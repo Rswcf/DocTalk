@@ -1,3 +1,7 @@
+from __future__ import annotations
+
+from typing import Optional
+
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -7,14 +11,14 @@ class Settings(BaseSettings):
     EMBEDDING_MODEL: str = Field(default="text-embedding-3-small")
     EMBEDDING_DIM: int = Field(default=1536)
     EMBEDDING_PROVIDER: str = Field(default="openai")
-    OPENAI_API_KEY: str | None = None
+    OPENAI_API_KEY: Optional[str] = None
 
     # Qdrant
     QDRANT_URL: str = Field(default="http://localhost:6333")
     QDRANT_COLLECTION: str = Field(default="doc_chunks")
 
     # LLM
-    ANTHROPIC_API_KEY: str | None = None
+    ANTHROPIC_API_KEY: Optional[str] = None
     LLM_MODEL: str = Field(default="claude-sonnet-4-5-20250929")
     LLM_MAX_CONTEXT_TOKENS: int = Field(default=180000)
 
@@ -40,7 +44,7 @@ class Settings(BaseSettings):
     FRONTEND_URL: str = Field(default="http://localhost:3000")
 
     # Optional DB URL placeholder for future use
-    DATABASE_URL: str | None = None
+    DATABASE_URL: Optional[str] = None
 
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", case_sensitive=False)
 

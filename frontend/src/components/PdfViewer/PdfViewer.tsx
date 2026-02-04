@@ -60,7 +60,7 @@ export default function PdfViewer({ pdfUrl, currentPage, highlights, scale }: Pd
           {pages.map((pageNumber) => (
             <div
               key={pageNumber}
-              ref={(el) => (pageRefs.current[pageNumber - 1] = el)}
+              ref={(el) => { pageRefs.current[pageNumber - 1] = el; }}
               className="relative"
               data-page-number={pageNumber}
             >
