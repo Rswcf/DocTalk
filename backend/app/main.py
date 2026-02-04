@@ -31,15 +31,18 @@ app.include_router(chunks_router, prefix="/api")
 
 @app.on_event("startup")
 def on_startup() -> None:
-    # Ensure object storage bucket exists
-    storage_service.ensure_bucket()
+    import logging
+    logger = logging.getLogger("doctalk.startup")
+    # Ensure object storage bucket exists (non-fatal on startup)
+    try:
+        storage_service.ensure_bucket()
+    except Exception as e:
+        logger.warning("MinIO bucket check failed on startup (will retry on first use): %s", e)
     # Ensure Qdrant collection exists with correct vector dimension
     try:
         embedding_service.ensure_collection()
-    except Exception:
-        # Avoid startup crash in dev; surface errors in logs
-        # In production, this should fail fast.
-        pass
+    except Exception as e:
+        logger.warning("Qdrant collection check failed on startup (will retry on first use): %s", e)
 
 
 @app.get("/health")
