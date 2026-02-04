@@ -51,7 +51,10 @@ class EmbeddingService:
     # ---------------- Qdrant -----------------
     @lru_cache(maxsize=1)
     def get_qdrant_client(self) -> QdrantClient:
-        return QdrantClient(url=settings.QDRANT_URL)
+        return QdrantClient(
+            url=settings.QDRANT_URL,
+            api_key=settings.QDRANT_API_KEY or None,
+        )
 
     def ensure_collection(self) -> None:
         """Validate or create the Qdrant collection with configured dimension.

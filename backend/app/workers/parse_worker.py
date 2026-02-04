@@ -23,11 +23,19 @@ logger = get_task_logger(__name__)
 
 
 def _get_minio_client() -> Minio:
+    from urllib.parse import urlparse
     endpoint = settings.MINIO_ENDPOINT
     access_key = settings.MINIO_ACCESS_KEY
     secret_key = settings.MINIO_SECRET_KEY
-    secure = not (endpoint.startswith("localhost") or ":9000" in endpoint or endpoint.startswith("127.0.0.1"))
-    return Minio(endpoint, access_key=access_key, secret_key=secret_key, secure=secure)
+    # Parse endpoint for scheme-based secure detection
+    if endpoint.startswith("http://") or endpoint.startswith("https://"):
+        parsed = urlparse(endpoint)
+        secure = parsed.scheme == "https"
+        host = parsed.netloc
+    else:
+        host = endpoint
+        secure = bool(settings.MINIO_SECURE)
+    return Minio(host, access_key=access_key, secret_key=secret_key, secure=secure)
 
 
 def _download_pdf_bytes(bucket: str, object_key: str) -> bytes:

@@ -17,18 +17,20 @@ class Settings(BaseSettings):
 
     # Qdrant
     QDRANT_URL: str = Field(default="http://localhost:6333")
+    QDRANT_API_KEY: Optional[str] = None
     QDRANT_COLLECTION: str = Field(default="doc_chunks")
 
     # LLM (通过 OpenRouter 调用)
     LLM_MODEL: str = Field(default="anthropic/claude-sonnet-4.5")
     LLM_MAX_CONTEXT_TOKENS: int = Field(default=180000)
 
-    # Object Storage
+    # Object Storage (MinIO local / S3-compatible in production)
     MINIO_ENDPOINT: str = Field(default="localhost:9000")
     MINIO_ACCESS_KEY: str = Field(default="minioadmin")
     MINIO_SECRET_KEY: str = Field(default="minioadmin")
     MINIO_BUCKET: str = Field(default="doctalk-pdfs")
     MINIO_PRESIGN_TTL: int = Field(default=300)
+    MINIO_SECURE: bool = Field(default=False)
 
     # Celery
     CELERY_BROKER_URL: str = Field(default="redis://localhost:6379/0")
