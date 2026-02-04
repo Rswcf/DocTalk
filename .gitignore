@@ -1,0 +1,29 @@
+# General
+.DS_Store
+.env
+.env.*
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+env/
+venv/
+dist/
+build/
+
+# Node/Next.js
+node_modules/
+.next/
+.turbo/
+.vercel/
+*.log
+
+# MinIO data (if bind-mount used)
+minio-data/
+
+# Codex output files (ephemeral)
+.collab/cx-output-*.md
+.collab/tasks/*-output.md
+
