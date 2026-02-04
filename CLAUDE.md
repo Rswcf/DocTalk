@@ -2,20 +2,172 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## 项目概述
+
+DocTalk 是一款面向高强度文档阅读者的 Web App，帮助用户在超长 PDF 中通过 AI 对话快速定位关键信息，回答绑定原文引用并实时高亮跳转。
+
+### 线上部署
+
+| 组件 | URL |
+|---|---|
+| **Frontend** (Vercel) | https://frontend-yijie-mas-projects.vercel.app |
+| **Backend** (Railway) | https://backend-production-a62e.up.railway.app |
+| **GitHub** | https://github.com/Rswcf/DocTalk |
+
+Railway 项目包含 5 个服务：backend, Postgres, Redis, qdrant-v2, minio-v2。
+
+### 技术栈
+
+- **Frontend**: Next.js 14 (App Router) + react-pdf + Zustand + Tailwind CSS + Radix UI
+- **Backend**: FastAPI + Celery + Redis
+- **Database**: PostgreSQL 16 (Alembic migration) + Qdrant (向量搜索)
+- **Storage**: MinIO (dev) / S3-compatible (prod)
+- **LLM/Embedding**: 统一通过 **OpenRouter** 网关调用
+  - LLM: `anthropic/claude-sonnet-4.5`
+  - Embedding: `openai/text-embedding-3-small` (dim=1536)
+- **PDF Parse**: PyMuPDF (fitz)
+
+### 核心架构决策
+
+- **API 网关**: 所有 LLM 和 Embedding 调用统一通过 OpenRouter（单一 API key）
+- **bbox 坐标**: 归一化 [0,1], top-left origin, 存于 chunks.bboxes (JSONB)
+- **引用格式**: 编号 [1]..[K]，后端 FSM 解析器处理跨 token 切断
+- **PDF 文件获取**: presigned URL (不走后端代理)
+- **向量维度**: 配置驱动 (EMBEDDING_DIM)，启动时校验 Qdrant collection
+- **删除**: 异步 202 + Celery worker
+- **认证 (MVP)**: 无登录，UUID 不可猜测
+
+### API 路由
+
+```
+POST   /api/documents/upload              # 上传 PDF
+GET    /api/documents/{document_id}        # 查询文档状态
+DELETE /api/documents/{document_id}        # 删除文档（异步）
+GET    /api/documents/{document_id}/file-url  # 获取 presigned URL
+POST   /api/documents/{document_id}/search    # 语义搜索
+POST   /api/documents/{document_id}/sessions  # 创建聊天会话
+GET    /api/sessions/{session_id}/messages     # 获取历史消息
+POST   /api/sessions/{session_id}/chat         # 对话（SSE streaming）
+GET    /api/chunks/{chunk_id}                  # 获取 chunk 详情
+GET    /health                                 # 健康检查
+```
+
+---
+
+## 常用开发命令
+
+```bash
+# 启动基础设施（PostgreSQL, Qdrant, Redis, MinIO）
+docker compose up -d
+
+# 后端（从 backend/ 目录运行）
+cd backend && python3 -m uvicorn app.main:app --reload
+
+# 前端（从 frontend/ 目录运行）
+cd frontend && npm run dev
+
+# 数据库迁移
+cd backend && python3 -m alembic upgrade head
+
+# Celery worker（macOS 需要设置 fork 安全变量）
+cd backend && OBJC_DISABLE_INITIALIZE_FORK_SAFETY=YES python3 -m celery -A app.workers.celery_app worker --loglevel=info -Q default,parse
+```
+
+### 环境变量
+
+后端配置通过 `.env` 文件加载（根目录或 backend/ 目录）。所有字段参见 `.env.example`。
+
+前端需要设置 `NEXT_PUBLIC_API_BASE`：
+- 本地开发：默认 `http://localhost:8000`（可不设置）
+- 生产环境：在 Vercel 中设置为 Railway 后端 URL
+
+---
+
+## 重要约定 / Gotchas
+
+- **Celery 用同步 DB**: Worker 使用 `psycopg`（同步），API 使用 `asyncpg`（异步）。不要在 worker 中使用 async session，也不要在 API 中使用 sync session。同步引擎定义在 `backend/app/models/sync_database.py`。
+- **macOS Celery fork 安全**: 必须设置 `OBJC_DISABLE_INITIALIZE_FORK_SAFETY=YES`，否则 worker fork 后会 crash。
+- **PDF bbox 坐标**: 归一化到 [0,1]，top-left origin。前端渲染时乘以页面实际像素尺寸。
+- **引用 FSM 解析器**: `chat_service.py:RefParserFSM` 处理 LLM 流式输出中跨 token 的 `[n]` 引用标记切断。
+- **前端全部 `"use client"`**: 无 SSR，所有页面和组件均为客户端渲染。
+- **presigned URL 直连**: PDF 文件通过 MinIO/S3 presigned URL 直接下载，不经后端代理。
+- **前端文档列表**: 存 localStorage (`doctalk_docs`)，无后端列表 API 持久化。
+- **Alembic 配置**: `backend/alembic.ini` 中 `sqlalchemy.url` 被 `env.py` 运行时覆盖，以读取 `.env` 中的 `DATABASE_URL`。
+
+---
+
+## 测试
+
+```bash
+# 运行 smoke test（需要 docker compose 基础设施运行）
+cd backend && python3 -m pytest tests/test_smoke.py -v
+
+# 仅运行集成测试（标记为 @pytest.mark.integration）
+cd backend && python3 -m pytest -m integration -v
+```
+
+测试文件位于 `backend/tests/`，使用 httpx AsyncClient 直连 FastAPI app。
+
+---
+
+## 项目结构
+
+```
+DocTalk/
+├── backend/
+│   ├── app/
+│   │   ├── api/           # FastAPI 路由 (documents, chat, search, chunks)
+│   │   ├── core/
+│   │   │   ├── config.py  # Settings (pydantic-settings)
+│   │   │   └── deps.py    # FastAPI 依赖注入 (get_db 等)
+│   │   ├── models/
+│   │   │   ├── base.py          # SQLAlchemy declarative base
+│   │   │   ├── tables.py        # ORM 表定义
+│   │   │   ├── database.py      # Async engine + session
+│   │   │   └── sync_database.py # Sync engine (Celery worker 专用)
+│   │   ├── schemas/       # Pydantic 请求/响应模型
+│   │   ├── services/
+│   │   │   ├── chat_service.py       # LLM 对话 + 引用 FSM 解析
+│   │   │   ├── doc_service.py        # 文档管理 (CRUD)
+│   │   │   ├── embedding_service.py  # Embedding + Qdrant 管理
+│   │   │   ├── parse_service.py      # PyMuPDF 提取 + chunk 切分
+│   │   │   ├── retrieval_service.py  # 向量检索
+│   │   │   └── storage_service.py    # MinIO/S3 文件存储
+│   │   └── workers/
+│   │       ├── celery_app.py    # Celery 应用配置
+│   │       └── parse_worker.py  # 文档解析 + embedding 任务
+│   ├── alembic/           # 数据库迁移
+│   ├── alembic.ini        # Alembic 配置
+│   ├── tests/             # Pytest 测试
+│   ├── Dockerfile         # Railway 部署（从 repo root 构建）
+│   ├── railway.toml       # Railway 部署配置
+│   └── requirements.txt   # Python 依赖
+├── frontend/
+│   ├── src/
+│   │   ├── app/           # Next.js App Router 页面
+│   │   ├── components/    # React 组件 (PdfViewer, Chat, ErrorBoundary)
+│   │   ├── lib/           # API 客户端 (api.ts, sse.ts)
+│   │   ├── store/         # Zustand 状态管理
+│   │   └── types/         # TypeScript 类型定义
+│   ├── next.config.mjs    # Next.js 配置（canvas stub for pdf.js）
+│   └── package.json
+├── infra/
+│   ├── qdrant/Dockerfile  # Railway Qdrant 服务
+│   └── minio/Dockerfile   # Railway MinIO 服务
+├── .collab/               # CC ↔ CX 协作文档
+├── .env.example           # 环境变量模板
+├── .dockerignore          # Docker 构建排除
+├── docker-compose.yml     # 本地开发基础设施
+└── CLAUDE.md              # 本文件
+```
+
+---
+
 ## Working Mode: Claude Code (CC) + Codex (CX) 协作
 
-本项目采用 **CC 主导 + CX 执行** 的双 AI 协作模式。Claude Code 是架构师和大脑，Codex CLI 是执行者和双手。
-
-### 角色分工
-
-| 角色 | 工具 | 职责 |
-|---|---|---|
-| **CC (Claude Code)** | 本终端 | 制定计划、技术决策、审阅方向、回答问题、分配任务 |
-| **CX (Codex CLI)** | `codex exec` | 审阅计划、编写代码、构建 codebase、运行测试、执行具体开发任务 |
+本项目采用 CC 主导 + CX 执行的双 AI 协作模式。
 
 ### 如何调用 Codex
-
-使用 `codex exec` 非交互模式：
 
 ```bash
 codex exec \
@@ -26,56 +178,7 @@ codex exec \
   "<prompt>"
 ```
 
-关键参数：
-- `--skip-git-repo-check`: 项目初期可能未初始化 git
-- `--full-auto`: 允许 Codex 自动执行文件操作
-- `-C`: 指定工作目录
-- `-o`: 将 Codex 最后一条消息写入文件（用于读取结果）
-- 超时建议 300000ms（5 分钟），复杂任务可更长
-
-### 协作流程
-
-#### 1. 计划阶段（Plan）
-- CC 写计划 → `.collab/plans/xxx.md`
-- 调用 Codex 审阅：prompt 要求读取计划文件并写 review 到 `.collab/reviews/`
-- CC 读取 review，修改计划，再让 Codex 二审
-- 循环直到 Codex 给出 APPROVE
-
-#### 2. 执行阶段（Execute）
-- CC 将任务写入 `.collab/tasks/current.md`
-- 调用 Codex 执行具体任务：prompt 中包含任务描述、验收标准、涉及文件
-- CC 检查 Codex 产出，必要时追加修正指令
-
-#### 3. 审阅阶段（Review）
-- 代码写完后，CC 可以调用 Codex 做自测或让 Codex 审阅自己的代码
-- 也可以 CC 直接审阅 Codex 写的代码
-
-### Codex Prompt 编写要点
-
-1. **告诉 Codex 它的角色**：开头说明它是 DocTalk 项目的执行者
-2. **指明要读的文件**：明确给出文件路径，不要让它猜
-3. **指明要写的文件**：输出结果的路径要明确
-4. **给出验收标准**：什么样算完成
-5. **一次一个大任务**：不要在一个 prompt 中塞太多不相关的事
-
-### 示例 Prompt
-
-**让 Codex 审阅计划：**
-```
-你是 DocTalk 项目的 Codex 执行者 (CX)。
-请阅读 .collab/plans/002-tech-spec-v1.md，审阅后把反馈写入 .collab/reviews/002-review.md。
-格式：VERDICT: APPROVE | REQUEST_CHANGES + 具体问题列表。
-```
-
-**让 Codex 执行开发任务：**
-```
-你是 DocTalk 项目的 Codex 执行者 (CX)。
-请阅读 .collab/tasks/current.md 中的 Task 1.1，按照验收标准完成开发。
-完成后在 .collab/tasks/current.md 中将 Task 1.1 的 STATUS 改为 DONE，
-并在 CX_NOTES 中记录你的实现决策。
-```
-
-## 协作文件结构
+### 协作文件结构
 
 ```
 .collab/
@@ -83,54 +186,8 @@ codex exec \
 ├── plans/               # CC 写的计划文档
 ├── reviews/             # CX 的审阅反馈
 ├── tasks/
-│   ├── current.md       # 当前 sprint 的执行任务
+│   ├── current.md       # 当前任务
 │   └── backlog.md       # 后续任务
 ├── dialogue/            # CC ↔ CX 讨论记录
 └── archive/             # 已完成的历史文档
-```
-
-## 项目概述
-
-DocTalk 是一款面向高强度文档阅读者的 Web App，帮助用户在超长 PDF 中通过 AI 对话快速定位关键信息，回答绑定原文引用并实时高亮跳转。
-
-### 技术栈
-
-- **Frontend**: Next.js 14 (App Router) + react-pdf + Zustand + Tailwind + shadcn/ui
-- **Backend**: FastAPI + Celery + Redis
-- **Database**: PostgreSQL 16 (Alembic migration) + Qdrant (向量)
-- **Storage**: MinIO (dev) / S3 (prod)
-- **LLM**: Claude Sonnet 4.5 (Anthropic API)
-- **Embedding**: text-embedding-3-small (OpenAI, dim=1536)
-- **PDF Parse**: PyMuPDF (fitz)
-
-### 核心架构决策
-
-- **bbox 坐标**: 归一化 [0,1], top-left origin, 存于 chunks.bboxes (JSONB)
-- **引用格式**: 编号 [1]..[K]，后端 FSM 解析器处理跨 token 切断
-- **PDF 文件获取**: presigned URL (不走后端代理)
-- **向量维度**: 配置驱动 (EMBEDDING_DIM)，启动时校验 Qdrant collection
-- **删除**: 异步 202 + Celery worker
-- **认证 (MVP)**: 无登录，UUID 不可猜测 + IP 限流
-
-### 当前完整 Tech Spec
-
-详见 `.collab/plans/002-tech-spec-v1.md` (STATUS: APPROVED)
-
-### 常用开发命令
-
-```bash
-# 启动基础设施
-docker compose up -d
-
-# 后端
-cd backend && uvicorn app.main:app --reload
-
-# 前端
-cd frontend && npm run dev
-
-# 数据库迁移
-cd backend && alembic upgrade head
-
-# Celery worker
-cd backend && celery -A app.workers worker --loglevel=info
 ```
