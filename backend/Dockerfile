@@ -20,9 +20,6 @@ RUN pip install -r /tmp/requirements.txt greenlet psycopg[binary] && rm /tmp/req
 # Copy backend code into /app
 COPY backend/ /app/
 
-# Debug: verify file structure
-RUN ls -la /app/ && ls -la /app/app/ && echo "OK: app module found"
-
 EXPOSE 8000
 
 # Run migrations then start server; Railway injects $PORT
