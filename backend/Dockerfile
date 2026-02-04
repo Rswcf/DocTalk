@@ -12,10 +12,22 @@ RUN apt-get update \
     && apt-get install -y --no-install-recommends build-essential \
     && rm -rf /var/lib/apt/lists/*
 
-COPY requirements.txt /app/requirements.txt
-RUN pip install -r /app/requirements.txt greenlet psycopg[binary]
+# When Railway sets RAILWAY_DOCKERFILE_PATH, the build context is the repo root.
+# Support both: running from backend/ (local) and from repo root (Railway).
+COPY requirements.txt* backend/requirements.txt* /tmp/
+RUN if [ -f /tmp/requirements.txt ]; then \
+      pip install -r /tmp/requirements.txt greenlet psycopg[binary]; \
+    else \
+      pip install -r /tmp/backend/requirements.txt greenlet psycopg[binary]; \
+    fi
 
-COPY . /app
+# Copy app code (try backend/ first for Railway, then . for local)
+COPY . /tmp/src/
+RUN if [ -d /tmp/src/backend/app ]; then \
+      cp -r /tmp/src/backend/* /app/; \
+    else \
+      cp -r /tmp/src/* /app/; \
+    fi && rm -rf /tmp/src /tmp/requirements.txt /tmp/backend
 
 EXPOSE 8000
 
