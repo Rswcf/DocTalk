@@ -7,19 +7,20 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
-    # Embedding — 模型与维度强绑定
-    EMBEDDING_MODEL: str = Field(default="text-embedding-3-small")
+    # OpenRouter — 统一 API 网关
+    OPENROUTER_API_KEY: Optional[str] = None
+    OPENROUTER_BASE_URL: str = Field(default="https://openrouter.ai/api/v1")
+
+    # Embedding — 模型与维度强绑定 (通过 OpenRouter 调用)
+    EMBEDDING_MODEL: str = Field(default="openai/text-embedding-3-small")
     EMBEDDING_DIM: int = Field(default=1536)
-    EMBEDDING_PROVIDER: str = Field(default="openai")
-    OPENAI_API_KEY: Optional[str] = None
 
     # Qdrant
     QDRANT_URL: str = Field(default="http://localhost:6333")
     QDRANT_COLLECTION: str = Field(default="doc_chunks")
 
-    # LLM
-    ANTHROPIC_API_KEY: Optional[str] = None
-    LLM_MODEL: str = Field(default="claude-sonnet-4-5-20250929")
+    # LLM (通过 OpenRouter 调用)
+    LLM_MODEL: str = Field(default="anthropic/claude-sonnet-4.5")
     LLM_MAX_CONTEXT_TOKENS: int = Field(default=180000)
 
     # Object Storage

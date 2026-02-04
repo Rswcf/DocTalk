@@ -21,19 +21,18 @@ class RetrievalService:
 
         # 2) Qdrant search with document_id filter
         client = embedding_service.get_qdrant_client()
-        flt = Filter(must=[FieldCondition(key="document_id", match=MatchValue(str(document_id)))])
-        res = client.search(
+        flt = Filter(must=[FieldCondition(key="document_id", match=MatchValue(value=str(document_id)))])
+        res = client.query_points(
             collection_name=settings.QDRANT_COLLECTION,
-            query_vector=qvec,
+            query=qvec,
             limit=int(top_k or 5),
             query_filter=flt,
         )
 
         # 3) Load chunk details by returned ids
-        # Map: chunk_id -> score
         ids: List[uuid.UUID] = []
         scores: dict[uuid.UUID, float] = {}
-        for p in res:
+        for p in res.points:
             try:
                 cid = uuid.UUID(str(p.id))
             except Exception:

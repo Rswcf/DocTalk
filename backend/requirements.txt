@@ -8,7 +8,6 @@ redis
 pymupdf
 minio
 qdrant-client
-anthropic
 openai
 python-multipart
 pydantic-settings

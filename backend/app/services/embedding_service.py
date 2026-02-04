@@ -15,38 +15,36 @@ from app.core.config import settings
 class EmbeddingService:
     """Embedding + Qdrant collection utilities (config-driven).
 
-    - Reads model/provider/dim from settings
-    - Provides batch embedding via OpenAI
+    - Reads model/dim from settings
+    - Provides batch embedding via OpenRouter (OpenAI-compatible)
     - Ensures Qdrant collection with exact vector dimension
     """
 
     def __init__(self) -> None:
         self.model: str = settings.EMBEDDING_MODEL
         self.dim: int = int(settings.EMBEDDING_DIM)
-        self.provider: str = (settings.EMBEDDING_PROVIDER or "openai").lower()
-        self._openai_client: Optional[OpenAI] = None
-        self._openai_lock = threading.Lock()
+        self._client: Optional[OpenAI] = None
+        self._lock = threading.Lock()
 
     # ---------------- Embedding -----------------
-    def _get_openai(self) -> OpenAI:
-        if self.provider != "openai":
-            raise NotImplementedError(f"Embedding provider not supported: {self.provider}")
-        if not settings.OPENAI_API_KEY:
-            raise RuntimeError("OPENAI_API_KEY is not configured")
-        # Lazy init and reuse
-        if self._openai_client is None:
-            with self._openai_lock:
-                if self._openai_client is None:
-                    self._openai_client = OpenAI(api_key=settings.OPENAI_API_KEY)
-        return self._openai_client
+    def _get_client(self) -> OpenAI:
+        if not settings.OPENROUTER_API_KEY:
+            raise RuntimeError("OPENROUTER_API_KEY is not configured")
+        if self._client is None:
+            with self._lock:
+                if self._client is None:
+                    self._client = OpenAI(
+                        api_key=settings.OPENROUTER_API_KEY,
+                        base_url=settings.OPENROUTER_BASE_URL,
+                    )
+        return self._client
 
     def embed_texts(self, texts: List[str]) -> List[List[float]]:
         """Return embeddings for a list of texts (order-preserving)."""
         if not texts:
             return []
-        client = self._get_openai()
+        client = self._get_client()
         resp = client.embeddings.create(model=self.model, input=texts)
-        # openai v1 returns .data list with .embedding vectors
         vectors: List[List[float]] = [d.embedding for d in resp.data]
         return vectors
 

@@ -6,7 +6,7 @@ import uuid
 from dataclasses import dataclass
 from typing import Any, AsyncGenerator, Dict, List, Optional
 
-from anthropic import AsyncAnthropic
+from openai import AsyncOpenAI
 from sqlalchemy import asc, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -187,50 +187,65 @@ class ChatService:
             "助手：根据财报数据，2023年公司整体毛利率为35.2%[2]，较上年同期提升2.1个百分点。\n"
         )
 
-        # 6) Stream from Anthropic
-        client = AsyncAnthropic(api_key=settings.ANTHROPIC_API_KEY)
+        # 6) Stream from OpenRouter (OpenAI-compatible)
+        client = AsyncOpenAI(
+            api_key=settings.OPENROUTER_API_KEY,
+            base_url=settings.OPENROUTER_BASE_URL,
+            default_headers={
+                "HTTP-Referer": settings.FRONTEND_URL,
+                "X-Title": "DocTalk",
+            },
+        )
+
+        # Build OpenAI-format messages (system + history)
+        openai_messages = [{"role": "system", "content": system_prompt}] + claude_messages
 
         assistant_text_parts: List[str] = []
         citations: List[dict] = []
         fsm = RefParserFSM(chunk_map)
 
         last_ping = time.monotonic()
+        prompt_tokens: Optional[int] = None
+        output_tokens: Optional[int] = None
 
         try:
-            async with client.messages.stream(
+            stream = await client.chat.completions.create(
                 model=settings.LLM_MODEL,
                 max_tokens=2048,
-                system=system_prompt,
-                messages=claude_messages,
-            ) as stream:
-                async for text in stream.text_stream:
+                messages=openai_messages,
+                stream=True,
+            )
+
+            async for chunk in stream:
+                # Extract text delta
+                if chunk.choices and chunk.choices[0].delta.content:
+                    text = chunk.choices[0].delta.content
                     # 7) Feed FSM and emit events
                     for ev in fsm.feed(text):
                         if ev["event"] == "token":
                             assistant_text_parts.append(ev["data"]["text"])
                         elif ev["event"] == "citation":
-                            citations.append(ev["data"])  # already serializable
+                            citations.append(ev["data"])
                         yield ev
 
-                    # 8) Ping every 15 seconds
-                    now = time.monotonic()
-                    if now - last_ping >= 15.0:
-                        yield sse("ping", {})
-                        last_ping = now
+                # Extract usage if present (last chunk)
+                if hasattr(chunk, "usage") and chunk.usage:
+                    prompt_tokens = getattr(chunk.usage, "prompt_tokens", None)
+                    output_tokens = getattr(chunk.usage, "completion_tokens", None)
 
-                # Flush at stream end
-                for ev in fsm.flush():
-                    if ev["event"] == "token":
-                        assistant_text_parts.append(ev["data"]["text"])
-                    yield ev
+                # Ping every 15 seconds
+                now = time.monotonic()
+                if now - last_ping >= 15.0:
+                    yield sse("ping", {})
+                    last_ping = now
 
-                final_message = await stream.get_final_message()
-                usage = getattr(final_message, "usage", None)
-                prompt_tokens = getattr(usage, "input_tokens", None) if usage else None
-                output_tokens = getattr(usage, "output_tokens", None) if usage else None
+            # Flush at stream end
+            for ev in fsm.flush():
+                if ev["event"] == "token":
+                    assistant_text_parts.append(ev["data"]["text"])
+                yield ev
 
         except Exception as e:
-            # Surface error and stop
             yield sse("error", {"code": "LLM_ERROR", "message": str(e)})
             return
 
@@ -241,8 +256,8 @@ class ChatService:
             role="assistant",
             content=assistant_text,
             citations=citations or None,
-            prompt_tokens=int(prompt_tokens) if "prompt_tokens" in locals() and prompt_tokens is not None else None,
-            output_tokens=int(output_tokens) if "output_tokens" in locals() and output_tokens is not None else None,
+            prompt_tokens=int(prompt_tokens) if prompt_tokens is not None else None,
+            output_tokens=int(output_tokens) if output_tokens is not None else None,
         )
         db.add(asst_msg)
         await db.commit()
