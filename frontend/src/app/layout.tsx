@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import './globals.css'
 import ErrorBoundary from '../components/ErrorBoundary'
+import { ThemeProvider } from './ThemeProvider'
 
 export const metadata: Metadata = {
   title: 'DocTalk',
@@ -13,11 +14,13 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <body>
-        <ErrorBoundary>
-          {children}
-        </ErrorBoundary>
+        <ThemeProvider>
+          <ErrorBoundary>
+            {children}
+          </ErrorBoundary>
+        </ThemeProvider>
       </body>
     </html>
   )

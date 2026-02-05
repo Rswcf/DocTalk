@@ -1,7 +1,6 @@
 "use client";
 
 import React from 'react';
-import type { Citation } from '../../types';
 
 interface CitationCardProps {
   refIndex: number;
@@ -16,12 +15,12 @@ export default function CitationCard({ refIndex, textSnippet, page, onClick }: C
     <button
       type="button"
       onClick={onClick}
-      className="w-full text-left border rounded-md p-2 hover:bg-gray-50 transition flex items-start gap-2"
+      className="w-full text-left border rounded-md p-2 hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-700 transition flex items-start gap-2"
     >
-      <span className="text-blue-600 font-semibold">[{refIndex}]</span>
+      <span className="text-blue-600 dark:text-blue-400 font-semibold">[{refIndex}]</span>
       <div className="flex-1">
-        <p className="text-sm text-gray-800">{snippet}</p>
-        <p className="text-xs text-gray-500 mt-1">Page {page}</p>
+        <p className="text-sm text-gray-800 dark:text-gray-200">{snippet}</p>
+        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Page {page}</p>
       </div>
     </button>
   );

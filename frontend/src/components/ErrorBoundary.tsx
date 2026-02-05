@@ -16,7 +16,6 @@ export default class ErrorBoundary extends React.Component<React.PropsWithChildr
 
   componentDidCatch(error: any, errorInfo: any) {
     // Optionally log error
-    // console.error('ErrorBoundary caught:', error, errorInfo);
   }
 
   handleRefresh = () => {
@@ -28,11 +27,11 @@ export default class ErrorBoundary extends React.Component<React.PropsWithChildr
   render() {
     if (this.state.hasError) {
       return (
-        <div className="min-h-screen w-full flex items-center justify-center">
+        <div className="min-h-screen w-full flex items-center justify-center dark:bg-gray-900">
           <div className="text-center">
-            <div className="text-lg font-medium mb-3">出了点问题</div>
+            <div className="text-lg font-medium mb-3 dark:text-gray-100">出了点问题</div>
             <button
-              className="px-4 py-2 bg-gray-900 text-white rounded"
+              className="px-4 py-2 bg-gray-900 text-white rounded dark:bg-gray-100 dark:text-gray-900"
               onClick={this.handleRefresh}
             >
               刷新页面
@@ -44,4 +43,3 @@ export default class ErrorBoundary extends React.Component<React.PropsWithChildr
     return this.props.children;
   }
 }
-

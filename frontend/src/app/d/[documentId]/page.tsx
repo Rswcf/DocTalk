@@ -1,9 +1,10 @@
 "use client";
 
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { PdfViewer } from '../../../components/PdfViewer';
 import { ChatPanel } from '../../../components/Chat';
+import Header from '../../../components/Header';
 import { createSession, getDocument, getDocumentFileUrl } from '../../../lib/api';
 import { useDocTalkStore } from '../../../store';
 
@@ -19,6 +20,7 @@ export default function DocumentReaderPage() {
     scale,
     setPdfUrl,
     setDocument,
+    setDocumentName,
     setDocumentStatus,
     setSessionId,
     sessionId,
@@ -32,6 +34,7 @@ export default function DocumentReaderPage() {
       try {
         const info = await getDocument(documentId);
         setDocumentStatus(info.status);
+        if (info.filename) setDocumentName(info.filename);
       } catch (e: any) {
         const msg = String(e?.message || e || '');
         if (msg.includes('HTTP 404')) {
@@ -53,16 +56,17 @@ export default function DocumentReaderPage() {
         // 聊天会话创建失败将由 ChatPanel 的错误处理体现
       }
     })();
-  }, [documentId, setDocument, setDocumentStatus, setPdfUrl, setSessionId]);
+  }, [documentId, setDocument, setDocumentName, setDocumentStatus, setPdfUrl, setSessionId]);
 
   return (
-    <div className="flex h-screen w-full">
+    <div className="flex flex-col h-screen w-full">
+      <Header />
       {error ? (
-        <div className="w-full h-full flex items-center justify-center">
+        <div className="flex-1 flex items-center justify-center">
           <div className="text-center">
             <div className="text-lg font-medium mb-3">{error}</div>
             <button
-              className="px-4 py-2 bg-gray-900 text-white rounded"
+              className="px-4 py-2 bg-gray-900 text-white rounded dark:bg-gray-100 dark:text-gray-900"
               onClick={() => router.push('/')}
             >
               返回首页
@@ -70,7 +74,7 @@ export default function DocumentReaderPage() {
           </div>
         </div>
       ) : (
-        <>
+        <div className="flex flex-1 min-h-0">
           <div className="flex-1 min-w-0">
             {pdfUrl ? (
               <PdfViewer pdfUrl={pdfUrl} currentPage={currentPage} highlights={highlights} scale={scale} />
@@ -85,7 +89,7 @@ export default function DocumentReaderPage() {
               <div className="h-full w-full flex items-center justify-center text-gray-500">Initializing chat…</div>
             )}
           </div>
-        </>
+        </div>
       )}
     </div>
   );
