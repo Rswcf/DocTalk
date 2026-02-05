@@ -108,7 +108,7 @@ export default function DocumentReaderPage() {
         </div>
       ) : (
         <Group orientation="horizontal" className="flex-1 min-h-0">
-          <Panel defaultSize={35} minSize={25}>
+          <Panel defaultSize={50} minSize={25}>
             <div className="h-full min-w-[320px]">
               {sessionId ? (
                 <ChatPanel sessionId={sessionId} onCitationClick={navigateToCitation} />
@@ -125,7 +125,7 @@ export default function DocumentReaderPage() {
             <div className="w-0.5 h-8 bg-gray-400 dark:bg-gray-500 rounded-full" />
           </Separator>
 
-          <Panel defaultSize={65} minSize={35}>
+          <Panel defaultSize={50} minSize={35}>
             <div className="h-full">
               {pdfUrl ? (
                 <PdfViewer pdfUrl={pdfUrl} currentPage={currentPage} highlights={highlights} scale={scale} scrollNonce={scrollNonce} />
