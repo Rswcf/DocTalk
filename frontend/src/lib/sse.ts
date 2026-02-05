@@ -6,7 +6,7 @@ type CitationPayload = {
   ref_index: number;
   chunk_id: string;
   page: number;
-  bboxes: { x: number; y: number; w: number; h: number }[];
+  bboxes: { x: number; y: number; w: number; h: number; page?: number }[];
   text_snippet: string;
   offset: number;
 };

@@ -6,6 +6,7 @@ export interface NormalizedBBox {
   y: number;
   w: number;
   h: number;
+  page?: number;
 }
 
 export interface Citation {

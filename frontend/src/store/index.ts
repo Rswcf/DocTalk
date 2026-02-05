@@ -8,6 +8,7 @@ type DocStatus = 'idle' | 'uploading' | 'parsing' | 'embedding' | 'ready' | 'err
 export interface DocTalkStore {
   // Document
   documentId: string | null;
+  documentName: string | null;
   documentStatus: DocStatus;
   totalPages: number;
   parseProgress: { pagesParsed: number; chunksIndexed: number };
@@ -25,6 +26,7 @@ export interface DocTalkStore {
 
   // Actions
   setDocument: (id: string) => void;
+  setDocumentName: (name: string) => void;
   setDocumentStatus: (status: DocStatus) => void;
   setPdfUrl: (url: string) => void;
   setPage: (page: number) => void;
@@ -41,6 +43,7 @@ export interface DocTalkStore {
 
 const initialState = {
   documentId: null as string | null,
+  documentName: null as string | null,
   documentStatus: 'idle' as DocStatus,
   totalPages: 0,
   parseProgress: { pagesParsed: 0, chunksIndexed: 0 },
@@ -57,14 +60,17 @@ export const useDocTalkStore = create<DocTalkStore>((set, get) => ({
   ...initialState,
 
   setDocument: (id: string) => set({ documentId: id }),
+  setDocumentName: (name: string) => set({ documentName: name }),
   setDocumentStatus: (status: DocStatus) => set({ documentStatus: status }),
   setPdfUrl: (url: string) => set({ pdfUrl: url }),
   setPage: (page: number) => set({ currentPage: Math.max(1, page) }),
   setScale: (scale: number) => set({ scale: Math.max(0.25, scale) }),
   setHighlights: (highlights: NormalizedBBox[]) => set({ highlights }),
   navigateToCitation: (citation: Citation) => {
-    // Clicking citation jumps to page and highlights
-    set({ currentPage: citation.page, highlights: citation.bboxes });
+    const pageBboxes = (citation.bboxes || []).filter(
+      (bb: any) => (bb.page ?? citation.page) === citation.page
+    );
+    set({ currentPage: citation.page, highlights: pageBboxes });
   },
   addMessage: (msg: Message) => set({ messages: [...get().messages, msg] }),
   updateLastMessage: (text: string) => {

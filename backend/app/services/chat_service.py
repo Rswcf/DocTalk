@@ -67,6 +67,18 @@ class RefParserFSM:
                     if inner.isdigit() and (int(inner) in self.chunk_map):
                         ref_num = int(inner)
                         chunk = self.chunk_map[ref_num]
+                        # Filter, sort and limit bboxes to current page
+                        MAX_CITATION_BBOXES = 5
+                        page_bbs = [
+                            bb
+                            for bb in (chunk.bboxes or [])
+                            if isinstance(bb, dict)
+                            and bb.get("page", chunk.page_start) == chunk.page_start
+                        ]
+                        if not page_bbs:
+                            page_bbs = list(chunk.bboxes or [])
+                        page_bbs.sort(key=lambda b: (b.get("y", 0), b.get("x", 0)))
+                        limited_bboxes = page_bbs[:MAX_CITATION_BBOXES]
                         events.append(
                             sse(
                                 "citation",
@@ -74,7 +86,7 @@ class RefParserFSM:
                                     "ref_index": ref_num,
                                     "chunk_id": str(chunk.id),
                                     "page": chunk.page_start,
-                                    "bboxes": chunk.bboxes,
+                                    "bboxes": limited_bboxes,
                                     "text_snippet": (chunk.text or "")[:80],
                                     "offset": self.char_offset,
                                 },
@@ -181,7 +193,8 @@ class ChatService:
             "1. 只基于以上片段回答，不要编造信息。\n"
             "2. 在关键论述后用 [n] 标注引用来源（n 为片段编号）。\n"
             "3. 可以引用多个片段，如 [1][3]。\n"
-            "4. 如果以上片段无法回答问题，直接说文档中未找到相关信息。\n\n"
+            "4. 如果以上片段无法回答问题，直接说文档中未找到相关信息。\n"
+            "5. 使用 Markdown 格式回答：重点用**粗体**，多个要点用列表。\n\n"
             "## 示例\n"
             "用户：2023年毛利率是多少？\n"
             "助手：根据财报数据，2023年公司整体毛利率为35.2%[2]，较上年同期提升2.1个百分点。\n"
@@ -268,4 +281,3 @@ class ChatService:
 
 # Singleton service
 chat_service = ChatService()
-

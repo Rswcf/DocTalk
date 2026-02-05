@@ -80,22 +80,13 @@ class ParseService:
             for blk in page_dict.get("blocks", []):
                 if blk.get("type", 0) != 0:  # 0=text, 1=image, etc.
                     continue
-                bbox = blk.get("bbox", None)
                 lines = blk.get("lines", [])
-                if not bbox or not lines:
+                if not lines:
                     continue
 
-                text, avg_size = self._build_block_text_and_size(lines)
-                if not text.strip():
-                    continue
-                blocks.append(
-                    BlockInfo(
-                        page=pi,
-                        text=text,
-                        bbox=(float(bbox[0]), float(bbox[1]), float(bbox[2]), float(bbox[3])),
-                        font_size=avg_size,
-                    )
-                )
+                # Emit one BlockInfo per line for precise bbox granularity
+                for line_info in self._extract_line_blocks(pi, lines):
+                    blocks.append(line_info)
 
             pages.append(
                 PageInfo(
@@ -327,6 +318,57 @@ class ParseService:
         text = self._normalize_inline_text(text)
         avg_size = (sum(sizes) / len(sizes)) if sizes else 12.0
         return text, avg_size
+
+    def _extract_line_blocks(self, page: int, lines: Sequence[dict]) -> List[BlockInfo]:
+        """Extract one BlockInfo per line from a PyMuPDF block's lines.
+
+        This gives line-level bbox precision instead of block-level,
+        resulting in much tighter highlight regions.
+        """
+        result: List[BlockInfo] = []
+        num_lines = len(lines)
+        for i, line in enumerate(lines):
+            spans = line.get("spans", [])
+            if not spans:
+                continue
+
+            line_bbox = line.get("bbox", None)
+            if not line_bbox:
+                continue
+
+            line_text = "".join([s.get("text", "") for s in spans])
+            sizes: List[float] = []
+            for s in spans:
+                sz = float(s.get("size")) if s.get("size") else None
+                if sz:
+                    sizes.append(sz)
+
+            # Hyphenation fix across lines
+            if i < (num_lines - 1) and line_text.rstrip().endswith("-"):
+                next_line_spans = lines[i + 1].get("spans", [])
+                next_text = "".join([s.get("text", "") for s in next_line_spans])
+                if next_text and next_text[:1].isalnum():
+                    line_text = line_text.rstrip("-")
+                else:
+                    line_text = line_text + " "
+            else:
+                line_text = line_text + " "
+
+            text = self._normalize_inline_text(line_text)
+            if not text:
+                continue
+
+            avg_size = (sum(sizes) / len(sizes)) if sizes else 12.0
+            result.append(
+                BlockInfo(
+                    page=page,
+                    text=text,
+                    bbox=(float(line_bbox[0]), float(line_bbox[1]),
+                          float(line_bbox[2]), float(line_bbox[3])),
+                    font_size=avg_size,
+                )
+            )
+        return result
 
     def _normalize_inline_text(self, text: str) -> str:
         # Collapse excessive whitespace but keep sentence punctuation

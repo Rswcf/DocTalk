@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
+import { SendHorizontal } from 'lucide-react';
 import { chatStream } from '../../lib/sse';
 import { getMessages } from '../../lib/api';
 import type { Citation, Message } from '../../types';
@@ -13,13 +14,20 @@ interface ChatPanelProps {
   onCitationClick: (c: Citation) => void;
 }
 
+const SUGGESTED_QUESTIONS = [
+  '请总结这篇文档的要点',
+  '文档的主要结论是什么？',
+  '这篇文档涉及哪些关键概念？',
+  '请列出文档中的重要数据和发现',
+];
+
 export default function ChatPanel({ sessionId, onCitationClick }: ChatPanelProps) {
   const { messages, isStreaming, addMessage, updateLastMessage, addCitationToLastMessage, setStreaming } = useDocTalkStore();
   const [input, setInput] = useState('');
   const listRef = useRef<HTMLDivElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
-    // Fetch existing messages once session is ready
     (async () => {
       try {
         const data = await getMessages(sessionId);
@@ -34,14 +42,21 @@ export default function ChatPanel({ sessionId, onCitationClick }: ChatPanelProps
   }, [sessionId]);
 
   useEffect(() => {
-    // Auto-scroll to bottom on new messages
     listRef.current?.scrollTo({ top: listRef.current.scrollHeight, behavior: 'smooth' });
   }, [messages]);
 
-  const onSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!input.trim() || isStreaming) return;
-    const userMsg: Message = { id: `m_${Date.now()}_u`, role: 'user', text: input, createdAt: Date.now() };
+  // Auto-resize textarea
+  useEffect(() => {
+    const ta = textareaRef.current;
+    if (ta) {
+      ta.style.height = 'auto';
+      ta.style.height = Math.min(ta.scrollHeight, 160) + 'px';
+    }
+  }, [input]);
+
+  const sendMessage = useCallback(async (text: string) => {
+    if (!text.trim() || isStreaming) return;
+    const userMsg: Message = { id: `m_${Date.now()}_u`, role: 'user', text, createdAt: Date.now() };
     addMessage(userMsg);
     const asstMsg: Message = { id: `m_${Date.now()}_a`, role: 'assistant', text: '', citations: [], createdAt: Date.now() };
     addMessage(asstMsg);
@@ -49,8 +64,8 @@ export default function ChatPanel({ sessionId, onCitationClick }: ChatPanelProps
 
     await chatStream(
       sessionId,
-      input,
-      ({ text }) => updateLastMessage(text || ''),
+      text,
+      ({ text: t }) => updateLastMessage(t || ''),
       (c) => addCitationToLastMessage(c),
       (err) => {
         setStreaming(false);
@@ -67,46 +82,88 @@ export default function ChatPanel({ sessionId, onCitationClick }: ChatPanelProps
       () => setStreaming(false),
     );
     setInput('');
+  }, [isStreaming, sessionId, addMessage, updateLastMessage, addCitationToLastMessage, setStreaming]);
+
+  const onSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    sendMessage(input);
+  };
+
+  const onKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      sendMessage(input);
+    }
+  };
+
+  const handleSuggestedClick = (q: string) => {
+    setInput(q);
+    sendMessage(q);
   };
 
   return (
-    <div className="flex h-full flex-col border-l">
+    <div className="flex h-full flex-col border-l dark:border-gray-700">
       <div ref={listRef} className="flex-1 overflow-auto p-4">
-        {messages.map((m) => (
-          <div key={m.id}>
-            <MessageBubble message={m} onCitationClick={onCitationClick} />
-            {m.role === 'assistant' && m.citations && m.citations.length > 0 && (
-              <div className="mt-2 pl-6 space-y-2">
-                {m.citations.map((c) => (
-                  <CitationCard
-                    key={`${m.id}-${c.refIndex}`}
-                    refIndex={c.refIndex}
-                    textSnippet={c.textSnippet}
-                    page={c.page}
-                    onClick={() => onCitationClick(c)}
-                  />
-                ))}
-              </div>
-            )}
+        {messages.length === 0 ? (
+          <div className="flex flex-col items-center justify-center h-full gap-3 px-4">
+            <p className="text-sm text-gray-500 dark:text-gray-400 mb-2">试试以下问题开始对话：</p>
+            {SUGGESTED_QUESTIONS.map((q) => (
+              <button
+                key={q}
+                type="button"
+                onClick={() => handleSuggestedClick(q)}
+                className="w-full text-left text-sm px-4 py-2.5 border rounded-xl hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-800 transition-colors text-gray-700 dark:text-gray-300"
+              >
+                {q}
+              </button>
+            ))}
           </div>
-        ))}
+        ) : (
+          messages.map((m) => (
+            <div key={m.id}>
+              <MessageBubble message={m} onCitationClick={onCitationClick} />
+              {m.role === 'assistant' && m.citations && m.citations.length > 0 && (() => {
+                const uniqueCitations = m.citations.filter(
+                  (c, i, arr) => arr.findIndex((x) => x.refIndex === c.refIndex) === i
+                );
+                return (
+                <div className="mt-2 pl-6 space-y-2">
+                  {uniqueCitations.map((c) => (
+                    <CitationCard
+                      key={`${m.id}-${c.refIndex}`}
+                      refIndex={c.refIndex}
+                      textSnippet={c.textSnippet}
+                      page={c.page}
+                      onClick={() => onCitationClick(c)}
+                    />
+                  ))}
+                </div>
+                );
+              })()}
+            </div>
+          ))
+        )}
       </div>
-      <form onSubmit={onSubmit} className="p-3 border-t">
-        <div className="flex gap-2">
-          <input
-            type="text"
-            className="flex-1 border rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-            placeholder="Ask about this document…"
+      <form onSubmit={onSubmit} className="p-3 border-t dark:border-gray-700">
+        <div className="flex items-end gap-2">
+          <textarea
+            ref={textareaRef}
+            className="flex-1 border rounded-xl px-3 py-2 text-sm resize-none overflow-y-auto focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-100"
+            style={{ minHeight: '40px', maxHeight: '160px' }}
+            placeholder="输入问题…"
             value={input}
             onChange={(e) => setInput(e.target.value)}
+            onKeyDown={onKeyDown}
             disabled={isStreaming}
+            rows={1}
           />
           <button
             type="submit"
-            className="px-4 py-2 bg-blue-600 text-white rounded-md disabled:opacity-60"
-            disabled={isStreaming}
+            className="p-2 bg-blue-600 text-white rounded-xl disabled:opacity-60 hover:bg-blue-700 transition-colors shrink-0"
+            disabled={isStreaming || !input.trim()}
+            title="发送"
           >
-            Send
+            <SendHorizontal size={18} />
           </button>
         </div>
       </form>
