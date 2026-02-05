@@ -1,0 +1,57 @@
+{
+  "app.title": "DocTalk",
+  "app.subtitle": "Upload a PDF to start chatting.",
+
+  "upload.dragDrop": "Drag & drop your PDF here",
+  "upload.or": "or",
+  "upload.chooseFile": "Choose File",
+  "upload.uploading": "Uploading…",
+  "upload.parsing": "Parsing…",
+  "upload.parsingProgress": "Parsing pages: {pagesParsed}, indexing: {chunksIndexed}",
+  "upload.error": "Error during processing",
+  "upload.networkError": "Upload failed, please check network or try again later",
+  "upload.pdfOnly": "Please upload a PDF file",
+  "upload.tooLarge": "File size cannot exceed 50MB",
+
+  "doc.myDocuments": "My Documents",
+  "doc.noDocuments": "No documents yet",
+  "doc.open": "Open",
+  "doc.notFound": "Document not found",
+  "doc.loadError": "Failed to load document info",
+  "doc.backHome": "Back to Home",
+  "doc.loading": "Loading document…",
+  "doc.initChat": "Initializing chat…",
+  "doc.pdfLoadError": "Unable to load PDF. Please refresh or try again later.",
+  "doc.pdfLoading": "Loading PDF…",
+
+  "chat.placeholder": "Type a question…",
+  "chat.send": "Send",
+  "chat.trySuggested": "Try one of these questions to start:",
+  "chat.suggestedQ1": "Summarize the key points of this document",
+  "chat.suggestedQ2": "What are the main conclusions?",
+  "chat.suggestedQ3": "What key concepts does this document cover?",
+  "chat.suggestedQ4": "List important data and findings",
+  "chat.error": "Chat error: ",
+  "chat.networkError": "Network error, please try again later",
+
+  "citation.jumpTo": "Jump to page {page}",
+
+  "toolbar.zoomIn": "Zoom in",
+  "toolbar.zoomOut": "Zoom out",
+  "toolbar.prevPage": "Previous page",
+  "toolbar.nextPage": "Next page",
+
+  "header.darkMode": "Switch to dark mode",
+  "header.lightMode": "Switch to light mode",
+  "header.model": "Model",
+  "header.language": "Language",
+
+  "copy.button": "Copy",
+  "copy.copied": "Copied",
+  "feedback.helpful": "Helpful",
+  "feedback.notHelpful": "Not helpful",
+
+  "error.somethingWrong": "Something went wrong",
+  "error.refresh": "Refresh page"
+}
+

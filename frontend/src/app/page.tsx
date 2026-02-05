@@ -4,12 +4,14 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { getDocument, uploadDocument } from '../lib/api';
 import { useDocTalkStore } from '../store';
+import { useLocale } from '../i18n';
 
 type StoredDoc = { document_id: string; filename?: string; createdAt: number };
 
 export default function HomePage() {
   const router = useRouter();
   const { setDocument, setDocumentStatus } = useDocTalkStore();
+  const { t } = useLocale();
   const [isDragging, setDragging] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [progressText, setProgressText] = useState('');
@@ -24,15 +26,15 @@ export default function HomePage() {
   const onFiles = useCallback(async (file: File) => {
     if (!file) return;
     if (file.type !== 'application/pdf') {
-      setProgressText('请上传 PDF 文件');
+      setProgressText(t('upload.pdfOnly'));
       return;
     }
     if (file.size > 50 * 1024 * 1024) {
-      setProgressText('文件大小不能超过 50MB');
+      setProgressText(t('upload.tooLarge'));
       return;
     }
     setUploading(true);
-    setProgressText('Uploading…');
+    setProgressText(t('upload.uploading'));
     setDocumentStatus('uploading');
     try {
       const res = await uploadDocument(file);
@@ -42,32 +44,32 @@ export default function HomePage() {
       const entry: StoredDoc = { document_id: docId, filename: res.filename, createdAt: Date.now() };
       localStorage.setItem('doctalk_docs', JSON.stringify([entry, ...docs.filter(d => d.document_id !== docId)]));
 
-      setProgressText('Parsing…');
+      setProgressText(t('upload.parsing'));
       const timer = setInterval(async () => {
         try {
           const info = await getDocument(docId);
           setDocumentStatus(info.status);
-          setProgressText(`Parsing pages: ${info.pages_parsed ?? 0}, indexing: ${info.chunks_indexed ?? 0}`);
+          setProgressText(t('upload.parsingProgress', { pagesParsed: info.pages_parsed ?? 0, chunksIndexed: info.chunks_indexed ?? 0 }));
           if (info.status === 'ready') {
             clearInterval(timer);
             router.push(`/d/${docId}`);
           }
           if (info.status === 'error') {
             clearInterval(timer);
-            setProgressText('Error during processing');
+            setProgressText(t('upload.error'));
             setUploading(false);
           }
         } catch (e) {
           clearInterval(timer);
-          setProgressText('Error');
+          setProgressText(t('upload.error'));
           setUploading(false);
         }
       }, 2000);
     } catch (e: any) {
-      setProgressText('上传失败，请检查网络或稍后重试');
+      setProgressText(t('upload.networkError'));
       setUploading(false);
     }
-  }, [router, setDocument, setDocumentStatus]);
+  }, [router, setDocument, setDocumentStatus, t]);
 
   const onDrop = (e: React.DragEvent) => {
     e.preventDefault();
@@ -84,8 +86,8 @@ export default function HomePage() {
   return (
     <main className="min-h-screen flex flex-col items-center justify-center p-8 gap-10 dark:bg-gray-900">
       <div className="max-w-2xl w-full">
-        <h1 className="text-3xl font-semibold text-center dark:text-gray-100">DocTalk</h1>
-        <p className="text-gray-600 dark:text-gray-400 mt-2 text-center">Upload a PDF to start chatting.</p>
+        <h1 className="text-3xl font-semibold text-center dark:text-gray-100">{t('app.title')}</h1>
+        <p className="text-gray-600 dark:text-gray-400 mt-2 text-center">{t('app.subtitle')}</p>
 
         <div
           className={`mt-6 border-2 border-dashed rounded-xl p-10 text-center ${isDragging ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20' : 'border-gray-300 dark:border-gray-600'}`}
@@ -94,15 +96,15 @@ export default function HomePage() {
           onDrop={onDrop}
         >
           <input ref={inputRef} type="file" accept="application/pdf" className="hidden" onChange={onInputChange} />
-          <p className="text-gray-700 dark:text-gray-300">Drag & drop your PDF here</p>
-          <p className="text-gray-500 dark:text-gray-400 text-sm">or</p>
+          <p className="text-gray-700 dark:text-gray-300">{t('upload.dragDrop')}</p>
+          <p className="text-gray-500 dark:text-gray-400 text-sm">{t('upload.or')}</p>
           <button
             type="button"
             onClick={() => inputRef.current?.click()}
             className="mt-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
             disabled={uploading}
           >
-            Choose File
+            {t('upload.chooseFile')}
           </button>
           {progressText && (
             <div className={`mt-4 text-sm ${uploading ? 'text-gray-600 dark:text-gray-400' : 'text-red-600 dark:text-red-400'}`}>{progressText}</div>
@@ -111,9 +113,9 @@ export default function HomePage() {
       </div>
 
       <div className="max-w-2xl w-full">
-        <h2 className="text-lg font-medium mb-3 dark:text-gray-100">我的文档</h2>
+        <h2 className="text-lg font-medium mb-3 dark:text-gray-100">{t('doc.myDocuments')}</h2>
         {myDocs.length === 0 ? (
-          <p className="text-gray-500 dark:text-gray-400 text-sm">暂无历史文档</p>) : (
+          <p className="text-gray-500 dark:text-gray-400 text-sm">{t('doc.noDocuments')}</p>) : (
           <ul className="divide-y dark:divide-gray-700 rounded-md border dark:border-gray-700">
             {myDocs.map((d) => (
               <li key={d.document_id} className="p-3 hover:bg-gray-50 dark:hover:bg-gray-800 flex items-center justify-between">
@@ -125,7 +127,7 @@ export default function HomePage() {
                   className="px-3 py-1.5 text-sm bg-gray-900 text-white rounded dark:bg-gray-100 dark:text-gray-900"
                   onClick={() => router.push(`/d/${d.document_id}`)}
                 >
-                  打开
+                  {t('doc.open')}
                 </button>
               </li>
             ))}

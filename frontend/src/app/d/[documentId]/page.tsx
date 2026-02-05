@@ -7,17 +7,21 @@ import { ChatPanel } from '../../../components/Chat';
 import Header from '../../../components/Header';
 import { createSession, getDocument, getDocumentFileUrl } from '../../../lib/api';
 import { useDocTalkStore } from '../../../store';
+import { Panel, Group, Separator } from 'react-resizable-panels';
+import { useLocale } from '../../../i18n';
 
 export default function DocumentReaderPage() {
   const params = useParams<{ documentId: string }>();
   const documentId = params?.documentId as string;
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
+  const { t } = useLocale();
   const {
     pdfUrl,
     currentPage,
     highlights,
     scale,
+    scrollNonce,
     setPdfUrl,
     setDocument,
     setDocumentName,
@@ -38,10 +42,10 @@ export default function DocumentReaderPage() {
       } catch (e: any) {
         const msg = String(e?.message || e || '');
         if (msg.includes('HTTP 404')) {
-          setError('文档不存在');
+          setError(t('doc.notFound'));
           return;
         }
-        setError('加载文档信息失败');
+        setError(t('doc.loadError'));
       }
       try {
         const file = await getDocumentFileUrl(documentId);
@@ -56,7 +60,7 @@ export default function DocumentReaderPage() {
         // 聊天会话创建失败将由 ChatPanel 的错误处理体现
       }
     })();
-  }, [documentId, setDocument, setDocumentName, setDocumentStatus, setPdfUrl, setSessionId]);
+  }, [documentId, setDocument, setDocumentName, setDocumentStatus, setPdfUrl, setSessionId, t]);
 
   return (
     <div className="flex flex-col h-screen w-full">
@@ -69,27 +73,39 @@ export default function DocumentReaderPage() {
               className="px-4 py-2 bg-gray-900 text-white rounded dark:bg-gray-100 dark:text-gray-900"
               onClick={() => router.push('/')}
             >
-              返回首页
+              {t('doc.backHome')}
             </button>
           </div>
         </div>
       ) : (
-        <div className="flex flex-1 min-h-0">
-          <div className="flex-1 min-w-0">
-            {pdfUrl ? (
-              <PdfViewer pdfUrl={pdfUrl} currentPage={currentPage} highlights={highlights} scale={scale} />
-            ) : (
-              <div className="h-full w-full flex items-center justify-center text-gray-500">Loading document…</div>
-            )}
-          </div>
-          <div className="w-[400px] min-w-[320px] max-w-[480px]">
-            {sessionId ? (
-              <ChatPanel sessionId={sessionId} onCitationClick={navigateToCitation} />
-            ) : (
-              <div className="h-full w-full flex items-center justify-center text-gray-500">Initializing chat…</div>
-            )}
-          </div>
-        </div>
+        <Group orientation="horizontal" className="flex-1 min-h-0">
+          <Panel defaultSize={35} minSize={25}>
+            <div className="h-full min-w-[320px]">
+              {sessionId ? (
+                <ChatPanel sessionId={sessionId} onCitationClick={navigateToCitation} />
+              ) : (
+                <div className="h-full w-full flex items-center justify-center text-gray-500">{t('doc.initChat')}</div>
+              )}
+            </div>
+          </Panel>
+
+          <Separator
+            className="w-1.5 bg-gray-200 dark:bg-gray-700 hover:bg-blue-400 dark:hover:bg-blue-500 transition-colors cursor-col-resize flex items-center justify-center"
+            aria-label="Resize panels"
+          >
+            <div className="w-0.5 h-8 bg-gray-400 dark:bg-gray-500 rounded-full" />
+          </Separator>
+
+          <Panel defaultSize={65} minSize={35}>
+            <div className="h-full">
+              {pdfUrl ? (
+                <PdfViewer pdfUrl={pdfUrl} currentPage={currentPage} highlights={highlights} scale={scale} scrollNonce={scrollNonce} />
+              ) : (
+                <div className="h-full w-full flex items-center justify-center text-gray-500">{t('doc.loading')}</div>
+              )}
+            </div>
+          </Panel>
+        </Group>
       )}
     </div>
   );

@@ -1,0 +1,57 @@
+{
+  "app.title": "DocTalk",
+  "app.subtitle": "Téléchargez un PDF pour commencer à discuter.",
+
+  "upload.dragDrop": "Glissez-déposez votre PDF ici",
+  "upload.or": "ou",
+  "upload.chooseFile": "Choisir un fichier",
+  "upload.uploading": "Téléversement…",
+  "upload.parsing": "Analyse…",
+  "upload.parsingProgress": "Pages analysées : {pagesParsed}, indexation : {chunksIndexed}",
+  "upload.error": "Erreur lors du traitement",
+  "upload.networkError": "Échec du téléversement, vérifiez le réseau ou réessayez plus tard",
+  "upload.pdfOnly": "Veuillez téléverser un fichier PDF",
+  "upload.tooLarge": "La taille du fichier ne peut pas dépasser 50 Mo",
+
+  "doc.myDocuments": "Mes documents",
+  "doc.noDocuments": "Aucun document pour le moment",
+  "doc.open": "Ouvrir",
+  "doc.notFound": "Document introuvable",
+  "doc.loadError": "Échec du chargement des informations du document",
+  "doc.backHome": "Retour à l'accueil",
+  "doc.loading": "Chargement du document…",
+  "doc.initChat": "Initialisation du chat…",
+  "doc.pdfLoadError": "Impossible de charger le PDF. Veuillez actualiser la page ou réessayer plus tard.",
+  "doc.pdfLoading": "Chargement du PDF…",
+
+  "chat.placeholder": "Posez une question…",
+  "chat.send": "Envoyer",
+  "chat.trySuggested": "Essayez l'une de ces questions pour commencer :",
+  "chat.suggestedQ1": "Résumez les points clés de ce document",
+  "chat.suggestedQ2": "Quelles sont les principales conclusions ?",
+  "chat.suggestedQ3": "Quels concepts clés ce document couvre-t-il ?",
+  "chat.suggestedQ4": "Dressez la liste des données et conclusions importantes",
+  "chat.error": "Erreur de chat : ",
+  "chat.networkError": "Erreur réseau, veuillez réessayer plus tard",
+
+  "citation.jumpTo": "Aller à la page {page}",
+
+  "toolbar.zoomIn": "Zoom avant",
+  "toolbar.zoomOut": "Zoom arrière",
+  "toolbar.prevPage": "Page précédente",
+  "toolbar.nextPage": "Page suivante",
+
+  "header.darkMode": "Passer en mode sombre",
+  "header.lightMode": "Passer en mode clair",
+  "header.model": "Modèle",
+  "header.language": "Langue",
+
+  "copy.button": "Copier",
+  "copy.copied": "Copié",
+  "feedback.helpful": "Utile",
+  "feedback.notHelpful": "Pas utile",
+
+  "error.somethingWrong": "Un problème est survenu",
+  "error.refresh": "Actualiser la page"
+}
+

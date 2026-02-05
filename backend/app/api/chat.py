@@ -48,7 +48,7 @@ async def get_session_messages(session_id: uuid.UUID, db: AsyncSession = Depends
 @chat_router.post("/sessions/{session_id}/chat")
 async def chat_stream(session_id: uuid.UUID, body: ChatRequest, db: AsyncSession = Depends(get_db_session)):
     async def event_generator() -> AsyncGenerator[str, None]:
-        async for ev in chat_service.chat_stream(session_id, body.message, db):
+        async for ev in chat_service.chat_stream(session_id, body.message, db, model=body.model):
             # Format per SSE: event: <type>\ndata: {json}\n\n
             line = f"event: {ev['event']}\n"
             payload = json.dumps(ev.get("data", {}), ensure_ascii=False)
@@ -64,4 +64,3 @@ async def chat_stream(session_id: uuid.UUID, body: ChatRequest, db: AsyncSession
             "Connection": "keep-alive",
         },
     )
-

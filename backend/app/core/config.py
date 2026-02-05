@@ -23,6 +23,16 @@ class Settings(BaseSettings):
     # LLM (通过 OpenRouter 调用)
     LLM_MODEL: str = Field(default="anthropic/claude-sonnet-4.5")
     LLM_MAX_CONTEXT_TOKENS: int = Field(default=180000)
+    ALLOWED_MODELS: list[str] = Field(default=[
+        "anthropic/claude-sonnet-4.5",
+        "anthropic/claude-opus-4.5",
+        "openai/gpt-5.2",
+        "openai/gpt-5.2-pro",
+        "google/gemini-3-pro-preview",
+        "deepseek/deepseek-v3.2",
+        "mistralai/mistral-large-2512",
+        "qwen/qwen3-coder-next",
+    ])
 
     # Object Storage (MinIO local / S3-compatible in production)
     MINIO_ENDPOINT: str = Field(default="localhost:9000")

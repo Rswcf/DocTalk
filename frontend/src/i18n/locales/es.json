@@ -1,0 +1,57 @@
+{
+  "app.title": "DocTalk",
+  "app.subtitle": "Sube un PDF para empezar a chatear.",
+
+  "upload.dragDrop": "Arrastra y suelta tu PDF aquí",
+  "upload.or": "o",
+  "upload.chooseFile": "Elegir archivo",
+  "upload.uploading": "Subiendo…",
+  "upload.parsing": "Analizando…",
+  "upload.parsingProgress": "Páginas analizadas: {pagesParsed}, indexando: {chunksIndexed}",
+  "upload.error": "Error durante el procesamiento",
+  "upload.networkError": "La subida falló, comprueba la red o inténtalo más tarde",
+  "upload.pdfOnly": "Por favor, sube un archivo PDF",
+  "upload.tooLarge": "El tamaño del archivo no puede exceder 50MB",
+
+  "doc.myDocuments": "Mis documentos",
+  "doc.noDocuments": "Todavía no hay documentos",
+  "doc.open": "Abrir",
+  "doc.notFound": "Documento no encontrado",
+  "doc.loadError": "Error al cargar la información del documento",
+  "doc.backHome": "Volver al inicio",
+  "doc.loading": "Cargando documento…",
+  "doc.initChat": "Inicializando el chat…",
+  "doc.pdfLoadError": "No se puede cargar el PDF. Actualiza la página o inténtalo de nuevo más tarde.",
+  "doc.pdfLoading": "Cargando PDF…",
+
+  "chat.placeholder": "Escribe una pregunta…",
+  "chat.send": "Enviar",
+  "chat.trySuggested": "Prueba una de estas preguntas para empezar:",
+  "chat.suggestedQ1": "Resume los puntos clave de este documento",
+  "chat.suggestedQ2": "¿Cuáles son las principales conclusiones?",
+  "chat.suggestedQ3": "¿Qué conceptos clave cubre este documento?",
+  "chat.suggestedQ4": "Enumera datos e hallazgos importantes",
+  "chat.error": "Error de chat: ",
+  "chat.networkError": "Error de red, inténtalo de nuevo más tarde",
+
+  "citation.jumpTo": "Saltar a la página {page}",
+
+  "toolbar.zoomIn": "Acercar",
+  "toolbar.zoomOut": "Alejar",
+  "toolbar.prevPage": "Página anterior",
+  "toolbar.nextPage": "Página siguiente",
+
+  "header.darkMode": "Cambiar a modo oscuro",
+  "header.lightMode": "Cambiar a modo claro",
+  "header.model": "Modelo",
+  "header.language": "Idioma",
+
+  "copy.button": "Copiar",
+  "copy.copied": "Copiado",
+  "feedback.helpful": "Útil",
+  "feedback.notHelpful": "No es útil",
+
+  "error.somethingWrong": "Algo salió mal",
+  "error.refresh": "Actualizar página"
+}
+

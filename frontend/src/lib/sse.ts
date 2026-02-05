@@ -20,11 +20,12 @@ export async function chatStream(
   onCitation: (c: Citation) => void,
   onError: (e: ErrorPayload) => void,
   onDone: (d: DonePayload) => void,
+  model?: string,
 ) {
   const res = await fetch(`${API_BASE}/api/sessions/${sessionId}/chat`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ message }),
+    body: JSON.stringify({ message, ...(model ? { model } : {}) }),
   });
 
   if (!res.ok || !res.body) {

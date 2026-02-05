@@ -1,0 +1,57 @@
+{
+  "app.title": "DocTalk",
+  "app.subtitle": "চ্যাট শুরু করতে একটি PDF আপলোড করুন।",
+
+  "upload.dragDrop": "আপনার PDF এখানে ড্র্যাগ ও ড্রপ করুন",
+  "upload.or": "অথবা",
+  "upload.chooseFile": "ফাইল নির্বাচন করুন",
+  "upload.uploading": "আপলোড হচ্ছে…",
+  "upload.parsing": "বিশ্লেষণ করা হচ্ছে…",
+  "upload.parsingProgress": "পৃষ্ঠা বিশ্লেষণ: {pagesParsed}, ইনডেক্সিং: {chunksIndexed}",
+  "upload.error": "প্রক্রিয়াকরণের সময় ত্রুটি",
+  "upload.networkError": "আপলোড ব্যর্থ, নেটওয়ার্ক পরীক্ষা করুন বা পরে আবার চেষ্টা করুন",
+  "upload.pdfOnly": "অনুগ্রহ করে একটি PDF ফাইল আপলোড করুন",
+  "upload.tooLarge": "ফাইলের আকার 50MB-এর বেশি হতে পারবে না",
+
+  "doc.myDocuments": "আমার নথিপত্র",
+  "doc.noDocuments": "এখনও কোনো নথি নেই",
+  "doc.open": "খুলুন",
+  "doc.notFound": "নথি খুঁজে পাওয়া যায়নি",
+  "doc.loadError": "নথির তথ্য লোড করতে ব্যর্থ",
+  "doc.backHome": "হোম পৃষ্ঠায় ফিরে যান",
+  "doc.loading": "নথি লোড হচ্ছে…",
+  "doc.initChat": "চ্যাট আরম্ভ করা হচ্ছে…",
+  "doc.pdfLoadError": "PDF লোড করা যায়নি। অনুগ্রহ করে পেজ রিফ্রেশ করুন বা পরে আবার চেষ্টা করুন।",
+  "doc.pdfLoading": "PDF লোড হচ্ছে…",
+
+  "chat.placeholder": "একটি প্রশ্ন লিখুন…",
+  "chat.send": "পাঠান",
+  "chat.trySuggested": "শুরু করতে এই প্রশ্নগুলির একটি চেষ্টা করুন:",
+  "chat.suggestedQ1": "এই নথির মূল পয়েন্টগুলি সংক্ষেপে বলুন",
+  "chat.suggestedQ2": "প্রধান উপসংহারগুলো কী?",
+  "chat.suggestedQ3": "এই নথিটি কোন গুরুত্বপূর্ণ ধারণাগুলি কভার করে?",
+  "chat.suggestedQ4": "গুরুত্বপূর্ণ ডেটা ও অনুসন্ধানগুলি তালিকাভুক্ত করুন",
+  "chat.error": "চ্যাটে ত্রুটি: ",
+  "chat.networkError": "নেটওয়ার্ক ত্রুটি, অনুগ্রহ করে পরে আবার চেষ্টা করুন",
+
+  "citation.jumpTo": "{page} নং পৃষ্ঠায় যান",
+
+  "toolbar.zoomIn": "জুম ইন",
+  "toolbar.zoomOut": "জুম আউট",
+  "toolbar.prevPage": "পূর্ববর্তী পৃষ্ঠা",
+  "toolbar.nextPage": "পরবর্তী পৃষ্ঠা",
+
+  "header.darkMode": "ডার্ক মোডে যান",
+  "header.lightMode": "লাইট মোডে যান",
+  "header.model": "মডেল",
+  "header.language": "ভাষা",
+
+  "copy.button": "কপি",
+  "copy.copied": "কপি হয়েছে",
+  "feedback.helpful": "সহায়ক",
+  "feedback.notHelpful": "সহায়ক নয়",
+
+  "error.somethingWrong": "কিছু ভুল হয়েছে",
+  "error.refresh": "পৃষ্ঠা রিফ্রেশ করুন"
+}
+

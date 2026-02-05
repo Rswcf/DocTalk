@@ -18,11 +18,13 @@ export interface DocTalkStore {
   scale: number;
   highlights: NormalizedBBox[];
   pdfUrl: string | null;
+  scrollNonce: number;
 
   // Chat
   sessionId: string | null;
   messages: Message[];
   isStreaming: boolean;
+  selectedModel: string;
 
   // Actions
   setDocument: (id: string) => void;
@@ -38,6 +40,7 @@ export interface DocTalkStore {
   addCitationToLastMessage: (citation: Citation) => void;
   setStreaming: (v: boolean) => void;
   setSessionId: (id: string) => void;
+  setSelectedModel: (id: string) => void;
   reset: () => void;
 }
 
@@ -54,6 +57,8 @@ const initialState = {
   sessionId: null as string | null,
   messages: [] as Message[],
   isStreaming: false,
+  scrollNonce: 0,
+  selectedModel: (typeof window !== 'undefined' ? localStorage.getItem('doctalk_model') : null) || "anthropic/claude-sonnet-4.5",
 };
 
 export const useDocTalkStore = create<DocTalkStore>((set, get) => ({
@@ -67,10 +72,15 @@ export const useDocTalkStore = create<DocTalkStore>((set, get) => ({
   setScale: (scale: number) => set({ scale: Math.max(0.25, scale) }),
   setHighlights: (highlights: NormalizedBBox[]) => set({ highlights }),
   navigateToCitation: (citation: Citation) => {
-    const pageBboxes = (citation.bboxes || []).filter(
-      (bb: any) => (bb.page ?? citation.page) === citation.page
-    );
-    set({ currentPage: citation.page, highlights: pageBboxes });
+    const bboxes = (citation.bboxes || []).map((bb: any) => ({
+      ...bb,
+      page: bb.page ?? citation.page,
+    }));
+    set((state) => ({
+      currentPage: citation.page,
+      highlights: bboxes,
+      scrollNonce: state.scrollNonce + 1,
+    }));
   },
   addMessage: (msg: Message) => set({ messages: [...get().messages, msg] }),
   updateLastMessage: (text: string) => {
@@ -90,5 +100,9 @@ export const useDocTalkStore = create<DocTalkStore>((set, get) => ({
   },
   setStreaming: (v: boolean) => set({ isStreaming: v }),
   setSessionId: (id: string) => set({ sessionId: id }),
-  reset: () => set({ ...initialState }),
+  setSelectedModel: (id: string) => {
+    set({ selectedModel: id });
+    try { localStorage.setItem('doctalk_model', id); } catch {}
+  },
+  reset: () => set((state) => ({ ...initialState, selectedModel: state.selectedModel })),
 }));

@@ -1,0 +1,57 @@
+{
+  "app.title": "DocTalk",
+  "app.subtitle": "Envie um PDF para começar a conversar.",
+
+  "upload.dragDrop": "Arraste e solte seu PDF aqui",
+  "upload.or": "ou",
+  "upload.chooseFile": "Escolher arquivo",
+  "upload.uploading": "Enviando…",
+  "upload.parsing": "Analisando…",
+  "upload.parsingProgress": "Páginas analisadas: {pagesParsed}, indexando: {chunksIndexed}",
+  "upload.error": "Erro durante o processamento",
+  "upload.networkError": "Falha no envio, verifique a rede ou tente novamente mais tarde",
+  "upload.pdfOnly": "Envie um arquivo PDF, por favor",
+  "upload.tooLarge": "O tamanho do arquivo não pode exceder 50MB",
+
+  "doc.myDocuments": "Meus documentos",
+  "doc.noDocuments": "Ainda não há documentos",
+  "doc.open": "Abrir",
+  "doc.notFound": "Documento não encontrado",
+  "doc.loadError": "Falha ao carregar informações do documento",
+  "doc.backHome": "Voltar para a página inicial",
+  "doc.loading": "Carregando documento…",
+  "doc.initChat": "Inicializando o chat…",
+  "doc.pdfLoadError": "Não foi possível carregar o PDF. Atualize a página ou tente novamente mais tarde.",
+  "doc.pdfLoading": "Carregando PDF…",
+
+  "chat.placeholder": "Digite uma pergunta…",
+  "chat.send": "Enviar",
+  "chat.trySuggested": "Experimente uma destas perguntas para começar:",
+  "chat.suggestedQ1": "Resuma os pontos principais deste documento",
+  "chat.suggestedQ2": "Quais são as principais conclusões?",
+  "chat.suggestedQ3": "Quais conceitos-chave este documento aborda?",
+  "chat.suggestedQ4": "Liste os dados e descobertas importantes",
+  "chat.error": "Erro no chat: ",
+  "chat.networkError": "Erro de rede, tente novamente mais tarde",
+
+  "citation.jumpTo": "Ir para a página {page}",
+
+  "toolbar.zoomIn": "Ampliar",
+  "toolbar.zoomOut": "Reduzir",
+  "toolbar.prevPage": "Página anterior",
+  "toolbar.nextPage": "Próxima página",
+
+  "header.darkMode": "Mudar para modo escuro",
+  "header.lightMode": "Mudar para modo claro",
+  "header.model": "Modelo",
+  "header.language": "Idioma",
+
+  "copy.button": "Copiar",
+  "copy.copied": "Copiado",
+  "feedback.helpful": "Útil",
+  "feedback.notHelpful": "Não é útil",
+
+  "error.somethingWrong": "Algo deu errado",
+  "error.refresh": "Atualizar página"
+}
+

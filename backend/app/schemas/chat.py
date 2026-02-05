@@ -9,6 +9,7 @@ from pydantic import BaseModel
 
 class ChatRequest(BaseModel):
     message: str
+    model: Optional[str] = None  # OpenRouter model ID override
 
 
 class ChatMessageResponse(BaseModel):
@@ -28,4 +29,3 @@ class SessionResponse(BaseModel):
 
 class SessionMessagesResponse(BaseModel):
     messages: List[ChatMessageResponse]
-

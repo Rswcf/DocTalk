@@ -121,7 +121,11 @@ class RefParserFSM:
 
 class ChatService:
     async def chat_stream(
-        self, session_id: uuid.UUID, user_message: str, db: AsyncSession
+        self,
+        session_id: uuid.UUID,
+        user_message: str,
+        db: AsyncSession,
+        model: Optional[str] = None,
     ) -> AsyncGenerator[Dict[str, Any], None]:
         """Main chat streaming generator producing SSE event dicts.
 
@@ -221,9 +225,14 @@ class ChatService:
         prompt_tokens: Optional[int] = None
         output_tokens: Optional[int] = None
 
+        # Validate model selection
+        effective_model = settings.LLM_MODEL
+        if model and model in settings.ALLOWED_MODELS:
+            effective_model = model
+
         try:
             stream = await client.chat.completions.create(
-                model=settings.LLM_MODEL,
+                model=effective_model,
                 max_tokens=2048,
                 messages=openai_messages,
                 stream=True,

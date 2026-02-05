@@ -8,21 +8,38 @@ import type { Citation, Message } from '../../types';
 import { useDocTalkStore } from '../../store';
 import MessageBubble from './MessageBubble';
 import CitationCard from './CitationCard';
+import { useLocale } from '../../i18n';
+
+/** 将 citations 按出现顺序重编号为连续的 1, 2, 3, ... */
+function renumberCitations(citations: Citation[]): Citation[] {
+  if (!citations || citations.length === 0) return [];
+  // 按 refIndex 去重，保留首次出现
+  const unique = citations.filter(
+    (c, i, arr) => arr.findIndex((x) => x.refIndex === c.refIndex) === i
+  );
+  // 按 offset 排序（文本中出现顺序）
+  const sorted = [...unique].sort((a, b) => a.offset - b.offset);
+  // 建立映射: oldRefIndex → newSequentialIndex
+  const refMap = new Map<number, number>();
+  sorted.forEach((c, i) => refMap.set(c.refIndex, i + 1));
+  // 应用新编号到所有 citations（含重复引用）
+  return citations.map((c) => ({
+    ...c,
+    refIndex: refMap.get(c.refIndex) ?? c.refIndex,
+  }));
+}
 
 interface ChatPanelProps {
   sessionId: string;
   onCitationClick: (c: Citation) => void;
 }
 
-const SUGGESTED_QUESTIONS = [
-  '请总结这篇文档的要点',
-  '文档的主要结论是什么？',
-  '这篇文档涉及哪些关键概念？',
-  '请列出文档中的重要数据和发现',
-];
+const SUGGESTED_KEYS = ['chat.suggestedQ1', 'chat.suggestedQ2', 'chat.suggestedQ3', 'chat.suggestedQ4'] as const;
 
 export default function ChatPanel({ sessionId, onCitationClick }: ChatPanelProps) {
   const { messages, isStreaming, addMessage, updateLastMessage, addCitationToLastMessage, setStreaming } = useDocTalkStore();
+  const selectedModel = useDocTalkStore((s) => s.selectedModel);
+  const { t } = useLocale();
   const [input, setInput] = useState('');
   const listRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -69,7 +86,7 @@ export default function ChatPanel({ sessionId, onCitationClick }: ChatPanelProps
       (c) => addCitationToLastMessage(c),
       (err) => {
         setStreaming(false);
-        const errText = `聊天出错：${err?.message || '网络异常，请稍后重试'}`;
+        const errText = `${t('chat.error')}${err?.message || t('chat.networkError')}`;
         const errorMsg: Message = {
           id: `m_${Date.now()}_e`,
           role: 'assistant',
@@ -80,9 +97,10 @@ export default function ChatPanel({ sessionId, onCitationClick }: ChatPanelProps
         addMessage(errorMsg);
       },
       () => setStreaming(false),
+      selectedModel,
     );
     setInput('');
-  }, [isStreaming, sessionId, addMessage, updateLastMessage, addCitationToLastMessage, setStreaming]);
+  }, [isStreaming, sessionId, addMessage, updateLastMessage, addCitationToLastMessage, setStreaming, selectedModel, t]);
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -102,46 +120,53 @@ export default function ChatPanel({ sessionId, onCitationClick }: ChatPanelProps
   };
 
   return (
-    <div className="flex h-full flex-col border-l dark:border-gray-700">
+    <div className="flex h-full flex-col border-r dark:border-gray-700">
       <div ref={listRef} className="flex-1 overflow-auto p-4">
         {messages.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full gap-3 px-4">
-            <p className="text-sm text-gray-500 dark:text-gray-400 mb-2">试试以下问题开始对话：</p>
-            {SUGGESTED_QUESTIONS.map((q) => (
+            <p className="text-sm text-gray-500 dark:text-gray-400 mb-2">{t('chat.trySuggested')}</p>
+            {SUGGESTED_KEYS.map((k) => (
               <button
-                key={q}
+                key={k}
                 type="button"
-                onClick={() => handleSuggestedClick(q)}
+                onClick={() => handleSuggestedClick(t(k))}
                 className="w-full text-left text-sm px-4 py-2.5 border rounded-xl hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-800 transition-colors text-gray-700 dark:text-gray-300"
               >
-                {q}
+                {t(k)}
               </button>
             ))}
           </div>
         ) : (
-          messages.map((m) => (
-            <div key={m.id}>
-              <MessageBubble message={m} onCitationClick={onCitationClick} />
-              {m.role === 'assistant' && m.citations && m.citations.length > 0 && (() => {
-                const uniqueCitations = m.citations.filter(
-                  (c, i, arr) => arr.findIndex((x) => x.refIndex === c.refIndex) === i
-                );
-                return (
-                <div className="mt-2 pl-6 space-y-2">
-                  {uniqueCitations.map((c) => (
-                    <CitationCard
-                      key={`${m.id}-${c.refIndex}`}
-                      refIndex={c.refIndex}
-                      textSnippet={c.textSnippet}
-                      page={c.page}
-                      onClick={() => onCitationClick(c)}
-                    />
-                  ))}
-                </div>
-                );
-              })()}
-            </div>
-          ))
+          messages.map((m) => {
+            const displayCitations = (m.role === 'assistant' && m.citations && m.citations.length > 0)
+              ? renumberCitations(m.citations)
+              : undefined;
+            const displayMessage = displayCitations ? { ...m, citations: displayCitations } : m;
+
+            return (
+              <div key={m.id}>
+                <MessageBubble message={displayMessage} onCitationClick={onCitationClick} />
+                {displayCitations && displayCitations.length > 0 && (() => {
+                  const uniqueCitations = displayCitations
+                    .filter((c, i, arr) => arr.findIndex((x) => x.refIndex === c.refIndex) === i)
+                    .sort((a, b) => a.refIndex - b.refIndex);
+                  return (
+                  <div className="mt-2 pl-6 space-y-2">
+                    {uniqueCitations.map((c) => (
+                      <CitationCard
+                        key={`${m.id}-${c.refIndex}`}
+                        refIndex={c.refIndex}
+                        textSnippet={c.textSnippet}
+                        page={c.page}
+                        onClick={() => onCitationClick(c)}
+                      />
+                    ))}
+                  </div>
+                  );
+                })()}
+              </div>
+            );
+          })
         )}
       </div>
       <form onSubmit={onSubmit} className="p-3 border-t dark:border-gray-700">
@@ -150,7 +175,7 @@ export default function ChatPanel({ sessionId, onCitationClick }: ChatPanelProps
             ref={textareaRef}
             className="flex-1 border rounded-xl px-3 py-2 text-sm resize-none overflow-y-auto focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-100"
             style={{ minHeight: '40px', maxHeight: '160px' }}
-            placeholder="输入问题…"
+            placeholder={t('chat.placeholder')}
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={onKeyDown}
@@ -161,7 +186,7 @@ export default function ChatPanel({ sessionId, onCitationClick }: ChatPanelProps
             type="submit"
             className="p-2 bg-blue-600 text-white rounded-xl disabled:opacity-60 hover:bg-blue-700 transition-colors shrink-0"
             disabled={isStreaming || !input.trim()}
-            title="发送"
+            title={t('chat.send')}
           >
             <SendHorizontal size={18} />
           </button>

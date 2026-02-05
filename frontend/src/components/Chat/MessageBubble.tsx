@@ -5,6 +5,7 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { Copy, Check, ThumbsUp, ThumbsDown } from 'lucide-react';
 import type { Citation, Message } from '../../types';
+import { useLocale } from '../../i18n';
 
 interface MessageBubbleProps {
   message: Message;
@@ -26,6 +27,7 @@ function processCitationLinks(
   children: React.ReactNode,
   citations: Citation[],
   onClick?: (c: Citation) => void,
+  t?: (key: string, params?: Record<string, string | number>) => string,
 ): React.ReactNode {
   if (!citations || citations.length === 0) return children;
 
@@ -49,7 +51,7 @@ function processCitationLinks(
               key={`cite-${refNum}-${keyIdx++}`}
               className="text-blue-600 dark:text-blue-400 hover:underline cursor-pointer select-none font-medium"
               onClick={() => onClick?.(citation)}
-              title={`Jump to page ${citation.page}`}
+              title={t ? t('citation.jumpTo', { page: citation.page }) : `Jump to page ${citation.page}`}
             >
               [{refNum}]
             </span>
@@ -67,7 +69,7 @@ function processCitationLinks(
 
     if (React.isValidElement(child) && child.props?.children) {
       return React.cloneElement(child as React.ReactElement<any>, {
-        children: processCitationLinks(child.props.children, citations, onClick),
+        children: processCitationLinks(child.props.children, citations, onClick, t),
       });
     }
 
@@ -79,9 +81,10 @@ function createCitationComponent(
   Tag: string,
   citations: Citation[],
   onClick?: (c: Citation) => void,
+  t?: (key: string, params?: Record<string, string | number>) => string,
 ) {
   return function CitationElement({ children, ...props }: any) {
-    return React.createElement(Tag, props, processCitationLinks(children, citations, onClick));
+    return React.createElement(Tag, props, processCitationLinks(children, citations, onClick, t));
   };
 }
 
@@ -109,6 +112,7 @@ export default function MessageBubble({ message, onCitationClick }: MessageBubbl
   const isUser = message.role === 'user';
   const isError = !!message.isError;
   const isAssistant = !isUser;
+  const { t } = useLocale();
 
   const [copied, setCopied] = useState(false);
   const [feedback, setFeedback] = useState<Feedback>(null);
@@ -143,10 +147,10 @@ export default function MessageBubble({ message, onCitationClick }: MessageBubbl
     const tags = ['p', 'li', 'td', 'th', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'strong', 'em', 'blockquote'] as const;
     const components: Record<string, any> = {};
     for (const tag of tags) {
-      components[tag] = createCitationComponent(tag, citations, onCitationClick);
+      components[tag] = createCitationComponent(tag, citations, onCitationClick, t);
     }
     return components;
-  }, [message.citations, onCitationClick]);
+  }, [message.citations, onCitationClick, t]);
 
   return (
     <div className={`w-full flex ${isUser ? 'justify-end' : 'justify-start'} my-2 group`}>
@@ -156,7 +160,7 @@ export default function MessageBubble({ message, onCitationClick }: MessageBubbl
           <button
             onClick={handleCopy}
             className="absolute -top-2 right-0 opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded bg-white dark:bg-gray-700 shadow-sm border dark:border-gray-600 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
-            title="复制"
+            title={copied ? t('copy.copied') : t('copy.button')}
           >
             {copied ? <Check size={14} className="text-green-500" /> : <Copy size={14} />}
           </button>
@@ -192,7 +196,7 @@ export default function MessageBubble({ message, onCitationClick }: MessageBubbl
                   ? 'text-blue-600 dark:text-blue-400'
                   : 'text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300'
               }`}
-              title="有帮助"
+              title={t('feedback.helpful')}
             >
               <ThumbsUp size={14} fill={feedback === 'up' ? 'currentColor' : 'none'} />
             </button>
@@ -203,7 +207,7 @@ export default function MessageBubble({ message, onCitationClick }: MessageBubbl
                   ? 'text-red-500 dark:text-red-400'
                   : 'text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300'
               }`}
-              title="无帮助"
+              title={t('feedback.notHelpful')}
             >
               <ThumbsDown size={14} fill={feedback === 'down' ? 'currentColor' : 'none'} />
             </button>

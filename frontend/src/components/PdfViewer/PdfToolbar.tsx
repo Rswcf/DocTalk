@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { ZoomIn, ZoomOut, ChevronLeft, ChevronRight } from 'lucide-react';
+import { useLocale } from '../../i18n';
 
 interface PdfToolbarProps {
   currentPage: number;
@@ -12,6 +13,7 @@ interface PdfToolbarProps {
 }
 
 export default function PdfToolbar({ currentPage, totalPages, scale, onPageChange, onScaleChange }: PdfToolbarProps) {
+  const { t } = useLocale();
   const [pageInput, setPageInput] = useState(String(currentPage));
 
   useEffect(() => {
@@ -37,18 +39,18 @@ export default function PdfToolbar({ currentPage, totalPages, scale, onPageChang
   return (
     <div className="sticky top-0 z-10 flex items-center justify-center gap-2 px-3 py-1.5 bg-white/90 dark:bg-gray-800/90 backdrop-blur border-b dark:border-gray-700 text-sm">
       {/* Zoom controls */}
-      <button onClick={zoomOut} className="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700" title="Zoom out">
+      <button onClick={zoomOut} className="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700" title={t('toolbar.zoomOut')}>
         <ZoomOut size={16} />
       </button>
       <span className="w-12 text-center text-xs tabular-nums">{Math.round(scale * 100)}%</span>
-      <button onClick={zoomIn} className="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700" title="Zoom in">
+      <button onClick={zoomIn} className="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700" title={t('toolbar.zoomIn')}>
         <ZoomIn size={16} />
       </button>
 
       <div className="w-px h-5 bg-gray-300 dark:bg-gray-600 mx-1" />
 
       {/* Page navigation */}
-      <button onClick={prevPage} disabled={currentPage <= 1} className="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-30" title="Previous page">
+      <button onClick={prevPage} disabled={currentPage <= 1} className="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-30" title={t('toolbar.prevPage')}>
         <ChevronLeft size={16} />
       </button>
       <div className="flex items-center gap-1">
@@ -62,7 +64,7 @@ export default function PdfToolbar({ currentPage, totalPages, scale, onPageChang
         />
         <span className="text-xs text-gray-500 dark:text-gray-400">/ {totalPages}</span>
       </div>
-      <button onClick={nextPage} disabled={currentPage >= totalPages} className="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-30" title="Next page">
+      <button onClick={nextPage} disabled={currentPage >= totalPages} className="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-30" title={t('toolbar.nextPage')}>
         <ChevronRight size={16} />
       </button>
     </div>

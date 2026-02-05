@@ -1,0 +1,57 @@
+{
+  "app.title": "DocTalk",
+  "app.subtitle": "चैट शुरू करने के लिए PDF अपलोड करें।",
+
+  "upload.dragDrop": "अपना PDF यहाँ खींचकर छोड़ें",
+  "upload.or": "या",
+  "upload.chooseFile": "फ़ाइल चुनें",
+  "upload.uploading": "अपलोड हो रहा है…",
+  "upload.parsing": "पार्स किया जा रहा है…",
+  "upload.parsingProgress": "पृष्ठ पार्स: {pagesParsed}, इंडेक्सिंग: {chunksIndexed}",
+  "upload.error": "प्रक्रिया के दौरान त्रुटि",
+  "upload.networkError": "अपलोड विफल, कृपया नेटवर्क जांचें या बाद में पुनः प्रयास करें",
+  "upload.pdfOnly": "कृपया PDF फ़ाइल अपलोड करें",
+  "upload.tooLarge": "फ़ाइल का आकार 50MB से अधिक नहीं हो सकता",
+
+  "doc.myDocuments": "मेरे दस्तावेज़",
+  "doc.noDocuments": "अभी तक कोई दस्तावेज़ नहीं",
+  "doc.open": "खोलें",
+  "doc.notFound": "दस्तावेज़ नहीं मिला",
+  "doc.loadError": "दस्तावेज़ जानकारी लोड करने में विफल",
+  "doc.backHome": "मुख्य पृष्ठ पर लौटें",
+  "doc.loading": "दस्तावेज़ लोड हो रहा है…",
+  "doc.initChat": "चैट प्रारंभ की जा रही है…",
+  "doc.pdfLoadError": "PDF लोड नहीं हो सका। कृपया पेज रीफ़्रेश करें या बाद में फिर से प्रयास करें।",
+  "doc.pdfLoading": "PDF लोड हो रहा है…",
+
+  "chat.placeholder": "एक प्रश्न लिखें…",
+  "chat.send": "भेजें",
+  "chat.trySuggested": "शुरू करने के लिए इनमें से कोई प्रश्न आज़माएँ:",
+  "chat.suggestedQ1": "कृपया इस दस्तावेज़ के मुख्य बिंदुओं का सार बताएं",
+  "chat.suggestedQ2": "मुख्य निष्कर्ष क्या हैं?",
+  "chat.suggestedQ3": "यह दस्तावेज़ किन मुख्य अवधारणाओं को कवर करता है?",
+  "chat.suggestedQ4": "महत्वपूर्ण डेटा और निष्कर्ष सूचीबद्ध करें",
+  "chat.error": "चैट त्रुटि: ",
+  "chat.networkError": "नेटवर्क त्रुटि, कृपया बाद में पुनः प्रयास करें",
+
+  "citation.jumpTo": "पृष्ठ {page} पर जाएँ",
+
+  "toolbar.zoomIn": "ज़ूम इन",
+  "toolbar.zoomOut": "ज़ूम आउट",
+  "toolbar.prevPage": "पिछला पृष्ठ",
+  "toolbar.nextPage": "अगला पृष्ठ",
+
+  "header.darkMode": "डार्क मोड पर स्विच करें",
+  "header.lightMode": "लाइट मोड पर स्विच करें",
+  "header.model": "मॉडेल",
+  "header.language": "भाषा",
+
+  "copy.button": "कॉपी करें",
+  "copy.copied": "कॉपी हो गया",
+  "feedback.helpful": "उपयोगी",
+  "feedback.notHelpful": "उपयोगी नहीं",
+
+  "error.somethingWrong": "कुछ गड़बड़ हो गई",
+  "error.refresh": "पेज रीफ़्रेश करें"
+}
+

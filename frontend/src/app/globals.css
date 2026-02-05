@@ -5,11 +5,17 @@
 :root {
   --background: #ffffff;
   --foreground: #111827;
+  /* Highlight colors */
+  --highlight-base: rgba(56, 189, 248, 0.25);
+  --highlight-strong: rgba(56, 189, 248, 0.5);
 }
 
 .dark {
   --background: #0f172a;
   --foreground: #f1f5f9;
+  /* Dark mode highlight colors */
+  --highlight-base: rgba(56, 189, 248, 0.20);
+  --highlight-strong: rgba(56, 189, 248, 0.5);
 }
 
 html, body {
@@ -36,10 +42,16 @@ body {
   margin-bottom: 0.125em;
 }
 
-@keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
+/* PDF text-level citation highlighting */
+.textLayer mark.pdf-highlight {
+  background-color: var(--highlight-base);
+  color: transparent;
+  border-radius: 2px;
+  padding: 1px 0;
+  animation: highlightPulse 0.6s ease-out;
 }
-.animate-fadeIn {
-  animation: fadeIn 0.3s ease-out;
+
+@keyframes highlightPulse {
+  0% { background-color: var(--highlight-strong); }
+  100% { background-color: var(--highlight-base); }
 }

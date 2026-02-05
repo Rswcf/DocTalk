@@ -1,0 +1,57 @@
+{
+  "app.title": "DocTalk",
+  "app.subtitle": "上传 PDF 开始对话。",
+
+  "upload.dragDrop": "将 PDF 拖放到此处",
+  "upload.or": "或",
+  "upload.chooseFile": "选择文件",
+  "upload.uploading": "正在上传…",
+  "upload.parsing": "正在解析…",
+  "upload.parsingProgress": "解析页数：{pagesParsed}，索引：{chunksIndexed}",
+  "upload.error": "处理过程中出错",
+  "upload.networkError": "上传失败，请检查网络或稍后重试",
+  "upload.pdfOnly": "请上传 PDF 文件",
+  "upload.tooLarge": "文件大小不能超过 50MB",
+
+  "doc.myDocuments": "我的文档",
+  "doc.noDocuments": "暂无历史文档",
+  "doc.open": "打开",
+  "doc.notFound": "文档不存在",
+  "doc.loadError": "加载文档信息失败",
+  "doc.backHome": "返回首页",
+  "doc.loading": "正在加载文档…",
+  "doc.initChat": "正在初始化对话…",
+  "doc.pdfLoadError": "无法加载 PDF，请刷新页面或稍后重试。",
+  "doc.pdfLoading": "正在加载 PDF…",
+
+  "chat.placeholder": "输入问题…",
+  "chat.send": "发送",
+  "chat.trySuggested": "试试以下问题开始对话：",
+  "chat.suggestedQ1": "请总结这篇文档的要点",
+  "chat.suggestedQ2": "文档的主要结论是什么？",
+  "chat.suggestedQ3": "这篇文档涉及哪些关键概念？",
+  "chat.suggestedQ4": "请列出文档中的重要数据和发现",
+  "chat.error": "聊天出错：",
+  "chat.networkError": "网络异常，请稍后重试",
+
+  "citation.jumpTo": "跳转到第 {page} 页",
+
+  "toolbar.zoomIn": "放大",
+  "toolbar.zoomOut": "缩小",
+  "toolbar.prevPage": "上一页",
+  "toolbar.nextPage": "下一页",
+
+  "header.darkMode": "切换暗色模式",
+  "header.lightMode": "切换亮色模式",
+  "header.model": "模型",
+  "header.language": "语言",
+
+  "copy.button": "复制",
+  "copy.copied": "已复制",
+  "feedback.helpful": "有帮助",
+  "feedback.notHelpful": "无帮助",
+
+  "error.somethingWrong": "出了点问题",
+  "error.refresh": "刷新页面"
+}
+

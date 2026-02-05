@@ -1,0 +1,57 @@
+{
+  "app.title": "DocTalk",
+  "app.subtitle": "قم بتحميل ملف PDF لبدء الدردشة.",
+
+  "upload.dragDrop": "اسحب وأفلت ملف PDF هنا",
+  "upload.or": "أو",
+  "upload.chooseFile": "اختر ملفًا",
+  "upload.uploading": "جاري الرفع…",
+  "upload.parsing": "جارٍ التحليل…",
+  "upload.parsingProgress": "تحليل الصفحات: {pagesParsed}، الفهرسة: {chunksIndexed}",
+  "upload.error": "حدث خطأ أثناء المعالجة",
+  "upload.networkError": "فشل الرفع، يرجى التحقق من الشبكة أو المحاولة لاحقًا",
+  "upload.pdfOnly": "يرجى تحميل ملف PDF",
+  "upload.tooLarge": "لا يمكن أن يتجاوز حجم الملف 50 ميجابايت",
+
+  "doc.myDocuments": "مستنداتي",
+  "doc.noDocuments": "لا توجد مستندات بعد",
+  "doc.open": "فتح",
+  "doc.notFound": "لم يتم العثور على المستند",
+  "doc.loadError": "فشل تحميل معلومات المستند",
+  "doc.backHome": "العودة إلى الصفحة الرئيسية",
+  "doc.loading": "جارٍ تحميل المستند…",
+  "doc.initChat": "جارٍ تهيئة الدردشة…",
+  "doc.pdfLoadError": "تعذر تحميل ملف PDF. يرجى تحديث الصفحة أو المحاولة لاحقًا.",
+  "doc.pdfLoading": "جارٍ تحميل PDF…",
+
+  "chat.placeholder": "اكتب سؤالًا…",
+  "chat.send": "إرسال",
+  "chat.trySuggested": "جرّب أحد هذه الأسئلة للبدء:",
+  "chat.suggestedQ1": "لخّص النقاط الرئيسية لهذا المستند",
+  "chat.suggestedQ2": "ما هي الاستنتاجات الرئيسية؟",
+  "chat.suggestedQ3": "ما أهم المفاهيم التي يغطيها هذا المستند؟",
+  "chat.suggestedQ4": "اسرد البيانات والاكتشافات المهمة",
+  "chat.error": "خطأ في الدردشة: ",
+  "chat.networkError": "خطأ في الشبكة، حاول مرة أخرى لاحقًا",
+
+  "citation.jumpTo": "انتقل إلى الصفحة {page}",
+
+  "toolbar.zoomIn": "تكبير",
+  "toolbar.zoomOut": "تصغير",
+  "toolbar.prevPage": "الصفحة السابقة",
+  "toolbar.nextPage": "الصفحة التالية",
+
+  "header.darkMode": "التبديل إلى الوضع الداكن",
+  "header.lightMode": "التبديل إلى الوضع الفاتح",
+  "header.model": "النموذج",
+  "header.language": "اللغة",
+
+  "copy.button": "نسخ",
+  "copy.copied": "تم النسخ",
+  "feedback.helpful": "مفيد",
+  "feedback.notHelpful": "غير مفيد",
+
+  "error.somethingWrong": "حدث خطأ ما",
+  "error.refresh": "تحديث الصفحة"
+}
+
