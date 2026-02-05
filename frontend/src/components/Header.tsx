@@ -7,6 +7,7 @@ import { useDocTalkStore } from '../store';
 import ModelSelector from './ModelSelector';
 import LanguageSelector from './LanguageSelector';
 import { useLocale } from '../i18n';
+import SessionDropdown from './SessionDropdown';
 
 export default function Header() {
   const documentName = useDocTalkStore((s) => s.documentName);
@@ -23,9 +24,7 @@ export default function Header() {
       {documentName && (
         <>
           <span className="mx-3 text-gray-300 dark:text-gray-600">/</span>
-          <span className="text-sm text-gray-600 dark:text-gray-400 truncate max-w-[300px]" title={documentName}>
-            {documentName}
-          </span>
+          <SessionDropdown />
         </>
       )}
       <div className="ml-auto flex items-center gap-2">

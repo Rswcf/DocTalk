@@ -2,7 +2,8 @@
 
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { getDocument, uploadDocument } from '../lib/api';
+import { getDocument, uploadDocument, deleteDocument } from '../lib/api';
+import { Trash2 } from 'lucide-react';
 import { useDocTalkStore } from '../store';
 import { useLocale } from '../i18n';
 
@@ -123,12 +124,32 @@ export default function HomePage() {
                   <div className="text-sm font-medium dark:text-gray-200">{d.filename || d.document_id}</div>
                   <div className="text-xs text-gray-500 dark:text-gray-400">{new Date(d.createdAt).toLocaleString()}</div>
                 </div>
-                <button
-                  className="px-3 py-1.5 text-sm bg-gray-900 text-white rounded dark:bg-gray-100 dark:text-gray-900"
-                  onClick={() => router.push(`/d/${d.document_id}`)}
-                >
-                  {t('doc.open')}
-                </button>
+                <div className="flex items-center gap-2">
+                  <button
+                    className="px-3 py-1.5 text-sm bg-gray-900 text-white rounded dark:bg-gray-100 dark:text-gray-900"
+                    onClick={() => router.push(`/d/${d.document_id}`)}
+                  >
+                    {t('doc.open')}
+                  </button>
+                  <button
+                    className="p-2 rounded hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300"
+                    onClick={async () => {
+                      if (!window.confirm(t('doc.deleteDocConfirm'))) return;
+                      try {
+                        await deleteDocument(d.document_id);
+                      } catch (e) {
+                        // ignore network errors here; local list will still be updated
+                      }
+                      const docs: StoredDoc[] = JSON.parse(localStorage.getItem('doctalk_docs') || '[]');
+                      const next = docs.filter((x) => x.document_id !== d.document_id);
+                      localStorage.setItem('doctalk_docs', JSON.stringify(next));
+                      setMyDocs(next.sort((a, b) => b.createdAt - a.createdAt));
+                    }}
+                    title={t('doc.deleteDoc')}
+                  >
+                    <Trash2 size={16} />
+                  </button>
+                </div>
               </li>
             ))}
           </ul>

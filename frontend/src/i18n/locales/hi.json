@@ -52,6 +52,14 @@
   "feedback.notHelpful": "उपयोगी नहीं",
 
   "error.somethingWrong": "कुछ गड़बड़ हो गई",
-  "error.refresh": "पेज रीफ़्रेश करें"
+  "error.refresh": "पेज रीफ़्रेश करें",
+  "session.newChat": "नई चैट",
+  "session.recentChats": "हाल की चैट्स",
+  "session.deleteChat": "चैट हटाएँ",
+  "session.deleteChatConfirm": "क्या आप वाकई इस चैट को हटाना चाहते हैं? यह क्रिया वापस नहीं हो सकती।",
+  "session.backHome": "मुख्य पृष्ठ पर लौटें",
+  "session.noTitle": "नई चैट",
+  "session.messageCount": "{count} संदेश",
+  "doc.deleteDoc": "हटाएँ",
+  "doc.deleteDocConfirm": "क्या आप वाकई इस दस्तावेज़ और इसकी सभी चैट्स को हटाना चाहते हैं?"
 }
-

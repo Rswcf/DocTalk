@@ -25,7 +25,21 @@ class ChatMessageResponse(BaseModel):
 class SessionResponse(BaseModel):
     session_id: uuid.UUID
     document_id: uuid.UUID
+    title: Optional[str] = None
+    created_at: datetime
 
 
 class SessionMessagesResponse(BaseModel):
     messages: List[ChatMessageResponse]
+
+
+class SessionListItem(BaseModel):
+    session_id: uuid.UUID
+    title: Optional[str] = None
+    message_count: int
+    created_at: datetime
+    last_activity_at: datetime
+
+
+class SessionListResponse(BaseModel):
+    sessions: List[SessionListItem]

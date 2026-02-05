@@ -8,6 +8,7 @@ from typing import Any, AsyncGenerator, Dict, List, Optional
 
 from openai import AsyncOpenAI
 from sqlalchemy import asc, select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
@@ -155,6 +156,13 @@ class ChatService:
         db.add(user_msg)
         await db.commit()
 
+        # Auto-set session title from first user message
+        session = await db.get(ChatSession, session_id)
+        if session and not session.title:
+            clean = user_message.replace("\n", " ").replace("\r", "").strip()
+            session.title = clean[:50]
+            await db.commit()
+
         # 3) Load history (last N*2 messages before current user msg)
         max_turns = int(settings.MAX_CHAT_HISTORY_TURNS or 6)
         max_msgs = max_turns * 2
@@ -273,16 +281,21 @@ class ChatService:
 
         # 9) Save assistant message + citations
         assistant_text = "".join(assistant_text_parts)
-        asst_msg = Message(
-            session_id=session_id,
-            role="assistant",
-            content=assistant_text,
-            citations=citations or None,
-            prompt_tokens=int(prompt_tokens) if prompt_tokens is not None else None,
-            output_tokens=int(output_tokens) if output_tokens is not None else None,
-        )
-        db.add(asst_msg)
-        await db.commit()
+        try:
+            asst_msg = Message(
+                session_id=session_id,
+                role="assistant",
+                content=assistant_text,
+                citations=citations or None,
+                prompt_tokens=int(prompt_tokens) if prompt_tokens is not None else None,
+                output_tokens=int(output_tokens) if output_tokens is not None else None,
+            )
+            db.add(asst_msg)
+            await db.commit()
+        except IntegrityError:
+            await db.rollback()
+            yield sse("error", {"code": "PERSIST_FAILED", "message": "Failed to save response"})
+            return
 
         # 10) done
         yield sse("done", {"message_id": str(asst_msg.id), "citations_count": len(citations)})

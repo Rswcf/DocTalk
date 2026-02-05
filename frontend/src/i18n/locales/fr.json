@@ -52,6 +52,14 @@
   "feedback.notHelpful": "Pas utile",
 
   "error.somethingWrong": "Un problème est survenu",
-  "error.refresh": "Actualiser la page"
+  "error.refresh": "Actualiser la page",
+  "session.newChat": "Nouvelle discussion",
+  "session.recentChats": "Discussions récentes",
+  "session.deleteChat": "Supprimer la discussion",
+  "session.deleteChatConfirm": "Voulez-vous vraiment supprimer cette discussion ? Cette action est irréversible.",
+  "session.backHome": "Retour à l'accueil",
+  "session.noTitle": "Nouvelle discussion",
+  "session.messageCount": "{count} messages",
+  "doc.deleteDoc": "Supprimer",
+  "doc.deleteDocConfirm": "Voulez-vous vraiment supprimer ce document et toutes ses discussions ?"
 }
-

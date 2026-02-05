@@ -107,6 +107,7 @@ class ChatSession(Base):
     document_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), sa.ForeignKey("documents.id", ondelete="CASCADE"), nullable=False
     )
+    title: Mapped[Optional[str]] = mapped_column(sa.String(200), nullable=True)
     created_at: Mapped[sa.DateTime] = mapped_column(sa.DateTime(timezone=True), server_default=sa.text("now()"))
     updated_at: Mapped[sa.DateTime] = mapped_column(sa.DateTime(timezone=True), server_default=sa.text("now()"), onupdate=sa.func.now())
 
@@ -138,4 +139,3 @@ class Message(Base):
     __table_args__ = (
         sa.Index("idx_messages_session", "session_id", "created_at"),
     )
-

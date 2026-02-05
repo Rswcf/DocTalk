@@ -49,3 +49,15 @@ export interface SearchResult {
 export interface SearchResponse {
   results: SearchResult[];
 }
+
+export interface SessionItem {
+  session_id: string;
+  title: string | null;
+  message_count: number;
+  created_at: string;
+  last_activity_at: string;
+}
+
+export interface SessionListResponse {
+  sessions: SessionItem[];
+}

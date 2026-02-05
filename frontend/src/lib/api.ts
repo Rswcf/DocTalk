@@ -1,4 +1,4 @@
-import type { DocumentResponse, Message, SearchResponse, Citation } from '../types';
+import type { DocumentResponse, Message, SearchResponse, Citation, SessionListResponse } from '../types';
 
 export const API_BASE = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8000';
 
@@ -31,7 +31,7 @@ export async function getDocumentFileUrl(docId: string): Promise<{ url: string; 
   return handle(res);
 }
 
-export async function createSession(docId: string): Promise<{ session_id: string; document_id: string }>
+export async function createSession(docId: string): Promise<{ session_id: string; document_id: string; title: string | null; created_at: string }>
 {
   const res = await fetch(`${API_BASE}/api/documents/${docId}/sessions`, {
     method: 'POST',
@@ -74,4 +74,25 @@ export async function searchDocument(docId: string, query: string, topK?: number
     body: JSON.stringify({ query, top_k: topK }),
   });
   return handle(res);
+}
+
+export async function listSessions(docId: string): Promise<SessionListResponse> {
+  const res = await fetch(`${API_BASE}/api/documents/${docId}/sessions`);
+  return handle(res);
+}
+
+export async function deleteSession(sessionId: string): Promise<void> {
+  const res = await fetch(`${API_BASE}/api/sessions/${sessionId}`, { method: 'DELETE' });
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`HTTP ${res.status}: ${text}`);
+  }
+}
+
+export async function deleteDocument(docId: string): Promise<void> {
+  const res = await fetch(`${API_BASE}/api/documents/${docId}`, { method: 'DELETE' });
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`HTTP ${res.status}: ${text}`);
+  }
 }

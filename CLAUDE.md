@@ -40,6 +40,7 @@ Railway 项目包含 5 个服务：backend, Postgres, Redis, qdrant-v2, minio-v2
 - **向量维度**: 配置驱动 (EMBEDDING_DIM)，启动时校验 Qdrant collection
 - **删除**: 异步 202 + Celery worker
 - **认证 (MVP)**: 无登录，UUID 不可猜测
+- **会话管理**: 每文档支持多个独立对话会话，重新打开文档自动恢复最近活跃会话
 
 ### API 路由
 
@@ -50,8 +51,10 @@ DELETE /api/documents/{document_id}        # 删除文档（异步）
 GET    /api/documents/{document_id}/file-url  # 获取 presigned URL
 POST   /api/documents/{document_id}/search    # 语义搜索
 POST   /api/documents/{document_id}/sessions  # 创建聊天会话
+GET    /api/documents/{document_id}/sessions  # 列出文档的聊天会话
 GET    /api/sessions/{session_id}/messages     # 获取历史消息
 POST   /api/sessions/{session_id}/chat         # 对话（SSE streaming, 可选 model 字段）
+DELETE /api/sessions/{session_id}              # 删除聊天会话
 GET    /api/chunks/{chunk_id}                  # 获取 chunk 详情
 GET    /health                                 # 健康检查
 ```

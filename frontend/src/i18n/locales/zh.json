@@ -53,5 +53,14 @@
 
   "error.somethingWrong": "出了点问题",
   "error.refresh": "刷新页面"
+  ,
+  "session.newChat": "新建对话",
+  "session.recentChats": "最近对话",
+  "session.deleteChat": "删除当前对话",
+  "session.deleteChatConfirm": "确定要删除该对话吗？此操作不可恢复。",
+  "session.backHome": "返回首页",
+  "session.noTitle": "新建对话",
+  "session.messageCount": "{count} 条消息",
+  "doc.deleteDoc": "删除",
+  "doc.deleteDocConfirm": "确定要删除该文档及其所有对话吗？"
 }
-

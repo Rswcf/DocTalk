@@ -52,6 +52,14 @@
   "feedback.notHelpful": "সহায়ক নয়",
 
   "error.somethingWrong": "কিছু ভুল হয়েছে",
-  "error.refresh": "পৃষ্ঠা রিফ্রেশ করুন"
+  "error.refresh": "পৃষ্ঠা রিফ্রেশ করুন",
+  "session.newChat": "নতুন চ্যাট",
+  "session.recentChats": "সাম্প্রতিক চ্যাট",
+  "session.deleteChat": "চ্যাট মুছে ফেলুন",
+  "session.deleteChatConfirm": "আপনি কি নিশ্চিত যে এই চ্যাটটি মুছে ফেলতে চান? এটি পূর্বাবস্থায় ফেরানো যাবে না।",
+  "session.backHome": "হোম পৃষ্ঠায় ফিরে যান",
+  "session.noTitle": "নতুন চ্যাট",
+  "session.messageCount": "{count}টি বার্তা",
+  "doc.deleteDoc": "মুছে ফেলুন",
+  "doc.deleteDocConfirm": "আপনি কি নিশ্চিত যে এই নথিটি এবং এর সব চ্যাট মুছে ফেলতে চান?"
 }
-

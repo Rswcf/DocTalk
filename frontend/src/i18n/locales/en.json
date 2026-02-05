@@ -53,5 +53,14 @@
 
   "error.somethingWrong": "Something went wrong",
   "error.refresh": "Refresh page"
+  ,
+  "session.newChat": "New Chat",
+  "session.recentChats": "Recent Chats",
+  "session.deleteChat": "Delete Chat",
+  "session.deleteChatConfirm": "Are you sure you want to delete this chat? This cannot be undone.",
+  "session.backHome": "Back to Home",
+  "session.noTitle": "New Chat",
+  "session.messageCount": "{count} messages",
+  "doc.deleteDoc": "Delete",
+  "doc.deleteDocConfirm": "Are you sure you want to delete this document and all its chats?"
 }
-

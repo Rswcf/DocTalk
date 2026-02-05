@@ -1,7 +1,7 @@
 "use client";
 
 import { create } from 'zustand';
-import type { Citation, Message, NormalizedBBox } from '../types';
+import type { Citation, Message, NormalizedBBox, SessionItem } from '../types';
 
 type DocStatus = 'idle' | 'uploading' | 'parsing' | 'embedding' | 'ready' | 'error';
 
@@ -25,6 +25,7 @@ export interface DocTalkStore {
   messages: Message[];
   isStreaming: boolean;
   selectedModel: string;
+  sessions: SessionItem[];
 
   // Actions
   setDocument: (id: string) => void;
@@ -41,6 +42,11 @@ export interface DocTalkStore {
   setStreaming: (v: boolean) => void;
   setSessionId: (id: string) => void;
   setSelectedModel: (id: string) => void;
+  setMessages: (msgs: Message[]) => void;
+  setSessions: (sessions: SessionItem[]) => void;
+  addSession: (session: SessionItem) => void;
+  removeSession: (sessionId: string) => void;
+  updateSessionActivity: (sessionId: string) => void;
   reset: () => void;
 }
 
@@ -59,6 +65,7 @@ const initialState = {
   isStreaming: false,
   scrollNonce: 0,
   selectedModel: (typeof window !== 'undefined' ? localStorage.getItem('doctalk_model') : null) || "anthropic/claude-sonnet-4.5",
+  sessions: [] as SessionItem[],
 };
 
 export const useDocTalkStore = create<DocTalkStore>((set, get) => ({
@@ -83,6 +90,7 @@ export const useDocTalkStore = create<DocTalkStore>((set, get) => ({
     }));
   },
   addMessage: (msg: Message) => set({ messages: [...get().messages, msg] }),
+  setMessages: (msgs: Message[]) => set({ messages: msgs }),
   updateLastMessage: (text: string) => {
     const msgs = get().messages;
     if (msgs.length === 0) return;
@@ -104,5 +112,23 @@ export const useDocTalkStore = create<DocTalkStore>((set, get) => ({
     set({ selectedModel: id });
     try { localStorage.setItem('doctalk_model', id); } catch {}
   },
+  setSessions: (sessions: SessionItem[]) => set({ sessions }),
+  addSession: (session: SessionItem) => set((state) => ({
+    sessions: [session, ...state.sessions],
+  })),
+  removeSession: (sessionId: string) => set((state) => ({
+    sessions: state.sessions.filter((s) => s.session_id !== sessionId),
+  })),
+  updateSessionActivity: (sessionId: string) => set((state) => {
+    const now = new Date().toISOString();
+    const updated = state.sessions.map((s) =>
+      s.session_id === sessionId
+        ? { ...s, last_activity_at: now, message_count: s.message_count + 1 }
+        : s
+    );
+    // 重排：将活跃 session 移到顶部
+    updated.sort((a, b) => new Date(b.last_activity_at).getTime() - new Date(a.last_activity_at).getTime());
+    return { sessions: updated };
+  }),
   reset: () => set((state) => ({ ...initialState, selectedModel: state.selectedModel })),
 }));

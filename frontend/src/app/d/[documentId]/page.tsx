@@ -5,7 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { PdfViewer } from '../../../components/PdfViewer';
 import { ChatPanel } from '../../../components/Chat';
 import Header from '../../../components/Header';
-import { createSession, getDocument, getDocumentFileUrl } from '../../../lib/api';
+import { listSessions, createSession, getDocument, getDocumentFileUrl, getMessages } from '../../../lib/api';
 import { useDocTalkStore } from '../../../store';
 import { Panel, Group, Separator } from 'react-resizable-panels';
 import { useLocale } from '../../../i18n';
@@ -27,6 +27,9 @@ export default function DocumentReaderPage() {
     setDocumentName,
     setDocumentStatus,
     setSessionId,
+    setSessions,
+    addSession,
+    setMessages,
     sessionId,
     navigateToCitation,
   } = useDocTalkStore();
@@ -53,14 +56,40 @@ export default function DocumentReaderPage() {
       } catch (e) {
         // 保持 PdfViewer 自身的错误提示
       }
+      // Try to list existing sessions; fall back to creating a new one
+      let sessionReady = false;
       try {
-        const s = await createSession(documentId);
-        setSessionId(s.session_id);
-      } catch (e) {
-        // 聊天会话创建失败将由 ChatPanel 的错误处理体现
+        const sessionsData = await listSessions(documentId);
+        setSessions(sessionsData.sessions);
+        if (sessionsData.sessions.length > 0) {
+          const latest = sessionsData.sessions[0];
+          setSessionId(latest.session_id);
+          const msgsData = await getMessages(latest.session_id);
+          setMessages(msgsData.messages);
+          sessionReady = true;
+        }
+      } catch {
+        // listSessions endpoint may not exist yet — fall through to create
+      }
+      if (!sessionReady) {
+        try {
+          const s = await createSession(documentId);
+          setSessionId(s.session_id);
+          const now = s.created_at || new Date().toISOString();
+          addSession({
+            session_id: s.session_id,
+            title: null,
+            message_count: 0,
+            created_at: now,
+            last_activity_at: now,
+          });
+          setMessages([]);
+        } catch {
+          // session creation failed — ChatPanel will show init message
+        }
       }
     })();
-  }, [documentId, setDocument, setDocumentName, setDocumentStatus, setPdfUrl, setSessionId, t]);
+  }, [documentId, setDocument, setDocumentName, setDocumentStatus, setPdfUrl, setSessionId, setSessions, addSession, setMessages, t]);
 
   return (
     <div className="flex flex-col h-screen w-full">

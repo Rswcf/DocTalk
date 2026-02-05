@@ -52,6 +52,14 @@
   "feedback.notHelpful": "No es útil",
 
   "error.somethingWrong": "Algo salió mal",
-  "error.refresh": "Actualizar página"
+  "error.refresh": "Actualizar página",
+  "session.newChat": "Nuevo chat",
+  "session.recentChats": "Chats recientes",
+  "session.deleteChat": "Eliminar chat",
+  "session.deleteChatConfirm": "¿Seguro que deseas eliminar este chat? Esta acción no se puede deshacer.",
+  "session.backHome": "Volver al inicio",
+  "session.noTitle": "Nuevo chat",
+  "session.messageCount": "{count} mensajes",
+  "doc.deleteDoc": "Eliminar",
+  "doc.deleteDocConfirm": "¿Seguro que deseas eliminar este documento y todos sus chats?"
 }
-

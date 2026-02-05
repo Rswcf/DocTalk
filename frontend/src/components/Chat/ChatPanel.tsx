@@ -3,7 +3,6 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { SendHorizontal } from 'lucide-react';
 import { chatStream } from '../../lib/sse';
-import { getMessages } from '../../lib/api';
 import type { Citation, Message } from '../../types';
 import { useDocTalkStore } from '../../store';
 import MessageBubble from './MessageBubble';
@@ -37,26 +36,14 @@ interface ChatPanelProps {
 const SUGGESTED_KEYS = ['chat.suggestedQ1', 'chat.suggestedQ2', 'chat.suggestedQ3', 'chat.suggestedQ4'] as const;
 
 export default function ChatPanel({ sessionId, onCitationClick }: ChatPanelProps) {
-  const { messages, isStreaming, addMessage, updateLastMessage, addCitationToLastMessage, setStreaming } = useDocTalkStore();
+  const { messages, isStreaming, addMessage, updateLastMessage, addCitationToLastMessage, setStreaming, updateSessionActivity } = useDocTalkStore();
   const selectedModel = useDocTalkStore((s) => s.selectedModel);
   const { t } = useLocale();
   const [input, setInput] = useState('');
   const listRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  useEffect(() => {
-    (async () => {
-      try {
-        const data = await getMessages(sessionId);
-        for (const m of data.messages) {
-          addMessage(m);
-        }
-      } catch {
-        // ignore if history not available
-      }
-    })();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sessionId]);
+  // Message history is loaded in page.tsx
 
   useEffect(() => {
     listRef.current?.scrollTo({ top: listRef.current.scrollHeight, behavior: 'smooth' });
@@ -96,11 +83,11 @@ export default function ChatPanel({ sessionId, onCitationClick }: ChatPanelProps
         };
         addMessage(errorMsg);
       },
-      () => setStreaming(false),
+      () => { setStreaming(false); updateSessionActivity(sessionId); },
       selectedModel,
     );
     setInput('');
-  }, [isStreaming, sessionId, addMessage, updateLastMessage, addCitationToLastMessage, setStreaming, selectedModel, t]);
+  }, [isStreaming, sessionId, addMessage, updateLastMessage, addCitationToLastMessage, setStreaming, selectedModel, t, updateSessionActivity]);
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

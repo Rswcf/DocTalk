@@ -52,6 +52,14 @@
   "feedback.notHelpful": "غير مفيد",
 
   "error.somethingWrong": "حدث خطأ ما",
-  "error.refresh": "تحديث الصفحة"
+  "error.refresh": "تحديث الصفحة",
+  "session.newChat": "دردشة جديدة",
+  "session.recentChats": "الدردشات الأخيرة",
+  "session.deleteChat": "حذف الدردشة",
+  "session.deleteChatConfirm": "هل أنت متأكد أنك تريد حذف هذه الدردشة؟ لا يمكن التراجع عن ذلك.",
+  "session.backHome": "العودة إلى الصفحة الرئيسية",
+  "session.noTitle": "دردشة جديدة",
+  "session.messageCount": "{count} رسائل",
+  "doc.deleteDoc": "حذف",
+  "doc.deleteDocConfirm": "هل تريد بالتأكيد حذف هذا المستند وجميع دردشاته؟"
 }
-
