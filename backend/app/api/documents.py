@@ -8,7 +8,7 @@ from fastapi.responses import JSONResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
-from app.core.deps import get_current_user_optional, get_db_session
+from app.core.deps import get_current_user_optional, get_db_session, require_auth
 from app.models.tables import User
 from app.schemas.document import DocumentFileUrlResponse, DocumentResponse
 from app.services.doc_service import doc_service
@@ -21,7 +21,7 @@ documents_router = APIRouter(prefix="/documents", tags=["documents"])
 @documents_router.post("/upload", status_code=status.HTTP_202_ACCEPTED)
 async def upload_document(
     file: UploadFile = File(...),
-    user: Optional[User] = Depends(get_current_user_optional),
+    user: User = Depends(require_auth),
     db: AsyncSession = Depends(get_db_session),
 ):
     # Validate content type
@@ -44,9 +44,7 @@ async def upload_document(
             return data
 
     try:
-        document_id = await doc_service.create_document(
-            _MemUpload(), db, user_id=user.id if user else None
-        )
+        document_id = await doc_service.create_document(_MemUpload(), db, user_id=user.id)
     except ValueError as ve:
         # Map known validation errors to spec error codes
         code = str(ve)
@@ -105,4 +103,3 @@ async def delete_document(
     if not updated:
         return JSONResponse(status_code=404, content={"detail": "Document not found"})
     return JSONResponse(status_code=202, content={"status": "deleting", "message": "文档正在删除中"})
-
