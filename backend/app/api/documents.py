@@ -3,19 +3,51 @@ from __future__ import annotations
 import uuid
 from typing import Optional
 
-from fastapi import APIRouter, Depends, File, UploadFile, status
+from fastapi import APIRouter, Depends, File, UploadFile, status, HTTPException, Query
 from fastapi.responses import JSONResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
 from app.core.deps import get_current_user_optional, get_db_session, require_auth
 from app.models.tables import User
-from app.schemas.document import DocumentFileUrlResponse, DocumentResponse
+from app.schemas.document import DocumentFileUrlResponse, DocumentResponse, DocumentBrief
 from app.services.doc_service import doc_service
 from app.services.storage_service import storage_service
 
 
 documents_router = APIRouter(prefix="/documents", tags=["documents"])
+
+
+@documents_router.get("", response_model=list[DocumentBrief])
+async def list_documents(
+    mine: bool = Query(False, description="Filter by current user"),
+    user: Optional[User] = Depends(get_current_user_optional),
+    db: AsyncSession = Depends(get_db_session),
+):
+    """List documents. Use ?mine=1 to get only current user's documents."""
+    if mine:
+        if not user:
+            raise HTTPException(status_code=401, detail="Authentication required")
+        from sqlalchemy import select
+        from app.models.tables import Document
+
+        result = await db.execute(
+            select(Document)
+            .where(Document.user_id == user.id)
+            .order_by(Document.created_at.desc())
+            .limit(50)
+        )
+        docs = result.scalars().all()
+        return [
+            DocumentBrief(
+                id=str(d.id),
+                filename=d.filename,
+                status=d.status,
+                created_at=d.created_at.isoformat() if d.created_at else None,
+            )
+            for d in docs
+        ]
+    return []
 
 
 @documents_router.post("/upload", status_code=status.HTTP_202_ACCEPTED)

@@ -6,14 +6,21 @@ import { useRouter, useParams } from 'next/navigation';
 import Link from 'next/link';
 import { SendHorizontal, ArrowLeft } from 'lucide-react';
 import { useLocale } from '../../../i18n';
+import dynamic from 'next/dynamic';
+
+// Dynamic import to avoid SSR issues with pdf.js
+const PdfViewer = dynamic(
+  () => import('../../../components/PdfViewer/PdfViewer').then(mod => mod.default),
+  { ssr: false, loading: () => <div className="flex items-center justify-center h-full">Loading PDF...</div> }
+);
 
 const DEMO_MESSAGE_LIMIT = 5;
 
-// Placeholder: In P1, these will be real PDFs
+// Demo sample PDFs (served from /public/samples)
 const SAMPLE_PDFS: Record<string, string> = {
-  '10k': '/samples/placeholder.pdf',
-  'paper': '/samples/placeholder.pdf',
-  'contract': '/samples/placeholder.pdf',
+  '10k': '/samples/10k-sample.pdf',
+  'paper': '/samples/paper-sample.pdf',
+  'contract': '/samples/contract-sample.pdf',
 };
 
 interface DemoMessage {
@@ -33,9 +40,15 @@ export default function DemoReadPage() {
   const [remaining, setRemaining] = useState(DEMO_MESSAGE_LIMIT);
   const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [scale, setScale] = useState(1.0);
 
   const isLoggedIn = status === 'authenticated';
   const pdfUrl = SAMPLE_PDFS[sample] || SAMPLE_PDFS['10k'];
+  // Ensure PdfViewer receives absolute URL (it validates http/https)
+  const resolvedPdfUrl = typeof window !== 'undefined'
+    ? (pdfUrl.startsWith('http') ? pdfUrl : new URL(pdfUrl, window.location.origin).toString())
+    : pdfUrl;
 
   // Auto-scroll to bottom
   useEffect(() => {
@@ -178,15 +191,17 @@ export default function DemoReadPage() {
           </form>
         </div>
 
-        {/* PDF Placeholder */}
-        <div className="w-1/2 flex items-center justify-center bg-white dark:bg-gray-800">
-          <div className="text-center text-gray-500 dark:text-gray-400 p-8">
-            <p className="text-lg mb-2">{t('demo.pdfPlaceholder')}</p>
-            <p className="text-sm">{t('demo.pdfPlaceholderHint')}</p>
-          </div>
+        {/* PDF Viewer */}
+        <div className="w-1/2 bg-white dark:bg-gray-800 overflow-hidden">
+          <PdfViewer
+            pdfUrl={resolvedPdfUrl}
+            currentPage={currentPage}
+            highlights={[]}
+            scale={scale}
+            scrollNonce={0}
+          />
         </div>
       </div>
     </div>
   );
 }
-

@@ -1,10 +1,11 @@
 "use client";
 
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useSession, signIn } from 'next-auth/react';
-import { getDocument, uploadDocument, deleteDocument } from '../lib/api';
+import { getDocument, uploadDocument, deleteDocument, getMyDocuments } from '../lib/api';
+import type { DocumentBrief } from '../lib/api';
 import { Trash2 } from 'lucide-react';
 import { useDocTalkStore } from '../store';
 import { useLocale } from '../i18n';
@@ -22,12 +23,30 @@ export default function HomePage() {
   const [progressText, setProgressText] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
   const [myDocs, setMyDocs] = useState<StoredDoc[]>([]);
+  const [serverDocs, setServerDocs] = useState<DocumentBrief[]>([]);
   const isLoggedIn = status === 'authenticated';
 
   useEffect(() => {
     const docs = JSON.parse(localStorage.getItem('doctalk_docs') || '[]') as StoredDoc[];
     setMyDocs(docs.sort((a, b) => b.createdAt - a.createdAt));
   }, []);
+
+  useEffect(() => {
+    if (isLoggedIn) {
+      getMyDocuments().then(setServerDocs).catch(console.error);
+    }
+  }, [isLoggedIn]);
+
+  const allDocs = useMemo(() => {
+    const serverIds = new Set(serverDocs.map((d) => d.id));
+    const localOnly = myDocs.filter((d) => !serverIds.has(d.document_id));
+    const mappedServer: StoredDoc[] = serverDocs.map((d) => ({
+      document_id: d.id,
+      filename: d.filename,
+      createdAt: d.created_at ? new Date(d.created_at).getTime() : Date.now(),
+    }));
+    return [...mappedServer, ...localOnly].sort((a, b) => b.createdAt - a.createdAt);
+  }, [serverDocs, myDocs]);
 
   const onFiles = useCallback(async (file: File) => {
     if (!file) return;
@@ -174,10 +193,10 @@ export default function HomePage() {
 
           <div className="max-w-2xl w-full">
             <h2 className="text-lg font-medium mb-3 dark:text-gray-100">{t('doc.myDocuments')}</h2>
-            {myDocs.length === 0 ? (
+            {allDocs.length === 0 ? (
               <p className="text-gray-500 dark:text-gray-400 text-sm">{t('doc.noDocuments')}</p>) : (
               <ul className="divide-y dark:divide-gray-700 rounded-md border dark:border-gray-700">
-                {myDocs.map((d) => (
+                {allDocs.map((d) => (
                   <li key={d.document_id} className="p-3 hover:bg-gray-50 dark:hover:bg-gray-800 flex items-center justify-between">
                     <div>
                       <div className="text-sm font-medium dark:text-gray-200">{d.filename || d.document_id}</div>
@@ -203,6 +222,7 @@ export default function HomePage() {
                           const next = docs.filter((x) => x.document_id !== d.document_id);
                           localStorage.setItem('doctalk_docs', JSON.stringify(next));
                           setMyDocs(next.sort((a, b) => b.createdAt - a.createdAt));
+                          setServerDocs((prev) => prev.filter((s) => s.id !== d.document_id));
                         }}
                         title={t('doc.deleteDoc')}
                       >

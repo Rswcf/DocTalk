@@ -11,6 +11,22 @@ async function handle<T>(res: Response): Promise<T> {
   return res.json();
 }
 
+export interface DocumentBrief {
+  id: string;
+  filename: string;
+  status: string;
+  created_at: string | null;
+}
+
+export async function getMyDocuments(): Promise<DocumentBrief[]> {
+  const res = await fetch(`${PROXY_BASE}/api/documents?mine=1`);
+  if (!res.ok) {
+    if (res.status === 401) return [];
+    throw new Error(`Failed to fetch documents: ${res.status}`);
+  }
+  return res.json();
+}
+
 export async function uploadDocument(file: File): Promise<{ document_id: string; status: string; filename?: string }>
 {
   const form = new FormData();

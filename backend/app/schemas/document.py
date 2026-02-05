@@ -33,3 +33,9 @@ class DocumentFileUrlResponse(BaseModel):
     url: str
     expires_in: int
 
+
+class DocumentBrief(BaseModel):
+    id: str
+    filename: str
+    status: str
+    created_at: Optional[str] = None
