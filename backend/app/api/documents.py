@@ -1,13 +1,15 @@
 from __future__ import annotations
 
 import uuid
+from typing import Optional
 
 from fastapi import APIRouter, Depends, File, UploadFile, status
 from fastapi.responses import JSONResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
-from app.core.deps import get_db_session
+from app.core.deps import get_current_user_optional, get_db_session
+from app.models.tables import User
 from app.schemas.document import DocumentFileUrlResponse, DocumentResponse
 from app.services.doc_service import doc_service
 from app.services.storage_service import storage_service
@@ -19,6 +21,7 @@ documents_router = APIRouter(prefix="/documents", tags=["documents"])
 @documents_router.post("/upload", status_code=status.HTTP_202_ACCEPTED)
 async def upload_document(
     file: UploadFile = File(...),
+    user: Optional[User] = Depends(get_current_user_optional),
     db: AsyncSession = Depends(get_db_session),
 ):
     # Validate content type
@@ -41,7 +44,9 @@ async def upload_document(
             return data
 
     try:
-        document_id = await doc_service.create_document(_MemUpload(), db)
+        document_id = await doc_service.create_document(
+            _MemUpload(), db, user_id=user.id if user else None
+        )
     except ValueError as ve:
         # Map known validation errors to spec error codes
         code = str(ve)
@@ -54,24 +59,48 @@ async def upload_document(
 
 
 @documents_router.get("/{document_id}", response_model=DocumentResponse)
-async def get_document(document_id: uuid.UUID, db: AsyncSession = Depends(get_db_session)):
+async def get_document(
+    document_id: uuid.UUID,
+    user: Optional[User] = Depends(get_current_user_optional),
+    db: AsyncSession = Depends(get_db_session),
+):
     doc = await doc_service.get_document(document_id, db)
     if not doc:
+        return JSONResponse(status_code=404, content={"detail": "Document not found"})
+    # Authorization: if document has owner, verify user matches
+    if doc.user_id and (not user or doc.user_id != user.id):
         return JSONResponse(status_code=404, content={"detail": "Document not found"})
     return doc
 
 
 @documents_router.get("/{document_id}/file-url", response_model=DocumentFileUrlResponse)
-async def get_document_file_url(document_id: uuid.UUID, db: AsyncSession = Depends(get_db_session)):
+async def get_document_file_url(
+    document_id: uuid.UUID,
+    user: Optional[User] = Depends(get_current_user_optional),
+    db: AsyncSession = Depends(get_db_session),
+):
     doc = await doc_service.get_document(document_id, db)
     if not doc:
+        return JSONResponse(status_code=404, content={"detail": "Document not found"})
+    # Authorization: if document has owner, verify user matches
+    if doc.user_id and (not user or doc.user_id != user.id):
         return JSONResponse(status_code=404, content={"detail": "Document not found"})
     url = storage_service.get_presigned_url(doc.storage_key, ttl=settings.MINIO_PRESIGN_TTL)
     return DocumentFileUrlResponse(url=url, expires_in=int(settings.MINIO_PRESIGN_TTL))
 
 
 @documents_router.delete("/{document_id}", status_code=status.HTTP_202_ACCEPTED)
-async def delete_document(document_id: uuid.UUID, db: AsyncSession = Depends(get_db_session)):
+async def delete_document(
+    document_id: uuid.UUID,
+    user: Optional[User] = Depends(get_current_user_optional),
+    db: AsyncSession = Depends(get_db_session),
+):
+    doc = await doc_service.get_document(document_id, db)
+    if not doc:
+        return JSONResponse(status_code=404, content={"detail": "Document not found"})
+    # Authorization: if document has owner, verify user matches
+    if doc.user_id and (not user or doc.user_id != user.id):
+        return JSONResponse(status_code=404, content={"detail": "Document not found"})
     updated = await doc_service.mark_deleting(document_id, db)
     if not updated:
         return JSONResponse(status_code=404, content={"detail": "Document not found"})

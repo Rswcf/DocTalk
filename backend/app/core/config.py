@@ -59,6 +59,23 @@ class Settings(BaseSettings):
     # Optional DB URL placeholder for future use
     DATABASE_URL: Optional[str] = None
 
+    # Auth
+    AUTH_SECRET: Optional[str] = None  # Shared with Next.js Auth.js
+    ADAPTER_SECRET: Optional[str] = None  # For internal adapter API calls
+
+    # Stripe
+    STRIPE_SECRET_KEY: Optional[str] = None
+    STRIPE_WEBHOOK_SECRET: Optional[str] = None
+    STRIPE_PRICE_STARTER: str = "price_starter"
+    STRIPE_PRICE_PRO: str = "price_pro"
+    STRIPE_PRICE_ENTERPRISE: str = "price_enterprise"
+
+    # Credit amounts
+    CREDITS_STARTER: int = 50000
+    CREDITS_PRO: int = 200000
+    CREDITS_ENTERPRISE: int = 1000000
+    SIGNUP_BONUS_CREDITS: int = 10000
+
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", case_sensitive=False)
 
 

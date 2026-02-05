@@ -9,8 +9,28 @@ import type { NormalizedBBox } from '../../types';
 import { useDocTalkStore } from '../../store';
 import { useLocale } from '../../i18n';
 
-// Configure pdf.js worker (CDN)
-pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
+// Configure pdf.js worker with explicit https protocol
+pdfjs.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
+
+/**
+ * Validate that the PDF URL is safe to load.
+ * Only allows http(s) protocols to prevent javascript:, data:, or file:// attacks.
+ */
+function isValidPdfUrl(url: string): boolean {
+  if (!url || typeof url !== 'string') return false;
+  try {
+    const parsed = new URL(url);
+    // Only allow http and https protocols
+    if (!['http:', 'https:'].includes(parsed.protocol)) {
+      console.warn('Invalid PDF URL protocol:', parsed.protocol);
+      return false;
+    }
+    return true;
+  } catch {
+    console.warn('Invalid PDF URL format:', url);
+    return false;
+  }
+}
 
 export interface PdfViewerProps {
   pdfUrl: string;
@@ -22,6 +42,7 @@ export interface PdfViewerProps {
 
 export default function PdfViewer({ pdfUrl, currentPage, highlights, scale, scrollNonce }: PdfViewerProps) {
   const [numPages, setNumPages] = useState<number>(0);
+  const [urlError, setUrlError] = useState<string | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const pageRefs = useRef<(HTMLDivElement | null)[]>([]);
   const [visiblePage, setVisiblePage] = useState(1);
@@ -29,6 +50,16 @@ export default function PdfViewer({ pdfUrl, currentPage, highlights, scale, scro
   const { setScale } = useDocTalkStore();
   const setStoreTotalPages = (n: number) => useDocTalkStore.setState({ totalPages: n });
   const { t } = useLocale();
+
+  // Validate PDF URL
+  const validPdfUrl = useMemo(() => {
+    if (!isValidPdfUrl(pdfUrl)) {
+      setUrlError('Invalid PDF URL');
+      return null;
+    }
+    setUrlError(null);
+    return pdfUrl;
+  }, [pdfUrl]);
 
   // Scroll to page when currentPage changes (e.g. citation click or toolbar nav)
   useEffect(() => {
@@ -107,8 +138,13 @@ export default function PdfViewer({ pdfUrl, currentPage, highlights, scale, scro
         />
       )}
       <div className="flex-1 overflow-auto" ref={containerRef}>
+        {urlError ? (
+          <div className="p-4 text-red-600">{urlError}</div>
+        ) : !validPdfUrl ? (
+          <div className="p-4">{t('doc.pdfLoading')}</div>
+        ) : (
         <Document
-          file={pdfUrl}
+          file={validPdfUrl}
           onLoadSuccess={onDocumentLoadSuccess}
           loading={<div className="p-4">{t('doc.pdfLoading')}</div>}
           error={<div className="p-4 text-red-600">{t('doc.pdfLoadError')}</div>}
@@ -129,6 +165,7 @@ export default function PdfViewer({ pdfUrl, currentPage, highlights, scale, scro
             })}
           </div>
         </Document>
+        )}
       </div>
     </div>
   );

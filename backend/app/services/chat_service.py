@@ -12,8 +12,9 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
-from app.models.tables import ChatSession, Message
+from app.models.tables import ChatSession, Message, User
 from app.services.retrieval_service import retrieval_service
+from app.services import credit_service
 
 
 # ---------------------------
@@ -127,6 +128,7 @@ class ChatService:
         user_message: str,
         db: AsyncSession,
         model: Optional[str] = None,
+        user: Optional[User] = None,
     ) -> AsyncGenerator[Dict[str, Any], None]:
         """Main chat streaming generator producing SSE event dicts.
 
@@ -150,6 +152,28 @@ class ChatService:
             return
 
         document_id = session_obj.document_id
+
+        # Optional pre-chat credit check
+        effective_model = settings.LLM_MODEL
+        if model and model in settings.ALLOWED_MODELS:
+            effective_model = model
+
+        if user is not None:
+            try:
+                balance = await credit_service.get_user_credits(db, user.id)
+            except Exception:
+                balance = 0
+            if balance < credit_service.MIN_CREDITS_FOR_CHAT:
+                yield sse(
+                    "error",
+                    {
+                        "code": "INSUFFICIENT_CREDITS",
+                        "message": "Insufficient credits to start chat",
+                        "required": credit_service.MIN_CREDITS_FOR_CHAT,
+                        "balance": balance,
+                    },
+                )
+                return
 
         # 2) Save user message
         user_msg = Message(session_id=session_id, role="user", content=user_message)
@@ -233,10 +257,7 @@ class ChatService:
         prompt_tokens: Optional[int] = None
         output_tokens: Optional[int] = None
 
-        # Validate model selection
-        effective_model = settings.LLM_MODEL
-        if model and model in settings.ALLOWED_MODELS:
-            effective_model = model
+        # Validate model selection (already computed above)
 
         try:
             stream = await client.chat.completions.create(
@@ -296,6 +317,45 @@ class ChatService:
             await db.rollback()
             yield sse("error", {"code": "PERSIST_FAILED", "message": "Failed to save response"})
             return
+
+        # Credits: debit after successful chat and record usage
+        if user is not None:
+            pt = int(prompt_tokens or 0)
+            ct = int(output_tokens or 0)
+            try:
+                cost = credit_service.calculate_cost(pt, ct, effective_model)
+                ok = await credit_service.debit_credits(
+                    db,
+                    user_id=user.id,
+                    cost=cost,
+                    reason="chat_completion",
+                    ref_type="message",
+                    ref_id=str(asst_msg.id),
+                )
+                if ok:
+                    await credit_service.record_usage(
+                        db,
+                        user_id=user.id,
+                        message_id=asst_msg.id,
+                        model=effective_model,
+                        prompt_tokens=pt,
+                        completion_tokens=ct,
+                        cost_credits=cost,
+                    )
+                    await db.commit()
+                else:
+                    # Insufficient at debit time: emit warning event
+                    yield sse(
+                        "warn",
+                        {
+                            "code": "DEBIT_FAILED",
+                            "message": "Could not debit credits due to low balance",
+                            "cost": cost,
+                        },
+                    )
+            except Exception as e:
+                # Non-fatal accounting error
+                yield sse("warn", {"code": "ACCOUNTING_ERROR", "message": str(e)})
 
         # 10) done
         yield sse("done", {"message_id": str(asst_msg.id), "citations_count": len(citations)})

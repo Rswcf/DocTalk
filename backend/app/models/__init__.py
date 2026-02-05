@@ -1,5 +1,16 @@
 from .base import Base
-from .tables import Document, Page, Chunk, ChatSession, Message
+from .tables import (
+    Document,
+    Page,
+    Chunk,
+    ChatSession,
+    Message,
+    User,
+    Account,
+    VerificationToken,
+    CreditLedger,
+    UsageRecord,
+)
 
 __all__ = [
     "Base",
@@ -8,4 +19,9 @@ __all__ = [
     "Chunk",
     "ChatSession",
     "Message",
+    "User",
+    "Account",
+    "VerificationToken",
+    "CreditLedger",
+    "UsageRecord",
 ]

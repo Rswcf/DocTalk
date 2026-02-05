@@ -6,6 +6,10 @@ from .api.documents import documents_router
 from .api.search import search_router
 from .api.chat import chat_router
 from .api.chunks import chunks_router
+from .api.credits import router as credits_router
+from .api.users import router as users_router
+from .api.billing import router as billing_router
+from .api import auth
 from .services.storage_service import storage_service
 from .services.embedding_service import embedding_service
 
@@ -27,6 +31,10 @@ app.include_router(documents_router, prefix="/api")
 app.include_router(search_router, prefix="/api")
 app.include_router(chat_router, prefix="/api")
 app.include_router(chunks_router, prefix="/api")
+app.include_router(auth.router)
+app.include_router(credits_router)
+app.include_router(users_router)
+app.include_router(billing_router)
 
 
 @app.on_event("startup")

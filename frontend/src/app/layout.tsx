@@ -3,6 +3,7 @@ import './globals.css'
 import ErrorBoundary from '../components/ErrorBoundary'
 import { ThemeProvider } from './ThemeProvider'
 import LocaleProvider from '../i18n/LocaleProvider'
+import { Providers } from '../components/Providers'
 
 export const metadata: Metadata = {
   title: 'DocTalk',
@@ -18,9 +19,11 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <body>
         <ThemeProvider>
-          <LocaleProvider>
-            <ErrorBoundary>{children}</ErrorBoundary>
-          </LocaleProvider>
+          <Providers>
+            <LocaleProvider>
+              <ErrorBoundary>{children}</ErrorBoundary>
+            </LocaleProvider>
+          </Providers>
         </ThemeProvider>
       </body>
     </html>

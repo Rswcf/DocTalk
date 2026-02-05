@@ -6,8 +6,10 @@ import { useTheme } from 'next-themes';
 import { useDocTalkStore } from '../store';
 import ModelSelector from './ModelSelector';
 import LanguageSelector from './LanguageSelector';
+import { AuthButton } from './AuthButton';
 import { useLocale } from '../i18n';
 import SessionDropdown from './SessionDropdown';
+import { CreditsDisplay } from './CreditsDisplay';
 
 export default function Header() {
   const documentName = useDocTalkStore((s) => s.documentName);
@@ -36,6 +38,8 @@ export default function Header() {
         >
           {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
         </button>
+        <CreditsDisplay />
+        <AuthButton />
         <LanguageSelector />
       </div>
     </header>

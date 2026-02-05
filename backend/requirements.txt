@@ -11,4 +11,8 @@ qdrant-client
 openai
 python-multipart
 pydantic-settings
+email-validator
+python-jose[cryptography]
+itsdangerous
+stripe
 

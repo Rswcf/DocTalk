@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useRef, useState, useCallback } from 'react';
+import React, { useEffect, useRef, useState, useCallback, Component, ErrorInfo, ReactNode } from 'react';
 import { SendHorizontal } from 'lucide-react';
 import { chatStream } from '../../lib/sse';
 import type { Citation, Message } from '../../types';
@@ -8,6 +8,46 @@ import { useDocTalkStore } from '../../store';
 import MessageBubble from './MessageBubble';
 import CitationCard from './CitationCard';
 import { useLocale } from '../../i18n';
+import { PaywallModal } from '../PaywallModal';
+
+/**
+ * Error boundary for individual messages to prevent one broken message
+ * from crashing the entire chat panel.
+ */
+interface MessageErrorBoundaryProps {
+  children: ReactNode;
+  messageId: string;
+}
+
+interface MessageErrorBoundaryState {
+  hasError: boolean;
+}
+
+class MessageErrorBoundary extends Component<MessageErrorBoundaryProps, MessageErrorBoundaryState> {
+  constructor(props: MessageErrorBoundaryProps) {
+    super(props);
+    this.state = { hasError: false };
+  }
+
+  static getDerivedStateFromError(): MessageErrorBoundaryState {
+    return { hasError: true };
+  }
+
+  componentDidCatch(error: Error, errorInfo: ErrorInfo) {
+    console.error(`Error rendering message ${this.props.messageId}:`, error, errorInfo);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="p-3 rounded-lg bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 text-sm">
+          Failed to render message
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
 
 /** 将 citations 按出现顺序重编号为连续的 1, 2, 3, ... */
 function renumberCitations(citations: Citation[]): Citation[] {
@@ -42,6 +82,7 @@ export default function ChatPanel({ sessionId, onCitationClick }: ChatPanelProps
   const [input, setInput] = useState('');
   const listRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const [showPaywall, setShowPaywall] = useState(false);
 
   // Message history is loaded in page.tsx
 
@@ -73,6 +114,11 @@ export default function ChatPanel({ sessionId, onCitationClick }: ChatPanelProps
       (c) => addCitationToLastMessage(c),
       (err) => {
         setStreaming(false);
+        // Detect insufficient credits (HTTP 402) and show paywall modal
+        const isPaymentRequired = typeof err?.message === 'string' && err.message.includes('HTTP 402');
+        if (isPaymentRequired) {
+          setShowPaywall(true);
+        }
         const errText = `${t('chat.error')}${err?.message || t('chat.networkError')}`;
         const errorMsg: Message = {
           id: `m_${Date.now()}_e`,
@@ -108,6 +154,7 @@ export default function ChatPanel({ sessionId, onCitationClick }: ChatPanelProps
 
   return (
     <div className="flex h-full flex-col border-r dark:border-gray-700">
+      <PaywallModal isOpen={showPaywall} onClose={() => setShowPaywall(false)} />
       <div ref={listRef} className="flex-1 overflow-auto p-4">
         {messages.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full gap-3 px-4">
@@ -131,27 +178,29 @@ export default function ChatPanel({ sessionId, onCitationClick }: ChatPanelProps
             const displayMessage = displayCitations ? { ...m, citations: displayCitations } : m;
 
             return (
-              <div key={m.id}>
-                <MessageBubble message={displayMessage} onCitationClick={onCitationClick} />
-                {displayCitations && displayCitations.length > 0 && (() => {
-                  const uniqueCitations = displayCitations
-                    .filter((c, i, arr) => arr.findIndex((x) => x.refIndex === c.refIndex) === i)
-                    .sort((a, b) => a.refIndex - b.refIndex);
-                  return (
-                  <div className="mt-2 pl-6 space-y-2">
-                    {uniqueCitations.map((c) => (
-                      <CitationCard
-                        key={`${m.id}-${c.refIndex}`}
-                        refIndex={c.refIndex}
-                        textSnippet={c.textSnippet}
-                        page={c.page}
-                        onClick={() => onCitationClick(c)}
-                      />
-                    ))}
-                  </div>
-                  );
-                })()}
-              </div>
+              <MessageErrorBoundary key={m.id} messageId={m.id}>
+                <div>
+                  <MessageBubble message={displayMessage} onCitationClick={onCitationClick} />
+                  {displayCitations && displayCitations.length > 0 && (() => {
+                    const uniqueCitations = displayCitations
+                      .filter((c, i, arr) => arr.findIndex((x) => x.refIndex === c.refIndex) === i)
+                      .sort((a, b) => a.refIndex - b.refIndex);
+                    return (
+                    <div className="mt-2 pl-6 space-y-2">
+                      {uniqueCitations.map((c) => (
+                        <CitationCard
+                          key={`${m.id}-${c.refIndex}`}
+                          refIndex={c.refIndex}
+                          textSnippet={c.textSnippet}
+                          page={c.page}
+                          onClick={() => onCitationClick(c)}
+                        />
+                      ))}
+                    </div>
+                    );
+                  })()}
+                </div>
+              </MessageErrorBoundary>
             );
           })
         )}

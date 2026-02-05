@@ -16,7 +16,9 @@ from app.services.storage_service import storage_service
 class DocService:
     """Document lifecycle service."""
 
-    async def create_document(self, upload, db: AsyncSession) -> uuid.UUID:
+    async def create_document(
+        self, upload, db: AsyncSession, user_id: Optional[uuid.UUID] = None
+    ) -> uuid.UUID:
         """Save uploaded PDF to object storage, create DB record, dispatch parse.
 
         This method accepts an UploadFile-like object with attributes:
@@ -46,6 +48,7 @@ class DocService:
             file_size=len(data),
             storage_key=storage_key,
             status="parsing",
+            user_id=user_id,  # Associate with user if authenticated
         )
         db.add(doc)
         await db.commit()

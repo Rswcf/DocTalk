@@ -3,15 +3,16 @@ from __future__ import annotations
 import asyncio
 import json
 import uuid
-from typing import AsyncGenerator, Dict
+from typing import AsyncGenerator, Dict, Optional
 
 from fastapi import APIRouter, Depends, status
 from fastapi.responses import JSONResponse, StreamingResponse
 from sqlalchemy import asc, select, func, desc
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
-from app.core.deps import get_db_session
-from app.models.tables import ChatSession, Message
+from app.core.deps import get_current_user_optional, get_db_session
+from app.models.tables import ChatSession, Document, Message, User
 from app.schemas.chat import (
     ChatMessageResponse,
     ChatRequest,
@@ -21,13 +22,64 @@ from app.schemas.chat import (
     SessionListItem,
 )
 from app.services.chat_service import chat_service
+from app.services import credit_service
 
 
 chat_router = APIRouter(tags=["chat"])
 
 
+async def verify_session_access(
+    session_id: uuid.UUID,
+    user: Optional[User],
+    db: AsyncSession,
+) -> Optional[ChatSession]:
+    """Verify user has access to the session. Returns session if authorized, None otherwise."""
+    result = await db.execute(
+        select(ChatSession)
+        .options(selectinload(ChatSession.document))
+        .where(ChatSession.id == session_id)
+    )
+    session = result.scalar_one_or_none()
+    if not session:
+        return None
+
+    # If document has an owner, verify the user matches
+    if session.document and session.document.user_id:
+        if not user or session.document.user_id != user.id:
+            return None
+
+    return session
+
+
+async def verify_document_access(
+    document_id: uuid.UUID,
+    user: Optional[User],
+    db: AsyncSession,
+) -> Optional[Document]:
+    """Verify user has access to the document. Returns document if authorized, None otherwise."""
+    doc = await db.get(Document, document_id)
+    if not doc:
+        return None
+
+    # If document has an owner, verify the user matches
+    if doc.user_id:
+        if not user or doc.user_id != user.id:
+            return None
+
+    return doc
+
+
 @chat_router.post("/documents/{document_id}/sessions", status_code=status.HTTP_201_CREATED)
-async def create_session(document_id: uuid.UUID, db: AsyncSession = Depends(get_db_session)):
+async def create_session(
+    document_id: uuid.UUID,
+    user: Optional[User] = Depends(get_current_user_optional),
+    db: AsyncSession = Depends(get_db_session),
+):
+    # Verify document access
+    doc = await verify_document_access(document_id, user, db)
+    if not doc:
+        return JSONResponse(status_code=404, content={"detail": "Document not found"})
+
     sess = ChatSession(document_id=document_id)
     db.add(sess)
     await db.commit()
@@ -41,7 +93,16 @@ async def create_session(document_id: uuid.UUID, db: AsyncSession = Depends(get_
 
 
 @chat_router.get("/sessions/{session_id}/messages", response_model=SessionMessagesResponse)
-async def get_session_messages(session_id: uuid.UUID, db: AsyncSession = Depends(get_db_session)):
+async def get_session_messages(
+    session_id: uuid.UUID,
+    user: Optional[User] = Depends(get_current_user_optional),
+    db: AsyncSession = Depends(get_db_session),
+):
+    # Verify session access
+    session = await verify_session_access(session_id, user, db)
+    if not session:
+        return JSONResponse(status_code=404, content={"detail": "Session not found"})
+
     rows = await db.execute(
         select(Message).where(Message.session_id == session_id).order_by(asc(Message.created_at))
     )
@@ -59,9 +120,34 @@ async def get_session_messages(session_id: uuid.UUID, db: AsyncSession = Depends
 
 
 @chat_router.post("/sessions/{session_id}/chat")
-async def chat_stream(session_id: uuid.UUID, body: ChatRequest, db: AsyncSession = Depends(get_db_session)):
+async def chat_stream(
+    session_id: uuid.UUID,
+    body: ChatRequest,
+    user: Optional[User] = Depends(get_current_user_optional),
+    db: AsyncSession = Depends(get_db_session),
+):
+    # Verify session access
+    session = await verify_session_access(session_id, user, db)
+    if not session:
+        return JSONResponse(status_code=404, content={"detail": "Session not found"})
+
+    # If authenticated, ensure sufficient credits before opening stream
+    if user is not None:
+        balance = await credit_service.get_user_credits(db, user.id)
+        if balance < credit_service.MIN_CREDITS_FOR_CHAT:
+            return JSONResponse(
+                status_code=402,
+                content={
+                    "detail": "Insufficient credits",
+                    "required": credit_service.MIN_CREDITS_FOR_CHAT,
+                    "balance": balance,
+                },
+            )
+
     async def event_generator() -> AsyncGenerator[str, None]:
-        async for ev in chat_service.chat_stream(session_id, body.message, db, model=body.model):
+        async for ev in chat_service.chat_stream(
+            session_id, body.message, db, model=body.model, user=user
+        ):
             # Format per SSE: event: <type>\ndata: {json}\n\n
             line = f"event: {ev['event']}\n"
             payload = json.dumps(ev.get("data", {}), ensure_ascii=False)
@@ -80,7 +166,16 @@ async def chat_stream(session_id: uuid.UUID, body: ChatRequest, db: AsyncSession
 
 
 @chat_router.get("/documents/{document_id}/sessions", response_model=SessionListResponse)
-async def list_sessions(document_id: uuid.UUID, db: AsyncSession = Depends(get_db_session)):
+async def list_sessions(
+    document_id: uuid.UUID,
+    user: Optional[User] = Depends(get_current_user_optional),
+    db: AsyncSession = Depends(get_db_session),
+):
+    # Verify document access
+    doc = await verify_document_access(document_id, user, db)
+    if not doc:
+        return JSONResponse(status_code=404, content={"detail": "Document not found"})
+
     last_activity = func.coalesce(
         func.max(Message.created_at), ChatSession.created_at
     ).label("last_activity_at")
@@ -115,10 +210,16 @@ async def list_sessions(document_id: uuid.UUID, db: AsyncSession = Depends(get_d
 
 
 @chat_router.delete("/sessions/{session_id}", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_session(session_id: uuid.UUID, db: AsyncSession = Depends(get_db_session)):
-    sess = await db.get(ChatSession, session_id)
-    if not sess:
+async def delete_session(
+    session_id: uuid.UUID,
+    user: Optional[User] = Depends(get_current_user_optional),
+    db: AsyncSession = Depends(get_db_session),
+):
+    # Verify session access
+    session = await verify_session_access(session_id, user, db)
+    if not session:
         return JSONResponse(status_code=404, content={"detail": "Session not found"})
-    await db.delete(sess)
+
+    await db.delete(session)
     await db.commit()
     return None  # 204

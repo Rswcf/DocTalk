@@ -67,38 +67,42 @@ class ParseService:
         Returns a list of PageInfo entries, one per page.
         """
         doc = fitz.open(stream=pdf_bytes, filetype="pdf")
-        pages: List[PageInfo] = []
-        for pi, page in enumerate(doc, start=1):
-            rect = page.rect
-            rotation = int(page.rotation or 0)
-            width_pt = float(rect.width)
-            height_pt = float(rect.height)
+        try:
+            pages: List[PageInfo] = []
+            for pi, page in enumerate(doc, start=1):
+                rect = page.rect
+                rotation = int(page.rotation or 0)
+                width_pt = float(rect.width)
+                height_pt = float(rect.height)
 
-            # Extract text as dictionary to access spans and sizes
-            page_dict = page.get_text("dict")
-            blocks: List[BlockInfo] = []
-            for blk in page_dict.get("blocks", []):
-                if blk.get("type", 0) != 0:  # 0=text, 1=image, etc.
-                    continue
-                lines = blk.get("lines", [])
-                if not lines:
-                    continue
+                # Extract text as dictionary to access spans and sizes
+                page_dict = page.get_text("dict")
+                blocks: List[BlockInfo] = []
+                for blk in page_dict.get("blocks", []):
+                    if blk.get("type", 0) != 0:  # 0=text, 1=image, etc.
+                        continue
+                    lines = blk.get("lines", [])
+                    if not lines:
+                        continue
 
-                # Emit one BlockInfo per line for precise bbox granularity
-                for line_info in self._extract_line_blocks(pi, lines):
-                    blocks.append(line_info)
+                    # Emit one BlockInfo per line for precise bbox granularity
+                    for line_info in self._extract_line_blocks(pi, lines):
+                        blocks.append(line_info)
 
-            pages.append(
-                PageInfo(
-                    page_number=pi,
-                    width_pt=width_pt,
-                    height_pt=height_pt,
-                    rotation=rotation,
-                    blocks=blocks,
+                pages.append(
+                    PageInfo(
+                        page_number=pi,
+                        width_pt=width_pt,
+                        height_pt=height_pt,
+                        rotation=rotation,
+                        blocks=blocks,
+                    )
                 )
-            )
 
-        return pages
+            return pages
+        finally:
+            # Always close the PDF document to free resources
+            doc.close()
 
     def detect_scanned(self, pages: Sequence[PageInfo]) -> bool:
         """Return True if the document appears to be scanned (no text layer).

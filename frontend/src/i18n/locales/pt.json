@@ -61,5 +61,21 @@
   "session.noTitle": "Novo chat",
   "session.messageCount": "{count} mensagens",
   "doc.deleteDoc": "Excluir",
-  "doc.deleteDocConfirm": "Tem certeza de que deseja excluir este documento e todos os seus chats?"
+  "doc.deleteDocConfirm": "Tem certeza de que deseja excluir este documento e todos os seus chats?",
+  "auth.signIn": "Sign In",
+  "auth.signInSubtitle": "Sign in to continue to DocTalk",
+  "auth.continueWithGoogle": "Continue with Google",
+  "auth.termsNotice": "By continuing, you agree to our Terms of Service and Privacy Policy.",
+  "auth.signOut": "Sign Out",
+  "credits.credits": "credits",
+  "credits.insufficientCredits": "Insufficient Credits",
+  "credits.purchasePrompt": "You've run out of credits. Purchase more to continue chatting.",
+  "credits.buyCredits": "Buy Credits",
+  "billing.title": "Purchase Credits",
+  "billing.purchase": "Purchase",
+  "billing.purchaseSuccess": "Purchase successful! Credits have been added to your account.",
+  "billing.purchaseCanceled": "Purchase was canceled.",
+  "billing.error": "An error occurred. Please try again.",
+  "common.cancel": "Cancel",
+  "common.loading": "Loading..."
 }
