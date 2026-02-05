@@ -112,7 +112,7 @@ npm run dev
 
 | 组件 | URL |
 |---|---|
-| **Frontend** (Vercel) | https://frontend-yijie-mas-projects.vercel.app |
+| **Frontend** (Vercel) | https://doctalk-yijie-mas-projects.vercel.app |
 | **Backend** (Railway) | https://backend-production-a62e.up.railway.app |
 
 ## API 概览

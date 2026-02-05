@@ -10,7 +10,7 @@ DocTalk 是一款面向高强度文档阅读者的 Web App，帮助用户在超�
 
 | 组件 | URL |
 |---|---|
-| **Frontend** (Vercel) | https://frontend-yijie-mas-projects.vercel.app |
+| **Frontend** (Vercel) | https://doctalk-yijie-mas-projects.vercel.app |
 | **Backend** (Railway) | https://backend-production-a62e.up.railway.app |
 | **GitHub** | https://github.com/Rswcf/DocTalk |
 
