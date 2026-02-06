@@ -46,7 +46,10 @@ async function createBackendToken(userId: string): Promise<string> {
 async function handler(req: NextRequest) {
   // Get decoded token (not raw encrypted token)
   // Must pass secret explicitly for Auth.js v5
-  const token = await getToken({ req, secret: AUTH_SECRET });
+  // secureCookie must be true on HTTPS (Vercel) — otherwise getToken looks for
+  // "authjs.session-token" instead of "__Secure-authjs.session-token"
+  const secureCookie = req.nextUrl.protocol === "https:";
+  const token = await getToken({ req, secret: AUTH_SECRET, secureCookie });
 
   const path = req.nextUrl.pathname.replace("/api/proxy", "");
   const url = `${BACKEND_URL}${path}${req.nextUrl.search}`;
