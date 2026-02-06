@@ -68,6 +68,10 @@ export default function HomePage() {
       const docs: StoredDoc[] = JSON.parse(localStorage.getItem('doctalk_docs') || '[]');
       const entry: StoredDoc = { document_id: docId, filename: res.filename, createdAt: Date.now() };
       localStorage.setItem('doctalk_docs', JSON.stringify([entry, ...docs.filter(d => d.document_id !== docId)]));
+      // Update local state immediately so the document list shows the new doc
+      setMyDocs([entry, ...docs.filter(d => d.document_id !== docId)].sort((a, b) => b.createdAt - a.createdAt));
+      // Also refresh server-side document list
+      getMyDocuments().then(setServerDocs).catch(console.error);
 
       setProgressText(t('upload.parsing'));
       const timer = setInterval(async () => {
