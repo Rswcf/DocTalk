@@ -68,6 +68,18 @@ def parse_document(self, document_id: str) -> None:
             logger.error("Document %s not found", document_id)
             return
 
+        # Clean up partial data from previous attempts (idempotent re-parse)
+        from sqlalchemy import delete as sa_delete
+        db.execute(sa_delete(Chunk).where(Chunk.document_id == doc.id))
+        db.execute(sa_delete(Page).where(Page.document_id == doc.id))
+        doc.pages_parsed = 0
+        doc.chunks_total = 0
+        doc.chunks_indexed = 0
+        doc.status = "parsing"
+        db.add(doc)
+        db.commit()
+        logger.info("Cleaned up partial data for %s, starting fresh parse", document_id)
+
         # Download PDF
         try:
             pdf_bytes = _download_pdf_bytes(settings.MINIO_BUCKET, doc.storage_key)
