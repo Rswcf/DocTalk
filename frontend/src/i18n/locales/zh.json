@@ -45,6 +45,7 @@
   "header.lightMode": "切换亮色模式",
   "header.model": "模型",
   "header.language": "语言",
+  "header.backToDocument": "返回文档",
 
   "copy.button": "复制",
   "copy.copied": "已复制",

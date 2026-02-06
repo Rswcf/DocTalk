@@ -32,6 +32,7 @@ export default function DocumentReaderPage() {
     setMessages,
     sessionId,
     navigateToCitation,
+    setLastDocument,
   } = useDocTalkStore();
 
   useEffect(() => {
@@ -41,7 +42,10 @@ export default function DocumentReaderPage() {
       try {
         const info = await getDocument(documentId);
         setDocumentStatus(info.status);
-        if (info.filename) setDocumentName(info.filename);
+        if (info.filename) {
+          setDocumentName(info.filename);
+          setLastDocument(documentId, info.filename);
+        }
       } catch (e: any) {
         const msg = String(e?.message || e || '');
         if (msg.includes('HTTP 404')) {
@@ -89,7 +93,7 @@ export default function DocumentReaderPage() {
         }
       }
     })();
-  }, [documentId, setDocument, setDocumentName, setDocumentStatus, setPdfUrl, setSessionId, setSessions, addSession, setMessages, t]);
+  }, [documentId, setDocument, setDocumentName, setDocumentStatus, setLastDocument, setPdfUrl, setSessionId, setSessions, addSession, setMessages, t]);
 
   return (
     <div className="flex flex-col h-screen w-full">

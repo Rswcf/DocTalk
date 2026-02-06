@@ -45,6 +45,7 @@
   "header.lightMode": "लाइट मोड पर स्विच करें",
   "header.model": "मॉडेल",
   "header.language": "भाषा",
+  "header.backToDocument": "दस्तावेज़ पर वापस जाएँ",
 
   "copy.button": "कॉपी करें",
   "copy.copied": "कॉपी हो गया",

@@ -45,6 +45,7 @@
   "header.lightMode": "التبديل إلى الوضع الفاتح",
   "header.model": "النموذج",
   "header.language": "اللغة",
+  "header.backToDocument": "العودة إلى المستند",
 
   "copy.button": "نسخ",
   "copy.copied": "تم النسخ",

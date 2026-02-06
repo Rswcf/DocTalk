@@ -13,6 +13,10 @@ export interface DocTalkStore {
   totalPages: number;
   parseProgress: { pagesParsed: number; chunksIndexed: number };
 
+  // Last viewed document (persisted to localStorage)
+  lastDocumentId: string | null;
+  lastDocumentName: string | null;
+
   // PDF
   currentPage: number;
   scale: number;
@@ -31,6 +35,7 @@ export interface DocTalkStore {
   setDocument: (id: string) => void;
   setDocumentName: (name: string) => void;
   setDocumentStatus: (status: DocStatus) => void;
+  setLastDocument: (id: string, name: string) => void;
   setPdfUrl: (url: string) => void;
   setPage: (page: number) => void;
   setScale: (scale: number) => void;
@@ -56,6 +61,8 @@ const initialState = {
   documentStatus: 'idle' as DocStatus,
   totalPages: 0,
   parseProgress: { pagesParsed: 0, chunksIndexed: 0 },
+  lastDocumentId: (typeof window !== 'undefined' ? localStorage.getItem('doctalk_last_doc_id') : null) as string | null,
+  lastDocumentName: (typeof window !== 'undefined' ? localStorage.getItem('doctalk_last_doc_name') : null) as string | null,
   currentPage: 1,
   scale: 1,
   highlights: [] as NormalizedBBox[],
@@ -74,6 +81,13 @@ export const useDocTalkStore = create<DocTalkStore>((set, get) => ({
   setDocument: (id: string) => set({ documentId: id }),
   setDocumentName: (name: string) => set({ documentName: name }),
   setDocumentStatus: (status: DocStatus) => set({ documentStatus: status }),
+  setLastDocument: (id: string, name: string) => {
+    set({ lastDocumentId: id, lastDocumentName: name });
+    try {
+      localStorage.setItem('doctalk_last_doc_id', id);
+      localStorage.setItem('doctalk_last_doc_name', name);
+    } catch {}
+  },
   setPdfUrl: (url: string) => set({ pdfUrl: url }),
   setPage: (page: number) => set({ currentPage: Math.max(1, page) }),
   setScale: (scale: number) => set({ scale: Math.max(0.25, scale) }),
@@ -130,5 +144,5 @@ export const useDocTalkStore = create<DocTalkStore>((set, get) => ({
     updated.sort((a, b) => new Date(b.last_activity_at).getTime() - new Date(a.last_activity_at).getTime());
     return { sessions: updated };
   }),
-  reset: () => set((state) => ({ ...initialState, selectedModel: state.selectedModel })),
+  reset: () => set((state) => ({ ...initialState, selectedModel: state.selectedModel, lastDocumentId: state.lastDocumentId, lastDocumentName: state.lastDocumentName })),
 }));

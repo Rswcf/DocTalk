@@ -45,6 +45,7 @@
   "header.lightMode": "Switch to light mode",
   "header.model": "Model",
   "header.language": "Language",
+  "header.backToDocument": "Back to document",
 
   "copy.button": "Copy",
   "copy.copied": "Copied",
