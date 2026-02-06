@@ -39,12 +39,12 @@ export async function uploadDocument(file: File): Promise<{ document_id: string;
 }
 
 export async function getDocument(docId: string): Promise<DocumentResponse> {
-  const res = await fetch(`${API_BASE}/api/documents/${docId}`);
+  const res = await fetch(`${PROXY_BASE}/api/documents/${docId}`);
   return handle(res);
 }
 
 export async function getDocumentFileUrl(docId: string): Promise<{ url: string; expires_in: number }> {
-  const res = await fetch(`${API_BASE}/api/documents/${docId}/file-url`);
+  const res = await fetch(`${PROXY_BASE}/api/documents/${docId}/file-url`);
   return handle(res);
 }
 
@@ -57,7 +57,7 @@ export async function createSession(docId: string): Promise<{ session_id: string
 }
 
 export async function getMessages(sessionId: string): Promise<{ messages: Message[] }> {
-  const res = await fetch(`${API_BASE}/api/sessions/${sessionId}/messages`);
+  const res = await fetch(`${PROXY_BASE}/api/sessions/${sessionId}/messages`);
   const data: { messages: Array<{ role: Message['role']; content: string; citations?: any[]; created_at: string }> } = await handle(res);
 
   const mapped = (data.messages || []).map((m, idx) => {
@@ -85,7 +85,7 @@ export async function getMessages(sessionId: string): Promise<{ messages: Messag
 }
 
 export async function searchDocument(docId: string, query: string, topK?: number): Promise<SearchResponse> {
-  const res = await fetch(`${API_BASE}/api/documents/${docId}/search`, {
+  const res = await fetch(`${PROXY_BASE}/api/documents/${docId}/search`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ query, top_k: topK }),
@@ -94,7 +94,7 @@ export async function searchDocument(docId: string, query: string, topK?: number
 }
 
 export async function listSessions(docId: string): Promise<SessionListResponse> {
-  const res = await fetch(`${API_BASE}/api/documents/${docId}/sessions`);
+  const res = await fetch(`${PROXY_BASE}/api/documents/${docId}/sessions`);
   return handle(res);
 }
 
