@@ -33,7 +33,7 @@ Railway 项目包含 5 个服务：backend, Postgres, Redis, qdrant-v2, minio-v2
 ### 核心架构决策
 
 - **认证**: Auth.js v5 + Google OAuth，JWT 策略，后端通过 `require_auth` 依赖校验
-- **API 代理**: 前端敏感接口通过 `/api/proxy/*` 路由，自动注入 Authorization header
+- **API 代理**: 前端所有后端请求（含 SSE chat stream）通过 `/api/proxy/*` 路由，自动注入 Authorization header
 - **分层认证模型**:
   - 未登录: 可试用 Demo（示例 PDF，5 条消息限制）
   - 已登录: 可上传个人 PDF，服务端文档列表，Credits 系统
@@ -46,7 +46,7 @@ Railway 项目包含 5 个服务：backend, Postgres, Redis, qdrant-v2, minio-v2
 - **引用格式**: 编号 [1]..[K]，后端 FSM 解析器处理跨 token 切断；前端 `renumberCitations()` 按出现顺序重编号为连续序列
 - **PDF 文件获取**: presigned URL (不走后端代理)
 - **向量维度**: 配置驱动 (EMBEDDING_DIM)，启动时校验 Qdrant collection
-- **删除**: 异步 202 + Celery worker
+- **删除**: 同步 ORM cascade delete（pages, chunks, sessions, messages），返回 202；同时 best-effort 清理 MinIO 文件和 Qdrant 向量
 - **会话管理**: 每文档支持多个独立对话会话，重新打开文档自动恢复最近活跃会话
 
 ### API 路由
@@ -56,7 +56,7 @@ Railway 项目包含 5 个服务：backend, Postgres, Redis, qdrant-v2, minio-v2
 GET    /api/documents                     # 列出用户文档 (?mine=1)
 POST   /api/documents/upload              # 上传 PDF (需登录)
 GET    /api/documents/{document_id}       # 查询文档状态
-DELETE /api/documents/{document_id}       # 删除文档（异步）
+DELETE /api/documents/{document_id}       # 删除文档（ORM cascade，同步删除）
 GET    /api/documents/{document_id}/file-url  # 获取 presigned URL
 POST   /api/documents/{document_id}/search    # 语义搜索
 POST   /api/documents/{document_id}/sessions  # 创建聊天会话
@@ -85,6 +85,10 @@ POST   /api/internal/auth/verification-tokens/use   # 使用验证 Token
 # 其他
 GET    /api/chunks/{chunk_id}             # 获取 chunk 详情
 GET    /health                            # 健康检查
+
+# 临时 Admin (无鉴权，仅用于调试)
+POST   /admin/retry-stuck                 # 重新分发 stuck 状态的解析任务
+GET    /admin/documents                   # 列出所有文档及状态（最近20条）
 ```
 
 ---
@@ -107,6 +111,8 @@ cd backend && python3 -m alembic upgrade head
 # Celery worker（macOS 需要设置 fork 安全变量）
 cd backend && OBJC_DISABLE_INITIALIZE_FORK_SAFETY=YES python3 -m celery -A app.workers.celery_app worker --loglevel=info -Q default,parse
 ```
+
+> **生产部署**: Dockerfile 的 CMD 在单容器内同时启动 uvicorn 和 Celery worker（`--concurrency=1` 以节省内存），并先运行 Alembic migration。本地开发时仍需分别启动。
 
 ### 环境变量
 
@@ -133,13 +139,18 @@ GOOGLE_CLIENT_SECRET=...
 - `AUTH_SECRET`: 与后端一致
 - `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET`: Google OAuth
 
+### 部署
+
+- **Vercel (前端)**: Root Directory 配置为 `frontend/`，使用 `git push` 自动部署（GitHub 集成）。**不要**从 `frontend/` 目录运行 `vercel --prod`，否则 Root Directory 设置不生效
+- **Railway (后端)**: 从项目根目录运行 `railway up --detach`；Dockerfile 在单容器中运行 Alembic migration → Celery worker (background, concurrency=1) → uvicorn
+
 ---
 
 ## 重要约定 / Gotchas
 
 ### 认证相关
 - **上传需登录**: `upload_document` 使用 `require_auth` 依赖，未登录返回 401
-- **API 代理**: 敏感接口（上传、删除、会话）通过 `/api/proxy/*` 走前端代理，自动注入 JWT
+- **API 代理**: 所有后端接口（含 SSE chat stream）通过 `/api/proxy/*` 走前端代理，自动注入 JWT
 - **JWT 双层设计**: Auth.js v5 使用加密 JWT (JWE)，后端无法直接解密。API 代理使用 `jose` 库创建后端兼容的明文 JWT (HS256)，包含 sub/iat/exp claims
 - **JWT 校验**: 后端 `deps.py` 验证 exp/iat/sub claims
 - **Adapter Secret**: 内部 Auth API 使用 `X-Adapter-Secret` header 校验
@@ -150,12 +161,19 @@ GOOGLE_CLIENT_SECRET=...
 - **Demo 模式**: `/demo` 页面提供示例 PDF 试用，前端限制 5 条消息
 - **文档列表**: 服务端 + localStorage 合并，服务端优先
 - **前端全部 `"use client"`**: 无 SSR，所有页面和组件均为客户端渲染
+- **所有 API 走代理**: REST 和 SSE (chat stream) 均通过 `PROXY_BASE` (`/api/proxy`) 路由，`sse.ts` 的 `chatStream()` 也走代理以注入 JWT
+- **Proxy maxDuration**: `route.ts` 导出 `maxDuration = 60`（Vercel Hobby 上限），SSE chat 使用 60s fetch timeout，其他请求 30s
 
 ### 后端相关
 - **Celery 用同步 DB**: Worker 使用 `psycopg`（同步），API 使用 `asyncpg`（异步）
 - **macOS Celery fork 安全**: 必须设置 `OBJC_DISABLE_INITIALIZE_FORK_SAFETY=YES`
 - **Credits 扣费**: 使用 `db.flush()` 确保 ledger 在同一事务中写入
 - **FOR UPDATE 锁**: 验证 Token 使用行锁防止 TOCTOU 竞态
+- **Parse worker 幂等**: 重新执行时先删除已有 pages/chunks，重置计数器，避免 UniqueViolation；支持 stuck 文档重试
+- **启动自动重试**: `main.py` 的 `on_startup` 在后台线程中检测 status=parsing/embedding 的文档，自动重新分发 parse 任务
+- **Retrieval 容错**: `chat_service.py` 的 retrieval 调用包裹在 try/except 中，Qdrant 不可用时返回 `RETRIEVAL_ERROR` SSE 事件
+- **删除为同步级联**: `doc_service.delete_document()` 使用 ORM cascade 真正删除 DB 记录（非仅标记 status），同时 best-effort 清理 MinIO + Qdrant
+- **文档列表过滤**: `list_documents` 查询排除 `status="deleting"` 的文档
 
 ### PDF 相关
 - **bbox 坐标**: 归一化到 [0,1]，top-left origin，前端渲染时乘以页面实际像素尺寸
@@ -196,6 +214,7 @@ DocTalk/
 │   │   │   ├── auth.py           # 内部 Auth Adapter API
 │   │   │   ├── billing.py        # Stripe Checkout + Webhook
 │   │   │   └── credits.py        # Credits 余额查询
+│   │   │   # admin endpoints are in main.py (temporary, no auth)
 │   │   ├── core/
 │   │   │   ├── config.py         # Settings, ALLOWED_MODELS 白名单
 │   │   │   └── deps.py           # FastAPI 依赖 (require_auth, get_db)
