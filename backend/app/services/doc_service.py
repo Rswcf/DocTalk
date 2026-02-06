@@ -78,6 +78,50 @@ class DocService:
         await db.commit()
         return True
 
+    async def delete_document(self, document_id: uuid.UUID, db: AsyncSession) -> bool:
+        """Delete document and all related data via ORM cascade.
+
+        Pages, chunks, sessions, and messages are cascade-deleted by SQLAlchemy.
+        Storage and vector cleanup is best-effort.
+        """
+        from sqlalchemy.orm import selectinload
+
+        res = await db.execute(
+            select(Document)
+            .options(selectinload(Document.chunks))
+            .where(Document.id == document_id)
+        )
+        doc = res.scalar_one_or_none()
+        if not doc:
+            return False
+
+        # Best-effort: clean up object storage
+        try:
+            storage_service.delete_file(doc.storage_key)
+        except Exception:
+            pass
+
+        # Best-effort: clean up Qdrant vectors
+        try:
+            from app.services.embedding_service import embedding_service
+            from app.core.config import settings as _settings
+            from qdrant_client.models import Filter, FieldCondition, MatchValue
+
+            qclient = embedding_service.get_qdrant_client()
+            qclient.delete(
+                collection_name=_settings.QDRANT_COLLECTION,
+                points_selector=Filter(
+                    must=[FieldCondition(key="document_id", match=MatchValue(value=str(document_id)))]
+                ),
+            )
+        except Exception:
+            pass
+
+        # ORM cascade deletes pages, chunks, sessions, messages
+        await db.delete(doc)
+        await db.commit()
+        return True
+
 
 # Singleton instance for routers
 doc_service = DocService()

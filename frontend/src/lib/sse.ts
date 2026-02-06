@@ -1,5 +1,5 @@
 import type { Citation } from '../types';
-import { API_BASE } from './api';
+import { PROXY_BASE } from './api';
 
 type TokenPayload = { text: string };
 type CitationPayload = {
@@ -22,7 +22,7 @@ export async function chatStream(
   onDone: (d: DonePayload) => void,
   model?: string,
 ) {
-  const res = await fetch(`${API_BASE}/api/sessions/${sessionId}/chat`, {
+  const res = await fetch(`${PROXY_BASE}/api/sessions/${sessionId}/chat`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ message, ...(model ? { model } : {}) }),

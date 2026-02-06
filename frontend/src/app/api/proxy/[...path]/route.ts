@@ -74,11 +74,15 @@ async function handler(req: NextRequest) {
   }
 
   try {
+    // SSE chat endpoints need a longer timeout for streaming responses
+    const isChat = /\/sessions\/[^/]+\/chat$/.test(path);
+    const timeout = isChat ? 60000 : 30000;
+
     const response = await fetch(url, {
       method: req.method,
       headers,
       body: req.method !== "GET" && req.method !== "HEAD" ? await req.arrayBuffer() : undefined,
-      signal: AbortSignal.timeout(30000), // 30 second timeout
+      signal: AbortSignal.timeout(timeout),
     });
 
     // Build response headers with exclusion filtering
@@ -102,5 +106,8 @@ async function handler(req: NextRequest) {
     return new NextResponse("Bad Gateway", { status: 502 });
   }
 }
+
+// Vercel Hobby max is 60s; needed for SSE chat streaming
+export const maxDuration = 60;
 
 export { handler as GET, handler as POST, handler as PUT, handler as DELETE, handler as PATCH };

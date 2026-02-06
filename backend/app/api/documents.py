@@ -34,6 +34,7 @@ async def list_documents(
         result = await db.execute(
             select(Document)
             .where(Document.user_id == user.id)
+            .where(Document.status != "deleting")
             .order_by(Document.created_at.desc())
             .limit(50)
         )
@@ -131,7 +132,5 @@ async def delete_document(
     # Authorization: if document has owner, verify user matches
     if doc.user_id and (not user or doc.user_id != user.id):
         return JSONResponse(status_code=404, content={"detail": "Document not found"})
-    updated = await doc_service.mark_deleting(document_id, db)
-    if not updated:
-        return JSONResponse(status_code=404, content={"detail": "Document not found"})
-    return JSONResponse(status_code=202, content={"status": "deleting", "message": "文档正在删除中"})
+    await doc_service.delete_document(document_id, db)
+    return JSONResponse(status_code=202, content={"status": "deleted", "message": "文档已删除"})

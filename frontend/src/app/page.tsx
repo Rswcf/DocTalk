@@ -78,7 +78,11 @@ export default function HomePage() {
         try {
           const info = await getDocument(docId);
           setDocumentStatus(info.status);
-          setProgressText(t('upload.parsingProgress', { pagesParsed: info.pages_parsed ?? 0, chunksIndexed: info.chunks_indexed ?? 0 }));
+          const pp = info.pages_parsed ?? 0;
+          const ci = info.chunks_indexed ?? 0;
+          setProgressText(pp === 0 && ci === 0
+            ? t('upload.parsing')
+            : t('upload.parsingProgress', { pagesParsed: pp, chunksIndexed: ci }));
           if (info.status === 'ready') {
             clearInterval(timer);
             router.push(`/d/${docId}`);
