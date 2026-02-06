@@ -126,14 +126,19 @@ export default function HomePage() {
         <HeroSection />
 
         {/* Product Showcase */}
-        <section className="max-w-5xl mx-auto px-6 py-16">
-          <div className="border-t border-dashed border-zinc-300 dark:border-zinc-700 pt-12">
-            <h2 className="text-2xl font-bold text-zinc-900 dark:text-zinc-50 text-center mb-8">
+        <section className="max-w-5xl mx-auto px-6 py-24">
+          <div className="border-t border-zinc-200 dark:border-zinc-800 pt-12">
+            <h2 className="text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50 text-center mb-8">
               {t('landing.showcase.title')}
             </h2>
-            <div className="aspect-video bg-gradient-to-br from-zinc-100 to-zinc-200 dark:from-zinc-800 dark:to-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 shadow-2xl flex items-center justify-center">
-              <div className="text-center">
-                <div className="text-4xl mb-2">📄💬</div>
+            <div className="rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-2xl overflow-hidden">
+              {/* macOS window chrome */}
+              <div className="flex items-center gap-2 px-4 py-3 bg-zinc-100 dark:bg-zinc-800 border-b border-zinc-200 dark:border-zinc-700">
+                <span className="w-3 h-3 rounded-full bg-red-400" />
+                <span className="w-3 h-3 rounded-full bg-yellow-400" />
+                <span className="w-3 h-3 rounded-full bg-green-400" />
+              </div>
+              <div className="aspect-video bg-zinc-50 dark:bg-zinc-900 flex items-center justify-center">
                 <p className="text-zinc-400 dark:text-zinc-500 text-sm">PDF + AI Chat Split View</p>
               </div>
             </div>
@@ -164,7 +169,7 @@ export default function HomePage() {
           </div>
 
           <div
-            className={`border-2 border-dashed rounded-2xl p-8 sm:p-12 text-center transition-all duration-200 ${
+            className={`border-2 border-dashed rounded-2xl p-8 sm:p-12 text-center transition-colors ${
               isDragging
                 ? 'border-zinc-500 bg-zinc-50 dark:bg-zinc-900'
                 : 'border-zinc-300 dark:border-zinc-700'
@@ -179,7 +184,7 @@ export default function HomePage() {
             <button
               type="button"
               onClick={() => inputRef.current?.click()}
-              className="mt-4 px-6 py-2.5 bg-zinc-900 dark:bg-zinc-50 text-white dark:text-zinc-900 rounded-lg font-medium hover:bg-zinc-800 dark:hover:bg-zinc-200 transition-all duration-200"
+              className="mt-4 px-6 py-2.5 bg-zinc-900 dark:bg-zinc-50 text-white dark:text-zinc-900 rounded-lg font-medium hover:bg-zinc-800 dark:hover:bg-zinc-200 shadow-sm hover:shadow-md transition-[box-shadow,color,background-color]"
               disabled={uploading}
             >
               {t('upload.chooseFile')}
@@ -192,7 +197,7 @@ export default function HomePage() {
           </div>
 
           <div className="mt-3 text-center">
-            <Link href="/demo" className="text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100 text-sm transition-all duration-200">
+            <Link href="/demo" className="text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100 text-sm transition-colors">
               {t('home.cta.tryDemo')}
             </Link>
           </div>
@@ -203,11 +208,11 @@ export default function HomePage() {
           {allDocs.length === 0 ? (
             <p className="text-zinc-500 text-sm">{t('doc.noDocuments')}</p>
           ) : (
-            <div className="space-y-2">
+            <div className="space-y-3">
               {allDocs.map((d) => (
                 <div
                   key={d.document_id}
-                  className="p-4 rounded-xl border border-zinc-200 dark:border-zinc-800 hover:shadow-md transition-all duration-200 flex items-center justify-between"
+                  className="p-5 rounded-xl border border-zinc-100 dark:border-zinc-800 shadow-sm hover:shadow-md transition-colors flex items-center justify-between"
                 >
                   <div>
                     <div className="font-medium text-zinc-900 dark:text-zinc-100">
@@ -219,13 +224,13 @@ export default function HomePage() {
                   </div>
                   <div className="flex items-center gap-2">
                     <button
-                      className="px-4 py-1.5 text-sm bg-zinc-900 dark:bg-zinc-50 text-white dark:text-zinc-900 rounded-lg font-medium hover:bg-zinc-800 dark:hover:bg-zinc-200 transition-all duration-200"
+                      className="px-4 py-2 text-sm bg-zinc-900 dark:bg-zinc-50 text-white dark:text-zinc-900 rounded-lg font-medium hover:bg-zinc-800 dark:hover:bg-zinc-200 shadow-sm transition-colors"
                       onClick={() => router.push(`/d/${d.document_id}`)}
                     >
                       {t('doc.open')}
                     </button>
                     <button
-                      className="p-2 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-500 transition-all duration-200"
+                      className="p-2 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-500 transition-colors"
                       onClick={async () => {
                         if (!window.confirm(t('doc.deleteDocConfirm'))) return;
                         try { await deleteDocument(d.document_id); } catch {}

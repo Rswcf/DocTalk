@@ -32,12 +32,12 @@ export default function Header({ variant = 'full' }: HeaderProps) {
   };
 
   return (
-    <header className={`h-14 flex items-center px-3 sm:px-6 gap-2 min-w-0 shrink-0 ${
+    <header className={`h-14 flex items-center px-4 sm:px-6 gap-3 min-w-0 shrink-0 ${
       isMinimal
         ? 'bg-transparent'
         : 'border-b border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950'
     }`}>
-      <Link href="/" className="font-semibold text-lg text-zinc-900 dark:text-zinc-100 hover:text-zinc-600 dark:hover:text-zinc-300 transition-all duration-200 shrink-0">
+      <Link href="/" className="font-semibold text-lg text-zinc-900 dark:text-zinc-100 hover:text-zinc-600 dark:hover:text-zinc-300 transition-colors shrink-0">
         {t('app.title')}
       </Link>
       {!isMinimal && documentName && (
@@ -49,7 +49,7 @@ export default function Header({ variant = 'full' }: HeaderProps) {
       {!isMinimal && !isDocumentPage && lastDocumentId && (
         <Link
           href={`/d/${lastDocumentId}`}
-          className="ml-1 sm:ml-3 inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-sm text-zinc-600 dark:text-zinc-300 bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-all duration-200 max-w-[140px] sm:max-w-[240px]"
+          className="ml-1 sm:ml-3 inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-sm text-zinc-600 dark:text-zinc-300 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-800 hover:bg-zinc-100 dark:hover:bg-zinc-700 transition-colors max-w-[140px] sm:max-w-[240px]"
           title={lastDocumentName || ''}
           aria-label={t('header.backToDocument')}
         >
@@ -62,7 +62,7 @@ export default function Header({ variant = 'full' }: HeaderProps) {
         {!isMinimal && (
           <button
             onClick={toggleTheme}
-            className="p-1.5 rounded-md hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-600 dark:text-zinc-400 transition-all duration-200"
+            className="p-2 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-600 dark:text-zinc-400 transition-colors"
             title={theme === 'dark' ? t('header.lightMode') : t('header.darkMode')}
           >
             {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}

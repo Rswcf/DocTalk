@@ -14,17 +14,17 @@ export default function FeatureGrid() {
   const { t } = useLocale();
 
   return (
-    <section id="features" className="max-w-5xl mx-auto px-6 py-16">
-      <h2 className="text-3xl font-bold text-zinc-900 dark:text-zinc-50 text-center mb-12">
+    <section id="features" className="max-w-5xl mx-auto px-6 py-24">
+      <h2 className="text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50 text-center mb-12">
         {t('landing.features.title')}
       </h2>
       <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
         {features.map(({ icon: Icon, titleKey, descKey }) => (
           <div
             key={titleKey}
-            className="p-6 rounded-xl border border-zinc-200 dark:border-zinc-800 hover:shadow-md transition-all duration-200"
+            className="p-6 rounded-xl border border-zinc-100 dark:border-zinc-800 bg-white dark:bg-zinc-950 shadow-sm hover:shadow-md hover:-translate-y-1 transition-[box-shadow,transform] duration-150"
           >
-            <div className="w-10 h-10 rounded-lg bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center mb-4">
+            <div className="w-12 h-12 rounded-lg bg-zinc-50 dark:bg-zinc-800 border border-zinc-100 dark:border-zinc-800 flex items-center justify-center mb-4">
               <Icon size={20} className="text-zinc-600 dark:text-zinc-400" />
             </div>
             <h3 className="font-semibold text-zinc-900 dark:text-zinc-100 mb-2">

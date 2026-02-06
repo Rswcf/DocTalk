@@ -183,16 +183,16 @@ export default function ChatPanel({ sessionId, onCitationClick, maxUserMessages 
   return (
     <div className="flex h-full flex-col border-r dark:border-zinc-700">
       <PaywallModal isOpen={showPaywall} onClose={() => setShowPaywall(false)} />
-      <div ref={listRef} className="flex-1 overflow-auto p-4">
+      <div ref={listRef} className="flex-1 overflow-auto p-6">
         {messages.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-full gap-3 px-4">
+          <div className="flex flex-col items-center justify-center h-full gap-4 px-4">
             <p className="text-sm text-zinc-500 dark:text-zinc-400 mb-2">{t('chat.trySuggested')}</p>
             {SUGGESTED_KEYS.map((k) => (
               <button
                 key={k}
                 type="button"
                 onClick={() => handleSuggestedClick(t(k))}
-                className="w-full text-left text-sm px-4 py-2.5 border rounded-xl hover:bg-zinc-50 dark:border-zinc-600 dark:hover:bg-zinc-800 transition-colors text-zinc-700 dark:text-zinc-300"
+                className="w-full text-left text-sm px-4 py-2.5 border border-zinc-100 dark:border-zinc-700 rounded-xl hover:bg-zinc-50 dark:hover:bg-zinc-800 shadow-sm hover:shadow-md transition-colors text-zinc-700 dark:text-zinc-300"
               >
                 {t(k)}
               </button>
@@ -257,11 +257,11 @@ export default function ChatPanel({ sessionId, onCitationClick, maxUserMessages 
           )}
         </div>
       )}
-      <form onSubmit={onSubmit} className="p-3 border-t dark:border-zinc-700">
+      <form onSubmit={onSubmit} className="p-4 border-t dark:border-zinc-700">
         <div className="flex items-end gap-2">
           <textarea
             ref={textareaRef}
-            className="flex-1 border rounded-xl px-3 py-2 text-sm resize-none overflow-y-auto focus:outline-none focus:ring-2 focus:ring-zinc-500 dark:bg-zinc-800 dark:border-zinc-600 dark:text-zinc-100"
+            className="flex-1 border border-zinc-200 dark:border-zinc-700 rounded-2xl px-4 py-3 text-sm resize-none overflow-y-auto focus:outline-none focus:ring-2 focus:ring-zinc-500 dark:bg-zinc-800 dark:text-zinc-100"
             style={{ minHeight: '40px', maxHeight: '160px' }}
             placeholder={demoLimitReached ? t('demo.signInToContinue') : t('chat.placeholder')}
             value={input}
@@ -272,7 +272,7 @@ export default function ChatPanel({ sessionId, onCitationClick, maxUserMessages 
           />
           <button
             type="submit"
-            className="p-2 bg-zinc-600 text-white rounded-xl disabled:opacity-60 hover:bg-zinc-700 transition-colors shrink-0"
+            className="p-3 bg-zinc-900 dark:bg-zinc-50 text-white dark:text-zinc-900 rounded-2xl disabled:opacity-60 hover:bg-zinc-800 dark:hover:bg-zinc-200 shadow-sm hover:shadow-md transition-colors shrink-0"
             disabled={isStreaming || !input.trim() || demoLimitReached}
             title={t('chat.send')}
           >

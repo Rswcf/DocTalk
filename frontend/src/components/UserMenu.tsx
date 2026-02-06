@@ -35,7 +35,7 @@ export default function UserMenu() {
     return (
       <button
         onClick={() => signIn()}
-        className="px-3 py-1.5 text-sm bg-zinc-900 dark:bg-zinc-50 text-white dark:text-zinc-900 rounded hover:bg-zinc-800 dark:hover:bg-zinc-200 transition-all duration-200"
+        className="px-3 py-1.5 text-sm bg-zinc-900 dark:bg-zinc-50 text-white dark:text-zinc-900 rounded hover:bg-zinc-800 dark:hover:bg-zinc-200 shadow-sm transition-colors"
       >
         {t("auth.signIn")}
       </button>
@@ -53,7 +53,7 @@ export default function UserMenu() {
     <div className="relative" ref={menuRef}>
       <button
         onClick={() => setOpen((v) => !v)}
-        className="w-8 h-8 rounded-full overflow-hidden border border-zinc-200 dark:border-zinc-700 focus:outline-none focus:ring-2 focus:ring-zinc-500 transition-all duration-200"
+        className="w-8 h-8 rounded-full overflow-hidden border border-zinc-200 dark:border-zinc-700 focus:outline-none focus:ring-2 focus:ring-zinc-500 transition-colors"
         aria-haspopup="menu"
         aria-expanded={open}
       >
@@ -67,26 +67,26 @@ export default function UserMenu() {
 
       {open && (
         <div
-          className="absolute right-0 top-full mt-2 w-48 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-lg shadow-lg z-50"
+          className="absolute right-0 top-full mt-2 w-48 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-xl shadow-lg z-50 animate-fade-in overflow-hidden"
           role="menu"
         >
           <div
-            className="px-4 py-2 text-sm text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 cursor-pointer transition-all duration-200"
+            className="px-4 py-2.5 text-sm text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800 cursor-pointer transition-colors"
             onClick={() => go("/profile")}
             role="menuitem"
           >
             {t("userMenu.profile")}
           </div>
           <div
-            className="px-4 py-2 text-sm text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 cursor-pointer transition-all duration-200"
+            className="px-4 py-2.5 text-sm text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800 cursor-pointer transition-colors"
             onClick={() => go("/billing")}
             role="menuitem"
           >
             {t("userMenu.buyCredits")}
           </div>
-          <hr className="my-1 border-zinc-200 dark:border-zinc-700" />
+          <hr className="my-1 border-zinc-100 dark:border-zinc-700" />
           <div
-            className="px-4 py-2 text-sm text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 cursor-pointer transition-all duration-200"
+            className="px-4 py-2.5 text-sm text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800 cursor-pointer transition-colors"
             onClick={() => {
               setOpen(false);
               signOut();

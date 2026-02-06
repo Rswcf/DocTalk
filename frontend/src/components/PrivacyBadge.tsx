@@ -15,7 +15,7 @@ export function PrivacyBadge() {
       <button
         onClick={() => setExpanded(!expanded)}
         className="flex items-center justify-center gap-2 text-sm text-zinc-600 dark:text-zinc-400
-                   hover:text-zinc-800 dark:hover:text-zinc-200 transition-all duration-200 w-full"
+                   hover:text-zinc-800 dark:hover:text-zinc-200 transition-colors w-full"
       >
         <Shield size={16} className="text-green-600" />
         <span>{t('privacy.badge')}</span>
@@ -38,8 +38,8 @@ export function PrivacyBadge() {
             <span className="text-zinc-700 dark:text-zinc-300">{t('privacy.deleteAnytime')}</span>
           </p>
           <div className="pt-2 border-t border-zinc-200 dark:border-zinc-700 flex gap-4 text-xs">
-            <Link href="/privacy" className="text-zinc-600 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200 transition-all duration-200 hover:underline">{t('privacy.policyLink')}</Link>
-            <Link href="/terms" className="text-zinc-600 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200 transition-all duration-200 hover:underline">{t('privacy.termsLink')}</Link>
+            <Link href="/privacy" className="text-zinc-600 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200 transition-colors hover:underline">{t('privacy.policyLink')}</Link>
+            <Link href="/terms" className="text-zinc-600 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200 transition-colors hover:underline">{t('privacy.termsLink')}</Link>
           </div>
         </div>
       )}

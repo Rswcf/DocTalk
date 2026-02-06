@@ -52,7 +52,7 @@ export default function ModelSelector() {
         type="button"
         onClick={toggle}
         disabled={isStreaming}
-        className={`flex items-center gap-1.5 px-2 py-1 border border-zinc-200 rounded-md text-sm text-zinc-700 dark:border-zinc-700 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-all duration-200 ${
+        className={`flex items-center gap-1.5 px-2 py-1 border border-zinc-200 rounded-md text-sm text-zinc-700 dark:border-zinc-700 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors ${
           isStreaming ? 'opacity-60 cursor-not-allowed' : ''
         }`}
         title={t('header.model')}
@@ -69,7 +69,7 @@ export default function ModelSelector() {
               {(models as any).map((m: any) => (
                 <button
                   key={m.id}
-                  className={`w-full text-left flex items-center gap-2 px-2 py-1.5 rounded hover:bg-zinc-100 dark:hover:bg-zinc-800 text-sm transition-all duration-200 ${
+                  className={`w-full text-left flex items-center gap-2 px-2 py-1.5 rounded hover:bg-zinc-100 dark:hover:bg-zinc-800 text-sm transition-colors ${
                     selectedModel === m.id ? 'font-medium' : ''
                   }`}
                   onClick={() => choose(m.id)}

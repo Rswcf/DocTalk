@@ -32,7 +32,7 @@ export default function CitationCard({ refIndex, textSnippet, page, onClick }: C
     <button
       type="button"
       onClick={onClick}
-      className="w-full text-left border rounded-md p-2 hover:bg-zinc-50 dark:border-zinc-600 dark:hover:bg-zinc-700 transition flex items-start gap-2"
+      className="w-full text-left border border-zinc-100 dark:border-zinc-700 rounded-xl p-3 bg-white dark:bg-zinc-950 shadow-sm hover:shadow-md transition-[box-shadow,color,background-color] duration-150 flex items-start gap-2.5"
     >
       <span className="text-zinc-600 dark:text-zinc-400 font-semibold">[{refIndex}]</span>
       <div className="flex-1">

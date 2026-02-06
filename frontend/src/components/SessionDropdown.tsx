@@ -85,7 +85,7 @@ export default function SessionDropdown() {
       <button
         type="button"
         onClick={toggle}
-        className="text-sm text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200 transition-all duration-200 truncate max-w-[140px] sm:max-w-[300px] flex items-center gap-1.5"
+        className="text-sm text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200 transition-colors truncate max-w-[140px] sm:max-w-[300px] flex items-center gap-1.5"
         title={titleText}
       >
         <span className="truncate">{titleText}</span>
@@ -95,7 +95,7 @@ export default function SessionDropdown() {
         <div className="absolute left-0 mt-1 w-72 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-md shadow-lg z-20 p-1">
           <div className="py-1">
             <button
-              className={`w-full text-left flex items-center gap-2 px-2 py-1.5 rounded hover:bg-zinc-100 dark:hover:bg-zinc-800 text-sm text-zinc-700 dark:text-zinc-200 transition-all duration-200 ${disabledClass}`}
+              className={`w-full text-left flex items-center gap-2 px-2 py-1.5 rounded hover:bg-zinc-100 dark:hover:bg-zinc-800 text-sm text-zinc-700 dark:text-zinc-200 transition-colors ${disabledClass}`}
               onClick={onNewChat}
               disabled={isStreaming}
             >
@@ -117,7 +117,7 @@ export default function SessionDropdown() {
                 return (
                   <button
                     key={s.session_id}
-                    className={`w-full text-left flex items-center gap-2 px-2 py-1.5 rounded hover:bg-zinc-100 dark:hover:bg-zinc-800 text-sm text-zinc-700 dark:text-zinc-200 transition-all duration-200 ${
+                    className={`w-full text-left flex items-center gap-2 px-2 py-1.5 rounded hover:bg-zinc-100 dark:hover:bg-zinc-800 text-sm text-zinc-700 dark:text-zinc-200 transition-colors ${
                       isCurrent ? 'font-medium' : ''
                     } ${disabledClass}`}
                     onClick={() => onSwitchSession(s.session_id)}
@@ -138,7 +138,7 @@ export default function SessionDropdown() {
           <div className="my-1 h-px bg-zinc-200 dark:bg-zinc-700" />
           <div className="py-1">
             <button
-              className={`w-full text-left flex items-center gap-2 px-2 py-1.5 rounded hover:bg-zinc-100 dark:hover:bg-zinc-800 text-sm text-red-600 dark:text-red-400 transition-all duration-200 ${disabledClass}`}
+              className={`w-full text-left flex items-center gap-2 px-2 py-1.5 rounded hover:bg-zinc-100 dark:hover:bg-zinc-800 text-sm text-red-600 dark:text-red-400 transition-colors ${disabledClass}`}
               onClick={onDeleteCurrent}
               disabled={isStreaming}
             >
@@ -146,7 +146,7 @@ export default function SessionDropdown() {
               <span>{t('session.deleteChat')}</span>
             </button>
             <button
-              className="w-full text-left flex items-center gap-2 px-2 py-1.5 rounded hover:bg-zinc-100 dark:hover:bg-zinc-800 text-sm text-zinc-700 dark:text-zinc-200 transition-all duration-200"
+              className="w-full text-left flex items-center gap-2 px-2 py-1.5 rounded hover:bg-zinc-100 dark:hover:bg-zinc-800 text-sm text-zinc-700 dark:text-zinc-200 transition-colors"
               onClick={onBackHome}
             >
               <Home size={16} />

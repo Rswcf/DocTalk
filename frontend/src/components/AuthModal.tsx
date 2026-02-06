@@ -28,7 +28,7 @@ export function AuthModal() {
 
   return (
     <div
-      className="fixed inset-0 bg-black/60 flex items-center justify-center z-50"
+      className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 animate-fade-in"
       onClick={handleClose}
       role="dialog"
       aria-modal="true"
@@ -36,7 +36,7 @@ export function AuthModal() {
       onKeyDown={(e) => e.key === 'Escape' && handleClose()}
     >
       <div
-        className="bg-white dark:bg-zinc-900 rounded-2xl p-8 w-full max-w-md mx-4 shadow-xl border border-zinc-200 dark:border-zinc-800"
+        className="bg-white dark:bg-zinc-900 rounded-2xl p-8 w-full max-w-md mx-4 shadow-xl border border-zinc-200 dark:border-zinc-800 animate-slide-up"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex justify-between items-center mb-6">
@@ -45,7 +45,7 @@ export function AuthModal() {
           </h2>
           <button
             onClick={handleClose}
-            className="p-1.5 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg transition-all duration-200"
+            className="p-1.5 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg transition-colors"
             aria-label="Close"
           >
             <X size={20} className="text-zinc-400" />
@@ -58,8 +58,8 @@ export function AuthModal() {
 
         <button
           onClick={handleGoogleLogin}
-          className="w-full flex items-center justify-center gap-3 border border-zinc-200 dark:border-zinc-700 rounded-lg px-4 py-3
-                     hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-all duration-200 font-medium"
+          className="w-full flex items-center justify-center gap-3 border border-zinc-200 dark:border-zinc-700 rounded-xl px-4 py-3
+                     hover:bg-zinc-50 dark:hover:bg-zinc-800 shadow-sm hover:shadow-md transition-colors font-medium"
         >
           <svg className="w-5 h-5" viewBox="0 0 24 24">
             <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>

@@ -124,7 +124,7 @@ function BillingContent() {
                           }
                         }}
                         disabled={submitting}
-                        className="px-4 py-2 rounded-lg bg-zinc-100 dark:bg-zinc-800 text-zinc-800 dark:text-zinc-100 hover:bg-zinc-200 dark:hover:bg-zinc-700 disabled:opacity-50 transition-all duration-200"
+                        className="px-4 py-2 rounded-lg bg-zinc-100 dark:bg-zinc-800 text-zinc-800 dark:text-zinc-100 hover:bg-zinc-200 dark:hover:bg-zinc-700 disabled:opacity-50 transition-colors"
                       >
                         {t("profile.plan.manage")}
                       </button>
@@ -140,7 +140,7 @@ function BillingContent() {
                           }
                         }}
                         disabled={submitting}
-                        className="px-4 py-2 rounded-lg bg-zinc-900 dark:bg-zinc-50 text-white dark:text-zinc-900 hover:bg-zinc-800 dark:hover:bg-zinc-200 disabled:opacity-50 transition-all duration-200"
+                        className="px-4 py-2 rounded-lg bg-zinc-900 dark:bg-zinc-50 text-white dark:text-zinc-900 hover:bg-zinc-800 dark:hover:bg-zinc-200 disabled:opacity-50 shadow-sm hover:shadow-md transition-colors"
                       >
                         {t("profile.plan.upgrade")}
                       </button>
@@ -160,7 +160,7 @@ function BillingContent() {
           {products.map((product) => (
             <div
               key={product.id}
-              className="border border-zinc-200 dark:border-zinc-800 rounded-xl p-6 flex flex-col hover:shadow-md transition-all duration-200"
+              className="border border-zinc-100 dark:border-zinc-800 rounded-xl p-6 flex flex-col shadow-sm hover:shadow-md transition-colors"
             >
               <h3 className="text-lg font-medium capitalize text-zinc-900 dark:text-zinc-100">
                 {product.id}
@@ -174,7 +174,7 @@ function BillingContent() {
               <button
                 onClick={() => handlePurchase(product.id)}
                 disabled={loading === product.id}
-                className="mt-auto pt-4 px-4 py-2 bg-zinc-900 dark:bg-zinc-50 text-white dark:text-zinc-900 rounded-lg font-medium hover:bg-zinc-800 dark:hover:bg-zinc-200 disabled:opacity-50 transition-all duration-200"
+                className="mt-auto pt-4 px-4 py-2 bg-zinc-900 dark:bg-zinc-50 text-white dark:text-zinc-900 rounded-lg font-medium hover:bg-zinc-800 dark:hover:bg-zinc-200 disabled:opacity-50 shadow-sm hover:shadow-md transition-colors"
               >
                 {loading === product.id ? t("common.loading") : t("billing.purchase")}
               </button>

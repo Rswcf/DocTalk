@@ -153,13 +153,13 @@ export default function MessageBubble({ message, onCitationClick }: MessageBubbl
   }, [message.citations, onCitationClick, t]);
 
   return (
-    <div className={`w-full flex ${isUser ? 'justify-end' : 'justify-start'} my-2 group`}>
-      <div className="relative max-w-[85%]">
+    <div className={`w-full flex ${isUser ? 'justify-end' : 'justify-start'} my-3 group`}>
+      <div className="relative max-w-[80%]">
         {/* Copy button (assistant only) */}
         {isAssistant && !isError && message.text && (
           <button
             onClick={handleCopy}
-            className="absolute -top-2 right-0 opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded bg-white dark:bg-zinc-700 shadow-sm border dark:border-zinc-600 text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200"
+            className="absolute -top-2 right-0 opacity-0 group-hover:opacity-100 transition-opacity p-1.5 rounded-md bg-white dark:bg-zinc-700 shadow-sm border dark:border-zinc-600 text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200"
             title={copied ? t('copy.copied') : t('copy.button')}
           >
             {copied ? <Check size={14} className="text-green-500" /> : <Copy size={14} />}
@@ -167,12 +167,12 @@ export default function MessageBubble({ message, onCitationClick }: MessageBubbl
         )}
 
         <div
-          className={`rounded-lg px-3 py-2 text-sm ${
+          className={`rounded-2xl px-4 py-3 text-sm ${
             isError
               ? 'bg-red-600 text-white'
               : isUser
-              ? 'bg-zinc-600 text-white'
-              : 'bg-zinc-100 text-zinc-900 dark:bg-zinc-800 dark:text-zinc-100'
+              ? 'bg-zinc-800 dark:bg-zinc-700 text-white shadow-sm'
+              : 'bg-zinc-50 text-zinc-900 dark:bg-zinc-800 dark:text-zinc-100 border border-zinc-100 dark:border-zinc-800'
           }`}
         >
           {isUser ? (
