@@ -18,7 +18,7 @@ Railway 项目包含 5 个服务：backend, Postgres, Redis, qdrant-v2, minio-v2
 
 ### 技术栈
 
-- **Frontend**: Next.js 14 (App Router) + Auth.js v5 + jose (JWT) + react-pdf + react-resizable-panels + Zustand + Tailwind CSS + Radix UI
+- **Frontend**: Next.js 14 (App Router) + Auth.js v5 + jose (JWT) + react-pdf + react-resizable-panels + Zustand + Tailwind CSS (zinc palette) + Radix UI + Inter font (next/font/google)
 - **Backend**: FastAPI + Celery + Redis
 - **Database**: PostgreSQL 16 (Alembic migration) + Qdrant (向量搜索)
 - **Storage**: MinIO (dev) / S3-compatible (prod)
@@ -77,6 +77,7 @@ GET    /api/credits/history               # 交易历史 (?limit=20&offset=0)
 POST   /api/billing/checkout              # 创建 Stripe Checkout (一次性购买)
 POST   /api/billing/subscribe             # 创建 Stripe Subscription Checkout (Pro)
 POST   /api/billing/portal                # 创建 Stripe Customer Portal
+GET    /api/billing/products              # 列出 credit packs (starter/pro/enterprise)
 POST   /api/billing/webhook               # Stripe Webhook
 
 # 用户
@@ -88,6 +89,8 @@ DELETE /api/users/me                      # 删除账户 (级联清理)
 # 内部 Auth (Adapter)
 POST   /api/internal/auth/users           # 创建用户
 GET    /api/internal/auth/users/{id}      # 获取用户
+GET    /api/internal/auth/users/by-email/{email}          # 按邮箱查询用户
+GET    /api/internal/auth/users/by-account/{provider}/{id} # 按 OAuth 账户查询用户
 PUT    /api/internal/auth/users/{id}      # 更新用户
 DELETE /api/internal/auth/users/{id}      # 删除用户
 POST   /api/internal/auth/accounts        # Link 账户
@@ -170,7 +173,10 @@ GOOGLE_CLIENT_SECRET=...
 - **Adapter Secret**: 内部 Auth API 使用 `X-Adapter-Secret` header 校验
 
 ### 前端相关
-- **动态 CTA**: 首页根据登录状态显示不同 UI（未登录→Demo，已登录→上传）
+- **UI 设计**: 单色 zinc 调色板，Inter 字体，dark mode 反转按钮 (`bg-zinc-900 dark:bg-zinc-50`)，全站无 `gray-*`/`blue-*` 类（保留 Google OAuth 品牌色和状态色）。卡片使用 `shadow-sm`/`shadow-md` 分层，模态框 `animate-fade-in`/`animate-slide-up` 动画，零 `transition-all` 策略（所有过渡使用具体属性 `transition-colors`/`transition-opacity`/`transition-shadow`）
+- **Header variant**: `variant='minimal'`（首页/Demo/Auth：仅 Logo+UserMenu）vs `variant='full'`（文档页/Billing/Profile：完整控件）
+- **Landing page**: HeroSection（大字标题+CTA）+ macOS window chrome 产品展示 + FeatureGrid（3列特性卡片）+ PrivacyBadge
+- **动态 CTA**: 首页根据登录状态显示不同 UI（未登录→Landing page，已登录→Dashboard 上传区+文档列表）
 - **AuthModal**: 使用查询参数 `?auth=1` 触发登录模态框，ESC 可关闭
 - **Demo 模式**: `/demo` 页面从后端 `GET /api/documents/demo` 获取真实文档列表，链接到 `/d/{docId}`；ChatPanel 通过 `maxUserMessages` prop 实现客户端 5 条限制 + 计数条 + 登录 CTA；旧 `/demo/[sample]` 路由自动重定向到新路径
 - **文档列表**: 服务端 + localStorage 合并，服务端优先
@@ -179,7 +185,8 @@ GOOGLE_CLIENT_SECRET=...
 - **Proxy maxDuration**: `route.ts` 导出 `maxDuration = 60`（Vercel Hobby 上限），SSE chat 使用 60s fetch timeout，其他请求 30s
 - **UserMenu 替代 AuthButton**: Header 中 `AuthButton` 已被 `UserMenu` 下拉菜单替代，未登录时仍显示 Sign In 按钮
 - **Profile 页面**: `/profile?tab=credits` (默认 tab)，受保护路由，未登录重定向到 `/auth?callbackUrl=/profile`
-- **Billing 页面**: 顶部新增 Pro 订阅卡片（渐变蓝边框），根据 plan 显示 Upgrade/Manage；下方保留原有 credit packs
+- **Billing 页面**: 顶部 Pro 订阅卡片（渐变 zinc-800→zinc-900 边框），根据 plan 显示 Upgrade/Manage；下方 credit packs 卡片 (rounded-xl)
+- **响应式**: Header 移动端间距/截断/CreditsDisplay 小屏隐藏，upload zone `p-8 sm:p-12`，billing `p-6 sm:p-8`
 
 ### 后端相关
 - **Celery 用同步 DB**: Worker 使用 `psycopg`（同步），API 使用 `asyncpg`（异步）
@@ -233,8 +240,10 @@ DocTalk/
 │   │   ├── api/
 │   │   │   ├── documents.py      # 文档 CRUD + 列表
 │   │   │   ├── chat.py           # 会话 + 对话
+│   │   │   ├── search.py         # 语义搜索
+│   │   │   ├── chunks.py         # Chunk 详情
 │   │   │   ├── auth.py           # 内部 Auth Adapter API
-│   │   │   ├── billing.py        # Stripe Checkout/Subscribe/Portal + Webhook
+│   │   │   ├── billing.py        # Stripe Checkout/Subscribe/Portal/Products + Webhook
 │   │   │   ├── credits.py        # Credits 余额 + 历史
 │   │   │   └── users.py          # /me, /profile, /usage-breakdown, DELETE /me
 │   │   │   # admin endpoints are in main.py (temporary, no auth)
@@ -246,7 +255,10 @@ DocTalk/
 │   │   │   ├── database.py       # Async engine
 │   │   │   └── sync_database.py  # Sync engine (Celery)
 │   │   ├── schemas/
-│   │   │   └── document.py       # DocumentResponse, DocumentBrief
+│   │   │   ├── document.py       # DocumentResponse, DocumentBrief, DocumentFileUrlResponse
+│   │   │   ├── search.py         # SearchRequest, SearchResultItem, SearchResponse
+│   │   │   ├── chat.py           # ChatRequest, ChatMessageResponse, SessionResponse
+│   │   │   └── auth.py           # User/Account/VerificationToken schemas
 │   │   ├── services/
 │   │   │   ├── chat_service.py   # LLM 对话 + 引用解析
 │   │   │   ├── credit_service.py # Credits debit/credit + ensure_monthly_credits
@@ -272,12 +284,15 @@ DocTalk/
 │   │   │       ├── auth/         # NextAuth 路由
 │   │   │       └── proxy/        # API 代理 (创建后端兼容 JWT)
 │   │   ├── components/
-│   │   │   ├── AuthModal.tsx     # 登录模态框
+│   │   │   ├── landing/          # HeroSection, FeatureGrid (登陆页组件)
+│   │   │   ├── AuthModal.tsx     # 登录模态框 (rounded-2xl, zinc)
 │   │   │   ├── AuthButton.tsx    # 登录/登出按钮 (已被 UserMenu 替代)
 │   │   │   ├── UserMenu.tsx      # 头像下拉菜单 (Profile/Buy Credits/Sign Out)
 │   │   │   ├── PrivacyBadge.tsx  # 隐私承诺徽章
 │   │   │   ├── CreditsDisplay.tsx # 余额显示
 │   │   │   ├── PaywallModal.tsx  # 付费墙
+│   │   │   ├── ErrorBoundary.tsx # React 错误边界
+│   │   │   ├── Providers.tsx     # SessionProvider 包装器
 │   │   │   ├── Profile/          # ProfileTabs, ProfileInfo, Credits, Usage, Account
 │   │   │   ├── Chat/             # ChatPanel, MessageBubble, CitationCard
 │   │   │   └── PdfViewer/        # PdfViewer, PdfToolbar, PageWithHighlights
@@ -285,6 +300,7 @@ DocTalk/
 │   │   │   ├── api.ts            # REST 客户端 (含 PROXY_BASE)
 │   │   │   ├── auth.ts           # Auth.js 配置
 │   │   │   ├── authAdapter.ts    # FastAPI Adapter
+│   │   │   ├── models.ts         # AVAILABLE_MODELS 定义 (8 模型)
 │   │   │   └── sse.ts            # SSE 流式客户端
 │   │   ├── i18n/                 # 8 种语言
 │   │   ├── store/                # Zustand
@@ -293,9 +309,21 @@ DocTalk/
 │   │   └── samples/              # (已清空，Demo PDF 现由后端 seed_data/ 提供)
 │   └── package.json
 ├── .collab/                      # CC ↔ CX 协作文档
+├── docs/
+│   └── ARCHITECTURE.md           # 架构文档 (Mermaid 图表)
 ├── docker-compose.yml
+├── README.md                     # 英文 README (与 README.zh.md 保持同步)
+├── README.zh.md                  # 中文 README (与 README.md 保持同步)
 └── CLAUDE.md
 ```
+
+---
+
+## 文档维护
+
+- `README.md`（英文）和 `README.zh.md`（中文）内容必须保持同步。修改其中一个时，需同步更新另一个
+- `docs/ARCHITECTURE.md` 包含 Mermaid 架构图，架构变更时需同步更新
+- `CLAUDE.md` 面向 AI 开发工具，记录内部约定和实现细节
 
 ---
 
@@ -307,8 +335,8 @@ DocTalk/
 
 ```bash
 codex exec \
-  --skip-git-repo-check \
   --full-auto \
+  -m gpt-5.3-codex \
   -C /Users/mayijie/Projects/Code/010_DocTalk \
   -o <output-file> \
   "<prompt>"

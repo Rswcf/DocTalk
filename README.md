@@ -1,89 +1,69 @@
 # DocTalk
 
-面向高强度文档阅读者的 AI 对话助手 — 在超长 PDF 中通过 AI 对话快速定位关键信息，回答绑定原文引用并实时高亮跳转。
+[中文版](README.zh.md)
 
-## 功能特性
+> AI-powered document reader — chat with your PDFs, get cited answers with page highlights.
 
-- **PDF 上传与解析** — 上传 PDF，自动提取文本、切分语义块、生成向量索引
-- **语义搜索** — 基于向量检索，用自然语言查找文档内容
-- **AI 对话 + 引用高亮** — 流式对话回答，自动标注原文引用 `[1][2]`，点击即跳转到 PDF 对应位置并高亮
-- **多模型切换** — 支持 8 个主流 LLM（Claude、GPT、Gemini、DeepSeek、Mistral、Qwen），用户可在对话中随时切换
-- **多语言支持** — 8 种语言界面（English、中文、हिन्दी、Español、العربية、Français、বাংলা、Português）
-- **可调节布局** — Chat 面板在左、PDF 查看器在右，中间可拖拽调节宽度
-- **Demo 试用** — 无需注册即可体验示例文档（财报、论文、合同）
-- **Google 登录** — 一键登录，云端同步文档和对话历史
-- **Credits 系统** — 预付费模式，Stripe 支付集成
+DocTalk helps heavy document readers quickly locate key information in long PDFs through AI conversation. Answers include numbered citations that link back to the original text with real-time page highlighting.
 
-## 技术架构
+## Features
 
-```
-┌─────────────┐     ┌─────────────────────────────────────────┐
-│   Next.js   │────▶│              FastAPI                    │
-│  (Vercel)   │ SSE │  ┌─────────┐  ┌──────────┐  ┌───────┐ │
-│  Auth.js    │◀────│  │ Chat API│  │Search API│  │Doc API│ │
-│  react-pdf  │     │  └────┬────┘  └────┬─────┘  └───┬───┘ │
-│  Zustand    │     │       │            │             │     │
-└─────────────┘     │  ┌────▼────────────▼─────────────▼───┐ │
-                    │  │         Service Layer              │ │
-                    │  │  chat · retrieval · embedding      │ │
-                    │  │  parse · storage · auth · credits  │ │
-                    │  └──┬──────────┬──────────┬───────────┘ │
-                    │     │          │          │             │
-                    │  ┌──▼──┐  ┌───▼───┐  ┌───▼────┐       │
-                    │  │Qdrant│  │Postgres│  │MinIO/S3│       │
-                    │  └──────┘  └───────┘  └────────┘       │
-                    │                                         │
-                    │  ┌────────────────────────┐            │
-                    │  │ Celery Worker (Redis)  │            │
-                    │  │ PDF 解析 + Embedding   │            │
-                    │  └────────────────────────┘            │
-                    └─────────────────────────────────────────┘
-                           │                │
-                    ┌──────▼──────┐  ┌──────▼──────┐
-                    │  OpenRouter  │  │   Stripe    │
-                    │  LLM API     │  │  Payments   │
-                    └─────────────┘  └─────────────┘
-```
+- **Upload & Parse** — Upload any PDF; AI extracts text, detects sections, and builds a vector index
+- **Cited Answers** — Ask questions and get responses with `[1]`, `[2]` references to exact passages
+- **Page Highlights** — Click a citation to jump to the referenced page with bounding-box overlays
+- **Split View** — Resizable chat panel (left) + PDF viewer (right) with drag-to-pan zoom
+- **8 LLM Models** — Switch between Claude, GPT, Gemini, DeepSeek, Mistral, and Qwen models via OpenRouter
+- **Demo Mode** — Try 3 sample documents (NVIDIA 10-K, Attention paper, NDA contract) instantly
+- **Credits System** — Free tier (10K/month) and Pro tier (100K/month) with Stripe subscription
+- **8 Languages** — English, Chinese, Hindi, Spanish, Arabic, French, Bengali, Portuguese
+- **Dark Mode** — Full dark theme with monochrome zinc palette
+- **Multi-Session** — Multiple independent chat sessions per document with auto-restore
 
-**技术栈**:
-- **前端**: Next.js 14 (App Router) · Auth.js v5 · jose (JWT) · react-pdf · react-resizable-panels · Zustand · Tailwind CSS
-- **后端**: FastAPI · Celery · Redis
-- **数据库**: PostgreSQL 16 (Alembic) · Qdrant (向量搜索)
-- **存储**: MinIO (开发) / S3 (生产)
-- **认证**: Auth.js (NextAuth) v5 + Google OAuth + JWT
-- **支付**: Stripe Checkout + Webhooks
-- **AI**: OpenRouter 网关 → 多模型可选（默认 Claude Sonnet 4.5）+ text-embedding-3-small
-- **PDF 解析**: PyMuPDF (fitz)
-- **i18n**: 8 种语言，客户端 React Context
+## Live Demo
 
-## 快速开始
+- **App**: [www.doctalk.site](https://www.doctalk.site)
+- **Try It**: [www.doctalk.site/demo](https://www.doctalk.site/demo)
 
-### 前置要求
+## Tech Stack
+
+| Layer | Technology |
+|-------|-----------|
+| **Frontend** | Next.js 14 (App Router), Auth.js v5, react-pdf, react-resizable-panels, Zustand, Tailwind CSS, Radix UI |
+| **Backend** | FastAPI, Celery, Redis |
+| **Database** | PostgreSQL 16 (Alembic migrations), Qdrant (vector search) |
+| **Storage** | MinIO (dev) / S3-compatible (prod) |
+| **Auth** | Auth.js (NextAuth) v5 + Google OAuth + JWT |
+| **Payments** | Stripe Checkout + Subscriptions + Webhooks |
+| **AI** | OpenRouter gateway — LLM: `anthropic/claude-sonnet-4.5` (default), Embedding: `openai/text-embedding-3-small` |
+| **PDF Parse** | PyMuPDF (fitz) |
+
+## Getting Started
+
+### Prerequisites
 
 - Docker & Docker Compose
-- Node.js 18+
 - Python 3.11+
-- [OpenRouter API Key](https://openrouter.ai/)
-- [Google OAuth Credentials](https://console.cloud.google.com/)
+- Node.js 18+
+- An [OpenRouter](https://openrouter.ai) API key
+- [Google OAuth credentials](https://console.cloud.google.com/)
 
-### 本地开发
+### Local Development
 
-1. **克隆并配置环境变量**
+**1. Clone and configure:**
 
 ```bash
 git clone https://github.com/Rswcf/DocTalk.git
 cd DocTalk
-cp .env.example .env
-# 编辑 .env，填入必要的 API Keys
+cp .env.example .env   # Edit with your keys
 ```
 
-2. **启动基础设施**
+**2. Start infrastructure services:**
 
 ```bash
-docker compose up -d
+docker compose up -d   # PostgreSQL, Qdrant, Redis, MinIO
 ```
 
-3. **启动后端**
+**3. Set up the backend:**
 
 ```bash
 cd backend
@@ -92,16 +72,17 @@ python3 -m alembic upgrade head
 python3 -m uvicorn app.main:app --reload
 ```
 
-4. **启动 Celery Worker**
+**4. Start the Celery worker** (in a separate terminal):
 
 ```bash
 cd backend
-OBJC_DISABLE_INITIALIZE_FORK_SAFETY=YES python3 -m celery -A app.workers.celery_app worker --loglevel=info -Q default,parse
+OBJC_DISABLE_INITIALIZE_FORK_SAFETY=YES python3 -m celery \
+  -A app.workers.celery_app worker --loglevel=info -Q default,parse
 ```
 
-> `OBJC_DISABLE_INITIALIZE_FORK_SAFETY=YES` 仅 macOS 需要
+> The `OBJC_DISABLE_INITIALIZE_FORK_SAFETY=YES` variable is required on macOS.
 
-5. **启动前端**
+**5. Start the frontend** (in a separate terminal):
 
 ```bash
 cd frontend
@@ -109,95 +90,101 @@ npm install
 npm run dev
 ```
 
-访问 http://localhost:3001 开始使用。
+Open [http://localhost:3000](http://localhost:3000) in your browser.
 
-### 环境变量
+### Environment Variables
 
-关键配置项（完整列表见 [`.env.example`](.env.example)）：
+**Backend** (`.env` in `backend/` or project root):
 
-```bash
-# 必需
-DATABASE_URL=postgresql+asyncpg://user:pass@localhost:5432/doctalk
-OPENROUTER_API_KEY=sk-or-...
-AUTH_SECRET=<随机字符串，前后端一致>
-ADAPTER_SECRET=<随机字符串>
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `DATABASE_URL` | Yes | PostgreSQL connection string (`postgresql+asyncpg://...`) |
+| `OPENROUTER_API_KEY` | Yes | OpenRouter API key |
+| `AUTH_SECRET` | Yes | Random secret string (shared with frontend) |
+| `ADAPTER_SECRET` | Yes | Secret for internal auth API |
+| `STRIPE_SECRET_KEY` | No | Stripe secret key |
+| `STRIPE_WEBHOOK_SECRET` | No | Stripe webhook signing secret |
+| `STRIPE_PRICE_PRO_MONTHLY` | No | Stripe recurring price ID for Pro plan |
 
-# OAuth
-GOOGLE_CLIENT_ID=...
-GOOGLE_CLIENT_SECRET=...
+**Frontend** (`.env.local` in `frontend/`):
 
-# 支付 (可选)
-STRIPE_SECRET_KEY=sk_...
-STRIPE_WEBHOOK_SECRET=whsec_...
-```
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `NEXT_PUBLIC_API_BASE` | Yes | Backend URL (default: `http://localhost:8000`) |
+| `AUTH_SECRET` | Yes | Must match backend `AUTH_SECRET` |
+| `GOOGLE_CLIENT_ID` | Yes | Google OAuth client ID |
+| `GOOGLE_CLIENT_SECRET` | Yes | Google OAuth client secret |
 
-## 线上部署
-
-| 组件 | URL |
-|---|---|
-| **Frontend** (Vercel) | https://doctalk-liard.vercel.app |
-| **Backend** (Railway) | https://backend-production-a62e.up.railway.app |
-
-## API 概览
-
-| 方法 | 路径 | 说明 |
-|------|------|------|
-| `GET` | `/api/documents` | 列出用户文档 (?mine=1) |
-| `POST` | `/api/documents/upload` | 上传 PDF (需登录) |
-| `GET` | `/api/documents/{id}` | 查询文档状态 |
-| `DELETE` | `/api/documents/{id}` | 删除文档（异步） |
-| `GET` | `/api/documents/{id}/file-url` | 获取 PDF presigned URL |
-| `POST` | `/api/documents/{id}/search` | 语义搜索 |
-| `POST` | `/api/documents/{id}/sessions` | 创建聊天会话 |
-| `GET` | `/api/sessions/{id}/messages` | 获取历史消息 |
-| `POST` | `/api/sessions/{id}/chat` | AI 对话（SSE streaming） |
-| `GET` | `/api/credits/balance` | 获取 Credits 余额 |
-| `POST` | `/api/billing/checkout` | 创建 Stripe Checkout |
-| `GET` | `/health` | 健康检查 |
-
-## 项目结构
+## Project Structure
 
 ```
 DocTalk/
 ├── backend/
 │   ├── app/
-│   │   ├── api/           # FastAPI 路由 (documents, chat, auth, billing, credits)
-│   │   ├── core/          # 配置 + 依赖注入
-│   │   ├── models/        # SQLAlchemy ORM (User, Document, Credits, Ledger...)
-│   │   ├── schemas/       # Pydantic 模型
-│   │   ├── services/      # 业务逻辑层
-│   │   └── workers/       # Celery 异步任务
-│   ├── alembic/           # 数据库迁移
+│   │   ├── api/            # Route handlers (documents, chat, search, billing, auth, users)
+│   │   ├── core/           # Config & dependencies
+│   │   ├── models/         # SQLAlchemy ORM models
+│   │   ├── schemas/        # Pydantic request/response schemas
+│   │   ├── services/       # Business logic (chat, credits, parsing, demo seed)
+│   │   └── workers/        # Celery task definitions
+│   ├── alembic/            # Database migrations
+│   ├── seed_data/          # Demo PDF files
 │   └── tests/
 ├── frontend/
 │   ├── src/
-│   │   ├── app/           # 页面 (/, /demo, /d/[id], /auth, /billing, /privacy, /terms)
-│   │   ├── components/    # React 组件 (AuthModal, Chat, PdfViewer, CreditsDisplay...)
-│   │   ├── i18n/          # 国际化 (8 种语言)
-│   │   ├── lib/           # API 客户端, Auth 配置
-│   │   ├── store/         # Zustand 状态管理
+│   │   ├── app/            # Next.js pages (home, auth, billing, profile, demo, document viewer)
+│   │   ├── components/     # React components (Chat, PdfViewer, Profile, landing, Header)
+│   │   ├── lib/            # API client, auth config, SSE client, model definitions
+│   │   ├── i18n/           # 8 language locale files
+│   │   ├── store/          # Zustand state management
 │   │   └── types/
-│   ├── public/
-│   │   └── samples/       # Demo PDF 文件
-│   └── package.json
-├── .collab/               # CC ↔ CX 协作文档
-├── docker-compose.yml
-├── .env.example
-└── CLAUDE.md              # 开发指南
+│   └── public/
+├── docs/
+│   └── ARCHITECTURE.md     # Architecture deep-dive with Mermaid diagrams
+└── docker-compose.yml
 ```
 
-## 用户流程
+## Architecture
+
+For detailed architecture diagrams including data flows, authentication, billing, and database schema, see **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)**.
+
+**High-level overview:**
 
 ```
-首页 (未登录)
-├── "试用示例" → /demo → 选择示例 → /demo/[sample] (5条消息限制)
-│                                    └── 登录模态框 → 注册/登录
-└── "登录上传" → 登录模态框 → Google 登录
+Browser ──→ Vercel (Next.js) ──→ Railway (FastAPI) ──→ PostgreSQL
+                │                       │                Qdrant
+                │                       │                Redis
+                └── API Proxy ──────────┘                MinIO
+                   (JWT injection)
+```
 
-首页 (已登录)
-├── 上传 PDF → 解析中... → /d/[documentId] → 对话 + PDF 预览
-├── "我的文档" → 点击打开 → /d/[documentId]
-└── 购买 Credits → /billing → Stripe Checkout
+Key architectural decisions:
+
+- **Dual JWT** — Auth.js v5 uses encrypted JWE; API proxy translates to HS256 JWT for backend compatibility
+- **SSE Streaming** — Chat responses stream via Server-Sent Events through the proxy
+- **Vector Search** — Chunks with bounding-box coordinates enable citation-to-page-highlight linking
+- **OpenRouter Gateway** — Single API key for all LLM and embedding models
+
+## Deployment
+
+**Frontend (Vercel):**
+- Root Directory is set to `frontend/` in Vercel project settings
+- Deploy via `git push` to GitHub (auto-deploy enabled)
+- Do NOT run `vercel --prod` from `frontend/` directory
+
+**Backend (Railway):**
+- Deploy from project root: `railway up --detach`
+- Dockerfile runs: Alembic migration → Celery worker (background) → uvicorn
+- Railway project includes 5 services: backend, PostgreSQL, Redis, Qdrant, MinIO
+
+## Testing
+
+```bash
+# Smoke tests (requires docker compose services running)
+cd backend && python3 -m pytest tests/test_smoke.py -v
+
+# Integration tests
+cd backend && python3 -m pytest -m integration -v
 ```
 
 ## License
