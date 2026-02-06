@@ -46,7 +46,7 @@
 ```
 
 **技术栈**:
-- **前端**: Next.js 14 (App Router) · Auth.js v5 · react-pdf · react-resizable-panels · Zustand · Tailwind CSS
+- **前端**: Next.js 14 (App Router) · Auth.js v5 · jose (JWT) · react-pdf · react-resizable-panels · Zustand · Tailwind CSS
 - **后端**: FastAPI · Celery · Redis
 - **数据库**: PostgreSQL 16 (Alembic) · Qdrant (向量搜索)
 - **存储**: MinIO (开发) / S3 (生产)

@@ -18,7 +18,7 @@ Railway 项目包含 5 个服务：backend, Postgres, Redis, qdrant-v2, minio-v2
 
 ### 技术栈
 
-- **Frontend**: Next.js 14 (App Router) + Auth.js v5 + react-pdf + react-resizable-panels + Zustand + Tailwind CSS + Radix UI
+- **Frontend**: Next.js 14 (App Router) + Auth.js v5 + jose (JWT) + react-pdf + react-resizable-panels + Zustand + Tailwind CSS + Radix UI
 - **Backend**: FastAPI + Celery + Redis
 - **Database**: PostgreSQL 16 (Alembic migration) + Qdrant (向量搜索)
 - **Storage**: MinIO (dev) / S3-compatible (prod)
@@ -140,7 +140,8 @@ GOOGLE_CLIENT_SECRET=...
 ### 认证相关
 - **上传需登录**: `upload_document` 使用 `require_auth` 依赖，未登录返回 401
 - **API 代理**: 敏感接口（上传、删除、会话）通过 `/api/proxy/*` 走前端代理，自动注入 JWT
-- **JWT 校验**: 后端 `deps.py` 验证 exp/iat/sub claims，使用 `hmac.compare_digest` 防时序攻击
+- **JWT 双层设计**: Auth.js v5 使用加密 JWT (JWE)，后端无法直接解密。API 代理使用 `jose` 库创建后端兼容的明文 JWT (HS256)，包含 sub/iat/exp claims
+- **JWT 校验**: 后端 `deps.py` 验证 exp/iat/sub claims
 - **Adapter Secret**: 内部 Auth API 使用 `X-Adapter-Secret` header 校验
 
 ### 前端相关
@@ -224,7 +225,7 @@ DocTalk/
 │   │   │   ├── terms/            # 服务条款
 │   │   │   └── api/
 │   │   │       ├── auth/         # NextAuth 路由
-│   │   │       └── proxy/        # API 代理 (注入 JWT)
+│   │   │       └── proxy/        # API 代理 (创建后端兼容 JWT)
 │   │   ├── components/
 │   │   │   ├── AuthModal.tsx     # 登录模态框
 │   │   │   ├── AuthButton.tsx    # 登录/登出按钮
