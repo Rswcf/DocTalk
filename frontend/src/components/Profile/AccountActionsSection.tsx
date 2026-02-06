@@ -32,7 +32,7 @@ export default function AccountActionsSection({ email }: Props) {
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="border rounded-lg p-6 dark:border-gray-700 border-red-300 dark:border-red-700">
+      <div className="border rounded-lg p-6 dark:border-zinc-700 border-red-300 dark:border-red-700">
         <h3 className="text-lg font-medium mb-2 text-red-700 dark:text-red-300">
           {t("profile.account.dangerZone")}
         </h3>
@@ -51,16 +51,16 @@ export default function AccountActionsSection({ email }: Props) {
       {open && (
         <div className="fixed inset-0 z-50 flex items-center justify-center">
           <div className="absolute inset-0 bg-black/50" onClick={() => !deleting && setOpen(false)} />
-          <div className="relative bg-white dark:bg-gray-900 border dark:border-gray-700 rounded-lg p-6 w-full max-w-md shadow-lg">
-            <h4 className="text-lg font-semibold mb-2 dark:text-gray-100">
+          <div className="relative bg-white dark:bg-zinc-900 border dark:border-zinc-700 rounded-lg p-6 w-full max-w-md shadow-lg">
+            <h4 className="text-lg font-semibold mb-2 dark:text-zinc-100">
               {t("profile.account.deleteAccount")}
             </h4>
-            <p className="text-sm text-gray-700 dark:text-gray-300 mb-4">
+            <p className="text-sm text-zinc-700 dark:text-zinc-300 mb-4">
               {t("profile.account.deleteConfirm")}
             </p>
             <input
               type="text"
-              className="w-full px-3 py-2 rounded border dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
+              className="w-full px-3 py-2 rounded border dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100"
               value={confirmEmail}
               onChange={(e) => setConfirmEmail(e.target.value)}
               placeholder={email}
@@ -74,7 +74,7 @@ export default function AccountActionsSection({ email }: Props) {
                 type="button"
                 disabled={deleting}
                 onClick={() => setOpen(false)}
-                className="px-4 py-2 rounded-lg text-sm font-medium bg-gray-100 text-gray-800 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700"
+                className="px-4 py-2 rounded-lg text-sm font-medium bg-zinc-100 text-zinc-800 hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-200 dark:hover:bg-zinc-700"
               >
                 {t("common.cancel")}
               </button>

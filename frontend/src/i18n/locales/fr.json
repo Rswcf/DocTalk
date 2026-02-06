@@ -1,7 +1,6 @@
 {
   "app.title": "DocTalk",
   "app.subtitle": "Téléchargez un PDF pour commencer à discuter.",
-
   "upload.dragDrop": "Glissez-déposez votre PDF ici",
   "upload.or": "ou",
   "upload.chooseFile": "Choisir un fichier",
@@ -12,7 +11,6 @@
   "upload.networkError": "Échec du téléversement, vérifiez le réseau ou réessayez plus tard",
   "upload.pdfOnly": "Veuillez téléverser un fichier PDF",
   "upload.tooLarge": "La taille du fichier ne peut pas dépasser 50 Mo",
-
   "doc.myDocuments": "Mes documents",
   "doc.noDocuments": "Aucun document pour le moment",
   "doc.open": "Ouvrir",
@@ -23,7 +21,6 @@
   "doc.initChat": "Initialisation du chat…",
   "doc.pdfLoadError": "Impossible de charger le PDF. Veuillez actualiser la page ou réessayer plus tard.",
   "doc.pdfLoading": "Chargement du PDF…",
-
   "chat.placeholder": "Posez une question…",
   "chat.send": "Envoyer",
   "chat.trySuggested": "Essayez l'une de ces questions pour commencer :",
@@ -33,26 +30,21 @@
   "chat.suggestedQ4": "Dressez la liste des données et conclusions importantes",
   "chat.error": "Erreur de chat : ",
   "chat.networkError": "Erreur réseau, veuillez réessayer plus tard",
-
   "citation.jumpTo": "Aller à la page {page}",
-
   "toolbar.zoomIn": "Zoom avant",
   "toolbar.zoomOut": "Zoom arrière",
   "toolbar.prevPage": "Page précédente",
   "toolbar.nextPage": "Page suivante",
   "toolbar.grabMode": "Outil main (glisser pour déplacer)",
-
   "header.darkMode": "Passer en mode sombre",
   "header.lightMode": "Passer en mode clair",
   "header.model": "Modèle",
   "header.language": "Langue",
   "header.backToDocument": "Retour au document",
-
   "copy.button": "Copier",
   "copy.copied": "Copié",
   "feedback.helpful": "Utile",
   "feedback.notHelpful": "Pas utile",
-
   "error.somethingWrong": "Un problème est survenu",
   "error.refresh": "Actualiser la page",
   "session.newChat": "Nouvelle discussion",
@@ -80,23 +72,19 @@
   "billing.error": "An error occurred. Please try again.",
   "common.cancel": "Cancel",
   "common.loading": "Loading...",
-
   "profile.title": "Profil",
   "profile.tabs.profile": "Profil",
   "profile.tabs.credits": "Crédits",
   "profile.tabs.usage": "Utilisation",
   "profile.tabs.account": "Compte",
-
   "profile.info.memberSince": "Membre depuis {days} jours",
   "profile.info.connectedWith": "Connecté avec {provider}",
-
   "profile.plan.free": "Gratuit",
   "profile.plan.pro": "Pro",
   "profile.plan.upgrade": "Passer à Pro",
   "profile.plan.manage": "Gérer l’abonnement",
   "profile.plan.monthlyAllowance": "{used} / {total} crédits mensuels",
   "profile.plan.nextRenewal": "Renouvellement dans {days} jours",
-
   "profile.credits.balance": "Solde de crédits",
   "profile.credits.buyMore": "Acheter des crédits supplémentaires",
   "profile.credits.history": "Historique des transactions",
@@ -106,7 +94,6 @@
   "profile.credits.reason.chat": "Utilisation du chat",
   "profile.credits.reason.monthly_allowance": "Allocation mensuelle",
   "profile.credits.reason.refund": "Remboursement",
-
   "profile.usage.documents": "Documents",
   "profile.usage.sessions": "Sessions de chat",
   "profile.usage.messages": "Messages",
@@ -117,22 +104,18 @@
   "profile.usage.calls": "Appels",
   "profile.usage.tokens": "Jetons",
   "profile.usage.credits": "Crédits",
-
   "profile.account.dangerZone": "Zone de danger",
   "profile.account.deleteAccount": "Supprimer le compte",
   "profile.account.deleteWarning": "Cela supprimera définitivement votre compte, tous les documents, discussions et données. Cette action ne peut pas être annulée.",
   "profile.account.deleteConfirm": "Saisissez votre e-mail pour confirmer la suppression",
   "profile.account.deleting": "Suppression du compte…",
-
   "userMenu.profile": "Profil",
   "userMenu.buyCredits": "Acheter des crédits",
   "userMenu.signOut": "Se déconnecter",
-
   "billing.pro.title": "Forfait Pro",
   "billing.pro.description": "100 000 crédits/mois",
   "billing.pro.pricePerMonth": "{price}/mois",
   "billing.extraTopups": "Recharges de crédits supplémentaires",
-
   "demo.title": "Choisissez un document exemple",
   "demo.subtitle": "Découvrez DocTalk avec ces exemples de PDF",
   "demo.hint": "Astuce : cliquez sur les numéros de citation [1] pour accéder à la source et voir les surlignages",
@@ -157,5 +140,21 @@
   "demo.signInForUnlimited": "Connectez-vous pour l'illimité",
   "demo.signInToContinue": "Connectez-vous pour continuer à discuter",
   "demo.limitReachedMessage": "Vous avez utilisé vos 5 questions de démonstration. Connectez-vous pour un accès illimité avec des crédits gratuits !",
-  "demo.processing": "Traitement en cours..."
+  "demo.processing": "Traitement en cours...",
+  "landing.badge": "ASSISTANT PDF IA",
+  "landing.headline": "Discutez avec n'importe quel PDF\nen quelques secondes",
+  "landing.subtitle": "Votre compagnon de lecture IA",
+  "landing.description": "Téléchargez n'importe quel PDF et obtenez des réponses instantanées avec citations. Chaque réponse renvoie à la source exacte.",
+  "landing.cta.demo": "Démo gratuite",
+  "landing.cta.getStarted": "Commencer",
+  "landing.cta.howItWorks": "Comment ça marche",
+  "landing.showcase.title": "Voyez-le en action",
+  "landing.showcase.caption": "Téléchargez un PDF, posez des questions, obtenez des réponses citées avec surlignage",
+  "landing.features.title": "Pourquoi DocTalk ?",
+  "landing.feature.answers.title": "Réponses instantanées",
+  "landing.feature.answers.desc": "Posez n'importe quelle question et obtenez des réponses précises de votre document en quelques secondes.",
+  "landing.feature.citations.title": "Citations sourcées",
+  "landing.feature.citations.desc": "Chaque réponse inclut des références numérotées. Cliquez sur une citation pour aller à la page exacte.",
+  "landing.feature.privacy.title": "Confidentialité d'abord",
+  "landing.feature.privacy.desc": "Vos documents ne sont jamais utilisés pour l'entraînement IA. Chiffrés en transit et au repos."
 }

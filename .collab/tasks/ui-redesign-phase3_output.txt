@@ -1,0 +1,17 @@
+Applied the Phase 3 restyle by fully replacing these files with the exact versions you provided:
+
+- `frontend/src/app/demo/page.tsx`
+- `frontend/src/app/billing/page.tsx`
+- `frontend/src/app/auth/page.tsx`
+- `frontend/src/components/AuthModal.tsx`
+
+What’s now in place:
+- Zinc monochrome palette and `dark:bg-zinc-950` page backgrounds
+- Updated header usage on Demo (`<Header variant="minimal" />`)
+- Zinc primary button treatment (`bg-zinc-900 dark:bg-zinc-50 text-white dark:text-zinc-900`)
+- Refined borders/cards/transitions and spacing per your specs
+- Auth/AuthModal visual refresh including DocTalk wordmark and emoji removal in modal notes
+
+Validation:
+- Ran `npm run lint` in `frontend` successfully.
+- One unrelated pre-existing warning remains at `frontend/src/components/Profile/ProfileInfoSection.tsx:38` (`<img>` vs `next/image`).

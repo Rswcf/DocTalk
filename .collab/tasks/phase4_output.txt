@@ -1,0 +1,1455 @@
+OpenAI Codex v0.46.0 (research preview)
+--------
+workdir: /Users/mayijie/Projects/Code/010_DocTalk
+model: gpt-5
+provider: openai
+approval: never
+sandbox: workspace-write [workdir, /tmp, $TMPDIR]
+reasoning effort: high
+reasoning summaries: auto
+session id: 019c3310-a46c-7f32-a1ea-8055c4afe069
+--------
+user
+Phase 4: Frontend Data Layer (API types, functions, i18n EN)
+
+## IMPORTANT: Read ALL existing files before making changes\!
+
+Read these files first:
+- frontend/src/lib/api.ts
+- frontend/src/types/index.ts
+- frontend/src/i18n/locales/en.json
+
+### 4.1 TypeScript Types
+Add to frontend/src/types/index.ts:
+
+export interface UserProfile {
+  id: string;
+  email: string;
+  name: string | null;
+  image: string | null;
+  created_at: string;
+  plan: 'free' | 'pro';
+  credits_balance: number;
+  monthly_allowance: number;
+  monthly_credits_granted_at: string | null;
+  signup_bonus_granted: boolean;
+  connected_accounts: Array<{ provider: string; created_at: string }>;
+  stats: {
+    total_documents: number;
+    total_sessions: number;
+    total_messages: number;
+    total_credits_spent: number;
+    total_tokens_used: number;
+  };
+}
+
+export interface CreditHistoryItem {
+  id: string;
+  delta: number;
+  balance_after: number;
+  reason: string;
+  ref_type: string | null;
+  ref_id: string | null;
+  created_at: string;
+}
+
+export interface CreditHistoryResponse {
+  items: CreditHistoryItem[];
+  total: number;
+}
+
+export interface UsageBreakdown {
+  by_model: Array<{
+    model: string;
+    total_calls: number;
+    total_tokens: number;
+    total_credits: number;
+  }>;
+}
+
+### 4.2 API Functions
+Add to frontend/src/lib/api.ts (import the new types from '../types'):
+
+export async function getUserProfile(): Promise<UserProfile> {
+  const res = await fetch(PROXY_BASE + '/api/users/profile');
+  return handle(res);
+}
+
+export async function getCreditHistory(limit = 20, offset = 0): Promise<CreditHistoryResponse> {
+  const res = await fetch(PROXY_BASE + '/api/credits/history?limit=' + limit + '&offset=' + offset);
+  return handle(res);
+}
+
+export async function getUsageBreakdown(): Promise<UsageBreakdown> {
+  const res = await fetch(PROXY_BASE + '/api/users/usage-breakdown');
+  return handle(res);
+}
+
+export async function deleteUserAccount(): Promise<void> {
+  const res = await fetch(PROXY_BASE + '/api/users/me', { method: 'DELETE' });
+  if (\!res.ok) {
+    const text = await res.text();
+    throw new Error('HTTP ' + res.status + ': ' + text);
+  }
+}
+
+export async function createSubscription(): Promise<{ checkout_url: string }> {
+  const res = await fetch(PROXY_BASE + '/api/billing/subscribe', { method: 'POST' });
+  return handle(res);
+}
+
+export async function createPortalSession(): Promise<{ portal_url: string }> {
+  const res = await fetch(PROXY_BASE + '/api/billing/portal', { method: 'POST' });
+  return handle(res);
+}
+
+### 4.3 i18n Keys (English only)
+Add these keys to frontend/src/i18n/locales/en.json. KEEP ALL existing keys. Add these new ones:
+
+  "profile.title": "Profile",
+  "profile.tabs.profile": "Profile",
+  "profile.tabs.credits": "Credits",
+  "profile.tabs.usage": "Usage",
+  "profile.tabs.account": "Account",
+
+  "profile.info.memberSince": "Member for {days} days",
+  "profile.info.connectedWith": "Connected with {provider}",
+
+  "profile.plan.free": "Free",
+  "profile.plan.pro": "Pro",
+  "profile.plan.upgrade": "Upgrade to Pro",
+  "profile.plan.manage": "Manage Subscription",
+  "profile.plan.monthlyAllowance": "{used} / {total} monthly credits",
+  "profile.plan.nextRenewal": "Renews in {days} days",
+
+  "profile.credits.balance": "Credits Balance",
+  "profile.credits.buyMore": "Buy Extra Credits",
+  "profile.credits.history": "Transaction History",
+  "profile.credits.noHistory": "No transactions yet",
+  "profile.credits.reason.signup_bonus": "Signup Bonus",
+  "profile.credits.reason.purchase": "Credit Purchase",
+  "profile.credits.reason.chat": "Chat Usage",
+  "profile.credits.reason.monthly_allowance": "Monthly Allowance",
+  "profile.credits.reason.refund": "Refund",
+
+  "profile.usage.documents": "Documents",
+  "profile.usage.sessions": "Chat Sessions",
+  "profile.usage.messages": "Messages",
+  "profile.usage.creditsSpent": "Credits Spent",
+  "profile.usage.tokensUsed": "Tokens Used",
+  "profile.usage.modelBreakdown": "Usage by Model",
+  "profile.usage.model": "Model",
+  "profile.usage.calls": "Calls",
+  "profile.usage.tokens": "Tokens",
+  "profile.usage.credits": "Credits",
+
+  "profile.account.dangerZone": "Danger Zone",
+  "profile.account.deleteAccount": "Delete Account",
+  "profile.account.deleteWarning": "This will permanently delete your account, all documents, chats, and data. This action cannot be undone.",
+  "profile.account.deleteConfirm": "Type your email to confirm deletion",
+  "profile.account.deleting": "Deleting account...",
+
+  "userMenu.profile": "Profile",
+  "userMenu.buyCredits": "Buy Credits",
+  "userMenu.signOut": "Sign Out"
+
+## RULES:
+- Read ALL files before editing
+- Keep ALL existing content intact
+- Only ADD new types/functions/keys
+- Do NOT modify existing code
+- Do NOT touch any backend files
+- For en.json, make sure the final file is valid JSON (no trailing commas, proper formatting)
+
+thinking
+**Implementing Phase 4 tasks**
+
+I need to implement the tasks for Phase 4 carefully. First, I’ll read the specified files before making any changes. Then, I’ll add TypeScript types to frontend/src/types/index.ts and API functions to frontend/src/lib/api.ts. Additionally, I’ll include i18n keys to frontend/src/i18n/locales/en.json while keeping all existing content intact. It's important to ensure that the JSON in en.json is valid, and I should make sure to import the new types in api.ts. Let’s explore the repo!
+codex
+I’m going to inspect the specified frontend files to understand current structures and ensure we only append additions without altering existing code.
+exec
+bash -lc 'ls -la' in /Users/mayijie/Projects/Code/010_DocTalk succeeded in 12ms:
+total 96
+drwxr-xr-x  15 mayijie  staff    480 Feb  6 13:10 .
+drwxr-xr-x@ 14 mayijie  staff    448 Feb  4 18:58 ..
+drwxr-xr-x@  3 mayijie  staff     96 Feb  6 14:01 .claude
+drwxr-xr-x@  8 mayijie  staff    256 Feb  5 00:23 .collab
+-rw-r--r--@  1 mayijie  staff    129 Feb  4 23:10 .dockerignore
+-rw-r--r--@  1 mayijie  staff   1200 Feb  6 00:27 .env
+-rw-r--r--@  1 mayijie  staff   1159 Feb  5 20:30 .env.example
+drwxr-xr-x@ 12 mayijie  staff    384 Feb  6 14:01 .git
+-rw-r--r--@  1 mayijie  staff    309 Feb  4 22:24 .gitignore
+-rw-r--r--@  1 mayijie  staff  14095 Feb  6 13:10 CLAUDE.md
+-rw-r--r--@  1 mayijie  staff   8524 Feb  6 09:18 README.md
+drwxr-xr-x@ 10 mayijie  staff    320 Feb  6 11:46 backend
+-rw-r--r--@  1 mayijie  staff    978 Feb  4 19:38 docker-compose.yml
+drwxr-xr-x@ 19 mayijie  staff    608 Feb  6 00:21 frontend
+drwxr-xr-x@  4 mayijie  staff    128 Feb  4 23:32 infra
+exec
+bash -lc "sed -n '1,200p' frontend/src/lib/api.ts" in /Users/mayijie/Projects/Code/010_DocTalk succeeded in 6ms:
+import type { DocumentResponse, Message, SearchResponse, Citation, SessionListResponse } from '../types';
+
+export const API_BASE = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8000';
+export const PROXY_BASE = '/api/proxy';
+
+async function handle<T>(res: Response): Promise<T> {
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`HTTP ${res.status}: ${text}`);
+  }
+  return res.json();
+}
+
+export interface DocumentBrief {
+  id: string;
+  filename: string;
+  status: string;
+  created_at: string | null;
+}
+
+exec
+bash -lc "sed -n '1,240p' frontend/src/types/index.ts" in /Users/mayijie/Projects/Code/010_DocTalk succeeded in 16ms:
+export type Role = 'user' | 'assistant';
+
+export interface NormalizedBBox {
+  // Normalized coordinates in [0, 1] relative to the page viewport
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+  page?: number;
+}
+
+export interface Citation {
+  refIndex: number; // [n] index starting from 1
+  chunkId: string;
+  page: number; // 1-based page number
+  bboxes: NormalizedBBox[];
+  textSnippet: string;
+  offset: number; // character offset in assistant message text
+}
+
+exec
+bash -lc "sed -n '1,240p' frontend/src/i18n/locales/en.json" in /Users/mayijie/Projects/Code/010_DocTalk succeeded in 12ms:
+{
+  "app.title": "DocTalk",
+  "app.subtitle": "Upload a PDF to start chatting.",
+
+  "upload.dragDrop": "Drag & drop your PDF here",
+  "upload.or": "or",
+  "upload.chooseFile": "Choose File",
+  "upload.uploading": "Uploading…",
+  "upload.parsing": "Parsing…",
+  "upload.parsingProgress": "Parsing pages: {pagesParsed}, indexing: {chunksIndexed}",
+  "upload.error": "Error during processing",
+  "upload.networkError": "Upload failed, please check network or try again later",
+  "upload.pdfOnly": "Please upload a PDF file",
+  "upload.tooLarge": "File size cannot exceed 50MB",
+
+  "doc.myDocuments": "My Documents",
+  "doc.noDocuments": "No documents yet",
+  "doc.open": "Open",
+  "doc.notFound": "Document not found",
+  "doc.loadError": "Failed to load document info",
+exec
+bash -lc "rg -n \"\\bprofile\\.|userMenu\\.|credits\\.reason|usage\\.modelBreakdown|profile\\.tabs\\.|profile\\.account\\.deleteAccount|Member for|Connected with|Upgrade to Pro|Manage Subscription|Danger Zone\" frontend/src/i18n/locales/en.json || true" in /Users/mayijie/Projects/Code/010_DocTalk succeeded in 24ms:
+
+
+thinking
+**Checking for duplicates**
+
+I’m making sure there are no existing duplicates by double-checking other relevant files for different types. I really want to ensure exports are complete. It seems like I need to search in types for any user-related types to see if there are any already existing. I just want to be thorough and make sure everything is in order, so nothing gets missed!
+exec
+bash -lc 'rg -n "UserProfile|CreditHistory|UsageBreakdown" frontend/src || true' in /Users/mayijie/Projects/Code/010_DocTalk succeeded in 21ms:
+
+
+
+thinking
+**Reconciling import modifications**
+
+I need to ensure that the import path uses the correct extension. In `frontend/src/lib/api.ts`, it imports several types from '../types'. While I'm allowed to add new functions, I can't modify existing code. Adding names to the import line could be seen as a modification, even if it's required for including new types. The instructions seem contradictory since they say to "add" but also to refrain from "modifying." I need to figure out how to reconcile this!
+thinking
+**Adding import lines and implementing a patch**
+
+I need to add a new import line for additional types without changing the existing import. I’ll include: "import type { UserProfile, CreditHistoryResponse, UsageBreakdown } from '../types';" as a separate line. This way, I’m not modifying existing code! Next, I’ll add new functions to the end of the file. I understand that I need to summarize my planned actions before applying the patch and will update the necessary files accordingly while ensuring all new interfaces are exported without altering anything else. Now, it's time to implement the patch!
+codex
+Next, I’ll append the new TypeScript types, API functions, and i18n keys while keeping all existing content intact.
+file update
+M /Users/mayijie/Projects/Code/010_DocTalk/frontend/src/types/index.ts
+@@ -63 +63,46 @@
+ }
++
++export interface UserProfile {
++  id: string;
++  email: string;
++  name: string | null;
++  image: string | null;
++  created_at: string;
++  plan: 'free' | 'pro';
++  credits_balance: number;
++  monthly_allowance: number;
++  monthly_credits_granted_at: string | null;
++  signup_bonus_granted: boolean;
++  connected_accounts: Array<{ provider: string; created_at: string }>;
++  stats: {
++    total_documents: number;
++    total_sessions: number;
++    total_messages: number;
++    total_credits_spent: number;
++    total_tokens_used: number;
++  };
++}
++
++export interface CreditHistoryItem {
++  id: string;
++  delta: number;
++  balance_after: number;
++  reason: string;
++  ref_type: string | null;
++  ref_id: string | null;
++  created_at: string;
++}
++
++export interface CreditHistoryResponse {
++  items: CreditHistoryItem[];
++  total: number;
++}
++
++export interface UsageBreakdown {
++  by_model: Array<{
++    model: string;
++    total_calls: number;
++    total_tokens: number;
++    total_credits: number;
++  }>;
++}
+apply_patch(auto_approved=true) exited 0 in 24ms:
+Success. Updated the following files:
+M frontend/src/types/index.ts
+file update:
+diff --git a/frontend/src/types/index.ts b/frontend/src/types/index.ts
+index ce481ece2183924ec6050f744f58082f789bd3ee..d8c581716cc362c08450a6d06d1d43cdf9c41893
+--- a/frontend/src/types/index.ts
++++ b/frontend/src/types/index.ts
+@@ -61,3 +61,48 @@
+ export interface SessionListResponse {
+   sessions: SessionItem[];
+ }
++
++export interface UserProfile {
++  id: string;
++  email: string;
++  name: string | null;
++  image: string | null;
++  created_at: string;
++  plan: 'free' | 'pro';
++  credits_balance: number;
++  monthly_allowance: number;
++  monthly_credits_granted_at: string | null;
++  signup_bonus_granted: boolean;
++  connected_accounts: Array<{ provider: string; created_at: string }>;
++  stats: {
++    total_documents: number;
++    total_sessions: number;
++    total_messages: number;
++    total_credits_spent: number;
++    total_tokens_used: number;
++  };
++}
++
++export interface CreditHistoryItem {
++  id: string;
++  delta: number;
++  balance_after: number;
++  reason: string;
++  ref_type: string | null;
++  ref_id: string | null;
++  created_at: string;
++}
++
++export interface CreditHistoryResponse {
++  items: CreditHistoryItem[];
++  total: number;
++}
++
++export interface UsageBreakdown {
++  by_model: Array<{
++    model: string;
++    total_calls: number;
++    total_tokens: number;
++    total_credits: number;
++  }>;
++}
+
+file update:
+diff --git a/frontend/src/types/index.ts b/frontend/src/types/index.ts
+index ce481ece2183924ec6050f744f58082f789bd3ee..d8c581716cc362c08450a6d06d1d43cdf9c41893
+--- a/frontend/src/types/index.ts
++++ b/frontend/src/types/index.ts
+@@ -61,3 +61,48 @@
+ export interface SessionListResponse {
+   sessions: SessionItem[];
+ }
++
++export interface UserProfile {
++  id: string;
++  email: string;
++  name: string | null;
++  image: string | null;
++  created_at: string;
++  plan: 'free' | 'pro';
++  credits_balance: number;
++  monthly_allowance: number;
++  monthly_credits_granted_at: string | null;
++  signup_bonus_granted: boolean;
++  connected_accounts: Array<{ provider: string; created_at: string }>;
++  stats: {
++    total_documents: number;
++    total_sessions: number;
++    total_messages: number;
++    total_credits_spent: number;
++    total_tokens_used: number;
++  };
++}
++
++export interface CreditHistoryItem {
++  id: string;
++  delta: number;
++  balance_after: number;
++  reason: string;
++  ref_type: string | null;
++  ref_id: string | null;
++  created_at: string;
++}
++
++export interface CreditHistoryResponse {
++  items: CreditHistoryItem[];
++  total: number;
++}
++
++export interface UsageBreakdown {
++  by_model: Array<{
++    model: string;
++    total_calls: number;
++    total_tokens: number;
++    total_credits: number;
++  }>;
++}
+
+
+thinking
+**Updating the API file**
+
+I need to update the `api.ts` file in the frontend by adding a new import line for types and including functions. I want to be careful while crafting this patch—it's important not to modify any existing lines of code. I’ll just add the new import statement right after the first import. Then, I’ll introduce the new functions at the end of the file. Also, I'll make sure there are no name conflicts since the file has `deleteSession` and `deleteDocument` functions.
+file update
+M /Users/mayijie/Projects/Code/010_DocTalk/frontend/src/lib/api.ts
+@@ -1,2 +1,3 @@
+ import type { DocumentResponse, Message, SearchResponse, Citation, SessionListResponse } from '../types';
++import type { UserProfile, CreditHistoryResponse, UsageBreakdown } from '../types';
+ 
+@@ -115 +116,34 @@
+ }
++
++export async function getUserProfile(): Promise<UserProfile> {
++  const res = await fetch(PROXY_BASE + '/api/users/profile');
++  return handle(res);
++}
++
++export async function getCreditHistory(limit = 20, offset = 0): Promise<CreditHistoryResponse> {
++  const res = await fetch(PROXY_BASE + '/api/credits/history?limit=' + limit + '&offset=' + offset);
++  return handle(res);
++}
++
++export async function getUsageBreakdown(): Promise<UsageBreakdown> {
++  const res = await fetch(PROXY_BASE + '/api/users/usage-breakdown');
++  return handle(res);
++}
++
++export async function deleteUserAccount(): Promise<void> {
++  const res = await fetch(PROXY_BASE + '/api/users/me', { method: 'DELETE' });
++  if (!res.ok) {
++    const text = await res.text();
++    throw new Error('HTTP ' + res.status + ': ' + text);
++  }
++}
++
++export async function createSubscription(): Promise<{ checkout_url: string }> {
++  const res = await fetch(PROXY_BASE + '/api/billing/subscribe', { method: 'POST' });
++  return handle(res);
++}
++
++export async function createPortalSession(): Promise<{ portal_url: string }> {
++  const res = await fetch(PROXY_BASE + '/api/billing/portal', { method: 'POST' });
++  return handle(res);
++}
+apply_patch(auto_approved=true) exited 0 in 55ms:
+Success. Updated the following files:
+M frontend/src/lib/api.ts
+file update:
+diff --git a/frontend/src/lib/api.ts b/frontend/src/lib/api.ts
+index 7563c19b81f0d46b5f3062751975674673363dcf..f6d3a04a919a823e3c7bd313c00581576fda3f8b
+--- a/frontend/src/lib/api.ts
++++ b/frontend/src/lib/api.ts
+@@ -1,4 +1,5 @@
+ import type { DocumentResponse, Message, SearchResponse, Citation, SessionListResponse } from '../types';
++import type { UserProfile, CreditHistoryResponse, UsageBreakdown } from '../types';
+ 
+ export const API_BASE = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8000';
+ export const PROXY_BASE = '/api/proxy';
+@@ -113,3 +114,36 @@
+     throw new Error(`HTTP ${res.status}: ${text}`);
+   }
+ }
++
++export async function getUserProfile(): Promise<UserProfile> {
++  const res = await fetch(PROXY_BASE + '/api/users/profile');
++  return handle(res);
++}
++
++export async function getCreditHistory(limit = 20, offset = 0): Promise<CreditHistoryResponse> {
++  const res = await fetch(PROXY_BASE + '/api/credits/history?limit=' + limit + '&offset=' + offset);
++  return handle(res);
++}
++
++export async function getUsageBreakdown(): Promise<UsageBreakdown> {
++  const res = await fetch(PROXY_BASE + '/api/users/usage-breakdown');
++  return handle(res);
++}
++
++export async function deleteUserAccount(): Promise<void> {
++  const res = await fetch(PROXY_BASE + '/api/users/me', { method: 'DELETE' });
++  if (!res.ok) {
++    const text = await res.text();
++    throw new Error('HTTP ' + res.status + ': ' + text);
++  }
++}
++
++export async function createSubscription(): Promise<{ checkout_url: string }> {
++  const res = await fetch(PROXY_BASE + '/api/billing/subscribe', { method: 'POST' });
++  return handle(res);
++}
++
++export async function createPortalSession(): Promise<{ portal_url: string }> {
++  const res = await fetch(PROXY_BASE + '/api/billing/portal', { method: 'POST' });
++  return handle(res);
++}
+diff --git a/frontend/src/types/index.ts b/frontend/src/types/index.ts
+index ce481ece2183924ec6050f744f58082f789bd3ee..d8c581716cc362c08450a6d06d1d43cdf9c41893
+--- a/frontend/src/types/index.ts
++++ b/frontend/src/types/index.ts
+@@ -61,3 +61,48 @@
+ export interface SessionListResponse {
+   sessions: SessionItem[];
+ }
++
++export interface UserProfile {
++  id: string;
++  email: string;
++  name: string | null;
++  image: string | null;
++  created_at: string;
++  plan: 'free' | 'pro';
++  credits_balance: number;
++  monthly_allowance: number;
++  monthly_credits_granted_at: string | null;
++  signup_bonus_granted: boolean;
++  connected_accounts: Array<{ provider: string; created_at: string }>;
++  stats: {
++    total_documents: number;
++    total_sessions: number;
++    total_messages: number;
++    total_credits_spent: number;
++    total_tokens_used: number;
++  };
++}
++
++export interface CreditHistoryItem {
++  id: string;
++  delta: number;
++  balance_after: number;
++  reason: string;
++  ref_type: string | null;
++  ref_id: string | null;
++  created_at: string;
++}
++
++export interface CreditHistoryResponse {
++  items: CreditHistoryItem[];
++  total: number;
++}
++
++export interface UsageBreakdown {
++  by_model: Array<{
++    model: string;
++    total_calls: number;
++    total_tokens: number;
++    total_credits: number;
++  }>;
++}
+
+file update:
+diff --git a/frontend/src/lib/api.ts b/frontend/src/lib/api.ts
+index 7563c19b81f0d46b5f3062751975674673363dcf..f6d3a04a919a823e3c7bd313c00581576fda3f8b
+--- a/frontend/src/lib/api.ts
++++ b/frontend/src/lib/api.ts
+@@ -1,4 +1,5 @@
+ import type { DocumentResponse, Message, SearchResponse, Citation, SessionListResponse } from '../types';
++import type { UserProfile, CreditHistoryResponse, UsageBreakdown } from '../types';
+ 
+ export const API_BASE = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8000';
+ export const PROXY_BASE = '/api/proxy';
+@@ -113,3 +114,36 @@
+     throw new Error(`HTTP ${res.status}: ${text}`);
+   }
+ }
++
++export async function getUserProfile(): Promise<UserProfile> {
++  const res = await fetch(PROXY_BASE + '/api/users/profile');
++  return handle(res);
++}
++
++export async function getCreditHistory(limit = 20, offset = 0): Promise<CreditHistoryResponse> {
++  const res = await fetch(PROXY_BASE + '/api/credits/history?limit=' + limit + '&offset=' + offset);
++  return handle(res);
++}
++
++export async function getUsageBreakdown(): Promise<UsageBreakdown> {
++  const res = await fetch(PROXY_BASE + '/api/users/usage-breakdown');
++  return handle(res);
++}
++
++export async function deleteUserAccount(): Promise<void> {
++  const res = await fetch(PROXY_BASE + '/api/users/me', { method: 'DELETE' });
++  if (!res.ok) {
++    const text = await res.text();
++    throw new Error('HTTP ' + res.status + ': ' + text);
++  }
++}
++
++export async function createSubscription(): Promise<{ checkout_url: string }> {
++  const res = await fetch(PROXY_BASE + '/api/billing/subscribe', { method: 'POST' });
++  return handle(res);
++}
++
++export async function createPortalSession(): Promise<{ portal_url: string }> {
++  const res = await fetch(PROXY_BASE + '/api/billing/portal', { method: 'POST' });
++  return handle(res);
++}
+diff --git a/frontend/src/types/index.ts b/frontend/src/types/index.ts
+index ce481ece2183924ec6050f744f58082f789bd3ee..d8c581716cc362c08450a6d06d1d43cdf9c41893
+--- a/frontend/src/types/index.ts
++++ b/frontend/src/types/index.ts
+@@ -61,3 +61,48 @@
+ export interface SessionListResponse {
+   sessions: SessionItem[];
+ }
++
++export interface UserProfile {
++  id: string;
++  email: string;
++  name: string | null;
++  image: string | null;
++  created_at: string;
++  plan: 'free' | 'pro';
++  credits_balance: number;
++  monthly_allowance: number;
++  monthly_credits_granted_at: string | null;
++  signup_bonus_granted: boolean;
++  connected_accounts: Array<{ provider: string; created_at: string }>;
++  stats: {
++    total_documents: number;
++    total_sessions: number;
++    total_messages: number;
++    total_credits_spent: number;
++    total_tokens_used: number;
++  };
++}
++
++export interface CreditHistoryItem {
++  id: string;
++  delta: number;
++  balance_after: number;
++  reason: string;
++  ref_type: string | null;
++  ref_id: string | null;
++  created_at: string;
++}
++
++export interface CreditHistoryResponse {
++  items: CreditHistoryItem[];
++  total: number;
++}
++
++export interface UsageBreakdown {
++  by_model: Array<{
++    model: string;
++    total_calls: number;
++    total_tokens: number;
++    total_credits: number;
++  }>;
++}
+
+file update
+M /Users/mayijie/Projects/Code/010_DocTalk/frontend/src/i18n/locales/en.json
+@@ -148,3 +148,50 @@
+ 
+-  "common.backToHome": "Back to home"
++  "common.backToHome": "Back to home",
++
++  "profile.title": "Profile",
++  "profile.tabs.profile": "Profile",
++  "profile.tabs.credits": "Credits",
++  "profile.tabs.usage": "Usage",
++  "profile.tabs.account": "Account",
++
++  "profile.info.memberSince": "Member for {days} days",
++  "profile.info.connectedWith": "Connected with {provider}",
++
++  "profile.plan.free": "Free",
++  "profile.plan.pro": "Pro",
++  "profile.plan.upgrade": "Upgrade to Pro",
++  "profile.plan.manage": "Manage Subscription",
++  "profile.plan.monthlyAllowance": "{used} / {total} monthly credits",
++  "profile.plan.nextRenewal": "Renews in {days} days",
++
++  "profile.credits.balance": "Credits Balance",
++  "profile.credits.buyMore": "Buy Extra Credits",
++  "profile.credits.history": "Transaction History",
++  "profile.credits.noHistory": "No transactions yet",
++  "profile.credits.reason.signup_bonus": "Signup Bonus",
++  "profile.credits.reason.purchase": "Credit Purchase",
++  "profile.credits.reason.chat": "Chat Usage",
++  "profile.credits.reason.monthly_allowance": "Monthly Allowance",
++  "profile.credits.reason.refund": "Refund",
++
++  "profile.usage.documents": "Documents",
++  "profile.usage.sessions": "Chat Sessions",
++  "profile.usage.messages": "Messages",
++  "profile.usage.creditsSpent": "Credits Spent",
++  "profile.usage.tokensUsed": "Tokens Used",
++  "profile.usage.modelBreakdown": "Usage by Model",
++  "profile.usage.model": "Model",
++  "profile.usage.calls": "Calls",
++  "profile.usage.tokens": "Tokens",
++  "profile.usage.credits": "Credits",
++
++  "profile.account.dangerZone": "Danger Zone",
++  "profile.account.deleteAccount": "Delete Account",
++  "profile.account.deleteWarning": "This will permanently delete your account, all documents, chats, and data. This action cannot be undone.",
++  "profile.account.deleteConfirm": "Type your email to confirm deletion",
++  "profile.account.deleting": "Deleting account...",
++
++  "userMenu.profile": "Profile",
++  "userMenu.buyCredits": "Buy Credits",
++  "userMenu.signOut": "Sign Out"
+ }
+apply_patch(auto_approved=true) exited 0 in 47ms:
+Success. Updated the following files:
+M frontend/src/i18n/locales/en.json
+file update:
+diff --git a/frontend/src/i18n/locales/en.json b/frontend/src/i18n/locales/en.json
+index 1cc194b73cd0609103edbb0d9b06dcd3b4cb12ba..8de08189b6d237f0fffea8b82ca3df73de88a507
+--- a/frontend/src/i18n/locales/en.json
++++ b/frontend/src/i18n/locales/en.json
+@@ -146,5 +146,52 @@
+   "demo.pdfPlaceholder": "PDF Preview",
+   "demo.pdfPlaceholderHint": "Sample PDFs will be added in the next update",
+ 
+-  "common.backToHome": "Back to home"
++  "common.backToHome": "Back to home",
++
++  "profile.title": "Profile",
++  "profile.tabs.profile": "Profile",
++  "profile.tabs.credits": "Credits",
++  "profile.tabs.usage": "Usage",
++  "profile.tabs.account": "Account",
++
++  "profile.info.memberSince": "Member for {days} days",
++  "profile.info.connectedWith": "Connected with {provider}",
++
++  "profile.plan.free": "Free",
++  "profile.plan.pro": "Pro",
++  "profile.plan.upgrade": "Upgrade to Pro",
++  "profile.plan.manage": "Manage Subscription",
++  "profile.plan.monthlyAllowance": "{used} / {total} monthly credits",
++  "profile.plan.nextRenewal": "Renews in {days} days",
++
++  "profile.credits.balance": "Credits Balance",
++  "profile.credits.buyMore": "Buy Extra Credits",
++  "profile.credits.history": "Transaction History",
++  "profile.credits.noHistory": "No transactions yet",
++  "profile.credits.reason.signup_bonus": "Signup Bonus",
++  "profile.credits.reason.purchase": "Credit Purchase",
++  "profile.credits.reason.chat": "Chat Usage",
++  "profile.credits.reason.monthly_allowance": "Monthly Allowance",
++  "profile.credits.reason.refund": "Refund",
++
++  "profile.usage.documents": "Documents",
++  "profile.usage.sessions": "Chat Sessions",
++  "profile.usage.messages": "Messages",
++  "profile.usage.creditsSpent": "Credits Spent",
++  "profile.usage.tokensUsed": "Tokens Used",
++  "profile.usage.modelBreakdown": "Usage by Model",
++  "profile.usage.model": "Model",
++  "profile.usage.calls": "Calls",
++  "profile.usage.tokens": "Tokens",
++  "profile.usage.credits": "Credits",
++
++  "profile.account.dangerZone": "Danger Zone",
++  "profile.account.deleteAccount": "Delete Account",
++  "profile.account.deleteWarning": "This will permanently delete your account, all documents, chats, and data. This action cannot be undone.",
++  "profile.account.deleteConfirm": "Type your email to confirm deletion",
++  "profile.account.deleting": "Deleting account...",
++
++  "userMenu.profile": "Profile",
++  "userMenu.buyCredits": "Buy Credits",
++  "userMenu.signOut": "Sign Out"
+ }
+diff --git a/frontend/src/lib/api.ts b/frontend/src/lib/api.ts
+index 7563c19b81f0d46b5f3062751975674673363dcf..f6d3a04a919a823e3c7bd313c00581576fda3f8b
+--- a/frontend/src/lib/api.ts
++++ b/frontend/src/lib/api.ts
+@@ -1,4 +1,5 @@
+ import type { DocumentResponse, Message, SearchResponse, Citation, SessionListResponse } from '../types';
++import type { UserProfile, CreditHistoryResponse, UsageBreakdown } from '../types';
+ 
+ export const API_BASE = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8000';
+ export const PROXY_BASE = '/api/proxy';
+@@ -113,3 +114,36 @@
+     throw new Error(`HTTP ${res.status}: ${text}`);
+   }
+ }
++
++export async function getUserProfile(): Promise<UserProfile> {
++  const res = await fetch(PROXY_BASE + '/api/users/profile');
++  return handle(res);
++}
++
++export async function getCreditHistory(limit = 20, offset = 0): Promise<CreditHistoryResponse> {
++  const res = await fetch(PROXY_BASE + '/api/credits/history?limit=' + limit + '&offset=' + offset);
++  return handle(res);
++}
++
++export async function getUsageBreakdown(): Promise<UsageBreakdown> {
++  const res = await fetch(PROXY_BASE + '/api/users/usage-breakdown');
++  return handle(res);
++}
++
++export async function deleteUserAccount(): Promise<void> {
++  const res = await fetch(PROXY_BASE + '/api/users/me', { method: 'DELETE' });
++  if (!res.ok) {
++    const text = await res.text();
++    throw new Error('HTTP ' + res.status + ': ' + text);
++  }
++}
++
++export async function createSubscription(): Promise<{ checkout_url: string }> {
++  const res = await fetch(PROXY_BASE + '/api/billing/subscribe', { method: 'POST' });
++  return handle(res);
++}
++
++export async function createPortalSession(): Promise<{ portal_url: string }> {
++  const res = await fetch(PROXY_BASE + '/api/billing/portal', { method: 'POST' });
++  return handle(res);
++}
+diff --git a/frontend/src/types/index.ts b/frontend/src/types/index.ts
+index ce481ece2183924ec6050f744f58082f789bd3ee..d8c581716cc362c08450a6d06d1d43cdf9c41893
+--- a/frontend/src/types/index.ts
++++ b/frontend/src/types/index.ts
+@@ -61,3 +61,48 @@
+ export interface SessionListResponse {
+   sessions: SessionItem[];
+ }
++
++export interface UserProfile {
++  id: string;
++  email: string;
++  name: string | null;
++  image: string | null;
++  created_at: string;
++  plan: 'free' | 'pro';
++  credits_balance: number;
++  monthly_allowance: number;
++  monthly_credits_granted_at: string | null;
++  signup_bonus_granted: boolean;
++  connected_accounts: Array<{ provider: string; created_at: string }>;
++  stats: {
++    total_documents: number;
++    total_sessions: number;
++    total_messages: number;
++    total_credits_spent: number;
++    total_tokens_used: number;
++  };
++}
++
++export interface CreditHistoryItem {
++  id: string;
++  delta: number;
++  balance_after: number;
++  reason: string;
++  ref_type: string | null;
++  ref_id: string | null;
++  created_at: string;
++}
++
++export interface CreditHistoryResponse {
++  items: CreditHistoryItem[];
++  total: number;
++}
++
++export interface UsageBreakdown {
++  by_model: Array<{
++    model: string;
++    total_calls: number;
++    total_tokens: number;
++    total_credits: number;
++  }>;
++}
+
+file update:
+diff --git a/frontend/src/i18n/locales/en.json b/frontend/src/i18n/locales/en.json
+index 1cc194b73cd0609103edbb0d9b06dcd3b4cb12ba..8de08189b6d237f0fffea8b82ca3df73de88a507
+--- a/frontend/src/i18n/locales/en.json
++++ b/frontend/src/i18n/locales/en.json
+@@ -146,5 +146,52 @@
+   "demo.pdfPlaceholder": "PDF Preview",
+   "demo.pdfPlaceholderHint": "Sample PDFs will be added in the next update",
+ 
+-  "common.backToHome": "Back to home"
++  "common.backToHome": "Back to home",
++
++  "profile.title": "Profile",
++  "profile.tabs.profile": "Profile",
++  "profile.tabs.credits": "Credits",
++  "profile.tabs.usage": "Usage",
++  "profile.tabs.account": "Account",
++
++  "profile.info.memberSince": "Member for {days} days",
++  "profile.info.connectedWith": "Connected with {provider}",
++
++  "profile.plan.free": "Free",
++  "profile.plan.pro": "Pro",
++  "profile.plan.upgrade": "Upgrade to Pro",
++  "profile.plan.manage": "Manage Subscription",
++  "profile.plan.monthlyAllowance": "{used} / {total} monthly credits",
++  "profile.plan.nextRenewal": "Renews in {days} days",
++
++  "profile.credits.balance": "Credits Balance",
++  "profile.credits.buyMore": "Buy Extra Credits",
++  "profile.credits.history": "Transaction History",
++  "profile.credits.noHistory": "No transactions yet",
++  "profile.credits.reason.signup_bonus": "Signup Bonus",
++  "profile.credits.reason.purchase": "Credit Purchase",
++  "profile.credits.reason.chat": "Chat Usage",
++  "profile.credits.reason.monthly_allowance": "Monthly Allowance",
++  "profile.credits.reason.refund": "Refund",
++
++  "profile.usage.documents": "Documents",
++  "profile.usage.sessions": "Chat Sessions",
++  "profile.usage.messages": "Messages",
++  "profile.usage.creditsSpent": "Credits Spent",
++  "profile.usage.tokensUsed": "Tokens Used",
++  "profile.usage.modelBreakdown": "Usage by Model",
++  "profile.usage.model": "Model",
++  "profile.usage.calls": "Calls",
++  "profile.usage.tokens": "Tokens",
++  "profile.usage.credits": "Credits",
++
++  "profile.account.dangerZone": "Danger Zone",
++  "profile.account.deleteAccount": "Delete Account",
++  "profile.account.deleteWarning": "This will permanently delete your account, all documents, chats, and data. This action cannot be undone.",
++  "profile.account.deleteConfirm": "Type your email to confirm deletion",
++  "profile.account.deleting": "Deleting account...",
++
++  "userMenu.profile": "Profile",
++  "userMenu.buyCredits": "Buy Credits",
++  "userMenu.signOut": "Sign Out"
+ }
+diff --git a/frontend/src/lib/api.ts b/frontend/src/lib/api.ts
+index 7563c19b81f0d46b5f3062751975674673363dcf..f6d3a04a919a823e3c7bd313c00581576fda3f8b
+--- a/frontend/src/lib/api.ts
++++ b/frontend/src/lib/api.ts
+@@ -1,4 +1,5 @@
+ import type { DocumentResponse, Message, SearchResponse, Citation, SessionListResponse } from '../types';
++import type { UserProfile, CreditHistoryResponse, UsageBreakdown } from '../types';
+ 
+ export const API_BASE = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8000';
+ export const PROXY_BASE = '/api/proxy';
+@@ -113,3 +114,36 @@
+     throw new Error(`HTTP ${res.status}: ${text}`);
+   }
+ }
++
++export async function getUserProfile(): Promise<UserProfile> {
++  const res = await fetch(PROXY_BASE + '/api/users/profile');
++  return handle(res);
++}
++
++export async function getCreditHistory(limit = 20, offset = 0): Promise<CreditHistoryResponse> {
++  const res = await fetch(PROXY_BASE + '/api/credits/history?limit=' + limit + '&offset=' + offset);
++  return handle(res);
++}
++
++export async function getUsageBreakdown(): Promise<UsageBreakdown> {
++  const res = await fetch(PROXY_BASE + '/api/users/usage-breakdown');
++  return handle(res);
++}
++
++export async function deleteUserAccount(): Promise<void> {
++  const res = await fetch(PROXY_BASE + '/api/users/me', { method: 'DELETE' });
++  if (!res.ok) {
++    const text = await res.text();
++    throw new Error('HTTP ' + res.status + ': ' + text);
++  }
++}
++
++export async function createSubscription(): Promise<{ checkout_url: string }> {
++  const res = await fetch(PROXY_BASE + '/api/billing/subscribe', { method: 'POST' });
++  return handle(res);
++}
++
++export async function createPortalSession(): Promise<{ portal_url: string }> {
++  const res = await fetch(PROXY_BASE + '/api/billing/portal', { method: 'POST' });
++  return handle(res);
++}
+diff --git a/frontend/src/types/index.ts b/frontend/src/types/index.ts
+index ce481ece2183924ec6050f744f58082f789bd3ee..d8c581716cc362c08450a6d06d1d43cdf9c41893
+--- a/frontend/src/types/index.ts
++++ b/frontend/src/types/index.ts
+@@ -61,3 +61,48 @@
+ export interface SessionListResponse {
+   sessions: SessionItem[];
+ }
++
++export interface UserProfile {
++  id: string;
++  email: string;
++  name: string | null;
++  image: string | null;
++  created_at: string;
++  plan: 'free' | 'pro';
++  credits_balance: number;
++  monthly_allowance: number;
++  monthly_credits_granted_at: string | null;
++  signup_bonus_granted: boolean;
++  connected_accounts: Array<{ provider: string; created_at: string }>;
++  stats: {
++    total_documents: number;
++    total_sessions: number;
++    total_messages: number;
++    total_credits_spent: number;
++    total_tokens_used: number;
++  };
++}
++
++export interface CreditHistoryItem {
++  id: string;
++  delta: number;
++  balance_after: number;
++  reason: string;
++  ref_type: string | null;
++  ref_id: string | null;
++  created_at: string;
++}
++
++export interface CreditHistoryResponse {
++  items: CreditHistoryItem[];
++  total: number;
++}
++
++export interface UsageBreakdown {
++  by_model: Array<{
++    model: string;
++    total_calls: number;
++    total_tokens: number;
++    total_credits: number;
++  }>;
++}
+
+exec
+bash -lc "python3 - << 'PY'
+import json,sys
+p='frontend/src/i18n/locales/en.json'
+with open(p,'r') as f:
+    json.load(f)
+print('JSON OK')
+PY" in /Users/mayijie/Projects/Code/010_DocTalk succeeded in 50ms:
+JSON OK
+file update:
+diff --git a/frontend/src/i18n/locales/en.json b/frontend/src/i18n/locales/en.json
+index 1cc194b73cd0609103edbb0d9b06dcd3b4cb12ba..8de08189b6d237f0fffea8b82ca3df73de88a507
+--- a/frontend/src/i18n/locales/en.json
++++ b/frontend/src/i18n/locales/en.json
+@@ -146,5 +146,52 @@
+   "demo.pdfPlaceholder": "PDF Preview",
+   "demo.pdfPlaceholderHint": "Sample PDFs will be added in the next update",
+ 
+-  "common.backToHome": "Back to home"
++  "common.backToHome": "Back to home",
++
++  "profile.title": "Profile",
++  "profile.tabs.profile": "Profile",
++  "profile.tabs.credits": "Credits",
++  "profile.tabs.usage": "Usage",
++  "profile.tabs.account": "Account",
++
++  "profile.info.memberSince": "Member for {days} days",
++  "profile.info.connectedWith": "Connected with {provider}",
++
++  "profile.plan.free": "Free",
++  "profile.plan.pro": "Pro",
++  "profile.plan.upgrade": "Upgrade to Pro",
++  "profile.plan.manage": "Manage Subscription",
++  "profile.plan.monthlyAllowance": "{used} / {total} monthly credits",
++  "profile.plan.nextRenewal": "Renews in {days} days",
++
++  "profile.credits.balance": "Credits Balance",
++  "profile.credits.buyMore": "Buy Extra Credits",
++  "profile.credits.history": "Transaction History",
++  "profile.credits.noHistory": "No transactions yet",
++  "profile.credits.reason.signup_bonus": "Signup Bonus",
++  "profile.credits.reason.purchase": "Credit Purchase",
++  "profile.credits.reason.chat": "Chat Usage",
++  "profile.credits.reason.monthly_allowance": "Monthly Allowance",
++  "profile.credits.reason.refund": "Refund",
++
++  "profile.usage.documents": "Documents",
++  "profile.usage.sessions": "Chat Sessions",
++  "profile.usage.messages": "Messages",
++  "profile.usage.creditsSpent": "Credits Spent",
++  "profile.usage.tokensUsed": "Tokens Used",
++  "profile.usage.modelBreakdown": "Usage by Model",
++  "profile.usage.model": "Model",
++  "profile.usage.calls": "Calls",
++  "profile.usage.tokens": "Tokens",
++  "profile.usage.credits": "Credits",
++
++  "profile.account.dangerZone": "Danger Zone",
++  "profile.account.deleteAccount": "Delete Account",
++  "profile.account.deleteWarning": "This will permanently delete your account, all documents, chats, and data. This action cannot be undone.",
++  "profile.account.deleteConfirm": "Type your email to confirm deletion",
++  "profile.account.deleting": "Deleting account...",
++
++  "userMenu.profile": "Profile",
++  "userMenu.buyCredits": "Buy Credits",
++  "userMenu.signOut": "Sign Out"
+ }
+diff --git a/frontend/src/lib/api.ts b/frontend/src/lib/api.ts
+index 7563c19b81f0d46b5f3062751975674673363dcf..f6d3a04a919a823e3c7bd313c00581576fda3f8b
+--- a/frontend/src/lib/api.ts
++++ b/frontend/src/lib/api.ts
+@@ -1,4 +1,5 @@
+ import type { DocumentResponse, Message, SearchResponse, Citation, SessionListResponse } from '../types';
++import type { UserProfile, CreditHistoryResponse, UsageBreakdown } from '../types';
+ 
+ export const API_BASE = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8000';
+ export const PROXY_BASE = '/api/proxy';
+@@ -113,3 +114,36 @@
+     throw new Error(`HTTP ${res.status}: ${text}`);
+   }
+ }
++
++export async function getUserProfile(): Promise<UserProfile> {
++  const res = await fetch(PROXY_BASE + '/api/users/profile');
++  return handle(res);
++}
++
++export async function getCreditHistory(limit = 20, offset = 0): Promise<CreditHistoryResponse> {
++  const res = await fetch(PROXY_BASE + '/api/credits/history?limit=' + limit + '&offset=' + offset);
++  return handle(res);
++}
++
++export async function getUsageBreakdown(): Promise<UsageBreakdown> {
++  const res = await fetch(PROXY_BASE + '/api/users/usage-breakdown');
++  return handle(res);
++}
++
++export async function deleteUserAccount(): Promise<void> {
++  const res = await fetch(PROXY_BASE + '/api/users/me', { method: 'DELETE' });
++  if (!res.ok) {
++    const text = await res.text();
++    throw new Error('HTTP ' + res.status + ': ' + text);
++  }
++}
++
++export async function createSubscription(): Promise<{ checkout_url: string }> {
++  const res = await fetch(PROXY_BASE + '/api/billing/subscribe', { method: 'POST' });
++  return handle(res);
++}
++
++export async function createPortalSession(): Promise<{ portal_url: string }> {
++  const res = await fetch(PROXY_BASE + '/api/billing/portal', { method: 'POST' });
++  return handle(res);
++}
+diff --git a/frontend/src/types/index.ts b/frontend/src/types/index.ts
+index ce481ece2183924ec6050f744f58082f789bd3ee..d8c581716cc362c08450a6d06d1d43cdf9c41893
+--- a/frontend/src/types/index.ts
++++ b/frontend/src/types/index.ts
+@@ -61,3 +61,48 @@
+ export interface SessionListResponse {
+   sessions: SessionItem[];
+ }
++
++export interface UserProfile {
++  id: string;
++  email: string;
++  name: string | null;
++  image: string | null;
++  created_at: string;
++  plan: 'free' | 'pro';
++  credits_balance: number;
++  monthly_allowance: number;
++  monthly_credits_granted_at: string | null;
++  signup_bonus_granted: boolean;
++  connected_accounts: Array<{ provider: string; created_at: string }>;
++  stats: {
++    total_documents: number;
++    total_sessions: number;
++    total_messages: number;
++    total_credits_spent: number;
++    total_tokens_used: number;
++  };
++}
++
++export interface CreditHistoryItem {
++  id: string;
++  delta: number;
++  balance_after: number;
++  reason: string;
++  ref_type: string | null;
++  ref_id: string | null;
++  created_at: string;
++}
++
++export interface CreditHistoryResponse {
++  items: CreditHistoryItem[];
++  total: number;
++}
++
++export interface UsageBreakdown {
++  by_model: Array<{
++    model: string;
++    total_calls: number;
++    total_tokens: number;
++    total_credits: number;
++  }>;
++}
+
+
+thinking
+**Summarizing next steps**
+
+I’re not needing to run tests right now. Instead, I’m suggesting we hook these functions into the UI later. I’ll create a final answer that summarizes the changes made and outlines the next steps for building. I'll keep everything short and to the point so it's easy to follow. Let’s make sure everything is clear and actionable!
+codex
+Added the new types, API functions, and i18n keys, keeping all existing content intact.
+
+What I changed
+- Types
+  - Added interfaces to `frontend/src/types/index.ts:1`:
+    - `UserProfile`
+    - `CreditHistoryItem`
+    - `CreditHistoryResponse`
+    - `UsageBreakdown`
+- API
+  - Added a new import for the types in `frontend/src/lib/api.ts:2`.
+  - Appended API functions to `frontend/src/lib/api.ts:1`:
+    - `getUserProfile`
+    - `getCreditHistory`
+    - `getUsageBreakdown`
+    - `deleteUserAccount`
+    - `createSubscription`
+    - `createPortalSession`
+- i18n
+  - Appended new English keys to `frontend/src/i18n/locales/en.json:1` and validated JSON.
+
+Notes
+- JSON validated successfully.
+- No existing keys were modified; only additions were made.
+- Let me know if you want me to wire these into specific UI components next.
+file update:
+diff --git a/frontend/src/i18n/locales/en.json b/frontend/src/i18n/locales/en.json
+index 1cc194b73cd0609103edbb0d9b06dcd3b4cb12ba..8de08189b6d237f0fffea8b82ca3df73de88a507
+--- a/frontend/src/i18n/locales/en.json
++++ b/frontend/src/i18n/locales/en.json
+@@ -146,5 +146,52 @@
+   "demo.pdfPlaceholder": "PDF Preview",
+   "demo.pdfPlaceholderHint": "Sample PDFs will be added in the next update",
+ 
+-  "common.backToHome": "Back to home"
++  "common.backToHome": "Back to home",
++
++  "profile.title": "Profile",
++  "profile.tabs.profile": "Profile",
++  "profile.tabs.credits": "Credits",
++  "profile.tabs.usage": "Usage",
++  "profile.tabs.account": "Account",
++
++  "profile.info.memberSince": "Member for {days} days",
++  "profile.info.connectedWith": "Connected with {provider}",
++
++  "profile.plan.free": "Free",
++  "profile.plan.pro": "Pro",
++  "profile.plan.upgrade": "Upgrade to Pro",
++  "profile.plan.manage": "Manage Subscription",
++  "profile.plan.monthlyAllowance": "{used} / {total} monthly credits",
++  "profile.plan.nextRenewal": "Renews in {days} days",
++
++  "profile.credits.balance": "Credits Balance",
++  "profile.credits.buyMore": "Buy Extra Credits",
++  "profile.credits.history": "Transaction History",
++  "profile.credits.noHistory": "No transactions yet",
++  "profile.credits.reason.signup_bonus": "Signup Bonus",
++  "profile.credits.reason.purchase": "Credit Purchase",
++  "profile.credits.reason.chat": "Chat Usage",
++  "profile.credits.reason.monthly_allowance": "Monthly Allowance",
++  "profile.credits.reason.refund": "Refund",
++
++  "profile.usage.documents": "Documents",
++  "profile.usage.sessions": "Chat Sessions",
++  "profile.usage.messages": "Messages",
++  "profile.usage.creditsSpent": "Credits Spent",
++  "profile.usage.tokensUsed": "Tokens Used",
++  "profile.usage.modelBreakdown": "Usage by Model",
++  "profile.usage.model": "Model",
++  "profile.usage.calls": "Calls",
++  "profile.usage.tokens": "Tokens",
++  "profile.usage.credits": "Credits",
++
++  "profile.account.dangerZone": "Danger Zone",
++  "profile.account.deleteAccount": "Delete Account",
++  "profile.account.deleteWarning": "This will permanently delete your account, all documents, chats, and data. This action cannot be undone.",
++  "profile.account.deleteConfirm": "Type your email to confirm deletion",
++  "profile.account.deleting": "Deleting account...",
++
++  "userMenu.profile": "Profile",
++  "userMenu.buyCredits": "Buy Credits",
++  "userMenu.signOut": "Sign Out"
+ }
+diff --git a/frontend/src/lib/api.ts b/frontend/src/lib/api.ts
+index 7563c19b81f0d46b5f3062751975674673363dcf..f6d3a04a919a823e3c7bd313c00581576fda3f8b
+--- a/frontend/src/lib/api.ts
++++ b/frontend/src/lib/api.ts
+@@ -1,4 +1,5 @@
+ import type { DocumentResponse, Message, SearchResponse, Citation, SessionListResponse } from '../types';
++import type { UserProfile, CreditHistoryResponse, UsageBreakdown } from '../types';
+ 
+ export const API_BASE = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8000';
+ export const PROXY_BASE = '/api/proxy';
+@@ -113,3 +114,36 @@
+     throw new Error(`HTTP ${res.status}: ${text}`);
+   }
+ }
++
++export async function getUserProfile(): Promise<UserProfile> {
++  const res = await fetch(PROXY_BASE + '/api/users/profile');
++  return handle(res);
++}
++
++export async function getCreditHistory(limit = 20, offset = 0): Promise<CreditHistoryResponse> {
++  const res = await fetch(PROXY_BASE + '/api/credits/history?limit=' + limit + '&offset=' + offset);
++  return handle(res);
++}
++
++export async function getUsageBreakdown(): Promise<UsageBreakdown> {
++  const res = await fetch(PROXY_BASE + '/api/users/usage-breakdown');
++  return handle(res);
++}
++
++export async function deleteUserAccount(): Promise<void> {
++  const res = await fetch(PROXY_BASE + '/api/users/me', { method: 'DELETE' });
++  if (!res.ok) {
++    const text = await res.text();
++    throw new Error('HTTP ' + res.status + ': ' + text);
++  }
++}
++
++export async function createSubscription(): Promise<{ checkout_url: string }> {
++  const res = await fetch(PROXY_BASE + '/api/billing/subscribe', { method: 'POST' });
++  return handle(res);
++}
++
++export async function createPortalSession(): Promise<{ portal_url: string }> {
++  const res = await fetch(PROXY_BASE + '/api/billing/portal', { method: 'POST' });
++  return handle(res);
++}
+diff --git a/frontend/src/types/index.ts b/frontend/src/types/index.ts
+index ce481ece2183924ec6050f744f58082f789bd3ee..d8c581716cc362c08450a6d06d1d43cdf9c41893
+--- a/frontend/src/types/index.ts
++++ b/frontend/src/types/index.ts
+@@ -61,3 +61,48 @@
+ export interface SessionListResponse {
+   sessions: SessionItem[];
+ }
++
++export interface UserProfile {
++  id: string;
++  email: string;
++  name: string | null;
++  image: string | null;
++  created_at: string;
++  plan: 'free' | 'pro';
++  credits_balance: number;
++  monthly_allowance: number;
++  monthly_credits_granted_at: string | null;
++  signup_bonus_granted: boolean;
++  connected_accounts: Array<{ provider: string; created_at: string }>;
++  stats: {
++    total_documents: number;
++    total_sessions: number;
++    total_messages: number;
++    total_credits_spent: number;
++    total_tokens_used: number;
++  };
++}
++
++export interface CreditHistoryItem {
++  id: string;
++  delta: number;
++  balance_after: number;
++  reason: string;
++  ref_type: string | null;
++  ref_id: string | null;
++  created_at: string;
++}
++
++export interface CreditHistoryResponse {
++  items: CreditHistoryItem[];
++  total: number;
++}
++
++export interface UsageBreakdown {
++  by_model: Array<{
++    model: string;
++    total_calls: number;
++    total_tokens: number;
++    total_credits: number;
++  }>;
++}
+
+tokens used
+40,860
+Added the new types, API functions, and i18n keys, keeping all existing content intact.
+
+What I changed
+- Types
+  - Added interfaces to `frontend/src/types/index.ts:1`:
+    - `UserProfile`
+    - `CreditHistoryItem`
+    - `CreditHistoryResponse`
+    - `UsageBreakdown`
+- API
+  - Added a new import for the types in `frontend/src/lib/api.ts:2`.
+  - Appended API functions to `frontend/src/lib/api.ts:1`:
+    - `getUserProfile`
+    - `getCreditHistory`
+    - `getUsageBreakdown`
+    - `deleteUserAccount`
+    - `createSubscription`
+    - `createPortalSession`
+- i18n
+  - Appended new English keys to `frontend/src/i18n/locales/en.json:1` and validated JSON.
+
+Notes
+- JSON validated successfully.
+- No existing keys were modified; only additions were made.
+- Let me know if you want me to wire these into specific UI components next.

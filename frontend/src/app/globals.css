@@ -4,15 +4,17 @@
 
 :root {
   --background: #ffffff;
-  --foreground: #111827;
+  --foreground: #09090b;
+  --border: #e4e4e7;
   /* Highlight colors */
   --highlight-base: rgba(56, 189, 248, 0.25);
   --highlight-strong: rgba(56, 189, 248, 0.5);
 }
 
 .dark {
-  --background: #0f172a;
-  --foreground: #f1f5f9;
+  --background: #09090b;
+  --foreground: #fafafa;
+  --border: #3f3f46;
   /* Dark mode highlight colors */
   --highlight-base: rgba(56, 189, 248, 0.20);
   --highlight-strong: rgba(56, 189, 248, 0.5);

@@ -71,17 +71,17 @@ function ProfileContent() {
 
   if (status === "loading") {
     return (
-      <div className="min-h-screen flex items-center justify-center dark:bg-gray-900">
+      <div className="min-h-screen flex items-center justify-center dark:bg-zinc-900">
         <div className="animate-pulse">{t("common.loading")}</div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen dark:bg-gray-900">
+    <div className="min-h-screen dark:bg-zinc-900">
       <Header />
       <main className="max-w-4xl mx-auto p-8">
-        <h1 className="text-2xl font-semibold mb-6 dark:text-gray-100">{t("profile.title")}</h1>
+        <h1 className="text-2xl font-semibold mb-6 dark:text-zinc-100">{t("profile.title")}</h1>
 
         <div className="mb-6">
           <ProfileTabs activeTab={activeTab} onChange={handleTabChange} />
@@ -89,8 +89,8 @@ function ProfileContent() {
 
         {loading && (
           <div className="flex items-center justify-center py-12">
-            <div className="animate-spin h-6 w-6 border-2 border-gray-300 border-t-transparent rounded-full" />
-            <span className="ml-3 text-gray-600 dark:text-gray-400">{t("common.loading")}</span>
+            <div className="animate-spin h-6 w-6 border-2 border-zinc-300 border-t-transparent rounded-full" />
+            <span className="ml-3 text-zinc-600 dark:text-zinc-400">{t("common.loading")}</span>
           </div>
         )}
 
@@ -103,25 +103,25 @@ function ProfileContent() {
         {!loading && !error && profile && (
           <div className="space-y-6">
             {activeTab === "profile" && (
-              <section className="border rounded-lg p-6 dark:border-gray-700">
+              <section className="border rounded-lg p-6 dark:border-zinc-700">
                 <ProfileInfoSection profile={profile} />
               </section>
             )}
 
             {activeTab === "credits" && (
-              <section className="border rounded-lg p-6 dark:border-gray-700">
+              <section className="border rounded-lg p-6 dark:border-zinc-700">
                 <CreditsSection profile={profile} />
               </section>
             )}
 
             {activeTab === "usage" && (
-              <section className="border rounded-lg p-6 dark:border-gray-700">
+              <section className="border rounded-lg p-6 dark:border-zinc-700">
                 <UsageStatsSection profile={profile} />
               </section>
             )}
 
             {activeTab === "account" && (
-              <section className="border rounded-lg p-6 dark:border-gray-700">
+              <section className="border rounded-lg p-6 dark:border-zinc-700">
                 <AccountActionsSection email={profile.email} />
               </section>
             )}
@@ -136,7 +136,7 @@ export default function ProfilePage() {
   return (
     <Suspense
       fallback={
-        <div className="min-h-screen flex items-center justify-center dark:bg-gray-900">
+        <div className="min-h-screen flex items-center justify-center dark:bg-zinc-900">
           <div className="animate-pulse">Loading...</div>
         </div>
       }

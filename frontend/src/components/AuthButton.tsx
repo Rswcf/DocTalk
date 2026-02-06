@@ -8,7 +8,7 @@ export function AuthButton() {
   const { t } = useLocale();
 
   if (status === "loading") {
-    return <div className="w-8 h-8 rounded-full bg-gray-200 dark:bg-gray-700 animate-pulse" />;
+    return <div className="w-8 h-8 rounded-full bg-zinc-200 dark:bg-zinc-700 animate-pulse" />;
   }
 
   if (session?.user) {
@@ -24,7 +24,7 @@ export function AuthButton() {
         )}
         <button
           onClick={() => signOut()}
-          className="text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100"
+          className="text-sm text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100"
         >
           {t("auth.signOut")}
         </button>
@@ -35,7 +35,7 @@ export function AuthButton() {
   return (
     <button
       onClick={() => signIn()}
-      className="px-3 py-1.5 text-sm bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
+      className="px-3 py-1.5 text-sm bg-zinc-600 text-white rounded hover:bg-zinc-700 transition-colors"
     >
       {t("auth.signIn")}
     </button>

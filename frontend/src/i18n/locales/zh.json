@@ -1,7 +1,6 @@
 {
   "app.title": "DocTalk",
   "app.subtitle": "上传 PDF 开始对话。",
-
   "upload.dragDrop": "将 PDF 拖放到此处",
   "upload.or": "或",
   "upload.chooseFile": "选择文件",
@@ -12,7 +11,6 @@
   "upload.networkError": "上传失败，请检查网络或稍后重试",
   "upload.pdfOnly": "请上传 PDF 文件",
   "upload.tooLarge": "文件大小不能超过 50MB",
-
   "doc.myDocuments": "我的文档",
   "doc.noDocuments": "暂无历史文档",
   "doc.open": "打开",
@@ -23,7 +21,6 @@
   "doc.initChat": "正在初始化对话…",
   "doc.pdfLoadError": "无法加载 PDF，请刷新页面或稍后重试。",
   "doc.pdfLoading": "正在加载 PDF…",
-
   "chat.placeholder": "输入问题…",
   "chat.send": "发送",
   "chat.trySuggested": "试试以下问题开始对话：",
@@ -33,29 +30,23 @@
   "chat.suggestedQ4": "请列出文档中的重要数据和发现",
   "chat.error": "聊天出错：",
   "chat.networkError": "网络异常，请稍后重试",
-
   "citation.jumpTo": "跳转到第 {page} 页",
-
   "toolbar.zoomIn": "放大",
   "toolbar.zoomOut": "缩小",
   "toolbar.prevPage": "上一页",
   "toolbar.nextPage": "下一页",
   "toolbar.grabMode": "抓手工具（拖动平移）",
-
   "header.darkMode": "切换暗色模式",
   "header.lightMode": "切换亮色模式",
   "header.model": "模型",
   "header.language": "语言",
   "header.backToDocument": "返回文档",
-
   "copy.button": "复制",
   "copy.copied": "已复制",
   "feedback.helpful": "有帮助",
   "feedback.notHelpful": "无帮助",
-
   "error.somethingWrong": "出了点问题",
-  "error.refresh": "刷新页面"
-  ,
+  "error.refresh": "刷新页面",
   "session.newChat": "新建对话",
   "session.recentChats": "最近对话",
   "session.deleteChat": "删除当前对话",
@@ -74,14 +65,12 @@
   "credits.insufficientCredits": "Insufficient Credits",
   "credits.purchasePrompt": "You've run out of credits. Purchase more to continue chatting.",
   "credits.buyCredits": "Buy Credits",
-  
   "privacy.badge": "隐私优先：你的文档只属于你",
   "privacy.noTraining": "不用于模型训练",
   "privacy.encrypted": "传输与存储全程加密",
   "privacy.deleteAnytime": "随时可删除数据",
   "privacy.policyLink": "隐私政策",
   "privacy.termsLink": "服务条款",
-
   "home.cta.demoNow": "立即体验示例 PDF",
   "home.cta.loginUpload": "登录上传你的 PDF",
   "home.cta.tryDemo": "试用示例",
@@ -93,11 +82,9 @@
   "billing.error": "An error occurred. Please try again.",
   "common.cancel": "Cancel",
   "common.loading": "Loading...",
-
   "auth.loginToContinue": "登录以继续",
   "auth.loginBenefits": "登录后可上传文档、保存对话、多设备同步",
   "auth.privacyNote": "我们不使用你的文档训练 AI 模型",
-
   "privacy.title": "隐私政策",
   "privacy.section1.title": "数据收集",
   "privacy.section1.content": "我们收集你的邮箱用于身份验证，以及你上传的文档用于分析。",
@@ -112,7 +99,6 @@
   "privacy.section5.title": "联系方式",
   "privacy.section5.content": "隐私相关问题请联系 privacy@doctalk.app",
   "privacy.lastUpdated": "最后更新",
-
   "terms.title": "服务条款",
   "terms.section1.title": "服务说明",
   "terms.section1.content": "DocTalk 提供 AI 驱动的文档分析服务。你可以上传 PDF 并询问关于内容的问题。",
@@ -123,7 +109,6 @@
   "terms.section4.title": "条款变更",
   "terms.section4.content": "我们可能更新这些条款。继续使用即表示接受变更。",
   "terms.lastUpdated": "最后更新",
-
   "demo.title": "选择示例文档",
   "demo.subtitle": "使用这些示例 PDF 体验 DocTalk",
   "demo.hint": "提示：点击引用编号 [1] 可跳转到原文并高亮显示",
@@ -149,25 +134,20 @@
   "demo.signInToContinue": "登录以继续对话",
   "demo.limitReachedMessage": "5 个演示问题已用完。登录即可免费获取 Credits，享受无限对话！",
   "demo.processing": "处理中…",
-
   "common.backToHome": "返回首页",
-
   "profile.title": "个人资料",
   "profile.tabs.profile": "资料",
   "profile.tabs.credits": "额度",
   "profile.tabs.usage": "用量",
   "profile.tabs.account": "账户",
-
   "profile.info.memberSince": "已加入 {days} 天",
   "profile.info.connectedWith": "已通过 {provider} 连接",
-
   "profile.plan.free": "免费",
   "profile.plan.pro": "专业版",
   "profile.plan.upgrade": "升级到专业版",
   "profile.plan.manage": "管理订阅",
   "profile.plan.monthlyAllowance": "{used} / {total} 每月额度",
   "profile.plan.nextRenewal": "{days} 天后续订",
-
   "profile.credits.balance": "额度余额",
   "profile.credits.buyMore": "购买额外额度",
   "profile.credits.history": "交易记录",
@@ -177,7 +157,6 @@
   "profile.credits.reason.chat": "聊天消耗",
   "profile.credits.reason.monthly_allowance": "每月额度",
   "profile.credits.reason.refund": "退款",
-
   "profile.usage.documents": "文档",
   "profile.usage.sessions": "聊天会话",
   "profile.usage.messages": "消息",
@@ -188,19 +167,32 @@
   "profile.usage.calls": "调用次数",
   "profile.usage.tokens": "Tokens",
   "profile.usage.credits": "额度",
-
   "profile.account.dangerZone": "危险区域",
   "profile.account.deleteAccount": "删除账户",
   "profile.account.deleteWarning": "这将永久删除你的账户、所有文档、对话和数据。此操作无法撤销。",
   "profile.account.deleteConfirm": "输入你的邮箱以确认删除",
   "profile.account.deleting": "正在删除账户…",
-
   "userMenu.profile": "个人资料",
   "userMenu.buyCredits": "购买额度",
   "userMenu.signOut": "退出登录",
-
   "billing.pro.title": "Pro 计划",
   "billing.pro.description": "每月 100,000 额度",
   "billing.pro.pricePerMonth": "${price}/月",
-  "billing.extraTopups": "额外额度加购"
+  "billing.extraTopups": "额外额度加购",
+  "landing.badge": "PDF AI 助手",
+  "landing.headline": "与任何 PDF\n即时对话",
+  "landing.subtitle": "你的 AI 阅读伙伴",
+  "landing.description": "上传任意 PDF，即刻获得带引用的精准回答。每个回答都链接到原文出处，一键验证。",
+  "landing.cta.demo": "免费试用",
+  "landing.cta.getStarted": "开始使用",
+  "landing.cta.howItWorks": "了解详情",
+  "landing.showcase.title": "实际效果展示",
+  "landing.showcase.caption": "上传 PDF，提问，获取带页面高亮的引用回答",
+  "landing.features.title": "为什么选择 DocTalk？",
+  "landing.feature.answers.title": "即时回答",
+  "landing.feature.answers.desc": "提出任何问题，几秒内从文档中获得精准答案，由最先进的 AI 驱动。",
+  "landing.feature.citations.title": "来源引用",
+  "landing.feature.citations.desc": "每个回答都包含编号引用。点击任意引用跳转到精确页面并查看高亮原文。",
+  "landing.feature.privacy.title": "隐私优先",
+  "landing.feature.privacy.desc": "您的文档绝不会用于 AI 训练。传输和存储均加密，完全控制删除权。"
 }

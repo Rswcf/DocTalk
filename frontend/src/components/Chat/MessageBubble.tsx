@@ -49,7 +49,7 @@ function processCitationLinks(
           parts.push(
             <span
               key={`cite-${refNum}-${keyIdx++}`}
-              className="text-blue-600 dark:text-blue-400 hover:underline cursor-pointer select-none font-medium"
+              className="text-zinc-600 dark:text-zinc-400 hover:underline cursor-pointer select-none font-medium"
               onClick={() => onClick?.(citation)}
               title={t ? t('citation.jumpTo', { page: citation.page }) : `Jump to page ${citation.page}`}
             >
@@ -159,7 +159,7 @@ export default function MessageBubble({ message, onCitationClick }: MessageBubbl
         {isAssistant && !isError && message.text && (
           <button
             onClick={handleCopy}
-            className="absolute -top-2 right-0 opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded bg-white dark:bg-gray-700 shadow-sm border dark:border-gray-600 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
+            className="absolute -top-2 right-0 opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded bg-white dark:bg-zinc-700 shadow-sm border dark:border-zinc-600 text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200"
             title={copied ? t('copy.copied') : t('copy.button')}
           >
             {copied ? <Check size={14} className="text-green-500" /> : <Copy size={14} />}
@@ -171,8 +171,8 @@ export default function MessageBubble({ message, onCitationClick }: MessageBubbl
             isError
               ? 'bg-red-600 text-white'
               : isUser
-              ? 'bg-blue-600 text-white'
-              : 'bg-gray-100 text-gray-900 dark:bg-gray-800 dark:text-gray-100'
+              ? 'bg-zinc-600 text-white'
+              : 'bg-zinc-100 text-zinc-900 dark:bg-zinc-800 dark:text-zinc-100'
           }`}
         >
           {isUser ? (
@@ -193,8 +193,8 @@ export default function MessageBubble({ message, onCitationClick }: MessageBubbl
               onClick={() => handleFeedback('up')}
               className={`p-1 rounded transition-colors ${
                 feedback === 'up'
-                  ? 'text-blue-600 dark:text-blue-400'
-                  : 'text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300'
+                  ? 'text-zinc-600 dark:text-zinc-400'
+                  : 'text-zinc-400 dark:text-zinc-500 hover:text-zinc-600 dark:hover:text-zinc-300'
               }`}
               title={t('feedback.helpful')}
             >
@@ -205,7 +205,7 @@ export default function MessageBubble({ message, onCitationClick }: MessageBubbl
               className={`p-1 rounded transition-colors ${
                 feedback === 'down'
                   ? 'text-red-500 dark:text-red-400'
-                  : 'text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300'
+                  : 'text-zinc-400 dark:text-zinc-500 hover:text-zinc-600 dark:hover:text-zinc-300'
               }`}
               title={t('feedback.notHelpful')}
             >

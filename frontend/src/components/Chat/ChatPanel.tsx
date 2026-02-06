@@ -181,18 +181,18 @@ export default function ChatPanel({ sessionId, onCitationClick, maxUserMessages 
   };
 
   return (
-    <div className="flex h-full flex-col border-r dark:border-gray-700">
+    <div className="flex h-full flex-col border-r dark:border-zinc-700">
       <PaywallModal isOpen={showPaywall} onClose={() => setShowPaywall(false)} />
       <div ref={listRef} className="flex-1 overflow-auto p-4">
         {messages.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full gap-3 px-4">
-            <p className="text-sm text-gray-500 dark:text-gray-400 mb-2">{t('chat.trySuggested')}</p>
+            <p className="text-sm text-zinc-500 dark:text-zinc-400 mb-2">{t('chat.trySuggested')}</p>
             {SUGGESTED_KEYS.map((k) => (
               <button
                 key={k}
                 type="button"
                 onClick={() => handleSuggestedClick(t(k))}
-                className="w-full text-left text-sm px-4 py-2.5 border rounded-xl hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-800 transition-colors text-gray-700 dark:text-gray-300"
+                className="w-full text-left text-sm px-4 py-2.5 border rounded-xl hover:bg-zinc-50 dark:border-zinc-600 dark:hover:bg-zinc-800 transition-colors text-zinc-700 dark:text-zinc-300"
               >
                 {t(k)}
               </button>
@@ -234,7 +234,7 @@ export default function ChatPanel({ sessionId, onCitationClick, maxUserMessages 
         )}
       </div>
       {maxUserMessages != null && (
-        <div className="px-4 py-2 bg-gray-100 dark:bg-gray-800 text-sm text-gray-600 dark:text-gray-400 border-t dark:border-gray-700 flex items-center justify-between">
+        <div className="px-4 py-2 bg-zinc-100 dark:bg-zinc-800 text-sm text-zinc-600 dark:text-zinc-400 border-t dark:border-zinc-700 flex items-center justify-between">
           <span>
             {t('demo.questionsRemaining', { remaining: Math.max(0, demoRemaining), total: maxUserMessages })}
           </span>
@@ -242,7 +242,7 @@ export default function ChatPanel({ sessionId, onCitationClick, maxUserMessages 
             <button
               type="button"
               onClick={() => router.push('?auth=1', { scroll: false })}
-              className="text-blue-600 dark:text-blue-400 hover:underline text-sm"
+              className="text-zinc-600 dark:text-zinc-400 hover:underline text-sm"
             >
               {t('demo.signInForUnlimited')}
             </button>
@@ -250,18 +250,18 @@ export default function ChatPanel({ sessionId, onCitationClick, maxUserMessages 
             <button
               type="button"
               onClick={() => router.push('?auth=1', { scroll: false })}
-              className="text-blue-600 dark:text-blue-400 hover:underline text-sm font-medium"
+              className="text-zinc-600 dark:text-zinc-400 hover:underline text-sm font-medium"
             >
               {t('demo.signInToContinue')}
             </button>
           )}
         </div>
       )}
-      <form onSubmit={onSubmit} className="p-3 border-t dark:border-gray-700">
+      <form onSubmit={onSubmit} className="p-3 border-t dark:border-zinc-700">
         <div className="flex items-end gap-2">
           <textarea
             ref={textareaRef}
-            className="flex-1 border rounded-xl px-3 py-2 text-sm resize-none overflow-y-auto focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-100"
+            className="flex-1 border rounded-xl px-3 py-2 text-sm resize-none overflow-y-auto focus:outline-none focus:ring-2 focus:ring-zinc-500 dark:bg-zinc-800 dark:border-zinc-600 dark:text-zinc-100"
             style={{ minHeight: '40px', maxHeight: '160px' }}
             placeholder={demoLimitReached ? t('demo.signInToContinue') : t('chat.placeholder')}
             value={input}
@@ -272,7 +272,7 @@ export default function ChatPanel({ sessionId, onCitationClick, maxUserMessages 
           />
           <button
             type="submit"
-            className="p-2 bg-blue-600 text-white rounded-xl disabled:opacity-60 hover:bg-blue-700 transition-colors shrink-0"
+            className="p-2 bg-zinc-600 text-white rounded-xl disabled:opacity-60 hover:bg-zinc-700 transition-colors shrink-0"
             disabled={isStreaming || !input.trim() || demoLimitReached}
             title={t('chat.send')}
           >

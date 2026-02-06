@@ -41,21 +41,21 @@ export default function DemoPage() {
   }, []);
 
   return (
-    <div className="min-h-screen flex flex-col bg-gray-50 dark:bg-gray-900">
-      <Header />
+    <div className="min-h-screen flex flex-col bg-white dark:bg-zinc-950">
+      <Header variant="minimal" />
       <div className="flex-1 flex flex-col items-center justify-center p-6">
-        <h1 className="text-2xl font-bold mb-2 dark:text-white">{t('demo.title')}</h1>
-        <p className="text-gray-600 dark:text-gray-400 mb-8 text-center max-w-md">
+        <h1 className="text-3xl font-bold mb-2 text-zinc-900 dark:text-zinc-50">{t('demo.title')}</h1>
+        <p className="text-zinc-500 dark:text-zinc-400 mb-10 text-center max-w-md">
           {t('demo.subtitle')}
         </p>
 
         {loading ? (
-          <div className="flex items-center gap-2 text-gray-500">
+          <div className="flex items-center gap-2 text-zinc-500">
             <Loader2 className="animate-spin" size={20} />
             <span>{t('common.loading')}</span>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 max-w-4xl w-full">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-4xl w-full">
             {docs.map((doc) => {
               const config = SAMPLE_CONFIG[doc.slug];
               if (!config) return null;
@@ -65,16 +65,16 @@ export default function DemoPage() {
                 <Link
                   key={doc.slug}
                   href={`/d/${doc.document_id}`}
-                  className="flex flex-col p-6 bg-white dark:bg-gray-800 rounded-xl border
-                             border-gray-200 dark:border-gray-700 hover:border-blue-500
-                             dark:hover:border-blue-400 hover:shadow-lg transition group"
+                  className="flex flex-col p-6 bg-white dark:bg-zinc-950 rounded-xl border
+                             border-zinc-200 dark:border-zinc-800 hover:border-zinc-400
+                             dark:hover:border-zinc-600 hover:shadow-lg transition-all duration-200 group"
                 >
                   <div className="flex items-center gap-3 mb-3">
-                    <div className="p-2 bg-blue-100 dark:bg-blue-900 rounded-lg">
-                      <Icon size={24} className="text-blue-600 dark:text-blue-400" />
+                    <div className="p-2 bg-zinc-100 dark:bg-zinc-800 rounded-lg">
+                      <Icon size={24} className="text-zinc-600 dark:text-zinc-400" />
                     </div>
-                    <h2 className="font-semibold dark:text-white group-hover:text-blue-600
-                                   dark:group-hover:text-blue-400 transition">
+                    <h2 className="font-semibold text-zinc-900 dark:text-zinc-100 group-hover:text-zinc-600
+                                   dark:group-hover:text-zinc-300 transition-colors">
                       {t(config.titleKey)}
                     </h2>
                     {!isReady && (
@@ -83,11 +83,11 @@ export default function DemoPage() {
                       </span>
                     )}
                   </div>
-                  <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
+                  <p className="text-sm text-zinc-500 dark:text-zinc-400 mb-4">
                     {t(config.descKey)}
                   </p>
-                  <div className="mt-auto pt-3 border-t dark:border-gray-700">
-                    <p className="text-xs text-gray-400 dark:text-gray-500 italic">
+                  <div className="mt-auto pt-3 border-t border-zinc-200 dark:border-zinc-800">
+                    <p className="text-xs text-zinc-400 dark:text-zinc-500 italic">
                       &ldquo;{t(config.questionKey)}&rdquo;
                     </p>
                   </div>
@@ -97,11 +97,11 @@ export default function DemoPage() {
           </div>
         )}
 
-        <p className="mt-8 text-sm text-gray-500 dark:text-gray-400">
+        <p className="mt-10 text-sm text-zinc-500 dark:text-zinc-400">
           {t('demo.hint')}
         </p>
 
-        <Link href="/" className="mt-4 text-blue-600 hover:underline text-sm">
+        <Link href="/" className="mt-4 text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100 text-sm transition-all duration-200">
           &larr; {t('demo.backToHome')}
         </Link>
       </div>

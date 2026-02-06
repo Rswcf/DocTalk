@@ -1,0 +1,2968 @@
+OpenAI Codex v0.46.0 (research preview)
+--------
+workdir: /Users/mayijie/Projects/Code/010_DocTalk
+model: gpt-5
+provider: openai
+approval: never
+sandbox: workspace-write [workdir, /tmp, $TMPDIR]
+reasoning effort: high
+reasoning summaries: auto
+session id: 019c330f-ee40-7c11-87db-10f85032d57f
+--------
+user
+Phase 3: Profile API Endpoints
+
+## IMPORTANT: Read ALL existing files before making changes!
+
+You need to add profile-related endpoints to backend/app/api/users.py. Read the existing file first.
+
+### 3.1 GET /api/users/profile
+
+Add a comprehensive profile endpoint. Read these files for context:
+- backend/app/api/users.py (existing, add endpoints here)
+- backend/app/models/tables.py (for User, Account, Document, ChatSession, Message, UsageRecord, CreditLedger models)
+- backend/app/core/deps.py (for require_auth, get_db_session)
+
+Response schema:
+{
+  'id': str(user.id),
+  'email': user.email,
+  'name': user.name,
+  'image': user.image,
+  'created_at': user.created_at (isoformat),
+  'plan': user.plan,
+  'credits_balance': user.credits_balance,
+  'monthly_allowance': settings.PLAN_PRO_MONTHLY_CREDITS if plan=='pro' else settings.PLAN_FREE_MONTHLY_CREDITS,
+  'monthly_credits_granted_at': user.monthly_credits_granted_at (isoformat or null),
+  'signup_bonus_granted': bool(user.signup_bonus_granted_at),
+  'connected_accounts': list of {provider, created_at} from Account table,
+  'stats': {
+    'total_documents': count of user's documents,
+    'total_sessions': count of sessions across user's documents,
+    'total_messages': count of messages across user's sessions,
+    'total_credits_spent': sum of abs(delta) from CreditLedger where delta < 0,
+    'total_tokens_used': sum of total_tokens from UsageRecord
+  }
+}
+
+Implementation:
+- Import select, func from sqlalchemy
+- Import all needed models
+- Import settings from app.core.config
+- Use get_db_session dependency
+- Run aggregate queries for stats
+- For connected_accounts: query Account table by user_id
+- For total_sessions: join ChatSession to Document where Document.user_id == user.id
+- For total_messages: join Message to ChatSession to Document
+
+### 3.2 GET /api/users/usage-breakdown
+
+Response:
+{
+  'by_model': [
+    {'model': str, 'total_calls': int, 'total_tokens': int, 'total_credits': int}
+  ]
+}
+
+SQL: SELECT model, COUNT(*), SUM(total_tokens), SUM(cost_credits) FROM usage_records WHERE user_id=? GROUP BY model
+
+### 3.3 GET /api/credits/history
+
+Add to backend/app/api/credits.py (read it first).
+Query CreditLedger for user, ordered by created_at desc, with limit/offset pagination.
+
+Response:
+{
+  'items': [{'id': str, 'delta': int, 'balance_after': int, 'reason': str, 'ref_type': str|null, 'ref_id': str|null, 'created_at': str}],
+  'total': int
+}
+
+Parameters: limit (default 20, max 100), offset (default 0)
+
+### 3.4 DELETE /api/users/me
+
+Steps:
+1. Cancel Stripe subscription if active (stripe.Subscription.cancel)
+2. Find all user documents
+3. For each document, best-effort delete MinIO files + Qdrant vectors (reuse pattern from backend/app/services/doc_service.py delete_document method)
+4. Delete all user documents (ORM cascade handles pages, chunks, sessions, messages)
+5. Delete user row (cascade handles accounts, credit_ledger, usage_records)
+6. Return 200 with {'deleted': True}
+
+Import stripe, and follow existing patterns in doc_service.py for cleanup.
+
+## RULES:
+- Read ALL files before editing
+- Keep existing /me endpoint intact
+- Add new endpoints to the same router
+- Use same code style
+- Do NOT modify any other files except users.py and credits.py
+- Add proper imports at the top
+
+thinking
+**Exploring FastAPI implementation**
+
+I'm considering the task of implementing endpoints in a FastAPI backend repository. It's important to take a closer look at the repo to understand the structure and existing elements. I'll need to examine the current setup, see how endpoints are organized, and plan how to integrate new functionality effectively. This should help me ensure that everything works smoothly and meets the requirements. Let's dive into the details!
+codex
+I’ll scan the backend API files and models to understand existing patterns, then add the new endpoints in users.py and credits.py accordingly.
+exec
+bash -lc 'ls -la' in /Users/mayijie/Projects/Code/010_DocTalk succeeded in 17ms:
+total 96
+drwxr-xr-x  15 mayijie  staff    480 Feb  6 13:10 .
+drwxr-xr-x@ 14 mayijie  staff    448 Feb  4 18:58 ..
+drwxr-xr-x@  3 mayijie  staff     96 Feb  6 14:01 .claude
+drwxr-xr-x@  8 mayijie  staff    256 Feb  5 00:23 .collab
+-rw-r--r--@  1 mayijie  staff    129 Feb  4 23:10 .dockerignore
+-rw-r--r--@  1 mayijie  staff   1200 Feb  6 00:27 .env
+-rw-r--r--@  1 mayijie  staff   1159 Feb  5 20:30 .env.example
+drwxr-xr-x@ 12 mayijie  staff    384 Feb  6 14:01 .git
+-rw-r--r--@  1 mayijie  staff    309 Feb  4 22:24 .gitignore
+-rw-r--r--@  1 mayijie  staff  14095 Feb  6 13:10 CLAUDE.md
+-rw-r--r--@  1 mayijie  staff   8524 Feb  6 09:18 README.md
+drwxr-xr-x@ 10 mayijie  staff    320 Feb  6 11:46 backend
+-rw-r--r--@  1 mayijie  staff    978 Feb  4 19:38 docker-compose.yml
+drwxr-xr-x@ 19 mayijie  staff    608 Feb  6 00:21 frontend
+drwxr-xr-x@  4 mayijie  staff    128 Feb  4 23:32 infra
+exec
+bash -lc 'ls -la backend/app' in /Users/mayijie/Projects/Code/010_DocTalk succeeded in 20ms:
+total 24
+drwxr-xr-x@ 10 mayijie  staff   320 Feb  6 11:57 .
+drwxr-xr-x@ 10 mayijie  staff   320 Feb  6 11:46 ..
+-rw-r--r--@  1 mayijie  staff    14 Feb  4 19:38 __init__.py
+drwxr-xr-x@ 11 mayijie  staff   352 Feb  6 11:35 api
+drwxr-xr-x@  4 mayijie  staff   128 Feb  6 01:04 core
+-rw-r--r--@  1 mayijie  staff  5336 Feb  6 11:57 main.py
+drwxr-xr-x@  7 mayijie  staff   224 Feb  6 13:59 models
+drwxr-xr-x@  7 mayijie  staff   224 Feb  5 20:17 schemas
+drwxr-xr-x@ 11 mayijie  staff   352 Feb  6 11:47 services
+drwxr-xr-x@  5 mayijie  staff   160 Feb  6 11:48 workers
+exec
+bash -lc 'ls -la backend/app/api' in /Users/mayijie/Projects/Code/010_DocTalk succeeded in 15ms:
+total 112
+drwxr-xr-x@ 11 mayijie  staff    352 Feb  6 11:35 .
+drwxr-xr-x@ 10 mayijie  staff    320 Feb  6 11:57 ..
+-rw-r--r--@  1 mayijie  staff     42 Feb  4 19:39 __init__.py
+-rw-r--r--@  1 mayijie  staff   5192 Feb  5 21:04 auth.py
+-rw-r--r--@  1 mayijie  staff  12069 Feb  6 14:04 billing.py
+-rw-r--r--@  1 mayijie  staff   7470 Feb  6 14:04 chat.py
+-rw-r--r--@  1 mayijie  staff    871 Feb  4 21:40 chunks.py
+-rw-r--r--@  1 mayijie  staff   2335 Feb  5 20:41 credits.py
+-rw-r--r--@  1 mayijie  staff   5480 Feb  6 11:35 documents.py
+-rw-r--r--@  1 mayijie  staff    784 Feb  4 19:51 search.py
+-rw-r--r--@  1 mayijie  staff    740 Feb  5 20:41 users.py
+exec
+bash -lc "sed -n '1,200p' backend/app/api/users.py" in /Users/mayijie/Projects/Code/010_DocTalk succeeded in 14ms:
+from __future__ import annotations
+from typing import Optional
+from fastapi import APIRouter, Depends
+from pydantic import BaseModel
+
+from app.core.deps import require_auth
+from app.models.tables import User
+
+
+router = APIRouter(prefix="/api/users", tags=["users"])
+
+
+class UserMeResponse(BaseModel):
+    id: str
+    email: str
+    name: Optional[str]
+    image: Optional[str]
+    credits_balance: int
+
+    class Config:
+exec
+bash -lc "sed -n '1,300p' backend/app/api/credits.py" in /Users/mayijie/Projects/Code/010_DocTalk succeeded in 12ms:
+from __future__ import annotations
+
+from typing import List, Optional
+
+from fastapi import APIRouter, Depends
+from pydantic import BaseModel
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.core.deps import get_db_session, require_auth
+from app.models.tables import CreditLedger, User
+
+
+router = APIRouter(prefix="/api/credits", tags=["credits"])
+
+
+class CreditsBalanceResponse(BaseModel):
+    balance: int
+    recent_transactions: List[dict]
+
+
+thinking
+**Planning API Endpoints**
+
+I'm focusing on the users.py file, which currently only has the /me endpoint. According to the instructions, I need to add more endpoints, like GET /api/users/profile, for comprehensive profile info. I think it would be a good idea to check the models: User, Account, Document, ChatSession, Message, UsageRecord, and CreditLedger to understand their columns and relationships. This will help me design the new endpoints effectively.
+exec
+bash -lc "sed -n '1,260p' backend/app/models/tables.py" in /Users/mayijie/Projects/Code/010_DocTalk succeeded in 13ms:
+from __future__ import annotations
+
+import uuid
+from datetime import datetime
+from typing import List, Optional
+
+import sqlalchemy as sa
+from sqlalchemy.dialects.postgresql import JSONB, UUID
+from sqlalchemy.orm import Mapped, mapped_column, relationship
+
+from .base import Base
+
+
+# Documents table
+class Document(Base):
+    __tablename__ = "documents"
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        primary_key=True,
+exec
+bash -lc "sed -n '1,200p' backend/app/models/tables.py" in /Users/mayijie/Projects/Code/010_DocTalk succeeded in 17ms:
+from __future__ import annotations
+
+import uuid
+from datetime import datetime
+from typing import List, Optional
+
+import sqlalchemy as sa
+from sqlalchemy.dialects.postgresql import JSONB, UUID
+from sqlalchemy.orm import Mapped, mapped_column, relationship
+
+from .base import Base
+
+
+# Documents table
+class Document(Base):
+    __tablename__ = "documents"
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        primary_key=True,
+exec
+bash -lc "sed -n '200,520p' backend/app/models/tables.py" in /Users/mayijie/Projects/Code/010_DocTalk succeeded in 12ms:
+    __table_args__ = (
+        sa.UniqueConstraint("provider", "provider_account_id", name="uq_accounts_provider_account"),
+        sa.Index("idx_accounts_user_id", "user_id"),
+    )
+
+
+class VerificationToken(Base):
+    __tablename__ = "verification_tokens"
+
+    identifier: Mapped[str] = mapped_column(sa.String(255), primary_key=True)
+    token: Mapped[str] = mapped_column(sa.String(255), primary_key=True)
+    expires: Mapped[datetime] = mapped_column(sa.DateTime(timezone=True), nullable=False)
+
+
+class CreditLedger(Base):
+    __tablename__ = "credit_ledger"
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, server_default=sa.text("gen_random_uuid()")
+    )
+
+thinking
+**Planning API Modifications**
+
+I’ve identified all models we need to work with. My next steps involve implementing usage breakdown and modifying the credit history endpoint, along with adjusting the profile endpoint. Also, I need to delete the /api/users/me endpoint. Additionally, I must check core.deps and look into cleanup patterns for the doc_service. It's a lot to cover, but I’m organizing it to make sure nothing gets missed!
+exec
+bash -lc "sed -n '1,260p' backend/app/core/deps.py" in /Users/mayijie/Projects/Code/010_DocTalk succeeded in 8ms:
+import logging
+from typing import AsyncGenerator, Optional
+from uuid import UUID
+
+from fastapi import Depends, HTTPException, Request
+from jose import JWTError, jwt
+from jose.jwt import ExpiredSignatureError, JWTClaimsError
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.core.config import settings
+from app.models.database import AsyncSessionLocal
+from app.models.tables import User
+
+logger = logging.getLogger(__name__)
+
+
+async def get_db_session() -> AsyncGenerator[AsyncSession, None]:
+    """Provide an async SQLAlchemy session for FastAPI dependencies."""
+    async with AsyncSessionLocal() as session:  # type: AsyncSession
+        yield session
+exec
+bash -lc "sed -n '1,320p' backend/app/services/doc_service.py" in /Users/mayijie/Projects/Code/010_DocTalk succeeded in 16ms:
+from __future__ import annotations
+
+import io
+import os
+import uuid
+from typing import Optional
+
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.core.config import settings
+from app.models.tables import Document
+from app.services.storage_service import storage_service
+
+
+class DocService:
+    """Document lifecycle service."""
+
+    async def create_document(
+        self, upload, db: AsyncSession, user_id: Optional[uuid.UUID] = None
+
+thinking
+**Planning document cleanup**
+
+I’m thinking we should follow a process for cleanup by iterating through documents. I should mark them for deletion since the doc_service has functions for marking and deleting documents. In the context of user deletion, I want to be thorough with cleanup. I’ll check the other endpoints in documents.py to find some patterns to follow. This should help ensure I’m consistent with the approach!
+exec
+bash -lc "sed -n '1,240p' backend/app/api/documents.py" in /Users/mayijie/Projects/Code/010_DocTalk succeeded in 11ms:
+from __future__ import annotations
+
+import uuid
+from typing import Optional
+
+from fastapi import APIRouter, Depends, File, UploadFile, status, HTTPException, Query
+from fastapi.responses import JSONResponse
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.core.config import settings
+from app.core.deps import get_current_user_optional, get_db_session, require_auth
+from app.models.tables import User
+from app.schemas.document import DocumentFileUrlResponse, DocumentResponse, DocumentBrief
+from app.services.doc_service import doc_service
+from app.services.storage_service import storage_service
+
+
+documents_router = APIRouter(prefix="/documents", tags=["documents"])
+
+
+exec
+bash -lc "sed -n '1,240p' backend/app/models/base.py" in /Users/mayijie/Projects/Code/010_DocTalk succeeded in 17ms:
+from __future__ import annotations
+
+from sqlalchemy.orm import DeclarativeBase
+
+
+class Base(DeclarativeBase):
+    pass
+
+
+thinking
+**Evaluating account creation date issues**
+
+I see that the Account table doesn't have a created_at field, even though the specification requests it. Normally, the next-auth schema includes created_at, but it isn’t here, which causes a conflict. We can’t modify other files or add a created_at column. Options might include providing it as null or omitting it. I have to think carefully about whether to use the user’s created_at date, but that feels incorrect. I should check how the Account is used in other parts of the code.
+exec
+bash -lc "rg -n \"Account\\(\" -n backend | sed -n '1,120p'" in /Users/mayijie/Projects/Code/010_DocTalk succeeded in 33ms:
+backend/app/services/auth_service.py:119:    account = Account(
+backend/app/models/tables.py:179:class Account(Base):
+exec
+bash -lc "sed -n '1,220p' backend/app/services/auth_service.py" in /Users/mayijie/Projects/Code/010_DocTalk succeeded in 16ms:
+from __future__ import annotations
+
+import hashlib
+import logging
+from datetime import datetime
+from typing import Optional
+from uuid import UUID
+
+import sqlalchemy as sa
+from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.models.tables import User, Account, VerificationToken, CreditLedger
+
+logger = logging.getLogger(__name__)
+
+SIGNUP_BONUS_CREDITS = 10000
+
+
+exec
+bash -lc "sed -n '1,260p' backend/app/api/billing.py" in /Users/mayijie/Projects/Code/010_DocTalk succeeded in 17ms:
+from __future__ import annotations
+
+import logging
+import uuid
+from typing import Literal
+
+import stripe
+from fastapi import APIRouter, Depends, HTTPException, Request
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.core.config import settings
+from app.core.deps import get_db_session, require_auth
+from app.models.tables import CreditLedger, User
+from app.services.credit_service import credit_credits
+
+logger = logging.getLogger(__name__)
+
+router = APIRouter(prefix="/api/billing", tags=["billing"])
+
+
+thinking
+**Reviewing implementation setup**
+
+I'm noticing that the process starts with setting `stripe.api_key` during import, so I'll follow that pattern and also import Stripe while relying on the existing settings. For deleting a subscription, I think I need to ensure Stripe is properly configured. Plus, I'm getting ready to implement the `get_db_session` import. So, it looks like I need to check the `main.py` file to review how the router is registered.
+exec
+bash -lc "sed -n '1,200p' backend/app/main.py" in /Users/mayijie/Projects/Code/010_DocTalk succeeded in 16ms:
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+
+from .core.config import settings
+from .api.documents import documents_router
+from .api.search import search_router
+from .api.chat import chat_router
+from .api.chunks import chunks_router
+from .api.credits import router as credits_router
+from .api.users import router as users_router
+from .api.billing import router as billing_router
+from .api import auth
+from .services.storage_service import storage_service
+from .services.embedding_service import embedding_service
+
+
+app = FastAPI(title="DocTalk API")
+
+# CORS configuration
+app.add_middleware(
+
+thinking
+**Looking into settings constants**
+
+I need to check the core/config.py file for the settings constants related to the monthly allowances. This will help me ensure I have the correct values and parameters configured. It’s essential to get that right, as it affects how the allowances function. So, I’m diving into that configuration file to gather all the necessary information I’ll need for this task. Let's see what we find there!
+exec
+bash -lc "sed -n '1,300p' backend/app/core/config.py" in /Users/mayijie/Projects/Code/010_DocTalk succeeded in 16ms:
+from __future__ import annotations
+
+from typing import Optional
+
+from pydantic import Field
+from pydantic_settings import BaseSettings, SettingsConfigDict
+
+
+class Settings(BaseSettings):
+    # OpenRouter — 统一 API 网关
+    OPENROUTER_API_KEY: Optional[str] = None
+    OPENROUTER_BASE_URL: str = Field(default="https://openrouter.ai/api/v1")
+
+    # Embedding — 模型与维度强绑定 (通过 OpenRouter 调用)
+    EMBEDDING_MODEL: str = Field(default="openai/text-embedding-3-small")
+    EMBEDDING_DIM: int = Field(default=1536)
+
+    # Qdrant
+    QDRANT_URL: str = Field(default="http://localhost:6333")
+    QDRANT_API_KEY: Optional[str] = None
+
+
+
+
+
+thinking
+**Implementing API Updates**
+
+I’m looking at the implementation of new endpoints like GET /api/users/usage-breakdown and updating /api/credits/history to return a new response format with items and total. I need to ensure that the usage breakdown computes the group by model usage records, while also limiting the history response to 20 by default, with a max of 100 entries. It seems like we might need to replace the existing route and update the handler to match the new structure specified. I'll take care to maintain consistent coding style as needed.
+thinking
+**Implementing User Deletion Endpoint**
+
+I’m working on implementing the DELETE /api/users/me endpoint for user deletion, which will require accessing the database. I'll import AsyncSession and select to facilitate this. The process starts with canceling the user's Stripe subscription if it's active, using stripe.Subscription.cancel. I’ll ensure that stripe.api_key is only set if settings.STRIPE_SECRET_KEY exists, guarding the call to cancel to avoid failures. If everything checks out, I’ll proceed with deleting the subscription correctly based on the specifications.
+thinking
+**Handling Subscription Cancellation and User Deletion**
+
+I'm implementing cancellation for a user's subscription. The instruction is clear to use stripe.Subscription.cancel, but if that fails, I’ll attempt stripe.Subscription.delete if the cancel attribute is not available. I’ll create a try/except structure to handle this safely and guard by checking if settings.STRIPE_SECRET_KEY and user.stripe_subscription_id exist. After cancellation, the user’s plan will be set to 'free' (though I’m unsure about altering user fields). Finally, I'll ensure to delete the user row afterward, as instructed.
+thinking
+**Implementing Document Deletion for User**
+
+I’m planning to delete Document rows where user_id equals user.id. For each document, I’ll call doc_service.delete_document, which handles both storage and Qdrant deletions, but it requires a Document object. For step 2, I need to query the Document table for all documents linked to the user. Step 5 involves deleting the user row with db.delete(user) and committing afterward. Even though doc_service already commits on each delete, I think it should work fine if I manage the commit correctly after the loop.
+thinking
+**Adjusting User Data Deletion and Queries**
+
+I need to ensure that related data is properly deleted, especially since the Document table cascade deletes on related entries. It's important to delete all documents before removing the user to avoid orphaned records. For connected accounts, I'll select the Account for the user but need to carefully handle created_at fields. I’m crafting various queries to get total counts for documents, sessions, messages, credits spent, and tokens used. 
+
+I’ll likely return a dict instead of a Pydantic model for consistency, and I must ensure proper imports and stylistic adherence while updating both the user and credits APIs with new endpoints. Then I'll maintain existing functions without changes where necessary.
+codex
+Next, I’ll implement the new users endpoints and update credits history with pagination, mirroring existing style and imports.
+file update
+M /Users/mayijie/Projects/Code/010_DocTalk/backend/app/api/users.py
+@@ -1,8 +1,22 @@
+ from __future__ import annotations
+-from typing import Optional
+-from fastapi import APIRouter, Depends
++from typing import Optional, List
++from fastapi import APIRouter, Depends, HTTPException
+ from pydantic import BaseModel
++from sqlalchemy import select, func
++from sqlalchemy.ext.asyncio import AsyncSession
+ 
+-from app.core.deps import require_auth
+-from app.models.tables import User
++import stripe
++
++from app.core.config import settings
++from app.core.deps import require_auth, get_db_session
++from app.models.tables import (
++    User,
++    Account,
++    Document,
++    ChatSession,
++    Message,
++    UsageRecord,
++    CreditLedger,
++)
++from app.services.doc_service import doc_service
+ 
+@@ -33 +47,159 @@
+ 
++
++@router.get("/profile")
++async def get_profile(
++    user: User = Depends(require_auth),
++    db: AsyncSession = Depends(get_db_session),
++):
++    # Connected accounts
++    acc_rows = await db.execute(select(Account).where(Account.user_id == user.id))
++    accounts: List[Account] = acc_rows.scalars().all()
++
++    # Aggregated stats
++    # Total documents
++    total_documents = await db.scalar(
++        select(func.count()).select_from(Document).where(Document.user_id == user.id)
++    )
++
++    # Total sessions (join sessions -> documents by user)
++    total_sessions = await db.scalar(
++        select(func.count())
++        .select_from(ChatSession)
++        .join(Document, ChatSession.document_id == Document.id)
++        .where(Document.user_id == user.id)
++    )
++
++    # Total messages (join messages -> sessions -> documents by user)
++    total_messages = await db.scalar(
++        select(func.count())
++        .select_from(Message)
++        .join(ChatSession, Message.session_id == ChatSession.id)
++        .join(Document, ChatSession.document_id == Document.id)
++        .where(Document.user_id == user.id)
++    )
++
++    # Total credits spent (sum of abs(delta) where delta < 0)
++    total_credits_spent = await db.scalar(
++        select(func.coalesce(func.sum(-CreditLedger.delta), 0))
++        .where(CreditLedger.user_id == user.id)
++        .where(CreditLedger.delta < 0)
++    )
++
++    # Total tokens used
++    total_tokens_used = await db.scalar(
++        select(func.coalesce(func.sum(UsageRecord.total_tokens), 0)).where(UsageRecord.user_id == user.id)
++    )
++
++    # Monthly allowance by plan
++    monthly_allowance = (
++        int(settings.PLAN_PRO_MONTHLY_CREDITS or 0)
++        if (user.plan or "").lower() == "pro"
++        else int(settings.PLAN_FREE_MONTHLY_CREDITS or 0)
++    )
++
++    return {
++        "id": str(user.id),
++        "email": user.email,
++        "name": user.name,
++        "image": user.image,
++        "created_at": user.created_at.isoformat() if getattr(user, "created_at", None) else None,
++        "plan": user.plan,
++        "credits_balance": user.credits_balance,
++        "monthly_allowance": monthly_allowance,
++        "monthly_credits_granted_at": user.monthly_credits_granted_at.isoformat()
++        if user.monthly_credits_granted_at
++        else None,
++        "signup_bonus_granted": bool(user.signup_bonus_granted_at),
++        "connected_accounts": [
++            {
++                "provider": acc.provider,
++                # Account model has no created_at column; return None for compatibility
++                "created_at": None,
++            }
++            for acc in accounts
++        ],
++        "stats": {
++            "total_documents": int(total_documents or 0),
++            "total_sessions": int(total_sessions or 0),
++            "total_messages": int(total_messages or 0),
++            "total_credits_spent": int(total_credits_spent or 0),
++            "total_tokens_used": int(total_tokens_used or 0),
++        },
++    }
++
++
++@router.get("/usage-breakdown")
++async def get_usage_breakdown(
++    user: User = Depends(require_auth),
++    db: AsyncSession = Depends(get_db_session),
++):
++    rows = await db.execute(
++        select(
++            UsageRecord.model.label("model"),
++            func.count(UsageRecord.id).label("total_calls"),
++            func.coalesce(func.sum(UsageRecord.total_tokens), 0).label("total_tokens"),
++            func.coalesce(func.sum(UsageRecord.cost_credits), 0).label("total_credits"),
++        )
++        .where(UsageRecord.user_id == user.id)
++        .group_by(UsageRecord.model)
++        .order_by(UsageRecord.model)
++    )
++    results = rows.all()
++
++    return {
++        "by_model": [
++            {
++                "model": r.model,
++                "total_calls": int(r.total_calls or 0),
++                "total_tokens": int(r.total_tokens or 0),
++                "total_credits": int(r.total_credits or 0),
++            }
++            for r in results
++        ]
++    }
++
++
++@router.delete("/me")
++async def delete_me(
++    user: User = Depends(require_auth),
++    db: AsyncSession = Depends(get_db_session),
++):
++    # 1) Cancel Stripe subscription if active
++    try:
++        if settings.STRIPE_SECRET_KEY and user.stripe_subscription_id:
++            stripe.api_key = settings.STRIPE_SECRET_KEY
++            try:
++                # Prefer delete() which cancels the subscription
++                stripe.Subscription.delete(user.stripe_subscription_id)
++            except Exception:
++                try:
++                    # Fallback for environments expecting cancel()
++                    getattr(stripe.Subscription, "cancel")(user.stripe_subscription_id)
++                except Exception:
++                    pass
++    except Exception:
++        # Best-effort: ignore Stripe errors during account deletion
++        pass
++
++    # 2) Find all user documents
++    doc_rows = await db.execute(select(Document.id).where(Document.user_id == user.id))
++    doc_ids = [row.id for row in doc_rows.all()]
++
++    # 3) Best-effort delete storage and vectors via service, 4) Delete documents
++    for doc_id in doc_ids:
++        try:
++            await doc_service.delete_document(doc_id, db)
++        except Exception:
++            # Continue deleting other documents even if one fails
++            pass
++
++    # 5) Delete user row (cascade handles accounts, credit_ledger, usage_records)
++    try:
++        await db.delete(user)
++        await db.commit()
++    except Exception:
++        # If deletion fails, return error
++        raise HTTPException(status_code=500, detail="Failed to delete user")
++
++    # 6) Return confirmation
++    return {"deleted": True}
+apply_patch(auto_approved=true) exited 0 in 25ms:
+Success. Updated the following files:
+M backend/app/api/users.py
+file update:
+diff --git a/backend/app/api/users.py b/backend/app/api/users.py
+index 299ca422566dd21391367dd47bd68922f8bd1dc3..1e41d8f0959fba1450cc228d82cb93ba74690fd5
+--- a/backend/app/api/users.py
++++ b/backend/app/api/users.py
+@@ -1,10 +1,24 @@
+ from __future__ import annotations
+-from typing import Optional
+-from fastapi import APIRouter, Depends
++from typing import Optional, List
++from fastapi import APIRouter, Depends, HTTPException
+ from pydantic import BaseModel
++from sqlalchemy import select, func
++from sqlalchemy.ext.asyncio import AsyncSession
+ 
+-from app.core.deps import require_auth
+-from app.models.tables import User
++import stripe
++
++from app.core.config import settings
++from app.core.deps import require_auth, get_db_session
++from app.models.tables import (
++    User,
++    Account,
++    Document,
++    ChatSession,
++    Message,
++    UsageRecord,
++    CreditLedger,
++)
++from app.services.doc_service import doc_service
+ 
+ 
+ router = APIRouter(prefix="/api/users", tags=["users"])
+@@ -31,3 +45,161 @@
+         "credits_balance": user.credits_balance,
+     }
+ 
++
++@router.get("/profile")
++async def get_profile(
++    user: User = Depends(require_auth),
++    db: AsyncSession = Depends(get_db_session),
++):
++    # Connected accounts
++    acc_rows = await db.execute(select(Account).where(Account.user_id == user.id))
++    accounts: List[Account] = acc_rows.scalars().all()
++
++    # Aggregated stats
++    # Total documents
++    total_documents = await db.scalar(
++        select(func.count()).select_from(Document).where(Document.user_id == user.id)
++    )
++
++    # Total sessions (join sessions -> documents by user)
++    total_sessions = await db.scalar(
++        select(func.count())
++        .select_from(ChatSession)
++        .join(Document, ChatSession.document_id == Document.id)
++        .where(Document.user_id == user.id)
++    )
++
++    # Total messages (join messages -> sessions -> documents by user)
++    total_messages = await db.scalar(
++        select(func.count())
++        .select_from(Message)
++        .join(ChatSession, Message.session_id == ChatSession.id)
++        .join(Document, ChatSession.document_id == Document.id)
++        .where(Document.user_id == user.id)
++    )
++
++    # Total credits spent (sum of abs(delta) where delta < 0)
++    total_credits_spent = await db.scalar(
++        select(func.coalesce(func.sum(-CreditLedger.delta), 0))
++        .where(CreditLedger.user_id == user.id)
++        .where(CreditLedger.delta < 0)
++    )
++
++    # Total tokens used
++    total_tokens_used = await db.scalar(
++        select(func.coalesce(func.sum(UsageRecord.total_tokens), 0)).where(UsageRecord.user_id == user.id)
++    )
++
++    # Monthly allowance by plan
++    monthly_allowance = (
++        int(settings.PLAN_PRO_MONTHLY_CREDITS or 0)
++        if (user.plan or "").lower() == "pro"
++        else int(settings.PLAN_FREE_MONTHLY_CREDITS or 0)
++    )
++
++    return {
++        "id": str(user.id),
++        "email": user.email,
++        "name": user.name,
++        "image": user.image,
++        "created_at": user.created_at.isoformat() if getattr(user, "created_at", None) else None,
++        "plan": user.plan,
++        "credits_balance": user.credits_balance,
++        "monthly_allowance": monthly_allowance,
++        "monthly_credits_granted_at": user.monthly_credits_granted_at.isoformat()
++        if user.monthly_credits_granted_at
++        else None,
++        "signup_bonus_granted": bool(user.signup_bonus_granted_at),
++        "connected_accounts": [
++            {
++                "provider": acc.provider,
++                # Account model has no created_at column; return None for compatibility
++                "created_at": None,
++            }
++            for acc in accounts
++        ],
++        "stats": {
++            "total_documents": int(total_documents or 0),
++            "total_sessions": int(total_sessions or 0),
++            "total_messages": int(total_messages or 0),
++            "total_credits_spent": int(total_credits_spent or 0),
++            "total_tokens_used": int(total_tokens_used or 0),
++        },
++    }
++
++
++@router.get("/usage-breakdown")
++async def get_usage_breakdown(
++    user: User = Depends(require_auth),
++    db: AsyncSession = Depends(get_db_session),
++):
++    rows = await db.execute(
++        select(
++            UsageRecord.model.label("model"),
++            func.count(UsageRecord.id).label("total_calls"),
++            func.coalesce(func.sum(UsageRecord.total_tokens), 0).label("total_tokens"),
++            func.coalesce(func.sum(UsageRecord.cost_credits), 0).label("total_credits"),
++        )
++        .where(UsageRecord.user_id == user.id)
++        .group_by(UsageRecord.model)
++        .order_by(UsageRecord.model)
++    )
++    results = rows.all()
++
++    return {
++        "by_model": [
++            {
++                "model": r.model,
++                "total_calls": int(r.total_calls or 0),
++                "total_tokens": int(r.total_tokens or 0),
++                "total_credits": int(r.total_credits or 0),
++            }
++            for r in results
++        ]
++    }
++
++
++@router.delete("/me")
++async def delete_me(
++    user: User = Depends(require_auth),
++    db: AsyncSession = Depends(get_db_session),
++):
++    # 1) Cancel Stripe subscription if active
++    try:
++        if settings.STRIPE_SECRET_KEY and user.stripe_subscription_id:
++            stripe.api_key = settings.STRIPE_SECRET_KEY
++            try:
++                # Prefer delete() which cancels the subscription
++                stripe.Subscription.delete(user.stripe_subscription_id)
++            except Exception:
++                try:
++                    # Fallback for environments expecting cancel()
++                    getattr(stripe.Subscription, "cancel")(user.stripe_subscription_id)
++                except Exception:
++                    pass
++    except Exception:
++        # Best-effort: ignore Stripe errors during account deletion
++        pass
++
++    # 2) Find all user documents
++    doc_rows = await db.execute(select(Document.id).where(Document.user_id == user.id))
++    doc_ids = [row.id for row in doc_rows.all()]
++
++    # 3) Best-effort delete storage and vectors via service, 4) Delete documents
++    for doc_id in doc_ids:
++        try:
++            await doc_service.delete_document(doc_id, db)
++        except Exception:
++            # Continue deleting other documents even if one fails
++            pass
++
++    # 5) Delete user row (cascade handles accounts, credit_ledger, usage_records)
++    try:
++        await db.delete(user)
++        await db.commit()
++    except Exception:
++        # If deletion fails, return error
++        raise HTTPException(status_code=500, detail="Failed to delete user")
++
++    # 6) Return confirmation
++    return {"deleted": True}
+
+file update:
+diff --git a/backend/app/api/users.py b/backend/app/api/users.py
+index 299ca422566dd21391367dd47bd68922f8bd1dc3..1e41d8f0959fba1450cc228d82cb93ba74690fd5
+--- a/backend/app/api/users.py
++++ b/backend/app/api/users.py
+@@ -1,10 +1,24 @@
+ from __future__ import annotations
+-from typing import Optional
+-from fastapi import APIRouter, Depends
++from typing import Optional, List
++from fastapi import APIRouter, Depends, HTTPException
+ from pydantic import BaseModel
++from sqlalchemy import select, func
++from sqlalchemy.ext.asyncio import AsyncSession
+ 
+-from app.core.deps import require_auth
+-from app.models.tables import User
++import stripe
++
++from app.core.config import settings
++from app.core.deps import require_auth, get_db_session
++from app.models.tables import (
++    User,
++    Account,
++    Document,
++    ChatSession,
++    Message,
++    UsageRecord,
++    CreditLedger,
++)
++from app.services.doc_service import doc_service
+ 
+ 
+ router = APIRouter(prefix="/api/users", tags=["users"])
+@@ -31,3 +45,161 @@
+         "credits_balance": user.credits_balance,
+     }
+ 
++
++@router.get("/profile")
++async def get_profile(
++    user: User = Depends(require_auth),
++    db: AsyncSession = Depends(get_db_session),
++):
++    # Connected accounts
++    acc_rows = await db.execute(select(Account).where(Account.user_id == user.id))
++    accounts: List[Account] = acc_rows.scalars().all()
++
++    # Aggregated stats
++    # Total documents
++    total_documents = await db.scalar(
++        select(func.count()).select_from(Document).where(Document.user_id == user.id)
++    )
++
++    # Total sessions (join sessions -> documents by user)
++    total_sessions = await db.scalar(
++        select(func.count())
++        .select_from(ChatSession)
++        .join(Document, ChatSession.document_id == Document.id)
++        .where(Document.user_id == user.id)
++    )
++
++    # Total messages (join messages -> sessions -> documents by user)
++    total_messages = await db.scalar(
++        select(func.count())
++        .select_from(Message)
++        .join(ChatSession, Message.session_id == ChatSession.id)
++        .join(Document, ChatSession.document_id == Document.id)
++        .where(Document.user_id == user.id)
++    )
++
++    # Total credits spent (sum of abs(delta) where delta < 0)
++    total_credits_spent = await db.scalar(
++        select(func.coalesce(func.sum(-CreditLedger.delta), 0))
++        .where(CreditLedger.user_id == user.id)
++        .where(CreditLedger.delta < 0)
++    )
++
++    # Total tokens used
++    total_tokens_used = await db.scalar(
++        select(func.coalesce(func.sum(UsageRecord.total_tokens), 0)).where(UsageRecord.user_id == user.id)
++    )
++
++    # Monthly allowance by plan
++    monthly_allowance = (
++        int(settings.PLAN_PRO_MONTHLY_CREDITS or 0)
++        if (user.plan or "").lower() == "pro"
++        else int(settings.PLAN_FREE_MONTHLY_CREDITS or 0)
++    )
++
++    return {
++        "id": str(user.id),
++        "email": user.email,
++        "name": user.name,
++        "image": user.image,
++        "created_at": user.created_at.isoformat() if getattr(user, "created_at", None) else None,
++        "plan": user.plan,
++        "credits_balance": user.credits_balance,
++        "monthly_allowance": monthly_allowance,
++        "monthly_credits_granted_at": user.monthly_credits_granted_at.isoformat()
++        if user.monthly_credits_granted_at
++        else None,
++        "signup_bonus_granted": bool(user.signup_bonus_granted_at),
++        "connected_accounts": [
++            {
++                "provider": acc.provider,
++                # Account model has no created_at column; return None for compatibility
++                "created_at": None,
++            }
++            for acc in accounts
++        ],
++        "stats": {
++            "total_documents": int(total_documents or 0),
++            "total_sessions": int(total_sessions or 0),
++            "total_messages": int(total_messages or 0),
++            "total_credits_spent": int(total_credits_spent or 0),
++            "total_tokens_used": int(total_tokens_used or 0),
++        },
++    }
++
++
++@router.get("/usage-breakdown")
++async def get_usage_breakdown(
++    user: User = Depends(require_auth),
++    db: AsyncSession = Depends(get_db_session),
++):
++    rows = await db.execute(
++        select(
++            UsageRecord.model.label("model"),
++            func.count(UsageRecord.id).label("total_calls"),
++            func.coalesce(func.sum(UsageRecord.total_tokens), 0).label("total_tokens"),
++            func.coalesce(func.sum(UsageRecord.cost_credits), 0).label("total_credits"),
++        )
++        .where(UsageRecord.user_id == user.id)
++        .group_by(UsageRecord.model)
++        .order_by(UsageRecord.model)
++    )
++    results = rows.all()
++
++    return {
++        "by_model": [
++            {
++                "model": r.model,
++                "total_calls": int(r.total_calls or 0),
++                "total_tokens": int(r.total_tokens or 0),
++                "total_credits": int(r.total_credits or 0),
++            }
++            for r in results
++        ]
++    }
++
++
++@router.delete("/me")
++async def delete_me(
++    user: User = Depends(require_auth),
++    db: AsyncSession = Depends(get_db_session),
++):
++    # 1) Cancel Stripe subscription if active
++    try:
++        if settings.STRIPE_SECRET_KEY and user.stripe_subscription_id:
++            stripe.api_key = settings.STRIPE_SECRET_KEY
++            try:
++                # Prefer delete() which cancels the subscription
++                stripe.Subscription.delete(user.stripe_subscription_id)
++            except Exception:
++                try:
++                    # Fallback for environments expecting cancel()
++                    getattr(stripe.Subscription, "cancel")(user.stripe_subscription_id)
++                except Exception:
++                    pass
++    except Exception:
++        # Best-effort: ignore Stripe errors during account deletion
++        pass
++
++    # 2) Find all user documents
++    doc_rows = await db.execute(select(Document.id).where(Document.user_id == user.id))
++    doc_ids = [row.id for row in doc_rows.all()]
++
++    # 3) Best-effort delete storage and vectors via service, 4) Delete documents
++    for doc_id in doc_ids:
++        try:
++            await doc_service.delete_document(doc_id, db)
++        except Exception:
++            # Continue deleting other documents even if one fails
++            pass
++
++    # 5) Delete user row (cascade handles accounts, credit_ledger, usage_records)
++    try:
++        await db.delete(user)
++        await db.commit()
++    except Exception:
++        # If deletion fails, return error
++        raise HTTPException(status_code=500, detail="Failed to delete user")
++
++    # 6) Return confirmation
++    return {"deleted": True}
+
+file update
+M /Users/mayijie/Projects/Code/010_DocTalk/backend/app/api/credits.py
+@@ -64,5 +64,15 @@
+     db: AsyncSession = Depends(get_db_session),
+-    limit: int = 50,
++    limit: int = 20,
+     offset: int = 0,
+ ):
++    # Enforce sane bounds
++    limit = max(1, min(100, int(limit or 20)))
++    offset = max(0, int(offset or 0))
++
++    # Total count for pagination
++    total = await db.scalar(
++        select(func.count()).select_from(CreditLedger).where(CreditLedger.user_id == user.id)
++    )
++
++    # Page of items
+     result = await db.execute(
+@@ -77,3 +87,3 @@
+     return {
+-        "entries": [
++        "items": [
+             {
+@@ -89,5 +99,3 @@
+         ],
+-        "limit": limit,
+-        "offset": offset,
++        "total": int(total or 0),
+     }
+-
+apply_patch(auto_approved=true) exited 0 in 35ms:
+Success. Updated the following files:
+M backend/app/api/credits.py
+file update:
+diff --git a/backend/app/api/credits.py b/backend/app/api/credits.py
+index 31a04540443f7906605bea30f3dbe4d91ffc23bb..ffce07bce43a312c83cb1614014a51d67b59b876
+--- a/backend/app/api/credits.py
++++ b/backend/app/api/credits.py
+@@ -62,9 +62,19 @@
+ async def get_history(
+     user: User = Depends(require_auth),
+     db: AsyncSession = Depends(get_db_session),
+-    limit: int = 50,
++    limit: int = 20,
+     offset: int = 0,
+ ):
++    # Enforce sane bounds
++    limit = max(1, min(100, int(limit or 20)))
++    offset = max(0, int(offset or 0))
++
++    # Total count for pagination
++    total = await db.scalar(
++        select(func.count()).select_from(CreditLedger).where(CreditLedger.user_id == user.id)
++    )
++
++    # Page of items
+     result = await db.execute(
+         select(CreditLedger)
+         .where(CreditLedger.user_id == user.id)
+@@ -75,7 +85,7 @@
+     entries = result.scalars().all()
+ 
+     return {
+-        "entries": [
++        "items": [
+             {
+                 "id": str(e.id),
+                 "delta": e.delta,
+@@ -87,7 +97,5 @@
+             }
+             for e in entries
+         ],
+-        "limit": limit,
+-        "offset": offset,
++        "total": int(total or 0),
+     }
+-
+diff --git a/backend/app/api/users.py b/backend/app/api/users.py
+index 299ca422566dd21391367dd47bd68922f8bd1dc3..1e41d8f0959fba1450cc228d82cb93ba74690fd5
+--- a/backend/app/api/users.py
++++ b/backend/app/api/users.py
+@@ -1,10 +1,24 @@
+ from __future__ import annotations
+-from typing import Optional
+-from fastapi import APIRouter, Depends
++from typing import Optional, List
++from fastapi import APIRouter, Depends, HTTPException
+ from pydantic import BaseModel
++from sqlalchemy import select, func
++from sqlalchemy.ext.asyncio import AsyncSession
+ 
+-from app.core.deps import require_auth
+-from app.models.tables import User
++import stripe
++
++from app.core.config import settings
++from app.core.deps import require_auth, get_db_session
++from app.models.tables import (
++    User,
++    Account,
++    Document,
++    ChatSession,
++    Message,
++    UsageRecord,
++    CreditLedger,
++)
++from app.services.doc_service import doc_service
+ 
+ 
+ router = APIRouter(prefix="/api/users", tags=["users"])
+@@ -31,3 +45,161 @@
+         "credits_balance": user.credits_balance,
+     }
+ 
++
++@router.get("/profile")
++async def get_profile(
++    user: User = Depends(require_auth),
++    db: AsyncSession = Depends(get_db_session),
++):
++    # Connected accounts
++    acc_rows = await db.execute(select(Account).where(Account.user_id == user.id))
++    accounts: List[Account] = acc_rows.scalars().all()
++
++    # Aggregated stats
++    # Total documents
++    total_documents = await db.scalar(
++        select(func.count()).select_from(Document).where(Document.user_id == user.id)
++    )
++
++    # Total sessions (join sessions -> documents by user)
++    total_sessions = await db.scalar(
++        select(func.count())
++        .select_from(ChatSession)
++        .join(Document, ChatSession.document_id == Document.id)
++        .where(Document.user_id == user.id)
++    )
++
++    # Total messages (join messages -> sessions -> documents by user)
++    total_messages = await db.scalar(
++        select(func.count())
++        .select_from(Message)
++        .join(ChatSession, Message.session_id == ChatSession.id)
++        .join(Document, ChatSession.document_id == Document.id)
++        .where(Document.user_id == user.id)
++    )
++
++    # Total credits spent (sum of abs(delta) where delta < 0)
++    total_credits_spent = await db.scalar(
++        select(func.coalesce(func.sum(-CreditLedger.delta), 0))
++        .where(CreditLedger.user_id == user.id)
++        .where(CreditLedger.delta < 0)
++    )
++
++    # Total tokens used
++    total_tokens_used = await db.scalar(
++        select(func.coalesce(func.sum(UsageRecord.total_tokens), 0)).where(UsageRecord.user_id == user.id)
++    )
++
++    # Monthly allowance by plan
++    monthly_allowance = (
++        int(settings.PLAN_PRO_MONTHLY_CREDITS or 0)
++        if (user.plan or "").lower() == "pro"
++        else int(settings.PLAN_FREE_MONTHLY_CREDITS or 0)
++    )
++
++    return {
++        "id": str(user.id),
++        "email": user.email,
++        "name": user.name,
++        "image": user.image,
++        "created_at": user.created_at.isoformat() if getattr(user, "created_at", None) else None,
++        "plan": user.plan,
++        "credits_balance": user.credits_balance,
++        "monthly_allowance": monthly_allowance,
++        "monthly_credits_granted_at": user.monthly_credits_granted_at.isoformat()
++        if user.monthly_credits_granted_at
++        else None,
++        "signup_bonus_granted": bool(user.signup_bonus_granted_at),
++        "connected_accounts": [
++            {
++                "provider": acc.provider,
++                # Account model has no created_at column; return None for compatibility
++                "created_at": None,
++            }
++            for acc in accounts
++        ],
++        "stats": {
++            "total_documents": int(total_documents or 0),
++            "total_sessions": int(total_sessions or 0),
++            "total_messages": int(total_messages or 0),
++            "total_credits_spent": int(total_credits_spent or 0),
++            "total_tokens_used": int(total_tokens_used or 0),
++        },
++    }
++
++
++@router.get("/usage-breakdown")
++async def get_usage_breakdown(
++    user: User = Depends(require_auth),
++    db: AsyncSession = Depends(get_db_session),
++):
++    rows = await db.execute(
++        select(
++            UsageRecord.model.label("model"),
++            func.count(UsageRecord.id).label("total_calls"),
++            func.coalesce(func.sum(UsageRecord.total_tokens), 0).label("total_tokens"),
++            func.coalesce(func.sum(UsageRecord.cost_credits), 0).label("total_credits"),
++        )
++        .where(UsageRecord.user_id == user.id)
++        .group_by(UsageRecord.model)
++        .order_by(UsageRecord.model)
++    )
++    results = rows.all()
++
++    return {
++        "by_model": [
++            {
++                "model": r.model,
++                "total_calls": int(r.total_calls or 0),
++                "total_tokens": int(r.total_tokens or 0),
++                "total_credits": int(r.total_credits or 0),
++            }
++            for r in results
++        ]
++    }
++
++
++@router.delete("/me")
++async def delete_me(
++    user: User = Depends(require_auth),
++    db: AsyncSession = Depends(get_db_session),
++):
++    # 1) Cancel Stripe subscription if active
++    try:
++        if settings.STRIPE_SECRET_KEY and user.stripe_subscription_id:
++            stripe.api_key = settings.STRIPE_SECRET_KEY
++            try:
++                # Prefer delete() which cancels the subscription
++                stripe.Subscription.delete(user.stripe_subscription_id)
++            except Exception:
++                try:
++                    # Fallback for environments expecting cancel()
++                    getattr(stripe.Subscription, "cancel")(user.stripe_subscription_id)
++                except Exception:
++                    pass
++    except Exception:
++        # Best-effort: ignore Stripe errors during account deletion
++        pass
++
++    # 2) Find all user documents
++    doc_rows = await db.execute(select(Document.id).where(Document.user_id == user.id))
++    doc_ids = [row.id for row in doc_rows.all()]
++
++    # 3) Best-effort delete storage and vectors via service, 4) Delete documents
++    for doc_id in doc_ids:
++        try:
++            await doc_service.delete_document(doc_id, db)
++        except Exception:
++            # Continue deleting other documents even if one fails
++            pass
++
++    # 5) Delete user row (cascade handles accounts, credit_ledger, usage_records)
++    try:
++        await db.delete(user)
++        await db.commit()
++    except Exception:
++        # If deletion fails, return error
++        raise HTTPException(status_code=500, detail="Failed to delete user")
++
++    # 6) Return confirmation
++    return {"deleted": True}
+
+file update:
+diff --git a/backend/app/api/credits.py b/backend/app/api/credits.py
+index 31a04540443f7906605bea30f3dbe4d91ffc23bb..ffce07bce43a312c83cb1614014a51d67b59b876
+--- a/backend/app/api/credits.py
++++ b/backend/app/api/credits.py
+@@ -62,9 +62,19 @@
+ async def get_history(
+     user: User = Depends(require_auth),
+     db: AsyncSession = Depends(get_db_session),
+-    limit: int = 50,
++    limit: int = 20,
+     offset: int = 0,
+ ):
++    # Enforce sane bounds
++    limit = max(1, min(100, int(limit or 20)))
++    offset = max(0, int(offset or 0))
++
++    # Total count for pagination
++    total = await db.scalar(
++        select(func.count()).select_from(CreditLedger).where(CreditLedger.user_id == user.id)
++    )
++
++    # Page of items
+     result = await db.execute(
+         select(CreditLedger)
+         .where(CreditLedger.user_id == user.id)
+@@ -75,7 +85,7 @@
+     entries = result.scalars().all()
+ 
+     return {
+-        "entries": [
++        "items": [
+             {
+                 "id": str(e.id),
+                 "delta": e.delta,
+@@ -87,7 +97,5 @@
+             }
+             for e in entries
+         ],
+-        "limit": limit,
+-        "offset": offset,
++        "total": int(total or 0),
+     }
+-
+diff --git a/backend/app/api/users.py b/backend/app/api/users.py
+index 299ca422566dd21391367dd47bd68922f8bd1dc3..1e41d8f0959fba1450cc228d82cb93ba74690fd5
+--- a/backend/app/api/users.py
++++ b/backend/app/api/users.py
+@@ -1,10 +1,24 @@
+ from __future__ import annotations
+-from typing import Optional
+-from fastapi import APIRouter, Depends
++from typing import Optional, List
++from fastapi import APIRouter, Depends, HTTPException
+ from pydantic import BaseModel
++from sqlalchemy import select, func
++from sqlalchemy.ext.asyncio import AsyncSession
+ 
+-from app.core.deps import require_auth
+-from app.models.tables import User
++import stripe
++
++from app.core.config import settings
++from app.core.deps import require_auth, get_db_session
++from app.models.tables import (
++    User,
++    Account,
++    Document,
++    ChatSession,
++    Message,
++    UsageRecord,
++    CreditLedger,
++)
++from app.services.doc_service import doc_service
+ 
+ 
+ router = APIRouter(prefix="/api/users", tags=["users"])
+@@ -31,3 +45,161 @@
+         "credits_balance": user.credits_balance,
+     }
+ 
++
++@router.get("/profile")
++async def get_profile(
++    user: User = Depends(require_auth),
++    db: AsyncSession = Depends(get_db_session),
++):
++    # Connected accounts
++    acc_rows = await db.execute(select(Account).where(Account.user_id == user.id))
++    accounts: List[Account] = acc_rows.scalars().all()
++
++    # Aggregated stats
++    # Total documents
++    total_documents = await db.scalar(
++        select(func.count()).select_from(Document).where(Document.user_id == user.id)
++    )
++
++    # Total sessions (join sessions -> documents by user)
++    total_sessions = await db.scalar(
++        select(func.count())
++        .select_from(ChatSession)
++        .join(Document, ChatSession.document_id == Document.id)
++        .where(Document.user_id == user.id)
++    )
++
++    # Total messages (join messages -> sessions -> documents by user)
++    total_messages = await db.scalar(
++        select(func.count())
++        .select_from(Message)
++        .join(ChatSession, Message.session_id == ChatSession.id)
++        .join(Document, ChatSession.document_id == Document.id)
++        .where(Document.user_id == user.id)
++    )
++
++    # Total credits spent (sum of abs(delta) where delta < 0)
++    total_credits_spent = await db.scalar(
++        select(func.coalesce(func.sum(-CreditLedger.delta), 0))
++        .where(CreditLedger.user_id == user.id)
++        .where(CreditLedger.delta < 0)
++    )
++
++    # Total tokens used
++    total_tokens_used = await db.scalar(
++        select(func.coalesce(func.sum(UsageRecord.total_tokens), 0)).where(UsageRecord.user_id == user.id)
++    )
++
++    # Monthly allowance by plan
++    monthly_allowance = (
++        int(settings.PLAN_PRO_MONTHLY_CREDITS or 0)
++        if (user.plan or "").lower() == "pro"
++        else int(settings.PLAN_FREE_MONTHLY_CREDITS or 0)
++    )
++
++    return {
++        "id": str(user.id),
++        "email": user.email,
++        "name": user.name,
++        "image": user.image,
++        "created_at": user.created_at.isoformat() if getattr(user, "created_at", None) else None,
++        "plan": user.plan,
++        "credits_balance": user.credits_balance,
++        "monthly_allowance": monthly_allowance,
++        "monthly_credits_granted_at": user.monthly_credits_granted_at.isoformat()
++        if user.monthly_credits_granted_at
++        else None,
++        "signup_bonus_granted": bool(user.signup_bonus_granted_at),
++        "connected_accounts": [
++            {
++                "provider": acc.provider,
++                # Account model has no created_at column; return None for compatibility
++                "created_at": None,
++            }
++            for acc in accounts
++        ],
++        "stats": {
++            "total_documents": int(total_documents or 0),
++            "total_sessions": int(total_sessions or 0),
++            "total_messages": int(total_messages or 0),
++            "total_credits_spent": int(total_credits_spent or 0),
++            "total_tokens_used": int(total_tokens_used or 0),
++        },
++    }
++
++
++@router.get("/usage-breakdown")
++async def get_usage_breakdown(
++    user: User = Depends(require_auth),
++    db: AsyncSession = Depends(get_db_session),
++):
++    rows = await db.execute(
++        select(
++            UsageRecord.model.label("model"),
++            func.count(UsageRecord.id).label("total_calls"),
++            func.coalesce(func.sum(UsageRecord.total_tokens), 0).label("total_tokens"),
++            func.coalesce(func.sum(UsageRecord.cost_credits), 0).label("total_credits"),
++        )
++        .where(UsageRecord.user_id == user.id)
++        .group_by(UsageRecord.model)
++        .order_by(UsageRecord.model)
++    )
++    results = rows.all()
++
++    return {
++        "by_model": [
++            {
++                "model": r.model,
++                "total_calls": int(r.total_calls or 0),
++                "total_tokens": int(r.total_tokens or 0),
++                "total_credits": int(r.total_credits or 0),
++            }
++            for r in results
++        ]
++    }
++
++
++@router.delete("/me")
++async def delete_me(
++    user: User = Depends(require_auth),
++    db: AsyncSession = Depends(get_db_session),
++):
++    # 1) Cancel Stripe subscription if active
++    try:
++        if settings.STRIPE_SECRET_KEY and user.stripe_subscription_id:
++            stripe.api_key = settings.STRIPE_SECRET_KEY
++            try:
++                # Prefer delete() which cancels the subscription
++                stripe.Subscription.delete(user.stripe_subscription_id)
++            except Exception:
++                try:
++                    # Fallback for environments expecting cancel()
++                    getattr(stripe.Subscription, "cancel")(user.stripe_subscription_id)
++                except Exception:
++                    pass
++    except Exception:
++        # Best-effort: ignore Stripe errors during account deletion
++        pass
++
++    # 2) Find all user documents
++    doc_rows = await db.execute(select(Document.id).where(Document.user_id == user.id))
++    doc_ids = [row.id for row in doc_rows.all()]
++
++    # 3) Best-effort delete storage and vectors via service, 4) Delete documents
++    for doc_id in doc_ids:
++        try:
++            await doc_service.delete_document(doc_id, db)
++        except Exception:
++            # Continue deleting other documents even if one fails
++            pass
++
++    # 5) Delete user row (cascade handles accounts, credit_ledger, usage_records)
++    try:
++        await db.delete(user)
++        await db.commit()
++    except Exception:
++        # If deletion fails, return error
++        raise HTTPException(status_code=500, detail="Failed to delete user")
++
++    # 6) Return confirmation
++    return {"deleted": True}
+
+
+thinking
+**Updating imports in code**
+
+I just updated the code and need to run a check using rg to see if there were any import issues. In credits.py, we added an import for func, but the file was only importing select from sqlalchemy. I need to ensure that func is included as well. It seems the patch didn’t add it. So, I’ll update the import line to include both select and func. Next, I’ll reopen it to check the current setup.
+exec
+bash -lc "sed -n '1,80p' backend/app/api/credits.py" in /Users/mayijie/Projects/Code/010_DocTalk succeeded in 18ms:
+from __future__ import annotations
+
+from typing import List, Optional
+
+from fastapi import APIRouter, Depends
+from pydantic import BaseModel
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.core.deps import get_db_session, require_auth
+from app.models.tables import CreditLedger, User
+
+
+router = APIRouter(prefix="/api/credits", tags=["credits"])
+
+
+class CreditsBalanceResponse(BaseModel):
+    balance: int
+    recent_transactions: List[dict]
+
+file update:
+diff --git a/backend/app/api/credits.py b/backend/app/api/credits.py
+index 31a04540443f7906605bea30f3dbe4d91ffc23bb..ffce07bce43a312c83cb1614014a51d67b59b876
+--- a/backend/app/api/credits.py
++++ b/backend/app/api/credits.py
+@@ -62,9 +62,19 @@
+ async def get_history(
+     user: User = Depends(require_auth),
+     db: AsyncSession = Depends(get_db_session),
+-    limit: int = 50,
++    limit: int = 20,
+     offset: int = 0,
+ ):
++    # Enforce sane bounds
++    limit = max(1, min(100, int(limit or 20)))
++    offset = max(0, int(offset or 0))
++
++    # Total count for pagination
++    total = await db.scalar(
++        select(func.count()).select_from(CreditLedger).where(CreditLedger.user_id == user.id)
++    )
++
++    # Page of items
+     result = await db.execute(
+         select(CreditLedger)
+         .where(CreditLedger.user_id == user.id)
+@@ -75,7 +85,7 @@
+     entries = result.scalars().all()
+ 
+     return {
+-        "entries": [
++        "items": [
+             {
+                 "id": str(e.id),
+                 "delta": e.delta,
+@@ -87,7 +97,5 @@
+             }
+             for e in entries
+         ],
+-        "limit": limit,
+-        "offset": offset,
++        "total": int(total or 0),
+     }
+-
+diff --git a/backend/app/api/users.py b/backend/app/api/users.py
+index 299ca422566dd21391367dd47bd68922f8bd1dc3..1e41d8f0959fba1450cc228d82cb93ba74690fd5
+--- a/backend/app/api/users.py
++++ b/backend/app/api/users.py
+@@ -1,10 +1,24 @@
+ from __future__ import annotations
+-from typing import Optional
+-from fastapi import APIRouter, Depends
++from typing import Optional, List
++from fastapi import APIRouter, Depends, HTTPException
+ from pydantic import BaseModel
++from sqlalchemy import select, func
++from sqlalchemy.ext.asyncio import AsyncSession
+ 
+-from app.core.deps import require_auth
+-from app.models.tables import User
++import stripe
++
++from app.core.config import settings
++from app.core.deps import require_auth, get_db_session
++from app.models.tables import (
++    User,
++    Account,
++    Document,
++    ChatSession,
++    Message,
++    UsageRecord,
++    CreditLedger,
++)
++from app.services.doc_service import doc_service
+ 
+ 
+ router = APIRouter(prefix="/api/users", tags=["users"])
+@@ -31,3 +45,161 @@
+         "credits_balance": user.credits_balance,
+     }
+ 
++
++@router.get("/profile")
++async def get_profile(
++    user: User = Depends(require_auth),
++    db: AsyncSession = Depends(get_db_session),
++):
++    # Connected accounts
++    acc_rows = await db.execute(select(Account).where(Account.user_id == user.id))
++    accounts: List[Account] = acc_rows.scalars().all()
++
++    # Aggregated stats
++    # Total documents
++    total_documents = await db.scalar(
++        select(func.count()).select_from(Document).where(Document.user_id == user.id)
++    )
++
++    # Total sessions (join sessions -> documents by user)
++    total_sessions = await db.scalar(
++        select(func.count())
++        .select_from(ChatSession)
++        .join(Document, ChatSession.document_id == Document.id)
++        .where(Document.user_id == user.id)
++    )
++
++    # Total messages (join messages -> sessions -> documents by user)
++    total_messages = await db.scalar(
++        select(func.count())
++        .select_from(Message)
++        .join(ChatSession, Message.session_id == ChatSession.id)
++        .join(Document, ChatSession.document_id == Document.id)
++        .where(Document.user_id == user.id)
++    )
++
++    # Total credits spent (sum of abs(delta) where delta < 0)
++    total_credits_spent = await db.scalar(
++        select(func.coalesce(func.sum(-CreditLedger.delta), 0))
++        .where(CreditLedger.user_id == user.id)
++        .where(CreditLedger.delta < 0)
++    )
++
++    # Total tokens used
++    total_tokens_used = await db.scalar(
++        select(func.coalesce(func.sum(UsageRecord.total_tokens), 0)).where(UsageRecord.user_id == user.id)
++    )
++
++    # Monthly allowance by plan
++    monthly_allowance = (
++        int(settings.PLAN_PRO_MONTHLY_CREDITS or 0)
++        if (user.plan or "").lower() == "pro"
++        else int(settings.PLAN_FREE_MONTHLY_CREDITS or 0)
++    )
++
++    return {
++        "id": str(user.id),
++        "email": user.email,
++        "name": user.name,
++        "image": user.image,
++        "created_at": user.created_at.isoformat() if getattr(user, "created_at", None) else None,
++        "plan": user.plan,
++        "credits_balance": user.credits_balance,
++        "monthly_allowance": monthly_allowance,
++        "monthly_credits_granted_at": user.monthly_credits_granted_at.isoformat()
++        if user.monthly_credits_granted_at
++        else None,
++        "signup_bonus_granted": bool(user.signup_bonus_granted_at),
++        "connected_accounts": [
++            {
++                "provider": acc.provider,
++                # Account model has no created_at column; return None for compatibility
++                "created_at": None,
++            }
++            for acc in accounts
++        ],
++        "stats": {
++            "total_documents": int(total_documents or 0),
++            "total_sessions": int(total_sessions or 0),
++            "total_messages": int(total_messages or 0),
++            "total_credits_spent": int(total_credits_spent or 0),
++            "total_tokens_used": int(total_tokens_used or 0),
++        },
++    }
++
++
++@router.get("/usage-breakdown")
++async def get_usage_breakdown(
++    user: User = Depends(require_auth),
++    db: AsyncSession = Depends(get_db_session),
++):
++    rows = await db.execute(
++        select(
++            UsageRecord.model.label("model"),
++            func.count(UsageRecord.id).label("total_calls"),
++            func.coalesce(func.sum(UsageRecord.total_tokens), 0).label("total_tokens"),
++            func.coalesce(func.sum(UsageRecord.cost_credits), 0).label("total_credits"),
++        )
++        .where(UsageRecord.user_id == user.id)
++        .group_by(UsageRecord.model)
++        .order_by(UsageRecord.model)
++    )
++    results = rows.all()
++
++    return {
++        "by_model": [
++            {
++                "model": r.model,
++                "total_calls": int(r.total_calls or 0),
++                "total_tokens": int(r.total_tokens or 0),
++                "total_credits": int(r.total_credits or 0),
++            }
++            for r in results
++        ]
++    }
++
++
++@router.delete("/me")
++async def delete_me(
++    user: User = Depends(require_auth),
++    db: AsyncSession = Depends(get_db_session),
++):
++    # 1) Cancel Stripe subscription if active
++    try:
++        if settings.STRIPE_SECRET_KEY and user.stripe_subscription_id:
++            stripe.api_key = settings.STRIPE_SECRET_KEY
++            try:
++                # Prefer delete() which cancels the subscription
++                stripe.Subscription.delete(user.stripe_subscription_id)
++            except Exception:
++                try:
++                    # Fallback for environments expecting cancel()
++                    getattr(stripe.Subscription, "cancel")(user.stripe_subscription_id)
++                except Exception:
++                    pass
++    except Exception:
++        # Best-effort: ignore Stripe errors during account deletion
++        pass
++
++    # 2) Find all user documents
++    doc_rows = await db.execute(select(Document.id).where(Document.user_id == user.id))
++    doc_ids = [row.id for row in doc_rows.all()]
++
++    # 3) Best-effort delete storage and vectors via service, 4) Delete documents
++    for doc_id in doc_ids:
++        try:
++            await doc_service.delete_document(doc_id, db)
++        except Exception:
++            # Continue deleting other documents even if one fails
++            pass
++
++    # 5) Delete user row (cascade handles accounts, credit_ledger, usage_records)
++    try:
++        await db.delete(user)
++        await db.commit()
++    except Exception:
++        # If deletion fails, return error
++        raise HTTPException(status_code=500, detail="Failed to delete user")
++
++    # 6) Return confirmation
++    return {"deleted": True}
+
+file update
+M /Users/mayijie/Projects/Code/010_DocTalk/backend/app/api/credits.py
+@@ -6,3 +6,3 @@
+ from pydantic import BaseModel
+-from sqlalchemy import select
++from sqlalchemy import select, func
+ from sqlalchemy.ext.asyncio import AsyncSession
+apply_patch(auto_approved=true) exited 0 in 50ms:
+Success. Updated the following files:
+M backend/app/api/credits.py
+file update:
+diff --git a/backend/app/api/credits.py b/backend/app/api/credits.py
+index 31a04540443f7906605bea30f3dbe4d91ffc23bb..12e522bff100df74a41478fb20b6caad5c9add62
+--- a/backend/app/api/credits.py
++++ b/backend/app/api/credits.py
+@@ -4,7 +4,7 @@
+ 
+ from fastapi import APIRouter, Depends
+ from pydantic import BaseModel
+-from sqlalchemy import select
++from sqlalchemy import select, func
+ from sqlalchemy.ext.asyncio import AsyncSession
+ 
+ from app.core.deps import get_db_session, require_auth
+@@ -62,9 +62,19 @@
+ async def get_history(
+     user: User = Depends(require_auth),
+     db: AsyncSession = Depends(get_db_session),
+-    limit: int = 50,
++    limit: int = 20,
+     offset: int = 0,
+ ):
++    # Enforce sane bounds
++    limit = max(1, min(100, int(limit or 20)))
++    offset = max(0, int(offset or 0))
++
++    # Total count for pagination
++    total = await db.scalar(
++        select(func.count()).select_from(CreditLedger).where(CreditLedger.user_id == user.id)
++    )
++
++    # Page of items
+     result = await db.execute(
+         select(CreditLedger)
+         .where(CreditLedger.user_id == user.id)
+@@ -75,7 +85,7 @@
+     entries = result.scalars().all()
+ 
+     return {
+-        "entries": [
++        "items": [
+             {
+                 "id": str(e.id),
+                 "delta": e.delta,
+@@ -87,7 +97,5 @@
+             }
+             for e in entries
+         ],
+-        "limit": limit,
+-        "offset": offset,
++        "total": int(total or 0),
+     }
+-
+diff --git a/backend/app/api/users.py b/backend/app/api/users.py
+index 299ca422566dd21391367dd47bd68922f8bd1dc3..1e41d8f0959fba1450cc228d82cb93ba74690fd5
+--- a/backend/app/api/users.py
++++ b/backend/app/api/users.py
+@@ -1,10 +1,24 @@
+ from __future__ import annotations
+-from typing import Optional
+-from fastapi import APIRouter, Depends
++from typing import Optional, List
++from fastapi import APIRouter, Depends, HTTPException
+ from pydantic import BaseModel
++from sqlalchemy import select, func
++from sqlalchemy.ext.asyncio import AsyncSession
+ 
+-from app.core.deps import require_auth
+-from app.models.tables import User
++import stripe
++
++from app.core.config import settings
++from app.core.deps import require_auth, get_db_session
++from app.models.tables import (
++    User,
++    Account,
++    Document,
++    ChatSession,
++    Message,
++    UsageRecord,
++    CreditLedger,
++)
++from app.services.doc_service import doc_service
+ 
+ 
+ router = APIRouter(prefix="/api/users", tags=["users"])
+@@ -31,3 +45,161 @@
+         "credits_balance": user.credits_balance,
+     }
+ 
++
++@router.get("/profile")
++async def get_profile(
++    user: User = Depends(require_auth),
++    db: AsyncSession = Depends(get_db_session),
++):
++    # Connected accounts
++    acc_rows = await db.execute(select(Account).where(Account.user_id == user.id))
++    accounts: List[Account] = acc_rows.scalars().all()
++
++    # Aggregated stats
++    # Total documents
++    total_documents = await db.scalar(
++        select(func.count()).select_from(Document).where(Document.user_id == user.id)
++    )
++
++    # Total sessions (join sessions -> documents by user)
++    total_sessions = await db.scalar(
++        select(func.count())
++        .select_from(ChatSession)
++        .join(Document, ChatSession.document_id == Document.id)
++        .where(Document.user_id == user.id)
++    )
++
++    # Total messages (join messages -> sessions -> documents by user)
++    total_messages = await db.scalar(
++        select(func.count())
++        .select_from(Message)
++        .join(ChatSession, Message.session_id == ChatSession.id)
++        .join(Document, ChatSession.document_id == Document.id)
++        .where(Document.user_id == user.id)
++    )
++
++    # Total credits spent (sum of abs(delta) where delta < 0)
++    total_credits_spent = await db.scalar(
++        select(func.coalesce(func.sum(-CreditLedger.delta), 0))
++        .where(CreditLedger.user_id == user.id)
++        .where(CreditLedger.delta < 0)
++    )
++
++    # Total tokens used
++    total_tokens_used = await db.scalar(
++        select(func.coalesce(func.sum(UsageRecord.total_tokens), 0)).where(UsageRecord.user_id == user.id)
++    )
++
++    # Monthly allowance by plan
++    monthly_allowance = (
++        int(settings.PLAN_PRO_MONTHLY_CREDITS or 0)
++        if (user.plan or "").lower() == "pro"
++        else int(settings.PLAN_FREE_MONTHLY_CREDITS or 0)
++    )
++
++    return {
++        "id": str(user.id),
++        "email": user.email,
++        "name": user.name,
++        "image": user.image,
++        "created_at": user.created_at.isoformat() if getattr(user, "created_at", None) else None,
++        "plan": user.plan,
++        "credits_balance": user.credits_balance,
++        "monthly_allowance": monthly_allowance,
++        "monthly_credits_granted_at": user.monthly_credits_granted_at.isoformat()
++        if user.monthly_credits_granted_at
++        else None,
++        "signup_bonus_granted": bool(user.signup_bonus_granted_at),
++        "connected_accounts": [
++            {
++                "provider": acc.provider,
++                # Account model has no created_at column; return None for compatibility
++                "created_at": None,
++            }
++            for acc in accounts
++        ],
++        "stats": {
++            "total_documents": int(total_documents or 0),
++            "total_sessions": int(total_sessions or 0),
++            "total_messages": int(total_messages or 0),
++            "total_credits_spent": int(total_credits_spent or 0),
++            "total_tokens_used": int(total_tokens_used or 0),
++        },
++    }
++
++
++@router.get("/usage-breakdown")
++async def get_usage_breakdown(
++    user: User = Depends(require_auth),
++    db: AsyncSession = Depends(get_db_session),
++):
++    rows = await db.execute(
++        select(
++            UsageRecord.model.label("model"),
++            func.count(UsageRecord.id).label("total_calls"),
++            func.coalesce(func.sum(UsageRecord.total_tokens), 0).label("total_tokens"),
++            func.coalesce(func.sum(UsageRecord.cost_credits), 0).label("total_credits"),
++        )
++        .where(UsageRecord.user_id == user.id)
++        .group_by(UsageRecord.model)
++        .order_by(UsageRecord.model)
++    )
++    results = rows.all()
++
++    return {
++        "by_model": [
++            {
++                "model": r.model,
++                "total_calls": int(r.total_calls or 0),
++                "total_tokens": int(r.total_tokens or 0),
++                "total_credits": int(r.total_credits or 0),
++            }
++            for r in results
++        ]
++    }
++
++
++@router.delete("/me")
++async def delete_me(
++    user: User = Depends(require_auth),
++    db: AsyncSession = Depends(get_db_session),
++):
++    # 1) Cancel Stripe subscription if active
++    try:
++        if settings.STRIPE_SECRET_KEY and user.stripe_subscription_id:
++            stripe.api_key = settings.STRIPE_SECRET_KEY
++            try:
++                # Prefer delete() which cancels the subscription
++                stripe.Subscription.delete(user.stripe_subscription_id)
++            except Exception:
++                try:
++                    # Fallback for environments expecting cancel()
++                    getattr(stripe.Subscription, "cancel")(user.stripe_subscription_id)
++                except Exception:
++                    pass
++    except Exception:
++        # Best-effort: ignore Stripe errors during account deletion
++        pass
++
++    # 2) Find all user documents
++    doc_rows = await db.execute(select(Document.id).where(Document.user_id == user.id))
++    doc_ids = [row.id for row in doc_rows.all()]
++
++    # 3) Best-effort delete storage and vectors via service, 4) Delete documents
++    for doc_id in doc_ids:
++        try:
++            await doc_service.delete_document(doc_id, db)
++        except Exception:
++            # Continue deleting other documents even if one fails
++            pass
++
++    # 5) Delete user row (cascade handles accounts, credit_ledger, usage_records)
++    try:
++        await db.delete(user)
++        await db.commit()
++    except Exception:
++        # If deletion fails, return error
++        raise HTTPException(status_code=500, detail="Failed to delete user")
++
++    # 6) Return confirmation
++    return {"deleted": True}
+
+file update:
+diff --git a/backend/app/api/credits.py b/backend/app/api/credits.py
+index 31a04540443f7906605bea30f3dbe4d91ffc23bb..12e522bff100df74a41478fb20b6caad5c9add62
+--- a/backend/app/api/credits.py
++++ b/backend/app/api/credits.py
+@@ -4,7 +4,7 @@
+ 
+ from fastapi import APIRouter, Depends
+ from pydantic import BaseModel
+-from sqlalchemy import select
++from sqlalchemy import select, func
+ from sqlalchemy.ext.asyncio import AsyncSession
+ 
+ from app.core.deps import get_db_session, require_auth
+@@ -62,9 +62,19 @@
+ async def get_history(
+     user: User = Depends(require_auth),
+     db: AsyncSession = Depends(get_db_session),
+-    limit: int = 50,
++    limit: int = 20,
+     offset: int = 0,
+ ):
++    # Enforce sane bounds
++    limit = max(1, min(100, int(limit or 20)))
++    offset = max(0, int(offset or 0))
++
++    # Total count for pagination
++    total = await db.scalar(
++        select(func.count()).select_from(CreditLedger).where(CreditLedger.user_id == user.id)
++    )
++
++    # Page of items
+     result = await db.execute(
+         select(CreditLedger)
+         .where(CreditLedger.user_id == user.id)
+@@ -75,7 +85,7 @@
+     entries = result.scalars().all()
+ 
+     return {
+-        "entries": [
++        "items": [
+             {
+                 "id": str(e.id),
+                 "delta": e.delta,
+@@ -87,7 +97,5 @@
+             }
+             for e in entries
+         ],
+-        "limit": limit,
+-        "offset": offset,
++        "total": int(total or 0),
+     }
+-
+diff --git a/backend/app/api/users.py b/backend/app/api/users.py
+index 299ca422566dd21391367dd47bd68922f8bd1dc3..1e41d8f0959fba1450cc228d82cb93ba74690fd5
+--- a/backend/app/api/users.py
++++ b/backend/app/api/users.py
+@@ -1,10 +1,24 @@
+ from __future__ import annotations
+-from typing import Optional
+-from fastapi import APIRouter, Depends
++from typing import Optional, List
++from fastapi import APIRouter, Depends, HTTPException
+ from pydantic import BaseModel
++from sqlalchemy import select, func
++from sqlalchemy.ext.asyncio import AsyncSession
+ 
+-from app.core.deps import require_auth
+-from app.models.tables import User
++import stripe
++
++from app.core.config import settings
++from app.core.deps import require_auth, get_db_session
++from app.models.tables import (
++    User,
++    Account,
++    Document,
++    ChatSession,
++    Message,
++    UsageRecord,
++    CreditLedger,
++)
++from app.services.doc_service import doc_service
+ 
+ 
+ router = APIRouter(prefix="/api/users", tags=["users"])
+@@ -31,3 +45,161 @@
+         "credits_balance": user.credits_balance,
+     }
+ 
++
++@router.get("/profile")
++async def get_profile(
++    user: User = Depends(require_auth),
++    db: AsyncSession = Depends(get_db_session),
++):
++    # Connected accounts
++    acc_rows = await db.execute(select(Account).where(Account.user_id == user.id))
++    accounts: List[Account] = acc_rows.scalars().all()
++
++    # Aggregated stats
++    # Total documents
++    total_documents = await db.scalar(
++        select(func.count()).select_from(Document).where(Document.user_id == user.id)
++    )
++
++    # Total sessions (join sessions -> documents by user)
++    total_sessions = await db.scalar(
++        select(func.count())
++        .select_from(ChatSession)
++        .join(Document, ChatSession.document_id == Document.id)
++        .where(Document.user_id == user.id)
++    )
++
++    # Total messages (join messages -> sessions -> documents by user)
++    total_messages = await db.scalar(
++        select(func.count())
++        .select_from(Message)
++        .join(ChatSession, Message.session_id == ChatSession.id)
++        .join(Document, ChatSession.document_id == Document.id)
++        .where(Document.user_id == user.id)
++    )
++
++    # Total credits spent (sum of abs(delta) where delta < 0)
++    total_credits_spent = await db.scalar(
++        select(func.coalesce(func.sum(-CreditLedger.delta), 0))
++        .where(CreditLedger.user_id == user.id)
++        .where(CreditLedger.delta < 0)
++    )
++
++    # Total tokens used
++    total_tokens_used = await db.scalar(
++        select(func.coalesce(func.sum(UsageRecord.total_tokens), 0)).where(UsageRecord.user_id == user.id)
++    )
++
++    # Monthly allowance by plan
++    monthly_allowance = (
++        int(settings.PLAN_PRO_MONTHLY_CREDITS or 0)
++        if (user.plan or "").lower() == "pro"
++        else int(settings.PLAN_FREE_MONTHLY_CREDITS or 0)
++    )
++
++    return {
++        "id": str(user.id),
++        "email": user.email,
++        "name": user.name,
++        "image": user.image,
++        "created_at": user.created_at.isoformat() if getattr(user, "created_at", None) else None,
++        "plan": user.plan,
++        "credits_balance": user.credits_balance,
++        "monthly_allowance": monthly_allowance,
++        "monthly_credits_granted_at": user.monthly_credits_granted_at.isoformat()
++        if user.monthly_credits_granted_at
++        else None,
++        "signup_bonus_granted": bool(user.signup_bonus_granted_at),
++        "connected_accounts": [
++            {
++                "provider": acc.provider,
++                # Account model has no created_at column; return None for compatibility
++                "created_at": None,
++            }
++            for acc in accounts
++        ],
++        "stats": {
++            "total_documents": int(total_documents or 0),
++            "total_sessions": int(total_sessions or 0),
++            "total_messages": int(total_messages or 0),
++            "total_credits_spent": int(total_credits_spent or 0),
++            "total_tokens_used": int(total_tokens_used or 0),
++        },
++    }
++
++
++@router.get("/usage-breakdown")
++async def get_usage_breakdown(
++    user: User = Depends(require_auth),
++    db: AsyncSession = Depends(get_db_session),
++):
++    rows = await db.execute(
++        select(
++            UsageRecord.model.label("model"),
++            func.count(UsageRecord.id).label("total_calls"),
++            func.coalesce(func.sum(UsageRecord.total_tokens), 0).label("total_tokens"),
++            func.coalesce(func.sum(UsageRecord.cost_credits), 0).label("total_credits"),
++        )
++        .where(UsageRecord.user_id == user.id)
++        .group_by(UsageRecord.model)
++        .order_by(UsageRecord.model)
++    )
++    results = rows.all()
++
++    return {
++        "by_model": [
++            {
++                "model": r.model,
++                "total_calls": int(r.total_calls or 0),
++                "total_tokens": int(r.total_tokens or 0),
++                "total_credits": int(r.total_credits or 0),
++            }
++            for r in results
++        ]
++    }
++
++
++@router.delete("/me")
++async def delete_me(
++    user: User = Depends(require_auth),
++    db: AsyncSession = Depends(get_db_session),
++):
++    # 1) Cancel Stripe subscription if active
++    try:
++        if settings.STRIPE_SECRET_KEY and user.stripe_subscription_id:
++            stripe.api_key = settings.STRIPE_SECRET_KEY
++            try:
++                # Prefer delete() which cancels the subscription
++                stripe.Subscription.delete(user.stripe_subscription_id)
++            except Exception:
++                try:
++                    # Fallback for environments expecting cancel()
++                    getattr(stripe.Subscription, "cancel")(user.stripe_subscription_id)
++                except Exception:
++                    pass
++    except Exception:
++        # Best-effort: ignore Stripe errors during account deletion
++        pass
++
++    # 2) Find all user documents
++    doc_rows = await db.execute(select(Document.id).where(Document.user_id == user.id))
++    doc_ids = [row.id for row in doc_rows.all()]
++
++    # 3) Best-effort delete storage and vectors via service, 4) Delete documents
++    for doc_id in doc_ids:
++        try:
++            await doc_service.delete_document(doc_id, db)
++        except Exception:
++            # Continue deleting other documents even if one fails
++            pass
++
++    # 5) Delete user row (cascade handles accounts, credit_ledger, usage_records)
++    try:
++        await db.delete(user)
++        await db.commit()
++    except Exception:
++        # If deletion fails, return error
++        raise HTTPException(status_code=500, detail="Failed to delete user")
++
++    # 6) Return confirmation
++    return {"deleted": True}
+
+
+
+thinking
+**Checking code compliance**
+
+I need to ensure we're following the style guidelines. First, I’ll check imports in users.py to confirm there are no unused BaseModel or HTTPException, and I see they’re in use. We added creditledger for stats, which is great. I should also run a static check for duplicates in 'usage-breakdown' and '/me' since 'me' is already available for a GET. I'll consider running a quick static compilation check, but maybe I can trust the process without tests. There are some restrictions, but I can still run commands.
+thinking
+**Reviewing code and response models**
+
+I need to ensure that `monthly_allowance` uses settings values when available, which is good. I also need to include `monthly_credits_granted_at` as either an ISO format or None. The implementation for "GET /api/users/usage-breakdown" is done. I've updated the backend API in credits.py as well. Now, I’ll check the Pydantic models for responses in /balance since there's none for /history. I need to ensure we've imported settings from app.core.config in users.py, and we're set there. I'll provide a final summary message, and also note that I changed the type of `recent_transactions` in `CreditsBalanceResponse` to `List[dict]`. The items should include 'id', 'delta', 'balance_after', 'reason', and 'created_at'. Now, I want to make sure the code uses the "delete me" route in the earlier style, returning JSON. Lastly, I'll quickly check for the "AGENTS.md" file for relevant content.
+exec
+bash -lc 'rg -n "AGENTS.md" -S || true' in /Users/mayijie/Projects/Code/010_DocTalk succeeded in 16ms:
+
+file update:
+diff --git a/backend/app/api/credits.py b/backend/app/api/credits.py
+index 31a04540443f7906605bea30f3dbe4d91ffc23bb..12e522bff100df74a41478fb20b6caad5c9add62
+--- a/backend/app/api/credits.py
++++ b/backend/app/api/credits.py
+@@ -4,7 +4,7 @@
+ 
+ from fastapi import APIRouter, Depends
+ from pydantic import BaseModel
+-from sqlalchemy import select
++from sqlalchemy import select, func
+ from sqlalchemy.ext.asyncio import AsyncSession
+ 
+ from app.core.deps import get_db_session, require_auth
+@@ -62,9 +62,19 @@
+ async def get_history(
+     user: User = Depends(require_auth),
+     db: AsyncSession = Depends(get_db_session),
+-    limit: int = 50,
++    limit: int = 20,
+     offset: int = 0,
+ ):
++    # Enforce sane bounds
++    limit = max(1, min(100, int(limit or 20)))
++    offset = max(0, int(offset or 0))
++
++    # Total count for pagination
++    total = await db.scalar(
++        select(func.count()).select_from(CreditLedger).where(CreditLedger.user_id == user.id)
++    )
++
++    # Page of items
+     result = await db.execute(
+         select(CreditLedger)
+         .where(CreditLedger.user_id == user.id)
+@@ -75,7 +85,7 @@
+     entries = result.scalars().all()
+ 
+     return {
+-        "entries": [
++        "items": [
+             {
+                 "id": str(e.id),
+                 "delta": e.delta,
+@@ -87,7 +97,5 @@
+             }
+             for e in entries
+         ],
+-        "limit": limit,
+-        "offset": offset,
++        "total": int(total or 0),
+     }
+-
+diff --git a/backend/app/api/users.py b/backend/app/api/users.py
+index 299ca422566dd21391367dd47bd68922f8bd1dc3..1e41d8f0959fba1450cc228d82cb93ba74690fd5
+--- a/backend/app/api/users.py
++++ b/backend/app/api/users.py
+@@ -1,10 +1,24 @@
+ from __future__ import annotations
+-from typing import Optional
+-from fastapi import APIRouter, Depends
++from typing import Optional, List
++from fastapi import APIRouter, Depends, HTTPException
+ from pydantic import BaseModel
++from sqlalchemy import select, func
++from sqlalchemy.ext.asyncio import AsyncSession
+ 
+-from app.core.deps import require_auth
+-from app.models.tables import User
++import stripe
++
++from app.core.config import settings
++from app.core.deps import require_auth, get_db_session
++from app.models.tables import (
++    User,
++    Account,
++    Document,
++    ChatSession,
++    Message,
++    UsageRecord,
++    CreditLedger,
++)
++from app.services.doc_service import doc_service
+ 
+ 
+ router = APIRouter(prefix="/api/users", tags=["users"])
+@@ -31,3 +45,161 @@
+         "credits_balance": user.credits_balance,
+     }
+ 
++
++@router.get("/profile")
++async def get_profile(
++    user: User = Depends(require_auth),
++    db: AsyncSession = Depends(get_db_session),
++):
++    # Connected accounts
++    acc_rows = await db.execute(select(Account).where(Account.user_id == user.id))
++    accounts: List[Account] = acc_rows.scalars().all()
++
++    # Aggregated stats
++    # Total documents
++    total_documents = await db.scalar(
++        select(func.count()).select_from(Document).where(Document.user_id == user.id)
++    )
++
++    # Total sessions (join sessions -> documents by user)
++    total_sessions = await db.scalar(
++        select(func.count())
++        .select_from(ChatSession)
++        .join(Document, ChatSession.document_id == Document.id)
++        .where(Document.user_id == user.id)
++    )
++
++    # Total messages (join messages -> sessions -> documents by user)
++    total_messages = await db.scalar(
++        select(func.count())
++        .select_from(Message)
++        .join(ChatSession, Message.session_id == ChatSession.id)
++        .join(Document, ChatSession.document_id == Document.id)
++        .where(Document.user_id == user.id)
++    )
++
++    # Total credits spent (sum of abs(delta) where delta < 0)
++    total_credits_spent = await db.scalar(
++        select(func.coalesce(func.sum(-CreditLedger.delta), 0))
++        .where(CreditLedger.user_id == user.id)
++        .where(CreditLedger.delta < 0)
++    )
++
++    # Total tokens used
++    total_tokens_used = await db.scalar(
++        select(func.coalesce(func.sum(UsageRecord.total_tokens), 0)).where(UsageRecord.user_id == user.id)
++    )
++
++    # Monthly allowance by plan
++    monthly_allowance = (
++        int(settings.PLAN_PRO_MONTHLY_CREDITS or 0)
++        if (user.plan or "").lower() == "pro"
++        else int(settings.PLAN_FREE_MONTHLY_CREDITS or 0)
++    )
++
++    return {
++        "id": str(user.id),
++        "email": user.email,
++        "name": user.name,
++        "image": user.image,
++        "created_at": user.created_at.isoformat() if getattr(user, "created_at", None) else None,
++        "plan": user.plan,
++        "credits_balance": user.credits_balance,
++        "monthly_allowance": monthly_allowance,
++        "monthly_credits_granted_at": user.monthly_credits_granted_at.isoformat()
++        if user.monthly_credits_granted_at
++        else None,
++        "signup_bonus_granted": bool(user.signup_bonus_granted_at),
++        "connected_accounts": [
++            {
++                "provider": acc.provider,
++                # Account model has no created_at column; return None for compatibility
++                "created_at": None,
++            }
++            for acc in accounts
++        ],
++        "stats": {
++            "total_documents": int(total_documents or 0),
++            "total_sessions": int(total_sessions or 0),
++            "total_messages": int(total_messages or 0),
++            "total_credits_spent": int(total_credits_spent or 0),
++            "total_tokens_used": int(total_tokens_used or 0),
++        },
++    }
++
++
++@router.get("/usage-breakdown")
++async def get_usage_breakdown(
++    user: User = Depends(require_auth),
++    db: AsyncSession = Depends(get_db_session),
++):
++    rows = await db.execute(
++        select(
++            UsageRecord.model.label("model"),
++            func.count(UsageRecord.id).label("total_calls"),
++            func.coalesce(func.sum(UsageRecord.total_tokens), 0).label("total_tokens"),
++            func.coalesce(func.sum(UsageRecord.cost_credits), 0).label("total_credits"),
++        )
++        .where(UsageRecord.user_id == user.id)
++        .group_by(UsageRecord.model)
++        .order_by(UsageRecord.model)
++    )
++    results = rows.all()
++
++    return {
++        "by_model": [
++            {
++                "model": r.model,
++                "total_calls": int(r.total_calls or 0),
++                "total_tokens": int(r.total_tokens or 0),
++                "total_credits": int(r.total_credits or 0),
++            }
++            for r in results
++        ]
++    }
++
++
++@router.delete("/me")
++async def delete_me(
++    user: User = Depends(require_auth),
++    db: AsyncSession = Depends(get_db_session),
++):
++    # 1) Cancel Stripe subscription if active
++    try:
++        if settings.STRIPE_SECRET_KEY and user.stripe_subscription_id:
++            stripe.api_key = settings.STRIPE_SECRET_KEY
++            try:
++                # Prefer delete() which cancels the subscription
++                stripe.Subscription.delete(user.stripe_subscription_id)
++            except Exception:
++                try:
++                    # Fallback for environments expecting cancel()
++                    getattr(stripe.Subscription, "cancel")(user.stripe_subscription_id)
++                except Exception:
++                    pass
++    except Exception:
++        # Best-effort: ignore Stripe errors during account deletion
++        pass
++
++    # 2) Find all user documents
++    doc_rows = await db.execute(select(Document.id).where(Document.user_id == user.id))
++    doc_ids = [row.id for row in doc_rows.all()]
++
++    # 3) Best-effort delete storage and vectors via service, 4) Delete documents
++    for doc_id in doc_ids:
++        try:
++            await doc_service.delete_document(doc_id, db)
++        except Exception:
++            # Continue deleting other documents even if one fails
++            pass
++
++    # 5) Delete user row (cascade handles accounts, credit_ledger, usage_records)
++    try:
++        await db.delete(user)
++        await db.commit()
++    except Exception:
++        # If deletion fails, return error
++        raise HTTPException(status_code=500, detail="Failed to delete user")
++
++    # 6) Return confirmation
++    return {"deleted": True}
+
+
+
+thinking
+**Clarifying file reference rules**
+
+I’m thinking about how to reference files correctly according to the guidelines. It says to include the relevant start line but doesn't specify exact line numbers. They mention examples like src/app.ts:42, which makes me wonder what they mean by “relevant.” It seems a bit ambiguous, but I need to ensure I follow all the rules. I'll focus on including the start line of the file path, keeping it clickable for clarity.
+thinking
+**Formatting file references**
+
+I'm considering how to format file references correctly. The guidelines suggest using absolute paths and specific prefixes like "a/" or "b/", but not a range of lines. I'll include examples like "backend/app/api/users.py:1" to keep it clear. My final message will be straightforward and actionable. I also need to mention edge cases, like when connected_accounts has a created_at value of None, the cancellation method, and how we used settings values for monthly_allowance before committing to deletion.
+codex
+Implemented profile endpoints and credits history with pagination.
+
+What I changed
+- Added three endpoints to `backend/app/api/users.py:1`:
+  - GET `/api/users/profile`: returns comprehensive user profile with connected accounts and aggregate stats.
+  - GET `/api/users/usage-breakdown`: returns grouped usage by model.
+  - DELETE `/api/users/me`: cancels Stripe subscription (best-effort), deletes all user documents (with storage/vector cleanup via service), then deletes the user.
+
+- Updated `/api/credits/history` in `backend/app/api/credits.py:1`:
+  - Now supports limit/offset pagination with bounds (default 20, max 100).
+  - Response includes `items` array and `total` count.
+
+Details
+- Profile aggregates (users.py):
+  - connected_accounts: from `Account` by `user_id` (Account has no `created_at`; returned as `None`).
+  - stats:
+    - total_documents: count from `Document` by `user_id`.
+    - total_sessions: count of `ChatSession` joined via `Document`.
+    - total_messages: count of `Message` -> `ChatSession` -> `Document`.
+    - total_credits_spent: sum of `-delta` where `delta < 0` from `CreditLedger`.
+    - total_tokens_used: sum of `total_tokens` from `UsageRecord`.
+  - monthly_allowance: `settings.PLAN_PRO_MONTHLY_CREDITS` if `user.plan == "pro"`, else `settings.PLAN_FREE_MONTHLY_CREDITS`.
+
+- Usage breakdown (users.py):
+  - Grouped by `UsageRecord.model`, selecting count, sum(total_tokens), and sum(cost_credits).
+
+- Delete me (users.py):
+  - Cancels Stripe subscription if `settings.STRIPE_SECRET_KEY` and user has `stripe_subscription_id` (tries `Subscription.delete`, falls back to `Subscription.cancel`).
+  - For each user document, calls `doc_service.delete_document` (handles MinIO and Qdrant cleanup).
+  - Deletes user row (cascade removes accounts, credit_ledger, usage_records).
+
+- Credits history (credits.py):
+  - Returns:
+    - `items`: `[{'id','delta','balance_after','reason','ref_type','ref_id','created_at'}]`
+    - `total`: total ledger item count for the user.
+
+Notes
+- Kept existing GET `/api/users/me` unchanged.
+- Followed existing router/style patterns and added proper imports.
+- Account model lacks `created_at`; connected account entries return `created_at: None`. If you want that timestamp, we’ll need a schema change.
+file update:
+diff --git a/backend/app/api/credits.py b/backend/app/api/credits.py
+index 31a04540443f7906605bea30f3dbe4d91ffc23bb..12e522bff100df74a41478fb20b6caad5c9add62
+--- a/backend/app/api/credits.py
++++ b/backend/app/api/credits.py
+@@ -4,7 +4,7 @@
+ 
+ from fastapi import APIRouter, Depends
+ from pydantic import BaseModel
+-from sqlalchemy import select
++from sqlalchemy import select, func
+ from sqlalchemy.ext.asyncio import AsyncSession
+ 
+ from app.core.deps import get_db_session, require_auth
+@@ -62,9 +62,19 @@
+ async def get_history(
+     user: User = Depends(require_auth),
+     db: AsyncSession = Depends(get_db_session),
+-    limit: int = 50,
++    limit: int = 20,
+     offset: int = 0,
+ ):
++    # Enforce sane bounds
++    limit = max(1, min(100, int(limit or 20)))
++    offset = max(0, int(offset or 0))
++
++    # Total count for pagination
++    total = await db.scalar(
++        select(func.count()).select_from(CreditLedger).where(CreditLedger.user_id == user.id)
++    )
++
++    # Page of items
+     result = await db.execute(
+         select(CreditLedger)
+         .where(CreditLedger.user_id == user.id)
+@@ -75,7 +85,7 @@
+     entries = result.scalars().all()
+ 
+     return {
+-        "entries": [
++        "items": [
+             {
+                 "id": str(e.id),
+                 "delta": e.delta,
+@@ -87,7 +97,5 @@
+             }
+             for e in entries
+         ],
+-        "limit": limit,
+-        "offset": offset,
++        "total": int(total or 0),
+     }
+-
+diff --git a/backend/app/api/users.py b/backend/app/api/users.py
+index 299ca422566dd21391367dd47bd68922f8bd1dc3..1e41d8f0959fba1450cc228d82cb93ba74690fd5
+--- a/backend/app/api/users.py
++++ b/backend/app/api/users.py
+@@ -1,10 +1,24 @@
+ from __future__ import annotations
+-from typing import Optional
+-from fastapi import APIRouter, Depends
++from typing import Optional, List
++from fastapi import APIRouter, Depends, HTTPException
+ from pydantic import BaseModel
++from sqlalchemy import select, func
++from sqlalchemy.ext.asyncio import AsyncSession
+ 
+-from app.core.deps import require_auth
+-from app.models.tables import User
++import stripe
++
++from app.core.config import settings
++from app.core.deps import require_auth, get_db_session
++from app.models.tables import (
++    User,
++    Account,
++    Document,
++    ChatSession,
++    Message,
++    UsageRecord,
++    CreditLedger,
++)
++from app.services.doc_service import doc_service
+ 
+ 
+ router = APIRouter(prefix="/api/users", tags=["users"])
+@@ -31,3 +45,161 @@
+         "credits_balance": user.credits_balance,
+     }
+ 
++
++@router.get("/profile")
++async def get_profile(
++    user: User = Depends(require_auth),
++    db: AsyncSession = Depends(get_db_session),
++):
++    # Connected accounts
++    acc_rows = await db.execute(select(Account).where(Account.user_id == user.id))
++    accounts: List[Account] = acc_rows.scalars().all()
++
++    # Aggregated stats
++    # Total documents
++    total_documents = await db.scalar(
++        select(func.count()).select_from(Document).where(Document.user_id == user.id)
++    )
++
++    # Total sessions (join sessions -> documents by user)
++    total_sessions = await db.scalar(
++        select(func.count())
++        .select_from(ChatSession)
++        .join(Document, ChatSession.document_id == Document.id)
++        .where(Document.user_id == user.id)
++    )
++
++    # Total messages (join messages -> sessions -> documents by user)
++    total_messages = await db.scalar(
++        select(func.count())
++        .select_from(Message)
++        .join(ChatSession, Message.session_id == ChatSession.id)
++        .join(Document, ChatSession.document_id == Document.id)
++        .where(Document.user_id == user.id)
++    )
++
++    # Total credits spent (sum of abs(delta) where delta < 0)
++    total_credits_spent = await db.scalar(
++        select(func.coalesce(func.sum(-CreditLedger.delta), 0))
++        .where(CreditLedger.user_id == user.id)
++        .where(CreditLedger.delta < 0)
++    )
++
++    # Total tokens used
++    total_tokens_used = await db.scalar(
++        select(func.coalesce(func.sum(UsageRecord.total_tokens), 0)).where(UsageRecord.user_id == user.id)
++    )
++
++    # Monthly allowance by plan
++    monthly_allowance = (
++        int(settings.PLAN_PRO_MONTHLY_CREDITS or 0)
++        if (user.plan or "").lower() == "pro"
++        else int(settings.PLAN_FREE_MONTHLY_CREDITS or 0)
++    )
++
++    return {
++        "id": str(user.id),
++        "email": user.email,
++        "name": user.name,
++        "image": user.image,
++        "created_at": user.created_at.isoformat() if getattr(user, "created_at", None) else None,
++        "plan": user.plan,
++        "credits_balance": user.credits_balance,
++        "monthly_allowance": monthly_allowance,
++        "monthly_credits_granted_at": user.monthly_credits_granted_at.isoformat()
++        if user.monthly_credits_granted_at
++        else None,
++        "signup_bonus_granted": bool(user.signup_bonus_granted_at),
++        "connected_accounts": [
++            {
++                "provider": acc.provider,
++                # Account model has no created_at column; return None for compatibility
++                "created_at": None,
++            }
++            for acc in accounts
++        ],
++        "stats": {
++            "total_documents": int(total_documents or 0),
++            "total_sessions": int(total_sessions or 0),
++            "total_messages": int(total_messages or 0),
++            "total_credits_spent": int(total_credits_spent or 0),
++            "total_tokens_used": int(total_tokens_used or 0),
++        },
++    }
++
++
++@router.get("/usage-breakdown")
++async def get_usage_breakdown(
++    user: User = Depends(require_auth),
++    db: AsyncSession = Depends(get_db_session),
++):
++    rows = await db.execute(
++        select(
++            UsageRecord.model.label("model"),
++            func.count(UsageRecord.id).label("total_calls"),
++            func.coalesce(func.sum(UsageRecord.total_tokens), 0).label("total_tokens"),
++            func.coalesce(func.sum(UsageRecord.cost_credits), 0).label("total_credits"),
++        )
++        .where(UsageRecord.user_id == user.id)
++        .group_by(UsageRecord.model)
++        .order_by(UsageRecord.model)
++    )
++    results = rows.all()
++
++    return {
++        "by_model": [
++            {
++                "model": r.model,
++                "total_calls": int(r.total_calls or 0),
++                "total_tokens": int(r.total_tokens or 0),
++                "total_credits": int(r.total_credits or 0),
++            }
++            for r in results
++        ]
++    }
++
++
++@router.delete("/me")
++async def delete_me(
++    user: User = Depends(require_auth),
++    db: AsyncSession = Depends(get_db_session),
++):
++    # 1) Cancel Stripe subscription if active
++    try:
++        if settings.STRIPE_SECRET_KEY and user.stripe_subscription_id:
++            stripe.api_key = settings.STRIPE_SECRET_KEY
++            try:
++                # Prefer delete() which cancels the subscription
++                stripe.Subscription.delete(user.stripe_subscription_id)
++            except Exception:
++                try:
++                    # Fallback for environments expecting cancel()
++                    getattr(stripe.Subscription, "cancel")(user.stripe_subscription_id)
++                except Exception:
++                    pass
++    except Exception:
++        # Best-effort: ignore Stripe errors during account deletion
++        pass
++
++    # 2) Find all user documents
++    doc_rows = await db.execute(select(Document.id).where(Document.user_id == user.id))
++    doc_ids = [row.id for row in doc_rows.all()]
++
++    # 3) Best-effort delete storage and vectors via service, 4) Delete documents
++    for doc_id in doc_ids:
++        try:
++            await doc_service.delete_document(doc_id, db)
++        except Exception:
++            # Continue deleting other documents even if one fails
++            pass
++
++    # 5) Delete user row (cascade handles accounts, credit_ledger, usage_records)
++    try:
++        await db.delete(user)
++        await db.commit()
++    except Exception:
++        # If deletion fails, return error
++        raise HTTPException(status_code=500, detail="Failed to delete user")
++
++    # 6) Return confirmation
++    return {"deleted": True}
+
+tokens used
+138,494
+Implemented profile endpoints and credits history with pagination.
+
+What I changed
+- Added three endpoints to `backend/app/api/users.py:1`:
+  - GET `/api/users/profile`: returns comprehensive user profile with connected accounts and aggregate stats.
+  - GET `/api/users/usage-breakdown`: returns grouped usage by model.
+  - DELETE `/api/users/me`: cancels Stripe subscription (best-effort), deletes all user documents (with storage/vector cleanup via service), then deletes the user.
+
+- Updated `/api/credits/history` in `backend/app/api/credits.py:1`:
+  - Now supports limit/offset pagination with bounds (default 20, max 100).
+  - Response includes `items` array and `total` count.
+
+Details
+- Profile aggregates (users.py):
+  - connected_accounts: from `Account` by `user_id` (Account has no `created_at`; returned as `None`).
+  - stats:
+    - total_documents: count from `Document` by `user_id`.
+    - total_sessions: count of `ChatSession` joined via `Document`.
+    - total_messages: count of `Message` -> `ChatSession` -> `Document`.
+    - total_credits_spent: sum of `-delta` where `delta < 0` from `CreditLedger`.
+    - total_tokens_used: sum of `total_tokens` from `UsageRecord`.
+  - monthly_allowance: `settings.PLAN_PRO_MONTHLY_CREDITS` if `user.plan == "pro"`, else `settings.PLAN_FREE_MONTHLY_CREDITS`.
+
+- Usage breakdown (users.py):
+  - Grouped by `UsageRecord.model`, selecting count, sum(total_tokens), and sum(cost_credits).
+
+- Delete me (users.py):
+  - Cancels Stripe subscription if `settings.STRIPE_SECRET_KEY` and user has `stripe_subscription_id` (tries `Subscription.delete`, falls back to `Subscription.cancel`).
+  - For each user document, calls `doc_service.delete_document` (handles MinIO and Qdrant cleanup).
+  - Deletes user row (cascade removes accounts, credit_ledger, usage_records).
+
+- Credits history (credits.py):
+  - Returns:
+    - `items`: `[{'id','delta','balance_after','reason','ref_type','ref_id','created_at'}]`
+    - `total`: total ledger item count for the user.
+
+Notes
+- Kept existing GET `/api/users/me` unchanged.
+- Followed existing router/style patterns and added proper imports.
+- Account model lacks `created_at`; connected account entries return `created_at: None`. If you want that timestamp, we’ll need a schema change.

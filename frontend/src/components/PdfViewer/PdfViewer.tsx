@@ -154,7 +154,7 @@ export default function PdfViewer({ pdfUrl, currentPage, highlights, scale, scro
   const pages = useMemo(() => Array.from({ length: numPages }, (_, i) => i + 1), [numPages]);
 
   return (
-    <div className="w-full h-full flex flex-col bg-gray-50 dark:bg-gray-900">
+    <div className="w-full h-full flex flex-col bg-zinc-50 dark:bg-zinc-900">
       {numPages > 0 && (
         <PdfToolbar
           currentPage={visiblePage}

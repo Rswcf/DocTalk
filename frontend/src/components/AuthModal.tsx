@@ -15,14 +15,12 @@ export function AuthModal() {
   if (!isOpen) return null;
 
   const handleClose = () => {
-    // Remove ?auth=1 from URL
     const url = new URL(window.location.href);
     url.searchParams.delete('auth');
     router.replace(url.pathname + url.search, { scroll: false });
   };
 
   const handleGoogleLogin = () => {
-    // Get callback URL without auth param
     const url = new URL(window.location.href);
     url.searchParams.delete('auth');
     signIn('google', { callbackUrl: url.toString() });
@@ -30,7 +28,7 @@ export function AuthModal() {
 
   return (
     <div
-      className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
+      className="fixed inset-0 bg-black/60 flex items-center justify-center z-50"
       onClick={handleClose}
       role="dialog"
       aria-modal="true"
@@ -38,31 +36,30 @@ export function AuthModal() {
       onKeyDown={(e) => e.key === 'Escape' && handleClose()}
     >
       <div
-        className="bg-white dark:bg-gray-800 rounded-xl p-6 w-full max-w-md mx-4 shadow-xl"
+        className="bg-white dark:bg-zinc-900 rounded-2xl p-8 w-full max-w-md mx-4 shadow-xl border border-zinc-200 dark:border-zinc-800"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex justify-between items-center mb-4">
-          <h2 id="auth-modal-title" className="text-xl font-semibold dark:text-white">
+        <div className="flex justify-between items-center mb-6">
+          <h2 id="auth-modal-title" className="text-xl font-semibold text-zinc-900 dark:text-zinc-50">
             {t('auth.loginToContinue')}
           </h2>
-          <button 
-            onClick={handleClose} 
-            className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition"
+          <button
+            onClick={handleClose}
+            className="p-1.5 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg transition-all duration-200"
             aria-label="Close"
           >
-            <X size={20} className="text-gray-500" />
+            <X size={20} className="text-zinc-400" />
           </button>
         </div>
 
-        <p className="text-sm text-gray-600 dark:text-gray-400 mb-6">
+        <p className="text-sm text-zinc-500 dark:text-zinc-400 mb-6">
           {t('auth.loginBenefits')}
         </p>
 
         <button
           onClick={handleGoogleLogin}
-          className="w-full flex items-center justify-center gap-3 bg-white dark:bg-gray-700 
-                     border border-gray-300 dark:border-gray-600 rounded-lg px-4 py-3 
-                     hover:bg-gray-50 dark:hover:bg-gray-600 transition font-medium"
+          className="w-full flex items-center justify-center gap-3 border border-zinc-200 dark:border-zinc-700 rounded-lg px-4 py-3
+                     hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-all duration-200 font-medium"
         >
           <svg className="w-5 h-5" viewBox="0 0 24 24">
             <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
@@ -70,19 +67,18 @@ export function AuthModal() {
             <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
             <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
           </svg>
-          <span className="text-gray-700 dark:text-gray-200">Continue with Google</span>
+          <span className="text-zinc-700 dark:text-zinc-200">Continue with Google</span>
         </button>
 
-        <div className="mt-6 pt-4 border-t dark:border-gray-700 text-center space-y-2">
-          <p className="text-xs text-gray-500 dark:text-gray-400">
-            🔒 {t('auth.privacyNote')}
+        <div className="mt-6 pt-4 border-t border-zinc-200 dark:border-zinc-800 text-center space-y-2">
+          <p className="text-xs text-zinc-400">
+            {t('auth.privacyNote')}
           </p>
-          <p className="text-xs text-green-600 dark:text-green-400 font-medium">
-            🎁 {t('auth.freeCredits')}
+          <p className="text-xs text-zinc-600 dark:text-zinc-300 font-medium">
+            {t('auth.freeCredits')}
           </p>
         </div>
       </div>
     </div>
   );
 }
-

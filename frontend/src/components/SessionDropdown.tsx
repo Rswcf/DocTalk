@@ -85,17 +85,17 @@ export default function SessionDropdown() {
       <button
         type="button"
         onClick={toggle}
-        className="text-sm text-gray-600 dark:text-gray-400 truncate max-w-[300px] flex items-center gap-1.5"
+        className="text-sm text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200 transition-all duration-200 truncate max-w-[140px] sm:max-w-[300px] flex items-center gap-1.5"
         title={titleText}
       >
         <span className="truncate">{titleText}</span>
         <ChevronDown size={14} className="opacity-70" />
       </button>
       {open && (
-        <div className="absolute left-0 mt-1 w-72 bg-white dark:bg-gray-900 border dark:border-gray-700 rounded-md shadow-lg z-20 p-1">
+        <div className="absolute left-0 mt-1 w-72 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-md shadow-lg z-20 p-1">
           <div className="py-1">
             <button
-              className={`w-full text-left flex items-center gap-2 px-2 py-1.5 rounded hover:bg-gray-100 dark:hover:bg-gray-800 text-sm ${disabledClass}`}
+              className={`w-full text-left flex items-center gap-2 px-2 py-1.5 rounded hover:bg-zinc-100 dark:hover:bg-zinc-800 text-sm text-zinc-700 dark:text-zinc-200 transition-all duration-200 ${disabledClass}`}
               onClick={onNewChat}
               disabled={isStreaming}
             >
@@ -103,13 +103,13 @@ export default function SessionDropdown() {
               <span>{t('session.newChat')}</span>
             </button>
           </div>
-          <div className="my-1 h-px bg-gray-200 dark:bg-gray-700" />
-          <div className="px-2 py-1 text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">
+          <div className="my-1 h-px bg-zinc-200 dark:bg-zinc-700" />
+          <div className="px-2 py-1 text-xs uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
             {t('session.recentChats')}
           </div>
           <div className="max-h-64 overflow-auto">
             {sortedSessions.length === 0 ? (
-              <div className="px-3 py-2 text-sm text-gray-500 dark:text-gray-400">{t('session.noTitle')}</div>
+              <div className="px-3 py-2 text-sm text-zinc-500 dark:text-zinc-400">{t('session.noTitle')}</div>
             ) : (
               sortedSessions.map((s) => {
                 const isCurrent = s.session_id === sessionId;
@@ -117,17 +117,17 @@ export default function SessionDropdown() {
                 return (
                   <button
                     key={s.session_id}
-                    className={`w-full text-left flex items-center gap-2 px-2 py-1.5 rounded hover:bg-gray-100 dark:hover:bg-gray-800 text-sm ${
+                    className={`w-full text-left flex items-center gap-2 px-2 py-1.5 rounded hover:bg-zinc-100 dark:hover:bg-zinc-800 text-sm text-zinc-700 dark:text-zinc-200 transition-all duration-200 ${
                       isCurrent ? 'font-medium' : ''
                     } ${disabledClass}`}
                     onClick={() => onSwitchSession(s.session_id)}
                     disabled={isStreaming}
                   >
                     <span className="w-4 h-4 flex items-center justify-center">
-                      {isCurrent ? <span className="block w-2 h-2 rounded-full bg-blue-600" /> : null}
+                      {isCurrent ? <span className="block w-2 h-2 rounded-full bg-zinc-600" /> : null}
                     </span>
                     <span className="flex-1 truncate" title={label}>{label}</span>
-                    <span className="text-xs text-gray-500 dark:text-gray-400">
+                    <span className="text-xs text-zinc-500 dark:text-zinc-400">
                       {t('session.messageCount', { count: s.message_count })}
                     </span>
                   </button>
@@ -135,10 +135,10 @@ export default function SessionDropdown() {
               })
             )}
           </div>
-          <div className="my-1 h-px bg-gray-200 dark:bg-gray-700" />
+          <div className="my-1 h-px bg-zinc-200 dark:bg-zinc-700" />
           <div className="py-1">
             <button
-              className={`w-full text-left flex items-center gap-2 px-2 py-1.5 rounded hover:bg-gray-100 dark:hover:bg-gray-800 text-sm text-red-600 dark:text-red-400 ${disabledClass}`}
+              className={`w-full text-left flex items-center gap-2 px-2 py-1.5 rounded hover:bg-zinc-100 dark:hover:bg-zinc-800 text-sm text-red-600 dark:text-red-400 transition-all duration-200 ${disabledClass}`}
               onClick={onDeleteCurrent}
               disabled={isStreaming}
             >
@@ -146,7 +146,7 @@ export default function SessionDropdown() {
               <span>{t('session.deleteChat')}</span>
             </button>
             <button
-              className="w-full text-left flex items-center gap-2 px-2 py-1.5 rounded hover:bg-gray-100 dark:hover:bg-gray-800 text-sm"
+              className="w-full text-left flex items-center gap-2 px-2 py-1.5 rounded hover:bg-zinc-100 dark:hover:bg-zinc-800 text-sm text-zinc-700 dark:text-zinc-200 transition-all duration-200"
               onClick={onBackHome}
             >
               <Home size={16} />

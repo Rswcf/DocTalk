@@ -106,7 +106,7 @@ export default function PageWithHighlights({ pageNumber, scale, highlights }: Pa
       customTextRenderer={customTextRenderer}
       onLoadSuccess={onLoadSuccess}
       loading={
-        <div className="p-2 text-sm text-gray-500">
+        <div className="p-2 text-sm text-zinc-500">
           Rendering page {pageNumber}…
         </div>
       }

@@ -1,0 +1,2964 @@
+OpenAI Codex v0.46.0 (research preview)
+--------
+workdir: /Users/mayijie/Projects/Code/010_DocTalk
+model: gpt-5
+provider: openai
+approval: never
+sandbox: workspace-write [workdir, /tmp, $TMPDIR]
+reasoning effort: high
+reasoning summaries: auto
+session id: 019c3312-b6e6-7df3-889d-631c9c729f64
+--------
+user
+Phase 6: UserMenu Dropdown + Billing Page Update
+
+## IMPORTANT: Read existing files before making changes!
+
+Read these files first:
+- frontend/src/components/AuthButton.tsx (being replaced by UserMenu)
+- frontend/src/components/Header.tsx (swap AuthButton for UserMenu)
+- frontend/src/app/billing/page.tsx (add subscription card)
+- frontend/src/lib/api.ts (for createSubscription, createPortalSession)
+- frontend/src/i18n/locales/en.json (for i18n keys)
+
+### 6.1 UserMenu Component
+Create: frontend/src/components/UserMenu.tsx
+
+'use client' component.
+
+When logged out: render the same Sign In button as AuthButton (blue button, signIn() onClick).
+
+When logged in: render avatar button that opens a dropdown menu.
+- Use useState for open/close
+- Click outside to close (useRef + useEffect with click handler)
+- Avatar: 32px rounded-full, same as current AuthButton
+- Dropdown items:
+  1. 'Profile' -> router.push('/profile') (use i18n: userMenu.profile)
+  2. 'Buy Credits' -> router.push('/billing') (use i18n: userMenu.buyCredits)
+  3. Divider (hr)
+  4. 'Sign Out' -> signOut() (use i18n: userMenu.signOut)
+
+Dropdown styling:
+- absolute right-0 top-full mt-2 w-48
+- bg-white dark:bg-gray-800 border dark:border-gray-700 rounded-lg shadow-lg
+- Each item: px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer
+- z-50
+
+Import: useSession, signIn, signOut from next-auth/react; useRouter from next/navigation; useLocale from '../i18n'
+
+### 6.2 Header Update
+Edit: frontend/src/components/Header.tsx
+
+- Replace import of AuthButton with import of UserMenu
+- Replace <AuthButton /> with <UserMenu />
+- Keep everything else exactly the same
+
+### 6.3 Billing Page Update
+Edit: frontend/src/app/billing/page.tsx
+
+Add a Pro subscription card ABOVE the existing credit packs grid.
+
+Structure:
+- New section before the grid:
+  - Card with gradient blue border or highlight
+  - Title: 'Pro Plan'
+  - Description: '100,000 credits/month'
+  - Price: dollar sign + X/month (you can use a placeholder like 9.99)
+  - If user has plan data from profile (fetch getUserProfile to check), show:
+    - plan=='free': 'Upgrade to Pro' button -> createSubscription() -> redirect to checkout_url
+    - plan=='pro': 'Manage Subscription' button -> createPortalSession() -> redirect to portal_url  
+  - If profile not loaded yet or error: show 'Upgrade to Pro' as default
+- Add a small subtitle before the credit packs: 'Extra Credit Top-ups'
+
+Need to:
+- Import getUserProfile, createSubscription, createPortalSession from '../../lib/api'
+- Import UserProfile type from '../../types'
+- Add state for profile (useState<UserProfile | null>)
+- Fetch profile in useEffect
+- Add subscription card JSX
+
+## RULES:
+- Use 'use client' on new files
+- Use Tailwind CSS with dark mode support
+- Use i18n t() for all text
+- Keep existing billing functionality intact
+- Do NOT modify any backend files
+- Do NOT modify any Profile/ components
+
+thinking
+**Planning UI changes**
+
+I need to implement some UI updates, starting with creating a UserMenu.tsx that utilizes next-auth and i18n hooks. Next, I’ll update Header.tsx to swap out the AuthButton for the UserMenu. On the Billing page, I’ll add a Pro subscription card with a subtitle, referencing i18n keys from en.json as specified. First, I’ll read the pertinent files and follow the AGENTS specifications, so I’ll open the files and inspect the frontend project structure.
+codex
+I’m going to inspect the specified frontend files to understand current implementations and i18n usage before making changes.
+exec
+bash -lc 'ls -la' in /Users/mayijie/Projects/Code/010_DocTalk succeeded in 13ms:
+total 96
+drwxr-xr-x  15 mayijie  staff    480 Feb  6 13:10 .
+drwxr-xr-x@ 14 mayijie  staff    448 Feb  4 18:58 ..
+drwxr-xr-x@  3 mayijie  staff     96 Feb  6 14:01 .claude
+drwxr-xr-x@  8 mayijie  staff    256 Feb  5 00:23 .collab
+-rw-r--r--@  1 mayijie  staff    129 Feb  4 23:10 .dockerignore
+-rw-r--r--@  1 mayijie  staff   1200 Feb  6 00:27 .env
+-rw-r--r--@  1 mayijie  staff   1159 Feb  5 20:30 .env.example
+drwxr-xr-x@ 12 mayijie  staff    384 Feb  6 14:01 .git
+-rw-r--r--@  1 mayijie  staff    309 Feb  4 22:24 .gitignore
+-rw-r--r--@  1 mayijie  staff  14095 Feb  6 13:10 CLAUDE.md
+-rw-r--r--@  1 mayijie  staff   8524 Feb  6 09:18 README.md
+drwxr-xr-x@ 10 mayijie  staff    320 Feb  6 11:46 backend
+-rw-r--r--@  1 mayijie  staff    978 Feb  4 19:38 docker-compose.yml
+drwxr-xr-x@ 19 mayijie  staff    608 Feb  6 00:21 frontend
+drwxr-xr-x@  4 mayijie  staff    128 Feb  4 23:32 infra
+exec
+bash -lc 'ls -la frontend/src/components && rg -n "AuthButton|UserMenu|Header" -S frontend/src/components || true' in /Users/mayijie/Projects/Code/010_DocTalk succeeded in 31ms:
+total 96
+drwxr-xr-x@ 15 mayijie  staff   480 Feb  5 23:25 .
+drwxr-xr-x@  8 mayijie  staff   256 Feb  5 17:53 ..
+-rw-r--r--@  1 mayijie  staff  1162 Feb  5 20:29 AuthButton.tsx
+-rw-r--r--@  1 mayijie  staff  3460 Feb  5 23:22 AuthModal.tsx
+drwxr-xr-x@  6 mayijie  staff   192 Feb  5 21:12 Chat
+-rw-r--r--@  1 mayijie  staff  1043 Feb  5 20:38 CreditsDisplay.tsx
+-rw-r--r--@  1 mayijie  staff  1200 Feb  5 00:50 ErrorBoundary.tsx
+-rw-r--r--@  1 mayijie  staff  1634 Feb  5 20:39 Header.tsx
+-rw-r--r--@  1 mayijie  staff  2284 Feb  5 17:54 LanguageSelector.tsx
+-rw-r--r--@  1 mayijie  staff  3309 Feb  5 17:54 ModelSelector.tsx
+-rw-r--r--@  1 mayijie  staff  1297 Feb  5 20:38 PaywallModal.tsx
+drwxr-xr-x@  6 mayijie  staff   192 Feb  5 21:13 PdfViewer
+-rw-r--r--@  1 mayijie  staff  1966 Feb  5 23:25 PrivacyBadge.tsx
+-rw-r--r--@  1 mayijie  staff   228 Feb  5 20:29 Providers.tsx
+-rw-r--r--@  1 mayijie  staff  6056 Feb  5 18:39 SessionDropdown.tsx
+frontend/src/components/Header.tsx:9:import { AuthButton } from './AuthButton';
+frontend/src/components/Header.tsx:14:export default function Header() {
+frontend/src/components/Header.tsx:42:        <AuthButton />
+frontend/src/components/AuthButton.tsx:6:export function AuthButton() {
+exec
+bash -lc "sed -n '1,200p' frontend/src/components/AuthButton.tsx" in /Users/mayijie/Projects/Code/010_DocTalk succeeded in 12ms:
+"use client";
+
+import { useSession, signIn, signOut } from "next-auth/react";
+import { useLocale } from "../i18n";
+
+export function AuthButton() {
+  const { data: session, status } = useSession();
+  const { t } = useLocale();
+
+  if (status === "loading") {
+    return <div className="w-8 h-8 rounded-full bg-gray-200 dark:bg-gray-700 animate-pulse" />;
+  }
+
+  if (session?.user) {
+    return (
+      <div className="flex items-center gap-2">
+        {(session.user as any).image && (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={(session.user as any).image as string}
+exec
+bash -lc "sed -n '1,220p' frontend/src/components/Header.tsx" in /Users/mayijie/Projects/Code/010_DocTalk succeeded in 16ms:
+"use client";
+
+import React from 'react';
+import { Sun, Moon } from 'lucide-react';
+import { useTheme } from 'next-themes';
+import { useDocTalkStore } from '../store';
+import ModelSelector from './ModelSelector';
+import LanguageSelector from './LanguageSelector';
+import { AuthButton } from './AuthButton';
+import { useLocale } from '../i18n';
+import SessionDropdown from './SessionDropdown';
+import { CreditsDisplay } from './CreditsDisplay';
+
+export default function Header() {
+  const documentName = useDocTalkStore((s) => s.documentName);
+  const { theme, setTheme } = useTheme();
+  const { t } = useLocale();
+
+  const toggleTheme = () => {
+    setTheme(theme === 'dark' ? 'light' : 'dark');
+exec
+bash -lc "sed -n '1,240p' frontend/src/app/billing/page.tsx" in /Users/mayijie/Projects/Code/010_DocTalk succeeded in 12ms:
+"use client";
+
+import { useState, useEffect, Suspense } from "react";
+import { useSession } from "next-auth/react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useLocale } from "../../i18n";
+import Header from "../../components/Header";
+
+interface Product {
+  id: string;
+  credits: number;
+  price_usd: number;
+}
+
+function BillingContent() {
+  const { data: session, status } = useSession();
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const { t } = useLocale();
+  const [products, setProducts] = useState<Product[]>([]);
+exec
+bash -lc "sed -n '1,240p' frontend/src/lib/api.ts" in /Users/mayijie/Projects/Code/010_DocTalk succeeded in 12ms:
+import type { DocumentResponse, Message, SearchResponse, Citation, SessionListResponse } from '../types';
+import type { UserProfile, CreditHistoryResponse, UsageBreakdown } from '../types';
+
+export const API_BASE = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8000';
+export const PROXY_BASE = '/api/proxy';
+
+async function handle<T>(res: Response): Promise<T> {
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`HTTP ${res.status}: ${text}`);
+  }
+  return res.json();
+}
+
+export interface DocumentBrief {
+  id: string;
+  filename: string;
+  status: string;
+  created_at: string | null;
+}
+exec
+bash -lc "sed -n '1,260p' frontend/src/i18n/locales/en.json" in /Users/mayijie/Projects/Code/010_DocTalk succeeded in 13ms:
+{
+  "app.title": "DocTalk",
+  "app.subtitle": "Upload a PDF to start chatting.",
+
+  "upload.dragDrop": "Drag & drop your PDF here",
+  "upload.or": "or",
+  "upload.chooseFile": "Choose File",
+  "upload.uploading": "Uploading…",
+  "upload.parsing": "Parsing…",
+  "upload.parsingProgress": "Parsing pages: {pagesParsed}, indexing: {chunksIndexed}",
+  "upload.error": "Error during processing",
+  "upload.networkError": "Upload failed, please check network or try again later",
+  "upload.pdfOnly": "Please upload a PDF file",
+  "upload.tooLarge": "File size cannot exceed 50MB",
+
+  "doc.myDocuments": "My Documents",
+  "doc.noDocuments": "No documents yet",
+  "doc.open": "Open",
+  "doc.notFound": "Document not found",
+  "doc.loadError": "Failed to load document info",
+
+thinking
+**Importing necessary functions**
+
+I realize I need to import `createSubscription` and `createPortalSession` from `lib/api`, and it looks like they’re already there. I also need to ensure that `getUserProfile` is imported for accessing plan data. In addition, there's a `UserProfile` type that I should check for correctness in the types. I want to make sure everything is lined up properly to avoid any issues down the line!
+exec
+bash -lc "sed -n '1,260p' frontend/src/types.ts" in /Users/mayijie/Projects/Code/010_DocTalk exited 1 in 13ms:
+sed: frontend/src/types.ts: No such file or directory
+
+thinking
+**Exploring type locations**
+
+I’m considering where to find the types. They might be under `frontend/src/types/index.ts` or possibly grouped at the root level in `frontend/src/types`. It seems like I should list these options clearly so I can easily reference them later. Organizing this way should help in managing the code effectively. If I can pinpoint these locations, it'll streamline my work!
+exec
+bash -lc 'rg -n "export interface UserProfile|type UserProfile|UserProfile" frontend/src -S | head -n 50' in /Users/mayijie/Projects/Code/010_DocTalk succeeded in 22ms:
+frontend/src/lib/api.ts:2:import type { UserProfile, CreditHistoryResponse, UsageBreakdown } from '../types';
+frontend/src/lib/api.ts:118:export async function getUserProfile(): Promise<UserProfile> {
+frontend/src/types/index.ts:65:export interface UserProfile {
+exec
+bash -lc "sed -n '1,140p' frontend/src/types/index.ts" in /Users/mayijie/Projects/Code/010_DocTalk succeeded in 14ms:
+export type Role = 'user' | 'assistant';
+
+export interface NormalizedBBox {
+  // Normalized coordinates in [0, 1] relative to the page viewport
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+  page?: number;
+}
+
+export interface Citation {
+  refIndex: number; // [n] index starting from 1
+  chunkId: string;
+  page: number; // 1-based page number
+  bboxes: NormalizedBBox[];
+  textSnippet: string;
+  offset: number; // character offset in assistant message text
+}
+
+
+
+
+
+
+thinking
+**Implementing UserMenu components**
+
+I see we have profile.plan in place, and now it's time to create the new UserMenu component in the components folder. I need to swap in Header.tsx references and import the new component. For translations, I'll add new i18n keys like "billing.proPlanTitle" or "billing.pro.title," and use "billing.extraTopups" for the subtitle. I’ll also make sure to format the price with "billing.pro.price," like "$9.99/month." Lastly, I’ll revise the billing page code to properly import the necessary functions.
+thinking
+**Adding subscription card section**
+
+I’m setting up a new subscription card section between the message and grid, along with a subtitle before the grid. I need to import functions like getUserProfile, createSubscription, and createPortalSession, ensuring to reference the UserProfile type from '../../types'. I’ll use `useState<UserProfile | null>` and fetch the profile in `useEffect`, applying `t()` as available. The code already includes 'use client' at the top, which is great. The new profile fetch will utilize PROXY endpoints for user authentication. I'll also adjust the imports and set window.location.href to new URLs returned by the subscription functions.
+thinking
+**Maintaining functionality and UserMenu setup**
+
+I’ll need to make sure we keep all existing functionality intact, like the handlePurchase function for packs. There’s the question of hiding the grid if products are empty, but for now, I'll leave it as is. For the UserMenu component, it'll replicate the Sign In button just like AuthButton. When logged in, the avatar button should open a dropdown, which needs open/close functionality with `useState` and `useRef`, and I'll implement click handling outside the dropdown with `useEffect`. Also, I’ll integrate the last header elements and replace CreditsDisplay with UserMenu, while maintaining the layout. I need to import `useRouter`, `useLocale`, and `useNextAuth`, and show a loading skeleton if the status is 'loading'. Lastly, when logged out, I will render the same Sign In button style as AuthButton.
+thinking
+**Setting up UserMenu features**
+
+Even though it wasn't specifically requested, I think it's a good idea to replicate the loading skeleton for the 'loading' status to maintain the UI consistency. For the avatar, it should be a 32px rounded-full image, matching the current AuthButton which shows a 32x32 image. If the avatar image is absent, I can provide a placeholder circle with initials or a generic icon. The dropdown will toggle open via a click on the avatar, and items will either push to the router or sign out. I’ll make sure to set the z-index to 50 for the dropdown, implement the container as a relative div, and keep “use client” at the top. Finally, I’ll update the i18n en.json to add any missing keys like "billing.proPlanTitle," "billing.proPlanDesc," and "billing.proPricePerMonth" with a variable price.
+thinking
+**Formatting pricing and i18n keys**
+
+I'm planning to set the placeholder price to "9.99," but since the instructions say to use `t()` for all text, I'll format it as "billing.pro.price" with the placeholder for price. The string will look like "${price}/month." However, it seems like they might want me to hardcode that into the UI, using `t()` only for "per month." To stick with i18n best practices, it’s more coherent to store the entire string, like "starting at $9.99/month," and create keys for it. I’ll also add keys for "billing.extraTopups" and other items to ensure all text is consistent, while also checking the useLocale hook in case there are updates needed.
+exec
+bash -lc "sed -n '1,200p' frontend/src/i18n/index.ts" in /Users/mayijie/Projects/Code/010_DocTalk succeeded in 18ms:
+"use client";
+import { createContext, useContext } from 'react';
+
+export type Locale = 'en' | 'zh' | 'hi' | 'es' | 'ar' | 'fr' | 'bn' | 'pt';
+
+export interface LocaleInfo {
+  code: Locale;
+  label: string;
+  flag: string;
+}
+
+export const LOCALES: LocaleInfo[] = [
+  { code: 'en', label: 'English', flag: '🇺🇸' },
+  { code: 'zh', label: '中文', flag: '🇨🇳' },
+  { code: 'hi', label: 'हिन्दी', flag: '🇮🇳' },
+  { code: 'es', label: 'Español', flag: '🇪🇸' },
+  { code: 'ar', label: 'العربية', flag: '🇸🇦' },
+  { code: 'fr', label: 'Français', flag: '🇫🇷' },
+  { code: 'bn', label: 'বাংলা', flag: '🇧🇩' },
+  { code: 'pt', label: 'Português', flag: '🇧🇷' },
+
+
+thinking
+**Considering menu functionality and user profile**
+
+I'm thinking about using 'useEffect cleanup' to enhance the menu's functionality. If the 'Escape' key is pressed, we might close it, though that's not essential. When navigating, I’ll ensure the menu closes after a router push. For the avatar display, if the session user has an 'image' property, we'll utilize that, and I might need to cast to handle potential Type issues. If there's no image, a button with initials could work, but it's not strictly necessary. For the billing page, I’ll import UserProfile and manage profile loading states accordingly.
+thinking
+**Implementing profile handling and UI updates**
+
+I can't assume there won't be a profile fetch error compared to an actual null state, so I'll default to showing 'Upgrade to Pro.' This text will use the i18n key 'profile.plan.upgrade.' I need to create a click handler for the upgrade, utilizing createSubscription and createPortalSession from the library. I’ll also introduce a 'subLoading' state to manage button disabling and style the card with a gradient blue border. I’m planning to place this above the grid, add a price display, and include a small subtitle before the credit packs styled appropriately. Time to implement this patch!
+codex
+Next, I’ll add the new UserMenu component, update the header to use it, extend i18n keys, and enhance the billing page with the subscription card and profile logic.
+file update
+A /Users/mayijie/Projects/Code/010_DocTalk/frontend/src/components/UserMenu.tsx
+"use client";
+
+import { useEffect, useRef, useState } from "react";
+import { useSession, signIn, signOut } from "next-auth/react";
+import { useRouter } from "next/navigation";
+import { useLocale } from "../i18n";
+
+export default function UserMenu() {
+  const { data: session, status } = useSession();
+  const { t } = useLocale();
+  const router = useRouter();
+
+  const [open, setOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    function onClickOutside(e: MouseEvent) {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setOpen(false);
+      }
+    }
+    if (open) {
+      document.addEventListener("mousedown", onClickOutside);
+    }
+    return () => document.removeEventListener("mousedown", onClickOutside);
+  }, [open]);
+
+  if (status === "loading") {
+    return (
+      <div className="w-8 h-8 rounded-full bg-gray-200 dark:bg-gray-700 animate-pulse" />
+    );
+  }
+
+  if (!session?.user) {
+    return (
+      <button
+        onClick={() => signIn()}
+        className="px-3 py-1.5 text-sm bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
+      >
+        {t("auth.signIn")}
+      </button>
+    );
+  }
+
+  const userImage = (session.user as any).image as string | undefined;
+
+  const go = (path: string) => {
+    router.push(path);
+    setOpen(false);
+  };
+
+  return (
+    <div className="relative" ref={menuRef}>
+      <button
+        onClick={() => setOpen((v) => !v)}
+        className="w-8 h-8 rounded-full overflow-hidden border border-gray-200 dark:border-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+        aria-haspopup="menu"
+        aria-expanded={open}
+      >
+        {userImage ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={userImage} alt="" className="w-8 h-8 object-cover" />
+        ) : (
+          <div className="w-8 h-8 bg-gray-200 dark:bg-gray-700" />
+        )}
+      </button>
+
+      {open && (
+        <div
+          className="absolute right-0 top-full mt-2 w-48 bg-white dark:bg-gray-800 border dark:border-gray-700 rounded-lg shadow-lg z-50"
+          role="menu"
+        >
+          <div
+            className="px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer"
+            onClick={() => go("/profile")}
+            role="menuitem"
+          >
+            {t("userMenu.profile")}
+          </div>
+          <div
+            className="px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer"
+            onClick={() => go("/billing")}
+            role="menuitem"
+          >
+            {t("userMenu.buyCredits")}
+          </div>
+          <hr className="my-1 border-gray-200 dark:border-gray-700" />
+          <div
+            className="px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer"
+            onClick={() => {
+              setOpen(false);
+              signOut();
+            }}
+            role="menuitem"
+          >
+            {t("userMenu.signOut")}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+apply_patch(auto_approved=true) exited 0 in 31ms:
+Success. Updated the following files:
+A frontend/src/components/UserMenu.tsx
+file update:
+diff --git a/frontend/src/components/UserMenu.tsx b/frontend/src/components/UserMenu.tsx
+new file mode 100644
+index 0000000000000000000000000000000000000000..a2a0e622f5139f4637bd4a4090e7f938e4fed561
+--- /dev/null
++++ b/frontend/src/components/UserMenu.tsx
+@@ -0,0 +1,103 @@
++"use client";
++
++import { useEffect, useRef, useState } from "react";
++import { useSession, signIn, signOut } from "next-auth/react";
++import { useRouter } from "next/navigation";
++import { useLocale } from "../i18n";
++
++export default function UserMenu() {
++  const { data: session, status } = useSession();
++  const { t } = useLocale();
++  const router = useRouter();
++
++  const [open, setOpen] = useState(false);
++  const menuRef = useRef<HTMLDivElement | null>(null);
++
++  useEffect(() => {
++    function onClickOutside(e: MouseEvent) {
++      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
++        setOpen(false);
++      }
++    }
++    if (open) {
++      document.addEventListener("mousedown", onClickOutside);
++    }
++    return () => document.removeEventListener("mousedown", onClickOutside);
++  }, [open]);
++
++  if (status === "loading") {
++    return (
++      <div className="w-8 h-8 rounded-full bg-gray-200 dark:bg-gray-700 animate-pulse" />
++    );
++  }
++
++  if (!session?.user) {
++    return (
++      <button
++        onClick={() => signIn()}
++        className="px-3 py-1.5 text-sm bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
++      >
++        {t("auth.signIn")}
++      </button>
++    );
++  }
++
++  const userImage = (session.user as any).image as string | undefined;
++
++  const go = (path: string) => {
++    router.push(path);
++    setOpen(false);
++  };
++
++  return (
++    <div className="relative" ref={menuRef}>
++      <button
++        onClick={() => setOpen((v) => !v)}
++        className="w-8 h-8 rounded-full overflow-hidden border border-gray-200 dark:border-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
++        aria-haspopup="menu"
++        aria-expanded={open}
++      >
++        {userImage ? (
++          // eslint-disable-next-line @next/next/no-img-element
++          <img src={userImage} alt="" className="w-8 h-8 object-cover" />
++        ) : (
++          <div className="w-8 h-8 bg-gray-200 dark:bg-gray-700" />
++        )}
++      </button>
++
++      {open && (
++        <div
++          className="absolute right-0 top-full mt-2 w-48 bg-white dark:bg-gray-800 border dark:border-gray-700 rounded-lg shadow-lg z-50"
++          role="menu"
++        >
++          <div
++            className="px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer"
++            onClick={() => go("/profile")}
++            role="menuitem"
++          >
++            {t("userMenu.profile")}
++          </div>
++          <div
++            className="px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer"
++            onClick={() => go("/billing")}
++            role="menuitem"
++          >
++            {t("userMenu.buyCredits")}
++          </div>
++          <hr className="my-1 border-gray-200 dark:border-gray-700" />
++          <div
++            className="px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer"
++            onClick={() => {
++              setOpen(false);
++              signOut();
++            }}
++            role="menuitem"
++          >
++            {t("userMenu.signOut")}
++          </div>
++        </div>
++      )}
++    </div>
++  );
++}
++
+
+file update:
+diff --git a/frontend/src/components/UserMenu.tsx b/frontend/src/components/UserMenu.tsx
+new file mode 100644
+index 0000000000000000000000000000000000000000..a2a0e622f5139f4637bd4a4090e7f938e4fed561
+--- /dev/null
++++ b/frontend/src/components/UserMenu.tsx
+@@ -0,0 +1,103 @@
++"use client";
++
++import { useEffect, useRef, useState } from "react";
++import { useSession, signIn, signOut } from "next-auth/react";
++import { useRouter } from "next/navigation";
++import { useLocale } from "../i18n";
++
++export default function UserMenu() {
++  const { data: session, status } = useSession();
++  const { t } = useLocale();
++  const router = useRouter();
++
++  const [open, setOpen] = useState(false);
++  const menuRef = useRef<HTMLDivElement | null>(null);
++
++  useEffect(() => {
++    function onClickOutside(e: MouseEvent) {
++      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
++        setOpen(false);
++      }
++    }
++    if (open) {
++      document.addEventListener("mousedown", onClickOutside);
++    }
++    return () => document.removeEventListener("mousedown", onClickOutside);
++  }, [open]);
++
++  if (status === "loading") {
++    return (
++      <div className="w-8 h-8 rounded-full bg-gray-200 dark:bg-gray-700 animate-pulse" />
++    );
++  }
++
++  if (!session?.user) {
++    return (
++      <button
++        onClick={() => signIn()}
++        className="px-3 py-1.5 text-sm bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
++      >
++        {t("auth.signIn")}
++      </button>
++    );
++  }
++
++  const userImage = (session.user as any).image as string | undefined;
++
++  const go = (path: string) => {
++    router.push(path);
++    setOpen(false);
++  };
++
++  return (
++    <div className="relative" ref={menuRef}>
++      <button
++        onClick={() => setOpen((v) => !v)}
++        className="w-8 h-8 rounded-full overflow-hidden border border-gray-200 dark:border-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
++        aria-haspopup="menu"
++        aria-expanded={open}
++      >
++        {userImage ? (
++          // eslint-disable-next-line @next/next/no-img-element
++          <img src={userImage} alt="" className="w-8 h-8 object-cover" />
++        ) : (
++          <div className="w-8 h-8 bg-gray-200 dark:bg-gray-700" />
++        )}
++      </button>
++
++      {open && (
++        <div
++          className="absolute right-0 top-full mt-2 w-48 bg-white dark:bg-gray-800 border dark:border-gray-700 rounded-lg shadow-lg z-50"
++          role="menu"
++        >
++          <div
++            className="px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer"
++            onClick={() => go("/profile")}
++            role="menuitem"
++          >
++            {t("userMenu.profile")}
++          </div>
++          <div
++            className="px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer"
++            onClick={() => go("/billing")}
++            role="menuitem"
++          >
++            {t("userMenu.buyCredits")}
++          </div>
++          <hr className="my-1 border-gray-200 dark:border-gray-700" />
++          <div
++            className="px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer"
++            onClick={() => {
++              setOpen(false);
++              signOut();
++            }}
++            role="menuitem"
++          >
++            {t("userMenu.signOut")}
++          </div>
++        </div>
++      )}
++    </div>
++  );
++}
++
+
+file update
+M /Users/mayijie/Projects/Code/010_DocTalk/frontend/src/components/Header.tsx
+@@ -8,3 +8,3 @@
+ import LanguageSelector from './LanguageSelector';
+-import { AuthButton } from './AuthButton';
++import UserMenu from './UserMenu';
+ import { useLocale } from '../i18n';
+@@ -41,3 +41,3 @@
+         <CreditsDisplay />
+-        <AuthButton />
++        <UserMenu />
+         <LanguageSelector />
+apply_patch(auto_approved=true) exited 0 in 32ms:
+Success. Updated the following files:
+M frontend/src/components/Header.tsx
+file update:
+diff --git a/frontend/src/components/Header.tsx b/frontend/src/components/Header.tsx
+index 3ec8abbed1571649dbd8479f3ec7e6430895fb9d..4fc2a98f10670fd688599e0493ef617a9f56cf5f
+--- a/frontend/src/components/Header.tsx
++++ b/frontend/src/components/Header.tsx
+@@ -6,7 +6,7 @@
+ import { useDocTalkStore } from '../store';
+ import ModelSelector from './ModelSelector';
+ import LanguageSelector from './LanguageSelector';
+-import { AuthButton } from './AuthButton';
++import UserMenu from './UserMenu';
+ import { useLocale } from '../i18n';
+ import SessionDropdown from './SessionDropdown';
+ import { CreditsDisplay } from './CreditsDisplay';
+@@ -39,7 +39,7 @@
+           {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
+         </button>
+         <CreditsDisplay />
+-        <AuthButton />
++        <UserMenu />
+         <LanguageSelector />
+       </div>
+     </header>
+diff --git a/frontend/src/components/UserMenu.tsx b/frontend/src/components/UserMenu.tsx
+new file mode 100644
+index 0000000000000000000000000000000000000000..a2a0e622f5139f4637bd4a4090e7f938e4fed561
+--- /dev/null
++++ b/frontend/src/components/UserMenu.tsx
+@@ -0,0 +1,103 @@
++"use client";
++
++import { useEffect, useRef, useState } from "react";
++import { useSession, signIn, signOut } from "next-auth/react";
++import { useRouter } from "next/navigation";
++import { useLocale } from "../i18n";
++
++export default function UserMenu() {
++  const { data: session, status } = useSession();
++  const { t } = useLocale();
++  const router = useRouter();
++
++  const [open, setOpen] = useState(false);
++  const menuRef = useRef<HTMLDivElement | null>(null);
++
++  useEffect(() => {
++    function onClickOutside(e: MouseEvent) {
++      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
++        setOpen(false);
++      }
++    }
++    if (open) {
++      document.addEventListener("mousedown", onClickOutside);
++    }
++    return () => document.removeEventListener("mousedown", onClickOutside);
++  }, [open]);
++
++  if (status === "loading") {
++    return (
++      <div className="w-8 h-8 rounded-full bg-gray-200 dark:bg-gray-700 animate-pulse" />
++    );
++  }
++
++  if (!session?.user) {
++    return (
++      <button
++        onClick={() => signIn()}
++        className="px-3 py-1.5 text-sm bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
++      >
++        {t("auth.signIn")}
++      </button>
++    );
++  }
++
++  const userImage = (session.user as any).image as string | undefined;
++
++  const go = (path: string) => {
++    router.push(path);
++    setOpen(false);
++  };
++
++  return (
++    <div className="relative" ref={menuRef}>
++      <button
++        onClick={() => setOpen((v) => !v)}
++        className="w-8 h-8 rounded-full overflow-hidden border border-gray-200 dark:border-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
++        aria-haspopup="menu"
++        aria-expanded={open}
++      >
++        {userImage ? (
++          // eslint-disable-next-line @next/next/no-img-element
++          <img src={userImage} alt="" className="w-8 h-8 object-cover" />
++        ) : (
++          <div className="w-8 h-8 bg-gray-200 dark:bg-gray-700" />
++        )}
++      </button>
++
++      {open && (
++        <div
++          className="absolute right-0 top-full mt-2 w-48 bg-white dark:bg-gray-800 border dark:border-gray-700 rounded-lg shadow-lg z-50"
++          role="menu"
++        >
++          <div
++            className="px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer"
++            onClick={() => go("/profile")}
++            role="menuitem"
++          >
++            {t("userMenu.profile")}
++          </div>
++          <div
++            className="px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer"
++            onClick={() => go("/billing")}
++            role="menuitem"
++          >
++            {t("userMenu.buyCredits")}
++          </div>
++          <hr className="my-1 border-gray-200 dark:border-gray-700" />
++          <div
++            className="px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer"
++            onClick={() => {
++              setOpen(false);
++              signOut();
++            }}
++            role="menuitem"
++          >
++            {t("userMenu.signOut")}
++          </div>
++        </div>
++      )}
++    </div>
++  );
++}
++
+
+file update:
+diff --git a/frontend/src/components/Header.tsx b/frontend/src/components/Header.tsx
+index 3ec8abbed1571649dbd8479f3ec7e6430895fb9d..4fc2a98f10670fd688599e0493ef617a9f56cf5f
+--- a/frontend/src/components/Header.tsx
++++ b/frontend/src/components/Header.tsx
+@@ -6,7 +6,7 @@
+ import { useDocTalkStore } from '../store';
+ import ModelSelector from './ModelSelector';
+ import LanguageSelector from './LanguageSelector';
+-import { AuthButton } from './AuthButton';
++import UserMenu from './UserMenu';
+ import { useLocale } from '../i18n';
+ import SessionDropdown from './SessionDropdown';
+ import { CreditsDisplay } from './CreditsDisplay';
+@@ -39,7 +39,7 @@
+           {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
+         </button>
+         <CreditsDisplay />
+-        <AuthButton />
++        <UserMenu />
+         <LanguageSelector />
+       </div>
+     </header>
+diff --git a/frontend/src/components/UserMenu.tsx b/frontend/src/components/UserMenu.tsx
+new file mode 100644
+index 0000000000000000000000000000000000000000..a2a0e622f5139f4637bd4a4090e7f938e4fed561
+--- /dev/null
++++ b/frontend/src/components/UserMenu.tsx
+@@ -0,0 +1,103 @@
++"use client";
++
++import { useEffect, useRef, useState } from "react";
++import { useSession, signIn, signOut } from "next-auth/react";
++import { useRouter } from "next/navigation";
++import { useLocale } from "../i18n";
++
++export default function UserMenu() {
++  const { data: session, status } = useSession();
++  const { t } = useLocale();
++  const router = useRouter();
++
++  const [open, setOpen] = useState(false);
++  const menuRef = useRef<HTMLDivElement | null>(null);
++
++  useEffect(() => {
++    function onClickOutside(e: MouseEvent) {
++      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
++        setOpen(false);
++      }
++    }
++    if (open) {
++      document.addEventListener("mousedown", onClickOutside);
++    }
++    return () => document.removeEventListener("mousedown", onClickOutside);
++  }, [open]);
++
++  if (status === "loading") {
++    return (
++      <div className="w-8 h-8 rounded-full bg-gray-200 dark:bg-gray-700 animate-pulse" />
++    );
++  }
++
++  if (!session?.user) {
++    return (
++      <button
++        onClick={() => signIn()}
++        className="px-3 py-1.5 text-sm bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
++      >
++        {t("auth.signIn")}
++      </button>
++    );
++  }
++
++  const userImage = (session.user as any).image as string | undefined;
++
++  const go = (path: string) => {
++    router.push(path);
++    setOpen(false);
++  };
++
++  return (
++    <div className="relative" ref={menuRef}>
++      <button
++        onClick={() => setOpen((v) => !v)}
++        className="w-8 h-8 rounded-full overflow-hidden border border-gray-200 dark:border-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
++        aria-haspopup="menu"
++        aria-expanded={open}
++      >
++        {userImage ? (
++          // eslint-disable-next-line @next/next/no-img-element
++          <img src={userImage} alt="" className="w-8 h-8 object-cover" />
++        ) : (
++          <div className="w-8 h-8 bg-gray-200 dark:bg-gray-700" />
++        )}
++      </button>
++
++      {open && (
++        <div
++          className="absolute right-0 top-full mt-2 w-48 bg-white dark:bg-gray-800 border dark:border-gray-700 rounded-lg shadow-lg z-50"
++          role="menu"
++        >
++          <div
++            className="px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer"
++            onClick={() => go("/profile")}
++            role="menuitem"
++          >
++            {t("userMenu.profile")}
++          </div>
++          <div
++            className="px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer"
++            onClick={() => go("/billing")}
++            role="menuitem"
++          >
++            {t("userMenu.buyCredits")}
++          </div>
++          <hr className="my-1 border-gray-200 dark:border-gray-700" />
++          <div
++            className="px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer"
++            onClick={() => {
++              setOpen(false);
++              signOut();
++            }}
++            role="menuitem"
++          >
++            {t("userMenu.signOut")}
++          </div>
++        </div>
++      )}
++    </div>
++  );
++}
++
+
+
+thinking
+**Updating billing page**
+
+I'm focusing on updating the billing page to include the subscription card and new imports. I need to insert the imports for getUserProfile, createSubscription, and createPortalSession from '../../lib/api', along with the UserProfile type from '../../types'. I also plan to fetch the user profile and enhance the UI. So, I’ll implement a patch for the billing page to bring these changes together. That sounds like a solid plan!
+file update
+M /Users/mayijie/Projects/Code/010_DocTalk/frontend/src/app/billing/page.tsx
+@@ -7,2 +7,4 @@
+ import Header from "../../components/Header";
++import { getUserProfile, createSubscription, createPortalSession } from "../../lib/api";
++import type { UserProfile } from "../../types";
+ 
+@@ -22,2 +24,4 @@
+   const [message, setMessage] = useState<string | null>(null);
++  const [profile, setProfile] = useState<UserProfile | null>(null);
++  const [submitting, setSubmitting] = useState<boolean>(false);
+ 
+@@ -48,2 +52,16 @@
+ 
++  useEffect(() => {
++    async function fetchProfile() {
++      try {
++        const p = await getUserProfile();
++        setProfile(p);
++      } catch (e) {
++        // ignore; default CTA will show
++      }
++    }
++    if (status === "authenticated") {
++      fetchProfile();
++    }
++  }, [status]);
++
+   const handlePurchase = async (packId: string) => {
+@@ -84,2 +102,60 @@
+ 
++        {/* Subscription Card */}
++        <section className="mb-8">
++          <div className="rounded-xl bg-gradient-to-r from-blue-500 to-indigo-500 p-[1px]">
++            <div className="rounded-xl bg-white dark:bg-gray-900 p-6 border border-transparent dark:border-gray-800">
++              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
++                <div>
++                  <h2 className="text-xl font-semibold dark:text-gray-100">{t("billing.pro.title")}</h2>
++                  <p className="text-gray-600 dark:text-gray-400 mt-1">{t("billing.pro.description")}</p>
++                </div>
++                <div className="text-right">
++                  <div className="text-2xl font-bold dark:text-gray-100">
++                    {t("billing.pro.pricePerMonth", { price: 9.99 })}
++                  </div>
++                  <div className="mt-3">
++                    {profile?.plan === "pro" ? (
++                      <button
++                        onClick={async () => {
++                          setSubmitting(true);
++                          try {
++                            const res = await createPortalSession();
++                            window.location.href = res.portal_url;
++                          } finally {
++                            setSubmitting(false);
++                          }
++                        }}
++                        disabled={submitting}
++                        className="px-4 py-2 rounded bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-100 hover:bg-gray-200 dark:hover:bg-gray-700 disabled:opacity-50 transition-colors"
++                      >
++                        {t("profile.plan.manage")}
++                      </button>
++                    ) : (
++                      <button
++                        onClick={async () => {
++                          setSubmitting(true);
++                          try {
++                            const res = await createSubscription();
++                            window.location.href = res.checkout_url;
++                          } finally {
++                            setSubmitting(false);
++                          }
++                        }}
++                        disabled={submitting}
++                        className="px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 transition-colors"
++                      >
++                        {t("profile.plan.upgrade")}
++                      </button>
++                    )}
++                  </div>
++                </div>
++              </div>
++            </div>
++          </div>
++        </section>
++
++        <h2 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-4 uppercase tracking-wide">
++          {t("billing.extraTopups")}
++        </h2>
++
+         <div className="grid md:grid-cols-3 gap-6">
+@@ -127,2 +203 @@
+ }
+-
+apply_patch(auto_approved=true) exited 0 in 43ms:
+Success. Updated the following files:
+M frontend/src/app/billing/page.tsx
+file update:
+diff --git a/frontend/src/app/billing/page.tsx b/frontend/src/app/billing/page.tsx
+index ff45c152886964821c934f26296754b240a5b44b..82acf106a6cfd9ac6d7fc8a096bb576b22486ec8
+--- a/frontend/src/app/billing/page.tsx
++++ b/frontend/src/app/billing/page.tsx
+@@ -5,6 +5,8 @@
+ import { useRouter, useSearchParams } from "next/navigation";
+ import { useLocale } from "../../i18n";
+ import Header from "../../components/Header";
++import { getUserProfile, createSubscription, createPortalSession } from "../../lib/api";
++import type { UserProfile } from "../../types";
+ 
+ interface Product {
+   id: string;
+@@ -20,6 +22,8 @@
+   const [products, setProducts] = useState<Product[]>([]);
+   const [loading, setLoading] = useState<string | null>(null);
+   const [message, setMessage] = useState<string | null>(null);
++  const [profile, setProfile] = useState<UserProfile | null>(null);
++  const [submitting, setSubmitting] = useState<boolean>(false);
+ 
+   useEffect(() => {
+     if (searchParams.get("success")) {
+@@ -46,6 +50,20 @@
+     fetchProducts();
+   }, []);
+ 
++  useEffect(() => {
++    async function fetchProfile() {
++      try {
++        const p = await getUserProfile();
++        setProfile(p);
++      } catch (e) {
++        // ignore; default CTA will show
++      }
++    }
++    if (status === "authenticated") {
++      fetchProfile();
++    }
++  }, [status]);
++
+   const handlePurchase = async (packId: string) => {
+     setLoading(packId);
+     try {
+@@ -82,6 +100,64 @@
+           </div>
+         )}
+ 
++        {/* Subscription Card */}
++        <section className="mb-8">
++          <div className="rounded-xl bg-gradient-to-r from-blue-500 to-indigo-500 p-[1px]">
++            <div className="rounded-xl bg-white dark:bg-gray-900 p-6 border border-transparent dark:border-gray-800">
++              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
++                <div>
++                  <h2 className="text-xl font-semibold dark:text-gray-100">{t("billing.pro.title")}</h2>
++                  <p className="text-gray-600 dark:text-gray-400 mt-1">{t("billing.pro.description")}</p>
++                </div>
++                <div className="text-right">
++                  <div className="text-2xl font-bold dark:text-gray-100">
++                    {t("billing.pro.pricePerMonth", { price: 9.99 })}
++                  </div>
++                  <div className="mt-3">
++                    {profile?.plan === "pro" ? (
++                      <button
++                        onClick={async () => {
++                          setSubmitting(true);
++                          try {
++                            const res = await createPortalSession();
++                            window.location.href = res.portal_url;
++                          } finally {
++                            setSubmitting(false);
++                          }
++                        }}
++                        disabled={submitting}
++                        className="px-4 py-2 rounded bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-100 hover:bg-gray-200 dark:hover:bg-gray-700 disabled:opacity-50 transition-colors"
++                      >
++                        {t("profile.plan.manage")}
++                      </button>
++                    ) : (
++                      <button
++                        onClick={async () => {
++                          setSubmitting(true);
++                          try {
++                            const res = await createSubscription();
++                            window.location.href = res.checkout_url;
++                          } finally {
++                            setSubmitting(false);
++                          }
++                        }}
++                        disabled={submitting}
++                        className="px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 transition-colors"
++                      >
++                        {t("profile.plan.upgrade")}
++                      </button>
++                    )}
++                  </div>
++                </div>
++              </div>
++            </div>
++          </div>
++        </section>
++
++        <h2 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-4 uppercase tracking-wide">
++          {t("billing.extraTopups")}
++        </h2>
++
+         <div className="grid md:grid-cols-3 gap-6">
+           {products.map((product) => (
+             <div
+@@ -125,4 +201,3 @@
+     </Suspense>
+   );
+ }
+-
+diff --git a/frontend/src/components/Header.tsx b/frontend/src/components/Header.tsx
+index 3ec8abbed1571649dbd8479f3ec7e6430895fb9d..4fc2a98f10670fd688599e0493ef617a9f56cf5f
+--- a/frontend/src/components/Header.tsx
++++ b/frontend/src/components/Header.tsx
+@@ -6,7 +6,7 @@
+ import { useDocTalkStore } from '../store';
+ import ModelSelector from './ModelSelector';
+ import LanguageSelector from './LanguageSelector';
+-import { AuthButton } from './AuthButton';
++import UserMenu from './UserMenu';
+ import { useLocale } from '../i18n';
+ import SessionDropdown from './SessionDropdown';
+ import { CreditsDisplay } from './CreditsDisplay';
+@@ -39,7 +39,7 @@
+           {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
+         </button>
+         <CreditsDisplay />
+-        <AuthButton />
++        <UserMenu />
+         <LanguageSelector />
+       </div>
+     </header>
+diff --git a/frontend/src/components/UserMenu.tsx b/frontend/src/components/UserMenu.tsx
+new file mode 100644
+index 0000000000000000000000000000000000000000..a2a0e622f5139f4637bd4a4090e7f938e4fed561
+--- /dev/null
++++ b/frontend/src/components/UserMenu.tsx
+@@ -0,0 +1,103 @@
++"use client";
++
++import { useEffect, useRef, useState } from "react";
++import { useSession, signIn, signOut } from "next-auth/react";
++import { useRouter } from "next/navigation";
++import { useLocale } from "../i18n";
++
++export default function UserMenu() {
++  const { data: session, status } = useSession();
++  const { t } = useLocale();
++  const router = useRouter();
++
++  const [open, setOpen] = useState(false);
++  const menuRef = useRef<HTMLDivElement | null>(null);
++
++  useEffect(() => {
++    function onClickOutside(e: MouseEvent) {
++      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
++        setOpen(false);
++      }
++    }
++    if (open) {
++      document.addEventListener("mousedown", onClickOutside);
++    }
++    return () => document.removeEventListener("mousedown", onClickOutside);
++  }, [open]);
++
++  if (status === "loading") {
++    return (
++      <div className="w-8 h-8 rounded-full bg-gray-200 dark:bg-gray-700 animate-pulse" />
++    );
++  }
++
++  if (!session?.user) {
++    return (
++      <button
++        onClick={() => signIn()}
++        className="px-3 py-1.5 text-sm bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
++      >
++        {t("auth.signIn")}
++      </button>
++    );
++  }
++
++  const userImage = (session.user as any).image as string | undefined;
++
++  const go = (path: string) => {
++    router.push(path);
++    setOpen(false);
++  };
++
++  return (
++    <div className="relative" ref={menuRef}>
++      <button
++        onClick={() => setOpen((v) => !v)}
++        className="w-8 h-8 rounded-full overflow-hidden border border-gray-200 dark:border-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
++        aria-haspopup="menu"
++        aria-expanded={open}
++      >
++        {userImage ? (
++          // eslint-disable-next-line @next/next/no-img-element
++          <img src={userImage} alt="" className="w-8 h-8 object-cover" />
++        ) : (
++          <div className="w-8 h-8 bg-gray-200 dark:bg-gray-700" />
++        )}
++      </button>
++
++      {open && (
++        <div
++          className="absolute right-0 top-full mt-2 w-48 bg-white dark:bg-gray-800 border dark:border-gray-700 rounded-lg shadow-lg z-50"
++          role="menu"
++        >
++          <div
++            className="px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer"
++            onClick={() => go("/profile")}
++            role="menuitem"
++          >
++            {t("userMenu.profile")}
++          </div>
++          <div
++            className="px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer"
++            onClick={() => go("/billing")}
++            role="menuitem"
++          >
++            {t("userMenu.buyCredits")}
++          </div>
++          <hr className="my-1 border-gray-200 dark:border-gray-700" />
++          <div
++            className="px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer"
++            onClick={() => {
++              setOpen(false);
++              signOut();
++            }}
++            role="menuitem"
++          >
++            {t("userMenu.signOut")}
++          </div>
++        </div>
++      )}
++    </div>
++  );
++}
++
+
+file update:
+diff --git a/frontend/src/app/billing/page.tsx b/frontend/src/app/billing/page.tsx
+index ff45c152886964821c934f26296754b240a5b44b..82acf106a6cfd9ac6d7fc8a096bb576b22486ec8
+--- a/frontend/src/app/billing/page.tsx
++++ b/frontend/src/app/billing/page.tsx
+@@ -5,6 +5,8 @@
+ import { useRouter, useSearchParams } from "next/navigation";
+ import { useLocale } from "../../i18n";
+ import Header from "../../components/Header";
++import { getUserProfile, createSubscription, createPortalSession } from "../../lib/api";
++import type { UserProfile } from "../../types";
+ 
+ interface Product {
+   id: string;
+@@ -20,6 +22,8 @@
+   const [products, setProducts] = useState<Product[]>([]);
+   const [loading, setLoading] = useState<string | null>(null);
+   const [message, setMessage] = useState<string | null>(null);
++  const [profile, setProfile] = useState<UserProfile | null>(null);
++  const [submitting, setSubmitting] = useState<boolean>(false);
+ 
+   useEffect(() => {
+     if (searchParams.get("success")) {
+@@ -46,6 +50,20 @@
+     fetchProducts();
+   }, []);
+ 
++  useEffect(() => {
++    async function fetchProfile() {
++      try {
++        const p = await getUserProfile();
++        setProfile(p);
++      } catch (e) {
++        // ignore; default CTA will show
++      }
++    }
++    if (status === "authenticated") {
++      fetchProfile();
++    }
++  }, [status]);
++
+   const handlePurchase = async (packId: string) => {
+     setLoading(packId);
+     try {
+@@ -82,6 +100,64 @@
+           </div>
+         )}
+ 
++        {/* Subscription Card */}
++        <section className="mb-8">
++          <div className="rounded-xl bg-gradient-to-r from-blue-500 to-indigo-500 p-[1px]">
++            <div className="rounded-xl bg-white dark:bg-gray-900 p-6 border border-transparent dark:border-gray-800">
++              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
++                <div>
++                  <h2 className="text-xl font-semibold dark:text-gray-100">{t("billing.pro.title")}</h2>
++                  <p className="text-gray-600 dark:text-gray-400 mt-1">{t("billing.pro.description")}</p>
++                </div>
++                <div className="text-right">
++                  <div className="text-2xl font-bold dark:text-gray-100">
++                    {t("billing.pro.pricePerMonth", { price: 9.99 })}
++                  </div>
++                  <div className="mt-3">
++                    {profile?.plan === "pro" ? (
++                      <button
++                        onClick={async () => {
++                          setSubmitting(true);
++                          try {
++                            const res = await createPortalSession();
++                            window.location.href = res.portal_url;
++                          } finally {
++                            setSubmitting(false);
++                          }
++                        }}
++                        disabled={submitting}
++                        className="px-4 py-2 rounded bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-100 hover:bg-gray-200 dark:hover:bg-gray-700 disabled:opacity-50 transition-colors"
++                      >
++                        {t("profile.plan.manage")}
++                      </button>
++                    ) : (
++                      <button
++                        onClick={async () => {
++                          setSubmitting(true);
++                          try {
++                            const res = await createSubscription();
++                            window.location.href = res.checkout_url;
++                          } finally {
++                            setSubmitting(false);
++                          }
++                        }}
++                        disabled={submitting}
++                        className="px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 transition-colors"
++                      >
++                        {t("profile.plan.upgrade")}
++                      </button>
++                    )}
++                  </div>
++                </div>
++              </div>
++            </div>
++          </div>
++        </section>
++
++        <h2 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-4 uppercase tracking-wide">
++          {t("billing.extraTopups")}
++        </h2>
++
+         <div className="grid md:grid-cols-3 gap-6">
+           {products.map((product) => (
+             <div
+@@ -125,4 +201,3 @@
+     </Suspense>
+   );
+ }
+-
+diff --git a/frontend/src/components/Header.tsx b/frontend/src/components/Header.tsx
+index 3ec8abbed1571649dbd8479f3ec7e6430895fb9d..4fc2a98f10670fd688599e0493ef617a9f56cf5f
+--- a/frontend/src/components/Header.tsx
++++ b/frontend/src/components/Header.tsx
+@@ -6,7 +6,7 @@
+ import { useDocTalkStore } from '../store';
+ import ModelSelector from './ModelSelector';
+ import LanguageSelector from './LanguageSelector';
+-import { AuthButton } from './AuthButton';
++import UserMenu from './UserMenu';
+ import { useLocale } from '../i18n';
+ import SessionDropdown from './SessionDropdown';
+ import { CreditsDisplay } from './CreditsDisplay';
+@@ -39,7 +39,7 @@
+           {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
+         </button>
+         <CreditsDisplay />
+-        <AuthButton />
++        <UserMenu />
+         <LanguageSelector />
+       </div>
+     </header>
+diff --git a/frontend/src/components/UserMenu.tsx b/frontend/src/components/UserMenu.tsx
+new file mode 100644
+index 0000000000000000000000000000000000000000..a2a0e622f5139f4637bd4a4090e7f938e4fed561
+--- /dev/null
++++ b/frontend/src/components/UserMenu.tsx
+@@ -0,0 +1,103 @@
++"use client";
++
++import { useEffect, useRef, useState } from "react";
++import { useSession, signIn, signOut } from "next-auth/react";
++import { useRouter } from "next/navigation";
++import { useLocale } from "../i18n";
++
++export default function UserMenu() {
++  const { data: session, status } = useSession();
++  const { t } = useLocale();
++  const router = useRouter();
++
++  const [open, setOpen] = useState(false);
++  const menuRef = useRef<HTMLDivElement | null>(null);
++
++  useEffect(() => {
++    function onClickOutside(e: MouseEvent) {
++      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
++        setOpen(false);
++      }
++    }
++    if (open) {
++      document.addEventListener("mousedown", onClickOutside);
++    }
++    return () => document.removeEventListener("mousedown", onClickOutside);
++  }, [open]);
++
++  if (status === "loading") {
++    return (
++      <div className="w-8 h-8 rounded-full bg-gray-200 dark:bg-gray-700 animate-pulse" />
++    );
++  }
++
++  if (!session?.user) {
++    return (
++      <button
++        onClick={() => signIn()}
++        className="px-3 py-1.5 text-sm bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
++      >
++        {t("auth.signIn")}
++      </button>
++    );
++  }
++
++  const userImage = (session.user as any).image as string | undefined;
++
++  const go = (path: string) => {
++    router.push(path);
++    setOpen(false);
++  };
++
++  return (
++    <div className="relative" ref={menuRef}>
++      <button
++        onClick={() => setOpen((v) => !v)}
++        className="w-8 h-8 rounded-full overflow-hidden border border-gray-200 dark:border-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
++        aria-haspopup="menu"
++        aria-expanded={open}
++      >
++        {userImage ? (
++          // eslint-disable-next-line @next/next/no-img-element
++          <img src={userImage} alt="" className="w-8 h-8 object-cover" />
++        ) : (
++          <div className="w-8 h-8 bg-gray-200 dark:bg-gray-700" />
++        )}
++      </button>
++
++      {open && (
++        <div
++          className="absolute right-0 top-full mt-2 w-48 bg-white dark:bg-gray-800 border dark:border-gray-700 rounded-lg shadow-lg z-50"
++          role="menu"
++        >
++          <div
++            className="px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer"
++            onClick={() => go("/profile")}
++            role="menuitem"
++          >
++            {t("userMenu.profile")}
++          </div>
++          <div
++            className="px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer"
++            onClick={() => go("/billing")}
++            role="menuitem"
++          >
++            {t("userMenu.buyCredits")}
++          </div>
++          <hr className="my-1 border-gray-200 dark:border-gray-700" />
++          <div
++            className="px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer"
++            onClick={() => {
++              setOpen(false);
++              signOut();
++            }}
++            role="menuitem"
++          >
++            {t("userMenu.signOut")}
++          </div>
++        </div>
++      )}
++    </div>
++  );
++}
++
+
+
+thinking
+**Updating JSON keys**
+
+I’m looking to update the `en.json` file by adding new keys like `billing.pro.title`, `billing.pro.description`, `billing.pro.pricePerMonth`, and `billing.extraTopups`. I should patch the `en.json` now to ensure these new keys are integrated correctly. This seems straightforward, but I want to make sure there are no typos or mistakes in the process. I'll double-check everything to get it right!
+file update
+M /Users/mayijie/Projects/Code/010_DocTalk/frontend/src/i18n/locales/en.json
+@@ -91,2 +91,6 @@
+   "billing.error": "An error occurred. Please try again.",
++  "billing.pro.title": "Pro Plan",
++  "billing.pro.description": "100,000 credits/month",
++  "billing.pro.pricePerMonth": "${price}/month",
++  "billing.extraTopups": "Extra Credit Top-ups",
+   "common.cancel": "Cancel",
+apply_patch(auto_approved=true) exited 0 in 51ms:
+Success. Updated the following files:
+M frontend/src/i18n/locales/en.json
+file update:
+diff --git a/frontend/src/app/billing/page.tsx b/frontend/src/app/billing/page.tsx
+index ff45c152886964821c934f26296754b240a5b44b..82acf106a6cfd9ac6d7fc8a096bb576b22486ec8
+--- a/frontend/src/app/billing/page.tsx
++++ b/frontend/src/app/billing/page.tsx
+@@ -5,6 +5,8 @@
+ import { useRouter, useSearchParams } from "next/navigation";
+ import { useLocale } from "../../i18n";
+ import Header from "../../components/Header";
++import { getUserProfile, createSubscription, createPortalSession } from "../../lib/api";
++import type { UserProfile } from "../../types";
+ 
+ interface Product {
+   id: string;
+@@ -20,6 +22,8 @@
+   const [products, setProducts] = useState<Product[]>([]);
+   const [loading, setLoading] = useState<string | null>(null);
+   const [message, setMessage] = useState<string | null>(null);
++  const [profile, setProfile] = useState<UserProfile | null>(null);
++  const [submitting, setSubmitting] = useState<boolean>(false);
+ 
+   useEffect(() => {
+     if (searchParams.get("success")) {
+@@ -46,6 +50,20 @@
+     fetchProducts();
+   }, []);
+ 
++  useEffect(() => {
++    async function fetchProfile() {
++      try {
++        const p = await getUserProfile();
++        setProfile(p);
++      } catch (e) {
++        // ignore; default CTA will show
++      }
++    }
++    if (status === "authenticated") {
++      fetchProfile();
++    }
++  }, [status]);
++
+   const handlePurchase = async (packId: string) => {
+     setLoading(packId);
+     try {
+@@ -82,6 +100,64 @@
+           </div>
+         )}
+ 
++        {/* Subscription Card */}
++        <section className="mb-8">
++          <div className="rounded-xl bg-gradient-to-r from-blue-500 to-indigo-500 p-[1px]">
++            <div className="rounded-xl bg-white dark:bg-gray-900 p-6 border border-transparent dark:border-gray-800">
++              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
++                <div>
++                  <h2 className="text-xl font-semibold dark:text-gray-100">{t("billing.pro.title")}</h2>
++                  <p className="text-gray-600 dark:text-gray-400 mt-1">{t("billing.pro.description")}</p>
++                </div>
++                <div className="text-right">
++                  <div className="text-2xl font-bold dark:text-gray-100">
++                    {t("billing.pro.pricePerMonth", { price: 9.99 })}
++                  </div>
++                  <div className="mt-3">
++                    {profile?.plan === "pro" ? (
++                      <button
++                        onClick={async () => {
++                          setSubmitting(true);
++                          try {
++                            const res = await createPortalSession();
++                            window.location.href = res.portal_url;
++                          } finally {
++                            setSubmitting(false);
++                          }
++                        }}
++                        disabled={submitting}
++                        className="px-4 py-2 rounded bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-100 hover:bg-gray-200 dark:hover:bg-gray-700 disabled:opacity-50 transition-colors"
++                      >
++                        {t("profile.plan.manage")}
++                      </button>
++                    ) : (
++                      <button
++                        onClick={async () => {
++                          setSubmitting(true);
++                          try {
++                            const res = await createSubscription();
++                            window.location.href = res.checkout_url;
++                          } finally {
++                            setSubmitting(false);
++                          }
++                        }}
++                        disabled={submitting}
++                        className="px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 transition-colors"
++                      >
++                        {t("profile.plan.upgrade")}
++                      </button>
++                    )}
++                  </div>
++                </div>
++              </div>
++            </div>
++          </div>
++        </section>
++
++        <h2 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-4 uppercase tracking-wide">
++          {t("billing.extraTopups")}
++        </h2>
++
+         <div className="grid md:grid-cols-3 gap-6">
+           {products.map((product) => (
+             <div
+@@ -125,4 +201,3 @@
+     </Suspense>
+   );
+ }
+-
+diff --git a/frontend/src/components/Header.tsx b/frontend/src/components/Header.tsx
+index 3ec8abbed1571649dbd8479f3ec7e6430895fb9d..4fc2a98f10670fd688599e0493ef617a9f56cf5f
+--- a/frontend/src/components/Header.tsx
++++ b/frontend/src/components/Header.tsx
+@@ -6,7 +6,7 @@
+ import { useDocTalkStore } from '../store';
+ import ModelSelector from './ModelSelector';
+ import LanguageSelector from './LanguageSelector';
+-import { AuthButton } from './AuthButton';
++import UserMenu from './UserMenu';
+ import { useLocale } from '../i18n';
+ import SessionDropdown from './SessionDropdown';
+ import { CreditsDisplay } from './CreditsDisplay';
+@@ -39,7 +39,7 @@
+           {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
+         </button>
+         <CreditsDisplay />
+-        <AuthButton />
++        <UserMenu />
+         <LanguageSelector />
+       </div>
+     </header>
+diff --git a/frontend/src/components/UserMenu.tsx b/frontend/src/components/UserMenu.tsx
+new file mode 100644
+index 0000000000000000000000000000000000000000..a2a0e622f5139f4637bd4a4090e7f938e4fed561
+--- /dev/null
++++ b/frontend/src/components/UserMenu.tsx
+@@ -0,0 +1,103 @@
++"use client";
++
++import { useEffect, useRef, useState } from "react";
++import { useSession, signIn, signOut } from "next-auth/react";
++import { useRouter } from "next/navigation";
++import { useLocale } from "../i18n";
++
++export default function UserMenu() {
++  const { data: session, status } = useSession();
++  const { t } = useLocale();
++  const router = useRouter();
++
++  const [open, setOpen] = useState(false);
++  const menuRef = useRef<HTMLDivElement | null>(null);
++
++  useEffect(() => {
++    function onClickOutside(e: MouseEvent) {
++      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
++        setOpen(false);
++      }
++    }
++    if (open) {
++      document.addEventListener("mousedown", onClickOutside);
++    }
++    return () => document.removeEventListener("mousedown", onClickOutside);
++  }, [open]);
++
++  if (status === "loading") {
++    return (
++      <div className="w-8 h-8 rounded-full bg-gray-200 dark:bg-gray-700 animate-pulse" />
++    );
++  }
++
++  if (!session?.user) {
++    return (
++      <button
++        onClick={() => signIn()}
++        className="px-3 py-1.5 text-sm bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
++      >
++        {t("auth.signIn")}
++      </button>
++    );
++  }
++
++  const userImage = (session.user as any).image as string | undefined;
++
++  const go = (path: string) => {
++    router.push(path);
++    setOpen(false);
++  };
++
++  return (
++    <div className="relative" ref={menuRef}>
++      <button
++        onClick={() => setOpen((v) => !v)}
++        className="w-8 h-8 rounded-full overflow-hidden border border-gray-200 dark:border-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
++        aria-haspopup="menu"
++        aria-expanded={open}
++      >
++        {userImage ? (
++          // eslint-disable-next-line @next/next/no-img-element
++          <img src={userImage} alt="" className="w-8 h-8 object-cover" />
++        ) : (
++          <div className="w-8 h-8 bg-gray-200 dark:bg-gray-700" />
++        )}
++      </button>
++
++      {open && (
++        <div
++          className="absolute right-0 top-full mt-2 w-48 bg-white dark:bg-gray-800 border dark:border-gray-700 rounded-lg shadow-lg z-50"
++          role="menu"
++        >
++          <div
++            className="px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer"
++            onClick={() => go("/profile")}
++            role="menuitem"
++          >
++            {t("userMenu.profile")}
++          </div>
++          <div
++            className="px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer"
++            onClick={() => go("/billing")}
++            role="menuitem"
++          >
++            {t("userMenu.buyCredits")}
++          </div>
++          <hr className="my-1 border-gray-200 dark:border-gray-700" />
++          <div
++            className="px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer"
++            onClick={() => {
++              setOpen(false);
++              signOut();
++            }}
++            role="menuitem"
++          >
++            {t("userMenu.signOut")}
++          </div>
++        </div>
++      )}
++    </div>
++  );
++}
++
+diff --git a/frontend/src/i18n/locales/en.json b/frontend/src/i18n/locales/en.json
+index 8de08189b6d237f0fffea8b82ca3df73de88a507..23fd09a73fadb0999409c6fb608f63cfaddff697
+--- a/frontend/src/i18n/locales/en.json
++++ b/frontend/src/i18n/locales/en.json
+@@ -89,6 +89,10 @@
+   "billing.purchaseSuccess": "Purchase successful! Credits have been added to your account.",
+   "billing.purchaseCanceled": "Purchase was canceled.",
+   "billing.error": "An error occurred. Please try again.",
++  "billing.pro.title": "Pro Plan",
++  "billing.pro.description": "100,000 credits/month",
++  "billing.pro.pricePerMonth": "${price}/month",
++  "billing.extraTopups": "Extra Credit Top-ups",
+   "common.cancel": "Cancel",
+   "common.loading": "Loading...",
+ 
+
+file update:
+diff --git a/frontend/src/app/billing/page.tsx b/frontend/src/app/billing/page.tsx
+index ff45c152886964821c934f26296754b240a5b44b..82acf106a6cfd9ac6d7fc8a096bb576b22486ec8
+--- a/frontend/src/app/billing/page.tsx
++++ b/frontend/src/app/billing/page.tsx
+@@ -5,6 +5,8 @@
+ import { useRouter, useSearchParams } from "next/navigation";
+ import { useLocale } from "../../i18n";
+ import Header from "../../components/Header";
++import { getUserProfile, createSubscription, createPortalSession } from "../../lib/api";
++import type { UserProfile } from "../../types";
+ 
+ interface Product {
+   id: string;
+@@ -20,6 +22,8 @@
+   const [products, setProducts] = useState<Product[]>([]);
+   const [loading, setLoading] = useState<string | null>(null);
+   const [message, setMessage] = useState<string | null>(null);
++  const [profile, setProfile] = useState<UserProfile | null>(null);
++  const [submitting, setSubmitting] = useState<boolean>(false);
+ 
+   useEffect(() => {
+     if (searchParams.get("success")) {
+@@ -46,6 +50,20 @@
+     fetchProducts();
+   }, []);
+ 
++  useEffect(() => {
++    async function fetchProfile() {
++      try {
++        const p = await getUserProfile();
++        setProfile(p);
++      } catch (e) {
++        // ignore; default CTA will show
++      }
++    }
++    if (status === "authenticated") {
++      fetchProfile();
++    }
++  }, [status]);
++
+   const handlePurchase = async (packId: string) => {
+     setLoading(packId);
+     try {
+@@ -82,6 +100,64 @@
+           </div>
+         )}
+ 
++        {/* Subscription Card */}
++        <section className="mb-8">
++          <div className="rounded-xl bg-gradient-to-r from-blue-500 to-indigo-500 p-[1px]">
++            <div className="rounded-xl bg-white dark:bg-gray-900 p-6 border border-transparent dark:border-gray-800">
++              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
++                <div>
++                  <h2 className="text-xl font-semibold dark:text-gray-100">{t("billing.pro.title")}</h2>
++                  <p className="text-gray-600 dark:text-gray-400 mt-1">{t("billing.pro.description")}</p>
++                </div>
++                <div className="text-right">
++                  <div className="text-2xl font-bold dark:text-gray-100">
++                    {t("billing.pro.pricePerMonth", { price: 9.99 })}
++                  </div>
++                  <div className="mt-3">
++                    {profile?.plan === "pro" ? (
++                      <button
++                        onClick={async () => {
++                          setSubmitting(true);
++                          try {
++                            const res = await createPortalSession();
++                            window.location.href = res.portal_url;
++                          } finally {
++                            setSubmitting(false);
++                          }
++                        }}
++                        disabled={submitting}
++                        className="px-4 py-2 rounded bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-100 hover:bg-gray-200 dark:hover:bg-gray-700 disabled:opacity-50 transition-colors"
++                      >
++                        {t("profile.plan.manage")}
++                      </button>
++                    ) : (
++                      <button
++                        onClick={async () => {
++                          setSubmitting(true);
++                          try {
++                            const res = await createSubscription();
++                            window.location.href = res.checkout_url;
++                          } finally {
++                            setSubmitting(false);
++                          }
++                        }}
++                        disabled={submitting}
++                        className="px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 transition-colors"
++                      >
++                        {t("profile.plan.upgrade")}
++                      </button>
++                    )}
++                  </div>
++                </div>
++              </div>
++            </div>
++          </div>
++        </section>
++
++        <h2 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-4 uppercase tracking-wide">
++          {t("billing.extraTopups")}
++        </h2>
++
+         <div className="grid md:grid-cols-3 gap-6">
+           {products.map((product) => (
+             <div
+@@ -125,4 +201,3 @@
+     </Suspense>
+   );
+ }
+-
+diff --git a/frontend/src/components/Header.tsx b/frontend/src/components/Header.tsx
+index 3ec8abbed1571649dbd8479f3ec7e6430895fb9d..4fc2a98f10670fd688599e0493ef617a9f56cf5f
+--- a/frontend/src/components/Header.tsx
++++ b/frontend/src/components/Header.tsx
+@@ -6,7 +6,7 @@
+ import { useDocTalkStore } from '../store';
+ import ModelSelector from './ModelSelector';
+ import LanguageSelector from './LanguageSelector';
+-import { AuthButton } from './AuthButton';
++import UserMenu from './UserMenu';
+ import { useLocale } from '../i18n';
+ import SessionDropdown from './SessionDropdown';
+ import { CreditsDisplay } from './CreditsDisplay';
+@@ -39,7 +39,7 @@
+           {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
+         </button>
+         <CreditsDisplay />
+-        <AuthButton />
++        <UserMenu />
+         <LanguageSelector />
+       </div>
+     </header>
+diff --git a/frontend/src/components/UserMenu.tsx b/frontend/src/components/UserMenu.tsx
+new file mode 100644
+index 0000000000000000000000000000000000000000..a2a0e622f5139f4637bd4a4090e7f938e4fed561
+--- /dev/null
++++ b/frontend/src/components/UserMenu.tsx
+@@ -0,0 +1,103 @@
++"use client";
++
++import { useEffect, useRef, useState } from "react";
++import { useSession, signIn, signOut } from "next-auth/react";
++import { useRouter } from "next/navigation";
++import { useLocale } from "../i18n";
++
++export default function UserMenu() {
++  const { data: session, status } = useSession();
++  const { t } = useLocale();
++  const router = useRouter();
++
++  const [open, setOpen] = useState(false);
++  const menuRef = useRef<HTMLDivElement | null>(null);
++
++  useEffect(() => {
++    function onClickOutside(e: MouseEvent) {
++      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
++        setOpen(false);
++      }
++    }
++    if (open) {
++      document.addEventListener("mousedown", onClickOutside);
++    }
++    return () => document.removeEventListener("mousedown", onClickOutside);
++  }, [open]);
++
++  if (status === "loading") {
++    return (
++      <div className="w-8 h-8 rounded-full bg-gray-200 dark:bg-gray-700 animate-pulse" />
++    );
++  }
++
++  if (!session?.user) {
++    return (
++      <button
++        onClick={() => signIn()}
++        className="px-3 py-1.5 text-sm bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
++      >
++        {t("auth.signIn")}
++      </button>
++    );
++  }
++
++  const userImage = (session.user as any).image as string | undefined;
++
++  const go = (path: string) => {
++    router.push(path);
++    setOpen(false);
++  };
++
++  return (
++    <div className="relative" ref={menuRef}>
++      <button
++        onClick={() => setOpen((v) => !v)}
++        className="w-8 h-8 rounded-full overflow-hidden border border-gray-200 dark:border-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
++        aria-haspopup="menu"
++        aria-expanded={open}
++      >
++        {userImage ? (
++          // eslint-disable-next-line @next/next/no-img-element
++          <img src={userImage} alt="" className="w-8 h-8 object-cover" />
++        ) : (
++          <div className="w-8 h-8 bg-gray-200 dark:bg-gray-700" />
++        )}
++      </button>
++
++      {open && (
++        <div
++          className="absolute right-0 top-full mt-2 w-48 bg-white dark:bg-gray-800 border dark:border-gray-700 rounded-lg shadow-lg z-50"
++          role="menu"
++        >
++          <div
++            className="px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer"
++            onClick={() => go("/profile")}
++            role="menuitem"
++          >
++            {t("userMenu.profile")}
++          </div>
++          <div
++            className="px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer"
++            onClick={() => go("/billing")}
++            role="menuitem"
++          >
++            {t("userMenu.buyCredits")}
++          </div>
++          <hr className="my-1 border-gray-200 dark:border-gray-700" />
++          <div
++            className="px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer"
++            onClick={() => {
++              setOpen(false);
++              signOut();
++            }}
++            role="menuitem"
++          >
++            {t("userMenu.signOut")}
++          </div>
++        </div>
++      )}
++    </div>
++  );
++}
++
+diff --git a/frontend/src/i18n/locales/en.json b/frontend/src/i18n/locales/en.json
+index 8de08189b6d237f0fffea8b82ca3df73de88a507..23fd09a73fadb0999409c6fb608f63cfaddff697
+--- a/frontend/src/i18n/locales/en.json
++++ b/frontend/src/i18n/locales/en.json
+@@ -89,6 +89,10 @@
+   "billing.purchaseSuccess": "Purchase successful! Credits have been added to your account.",
+   "billing.purchaseCanceled": "Purchase was canceled.",
+   "billing.error": "An error occurred. Please try again.",
++  "billing.pro.title": "Pro Plan",
++  "billing.pro.description": "100,000 credits/month",
++  "billing.pro.pricePerMonth": "${price}/month",
++  "billing.extraTopups": "Extra Credit Top-ups",
+   "common.cancel": "Cancel",
+   "common.loading": "Loading...",
+ 
+
+
+thinking
+**Checking imports and text usage**
+
+I need to ensure that the imports for types are correct. We imported `type { UserProfile } from "../../types"`, and since there’s an index.ts in the types folder, that should work fine. I’ll quickly check for duplicate definitions. AuthButton.tsx needs to stay, but now Header uses UserMenu. I also need to ensure that we're using "use i18n t()" for all text. Billing is mostly good, but there's a price number that isn’t using t(). I'll check for any leftover AuthButton references too.
+exec
+bash -lc 'rg -n "AuthButton" frontend/src -S || true' in /Users/mayijie/Projects/Code/010_DocTalk succeeded in 13ms:
+frontend/src/components/AuthButton.tsx:6:export function AuthButton() {
+file update:
+diff --git a/frontend/src/app/billing/page.tsx b/frontend/src/app/billing/page.tsx
+index ff45c152886964821c934f26296754b240a5b44b..82acf106a6cfd9ac6d7fc8a096bb576b22486ec8
+--- a/frontend/src/app/billing/page.tsx
++++ b/frontend/src/app/billing/page.tsx
+@@ -5,6 +5,8 @@
+ import { useRouter, useSearchParams } from "next/navigation";
+ import { useLocale } from "../../i18n";
+ import Header from "../../components/Header";
++import { getUserProfile, createSubscription, createPortalSession } from "../../lib/api";
++import type { UserProfile } from "../../types";
+ 
+ interface Product {
+   id: string;
+@@ -20,6 +22,8 @@
+   const [products, setProducts] = useState<Product[]>([]);
+   const [loading, setLoading] = useState<string | null>(null);
+   const [message, setMessage] = useState<string | null>(null);
++  const [profile, setProfile] = useState<UserProfile | null>(null);
++  const [submitting, setSubmitting] = useState<boolean>(false);
+ 
+   useEffect(() => {
+     if (searchParams.get("success")) {
+@@ -46,6 +50,20 @@
+     fetchProducts();
+   }, []);
+ 
++  useEffect(() => {
++    async function fetchProfile() {
++      try {
++        const p = await getUserProfile();
++        setProfile(p);
++      } catch (e) {
++        // ignore; default CTA will show
++      }
++    }
++    if (status === "authenticated") {
++      fetchProfile();
++    }
++  }, [status]);
++
+   const handlePurchase = async (packId: string) => {
+     setLoading(packId);
+     try {
+@@ -82,6 +100,64 @@
+           </div>
+         )}
+ 
++        {/* Subscription Card */}
++        <section className="mb-8">
++          <div className="rounded-xl bg-gradient-to-r from-blue-500 to-indigo-500 p-[1px]">
++            <div className="rounded-xl bg-white dark:bg-gray-900 p-6 border border-transparent dark:border-gray-800">
++              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
++                <div>
++                  <h2 className="text-xl font-semibold dark:text-gray-100">{t("billing.pro.title")}</h2>
++                  <p className="text-gray-600 dark:text-gray-400 mt-1">{t("billing.pro.description")}</p>
++                </div>
++                <div className="text-right">
++                  <div className="text-2xl font-bold dark:text-gray-100">
++                    {t("billing.pro.pricePerMonth", { price: 9.99 })}
++                  </div>
++                  <div className="mt-3">
++                    {profile?.plan === "pro" ? (
++                      <button
++                        onClick={async () => {
++                          setSubmitting(true);
++                          try {
++                            const res = await createPortalSession();
++                            window.location.href = res.portal_url;
++                          } finally {
++                            setSubmitting(false);
++                          }
++                        }}
++                        disabled={submitting}
++                        className="px-4 py-2 rounded bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-100 hover:bg-gray-200 dark:hover:bg-gray-700 disabled:opacity-50 transition-colors"
++                      >
++                        {t("profile.plan.manage")}
++                      </button>
++                    ) : (
++                      <button
++                        onClick={async () => {
++                          setSubmitting(true);
++                          try {
++                            const res = await createSubscription();
++                            window.location.href = res.checkout_url;
++                          } finally {
++                            setSubmitting(false);
++                          }
++                        }}
++                        disabled={submitting}
++                        className="px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 transition-colors"
++                      >
++                        {t("profile.plan.upgrade")}
++                      </button>
++                    )}
++                  </div>
++                </div>
++              </div>
++            </div>
++          </div>
++        </section>
++
++        <h2 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-4 uppercase tracking-wide">
++          {t("billing.extraTopups")}
++        </h2>
++
+         <div className="grid md:grid-cols-3 gap-6">
+           {products.map((product) => (
+             <div
+@@ -125,4 +201,3 @@
+     </Suspense>
+   );
+ }
+-
+diff --git a/frontend/src/components/Header.tsx b/frontend/src/components/Header.tsx
+index 3ec8abbed1571649dbd8479f3ec7e6430895fb9d..4fc2a98f10670fd688599e0493ef617a9f56cf5f
+--- a/frontend/src/components/Header.tsx
++++ b/frontend/src/components/Header.tsx
+@@ -6,7 +6,7 @@
+ import { useDocTalkStore } from '../store';
+ import ModelSelector from './ModelSelector';
+ import LanguageSelector from './LanguageSelector';
+-import { AuthButton } from './AuthButton';
++import UserMenu from './UserMenu';
+ import { useLocale } from '../i18n';
+ import SessionDropdown from './SessionDropdown';
+ import { CreditsDisplay } from './CreditsDisplay';
+@@ -39,7 +39,7 @@
+           {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
+         </button>
+         <CreditsDisplay />
+-        <AuthButton />
++        <UserMenu />
+         <LanguageSelector />
+       </div>
+     </header>
+diff --git a/frontend/src/components/UserMenu.tsx b/frontend/src/components/UserMenu.tsx
+new file mode 100644
+index 0000000000000000000000000000000000000000..a2a0e622f5139f4637bd4a4090e7f938e4fed561
+--- /dev/null
++++ b/frontend/src/components/UserMenu.tsx
+@@ -0,0 +1,103 @@
++"use client";
++
++import { useEffect, useRef, useState } from "react";
++import { useSession, signIn, signOut } from "next-auth/react";
++import { useRouter } from "next/navigation";
++import { useLocale } from "../i18n";
++
++export default function UserMenu() {
++  const { data: session, status } = useSession();
++  const { t } = useLocale();
++  const router = useRouter();
++
++  const [open, setOpen] = useState(false);
++  const menuRef = useRef<HTMLDivElement | null>(null);
++
++  useEffect(() => {
++    function onClickOutside(e: MouseEvent) {
++      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
++        setOpen(false);
++      }
++    }
++    if (open) {
++      document.addEventListener("mousedown", onClickOutside);
++    }
++    return () => document.removeEventListener("mousedown", onClickOutside);
++  }, [open]);
++
++  if (status === "loading") {
++    return (
++      <div className="w-8 h-8 rounded-full bg-gray-200 dark:bg-gray-700 animate-pulse" />
++    );
++  }
++
++  if (!session?.user) {
++    return (
++      <button
++        onClick={() => signIn()}
++        className="px-3 py-1.5 text-sm bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
++      >
++        {t("auth.signIn")}
++      </button>
++    );
++  }
++
++  const userImage = (session.user as any).image as string | undefined;
++
++  const go = (path: string) => {
++    router.push(path);
++    setOpen(false);
++  };
++
++  return (
++    <div className="relative" ref={menuRef}>
++      <button
++        onClick={() => setOpen((v) => !v)}
++        className="w-8 h-8 rounded-full overflow-hidden border border-gray-200 dark:border-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
++        aria-haspopup="menu"
++        aria-expanded={open}
++      >
++        {userImage ? (
++          // eslint-disable-next-line @next/next/no-img-element
++          <img src={userImage} alt="" className="w-8 h-8 object-cover" />
++        ) : (
++          <div className="w-8 h-8 bg-gray-200 dark:bg-gray-700" />
++        )}
++      </button>
++
++      {open && (
++        <div
++          className="absolute right-0 top-full mt-2 w-48 bg-white dark:bg-gray-800 border dark:border-gray-700 rounded-lg shadow-lg z-50"
++          role="menu"
++        >
++          <div
++            className="px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer"
++            onClick={() => go("/profile")}
++            role="menuitem"
++          >
++            {t("userMenu.profile")}
++          </div>
++          <div
++            className="px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer"
++            onClick={() => go("/billing")}
++            role="menuitem"
++          >
++            {t("userMenu.buyCredits")}
++          </div>
++          <hr className="my-1 border-gray-200 dark:border-gray-700" />
++          <div
++            className="px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer"
++            onClick={() => {
++              setOpen(false);
++              signOut();
++            }}
++            role="menuitem"
++          >
++            {t("userMenu.signOut")}
++          </div>
++        </div>
++      )}
++    </div>
++  );
++}
++
+diff --git a/frontend/src/i18n/locales/en.json b/frontend/src/i18n/locales/en.json
+index 8de08189b6d237f0fffea8b82ca3df73de88a507..23fd09a73fadb0999409c6fb608f63cfaddff697
+--- a/frontend/src/i18n/locales/en.json
++++ b/frontend/src/i18n/locales/en.json
+@@ -89,6 +89,10 @@
+   "billing.purchaseSuccess": "Purchase successful! Credits have been added to your account.",
+   "billing.purchaseCanceled": "Purchase was canceled.",
+   "billing.error": "An error occurred. Please try again.",
++  "billing.pro.title": "Pro Plan",
++  "billing.pro.description": "100,000 credits/month",
++  "billing.pro.pricePerMonth": "${price}/month",
++  "billing.extraTopups": "Extra Credit Top-ups",
+   "common.cancel": "Cancel",
+   "common.loading": "Loading...",
+ 
+
+
+thinking
+**Ensuring components and testing**
+
+I need to make sure the header includes LanguageSelector after UserMenu, just like before, and ModelSelector too. I should check for any missing translation keys and confirm we've added the necessary ones. It’s also crucial to verify the bundling path and be aware of potential TypeScript warnings regarding the 'react' import in Header—we didn’t change that. I might need to adjust the color scheme and check if we need to update references related to the 'buy credits' path from the user menu. Finally, do we want to run tests or compile TypeScript?
+exec
+bash -lc "rg -n \"billing\\.pro\\.|billing\\.extraTopups|userMenu\\.profile|userMenu\\.buyCredits|userMenu\\.signOut\" frontend/src -S" in /Users/mayijie/Projects/Code/010_DocTalk succeeded in 19ms:
+frontend/src/i18n/locales/en.json:92:  "billing.pro.title": "Pro Plan",
+frontend/src/i18n/locales/en.json:93:  "billing.pro.description": "100,000 credits/month",
+frontend/src/i18n/locales/en.json:94:  "billing.pro.pricePerMonth": "${price}/month",
+frontend/src/i18n/locales/en.json:95:  "billing.extraTopups": "Extra Credit Top-ups",
+frontend/src/i18n/locales/en.json:198:  "userMenu.profile": "Profile",
+frontend/src/i18n/locales/en.json:199:  "userMenu.buyCredits": "Buy Credits",
+frontend/src/i18n/locales/en.json:200:  "userMenu.signOut": "Sign Out"
+frontend/src/components/UserMenu.tsx:78:            {t("userMenu.profile")}
+frontend/src/components/UserMenu.tsx:85:            {t("userMenu.buyCredits")}
+frontend/src/components/UserMenu.tsx:96:            {t("userMenu.signOut")}
+frontend/src/app/billing/page.tsx:109:                  <h2 className="text-xl font-semibold dark:text-gray-100">{t("billing.pro.title")}</h2>
+frontend/src/app/billing/page.tsx:110:                  <p className="text-gray-600 dark:text-gray-400 mt-1">{t("billing.pro.description")}</p>
+frontend/src/app/billing/page.tsx:114:                    {t("billing.pro.pricePerMonth", { price: 9.99 })}
+frontend/src/app/billing/page.tsx:158:          {t("billing.extraTopups")}
+file update:
+diff --git a/frontend/src/app/billing/page.tsx b/frontend/src/app/billing/page.tsx
+index ff45c152886964821c934f26296754b240a5b44b..82acf106a6cfd9ac6d7fc8a096bb576b22486ec8
+--- a/frontend/src/app/billing/page.tsx
++++ b/frontend/src/app/billing/page.tsx
+@@ -5,6 +5,8 @@
+ import { useRouter, useSearchParams } from "next/navigation";
+ import { useLocale } from "../../i18n";
+ import Header from "../../components/Header";
++import { getUserProfile, createSubscription, createPortalSession } from "../../lib/api";
++import type { UserProfile } from "../../types";
+ 
+ interface Product {
+   id: string;
+@@ -20,6 +22,8 @@
+   const [products, setProducts] = useState<Product[]>([]);
+   const [loading, setLoading] = useState<string | null>(null);
+   const [message, setMessage] = useState<string | null>(null);
++  const [profile, setProfile] = useState<UserProfile | null>(null);
++  const [submitting, setSubmitting] = useState<boolean>(false);
+ 
+   useEffect(() => {
+     if (searchParams.get("success")) {
+@@ -46,6 +50,20 @@
+     fetchProducts();
+   }, []);
+ 
++  useEffect(() => {
++    async function fetchProfile() {
++      try {
++        const p = await getUserProfile();
++        setProfile(p);
++      } catch (e) {
++        // ignore; default CTA will show
++      }
++    }
++    if (status === "authenticated") {
++      fetchProfile();
++    }
++  }, [status]);
++
+   const handlePurchase = async (packId: string) => {
+     setLoading(packId);
+     try {
+@@ -82,6 +100,64 @@
+           </div>
+         )}
+ 
++        {/* Subscription Card */}
++        <section className="mb-8">
++          <div className="rounded-xl bg-gradient-to-r from-blue-500 to-indigo-500 p-[1px]">
++            <div className="rounded-xl bg-white dark:bg-gray-900 p-6 border border-transparent dark:border-gray-800">
++              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
++                <div>
++                  <h2 className="text-xl font-semibold dark:text-gray-100">{t("billing.pro.title")}</h2>
++                  <p className="text-gray-600 dark:text-gray-400 mt-1">{t("billing.pro.description")}</p>
++                </div>
++                <div className="text-right">
++                  <div className="text-2xl font-bold dark:text-gray-100">
++                    {t("billing.pro.pricePerMonth", { price: 9.99 })}
++                  </div>
++                  <div className="mt-3">
++                    {profile?.plan === "pro" ? (
++                      <button
++                        onClick={async () => {
++                          setSubmitting(true);
++                          try {
++                            const res = await createPortalSession();
++                            window.location.href = res.portal_url;
++                          } finally {
++                            setSubmitting(false);
++                          }
++                        }}
++                        disabled={submitting}
++                        className="px-4 py-2 rounded bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-100 hover:bg-gray-200 dark:hover:bg-gray-700 disabled:opacity-50 transition-colors"
++                      >
++                        {t("profile.plan.manage")}
++                      </button>
++                    ) : (
++                      <button
++                        onClick={async () => {
++                          setSubmitting(true);
++                          try {
++                            const res = await createSubscription();
++                            window.location.href = res.checkout_url;
++                          } finally {
++                            setSubmitting(false);
++                          }
++                        }}
++                        disabled={submitting}
++                        className="px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 transition-colors"
++                      >
++                        {t("profile.plan.upgrade")}
++                      </button>
++                    )}
++                  </div>
++                </div>
++              </div>
++            </div>
++          </div>
++        </section>
++
++        <h2 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-4 uppercase tracking-wide">
++          {t("billing.extraTopups")}
++        </h2>
++
+         <div className="grid md:grid-cols-3 gap-6">
+           {products.map((product) => (
+             <div
+@@ -125,4 +201,3 @@
+     </Suspense>
+   );
+ }
+-
+diff --git a/frontend/src/components/Header.tsx b/frontend/src/components/Header.tsx
+index 3ec8abbed1571649dbd8479f3ec7e6430895fb9d..4fc2a98f10670fd688599e0493ef617a9f56cf5f
+--- a/frontend/src/components/Header.tsx
++++ b/frontend/src/components/Header.tsx
+@@ -6,7 +6,7 @@
+ import { useDocTalkStore } from '../store';
+ import ModelSelector from './ModelSelector';
+ import LanguageSelector from './LanguageSelector';
+-import { AuthButton } from './AuthButton';
++import UserMenu from './UserMenu';
+ import { useLocale } from '../i18n';
+ import SessionDropdown from './SessionDropdown';
+ import { CreditsDisplay } from './CreditsDisplay';
+@@ -39,7 +39,7 @@
+           {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
+         </button>
+         <CreditsDisplay />
+-        <AuthButton />
++        <UserMenu />
+         <LanguageSelector />
+       </div>
+     </header>
+diff --git a/frontend/src/components/UserMenu.tsx b/frontend/src/components/UserMenu.tsx
+new file mode 100644
+index 0000000000000000000000000000000000000000..a2a0e622f5139f4637bd4a4090e7f938e4fed561
+--- /dev/null
++++ b/frontend/src/components/UserMenu.tsx
+@@ -0,0 +1,103 @@
++"use client";
++
++import { useEffect, useRef, useState } from "react";
++import { useSession, signIn, signOut } from "next-auth/react";
++import { useRouter } from "next/navigation";
++import { useLocale } from "../i18n";
++
++export default function UserMenu() {
++  const { data: session, status } = useSession();
++  const { t } = useLocale();
++  const router = useRouter();
++
++  const [open, setOpen] = useState(false);
++  const menuRef = useRef<HTMLDivElement | null>(null);
++
++  useEffect(() => {
++    function onClickOutside(e: MouseEvent) {
++      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
++        setOpen(false);
++      }
++    }
++    if (open) {
++      document.addEventListener("mousedown", onClickOutside);
++    }
++    return () => document.removeEventListener("mousedown", onClickOutside);
++  }, [open]);
++
++  if (status === "loading") {
++    return (
++      <div className="w-8 h-8 rounded-full bg-gray-200 dark:bg-gray-700 animate-pulse" />
++    );
++  }
++
++  if (!session?.user) {
++    return (
++      <button
++        onClick={() => signIn()}
++        className="px-3 py-1.5 text-sm bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
++      >
++        {t("auth.signIn")}
++      </button>
++    );
++  }
++
++  const userImage = (session.user as any).image as string | undefined;
++
++  const go = (path: string) => {
++    router.push(path);
++    setOpen(false);
++  };
++
++  return (
++    <div className="relative" ref={menuRef}>
++      <button
++        onClick={() => setOpen((v) => !v)}
++        className="w-8 h-8 rounded-full overflow-hidden border border-gray-200 dark:border-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
++        aria-haspopup="menu"
++        aria-expanded={open}
++      >
++        {userImage ? (
++          // eslint-disable-next-line @next/next/no-img-element
++          <img src={userImage} alt="" className="w-8 h-8 object-cover" />
++        ) : (
++          <div className="w-8 h-8 bg-gray-200 dark:bg-gray-700" />
++        )}
++      </button>
++
++      {open && (
++        <div
++          className="absolute right-0 top-full mt-2 w-48 bg-white dark:bg-gray-800 border dark:border-gray-700 rounded-lg shadow-lg z-50"
++          role="menu"
++        >
++          <div
++            className="px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer"
++            onClick={() => go("/profile")}
++            role="menuitem"
++          >
++            {t("userMenu.profile")}
++          </div>
++          <div
++            className="px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer"
++            onClick={() => go("/billing")}
++            role="menuitem"
++          >
++            {t("userMenu.buyCredits")}
++          </div>
++          <hr className="my-1 border-gray-200 dark:border-gray-700" />
++          <div
++            className="px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer"
++            onClick={() => {
++              setOpen(false);
++              signOut();
++            }}
++            role="menuitem"
++          >
++            {t("userMenu.signOut")}
++          </div>
++        </div>
++      )}
++    </div>
++  );
++}
++
+diff --git a/frontend/src/i18n/locales/en.json b/frontend/src/i18n/locales/en.json
+index 8de08189b6d237f0fffea8b82ca3df73de88a507..23fd09a73fadb0999409c6fb608f63cfaddff697
+--- a/frontend/src/i18n/locales/en.json
++++ b/frontend/src/i18n/locales/en.json
+@@ -89,6 +89,10 @@
+   "billing.purchaseSuccess": "Purchase successful! Credits have been added to your account.",
+   "billing.purchaseCanceled": "Purchase was canceled.",
+   "billing.error": "An error occurred. Please try again.",
++  "billing.pro.title": "Pro Plan",
++  "billing.pro.description": "100,000 credits/month",
++  "billing.pro.pricePerMonth": "${price}/month",
++  "billing.extraTopups": "Extra Credit Top-ups",
+   "common.cancel": "Cancel",
+   "common.loading": "Loading...",
+ 
+
+codex
+Implemented the UserMenu dropdown and updated the Billing page with a Pro subscription card.
+
+What I changed
+- Added UserMenu
+  - New component with avatar dropdown and outside-click close.
+  - Logged out: renders the same Sign In button as before.
+  - Logged in: shows Profile, Buy Credits, Sign Out.
+  - File: frontend/src/components/UserMenu.tsx
+- Header swap
+  - Replaced AuthButton with UserMenu; everything else unchanged.
+  - Files: frontend/src/components/Header.tsx:9, frontend/src/components/Header.tsx:42
+- Billing page enhancements
+  - Added Pro subscription card above credit packs.
+  - Fetches user profile to show Upgrade to Pro or Manage Subscription.
+  - Added “Extra Credit Top-ups” subtitle before the grid.
+  - Files: frontend/src/app/billing/page.tsx
+- API and types
+  - Uses getUserProfile, createSubscription, createPortalSession.
+  - Imports UserProfile type.
+  - Files: frontend/src/app/billing/page.tsx:8, frontend/src/app/billing/page.tsx:9
+- i18n keys
+  - Added keys for the subscription card and subtitle.
+  - File: frontend/src/i18n/locales/en.json
+    - billing.pro.title: Pro Plan
+    - billing.pro.description: 100,000 credits/month
+    - billing.pro.pricePerMonth: ${price}/month
+    - billing.extraTopups: Extra Credit Top-ups
+
+Notes
+- The subscription price uses a placeholder 9.99 via t('billing.pro.pricePerMonth', { price: 9.99 }).
+- All text uses t(); dark mode and Tailwind styling are applied.
+- Existing billing functionality remains intact. Want me to run a quick build to sanity check types?
+file update:
+diff --git a/frontend/src/app/billing/page.tsx b/frontend/src/app/billing/page.tsx
+index ff45c152886964821c934f26296754b240a5b44b..82acf106a6cfd9ac6d7fc8a096bb576b22486ec8
+--- a/frontend/src/app/billing/page.tsx
++++ b/frontend/src/app/billing/page.tsx
+@@ -5,6 +5,8 @@
+ import { useRouter, useSearchParams } from "next/navigation";
+ import { useLocale } from "../../i18n";
+ import Header from "../../components/Header";
++import { getUserProfile, createSubscription, createPortalSession } from "../../lib/api";
++import type { UserProfile } from "../../types";
+ 
+ interface Product {
+   id: string;
+@@ -20,6 +22,8 @@
+   const [products, setProducts] = useState<Product[]>([]);
+   const [loading, setLoading] = useState<string | null>(null);
+   const [message, setMessage] = useState<string | null>(null);
++  const [profile, setProfile] = useState<UserProfile | null>(null);
++  const [submitting, setSubmitting] = useState<boolean>(false);
+ 
+   useEffect(() => {
+     if (searchParams.get("success")) {
+@@ -46,6 +50,20 @@
+     fetchProducts();
+   }, []);
+ 
++  useEffect(() => {
++    async function fetchProfile() {
++      try {
++        const p = await getUserProfile();
++        setProfile(p);
++      } catch (e) {
++        // ignore; default CTA will show
++      }
++    }
++    if (status === "authenticated") {
++      fetchProfile();
++    }
++  }, [status]);
++
+   const handlePurchase = async (packId: string) => {
+     setLoading(packId);
+     try {
+@@ -82,6 +100,64 @@
+           </div>
+         )}
+ 
++        {/* Subscription Card */}
++        <section className="mb-8">
++          <div className="rounded-xl bg-gradient-to-r from-blue-500 to-indigo-500 p-[1px]">
++            <div className="rounded-xl bg-white dark:bg-gray-900 p-6 border border-transparent dark:border-gray-800">
++              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
++                <div>
++                  <h2 className="text-xl font-semibold dark:text-gray-100">{t("billing.pro.title")}</h2>
++                  <p className="text-gray-600 dark:text-gray-400 mt-1">{t("billing.pro.description")}</p>
++                </div>
++                <div className="text-right">
++                  <div className="text-2xl font-bold dark:text-gray-100">
++                    {t("billing.pro.pricePerMonth", { price: 9.99 })}
++                  </div>
++                  <div className="mt-3">
++                    {profile?.plan === "pro" ? (
++                      <button
++                        onClick={async () => {
++                          setSubmitting(true);
++                          try {
++                            const res = await createPortalSession();
++                            window.location.href = res.portal_url;
++                          } finally {
++                            setSubmitting(false);
++                          }
++                        }}
++                        disabled={submitting}
++                        className="px-4 py-2 rounded bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-100 hover:bg-gray-200 dark:hover:bg-gray-700 disabled:opacity-50 transition-colors"
++                      >
++                        {t("profile.plan.manage")}
++                      </button>
++                    ) : (
++                      <button
++                        onClick={async () => {
++                          setSubmitting(true);
++                          try {
++                            const res = await createSubscription();
++                            window.location.href = res.checkout_url;
++                          } finally {
++                            setSubmitting(false);
++                          }
++                        }}
++                        disabled={submitting}
++                        className="px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 transition-colors"
++                      >
++                        {t("profile.plan.upgrade")}
++                      </button>
++                    )}
++                  </div>
++                </div>
++              </div>
++            </div>
++          </div>
++        </section>
++
++        <h2 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-4 uppercase tracking-wide">
++          {t("billing.extraTopups")}
++        </h2>
++
+         <div className="grid md:grid-cols-3 gap-6">
+           {products.map((product) => (
+             <div
+@@ -125,4 +201,3 @@
+     </Suspense>
+   );
+ }
+-
+diff --git a/frontend/src/components/Header.tsx b/frontend/src/components/Header.tsx
+index 3ec8abbed1571649dbd8479f3ec7e6430895fb9d..4fc2a98f10670fd688599e0493ef617a9f56cf5f
+--- a/frontend/src/components/Header.tsx
++++ b/frontend/src/components/Header.tsx
+@@ -6,7 +6,7 @@
+ import { useDocTalkStore } from '../store';
+ import ModelSelector from './ModelSelector';
+ import LanguageSelector from './LanguageSelector';
+-import { AuthButton } from './AuthButton';
++import UserMenu from './UserMenu';
+ import { useLocale } from '../i18n';
+ import SessionDropdown from './SessionDropdown';
+ import { CreditsDisplay } from './CreditsDisplay';
+@@ -39,7 +39,7 @@
+           {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
+         </button>
+         <CreditsDisplay />
+-        <AuthButton />
++        <UserMenu />
+         <LanguageSelector />
+       </div>
+     </header>
+diff --git a/frontend/src/components/UserMenu.tsx b/frontend/src/components/UserMenu.tsx
+new file mode 100644
+index 0000000000000000000000000000000000000000..a2a0e622f5139f4637bd4a4090e7f938e4fed561
+--- /dev/null
++++ b/frontend/src/components/UserMenu.tsx
+@@ -0,0 +1,103 @@
++"use client";
++
++import { useEffect, useRef, useState } from "react";
++import { useSession, signIn, signOut } from "next-auth/react";
++import { useRouter } from "next/navigation";
++import { useLocale } from "../i18n";
++
++export default function UserMenu() {
++  const { data: session, status } = useSession();
++  const { t } = useLocale();
++  const router = useRouter();
++
++  const [open, setOpen] = useState(false);
++  const menuRef = useRef<HTMLDivElement | null>(null);
++
++  useEffect(() => {
++    function onClickOutside(e: MouseEvent) {
++      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
++        setOpen(false);
++      }
++    }
++    if (open) {
++      document.addEventListener("mousedown", onClickOutside);
++    }
++    return () => document.removeEventListener("mousedown", onClickOutside);
++  }, [open]);
++
++  if (status === "loading") {
++    return (
++      <div className="w-8 h-8 rounded-full bg-gray-200 dark:bg-gray-700 animate-pulse" />
++    );
++  }
++
++  if (!session?.user) {
++    return (
++      <button
++        onClick={() => signIn()}
++        className="px-3 py-1.5 text-sm bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
++      >
++        {t("auth.signIn")}
++      </button>
++    );
++  }
++
++  const userImage = (session.user as any).image as string | undefined;
++
++  const go = (path: string) => {
++    router.push(path);
++    setOpen(false);
++  };
++
++  return (
++    <div className="relative" ref={menuRef}>
++      <button
++        onClick={() => setOpen((v) => !v)}
++        className="w-8 h-8 rounded-full overflow-hidden border border-gray-200 dark:border-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
++        aria-haspopup="menu"
++        aria-expanded={open}
++      >
++        {userImage ? (
++          // eslint-disable-next-line @next/next/no-img-element
++          <img src={userImage} alt="" className="w-8 h-8 object-cover" />
++        ) : (
++          <div className="w-8 h-8 bg-gray-200 dark:bg-gray-700" />
++        )}
++      </button>
++
++      {open && (
++        <div
++          className="absolute right-0 top-full mt-2 w-48 bg-white dark:bg-gray-800 border dark:border-gray-700 rounded-lg shadow-lg z-50"
++          role="menu"
++        >
++          <div
++            className="px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer"
++            onClick={() => go("/profile")}
++            role="menuitem"
++          >
++            {t("userMenu.profile")}
++          </div>
++          <div
++            className="px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer"
++            onClick={() => go("/billing")}
++            role="menuitem"
++          >
++            {t("userMenu.buyCredits")}
++          </div>
++          <hr className="my-1 border-gray-200 dark:border-gray-700" />
++          <div
++            className="px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer"
++            onClick={() => {
++              setOpen(false);
++              signOut();
++            }}
++            role="menuitem"
++          >
++            {t("userMenu.signOut")}
++          </div>
++        </div>
++      )}
++    </div>
++  );
++}
++
+diff --git a/frontend/src/i18n/locales/en.json b/frontend/src/i18n/locales/en.json
+index 8de08189b6d237f0fffea8b82ca3df73de88a507..23fd09a73fadb0999409c6fb608f63cfaddff697
+--- a/frontend/src/i18n/locales/en.json
++++ b/frontend/src/i18n/locales/en.json
+@@ -89,6 +89,10 @@
+   "billing.purchaseSuccess": "Purchase successful! Credits have been added to your account.",
+   "billing.purchaseCanceled": "Purchase was canceled.",
+   "billing.error": "An error occurred. Please try again.",
++  "billing.pro.title": "Pro Plan",
++  "billing.pro.description": "100,000 credits/month",
++  "billing.pro.pricePerMonth": "${price}/month",
++  "billing.extraTopups": "Extra Credit Top-ups",
+   "common.cancel": "Cancel",
+   "common.loading": "Loading...",
+ 
+
+tokens used
+98,742
+Implemented the UserMenu dropdown and updated the Billing page with a Pro subscription card.
+
+What I changed
+- Added UserMenu
+  - New component with avatar dropdown and outside-click close.
+  - Logged out: renders the same Sign In button as before.
+  - Logged in: shows Profile, Buy Credits, Sign Out.
+  - File: frontend/src/components/UserMenu.tsx
+- Header swap
+  - Replaced AuthButton with UserMenu; everything else unchanged.
+  - Files: frontend/src/components/Header.tsx:9, frontend/src/components/Header.tsx:42
+- Billing page enhancements
+  - Added Pro subscription card above credit packs.
+  - Fetches user profile to show Upgrade to Pro or Manage Subscription.
+  - Added “Extra Credit Top-ups” subtitle before the grid.
+  - Files: frontend/src/app/billing/page.tsx
+- API and types
+  - Uses getUserProfile, createSubscription, createPortalSession.
+  - Imports UserProfile type.
+  - Files: frontend/src/app/billing/page.tsx:8, frontend/src/app/billing/page.tsx:9
+- i18n keys
+  - Added keys for the subscription card and subtitle.
+  - File: frontend/src/i18n/locales/en.json
+    - billing.pro.title: Pro Plan
+    - billing.pro.description: 100,000 credits/month
+    - billing.pro.pricePerMonth: ${price}/month
+    - billing.extraTopups: Extra Credit Top-ups
+
+Notes
+- The subscription price uses a placeholder 9.99 via t('billing.pro.pricePerMonth', { price: 9.99 }).
+- All text uses t(); dark mode and Tailwind styling are applied.
+- Existing billing functionality remains intact. Want me to run a quick build to sanity check types?

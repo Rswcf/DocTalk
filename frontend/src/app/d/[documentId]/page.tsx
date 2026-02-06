@@ -108,7 +108,7 @@ export default function DocumentReaderPage() {
           <div className="text-center">
             <div className="text-lg font-medium mb-3">{error}</div>
             <button
-              className="px-4 py-2 bg-gray-900 text-white rounded dark:bg-gray-100 dark:text-gray-900"
+              className="px-4 py-2 bg-zinc-900 text-white rounded dark:bg-zinc-100 dark:text-zinc-900"
               onClick={() => router.push('/')}
             >
               {t('doc.backHome')}
@@ -122,16 +122,16 @@ export default function DocumentReaderPage() {
               {sessionId ? (
                 <ChatPanel sessionId={sessionId} onCitationClick={navigateToCitation} maxUserMessages={isDemo && !isLoggedIn ? 5 : undefined} />
               ) : (
-                <div className="h-full w-full flex items-center justify-center text-gray-500">{t('doc.initChat')}</div>
+                <div className="h-full w-full flex items-center justify-center text-zinc-500">{t('doc.initChat')}</div>
               )}
             </div>
           </Panel>
 
           <Separator
-            className="w-1.5 bg-gray-200 dark:bg-gray-700 hover:bg-blue-400 dark:hover:bg-blue-500 transition-colors cursor-col-resize flex items-center justify-center"
+            className="w-1.5 bg-zinc-200 dark:bg-zinc-700 hover:bg-zinc-400 dark:hover:bg-zinc-500 transition-colors cursor-col-resize flex items-center justify-center"
             aria-label="Resize panels"
           >
-            <div className="w-0.5 h-8 bg-gray-400 dark:bg-gray-500 rounded-full" />
+            <div className="w-0.5 h-8 bg-zinc-400 dark:bg-zinc-500 rounded-full" />
           </Separator>
 
           <Panel defaultSize={50} minSize={35}>
@@ -139,7 +139,7 @@ export default function DocumentReaderPage() {
               {pdfUrl ? (
                 <PdfViewer pdfUrl={pdfUrl} currentPage={currentPage} highlights={highlights} scale={scale} scrollNonce={scrollNonce} />
               ) : (
-                <div className="h-full w-full flex items-center justify-center text-gray-500">{t('doc.loading')}</div>
+                <div className="h-full w-full flex items-center justify-center text-zinc-500">{t('doc.loading')}</div>
               )}
             </div>
           </Panel>

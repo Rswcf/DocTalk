@@ -35,10 +35,10 @@ export default function DemoRedirectPage() {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
-          <p className="text-gray-600 dark:text-gray-400 mb-4">Demo document not found</p>
+          <p className="text-zinc-600 dark:text-zinc-400 mb-4">Demo document not found</p>
           <button
             onClick={() => router.push('/demo')}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+            className="px-4 py-2 bg-zinc-600 text-white rounded-lg hover:bg-zinc-700"
           >
             View all demos
           </button>
@@ -49,7 +49,7 @@ export default function DemoRedirectPage() {
 
   return (
     <div className="min-h-screen flex items-center justify-center">
-      <Loader2 className="animate-spin text-gray-400" size={32} />
+      <Loader2 className="animate-spin text-zinc-400" size={32} />
     </div>
   );
 }

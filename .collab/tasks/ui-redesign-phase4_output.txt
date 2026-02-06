@@ -1,0 +1,49 @@
+Completed. I ran the full audit and applied class-only fixes for dark mode, responsive behavior, and transition polish.
+
+- `gray-*`/`blue-*` audit: `rg "gray-|blue-" frontend/src -n` now returns no matches.
+- Kept Google OAuth brand SVG colors (`#4285F4`, etc.) unchanged.
+- Updated mobile/header behavior:
+  - `frontend/src/components/Header.tsx`: reduced mobile spacing, added truncation constraints, hid credits on small screens to prevent overflow.
+  - `frontend/src/components/SessionDropdown.tsx`: mobile-safe max width.
+  - `frontend/src/app/page.tsx`: upload zone padding changed to `p-8 sm:p-12`.
+  - `frontend/src/app/billing/page.tsx`: `p-6 sm:p-8`.
+- Added/standardized `transition-all duration-200` on interactive elements in scoped components.
+- Normalized primary CTA styles in scoped components to zinc inverted pattern in dark mode where needed (notably `UserMenu` and `PaywallModal`).
+
+`npm run lint` in `frontend/` passes, with one existing warning:
+- `frontend/src/components/Profile/ProfileInfoSection.tsx:38` (`@next/next/no-img-element`)
+
+No edits were made to `frontend/src/app/globals.css` or locale JSON files.
+
+Changed files:
+1. `frontend/src/app/auth/page.tsx`
+2. `frontend/src/app/billing/page.tsx`
+3. `frontend/src/app/d/[documentId]/page.tsx`
+4. `frontend/src/app/demo/[sample]/page.tsx`
+5. `frontend/src/app/demo/page.tsx`
+6. `frontend/src/app/page.tsx`
+7. `frontend/src/app/privacy/page.tsx`
+8. `frontend/src/app/profile/page.tsx`
+9. `frontend/src/app/terms/page.tsx`
+10. `frontend/src/components/AuthButton.tsx`
+11. `frontend/src/components/AuthModal.tsx`
+12. `frontend/src/components/Chat/ChatPanel.tsx`
+13. `frontend/src/components/Chat/CitationCard.tsx`
+14. `frontend/src/components/Chat/MessageBubble.tsx`
+15. `frontend/src/components/CreditsDisplay.tsx`
+16. `frontend/src/components/ErrorBoundary.tsx`
+17. `frontend/src/components/Header.tsx`
+18. `frontend/src/components/LanguageSelector.tsx`
+19. `frontend/src/components/ModelSelector.tsx`
+20. `frontend/src/components/PaywallModal.tsx`
+21. `frontend/src/components/PdfViewer/PageWithHighlights.tsx`
+22. `frontend/src/components/PdfViewer/PdfToolbar.tsx`
+23. `frontend/src/components/PdfViewer/PdfViewer.tsx`
+24. `frontend/src/components/PrivacyBadge.tsx`
+25. `frontend/src/components/Profile/AccountActionsSection.tsx`
+26. `frontend/src/components/Profile/CreditsSection.tsx`
+27. `frontend/src/components/Profile/ProfileInfoSection.tsx`
+28. `frontend/src/components/Profile/ProfileTabs.tsx`
+29. `frontend/src/components/Profile/UsageStatsSection.tsx`
+30. `frontend/src/components/SessionDropdown.tsx`
+31. `frontend/src/components/UserMenu.tsx`

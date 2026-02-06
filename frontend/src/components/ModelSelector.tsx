@@ -52,7 +52,7 @@ export default function ModelSelector() {
         type="button"
         onClick={toggle}
         disabled={isStreaming}
-        className={`flex items-center gap-1.5 px-2 py-1 border rounded-md text-sm dark:border-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors ${
+        className={`flex items-center gap-1.5 px-2 py-1 border border-zinc-200 rounded-md text-sm text-zinc-700 dark:border-zinc-700 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-all duration-200 ${
           isStreaming ? 'opacity-60 cursor-not-allowed' : ''
         }`}
         title={t('header.model')}
@@ -62,14 +62,14 @@ export default function ModelSelector() {
         <ChevronDown size={14} className="opacity-70" />
       </button>
       {open && (
-        <div className="absolute right-0 mt-1 w-64 max-h-72 overflow-auto bg-white dark:bg-gray-900 border dark:border-gray-700 rounded-md shadow-lg z-20 p-1">
+        <div className="absolute right-0 mt-1 w-64 max-h-72 overflow-auto bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-md shadow-lg z-20 p-1">
           {groups.map(([provider, models]) => (
             <div key={provider} className="py-1">
-              <div className="px-2 py-1 text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">{provider}</div>
+              <div className="px-2 py-1 text-xs uppercase tracking-wide text-zinc-500 dark:text-zinc-400">{provider}</div>
               {(models as any).map((m: any) => (
                 <button
                   key={m.id}
-                  className={`w-full text-left flex items-center gap-2 px-2 py-1.5 rounded hover:bg-gray-100 dark:hover:bg-gray-800 text-sm ${
+                  className={`w-full text-left flex items-center gap-2 px-2 py-1.5 rounded hover:bg-zinc-100 dark:hover:bg-zinc-800 text-sm transition-all duration-200 ${
                     selectedModel === m.id ? 'font-medium' : ''
                   }`}
                   onClick={() => choose(m.id)}
@@ -87,4 +87,3 @@ export default function ModelSelector() {
     </div>
   );
 }
-

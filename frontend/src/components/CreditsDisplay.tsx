@@ -32,7 +32,7 @@ export function CreditsDisplay() {
   }
 
   return (
-    <div className="flex items-center gap-1 text-sm text-gray-600 dark:text-gray-400">
+    <div className="flex items-center gap-1 text-sm text-zinc-600 dark:text-zinc-400">
       <span className="font-medium">{credits.toLocaleString()}</span>
       <span>{t("credits.credits")}</span>
     </div>

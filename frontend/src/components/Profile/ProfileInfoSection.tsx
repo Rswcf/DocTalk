@@ -38,35 +38,35 @@ export default function ProfileInfoSection({ profile }: Props) {
           <img
             src={profile.image}
             alt={profile.name || profile.email}
-            className="w-16 h-16 rounded-full object-cover border border-gray-200 dark:border-gray-700"
+            className="w-16 h-16 rounded-full object-cover border border-zinc-200 dark:border-zinc-700"
           />
         ) : (
           // Initials fallback
-          <div className="w-16 h-16 rounded-full flex items-center justify-center bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200 text-xl font-semibold">
+          <div className="w-16 h-16 rounded-full flex items-center justify-center bg-zinc-200 dark:bg-zinc-700 text-zinc-700 dark:text-zinc-200 text-xl font-semibold">
             {getInitials(profile.name, profile.email)}
           </div>
         )}
 
         <div className="min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
-            <h2 className="text-lg font-semibold dark:text-gray-100 truncate">
+            <h2 className="text-lg font-semibold dark:text-zinc-100 truncate">
               {profile.name || profile.email}
             </h2>
             <span
               className={
                 `px-2 py-0.5 rounded text-xs font-medium ` +
                 (profile.plan === "pro"
-                  ? `bg-gradient-to-r from-blue-500 to-indigo-600 text-white`
-                  : `bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300`)
+                  ? `bg-gradient-to-r from-zinc-500 to-indigo-600 text-white`
+                  : `bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300`)
               }
             >
               {planLabel}
             </span>
           </div>
           {profile.name && (
-            <div className="text-sm text-gray-600 dark:text-gray-400 truncate">{profile.email}</div>
+            <div className="text-sm text-zinc-600 dark:text-zinc-400 truncate">{profile.email}</div>
           )}
-          <div className="text-sm text-gray-600 dark:text-gray-400">
+          <div className="text-sm text-zinc-600 dark:text-zinc-400">
             {t("profile.info.memberSince", { days: memberDays })}
           </div>
         </div>
@@ -77,11 +77,11 @@ export default function ProfileInfoSection({ profile }: Props) {
           {profile.connected_accounts.map((acc, idx) => (
             <div
               key={idx}
-              className="px-2 py-1 rounded-md border dark:border-gray-700 text-xs text-gray-700 dark:text-gray-300 flex items-center gap-2"
+              className="px-2 py-1 rounded-md border dark:border-zinc-700 text-xs text-zinc-700 dark:text-zinc-300 flex items-center gap-2"
               title={acc.provider}
             >
               {/* Simple provider badge; could be replaced with icon */}
-              <span className="inline-flex h-4 w-4 items-center justify-center rounded-sm bg-gray-200 dark:bg-gray-700 text-[10px]">
+              <span className="inline-flex h-4 w-4 items-center justify-center rounded-sm bg-zinc-200 dark:bg-zinc-700 text-[10px]">
                 {acc.provider?.[0]?.toUpperCase() || "?"}
               </span>
               <span>

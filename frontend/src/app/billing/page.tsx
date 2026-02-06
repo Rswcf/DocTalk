@@ -55,9 +55,7 @@ function BillingContent() {
       try {
         const p = await getUserProfile();
         setProfile(p);
-      } catch (e) {
-        // ignore; default CTA will show
-      }
+      } catch (e) {}
     }
     if (status === "authenticated") {
       fetchProfile();
@@ -83,34 +81,34 @@ function BillingContent() {
   };
 
   if (status === "loading") {
-    return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
+    return <div className="min-h-screen flex items-center justify-center bg-white dark:bg-zinc-950">Loading...</div>;
   }
 
   return (
-    <div className="min-h-screen dark:bg-gray-900">
+    <div className="min-h-screen bg-white dark:bg-zinc-950">
       <Header />
-      <main className="max-w-4xl mx-auto p-8">
-        <h1 className="text-2xl font-semibold mb-6 dark:text-gray-100">
+      <main className="max-w-4xl mx-auto p-6 sm:p-8">
+        <h1 className="text-2xl font-bold mb-6 text-zinc-900 dark:text-zinc-50">
           {t("billing.title")}
         </h1>
 
         {message && (
-          <div className="mb-6 p-4 rounded bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300">
+          <div className="mb-6 p-4 rounded-xl bg-zinc-100 dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-800">
             {message}
           </div>
         )}
 
         {/* Subscription Card */}
         <section className="mb-8">
-          <div className="rounded-xl bg-gradient-to-r from-blue-500 to-indigo-500 p-[1px]">
-            <div className="rounded-xl bg-white dark:bg-gray-900 p-6 border border-transparent dark:border-gray-800">
+          <div className="rounded-xl bg-gradient-to-r from-zinc-800 to-zinc-900 p-[1px]">
+            <div className="rounded-xl bg-white dark:bg-zinc-950 p-6">
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                 <div>
-                  <h2 className="text-xl font-semibold dark:text-gray-100">{t("billing.pro.title")}</h2>
-                  <p className="text-gray-600 dark:text-gray-400 mt-1">{t("billing.pro.description")}</p>
+                  <h2 className="text-xl font-semibold text-zinc-900 dark:text-zinc-50">{t("billing.pro.title")}</h2>
+                  <p className="text-zinc-500 dark:text-zinc-400 mt-1">{t("billing.pro.description")}</p>
                 </div>
                 <div className="text-right">
-                  <div className="text-2xl font-bold dark:text-gray-100">
+                  <div className="text-2xl font-bold text-zinc-900 dark:text-zinc-50">
                     {t("billing.pro.pricePerMonth", { price: 9.99 })}
                   </div>
                   <div className="mt-3">
@@ -126,7 +124,7 @@ function BillingContent() {
                           }
                         }}
                         disabled={submitting}
-                        className="px-4 py-2 rounded bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-100 hover:bg-gray-200 dark:hover:bg-gray-700 disabled:opacity-50 transition-colors"
+                        className="px-4 py-2 rounded-lg bg-zinc-100 dark:bg-zinc-800 text-zinc-800 dark:text-zinc-100 hover:bg-zinc-200 dark:hover:bg-zinc-700 disabled:opacity-50 transition-all duration-200"
                       >
                         {t("profile.plan.manage")}
                       </button>
@@ -142,7 +140,7 @@ function BillingContent() {
                           }
                         }}
                         disabled={submitting}
-                        className="px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 transition-colors"
+                        className="px-4 py-2 rounded-lg bg-zinc-900 dark:bg-zinc-50 text-white dark:text-zinc-900 hover:bg-zinc-800 dark:hover:bg-zinc-200 disabled:opacity-50 transition-all duration-200"
                       >
                         {t("profile.plan.upgrade")}
                       </button>
@@ -154,7 +152,7 @@ function BillingContent() {
           </div>
         </section>
 
-        <h2 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-4 uppercase tracking-wide">
+        <h2 className="text-sm font-medium text-zinc-500 dark:text-zinc-400 mb-4 uppercase tracking-wide">
           {t("billing.extraTopups")}
         </h2>
 
@@ -162,21 +160,21 @@ function BillingContent() {
           {products.map((product) => (
             <div
               key={product.id}
-              className="border dark:border-gray-700 rounded-lg p-6 flex flex-col"
+              className="border border-zinc-200 dark:border-zinc-800 rounded-xl p-6 flex flex-col hover:shadow-md transition-all duration-200"
             >
-              <h3 className="text-lg font-medium capitalize dark:text-gray-100">
+              <h3 className="text-lg font-medium capitalize text-zinc-900 dark:text-zinc-100">
                 {product.id}
               </h3>
-              <p className="text-3xl font-bold mt-2 dark:text-gray-100">
+              <p className="text-3xl font-bold mt-2 text-zinc-900 dark:text-zinc-100">
                 ${product.price_usd}
               </p>
-              <p className="text-gray-600 dark:text-gray-400 mt-1">
+              <p className="text-zinc-500 dark:text-zinc-400 mt-1">
                 {product.credits.toLocaleString()} {t("credits.credits")}
               </p>
               <button
                 onClick={() => handlePurchase(product.id)}
                 disabled={loading === product.id}
-                className="mt-auto pt-4 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50 transition-colors"
+                className="mt-auto pt-4 px-4 py-2 bg-zinc-900 dark:bg-zinc-50 text-white dark:text-zinc-900 rounded-lg font-medium hover:bg-zinc-800 dark:hover:bg-zinc-200 disabled:opacity-50 transition-all duration-200"
               >
                 {loading === product.id ? t("common.loading") : t("billing.purchase")}
               </button>
@@ -192,8 +190,8 @@ export default function BillingPage() {
   return (
     <Suspense
       fallback={
-        <div className="min-h-screen flex items-center justify-center dark:bg-gray-900">
-          <div className="animate-pulse">Loading...</div>
+        <div className="min-h-screen flex items-center justify-center bg-white dark:bg-zinc-950">
+          <div className="animate-pulse text-zinc-500">Loading...</div>
         </div>
       }
     >

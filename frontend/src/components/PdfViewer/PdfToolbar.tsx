@@ -39,30 +39,30 @@ export default function PdfToolbar({ currentPage, totalPages, scale, onPageChang
   const nextPage = () => { if (currentPage < totalPages) onPageChange(currentPage + 1); };
 
   return (
-    <div className="sticky top-0 z-10 flex items-center justify-center gap-2 px-3 py-1.5 bg-white/90 dark:bg-gray-800/90 backdrop-blur border-b dark:border-gray-700 text-sm">
+    <div className="sticky top-0 z-10 flex items-center justify-center gap-2 px-3 py-1.5 bg-white/90 dark:bg-zinc-800/90 backdrop-blur border-b dark:border-zinc-700 text-sm">
       {/* Zoom controls */}
-      <button onClick={zoomOut} className="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700" title={t('toolbar.zoomOut')}>
+      <button onClick={zoomOut} className="p-1 rounded hover:bg-zinc-100 dark:hover:bg-zinc-700" title={t('toolbar.zoomOut')}>
         <ZoomOut size={16} />
       </button>
       <span className="w-12 text-center text-xs tabular-nums">{Math.round(scale * 100)}%</span>
-      <button onClick={zoomIn} className="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700" title={t('toolbar.zoomIn')}>
+      <button onClick={zoomIn} className="p-1 rounded hover:bg-zinc-100 dark:hover:bg-zinc-700" title={t('toolbar.zoomIn')}>
         <ZoomIn size={16} />
       </button>
 
-      <div className="w-px h-5 bg-gray-300 dark:bg-gray-600 mx-1" />
+      <div className="w-px h-5 bg-zinc-300 dark:bg-zinc-600 mx-1" />
 
       <button
         onClick={onGrabModeToggle}
-        className={`p-1 rounded ${grabMode ? 'bg-blue-100 dark:bg-blue-900/50 text-blue-600 dark:text-blue-400' : 'hover:bg-gray-100 dark:hover:bg-gray-700'}`}
+        className={`p-1 rounded ${grabMode ? 'bg-zinc-100 dark:bg-zinc-900/50 text-zinc-600 dark:text-zinc-400' : 'hover:bg-zinc-100 dark:hover:bg-zinc-700'}`}
         title={t('toolbar.grabMode')}
       >
         <Hand size={16} />
       </button>
 
-      <div className="w-px h-5 bg-gray-300 dark:bg-gray-600 mx-1" />
+      <div className="w-px h-5 bg-zinc-300 dark:bg-zinc-600 mx-1" />
 
       {/* Page navigation */}
-      <button onClick={prevPage} disabled={currentPage <= 1} className="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-30" title={t('toolbar.prevPage')}>
+      <button onClick={prevPage} disabled={currentPage <= 1} className="p-1 rounded hover:bg-zinc-100 dark:hover:bg-zinc-700 disabled:opacity-30" title={t('toolbar.prevPage')}>
         <ChevronLeft size={16} />
       </button>
       <div className="flex items-center gap-1">
@@ -72,11 +72,11 @@ export default function PdfToolbar({ currentPage, totalPages, scale, onPageChang
           onChange={(e) => setPageInput(e.target.value)}
           onKeyDown={handlePageSubmit}
           onBlur={() => setPageInput(String(currentPage))}
-          className="w-10 text-center border rounded px-1 py-0.5 text-xs dark:bg-gray-700 dark:border-gray-600"
+          className="w-10 text-center border rounded px-1 py-0.5 text-xs dark:bg-zinc-700 dark:border-zinc-600"
         />
-        <span className="text-xs text-gray-500 dark:text-gray-400">/ {totalPages}</span>
+        <span className="text-xs text-zinc-500 dark:text-zinc-400">/ {totalPages}</span>
       </div>
-      <button onClick={nextPage} disabled={currentPage >= totalPages} className="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-30" title={t('toolbar.nextPage')}>
+      <button onClick={nextPage} disabled={currentPage >= totalPages} className="p-1 rounded hover:bg-zinc-100 dark:hover:bg-zinc-700 disabled:opacity-30" title={t('toolbar.nextPage')}>
         <ChevronRight size={16} />
       </button>
     </div>

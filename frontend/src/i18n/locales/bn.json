@@ -1,7 +1,6 @@
 {
   "app.title": "DocTalk",
   "app.subtitle": "চ্যাট শুরু করতে একটি PDF আপলোড করুন।",
-
   "upload.dragDrop": "আপনার PDF এখানে ড্র্যাগ ও ড্রপ করুন",
   "upload.or": "অথবা",
   "upload.chooseFile": "ফাইল নির্বাচন করুন",
@@ -12,7 +11,6 @@
   "upload.networkError": "আপলোড ব্যর্থ, নেটওয়ার্ক পরীক্ষা করুন বা পরে আবার চেষ্টা করুন",
   "upload.pdfOnly": "অনুগ্রহ করে একটি PDF ফাইল আপলোড করুন",
   "upload.tooLarge": "ফাইলের আকার 50MB-এর বেশি হতে পারবে না",
-
   "doc.myDocuments": "আমার নথিপত্র",
   "doc.noDocuments": "এখনও কোনো নথি নেই",
   "doc.open": "খুলুন",
@@ -23,7 +21,6 @@
   "doc.initChat": "চ্যাট আরম্ভ করা হচ্ছে…",
   "doc.pdfLoadError": "PDF লোড করা যায়নি। অনুগ্রহ করে পেজ রিফ্রেশ করুন বা পরে আবার চেষ্টা করুন।",
   "doc.pdfLoading": "PDF লোড হচ্ছে…",
-
   "chat.placeholder": "একটি প্রশ্ন লিখুন…",
   "chat.send": "পাঠান",
   "chat.trySuggested": "শুরু করতে এই প্রশ্নগুলির একটি চেষ্টা করুন:",
@@ -33,26 +30,21 @@
   "chat.suggestedQ4": "গুরুত্বপূর্ণ ডেটা ও অনুসন্ধানগুলি তালিকাভুক্ত করুন",
   "chat.error": "চ্যাটে ত্রুটি: ",
   "chat.networkError": "নেটওয়ার্ক ত্রুটি, অনুগ্রহ করে পরে আবার চেষ্টা করুন",
-
   "citation.jumpTo": "{page} নং পৃষ্ঠায় যান",
-
   "toolbar.zoomIn": "জুম ইন",
   "toolbar.zoomOut": "জুম আউট",
   "toolbar.prevPage": "পূর্ববর্তী পৃষ্ঠা",
   "toolbar.nextPage": "পরবর্তী পৃষ্ঠা",
   "toolbar.grabMode": "হ্যান্ড টুল (প্যান করতে ড্র্যাগ করুন)",
-
   "header.darkMode": "ডার্ক মোডে যান",
   "header.lightMode": "লাইট মোডে যান",
   "header.model": "মডেল",
   "header.language": "ভাষা",
   "header.backToDocument": "নথিতে ফিরে যান",
-
   "copy.button": "কপি",
   "copy.copied": "কপি হয়েছে",
   "feedback.helpful": "সহায়ক",
   "feedback.notHelpful": "সহায়ক নয়",
-
   "error.somethingWrong": "কিছু ভুল হয়েছে",
   "error.refresh": "পৃষ্ঠা রিফ্রেশ করুন",
   "session.newChat": "নতুন চ্যাট",
@@ -80,23 +72,19 @@
   "billing.error": "An error occurred. Please try again.",
   "common.cancel": "Cancel",
   "common.loading": "Loading...",
-
   "profile.title": "প্রোফাইল",
   "profile.tabs.profile": "প্রোফাইল",
   "profile.tabs.credits": "ক্রেডিট",
   "profile.tabs.usage": "ব্যবহার",
   "profile.tabs.account": "অ্যাকাউন্ট",
-
   "profile.info.memberSince": "সদস্য {days} দিন ধরে",
   "profile.info.connectedWith": "{provider} দিয়ে সংযুক্ত",
-
   "profile.plan.free": "ফ্রি",
   "profile.plan.pro": "প্রো",
   "profile.plan.upgrade": "প্রো-তে আপগ্রেড করুন",
   "profile.plan.manage": "সাবস্ক্রিপশন পরিচালনা করুন",
   "profile.plan.monthlyAllowance": "{used} / {total} মাসিক ক্রেডিট",
   "profile.plan.nextRenewal": "{days} দিনের মধ্যে নবায়ন হবে",
-
   "profile.credits.balance": "ক্রেডিট ব্যালেন্স",
   "profile.credits.buyMore": "অতিরিক্ত ক্রেডিট কিনুন",
   "profile.credits.history": "লেনদেনের ইতিহাস",
@@ -106,7 +94,6 @@
   "profile.credits.reason.chat": "চ্যাট ব্যবহার",
   "profile.credits.reason.monthly_allowance": "মাসিক বরাদ্দ",
   "profile.credits.reason.refund": "ফেরত",
-
   "profile.usage.documents": "নথি",
   "profile.usage.sessions": "চ্যাট সেশন",
   "profile.usage.messages": "বার্তা",
@@ -117,22 +104,18 @@
   "profile.usage.calls": "কল",
   "profile.usage.tokens": "টোকেন",
   "profile.usage.credits": "ক্রেডিট",
-
   "profile.account.dangerZone": "বিপজ্জনক এলাকা",
   "profile.account.deleteAccount": "অ্যাকাউন্ট মুছে ফেলুন",
   "profile.account.deleteWarning": "এটি আপনার অ্যাকাউন্ট, সব নথি, চ্যাট এবং তথ্য স্থায়ীভাবে মুছে ফেলবে। এই কাজটি বাতিল করা যাবে না।",
   "profile.account.deleteConfirm": "মুছে ফেলতে নিশ্চিত করতে আপনার ইমেল টাইপ করুন",
   "profile.account.deleting": "অ্যাকাউন্ট মুছে ফেলা হচ্ছে…",
-
   "userMenu.profile": "প্রোফাইল",
   "userMenu.buyCredits": "ক্রেডিট কিনুন",
   "userMenu.signOut": "সাইন আউট",
-
   "billing.pro.title": "প্রো প্ল্যান",
   "billing.pro.description": "প্রতি মাসে 100,000 ক্রেডিট",
   "billing.pro.pricePerMonth": "{price}/মাস",
   "billing.extraTopups": "অতিরিক্ত ক্রেডিট টপ-আপ",
-
   "demo.title": "একটি নমুনা নথি বেছে নিন",
   "demo.subtitle": "এই উদাহরণ PDFs দিয়ে DocTalk অভিজ্ঞতা নিন",
   "demo.hint": "টিপ: উদ্ধৃতি নম্বর [1]-এ ক্লিক করে উৎসে যান এবং হাইলাইট দেখুন",
@@ -157,5 +140,21 @@
   "demo.signInForUnlimited": "সীমাহীনের জন্য সাইন ইন করুন",
   "demo.signInToContinue": "চ্যাট চালিয়ে যেতে সাইন ইন করুন",
   "demo.limitReachedMessage": "আপনি সব ৫টি ডেমো প্রশ্ন ব্যবহার করেছেন। বিনামূল্যে ক্রেডিট সহ সীমাহীন অ্যাক্সেসের জন্য সাইন ইন করুন!",
-  "demo.processing": "প্রক্রিয়াকরণ হচ্ছে..."
+  "demo.processing": "প্রক্রিয়াকরণ হচ্ছে...",
+  "landing.badge": "PDF AI সহকারী",
+  "landing.headline": "যেকোনো PDF-এর সাথে\nতাৎক্ষণিক আলাপ",
+  "landing.subtitle": "আপনার AI পড়ার সঙ্গী",
+  "landing.description": "যেকোনো PDF আপলোড করুন এবং উদ্ধৃতিসহ তাৎক্ষণিক উত্তর পান। প্রতিটি উত্তর সঠিক উৎসের সাথে যুক্ত।",
+  "landing.cta.demo": "বিনামূল্যে ডেমো",
+  "landing.cta.getStarted": "শুরু করুন",
+  "landing.cta.howItWorks": "কিভাবে কাজ করে",
+  "landing.showcase.title": "কার্যক্রমে দেখুন",
+  "landing.showcase.caption": "PDF আপলোড করুন, প্রশ্ন করুন, পৃষ্ঠা হাইলাইটসহ উদ্ধৃত উত্তর পান",
+  "landing.features.title": "কেন DocTalk?",
+  "landing.feature.answers.title": "তাৎক্ষণিক উত্তর",
+  "landing.feature.answers.desc": "যেকোনো প্রশ্ন করুন এবং সেকেন্ডের মধ্যে আপনার নথি থেকে সঠিক উত্তর পান।",
+  "landing.feature.citations.title": "উৎস উদ্ধৃতি",
+  "landing.feature.citations.desc": "প্রতিটি উত্তরে সংখ্যাযুক্ত রেফারেন্স অন্তর্ভুক্ত। যেকোনো উদ্ধৃতিতে ক্লিক করে সঠিক পৃষ্ঠায় যান।",
+  "landing.feature.privacy.title": "গোপনীয়তা প্রথমে",
+  "landing.feature.privacy.desc": "আপনার নথি কখনোই AI প্রশিক্ষণের জন্য ব্যবহৃত হয় না।"
 }

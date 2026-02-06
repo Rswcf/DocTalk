@@ -1,7 +1,6 @@
 {
   "app.title": "DocTalk",
   "app.subtitle": "قم بتحميل ملف PDF لبدء الدردشة.",
-
   "upload.dragDrop": "اسحب وأفلت ملف PDF هنا",
   "upload.or": "أو",
   "upload.chooseFile": "اختر ملفًا",
@@ -12,7 +11,6 @@
   "upload.networkError": "فشل الرفع، يرجى التحقق من الشبكة أو المحاولة لاحقًا",
   "upload.pdfOnly": "يرجى تحميل ملف PDF",
   "upload.tooLarge": "لا يمكن أن يتجاوز حجم الملف 50 ميجابايت",
-
   "doc.myDocuments": "مستنداتي",
   "doc.noDocuments": "لا توجد مستندات بعد",
   "doc.open": "فتح",
@@ -23,7 +21,6 @@
   "doc.initChat": "جارٍ تهيئة الدردشة…",
   "doc.pdfLoadError": "تعذر تحميل ملف PDF. يرجى تحديث الصفحة أو المحاولة لاحقًا.",
   "doc.pdfLoading": "جارٍ تحميل PDF…",
-
   "chat.placeholder": "اكتب سؤالًا…",
   "chat.send": "إرسال",
   "chat.trySuggested": "جرّب أحد هذه الأسئلة للبدء:",
@@ -33,26 +30,21 @@
   "chat.suggestedQ4": "اسرد البيانات والاكتشافات المهمة",
   "chat.error": "خطأ في الدردشة: ",
   "chat.networkError": "خطأ في الشبكة، حاول مرة أخرى لاحقًا",
-
   "citation.jumpTo": "انتقل إلى الصفحة {page}",
-
   "toolbar.zoomIn": "تكبير",
   "toolbar.zoomOut": "تصغير",
   "toolbar.prevPage": "الصفحة السابقة",
   "toolbar.nextPage": "الصفحة التالية",
   "toolbar.grabMode": "أداة اليد (اسحب للتحريك)",
-
   "header.darkMode": "التبديل إلى الوضع الداكن",
   "header.lightMode": "التبديل إلى الوضع الفاتح",
   "header.model": "النموذج",
   "header.language": "اللغة",
   "header.backToDocument": "العودة إلى المستند",
-
   "copy.button": "نسخ",
   "copy.copied": "تم النسخ",
   "feedback.helpful": "مفيد",
   "feedback.notHelpful": "غير مفيد",
-
   "error.somethingWrong": "حدث خطأ ما",
   "error.refresh": "تحديث الصفحة",
   "session.newChat": "دردشة جديدة",
@@ -80,23 +72,19 @@
   "billing.error": "An error occurred. Please try again.",
   "common.cancel": "Cancel",
   "common.loading": "Loading...",
-
   "profile.title": "الملف الشخصي",
   "profile.tabs.profile": "الملف",
   "profile.tabs.credits": "الأرصدة",
   "profile.tabs.usage": "الاستخدام",
   "profile.tabs.account": "الحساب",
-
   "profile.info.memberSince": "عضو منذ {days} يومًا",
   "profile.info.connectedWith": "متصل عبر {provider}",
-
   "profile.plan.free": "مجاني",
   "profile.plan.pro": "برو",
   "profile.plan.upgrade": "الترقية إلى برو",
   "profile.plan.manage": "إدارة الاشتراك",
   "profile.plan.monthlyAllowance": "{used} / {total} أرصدة شهرية",
   "profile.plan.nextRenewal": "يتجدد خلال {days} يومًا",
-
   "profile.credits.balance": "رصيد الاعتمادات",
   "profile.credits.buyMore": "شراء أرصدة إضافية",
   "profile.credits.history": "سجل المعاملات",
@@ -106,7 +94,6 @@
   "profile.credits.reason.chat": "استخدام الدردشة",
   "profile.credits.reason.monthly_allowance": "البدل الشهري",
   "profile.credits.reason.refund": "استرداد",
-
   "profile.usage.documents": "المستندات",
   "profile.usage.sessions": "جلسات الدردشة",
   "profile.usage.messages": "الرسائل",
@@ -117,22 +104,18 @@
   "profile.usage.calls": "الاستدعاءات",
   "profile.usage.tokens": "الرموز",
   "profile.usage.credits": "الأرصدة",
-
   "profile.account.dangerZone": "منطقة الخطر",
   "profile.account.deleteAccount": "حذف الحساب",
   "profile.account.deleteWarning": "سيؤدي ذلك إلى حذف حسابك وجميع المستندات والدردشات والبيانات نهائيًا. لا يمكن التراجع عن هذا الإجراء.",
   "profile.account.deleteConfirm": "اكتب بريدك الإلكتروني لتأكيد الحذف",
   "profile.account.deleting": "جارٍ حذف الحساب…",
-
   "userMenu.profile": "الملف الشخصي",
   "userMenu.buyCredits": "شراء أرصدة",
   "userMenu.signOut": "تسجيل الخروج",
-
   "billing.pro.title": "خطة برو",
   "billing.pro.description": "100,000 رصيد/شهر",
   "billing.pro.pricePerMonth": "${price}/شهر",
   "billing.extraTopups": "شحن أرصدة إضافية",
-
   "demo.title": "اختر مستندًا نموذجيًا",
   "demo.subtitle": "جرّب DocTalk مع ملفات PDF النموذجية هذه",
   "demo.hint": "نصيحة: انقر على أرقام الاقتباس [1] للانتقال إلى المصدر ومشاهدة التمييزات",
@@ -157,5 +140,21 @@
   "demo.signInForUnlimited": "سجّل الدخول للاستخدام غير المحدود",
   "demo.signInToContinue": "سجّل الدخول لمتابعة الدردشة",
   "demo.limitReachedMessage": "لقد استخدمت جميع الأسئلة التجريبية الخمسة. سجّل الدخول للوصول غير المحدود مع أرصدة مجانية!",
-  "demo.processing": "جارٍ المعالجة..."
+  "demo.processing": "جارٍ المعالجة...",
+  "landing.badge": "مساعد PDF بالذكاء الاصطناعي",
+  "landing.headline": "تحدث مع أي PDF\nفي ثوانٍ",
+  "landing.subtitle": "رفيقك في القراءة بالذكاء الاصطناعي",
+  "landing.description": "ارفع أي PDF واحصل على إجابات فورية مع اقتباسات. كل إجابة مرتبطة بالمصدر الأصلي.",
+  "landing.cta.demo": "تجربة مجانية",
+  "landing.cta.getStarted": "ابدأ الآن",
+  "landing.cta.howItWorks": "كيف يعمل",
+  "landing.showcase.title": "شاهده أثناء العمل",
+  "landing.showcase.caption": "ارفع PDF، اطرح أسئلة، احصل على إجابات مقتبسة مع تمييز الصفحات",
+  "landing.features.title": "لماذا DocTalk؟",
+  "landing.feature.answers.title": "إجابات فورية",
+  "landing.feature.answers.desc": "اطرح أي سؤال واحصل على إجابات دقيقة من مستندك في ثوانٍ.",
+  "landing.feature.citations.title": "اقتباسات المصدر",
+  "landing.feature.citations.desc": "كل إجابة تتضمن مراجع مرقمة. انقر على أي اقتباس للانتقال إلى الصفحة المحددة.",
+  "landing.feature.privacy.title": "الخصوصية أولاً",
+  "landing.feature.privacy.desc": "لا تُستخدم مستنداتك أبداً لتدريب الذكاء الاصطناعي. مشفرة أثناء النقل والتخزين."
 }

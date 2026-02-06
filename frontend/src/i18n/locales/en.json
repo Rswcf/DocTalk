@@ -1,7 +1,6 @@
 {
   "app.title": "DocTalk",
   "app.subtitle": "Upload a PDF to start chatting.",
-
   "upload.dragDrop": "Drag & drop your PDF here",
   "upload.or": "or",
   "upload.chooseFile": "Choose File",
@@ -12,7 +11,6 @@
   "upload.networkError": "Upload failed, please check network or try again later",
   "upload.pdfOnly": "Please upload a PDF file",
   "upload.tooLarge": "File size cannot exceed 50MB",
-
   "doc.myDocuments": "My Documents",
   "doc.noDocuments": "No documents yet",
   "doc.open": "Open",
@@ -23,7 +21,6 @@
   "doc.initChat": "Initializing chat…",
   "doc.pdfLoadError": "Unable to load PDF. Please refresh or try again later.",
   "doc.pdfLoading": "Loading PDF…",
-
   "chat.placeholder": "Type a question…",
   "chat.send": "Send",
   "chat.trySuggested": "Try one of these questions to start:",
@@ -33,29 +30,23 @@
   "chat.suggestedQ4": "List important data and findings",
   "chat.error": "Chat error: ",
   "chat.networkError": "Network error, please try again later",
-
   "citation.jumpTo": "Jump to page {page}",
-
   "toolbar.zoomIn": "Zoom in",
   "toolbar.zoomOut": "Zoom out",
   "toolbar.prevPage": "Previous page",
   "toolbar.nextPage": "Next page",
   "toolbar.grabMode": "Hand tool (drag to pan)",
-
   "header.darkMode": "Switch to dark mode",
   "header.lightMode": "Switch to light mode",
   "header.model": "Model",
   "header.language": "Language",
   "header.backToDocument": "Back to document",
-
   "copy.button": "Copy",
   "copy.copied": "Copied",
   "feedback.helpful": "Helpful",
   "feedback.notHelpful": "Not helpful",
-
   "error.somethingWrong": "Something went wrong",
-  "error.refresh": "Refresh page"
-  ,
+  "error.refresh": "Refresh page",
   "session.newChat": "New Chat",
   "session.recentChats": "Recent Chats",
   "session.deleteChat": "Delete Chat",
@@ -74,14 +65,12 @@
   "credits.insufficientCredits": "Insufficient Credits",
   "credits.purchasePrompt": "You've run out of credits. Purchase more to continue chatting.",
   "credits.buyCredits": "Buy Credits",
-  
   "privacy.badge": "Privacy-first: your docs stay yours",
   "privacy.noTraining": "We never use your data for model training",
   "privacy.encrypted": "Encrypted in transit and at rest",
   "privacy.deleteAnytime": "Delete your data anytime",
   "privacy.policyLink": "Privacy Policy",
   "privacy.termsLink": "Terms",
-
   "home.cta.demoNow": "Try Example PDF Now",
   "home.cta.loginUpload": "Log in to upload your PDF",
   "home.cta.tryDemo": "Try demo",
@@ -97,11 +86,9 @@
   "billing.extraTopups": "Extra Credit Top-ups",
   "common.cancel": "Cancel",
   "common.loading": "Loading...",
-
   "auth.loginToContinue": "Sign in to continue",
   "auth.loginBenefits": "Sign in to upload documents, save conversations, and sync across devices",
   "auth.privacyNote": "We don't use your documents to train AI models",
-
   "privacy.title": "Privacy Policy",
   "privacy.section1.title": "Data Collection",
   "privacy.section1.content": "We collect your email address for authentication and the documents you upload for analysis.",
@@ -116,7 +103,6 @@
   "privacy.section5.title": "Contact",
   "privacy.section5.content": "For privacy inquiries, contact privacy@doctalk.app",
   "privacy.lastUpdated": "Last updated",
-
   "terms.title": "Terms of Service",
   "terms.section1.title": "Service Description",
   "terms.section1.content": "DocTalk provides AI-powered document analysis. You upload PDFs and can ask questions about their content.",
@@ -127,7 +113,6 @@
   "terms.section4.title": "Changes",
   "terms.section4.content": "We may update these terms. Continued use constitutes acceptance of changes.",
   "terms.lastUpdated": "Last updated",
-
   "demo.title": "Choose a sample document",
   "demo.subtitle": "Experience DocTalk with these example PDFs",
   "demo.hint": "Tip: Click citation numbers [1] to jump to the source and see highlights",
@@ -153,25 +138,20 @@
   "demo.signInToContinue": "Sign in to continue chatting",
   "demo.limitReachedMessage": "You've used all 5 demo questions. Sign in for unlimited access with free credits!",
   "demo.processing": "Processing...",
-
   "common.backToHome": "Back to home",
-
   "profile.title": "Profile",
   "profile.tabs.profile": "Profile",
   "profile.tabs.credits": "Credits",
   "profile.tabs.usage": "Usage",
   "profile.tabs.account": "Account",
-
   "profile.info.memberSince": "Member for {days} days",
   "profile.info.connectedWith": "Connected with {provider}",
-
   "profile.plan.free": "Free",
   "profile.plan.pro": "Pro",
   "profile.plan.upgrade": "Upgrade to Pro",
   "profile.plan.manage": "Manage Subscription",
   "profile.plan.monthlyAllowance": "{used} / {total} monthly credits",
   "profile.plan.nextRenewal": "Renews in {days} days",
-
   "profile.credits.balance": "Credits Balance",
   "profile.credits.buyMore": "Buy Extra Credits",
   "profile.credits.history": "Transaction History",
@@ -181,7 +161,6 @@
   "profile.credits.reason.chat": "Chat Usage",
   "profile.credits.reason.monthly_allowance": "Monthly Allowance",
   "profile.credits.reason.refund": "Refund",
-
   "profile.usage.documents": "Documents",
   "profile.usage.sessions": "Chat Sessions",
   "profile.usage.messages": "Messages",
@@ -192,14 +171,28 @@
   "profile.usage.calls": "Calls",
   "profile.usage.tokens": "Tokens",
   "profile.usage.credits": "Credits",
-
   "profile.account.dangerZone": "Danger Zone",
   "profile.account.deleteAccount": "Delete Account",
   "profile.account.deleteWarning": "This will permanently delete your account, all documents, chats, and data. This action cannot be undone.",
   "profile.account.deleteConfirm": "Type your email to confirm deletion",
   "profile.account.deleting": "Deleting account...",
-
   "userMenu.profile": "Profile",
   "userMenu.buyCredits": "Buy Credits",
-  "userMenu.signOut": "Sign Out"
+  "userMenu.signOut": "Sign Out",
+  "landing.badge": "PDF AI ASSISTANT",
+  "landing.headline": "Chat with any PDF\nin seconds",
+  "landing.subtitle": "Your AI-powered reading companion",
+  "landing.description": "Upload any PDF and get instant, cited answers. Every response links back to the exact source — so you can verify in one click.",
+  "landing.cta.demo": "Try free demo",
+  "landing.cta.getStarted": "Get started",
+  "landing.cta.howItWorks": "How it works",
+  "landing.showcase.title": "See it in action",
+  "landing.showcase.caption": "Upload a PDF, ask questions, get cited answers with page highlights",
+  "landing.features.title": "Why DocTalk?",
+  "landing.feature.answers.title": "Instant Answers",
+  "landing.feature.answers.desc": "Ask any question and get precise answers from your document in seconds, powered by state-of-the-art AI.",
+  "landing.feature.citations.title": "Source Citations",
+  "landing.feature.citations.desc": "Every answer includes numbered references. Click any citation to jump to the exact page and see the source highlighted.",
+  "landing.feature.privacy.title": "Privacy First",
+  "landing.feature.privacy.desc": "Your documents are never used for AI training. Encrypted in transit and at rest, with full deletion control."
 }

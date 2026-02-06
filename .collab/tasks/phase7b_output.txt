@@ -1,0 +1,2418 @@
+OpenAI Codex v0.46.0 (research preview)
+--------
+workdir: /Users/mayijie/Projects/Code/010_DocTalk
+model: gpt-5
+provider: openai
+approval: never
+sandbox: workspace-write [workdir, /tmp, $TMPDIR]
+reasoning effort: high
+reasoning summaries: auto
+session id: 019c3315-5ec6-7ce1-8d4a-5edd2cdb0272
+--------
+user
+Phase 7B: Add i18n keys to fr.json, bn.json, pt.json
+
+## IMPORTANT: Read ALL target files AND en.json before making changes!
+
+Read frontend/src/i18n/locales/en.json to see all the new keys that need translations.
+
+The following NEW keys exist in en.json but are MISSING from the other locale files. Add them with proper translations:
+
+Profile/subscription keys:
+  profile.title, profile.tabs.profile, profile.tabs.credits, profile.tabs.usage, profile.tabs.account,
+  profile.info.memberSince, profile.info.connectedWith,
+  profile.plan.free, profile.plan.pro, profile.plan.upgrade, profile.plan.manage,
+  profile.plan.monthlyAllowance, profile.plan.nextRenewal,
+  profile.credits.balance, profile.credits.buyMore, profile.credits.history, profile.credits.noHistory,
+  profile.credits.reason.signup_bonus, profile.credits.reason.purchase, profile.credits.reason.chat,
+  profile.credits.reason.monthly_allowance, profile.credits.reason.refund,
+  profile.usage.documents, profile.usage.sessions, profile.usage.messages, profile.usage.creditsSpent,
+  profile.usage.tokensUsed, profile.usage.modelBreakdown, profile.usage.model, profile.usage.calls,
+  profile.usage.tokens, profile.usage.credits,
+  profile.account.dangerZone, profile.account.deleteAccount, profile.account.deleteWarning,
+  profile.account.deleteConfirm, profile.account.deleting,
+  userMenu.profile, userMenu.buyCredits, userMenu.signOut
+
+Billing keys:
+  billing.pro.title, billing.pro.description, billing.pro.pricePerMonth, billing.extraTopups
+
+For each file:
+1. Read the entire file first
+2. Add the missing keys at the end (before the closing })
+3. Translate to the target language (proper native translations, NOT English)
+4. Keep ALL existing keys intact
+5. Ensure valid JSON (no trailing commas)
+
+Target files:
+- frontend/src/i18n/locales/fr.json (French)
+- frontend/src/i18n/locales/bn.json (Bengali)
+- frontend/src/i18n/locales/pt.json (Portuguese)
+
+Important notes for translations:
+- Keep {placeholder} parameters as-is (like {days}, {used}, {total}, {price}, {provider})
+- Ensure each file is valid JSON after editing
+
+## RULES:
+- Read ALL files before editing
+- Do NOT modify en.json
+- Do NOT modify any other files
+- Ensure valid JSON output for each file
+
+thinking
+**Modifying JSON files**
+
+I need to modify three JSON files to add new translation keys. First, I'll read the en.json file to identify the keys. Then, I'll check the target locale files to see what's currently there and what keys are missing. After that, I’ll append the missing keys at the end while ensuring the JSON remains valid by adding a comma beforehand. I have to keep the placeholders and provide translations for French, Bengali, and Portuguese. Let's open the repository!
+codex
+I’m going to inspect `en.json` and the three locale files to identify missing keys and then append translated entries while keeping JSON valid.
+exec
+bash -lc 'ls -la' in /Users/mayijie/Projects/Code/010_DocTalk succeeded in 10ms:
+total 96
+drwxr-xr-x  15 mayijie  staff    480 Feb  6 13:10 .
+drwxr-xr-x@ 14 mayijie  staff    448 Feb  4 18:58 ..
+drwxr-xr-x@  3 mayijie  staff     96 Feb  6 14:01 .claude
+drwxr-xr-x@  8 mayijie  staff    256 Feb  5 00:23 .collab
+-rw-r--r--@  1 mayijie  staff    129 Feb  4 23:10 .dockerignore
+-rw-r--r--@  1 mayijie  staff   1200 Feb  6 00:27 .env
+-rw-r--r--@  1 mayijie  staff   1159 Feb  5 20:30 .env.example
+drwxr-xr-x@ 12 mayijie  staff    384 Feb  6 14:01 .git
+-rw-r--r--@  1 mayijie  staff    309 Feb  4 22:24 .gitignore
+-rw-r--r--@  1 mayijie  staff  14095 Feb  6 13:10 CLAUDE.md
+-rw-r--r--@  1 mayijie  staff   8524 Feb  6 09:18 README.md
+drwxr-xr-x@ 10 mayijie  staff    320 Feb  6 11:46 backend
+-rw-r--r--@  1 mayijie  staff    978 Feb  4 19:38 docker-compose.yml
+drwxr-xr-x@ 19 mayijie  staff    608 Feb  6 00:21 frontend
+drwxr-xr-x@  4 mayijie  staff    128 Feb  4 23:32 infra
+exec
+bash -lc "sed -n '1,200p' frontend/src/i18n/locales/en.json" in /Users/mayijie/Projects/Code/010_DocTalk succeeded in 14ms:
+{
+  "app.title": "DocTalk",
+  "app.subtitle": "Upload a PDF to start chatting.",
+
+  "upload.dragDrop": "Drag & drop your PDF here",
+  "upload.or": "or",
+  "upload.chooseFile": "Choose File",
+  "upload.uploading": "Uploading…",
+  "upload.parsing": "Parsing…",
+  "upload.parsingProgress": "Parsing pages: {pagesParsed}, indexing: {chunksIndexed}",
+  "upload.error": "Error during processing",
+  "upload.networkError": "Upload failed, please check network or try again later",
+  "upload.pdfOnly": "Please upload a PDF file",
+  "upload.tooLarge": "File size cannot exceed 50MB",
+
+  "doc.myDocuments": "My Documents",
+  "doc.noDocuments": "No documents yet",
+  "doc.open": "Open",
+  "doc.notFound": "Document not found",
+  "doc.loadError": "Failed to load document info",
+
+thinking
+**Checking JSON structure**
+
+I noticed that the en.json file ends without a closing brace, which makes the output seem incomplete. It looks like the truncation happened because it only read the first 200 lines. Now I'm questioning whether it has closed properly after the line that says "userMenu.signOut": "Sign Out". Let's investigate by showing the next lines to see if everything is in order. It’s important to ensure the structure is correct!
+exec
+bash -lc "sed -n '200,400p' frontend/src/i18n/locales/en.json" in /Users/mayijie/Projects/Code/010_DocTalk succeeded in 14ms:
+  "userMenu.signOut": "Sign Out"
+}
+
+thinking
+**Opening JSON files**
+
+I'm looking to open fr.json, bn.json, and pt.json right now. I want to check the current keys inside them to find the right spot for adding new content. It’s important to see their structure first so I ensure that everything aligns correctly. Let’s figure out what adjustments we might need as I explore these files. It's all about getting the details just right!
+exec
+bash -lc "sed -n '1,240p' frontend/src/i18n/locales/fr.json" in /Users/mayijie/Projects/Code/010_DocTalk succeeded in 13ms:
+{
+  "app.title": "DocTalk",
+  "app.subtitle": "Téléchargez un PDF pour commencer à discuter.",
+
+  "upload.dragDrop": "Glissez-déposez votre PDF ici",
+  "upload.or": "ou",
+  "upload.chooseFile": "Choisir un fichier",
+  "upload.uploading": "Téléversement…",
+  "upload.parsing": "Analyse…",
+  "upload.parsingProgress": "Pages analysées : {pagesParsed}, indexation : {chunksIndexed}",
+  "upload.error": "Erreur lors du traitement",
+  "upload.networkError": "Échec du téléversement, vérifiez le réseau ou réessayez plus tard",
+  "upload.pdfOnly": "Veuillez téléverser un fichier PDF",
+  "upload.tooLarge": "La taille du fichier ne peut pas dépasser 50 Mo",
+
+  "doc.myDocuments": "Mes documents",
+  "doc.noDocuments": "Aucun document pour le moment",
+  "doc.open": "Ouvrir",
+  "doc.notFound": "Document introuvable",
+  "doc.loadError": "Échec du chargement des informations du document",
+
+thinking
+**Checking translation files**
+
+I noticed that fr.json has some English keys that aren't translated, like “auth,” but that’s alright since it’s not my job to fix earlier translations. My focus should be on adding new keys. Now, I’m looking into bn.json to see what needs to be done there as well. I want to ensure I'm thorough and up-to-date with both files! Let’s see what I find in bn.json.
+exec
+bash -lc "sed -n '1,260p' frontend/src/i18n/locales/bn.json" in /Users/mayijie/Projects/Code/010_DocTalk succeeded in 11ms:
+{
+  "app.title": "DocTalk",
+  "app.subtitle": "চ্যাট শুরু করতে একটি PDF আপলোড করুন।",
+
+  "upload.dragDrop": "আপনার PDF এখানে ড্র্যাগ ও ড্রপ করুন",
+  "upload.or": "অথবা",
+  "upload.chooseFile": "ফাইল নির্বাচন করুন",
+  "upload.uploading": "আপলোড হচ্ছে…",
+  "upload.parsing": "বিশ্লেষণ করা হচ্ছে…",
+  "upload.parsingProgress": "পৃষ্ঠা বিশ্লেষণ: {pagesParsed}, ইনডেক্সিং: {chunksIndexed}",
+  "upload.error": "প্রক্রিয়াকরণের সময় ত্রুটি",
+  "upload.networkError": "আপলোড ব্যর্থ, নেটওয়ার্ক পরীক্ষা করুন বা পরে আবার চেষ্টা করুন",
+  "upload.pdfOnly": "অনুগ্রহ করে একটি PDF ফাইল আপলোড করুন",
+  "upload.tooLarge": "ফাইলের আকার 50MB-এর বেশি হতে পারবে না",
+
+  "doc.myDocuments": "আমার নথিপত্র",
+  "doc.noDocuments": "এখনও কোনো নথি নেই",
+  "doc.open": "খুলুন",
+  "doc.notFound": "নথি খুঁজে পাওয়া যায়নি",
+  "doc.loadError": "নথির তথ্য লোড করতে ব্যর্থ",
+exec
+bash -lc "sed -n '1,280p' frontend/src/i18n/locales/pt.json" in /Users/mayijie/Projects/Code/010_DocTalk succeeded in 12ms:
+{
+  "app.title": "DocTalk",
+  "app.subtitle": "Envie um PDF para começar a conversar.",
+
+  "upload.dragDrop": "Arraste e solte seu PDF aqui",
+  "upload.or": "ou",
+  "upload.chooseFile": "Escolher arquivo",
+  "upload.uploading": "Enviando…",
+  "upload.parsing": "Analisando…",
+  "upload.parsingProgress": "Páginas analisadas: {pagesParsed}, indexando: {chunksIndexed}",
+  "upload.error": "Erro durante o processamento",
+  "upload.networkError": "Falha no envio, verifique a rede ou tente novamente mais tarde",
+  "upload.pdfOnly": "Envie um arquivo PDF, por favor",
+  "upload.tooLarge": "O tamanho do arquivo não pode exceder 50MB",
+
+  "doc.myDocuments": "Meus documentos",
+  "doc.noDocuments": "Ainda não há documentos",
+  "doc.open": "Abrir",
+  "doc.notFound": "Documento não encontrado",
+  "doc.loadError": "Falha ao carregar informações do documento",
+
+
+
+
+
+
+thinking
+**Updating JSON Keys**
+
+I need to append the missing keys for the FR/BN/PT files since they don’t have any of the new profile or billing keys. First, I should check if any of these keys are already present, which is likely not the case. I need to add a trailing comma after the last existing entry before inserting the new keys. I must ensure accurate translations for the new profile and billing keys, while also keeping placeholders intact: {days}, {used}, {total}, {price}, {provider}.
+thinking
+**Crafting French Translations**
+
+I notice that the FR/BN/PT files already have some keys like auth.*, but that’s not really my concern. My main task is to ensure the translations are correct and sound natural. For the French translations, I have some crafted phrases, such as “Profil” for profile titles, “Crédits” for credits, and “Utilisation” for usage. For member since, “Membre depuis {days} jours” works well. I’ll also use phrases like “Gratuit” for the free plan and “Gérer l’abonnement” for account management.
+thinking
+**Completing French Translations**
+
+I’m continuing with the French translations for the profile credits and usage keys. For instance, “Solde de crédits” for credit balance, and “Acheter des crédits supplémentaires” for buying more credits. I’m also noting down translations for the usage section, like “Documents” and “Sessions de chat.” For account deletions, I'll translate the warning as “Cela supprimera définitivement votre compte, tous les documents, discussions et données. Cette action ne peut pas être annulée.” This way, all the essential phrases will have accurate and clear translations.
+thinking
+**Finalizing French Translations**
+
+I’m working on the remaining French translations. For account deletion, “Saisissez votre e-mail pour confirmer la suppression” communicates the confirmation request, and “Suppression du compte…” indicates the account is being deleted. In the user menu, I’ll translate "Sign Out" as "Se déconnecter." For billing, I'll go with "Forfait Pro" instead of "Offre Pro," and use “100 000 crédits/mois” for clarity with the proper spacing. It's important to ensure everything is correctly formatted and readable in JSON.
+thinking
+**Completing Translations for Multiple Languages**
+
+I’m finalizing the translations for various sections. For Bengali, "100 000" is readable, and I’ll keep “{price}/মাস” for billing alongside phrases like "ক্রেডিট ব্যালেন্স" for the balance. 
+
+Moving to Portuguese, I’ll translate profile-related keys as "Perfil" and maintain accurate wording for actions like account deletion: "Excluir conta." 
+
+In billing, "Plano Pro" fits, while "100.000 créditos/mês" uses the period for thousands, which is common in Portuguese. Overall, I’m ensuring consistency and clarity throughout all translations.
+thinking
+**Implementing JSON Patches**
+
+I need to add new keys to the JSON file, ensuring I place a comma before the first new key while keeping the existing structure intact. 
+
+I’ll check to confirm that these keys don’t already exist in the FR, BN, or PT files—looks like they don’t! I’ll carefully maintain the last line as "common.loading": "Loading..." and make sure to avoid any duplicates, like checking for "common.backToHome." With everything in order, I’m ready to implement the patch effectively!
+codex
+Next, I’ll append the missing translated keys to the three locale files, ensuring valid JSON and preserving existing content.
+file update
+M /Users/mayijie/Projects/Code/010_DocTalk/frontend/src/i18n/locales/fr.json
+@@ -79,3 +79,55 @@
+   "common.cancel": "Cancel",
+-  "common.loading": "Loading..."
++  "common.loading": "Loading...",
++
++  "profile.title": "Profil",
++  "profile.tabs.profile": "Profil",
++  "profile.tabs.credits": "Crédits",
++  "profile.tabs.usage": "Utilisation",
++  "profile.tabs.account": "Compte",
++
++  "profile.info.memberSince": "Membre depuis {days} jours",
++  "profile.info.connectedWith": "Connecté avec {provider}",
++
++  "profile.plan.free": "Gratuit",
++  "profile.plan.pro": "Pro",
++  "profile.plan.upgrade": "Passer à Pro",
++  "profile.plan.manage": "Gérer l’abonnement",
++  "profile.plan.monthlyAllowance": "{used} / {total} crédits mensuels",
++  "profile.plan.nextRenewal": "Renouvellement dans {days} jours",
++
++  "profile.credits.balance": "Solde de crédits",
++  "profile.credits.buyMore": "Acheter des crédits supplémentaires",
++  "profile.credits.history": "Historique des transactions",
++  "profile.credits.noHistory": "Aucune transaction pour le moment",
++  "profile.credits.reason.signup_bonus": "Bonus d’inscription",
++  "profile.credits.reason.purchase": "Achat de crédits",
++  "profile.credits.reason.chat": "Utilisation du chat",
++  "profile.credits.reason.monthly_allowance": "Allocation mensuelle",
++  "profile.credits.reason.refund": "Remboursement",
++
++  "profile.usage.documents": "Documents",
++  "profile.usage.sessions": "Sessions de chat",
++  "profile.usage.messages": "Messages",
++  "profile.usage.creditsSpent": "Crédits dépensés",
++  "profile.usage.tokensUsed": "Jetons utilisés",
++  "profile.usage.modelBreakdown": "Utilisation par modèle",
++  "profile.usage.model": "Modèle",
++  "profile.usage.calls": "Appels",
++  "profile.usage.tokens": "Jetons",
++  "profile.usage.credits": "Crédits",
++
++  "profile.account.dangerZone": "Zone de danger",
++  "profile.account.deleteAccount": "Supprimer le compte",
++  "profile.account.deleteWarning": "Cela supprimera définitivement votre compte, tous les documents, discussions et données. Cette action ne peut pas être annulée.",
++  "profile.account.deleteConfirm": "Saisissez votre e-mail pour confirmer la suppression",
++  "profile.account.deleting": "Suppression du compte…",
++
++  "userMenu.profile": "Profil",
++  "userMenu.buyCredits": "Acheter des crédits",
++  "userMenu.signOut": "Se déconnecter",
++
++  "billing.pro.title": "Forfait Pro",
++  "billing.pro.description": "100 000 crédits/mois",
++  "billing.pro.pricePerMonth": "{price}/mois",
++  "billing.extraTopups": "Recharges de crédits supplémentaires"
+ }
+apply_patch(auto_approved=true) exited 0 in 25ms:
+Success. Updated the following files:
+M frontend/src/i18n/locales/fr.json
+file update:
+diff --git a/frontend/src/i18n/locales/fr.json b/frontend/src/i18n/locales/fr.json
+index e4d20fbaa38dc06ac8ba34741c7e007e3f92f5a0..6f2c7fb31d201186cbd0a99d184158c512a99cd4
+--- a/frontend/src/i18n/locales/fr.json
++++ b/frontend/src/i18n/locales/fr.json
+@@ -77,5 +77,57 @@
+   "billing.purchaseCanceled": "Purchase was canceled.",
+   "billing.error": "An error occurred. Please try again.",
+   "common.cancel": "Cancel",
+-  "common.loading": "Loading..."
++  "common.loading": "Loading...",
++
++  "profile.title": "Profil",
++  "profile.tabs.profile": "Profil",
++  "profile.tabs.credits": "Crédits",
++  "profile.tabs.usage": "Utilisation",
++  "profile.tabs.account": "Compte",
++
++  "profile.info.memberSince": "Membre depuis {days} jours",
++  "profile.info.connectedWith": "Connecté avec {provider}",
++
++  "profile.plan.free": "Gratuit",
++  "profile.plan.pro": "Pro",
++  "profile.plan.upgrade": "Passer à Pro",
++  "profile.plan.manage": "Gérer l’abonnement",
++  "profile.plan.monthlyAllowance": "{used} / {total} crédits mensuels",
++  "profile.plan.nextRenewal": "Renouvellement dans {days} jours",
++
++  "profile.credits.balance": "Solde de crédits",
++  "profile.credits.buyMore": "Acheter des crédits supplémentaires",
++  "profile.credits.history": "Historique des transactions",
++  "profile.credits.noHistory": "Aucune transaction pour le moment",
++  "profile.credits.reason.signup_bonus": "Bonus d’inscription",
++  "profile.credits.reason.purchase": "Achat de crédits",
++  "profile.credits.reason.chat": "Utilisation du chat",
++  "profile.credits.reason.monthly_allowance": "Allocation mensuelle",
++  "profile.credits.reason.refund": "Remboursement",
++
++  "profile.usage.documents": "Documents",
++  "profile.usage.sessions": "Sessions de chat",
++  "profile.usage.messages": "Messages",
++  "profile.usage.creditsSpent": "Crédits dépensés",
++  "profile.usage.tokensUsed": "Jetons utilisés",
++  "profile.usage.modelBreakdown": "Utilisation par modèle",
++  "profile.usage.model": "Modèle",
++  "profile.usage.calls": "Appels",
++  "profile.usage.tokens": "Jetons",
++  "profile.usage.credits": "Crédits",
++
++  "profile.account.dangerZone": "Zone de danger",
++  "profile.account.deleteAccount": "Supprimer le compte",
++  "profile.account.deleteWarning": "Cela supprimera définitivement votre compte, tous les documents, discussions et données. Cette action ne peut pas être annulée.",
++  "profile.account.deleteConfirm": "Saisissez votre e-mail pour confirmer la suppression",
++  "profile.account.deleting": "Suppression du compte…",
++
++  "userMenu.profile": "Profil",
++  "userMenu.buyCredits": "Acheter des crédits",
++  "userMenu.signOut": "Se déconnecter",
++
++  "billing.pro.title": "Forfait Pro",
++  "billing.pro.description": "100 000 crédits/mois",
++  "billing.pro.pricePerMonth": "{price}/mois",
++  "billing.extraTopups": "Recharges de crédits supplémentaires"
+ }
+
+file update:
+diff --git a/frontend/src/i18n/locales/fr.json b/frontend/src/i18n/locales/fr.json
+index e4d20fbaa38dc06ac8ba34741c7e007e3f92f5a0..6f2c7fb31d201186cbd0a99d184158c512a99cd4
+--- a/frontend/src/i18n/locales/fr.json
++++ b/frontend/src/i18n/locales/fr.json
+@@ -77,5 +77,57 @@
+   "billing.purchaseCanceled": "Purchase was canceled.",
+   "billing.error": "An error occurred. Please try again.",
+   "common.cancel": "Cancel",
+-  "common.loading": "Loading..."
++  "common.loading": "Loading...",
++
++  "profile.title": "Profil",
++  "profile.tabs.profile": "Profil",
++  "profile.tabs.credits": "Crédits",
++  "profile.tabs.usage": "Utilisation",
++  "profile.tabs.account": "Compte",
++
++  "profile.info.memberSince": "Membre depuis {days} jours",
++  "profile.info.connectedWith": "Connecté avec {provider}",
++
++  "profile.plan.free": "Gratuit",
++  "profile.plan.pro": "Pro",
++  "profile.plan.upgrade": "Passer à Pro",
++  "profile.plan.manage": "Gérer l’abonnement",
++  "profile.plan.monthlyAllowance": "{used} / {total} crédits mensuels",
++  "profile.plan.nextRenewal": "Renouvellement dans {days} jours",
++
++  "profile.credits.balance": "Solde de crédits",
++  "profile.credits.buyMore": "Acheter des crédits supplémentaires",
++  "profile.credits.history": "Historique des transactions",
++  "profile.credits.noHistory": "Aucune transaction pour le moment",
++  "profile.credits.reason.signup_bonus": "Bonus d’inscription",
++  "profile.credits.reason.purchase": "Achat de crédits",
++  "profile.credits.reason.chat": "Utilisation du chat",
++  "profile.credits.reason.monthly_allowance": "Allocation mensuelle",
++  "profile.credits.reason.refund": "Remboursement",
++
++  "profile.usage.documents": "Documents",
++  "profile.usage.sessions": "Sessions de chat",
++  "profile.usage.messages": "Messages",
++  "profile.usage.creditsSpent": "Crédits dépensés",
++  "profile.usage.tokensUsed": "Jetons utilisés",
++  "profile.usage.modelBreakdown": "Utilisation par modèle",
++  "profile.usage.model": "Modèle",
++  "profile.usage.calls": "Appels",
++  "profile.usage.tokens": "Jetons",
++  "profile.usage.credits": "Crédits",
++
++  "profile.account.dangerZone": "Zone de danger",
++  "profile.account.deleteAccount": "Supprimer le compte",
++  "profile.account.deleteWarning": "Cela supprimera définitivement votre compte, tous les documents, discussions et données. Cette action ne peut pas être annulée.",
++  "profile.account.deleteConfirm": "Saisissez votre e-mail pour confirmer la suppression",
++  "profile.account.deleting": "Suppression du compte…",
++
++  "userMenu.profile": "Profil",
++  "userMenu.buyCredits": "Acheter des crédits",
++  "userMenu.signOut": "Se déconnecter",
++
++  "billing.pro.title": "Forfait Pro",
++  "billing.pro.description": "100 000 crédits/mois",
++  "billing.pro.pricePerMonth": "{price}/mois",
++  "billing.extraTopups": "Recharges de crédits supplémentaires"
+ }
+
+file update
+M /Users/mayijie/Projects/Code/010_DocTalk/frontend/src/i18n/locales/bn.json
+@@ -79,3 +79,55 @@
+   "common.cancel": "Cancel",
+-  "common.loading": "Loading..."
++  "common.loading": "Loading...",
++
++  "profile.title": "প্রোফাইল",
++  "profile.tabs.profile": "প্রোফাইল",
++  "profile.tabs.credits": "ক্রেডিট",
++  "profile.tabs.usage": "ব্যবহার",
++  "profile.tabs.account": "অ্যাকাউন্ট",
++
++  "profile.info.memberSince": "সদস্য {days} দিন ধরে",
++  "profile.info.connectedWith": "{provider} দিয়ে সংযুক্ত",
++
++  "profile.plan.free": "ফ্রি",
++  "profile.plan.pro": "প্রো",
++  "profile.plan.upgrade": "প্রো-তে আপগ্রেড করুন",
++  "profile.plan.manage": "সাবস্ক্রিপশন পরিচালনা করুন",
++  "profile.plan.monthlyAllowance": "{used} / {total} মাসিক ক্রেডিট",
++  "profile.plan.nextRenewal": "{days} দিনের মধ্যে নবায়ন হবে",
++
++  "profile.credits.balance": "ক্রেডিট ব্যালেন্স",
++  "profile.credits.buyMore": "অতিরিক্ত ক্রেডিট কিনুন",
++  "profile.credits.history": "লেনদেনের ইতিহাস",
++  "profile.credits.noHistory": "এখনও কোনো লেনদেন নেই",
++  "profile.credits.reason.signup_bonus": "সাইনআপ বোনাস",
++  "profile.credits.reason.purchase": "ক্রেডিট ক্রয়",
++  "profile.credits.reason.chat": "চ্যাট ব্যবহার",
++  "profile.credits.reason.monthly_allowance": "মাসিক বরাদ্দ",
++  "profile.credits.reason.refund": "ফেরত",
++
++  "profile.usage.documents": "নথি",
++  "profile.usage.sessions": "চ্যাট সেশন",
++  "profile.usage.messages": "বার্তা",
++  "profile.usage.creditsSpent": "খরচ করা ক্রেডিট",
++  "profile.usage.tokensUsed": "ব্যবহৃত টোকেন",
++  "profile.usage.modelBreakdown": "মডেল অনুযায়ী ব্যবহার",
++  "profile.usage.model": "মডেল",
++  "profile.usage.calls": "কল",
++  "profile.usage.tokens": "টোকেন",
++  "profile.usage.credits": "ক্রেডিট",
++
++  "profile.account.dangerZone": "বিপজ্জনক এলাকা",
++  "profile.account.deleteAccount": "অ্যাকাউন্ট মুছে ফেলুন",
++  "profile.account.deleteWarning": "এটি আপনার অ্যাকাউন্ট, সব নথি, চ্যাট এবং তথ্য স্থায়ীভাবে মুছে ফেলবে। এই কাজটি বাতিল করা যাবে না।",
++  "profile.account.deleteConfirm": "নিশ্চিত করতে আপনার ইমেল টাইপ করুন",
++  "profile.account.deleting": "অ্যাকাউন্ট মুছে ফেলা হচ্ছে…",
++
++  "userMenu.profile": "প্রোফাইল",
++  "userMenu.buyCredits": "ক্রেডিট কিনুন",
++  "userMenu.signOut": "সাইন আউট",
++
++  "billing.pro.title": "প্রো প্ল্যান",
++  "billing.pro.description": "প্রতি মাসে 100,000 ক্রেডিট",
++  "billing.pro.pricePerMonth": "{price}/মাস",
++  "billing.extraTopups": "অতিরিক্ত ক্রেডিট টপ-আপ"
+ }
+apply_patch(auto_approved=true) exited 0 in 34ms:
+Success. Updated the following files:
+M frontend/src/i18n/locales/bn.json
+file update:
+diff --git a/frontend/src/i18n/locales/bn.json b/frontend/src/i18n/locales/bn.json
+index 4840b3f71e361ff2b476d4fafb9051f7618eab28..ea9a58f3184dac7f760807546cfb82fdbc38650a
+--- a/frontend/src/i18n/locales/bn.json
++++ b/frontend/src/i18n/locales/bn.json
+@@ -77,5 +77,57 @@
+   "billing.purchaseCanceled": "Purchase was canceled.",
+   "billing.error": "An error occurred. Please try again.",
+   "common.cancel": "Cancel",
+-  "common.loading": "Loading..."
++  "common.loading": "Loading...",
++
++  "profile.title": "প্রোফাইল",
++  "profile.tabs.profile": "প্রোফাইল",
++  "profile.tabs.credits": "ক্রেডিট",
++  "profile.tabs.usage": "ব্যবহার",
++  "profile.tabs.account": "অ্যাকাউন্ট",
++
++  "profile.info.memberSince": "সদস্য {days} দিন ধরে",
++  "profile.info.connectedWith": "{provider} দিয়ে সংযুক্ত",
++
++  "profile.plan.free": "ফ্রি",
++  "profile.plan.pro": "প্রো",
++  "profile.plan.upgrade": "প্রো-তে আপগ্রেড করুন",
++  "profile.plan.manage": "সাবস্ক্রিপশন পরিচালনা করুন",
++  "profile.plan.monthlyAllowance": "{used} / {total} মাসিক ক্রেডিট",
++  "profile.plan.nextRenewal": "{days} দিনের মধ্যে নবায়ন হবে",
++
++  "profile.credits.balance": "ক্রেডিট ব্যালেন্স",
++  "profile.credits.buyMore": "অতিরিক্ত ক্রেডিট কিনুন",
++  "profile.credits.history": "লেনদেনের ইতিহাস",
++  "profile.credits.noHistory": "এখনও কোনো লেনদেন নেই",
++  "profile.credits.reason.signup_bonus": "সাইনআপ বোনাস",
++  "profile.credits.reason.purchase": "ক্রেডিট ক্রয়",
++  "profile.credits.reason.chat": "চ্যাট ব্যবহার",
++  "profile.credits.reason.monthly_allowance": "মাসিক বরাদ্দ",
++  "profile.credits.reason.refund": "ফেরত",
++
++  "profile.usage.documents": "নথি",
++  "profile.usage.sessions": "চ্যাট সেশন",
++  "profile.usage.messages": "বার্তা",
++  "profile.usage.creditsSpent": "খরচ করা ক্রেডিট",
++  "profile.usage.tokensUsed": "ব্যবহৃত টোকেন",
++  "profile.usage.modelBreakdown": "মডেল অনুযায়ী ব্যবহার",
++  "profile.usage.model": "মডেল",
++  "profile.usage.calls": "কল",
++  "profile.usage.tokens": "টোকেন",
++  "profile.usage.credits": "ক্রেডিট",
++
++  "profile.account.dangerZone": "বিপজ্জনক এলাকা",
++  "profile.account.deleteAccount": "অ্যাকাউন্ট মুছে ফেলুন",
++  "profile.account.deleteWarning": "এটি আপনার অ্যাকাউন্ট, সব নথি, চ্যাট এবং তথ্য স্থায়ীভাবে মুছে ফেলবে। এই কাজটি বাতিল করা যাবে না।",
++  "profile.account.deleteConfirm": "নিশ্চিত করতে আপনার ইমেল টাইপ করুন",
++  "profile.account.deleting": "অ্যাকাউন্ট মুছে ফেলা হচ্ছে…",
++
++  "userMenu.profile": "প্রোফাইল",
++  "userMenu.buyCredits": "ক্রেডিট কিনুন",
++  "userMenu.signOut": "সাইন আউট",
++
++  "billing.pro.title": "প্রো প্ল্যান",
++  "billing.pro.description": "প্রতি মাসে 100,000 ক্রেডিট",
++  "billing.pro.pricePerMonth": "{price}/মাস",
++  "billing.extraTopups": "অতিরিক্ত ক্রেডিট টপ-আপ"
+ }
+diff --git a/frontend/src/i18n/locales/fr.json b/frontend/src/i18n/locales/fr.json
+index e4d20fbaa38dc06ac8ba34741c7e007e3f92f5a0..6f2c7fb31d201186cbd0a99d184158c512a99cd4
+--- a/frontend/src/i18n/locales/fr.json
++++ b/frontend/src/i18n/locales/fr.json
+@@ -77,5 +77,57 @@
+   "billing.purchaseCanceled": "Purchase was canceled.",
+   "billing.error": "An error occurred. Please try again.",
+   "common.cancel": "Cancel",
+-  "common.loading": "Loading..."
++  "common.loading": "Loading...",
++
++  "profile.title": "Profil",
++  "profile.tabs.profile": "Profil",
++  "profile.tabs.credits": "Crédits",
++  "profile.tabs.usage": "Utilisation",
++  "profile.tabs.account": "Compte",
++
++  "profile.info.memberSince": "Membre depuis {days} jours",
++  "profile.info.connectedWith": "Connecté avec {provider}",
++
++  "profile.plan.free": "Gratuit",
++  "profile.plan.pro": "Pro",
++  "profile.plan.upgrade": "Passer à Pro",
++  "profile.plan.manage": "Gérer l’abonnement",
++  "profile.plan.monthlyAllowance": "{used} / {total} crédits mensuels",
++  "profile.plan.nextRenewal": "Renouvellement dans {days} jours",
++
++  "profile.credits.balance": "Solde de crédits",
++  "profile.credits.buyMore": "Acheter des crédits supplémentaires",
++  "profile.credits.history": "Historique des transactions",
++  "profile.credits.noHistory": "Aucune transaction pour le moment",
++  "profile.credits.reason.signup_bonus": "Bonus d’inscription",
++  "profile.credits.reason.purchase": "Achat de crédits",
++  "profile.credits.reason.chat": "Utilisation du chat",
++  "profile.credits.reason.monthly_allowance": "Allocation mensuelle",
++  "profile.credits.reason.refund": "Remboursement",
++
++  "profile.usage.documents": "Documents",
++  "profile.usage.sessions": "Sessions de chat",
++  "profile.usage.messages": "Messages",
++  "profile.usage.creditsSpent": "Crédits dépensés",
++  "profile.usage.tokensUsed": "Jetons utilisés",
++  "profile.usage.modelBreakdown": "Utilisation par modèle",
++  "profile.usage.model": "Modèle",
++  "profile.usage.calls": "Appels",
++  "profile.usage.tokens": "Jetons",
++  "profile.usage.credits": "Crédits",
++
++  "profile.account.dangerZone": "Zone de danger",
++  "profile.account.deleteAccount": "Supprimer le compte",
++  "profile.account.deleteWarning": "Cela supprimera définitivement votre compte, tous les documents, discussions et données. Cette action ne peut pas être annulée.",
++  "profile.account.deleteConfirm": "Saisissez votre e-mail pour confirmer la suppression",
++  "profile.account.deleting": "Suppression du compte…",
++
++  "userMenu.profile": "Profil",
++  "userMenu.buyCredits": "Acheter des crédits",
++  "userMenu.signOut": "Se déconnecter",
++
++  "billing.pro.title": "Forfait Pro",
++  "billing.pro.description": "100 000 crédits/mois",
++  "billing.pro.pricePerMonth": "{price}/mois",
++  "billing.extraTopups": "Recharges de crédits supplémentaires"
+ }
+
+file update:
+diff --git a/frontend/src/i18n/locales/bn.json b/frontend/src/i18n/locales/bn.json
+index 4840b3f71e361ff2b476d4fafb9051f7618eab28..ea9a58f3184dac7f760807546cfb82fdbc38650a
+--- a/frontend/src/i18n/locales/bn.json
++++ b/frontend/src/i18n/locales/bn.json
+@@ -77,5 +77,57 @@
+   "billing.purchaseCanceled": "Purchase was canceled.",
+   "billing.error": "An error occurred. Please try again.",
+   "common.cancel": "Cancel",
+-  "common.loading": "Loading..."
++  "common.loading": "Loading...",
++
++  "profile.title": "প্রোফাইল",
++  "profile.tabs.profile": "প্রোফাইল",
++  "profile.tabs.credits": "ক্রেডিট",
++  "profile.tabs.usage": "ব্যবহার",
++  "profile.tabs.account": "অ্যাকাউন্ট",
++
++  "profile.info.memberSince": "সদস্য {days} দিন ধরে",
++  "profile.info.connectedWith": "{provider} দিয়ে সংযুক্ত",
++
++  "profile.plan.free": "ফ্রি",
++  "profile.plan.pro": "প্রো",
++  "profile.plan.upgrade": "প্রো-তে আপগ্রেড করুন",
++  "profile.plan.manage": "সাবস্ক্রিপশন পরিচালনা করুন",
++  "profile.plan.monthlyAllowance": "{used} / {total} মাসিক ক্রেডিট",
++  "profile.plan.nextRenewal": "{days} দিনের মধ্যে নবায়ন হবে",
++
++  "profile.credits.balance": "ক্রেডিট ব্যালেন্স",
++  "profile.credits.buyMore": "অতিরিক্ত ক্রেডিট কিনুন",
++  "profile.credits.history": "লেনদেনের ইতিহাস",
++  "profile.credits.noHistory": "এখনও কোনো লেনদেন নেই",
++  "profile.credits.reason.signup_bonus": "সাইনআপ বোনাস",
++  "profile.credits.reason.purchase": "ক্রেডিট ক্রয়",
++  "profile.credits.reason.chat": "চ্যাট ব্যবহার",
++  "profile.credits.reason.monthly_allowance": "মাসিক বরাদ্দ",
++  "profile.credits.reason.refund": "ফেরত",
++
++  "profile.usage.documents": "নথি",
++  "profile.usage.sessions": "চ্যাট সেশন",
++  "profile.usage.messages": "বার্তা",
++  "profile.usage.creditsSpent": "খরচ করা ক্রেডিট",
++  "profile.usage.tokensUsed": "ব্যবহৃত টোকেন",
++  "profile.usage.modelBreakdown": "মডেল অনুযায়ী ব্যবহার",
++  "profile.usage.model": "মডেল",
++  "profile.usage.calls": "কল",
++  "profile.usage.tokens": "টোকেন",
++  "profile.usage.credits": "ক্রেডিট",
++
++  "profile.account.dangerZone": "বিপজ্জনক এলাকা",
++  "profile.account.deleteAccount": "অ্যাকাউন্ট মুছে ফেলুন",
++  "profile.account.deleteWarning": "এটি আপনার অ্যাকাউন্ট, সব নথি, চ্যাট এবং তথ্য স্থায়ীভাবে মুছে ফেলবে। এই কাজটি বাতিল করা যাবে না।",
++  "profile.account.deleteConfirm": "নিশ্চিত করতে আপনার ইমেল টাইপ করুন",
++  "profile.account.deleting": "অ্যাকাউন্ট মুছে ফেলা হচ্ছে…",
++
++  "userMenu.profile": "প্রোফাইল",
++  "userMenu.buyCredits": "ক্রেডিট কিনুন",
++  "userMenu.signOut": "সাইন আউট",
++
++  "billing.pro.title": "প্রো প্ল্যান",
++  "billing.pro.description": "প্রতি মাসে 100,000 ক্রেডিট",
++  "billing.pro.pricePerMonth": "{price}/মাস",
++  "billing.extraTopups": "অতিরিক্ত ক্রেডিট টপ-আপ"
+ }
+diff --git a/frontend/src/i18n/locales/fr.json b/frontend/src/i18n/locales/fr.json
+index e4d20fbaa38dc06ac8ba34741c7e007e3f92f5a0..6f2c7fb31d201186cbd0a99d184158c512a99cd4
+--- a/frontend/src/i18n/locales/fr.json
++++ b/frontend/src/i18n/locales/fr.json
+@@ -77,5 +77,57 @@
+   "billing.purchaseCanceled": "Purchase was canceled.",
+   "billing.error": "An error occurred. Please try again.",
+   "common.cancel": "Cancel",
+-  "common.loading": "Loading..."
++  "common.loading": "Loading...",
++
++  "profile.title": "Profil",
++  "profile.tabs.profile": "Profil",
++  "profile.tabs.credits": "Crédits",
++  "profile.tabs.usage": "Utilisation",
++  "profile.tabs.account": "Compte",
++
++  "profile.info.memberSince": "Membre depuis {days} jours",
++  "profile.info.connectedWith": "Connecté avec {provider}",
++
++  "profile.plan.free": "Gratuit",
++  "profile.plan.pro": "Pro",
++  "profile.plan.upgrade": "Passer à Pro",
++  "profile.plan.manage": "Gérer l’abonnement",
++  "profile.plan.monthlyAllowance": "{used} / {total} crédits mensuels",
++  "profile.plan.nextRenewal": "Renouvellement dans {days} jours",
++
++  "profile.credits.balance": "Solde de crédits",
++  "profile.credits.buyMore": "Acheter des crédits supplémentaires",
++  "profile.credits.history": "Historique des transactions",
++  "profile.credits.noHistory": "Aucune transaction pour le moment",
++  "profile.credits.reason.signup_bonus": "Bonus d’inscription",
++  "profile.credits.reason.purchase": "Achat de crédits",
++  "profile.credits.reason.chat": "Utilisation du chat",
++  "profile.credits.reason.monthly_allowance": "Allocation mensuelle",
++  "profile.credits.reason.refund": "Remboursement",
++
++  "profile.usage.documents": "Documents",
++  "profile.usage.sessions": "Sessions de chat",
++  "profile.usage.messages": "Messages",
++  "profile.usage.creditsSpent": "Crédits dépensés",
++  "profile.usage.tokensUsed": "Jetons utilisés",
++  "profile.usage.modelBreakdown": "Utilisation par modèle",
++  "profile.usage.model": "Modèle",
++  "profile.usage.calls": "Appels",
++  "profile.usage.tokens": "Jetons",
++  "profile.usage.credits": "Crédits",
++
++  "profile.account.dangerZone": "Zone de danger",
++  "profile.account.deleteAccount": "Supprimer le compte",
++  "profile.account.deleteWarning": "Cela supprimera définitivement votre compte, tous les documents, discussions et données. Cette action ne peut pas être annulée.",
++  "profile.account.deleteConfirm": "Saisissez votre e-mail pour confirmer la suppression",
++  "profile.account.deleting": "Suppression du compte…",
++
++  "userMenu.profile": "Profil",
++  "userMenu.buyCredits": "Acheter des crédits",
++  "userMenu.signOut": "Se déconnecter",
++
++  "billing.pro.title": "Forfait Pro",
++  "billing.pro.description": "100 000 crédits/mois",
++  "billing.pro.pricePerMonth": "{price}/mois",
++  "billing.extraTopups": "Recharges de crédits supplémentaires"
+ }
+
+file update
+M /Users/mayijie/Projects/Code/010_DocTalk/frontend/src/i18n/locales/pt.json
+@@ -79,3 +79,55 @@
+   "common.cancel": "Cancel",
+-  "common.loading": "Loading..."
++  "common.loading": "Loading...",
++
++  "profile.title": "Perfil",
++  "profile.tabs.profile": "Perfil",
++  "profile.tabs.credits": "Créditos",
++  "profile.tabs.usage": "Uso",
++  "profile.tabs.account": "Conta",
++
++  "profile.info.memberSince": "Membro há {days} dias",
++  "profile.info.connectedWith": "Conectado com {provider}",
++
++  "profile.plan.free": "Gratuito",
++  "profile.plan.pro": "Pro",
++  "profile.plan.upgrade": "Fazer upgrade para Pro",
++  "profile.plan.manage": "Gerenciar assinatura",
++  "profile.plan.monthlyAllowance": "{used} / {total} créditos mensais",
++  "profile.plan.nextRenewal": "Renova em {days} dias",
++
++  "profile.credits.balance": "Saldo de créditos",
++  "profile.credits.buyMore": "Comprar créditos extras",
++  "profile.credits.history": "Histórico de transações",
++  "profile.credits.noHistory": "Nenhuma transação ainda",
++  "profile.credits.reason.signup_bonus": "Bônus de cadastro",
++  "profile.credits.reason.purchase": "Compra de créditos",
++  "profile.credits.reason.chat": "Uso do chat",
++  "profile.credits.reason.monthly_allowance": "Cota mensal",
++  "profile.credits.reason.refund": "Reembolso",
++
++  "profile.usage.documents": "Documentos",
++  "profile.usage.sessions": "Sessões de chat",
++  "profile.usage.messages": "Mensagens",
++  "profile.usage.creditsSpent": "Créditos gastos",
++  "profile.usage.tokensUsed": "Tokens usados",
++  "profile.usage.modelBreakdown": "Uso por modelo",
++  "profile.usage.model": "Modelo",
++  "profile.usage.calls": "Chamadas",
++  "profile.usage.tokens": "Tokens",
++  "profile.usage.credits": "Créditos",
++
++  "profile.account.dangerZone": "Zona de perigo",
++  "profile.account.deleteAccount": "Excluir conta",
++  "profile.account.deleteWarning": "Isso excluirá permanentemente sua conta, todos os documentos, chats e dados. Esta ação não pode ser desfeita.",
++  "profile.account.deleteConfirm": "Digite seu e-mail para confirmar a exclusão",
++  "profile.account.deleting": "Excluindo conta…",
++
++  "userMenu.profile": "Perfil",
++  "userMenu.buyCredits": "Comprar créditos",
++  "userMenu.signOut": "Sair",
++
++  "billing.pro.title": "Plano Pro",
++  "billing.pro.description": "100.000 créditos/mês",
++  "billing.pro.pricePerMonth": "{price}/mês",
++  "billing.extraTopups": "Recargas extras de créditos"
+ }
+apply_patch(auto_approved=true) exited 0 in 45ms:
+Success. Updated the following files:
+M frontend/src/i18n/locales/pt.json
+file update:
+diff --git a/frontend/src/i18n/locales/bn.json b/frontend/src/i18n/locales/bn.json
+index 4840b3f71e361ff2b476d4fafb9051f7618eab28..ea9a58f3184dac7f760807546cfb82fdbc38650a
+--- a/frontend/src/i18n/locales/bn.json
++++ b/frontend/src/i18n/locales/bn.json
+@@ -77,5 +77,57 @@
+   "billing.purchaseCanceled": "Purchase was canceled.",
+   "billing.error": "An error occurred. Please try again.",
+   "common.cancel": "Cancel",
+-  "common.loading": "Loading..."
++  "common.loading": "Loading...",
++
++  "profile.title": "প্রোফাইল",
++  "profile.tabs.profile": "প্রোফাইল",
++  "profile.tabs.credits": "ক্রেডিট",
++  "profile.tabs.usage": "ব্যবহার",
++  "profile.tabs.account": "অ্যাকাউন্ট",
++
++  "profile.info.memberSince": "সদস্য {days} দিন ধরে",
++  "profile.info.connectedWith": "{provider} দিয়ে সংযুক্ত",
++
++  "profile.plan.free": "ফ্রি",
++  "profile.plan.pro": "প্রো",
++  "profile.plan.upgrade": "প্রো-তে আপগ্রেড করুন",
++  "profile.plan.manage": "সাবস্ক্রিপশন পরিচালনা করুন",
++  "profile.plan.monthlyAllowance": "{used} / {total} মাসিক ক্রেডিট",
++  "profile.plan.nextRenewal": "{days} দিনের মধ্যে নবায়ন হবে",
++
++  "profile.credits.balance": "ক্রেডিট ব্যালেন্স",
++  "profile.credits.buyMore": "অতিরিক্ত ক্রেডিট কিনুন",
++  "profile.credits.history": "লেনদেনের ইতিহাস",
++  "profile.credits.noHistory": "এখনও কোনো লেনদেন নেই",
++  "profile.credits.reason.signup_bonus": "সাইনআপ বোনাস",
++  "profile.credits.reason.purchase": "ক্রেডিট ক্রয়",
++  "profile.credits.reason.chat": "চ্যাট ব্যবহার",
++  "profile.credits.reason.monthly_allowance": "মাসিক বরাদ্দ",
++  "profile.credits.reason.refund": "ফেরত",
++
++  "profile.usage.documents": "নথি",
++  "profile.usage.sessions": "চ্যাট সেশন",
++  "profile.usage.messages": "বার্তা",
++  "profile.usage.creditsSpent": "খরচ করা ক্রেডিট",
++  "profile.usage.tokensUsed": "ব্যবহৃত টোকেন",
++  "profile.usage.modelBreakdown": "মডেল অনুযায়ী ব্যবহার",
++  "profile.usage.model": "মডেল",
++  "profile.usage.calls": "কল",
++  "profile.usage.tokens": "টোকেন",
++  "profile.usage.credits": "ক্রেডিট",
++
++  "profile.account.dangerZone": "বিপজ্জনক এলাকা",
++  "profile.account.deleteAccount": "অ্যাকাউন্ট মুছে ফেলুন",
++  "profile.account.deleteWarning": "এটি আপনার অ্যাকাউন্ট, সব নথি, চ্যাট এবং তথ্য স্থায়ীভাবে মুছে ফেলবে। এই কাজটি বাতিল করা যাবে না।",
++  "profile.account.deleteConfirm": "নিশ্চিত করতে আপনার ইমেল টাইপ করুন",
++  "profile.account.deleting": "অ্যাকাউন্ট মুছে ফেলা হচ্ছে…",
++
++  "userMenu.profile": "প্রোফাইল",
++  "userMenu.buyCredits": "ক্রেডিট কিনুন",
++  "userMenu.signOut": "সাইন আউট",
++
++  "billing.pro.title": "প্রো প্ল্যান",
++  "billing.pro.description": "প্রতি মাসে 100,000 ক্রেডিট",
++  "billing.pro.pricePerMonth": "{price}/মাস",
++  "billing.extraTopups": "অতিরিক্ত ক্রেডিট টপ-আপ"
+ }
+diff --git a/frontend/src/i18n/locales/fr.json b/frontend/src/i18n/locales/fr.json
+index e4d20fbaa38dc06ac8ba34741c7e007e3f92f5a0..6f2c7fb31d201186cbd0a99d184158c512a99cd4
+--- a/frontend/src/i18n/locales/fr.json
++++ b/frontend/src/i18n/locales/fr.json
+@@ -77,5 +77,57 @@
+   "billing.purchaseCanceled": "Purchase was canceled.",
+   "billing.error": "An error occurred. Please try again.",
+   "common.cancel": "Cancel",
+-  "common.loading": "Loading..."
++  "common.loading": "Loading...",
++
++  "profile.title": "Profil",
++  "profile.tabs.profile": "Profil",
++  "profile.tabs.credits": "Crédits",
++  "profile.tabs.usage": "Utilisation",
++  "profile.tabs.account": "Compte",
++
++  "profile.info.memberSince": "Membre depuis {days} jours",
++  "profile.info.connectedWith": "Connecté avec {provider}",
++
++  "profile.plan.free": "Gratuit",
++  "profile.plan.pro": "Pro",
++  "profile.plan.upgrade": "Passer à Pro",
++  "profile.plan.manage": "Gérer l’abonnement",
++  "profile.plan.monthlyAllowance": "{used} / {total} crédits mensuels",
++  "profile.plan.nextRenewal": "Renouvellement dans {days} jours",
++
++  "profile.credits.balance": "Solde de crédits",
++  "profile.credits.buyMore": "Acheter des crédits supplémentaires",
++  "profile.credits.history": "Historique des transactions",
++  "profile.credits.noHistory": "Aucune transaction pour le moment",
++  "profile.credits.reason.signup_bonus": "Bonus d’inscription",
++  "profile.credits.reason.purchase": "Achat de crédits",
++  "profile.credits.reason.chat": "Utilisation du chat",
++  "profile.credits.reason.monthly_allowance": "Allocation mensuelle",
++  "profile.credits.reason.refund": "Remboursement",
++
++  "profile.usage.documents": "Documents",
++  "profile.usage.sessions": "Sessions de chat",
++  "profile.usage.messages": "Messages",
++  "profile.usage.creditsSpent": "Crédits dépensés",
++  "profile.usage.tokensUsed": "Jetons utilisés",
++  "profile.usage.modelBreakdown": "Utilisation par modèle",
++  "profile.usage.model": "Modèle",
++  "profile.usage.calls": "Appels",
++  "profile.usage.tokens": "Jetons",
++  "profile.usage.credits": "Crédits",
++
++  "profile.account.dangerZone": "Zone de danger",
++  "profile.account.deleteAccount": "Supprimer le compte",
++  "profile.account.deleteWarning": "Cela supprimera définitivement votre compte, tous les documents, discussions et données. Cette action ne peut pas être annulée.",
++  "profile.account.deleteConfirm": "Saisissez votre e-mail pour confirmer la suppression",
++  "profile.account.deleting": "Suppression du compte…",
++
++  "userMenu.profile": "Profil",
++  "userMenu.buyCredits": "Acheter des crédits",
++  "userMenu.signOut": "Se déconnecter",
++
++  "billing.pro.title": "Forfait Pro",
++  "billing.pro.description": "100 000 crédits/mois",
++  "billing.pro.pricePerMonth": "{price}/mois",
++  "billing.extraTopups": "Recharges de crédits supplémentaires"
+ }
+diff --git a/frontend/src/i18n/locales/pt.json b/frontend/src/i18n/locales/pt.json
+index ee63dad08c6ab9b6389d67203e817da92b054d19..c1aa9f47a75f3c104cc5e253d37d4828a60486c9
+--- a/frontend/src/i18n/locales/pt.json
++++ b/frontend/src/i18n/locales/pt.json
+@@ -77,5 +77,57 @@
+   "billing.purchaseCanceled": "Purchase was canceled.",
+   "billing.error": "An error occurred. Please try again.",
+   "common.cancel": "Cancel",
+-  "common.loading": "Loading..."
++  "common.loading": "Loading...",
++
++  "profile.title": "Perfil",
++  "profile.tabs.profile": "Perfil",
++  "profile.tabs.credits": "Créditos",
++  "profile.tabs.usage": "Uso",
++  "profile.tabs.account": "Conta",
++
++  "profile.info.memberSince": "Membro há {days} dias",
++  "profile.info.connectedWith": "Conectado com {provider}",
++
++  "profile.plan.free": "Gratuito",
++  "profile.plan.pro": "Pro",
++  "profile.plan.upgrade": "Fazer upgrade para Pro",
++  "profile.plan.manage": "Gerenciar assinatura",
++  "profile.plan.monthlyAllowance": "{used} / {total} créditos mensais",
++  "profile.plan.nextRenewal": "Renova em {days} dias",
++
++  "profile.credits.balance": "Saldo de créditos",
++  "profile.credits.buyMore": "Comprar créditos extras",
++  "profile.credits.history": "Histórico de transações",
++  "profile.credits.noHistory": "Nenhuma transação ainda",
++  "profile.credits.reason.signup_bonus": "Bônus de cadastro",
++  "profile.credits.reason.purchase": "Compra de créditos",
++  "profile.credits.reason.chat": "Uso do chat",
++  "profile.credits.reason.monthly_allowance": "Cota mensal",
++  "profile.credits.reason.refund": "Reembolso",
++
++  "profile.usage.documents": "Documentos",
++  "profile.usage.sessions": "Sessões de chat",
++  "profile.usage.messages": "Mensagens",
++  "profile.usage.creditsSpent": "Créditos gastos",
++  "profile.usage.tokensUsed": "Tokens usados",
++  "profile.usage.modelBreakdown": "Uso por modelo",
++  "profile.usage.model": "Modelo",
++  "profile.usage.calls": "Chamadas",
++  "profile.usage.tokens": "Tokens",
++  "profile.usage.credits": "Créditos",
++
++  "profile.account.dangerZone": "Zona de perigo",
++  "profile.account.deleteAccount": "Excluir conta",
++  "profile.account.deleteWarning": "Isso excluirá permanentemente sua conta, todos os documentos, chats e dados. Esta ação não pode ser desfeita.",
++  "profile.account.deleteConfirm": "Digite seu e-mail para confirmar a exclusão",
++  "profile.account.deleting": "Excluindo conta…",
++
++  "userMenu.profile": "Perfil",
++  "userMenu.buyCredits": "Comprar créditos",
++  "userMenu.signOut": "Sair",
++
++  "billing.pro.title": "Plano Pro",
++  "billing.pro.description": "100.000 créditos/mês",
++  "billing.pro.pricePerMonth": "{price}/mês",
++  "billing.extraTopups": "Recargas extras de créditos"
+ }
+
+file update:
+diff --git a/frontend/src/i18n/locales/bn.json b/frontend/src/i18n/locales/bn.json
+index 4840b3f71e361ff2b476d4fafb9051f7618eab28..ea9a58f3184dac7f760807546cfb82fdbc38650a
+--- a/frontend/src/i18n/locales/bn.json
++++ b/frontend/src/i18n/locales/bn.json
+@@ -77,5 +77,57 @@
+   "billing.purchaseCanceled": "Purchase was canceled.",
+   "billing.error": "An error occurred. Please try again.",
+   "common.cancel": "Cancel",
+-  "common.loading": "Loading..."
++  "common.loading": "Loading...",
++
++  "profile.title": "প্রোফাইল",
++  "profile.tabs.profile": "প্রোফাইল",
++  "profile.tabs.credits": "ক্রেডিট",
++  "profile.tabs.usage": "ব্যবহার",
++  "profile.tabs.account": "অ্যাকাউন্ট",
++
++  "profile.info.memberSince": "সদস্য {days} দিন ধরে",
++  "profile.info.connectedWith": "{provider} দিয়ে সংযুক্ত",
++
++  "profile.plan.free": "ফ্রি",
++  "profile.plan.pro": "প্রো",
++  "profile.plan.upgrade": "প্রো-তে আপগ্রেড করুন",
++  "profile.plan.manage": "সাবস্ক্রিপশন পরিচালনা করুন",
++  "profile.plan.monthlyAllowance": "{used} / {total} মাসিক ক্রেডিট",
++  "profile.plan.nextRenewal": "{days} দিনের মধ্যে নবায়ন হবে",
++
++  "profile.credits.balance": "ক্রেডিট ব্যালেন্স",
++  "profile.credits.buyMore": "অতিরিক্ত ক্রেডিট কিনুন",
++  "profile.credits.history": "লেনদেনের ইতিহাস",
++  "profile.credits.noHistory": "এখনও কোনো লেনদেন নেই",
++  "profile.credits.reason.signup_bonus": "সাইনআপ বোনাস",
++  "profile.credits.reason.purchase": "ক্রেডিট ক্রয়",
++  "profile.credits.reason.chat": "চ্যাট ব্যবহার",
++  "profile.credits.reason.monthly_allowance": "মাসিক বরাদ্দ",
++  "profile.credits.reason.refund": "ফেরত",
++
++  "profile.usage.documents": "নথি",
++  "profile.usage.sessions": "চ্যাট সেশন",
++  "profile.usage.messages": "বার্তা",
++  "profile.usage.creditsSpent": "খরচ করা ক্রেডিট",
++  "profile.usage.tokensUsed": "ব্যবহৃত টোকেন",
++  "profile.usage.modelBreakdown": "মডেল অনুযায়ী ব্যবহার",
++  "profile.usage.model": "মডেল",
++  "profile.usage.calls": "কল",
++  "profile.usage.tokens": "টোকেন",
++  "profile.usage.credits": "ক্রেডিট",
++
++  "profile.account.dangerZone": "বিপজ্জনক এলাকা",
++  "profile.account.deleteAccount": "অ্যাকাউন্ট মুছে ফেলুন",
++  "profile.account.deleteWarning": "এটি আপনার অ্যাকাউন্ট, সব নথি, চ্যাট এবং তথ্য স্থায়ীভাবে মুছে ফেলবে। এই কাজটি বাতিল করা যাবে না।",
++  "profile.account.deleteConfirm": "নিশ্চিত করতে আপনার ইমেল টাইপ করুন",
++  "profile.account.deleting": "অ্যাকাউন্ট মুছে ফেলা হচ্ছে…",
++
++  "userMenu.profile": "প্রোফাইল",
++  "userMenu.buyCredits": "ক্রেডিট কিনুন",
++  "userMenu.signOut": "সাইন আউট",
++
++  "billing.pro.title": "প্রো প্ল্যান",
++  "billing.pro.description": "প্রতি মাসে 100,000 ক্রেডিট",
++  "billing.pro.pricePerMonth": "{price}/মাস",
++  "billing.extraTopups": "অতিরিক্ত ক্রেডিট টপ-আপ"
+ }
+diff --git a/frontend/src/i18n/locales/fr.json b/frontend/src/i18n/locales/fr.json
+index e4d20fbaa38dc06ac8ba34741c7e007e3f92f5a0..6f2c7fb31d201186cbd0a99d184158c512a99cd4
+--- a/frontend/src/i18n/locales/fr.json
++++ b/frontend/src/i18n/locales/fr.json
+@@ -77,5 +77,57 @@
+   "billing.purchaseCanceled": "Purchase was canceled.",
+   "billing.error": "An error occurred. Please try again.",
+   "common.cancel": "Cancel",
+-  "common.loading": "Loading..."
++  "common.loading": "Loading...",
++
++  "profile.title": "Profil",
++  "profile.tabs.profile": "Profil",
++  "profile.tabs.credits": "Crédits",
++  "profile.tabs.usage": "Utilisation",
++  "profile.tabs.account": "Compte",
++
++  "profile.info.memberSince": "Membre depuis {days} jours",
++  "profile.info.connectedWith": "Connecté avec {provider}",
++
++  "profile.plan.free": "Gratuit",
++  "profile.plan.pro": "Pro",
++  "profile.plan.upgrade": "Passer à Pro",
++  "profile.plan.manage": "Gérer l’abonnement",
++  "profile.plan.monthlyAllowance": "{used} / {total} crédits mensuels",
++  "profile.plan.nextRenewal": "Renouvellement dans {days} jours",
++
++  "profile.credits.balance": "Solde de crédits",
++  "profile.credits.buyMore": "Acheter des crédits supplémentaires",
++  "profile.credits.history": "Historique des transactions",
++  "profile.credits.noHistory": "Aucune transaction pour le moment",
++  "profile.credits.reason.signup_bonus": "Bonus d’inscription",
++  "profile.credits.reason.purchase": "Achat de crédits",
++  "profile.credits.reason.chat": "Utilisation du chat",
++  "profile.credits.reason.monthly_allowance": "Allocation mensuelle",
++  "profile.credits.reason.refund": "Remboursement",
++
++  "profile.usage.documents": "Documents",
++  "profile.usage.sessions": "Sessions de chat",
++  "profile.usage.messages": "Messages",
++  "profile.usage.creditsSpent": "Crédits dépensés",
++  "profile.usage.tokensUsed": "Jetons utilisés",
++  "profile.usage.modelBreakdown": "Utilisation par modèle",
++  "profile.usage.model": "Modèle",
++  "profile.usage.calls": "Appels",
++  "profile.usage.tokens": "Jetons",
++  "profile.usage.credits": "Crédits",
++
++  "profile.account.dangerZone": "Zone de danger",
++  "profile.account.deleteAccount": "Supprimer le compte",
++  "profile.account.deleteWarning": "Cela supprimera définitivement votre compte, tous les documents, discussions et données. Cette action ne peut pas être annulée.",
++  "profile.account.deleteConfirm": "Saisissez votre e-mail pour confirmer la suppression",
++  "profile.account.deleting": "Suppression du compte…",
++
++  "userMenu.profile": "Profil",
++  "userMenu.buyCredits": "Acheter des crédits",
++  "userMenu.signOut": "Se déconnecter",
++
++  "billing.pro.title": "Forfait Pro",
++  "billing.pro.description": "100 000 crédits/mois",
++  "billing.pro.pricePerMonth": "{price}/mois",
++  "billing.extraTopups": "Recharges de crédits supplémentaires"
+ }
+diff --git a/frontend/src/i18n/locales/pt.json b/frontend/src/i18n/locales/pt.json
+index ee63dad08c6ab9b6389d67203e817da92b054d19..c1aa9f47a75f3c104cc5e253d37d4828a60486c9
+--- a/frontend/src/i18n/locales/pt.json
++++ b/frontend/src/i18n/locales/pt.json
+@@ -77,5 +77,57 @@
+   "billing.purchaseCanceled": "Purchase was canceled.",
+   "billing.error": "An error occurred. Please try again.",
+   "common.cancel": "Cancel",
+-  "common.loading": "Loading..."
++  "common.loading": "Loading...",
++
++  "profile.title": "Perfil",
++  "profile.tabs.profile": "Perfil",
++  "profile.tabs.credits": "Créditos",
++  "profile.tabs.usage": "Uso",
++  "profile.tabs.account": "Conta",
++
++  "profile.info.memberSince": "Membro há {days} dias",
++  "profile.info.connectedWith": "Conectado com {provider}",
++
++  "profile.plan.free": "Gratuito",
++  "profile.plan.pro": "Pro",
++  "profile.plan.upgrade": "Fazer upgrade para Pro",
++  "profile.plan.manage": "Gerenciar assinatura",
++  "profile.plan.monthlyAllowance": "{used} / {total} créditos mensais",
++  "profile.plan.nextRenewal": "Renova em {days} dias",
++
++  "profile.credits.balance": "Saldo de créditos",
++  "profile.credits.buyMore": "Comprar créditos extras",
++  "profile.credits.history": "Histórico de transações",
++  "profile.credits.noHistory": "Nenhuma transação ainda",
++  "profile.credits.reason.signup_bonus": "Bônus de cadastro",
++  "profile.credits.reason.purchase": "Compra de créditos",
++  "profile.credits.reason.chat": "Uso do chat",
++  "profile.credits.reason.monthly_allowance": "Cota mensal",
++  "profile.credits.reason.refund": "Reembolso",
++
++  "profile.usage.documents": "Documentos",
++  "profile.usage.sessions": "Sessões de chat",
++  "profile.usage.messages": "Mensagens",
++  "profile.usage.creditsSpent": "Créditos gastos",
++  "profile.usage.tokensUsed": "Tokens usados",
++  "profile.usage.modelBreakdown": "Uso por modelo",
++  "profile.usage.model": "Modelo",
++  "profile.usage.calls": "Chamadas",
++  "profile.usage.tokens": "Tokens",
++  "profile.usage.credits": "Créditos",
++
++  "profile.account.dangerZone": "Zona de perigo",
++  "profile.account.deleteAccount": "Excluir conta",
++  "profile.account.deleteWarning": "Isso excluirá permanentemente sua conta, todos os documentos, chats e dados. Esta ação não pode ser desfeita.",
++  "profile.account.deleteConfirm": "Digite seu e-mail para confirmar a exclusão",
++  "profile.account.deleting": "Excluindo conta…",
++
++  "userMenu.profile": "Perfil",
++  "userMenu.buyCredits": "Comprar créditos",
++  "userMenu.signOut": "Sair",
++
++  "billing.pro.title": "Plano Pro",
++  "billing.pro.description": "100.000 créditos/mês",
++  "billing.pro.pricePerMonth": "{price}/mês",
++  "billing.extraTopups": "Recargas extras de créditos"
+ }
+
+
+thinking
+I'm thinking about how to validate JSON quickly. I could use jq, but I'm not sure if it's installed. I have a couple of alternatives like using `node -e` to parse JSON or running `python -m json.tool`. Since the workspace isn't necessarily Node, I'll lean towards using Python instead. The network is restricted, so I really only need to check if each file is valid with `python -m json.tool`. Let's see how that goes!
+exec
+bash -lc "python - << 'PY'
+import json,sys
+files=['frontend/src/i18n/locales/fr.json','frontend/src/i18n/locales/bn.json','frontend/src/i18n/locales/pt.json']
+for f in files:
+    with open(f,'r',encoding='utf-8') as fh:
+        try:
+            json.load(fh)
+            print(f'OK {f}')
+        except Exception as e:
+            print(f'ERR {f}: {e}')
+PY" in /Users/mayijie/Projects/Code/010_DocTalk exited 127 in 12ms:
+bash: python: command not found
+file update:
+diff --git a/frontend/src/i18n/locales/bn.json b/frontend/src/i18n/locales/bn.json
+index 4840b3f71e361ff2b476d4fafb9051f7618eab28..ea9a58f3184dac7f760807546cfb82fdbc38650a
+--- a/frontend/src/i18n/locales/bn.json
++++ b/frontend/src/i18n/locales/bn.json
+@@ -77,5 +77,57 @@
+   "billing.purchaseCanceled": "Purchase was canceled.",
+   "billing.error": "An error occurred. Please try again.",
+   "common.cancel": "Cancel",
+-  "common.loading": "Loading..."
++  "common.loading": "Loading...",
++
++  "profile.title": "প্রোফাইল",
++  "profile.tabs.profile": "প্রোফাইল",
++  "profile.tabs.credits": "ক্রেডিট",
++  "profile.tabs.usage": "ব্যবহার",
++  "profile.tabs.account": "অ্যাকাউন্ট",
++
++  "profile.info.memberSince": "সদস্য {days} দিন ধরে",
++  "profile.info.connectedWith": "{provider} দিয়ে সংযুক্ত",
++
++  "profile.plan.free": "ফ্রি",
++  "profile.plan.pro": "প্রো",
++  "profile.plan.upgrade": "প্রো-তে আপগ্রেড করুন",
++  "profile.plan.manage": "সাবস্ক্রিপশন পরিচালনা করুন",
++  "profile.plan.monthlyAllowance": "{used} / {total} মাসিক ক্রেডিট",
++  "profile.plan.nextRenewal": "{days} দিনের মধ্যে নবায়ন হবে",
++
++  "profile.credits.balance": "ক্রেডিট ব্যালেন্স",
++  "profile.credits.buyMore": "অতিরিক্ত ক্রেডিট কিনুন",
++  "profile.credits.history": "লেনদেনের ইতিহাস",
++  "profile.credits.noHistory": "এখনও কোনো লেনদেন নেই",
++  "profile.credits.reason.signup_bonus": "সাইনআপ বোনাস",
++  "profile.credits.reason.purchase": "ক্রেডিট ক্রয়",
++  "profile.credits.reason.chat": "চ্যাট ব্যবহার",
++  "profile.credits.reason.monthly_allowance": "মাসিক বরাদ্দ",
++  "profile.credits.reason.refund": "ফেরত",
++
++  "profile.usage.documents": "নথি",
++  "profile.usage.sessions": "চ্যাট সেশন",
++  "profile.usage.messages": "বার্তা",
++  "profile.usage.creditsSpent": "খরচ করা ক্রেডিট",
++  "profile.usage.tokensUsed": "ব্যবহৃত টোকেন",
++  "profile.usage.modelBreakdown": "মডেল অনুযায়ী ব্যবহার",
++  "profile.usage.model": "মডেল",
++  "profile.usage.calls": "কল",
++  "profile.usage.tokens": "টোকেন",
++  "profile.usage.credits": "ক্রেডিট",
++
++  "profile.account.dangerZone": "বিপজ্জনক এলাকা",
++  "profile.account.deleteAccount": "অ্যাকাউন্ট মুছে ফেলুন",
++  "profile.account.deleteWarning": "এটি আপনার অ্যাকাউন্ট, সব নথি, চ্যাট এবং তথ্য স্থায়ীভাবে মুছে ফেলবে। এই কাজটি বাতিল করা যাবে না।",
++  "profile.account.deleteConfirm": "নিশ্চিত করতে আপনার ইমেল টাইপ করুন",
++  "profile.account.deleting": "অ্যাকাউন্ট মুছে ফেলা হচ্ছে…",
++
++  "userMenu.profile": "প্রোফাইল",
++  "userMenu.buyCredits": "ক্রেডিট কিনুন",
++  "userMenu.signOut": "সাইন আউট",
++
++  "billing.pro.title": "প্রো প্ল্যান",
++  "billing.pro.description": "প্রতি মাসে 100,000 ক্রেডিট",
++  "billing.pro.pricePerMonth": "{price}/মাস",
++  "billing.extraTopups": "অতিরিক্ত ক্রেডিট টপ-আপ"
+ }
+diff --git a/frontend/src/i18n/locales/fr.json b/frontend/src/i18n/locales/fr.json
+index e4d20fbaa38dc06ac8ba34741c7e007e3f92f5a0..6f2c7fb31d201186cbd0a99d184158c512a99cd4
+--- a/frontend/src/i18n/locales/fr.json
++++ b/frontend/src/i18n/locales/fr.json
+@@ -77,5 +77,57 @@
+   "billing.purchaseCanceled": "Purchase was canceled.",
+   "billing.error": "An error occurred. Please try again.",
+   "common.cancel": "Cancel",
+-  "common.loading": "Loading..."
++  "common.loading": "Loading...",
++
++  "profile.title": "Profil",
++  "profile.tabs.profile": "Profil",
++  "profile.tabs.credits": "Crédits",
++  "profile.tabs.usage": "Utilisation",
++  "profile.tabs.account": "Compte",
++
++  "profile.info.memberSince": "Membre depuis {days} jours",
++  "profile.info.connectedWith": "Connecté avec {provider}",
++
++  "profile.plan.free": "Gratuit",
++  "profile.plan.pro": "Pro",
++  "profile.plan.upgrade": "Passer à Pro",
++  "profile.plan.manage": "Gérer l’abonnement",
++  "profile.plan.monthlyAllowance": "{used} / {total} crédits mensuels",
++  "profile.plan.nextRenewal": "Renouvellement dans {days} jours",
++
++  "profile.credits.balance": "Solde de crédits",
++  "profile.credits.buyMore": "Acheter des crédits supplémentaires",
++  "profile.credits.history": "Historique des transactions",
++  "profile.credits.noHistory": "Aucune transaction pour le moment",
++  "profile.credits.reason.signup_bonus": "Bonus d’inscription",
++  "profile.credits.reason.purchase": "Achat de crédits",
++  "profile.credits.reason.chat": "Utilisation du chat",
++  "profile.credits.reason.monthly_allowance": "Allocation mensuelle",
++  "profile.credits.reason.refund": "Remboursement",
++
++  "profile.usage.documents": "Documents",
++  "profile.usage.sessions": "Sessions de chat",
++  "profile.usage.messages": "Messages",
++  "profile.usage.creditsSpent": "Crédits dépensés",
++  "profile.usage.tokensUsed": "Jetons utilisés",
++  "profile.usage.modelBreakdown": "Utilisation par modèle",
++  "profile.usage.model": "Modèle",
++  "profile.usage.calls": "Appels",
++  "profile.usage.tokens": "Jetons",
++  "profile.usage.credits": "Crédits",
++
++  "profile.account.dangerZone": "Zone de danger",
++  "profile.account.deleteAccount": "Supprimer le compte",
++  "profile.account.deleteWarning": "Cela supprimera définitivement votre compte, tous les documents, discussions et données. Cette action ne peut pas être annulée.",
++  "profile.account.deleteConfirm": "Saisissez votre e-mail pour confirmer la suppression",
++  "profile.account.deleting": "Suppression du compte…",
++
++  "userMenu.profile": "Profil",
++  "userMenu.buyCredits": "Acheter des crédits",
++  "userMenu.signOut": "Se déconnecter",
++
++  "billing.pro.title": "Forfait Pro",
++  "billing.pro.description": "100 000 crédits/mois",
++  "billing.pro.pricePerMonth": "{price}/mois",
++  "billing.extraTopups": "Recharges de crédits supplémentaires"
+ }
+diff --git a/frontend/src/i18n/locales/pt.json b/frontend/src/i18n/locales/pt.json
+index ee63dad08c6ab9b6389d67203e817da92b054d19..c1aa9f47a75f3c104cc5e253d37d4828a60486c9
+--- a/frontend/src/i18n/locales/pt.json
++++ b/frontend/src/i18n/locales/pt.json
+@@ -77,5 +77,57 @@
+   "billing.purchaseCanceled": "Purchase was canceled.",
+   "billing.error": "An error occurred. Please try again.",
+   "common.cancel": "Cancel",
+-  "common.loading": "Loading..."
++  "common.loading": "Loading...",
++
++  "profile.title": "Perfil",
++  "profile.tabs.profile": "Perfil",
++  "profile.tabs.credits": "Créditos",
++  "profile.tabs.usage": "Uso",
++  "profile.tabs.account": "Conta",
++
++  "profile.info.memberSince": "Membro há {days} dias",
++  "profile.info.connectedWith": "Conectado com {provider}",
++
++  "profile.plan.free": "Gratuito",
++  "profile.plan.pro": "Pro",
++  "profile.plan.upgrade": "Fazer upgrade para Pro",
++  "profile.plan.manage": "Gerenciar assinatura",
++  "profile.plan.monthlyAllowance": "{used} / {total} créditos mensais",
++  "profile.plan.nextRenewal": "Renova em {days} dias",
++
++  "profile.credits.balance": "Saldo de créditos",
++  "profile.credits.buyMore": "Comprar créditos extras",
++  "profile.credits.history": "Histórico de transações",
++  "profile.credits.noHistory": "Nenhuma transação ainda",
++  "profile.credits.reason.signup_bonus": "Bônus de cadastro",
++  "profile.credits.reason.purchase": "Compra de créditos",
++  "profile.credits.reason.chat": "Uso do chat",
++  "profile.credits.reason.monthly_allowance": "Cota mensal",
++  "profile.credits.reason.refund": "Reembolso",
++
++  "profile.usage.documents": "Documentos",
++  "profile.usage.sessions": "Sessões de chat",
++  "profile.usage.messages": "Mensagens",
++  "profile.usage.creditsSpent": "Créditos gastos",
++  "profile.usage.tokensUsed": "Tokens usados",
++  "profile.usage.modelBreakdown": "Uso por modelo",
++  "profile.usage.model": "Modelo",
++  "profile.usage.calls": "Chamadas",
++  "profile.usage.tokens": "Tokens",
++  "profile.usage.credits": "Créditos",
++
++  "profile.account.dangerZone": "Zona de perigo",
++  "profile.account.deleteAccount": "Excluir conta",
++  "profile.account.deleteWarning": "Isso excluirá permanentemente sua conta, todos os documentos, chats e dados. Esta ação não pode ser desfeita.",
++  "profile.account.deleteConfirm": "Digite seu e-mail para confirmar a exclusão",
++  "profile.account.deleting": "Excluindo conta…",
++
++  "userMenu.profile": "Perfil",
++  "userMenu.buyCredits": "Comprar créditos",
++  "userMenu.signOut": "Sair",
++
++  "billing.pro.title": "Plano Pro",
++  "billing.pro.description": "100.000 créditos/mês",
++  "billing.pro.pricePerMonth": "{price}/mês",
++  "billing.extraTopups": "Recargas extras de créditos"
+ }
+
+exec
+bash -lc "node -e \"const fs=require('fs'); const files=['frontend/src/i18n/locales/fr.json','frontend/src/i18n/locales/bn.json','frontend/src/i18n/locales/pt.json']; for (const f of files){ try{ JSON.parse(fs.readFileSync(f,'utf8')); console.log('OK '+f);} catch(e){ console.log('ERR '+f+': '+e.message);} }\"" in /Users/mayijie/Projects/Code/010_DocTalk succeeded in 48ms:
+OK frontend/src/i18n/locales/fr.json
+OK frontend/src/i18n/locales/bn.json
+OK frontend/src/i18n/locales/pt.json
+file update:
+diff --git a/frontend/src/i18n/locales/bn.json b/frontend/src/i18n/locales/bn.json
+index 4840b3f71e361ff2b476d4fafb9051f7618eab28..ea9a58f3184dac7f760807546cfb82fdbc38650a
+--- a/frontend/src/i18n/locales/bn.json
++++ b/frontend/src/i18n/locales/bn.json
+@@ -77,5 +77,57 @@
+   "billing.purchaseCanceled": "Purchase was canceled.",
+   "billing.error": "An error occurred. Please try again.",
+   "common.cancel": "Cancel",
+-  "common.loading": "Loading..."
++  "common.loading": "Loading...",
++
++  "profile.title": "প্রোফাইল",
++  "profile.tabs.profile": "প্রোফাইল",
++  "profile.tabs.credits": "ক্রেডিট",
++  "profile.tabs.usage": "ব্যবহার",
++  "profile.tabs.account": "অ্যাকাউন্ট",
++
++  "profile.info.memberSince": "সদস্য {days} দিন ধরে",
++  "profile.info.connectedWith": "{provider} দিয়ে সংযুক্ত",
++
++  "profile.plan.free": "ফ্রি",
++  "profile.plan.pro": "প্রো",
++  "profile.plan.upgrade": "প্রো-তে আপগ্রেড করুন",
++  "profile.plan.manage": "সাবস্ক্রিপশন পরিচালনা করুন",
++  "profile.plan.monthlyAllowance": "{used} / {total} মাসিক ক্রেডিট",
++  "profile.plan.nextRenewal": "{days} দিনের মধ্যে নবায়ন হবে",
++
++  "profile.credits.balance": "ক্রেডিট ব্যালেন্স",
++  "profile.credits.buyMore": "অতিরিক্ত ক্রেডিট কিনুন",
++  "profile.credits.history": "লেনদেনের ইতিহাস",
++  "profile.credits.noHistory": "এখনও কোনো লেনদেন নেই",
++  "profile.credits.reason.signup_bonus": "সাইনআপ বোনাস",
++  "profile.credits.reason.purchase": "ক্রেডিট ক্রয়",
++  "profile.credits.reason.chat": "চ্যাট ব্যবহার",
++  "profile.credits.reason.monthly_allowance": "মাসিক বরাদ্দ",
++  "profile.credits.reason.refund": "ফেরত",
++
++  "profile.usage.documents": "নথি",
++  "profile.usage.sessions": "চ্যাট সেশন",
++  "profile.usage.messages": "বার্তা",
++  "profile.usage.creditsSpent": "খরচ করা ক্রেডিট",
++  "profile.usage.tokensUsed": "ব্যবহৃত টোকেন",
++  "profile.usage.modelBreakdown": "মডেল অনুযায়ী ব্যবহার",
++  "profile.usage.model": "মডেল",
++  "profile.usage.calls": "কল",
++  "profile.usage.tokens": "টোকেন",
++  "profile.usage.credits": "ক্রেডিট",
++
++  "profile.account.dangerZone": "বিপজ্জনক এলাকা",
++  "profile.account.deleteAccount": "অ্যাকাউন্ট মুছে ফেলুন",
++  "profile.account.deleteWarning": "এটি আপনার অ্যাকাউন্ট, সব নথি, চ্যাট এবং তথ্য স্থায়ীভাবে মুছে ফেলবে। এই কাজটি বাতিল করা যাবে না।",
++  "profile.account.deleteConfirm": "নিশ্চিত করতে আপনার ইমেল টাইপ করুন",
++  "profile.account.deleting": "অ্যাকাউন্ট মুছে ফেলা হচ্ছে…",
++
++  "userMenu.profile": "প্রোফাইল",
++  "userMenu.buyCredits": "ক্রেডিট কিনুন",
++  "userMenu.signOut": "সাইন আউট",
++
++  "billing.pro.title": "প্রো প্ল্যান",
++  "billing.pro.description": "প্রতি মাসে 100,000 ক্রেডিট",
++  "billing.pro.pricePerMonth": "{price}/মাস",
++  "billing.extraTopups": "অতিরিক্ত ক্রেডিট টপ-আপ"
+ }
+diff --git a/frontend/src/i18n/locales/fr.json b/frontend/src/i18n/locales/fr.json
+index e4d20fbaa38dc06ac8ba34741c7e007e3f92f5a0..6f2c7fb31d201186cbd0a99d184158c512a99cd4
+--- a/frontend/src/i18n/locales/fr.json
++++ b/frontend/src/i18n/locales/fr.json
+@@ -77,5 +77,57 @@
+   "billing.purchaseCanceled": "Purchase was canceled.",
+   "billing.error": "An error occurred. Please try again.",
+   "common.cancel": "Cancel",
+-  "common.loading": "Loading..."
++  "common.loading": "Loading...",
++
++  "profile.title": "Profil",
++  "profile.tabs.profile": "Profil",
++  "profile.tabs.credits": "Crédits",
++  "profile.tabs.usage": "Utilisation",
++  "profile.tabs.account": "Compte",
++
++  "profile.info.memberSince": "Membre depuis {days} jours",
++  "profile.info.connectedWith": "Connecté avec {provider}",
++
++  "profile.plan.free": "Gratuit",
++  "profile.plan.pro": "Pro",
++  "profile.plan.upgrade": "Passer à Pro",
++  "profile.plan.manage": "Gérer l’abonnement",
++  "profile.plan.monthlyAllowance": "{used} / {total} crédits mensuels",
++  "profile.plan.nextRenewal": "Renouvellement dans {days} jours",
++
++  "profile.credits.balance": "Solde de crédits",
++  "profile.credits.buyMore": "Acheter des crédits supplémentaires",
++  "profile.credits.history": "Historique des transactions",
++  "profile.credits.noHistory": "Aucune transaction pour le moment",
++  "profile.credits.reason.signup_bonus": "Bonus d’inscription",
++  "profile.credits.reason.purchase": "Achat de crédits",
++  "profile.credits.reason.chat": "Utilisation du chat",
++  "profile.credits.reason.monthly_allowance": "Allocation mensuelle",
++  "profile.credits.reason.refund": "Remboursement",
++
++  "profile.usage.documents": "Documents",
++  "profile.usage.sessions": "Sessions de chat",
++  "profile.usage.messages": "Messages",
++  "profile.usage.creditsSpent": "Crédits dépensés",
++  "profile.usage.tokensUsed": "Jetons utilisés",
++  "profile.usage.modelBreakdown": "Utilisation par modèle",
++  "profile.usage.model": "Modèle",
++  "profile.usage.calls": "Appels",
++  "profile.usage.tokens": "Jetons",
++  "profile.usage.credits": "Crédits",
++
++  "profile.account.dangerZone": "Zone de danger",
++  "profile.account.deleteAccount": "Supprimer le compte",
++  "profile.account.deleteWarning": "Cela supprimera définitivement votre compte, tous les documents, discussions et données. Cette action ne peut pas être annulée.",
++  "profile.account.deleteConfirm": "Saisissez votre e-mail pour confirmer la suppression",
++  "profile.account.deleting": "Suppression du compte…",
++
++  "userMenu.profile": "Profil",
++  "userMenu.buyCredits": "Acheter des crédits",
++  "userMenu.signOut": "Se déconnecter",
++
++  "billing.pro.title": "Forfait Pro",
++  "billing.pro.description": "100 000 crédits/mois",
++  "billing.pro.pricePerMonth": "{price}/mois",
++  "billing.extraTopups": "Recharges de crédits supplémentaires"
+ }
+diff --git a/frontend/src/i18n/locales/pt.json b/frontend/src/i18n/locales/pt.json
+index ee63dad08c6ab9b6389d67203e817da92b054d19..c1aa9f47a75f3c104cc5e253d37d4828a60486c9
+--- a/frontend/src/i18n/locales/pt.json
++++ b/frontend/src/i18n/locales/pt.json
+@@ -77,5 +77,57 @@
+   "billing.purchaseCanceled": "Purchase was canceled.",
+   "billing.error": "An error occurred. Please try again.",
+   "common.cancel": "Cancel",
+-  "common.loading": "Loading..."
++  "common.loading": "Loading...",
++
++  "profile.title": "Perfil",
++  "profile.tabs.profile": "Perfil",
++  "profile.tabs.credits": "Créditos",
++  "profile.tabs.usage": "Uso",
++  "profile.tabs.account": "Conta",
++
++  "profile.info.memberSince": "Membro há {days} dias",
++  "profile.info.connectedWith": "Conectado com {provider}",
++
++  "profile.plan.free": "Gratuito",
++  "profile.plan.pro": "Pro",
++  "profile.plan.upgrade": "Fazer upgrade para Pro",
++  "profile.plan.manage": "Gerenciar assinatura",
++  "profile.plan.monthlyAllowance": "{used} / {total} créditos mensais",
++  "profile.plan.nextRenewal": "Renova em {days} dias",
++
++  "profile.credits.balance": "Saldo de créditos",
++  "profile.credits.buyMore": "Comprar créditos extras",
++  "profile.credits.history": "Histórico de transações",
++  "profile.credits.noHistory": "Nenhuma transação ainda",
++  "profile.credits.reason.signup_bonus": "Bônus de cadastro",
++  "profile.credits.reason.purchase": "Compra de créditos",
++  "profile.credits.reason.chat": "Uso do chat",
++  "profile.credits.reason.monthly_allowance": "Cota mensal",
++  "profile.credits.reason.refund": "Reembolso",
++
++  "profile.usage.documents": "Documentos",
++  "profile.usage.sessions": "Sessões de chat",
++  "profile.usage.messages": "Mensagens",
++  "profile.usage.creditsSpent": "Créditos gastos",
++  "profile.usage.tokensUsed": "Tokens usados",
++  "profile.usage.modelBreakdown": "Uso por modelo",
++  "profile.usage.model": "Modelo",
++  "profile.usage.calls": "Chamadas",
++  "profile.usage.tokens": "Tokens",
++  "profile.usage.credits": "Créditos",
++
++  "profile.account.dangerZone": "Zona de perigo",
++  "profile.account.deleteAccount": "Excluir conta",
++  "profile.account.deleteWarning": "Isso excluirá permanentemente sua conta, todos os documentos, chats e dados. Esta ação não pode ser desfeita.",
++  "profile.account.deleteConfirm": "Digite seu e-mail para confirmar a exclusão",
++  "profile.account.deleting": "Excluindo conta…",
++
++  "userMenu.profile": "Perfil",
++  "userMenu.buyCredits": "Comprar créditos",
++  "userMenu.signOut": "Sair",
++
++  "billing.pro.title": "Plano Pro",
++  "billing.pro.description": "100.000 créditos/mês",
++  "billing.pro.pricePerMonth": "{price}/mês",
++  "billing.extraTopups": "Recargas extras de créditos"
+ }
+
+
+thinking
+**Updating translations**
+
+The instructions mentioned adding translations but didn't require them to be perfect. Still, I'd like to make some adjustments. I'll update the bn.json file for that specific string. They asked to avoid unnecessary steps, yet since we've just patched it, we can safely apply another patch update for that line. Now, I'll open the bn.json region to get the exact line for that key, then I can re-run apply_patch to update the key value.
+file update
+M /Users/mayijie/Projects/Code/010_DocTalk/frontend/src/i18n/locales/bn.json
+@@ -121,3 +121,3 @@
+   "profile.account.deleteWarning": "এটি আপনার অ্যাকাউন্ট, সব নথি, চ্যাট এবং তথ্য স্থায়ীভাবে মুছে ফেলবে। এই কাজটি বাতিল করা যাবে না।",
+-  "profile.account.deleteConfirm": "নিশ্চিত করতে আপনার ইমেল টাইপ করুন",
++  "profile.account.deleteConfirm": "মুছে ফেলতে নিশ্চিত করতে আপনার ইমেল টাইপ করুন",
+   "profile.account.deleting": "অ্যাকাউন্ট মুছে ফেলা হচ্ছে…",
+apply_patch(auto_approved=true) exited 0 in 49ms:
+Success. Updated the following files:
+M frontend/src/i18n/locales/bn.json
+file update:
+diff --git a/frontend/src/i18n/locales/bn.json b/frontend/src/i18n/locales/bn.json
+index 4840b3f71e361ff2b476d4fafb9051f7618eab28..5d71ff6a33bb53720b457bf206de6976e572f41e
+--- a/frontend/src/i18n/locales/bn.json
++++ b/frontend/src/i18n/locales/bn.json
+@@ -77,5 +77,57 @@
+   "billing.purchaseCanceled": "Purchase was canceled.",
+   "billing.error": "An error occurred. Please try again.",
+   "common.cancel": "Cancel",
+-  "common.loading": "Loading..."
++  "common.loading": "Loading...",
++
++  "profile.title": "প্রোফাইল",
++  "profile.tabs.profile": "প্রোফাইল",
++  "profile.tabs.credits": "ক্রেডিট",
++  "profile.tabs.usage": "ব্যবহার",
++  "profile.tabs.account": "অ্যাকাউন্ট",
++
++  "profile.info.memberSince": "সদস্য {days} দিন ধরে",
++  "profile.info.connectedWith": "{provider} দিয়ে সংযুক্ত",
++
++  "profile.plan.free": "ফ্রি",
++  "profile.plan.pro": "প্রো",
++  "profile.plan.upgrade": "প্রো-তে আপগ্রেড করুন",
++  "profile.plan.manage": "সাবস্ক্রিপশন পরিচালনা করুন",
++  "profile.plan.monthlyAllowance": "{used} / {total} মাসিক ক্রেডিট",
++  "profile.plan.nextRenewal": "{days} দিনের মধ্যে নবায়ন হবে",
++
++  "profile.credits.balance": "ক্রেডিট ব্যালেন্স",
++  "profile.credits.buyMore": "অতিরিক্ত ক্রেডিট কিনুন",
++  "profile.credits.history": "লেনদেনের ইতিহাস",
++  "profile.credits.noHistory": "এখনও কোনো লেনদেন নেই",
++  "profile.credits.reason.signup_bonus": "সাইনআপ বোনাস",
++  "profile.credits.reason.purchase": "ক্রেডিট ক্রয়",
++  "profile.credits.reason.chat": "চ্যাট ব্যবহার",
++  "profile.credits.reason.monthly_allowance": "মাসিক বরাদ্দ",
++  "profile.credits.reason.refund": "ফেরত",
++
++  "profile.usage.documents": "নথি",
++  "profile.usage.sessions": "চ্যাট সেশন",
++  "profile.usage.messages": "বার্তা",
++  "profile.usage.creditsSpent": "খরচ করা ক্রেডিট",
++  "profile.usage.tokensUsed": "ব্যবহৃত টোকেন",
++  "profile.usage.modelBreakdown": "মডেল অনুযায়ী ব্যবহার",
++  "profile.usage.model": "মডেল",
++  "profile.usage.calls": "কল",
++  "profile.usage.tokens": "টোকেন",
++  "profile.usage.credits": "ক্রেডিট",
++
++  "profile.account.dangerZone": "বিপজ্জনক এলাকা",
++  "profile.account.deleteAccount": "অ্যাকাউন্ট মুছে ফেলুন",
++  "profile.account.deleteWarning": "এটি আপনার অ্যাকাউন্ট, সব নথি, চ্যাট এবং তথ্য স্থায়ীভাবে মুছে ফেলবে। এই কাজটি বাতিল করা যাবে না।",
++  "profile.account.deleteConfirm": "মুছে ফেলতে নিশ্চিত করতে আপনার ইমেল টাইপ করুন",
++  "profile.account.deleting": "অ্যাকাউন্ট মুছে ফেলা হচ্ছে…",
++
++  "userMenu.profile": "প্রোফাইল",
++  "userMenu.buyCredits": "ক্রেডিট কিনুন",
++  "userMenu.signOut": "সাইন আউট",
++
++  "billing.pro.title": "প্রো প্ল্যান",
++  "billing.pro.description": "প্রতি মাসে 100,000 ক্রেডিট",
++  "billing.pro.pricePerMonth": "{price}/মাস",
++  "billing.extraTopups": "অতিরিক্ত ক্রেডিট টপ-আপ"
+ }
+diff --git a/frontend/src/i18n/locales/fr.json b/frontend/src/i18n/locales/fr.json
+index e4d20fbaa38dc06ac8ba34741c7e007e3f92f5a0..6f2c7fb31d201186cbd0a99d184158c512a99cd4
+--- a/frontend/src/i18n/locales/fr.json
++++ b/frontend/src/i18n/locales/fr.json
+@@ -77,5 +77,57 @@
+   "billing.purchaseCanceled": "Purchase was canceled.",
+   "billing.error": "An error occurred. Please try again.",
+   "common.cancel": "Cancel",
+-  "common.loading": "Loading..."
++  "common.loading": "Loading...",
++
++  "profile.title": "Profil",
++  "profile.tabs.profile": "Profil",
++  "profile.tabs.credits": "Crédits",
++  "profile.tabs.usage": "Utilisation",
++  "profile.tabs.account": "Compte",
++
++  "profile.info.memberSince": "Membre depuis {days} jours",
++  "profile.info.connectedWith": "Connecté avec {provider}",
++
++  "profile.plan.free": "Gratuit",
++  "profile.plan.pro": "Pro",
++  "profile.plan.upgrade": "Passer à Pro",
++  "profile.plan.manage": "Gérer l’abonnement",
++  "profile.plan.monthlyAllowance": "{used} / {total} crédits mensuels",
++  "profile.plan.nextRenewal": "Renouvellement dans {days} jours",
++
++  "profile.credits.balance": "Solde de crédits",
++  "profile.credits.buyMore": "Acheter des crédits supplémentaires",
++  "profile.credits.history": "Historique des transactions",
++  "profile.credits.noHistory": "Aucune transaction pour le moment",
++  "profile.credits.reason.signup_bonus": "Bonus d’inscription",
++  "profile.credits.reason.purchase": "Achat de crédits",
++  "profile.credits.reason.chat": "Utilisation du chat",
++  "profile.credits.reason.monthly_allowance": "Allocation mensuelle",
++  "profile.credits.reason.refund": "Remboursement",
++
++  "profile.usage.documents": "Documents",
++  "profile.usage.sessions": "Sessions de chat",
++  "profile.usage.messages": "Messages",
++  "profile.usage.creditsSpent": "Crédits dépensés",
++  "profile.usage.tokensUsed": "Jetons utilisés",
++  "profile.usage.modelBreakdown": "Utilisation par modèle",
++  "profile.usage.model": "Modèle",
++  "profile.usage.calls": "Appels",
++  "profile.usage.tokens": "Jetons",
++  "profile.usage.credits": "Crédits",
++
++  "profile.account.dangerZone": "Zone de danger",
++  "profile.account.deleteAccount": "Supprimer le compte",
++  "profile.account.deleteWarning": "Cela supprimera définitivement votre compte, tous les documents, discussions et données. Cette action ne peut pas être annulée.",
++  "profile.account.deleteConfirm": "Saisissez votre e-mail pour confirmer la suppression",
++  "profile.account.deleting": "Suppression du compte…",
++
++  "userMenu.profile": "Profil",
++  "userMenu.buyCredits": "Acheter des crédits",
++  "userMenu.signOut": "Se déconnecter",
++
++  "billing.pro.title": "Forfait Pro",
++  "billing.pro.description": "100 000 crédits/mois",
++  "billing.pro.pricePerMonth": "{price}/mois",
++  "billing.extraTopups": "Recharges de crédits supplémentaires"
+ }
+diff --git a/frontend/src/i18n/locales/pt.json b/frontend/src/i18n/locales/pt.json
+index ee63dad08c6ab9b6389d67203e817da92b054d19..c1aa9f47a75f3c104cc5e253d37d4828a60486c9
+--- a/frontend/src/i18n/locales/pt.json
++++ b/frontend/src/i18n/locales/pt.json
+@@ -77,5 +77,57 @@
+   "billing.purchaseCanceled": "Purchase was canceled.",
+   "billing.error": "An error occurred. Please try again.",
+   "common.cancel": "Cancel",
+-  "common.loading": "Loading..."
++  "common.loading": "Loading...",
++
++  "profile.title": "Perfil",
++  "profile.tabs.profile": "Perfil",
++  "profile.tabs.credits": "Créditos",
++  "profile.tabs.usage": "Uso",
++  "profile.tabs.account": "Conta",
++
++  "profile.info.memberSince": "Membro há {days} dias",
++  "profile.info.connectedWith": "Conectado com {provider}",
++
++  "profile.plan.free": "Gratuito",
++  "profile.plan.pro": "Pro",
++  "profile.plan.upgrade": "Fazer upgrade para Pro",
++  "profile.plan.manage": "Gerenciar assinatura",
++  "profile.plan.monthlyAllowance": "{used} / {total} créditos mensais",
++  "profile.plan.nextRenewal": "Renova em {days} dias",
++
++  "profile.credits.balance": "Saldo de créditos",
++  "profile.credits.buyMore": "Comprar créditos extras",
++  "profile.credits.history": "Histórico de transações",
++  "profile.credits.noHistory": "Nenhuma transação ainda",
++  "profile.credits.reason.signup_bonus": "Bônus de cadastro",
++  "profile.credits.reason.purchase": "Compra de créditos",
++  "profile.credits.reason.chat": "Uso do chat",
++  "profile.credits.reason.monthly_allowance": "Cota mensal",
++  "profile.credits.reason.refund": "Reembolso",
++
++  "profile.usage.documents": "Documentos",
++  "profile.usage.sessions": "Sessões de chat",
++  "profile.usage.messages": "Mensagens",
++  "profile.usage.creditsSpent": "Créditos gastos",
++  "profile.usage.tokensUsed": "Tokens usados",
++  "profile.usage.modelBreakdown": "Uso por modelo",
++  "profile.usage.model": "Modelo",
++  "profile.usage.calls": "Chamadas",
++  "profile.usage.tokens": "Tokens",
++  "profile.usage.credits": "Créditos",
++
++  "profile.account.dangerZone": "Zona de perigo",
++  "profile.account.deleteAccount": "Excluir conta",
++  "profile.account.deleteWarning": "Isso excluirá permanentemente sua conta, todos os documentos, chats e dados. Esta ação não pode ser desfeita.",
++  "profile.account.deleteConfirm": "Digite seu e-mail para confirmar a exclusão",
++  "profile.account.deleting": "Excluindo conta…",
++
++  "userMenu.profile": "Perfil",
++  "userMenu.buyCredits": "Comprar créditos",
++  "userMenu.signOut": "Sair",
++
++  "billing.pro.title": "Plano Pro",
++  "billing.pro.description": "100.000 créditos/mês",
++  "billing.pro.pricePerMonth": "{price}/mês",
++  "billing.extraTopups": "Recargas extras de créditos"
+ }
+
+file update:
+diff --git a/frontend/src/i18n/locales/bn.json b/frontend/src/i18n/locales/bn.json
+index 4840b3f71e361ff2b476d4fafb9051f7618eab28..5d71ff6a33bb53720b457bf206de6976e572f41e
+--- a/frontend/src/i18n/locales/bn.json
++++ b/frontend/src/i18n/locales/bn.json
+@@ -77,5 +77,57 @@
+   "billing.purchaseCanceled": "Purchase was canceled.",
+   "billing.error": "An error occurred. Please try again.",
+   "common.cancel": "Cancel",
+-  "common.loading": "Loading..."
++  "common.loading": "Loading...",
++
++  "profile.title": "প্রোফাইল",
++  "profile.tabs.profile": "প্রোফাইল",
++  "profile.tabs.credits": "ক্রেডিট",
++  "profile.tabs.usage": "ব্যবহার",
++  "profile.tabs.account": "অ্যাকাউন্ট",
++
++  "profile.info.memberSince": "সদস্য {days} দিন ধরে",
++  "profile.info.connectedWith": "{provider} দিয়ে সংযুক্ত",
++
++  "profile.plan.free": "ফ্রি",
++  "profile.plan.pro": "প্রো",
++  "profile.plan.upgrade": "প্রো-তে আপগ্রেড করুন",
++  "profile.plan.manage": "সাবস্ক্রিপশন পরিচালনা করুন",
++  "profile.plan.monthlyAllowance": "{used} / {total} মাসিক ক্রেডিট",
++  "profile.plan.nextRenewal": "{days} দিনের মধ্যে নবায়ন হবে",
++
++  "profile.credits.balance": "ক্রেডিট ব্যালেন্স",
++  "profile.credits.buyMore": "অতিরিক্ত ক্রেডিট কিনুন",
++  "profile.credits.history": "লেনদেনের ইতিহাস",
++  "profile.credits.noHistory": "এখনও কোনো লেনদেন নেই",
++  "profile.credits.reason.signup_bonus": "সাইনআপ বোনাস",
++  "profile.credits.reason.purchase": "ক্রেডিট ক্রয়",
++  "profile.credits.reason.chat": "চ্যাট ব্যবহার",
++  "profile.credits.reason.monthly_allowance": "মাসিক বরাদ্দ",
++  "profile.credits.reason.refund": "ফেরত",
++
++  "profile.usage.documents": "নথি",
++  "profile.usage.sessions": "চ্যাট সেশন",
++  "profile.usage.messages": "বার্তা",
++  "profile.usage.creditsSpent": "খরচ করা ক্রেডিট",
++  "profile.usage.tokensUsed": "ব্যবহৃত টোকেন",
++  "profile.usage.modelBreakdown": "মডেল অনুযায়ী ব্যবহার",
++  "profile.usage.model": "মডেল",
++  "profile.usage.calls": "কল",
++  "profile.usage.tokens": "টোকেন",
++  "profile.usage.credits": "ক্রেডিট",
++
++  "profile.account.dangerZone": "বিপজ্জনক এলাকা",
++  "profile.account.deleteAccount": "অ্যাকাউন্ট মুছে ফেলুন",
++  "profile.account.deleteWarning": "এটি আপনার অ্যাকাউন্ট, সব নথি, চ্যাট এবং তথ্য স্থায়ীভাবে মুছে ফেলবে। এই কাজটি বাতিল করা যাবে না।",
++  "profile.account.deleteConfirm": "মুছে ফেলতে নিশ্চিত করতে আপনার ইমেল টাইপ করুন",
++  "profile.account.deleting": "অ্যাকাউন্ট মুছে ফেলা হচ্ছে…",
++
++  "userMenu.profile": "প্রোফাইল",
++  "userMenu.buyCredits": "ক্রেডিট কিনুন",
++  "userMenu.signOut": "সাইন আউট",
++
++  "billing.pro.title": "প্রো প্ল্যান",
++  "billing.pro.description": "প্রতি মাসে 100,000 ক্রেডিট",
++  "billing.pro.pricePerMonth": "{price}/মাস",
++  "billing.extraTopups": "অতিরিক্ত ক্রেডিট টপ-আপ"
+ }
+diff --git a/frontend/src/i18n/locales/fr.json b/frontend/src/i18n/locales/fr.json
+index e4d20fbaa38dc06ac8ba34741c7e007e3f92f5a0..6f2c7fb31d201186cbd0a99d184158c512a99cd4
+--- a/frontend/src/i18n/locales/fr.json
++++ b/frontend/src/i18n/locales/fr.json
+@@ -77,5 +77,57 @@
+   "billing.purchaseCanceled": "Purchase was canceled.",
+   "billing.error": "An error occurred. Please try again.",
+   "common.cancel": "Cancel",
+-  "common.loading": "Loading..."
++  "common.loading": "Loading...",
++
++  "profile.title": "Profil",
++  "profile.tabs.profile": "Profil",
++  "profile.tabs.credits": "Crédits",
++  "profile.tabs.usage": "Utilisation",
++  "profile.tabs.account": "Compte",
++
++  "profile.info.memberSince": "Membre depuis {days} jours",
++  "profile.info.connectedWith": "Connecté avec {provider}",
++
++  "profile.plan.free": "Gratuit",
++  "profile.plan.pro": "Pro",
++  "profile.plan.upgrade": "Passer à Pro",
++  "profile.plan.manage": "Gérer l’abonnement",
++  "profile.plan.monthlyAllowance": "{used} / {total} crédits mensuels",
++  "profile.plan.nextRenewal": "Renouvellement dans {days} jours",
++
++  "profile.credits.balance": "Solde de crédits",
++  "profile.credits.buyMore": "Acheter des crédits supplémentaires",
++  "profile.credits.history": "Historique des transactions",
++  "profile.credits.noHistory": "Aucune transaction pour le moment",
++  "profile.credits.reason.signup_bonus": "Bonus d’inscription",
++  "profile.credits.reason.purchase": "Achat de crédits",
++  "profile.credits.reason.chat": "Utilisation du chat",
++  "profile.credits.reason.monthly_allowance": "Allocation mensuelle",
++  "profile.credits.reason.refund": "Remboursement",
++
++  "profile.usage.documents": "Documents",
++  "profile.usage.sessions": "Sessions de chat",
++  "profile.usage.messages": "Messages",
++  "profile.usage.creditsSpent": "Crédits dépensés",
++  "profile.usage.tokensUsed": "Jetons utilisés",
++  "profile.usage.modelBreakdown": "Utilisation par modèle",
++  "profile.usage.model": "Modèle",
++  "profile.usage.calls": "Appels",
++  "profile.usage.tokens": "Jetons",
++  "profile.usage.credits": "Crédits",
++
++  "profile.account.dangerZone": "Zone de danger",
++  "profile.account.deleteAccount": "Supprimer le compte",
++  "profile.account.deleteWarning": "Cela supprimera définitivement votre compte, tous les documents, discussions et données. Cette action ne peut pas être annulée.",
++  "profile.account.deleteConfirm": "Saisissez votre e-mail pour confirmer la suppression",
++  "profile.account.deleting": "Suppression du compte…",
++
++  "userMenu.profile": "Profil",
++  "userMenu.buyCredits": "Acheter des crédits",
++  "userMenu.signOut": "Se déconnecter",
++
++  "billing.pro.title": "Forfait Pro",
++  "billing.pro.description": "100 000 crédits/mois",
++  "billing.pro.pricePerMonth": "{price}/mois",
++  "billing.extraTopups": "Recharges de crédits supplémentaires"
+ }
+diff --git a/frontend/src/i18n/locales/pt.json b/frontend/src/i18n/locales/pt.json
+index ee63dad08c6ab9b6389d67203e817da92b054d19..c1aa9f47a75f3c104cc5e253d37d4828a60486c9
+--- a/frontend/src/i18n/locales/pt.json
++++ b/frontend/src/i18n/locales/pt.json
+@@ -77,5 +77,57 @@
+   "billing.purchaseCanceled": "Purchase was canceled.",
+   "billing.error": "An error occurred. Please try again.",
+   "common.cancel": "Cancel",
+-  "common.loading": "Loading..."
++  "common.loading": "Loading...",
++
++  "profile.title": "Perfil",
++  "profile.tabs.profile": "Perfil",
++  "profile.tabs.credits": "Créditos",
++  "profile.tabs.usage": "Uso",
++  "profile.tabs.account": "Conta",
++
++  "profile.info.memberSince": "Membro há {days} dias",
++  "profile.info.connectedWith": "Conectado com {provider}",
++
++  "profile.plan.free": "Gratuito",
++  "profile.plan.pro": "Pro",
++  "profile.plan.upgrade": "Fazer upgrade para Pro",
++  "profile.plan.manage": "Gerenciar assinatura",
++  "profile.plan.monthlyAllowance": "{used} / {total} créditos mensais",
++  "profile.plan.nextRenewal": "Renova em {days} dias",
++
++  "profile.credits.balance": "Saldo de créditos",
++  "profile.credits.buyMore": "Comprar créditos extras",
++  "profile.credits.history": "Histórico de transações",
++  "profile.credits.noHistory": "Nenhuma transação ainda",
++  "profile.credits.reason.signup_bonus": "Bônus de cadastro",
++  "profile.credits.reason.purchase": "Compra de créditos",
++  "profile.credits.reason.chat": "Uso do chat",
++  "profile.credits.reason.monthly_allowance": "Cota mensal",
++  "profile.credits.reason.refund": "Reembolso",
++
++  "profile.usage.documents": "Documentos",
++  "profile.usage.sessions": "Sessões de chat",
++  "profile.usage.messages": "Mensagens",
++  "profile.usage.creditsSpent": "Créditos gastos",
++  "profile.usage.tokensUsed": "Tokens usados",
++  "profile.usage.modelBreakdown": "Uso por modelo",
++  "profile.usage.model": "Modelo",
++  "profile.usage.calls": "Chamadas",
++  "profile.usage.tokens": "Tokens",
++  "profile.usage.credits": "Créditos",
++
++  "profile.account.dangerZone": "Zona de perigo",
++  "profile.account.deleteAccount": "Excluir conta",
++  "profile.account.deleteWarning": "Isso excluirá permanentemente sua conta, todos os documentos, chats e dados. Esta ação não pode ser desfeita.",
++  "profile.account.deleteConfirm": "Digite seu e-mail para confirmar a exclusão",
++  "profile.account.deleting": "Excluindo conta…",
++
++  "userMenu.profile": "Perfil",
++  "userMenu.buyCredits": "Comprar créditos",
++  "userMenu.signOut": "Sair",
++
++  "billing.pro.title": "Plano Pro",
++  "billing.pro.description": "100.000 créditos/mês",
++  "billing.pro.pricePerMonth": "{price}/mês",
++  "billing.extraTopups": "Recargas extras de créditos"
+ }
+
+exec
+bash -lc "node -e \"const fs=require('fs'); const f='frontend/src/i18n/locales/bn.json'; try{ JSON.parse(fs.readFileSync(f,'utf8')); console.log('OK'); } catch(e){ console.log('ERR: '+e.message);} \"" in /Users/mayijie/Projects/Code/010_DocTalk succeeded in 48ms:
+OK
+file update:
+diff --git a/frontend/src/i18n/locales/bn.json b/frontend/src/i18n/locales/bn.json
+index 4840b3f71e361ff2b476d4fafb9051f7618eab28..5d71ff6a33bb53720b457bf206de6976e572f41e
+--- a/frontend/src/i18n/locales/bn.json
++++ b/frontend/src/i18n/locales/bn.json
+@@ -77,5 +77,57 @@
+   "billing.purchaseCanceled": "Purchase was canceled.",
+   "billing.error": "An error occurred. Please try again.",
+   "common.cancel": "Cancel",
+-  "common.loading": "Loading..."
++  "common.loading": "Loading...",
++
++  "profile.title": "প্রোফাইল",
++  "profile.tabs.profile": "প্রোফাইল",
++  "profile.tabs.credits": "ক্রেডিট",
++  "profile.tabs.usage": "ব্যবহার",
++  "profile.tabs.account": "অ্যাকাউন্ট",
++
++  "profile.info.memberSince": "সদস্য {days} দিন ধরে",
++  "profile.info.connectedWith": "{provider} দিয়ে সংযুক্ত",
++
++  "profile.plan.free": "ফ্রি",
++  "profile.plan.pro": "প্রো",
++  "profile.plan.upgrade": "প্রো-তে আপগ্রেড করুন",
++  "profile.plan.manage": "সাবস্ক্রিপশন পরিচালনা করুন",
++  "profile.plan.monthlyAllowance": "{used} / {total} মাসিক ক্রেডিট",
++  "profile.plan.nextRenewal": "{days} দিনের মধ্যে নবায়ন হবে",
++
++  "profile.credits.balance": "ক্রেডিট ব্যালেন্স",
++  "profile.credits.buyMore": "অতিরিক্ত ক্রেডিট কিনুন",
++  "profile.credits.history": "লেনদেনের ইতিহাস",
++  "profile.credits.noHistory": "এখনও কোনো লেনদেন নেই",
++  "profile.credits.reason.signup_bonus": "সাইনআপ বোনাস",
++  "profile.credits.reason.purchase": "ক্রেডিট ক্রয়",
++  "profile.credits.reason.chat": "চ্যাট ব্যবহার",
++  "profile.credits.reason.monthly_allowance": "মাসিক বরাদ্দ",
++  "profile.credits.reason.refund": "ফেরত",
++
++  "profile.usage.documents": "নথি",
++  "profile.usage.sessions": "চ্যাট সেশন",
++  "profile.usage.messages": "বার্তা",
++  "profile.usage.creditsSpent": "খরচ করা ক্রেডিট",
++  "profile.usage.tokensUsed": "ব্যবহৃত টোকেন",
++  "profile.usage.modelBreakdown": "মডেল অনুযায়ী ব্যবহার",
++  "profile.usage.model": "মডেল",
++  "profile.usage.calls": "কল",
++  "profile.usage.tokens": "টোকেন",
++  "profile.usage.credits": "ক্রেডিট",
++
++  "profile.account.dangerZone": "বিপজ্জনক এলাকা",
++  "profile.account.deleteAccount": "অ্যাকাউন্ট মুছে ফেলুন",
++  "profile.account.deleteWarning": "এটি আপনার অ্যাকাউন্ট, সব নথি, চ্যাট এবং তথ্য স্থায়ীভাবে মুছে ফেলবে। এই কাজটি বাতিল করা যাবে না।",
++  "profile.account.deleteConfirm": "মুছে ফেলতে নিশ্চিত করতে আপনার ইমেল টাইপ করুন",
++  "profile.account.deleting": "অ্যাকাউন্ট মুছে ফেলা হচ্ছে…",
++
++  "userMenu.profile": "প্রোফাইল",
++  "userMenu.buyCredits": "ক্রেডিট কিনুন",
++  "userMenu.signOut": "সাইন আউট",
++
++  "billing.pro.title": "প্রো প্ল্যান",
++  "billing.pro.description": "প্রতি মাসে 100,000 ক্রেডিট",
++  "billing.pro.pricePerMonth": "{price}/মাস",
++  "billing.extraTopups": "অতিরিক্ত ক্রেডিট টপ-আপ"
+ }
+diff --git a/frontend/src/i18n/locales/fr.json b/frontend/src/i18n/locales/fr.json
+index e4d20fbaa38dc06ac8ba34741c7e007e3f92f5a0..6f2c7fb31d201186cbd0a99d184158c512a99cd4
+--- a/frontend/src/i18n/locales/fr.json
++++ b/frontend/src/i18n/locales/fr.json
+@@ -77,5 +77,57 @@
+   "billing.purchaseCanceled": "Purchase was canceled.",
+   "billing.error": "An error occurred. Please try again.",
+   "common.cancel": "Cancel",
+-  "common.loading": "Loading..."
++  "common.loading": "Loading...",
++
++  "profile.title": "Profil",
++  "profile.tabs.profile": "Profil",
++  "profile.tabs.credits": "Crédits",
++  "profile.tabs.usage": "Utilisation",
++  "profile.tabs.account": "Compte",
++
++  "profile.info.memberSince": "Membre depuis {days} jours",
++  "profile.info.connectedWith": "Connecté avec {provider}",
++
++  "profile.plan.free": "Gratuit",
++  "profile.plan.pro": "Pro",
++  "profile.plan.upgrade": "Passer à Pro",
++  "profile.plan.manage": "Gérer l’abonnement",
++  "profile.plan.monthlyAllowance": "{used} / {total} crédits mensuels",
++  "profile.plan.nextRenewal": "Renouvellement dans {days} jours",
++
++  "profile.credits.balance": "Solde de crédits",
++  "profile.credits.buyMore": "Acheter des crédits supplémentaires",
++  "profile.credits.history": "Historique des transactions",
++  "profile.credits.noHistory": "Aucune transaction pour le moment",
++  "profile.credits.reason.signup_bonus": "Bonus d’inscription",
++  "profile.credits.reason.purchase": "Achat de crédits",
++  "profile.credits.reason.chat": "Utilisation du chat",
++  "profile.credits.reason.monthly_allowance": "Allocation mensuelle",
++  "profile.credits.reason.refund": "Remboursement",
++
++  "profile.usage.documents": "Documents",
++  "profile.usage.sessions": "Sessions de chat",
++  "profile.usage.messages": "Messages",
++  "profile.usage.creditsSpent": "Crédits dépensés",
++  "profile.usage.tokensUsed": "Jetons utilisés",
++  "profile.usage.modelBreakdown": "Utilisation par modèle",
++  "profile.usage.model": "Modèle",
++  "profile.usage.calls": "Appels",
++  "profile.usage.tokens": "Jetons",
++  "profile.usage.credits": "Crédits",
++
++  "profile.account.dangerZone": "Zone de danger",
++  "profile.account.deleteAccount": "Supprimer le compte",
++  "profile.account.deleteWarning": "Cela supprimera définitivement votre compte, tous les documents, discussions et données. Cette action ne peut pas être annulée.",
++  "profile.account.deleteConfirm": "Saisissez votre e-mail pour confirmer la suppression",
++  "profile.account.deleting": "Suppression du compte…",
++
++  "userMenu.profile": "Profil",
++  "userMenu.buyCredits": "Acheter des crédits",
++  "userMenu.signOut": "Se déconnecter",
++
++  "billing.pro.title": "Forfait Pro",
++  "billing.pro.description": "100 000 crédits/mois",
++  "billing.pro.pricePerMonth": "{price}/mois",
++  "billing.extraTopups": "Recharges de crédits supplémentaires"
+ }
+diff --git a/frontend/src/i18n/locales/pt.json b/frontend/src/i18n/locales/pt.json
+index ee63dad08c6ab9b6389d67203e817da92b054d19..c1aa9f47a75f3c104cc5e253d37d4828a60486c9
+--- a/frontend/src/i18n/locales/pt.json
++++ b/frontend/src/i18n/locales/pt.json
+@@ -77,5 +77,57 @@
+   "billing.purchaseCanceled": "Purchase was canceled.",
+   "billing.error": "An error occurred. Please try again.",
+   "common.cancel": "Cancel",
+-  "common.loading": "Loading..."
++  "common.loading": "Loading...",
++
++  "profile.title": "Perfil",
++  "profile.tabs.profile": "Perfil",
++  "profile.tabs.credits": "Créditos",
++  "profile.tabs.usage": "Uso",
++  "profile.tabs.account": "Conta",
++
++  "profile.info.memberSince": "Membro há {days} dias",
++  "profile.info.connectedWith": "Conectado com {provider}",
++
++  "profile.plan.free": "Gratuito",
++  "profile.plan.pro": "Pro",
++  "profile.plan.upgrade": "Fazer upgrade para Pro",
++  "profile.plan.manage": "Gerenciar assinatura",
++  "profile.plan.monthlyAllowance": "{used} / {total} créditos mensais",
++  "profile.plan.nextRenewal": "Renova em {days} dias",
++
++  "profile.credits.balance": "Saldo de créditos",
++  "profile.credits.buyMore": "Comprar créditos extras",
++  "profile.credits.history": "Histórico de transações",
++  "profile.credits.noHistory": "Nenhuma transação ainda",
++  "profile.credits.reason.signup_bonus": "Bônus de cadastro",
++  "profile.credits.reason.purchase": "Compra de créditos",
++  "profile.credits.reason.chat": "Uso do chat",
++  "profile.credits.reason.monthly_allowance": "Cota mensal",
++  "profile.credits.reason.refund": "Reembolso",
++
++  "profile.usage.documents": "Documentos",
++  "profile.usage.sessions": "Sessões de chat",
++  "profile.usage.messages": "Mensagens",
++  "profile.usage.creditsSpent": "Créditos gastos",
++  "profile.usage.tokensUsed": "Tokens usados",
++  "profile.usage.modelBreakdown": "Uso por modelo",
++  "profile.usage.model": "Modelo",
++  "profile.usage.calls": "Chamadas",
++  "profile.usage.tokens": "Tokens",
++  "profile.usage.credits": "Créditos",
++
++  "profile.account.dangerZone": "Zona de perigo",
++  "profile.account.deleteAccount": "Excluir conta",
++  "profile.account.deleteWarning": "Isso excluirá permanentemente sua conta, todos os documentos, chats e dados. Esta ação não pode ser desfeita.",
++  "profile.account.deleteConfirm": "Digite seu e-mail para confirmar a exclusão",
++  "profile.account.deleting": "Excluindo conta…",
++
++  "userMenu.profile": "Perfil",
++  "userMenu.buyCredits": "Comprar créditos",
++  "userMenu.signOut": "Sair",
++
++  "billing.pro.title": "Plano Pro",
++  "billing.pro.description": "100.000 créditos/mês",
++  "billing.pro.pricePerMonth": "{price}/mês",
++  "billing.extraTopups": "Recargas extras de créditos"
+ }
+
+
+thinking
+**Finalizing file updates**
+
+I see that the guidelines mention including the file path when referencing files, but we can keep it simple and not worry about line numbers unless we're talking about specific content. It sounds like it’s enough to just mention that we've updated those files. Alright, let's wrap this up!
+codex
+Added the missing profile/subscription and billing i18n keys to the three locales with native translations and preserved placeholders.
+
+What I changed
+- frontend/src/i18n/locales/fr.json
+  - Added: profile.* (all listed), userMenu.profile/buyCredits/signOut, billing.pro.* and billing.extraTopups
+  - Translations in French; placeholders like {days}, {used}, {total}, {price}, {provider} preserved
+
+- frontend/src/i18n/locales/bn.json
+  - Added: profile.* (all listed), userMenu.profile/buyCredits/signOut, billing.pro.* and billing.extraTopups
+  - Translations in Bengali; placeholders preserved
+
+- frontend/src/i18n/locales/pt.json
+  - Added: profile.* (all listed), userMenu.profile/buyCredits/signOut, billing.pro.* and billing.extraTopups
+  - Translations in Portuguese; placeholders preserved
+
+Notes
+- Kept all existing keys intact.
+- Ensured valid JSON (verified by parsing).
+- Did not modify en.json or any other files.
+
+Want me to also localize the earlier auth/billing/common strings in fr/bn/pt that are still in English?
+file update:
+diff --git a/frontend/src/i18n/locales/bn.json b/frontend/src/i18n/locales/bn.json
+index 4840b3f71e361ff2b476d4fafb9051f7618eab28..5d71ff6a33bb53720b457bf206de6976e572f41e
+--- a/frontend/src/i18n/locales/bn.json
++++ b/frontend/src/i18n/locales/bn.json
+@@ -77,5 +77,57 @@
+   "billing.purchaseCanceled": "Purchase was canceled.",
+   "billing.error": "An error occurred. Please try again.",
+   "common.cancel": "Cancel",
+-  "common.loading": "Loading..."
++  "common.loading": "Loading...",
++
++  "profile.title": "প্রোফাইল",
++  "profile.tabs.profile": "প্রোফাইল",
++  "profile.tabs.credits": "ক্রেডিট",
++  "profile.tabs.usage": "ব্যবহার",
++  "profile.tabs.account": "অ্যাকাউন্ট",
++
++  "profile.info.memberSince": "সদস্য {days} দিন ধরে",
++  "profile.info.connectedWith": "{provider} দিয়ে সংযুক্ত",
++
++  "profile.plan.free": "ফ্রি",
++  "profile.plan.pro": "প্রো",
++  "profile.plan.upgrade": "প্রো-তে আপগ্রেড করুন",
++  "profile.plan.manage": "সাবস্ক্রিপশন পরিচালনা করুন",
++  "profile.plan.monthlyAllowance": "{used} / {total} মাসিক ক্রেডিট",
++  "profile.plan.nextRenewal": "{days} দিনের মধ্যে নবায়ন হবে",
++
++  "profile.credits.balance": "ক্রেডিট ব্যালেন্স",
++  "profile.credits.buyMore": "অতিরিক্ত ক্রেডিট কিনুন",
++  "profile.credits.history": "লেনদেনের ইতিহাস",
++  "profile.credits.noHistory": "এখনও কোনো লেনদেন নেই",
++  "profile.credits.reason.signup_bonus": "সাইনআপ বোনাস",
++  "profile.credits.reason.purchase": "ক্রেডিট ক্রয়",
++  "profile.credits.reason.chat": "চ্যাট ব্যবহার",
++  "profile.credits.reason.monthly_allowance": "মাসিক বরাদ্দ",
++  "profile.credits.reason.refund": "ফেরত",
++
++  "profile.usage.documents": "নথি",
++  "profile.usage.sessions": "চ্যাট সেশন",
++  "profile.usage.messages": "বার্তা",
++  "profile.usage.creditsSpent": "খরচ করা ক্রেডিট",
++  "profile.usage.tokensUsed": "ব্যবহৃত টোকেন",
++  "profile.usage.modelBreakdown": "মডেল অনুযায়ী ব্যবহার",
++  "profile.usage.model": "মডেল",
++  "profile.usage.calls": "কল",
++  "profile.usage.tokens": "টোকেন",
++  "profile.usage.credits": "ক্রেডিট",
++
++  "profile.account.dangerZone": "বিপজ্জনক এলাকা",
++  "profile.account.deleteAccount": "অ্যাকাউন্ট মুছে ফেলুন",
++  "profile.account.deleteWarning": "এটি আপনার অ্যাকাউন্ট, সব নথি, চ্যাট এবং তথ্য স্থায়ীভাবে মুছে ফেলবে। এই কাজটি বাতিল করা যাবে না।",
++  "profile.account.deleteConfirm": "মুছে ফেলতে নিশ্চিত করতে আপনার ইমেল টাইপ করুন",
++  "profile.account.deleting": "অ্যাকাউন্ট মুছে ফেলা হচ্ছে…",
++
++  "userMenu.profile": "প্রোফাইল",
++  "userMenu.buyCredits": "ক্রেডিট কিনুন",
++  "userMenu.signOut": "সাইন আউট",
++
++  "billing.pro.title": "প্রো প্ল্যান",
++  "billing.pro.description": "প্রতি মাসে 100,000 ক্রেডিট",
++  "billing.pro.pricePerMonth": "{price}/মাস",
++  "billing.extraTopups": "অতিরিক্ত ক্রেডিট টপ-আপ"
+ }
+diff --git a/frontend/src/i18n/locales/fr.json b/frontend/src/i18n/locales/fr.json
+index e4d20fbaa38dc06ac8ba34741c7e007e3f92f5a0..6f2c7fb31d201186cbd0a99d184158c512a99cd4
+--- a/frontend/src/i18n/locales/fr.json
++++ b/frontend/src/i18n/locales/fr.json
+@@ -77,5 +77,57 @@
+   "billing.purchaseCanceled": "Purchase was canceled.",
+   "billing.error": "An error occurred. Please try again.",
+   "common.cancel": "Cancel",
+-  "common.loading": "Loading..."
++  "common.loading": "Loading...",
++
++  "profile.title": "Profil",
++  "profile.tabs.profile": "Profil",
++  "profile.tabs.credits": "Crédits",
++  "profile.tabs.usage": "Utilisation",
++  "profile.tabs.account": "Compte",
++
++  "profile.info.memberSince": "Membre depuis {days} jours",
++  "profile.info.connectedWith": "Connecté avec {provider}",
++
++  "profile.plan.free": "Gratuit",
++  "profile.plan.pro": "Pro",
++  "profile.plan.upgrade": "Passer à Pro",
++  "profile.plan.manage": "Gérer l’abonnement",
++  "profile.plan.monthlyAllowance": "{used} / {total} crédits mensuels",
++  "profile.plan.nextRenewal": "Renouvellement dans {days} jours",
++
++  "profile.credits.balance": "Solde de crédits",
++  "profile.credits.buyMore": "Acheter des crédits supplémentaires",
++  "profile.credits.history": "Historique des transactions",
++  "profile.credits.noHistory": "Aucune transaction pour le moment",
++  "profile.credits.reason.signup_bonus": "Bonus d’inscription",
++  "profile.credits.reason.purchase": "Achat de crédits",
++  "profile.credits.reason.chat": "Utilisation du chat",
++  "profile.credits.reason.monthly_allowance": "Allocation mensuelle",
++  "profile.credits.reason.refund": "Remboursement",
++
++  "profile.usage.documents": "Documents",
++  "profile.usage.sessions": "Sessions de chat",
++  "profile.usage.messages": "Messages",
++  "profile.usage.creditsSpent": "Crédits dépensés",
++  "profile.usage.tokensUsed": "Jetons utilisés",
++  "profile.usage.modelBreakdown": "Utilisation par modèle",
++  "profile.usage.model": "Modèle",
++  "profile.usage.calls": "Appels",
++  "profile.usage.tokens": "Jetons",
++  "profile.usage.credits": "Crédits",
++
++  "profile.account.dangerZone": "Zone de danger",
++  "profile.account.deleteAccount": "Supprimer le compte",
++  "profile.account.deleteWarning": "Cela supprimera définitivement votre compte, tous les documents, discussions et données. Cette action ne peut pas être annulée.",
++  "profile.account.deleteConfirm": "Saisissez votre e-mail pour confirmer la suppression",
++  "profile.account.deleting": "Suppression du compte…",
++
++  "userMenu.profile": "Profil",
++  "userMenu.buyCredits": "Acheter des crédits",
++  "userMenu.signOut": "Se déconnecter",
++
++  "billing.pro.title": "Forfait Pro",
++  "billing.pro.description": "100 000 crédits/mois",
++  "billing.pro.pricePerMonth": "{price}/mois",
++  "billing.extraTopups": "Recharges de crédits supplémentaires"
+ }
+diff --git a/frontend/src/i18n/locales/pt.json b/frontend/src/i18n/locales/pt.json
+index ee63dad08c6ab9b6389d67203e817da92b054d19..c1aa9f47a75f3c104cc5e253d37d4828a60486c9
+--- a/frontend/src/i18n/locales/pt.json
++++ b/frontend/src/i18n/locales/pt.json
+@@ -77,5 +77,57 @@
+   "billing.purchaseCanceled": "Purchase was canceled.",
+   "billing.error": "An error occurred. Please try again.",
+   "common.cancel": "Cancel",
+-  "common.loading": "Loading..."
++  "common.loading": "Loading...",
++
++  "profile.title": "Perfil",
++  "profile.tabs.profile": "Perfil",
++  "profile.tabs.credits": "Créditos",
++  "profile.tabs.usage": "Uso",
++  "profile.tabs.account": "Conta",
++
++  "profile.info.memberSince": "Membro há {days} dias",
++  "profile.info.connectedWith": "Conectado com {provider}",
++
++  "profile.plan.free": "Gratuito",
++  "profile.plan.pro": "Pro",
++  "profile.plan.upgrade": "Fazer upgrade para Pro",
++  "profile.plan.manage": "Gerenciar assinatura",
++  "profile.plan.monthlyAllowance": "{used} / {total} créditos mensais",
++  "profile.plan.nextRenewal": "Renova em {days} dias",
++
++  "profile.credits.balance": "Saldo de créditos",
++  "profile.credits.buyMore": "Comprar créditos extras",
++  "profile.credits.history": "Histórico de transações",
++  "profile.credits.noHistory": "Nenhuma transação ainda",
++  "profile.credits.reason.signup_bonus": "Bônus de cadastro",
++  "profile.credits.reason.purchase": "Compra de créditos",
++  "profile.credits.reason.chat": "Uso do chat",
++  "profile.credits.reason.monthly_allowance": "Cota mensal",
++  "profile.credits.reason.refund": "Reembolso",
++
++  "profile.usage.documents": "Documentos",
++  "profile.usage.sessions": "Sessões de chat",
++  "profile.usage.messages": "Mensagens",
++  "profile.usage.creditsSpent": "Créditos gastos",
++  "profile.usage.tokensUsed": "Tokens usados",
++  "profile.usage.modelBreakdown": "Uso por modelo",
++  "profile.usage.model": "Modelo",
++  "profile.usage.calls": "Chamadas",
++  "profile.usage.tokens": "Tokens",
++  "profile.usage.credits": "Créditos",
++
++  "profile.account.dangerZone": "Zona de perigo",
++  "profile.account.deleteAccount": "Excluir conta",
++  "profile.account.deleteWarning": "Isso excluirá permanentemente sua conta, todos os documentos, chats e dados. Esta ação não pode ser desfeita.",
++  "profile.account.deleteConfirm": "Digite seu e-mail para confirmar a exclusão",
++  "profile.account.deleting": "Excluindo conta…",
++
++  "userMenu.profile": "Perfil",
++  "userMenu.buyCredits": "Comprar créditos",
++  "userMenu.signOut": "Sair",
++
++  "billing.pro.title": "Plano Pro",
++  "billing.pro.description": "100.000 créditos/mês",
++  "billing.pro.pricePerMonth": "{price}/mês",
++  "billing.extraTopups": "Recargas extras de créditos"
+ }
+
+tokens used
+58,033
+Added the missing profile/subscription and billing i18n keys to the three locales with native translations and preserved placeholders.
+
+What I changed
+- frontend/src/i18n/locales/fr.json
+  - Added: profile.* (all listed), userMenu.profile/buyCredits/signOut, billing.pro.* and billing.extraTopups
+  - Translations in French; placeholders like {days}, {used}, {total}, {price}, {provider} preserved
+
+- frontend/src/i18n/locales/bn.json
+  - Added: profile.* (all listed), userMenu.profile/buyCredits/signOut, billing.pro.* and billing.extraTopups
+  - Translations in Bengali; placeholders preserved
+
+- frontend/src/i18n/locales/pt.json
+  - Added: profile.* (all listed), userMenu.profile/buyCredits/signOut, billing.pro.* and billing.extraTopups
+  - Translations in Portuguese; placeholders preserved
+
+Notes
+- Kept all existing keys intact.
+- Ensured valid JSON (verified by parsing).
+- Did not modify en.json or any other files.
+
+Want me to also localize the earlier auth/billing/common strings in fr/bn/pt that are still in English?

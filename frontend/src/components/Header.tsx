@@ -13,7 +13,11 @@ import { useLocale } from '../i18n';
 import SessionDropdown from './SessionDropdown';
 import { CreditsDisplay } from './CreditsDisplay';
 
-export default function Header() {
+interface HeaderProps {
+  variant?: 'minimal' | 'full';
+}
+
+export default function Header({ variant = 'full' }: HeaderProps) {
   const documentName = useDocTalkStore((s) => s.documentName);
   const lastDocumentId = useDocTalkStore((s) => s.lastDocumentId);
   const lastDocumentName = useDocTalkStore((s) => s.lastDocumentName);
@@ -21,26 +25,31 @@ export default function Header() {
   const { t } = useLocale();
   const pathname = usePathname();
   const isDocumentPage = pathname?.startsWith('/d/');
+  const isMinimal = variant === 'minimal';
 
   const toggleTheme = () => {
     setTheme(theme === 'dark' ? 'light' : 'dark');
   };
 
   return (
-    <header className="h-12 flex items-center px-4 border-b bg-white dark:bg-gray-900 dark:border-gray-700 shrink-0">
-      <Link href="/" className="font-semibold text-lg dark:text-gray-100 hover:text-blue-600 dark:hover:text-blue-400 transition-colors">
+    <header className={`h-14 flex items-center px-3 sm:px-6 gap-2 min-w-0 shrink-0 ${
+      isMinimal
+        ? 'bg-transparent'
+        : 'border-b border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950'
+    }`}>
+      <Link href="/" className="font-semibold text-lg text-zinc-900 dark:text-zinc-100 hover:text-zinc-600 dark:hover:text-zinc-300 transition-all duration-200 shrink-0">
         {t('app.title')}
       </Link>
-      {documentName && (
+      {!isMinimal && documentName && (
         <>
-          <span className="mx-3 text-gray-300 dark:text-gray-600">/</span>
+          <span className="mx-3 text-zinc-300 dark:text-zinc-600">/</span>
           <SessionDropdown />
         </>
       )}
-      {!isDocumentPage && lastDocumentId && (
+      {!isMinimal && !isDocumentPage && lastDocumentId && (
         <Link
           href={`/d/${lastDocumentId}`}
-          className="ml-3 inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-sm text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-gray-800 hover:bg-blue-50 hover:text-blue-600 dark:hover:bg-blue-900/30 dark:hover:text-blue-400 transition-colors"
+          className="ml-1 sm:ml-3 inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-sm text-zinc-600 dark:text-zinc-300 bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-all duration-200 max-w-[140px] sm:max-w-[240px]"
           title={lastDocumentName || ''}
           aria-label={t('header.backToDocument')}
         >
@@ -48,18 +57,20 @@ export default function Header() {
           <span className="max-w-[160px] truncate">{lastDocumentName}</span>
         </Link>
       )}
-      <div className="ml-auto flex items-center gap-2">
-        <ModelSelector />
-        <button
-          onClick={toggleTheme}
-          className="p-1.5 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-600 dark:text-gray-400 transition-colors"
-          title={theme === 'dark' ? t('header.lightMode') : t('header.darkMode')}
-        >
-          {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
-        </button>
-        <CreditsDisplay />
+      <div className="ml-auto flex items-center gap-1 sm:gap-2 shrink-0">
+        {!isMinimal && <ModelSelector />}
+        {!isMinimal && (
+          <button
+            onClick={toggleTheme}
+            className="p-1.5 rounded-md hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-600 dark:text-zinc-400 transition-all duration-200"
+            title={theme === 'dark' ? t('header.lightMode') : t('header.darkMode')}
+          >
+            {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
+          </button>
+        )}
+        {!isMinimal && <div className="hidden sm:block"><CreditsDisplay /></div>}
         <UserMenu />
-        <LanguageSelector />
+        {!isMinimal && <LanguageSelector />}
       </div>
     </header>
   );

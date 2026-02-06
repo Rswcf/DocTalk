@@ -27,7 +27,7 @@ export default function UserMenu() {
 
   if (status === "loading") {
     return (
-      <div className="w-8 h-8 rounded-full bg-gray-200 dark:bg-gray-700 animate-pulse" />
+      <div className="w-8 h-8 rounded-full bg-zinc-200 dark:bg-zinc-700 animate-pulse" />
     );
   }
 
@@ -35,7 +35,7 @@ export default function UserMenu() {
     return (
       <button
         onClick={() => signIn()}
-        className="px-3 py-1.5 text-sm bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
+        className="px-3 py-1.5 text-sm bg-zinc-900 dark:bg-zinc-50 text-white dark:text-zinc-900 rounded hover:bg-zinc-800 dark:hover:bg-zinc-200 transition-all duration-200"
       >
         {t("auth.signIn")}
       </button>
@@ -53,7 +53,7 @@ export default function UserMenu() {
     <div className="relative" ref={menuRef}>
       <button
         onClick={() => setOpen((v) => !v)}
-        className="w-8 h-8 rounded-full overflow-hidden border border-gray-200 dark:border-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+        className="w-8 h-8 rounded-full overflow-hidden border border-zinc-200 dark:border-zinc-700 focus:outline-none focus:ring-2 focus:ring-zinc-500 transition-all duration-200"
         aria-haspopup="menu"
         aria-expanded={open}
       >
@@ -61,32 +61,32 @@ export default function UserMenu() {
           // eslint-disable-next-line @next/next/no-img-element
           <img src={userImage} alt="" className="w-8 h-8 object-cover" />
         ) : (
-          <div className="w-8 h-8 bg-gray-200 dark:bg-gray-700" />
+          <div className="w-8 h-8 bg-zinc-200 dark:bg-zinc-700" />
         )}
       </button>
 
       {open && (
         <div
-          className="absolute right-0 top-full mt-2 w-48 bg-white dark:bg-gray-800 border dark:border-gray-700 rounded-lg shadow-lg z-50"
+          className="absolute right-0 top-full mt-2 w-48 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-lg shadow-lg z-50"
           role="menu"
         >
           <div
-            className="px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer"
+            className="px-4 py-2 text-sm text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 cursor-pointer transition-all duration-200"
             onClick={() => go("/profile")}
             role="menuitem"
           >
             {t("userMenu.profile")}
           </div>
           <div
-            className="px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer"
+            className="px-4 py-2 text-sm text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 cursor-pointer transition-all duration-200"
             onClick={() => go("/billing")}
             role="menuitem"
           >
             {t("userMenu.buyCredits")}
           </div>
-          <hr className="my-1 border-gray-200 dark:border-gray-700" />
+          <hr className="my-1 border-zinc-200 dark:border-zinc-700" />
           <div
-            className="px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer"
+            className="px-4 py-2 text-sm text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 cursor-pointer transition-all duration-200"
             onClick={() => {
               setOpen(false);
               signOut();
@@ -100,4 +100,3 @@ export default function UserMenu() {
     </div>
   );
 }
-

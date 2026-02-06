@@ -1,0 +1,2624 @@
+OpenAI Codex v0.46.0 (research preview)
+--------
+workdir: /Users/mayijie/Projects/Code/010_DocTalk
+model: gpt-5
+provider: openai
+approval: never
+sandbox: workspace-write [workdir, /tmp, $TMPDIR]
+reasoning effort: high
+reasoning summaries: auto
+session id: 019c3315-392a-7580-8461-6b09eef283ff
+--------
+user
+Phase 7A: Add i18n keys to zh.json, hi.json, es.json, ar.json
+
+## IMPORTANT: Read ALL target files AND en.json before making changes!
+
+Read frontend/src/i18n/locales/en.json to see all the new keys that need translations.
+
+The following NEW keys exist in en.json but are MISSING from the other locale files. Add them with proper translations. The keys are:
+
+Profile/subscription keys:
+  profile.title, profile.tabs.profile, profile.tabs.credits, profile.tabs.usage, profile.tabs.account,
+  profile.info.memberSince, profile.info.connectedWith,
+  profile.plan.free, profile.plan.pro, profile.plan.upgrade, profile.plan.manage,
+  profile.plan.monthlyAllowance, profile.plan.nextRenewal,
+  profile.credits.balance, profile.credits.buyMore, profile.credits.history, profile.credits.noHistory,
+  profile.credits.reason.signup_bonus, profile.credits.reason.purchase, profile.credits.reason.chat,
+  profile.credits.reason.monthly_allowance, profile.credits.reason.refund,
+  profile.usage.documents, profile.usage.sessions, profile.usage.messages, profile.usage.creditsSpent,
+  profile.usage.tokensUsed, profile.usage.modelBreakdown, profile.usage.model, profile.usage.calls,
+  profile.usage.tokens, profile.usage.credits,
+  profile.account.dangerZone, profile.account.deleteAccount, profile.account.deleteWarning,
+  profile.account.deleteConfirm, profile.account.deleting,
+  userMenu.profile, userMenu.buyCredits, userMenu.signOut
+
+Billing keys:
+  billing.pro.title, billing.pro.description, billing.pro.pricePerMonth, billing.extraTopups
+
+For each file:
+1. Read the entire file first
+2. Add the missing keys at the end (before the closing })
+3. Translate to the target language (proper native translations, NOT English)
+4. Keep ALL existing keys intact
+5. Ensure valid JSON (no trailing commas)
+
+Target files:
+- frontend/src/i18n/locales/zh.json (Chinese Simplified)
+- frontend/src/i18n/locales/hi.json (Hindi)
+- frontend/src/i18n/locales/es.json (Spanish)
+- frontend/src/i18n/locales/ar.json (Arabic)
+
+Important notes for translations:
+- Keep {placeholder} parameters as-is (like {days}, {used}, {total}, {price}, {provider})
+- For zh.json: translate UI text to Chinese but keep technical terms in English where appropriate
+- For ar.json: use proper Arabic text (RTL will be handled by the app)
+- Ensure each file is valid JSON after editing
+
+## RULES:
+- Read ALL files before editing
+- Do NOT modify en.json
+- Do NOT modify any other files
+- Ensure valid JSON output for each file
+
+thinking
+**Modifying i18n files**
+
+I need to modify the i18n locale JSON files for four languages: Chinese (zh), Hindi (hi), Spanish (es), and Arabic (ar). I should look at the en.json file for phrasing and context, while also checking the target files for existing keys to avoid duplicates and keep formatting consistent. After adding the new keys and making sure commas are in place, I'll use apply_patch to implement the changes. First, I’ll explore the repository and read the relevant files. Let's get started!
+codex
+I’m going to open `en.json` and the four locale files to see what’s missing and where to add keys.
+exec
+bash -lc 'ls -la' in /Users/mayijie/Projects/Code/010_DocTalk succeeded in 13ms:
+total 96
+drwxr-xr-x  15 mayijie  staff    480 Feb  6 13:10 .
+drwxr-xr-x@ 14 mayijie  staff    448 Feb  4 18:58 ..
+drwxr-xr-x@  3 mayijie  staff     96 Feb  6 14:01 .claude
+drwxr-xr-x@  8 mayijie  staff    256 Feb  5 00:23 .collab
+-rw-r--r--@  1 mayijie  staff    129 Feb  4 23:10 .dockerignore
+-rw-r--r--@  1 mayijie  staff   1200 Feb  6 00:27 .env
+-rw-r--r--@  1 mayijie  staff   1159 Feb  5 20:30 .env.example
+drwxr-xr-x@ 12 mayijie  staff    384 Feb  6 14:01 .git
+-rw-r--r--@  1 mayijie  staff    309 Feb  4 22:24 .gitignore
+-rw-r--r--@  1 mayijie  staff  14095 Feb  6 13:10 CLAUDE.md
+-rw-r--r--@  1 mayijie  staff   8524 Feb  6 09:18 README.md
+drwxr-xr-x@ 10 mayijie  staff    320 Feb  6 11:46 backend
+-rw-r--r--@  1 mayijie  staff    978 Feb  4 19:38 docker-compose.yml
+drwxr-xr-x@ 19 mayijie  staff    608 Feb  6 00:21 frontend
+drwxr-xr-x@  4 mayijie  staff    128 Feb  4 23:32 infra
+exec
+bash -lc "sed -n '1,200p' frontend/src/i18n/locales/en.json" in /Users/mayijie/Projects/Code/010_DocTalk succeeded in 10ms:
+{
+  "app.title": "DocTalk",
+  "app.subtitle": "Upload a PDF to start chatting.",
+
+  "upload.dragDrop": "Drag & drop your PDF here",
+  "upload.or": "or",
+  "upload.chooseFile": "Choose File",
+  "upload.uploading": "Uploading…",
+  "upload.parsing": "Parsing…",
+  "upload.parsingProgress": "Parsing pages: {pagesParsed}, indexing: {chunksIndexed}",
+  "upload.error": "Error during processing",
+  "upload.networkError": "Upload failed, please check network or try again later",
+  "upload.pdfOnly": "Please upload a PDF file",
+  "upload.tooLarge": "File size cannot exceed 50MB",
+
+  "doc.myDocuments": "My Documents",
+  "doc.noDocuments": "No documents yet",
+  "doc.open": "Open",
+  "doc.notFound": "Document not found",
+  "doc.loadError": "Failed to load document info",
+
+thinking
+**Checking JSON output**
+
+It looks like the JSON file ended abruptly without a closing brace. The output cut off at "userMenu.signOut": "Sign Out," so I think I need to ensure I get the complete structure. I should continue printing to see if there are more lines or just the closing bracket missing. Let’s focus on retrieving lines 200-400 to check for the full content of the file.
+exec
+bash -lc "sed -n '200,400p' frontend/src/i18n/locales/en.json" in /Users/mayijie/Projects/Code/010_DocTalk succeeded in 15ms:
+  "userMenu.signOut": "Sign Out"
+}
+exec
+bash -lc "sed -n '1,220p' frontend/src/i18n/locales/zh.json" in /Users/mayijie/Projects/Code/010_DocTalk succeeded in 7ms:
+{
+  "app.title": "DocTalk",
+  "app.subtitle": "上传 PDF 开始对话。",
+
+  "upload.dragDrop": "将 PDF 拖放到此处",
+  "upload.or": "或",
+  "upload.chooseFile": "选择文件",
+  "upload.uploading": "正在上传…",
+  "upload.parsing": "正在解析…",
+  "upload.parsingProgress": "解析页数：{pagesParsed}，索引：{chunksIndexed}",
+  "upload.error": "处理过程中出错",
+  "upload.networkError": "上传失败，请检查网络或稍后重试",
+  "upload.pdfOnly": "请上传 PDF 文件",
+  "upload.tooLarge": "文件大小不能超过 50MB",
+
+  "doc.myDocuments": "我的文档",
+  "doc.noDocuments": "暂无历史文档",
+  "doc.open": "打开",
+  "doc.notFound": "文档不存在",
+  "doc.loadError": "加载文档信息失败",
+
+thinking
+**Adding localization keys**
+
+I see that the zh.json file is missing several localized keys for authentication and billing, with English placeholders in place. That's okay! My task is to add the new profile, subscription, and billing keys translated into Chinese (Simplified). I need to ensure I add them at the end of the file before the closing bracket, while also keeping commas in check. Once I'm done with that, I’ll move on to hi.json.
+exec
+bash -lc "sed -n '1,240p' frontend/src/i18n/locales/hi.json" in /Users/mayijie/Projects/Code/010_DocTalk succeeded in 10ms:
+{
+  "app.title": "DocTalk",
+  "app.subtitle": "चैट शुरू करने के लिए PDF अपलोड करें।",
+
+  "upload.dragDrop": "अपना PDF यहाँ खींचकर छोड़ें",
+  "upload.or": "या",
+  "upload.chooseFile": "फ़ाइल चुनें",
+  "upload.uploading": "अपलोड हो रहा है…",
+  "upload.parsing": "पार्स किया जा रहा है…",
+  "upload.parsingProgress": "पृष्ठ पार्स: {pagesParsed}, इंडेक्सिंग: {chunksIndexed}",
+  "upload.error": "प्रक्रिया के दौरान त्रुटि",
+  "upload.networkError": "अपलोड विफल, कृपया नेटवर्क जांचें या बाद में पुनः प्रयास करें",
+  "upload.pdfOnly": "कृपया PDF फ़ाइल अपलोड करें",
+  "upload.tooLarge": "फ़ाइल का आकार 50MB से अधिक नहीं हो सकता",
+
+  "doc.myDocuments": "मेरे दस्तावेज़",
+  "doc.noDocuments": "अभी तक कोई दस्तावेज़ नहीं",
+  "doc.open": "खोलें",
+  "doc.notFound": "दस्तावेज़ नहीं मिला",
+  "doc.loadError": "दस्तावेज़ जानकारी लोड करने में विफल",
+exec
+bash -lc "sed -n '1,240p' frontend/src/i18n/locales/es.json" in /Users/mayijie/Projects/Code/010_DocTalk succeeded in 16ms:
+{
+  "app.title": "DocTalk",
+  "app.subtitle": "Sube un PDF para empezar a chatear.",
+
+  "upload.dragDrop": "Arrastra y suelta tu PDF aquí",
+  "upload.or": "o",
+  "upload.chooseFile": "Elegir archivo",
+  "upload.uploading": "Subiendo…",
+  "upload.parsing": "Analizando…",
+  "upload.parsingProgress": "Páginas analizadas: {pagesParsed}, indexando: {chunksIndexed}",
+  "upload.error": "Error durante el procesamiento",
+  "upload.networkError": "La subida falló, comprueba la red o inténtalo más tarde",
+  "upload.pdfOnly": "Por favor, sube un archivo PDF",
+  "upload.tooLarge": "El tamaño del archivo no puede exceder 50MB",
+
+  "doc.myDocuments": "Mis documentos",
+  "doc.noDocuments": "Todavía no hay documentos",
+  "doc.open": "Abrir",
+  "doc.notFound": "Documento no encontrado",
+  "doc.loadError": "Error al cargar la información del documento",
+exec
+bash -lc "sed -n '1,260p' frontend/src/i18n/locales/ar.json" in /Users/mayijie/Projects/Code/010_DocTalk succeeded in 16ms:
+{
+  "app.title": "DocTalk",
+  "app.subtitle": "قم بتحميل ملف PDF لبدء الدردشة.",
+
+  "upload.dragDrop": "اسحب وأفلت ملف PDF هنا",
+  "upload.or": "أو",
+  "upload.chooseFile": "اختر ملفًا",
+  "upload.uploading": "جاري الرفع…",
+  "upload.parsing": "جارٍ التحليل…",
+  "upload.parsingProgress": "تحليل الصفحات: {pagesParsed}، الفهرسة: {chunksIndexed}",
+  "upload.error": "حدث خطأ أثناء المعالجة",
+  "upload.networkError": "فشل الرفع، يرجى التحقق من الشبكة أو المحاولة لاحقًا",
+  "upload.pdfOnly": "يرجى تحميل ملف PDF",
+  "upload.tooLarge": "لا يمكن أن يتجاوز حجم الملف 50 ميجابايت",
+
+  "doc.myDocuments": "مستنداتي",
+  "doc.noDocuments": "لا توجد مستندات بعد",
+  "doc.open": "فتح",
+  "doc.notFound": "لم يتم العثور على المستند",
+  "doc.loadError": "فشل تحميل معلومات المستند",
+
+
+
+
+
+
+
+thinking
+**Updating JSON files**
+
+I see that these files end with common.cancel/loading and are missing profile keys. It’s important to add the specified profile and billing.pro keys at the end to maintain valid structure. I’ll ensure that the JSON format is respected by inserting commas where necessary. Additionally, I need to produce translations for the newly added keys, which is crucial for proper functionality. Let’s make sure everything is aligned correctly!
+thinking
+**Compiling profile keys**
+
+Let’s compile the list of subscription keys again to ensure everything is in order. This includes keys like profile.title and various tabs for profile, credits, usage, and account. I also see keys for membership info, credits balance, history, and usage metrics like documents and sessions. Additionally, there are important actions related to account management, such as deleting the account and the warning that comes with that. I want to make sure all of this is correctly organized!
+thinking
+**Finalizing profile and billing keys**
+
+I just realized I need to finalize the deletion confirmation messages, like the warning that this action cannot be undone and the prompt to type an email for confirmation. There are also user menu actions like profile, buy credits, and sign out, which now needs translation since userMenu.signOut is a separate entry. 
+
+I've got billing keys to translate too, like the Pro Plan title and description. For Chinese Simplified, I'll remember to keep technical terms in English when appropriate and use established translations for credits. Let's make sure all the translations are done correctly for the four locale files!
+thinking
+**Reviewing translation consistency**
+
+I’m looking at the previous zh.json file, and I see that many English terms for credits haven’t been translated. For example, "credits" is used in cases like "auth.freeCredits," and "billing.title" was also left in English as "Purchase Credits." The file seems partially untranslated; we need to ensure the new keys are properly translated. The instructions emphasize using native language while keeping technical terms in English when suitable. It's tricky because "credits" could be translated in several ways, but I need to follow the guideline for proper translations. Let’s align everything carefully!
+thinking
+**Crafting translations for multiple languages**
+
+I need to ensure proper translations for new keys, even if the previous files had English terms. It's essential to maintain consistency while adhering to instructions for native language translations. For example, I’ll translate "profile.title" as "个人资料" in Chinese and use "积分" for credits. For Hindi, I’ll translate "profile.title" as "प्रोफ़ाइल" and "credits" as "क्रेडिट्स." I need to carefully craft translations for various keys across both Chinese and Hindi to ensure clarity and consistency. Let’s standardize these translations effectively!
+thinking
+**Finalizing translations for multiple languages**
+
+I've settled on "अतिरिक्त क्रेडिट टॉप‑अप्स" for Hindi. Now, I'm crafting Spanish translations for various profile elements, like "Perfil" for "profile.title" and "Créditos" for "profile.tabs.credits." I need to be careful with plural forms, ensuring they're natural. For Arabic, I'm using proper terms such as "الملف الشخصي" and "رصيد الاعتمادات." I also have to ensure placeholder integrity in all translations while maintaining valid JSON format and i18n neutrality across languages. Let's make this happen!
+thinking
+**Crafting detailed translations**
+
+I'm working on Chinese translations for profile elements like "账户" for "account," making sure it's smooth. For "member since," I'll use "已加入 {days} 天" instead of the earlier phrase that's a bit unnatural. When it comes to ellipses, I'm opting for "…" to maintain consistency across languages, especially in phrases like "正在删除账户…" in Chinese. For Hindi and Arabic, I'm using similar formatting too. I need to double-check JSON formatting to avoid errors when appending new keys. Let's apply this patch carefully!
+file update
+M /Users/mayijie/Projects/Code/010_DocTalk/frontend/src/i18n/locales/zh.json
+@@ -148,3 +148,55 @@
+ 
+-  "common.backToHome": "返回首页"
++  "common.backToHome": "返回首页",
++
++  "profile.title": "个人资料",
++  "profile.tabs.profile": "资料",
++  "profile.tabs.credits": "额度",
++  "profile.tabs.usage": "用量",
++  "profile.tabs.account": "账户",
++
++  "profile.info.memberSince": "已加入 {days} 天",
++  "profile.info.connectedWith": "已通过 {provider} 连接",
++
++  "profile.plan.free": "免费",
++  "profile.plan.pro": "专业版",
++  "profile.plan.upgrade": "升级到专业版",
++  "profile.plan.manage": "管理订阅",
++  "profile.plan.monthlyAllowance": "{used} / {total} 每月额度",
++  "profile.plan.nextRenewal": "{days} 天后续订",
++
++  "profile.credits.balance": "额度余额",
++  "profile.credits.buyMore": "购买额外额度",
++  "profile.credits.history": "交易记录",
++  "profile.credits.noHistory": "暂无交易记录",
++  "profile.credits.reason.signup_bonus": "注册赠送",
++  "profile.credits.reason.purchase": "购买额度",
++  "profile.credits.reason.chat": "聊天消耗",
++  "profile.credits.reason.monthly_allowance": "每月额度",
++  "profile.credits.reason.refund": "退款",
++
++  "profile.usage.documents": "文档",
++  "profile.usage.sessions": "聊天会话",
++  "profile.usage.messages": "消息",
++  "profile.usage.creditsSpent": "已消耗额度",
++  "profile.usage.tokensUsed": "已使用 Tokens",
++  "profile.usage.modelBreakdown": "按模型统计",
++  "profile.usage.model": "模型",
++  "profile.usage.calls": "调用次数",
++  "profile.usage.tokens": "Tokens",
++  "profile.usage.credits": "额度",
++
++  "profile.account.dangerZone": "危险区域",
++  "profile.account.deleteAccount": "删除账户",
++  "profile.account.deleteWarning": "这将永久删除你的账户、所有文档、对话和数据。此操作无法撤销。",
++  "profile.account.deleteConfirm": "输入你的邮箱以确认删除",
++  "profile.account.deleting": "正在删除账户…",
++
++  "userMenu.profile": "个人资料",
++  "userMenu.buyCredits": "购买额度",
++  "userMenu.signOut": "退出登录",
++
++  "billing.pro.title": "Pro 计划",
++  "billing.pro.description": "每月 100,000 额度",
++  "billing.pro.pricePerMonth": "${price}/月",
++  "billing.extraTopups": "额外额度加购"
+ }
+apply_patch(auto_approved=true) exited 0 in 26ms:
+Success. Updated the following files:
+M frontend/src/i18n/locales/zh.json
+file update:
+diff --git a/frontend/src/i18n/locales/zh.json b/frontend/src/i18n/locales/zh.json
+index f996bf6d27f8f276c69ac8add1473db91c6ff4ee..82ca512fc4aee326c85b88d3ab3edc8e27130edc
+--- a/frontend/src/i18n/locales/zh.json
++++ b/frontend/src/i18n/locales/zh.json
+@@ -146,5 +146,57 @@
+   "demo.pdfPlaceholder": "PDF 预览",
+   "demo.pdfPlaceholderHint": "示例 PDF 将在下次更新中添加",
+ 
+-  "common.backToHome": "返回首页"
++  "common.backToHome": "返回首页",
++
++  "profile.title": "个人资料",
++  "profile.tabs.profile": "资料",
++  "profile.tabs.credits": "额度",
++  "profile.tabs.usage": "用量",
++  "profile.tabs.account": "账户",
++
++  "profile.info.memberSince": "已加入 {days} 天",
++  "profile.info.connectedWith": "已通过 {provider} 连接",
++
++  "profile.plan.free": "免费",
++  "profile.plan.pro": "专业版",
++  "profile.plan.upgrade": "升级到专业版",
++  "profile.plan.manage": "管理订阅",
++  "profile.plan.monthlyAllowance": "{used} / {total} 每月额度",
++  "profile.plan.nextRenewal": "{days} 天后续订",
++
++  "profile.credits.balance": "额度余额",
++  "profile.credits.buyMore": "购买额外额度",
++  "profile.credits.history": "交易记录",
++  "profile.credits.noHistory": "暂无交易记录",
++  "profile.credits.reason.signup_bonus": "注册赠送",
++  "profile.credits.reason.purchase": "购买额度",
++  "profile.credits.reason.chat": "聊天消耗",
++  "profile.credits.reason.monthly_allowance": "每月额度",
++  "profile.credits.reason.refund": "退款",
++
++  "profile.usage.documents": "文档",
++  "profile.usage.sessions": "聊天会话",
++  "profile.usage.messages": "消息",
++  "profile.usage.creditsSpent": "已消耗额度",
++  "profile.usage.tokensUsed": "已使用 Tokens",
++  "profile.usage.modelBreakdown": "按模型统计",
++  "profile.usage.model": "模型",
++  "profile.usage.calls": "调用次数",
++  "profile.usage.tokens": "Tokens",
++  "profile.usage.credits": "额度",
++
++  "profile.account.dangerZone": "危险区域",
++  "profile.account.deleteAccount": "删除账户",
++  "profile.account.deleteWarning": "这将永久删除你的账户、所有文档、对话和数据。此操作无法撤销。",
++  "profile.account.deleteConfirm": "输入你的邮箱以确认删除",
++  "profile.account.deleting": "正在删除账户…",
++
++  "userMenu.profile": "个人资料",
++  "userMenu.buyCredits": "购买额度",
++  "userMenu.signOut": "退出登录",
++
++  "billing.pro.title": "Pro 计划",
++  "billing.pro.description": "每月 100,000 额度",
++  "billing.pro.pricePerMonth": "${price}/月",
++  "billing.extraTopups": "额外额度加购"
+ }
+
+file update:
+diff --git a/frontend/src/i18n/locales/zh.json b/frontend/src/i18n/locales/zh.json
+index f996bf6d27f8f276c69ac8add1473db91c6ff4ee..82ca512fc4aee326c85b88d3ab3edc8e27130edc
+--- a/frontend/src/i18n/locales/zh.json
++++ b/frontend/src/i18n/locales/zh.json
+@@ -146,5 +146,57 @@
+   "demo.pdfPlaceholder": "PDF 预览",
+   "demo.pdfPlaceholderHint": "示例 PDF 将在下次更新中添加",
+ 
+-  "common.backToHome": "返回首页"
++  "common.backToHome": "返回首页",
++
++  "profile.title": "个人资料",
++  "profile.tabs.profile": "资料",
++  "profile.tabs.credits": "额度",
++  "profile.tabs.usage": "用量",
++  "profile.tabs.account": "账户",
++
++  "profile.info.memberSince": "已加入 {days} 天",
++  "profile.info.connectedWith": "已通过 {provider} 连接",
++
++  "profile.plan.free": "免费",
++  "profile.plan.pro": "专业版",
++  "profile.plan.upgrade": "升级到专业版",
++  "profile.plan.manage": "管理订阅",
++  "profile.plan.monthlyAllowance": "{used} / {total} 每月额度",
++  "profile.plan.nextRenewal": "{days} 天后续订",
++
++  "profile.credits.balance": "额度余额",
++  "profile.credits.buyMore": "购买额外额度",
++  "profile.credits.history": "交易记录",
++  "profile.credits.noHistory": "暂无交易记录",
++  "profile.credits.reason.signup_bonus": "注册赠送",
++  "profile.credits.reason.purchase": "购买额度",
++  "profile.credits.reason.chat": "聊天消耗",
++  "profile.credits.reason.monthly_allowance": "每月额度",
++  "profile.credits.reason.refund": "退款",
++
++  "profile.usage.documents": "文档",
++  "profile.usage.sessions": "聊天会话",
++  "profile.usage.messages": "消息",
++  "profile.usage.creditsSpent": "已消耗额度",
++  "profile.usage.tokensUsed": "已使用 Tokens",
++  "profile.usage.modelBreakdown": "按模型统计",
++  "profile.usage.model": "模型",
++  "profile.usage.calls": "调用次数",
++  "profile.usage.tokens": "Tokens",
++  "profile.usage.credits": "额度",
++
++  "profile.account.dangerZone": "危险区域",
++  "profile.account.deleteAccount": "删除账户",
++  "profile.account.deleteWarning": "这将永久删除你的账户、所有文档、对话和数据。此操作无法撤销。",
++  "profile.account.deleteConfirm": "输入你的邮箱以确认删除",
++  "profile.account.deleting": "正在删除账户…",
++
++  "userMenu.profile": "个人资料",
++  "userMenu.buyCredits": "购买额度",
++  "userMenu.signOut": "退出登录",
++
++  "billing.pro.title": "Pro 计划",
++  "billing.pro.description": "每月 100,000 额度",
++  "billing.pro.pricePerMonth": "${price}/月",
++  "billing.extraTopups": "额外额度加购"
+ }
+
+
+thinking
+**Updating language files**
+
+I’ve just applied a patch to the zh.json file, and now it’s time to move on to the hi.json file. I’ll append new keys right after the "common.loading": "Loading..." line which is located towards the end. It’s important to craft the patch accordingly to ensure everything aligns seamlessly. I’m feeling good about getting this organized and ready for implementation!
+file update
+M /Users/mayijie/Projects/Code/010_DocTalk/frontend/src/i18n/locales/hi.json
+@@ -79,3 +79,55 @@
+   "common.cancel": "Cancel",
+-  "common.loading": "Loading..."
++  "common.loading": "Loading...",
++
++  "profile.title": "प्रोफ़ाइल",
++  "profile.tabs.profile": "प्रोफ़ाइल",
++  "profile.tabs.credits": "क्रेडिट्स",
++  "profile.tabs.usage": "उपयोग",
++  "profile.tabs.account": "खाता",
++
++  "profile.info.memberSince": "पिछले {days} दिनों से सदस्य",
++  "profile.info.connectedWith": "{provider} से कनेक्टेड",
++
++  "profile.plan.free": "मुफ़्त",
++  "profile.plan.pro": "प्रो",
++  "profile.plan.upgrade": "प्रो में अपग्रेड करें",
++  "profile.plan.manage": "सब्सक्रिप्शन प्रबंधित करें",
++  "profile.plan.monthlyAllowance": "{used} / {total} मासिक क्रेडिट्स",
++  "profile.plan.nextRenewal": "{days} दिनों में नवीनीकरण",
++
++  "profile.credits.balance": "क्रेडिट शेष",
++  "profile.credits.buyMore": "अतिरिक्त क्रेडिट्स खरीदें",
++  "profile.credits.history": "लेनदेन इतिहास",
++  "profile.credits.noHistory": "अभी कोई लेनदेन नहीं",
++  "profile.credits.reason.signup_bonus": "साइनअप बोनस",
++  "profile.credits.reason.purchase": "क्रेडिट खरीद",
++  "profile.credits.reason.chat": "चैट उपयोग",
++  "profile.credits.reason.monthly_allowance": "मासिक भत्ता",
++  "profile.credits.reason.refund": "रिफंड",
++
++  "profile.usage.documents": "दस्तावेज़",
++  "profile.usage.sessions": "चैट सत्र",
++  "profile.usage.messages": "संदेश",
++  "profile.usage.creditsSpent": "खर्च किए गए क्रेडिट्स",
++  "profile.usage.tokensUsed": "उपयोग किए गए टोकन",
++  "profile.usage.modelBreakdown": "मॉडेल अनुसार उपयोग",
++  "profile.usage.model": "मॉडेल",
++  "profile.usage.calls": "कॉल्स",
++  "profile.usage.tokens": "टोकन",
++  "profile.usage.credits": "क्रेडिट्स",
++
++  "profile.account.dangerZone": "खतरे का क्षेत्र",
++  "profile.account.deleteAccount": "खाता हटाएँ",
++  "profile.account.deleteWarning": "यह आपके खाते, सभी दस्तावेज़, चैट और डेटा को स्थायी रूप से हटा देगा। यह क्रिया वापस नहीं की जा सकती।",
++  "profile.account.deleteConfirm": "हटाने की पुष्टि के लिए अपना ईमेल टाइप करें",
++  "profile.account.deleting": "खाता हटाया जा रहा है…",
++
++  "userMenu.profile": "प्रोफ़ाइल",
++  "userMenu.buyCredits": "क्रेडिट्स खरीदें",
++  "userMenu.signOut": "साइन आउट",
++
++  "billing.pro.title": "प्रो प्लान",
++  "billing.pro.description": "100,000 क्रेडिट्स/महीना",
++  "billing.pro.pricePerMonth": "${price}/माह",
++  "billing.extraTopups": "अतिरिक्त क्रेडिट टॉप‑अप्स"
+ }
+apply_patch(auto_approved=true) exited 0 in 35ms:
+Success. Updated the following files:
+M frontend/src/i18n/locales/hi.json
+file update:
+diff --git a/frontend/src/i18n/locales/hi.json b/frontend/src/i18n/locales/hi.json
+index 6c5aa1fa4d4f2f0f51415a9727c15abf9df3aa31..53732007fe813b6335f8392af9785728c60fdd8c
+--- a/frontend/src/i18n/locales/hi.json
++++ b/frontend/src/i18n/locales/hi.json
+@@ -77,5 +77,57 @@
+   "billing.purchaseCanceled": "Purchase was canceled.",
+   "billing.error": "An error occurred. Please try again.",
+   "common.cancel": "Cancel",
+-  "common.loading": "Loading..."
++  "common.loading": "Loading...",
++
++  "profile.title": "प्रोफ़ाइल",
++  "profile.tabs.profile": "प्रोफ़ाइल",
++  "profile.tabs.credits": "क्रेडिट्स",
++  "profile.tabs.usage": "उपयोग",
++  "profile.tabs.account": "खाता",
++
++  "profile.info.memberSince": "पिछले {days} दिनों से सदस्य",
++  "profile.info.connectedWith": "{provider} से कनेक्टेड",
++
++  "profile.plan.free": "मुफ़्त",
++  "profile.plan.pro": "प्रो",
++  "profile.plan.upgrade": "प्रो में अपग्रेड करें",
++  "profile.plan.manage": "सब्सक्रिप्शन प्रबंधित करें",
++  "profile.plan.monthlyAllowance": "{used} / {total} मासिक क्रेडिट्स",
++  "profile.plan.nextRenewal": "{days} दिनों में नवीनीकरण",
++
++  "profile.credits.balance": "क्रेडिट शेष",
++  "profile.credits.buyMore": "अतिरिक्त क्रेडिट्स खरीदें",
++  "profile.credits.history": "लेनदेन इतिहास",
++  "profile.credits.noHistory": "अभी कोई लेनदेन नहीं",
++  "profile.credits.reason.signup_bonus": "साइनअप बोनस",
++  "profile.credits.reason.purchase": "क्रेडिट खरीद",
++  "profile.credits.reason.chat": "चैट उपयोग",
++  "profile.credits.reason.monthly_allowance": "मासिक भत्ता",
++  "profile.credits.reason.refund": "रिफंड",
++
++  "profile.usage.documents": "दस्तावेज़",
++  "profile.usage.sessions": "चैट सत्र",
++  "profile.usage.messages": "संदेश",
++  "profile.usage.creditsSpent": "खर्च किए गए क्रेडिट्स",
++  "profile.usage.tokensUsed": "उपयोग किए गए टोकन",
++  "profile.usage.modelBreakdown": "मॉडेल अनुसार उपयोग",
++  "profile.usage.model": "मॉडेल",
++  "profile.usage.calls": "कॉल्स",
++  "profile.usage.tokens": "टोकन",
++  "profile.usage.credits": "क्रेडिट्स",
++
++  "profile.account.dangerZone": "खतरे का क्षेत्र",
++  "profile.account.deleteAccount": "खाता हटाएँ",
++  "profile.account.deleteWarning": "यह आपके खाते, सभी दस्तावेज़, चैट और डेटा को स्थायी रूप से हटा देगा। यह क्रिया वापस नहीं की जा सकती।",
++  "profile.account.deleteConfirm": "हटाने की पुष्टि के लिए अपना ईमेल टाइप करें",
++  "profile.account.deleting": "खाता हटाया जा रहा है…",
++
++  "userMenu.profile": "प्रोफ़ाइल",
++  "userMenu.buyCredits": "क्रेडिट्स खरीदें",
++  "userMenu.signOut": "साइन आउट",
++
++  "billing.pro.title": "प्रो प्लान",
++  "billing.pro.description": "100,000 क्रेडिट्स/महीना",
++  "billing.pro.pricePerMonth": "${price}/माह",
++  "billing.extraTopups": "अतिरिक्त क्रेडिट टॉप‑अप्स"
+ }
+diff --git a/frontend/src/i18n/locales/zh.json b/frontend/src/i18n/locales/zh.json
+index f996bf6d27f8f276c69ac8add1473db91c6ff4ee..82ca512fc4aee326c85b88d3ab3edc8e27130edc
+--- a/frontend/src/i18n/locales/zh.json
++++ b/frontend/src/i18n/locales/zh.json
+@@ -146,5 +146,57 @@
+   "demo.pdfPlaceholder": "PDF 预览",
+   "demo.pdfPlaceholderHint": "示例 PDF 将在下次更新中添加",
+ 
+-  "common.backToHome": "返回首页"
++  "common.backToHome": "返回首页",
++
++  "profile.title": "个人资料",
++  "profile.tabs.profile": "资料",
++  "profile.tabs.credits": "额度",
++  "profile.tabs.usage": "用量",
++  "profile.tabs.account": "账户",
++
++  "profile.info.memberSince": "已加入 {days} 天",
++  "profile.info.connectedWith": "已通过 {provider} 连接",
++
++  "profile.plan.free": "免费",
++  "profile.plan.pro": "专业版",
++  "profile.plan.upgrade": "升级到专业版",
++  "profile.plan.manage": "管理订阅",
++  "profile.plan.monthlyAllowance": "{used} / {total} 每月额度",
++  "profile.plan.nextRenewal": "{days} 天后续订",
++
++  "profile.credits.balance": "额度余额",
++  "profile.credits.buyMore": "购买额外额度",
++  "profile.credits.history": "交易记录",
++  "profile.credits.noHistory": "暂无交易记录",
++  "profile.credits.reason.signup_bonus": "注册赠送",
++  "profile.credits.reason.purchase": "购买额度",
++  "profile.credits.reason.chat": "聊天消耗",
++  "profile.credits.reason.monthly_allowance": "每月额度",
++  "profile.credits.reason.refund": "退款",
++
++  "profile.usage.documents": "文档",
++  "profile.usage.sessions": "聊天会话",
++  "profile.usage.messages": "消息",
++  "profile.usage.creditsSpent": "已消耗额度",
++  "profile.usage.tokensUsed": "已使用 Tokens",
++  "profile.usage.modelBreakdown": "按模型统计",
++  "profile.usage.model": "模型",
++  "profile.usage.calls": "调用次数",
++  "profile.usage.tokens": "Tokens",
++  "profile.usage.credits": "额度",
++
++  "profile.account.dangerZone": "危险区域",
++  "profile.account.deleteAccount": "删除账户",
++  "profile.account.deleteWarning": "这将永久删除你的账户、所有文档、对话和数据。此操作无法撤销。",
++  "profile.account.deleteConfirm": "输入你的邮箱以确认删除",
++  "profile.account.deleting": "正在删除账户…",
++
++  "userMenu.profile": "个人资料",
++  "userMenu.buyCredits": "购买额度",
++  "userMenu.signOut": "退出登录",
++
++  "billing.pro.title": "Pro 计划",
++  "billing.pro.description": "每月 100,000 额度",
++  "billing.pro.pricePerMonth": "${price}/月",
++  "billing.extraTopups": "额外额度加购"
+ }
+
+file update:
+diff --git a/frontend/src/i18n/locales/hi.json b/frontend/src/i18n/locales/hi.json
+index 6c5aa1fa4d4f2f0f51415a9727c15abf9df3aa31..53732007fe813b6335f8392af9785728c60fdd8c
+--- a/frontend/src/i18n/locales/hi.json
++++ b/frontend/src/i18n/locales/hi.json
+@@ -77,5 +77,57 @@
+   "billing.purchaseCanceled": "Purchase was canceled.",
+   "billing.error": "An error occurred. Please try again.",
+   "common.cancel": "Cancel",
+-  "common.loading": "Loading..."
++  "common.loading": "Loading...",
++
++  "profile.title": "प्रोफ़ाइल",
++  "profile.tabs.profile": "प्रोफ़ाइल",
++  "profile.tabs.credits": "क्रेडिट्स",
++  "profile.tabs.usage": "उपयोग",
++  "profile.tabs.account": "खाता",
++
++  "profile.info.memberSince": "पिछले {days} दिनों से सदस्य",
++  "profile.info.connectedWith": "{provider} से कनेक्टेड",
++
++  "profile.plan.free": "मुफ़्त",
++  "profile.plan.pro": "प्रो",
++  "profile.plan.upgrade": "प्रो में अपग्रेड करें",
++  "profile.plan.manage": "सब्सक्रिप्शन प्रबंधित करें",
++  "profile.plan.monthlyAllowance": "{used} / {total} मासिक क्रेडिट्स",
++  "profile.plan.nextRenewal": "{days} दिनों में नवीनीकरण",
++
++  "profile.credits.balance": "क्रेडिट शेष",
++  "profile.credits.buyMore": "अतिरिक्त क्रेडिट्स खरीदें",
++  "profile.credits.history": "लेनदेन इतिहास",
++  "profile.credits.noHistory": "अभी कोई लेनदेन नहीं",
++  "profile.credits.reason.signup_bonus": "साइनअप बोनस",
++  "profile.credits.reason.purchase": "क्रेडिट खरीद",
++  "profile.credits.reason.chat": "चैट उपयोग",
++  "profile.credits.reason.monthly_allowance": "मासिक भत्ता",
++  "profile.credits.reason.refund": "रिफंड",
++
++  "profile.usage.documents": "दस्तावेज़",
++  "profile.usage.sessions": "चैट सत्र",
++  "profile.usage.messages": "संदेश",
++  "profile.usage.creditsSpent": "खर्च किए गए क्रेडिट्स",
++  "profile.usage.tokensUsed": "उपयोग किए गए टोकन",
++  "profile.usage.modelBreakdown": "मॉडेल अनुसार उपयोग",
++  "profile.usage.model": "मॉडेल",
++  "profile.usage.calls": "कॉल्स",
++  "profile.usage.tokens": "टोकन",
++  "profile.usage.credits": "क्रेडिट्स",
++
++  "profile.account.dangerZone": "खतरे का क्षेत्र",
++  "profile.account.deleteAccount": "खाता हटाएँ",
++  "profile.account.deleteWarning": "यह आपके खाते, सभी दस्तावेज़, चैट और डेटा को स्थायी रूप से हटा देगा। यह क्रिया वापस नहीं की जा सकती।",
++  "profile.account.deleteConfirm": "हटाने की पुष्टि के लिए अपना ईमेल टाइप करें",
++  "profile.account.deleting": "खाता हटाया जा रहा है…",
++
++  "userMenu.profile": "प्रोफ़ाइल",
++  "userMenu.buyCredits": "क्रेडिट्स खरीदें",
++  "userMenu.signOut": "साइन आउट",
++
++  "billing.pro.title": "प्रो प्लान",
++  "billing.pro.description": "100,000 क्रेडिट्स/महीना",
++  "billing.pro.pricePerMonth": "${price}/माह",
++  "billing.extraTopups": "अतिरिक्त क्रेडिट टॉप‑अप्स"
+ }
+diff --git a/frontend/src/i18n/locales/zh.json b/frontend/src/i18n/locales/zh.json
+index f996bf6d27f8f276c69ac8add1473db91c6ff4ee..82ca512fc4aee326c85b88d3ab3edc8e27130edc
+--- a/frontend/src/i18n/locales/zh.json
++++ b/frontend/src/i18n/locales/zh.json
+@@ -146,5 +146,57 @@
+   "demo.pdfPlaceholder": "PDF 预览",
+   "demo.pdfPlaceholderHint": "示例 PDF 将在下次更新中添加",
+ 
+-  "common.backToHome": "返回首页"
++  "common.backToHome": "返回首页",
++
++  "profile.title": "个人资料",
++  "profile.tabs.profile": "资料",
++  "profile.tabs.credits": "额度",
++  "profile.tabs.usage": "用量",
++  "profile.tabs.account": "账户",
++
++  "profile.info.memberSince": "已加入 {days} 天",
++  "profile.info.connectedWith": "已通过 {provider} 连接",
++
++  "profile.plan.free": "免费",
++  "profile.plan.pro": "专业版",
++  "profile.plan.upgrade": "升级到专业版",
++  "profile.plan.manage": "管理订阅",
++  "profile.plan.monthlyAllowance": "{used} / {total} 每月额度",
++  "profile.plan.nextRenewal": "{days} 天后续订",
++
++  "profile.credits.balance": "额度余额",
++  "profile.credits.buyMore": "购买额外额度",
++  "profile.credits.history": "交易记录",
++  "profile.credits.noHistory": "暂无交易记录",
++  "profile.credits.reason.signup_bonus": "注册赠送",
++  "profile.credits.reason.purchase": "购买额度",
++  "profile.credits.reason.chat": "聊天消耗",
++  "profile.credits.reason.monthly_allowance": "每月额度",
++  "profile.credits.reason.refund": "退款",
++
++  "profile.usage.documents": "文档",
++  "profile.usage.sessions": "聊天会话",
++  "profile.usage.messages": "消息",
++  "profile.usage.creditsSpent": "已消耗额度",
++  "profile.usage.tokensUsed": "已使用 Tokens",
++  "profile.usage.modelBreakdown": "按模型统计",
++  "profile.usage.model": "模型",
++  "profile.usage.calls": "调用次数",
++  "profile.usage.tokens": "Tokens",
++  "profile.usage.credits": "额度",
++
++  "profile.account.dangerZone": "危险区域",
++  "profile.account.deleteAccount": "删除账户",
++  "profile.account.deleteWarning": "这将永久删除你的账户、所有文档、对话和数据。此操作无法撤销。",
++  "profile.account.deleteConfirm": "输入你的邮箱以确认删除",
++  "profile.account.deleting": "正在删除账户…",
++
++  "userMenu.profile": "个人资料",
++  "userMenu.buyCredits": "购买额度",
++  "userMenu.signOut": "退出登录",
++
++  "billing.pro.title": "Pro 计划",
++  "billing.pro.description": "每月 100,000 额度",
++  "billing.pro.pricePerMonth": "${price}/月",
++  "billing.extraTopups": "额外额度加购"
+ }
+
+file update
+M /Users/mayijie/Projects/Code/010_DocTalk/frontend/src/i18n/locales/es.json
+@@ -79,3 +79,55 @@
+   "common.cancel": "Cancel",
+-  "common.loading": "Loading..."
++  "common.loading": "Loading...",
++
++  "profile.title": "Perfil",
++  "profile.tabs.profile": "Perfil",
++  "profile.tabs.credits": "Créditos",
++  "profile.tabs.usage": "Uso",
++  "profile.tabs.account": "Cuenta",
++
++  "profile.info.memberSince": "Miembro desde hace {days} días",
++  "profile.info.connectedWith": "Conectado con {provider}",
++
++  "profile.plan.free": "Gratis",
++  "profile.plan.pro": "Pro",
++  "profile.plan.upgrade": "Actualizar a Pro",
++  "profile.plan.manage": "Gestionar suscripción",
++  "profile.plan.monthlyAllowance": "{used} / {total} créditos mensuales",
++  "profile.plan.nextRenewal": "Se renueva en {days} días",
++
++  "profile.credits.balance": "Saldo de créditos",
++  "profile.credits.buyMore": "Comprar créditos adicionales",
++  "profile.credits.history": "Historial de transacciones",
++  "profile.credits.noHistory": "Aún no hay transacciones",
++  "profile.credits.reason.signup_bonus": "Bono de registro",
++  "profile.credits.reason.purchase": "Compra de créditos",
++  "profile.credits.reason.chat": "Uso de chat",
++  "profile.credits.reason.monthly_allowance": "Asignación mensual",
++  "profile.credits.reason.refund": "Reembolso",
++
++  "profile.usage.documents": "Documentos",
++  "profile.usage.sessions": "Sesiones de chat",
++  "profile.usage.messages": "Mensajes",
++  "profile.usage.creditsSpent": "Créditos gastados",
++  "profile.usage.tokensUsed": "Tokens usados",
++  "profile.usage.modelBreakdown": "Uso por modelo",
++  "profile.usage.model": "Modelo",
++  "profile.usage.calls": "Llamadas",
++  "profile.usage.tokens": "Tokens",
++  "profile.usage.credits": "Créditos",
++
++  "profile.account.dangerZone": "Zona de peligro",
++  "profile.account.deleteAccount": "Eliminar cuenta",
++  "profile.account.deleteWarning": "Esto eliminará permanentemente tu cuenta, todos los documentos, chats y datos. Esta acción no se puede deshacer.",
++  "profile.account.deleteConfirm": "Escribe tu correo para confirmar la eliminación",
++  "profile.account.deleting": "Eliminando cuenta…",
++
++  "userMenu.profile": "Perfil",
++  "userMenu.buyCredits": "Comprar créditos",
++  "userMenu.signOut": "Cerrar sesión",
++
++  "billing.pro.title": "Plan Pro",
++  "billing.pro.description": "100.000 créditos/mes",
++  "billing.pro.pricePerMonth": "${price}/mes",
++  "billing.extraTopups": "Recargas de créditos adicionales"
+ }
+apply_patch(auto_approved=true) exited 0 in 38ms:
+Success. Updated the following files:
+M frontend/src/i18n/locales/es.json
+file update:
+diff --git a/frontend/src/i18n/locales/es.json b/frontend/src/i18n/locales/es.json
+index f269871c3be469ab6012bdb9cf9965608a594b59..e19095bc4d152151c8f447de2449205366a57845
+--- a/frontend/src/i18n/locales/es.json
++++ b/frontend/src/i18n/locales/es.json
+@@ -77,5 +77,57 @@
+   "billing.purchaseCanceled": "Purchase was canceled.",
+   "billing.error": "An error occurred. Please try again.",
+   "common.cancel": "Cancel",
+-  "common.loading": "Loading..."
++  "common.loading": "Loading...",
++
++  "profile.title": "Perfil",
++  "profile.tabs.profile": "Perfil",
++  "profile.tabs.credits": "Créditos",
++  "profile.tabs.usage": "Uso",
++  "profile.tabs.account": "Cuenta",
++
++  "profile.info.memberSince": "Miembro desde hace {days} días",
++  "profile.info.connectedWith": "Conectado con {provider}",
++
++  "profile.plan.free": "Gratis",
++  "profile.plan.pro": "Pro",
++  "profile.plan.upgrade": "Actualizar a Pro",
++  "profile.plan.manage": "Gestionar suscripción",
++  "profile.plan.monthlyAllowance": "{used} / {total} créditos mensuales",
++  "profile.plan.nextRenewal": "Se renueva en {days} días",
++
++  "profile.credits.balance": "Saldo de créditos",
++  "profile.credits.buyMore": "Comprar créditos adicionales",
++  "profile.credits.history": "Historial de transacciones",
++  "profile.credits.noHistory": "Aún no hay transacciones",
++  "profile.credits.reason.signup_bonus": "Bono de registro",
++  "profile.credits.reason.purchase": "Compra de créditos",
++  "profile.credits.reason.chat": "Uso de chat",
++  "profile.credits.reason.monthly_allowance": "Asignación mensual",
++  "profile.credits.reason.refund": "Reembolso",
++
++  "profile.usage.documents": "Documentos",
++  "profile.usage.sessions": "Sesiones de chat",
++  "profile.usage.messages": "Mensajes",
++  "profile.usage.creditsSpent": "Créditos gastados",
++  "profile.usage.tokensUsed": "Tokens usados",
++  "profile.usage.modelBreakdown": "Uso por modelo",
++  "profile.usage.model": "Modelo",
++  "profile.usage.calls": "Llamadas",
++  "profile.usage.tokens": "Tokens",
++  "profile.usage.credits": "Créditos",
++
++  "profile.account.dangerZone": "Zona de peligro",
++  "profile.account.deleteAccount": "Eliminar cuenta",
++  "profile.account.deleteWarning": "Esto eliminará permanentemente tu cuenta, todos los documentos, chats y datos. Esta acción no se puede deshacer.",
++  "profile.account.deleteConfirm": "Escribe tu correo para confirmar la eliminación",
++  "profile.account.deleting": "Eliminando cuenta…",
++
++  "userMenu.profile": "Perfil",
++  "userMenu.buyCredits": "Comprar créditos",
++  "userMenu.signOut": "Cerrar sesión",
++
++  "billing.pro.title": "Plan Pro",
++  "billing.pro.description": "100.000 créditos/mes",
++  "billing.pro.pricePerMonth": "${price}/mes",
++  "billing.extraTopups": "Recargas de créditos adicionales"
+ }
+diff --git a/frontend/src/i18n/locales/hi.json b/frontend/src/i18n/locales/hi.json
+index 6c5aa1fa4d4f2f0f51415a9727c15abf9df3aa31..53732007fe813b6335f8392af9785728c60fdd8c
+--- a/frontend/src/i18n/locales/hi.json
++++ b/frontend/src/i18n/locales/hi.json
+@@ -77,5 +77,57 @@
+   "billing.purchaseCanceled": "Purchase was canceled.",
+   "billing.error": "An error occurred. Please try again.",
+   "common.cancel": "Cancel",
+-  "common.loading": "Loading..."
++  "common.loading": "Loading...",
++
++  "profile.title": "प्रोफ़ाइल",
++  "profile.tabs.profile": "प्रोफ़ाइल",
++  "profile.tabs.credits": "क्रेडिट्स",
++  "profile.tabs.usage": "उपयोग",
++  "profile.tabs.account": "खाता",
++
++  "profile.info.memberSince": "पिछले {days} दिनों से सदस्य",
++  "profile.info.connectedWith": "{provider} से कनेक्टेड",
++
++  "profile.plan.free": "मुफ़्त",
++  "profile.plan.pro": "प्रो",
++  "profile.plan.upgrade": "प्रो में अपग्रेड करें",
++  "profile.plan.manage": "सब्सक्रिप्शन प्रबंधित करें",
++  "profile.plan.monthlyAllowance": "{used} / {total} मासिक क्रेडिट्स",
++  "profile.plan.nextRenewal": "{days} दिनों में नवीनीकरण",
++
++  "profile.credits.balance": "क्रेडिट शेष",
++  "profile.credits.buyMore": "अतिरिक्त क्रेडिट्स खरीदें",
++  "profile.credits.history": "लेनदेन इतिहास",
++  "profile.credits.noHistory": "अभी कोई लेनदेन नहीं",
++  "profile.credits.reason.signup_bonus": "साइनअप बोनस",
++  "profile.credits.reason.purchase": "क्रेडिट खरीद",
++  "profile.credits.reason.chat": "चैट उपयोग",
++  "profile.credits.reason.monthly_allowance": "मासिक भत्ता",
++  "profile.credits.reason.refund": "रिफंड",
++
++  "profile.usage.documents": "दस्तावेज़",
++  "profile.usage.sessions": "चैट सत्र",
++  "profile.usage.messages": "संदेश",
++  "profile.usage.creditsSpent": "खर्च किए गए क्रेडिट्स",
++  "profile.usage.tokensUsed": "उपयोग किए गए टोकन",
++  "profile.usage.modelBreakdown": "मॉडेल अनुसार उपयोग",
++  "profile.usage.model": "मॉडेल",
++  "profile.usage.calls": "कॉल्स",
++  "profile.usage.tokens": "टोकन",
++  "profile.usage.credits": "क्रेडिट्स",
++
++  "profile.account.dangerZone": "खतरे का क्षेत्र",
++  "profile.account.deleteAccount": "खाता हटाएँ",
++  "profile.account.deleteWarning": "यह आपके खाते, सभी दस्तावेज़, चैट और डेटा को स्थायी रूप से हटा देगा। यह क्रिया वापस नहीं की जा सकती।",
++  "profile.account.deleteConfirm": "हटाने की पुष्टि के लिए अपना ईमेल टाइप करें",
++  "profile.account.deleting": "खाता हटाया जा रहा है…",
++
++  "userMenu.profile": "प्रोफ़ाइल",
++  "userMenu.buyCredits": "क्रेडिट्स खरीदें",
++  "userMenu.signOut": "साइन आउट",
++
++  "billing.pro.title": "प्रो प्लान",
++  "billing.pro.description": "100,000 क्रेडिट्स/महीना",
++  "billing.pro.pricePerMonth": "${price}/माह",
++  "billing.extraTopups": "अतिरिक्त क्रेडिट टॉप‑अप्स"
+ }
+diff --git a/frontend/src/i18n/locales/zh.json b/frontend/src/i18n/locales/zh.json
+index f996bf6d27f8f276c69ac8add1473db91c6ff4ee..82ca512fc4aee326c85b88d3ab3edc8e27130edc
+--- a/frontend/src/i18n/locales/zh.json
++++ b/frontend/src/i18n/locales/zh.json
+@@ -146,5 +146,57 @@
+   "demo.pdfPlaceholder": "PDF 预览",
+   "demo.pdfPlaceholderHint": "示例 PDF 将在下次更新中添加",
+ 
+-  "common.backToHome": "返回首页"
++  "common.backToHome": "返回首页",
++
++  "profile.title": "个人资料",
++  "profile.tabs.profile": "资料",
++  "profile.tabs.credits": "额度",
++  "profile.tabs.usage": "用量",
++  "profile.tabs.account": "账户",
++
++  "profile.info.memberSince": "已加入 {days} 天",
++  "profile.info.connectedWith": "已通过 {provider} 连接",
++
++  "profile.plan.free": "免费",
++  "profile.plan.pro": "专业版",
++  "profile.plan.upgrade": "升级到专业版",
++  "profile.plan.manage": "管理订阅",
++  "profile.plan.monthlyAllowance": "{used} / {total} 每月额度",
++  "profile.plan.nextRenewal": "{days} 天后续订",
++
++  "profile.credits.balance": "额度余额",
++  "profile.credits.buyMore": "购买额外额度",
++  "profile.credits.history": "交易记录",
++  "profile.credits.noHistory": "暂无交易记录",
++  "profile.credits.reason.signup_bonus": "注册赠送",
++  "profile.credits.reason.purchase": "购买额度",
++  "profile.credits.reason.chat": "聊天消耗",
++  "profile.credits.reason.monthly_allowance": "每月额度",
++  "profile.credits.reason.refund": "退款",
++
++  "profile.usage.documents": "文档",
++  "profile.usage.sessions": "聊天会话",
++  "profile.usage.messages": "消息",
++  "profile.usage.creditsSpent": "已消耗额度",
++  "profile.usage.tokensUsed": "已使用 Tokens",
++  "profile.usage.modelBreakdown": "按模型统计",
++  "profile.usage.model": "模型",
++  "profile.usage.calls": "调用次数",
++  "profile.usage.tokens": "Tokens",
++  "profile.usage.credits": "额度",
++
++  "profile.account.dangerZone": "危险区域",
++  "profile.account.deleteAccount": "删除账户",
++  "profile.account.deleteWarning": "这将永久删除你的账户、所有文档、对话和数据。此操作无法撤销。",
++  "profile.account.deleteConfirm": "输入你的邮箱以确认删除",
++  "profile.account.deleting": "正在删除账户…",
++
++  "userMenu.profile": "个人资料",
++  "userMenu.buyCredits": "购买额度",
++  "userMenu.signOut": "退出登录",
++
++  "billing.pro.title": "Pro 计划",
++  "billing.pro.description": "每月 100,000 额度",
++  "billing.pro.pricePerMonth": "${price}/月",
++  "billing.extraTopups": "额外额度加购"
+ }
+
+file update:
+diff --git a/frontend/src/i18n/locales/es.json b/frontend/src/i18n/locales/es.json
+index f269871c3be469ab6012bdb9cf9965608a594b59..e19095bc4d152151c8f447de2449205366a57845
+--- a/frontend/src/i18n/locales/es.json
++++ b/frontend/src/i18n/locales/es.json
+@@ -77,5 +77,57 @@
+   "billing.purchaseCanceled": "Purchase was canceled.",
+   "billing.error": "An error occurred. Please try again.",
+   "common.cancel": "Cancel",
+-  "common.loading": "Loading..."
++  "common.loading": "Loading...",
++
++  "profile.title": "Perfil",
++  "profile.tabs.profile": "Perfil",
++  "profile.tabs.credits": "Créditos",
++  "profile.tabs.usage": "Uso",
++  "profile.tabs.account": "Cuenta",
++
++  "profile.info.memberSince": "Miembro desde hace {days} días",
++  "profile.info.connectedWith": "Conectado con {provider}",
++
++  "profile.plan.free": "Gratis",
++  "profile.plan.pro": "Pro",
++  "profile.plan.upgrade": "Actualizar a Pro",
++  "profile.plan.manage": "Gestionar suscripción",
++  "profile.plan.monthlyAllowance": "{used} / {total} créditos mensuales",
++  "profile.plan.nextRenewal": "Se renueva en {days} días",
++
++  "profile.credits.balance": "Saldo de créditos",
++  "profile.credits.buyMore": "Comprar créditos adicionales",
++  "profile.credits.history": "Historial de transacciones",
++  "profile.credits.noHistory": "Aún no hay transacciones",
++  "profile.credits.reason.signup_bonus": "Bono de registro",
++  "profile.credits.reason.purchase": "Compra de créditos",
++  "profile.credits.reason.chat": "Uso de chat",
++  "profile.credits.reason.monthly_allowance": "Asignación mensual",
++  "profile.credits.reason.refund": "Reembolso",
++
++  "profile.usage.documents": "Documentos",
++  "profile.usage.sessions": "Sesiones de chat",
++  "profile.usage.messages": "Mensajes",
++  "profile.usage.creditsSpent": "Créditos gastados",
++  "profile.usage.tokensUsed": "Tokens usados",
++  "profile.usage.modelBreakdown": "Uso por modelo",
++  "profile.usage.model": "Modelo",
++  "profile.usage.calls": "Llamadas",
++  "profile.usage.tokens": "Tokens",
++  "profile.usage.credits": "Créditos",
++
++  "profile.account.dangerZone": "Zona de peligro",
++  "profile.account.deleteAccount": "Eliminar cuenta",
++  "profile.account.deleteWarning": "Esto eliminará permanentemente tu cuenta, todos los documentos, chats y datos. Esta acción no se puede deshacer.",
++  "profile.account.deleteConfirm": "Escribe tu correo para confirmar la eliminación",
++  "profile.account.deleting": "Eliminando cuenta…",
++
++  "userMenu.profile": "Perfil",
++  "userMenu.buyCredits": "Comprar créditos",
++  "userMenu.signOut": "Cerrar sesión",
++
++  "billing.pro.title": "Plan Pro",
++  "billing.pro.description": "100.000 créditos/mes",
++  "billing.pro.pricePerMonth": "${price}/mes",
++  "billing.extraTopups": "Recargas de créditos adicionales"
+ }
+diff --git a/frontend/src/i18n/locales/hi.json b/frontend/src/i18n/locales/hi.json
+index 6c5aa1fa4d4f2f0f51415a9727c15abf9df3aa31..53732007fe813b6335f8392af9785728c60fdd8c
+--- a/frontend/src/i18n/locales/hi.json
++++ b/frontend/src/i18n/locales/hi.json
+@@ -77,5 +77,57 @@
+   "billing.purchaseCanceled": "Purchase was canceled.",
+   "billing.error": "An error occurred. Please try again.",
+   "common.cancel": "Cancel",
+-  "common.loading": "Loading..."
++  "common.loading": "Loading...",
++
++  "profile.title": "प्रोफ़ाइल",
++  "profile.tabs.profile": "प्रोफ़ाइल",
++  "profile.tabs.credits": "क्रेडिट्स",
++  "profile.tabs.usage": "उपयोग",
++  "profile.tabs.account": "खाता",
++
++  "profile.info.memberSince": "पिछले {days} दिनों से सदस्य",
++  "profile.info.connectedWith": "{provider} से कनेक्टेड",
++
++  "profile.plan.free": "मुफ़्त",
++  "profile.plan.pro": "प्रो",
++  "profile.plan.upgrade": "प्रो में अपग्रेड करें",
++  "profile.plan.manage": "सब्सक्रिप्शन प्रबंधित करें",
++  "profile.plan.monthlyAllowance": "{used} / {total} मासिक क्रेडिट्स",
++  "profile.plan.nextRenewal": "{days} दिनों में नवीनीकरण",
++
++  "profile.credits.balance": "क्रेडिट शेष",
++  "profile.credits.buyMore": "अतिरिक्त क्रेडिट्स खरीदें",
++  "profile.credits.history": "लेनदेन इतिहास",
++  "profile.credits.noHistory": "अभी कोई लेनदेन नहीं",
++  "profile.credits.reason.signup_bonus": "साइनअप बोनस",
++  "profile.credits.reason.purchase": "क्रेडिट खरीद",
++  "profile.credits.reason.chat": "चैट उपयोग",
++  "profile.credits.reason.monthly_allowance": "मासिक भत्ता",
++  "profile.credits.reason.refund": "रिफंड",
++
++  "profile.usage.documents": "दस्तावेज़",
++  "profile.usage.sessions": "चैट सत्र",
++  "profile.usage.messages": "संदेश",
++  "profile.usage.creditsSpent": "खर्च किए गए क्रेडिट्स",
++  "profile.usage.tokensUsed": "उपयोग किए गए टोकन",
++  "profile.usage.modelBreakdown": "मॉडेल अनुसार उपयोग",
++  "profile.usage.model": "मॉडेल",
++  "profile.usage.calls": "कॉल्स",
++  "profile.usage.tokens": "टोकन",
++  "profile.usage.credits": "क्रेडिट्स",
++
++  "profile.account.dangerZone": "खतरे का क्षेत्र",
++  "profile.account.deleteAccount": "खाता हटाएँ",
++  "profile.account.deleteWarning": "यह आपके खाते, सभी दस्तावेज़, चैट और डेटा को स्थायी रूप से हटा देगा। यह क्रिया वापस नहीं की जा सकती।",
++  "profile.account.deleteConfirm": "हटाने की पुष्टि के लिए अपना ईमेल टाइप करें",
++  "profile.account.deleting": "खाता हटाया जा रहा है…",
++
++  "userMenu.profile": "प्रोफ़ाइल",
++  "userMenu.buyCredits": "क्रेडिट्स खरीदें",
++  "userMenu.signOut": "साइन आउट",
++
++  "billing.pro.title": "प्रो प्लान",
++  "billing.pro.description": "100,000 क्रेडिट्स/महीना",
++  "billing.pro.pricePerMonth": "${price}/माह",
++  "billing.extraTopups": "अतिरिक्त क्रेडिट टॉप‑अप्स"
+ }
+diff --git a/frontend/src/i18n/locales/zh.json b/frontend/src/i18n/locales/zh.json
+index f996bf6d27f8f276c69ac8add1473db91c6ff4ee..82ca512fc4aee326c85b88d3ab3edc8e27130edc
+--- a/frontend/src/i18n/locales/zh.json
++++ b/frontend/src/i18n/locales/zh.json
+@@ -146,5 +146,57 @@
+   "demo.pdfPlaceholder": "PDF 预览",
+   "demo.pdfPlaceholderHint": "示例 PDF 将在下次更新中添加",
+ 
+-  "common.backToHome": "返回首页"
++  "common.backToHome": "返回首页",
++
++  "profile.title": "个人资料",
++  "profile.tabs.profile": "资料",
++  "profile.tabs.credits": "额度",
++  "profile.tabs.usage": "用量",
++  "profile.tabs.account": "账户",
++
++  "profile.info.memberSince": "已加入 {days} 天",
++  "profile.info.connectedWith": "已通过 {provider} 连接",
++
++  "profile.plan.free": "免费",
++  "profile.plan.pro": "专业版",
++  "profile.plan.upgrade": "升级到专业版",
++  "profile.plan.manage": "管理订阅",
++  "profile.plan.monthlyAllowance": "{used} / {total} 每月额度",
++  "profile.plan.nextRenewal": "{days} 天后续订",
++
++  "profile.credits.balance": "额度余额",
++  "profile.credits.buyMore": "购买额外额度",
++  "profile.credits.history": "交易记录",
++  "profile.credits.noHistory": "暂无交易记录",
++  "profile.credits.reason.signup_bonus": "注册赠送",
++  "profile.credits.reason.purchase": "购买额度",
++  "profile.credits.reason.chat": "聊天消耗",
++  "profile.credits.reason.monthly_allowance": "每月额度",
++  "profile.credits.reason.refund": "退款",
++
++  "profile.usage.documents": "文档",
++  "profile.usage.sessions": "聊天会话",
++  "profile.usage.messages": "消息",
++  "profile.usage.creditsSpent": "已消耗额度",
++  "profile.usage.tokensUsed": "已使用 Tokens",
++  "profile.usage.modelBreakdown": "按模型统计",
++  "profile.usage.model": "模型",
++  "profile.usage.calls": "调用次数",
++  "profile.usage.tokens": "Tokens",
++  "profile.usage.credits": "额度",
++
++  "profile.account.dangerZone": "危险区域",
++  "profile.account.deleteAccount": "删除账户",
++  "profile.account.deleteWarning": "这将永久删除你的账户、所有文档、对话和数据。此操作无法撤销。",
++  "profile.account.deleteConfirm": "输入你的邮箱以确认删除",
++  "profile.account.deleting": "正在删除账户…",
++
++  "userMenu.profile": "个人资料",
++  "userMenu.buyCredits": "购买额度",
++  "userMenu.signOut": "退出登录",
++
++  "billing.pro.title": "Pro 计划",
++  "billing.pro.description": "每月 100,000 额度",
++  "billing.pro.pricePerMonth": "${price}/月",
++  "billing.extraTopups": "额外额度加购"
+ }
+
+file update
+M /Users/mayijie/Projects/Code/010_DocTalk/frontend/src/i18n/locales/ar.json
+@@ -79,3 +79,55 @@
+   "common.cancel": "Cancel",
+-  "common.loading": "Loading..."
++  "common.loading": "Loading...",
++
++  "profile.title": "الملف الشخصي",
++  "profile.tabs.profile": "الملف",
++  "profile.tabs.credits": "الأرصدة",
++  "profile.tabs.usage": "الاستخدام",
++  "profile.tabs.account": "الحساب",
++
++  "profile.info.memberSince": "عضو منذ {days} يومًا",
++  "profile.info.connectedWith": "متصل عبر {provider}",
++
++  "profile.plan.free": "مجاني",
++  "profile.plan.pro": "برو",
++  "profile.plan.upgrade": "الترقية إلى برو",
++  "profile.plan.manage": "إدارة الاشتراك",
++  "profile.plan.monthlyAllowance": "{used} / {total} أرصدة شهرية",
++  "profile.plan.nextRenewal": "يتجدد خلال {days} يومًا",
++
++  "profile.credits.balance": "رصيد الاعتمادات",
++  "profile.credits.buyMore": "شراء أرصدة إضافية",
++  "profile.credits.history": "سجل المعاملات",
++  "profile.credits.noHistory": "لا توجد معاملات بعد",
++  "profile.credits.reason.signup_bonus": "مكافأة التسجيل",
++  "profile.credits.reason.purchase": "شراء أرصدة",
++  "profile.credits.reason.chat": "استخدام الدردشة",
++  "profile.credits.reason.monthly_allowance": "البدل الشهري",
++  "profile.credits.reason.refund": "استرداد",
++
++  "profile.usage.documents": "المستندات",
++  "profile.usage.sessions": "جلسات الدردشة",
++  "profile.usage.messages": "الرسائل",
++  "profile.usage.creditsSpent": "الأرصدة المُستهلكة",
++  "profile.usage.tokensUsed": "الرموز المستخدمة",
++  "profile.usage.modelBreakdown": "الاستخدام حسب النموذج",
++  "profile.usage.model": "النموذج",
++  "profile.usage.calls": "الاستدعاءات",
++  "profile.usage.tokens": "الرموز",
++  "profile.usage.credits": "الأرصدة",
++
++  "profile.account.dangerZone": "منطقة الخطر",
++  "profile.account.deleteAccount": "حذف الحساب",
++  "profile.account.deleteWarning": "سيؤدي ذلك إلى حذف حسابك وجميع المستندات والدردشات والبيانات نهائيًا. لا يمكن التراجع عن هذا الإجراء.",
++  "profile.account.deleteConfirm": "اكتب بريدك الإلكتروني لتأكيد الحذف",
++  "profile.account.deleting": "جارٍ حذف الحساب…",
++
++  "userMenu.profile": "الملف الشخصي",
++  "userMenu.buyCredits": "شراء أرصدة",
++  "userMenu.signOut": "تسجيل الخروج",
++
++  "billing.pro.title": "خطة برو",
++  "billing.pro.description": "100,000 رصيد/شهر",
++  "billing.pro.pricePerMonth": "${price}/شهر",
++  "billing.extraTopups": "شحن أرصدة إضافية"
+ }
+apply_patch(auto_approved=true) exited 0 in 50ms:
+Success. Updated the following files:
+M frontend/src/i18n/locales/ar.json
+file update:
+diff --git a/frontend/src/i18n/locales/ar.json b/frontend/src/i18n/locales/ar.json
+index 465c93f525002f3c3b948bdbf6e994b7e7b89cbd..400a63fb92b66956fb7fd030c569cc07dd2651fd
+--- a/frontend/src/i18n/locales/ar.json
++++ b/frontend/src/i18n/locales/ar.json
+@@ -77,5 +77,57 @@
+   "billing.purchaseCanceled": "Purchase was canceled.",
+   "billing.error": "An error occurred. Please try again.",
+   "common.cancel": "Cancel",
+-  "common.loading": "Loading..."
++  "common.loading": "Loading...",
++
++  "profile.title": "الملف الشخصي",
++  "profile.tabs.profile": "الملف",
++  "profile.tabs.credits": "الأرصدة",
++  "profile.tabs.usage": "الاستخدام",
++  "profile.tabs.account": "الحساب",
++
++  "profile.info.memberSince": "عضو منذ {days} يومًا",
++  "profile.info.connectedWith": "متصل عبر {provider}",
++
++  "profile.plan.free": "مجاني",
++  "profile.plan.pro": "برو",
++  "profile.plan.upgrade": "الترقية إلى برو",
++  "profile.plan.manage": "إدارة الاشتراك",
++  "profile.plan.monthlyAllowance": "{used} / {total} أرصدة شهرية",
++  "profile.plan.nextRenewal": "يتجدد خلال {days} يومًا",
++
++  "profile.credits.balance": "رصيد الاعتمادات",
++  "profile.credits.buyMore": "شراء أرصدة إضافية",
++  "profile.credits.history": "سجل المعاملات",
++  "profile.credits.noHistory": "لا توجد معاملات بعد",
++  "profile.credits.reason.signup_bonus": "مكافأة التسجيل",
++  "profile.credits.reason.purchase": "شراء أرصدة",
++  "profile.credits.reason.chat": "استخدام الدردشة",
++  "profile.credits.reason.monthly_allowance": "البدل الشهري",
++  "profile.credits.reason.refund": "استرداد",
++
++  "profile.usage.documents": "المستندات",
++  "profile.usage.sessions": "جلسات الدردشة",
++  "profile.usage.messages": "الرسائل",
++  "profile.usage.creditsSpent": "الأرصدة المُستهلكة",
++  "profile.usage.tokensUsed": "الرموز المستخدمة",
++  "profile.usage.modelBreakdown": "الاستخدام حسب النموذج",
++  "profile.usage.model": "النموذج",
++  "profile.usage.calls": "الاستدعاءات",
++  "profile.usage.tokens": "الرموز",
++  "profile.usage.credits": "الأرصدة",
++
++  "profile.account.dangerZone": "منطقة الخطر",
++  "profile.account.deleteAccount": "حذف الحساب",
++  "profile.account.deleteWarning": "سيؤدي ذلك إلى حذف حسابك وجميع المستندات والدردشات والبيانات نهائيًا. لا يمكن التراجع عن هذا الإجراء.",
++  "profile.account.deleteConfirm": "اكتب بريدك الإلكتروني لتأكيد الحذف",
++  "profile.account.deleting": "جارٍ حذف الحساب…",
++
++  "userMenu.profile": "الملف الشخصي",
++  "userMenu.buyCredits": "شراء أرصدة",
++  "userMenu.signOut": "تسجيل الخروج",
++
++  "billing.pro.title": "خطة برو",
++  "billing.pro.description": "100,000 رصيد/شهر",
++  "billing.pro.pricePerMonth": "${price}/شهر",
++  "billing.extraTopups": "شحن أرصدة إضافية"
+ }
+diff --git a/frontend/src/i18n/locales/es.json b/frontend/src/i18n/locales/es.json
+index f269871c3be469ab6012bdb9cf9965608a594b59..e19095bc4d152151c8f447de2449205366a57845
+--- a/frontend/src/i18n/locales/es.json
++++ b/frontend/src/i18n/locales/es.json
+@@ -77,5 +77,57 @@
+   "billing.purchaseCanceled": "Purchase was canceled.",
+   "billing.error": "An error occurred. Please try again.",
+   "common.cancel": "Cancel",
+-  "common.loading": "Loading..."
++  "common.loading": "Loading...",
++
++  "profile.title": "Perfil",
++  "profile.tabs.profile": "Perfil",
++  "profile.tabs.credits": "Créditos",
++  "profile.tabs.usage": "Uso",
++  "profile.tabs.account": "Cuenta",
++
++  "profile.info.memberSince": "Miembro desde hace {days} días",
++  "profile.info.connectedWith": "Conectado con {provider}",
++
++  "profile.plan.free": "Gratis",
++  "profile.plan.pro": "Pro",
++  "profile.plan.upgrade": "Actualizar a Pro",
++  "profile.plan.manage": "Gestionar suscripción",
++  "profile.plan.monthlyAllowance": "{used} / {total} créditos mensuales",
++  "profile.plan.nextRenewal": "Se renueva en {days} días",
++
++  "profile.credits.balance": "Saldo de créditos",
++  "profile.credits.buyMore": "Comprar créditos adicionales",
++  "profile.credits.history": "Historial de transacciones",
++  "profile.credits.noHistory": "Aún no hay transacciones",
++  "profile.credits.reason.signup_bonus": "Bono de registro",
++  "profile.credits.reason.purchase": "Compra de créditos",
++  "profile.credits.reason.chat": "Uso de chat",
++  "profile.credits.reason.monthly_allowance": "Asignación mensual",
++  "profile.credits.reason.refund": "Reembolso",
++
++  "profile.usage.documents": "Documentos",
++  "profile.usage.sessions": "Sesiones de chat",
++  "profile.usage.messages": "Mensajes",
++  "profile.usage.creditsSpent": "Créditos gastados",
++  "profile.usage.tokensUsed": "Tokens usados",
++  "profile.usage.modelBreakdown": "Uso por modelo",
++  "profile.usage.model": "Modelo",
++  "profile.usage.calls": "Llamadas",
++  "profile.usage.tokens": "Tokens",
++  "profile.usage.credits": "Créditos",
++
++  "profile.account.dangerZone": "Zona de peligro",
++  "profile.account.deleteAccount": "Eliminar cuenta",
++  "profile.account.deleteWarning": "Esto eliminará permanentemente tu cuenta, todos los documentos, chats y datos. Esta acción no se puede deshacer.",
++  "profile.account.deleteConfirm": "Escribe tu correo para confirmar la eliminación",
++  "profile.account.deleting": "Eliminando cuenta…",
++
++  "userMenu.profile": "Perfil",
++  "userMenu.buyCredits": "Comprar créditos",
++  "userMenu.signOut": "Cerrar sesión",
++
++  "billing.pro.title": "Plan Pro",
++  "billing.pro.description": "100.000 créditos/mes",
++  "billing.pro.pricePerMonth": "${price}/mes",
++  "billing.extraTopups": "Recargas de créditos adicionales"
+ }
+diff --git a/frontend/src/i18n/locales/hi.json b/frontend/src/i18n/locales/hi.json
+index 6c5aa1fa4d4f2f0f51415a9727c15abf9df3aa31..53732007fe813b6335f8392af9785728c60fdd8c
+--- a/frontend/src/i18n/locales/hi.json
++++ b/frontend/src/i18n/locales/hi.json
+@@ -77,5 +77,57 @@
+   "billing.purchaseCanceled": "Purchase was canceled.",
+   "billing.error": "An error occurred. Please try again.",
+   "common.cancel": "Cancel",
+-  "common.loading": "Loading..."
++  "common.loading": "Loading...",
++
++  "profile.title": "प्रोफ़ाइल",
++  "profile.tabs.profile": "प्रोफ़ाइल",
++  "profile.tabs.credits": "क्रेडिट्स",
++  "profile.tabs.usage": "उपयोग",
++  "profile.tabs.account": "खाता",
++
++  "profile.info.memberSince": "पिछले {days} दिनों से सदस्य",
++  "profile.info.connectedWith": "{provider} से कनेक्टेड",
++
++  "profile.plan.free": "मुफ़्त",
++  "profile.plan.pro": "प्रो",
++  "profile.plan.upgrade": "प्रो में अपग्रेड करें",
++  "profile.plan.manage": "सब्सक्रिप्शन प्रबंधित करें",
++  "profile.plan.monthlyAllowance": "{used} / {total} मासिक क्रेडिट्स",
++  "profile.plan.nextRenewal": "{days} दिनों में नवीनीकरण",
++
++  "profile.credits.balance": "क्रेडिट शेष",
++  "profile.credits.buyMore": "अतिरिक्त क्रेडिट्स खरीदें",
++  "profile.credits.history": "लेनदेन इतिहास",
++  "profile.credits.noHistory": "अभी कोई लेनदेन नहीं",
++  "profile.credits.reason.signup_bonus": "साइनअप बोनस",
++  "profile.credits.reason.purchase": "क्रेडिट खरीद",
++  "profile.credits.reason.chat": "चैट उपयोग",
++  "profile.credits.reason.monthly_allowance": "मासिक भत्ता",
++  "profile.credits.reason.refund": "रिफंड",
++
++  "profile.usage.documents": "दस्तावेज़",
++  "profile.usage.sessions": "चैट सत्र",
++  "profile.usage.messages": "संदेश",
++  "profile.usage.creditsSpent": "खर्च किए गए क्रेडिट्स",
++  "profile.usage.tokensUsed": "उपयोग किए गए टोकन",
++  "profile.usage.modelBreakdown": "मॉडेल अनुसार उपयोग",
++  "profile.usage.model": "मॉडेल",
++  "profile.usage.calls": "कॉल्स",
++  "profile.usage.tokens": "टोकन",
++  "profile.usage.credits": "क्रेडिट्स",
++
++  "profile.account.dangerZone": "खतरे का क्षेत्र",
++  "profile.account.deleteAccount": "खाता हटाएँ",
++  "profile.account.deleteWarning": "यह आपके खाते, सभी दस्तावेज़, चैट और डेटा को स्थायी रूप से हटा देगा। यह क्रिया वापस नहीं की जा सकती।",
++  "profile.account.deleteConfirm": "हटाने की पुष्टि के लिए अपना ईमेल टाइप करें",
++  "profile.account.deleting": "खाता हटाया जा रहा है…",
++
++  "userMenu.profile": "प्रोफ़ाइल",
++  "userMenu.buyCredits": "क्रेडिट्स खरीदें",
++  "userMenu.signOut": "साइन आउट",
++
++  "billing.pro.title": "प्रो प्लान",
++  "billing.pro.description": "100,000 क्रेडिट्स/महीना",
++  "billing.pro.pricePerMonth": "${price}/माह",
++  "billing.extraTopups": "अतिरिक्त क्रेडिट टॉप‑अप्स"
+ }
+diff --git a/frontend/src/i18n/locales/zh.json b/frontend/src/i18n/locales/zh.json
+index f996bf6d27f8f276c69ac8add1473db91c6ff4ee..82ca512fc4aee326c85b88d3ab3edc8e27130edc
+--- a/frontend/src/i18n/locales/zh.json
++++ b/frontend/src/i18n/locales/zh.json
+@@ -146,5 +146,57 @@
+   "demo.pdfPlaceholder": "PDF 预览",
+   "demo.pdfPlaceholderHint": "示例 PDF 将在下次更新中添加",
+ 
+-  "common.backToHome": "返回首页"
++  "common.backToHome": "返回首页",
++
++  "profile.title": "个人资料",
++  "profile.tabs.profile": "资料",
++  "profile.tabs.credits": "额度",
++  "profile.tabs.usage": "用量",
++  "profile.tabs.account": "账户",
++
++  "profile.info.memberSince": "已加入 {days} 天",
++  "profile.info.connectedWith": "已通过 {provider} 连接",
++
++  "profile.plan.free": "免费",
++  "profile.plan.pro": "专业版",
++  "profile.plan.upgrade": "升级到专业版",
++  "profile.plan.manage": "管理订阅",
++  "profile.plan.monthlyAllowance": "{used} / {total} 每月额度",
++  "profile.plan.nextRenewal": "{days} 天后续订",
++
++  "profile.credits.balance": "额度余额",
++  "profile.credits.buyMore": "购买额外额度",
++  "profile.credits.history": "交易记录",
++  "profile.credits.noHistory": "暂无交易记录",
++  "profile.credits.reason.signup_bonus": "注册赠送",
++  "profile.credits.reason.purchase": "购买额度",
++  "profile.credits.reason.chat": "聊天消耗",
++  "profile.credits.reason.monthly_allowance": "每月额度",
++  "profile.credits.reason.refund": "退款",
++
++  "profile.usage.documents": "文档",
++  "profile.usage.sessions": "聊天会话",
++  "profile.usage.messages": "消息",
++  "profile.usage.creditsSpent": "已消耗额度",
++  "profile.usage.tokensUsed": "已使用 Tokens",
++  "profile.usage.modelBreakdown": "按模型统计",
++  "profile.usage.model": "模型",
++  "profile.usage.calls": "调用次数",
++  "profile.usage.tokens": "Tokens",
++  "profile.usage.credits": "额度",
++
++  "profile.account.dangerZone": "危险区域",
++  "profile.account.deleteAccount": "删除账户",
++  "profile.account.deleteWarning": "这将永久删除你的账户、所有文档、对话和数据。此操作无法撤销。",
++  "profile.account.deleteConfirm": "输入你的邮箱以确认删除",
++  "profile.account.deleting": "正在删除账户…",
++
++  "userMenu.profile": "个人资料",
++  "userMenu.buyCredits": "购买额度",
++  "userMenu.signOut": "退出登录",
++
++  "billing.pro.title": "Pro 计划",
++  "billing.pro.description": "每月 100,000 额度",
++  "billing.pro.pricePerMonth": "${price}/月",
++  "billing.extraTopups": "额外额度加购"
+ }
+
+file update:
+diff --git a/frontend/src/i18n/locales/ar.json b/frontend/src/i18n/locales/ar.json
+index 465c93f525002f3c3b948bdbf6e994b7e7b89cbd..400a63fb92b66956fb7fd030c569cc07dd2651fd
+--- a/frontend/src/i18n/locales/ar.json
++++ b/frontend/src/i18n/locales/ar.json
+@@ -77,5 +77,57 @@
+   "billing.purchaseCanceled": "Purchase was canceled.",
+   "billing.error": "An error occurred. Please try again.",
+   "common.cancel": "Cancel",
+-  "common.loading": "Loading..."
++  "common.loading": "Loading...",
++
++  "profile.title": "الملف الشخصي",
++  "profile.tabs.profile": "الملف",
++  "profile.tabs.credits": "الأرصدة",
++  "profile.tabs.usage": "الاستخدام",
++  "profile.tabs.account": "الحساب",
++
++  "profile.info.memberSince": "عضو منذ {days} يومًا",
++  "profile.info.connectedWith": "متصل عبر {provider}",
++
++  "profile.plan.free": "مجاني",
++  "profile.plan.pro": "برو",
++  "profile.plan.upgrade": "الترقية إلى برو",
++  "profile.plan.manage": "إدارة الاشتراك",
++  "profile.plan.monthlyAllowance": "{used} / {total} أرصدة شهرية",
++  "profile.plan.nextRenewal": "يتجدد خلال {days} يومًا",
++
++  "profile.credits.balance": "رصيد الاعتمادات",
++  "profile.credits.buyMore": "شراء أرصدة إضافية",
++  "profile.credits.history": "سجل المعاملات",
++  "profile.credits.noHistory": "لا توجد معاملات بعد",
++  "profile.credits.reason.signup_bonus": "مكافأة التسجيل",
++  "profile.credits.reason.purchase": "شراء أرصدة",
++  "profile.credits.reason.chat": "استخدام الدردشة",
++  "profile.credits.reason.monthly_allowance": "البدل الشهري",
++  "profile.credits.reason.refund": "استرداد",
++
++  "profile.usage.documents": "المستندات",
++  "profile.usage.sessions": "جلسات الدردشة",
++  "profile.usage.messages": "الرسائل",
++  "profile.usage.creditsSpent": "الأرصدة المُستهلكة",
++  "profile.usage.tokensUsed": "الرموز المستخدمة",
++  "profile.usage.modelBreakdown": "الاستخدام حسب النموذج",
++  "profile.usage.model": "النموذج",
++  "profile.usage.calls": "الاستدعاءات",
++  "profile.usage.tokens": "الرموز",
++  "profile.usage.credits": "الأرصدة",
++
++  "profile.account.dangerZone": "منطقة الخطر",
++  "profile.account.deleteAccount": "حذف الحساب",
++  "profile.account.deleteWarning": "سيؤدي ذلك إلى حذف حسابك وجميع المستندات والدردشات والبيانات نهائيًا. لا يمكن التراجع عن هذا الإجراء.",
++  "profile.account.deleteConfirm": "اكتب بريدك الإلكتروني لتأكيد الحذف",
++  "profile.account.deleting": "جارٍ حذف الحساب…",
++
++  "userMenu.profile": "الملف الشخصي",
++  "userMenu.buyCredits": "شراء أرصدة",
++  "userMenu.signOut": "تسجيل الخروج",
++
++  "billing.pro.title": "خطة برو",
++  "billing.pro.description": "100,000 رصيد/شهر",
++  "billing.pro.pricePerMonth": "${price}/شهر",
++  "billing.extraTopups": "شحن أرصدة إضافية"
+ }
+diff --git a/frontend/src/i18n/locales/es.json b/frontend/src/i18n/locales/es.json
+index f269871c3be469ab6012bdb9cf9965608a594b59..e19095bc4d152151c8f447de2449205366a57845
+--- a/frontend/src/i18n/locales/es.json
++++ b/frontend/src/i18n/locales/es.json
+@@ -77,5 +77,57 @@
+   "billing.purchaseCanceled": "Purchase was canceled.",
+   "billing.error": "An error occurred. Please try again.",
+   "common.cancel": "Cancel",
+-  "common.loading": "Loading..."
++  "common.loading": "Loading...",
++
++  "profile.title": "Perfil",
++  "profile.tabs.profile": "Perfil",
++  "profile.tabs.credits": "Créditos",
++  "profile.tabs.usage": "Uso",
++  "profile.tabs.account": "Cuenta",
++
++  "profile.info.memberSince": "Miembro desde hace {days} días",
++  "profile.info.connectedWith": "Conectado con {provider}",
++
++  "profile.plan.free": "Gratis",
++  "profile.plan.pro": "Pro",
++  "profile.plan.upgrade": "Actualizar a Pro",
++  "profile.plan.manage": "Gestionar suscripción",
++  "profile.plan.monthlyAllowance": "{used} / {total} créditos mensuales",
++  "profile.plan.nextRenewal": "Se renueva en {days} días",
++
++  "profile.credits.balance": "Saldo de créditos",
++  "profile.credits.buyMore": "Comprar créditos adicionales",
++  "profile.credits.history": "Historial de transacciones",
++  "profile.credits.noHistory": "Aún no hay transacciones",
++  "profile.credits.reason.signup_bonus": "Bono de registro",
++  "profile.credits.reason.purchase": "Compra de créditos",
++  "profile.credits.reason.chat": "Uso de chat",
++  "profile.credits.reason.monthly_allowance": "Asignación mensual",
++  "profile.credits.reason.refund": "Reembolso",
++
++  "profile.usage.documents": "Documentos",
++  "profile.usage.sessions": "Sesiones de chat",
++  "profile.usage.messages": "Mensajes",
++  "profile.usage.creditsSpent": "Créditos gastados",
++  "profile.usage.tokensUsed": "Tokens usados",
++  "profile.usage.modelBreakdown": "Uso por modelo",
++  "profile.usage.model": "Modelo",
++  "profile.usage.calls": "Llamadas",
++  "profile.usage.tokens": "Tokens",
++  "profile.usage.credits": "Créditos",
++
++  "profile.account.dangerZone": "Zona de peligro",
++  "profile.account.deleteAccount": "Eliminar cuenta",
++  "profile.account.deleteWarning": "Esto eliminará permanentemente tu cuenta, todos los documentos, chats y datos. Esta acción no se puede deshacer.",
++  "profile.account.deleteConfirm": "Escribe tu correo para confirmar la eliminación",
++  "profile.account.deleting": "Eliminando cuenta…",
++
++  "userMenu.profile": "Perfil",
++  "userMenu.buyCredits": "Comprar créditos",
++  "userMenu.signOut": "Cerrar sesión",
++
++  "billing.pro.title": "Plan Pro",
++  "billing.pro.description": "100.000 créditos/mes",
++  "billing.pro.pricePerMonth": "${price}/mes",
++  "billing.extraTopups": "Recargas de créditos adicionales"
+ }
+diff --git a/frontend/src/i18n/locales/hi.json b/frontend/src/i18n/locales/hi.json
+index 6c5aa1fa4d4f2f0f51415a9727c15abf9df3aa31..53732007fe813b6335f8392af9785728c60fdd8c
+--- a/frontend/src/i18n/locales/hi.json
++++ b/frontend/src/i18n/locales/hi.json
+@@ -77,5 +77,57 @@
+   "billing.purchaseCanceled": "Purchase was canceled.",
+   "billing.error": "An error occurred. Please try again.",
+   "common.cancel": "Cancel",
+-  "common.loading": "Loading..."
++  "common.loading": "Loading...",
++
++  "profile.title": "प्रोफ़ाइल",
++  "profile.tabs.profile": "प्रोफ़ाइल",
++  "profile.tabs.credits": "क्रेडिट्स",
++  "profile.tabs.usage": "उपयोग",
++  "profile.tabs.account": "खाता",
++
++  "profile.info.memberSince": "पिछले {days} दिनों से सदस्य",
++  "profile.info.connectedWith": "{provider} से कनेक्टेड",
++
++  "profile.plan.free": "मुफ़्त",
++  "profile.plan.pro": "प्रो",
++  "profile.plan.upgrade": "प्रो में अपग्रेड करें",
++  "profile.plan.manage": "सब्सक्रिप्शन प्रबंधित करें",
++  "profile.plan.monthlyAllowance": "{used} / {total} मासिक क्रेडिट्स",
++  "profile.plan.nextRenewal": "{days} दिनों में नवीनीकरण",
++
++  "profile.credits.balance": "क्रेडिट शेष",
++  "profile.credits.buyMore": "अतिरिक्त क्रेडिट्स खरीदें",
++  "profile.credits.history": "लेनदेन इतिहास",
++  "profile.credits.noHistory": "अभी कोई लेनदेन नहीं",
++  "profile.credits.reason.signup_bonus": "साइनअप बोनस",
++  "profile.credits.reason.purchase": "क्रेडिट खरीद",
++  "profile.credits.reason.chat": "चैट उपयोग",
++  "profile.credits.reason.monthly_allowance": "मासिक भत्ता",
++  "profile.credits.reason.refund": "रिफंड",
++
++  "profile.usage.documents": "दस्तावेज़",
++  "profile.usage.sessions": "चैट सत्र",
++  "profile.usage.messages": "संदेश",
++  "profile.usage.creditsSpent": "खर्च किए गए क्रेडिट्स",
++  "profile.usage.tokensUsed": "उपयोग किए गए टोकन",
++  "profile.usage.modelBreakdown": "मॉडेल अनुसार उपयोग",
++  "profile.usage.model": "मॉडेल",
++  "profile.usage.calls": "कॉल्स",
++  "profile.usage.tokens": "टोकन",
++  "profile.usage.credits": "क्रेडिट्स",
++
++  "profile.account.dangerZone": "खतरे का क्षेत्र",
++  "profile.account.deleteAccount": "खाता हटाएँ",
++  "profile.account.deleteWarning": "यह आपके खाते, सभी दस्तावेज़, चैट और डेटा को स्थायी रूप से हटा देगा। यह क्रिया वापस नहीं की जा सकती।",
++  "profile.account.deleteConfirm": "हटाने की पुष्टि के लिए अपना ईमेल टाइप करें",
++  "profile.account.deleting": "खाता हटाया जा रहा है…",
++
++  "userMenu.profile": "प्रोफ़ाइल",
++  "userMenu.buyCredits": "क्रेडिट्स खरीदें",
++  "userMenu.signOut": "साइन आउट",
++
++  "billing.pro.title": "प्रो प्लान",
++  "billing.pro.description": "100,000 क्रेडिट्स/महीना",
++  "billing.pro.pricePerMonth": "${price}/माह",
++  "billing.extraTopups": "अतिरिक्त क्रेडिट टॉप‑अप्स"
+ }
+diff --git a/frontend/src/i18n/locales/zh.json b/frontend/src/i18n/locales/zh.json
+index f996bf6d27f8f276c69ac8add1473db91c6ff4ee..82ca512fc4aee326c85b88d3ab3edc8e27130edc
+--- a/frontend/src/i18n/locales/zh.json
++++ b/frontend/src/i18n/locales/zh.json
+@@ -146,5 +146,57 @@
+   "demo.pdfPlaceholder": "PDF 预览",
+   "demo.pdfPlaceholderHint": "示例 PDF 将在下次更新中添加",
+ 
+-  "common.backToHome": "返回首页"
++  "common.backToHome": "返回首页",
++
++  "profile.title": "个人资料",
++  "profile.tabs.profile": "资料",
++  "profile.tabs.credits": "额度",
++  "profile.tabs.usage": "用量",
++  "profile.tabs.account": "账户",
++
++  "profile.info.memberSince": "已加入 {days} 天",
++  "profile.info.connectedWith": "已通过 {provider} 连接",
++
++  "profile.plan.free": "免费",
++  "profile.plan.pro": "专业版",
++  "profile.plan.upgrade": "升级到专业版",
++  "profile.plan.manage": "管理订阅",
++  "profile.plan.monthlyAllowance": "{used} / {total} 每月额度",
++  "profile.plan.nextRenewal": "{days} 天后续订",
++
++  "profile.credits.balance": "额度余额",
++  "profile.credits.buyMore": "购买额外额度",
++  "profile.credits.history": "交易记录",
++  "profile.credits.noHistory": "暂无交易记录",
++  "profile.credits.reason.signup_bonus": "注册赠送",
++  "profile.credits.reason.purchase": "购买额度",
++  "profile.credits.reason.chat": "聊天消耗",
++  "profile.credits.reason.monthly_allowance": "每月额度",
++  "profile.credits.reason.refund": "退款",
++
++  "profile.usage.documents": "文档",
++  "profile.usage.sessions": "聊天会话",
++  "profile.usage.messages": "消息",
++  "profile.usage.creditsSpent": "已消耗额度",
++  "profile.usage.tokensUsed": "已使用 Tokens",
++  "profile.usage.modelBreakdown": "按模型统计",
++  "profile.usage.model": "模型",
++  "profile.usage.calls": "调用次数",
++  "profile.usage.tokens": "Tokens",
++  "profile.usage.credits": "额度",
++
++  "profile.account.dangerZone": "危险区域",
++  "profile.account.deleteAccount": "删除账户",
++  "profile.account.deleteWarning": "这将永久删除你的账户、所有文档、对话和数据。此操作无法撤销。",
++  "profile.account.deleteConfirm": "输入你的邮箱以确认删除",
++  "profile.account.deleting": "正在删除账户…",
++
++  "userMenu.profile": "个人资料",
++  "userMenu.buyCredits": "购买额度",
++  "userMenu.signOut": "退出登录",
++
++  "billing.pro.title": "Pro 计划",
++  "billing.pro.description": "每月 100,000 额度",
++  "billing.pro.pricePerMonth": "${price}/月",
++  "billing.extraTopups": "额外额度加购"
+ }
+
+exec
+bash -lc "python3 - << 'PY'
+import json,sys
+files=[
+    'frontend/src/i18n/locales/zh.json',
+    'frontend/src/i18n/locales/hi.json',
+    'frontend/src/i18n/locales/es.json',
+    'frontend/src/i18n/locales/ar.json',
+    'frontend/src/i18n/locales/en.json',
+]
+for f in files:
+    with open(f,'r',encoding='utf-8') as fh:
+        try:
+            json.load(fh)
+            print(f,'OK')
+        except Exception as e:
+            print(f,'ERROR',e)
+            sys.exit(1)
+PY" in /Users/mayijie/Projects/Code/010_DocTalk succeeded in 52ms:
+frontend/src/i18n/locales/zh.json OK
+frontend/src/i18n/locales/hi.json OK
+frontend/src/i18n/locales/es.json OK
+frontend/src/i18n/locales/ar.json OK
+frontend/src/i18n/locales/en.json OK
+file update:
+diff --git a/frontend/src/i18n/locales/ar.json b/frontend/src/i18n/locales/ar.json
+index 465c93f525002f3c3b948bdbf6e994b7e7b89cbd..400a63fb92b66956fb7fd030c569cc07dd2651fd
+--- a/frontend/src/i18n/locales/ar.json
++++ b/frontend/src/i18n/locales/ar.json
+@@ -77,5 +77,57 @@
+   "billing.purchaseCanceled": "Purchase was canceled.",
+   "billing.error": "An error occurred. Please try again.",
+   "common.cancel": "Cancel",
+-  "common.loading": "Loading..."
++  "common.loading": "Loading...",
++
++  "profile.title": "الملف الشخصي",
++  "profile.tabs.profile": "الملف",
++  "profile.tabs.credits": "الأرصدة",
++  "profile.tabs.usage": "الاستخدام",
++  "profile.tabs.account": "الحساب",
++
++  "profile.info.memberSince": "عضو منذ {days} يومًا",
++  "profile.info.connectedWith": "متصل عبر {provider}",
++
++  "profile.plan.free": "مجاني",
++  "profile.plan.pro": "برو",
++  "profile.plan.upgrade": "الترقية إلى برو",
++  "profile.plan.manage": "إدارة الاشتراك",
++  "profile.plan.monthlyAllowance": "{used} / {total} أرصدة شهرية",
++  "profile.plan.nextRenewal": "يتجدد خلال {days} يومًا",
++
++  "profile.credits.balance": "رصيد الاعتمادات",
++  "profile.credits.buyMore": "شراء أرصدة إضافية",
++  "profile.credits.history": "سجل المعاملات",
++  "profile.credits.noHistory": "لا توجد معاملات بعد",
++  "profile.credits.reason.signup_bonus": "مكافأة التسجيل",
++  "profile.credits.reason.purchase": "شراء أرصدة",
++  "profile.credits.reason.chat": "استخدام الدردشة",
++  "profile.credits.reason.monthly_allowance": "البدل الشهري",
++  "profile.credits.reason.refund": "استرداد",
++
++  "profile.usage.documents": "المستندات",
++  "profile.usage.sessions": "جلسات الدردشة",
++  "profile.usage.messages": "الرسائل",
++  "profile.usage.creditsSpent": "الأرصدة المُستهلكة",
++  "profile.usage.tokensUsed": "الرموز المستخدمة",
++  "profile.usage.modelBreakdown": "الاستخدام حسب النموذج",
++  "profile.usage.model": "النموذج",
++  "profile.usage.calls": "الاستدعاءات",
++  "profile.usage.tokens": "الرموز",
++  "profile.usage.credits": "الأرصدة",
++
++  "profile.account.dangerZone": "منطقة الخطر",
++  "profile.account.deleteAccount": "حذف الحساب",
++  "profile.account.deleteWarning": "سيؤدي ذلك إلى حذف حسابك وجميع المستندات والدردشات والبيانات نهائيًا. لا يمكن التراجع عن هذا الإجراء.",
++  "profile.account.deleteConfirm": "اكتب بريدك الإلكتروني لتأكيد الحذف",
++  "profile.account.deleting": "جارٍ حذف الحساب…",
++
++  "userMenu.profile": "الملف الشخصي",
++  "userMenu.buyCredits": "شراء أرصدة",
++  "userMenu.signOut": "تسجيل الخروج",
++
++  "billing.pro.title": "خطة برو",
++  "billing.pro.description": "100,000 رصيد/شهر",
++  "billing.pro.pricePerMonth": "${price}/شهر",
++  "billing.extraTopups": "شحن أرصدة إضافية"
+ }
+diff --git a/frontend/src/i18n/locales/es.json b/frontend/src/i18n/locales/es.json
+index f269871c3be469ab6012bdb9cf9965608a594b59..e19095bc4d152151c8f447de2449205366a57845
+--- a/frontend/src/i18n/locales/es.json
++++ b/frontend/src/i18n/locales/es.json
+@@ -77,5 +77,57 @@
+   "billing.purchaseCanceled": "Purchase was canceled.",
+   "billing.error": "An error occurred. Please try again.",
+   "common.cancel": "Cancel",
+-  "common.loading": "Loading..."
++  "common.loading": "Loading...",
++
++  "profile.title": "Perfil",
++  "profile.tabs.profile": "Perfil",
++  "profile.tabs.credits": "Créditos",
++  "profile.tabs.usage": "Uso",
++  "profile.tabs.account": "Cuenta",
++
++  "profile.info.memberSince": "Miembro desde hace {days} días",
++  "profile.info.connectedWith": "Conectado con {provider}",
++
++  "profile.plan.free": "Gratis",
++  "profile.plan.pro": "Pro",
++  "profile.plan.upgrade": "Actualizar a Pro",
++  "profile.plan.manage": "Gestionar suscripción",
++  "profile.plan.monthlyAllowance": "{used} / {total} créditos mensuales",
++  "profile.plan.nextRenewal": "Se renueva en {days} días",
++
++  "profile.credits.balance": "Saldo de créditos",
++  "profile.credits.buyMore": "Comprar créditos adicionales",
++  "profile.credits.history": "Historial de transacciones",
++  "profile.credits.noHistory": "Aún no hay transacciones",
++  "profile.credits.reason.signup_bonus": "Bono de registro",
++  "profile.credits.reason.purchase": "Compra de créditos",
++  "profile.credits.reason.chat": "Uso de chat",
++  "profile.credits.reason.monthly_allowance": "Asignación mensual",
++  "profile.credits.reason.refund": "Reembolso",
++
++  "profile.usage.documents": "Documentos",
++  "profile.usage.sessions": "Sesiones de chat",
++  "profile.usage.messages": "Mensajes",
++  "profile.usage.creditsSpent": "Créditos gastados",
++  "profile.usage.tokensUsed": "Tokens usados",
++  "profile.usage.modelBreakdown": "Uso por modelo",
++  "profile.usage.model": "Modelo",
++  "profile.usage.calls": "Llamadas",
++  "profile.usage.tokens": "Tokens",
++  "profile.usage.credits": "Créditos",
++
++  "profile.account.dangerZone": "Zona de peligro",
++  "profile.account.deleteAccount": "Eliminar cuenta",
++  "profile.account.deleteWarning": "Esto eliminará permanentemente tu cuenta, todos los documentos, chats y datos. Esta acción no se puede deshacer.",
++  "profile.account.deleteConfirm": "Escribe tu correo para confirmar la eliminación",
++  "profile.account.deleting": "Eliminando cuenta…",
++
++  "userMenu.profile": "Perfil",
++  "userMenu.buyCredits": "Comprar créditos",
++  "userMenu.signOut": "Cerrar sesión",
++
++  "billing.pro.title": "Plan Pro",
++  "billing.pro.description": "100.000 créditos/mes",
++  "billing.pro.pricePerMonth": "${price}/mes",
++  "billing.extraTopups": "Recargas de créditos adicionales"
+ }
+diff --git a/frontend/src/i18n/locales/hi.json b/frontend/src/i18n/locales/hi.json
+index 6c5aa1fa4d4f2f0f51415a9727c15abf9df3aa31..53732007fe813b6335f8392af9785728c60fdd8c
+--- a/frontend/src/i18n/locales/hi.json
++++ b/frontend/src/i18n/locales/hi.json
+@@ -77,5 +77,57 @@
+   "billing.purchaseCanceled": "Purchase was canceled.",
+   "billing.error": "An error occurred. Please try again.",
+   "common.cancel": "Cancel",
+-  "common.loading": "Loading..."
++  "common.loading": "Loading...",
++
++  "profile.title": "प्रोफ़ाइल",
++  "profile.tabs.profile": "प्रोफ़ाइल",
++  "profile.tabs.credits": "क्रेडिट्स",
++  "profile.tabs.usage": "उपयोग",
++  "profile.tabs.account": "खाता",
++
++  "profile.info.memberSince": "पिछले {days} दिनों से सदस्य",
++  "profile.info.connectedWith": "{provider} से कनेक्टेड",
++
++  "profile.plan.free": "मुफ़्त",
++  "profile.plan.pro": "प्रो",
++  "profile.plan.upgrade": "प्रो में अपग्रेड करें",
++  "profile.plan.manage": "सब्सक्रिप्शन प्रबंधित करें",
++  "profile.plan.monthlyAllowance": "{used} / {total} मासिक क्रेडिट्स",
++  "profile.plan.nextRenewal": "{days} दिनों में नवीनीकरण",
++
++  "profile.credits.balance": "क्रेडिट शेष",
++  "profile.credits.buyMore": "अतिरिक्त क्रेडिट्स खरीदें",
++  "profile.credits.history": "लेनदेन इतिहास",
++  "profile.credits.noHistory": "अभी कोई लेनदेन नहीं",
++  "profile.credits.reason.signup_bonus": "साइनअप बोनस",
++  "profile.credits.reason.purchase": "क्रेडिट खरीद",
++  "profile.credits.reason.chat": "चैट उपयोग",
++  "profile.credits.reason.monthly_allowance": "मासिक भत्ता",
++  "profile.credits.reason.refund": "रिफंड",
++
++  "profile.usage.documents": "दस्तावेज़",
++  "profile.usage.sessions": "चैट सत्र",
++  "profile.usage.messages": "संदेश",
++  "profile.usage.creditsSpent": "खर्च किए गए क्रेडिट्स",
++  "profile.usage.tokensUsed": "उपयोग किए गए टोकन",
++  "profile.usage.modelBreakdown": "मॉडेल अनुसार उपयोग",
++  "profile.usage.model": "मॉडेल",
++  "profile.usage.calls": "कॉल्स",
++  "profile.usage.tokens": "टोकन",
++  "profile.usage.credits": "क्रेडिट्स",
++
++  "profile.account.dangerZone": "खतरे का क्षेत्र",
++  "profile.account.deleteAccount": "खाता हटाएँ",
++  "profile.account.deleteWarning": "यह आपके खाते, सभी दस्तावेज़, चैट और डेटा को स्थायी रूप से हटा देगा। यह क्रिया वापस नहीं की जा सकती।",
++  "profile.account.deleteConfirm": "हटाने की पुष्टि के लिए अपना ईमेल टाइप करें",
++  "profile.account.deleting": "खाता हटाया जा रहा है…",
++
++  "userMenu.profile": "प्रोफ़ाइल",
++  "userMenu.buyCredits": "क्रेडिट्स खरीदें",
++  "userMenu.signOut": "साइन आउट",
++
++  "billing.pro.title": "प्रो प्लान",
++  "billing.pro.description": "100,000 क्रेडिट्स/महीना",
++  "billing.pro.pricePerMonth": "${price}/माह",
++  "billing.extraTopups": "अतिरिक्त क्रेडिट टॉप‑अप्स"
+ }
+diff --git a/frontend/src/i18n/locales/zh.json b/frontend/src/i18n/locales/zh.json
+index f996bf6d27f8f276c69ac8add1473db91c6ff4ee..82ca512fc4aee326c85b88d3ab3edc8e27130edc
+--- a/frontend/src/i18n/locales/zh.json
++++ b/frontend/src/i18n/locales/zh.json
+@@ -146,5 +146,57 @@
+   "demo.pdfPlaceholder": "PDF 预览",
+   "demo.pdfPlaceholderHint": "示例 PDF 将在下次更新中添加",
+ 
+-  "common.backToHome": "返回首页"
++  "common.backToHome": "返回首页",
++
++  "profile.title": "个人资料",
++  "profile.tabs.profile": "资料",
++  "profile.tabs.credits": "额度",
++  "profile.tabs.usage": "用量",
++  "profile.tabs.account": "账户",
++
++  "profile.info.memberSince": "已加入 {days} 天",
++  "profile.info.connectedWith": "已通过 {provider} 连接",
++
++  "profile.plan.free": "免费",
++  "profile.plan.pro": "专业版",
++  "profile.plan.upgrade": "升级到专业版",
++  "profile.plan.manage": "管理订阅",
++  "profile.plan.monthlyAllowance": "{used} / {total} 每月额度",
++  "profile.plan.nextRenewal": "{days} 天后续订",
++
++  "profile.credits.balance": "额度余额",
++  "profile.credits.buyMore": "购买额外额度",
++  "profile.credits.history": "交易记录",
++  "profile.credits.noHistory": "暂无交易记录",
++  "profile.credits.reason.signup_bonus": "注册赠送",
++  "profile.credits.reason.purchase": "购买额度",
++  "profile.credits.reason.chat": "聊天消耗",
++  "profile.credits.reason.monthly_allowance": "每月额度",
++  "profile.credits.reason.refund": "退款",
++
++  "profile.usage.documents": "文档",
++  "profile.usage.sessions": "聊天会话",
++  "profile.usage.messages": "消息",
++  "profile.usage.creditsSpent": "已消耗额度",
++  "profile.usage.tokensUsed": "已使用 Tokens",
++  "profile.usage.modelBreakdown": "按模型统计",
++  "profile.usage.model": "模型",
++  "profile.usage.calls": "调用次数",
++  "profile.usage.tokens": "Tokens",
++  "profile.usage.credits": "额度",
++
++  "profile.account.dangerZone": "危险区域",
++  "profile.account.deleteAccount": "删除账户",
++  "profile.account.deleteWarning": "这将永久删除你的账户、所有文档、对话和数据。此操作无法撤销。",
++  "profile.account.deleteConfirm": "输入你的邮箱以确认删除",
++  "profile.account.deleting": "正在删除账户…",
++
++  "userMenu.profile": "个人资料",
++  "userMenu.buyCredits": "购买额度",
++  "userMenu.signOut": "退出登录",
++
++  "billing.pro.title": "Pro 计划",
++  "billing.pro.description": "每月 100,000 额度",
++  "billing.pro.pricePerMonth": "${price}/月",
++  "billing.extraTopups": "额外额度加购"
+ }
+
+
+
+thinking
+**Considering file referencing**
+
+I’m thinking about how to reference files based on the user’s instructions. They suggest including the relevant start line, which makes me wonder if we really need to. It's optional, but the guideline states we should always include it. So, maybe I could mention the file path and the first key location without highlighting specific lines. However, the rules do say to always include it, so including the path and the line for the first newly added key seems like the safest approach.
+thinking
+**Finding line numbers**
+
+I’m thinking about how to determine exact line numbers after a patch. We can get an approximation by counting lines, but I want to ensure accuracy. Running `nl -ba` would help check line numbers where key additions are made, but it's not strictly necessary. The guideline states we should include it when referencing, so I’ll opt for a robust approach. I’ll call `rg -n '"profile.title":'` to find line numbers across the updated files using ripgrep.
+exec
+bash -lc "rg -n '\"profile.title\"\\s*:' frontend/src/i18n/locales/*.json" in /Users/mayijie/Projects/Code/010_DocTalk succeeded in 15ms:
+frontend/src/i18n/locales/zh.json:151:  "profile.title": "个人资料",
+frontend/src/i18n/locales/hi.json:82:  "profile.title": "प्रोफ़ाइल",
+frontend/src/i18n/locales/fr.json:82:  "profile.title": "Profil",
+frontend/src/i18n/locales/pt.json:82:  "profile.title": "Perfil",
+frontend/src/i18n/locales/ar.json:82:  "profile.title": "الملف الشخصي",
+frontend/src/i18n/locales/bn.json:82:  "profile.title": "প্রোফাইল",
+frontend/src/i18n/locales/es.json:82:  "profile.title": "Perfil",
+frontend/src/i18n/locales/en.json:155:  "profile.title": "Profile",
+file update:
+diff --git a/frontend/src/i18n/locales/ar.json b/frontend/src/i18n/locales/ar.json
+index 465c93f525002f3c3b948bdbf6e994b7e7b89cbd..400a63fb92b66956fb7fd030c569cc07dd2651fd
+--- a/frontend/src/i18n/locales/ar.json
++++ b/frontend/src/i18n/locales/ar.json
+@@ -77,5 +77,57 @@
+   "billing.purchaseCanceled": "Purchase was canceled.",
+   "billing.error": "An error occurred. Please try again.",
+   "common.cancel": "Cancel",
+-  "common.loading": "Loading..."
++  "common.loading": "Loading...",
++
++  "profile.title": "الملف الشخصي",
++  "profile.tabs.profile": "الملف",
++  "profile.tabs.credits": "الأرصدة",
++  "profile.tabs.usage": "الاستخدام",
++  "profile.tabs.account": "الحساب",
++
++  "profile.info.memberSince": "عضو منذ {days} يومًا",
++  "profile.info.connectedWith": "متصل عبر {provider}",
++
++  "profile.plan.free": "مجاني",
++  "profile.plan.pro": "برو",
++  "profile.plan.upgrade": "الترقية إلى برو",
++  "profile.plan.manage": "إدارة الاشتراك",
++  "profile.plan.monthlyAllowance": "{used} / {total} أرصدة شهرية",
++  "profile.plan.nextRenewal": "يتجدد خلال {days} يومًا",
++
++  "profile.credits.balance": "رصيد الاعتمادات",
++  "profile.credits.buyMore": "شراء أرصدة إضافية",
++  "profile.credits.history": "سجل المعاملات",
++  "profile.credits.noHistory": "لا توجد معاملات بعد",
++  "profile.credits.reason.signup_bonus": "مكافأة التسجيل",
++  "profile.credits.reason.purchase": "شراء أرصدة",
++  "profile.credits.reason.chat": "استخدام الدردشة",
++  "profile.credits.reason.monthly_allowance": "البدل الشهري",
++  "profile.credits.reason.refund": "استرداد",
++
++  "profile.usage.documents": "المستندات",
++  "profile.usage.sessions": "جلسات الدردشة",
++  "profile.usage.messages": "الرسائل",
++  "profile.usage.creditsSpent": "الأرصدة المُستهلكة",
++  "profile.usage.tokensUsed": "الرموز المستخدمة",
++  "profile.usage.modelBreakdown": "الاستخدام حسب النموذج",
++  "profile.usage.model": "النموذج",
++  "profile.usage.calls": "الاستدعاءات",
++  "profile.usage.tokens": "الرموز",
++  "profile.usage.credits": "الأرصدة",
++
++  "profile.account.dangerZone": "منطقة الخطر",
++  "profile.account.deleteAccount": "حذف الحساب",
++  "profile.account.deleteWarning": "سيؤدي ذلك إلى حذف حسابك وجميع المستندات والدردشات والبيانات نهائيًا. لا يمكن التراجع عن هذا الإجراء.",
++  "profile.account.deleteConfirm": "اكتب بريدك الإلكتروني لتأكيد الحذف",
++  "profile.account.deleting": "جارٍ حذف الحساب…",
++
++  "userMenu.profile": "الملف الشخصي",
++  "userMenu.buyCredits": "شراء أرصدة",
++  "userMenu.signOut": "تسجيل الخروج",
++
++  "billing.pro.title": "خطة برو",
++  "billing.pro.description": "100,000 رصيد/شهر",
++  "billing.pro.pricePerMonth": "${price}/شهر",
++  "billing.extraTopups": "شحن أرصدة إضافية"
+ }
+diff --git a/frontend/src/i18n/locales/es.json b/frontend/src/i18n/locales/es.json
+index f269871c3be469ab6012bdb9cf9965608a594b59..e19095bc4d152151c8f447de2449205366a57845
+--- a/frontend/src/i18n/locales/es.json
++++ b/frontend/src/i18n/locales/es.json
+@@ -77,5 +77,57 @@
+   "billing.purchaseCanceled": "Purchase was canceled.",
+   "billing.error": "An error occurred. Please try again.",
+   "common.cancel": "Cancel",
+-  "common.loading": "Loading..."
++  "common.loading": "Loading...",
++
++  "profile.title": "Perfil",
++  "profile.tabs.profile": "Perfil",
++  "profile.tabs.credits": "Créditos",
++  "profile.tabs.usage": "Uso",
++  "profile.tabs.account": "Cuenta",
++
++  "profile.info.memberSince": "Miembro desde hace {days} días",
++  "profile.info.connectedWith": "Conectado con {provider}",
++
++  "profile.plan.free": "Gratis",
++  "profile.plan.pro": "Pro",
++  "profile.plan.upgrade": "Actualizar a Pro",
++  "profile.plan.manage": "Gestionar suscripción",
++  "profile.plan.monthlyAllowance": "{used} / {total} créditos mensuales",
++  "profile.plan.nextRenewal": "Se renueva en {days} días",
++
++  "profile.credits.balance": "Saldo de créditos",
++  "profile.credits.buyMore": "Comprar créditos adicionales",
++  "profile.credits.history": "Historial de transacciones",
++  "profile.credits.noHistory": "Aún no hay transacciones",
++  "profile.credits.reason.signup_bonus": "Bono de registro",
++  "profile.credits.reason.purchase": "Compra de créditos",
++  "profile.credits.reason.chat": "Uso de chat",
++  "profile.credits.reason.monthly_allowance": "Asignación mensual",
++  "profile.credits.reason.refund": "Reembolso",
++
++  "profile.usage.documents": "Documentos",
++  "profile.usage.sessions": "Sesiones de chat",
++  "profile.usage.messages": "Mensajes",
++  "profile.usage.creditsSpent": "Créditos gastados",
++  "profile.usage.tokensUsed": "Tokens usados",
++  "profile.usage.modelBreakdown": "Uso por modelo",
++  "profile.usage.model": "Modelo",
++  "profile.usage.calls": "Llamadas",
++  "profile.usage.tokens": "Tokens",
++  "profile.usage.credits": "Créditos",
++
++  "profile.account.dangerZone": "Zona de peligro",
++  "profile.account.deleteAccount": "Eliminar cuenta",
++  "profile.account.deleteWarning": "Esto eliminará permanentemente tu cuenta, todos los documentos, chats y datos. Esta acción no se puede deshacer.",
++  "profile.account.deleteConfirm": "Escribe tu correo para confirmar la eliminación",
++  "profile.account.deleting": "Eliminando cuenta…",
++
++  "userMenu.profile": "Perfil",
++  "userMenu.buyCredits": "Comprar créditos",
++  "userMenu.signOut": "Cerrar sesión",
++
++  "billing.pro.title": "Plan Pro",
++  "billing.pro.description": "100.000 créditos/mes",
++  "billing.pro.pricePerMonth": "${price}/mes",
++  "billing.extraTopups": "Recargas de créditos adicionales"
+ }
+diff --git a/frontend/src/i18n/locales/hi.json b/frontend/src/i18n/locales/hi.json
+index 6c5aa1fa4d4f2f0f51415a9727c15abf9df3aa31..53732007fe813b6335f8392af9785728c60fdd8c
+--- a/frontend/src/i18n/locales/hi.json
++++ b/frontend/src/i18n/locales/hi.json
+@@ -77,5 +77,57 @@
+   "billing.purchaseCanceled": "Purchase was canceled.",
+   "billing.error": "An error occurred. Please try again.",
+   "common.cancel": "Cancel",
+-  "common.loading": "Loading..."
++  "common.loading": "Loading...",
++
++  "profile.title": "प्रोफ़ाइल",
++  "profile.tabs.profile": "प्रोफ़ाइल",
++  "profile.tabs.credits": "क्रेडिट्स",
++  "profile.tabs.usage": "उपयोग",
++  "profile.tabs.account": "खाता",
++
++  "profile.info.memberSince": "पिछले {days} दिनों से सदस्य",
++  "profile.info.connectedWith": "{provider} से कनेक्टेड",
++
++  "profile.plan.free": "मुफ़्त",
++  "profile.plan.pro": "प्रो",
++  "profile.plan.upgrade": "प्रो में अपग्रेड करें",
++  "profile.plan.manage": "सब्सक्रिप्शन प्रबंधित करें",
++  "profile.plan.monthlyAllowance": "{used} / {total} मासिक क्रेडिट्स",
++  "profile.plan.nextRenewal": "{days} दिनों में नवीनीकरण",
++
++  "profile.credits.balance": "क्रेडिट शेष",
++  "profile.credits.buyMore": "अतिरिक्त क्रेडिट्स खरीदें",
++  "profile.credits.history": "लेनदेन इतिहास",
++  "profile.credits.noHistory": "अभी कोई लेनदेन नहीं",
++  "profile.credits.reason.signup_bonus": "साइनअप बोनस",
++  "profile.credits.reason.purchase": "क्रेडिट खरीद",
++  "profile.credits.reason.chat": "चैट उपयोग",
++  "profile.credits.reason.monthly_allowance": "मासिक भत्ता",
++  "profile.credits.reason.refund": "रिफंड",
++
++  "profile.usage.documents": "दस्तावेज़",
++  "profile.usage.sessions": "चैट सत्र",
++  "profile.usage.messages": "संदेश",
++  "profile.usage.creditsSpent": "खर्च किए गए क्रेडिट्स",
++  "profile.usage.tokensUsed": "उपयोग किए गए टोकन",
++  "profile.usage.modelBreakdown": "मॉडेल अनुसार उपयोग",
++  "profile.usage.model": "मॉडेल",
++  "profile.usage.calls": "कॉल्स",
++  "profile.usage.tokens": "टोकन",
++  "profile.usage.credits": "क्रेडिट्स",
++
++  "profile.account.dangerZone": "खतरे का क्षेत्र",
++  "profile.account.deleteAccount": "खाता हटाएँ",
++  "profile.account.deleteWarning": "यह आपके खाते, सभी दस्तावेज़, चैट और डेटा को स्थायी रूप से हटा देगा। यह क्रिया वापस नहीं की जा सकती।",
++  "profile.account.deleteConfirm": "हटाने की पुष्टि के लिए अपना ईमेल टाइप करें",
++  "profile.account.deleting": "खाता हटाया जा रहा है…",
++
++  "userMenu.profile": "प्रोफ़ाइल",
++  "userMenu.buyCredits": "क्रेडिट्स खरीदें",
++  "userMenu.signOut": "साइन आउट",
++
++  "billing.pro.title": "प्रो प्लान",
++  "billing.pro.description": "100,000 क्रेडिट्स/महीना",
++  "billing.pro.pricePerMonth": "${price}/माह",
++  "billing.extraTopups": "अतिरिक्त क्रेडिट टॉप‑अप्स"
+ }
+diff --git a/frontend/src/i18n/locales/zh.json b/frontend/src/i18n/locales/zh.json
+index f996bf6d27f8f276c69ac8add1473db91c6ff4ee..82ca512fc4aee326c85b88d3ab3edc8e27130edc
+--- a/frontend/src/i18n/locales/zh.json
++++ b/frontend/src/i18n/locales/zh.json
+@@ -146,5 +146,57 @@
+   "demo.pdfPlaceholder": "PDF 预览",
+   "demo.pdfPlaceholderHint": "示例 PDF 将在下次更新中添加",
+ 
+-  "common.backToHome": "返回首页"
++  "common.backToHome": "返回首页",
++
++  "profile.title": "个人资料",
++  "profile.tabs.profile": "资料",
++  "profile.tabs.credits": "额度",
++  "profile.tabs.usage": "用量",
++  "profile.tabs.account": "账户",
++
++  "profile.info.memberSince": "已加入 {days} 天",
++  "profile.info.connectedWith": "已通过 {provider} 连接",
++
++  "profile.plan.free": "免费",
++  "profile.plan.pro": "专业版",
++  "profile.plan.upgrade": "升级到专业版",
++  "profile.plan.manage": "管理订阅",
++  "profile.plan.monthlyAllowance": "{used} / {total} 每月额度",
++  "profile.plan.nextRenewal": "{days} 天后续订",
++
++  "profile.credits.balance": "额度余额",
++  "profile.credits.buyMore": "购买额外额度",
++  "profile.credits.history": "交易记录",
++  "profile.credits.noHistory": "暂无交易记录",
++  "profile.credits.reason.signup_bonus": "注册赠送",
++  "profile.credits.reason.purchase": "购买额度",
++  "profile.credits.reason.chat": "聊天消耗",
++  "profile.credits.reason.monthly_allowance": "每月额度",
++  "profile.credits.reason.refund": "退款",
++
++  "profile.usage.documents": "文档",
++  "profile.usage.sessions": "聊天会话",
++  "profile.usage.messages": "消息",
++  "profile.usage.creditsSpent": "已消耗额度",
++  "profile.usage.tokensUsed": "已使用 Tokens",
++  "profile.usage.modelBreakdown": "按模型统计",
++  "profile.usage.model": "模型",
++  "profile.usage.calls": "调用次数",
++  "profile.usage.tokens": "Tokens",
++  "profile.usage.credits": "额度",
++
++  "profile.account.dangerZone": "危险区域",
++  "profile.account.deleteAccount": "删除账户",
++  "profile.account.deleteWarning": "这将永久删除你的账户、所有文档、对话和数据。此操作无法撤销。",
++  "profile.account.deleteConfirm": "输入你的邮箱以确认删除",
++  "profile.account.deleting": "正在删除账户…",
++
++  "userMenu.profile": "个人资料",
++  "userMenu.buyCredits": "购买额度",
++  "userMenu.signOut": "退出登录",
++
++  "billing.pro.title": "Pro 计划",
++  "billing.pro.description": "每月 100,000 额度",
++  "billing.pro.pricePerMonth": "${price}/月",
++  "billing.extraTopups": "额外额度加购"
+ }
+
+codex
+I’ve read all locale files and en.json, then added the missing keys with native translations. Placeholders are preserved and JSON validated.
+
+**Updated Files**
+- frontend/src/i18n/locales/zh.json:151
+- frontend/src/i18n/locales/hi.json:82
+- frontend/src/i18n/locales/es.json:82
+- frontend/src/i18n/locales/ar.json:82
+
+**What I Added**
+- Profile/subscription keys: `profile.*`, `userMenu.profile`, `userMenu.buyCredits`, `userMenu.signOut`
+- Billing keys: `billing.pro.title`, `billing.pro.description`, `billing.pro.pricePerMonth`, `billing.extraTopups`
+
+**Translation Notes**
+- zh: UI localized; “Pro” rendered as 专业版; “credits” as 额度; placeholders kept (e.g., `{days}`, `{used}`, `{total}`, `{provider}`, `{price}`).
+- hi: Natural Hindi with common UI terms transliterated where standard (e.g., “प्रो”, “टोकन”).
+- es: Standard Spanish (“Actualizar a Pro”, “Créditos”, “100.000 créditos/mes”).
+- ar: Proper Arabic, RTL-safe (“خطة برو”, “الاستخدام حسب النموذج”, “${price}/شهر”).
+
+Want me to run a quick UI check or add any tweaks to wording preference (e.g., zh “credits” as “积分” instead of “额度”)?
+file update:
+diff --git a/frontend/src/i18n/locales/ar.json b/frontend/src/i18n/locales/ar.json
+index 465c93f525002f3c3b948bdbf6e994b7e7b89cbd..400a63fb92b66956fb7fd030c569cc07dd2651fd
+--- a/frontend/src/i18n/locales/ar.json
++++ b/frontend/src/i18n/locales/ar.json
+@@ -77,5 +77,57 @@
+   "billing.purchaseCanceled": "Purchase was canceled.",
+   "billing.error": "An error occurred. Please try again.",
+   "common.cancel": "Cancel",
+-  "common.loading": "Loading..."
++  "common.loading": "Loading...",
++
++  "profile.title": "الملف الشخصي",
++  "profile.tabs.profile": "الملف",
++  "profile.tabs.credits": "الأرصدة",
++  "profile.tabs.usage": "الاستخدام",
++  "profile.tabs.account": "الحساب",
++
++  "profile.info.memberSince": "عضو منذ {days} يومًا",
++  "profile.info.connectedWith": "متصل عبر {provider}",
++
++  "profile.plan.free": "مجاني",
++  "profile.plan.pro": "برو",
++  "profile.plan.upgrade": "الترقية إلى برو",
++  "profile.plan.manage": "إدارة الاشتراك",
++  "profile.plan.monthlyAllowance": "{used} / {total} أرصدة شهرية",
++  "profile.plan.nextRenewal": "يتجدد خلال {days} يومًا",
++
++  "profile.credits.balance": "رصيد الاعتمادات",
++  "profile.credits.buyMore": "شراء أرصدة إضافية",
++  "profile.credits.history": "سجل المعاملات",
++  "profile.credits.noHistory": "لا توجد معاملات بعد",
++  "profile.credits.reason.signup_bonus": "مكافأة التسجيل",
++  "profile.credits.reason.purchase": "شراء أرصدة",
++  "profile.credits.reason.chat": "استخدام الدردشة",
++  "profile.credits.reason.monthly_allowance": "البدل الشهري",
++  "profile.credits.reason.refund": "استرداد",
++
++  "profile.usage.documents": "المستندات",
++  "profile.usage.sessions": "جلسات الدردشة",
++  "profile.usage.messages": "الرسائل",
++  "profile.usage.creditsSpent": "الأرصدة المُستهلكة",
++  "profile.usage.tokensUsed": "الرموز المستخدمة",
++  "profile.usage.modelBreakdown": "الاستخدام حسب النموذج",
++  "profile.usage.model": "النموذج",
++  "profile.usage.calls": "الاستدعاءات",
++  "profile.usage.tokens": "الرموز",
++  "profile.usage.credits": "الأرصدة",
++
++  "profile.account.dangerZone": "منطقة الخطر",
++  "profile.account.deleteAccount": "حذف الحساب",
++  "profile.account.deleteWarning": "سيؤدي ذلك إلى حذف حسابك وجميع المستندات والدردشات والبيانات نهائيًا. لا يمكن التراجع عن هذا الإجراء.",
++  "profile.account.deleteConfirm": "اكتب بريدك الإلكتروني لتأكيد الحذف",
++  "profile.account.deleting": "جارٍ حذف الحساب…",
++
++  "userMenu.profile": "الملف الشخصي",
++  "userMenu.buyCredits": "شراء أرصدة",
++  "userMenu.signOut": "تسجيل الخروج",
++
++  "billing.pro.title": "خطة برو",
++  "billing.pro.description": "100,000 رصيد/شهر",
++  "billing.pro.pricePerMonth": "${price}/شهر",
++  "billing.extraTopups": "شحن أرصدة إضافية"
+ }
+diff --git a/frontend/src/i18n/locales/es.json b/frontend/src/i18n/locales/es.json
+index f269871c3be469ab6012bdb9cf9965608a594b59..e19095bc4d152151c8f447de2449205366a57845
+--- a/frontend/src/i18n/locales/es.json
++++ b/frontend/src/i18n/locales/es.json
+@@ -77,5 +77,57 @@
+   "billing.purchaseCanceled": "Purchase was canceled.",
+   "billing.error": "An error occurred. Please try again.",
+   "common.cancel": "Cancel",
+-  "common.loading": "Loading..."
++  "common.loading": "Loading...",
++
++  "profile.title": "Perfil",
++  "profile.tabs.profile": "Perfil",
++  "profile.tabs.credits": "Créditos",
++  "profile.tabs.usage": "Uso",
++  "profile.tabs.account": "Cuenta",
++
++  "profile.info.memberSince": "Miembro desde hace {days} días",
++  "profile.info.connectedWith": "Conectado con {provider}",
++
++  "profile.plan.free": "Gratis",
++  "profile.plan.pro": "Pro",
++  "profile.plan.upgrade": "Actualizar a Pro",
++  "profile.plan.manage": "Gestionar suscripción",
++  "profile.plan.monthlyAllowance": "{used} / {total} créditos mensuales",
++  "profile.plan.nextRenewal": "Se renueva en {days} días",
++
++  "profile.credits.balance": "Saldo de créditos",
++  "profile.credits.buyMore": "Comprar créditos adicionales",
++  "profile.credits.history": "Historial de transacciones",
++  "profile.credits.noHistory": "Aún no hay transacciones",
++  "profile.credits.reason.signup_bonus": "Bono de registro",
++  "profile.credits.reason.purchase": "Compra de créditos",
++  "profile.credits.reason.chat": "Uso de chat",
++  "profile.credits.reason.monthly_allowance": "Asignación mensual",
++  "profile.credits.reason.refund": "Reembolso",
++
++  "profile.usage.documents": "Documentos",
++  "profile.usage.sessions": "Sesiones de chat",
++  "profile.usage.messages": "Mensajes",
++  "profile.usage.creditsSpent": "Créditos gastados",
++  "profile.usage.tokensUsed": "Tokens usados",
++  "profile.usage.modelBreakdown": "Uso por modelo",
++  "profile.usage.model": "Modelo",
++  "profile.usage.calls": "Llamadas",
++  "profile.usage.tokens": "Tokens",
++  "profile.usage.credits": "Créditos",
++
++  "profile.account.dangerZone": "Zona de peligro",
++  "profile.account.deleteAccount": "Eliminar cuenta",
++  "profile.account.deleteWarning": "Esto eliminará permanentemente tu cuenta, todos los documentos, chats y datos. Esta acción no se puede deshacer.",
++  "profile.account.deleteConfirm": "Escribe tu correo para confirmar la eliminación",
++  "profile.account.deleting": "Eliminando cuenta…",
++
++  "userMenu.profile": "Perfil",
++  "userMenu.buyCredits": "Comprar créditos",
++  "userMenu.signOut": "Cerrar sesión",
++
++  "billing.pro.title": "Plan Pro",
++  "billing.pro.description": "100.000 créditos/mes",
++  "billing.pro.pricePerMonth": "${price}/mes",
++  "billing.extraTopups": "Recargas de créditos adicionales"
+ }
+diff --git a/frontend/src/i18n/locales/hi.json b/frontend/src/i18n/locales/hi.json
+index 6c5aa1fa4d4f2f0f51415a9727c15abf9df3aa31..53732007fe813b6335f8392af9785728c60fdd8c
+--- a/frontend/src/i18n/locales/hi.json
++++ b/frontend/src/i18n/locales/hi.json
+@@ -77,5 +77,57 @@
+   "billing.purchaseCanceled": "Purchase was canceled.",
+   "billing.error": "An error occurred. Please try again.",
+   "common.cancel": "Cancel",
+-  "common.loading": "Loading..."
++  "common.loading": "Loading...",
++
++  "profile.title": "प्रोफ़ाइल",
++  "profile.tabs.profile": "प्रोफ़ाइल",
++  "profile.tabs.credits": "क्रेडिट्स",
++  "profile.tabs.usage": "उपयोग",
++  "profile.tabs.account": "खाता",
++
++  "profile.info.memberSince": "पिछले {days} दिनों से सदस्य",
++  "profile.info.connectedWith": "{provider} से कनेक्टेड",
++
++  "profile.plan.free": "मुफ़्त",
++  "profile.plan.pro": "प्रो",
++  "profile.plan.upgrade": "प्रो में अपग्रेड करें",
++  "profile.plan.manage": "सब्सक्रिप्शन प्रबंधित करें",
++  "profile.plan.monthlyAllowance": "{used} / {total} मासिक क्रेडिट्स",
++  "profile.plan.nextRenewal": "{days} दिनों में नवीनीकरण",
++
++  "profile.credits.balance": "क्रेडिट शेष",
++  "profile.credits.buyMore": "अतिरिक्त क्रेडिट्स खरीदें",
++  "profile.credits.history": "लेनदेन इतिहास",
++  "profile.credits.noHistory": "अभी कोई लेनदेन नहीं",
++  "profile.credits.reason.signup_bonus": "साइनअप बोनस",
++  "profile.credits.reason.purchase": "क्रेडिट खरीद",
++  "profile.credits.reason.chat": "चैट उपयोग",
++  "profile.credits.reason.monthly_allowance": "मासिक भत्ता",
++  "profile.credits.reason.refund": "रिफंड",
++
++  "profile.usage.documents": "दस्तावेज़",
++  "profile.usage.sessions": "चैट सत्र",
++  "profile.usage.messages": "संदेश",
++  "profile.usage.creditsSpent": "खर्च किए गए क्रेडिट्स",
++  "profile.usage.tokensUsed": "उपयोग किए गए टोकन",
++  "profile.usage.modelBreakdown": "मॉडेल अनुसार उपयोग",
++  "profile.usage.model": "मॉडेल",
++  "profile.usage.calls": "कॉल्स",
++  "profile.usage.tokens": "टोकन",
++  "profile.usage.credits": "क्रेडिट्स",
++
++  "profile.account.dangerZone": "खतरे का क्षेत्र",
++  "profile.account.deleteAccount": "खाता हटाएँ",
++  "profile.account.deleteWarning": "यह आपके खाते, सभी दस्तावेज़, चैट और डेटा को स्थायी रूप से हटा देगा। यह क्रिया वापस नहीं की जा सकती।",
++  "profile.account.deleteConfirm": "हटाने की पुष्टि के लिए अपना ईमेल टाइप करें",
++  "profile.account.deleting": "खाता हटाया जा रहा है…",
++
++  "userMenu.profile": "प्रोफ़ाइल",
++  "userMenu.buyCredits": "क्रेडिट्स खरीदें",
++  "userMenu.signOut": "साइन आउट",
++
++  "billing.pro.title": "प्रो प्लान",
++  "billing.pro.description": "100,000 क्रेडिट्स/महीना",
++  "billing.pro.pricePerMonth": "${price}/माह",
++  "billing.extraTopups": "अतिरिक्त क्रेडिट टॉप‑अप्स"
+ }
+diff --git a/frontend/src/i18n/locales/zh.json b/frontend/src/i18n/locales/zh.json
+index f996bf6d27f8f276c69ac8add1473db91c6ff4ee..82ca512fc4aee326c85b88d3ab3edc8e27130edc
+--- a/frontend/src/i18n/locales/zh.json
++++ b/frontend/src/i18n/locales/zh.json
+@@ -146,5 +146,57 @@
+   "demo.pdfPlaceholder": "PDF 预览",
+   "demo.pdfPlaceholderHint": "示例 PDF 将在下次更新中添加",
+ 
+-  "common.backToHome": "返回首页"
++  "common.backToHome": "返回首页",
++
++  "profile.title": "个人资料",
++  "profile.tabs.profile": "资料",
++  "profile.tabs.credits": "额度",
++  "profile.tabs.usage": "用量",
++  "profile.tabs.account": "账户",
++
++  "profile.info.memberSince": "已加入 {days} 天",
++  "profile.info.connectedWith": "已通过 {provider} 连接",
++
++  "profile.plan.free": "免费",
++  "profile.plan.pro": "专业版",
++  "profile.plan.upgrade": "升级到专业版",
++  "profile.plan.manage": "管理订阅",
++  "profile.plan.monthlyAllowance": "{used} / {total} 每月额度",
++  "profile.plan.nextRenewal": "{days} 天后续订",
++
++  "profile.credits.balance": "额度余额",
++  "profile.credits.buyMore": "购买额外额度",
++  "profile.credits.history": "交易记录",
++  "profile.credits.noHistory": "暂无交易记录",
++  "profile.credits.reason.signup_bonus": "注册赠送",
++  "profile.credits.reason.purchase": "购买额度",
++  "profile.credits.reason.chat": "聊天消耗",
++  "profile.credits.reason.monthly_allowance": "每月额度",
++  "profile.credits.reason.refund": "退款",
++
++  "profile.usage.documents": "文档",
++  "profile.usage.sessions": "聊天会话",
++  "profile.usage.messages": "消息",
++  "profile.usage.creditsSpent": "已消耗额度",
++  "profile.usage.tokensUsed": "已使用 Tokens",
++  "profile.usage.modelBreakdown": "按模型统计",
++  "profile.usage.model": "模型",
++  "profile.usage.calls": "调用次数",
++  "profile.usage.tokens": "Tokens",
++  "profile.usage.credits": "额度",
++
++  "profile.account.dangerZone": "危险区域",
++  "profile.account.deleteAccount": "删除账户",
++  "profile.account.deleteWarning": "这将永久删除你的账户、所有文档、对话和数据。此操作无法撤销。",
++  "profile.account.deleteConfirm": "输入你的邮箱以确认删除",
++  "profile.account.deleting": "正在删除账户…",
++
++  "userMenu.profile": "个人资料",
++  "userMenu.buyCredits": "购买额度",
++  "userMenu.signOut": "退出登录",
++
++  "billing.pro.title": "Pro 计划",
++  "billing.pro.description": "每月 100,000 额度",
++  "billing.pro.pricePerMonth": "${price}/月",
++  "billing.extraTopups": "额外额度加购"
+ }
+
+tokens used
+147,283
+I’ve read all locale files and en.json, then added the missing keys with native translations. Placeholders are preserved and JSON validated.
+
+**Updated Files**
+- frontend/src/i18n/locales/zh.json:151
+- frontend/src/i18n/locales/hi.json:82
+- frontend/src/i18n/locales/es.json:82
+- frontend/src/i18n/locales/ar.json:82
+
+**What I Added**
+- Profile/subscription keys: `profile.*`, `userMenu.profile`, `userMenu.buyCredits`, `userMenu.signOut`
+- Billing keys: `billing.pro.title`, `billing.pro.description`, `billing.pro.pricePerMonth`, `billing.extraTopups`
+
+**Translation Notes**
+- zh: UI localized; “Pro” rendered as 专业版; “credits” as 额度; placeholders kept (e.g., `{days}`, `{used}`, `{total}`, `{provider}`, `{price}`).
+- hi: Natural Hindi with common UI terms transliterated where standard (e.g., “प्रो”, “टोकन”).
+- es: Standard Spanish (“Actualizar a Pro”, “Créditos”, “100.000 créditos/mes”).
+- ar: Proper Arabic, RTL-safe (“خطة برو”, “الاستخدام حسب النموذج”, “${price}/شهر”).
+
+Want me to run a quick UI check or add any tweaks to wording preference (e.g., zh “credits” as “积分” instead of “额度”)?
