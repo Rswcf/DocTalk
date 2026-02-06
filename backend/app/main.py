@@ -92,3 +92,29 @@ def on_startup() -> None:
 @app.get("/health")
 async def health() -> dict:
     return {"status": "ok"}
+
+
+@app.post("/admin/retry-stuck")
+async def retry_stuck_documents():
+    """Temporary admin endpoint to re-dispatch stuck parse tasks."""
+    from sqlalchemy import select as sa_select
+    from app.models.database import AsyncSessionLocal as async_session_factory
+    from app.models.tables import Document
+
+    async with async_session_factory() as db:
+        rows = await db.execute(
+            sa_select(Document.id, Document.filename, Document.status)
+            .where(Document.status.in_(["parsing", "embedding"]))
+        )
+        stuck = list(rows.all())
+
+    results = []
+    for doc in stuck:
+        try:
+            from app.workers.parse_worker import parse_document
+            parse_document.delay(str(doc.id))
+            results.append({"id": str(doc.id), "filename": doc.filename, "dispatched": True})
+        except Exception as e:
+            results.append({"id": str(doc.id), "filename": doc.filename, "error": str(e)})
+
+    return {"stuck_count": len(stuck), "results": results}
