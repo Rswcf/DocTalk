@@ -118,3 +118,27 @@ async def retry_stuck_documents():
             results.append({"id": str(doc.id), "filename": doc.filename, "error": str(e)})
 
     return {"stuck_count": len(stuck), "results": results}
+
+
+@app.get("/admin/documents")
+async def list_all_documents():
+    """Temporary admin endpoint to list all documents with status."""
+    from sqlalchemy import select as sa_select
+    from app.models.database import AsyncSessionLocal as async_session_factory
+    from app.models.tables import Document
+
+    async with async_session_factory() as db:
+        rows = await db.execute(
+            sa_select(Document.id, Document.filename, Document.status, Document.pages_parsed, Document.chunks_total, Document.chunks_indexed, Document.error_msg)
+            .order_by(Document.created_at.desc())
+            .limit(20)
+        )
+        docs = [
+            {
+                "id": str(r.id), "filename": r.filename, "status": r.status,
+                "pages_parsed": r.pages_parsed, "chunks_total": r.chunks_total,
+                "chunks_indexed": r.chunks_indexed, "error_msg": r.error_msg,
+            }
+            for r in rows.all()
+        ]
+    return {"documents": docs}
