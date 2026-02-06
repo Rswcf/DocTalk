@@ -147,3 +147,16 @@ export async function createPortalSession(): Promise<{ portal_url: string }> {
   const res = await fetch(PROXY_BASE + '/api/billing/portal', { method: 'POST' });
   return handle(res);
 }
+
+export interface DemoDocument {
+  slug: string;
+  document_id: string;
+  filename: string;
+  status: string;
+}
+
+export async function getDemoDocuments(): Promise<DemoDocument[]> {
+  const res = await fetch(`${PROXY_BASE}/api/documents/demo`);
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  return res.json();
+}

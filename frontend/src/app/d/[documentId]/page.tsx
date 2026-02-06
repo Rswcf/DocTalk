@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
+import { useSession } from 'next-auth/react';
 import { PdfViewer } from '../../../components/PdfViewer';
 import { ChatPanel } from '../../../components/Chat';
 import Header from '../../../components/Header';
@@ -14,7 +15,10 @@ export default function DocumentReaderPage() {
   const params = useParams<{ documentId: string }>();
   const documentId = params?.documentId as string;
   const router = useRouter();
+  const { status: authStatus } = useSession();
+  const isLoggedIn = authStatus === 'authenticated';
   const [error, setError] = useState<string | null>(null);
+  const [isDemo, setIsDemo] = useState(false);
   const { t } = useLocale();
   const {
     pdfUrl,
@@ -42,6 +46,7 @@ export default function DocumentReaderPage() {
       try {
         const info = await getDocument(documentId);
         setDocumentStatus(info.status);
+        if (info.is_demo) setIsDemo(true);
         if (info.filename) {
           setDocumentName(info.filename);
           setLastDocument(documentId, info.filename);
@@ -115,7 +120,7 @@ export default function DocumentReaderPage() {
           <Panel defaultSize={50} minSize={25}>
             <div className="h-full min-w-[320px]">
               {sessionId ? (
-                <ChatPanel sessionId={sessionId} onCitationClick={navigateToCitation} />
+                <ChatPanel sessionId={sessionId} onCitationClick={navigateToCitation} maxUserMessages={isDemo && !isLoggedIn ? 5 : undefined} />
               ) : (
                 <div className="h-full w-full flex items-center justify-center text-gray-500">{t('doc.initChat')}</div>
               )}

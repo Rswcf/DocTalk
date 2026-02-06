@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useRef, useState, useCallback, Component, ErrorInfo, ReactNode } from 'react';
+import { useRouter } from 'next/navigation';
 import { SendHorizontal } from 'lucide-react';
 import { chatStream } from '../../lib/sse';
 import type { Citation, Message } from '../../types';
@@ -71,11 +72,12 @@ function renumberCitations(citations: Citation[]): Citation[] {
 interface ChatPanelProps {
   sessionId: string;
   onCitationClick: (c: Citation) => void;
+  maxUserMessages?: number;
 }
 
 const SUGGESTED_KEYS = ['chat.suggestedQ1', 'chat.suggestedQ2', 'chat.suggestedQ3', 'chat.suggestedQ4'] as const;
 
-export default function ChatPanel({ sessionId, onCitationClick }: ChatPanelProps) {
+export default function ChatPanel({ sessionId, onCitationClick, maxUserMessages }: ChatPanelProps) {
   const { messages, isStreaming, addMessage, updateLastMessage, addCitationToLastMessage, setStreaming, updateSessionActivity } = useDocTalkStore();
   const selectedModel = useDocTalkStore((s) => s.selectedModel);
   const { t } = useLocale();
@@ -83,6 +85,13 @@ export default function ChatPanel({ sessionId, onCitationClick }: ChatPanelProps
   const listRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [showPaywall, setShowPaywall] = useState(false);
+
+  // Demo mode: track user message count
+  const userMsgCount = maxUserMessages != null
+    ? messages.filter((m) => m.role === 'user').length
+    : 0;
+  const demoRemaining = maxUserMessages != null ? maxUserMessages - userMsgCount : Infinity;
+  const demoLimitReached = maxUserMessages != null && demoRemaining <= 0;
 
   // Message history is loaded in page.tsx
 
@@ -99,8 +108,15 @@ export default function ChatPanel({ sessionId, onCitationClick }: ChatPanelProps
     }
   }, [input]);
 
+  const router = useRouter();
+
   const sendMessage = useCallback(async (text: string) => {
     if (!text.trim() || isStreaming) return;
+    // Demo limit check (client-side)
+    if (demoLimitReached) {
+      router.push('?auth=1', { scroll: false });
+      return;
+    }
     const userMsg: Message = { id: `m_${Date.now()}_u`, role: 'user', text, createdAt: Date.now() };
     addMessage(userMsg);
     const asstMsg: Message = { id: `m_${Date.now()}_a`, role: 'assistant', text: '', citations: [], createdAt: Date.now() };
@@ -119,6 +135,18 @@ export default function ChatPanel({ sessionId, onCitationClick }: ChatPanelProps
         if (isPaymentRequired) {
           setShowPaywall(true);
         }
+        // Detect demo limit (HTTP 429) — show sign-in prompt
+        const isDemoLimit = typeof err?.message === 'string' && err.message.includes('HTTP 429');
+        if (isDemoLimit) {
+          const limitMsg: Message = {
+            id: `m_${Date.now()}_limit`,
+            role: 'assistant',
+            text: t('demo.limitReachedMessage'),
+            createdAt: Date.now(),
+          };
+          addMessage(limitMsg);
+          return;
+        }
         const errText = `${t('chat.error')}${err?.message || t('chat.networkError')}`;
         const errorMsg: Message = {
           id: `m_${Date.now()}_e`,
@@ -133,7 +161,7 @@ export default function ChatPanel({ sessionId, onCitationClick }: ChatPanelProps
       selectedModel,
     );
     setInput('');
-  }, [isStreaming, sessionId, addMessage, updateLastMessage, addCitationToLastMessage, setStreaming, selectedModel, t, updateSessionActivity]);
+  }, [isStreaming, demoLimitReached, sessionId, addMessage, updateLastMessage, addCitationToLastMessage, setStreaming, selectedModel, t, updateSessionActivity, router]);
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -205,23 +233,47 @@ export default function ChatPanel({ sessionId, onCitationClick }: ChatPanelProps
           })
         )}
       </div>
+      {maxUserMessages != null && (
+        <div className="px-4 py-2 bg-gray-100 dark:bg-gray-800 text-sm text-gray-600 dark:text-gray-400 border-t dark:border-gray-700 flex items-center justify-between">
+          <span>
+            {t('demo.questionsRemaining', { remaining: Math.max(0, demoRemaining), total: maxUserMessages })}
+          </span>
+          {!demoLimitReached ? (
+            <button
+              type="button"
+              onClick={() => router.push('?auth=1', { scroll: false })}
+              className="text-blue-600 dark:text-blue-400 hover:underline text-sm"
+            >
+              {t('demo.signInForUnlimited')}
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={() => router.push('?auth=1', { scroll: false })}
+              className="text-blue-600 dark:text-blue-400 hover:underline text-sm font-medium"
+            >
+              {t('demo.signInToContinue')}
+            </button>
+          )}
+        </div>
+      )}
       <form onSubmit={onSubmit} className="p-3 border-t dark:border-gray-700">
         <div className="flex items-end gap-2">
           <textarea
             ref={textareaRef}
             className="flex-1 border rounded-xl px-3 py-2 text-sm resize-none overflow-y-auto focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-100"
             style={{ minHeight: '40px', maxHeight: '160px' }}
-            placeholder={t('chat.placeholder')}
+            placeholder={demoLimitReached ? t('demo.signInToContinue') : t('chat.placeholder')}
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={onKeyDown}
-            disabled={isStreaming}
+            disabled={isStreaming || demoLimitReached}
             rows={1}
           />
           <button
             type="submit"
             className="p-2 bg-blue-600 text-white rounded-xl disabled:opacity-60 hover:bg-blue-700 transition-colors shrink-0"
-            disabled={isStreaming || !input.trim()}
+            disabled={isStreaming || !input.trim() || demoLimitReached}
             title={t('chat.send')}
           >
             <SendHorizontal size={18} />

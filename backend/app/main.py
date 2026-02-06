@@ -80,10 +80,18 @@ def on_startup() -> None:
         except Exception as e:
             logger.warning("Stuck document retry failed: %s", e)
 
+    def _seed_demo_documents() -> None:
+        try:
+            from app.services.demo_seed import seed_demo_documents
+            seed_demo_documents()
+        except Exception as e:
+            logger.warning("Demo document seeding failed: %s", e)
+
     # Run service initialization in background so app starts immediately
     def _startup_tasks() -> None:
         _init_services()
         _retry_stuck_documents()
+        _seed_demo_documents()
 
     t = threading.Thread(target=_startup_tasks, daemon=True)
     t.start()

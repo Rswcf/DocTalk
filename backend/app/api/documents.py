@@ -51,6 +51,31 @@ async def list_documents(
     return []
 
 
+@documents_router.get("/demo")
+async def get_demo_documents(
+    db: AsyncSession = Depends(get_db_session),
+):
+    """Return list of demo documents for the demo selection page."""
+    from sqlalchemy import select
+    from app.models.tables import Document
+
+    result = await db.execute(
+        select(Document)
+        .where(Document.demo_slug.isnot(None))
+        .order_by(Document.demo_slug)
+    )
+    docs = result.scalars().all()
+    return [
+        {
+            "slug": d.demo_slug,
+            "document_id": str(d.id),
+            "filename": d.filename,
+            "status": d.status,
+        }
+        for d in docs
+    ]
+
+
 @documents_router.post("/upload", status_code=status.HTTP_202_ACCEPTED)
 async def upload_document(
     file: UploadFile = File(...),

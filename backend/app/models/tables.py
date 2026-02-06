@@ -42,6 +42,15 @@ class Document(Base):
         index=True,
     )
 
+    # Demo documents have a slug (e.g. "nvidia-10k"); user docs have None
+    demo_slug: Mapped[Optional[str]] = mapped_column(
+        sa.String(50), nullable=True, unique=True
+    )
+
+    @property
+    def is_demo(self) -> bool:
+        return self.demo_slug is not None
+
     pages: Mapped[List[Page]] = relationship("Page", back_populates="document", cascade="all, delete-orphan")
     chunks: Mapped[List[Chunk]] = relationship("Chunk", back_populates="document", cascade="all, delete-orphan")
     sessions: Mapped[List[ChatSession]] = relationship(

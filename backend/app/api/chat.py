@@ -131,6 +131,19 @@ async def chat_stream(
     if not session:
         return JSONResponse(status_code=404, content={"detail": "Session not found"})
 
+    # Enforce 5-message limit for anonymous users on demo documents
+    DEMO_MESSAGE_LIMIT = 5
+    if user is None and session.document and session.document.demo_slug:
+        msg_count = await db.execute(
+            select(func.count(Message.id))
+            .where(Message.session_id == session_id, Message.role == "user")
+        )
+        if msg_count.scalar() >= DEMO_MESSAGE_LIMIT:
+            return JSONResponse(
+                status_code=429,
+                content={"detail": "Demo message limit reached", "limit": DEMO_MESSAGE_LIMIT},
+            )
+
     # If authenticated, ensure sufficient credits before opening stream
     if user is not None:
         from app.services.credit_service import ensure_monthly_credits
