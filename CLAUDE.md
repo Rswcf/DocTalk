@@ -310,7 +310,8 @@ DocTalk/
 │   └── package.json
 ├── .collab/                      # CC ↔ CX 协作文档
 ├── docs/
-│   └── ARCHITECTURE.md           # 架构文档 (Mermaid 图表)
+│   ├── ARCHITECTURE.md           # 架构文档 - 英文 (Mermaid 图表)
+│   └── ARCHITECTURE.zh.md       # 架构文档 - 中文
 ├── docker-compose.yml
 ├── README.md                     # 英文 README (与 README.zh.md 保持同步)
 ├── README.zh.md                  # 中文 README (与 README.md 保持同步)

@@ -1,0 +1,587 @@
+# DocTalk 架构文档
+
+[English](ARCHITECTURE.md)
+
+本文档通过 Mermaid 图表深入介绍 DocTalk 的架构，涵盖系统拓扑、数据流、认证、计费、数据库模型和前端组件结构。
+
+---
+
+## 1. 系统总览
+
+```mermaid
+graph TB
+    Browser["浏览器"]
+
+    subgraph Vercel["Vercel (前端)"]
+        NextJS["Next.js 14<br/>App Router"]
+        AuthJS["Auth.js v5<br/>Google OAuth"]
+        Proxy["API 代理<br/>/api/proxy/*<br/>JWT 注入"]
+    end
+
+    subgraph Railway["Railway (后端)"]
+        FastAPI["FastAPI<br/>REST + SSE"]
+        Celery["Celery Worker<br/>PDF 解析 + 向量化"]
+    end
+
+    subgraph DataStores["数据存储 (Railway)"]
+        PG["PostgreSQL 16"]
+        Qdrant["Qdrant<br/>向量搜索"]
+        Redis["Redis<br/>Celery 消息队列 + 缓存"]
+        MinIO["MinIO / S3<br/>PDF 存储"]
+    end
+
+    subgraph External["外部服务"]
+        OpenRouter["OpenRouter<br/>LLM + Embedding API"]
+        Stripe["Stripe<br/>支付"]
+        Google["Google OAuth"]
+    end
+
+    Browser -->|HTTPS| NextJS
+    NextJS --> AuthJS
+    NextJS --> Proxy
+    Proxy -->|HS256 JWT| FastAPI
+    FastAPI --> PG
+    FastAPI --> Qdrant
+    FastAPI --> Redis
+    FastAPI --> MinIO
+    FastAPI --> OpenRouter
+    FastAPI --> Stripe
+    Celery --> PG
+    Celery --> Qdrant
+    Celery --> MinIO
+    Celery --> OpenRouter
+    Redis -.->|任务队列| Celery
+    AuthJS --> Google
+    Browser -->|Presigned URL| MinIO
+```
+
+**各组件职责：**
+
+| 组件 | 职责 |
+|------|------|
+| **Next.js** | 客户端渲染 SPA（`"use client"`），负责路由、国际化和 UI 状态管理（Zustand） |
+| **Auth.js v5** | Google OAuth 认证，加密 JWE 会话令牌 |
+| **API 代理** | 将 JWE 令牌转换为 HS256 JWT，为所有后端请求注入 `Authorization` 头 |
+| **FastAPI** | REST API + SSE 流式传输，处理对话、文档管理、计费、用户账户 |
+| **Celery** | 异步 PDF 解析：文本提取 → 分块 → 向量化 → 索引 |
+| **PostgreSQL** | 主数据存储：用户、文档、页面、文本块、会话、消息、积分 |
+| **Qdrant** | 向量数据库，语义搜索（COSINE 相似度，1536 维） |
+| **Redis** | Celery 任务代理和结果后端 |
+| **MinIO** | S3 兼容对象存储，用于上传的 PDF 文件 |
+| **OpenRouter** | LLM 推理和文本向量化的统一网关 |
+| **Stripe** | 积分购买和 Pro 订阅的支付处理 |
+
+---
+
+## 2. PDF 上传与解析流水线
+
+```mermaid
+sequenceDiagram
+    participant B as 浏览器
+    participant P as API 代理
+    participant API as FastAPI
+    participant S3 as MinIO
+    participant R as Redis
+    participant W as Celery Worker
+    participant DB as PostgreSQL
+    participant Q as Qdrant
+    participant OR as OpenRouter
+
+    B->>P: POST /api/proxy/documents/upload<br/>(multipart/form-data)
+    P->>API: 携带 JWT 转发
+    API->>S3: 上传 PDF 二进制文件
+    S3-->>API: storage_key
+    API->>DB: INSERT document (status=uploading)
+    API->>R: 分发 parse_document 任务
+    API-->>B: 201 {document_id, status: "parsing"}
+
+    Note over W: Celery 接收任务
+    W->>S3: 下载 PDF
+    W->>W: PyMuPDF: 按页提取文本 + 边界框
+    W->>DB: INSERT pages (page_number, width, height)
+    W->>W: 文本分块 (300-500 tokens)<br/>标题检测，页眉页脚过滤
+    W->>DB: INSERT chunks (text, bboxes, page_start, page_end)
+
+    loop 按批次处理文本块
+        W->>OR: POST /embeddings<br/>model: text-embedding-3-small
+        OR-->>W: 向量 (1536 维)
+        W->>Q: 插入向量到 doc_chunks 集合
+        W->>DB: UPDATE chunk.vector_id, document.chunks_indexed
+    end
+
+    W->>DB: UPDATE document status=ready
+```
+
+**逐步说明：**
+
+1. **上传**：浏览器通过 API 代理以 multipart 表单发送 PDF。后端将文件存储到 MinIO 并创建文档记录。
+
+2. **文本提取**：Celery Worker 下载 PDF，使用 **PyMuPDF (fitz)** 按页提取文本及边界框坐标。坐标归一化到 `[0, 1]` 范围（左上角原点）。
+
+3. **分块**：文本被分割为 300–500 token 的窗口，具有以下特性：
+   - 标题检测用于识别章节标题
+   - 页眉/页脚过滤以移除重复的页面元素
+   - 每个文本块存储 `page_start`、`page_end` 和 `bboxes`（归一化矩形的 JSONB 数组）
+
+4. **向量化**：文本块按批次发送到 OpenRouter 的 `openai/text-embedding-3-small` 端点，生成 1536 维向量。
+
+5. **向量索引**：向量插入到 Qdrant 的 `doc_chunks` 集合中，使用 COSINE 相似度度量。集合维度由配置驱动（`EMBEDDING_DIM`）。
+
+6. **完成**：文档状态从 `parsing` 转换为 `ready`。前端轮询状态并切换到文档阅读器。
+
+---
+
+## 3. 对话与引用流程
+
+```mermaid
+sequenceDiagram
+    participant U as 用户
+    participant CP as ChatPanel
+    participant P as API 代理
+    participant API as FastAPI
+    participant CS as CreditService
+    participant Q as Qdrant
+    participant OR as OpenRouter
+    participant FSM as RefParserFSM
+    participant DB as PostgreSQL
+
+    U->>CP: 输入问题并发送
+    CP->>P: POST /api/proxy/sessions/{id}/chat<br/>{message, model?}
+    P->>API: 携带 JWT 转发
+
+    API->>CS: ensure_monthly_credits(user)
+    API->>CS: check_balance(user)
+    CS-->>API: OK（余额充足）
+
+    API->>Q: 向量搜索（top 5 文本块）
+    Q-->>API: 匹配的文本块及分数
+
+    API->>OR: POST /chat/completions (stream=true)<br/>系统提示 + 编号文档片段 + 用户问题
+
+    loop SSE Token 流
+        OR-->>API: token
+        API->>FSM: 将 token 输入 RefParserFSM
+        FSM-->>API: 解析后的文本 + 引用标记 [n]
+        API-->>P: SSE 事件: {token, citations?}
+        P-->>CP: 转发 SSE
+        CP->>CP: 追加到消息气泡
+    end
+
+    API->>DB: INSERT message (content, citations, token counts)
+    API->>CS: 扣除积分（基于模型 + token 数量）
+    API-->>P: SSE 事件: DONE
+    CP->>CP: renumberCitations() → 连续编号 [1][2][3]
+    U->>CP: 点击引用 [2]
+    CP->>CP: PDF 滚动到对应页面，高亮边界框
+```
+
+**关键组件：**
+
+- **检索**：从 Qdrant 按 COSINE 向量相似度检索 Top-5 文本块。每个文本块包含文本、页码和边界框。
+
+- **LLM 提示词**：系统提示指示模型使用 `[n]` 标记引用来源，编号对应提供的文档片段。
+
+- **RefParserFSM**：`chat_service.py` 中的有限状态机，处理流式 token 中跨边界的 `[n]` 引用标记。例如，token `"[1"` 后跟 `"]"` 会被正确解析为引用标记 1。
+
+- **前端渲染**：ChatPanel 中的 `renumberCitations()` 将引用编号按出现顺序重新分配为连续序列 `[1], [2], [3]...`，不依赖后端的原始编号。
+
+- **PDF 高亮**：当用户点击引用时，PDF 查看器滚动到对应页面，使用文本块的归一化边界框坐标乘以页面像素尺寸，渲染半透明覆盖矩形。
+
+---
+
+## 4. 认证流程
+
+```mermaid
+sequenceDiagram
+    participant U as 用户
+    participant NJ as Next.js
+    participant AJ as Auth.js v5
+    participant G as Google OAuth
+    participant AD as FastAPI Adapter
+    participant DB as PostgreSQL
+    participant PX as API 代理
+    participant API as FastAPI
+
+    U->>NJ: 点击 "使用 Google 登录"
+    NJ->>AJ: signIn("google")
+    AJ->>G: OAuth 重定向
+    G-->>AJ: 授权码
+    AJ->>G: 交换令牌
+    G-->>AJ: id_token, access_token
+
+    AJ->>AD: POST /api/internal/auth/users<br/>(X-Adapter-Secret 头)
+    AD->>DB: UPSERT 用户 + 账户
+    AD-->>AJ: UserResponse
+
+    AJ->>AJ: 创建加密 JWE 会话令牌
+    AJ-->>NJ: 设置会话 Cookie<br/>(__Secure-authjs.session-token)
+
+    Note over PX: 后续 API 请求
+    NJ->>PX: 请求 /api/proxy/*
+    PX->>PX: 解密 JWE → 提取用户 ID
+    PX->>PX: 创建 HS256 JWT<br/>(sub, iat, exp)
+    PX->>API: 携带 Authorization: Bearer <HS256 JWT> 转发
+    API->>API: 验证 JWT (deps.py)<br/>检查 exp, iat, sub
+    API-->>PX: 响应
+    PX-->>NJ: 转发响应
+```
+
+**为什么需要双层 JWT？**
+
+Auth.js v5 将会话令牌加密为 JWE（JSON Web Encryption），Python 后端无法在不共享加密密钥和匹配加密算法的情况下解密。我们没有耦合两个系统，而是采用了以下方案：
+
+1. **API 代理**（`/api/proxy/[...path]/route.ts`）使用 Auth.js 内置的 `getToken()` 函数解密 JWE
+2. 创建新的 **HS256 签名 JWT**，仅包含 `sub`（用户 ID）、`iat` 和 `exp` 声明
+3. 后端使用共享的 `AUTH_SECRET` 验证这个简单的 JWT
+
+这样可以干净地将前端认证系统与后端 API 认证分离。
+
+**内部 Auth Adapter**：Auth.js 使用自定义 Adapter，调用 FastAPI 后端的 `/api/internal/auth/*` 端点（通过 `X-Adapter-Secret` 头保护）来管理 PostgreSQL 中的用户、账户和验证令牌。
+
+---
+
+## 5. 计费与积分流程
+
+```mermaid
+flowchart TB
+    subgraph Sources["积分来源"]
+        Signup["注册奖励<br/>10,000 积分"]
+        Monthly["月度发放<br/>Free: 10K / Pro: 100K"]
+        Purchase["一次性购买<br/>Starter: 50K / Pro: 200K / Enterprise: 1M"]
+        Subscription["Pro 订阅<br/>100K 积分/月"]
+    end
+
+    subgraph Stripe["Stripe 集成"]
+        Checkout["Stripe Checkout<br/>（一次性）"]
+        SubCheckout["Stripe 订阅<br/>Checkout"]
+        Portal["客户门户<br/>（管理订阅）"]
+        Webhook["Webhook 处理器"]
+    end
+
+    subgraph Backend["后端处理"]
+        CreditService["CreditService"]
+        Ledger["CreditLedger<br/>（仅追加）"]
+        Balance["User.credits_balance"]
+        UsageRecord["UsageRecord<br/>（按消息）"]
+    end
+
+    subgraph Chat["对话扣费"]
+        EnsureMonthly["ensure_monthly_credits()<br/>30 天惰性检查"]
+        CheckBalance["check_balance()"]
+        Debit["debit_credits()<br/>模型 + tokens → 费用"]
+    end
+
+    Signup --> CreditService
+    Monthly --> EnsureMonthly
+    Purchase --> Checkout --> Webhook --> CreditService
+    Subscription --> SubCheckout --> Webhook
+    Portal --> Stripe
+
+    CreditService --> Ledger
+    CreditService --> Balance
+
+    EnsureMonthly --> CreditService
+    CheckBalance --> Balance
+    Debit --> CreditService
+    Debit --> UsageRecord
+```
+
+**积分生命周期：**
+
+1. **注册奖励**：新用户首次登录获得 10,000 积分（幂等操作，`signup_bonus_granted_at` 时间戳防止重复发放）。
+
+2. **月度发放**：`ensure_monthly_credits()` 在每次对话请求前调用。检查 `monthly_credits_granted_at` — 若已过 30 天以上，发放 Free（10K）或 Pro（100K）积分。Ledger 条目使用 `ref_type=monthly_grant` 和基于时间戳的 `ref_id` 保证幂等性。
+
+3. **一次性购买**：Stripe Checkout 创建支付会话。收到 `checkout.session.completed` Webhook（mode=payment）后，将积分添加到用户余额。
+
+4. **Pro 订阅**：Stripe 循环订阅。收到 `invoice.payment_succeeded` Webhook 后发放月度积分，按 `invoice.id` 幂等。收到 `customer.subscription.deleted` 后将套餐重置为 Free。
+
+5. **对话扣费**：每条对话消息根据模型和 token 用量扣除积分。费用同时记录在 `CreditLedger`（余额追踪）和 `UsageRecord`（分析统计）中。
+
+---
+
+## 6. 数据库模型
+
+```mermaid
+erDiagram
+    User ||--o{ Document : "上传"
+    User ||--o{ Account : "拥有"
+    User ||--o{ CreditLedger : "拥有"
+    User ||--o{ UsageRecord : "拥有"
+    Document ||--o{ Page : "包含"
+    Document ||--o{ Chunk : "包含"
+    Document ||--o{ ChatSession : "拥有"
+    ChatSession ||--o{ Message : "包含"
+    Message ||--o| UsageRecord : "追踪"
+
+    User {
+        uuid id PK
+        string email UK
+        string name
+        string image
+        datetime email_verified
+        int credits_balance
+        datetime signup_bonus_granted_at
+        string plan "free | pro"
+        string stripe_customer_id
+        string stripe_subscription_id
+        datetime monthly_credits_granted_at
+        datetime created_at
+        datetime updated_at
+    }
+
+    Document {
+        uuid id PK
+        string filename
+        int file_size
+        int page_count
+        string storage_key
+        string status "uploading | parsing | ready | error | deleting"
+        string error_msg
+        int pages_parsed
+        int chunks_total
+        int chunks_indexed
+        uuid user_id FK "可空 (demo 文档)"
+        string demo_slug UK "可空"
+        datetime created_at
+        datetime updated_at
+    }
+
+    Page {
+        uuid id PK
+        uuid document_id FK
+        int page_number
+        float width_pt
+        float height_pt
+        int rotation
+    }
+
+    Chunk {
+        uuid id PK
+        uuid document_id FK
+        int chunk_index
+        text text
+        int token_count
+        int page_start
+        int page_end
+        jsonb bboxes "归一化 [0,1] 坐标"
+        string section_title
+        string vector_id
+        datetime created_at
+    }
+
+    ChatSession {
+        uuid id PK
+        uuid document_id FK
+        string title
+        datetime created_at
+        datetime updated_at
+    }
+
+    Message {
+        uuid id PK
+        uuid session_id FK
+        string role "user | assistant"
+        text content
+        jsonb citations
+        int prompt_tokens
+        int output_tokens
+        datetime created_at
+    }
+
+    Account {
+        uuid id PK
+        uuid user_id FK
+        string type
+        string provider
+        string provider_account_id
+        string refresh_token
+        string access_token
+        int expires_at
+        string token_type
+        string scope
+        string id_token
+    }
+
+    CreditLedger {
+        uuid id PK
+        uuid user_id FK
+        int delta
+        int balance_after
+        string reason
+        string ref_type
+        string ref_id
+        datetime created_at
+    }
+
+    UsageRecord {
+        uuid id PK
+        uuid user_id FK
+        uuid message_id FK "可空"
+        string model
+        int prompt_tokens
+        int completion_tokens
+        int total_tokens
+        int cost_credits
+        datetime created_at
+    }
+
+    VerificationToken {
+        string identifier PK
+        string token PK
+        datetime expires
+    }
+```
+
+**关键关系：**
+
+- `User → Document`：删除时 SET NULL（demo 文档的 `user_id = NULL`）
+- `User → Account/CreditLedger/UsageRecord`：CASCADE 删除
+- `Document → Page/Chunk/ChatSession`：CASCADE 删除
+- `ChatSession → Message`：CASCADE 删除
+- `Message → UsageRecord`：删除时 SET NULL
+
+**唯一约束：**
+- `(Document.document_id, Page.page_number)` — 每个文档每个页码唯一
+- `(Document.document_id, Chunk.chunk_index)` — 文本块顺序编号
+- `(Account.provider, Account.provider_account_id)` — 每个提供商一个账户链接
+- `Document.demo_slug` — 非空时唯一
+
+---
+
+## 7. 前端组件树
+
+```mermaid
+graph TD
+    Layout["RootLayout<br/>Providers + ErrorBoundary"]
+
+    subgraph Pages["页面"]
+        Home["/ (首页)<br/>Landing 或 Dashboard"]
+        DocView["d/[documentId]<br/>文档阅读器"]
+        Demo["/demo<br/>Demo 选择"]
+        Auth["/auth<br/>登录页"]
+        Billing["/billing<br/>购买页"]
+        Profile["/profile<br/>个人中心"]
+        Privacy["/privacy"]
+        Terms["/terms"]
+    end
+
+    subgraph HeaderComp["Header 组件"]
+        Logo["Logo"]
+        ModelSel["ModelSelector"]
+        LangSel["LanguageSelector"]
+        SessionDrop["SessionDropdown"]
+        CreditsDis["CreditsDisplay"]
+        UserMenuC["UserMenu"]
+    end
+
+    subgraph LandingComp["Landing 组件"]
+        Hero["HeroSection<br/>大字标题 + CTA"]
+        Showcase["产品展示<br/>macOS 窗口风格"]
+        Features["FeatureGrid<br/>3 列特性卡片"]
+        PrivBadge["PrivacyBadge"]
+    end
+
+    subgraph DocViewComp["文档阅读器"]
+        ResizablePanels["react-resizable-panels<br/>Group / Panel / Separator"]
+        ChatPanel["ChatPanel<br/>消息 + 输入框"]
+        PdfViewer["PdfViewer<br/>react-pdf"]
+    end
+
+    subgraph ChatComp["Chat 组件"]
+        MsgBubble["MessageBubble"]
+        CitCard["CitationCard"]
+    end
+
+    subgraph PdfComp["PDF 组件"]
+        PdfToolbar["PdfToolbar<br/>缩放 + 拖拽工具"]
+        PageHL["PageWithHighlights<br/>边界框覆盖层"]
+    end
+
+    subgraph ProfileComp["Profile 组件"]
+        ProfTabs["ProfileTabs"]
+        ProfInfo["ProfileInfoSection"]
+        CreditsSec["CreditsSection"]
+        UsageSec["UsageStatsSection"]
+        AccountSec["AccountActionsSection"]
+    end
+
+    Layout --> Pages
+    Layout --> HeaderComp
+    Home --> LandingComp
+    Home -->|"已登录"| DocViewComp
+    DocView --> ResizablePanels
+    ResizablePanels --> ChatPanel
+    ResizablePanels --> PdfViewer
+    ChatPanel --> ChatComp
+    PdfViewer --> PdfComp
+    Profile --> ProfileComp
+
+    AuthModal["AuthModal<br/>?auth=1 触发"]
+    PaywallMod["PaywallModal"]
+
+    Layout -.-> AuthModal
+    Layout -.-> PaywallMod
+```
+
+**Header 变体：**
+- `variant="minimal"` — 仅 Logo + UserMenu（透明背景）— 用于首页、Demo、登录页
+- `variant="full"` — 所有控件（ModelSelector、LanguageSelector、SessionDropdown、CreditsDisplay、UserMenu）— 用于文档页、购买页、个人中心
+
+**状态管理：**
+- **Zustand store** 管理文档状态、选中模型、活跃会话、PDF 查看器状态
+- **Auth.js SessionProvider** 通过 `Providers.tsx` 包裹整个应用
+
+---
+
+## 8. 基础设施与部署
+
+```mermaid
+graph LR
+    subgraph GitHub["GitHub 仓库"]
+        Repo["Rswcf/DocTalk"]
+    end
+
+    subgraph VercelDeploy["Vercel"]
+        VBuild["构建<br/>Root: frontend/"]
+        VDeploy["部署<br/>Serverless Functions"]
+        VDomain["www.doctalk.site"]
+    end
+
+    subgraph RailwayDeploy["Railway"]
+        RBuild["Docker 构建<br/>Root: ./"]
+        subgraph Container["单容器"]
+            Alembic["1. Alembic 迁移"]
+            CeleryW["2. Celery Worker<br/>（后台，concurrency=1）"]
+            Uvicorn["3. Uvicorn<br/>（前台）"]
+        end
+        subgraph RServices["托管服务"]
+            RPG["PostgreSQL"]
+            RRedis["Redis"]
+            RQdrant["Qdrant"]
+            RMinIO["MinIO"]
+        end
+    end
+
+    Repo -->|"git push<br/>（自动部署）"| VBuild
+    VBuild --> VDeploy --> VDomain
+    Repo -->|"railway up<br/>（手动）"| RBuild
+    RBuild --> Alembic --> CeleryW --> Uvicorn
+    Uvicorn --> RServices
+    CeleryW --> RServices
+```
+
+**部署详情：**
+
+| 方面 | 前端 (Vercel) | 后端 (Railway) |
+|------|---------------|----------------|
+| **触发方式** | `git push`（自动） | `railway up --detach`（手动） |
+| **构建** | 从 `frontend/` 导出 Next.js | 从项目根目录构建 Dockerfile |
+| **运行时** | Serverless 函数（Hobby 计划） | 单容器：alembic → celery → uvicorn |
+| **域名** | `www.doctalk.site` | `backend-production-a62e.up.railway.app` |
+| **限制** | 4.5 MB 函数体积，60s 最大时长 | 容器内存取决于 Railway 计划 |
+
+**环境变量同步：**
+- `AUTH_SECRET` 和 `ADAPTER_SECRET` 在 Vercel 和 Railway 之间必须一致
+- Vercel 上的 `NEXT_PUBLIC_API_BASE` 必须指向 Railway 后端 URL
+- Vercel 上的 `BACKEND_INTERNAL_URL` 是相同的 Railway URL（Auth Adapter 使用）

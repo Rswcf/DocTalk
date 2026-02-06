@@ -1,5 +1,7 @@
 # DocTalk Architecture
 
+[中文版](ARCHITECTURE.zh.md)
+
 This document provides a deep-dive into DocTalk's architecture with Mermaid diagrams covering system topology, data flows, authentication, billing, database schema, and frontend component structure.
 
 ---
