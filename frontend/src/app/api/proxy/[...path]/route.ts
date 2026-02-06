@@ -51,6 +51,9 @@ async function handler(req: NextRequest) {
   const path = req.nextUrl.pathname.replace("/api/proxy", "");
   const url = `${BACKEND_URL}${path}${req.nextUrl.search}`;
 
+  // Debug logging for auth troubleshooting
+  console.log(`[proxy] ${req.method} ${path} | token.sub=${token?.sub ?? "null"} | AUTH_SECRET=${AUTH_SECRET ? "set(" + AUTH_SECRET.length + ")" : "MISSING"} | BACKEND_URL=${BACKEND_URL}`);
+
   // Build headers with whitelist filtering
   const headers = new Headers();
   req.headers.forEach((value, key) => {
@@ -65,9 +68,12 @@ async function handler(req: NextRequest) {
     try {
       const backendToken = await createBackendToken(token.sub);
       headers.set("Authorization", `Bearer ${backendToken}`);
+      console.log(`[proxy] JWT created for user ${token.sub}`);
     } catch (error) {
-      console.error("Failed to create backend token:", error);
+      console.error("[proxy] Failed to create backend token:", error);
     }
+  } else {
+    console.log(`[proxy] No auth token - cookies: ${req.cookies.getAll().map(c => c.name).join(", ")}`);
   }
 
   try {
