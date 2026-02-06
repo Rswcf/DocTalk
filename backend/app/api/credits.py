@@ -4,7 +4,7 @@ from typing import List, Optional
 
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel
-from sqlalchemy import select
+from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.deps import get_db_session, require_auth
@@ -62,9 +62,19 @@ async def get_balance(
 async def get_history(
     user: User = Depends(require_auth),
     db: AsyncSession = Depends(get_db_session),
-    limit: int = 50,
+    limit: int = 20,
     offset: int = 0,
 ):
+    # Enforce sane bounds
+    limit = max(1, min(100, int(limit or 20)))
+    offset = max(0, int(offset or 0))
+
+    # Total count for pagination
+    total = await db.scalar(
+        select(func.count()).select_from(CreditLedger).where(CreditLedger.user_id == user.id)
+    )
+
+    # Page of items
     result = await db.execute(
         select(CreditLedger)
         .where(CreditLedger.user_id == user.id)
@@ -75,7 +85,7 @@ async def get_history(
     entries = result.scalars().all()
 
     return {
-        "entries": [
+        "items": [
             {
                 "id": str(e.id),
                 "delta": e.delta,
@@ -87,7 +97,5 @@ async def get_history(
             }
             for e in entries
         ],
-        "limit": limit,
-        "offset": offset,
+        "total": int(total or 0),
     }
-

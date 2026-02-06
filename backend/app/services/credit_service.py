@@ -7,6 +7,7 @@ import sqlalchemy as sa
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.tables import CreditLedger, UsageRecord, User
+from app.core.config import settings
 
 
 # Token-to-credit rates by model tier
@@ -144,3 +145,59 @@ async def record_usage(
     db.add(usage)
     return usage
 
+
+async def ensure_monthly_credits(db: AsyncSession, user: User) -> None:
+    """Grant monthly credits if last grant was over 30 days ago.
+
+    Idempotency: checks CreditLedger for any recent 'monthly_allowance' within 30 days.
+    """
+    from datetime import datetime, timedelta, timezone
+
+    # Determine if grant needed based on timestamp
+    now = datetime.now(timezone.utc)
+    last = user.monthly_credits_granted_at
+    if last is not None and last.tzinfo is None:
+        # Treat naive as UTC
+        last = last.replace(tzinfo=timezone.utc)
+    needs_grant = last is None or (now - last) >= timedelta(days=30)
+    if not needs_grant:
+        return
+
+    # Check ledger for idempotency within last 30 days
+    cutoff = now - timedelta(days=30)
+    existing = await db.scalar(
+        sa.select(CreditLedger)
+        .where(CreditLedger.user_id == user.id)
+        .where(CreditLedger.reason == "monthly_allowance")
+        .where(CreditLedger.created_at >= cutoff)
+    )
+    if existing:
+        # Still update marker to avoid repeatedly checking in future requests
+        user.monthly_credits_granted_at = now
+        await db.flush()
+        return
+
+    # Determine allowance by plan
+    plan = (user.plan or "free").lower()
+    if plan == "pro":
+        allowance = int(settings.PLAN_PRO_MONTHLY_CREDITS or 0)
+    else:
+        allowance = int(settings.PLAN_FREE_MONTHLY_CREDITS or 0)
+
+    if allowance <= 0:
+        # Nothing to grant
+        user.monthly_credits_granted_at = now
+        await db.flush()
+        return
+
+    # Grant credits and update marker
+    await credit_credits(
+        db,
+        user_id=user.id,
+        amount=allowance,
+        reason="monthly_allowance",
+        ref_type=None,
+        ref_id=None,
+    )
+    user.monthly_credits_granted_at = now
+    await db.flush()

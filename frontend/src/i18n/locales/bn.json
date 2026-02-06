@@ -77,5 +77,57 @@
   "billing.purchaseCanceled": "Purchase was canceled.",
   "billing.error": "An error occurred. Please try again.",
   "common.cancel": "Cancel",
-  "common.loading": "Loading..."
+  "common.loading": "Loading...",
+
+  "profile.title": "প্রোফাইল",
+  "profile.tabs.profile": "প্রোফাইল",
+  "profile.tabs.credits": "ক্রেডিট",
+  "profile.tabs.usage": "ব্যবহার",
+  "profile.tabs.account": "অ্যাকাউন্ট",
+
+  "profile.info.memberSince": "সদস্য {days} দিন ধরে",
+  "profile.info.connectedWith": "{provider} দিয়ে সংযুক্ত",
+
+  "profile.plan.free": "ফ্রি",
+  "profile.plan.pro": "প্রো",
+  "profile.plan.upgrade": "প্রো-তে আপগ্রেড করুন",
+  "profile.plan.manage": "সাবস্ক্রিপশন পরিচালনা করুন",
+  "profile.plan.monthlyAllowance": "{used} / {total} মাসিক ক্রেডিট",
+  "profile.plan.nextRenewal": "{days} দিনের মধ্যে নবায়ন হবে",
+
+  "profile.credits.balance": "ক্রেডিট ব্যালেন্স",
+  "profile.credits.buyMore": "অতিরিক্ত ক্রেডিট কিনুন",
+  "profile.credits.history": "লেনদেনের ইতিহাস",
+  "profile.credits.noHistory": "এখনও কোনো লেনদেন নেই",
+  "profile.credits.reason.signup_bonus": "সাইনআপ বোনাস",
+  "profile.credits.reason.purchase": "ক্রেডিট ক্রয়",
+  "profile.credits.reason.chat": "চ্যাট ব্যবহার",
+  "profile.credits.reason.monthly_allowance": "মাসিক বরাদ্দ",
+  "profile.credits.reason.refund": "ফেরত",
+
+  "profile.usage.documents": "নথি",
+  "profile.usage.sessions": "চ্যাট সেশন",
+  "profile.usage.messages": "বার্তা",
+  "profile.usage.creditsSpent": "খরচ করা ক্রেডিট",
+  "profile.usage.tokensUsed": "ব্যবহৃত টোকেন",
+  "profile.usage.modelBreakdown": "মডেল অনুযায়ী ব্যবহার",
+  "profile.usage.model": "মডেল",
+  "profile.usage.calls": "কল",
+  "profile.usage.tokens": "টোকেন",
+  "profile.usage.credits": "ক্রেডিট",
+
+  "profile.account.dangerZone": "বিপজ্জনক এলাকা",
+  "profile.account.deleteAccount": "অ্যাকাউন্ট মুছে ফেলুন",
+  "profile.account.deleteWarning": "এটি আপনার অ্যাকাউন্ট, সব নথি, চ্যাট এবং তথ্য স্থায়ীভাবে মুছে ফেলবে। এই কাজটি বাতিল করা যাবে না।",
+  "profile.account.deleteConfirm": "মুছে ফেলতে নিশ্চিত করতে আপনার ইমেল টাইপ করুন",
+  "profile.account.deleting": "অ্যাকাউন্ট মুছে ফেলা হচ্ছে…",
+
+  "userMenu.profile": "প্রোফাইল",
+  "userMenu.buyCredits": "ক্রেডিট কিনুন",
+  "userMenu.signOut": "সাইন আউট",
+
+  "billing.pro.title": "প্রো প্ল্যান",
+  "billing.pro.description": "প্রতি মাসে 100,000 ক্রেডিট",
+  "billing.pro.pricePerMonth": "{price}/মাস",
+  "billing.extraTopups": "অতিরিক্ত ক্রেডিট টপ-আপ"
 }

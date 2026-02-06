@@ -58,6 +58,47 @@ async def create_checkout(
     return {"checkout_url": session.url}
 
 
+# Subscriptions
+@router.post("/subscribe")
+async def subscribe(
+    user: User = Depends(require_auth),
+    db: AsyncSession = Depends(get_db_session),
+):
+    if not settings.STRIPE_SECRET_KEY or not settings.STRIPE_PRICE_PRO_MONTHLY:
+        raise HTTPException(503, "Stripe not configured")
+
+    # Ensure customer exists
+    if not user.stripe_customer_id:
+        cust = stripe.Customer.create(email=user.email, name=user.name or None)
+        user.stripe_customer_id = cust.id
+        await db.commit()
+
+    # Create Checkout Session for subscription
+    session = stripe.checkout.Session.create(
+        mode="subscription",
+        line_items=[{"price": settings.STRIPE_PRICE_PRO_MONTHLY, "quantity": 1}],
+        success_url=f"{settings.FRONTEND_URL}/billing",
+        cancel_url=f"{settings.FRONTEND_URL}/billing",
+        customer=user.stripe_customer_id,
+        client_reference_id=str(user.id),
+    )
+    return {"checkout_url": session.url}
+
+
+@router.post("/portal")
+async def customer_portal(user: User = Depends(require_auth)):
+    if not settings.STRIPE_SECRET_KEY:
+        raise HTTPException(503, "Stripe not configured")
+    if not user.stripe_customer_id:
+        raise HTTPException(400, "No Stripe customer for user")
+
+    portal = stripe.billing_portal.Session.create(
+        customer=user.stripe_customer_id,
+        return_url=f"{settings.FRONTEND_URL}/billing",
+    )
+    return {"portal_url": portal.url}
+
+
 @router.post("/webhook")
 async def stripe_webhook(request: Request, db: AsyncSession = Depends(get_db_session)):
     payload = await request.body()
@@ -85,70 +126,196 @@ async def stripe_webhook(request: Request, db: AsyncSession = Depends(get_db_ses
             logger.error("Invalid event structure: missing data.object")
             return {"received": True}
 
-        # Parse and validate client_reference_id (user_id)
-        try:
-            client_ref = session.get("client_reference_id")
-            if not client_ref:
-                logger.error("Missing client_reference_id in checkout session")
+        mode = session.get("mode")
+
+        # Handle subscription checkout
+        if mode == "subscription":
+            try:
+                client_ref = session.get("client_reference_id")
+                if not client_ref:
+                    logger.error("Missing client_reference_id in subscription session")
+                    return {"received": True}
+                user_id = uuid.UUID(client_ref)
+            except (ValueError, TypeError) as e:
+                logger.error("Invalid client_reference_id: %s", e)
                 return {"received": True}
-            user_id = uuid.UUID(client_ref)
-        except (ValueError, TypeError) as e:
-            logger.error("Invalid client_reference_id: %s", e)
+
+            user = await db.get(User, user_id)
+            if not user:
+                logger.warning("Subscription completed for non-existent user %s", user_id)
+                return {"received": True}
+
+            subscription_id = session.get("subscription")
+            customer_id = session.get("customer")
+
+            # Update user plan and subscription/customer ids
+            user.plan = "pro"
+            if subscription_id:
+                user.stripe_subscription_id = subscription_id
+            if customer_id and not user.stripe_customer_id:
+                user.stripe_customer_id = customer_id
+
+            # Idempotency: only one monthly grant per subscription id at start
+            existing = await db.scalar(
+                select(CreditLedger).where(
+                    CreditLedger.ref_type == "stripe_subscription",
+                    CreditLedger.ref_id == (subscription_id or ""),
+                )
+            )
+
+            if not existing:
+                try:
+                    await credit_credits(
+                        db,
+                        user_id=user.id,
+                        amount=int(settings.PLAN_PRO_MONTHLY_CREDITS or 0),
+                        reason="monthly_allowance",
+                        ref_type="stripe_subscription",
+                        ref_id=subscription_id or "",
+                    )
+                    await db.commit()
+                    logger.info(
+                        "Subscription start credits granted: user_id=%s, subscription=%s",
+                        user.id,
+                        subscription_id,
+                    )
+                except Exception as e:
+                    await db.rollback()
+                    logger.error("Failed to grant subscription start credits: %s", e)
+                    raise HTTPException(500, "Database error")
+            else:
+                await db.commit()
+
             return {"received": True}
 
-        # Parse and validate credits amount
-        try:
-            metadata = session.get("metadata", {})
-            credits_str = metadata.get("credits")
-            if not credits_str:
-                logger.error("Missing credits in session metadata")
+        # Handle one-time credit pack checkout
+        if mode == "payment":
+            # Parse and validate client_reference_id (user_id)
+            try:
+                client_ref = session.get("client_reference_id")
+                if not client_ref:
+                    logger.error("Missing client_reference_id in checkout session")
+                    return {"received": True}
+                user_id = uuid.UUID(client_ref)
+            except (ValueError, TypeError) as e:
+                logger.error("Invalid client_reference_id: %s", e)
                 return {"received": True}
-            credits = int(credits_str)
-            if credits <= 0:
-                logger.error("Invalid credits amount: %d", credits)
+
+            # Parse and validate credits amount
+            try:
+                metadata = session.get("metadata", {})
+                credits_str = metadata.get("credits")
+                if not credits_str:
+                    logger.error("Missing credits in session metadata")
+                    return {"received": True}
+                credits = int(credits_str)
+                if credits <= 0:
+                    logger.error("Invalid credits amount: %d", credits)
+                    return {"received": True}
+            except (ValueError, TypeError) as e:
+                logger.error("Cannot parse credits from metadata: %s", e)
                 return {"received": True}
-        except (ValueError, TypeError) as e:
-            logger.error("Cannot parse credits from metadata: %s", e)
+
+            # Get payment_intent for idempotency
+            payment_intent = session.get("payment_intent")
+            if not payment_intent:
+                logger.warning("Checkout session has no payment_intent, skipping for safety")
+                return {"received": True}
+
+            # Verify user exists
+            user = await db.get(User, user_id)
+            if not user:
+                logger.warning("Webhook for non-existent user %s", user_id)
+                return {"received": True}
+
+            # Idempotency check
+            existing = await db.scalar(
+                select(CreditLedger).where(
+                    CreditLedger.ref_type == "stripe_payment",
+                    CreditLedger.ref_id == payment_intent,
+                )
+            )
+
+            if not existing:
+                try:
+                    await credit_credits(
+                        db,
+                        user_id,
+                        credits,
+                        reason="purchase",
+                        ref_type="stripe_payment",
+                        ref_id=payment_intent,
+                    )
+                    await db.commit()
+                    logger.info(
+                        "Credits granted: user_id=%s, credits=%d, payment_intent=%s",
+                        user_id,
+                        credits,
+                        payment_intent,
+                    )
+                except Exception as e:
+                    await db.rollback()
+                    logger.error("Failed to grant credits: %s", e)
+                    # Return 5xx so Stripe retries
+                    raise HTTPException(500, "Database error")
             return {"received": True}
 
-        # Get payment_intent for idempotency
-        payment_intent = session.get("payment_intent")
-        if not payment_intent:
-            logger.warning("Checkout session has no payment_intent, skipping for safety")
+    elif event["type"] == "invoice.payment_succeeded":
+    
+        obj = event.get("data", {}).get("object")
+        if not obj or not isinstance(obj, dict):
             return {"received": True}
 
-        # Verify user exists
-        user = await db.get(User, user_id)
+        invoice_id = obj.get("id")
+        customer_id = obj.get("customer")
+        if not invoice_id or not customer_id:
+            return {"received": True}
+
+        # Find user by customer id
+        user = await db.scalar(select(User).where(User.stripe_customer_id == customer_id))
         if not user:
-            logger.warning("Webhook for non-existent user %s", user_id)
             return {"received": True}
 
-        # Idempotency check
+        # Idempotency: ensure we haven't granted for this invoice
         existing = await db.scalar(
             select(CreditLedger).where(
-                CreditLedger.ref_type == "stripe_payment",
-                CreditLedger.ref_id == payment_intent,
+                CreditLedger.ref_type == "stripe_invoice",
+                CreditLedger.ref_id == invoice_id,
             )
         )
-
         if not existing:
             try:
                 await credit_credits(
                     db,
-                    user_id,
-                    credits,
-                    reason="purchase",
-                    ref_type="stripe_payment",
-                    ref_id=payment_intent,
+                    user_id=user.id,
+                    amount=int(settings.PLAN_PRO_MONTHLY_CREDITS or 0),
+                    reason="monthly_allowance",
+                    ref_type="stripe_invoice",
+                    ref_id=invoice_id,
                 )
                 await db.commit()
-                logger.info("Credits granted: user_id=%s, credits=%d, payment_intent=%s",
-                           user_id, credits, payment_intent)
             except Exception as e:
                 await db.rollback()
-                logger.error("Failed to grant credits: %s", e)
-                # Return 5xx so Stripe retries
+                logger.error("Failed to grant monthly credits on invoice: %s", e)
                 raise HTTPException(500, "Database error")
+        return {"received": True}
+
+    elif event["type"] == "customer.subscription.deleted":
+        obj = event.get("data", {}).get("object")
+        if not obj or not isinstance(obj, dict):
+            return {"received": True}
+
+        customer_id = obj.get("customer")
+        if not customer_id:
+            return {"received": True}
+
+        user = await db.scalar(select(User).where(User.stripe_customer_id == customer_id))
+        if not user:
+            return {"received": True}
+
+        user.plan = "free"
+        user.stripe_subscription_id = None
+        await db.commit()
+        return {"received": True}
 
     return {"received": True}
-

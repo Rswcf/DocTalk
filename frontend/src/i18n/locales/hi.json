@@ -77,5 +77,57 @@
   "billing.purchaseCanceled": "Purchase was canceled.",
   "billing.error": "An error occurred. Please try again.",
   "common.cancel": "Cancel",
-  "common.loading": "Loading..."
+  "common.loading": "Loading...",
+
+  "profile.title": "प्रोफ़ाइल",
+  "profile.tabs.profile": "प्रोफ़ाइल",
+  "profile.tabs.credits": "क्रेडिट्स",
+  "profile.tabs.usage": "उपयोग",
+  "profile.tabs.account": "खाता",
+
+  "profile.info.memberSince": "पिछले {days} दिनों से सदस्य",
+  "profile.info.connectedWith": "{provider} से कनेक्टेड",
+
+  "profile.plan.free": "मुफ़्त",
+  "profile.plan.pro": "प्रो",
+  "profile.plan.upgrade": "प्रो में अपग्रेड करें",
+  "profile.plan.manage": "सब्सक्रिप्शन प्रबंधित करें",
+  "profile.plan.monthlyAllowance": "{used} / {total} मासिक क्रेडिट्स",
+  "profile.plan.nextRenewal": "{days} दिनों में नवीनीकरण",
+
+  "profile.credits.balance": "क्रेडिट शेष",
+  "profile.credits.buyMore": "अतिरिक्त क्रेडिट्स खरीदें",
+  "profile.credits.history": "लेनदेन इतिहास",
+  "profile.credits.noHistory": "अभी कोई लेनदेन नहीं",
+  "profile.credits.reason.signup_bonus": "साइनअप बोनस",
+  "profile.credits.reason.purchase": "क्रेडिट खरीद",
+  "profile.credits.reason.chat": "चैट उपयोग",
+  "profile.credits.reason.monthly_allowance": "मासिक भत्ता",
+  "profile.credits.reason.refund": "रिफंड",
+
+  "profile.usage.documents": "दस्तावेज़",
+  "profile.usage.sessions": "चैट सत्र",
+  "profile.usage.messages": "संदेश",
+  "profile.usage.creditsSpent": "खर्च किए गए क्रेडिट्स",
+  "profile.usage.tokensUsed": "उपयोग किए गए टोकन",
+  "profile.usage.modelBreakdown": "मॉडेल अनुसार उपयोग",
+  "profile.usage.model": "मॉडेल",
+  "profile.usage.calls": "कॉल्स",
+  "profile.usage.tokens": "टोकन",
+  "profile.usage.credits": "क्रेडिट्स",
+
+  "profile.account.dangerZone": "खतरे का क्षेत्र",
+  "profile.account.deleteAccount": "खाता हटाएँ",
+  "profile.account.deleteWarning": "यह आपके खाते, सभी दस्तावेज़, चैट और डेटा को स्थायी रूप से हटा देगा। यह क्रिया वापस नहीं की जा सकती।",
+  "profile.account.deleteConfirm": "हटाने की पुष्टि के लिए अपना ईमेल टाइप करें",
+  "profile.account.deleting": "खाता हटाया जा रहा है…",
+
+  "userMenu.profile": "प्रोफ़ाइल",
+  "userMenu.buyCredits": "क्रेडिट्स खरीदें",
+  "userMenu.signOut": "साइन आउट",
+
+  "billing.pro.title": "प्रो प्लान",
+  "billing.pro.description": "100,000 क्रेडिट्स/महीना",
+  "billing.pro.pricePerMonth": "${price}/माह",
+  "billing.extraTopups": "अतिरिक्त क्रेडिट टॉप‑अप्स"
 }

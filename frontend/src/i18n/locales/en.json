@@ -89,6 +89,10 @@
   "billing.purchaseSuccess": "Purchase successful! Credits have been added to your account.",
   "billing.purchaseCanceled": "Purchase was canceled.",
   "billing.error": "An error occurred. Please try again.",
+  "billing.pro.title": "Pro Plan",
+  "billing.pro.description": "100,000 credits/month",
+  "billing.pro.pricePerMonth": "${price}/month",
+  "billing.extraTopups": "Extra Credit Top-ups",
   "common.cancel": "Cancel",
   "common.loading": "Loading...",
 
@@ -146,5 +150,52 @@
   "demo.pdfPlaceholder": "PDF Preview",
   "demo.pdfPlaceholderHint": "Sample PDFs will be added in the next update",
 
-  "common.backToHome": "Back to home"
+  "common.backToHome": "Back to home",
+
+  "profile.title": "Profile",
+  "profile.tabs.profile": "Profile",
+  "profile.tabs.credits": "Credits",
+  "profile.tabs.usage": "Usage",
+  "profile.tabs.account": "Account",
+
+  "profile.info.memberSince": "Member for {days} days",
+  "profile.info.connectedWith": "Connected with {provider}",
+
+  "profile.plan.free": "Free",
+  "profile.plan.pro": "Pro",
+  "profile.plan.upgrade": "Upgrade to Pro",
+  "profile.plan.manage": "Manage Subscription",
+  "profile.plan.monthlyAllowance": "{used} / {total} monthly credits",
+  "profile.plan.nextRenewal": "Renews in {days} days",
+
+  "profile.credits.balance": "Credits Balance",
+  "profile.credits.buyMore": "Buy Extra Credits",
+  "profile.credits.history": "Transaction History",
+  "profile.credits.noHistory": "No transactions yet",
+  "profile.credits.reason.signup_bonus": "Signup Bonus",
+  "profile.credits.reason.purchase": "Credit Purchase",
+  "profile.credits.reason.chat": "Chat Usage",
+  "profile.credits.reason.monthly_allowance": "Monthly Allowance",
+  "profile.credits.reason.refund": "Refund",
+
+  "profile.usage.documents": "Documents",
+  "profile.usage.sessions": "Chat Sessions",
+  "profile.usage.messages": "Messages",
+  "profile.usage.creditsSpent": "Credits Spent",
+  "profile.usage.tokensUsed": "Tokens Used",
+  "profile.usage.modelBreakdown": "Usage by Model",
+  "profile.usage.model": "Model",
+  "profile.usage.calls": "Calls",
+  "profile.usage.tokens": "Tokens",
+  "profile.usage.credits": "Credits",
+
+  "profile.account.dangerZone": "Danger Zone",
+  "profile.account.deleteAccount": "Delete Account",
+  "profile.account.deleteWarning": "This will permanently delete your account, all documents, chats, and data. This action cannot be undone.",
+  "profile.account.deleteConfirm": "Type your email to confirm deletion",
+  "profile.account.deleting": "Deleting account...",
+
+  "userMenu.profile": "Profile",
+  "userMenu.buyCredits": "Buy Credits",
+  "userMenu.signOut": "Sign Out"
 }

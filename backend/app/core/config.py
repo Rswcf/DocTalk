@@ -75,6 +75,10 @@ class Settings(BaseSettings):
     CREDITS_PRO: int = 200000
     CREDITS_ENTERPRISE: int = 1000000
     SIGNUP_BONUS_CREDITS: int = 10000
+    # Subscription tiers
+    PLAN_FREE_MONTHLY_CREDITS: int = 10000
+    PLAN_PRO_MONTHLY_CREDITS: int = 100000
+    STRIPE_PRICE_PRO_MONTHLY: str = ''
 
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", case_sensitive=False)
 

@@ -163,6 +163,10 @@ class User(Base):
     email_verified: Mapped[Optional[datetime]] = mapped_column(sa.DateTime(timezone=True))
     credits_balance: Mapped[int] = mapped_column(sa.Integer, nullable=False, server_default=sa.text("0"))
     signup_bonus_granted_at: Mapped[Optional[datetime]] = mapped_column(sa.DateTime(timezone=True))
+    plan: Mapped[str] = mapped_column(sa.String(20), nullable=False, server_default=sa.text("'free'"))
+    stripe_customer_id: Mapped[Optional[str]] = mapped_column(sa.String(255))
+    stripe_subscription_id: Mapped[Optional[str]] = mapped_column(sa.String(255))
+    monthly_credits_granted_at: Mapped[Optional[datetime]] = mapped_column(sa.DateTime(timezone=True))
     created_at: Mapped[datetime] = mapped_column(sa.DateTime(timezone=True), server_default=sa.text("now()"))
     updated_at: Mapped[datetime] = mapped_column(
         sa.DateTime(timezone=True), server_default=sa.text("now()"), onupdate=sa.func.now()

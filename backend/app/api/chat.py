@@ -133,6 +133,9 @@ async def chat_stream(
 
     # If authenticated, ensure sufficient credits before opening stream
     if user is not None:
+        from app.services.credit_service import ensure_monthly_credits
+        await ensure_monthly_credits(db, user)
+        await db.commit()
         balance = await credit_service.get_user_credits(db, user.id)
         if balance < credit_service.MIN_CREDITS_FOR_CHAT:
             return JSONResponse(

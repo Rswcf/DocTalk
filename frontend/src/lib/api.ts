@@ -1,4 +1,5 @@
 import type { DocumentResponse, Message, SearchResponse, Citation, SessionListResponse } from '../types';
+import type { UserProfile, CreditHistoryResponse, UsageBreakdown } from '../types';
 
 export const API_BASE = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8000';
 export const PROXY_BASE = '/api/proxy';
@@ -112,4 +113,37 @@ export async function deleteDocument(docId: string): Promise<void> {
     const text = await res.text();
     throw new Error(`HTTP ${res.status}: ${text}`);
   }
+}
+
+export async function getUserProfile(): Promise<UserProfile> {
+  const res = await fetch(PROXY_BASE + '/api/users/profile');
+  return handle(res);
+}
+
+export async function getCreditHistory(limit = 20, offset = 0): Promise<CreditHistoryResponse> {
+  const res = await fetch(PROXY_BASE + '/api/credits/history?limit=' + limit + '&offset=' + offset);
+  return handle(res);
+}
+
+export async function getUsageBreakdown(): Promise<UsageBreakdown> {
+  const res = await fetch(PROXY_BASE + '/api/users/usage-breakdown');
+  return handle(res);
+}
+
+export async function deleteUserAccount(): Promise<void> {
+  const res = await fetch(PROXY_BASE + '/api/users/me', { method: 'DELETE' });
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error('HTTP ' + res.status + ': ' + text);
+  }
+}
+
+export async function createSubscription(): Promise<{ checkout_url: string }> {
+  const res = await fetch(PROXY_BASE + '/api/billing/subscribe', { method: 'POST' });
+  return handle(res);
+}
+
+export async function createPortalSession(): Promise<{ portal_url: string }> {
+  const res = await fetch(PROXY_BASE + '/api/billing/portal', { method: 'POST' });
+  return handle(res);
 }

@@ -146,5 +146,57 @@
   "demo.pdfPlaceholder": "PDF 预览",
   "demo.pdfPlaceholderHint": "示例 PDF 将在下次更新中添加",
 
-  "common.backToHome": "返回首页"
+  "common.backToHome": "返回首页",
+
+  "profile.title": "个人资料",
+  "profile.tabs.profile": "资料",
+  "profile.tabs.credits": "额度",
+  "profile.tabs.usage": "用量",
+  "profile.tabs.account": "账户",
+
+  "profile.info.memberSince": "已加入 {days} 天",
+  "profile.info.connectedWith": "已通过 {provider} 连接",
+
+  "profile.plan.free": "免费",
+  "profile.plan.pro": "专业版",
+  "profile.plan.upgrade": "升级到专业版",
+  "profile.plan.manage": "管理订阅",
+  "profile.plan.monthlyAllowance": "{used} / {total} 每月额度",
+  "profile.plan.nextRenewal": "{days} 天后续订",
+
+  "profile.credits.balance": "额度余额",
+  "profile.credits.buyMore": "购买额外额度",
+  "profile.credits.history": "交易记录",
+  "profile.credits.noHistory": "暂无交易记录",
+  "profile.credits.reason.signup_bonus": "注册赠送",
+  "profile.credits.reason.purchase": "购买额度",
+  "profile.credits.reason.chat": "聊天消耗",
+  "profile.credits.reason.monthly_allowance": "每月额度",
+  "profile.credits.reason.refund": "退款",
+
+  "profile.usage.documents": "文档",
+  "profile.usage.sessions": "聊天会话",
+  "profile.usage.messages": "消息",
+  "profile.usage.creditsSpent": "已消耗额度",
+  "profile.usage.tokensUsed": "已使用 Tokens",
+  "profile.usage.modelBreakdown": "按模型统计",
+  "profile.usage.model": "模型",
+  "profile.usage.calls": "调用次数",
+  "profile.usage.tokens": "Tokens",
+  "profile.usage.credits": "额度",
+
+  "profile.account.dangerZone": "危险区域",
+  "profile.account.deleteAccount": "删除账户",
+  "profile.account.deleteWarning": "这将永久删除你的账户、所有文档、对话和数据。此操作无法撤销。",
+  "profile.account.deleteConfirm": "输入你的邮箱以确认删除",
+  "profile.account.deleting": "正在删除账户…",
+
+  "userMenu.profile": "个人资料",
+  "userMenu.buyCredits": "购买额度",
+  "userMenu.signOut": "退出登录",
+
+  "billing.pro.title": "Pro 计划",
+  "billing.pro.description": "每月 100,000 额度",
+  "billing.pro.pricePerMonth": "${price}/月",
+  "billing.extraTopups": "额外额度加购"
 }

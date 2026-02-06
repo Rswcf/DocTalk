@@ -77,5 +77,57 @@
   "billing.purchaseCanceled": "Purchase was canceled.",
   "billing.error": "An error occurred. Please try again.",
   "common.cancel": "Cancel",
-  "common.loading": "Loading..."
+  "common.loading": "Loading...",
+
+  "profile.title": "Profil",
+  "profile.tabs.profile": "Profil",
+  "profile.tabs.credits": "Crédits",
+  "profile.tabs.usage": "Utilisation",
+  "profile.tabs.account": "Compte",
+
+  "profile.info.memberSince": "Membre depuis {days} jours",
+  "profile.info.connectedWith": "Connecté avec {provider}",
+
+  "profile.plan.free": "Gratuit",
+  "profile.plan.pro": "Pro",
+  "profile.plan.upgrade": "Passer à Pro",
+  "profile.plan.manage": "Gérer l’abonnement",
+  "profile.plan.monthlyAllowance": "{used} / {total} crédits mensuels",
+  "profile.plan.nextRenewal": "Renouvellement dans {days} jours",
+
+  "profile.credits.balance": "Solde de crédits",
+  "profile.credits.buyMore": "Acheter des crédits supplémentaires",
+  "profile.credits.history": "Historique des transactions",
+  "profile.credits.noHistory": "Aucune transaction pour le moment",
+  "profile.credits.reason.signup_bonus": "Bonus d’inscription",
+  "profile.credits.reason.purchase": "Achat de crédits",
+  "profile.credits.reason.chat": "Utilisation du chat",
+  "profile.credits.reason.monthly_allowance": "Allocation mensuelle",
+  "profile.credits.reason.refund": "Remboursement",
+
+  "profile.usage.documents": "Documents",
+  "profile.usage.sessions": "Sessions de chat",
+  "profile.usage.messages": "Messages",
+  "profile.usage.creditsSpent": "Crédits dépensés",
+  "profile.usage.tokensUsed": "Jetons utilisés",
+  "profile.usage.modelBreakdown": "Utilisation par modèle",
+  "profile.usage.model": "Modèle",
+  "profile.usage.calls": "Appels",
+  "profile.usage.tokens": "Jetons",
+  "profile.usage.credits": "Crédits",
+
+  "profile.account.dangerZone": "Zone de danger",
+  "profile.account.deleteAccount": "Supprimer le compte",
+  "profile.account.deleteWarning": "Cela supprimera définitivement votre compte, tous les documents, discussions et données. Cette action ne peut pas être annulée.",
+  "profile.account.deleteConfirm": "Saisissez votre e-mail pour confirmer la suppression",
+  "profile.account.deleting": "Suppression du compte…",
+
+  "userMenu.profile": "Profil",
+  "userMenu.buyCredits": "Acheter des crédits",
+  "userMenu.signOut": "Se déconnecter",
+
+  "billing.pro.title": "Forfait Pro",
+  "billing.pro.description": "100 000 crédits/mois",
+  "billing.pro.pricePerMonth": "{price}/mois",
+  "billing.extraTopups": "Recharges de crédits supplémentaires"
 }

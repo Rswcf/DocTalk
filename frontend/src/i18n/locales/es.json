@@ -77,5 +77,57 @@
   "billing.purchaseCanceled": "Purchase was canceled.",
   "billing.error": "An error occurred. Please try again.",
   "common.cancel": "Cancel",
-  "common.loading": "Loading..."
+  "common.loading": "Loading...",
+
+  "profile.title": "Perfil",
+  "profile.tabs.profile": "Perfil",
+  "profile.tabs.credits": "Créditos",
+  "profile.tabs.usage": "Uso",
+  "profile.tabs.account": "Cuenta",
+
+  "profile.info.memberSince": "Miembro desde hace {days} días",
+  "profile.info.connectedWith": "Conectado con {provider}",
+
+  "profile.plan.free": "Gratis",
+  "profile.plan.pro": "Pro",
+  "profile.plan.upgrade": "Actualizar a Pro",
+  "profile.plan.manage": "Gestionar suscripción",
+  "profile.plan.monthlyAllowance": "{used} / {total} créditos mensuales",
+  "profile.plan.nextRenewal": "Se renueva en {days} días",
+
+  "profile.credits.balance": "Saldo de créditos",
+  "profile.credits.buyMore": "Comprar créditos adicionales",
+  "profile.credits.history": "Historial de transacciones",
+  "profile.credits.noHistory": "Aún no hay transacciones",
+  "profile.credits.reason.signup_bonus": "Bono de registro",
+  "profile.credits.reason.purchase": "Compra de créditos",
+  "profile.credits.reason.chat": "Uso de chat",
+  "profile.credits.reason.monthly_allowance": "Asignación mensual",
+  "profile.credits.reason.refund": "Reembolso",
+
+  "profile.usage.documents": "Documentos",
+  "profile.usage.sessions": "Sesiones de chat",
+  "profile.usage.messages": "Mensajes",
+  "profile.usage.creditsSpent": "Créditos gastados",
+  "profile.usage.tokensUsed": "Tokens usados",
+  "profile.usage.modelBreakdown": "Uso por modelo",
+  "profile.usage.model": "Modelo",
+  "profile.usage.calls": "Llamadas",
+  "profile.usage.tokens": "Tokens",
+  "profile.usage.credits": "Créditos",
+
+  "profile.account.dangerZone": "Zona de peligro",
+  "profile.account.deleteAccount": "Eliminar cuenta",
+  "profile.account.deleteWarning": "Esto eliminará permanentemente tu cuenta, todos los documentos, chats y datos. Esta acción no se puede deshacer.",
+  "profile.account.deleteConfirm": "Escribe tu correo para confirmar la eliminación",
+  "profile.account.deleting": "Eliminando cuenta…",
+
+  "userMenu.profile": "Perfil",
+  "userMenu.buyCredits": "Comprar créditos",
+  "userMenu.signOut": "Cerrar sesión",
+
+  "billing.pro.title": "Plan Pro",
+  "billing.pro.description": "100.000 créditos/mes",
+  "billing.pro.pricePerMonth": "${price}/mes",
+  "billing.extraTopups": "Recargas de créditos adicionales"
 }

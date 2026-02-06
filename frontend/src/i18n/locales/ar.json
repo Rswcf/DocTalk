@@ -77,5 +77,57 @@
   "billing.purchaseCanceled": "Purchase was canceled.",
   "billing.error": "An error occurred. Please try again.",
   "common.cancel": "Cancel",
-  "common.loading": "Loading..."
+  "common.loading": "Loading...",
+
+  "profile.title": "الملف الشخصي",
+  "profile.tabs.profile": "الملف",
+  "profile.tabs.credits": "الأرصدة",
+  "profile.tabs.usage": "الاستخدام",
+  "profile.tabs.account": "الحساب",
+
+  "profile.info.memberSince": "عضو منذ {days} يومًا",
+  "profile.info.connectedWith": "متصل عبر {provider}",
+
+  "profile.plan.free": "مجاني",
+  "profile.plan.pro": "برو",
+  "profile.plan.upgrade": "الترقية إلى برو",
+  "profile.plan.manage": "إدارة الاشتراك",
+  "profile.plan.monthlyAllowance": "{used} / {total} أرصدة شهرية",
+  "profile.plan.nextRenewal": "يتجدد خلال {days} يومًا",
+
+  "profile.credits.balance": "رصيد الاعتمادات",
+  "profile.credits.buyMore": "شراء أرصدة إضافية",
+  "profile.credits.history": "سجل المعاملات",
+  "profile.credits.noHistory": "لا توجد معاملات بعد",
+  "profile.credits.reason.signup_bonus": "مكافأة التسجيل",
+  "profile.credits.reason.purchase": "شراء أرصدة",
+  "profile.credits.reason.chat": "استخدام الدردشة",
+  "profile.credits.reason.monthly_allowance": "البدل الشهري",
+  "profile.credits.reason.refund": "استرداد",
+
+  "profile.usage.documents": "المستندات",
+  "profile.usage.sessions": "جلسات الدردشة",
+  "profile.usage.messages": "الرسائل",
+  "profile.usage.creditsSpent": "الأرصدة المُستهلكة",
+  "profile.usage.tokensUsed": "الرموز المستخدمة",
+  "profile.usage.modelBreakdown": "الاستخدام حسب النموذج",
+  "profile.usage.model": "النموذج",
+  "profile.usage.calls": "الاستدعاءات",
+  "profile.usage.tokens": "الرموز",
+  "profile.usage.credits": "الأرصدة",
+
+  "profile.account.dangerZone": "منطقة الخطر",
+  "profile.account.deleteAccount": "حذف الحساب",
+  "profile.account.deleteWarning": "سيؤدي ذلك إلى حذف حسابك وجميع المستندات والدردشات والبيانات نهائيًا. لا يمكن التراجع عن هذا الإجراء.",
+  "profile.account.deleteConfirm": "اكتب بريدك الإلكتروني لتأكيد الحذف",
+  "profile.account.deleting": "جارٍ حذف الحساب…",
+
+  "userMenu.profile": "الملف الشخصي",
+  "userMenu.buyCredits": "شراء أرصدة",
+  "userMenu.signOut": "تسجيل الخروج",
+
+  "billing.pro.title": "خطة برو",
+  "billing.pro.description": "100,000 رصيد/شهر",
+  "billing.pro.pricePerMonth": "${price}/شهر",
+  "billing.extraTopups": "شحن أرصدة إضافية"
 }

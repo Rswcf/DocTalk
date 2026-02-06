@@ -52,6 +52,7 @@ async def create_user(
         email_verified=email_verified,
         credits_balance=SIGNUP_BONUS_CREDITS,
         signup_bonus_granted_at=datetime.utcnow(),
+        monthly_credits_granted_at=datetime.utcnow(),
     )
     db.add(user)
 
@@ -179,4 +180,3 @@ async def use_verification_token(
     await db.delete(vt)
     await db.commit()
     return vt
-

@@ -61,3 +61,48 @@ export interface SessionItem {
 export interface SessionListResponse {
   sessions: SessionItem[];
 }
+
+export interface UserProfile {
+  id: string;
+  email: string;
+  name: string | null;
+  image: string | null;
+  created_at: string;
+  plan: 'free' | 'pro';
+  credits_balance: number;
+  monthly_allowance: number;
+  monthly_credits_granted_at: string | null;
+  signup_bonus_granted: boolean;
+  connected_accounts: Array<{ provider: string; created_at: string }>;
+  stats: {
+    total_documents: number;
+    total_sessions: number;
+    total_messages: number;
+    total_credits_spent: number;
+    total_tokens_used: number;
+  };
+}
+
+export interface CreditHistoryItem {
+  id: string;
+  delta: number;
+  balance_after: number;
+  reason: string;
+  ref_type: string | null;
+  ref_id: string | null;
+  created_at: string;
+}
+
+export interface CreditHistoryResponse {
+  items: CreditHistoryItem[];
+  total: number;
+}
+
+export interface UsageBreakdown {
+  by_model: Array<{
+    model: string;
+    total_calls: number;
+    total_tokens: number;
+    total_credits: number;
+  }>;
+}
