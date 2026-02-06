@@ -10,6 +10,7 @@ import { Trash2 } from 'lucide-react';
 import { useDocTalkStore } from '../store';
 import { useLocale } from '../i18n';
 import { PrivacyBadge } from '../components/PrivacyBadge';
+import Header from '../components/Header';
 
 type StoredDoc = { document_id: string; filename?: string; createdAt: number };
 
@@ -117,7 +118,9 @@ export default function HomePage() {
   };
 
   return (
-    <main className="min-h-screen flex flex-col items-center justify-center p-8 gap-10 dark:bg-gray-900">
+    <div className="flex flex-col min-h-screen dark:bg-gray-900">
+      <Header />
+      <main className="flex-1 flex flex-col items-center justify-center p-8 gap-10">
       {!isLoggedIn ? (
         <div className="max-w-2xl w-full flex flex-col items-center">
           <h1 className="text-3xl font-semibold text-center dark:text-gray-100">{t('app.title')}</h1>
@@ -166,8 +169,6 @@ export default function HomePage() {
       ) : (
         <>
           <div className="max-w-2xl w-full">
-            <h1 className="text-3xl font-semibold text-center dark:text-gray-100">{t('app.title')}</h1>
-
             <div className="mt-4 w-full flex justify-center">
               <PrivacyBadge />
             </div>
@@ -244,6 +245,7 @@ export default function HomePage() {
           </div>
         </>
       )}
-    </main>
+      </main>
+    </div>
   );
 }
