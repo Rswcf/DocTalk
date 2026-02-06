@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { ZoomIn, ZoomOut, ChevronLeft, ChevronRight } from 'lucide-react';
+import { ZoomIn, ZoomOut, ChevronLeft, ChevronRight, Hand } from 'lucide-react';
 import { useLocale } from '../../i18n';
 
 interface PdfToolbarProps {
@@ -10,9 +10,11 @@ interface PdfToolbarProps {
   scale: number;
   onPageChange: (page: number) => void;
   onScaleChange: (scale: number) => void;
+  grabMode: boolean;
+  onGrabModeToggle: () => void;
 }
 
-export default function PdfToolbar({ currentPage, totalPages, scale, onPageChange, onScaleChange }: PdfToolbarProps) {
+export default function PdfToolbar({ currentPage, totalPages, scale, onPageChange, onScaleChange, grabMode, onGrabModeToggle }: PdfToolbarProps) {
   const { t } = useLocale();
   const [pageInput, setPageInput] = useState(String(currentPage));
 
@@ -45,6 +47,16 @@ export default function PdfToolbar({ currentPage, totalPages, scale, onPageChang
       <span className="w-12 text-center text-xs tabular-nums">{Math.round(scale * 100)}%</span>
       <button onClick={zoomIn} className="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700" title={t('toolbar.zoomIn')}>
         <ZoomIn size={16} />
+      </button>
+
+      <div className="w-px h-5 bg-gray-300 dark:bg-gray-600 mx-1" />
+
+      <button
+        onClick={onGrabModeToggle}
+        className={`p-1 rounded ${grabMode ? 'bg-blue-100 dark:bg-blue-900/50 text-blue-600 dark:text-blue-400' : 'hover:bg-gray-100 dark:hover:bg-gray-700'}`}
+        title={t('toolbar.grabMode')}
+      >
+        <Hand size={16} />
       </button>
 
       <div className="w-px h-5 bg-gray-300 dark:bg-gray-600 mx-1" />

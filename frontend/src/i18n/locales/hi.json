@@ -40,6 +40,7 @@
   "toolbar.zoomOut": "ज़ूम आउट",
   "toolbar.prevPage": "पिछला पृष्ठ",
   "toolbar.nextPage": "अगला पृष्ठ",
+  "toolbar.grabMode": "हैंड टूल (पैन करने के लिए ड्रैग करें)",
 
   "header.darkMode": "डार्क मोड पर स्विच करें",
   "header.lightMode": "लाइट मोड पर स्विच करें",

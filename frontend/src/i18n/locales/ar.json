@@ -40,6 +40,7 @@
   "toolbar.zoomOut": "تصغير",
   "toolbar.prevPage": "الصفحة السابقة",
   "toolbar.nextPage": "الصفحة التالية",
+  "toolbar.grabMode": "أداة اليد (اسحب للتحريك)",
 
   "header.darkMode": "التبديل إلى الوضع الداكن",
   "header.lightMode": "التبديل إلى الوضع الفاتح",

@@ -40,6 +40,7 @@
   "toolbar.zoomOut": "缩小",
   "toolbar.prevPage": "上一页",
   "toolbar.nextPage": "下一页",
+  "toolbar.grabMode": "抓手工具（拖动平移）",
 
   "header.darkMode": "切换暗色模式",
   "header.lightMode": "切换亮色模式",

@@ -20,6 +20,7 @@ export interface DocTalkStore {
   // PDF
   currentPage: number;
   scale: number;
+  grabMode: boolean;
   highlights: NormalizedBBox[];
   pdfUrl: string | null;
   scrollNonce: number;
@@ -39,6 +40,7 @@ export interface DocTalkStore {
   setPdfUrl: (url: string) => void;
   setPage: (page: number) => void;
   setScale: (scale: number) => void;
+  setGrabMode: (v: boolean) => void;
   setHighlights: (highlights: NormalizedBBox[]) => void;
   navigateToCitation: (citation: Citation) => void;
   addMessage: (msg: Message) => void;
@@ -65,6 +67,7 @@ const initialState = {
   lastDocumentName: (typeof window !== 'undefined' ? localStorage.getItem('doctalk_last_doc_name') : null) as string | null,
   currentPage: 1,
   scale: 1,
+  grabMode: false,
   highlights: [] as NormalizedBBox[],
   pdfUrl: null as string | null,
   sessionId: null as string | null,
@@ -91,6 +94,7 @@ export const useDocTalkStore = create<DocTalkStore>((set, get) => ({
   setPdfUrl: (url: string) => set({ pdfUrl: url }),
   setPage: (page: number) => set({ currentPage: Math.max(1, page) }),
   setScale: (scale: number) => set({ scale: Math.max(0.25, scale) }),
+  setGrabMode: (v: boolean) => set({ grabMode: v }),
   setHighlights: (highlights: NormalizedBBox[]) => set({ highlights }),
   navigateToCitation: (citation: Citation) => {
     const bboxes = (citation.bboxes || []).map((bb: any) => ({

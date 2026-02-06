@@ -40,6 +40,7 @@
   "toolbar.zoomOut": "Zoom out",
   "toolbar.prevPage": "Previous page",
   "toolbar.nextPage": "Next page",
+  "toolbar.grabMode": "Hand tool (drag to pan)",
 
   "header.darkMode": "Switch to dark mode",
   "header.lightMode": "Switch to light mode",

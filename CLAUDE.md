@@ -35,9 +35,12 @@ Railway 项目包含 5 个服务：backend, Postgres, Redis, qdrant-v2, minio-v2
 - **认证**: Auth.js v5 + Google OAuth，JWT 策略，后端通过 `require_auth` 依赖校验
 - **API 代理**: 前端所有后端请求（含 SSE chat stream）通过 `/api/proxy/*` 路由，自动注入 Authorization header
 - **分层认证模型**:
-  - 未登录: 可试用 Demo（示例 PDF，5 条消息限制）
-  - 已登录: 可上传个人 PDF，服务端文档列表，Credits 系统
+  - 未登录: 可试用 Demo（3 篇真实 PDF，5 条消息限制，服务端 + 客户端双重限制）
+  - 已登录: 可上传个人 PDF，服务端文档列表，Credits 系统；访问 Demo 文档使用 Credits，无消息限制
+- **Demo 系统**: 后端启动时自动种子 3 篇真实文档（NVIDIA 10-K、Attention 论文、NDA）到 MinIO + DB，通过 Celery 解析。`demo_slug` 列标识 Demo 文档，`is_demo` 属性暴露给前端。`GET /api/documents/demo` 返回 Demo 文档列表。`/demo` 页面从 API 获取文档 ID 后链接到 `/d/{docId}`，旧 `/demo/[sample]` 路由自动重定向
 - **Credits 系统**: 预付费模式，余额 + Ledger 双表记录，每次对话扣费
+- **订阅系统**: Free (10K credits/月) + Pro (100K credits/月) 两级，月度 credits 惰性发放（`ensure_monthly_credits`），Stripe 订阅集成
+- **Profile 页面**: `/profile` 4 个 Tab (Profile/Credits/Usage/Account)，含交易历史、使用统计、账户删除
 - **API 网关**: 所有 LLM 和 Embedding 调用统一通过 OpenRouter（单一 API key）
 - **模型切换**: 前端用户可选择 LLM 模型，后端白名单 (`ALLOWED_MODELS`) 验证后透传给 OpenRouter
 - **布局**: Chat 面板在左侧, PDF 查看器在右侧，中间可拖拽调节宽度 (react-resizable-panels)
@@ -54,6 +57,7 @@ Railway 项目包含 5 个服务：backend, Postgres, Redis, qdrant-v2, minio-v2
 ```
 # 文档管理
 GET    /api/documents                     # 列出用户文档 (?mine=1)
+GET    /api/documents/demo                # 列出 Demo 文档 (slug, document_id, status)
 POST   /api/documents/upload              # 上传 PDF (需登录)
 GET    /api/documents/{document_id}       # 查询文档状态
 DELETE /api/documents/{document_id}       # 删除文档（ORM cascade，同步删除）
@@ -64,13 +68,22 @@ GET    /api/documents/{document_id}/sessions  # 列出文档的聊天会话
 
 # 会话与对话
 GET    /api/sessions/{session_id}/messages    # 获取历史消息
-POST   /api/sessions/{session_id}/chat        # 对话（SSE streaming, 可选 model 字段）
+POST   /api/sessions/{session_id}/chat        # 对话（SSE streaming, 可选 model 字段；Demo 匿名用户限 5 条，超限返回 429）
 DELETE /api/sessions/{session_id}             # 删除聊天会话
 
 # Credits & Billing
 GET    /api/credits/balance               # 获取余额
-POST   /api/billing/checkout              # 创建 Stripe Checkout
+GET    /api/credits/history               # 交易历史 (?limit=20&offset=0)
+POST   /api/billing/checkout              # 创建 Stripe Checkout (一次性购买)
+POST   /api/billing/subscribe             # 创建 Stripe Subscription Checkout (Pro)
+POST   /api/billing/portal                # 创建 Stripe Customer Portal
 POST   /api/billing/webhook               # Stripe Webhook
+
+# 用户
+GET    /api/users/me                      # 基本用户信息
+GET    /api/users/profile                 # 完整 Profile (含 stats, plan, accounts)
+GET    /api/users/usage-breakdown         # 按模型分组的使用统计
+DELETE /api/users/me                      # 删除账户 (级联清理)
 
 # 内部 Auth (Adapter)
 POST   /api/internal/auth/users           # 创建用户
@@ -128,6 +141,7 @@ ADAPTER_SECRET=<随机字符串>
 # 支付 (可选)
 STRIPE_SECRET_KEY=sk_...
 STRIPE_WEBHOOK_SECRET=whsec_...
+STRIPE_PRICE_PRO_MONTHLY=price_...  # Stripe recurring price ID for Pro plan
 
 # OAuth (前端)
 GOOGLE_CLIENT_ID=...
@@ -158,11 +172,14 @@ GOOGLE_CLIENT_SECRET=...
 ### 前端相关
 - **动态 CTA**: 首页根据登录状态显示不同 UI（未登录→Demo，已登录→上传）
 - **AuthModal**: 使用查询参数 `?auth=1` 触发登录模态框，ESC 可关闭
-- **Demo 模式**: `/demo` 页面提供示例 PDF 试用，前端限制 5 条消息
+- **Demo 模式**: `/demo` 页面从后端 `GET /api/documents/demo` 获取真实文档列表，链接到 `/d/{docId}`；ChatPanel 通过 `maxUserMessages` prop 实现客户端 5 条限制 + 计数条 + 登录 CTA；旧 `/demo/[sample]` 路由自动重定向到新路径
 - **文档列表**: 服务端 + localStorage 合并，服务端优先
 - **前端全部 `"use client"`**: 无 SSR，所有页面和组件均为客户端渲染
 - **所有 API 走代理**: REST 和 SSE (chat stream) 均通过 `PROXY_BASE` (`/api/proxy`) 路由，`sse.ts` 的 `chatStream()` 也走代理以注入 JWT
 - **Proxy maxDuration**: `route.ts` 导出 `maxDuration = 60`（Vercel Hobby 上限），SSE chat 使用 60s fetch timeout，其他请求 30s
+- **UserMenu 替代 AuthButton**: Header 中 `AuthButton` 已被 `UserMenu` 下拉菜单替代，未登录时仍显示 Sign In 按钮
+- **Profile 页面**: `/profile?tab=credits` (默认 tab)，受保护路由，未登录重定向到 `/auth?callbackUrl=/profile`
+- **Billing 页面**: 顶部新增 Pro 订阅卡片（渐变蓝边框），根据 plan 显示 Upgrade/Manage；下方保留原有 credit packs
 
 ### 后端相关
 - **Celery 用同步 DB**: Worker 使用 `psycopg`（同步），API 使用 `asyncpg`（异步）
@@ -171,9 +188,14 @@ GOOGLE_CLIENT_SECRET=...
 - **FOR UPDATE 锁**: 验证 Token 使用行锁防止 TOCTOU 竞态
 - **Parse worker 幂等**: 重新执行时先删除已有 pages/chunks，重置计数器，避免 UniqueViolation；支持 stuck 文档重试
 - **启动自动重试**: `main.py` 的 `on_startup` 在后台线程中检测 status=parsing/embedding 的文档，自动重新分发 parse 任务
+- **Demo 文档种子**: `on_startup` → `_seed_demo_documents()` → `demo_seed.seed_demo_documents()`，从 `backend/seed_data/` 读取 3 篇 PDF，上传 MinIO 并 dispatch parse。幂等：已 ready 跳过，stuck 重派，error 重建
+- **Demo 5 条消息限制**: `chat.py:chat_stream` 中，匿名用户 + demo_slug 文档 → 查询 user messages 数量 → 超过 5 条返回 429
 - **Retrieval 容错**: `chat_service.py` 的 retrieval 调用包裹在 try/except 中，Qdrant 不可用时返回 `RETRIEVAL_ERROR` SSE 事件
 - **删除为同步级联**: `doc_service.delete_document()` 使用 ORM cascade 真正删除 DB 记录（非仅标记 status），同时 best-effort 清理 MinIO + Qdrant
 - **文档列表过滤**: `list_documents` 查询排除 `status="deleting"` 的文档
+- **月度 Credits 惰性发放**: `ensure_monthly_credits()` 在每次 chat 前检查，30 天周期，ledger 幂等，时区安全
+- **Stripe 订阅 Webhook**: `checkout.session.completed` 按 mode 分流 (subscription vs payment)；`invoice.payment_succeeded` 按 invoice.id 幂等；`customer.subscription.deleted` 清除 plan
+- **账户删除**: `DELETE /api/users/me` 先取消 Stripe 订阅，再逐文档清理 MinIO+Qdrant，最后 ORM cascade 删除用户
 
 ### PDF 相关
 - **bbox 坐标**: 归一化到 [0,1]，top-left origin，前端渲染时乘以页面实际像素尺寸
@@ -212,8 +234,9 @@ DocTalk/
 │   │   │   ├── documents.py      # 文档 CRUD + 列表
 │   │   │   ├── chat.py           # 会话 + 对话
 │   │   │   ├── auth.py           # 内部 Auth Adapter API
-│   │   │   ├── billing.py        # Stripe Checkout + Webhook
-│   │   │   └── credits.py        # Credits 余额查询
+│   │   │   ├── billing.py        # Stripe Checkout/Subscribe/Portal + Webhook
+│   │   │   ├── credits.py        # Credits 余额 + 历史
+│   │   │   └── users.py          # /me, /profile, /usage-breakdown, DELETE /me
 │   │   │   # admin endpoints are in main.py (temporary, no auth)
 │   │   ├── core/
 │   │   │   ├── config.py         # Settings, ALLOWED_MODELS 白名单
@@ -226,19 +249,22 @@ DocTalk/
 │   │   │   └── document.py       # DocumentResponse, DocumentBrief
 │   │   ├── services/
 │   │   │   ├── chat_service.py   # LLM 对话 + 引用解析
-│   │   │   ├── credit_service.py # Credits debit/credit
+│   │   │   ├── credit_service.py # Credits debit/credit + ensure_monthly_credits
 │   │   │   ├── auth_service.py   # User/Account/Token 管理
+│   │   │   ├── demo_seed.py      # Demo 文档种子 (启动时自动执行)
 │   │   │   └── ...
 │   │   └── workers/              # Celery 任务
 │   ├── alembic/                  # 数据库迁移
+│   ├── seed_data/                # Demo PDF 文件 (nvidia-10k, attention-paper, nda-contract)
 │   └── tests/
 ├── frontend/
 │   ├── src/
 │   │   ├── app/
 │   │   │   ├── page.tsx          # 首页 (动态 CTA)
 │   │   │   ├── auth/             # 登录页
-│   │   │   ├── billing/          # 购买页
-│   │   │   ├── demo/             # Demo 选择 + 阅读页
+│   │   │   ├── billing/          # 购买页 (含 Pro 订阅卡片)
+│   │   │   ├── profile/          # Profile 页 (4 tabs: info/credits/usage/account)
+│   │   │   ├── demo/             # Demo 选择页 + 旧路由重定向
 │   │   │   ├── d/[documentId]/   # 文档阅读页
 │   │   │   ├── privacy/          # 隐私政策
 │   │   │   ├── terms/            # 服务条款
@@ -247,10 +273,12 @@ DocTalk/
 │   │   │       └── proxy/        # API 代理 (创建后端兼容 JWT)
 │   │   ├── components/
 │   │   │   ├── AuthModal.tsx     # 登录模态框
-│   │   │   ├── AuthButton.tsx    # 登录/登出按钮
+│   │   │   ├── AuthButton.tsx    # 登录/登出按钮 (已被 UserMenu 替代)
+│   │   │   ├── UserMenu.tsx      # 头像下拉菜单 (Profile/Buy Credits/Sign Out)
 │   │   │   ├── PrivacyBadge.tsx  # 隐私承诺徽章
 │   │   │   ├── CreditsDisplay.tsx # 余额显示
 │   │   │   ├── PaywallModal.tsx  # 付费墙
+│   │   │   ├── Profile/          # ProfileTabs, ProfileInfo, Credits, Usage, Account
 │   │   │   ├── Chat/             # ChatPanel, MessageBubble, CitationCard
 │   │   │   └── PdfViewer/        # PdfViewer, PdfToolbar, PageWithHighlights
 │   │   ├── lib/
@@ -262,7 +290,7 @@ DocTalk/
 │   │   ├── store/                # Zustand
 │   │   └── types/
 │   ├── public/
-│   │   └── samples/              # Demo PDF 文件
+│   │   └── samples/              # (已清空，Demo PDF 现由后端 seed_data/ 提供)
 │   └── package.json
 ├── .collab/                      # CC ↔ CX 协作文档
 ├── docker-compose.yml

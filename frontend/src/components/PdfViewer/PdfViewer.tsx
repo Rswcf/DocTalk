@@ -43,11 +43,13 @@ export interface PdfViewerProps {
 export default function PdfViewer({ pdfUrl, currentPage, highlights, scale, scrollNonce }: PdfViewerProps) {
   const [numPages, setNumPages] = useState<number>(0);
   const [urlError, setUrlError] = useState<string | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const pageRefs = useRef<(HTMLDivElement | null)[]>([]);
+  const dragState = useRef({ isDragging: false, startX: 0, startY: 0, scrollLeft: 0, scrollTop: 0 });
   const [visiblePage, setVisiblePage] = useState(1);
   const isScrollingToPage = useRef(false);
-  const { setScale } = useDocTalkStore();
+  const { setScale, grabMode, setGrabMode } = useDocTalkStore();
   const setStoreTotalPages = (n: number) => useDocTalkStore.setState({ totalPages: n });
   const { t } = useLocale();
 
@@ -124,6 +126,31 @@ export default function PdfViewer({ pdfUrl, currentPage, highlights, scale, scro
     setScale(newScale);
   }, [setScale]);
 
+  const handleMouseDown = useCallback((e: React.MouseEvent) => {
+    if (!grabMode || !containerRef.current) return;
+    dragState.current = {
+      isDragging: true,
+      startX: e.clientX,
+      startY: e.clientY,
+      scrollLeft: containerRef.current.scrollLeft,
+      scrollTop: containerRef.current.scrollTop,
+    };
+    setIsDragging(true);
+  }, [grabMode]);
+
+  const handleMouseMove = useCallback((e: React.MouseEvent) => {
+    if (!dragState.current.isDragging || !containerRef.current) return;
+    const dx = e.clientX - dragState.current.startX;
+    const dy = e.clientY - dragState.current.startY;
+    containerRef.current.scrollLeft = dragState.current.scrollLeft - dx;
+    containerRef.current.scrollTop = dragState.current.scrollTop - dy;
+  }, []);
+
+  const handleMouseUp = useCallback(() => {
+    dragState.current.isDragging = false;
+    setIsDragging(false);
+  }, []);
+
   const pages = useMemo(() => Array.from({ length: numPages }, (_, i) => i + 1), [numPages]);
 
   return (
@@ -135,9 +162,19 @@ export default function PdfViewer({ pdfUrl, currentPage, highlights, scale, scro
           scale={scale}
           onPageChange={handlePageChange}
           onScaleChange={handleScaleChange}
+          grabMode={grabMode}
+          onGrabModeToggle={() => setGrabMode(!grabMode)}
         />
       )}
-      <div className="flex-1 overflow-auto" ref={containerRef}>
+      <div
+        className={`flex-1 overflow-auto ${grabMode ? (isDragging ? 'cursor-grabbing' : 'cursor-grab') : ''}`}
+        style={grabMode ? { userSelect: 'none' } : undefined}
+        ref={containerRef}
+        onMouseDown={handleMouseDown}
+        onMouseMove={handleMouseMove}
+        onMouseUp={handleMouseUp}
+        onMouseLeave={handleMouseUp}
+      >
         {urlError ? (
           <div className="p-4 text-red-600">{urlError}</div>
         ) : !validPdfUrl ? (

@@ -40,6 +40,7 @@
   "toolbar.zoomOut": "Reduzir",
   "toolbar.prevPage": "Página anterior",
   "toolbar.nextPage": "Próxima página",
+  "toolbar.grabMode": "Ferramenta mão (arrastar para mover)",
 
   "header.darkMode": "Mudar para modo escuro",
   "header.lightMode": "Mudar para modo claro",
