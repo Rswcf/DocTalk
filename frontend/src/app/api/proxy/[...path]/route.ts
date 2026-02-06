@@ -74,7 +74,7 @@ async function handler(req: NextRequest) {
     const response = await fetch(url, {
       method: req.method,
       headers,
-      body: req.method !== "GET" && req.method !== "HEAD" ? await req.text() : undefined,
+      body: req.method !== "GET" && req.method !== "HEAD" ? await req.arrayBuffer() : undefined,
       signal: AbortSignal.timeout(30000), // 30 second timeout
     });
 
