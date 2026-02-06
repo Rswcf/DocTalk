@@ -55,8 +55,37 @@ def on_startup() -> None:
         except Exception as e:
             logger.warning("Qdrant collection check failed (will retry on first use): %s", e)
 
+    def _retry_stuck_documents() -> None:
+        """Re-dispatch parse tasks for documents stuck in 'parsing' status."""
+        try:
+            from app.models.sync_database import SyncSessionLocal
+            from app.models.tables import Document
+            from sqlalchemy import select
+
+            with SyncSessionLocal() as db:
+                rows = db.execute(
+                    select(Document).where(Document.status.in_(["parsing", "embedding"]))
+                )
+                stuck = list(rows.scalars())
+                if not stuck:
+                    return
+                logger.info("Found %d stuck documents, re-dispatching parse tasks", len(stuck))
+                from app.workers.parse_worker import parse_document
+                for doc in stuck:
+                    try:
+                        parse_document.delay(str(doc.id))
+                        logger.info("Re-dispatched parse for %s (%s)", doc.id, doc.filename)
+                    except Exception as e:
+                        logger.warning("Failed to re-dispatch parse for %s: %s", doc.id, e)
+        except Exception as e:
+            logger.warning("Stuck document retry failed: %s", e)
+
     # Run service initialization in background so app starts immediately
-    t = threading.Thread(target=_init_services, daemon=True)
+    def _startup_tasks() -> None:
+        _init_services()
+        _retry_stuck_documents()
+
+    t = threading.Thread(target=_startup_tasks, daemon=True)
     t.start()
 
 

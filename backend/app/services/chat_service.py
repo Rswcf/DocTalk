@@ -203,8 +203,12 @@ class ChatService:
         for m in history_msgs:
             claude_messages.append({"role": m.role, "content": m.content})
 
-        # 4) Retrieval
-        retrieved = await retrieval_service.search(user_message, document_id, top_k=5, db=db)
+        # 4) Retrieval (with error handling — e.g. Qdrant down or no vectors yet)
+        try:
+            retrieved = await retrieval_service.search(user_message, document_id, top_k=5, db=db)
+        except Exception as e:
+            yield sse("error", {"code": "RETRIEVAL_ERROR", "message": f"文档检索失败: {e}"})
+            return
 
         # 5) Build prompt (system)
         numbered_chunks: List[str] = []

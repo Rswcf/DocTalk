@@ -22,5 +22,6 @@ COPY backend/ /app/
 
 EXPOSE 8000
 
-# Run migrations then start server; Railway injects $PORT
-CMD ["sh", "-c", "cd /app && python -m alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}"]
+# Run migrations, start Celery worker in background, then start API server.
+# Railway injects $PORT. Celery concurrency=1 to conserve memory.
+CMD ["sh", "-c", "cd /app && python -m alembic upgrade head && python -m celery -A app.workers.celery_app worker --loglevel=info -Q default,parse --concurrency=1 & uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}"]
