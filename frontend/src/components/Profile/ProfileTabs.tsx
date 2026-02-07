@@ -30,7 +30,7 @@ export default function ProfileTabs({ activeTab, onChange }: Props) {
             className={
               `shrink-0 px-4 py-2 rounded-lg text-sm font-medium transition-colors ` +
               (isActive
-                ? `bg-zinc-600 text-white`
+                ? `bg-zinc-900 dark:bg-zinc-50 text-white dark:text-zinc-900`
                 : `bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-700`)
             }
           >

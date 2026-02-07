@@ -21,7 +21,7 @@ export default function HeroSection() {
         </h1>
 
         {/* Subtitle */}
-        <p className="mt-4 text-xl md:text-2xl text-zinc-400 dark:text-zinc-500 font-normal">
+        <p className="mt-4 text-xl md:text-2xl text-zinc-500 dark:text-zinc-400 font-normal">
           {t('landing.subtitle')}
         </p>
 

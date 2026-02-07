@@ -162,8 +162,8 @@ function BillingContent() {
               key={product.id}
               className="border border-zinc-100 dark:border-zinc-800 rounded-xl p-6 flex flex-col shadow-sm hover:shadow-md transition-colors"
             >
-              <h3 className="text-lg font-medium capitalize text-zinc-900 dark:text-zinc-100">
-                {product.id}
+              <h3 className="text-lg font-medium text-zinc-900 dark:text-zinc-100">
+                {t(`billing.pack.${product.id}` as any)}
               </h3>
               <p className="text-3xl font-bold mt-2 text-zinc-900 dark:text-zinc-100">
                 ${product.price_usd}

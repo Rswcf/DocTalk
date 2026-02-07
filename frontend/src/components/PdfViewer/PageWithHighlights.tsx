@@ -2,6 +2,7 @@
 
 import React, { useState, useCallback, useMemo } from 'react';
 import { Page } from 'react-pdf';
+import { useLocale } from '../../i18n';
 import type { NormalizedBBox } from '../../types';
 
 interface PageWithHighlightsProps {
@@ -46,6 +47,7 @@ function escapeHtml(str: string): string {
 }
 
 export default function PageWithHighlights({ pageNumber, scale, highlights }: PageWithHighlightsProps) {
+  const { t } = useLocale();
   const [pageDims, setPageDims] = useState<{ w: number; h: number } | null>(null);
 
   const onLoadSuccess = useCallback((page: any) => {
@@ -115,7 +117,7 @@ export default function PageWithHighlights({ pageNumber, scale, highlights }: Pa
         onLoadSuccess={onLoadSuccess}
         loading={
           <div className="p-2 text-sm text-zinc-500">
-            Rendering page {pageNumber}…
+            {t('doc.renderingPage', { page: pageNumber })}
           </div>
         }
       />

@@ -47,14 +47,15 @@ function processCitationLinks(
         const citation = citations.find((c) => c.refIndex === refNum);
         if (citation) {
           parts.push(
-            <span
+            <button
               key={`cite-${refNum}-${keyIdx++}`}
-              className="text-zinc-600 dark:text-zinc-400 hover:underline cursor-pointer select-none font-medium"
+              type="button"
+              className="inline text-zinc-600 dark:text-zinc-400 hover:underline cursor-pointer select-none font-medium bg-transparent border-none p-0 text-inherit leading-inherit"
               onClick={() => onClick?.(citation)}
               title={t ? t('citation.jumpTo', { page: citation.page }) : `Jump to page ${citation.page}`}
             >
               [{refNum}]
-            </span>
+            </button>
           );
         } else {
           parts.push(`[${refNum}]`);

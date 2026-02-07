@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useRef } from "react";
 import { useLocale } from "../i18n";
 
 interface PaywallModalProps {
@@ -9,13 +10,32 @@ interface PaywallModalProps {
 
 export function PaywallModal({ isOpen, onClose }: PaywallModalProps) {
   const { t } = useLocale();
+  const overlayRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (isOpen) {
+      overlayRef.current?.focus();
+    }
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 animate-fade-in">
-      <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl p-6 max-w-md w-full mx-4 shadow-xl animate-slide-up">
-        <h2 className="text-xl font-semibold mb-4 text-zinc-900 dark:text-zinc-100">
+    <div
+      ref={overlayRef}
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 animate-fade-in"
+      onClick={onClose}
+      onKeyDown={(e) => e.key === "Escape" && onClose()}
+      tabIndex={-1}
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="paywall-title"
+    >
+      <div
+        className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl p-6 max-w-md w-full mx-4 shadow-xl animate-slide-up"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <h2 id="paywall-title" className="text-xl font-semibold mb-4 text-zinc-900 dark:text-zinc-100">
           {t("credits.insufficientCredits")}
         </h2>
         <p className="text-zinc-600 dark:text-zinc-400 mb-6">

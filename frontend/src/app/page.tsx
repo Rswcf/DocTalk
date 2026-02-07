@@ -27,6 +27,7 @@ export default function HomePage() {
   const inputRef = useRef<HTMLInputElement>(null);
   const [myDocs, setMyDocs] = useState<StoredDoc[]>([]);
   const [serverDocs, setServerDocs] = useState<DocumentBrief[]>([]);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
   const isLoggedIn = status === 'authenticated';
 
   useEffect(() => {
@@ -121,6 +122,15 @@ export default function HomePage() {
     if (file) onFiles(file);
   };
 
+  /* --- Loading guard (prevents flash of wrong content) --- */
+  if (status === 'loading') {
+    return (
+      <div className="min-h-screen bg-white dark:bg-zinc-950 flex items-center justify-center">
+        <div className="animate-pulse text-zinc-400">Loading...</div>
+      </div>
+    );
+  }
+
   /* --- Logged-out landing page --- */
   if (!isLoggedIn) {
     return (
@@ -158,6 +168,10 @@ export default function HomePage() {
         <section className="py-8 flex justify-center">
           <PrivacyBadge />
         </section>
+
+        <footer className="border-t border-zinc-200 dark:border-zinc-800 py-8 text-center text-sm text-zinc-400 dark:text-zinc-500">
+          <p>&copy; 2026 DocTalk. <a href="/privacy" className="hover:text-zinc-600 dark:hover:text-zinc-300 transition-colors">Privacy</a> &middot; <a href="/terms" className="hover:text-zinc-600 dark:hover:text-zinc-300 transition-colors">Terms</a></p>
+        </footer>
       </div>
     );
   }
@@ -188,7 +202,7 @@ export default function HomePage() {
             <button
               type="button"
               onClick={() => inputRef.current?.click()}
-              className="mt-4 px-6 py-2.5 bg-zinc-900 dark:bg-zinc-50 text-white dark:text-zinc-900 rounded-lg font-medium hover:bg-zinc-800 dark:hover:bg-zinc-200 shadow-sm hover:shadow-md transition-[box-shadow,color,background-color]"
+              className="mt-4 px-6 py-2.5 bg-zinc-900 dark:bg-zinc-50 text-white dark:text-zinc-900 rounded-lg font-medium hover:bg-zinc-800 dark:hover:bg-zinc-200 shadow-sm hover:shadow-md transition-[box-shadow,color,background-color] disabled:opacity-60"
               disabled={uploading}
             >
               {t('upload.chooseFile')}
@@ -216,7 +230,8 @@ export default function HomePage() {
               {allDocs.map((d) => (
                 <div
                   key={d.document_id}
-                  className="p-5 rounded-xl border border-zinc-100 dark:border-zinc-800 shadow-sm hover:shadow-md transition-colors flex items-center justify-between"
+                  className="p-5 rounded-xl border border-zinc-100 dark:border-zinc-800 shadow-sm hover:shadow-md transition-shadow cursor-pointer flex items-center justify-between"
+                  onClick={() => router.push(`/d/${d.document_id}`)}
                 >
                   <div>
                     <div className="font-medium text-zinc-900 dark:text-zinc-100">
@@ -226,7 +241,7 @@ export default function HomePage() {
                       {new Date(d.createdAt).toLocaleString()}
                     </div>
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
                     <button
                       className="px-4 py-2 text-sm bg-zinc-900 dark:bg-zinc-50 text-white dark:text-zinc-900 rounded-lg font-medium hover:bg-zinc-800 dark:hover:bg-zinc-200 shadow-sm transition-colors"
                       onClick={() => router.push(`/d/${d.document_id}`)}
@@ -234,15 +249,18 @@ export default function HomePage() {
                       {t('doc.open')}
                     </button>
                     <button
-                      className="p-2 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-500 transition-colors"
+                      className="p-2 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-500 transition-colors disabled:opacity-50"
+                      disabled={deletingId === d.document_id}
                       onClick={async () => {
                         if (!window.confirm(t('doc.deleteDocConfirm'))) return;
+                        setDeletingId(d.document_id);
                         try { await deleteDocument(d.document_id); } catch {}
                         const docs: StoredDoc[] = JSON.parse(localStorage.getItem('doctalk_docs') || '[]');
                         const next = docs.filter((x) => x.document_id !== d.document_id);
                         localStorage.setItem('doctalk_docs', JSON.stringify(next));
                         setMyDocs(next.sort((a, b) => b.createdAt - a.createdAt));
                         setServerDocs((prev) => prev.filter((s) => s.id !== d.document_id));
+                        setDeletingId(null);
                       }}
                       title={t('doc.deleteDoc')}
                     >

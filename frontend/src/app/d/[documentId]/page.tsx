@@ -153,7 +153,7 @@ export default function DocumentReaderPage() {
           <div className="text-center">
             <div className="text-lg font-medium mb-3">{error}</div>
             <button
-              className="px-4 py-2 bg-zinc-900 text-white rounded dark:bg-zinc-100 dark:text-zinc-900"
+              className="px-4 py-2 bg-zinc-900 text-white rounded-lg dark:bg-zinc-50 dark:text-zinc-900 hover:bg-zinc-800 dark:hover:bg-zinc-200 shadow-sm transition-colors"
               onClick={() => router.push('/')}
             >
               {t('doc.backHome')}
@@ -163,7 +163,7 @@ export default function DocumentReaderPage() {
       ) : (
         <Group orientation="horizontal" className="flex-1 min-h-0">
           <Panel defaultSize={50} minSize={25}>
-            <div className="h-full min-w-[320px]">
+            <div className="h-full min-w-0 sm:min-w-[320px]">
               {documentStatus === 'ready' && sessionId ? (
                 <ChatPanel sessionId={sessionId} onCitationClick={navigateToCitation} maxUserMessages={isDemo && !isLoggedIn ? 5 : undefined} />
               ) : documentStatus !== 'ready' && !error ? (
@@ -178,7 +178,7 @@ export default function DocumentReaderPage() {
           </Panel>
 
           <Separator
-            className="w-1.5 bg-zinc-200 dark:bg-zinc-700 hover:bg-zinc-400 dark:hover:bg-zinc-500 transition-colors cursor-col-resize flex items-center justify-center"
+            className="w-3 sm:w-1.5 bg-zinc-200 dark:bg-zinc-700 hover:bg-zinc-400 dark:hover:bg-zinc-500 transition-colors cursor-col-resize flex items-center justify-center"
             aria-label="Resize panels"
           >
             <div className="w-0.5 h-8 bg-zinc-400 dark:bg-zinc-500 rounded-full" />

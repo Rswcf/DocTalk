@@ -107,7 +107,7 @@ export default function CreditsSection({ profile }: Props) {
             className={
               `px-2 py-1 rounded text-xs font-medium ` +
               (profile.plan === "pro"
-                ? `bg-gradient-to-r from-zinc-500 to-indigo-600 text-white`
+                ? `bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900`
                 : `bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300`)
             }
           >
@@ -139,7 +139,7 @@ export default function CreditsSection({ profile }: Props) {
             type="button"
             disabled={submitting}
             onClick={onUpgrade}
-            className="px-4 py-2 rounded-lg text-sm font-medium bg-zinc-600 text-white hover:bg-zinc-700 disabled:opacity-50"
+            className="px-4 py-2 rounded-lg text-sm font-medium bg-zinc-900 dark:bg-zinc-50 text-white dark:text-zinc-900 hover:bg-zinc-800 dark:hover:bg-zinc-200 disabled:opacity-50"
           >
             {t("profile.plan.upgrade")}
           </button>
@@ -148,7 +148,7 @@ export default function CreditsSection({ profile }: Props) {
             type="button"
             disabled={submitting}
             onClick={onManage}
-            className="px-4 py-2 rounded-lg text-sm font-medium bg-zinc-600 text-white hover:bg-zinc-700 disabled:opacity-50"
+            className="px-4 py-2 rounded-lg text-sm font-medium bg-zinc-900 dark:bg-zinc-50 text-white dark:text-zinc-900 hover:bg-zinc-800 dark:hover:bg-zinc-200 disabled:opacity-50"
           >
             {t("profile.plan.manage")}
           </button>
@@ -178,9 +178,9 @@ export default function CreditsSection({ profile }: Props) {
             <table className="w-full text-sm">
               <thead>
                 <tr className="text-left text-zinc-600 dark:text-zinc-400">
-                  <th className="pb-2 font-medium">{/* Date */}</th>
-                  <th className="pb-2 font-medium">{/* Type */}</th>
-                  <th className="pb-2 font-medium">{/* Amount */}</th>
+                  <th className="pb-2 font-medium">{t("profile.credits.date")}</th>
+                  <th className="pb-2 font-medium">{t("profile.credits.type")}</th>
+                  <th className="pb-2 font-medium">{t("profile.credits.amount")}</th>
                   <th className="pb-2 font-medium">{t("profile.credits.balance")}</th>
                 </tr>
               </thead>

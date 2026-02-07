@@ -1,6 +1,7 @@
 "use client";
 
 import React from 'react';
+import { useLocale } from '../../i18n';
 
 interface CitationCardProps {
   refIndex: number;
@@ -21,6 +22,7 @@ function sanitizeText(text: string | null | undefined): string {
 }
 
 export default function CitationCard({ refIndex, textSnippet, page, onClick }: CitationCardProps) {
+  const { t } = useLocale();
   // Sanitize and truncate the snippet
   const sanitized = sanitizeText(textSnippet);
   const snippet = sanitized.length > 80 ? sanitized.slice(0, 80) + '…' : sanitized;
@@ -37,7 +39,7 @@ export default function CitationCard({ refIndex, textSnippet, page, onClick }: C
       <span className="text-zinc-600 dark:text-zinc-400 font-semibold">[{refIndex}]</span>
       <div className="flex-1">
         <p className="text-sm text-zinc-800 dark:text-zinc-200">{snippet}</p>
-        <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">Page {validPage}</p>
+        <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">{t('citation.page', { page: validPage })}</p>
       </div>
     </button>
   );

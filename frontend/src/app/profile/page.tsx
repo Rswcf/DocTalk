@@ -71,14 +71,14 @@ function ProfileContent() {
 
   if (status === "loading") {
     return (
-      <div className="min-h-screen flex items-center justify-center dark:bg-zinc-900">
+      <div className="min-h-screen flex items-center justify-center dark:bg-zinc-950">
         <div className="animate-pulse">{t("common.loading")}</div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen dark:bg-zinc-900">
+    <div className="min-h-screen dark:bg-zinc-950">
       <Header />
       <main className="max-w-4xl mx-auto p-8">
         <h1 className="text-2xl font-semibold mb-6 dark:text-zinc-100">{t("profile.title")}</h1>
@@ -136,7 +136,7 @@ export default function ProfilePage() {
   return (
     <Suspense
       fallback={
-        <div className="min-h-screen flex items-center justify-center dark:bg-zinc-900">
+        <div className="min-h-screen flex items-center justify-center dark:bg-zinc-950">
           <div className="animate-pulse">Loading...</div>
         </div>
       }

@@ -56,7 +56,7 @@ export default function ProfileInfoSection({ profile }: Props) {
               className={
                 `px-2 py-0.5 rounded text-xs font-medium ` +
                 (profile.plan === "pro"
-                  ? `bg-gradient-to-r from-zinc-500 to-indigo-600 text-white`
+                  ? `bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900`
                   : `bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300`)
               }
             >

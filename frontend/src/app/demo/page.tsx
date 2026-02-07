@@ -61,14 +61,8 @@ export default function DemoPage() {
               if (!config) return null;
               const Icon = config.icon;
               const isReady = doc.status === 'ready';
-              return (
-                <Link
-                  key={doc.slug}
-                  href={`/d/${doc.document_id}`}
-                  className="flex flex-col p-6 bg-white dark:bg-zinc-950 rounded-xl border
-                             border-zinc-100 dark:border-zinc-800 shadow-sm hover:shadow-md
-                             hover:-translate-y-1 transition-[box-shadow,transform] duration-150 group"
-                >
+              const cardContent = (
+                <>
                   <div className="flex items-center gap-3 mb-3">
                     <div className="p-2 bg-zinc-50 dark:bg-zinc-800 rounded-lg border border-zinc-100 dark:border-zinc-800">
                       <Icon size={24} className="text-zinc-600 dark:text-zinc-400" />
@@ -91,7 +85,26 @@ export default function DemoPage() {
                       &ldquo;{t(config.questionKey)}&rdquo;
                     </p>
                   </div>
+                </>
+              );
+              return isReady ? (
+                <Link
+                  key={doc.slug}
+                  href={`/d/${doc.document_id}`}
+                  className="flex flex-col p-6 bg-white dark:bg-zinc-950 rounded-xl border
+                             border-zinc-100 dark:border-zinc-800 shadow-sm hover:shadow-md
+                             hover:-translate-y-1 transition-[box-shadow,transform] duration-150 group"
+                >
+                  {cardContent}
                 </Link>
+              ) : (
+                <div
+                  key={doc.slug}
+                  className="flex flex-col p-6 bg-white dark:bg-zinc-950 rounded-xl border
+                             border-zinc-100 dark:border-zinc-800 shadow-sm opacity-60 cursor-not-allowed"
+                >
+                  {cardContent}
+                </div>
               );
             })}
           </div>
