@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import io
 import os
 import uuid
@@ -95,20 +96,21 @@ class DocService:
         if not doc:
             return False
 
-        # Best-effort: clean up object storage
+        # Best-effort: clean up object storage (sync call, run off event loop)
         try:
-            storage_service.delete_file(doc.storage_key)
+            await asyncio.to_thread(storage_service.delete_file, doc.storage_key)
         except Exception:
             pass
 
-        # Best-effort: clean up Qdrant vectors
+        # Best-effort: clean up Qdrant vectors (sync call, run off event loop)
         try:
             from app.services.embedding_service import embedding_service
             from app.core.config import settings as _settings
             from qdrant_client.models import Filter, FieldCondition, MatchValue
 
             qclient = embedding_service.get_qdrant_client()
-            qclient.delete(
+            await asyncio.to_thread(
+                qclient.delete,
                 collection_name=_settings.QDRANT_COLLECTION,
                 points_selector=Filter(
                     must=[FieldCondition(key="document_id", match=MatchValue(value=str(document_id)))]

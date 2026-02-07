@@ -1,12 +1,13 @@
 "use client";
 import { createContext, useContext } from 'react';
 
-export type Locale = 'en' | 'zh' | 'es' | 'fr' | 'de';
+export type Locale = 'en' | 'zh' | 'es' | 'fr' | 'de' | 'ar' | 'bn' | 'hi' | 'pt';
 
 export interface LocaleInfo {
   code: Locale;
   label: string;
   flag: string;
+  dir?: 'rtl' | 'ltr';
 }
 
 export const LOCALES: LocaleInfo[] = [
@@ -15,6 +16,10 @@ export const LOCALES: LocaleInfo[] = [
   { code: 'es', label: 'Español', flag: '🇪🇸' },
   { code: 'fr', label: 'Français', flag: '🇫🇷' },
   { code: 'de', label: 'Deutsch', flag: '🇩🇪' },
+  { code: 'ar', label: 'العربية', flag: '🇸🇦', dir: 'rtl' },
+  { code: 'bn', label: 'বাংলা', flag: '🇧🇩' },
+  { code: 'hi', label: 'हिन्दी', flag: '🇮🇳' },
+  { code: 'pt', label: 'Português', flag: '🇧🇷' },
 ];
 
 export interface LocaleContextValue {

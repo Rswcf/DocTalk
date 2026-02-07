@@ -7,8 +7,12 @@ import zh from './locales/zh.json';
 import es from './locales/es.json';
 import fr from './locales/fr.json';
 import de from './locales/de.json';
+import ar from './locales/ar.json';
+import bn from './locales/bn.json';
+import hi from './locales/hi.json';
+import pt from './locales/pt.json';
 
-const translations: Record<Locale, Record<string, string>> = { en, zh, es, fr, de };
+const translations: Record<Locale, Record<string, string>> = { en, zh, es, fr, de, ar, bn, hi, pt };
 
 function detectLocale(): Locale {
   const stored = typeof window !== 'undefined' ? localStorage.getItem('doctalk_locale') : null;
@@ -38,7 +42,8 @@ export default function LocaleProvider({ children }: { children: React.ReactNode
 
   useEffect(() => {
     document.documentElement.lang = locale;
-    document.documentElement.dir = 'ltr';
+    const localeInfo = LOCALES.find((l) => l.code === locale);
+    document.documentElement.dir = localeInfo?.dir === 'rtl' ? 'rtl' : 'ltr';
   }, [locale]);
 
   const t = useCallback(

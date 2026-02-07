@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import uuid
 from typing import List, Optional
 
@@ -16,13 +17,14 @@ class RetrievalService:
     """Vector search over chunks using Qdrant, returning DB-backed details."""
 
     async def search(self, query: str, document_id: uuid.UUID, top_k: int, db: AsyncSession):
-        # 1) Embed query
-        qvec = embedding_service.embed_texts([query])[0]
+        # 1) Embed query — run sync call off the event loop
+        qvec = (await asyncio.to_thread(embedding_service.embed_texts, [query]))[0]
 
-        # 2) Qdrant search with document_id filter
+        # 2) Qdrant search with document_id filter — run sync call off the event loop
         client = embedding_service.get_qdrant_client()
         flt = Filter(must=[FieldCondition(key="document_id", match=MatchValue(value=str(document_id)))])
-        res = client.query_points(
+        res = await asyncio.to_thread(
+            client.query_points,
             collection_name=settings.QDRANT_COLLECTION,
             query=qvec,
             limit=int(top_k or 5),
