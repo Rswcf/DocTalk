@@ -12,10 +12,10 @@ DocTalk helps heavy document readers quickly locate key information in long PDFs
 - **Cited Answers** — Ask questions and get responses with `[1]`, `[2]` references to exact passages
 - **Page Highlights** — Click a citation to jump to the referenced page with bounding-box overlays
 - **Split View** — Resizable chat panel (left) + PDF viewer (right) with drag-to-pan zoom
-- **8 LLM Models** — Switch between Claude, GPT, Gemini, DeepSeek, Mistral, and Qwen models via OpenRouter
+- **9 LLM Models** — Switch between Claude, GPT, Gemini, DeepSeek, Grok, MiniMax, Kimi, and more via OpenRouter
 - **Demo Mode** — Try 3 sample documents (NVIDIA 10-K, Attention paper, NDA contract) instantly
 - **Credits System** — Free tier (10K/month) and Pro tier (100K/month) with Stripe subscription
-- **8 Languages** — English, Chinese, Hindi, Spanish, Arabic, French, Bengali, Portuguese
+- **9 Languages** — English, Chinese, Hindi, Spanish, Arabic, French, Bengali, Portuguese, German
 - **Dark Mode** — Full dark theme with monochrome zinc palette
 - **Multi-Session** — Multiple independent chat sessions per document with auto-restore
 
@@ -36,6 +36,7 @@ DocTalk helps heavy document readers quickly locate key information in long PDFs
 | **Payments** | Stripe Checkout + Subscriptions + Webhooks |
 | **AI** | OpenRouter gateway — LLM: `anthropic/claude-sonnet-4.5` (default), Embedding: `openai/text-embedding-3-small` |
 | **PDF Parse** | PyMuPDF (fitz) |
+| **Monitoring** | Sentry (error tracking + performance) |
 
 ## Getting Started
 
@@ -105,6 +106,9 @@ Open [http://localhost:3000](http://localhost:3000) in your browser.
 | `STRIPE_SECRET_KEY` | No | Stripe secret key |
 | `STRIPE_WEBHOOK_SECRET` | No | Stripe webhook signing secret |
 | `STRIPE_PRICE_PRO_MONTHLY` | No | Stripe recurring price ID for Pro plan |
+| `SENTRY_DSN` | No | Sentry DSN for backend error tracking |
+| `SENTRY_ENVIRONMENT` | No | Sentry environment (default: `production`) |
+| `SENTRY_TRACES_SAMPLE_RATE` | No | Sentry performance sampling rate (default: `0.1`) |
 
 **Frontend** (`.env.local` in `frontend/`):
 
@@ -114,6 +118,7 @@ Open [http://localhost:3000](http://localhost:3000) in your browser.
 | `AUTH_SECRET` | Yes | Must match backend `AUTH_SECRET` |
 | `GOOGLE_CLIENT_ID` | Yes | Google OAuth client ID |
 | `GOOGLE_CLIENT_SECRET` | Yes | Google OAuth client secret |
+| `NEXT_PUBLIC_SENTRY_DSN` | No | Sentry DSN for frontend error tracking |
 
 ## Project Structure
 
@@ -135,7 +140,7 @@ DocTalk/
 │   │   ├── app/            # Next.js pages (home, auth, billing, profile, demo, document viewer)
 │   │   ├── components/     # React components (Chat, PdfViewer, Profile, landing, Header)
 │   │   ├── lib/            # API client, auth config, SSE client, model definitions
-│   │   ├── i18n/           # 8 language locale files
+│   │   ├── i18n/           # 9 language locale files
 │   │   ├── store/          # Zustand state management
 │   │   └── types/
 │   └── public/
@@ -174,7 +179,7 @@ Key architectural decisions:
 
 **Backend (Railway):**
 - Deploy from project root: `railway up --detach`
-- Dockerfile runs: Alembic migration → Celery worker (background) → uvicorn
+- `entrypoint.sh` runs: Alembic migration → Celery worker (background, auto-restart) → uvicorn, with SIGTERM graceful shutdown
 - Railway project includes 5 services: backend, PostgreSQL, Redis, Qdrant, MinIO
 
 ## Testing

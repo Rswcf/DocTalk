@@ -34,6 +34,7 @@ graph TB
         OpenRouter["OpenRouter<br/>LLM + Embedding API"]
         Stripe["Stripe<br/>支付"]
         Google["Google OAuth"]
+        Sentry["Sentry<br/>错误追踪"]
     end
 
     Browser -->|HTTPS| NextJS
@@ -52,6 +53,8 @@ graph TB
     Celery --> OpenRouter
     Redis -.->|任务队列| Celery
     AuthJS --> Google
+    FastAPI --> Sentry
+    NextJS --> Sentry
     Browser -->|Presigned URL| MinIO
 ```
 
@@ -70,6 +73,7 @@ graph TB
 | **MinIO** | S3 兼容对象存储，用于上传的 PDF 文件 |
 | **OpenRouter** | LLM 推理和文本向量化的统一网关 |
 | **Stripe** | 积分购买和 Pro 订阅的支付处理 |
+| **Sentry** | 后端（FastAPI + Celery）和前端（Next.js）的错误追踪与性能监控 |
 
 ---
 
@@ -550,10 +554,10 @@ graph LR
 
     subgraph RailwayDeploy["Railway"]
         RBuild["Docker 构建<br/>Root: ./"]
-        subgraph Container["单容器"]
+        subgraph Container["单容器 (entrypoint.sh)"]
             Alembic["1. Alembic 迁移"]
-            CeleryW["2. Celery Worker<br/>（后台，concurrency=1）"]
-            Uvicorn["3. Uvicorn<br/>（前台）"]
+            CeleryW["2. Celery Worker<br/>（后台，崩溃自动重启）"]
+            Uvicorn["3. Uvicorn<br/>（前台，优雅关闭）"]
         end
         subgraph RServices["托管服务"]
             RPG["PostgreSQL"]
@@ -577,7 +581,7 @@ graph LR
 |------|---------------|----------------|
 | **触发方式** | `git push`（自动） | `railway up --detach`（手动） |
 | **构建** | 从 `frontend/` 导出 Next.js | 从项目根目录构建 Dockerfile |
-| **运行时** | Serverless 函数（Hobby 计划） | 单容器：alembic → celery → uvicorn |
+| **运行时** | Serverless 函数（Hobby 计划） | 单容器（`entrypoint.sh`）：alembic → celery（自动重启）→ uvicorn |
 | **域名** | `www.doctalk.site` | `backend-production-a62e.up.railway.app` |
 | **限制** | 4.5 MB 函数体积，60s 最大时长 | 容器内存取决于 Railway 计划 |
 

@@ -31,10 +31,11 @@ Railway 项目包含 5 个服务：backend, Postgres, Redis, qdrant-v2, minio-v2
 - **Auth**: Auth.js (NextAuth) v5 + Google OAuth + JWT
 - **Payments**: Stripe Checkout + Webhooks
 - **LLM/Embedding**: 统一通过 **OpenRouter** 网关调用
-  - LLM: 默认 `anthropic/claude-sonnet-4.5`，支持用户在前端切换（8 个模型可选）
+  - LLM: 默认 `anthropic/claude-sonnet-4.5`，支持用户在前端切换（9 个模型可选）
   - Embedding: `openai/text-embedding-3-small` (dim=1536)
 - **PDF Parse**: PyMuPDF (fitz)
-- **i18n**: 轻量级 React Context 方案，支持 8 种语言（EN, ZH, HI, ES, AR, FR, BN, PT）
+- **i18n**: 轻量级 React Context 方案，支持 9 种语言（EN, ZH, HI, ES, AR, FR, BN, PT, DE）
+- **Monitoring**: Sentry 集成（后端 FastAPI + Celery，前端 Next.js），用于错误追踪和性能监控
 
 ### 核心架构决策
 
@@ -50,7 +51,7 @@ Railway 项目包含 5 个服务：backend, Postgres, Redis, qdrant-v2, minio-v2
 - **API 网关**: 所有 LLM 和 Embedding 调用统一通过 OpenRouter（单一 API key）
 - **模型切换**: 前端用户可选择 LLM 模型，后端白名单 (`ALLOWED_MODELS`) 验证后透传给 OpenRouter
 - **布局**: Chat 面板在左侧, PDF 查看器在右侧，中间可拖拽调节宽度 (react-resizable-panels)
-- **i18n**: 客户端 React Context，8 语言 JSON 静态打包，`t()` 函数支持参数插值，Arabic 自动 RTL
+- **i18n**: 客户端 React Context，9 语言 JSON 静态打包，`t()` 函数支持参数插值，Arabic 自动 RTL
 - **bbox 坐标**: 归一化 [0,1], top-left origin, 存于 chunks.bboxes (JSONB)
 - **引用格式**: 编号 [1]..[K]，后端 FSM 解析器处理跨 token 切断；前端 `renumberCitations()` 按出现顺序重编号为连续序列
 - **PDF 文件获取**: presigned URL (不走后端代理)
@@ -108,9 +109,6 @@ POST   /api/internal/auth/verification-tokens/use   # 使用验证 Token
 GET    /api/chunks/{chunk_id}             # 获取 chunk 详情
 GET    /health                            # 健康检查
 
-# 临时 Admin (无鉴权，仅用于调试)
-POST   /admin/retry-stuck                 # 重新分发 stuck 状态的解析任务
-GET    /admin/documents                   # 列出所有文档及状态（最近20条）
 ```
 
 ---
@@ -134,7 +132,7 @@ cd backend && python3 -m alembic upgrade head
 cd backend && OBJC_DISABLE_INITIALIZE_FORK_SAFETY=YES python3 -m celery -A app.workers.celery_app worker --loglevel=info -Q default,parse
 ```
 
-> **生产部署**: Dockerfile 的 CMD 在单容器内同时启动 uvicorn 和 Celery worker（`--concurrency=1` 以节省内存），并先运行 Alembic migration。本地开发时仍需分别启动。
+> **生产部署**: `entrypoint.sh` 进程管理器在单容器内编排：Alembic migration → Celery worker（后台，`--concurrency=1`，崩溃自动重启）→ uvicorn（前台）。支持 SIGTERM 优雅关闭（先停 Celery 再停 uvicorn）。本地开发时仍需分别启动。
 
 ### 环境变量
 
@@ -155,12 +153,18 @@ STRIPE_PRICE_PRO_MONTHLY=price_...  # Stripe recurring price ID for Pro plan
 # OAuth (前端)
 GOOGLE_CLIENT_ID=...
 GOOGLE_CLIENT_SECRET=...
+
+# 监控 (可选)
+SENTRY_DSN=https://...@sentry.io/...
+SENTRY_ENVIRONMENT=production
+SENTRY_TRACES_SAMPLE_RATE=0.1
 ```
 
 前端需要设置：
 - `NEXT_PUBLIC_API_BASE`: 后端 URL（本地默认 `http://localhost:8000`）
 - `AUTH_SECRET`: 与后端一致
 - `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET`: Google OAuth
+- `NEXT_PUBLIC_SENTRY_DSN`: (可选) Sentry DSN 用于前端错误追踪
 
 ### 部署
 
@@ -175,7 +179,8 @@ GOOGLE_CLIENT_SECRET=...
 #### Railway (后端)
 
 - 从项目根目录运行 `railway up --detach`
-- Dockerfile 在单容器中运行 Alembic migration → Celery worker (background, concurrency=1) → uvicorn
+- `entrypoint.sh` 进程管理器：Alembic migration → Celery worker (后台, concurrency=1, 崩溃自动重启) → uvicorn (前台)
+- SIGTERM 优雅关闭：trap 信号 → 先停 Celery 再停 uvicorn
 - 确保 Dockerfile 路径配置正确，验证 Docker Image 服务不接受 start 命令
 - 部署后始终确认后端运行的是**最新代码**（避免过时部署）
 - 测试前检查本地端口冲突
@@ -184,8 +189,14 @@ GOOGLE_CLIENT_SECRET=...
 
 ## 重要约定 / Gotchas
 
+### 安全相关
+- **上传/删除需登录**: `upload_document` 和 `delete_document` 使用 `require_auth` 依赖，未登录返回 401
+- **搜索支持可选认证**: `search_document` 使用 `get_current_user_optional`，已登录用户可搜索自己的文档，匿名用户可搜索 demo 文档
+- **Demo 会话上限**: 匿名用户每个 demo 文档最多创建 3 个会话 (`DEMO_MAX_SESSIONS_PER_DOC=3`)，超限返回 429
+- **Admin 端点已移除**: 不再暴露 `/admin/retry-stuck`、`/admin/documents` 等无鉴权端点
+- **依赖已锁定**: `requirements.txt` 中所有依赖版本已 pin（`==`），防止供应链攻击
+
 ### 认证相关
-- **上传需登录**: `upload_document` 使用 `require_auth` 依赖，未登录返回 401
 - **API 代理**: 所有后端接口（含 SSE chat stream）通过 `/api/proxy/*` 走前端代理，自动注入 JWT
 - **JWT 双层设计**: Auth.js v5 使用加密 JWT (JWE)，后端无法直接解密。API 代理使用 `jose` 库创建后端兼容的明文 JWT (HS256)，包含 sub/iat/exp claims
 - **JWT 校验**: 后端 `deps.py` 验证 exp/iat/sub claims
@@ -265,7 +276,6 @@ DocTalk/
 │   │   │   ├── billing.py        # Stripe Checkout/Subscribe/Portal/Products + Webhook
 │   │   │   ├── credits.py        # Credits 余额 + 历史
 │   │   │   └── users.py          # /me, /profile, /usage-breakdown, DELETE /me
-│   │   │   # admin endpoints are in main.py (temporary, no auth)
 │   │   ├── core/
 │   │   │   ├── config.py         # Settings, ALLOWED_MODELS 白名单
 │   │   │   └── deps.py           # FastAPI 依赖 (require_auth, get_db)
@@ -319,9 +329,9 @@ DocTalk/
 │   │   │   ├── api.ts            # REST 客户端 (含 PROXY_BASE)
 │   │   │   ├── auth.ts           # Auth.js 配置
 │   │   │   ├── authAdapter.ts    # FastAPI Adapter
-│   │   │   ├── models.ts         # AVAILABLE_MODELS 定义 (8 模型)
+│   │   │   ├── models.ts         # AVAILABLE_MODELS 定义 (9 模型)
 │   │   │   └── sse.ts            # SSE 流式客户端
-│   │   ├── i18n/                 # 8 种语言
+│   │   ├── i18n/                 # 9 种语言
 │   │   ├── store/                # Zustand
 │   │   └── types/
 │   ├── public/

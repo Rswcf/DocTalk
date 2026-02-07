@@ -34,6 +34,7 @@ graph TB
         OpenRouter["OpenRouter<br/>LLM + Embedding API"]
         Stripe["Stripe<br/>Payments"]
         Google["Google OAuth"]
+        Sentry["Sentry<br/>Error Tracking"]
     end
 
     Browser -->|HTTPS| NextJS
@@ -52,6 +53,8 @@ graph TB
     Celery --> OpenRouter
     Redis -.->|Task Queue| Celery
     AuthJS --> Google
+    FastAPI --> Sentry
+    NextJS --> Sentry
     Browser -->|Presigned URL| MinIO
 ```
 
@@ -70,6 +73,7 @@ graph TB
 | **MinIO** | S3-compatible object storage for uploaded PDFs |
 | **OpenRouter** | Unified gateway for LLM inference and text embedding |
 | **Stripe** | Payment processing for credit purchases and Pro subscriptions |
+| **Sentry** | Error tracking and performance monitoring for both backend (FastAPI + Celery) and frontend (Next.js) |
 
 ---
 
@@ -550,10 +554,10 @@ graph LR
 
     subgraph RailwayDeploy["Railway"]
         RBuild["Docker Build<br/>Root: ./"]
-        subgraph Container["Single Container"]
+        subgraph Container["Single Container (entrypoint.sh)"]
             Alembic["1. Alembic Migrate"]
-            CeleryW["2. Celery Worker<br/>(background, concurrency=1)"]
-            Uvicorn["3. Uvicorn<br/>(foreground)"]
+            CeleryW["2. Celery Worker<br/>(background, auto-restart)"]
+            Uvicorn["3. Uvicorn<br/>(foreground, graceful shutdown)"]
         end
         subgraph RServices["Managed Services"]
             RPG["PostgreSQL"]
@@ -577,7 +581,7 @@ graph LR
 |--------|-------------------|-------------------|
 | **Trigger** | `git push` (auto) | `railway up --detach` (manual) |
 | **Build** | Next.js static export from `frontend/` | Dockerfile from project root |
-| **Runtime** | Serverless functions (Hobby plan) | Single container: alembic → celery → uvicorn |
+| **Runtime** | Serverless functions (Hobby plan) | Single container (`entrypoint.sh`): alembic → celery (auto-restart) → uvicorn |
 | **Domain** | `www.doctalk.site` | `backend-production-a62e.up.railway.app` |
 | **Limits** | 4.5 MB function body, 60s max duration | Container memory based on Railway plan |
 

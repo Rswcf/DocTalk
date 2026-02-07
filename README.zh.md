@@ -12,10 +12,10 @@ DocTalk 帮助高强度文档阅读者在超长 PDF 中通过 AI 对话快速定
 - **引用回答** — 提问后获得带 `[1]`、`[2]` 引用标记的回答，精确指向原文段落
 - **页面高亮** — 点击引用跳转到对应页面，以边界框覆盖层高亮显示引用区域
 - **分屏视图** — 可调节的聊天面板（左）+ PDF 查看器（右），支持拖拽缩放和平移
-- **8 种大模型** — 通过 OpenRouter 切换 Claude、GPT、Gemini、DeepSeek、Mistral、Qwen 等模型
+- **9 种大模型** — 通过 OpenRouter 切换 Claude、GPT、Gemini、DeepSeek、Grok、MiniMax、Kimi 等模型
 - **Demo 模式** — 无需注册即可体验 3 篇示例文档（NVIDIA 10-K、Attention 论文、NDA 合同）
 - **Credits 系统** — Free 套餐（10K/月）和 Pro 套餐（100K/月），Stripe 订阅集成
-- **8 种语言** — 英语、中文、印地语、西班牙语、阿拉伯语、法语、孟加拉语、葡萄牙语
+- **9 种语言** — 英语、中文、印地语、西班牙语、阿拉伯语、法语、孟加拉语、葡萄牙语、德语
 - **暗色模式** — 完整的暗色主题，单色 zinc 调色板
 - **多会话** — 每个文档支持多个独立聊天会话，自动恢复最近活跃会话
 
@@ -36,6 +36,7 @@ DocTalk 帮助高强度文档阅读者在超长 PDF 中通过 AI 对话快速定
 | **支付** | Stripe Checkout + 订阅 + Webhooks |
 | **AI** | OpenRouter 网关 — LLM: `anthropic/claude-sonnet-4.5` (默认)，Embedding: `openai/text-embedding-3-small` |
 | **PDF 解析** | PyMuPDF (fitz) |
+| **监控** | Sentry（错误追踪 + 性能监控） |
 
 ## 快速开始
 
@@ -105,6 +106,9 @@ npm run dev
 | `STRIPE_SECRET_KEY` | 否 | Stripe 密钥 |
 | `STRIPE_WEBHOOK_SECRET` | 否 | Stripe Webhook 签名密钥 |
 | `STRIPE_PRICE_PRO_MONTHLY` | 否 | Stripe Pro 套餐循环价格 ID |
+| `SENTRY_DSN` | 否 | Sentry DSN，后端错误追踪 |
+| `SENTRY_ENVIRONMENT` | 否 | Sentry 环境（默认: `production`） |
+| `SENTRY_TRACES_SAMPLE_RATE` | 否 | Sentry 性能采样率（默认: `0.1`） |
 
 **前端**（`frontend/` 下的 `.env.local`）：
 
@@ -114,6 +118,7 @@ npm run dev
 | `AUTH_SECRET` | 是 | 必须与后端 `AUTH_SECRET` 一致 |
 | `GOOGLE_CLIENT_ID` | 是 | Google OAuth 客户端 ID |
 | `GOOGLE_CLIENT_SECRET` | 是 | Google OAuth 客户端密钥 |
+| `NEXT_PUBLIC_SENTRY_DSN` | 否 | Sentry DSN，前端错误追踪 |
 
 ## 项目结构
 
@@ -135,7 +140,7 @@ DocTalk/
 │   │   ├── app/            # Next.js 页面 (首页, 登录, 购买, 个人中心, Demo, 文档阅读)
 │   │   ├── components/     # React 组件 (Chat, PdfViewer, Profile, landing, Header)
 │   │   ├── lib/            # API 客户端、Auth 配置、SSE 客户端、模型定义
-│   │   ├── i18n/           # 8 种语言翻译文件
+│   │   ├── i18n/           # 9 种语言翻译文件
 │   │   ├── store/          # Zustand 状态管理
 │   │   └── types/
 │   └── public/
@@ -174,7 +179,7 @@ DocTalk/
 
 **后端 (Railway):**
 - 从项目根目录部署：`railway up --detach`
-- Dockerfile 执行流程：Alembic 迁移 → Celery Worker (后台) → uvicorn
+- `entrypoint.sh` 执行流程：Alembic 迁移 → Celery Worker（后台，崩溃自动重启）→ uvicorn，支持 SIGTERM 优雅关闭
 - Railway 项目包含 5 个服务：backend、PostgreSQL、Redis、Qdrant、MinIO
 
 ## 测试
