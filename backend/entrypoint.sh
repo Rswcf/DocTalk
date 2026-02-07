@@ -46,7 +46,7 @@ echo "[entrypoint] Starting uvicorn..."
 uvicorn app.main:app \
     --host 0.0.0.0 \
     --port "${PORT:-8000}" \
-    --graceful-timeout 30 &
+    --timeout-graceful-shutdown 30 &
 UVICORN_PID=$!
 
 # Wait for either process to exit
