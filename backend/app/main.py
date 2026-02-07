@@ -1,3 +1,4 @@
+import sentry_sdk
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -13,6 +14,14 @@ from .api import auth
 from .services.storage_service import storage_service
 from .services.embedding_service import embedding_service
 
+# Initialize Sentry (no-op if DSN is not configured)
+if settings.SENTRY_DSN:
+    sentry_sdk.init(
+        dsn=settings.SENTRY_DSN,
+        environment=settings.SENTRY_ENVIRONMENT,
+        traces_sample_rate=settings.SENTRY_TRACES_SAMPLE_RATE,
+        send_default_pii=False,
+    )
 
 app = FastAPI(title="DocTalk API")
 

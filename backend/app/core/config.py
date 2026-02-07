@@ -64,6 +64,11 @@ class Settings(BaseSettings):
     AUTH_SECRET: Optional[str] = None  # Shared with Next.js Auth.js
     ADAPTER_SECRET: Optional[str] = None  # For internal adapter API calls
 
+    # Sentry
+    SENTRY_DSN: Optional[str] = None
+    SENTRY_ENVIRONMENT: str = Field(default="production")
+    SENTRY_TRACES_SAMPLE_RATE: float = Field(default=0.1)
+
     # Stripe
     STRIPE_SECRET_KEY: Optional[str] = None
     STRIPE_WEBHOOK_SECRET: Optional[str] = None

@@ -1,9 +1,18 @@
 from __future__ import annotations
 
+import sentry_sdk
 from celery import Celery
 
 from app.core.config import settings
 
+# Initialize Sentry for Celery workers (no-op if DSN is not configured)
+if settings.SENTRY_DSN:
+    sentry_sdk.init(
+        dsn=settings.SENTRY_DSN,
+        environment=settings.SENTRY_ENVIRONMENT,
+        traces_sample_rate=settings.SENTRY_TRACES_SAMPLE_RATE,
+        send_default_pii=False,
+    )
 
 # Create Celery application
 celery_app = Celery(
