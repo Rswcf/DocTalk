@@ -10,6 +10,7 @@ from pydantic import BaseModel
 class ChatRequest(BaseModel):
     message: str
     model: Optional[str] = None  # OpenRouter model ID override
+    locale: Optional[str] = None  # Frontend locale code (en/zh/es/fr/de)
 
 
 class ChatMessageResponse(BaseModel):

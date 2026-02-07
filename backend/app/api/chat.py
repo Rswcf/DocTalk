@@ -162,7 +162,7 @@ async def chat_stream(
 
     async def event_generator() -> AsyncGenerator[str, None]:
         async for ev in chat_service.chat_stream(
-            session_id, body.message, db, model=body.model, user=user
+            session_id, body.message, db, model=body.model, user=user, locale=body.locale
         ):
             # Format per SSE: event: <type>\ndata: {json}\n\n
             line = f"event: {ev['event']}\n"

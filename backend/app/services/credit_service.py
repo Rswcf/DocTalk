@@ -12,17 +12,18 @@ from app.core.config import settings
 
 # Token-to-credit rates by model tier
 CREDIT_RATES = {
-    # Small tier: 3 input, 15 output per 1K tokens
-    "anthropic/claude-sonnet-4.5": (3, 15),
+    # Budget tier: 1 input, 5 output per 1K tokens
+    "x-ai/grok-4.1-fast": (1, 5),
+    "deepseek/deepseek-v3.2": (1, 5),
+    "minimax/minimax-m2.1": (1, 5),
+    "moonshotai/kimi-k2.5": (1, 5),
+    "google/gemini-3-flash-preview": (1, 5),
+    # Standard tier: 3 input, 15 output per 1K tokens
     "openai/gpt-5.2": (3, 15),
     "google/gemini-3-pro-preview": (3, 15),
-    "mistralai/mistral-large-2512": (3, 15),
-    # Large tier: 15 input, 75 output per 1K tokens
-    "anthropic/claude-opus-4.5": (15, 75),
-    "openai/gpt-5.2-pro": (15, 75),
-    # Budget tier: 1 input, 5 output per 1K tokens
-    "deepseek/deepseek-v3.2": (1, 5),
-    "qwen/qwen3-coder-next": (1, 5),
+    "anthropic/claude-sonnet-4.5": (3, 15),
+    # Premium tier: 15 input, 75 output per 1K tokens
+    "anthropic/claude-opus-4.6": (15, 75),
 }
 DEFAULT_RATE = (3, 15)
 MIN_CREDITS_FOR_CHAT = 100

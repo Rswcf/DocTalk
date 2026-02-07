@@ -1,6 +1,7 @@
 "use client";
 
 import { create } from 'zustand';
+import { AVAILABLE_MODELS, DEFAULT_MODEL_ID } from '../lib/models';
 import type { Citation, Message, NormalizedBBox, SessionItem } from '../types';
 
 type DocStatus = 'idle' | 'uploading' | 'parsing' | 'embedding' | 'ready' | 'error';
@@ -74,7 +75,11 @@ const initialState = {
   messages: [] as Message[],
   isStreaming: false,
   scrollNonce: 0,
-  selectedModel: (typeof window !== 'undefined' ? localStorage.getItem('doctalk_model') : null) || "anthropic/claude-sonnet-4.5",
+  selectedModel: (() => {
+    const stored = typeof window !== 'undefined' ? localStorage.getItem('doctalk_model') : null;
+    const id = stored || DEFAULT_MODEL_ID;
+    return AVAILABLE_MODELS.some(m => m.id === id) ? id : DEFAULT_MODEL_ID;
+  })(),
   sessions: [] as SessionItem[],
 };
 

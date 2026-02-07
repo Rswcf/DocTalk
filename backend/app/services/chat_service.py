@@ -122,6 +122,14 @@ class RefParserFSM:
 
 
 class ChatService:
+    LOCALE_TO_LANGUAGE = {
+        "en": "English",
+        "zh": "Chinese (Simplified)",
+        "es": "Spanish",
+        "fr": "French",
+        "de": "German",
+    }
+
     async def chat_stream(
         self,
         session_id: uuid.UUID,
@@ -129,6 +137,7 @@ class ChatService:
         db: AsyncSession,
         model: Optional[str] = None,
         user: Optional[User] = None,
+        locale: Optional[str] = None,
     ) -> AsyncGenerator[Dict[str, Any], None]:
         """Main chat streaming generator producing SSE event dicts.
 
@@ -225,19 +234,20 @@ class ChatService:
                 text=text,
             )
 
+        language_name = self.LOCALE_TO_LANGUAGE.get(locale or "en", "English")
+
         system_prompt = (
-            "你是一个文档分析助手。基于以下文档片段回答用户问题。\n\n"
-            "## 文档片段\n"
-            + ("\n".join(numbered_chunks) if numbered_chunks else "(无)")
-            + "\n\n## 规则\n"
-            "1. 只基于以上片段回答，不要编造信息。\n"
-            "2. 在关键论述后用 [n] 标注引用来源（n 为片段编号）。\n"
-            "3. 可以引用多个片段，如 [1][3]。\n"
-            "4. 如果以上片段无法回答问题，直接说文档中未找到相关信息。\n"
-            "5. 使用 Markdown 格式回答：重点用**粗体**，多个要点用列表。\n\n"
-            "## 示例\n"
-            "用户：2023年毛利率是多少？\n"
-            "助手：根据财报数据，2023年公司整体毛利率为35.2%[2]，较上年同期提升2.1个百分点。\n"
+            "You are a document analysis assistant. Answer the user's question based on the following document fragments.\n"
+            f"You MUST respond in {language_name}.\n\n"
+            "## Document Fragments\n"
+            + ("\n".join(numbered_chunks) if numbered_chunks else "(none)")
+            + "\n\n## Rules\n"
+            "1. Only answer based on the fragments above. Do not fabricate information.\n"
+            "2. After key statements, cite sources with [n] (n = fragment number).\n"
+            "3. You may cite multiple fragments, e.g. [1][3].\n"
+            "4. If the fragments cannot answer the question, say the information was not found in the document.\n"
+            "5. Use Markdown: **bold** for emphasis, bullet lists for multiple points.\n"
+            f"6. Your response language MUST be {language_name}.\n"
         )
 
         # 6) Stream from OpenRouter (OpenAI-compatible)
@@ -250,8 +260,19 @@ class ChatService:
             },
         )
 
-        # Build OpenAI-format messages (system + history)
-        openai_messages = [{"role": "system", "content": system_prompt}] + claude_messages
+        # Build OpenAI-format messages (system + history) with cache_control for prompt caching
+        openai_messages = [
+            {
+                "role": "system",
+                "content": [
+                    {
+                        "type": "text",
+                        "text": system_prompt,
+                        "cache_control": {"type": "ephemeral"},
+                    }
+                ],
+            }
+        ] + claude_messages
 
         assistant_text_parts: List[str] = []
         citations: List[dict] = []
@@ -269,6 +290,7 @@ class ChatService:
                 max_tokens=2048,
                 messages=openai_messages,
                 stream=True,
+                stream_options={"include_usage": True},
             )
 
             async for chunk in stream:

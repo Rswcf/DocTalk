@@ -2,6 +2,12 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Workflow Protocol
+
+When user asks to implement a plan or make code changes, ALWAYS delegate execution to Codex (`gpt-5.3-codex`) unless explicitly told otherwise. Claude's role is **architect/reviewer**, Codex's role is **implementer**. Use `codex exec --full-auto` for non-interactive execution.
+
+---
+
 ## 项目概述
 
 DocTalk 是一款面向高强度文档阅读者的 Web App，帮助用户在超长 PDF 中通过 AI 对话快速定位关键信息，回答绑定原文引用并实时高亮跳转。
@@ -158,8 +164,21 @@ GOOGLE_CLIENT_SECRET=...
 
 ### 部署
 
-- **Vercel (前端)**: Root Directory 配置为 `frontend/`，使用 `git push` 自动部署（GitHub 集成）。**不要**从 `frontend/` 目录运行 `vercel --prod`，否则 Root Directory 设置不生效
-- **Railway (后端)**: 从项目根目录运行 `railway up --detach`；Dockerfile 在单容器中运行 Alembic migration → Celery worker (background, concurrency=1) → uvicorn
+#### Vercel (前端)
+
+- Root Directory 配置为 `frontend/`，使用 `git push` 自动部署（GitHub 集成）
+- **不要**从 `frontend/` 目录运行 `vercel --prod`，否则 Root Directory 设置不生效
+- Root Directory 必须在 **Vercel Dashboard** 中更改，**不能**通过 vercel.json 设置
+- `NEXT_PUBLIC_API_BASE` 必须指向 Railway 生产 URL，**绝对不能**是 localhost
+- GitHub 自动部署到 Vercel — 不需要手动 `vercel` CLI 部署，除非明确要求
+
+#### Railway (后端)
+
+- 从项目根目录运行 `railway up --detach`
+- Dockerfile 在单容器中运行 Alembic migration → Celery worker (background, concurrency=1) → uvicorn
+- 确保 Dockerfile 路径配置正确，验证 Docker Image 服务不接受 start 命令
+- 部署后始终确认后端运行的是**最新代码**（避免过时部署）
+- 测试前检查本地端口冲突
 
 ---
 
@@ -328,9 +347,29 @@ DocTalk/
 
 ---
 
+## Session Completion Checklist
+
+部署或重大变更后，**必须**更新文档（README.md、ARCHITECTURE.md、相关 docs/）并推送到 GitHub。不要将文档视为可选或可延迟的。
+
+---
+
+## Development Server
+
+- **不要**启动多个后台开发服务器进程
+- 启动新服务器前先检查是否已有运行中的
+- 启动服务前终止占用冲突端口的孤儿进程
+
+---
+
 ## Working Mode: Claude Code (CC) + Codex (CX) 协作
 
 本项目采用 CC 主导 + CX 执行的双 AI 协作模式。
+
+### Codex 集成规范
+
+- 使用 `codex exec --full-auto` 进行非交互式执行
+- 正确的模型名是 **`gpt-5.3-codex`**（不是 `gpt-5.3`，缺少 `-codex` 后缀会失败）
+- Codex 沙箱**无法执行 git 操作**（`.git/index.lock` 权限限制 + 无网络）— 在 Claude 中直接处理 git push/commit
 
 ### 如何调用 Codex
 

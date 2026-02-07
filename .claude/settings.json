@@ -1,0 +1,15 @@
+{
+  "hooks": {
+    "postToolCall": [
+      {
+        "matcher": "Edit|Write",
+        "command": "echo '⚠️  REMINDER: Should this change be delegated to Codex instead? Did you update docs?'"
+      }
+    ],
+    "preCommit": [
+      {
+        "command": "echo 'Pre-commit: Checking NEXT_PUBLIC_API_URL is not localhost...' && ! grep -r 'NEXT_PUBLIC_API_URL.*localhost' .env.production"
+      }
+    ]
+  }
+}

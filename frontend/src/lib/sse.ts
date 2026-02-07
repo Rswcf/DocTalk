@@ -21,11 +21,12 @@ export async function chatStream(
   onError: (e: ErrorPayload) => void,
   onDone: (d: DonePayload) => void,
   model?: string,
+  locale?: string,
 ) {
   const res = await fetch(`${PROXY_BASE}/api/sessions/${sessionId}/chat`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ message, ...(model ? { model } : {}) }),
+    body: JSON.stringify({ message, ...(model ? { model } : {}), ...(locale ? { locale } : {}) }),
   });
 
   if (!res.ok || !res.body) {

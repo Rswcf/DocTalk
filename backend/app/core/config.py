@@ -24,14 +24,15 @@ class Settings(BaseSettings):
     LLM_MODEL: str = Field(default="anthropic/claude-sonnet-4.5")
     LLM_MAX_CONTEXT_TOKENS: int = Field(default=180000)
     ALLOWED_MODELS: list[str] = Field(default=[
-        "anthropic/claude-sonnet-4.5",
-        "anthropic/claude-opus-4.5",
-        "openai/gpt-5.2",
-        "openai/gpt-5.2-pro",
-        "google/gemini-3-pro-preview",
+        "x-ai/grok-4.1-fast",
         "deepseek/deepseek-v3.2",
-        "mistralai/mistral-large-2512",
-        "qwen/qwen3-coder-next",
+        "minimax/minimax-m2.1",
+        "moonshotai/kimi-k2.5",
+        "google/gemini-3-flash-preview",
+        "openai/gpt-5.2",
+        "google/gemini-3-pro-preview",
+        "anthropic/claude-sonnet-4.5",
+        "anthropic/claude-opus-4.6",
     ])
 
     # Object Storage (MinIO local / S3-compatible in production)

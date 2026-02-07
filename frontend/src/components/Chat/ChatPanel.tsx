@@ -80,7 +80,7 @@ const SUGGESTED_KEYS = ['chat.suggestedQ1', 'chat.suggestedQ2', 'chat.suggestedQ
 export default function ChatPanel({ sessionId, onCitationClick, maxUserMessages }: ChatPanelProps) {
   const { messages, isStreaming, addMessage, updateLastMessage, addCitationToLastMessage, setStreaming, updateSessionActivity } = useDocTalkStore();
   const selectedModel = useDocTalkStore((s) => s.selectedModel);
-  const { t } = useLocale();
+  const { t, locale } = useLocale();
   const [input, setInput] = useState('');
   const listRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -159,9 +159,10 @@ export default function ChatPanel({ sessionId, onCitationClick, maxUserMessages 
       },
       () => { setStreaming(false); updateSessionActivity(sessionId); },
       selectedModel,
+      locale,
     );
     setInput('');
-  }, [isStreaming, demoLimitReached, sessionId, addMessage, updateLastMessage, addCitationToLastMessage, setStreaming, selectedModel, t, updateSessionActivity, router]);
+  }, [isStreaming, demoLimitReached, sessionId, addMessage, updateLastMessage, addCitationToLastMessage, setStreaming, selectedModel, locale, t, updateSessionActivity, router]);
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
