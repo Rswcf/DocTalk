@@ -2,17 +2,17 @@ import sentry_sdk
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from .core.config import settings
-from .api.documents import documents_router
-from .api.search import search_router
+from .api import auth
+from .api.billing import router as billing_router
 from .api.chat import chat_router
 from .api.chunks import chunks_router
 from .api.credits import router as credits_router
+from .api.documents import documents_router
+from .api.search import search_router
 from .api.users import router as users_router
-from .api.billing import router as billing_router
-from .api import auth
-from .services.storage_service import storage_service
+from .core.config import settings
 from .services.embedding_service import embedding_service
+from .services.storage_service import storage_service
 
 # Initialize Sentry (no-op if DSN is not configured)
 if settings.SENTRY_DSN:
@@ -67,13 +67,14 @@ def on_startup() -> None:
     def _retry_stuck_documents() -> None:
         """Re-dispatch parse tasks for documents stuck in 'parsing' status."""
         try:
+            from sqlalchemy import select
+
             from app.models.sync_database import SyncSessionLocal
             from app.models.tables import Document
-            from sqlalchemy import select
 
             with SyncSessionLocal() as db:
                 rows = db.execute(
-                    select(Document).where(Document.status.in_(["parsing", "embedding"]))
+                    select(Document).where(Document.status.in_(["parsing", "ocr", "embedding"]))
                 )
                 stuck = list(rows.scalars())
                 if not stuck:

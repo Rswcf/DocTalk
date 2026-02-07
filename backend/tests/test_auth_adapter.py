@@ -1,9 +1,6 @@
-import os
-import uuid
 from datetime import datetime, timedelta
 
 import pytest
-
 
 ADAPTER_SECRET_VAL = "test-adapter-secret"
 

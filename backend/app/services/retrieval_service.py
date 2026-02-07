@@ -2,9 +2,9 @@ from __future__ import annotations
 
 import asyncio
 import uuid
-from typing import List, Optional
+from typing import List
 
-from qdrant_client.models import Filter, FieldCondition, MatchValue
+from qdrant_client.models import FieldCondition, Filter, MatchValue
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 

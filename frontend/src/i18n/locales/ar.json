@@ -189,6 +189,8 @@
   "upload.or": "أو",
   "upload.parsing": "جارٍ التحليل…",
   "upload.parsingProgress": "تحليل الصفحات: {pagesParsed}، الفهرسة: {chunksIndexed}",
+  "upload.ocr": "جارٍ التعرف على النص بتقنية OCR...",
+  "upload.ocrFailed": "فشل التعرف على النص بتقنية OCR",
   "upload.pdfOnly": "يرجى تحميل ملف PDF",
   "upload.tooLarge": "لا يمكن أن يتجاوز حجم الملف 50 ميجابايت",
   "upload.uploading": "جاري الرفع…",

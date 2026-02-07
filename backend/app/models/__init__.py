@@ -1,15 +1,15 @@
 from .base import Base
 from .tables import (
-    Document,
-    Page,
-    Chunk,
-    ChatSession,
-    Message,
-    User,
     Account,
-    VerificationToken,
+    ChatSession,
+    Chunk,
     CreditLedger,
+    Document,
+    Message,
+    Page,
     UsageRecord,
+    User,
+    VerificationToken,
 )
 
 __all__ = [

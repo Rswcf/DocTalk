@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import asyncio
-import io
 import os
 import uuid
 from typing import Optional
@@ -104,9 +103,10 @@ class DocService:
 
         # Best-effort: clean up Qdrant vectors (sync call, run off event loop)
         try:
-            from app.services.embedding_service import embedding_service
+            from qdrant_client.models import FieldCondition, Filter, MatchValue
+
             from app.core.config import settings as _settings
-            from qdrant_client.models import Filter, FieldCondition, MatchValue
+            from app.services.embedding_service import embedding_service
 
             qclient = embedding_service.get_qdrant_client()
             await asyncio.to_thread(

@@ -6,9 +6,8 @@ from uuid import UUID
 import sqlalchemy as sa
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.tables import CreditLedger, UsageRecord, User
 from app.core.config import settings
-
+from app.models.tables import CreditLedger, UsageRecord, User
 
 # Token-to-credit rates by model tier
 CREDIT_RATES = {

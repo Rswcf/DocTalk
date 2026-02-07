@@ -189,6 +189,8 @@
   "upload.or": "অথবা",
   "upload.parsing": "বিশ্লেষণ করা হচ্ছে…",
   "upload.parsingProgress": "পৃষ্ঠা বিশ্লেষণ: {pagesParsed}, ইনডেক্সিং: {chunksIndexed}",
+  "upload.ocr": "OCR টেক্সট স্বীকৃতি চলছে...",
+  "upload.ocrFailed": "OCR টেক্সট স্বীকৃতি ব্যর্থ হয়েছে",
   "upload.pdfOnly": "অনুগ্রহ করে একটি PDF ফাইল আপলোড করুন",
   "upload.tooLarge": "ফাইলের আকার 50MB-এর বেশি হতে পারবে না",
   "upload.uploading": "আপলোড হচ্ছে…",

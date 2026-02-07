@@ -189,6 +189,8 @@
   "upload.or": "o",
   "upload.parsing": "Analizando…",
   "upload.parsingProgress": "Páginas analizadas: {pagesParsed}, indexando: {chunksIndexed}",
+  "upload.ocr": "Realizando reconocimiento de texto OCR...",
+  "upload.ocrFailed": "El reconocimiento de texto OCR falló",
   "upload.pdfOnly": "Por favor, sube un archivo PDF",
   "upload.tooLarge": "El tamaño del archivo no puede exceder 50MB",
   "upload.uploading": "Subiendo…",

@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import asyncio
 import time
 import uuid
 from dataclasses import dataclass
@@ -13,9 +12,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
 from app.models.tables import ChatSession, Message, User
-from app.services.retrieval_service import retrieval_service
 from app.services import credit_service
-
+from app.services.retrieval_service import retrieval_service
 
 # ---------------------------
 # SSE Event helpers

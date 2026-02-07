@@ -58,6 +58,8 @@ Railway 项目包含 5 个服务：backend, Postgres, Redis, qdrant-v2, minio-v2
 - **向量维度**: 配置驱动 (EMBEDDING_DIM)，启动时校验 Qdrant collection
 - **删除**: 同步 ORM cascade delete（pages, chunks, sessions, messages），返回 202；同时 best-effort 清理 MinIO 文件和 Qdrant 向量
 - **会话管理**: 每文档支持多个独立对话会话，重新打开文档自动恢复最近活跃会话
+- **OCR 支持**: 扫描版 PDF 自动通过 PyMuPDF 内置 Tesseract OCR 提取文字（`extract_pages_ocr()`），支持中英文（`eng+chi_sim`），可配置 DPI。流程：`detect_scanned()` → 设 status="ocr" → OCR 提取 → 验证文字量 ≥50 chars → 继续正常 parsing/embedding 流程
+- **CI/CD**: GitHub Actions 3 并行 job — backend（ruff lint + pytest）、frontend（eslint + next build）、docker（Dockerfile 构建验证）
 
 ### API 路由
 
@@ -154,6 +156,11 @@ STRIPE_PRICE_PRO_MONTHLY=price_...  # Stripe recurring price ID for Pro plan
 GOOGLE_CLIENT_ID=...
 GOOGLE_CLIENT_SECRET=...
 
+# OCR (可选，默认值即可)
+OCR_ENABLED=true
+OCR_LANGUAGES=eng+chi_sim
+OCR_DPI=300
+
 # 监控 (可选)
 SENTRY_DSN=https://...@sentry.io/...
 SENTRY_ENVIRONMENT=production
@@ -223,6 +230,8 @@ SENTRY_TRACES_SAMPLE_RATE=0.1
 - **macOS Celery fork 安全**: 必须设置 `OBJC_DISABLE_INITIALIZE_FORK_SAFETY=YES`
 - **Credits 扣费**: 使用 `db.flush()` 确保 ledger 在同一事务中写入
 - **FOR UPDATE 锁**: 验证 Token 使用行锁防止 TOCTOU 竞态
+- **OCR 回退**: `detect_scanned()` 检测到扫描 PDF 后，若 `OCR_ENABLED=true`，设 status="ocr" → 调用 `extract_pages_ocr()` → 验证文字 ≥50 chars → 继续 parsing。PyMuPDF `page.get_textpage_ocr(language=..., dpi=..., full=True)` 需要系统安装 Tesseract（Dockerfile 已包含 `tesseract-ocr-eng` + `tesseract-ocr-chi-sim`）
+- **OCR 容错**: 每页独立 try/except，一页 OCR 失败不影响其他页。OCR 文字不足 50 chars 时标记 error
 - **Parse worker 幂等**: 重新执行时先删除已有 pages/chunks，重置计数器，避免 UniqueViolation；支持 stuck 文档重试
 - **启动自动重试**: `main.py` 的 `on_startup` 在后台线程中检测 status=parsing/embedding 的文档，自动重新分发 parse 任务
 - **Demo 文档种子**: `on_startup` → `_seed_demo_documents()` → `demo_seed.seed_demo_documents()`，从 `backend/seed_data/` 读取 3 篇 PDF，上传 MinIO 并 dispatch parse。幂等：已 ready 跳过，stuck 重派，error 重建
@@ -253,11 +262,17 @@ SENTRY_TRACES_SAMPLE_RATE=0.1
 # 运行 smoke test（需要 docker compose 基础设施运行）
 cd backend && python3 -m pytest tests/test_smoke.py -v
 
+# 运行 parse service 单元测试（无外部依赖）
+cd backend && python3 -m pytest tests/test_parse_service.py -v
+
 # 仅运行集成测试（标记为 @pytest.mark.integration）
 cd backend && python3 -m pytest -m integration -v
+
+# Lint 检查
+cd backend && python3 -m ruff check app/ tests/
 ```
 
-测试文件位于 `backend/tests/`，使用 httpx AsyncClient 直连 FastAPI app。
+测试文件位于 `backend/tests/`，使用 httpx AsyncClient 直连 FastAPI app。CI 通过 GitHub Actions 自动运行（`.github/workflows/ci.yml`）。
 
 ---
 
@@ -341,6 +356,9 @@ DocTalk/
 ├── docs/
 │   ├── ARCHITECTURE.md           # 架构文档 - 英文 (Mermaid 图表)
 │   └── ARCHITECTURE.zh.md       # 架构文档 - 中文
+├── .github/
+│   └── workflows/
+│       └── ci.yml                # GitHub Actions CI (backend lint+test, frontend build, docker build)
 ├── docker-compose.yml
 ├── README.md                     # 英文 README (与 README.zh.md 保持同步)
 ├── README.zh.md                  # 中文 README (与 README.md 保持同步)

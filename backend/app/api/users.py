@@ -1,25 +1,25 @@
 from __future__ import annotations
-from typing import Optional, List
-from fastapi import APIRouter, Depends, HTTPException
-from pydantic import BaseModel
-from sqlalchemy import select, func
-from sqlalchemy.ext.asyncio import AsyncSession
+
+from typing import List, Optional
 
 import stripe
+from fastapi import APIRouter, Depends, HTTPException
+from pydantic import BaseModel
+from sqlalchemy import func, select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
-from app.core.deps import require_auth, get_db_session
+from app.core.deps import get_db_session, require_auth
 from app.models.tables import (
-    User,
     Account,
-    Document,
     ChatSession,
+    CreditLedger,
+    Document,
     Message,
     UsageRecord,
-    CreditLedger,
+    User,
 )
 from app.services.doc_service import doc_service
-
 
 router = APIRouter(prefix="/api/users", tags=["users"])
 

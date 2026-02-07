@@ -1,23 +1,21 @@
 from __future__ import annotations
 
-import io
-import json
+import time
 import uuid
 from typing import List, Optional
-import time
 
 from celery.utils.log import get_task_logger
 from minio import Minio
+from qdrant_client.models import PointStruct
 from sqlalchemy import select
 
 from app.core.config import settings
 from app.models.sync_database import SyncSessionLocal
 from app.models.tables import Chunk, Document, Page
-from app.services.parse_service import ParseService
 from app.services.embedding_service import embedding_service
-from qdrant_client.models import PointStruct
-from .celery_app import celery_app
+from app.services.parse_service import ParseService
 
+from .celery_app import celery_app
 
 logger = get_task_logger(__name__)
 
@@ -107,14 +105,51 @@ def parse_document(self, document_id: str) -> None:
         db.add(doc)
         db.commit()
 
-        # Detect scanned PDFs
+        # Detect scanned PDFs — attempt OCR fallback
         if service.detect_scanned(pages):
-            doc.status = "error"
-            doc.error_msg = "该文档为扫描版 PDF，暂不支持。请上传含文本层的 PDF。"
+            if not settings.OCR_ENABLED:
+                doc.status = "error"
+                doc.error_msg = "该文档为扫描版 PDF，暂不支持。请上传含文本层的 PDF。"
+                db.add(doc)
+                db.commit()
+                logger.info("Document %s marked as scanned / error (OCR disabled)", document_id)
+                return
+
+            logger.info("Document %s appears scanned, attempting OCR", document_id)
+            doc.status = "ocr"
             db.add(doc)
             db.commit()
-            logger.info("Document %s marked as scanned / error", document_id)
-            return
+
+            try:
+                pages = service.extract_pages_ocr(
+                    pdf_bytes,
+                    languages=settings.OCR_LANGUAGES,
+                    dpi=settings.OCR_DPI,
+                )
+            except Exception as e:
+                logger.exception("OCR extraction failed for %s: %s", document_id, e)
+                doc.status = "error"
+                doc.error_msg = "OCR 文字识别失败"
+                db.add(doc)
+                db.commit()
+                return
+
+            # Verify OCR produced enough text
+            total_chars = sum(
+                sum(len(b.text) for b in p.blocks) for p in pages
+            )
+            if total_chars < 50:
+                doc.status = "error"
+                doc.error_msg = "OCR 未能识别出足够文字"
+                db.add(doc)
+                db.commit()
+                logger.info("Document %s: OCR produced only %d chars", document_id, total_chars)
+                return
+
+            logger.info("OCR succeeded for %s: %d chars extracted", document_id, total_chars)
+            doc.status = "parsing"
+            db.add(doc)
+            db.commit()
 
         # Persist pages and update progress every 10 pages
         for i, p in enumerate(pages, start=1):

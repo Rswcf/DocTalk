@@ -261,7 +261,7 @@ async def stripe_webhook(request: Request, db: AsyncSession = Depends(get_db_ses
             return {"received": True}
 
     elif event["type"] == "invoice.payment_succeeded":
-    
+
         obj = event.get("data", {}).get("object")
         if not obj or not isinstance(obj, dict):
             return {"received": True}

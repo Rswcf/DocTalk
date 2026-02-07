@@ -7,6 +7,8 @@
   "upload.uploading": "Wird hochgeladen…",
   "upload.parsing": "Wird verarbeitet…",
   "upload.parsingProgress": "Seiten verarbeitet: {pagesParsed}, indexiert: {chunksIndexed}",
+  "upload.ocr": "OCR-Texterkennung wird durchgeführt...",
+  "upload.ocrFailed": "OCR-Texterkennung fehlgeschlagen",
   "upload.error": "Fehler bei der Verarbeitung",
   "upload.networkError": "Upload fehlgeschlagen, bitte überprüfen Sie das Netzwerk oder versuchen Sie es später erneut",
   "upload.pdfOnly": "Bitte laden Sie eine PDF-Datei hoch",

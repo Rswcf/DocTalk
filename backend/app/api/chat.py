@@ -6,7 +6,7 @@ from typing import AsyncGenerator, Optional
 
 from fastapi import APIRouter, Depends, status
 from fastapi.responses import JSONResponse, StreamingResponse
-from sqlalchemy import asc, select, func, desc
+from sqlalchemy import asc, desc, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -15,13 +15,13 @@ from app.models.tables import ChatSession, Document, Message, User
 from app.schemas.chat import (
     ChatMessageResponse,
     ChatRequest,
+    SessionListItem,
+    SessionListResponse,
     SessionMessagesResponse,
     SessionResponse,
-    SessionListResponse,
-    SessionListItem,
 )
-from app.services.chat_service import chat_service
 from app.services import credit_service
+from app.services.chat_service import chat_service
 
 DEMO_MESSAGE_LIMIT = 5
 DEMO_MAX_SESSIONS_PER_DOC = 3

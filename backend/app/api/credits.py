@@ -4,12 +4,11 @@ from typing import List, Optional
 
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel
-from sqlalchemy import select, func
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.deps import get_db_session, require_auth
 from app.models.tables import CreditLedger, User
-
 
 router = APIRouter(prefix="/api/credits", tags=["credits"])
 

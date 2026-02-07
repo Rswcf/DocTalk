@@ -30,7 +30,7 @@ export interface Message {
 export interface DocumentResponse {
   id: string;
   filename: string;
-  status: 'idle' | 'uploading' | 'parsing' | 'embedding' | 'ready' | 'error';
+  status: 'idle' | 'uploading' | 'parsing' | 'ocr' | 'embedding' | 'ready' | 'error';
   page_count?: number;
   pages_parsed: number;
   chunks_total: number;

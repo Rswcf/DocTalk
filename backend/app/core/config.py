@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from pathlib import Path
 from typing import Optional
 
 from pydantic import Field
@@ -54,6 +55,11 @@ class Settings(BaseSettings):
     MAX_CHAT_HISTORY_TURNS: int = Field(default=6)
     MAX_RETRIEVAL_TOKENS: int = Field(default=1750)
 
+    # OCR
+    OCR_ENABLED: bool = Field(default=True)
+    OCR_LANGUAGES: str = Field(default="eng+chi_sim")
+    OCR_DPI: int = Field(default=300)
+
     # CORS
     FRONTEND_URL: str = Field(default="http://localhost:3000")
 
@@ -88,8 +94,6 @@ class Settings(BaseSettings):
 
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", case_sensitive=False)
 
-
-from pathlib import Path
 
 # Try to load .env from backend/ or repo root for local dev
 _candidates = [Path(".env"), Path("..") / ".env"]

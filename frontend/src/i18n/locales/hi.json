@@ -189,6 +189,8 @@
   "upload.or": "या",
   "upload.parsing": "पार्स किया जा रहा है…",
   "upload.parsingProgress": "पृष्ठ पार्स: {pagesParsed}, इंडेक्सिंग: {chunksIndexed}",
+  "upload.ocr": "OCR टेक्स्ट पहचान जारी है...",
+  "upload.ocrFailed": "OCR टेक्स्ट पहचान विफल",
   "upload.pdfOnly": "कृपया PDF फ़ाइल अपलोड करें",
   "upload.tooLarge": "फ़ाइल का आकार 50MB से अधिक नहीं हो सकता",
   "upload.uploading": "अपलोड हो रहा है…",

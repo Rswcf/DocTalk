@@ -7,6 +7,8 @@
   "upload.uploading": "正在上传…",
   "upload.parsing": "正在解析…",
   "upload.parsingProgress": "解析页数：{pagesParsed}，索引：{chunksIndexed}",
+  "upload.ocr": "正在进行 OCR 文字识别…",
+  "upload.ocrFailed": "OCR 文字识别失败",
   "upload.error": "处理过程中出错",
   "upload.networkError": "上传失败，请检查网络或稍后重试",
   "upload.pdfOnly": "请上传 PDF 文件",

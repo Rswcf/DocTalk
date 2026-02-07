@@ -2,9 +2,9 @@ import os
 import sys
 from pathlib import Path
 
-import pytest
 import httpx
-
+import pytest
+import pytest_asyncio
 
 # Ensure the backend package path (backend/) is importable so `from app.main import app` works
 BACKEND_DIR = Path(__file__).resolve().parents[1]
@@ -38,7 +38,7 @@ def pytest_collection_modifyitems(config: pytest.Config, items: list[pytest.Item
             item.add_marker(skip_marker)
 
 
-@pytest.fixture
+@pytest_asyncio.fixture
 async def client():
     # Import app after env setup
     from app.main import app

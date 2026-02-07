@@ -81,9 +81,13 @@ export default function HomePage() {
           setDocumentStatus(info.status);
           const pp = info.pages_parsed ?? 0;
           const ci = info.chunks_indexed ?? 0;
-          setProgressText(pp === 0 && ci === 0
-            ? t('upload.parsing')
-            : t('upload.parsingProgress', { pagesParsed: pp, chunksIndexed: ci }));
+          if (info.status === 'ocr') {
+            setProgressText(t('upload.ocr'));
+          } else if (pp === 0 && ci === 0) {
+            setProgressText(t('upload.parsing'));
+          } else {
+            setProgressText(t('upload.parsingProgress', { pagesParsed: pp, chunksIndexed: ci }));
+          }
           if (info.status === 'ready') {
             clearInterval(timer);
             router.push(`/d/${docId}`);

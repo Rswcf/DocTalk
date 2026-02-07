@@ -6,12 +6,11 @@ from datetime import datetime
 from typing import Optional
 from uuid import UUID
 
-import sqlalchemy as sa
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.tables import User, Account, VerificationToken, CreditLedger
+from app.models.tables import Account, CreditLedger, User, VerificationToken
 
 logger = logging.getLogger(__name__)
 

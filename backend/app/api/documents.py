@@ -3,17 +3,20 @@ from __future__ import annotations
 import uuid
 from typing import Optional
 
-from fastapi import APIRouter, Depends, File, UploadFile, status, HTTPException, Query
+from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile, status
 from fastapi.responses import JSONResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
 from app.core.deps import get_current_user_optional, get_db_session, require_auth
 from app.models.tables import User
-from app.schemas.document import DocumentFileUrlResponse, DocumentResponse, DocumentBrief
+from app.schemas.document import (
+    DocumentBrief,
+    DocumentFileUrlResponse,
+    DocumentResponse,
+)
 from app.services.doc_service import doc_service
 from app.services.storage_service import storage_service
-
 
 documents_router = APIRouter(prefix="/documents", tags=["documents"])
 
@@ -29,6 +32,7 @@ async def list_documents(
         if not user:
             raise HTTPException(status_code=401, detail="Authentication required")
         from sqlalchemy import select
+
         from app.models.tables import Document
 
         result = await db.execute(
@@ -57,6 +61,7 @@ async def get_demo_documents(
 ):
     """Return list of demo documents for the demo selection page."""
     from sqlalchemy import select
+
     from app.models.tables import Document
 
     result = await db.execute(

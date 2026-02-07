@@ -40,6 +40,7 @@ DEMO_DOCS = [
 def _get_minio_client():
     """Create a MinIO client (same logic as parse_worker)."""
     from urllib.parse import urlparse
+
     from minio import Minio
 
     endpoint = settings.MINIO_ENDPOINT

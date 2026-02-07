@@ -4,7 +4,7 @@ import { create } from 'zustand';
 import { AVAILABLE_MODELS, DEFAULT_MODEL_ID } from '../lib/models';
 import type { Citation, Message, NormalizedBBox, SessionItem } from '../types';
 
-type DocStatus = 'idle' | 'uploading' | 'parsing' | 'embedding' | 'ready' | 'error';
+type DocStatus = 'idle' | 'uploading' | 'parsing' | 'ocr' | 'embedding' | 'ready' | 'error';
 
 export interface DocTalkStore {
   // Document

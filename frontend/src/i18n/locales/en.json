@@ -7,6 +7,8 @@
   "upload.uploading": "Uploading…",
   "upload.parsing": "Parsing…",
   "upload.parsingProgress": "Parsing pages: {pagesParsed}, indexing: {chunksIndexed}",
+  "upload.ocr": "Performing OCR text recognition...",
+  "upload.ocrFailed": "OCR text recognition failed",
   "upload.error": "Error during processing",
   "upload.networkError": "Upload failed, please check network or try again later",
   "upload.pdfOnly": "Please upload a PDF file",

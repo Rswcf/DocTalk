@@ -10,7 +10,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.deps import get_db_session
 from app.models.tables import Chunk
 
-
 chunks_router = APIRouter(tags=["chunks"])
 
 

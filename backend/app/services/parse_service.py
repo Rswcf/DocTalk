@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from statistics import median
-from typing import Iterable, List, Optional, Sequence, Tuple
+from typing import List, Optional, Sequence, Tuple
 
 import fitz  # PyMuPDF
 
@@ -102,6 +102,55 @@ class ParseService:
             return pages
         finally:
             # Always close the PDF document to free resources
+            doc.close()
+
+    def extract_pages_ocr(
+        self, pdf_bytes: bytes, languages: str = "eng+chi_sim", dpi: int = 300
+    ) -> List[PageInfo]:
+        """Extract pages using Tesseract OCR via PyMuPDF.
+
+        Same interface as extract_pages() but uses OCR for scanned PDFs.
+        Requires Tesseract to be installed on the system.
+        """
+        import logging
+        logger = logging.getLogger(__name__)
+        doc = fitz.open(stream=pdf_bytes, filetype="pdf")
+        try:
+            pages: List[PageInfo] = []
+            for pi, page in enumerate(doc, start=1):
+                try:
+                    rect = page.rect
+                    rotation = int(page.rotation or 0)
+                    width_pt = float(rect.width)
+                    height_pt = float(rect.height)
+
+                    tp = page.get_textpage_ocr(language=languages, dpi=dpi, full=True)
+                    page_dict = page.get_text("dict", textpage=tp)
+                    blocks: List[BlockInfo] = []
+                    for blk in page_dict.get("blocks", []):
+                        if blk.get("type", 0) != 0:
+                            continue
+                        lines = blk.get("lines", [])
+                        if not lines:
+                            continue
+                        for line_info in self._extract_line_blocks(pi, lines):
+                            blocks.append(line_info)
+
+                    pages.append(
+                        PageInfo(
+                            page_number=pi,
+                            width_pt=width_pt,
+                            height_pt=height_pt,
+                            rotation=rotation,
+                            blocks=blocks,
+                        )
+                    )
+                except Exception as e:
+                    logger.warning("OCR failed on page %d: %s", pi, e)
+                    # Skip this page but continue with the rest
+                    continue
+            return pages
+        finally:
             doc.close()
 
     def detect_scanned(self, pages: Sequence[PageInfo]) -> bool:
@@ -269,8 +318,6 @@ class ParseService:
             # Advance start index with overlap of 50 tokens
             # Compute how many sentences to step back to preserve ~50 tokens overlap
             overlap = self.OVERLAP_TOKENS
-            # tokens in current chunk
-            current_chunk_tokens = sum(sent_tokens[start_idx:end_idx])
             # We want next window to start so that the tail has ~overlap tokens
             # Find k: sum of last k sentences' tokens >= overlap
             k = 0

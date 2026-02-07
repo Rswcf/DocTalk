@@ -1,9 +1,8 @@
 from __future__ import annotations
 
 import threading
-import time
 from functools import lru_cache
-from typing import Iterable, List, Optional
+from typing import List, Optional
 
 from openai import OpenAI
 from qdrant_client import QdrantClient

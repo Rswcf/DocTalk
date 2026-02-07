@@ -10,17 +10,16 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.config import settings
 from app.core.deps import get_db_session
 from app.schemas.auth import (
-    CreateUserRequest,
-    UserResponse,
-    UpdateUserRequest,
-    LinkAccountRequest,
     AccountResponse,
+    CreateUserRequest,
     CreateVerificationTokenRequest,
+    LinkAccountRequest,
+    UpdateUserRequest,
+    UserResponse,
     UseVerificationTokenRequest,
     VerificationTokenResponse,
 )
 from app.services import auth_service
-
 
 router = APIRouter(prefix="/api/internal/auth", tags=["auth-internal"])
 
@@ -139,7 +138,7 @@ async def create_verification_token(
     db: AsyncSession = Depends(get_db_session),
     _: None = Depends(verify_adapter_secret),
 ):
-    vt = await auth_service.create_verification_token(db, data.identifier, data.token, data.expires)
+    await auth_service.create_verification_token(db, data.identifier, data.token, data.expires)
     # Return raw token (not hashed) for Auth.js
     return {"identifier": data.identifier, "token": data.token, "expires": data.expires}
 
