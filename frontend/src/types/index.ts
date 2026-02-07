@@ -37,6 +37,7 @@ export interface DocumentResponse {
   chunks_indexed: number;
   created_at: string;
   is_demo?: boolean;
+  error_msg?: string;
 }
 
 export interface SearchResult {

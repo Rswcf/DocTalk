@@ -213,10 +213,11 @@ def parse_document(self, document_id: str) -> None:
             rows = db.execute(select(Chunk).where(Chunk.document_id == doc.id).order_by(Chunk.chunk_index))
             chunks: List[Chunk] = list(rows.scalars())
             if not chunks:
-                doc.status = "ready"
+                doc.status = "error"
+                doc.error_msg = "No text content could be extracted from the document"
                 db.add(doc)
                 db.commit()
-                logger.info("No chunks to embed for %s; marked ready", document_id)
+                logger.warning("No chunks to embed for %s; marked error", document_id)
                 return
 
             doc.status = "embedding"

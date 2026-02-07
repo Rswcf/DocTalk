@@ -25,6 +25,7 @@ class DocumentResponse(BaseModel):
     chunks_indexed: int
     created_at: datetime
     is_demo: bool = False
+    error_msg: Optional[str] = None
 
     class Config:
         from_attributes = True

@@ -46,6 +46,10 @@ export default function DocumentReaderPage() {
       try {
         const info = await getDocument(documentId);
         setDocumentStatus(info.status);
+        if (info.status === 'error') {
+          setError(info.error_msg || t('upload.error'));
+          return;
+        }
         if (info.is_demo) setIsDemo(true);
         if (info.filename) {
           setDocumentName(info.filename);

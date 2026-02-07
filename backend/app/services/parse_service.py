@@ -124,7 +124,19 @@ class ParseService:
                     width_pt = float(rect.width)
                     height_pt = float(rect.height)
 
-                    tp = page.get_textpage_ocr(language=languages, dpi=dpi, full=True)
+                    # Cap rendered image size at 20MP to prevent Tesseract crashes
+                    page_w_px = width_pt * dpi / 72
+                    page_h_px = height_pt * dpi / 72
+                    max_pixels = 20_000_000
+                    if page_w_px * page_h_px > max_pixels:
+                        scale = (max_pixels / (page_w_px * page_h_px)) ** 0.5
+                        effective_dpi = max(72, int(dpi * scale))
+                        logger.info("Page %d too large (%.0fx%.0f px at %d DPI), reducing to %d DPI",
+                                    pi, page_w_px, page_h_px, dpi, effective_dpi)
+                    else:
+                        effective_dpi = dpi
+
+                    tp = page.get_textpage_ocr(language=languages, dpi=effective_dpi, full=True)
                     page_dict = page.get_text("dict", textpage=tp)
                     blocks: List[BlockInfo] = []
                     for blk in page_dict.get("blocks", []):
