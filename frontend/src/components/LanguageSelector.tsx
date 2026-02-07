@@ -8,7 +8,10 @@ import { useLocale } from '../i18n';
 export default function LanguageSelector() {
   const { locale, setLocale, t } = useLocale();
   const [open, setOpen] = useState(false);
+  const [focusIndex, setFocusIndex] = useState(-1);
   const ref = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const itemRefs = useRef<(HTMLButtonElement | null)[]>([]);
 
   useEffect(() => {
     function onDocClick(e: MouseEvent) {
@@ -19,35 +22,81 @@ export default function LanguageSelector() {
     return () => document.removeEventListener('mousedown', onDocClick);
   }, []);
 
+  useEffect(() => {
+    if (open) {
+      setFocusIndex(0);
+    }
+  }, [open]);
+
+  useEffect(() => {
+    if (open && focusIndex >= 0 && itemRefs.current[focusIndex]) {
+      itemRefs.current[focusIndex]?.focus();
+    }
+  }, [open, focusIndex]);
+
   const toggle = () => setOpen((v) => !v);
   const choose = (code: string) => {
     setLocale(code as any);
     setOpen(false);
   };
 
+  function handleMenuKeyDown(e: React.KeyboardEvent) {
+    const itemCount = LOCALES.length;
+    switch (e.key) {
+      case 'ArrowDown':
+        e.preventDefault();
+        setFocusIndex((prev) => (prev + 1) % itemCount);
+        break;
+      case 'ArrowUp':
+        e.preventDefault();
+        setFocusIndex((prev) => (prev - 1 + itemCount) % itemCount);
+        break;
+      case 'Home':
+        e.preventDefault();
+        setFocusIndex(0);
+        break;
+      case 'End':
+        e.preventDefault();
+        setFocusIndex(itemCount - 1);
+        break;
+      case 'Escape':
+        e.preventDefault();
+        setOpen(false);
+        triggerRef.current?.focus();
+        break;
+    }
+  }
+
   const current = LOCALES.find((l) => l.code === locale);
 
   return (
     <div className="relative" ref={ref}>
       <button
+        ref={triggerRef}
         type="button"
         onClick={toggle}
         className="flex items-center gap-1.5 px-2 py-1 border border-zinc-200 rounded-md text-sm text-zinc-700 dark:border-zinc-700 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
         title={t('header.language')}
+        aria-haspopup="listbox"
+        aria-expanded={open}
       >
         <Globe size={16} />
         <span className="hidden sm:inline">{(current?.code || 'en').toUpperCase()}</span>
         <ChevronDown size={14} className="opacity-70" />
       </button>
       {open && (
-        <div className="absolute right-0 mt-1 w-48 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-md shadow-lg z-20 p-1">
-          {LOCALES.map((l) => (
+        <div className="absolute right-0 mt-1 w-48 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-md shadow-lg z-20 p-1" onKeyDown={handleMenuKeyDown} role="listbox">
+          {LOCALES.map((l, i) => (
             <button
               key={l.code}
+              ref={(el) => { itemRefs.current[i] = el; }}
               className={`w-full text-left flex items-center gap-2 px-2 py-1.5 rounded hover:bg-zinc-100 dark:hover:bg-zinc-800 text-sm transition-colors ${
                 locale === l.code ? 'font-medium' : ''
               }`}
               onClick={() => choose(l.code)}
+              tabIndex={focusIndex === i ? 0 : -1}
+              role="option"
+              aria-selected={locale === l.code}
             >
               <span className="w-4 h-4 flex items-center justify-center">
                 {locale === l.code ? <Check size={14} /> : null}

@@ -10,6 +10,7 @@ import { useLocale } from '../../i18n';
 interface MessageBubbleProps {
   message: Message;
   onCitationClick?: (c: Citation) => void;
+  isStreaming?: boolean;
 }
 
 function insertCitationMarkers(text: string, citations: Citation[]): string {
@@ -47,15 +48,25 @@ function processCitationLinks(
         const citation = citations.find((c) => c.refIndex === refNum);
         if (citation) {
           parts.push(
-            <button
-              key={`cite-${refNum}-${keyIdx++}`}
-              type="button"
-              className="inline text-zinc-600 dark:text-zinc-400 hover:underline cursor-pointer select-none font-medium bg-transparent border-none p-0 text-inherit leading-inherit"
-              onClick={() => onClick?.(citation)}
-              title={t ? t('citation.jumpTo', { page: citation.page }) : `Jump to page ${citation.page}`}
-            >
-              [{refNum}]
-            </button>
+            <span key={`cite-${refNum}-${keyIdx++}`} className="relative inline-block group/cite">
+              <button
+                type="button"
+                className="inline text-zinc-600 dark:text-zinc-400 hover:underline cursor-pointer select-none font-medium bg-transparent border-none p-0 text-inherit leading-inherit"
+                onClick={() => onClick?.(citation)}
+                title={t ? t('citation.jumpTo', { page: citation.page }) : `Jump to page ${citation.page}`}
+              >
+                [{refNum}]
+              </button>
+              {citation.textSnippet && (
+                <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 text-xs rounded-lg shadow-lg whitespace-normal max-w-[280px] pointer-events-none opacity-0 group-hover/cite:opacity-100 transition-opacity z-50">
+                  <span className="line-clamp-3">{citation.textSnippet}</span>
+                  <span className="block mt-1 text-zinc-400 dark:text-zinc-500 text-[10px]">
+                    {t ? t('citation.page', { page: citation.page }) : `Page ${citation.page}`}
+                  </span>
+                  <span className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-zinc-900 dark:border-t-zinc-100" />
+                </span>
+              )}
+            </span>
           );
         } else {
           parts.push(`[${refNum}]`);
@@ -109,7 +120,7 @@ function setFeedbackStorage(messageId: string, fb: Feedback) {
   } catch {}
 }
 
-export default function MessageBubble({ message, onCitationClick }: MessageBubbleProps) {
+export default function MessageBubble({ message, onCitationClick, isStreaming }: MessageBubbleProps) {
   const isUser = message.role === 'user';
   const isError = !!message.isError;
   const isAssistant = !isUser;
@@ -178,11 +189,23 @@ export default function MessageBubble({ message, onCitationClick }: MessageBubbl
         >
           {isUser ? (
             <span className="whitespace-pre-wrap">{message.text}</span>
+          ) : isStreaming && !message.text ? (
+            <div className="flex items-center gap-2 text-zinc-400 dark:text-zinc-500 text-sm">
+              <div className="flex gap-1">
+                <span className="w-1.5 h-1.5 bg-zinc-400 rounded-full animate-bounce [animation-delay:-0.3s]" />
+                <span className="w-1.5 h-1.5 bg-zinc-400 rounded-full animate-bounce [animation-delay:-0.15s]" />
+                <span className="w-1.5 h-1.5 bg-zinc-400 rounded-full animate-bounce" />
+              </div>
+              <span>{t('chat.searching')}</span>
+            </div>
           ) : (
             <div className="prose prose-sm dark:prose-invert max-w-none [&>*:first-child]:mt-0 [&>*:last-child]:mb-0">
               <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>
                 {markdownText}
               </ReactMarkdown>
+              {isStreaming && isAssistant && message.text && (
+                <span className="inline-block w-2 h-4 bg-zinc-400 dark:bg-zinc-500 animate-pulse rounded-sm ml-0.5 align-text-bottom" />
+              )}
             </div>
           )}
         </div>

@@ -10,6 +10,7 @@ import MessageBubble from './MessageBubble';
 import CitationCard from './CitationCard';
 import { useLocale } from '../../i18n';
 import { PaywallModal } from '../PaywallModal';
+import { triggerCreditsRefresh } from '../CreditsDisplay';
 
 /**
  * Error boundary for individual messages to prevent one broken message
@@ -169,7 +170,7 @@ export default function ChatPanel({ sessionId, onCitationClick, maxUserMessages 
         };
         addMessage(errorMsg);
       },
-      () => { setStreaming(false); updateSessionActivity(sessionId); },
+      () => { setStreaming(false); updateSessionActivity(sessionId); triggerCreditsRefresh(); },
       selectedModel,
       locale,
     );
@@ -212,16 +213,18 @@ export default function ChatPanel({ sessionId, onCitationClick, maxUserMessages 
             ))}
           </div>
         ) : (
-          messages.map((m) => {
+          messages.map((m, idx) => {
             const displayCitations = (m.role === 'assistant' && m.citations && m.citations.length > 0)
               ? renumberCitations(m.citations)
               : undefined;
             const displayMessage = displayCitations ? { ...m, citations: displayCitations } : m;
+            const isLastMessage = idx === messages.length - 1;
+            const showStreaming = isLastMessage && isStreaming && m.role === 'assistant';
 
             return (
               <MessageErrorBoundary key={m.id} messageId={m.id}>
                 <div>
-                  <MessageBubble message={displayMessage} onCitationClick={onCitationClick} />
+                  <MessageBubble message={displayMessage} onCitationClick={onCitationClick} isStreaming={showStreaming} />
                   {displayCitations && displayCitations.length > 0 && (() => {
                     const uniqueCitations = displayCitations
                       .filter((c, i, arr) => arr.findIndex((x) => x.refIndex === c.refIndex) === i)

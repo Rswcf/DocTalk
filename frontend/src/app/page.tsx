@@ -13,6 +13,9 @@ import { PrivacyBadge } from '../components/PrivacyBadge';
 import Header from '../components/Header';
 import HeroSection from '../components/landing/HeroSection';
 import FeatureGrid from '../components/landing/FeatureGrid';
+import HowItWorks from '../components/landing/HowItWorks';
+import SocialProof from '../components/landing/SocialProof';
+import SecuritySection from '../components/landing/SecuritySection';
 
 type StoredDoc = { document_id: string; filename?: string; createdAt: number };
 
@@ -162,7 +165,13 @@ export default function HomePage() {
           </div>
         </section>
 
+        <HowItWorks />
+
         <FeatureGrid />
+
+        <SocialProof />
+
+        <SecuritySection />
 
         {/* Privacy Badge */}
         <section className="py-8 flex justify-center">

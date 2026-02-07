@@ -1,11 +1,12 @@
 "use client";
 
-import { useState, useEffect, Suspense } from "react";
+import { useState, useEffect, useCallback, Suspense } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useLocale } from "../../i18n";
 import Header from "../../components/Header";
 import { getUserProfile, createSubscription, createPortalSession } from "../../lib/api";
+import { triggerCreditsRefresh } from "../../components/CreditsDisplay";
 import type { UserProfile } from "../../types";
 
 interface Product {
@@ -24,10 +25,13 @@ function BillingContent() {
   const [message, setMessage] = useState<string | null>(null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [submitting, setSubmitting] = useState<boolean>(false);
+  const [productsLoading, setProductsLoading] = useState(true);
+  const [productsError, setProductsError] = useState(false);
 
   useEffect(() => {
     if (searchParams.get("success")) {
       setMessage(t("billing.purchaseSuccess"));
+      triggerCreditsRefresh();
     } else if (searchParams.get("canceled")) {
       setMessage(t("billing.purchaseCanceled"));
     }
@@ -39,16 +43,27 @@ function BillingContent() {
     }
   }, [status, router]);
 
-  useEffect(() => {
-    async function fetchProducts() {
+  const fetchProducts = useCallback(async () => {
+    setProductsLoading(true);
+    setProductsError(false);
+    try {
       const res = await fetch("/api/proxy/api/billing/products");
       if (res.ok) {
         const data = await res.json();
         setProducts(data.products);
+      } else {
+        setProductsError(true);
       }
+    } catch {
+      setProductsError(true);
+    } finally {
+      setProductsLoading(false);
     }
-    fetchProducts();
   }, []);
+
+  useEffect(() => {
+    fetchProducts();
+  }, [fetchProducts]);
 
   useEffect(() => {
     async function fetchProfile() {
@@ -156,31 +171,58 @@ function BillingContent() {
           {t("billing.extraTopups")}
         </h2>
 
-        <div className="grid md:grid-cols-3 gap-6">
-          {products.map((product) => (
-            <div
-              key={product.id}
-              className="border border-zinc-100 dark:border-zinc-800 rounded-xl p-6 flex flex-col shadow-sm hover:shadow-md transition-colors"
+        {productsLoading && (
+          <div className="grid md:grid-cols-3 gap-6">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="border border-zinc-100 dark:border-zinc-800 rounded-xl p-6 animate-pulse">
+                <div className="h-5 bg-zinc-200 dark:bg-zinc-700 rounded w-24 mb-4" />
+                <div className="h-8 bg-zinc-200 dark:bg-zinc-700 rounded w-16 mb-2" />
+                <div className="h-4 bg-zinc-200 dark:bg-zinc-700 rounded w-32 mb-4" />
+                <div className="h-10 bg-zinc-200 dark:bg-zinc-700 rounded mt-4" />
+              </div>
+            ))}
+          </div>
+        )}
+
+        {productsError && !productsLoading && (
+          <div className="text-center py-8 text-zinc-500 dark:text-zinc-400">
+            <p>{t("billing.error")}</p>
+            <button
+              onClick={fetchProducts}
+              className="mt-2 text-sm underline hover:text-zinc-700 dark:hover:text-zinc-300"
             >
-              <h3 className="text-lg font-medium text-zinc-900 dark:text-zinc-100">
-                {t(`billing.pack.${product.id}` as any)}
-              </h3>
-              <p className="text-3xl font-bold mt-2 text-zinc-900 dark:text-zinc-100">
-                ${product.price_usd}
-              </p>
-              <p className="text-zinc-500 dark:text-zinc-400 mt-1">
-                {product.credits.toLocaleString()} {t("credits.credits")}
-              </p>
-              <button
-                onClick={() => handlePurchase(product.id)}
-                disabled={loading === product.id}
-                className="mt-auto pt-4 px-4 py-2 bg-zinc-900 dark:bg-zinc-50 text-white dark:text-zinc-900 rounded-lg font-medium hover:bg-zinc-800 dark:hover:bg-zinc-200 disabled:opacity-50 shadow-sm hover:shadow-md transition-colors"
+              {t("common.retry")}
+            </button>
+          </div>
+        )}
+
+        {!productsLoading && !productsError && (
+          <div className="grid md:grid-cols-3 gap-6">
+            {products.map((product) => (
+              <div
+                key={product.id}
+                className="border border-zinc-100 dark:border-zinc-800 rounded-xl p-6 flex flex-col shadow-sm hover:shadow-md transition-colors"
               >
-                {loading === product.id ? t("common.loading") : t("billing.purchase")}
-              </button>
-            </div>
-          ))}
-        </div>
+                <h3 className="text-lg font-medium text-zinc-900 dark:text-zinc-100">
+                  {t(`billing.pack.${product.id}` as any)}
+                </h3>
+                <p className="text-3xl font-bold mt-2 text-zinc-900 dark:text-zinc-100">
+                  ${product.price_usd}
+                </p>
+                <p className="text-zinc-500 dark:text-zinc-400 mt-1">
+                  {product.credits.toLocaleString()} {t("credits.credits")}
+                </p>
+                <button
+                  onClick={() => handlePurchase(product.id)}
+                  disabled={loading === product.id}
+                  className="mt-auto pt-4 px-4 py-2 bg-zinc-900 dark:bg-zinc-50 text-white dark:text-zinc-900 rounded-lg font-medium hover:bg-zinc-800 dark:hover:bg-zinc-200 disabled:opacity-50 shadow-sm hover:shadow-md transition-colors"
+                >
+                  {loading === product.id ? t("common.loading") : t("billing.purchase")}
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
       </main>
     </div>
   );
