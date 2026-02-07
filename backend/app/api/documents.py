@@ -148,14 +148,14 @@ async def get_document_file_url(
 @documents_router.delete("/{document_id}", status_code=status.HTTP_202_ACCEPTED)
 async def delete_document(
     document_id: uuid.UUID,
-    user: Optional[User] = Depends(get_current_user_optional),
+    user: User = Depends(require_auth),
     db: AsyncSession = Depends(get_db_session),
 ):
     doc = await doc_service.get_document(document_id, db)
     if not doc:
         return JSONResponse(status_code=404, content={"detail": "Document not found"})
-    # Authorization: if document has owner, verify user matches
-    if doc.user_id and (not user or doc.user_id != user.id):
+    # Only the document owner can delete; demo docs (user_id=None) are not deletable via API
+    if doc.user_id != user.id:
         return JSONResponse(status_code=404, content={"detail": "Document not found"})
     await doc_service.delete_document(document_id, db)
-    return JSONResponse(status_code=202, content={"status": "deleted", "message": "文档已删除"})
+    return JSONResponse(status_code=202, content={"status": "deleted"})

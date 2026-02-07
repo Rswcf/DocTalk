@@ -1,9 +1,8 @@
 from __future__ import annotations
 
-import asyncio
 import json
 import uuid
-from typing import AsyncGenerator, Dict, Optional
+from typing import AsyncGenerator, Optional
 
 from fastapi import APIRouter, Depends, status
 from fastapi.responses import JSONResponse, StreamingResponse
@@ -24,6 +23,8 @@ from app.schemas.chat import (
 from app.services.chat_service import chat_service
 from app.services import credit_service
 
+DEMO_MESSAGE_LIMIT = 5
+DEMO_MAX_SESSIONS_PER_DOC = 3
 
 chat_router = APIRouter(tags=["chat"])
 
@@ -80,10 +81,22 @@ async def create_session(
     if not doc:
         return JSONResponse(status_code=404, content={"detail": "Document not found"})
 
+    # Limit anonymous users to a small number of sessions on demo documents
+    if user is None and doc.demo_slug:
+        session_count = await db.execute(
+            select(func.count(ChatSession.id))
+            .where(ChatSession.document_id == document_id)
+        )
+        if session_count.scalar() >= DEMO_MAX_SESSIONS_PER_DOC:
+            return JSONResponse(
+                status_code=429,
+                content={"detail": "Demo session limit reached", "limit": DEMO_MAX_SESSIONS_PER_DOC},
+            )
+
     sess = ChatSession(document_id=document_id)
     db.add(sess)
     await db.commit()
-    await db.refresh(sess)  # 获取 server_default 的 created_at
+    await db.refresh(sess)
     return SessionResponse(
         session_id=sess.id,
         document_id=sess.document_id,
@@ -131,8 +144,7 @@ async def chat_stream(
     if not session:
         return JSONResponse(status_code=404, content={"detail": "Session not found"})
 
-    # Enforce 5-message limit for anonymous users on demo documents
-    DEMO_MESSAGE_LIMIT = 5
+    # Enforce message limit for anonymous users on demo documents
     if user is None and session.document and session.document.demo_slug:
         msg_count = await db.execute(
             select(func.count(Message.id))
