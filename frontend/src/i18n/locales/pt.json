@@ -72,6 +72,7 @@
   "doc.myDocuments": "Meus documentos",
   "doc.noDocuments": "Ainda não há documentos",
   "doc.notFound": "Documento não encontrado",
+  "doc.processing": "O documento está sendo processado, por favor aguarde...",
   "doc.open": "Abrir",
   "doc.pdfLoadError": "Não foi possível carregar o PDF. Atualize a página ou tente novamente mais tarde.",
   "doc.pdfLoading": "Carregando PDF…",

@@ -17,6 +17,7 @@
   "doc.noDocuments": "Noch keine Dokumente",
   "doc.open": "Öffnen",
   "doc.notFound": "Dokument nicht gefunden",
+  "doc.processing": "Dokument wird verarbeitet, bitte warten...",
   "doc.loadError": "Dokumentinformationen konnten nicht geladen werden",
   "doc.backHome": "Zurück zur Startseite",
   "doc.loading": "Dokument wird geladen…",

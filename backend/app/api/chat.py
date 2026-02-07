@@ -144,6 +144,13 @@ async def chat_stream(
     if not session:
         return JSONResponse(status_code=404, content={"detail": "Session not found"})
 
+    # Block chat if document is not fully processed
+    if session.document and session.document.status != "ready":
+        return JSONResponse(
+            status_code=409,
+            content={"detail": "Document is still being processed", "status": session.document.status},
+        )
+
     # Enforce message limit for anonymous users on demo documents
     if user is None and session.document and session.document.demo_slug:
         msg_count = await db.execute(

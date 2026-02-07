@@ -135,6 +135,18 @@ export default function ChatPanel({ sessionId, onCitationClick, maxUserMessages 
         if (isPaymentRequired) {
           setShowPaywall(true);
         }
+        // Detect document still processing (HTTP 409) — show processing message
+        const isProcessing = typeof err?.message === 'string' && err.message.includes('HTTP 409');
+        if (isProcessing) {
+          const processingMsg: Message = {
+            id: `m_${Date.now()}_proc`,
+            role: 'assistant',
+            text: t('doc.processing'),
+            createdAt: Date.now(),
+          };
+          addMessage(processingMsg);
+          return;
+        }
         // Detect demo limit (HTTP 429) — show sign-in prompt
         const isDemoLimit = typeof err?.message === 'string' && err.message.includes('HTTP 429');
         if (isDemoLimit) {

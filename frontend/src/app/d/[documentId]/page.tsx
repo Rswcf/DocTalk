@@ -39,54 +39,93 @@ export default function DocumentReaderPage() {
     setLastDocument,
   } = useDocTalkStore();
 
+  const documentStatus = useDocTalkStore((s) => s.documentStatus);
+
+  // Effect 1: Initial load + polling until ready/error
   useEffect(() => {
     if (!documentId) return;
     setDocument(documentId);
-    (async () => {
+
+    let intervalId: NodeJS.Timeout | null = null;
+    let cancelled = false;
+
+    const fetchStatus = async () => {
       try {
         const info = await getDocument(documentId);
+        if (cancelled) return;
         setDocumentStatus(info.status);
-        if (info.status === 'error') {
-          setError(info.error_msg || t('upload.error'));
-          return;
-        }
         if (info.is_demo) setIsDemo(true);
         if (info.filename) {
           setDocumentName(info.filename);
           setLastDocument(documentId, info.filename);
         }
+        if (info.status === 'error') {
+          setError(info.error_msg || t('upload.error'));
+          if (intervalId) clearInterval(intervalId);
+          return;
+        }
+        if (info.status === 'ready') {
+          if (intervalId) clearInterval(intervalId);
+          return;
+        }
       } catch (e: any) {
+        if (cancelled) return;
         const msg = String(e?.message || e || '');
         if (msg.includes('HTTP 404')) {
           setError(t('doc.notFound'));
-          return;
+        } else {
+          setError(t('doc.loadError'));
         }
-        setError(t('doc.loadError'));
+        if (intervalId) clearInterval(intervalId);
       }
+    };
+
+    // Fetch PDF file URL immediately (independent of status)
+    (async () => {
       try {
         const file = await getDocumentFileUrl(documentId);
-        setPdfUrl(file.url);
-      } catch (e) {
-        // 保持 PdfViewer 自身的错误提示
+        if (!cancelled) setPdfUrl(file.url);
+      } catch {
+        // PdfViewer shows its own error
       }
-      // Try to list existing sessions; fall back to creating a new one
+    })();
+
+    // Initial fetch + start polling
+    fetchStatus();
+    intervalId = setInterval(fetchStatus, 3000);
+
+    return () => {
+      cancelled = true;
+      if (intervalId) clearInterval(intervalId);
+    };
+  }, [documentId]);
+
+  // Effect 2: Session setup when document is ready
+  useEffect(() => {
+    if (!documentId || documentStatus !== 'ready') return;
+
+    let cancelled = false;
+
+    (async () => {
       let sessionReady = false;
       try {
         const sessionsData = await listSessions(documentId);
+        if (cancelled) return;
         setSessions(sessionsData.sessions);
         if (sessionsData.sessions.length > 0) {
           const latest = sessionsData.sessions[0];
           setSessionId(latest.session_id);
           const msgsData = await getMessages(latest.session_id);
-          setMessages(msgsData.messages);
+          if (!cancelled) setMessages(msgsData.messages);
           sessionReady = true;
         }
       } catch {
         // listSessions endpoint may not exist yet — fall through to create
       }
-      if (!sessionReady) {
+      if (!sessionReady && !cancelled) {
         try {
           const s = await createSession(documentId);
+          if (cancelled) return;
           setSessionId(s.session_id);
           const now = s.created_at || new Date().toISOString();
           addSession({
@@ -102,7 +141,9 @@ export default function DocumentReaderPage() {
         }
       }
     })();
-  }, [documentId, setDocument, setDocumentName, setDocumentStatus, setLastDocument, setPdfUrl, setSessionId, setSessions, addSession, setMessages, t]);
+
+    return () => { cancelled = true; };
+  }, [documentId, documentStatus]);
 
   return (
     <div className="flex flex-col h-screen w-full">
@@ -123,8 +164,13 @@ export default function DocumentReaderPage() {
         <Group orientation="horizontal" className="flex-1 min-h-0">
           <Panel defaultSize={50} minSize={25}>
             <div className="h-full min-w-[320px]">
-              {sessionId ? (
+              {documentStatus === 'ready' && sessionId ? (
                 <ChatPanel sessionId={sessionId} onCitationClick={navigateToCitation} maxUserMessages={isDemo && !isLoggedIn ? 5 : undefined} />
+              ) : documentStatus !== 'ready' && !error ? (
+                <div className="h-full w-full flex flex-col items-center justify-center text-zinc-500 gap-3">
+                  <div className="animate-spin rounded-full h-8 w-8 border-2 border-zinc-300 border-t-zinc-600" />
+                  <p className="text-sm">{t('doc.processing')}</p>
+                </div>
               ) : (
                 <div className="h-full w-full flex items-center justify-center text-zinc-500">{t('doc.initChat')}</div>
               )}

@@ -17,6 +17,7 @@
   "doc.noDocuments": "暂无历史文档",
   "doc.open": "打开",
   "doc.notFound": "文档不存在",
+  "doc.processing": "文档正在处理中，请稍候...",
   "doc.loadError": "加载文档信息失败",
   "doc.backHome": "返回首页",
   "doc.loading": "正在加载文档…",

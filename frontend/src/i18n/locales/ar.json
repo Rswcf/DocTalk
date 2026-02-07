@@ -72,6 +72,7 @@
   "doc.myDocuments": "مستنداتي",
   "doc.noDocuments": "لا توجد مستندات بعد",
   "doc.notFound": "لم يتم العثور على المستند",
+  "doc.processing": "جاري معالجة المستند، يرجى الانتظار...",
   "doc.open": "فتح",
   "doc.pdfLoadError": "تعذر تحميل ملف PDF. يرجى تحديث الصفحة أو المحاولة لاحقًا.",
   "doc.pdfLoading": "جارٍ تحميل PDF…",
