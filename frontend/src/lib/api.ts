@@ -30,10 +30,20 @@ export async function getMyDocuments(): Promise<DocumentBrief[]> {
 
 export async function uploadDocument(file: File): Promise<{ document_id: string; status: string; filename?: string }>
 {
+  // Uploads bypass the Vercel proxy to avoid the 4.5MB serverless body limit.
+  // 1. Obtain a short-lived backend JWT via the lightweight /api/upload-token endpoint
+  // 2. POST the file directly to the Railway backend with that JWT
+  const tokenRes = await fetch('/api/upload-token');
+  if (!tokenRes.ok) {
+    throw new Error(`Failed to get upload token: ${tokenRes.status}`);
+  }
+  const { token } = await tokenRes.json();
+
   const form = new FormData();
   form.append('file', file);
-  const res = await fetch(`${PROXY_BASE}/api/documents/upload`, {
+  const res = await fetch(`${API_BASE}/api/documents/upload`, {
     method: 'POST',
+    headers: { 'Authorization': `Bearer ${token}` },
     body: form,
   });
   return handle(res);
