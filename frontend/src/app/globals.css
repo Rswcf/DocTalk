@@ -50,10 +50,26 @@ body {
   color: transparent;
   border-radius: 2px;
   padding: 1px 0;
-  animation: highlightPulse 0.6s ease-out;
+  animation: highlightPulse 1.2s ease-out;
 }
 
 @keyframes highlightPulse {
-  0% { background-color: var(--highlight-strong); }
-  100% { background-color: var(--highlight-base); }
+  0% { background-color: var(--highlight-strong); box-shadow: 0 0 8px var(--highlight-strong); }
+  50% { background-color: var(--highlight-base); box-shadow: 0 0 4px var(--highlight-base); }
+  100% { background-color: var(--highlight-base); box-shadow: none; }
+}
+
+/* Overlay-layer citation highlighting (always visible, even without text layer) */
+.citation-overlay {
+  background: rgba(56, 189, 248, 0.15);
+  border-left: 3px solid rgba(56, 189, 248, 0.6);
+  border-radius: 2px;
+  pointer-events: none;
+  animation: overlayPulse 1.5s ease-out;
+}
+
+@keyframes overlayPulse {
+  0% { background: rgba(56, 189, 248, 0.35); border-left-color: rgba(56, 189, 248, 0.9); }
+  40% { background: rgba(56, 189, 248, 0.2); border-left-color: rgba(56, 189, 248, 0.7); }
+  100% { background: rgba(56, 189, 248, 0.15); border-left-color: rgba(56, 189, 248, 0.6); }
 }

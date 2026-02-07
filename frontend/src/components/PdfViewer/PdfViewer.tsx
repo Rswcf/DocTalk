@@ -64,16 +64,41 @@ export default function PdfViewer({ pdfUrl, currentPage, highlights, scale, scro
   }, [pdfUrl]);
 
   // Scroll to page when currentPage changes (e.g. citation click or toolbar nav)
+  // If highlights exist, center the viewport on the first highlight bbox
   useEffect(() => {
-    if (!numPages) return;
+    if (!numPages || !containerRef.current) return;
     const target = pageRefs.current[currentPage - 1];
-    if (target) {
-      isScrollingToPage.current = true;
-      setVisiblePage(currentPage);
-      target.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      // Reset flag after scroll completes
-      setTimeout(() => { isScrollingToPage.current = false; }, 800);
-    }
+    if (!target) return;
+
+    isScrollingToPage.current = true;
+    setVisiblePage(currentPage);
+
+    // Try to find the first highlight anchor and center on it
+    // Use requestAnimationFrame to wait for overlay elements to render
+    requestAnimationFrame(() => {
+      const anchor = target.querySelector('[data-highlight-anchor="true"]') as HTMLElement | null;
+      if (anchor && containerRef.current) {
+        const container = containerRef.current;
+        const anchorRect = anchor.getBoundingClientRect();
+        const containerRect = container.getBoundingClientRect();
+        // Calculate where the anchor center is relative to the scroll container
+        const anchorCenterInContainer =
+          anchor.offsetTop +
+          target.offsetTop -
+          container.offsetTop +
+          anchorRect.height / 2;
+        const scrollTarget = anchorCenterInContainer - containerRect.height / 2;
+        container.scrollTo({
+          top: Math.max(0, scrollTarget),
+          behavior: 'smooth',
+        });
+      } else {
+        target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    });
+
+    // Reset flag after scroll completes
+    setTimeout(() => { isScrollingToPage.current = false; }, 800);
   }, [currentPage, scrollNonce, numPages]);
 
   // IntersectionObserver to track visible page
