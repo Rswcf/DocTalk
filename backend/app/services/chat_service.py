@@ -33,6 +33,7 @@ class _ChunkInfo:
     page_start: int
     bboxes: list
     text: str
+    section_title: str = ""
 
 
 class RefParserFSM:
@@ -67,8 +68,7 @@ class RefParserFSM:
                     if inner.isdigit() and (int(inner) in self.chunk_map):
                         ref_num = int(inner)
                         chunk = self.chunk_map[ref_num]
-                        # Filter, sort and limit bboxes to current page
-                        MAX_CITATION_BBOXES = 5
+                        # Filter and sort bboxes to current page (no artificial limit)
                         page_bbs = [
                             bb
                             for bb in (chunk.bboxes or [])
@@ -78,7 +78,7 @@ class RefParserFSM:
                         if not page_bbs:
                             page_bbs = list(chunk.bboxes or [])
                         page_bbs.sort(key=lambda b: (b.get("y", 0), b.get("x", 0)))
-                        limited_bboxes = page_bbs[:MAX_CITATION_BBOXES]
+                        limited_bboxes = page_bbs
                         events.append(
                             sse(
                                 "citation",
@@ -87,7 +87,7 @@ class RefParserFSM:
                                     "chunk_id": str(chunk.id),
                                     "page": chunk.page_start,
                                     "bboxes": limited_bboxes,
-                                    "text_snippet": (chunk.text or "")[:80],
+                                    "text_snippet": ((f"{chunk.section_title}: " if chunk.section_title else "") + (chunk.text or ""))[:100],
                                     "offset": self.char_offset,
                                 },
                             )
@@ -212,7 +212,7 @@ class ChatService:
 
         # 4) Retrieval (with error handling — e.g. Qdrant down or no vectors yet)
         try:
-            retrieved = await retrieval_service.search(user_message, document_id, top_k=5, db=db)
+            retrieved = await retrieval_service.search(user_message, document_id, top_k=8, db=db)
         except Exception as e:
             yield sse("error", {"code": "RETRIEVAL_ERROR", "message": f"文档检索失败: {e}"})
             return
@@ -230,6 +230,7 @@ class ChatService:
                 page_start=int(item["page"]),
                 bboxes=item.get("bboxes") or [],
                 text=text,
+                section_title=item.get("section_title") or "",
             )
 
         language_name = self.LOCALE_TO_LANGUAGE.get(locale or "en", "English")

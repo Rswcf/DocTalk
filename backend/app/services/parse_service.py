@@ -54,8 +54,8 @@ class ParseService:
     HEADER_FOOTER_REGION_RATIO = 0.10  # top/bottom 10%
     HEADER_FOOTER_FREQ_THRESHOLD = 0.60  # appears in >60% pages
 
-    TARGET_MIN_TOKENS = 300
-    TARGET_MAX_TOKENS = 500
+    TARGET_MIN_TOKENS = 150
+    TARGET_MAX_TOKENS = 300
     OVERLAP_TOKENS = 50
 
     SENTENCE_DELIMS = "。！？；.!?"  # Chinese + English basic punctuation

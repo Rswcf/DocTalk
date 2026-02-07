@@ -150,6 +150,28 @@ async def get_document_file_url(
     return DocumentFileUrlResponse(url=url, expires_in=int(settings.MINIO_PRESIGN_TTL))
 
 
+@documents_router.post("/{document_id}/reparse", status_code=status.HTTP_202_ACCEPTED)
+async def reparse_document(
+    document_id: uuid.UUID,
+    user: User = Depends(require_auth),
+    db: AsyncSession = Depends(get_db_session),
+):
+    """Re-parse an existing document (e.g., after chunk config changes)."""
+    from app.models.tables import Document
+
+    doc = await db.get(Document, document_id)
+    if not doc or doc.user_id != user.id:
+        raise HTTPException(status_code=404)
+    if doc.status not in ("ready", "error"):
+        raise HTTPException(status_code=409, detail="Document is still processing")
+    doc.status = "parsing"
+    db.add(doc)
+    await db.commit()
+    from app.workers.parse_worker import parse_document
+    parse_document.delay(str(doc.id))
+    return {"status": "reparsing"}
+
+
 @documents_router.delete("/{document_id}", status_code=status.HTTP_202_ACCEPTED)
 async def delete_document(
     document_id: uuid.UUID,
