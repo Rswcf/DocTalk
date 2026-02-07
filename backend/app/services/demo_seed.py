@@ -73,9 +73,7 @@ def seed_demo_documents() -> None:
 
                 if existing:
                     if existing.status == "ready":
-                        logger.info("Demo doc '%s' already ready, re-parsing for updated chunk config", slug)
-                        from app.workers.parse_worker import parse_document
-                        parse_document.delay(str(existing.id))
+                        logger.info("Demo doc '%s' already ready, skipping", slug)
                         continue
                     if existing.status in ("parsing", "embedding"):
                         logger.info("Demo doc '%s' stuck in %s, re-dispatching", slug, existing.status)
