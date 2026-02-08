@@ -44,7 +44,7 @@ DocTalk helps heavy document readers quickly locate key information in long docu
 
 | Layer | Technology |
 |-------|-----------|
-| **Frontend** | Next.js 14 (App Router), Auth.js v5, react-pdf v9 (pdf.js v4), react-resizable-panels, Zustand, Tailwind CSS, Radix UI |
+| **Frontend** | Next.js 14 (App Router), Auth.js v5, react-pdf v9 (pdf.js v4), Remotion (animated showcase), react-resizable-panels, Zustand, Tailwind CSS, Radix UI |
 | **Backend** | FastAPI, Celery, Redis |
 | **Database** | PostgreSQL 16 (Alembic migrations), Qdrant (vector search) |
 | **Storage** | MinIO (dev) / S3-compatible (prod) |

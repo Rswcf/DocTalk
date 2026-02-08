@@ -513,7 +513,7 @@ graph TD
 
     subgraph LandingComp["Landing Components"]
         Hero["HeroSection<br/>Headline + CTAs"]
-        Showcase["Product Showcase<br/>macOS Window Chrome"]
+        Showcase["Product Showcase<br/>Remotion Animation<br/>macOS Window Chrome"]
         HowItWorks["HowItWorks<br/>3-Step Guide"]
         Features["FeatureGrid<br/>3-Column Cards"]
         SocialProof["SocialProof<br/>Trust Metrics"]
@@ -579,7 +579,7 @@ graph TD
 - `variant="minimal"` — Logo + UserMenu only (transparent background) — used on Home, Demo, Auth pages
 - `variant="full"` — All controls (ModelSelector, LanguageSelector, SessionDropdown, CreditsDisplay, UserMenu) — used on Document, Billing, Profile pages
 
-**Landing page sections** (in order): HeroSection → Product Showcase → HowItWorks → FeatureGrid → SocialProof → SecuritySection → FAQ → FinalCTA → PrivacyBadge → Footer
+**Landing page sections** (in order): HeroSection → Product Showcase (Remotion `<Player>` animated demo, 300 frames @ 30fps, lazy-loaded) → HowItWorks → FeatureGrid → SocialProof → SecuritySection → FAQ → FinalCTA → PrivacyBadge → Footer
 
 **Chat features:**
 - **Auto-Summary**: New sessions inject a synthetic assistant message with the AI-generated document summary

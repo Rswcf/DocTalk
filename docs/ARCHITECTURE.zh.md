@@ -513,7 +513,7 @@ graph TD
 
     subgraph LandingComp["Landing 组件"]
         Hero["HeroSection<br/>大字标题 + CTA"]
-        Showcase["产品展示<br/>macOS 窗口风格"]
+        Showcase["产品展示<br/>Remotion 动画<br/>macOS 窗口风格"]
         HowItWorks["HowItWorks<br/>3 步引导"]
         Features["FeatureGrid<br/>3 列特性卡片"]
         SocialProof["SocialProof<br/>信任指标"]
@@ -579,7 +579,7 @@ graph TD
 - `variant="minimal"` — 仅 Logo + UserMenu（透明背景）— 用于首页、Demo、登录页
 - `variant="full"` — 所有控件（ModelSelector、LanguageSelector、SessionDropdown、CreditsDisplay、UserMenu）— 用于文档页、购买页、个人中心
 
-**Landing 页面各区块**（按顺序）：HeroSection → 产品展示 → HowItWorks → FeatureGrid → SocialProof → SecuritySection → FAQ → FinalCTA → PrivacyBadge → Footer
+**Landing 页面各区块**（按顺序）：HeroSection → 产品展示（Remotion `<Player>` 动画演示，300帧@30fps，lazy-loaded）→ HowItWorks → FeatureGrid → SocialProof → SecuritySection → FAQ → FinalCTA → PrivacyBadge → Footer
 
 **Chat 功能：**
 - **自动摘要**：新会话注入一条合成的 assistant 消息，展示 AI 生成的文档摘要

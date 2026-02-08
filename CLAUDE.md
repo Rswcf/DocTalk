@@ -24,7 +24,7 @@ Railway 项目包含 5 个服务：backend, Postgres, Redis, qdrant-v2, minio-v2
 
 ### 技术栈
 
-- **Frontend**: Next.js 14 (App Router) + Auth.js v5 + jose (JWT) + react-pdf v9 (pdf.js v4) + react-resizable-panels + Zustand + Tailwind CSS (zinc palette) + Radix UI + Inter font (next/font/google)
+- **Frontend**: Next.js 14 (App Router) + Auth.js v5 + jose (JWT) + react-pdf v9 (pdf.js v4) + Remotion (animated product showcase) + react-resizable-panels + Zustand + Tailwind CSS (zinc palette) + Radix UI + Inter font (next/font/google)
 - **Backend**: FastAPI + Celery + Redis
 - **Database**: PostgreSQL 16 (Alembic migration) + Qdrant (向量搜索)
 - **Storage**: MinIO (dev) / S3-compatible (prod)
@@ -82,6 +82,7 @@ Railway 项目包含 5 个服务：backend, Postgres, Redis, qdrant-v2, minio-v2
 - **URL/网页导入**: `POST /api/documents/ingest-url` 端点接收 URL，通过 httpx 抓取 + BeautifulSoup 提取文本，存为 txt 文件处理。PDF URL 自动走 PDF 流水线。前端 Dashboard 提供 URL 输入框
 - **文档集合**: `Collection` 模型 + `collection_documents` 多对多关联表，支持跨文档问答。`retrieval_service.search_multi()` 使用 Qdrant `MatchAny` 过滤器。`chat_service.py` 为集合会话构建跨文档系统提示，引用事件包含 `document_id` 和 `document_filename`。前端 `/collections` 列表页 + `/collections/[id]` 详情页（左侧 Chat + 右侧文档列表）
 - **Vercel Web Analytics**: `@vercel/analytics` 集成在 `layout.tsx`，自动追踪页面访问
+- **产品展示动画**: Remotion `<Player>` 驱动的 landing page 动画演示（`ProductShowcase.tsx`）。300帧@30fps=10s循环。动画序列：用户消息弹入→打字点→AI流式输出（`text.slice(0, chars)` + 闪烁光标）→PDF高亮渐现（`spring()` → `scaleX`）→引用卡片交错弹入→静态保持→交叉淡出循环。所有动画使用 `useCurrentFrame()` + `interpolate()`/`spring()`，禁止 CSS transition/animation。`ShowcasePlayer.tsx` lazy-load Player + 骨架屏，通过 `useTheme()` 传递 `isDark` prop 实现 dark mode
 
 ### API 路由
 
@@ -248,7 +249,7 @@ SENTRY_TRACES_SAMPLE_RATE=0.1
 ### 前端相关
 - **UI 设计**: 单色 zinc 调色板，Inter 字体，dark mode 反转按钮 (`bg-zinc-900 dark:bg-zinc-50`)，全站无 `gray-*`/`blue-*` 类（保留 Google OAuth 品牌色和状态色）。卡片使用 `shadow-sm`/`shadow-md` 分层，模态框 `animate-fade-in`/`animate-slide-up` 动画，零 `transition-all` 策略（所有过渡使用具体属性 `transition-colors`/`transition-opacity`/`transition-shadow`）
 - **Header variant**: `variant='minimal'`（首页/Demo/Auth：仅 Logo+UserMenu）vs `variant='full'`（文档页/Billing/Profile：完整控件）
-- **Landing page**: HeroSection（大字标题+CTA）+ macOS window chrome 产品展示 + **HowItWorks**（3步骤：Upload→Ask→Cited Answers）+ FeatureGrid（3列特性卡片）+ **SocialProof**（4项信任指标）+ **SecuritySection**（4张安全卡片）+ **FAQ**（6项手风琴）+ **FinalCTA**（转化CTA）+ PrivacyBadge + **Footer**（3列链接组件）
+- **Landing page**: HeroSection（大字标题+CTA）+ **ProductShowcase**（Remotion `<Player>` 动画演示：用户提问→AI流式引用回答→PDF高亮同步，300帧@30fps=10s循环，macOS window chrome 框架，lazy-loaded，支持 dark mode）+ **HowItWorks**（3步骤：Upload→Ask→Cited Answers）+ FeatureGrid（3列特性卡片）+ **SocialProof**（4项信任指标）+ **SecuritySection**（4张安全卡片）+ **FAQ**（6项手风琴）+ **FinalCTA**（转化CTA）+ PrivacyBadge + **Footer**（3列链接组件）
 - **动态 CTA**: 首页根据登录状态显示不同 UI（未登录→Landing page，已登录→Dashboard 上传区+文档列表）
 - **AuthModal**: 使用查询参数 `?auth=1` 触发登录模态框，ESC 可关闭，焦点陷阱（Tab 循环），backdrop 点击关闭
 - **Demo 模式**: `/demo` 页面从后端 `GET /api/documents/demo` 获取真实文档列表，链接到 `/d/{docId}`；ChatPanel 通过 `maxUserMessages` prop 实现客户端 5 条限制 + 计数条 + 登录 CTA；旧 `/demo/[sample]` 路由自动重定向到新路径
@@ -389,7 +390,7 @@ DocTalk/
 │   │   │       ├── auth/         # NextAuth 路由
 │   │   │       └── proxy/        # API 代理 (创建后端兼容 JWT)
 │   │   ├── components/
-│   │   │   ├── landing/          # HeroSection, FeatureGrid, HowItWorks, SocialProof, SecuritySection, FAQ, FinalCTA
+│   │   │   ├── landing/          # HeroSection, ProductShowcase (Remotion), ShowcasePlayer, FeatureGrid, HowItWorks, SocialProof, SecuritySection, FAQ, FinalCTA
 │   │   │   ├── AuthModal.tsx     # 登录模态框 (rounded-2xl, zinc)
 │   │   │   ├── AuthButton.tsx    # 登录/登出按钮 (已被 UserMenu 替代)
 │   │   │   ├── UserMenu.tsx      # 头像下拉菜单 (Profile/Buy Credits/Sign Out)

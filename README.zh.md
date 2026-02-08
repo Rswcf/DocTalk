@@ -44,7 +44,7 @@ DocTalk 帮助高强度文档阅读者在超长文档中通过 AI 对话快速�
 
 | 层级 | 技术 |
 |------|------|
-| **前端** | Next.js 14 (App Router)、Auth.js v5、react-pdf v9 (pdf.js v4)、react-resizable-panels、Zustand、Tailwind CSS、Radix UI |
+| **前端** | Next.js 14 (App Router)、Auth.js v5、react-pdf v9 (pdf.js v4)、Remotion（动画产品展示）、react-resizable-panels、Zustand、Tailwind CSS、Radix UI |
 | **后端** | FastAPI、Celery、Redis |
 | **数据库** | PostgreSQL 16 (Alembic 迁移)、Qdrant (向量搜索) |
 | **存储** | MinIO (开发) / S3 兼容 (生产) |
