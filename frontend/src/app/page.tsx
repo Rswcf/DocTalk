@@ -3,7 +3,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import Image from 'next/image';
+import ShowcasePlayer from '../components/landing/ShowcasePlayer';
 import { useSession, signIn } from 'next-auth/react';
 import { getDocument, uploadDocument, deleteDocument, getMyDocuments, ingestUrl } from '../lib/api';
 import type { DocumentBrief } from '../lib/api';
@@ -203,14 +203,7 @@ export default function HomePage() {
                 <span className="w-3 h-3 rounded-full bg-green-400" />
               </div>
               <div className="aspect-video bg-zinc-50 dark:bg-zinc-900 relative">
-                <Image
-                  src="/showcase.png"
-                  alt="DocTalk split view — chat with PDF and cited answers"
-                  fill
-                  className="object-cover object-top"
-                  priority
-                  sizes="(max-width: 1024px) 100vw, 1024px"
-                />
+                <ShowcasePlayer />
               </div>
             </div>
             <p className="text-center text-sm text-zinc-500 dark:text-zinc-400 mt-4">
