@@ -38,6 +38,8 @@ export interface DocumentResponse {
   created_at: string;
   is_demo?: boolean;
   error_msg?: string;
+  summary?: string;
+  suggested_questions?: string[];
 }
 
 export interface SearchResult {

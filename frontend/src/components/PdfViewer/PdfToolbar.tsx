@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { ZoomIn, ZoomOut, ChevronLeft, ChevronRight, Hand } from 'lucide-react';
+import { ZoomIn, ZoomOut, ChevronLeft, ChevronRight, Hand, Search, X } from 'lucide-react';
 import { useLocale } from '../../i18n';
 
 interface PdfToolbarProps {
@@ -12,11 +12,19 @@ interface PdfToolbarProps {
   onScaleChange: (scale: number) => void;
   grabMode: boolean;
   onGrabModeToggle: () => void;
+  searchQuery: string;
+  searchMatchCount: number;
+  currentMatchIndex: number;
+  onSearchQueryChange: (query: string) => void;
+  onSearchNext: () => void;
+  onSearchPrev: () => void;
+  onSearchClose: () => void;
 }
 
-export default function PdfToolbar({ currentPage, totalPages, scale, onPageChange, onScaleChange, grabMode, onGrabModeToggle }: PdfToolbarProps) {
+export default function PdfToolbar({ currentPage, totalPages, scale, onPageChange, onScaleChange, grabMode, onGrabModeToggle, searchQuery, searchMatchCount, currentMatchIndex, onSearchQueryChange, onSearchNext, onSearchPrev, onSearchClose }: PdfToolbarProps) {
   const { t } = useLocale();
   const [pageInput, setPageInput] = useState(String(currentPage));
+  const [searchOpen, setSearchOpen] = useState(false);
 
   useEffect(() => {
     setPageInput(String(currentPage));
@@ -39,46 +47,96 @@ export default function PdfToolbar({ currentPage, totalPages, scale, onPageChang
   const nextPage = () => { if (currentPage < totalPages) onPageChange(currentPage + 1); };
 
   return (
-    <div className="sticky top-0 z-10 flex items-center justify-center gap-2 px-3 py-1.5 bg-white/90 dark:bg-zinc-800/90 backdrop-blur border-b dark:border-zinc-700 text-sm">
-      {/* Zoom controls */}
-      <button onClick={zoomOut} className="p-1 rounded hover:bg-zinc-100 dark:hover:bg-zinc-700 focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:ring-offset-1" title={t('toolbar.zoomOut')}>
-        <ZoomOut size={16} />
-      </button>
-      <span className="w-12 text-center text-xs tabular-nums">{Math.round(scale * 100)}%</span>
-      <button onClick={zoomIn} className="p-1 rounded hover:bg-zinc-100 dark:hover:bg-zinc-700 focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:ring-offset-1" title={t('toolbar.zoomIn')}>
-        <ZoomIn size={16} />
-      </button>
+    <>
+      <div className="sticky top-0 z-10 flex items-center justify-center gap-2 px-3 py-1.5 bg-white/90 dark:bg-zinc-800/90 backdrop-blur border-b dark:border-zinc-700 text-sm">
+        {/* Zoom controls */}
+        <button onClick={zoomOut} className="p-1 rounded hover:bg-zinc-100 dark:hover:bg-zinc-700 focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:ring-offset-1" title={t('toolbar.zoomOut')}>
+          <ZoomOut size={16} />
+        </button>
+        <span className="w-12 text-center text-xs tabular-nums">{Math.round(scale * 100)}%</span>
+        <button onClick={zoomIn} className="p-1 rounded hover:bg-zinc-100 dark:hover:bg-zinc-700 focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:ring-offset-1" title={t('toolbar.zoomIn')}>
+          <ZoomIn size={16} />
+        </button>
 
-      <div className="w-px h-5 bg-zinc-300 dark:bg-zinc-600 mx-1" />
+        <div className="w-px h-5 bg-zinc-300 dark:bg-zinc-600 mx-1" />
 
-      <button
-        onClick={onGrabModeToggle}
-        className={`p-1 rounded focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:ring-offset-1 ${grabMode ? 'bg-zinc-100 dark:bg-zinc-900/50 text-zinc-600 dark:text-zinc-400' : 'hover:bg-zinc-100 dark:hover:bg-zinc-700'}`}
-        title={t('toolbar.grabMode')}
-      >
-        <Hand size={16} />
-      </button>
+        <button
+          onClick={onGrabModeToggle}
+          className={`p-1 rounded focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:ring-offset-1 ${grabMode ? 'bg-zinc-100 dark:bg-zinc-900/50 text-zinc-600 dark:text-zinc-400' : 'hover:bg-zinc-100 dark:hover:bg-zinc-700'}`}
+          title={t('toolbar.grabMode')}
+        >
+          <Hand size={16} />
+        </button>
 
-      <div className="w-px h-5 bg-zinc-300 dark:bg-zinc-600 mx-1" />
+        <div className="w-px h-5 bg-zinc-300 dark:bg-zinc-600 mx-1" />
 
-      {/* Page navigation */}
-      <button onClick={prevPage} disabled={currentPage <= 1} className="p-1 rounded hover:bg-zinc-100 dark:hover:bg-zinc-700 disabled:opacity-30 focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:ring-offset-1" title={t('toolbar.prevPage')}>
-        <ChevronLeft size={16} />
-      </button>
-      <div className="flex items-center gap-1">
-        <input
-          type="text"
-          value={pageInput}
-          onChange={(e) => setPageInput(e.target.value)}
-          onKeyDown={handlePageSubmit}
-          onBlur={() => setPageInput(String(currentPage))}
-          className="w-10 text-center border rounded px-1 py-0.5 text-xs dark:bg-zinc-700 dark:border-zinc-600"
-        />
-        <span className="text-xs text-zinc-500 dark:text-zinc-400">/ {totalPages}</span>
+        {/* Search toggle */}
+        <button
+          onClick={() => { setSearchOpen(!searchOpen); if (searchOpen) onSearchClose(); }}
+          className={`p-1 rounded focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:ring-offset-1 ${searchOpen ? 'bg-zinc-100 dark:bg-zinc-900/50 text-zinc-600 dark:text-zinc-400' : 'hover:bg-zinc-100 dark:hover:bg-zinc-700'}`}
+          title={t('toolbar.search')}
+        >
+          <Search size={16} />
+        </button>
+
+        <div className="w-px h-5 bg-zinc-300 dark:bg-zinc-600 mx-1" />
+
+        {/* Page navigation */}
+        <button onClick={prevPage} disabled={currentPage <= 1} className="p-1 rounded hover:bg-zinc-100 dark:hover:bg-zinc-700 disabled:opacity-30 focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:ring-offset-1" title={t('toolbar.prevPage')}>
+          <ChevronLeft size={16} />
+        </button>
+        <div className="flex items-center gap-1">
+          <input
+            type="text"
+            value={pageInput}
+            onChange={(e) => setPageInput(e.target.value)}
+            onKeyDown={handlePageSubmit}
+            onBlur={() => setPageInput(String(currentPage))}
+            className="w-10 text-center border rounded px-1 py-0.5 text-xs dark:bg-zinc-700 dark:border-zinc-600"
+          />
+          <span className="text-xs text-zinc-500 dark:text-zinc-400">/ {totalPages}</span>
+        </div>
+        <button onClick={nextPage} disabled={currentPage >= totalPages} className="p-1 rounded hover:bg-zinc-100 dark:hover:bg-zinc-700 disabled:opacity-30 focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:ring-offset-1" title={t('toolbar.nextPage')}>
+          <ChevronRight size={16} />
+        </button>
       </div>
-      <button onClick={nextPage} disabled={currentPage >= totalPages} className="p-1 rounded hover:bg-zinc-100 dark:hover:bg-zinc-700 disabled:opacity-30 focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:ring-offset-1" title={t('toolbar.nextPage')}>
-        <ChevronRight size={16} />
-      </button>
-    </div>
+
+      {searchOpen && (
+        <div className="flex items-center gap-2 px-3 py-1.5 bg-white/90 dark:bg-zinc-800/90 backdrop-blur border-b dark:border-zinc-700 text-sm">
+          <Search size={14} className="text-zinc-400 shrink-0" />
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => onSearchQueryChange(e.target.value)}
+            placeholder={t('toolbar.searchPlaceholder')}
+            className="flex-1 min-w-0 border-none bg-transparent text-sm focus:outline-none dark:text-zinc-100 placeholder:text-zinc-400"
+            autoFocus
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                e.shiftKey ? onSearchPrev() : onSearchNext();
+              }
+              if (e.key === 'Escape') {
+                setSearchOpen(false);
+                onSearchClose();
+              }
+            }}
+          />
+          {searchQuery && (
+            <span className="text-xs text-zinc-400 tabular-nums whitespace-nowrap">
+              {searchMatchCount > 0 ? t('toolbar.matchCount', { current: currentMatchIndex + 1, total: searchMatchCount }) : t('toolbar.noMatches')}
+            </span>
+          )}
+          <button onClick={onSearchPrev} disabled={searchMatchCount === 0} className="p-0.5 rounded hover:bg-zinc-100 dark:hover:bg-zinc-700 disabled:opacity-30" title={t('toolbar.prevPage')}>
+            <ChevronLeft size={14} />
+          </button>
+          <button onClick={onSearchNext} disabled={searchMatchCount === 0} className="p-0.5 rounded hover:bg-zinc-100 dark:hover:bg-zinc-700 disabled:opacity-30" title={t('toolbar.nextPage')}>
+            <ChevronRight size={14} />
+          </button>
+          <button onClick={() => { setSearchOpen(false); onSearchClose(); }} className="p-0.5 rounded hover:bg-zinc-100 dark:hover:bg-zinc-700">
+            <X size={14} />
+          </button>
+        </div>
+      )}
+    </>
   );
 }

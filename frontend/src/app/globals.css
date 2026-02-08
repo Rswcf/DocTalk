@@ -73,3 +73,11 @@ body {
   40% { background: rgba(56, 189, 248, 0.2); border-left-color: rgba(56, 189, 248, 0.7); }
   100% { background: rgba(56, 189, 248, 0.15); border-left-color: rgba(56, 189, 248, 0.6); }
 }
+
+/* PDF text search highlighting */
+.textLayer mark.pdf-search-match {
+  background-color: rgba(250, 204, 21, 0.4);
+  color: transparent;
+  border-radius: 2px;
+  padding: 1px 0;
+}

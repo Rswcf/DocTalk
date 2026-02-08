@@ -7,6 +7,7 @@ import { useLocale } from "../../i18n";
 import Header from "../../components/Header";
 import { getUserProfile, createSubscription, createPortalSession } from "../../lib/api";
 import { triggerCreditsRefresh } from "../../components/CreditsDisplay";
+import PricingTable from "../../components/PricingTable";
 import type { UserProfile } from "../../types";
 
 interface Product {
@@ -165,6 +166,14 @@ function BillingContent() {
               </div>
             </div>
           </div>
+        </section>
+
+        {/* Pricing Comparison */}
+        <section className="mb-8">
+          <h2 className="text-sm font-medium text-zinc-500 dark:text-zinc-400 mb-4 uppercase tracking-wide">
+            {t("billing.comparison.title")}
+          </h2>
+          <PricingTable />
         </section>
 
         <h2 className="text-sm font-medium text-zinc-500 dark:text-zinc-400 mb-4 uppercase tracking-wide">

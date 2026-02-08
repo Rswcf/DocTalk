@@ -37,7 +37,11 @@ export default function DocumentReaderPage() {
     sessionId,
     navigateToCitation,
     setLastDocument,
+    setDocumentSummary,
+    setSuggestedQuestions,
   } = useDocTalkStore();
+
+  const suggestedQuestions = useDocTalkStore((s) => s.suggestedQuestions);
 
   const documentStatus = useDocTalkStore((s) => s.documentStatus);
 
@@ -65,6 +69,8 @@ export default function DocumentReaderPage() {
           return;
         }
         if (info.status === 'ready') {
+          if (info.summary) setDocumentSummary(info.summary);
+          if (info.suggested_questions) setSuggestedQuestions(info.suggested_questions);
           if (intervalId) clearInterval(intervalId);
           return;
         }
@@ -135,7 +141,18 @@ export default function DocumentReaderPage() {
             created_at: now,
             last_activity_at: now,
           });
-          setMessages([]);
+          // Inject synthetic summary message if available
+          const summary = useDocTalkStore.getState().documentSummary;
+          if (summary) {
+            setMessages([{
+              id: 'summary_synthetic',
+              role: 'assistant',
+              text: summary,
+              createdAt: Date.now(),
+            }]);
+          } else {
+            setMessages([]);
+          }
         } catch {
           // session creation failed — ChatPanel will show init message
         }
@@ -165,7 +182,7 @@ export default function DocumentReaderPage() {
           <Panel defaultSize={50} minSize={25}>
             <div className="h-full min-w-0 sm:min-w-[320px]">
               {documentStatus === 'ready' && sessionId ? (
-                <ChatPanel sessionId={sessionId} onCitationClick={navigateToCitation} maxUserMessages={isDemo && !isLoggedIn ? 5 : undefined} />
+                <ChatPanel sessionId={sessionId} onCitationClick={navigateToCitation} maxUserMessages={isDemo && !isLoggedIn ? 5 : undefined} suggestedQuestions={suggestedQuestions.length > 0 ? suggestedQuestions : undefined} />
               ) : documentStatus !== 'ready' && !error ? (
                 <div className="h-full w-full flex flex-col items-center justify-center text-zinc-500 gap-3">
                   <div className="animate-spin rounded-full h-8 w-8 border-2 border-zinc-300 border-t-zinc-600" />

@@ -271,6 +271,13 @@ def parse_document(self, document_id: str) -> None:
             db.commit()
             logger.info("Embedding completed for %s: %d indexed", document_id, total_indexed)
 
+            # Best-effort: generate summary + suggested questions
+            try:
+                from app.services.summary_service import generate_summary_sync
+                generate_summary_sync(document_id)
+            except Exception as e:
+                logger.warning("Summary generation failed for %s (non-blocking): %s", document_id, e)
+
         except Exception as e:
             logger.exception("Embedding/indexing failed for %s: %s", document_id, e)
             doc.status = "error"

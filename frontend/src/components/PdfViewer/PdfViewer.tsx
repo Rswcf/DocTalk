@@ -49,7 +49,7 @@ export default function PdfViewer({ pdfUrl, currentPage, highlights, scale, scro
   const dragState = useRef({ isDragging: false, startX: 0, startY: 0, scrollLeft: 0, scrollTop: 0 });
   const [visiblePage, setVisiblePage] = useState(1);
   const isScrollingToPage = useRef(false);
-  const { setScale, grabMode, setGrabMode } = useDocTalkStore();
+  const { setScale, grabMode, setGrabMode, searchQuery, searchMatches, currentMatchIndex, setSearchQuery, setSearchMatches, setCurrentMatchIndex } = useDocTalkStore();
   const setStoreTotalPages = (n: number) => useDocTalkStore.setState({ totalPages: n });
   const { t } = useLocale();
 
@@ -132,6 +132,50 @@ export default function PdfViewer({ pdfUrl, currentPage, highlights, scale, scro
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [numPages]); // re-observe after pages render
 
+  // Text search: extract text from pages and find matches
+  useEffect(() => {
+    if (!searchQuery.trim() || !validPdfUrl || !numPages) {
+      setSearchMatches([]);
+      setCurrentMatchIndex(-1);
+      return;
+    }
+
+    const query = searchQuery.toLowerCase();
+    let cancelled = false;
+
+    (async () => {
+      try {
+        const pdf = await pdfjs.getDocument(validPdfUrl).promise;
+        const matches: Array<{ page: number; index: number }> = [];
+
+        for (let p = 1; p <= numPages; p++) {
+          const page = await pdf.getPage(p);
+          const textContent = await page.getTextContent();
+          const pageText = textContent.items
+            .map((item: any) => item.str || '')
+            .join(' ')
+            .toLowerCase();
+
+          let startIdx = 0;
+          let matchIdx = 0;
+          while ((startIdx = pageText.indexOf(query, startIdx)) !== -1) {
+            matches.push({ page: p, index: matchIdx++ });
+            startIdx += query.length;
+          }
+        }
+
+        if (!cancelled) {
+          setSearchMatches(matches);
+          setCurrentMatchIndex(matches.length > 0 ? 0 : -1);
+        }
+      } catch (err) {
+        console.error('Search text extraction failed:', err);
+      }
+    })();
+
+    return () => { cancelled = true; };
+  }, [searchQuery, validPdfUrl, numPages, setSearchMatches, setCurrentMatchIndex]);
+
   const onDocumentLoadSuccess = ({ numPages: n }: { numPages: number }) => {
     setNumPages(n);
     setStoreTotalPages(n);
@@ -150,6 +194,28 @@ export default function PdfViewer({ pdfUrl, currentPage, highlights, scale, scro
   const handleScaleChange = useCallback((newScale: number) => {
     setScale(newScale);
   }, [setScale]);
+
+  const handleSearchNext = useCallback(() => {
+    if (searchMatches.length === 0) return;
+    const nextIdx = (currentMatchIndex + 1) % searchMatches.length;
+    setCurrentMatchIndex(nextIdx);
+    const match = searchMatches[nextIdx];
+    handlePageChange(match.page);
+  }, [searchMatches, currentMatchIndex, setCurrentMatchIndex, handlePageChange]);
+
+  const handleSearchPrev = useCallback(() => {
+    if (searchMatches.length === 0) return;
+    const prevIdx = (currentMatchIndex - 1 + searchMatches.length) % searchMatches.length;
+    setCurrentMatchIndex(prevIdx);
+    const match = searchMatches[prevIdx];
+    handlePageChange(match.page);
+  }, [searchMatches, currentMatchIndex, setCurrentMatchIndex, handlePageChange]);
+
+  const handleSearchClose = useCallback(() => {
+    setSearchQuery('');
+    setSearchMatches([]);
+    setCurrentMatchIndex(-1);
+  }, [setSearchQuery, setSearchMatches, setCurrentMatchIndex]);
 
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
     if (!grabMode || !containerRef.current) return;
@@ -189,6 +255,13 @@ export default function PdfViewer({ pdfUrl, currentPage, highlights, scale, scro
           onScaleChange={handleScaleChange}
           grabMode={grabMode}
           onGrabModeToggle={() => setGrabMode(!grabMode)}
+          searchQuery={searchQuery}
+          searchMatchCount={searchMatches.length}
+          currentMatchIndex={currentMatchIndex}
+          onSearchQueryChange={setSearchQuery}
+          onSearchNext={handleSearchNext}
+          onSearchPrev={handleSearchPrev}
+          onSearchClose={handleSearchClose}
         />
       )}
       <div
@@ -221,7 +294,7 @@ export default function PdfViewer({ pdfUrl, currentPage, highlights, scale, scro
                   className="relative"
                   data-page-number={pageNumber}
                 >
-                  <PageWithHighlights pageNumber={pageNumber} scale={scale} highlights={pageHighlights} />
+                  <PageWithHighlights pageNumber={pageNumber} scale={scale} highlights={pageHighlights} searchQuery={searchQuery} />
                 </div>
               );
             })}

@@ -3,7 +3,7 @@
 import React, { useMemo, useState, useCallback, useEffect } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import { Copy, Check, ThumbsUp, ThumbsDown } from 'lucide-react';
+import { Copy, Check, ThumbsUp, ThumbsDown, RotateCcw } from 'lucide-react';
 import type { Citation, Message } from '../../types';
 import { useLocale } from '../../i18n';
 
@@ -11,6 +11,8 @@ interface MessageBubbleProps {
   message: Message;
   onCitationClick?: (c: Citation) => void;
   isStreaming?: boolean;
+  onRegenerate?: () => void;
+  isLastAssistant?: boolean;
 }
 
 function insertCitationMarkers(text: string, citations: Citation[]): string {
@@ -120,7 +122,7 @@ function setFeedbackStorage(messageId: string, fb: Feedback) {
   } catch {}
 }
 
-export default function MessageBubble({ message, onCitationClick, isStreaming }: MessageBubbleProps) {
+export default function MessageBubble({ message, onCitationClick, isStreaming, onRegenerate, isLastAssistant }: MessageBubbleProps) {
   const isUser = message.role === 'user';
   const isError = !!message.isError;
   const isAssistant = !isUser;
@@ -235,6 +237,15 @@ export default function MessageBubble({ message, onCitationClick, isStreaming }:
             >
               <ThumbsDown size={14} fill={feedback === 'down' ? 'currentColor' : 'none'} />
             </button>
+            {isLastAssistant && onRegenerate && !isStreaming && (
+              <button
+                onClick={onRegenerate}
+                className={`p-1 rounded transition-colors text-zinc-400 dark:text-zinc-500 hover:text-zinc-600 dark:hover:text-zinc-300`}
+                title={t('chat.regenerate')}
+              >
+                <RotateCcw size={14} />
+              </button>
+            )}
           </div>
         )}
       </div>

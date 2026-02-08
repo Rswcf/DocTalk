@@ -3,6 +3,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import Image from 'next/image';
 import { useSession, signIn } from 'next-auth/react';
 import { getDocument, uploadDocument, deleteDocument, getMyDocuments } from '../lib/api';
 import type { DocumentBrief } from '../lib/api';
@@ -16,6 +17,9 @@ import FeatureGrid from '../components/landing/FeatureGrid';
 import HowItWorks from '../components/landing/HowItWorks';
 import SocialProof from '../components/landing/SocialProof';
 import SecuritySection from '../components/landing/SecuritySection';
+import FAQ from '../components/landing/FAQ';
+import FinalCTA from '../components/landing/FinalCTA';
+import Footer from '../components/Footer';
 
 type StoredDoc = { document_id: string; filename?: string; createdAt: number };
 
@@ -155,8 +159,15 @@ export default function HomePage() {
                 <span className="w-3 h-3 rounded-full bg-yellow-400" />
                 <span className="w-3 h-3 rounded-full bg-green-400" />
               </div>
-              <div className="aspect-video bg-zinc-50 dark:bg-zinc-900 flex items-center justify-center">
-                <p className="text-zinc-400 dark:text-zinc-500 text-sm">PDF + AI Chat Split View</p>
+              <div className="aspect-video bg-zinc-50 dark:bg-zinc-900 relative">
+                <Image
+                  src="/showcase.png"
+                  alt="DocTalk split view — chat with PDF and cited answers"
+                  fill
+                  className="object-cover object-top"
+                  priority
+                  sizes="(max-width: 1024px) 100vw, 1024px"
+                />
               </div>
             </div>
             <p className="text-center text-sm text-zinc-500 dark:text-zinc-400 mt-4">
@@ -173,14 +184,16 @@ export default function HomePage() {
 
         <SecuritySection />
 
+        <FAQ />
+
+        <FinalCTA />
+
         {/* Privacy Badge */}
         <section className="py-8 flex justify-center">
           <PrivacyBadge />
         </section>
 
-        <footer className="border-t border-zinc-200 dark:border-zinc-800 py-8 text-center text-sm text-zinc-400 dark:text-zinc-500">
-          <p>&copy; 2026 DocTalk. <a href="/privacy" className="hover:text-zinc-600 dark:hover:text-zinc-300 transition-colors">Privacy</a> &middot; <a href="/terms" className="hover:text-zinc-600 dark:hover:text-zinc-300 transition-colors">Terms</a></p>
-        </footer>
+        <Footer />
       </div>
     );
   }

@@ -9,6 +9,7 @@ interface PageWithHighlightsProps {
   pageNumber: number;
   scale: number;
   highlights: NormalizedBBox[]; // 已过滤为本页的 bbox
+  searchQuery?: string;
 }
 
 // Validate bbox values are within expected bounds (allow h=0 for overlay estimation)
@@ -46,7 +47,7 @@ function escapeHtml(str: string): string {
     .replace(/\//g, '&#x2F;');
 }
 
-export default function PageWithHighlights({ pageNumber, scale, highlights }: PageWithHighlightsProps) {
+export default function PageWithHighlights({ pageNumber, scale, highlights, searchQuery }: PageWithHighlightsProps) {
   const { t } = useLocale();
   const [pageDims, setPageDims] = useState<{ w: number; h: number } | null>(null);
 
@@ -60,9 +61,9 @@ export default function PageWithHighlights({ pageNumber, scale, highlights }: Pa
     [highlights]
   );
 
-  // customTextRenderer: 仅当有 highlights 且有 pageDims 时启用
+  // customTextRenderer: 仅当有 highlights/searchQuery 且有 pageDims 时启用
   const customTextRenderer = useMemo(() => {
-    if (validHighlights.length === 0 || !pageDims) return undefined;
+    if ((validHighlights.length === 0 && !searchQuery?.trim()) || !pageDims) return undefined;
 
     return (textItem: any) => {
       const { str, transform, width, height } = textItem;
@@ -93,15 +94,27 @@ export default function PageWithHighlights({ pageNumber, scale, highlights }: Pa
       };
 
       // 检查是否与任一 highlight bbox 相交
-      const isHighlighted = validHighlights.some((hl) => bboxOverlap(textRect, hl));
+      const isHighlighted = validHighlights.length > 0 && validHighlights.some((hl) => bboxOverlap(textRect, hl));
 
-      if (isHighlighted) {
-        // Use hardcoded class name - never from user input
-        return `<mark class="pdf-highlight">${escapeHtml(str)}</mark>`;
+      let result = isHighlighted
+        ? `<mark class="pdf-highlight">${escapeHtml(str)}</mark>`
+        : str;
+
+      // Search highlighting
+      if (searchQuery?.trim()) {
+        const query = searchQuery.toLowerCase();
+        const lowerStr = str.toLowerCase();
+        if (lowerStr.includes(query)) {
+          // Wrap matches in search highlight marks
+          const escaped = escapeHtml(str);
+          const regex = new RegExp(`(${query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
+          result = escaped.replace(regex, '<mark class="pdf-search-match">$1</mark>');
+        }
       }
-      return str;
+
+      return result;
     };
-  }, [validHighlights, pageDims]);
+  }, [validHighlights, pageDims, searchQuery]);
 
   // Compute rendered dimensions for overlay positioning
   const renderedW = pageDims ? pageDims.w * scale : 0;

@@ -42,6 +42,10 @@ class Document(Base):
         index=True,
     )
 
+    # Auto-generated summary and suggested questions (populated after parsing)
+    summary: Mapped[Optional[str]] = mapped_column(sa.Text, nullable=True)
+    suggested_questions: Mapped[Optional[dict]] = mapped_column(JSONB, nullable=True)
+
     # Demo documents have a slug (e.g. "nvidia-10k"); user docs have None
     demo_slug: Mapped[Optional[str]] = mapped_column(
         sa.String(50), nullable=True, unique=True

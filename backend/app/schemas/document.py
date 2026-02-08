@@ -26,6 +26,8 @@ class DocumentResponse(BaseModel):
     created_at: datetime
     is_demo: bool = False
     error_msg: Optional[str] = None
+    summary: Optional[str] = None
+    suggested_questions: Optional[list[str]] = None
 
     class Config:
         from_attributes = True

@@ -33,6 +33,15 @@ export interface DocTalkStore {
   selectedModel: string;
   sessions: SessionItem[];
 
+  // Document summary (auto-generated)
+  documentSummary: string | null;
+  suggestedQuestions: string[];
+
+  // PDF Search
+  searchQuery: string;
+  searchMatches: Array<{ page: number; index: number }>;
+  currentMatchIndex: number;
+
   // Actions
   setDocument: (id: string) => void;
   setDocumentName: (name: string) => void;
@@ -55,6 +64,11 @@ export interface DocTalkStore {
   addSession: (session: SessionItem) => void;
   removeSession: (sessionId: string) => void;
   updateSessionActivity: (sessionId: string) => void;
+  setDocumentSummary: (summary: string | null) => void;
+  setSuggestedQuestions: (questions: string[]) => void;
+  setSearchQuery: (query: string) => void;
+  setSearchMatches: (matches: Array<{ page: number; index: number }>) => void;
+  setCurrentMatchIndex: (index: number) => void;
   reset: () => void;
 }
 
@@ -81,6 +95,11 @@ const initialState = {
     return AVAILABLE_MODELS.some(m => m.id === id) ? id : DEFAULT_MODEL_ID;
   })(),
   sessions: [] as SessionItem[],
+  documentSummary: null as string | null,
+  suggestedQuestions: [] as string[],
+  searchQuery: '',
+  searchMatches: [] as Array<{ page: number; index: number }>,
+  currentMatchIndex: -1,
 };
 
 export const useDocTalkStore = create<DocTalkStore>((set, get) => ({
@@ -153,5 +172,10 @@ export const useDocTalkStore = create<DocTalkStore>((set, get) => ({
     updated.sort((a, b) => new Date(b.last_activity_at).getTime() - new Date(a.last_activity_at).getTime());
     return { sessions: updated };
   }),
+  setDocumentSummary: (summary: string | null) => set({ documentSummary: summary }),
+  setSuggestedQuestions: (questions: string[]) => set({ suggestedQuestions: questions }),
+  setSearchQuery: (query: string) => set({ searchQuery: query }),
+  setSearchMatches: (matches) => set({ searchMatches: matches }),
+  setCurrentMatchIndex: (index: number) => set({ currentMatchIndex: index }),
   reset: () => set((state) => ({ ...initialState, selectedModel: state.selectedModel, lastDocumentId: state.lastDocumentId, lastDocumentName: state.lastDocumentName })),
 }));
