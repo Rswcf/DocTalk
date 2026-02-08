@@ -190,7 +190,7 @@ export default function HomePage() {
         <HeroSection />
 
         {/* Product Showcase */}
-        <section className="max-w-5xl mx-auto px-6 py-24">
+        <section className="max-w-7xl mx-auto px-6 py-24">
           <div className="border-t border-zinc-200 dark:border-zinc-800 pt-12">
             <h2 className="text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50 text-center mb-8">
               {t('landing.showcase.title')}
