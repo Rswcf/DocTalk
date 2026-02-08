@@ -12,11 +12,12 @@ import { useLocale } from '../../i18n';
 // Configure pdf.js worker with explicit https protocol
 pdfjs.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
 
-// CMap files are required for rendering CJK (Chinese/Japanese/Korean) fonts in PDFs
+// CMap files are required for rendering CJK (Chinese/Japanese/Korean) fonts in PDFs.
+// Served from public/ because cdnjs returns 403 for pdfjs-dist 3.11.174 cmaps.
 const PDF_OPTIONS = {
-  cMapUrl: `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/cmaps/`,
+  cMapUrl: '/cmaps/',
   cMapPacked: true,
-  standardFontDataUrl: `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/standard_fonts/`,
+  standardFontDataUrl: '/standard_fonts/',
 };
 
 /**
