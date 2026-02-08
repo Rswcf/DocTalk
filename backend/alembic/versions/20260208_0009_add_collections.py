@@ -9,7 +9,7 @@ import sqlalchemy as sa
 from sqlalchemy.dialects.postgresql import UUID
 
 revision = '20260208_0009'
-down_revision = '20260208_0008'
+down_revision = '20260208_0007'
 branch_labels = None
 depends_on = None
 
