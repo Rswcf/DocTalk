@@ -527,7 +527,7 @@ graph TD
         ResizablePanels["react-resizable-panels<br/>Group / Panel / Separator"]
         ChatPanel["ChatPanel<br/>消息 + 输入框"]
         PdfViewer["PdfViewer<br/>react-pdf"]
-        TextViewer["TextViewer<br/>非 PDF 查看器"]
+        TextViewer["TextViewer<br/>非 PDF 查看器<br/>片段高亮"]
     end
 
     subgraph ChatComp["Chat 组件"]

@@ -56,6 +56,7 @@ Railway 项目包含 5 个服务：backend, Postgres, Redis, qdrant-v2, minio-v2
 - **布局**: Chat 面板在左侧, PDF 查看器在右侧，中间可拖拽调节宽度 (react-resizable-panels)
 - **i18n**: 客户端 React Context，11 语言 JSON 静态打包，`t()` 函数支持参数插值，Arabic 自动 RTL
 - **bbox 坐标**: 归一化 [0,1], top-left origin, 存于 chunks.bboxes (JSONB)
+- **引用高亮双策略**: PDF 文档使用 bbox 坐标定位高亮区域（PageWithHighlights）；非 PDF 文档使用 textSnippet 文本匹配定位高亮（TextViewer `findSnippetInPage()` 渐进前缀搜索）。Store 中 `highlights`（bbox）和 `highlightSnippet`（文本）由 `navigateToCitation` 同时设置
 - **引用格式**: 编号 [1]..[K]，后端 FSM 解析器处理跨 token 切断；前端 `renumberCitations()` 按出现顺序重编号为连续序列
 - **PDF 文件获取**: presigned URL (不走后端代理)
 - **向量维度**: 配置驱动 (EMBEDDING_DIM)，启动时校验 Qdrant collection
@@ -265,7 +266,7 @@ SENTRY_TRACES_SAMPLE_RATE=0.1
 - **响应式**: Header 移动端间距/截断/CreditsDisplay 小屏隐藏，upload zone `p-8 sm:p-12`，billing `p-6 sm:p-8`
 - **自定义 AI 指令模态框**: `CustomInstructionsModal.tsx`，Settings2 图标触发，textarea 2000 字限制，Save/Clear 按钮
 - **多格式上传**: Dashboard 上传区 accept 属性包含 PDF/DOCX/PPTX/XLSX/TXT/MD 的 MIME 类型和扩展名
-- **TextViewer**: 非 PDF 文档使用 `TextViewer.tsx` 显示提取的文本内容（按页/章节分组），PDF 文档继续使用 PdfViewer
+- **TextViewer**: 非 PDF 文档使用 `TextViewer.tsx` 显示提取的文本内容（按页/章节分组），PDF 文档继续使用 PdfViewer。支持引用高亮：点击引用时，`highlightSnippet`（存储在 Zustand store）通过 `findSnippetInPage()` 渐进前缀匹配在目标页文本中定位，匹配文本以 amber 背景高亮并滚动居中
 - **URL 导入**: Dashboard 上传区下方 URL 输入框（Link2 图标 + 输入 + Import URL 按钮），调用 `ingestUrl()` → 跳转到文档页
 - **文档集合**: `/collections` 列表页 + `/collections/[id]` 详情页（ChatPanel 左 + 文档列表侧栏右），Header full variant 新增 FolderOpen 集合入口
 

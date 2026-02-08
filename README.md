@@ -10,7 +10,7 @@ DocTalk helps heavy document readers quickly locate key information in long docu
 
 - **Upload & Parse** — Upload PDF, DOCX, PPTX, XLSX, TXT, or Markdown files; AI extracts text, detects sections, and builds a vector index
 - **Cited Answers** — Ask questions and get responses with `[1]`, `[2]` references to exact passages
-- **Page Highlights** — Click or hover a citation to see the referenced text; click to jump to the page with bounding-box overlays
+- **Page Highlights** — Click or hover a citation to see the referenced text; click to jump to the page with bounding-box overlays (PDF) or text snippet highlighting (non-PDF)
 - **Split View** — Resizable chat panel (left) + PDF viewer (right) with drag-to-pan zoom
 - **9 LLM Models** — Switch between Claude, GPT, Gemini, DeepSeek, Grok, MiniMax, Kimi, and more via OpenRouter
 - **Demo Mode** — Try 3 sample documents (NVIDIA 10-K, Attention paper, NDA contract) instantly
@@ -191,7 +191,7 @@ Key architectural decisions:
 
 - **Dual JWT** — Auth.js v5 uses encrypted JWE; API proxy translates to HS256 JWT for backend compatibility
 - **SSE Streaming** — Chat responses stream via Server-Sent Events through the proxy
-- **Vector Search** — Chunks with bounding-box coordinates enable citation-to-page-highlight linking
+- **Vector Search** — Chunks with bounding-box coordinates enable citation-to-page-highlight linking (PDF bbox overlays, non-PDF text snippet matching)
 - **Small Chunks** — 150--300 token chunks with 8 retrieval results for precise citation targeting
 - **Auto-Summary** — After parsing, Celery generates a document summary + suggested questions via budget LLM (DeepSeek)
 - **Multi-Format** — DOCX/PPTX/XLSX/TXT/MD files are processed through format-specific extractors, then fed into the same chunking+embedding pipeline as PDFs
