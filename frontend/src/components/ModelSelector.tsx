@@ -2,6 +2,7 @@
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { ChevronDown, Check, Cpu, Lock } from 'lucide-react';
+import { useSession } from 'next-auth/react';
 import { AVAILABLE_MODELS, isModelAvailable, type ModelOption } from '../lib/models';
 import { useDocTalkStore } from '../store';
 import { useLocale } from '../i18n';
@@ -35,6 +36,8 @@ export default function ModelSelector() {
   const userPlan = useDocTalkStore((s) => s.userPlan);
   const { t } = useLocale();
   const router = useRouter();
+  const { status: authStatus } = useSession();
+  const isLoggedIn = authStatus === 'authenticated';
 
   const [open, setOpen] = useState(false);
   const [focusIndex, setFocusIndex] = useState(-1);
@@ -88,7 +91,11 @@ export default function ModelSelector() {
 
   const choose = (m: ModelOption) => {
     if (!isModelAvailable(m.id, userPlan)) {
-      router.push('/billing');
+      if (isLoggedIn) {
+        router.push('/billing');
+      } else {
+        router.push('?auth=1', { scroll: false });
+      }
       setOpen(false);
       return;
     }
@@ -163,7 +170,7 @@ export default function ModelSelector() {
                     tabIndex={focusIndex === idx ? 0 : -1}
                     role="option"
                     aria-selected={selectedModel === m.id}
-                    title={available ? undefined : t('models.upgradeToPlusTooltip' as any)}
+                    title={available ? undefined : (isLoggedIn ? t('models.upgradeToPlusTooltip' as any) : t('models.signInToUnlock' as any))}
                   >
                     <span className="w-4 h-4 flex items-center justify-center shrink-0">
                       {selectedModel === m.id ? <Check size={14} /> : null}

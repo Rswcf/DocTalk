@@ -189,6 +189,10 @@ class ChatService:
         if model and model in settings.ALLOWED_MODELS:
             effective_model = model
 
+        # Force default model for anonymous users on demo documents
+        if user is None and doc and doc.demo_slug:
+            effective_model = settings.LLM_MODEL
+
         # Premium model gating: require Plus or Pro plan
         if effective_model in settings.PREMIUM_MODELS:
             user_plan = (user.plan or "free").lower() if user else "free"

@@ -150,13 +150,14 @@ export default function ChatPanel({ sessionId, onCitationClick, maxUserMessages,
           addMessage(processingMsg);
           return;
         }
-        // Detect demo limit (HTTP 429) — show sign-in prompt
+        // Detect demo limit or rate limit (HTTP 429)
         const isDemoLimit = typeof err?.message === 'string' && err.message.includes('HTTP 429');
         if (isDemoLimit) {
+          const isRateLimit = err.message.includes('Rate limit exceeded');
           const limitMsg: Message = {
             id: `m_${Date.now()}_limit`,
             role: 'assistant',
-            text: t('demo.limitReachedMessage'),
+            text: isRateLimit ? t('demo.rateLimitMessage') : t('demo.limitReachedMessage'),
             createdAt: Date.now(),
           };
           addMessage(limitMsg);
@@ -304,27 +305,29 @@ export default function ChatPanel({ sessionId, onCitationClick, maxUserMessages,
         )}
       </div>
       {maxUserMessages != null && (
-        <div className="px-4 py-2 bg-zinc-100 dark:bg-zinc-800 text-sm text-zinc-600 dark:text-zinc-400 border-t dark:border-zinc-700 flex items-center justify-between">
-          <span>
-            {t('demo.questionsRemaining', { remaining: Math.max(0, demoRemaining), total: maxUserMessages })}
-          </span>
-          {!demoLimitReached ? (
-            <button
-              type="button"
-              onClick={() => router.push('?auth=1', { scroll: false })}
-              className="text-zinc-600 dark:text-zinc-400 hover:underline text-sm"
-            >
-              {t('demo.signInForUnlimited')}
-            </button>
-          ) : (
-            <button
-              type="button"
-              onClick={() => router.push('?auth=1', { scroll: false })}
-              className="text-zinc-600 dark:text-zinc-400 hover:underline text-sm font-medium"
-            >
-              {t('demo.signInToContinue')}
-            </button>
-          )}
+        <div className="border-t dark:border-zinc-700">
+          <div className="h-1 bg-zinc-200 dark:bg-zinc-800">
+            <div
+              className={`h-full transition-all duration-300 ${
+                demoRemaining <= 2 ? 'bg-amber-500' : 'bg-zinc-400 dark:bg-zinc-500'
+              }`}
+              style={{ width: `${Math.max(0, (demoRemaining / maxUserMessages) * 100)}%` }}
+            />
+          </div>
+          <div className="px-4 py-2 text-sm text-zinc-600 dark:text-zinc-400 flex items-center justify-between">
+            <span className={demoRemaining <= 2 ? 'text-amber-600 dark:text-amber-400 font-medium' : ''}>
+              {t('demo.questionsRemaining', { remaining: Math.max(0, demoRemaining), total: maxUserMessages })}
+            </span>
+            {!demoLimitReached ? (
+              <button type="button" onClick={() => router.push('?auth=1', { scroll: false })} className="text-zinc-600 dark:text-zinc-400 hover:underline text-sm">
+                {t('demo.signInForUnlimited')}
+              </button>
+            ) : (
+              <button type="button" onClick={() => router.push('?auth=1', { scroll: false })} className="text-zinc-600 dark:text-zinc-400 hover:underline text-sm font-medium">
+                {t('demo.signInToContinue')}
+              </button>
+            )}
+          </div>
         </div>
       )}
       <form onSubmit={onSubmit} className="p-4 border-t dark:border-zinc-700">

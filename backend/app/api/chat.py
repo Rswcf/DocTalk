@@ -4,13 +4,14 @@ import json
 import uuid
 from typing import AsyncGenerator, Optional
 
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, Request, status
 from fastapi.responses import JSONResponse, StreamingResponse
 from sqlalchemy import asc, desc, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.core.deps import get_current_user_optional, get_db_session
+from app.core.rate_limit import demo_chat_limiter
 from app.models.tables import ChatSession, Document, Message, User
 from app.schemas.chat import (
     ChatMessageResponse,
@@ -24,7 +25,7 @@ from app.services import credit_service
 from app.services.chat_service import chat_service
 
 DEMO_MESSAGE_LIMIT = 5
-DEMO_MAX_SESSIONS_PER_DOC = 3
+DEMO_MAX_SESSIONS_PER_DOC = 50
 
 chat_router = APIRouter(tags=["chat"])
 
@@ -136,6 +137,7 @@ async def get_session_messages(
 async def chat_stream(
     session_id: uuid.UUID,
     body: ChatRequest,
+    request: Request,
     user: Optional[User] = Depends(get_current_user_optional),
     db: AsyncSession = Depends(get_db_session),
 ):
@@ -150,6 +152,16 @@ async def chat_stream(
             status_code=409,
             content={"detail": "Document is still being processed", "status": session.document.status},
         )
+
+    # Rate limit anonymous users
+    if user is None:
+        client_ip = request.client.host if request.client else "unknown"
+        if not demo_chat_limiter.is_allowed(client_ip):
+            return JSONResponse(
+                status_code=429,
+                content={"detail": "Rate limit exceeded", "retry_after": 60},
+                headers={"Retry-After": "60"},
+            )
 
     # Enforce message limit for anonymous users on demo documents
     if user is None and session.document and session.document.demo_slug:

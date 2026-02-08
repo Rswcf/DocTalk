@@ -173,7 +173,7 @@ export default function DocumentReaderPage() {
 
   return (
     <div className="flex flex-col h-screen w-full">
-      <Header />
+      <Header isDemo={isDemo} isLoggedIn={isLoggedIn} />
       {error ? (
         <div className="flex-1 flex items-center justify-center">
           <div className="text-center">

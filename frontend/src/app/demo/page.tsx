@@ -45,8 +45,11 @@ export default function DemoPage() {
       <Header variant="minimal" />
       <div className="flex-1 flex flex-col items-center justify-center p-6">
         <h1 className="text-3xl font-bold mb-2 text-zinc-900 dark:text-zinc-50">{t('demo.title')}</h1>
-        <p className="text-zinc-500 dark:text-zinc-400 mb-10 text-center max-w-md">
+        <p className="text-zinc-500 dark:text-zinc-400 mb-3 text-center max-w-md">
           {t('demo.subtitle')}
+        </p>
+        <p className="text-sm text-zinc-400 dark:text-zinc-500 mb-10 text-center">
+          {t('demo.freeMessages')}
         </p>
 
         {loading ? (

@@ -15,9 +15,11 @@ import { CreditsDisplay } from './CreditsDisplay';
 
 interface HeaderProps {
   variant?: 'minimal' | 'full';
+  isDemo?: boolean;
+  isLoggedIn?: boolean;
 }
 
-export default function Header({ variant = 'full' }: HeaderProps) {
+export default function Header({ variant = 'full', isDemo, isLoggedIn }: HeaderProps) {
   const documentName = useDocTalkStore((s) => s.documentName);
   const lastDocumentId = useDocTalkStore((s) => s.lastDocumentId);
   const lastDocumentName = useDocTalkStore((s) => s.lastDocumentName);
@@ -67,7 +69,7 @@ export default function Header({ variant = 'full' }: HeaderProps) {
         </Link>
       )}
       <div className="ml-auto flex items-center gap-1 sm:gap-2 shrink-0">
-        {!isMinimal && <ModelSelector />}
+        {!isMinimal && !(isDemo && !isLoggedIn) && <ModelSelector />}
         {!isMinimal && (
           <button
             onClick={toggleTheme}
