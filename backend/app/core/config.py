@@ -113,6 +113,9 @@ class Settings(BaseSettings):
         "anthropic/claude-opus-4.6",
     ])
 
+    # Admin access — comma-separated email list
+    ADMIN_EMAILS: str = ""
+
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", case_sensitive=False)
 
 

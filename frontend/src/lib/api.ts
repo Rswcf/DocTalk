@@ -241,6 +241,33 @@ export async function listCollectionSessions(collectionId: string): Promise<Sess
   return handle(res);
 }
 
+// --- Admin API ---
+
+export async function getAdminOverview() {
+  const res = await fetch(`${PROXY_BASE}/api/admin/overview`);
+  return handle(res);
+}
+
+export async function getAdminTrends(period = 'day', days = 30) {
+  const res = await fetch(`${PROXY_BASE}/api/admin/trends?period=${period}&days=${days}`);
+  return handle(res);
+}
+
+export async function getAdminBreakdowns() {
+  const res = await fetch(`${PROXY_BASE}/api/admin/breakdowns`);
+  return handle(res);
+}
+
+export async function getAdminRecentUsers(limit = 20) {
+  const res = await fetch(`${PROXY_BASE}/api/admin/recent-users?limit=${limit}`);
+  return handle(res);
+}
+
+export async function getAdminTopUsers(limit = 20, by = 'tokens') {
+  const res = await fetch(`${PROXY_BASE}/api/admin/top-users?limit=${limit}&by=${by}`);
+  return handle(res);
+}
+
 // --- URL Ingestion ---
 
 export async function ingestUrl(url: string): Promise<{ document_id: string; status: string; filename?: string }> {

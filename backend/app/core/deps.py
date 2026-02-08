@@ -70,3 +70,13 @@ async def require_auth(
     if not user:
         raise HTTPException(status_code=401, detail="Authentication required")
     return user
+
+
+async def require_admin(
+    user: User = Depends(require_auth),
+) -> User:
+    """Require admin user (email in ADMIN_EMAILS env var)."""
+    admin_emails = [e.strip() for e in settings.ADMIN_EMAILS.split(",") if e.strip()]
+    if user.email not in admin_emails:
+        raise HTTPException(status_code=403, detail="Admin access required")
+    return user

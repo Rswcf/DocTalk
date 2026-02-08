@@ -3,6 +3,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from .api import auth
+from .api.admin import router as admin_router
 from .api.billing import router as billing_router
 from .api.chat import chat_router
 from .api.chunks import chunks_router
@@ -46,6 +47,7 @@ app.include_router(credits_router)
 app.include_router(users_router)
 app.include_router(billing_router)
 app.include_router(collections_router)
+app.include_router(admin_router)
 
 
 @app.on_event("startup")
