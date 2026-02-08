@@ -114,6 +114,12 @@ sequenceDiagram
     end
 
     W->>DB: UPDATE document status=ready
+
+    Note over W: Auto-summary (best-effort)
+    W->>DB: Load first 20 chunks
+    W->>OR: POST /chat/completions<br/>model: deepseek/deepseek-v3.2<br/>Generate summary + 5 questions
+    OR-->>W: JSON {summary, questions}
+    W->>DB: UPDATE document summary, suggested_questions
 ```
 
 **Step-by-step:**
@@ -132,6 +138,8 @@ sequenceDiagram
 5. **Vector Indexing**: Vectors are upserted into Qdrant's `doc_chunks` collection with COSINE similarity metric. The collection dimension is configuration-driven (`EMBEDDING_DIM`).
 
 6. **Completion**: Document status transitions from `parsing` → `ready`. The frontend polls status and transitions to the document viewer.
+
+7. **Auto-Summary** (best-effort): After status becomes `ready`, the worker loads the first 20 chunks and calls a budget LLM (DeepSeek) to generate a 2–3 paragraph summary and 5 suggested questions. Results are stored in the `summary` and `suggested_questions` columns. Failures are logged but do not affect document status.
 
 ---
 
@@ -347,6 +355,8 @@ erDiagram
         int chunks_indexed
         uuid user_id FK "nullable (demo docs)"
         string demo_slug UK "nullable"
+        text summary "AI-generated summary"
+        jsonb suggested_questions "AI-generated questions"
         datetime created_at
         datetime updated_at
     }
@@ -482,8 +492,14 @@ graph TD
     subgraph LandingComp["Landing Components"]
         Hero["HeroSection<br/>Headline + CTAs"]
         Showcase["Product Showcase<br/>macOS Window Chrome"]
+        HowItWorks["HowItWorks<br/>3-Step Guide"]
         Features["FeatureGrid<br/>3-Column Cards"]
+        SocialProof["SocialProof<br/>Trust Metrics"]
+        Security["SecuritySection<br/>4 Security Cards"]
+        FAQ["FAQ<br/>6-Item Accordion"]
+        FinalCTA["FinalCTA<br/>Conversion Section"]
         PrivBadge["PrivacyBadge"]
+        FooterComp["Footer<br/>3-Column Links"]
     end
 
     subgraph DocViewComp["Document Viewer"]
@@ -493,13 +509,14 @@ graph TD
     end
 
     subgraph ChatComp["Chat Components"]
-        MsgBubble["MessageBubble"]
+        MsgBubble["MessageBubble<br/>+ Regenerate"]
         CitCard["CitationCard"]
+        Export["Export (Markdown)"]
     end
 
     subgraph PdfComp["PDF Components"]
-        PdfToolbar["PdfToolbar<br/>Zoom + Hand Tool"]
-        PageHL["PageWithHighlights<br/>bbox Overlays"]
+        PdfToolbar["PdfToolbar<br/>Zoom + Hand + Search"]
+        PageHL["PageWithHighlights<br/>bbox + Search Overlays"]
     end
 
     subgraph ProfileComp["Profile Components"]
@@ -532,8 +549,18 @@ graph TD
 - `variant="minimal"` — Logo + UserMenu only (transparent background) — used on Home, Demo, Auth pages
 - `variant="full"` — All controls (ModelSelector, LanguageSelector, SessionDropdown, CreditsDisplay, UserMenu) — used on Document, Billing, Profile pages
 
+**Landing page sections** (in order): HeroSection → Product Showcase → HowItWorks → FeatureGrid → SocialProof → SecuritySection → FAQ → FinalCTA → PrivacyBadge → Footer
+
+**Chat features:**
+- **Auto-Summary**: New sessions inject a synthetic assistant message with the AI-generated document summary
+- **Suggested Questions**: Document-specific questions replace static i18n defaults when available
+- **Regenerate**: Re-send the last user message to get a new AI response
+- **Export**: Download the full conversation as a Markdown file with citations converted to footnotes
+
+**PDF Search**: Ctrl+F triggers an in-viewer search bar. Text is extracted via `pdfjs page.getTextContent()`, matches are highlighted using `customTextRenderer` with `<mark>` tags, and prev/next navigation scrolls between matches.
+
 **State management:**
-- **Zustand store** manages document state, selected model, active session, PDF viewer state
+- **Zustand store** manages document state, selected model, active session, PDF viewer state, search state (query, matches, currentMatchIndex), document summary, and suggested questions
 - **Auth.js SessionProvider** wraps the entire app via `Providers.tsx`
 
 ---

@@ -60,6 +60,18 @@ Railway 项目包含 5 个服务：backend, Postgres, Redis, qdrant-v2, minio-v2
 - **会话管理**: 每文档支持多个独立对话会话，重新打开文档自动恢复最近活跃会话
 - **OCR 支持**: 扫描版 PDF 自动通过 PyMuPDF 内置 Tesseract OCR 提取文字（`extract_pages_ocr()`），支持中英文（`eng+chi_sim`），可配置 DPI。流程：`detect_scanned()` → 设 status="ocr" → OCR 提取 → 验证文字量 ≥50 chars → 继续正常 parsing/embedding 流程
 - **CI/CD**: GitHub Actions 3 并行 job — backend（ruff lint + pytest）、frontend（eslint + next build）、docker（Dockerfile 构建验证）
+- **Chunking 配置**: TARGET_MIN_TOKENS=150, TARGET_MAX_TOKENS=300, top_k=8 检索。小分块提升引用精准度，所有 bbox 不再限制数量（原先限制 5 个）
+- **引用 snippet**: text_snippet 前置 section_title，截取长度 100 chars（原先 80 chars 无标题）
+- **文档重解析**: `POST /api/documents/{document_id}/reparse` 端点允许已登录用户重新解析 ready/error 状态的文档
+- **自动摘要**: 文档 ready 后，Celery 调用 `summary_service.generate_summary_sync()` 加载前 20 个 chunks → 调用 DeepSeek 生成摘要 + 5 个推荐问题 → 存入 `documents.summary` (Text) + `documents.suggested_questions` (JSONB)。尽力而为，失败不影响文档状态
+- **推荐问题**: 前端 ChatPanel 优先显示文档特定的 `suggestedQuestions`，无则回退到静态 i18n keys
+- **消息重新生成**: ChatPanel `handleRegenerate` 截取到最后一条用户消息，重新 chatStream
+- **对话导出**: `export.ts:exportConversationAsMarkdown()` 构建 Markdown + 引用脚注 → Blob 下载
+- **PDF 文本搜索**: PdfViewer 通过 pdfjs `page.getTextContent()` 提取全文 → store 中 searchQuery/searchMatches/currentMatchIndex → customTextRenderer `<mark>` 高亮 → PdfToolbar 搜索 UI
+- **FAQ 手风琴**: `landing/FAQ.tsx` 6 项展开/折叠，`transition-[max-height,opacity]` 动画
+- **Footer 组件**: `Footer.tsx` 3 列 (Product/Company/Legal) + 版权底栏
+- **FinalCTA**: `landing/FinalCTA.tsx` 转化 CTA (Try Demo + Sign Up)
+- **套餐对比表**: `PricingTable.tsx` Free vs Pro 6 行对比，Check/X 图标
 
 ### API 路由
 
@@ -70,6 +82,7 @@ GET    /api/documents/demo                # 列出 Demo 文档 (slug, document_i
 POST   /api/documents/upload              # 上传 PDF (需登录)
 GET    /api/documents/{document_id}       # 查询文档状态
 DELETE /api/documents/{document_id}       # 删除文档（ORM cascade，同步删除）
+POST   /api/documents/{document_id}/reparse  # 重新解析文档（需登录，ready/error 状态）
 GET    /api/documents/{document_id}/file-url  # 获取 presigned URL
 POST   /api/documents/{document_id}/search    # 语义搜索
 POST   /api/documents/{document_id}/sessions  # 创建聊天会话
@@ -212,9 +225,9 @@ SENTRY_TRACES_SAMPLE_RATE=0.1
 ### 前端相关
 - **UI 设计**: 单色 zinc 调色板，Inter 字体，dark mode 反转按钮 (`bg-zinc-900 dark:bg-zinc-50`)，全站无 `gray-*`/`blue-*` 类（保留 Google OAuth 品牌色和状态色）。卡片使用 `shadow-sm`/`shadow-md` 分层，模态框 `animate-fade-in`/`animate-slide-up` 动画，零 `transition-all` 策略（所有过渡使用具体属性 `transition-colors`/`transition-opacity`/`transition-shadow`）
 - **Header variant**: `variant='minimal'`（首页/Demo/Auth：仅 Logo+UserMenu）vs `variant='full'`（文档页/Billing/Profile：完整控件）
-- **Landing page**: HeroSection（大字标题+CTA）+ macOS window chrome 产品展示 + FeatureGrid（3列特性卡片）+ PrivacyBadge
+- **Landing page**: HeroSection（大字标题+CTA）+ macOS window chrome 产品展示 + **HowItWorks**（3步骤：Upload→Ask→Cited Answers）+ FeatureGrid（3列特性卡片）+ **SocialProof**（4项信任指标）+ **SecuritySection**（4张安全卡片）+ **FAQ**（6项手风琴）+ **FinalCTA**（转化CTA）+ PrivacyBadge + **Footer**（3列链接组件）
 - **动态 CTA**: 首页根据登录状态显示不同 UI（未登录→Landing page，已登录→Dashboard 上传区+文档列表）
-- **AuthModal**: 使用查询参数 `?auth=1` 触发登录模态框，ESC 可关闭
+- **AuthModal**: 使用查询参数 `?auth=1` 触发登录模态框，ESC 可关闭，焦点陷阱（Tab 循环），backdrop 点击关闭
 - **Demo 模式**: `/demo` 页面从后端 `GET /api/documents/demo` 获取真实文档列表，链接到 `/d/{docId}`；ChatPanel 通过 `maxUserMessages` prop 实现客户端 5 条限制 + 计数条 + 登录 CTA；旧 `/demo/[sample]` 路由自动重定向到新路径
 - **文档列表**: 服务端 + localStorage 合并，服务端优先
 - **前端全部 `"use client"`**: 无 SSR，所有页面和组件均为客户端渲染
@@ -222,7 +235,12 @@ SENTRY_TRACES_SAMPLE_RATE=0.1
 - **Proxy maxDuration**: `route.ts` 导出 `maxDuration = 60`（Vercel Hobby 上限），SSE chat 使用 60s fetch timeout，其他请求 30s
 - **UserMenu 替代 AuthButton**: Header 中 `AuthButton` 已被 `UserMenu` 下拉菜单替代，未登录时仍显示 Sign In 按钮
 - **Profile 页面**: `/profile?tab=credits` (默认 tab)，受保护路由，未登录重定向到 `/auth?callbackUrl=/profile`
-- **Billing 页面**: 顶部 Pro 订阅卡片（渐变 zinc-800→zinc-900 边框），根据 plan 显示 Upgrade/Manage；下方 credit packs 卡片 (rounded-xl)
+- **Billing 页面**: 顶部 Pro 订阅卡片（渐变 zinc-800→zinc-900 边框），根据 plan 显示 Upgrade/Manage；中间 PricingTable（Free vs Pro 6 行对比）；下方 credit packs 卡片 (rounded-xl)
+- **引用悬浮 Tooltip**: `MessageBubble.tsx` 中引用 `[n]` 按钮悬浮显示 textSnippet + page tooltip，减少验证点击次数
+- **流式状态指示**: streaming 时显示 3 点弹跳动画（"搜索文档中..."）和闪烁光标，区分 retrieval 阶段和生成阶段
+- **下拉菜单键盘导航**: UserMenu、ModelSelector、LanguageSelector、SessionDropdown 支持 Arrow/Home/End/Escape 键盘操作
+- **CreditsDisplay 自动刷新**: 每 60s 轮询 + 自定义事件 `doctalk:credits-refresh`（聊天完成/购买后触发），`triggerCreditsRefresh()` 导出供外部调用
+- **Billing 骨架屏**: 产品列表加载中显示 skeleton cards，失败显示 error + retry 按钮
 - **响应式**: Header 移动端间距/截断/CreditsDisplay 小屏隐藏，upload zone `p-8 sm:p-12`，billing `p-6 sm:p-8`
 
 ### 后端相关
@@ -234,6 +252,7 @@ SENTRY_TRACES_SAMPLE_RATE=0.1
 - **OCR 容错**: 每页独立 try/except，一页 OCR 失败不影响其他页。OCR 文字不足 50 chars 时标记 error
 - **Parse worker 幂等**: 重新执行时先删除已有 pages/chunks，重置计数器，避免 UniqueViolation；支持 stuck 文档重试
 - **启动自动重试**: `main.py` 的 `on_startup` 在后台线程中检测 status=parsing/embedding 的文档，自动重新分发 parse 任务
+- **自动摘要生成**: `summary_service.generate_summary_sync(document_id)` 在 Celery 上下文中调用，加载前 20 个 chunks（max 8K chars），通过 OpenRouter 调用 `deepseek/deepseek-v3.2` 生成 JSON `{summary, questions}`。支持 markdown code fence 解析。不扣 credits（系统生成）。在 `parse_worker.py` 中 ready 后 try/except 调用，失败仅 warning 日志
 - **Demo 文档种子**: `on_startup` → `_seed_demo_documents()` → `demo_seed.seed_demo_documents()`，从 `backend/seed_data/` 读取 3 篇 PDF，上传 MinIO 并 dispatch parse。幂等：已 ready 跳过，stuck 重派，error 重建
 - **Demo 5 条消息限制**: `chat.py:chat_stream` 中，匿名用户 + demo_slug 文档 → 查询 user messages 数量 → 超过 5 条返回 429
 - **Retrieval 容错**: `chat_service.py` 的 retrieval 调用包裹在 try/except 中，Qdrant 不可用时返回 `RETRIEVAL_ERROR` SSE 事件
@@ -248,6 +267,7 @@ SENTRY_TRACES_SAMPLE_RATE=0.1
 - **引用 FSM 解析器**: `chat_service.py:RefParserFSM` 处理 LLM 流式输出中跨 token 的 `[n]` 引用标记切断
 - **引用重编号**: `ChatPanel.tsx:renumberCitations()` 将后端返回的 refIndex 重编号为连续序列
 - **presigned URL 直连**: PDF 文件通过 MinIO/S3 presigned URL 直接下载
+- **PDF 文本搜索**: PdfViewer 通过 `pdfjs page.getTextContent()` 提取全文文本，存入 Zustand store (searchQuery/searchMatches/currentMatchIndex)。PageWithHighlights 的 `customTextRenderer` 同时处理引用高亮和搜索匹配高亮（`<mark class="pdf-search-match">`）。PdfToolbar 提供搜索 UI（Search 图标 + 输入框 + 匹配计数 + 上下翻页）
 
 ### 其他
 - **模型白名单**: 后端 `config.py:ALLOWED_MODELS` 定义允许的模型 ID 列表
@@ -308,6 +328,7 @@ DocTalk/
 │   │   │   ├── credit_service.py # Credits debit/credit + ensure_monthly_credits
 │   │   │   ├── auth_service.py   # User/Account/Token 管理
 │   │   │   ├── demo_seed.py      # Demo 文档种子 (启动时自动执行)
+│   │   │   ├── summary_service.py # 自动摘要生成 (Celery 上下文, DeepSeek)
 │   │   │   └── ...
 │   │   └── workers/              # Celery 任务
 │   ├── alembic/                  # 数据库迁移
@@ -328,13 +349,15 @@ DocTalk/
 │   │   │       ├── auth/         # NextAuth 路由
 │   │   │       └── proxy/        # API 代理 (创建后端兼容 JWT)
 │   │   ├── components/
-│   │   │   ├── landing/          # HeroSection, FeatureGrid (登陆页组件)
+│   │   │   ├── landing/          # HeroSection, FeatureGrid, HowItWorks, SocialProof, SecuritySection, FAQ, FinalCTA
 │   │   │   ├── AuthModal.tsx     # 登录模态框 (rounded-2xl, zinc)
 │   │   │   ├── AuthButton.tsx    # 登录/登出按钮 (已被 UserMenu 替代)
 │   │   │   ├── UserMenu.tsx      # 头像下拉菜单 (Profile/Buy Credits/Sign Out)
 │   │   │   ├── PrivacyBadge.tsx  # 隐私承诺徽章
-│   │   │   ├── CreditsDisplay.tsx # 余额显示
+│   │   │   ├── CreditsDisplay.tsx # 余额显示 (自动刷新 + 事件驱动刷新)
 │   │   │   ├── PaywallModal.tsx  # 付费墙
+│   │   │   ├── Footer.tsx        # 页脚 (3 列链接: Product/Company/Legal)
+│   │   │   ├── PricingTable.tsx  # 套餐对比表 (Free vs Pro)
 │   │   │   ├── ErrorBoundary.tsx # React 错误边界
 │   │   │   ├── Providers.tsx     # SessionProvider 包装器
 │   │   │   ├── Profile/          # ProfileTabs, ProfileInfo, Credits, Usage, Account
@@ -345,6 +368,7 @@ DocTalk/
 │   │   │   ├── auth.ts           # Auth.js 配置
 │   │   │   ├── authAdapter.ts    # FastAPI Adapter
 │   │   │   ├── models.ts         # AVAILABLE_MODELS 定义 (9 模型)
+│   │   │   ├── export.ts         # 对话导出 (Markdown + 引用脚注)
 │   │   │   └── sse.ts            # SSE 流式客户端
 │   │   ├── i18n/                 # 9 种语言
 │   │   ├── store/                # Zustand

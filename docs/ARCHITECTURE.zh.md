@@ -114,6 +114,12 @@ sequenceDiagram
     end
 
     W->>DB: UPDATE document status=ready
+
+    Note over W: 自动摘要（尽力而为）
+    W->>DB: 加载前 20 个文本块
+    W->>OR: POST /chat/completions<br/>model: deepseek/deepseek-v3.2<br/>生成摘要 + 5 个问题
+    OR-->>W: JSON {summary, questions}
+    W->>DB: UPDATE document summary, suggested_questions
 ```
 
 **逐步说明：**
@@ -132,6 +138,8 @@ sequenceDiagram
 5. **向量索引**：向量插入到 Qdrant 的 `doc_chunks` 集合中，使用 COSINE 相似度度量。集合维度由配置驱动（`EMBEDDING_DIM`）。
 
 6. **完成**：文档状态从 `parsing` 转换为 `ready`。前端轮询状态并切换到文档阅读器。
+
+7. **自动摘要**（尽力而为）：状态变为 `ready` 后，Worker 加载前 20 个文本块，调用预算 LLM（DeepSeek）生成 2–3 段摘要和 5 个推荐问题。结果存储在 `summary` 和 `suggested_questions` 列中。失败仅记录日志，不影响文档状态。
 
 ---
 
@@ -347,6 +355,8 @@ erDiagram
         int chunks_indexed
         uuid user_id FK "可空 (demo 文档)"
         string demo_slug UK "可空"
+        text summary "AI 生成的摘要"
+        jsonb suggested_questions "AI 生成的推荐问题"
         datetime created_at
         datetime updated_at
     }
@@ -482,8 +492,14 @@ graph TD
     subgraph LandingComp["Landing 组件"]
         Hero["HeroSection<br/>大字标题 + CTA"]
         Showcase["产品展示<br/>macOS 窗口风格"]
+        HowItWorks["HowItWorks<br/>3 步引导"]
         Features["FeatureGrid<br/>3 列特性卡片"]
+        SocialProof["SocialProof<br/>信任指标"]
+        Security["SecuritySection<br/>4 张安全卡片"]
+        FAQ["FAQ<br/>6 项手风琴"]
+        FinalCTA["FinalCTA<br/>转化 CTA"]
         PrivBadge["PrivacyBadge"]
+        FooterComp["Footer<br/>3 列链接"]
     end
 
     subgraph DocViewComp["文档阅读器"]
@@ -493,13 +509,14 @@ graph TD
     end
 
     subgraph ChatComp["Chat 组件"]
-        MsgBubble["MessageBubble"]
+        MsgBubble["MessageBubble<br/>+ 重新生成"]
         CitCard["CitationCard"]
+        Export["导出 (Markdown)"]
     end
 
     subgraph PdfComp["PDF 组件"]
-        PdfToolbar["PdfToolbar<br/>缩放 + 拖拽工具"]
-        PageHL["PageWithHighlights<br/>边界框覆盖层"]
+        PdfToolbar["PdfToolbar<br/>缩放 + 拖拽 + 搜索"]
+        PageHL["PageWithHighlights<br/>边界框 + 搜索覆盖层"]
     end
 
     subgraph ProfileComp["Profile 组件"]
@@ -532,8 +549,18 @@ graph TD
 - `variant="minimal"` — 仅 Logo + UserMenu（透明背景）— 用于首页、Demo、登录页
 - `variant="full"` — 所有控件（ModelSelector、LanguageSelector、SessionDropdown、CreditsDisplay、UserMenu）— 用于文档页、购买页、个人中心
 
+**Landing 页面各区块**（按顺序）：HeroSection → 产品展示 → HowItWorks → FeatureGrid → SocialProof → SecuritySection → FAQ → FinalCTA → PrivacyBadge → Footer
+
+**Chat 功能：**
+- **自动摘要**：新会话注入一条合成的 assistant 消息，展示 AI 生成的文档摘要
+- **推荐问题**：当文档有 AI 生成的问题时，替代静态的 i18n 默认问题
+- **重新生成**：重新发送上一条用户消息，获取新的 AI 回答
+- **导出**：将完整对话下载为 Markdown 文件，引用转为脚注
+
+**PDF 搜索**：Ctrl+F 触发阅读器内搜索栏。通过 `pdfjs page.getTextContent()` 提取文本，使用 `customTextRenderer` 的 `<mark>` 标签高亮匹配，上下翻页在匹配项之间滚动。
+
 **状态管理：**
-- **Zustand store** 管理文档状态、选中模型、活跃会话、PDF 查看器状态
+- **Zustand store** 管理文档状态、选中模型、活跃会话、PDF 查看器状态、搜索状态（query/matches/currentMatchIndex）、文档摘要和推荐问题
 - **Auth.js SessionProvider** 通过 `Providers.tsx` 包裹整个应用
 
 ---

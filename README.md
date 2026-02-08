@@ -10,7 +10,7 @@ DocTalk helps heavy document readers quickly locate key information in long PDFs
 
 - **Upload & Parse** — Upload any PDF; AI extracts text, detects sections, and builds a vector index
 - **Cited Answers** — Ask questions and get responses with `[1]`, `[2]` references to exact passages
-- **Page Highlights** — Click a citation to jump to the referenced page with bounding-box overlays
+- **Page Highlights** — Click or hover a citation to see the referenced text; click to jump to the page with bounding-box overlays
 - **Split View** — Resizable chat panel (left) + PDF viewer (right) with drag-to-pan zoom
 - **9 LLM Models** — Switch between Claude, GPT, Gemini, DeepSeek, Grok, MiniMax, Kimi, and more via OpenRouter
 - **Demo Mode** — Try 3 sample documents (NVIDIA 10-K, Attention paper, NDA contract) instantly
@@ -18,6 +18,17 @@ DocTalk helps heavy document readers quickly locate key information in long PDFs
 - **9 Languages** — English, Chinese, Hindi, Spanish, Arabic, French, Bengali, Portuguese, German
 - **Dark Mode** — Full dark theme with monochrome zinc palette
 - **Multi-Session** — Multiple independent chat sessions per document with auto-restore
+- **Auto-Summary** — AI automatically generates a document summary and 5 suggested questions after parsing
+- **Message Regenerate** — Re-generate the last AI response with one click
+- **Conversation Export** — Download any chat as a Markdown file with citations as footnotes
+- **PDF Text Search** — In-viewer Ctrl+F search with highlighted matches and prev/next navigation
+- **Citation Hover Preview** — Hover over any `[1]`, `[2]` citation to see a tooltip with the cited text snippet and page number
+- **Streaming Indicators** — Bouncing dots during document search, blinking cursor during response streaming
+- **OCR Support** — Scanned PDFs are automatically processed with Tesseract OCR (Chinese + English)
+- **Re-parse Documents** — Re-parse existing documents after config changes without re-uploading
+- **Keyboard Accessible** — Full keyboard navigation for menus, modals with focus traps, and ARIA compliance
+- **Pricing Comparison** — Free vs Pro feature comparison table on the billing page
+- **Landing Page** — FAQ section, How-It-Works steps, social proof metrics, security cards, and final CTA
 
 ## Live Demo
 
@@ -109,6 +120,9 @@ Open [http://localhost:3000](http://localhost:3000) in your browser.
 | `SENTRY_DSN` | No | Sentry DSN for backend error tracking |
 | `SENTRY_ENVIRONMENT` | No | Sentry environment (default: `production`) |
 | `SENTRY_TRACES_SAMPLE_RATE` | No | Sentry performance sampling rate (default: `0.1`) |
+| `OCR_ENABLED` | No | Enable OCR for scanned PDFs (default: `true`) |
+| `OCR_LANGUAGES` | No | Tesseract language codes (default: `eng+chi_sim`) |
+| `OCR_DPI` | No | OCR rendering DPI (default: `300`) |
 
 **Frontend** (`.env.local` in `frontend/`):
 
@@ -130,7 +144,7 @@ DocTalk/
 │   │   ├── core/           # Config & dependencies
 │   │   ├── models/         # SQLAlchemy ORM models
 │   │   ├── schemas/        # Pydantic request/response schemas
-│   │   ├── services/       # Business logic (chat, credits, parsing, demo seed)
+│   │   ├── services/       # Business logic (chat, credits, parsing, retrieval, demo seed, summary)
 │   │   └── workers/        # Celery task definitions
 │   ├── alembic/            # Database migrations
 │   ├── seed_data/          # Demo PDF files
@@ -138,8 +152,8 @@ DocTalk/
 ├── frontend/
 │   ├── src/
 │   │   ├── app/            # Next.js pages (home, auth, billing, profile, demo, document viewer)
-│   │   ├── components/     # React components (Chat, PdfViewer, Profile, landing, Header)
-│   │   ├── lib/            # API client, auth config, SSE client, model definitions
+│   │   ├── components/     # React components (Chat, PdfViewer, Profile, landing, Header, Footer, PricingTable)
+│   │   ├── lib/            # API client, auth config, SSE client, model definitions, export utils
 │   │   ├── i18n/           # 9 language locale files
 │   │   ├── store/          # Zustand state management
 │   │   └── types/
@@ -168,6 +182,8 @@ Key architectural decisions:
 - **Dual JWT** — Auth.js v5 uses encrypted JWE; API proxy translates to HS256 JWT for backend compatibility
 - **SSE Streaming** — Chat responses stream via Server-Sent Events through the proxy
 - **Vector Search** — Chunks with bounding-box coordinates enable citation-to-page-highlight linking
+- **Small Chunks** — 150--300 token chunks with 8 retrieval results for precise citation targeting
+- **Auto-Summary** — After parsing, Celery generates a document summary + suggested questions via budget LLM (DeepSeek)
 - **OpenRouter Gateway** — Single API key for all LLM and embedding models
 
 ## Deployment
