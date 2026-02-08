@@ -495,7 +495,8 @@ class ParseService:
 
     def _detect_header_footer_texts(self, pages: Sequence[PageInfo]) -> tuple[set[str], set[str]]:
         """Find repeated texts in top/bottom 10% regions that appear on >60% pages."""
-        if not pages:
+        if not pages or len(pages) < 3:
+            # Need at least 3 pages for meaningful header/footer detection
             return set(), set()
 
         top_counts: dict[str, int] = {}
