@@ -23,7 +23,7 @@ DocTalk helps heavy document readers quickly locate key information in long docu
 - **Conversation Export** — Download any chat as a Markdown file with citations as footnotes
 - **PDF Text Search** — In-viewer Ctrl+F search with highlighted matches and prev/next navigation
 - **Custom AI Instructions** — Set per-document instructions to customize how the AI analyzes and responds
-- **Multi-Format Support** — Full support for PDF, Word (DOCX), PowerPoint (PPTX), Excel (XLSX), plain text, and Markdown
+- **Multi-Format Support** — Full support for PDF, Word (DOCX), PowerPoint (PPTX), Excel (XLSX), plain text, and Markdown. Tables extracted from DOCX/PPTX/XLSX render as formatted tables with borders and alternating rows
 - **URL Import** — Paste any webpage URL to import its content as a document for AI-powered Q&A
 - **Document Collections** — Group multiple documents into collections for cross-document questions with source attribution
 - **Citation Hover Preview** — Hover over any `[1]`, `[2]` citation to see a tooltip with the cited text snippet and page number
@@ -194,7 +194,7 @@ Key architectural decisions:
 - **Vector Search** — Chunks with bounding-box coordinates enable citation-to-page-highlight linking (PDF bbox overlays, non-PDF text snippet matching)
 - **Small Chunks** — 150--300 token chunks with 8 retrieval results for precise citation targeting
 - **Auto-Summary** — After parsing, Celery generates a document summary + suggested questions via budget LLM (DeepSeek)
-- **Multi-Format** — DOCX/PPTX/XLSX/TXT/MD files are processed through format-specific extractors, then fed into the same chunking+embedding pipeline as PDFs
+- **Multi-Format** — DOCX/PPTX/XLSX/TXT/MD files are processed through format-specific extractors (with table extraction as markdown tables, speaker notes for PPTX), then fed into the same chunking+embedding pipeline as PDFs. Non-PDF viewer renders markdown with react-markdown for rich table display
 - **URL Ingestion** — Webpages are fetched via httpx, parsed with BeautifulSoup to extract text, then processed as text documents
 - **Collections** — Documents can be grouped into collections for cross-document Q&A; vector search uses Qdrant MatchAny filter across multiple document IDs
 - **OpenRouter Gateway** — Single API key for all LLM and embedding models

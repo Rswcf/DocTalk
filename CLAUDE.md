@@ -72,12 +72,13 @@ Railway 项目包含 5 个服务：backend, Postgres, Redis, qdrant-v2, minio-v2
 - **消息重新生成**: ChatPanel `handleRegenerate` 截取到最后一条用户消息，重新 chatStream
 - **对话导出**: `export.ts:exportConversationAsMarkdown()` 构建 Markdown + 引用脚注 → Blob 下载
 - **PDF 文本搜索**: PdfViewer 通过 pdfjs `page.getTextContent()` 提取全文 → store 中 searchQuery/searchMatches/currentMatchIndex → customTextRenderer `<mark>` 高亮 → PdfToolbar 搜索 UI
+- **TextViewer 文本搜索**: Ctrl+F 打开搜索栏，大小写不敏感全文搜索，匹配计数 "X/Y"，上下翻页导航，当前匹配 amber 高亮 + 其他匹配 yellow 高亮，与引用高亮共存
 - **FAQ 手风琴**: `landing/FAQ.tsx` 6 项展开/折叠，`transition-[max-height,opacity]` 动画
 - **Footer 组件**: `Footer.tsx` 3 列 (Product/Company/Legal) + 版权底栏
 - **FinalCTA**: `landing/FinalCTA.tsx` 转化 CTA (Try Demo + Sign Up)
 - **套餐对比表**: `PricingTable.tsx` Free vs Plus vs Pro 9 行对比，Check/X 图标，Plus 列 "Most Popular" 高亮
 - **自定义 AI 指令**: 每文档可设置 `custom_instructions`（最多 2000 字），通过 `PATCH /api/documents/{id}` 更新，`chat_service.py` 注入系统提示
-- **多格式支持**: DOCX/PPTX/XLSX/TXT/MD 文件通过 `backend/app/services/extractors/` 格式专用提取器处理，然后进入与 PDF 相同的分块+向量化流水线。`parse_worker.py` 按 `file_type` 分流
+- **多格式支持**: DOCX/PPTX/XLSX/TXT/MD 文件通过 `backend/app/services/extractors/` 格式专用提取器处理，然后进入与 PDF 相同的分块+向量化流水线。`parse_worker.py` 按 `file_type` 分流。DOCX 提取器遍历 body 元素交错获取段落和表格（markdown table 格式）。XLSX 输出 markdown table（表头+分隔+数据行）。PPTX 提取幻灯片文本、表格和演讲者备注
 - **URL/网页导入**: `POST /api/documents/ingest-url` 端点接收 URL，通过 httpx 抓取 + BeautifulSoup 提取文本，存为 txt 文件处理。PDF URL 自动走 PDF 流水线。前端 Dashboard 提供 URL 输入框
 - **文档集合**: `Collection` 模型 + `collection_documents` 多对多关联表，支持跨文档问答。`retrieval_service.search_multi()` 使用 Qdrant `MatchAny` 过滤器。`chat_service.py` 为集合会话构建跨文档系统提示，引用事件包含 `document_id` 和 `document_filename`。前端 `/collections` 列表页 + `/collections/[id]` 详情页（左侧 Chat + 右侧文档列表）
 - **Vercel Web Analytics**: `@vercel/analytics` 集成在 `layout.tsx`，自动追踪页面访问
@@ -91,7 +92,7 @@ GET    /api/documents/demo                # 列出 Demo 文档 (slug, document_i
 POST   /api/documents/upload              # 上传文档 (PDF/DOCX/PPTX/XLSX/TXT/MD, 需登录)
 POST   /api/documents/ingest-url         # 导入网页 URL (需登录)
 GET    /api/documents/{document_id}       # 查询文档状态
-GET    /api/documents/{document_id}/text-content  # 获取非 PDF 文档的文本内容
+GET    /api/documents/{document_id}/text-content  # 获取非 PDF 文档的文本内容 (优先 Page.content，回退 chunk 重建)
 PATCH  /api/documents/{document_id}       # 更新文档设置 (custom_instructions)
 DELETE /api/documents/{document_id}       # 删除文档（ORM cascade，同步删除）
 POST   /api/documents/{document_id}/reparse  # 重新解析文档（需登录，ready/error 状态）
@@ -266,7 +267,7 @@ SENTRY_TRACES_SAMPLE_RATE=0.1
 - **响应式**: Header 移动端间距/截断/CreditsDisplay 小屏隐藏，upload zone `p-8 sm:p-12`，billing `p-6 sm:p-8`
 - **自定义 AI 指令模态框**: `CustomInstructionsModal.tsx`，Settings2 图标触发，textarea 2000 字限制，Save/Clear 按钮
 - **多格式上传**: Dashboard 上传区 accept 属性包含 PDF/DOCX/PPTX/XLSX/TXT/MD 的 MIME 类型和扩展名
-- **TextViewer**: 非 PDF 文档使用 `TextViewer.tsx` 显示提取的文本内容（按页/章节分组），PDF 文档继续使用 PdfViewer。支持引用高亮：点击引用时，`highlightSnippet`（存储在 Zustand store）通过 `findSnippetInPage()` 渐进前缀匹配在目标页文本中定位，匹配文本以 amber 背景高亮并滚动居中
+- **TextViewer**: 非 PDF 文档使用 `TextViewer.tsx` 显示内容，PDF 文档使用 PdfViewer。支持两种渲染模式：md/docx/pptx/xlsx 使用 react-markdown + remark-gfm 渲染（Tailwind Typography prose 样式，表格带边框和交替行色），txt/url 使用纯文本 `<pre>` 渲染。引用高亮：`highlightSnippet` 通过 `findSnippetInPage()` 渐进前缀匹配定位（amber 背景）。全文搜索：Ctrl+F 打开搜索栏，跨页搜索+匹配计数+上下翻页（黄色高亮）。搜索和引用高亮共存，重叠时引用优先
 - **URL 导入**: Dashboard 上传区下方 URL 输入框（Link2 图标 + 输入 + Import URL 按钮），调用 `ingestUrl()` → 跳转到文档页
 - **文档集合**: `/collections` 列表页 + `/collections/[id]` 详情页（ChatPanel 左 + 文档列表侧栏右），Header full variant 新增 FolderOpen 集合入口
 
@@ -362,9 +363,9 @@ DocTalk/
 │   │   │   ├── retrieval_service.py # 向量检索 (search + search_multi for collections)
 │   │   │   ├── extractors/       # 多格式文档提取器
 │   │   │   │   ├── base.py       # ExtractedPage 数据类 + extract_document() 路由
-│   │   │   │   ├── docx_extractor.py  # Word 文档提取
-│   │   │   │   ├── pptx_extractor.py  # PowerPoint 提取
-│   │   │   │   ├── xlsx_extractor.py  # Excel 提取
+│   │   │   │   ├── docx_extractor.py  # Word 文档提取 (段落+表格交错，markdown table)
+│   │   │   │   ├── pptx_extractor.py  # PowerPoint 提取 (文本+表格+演讲者备注)
+│   │   │   │   ├── xlsx_extractor.py  # Excel 提取 (markdown table 格式)
 │   │   │   │   ├── text_extractor.py  # TXT/Markdown 提取
 │   │   │   │   └── url_extractor.py   # URL/网页提取 (httpx + BeautifulSoup)
 │   │   │   └── ...
@@ -403,7 +404,7 @@ DocTalk/
 │   │   │   ├── Collections/      # CollectionList, CreateCollectionModal
 │   │   │   ├── Chat/             # ChatPanel, MessageBubble, CitationCard
 │   │   │   ├── PdfViewer/        # PdfViewer, PdfToolbar, PageWithHighlights
-│   │   │   ├── TextViewer/       # TextViewer (非 PDF 文档查看器)
+│   │   │   ├── TextViewer/       # TextViewer (非 PDF: markdown 渲染 + 全文搜索)
 │   │   │   └── CustomInstructionsModal.tsx  # 自定义 AI 指令模态框
 │   │   ├── lib/
 │   │   │   ├── api.ts            # REST 客户端 (含 PROXY_BASE)

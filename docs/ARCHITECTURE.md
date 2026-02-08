@@ -373,6 +373,7 @@ erDiagram
         int page_number
         float width_pt "nullable (non-PDF)"
         float height_pt "nullable (non-PDF)"
+        text content "original extracted text"
         int rotation
     }
 
@@ -527,7 +528,7 @@ graph TD
         ResizablePanels["react-resizable-panels<br/>Group / Panel / Separator"]
         ChatPanel["ChatPanel<br/>Messages + Input"]
         PdfViewer["PdfViewer<br/>react-pdf"]
-        TextViewer["TextViewer<br/>Non-PDF Viewer<br/>Snippet Highlights"]
+        TextViewer["TextViewer<br/>Non-PDF Viewer<br/>Markdown Rendering + Search<br/>Snippet Highlights"]
     end
 
     subgraph ChatComp["Chat Components"]

@@ -373,6 +373,7 @@ erDiagram
         int page_number
         float width_pt "可空 (非 PDF)"
         float height_pt "可空 (非 PDF)"
+        text content "原始提取文本"
         int rotation
     }
 
@@ -527,7 +528,7 @@ graph TD
         ResizablePanels["react-resizable-panels<br/>Group / Panel / Separator"]
         ChatPanel["ChatPanel<br/>消息 + 输入框"]
         PdfViewer["PdfViewer<br/>react-pdf"]
-        TextViewer["TextViewer<br/>非 PDF 查看器<br/>片段高亮"]
+        TextViewer["TextViewer<br/>非 PDF 查看器<br/>Markdown 渲染 + 搜索<br/>片段高亮"]
     end
 
     subgraph ChatComp["Chat 组件"]

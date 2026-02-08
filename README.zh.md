@@ -23,7 +23,7 @@ DocTalk 帮助高强度文档阅读者在超长文档中通过 AI 对话快速�
 - **对话导出** — 将聊天记录下载为 Markdown 文件，引用转为脚注
 - **PDF 文本搜索** — 阅读器内 Ctrl+F 搜索，匹配高亮显示，支持上下翻页
 - **自定义 AI 指令** — 为每个文档设置自定义指令，定制 AI 的分析和回答方式
-- **多格式支持** — 完整支持 PDF、Word (DOCX)、PowerPoint (PPTX)、Excel (XLSX)、纯文本和 Markdown
+- **多格式支持** — 完整支持 PDF、Word (DOCX)、PowerPoint (PPTX)、Excel (XLSX)、纯文本和 Markdown。DOCX/PPTX/XLSX 中的表格提取后以带边框、交替行色的格式化表格渲染
 - **URL 导入** — 粘贴任意网页链接，导入其内容为文档进行 AI 问答
 - **文档集合** — 将多个文档分组为集合，支持跨文档提问并标注来源
 - **引用悬浮预览** — 将鼠标悬浮在 `[1]`、`[2]` 引用标记上，即可看到引用文本摘要和页码的提示框
@@ -194,7 +194,7 @@ DocTalk/
 - **向量检索** — 带边界框坐标的文本块实现引用到页面高亮的链接（PDF 使用 bbox 覆盖层，非 PDF 使用文本片段匹配）
 - **精细分块** — 150–300 token 小分块配合 8 条检索结果，实现精准引用定位
 - **自动摘要** — 解析完成后，Celery 通过预算 LLM（DeepSeek）生成文档摘要 + 推荐问题
-- **多格式支持** — DOCX/PPTX/XLSX/TXT/MD 文件通过格式专用提取器处理，然后进入与 PDF 相同的分块+向量化流水线
+- **多格式支持** — DOCX/PPTX/XLSX/TXT/MD 文件通过格式专用提取器处理（DOCX/XLSX 表格提取为 markdown table，PPTX 含演讲者备注），然后进入与 PDF 相同的分块+向量化流水线。非 PDF 查看器使用 react-markdown 渲染表格
 - **URL 导入** — 通过 httpx 获取网页，使用 BeautifulSoup 解析提取文本，然后作为文本文档处理
 - **文档集合** — 文档可分组为集合进行跨文档问答；向量搜索使用 Qdrant MatchAny 过滤器跨多个文档 ID 检索
 - **OpenRouter 网关** — 单一 API key 调用所有 LLM 和 Embedding 模型
