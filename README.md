@@ -15,7 +15,7 @@ DocTalk helps heavy document readers quickly locate key information in long docu
 - **9 LLM Models** — Switch between Claude, GPT, Gemini, DeepSeek, Grok, MiniMax, Kimi, and more via OpenRouter
 - **Demo Mode** — Try 3 sample documents (NVIDIA 10-K, Attention paper, NDA contract) instantly
 - **Credits System** — Free (5K/month), Plus (30K/month), and Pro (150K/month) with Stripe subscriptions and annual billing
-- **9 Languages** — English, Chinese, Hindi, Spanish, Arabic, French, Bengali, Portuguese, German
+- **11 Languages** — English, Chinese, Spanish, Japanese, German, French, Korean, Portuguese, Italian, Arabic, Hindi
 - **Dark Mode** — Full dark theme with monochrome zinc palette
 - **Multi-Session** — Multiple independent chat sessions per document with auto-restore
 - **Auto-Summary** — AI automatically generates a document summary and 5 suggested questions after parsing
@@ -164,7 +164,7 @@ DocTalk/
 │   │   ├── app/            # Next.js pages (home, auth, billing, profile, demo, document viewer, collections)
 │   │   ├── components/     # React components (Chat, PdfViewer, TextViewer, Collections, Profile, landing, Header, Footer, PricingTable)
 │   │   ├── lib/            # API client, auth config, SSE client, model definitions, export utils
-│   │   ├── i18n/           # 9 language locale files
+│   │   ├── i18n/           # 11 language locale files
 │   │   ├── store/          # Zustand state management
 │   │   └── types/
 │   └── public/

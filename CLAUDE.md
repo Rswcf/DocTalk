@@ -35,7 +35,7 @@ Railway 项目包含 5 个服务：backend, Postgres, Redis, qdrant-v2, minio-v2
   - Embedding: `openai/text-embedding-3-small` (dim=1536)
 - **PDF Parse**: PyMuPDF (fitz)
 - **Document Parse**: python-docx (DOCX), python-pptx (PPTX), openpyxl (XLSX), httpx + BeautifulSoup4 (URL)
-- **i18n**: 轻量级 React Context 方案，支持 9 种语言（EN, ZH, HI, ES, AR, FR, BN, PT, DE）
+- **i18n**: 轻量级 React Context 方案，支持 11 种语言（EN, ZH, ES, JA, DE, FR, KO, PT, IT, AR, HI）
 - **Monitoring**: Sentry 集成（后端 FastAPI + Celery，前端 Next.js），用于错误追踪和性能监控
 - **Analytics**: Vercel Web Analytics（页面访问和访客追踪）
 
@@ -409,7 +409,7 @@ DocTalk/
 │   │   │   ├── models.ts         # AVAILABLE_MODELS 定义 (9 模型)
 │   │   │   ├── export.ts         # 对话导出 (Markdown + 引用脚注)
 │   │   │   └── sse.ts            # SSE 流式客户端
-│   │   ├── i18n/                 # 9 种语言
+│   │   ├── i18n/                 # 11 种语言
 │   │   ├── store/                # Zustand
 │   │   └── types/
 │   ├── public/
@@ -432,15 +432,21 @@ DocTalk/
 
 ## 文档维护
 
+"更新文档"的含义是**广义的**——不仅限于 CLAUDE.md，而是包括所有受影响的文档：
+
 - `README.md`（英文）和 `README.zh.md`（中文）内容必须保持同步。修改其中一个时，需同步更新另一个
-- `docs/ARCHITECTURE.md` 包含 Mermaid 架构图，架构变更时需同步更新
+- `docs/ARCHITECTURE.md` / `docs/ARCHITECTURE.zh.md` 包含 Mermaid 架构图，架构变更时需同步更新
+- `docs/PRODUCT_STRATEGY.md` 包含产品定位和竞争分析，功能/配置变更时需同步更新
+- `docs/research/` 下的研究文档（user-segments.md、competitive-analysis.md、feature-roadmap.md 等）中引用了具体数字（语言数、模型数等），变更时需全局搜索并更新
 - `CLAUDE.md` 面向 AI 开发工具，记录内部约定和实现细节
+
+**操作原则**: 每次功能变更后，使用 `grep -r` 或 Grep 工具在整个仓库的 `*.md` 文件中搜索受影响的关键词（如数量、名称、列表），确保所有文档中的引用保持一致。不要只更新一处而遗漏其他位置。
 
 ---
 
 ## Session Completion Checklist
 
-部署或重大变更后，**必须**更新文档（README.md、ARCHITECTURE.md、相关 docs/）并推送到 GitHub。不要将文档视为可选或可延迟的。
+部署或重大变更后，**必须**更新所有受影响的文档（README.md、README.zh.md、ARCHITECTURE.md、PRODUCT_STRATEGY.md、docs/research/*、CLAUDE.md）并推送到 GitHub。不要将文档视为可选或可延迟的。"更新文档"意味着搜索整个仓库中所有可能引用了变更内容的 Markdown 文件，而非仅更新单个文件。
 
 ---
 

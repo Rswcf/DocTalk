@@ -15,7 +15,7 @@ DocTalk 帮助高强度文档阅读者在超长文档中通过 AI 对话快速�
 - **9 种大模型** — 通过 OpenRouter 切换 Claude、GPT、Gemini、DeepSeek、Grok、MiniMax、Kimi 等模型
 - **Demo 模式** — 无需注册即可体验 3 篇示例文档（NVIDIA 10-K、Attention 论文、NDA 合同）
 - **Credits 系统** — Free（5K/月）、Plus（30K/月）和 Pro（150K/月），支持 Stripe 订阅和年付
-- **9 种语言** — 英语、中文、印地语、西班牙语、阿拉伯语、法语、孟加拉语、葡萄牙语、德语
+- **11 种语言** — 英语、中文、西班牙语、日语、德语、法语、韩语、葡萄牙语、意大利语、阿拉伯语、印地语
 - **暗色模式** — 完整的暗色主题，单色 zinc 调色板
 - **多会话** — 每个文档支持多个独立聊天会话，自动恢复最近活跃会话
 - **自动摘要** — AI 解析完成后自动生成文档摘要和 5 个推荐问题
@@ -164,7 +164,7 @@ DocTalk/
 │   │   ├── app/            # Next.js 页面 (首页, 登录, 购买, 个人中心, Demo, 文档阅读, 集合)
 │   │   ├── components/     # React 组件 (Chat, PdfViewer, TextViewer, Collections, Profile, landing, Header, Footer, PricingTable)
 │   │   ├── lib/            # API 客户端、Auth 配置、SSE 客户端、模型定义、导出工具
-│   │   ├── i18n/           # 9 种语言翻译文件
+│   │   ├── i18n/           # 11 种语言翻译文件
 │   │   ├── store/          # Zustand 状态管理
 │   │   └── types/
 │   └── public/

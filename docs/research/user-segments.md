@@ -364,7 +364,7 @@ Peer at competitor      --> Check data security        --> Daily use for        
 
 **Rationale**
 - **Largest addressable market**: 73.6% of 8M+ graduate students globally use AI; 51% specifically for literature review
-- **Strong DocTalk fit**: Multi-language support (9 languages) is a major differentiator for non-English-native researchers
+- **Strong DocTalk fit**: Multi-language support (11 languages) is a major differentiator for non-English-native researchers
 - **Low CAC via organic channels**: Academic communities spread tools virally (lab recommendations, Twitter/X academic community, Reddit r/GradSchool)
 - **Existing demo**: Attention paper (a foundational ML paper) is already a demo document
 - **Pipeline to premium**: Students graduate into high-paying professionals (lawyers, consultants, analysts)

@@ -5,14 +5,16 @@ import { LocaleContext, Locale, LOCALES } from './index';
 import en from './locales/en.json';
 import zh from './locales/zh.json';
 import es from './locales/es.json';
-import fr from './locales/fr.json';
+import ja from './locales/ja.json';
 import de from './locales/de.json';
-import ar from './locales/ar.json';
-import bn from './locales/bn.json';
-import hi from './locales/hi.json';
+import fr from './locales/fr.json';
+import ko from './locales/ko.json';
 import pt from './locales/pt.json';
+import it from './locales/it.json';
+import ar from './locales/ar.json';
+import hi from './locales/hi.json';
 
-const translations: Record<Locale, Record<string, string>> = { en, zh, es, fr, de, ar, bn, hi, pt };
+const translations: Record<Locale, Record<string, string>> = { en, zh, es, ja, de, fr, ko, pt, it, ar, hi };
 
 function detectLocale(): Locale {
   const stored = typeof window !== 'undefined' ? localStorage.getItem('doctalk_locale') : null;

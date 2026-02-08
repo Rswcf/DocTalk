@@ -101,7 +101,6 @@ export default function LanguageSelector() {
               <span className="w-4 h-4 flex items-center justify-center">
                 {locale === l.code ? <Check size={14} /> : null}
               </span>
-              <span className="text-lg leading-none">{l.flag}</span>
               <span className="flex-1">{l.label}</span>
             </button>
           ))}
