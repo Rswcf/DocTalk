@@ -255,10 +255,14 @@ async def get_document_text_content(
     user: Optional[User] = Depends(get_current_user_optional),
     db: AsyncSession = Depends(get_db_session),
 ):
-    """Return extracted text content grouped by page for non-PDF viewer."""
-    from sqlalchemy import select as sa_select
+    """Return extracted text content grouped by page for non-PDF viewer.
 
-    from app.models.tables import Chunk
+    Prefers Page.content (original extracted text) over chunk reconstruction
+    to avoid overlap/duplication artifacts from the chunking pipeline.
+    """
+    from sqlalchemy import select as sa_select  # noqa: I001
+
+    from app.models.tables import Chunk, Page as PageModel
 
     doc = await doc_service.get_document(document_id, db)
     if not doc:
@@ -266,26 +270,43 @@ async def get_document_text_content(
     if doc.user_id and (not user or doc.user_id != user.id):
         return JSONResponse(status_code=404, content={"detail": "Document not found"})
 
-    # Get chunks ordered by page and index
+    # Try Page.content first (available for newly parsed non-PDF documents)
     result = await db.execute(
-        sa_select(Chunk)
-        .where(Chunk.document_id == document_id)
-        .order_by(Chunk.page_start, Chunk.chunk_index)
+        sa_select(PageModel)
+        .where(PageModel.document_id == document_id)
+        .order_by(PageModel.page_number)
     )
-    chunks = result.scalars().all()
+    db_pages = result.scalars().all()
 
-    # Group by page
-    pages_dict: dict[int, list[str]] = {}
-    for chunk in chunks:
-        for page_num in range(chunk.page_start, chunk.page_end + 1):
-            if page_num not in pages_dict:
-                pages_dict[page_num] = []
-            pages_dict[page_num].append(chunk.text)
+    # Check if any page has content stored
+    has_content = any(p.content for p in db_pages)
 
-    pages_list = [
-        {"page_number": pn, "text": "\n".join(texts)}
-        for pn, texts in sorted(pages_dict.items())
-    ]
+    if has_content:
+        pages_list = [
+            {"page_number": p.page_number, "text": p.content or ''}
+            for p in db_pages
+            if p.content
+        ]
+    else:
+        # Fallback: reconstruct from chunks (for legacy documents parsed before this change)
+        result = await db.execute(
+            sa_select(Chunk)
+            .where(Chunk.document_id == document_id)
+            .order_by(Chunk.page_start, Chunk.chunk_index)
+        )
+        chunks = result.scalars().all()
+
+        pages_dict: dict[int, list[str]] = {}
+        for chunk in chunks:
+            for page_num in range(chunk.page_start, chunk.page_end + 1):
+                if page_num not in pages_dict:
+                    pages_dict[page_num] = []
+                pages_dict[page_num].append(chunk.text)
+
+        pages_list = [
+            {"page_number": pn, "text": "\n".join(texts)}
+            for pn, texts in sorted(pages_dict.items())
+        ]
 
     return {"file_type": getattr(doc, 'file_type', 'pdf'), "pages": pages_list}
 

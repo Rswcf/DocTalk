@@ -89,6 +89,9 @@ def parse_document(self, document_id: str) -> None:
 
         file_type = getattr(doc, 'file_type', 'pdf') or 'pdf'
 
+        # Map page_number → original extracted text for non-PDF (used when persisting Page.content)
+        extracted_content_map: dict[int, str] = {}
+
         if file_type != 'pdf':
             # ---- Non-PDF extraction path ----
             try:
@@ -105,6 +108,10 @@ def parse_document(self, document_id: str) -> None:
             doc.page_count = len(extracted)
             db.add(doc)
             db.commit()
+
+            # Store original extracted text for Page.content
+            for ep in extracted:
+                extracted_content_map[ep.page_number] = ep.text
 
             # Convert to PageInfo for the shared chunking pipeline
             from app.services.parse_service import BlockInfo, PageInfo
@@ -196,6 +203,7 @@ def parse_document(self, document_id: str) -> None:
                     width_pt=p.width_pt,
                     height_pt=p.height_pt,
                     rotation=p.rotation,
+                    content=extracted_content_map.get(p.page_number),
                 )
             )
             if (i % 10) == 0 or i == len(pages):

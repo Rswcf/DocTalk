@@ -93,6 +93,7 @@ class Page(Base):
     width_pt: Mapped[Optional[float]] = mapped_column(sa.Float, nullable=True)
     height_pt: Mapped[Optional[float]] = mapped_column(sa.Float, nullable=True)
     rotation: Mapped[int] = mapped_column(sa.Integer, nullable=False, server_default=sa.text("0"))
+    content: Mapped[Optional[str]] = mapped_column(sa.Text, nullable=True)
 
     document: Mapped[Document] = relationship("Document", back_populates="pages")
 
