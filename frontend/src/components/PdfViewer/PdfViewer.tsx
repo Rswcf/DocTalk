@@ -13,11 +13,13 @@ import { useLocale } from '../../i18n';
 pdfjs.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.mjs`;
 
 // CMap files are required for rendering CJK (Chinese/Japanese/Korean) fonts in PDFs.
-// Served from public/ because cdnjs returns 403 for pdfjs-dist 3.11.174 cmaps.
+// Must use absolute URLs because the pdf.js Web Worker runs on the CDN origin,
+// so relative paths like "/cmaps/" resolve to the CDN domain instead of the app domain.
+const origin = typeof window !== 'undefined' ? window.location.origin : '';
 const PDF_OPTIONS = {
-  cMapUrl: '/cmaps/',
+  cMapUrl: `${origin}/cmaps/`,
   cMapPacked: true,
-  standardFontDataUrl: '/standard_fonts/',
+  standardFontDataUrl: `${origin}/standard_fonts/`,
 };
 
 /**
