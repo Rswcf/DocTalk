@@ -79,7 +79,7 @@ export default function Header({ variant = 'full' }: HeaderProps) {
         )}
         {!isMinimal && <div className="hidden sm:block"><CreditsDisplay /></div>}
         <UserMenu />
-        {!isMinimal && <LanguageSelector />}
+        <LanguageSelector />
       </div>
     </header>
   );
