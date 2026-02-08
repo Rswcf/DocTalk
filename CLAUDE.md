@@ -44,12 +44,12 @@ Railway 项目包含 5 个服务：backend, Postgres, Redis, qdrant-v2, minio-v2
 - **认证**: Auth.js v5 + Google OAuth，JWT 策略，后端通过 `require_auth` 依赖校验
 - **API 代理**: 前端所有后端请求（含 SSE chat stream）通过 `/api/proxy/*` 路由，自动注入 Authorization header
 - **分层认证模型**:
-  - 未登录: 可试用 Demo（3 篇真实 PDF，5 条消息限制，服务端 + 客户端双重限制）
+  - 未登录: 可试用 Demo（3 篇真实 PDF，5 条消息限制，服务端 + 客户端双重限制，匿名用户强制使用默认模型且隐藏 ModelSelector，IP 级速率限制 10 req/min）
   - 已登录: 可上传个人 PDF，服务端文档列表，Credits 系统；访问 Demo 文档使用 Credits，无消息限制
 - **Demo 系统**: 后端启动时自动种子 3 篇真实文档（NVIDIA 10-K、Attention 论文、NDA）到 MinIO + DB，通过 Celery 解析。`demo_slug` 列标识 Demo 文档，`is_demo` 属性暴露给前端。`GET /api/documents/demo` 返回 Demo 文档列表。`/demo` 页面从 API 获取文档 ID 后链接到 `/d/{docId}`，旧 `/demo/[sample]` 路由自动重定向
 - **Credits 系统**: 预付费模式，余额 + Ledger 双表记录，每次对话扣费
 - **订阅系统**: Free (5K credits/月) + Plus (30K credits/月, $7.99) + Pro (150K credits/月, $14.99) 三级，支持月付/年付（年付享 20-25% 折扣），月度 credits 惰性发放（`ensure_monthly_credits`），Stripe 订阅集成
-- **模型门控**: 高级模型（`anthropic/claude-opus-4.6`）仅限 Plus+ 套餐使用，后端 `chat_service.py` 校验 + 前端 `ModelSelector.tsx` 锁定图标
+- **模型门控**: 高级模型（`anthropic/claude-opus-4.6`）仅限 Plus+ 套餐使用，后端 `chat_service.py` 校验 + 前端 `ModelSelector.tsx` 锁定图标。ModelSelector 根据认证状态显示不同 CTA：匿名用户点击锁定模型 → 登录模态框（`?auth=1`），已登录免费用户 → `/billing`
 - **Profile 页面**: `/profile` 4 个 Tab (Profile/Credits/Usage/Account)，含交易历史、使用统计、账户删除
 - **API 网关**: 所有 LLM 和 Embedding 调用统一通过 OpenRouter（单一 API key）
 - **模型切换**: 前端用户可选择 LLM 模型，后端白名单 (`ALLOWED_MODELS`) 验证后透传给 OpenRouter
@@ -104,7 +104,7 @@ GET    /api/documents/{document_id}/sessions  # 列出文档的聊天会话
 
 # 会话与对话
 GET    /api/sessions/{session_id}/messages    # 获取历史消息
-POST   /api/sessions/{session_id}/chat        # 对话（SSE streaming, 可选 model 字段；Demo 匿名用户限 5 条，超限返回 429）
+POST   /api/sessions/{session_id}/chat        # 对话（SSE streaming, 可选 model 字段；匿名用户速率限制 10 req/min/IP；Demo 匿名用户限 5 条消息 + 强制默认模型，超限返回 429）
 DELETE /api/sessions/{session_id}             # 删除聊天会话
 
 # Credits & Billing
@@ -236,7 +236,9 @@ SENTRY_TRACES_SAMPLE_RATE=0.1
 ### 安全相关
 - **上传/删除需登录**: `upload_document` 和 `delete_document` 使用 `require_auth` 依赖，未登录返回 401
 - **搜索支持可选认证**: `search_document` 使用 `get_current_user_optional`，已登录用户可搜索自己的文档，匿名用户可搜索 demo 文档
-- **Demo 会话上限**: 匿名用户每个 demo 文档最多创建 3 个会话 (`DEMO_MAX_SESSIONS_PER_DOC=3`)，超限返回 429
+- **Demo 会话上限**: 匿名用户每个 demo 文档最多创建 50 个会话 (`DEMO_MAX_SESSIONS_PER_DOC=50`)，超限返回 429。上限较大是因为全局计数（含已登录用户的会话），真正的保护是每会话 5 条消息限制
+- **匿名速率限制**: `rate_limit.py` 提供内存级 token-bucket 速率限制器，匿名用户 chat 端点限制 10 req/min/IP，超限返回 429 + `Retry-After` header
+- **匿名 Demo 模型强制**: 匿名用户在 Demo 文档上的 chat 请求忽略 `model` 参数，强制使用默认模型（`settings.LLM_MODEL`），防止通过 API 直接调用高成本模型
 - **Admin 端点已移除**: 不再暴露 `/admin/retry-stuck`、`/admin/documents` 等无鉴权端点
 - **依赖已锁定**: `requirements.txt` 中所有依赖版本已 pin（`==`），防止供应链攻击
 
@@ -248,11 +250,11 @@ SENTRY_TRACES_SAMPLE_RATE=0.1
 
 ### 前端相关
 - **UI 设计**: 单色 zinc 调色板，Inter 字体，dark mode 反转按钮 (`bg-zinc-900 dark:bg-zinc-50`)，全站无 `gray-*`/`blue-*` 类（保留 Google OAuth 品牌色和状态色）。卡片使用 `shadow-sm`/`shadow-md` 分层，模态框 `animate-fade-in`/`animate-slide-up` 动画，零 `transition-all` 策略（所有过渡使用具体属性 `transition-colors`/`transition-opacity`/`transition-shadow`）
-- **Header variant**: `variant='minimal'`（首页/Demo/Auth：仅 Logo+UserMenu）vs `variant='full'`（文档页/Billing/Profile：完整控件）
+- **Header variant**: `variant='minimal'`（首页/Demo/Auth：仅 Logo+UserMenu）vs `variant='full'`（文档页/Billing/Profile：完整控件）。额外支持 `isDemo`/`isLoggedIn` props，匿名 Demo 用户时隐藏 ModelSelector
 - **Landing page**: HeroSection（大字标题+CTA）+ **ProductShowcase**（Remotion `<Player>` 动画演示：用户提问→AI流式引用回答→PDF高亮同步，300帧@30fps=10s循环，macOS window chrome 框架，lazy-loaded，支持 dark mode）+ **HowItWorks**（3步骤：Upload→Ask→Cited Answers）+ FeatureGrid（3列特性卡片）+ **SocialProof**（4项信任指标）+ **SecuritySection**（4张安全卡片）+ **FAQ**（6项手风琴）+ **FinalCTA**（转化CTA）+ PrivacyBadge + **Footer**（3列链接组件）
 - **动态 CTA**: 首页根据登录状态显示不同 UI（未登录→Landing page，已登录→Dashboard 上传区+文档列表）
 - **AuthModal**: 使用查询参数 `?auth=1` 触发登录模态框，ESC 可关闭，焦点陷阱（Tab 循环），backdrop 点击关闭
-- **Demo 模式**: `/demo` 页面从后端 `GET /api/documents/demo` 获取真实文档列表，链接到 `/d/{docId}`；ChatPanel 通过 `maxUserMessages` prop 实现客户端 5 条限制 + 计数条 + 登录 CTA；旧 `/demo/[sample]` 路由自动重定向到新路径
+- **Demo 模式**: `/demo` 页面从后端 `GET /api/documents/demo` 获取真实文档列表，显示 "5 free messages" 提示信息，链接到 `/d/{docId}`；ChatPanel 通过 `maxUserMessages` prop 实现客户端 5 条限制 + 进度条（剩余 ≤2 时 amber 警告色）+ 登录 CTA；旧 `/demo/[sample]` 路由自动重定向到新路径。匿名用户在 Demo 文档页面 Header 中隐藏 ModelSelector（通过 `isDemo`/`isLoggedIn` props 控制）
 - **文档列表**: 服务端 + localStorage 合并，服务端优先
 - **前端全部 `"use client"`**: 无 SSR，所有页面和组件均为客户端渲染
 - **所有 API 走代理**: REST 和 SSE (chat stream) 均通过 `PROXY_BASE` (`/api/proxy`) 路由，`sse.ts` 的 `chatStream()` 也走代理以注入 JWT
@@ -283,7 +285,7 @@ SENTRY_TRACES_SAMPLE_RATE=0.1
 - **启动自动重试**: `main.py` 的 `on_startup` 在后台线程中检测 status=parsing/embedding 的文档，自动重新分发 parse 任务
 - **自动摘要生成**: `summary_service.generate_summary_sync(document_id)` 在 Celery 上下文中调用，加载前 20 个 chunks（max 8K chars），通过 OpenRouter 调用 `deepseek/deepseek-v3.2` 生成 JSON `{summary, questions}`。支持 markdown code fence 解析。不扣 credits（系统生成）。在 `parse_worker.py` 中 ready 后 try/except 调用，失败仅 warning 日志
 - **Demo 文档种子**: `on_startup` → `_seed_demo_documents()` → `demo_seed.seed_demo_documents()`，从 `backend/seed_data/` 读取 3 篇 PDF，上传 MinIO 并 dispatch parse。幂等：已 ready 跳过，stuck 重派，error 重建
-- **Demo 5 条消息限制**: `chat.py:chat_stream` 中，匿名用户 + demo_slug 文档 → 查询 user messages 数量 → 超过 5 条返回 429
+- **Demo 5 条消息限制**: `chat.py:chat_stream` 中，匿名用户 + demo_slug 文档 → 查询 user messages 数量 → 超过 5 条返回 429。前端 ChatPanel 区分速率限制 429（"Rate limit exceeded" → `demo.rateLimitMessage`）和消息限制 429（→ `demo.limitReachedMessage`）
 - **Retrieval 容错**: `chat_service.py` 的 retrieval 调用包裹在 try/except 中，Qdrant 不可用时返回 `RETRIEVAL_ERROR` SSE 事件
 - **删除为同步级联**: `doc_service.delete_document()` 使用 ORM cascade 真正删除 DB 记录（非仅标记 status），同时 best-effort 清理 MinIO + Qdrant
 - **文档列表过滤**: `list_documents` 查询排除 `status="deleting"` 的文档
@@ -345,7 +347,8 @@ DocTalk/
 │   │   │   └── users.py          # /me, /profile, /usage-breakdown, DELETE /me
 │   │   ├── core/
 │   │   │   ├── config.py         # Settings, ALLOWED_MODELS 白名单
-│   │   │   └── deps.py           # FastAPI 依赖 (require_auth, get_db)
+│   │   │   ├── deps.py           # FastAPI 依赖 (require_auth, get_db)
+│   │   │   └── rate_limit.py     # 内存级速率限制器 (匿名用户 chat 端点)
 │   │   ├── models/
 │   │   │   ├── tables.py         # ORM (User, Document, Collection, Session, Credits, Ledger...)
 │   │   │   ├── database.py       # Async engine

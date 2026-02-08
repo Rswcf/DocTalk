@@ -14,7 +14,7 @@
 | **Pro Subscription** | $9.99/month via Stripe, 100,000 credits/month |
 | **One-Time Credit Packs** | Starter ($5 / 50K credits), Pro ($15 / 200K credits), Enterprise ($50 / 1M credits) |
 | **Credit Rates** | Budget models: 1 input + 5 output per 1K tokens; Standard: 3+15; Premium (Claude Opus 4.6): 15+75 |
-| **Demo** | 3 seeded documents, 5 messages/session for anonymous users, 3 sessions/doc cap |
+| **Demo** | 3 seeded documents, 5 messages/session for anonymous users, 50 sessions/doc cap (global), forced default model, 10 req/min/IP rate limit, ModelSelector hidden |
 | **Billing** | Stripe Checkout (one-time) + Stripe Subscriptions (recurring) + Stripe Customer Portal |
 
 ### Credit Economics
