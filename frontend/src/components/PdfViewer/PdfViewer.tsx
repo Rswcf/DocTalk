@@ -10,7 +10,7 @@ import { useDocTalkStore } from '../../store';
 import { useLocale } from '../../i18n';
 
 // Configure pdf.js worker with explicit https protocol
-pdfjs.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
+pdfjs.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.mjs`;
 
 // CMap files are required for rendering CJK (Chinese/Japanese/Korean) fonts in PDFs.
 // Served from public/ because cdnjs returns 403 for pdfjs-dist 3.11.174 cmaps.
