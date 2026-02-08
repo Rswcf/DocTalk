@@ -1,7 +1,7 @@
 "use client";
 
 import React from 'react';
-import { Sun, Moon, ArrowLeft } from 'lucide-react';
+import { Sun, Moon, ArrowLeft, FolderOpen } from 'lucide-react';
 import { useTheme } from 'next-themes';
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
@@ -55,6 +55,15 @@ export default function Header({ variant = 'full' }: HeaderProps) {
         >
           <ArrowLeft size={14} className="shrink-0" />
           <span className="max-w-[160px] truncate">{lastDocumentName}</span>
+        </Link>
+      )}
+      {!isMinimal && !isDocumentPage && (
+        <Link
+          href="/collections"
+          className="ml-1 sm:ml-3 inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-sm text-zinc-600 dark:text-zinc-300 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-800 hover:bg-zinc-100 dark:hover:bg-zinc-700 transition-colors"
+        >
+          <FolderOpen size={14} className="shrink-0" />
+          <span className="hidden sm:inline">{t('collections.title')}</span>
         </Link>
       )}
       <div className="ml-auto flex items-center gap-1 sm:gap-2 shrink-0">

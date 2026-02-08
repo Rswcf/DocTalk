@@ -2,19 +2,19 @@
 
 [中文版](README.zh.md)
 
-> AI-powered document reader — chat with your PDFs, get cited answers with page highlights.
+> AI-powered document reader — chat with your PDFs, documents, and webpages, get cited answers with page highlights.
 
-DocTalk helps heavy document readers quickly locate key information in long PDFs through AI conversation. Answers include numbered citations that link back to the original text with real-time page highlighting.
+DocTalk helps heavy document readers quickly locate key information in long documents through AI conversation. Upload PDFs, Word documents, PowerPoints, spreadsheets, text files, or import any webpage — then chat with AI to find exactly what you need. Answers include numbered citations that link back to the original text with real-time page highlighting.
 
 ## Features
 
-- **Upload & Parse** — Upload any PDF; AI extracts text, detects sections, and builds a vector index
+- **Upload & Parse** — Upload PDF, DOCX, PPTX, XLSX, TXT, or Markdown files; AI extracts text, detects sections, and builds a vector index
 - **Cited Answers** — Ask questions and get responses with `[1]`, `[2]` references to exact passages
 - **Page Highlights** — Click or hover a citation to see the referenced text; click to jump to the page with bounding-box overlays
 - **Split View** — Resizable chat panel (left) + PDF viewer (right) with drag-to-pan zoom
 - **9 LLM Models** — Switch between Claude, GPT, Gemini, DeepSeek, Grok, MiniMax, Kimi, and more via OpenRouter
 - **Demo Mode** — Try 3 sample documents (NVIDIA 10-K, Attention paper, NDA contract) instantly
-- **Credits System** — Free tier (10K/month) and Pro tier (100K/month) with Stripe subscription
+- **Credits System** — Free (5K/month), Plus (30K/month), and Pro (150K/month) with Stripe subscriptions and annual billing
 - **9 Languages** — English, Chinese, Hindi, Spanish, Arabic, French, Bengali, Portuguese, German
 - **Dark Mode** — Full dark theme with monochrome zinc palette
 - **Multi-Session** — Multiple independent chat sessions per document with auto-restore
@@ -22,12 +22,17 @@ DocTalk helps heavy document readers quickly locate key information in long PDFs
 - **Message Regenerate** — Re-generate the last AI response with one click
 - **Conversation Export** — Download any chat as a Markdown file with citations as footnotes
 - **PDF Text Search** — In-viewer Ctrl+F search with highlighted matches and prev/next navigation
+- **Custom AI Instructions** — Set per-document instructions to customize how the AI analyzes and responds
+- **Multi-Format Support** — Full support for PDF, Word (DOCX), PowerPoint (PPTX), Excel (XLSX), plain text, and Markdown
+- **URL Import** — Paste any webpage URL to import its content as a document for AI-powered Q&A
+- **Document Collections** — Group multiple documents into collections for cross-document questions with source attribution
 - **Citation Hover Preview** — Hover over any `[1]`, `[2]` citation to see a tooltip with the cited text snippet and page number
 - **Streaming Indicators** — Bouncing dots during document search, blinking cursor during response streaming
 - **OCR Support** — Scanned PDFs are automatically processed with Tesseract OCR (Chinese + English)
 - **Re-parse Documents** — Re-parse existing documents after config changes without re-uploading
 - **Keyboard Accessible** — Full keyboard navigation for menus, modals with focus traps, and ARIA compliance
-- **Pricing Comparison** — Free vs Pro feature comparison table on the billing page
+- **Pricing Comparison** — Free vs Plus vs Pro feature comparison table on the billing page
+- **Model Gating** — Premium models (Claude Opus 4.6) restricted to Plus+ plans
 - **Landing Page** — FAQ section, How-It-Works steps, social proof metrics, security cards, and final CTA
 
 ## Live Demo
@@ -46,7 +51,9 @@ DocTalk helps heavy document readers quickly locate key information in long PDFs
 | **Auth** | Auth.js (NextAuth) v5 + Google OAuth + JWT |
 | **Payments** | Stripe Checkout + Subscriptions + Webhooks |
 | **AI** | OpenRouter gateway — LLM: `anthropic/claude-sonnet-4.5` (default), Embedding: `openai/text-embedding-3-small` |
-| **PDF Parse** | PyMuPDF (fitz) |
+| **PDF Parse** | PyMuPDF (fitz), Tesseract OCR |
+| **Document Parse** | python-docx, python-pptx, openpyxl (DOCX/PPTX/XLSX), httpx + BeautifulSoup4 (URL) |
+| **Analytics** | Vercel Web Analytics |
 | **Monitoring** | Sentry (error tracking + performance) |
 
 ## Getting Started
@@ -116,7 +123,10 @@ Open [http://localhost:3000](http://localhost:3000) in your browser.
 | `ADAPTER_SECRET` | Yes | Secret for internal auth API |
 | `STRIPE_SECRET_KEY` | No | Stripe secret key |
 | `STRIPE_WEBHOOK_SECRET` | No | Stripe webhook signing secret |
-| `STRIPE_PRICE_PRO_MONTHLY` | No | Stripe recurring price ID for Pro plan |
+| `STRIPE_PRICE_PLUS_MONTHLY` | No | Stripe recurring price ID for Plus monthly plan |
+| `STRIPE_PRICE_PLUS_ANNUAL` | No | Stripe recurring price ID for Plus annual plan |
+| `STRIPE_PRICE_PRO_MONTHLY` | No | Stripe recurring price ID for Pro monthly plan |
+| `STRIPE_PRICE_PRO_ANNUAL` | No | Stripe recurring price ID for Pro annual plan |
 | `SENTRY_DSN` | No | Sentry DSN for backend error tracking |
 | `SENTRY_ENVIRONMENT` | No | Sentry environment (default: `production`) |
 | `SENTRY_TRACES_SAMPLE_RATE` | No | Sentry performance sampling rate (default: `0.1`) |
@@ -144,15 +154,15 @@ DocTalk/
 │   │   ├── core/           # Config & dependencies
 │   │   ├── models/         # SQLAlchemy ORM models
 │   │   ├── schemas/        # Pydantic request/response schemas
-│   │   ├── services/       # Business logic (chat, credits, parsing, retrieval, demo seed, summary)
+│   │   ├── services/       # Business logic (chat, credits, parsing, retrieval, extractors, demo seed, summary)
 │   │   └── workers/        # Celery task definitions
 │   ├── alembic/            # Database migrations
 │   ├── seed_data/          # Demo PDF files
 │   └── tests/
 ├── frontend/
 │   ├── src/
-│   │   ├── app/            # Next.js pages (home, auth, billing, profile, demo, document viewer)
-│   │   ├── components/     # React components (Chat, PdfViewer, Profile, landing, Header, Footer, PricingTable)
+│   │   ├── app/            # Next.js pages (home, auth, billing, profile, demo, document viewer, collections)
+│   │   ├── components/     # React components (Chat, PdfViewer, TextViewer, Collections, Profile, landing, Header, Footer, PricingTable)
 │   │   ├── lib/            # API client, auth config, SSE client, model definitions, export utils
 │   │   ├── i18n/           # 9 language locale files
 │   │   ├── store/          # Zustand state management
@@ -184,6 +194,9 @@ Key architectural decisions:
 - **Vector Search** — Chunks with bounding-box coordinates enable citation-to-page-highlight linking
 - **Small Chunks** — 150--300 token chunks with 8 retrieval results for precise citation targeting
 - **Auto-Summary** — After parsing, Celery generates a document summary + suggested questions via budget LLM (DeepSeek)
+- **Multi-Format** — DOCX/PPTX/XLSX/TXT/MD files are processed through format-specific extractors, then fed into the same chunking+embedding pipeline as PDFs
+- **URL Ingestion** — Webpages are fetched via httpx, parsed with BeautifulSoup to extract text, then processed as text documents
+- **Collections** — Documents can be grouped into collections for cross-document Q&A; vector search uses Qdrant MatchAny filter across multiple document IDs
 - **OpenRouter Gateway** — Single API key for all LLM and embedding models
 
 ## Deployment

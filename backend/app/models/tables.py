@@ -46,6 +46,15 @@ class Document(Base):
     summary: Mapped[Optional[str]] = mapped_column(sa.Text, nullable=True)
     suggested_questions: Mapped[Optional[dict]] = mapped_column(JSONB, nullable=True)
 
+    # Custom AI instructions per document (user-provided, max 2000 chars)
+    custom_instructions: Mapped[Optional[str]] = mapped_column(sa.Text, nullable=True)
+
+    # File type (pdf, docx, pptx, xlsx, txt, md)
+    file_type: Mapped[str] = mapped_column(sa.String(20), nullable=False, server_default=sa.text("'pdf'"))
+
+    # Source URL for URL-ingested documents
+    source_url: Mapped[Optional[str]] = mapped_column(sa.String(2000), nullable=True)
+
     # Demo documents have a slug (e.g. "nvidia-10k"); user docs have None
     demo_slug: Mapped[Optional[str]] = mapped_column(
         sa.String(50), nullable=True, unique=True
@@ -58,7 +67,13 @@ class Document(Base):
     pages: Mapped[List[Page]] = relationship("Page", back_populates="document", cascade="all, delete-orphan")
     chunks: Mapped[List[Chunk]] = relationship("Chunk", back_populates="document", cascade="all, delete-orphan")
     sessions: Mapped[List[ChatSession]] = relationship(
-        "ChatSession", back_populates="document", cascade="all, delete-orphan"
+        "ChatSession", back_populates="document", cascade="all, delete-orphan",
+        foreign_keys="ChatSession.document_id",
+    )
+    collections: Mapped[List["Collection"]] = relationship(
+        "Collection",
+        secondary="collection_documents",
+        back_populates="documents",
     )
 
 
@@ -75,8 +90,8 @@ class Page(Base):
         UUID(as_uuid=True), sa.ForeignKey("documents.id", ondelete="CASCADE"), nullable=False
     )
     page_number: Mapped[int] = mapped_column(sa.Integer, nullable=False)
-    width_pt: Mapped[float] = mapped_column(sa.Float, nullable=False)
-    height_pt: Mapped[float] = mapped_column(sa.Float, nullable=False)
+    width_pt: Mapped[Optional[float]] = mapped_column(sa.Float, nullable=True)
+    height_pt: Mapped[Optional[float]] = mapped_column(sa.Float, nullable=True)
     rotation: Mapped[int] = mapped_column(sa.Integer, nullable=False, server_default=sa.text("0"))
 
     document: Mapped[Document] = relationship("Document", back_populates="pages")
@@ -126,14 +141,18 @@ class ChatSession(Base):
         primary_key=True,
         server_default=sa.text("gen_random_uuid()"),
     )
-    document_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), sa.ForeignKey("documents.id", ondelete="CASCADE"), nullable=False
+    document_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        UUID(as_uuid=True), sa.ForeignKey("documents.id", ondelete="CASCADE"), nullable=True
+    )
+    collection_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        UUID(as_uuid=True), sa.ForeignKey("collections.id", ondelete="CASCADE"), nullable=True
     )
     title: Mapped[Optional[str]] = mapped_column(sa.String(200), nullable=True)
     created_at: Mapped[sa.DateTime] = mapped_column(sa.DateTime(timezone=True), server_default=sa.text("now()"))
     updated_at: Mapped[sa.DateTime] = mapped_column(sa.DateTime(timezone=True), server_default=sa.text("now()"), onupdate=sa.func.now())
 
-    document: Mapped[Document] = relationship("Document", back_populates="sessions")
+    document: Mapped[Optional[Document]] = relationship("Document", back_populates="sessions", foreign_keys=[document_id])
+    collection: Mapped[Optional["Collection"]] = relationship("Collection", back_populates="sessions")
     messages: Mapped[List[Message]] = relationship("Message", back_populates="session", cascade="all, delete-orphan")
 
 
@@ -267,4 +286,40 @@ class UsageRecord(Base):
 
     __table_args__ = (
         sa.Index("idx_usage_records_user_created", "user_id", "created_at"),
+    )
+
+
+# Collection-Document junction table (many-to-many)
+collection_documents = sa.Table(
+    "collection_documents",
+    Base.metadata,
+    sa.Column("collection_id", UUID(as_uuid=True), sa.ForeignKey("collections.id", ondelete="CASCADE"), primary_key=True),
+    sa.Column("document_id", UUID(as_uuid=True), sa.ForeignKey("documents.id", ondelete="CASCADE"), primary_key=True),
+    sa.Column("added_at", sa.DateTime(timezone=True), server_default=sa.text("now()")),
+)
+
+
+class Collection(Base):
+    __tablename__ = "collections"
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, server_default=sa.text("gen_random_uuid()")
+    )
+    name: Mapped[str] = mapped_column(sa.String(200), nullable=False)
+    description: Mapped[Optional[str]] = mapped_column(sa.Text, nullable=True)
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), sa.ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    created_at: Mapped[datetime] = mapped_column(sa.DateTime(timezone=True), server_default=sa.text("now()"))
+    updated_at: Mapped[datetime] = mapped_column(
+        sa.DateTime(timezone=True), server_default=sa.text("now()"), onupdate=sa.func.now()
+    )
+
+    documents: Mapped[List[Document]] = relationship(
+        "Document",
+        secondary=collection_documents,
+        back_populates="collections",
+    )
+    sessions: Mapped[List[ChatSession]] = relationship(
+        "ChatSession", back_populates="collection", cascade="all, delete-orphan"
     )

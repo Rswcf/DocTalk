@@ -4,7 +4,7 @@ import asyncio
 import uuid
 from typing import List
 
-from qdrant_client.models import FieldCondition, Filter, MatchValue
+from qdrant_client.models import FieldCondition, Filter, MatchAny, MatchValue
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -64,6 +64,58 @@ class RetrievalService:
                 }
             )
 
+        return results
+
+    async def search_multi(
+        self, query: str, document_ids: List[uuid.UUID], top_k: int, db: AsyncSession
+    ):
+        """Search across multiple documents for cross-document Q&A."""
+        if not document_ids:
+            return []
+
+        qvec = (await asyncio.to_thread(embedding_service.embed_texts, [query]))[0]
+
+        client = embedding_service.get_qdrant_client()
+        doc_id_strs = [str(did) for did in document_ids]
+        flt = Filter(must=[FieldCondition(key="document_id", match=MatchAny(any=doc_id_strs))])
+        res = await asyncio.to_thread(
+            client.query_points,
+            collection_name=settings.QDRANT_COLLECTION,
+            query=qvec,
+            limit=int(top_k or 8),
+            query_filter=flt,
+        )
+
+        ids: List[uuid.UUID] = []
+        scores: dict[uuid.UUID, float] = {}
+        for p in res.points:
+            try:
+                cid = uuid.UUID(str(p.id))
+            except Exception:
+                continue
+            ids.append(cid)
+            scores[cid] = float(p.score or 0.0)
+
+        if not ids:
+            return []
+
+        rows = await db.execute(select(Chunk).where(Chunk.id.in_(ids)))
+        chunks: List[Chunk] = list(rows.scalars())
+        chunks.sort(key=lambda c: scores.get(c.id, 0.0), reverse=True)
+
+        results = []
+        for ch in chunks:
+            results.append(
+                {
+                    "chunk_id": ch.id,
+                    "document_id": ch.document_id,
+                    "text": ch.text,
+                    "page": ch.page_start,
+                    "bboxes": ch.bboxes,
+                    "score": scores.get(ch.id, 0.0),
+                    "section_title": ch.section_title,
+                }
+            )
         return results
 
 

@@ -16,6 +16,8 @@ export interface Citation {
   bboxes: NormalizedBBox[];
   textSnippet: string;
   offset: number; // character offset in assistant message text
+  documentId?: string; // for cross-document citations
+  documentFilename?: string; // source document name
 }
 
 export interface Message {
@@ -40,6 +42,8 @@ export interface DocumentResponse {
   error_msg?: string;
   summary?: string;
   suggested_questions?: string[];
+  custom_instructions?: string | null;
+  file_type?: string;
 }
 
 export interface SearchResult {
@@ -109,4 +113,28 @@ export interface UsageBreakdown {
     total_tokens: number;
     total_credits: number;
   }>;
+}
+
+export interface CollectionBrief {
+  id: string;
+  name: string;
+  description: string | null;
+  document_count: number;
+  created_at: string;
+}
+
+export interface CollectionDocumentBrief {
+  id: string;
+  filename: string;
+  status: string;
+  file_type?: string;
+}
+
+export interface CollectionDetail {
+  id: string;
+  name: string;
+  description: string | null;
+  documents: CollectionDocumentBrief[];
+  created_at: string;
+  updated_at: string;
 }

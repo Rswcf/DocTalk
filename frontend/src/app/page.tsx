@@ -5,9 +5,9 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useSession, signIn } from 'next-auth/react';
-import { getDocument, uploadDocument, deleteDocument, getMyDocuments } from '../lib/api';
+import { getDocument, uploadDocument, deleteDocument, getMyDocuments, ingestUrl } from '../lib/api';
 import type { DocumentBrief } from '../lib/api';
-import { Trash2 } from 'lucide-react';
+import { Trash2, Link2 } from 'lucide-react';
 import { useDocTalkStore } from '../store';
 import { useLocale } from '../i18n';
 import { PrivacyBadge } from '../components/PrivacyBadge';
@@ -35,6 +35,9 @@ export default function HomePage() {
   const [myDocs, setMyDocs] = useState<StoredDoc[]>([]);
   const [serverDocs, setServerDocs] = useState<DocumentBrief[]>([]);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [urlInput, setUrlInput] = useState('');
+  const [urlLoading, setUrlLoading] = useState(false);
+  const [urlError, setUrlError] = useState('');
   const isLoggedIn = status === 'authenticated';
 
   useEffect(() => {
@@ -61,8 +64,18 @@ export default function HomePage() {
 
   const onFiles = useCallback(async (file: File) => {
     if (!file) return;
-    if (file.type !== 'application/pdf') {
-      setProgressText(t('upload.pdfOnly'));
+    const allowedTypes = [
+      'application/pdf',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      'text/plain',
+      'text/markdown',
+    ];
+    const allowedExtensions = ['.pdf', '.docx', '.pptx', '.xlsx', '.txt', '.md'];
+    const ext = file.name.toLowerCase().slice(file.name.lastIndexOf('.'));
+    if (!allowedTypes.includes(file.type) && !allowedExtensions.includes(ext)) {
+      setProgressText(t('upload.unsupportedFormat'));
       return;
     }
     if (file.size > 50 * 1024 * 1024) {
@@ -128,6 +141,36 @@ export default function HomePage() {
     const file = e.target.files?.[0];
     if (file) onFiles(file);
   };
+
+  const onUrlSubmit = useCallback(async () => {
+    const url = urlInput.trim();
+    if (!url) return;
+    if (!url.startsWith('http://') && !url.startsWith('https://')) {
+      setUrlError(t('upload.urlError'));
+      return;
+    }
+    setUrlLoading(true);
+    setUrlError('');
+    try {
+      const res = await ingestUrl(url);
+      const docId = res.document_id;
+      setDocument(docId);
+      setUrlInput('');
+      getMyDocuments().then(setServerDocs).catch(console.error);
+      router.push(`/d/${docId}`);
+    } catch (e: any) {
+      const msg = e.message || '';
+      if (msg.includes('URL_CONTENT_TOO_LARGE')) {
+        setUrlError(t('upload.urlTooLarge'));
+      } else if (msg.includes('NO_TEXT_CONTENT')) {
+        setUrlError(t('upload.noTextContent'));
+      } else {
+        setUrlError(t('upload.urlError'));
+      }
+    } finally {
+      setUrlLoading(false);
+    }
+  }, [urlInput, router, setDocument, t]);
 
   /* --- Loading guard (prevents flash of wrong content) --- */
   if (status === 'loading') {
@@ -218,8 +261,9 @@ export default function HomePage() {
             onDragLeave={() => setDragging(false)}
             onDrop={onDrop}
           >
-            <input ref={inputRef} type="file" accept="application/pdf" className="hidden" onChange={onInputChange} />
+            <input ref={inputRef} type="file" accept="application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.openxmlformats-officedocument.presentationml.presentation,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/plain,text/markdown,.pdf,.docx,.pptx,.xlsx,.txt,.md" className="hidden" onChange={onInputChange} />
             <p className="text-zinc-700 dark:text-zinc-300 text-lg">{t('upload.dragDrop')}</p>
+            <p className="text-zinc-400 text-xs mt-1">{t('upload.supportedFormats')}</p>
             <p className="text-zinc-400 text-sm mt-1">{t('upload.or')}</p>
             <button
               type="button"
@@ -235,6 +279,32 @@ export default function HomePage() {
               </div>
             )}
           </div>
+
+          {/* URL Import */}
+          <div className="mt-4 flex items-center gap-2 max-w-lg mx-auto">
+            <div className="flex-1 relative">
+              <Link2 size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400" />
+              <input
+                type="url"
+                value={urlInput}
+                onChange={(e) => { setUrlInput(e.target.value); setUrlError(''); }}
+                onKeyDown={(e) => { if (e.key === 'Enter') onUrlSubmit(); }}
+                placeholder={t('upload.urlPlaceholder')}
+                className="w-full pl-9 pr-3 py-2.5 rounded-lg border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-sm text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-300 dark:focus:ring-zinc-600 transition-shadow"
+                disabled={urlLoading}
+              />
+            </div>
+            <button
+              onClick={onUrlSubmit}
+              disabled={urlLoading || !urlInput.trim()}
+              className="px-4 py-2.5 bg-zinc-900 dark:bg-zinc-50 text-white dark:text-zinc-900 rounded-lg text-sm font-medium hover:bg-zinc-800 dark:hover:bg-zinc-200 shadow-sm transition-colors disabled:opacity-50"
+            >
+              {urlLoading ? '...' : t('upload.ingestUrl')}
+            </button>
+          </div>
+          {urlError && (
+            <p className="mt-2 text-center text-sm text-red-600 dark:text-red-400">{urlError}</p>
+          )}
 
           <div className="mt-3 text-center">
             <Link href="/demo" className="text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100 text-sm transition-colors">

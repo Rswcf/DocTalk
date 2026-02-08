@@ -28,6 +28,9 @@ class DocumentResponse(BaseModel):
     error_msg: Optional[str] = None
     summary: Optional[str] = None
     suggested_questions: Optional[list[str]] = None
+    custom_instructions: Optional[str] = None
+    file_type: Optional[str] = "pdf"
+    source_url: Optional[str] = None
 
     class Config:
         from_attributes = True

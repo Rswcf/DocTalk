@@ -60,6 +60,11 @@ class Settings(BaseSettings):
     OCR_LANGUAGES: str = Field(default="eng+chi_sim")
     OCR_DPI: int = Field(default=300)
 
+    # Multi-format support
+    ALLOWED_FILE_TYPES: list[str] = Field(default=[
+        'pdf', 'docx', 'pptx', 'xlsx', 'txt', 'md',
+    ])
+
     # CORS
     FRONTEND_URL: str = Field(default="http://localhost:3000")
 
@@ -116,3 +121,22 @@ _candidates = [Path(".env"), Path("..") / ".env"]
 _env_file = next((str(p) for p in _candidates if p.exists()), None)
 
 settings = Settings(_env_file=_env_file) if _env_file else Settings()
+
+FILE_TYPE_MAP = {
+    'application/pdf': 'pdf',
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document': 'docx',
+    'application/vnd.openxmlformats-officedocument.presentationml.presentation': 'pptx',
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': 'xlsx',
+    'text/plain': 'txt',
+    'text/markdown': 'md',
+    'application/octet-stream': None,  # will be detected by extension
+}
+
+EXTENSION_TYPE_MAP = {
+    '.pdf': 'pdf',
+    '.docx': 'docx',
+    '.pptx': 'pptx',
+    '.xlsx': 'xlsx',
+    '.txt': 'txt',
+    '.md': 'md',
+}

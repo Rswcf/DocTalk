@@ -3,10 +3,13 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
+import { Settings2 } from 'lucide-react';
 import { PdfViewer } from '../../../components/PdfViewer';
+import TextViewer from '../../../components/TextViewer/TextViewer';
 import { ChatPanel } from '../../../components/Chat';
 import Header from '../../../components/Header';
-import { listSessions, createSession, getDocument, getDocumentFileUrl, getMessages } from '../../../lib/api';
+import CustomInstructionsModal from '../../../components/CustomInstructionsModal';
+import { listSessions, createSession, getDocument, getDocumentFileUrl, getMessages, updateDocumentInstructions } from '../../../lib/api';
 import { useDocTalkStore } from '../../../store';
 import { Panel, Group, Separator } from 'react-resizable-panels';
 import { useLocale } from '../../../i18n';
@@ -19,6 +22,7 @@ export default function DocumentReaderPage() {
   const isLoggedIn = authStatus === 'authenticated';
   const [error, setError] = useState<string | null>(null);
   const [isDemo, setIsDemo] = useState(false);
+  const [fileType, setFileType] = useState<string>('pdf');
   const { t } = useLocale();
   const {
     pdfUrl,
@@ -42,6 +46,8 @@ export default function DocumentReaderPage() {
   } = useDocTalkStore();
 
   const suggestedQuestions = useDocTalkStore((s) => s.suggestedQuestions);
+  const [showInstructions, setShowInstructions] = useState(false);
+  const [customInstructions, setCustomInstructions] = useState<string | null>(null);
 
   const documentStatus = useDocTalkStore((s) => s.documentStatus);
 
@@ -59,6 +65,7 @@ export default function DocumentReaderPage() {
         if (cancelled) return;
         setDocumentStatus(info.status);
         if (info.is_demo) setIsDemo(true);
+        if (info.file_type) setFileType(info.file_type);
         if (info.filename) {
           setDocumentName(info.filename);
           setLastDocument(documentId, info.filename);
@@ -71,6 +78,7 @@ export default function DocumentReaderPage() {
         if (info.status === 'ready') {
           if (info.summary) setDocumentSummary(info.summary);
           if (info.suggested_questions) setSuggestedQuestions(info.suggested_questions);
+          if (info.custom_instructions !== undefined) setCustomInstructions(info.custom_instructions ?? null);
           if (intervalId) clearInterval(intervalId);
           return;
         }
@@ -180,17 +188,30 @@ export default function DocumentReaderPage() {
       ) : (
         <Group orientation="horizontal" className="flex-1 min-h-0">
           <Panel defaultSize={50} minSize={25}>
-            <div className="h-full min-w-0 sm:min-w-[320px]">
-              {documentStatus === 'ready' && sessionId ? (
-                <ChatPanel sessionId={sessionId} onCitationClick={navigateToCitation} maxUserMessages={isDemo && !isLoggedIn ? 5 : undefined} suggestedQuestions={suggestedQuestions.length > 0 ? suggestedQuestions : undefined} />
-              ) : documentStatus !== 'ready' && !error ? (
-                <div className="h-full w-full flex flex-col items-center justify-center text-zinc-500 gap-3">
-                  <div className="animate-spin rounded-full h-8 w-8 border-2 border-zinc-300 border-t-zinc-600" />
-                  <p className="text-sm">{t('doc.processing')}</p>
+            <div className="h-full min-w-0 sm:min-w-[320px] flex flex-col">
+              {isLoggedIn && documentStatus === 'ready' && (
+                <div className="flex items-center justify-end px-3 py-1 border-b border-zinc-100 dark:border-zinc-800">
+                  <button
+                    onClick={() => setShowInstructions(true)}
+                    className="p-1.5 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-500 transition-colors"
+                    title={t('instructions.title')}
+                  >
+                    <Settings2 size={16} />
+                  </button>
                 </div>
-              ) : (
-                <div className="h-full w-full flex items-center justify-center text-zinc-500">{t('doc.initChat')}</div>
               )}
+              <div className="flex-1 min-h-0">
+                {documentStatus === 'ready' && sessionId ? (
+                  <ChatPanel sessionId={sessionId} onCitationClick={navigateToCitation} maxUserMessages={isDemo && !isLoggedIn ? 5 : undefined} suggestedQuestions={suggestedQuestions.length > 0 ? suggestedQuestions : undefined} />
+                ) : documentStatus !== 'ready' && !error ? (
+                  <div className="h-full w-full flex flex-col items-center justify-center text-zinc-500 gap-3">
+                    <div className="animate-spin rounded-full h-8 w-8 border-2 border-zinc-300 border-t-zinc-600" />
+                    <p className="text-sm">{t('doc.processing')}</p>
+                  </div>
+                ) : (
+                  <div className="h-full w-full flex items-center justify-center text-zinc-500">{t('doc.initChat')}</div>
+                )}
+              </div>
             </div>
           </Panel>
 
@@ -203,15 +224,28 @@ export default function DocumentReaderPage() {
 
           <Panel defaultSize={50} minSize={35}>
             <div className="h-full">
-              {pdfUrl ? (
-                <PdfViewer pdfUrl={pdfUrl} currentPage={currentPage} highlights={highlights} scale={scale} scrollNonce={scrollNonce} />
+              {fileType === 'pdf' ? (
+                pdfUrl ? (
+                  <PdfViewer pdfUrl={pdfUrl} currentPage={currentPage} highlights={highlights} scale={scale} scrollNonce={scrollNonce} />
+                ) : (
+                  <div className="h-full w-full flex items-center justify-center text-zinc-500">{t('doc.loading')}</div>
+                )
               ) : (
-                <div className="h-full w-full flex items-center justify-center text-zinc-500">{t('doc.loading')}</div>
+                <TextViewer documentId={documentId} targetPage={currentPage} scrollNonce={scrollNonce} />
               )}
             </div>
           </Panel>
         </Group>
       )}
+      <CustomInstructionsModal
+        isOpen={showInstructions}
+        onClose={() => setShowInstructions(false)}
+        currentInstructions={customInstructions}
+        onSave={async (instructions) => {
+          await updateDocumentInstructions(documentId, instructions);
+          setCustomInstructions(instructions);
+        }}
+      />
     </div>
   );
 }

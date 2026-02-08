@@ -36,7 +36,7 @@ def _get_minio_client() -> Minio:
     return Minio(host, access_key=access_key, secret_key=secret_key, secure=secure)
 
 
-def _download_pdf_bytes(bucket: str, object_key: str) -> bytes:
+def _download_file_bytes(bucket: str, object_key: str) -> bytes:
     client = _get_minio_client()
     response = client.get_object(bucket, object_key)
     try:
@@ -49,12 +49,10 @@ def _download_pdf_bytes(bucket: str, object_key: str) -> bytes:
 
 @celery_app.task(name="app.workers.parse_worker.parse_document", bind=True)
 def parse_document(self, document_id: str) -> None:
-    """Parse a PDF from object storage, chunk it and persist metadata.
+    """Parse a document from object storage, chunk it and persist metadata.
 
-    - If the document appears scanned (insufficient text), mark error.
-    - Writes pages and chunks tables.
-    - Updates progress every 10 pages.
-    - Leaves status for the embedding worker to finalize.
+    Supports PDF (via PyMuPDF) and non-PDF formats (DOCX, PPTX, XLSX, TXT, MD)
+    via format-specific extractors.
     """
     logger.info("Starting parse_document for %s", document_id)
 
@@ -78,78 +76,116 @@ def parse_document(self, document_id: str) -> None:
         db.commit()
         logger.info("Cleaned up partial data for %s, starting fresh parse", document_id)
 
-        # Download PDF
+        # Download file
         try:
-            pdf_bytes = _download_pdf_bytes(settings.MINIO_BUCKET, doc.storage_key)
+            file_bytes = _download_file_bytes(settings.MINIO_BUCKET, doc.storage_key)
         except Exception as e:
-            logger.exception("Failed to download PDF for %s: %s", document_id, e)
+            logger.exception("Failed to download file for %s: %s", document_id, e)
             doc.status = "error"
-            doc.error_msg = "无法下载文档文件，请稍后重试"
+            doc.error_msg = "Failed to download document file"
             db.add(doc)
             db.commit()
             return
 
-        # Extract pages
-        try:
-            pages = service.extract_pages(pdf_bytes)
-        except Exception as e:
-            logger.exception("PyMuPDF extraction failed for %s: %s", document_id, e)
-            doc.status = "error"
-            doc.error_msg = "PDF 解析失败，文件可能已损坏"
-            db.add(doc)
-            db.commit()
-            return
+        file_type = getattr(doc, 'file_type', 'pdf') or 'pdf'
 
-        # Update total page count
-        doc.page_count = len(pages)
-        db.add(doc)
-        db.commit()
-
-        # Detect scanned PDFs — attempt OCR fallback
-        if service.detect_scanned(pages):
-            if not settings.OCR_ENABLED:
-                doc.status = "error"
-                doc.error_msg = "该文档为扫描版 PDF，暂不支持。请上传含文本层的 PDF。"
-                db.add(doc)
-                db.commit()
-                logger.info("Document %s marked as scanned / error (OCR disabled)", document_id)
-                return
-
-            logger.info("Document %s appears scanned, attempting OCR", document_id)
-            doc.status = "ocr"
-            db.add(doc)
-            db.commit()
-
+        if file_type != 'pdf':
+            # ---- Non-PDF extraction path ----
             try:
-                pages = service.extract_pages_ocr(
-                    pdf_bytes,
-                    languages=settings.OCR_LANGUAGES,
-                    dpi=settings.OCR_DPI,
-                )
+                from app.services.extractors import extract_document
+                extracted = extract_document(file_bytes, file_type)
             except Exception as e:
-                logger.exception("OCR extraction failed for %s: %s", document_id, e)
+                logger.exception("Extraction failed for %s (type=%s): %s", document_id, file_type, e)
                 doc.status = "error"
-                doc.error_msg = "OCR 文字识别失败"
+                doc.error_msg = f"Failed to extract {file_type.upper()} content"
                 db.add(doc)
                 db.commit()
                 return
 
-            # Verify OCR produced enough text
-            total_chars = sum(
-                sum(len(b.text) for b in p.blocks) for p in pages
-            )
-            if total_chars < 50:
-                doc.status = "error"
-                doc.error_msg = "OCR 未能识别出足够文字"
-                db.add(doc)
-                db.commit()
-                logger.info("Document %s: OCR produced only %d chars", document_id, total_chars)
-                return
-
-            logger.info("OCR succeeded for %s: %d chars extracted", document_id, total_chars)
-            doc.status = "parsing"
+            doc.page_count = len(extracted)
             db.add(doc)
             db.commit()
+
+            # Convert to PageInfo for the shared chunking pipeline
+            from app.services.parse_service import BlockInfo, PageInfo
+            pages = []
+            for ep in extracted:
+                blocks = [BlockInfo(
+                    page=ep.page_number,
+                    text=ep.text,
+                    bbox=(0.0, 0.0, 1.0, 1.0),
+                    font_size=12.0,
+                )]
+                pages.append(PageInfo(
+                    page_number=ep.page_number,
+                    width_pt=ep.width_pt or 612.0,
+                    height_pt=ep.height_pt or 792.0,
+                    rotation=0,
+                    blocks=blocks,
+                ))
+        else:
+            # ---- PDF extraction path (existing logic) ----
+            try:
+                pages = service.extract_pages(file_bytes)
+            except Exception as e:
+                logger.exception("PyMuPDF extraction failed for %s: %s", document_id, e)
+                doc.status = "error"
+                doc.error_msg = "PDF parsing failed, file may be corrupted"
+                db.add(doc)
+                db.commit()
+                return
+
+            doc.page_count = len(pages)
+            db.add(doc)
+            db.commit()
+
+            # Detect scanned PDFs — attempt OCR fallback
+            if service.detect_scanned(pages):
+                if not settings.OCR_ENABLED:
+                    doc.status = "error"
+                    doc.error_msg = "This document is a scanned PDF without a text layer. OCR is disabled."
+                    db.add(doc)
+                    db.commit()
+                    logger.info("Document %s marked as scanned / error (OCR disabled)", document_id)
+                    return
+
+                logger.info("Document %s appears scanned, attempting OCR", document_id)
+                doc.status = "ocr"
+                db.add(doc)
+                db.commit()
+
+                try:
+                    pages = service.extract_pages_ocr(
+                        file_bytes,
+                        languages=settings.OCR_LANGUAGES,
+                        dpi=settings.OCR_DPI,
+                    )
+                except Exception as e:
+                    logger.exception("OCR extraction failed for %s: %s", document_id, e)
+                    doc.status = "error"
+                    doc.error_msg = "OCR text recognition failed"
+                    db.add(doc)
+                    db.commit()
+                    return
+
+                # Verify OCR produced enough text
+                total_chars = sum(
+                    sum(len(b.text) for b in p.blocks) for p in pages
+                )
+                if total_chars < 50:
+                    doc.status = "error"
+                    doc.error_msg = "OCR could not extract sufficient text"
+                    db.add(doc)
+                    db.commit()
+                    logger.info("Document %s: OCR produced only %d chars", document_id, total_chars)
+                    return
+
+                logger.info("OCR succeeded for %s: %d chars extracted", document_id, total_chars)
+                doc.status = "parsing"
+                db.add(doc)
+                db.commit()
+
+        # ---- Shared path: persist pages, chunk, and embed ----
 
         # Persist pages and update progress every 10 pages
         for i, p in enumerate(pages, start=1):
@@ -173,7 +209,7 @@ def parse_document(self, document_id: str) -> None:
         except Exception as e:
             logger.exception("Chunking failed for %s: %s", document_id, e)
             doc.status = "error"
-            doc.error_msg = "PDF 切分失败"
+            doc.error_msg = "Document chunking failed"
             db.add(doc)
             db.commit()
             return
@@ -281,7 +317,7 @@ def parse_document(self, document_id: str) -> None:
         except Exception as e:
             logger.exception("Embedding/indexing failed for %s: %s", document_id, e)
             doc.status = "error"
-            doc.error_msg = "向量化或索引失败"
+            doc.error_msg = "Vectorization or indexing failed"
             db.add(doc)
             db.commit()
             return

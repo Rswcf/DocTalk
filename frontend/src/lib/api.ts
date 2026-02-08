@@ -1,4 +1,4 @@
-import type { DocumentResponse, Message, SearchResponse, Citation, SessionListResponse } from '../types';
+import type { DocumentResponse, Message, SearchResponse, Citation, SessionListResponse, CollectionBrief, CollectionDetail } from '../types';
 import type { UserProfile, CreditHistoryResponse, UsageBreakdown } from '../types';
 
 export const API_BASE = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8000';
@@ -169,8 +169,85 @@ export interface DemoDocument {
   status: string;
 }
 
+export async function updateDocumentInstructions(docId: string, instructions: string | null): Promise<void> {
+  const res = await fetch(`${PROXY_BASE}/api/documents/${docId}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ custom_instructions: instructions }),
+  });
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`HTTP ${res.status}: ${text}`);
+  }
+}
+
 export async function getDemoDocuments(): Promise<DemoDocument[]> {
   const res = await fetch(`${PROXY_BASE}/api/documents/demo`);
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   return res.json();
+}
+
+// --- Collections API ---
+
+export async function listCollections(): Promise<CollectionBrief[]> {
+  const res = await fetch(`${PROXY_BASE}/api/collections`);
+  if (!res.ok) {
+    if (res.status === 401) return [];
+    throw new Error(`HTTP ${res.status}`);
+  }
+  return res.json();
+}
+
+export async function createCollection(name: string, description?: string, documentIds?: string[]): Promise<{ id: string; name: string; created_at: string }> {
+  const res = await fetch(`${PROXY_BASE}/api/collections`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name, description, document_ids: documentIds }),
+  });
+  return handle(res);
+}
+
+export async function getCollection(collectionId: string): Promise<CollectionDetail> {
+  const res = await fetch(`${PROXY_BASE}/api/collections/${collectionId}`);
+  return handle(res);
+}
+
+export async function deleteCollection(collectionId: string): Promise<void> {
+  const res = await fetch(`${PROXY_BASE}/api/collections/${collectionId}`, { method: 'DELETE' });
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+}
+
+export async function addDocumentsToCollection(collectionId: string, documentIds: string[]): Promise<{ added: number }> {
+  const res = await fetch(`${PROXY_BASE}/api/collections/${collectionId}/documents`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ document_ids: documentIds }),
+  });
+  return handle(res);
+}
+
+export async function removeDocumentFromCollection(collectionId: string, documentId: string): Promise<void> {
+  const res = await fetch(`${PROXY_BASE}/api/collections/${collectionId}/documents/${documentId}`, { method: 'DELETE' });
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+}
+
+export async function createCollectionSession(collectionId: string): Promise<{ session_id: string; collection_id: string; title: string | null; created_at: string }> {
+  const res = await fetch(`${PROXY_BASE}/api/collections/${collectionId}/sessions`, { method: 'POST' });
+  return handle(res);
+}
+
+export async function listCollectionSessions(collectionId: string): Promise<SessionListResponse> {
+  const res = await fetch(`${PROXY_BASE}/api/collections/${collectionId}/sessions`);
+  return handle(res);
+}
+
+// --- URL Ingestion ---
+
+export async function ingestUrl(url: string): Promise<{ document_id: string; status: string; filename?: string }> {
+  const res = await fetch(`${PROXY_BASE}/api/documents/ingest-url`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ url }),
+  });
+  return handle(res);
 }

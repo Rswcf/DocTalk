@@ -66,13 +66,13 @@ graph TB
 | **Auth.js v5** | Google OAuth authentication, encrypted JWE session tokens |
 | **API Proxy** | Translates JWE tokens to HS256 JWT, injects `Authorization` header for all backend requests |
 | **FastAPI** | REST API + SSE streaming for chat, document management, billing, user accounts |
-| **Celery** | Async PDF parsing: text extraction → chunking → embedding → vector indexing |
+| **Celery** | Async document parsing: text extraction (PDF/DOCX/PPTX/XLSX/TXT/MD/URL) → chunking → embedding → vector indexing |
 | **PostgreSQL** | Primary data store for users, documents, pages, chunks, sessions, messages, credits |
 | **Qdrant** | Vector database for semantic search (COSINE similarity, 1536 dimensions) |
 | **Redis** | Celery task broker and result backend |
 | **MinIO** | S3-compatible object storage for uploaded PDFs |
 | **OpenRouter** | Unified gateway for LLM inference and text embedding |
-| **Stripe** | Payment processing for credit purchases and Pro subscriptions |
+| **Stripe** | Payment processing for credit purchases and Plus/Pro subscriptions (monthly + annual) |
 | **Sentry** | Error tracking and performance monitoring for both backend (FastAPI + Celery) and frontend (Next.js) |
 
 ---
@@ -258,9 +258,9 @@ This cleanly separates the frontend auth system from the backend API authenticat
 flowchart TB
     subgraph Sources["Credit Sources"]
         Signup["Signup Bonus<br/>10,000 credits"]
-        Monthly["Monthly Grant<br/>Free: 10K / Pro: 100K"]
+        Monthly["Monthly Grant<br/>Free: 5K / Plus: 30K / Pro: 150K"]
         Purchase["One-Time Purchase<br/>Starter: 50K / Pro: 200K / Enterprise: 1M"]
-        Subscription["Pro Subscription<br/>100K credits/month"]
+        Subscription["Plus/Pro Subscription<br/>Plus: 30K / Pro: 150K credits/month"]
     end
 
     subgraph Stripe["Stripe Integration"]
@@ -302,11 +302,11 @@ flowchart TB
 
 1. **Signup Bonus**: New users receive 10,000 credits on first login (idempotent, `signup_bonus_granted_at` timestamp guards against double-grant).
 
-2. **Monthly Grant**: `ensure_monthly_credits()` is called before every chat request. It checks `monthly_credits_granted_at` — if 30+ days have elapsed, grants Free (10K) or Pro (100K) credits. The ledger entry uses `ref_type=monthly_grant` with a timestamp-based `ref_id` for idempotency.
+2. **Monthly Grant**: `ensure_monthly_credits()` is called before every chat request. It checks `monthly_credits_granted_at` — if 30+ days have elapsed, grants Free (5K), Plus (30K), or Pro (150K) credits based on the user's plan. The ledger entry uses `ref_type=monthly_grant` with a timestamp-based `ref_id` for idempotency.
 
 3. **One-Time Purchase**: Stripe Checkout creates a payment session. On `checkout.session.completed` webhook (mode=payment), credits are added to the user's balance.
 
-4. **Pro Subscription**: Stripe recurring subscription. On `invoice.payment_succeeded` webhook, monthly credits are granted. Idempotent by `invoice.id`. On `customer.subscription.deleted`, plan is reset to Free.
+4. **Plus/Pro Subscription**: Stripe recurring subscription (monthly or annual). On `invoice.payment_succeeded` webhook, monthly credits are granted based on plan (Plus: 30K, Pro: 150K). Idempotent by `invoice.id`. On `customer.subscription.deleted`, plan is reset to Free.
 
 5. **Chat Debit**: Each chat message deducts credits based on model and token usage. The cost is recorded in both `CreditLedger` (balance tracking) and `UsageRecord` (analytics).
 
@@ -320,6 +320,9 @@ erDiagram
     User ||--o{ Account : "has"
     User ||--o{ CreditLedger : "has"
     User ||--o{ UsageRecord : "has"
+    User ||--o{ Collection : "owns"
+    Collection }o--o{ Document : "contains"
+    Collection ||--o{ ChatSession : "has"
     Document ||--o{ Page : "contains"
     Document ||--o{ Chunk : "contains"
     Document ||--o{ ChatSession : "has"
@@ -334,7 +337,7 @@ erDiagram
         datetime email_verified
         int credits_balance
         datetime signup_bonus_granted_at
-        string plan "free | pro"
+        string plan "free | plus | pro"
         string stripe_customer_id
         string stripe_subscription_id
         datetime monthly_credits_granted_at
@@ -348,7 +351,7 @@ erDiagram
         int file_size
         int page_count
         string storage_key
-        string status "uploading | parsing | ready | error | deleting"
+        string status "uploading | parsing | ocr | ready | error | deleting"
         string error_msg
         int pages_parsed
         int chunks_total
@@ -357,6 +360,9 @@ erDiagram
         string demo_slug UK "nullable"
         text summary "AI-generated summary"
         jsonb suggested_questions "AI-generated questions"
+        text custom_instructions "User AI instructions"
+        string file_type "pdf | docx | pptx | xlsx | txt | md"
+        string source_url "URL for imported webpages"
         datetime created_at
         datetime updated_at
     }
@@ -365,8 +371,8 @@ erDiagram
         uuid id PK
         uuid document_id FK
         int page_number
-        float width_pt
-        float height_pt
+        float width_pt "nullable (non-PDF)"
+        float height_pt "nullable (non-PDF)"
         int rotation
     }
 
@@ -386,7 +392,8 @@ erDiagram
 
     ChatSession {
         uuid id PK
-        uuid document_id FK
+        uuid document_id FK "nullable"
+        uuid collection_id FK "nullable"
         string title
         datetime created_at
         datetime updated_at
@@ -440,6 +447,15 @@ erDiagram
         datetime created_at
     }
 
+    Collection {
+        uuid id PK
+        string name
+        text description
+        uuid user_id FK
+        datetime created_at
+        datetime updated_at
+    }
+
     VerificationToken {
         string identifier PK
         string token PK
@@ -454,6 +470,9 @@ erDiagram
 - `Document → Page/Chunk/ChatSession`: CASCADE delete
 - `ChatSession → Message`: CASCADE delete
 - `Message → UsageRecord`: SET NULL on delete
+- `User → Collection`: CASCADE delete
+- `Collection → ChatSession`: CASCADE delete (via collection_id)
+- `Collection ↔ Document`: Many-to-many via `collection_documents` junction table
 
 **Unique constraints:**
 - `(Document.document_id, Page.page_number)` — one page per number per document
@@ -476,6 +495,8 @@ graph TD
         Auth["/auth<br/>Auth Page"]
         Billing["/billing<br/>Billing Page"]
         Profile["/profile<br/>Profile Page"]
+        Collections["/collections<br/>Document Collections"]
+        CollDetail["/collections/[id]<br/>Collection Detail"]
         Privacy["/privacy"]
         Terms["/terms"]
     end
@@ -506,6 +527,7 @@ graph TD
         ResizablePanels["react-resizable-panels<br/>Group / Panel / Separator"]
         ChatPanel["ChatPanel<br/>Messages + Input"]
         PdfViewer["PdfViewer<br/>react-pdf"]
+        TextViewer["TextViewer<br/>Non-PDF Viewer"]
     end
 
     subgraph ChatComp["Chat Components"]
@@ -527,6 +549,12 @@ graph TD
         AccountSec["AccountActionsSection"]
     end
 
+    subgraph CollComp["Collection Components"]
+        CollList["CollectionList"]
+        CreateColl["CreateCollectionModal"]
+        CustomInst["CustomInstructionsModal"]
+    end
+
     Layout --> Pages
     Layout --> HeaderComp
     Home --> LandingComp
@@ -537,6 +565,7 @@ graph TD
     ChatPanel --> ChatComp
     PdfViewer --> PdfComp
     Profile --> ProfileComp
+    Collections --> CollComp
 
     AuthModal["AuthModal<br/>?auth=1 trigger"]
     PaywallMod["PaywallModal"]

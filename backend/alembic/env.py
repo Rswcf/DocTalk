@@ -21,6 +21,7 @@ if config.config_file_name is not None:
 # Import models and metadata
 from app.models import Base  # noqa: E402
 from app.models import Document, Page, Chunk, ChatSession, Message  # noqa: F401,E402
+from app.models.tables import Collection, collection_documents  # noqa: F401,E402
 from app.core.config import settings  # noqa: E402
 
 target_metadata = Base.metadata

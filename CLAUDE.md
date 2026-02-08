@@ -10,7 +10,7 @@ When user asks to implement a plan or make code changes, ALWAYS delegate executi
 
 ## 项目概述
 
-DocTalk 是一款面向高强度文档阅读者的 Web App，帮助用户在超长 PDF 中通过 AI 对话快速定位关键信息，回答绑定原文引用并实时高亮跳转。
+DocTalk 是一款面向高强度文档阅读者的 Web App，帮助用户在超长文档中通过 AI 对话快速定位关键信息，回答绑定原文引用并实时高亮跳转。支持 PDF、DOCX、PPTX、XLSX、TXT、Markdown 文件上传及网页 URL 导入。
 
 ### 线上部署
 
@@ -34,8 +34,10 @@ Railway 项目包含 5 个服务：backend, Postgres, Redis, qdrant-v2, minio-v2
   - LLM: 默认 `anthropic/claude-sonnet-4.5`，支持用户在前端切换（9 个模型可选）
   - Embedding: `openai/text-embedding-3-small` (dim=1536)
 - **PDF Parse**: PyMuPDF (fitz)
+- **Document Parse**: python-docx (DOCX), python-pptx (PPTX), openpyxl (XLSX), httpx + BeautifulSoup4 (URL)
 - **i18n**: 轻量级 React Context 方案，支持 9 种语言（EN, ZH, HI, ES, AR, FR, BN, PT, DE）
 - **Monitoring**: Sentry 集成（后端 FastAPI + Celery，前端 Next.js），用于错误追踪和性能监控
+- **Analytics**: Vercel Web Analytics（页面访问和访客追踪）
 
 ### 核心架构决策
 
@@ -46,7 +48,8 @@ Railway 项目包含 5 个服务：backend, Postgres, Redis, qdrant-v2, minio-v2
   - 已登录: 可上传个人 PDF，服务端文档列表，Credits 系统；访问 Demo 文档使用 Credits，无消息限制
 - **Demo 系统**: 后端启动时自动种子 3 篇真实文档（NVIDIA 10-K、Attention 论文、NDA）到 MinIO + DB，通过 Celery 解析。`demo_slug` 列标识 Demo 文档，`is_demo` 属性暴露给前端。`GET /api/documents/demo` 返回 Demo 文档列表。`/demo` 页面从 API 获取文档 ID 后链接到 `/d/{docId}`，旧 `/demo/[sample]` 路由自动重定向
 - **Credits 系统**: 预付费模式，余额 + Ledger 双表记录，每次对话扣费
-- **订阅系统**: Free (10K credits/月) + Pro (100K credits/月) 两级，月度 credits 惰性发放（`ensure_monthly_credits`），Stripe 订阅集成
+- **订阅系统**: Free (5K credits/月) + Plus (30K credits/月, $7.99) + Pro (150K credits/月, $14.99) 三级，支持月付/年付（年付享 20-25% 折扣），月度 credits 惰性发放（`ensure_monthly_credits`），Stripe 订阅集成
+- **模型门控**: 高级模型（`anthropic/claude-opus-4.6`）仅限 Plus+ 套餐使用，后端 `chat_service.py` 校验 + 前端 `ModelSelector.tsx` 锁定图标
 - **Profile 页面**: `/profile` 4 个 Tab (Profile/Credits/Usage/Account)，含交易历史、使用统计、账户删除
 - **API 网关**: 所有 LLM 和 Embedding 调用统一通过 OpenRouter（单一 API key）
 - **模型切换**: 前端用户可选择 LLM 模型，后端白名单 (`ALLOWED_MODELS`) 验证后透传给 OpenRouter
@@ -71,7 +74,12 @@ Railway 项目包含 5 个服务：backend, Postgres, Redis, qdrant-v2, minio-v2
 - **FAQ 手风琴**: `landing/FAQ.tsx` 6 项展开/折叠，`transition-[max-height,opacity]` 动画
 - **Footer 组件**: `Footer.tsx` 3 列 (Product/Company/Legal) + 版权底栏
 - **FinalCTA**: `landing/FinalCTA.tsx` 转化 CTA (Try Demo + Sign Up)
-- **套餐对比表**: `PricingTable.tsx` Free vs Pro 6 行对比，Check/X 图标
+- **套餐对比表**: `PricingTable.tsx` Free vs Plus vs Pro 9 行对比，Check/X 图标，Plus 列 "Most Popular" 高亮
+- **自定义 AI 指令**: 每文档可设置 `custom_instructions`（最多 2000 字），通过 `PATCH /api/documents/{id}` 更新，`chat_service.py` 注入系统提示
+- **多格式支持**: DOCX/PPTX/XLSX/TXT/MD 文件通过 `backend/app/services/extractors/` 格式专用提取器处理，然后进入与 PDF 相同的分块+向量化流水线。`parse_worker.py` 按 `file_type` 分流
+- **URL/网页导入**: `POST /api/documents/ingest-url` 端点接收 URL，通过 httpx 抓取 + BeautifulSoup 提取文本，存为 txt 文件处理。PDF URL 自动走 PDF 流水线。前端 Dashboard 提供 URL 输入框
+- **文档集合**: `Collection` 模型 + `collection_documents` 多对多关联表，支持跨文档问答。`retrieval_service.search_multi()` 使用 Qdrant `MatchAny` 过滤器。`chat_service.py` 为集合会话构建跨文档系统提示，引用事件包含 `document_id` 和 `document_filename`。前端 `/collections` 列表页 + `/collections/[id]` 详情页（左侧 Chat + 右侧文档列表）
+- **Vercel Web Analytics**: `@vercel/analytics` 集成在 `layout.tsx`，自动追踪页面访问
 
 ### API 路由
 
@@ -79,8 +87,11 @@ Railway 项目包含 5 个服务：backend, Postgres, Redis, qdrant-v2, minio-v2
 # 文档管理
 GET    /api/documents                     # 列出用户文档 (?mine=1)
 GET    /api/documents/demo                # 列出 Demo 文档 (slug, document_id, status)
-POST   /api/documents/upload              # 上传 PDF (需登录)
+POST   /api/documents/upload              # 上传文档 (PDF/DOCX/PPTX/XLSX/TXT/MD, 需登录)
+POST   /api/documents/ingest-url         # 导入网页 URL (需登录)
 GET    /api/documents/{document_id}       # 查询文档状态
+GET    /api/documents/{document_id}/text-content  # 获取非 PDF 文档的文本内容
+PATCH  /api/documents/{document_id}       # 更新文档设置 (custom_instructions)
 DELETE /api/documents/{document_id}       # 删除文档（ORM cascade，同步删除）
 POST   /api/documents/{document_id}/reparse  # 重新解析文档（需登录，ready/error 状态）
 GET    /api/documents/{document_id}/file-url  # 获取 presigned URL
@@ -119,6 +130,16 @@ POST   /api/internal/auth/accounts        # Link 账户
 DELETE /api/internal/auth/accounts/{provider}/{id}  # Unlink 账户
 POST   /api/internal/auth/verification-tokens       # 创建验证 Token
 POST   /api/internal/auth/verification-tokens/use   # 使用验证 Token
+
+# 文档集合
+GET    /api/collections                   # 列出用户集合
+POST   /api/collections                   # 创建集合 (name, description?, document_ids?)
+GET    /api/collections/{id}              # 获取集合详情 (含文档列表)
+DELETE /api/collections/{id}              # 删除集合 (保留文档)
+POST   /api/collections/{id}/documents    # 添加文档到集合
+DELETE /api/collections/{id}/documents/{doc_id}  # 从集合移除文档
+POST   /api/collections/{id}/sessions     # 创建集合聊天会话
+GET    /api/collections/{id}/sessions     # 列出集合的聊天会话
 
 # 其他
 GET    /api/chunks/{chunk_id}             # 获取 chunk 详情
@@ -235,13 +256,18 @@ SENTRY_TRACES_SAMPLE_RATE=0.1
 - **Proxy maxDuration**: `route.ts` 导出 `maxDuration = 60`（Vercel Hobby 上限），SSE chat 使用 60s fetch timeout，其他请求 30s
 - **UserMenu 替代 AuthButton**: Header 中 `AuthButton` 已被 `UserMenu` 下拉菜单替代，未登录时仍显示 Sign In 按钮
 - **Profile 页面**: `/profile?tab=credits` (默认 tab)，受保护路由，未登录重定向到 `/auth?callbackUrl=/profile`
-- **Billing 页面**: 顶部 Pro 订阅卡片（渐变 zinc-800→zinc-900 边框），根据 plan 显示 Upgrade/Manage；中间 PricingTable（Free vs Pro 6 行对比）；下方 credit packs 卡片 (rounded-xl)
+- **Billing 页面**: 月付/年付切换 + Plus 订阅卡片（"Most Popular" 标记）+ Pro 订阅卡片；中间 PricingTable（Free vs Plus vs Pro 9 行对比）；下方 credit packs 卡片 (rounded-xl)
 - **引用悬浮 Tooltip**: `MessageBubble.tsx` 中引用 `[n]` 按钮悬浮显示 textSnippet + page tooltip，减少验证点击次数
 - **流式状态指示**: streaming 时显示 3 点弹跳动画（"搜索文档中..."）和闪烁光标，区分 retrieval 阶段和生成阶段
 - **下拉菜单键盘导航**: UserMenu、ModelSelector、LanguageSelector、SessionDropdown 支持 Arrow/Home/End/Escape 键盘操作
 - **CreditsDisplay 自动刷新**: 每 60s 轮询 + 自定义事件 `doctalk:credits-refresh`（聊天完成/购买后触发），`triggerCreditsRefresh()` 导出供外部调用
 - **Billing 骨架屏**: 产品列表加载中显示 skeleton cards，失败显示 error + retry 按钮
 - **响应式**: Header 移动端间距/截断/CreditsDisplay 小屏隐藏，upload zone `p-8 sm:p-12`，billing `p-6 sm:p-8`
+- **自定义 AI 指令模态框**: `CustomInstructionsModal.tsx`，Settings2 图标触发，textarea 2000 字限制，Save/Clear 按钮
+- **多格式上传**: Dashboard 上传区 accept 属性包含 PDF/DOCX/PPTX/XLSX/TXT/MD 的 MIME 类型和扩展名
+- **TextViewer**: 非 PDF 文档使用 `TextViewer.tsx` 显示提取的文本内容（按页/章节分组），PDF 文档继续使用 PdfViewer
+- **URL 导入**: Dashboard 上传区下方 URL 输入框（Link2 图标 + 输入 + Import URL 按钮），调用 `ingestUrl()` → 跳转到文档页
+- **文档集合**: `/collections` 列表页 + `/collections/[id]` 详情页（ChatPanel 左 + 文档列表侧栏右），Header full variant 新增 FolderOpen 集合入口
 
 ### 后端相关
 - **Celery 用同步 DB**: Worker 使用 `psycopg`（同步），API 使用 `asyncpg`（异步）
@@ -303,7 +329,8 @@ DocTalk/
 ├── backend/
 │   ├── app/
 │   │   ├── api/
-│   │   │   ├── documents.py      # 文档 CRUD + 列表
+│   │   │   ├── documents.py      # 文档 CRUD + 列表 + URL 导入
+│   │   │   ├── collections.py    # 文档集合 CRUD + 跨文档会话
 │   │   │   ├── chat.py           # 会话 + 对话
 │   │   │   ├── search.py         # 语义搜索
 │   │   │   ├── chunks.py         # Chunk 详情
@@ -315,7 +342,7 @@ DocTalk/
 │   │   │   ├── config.py         # Settings, ALLOWED_MODELS 白名单
 │   │   │   └── deps.py           # FastAPI 依赖 (require_auth, get_db)
 │   │   ├── models/
-│   │   │   ├── tables.py         # ORM (User, Document, Session, Credits, Ledger...)
+│   │   │   ├── tables.py         # ORM (User, Document, Collection, Session, Credits, Ledger...)
 │   │   │   ├── database.py       # Async engine
 │   │   │   └── sync_database.py  # Sync engine (Celery)
 │   │   ├── schemas/
@@ -329,6 +356,14 @@ DocTalk/
 │   │   │   ├── auth_service.py   # User/Account/Token 管理
 │   │   │   ├── demo_seed.py      # Demo 文档种子 (启动时自动执行)
 │   │   │   ├── summary_service.py # 自动摘要生成 (Celery 上下文, DeepSeek)
+│   │   │   ├── retrieval_service.py # 向量检索 (search + search_multi for collections)
+│   │   │   ├── extractors/       # 多格式文档提取器
+│   │   │   │   ├── base.py       # ExtractedPage 数据类 + extract_document() 路由
+│   │   │   │   ├── docx_extractor.py  # Word 文档提取
+│   │   │   │   ├── pptx_extractor.py  # PowerPoint 提取
+│   │   │   │   ├── xlsx_extractor.py  # Excel 提取
+│   │   │   │   ├── text_extractor.py  # TXT/Markdown 提取
+│   │   │   │   └── url_extractor.py   # URL/网页提取 (httpx + BeautifulSoup)
 │   │   │   └── ...
 │   │   └── workers/              # Celery 任务
 │   ├── alembic/                  # 数据库迁移
@@ -342,7 +377,8 @@ DocTalk/
 │   │   │   ├── billing/          # 购买页 (含 Pro 订阅卡片)
 │   │   │   ├── profile/          # Profile 页 (4 tabs: info/credits/usage/account)
 │   │   │   ├── demo/             # Demo 选择页 + 旧路由重定向
-│   │   │   ├── d/[documentId]/   # 文档阅读页
+│   │   │   ├── d/[documentId]/   # 文档阅读页 (PDF: PdfViewer, 其他: TextViewer)
+│   │   │   ├── collections/      # 文档集合列表 + 详情页 (跨文档 Chat)
 │   │   │   ├── privacy/          # 隐私政策
 │   │   │   ├── terms/            # 服务条款
 │   │   │   └── api/
@@ -357,12 +393,15 @@ DocTalk/
 │   │   │   ├── CreditsDisplay.tsx # 余额显示 (自动刷新 + 事件驱动刷新)
 │   │   │   ├── PaywallModal.tsx  # 付费墙
 │   │   │   ├── Footer.tsx        # 页脚 (3 列链接: Product/Company/Legal)
-│   │   │   ├── PricingTable.tsx  # 套餐对比表 (Free vs Pro)
+│   │   │   ├── PricingTable.tsx  # 套餐对比表 (Free vs Plus vs Pro)
 │   │   │   ├── ErrorBoundary.tsx # React 错误边界
 │   │   │   ├── Providers.tsx     # SessionProvider 包装器
 │   │   │   ├── Profile/          # ProfileTabs, ProfileInfo, Credits, Usage, Account
+│   │   │   ├── Collections/      # CollectionList, CreateCollectionModal
 │   │   │   ├── Chat/             # ChatPanel, MessageBubble, CitationCard
-│   │   │   └── PdfViewer/        # PdfViewer, PdfToolbar, PageWithHighlights
+│   │   │   ├── PdfViewer/        # PdfViewer, PdfToolbar, PageWithHighlights
+│   │   │   ├── TextViewer/       # TextViewer (非 PDF 文档查看器)
+│   │   │   └── CustomInstructionsModal.tsx  # 自定义 AI 指令模态框
 │   │   ├── lib/
 │   │   │   ├── api.ts            # REST 客户端 (含 PROXY_BASE)
 │   │   │   ├── auth.ts           # Auth.js 配置

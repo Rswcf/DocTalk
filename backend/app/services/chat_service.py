@@ -11,7 +11,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
-from app.models.tables import ChatSession, Message, User
+from app.models.tables import ChatSession, Document, Message, User, collection_documents
 from app.services import credit_service
 from app.services.retrieval_service import retrieval_service
 
@@ -34,6 +34,8 @@ class _ChunkInfo:
     bboxes: list
     text: str
     section_title: str = ""
+    document_id: Optional[uuid.UUID] = None
+    document_filename: str = ""
 
 
 class RefParserFSM:
@@ -79,19 +81,19 @@ class RefParserFSM:
                             page_bbs = list(chunk.bboxes or [])
                         page_bbs.sort(key=lambda b: (b.get("y", 0), b.get("x", 0)))
                         limited_bboxes = page_bbs
-                        events.append(
-                            sse(
-                                "citation",
-                                {
+                        citation_data: Dict[str, Any] = {
                                     "ref_index": ref_num,
                                     "chunk_id": str(chunk.id),
                                     "page": chunk.page_start,
                                     "bboxes": limited_bboxes,
                                     "text_snippet": ((f"{chunk.section_title}: " if chunk.section_title else "") + (chunk.text or ""))[:100],
                                     "offset": self.char_offset,
-                                },
-                            )
-                        )
+                        }
+                        if chunk.document_id:
+                            citation_data["document_id"] = str(chunk.document_id)
+                        if chunk.document_filename:
+                            citation_data["document_filename"] = chunk.document_filename
+                        events.append(sse("citation", citation_data))
                     else:
                         # 非有效引用，回退为普通文本
                         events.append(sse("token", {"text": self.buffer}))
@@ -159,6 +161,28 @@ class ChatService:
             return
 
         document_id = session_obj.document_id
+        collection_id = getattr(session_obj, "collection_id", None)
+        is_collection_session = collection_id is not None and document_id is None
+
+        # Load document for custom instructions (single-doc sessions)
+        doc = await db.get(Document, document_id) if document_id else None
+
+        # For collection sessions, load all document IDs and filenames
+        collection_doc_ids: List[uuid.UUID] = []
+        collection_doc_names: dict[uuid.UUID, str] = {}
+        if is_collection_session:
+            cd_rows = await db.execute(
+                select(collection_documents.c.document_id).where(
+                    collection_documents.c.collection_id == collection_id
+                )
+            )
+            collection_doc_ids = [row[0] for row in cd_rows.all()]
+            if collection_doc_ids:
+                doc_rows = await db.execute(
+                    select(Document.id, Document.filename).where(Document.id.in_(collection_doc_ids))
+                )
+                for drow in doc_rows.all():
+                    collection_doc_names[drow[0]] = drow[1]
 
         # Optional pre-chat credit check
         effective_model = settings.LLM_MODEL
@@ -219,9 +243,16 @@ class ChatService:
 
         # 4) Retrieval (with error handling — e.g. Qdrant down or no vectors yet)
         try:
-            retrieved = await retrieval_service.search(user_message, document_id, top_k=8, db=db)
+            if is_collection_session and collection_doc_ids:
+                retrieved = await retrieval_service.search_multi(
+                    user_message, collection_doc_ids, top_k=8, db=db
+                )
+            elif document_id:
+                retrieved = await retrieval_service.search(user_message, document_id, top_k=8, db=db)
+            else:
+                retrieved = []
         except Exception as e:
-            yield sse("error", {"code": "RETRIEVAL_ERROR", "message": f"文档检索失败: {e}"})
+            yield sse("error", {"code": "RETRIEVAL_ERROR", "message": f"Document retrieval failed: {e}"})
             return
 
         # 5) Build prompt (system)
@@ -231,30 +262,64 @@ class ChatService:
             # Heuristic truncation to ~350 tokens (roughly 1200-1400 chars)
             text = item["text"] or ""
             truncated = text[:1400]
-            numbered_chunks.append(f"[{idx}] {truncated}")
+            chunk_doc_id = item.get("document_id")
+            doc_label = ""
+            if is_collection_session and chunk_doc_id:
+                fname = collection_doc_names.get(chunk_doc_id, "")
+                if fname:
+                    doc_label = f"(from: {fname}) "
+            numbered_chunks.append(f"[{idx}] {doc_label}{truncated}")
             chunk_map[idx] = _ChunkInfo(
                 id=item["chunk_id"],
                 page_start=int(item["page"]),
                 bboxes=item.get("bboxes") or [],
                 text=text,
                 section_title=item.get("section_title") or "",
+                document_id=chunk_doc_id if chunk_doc_id else document_id,
+                document_filename=collection_doc_names.get(chunk_doc_id, "") if chunk_doc_id else "",
             )
 
         language_name = self.LOCALE_TO_LANGUAGE.get(locale or "en", "English")
 
-        system_prompt = (
-            "You are a document analysis assistant. Answer the user's question based on the following document fragments.\n"
-            f"You MUST respond in {language_name}.\n\n"
-            "## Document Fragments\n"
-            + ("\n".join(numbered_chunks) if numbered_chunks else "(none)")
-            + "\n\n## Rules\n"
-            "1. Only answer based on the fragments above. Do not fabricate information.\n"
-            "2. After key statements, cite sources with [n] (n = fragment number).\n"
-            "3. You may cite multiple fragments, e.g. [1][3].\n"
-            "4. If the fragments cannot answer the question, say the information was not found in the document.\n"
-            "5. Use Markdown: **bold** for emphasis, bullet lists for multiple points.\n"
-            f"6. Your response language MUST be {language_name}.\n"
-        )
+        if is_collection_session:
+            doc_list = ", ".join(collection_doc_names.values()) if collection_doc_names else "(no documents)"
+            system_prompt = (
+                "You are a document analysis assistant. Answer the user's question based on fragments from multiple documents.\n"
+                f"You MUST respond in {language_name}.\n\n"
+                f"## Available Documents\n{doc_list}\n\n"
+                "## Document Fragments\n"
+                + ("\n".join(numbered_chunks) if numbered_chunks else "(none)")
+                + "\n\n## Rules\n"
+                "1. Only answer based on the fragments above. Do not fabricate information.\n"
+                "2. After key statements, cite sources with [n] (n = fragment number).\n"
+                "3. You may cite multiple fragments, e.g. [1][3].\n"
+                "4. When relevant, mention which document the information comes from.\n"
+                "5. If the fragments cannot answer the question, say the information was not found in the documents.\n"
+                "6. Use Markdown: **bold** for emphasis, bullet lists for multiple points.\n"
+                f"7. Your response language MUST be {language_name}.\n"
+            )
+        else:
+            system_prompt = (
+                "You are a document analysis assistant. Answer the user's question based on the following document fragments.\n"
+                f"You MUST respond in {language_name}.\n\n"
+                "## Document Fragments\n"
+                + ("\n".join(numbered_chunks) if numbered_chunks else "(none)")
+                + "\n\n## Rules\n"
+                "1. Only answer based on the fragments above. Do not fabricate information.\n"
+                "2. After key statements, cite sources with [n] (n = fragment number).\n"
+                "3. You may cite multiple fragments, e.g. [1][3].\n"
+                "4. If the fragments cannot answer the question, say the information was not found in the document.\n"
+                "5. Use Markdown: **bold** for emphasis, bullet lists for multiple points.\n"
+                f"6. Your response language MUST be {language_name}.\n"
+            )
+
+        # Inject custom instructions if present
+        if doc and doc.custom_instructions:
+            system_prompt += (
+                "\n## Custom Instructions\n"
+                "The user has provided the following custom instructions for this document. Follow them:\n"
+                + doc.custom_instructions + "\n"
+            )
 
         # 6) Stream from OpenRouter (OpenAI-compatible)
         client = AsyncOpenAI(

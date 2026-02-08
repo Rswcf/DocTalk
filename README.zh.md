@@ -2,19 +2,19 @@
 
 [English](README.md)
 
-> AI 驱动的文档阅读器 — 与 PDF 对话，获取带引用的回答并实时高亮跳转。
+> AI 驱动的文档阅读器 — 与 PDF、文档和网页对话，获取带引用的回答并实时高亮跳转。
 
-DocTalk 帮助高强度文档阅读者在超长 PDF 中通过 AI 对话快速定位关键信息。回答包含编号引用，点击即可跳转到原文对应位置并高亮显示。
+DocTalk 帮助高强度文档阅读者在超长文档中通过 AI 对话快速定位关键信息。支持上传 PDF、Word、PowerPoint、Excel、文本文件，或导入任意网页 — 然后与 AI 对话，精准找到所需信息。回答包含编号引用，点击即可跳转到原文对应位置并高亮显示。
 
 ## 功能特性
 
-- **上传与解析** — 上传任意 PDF，AI 自动提取文本、检测章节、构建向量索引
+- **上传与解析** — 上传 PDF、DOCX、PPTX、XLSX、TXT 或 Markdown 文件，AI 自动提取文本、检测章节、构建向量索引
 - **引用回答** — 提问后获得带 `[1]`、`[2]` 引用标记的回答，精确指向原文段落
 - **页面高亮** — 悬浮或点击引用即可预览引用文本；点击跳转到对应页面并高亮显示引用区域
 - **分屏视图** — 可调节的聊天面板（左）+ PDF 查看器（右），支持拖拽缩放和平移
 - **9 种大模型** — 通过 OpenRouter 切换 Claude、GPT、Gemini、DeepSeek、Grok、MiniMax、Kimi 等模型
 - **Demo 模式** — 无需注册即可体验 3 篇示例文档（NVIDIA 10-K、Attention 论文、NDA 合同）
-- **Credits 系统** — Free 套餐（10K/月）和 Pro 套餐（100K/月），Stripe 订阅集成
+- **Credits 系统** — Free（5K/月）、Plus（30K/月）和 Pro（150K/月），支持 Stripe 订阅和年付
 - **9 种语言** — 英语、中文、印地语、西班牙语、阿拉伯语、法语、孟加拉语、葡萄牙语、德语
 - **暗色模式** — 完整的暗色主题，单色 zinc 调色板
 - **多会话** — 每个文档支持多个独立聊天会话，自动恢复最近活跃会话
@@ -22,12 +22,17 @@ DocTalk 帮助高强度文档阅读者在超长 PDF 中通过 AI 对话快速定
 - **消息重新生成** — 一键重新生成上一条 AI 回答
 - **对话导出** — 将聊天记录下载为 Markdown 文件，引用转为脚注
 - **PDF 文本搜索** — 阅读器内 Ctrl+F 搜索，匹配高亮显示，支持上下翻页
+- **自定义 AI 指令** — 为每个文档设置自定义指令，定制 AI 的分析和回答方式
+- **多格式支持** — 完整支持 PDF、Word (DOCX)、PowerPoint (PPTX)、Excel (XLSX)、纯文本和 Markdown
+- **URL 导入** — 粘贴任意网页链接，导入其内容为文档进行 AI 问答
+- **文档集合** — 将多个文档分组为集合，支持跨文档提问并标注来源
 - **引用悬浮预览** — 将鼠标悬浮在 `[1]`、`[2]` 引用标记上，即可看到引用文本摘要和页码的提示框
 - **流式状态指示** — 文档搜索时显示弹跳点动画，回答流式生成时显示闪烁光标
 - **OCR 支持** — 扫描版 PDF 自动通过 Tesseract OCR 处理（支持中英文）
 - **文档重新解析** — 配置变更后可重新解析已有文档，无需重新上传
 - **键盘无障碍** — 菜单、模态框完整键盘导航支持，焦点陷阱，ARIA 合规
-- **套餐对比** — 购买页展示 Free vs Pro 功能对比表
+- **套餐对比** — 购买页展示 Free vs Plus vs Pro 功能对比表
+- **模型门控** — 高级模型（Claude Opus 4.6）仅限 Plus+ 套餐使用
 - **Landing 页面** — FAQ 常见问题、使用步骤、信任指标、安全卡片、底部 CTA
 
 ## 在线体验
@@ -46,7 +51,9 @@ DocTalk 帮助高强度文档阅读者在超长 PDF 中通过 AI 对话快速定
 | **认证** | Auth.js (NextAuth) v5 + Google OAuth + JWT |
 | **支付** | Stripe Checkout + 订阅 + Webhooks |
 | **AI** | OpenRouter 网关 — LLM: `anthropic/claude-sonnet-4.5` (默认)，Embedding: `openai/text-embedding-3-small` |
-| **PDF 解析** | PyMuPDF (fitz) |
+| **PDF 解析** | PyMuPDF (fitz)、Tesseract OCR |
+| **文档解析** | python-docx、python-pptx、openpyxl (DOCX/PPTX/XLSX)，httpx + BeautifulSoup4 (URL) |
+| **分析** | Vercel Web Analytics |
 | **监控** | Sentry（错误追踪 + 性能监控） |
 
 ## 快速开始
@@ -116,7 +123,10 @@ npm run dev
 | `ADAPTER_SECRET` | 是 | 内部 Auth API 密钥 |
 | `STRIPE_SECRET_KEY` | 否 | Stripe 密钥 |
 | `STRIPE_WEBHOOK_SECRET` | 否 | Stripe Webhook 签名密钥 |
-| `STRIPE_PRICE_PRO_MONTHLY` | 否 | Stripe Pro 套餐循环价格 ID |
+| `STRIPE_PRICE_PLUS_MONTHLY` | 否 | Stripe Plus 月付价格 ID |
+| `STRIPE_PRICE_PLUS_ANNUAL` | 否 | Stripe Plus 年付价格 ID |
+| `STRIPE_PRICE_PRO_MONTHLY` | 否 | Stripe Pro 月付价格 ID |
+| `STRIPE_PRICE_PRO_ANNUAL` | 否 | Stripe Pro 年付价格 ID |
 | `SENTRY_DSN` | 否 | Sentry DSN，后端错误追踪 |
 | `SENTRY_ENVIRONMENT` | 否 | Sentry 环境（默认: `production`） |
 | `SENTRY_TRACES_SAMPLE_RATE` | 否 | Sentry 性能采样率（默认: `0.1`） |
@@ -144,15 +154,15 @@ DocTalk/
 │   │   ├── core/           # 配置与依赖注入
 │   │   ├── models/         # SQLAlchemy ORM 模型
 │   │   ├── schemas/        # Pydantic 请求/响应模型
-│   │   ├── services/       # 业务逻辑 (chat, credits, parsing, retrieval, demo seed, summary)
+│   │   ├── services/       # 业务逻辑 (chat, credits, parsing, retrieval, extractors, demo seed, summary)
 │   │   └── workers/        # Celery 任务定义
 │   ├── alembic/            # 数据库迁移
 │   ├── seed_data/          # Demo PDF 文件
 │   └── tests/
 ├── frontend/
 │   ├── src/
-│   │   ├── app/            # Next.js 页面 (首页, 登录, 购买, 个人中心, Demo, 文档阅读)
-│   │   ├── components/     # React 组件 (Chat, PdfViewer, Profile, landing, Header, Footer, PricingTable)
+│   │   ├── app/            # Next.js 页面 (首页, 登录, 购买, 个人中心, Demo, 文档阅读, 集合)
+│   │   ├── components/     # React 组件 (Chat, PdfViewer, TextViewer, Collections, Profile, landing, Header, Footer, PricingTable)
 │   │   ├── lib/            # API 客户端、Auth 配置、SSE 客户端、模型定义、导出工具
 │   │   ├── i18n/           # 9 种语言翻译文件
 │   │   ├── store/          # Zustand 状态管理
@@ -184,6 +194,9 @@ DocTalk/
 - **向量检索** — 带边界框坐标的文本块实现引用到页面高亮的链接
 - **精细分块** — 150–300 token 小分块配合 8 条检索结果，实现精准引用定位
 - **自动摘要** — 解析完成后，Celery 通过预算 LLM（DeepSeek）生成文档摘要 + 推荐问题
+- **多格式支持** — DOCX/PPTX/XLSX/TXT/MD 文件通过格式专用提取器处理，然后进入与 PDF 相同的分块+向量化流水线
+- **URL 导入** — 通过 httpx 获取网页，使用 BeautifulSoup 解析提取文本，然后作为文本文档处理
+- **文档集合** — 文档可分组为集合进行跨文档问答；向量搜索使用 Qdrant MatchAny 过滤器跨多个文档 ID 检索
 - **OpenRouter 网关** — 单一 API key 调用所有 LLM 和 Embedding 模型
 
 ## 部署

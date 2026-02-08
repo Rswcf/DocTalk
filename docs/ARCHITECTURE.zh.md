@@ -66,13 +66,13 @@ graph TB
 | **Auth.js v5** | Google OAuth 认证，加密 JWE 会话令牌 |
 | **API 代理** | 将 JWE 令牌转换为 HS256 JWT，为所有后端请求注入 `Authorization` 头 |
 | **FastAPI** | REST API + SSE 流式传输，处理对话、文档管理、计费、用户账户 |
-| **Celery** | 异步 PDF 解析：文本提取 → 分块 → 向量化 → 索引 |
+| **Celery** | 异步文档解析：文本提取 (PDF/DOCX/PPTX/XLSX/TXT/MD/URL) → 分块 → 向量化 → 索引 |
 | **PostgreSQL** | 主数据存储：用户、文档、页面、文本块、会话、消息、积分 |
 | **Qdrant** | 向量数据库，语义搜索（COSINE 相似度，1536 维） |
 | **Redis** | Celery 任务代理和结果后端 |
 | **MinIO** | S3 兼容对象存储，用于上传的 PDF 文件 |
 | **OpenRouter** | LLM 推理和文本向量化的统一网关 |
-| **Stripe** | 积分购买和 Pro 订阅的支付处理 |
+| **Stripe** | 积分购买和 Plus/Pro 订阅（月付 + 年付）的支付处理 |
 | **Sentry** | 后端（FastAPI + Celery）和前端（Next.js）的错误追踪与性能监控 |
 
 ---
@@ -258,9 +258,9 @@ Auth.js v5 将会话令牌加密为 JWE（JSON Web Encryption），Python 后端
 flowchart TB
     subgraph Sources["积分来源"]
         Signup["注册奖励<br/>10,000 积分"]
-        Monthly["月度发放<br/>Free: 10K / Pro: 100K"]
+        Monthly["月度发放<br/>Free: 5K / Plus: 30K / Pro: 150K"]
         Purchase["一次性购买<br/>Starter: 50K / Pro: 200K / Enterprise: 1M"]
-        Subscription["Pro 订阅<br/>100K 积分/月"]
+        Subscription["Plus/Pro 订阅<br/>Plus: 30K / Pro: 150K 积分/月"]
     end
 
     subgraph Stripe["Stripe 集成"]
@@ -302,11 +302,11 @@ flowchart TB
 
 1. **注册奖励**：新用户首次登录获得 10,000 积分（幂等操作，`signup_bonus_granted_at` 时间戳防止重复发放）。
 
-2. **月度发放**：`ensure_monthly_credits()` 在每次对话请求前调用。检查 `monthly_credits_granted_at` — 若已过 30 天以上，发放 Free（10K）或 Pro（100K）积分。Ledger 条目使用 `ref_type=monthly_grant` 和基于时间戳的 `ref_id` 保证幂等性。
+2. **月度发放**：`ensure_monthly_credits()` 在每次对话请求前调用。检查 `monthly_credits_granted_at` — 若已过 30 天以上，根据用户套餐发放 Free（5K）、Plus（30K）或 Pro（150K）积分。Ledger 条目使用 `ref_type=monthly_grant` 和基于时间戳的 `ref_id` 保证幂等性。
 
 3. **一次性购买**：Stripe Checkout 创建支付会话。收到 `checkout.session.completed` Webhook（mode=payment）后，将积分添加到用户余额。
 
-4. **Pro 订阅**：Stripe 循环订阅。收到 `invoice.payment_succeeded` Webhook 后发放月度积分，按 `invoice.id` 幂等。收到 `customer.subscription.deleted` 后将套餐重置为 Free。
+4. **Plus/Pro 订阅**：Stripe 循环订阅（月付或年付）。收到 `invoice.payment_succeeded` Webhook 后根据套餐发放月度积分（Plus: 30K，Pro: 150K），按 `invoice.id` 幂等。收到 `customer.subscription.deleted` 后将套餐重置为 Free。
 
 5. **对话扣费**：每条对话消息根据模型和 token 用量扣除积分。费用同时记录在 `CreditLedger`（余额追踪）和 `UsageRecord`（分析统计）中。
 
@@ -320,6 +320,9 @@ erDiagram
     User ||--o{ Account : "拥有"
     User ||--o{ CreditLedger : "拥有"
     User ||--o{ UsageRecord : "拥有"
+    User ||--o{ Collection : "拥有"
+    Collection }o--o{ Document : "包含"
+    Collection ||--o{ ChatSession : "拥有"
     Document ||--o{ Page : "包含"
     Document ||--o{ Chunk : "包含"
     Document ||--o{ ChatSession : "拥有"
@@ -334,7 +337,7 @@ erDiagram
         datetime email_verified
         int credits_balance
         datetime signup_bonus_granted_at
-        string plan "free | pro"
+        string plan "free | plus | pro"
         string stripe_customer_id
         string stripe_subscription_id
         datetime monthly_credits_granted_at
@@ -348,7 +351,7 @@ erDiagram
         int file_size
         int page_count
         string storage_key
-        string status "uploading | parsing | ready | error | deleting"
+        string status "uploading | parsing | ocr | ready | error | deleting"
         string error_msg
         int pages_parsed
         int chunks_total
@@ -357,6 +360,9 @@ erDiagram
         string demo_slug UK "可空"
         text summary "AI 生成的摘要"
         jsonb suggested_questions "AI 生成的推荐问题"
+        text custom_instructions "用户自定义 AI 指令"
+        string file_type "pdf | docx | pptx | xlsx | txt | md"
+        string source_url "导入网页的 URL"
         datetime created_at
         datetime updated_at
     }
@@ -365,8 +371,8 @@ erDiagram
         uuid id PK
         uuid document_id FK
         int page_number
-        float width_pt
-        float height_pt
+        float width_pt "可空 (非 PDF)"
+        float height_pt "可空 (非 PDF)"
         int rotation
     }
 
@@ -386,7 +392,8 @@ erDiagram
 
     ChatSession {
         uuid id PK
-        uuid document_id FK
+        uuid document_id FK "可空"
+        uuid collection_id FK "可空"
         string title
         datetime created_at
         datetime updated_at
@@ -440,6 +447,15 @@ erDiagram
         datetime created_at
     }
 
+    Collection {
+        uuid id PK
+        string name
+        text description
+        uuid user_id FK
+        datetime created_at
+        datetime updated_at
+    }
+
     VerificationToken {
         string identifier PK
         string token PK
@@ -454,6 +470,9 @@ erDiagram
 - `Document → Page/Chunk/ChatSession`：CASCADE 删除
 - `ChatSession → Message`：CASCADE 删除
 - `Message → UsageRecord`：删除时 SET NULL
+- `User → Collection`：CASCADE 删除
+- `Collection → ChatSession`：CASCADE 删除（通过 collection_id）
+- `Collection ↔ Document`：多对多关系，通过 `collection_documents` 关联表
 
 **唯一约束：**
 - `(Document.document_id, Page.page_number)` — 每个文档每个页码唯一
@@ -476,6 +495,8 @@ graph TD
         Auth["/auth<br/>登录页"]
         Billing["/billing<br/>购买页"]
         Profile["/profile<br/>个人中心"]
+        Collections["/collections<br/>文档集合"]
+        CollDetail["/collections/[id]<br/>集合详情"]
         Privacy["/privacy"]
         Terms["/terms"]
     end
@@ -506,6 +527,7 @@ graph TD
         ResizablePanels["react-resizable-panels<br/>Group / Panel / Separator"]
         ChatPanel["ChatPanel<br/>消息 + 输入框"]
         PdfViewer["PdfViewer<br/>react-pdf"]
+        TextViewer["TextViewer<br/>非 PDF 查看器"]
     end
 
     subgraph ChatComp["Chat 组件"]
@@ -527,6 +549,12 @@ graph TD
         AccountSec["AccountActionsSection"]
     end
 
+    subgraph CollComp["集合组件"]
+        CollList["CollectionList"]
+        CreateColl["CreateCollectionModal"]
+        CustomInst["CustomInstructionsModal"]
+    end
+
     Layout --> Pages
     Layout --> HeaderComp
     Home --> LandingComp
@@ -537,6 +565,7 @@ graph TD
     ChatPanel --> ChatComp
     PdfViewer --> PdfComp
     Profile --> ProfileComp
+    Collections --> CollComp
 
     AuthModal["AuthModal<br/>?auth=1 触发"]
     PaywallMod["PaywallModal"]

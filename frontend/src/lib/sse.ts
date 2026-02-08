@@ -77,6 +77,8 @@ export async function chatStream(
                 bboxes: p.bboxes || [],
                 textSnippet: p.text_snippet || '',
                 offset: p.offset ?? 0,
+                documentId: (data as any).document_id || undefined,
+                documentFilename: (data as any).document_filename || undefined,
               };
               onCitation(c);
               break; }

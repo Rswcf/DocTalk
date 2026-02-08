@@ -17,9 +17,10 @@ class DocService:
     """Document lifecycle service."""
 
     async def create_document(
-        self, upload, db: AsyncSession, user_id: Optional[uuid.UUID] = None
+        self, upload, db: AsyncSession, user_id: Optional[uuid.UUID] = None,
+        file_type: str = "pdf",
     ) -> uuid.UUID:
-        """Save uploaded PDF to object storage, create DB record, dispatch parse.
+        """Save uploaded document to object storage, create DB record, dispatch parse.
 
         This method accepts an UploadFile-like object with attributes:
         - filename: str
@@ -28,8 +29,6 @@ class DocService:
         """
         filename: str = getattr(upload, "filename", "document.pdf") or "document.pdf"
         content_type: str = getattr(upload, "content_type", "application/pdf") or "application/pdf"
-        if (content_type or "").lower() != "application/pdf":
-            raise ValueError("NOT_PDF")
 
         data: bytes = await upload.read()
         max_bytes = int(settings.MAX_PDF_SIZE_MB) * 1024 * 1024
@@ -39,7 +38,18 @@ class DocService:
         # Persist to object storage under namespaced key
         doc_id = uuid.uuid4()
         storage_key = f"documents/{doc_id}/{os.path.basename(filename)}"
-        storage_service.upload_file(data, storage_key, content_type=content_type)
+
+        # Use appropriate content type for storage
+        mime_types = {
+            'pdf': 'application/pdf',
+            'docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+            'pptx': 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+            'xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            'txt': 'text/plain',
+            'md': 'text/markdown',
+        }
+        storage_content_type = mime_types.get(file_type, content_type)
+        storage_service.upload_file(data, storage_key, content_type=storage_content_type)
 
         # Create document row (status=parsing)
         doc = Document(
@@ -49,6 +59,7 @@ class DocService:
             storage_key=storage_key,
             status="parsing",
             user_id=user_id,  # Associate with user if authenticated
+            file_type=file_type,
         )
         db.add(doc)
         await db.commit()

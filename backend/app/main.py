@@ -6,6 +6,7 @@ from .api import auth
 from .api.billing import router as billing_router
 from .api.chat import chat_router
 from .api.chunks import chunks_router
+from .api.collections import collections_router
 from .api.credits import router as credits_router
 from .api.documents import documents_router
 from .api.search import search_router
@@ -44,6 +45,7 @@ app.include_router(auth.router)
 app.include_router(credits_router)
 app.include_router(users_router)
 app.include_router(billing_router)
+app.include_router(collections_router)
 
 
 @app.on_event("startup")
