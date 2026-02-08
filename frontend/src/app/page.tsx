@@ -190,25 +190,22 @@ export default function HomePage() {
         <HeroSection />
 
         {/* Product Showcase */}
-        <section className="max-w-7xl mx-auto px-6 py-24">
-          <div className="border-t border-zinc-200 dark:border-zinc-800 pt-12">
+        <section className="w-full px-4 sm:px-8 lg:px-16 py-24">
+          <div className="border-t border-zinc-200 dark:border-zinc-800 pt-12 max-w-5xl mx-auto">
             <h2 className="text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50 text-center mb-8">
               {t('landing.showcase.title')}
             </h2>
-            <div className="rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-2xl overflow-hidden">
-              {/* macOS window chrome */}
-              <div className="flex items-center gap-2 px-4 py-3 bg-zinc-100 dark:bg-zinc-800 border-b border-zinc-200 dark:border-zinc-700">
-                <span className="w-3 h-3 rounded-full bg-red-400" />
-                <span className="w-3 h-3 rounded-full bg-yellow-400" />
-                <span className="w-3 h-3 rounded-full bg-green-400" />
-              </div>
-              <div className="aspect-video bg-zinc-50 dark:bg-zinc-900 relative">
-                <ShowcasePlayer />
-              </div>
+          </div>
+          <div className="rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-2xl overflow-hidden">
+            {/* macOS window chrome */}
+            <div className="flex items-center gap-2 px-4 py-3 bg-zinc-100 dark:bg-zinc-800 border-b border-zinc-200 dark:border-zinc-700">
+              <span className="w-3 h-3 rounded-full bg-red-400" />
+              <span className="w-3 h-3 rounded-full bg-yellow-400" />
+              <span className="w-3 h-3 rounded-full bg-green-400" />
             </div>
-            <p className="text-center text-sm text-zinc-500 dark:text-zinc-400 mt-4">
-              {t('landing.showcase.caption')}
-            </p>
+            <div className="aspect-video bg-zinc-50 dark:bg-zinc-900 relative">
+              <ShowcasePlayer />
+            </div>
           </div>
         </section>
 
