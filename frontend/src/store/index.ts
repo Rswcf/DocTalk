@@ -41,6 +41,9 @@ export interface DocTalkStore {
   // User plan
   userPlan: PlanType;
 
+  // Text highlight (for non-PDF documents)
+  highlightSnippet: string | null;
+
   // PDF Search
   searchQuery: string;
   searchMatches: Array<{ page: number; index: number }>;
@@ -103,6 +106,7 @@ const initialState = {
   documentSummary: null as string | null,
   suggestedQuestions: [] as string[],
   userPlan: 'free' as PlanType,
+  highlightSnippet: null as string | null,
   searchQuery: '',
   searchMatches: [] as Array<{ page: number; index: number }>,
   currentMatchIndex: -1,
@@ -134,6 +138,7 @@ export const useDocTalkStore = create<DocTalkStore>((set, get) => ({
     set((state) => ({
       currentPage: citation.page,
       highlights: bboxes,
+      highlightSnippet: citation.textSnippet || null,
       scrollNonce: state.scrollNonce + 1,
     }));
   },

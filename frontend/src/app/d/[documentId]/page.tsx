@@ -28,6 +28,7 @@ export default function DocumentReaderPage() {
     pdfUrl,
     currentPage,
     highlights,
+    highlightSnippet,
     scale,
     scrollNonce,
     setPdfUrl,
@@ -231,7 +232,7 @@ export default function DocumentReaderPage() {
                   <div className="h-full w-full flex items-center justify-center text-zinc-500">{t('doc.loading')}</div>
                 )
               ) : (
-                <TextViewer documentId={documentId} targetPage={currentPage} scrollNonce={scrollNonce} />
+                <TextViewer documentId={documentId} targetPage={currentPage} scrollNonce={scrollNonce} highlightSnippet={highlightSnippet} />
               )}
             </div>
           </Panel>
