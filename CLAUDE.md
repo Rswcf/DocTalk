@@ -24,7 +24,7 @@ Railway 项目包含 5 个服务：backend, Postgres, Redis, qdrant-v2, minio-v2
 
 ### 技术栈
 
-- **Frontend**: Next.js 14 (App Router) + Auth.js v5 + jose (JWT) + react-pdf + react-resizable-panels + Zustand + Tailwind CSS (zinc palette) + Radix UI + Inter font (next/font/google)
+- **Frontend**: Next.js 14 (App Router) + Auth.js v5 + jose (JWT) + react-pdf v9 (pdf.js v4) + react-resizable-panels + Zustand + Tailwind CSS (zinc palette) + Radix UI + Inter font (next/font/google)
 - **Backend**: FastAPI + Celery + Redis
 - **Database**: PostgreSQL 16 (Alembic migration) + Qdrant (向量搜索)
 - **Storage**: MinIO (dev) / S3-compatible (prod)
@@ -54,7 +54,7 @@ Railway 项目包含 5 个服务：backend, Postgres, Redis, qdrant-v2, minio-v2
 - **API 网关**: 所有 LLM 和 Embedding 调用统一通过 OpenRouter（单一 API key）
 - **模型切换**: 前端用户可选择 LLM 模型，后端白名单 (`ALLOWED_MODELS`) 验证后透传给 OpenRouter
 - **布局**: Chat 面板在左侧, PDF 查看器在右侧，中间可拖拽调节宽度 (react-resizable-panels)
-- **i18n**: 客户端 React Context，9 语言 JSON 静态打包，`t()` 函数支持参数插值，Arabic 自动 RTL
+- **i18n**: 客户端 React Context，11 语言 JSON 静态打包，`t()` 函数支持参数插值，Arabic 自动 RTL
 - **bbox 坐标**: 归一化 [0,1], top-left origin, 存于 chunks.bboxes (JSONB)
 - **引用格式**: 编号 [1]..[K]，后端 FSM 解析器处理跨 token 切断；前端 `renumberCitations()` 按出现顺序重编号为连续序列
 - **PDF 文件获取**: presigned URL (不走后端代理)
@@ -289,6 +289,8 @@ SENTRY_TRACES_SAMPLE_RATE=0.1
 - **账户删除**: `DELETE /api/users/me` 先取消 Stripe 订阅，再逐文档清理 MinIO+Qdrant，最后 ORM cascade 删除用户
 
 ### PDF 相关
+- **react-pdf v9 (pdf.js v4.8)**: 从 v7 升级到 v9 以支持 CJK 字体渲染。Worker 文件扩展名从 `.js` 改为 `.mjs`
+- **CJK CMap 支持**: CMap 文件（169 个）和标准字体文件（16 个）从 `pdfjs-dist` 复制到 `public/cmaps/` 和 `public/standard_fonts/`。`PDF_OPTIONS` 使用 `window.location.origin` 构建绝对 URL，因为 pdf.js Web Worker 运行在 CDN 域名上，相对路径无法解析。升级 react-pdf 或 pdfjs-dist 后需重新复制这些文件
 - **bbox 坐标**: 归一化到 [0,1]，top-left origin，前端渲染时乘以页面实际像素尺寸
 - **引用 FSM 解析器**: `chat_service.py:RefParserFSM` 处理 LLM 流式输出中跨 token 的 `[n]` 引用标记切断
 - **引用重编号**: `ChatPanel.tsx:renumberCitations()` 将后端返回的 refIndex 重编号为连续序列
