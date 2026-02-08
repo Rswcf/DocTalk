@@ -12,6 +12,13 @@ import { useLocale } from '../../i18n';
 // Configure pdf.js worker with explicit https protocol
 pdfjs.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
 
+// CMap files are required for rendering CJK (Chinese/Japanese/Korean) fonts in PDFs
+const PDF_OPTIONS = {
+  cMapUrl: `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/cmaps/`,
+  cMapPacked: true,
+  standardFontDataUrl: `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/standard_fonts/`,
+};
+
 /**
  * Validate that the PDF URL is safe to load.
  * Only allows http(s) protocols to prevent javascript:, data:, or file:// attacks.
@@ -145,7 +152,7 @@ export default function PdfViewer({ pdfUrl, currentPage, highlights, scale, scro
 
     (async () => {
       try {
-        const pdf = await pdfjs.getDocument(validPdfUrl).promise;
+        const pdf = await pdfjs.getDocument({ url: validPdfUrl, ...PDF_OPTIONS }).promise;
         const matches: Array<{ page: number; index: number }> = [];
 
         for (let p = 1; p <= numPages; p++) {
@@ -280,6 +287,7 @@ export default function PdfViewer({ pdfUrl, currentPage, highlights, scale, scro
         ) : (
         <Document
           file={validPdfUrl}
+          options={PDF_OPTIONS}
           onLoadSuccess={onDocumentLoadSuccess}
           loading={<div className="p-4">{t('doc.pdfLoading')}</div>}
           error={<div className="p-4 text-red-600">{t('doc.pdfLoadError')}</div>}
