@@ -165,6 +165,13 @@ class ChatService:
         if model and model in settings.ALLOWED_MODELS:
             effective_model = model
 
+        # Premium model gating: require Plus or Pro plan
+        if effective_model in settings.PREMIUM_MODELS:
+            user_plan = (user.plan or "free").lower() if user else "free"
+            if user_plan == "free":
+                yield sse("error", {"code": "MODEL_NOT_ALLOWED", "message": "Upgrade to Plus to use premium models"})
+                return
+
         if user is not None:
             try:
                 balance = await credit_service.get_user_credits(db, user.id)

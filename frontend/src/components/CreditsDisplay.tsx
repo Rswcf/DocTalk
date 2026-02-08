@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { useSession } from "next-auth/react";
 import { useLocale } from "../i18n";
+import { useDocTalkStore } from "../store";
 
 // Global event emitter for credits refresh
 const CREDITS_REFRESH_EVENT = 'doctalk:credits-refresh';
@@ -15,6 +16,7 @@ export function CreditsDisplay() {
   const { status } = useSession();
   const [credits, setCredits] = useState<number | null>(null);
   const { t } = useLocale();
+  const setUserPlan = useDocTalkStore((s) => s.setUserPlan);
 
   const fetchCredits = useCallback(async () => {
     try {
@@ -27,6 +29,20 @@ export function CreditsDisplay() {
       console.error("Failed to fetch credits", e);
     }
   }, []);
+
+  // Fetch user plan once on auth
+  useEffect(() => {
+    if (status !== "authenticated") return;
+    (async () => {
+      try {
+        const res = await fetch("/api/proxy/api/users/profile");
+        if (res.ok) {
+          const data = await res.json();
+          if (data.plan) setUserPlan(data.plan);
+        }
+      } catch {}
+    })();
+  }, [status, setUserPlan]);
 
   useEffect(() => {
     if (status !== "authenticated") return;

@@ -181,6 +181,8 @@ async def ensure_monthly_credits(db: AsyncSession, user: User) -> None:
     plan = (user.plan or "free").lower()
     if plan == "pro":
         allowance = int(settings.PLAN_PRO_MONTHLY_CREDITS or 0)
+    elif plan == "plus":
+        allowance = int(settings.PLAN_PLUS_MONTHLY_CREDITS or 0)
     else:
         allowance = int(settings.PLAN_FREE_MONTHLY_CREDITS or 0)
 

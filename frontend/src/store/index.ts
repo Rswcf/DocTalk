@@ -2,6 +2,7 @@
 
 import { create } from 'zustand';
 import { AVAILABLE_MODELS, DEFAULT_MODEL_ID } from '../lib/models';
+import type { PlanType } from '../lib/models';
 import type { Citation, Message, NormalizedBBox, SessionItem } from '../types';
 
 type DocStatus = 'idle' | 'uploading' | 'parsing' | 'ocr' | 'embedding' | 'ready' | 'error';
@@ -37,6 +38,9 @@ export interface DocTalkStore {
   documentSummary: string | null;
   suggestedQuestions: string[];
 
+  // User plan
+  userPlan: PlanType;
+
   // PDF Search
   searchQuery: string;
   searchMatches: Array<{ page: number; index: number }>;
@@ -66,6 +70,7 @@ export interface DocTalkStore {
   updateSessionActivity: (sessionId: string) => void;
   setDocumentSummary: (summary: string | null) => void;
   setSuggestedQuestions: (questions: string[]) => void;
+  setUserPlan: (plan: PlanType) => void;
   setSearchQuery: (query: string) => void;
   setSearchMatches: (matches: Array<{ page: number; index: number }>) => void;
   setCurrentMatchIndex: (index: number) => void;
@@ -97,6 +102,7 @@ const initialState = {
   sessions: [] as SessionItem[],
   documentSummary: null as string | null,
   suggestedQuestions: [] as string[],
+  userPlan: 'free' as PlanType,
   searchQuery: '',
   searchMatches: [] as Array<{ page: number; index: number }>,
   currentMatchIndex: -1,
@@ -174,6 +180,7 @@ export const useDocTalkStore = create<DocTalkStore>((set, get) => ({
   }),
   setDocumentSummary: (summary: string | null) => set({ documentSummary: summary }),
   setSuggestedQuestions: (questions: string[]) => set({ suggestedQuestions: questions }),
+  setUserPlan: (plan: PlanType) => set({ userPlan: plan }),
   setSearchQuery: (query: string) => set({ searchQuery: query }),
   setSearchMatches: (matches) => set({ searchMatches: matches }),
   setCurrentMatchIndex: (index: number) => set({ currentMatchIndex: index }),

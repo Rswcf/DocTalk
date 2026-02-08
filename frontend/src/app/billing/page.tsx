@@ -9,6 +9,8 @@ import { getUserProfile, createSubscription, createPortalSession } from "../../l
 import { triggerCreditsRefresh } from "../../components/CreditsDisplay";
 import PricingTable from "../../components/PricingTable";
 import type { UserProfile } from "../../types";
+import type { PlanType } from "../../lib/models";
+import { Check } from "lucide-react";
 
 interface Product {
   id: string;
@@ -25,9 +27,10 @@ function BillingContent() {
   const [loading, setLoading] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
-  const [submitting, setSubmitting] = useState<boolean>(false);
+  const [submitting, setSubmitting] = useState<string | null>(null);
   const [productsLoading, setProductsLoading] = useState(true);
   const [productsError, setProductsError] = useState(false);
+  const [billingPeriod, setBillingPeriod] = useState<'monthly' | 'annual'>('monthly');
 
   useEffect(() => {
     if (searchParams.get("success")) {
@@ -96,14 +99,55 @@ function BillingContent() {
     setLoading(null);
   };
 
+  const handleSubscribe = async (plan: string) => {
+    setSubmitting(plan);
+    try {
+      const res = await createSubscription({ plan, billing: billingPeriod });
+      window.location.href = res.checkout_url;
+    } catch {
+      setMessage(t("billing.error"));
+    } finally {
+      setSubmitting(null);
+    }
+  };
+
+  const handleManage = async () => {
+    setSubmitting('manage');
+    try {
+      const res = await createPortalSession();
+      window.location.href = res.portal_url;
+    } finally {
+      setSubmitting(null);
+    }
+  };
+
+  const handleUpgrade = (plan: PlanType) => {
+    if (plan === 'free') return;
+    handleSubscribe(plan);
+  };
+
   if (status === "loading") {
     return <div className="min-h-screen flex items-center justify-center bg-white dark:bg-zinc-950">Loading...</div>;
   }
 
+  const plusFeatures = [
+    '30,000 credits/month',
+    'All 9 AI models',
+    'OCR & Markdown export',
+    '20 documents, 50MB files',
+  ];
+
+  const proFeatures = [
+    '150,000 credits/month',
+    'All 9 AI models',
+    'Custom prompts & priority support',
+    'Unlimited documents, 100MB files',
+  ];
+
   return (
     <div className="min-h-screen bg-white dark:bg-zinc-950">
       <Header />
-      <main className="max-w-4xl mx-auto p-6 sm:p-8">
+      <main className="max-w-5xl mx-auto p-6 sm:p-8">
         <h1 className="text-2xl font-bold mb-6 text-zinc-900 dark:text-zinc-50">
           {t("billing.title")}
         </h1>
@@ -114,57 +158,125 @@ function BillingContent() {
           </div>
         )}
 
-        {/* Subscription Card */}
-        <section className="mb-8">
-          <div className="rounded-xl bg-gradient-to-r from-zinc-800 to-zinc-900 p-[1px]">
-            <div className="rounded-xl bg-white dark:bg-zinc-950 p-6">
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                <div>
-                  <h2 className="text-xl font-semibold text-zinc-900 dark:text-zinc-50">{t("billing.pro.title")}</h2>
-                  <p className="text-zinc-500 dark:text-zinc-400 mt-1">{t("billing.pro.description")}</p>
-                </div>
-                <div className="text-right">
-                  <div className="text-2xl font-bold text-zinc-900 dark:text-zinc-50">
-                    {t("billing.pro.pricePerMonth", { price: 9.99 })}
-                  </div>
-                  <div className="mt-3">
-                    {profile?.plan === "pro" ? (
-                      <button
-                        onClick={async () => {
-                          setSubmitting(true);
-                          try {
-                            const res = await createPortalSession();
-                            window.location.href = res.portal_url;
-                          } finally {
-                            setSubmitting(false);
-                          }
-                        }}
-                        disabled={submitting}
-                        className="px-4 py-2 rounded-lg bg-zinc-100 dark:bg-zinc-800 text-zinc-800 dark:text-zinc-100 hover:bg-zinc-200 dark:hover:bg-zinc-700 disabled:opacity-50 transition-colors"
-                      >
-                        {t("profile.plan.manage")}
-                      </button>
-                    ) : (
-                      <button
-                        onClick={async () => {
-                          setSubmitting(true);
-                          try {
-                            const res = await createSubscription();
-                            window.location.href = res.checkout_url;
-                          } finally {
-                            setSubmitting(false);
-                          }
-                        }}
-                        disabled={submitting}
-                        className="px-4 py-2 rounded-lg bg-zinc-900 dark:bg-zinc-50 text-white dark:text-zinc-900 hover:bg-zinc-800 dark:hover:bg-zinc-200 disabled:opacity-50 shadow-sm hover:shadow-md transition-colors"
-                      >
-                        {t("profile.plan.upgrade")}
-                      </button>
-                    )}
-                  </div>
-                </div>
+        {/* Billing Period Toggle */}
+        <div className="flex items-center justify-center gap-3 mb-8">
+          <button
+            onClick={() => setBillingPeriod('monthly')}
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+              billingPeriod === 'monthly'
+                ? 'bg-zinc-900 dark:bg-zinc-50 text-white dark:text-zinc-900'
+                : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-200 dark:hover:bg-zinc-700'
+            }`}
+          >
+            {t('billing.monthly')}
+          </button>
+          <button
+            onClick={() => setBillingPeriod('annual')}
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+              billingPeriod === 'annual'
+                ? 'bg-zinc-900 dark:bg-zinc-50 text-white dark:text-zinc-900'
+                : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-200 dark:hover:bg-zinc-700'
+            }`}
+          >
+            {t('billing.annual')}
+          </button>
+        </div>
+
+        {/* Subscription Cards */}
+        <section className="mb-8 grid md:grid-cols-2 gap-6">
+          {/* Plus Card */}
+          <div className="relative rounded-xl bg-gradient-to-r from-zinc-800 to-zinc-900 p-[2px]">
+            <div className="rounded-xl bg-white dark:bg-zinc-950 p-6 h-full flex flex-col">
+              <div className="flex items-center gap-2 mb-1">
+                <h2 className="text-xl font-semibold text-zinc-900 dark:text-zinc-50">{t("billing.plus.title")}</h2>
+                <span className="text-xs px-2 py-0.5 rounded-full bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 font-medium">
+                  {t("billing.mostPopular")}
+                </span>
               </div>
+              <p className="text-zinc-500 dark:text-zinc-400 text-sm mb-4">{t("billing.plus.description")}</p>
+              <div className="mb-4">
+                <span className="text-3xl font-bold text-zinc-900 dark:text-zinc-50">
+                  {billingPeriod === 'monthly' ? '$7.99' : '$5.99'}
+                </span>
+                <span className="text-zinc-500 dark:text-zinc-400 text-sm ml-1">
+                  /{billingPeriod === 'monthly' ? 'mo' : 'mo'}
+                </span>
+                {billingPeriod === 'annual' && (
+                  <span className="ml-2 text-xs px-2 py-0.5 rounded-full bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 font-medium">
+                    {t('billing.savePercent', { percent: 25 })}
+                  </span>
+                )}
+              </div>
+              <ul className="space-y-2 mb-6 flex-1">
+                {plusFeatures.map((f, i) => (
+                  <li key={i} className="flex items-start gap-2 text-sm text-zinc-600 dark:text-zinc-300">
+                    <Check size={16} className="text-green-600 dark:text-green-400 mt-0.5 shrink-0" />
+                    {f}
+                  </li>
+                ))}
+              </ul>
+              {profile?.plan === 'plus' ? (
+                <button
+                  onClick={handleManage}
+                  disabled={submitting === 'manage'}
+                  className="w-full px-4 py-2.5 rounded-lg bg-zinc-100 dark:bg-zinc-800 text-zinc-800 dark:text-zinc-100 hover:bg-zinc-200 dark:hover:bg-zinc-700 disabled:opacity-50 transition-colors font-medium"
+                >
+                  {t("billing.manage")}
+                </button>
+              ) : (
+                <button
+                  onClick={() => handleSubscribe('plus')}
+                  disabled={submitting === 'plus'}
+                  className="w-full px-4 py-2.5 rounded-lg bg-zinc-900 dark:bg-zinc-50 text-white dark:text-zinc-900 hover:bg-zinc-800 dark:hover:bg-zinc-200 disabled:opacity-50 shadow-sm hover:shadow-md transition-colors font-medium"
+                >
+                  {submitting === 'plus' ? t("common.loading") : `${t("billing.upgrade")} Plus`}
+                </button>
+              )}
             </div>
+          </div>
+
+          {/* Pro Card */}
+          <div className="rounded-xl border border-zinc-200 dark:border-zinc-800 p-6 flex flex-col">
+            <h2 className="text-xl font-semibold text-zinc-900 dark:text-zinc-50 mb-1">{t("billing.pro.title")}</h2>
+            <p className="text-zinc-500 dark:text-zinc-400 text-sm mb-4">{t("billing.pro.description")}</p>
+            <div className="mb-4">
+              <span className="text-3xl font-bold text-zinc-900 dark:text-zinc-50">
+                {billingPeriod === 'monthly' ? '$14.99' : '$11.99'}
+              </span>
+              <span className="text-zinc-500 dark:text-zinc-400 text-sm ml-1">
+                /mo
+              </span>
+              {billingPeriod === 'annual' && (
+                <span className="ml-2 text-xs px-2 py-0.5 rounded-full bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 font-medium">
+                  {t('billing.savePercent', { percent: 20 })}
+                </span>
+              )}
+            </div>
+            <ul className="space-y-2 mb-6 flex-1">
+              {proFeatures.map((f, i) => (
+                <li key={i} className="flex items-start gap-2 text-sm text-zinc-600 dark:text-zinc-300">
+                  <Check size={16} className="text-green-600 dark:text-green-400 mt-0.5 shrink-0" />
+                  {f}
+                </li>
+              ))}
+            </ul>
+            {profile?.plan === 'pro' ? (
+              <button
+                onClick={handleManage}
+                disabled={submitting === 'manage'}
+                className="w-full px-4 py-2.5 rounded-lg bg-zinc-100 dark:bg-zinc-800 text-zinc-800 dark:text-zinc-100 hover:bg-zinc-200 dark:hover:bg-zinc-700 disabled:opacity-50 transition-colors font-medium"
+              >
+                {t("billing.manage")}
+              </button>
+            ) : (
+              <button
+                onClick={() => handleSubscribe('pro')}
+                disabled={submitting === 'pro'}
+                className="w-full px-4 py-2.5 rounded-lg bg-zinc-900 dark:bg-zinc-50 text-white dark:text-zinc-900 hover:bg-zinc-800 dark:hover:bg-zinc-200 disabled:opacity-50 shadow-sm hover:shadow-md transition-colors font-medium"
+              >
+                {submitting === 'pro' ? t("common.loading") : `${t("billing.upgrade")} Pro`}
+              </button>
+            )}
           </div>
         </section>
 
@@ -173,7 +285,7 @@ function BillingContent() {
           <h2 className="text-sm font-medium text-zinc-500 dark:text-zinc-400 mb-4 uppercase tracking-wide">
             {t("billing.comparison.title")}
           </h2>
-          <PricingTable />
+          <PricingTable currentPlan={profile?.plan as PlanType || 'free'} onUpgrade={handleUpgrade} />
         </section>
 
         <h2 className="text-sm font-medium text-zinc-500 dark:text-zinc-400 mb-4 uppercase tracking-wide">
@@ -210,7 +322,7 @@ function BillingContent() {
             {products.map((product) => (
               <div
                 key={product.id}
-                className="border border-zinc-100 dark:border-zinc-800 rounded-xl p-6 flex flex-col shadow-sm hover:shadow-md transition-colors"
+                className="border border-zinc-100 dark:border-zinc-800 rounded-xl p-6 flex flex-col shadow-sm hover:shadow-md transition-shadow"
               >
                 <h3 className="text-lg font-medium text-zinc-900 dark:text-zinc-100">
                   {t(`billing.pack.${product.id}` as any)}

@@ -2,10 +2,11 @@ from __future__ import annotations
 
 import logging
 import uuid
-from typing import Literal
+from typing import Literal, Optional
 
 import stripe
 from fastapi import APIRouter, Depends, HTTPException, Request
+from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -19,6 +20,43 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/billing", tags=["billing"])
 
 stripe.api_key = settings.STRIPE_SECRET_KEY
+
+
+class SubscribeRequest(BaseModel):
+    plan: Literal["plus", "pro"] = "pro"
+    billing: Literal["monthly", "annual"] = "monthly"
+
+
+def _get_subscription_price_id(plan: str, billing: str) -> str:
+    """Map plan+billing to Stripe price ID."""
+    key = f"{plan}_{billing}"
+    mapping = {
+        "plus_monthly": settings.STRIPE_PRICE_PLUS_MONTHLY,
+        "plus_annual": settings.STRIPE_PRICE_PLUS_ANNUAL,
+        "pro_monthly": settings.STRIPE_PRICE_PRO_MONTHLY,
+        "pro_annual": settings.STRIPE_PRICE_PRO_ANNUAL,
+    }
+    return mapping.get(key, "")
+
+
+def _plan_from_price_id(price_id: str) -> Optional[str]:
+    """Determine plan name from a Stripe price ID. Returns None if unknown."""
+    plus_prices = {settings.STRIPE_PRICE_PLUS_MONTHLY, settings.STRIPE_PRICE_PLUS_ANNUAL}
+    pro_prices = {settings.STRIPE_PRICE_PRO_MONTHLY, settings.STRIPE_PRICE_PRO_ANNUAL}
+    if price_id in plus_prices:
+        return "plus"
+    if price_id in pro_prices:
+        return "pro"
+    return None
+
+
+def _credits_for_plan(plan: str) -> int:
+    """Return monthly credit allowance for a plan."""
+    if plan == "pro":
+        return int(settings.PLAN_PRO_MONTHLY_CREDITS or 0)
+    if plan == "plus":
+        return int(settings.PLAN_PLUS_MONTHLY_CREDITS or 0)
+    return int(settings.PLAN_FREE_MONTHLY_CREDITS or 0)
 
 
 @router.get("/products")
@@ -61,11 +99,16 @@ async def create_checkout(
 # Subscriptions
 @router.post("/subscribe")
 async def subscribe(
+    body: SubscribeRequest = SubscribeRequest(),
     user: User = Depends(require_auth),
     db: AsyncSession = Depends(get_db_session),
 ):
-    if not settings.STRIPE_SECRET_KEY or not settings.STRIPE_PRICE_PRO_MONTHLY:
+    if not settings.STRIPE_SECRET_KEY:
         raise HTTPException(503, "Stripe not configured")
+
+    price_id = _get_subscription_price_id(body.plan, body.billing)
+    if not price_id:
+        raise HTTPException(400, f"Stripe price not configured for {body.plan}/{body.billing}")
 
     # Ensure customer exists
     if not user.stripe_customer_id:
@@ -76,7 +119,7 @@ async def subscribe(
     # Create Checkout Session for subscription
     session = stripe.checkout.Session.create(
         mode="subscription",
-        line_items=[{"price": settings.STRIPE_PRICE_PRO_MONTHLY, "quantity": 1}],
+        line_items=[{"price": price_id, "quantity": 1}],
         success_url=f"{settings.FRONTEND_URL}/billing",
         cancel_url=f"{settings.FRONTEND_URL}/billing",
         customer=user.stripe_customer_id,
@@ -148,12 +191,27 @@ async def stripe_webhook(request: Request, db: AsyncSession = Depends(get_db_ses
             subscription_id = session.get("subscription")
             customer_id = session.get("customer")
 
+            # Determine plan from subscription price_id
+            plan = "pro"  # default for backward compatibility
+            if subscription_id:
+                try:
+                    sub = stripe.Subscription.retrieve(subscription_id)
+                    if sub.get("items") and sub["items"].get("data"):
+                        sub_price_id = sub["items"]["data"][0].get("price", {}).get("id", "")
+                        detected = _plan_from_price_id(sub_price_id)
+                        if detected:
+                            plan = detected
+                except Exception as e:
+                    logger.warning("Could not retrieve subscription to detect plan: %s", e)
+
             # Update user plan and subscription/customer ids
-            user.plan = "pro"
+            user.plan = plan
             if subscription_id:
                 user.stripe_subscription_id = subscription_id
             if customer_id and not user.stripe_customer_id:
                 user.stripe_customer_id = customer_id
+
+            allowance = _credits_for_plan(plan)
 
             # Idempotency: only one monthly grant per subscription id at start
             existing = await db.scalar(
@@ -163,20 +221,21 @@ async def stripe_webhook(request: Request, db: AsyncSession = Depends(get_db_ses
                 )
             )
 
-            if not existing:
+            if not existing and allowance > 0:
                 try:
                     await credit_credits(
                         db,
                         user_id=user.id,
-                        amount=int(settings.PLAN_PRO_MONTHLY_CREDITS or 0),
+                        amount=allowance,
                         reason="monthly_allowance",
                         ref_type="stripe_subscription",
                         ref_id=subscription_id or "",
                     )
                     await db.commit()
                     logger.info(
-                        "Subscription start credits granted: user_id=%s, subscription=%s",
+                        "Subscription start credits granted: user_id=%s, plan=%s, subscription=%s",
                         user.id,
+                        plan,
                         subscription_id,
                     )
                 except Exception as e:
@@ -276,6 +335,25 @@ async def stripe_webhook(request: Request, db: AsyncSession = Depends(get_db_ses
         if not user:
             return {"received": True}
 
+        # Determine plan from subscription price_id
+        plan = user.plan or "pro"  # default to current plan for backward compat
+        subscription_id = obj.get("subscription")
+        if subscription_id:
+            try:
+                sub = stripe.Subscription.retrieve(subscription_id)
+                if sub.get("items") and sub["items"].get("data"):
+                    sub_price_id = sub["items"]["data"][0].get("price", {}).get("id", "")
+                    detected = _plan_from_price_id(sub_price_id)
+                    if detected:
+                        plan = detected
+                        # Sync plan in case of upgrade/downgrade
+                        if user.plan != plan:
+                            user.plan = plan
+            except Exception as e:
+                logger.warning("Could not retrieve subscription to detect plan on invoice: %s", e)
+
+        allowance = _credits_for_plan(plan)
+
         # Idempotency: ensure we haven't granted for this invoice
         existing = await db.scalar(
             select(CreditLedger).where(
@@ -283,12 +361,12 @@ async def stripe_webhook(request: Request, db: AsyncSession = Depends(get_db_ses
                 CreditLedger.ref_id == invoice_id,
             )
         )
-        if not existing:
+        if not existing and allowance > 0:
             try:
                 await credit_credits(
                     db,
                     user_id=user.id,
-                    amount=int(settings.PLAN_PRO_MONTHLY_CREDITS or 0),
+                    amount=allowance,
                     reason="monthly_allowance",
                     ref_type="stripe_invoice",
                     ref_id=invoice_id,
@@ -298,6 +376,8 @@ async def stripe_webhook(request: Request, db: AsyncSession = Depends(get_db_ses
                 await db.rollback()
                 logger.error("Failed to grant monthly credits on invoice: %s", e)
                 raise HTTPException(500, "Database error")
+        else:
+            await db.commit()
         return {"received": True}
 
     elif event["type"] == "customer.subscription.deleted":

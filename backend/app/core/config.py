@@ -88,9 +88,25 @@ class Settings(BaseSettings):
     CREDITS_ENTERPRISE: int = 1000000
     SIGNUP_BONUS_CREDITS: int = 10000
     # Subscription tiers
-    PLAN_FREE_MONTHLY_CREDITS: int = 10000
-    PLAN_PRO_MONTHLY_CREDITS: int = 100000
+    PLAN_FREE_MONTHLY_CREDITS: int = 5000
+    PLAN_PLUS_MONTHLY_CREDITS: int = 30000
+    PLAN_PRO_MONTHLY_CREDITS: int = 150000
+    STRIPE_PRICE_PLUS_MONTHLY: str = ''
+    STRIPE_PRICE_PLUS_ANNUAL: str = ''
     STRIPE_PRICE_PRO_MONTHLY: str = ''
+    STRIPE_PRICE_PRO_ANNUAL: str = ''
+
+    # Per-plan limits
+    FREE_MAX_DOCUMENTS: int = 3
+    PLUS_MAX_DOCUMENTS: int = 20
+    FREE_MAX_FILE_SIZE_MB: int = 25
+    PLUS_MAX_FILE_SIZE_MB: int = 50
+    PRO_MAX_FILE_SIZE_MB: int = 100
+
+    # Model access by plan — Premium models (claude-opus-4.6) require Plus+
+    PREMIUM_MODELS: list[str] = Field(default=[
+        "anthropic/claude-opus-4.6",
+    ])
 
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", case_sensitive=False)
 

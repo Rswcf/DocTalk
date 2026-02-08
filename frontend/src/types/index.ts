@@ -72,7 +72,7 @@ export interface UserProfile {
   name: string | null;
   image: string | null;
   created_at: string;
-  plan: 'free' | 'pro';
+  plan: 'free' | 'plus' | 'pro';
   credits_balance: number;
   monthly_allowance: number;
   monthly_credits_granted_at: string | null;

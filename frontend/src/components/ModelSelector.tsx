@@ -1,10 +1,11 @@
 "use client";
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { ChevronDown, Check, Cpu } from 'lucide-react';
-import { AVAILABLE_MODELS, type ModelOption } from '../lib/models';
+import { ChevronDown, Check, Cpu, Lock } from 'lucide-react';
+import { AVAILABLE_MODELS, isModelAvailable, type ModelOption } from '../lib/models';
 import { useDocTalkStore } from '../store';
 import { useLocale } from '../i18n';
+import { useRouter } from 'next/navigation';
 
 const tierStyles: Record<ModelOption['tier'], { bg: string; hover: string; badge: string | null; badgeClass: string }> = {
   budget: {
@@ -31,7 +32,9 @@ export default function ModelSelector() {
   const selectedModel = useDocTalkStore((s) => s.selectedModel);
   const setSelectedModel = useDocTalkStore((s) => s.setSelectedModel);
   const isStreaming = useDocTalkStore((s) => s.isStreaming);
+  const userPlan = useDocTalkStore((s) => s.userPlan);
   const { t } = useLocale();
+  const router = useRouter();
 
   const [open, setOpen] = useState(false);
   const [focusIndex, setFocusIndex] = useState(-1);
@@ -83,8 +86,13 @@ export default function ModelSelector() {
 
   const allModels = useMemo(() => AVAILABLE_MODELS, []);
 
-  const choose = (id: string) => {
-    setSelectedModel(id);
+  const choose = (m: ModelOption) => {
+    if (!isModelAvailable(m.id, userPlan)) {
+      router.push('/billing');
+      setOpen(false);
+      return;
+    }
+    setSelectedModel(m.id);
     setOpen(false);
   };
 
@@ -143,22 +151,27 @@ export default function ModelSelector() {
               {group.models.map((m) => {
                 const style = tierStyles[m.tier];
                 const idx = flatIndex++;
+                const available = isModelAvailable(m.id, userPlan);
                 return (
                   <button
                     key={m.id}
                     ref={(el) => { itemRefs.current[idx] = el; }}
-                    className={`w-full text-left flex items-center gap-2 px-2 py-1.5 rounded text-sm transition-colors ${style.bg} ${style.hover} ${
-                      selectedModel === m.id ? 'font-medium' : ''
-                    }`}
-                    onClick={() => choose(m.id)}
+                    className={`w-full text-left flex items-center gap-2 px-2 py-1.5 rounded text-sm transition-colors ${style.bg} ${
+                      available ? style.hover : 'opacity-50 cursor-not-allowed'
+                    } ${selectedModel === m.id ? 'font-medium' : ''}`}
+                    onClick={() => choose(m)}
                     tabIndex={focusIndex === idx ? 0 : -1}
                     role="option"
                     aria-selected={selectedModel === m.id}
+                    title={available ? undefined : t('models.upgradeToPlusTooltip' as any)}
                   >
                     <span className="w-4 h-4 flex items-center justify-center shrink-0">
                       {selectedModel === m.id ? <Check size={14} /> : null}
                     </span>
                     <span className="flex-1 truncate">{m.label}</span>
+                    {!available && (
+                      <Lock size={14} className="text-zinc-400 dark:text-zinc-500 shrink-0" />
+                    )}
                     {style.badge && (
                       <span className={`text-xs px-1.5 py-0.5 rounded-full font-medium shrink-0 ${style.badgeClass}`}>
                         {style.badge}

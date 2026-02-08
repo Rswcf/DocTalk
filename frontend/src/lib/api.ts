@@ -148,8 +148,12 @@ export async function deleteUserAccount(): Promise<void> {
   }
 }
 
-export async function createSubscription(): Promise<{ checkout_url: string }> {
-  const res = await fetch(PROXY_BASE + '/api/billing/subscribe', { method: 'POST' });
+export async function createSubscription(params?: { plan?: string; billing?: string }): Promise<{ checkout_url: string }> {
+  const res = await fetch(PROXY_BASE + '/api/billing/subscribe', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(params || {}),
+  });
   return handle(res);
 }
 
