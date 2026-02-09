@@ -191,7 +191,7 @@ sequenceDiagram
 
 - **Retrieval**: Top-5 chunks by COSINE vector similarity from Qdrant. Each chunk includes text, page numbers, and bounding boxes.
 
-- **LLM Prompt**: System prompt instructs the model to cite sources using `[n]` notation matching the numbered document fragments provided.
+- **LLM Prompt**: System prompt instructs the model to cite sources using `[n]` notation matching the numbered document fragments provided. Anonymous demo users are routed to NVIDIA NIM (Kimi K2.5 with thinking mode) instead of OpenRouter; logged-in users continue through OpenRouter.
 
 - **RefParserFSM**: A finite state machine in `chat_service.py` that handles `[n]` citation markers split across streaming token boundaries. For example, token `"[1"` followed by `"]"` is correctly parsed as citation reference 1.
 

@@ -30,8 +30,9 @@ Railway 项目包含 5 个服务：backend, Postgres, Redis, qdrant-v2, minio-v2
 - **Storage**: MinIO (dev) / S3-compatible (prod)
 - **Auth**: Auth.js (NextAuth) v5 + Google OAuth + JWT
 - **Payments**: Stripe Checkout + Webhooks
-- **LLM/Embedding**: 统一通过 **OpenRouter** 网关调用
+- **LLM/Embedding**: 统一通过 **OpenRouter** 网关调用（Demo 匿名用户通过 **NVIDIA NIM** 免费 API）
   - LLM: 默认 `anthropic/claude-sonnet-4.5`，支持用户在前端切换（9 个模型可选）
+  - Demo LLM: `moonshotai/kimi-k2.5`（256K context，thinking mode），通过 NVIDIA NIM 调用，零 OpenRouter 成本
   - Embedding: `openai/text-embedding-3-small` (dim=1536)
 - **PDF Parse**: PyMuPDF (fitz)
 - **Document Parse**: python-docx (DOCX), python-pptx (PPTX), openpyxl (XLSX), httpx + BeautifulSoup4 (URL)
@@ -45,14 +46,14 @@ Railway 项目包含 5 个服务：backend, Postgres, Redis, qdrant-v2, minio-v2
 - **认证**: Auth.js v5 + Google OAuth，JWT 策略，后端通过 `require_auth` 依赖校验
 - **API 代理**: 前端所有后端请求（含 SSE chat stream）通过 `/api/proxy/*` 路由，自动注入 Authorization header
 - **分层认证模型**:
-  - 未登录: 可试用 Demo（3 篇真实 PDF，5 条消息限制，服务端 + 客户端双重限制，匿名用户强制使用默认模型且隐藏 ModelSelector，IP 级速率限制 10 req/min）
+  - 未登录: 可试用 Demo（3 篇真实 PDF，5 条消息限制，服务端 + 客户端双重限制，匿名用户强制使用 Kimi K2.5（NVIDIA NIM）且隐藏 ModelSelector，IP 级速率限制 10 req/min）
   - 已登录: 可上传个人 PDF，服务端文档列表，Credits 系统；访问 Demo 文档使用 Credits，无消息限制
 - **Demo 系统**: 后端启动时自动种子 3 篇真实文档（NVIDIA 10-K、Attention 论文、NDA）到 MinIO + DB，通过 Celery 解析。`demo_slug` 列标识 Demo 文档，`is_demo` 属性暴露给前端。`GET /api/documents/demo` 返回 Demo 文档列表。`/demo` 页面从 API 获取文档 ID 后链接到 `/d/{docId}`，旧 `/demo/[sample]` 路由自动重定向
 - **Credits 系统**: 预付费模式，余额 + Ledger 双表记录，每次对话扣费
 - **订阅系统**: Free (5K credits/月) + Plus (30K credits/月, $7.99) + Pro (150K credits/月, $14.99) 三级，支持月付/年付（年付享 20-25% 折扣），月度 credits 惰性发放（`ensure_monthly_credits`），Stripe 订阅集成
 - **模型门控**: 高级模型（`anthropic/claude-opus-4.6`）仅限 Plus+ 套餐使用，后端 `chat_service.py` 校验 + 前端 `ModelSelector.tsx` 锁定图标。ModelSelector 根据认证状态显示不同 CTA：匿名用户点击锁定模型 → 登录模态框（`?auth=1`），已登录免费用户 → `/billing`
 - **Profile 页面**: `/profile` 4 个 Tab (Profile/Credits/Usage/Account)，含交易历史、使用统计、账户删除
-- **API 网关**: 所有 LLM 和 Embedding 调用统一通过 OpenRouter（单一 API key）
+- **API 网关**: 已登录用户的 LLM 和所有 Embedding 调用通过 OpenRouter（单一 API key）；匿名 Demo 用户的 LLM 调用通过 NVIDIA NIM 免费 API（`NVIDIA_API_KEY` 设置时生效，否则回退 OpenRouter）
 - **模型切换**: 前端用户可选择 LLM 模型，后端白名单 (`ALLOWED_MODELS`) 验证后透传给 OpenRouter
 - **布局**: Chat 面板在左侧, PDF 查看器在右侧，中间可拖拽调节宽度 (react-resizable-panels)
 - **i18n**: 客户端 React Context，11 语言 JSON 静态打包，`t()` 函数支持参数插值，Arabic 自动 RTL
@@ -200,6 +201,9 @@ OCR_ENABLED=true
 OCR_LANGUAGES=eng+chi_sim
 OCR_DPI=300
 
+# NVIDIA NIM — Demo 免费 LLM (可选，未设置则 Demo 走 OpenRouter)
+NVIDIA_API_KEY=nvapi-...
+
 # 监控 (可选)
 SENTRY_DSN=https://...@sentry.io/...
 SENTRY_ENVIRONMENT=production
@@ -240,7 +244,7 @@ SENTRY_TRACES_SAMPLE_RATE=0.1
 - **搜索支持可选认证**: `search_document` 使用 `get_current_user_optional`，已登录用户可搜索自己的文档，匿名用户可搜索 demo 文档
 - **Demo 会话上限**: 匿名用户每个 demo 文档最多创建 50 个会话 (`DEMO_MAX_SESSIONS_PER_DOC=50`)，超限返回 429。上限较大是因为全局计数（含已登录用户的会话），真正的保护是每会话 5 条消息限制
 - **匿名速率限制**: `rate_limit.py` 提供内存级 token-bucket 速率限制器，匿名用户 chat 端点限制 10 req/min/IP，超限返回 429 + `Retry-After` header。bucket 字典超过 10K 条目时自动清理过期条目
-- **匿名 Demo 模型强制**: 匿名用户在 Demo 文档上的 chat 请求忽略 `model` 参数，强制使用默认模型（`settings.LLM_MODEL`），防止通过 API 直接调用高成本模型
+- **匿名 Demo 模型强制**: 匿名用户在 Demo 文档上的 chat 请求忽略 `model` 参数，强制使用 `settings.DEMO_LLM_MODEL`（`moonshotai/kimi-k2.5`）。当 `NVIDIA_API_KEY` 已配置时，通过 NVIDIA NIM 免费 API 调用（thinking mode 开启），否则回退到 OpenRouter。防止通过 API 直接调用高成本模型
 - **Admin 端点已移除**: 不再暴露 `/admin/retry-stuck`、`/admin/documents` 等无鉴权端点
 - **依赖已锁定**: `requirements.txt` 中所有依赖版本已 pin（`==`），防止供应链攻击
 - **SSRF 防护**: `url_validator.py` 对 URL 导入端点执行 DNS 解析，阻断 RFC 1918/链路本地/云元数据地址段的私有 IP，封锁内部服务端口（5432/6379/6333/9000），手动跟踪最多 3 次重定向并在每跳验证目标安全性
