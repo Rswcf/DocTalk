@@ -102,6 +102,54 @@ function createCitationComponent(
   };
 }
 
+/* ── Code block with header + copy button ── */
+function CodeBlock({ language, code }: { language: string; code: string }) {
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = useCallback(() => {
+    navigator.clipboard.writeText(code);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  }, [code]);
+
+  return (
+    <div className="not-prose my-4 rounded-xl overflow-hidden bg-zinc-900">
+      <div className="flex items-center justify-between px-4 py-2 text-xs text-zinc-400 bg-zinc-800">
+        <span className="font-mono">{language}</span>
+        <button
+          type="button"
+          onClick={handleCopy}
+          className="flex items-center gap-1.5 hover:text-zinc-200 transition-colors"
+        >
+          {copied ? <Check size={14} /> : <Copy size={14} />}
+          <span>{copied ? 'Copied!' : 'Copy code'}</span>
+        </button>
+      </div>
+      <div className="overflow-x-auto p-4">
+        <pre className="text-[13px] leading-relaxed text-zinc-100">
+          <code>{code}</code>
+        </pre>
+      </div>
+    </div>
+  );
+}
+
+/* ── Pre override: render fenced code blocks as CodeBlock ── */
+function PreBlock({ children }: any) {
+  const child = React.Children.toArray(children)[0];
+  if (React.isValidElement(child)) {
+    const childProps = (child as any).props || {};
+    const className = childProps.className || '';
+    const match = /language-(\w+)/.exec(className);
+    const lang = match ? match[1] : '';
+    const text = String(childProps.children ?? '').replace(/\n$/, '');
+    if (text) {
+      return <CodeBlock language={lang} code={text} />;
+    }
+  }
+  return <pre className="overflow-x-auto">{children}</pre>;
+}
+
 type Feedback = 'up' | 'down' | null;
 
 function getFeedback(messageId: string): Feedback {
@@ -157,11 +205,14 @@ export default function MessageBubble({ message, onCitationClick, isStreaming, o
 
   const markdownComponents = useMemo(() => {
     const citations = message.citations || [];
-    if (citations.length === 0) return undefined;
-    const tags = ['p', 'li', 'td', 'th', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'strong', 'em', 'blockquote'] as const;
-    const components: Record<string, any> = {};
-    for (const tag of tags) {
-      components[tag] = createCitationComponent(tag, citations, onCitationClick, t);
+    const components: Record<string, any> = {
+      pre: PreBlock,
+    };
+    if (citations.length > 0) {
+      const tags = ['p', 'li', 'td', 'th', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'strong', 'em', 'blockquote'] as const;
+      for (const tag of tags) {
+        components[tag] = createCitationComponent(tag, citations, onCitationClick, t);
+      }
     }
     return components;
   }, [message.citations, onCitationClick, t]);
@@ -174,7 +225,7 @@ export default function MessageBubble({ message, onCitationClick, isStreaming, o
             isError
               ? 'text-sm rounded-3xl px-4 py-3 bg-red-600 text-white'
               : isUser
-              ? 'text-sm rounded-3xl px-4 py-3 bg-zinc-100 dark:bg-zinc-700 text-zinc-900 dark:text-white shadow-sm'
+              ? 'rounded-3xl px-4 py-3 bg-zinc-100 dark:bg-zinc-700 text-zinc-900 dark:text-white shadow-sm'
               : 'text-zinc-900 dark:text-zinc-100'
           }
         >

@@ -29,19 +29,18 @@ body {
   background: var(--background);
 }
 
-/* Tighten prose spacing inside chat bubbles */
-.prose.prose-sm p {
-  margin-top: 0.375em;
-  margin-bottom: 0.375em;
+/* Chat prose: tighten paragraph spacing vs. default prose */
+.prose p {
+  margin-top: 0.75em;
+  margin-bottom: 0.75em;
 }
-.prose.prose-sm ul,
-.prose.prose-sm ol {
+.prose ul, .prose ol {
+  margin-top: 0.5em;
+  margin-bottom: 0.5em;
+}
+.prose li {
   margin-top: 0.25em;
   margin-bottom: 0.25em;
-}
-.prose.prose-sm li {
-  margin-top: 0.125em;
-  margin-bottom: 0.125em;
 }
 
 /* PDF text-level citation highlighting */

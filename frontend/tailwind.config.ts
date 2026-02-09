@@ -26,6 +26,28 @@ const config: Config = {
         'fade-in': 'fade-in 150ms ease-out',
         'slide-up': 'slide-up 200ms ease-out',
       },
+      typography: {
+        DEFAULT: {
+          css: {
+            'code::before': { content: 'none' },
+            'code::after': { content: 'none' },
+            code: {
+              backgroundColor: 'rgb(0 0 0 / 0.06)',
+              borderRadius: '0.375rem',
+              padding: '0.125rem 0.375rem',
+              fontWeight: '500',
+              fontSize: '0.875em',
+            },
+          },
+        },
+        invert: {
+          css: {
+            code: {
+              backgroundColor: 'rgb(255 255 255 / 0.12)',
+            },
+          },
+        },
+      },
     },
   },
   plugins: [

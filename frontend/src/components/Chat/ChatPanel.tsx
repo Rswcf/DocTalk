@@ -327,7 +327,8 @@ export default function ChatPanel({ sessionId, onCitationClick, maxUserMessages,
               </div>
             </div>
           ) : (
-            messages.map((m, idx) => {
+            <div className="max-w-3xl mx-auto">
+            {messages.map((m, idx) => {
               const displayCitations = (m.role === 'assistant' && m.citations && m.citations.length > 0)
                 ? renumberCitations(m.citations)
                 : undefined;
@@ -361,7 +362,8 @@ export default function ChatPanel({ sessionId, onCitationClick, maxUserMessages,
                   </div>
                 </MessageErrorBoundary>
               );
-            })
+            })}
+            </div>
           )}
         </div>
         {showScrollBtn && (
@@ -402,7 +404,8 @@ export default function ChatPanel({ sessionId, onCitationClick, maxUserMessages,
         </div>
       )}
       <form onSubmit={onSubmit} className="p-4 border-t dark:border-zinc-700">
-        <div className="flex items-end border border-zinc-200 dark:border-zinc-700 rounded-3xl bg-white dark:bg-zinc-800 focus-within:ring-2 focus-within:ring-zinc-400 dark:focus-within:ring-zinc-500 transition-shadow">
+        <div className="max-w-3xl mx-auto">
+        <div className="flex items-end border border-zinc-200 dark:border-zinc-700 rounded-3xl bg-white dark:bg-zinc-800 shadow-sm focus-within:ring-2 focus-within:ring-zinc-400 dark:focus-within:ring-zinc-500 transition-shadow">
           {showPlusButton && (
             <div className="relative pl-2 pb-2 shrink-0" data-plus-menu>
               <button
@@ -446,7 +449,7 @@ export default function ChatPanel({ sessionId, onCitationClick, maxUserMessages,
           )}
           <textarea
             ref={textareaRef}
-            className="flex-1 px-4 py-3 text-sm resize-none overflow-y-auto focus:outline-none bg-transparent dark:text-zinc-100 placeholder:text-zinc-400 dark:placeholder:text-zinc-500"
+            className="flex-1 px-4 py-3 resize-none overflow-y-auto focus:outline-none bg-transparent dark:text-zinc-100 placeholder:text-zinc-400 dark:placeholder:text-zinc-500"
             style={{ minHeight: '40px' }}
             placeholder={demoLimitReached ? t('demo.signInToContinue') : t('chat.placeholder')}
             value={input}
@@ -477,9 +480,10 @@ export default function ChatPanel({ sessionId, onCitationClick, maxUserMessages,
             )}
           </div>
         </div>
+        </div>
       </form>
       <div className="text-center pb-2">
-        <p className="text-xs text-zinc-400 dark:text-zinc-500">
+        <p className="text-xs text-zinc-400 dark:text-zinc-500 max-w-3xl mx-auto">
           {t('chat.disclaimer')}
         </p>
       </div>
