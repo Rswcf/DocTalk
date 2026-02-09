@@ -34,6 +34,16 @@ DocTalk 帮助高强度文档阅读者在超长文档中通过 AI 对话快速�
 - **套餐对比** — 购买页展示 Free vs Plus vs Pro 功能对比表
 - **模型门控** — 高级模型（Claude Opus 4.6）仅限 Plus+ 套餐使用
 - **Landing 页面** — FAQ 常见问题、使用步骤、信任指标、安全卡片、底部 CTA
+- **SSRF 防护** — URL 导入验证私有 IP 范围，阻断内部端口，手动跟踪重定向并逐跳验证
+- **静态加密** — MinIO 服务端加密 (SSE-S3)，所有存储文件 + bucket 级默认策略
+- **文件验证** — Magic-byte 校验（PDF 头、Office ZIP 结构），zip bomb 防护（500MB 限制），双扩展名阻断
+- **按套餐限制** — 文档数量（3/20/999）和文件大小限制（25/50/100 MB）按订阅等级强制执行
+- **安全日志** — 结构化 JSON 事件日志，覆盖认证失败、速率限制、SSRF 阻断、上传和删除
+- **GDPR 数据导出** — 在个人中心页面下载所有个人数据为 JSON
+- **Cookie 同意** — GDPR 合规横栏控制分析加载；Vercel Analytics 仅在用户同意后激活
+- **CCPA 合规** — 页脚新增 "Do Not Sell My Info" 链接
+- **非 root Docker** — 生产容器以非特权用户运行 (UID 1001)
+- **文件名清洗** — Unicode 规范化、控制字符剥离、双扩展名阻断，前后端统一执行
 
 ## 在线体验
 
@@ -53,8 +63,9 @@ DocTalk 帮助高强度文档阅读者在超长文档中通过 AI 对话快速�
 | **AI** | OpenRouter 网关 — LLM: `anthropic/claude-sonnet-4.5` (默认)，Embedding: `openai/text-embedding-3-small` |
 | **PDF 解析** | PyMuPDF (fitz)、Tesseract OCR |
 | **文档解析** | python-docx、python-pptx、openpyxl (DOCX/PPTX/XLSX)，httpx + BeautifulSoup4 (URL) |
-| **分析** | Vercel Web Analytics |
+| **分析** | Vercel Web Analytics（需 cookie 同意后加载） |
 | **监控** | Sentry（错误追踪 + 性能监控） |
+| **安全** | SSRF 防护、SSE-S3 静态加密、magic-byte 文件验证、结构化安全日志 |
 
 ## 快速开始
 
@@ -151,7 +162,7 @@ DocTalk/
 ├── backend/
 │   ├── app/
 │   │   ├── api/            # 路由处理 (documents, chat, search, billing, auth, users)
-│   │   ├── core/           # 配置与依赖注入
+│   │   ├── core/           # 配置、依赖注入、SSRF 防护、安全日志
 │   │   ├── models/         # SQLAlchemy ORM 模型
 │   │   ├── schemas/        # Pydantic 请求/响应模型
 │   │   ├── services/       # 业务逻辑 (chat, credits, parsing, retrieval, extractors, demo seed, summary)
@@ -162,8 +173,8 @@ DocTalk/
 ├── frontend/
 │   ├── src/
 │   │   ├── app/            # Next.js 页面 (首页, 登录, 购买, 个人中心, Demo, 文档阅读, 集合)
-│   │   ├── components/     # React 组件 (Chat, PdfViewer, TextViewer, Collections, Profile, landing, Header, Footer, PricingTable)
-│   │   ├── lib/            # API 客户端、Auth 配置、SSE 客户端、模型定义、导出工具
+│   │   ├── components/     # React 组件 (Chat, PdfViewer, TextViewer, Collections, Profile, landing, Header, Footer, PricingTable, CookieConsentBanner, AnalyticsWrapper)
+│   │   ├── lib/            # API 客户端、Auth 配置、SSE 客户端、模型定义、导出工具、文件名清洗
 │   │   ├── i18n/           # 11 种语言翻译文件
 │   │   ├── store/          # Zustand 状态管理
 │   │   └── types/
@@ -198,6 +209,8 @@ DocTalk/
 - **URL 导入** — 通过 httpx 获取网页，使用 BeautifulSoup 解析提取文本，然后作为文本文档处理
 - **文档集合** — 文档可分组为集合进行跨文档问答；向量搜索使用 Qdrant MatchAny 过滤器跨多个文档 ID 检索
 - **OpenRouter 网关** — 单一 API key 调用所有 LLM 和 Embedding 模型
+- **纵深防御** — URL 导入 SSRF 验证、magic-byte 文件校验、SSE-S3 静态加密、按套餐上传限制、文件名清洗、非 root Docker 容器、结构化安全事件日志、Celery 重试清理失败的存储对象
+- **隐私与合规** — GDPR 数据导出端点、Cookie 同意横栏控制分析加载、登录流程 AI 处理披露、CCPA "Do Not Sell" 链接、OAuth 令牌清理（不存储 access/refresh token）
 
 ## 部署
 
@@ -208,7 +221,7 @@ DocTalk/
 
 **后端 (Railway):**
 - 从项目根目录部署：`railway up --detach`
-- `entrypoint.sh` 执行流程：Alembic 迁移 → Celery Worker（后台，崩溃自动重启）→ uvicorn，支持 SIGTERM 优雅关闭
+- `entrypoint.sh` 执行流程：Alembic 迁移 → Celery Worker（后台，崩溃自动重启）→ uvicorn，支持 SIGTERM 优雅关闭。容器以非 root 用户 `app` (UID 1001) 运行
 - Railway 项目包含 5 个服务：backend、PostgreSQL、Redis、Qdrant、MinIO
 
 ## 测试

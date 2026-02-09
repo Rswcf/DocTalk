@@ -26,8 +26,8 @@ DocTalk is an AI-powered PDF reader with a unique competitive advantage: **citat
 - **Cross-document Q&A** is the #1 missing capability vs. NotebookLM
 
 ### DocTalk's Position Today
-- **Strengths**: Citation precision (small chunks + bbox highlights), 9 LLM models via OpenRouter, OCR, dark mode, multi-language (11 languages), streaming indicators, auto-summary
-- **Weaknesses**: Single-document only, PDF-only, no team features, no API, underpriced, only 2 tiers (Free/Pro)
+- **Strengths**: Citation precision (small chunks + bbox highlights), 9 LLM models via OpenRouter, OCR, dark mode, multi-language (11 languages), streaming indicators, auto-summary, security hardening (SSRF protection, SSE-S3 encryption at rest, file validation, structured security logging, GDPR data export, cookie consent, non-root Docker)
+- **Weaknesses**: No team features, no API, no SSO
 
 ---
 
@@ -36,7 +36,7 @@ DocTalk is an AI-powered PDF reader with a unique competitive advantage: **citat
 ### Where DocTalk Wins Today
 | vs. Competitor | DocTalk Advantage |
 |----------------|-------------------|
-| **NotebookLM** | Page-level bbox citations, model choice (9 models), OCR, privacy |
+| **NotebookLM** | Page-level bbox citations, model choice (9 models), OCR, privacy, encryption at rest, GDPR data export |
 | **ChatPDF** | Multi-model, dark mode, multi-session, auto-summary, streaming UX |
 | **AskYourPDF** | Better citation UX (hover preview, page highlights), cleaner UI, multi-language |
 | **Humata** | Better citation accuracy (small chunks), more model options, credits transparency |
@@ -45,12 +45,12 @@ DocTalk is an AI-powered PDF reader with a unique competitive advantage: **citat
 ### Where DocTalk Loses
 | Gap | Impact | Fix Needed |
 |-----|--------|-----------|
-| Single-document chat only | CRITICAL — #1 gap vs. NotebookLM | Multi-document collections (Phase 1) |
-| PDF-only | HIGH — users need DOCX/PPTX/XLSX | Multi-format parsing (Phase 1) |
+| ~~Single-document chat only~~ | ~~DONE~~ — Collections + cross-doc Q&A shipped | ~~Multi-document collections (Phase 1)~~ |
+| ~~PDF-only~~ | ~~DONE~~ — DOCX/PPTX/XLSX/TXT/MD + URL import | ~~Multi-format parsing (Phase 1)~~ |
 | No team features | HIGH — blocks B2B revenue | Team workspaces (Phase 3) |
 | No API access | MEDIUM — developer segment lost | REST API (Phase 2) |
 | No SSO | CRITICAL for enterprise | SAML/OIDC (Phase 3) |
-| Only 2 pricing tiers | MEDIUM — no mid-tier capture | Plus tier + Team tier |
+| ~~Only 2 pricing tiers~~ | ~~DONE~~ — Free/Plus/Pro shipped | ~~Plus tier + Team tier~~ |
 
 ### Recommended Positioning Statement
 > "DocTalk: AI document reader with the most precise citations in the market. Ask questions across your PDFs, get answers with exact page references and highlighted text. Trusted by finance analysts, lawyers, and researchers who need source-backed accuracy."
@@ -182,7 +182,7 @@ DocTalk is an AI-powered PDF reader with a unique competitive advantage: **citat
 | **Multi-document Q&A quality degrades** | MEDIUM | Reranker (Cohere Rerank) for cross-doc retrieval quality; tune top_k |
 | **Enterprise sales cycle too long** for small team | HIGH | Focus on self-serve Team tier first; enterprise = later-stage |
 | **Competitors undercut on price** | LOW | Compete on value (9 models, citation quality, OCR), not price |
-| **SOC 2 takes too long** | MEDIUM | Start now; engage compliance automation tool (Vanta/Drata) early |
+| **SOC 2 takes too long** | MEDIUM | Foundation laid: structured security logging, encryption at rest, SSRF protection, non-root Docker, GDPR data export, OAuth token cleanup. Engage compliance automation tool (Vanta/Drata) for formal audit |
 | **Too many features dilute quality** | HIGH | Ship fewer features better; focus on citation precision as core differentiator |
 
 ---

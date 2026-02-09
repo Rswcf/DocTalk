@@ -34,6 +34,16 @@ DocTalk helps heavy document readers quickly locate key information in long docu
 - **Pricing Comparison** — Free vs Plus vs Pro feature comparison table on the billing page
 - **Model Gating** — Premium models (Claude Opus 4.6) restricted to Plus+ plans
 - **Landing Page** — FAQ section, How-It-Works steps, social proof metrics, security cards, and final CTA
+- **SSRF Protection** — URL imports validated against private IP ranges, internal ports blocked, manual redirect following with per-hop validation
+- **Encryption at Rest** — MinIO server-side encryption (SSE-S3) on all stored files with bucket-level default policy
+- **File Validation** — Magic-byte verification (PDF headers, Office ZIP structure), zip bomb protection (500MB limit), double-extension blocking
+- **Per-Plan Limits** — Document count (3/20/999) and file size limits (25/50/100 MB) enforced per subscription tier
+- **Security Logging** — Structured JSON event logs for auth failures, rate limits, SSRF blocks, uploads, and deletions
+- **GDPR Data Export** — Download all personal data as JSON via Profile page
+- **Cookie Consent** — GDPR-compliant banner controlling analytics loading; Vercel Analytics only activates on user consent
+- **CCPA Compliance** — "Do Not Sell My Info" link in footer
+- **Non-Root Docker** — Production container runs as unprivileged user (UID 1001)
+- **Filename Sanitization** — Unicode normalization, control character stripping, double-extension blocking across frontend and backend
 
 ## Live Demo
 
@@ -53,8 +63,9 @@ DocTalk helps heavy document readers quickly locate key information in long docu
 | **AI** | OpenRouter gateway — LLM: `anthropic/claude-sonnet-4.5` (default), Embedding: `openai/text-embedding-3-small` |
 | **PDF Parse** | PyMuPDF (fitz), Tesseract OCR |
 | **Document Parse** | python-docx, python-pptx, openpyxl (DOCX/PPTX/XLSX), httpx + BeautifulSoup4 (URL) |
-| **Analytics** | Vercel Web Analytics |
+| **Analytics** | Vercel Web Analytics (cookie-consent-gated) |
 | **Monitoring** | Sentry (error tracking + performance) |
+| **Security** | SSRF protection, SSE-S3 encryption at rest, magic-byte file validation, structured security logging |
 
 ## Getting Started
 
@@ -151,7 +162,7 @@ DocTalk/
 ├── backend/
 │   ├── app/
 │   │   ├── api/            # Route handlers (documents, chat, search, billing, auth, users)
-│   │   ├── core/           # Config & dependencies
+│   │   ├── core/           # Config, dependencies, SSRF protection, security logging
 │   │   ├── models/         # SQLAlchemy ORM models
 │   │   ├── schemas/        # Pydantic request/response schemas
 │   │   ├── services/       # Business logic (chat, credits, parsing, retrieval, extractors, demo seed, summary)
@@ -162,8 +173,8 @@ DocTalk/
 ├── frontend/
 │   ├── src/
 │   │   ├── app/            # Next.js pages (home, auth, billing, profile, demo, document viewer, collections)
-│   │   ├── components/     # React components (Chat, PdfViewer, TextViewer, Collections, Profile, landing, Header, Footer, PricingTable)
-│   │   ├── lib/            # API client, auth config, SSE client, model definitions, export utils
+│   │   ├── components/     # React components (Chat, PdfViewer, TextViewer, Collections, Profile, landing, Header, Footer, PricingTable, CookieConsentBanner, AnalyticsWrapper)
+│   │   ├── lib/            # API client, auth config, SSE client, model definitions, export utils, filename sanitization
 │   │   ├── i18n/           # 11 language locale files
 │   │   ├── store/          # Zustand state management
 │   │   └── types/
@@ -198,6 +209,8 @@ Key architectural decisions:
 - **URL Ingestion** — Webpages are fetched via httpx, parsed with BeautifulSoup to extract text, then processed as text documents
 - **Collections** — Documents can be grouped into collections for cross-document Q&A; vector search uses Qdrant MatchAny filter across multiple document IDs
 - **OpenRouter Gateway** — Single API key for all LLM and embedding models
+- **Defense in Depth** — SSRF validation on URL imports, magic-byte file verification, SSE-S3 encryption at rest, per-plan upload limits, filename sanitization, non-root Docker container, structured security event logging, Celery retry for failed storage cleanup
+- **Privacy & Compliance** — GDPR data export endpoint, cookie consent banner gating analytics, AI processing disclosure in auth flow, CCPA "Do Not Sell" link, OAuth token cleanup (no access/refresh tokens stored)
 
 ## Deployment
 
@@ -208,7 +221,7 @@ Key architectural decisions:
 
 **Backend (Railway):**
 - Deploy from project root: `railway up --detach`
-- `entrypoint.sh` runs: Alembic migration → Celery worker (background, auto-restart) → uvicorn, with SIGTERM graceful shutdown
+- `entrypoint.sh` runs: Alembic migration → Celery worker (background, auto-restart) → uvicorn, with SIGTERM graceful shutdown. Container runs as non-root user `app` (UID 1001)
 - Railway project includes 5 services: backend, PostgreSQL, Redis, Qdrant, MinIO
 
 ## Testing

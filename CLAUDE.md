@@ -37,7 +37,8 @@ Railway 项目包含 5 个服务：backend, Postgres, Redis, qdrant-v2, minio-v2
 - **Document Parse**: python-docx (DOCX), python-pptx (PPTX), openpyxl (XLSX), httpx + BeautifulSoup4 (URL)
 - **i18n**: 轻量级 React Context 方案，支持 11 种语言（EN, ZH, ES, JA, DE, FR, KO, PT, IT, AR, HI）
 - **Monitoring**: Sentry 集成（后端 FastAPI + Celery，前端 Next.js），用于错误追踪和性能监控
-- **Analytics**: Vercel Web Analytics（页面访问和访客追踪）
+- **Analytics**: Vercel Web Analytics（页面访问和访客追踪，需 cookie 同意后加载）
+- **Security**: SSRF 防护（URL 验证 + 私有 IP 阻断）、MinIO SSE-S3 静态加密、magic-byte 文件验证、结构化安全事件日志、非 root Docker 容器
 
 ### 核心架构决策
 
@@ -60,7 +61,7 @@ Railway 项目包含 5 个服务：backend, Postgres, Redis, qdrant-v2, minio-v2
 - **引用格式**: 编号 [1]..[K]，后端 FSM 解析器处理跨 token 切断；前端 `renumberCitations()` 按出现顺序重编号为连续序列
 - **PDF 文件获取**: presigned URL (不走后端代理)
 - **向量维度**: 配置驱动 (EMBEDDING_DIM)，启动时校验 Qdrant collection
-- **删除**: 同步 ORM cascade delete（pages, chunks, sessions, messages），返回 202；同时 best-effort 清理 MinIO 文件和 Qdrant 向量
+- **删除**: 同步 ORM cascade delete（pages, chunks, sessions, messages），返回 202；同时 best-effort 清理 MinIO 文件和 Qdrant 向量。清理失败时通过 `deletion_worker.py` Celery 重试任务（3 次重试，指数退避）兜底，并记录结构化安全日志
 - **会话管理**: 每文档支持多个独立对话会话，重新打开文档自动恢复最近活跃会话
 - **OCR 支持**: 扫描版 PDF 自动通过 PyMuPDF 内置 Tesseract OCR 提取文字（`extract_pages_ocr()`），支持中英文（`eng+chi_sim`），可配置 DPI。流程：`detect_scanned()` → 设 status="ocr" → OCR 提取 → 验证文字量 ≥50 chars → 继续正常 parsing/embedding 流程
 - **CI/CD**: GitHub Actions 3 并行 job — backend（ruff lint + pytest）、frontend（eslint + next build）、docker（Dockerfile 构建验证）
@@ -74,14 +75,14 @@ Railway 项目包含 5 个服务：backend, Postgres, Redis, qdrant-v2, minio-v2
 - **PDF 文本搜索**: PdfViewer 通过 pdfjs `page.getTextContent()` 提取全文 → store 中 searchQuery/searchMatches/currentMatchIndex → customTextRenderer `<mark>` 高亮 → PdfToolbar 搜索 UI
 - **TextViewer 文本搜索**: Ctrl+F 打开搜索栏，大小写不敏感全文搜索，匹配计数 "X/Y"，上下翻页导航，当前匹配 amber 高亮 + 其他匹配 yellow 高亮，与引用高亮共存
 - **FAQ 手风琴**: `landing/FAQ.tsx` 6 项展开/折叠，`transition-[max-height,opacity]` 动画
-- **Footer 组件**: `Footer.tsx` 3 列 (Product/Company/Legal) + 版权底栏
+- **Footer 组件**: `Footer.tsx` 3 列 (Product/Company/Legal) + 版权底栏。Company 列含 Contact 链接，Legal 列含 CCPA "Do Not Sell My Info" 链接
 - **FinalCTA**: `landing/FinalCTA.tsx` 转化 CTA (Try Demo + Sign Up)
 - **套餐对比表**: `PricingTable.tsx` Free vs Plus vs Pro 9 行对比，Check/X 图标，Plus 列 "Most Popular" 高亮
 - **自定义 AI 指令**: 每文档可设置 `custom_instructions`（最多 2000 字），通过 `PATCH /api/documents/{id}` 更新，`chat_service.py` 注入系统提示
 - **多格式支持**: DOCX/PPTX/XLSX/TXT/MD 文件通过 `backend/app/services/extractors/` 格式专用提取器处理，然后进入与 PDF 相同的分块+向量化流水线。`parse_worker.py` 按 `file_type` 分流。DOCX 提取器遍历 body 元素交错获取段落和表格（markdown table 格式）。XLSX 输出 markdown table（表头+分隔+数据行）。PPTX 提取幻灯片文本、表格和演讲者备注
-- **URL/网页导入**: `POST /api/documents/ingest-url` 端点接收 URL，通过 httpx 抓取 + BeautifulSoup 提取文本，存为 txt 文件处理。PDF URL 自动走 PDF 流水线。前端 Dashboard 提供 URL 输入框
+- **URL/网页导入**: `POST /api/documents/ingest-url` 端点接收 URL，经 `url_validator.py` SSRF 防护（DNS 解析 + 私有 IP 阻断 + 端口白名单 + 最多 3 次手动重定向验证）后，通过 httpx 抓取 + BeautifulSoup 提取文本，存为 txt 文件处理。PDF URL 自动走 PDF 流水线。前端 Dashboard 提供 URL 输入框
 - **文档集合**: `Collection` 模型 + `collection_documents` 多对多关联表，支持跨文档问答。`retrieval_service.search_multi()` 使用 Qdrant `MatchAny` 过滤器。`chat_service.py` 为集合会话构建跨文档系统提示，引用事件包含 `document_id` 和 `document_filename`。前端 `/collections` 列表页 + `/collections/[id]` 详情页（左侧 Chat + 右侧文档列表）
-- **Vercel Web Analytics**: `@vercel/analytics` 集成在 `layout.tsx`，自动追踪页面访问
+- **Vercel Web Analytics**: `@vercel/analytics` 通过 `AnalyticsWrapper.tsx` 条件加载（仅在用户 cookie 同意后），`CookieConsentBanner.tsx` 提供 Accept/Decline 选择，consent 状态存储在 localStorage
 - **产品展示动画**: Remotion `<Player>` 驱动的 landing page 动画演示（`ProductShowcase.tsx`）。300帧@30fps=10s循环。动画序列：用户消息弹入→打字点→AI流式输出（`text.slice(0, chars)` + 闪烁光标）→PDF高亮渐现（`spring()` → `scaleX`）→引用卡片交错弹入→静态保持→交叉淡出循环。所有动画使用 `useCurrentFrame()` + `interpolate()`/`spring()`，禁止 CSS transition/animation。`ShowcasePlayer.tsx` lazy-load Player + 骨架屏，通过 `useTheme()` 传递 `isDark` prop 实现 dark mode
 
 ### API 路由
@@ -118,6 +119,7 @@ POST   /api/billing/webhook               # Stripe Webhook
 
 # 用户
 GET    /api/users/me                      # 基本用户信息
+GET    /api/users/me/export               # GDPR 数据导出 (JSON，包含用户所有数据)
 GET    /api/users/profile                 # 完整 Profile (含 stats, plan, accounts)
 GET    /api/users/usage-breakdown         # 按模型分组的使用统计
 DELETE /api/users/me                      # 删除账户 (级联清理)
@@ -225,7 +227,7 @@ SENTRY_TRACES_SAMPLE_RATE=0.1
 - 从项目根目录运行 `railway up --detach`
 - `entrypoint.sh` 进程管理器：Alembic migration → Celery worker (后台, concurrency=1, 崩溃自动重启) → uvicorn (前台)
 - SIGTERM 优雅关闭：trap 信号 → 先停 Celery 再停 uvicorn
-- 确保 Dockerfile 路径配置正确，验证 Docker Image 服务不接受 start 命令
+- 确保 Dockerfile 路径配置正确，验证 Docker Image 服务不接受 start 命令。容器以非 root 用户 `app` (UID 1001) 运行
 - 部署后始终确认后端运行的是**最新代码**（避免过时部署）
 - 测试前检查本地端口冲突
 
@@ -237,23 +239,38 @@ SENTRY_TRACES_SAMPLE_RATE=0.1
 - **上传/删除需登录**: `upload_document` 和 `delete_document` 使用 `require_auth` 依赖，未登录返回 401
 - **搜索支持可选认证**: `search_document` 使用 `get_current_user_optional`，已登录用户可搜索自己的文档，匿名用户可搜索 demo 文档
 - **Demo 会话上限**: 匿名用户每个 demo 文档最多创建 50 个会话 (`DEMO_MAX_SESSIONS_PER_DOC=50`)，超限返回 429。上限较大是因为全局计数（含已登录用户的会话），真正的保护是每会话 5 条消息限制
-- **匿名速率限制**: `rate_limit.py` 提供内存级 token-bucket 速率限制器，匿名用户 chat 端点限制 10 req/min/IP，超限返回 429 + `Retry-After` header
+- **匿名速率限制**: `rate_limit.py` 提供内存级 token-bucket 速率限制器，匿名用户 chat 端点限制 10 req/min/IP，超限返回 429 + `Retry-After` header。bucket 字典超过 10K 条目时自动清理过期条目
 - **匿名 Demo 模型强制**: 匿名用户在 Demo 文档上的 chat 请求忽略 `model` 参数，强制使用默认模型（`settings.LLM_MODEL`），防止通过 API 直接调用高成本模型
 - **Admin 端点已移除**: 不再暴露 `/admin/retry-stuck`、`/admin/documents` 等无鉴权端点
 - **依赖已锁定**: `requirements.txt` 中所有依赖版本已 pin（`==`），防止供应链攻击
+- **SSRF 防护**: `url_validator.py` 对 URL 导入端点执行 DNS 解析，阻断 RFC 1918/链路本地/云元数据地址段的私有 IP，封锁内部服务端口（5432/6379/6333/9000），手动跟踪最多 3 次重定向并在每跳验证目标安全性
+- **Magic-byte 文件验证**: 上传时检查 PDF `%PDF` 头、Office ZIP 结构 + `[Content_Types].xml`，以及 500MB zip bomb 保护
+- **MinIO SSE-S3 静态加密**: 所有 `put_object()` 调用附加 `SseS3()` + bucket 默认加密策略
+- **Per-plan 文档/文件限制**: FREE_MAX_DOCUMENTS=3, PLUS_MAX_DOCUMENTS=20, PRO_MAX_DOCUMENTS=999；按套餐文件大小限制（25/50/100 MB）在上传端点实际校验
+- **文件名清洗**: `sanitizeFilename()` 执行 Unicode 规范化、控制字符剥离、双扩展名阻断（.pdf.exe → _pdf.exe）、200 字符截断
+- **删除验证**: 结构化安全日志替代静默 `except: pass`；MinIO/Qdrant 清理失败时排入 `deletion_worker.py` Celery 重试任务（3 次重试，指数退避）
+- **安全事件日志**: `security_log.py` 输出结构化 JSON 日志，覆盖认证失败、速率限制命中、SSRF 阻断、上传、删除、账户删除等事件
+- **GDPR 数据导出**: `GET /api/users/me/export` 返回包含用户所有数据的 JSON（GDPR Art. 20 数据可携带性）
+- **OAuth Token 清理**: `link_account()` 中剥离 access_token/refresh_token/id_token — DocTalk 仅需身份信息
+- **非 root Docker**: 容器以 `app` 用户（UID 1001）运行
 
 ### 认证相关
 - **API 代理**: 所有后端接口（含 SSE chat stream）通过 `/api/proxy/*` 走前端代理，自动注入 JWT
 - **JWT 双层设计**: Auth.js v5 使用加密 JWT (JWE)，后端无法直接解密。API 代理使用 `jose` 库创建后端兼容的明文 JWT (HS256)，包含 sub/iat/exp claims
 - **JWT 校验**: 后端 `deps.py` 验证 exp/iat/sub claims
 - **Adapter Secret**: 内部 Auth API 使用 `X-Adapter-Secret` header 校验
+- **OAuth Token 清理**: `auth_service.py:link_account()` 剥离 OAuth 提供商返回的 access_token/refresh_token/id_token，DocTalk 仅保存身份绑定信息（provider + provider_account_id），不存储可用于访问用户第三方账户的令牌
 
 ### 前端相关
 - **UI 设计**: 单色 zinc 调色板，Inter 字体，dark mode 反转按钮 (`bg-zinc-900 dark:bg-zinc-50`)，全站无 `gray-*`/`blue-*` 类（保留 Google OAuth 品牌色和状态色）。卡片使用 `shadow-sm`/`shadow-md` 分层，模态框 `animate-fade-in`/`animate-slide-up` 动画，零 `transition-all` 策略（所有过渡使用具体属性 `transition-colors`/`transition-opacity`/`transition-shadow`）
 - **Header variant**: `variant='minimal'`（首页/Demo/Auth：仅 Logo+UserMenu）vs `variant='full'`（文档页/Billing/Profile：完整控件）。额外支持 `isDemo`/`isLoggedIn` props，匿名 Demo 用户时隐藏 ModelSelector
 - **Landing page**: HeroSection（大字标题+CTA）+ **ProductShowcase**（Remotion `<Player>` 动画演示：用户提问→AI流式引用回答→PDF高亮同步，300帧@30fps=10s循环，macOS window chrome 框架，lazy-loaded，支持 dark mode）+ **HowItWorks**（3步骤：Upload→Ask→Cited Answers）+ FeatureGrid（3列特性卡片）+ **SocialProof**（4项信任指标）+ **SecuritySection**（4张安全卡片）+ **FAQ**（6项手风琴）+ **FinalCTA**（转化CTA）+ PrivacyBadge + **Footer**（3列链接组件）
 - **动态 CTA**: 首页根据登录状态显示不同 UI（未登录→Landing page，已登录→Dashboard 上传区+文档列表）
-- **AuthModal**: 使用查询参数 `?auth=1` 触发登录模态框，ESC 可关闭，焦点陷阱（Tab 循环），backdrop 点击关闭
+- **AuthModal**: 使用查询参数 `?auth=1` 触发登录模态框，ESC 可关闭，焦点陷阱（Tab 循环），backdrop 点击关闭。底部显示 AI 处理披露（`auth.aiDisclosure`：文档由第三方 AI 服务处理）和服务条款通知（`auth.termsNotice`）
+- **Cookie 同意**: `CookieConsentBanner.tsx` 底部横栏提供 Accept/Decline 按钮，控制 Vercel Analytics 加载（`AnalyticsWrapper.tsx` 条件渲染），consent 存储在 localStorage
+- **CCPA 合规**: Footer Legal 列新增 "Do Not Sell My Info" 链接
+- **数据导出**: Profile AccountActionsSection 新增 "Download My Data" 按钮，调用 `GET /api/users/me/export` 下载用户全部数据 JSON
+- **隐私声明修正**: 11 种语言的 i18n 文件中移除了虚假声明（"端到端加密"、"30 天自动删除"、"不与第三方共享"、"我们不保留任何内容"），替换为准确描述
 - **Demo 模式**: `/demo` 页面从后端 `GET /api/documents/demo` 获取真实文档列表，显示 "5 free messages" 提示信息，链接到 `/d/{docId}`；ChatPanel 通过 `maxUserMessages` prop 实现客户端 5 条限制 + 进度条（剩余 ≤2 时 amber 警告色）+ 登录 CTA；旧 `/demo/[sample]` 路由自动重定向到新路径。匿名用户在 Demo 文档页面 Header 中隐藏 ModelSelector（通过 `isDemo`/`isLoggedIn` props 控制）
 - **文档列表**: 服务端 + localStorage 合并，服务端优先
 - **前端全部 `"use client"`**: 无 SSR，所有页面和组件均为客户端渲染
@@ -287,7 +304,7 @@ SENTRY_TRACES_SAMPLE_RATE=0.1
 - **Demo 文档种子**: `on_startup` → `_seed_demo_documents()` → `demo_seed.seed_demo_documents()`，从 `backend/seed_data/` 读取 3 篇 PDF，上传 MinIO 并 dispatch parse。幂等：已 ready 跳过，stuck 重派，error 重建
 - **Demo 5 条消息限制**: `chat.py:chat_stream` 中，匿名用户 + demo_slug 文档 → 查询 user messages 数量 → 超过 5 条返回 429。前端 ChatPanel 区分速率限制 429（"Rate limit exceeded" → `demo.rateLimitMessage`）和消息限制 429（→ `demo.limitReachedMessage`）
 - **Retrieval 容错**: `chat_service.py` 的 retrieval 调用包裹在 try/except 中，Qdrant 不可用时返回 `RETRIEVAL_ERROR` SSE 事件
-- **删除为同步级联**: `doc_service.delete_document()` 使用 ORM cascade 真正删除 DB 记录（非仅标记 status），同时 best-effort 清理 MinIO + Qdrant
+- **删除为同步级联**: `doc_service.delete_document()` 使用 ORM cascade 真正删除 DB 记录（非仅标记 status），同时 best-effort 清理 MinIO + Qdrant。清理失败时通过 `deletion_worker.py` Celery 任务重试（3 次，指数退避），所有删除操作记录结构化安全日志
 - **文档列表过滤**: `list_documents` 查询排除 `status="deleting"` 的文档
 - **月度 Credits 惰性发放**: `ensure_monthly_credits()` 在每次 chat 前检查，30 天周期，ledger 幂等，时区安全
 - **Stripe 订阅 Webhook**: `checkout.session.completed` 按 mode 分流 (subscription vs payment)；`invoice.payment_succeeded` 按 invoice.id 幂等；`customer.subscription.deleted` 清除 plan
@@ -348,7 +365,9 @@ DocTalk/
 │   │   ├── core/
 │   │   │   ├── config.py         # Settings, ALLOWED_MODELS 白名单
 │   │   │   ├── deps.py           # FastAPI 依赖 (require_auth, get_db)
-│   │   │   └── rate_limit.py     # 内存级速率限制器 (匿名用户 chat 端点)
+│   │   │   ├── rate_limit.py     # 内存级速率限制器 (匿名用户 chat 端点, 10K 条目自动清理)
+│   │   │   ├── url_validator.py  # SSRF 防护 (DNS 解析 + 私有 IP 阻断 + 端口封锁 + 重定向验证)
+│   │   │   └── security_log.py   # 结构化 JSON 安全事件日志
 │   │   ├── models/
 │   │   │   ├── tables.py         # ORM (User, Document, Collection, Session, Credits, Ledger...)
 │   │   │   ├── database.py       # Async engine
@@ -373,7 +392,7 @@ DocTalk/
 │   │   │   │   ├── text_extractor.py  # TXT/Markdown 提取
 │   │   │   │   └── url_extractor.py   # URL/网页提取 (httpx + BeautifulSoup)
 │   │   │   └── ...
-│   │   └── workers/              # Celery 任务
+│   │   └── workers/              # Celery 任务 (parse_worker + deletion_worker)
 │   ├── alembic/                  # 数据库迁移
 │   ├── seed_data/                # Demo PDF 文件 (nvidia-10k, attention-paper, nda-contract)
 │   └── tests/
@@ -400,8 +419,10 @@ DocTalk/
 │   │   │   ├── PrivacyBadge.tsx  # 隐私承诺徽章
 │   │   │   ├── CreditsDisplay.tsx # 余额显示 (自动刷新 + 事件驱动刷新)
 │   │   │   ├── PaywallModal.tsx  # 付费墙
-│   │   │   ├── Footer.tsx        # 页脚 (3 列链接: Product/Company/Legal)
+│   │   │   ├── Footer.tsx        # 页脚 (3 列链接: Product/Company/Legal + CCPA "Do Not Sell" + Contact)
 │   │   │   ├── PricingTable.tsx  # 套餐对比表 (Free vs Plus vs Pro)
+│   │   │   ├── CookieConsentBanner.tsx  # Cookie 同意横栏 (GDPR ePrivacy, Accept/Decline)
+│   │   │   ├── AnalyticsWrapper.tsx     # 条件 Vercel Analytics (仅 cookie 同意后加载)
 │   │   │   ├── ErrorBoundary.tsx # React 错误边界
 │   │   │   ├── Providers.tsx     # SessionProvider 包装器
 │   │   │   ├── Profile/          # ProfileTabs, ProfileInfo, Credits, Usage, Account
@@ -416,6 +437,7 @@ DocTalk/
 │   │   │   ├── authAdapter.ts    # FastAPI Adapter
 │   │   │   ├── models.ts         # AVAILABLE_MODELS 定义 (9 模型)
 │   │   │   ├── export.ts         # 对话导出 (Markdown + 引用脚注)
+│   │   │   ├── utils.ts          # 工具函数 (sanitizeFilename: Unicode 规范化 + 控制字符剥离 + 双扩展名阻断)
 │   │   │   └── sse.ts            # SSE 流式客户端
 │   │   ├── i18n/                 # 11 种语言
 │   │   ├── store/                # Zustand

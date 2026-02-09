@@ -29,7 +29,7 @@ DocTalk currently offers a strong single-document PDF Q&A experience with citati
 | **Document versioning** | LOW | 2-3 | LOW | Legal, compliance | 5 |
 | **Audio overviews (podcast-style)** | MEDIUM | 4-6 | LOW | General users | 5 |
 | **Email digests** | LOW | 1-2 | LOW | Retention play | 4 |
-| **SOC 2 Type II** | HIGH (enterprise gate) | 12-18 months | HIGH (enterprise) | Enterprise | 4* |
+| **SOC 2 Type II** | HIGH (enterprise gate) | 12-18 months | HIGH (enterprise) | Enterprise | 4* (foundation laid: security logging, encryption at rest, SSRF protection, GDPR export, non-root Docker) |
 | **Mobile PWA** | LOW | 2-3 | LOW | Mobile users | 3 |
 | **Zapier/Make integration** | LOW | 1-2 | LOW | Automation users | 3 |
 
@@ -262,15 +262,19 @@ DocTalk currently offers a strong single-document PDF Q&A experience with citati
 **Revenue Impact**: HIGH (gating) -- required for any enterprise deal >$50K ARR.
 
 **Implementation (Phase 3 scope: preparation only)**:
-- Audit logging: Log all data access, auth events, admin actions to structured log store
+- ~~Audit logging: Log all data access, auth events, admin actions to structured log store~~ **DONE** — `security_log.py` emits structured JSON for auth failures, rate limits, SSRF blocks, uploads, deletions, account deletions
 - Access control documentation
-- Data encryption verification (at rest and in transit)
+- ~~Data encryption verification (at rest and in transit)~~ **DONE** — SSE-S3 encryption on all MinIO objects + bucket default policy; HTTPS enforced in transit
+- ~~SSRF protection~~ **DONE** — `url_validator.py` validates all URL imports against private IP ranges and internal ports
+- ~~Non-root container~~ **DONE** — Docker runs as `app` user (UID 1001)
+- ~~GDPR data portability~~ **DONE** — `GET /api/users/me/export` endpoint
+- ~~OAuth token minimization~~ **DONE** — access/refresh/id tokens stripped on save
 - Vendor risk assessment for Railway, Vercel, OpenRouter
 - Engage compliance automation tool (Vanta, Drata, or Scytale)
 - Target: SOC 2 Type I audit engagement by end of Phase 3
 
-**Effort**: 2-3 eng-weeks for technical controls + compliance tooling setup
-**Risk**: Low technical risk, high process overhead.
+**Effort**: ~1 eng-week remaining (vendor assessment + compliance tooling), down from 2-3 weeks originally
+**Risk**: Low technical risk (most controls already implemented), remaining work is process and documentation.
 
 ---
 
@@ -392,7 +396,7 @@ DocTalk currently offers a strong single-document PDF Q&A experience with citati
 
 | Competitor | Strengths | DocTalk Advantages |
 |-----------|-----------|-------------------|
-| **NotebookLM** | Free, multi-source, audio overviews, Google ecosystem | Precise page-level citations with bbox highlights, model choice (9 models), OCR, privacy (self-hosted option), Pro features |
+| **NotebookLM** | Free, multi-source, audio overviews, Google ecosystem | Precise page-level citations with bbox highlights, model choice (9 models), OCR, privacy (self-hosted option), encryption at rest, GDPR data export, security hardening, Pro features |
 | **ChatPDF** | Simple UX, low price ($5/mo) | Multi-model choice, dark mode, multi-session, auto-summary, streaming indicators |
 | **AskYourPDF** | Multi-format, API, Chrome extension, GPT plugin | Better citation UX (hover preview, page highlights), cleaner UI, multi-language |
 | **Humata** | Research-focused, multi-format | Better citation accuracy (small chunks), more model options, credits transparency |
@@ -404,7 +408,7 @@ DocTalk currently offers a strong single-document PDF Q&A experience with citati
 2. **Model flexibility**: 9+ LLM models via OpenRouter, user's choice
 3. **Multi-format + multi-document**: Combined with citation precision, creates unique value
 4. **API + UI**: Serves both end-users and developers
-5. **Privacy**: Self-hostable architecture, no training on user data
+5. **Privacy & Security**: Self-hostable architecture, no training on user data, encryption at rest (SSE-S3), SSRF protection, GDPR data export, cookie consent, structured security logging, non-root Docker, OAuth token minimization
 
 ---
 

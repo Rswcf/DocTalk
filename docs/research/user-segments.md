@@ -432,7 +432,7 @@ Peer at competitor      --> Check data security        --> Daily use for        
 | Elicit | Academic | Limited | $12/month | Institutional |
 | Hebbia | Finance/Legal | N/A | $3,000-$10,000/seat/year | Custom |
 | Harvey AI | Legal | N/A | Enterprise only (~$100K+/year) | Custom |
-| **DocTalk (current)** | **General** | **10K credits/month** | **Pro: 100K credits/month** | **N/A** |
+| **DocTalk (current)** | **General** | **5K credits/month (3 docs, 25MB)** | **Plus: 30K / Pro: 150K credits/month** | **N/A** |
 
 ### Key Insight for DocTalk Pricing
 
@@ -457,4 +457,4 @@ The three highest-value segments for DocTalk are:
 2. **Legal professionals (solo/small firm)** — massive underserved market, citation accuracy is DocTalk's strongest differentiator, high switching incentive from expensive incumbents
 3. **Academic researchers** — largest addressable market, viral growth potential, strong multi-language fit, pipeline to premium segments
 
-DocTalk's existing citation-backed answer system, multi-language support, and OCR capabilities create a defensible position in all three segments. The primary gaps to address are multi-document support, domain-specific templates, and enterprise features (SSO, compliance certifications).
+DocTalk's existing citation-backed answer system, multi-language support (11 languages), OCR capabilities, multi-format support (PDF/DOCX/PPTX/XLSX/TXT/MD/URL), document collections with cross-document Q&A, and security hardening (SSRF protection, encryption at rest, GDPR data export, structured security logging) create a defensible position in all three segments. The primary gaps to address are domain-specific templates and enterprise features (SSO, SOC 2 certification, team workspaces).

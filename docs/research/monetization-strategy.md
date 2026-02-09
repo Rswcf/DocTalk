@@ -49,9 +49,9 @@ A Pro user gets approximately:
 1. **Only 2 tiers** (Free/Pro) -- no middle ground for casual paid users, no team/enterprise tier
 2. **Credits are abstract** -- users don't intuitively know what "10,000 credits" means in terms of real usage; no clear mapping to "X conversations" or "X documents"
 3. **No annual discount** -- missing the most common SaaS conversion lever (typically 15-20% annual savings)
-4. **No per-document or per-page limits** -- a free user can upload unlimited documents with only credit consumption as the gate, meaning heavy uploaders who ask few questions pay nothing
-5. **Upload is free** -- parsing and embedding cost server resources (Celery compute, Qdrant storage, MinIO storage) but don't consume credits
-6. **No differentiation in document limits** -- Free and Pro both show "50 MB / file" with same access to all 9 models
+4. ~~**No per-document or per-page limits**~~ **FIXED** — per-plan document count limits enforced: FREE=3, PLUS=20, PRO=999
+5. ~~**Upload is free**~~ — upload still doesn't consume credits, but per-plan file size limits now enforced (FREE=25MB, PLUS=50MB, PRO=100MB) with magic-byte file validation
+6. ~~**No differentiation in document limits**~~ **FIXED** — per-plan document count and file size limits now enforced at upload endpoint
 7. **No team features** -- no shared workspaces, no admin controls, no seat-based pricing
 8. **No usage-based overages** -- when credits run out, the user is blocked rather than offered pay-as-you-go
 9. **Price-to-value gap at Pro** -- $9.99/month for 100K credits (7,142 standard queries) is extremely generous; power users get enormous value but there's no capture mechanism above Pro
@@ -71,8 +71,8 @@ A Pro user gets approximately:
 | **Model Selection** | 9 models (user choice) | Not specified | GPT-5 family + Claude + Gemini (credits for premium) | GPT-5 | Not specified |
 | **OCR** | Included (all tiers) | Not specified | Premium+ only | Team+ only ($49/user) | Not specified |
 | **Page Limits** | None (credit-gated) | 120 free / 2000 paid | 100 free / 6000 pro | 60 free / 5000 team | Not specified |
-| **File Size** | 50 MB | 32 MB (paid) | 877 MB (pro) | Not specified | Not specified |
-| **Key Differentiator** | Cited answers with bbox highlights, multi-model | Simplicity, brand recognition | API access, ChatGPT plugin | Team features, SOC-2 | Developer API, embeddable chatbot |
+| **File Size** | 25 MB (Free) / 50 MB (Plus) / 100 MB (Pro) | 32 MB (paid) | 877 MB (pro) | Not specified | Not specified |
+| **Key Differentiator** | Cited answers with bbox highlights, multi-model, encryption at rest, GDPR export, per-plan limits | Simplicity, brand recognition | API access, ChatGPT plugin | Team features, SOC-2 | Developer API, embeddable chatbot |
 
 ### Key Pricing Observations
 

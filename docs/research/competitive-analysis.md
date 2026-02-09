@@ -225,7 +225,7 @@ The market has progressed from novelty (2023) through commoditization of basic f
 
 | Tool | Free Tier | Entry Paid | Mid Tier | Enterprise |
 |------|-----------|------------|----------|------------|
-| **DocTalk** | Demo (3 docs, 5 msg limit, rate limited) | Free (5K credits/mo) | Plus (30K) / Pro (150K credits/mo) | -- |
+| **DocTalk** | Demo (3 docs, 5 msg limit, rate limited) | Free (5K credits/mo, 3 docs, 25MB) | Plus (30K, 20 docs, 50MB) / Pro (150K credits/mo, 999 docs, 100MB) | -- |
 | ChatPDF | 2 PDFs/day | $19.99/mo | -- | -- |
 | PDF.ai | 1 PDF total | $17/mo | $27/mo | $37/mo |
 | AskYourPDF | 1 doc/day | $11.99/mo | $14.99/mo | Custom |
@@ -249,8 +249,8 @@ The market has progressed from novelty (2023) through commoditization of basic f
 | **Side-by-side PDF+Chat** | Yes | Yes | No | No | Yes | No | No | No |
 | **Citation with page jump** | Yes (bbox highlight) | Yes (scroll) | Basic | Yes | Yes | Yes (fragment) | Yes (source) | Yes |
 | **Visual bbox highlighting** | Yes | No | No | No | No | No | No | No |
-| **Multi-document chat** | No | Yes | Yes | Yes | Yes | Yes | Yes | Yes (10) |
-| **Multi-format support** | PDF only | PDF only | PDF+DOC+PPT+TXT | PDF | PDF+web+audio | PDF+DOC+EPUB | PDF+Docs+YT+web | PDF+DOC+PPT |
+| **Multi-document chat** | Yes (Collections) | Yes | Yes | Yes | Yes | Yes | Yes | Yes (10) |
+| **Multi-format support** | PDF+DOCX+PPTX+XLSX+TXT+MD+URL | PDF only | PDF+DOC+PPT+TXT | PDF | PDF+web+audio | PDF+DOC+EPUB | PDF+Docs+YT+web | PDF+DOC+PPT |
 | **OCR** | Yes | No | Yes | Yes (Team+) | No | Yes | No | No |
 | **Model selection** | Yes (9 models) | No | Yes (8+ models) | Yes (GPT-5) | Yes (multi) | Yes (GPT-4o) | No (Gemini only) | No |
 | **PDF text search** | Yes | No | No | No | No | No | No | Yes |
@@ -262,7 +262,7 @@ The market has progressed from novelty (2023) through commoditization of basic f
 | **API access** | No | No | Yes | No | No | No | No | No |
 | **Browser extension** | No | No | Yes (Chrome) | No | Yes (Chrome) | No | No | No |
 | **Resizable panels** | Yes | No | No | No | No | No | No | No |
-| **i18n** | Yes (9 langs) | Partial | Partial | Multi-lang | 90+ langs | Multi-lang | Multi-lang | Multi-lang |
+| **i18n** | Yes (11 langs) | Partial | Partial | Multi-lang | 90+ langs | Multi-lang | Multi-lang | Multi-lang |
 | **Stripe billing** | Yes | Yes | Yes | Yes | Yes | Yes | Google Pay | Adobe |
 | **Dark mode** | Yes | No | No | No | Yes | No | Yes | Yes |
 | **Mobile responsive** | Yes | Partial | Yes | Yes | Yes | Partial | Yes (app) | Yes (app) |
@@ -382,14 +382,17 @@ Any competitor relying purely on "chat with PDF" as their value proposition is v
 - **Export to Markdown**: Clean conversation export
 - **OCR support**: Handles scanned PDFs
 - **Credit-based pricing**: Aligns costs with usage
+- **Multi-format + URL import**: PDF, DOCX, PPTX, XLSX, TXT, MD, and webpage URL ingestion
+- **Document Collections**: Cross-document Q&A with source attribution
+- **Security hardening**: SSRF protection, SSE-S3 encryption at rest, magic-byte file validation, per-plan upload limits, structured security logging, GDPR data export, cookie consent, non-root Docker
 
 ### Weaknesses (Address)
-- **Single-document only**: Critical gap vs. all competitors
-- **PDF-only**: Limits addressable market
+- ~~**Single-document only**~~: Resolved — Document Collections with cross-document Q&A
+- ~~**PDF-only**~~: Resolved — DOCX/PPTX/XLSX/TXT/MD + URL import
 - **No team features**: Blocks B2B revenue (highest ARPU segment)
 - **No API**: Missing B2B integration revenue
 - **No browser extension**: Missing discoverability channel
-- **No folder/organization**: Limits utility for heavy users
+- ~~**No folder/organization**~~: Resolved — Document Collections
 - **Demo limited to 3 fixed docs**: Less compelling than competitors' free tiers (ChatDOC: 5 docs/day, NotebookLM: free)
 
 ### Opportunities

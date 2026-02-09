@@ -70,7 +70,7 @@ graph TB
 | **PostgreSQL** | Primary data store for users, documents, pages, chunks, sessions, messages, credits |
 | **Qdrant** | Vector database for semantic search (COSINE similarity, 1536 dimensions) |
 | **Redis** | Celery task broker and result backend |
-| **MinIO** | S3-compatible object storage for uploaded PDFs |
+| **MinIO** | S3-compatible object storage for uploaded files with SSE-S3 encryption at rest |
 | **OpenRouter** | Unified gateway for LLM inference and text embedding |
 | **Stripe** | Payment processing for credit purchases and Plus/Pro subscriptions (monthly + annual) |
 | **Sentry** | Error tracking and performance monitoring for both backend (FastAPI + Celery) and frontend (Next.js) |
@@ -124,7 +124,7 @@ sequenceDiagram
 
 **Step-by-step:**
 
-1. **Upload**: Browser sends PDF via multipart form through the API proxy. Backend stores the file in MinIO and creates a document record.
+1. **Upload**: Browser sends PDF via multipart form through the API proxy. Backend validates per-plan document count and file size limits, performs magic-byte file validation (PDF `%PDF` header, Office ZIP structure + `[Content_Types].xml`, 500MB zip bomb protection), sanitizes the filename (Unicode normalization, control char stripping, double-extension blocking), stores the file in MinIO with SSE-S3 encryption, and creates a document record.
 
 2. **Text Extraction**: Celery worker downloads the PDF and uses **PyMuPDF (fitz)** to extract text with bounding-box coordinates per page. Coordinates are normalized to `[0, 1]` range (top-left origin).
 
@@ -417,12 +417,12 @@ erDiagram
         string type
         string provider
         string provider_account_id
-        string refresh_token
-        string access_token
+        string refresh_token "stripped on save"
+        string access_token "stripped on save"
         int expires_at
         string token_type
         string scope
-        string id_token
+        string id_token "stripped on save"
     }
 
     CreditLedger {
@@ -595,7 +595,37 @@ graph TD
 
 ---
 
-## 8. Infrastructure & Deployment
+## 8. Security & Compliance
+
+### Security Layers
+
+| Layer | Mechanism |
+|-------|-----------|
+| **SSRF Protection** | `url_validator.py` — DNS resolution + private IP blocking (RFC 1918, link-local, cloud metadata `169.254.169.254`), internal port blocking (5432/6379/6333/9000), manual redirect following (max 3 hops) with per-hop validation |
+| **File Validation** | Magic-byte checks: PDF `%PDF` header, Office ZIP structure + `[Content_Types].xml` presence, 500MB zip bomb protection. Double-extension blocking (`.pdf.exe` becomes `_pdf.exe`) |
+| **Encryption at Rest** | MinIO SSE-S3 on all `put_object()` calls + bucket-level default encryption policy |
+| **Per-Plan Limits** | FREE: 3 docs / 25MB, PLUS: 20 docs / 50MB, PRO: 999 docs / 100MB — enforced at upload endpoint |
+| **Filename Sanitization** | Unicode NFC normalization, control character stripping, double-extension blocking, 200 character truncation — applied in both frontend (`utils.ts`) and backend |
+| **Rate Limiting** | In-memory token-bucket for anonymous chat (10 req/min/IP), automatic cleanup when bucket dict exceeds 10K entries |
+| **OAuth Token Cleanup** | `link_account()` strips access_token, refresh_token, and id_token — DocTalk stores only identity binding (provider + provider_account_id) |
+| **Non-Root Docker** | Container runs as `app` user (UID 1001), not root |
+| **Deletion Verification** | Failed MinIO/Qdrant cleanup queued as Celery retry task (`deletion_worker.py`, 3 retries with exponential backoff); structured security logging replaces silent exception swallowing |
+| **Security Event Logging** | `security_log.py` emits structured JSON logs for: auth failures, rate limit hits, SSRF blocks, file uploads, document deletions, account deletions |
+
+### Privacy & Compliance
+
+| Requirement | Implementation |
+|-------------|---------------|
+| **GDPR Art. 17 (Right to Erasure)** | `DELETE /api/users/me` — cascading deletion of all user data, Stripe subscription cancellation, MinIO + Qdrant cleanup |
+| **GDPR Art. 20 (Data Portability)** | `GET /api/users/me/export` — JSON export of all user data (profile, documents, sessions, messages, credits, usage) |
+| **GDPR ePrivacy (Cookies)** | `CookieConsentBanner.tsx` — Accept/Decline banner; `AnalyticsWrapper.tsx` conditionally loads Vercel Analytics only on consent; consent stored in localStorage |
+| **AI Processing Disclosure** | `AuthModal` displays `auth.aiDisclosure` notice: documents are processed by third-party AI services (OpenRouter) |
+| **CCPA (Do Not Sell)** | Footer Legal column includes "Do Not Sell My Info" link |
+| **False Claims Removed** | All 11 locale files corrected: removed "end-to-end encryption", "30-day auto-deletion", "no third-party sharing", "we retain nothing" — replaced with accurate descriptions |
+
+---
+
+## 9. Infrastructure & Deployment
 
 ```mermaid
 graph LR

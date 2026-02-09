@@ -70,7 +70,7 @@ graph TB
 | **PostgreSQL** | 主数据存储：用户、文档、页面、文本块、会话、消息、积分 |
 | **Qdrant** | 向量数据库，语义搜索（COSINE 相似度，1536 维） |
 | **Redis** | Celery 任务代理和结果后端 |
-| **MinIO** | S3 兼容对象存储，用于上传的 PDF 文件 |
+| **MinIO** | S3 兼容对象存储，用于上传的文件，SSE-S3 静态加密 |
 | **OpenRouter** | LLM 推理和文本向量化的统一网关 |
 | **Stripe** | 积分购买和 Plus/Pro 订阅（月付 + 年付）的支付处理 |
 | **Sentry** | 后端（FastAPI + Celery）和前端（Next.js）的错误追踪与性能监控 |
@@ -124,7 +124,7 @@ sequenceDiagram
 
 **逐步说明：**
 
-1. **上传**：浏览器通过 API 代理以 multipart 表单发送 PDF。后端将文件存储到 MinIO 并创建文档记录。
+1. **上传**：浏览器通过 API 代理以 multipart 表单发送 PDF。后端校验按套餐的文档数量和文件大小限制，执行 magic-byte 文件验证（PDF `%PDF` 头、Office ZIP 结构 + `[Content_Types].xml`、500MB zip bomb 防护），清洗文件名（Unicode 规范化、控制字符剥离、双扩展名阻断），将文件以 SSE-S3 加密存储到 MinIO，并创建文档记录。
 
 2. **文本提取**：Celery Worker 下载 PDF，使用 **PyMuPDF (fitz)** 按页提取文本及边界框坐标。坐标归一化到 `[0, 1]` 范围（左上角原点）。
 
@@ -417,12 +417,12 @@ erDiagram
         string type
         string provider
         string provider_account_id
-        string refresh_token
-        string access_token
+        string refresh_token "保存时剥离"
+        string access_token "保存时剥离"
         int expires_at
         string token_type
         string scope
-        string id_token
+        string id_token "保存时剥离"
     }
 
     CreditLedger {
@@ -595,7 +595,37 @@ graph TD
 
 ---
 
-## 8. 基础设施与部署
+## 8. 安全与合规
+
+### 安全层级
+
+| 层级 | 机制 |
+|------|------|
+| **SSRF 防护** | `url_validator.py` — DNS 解析 + 私有 IP 阻断（RFC 1918、链路本地、云元数据 `169.254.169.254`），内部端口封锁（5432/6379/6333/9000），手动重定向跟踪（最多 3 跳）并逐跳验证 |
+| **文件验证** | Magic-byte 检查：PDF `%PDF` 头、Office ZIP 结构 + `[Content_Types].xml`、500MB zip bomb 防护。双扩展名阻断（`.pdf.exe` → `_pdf.exe`） |
+| **静态加密** | MinIO SSE-S3 应用于所有 `put_object()` 调用 + bucket 级默认加密策略 |
+| **按套餐限制** | FREE: 3 文档 / 25MB，PLUS: 20 文档 / 50MB，PRO: 999 文档 / 100MB — 在上传端点强制执行 |
+| **文件名清洗** | Unicode NFC 规范化、控制字符剥离、双扩展名阻断、200 字符截断 — 前端（`utils.ts`）和后端同时执行 |
+| **速率限制** | 内存级 token-bucket 限制匿名 chat（10 req/min/IP），bucket 字典超 10K 条目时自动清理 |
+| **OAuth 令牌清理** | `link_account()` 剥离 access_token、refresh_token 和 id_token — DocTalk 仅存储身份绑定信息（provider + provider_account_id） |
+| **非 root Docker** | 容器以 `app` 用户（UID 1001）运行，非 root |
+| **删除验证** | MinIO/Qdrant 清理失败时排入 Celery 重试任务（`deletion_worker.py`，3 次重试，指数退避）；结构化安全日志替代静默异常吞没 |
+| **安全事件日志** | `security_log.py` 输出结构化 JSON 日志：认证失败、速率限制命中、SSRF 阻断、文件上传、文档删除、账户删除 |
+
+### 隐私与合规
+
+| 要求 | 实现 |
+|------|------|
+| **GDPR Art. 17（被遗忘权）** | `DELETE /api/users/me` — 级联删除所有用户数据，取消 Stripe 订阅，清理 MinIO + Qdrant |
+| **GDPR Art. 20（数据可携带性）** | `GET /api/users/me/export` — JSON 导出所有用户数据（个人信息、文档、会话、消息、积分、使用记录） |
+| **GDPR ePrivacy（Cookie）** | `CookieConsentBanner.tsx` — Accept/Decline 横栏；`AnalyticsWrapper.tsx` 仅在同意后条件加载 Vercel Analytics；consent 存储在 localStorage |
+| **AI 处理披露** | `AuthModal` 显示 `auth.aiDisclosure` 通知：文档由第三方 AI 服务（OpenRouter）处理 |
+| **CCPA（禁止出售）** | Footer Legal 列包含 "Do Not Sell My Info" 链接 |
+| **虚假声明移除** | 11 种语言的 i18n 文件已修正：移除 "端到端加密"、"30 天自动删除"、"不与第三方共享"、"我们不保留任何内容"，替换为准确描述 |
+
+---
+
+## 9. 基础设施与部署
 
 ```mermaid
 graph LR
