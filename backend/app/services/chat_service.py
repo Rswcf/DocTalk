@@ -298,7 +298,7 @@ class ChatService:
                 "2. After key statements, cite sources with [n] (n = fragment number).\n"
                 "3. You may cite multiple fragments, e.g. [1][3].\n"
                 "4. When relevant, mention which document the information comes from.\n"
-                "5. If the fragments cannot answer the question, say the information was not found in the documents.\n"
+                "5. Always extract as much relevant information as possible from the fragments. Focus on what IS available rather than what is missing. Only say the information was not found if the fragments are truly unrelated to the question.\n"
                 "6. Use Markdown: **bold** for emphasis, bullet lists for multiple points.\n"
                 f"7. Your response language MUST be {language_name}.\n"
             )
@@ -312,7 +312,7 @@ class ChatService:
                 "1. Only answer based on the fragments above. Do not fabricate information.\n"
                 "2. After key statements, cite sources with [n] (n = fragment number).\n"
                 "3. You may cite multiple fragments, e.g. [1][3].\n"
-                "4. If the fragments cannot answer the question, say the information was not found in the document.\n"
+                "4. Always extract as much relevant information as possible from the fragments. Focus on what IS available rather than what is missing. Only say the information was not found if the fragments are truly unrelated to the question.\n"
                 "5. Use Markdown: **bold** for emphasis, bullet lists for multiple points.\n"
                 f"6. Your response language MUST be {language_name}.\n"
             )
