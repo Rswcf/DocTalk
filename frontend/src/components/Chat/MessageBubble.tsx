@@ -167,26 +167,15 @@ export default function MessageBubble({ message, onCitationClick, isStreaming, o
   }, [message.citations, onCitationClick, t]);
 
   return (
-    <div className={`w-full flex ${isUser ? 'justify-end' : 'justify-start'} my-3 group`}>
-      <div className="relative max-w-[80%]">
-        {/* Copy button (assistant only) */}
-        {isAssistant && !isError && message.text && (
-          <button
-            onClick={handleCopy}
-            className="absolute -top-2 right-0 opacity-0 group-hover:opacity-100 transition-opacity p-1.5 rounded-md bg-white dark:bg-zinc-700 shadow-sm border dark:border-zinc-600 text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200"
-            title={copied ? t('copy.copied') : t('copy.button')}
-          >
-            {copied ? <Check size={14} className="text-green-500" /> : <Copy size={14} />}
-          </button>
-        )}
-
+    <div className={`w-full flex ${isUser ? 'justify-end' : 'justify-start'} ${isUser ? 'my-3' : 'my-4'} group`}>
+      <div className={`relative ${isUser ? 'max-w-[80%]' : 'w-full'}`}>
         <div
-          className={`rounded-2xl px-4 py-3 text-sm ${
+          className={`text-sm ${
             isError
-              ? 'bg-red-600 text-white'
+              ? 'rounded-2xl px-4 py-3 bg-red-600 text-white'
               : isUser
-              ? 'bg-zinc-800 dark:bg-zinc-700 text-white shadow-sm'
-              : 'bg-zinc-50 text-zinc-900 dark:bg-zinc-800 dark:text-zinc-100 border border-zinc-100 dark:border-zinc-800'
+              ? 'rounded-2xl px-4 py-3 bg-zinc-800 dark:bg-zinc-700 text-white shadow-sm'
+              : 'text-zinc-900 dark:text-zinc-100'
           }`}
         >
           {isUser ? (
@@ -212,9 +201,16 @@ export default function MessageBubble({ message, onCitationClick, isStreaming, o
           )}
         </div>
 
-        {/* Feedback buttons (assistant only) */}
+        {/* Copy + feedback buttons (assistant only) */}
         {isAssistant && !isError && message.text && (
-          <div className="flex gap-1 mt-1">
+          <div className="flex gap-1 mt-2">
+            <button
+              onClick={handleCopy}
+              className={`p-1 rounded transition-colors text-zinc-400 dark:text-zinc-500 hover:text-zinc-600 dark:hover:text-zinc-300`}
+              title={copied ? t('copy.copied') : t('copy.button')}
+            >
+              {copied ? <Check size={14} className="text-green-500" /> : <Copy size={14} />}
+            </button>
             <button
               onClick={() => handleFeedback('up')}
               className={`p-1 rounded transition-colors ${

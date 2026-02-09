@@ -331,10 +331,10 @@ export default function ChatPanel({ sessionId, onCitationClick, maxUserMessages,
         </div>
       )}
       <form onSubmit={onSubmit} className="p-4 border-t dark:border-zinc-700">
-        <div className="flex items-end gap-2">
+        <div className="flex items-end border border-zinc-200 dark:border-zinc-700 rounded-2xl bg-white dark:bg-zinc-800 focus-within:ring-2 focus-within:ring-zinc-400 dark:focus-within:ring-zinc-500 transition-shadow">
           <textarea
             ref={textareaRef}
-            className="flex-1 border border-zinc-200 dark:border-zinc-700 rounded-2xl px-4 py-3 text-sm resize-none overflow-y-auto focus:outline-none focus:ring-2 focus:ring-zinc-500 dark:bg-zinc-800 dark:text-zinc-100"
+            className="flex-1 px-4 py-3 text-sm resize-none overflow-y-auto focus:outline-none bg-transparent dark:text-zinc-100 placeholder:text-zinc-400 dark:placeholder:text-zinc-500"
             style={{ minHeight: '40px', maxHeight: '160px' }}
             placeholder={demoLimitReached ? t('demo.signInToContinue') : t('chat.placeholder')}
             value={input}
@@ -343,24 +343,26 @@ export default function ChatPanel({ sessionId, onCitationClick, maxUserMessages,
             disabled={isStreaming || demoLimitReached}
             rows={1}
           />
-          {messages.length > 0 && !isStreaming && (
+          <div className="flex items-center gap-1 pr-2 pb-2 shrink-0">
+            {messages.length > 0 && !isStreaming && (
+              <button
+                type="button"
+                onClick={handleExport}
+                className="p-2 rounded-full text-zinc-400 hover:text-zinc-600 dark:text-zinc-500 dark:hover:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-700 transition-colors"
+                title={t('chat.export')}
+              >
+                <Download size={16} />
+              </button>
+            )}
             <button
-              type="button"
-              onClick={handleExport}
-              className="p-3 rounded-2xl text-zinc-500 hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors shrink-0"
-              title={t('chat.export')}
+              type="submit"
+              className="p-2 bg-zinc-900 dark:bg-zinc-50 text-white dark:text-zinc-900 rounded-full disabled:opacity-40 hover:bg-zinc-800 dark:hover:bg-zinc-200 transition-colors"
+              disabled={isStreaming || !input.trim() || demoLimitReached}
+              title={t('chat.send')}
             >
-              <Download size={18} />
+              <SendHorizontal size={16} />
             </button>
-          )}
-          <button
-            type="submit"
-            className="p-3 bg-zinc-900 dark:bg-zinc-50 text-white dark:text-zinc-900 rounded-2xl disabled:opacity-60 hover:bg-zinc-800 dark:hover:bg-zinc-200 shadow-sm hover:shadow-md transition-colors shrink-0"
-            disabled={isStreaming || !input.trim() || demoLimitReached}
-            title={t('chat.send')}
-          >
-            <SendHorizontal size={18} />
-          </button>
+          </div>
         </div>
       </form>
     </div>
