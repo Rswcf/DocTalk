@@ -56,6 +56,7 @@ Railway 项目包含 5 个服务：backend, Postgres, Redis, qdrant-v2, minio-v2
 - **API 网关**: 所有 LLM 和 Embedding 调用统一通过 OpenRouter（单一 API key）。匿名 Demo 用户使用 `DEMO_LLM_MODEL`（默认 `deepseek/deepseek-v3.2`）降低成本
 - **模型切换**: 前端用户可选择 LLM 模型，后端白名单 (`ALLOWED_MODELS`) 验证后透传给 OpenRouter
 - **模型自适应提示**: `model_profiles.py` 为每个模型定义独立的 `ModelProfile`（temperature、max_tokens、supports_cache_control、supports_stream_options、prompt_style）。`chat_service.py` 根据模型 profile 动态调整系统提示规则和 API 参数。5 种 prompt_style 变体：`default`（MiniMax/Kimi/GPT/Gemini Pro）、`positive_framing`（DeepSeek — 避免消极表述过度遵从）、`constraints_at_end`（Gemini Flash — 约束放末尾防丢失）、`explicit_formatting`（Grok — 显式 markdown 指导）、`explicit_citation`（Claude — 强制每条陈述引用）。`cache_control` 仅对 Anthropic 模型发送（修复了之前对所有模型发送的 bug），`stream_options` 仅对 OpenAI 模型启用
+- **AI 回答语言**: 跟随用户提问语言（"Your response language MUST match the language of the user's question"），不受前端 UI locale 影响。前端 locale 仅控制界面文字展示
 - **RAG 基准测试**: `backend/scripts/` 包含 48 个测试用例（10 类别 × 3 demo 文档）、自动化 benchmark runner（`run_benchmark.py`）和评估器（`evaluate_benchmark.py`，8 维度自动评分 + 可选 LLM-as-judge）。评估维度：引用准确度、信息完整度、幻觉率、语言合规、Markdown 质量、指令遵从、否定案例准确度、首 token 延迟
 - **布局**: Chat 面板在左侧, PDF 查看器在右侧，中间可拖拽调节宽度 (react-resizable-panels)
 - **i18n**: 客户端 React Context，11 语言 JSON 静态打包，`t()` 函数支持参数插值，Arabic 自动 RTL
