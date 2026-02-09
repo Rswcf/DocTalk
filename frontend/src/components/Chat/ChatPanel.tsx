@@ -449,7 +449,7 @@ export default function ChatPanel({ sessionId, onCitationClick, maxUserMessages,
           )}
           <textarea
             ref={textareaRef}
-            className="flex-1 px-4 py-3 resize-none overflow-y-auto focus:outline-none bg-transparent dark:text-zinc-100 placeholder:text-zinc-400 dark:placeholder:text-zinc-500"
+            className="flex-1 px-4 py-3 text-sm resize-none overflow-y-auto focus:outline-none bg-transparent dark:text-zinc-100 placeholder:text-zinc-400 dark:placeholder:text-zinc-500"
             style={{ minHeight: '40px' }}
             placeholder={demoLimitReached ? t('demo.signInToContinue') : t('chat.placeholder')}
             value={input}
