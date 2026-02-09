@@ -33,12 +33,12 @@ export default function RootLayout({
                 <Suspense fallback={null}>
                   <AuthModal />
                 </Suspense>
+                <CookieConsentBanner />
               </ErrorBoundary>
             </LocaleProvider>
           </Providers>
         </ThemeProvider>
         <AnalyticsWrapper />
-        <CookieConsentBanner />
       </body>
     </html>
   )
