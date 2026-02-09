@@ -29,6 +29,9 @@ const config: Config = {
       typography: {
         DEFAULT: {
           css: {
+            '--tw-prose-body': '#09090b',
+            '--tw-prose-headings': '#09090b',
+            '--tw-prose-bold': '#09090b',
             'code::before': { content: 'none' },
             'code::after': { content: 'none' },
             code: {
@@ -42,6 +45,9 @@ const config: Config = {
         },
         invert: {
           css: {
+            '--tw-prose-invert-body': '#fafafa',
+            '--tw-prose-invert-headings': '#fafafa',
+            '--tw-prose-invert-bold': '#fafafa',
             code: {
               backgroundColor: 'rgb(255 255 255 / 0.12)',
             },
