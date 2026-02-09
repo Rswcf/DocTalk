@@ -12,7 +12,7 @@ DocTalk helps heavy document readers quickly locate key information in long docu
 - **Cited Answers** — Ask questions and get responses with `[1]`, `[2]` references to exact passages
 - **Page Highlights** — Click or hover a citation to see the referenced text; click to jump to the page with bounding-box overlays (PDF) or text snippet highlighting (non-PDF)
 - **Split View** — Resizable chat panel (left) + PDF viewer (right) with drag-to-pan zoom
-- **9 LLM Models** — Switch between Claude, GPT, Gemini, DeepSeek, Grok, MiniMax, Kimi, and more via OpenRouter
+- **9 LLM Models** — Switch between Claude, GPT, Gemini, DeepSeek, Grok, MiniMax, Kimi, and more via OpenRouter; model-adaptive prompts and parameters optimize each model's RAG performance
 - **Demo Mode** — Try 3 sample documents (NVIDIA 10-K, Attention paper, NDA contract) instantly with 5 free messages per document, progress bar indicator, and rate limiting
 - **Credits System** — Free (5K/month), Plus (30K/month), and Pro (150K/month) with Stripe subscriptions and annual billing
 - **11 Languages** — English, Chinese, Spanish, Japanese, German, French, Korean, Portuguese, Italian, Arabic, Hindi

@@ -26,7 +26,7 @@ DocTalk is an AI-powered PDF reader with a unique competitive advantage: **citat
 - **Cross-document Q&A** is the #1 missing capability vs. NotebookLM
 
 ### DocTalk's Position Today
-- **Strengths**: Citation precision (small chunks + bbox highlights), 9 LLM models via OpenRouter, OCR, dark mode, multi-language (11 languages), streaming indicators, auto-summary, security hardening (SSRF protection, SSE-S3 encryption at rest, file validation, structured security logging, GDPR data export, cookie consent, non-root Docker)
+- **Strengths**: Citation precision (small chunks + bbox highlights), 9 LLM models via OpenRouter with model-adaptive prompts and per-model parameter tuning (benchmark-validated), OCR, dark mode, multi-language (11 languages), streaming indicators, auto-summary, security hardening (SSRF protection, SSE-S3 encryption at rest, file validation, structured security logging, GDPR data export, cookie consent, non-root Docker)
 - **Weaknesses**: No team features, no API, no SSO
 
 ---

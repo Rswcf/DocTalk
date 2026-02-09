@@ -55,6 +55,8 @@ Railway 项目包含 5 个服务：backend, Postgres, Redis, qdrant-v2, minio-v2
 - **Profile 页面**: `/profile` 4 个 Tab (Profile/Credits/Usage/Account)，含交易历史、使用统计、账户删除
 - **API 网关**: 所有 LLM 和 Embedding 调用统一通过 OpenRouter（单一 API key）。匿名 Demo 用户使用 `DEMO_LLM_MODEL`（默认 `deepseek/deepseek-v3.2`）降低成本
 - **模型切换**: 前端用户可选择 LLM 模型，后端白名单 (`ALLOWED_MODELS`) 验证后透传给 OpenRouter
+- **模型自适应提示**: `model_profiles.py` 为每个模型定义独立的 `ModelProfile`（temperature、max_tokens、supports_cache_control、supports_stream_options、prompt_style）。`chat_service.py` 根据模型 profile 动态调整系统提示规则和 API 参数。5 种 prompt_style 变体：`default`（MiniMax/Kimi/GPT/Gemini Pro）、`positive_framing`（DeepSeek — 避免消极表述过度遵从）、`constraints_at_end`（Gemini Flash — 约束放末尾防丢失）、`explicit_formatting`（Grok — 显式 markdown 指导）、`explicit_citation`（Claude — 强制每条陈述引用）。`cache_control` 仅对 Anthropic 模型发送（修复了之前对所有模型发送的 bug），`stream_options` 仅对 OpenAI 模型启用
+- **RAG 基准测试**: `backend/scripts/` 包含 48 个测试用例（10 类别 × 3 demo 文档）、自动化 benchmark runner（`run_benchmark.py`）和评估器（`evaluate_benchmark.py`，8 维度自动评分 + 可选 LLM-as-judge）。评估维度：引用准确度、信息完整度、幻觉率、语言合规、Markdown 质量、指令遵从、否定案例准确度、首 token 延迟
 - **布局**: Chat 面板在左侧, PDF 查看器在右侧，中间可拖拽调节宽度 (react-resizable-panels)
 - **i18n**: 客户端 React Context，11 语言 JSON 静态打包，`t()` 函数支持参数插值，Arabic 自动 RTL
 - **bbox 坐标**: 归一化 [0,1], top-left origin, 存于 chunks.bboxes (JSONB)
@@ -322,6 +324,7 @@ SENTRY_TRACES_SAMPLE_RATE=0.1
 
 ### 其他
 - **模型白名单**: 后端 `config.py:ALLOWED_MODELS` 定义允许的模型 ID 列表
+- **模型 Profile**: `model_profiles.py:MODEL_PROFILES` 为 9 个模型定义独立的 temperature/max_tokens/prompt_style。`get_model_profile()` 返回模型配置，`get_rules_for_model()` 返回模型专用规则文本
 - **react-resizable-panels v4 API**: 使用 `Group`/`Panel`/`Separator`
 - **Alembic 配置**: `sqlalchemy.url` 被 `env.py` 运行时覆盖
 
@@ -368,7 +371,8 @@ DocTalk/
 │   │   │   ├── deps.py           # FastAPI 依赖 (require_auth, get_db)
 │   │   │   ├── rate_limit.py     # 内存级速率限制器 (匿名用户 chat 端点, 10K 条目自动清理)
 │   │   │   ├── url_validator.py  # SSRF 防护 (DNS 解析 + 私有 IP 阻断 + 端口封锁 + 重定向验证)
-│   │   │   └── security_log.py   # 结构化 JSON 安全事件日志
+│   │   │   ├── security_log.py   # 结构化 JSON 安全事件日志
+│   │   │   └── model_profiles.py # 模型自适应配置 (ModelProfile + 9 模型 profile + 5 种 prompt_style)
 │   │   ├── models/
 │   │   │   ├── tables.py         # ORM (User, Document, Collection, Session, Credits, Ledger...)
 │   │   │   ├── database.py       # Async engine
@@ -379,7 +383,7 @@ DocTalk/
 │   │   │   ├── chat.py           # ChatRequest, ChatMessageResponse, SessionResponse
 │   │   │   └── auth.py           # User/Account/VerificationToken schemas
 │   │   ├── services/
-│   │   │   ├── chat_service.py   # LLM 对话 + 引用解析
+│   │   │   ├── chat_service.py   # LLM 对话 + 引用解析 + 模型自适应提示/参数
 │   │   │   ├── credit_service.py # Credits debit/credit + ensure_monthly_credits
 │   │   │   ├── auth_service.py   # User/Account/Token 管理
 │   │   │   ├── demo_seed.py      # Demo 文档种子 (启动时自动执行)
@@ -395,6 +399,11 @@ DocTalk/
 │   │   │   └── ...
 │   │   └── workers/              # Celery 任务 (parse_worker + deletion_worker)
 │   ├── alembic/                  # 数据库迁移
+│   ├── scripts/
+│   │   ├── benchmark_test_cases.json  # RAG 基准测试用例 (48 cases, 10 types)
+│   │   ├── run_benchmark.py           # 自动化 benchmark runner
+│   │   ├── evaluate_benchmark.py      # 评分评估器 (自动指标 + LLM-as-judge)
+│   │   └── benchmark_results/         # 基准测试结果输出
 │   ├── seed_data/                # Demo PDF 文件 (nvidia-10k, attention-paper, nda-contract)
 │   └── tests/
 ├── frontend/

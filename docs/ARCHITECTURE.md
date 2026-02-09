@@ -191,7 +191,7 @@ sequenceDiagram
 
 - **Retrieval**: Top-5 chunks by COSINE vector similarity from Qdrant. Each chunk includes text, page numbers, and bounding boxes.
 
-- **LLM Prompt**: System prompt instructs the model to cite sources using `[n]` notation matching the numbered document fragments provided. Anonymous demo users use a cheaper model (`DEMO_LLM_MODEL`, default DeepSeek V3.2) to reduce API costs.
+- **LLM Prompt**: System prompt instructs the model to cite sources using `[n]` notation matching the numbered document fragments provided. Anonymous demo users use a cheaper model (`DEMO_LLM_MODEL`, default DeepSeek V3.2) to reduce API costs. A **model-adaptive prompt system** (`model_profiles.py`) tailors the rules section and API parameters per model: DeepSeek uses `positive_framing` to avoid negative-framing over-compliance, Gemini Flash uses `constraints_at_end` to prevent constraint dropping, Grok uses `explicit_formatting` for better markdown, Claude uses `explicit_citation` for stronger citation pressure. Temperature, max_tokens, and feature flags (cache_control, stream_options) are also per-model.
 
 - **RefParserFSM**: A finite state machine in `chat_service.py` that handles `[n]` citation markers split across streaming token boundaries. For example, token `"[1"` followed by `"]"` is correctly parsed as citation reference 1.
 

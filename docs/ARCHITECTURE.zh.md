@@ -191,7 +191,7 @@ sequenceDiagram
 
 - **检索**：从 Qdrant 按 COSINE 向量相似度检索 Top-5 文本块。每个文本块包含文本、页码和边界框。
 
-- **LLM 提示词**：系统提示指示模型使用 `[n]` 标记引用来源，编号对应提供的文档片段。匿名 Demo 用户使用低成本模型（`DEMO_LLM_MODEL`，默认 DeepSeek V3.2）以降低 API 成本。
+- **LLM 提示词**：系统提示指示模型使用 `[n]` 标记引用来源，编号对应提供的文档片段。匿名 Demo 用户使用低成本模型（`DEMO_LLM_MODEL`，默认 DeepSeek V3.2）以降低 API 成本。**模型自适应提示系统**（`model_profiles.py`）为每个模型定制规则部分和 API 参数：DeepSeek 使用 `positive_framing` 避免消极表述过度遵从，Gemini Flash 使用 `constraints_at_end` 防止约束丢失，Grok 使用 `explicit_formatting` 改善 markdown 格式，Claude 使用 `explicit_citation` 强化引用要求。temperature、max_tokens 和功能标志（cache_control、stream_options）也按模型配置。
 
 - **RefParserFSM**：`chat_service.py` 中的有限状态机，处理流式 token 中跨边界的 `[n]` 引用标记。例如，token `"[1"` 后跟 `"]"` 会被正确解析为引用标记 1。
 

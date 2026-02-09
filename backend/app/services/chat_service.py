@@ -11,6 +11,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
+from app.core.model_profiles import get_model_profile, get_rules_for_model
 from app.models.tables import ChatSession, Document, Message, User, collection_documents
 from app.services import credit_service
 from app.services.retrieval_service import retrieval_service
@@ -285,6 +286,10 @@ class ChatService:
 
         language_name = self.LOCALE_TO_LANGUAGE.get(locale or "en", "English")
 
+        rules = get_rules_for_model(
+            effective_model, language_name, is_collection=is_collection_session
+        )
+
         if is_collection_session:
             doc_list = ", ".join(collection_doc_names.values()) if collection_doc_names else "(no documents)"
             system_prompt = (
@@ -293,14 +298,7 @@ class ChatService:
                 f"## Available Documents\n{doc_list}\n\n"
                 "## Document Fragments\n"
                 + ("\n".join(numbered_chunks) if numbered_chunks else "(none)")
-                + "\n\n## Rules\n"
-                "1. Only answer based on the fragments above. Do not fabricate information.\n"
-                "2. After key statements, cite sources with [n] (n = fragment number).\n"
-                "3. You may cite multiple fragments, e.g. [1][3].\n"
-                "4. When relevant, mention which document the information comes from.\n"
-                "5. Always extract as much relevant information as possible from the fragments. Focus on what IS available rather than what is missing. Only say the information was not found if the fragments are truly unrelated to the question.\n"
-                "6. Use Markdown: **bold** for emphasis, bullet lists for multiple points.\n"
-                f"7. Your response language MUST be {language_name}.\n"
+                + "\n\n## Rules\n" + rules
             )
         else:
             system_prompt = (
@@ -308,13 +306,7 @@ class ChatService:
                 f"You MUST respond in {language_name}.\n\n"
                 "## Document Fragments\n"
                 + ("\n".join(numbered_chunks) if numbered_chunks else "(none)")
-                + "\n\n## Rules\n"
-                "1. Only answer based on the fragments above. Do not fabricate information.\n"
-                "2. After key statements, cite sources with [n] (n = fragment number).\n"
-                "3. You may cite multiple fragments, e.g. [1][3].\n"
-                "4. Always extract as much relevant information as possible from the fragments. Focus on what IS available rather than what is missing. Only say the information was not found if the fragments are truly unrelated to the question.\n"
-                "5. Use Markdown: **bold** for emphasis, bullet lists for multiple points.\n"
-                f"6. Your response language MUST be {language_name}.\n"
+                + "\n\n## Rules\n" + rules
             )
 
         # Inject custom instructions if present
@@ -335,9 +327,11 @@ class ChatService:
             },
         )
 
-        # Build OpenAI-format messages (system + history) with cache_control for prompt caching
-        openai_messages = [
-            {
+        # Build OpenAI-format messages (system + history)
+        # cache_control is Anthropic-specific — only include for Anthropic models
+        profile = get_model_profile(effective_model)
+        if profile.supports_cache_control:
+            sys_msg: dict = {
                 "role": "system",
                 "content": [
                     {
@@ -347,7 +341,9 @@ class ChatService:
                     }
                 ],
             }
-        ] + claude_messages
+        else:
+            sys_msg = {"role": "system", "content": system_prompt}
+        openai_messages = [sys_msg] + claude_messages
 
         assistant_text_parts: List[str] = []
         citations: List[dict] = []
@@ -358,13 +354,16 @@ class ChatService:
         output_tokens: Optional[int] = None
 
         try:
-            stream = await client.chat.completions.create(
-                model=effective_model,
-                max_tokens=2048,
-                messages=openai_messages,
-                stream=True,
-                stream_options={"include_usage": True},
-            )
+            create_kwargs: dict[str, Any] = {
+                "model": effective_model,
+                "max_tokens": profile.max_tokens,
+                "temperature": profile.temperature,
+                "messages": openai_messages,
+                "stream": True,
+            }
+            if profile.supports_stream_options:
+                create_kwargs["stream_options"] = {"include_usage": True}
+            stream = await client.chat.completions.create(**create_kwargs)
 
             async for chunk in stream:
                 # Extract text delta
