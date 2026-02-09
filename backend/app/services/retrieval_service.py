@@ -12,6 +12,11 @@ from app.core.config import settings
 from app.models.tables import Chunk
 from app.services.embedding_service import embedding_service
 
+# Minimum text length for a chunk to be useful in retrieval.
+# Shorter chunks are typically form fields, metadata footers, or page numbers
+# that pollute search results for vague queries.
+_MIN_CHUNK_TEXT_LEN = 200
+
 
 class RetrievalService:
     """Vector search over chunks using Qdrant, returning DB-backed details."""
@@ -20,14 +25,15 @@ class RetrievalService:
         # 1) Embed query — run sync call off the event loop
         qvec = (await asyncio.to_thread(embedding_service.embed_texts, [query]))[0]
 
-        # 2) Qdrant search with document_id filter — run sync call off the event loop
+        # 2) Qdrant search — over-fetch to compensate for micro-chunk filtering
         client = embedding_service.get_qdrant_client()
         flt = Filter(must=[FieldCondition(key="document_id", match=MatchValue(value=str(document_id)))])
+        fetch_limit = int(top_k or 5) * 3
         res = await asyncio.to_thread(
             client.query_points,
             collection_name=settings.QDRANT_COLLECTION,
             query=qvec,
-            limit=int(top_k or 5),
+            limit=fetch_limit,
             query_filter=flt,
         )
 
@@ -53,6 +59,9 @@ class RetrievalService:
 
         results = []
         for ch in chunks:
+            # Skip micro-chunks (form fields, metadata footers, page numbers)
+            if len((ch.text or "").strip()) < _MIN_CHUNK_TEXT_LEN:
+                continue
             results.append(
                 {
                     "chunk_id": ch.id,
@@ -64,7 +73,7 @@ class RetrievalService:
                 }
             )
 
-        return results
+        return results[: int(top_k or 5)]
 
     async def search_multi(
         self, query: str, document_ids: List[uuid.UUID], top_k: int, db: AsyncSession
@@ -78,11 +87,12 @@ class RetrievalService:
         client = embedding_service.get_qdrant_client()
         doc_id_strs = [str(did) for did in document_ids]
         flt = Filter(must=[FieldCondition(key="document_id", match=MatchAny(any=doc_id_strs))])
+        fetch_limit = int(top_k or 8) * 3
         res = await asyncio.to_thread(
             client.query_points,
             collection_name=settings.QDRANT_COLLECTION,
             query=qvec,
-            limit=int(top_k or 8),
+            limit=fetch_limit,
             query_filter=flt,
         )
 
@@ -105,6 +115,8 @@ class RetrievalService:
 
         results = []
         for ch in chunks:
+            if len((ch.text or "").strip()) < _MIN_CHUNK_TEXT_LEN:
+                continue
             results.append(
                 {
                     "chunk_id": ch.id,
@@ -116,9 +128,9 @@ class RetrievalService:
                     "section_title": ch.section_title,
                 }
             )
-        return results
+
+        return results[: int(top_k or 8)]
 
 
 # Singleton service
 retrieval_service = RetrievalService()
-

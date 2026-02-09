@@ -343,7 +343,41 @@ class ParseService:
 
             start_idx = next_start
 
-        return chunks
+        # Post-process: remove micro-chunks that provide no retrieval value.
+        # These arise from form fields, metadata footers, or single short lines.
+        MIN_CHUNK_CHARS = 50
+        filtered = []
+        for c in chunks:
+            if len(c.text.strip()) >= MIN_CHUNK_CHARS:
+                filtered.append(c)
+            elif filtered:
+                # Merge micro-chunk text into previous chunk
+                prev = filtered[-1]
+                filtered[-1] = ChunkInfo(
+                    text=prev.text + c.text,
+                    chunk_index=prev.chunk_index,
+                    page_start=prev.page_start,
+                    page_end=max(prev.page_end, c.page_end),
+                    bboxes=prev.bboxes + c.bboxes,
+                    section_title=prev.section_title,
+                    token_count=prev.token_count + c.token_count,
+                )
+            # else: first chunk is micro — skip it entirely (very rare)
+
+        # Re-index chunk_index after filtering
+        for i, c in enumerate(filtered):
+            if c.chunk_index != i:
+                filtered[i] = ChunkInfo(
+                    text=c.text,
+                    chunk_index=i,
+                    page_start=c.page_start,
+                    page_end=c.page_end,
+                    bboxes=c.bboxes,
+                    section_title=c.section_title,
+                    token_count=c.token_count,
+                )
+
+        return filtered
 
     # -------------------------- Helpers --------------------------
     def _build_block_text_and_size(self, lines: Sequence[dict]) -> Tuple[str, float]:
