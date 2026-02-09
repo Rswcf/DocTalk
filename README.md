@@ -28,6 +28,7 @@ DocTalk helps heavy document readers quickly locate key information in long docu
 - **Document Collections** — Group multiple documents into collections for cross-document questions with source attribution
 - **Citation Hover Preview** — Hover over any `[1]`, `[2]` citation to see a tooltip with the cited text snippet and page number
 - **Compact Citation Pills** — Citations display as inline pill chips in a horizontal wrap layout for quick scanning
+- **Styled Code Blocks** — Fenced code blocks render with dark background, language label header, and one-click Copy code button
 - **Streaming Indicators** — Bouncing dots during document search, blinking cursor during response streaming
 - **Stop Generation** — Abort AI responses mid-stream with one click; partial responses are preserved
 - **Scroll-to-Bottom** — Floating arrow button appears when scrolled up in long conversations

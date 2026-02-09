@@ -266,7 +266,7 @@ SENTRY_TRACES_SAMPLE_RATE=0.1
 - **OAuth Token 清理**: `auth_service.py:link_account()` 剥离 OAuth 提供商返回的 access_token/refresh_token/id_token，DocTalk 仅保存身份绑定信息（provider + provider_account_id），不存储可用于访问用户第三方账户的令牌
 
 ### 前端相关
-- **UI 设计**: 单色 zinc 调色板，Inter 字体，dark mode 反转按钮 (`bg-zinc-900 dark:bg-zinc-50`)，全站无 `gray-*`/`blue-*` 类（保留 Google OAuth 品牌色和状态色）。卡片使用 `shadow-sm`/`shadow-md` 分层，模态框 `animate-fade-in`/`animate-slide-up` 动画，零 `transition-all` 策略（所有过渡使用具体属性 `transition-colors`/`transition-opacity`/`transition-shadow`）
+- **UI 设计**: 单色 zinc 调色板，Inter 字体 + `antialiased` 字体渲染，dark mode 反转按钮 (`bg-zinc-900 dark:bg-zinc-50`)，全站无 `gray-*`/`blue-*` 类（保留 Google OAuth 品牌色和状态色）。卡片使用 `shadow-sm`/`shadow-md` 分层，模态框 `animate-fade-in`/`animate-slide-up` 动画，零 `transition-all` 策略（所有过渡使用具体属性 `transition-colors`/`transition-opacity`/`transition-shadow`）。Tailwind Typography 配置：prose 正文颜色覆盖为 zinc-950（`#09090b`，近纯黑，替代默认 gray-700 `#374151`），dark mode 为 zinc-50（`#fafafa`）；内联 `code` 去除反引号装饰 + 灰色背景药丸样式；段落/列表间距收紧
 - **Header variant**: `variant='minimal'`（首页/Demo/Auth：仅 Logo+UserMenu）vs `variant='full'`（文档页/Billing/Profile：完整控件）。额外支持 `isDemo`/`isLoggedIn` props，匿名 Demo 用户时隐藏 ModelSelector
 - **Landing page**: HeroSection（大字标题+CTA）+ **ProductShowcase**（Remotion `<Player>` 动画演示：用户提问→AI流式引用回答→PDF高亮同步，300帧@30fps=10s循环，macOS window chrome 框架，lazy-loaded，支持 dark mode）+ **HowItWorks**（3步骤：Upload→Ask→Cited Answers）+ FeatureGrid（3列特性卡片）+ **SocialProof**（4项信任指标）+ **SecuritySection**（4张安全卡片）+ **FAQ**（6项手风琴）+ **FinalCTA**（转化CTA）+ PrivacyBadge + **Footer**（3列链接组件）
 - **动态 CTA**: 首页根据登录状态显示不同 UI（未登录→Landing page，已登录→Dashboard 上传区+文档列表）
@@ -283,7 +283,8 @@ SENTRY_TRACES_SAMPLE_RATE=0.1
 - **UserMenu 替代 AuthButton**: Header 中 `AuthButton` 已被 `UserMenu` 下拉菜单替代，未登录时仍显示 Sign In 按钮
 - **Profile 页面**: `/profile?tab=credits` (默认 tab)，受保护路由，未登录重定向到 `/auth?callbackUrl=/profile`
 - **Billing 页面**: 月付/年付切换 + Plus 订阅卡片（"Most Popular" 标记）+ Pro 订阅卡片；中间 PricingTable（Free vs Plus vs Pro 9 行对比）；下方 credit packs 卡片 (rounded-xl)
-- **Chat UI（ChatGPT 风格）**: AI 消息无卡片/边框/背景，`prose` 级别文本平铺渲染（用户消息 `rounded-3xl` 圆角气泡，浅色模式 `bg-zinc-100`，深色模式 `dark:bg-zinc-700`）。AI 消息全宽展示（无 `max-w-[80%]` 限制）。Copy/ThumbsUp/ThumbsDown/Regenerate 按钮在 AI 消息下方 hover 显示（`opacity-0 group-hover:opacity-100`），最后一条 AI 消息始终可见。输入框为 `rounded-3xl` 药丸形容器（`focus-within:ring` 聚焦高亮），左侧 "+" 按钮弹出菜单（Custom Instructions + Export Chat），右侧 Send/Stop 按钮切换（streaming 时 Square 图标替换 SendHorizontal）。输入栏下方显示 AI 准确性免责声明（`chat.disclaimer`，11 语言）
+- **Chat UI（ChatGPT 风格）**: AI 消息无卡片/边框/背景，`prose` 级别文本平铺渲染（用户消息 `rounded-3xl` 圆角气泡，浅色模式 `bg-zinc-100`，深色模式 `dark:bg-zinc-700`）。消息区域 + 输入栏使用 `max-w-3xl mx-auto` 居中，宽面板时保持舒适阅读宽度。Copy/ThumbsUp/ThumbsDown/Regenerate 按钮在 AI 消息下方 hover 显示（`opacity-0 group-hover:opacity-100`），最后一条 AI 消息始终可见。输入框为 `rounded-3xl` 药丸形容器（`shadow-sm` 静态阴影 + `focus-within:ring` 聚焦高亮），左侧 "+" 按钮弹出菜单（Custom Instructions + Export Chat），右侧 Send/Stop 按钮切换（streaming 时 Square 图标替换 SendHorizontal）。输入栏下方显示 AI 准确性免责声明（`chat.disclaimer`，11 语言）
+- **代码块**: `MessageBubble.tsx` 中 `PreBlock` 组件拦截 `<pre>` 元素，渲染为深色背景代码块（`bg-zinc-900` header + `bg-zinc-900` code body），顶部显示语言标签 + Copy code 按钮。`not-prose` 避免 Typography 样式干扰。内联 `code` 通过 `tailwind.config.ts` Typography 配置渲染为灰色背景药丸（无反引号装饰）
 - **Stop 生成**: `sse.ts` 支持 `AbortSignal` 参数，`ChatPanel` 通过 `AbortController` 实现流式中断。Streaming 时 Send 按钮变为 Stop 按钮（Square 图标），点击后立即中止 SSE 连接并保留已生成的部分回答
 - **"+" 菜单**: 输入栏左侧 Plus 按钮弹出下拉菜单，包含 Custom Instructions（Settings2 图标，指令已设置时显示翡翠色圆点指示器）和 Export Chat（Download 图标）。替代了原先 page.tsx 中的 Settings2 顶栏和输入框内嵌的 Export 按钮
 - **引用卡片（紧凑模式）**: `CitationCard.tsx` 使用 `inline-flex` 紧凑药丸样式（`rounded-lg px-2.5 py-1.5 text-xs`），引用容器为 `flex flex-wrap gap-1.5` 水平排列，替代原先的全宽竖向卡片
