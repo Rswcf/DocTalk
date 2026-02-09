@@ -24,8 +24,6 @@ class ModelProfile:
 # ---------------------------------------------------------------------------
 # Prompt style rule templates
 # ---------------------------------------------------------------------------
-# {language_name} is substituted at build time.
-
 PROMPT_RULES: dict[str, str] = {
     # Standard rules — MiniMax, Kimi, GPT-5.2, Gemini Pro
     "default": (
@@ -38,7 +36,7 @@ PROMPT_RULES: dict[str, str] = {
         "5. If the question asks about a specific topic that is genuinely NOT covered in any of the fragments, "
         "clearly state: \"This information is not present in the provided document.\"\n"
         "6. Use Markdown: **bold** for emphasis, bullet lists for multiple points.\n"
-        "7. Your response language MUST be {language_name}.\n"
+        "7. Your response language MUST match the language of the user's question.\n"
     ),
     # DeepSeek — avoid negative-framing over-compliance
     "positive_framing": (
@@ -51,7 +49,7 @@ PROMPT_RULES: dict[str, str] = {
         "6. When a question is about a topic completely absent from ALL fragments, "
         "state that this specific information is not available in the document.\n"
         "7. Use Markdown: **bold** for emphasis, bullet lists for multiple points.\n"
-        "8. Your response language MUST be {language_name}.\n"
+        "8. Your response language MUST match the language of the user's question.\n"
     ),
     # Gemini Flash — negative constraints at end to avoid being dropped
     "constraints_at_end": (
@@ -59,7 +57,7 @@ PROMPT_RULES: dict[str, str] = {
         "2. You may cite multiple fragments, e.g. [1][3].\n"
         "3. Extract as much relevant information as possible from the fragments.\n"
         "4. Use Markdown: **bold** for emphasis, bullet lists for multiple points.\n"
-        "5. Your response language MUST be {language_name}.\n"
+        "5. Your response language MUST match the language of the user's question.\n"
         "6. CRITICAL: If a question asks about something NOT in the fragments, "
         "you MUST explicitly say the information is not found in the document.\n"
         "7. CRITICAL: Do NOT fabricate information that is not in the fragments above.\n"
@@ -76,7 +74,7 @@ PROMPT_RULES: dict[str, str] = {
         "explicitly state that this information is not present in the document.\n"
         "6. Format your response with proper Markdown: use **bold** for key terms, "
         "use - for bullet lists, use | for tables if comparing data, use ``` for code/formulas.\n"
-        "7. Your response language MUST be {language_name}.\n"
+        "7. Your response language MUST match the language of the user's question.\n"
     ),
     # Claude Sonnet/Opus — explicit citation pressure
     "explicit_citation": (
@@ -89,7 +87,7 @@ PROMPT_RULES: dict[str, str] = {
         "5. If the question asks about a topic not covered in any of the fragments, "
         "state explicitly that this information is not present in the document.\n"
         "6. Use Markdown: **bold** for emphasis, bullet lists for multiple points.\n"
-        "7. Your response language MUST be {language_name}.\n"
+        "7. Your response language MUST match the language of the user's question.\n"
     ),
 }
 
@@ -193,15 +191,13 @@ def get_model_profile(model_id: str) -> ModelProfile:
 
 def get_rules_for_model(
     model_id: str,
-    language_name: str,
     *,
     is_collection: bool = False,
 ) -> str:
-    """Return the rendered rules block for the given model and language."""
+    """Return the rendered rules block for the given model."""
     profile = get_model_profile(model_id)
     style = profile.prompt_style
     rules = PROMPT_RULES.get(style, PROMPT_RULES["default"])
-    rules = rules.replace("{language_name}", language_name)
     if is_collection:
         extra = COLLECTION_EXTRA_RULES.get(style, COLLECTION_EXTRA_RULES["default"])
         rules += extra

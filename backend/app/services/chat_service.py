@@ -123,14 +123,6 @@ class RefParserFSM:
 
 
 class ChatService:
-    LOCALE_TO_LANGUAGE = {
-        "en": "English",
-        "zh": "Chinese (Simplified)",
-        "es": "Spanish",
-        "fr": "French",
-        "de": "German",
-    }
-
     async def chat_stream(
         self,
         session_id: uuid.UUID,
@@ -284,17 +276,14 @@ class ChatService:
                 document_filename=collection_doc_names.get(chunk_doc_id, "") if chunk_doc_id else "",
             )
 
-        language_name = self.LOCALE_TO_LANGUAGE.get(locale or "en", "English")
-
         rules = get_rules_for_model(
-            effective_model, language_name, is_collection=is_collection_session
+            effective_model, is_collection=is_collection_session
         )
 
         if is_collection_session:
             doc_list = ", ".join(collection_doc_names.values()) if collection_doc_names else "(no documents)"
             system_prompt = (
-                "You are a document analysis assistant. Answer the user's question based on fragments from multiple documents.\n"
-                f"You MUST respond in {language_name}.\n\n"
+                "You are a document analysis assistant. Answer the user's question based on fragments from multiple documents.\n\n"
                 f"## Available Documents\n{doc_list}\n\n"
                 "## Document Fragments\n"
                 + ("\n".join(numbered_chunks) if numbered_chunks else "(none)")
@@ -302,8 +291,7 @@ class ChatService:
             )
         else:
             system_prompt = (
-                "You are a document analysis assistant. Answer the user's question based on the following document fragments.\n"
-                f"You MUST respond in {language_name}.\n\n"
+                "You are a document analysis assistant. Answer the user's question based on the following document fragments.\n\n"
                 "## Document Fragments\n"
                 + ("\n".join(numbered_chunks) if numbered_chunks else "(none)")
                 + "\n\n## Rules\n" + rules
