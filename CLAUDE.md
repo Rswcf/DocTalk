@@ -283,14 +283,19 @@ SENTRY_TRACES_SAMPLE_RATE=0.1
 - **UserMenu 替代 AuthButton**: Header 中 `AuthButton` 已被 `UserMenu` 下拉菜单替代，未登录时仍显示 Sign In 按钮
 - **Profile 页面**: `/profile?tab=credits` (默认 tab)，受保护路由，未登录重定向到 `/auth?callbackUrl=/profile`
 - **Billing 页面**: 月付/年付切换 + Plus 订阅卡片（"Most Popular" 标记）+ Pro 订阅卡片；中间 PricingTable（Free vs Plus vs Pro 9 行对比）；下方 credit packs 卡片 (rounded-xl)
-- **Chat UI（ChatGPT 风格）**: AI 消息无卡片/边框/背景，文本平铺渲染（用户消息保留深色圆角气泡）。AI 消息全宽展示（无 `max-w-[80%]` 限制）。Copy/ThumbsUp/ThumbsDown/Regenerate 按钮统一在消息下方一行显示。输入框为单一圆角容器包裹 textarea + 操作按钮（`focus-within:ring` 聚焦高亮整个输入栏），Send 按钮为 `rounded-full` 圆形，Export 按钮内嵌容器中
+- **Chat UI（ChatGPT 风格）**: AI 消息无卡片/边框/背景，`prose` 级别文本平铺渲染（用户消息 `rounded-3xl` 圆角气泡，浅色模式 `bg-zinc-100`，深色模式 `dark:bg-zinc-700`）。AI 消息全宽展示（无 `max-w-[80%]` 限制）。Copy/ThumbsUp/ThumbsDown/Regenerate 按钮在 AI 消息下方 hover 显示（`opacity-0 group-hover:opacity-100`），最后一条 AI 消息始终可见。输入框为 `rounded-3xl` 药丸形容器（`focus-within:ring` 聚焦高亮），左侧 "+" 按钮弹出菜单（Custom Instructions + Export Chat），右侧 Send/Stop 按钮切换（streaming 时 Square 图标替换 SendHorizontal）。输入栏下方显示 AI 准确性免责声明（`chat.disclaimer`，11 语言）
+- **Stop 生成**: `sse.ts` 支持 `AbortSignal` 参数，`ChatPanel` 通过 `AbortController` 实现流式中断。Streaming 时 Send 按钮变为 Stop 按钮（Square 图标），点击后立即中止 SSE 连接并保留已生成的部分回答
+- **"+" 菜单**: 输入栏左侧 Plus 按钮弹出下拉菜单，包含 Custom Instructions（Settings2 图标，指令已设置时显示翡翠色圆点指示器）和 Export Chat（Download 图标）。替代了原先 page.tsx 中的 Settings2 顶栏和输入框内嵌的 Export 按钮
+- **引用卡片（紧凑模式）**: `CitationCard.tsx` 使用 `inline-flex` 紧凑药丸样式（`rounded-lg px-2.5 py-1.5 text-xs`），引用容器为 `flex flex-wrap gap-1.5` 水平排列，替代原先的全宽竖向卡片
+- **建议问题药丸**: 空消息状态下建议问题使用 `rounded-full` 药丸按钮 + `flex flex-wrap` 居中排列，替代原先的全宽竖向按钮
+- **滚动到底部按钮**: 消息列表滚动离底部 >80px 时，显示浮动 ArrowDown 圆形按钮，点击平滑滚动到底部
 - **引用悬浮 Tooltip**: `MessageBubble.tsx` 中引用 `[n]` 按钮悬浮显示 textSnippet + page tooltip，减少验证点击次数
 - **流式状态指示**: streaming 时显示 3 点弹跳动画（"搜索文档中..."）和闪烁光标，区分 retrieval 阶段和生成阶段
 - **下拉菜单键盘导航**: UserMenu、ModelSelector、LanguageSelector、SessionDropdown 支持 Arrow/Home/End/Escape 键盘操作
 - **CreditsDisplay 自动刷新**: 每 60s 轮询 + 自定义事件 `doctalk:credits-refresh`（聊天完成/购买后触发），`triggerCreditsRefresh()` 导出供外部调用
 - **Billing 骨架屏**: 产品列表加载中显示 skeleton cards，失败显示 error + retry 按钮
 - **响应式**: Header 移动端间距/截断/CreditsDisplay 小屏隐藏，upload zone `p-8 sm:p-12`，billing `p-6 sm:p-8`
-- **自定义 AI 指令模态框**: `CustomInstructionsModal.tsx`，Settings2 图标触发，textarea 2000 字限制，Save/Clear 按钮
+- **自定义 AI 指令模态框**: `CustomInstructionsModal.tsx`，通过 ChatPanel "+" 菜单中的 Settings2 图标触发（`onOpenSettings` prop 从 page.tsx 传入），textarea 2000 字限制，Save/Clear 按钮
 - **多格式上传**: Dashboard 上传区 accept 属性包含 PDF/DOCX/PPTX/XLSX/TXT/MD 的 MIME 类型和扩展名
 - **TextViewer**: 非 PDF 文档使用 `TextViewer.tsx` 显示内容，PDF 文档使用 PdfViewer。支持两种渲染模式：md/docx/pptx/xlsx 使用 react-markdown + remark-gfm 渲染（Tailwind Typography prose 样式，表格带边框和交替行色），txt/url 使用纯文本 `<pre>` 渲染。引用高亮：`highlightSnippet` 通过 `findSnippetInPage()` 渐进前缀匹配定位（amber 背景）。全文搜索：Ctrl+F 打开搜索栏，跨页搜索+匹配计数+上下翻页（黄色高亮）。搜索和引用高亮共存，重叠时引用优先
 - **URL 导入**: Dashboard 上传区下方 URL 输入框（Link2 图标 + 输入 + Import URL 按钮），调用 `ingestUrl()` → 跳转到文档页
@@ -450,7 +455,7 @@ DocTalk/
 │   │   │   ├── models.ts         # AVAILABLE_MODELS 定义 (9 模型)
 │   │   │   ├── export.ts         # 对话导出 (Markdown + 引用脚注)
 │   │   │   ├── utils.ts          # 工具函数 (sanitizeFilename: Unicode 规范化 + 控制字符剥离 + 双扩展名阻断)
-│   │   │   └── sse.ts            # SSE 流式客户端
+│   │   │   └── sse.ts            # SSE 流式客户端 (支持 AbortSignal 中断)
 │   │   ├── i18n/                 # 11 种语言
 │   │   ├── store/                # Zustand
 │   │   └── types/

@@ -3,7 +3,6 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
-import { Settings2 } from 'lucide-react';
 import { PdfViewer } from '../../../components/PdfViewer';
 import TextViewer from '../../../components/TextViewer/TextViewer';
 import { ChatPanel } from '../../../components/Chat';
@@ -192,20 +191,9 @@ export default function DocumentReaderPage() {
         <Group orientation="horizontal" className="flex-1 min-h-0">
           <Panel defaultSize={50} minSize={25}>
             <div className="h-full min-w-0 sm:min-w-[320px] flex flex-col">
-              {isLoggedIn && documentStatus === 'ready' && (
-                <div className="flex items-center justify-end px-3 py-1 border-b border-zinc-100 dark:border-zinc-800">
-                  <button
-                    onClick={() => setShowInstructions(true)}
-                    className="p-1.5 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-500 transition-colors"
-                    title={t('instructions.title')}
-                  >
-                    <Settings2 size={16} />
-                  </button>
-                </div>
-              )}
               <div className="flex-1 min-h-0">
                 {documentStatus === 'ready' && sessionId ? (
-                  <ChatPanel sessionId={sessionId} onCitationClick={navigateToCitation} maxUserMessages={isDemo && !isLoggedIn ? 5 : undefined} suggestedQuestions={suggestedQuestions.length > 0 ? suggestedQuestions : undefined} />
+                  <ChatPanel sessionId={sessionId} onCitationClick={navigateToCitation} maxUserMessages={isDemo && !isLoggedIn ? 5 : undefined} suggestedQuestions={suggestedQuestions.length > 0 ? suggestedQuestions : undefined} onOpenSettings={isLoggedIn ? () => setShowInstructions(true) : undefined} hasCustomInstructions={!!customInstructions} />
                 ) : documentStatus !== 'ready' && !error ? (
                   <div className="h-full w-full flex flex-col items-center justify-center text-zinc-500 gap-3">
                     <div className="animate-spin rounded-full h-8 w-8 border-2 border-zinc-300 border-t-zinc-600" />

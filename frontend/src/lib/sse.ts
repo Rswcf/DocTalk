@@ -22,14 +22,17 @@ export async function chatStream(
   onDone: (d: DonePayload) => void,
   model?: string,
   locale?: string,
+  signal?: AbortSignal,
 ) {
   const res = await fetch(`${PROXY_BASE}/api/sessions/${sessionId}/chat`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ message, ...(model ? { model } : {}), ...(locale ? { locale } : {}) }),
+    signal,
   });
 
   if (!res.ok || !res.body) {
+    if (signal?.aborted) return;
     const msg = await res.text().catch(() => '');
     onError({ code: 'http_error', message: `HTTP ${res.status}: ${msg}` });
     return;
@@ -93,11 +96,13 @@ export async function chatStream(
               break;
           }
         } catch (e) {
+          if (signal?.aborted) return;
           onError({ code: 'parse_error', message: String(e) });
         }
       }
     }
   } catch (e) {
+    if (signal?.aborted) return;
     onError({ code: 'stream_error', message: String(e) });
   }
 }

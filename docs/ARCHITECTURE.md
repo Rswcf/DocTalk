@@ -532,9 +532,10 @@ graph TD
     end
 
     subgraph ChatComp["Chat Components"]
-        MsgBubble["MessageBubble<br/>Flat AI / Bubble User<br/>+ Copy/Feedback/Regenerate"]
-        CitCard["CitationCard"]
-        Export["Export (Markdown)"]
+        MsgBubble["MessageBubble<br/>Flat AI / Pill Bubble User<br/>+ Hover Copy/Feedback/Regen"]
+        CitCard["CitationCard<br/>Compact Pills"]
+        PlusMenu["'+' Menu<br/>Instructions + Export"]
+        ScrollBtn["Scroll-to-Bottom"]
     end
 
     subgraph PdfComp["PDF Components"]
@@ -582,11 +583,14 @@ graph TD
 **Landing page sections** (in order): HeroSection → Product Showcase (Remotion `<Player>` animated demo, 300 frames @ 30fps, lazy-loaded) → HowItWorks → FeatureGrid → SocialProof → SecuritySection → FAQ → FinalCTA → PrivacyBadge → Footer
 
 **Chat features:**
-- **ChatGPT-style UI**: AI messages render flat without card/border/background (full width); user messages keep dark rounded bubbles. Copy, thumbs up/down, and regenerate buttons display in a single row below each AI message. Chat input is a unified rounded container with textarea + action buttons inside (focus-within ring highlights the whole bar)
+- **ChatGPT-style UI**: AI messages render flat without card/border/background (full width, base `prose` size); user messages keep `rounded-3xl` bubbles (light gray `bg-zinc-100` in light mode, `dark:bg-zinc-700` in dark mode). Action buttons (Copy, ThumbsUp/Down, Regenerate) appear on hover for older messages (`opacity-0 group-hover:opacity-100`), always visible on the latest AI message
+- **Input bar**: `rounded-3xl` pill-shaped container. Left: "+" button with dropdown menu (Custom Instructions + Export Chat). Right: Send/Stop toggle (Stop button with `Square` icon during streaming, aborts SSE via `AbortController`). Disclaimer text below input bar (11 locales)
+- **Scroll-to-bottom**: Floating `ArrowDown` button appears when scrolled >80px from bottom
+- **Compact citations**: `CitationCard` renders as inline `rounded-lg` pills in a `flex-wrap` row (not full-width stacked cards)
+- **Suggested questions**: Displayed as `rounded-full` pill chips in a centered flex-wrap layout
 - **Auto-Summary**: New sessions inject a synthetic assistant message with the AI-generated document summary
-- **Suggested Questions**: Document-specific questions replace static i18n defaults when available
 - **Regenerate**: Re-send the last user message to get a new AI response
-- **Export**: Download the full conversation as a Markdown file with citations converted to footnotes
+- **Export**: Download the full conversation as a Markdown file with citations converted to footnotes (accessed via "+" menu)
 
 **PDF Search**: Ctrl+F triggers an in-viewer search bar. Text is extracted via `pdfjs page.getTextContent()`, matches are highlighted using `customTextRenderer` with `<mark>` tags, and prev/next navigation scrolls between matches.
 

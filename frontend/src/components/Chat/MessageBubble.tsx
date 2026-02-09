@@ -167,16 +167,16 @@ export default function MessageBubble({ message, onCitationClick, isStreaming, o
   }, [message.citations, onCitationClick, t]);
 
   return (
-    <div className={`w-full flex ${isUser ? 'justify-end' : 'justify-start'} ${isUser ? 'my-3' : 'my-4'} group`}>
+    <div className={`w-full flex ${isUser ? 'justify-end' : 'justify-start'} ${isUser ? 'my-4' : 'my-6'} group`}>
       <div className={`relative ${isUser ? 'max-w-[80%]' : 'w-full'}`}>
         <div
-          className={`text-sm ${
+          className={
             isError
-              ? 'rounded-2xl px-4 py-3 bg-red-600 text-white'
+              ? 'text-sm rounded-3xl px-4 py-3 bg-red-600 text-white'
               : isUser
-              ? 'rounded-2xl px-4 py-3 bg-zinc-800 dark:bg-zinc-700 text-white shadow-sm'
+              ? 'text-sm rounded-3xl px-4 py-3 bg-zinc-100 dark:bg-zinc-700 text-zinc-900 dark:text-white shadow-sm'
               : 'text-zinc-900 dark:text-zinc-100'
-          }`}
+          }
         >
           {isUser ? (
             <span className="whitespace-pre-wrap">{message.text}</span>
@@ -190,7 +190,7 @@ export default function MessageBubble({ message, onCitationClick, isStreaming, o
               <span>{t('chat.searching')}</span>
             </div>
           ) : (
-            <div className="prose prose-sm dark:prose-invert max-w-none [&>*:first-child]:mt-0 [&>*:last-child]:mb-0">
+            <div className="prose dark:prose-invert max-w-none [&>*:first-child]:mt-0 [&>*:last-child]:mb-0">
               <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>
                 {markdownText}
               </ReactMarkdown>
@@ -203,7 +203,7 @@ export default function MessageBubble({ message, onCitationClick, isStreaming, o
 
         {/* Copy + feedback buttons (assistant only) */}
         {isAssistant && !isError && message.text && (
-          <div className="flex gap-1 mt-2">
+          <div className={`flex gap-1 mt-2 transition-opacity ${isLastAssistant ? '' : 'opacity-0 group-hover:opacity-100'}`}>
             <button
               onClick={handleCopy}
               className={`p-1 rounded transition-colors text-zinc-400 dark:text-zinc-500 hover:text-zinc-600 dark:hover:text-zinc-300`}

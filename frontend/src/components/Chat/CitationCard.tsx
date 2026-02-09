@@ -1,7 +1,6 @@
 "use client";
 
 import React from 'react';
-import { useLocale } from '../../i18n';
 
 interface CitationCardProps {
   refIndex: number;
@@ -22,10 +21,9 @@ function sanitizeText(text: string | null | undefined): string {
 }
 
 export default function CitationCard({ refIndex, textSnippet, page, onClick }: CitationCardProps) {
-  const { t } = useLocale();
   // Sanitize and truncate the snippet
   const sanitized = sanitizeText(textSnippet);
-  const snippet = sanitized.length > 80 ? sanitized.slice(0, 80) + '…' : sanitized;
+  const snippet = sanitized.length > 60 ? sanitized.slice(0, 60) + '…' : sanitized;
 
   // Validate page number
   const validPage = typeof page === 'number' && isFinite(page) && page > 0 ? page : 1;
@@ -34,13 +32,11 @@ export default function CitationCard({ refIndex, textSnippet, page, onClick }: C
     <button
       type="button"
       onClick={onClick}
-      className="w-full text-left border border-zinc-100 dark:border-zinc-700 rounded-xl p-3 bg-white dark:bg-zinc-950 shadow-sm hover:shadow-md transition-[box-shadow,color,background-color] duration-150 flex items-start gap-2.5"
+      className="inline-flex items-center gap-1.5 text-left border border-zinc-100 dark:border-zinc-700 rounded-lg px-2.5 py-1.5 bg-white dark:bg-zinc-950 shadow-sm hover:shadow-md transition-shadow text-xs"
     >
-      <span className="text-zinc-600 dark:text-zinc-400 font-semibold">[{refIndex}]</span>
-      <div className="flex-1">
-        <p className="text-sm text-zinc-800 dark:text-zinc-200">{snippet}</p>
-        <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">{t('citation.page', { page: validPage })}</p>
-      </div>
+      <span className="text-zinc-500 dark:text-zinc-400 font-semibold shrink-0">[{refIndex}]</span>
+      <span className="text-zinc-600 dark:text-zinc-300 truncate max-w-[200px]">{snippet}</span>
+      <span className="text-zinc-400 dark:text-zinc-500 shrink-0">p.{validPage}</span>
     </button>
   );
 }

@@ -532,9 +532,10 @@ graph TD
     end
 
     subgraph ChatComp["Chat 组件"]
-        MsgBubble["MessageBubble<br/>AI 平铺 / 用户气泡<br/>+ 复制/反馈/重新生成"]
-        CitCard["CitationCard"]
-        Export["导出 (Markdown)"]
+        MsgBubble["MessageBubble<br/>AI 平铺 / 药丸气泡<br/>+ Hover 复制/反馈/重新生成"]
+        CitCard["CitationCard<br/>紧凑药丸"]
+        PlusMenu["'+' 菜单<br/>指令 + 导出"]
+        ScrollBtn["滚动到底部"]
     end
 
     subgraph PdfComp["PDF 组件"]
@@ -582,11 +583,14 @@ graph TD
 **Landing 页面各区块**（按顺序）：HeroSection → 产品展示（Remotion `<Player>` 动画演示，300帧@30fps，lazy-loaded）→ HowItWorks → FeatureGrid → SocialProof → SecuritySection → FAQ → FinalCTA → PrivacyBadge → Footer
 
 **Chat 功能：**
-- **ChatGPT 风格 UI**：AI 消息无卡片/边框/背景，平铺全宽渲染；用户消息保留深色圆角气泡。Copy、点赞/点踩、重新生成按钮统一在 AI 消息下方一行展示。输入框为单一圆角容器包裹 textarea + 操作按钮（focus-within ring 聚焦高亮整个输入栏）
+- **ChatGPT 风格 UI**：AI 消息无卡片/边框/背景，基础 `prose` 级别全宽渲染；用户消息 `rounded-3xl` 圆角气泡（浅色模式 `bg-zinc-100`，深色模式 `dark:bg-zinc-700`）。操作按钮（复制/点赞/点踩/重新生成）在旧消息上 hover 显示（`opacity-0 group-hover:opacity-100`），最新 AI 消息始终可见
+- **输入栏**：`rounded-3xl` 药丸形容器。左侧 "+" 按钮弹出下拉菜单（自定义指令 + 导出对话）。右侧 Send/Stop 切换（streaming 时显示 Square 停止按钮，通过 `AbortController` 中止 SSE）。输入栏下方显示免责声明（11 语言）
+- **滚动到底部**：滚动离底部 >80px 时显示浮动 ArrowDown 按钮
+- **紧凑引用**：`CitationCard` 渲染为 `rounded-lg` 内联药丸，`flex-wrap` 水平排列（非全宽竖向卡片）
+- **推荐问题**：`rounded-full` 药丸按钮 + 居中 flex-wrap 布局
 - **自动摘要**：新会话注入一条合成的 assistant 消息，展示 AI 生成的文档摘要
-- **推荐问题**：当文档有 AI 生成的问题时，替代静态的 i18n 默认问题
 - **重新生成**：重新发送上一条用户消息，获取新的 AI 回答
-- **导出**：将完整对话下载为 Markdown 文件，引用转为脚注
+- **导出**：将完整对话下载为 Markdown 文件，引用转为脚注（通过 "+" 菜单访问）
 
 **PDF 搜索**：Ctrl+F 触发阅读器内搜索栏。通过 `pdfjs page.getTextContent()` 提取文本，使用 `customTextRenderer` 的 `<mark>` 标签高亮匹配，上下翻页在匹配项之间滚动。
 
