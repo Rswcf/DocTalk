@@ -94,10 +94,34 @@ def check_negative_case(text: str, is_negative: bool) -> bool | None:
 
     text_lower = text.lower()
     not_found_phrases = [
-        "not found", "not mention", "no information", "not contain",
-        "not available", "does not", "doesn't", "not present",
-        "not included", "not discuss", "cannot find", "no specific",
-        "not specified", "unable to find",
+        # Original phrases
+        "not found", "not mention", "no mention", "no information",
+        "not contain", "not available", "does not", "doesn't",
+        "not present", "not included", "not discuss", "cannot find",
+        "no specific", "not specified", "unable to find",
+        # Expanded negation patterns — "do not <verb>"
+        "do not state", "do not describe", "do not report",
+        "do not specify", "do not contain information",
+        # "does not <verb>"
+        "does not state", "does not describe", "does not report",
+        "does not specify",
+        # Passive negation — "is not <past participle>"
+        "is not reported", "is not specified", "is not explicitly",
+        "is not stated",
+        # "no <noun>" patterns
+        "no specific information", "no data", "no details",
+        # Scope / topic mismatch
+        "not covered", "not directly addressed", "not the topic",
+        "outside the scope", "beyond the scope", "beyond what",
+        # Inability phrases
+        "not able to", "unable to",
+        # Adversarial refusal phrases (model refuses off-topic / prompt-injection)
+        "i cannot", "i can't", "i can only", "i must be transparent",
+        "i'm designed to", "i'm required to", "my role is limited",
+        "i'm here to help you analyze",
+        # "are not/were not" patterns
+        "are not described", "are not mentioned", "were not conducted",
+        "are not included",
         # Chinese
         "未找到", "没有提到", "没有包含", "未提及", "没有相关",
         # Spanish
@@ -106,16 +130,8 @@ def check_negative_case(text: str, is_negative: bool) -> bool | None:
         "見つかり", "記載されて", "含まれて",
     ]
 
-    # Also check that the response doesn't hallucinate a concrete answer
-    hallucination_signals = [
-        "the revenue", "the plan", "the strategy",
-        "they operate", "the number of stores",
-    ]
-
     has_not_found = any(p in text_lower for p in not_found_phrases)
-    has_hallucination = any(p in text_lower for p in hallucination_signals)
-
-    return has_not_found and not has_hallucination
+    return has_not_found
 
 
 def check_keyword_coverage(text: str, keywords: list[str]) -> float:

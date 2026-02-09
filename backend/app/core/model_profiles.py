@@ -35,8 +35,10 @@ PROMPT_RULES: dict[str, str] = {
         "4. Always extract as much relevant information as possible from the fragments. "
         "Focus on what IS available rather than what is missing. "
         "Only say the information was not found if the fragments are truly unrelated to the question.\n"
-        "5. Use Markdown: **bold** for emphasis, bullet lists for multiple points.\n"
-        "6. Your response language MUST be {language_name}.\n"
+        "5. If the question asks about a specific topic that is genuinely NOT covered in any of the fragments, "
+        "clearly state: \"This information is not present in the provided document.\"\n"
+        "6. Use Markdown: **bold** for emphasis, bullet lists for multiple points.\n"
+        "7. Your response language MUST be {language_name}.\n"
     ),
     # DeepSeek — avoid negative-framing over-compliance
     "positive_framing": (
@@ -46,8 +48,10 @@ PROMPT_RULES: dict[str, str] = {
         "4. Your primary goal is to extract and present ALL useful information from the fragments. "
         "Be thorough — cover every relevant detail you find.\n"
         "5. Only say information is unavailable if the fragments are genuinely unrelated to the question.\n"
-        "6. Use Markdown: **bold** for emphasis, bullet lists for multiple points.\n"
-        "7. Your response language MUST be {language_name}.\n"
+        "6. When a question is about a topic completely absent from ALL fragments, "
+        "state that this specific information is not available in the document.\n"
+        "7. Use Markdown: **bold** for emphasis, bullet lists for multiple points.\n"
+        "8. Your response language MUST be {language_name}.\n"
     ),
     # Gemini Flash — negative constraints at end to avoid being dropped
     "constraints_at_end": (
@@ -56,8 +60,10 @@ PROMPT_RULES: dict[str, str] = {
         "3. Extract as much relevant information as possible from the fragments.\n"
         "4. Use Markdown: **bold** for emphasis, bullet lists for multiple points.\n"
         "5. Your response language MUST be {language_name}.\n"
-        "6. CRITICAL: Do NOT fabricate information that is not in the fragments above.\n"
-        "7. CRITICAL: If information is not present in the fragments, state clearly that it was not found.\n"
+        "6. CRITICAL: If a question asks about something NOT in the fragments, "
+        "you MUST explicitly say the information is not found in the document.\n"
+        "7. CRITICAL: Do NOT fabricate information that is not in the fragments above.\n"
+        "8. CRITICAL: If information is not present in the fragments, state clearly that it was not found.\n"
     ),
     # Grok — explicit markdown formatting guidance
     "explicit_formatting": (
@@ -66,9 +72,11 @@ PROMPT_RULES: dict[str, str] = {
         "3. You may cite multiple fragments, e.g. [1][3].\n"
         "4. Always extract as much relevant information as possible from the fragments. "
         "Focus on what IS available.\n"
-        "5. Format your response with proper Markdown: use **bold** for key terms, "
+        "5. If the question asks about a topic not covered in the fragments, "
+        "explicitly state that this information is not present in the document.\n"
+        "6. Format your response with proper Markdown: use **bold** for key terms, "
         "use - for bullet lists, use | for tables if comparing data, use ``` for code/formulas.\n"
-        "6. Your response language MUST be {language_name}.\n"
+        "7. Your response language MUST be {language_name}.\n"
     ),
     # Claude Sonnet/Opus — explicit citation pressure
     "explicit_citation": (
@@ -78,8 +86,10 @@ PROMPT_RULES: dict[str, str] = {
         "4. Always extract as much relevant information as possible from the fragments. "
         "Focus on what IS available rather than what is missing. "
         "Only say the information was not found if the fragments are truly unrelated to the question.\n"
-        "5. Use Markdown: **bold** for emphasis, bullet lists for multiple points.\n"
-        "6. Your response language MUST be {language_name}.\n"
+        "5. If the question asks about a topic not covered in any of the fragments, "
+        "state explicitly that this information is not present in the document.\n"
+        "6. Use Markdown: **bold** for emphasis, bullet lists for multiple points.\n"
+        "7. Your response language MUST be {language_name}.\n"
     ),
 }
 

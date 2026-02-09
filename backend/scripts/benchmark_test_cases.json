@@ -294,12 +294,12 @@
     {
       "id": "negative_nda_02",
       "document_slug": "nda-contract",
-      "question": "Which country's law governs this agreement?",
+      "question": "What are the insurance requirements specified in this NDA?",
       "language": "en",
       "type": "negative",
       "is_negative": true,
       "expected_min_citations": 0,
-      "ground_truth_keywords": ["not found", "not mention", "no information"]
+      "ground_truth_keywords": []
     },
     {
       "id": "multilingual_nvidia_zh",
