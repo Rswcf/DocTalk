@@ -283,6 +283,7 @@ SENTRY_TRACES_SAMPLE_RATE=0.1
 - **UserMenu 替代 AuthButton**: Header 中 `AuthButton` 已被 `UserMenu` 下拉菜单替代，未登录时仍显示 Sign In 按钮
 - **Profile 页面**: `/profile?tab=credits` (默认 tab)，受保护路由，未登录重定向到 `/auth?callbackUrl=/profile`
 - **Billing 页面**: 月付/年付切换 + Plus 订阅卡片（"Most Popular" 标记）+ Pro 订阅卡片；中间 PricingTable（Free vs Plus vs Pro 9 行对比）；下方 credit packs 卡片 (rounded-xl)
+- **Chat UI（ChatGPT 风格）**: AI 消息无卡片/边框/背景，文本平铺渲染（用户消息保留深色圆角气泡）。AI 消息全宽展示（无 `max-w-[80%]` 限制）。Copy/ThumbsUp/ThumbsDown/Regenerate 按钮统一在消息下方一行显示。输入框为单一圆角容器包裹 textarea + 操作按钮（`focus-within:ring` 聚焦高亮整个输入栏），Send 按钮为 `rounded-full` 圆形，Export 按钮内嵌容器中
 - **引用悬浮 Tooltip**: `MessageBubble.tsx` 中引用 `[n]` 按钮悬浮显示 textSnippet + page tooltip，减少验证点击次数
 - **流式状态指示**: streaming 时显示 3 点弹跳动画（"搜索文档中..."）和闪烁光标，区分 retrieval 阶段和生成阶段
 - **下拉菜单键盘导航**: UserMenu、ModelSelector、LanguageSelector、SessionDropdown 支持 Arrow/Home/End/Escape 键盘操作

@@ -532,7 +532,7 @@ graph TD
     end
 
     subgraph ChatComp["Chat 组件"]
-        MsgBubble["MessageBubble<br/>+ 重新生成"]
+        MsgBubble["MessageBubble<br/>AI 平铺 / 用户气泡<br/>+ 复制/反馈/重新生成"]
         CitCard["CitationCard"]
         Export["导出 (Markdown)"]
     end
@@ -582,6 +582,7 @@ graph TD
 **Landing 页面各区块**（按顺序）：HeroSection → 产品展示（Remotion `<Player>` 动画演示，300帧@30fps，lazy-loaded）→ HowItWorks → FeatureGrid → SocialProof → SecuritySection → FAQ → FinalCTA → PrivacyBadge → Footer
 
 **Chat 功能：**
+- **ChatGPT 风格 UI**：AI 消息无卡片/边框/背景，平铺全宽渲染；用户消息保留深色圆角气泡。Copy、点赞/点踩、重新生成按钮统一在 AI 消息下方一行展示。输入框为单一圆角容器包裹 textarea + 操作按钮（focus-within ring 聚焦高亮整个输入栏）
 - **自动摘要**：新会话注入一条合成的 assistant 消息，展示 AI 生成的文档摘要
 - **推荐问题**：当文档有 AI 生成的问题时，替代静态的 i18n 默认问题
 - **重新生成**：重新发送上一条用户消息，获取新的 AI 回答

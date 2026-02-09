@@ -532,7 +532,7 @@ graph TD
     end
 
     subgraph ChatComp["Chat Components"]
-        MsgBubble["MessageBubble<br/>+ Regenerate"]
+        MsgBubble["MessageBubble<br/>Flat AI / Bubble User<br/>+ Copy/Feedback/Regenerate"]
         CitCard["CitationCard"]
         Export["Export (Markdown)"]
     end
@@ -582,6 +582,7 @@ graph TD
 **Landing page sections** (in order): HeroSection → Product Showcase (Remotion `<Player>` animated demo, 300 frames @ 30fps, lazy-loaded) → HowItWorks → FeatureGrid → SocialProof → SecuritySection → FAQ → FinalCTA → PrivacyBadge → Footer
 
 **Chat features:**
+- **ChatGPT-style UI**: AI messages render flat without card/border/background (full width); user messages keep dark rounded bubbles. Copy, thumbs up/down, and regenerate buttons display in a single row below each AI message. Chat input is a unified rounded container with textarea + action buttons inside (focus-within ring highlights the whole bar)
 - **Auto-Summary**: New sessions inject a synthetic assistant message with the AI-generated document summary
 - **Suggested Questions**: Document-specific questions replace static i18n defaults when available
 - **Regenerate**: Re-send the last user message to get a new AI response
