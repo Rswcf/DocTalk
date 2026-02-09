@@ -112,12 +112,10 @@ async def link_account(
         data.provider,
         data.provider_account_id,
         type=data.type,
-        refresh_token=data.refresh_token,
-        access_token=data.access_token,
         expires_at=data.expires_at,
         token_type=data.token_type,
         scope=data.scope,
-        id_token=data.id_token,
+        # OAuth tokens intentionally not stored (data minimization)
     )
 
 

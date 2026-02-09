@@ -6,10 +6,49 @@ from typing import List, Optional, Tuple
 import httpx
 from bs4 import BeautifulSoup
 
+from app.core.url_validator import validate_url
+
 from .base import ExtractedPage
 
 MAX_CONTENT_SIZE = 10 * 1024 * 1024  # 10MB
 FETCH_TIMEOUT = 30  # seconds
+MAX_REDIRECTS = 3
+
+
+def _fetch_with_safe_redirects(url: str) -> httpx.Response:
+    """Fetch a URL, manually following redirects and validating each hop."""
+    validate_url(url)
+    current_url = url
+    seen_urls: set[str] = {current_url}
+
+    with httpx.Client(timeout=FETCH_TIMEOUT, follow_redirects=False) as client:
+        for _hop in range(MAX_REDIRECTS + 1):
+            response = client.get(current_url, headers={
+                'User-Agent': 'Mozilla/5.0 (compatible; DocTalk/1.0)',
+            })
+
+            if response.is_redirect:
+                location = response.headers.get('location', '')
+                if not location:
+                    raise ValueError("REDIRECT_NO_LOCATION")
+
+                # Resolve relative redirects
+                redirect_url = str(response.next_request.url) if response.next_request else location
+
+                # Detect redirect loops
+                if redirect_url in seen_urls:
+                    raise ValueError("REDIRECT_LOOP")
+                seen_urls.add(redirect_url)
+
+                # Validate the redirect target before following
+                validate_url(redirect_url)
+                current_url = redirect_url
+                continue
+
+            response.raise_for_status()
+            return response
+
+    raise ValueError("TOO_MANY_REDIRECTS")
 
 
 def fetch_and_extract_url(url: str) -> Tuple[str, List[ExtractedPage], Optional[bytes]]:
@@ -20,11 +59,7 @@ def fetch_and_extract_url(url: str) -> Tuple[str, List[ExtractedPage], Optional[
         - If the URL points to a PDF, returns (filename, [], pdf_bytes)
         - Otherwise returns (title, extracted_pages, None)
     """
-    with httpx.Client(timeout=FETCH_TIMEOUT, follow_redirects=True) as client:
-        response = client.get(url, headers={
-            'User-Agent': 'Mozilla/5.0 (compatible; DocTalk/1.0)',
-        })
-        response.raise_for_status()
+    response = _fetch_with_safe_redirects(url)
 
     content_type = response.headers.get('content-type', '').lower()
 

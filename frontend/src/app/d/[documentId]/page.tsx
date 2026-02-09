@@ -13,6 +13,7 @@ import { listSessions, createSession, getDocument, getDocumentFileUrl, getMessag
 import { useDocTalkStore } from '../../../store';
 import { Panel, Group, Separator } from 'react-resizable-panels';
 import { useLocale } from '../../../i18n';
+import { sanitizeFilename } from '../../../lib/utils';
 
 export default function DocumentReaderPage() {
   const params = useParams<{ documentId: string }>();
@@ -68,8 +69,9 @@ export default function DocumentReaderPage() {
         if (info.is_demo) setIsDemo(true);
         if (info.file_type) setFileType(info.file_type);
         if (info.filename) {
-          setDocumentName(info.filename);
-          setLastDocument(documentId, info.filename);
+          const safeName = sanitizeFilename(info.filename);
+          setDocumentName(safeName);
+          setLastDocument(documentId, safeName);
         }
         if (info.status === 'error') {
           setError(info.error_msg || t('upload.error'));

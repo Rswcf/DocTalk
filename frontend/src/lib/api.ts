@@ -268,6 +268,14 @@ export async function getAdminTopUsers(limit = 20, by = 'tokens') {
   return handle(res);
 }
 
+// --- Data Export ---
+
+export async function exportUserData(): Promise<Blob> {
+  const res = await fetch(`${PROXY_BASE}/api/users/me/export`);
+  if (!res.ok) throw new Error('Export failed');
+  return res.blob();
+}
+
 // --- URL Ingestion ---
 
 export async function ingestUrl(url: string): Promise<{ document_id: string; status: string; filename?: string }> {

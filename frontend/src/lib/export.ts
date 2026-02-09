@@ -1,4 +1,5 @@
 import type { Message, Citation } from '../types';
+import { sanitizeFilename } from './utils';
 
 export function exportConversationAsMarkdown(messages: Message[], documentName: string): void {
   const lines: string[] = [];
@@ -73,7 +74,7 @@ export function exportConversationAsMarkdown(messages: Message[], documentName: 
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  const safeName = (documentName || 'chat').replace(/[^a-zA-Z0-9_-]/g, '_');
+  const safeName = sanitizeFilename(documentName || 'chat').replace(/[^a-zA-Z0-9_\-\.]/g, '_');
   a.download = `${safeName}_chat_export.md`;
   document.body.appendChild(a);
   a.click();

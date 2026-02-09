@@ -1,7 +1,10 @@
 from __future__ import annotations
 
 import asyncio
+import logging
 import os
+import re
+import unicodedata
 import uuid
 from typing import Optional
 
@@ -9,8 +12,28 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
+from app.core.security_log import log_security_event
 from app.models.tables import Document
 from app.services.storage_service import storage_service
+
+logger = logging.getLogger(__name__)
+
+
+def sanitize_filename(name: str, max_length: int = 200) -> str:
+    """Sanitize filename to prevent path traversal and special character issues."""
+    name = unicodedata.normalize("NFC", name)
+    name = os.path.basename(name)
+    name = re.sub(r'[\x00-\x1f\x7f]', '', name)
+    name = re.sub(r'[<>:"|?*\\]', '_', name)
+    # Block double extensions like .pdf.exe
+    parts = name.rsplit('.', 1)
+    if len(parts) == 2:
+        base = parts[0].replace('.', '_')
+        name = f"{base}.{parts[1]}"
+    if len(name) > max_length:
+        base, ext = os.path.splitext(name)
+        name = base[:max_length - len(ext)] + ext
+    return name or "document"
 
 
 class DocService:
@@ -27,7 +50,8 @@ class DocService:
         - content_type: str
         - read(): async -> bytes
         """
-        filename: str = getattr(upload, "filename", "document.pdf") or "document.pdf"
+        raw_filename: str = getattr(upload, "filename", "document.pdf") or "document.pdf"
+        filename = sanitize_filename(raw_filename)
         content_type: str = getattr(upload, "content_type", "application/pdf") or "application/pdf"
 
         data: bytes = await upload.read()
@@ -106,11 +130,16 @@ class DocService:
         if not doc:
             return False
 
+        storage_ok = True
+        qdrant_ok = True
+        storage_key = doc.storage_key
+
         # Best-effort: clean up object storage (sync call, run off event loop)
         try:
-            await asyncio.to_thread(storage_service.delete_file, doc.storage_key)
-        except Exception:
-            pass
+            await asyncio.to_thread(storage_service.delete_file, storage_key)
+        except Exception as e:
+            storage_ok = False
+            logger.error("MinIO deletion failed for doc %s: %s", document_id, e)
 
         # Best-effort: clean up Qdrant vectors (sync call, run off event loop)
         try:
@@ -127,12 +156,31 @@ class DocService:
                     must=[FieldCondition(key="document_id", match=MatchValue(value=str(document_id)))]
                 ),
             )
-        except Exception:
-            pass
+        except Exception as e:
+            qdrant_ok = False
+            logger.error("Qdrant deletion failed for doc %s: %s", document_id, e)
 
         # ORM cascade deletes pages, chunks, sessions, messages
         await db.delete(doc)
         await db.commit()
+
+        log_security_event(
+            "document_deleted", document_id=document_id, user_id=doc.user_id,
+            storage_cleaned=storage_ok, vectors_cleaned=qdrant_ok,
+        )
+
+        # Queue retry task if any cleanup failed
+        if not storage_ok or not qdrant_ok:
+            try:
+                from app.workers.deletion_worker import retry_failed_deletion
+                retry_failed_deletion.delay(
+                    str(document_id),
+                    storage_key=storage_key if not storage_ok else None,
+                    cleanup_qdrant=not qdrant_ok,
+                )
+            except Exception:
+                logger.error("Failed to queue deletion retry for doc %s", document_id)
+
         return True
 
 

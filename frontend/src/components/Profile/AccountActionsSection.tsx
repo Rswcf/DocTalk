@@ -1,8 +1,9 @@
 "use client";
 
 import React, { useState } from "react";
+import { Download } from "lucide-react";
 import { useLocale } from "../../i18n";
-import { deleteUserAccount } from "../../lib/api";
+import { deleteUserAccount, exportUserData } from "../../lib/api";
 import { signOut } from "next-auth/react";
 
 interface Props {
@@ -15,8 +16,28 @@ export default function AccountActionsSection({ email }: Props) {
   const [confirmEmail, setConfirmEmail] = useState("");
   const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [exporting, setExporting] = useState(false);
 
   const canConfirm = confirmEmail.trim() === email.trim();
+
+  const onExport = async () => {
+    setExporting(true);
+    try {
+      const blob = await exportUserData();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `doctalk-export-${new Date().toISOString().slice(0, 10)}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch {
+      // silent — user sees no download
+    } finally {
+      setExporting(false);
+    }
+  };
 
   const onDelete = async () => {
     setDeleting(true);
@@ -32,6 +53,26 @@ export default function AccountActionsSection({ email }: Props) {
 
   return (
     <div className="flex flex-col gap-4">
+      {/* Data Export */}
+      <div className="border rounded-lg p-6 border-zinc-200 dark:border-zinc-700">
+        <h3 className="text-lg font-medium mb-2 text-zinc-900 dark:text-zinc-100">
+          {t("profile.account.exportTitle")}
+        </h3>
+        <p className="text-sm text-zinc-600 dark:text-zinc-400 mb-4">
+          {t("profile.account.exportDesc")}
+        </p>
+        <button
+          type="button"
+          onClick={onExport}
+          disabled={exporting}
+          className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 hover:bg-zinc-50 dark:hover:bg-zinc-700 transition-colors disabled:opacity-50"
+        >
+          <Download size={16} />
+          {exporting ? t("profile.account.exporting") : t("profile.account.exportButton")}
+        </button>
+      </div>
+
+      {/* Danger Zone */}
       <div className="border rounded-lg p-6 dark:border-zinc-700 border-red-300 dark:border-red-700">
         <h3 className="text-lg font-medium mb-2 text-red-700 dark:text-red-300">
           {t("profile.account.dangerZone")}

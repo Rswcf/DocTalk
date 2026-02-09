@@ -112,9 +112,19 @@ export function AuthModal() {
           <span className="text-zinc-700 dark:text-zinc-200">{t('auth.continueWithGoogle')}</span>
         </button>
 
-        <div className="mt-6 pt-4 border-t border-zinc-200 dark:border-zinc-800 text-center space-y-2">
+        <p className="mt-4 text-xs text-zinc-400 text-center">
+          {t('auth.termsNotice').split('Terms of Service')[0]}
+          <a href="/terms" target="_blank" rel="noopener noreferrer" className="underline hover:text-zinc-600 dark:hover:text-zinc-300">Terms of Service</a>
+          {' and '}
+          <a href="/privacy" target="_blank" rel="noopener noreferrer" className="underline hover:text-zinc-600 dark:hover:text-zinc-300">Privacy Policy</a>.
+        </p>
+
+        <div className="mt-4 pt-4 border-t border-zinc-200 dark:border-zinc-800 text-center space-y-2">
           <p className="text-xs text-zinc-400">
             {t('auth.privacyNote')}
+          </p>
+          <p className="text-xs text-zinc-400">
+            {t('auth.aiDisclosure')}
           </p>
           <p className="text-xs text-zinc-600 dark:text-zinc-300 font-medium">
             {t('auth.freeCredits')}

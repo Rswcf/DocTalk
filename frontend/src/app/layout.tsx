@@ -6,8 +6,9 @@ import { ThemeProvider } from './ThemeProvider'
 import LocaleProvider from '../i18n/LocaleProvider'
 import { Providers } from '../components/Providers'
 import { Suspense } from 'react'
-import { Analytics } from '@vercel/analytics/react'
 import { AuthModal } from '../components/AuthModal'
+import { AnalyticsWrapper } from '../components/AnalyticsWrapper'
+import { CookieConsentBanner } from '../components/CookieConsentBanner'
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter' })
 
@@ -36,7 +37,8 @@ export default function RootLayout({
             </LocaleProvider>
           </Providers>
         </ThemeProvider>
-        <Analytics />
+        <AnalyticsWrapper />
+        <CookieConsentBanner />
       </body>
     </html>
   )

@@ -1,15 +1,19 @@
 from __future__ import annotations
 
+import json
+from datetime import datetime, timezone
 from typing import List, Optional
 
 import stripe
 from fastapi import APIRouter, Depends, HTTPException
+from fastapi.responses import Response
 from pydantic import BaseModel
-from sqlalchemy import func, select
+from sqlalchemy import asc, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
 from app.core.deps import get_db_session, require_auth
+from app.core.security_log import log_security_event
 from app.models.tables import (
     Account,
     ChatSession,
@@ -159,6 +163,116 @@ async def get_usage_breakdown(
     }
 
 
+_export_rate_limit: dict[str, float] = {}  # user_id -> last export timestamp
+EXPORT_COOLDOWN_SECONDS = 3600  # 1 hour
+
+
+@router.get("/me/export")
+async def export_my_data(
+    user: User = Depends(require_auth),
+    db: AsyncSession = Depends(get_db_session),
+):
+    """Export all user data as JSON (GDPR Art. 20 data portability)."""
+    uid = str(user.id)
+    now = datetime.now(timezone.utc).timestamp()
+    last_export = _export_rate_limit.get(uid, 0)
+    if now - last_export < EXPORT_COOLDOWN_SECONDS:
+        remaining = int(EXPORT_COOLDOWN_SECONDS - (now - last_export))
+        return Response(
+            content=json.dumps({"error": "EXPORT_RATE_LIMITED", "retry_after": remaining}),
+            status_code=429,
+            media_type="application/json",
+            headers={"Retry-After": str(remaining)},
+        )
+
+    # 1. User profile
+    profile = {
+        "id": uid,
+        "email": user.email,
+        "name": user.name,
+        "plan": user.plan,
+        "created_at": user.created_at.isoformat() if user.created_at else None,
+        "credits_balance": user.credits_balance,
+    }
+
+    # 2. Documents metadata
+    doc_rows = await db.execute(
+        select(Document).where(Document.user_id == user.id).order_by(Document.created_at)
+    )
+    docs = doc_rows.scalars().all()
+    documents = [
+        {
+            "id": str(d.id),
+            "filename": d.filename,
+            "file_type": getattr(d, "file_type", "pdf"),
+            "status": d.status,
+            "created_at": d.created_at.isoformat() if d.created_at else None,
+            "page_count": d.page_count,
+        }
+        for d in docs
+    ]
+
+    # 3. Sessions and messages
+    conversations = []
+    for d in docs:
+        sess_rows = await db.execute(
+            select(ChatSession).where(ChatSession.document_id == d.id)
+        )
+        for sess in sess_rows.scalars():
+            msg_rows = await db.execute(
+                select(Message).where(Message.session_id == sess.id).order_by(asc(Message.created_at))
+            )
+            conversations.append({
+                "session_id": str(sess.id),
+                "document_id": str(d.id),
+                "title": sess.title,
+                "created_at": sess.created_at.isoformat() if sess.created_at else None,
+                "messages": [
+                    {
+                        "role": m.role,
+                        "content": m.content,
+                        "created_at": m.created_at.isoformat() if m.created_at else None,
+                    }
+                    for m in msg_rows.scalars()
+                ],
+            })
+
+    # 4. Credit history
+    ledger_rows = await db.execute(
+        select(CreditLedger)
+        .where(CreditLedger.user_id == user.id)
+        .order_by(CreditLedger.created_at.desc())
+        .limit(1000)
+    )
+    credit_history = [
+        {
+            "delta": entry.delta,
+            "balance_after": entry.balance_after,
+            "reason": entry.reason,
+            "created_at": entry.created_at.isoformat() if entry.created_at else None,
+        }
+        for entry in ledger_rows.scalars()
+    ]
+
+    export_data = {
+        "exported_at": datetime.now(timezone.utc).isoformat(),
+        "user": profile,
+        "documents": documents,
+        "conversations": conversations,
+        "credit_history": credit_history,
+    }
+
+    _export_rate_limit[uid] = now
+    log_security_event("data_export", user_id=user.id)
+
+    content = json.dumps(export_data, indent=2, ensure_ascii=False).encode("utf-8")
+    return Response(
+        content=content,
+        media_type="application/json",
+        headers={"Content-Disposition": "attachment; filename=doctalk-data-export.json"},
+    )
+
+
 @router.delete("/me")
 async def delete_me(
     user: User = Depends(require_auth),
@@ -202,4 +316,5 @@ async def delete_me(
         raise HTTPException(status_code=500, detail="Failed to delete user")
 
     # 6) Return confirmation
+    log_security_event("account_deleted", user_id=user.id, email=user.email)
     return {"deleted": True}

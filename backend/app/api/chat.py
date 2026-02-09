@@ -12,6 +12,7 @@ from sqlalchemy.orm import selectinload
 
 from app.core.deps import get_current_user_optional, get_db_session
 from app.core.rate_limit import demo_chat_limiter
+from app.core.security_log import log_security_event
 from app.models.tables import ChatSession, Document, Message, User
 from app.schemas.chat import (
     ChatMessageResponse,
@@ -157,6 +158,7 @@ async def chat_stream(
     if user is None:
         client_ip = request.client.host if request.client else "unknown"
         if not demo_chat_limiter.is_allowed(client_ip):
+            log_security_event("demo_rate_limit", ip=client_ip, session_id=session_id)
             return JSONResponse(
                 status_code=429,
                 content={"detail": "Rate limit exceeded", "retry_after": 60},
@@ -170,6 +172,7 @@ async def chat_stream(
             .where(Message.session_id == session_id, Message.role == "user")
         )
         if msg_count.scalar() >= DEMO_MESSAGE_LIMIT:
+            log_security_event("demo_message_limit", session_id=session_id, document_id=session.document_id)
             return JSONResponse(
                 status_code=429,
                 content={"detail": "Demo message limit reached", "limit": DEMO_MESSAGE_LIMIT},

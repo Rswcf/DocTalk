@@ -21,6 +21,9 @@ RUN apt-get update \
 COPY backend/requirements.txt /tmp/requirements.txt
 RUN pip install -r /tmp/requirements.txt greenlet psycopg[binary] && rm /tmp/requirements.txt
 
+# Create non-root user
+RUN addgroup --system --gid 1001 app && adduser --system --uid 1001 --ingroup app app
+
 # Copy backend code and entrypoint
 COPY backend/ /app/
 
@@ -32,6 +35,8 @@ EXPOSE 8000
 # - Starts uvicorn API server
 # - Forwards SIGTERM to both processes for graceful shutdown
 COPY backend/entrypoint.sh /app/entrypoint.sh
-RUN chmod +x /app/entrypoint.sh
+RUN chmod +x /app/entrypoint.sh && chown -R app:app /app
+
+USER app
 
 CMD ["/app/entrypoint.sh"]

@@ -104,6 +104,7 @@ class Settings(BaseSettings):
     # Per-plan limits
     FREE_MAX_DOCUMENTS: int = 3
     PLUS_MAX_DOCUMENTS: int = 20
+    PRO_MAX_DOCUMENTS: int = 999
     FREE_MAX_FILE_SIZE_MB: int = 25
     PLUS_MAX_FILE_SIZE_MB: int = 50
     PRO_MAX_FILE_SIZE_MB: int = 100

@@ -10,6 +10,7 @@ import type { DocumentBrief } from '../lib/api';
 import { Trash2, Link2 } from 'lucide-react';
 import { useDocTalkStore } from '../store';
 import { useLocale } from '../i18n';
+import { sanitizeFilename } from '../lib/utils';
 import { PrivacyBadge } from '../components/PrivacyBadge';
 import Header from '../components/Header';
 import HeroSection from '../components/landing/HeroSection';
@@ -317,7 +318,7 @@ export default function HomePage() {
                 >
                   <div>
                     <div className="font-medium text-zinc-900 dark:text-zinc-100">
-                      {d.filename || d.document_id}
+                      {d.filename ? sanitizeFilename(d.filename) : d.document_id}
                     </div>
                     <div className="text-xs text-zinc-500 mt-0.5">
                       {new Date(d.createdAt).toLocaleString()}

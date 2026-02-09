@@ -41,6 +41,11 @@ export default function Footer() {
                   DocTalk
                 </span>
               </li>
+              <li>
+                <a href="mailto:support@doctalk.app" className="text-sm text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors">
+                  {t('footer.contact')}
+                </a>
+              </li>
             </ul>
           </div>
 
@@ -58,6 +63,11 @@ export default function Footer() {
               <li>
                 <Link href="/terms" className="text-sm text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors">
                   {t('privacy.termsLink')}
+                </Link>
+              </li>
+              <li>
+                <Link href="/privacy#ccpa" className="text-sm text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors">
+                  {t('footer.doNotSell')}
                 </Link>
               </li>
             </ul>

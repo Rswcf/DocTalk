@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import io
 import uuid
+import zipfile
 from typing import Optional
 
 from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile, status
@@ -10,6 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
 from app.core.deps import get_current_user_optional, get_db_session, require_auth
+from app.core.security_log import log_security_event
 from app.models.tables import User
 from app.schemas.document import (
     DocumentBrief,
@@ -20,6 +23,36 @@ from app.services.doc_service import doc_service
 from app.services.storage_service import storage_service
 
 documents_router = APIRouter(prefix="/documents", tags=["documents"])
+
+_MAGIC_SIGNATURES: dict[str, list[bytes]] = {
+    'pdf': [b'%PDF'],
+    'docx': [b'PK\x03\x04'],
+    'pptx': [b'PK\x03\x04'],
+    'xlsx': [b'PK\x03\x04'],
+    'txt': [],
+    'md': [],
+}
+
+_MAX_UNCOMPRESSED_SIZE = 500 * 1024 * 1024  # 500MB zip bomb protection
+
+
+def _validate_file_content(data: bytes, file_type: str) -> bool:
+    """Validate file content against expected magic bytes and structure."""
+    sigs = _MAGIC_SIGNATURES.get(file_type, [])
+    if sigs and not any(data[:len(sig)] == sig for sig in sigs):
+        return False
+    # For Office Open XML formats, verify ZIP structure
+    if file_type in ('docx', 'pptx', 'xlsx'):
+        try:
+            with zipfile.ZipFile(io.BytesIO(data)) as zf:
+                if '[Content_Types].xml' not in zf.namelist():
+                    return False
+                total_uncompressed = sum(info.file_size for info in zf.infolist())
+                if total_uncompressed > _MAX_UNCOMPRESSED_SIZE:
+                    return False
+        except zipfile.BadZipFile:
+            return False
+    return True
 
 
 @documents_router.get("", response_model=list[DocumentBrief])
@@ -103,11 +136,43 @@ async def upload_document(
     if file_type is None or file_type not in settings.ALLOWED_FILE_TYPES:
         return JSONResponse(status_code=400, content={"error": "UNSUPPORTED_FORMAT"})
 
-    # Validate size by reading bytes (DocService will re-validate too)
+    # Enforce per-plan document count limit
+    from sqlalchemy import func
+    from sqlalchemy import select as sa_select
+
+    from app.models.tables import Document
+    user_doc_count = await db.scalar(
+        sa_select(func.count()).select_from(Document)
+        .where(Document.user_id == user.id)
+        .where(Document.status != "deleting")
+    )
+    plan = getattr(user, 'plan', None) or "free"
+    max_docs = {
+        "free": settings.FREE_MAX_DOCUMENTS,
+        "plus": settings.PLUS_MAX_DOCUMENTS,
+        "pro": settings.PRO_MAX_DOCUMENTS,
+    }.get(plan, settings.FREE_MAX_DOCUMENTS)
+    if user_doc_count >= max_docs:
+        log_security_event("plan_limit_hit", user_id=user.id, plan=plan, limit_type="documents", limit=max_docs, current=user_doc_count)
+        return JSONResponse(status_code=403, content={
+            "error": "DOCUMENT_LIMIT_REACHED", "limit": max_docs, "current": user_doc_count,
+        })
+
+    # Validate size by reading bytes
     data = await file.read()
-    max_bytes = int(settings.MAX_PDF_SIZE_MB) * 1024 * 1024
-    if len(data) > max_bytes:
-        return JSONResponse(status_code=400, content={"error": "FILE_TOO_LARGE"})
+    max_size_mb = {
+        "free": settings.FREE_MAX_FILE_SIZE_MB,
+        "plus": settings.PLUS_MAX_FILE_SIZE_MB,
+        "pro": settings.PRO_MAX_FILE_SIZE_MB,
+    }.get(plan, settings.FREE_MAX_FILE_SIZE_MB)
+    if len(data) > max_size_mb * 1024 * 1024:
+        log_security_event("upload_rejected", user_id=user.id, reason="file_too_large", size=len(data), max_mb=max_size_mb)
+        return JSONResponse(status_code=400, content={"error": "FILE_TOO_LARGE", "max_mb": max_size_mb})
+
+    # Validate file content matches declared type (magic bytes + structure)
+    if not _validate_file_content(data, file_type):
+        log_security_event("upload_rejected", user_id=user.id, reason="invalid_magic_bytes", filename=file.filename, file_type=file_type)
+        return JSONResponse(status_code=400, content={"error": "INVALID_FILE_CONTENT"})
 
     # FastAPI resets file after read? We already have bytes; reconstruct UploadFile-like
     # to pass filename/content_type to service: create an in-memory UploadFile proxy
@@ -125,6 +190,7 @@ async def upload_document(
         code = str(ve)
         return JSONResponse(status_code=400, content={"error": code})
 
+    log_security_event("file_upload", user_id=user.id, document_id=document_id, filename=file.filename, file_type=file_type, size=len(data))
     return JSONResponse(
         status_code=status.HTTP_202_ACCEPTED,
         content={"document_id": str(document_id), "status": "parsing", "filename": file.filename},
@@ -146,11 +212,22 @@ async def ingest_url(
     if not url.startswith(('http://', 'https://')):
         return JSONResponse(status_code=400, content={"error": "URL must start with http:// or https://"})
 
+    # Validate URL before fetching (SSRF protection)
+    from app.core.url_validator import validate_url
+    try:
+        validate_url(url)
+    except ValueError as e:
+        return JSONResponse(status_code=400, content={"error": str(e)})
+
     try:
         from app.services.extractors.url_extractor import fetch_and_extract_url
         title, pages, pdf_bytes = fetch_and_extract_url(url)
     except ValueError as e:
         code = str(e)
+        if code in ("BLOCKED_HOST", "BLOCKED_PORT", "INVALID_URL_SCHEME",
+                     "INVALID_URL_HOST", "DNS_RESOLUTION_FAILED",
+                     "REDIRECT_LOOP", "TOO_MANY_REDIRECTS"):
+            return JSONResponse(status_code=400, content={"error": code})
         if code == "URL_CONTENT_TOO_LARGE":
             return JSONResponse(status_code=400, content={"error": "URL_CONTENT_TOO_LARGE"})
         if code == "NO_TEXT_CONTENT":

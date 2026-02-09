@@ -18,7 +18,7 @@ if settings.SENTRY_DSN:
 celery_app = Celery(
     "doctalk",
     broker=settings.CELERY_BROKER_URL,
-    include=["app.workers.parse_worker"],
+    include=["app.workers.parse_worker", "app.workers.deletion_worker"],
 )
 
 # Basic configuration and task routing

@@ -8,6 +8,7 @@ from jose.jwt import ExpiredSignatureError, JWTClaimsError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
+from app.core.security_log import log_security_event
 from app.models.database import AsyncSessionLocal
 from app.models.tables import User
 
@@ -53,13 +54,13 @@ async def get_current_user_optional(
             return None
         return await db.get(User, UUID(user_id))
     except ExpiredSignatureError:
-        logger.debug("JWT token expired")
+        log_security_event("auth_failure", reason="token_expired")
         return None
     except JWTClaimsError as e:
-        logger.debug("JWT claims error: %s", e)
+        log_security_event("auth_failure", reason="claims_error", detail=str(e))
         return None
     except JWTError as e:
-        logger.debug("JWT decode error: %s", e)
+        log_security_event("auth_failure", reason="decode_error", detail=str(e))
         return None
 
 

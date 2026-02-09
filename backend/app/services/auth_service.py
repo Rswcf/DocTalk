@@ -115,6 +115,10 @@ async def link_account(
     provider_account_id: str,
     **kwargs,
 ) -> Account:
+    # Strip OAuth tokens — DocTalk only needs identity, not API access.
+    # Reduces blast radius if DB is compromised.
+    for token_field in ("access_token", "refresh_token", "id_token"):
+        kwargs.pop(token_field, None)
     account = Account(
         user_id=user_id,
         provider=provider,
