@@ -191,7 +191,7 @@ sequenceDiagram
 
 - **检索**：从 Qdrant 按 COSINE 向量相似度检索 Top-5 文本块。每个文本块包含文本、页码和边界框。
 
-- **LLM 提示词**：系统提示指示模型使用 `[n]` 标记引用来源，编号对应提供的文档片段。匿名 Demo 用户通过 NVIDIA NIM（Kimi K2.5，thinking mode）调用，已登录用户继续走 OpenRouter。
+- **LLM 提示词**：系统提示指示模型使用 `[n]` 标记引用来源，编号对应提供的文档片段。匿名 Demo 用户使用低成本模型（`DEMO_LLM_MODEL`，默认 DeepSeek V3.2）以降低 API 成本。
 
 - **RefParserFSM**：`chat_service.py` 中的有限状态机，处理流式 token 中跨边界的 `[n]` 引用标记。例如，token `"[1"` 后跟 `"]"` 会被正确解析为引用标记 1。
 

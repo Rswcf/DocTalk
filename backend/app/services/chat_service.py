@@ -325,59 +325,29 @@ class ChatService:
                 + doc.custom_instructions + "\n"
             )
 
-        # 6) Stream from LLM (NVIDIA NIM for anonymous demo, OpenRouter otherwise)
-        is_demo_nvidia = (
-            user is None
-            and doc
-            and doc.demo_slug
-            and settings.NVIDIA_API_KEY
+        # 6) Stream from OpenRouter (OpenAI-compatible)
+        client = AsyncOpenAI(
+            api_key=settings.OPENROUTER_API_KEY,
+            base_url=settings.OPENROUTER_BASE_URL,
+            default_headers={
+                "HTTP-Referer": settings.FRONTEND_URL,
+                "X-Title": "DocTalk",
+            },
         )
 
-        if is_demo_nvidia:
-            client = AsyncOpenAI(
-                api_key=settings.NVIDIA_API_KEY,
-                base_url=settings.NVIDIA_BASE_URL,
-            )
-            # NVIDIA NIM expects plain string system message (not Anthropic cache_control format)
-            openai_messages = [
-                {"role": "system", "content": system_prompt}
-            ] + claude_messages
-            create_kwargs: Dict[str, Any] = {
-                "model": effective_model,
-                "max_tokens": 2048,
-                "messages": openai_messages,
-                "stream": True,
-                "extra_body": {"chat_template_kwargs": {"thinking": True}},
+        # Build OpenAI-format messages (system + history) with cache_control for prompt caching
+        openai_messages = [
+            {
+                "role": "system",
+                "content": [
+                    {
+                        "type": "text",
+                        "text": system_prompt,
+                        "cache_control": {"type": "ephemeral"},
+                    }
+                ],
             }
-        else:
-            client = AsyncOpenAI(
-                api_key=settings.OPENROUTER_API_KEY,
-                base_url=settings.OPENROUTER_BASE_URL,
-                default_headers={
-                    "HTTP-Referer": settings.FRONTEND_URL,
-                    "X-Title": "DocTalk",
-                },
-            )
-            # OpenRouter with Anthropic cache_control for prompt caching
-            openai_messages = [
-                {
-                    "role": "system",
-                    "content": [
-                        {
-                            "type": "text",
-                            "text": system_prompt,
-                            "cache_control": {"type": "ephemeral"},
-                        }
-                    ],
-                }
-            ] + claude_messages
-            create_kwargs = {
-                "model": effective_model,
-                "max_tokens": 2048,
-                "messages": openai_messages,
-                "stream": True,
-                "stream_options": {"include_usage": True},
-            }
+        ] + claude_messages
 
         assistant_text_parts: List[str] = []
         citations: List[dict] = []
@@ -388,7 +358,13 @@ class ChatService:
         output_tokens: Optional[int] = None
 
         try:
-            stream = await client.chat.completions.create(**create_kwargs)
+            stream = await client.chat.completions.create(
+                model=effective_model,
+                max_tokens=2048,
+                messages=openai_messages,
+                stream=True,
+                stream_options={"include_usage": True},
+            )
 
             async for chunk in stream:
                 # Extract text delta

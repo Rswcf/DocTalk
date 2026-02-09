@@ -141,7 +141,6 @@ npm run dev
 | `SENTRY_DSN` | 否 | Sentry DSN，后端错误追踪 |
 | `SENTRY_ENVIRONMENT` | 否 | Sentry 环境（默认: `production`） |
 | `SENTRY_TRACES_SAMPLE_RATE` | 否 | Sentry 性能采样率（默认: `0.1`） |
-| `NVIDIA_API_KEY` | 否 | NVIDIA NIM API key，Demo 匿名用户免费 LLM 调用（未设置则回退 OpenRouter） |
 | `OCR_ENABLED` | 否 | 启用扫描 PDF 的 OCR（默认: `true`） |
 | `OCR_LANGUAGES` | 否 | Tesseract 语言代码（默认: `eng+chi_sim`） |
 | `OCR_DPI` | 否 | OCR 渲染 DPI（默认: `300`） |

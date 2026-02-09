@@ -141,7 +141,6 @@ Open [http://localhost:3000](http://localhost:3000) in your browser.
 | `SENTRY_DSN` | No | Sentry DSN for backend error tracking |
 | `SENTRY_ENVIRONMENT` | No | Sentry environment (default: `production`) |
 | `SENTRY_TRACES_SAMPLE_RATE` | No | Sentry performance sampling rate (default: `0.1`) |
-| `NVIDIA_API_KEY` | No | NVIDIA NIM API key for free demo LLM calls (falls back to OpenRouter if unset) |
 | `OCR_ENABLED` | No | Enable OCR for scanned PDFs (default: `true`) |
 | `OCR_LANGUAGES` | No | Tesseract language codes (default: `eng+chi_sim`) |
 | `OCR_DPI` | No | OCR rendering DPI (default: `300`) |
