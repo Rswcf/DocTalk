@@ -67,11 +67,11 @@ export default function DemoPage() {
               const cardContent = (
                 <>
                   <div className="flex items-center gap-3 mb-3">
-                    <div className="p-2 bg-zinc-50 dark:bg-zinc-800 rounded-lg border border-zinc-100 dark:border-zinc-800">
+                    <div className="p-2 bg-zinc-50 dark:bg-zinc-800 rounded-lg border border-zinc-100 dark:border-zinc-800 shrink-0">
                       <Icon size={24} className="text-zinc-600 dark:text-zinc-400" />
                     </div>
                     <h2 className="font-semibold text-zinc-900 dark:text-zinc-100 group-hover:text-zinc-600
-                                   dark:group-hover:text-zinc-300 transition-colors">
+                                   dark:group-hover:text-zinc-300 transition-colors min-w-0 break-words">
                       {t(config.titleKey)}
                     </h2>
                     {!isReady && (
