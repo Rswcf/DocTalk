@@ -2,11 +2,12 @@ from __future__ import annotations
 
 import json
 import uuid
+from datetime import datetime, timedelta, timezone
 from typing import AsyncGenerator, Optional
 
 from fastapi import APIRouter, Depends, Request, status
 from fastapi.responses import JSONResponse, StreamingResponse
-from sqlalchemy import asc, desc, func, select
+from sqlalchemy import asc, delete, desc, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -26,7 +27,8 @@ from app.services import credit_service
 from app.services.chat_service import chat_service
 
 DEMO_MESSAGE_LIMIT = 5
-DEMO_MAX_SESSIONS_PER_DOC = 50
+DEMO_MAX_SESSIONS_PER_DOC = 500
+DEMO_SESSION_TTL_HOURS = 24
 
 chat_router = APIRouter(tags=["chat"])
 
@@ -83,8 +85,16 @@ async def create_session(
     if not doc:
         return JSONResponse(status_code=404, content={"detail": "Document not found"})
 
-    # Limit anonymous users to a small number of sessions on demo documents
+    # Limit anonymous users on demo documents; garbage-collect stale sessions first
     if user is None and doc.demo_slug:
+        # Clean up demo sessions older than TTL (cascade deletes messages)
+        cutoff = datetime.now(timezone.utc) - timedelta(hours=DEMO_SESSION_TTL_HOURS)
+        await db.execute(
+            delete(ChatSession)
+            .where(ChatSession.document_id == document_id)
+            .where(ChatSession.created_at < cutoff)
+        )
+
         session_count = await db.execute(
             select(func.count(ChatSession.id))
             .where(ChatSession.document_id == document_id)
@@ -225,6 +235,11 @@ async def list_sessions(
     doc = await verify_document_access(document_id, user, db)
     if not doc:
         return JSONResponse(status_code=404, content={"detail": "Document not found"})
+
+    # Anonymous users on demo documents must never see previous sessions
+    # (sessions have no user_id — returning all would leak other users' conversations)
+    if doc.demo_slug and user is None:
+        return SessionListResponse(sessions=[])
 
     last_activity = func.coalesce(
         func.max(Message.created_at), ChatSession.created_at
