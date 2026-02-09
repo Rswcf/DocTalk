@@ -189,9 +189,9 @@ class ChatService:
         if model and model in settings.ALLOWED_MODELS:
             effective_model = model
 
-        # Force default model for anonymous users on demo documents
+        # Force demo model for anonymous users on demo documents
         if user is None and doc and doc.demo_slug:
-            effective_model = settings.LLM_MODEL
+            effective_model = settings.DEMO_LLM_MODEL
 
         # Premium model gating: require Plus or Pro plan
         if effective_model in settings.PREMIUM_MODELS:
@@ -325,29 +325,59 @@ class ChatService:
                 + doc.custom_instructions + "\n"
             )
 
-        # 6) Stream from OpenRouter (OpenAI-compatible)
-        client = AsyncOpenAI(
-            api_key=settings.OPENROUTER_API_KEY,
-            base_url=settings.OPENROUTER_BASE_URL,
-            default_headers={
-                "HTTP-Referer": settings.FRONTEND_URL,
-                "X-Title": "DocTalk",
-            },
+        # 6) Stream from LLM (NVIDIA NIM for anonymous demo, OpenRouter otherwise)
+        is_demo_nvidia = (
+            user is None
+            and doc
+            and doc.demo_slug
+            and settings.NVIDIA_API_KEY
         )
 
-        # Build OpenAI-format messages (system + history) with cache_control for prompt caching
-        openai_messages = [
-            {
-                "role": "system",
-                "content": [
-                    {
-                        "type": "text",
-                        "text": system_prompt,
-                        "cache_control": {"type": "ephemeral"},
-                    }
-                ],
+        if is_demo_nvidia:
+            client = AsyncOpenAI(
+                api_key=settings.NVIDIA_API_KEY,
+                base_url=settings.NVIDIA_BASE_URL,
+            )
+            # NVIDIA NIM expects plain string system message (not Anthropic cache_control format)
+            openai_messages = [
+                {"role": "system", "content": system_prompt}
+            ] + claude_messages
+            create_kwargs: Dict[str, Any] = {
+                "model": effective_model,
+                "max_tokens": 2048,
+                "messages": openai_messages,
+                "stream": True,
+                "extra_body": {"chat_template_kwargs": {"thinking": True}},
             }
-        ] + claude_messages
+        else:
+            client = AsyncOpenAI(
+                api_key=settings.OPENROUTER_API_KEY,
+                base_url=settings.OPENROUTER_BASE_URL,
+                default_headers={
+                    "HTTP-Referer": settings.FRONTEND_URL,
+                    "X-Title": "DocTalk",
+                },
+            )
+            # OpenRouter with Anthropic cache_control for prompt caching
+            openai_messages = [
+                {
+                    "role": "system",
+                    "content": [
+                        {
+                            "type": "text",
+                            "text": system_prompt,
+                            "cache_control": {"type": "ephemeral"},
+                        }
+                    ],
+                }
+            ] + claude_messages
+            create_kwargs = {
+                "model": effective_model,
+                "max_tokens": 2048,
+                "messages": openai_messages,
+                "stream": True,
+                "stream_options": {"include_usage": True},
+            }
 
         assistant_text_parts: List[str] = []
         citations: List[dict] = []
@@ -357,16 +387,8 @@ class ChatService:
         prompt_tokens: Optional[int] = None
         output_tokens: Optional[int] = None
 
-        # Validate model selection (already computed above)
-
         try:
-            stream = await client.chat.completions.create(
-                model=effective_model,
-                max_tokens=2048,
-                messages=openai_messages,
-                stream=True,
-                stream_options={"include_usage": True},
-            )
+            stream = await client.chat.completions.create(**create_kwargs)
 
             async for chunk in stream:
                 # Extract text delta

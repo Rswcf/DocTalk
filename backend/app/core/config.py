@@ -75,6 +75,11 @@ class Settings(BaseSettings):
     AUTH_SECRET: Optional[str] = None  # Shared with Next.js Auth.js
     ADAPTER_SECRET: Optional[str] = None  # For internal adapter API calls
 
+    # NVIDIA NIM — free API for demo LLM calls
+    NVIDIA_API_KEY: Optional[str] = None
+    NVIDIA_BASE_URL: str = "https://integrate.api.nvidia.com/v1"
+    DEMO_LLM_MODEL: str = "moonshotai/kimi-k2.5"
+
     # Sentry
     SENTRY_DSN: Optional[str] = None
     SENTRY_ENVIRONMENT: str = Field(default="production")
