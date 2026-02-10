@@ -13,7 +13,7 @@ import { useLocale } from '../../i18n';
 import { PaywallModal } from '../PaywallModal';
 import { triggerCreditsRefresh } from '../CreditsDisplay';
 import { useWin98Theme } from '../win98/useWin98Theme';
-import { SendIcon, StopIcon } from '../win98/Win98Icons';
+import { SendIcon, StopIcon, ChevronDownIcon } from '../win98/Win98Icons';
 
 /**
  * Error boundary for individual messages to prevent one broken message
@@ -406,6 +406,17 @@ export default function ChatPanel({ sessionId, onCitationClick, maxUserMessages,
             </button>
           </div>
         )}
+        {showScrollBtn && isWin98 && (
+          <div className="absolute bottom-1 right-2 z-10">
+            <button
+              onClick={() => listRef.current?.scrollTo({ top: listRef.current.scrollHeight, behavior: 'smooth' })}
+              className="win98-button flex items-center justify-center w-[22px] h-[20px] p-0"
+              title="Scroll to bottom"
+            >
+              <ChevronDownIcon size={10} />
+            </button>
+          </div>
+        )}
       </div>
       {maxUserMessages != null && !isWin98 && (
         <div className="border-t dark:border-zinc-700">
@@ -433,6 +444,15 @@ export default function ChatPanel({ sessionId, onCitationClick, maxUserMessages,
           </div>
         </div>
       )}
+      {/* Win98 demo progress */}
+      {maxUserMessages != null && isWin98 && (
+        <div className="px-2 py-[2px] text-[10px] text-[var(--win98-dark-gray)] flex items-center justify-between border-t border-t-[var(--win98-button-shadow)] shrink-0">
+          <span>{t('demo.questionsRemaining', { remaining: Math.max(0, demoRemaining), total: maxUserMessages })}</span>
+          <button type="button" onClick={() => router.push('?auth=1', { scroll: false })} className="text-[#000080] underline text-[10px]">
+            {demoLimitReached ? t('demo.signInToContinue') : t('demo.signInForUnlimited')}
+          </button>
+        </div>
+      )}
       {/* Win98 disclaimer */}
       {isWin98 && (
         <div className="text-center text-[10px] text-[var(--win98-dark-gray)] py-[2px] shrink-0">
@@ -442,7 +462,23 @@ export default function ChatPanel({ sessionId, onCitationClick, maxUserMessages,
       {/* Input Area */}
       <form onSubmit={onSubmit} className={isWin98 ? 'px-2 pb-2 shrink-0' : 'p-4 border-t dark:border-zinc-700'}>
         {isWin98 ? (
-          <div className="win98-inset flex items-end gap-1 p-1 bg-white">
+          <div>
+            {(showCustomInstructions || showExportInMenu) && (
+              <div className="flex items-center gap-[2px] mb-1">
+                {showCustomInstructions && (
+                  <button type="button" onClick={() => onOpenSettings?.()} className="win98-button text-[10px] px-2 h-[18px]" title={t('chat.customInstructions') || 'Custom Instructions'}>
+                    {t('chat.customInstructions') || 'Instructions'}
+                    {hasCustomInstructions && <span className="ml-1 text-[#008000]">*</span>}
+                  </button>
+                )}
+                {showExportInMenu && (
+                  <button type="button" onClick={handleExport} className="win98-button text-[10px] px-2 h-[18px]" title={t('chat.export')}>
+                    {t('chat.export')}
+                  </button>
+                )}
+              </div>
+            )}
+            <div className="win98-inset flex items-end gap-1 p-1 bg-white">
             <textarea
               ref={textareaRef}
               value={input}
@@ -475,6 +511,7 @@ export default function ChatPanel({ sessionId, onCitationClick, maxUserMessages,
                 <SendIcon />
               </button>
             )}
+          </div>
           </div>
         ) : (
           <div className="max-w-3xl mx-auto">

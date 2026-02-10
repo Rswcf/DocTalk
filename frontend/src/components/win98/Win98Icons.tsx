@@ -154,3 +154,20 @@ export function StopIcon({ size = 12 }: { size?: number }) {
     </svg>
   );
 }
+
+export function ChevronDownIcon({ size = 10 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 10 10" fill="none">
+      <path d="M1 3l4 4 4-4" stroke="#000" strokeWidth="1.5" />
+    </svg>
+  );
+}
+
+export function CloseIcon({ size = 10 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 10 10" fill="none">
+      <line x1="1" y1="1" x2="9" y2="9" stroke="#000" strokeWidth="1.5" />
+      <line x1="9" y1="1" x2="1" y2="9" stroke="#000" strokeWidth="1.5" />
+    </svg>
+  );
+}

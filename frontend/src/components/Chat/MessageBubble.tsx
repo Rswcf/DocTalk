@@ -227,11 +227,11 @@ export default function MessageBubble({ message, onCitationClick, isStreaming, o
     if (citations.length > 0) {
       const tags = ['p', 'li', 'td', 'th', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'strong', 'em', 'blockquote'] as const;
       for (const tag of tags) {
-        components[tag] = createCitationComponent(tag, citations, onCitationClick, t);
+        components[tag] = createCitationComponent(tag, citations, onCitationClick, t, isWin98);
       }
     }
     return components;
-  }, [message.citations, onCitationClick, t]);
+  }, [message.citations, onCitationClick, t, isWin98]);
 
   if (isWin98) {
     return (

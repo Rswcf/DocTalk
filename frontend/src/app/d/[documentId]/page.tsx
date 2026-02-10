@@ -30,7 +30,7 @@ export default function DocumentReaderPage() {
   const [error, setError] = useState<string | null>(null);
   const [isDemo, setIsDemo] = useState(false);
   const [fileType, setFileType] = useState<string>('pdf');
-  const { t } = useLocale();
+  const { t, locale } = useLocale();
   const {
     pdfUrl,
     currentPage,
@@ -270,6 +270,22 @@ export default function DocumentReaderPage() {
               className="w-full h-full"
               toolbar={
                 <div className="flex items-center gap-2 text-[11px]">
+                  <button
+                    className="win98-button text-[11px] px-2 py-0 h-[18px] shrink-0"
+                    onClick={async () => {
+                      if (!documentId) return;
+                      try {
+                        const s = await createSession(documentId);
+                        addSession({ session_id: s.session_id, title: null, message_count: 0, created_at: s.created_at || new Date().toISOString(), last_activity_at: s.created_at || new Date().toISOString() });
+                        setSessionId(s.session_id);
+                        setMessages([]);
+                      } catch {}
+                    }}
+                    title={t('session.newChat')}
+                  >
+                    New Chat
+                  </button>
+                  <div className="win98-groove-v h-[14px]" />
                   <span className="text-[11px] shrink-0">Document:</span>
                   <div className="win98-inset flex-1 flex items-center bg-white h-[18px] px-1">
                     <DocumentIcon size={12} />
@@ -292,7 +308,7 @@ export default function DocumentReaderPage() {
                   <div className="win98-groove-v h-[14px]" />
                   <div className="flex items-center gap-1 shrink-0">
                     <GlobeIcon size={14} />
-                    <span className="text-[11px]">EN</span>
+                    <span className="text-[11px]">{locale.toUpperCase()}</span>
                   </div>
                 </div>
               }
