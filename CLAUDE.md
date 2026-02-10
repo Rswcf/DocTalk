@@ -300,7 +300,8 @@ SENTRY_TRACES_SAMPLE_RATE=0.1
 - **滚动到底部按钮**: 消息列表滚动离底部 >80px 时，显示浮动 ArrowDown 圆形按钮，点击平滑滚动到底部
 - **引用悬浮 Tooltip**: `MessageBubble.tsx` 中引用 `[n]` 按钮悬浮显示 textSnippet + page tooltip，减少验证点击次数
 - **流式状态指示**: streaming 时显示 3 点弹跳动画（"搜索文档中..."）和闪烁光标，区分 retrieval 阶段和生成阶段
-- **下拉菜单键盘导航**: UserMenu、ModeSelector、LanguageSelector、SessionDropdown 支持 Arrow/Home/End/Escape 键盘操作
+- **下拉菜单键盘导航**: UserMenu、ThemeSelector、LanguageSelector、SessionDropdown 支持 Arrow/Home/End/Escape 键盘操作
+- **ThemeSelector 下拉菜单**: 替代原先的主题图标循环按钮，用户可从下拉列表中选择 Light/Dark/Windows 98 主题，当前主题显示 Check 图标
 - **CreditsDisplay 自动刷新**: 每 60s 轮询 + 自定义事件 `doctalk:credits-refresh`（聊天完成/购买后触发），`triggerCreditsRefresh()` 导出供外部调用
 - **Billing 骨架屏**: 产品列表加载中显示 skeleton cards，失败显示 error + retry 按钮
 - **响应式**: Header 移动端间距/截断/CreditsDisplay 小屏隐藏，upload zone `p-8 sm:p-12`，billing `p-6 sm:p-8`
