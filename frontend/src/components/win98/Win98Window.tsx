@@ -57,7 +57,7 @@ export function Win98Window({
               className="win98-titlebar-btn"
               aria-label="Minimize"
             >
-              <svg width="8" height="7" viewBox="0 0 8 7" fill="none">
+              <svg aria-hidden="true" width="8" height="7" viewBox="0 0 8 7" fill="none">
                 <rect x="0" y="5" width="6" height="2" fill="black" />
               </svg>
             </button>
@@ -69,7 +69,7 @@ export function Win98Window({
               className="win98-titlebar-btn"
               aria-label="Maximize"
             >
-              <svg width="8" height="7" viewBox="0 0 9 8" fill="none">
+              <svg aria-hidden="true" width="8" height="7" viewBox="0 0 9 8" fill="none">
                 <rect x="0" y="0" width="9" height="8" fill="none" stroke="black" strokeWidth="1" />
                 <rect x="0" y="0" width="9" height="2" fill="black" />
               </svg>
@@ -82,7 +82,7 @@ export function Win98Window({
               className="win98-titlebar-btn"
               aria-label="Close"
             >
-              <svg width="8" height="7" viewBox="0 0 8 7" fill="none">
+              <svg aria-hidden="true" width="8" height="7" viewBox="0 0 8 7" fill="none">
                 <line x1="0" y1="0" x2="8" y2="7" stroke="black" strokeWidth="1.5" />
                 <line x1="8" y1="0" x2="0" y2="7" stroke="black" strokeWidth="1.5" />
               </svg>

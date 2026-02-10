@@ -75,14 +75,15 @@ export default function LanguageSelector() {
         ref={triggerRef}
         type="button"
         onClick={toggle}
-        className="flex items-center gap-1.5 px-2 py-1 border border-zinc-200 rounded-md text-sm text-zinc-700 dark:border-zinc-700 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
+        className="flex items-center gap-1.5 px-2 py-1 border border-zinc-200 rounded-md text-sm text-zinc-700 dark:border-zinc-700 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors focus-visible:ring-2 focus-visible:ring-zinc-400 dark:focus-visible:ring-zinc-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-900"
         title={t('header.language')}
         aria-haspopup="listbox"
         aria-expanded={open}
+        aria-label="Select language"
       >
-        <Globe size={16} />
+        <Globe aria-hidden="true" size={16} />
         <span className="hidden sm:inline">{(current?.code || 'en').toUpperCase()}</span>
-        <ChevronDown size={14} className="opacity-70" />
+        <ChevronDown aria-hidden="true" size={14} className="opacity-70" />
       </button>
       {open && (
         <div className="absolute right-0 mt-1 w-48 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-md shadow-lg z-20 p-1" onKeyDown={handleMenuKeyDown} role="listbox">
@@ -90,7 +91,7 @@ export default function LanguageSelector() {
             <button
               key={l.code}
               ref={(el) => { itemRefs.current[i] = el; }}
-              className={`w-full text-left flex items-center gap-2 px-2 py-1.5 rounded hover:bg-zinc-100 dark:hover:bg-zinc-800 text-sm transition-colors ${
+              className={`w-full text-left flex items-center gap-2 px-2 py-1.5 rounded hover:bg-zinc-100 dark:hover:bg-zinc-800 text-sm transition-colors focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:ring-inset ${
                 locale === l.code ? 'font-medium' : ''
               }`}
               onClick={() => choose(l.code)}

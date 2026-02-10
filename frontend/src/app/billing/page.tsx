@@ -162,7 +162,7 @@ function BillingContent() {
         <div className="flex items-center justify-center gap-3 mb-8">
           <button
             onClick={() => setBillingPeriod('monthly')}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors focus-visible:ring-2 focus-visible:ring-zinc-400 dark:focus-visible:ring-zinc-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-900 ${
               billingPeriod === 'monthly'
                 ? 'bg-zinc-900 dark:bg-zinc-50 text-white dark:text-zinc-900'
                 : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-200 dark:hover:bg-zinc-700'
@@ -172,7 +172,7 @@ function BillingContent() {
           </button>
           <button
             onClick={() => setBillingPeriod('annual')}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors focus-visible:ring-2 focus-visible:ring-zinc-400 dark:focus-visible:ring-zinc-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-900 ${
               billingPeriod === 'annual'
                 ? 'bg-zinc-900 dark:bg-zinc-50 text-white dark:text-zinc-900'
                 : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-200 dark:hover:bg-zinc-700'
@@ -195,7 +195,7 @@ function BillingContent() {
               </div>
               <p className="text-zinc-500 dark:text-zinc-400 text-sm mb-4">{t("billing.plus.description")}</p>
               <div className="mb-4">
-                <span className="text-3xl font-bold text-zinc-900 dark:text-zinc-50">
+                <span className="text-3xl font-bold text-zinc-900 dark:text-zinc-50 tabular-nums">
                   {billingPeriod === 'monthly' ? '$9.99' : '$7.99'}
                 </span>
                 <span className="text-zinc-500 dark:text-zinc-400 text-sm ml-1">
@@ -210,7 +210,7 @@ function BillingContent() {
               <ul className="space-y-2 mb-6 flex-1">
                 {plusFeatures.map((f, i) => (
                   <li key={i} className="flex items-start gap-2 text-sm text-zinc-600 dark:text-zinc-300">
-                    <Check size={16} className="text-green-600 dark:text-green-400 mt-0.5 shrink-0" />
+                    <Check aria-hidden="true" size={16} className="text-green-600 dark:text-green-400 mt-0.5 shrink-0" />
                     {f}
                   </li>
                 ))}
@@ -219,7 +219,7 @@ function BillingContent() {
                 <button
                   onClick={handleManage}
                   disabled={submitting === 'manage'}
-                  className="w-full px-4 py-2.5 rounded-lg bg-zinc-100 dark:bg-zinc-800 text-zinc-800 dark:text-zinc-100 hover:bg-zinc-200 dark:hover:bg-zinc-700 disabled:opacity-50 transition-colors font-medium"
+                  className="w-full px-4 py-2.5 rounded-lg bg-zinc-100 dark:bg-zinc-800 text-zinc-800 dark:text-zinc-100 hover:bg-zinc-200 dark:hover:bg-zinc-700 disabled:opacity-50 transition-colors font-medium focus-visible:ring-2 focus-visible:ring-zinc-400 dark:focus-visible:ring-zinc-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-900"
                 >
                   {t("billing.manage")}
                 </button>
@@ -227,7 +227,7 @@ function BillingContent() {
                 <button
                   onClick={() => handleSubscribe('plus')}
                   disabled={submitting === 'plus'}
-                  className="w-full px-4 py-2.5 rounded-lg bg-zinc-900 dark:bg-zinc-50 text-white dark:text-zinc-900 hover:bg-zinc-800 dark:hover:bg-zinc-200 disabled:opacity-50 shadow-sm hover:shadow-md transition-colors font-medium"
+                  className="w-full px-4 py-2.5 rounded-lg bg-zinc-900 dark:bg-zinc-50 text-white dark:text-zinc-900 hover:bg-zinc-800 dark:hover:bg-zinc-200 disabled:opacity-50 shadow-sm hover:shadow-md transition-colors font-medium focus-visible:ring-2 focus-visible:ring-zinc-400 dark:focus-visible:ring-zinc-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-900"
                 >
                   {submitting === 'plus' ? t("common.loading") : `${t("billing.upgrade")} Plus`}
                 </button>
@@ -240,7 +240,7 @@ function BillingContent() {
             <h2 className="text-xl font-semibold text-zinc-900 dark:text-zinc-50 mb-1">{t("billing.pro.title")}</h2>
             <p className="text-zinc-500 dark:text-zinc-400 text-sm mb-4">{t("billing.pro.description")}</p>
             <div className="mb-4">
-              <span className="text-3xl font-bold text-zinc-900 dark:text-zinc-50">
+              <span className="text-3xl font-bold text-zinc-900 dark:text-zinc-50 tabular-nums">
                 {billingPeriod === 'monthly' ? '$19.99' : '$15.99'}
               </span>
               <span className="text-zinc-500 dark:text-zinc-400 text-sm ml-1">
@@ -264,7 +264,7 @@ function BillingContent() {
               <button
                 onClick={handleManage}
                 disabled={submitting === 'manage'}
-                className="w-full px-4 py-2.5 rounded-lg bg-zinc-100 dark:bg-zinc-800 text-zinc-800 dark:text-zinc-100 hover:bg-zinc-200 dark:hover:bg-zinc-700 disabled:opacity-50 transition-colors font-medium"
+                className="w-full px-4 py-2.5 rounded-lg bg-zinc-100 dark:bg-zinc-800 text-zinc-800 dark:text-zinc-100 hover:bg-zinc-200 dark:hover:bg-zinc-700 disabled:opacity-50 transition-colors font-medium focus-visible:ring-2 focus-visible:ring-zinc-400 dark:focus-visible:ring-zinc-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-900"
               >
                 {t("billing.manage")}
               </button>
@@ -272,7 +272,7 @@ function BillingContent() {
               <button
                 onClick={() => handleSubscribe('pro')}
                 disabled={submitting === 'pro'}
-                className="w-full px-4 py-2.5 rounded-lg bg-zinc-900 dark:bg-zinc-50 text-white dark:text-zinc-900 hover:bg-zinc-800 dark:hover:bg-zinc-200 disabled:opacity-50 shadow-sm hover:shadow-md transition-colors font-medium"
+                className="w-full px-4 py-2.5 rounded-lg bg-zinc-900 dark:bg-zinc-50 text-white dark:text-zinc-900 hover:bg-zinc-800 dark:hover:bg-zinc-200 disabled:opacity-50 shadow-sm hover:shadow-md transition-colors font-medium focus-visible:ring-2 focus-visible:ring-zinc-400 dark:focus-visible:ring-zinc-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-900"
               >
                 {submitting === 'pro' ? t("common.loading") : `${t("billing.upgrade")} Pro`}
               </button>
@@ -310,7 +310,7 @@ function BillingContent() {
             <p>{t("billing.error")}</p>
             <button
               onClick={fetchProducts}
-              className="mt-2 text-sm underline hover:text-zinc-700 dark:hover:text-zinc-300"
+              className="mt-2 text-sm underline hover:text-zinc-700 dark:hover:text-zinc-300 focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:rounded-sm"
             >
               {t("common.retry")}
             </button>
@@ -336,7 +336,7 @@ function BillingContent() {
                 <button
                   onClick={() => handlePurchase(product.id)}
                   disabled={loading === product.id}
-                  className="mt-auto pt-4 px-4 py-2 bg-zinc-900 dark:bg-zinc-50 text-white dark:text-zinc-900 rounded-lg font-medium hover:bg-zinc-800 dark:hover:bg-zinc-200 disabled:opacity-50 shadow-sm hover:shadow-md transition-colors"
+                  className="mt-auto pt-4 px-4 py-2 bg-zinc-900 dark:bg-zinc-50 text-white dark:text-zinc-900 rounded-lg font-medium hover:bg-zinc-800 dark:hover:bg-zinc-200 disabled:opacity-50 shadow-sm hover:shadow-md transition-colors focus-visible:ring-2 focus-visible:ring-zinc-400 dark:focus-visible:ring-zinc-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-900"
                 >
                   {loading === product.id ? t("common.loading") : t("billing.purchase")}
                 </button>

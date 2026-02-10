@@ -220,7 +220,7 @@ export default function TextViewer({ documentId, fileType, targetPage, scrollNon
   if (loading) {
     return (
       <div className="h-full flex items-center justify-center text-zinc-500">
-        <div className="animate-spin rounded-full h-8 w-8 border-2 border-zinc-300 border-t-zinc-600" />
+        <div className="animate-spin motion-reduce:animate-none rounded-full h-8 w-8 border-2 border-zinc-300 border-t-zinc-600" role="status" />
       </div>
     );
   }
@@ -242,7 +242,7 @@ export default function TextViewer({ documentId, fileType, targetPage, scrollNon
             ? 'bg-[var(--win98-button-face)] px-2 py-[2px] border-b border-b-[var(--win98-button-shadow)] text-[11px]'
             : 'px-3 py-1.5 bg-white/90 dark:bg-zinc-800/90 backdrop-blur border-b border-zinc-200 dark:border-zinc-700'
         }`}>
-          <Search size={14} className={isWin98 ? 'text-[var(--win98-black)] shrink-0' : 'text-zinc-400 shrink-0'} />
+          <Search aria-hidden="true" size={14} className={isWin98 ? 'text-[var(--win98-black)] shrink-0' : 'text-zinc-400 shrink-0'} />
           <input
             ref={searchInputRef}
             type="text"
@@ -251,8 +251,9 @@ export default function TextViewer({ documentId, fileType, targetPage, scrollNon
             placeholder={t('toolbar.searchPlaceholder')}
             className={isWin98
               ? 'win98-input flex-1 min-w-0 text-[11px] h-[18px]'
-              : 'flex-1 min-w-0 border-none bg-transparent text-sm focus:outline-none dark:text-zinc-100 placeholder:text-zinc-400'
+              : 'flex-1 min-w-0 border-none bg-transparent text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400 dark:text-zinc-100 placeholder:text-zinc-400'
             }
+            aria-label="Search in document"
             autoFocus
             onKeyDown={(e) => {
               if (e.key === 'Enter') {
@@ -268,13 +269,13 @@ export default function TextViewer({ documentId, fileType, targetPage, scrollNon
               {searchMatches.length > 0 ? t('toolbar.matchCount', { current: currentMatchIndex + 1, total: searchMatches.length }) : t('toolbar.noMatches')}
             </span>
           )}
-          <button onClick={searchPrev} disabled={searchMatches.length === 0} className={isWin98 ? 'win98-button flex items-center justify-center w-[20px] h-[20px] p-0 disabled:opacity-30' : 'p-0.5 rounded hover:bg-zinc-100 dark:hover:bg-zinc-700 disabled:opacity-30'} title={t('toolbar.prevPage')}>
+          <button onClick={searchPrev} disabled={searchMatches.length === 0} className={isWin98 ? 'win98-button flex items-center justify-center w-[20px] h-[20px] p-0 disabled:opacity-30' : 'p-0.5 rounded hover:bg-zinc-100 dark:hover:bg-zinc-700 disabled:opacity-30 focus-visible:ring-2 focus-visible:ring-zinc-400'} title={t('toolbar.prevPage')} aria-label="Previous match">
             <ChevronLeft size={isWin98 ? 10 : 14} />
           </button>
-          <button onClick={searchNext} disabled={searchMatches.length === 0} className={isWin98 ? 'win98-button flex items-center justify-center w-[20px] h-[20px] p-0 disabled:opacity-30' : 'p-0.5 rounded hover:bg-zinc-100 dark:hover:bg-zinc-700 disabled:opacity-30'} title={t('toolbar.nextPage')}>
+          <button onClick={searchNext} disabled={searchMatches.length === 0} className={isWin98 ? 'win98-button flex items-center justify-center w-[20px] h-[20px] p-0 disabled:opacity-30' : 'p-0.5 rounded hover:bg-zinc-100 dark:hover:bg-zinc-700 disabled:opacity-30 focus-visible:ring-2 focus-visible:ring-zinc-400'} title={t('toolbar.nextPage')} aria-label="Next match">
             <ChevronRight size={isWin98 ? 10 : 14} />
           </button>
-          <button onClick={searchClose} className={isWin98 ? 'win98-button flex items-center justify-center w-[20px] h-[20px] p-0' : 'p-0.5 rounded hover:bg-zinc-100 dark:hover:bg-zinc-700'}>
+          <button onClick={searchClose} className={isWin98 ? 'win98-button flex items-center justify-center w-[20px] h-[20px] p-0' : 'p-0.5 rounded hover:bg-zinc-100 dark:hover:bg-zinc-700 focus-visible:ring-2 focus-visible:ring-zinc-400'} aria-label="Close search">
             <X size={isWin98 ? 10 : 14} />
           </button>
         </div>
@@ -300,10 +301,11 @@ export default function TextViewer({ documentId, fileType, targetPage, scrollNon
                 {!searchOpen && (
                   <button
                     onClick={() => { setSearchOpen(true); requestAnimationFrame(() => searchInputRef.current?.focus()); }}
-                    className="p-1 rounded hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
+                    className="p-1 rounded hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors focus-visible:ring-2 focus-visible:ring-zinc-400"
                     title={t('toolbar.search')}
+                    aria-label="Search in document"
                   >
-                    <Search size={12} />
+                    <Search aria-hidden="true" size={12} />
                   </button>
                 )}
               </div>

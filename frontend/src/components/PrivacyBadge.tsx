@@ -14,12 +14,13 @@ export function PrivacyBadge() {
       {/* Badge Line */}
       <button
         onClick={() => setExpanded(!expanded)}
+        aria-expanded={expanded}
         className="flex items-center justify-center gap-2 text-sm text-zinc-600 dark:text-zinc-400
-                   hover:text-zinc-800 dark:hover:text-zinc-200 transition-colors w-full"
+                   hover:text-zinc-800 dark:hover:text-zinc-200 transition-colors w-full focus-visible:ring-2 focus-visible:ring-zinc-400 dark:focus-visible:ring-zinc-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-900"
       >
-        <Shield size={16} className="text-green-600" />
+        <Shield aria-hidden="true" size={16} className="text-green-600" />
         <span>{t('privacy.badge')}</span>
-        {expanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+        {expanded ? <ChevronUp aria-hidden="true" size={16} /> : <ChevronDown aria-hidden="true" size={16} />}
       </button>
 
       {/* Expanded Details */}
@@ -38,8 +39,8 @@ export function PrivacyBadge() {
             <span className="text-zinc-700 dark:text-zinc-300">{t('privacy.deleteAnytime')}</span>
           </p>
           <div className="pt-2 border-t border-zinc-200 dark:border-zinc-700 flex gap-4 text-xs">
-            <Link href="/privacy" className="text-zinc-600 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200 transition-colors hover:underline">{t('privacy.policyLink')}</Link>
-            <Link href="/terms" className="text-zinc-600 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200 transition-colors hover:underline">{t('privacy.termsLink')}</Link>
+            <Link href="/privacy" className="text-zinc-600 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200 transition-colors hover:underline focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:rounded-sm">{t('privacy.policyLink')}</Link>
+            <Link href="/terms" className="text-zinc-600 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200 transition-colors hover:underline focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:rounded-sm">{t('privacy.termsLink')}</Link>
           </div>
         </div>
       )}

@@ -234,8 +234,8 @@ export default function DocumentReaderPage() {
   const chatContent = documentStatus === 'ready' && sessionId ? (
     <ChatPanel sessionId={sessionId} onCitationClick={navigateToCitation} maxUserMessages={isDemo && !isLoggedIn ? 5 : undefined} suggestedQuestions={suggestedQuestions.length > 0 ? suggestedQuestions : undefined} onOpenSettings={profile?.plan === 'pro' ? () => setShowInstructions(true) : undefined} hasCustomInstructions={!!customInstructions} userPlan={profile?.plan || (isLoggedIn ? 'free' : undefined)} />
   ) : documentStatus !== 'ready' && !error ? (
-    <div className={`h-full w-full flex flex-col items-center justify-center gap-3 ${isWin98 ? 'text-[var(--win98-dark-gray)] text-[11px]' : 'text-zinc-500'}`}>
-      <div className={isWin98 ? 'text-[11px]' : 'animate-spin rounded-full h-8 w-8 border-2 border-zinc-300 border-t-zinc-600'}>
+    <div className={`h-full w-full flex flex-col items-center justify-center gap-3 ${isWin98 ? 'text-[var(--win98-dark-gray)] text-[11px]' : 'text-zinc-500'}`} role="status">
+      <div className={isWin98 ? 'text-[11px]' : 'animate-spin motion-reduce:animate-none rounded-full h-8 w-8 border-2 border-zinc-300 border-t-zinc-600'}>
         {isWin98 ? 'Loading...' : null}
       </div>
       <p className={isWin98 ? '' : 'text-sm'}>{t('doc.processing')}</p>
@@ -396,7 +396,7 @@ export default function DocumentReaderPage() {
           <div className="text-center">
             <div className="text-lg font-medium mb-3">{error}</div>
             <button
-              className="px-4 py-2 bg-zinc-900 text-white rounded-lg dark:bg-zinc-50 dark:text-zinc-900 hover:bg-zinc-800 dark:hover:bg-zinc-200 shadow-sm transition-colors"
+              className="px-4 py-2 bg-zinc-900 text-white rounded-lg dark:bg-zinc-50 dark:text-zinc-900 hover:bg-zinc-800 dark:hover:bg-zinc-200 shadow-sm transition-colors focus-visible:ring-2 focus-visible:ring-zinc-400 dark:focus-visible:ring-zinc-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-900"
               onClick={() => router.push('/')}
             >
               {t('doc.backHome')}

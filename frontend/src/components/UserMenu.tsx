@@ -50,7 +50,7 @@ export default function UserMenu() {
     return (
       <button
         onClick={() => signIn()}
-        className="px-3 py-1.5 text-sm bg-zinc-900 dark:bg-zinc-50 text-white dark:text-zinc-900 rounded hover:bg-zinc-800 dark:hover:bg-zinc-200 shadow-sm transition-colors"
+        className="px-3 py-1.5 text-sm bg-zinc-900 dark:bg-zinc-50 text-white dark:text-zinc-900 rounded hover:bg-zinc-800 dark:hover:bg-zinc-200 shadow-sm transition-colors focus-visible:ring-2 focus-visible:ring-zinc-400 dark:focus-visible:ring-zinc-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-900"
       >
         {t("auth.signIn")}
       </button>
@@ -96,9 +96,10 @@ export default function UserMenu() {
       <button
         ref={triggerRef}
         onClick={() => setOpen((v) => !v)}
-        className="w-8 h-8 rounded-full overflow-hidden border border-zinc-200 dark:border-zinc-700 focus:outline-none focus:ring-2 focus:ring-zinc-500 transition-colors"
+        className="w-8 h-8 rounded-full overflow-hidden border border-zinc-200 dark:border-zinc-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400 dark:focus-visible:ring-zinc-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-900 transition-colors"
         aria-haspopup="menu"
         aria-expanded={open}
+        aria-label="User menu"
       >
         {userImage ? (
           // eslint-disable-next-line @next/next/no-img-element
@@ -110,14 +111,14 @@ export default function UserMenu() {
 
       {open && (
         <div
-          className="absolute right-0 top-full mt-2 w-48 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-xl shadow-lg z-50 animate-fade-in overflow-hidden"
+          className="absolute right-0 top-full mt-2 w-48 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-xl shadow-lg z-50 animate-fade-in motion-reduce:animate-none overflow-hidden"
           role="menu"
           onKeyDown={handleMenuKeyDown}
         >
           <button
             ref={(el) => { itemRefs.current[0] = el; }}
             type="button"
-            className="w-full text-left px-4 py-2.5 text-sm text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800 cursor-pointer transition-colors"
+            className="w-full text-left px-4 py-2.5 text-sm text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800 cursor-pointer transition-colors focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:ring-inset"
             onClick={() => go("/profile")}
             role="menuitem"
             tabIndex={focusIndex === 0 ? 0 : -1}
@@ -127,7 +128,7 @@ export default function UserMenu() {
           <button
             ref={(el) => { itemRefs.current[1] = el; }}
             type="button"
-            className="w-full text-left px-4 py-2.5 text-sm text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800 cursor-pointer transition-colors"
+            className="w-full text-left px-4 py-2.5 text-sm text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800 cursor-pointer transition-colors focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:ring-inset"
             onClick={() => go("/billing")}
             role="menuitem"
             tabIndex={focusIndex === 1 ? 0 : -1}
@@ -138,7 +139,7 @@ export default function UserMenu() {
           <button
             ref={(el) => { itemRefs.current[2] = el; }}
             type="button"
-            className="w-full text-left px-4 py-2.5 text-sm text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800 cursor-pointer transition-colors"
+            className="w-full text-left px-4 py-2.5 text-sm text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800 cursor-pointer transition-colors focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:ring-inset"
             onClick={() => {
               setOpen(false);
               signOut();

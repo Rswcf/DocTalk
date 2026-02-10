@@ -50,8 +50,8 @@ export default function UsageStatsSection({ profile }: Props) {
       <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
         {cards.map((c, idx) => (
           <div key={idx} className="border rounded-lg p-6 dark:border-zinc-700 flex flex-col items-start gap-2">
-            <c.icon className="text-zinc-500 dark:text-zinc-400" size={18} />
-            <div className="text-2xl font-semibold dark:text-zinc-100">{c.value.toLocaleString()}</div>
+            <c.icon aria-hidden="true" className="text-zinc-500 dark:text-zinc-400" size={18} />
+            <div className="text-2xl font-semibold dark:text-zinc-100 tabular-nums">{c.value.toLocaleString()}</div>
             <div className="text-sm text-zinc-600 dark:text-zinc-400">{c.label}</div>
           </div>
         ))}
@@ -82,9 +82,9 @@ export default function UsageStatsSection({ profile }: Props) {
                 {breakdown.by_model.map((row, i) => (
                   <tr key={i} className="border-t dark:border-zinc-800">
                     <td className="py-2 text-zinc-700 dark:text-zinc-300">{row.model}</td>
-                    <td className="py-2 text-zinc-700 dark:text-zinc-300">{row.total_calls.toLocaleString()}</td>
-                    <td className="py-2 text-zinc-700 dark:text-zinc-300">{row.total_tokens.toLocaleString()}</td>
-                    <td className="py-2 text-zinc-700 dark:text-zinc-300">{row.total_credits.toLocaleString()}</td>
+                    <td className="py-2 text-zinc-700 dark:text-zinc-300 tabular-nums">{row.total_calls.toLocaleString()}</td>
+                    <td className="py-2 text-zinc-700 dark:text-zinc-300 tabular-nums">{row.total_tokens.toLocaleString()}</td>
+                    <td className="py-2 text-zinc-700 dark:text-zinc-300 tabular-nums">{row.total_credits.toLocaleString()}</td>
                   </tr>
                 ))}
               </tbody>

@@ -368,7 +368,7 @@ export default function ChatPanel({ sessionId, onCitationClick, maxUserMessages,
                       onClick={() => handleSuggestedClick(q)}
                       className={isWin98
                         ? 'win98-button text-[11px] px-2 py-[2px]'
-                        : 'text-sm px-4 py-2 border border-zinc-200 dark:border-zinc-700 rounded-full hover:bg-zinc-50 dark:hover:bg-zinc-800 hover:border-zinc-300 dark:hover:border-zinc-600 transition-colors text-zinc-600 dark:text-zinc-400'
+                        : 'text-sm px-4 py-2 border border-zinc-200 dark:border-zinc-700 rounded-full hover:bg-zinc-50 dark:hover:bg-zinc-800 hover:border-zinc-300 dark:hover:border-zinc-600 transition-colors text-zinc-600 dark:text-zinc-400 focus-visible:ring-2 focus-visible:ring-zinc-400 dark:focus-visible:ring-zinc-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-900'
                       }
                     >
                       {q}
@@ -381,7 +381,7 @@ export default function ChatPanel({ sessionId, onCitationClick, maxUserMessages,
                       onClick={() => handleSuggestedClick(t(k))}
                       className={isWin98
                         ? 'win98-button text-[11px] px-2 py-[2px]'
-                        : 'text-sm px-4 py-2 border border-zinc-200 dark:border-zinc-700 rounded-full hover:bg-zinc-50 dark:hover:bg-zinc-800 hover:border-zinc-300 dark:hover:border-zinc-600 transition-colors text-zinc-600 dark:text-zinc-400'
+                        : 'text-sm px-4 py-2 border border-zinc-200 dark:border-zinc-700 rounded-full hover:bg-zinc-50 dark:hover:bg-zinc-800 hover:border-zinc-300 dark:hover:border-zinc-600 transition-colors text-zinc-600 dark:text-zinc-400 focus-visible:ring-2 focus-visible:ring-zinc-400 dark:focus-visible:ring-zinc-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-900'
                       }
                     >
                       {t(k)}
@@ -400,7 +400,8 @@ export default function ChatPanel({ sessionId, onCitationClick, maxUserMessages,
           <div className="absolute bottom-2 left-0 right-0 flex justify-center pointer-events-none z-10">
             <button
               onClick={() => listRef.current?.scrollTo({ top: listRef.current.scrollHeight, behavior: 'smooth' })}
-              className="pointer-events-auto p-2 rounded-full bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 shadow-md hover:shadow-lg text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 transition-shadow"
+              className="pointer-events-auto p-2 rounded-full bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 shadow-md hover:shadow-lg text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 transition-shadow focus-visible:ring-2 focus-visible:ring-zinc-400 dark:focus-visible:ring-zinc-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-900"
+              aria-label="Scroll to bottom"
             >
               <ArrowDown size={16} />
             </button>
@@ -412,6 +413,7 @@ export default function ChatPanel({ sessionId, onCitationClick, maxUserMessages,
               onClick={() => listRef.current?.scrollTo({ top: listRef.current.scrollHeight, behavior: 'smooth' })}
               className="win98-button flex items-center justify-center w-[22px] h-[20px] p-0"
               title="Scroll to bottom"
+              aria-label="Scroll to bottom"
             >
               <ChevronDownIcon size={10} />
             </button>
@@ -422,7 +424,7 @@ export default function ChatPanel({ sessionId, onCitationClick, maxUserMessages,
         <div className="border-t dark:border-zinc-700">
           <div className="h-1 bg-zinc-200 dark:bg-zinc-800">
             <div
-              className={`h-full transition-all duration-300 ${
+              className={`h-full transition-[width] duration-300 ${
                 demoRemaining <= 2 ? 'bg-amber-500' : 'bg-zinc-400 dark:bg-zinc-500'
               }`}
               style={{ width: `${Math.max(0, (demoRemaining / maxUserMessages) * 100)}%` }}
@@ -433,11 +435,11 @@ export default function ChatPanel({ sessionId, onCitationClick, maxUserMessages,
               {t('demo.questionsRemaining', { remaining: Math.max(0, demoRemaining), total: maxUserMessages })}
             </span>
             {!demoLimitReached ? (
-              <button type="button" onClick={() => router.push('?auth=1', { scroll: false })} className="text-zinc-600 dark:text-zinc-400 hover:underline text-sm">
+              <button type="button" onClick={() => router.push('?auth=1', { scroll: false })} className="text-zinc-600 dark:text-zinc-400 hover:underline text-sm focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:rounded-sm">
                 {t('demo.signInForUnlimited')}
               </button>
             ) : (
-              <button type="button" onClick={() => router.push('?auth=1', { scroll: false })} className="text-zinc-600 dark:text-zinc-400 hover:underline text-sm font-medium">
+              <button type="button" onClick={() => router.push('?auth=1', { scroll: false })} className="text-zinc-600 dark:text-zinc-400 hover:underline text-sm font-medium focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:rounded-sm">
                 {t('demo.signInToContinue')}
               </button>
             )}
@@ -489,6 +491,7 @@ export default function ChatPanel({ sessionId, onCitationClick, maxUserMessages,
               disabled={isStreaming || demoLimitReached}
               className="flex-1 resize-none bg-white text-[12px] leading-[1.4] p-1 outline-none border-none select-text cursor-text"
               style={{ fontFamily: 'inherit' }}
+              aria-label="Ask a question"
             />
             {isStreaming ? (
               <button
@@ -521,17 +524,18 @@ export default function ChatPanel({ sessionId, onCitationClick, maxUserMessages,
                 <button
                   type="button"
                   onClick={() => setPlusMenuOpen((v) => !v)}
-                  className="p-2 rounded-full text-zinc-400 hover:text-zinc-600 dark:text-zinc-500 dark:hover:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-700 transition-colors"
+                  className="p-2 rounded-full text-zinc-400 hover:text-zinc-600 dark:text-zinc-500 dark:hover:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-700 transition-colors focus-visible:ring-2 focus-visible:ring-zinc-400 dark:focus-visible:ring-zinc-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-900"
+                  aria-label="More options"
                 >
                   <Plus size={16} />
                 </button>
                 {plusMenuOpen && (
-                  <div className="absolute bottom-full left-0 mb-2 w-56 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-xl shadow-lg z-20 py-1 animate-fade-in">
+                  <div className="absolute bottom-full left-0 mb-2 w-56 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-xl shadow-lg z-20 py-1 animate-fade-in motion-reduce:animate-none">
                     {showCustomInstructions && (
                       <button
                         type="button"
                         onClick={() => { onOpenSettings?.(); setPlusMenuOpen(false); }}
-                        className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors"
+                        className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:ring-inset"
                       >
                         <Settings2 size={16} />
                         <span>{t('chat.customInstructions') || 'Custom Instructions'}</span>
@@ -547,7 +551,7 @@ export default function ChatPanel({ sessionId, onCitationClick, maxUserMessages,
                       <button
                         type="button"
                         onClick={() => { handleExport(); setPlusMenuOpen(false); }}
-                        className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors"
+                        className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:ring-inset"
                       >
                         <Download size={16} />
                         <span>{t('chat.export')}</span>
@@ -567,23 +571,26 @@ export default function ChatPanel({ sessionId, onCitationClick, maxUserMessages,
               onKeyDown={onKeyDown}
               disabled={isStreaming || demoLimitReached}
               rows={1}
+              aria-label="Ask a question"
             />
             <div className="flex items-center gap-1 pr-2 pb-2 shrink-0">
               {isStreaming ? (
                 <button
                   type="button"
                   onClick={handleStop}
-                  className="p-2 bg-zinc-900 dark:bg-zinc-50 text-white dark:text-zinc-900 rounded-full hover:bg-zinc-800 dark:hover:bg-zinc-200 transition-colors"
+                  className="p-2 bg-zinc-900 dark:bg-zinc-50 text-white dark:text-zinc-900 rounded-full hover:bg-zinc-800 dark:hover:bg-zinc-200 transition-colors focus-visible:ring-2 focus-visible:ring-zinc-400 dark:focus-visible:ring-zinc-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-900"
                   title={t('chat.stop') || 'Stop'}
+                  aria-label="Stop generating"
                 >
                   <Square size={14} />
                 </button>
               ) : (
                 <button
                   type="submit"
-                  className="p-2 bg-zinc-900 dark:bg-zinc-50 text-white dark:text-zinc-900 rounded-full disabled:opacity-40 hover:bg-zinc-800 dark:hover:bg-zinc-200 transition-colors"
+                  className="p-2 bg-zinc-900 dark:bg-zinc-50 text-white dark:text-zinc-900 rounded-full disabled:opacity-40 hover:bg-zinc-800 dark:hover:bg-zinc-200 transition-colors focus-visible:ring-2 focus-visible:ring-zinc-400 dark:focus-visible:ring-zinc-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-900"
                   disabled={!input.trim() || demoLimitReached}
                   title={t('chat.send')}
+                  aria-label="Send message"
                 >
                   <SendHorizontal size={16} />
                 </button>

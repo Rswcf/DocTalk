@@ -46,7 +46,7 @@ export default function PrivacyPage() {
           <p>{t('privacy.lastUpdated')}: 2026-02-05</p>
         </div>
 
-        <Link href="/" className="inline-block mt-6 text-zinc-600 hover:underline">
+        <Link href="/" className="inline-block mt-6 text-zinc-600 hover:underline focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:rounded-sm">
           ← {t('common.backToHome')}
         </Link>
       </div>

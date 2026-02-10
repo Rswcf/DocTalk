@@ -65,7 +65,7 @@ export default function PdfToolbar({ currentPage, totalPages, scale, onPageChang
           : 'px-3 py-1.5 bg-white/90 dark:bg-zinc-800/90 backdrop-blur border-b dark:border-zinc-700 text-sm'
       }`}>
         {/* Zoom controls */}
-        <button onClick={zoomOut} className={btnClass} title={t('toolbar.zoomOut')}>
+        <button onClick={zoomOut} className={btnClass} title={t('toolbar.zoomOut')} aria-label="Zoom out">
           {isWin98 ? <ZoomOutIcon size={12} /> : <ZoomOut size={16} />}
         </button>
         {isWin98 ? (
@@ -75,7 +75,7 @@ export default function PdfToolbar({ currentPage, totalPages, scale, onPageChang
         ) : (
           <span className="w-12 text-center text-xs tabular-nums">{Math.round(scale * 100)}%</span>
         )}
-        <button onClick={zoomIn} className={btnClass} title={t('toolbar.zoomIn')}>
+        <button onClick={zoomIn} className={btnClass} title={t('toolbar.zoomIn')} aria-label="Zoom in">
           {isWin98 ? <ZoomInIcon size={12} /> : <ZoomIn size={16} />}
         </button>
 
@@ -88,6 +88,7 @@ export default function PdfToolbar({ currentPage, totalPages, scale, onPageChang
             : `p-1 rounded focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:ring-offset-1 ${grabMode ? 'bg-zinc-100 dark:bg-zinc-900/50 text-zinc-600 dark:text-zinc-400' : 'hover:bg-zinc-100 dark:hover:bg-zinc-700'}`
           }
           title={t('toolbar.grabMode')}
+          aria-label="Toggle grab mode"
         >
           {isWin98 ? <HandIcon size={12} /> : <Hand size={16} />}
         </button>
@@ -102,14 +103,15 @@ export default function PdfToolbar({ currentPage, totalPages, scale, onPageChang
             : `p-1 rounded focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:ring-offset-1 ${searchOpen ? 'bg-zinc-100 dark:bg-zinc-900/50 text-zinc-600 dark:text-zinc-400' : 'hover:bg-zinc-100 dark:hover:bg-zinc-700'}`
           }
           title={t('toolbar.search')}
+          aria-label="Toggle search"
         >
-          {isWin98 ? <SearchIcon size={12} /> : <Search size={16} />}
+          {isWin98 ? <SearchIcon size={12} /> : <Search aria-hidden="true" size={16} />}
         </button>
 
         <div className={separatorClass} />
 
         {/* Page navigation */}
-        <button onClick={prevPage} disabled={currentPage <= 1} className={`${btnClass} disabled:opacity-30`} title={t('toolbar.prevPage')}>
+        <button onClick={prevPage} disabled={currentPage <= 1} className={`${btnClass} disabled:opacity-30`} title={t('toolbar.prevPage')} aria-label="Previous page">
           {isWin98 ? <ChevronLeftIcon size={12} /> : <ChevronLeft size={16} />}
         </button>
         <div className="flex items-center gap-1">
@@ -123,10 +125,11 @@ export default function PdfToolbar({ currentPage, totalPages, scale, onPageChang
               ? 'win98-input w-[40px] text-center text-[11px] h-[18px]'
               : 'w-10 text-center border rounded px-1 py-0.5 text-xs dark:bg-zinc-700 dark:border-zinc-600'
             }
+            aria-label="Page number"
           />
           <span className={isWin98 ? 'text-[11px] text-[var(--win98-dark-gray)]' : 'text-xs text-zinc-500 dark:text-zinc-400'}>/ {totalPages}</span>
         </div>
-        <button onClick={nextPage} disabled={currentPage >= totalPages} className={`${btnClass} disabled:opacity-30`} title={t('toolbar.nextPage')}>
+        <button onClick={nextPage} disabled={currentPage >= totalPages} className={`${btnClass} disabled:opacity-30`} title={t('toolbar.nextPage')} aria-label="Next page">
           {isWin98 ? <ChevronRightIcon size={12} /> : <ChevronRight size={16} />}
         </button>
       </div>
@@ -137,7 +140,7 @@ export default function PdfToolbar({ currentPage, totalPages, scale, onPageChang
             ? 'bg-[var(--win98-button-face)] px-2 py-[2px] border-b border-b-[var(--win98-button-shadow)] text-[11px]'
             : 'px-3 py-1.5 bg-white/90 dark:bg-zinc-800/90 backdrop-blur border-b dark:border-zinc-700'
         }`}>
-          {isWin98 ? <SearchIcon size={12} /> : <Search size={14} className="text-zinc-400 shrink-0" />}
+          {isWin98 ? <SearchIcon size={12} /> : <Search aria-hidden="true" size={14} className="text-zinc-400 shrink-0" />}
           <input
             type="text"
             value={searchQuery}
@@ -145,8 +148,9 @@ export default function PdfToolbar({ currentPage, totalPages, scale, onPageChang
             placeholder={t('toolbar.searchPlaceholder')}
             className={isWin98
               ? 'win98-input flex-1 min-w-0 text-[11px] h-[18px]'
-              : 'flex-1 min-w-0 border-none bg-transparent text-sm focus:outline-none dark:text-zinc-100 placeholder:text-zinc-400'
+              : 'flex-1 min-w-0 border-none bg-transparent text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400 dark:text-zinc-100 placeholder:text-zinc-400'
             }
+            aria-label="Search in PDF"
             autoFocus
             onKeyDown={(e) => {
               if (e.key === 'Enter') {
@@ -163,13 +167,13 @@ export default function PdfToolbar({ currentPage, totalPages, scale, onPageChang
               {searchMatchCount > 0 ? t('toolbar.matchCount', { current: currentMatchIndex + 1, total: searchMatchCount }) : t('toolbar.noMatches')}
             </span>
           )}
-          <button onClick={onSearchPrev} disabled={searchMatchCount === 0} className={isWin98 ? 'win98-button flex items-center justify-center w-[20px] h-[20px] p-0 disabled:opacity-30' : 'p-0.5 rounded hover:bg-zinc-100 dark:hover:bg-zinc-700 disabled:opacity-30'} title={t('toolbar.prevPage')}>
+          <button onClick={onSearchPrev} disabled={searchMatchCount === 0} className={isWin98 ? 'win98-button flex items-center justify-center w-[20px] h-[20px] p-0 disabled:opacity-30' : 'p-0.5 rounded hover:bg-zinc-100 dark:hover:bg-zinc-700 disabled:opacity-30 focus-visible:ring-2 focus-visible:ring-zinc-400'} title={t('toolbar.prevPage')} aria-label="Previous match">
             {isWin98 ? <ChevronLeftIcon size={10} /> : <ChevronLeft size={14} />}
           </button>
-          <button onClick={onSearchNext} disabled={searchMatchCount === 0} className={isWin98 ? 'win98-button flex items-center justify-center w-[20px] h-[20px] p-0 disabled:opacity-30' : 'p-0.5 rounded hover:bg-zinc-100 dark:hover:bg-zinc-700 disabled:opacity-30'} title={t('toolbar.nextPage')}>
+          <button onClick={onSearchNext} disabled={searchMatchCount === 0} className={isWin98 ? 'win98-button flex items-center justify-center w-[20px] h-[20px] p-0 disabled:opacity-30' : 'p-0.5 rounded hover:bg-zinc-100 dark:hover:bg-zinc-700 disabled:opacity-30 focus-visible:ring-2 focus-visible:ring-zinc-400'} title={t('toolbar.nextPage')} aria-label="Next match">
             {isWin98 ? <ChevronRightIcon size={10} /> : <ChevronRight size={14} />}
           </button>
-          <button onClick={() => { setSearchOpen(false); onSearchClose(); }} className={isWin98 ? 'win98-button flex items-center justify-center w-[20px] h-[20px] p-0' : 'p-0.5 rounded hover:bg-zinc-100 dark:hover:bg-zinc-700'}>
+          <button onClick={() => { setSearchOpen(false); onSearchClose(); }} className={isWin98 ? 'win98-button flex items-center justify-center w-[20px] h-[20px] p-0' : 'p-0.5 rounded hover:bg-zinc-100 dark:hover:bg-zinc-700 focus-visible:ring-2 focus-visible:ring-zinc-400'} aria-label="Close search">
             <X size={isWin98 ? 10 : 14} />
           </button>
         </div>

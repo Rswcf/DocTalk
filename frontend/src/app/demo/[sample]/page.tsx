@@ -38,7 +38,7 @@ export default function DemoRedirectPage() {
           <p className="text-zinc-600 dark:text-zinc-400 mb-4">Demo document not found</p>
           <button
             onClick={() => router.push('/demo')}
-            className="px-4 py-2 bg-zinc-600 text-white rounded-lg hover:bg-zinc-700"
+            className="px-4 py-2 bg-zinc-600 text-white rounded-lg hover:bg-zinc-700 focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:ring-offset-2"
           >
             View all demos
           </button>

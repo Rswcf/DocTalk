@@ -54,7 +54,7 @@ export default function DemoPage() {
 
         {loading ? (
           <div className="flex items-center gap-2 text-zinc-500">
-            <Loader2 className="animate-spin" size={20} />
+            <Loader2 aria-hidden="true" className="animate-spin" size={20} />
             <span>{t('common.loading')}</span>
           </div>
         ) : (
@@ -68,7 +68,7 @@ export default function DemoPage() {
                 <>
                   <div className="flex items-center gap-3 mb-3">
                     <div className="p-2 bg-zinc-50 dark:bg-zinc-800 rounded-lg border border-zinc-100 dark:border-zinc-800 shrink-0">
-                      <Icon size={24} className="text-zinc-600 dark:text-zinc-400" />
+                      <Icon aria-hidden="true" size={24} className="text-zinc-600 dark:text-zinc-400" />
                     </div>
                     <h2 className="font-semibold text-zinc-900 dark:text-zinc-100 group-hover:text-zinc-600
                                    dark:group-hover:text-zinc-300 transition-colors min-w-0 break-words">
@@ -96,7 +96,7 @@ export default function DemoPage() {
                   href={`/d/${doc.document_id}`}
                   className="flex flex-col p-6 bg-white dark:bg-zinc-950 rounded-xl border
                              border-zinc-100 dark:border-zinc-800 shadow-sm hover:shadow-md
-                             hover:-translate-y-1 transition-[box-shadow,transform] duration-150 group"
+                             hover:-translate-y-1 transition-[box-shadow,transform] duration-150 group focus-visible:ring-2 focus-visible:ring-zinc-400 dark:focus-visible:ring-zinc-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-900"
                 >
                   {cardContent}
                 </Link>
@@ -117,7 +117,7 @@ export default function DemoPage() {
           {t('demo.hint')}
         </p>
 
-        <Link href="/" className="mt-4 text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100 text-sm transition-colors">
+        <Link href="/" className="mt-4 text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100 text-sm transition-colors focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:rounded-sm">
           &larr; {t('demo.backToHome')}
         </Link>
       </div>

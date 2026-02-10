@@ -42,7 +42,7 @@ export function CookieConsentBanner() {
           {t('consent.message')}{' '}
           <Link
             href="/privacy"
-            className="underline hover:text-zinc-900 dark:hover:text-zinc-200 transition-colors"
+            className="underline hover:text-zinc-900 dark:hover:text-zinc-200 transition-colors focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:rounded-sm"
           >
             {t('consent.learnMore')}
           </Link>
@@ -52,7 +52,7 @@ export function CookieConsentBanner() {
             onClick={handleDecline}
             className="px-4 py-1.5 text-sm rounded-lg border border-zinc-300 dark:border-zinc-700
                        text-zinc-700 dark:text-zinc-300
-                       hover:bg-zinc-50 dark:hover:bg-zinc-900 transition-colors"
+                       hover:bg-zinc-50 dark:hover:bg-zinc-900 transition-colors focus-visible:ring-2 focus-visible:ring-zinc-400 dark:focus-visible:ring-zinc-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-900"
           >
             {t('consent.decline')}
           </button>
@@ -60,7 +60,7 @@ export function CookieConsentBanner() {
             onClick={handleAccept}
             className="px-4 py-1.5 text-sm rounded-lg
                        bg-zinc-900 dark:bg-zinc-50 text-white dark:text-zinc-900
-                       hover:bg-zinc-800 dark:hover:bg-zinc-200 transition-colors"
+                       hover:bg-zinc-800 dark:hover:bg-zinc-200 transition-colors focus-visible:ring-2 focus-visible:ring-zinc-400 dark:focus-visible:ring-zinc-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-900"
           >
             {t('consent.accept')}
           </button>

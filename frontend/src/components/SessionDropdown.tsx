@@ -130,26 +130,26 @@ export default function SessionDropdown() {
         ref={triggerRef}
         type="button"
         onClick={toggle}
-        className="text-sm text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200 transition-colors truncate max-w-[140px] sm:max-w-[300px] flex items-center gap-1.5"
+        className="text-sm text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200 transition-colors truncate max-w-[140px] sm:max-w-[300px] flex items-center gap-1.5 focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:rounded-sm"
         title={titleText}
         aria-haspopup="menu"
         aria-expanded={open}
       >
         <span className="truncate">{titleText}</span>
-        <ChevronDown size={14} className="opacity-70" />
+        <ChevronDown aria-hidden="true" size={14} className="opacity-70" />
       </button>
       {open && (
         <div className="absolute left-0 mt-1 w-72 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-md shadow-lg z-20 p-1" onKeyDown={handleMenuKeyDown} role="menu">
           <div className="py-1">
             <button
               ref={(el) => { itemRefs.current[0] = el; }}
-              className={`w-full text-left flex items-center gap-2 px-2 py-1.5 rounded hover:bg-zinc-100 dark:hover:bg-zinc-800 text-sm text-zinc-700 dark:text-zinc-200 transition-colors ${disabledClass}`}
+              className={`w-full text-left flex items-center gap-2 px-2 py-1.5 rounded hover:bg-zinc-100 dark:hover:bg-zinc-800 text-sm text-zinc-700 dark:text-zinc-200 transition-colors focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:ring-inset ${disabledClass}`}
               onClick={onNewChat}
               disabled={isStreaming}
               tabIndex={focusIndex === 0 ? 0 : -1}
               role="menuitem"
             >
-              <Plus size={16} />
+              <Plus aria-hidden="true" size={16} />
               <span>{t('session.newChat')}</span>
             </button>
           </div>
@@ -169,7 +169,7 @@ export default function SessionDropdown() {
                   <button
                     key={s.session_id}
                     ref={(el) => { itemRefs.current[idx] = el; }}
-                    className={`w-full text-left flex items-center gap-2 px-2 py-1.5 rounded hover:bg-zinc-100 dark:hover:bg-zinc-800 text-sm text-zinc-700 dark:text-zinc-200 transition-colors ${
+                    className={`w-full text-left flex items-center gap-2 px-2 py-1.5 rounded hover:bg-zinc-100 dark:hover:bg-zinc-800 text-sm text-zinc-700 dark:text-zinc-200 transition-colors focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:ring-inset ${
                       isCurrent ? 'font-medium' : ''
                     } ${disabledClass}`}
                     onClick={() => onSwitchSession(s.session_id)}
@@ -193,23 +193,23 @@ export default function SessionDropdown() {
           <div className="py-1">
             <button
               ref={(el) => { itemRefs.current[1 + sortedSessions.length] = el; }}
-              className={`w-full text-left flex items-center gap-2 px-2 py-1.5 rounded hover:bg-zinc-100 dark:hover:bg-zinc-800 text-sm text-red-600 dark:text-red-400 transition-colors ${disabledClass}`}
+              className={`w-full text-left flex items-center gap-2 px-2 py-1.5 rounded hover:bg-zinc-100 dark:hover:bg-zinc-800 text-sm text-red-600 dark:text-red-400 transition-colors focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:ring-inset ${disabledClass}`}
               onClick={onDeleteCurrent}
               disabled={isStreaming}
               tabIndex={focusIndex === 1 + sortedSessions.length ? 0 : -1}
               role="menuitem"
             >
-              <Trash2 size={16} />
+              <Trash2 aria-hidden="true" size={16} />
               <span>{t('session.deleteChat')}</span>
             </button>
             <button
               ref={(el) => { itemRefs.current[2 + sortedSessions.length] = el; }}
-              className="w-full text-left flex items-center gap-2 px-2 py-1.5 rounded hover:bg-zinc-100 dark:hover:bg-zinc-800 text-sm text-zinc-700 dark:text-zinc-200 transition-colors"
+              className="w-full text-left flex items-center gap-2 px-2 py-1.5 rounded hover:bg-zinc-100 dark:hover:bg-zinc-800 text-sm text-zinc-700 dark:text-zinc-200 transition-colors focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:ring-inset"
               onClick={onBackHome}
               tabIndex={focusIndex === 2 + sortedSessions.length ? 0 : -1}
               role="menuitem"
             >
-              <Home size={16} />
+              <Home aria-hidden="true" size={16} />
               <span>{t('session.backHome')}</span>
             </button>
           </div>

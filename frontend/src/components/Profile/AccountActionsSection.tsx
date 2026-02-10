@@ -65,7 +65,7 @@ export default function AccountActionsSection({ email }: Props) {
           type="button"
           onClick={onExport}
           disabled={exporting}
-          className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 hover:bg-zinc-50 dark:hover:bg-zinc-700 transition-colors disabled:opacity-50"
+          className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 hover:bg-zinc-50 dark:hover:bg-zinc-700 transition-colors disabled:opacity-50 focus-visible:ring-2 focus-visible:ring-zinc-400 dark:focus-visible:ring-zinc-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-900"
         >
           <Download size={16} />
           {exporting ? t("profile.account.exporting") : t("profile.account.exportButton")}
@@ -83,17 +83,25 @@ export default function AccountActionsSection({ email }: Props) {
         <button
           type="button"
           onClick={() => setOpen(true)}
-          className="px-4 py-2 rounded-lg text-sm font-medium bg-red-600 text-white hover:bg-red-700"
+          className="px-4 py-2 rounded-lg text-sm font-medium bg-red-600 text-white hover:bg-red-700 focus-visible:ring-2 focus-visible:ring-red-400 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-900"
         >
           {t("profile.account.deleteAccount")}
         </button>
       </div>
 
       {open && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center">
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center overscroll-contain"
+          onKeyDown={(e) => { if (e.key === 'Escape' && !deleting) setOpen(false); }}
+        >
           <div className="absolute inset-0 bg-black/50" onClick={() => !deleting && setOpen(false)} />
-          <div className="relative bg-white dark:bg-zinc-900 border dark:border-zinc-700 rounded-lg p-6 w-full max-w-md shadow-lg">
-            <h4 className="text-lg font-semibold mb-2 dark:text-zinc-100">
+          <div
+            className="relative bg-white dark:bg-zinc-900 border dark:border-zinc-700 rounded-lg p-6 w-full max-w-md shadow-lg"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="delete-account-title"
+          >
+            <h4 id="delete-account-title" className="text-lg font-semibold mb-2 dark:text-zinc-100">
               {t("profile.account.deleteAccount")}
             </h4>
             <p className="text-sm text-zinc-700 dark:text-zinc-300 mb-4">
@@ -106,6 +114,7 @@ export default function AccountActionsSection({ email }: Props) {
               onChange={(e) => setConfirmEmail(e.target.value)}
               placeholder={email}
               disabled={deleting}
+              aria-label="Confirm email address"
             />
             {error && (
               <div className="mt-3 text-sm text-red-600">{t("error.somethingWrong")}</div>
@@ -115,7 +124,8 @@ export default function AccountActionsSection({ email }: Props) {
                 type="button"
                 disabled={deleting}
                 onClick={() => setOpen(false)}
-                className="px-4 py-2 rounded-lg text-sm font-medium bg-zinc-100 text-zinc-800 hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-200 dark:hover:bg-zinc-700"
+                autoFocus
+                className="px-4 py-2 rounded-lg text-sm font-medium bg-zinc-100 text-zinc-800 hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-200 dark:hover:bg-zinc-700 focus-visible:ring-2 focus-visible:ring-zinc-400 dark:focus-visible:ring-zinc-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-900"
               >
                 {t("common.cancel")}
               </button>
@@ -123,7 +133,7 @@ export default function AccountActionsSection({ email }: Props) {
                 type="button"
                 disabled={!canConfirm || deleting}
                 onClick={onDelete}
-                className="px-4 py-2 rounded-lg text-sm font-medium bg-red-600 text-white hover:bg-red-700 disabled:opacity-50"
+                className="px-4 py-2 rounded-lg text-sm font-medium bg-red-600 text-white hover:bg-red-700 disabled:opacity-50 focus-visible:ring-2 focus-visible:ring-red-400 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-900"
               >
                 {deleting ? t("profile.account.deleting") : t("profile.account.deleteAccount")}
               </button>

@@ -124,9 +124,9 @@ export default function CreditsSection({ profile }: Props) {
             total: totalAllowance.toLocaleString(),
           })}
         </div>
-        <div className="mt-2 h-3 w-full rounded bg-zinc-200 dark:bg-zinc-800 overflow-hidden">
+        <div className="mt-2 h-3 w-full rounded bg-zinc-200 dark:bg-zinc-800 overflow-hidden" role="progressbar" aria-valuenow={Math.round(percentUsed)} aria-valuemin={0} aria-valuemax={100}>
           <div
-            className={`${barColor} h-full`} 
+            className={`${barColor} h-full`}
             style={{ width: `${percentUsed}%` }}
           />
         </div>
@@ -139,7 +139,7 @@ export default function CreditsSection({ profile }: Props) {
             type="button"
             disabled={submitting}
             onClick={onUpgrade}
-            className="px-4 py-2 rounded-lg text-sm font-medium bg-zinc-900 dark:bg-zinc-50 text-white dark:text-zinc-900 hover:bg-zinc-800 dark:hover:bg-zinc-200 disabled:opacity-50"
+            className="px-4 py-2 rounded-lg text-sm font-medium bg-zinc-900 dark:bg-zinc-50 text-white dark:text-zinc-900 hover:bg-zinc-800 dark:hover:bg-zinc-200 disabled:opacity-50 focus-visible:ring-2 focus-visible:ring-zinc-400 dark:focus-visible:ring-zinc-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-900"
           >
             {t("profile.plan.upgrade")}
           </button>
@@ -148,7 +148,7 @@ export default function CreditsSection({ profile }: Props) {
             type="button"
             disabled={submitting}
             onClick={onManage}
-            className="px-4 py-2 rounded-lg text-sm font-medium bg-zinc-900 dark:bg-zinc-50 text-white dark:text-zinc-900 hover:bg-zinc-800 dark:hover:bg-zinc-200 disabled:opacity-50"
+            className="px-4 py-2 rounded-lg text-sm font-medium bg-zinc-900 dark:bg-zinc-50 text-white dark:text-zinc-900 hover:bg-zinc-800 dark:hover:bg-zinc-200 disabled:opacity-50 focus-visible:ring-2 focus-visible:ring-zinc-400 dark:focus-visible:ring-zinc-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-900"
           >
             {t("profile.plan.manage")}
           </button>
@@ -156,7 +156,7 @@ export default function CreditsSection({ profile }: Props) {
         <button
           type="button"
           onClick={() => router.push("/billing")}
-          className="px-4 py-2 rounded-lg text-sm font-medium bg-zinc-100 text-zinc-800 hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-200 dark:hover:bg-zinc-700"
+          className="px-4 py-2 rounded-lg text-sm font-medium bg-zinc-100 text-zinc-800 hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-200 dark:hover:bg-zinc-700 focus-visible:ring-2 focus-visible:ring-zinc-400 dark:focus-visible:ring-zinc-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-900"
         >
           {t("profile.credits.buyMore")}
         </button>
@@ -197,11 +197,11 @@ export default function CreditsSection({ profile }: Props) {
                       <td className="py-2 text-zinc-700 dark:text-zinc-300">
                         {t(reasonKey as any)}
                       </td>
-                      <td className={`py-2 font-medium ${isPos ? "text-green-600" : "text-red-600"}`}>
+                      <td className={`py-2 font-medium tabular-nums ${isPos ? "text-green-600" : "text-red-600"}`}>
                         {isPos ? "+" : ""}
                         {amount.toLocaleString()} {t("credits.credits")}
                       </td>
-                      <td className="py-2 text-zinc-700 dark:text-zinc-300">
+                      <td className="py-2 text-zinc-700 dark:text-zinc-300 tabular-nums">
                         {it.balance_after.toLocaleString()} {t("credits.credits")}
                       </td>
                     </tr>
@@ -220,7 +220,7 @@ export default function CreditsSection({ profile }: Props) {
               aria-label={t("profile.credits.history")}
               disabled={!canPrev}
               onClick={() => setOffset(Math.max(0, offset - limit))}
-              className="px-3 py-1 rounded border dark:border-zinc-700 disabled:opacity-40"
+              className="px-3 py-1 rounded border dark:border-zinc-700 disabled:opacity-40 focus-visible:ring-2 focus-visible:ring-zinc-400 dark:focus-visible:ring-zinc-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-900"
               title="Prev"
             >
               ←
@@ -230,7 +230,7 @@ export default function CreditsSection({ profile }: Props) {
               aria-label={t("profile.credits.history")}
               disabled={!canNext}
               onClick={() => setOffset(offset + limit)}
-              className="px-3 py-1 rounded border dark:border-zinc-700 disabled:opacity-40"
+              className="px-3 py-1 rounded border dark:border-zinc-700 disabled:opacity-40 focus-visible:ring-2 focus-visible:ring-zinc-400 dark:focus-visible:ring-zinc-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-900"
               title="Next"
             >
               →

@@ -169,14 +169,15 @@ export default function CollectionDetailPage() {
                 key={doc.id}
                 className="flex items-center gap-2 p-2 rounded-lg bg-white dark:bg-zinc-800 border border-zinc-100 dark:border-zinc-700"
               >
-                <FileText size={14} className="text-zinc-400 shrink-0" />
+                <FileText aria-hidden="true" size={14} className="text-zinc-400 shrink-0" />
                 <span className="text-sm text-zinc-800 dark:text-zinc-200 truncate flex-1">
                   {doc.filename}
                 </span>
                 <button
                   onClick={() => handleRemoveDocument(doc.id)}
-                  className="p-1 rounded hover:bg-zinc-100 dark:hover:bg-zinc-700 text-zinc-400 transition-colors"
+                  className="p-1 rounded hover:bg-zinc-100 dark:hover:bg-zinc-700 text-zinc-400 transition-colors focus-visible:ring-2 focus-visible:ring-zinc-400"
                   title={t('collections.removeDocument')}
+                  aria-label="Remove document"
                 >
                   <X size={12} />
                 </button>
@@ -187,9 +188,9 @@ export default function CollectionDetailPage() {
           <div className="p-3 border-t border-zinc-200 dark:border-zinc-800">
             <button
               onClick={handleAddDocs}
-              className="w-full flex items-center justify-center gap-2 px-3 py-2 text-sm rounded-lg border border-zinc-200 dark:border-zinc-700 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
+              className="w-full flex items-center justify-center gap-2 px-3 py-2 text-sm rounded-lg border border-zinc-200 dark:border-zinc-700 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors focus-visible:ring-2 focus-visible:ring-zinc-400 dark:focus-visible:ring-zinc-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-900"
             >
-              <Plus size={14} />
+              <Plus aria-hidden="true" size={14} />
               {t('collections.addDocuments')}
             </button>
           </div>
@@ -198,12 +199,19 @@ export default function CollectionDetailPage() {
 
       {/* Add documents modal */}
       {showAddDocs && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={() => setShowAddDocs(false)}>
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 overscroll-contain"
+          onClick={() => setShowAddDocs(false)}
+          onKeyDown={(e) => { if (e.key === 'Escape') setShowAddDocs(false); }}
+        >
           <div
             className="bg-white dark:bg-zinc-900 rounded-2xl shadow-xl w-full max-w-md mx-4 p-6"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="add-docs-title"
             onClick={(e) => e.stopPropagation()}
           >
-            <h3 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100 mb-4">
+            <h3 id="add-docs-title" className="text-lg font-semibold text-zinc-900 dark:text-zinc-100 mb-4">
               {t('collections.addDocuments')}
             </h3>
             {availableDocs.length === 0 ? (
@@ -214,7 +222,7 @@ export default function CollectionDetailPage() {
                   <button
                     key={d.id}
                     onClick={() => handleAddDocument(d.id)}
-                    className="w-full text-left p-3 rounded-lg border border-zinc-100 dark:border-zinc-700 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors"
+                    className="w-full text-left p-3 rounded-lg border border-zinc-100 dark:border-zinc-700 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors focus-visible:ring-2 focus-visible:ring-zinc-400 dark:focus-visible:ring-zinc-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-900"
                   >
                     <span className="text-sm text-zinc-800 dark:text-zinc-200">{d.filename}</span>
                   </button>
@@ -224,7 +232,7 @@ export default function CollectionDetailPage() {
             <div className="mt-4 flex justify-end">
               <button
                 onClick={() => setShowAddDocs(false)}
-                className="px-4 py-2 text-sm rounded-lg border border-zinc-200 dark:border-zinc-700 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
+                className="px-4 py-2 text-sm rounded-lg border border-zinc-200 dark:border-zinc-700 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors focus-visible:ring-2 focus-visible:ring-zinc-400 dark:focus-visible:ring-zinc-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-900"
               >
                 {t('common.cancel')}
               </button>

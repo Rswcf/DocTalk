@@ -113,7 +113,7 @@ function KPICard({
   return (
     <div className="border border-zinc-200 dark:border-zinc-700 rounded-lg p-5 flex items-start gap-4">
       <div className="p-2.5 rounded-lg bg-zinc-100 dark:bg-zinc-800">
-        <Icon className="w-5 h-5 text-zinc-600 dark:text-zinc-400" />
+        <Icon aria-hidden="true" className="w-5 h-5 text-zinc-600 dark:text-zinc-400" />
       </div>
       <div>
         <p className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100">
@@ -265,7 +265,7 @@ export default function AdminPage() {
                   <button
                     key={d}
                     onClick={() => setTrendDays(d)}
-                    className={`px-3 py-1 rounded-md text-sm transition-colors ${
+                    className={`px-3 py-1 rounded-md text-sm transition-colors focus-visible:ring-2 focus-visible:ring-zinc-400 dark:focus-visible:ring-zinc-500 focus-visible:ring-offset-1 ${
                       trendDays === d
                         ? "bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900"
                         : "text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800"
@@ -427,6 +427,7 @@ export default function AdminPage() {
                   setTopBy(e.target.value as "tokens" | "credits" | "documents")
                 }
                 className="text-xs border border-zinc-200 dark:border-zinc-700 rounded px-2 py-1 bg-transparent dark:text-zinc-300"
+                aria-label="Sort by"
               >
                 <option value="tokens">By Tokens</option>
                 <option value="credits">By Credits</option>

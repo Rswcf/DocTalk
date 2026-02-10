@@ -58,7 +58,7 @@ function processCitationLinks(
                 type="button"
                 className={isWin98
                   ? "inline text-[#000080] hover:underline cursor-pointer select-none font-bold bg-transparent border-none p-0 text-inherit leading-inherit"
-                  : "inline text-zinc-600 dark:text-zinc-400 hover:underline cursor-pointer select-none font-medium bg-transparent border-none p-0 text-inherit leading-inherit"
+                  : "inline text-zinc-600 dark:text-zinc-400 hover:underline cursor-pointer select-none font-medium bg-transparent border-none p-0 text-inherit leading-inherit focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:rounded-sm"
                 }
                 onClick={() => onClick?.(citation)}
                 title={t ? t('citation.jumpTo', { page: citation.page }) : `Jump to page ${citation.page}`}
@@ -134,7 +134,7 @@ function CodeBlock({ language, code }: { language: string; code: string }) {
         <button
           type="button"
           onClick={handleCopy}
-          className="flex items-center gap-1.5 hover:text-zinc-200 transition-colors"
+          className="flex items-center gap-1.5 hover:text-zinc-200 transition-colors focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:rounded-sm"
         >
           {copied ? <Check size={14} /> : <Copy size={14} />}
           <span>{copied ? 'Copied!' : 'Copy code'}</span>
@@ -257,7 +257,7 @@ export default function MessageBubble({ message, onCitationClick, isStreaming, o
           {isUser ? (
             message.text
           ) : isStreaming && !message.text ? (
-            <span className="text-[11px] text-[var(--win98-dark-gray)] animate-pulse">DocTalk is typing...</span>
+            <span className="text-[11px] text-[var(--win98-dark-gray)] animate-pulse motion-reduce:animate-none">DocTalk is typing...</span>
           ) : (
             <>
               <div className="[&>*:first-child]:mt-0 [&>*:last-child]:mb-0 text-[12px]">
@@ -266,7 +266,7 @@ export default function MessageBubble({ message, onCitationClick, isStreaming, o
                 </ReactMarkdown>
               </div>
               {isStreaming && isAssistant && message.text && (
-                <span className="inline-block w-1.5 h-3 bg-black animate-pulse ml-0.5 align-text-bottom" />
+                <span className="inline-block w-1.5 h-3 bg-black animate-pulse motion-reduce:animate-none ml-0.5 align-text-bottom" />
               )}
             </>
           )}
@@ -311,11 +311,11 @@ export default function MessageBubble({ message, onCitationClick, isStreaming, o
           {isUser ? (
             <span className="whitespace-pre-wrap">{message.text}</span>
           ) : isStreaming && !message.text ? (
-            <div className="flex items-center gap-2 text-zinc-400 dark:text-zinc-500 text-sm">
+            <div className="flex items-center gap-2 text-zinc-400 dark:text-zinc-500 text-sm" aria-live="polite">
               <div className="flex gap-1">
-                <span className="w-1.5 h-1.5 bg-zinc-400 rounded-full animate-bounce [animation-delay:-0.3s]" />
-                <span className="w-1.5 h-1.5 bg-zinc-400 rounded-full animate-bounce [animation-delay:-0.15s]" />
-                <span className="w-1.5 h-1.5 bg-zinc-400 rounded-full animate-bounce" />
+                <span className="w-1.5 h-1.5 bg-zinc-400 rounded-full animate-bounce motion-reduce:animate-none [animation-delay:-0.3s]" />
+                <span className="w-1.5 h-1.5 bg-zinc-400 rounded-full animate-bounce motion-reduce:animate-none [animation-delay:-0.15s]" />
+                <span className="w-1.5 h-1.5 bg-zinc-400 rounded-full animate-bounce motion-reduce:animate-none" />
               </div>
               <span>{t('chat.searching')}</span>
             </div>
@@ -325,7 +325,7 @@ export default function MessageBubble({ message, onCitationClick, isStreaming, o
                 {markdownText}
               </ReactMarkdown>
               {isStreaming && isAssistant && message.text && (
-                <span className="inline-block w-2 h-4 bg-zinc-400 dark:bg-zinc-500 animate-pulse rounded-sm ml-0.5 align-text-bottom" />
+                <span aria-hidden="true" className="inline-block w-2 h-4 bg-zinc-400 dark:bg-zinc-500 animate-pulse motion-reduce:animate-none rounded-sm ml-0.5 align-text-bottom" />
               )}
             </div>
           )}
@@ -336,38 +336,42 @@ export default function MessageBubble({ message, onCitationClick, isStreaming, o
           <div className={`flex gap-1 mt-2 transition-opacity ${isLastAssistant ? '' : 'opacity-0 group-hover:opacity-100'}`}>
             <button
               onClick={handleCopy}
-              className={`p-1 rounded transition-colors text-zinc-400 dark:text-zinc-500 hover:text-zinc-600 dark:hover:text-zinc-300`}
+              className={`p-1 rounded transition-colors text-zinc-400 dark:text-zinc-500 hover:text-zinc-600 dark:hover:text-zinc-300 focus-visible:ring-2 focus-visible:ring-zinc-400`}
               title={copied ? t('copy.copied') : t('copy.button')}
+              aria-label="Copy message"
             >
               {copied ? <Check size={14} className="text-green-500" /> : <Copy size={14} />}
             </button>
             <button
               onClick={() => handleFeedback('up')}
-              className={`p-1 rounded transition-colors ${
+              className={`p-1 rounded transition-colors focus-visible:ring-2 focus-visible:ring-zinc-400 ${
                 feedback === 'up'
                   ? 'text-zinc-600 dark:text-zinc-400'
                   : 'text-zinc-400 dark:text-zinc-500 hover:text-zinc-600 dark:hover:text-zinc-300'
               }`}
               title={t('feedback.helpful')}
+              aria-label="Good response"
             >
               <ThumbsUp size={14} fill={feedback === 'up' ? 'currentColor' : 'none'} />
             </button>
             <button
               onClick={() => handleFeedback('down')}
-              className={`p-1 rounded transition-colors ${
+              className={`p-1 rounded transition-colors focus-visible:ring-2 focus-visible:ring-zinc-400 ${
                 feedback === 'down'
                   ? 'text-red-500 dark:text-red-400'
                   : 'text-zinc-400 dark:text-zinc-500 hover:text-zinc-600 dark:hover:text-zinc-300'
               }`}
               title={t('feedback.notHelpful')}
+              aria-label="Bad response"
             >
               <ThumbsDown size={14} fill={feedback === 'down' ? 'currentColor' : 'none'} />
             </button>
             {isLastAssistant && onRegenerate && !isStreaming && (
               <button
                 onClick={onRegenerate}
-                className={`p-1 rounded transition-colors text-zinc-400 dark:text-zinc-500 hover:text-zinc-600 dark:hover:text-zinc-300`}
+                className={`p-1 rounded transition-colors text-zinc-400 dark:text-zinc-500 hover:text-zinc-600 dark:hover:text-zinc-300 focus-visible:ring-2 focus-visible:ring-zinc-400`}
                 title={t('chat.regenerate')}
+                aria-label="Regenerate response"
               >
                 <RotateCcw size={14} />
               </button>

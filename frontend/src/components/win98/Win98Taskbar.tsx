@@ -16,7 +16,7 @@ interface Win98TaskbarProps {
 
 function WindowsLogo() {
   return (
-    <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+    <svg aria-hidden="true" width="14" height="14" viewBox="0 0 16 16" fill="none">
       <rect x="1" y="1" width="6" height="6" fill="#FF0000" />
       <rect x="9" y="1" width="6" height="6" fill="#00FF00" />
       <rect x="1" y="9" width="6" height="6" fill="#0000FF" />
@@ -62,7 +62,7 @@ export function Win98Taskbar({ items = [] }: Win98TaskbarProps) {
       {/* Quick Launch */}
       <div className="flex items-center gap-[2px] px-1">
         <button type="button" className="w-[20px] h-[20px] flex items-center justify-center hover:bg-[var(--win98-light-gray)]" aria-label="Show Desktop">
-          <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+          <svg aria-hidden="true" width="14" height="14" viewBox="0 0 14 14" fill="none">
             <rect x="1" y="1" width="12" height="9" fill="#000080" stroke="#000" strokeWidth="1"/>
             <rect x="5" y="10" width="4" height="1" fill="#808080"/>
             <rect x="3" y="11" width="8" height="1" fill="#808080"/>
@@ -94,7 +94,7 @@ export function Win98Taskbar({ items = [] }: Win98TaskbarProps) {
       {/* System Tray */}
       <div className="win98-groove-v h-[22px] mx-[2px]" />
       <div className="win98-inset flex items-center gap-2 px-2 h-[22px]">
-        <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+        <svg aria-hidden="true" width="12" height="12" viewBox="0 0 12 12" fill="none">
           <path d="M1 4h2l3-3v10l-3-3H1V4z" fill="#000"/>
           <path d="M8 3c1 1 1 5 0 6" stroke="#000" strokeWidth="1" fill="none"/>
           <path d="M9 1c2 2 2 8 0 10" stroke="#000" strokeWidth="1" fill="none"/>

@@ -295,8 +295,8 @@ export default function PdfViewer({ pdfUrl, currentPage, highlights, scale, scro
           file={validPdfUrl}
           options={PDF_OPTIONS}
           onLoadSuccess={onDocumentLoadSuccess}
-          loading={<div className="p-4">{t('doc.pdfLoading')}</div>}
-          error={<div className="p-4 text-red-600">{t('doc.pdfLoadError')}</div>}
+          loading={<div className="p-4" aria-live="polite">{t('doc.pdfLoading')}</div>}
+          error={<div className="p-4 text-red-600" aria-live="polite">{t('doc.pdfLoadError')}</div>}
         >
           <div className="flex flex-col items-center gap-4 py-4">
             {pages.map((pageNumber) => {

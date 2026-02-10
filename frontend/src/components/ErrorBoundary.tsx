@@ -10,7 +10,7 @@ function ErrorFallback({ onRefresh }: { onRefresh: () => void }) {
       <div className="text-center">
         <div className="text-lg font-medium mb-3 dark:text-zinc-100">{t('error.somethingWrong')}</div>
         <button
-          className="px-4 py-2 bg-zinc-900 text-white rounded dark:bg-zinc-100 dark:text-zinc-900"
+          className="px-4 py-2 bg-zinc-900 text-white rounded dark:bg-zinc-100 dark:text-zinc-900 focus-visible:ring-2 focus-visible:ring-zinc-400 dark:focus-visible:ring-zinc-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-900"
           onClick={onRefresh}
         >
           {t('error.refresh')}

@@ -36,6 +36,7 @@ export default function CitationCard({ refIndex, textSnippet, page, onClick }: C
         type="button"
         onClick={onClick}
         className="flex items-center gap-1 text-[10px] bg-[var(--win98-light-gray)] border border-[var(--win98-dark-gray)] px-2 py-[2px] w-fit cursor-default"
+        aria-label={`Citation ${refIndex}, page ${validPage}`}
       >
         <span className="text-[#000080] font-bold shrink-0">[{refIndex}]</span>
         <span className="truncate max-w-[200px]">{snippet}</span>
@@ -48,7 +49,8 @@ export default function CitationCard({ refIndex, textSnippet, page, onClick }: C
     <button
       type="button"
       onClick={onClick}
-      className="inline-flex items-center gap-1.5 text-left border border-zinc-100 dark:border-zinc-700 rounded-lg px-2.5 py-1.5 bg-white dark:bg-zinc-950 shadow-sm hover:shadow-md transition-shadow text-xs"
+      className="inline-flex items-center gap-1.5 text-left border border-zinc-100 dark:border-zinc-700 rounded-lg px-2.5 py-1.5 bg-white dark:bg-zinc-950 shadow-sm hover:shadow-md transition-shadow text-xs focus-visible:ring-2 focus-visible:ring-zinc-400 dark:focus-visible:ring-zinc-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-900"
+      aria-label={`Citation ${refIndex}, page ${validPage}`}
     >
       <span className="text-zinc-500 dark:text-zinc-400 font-semibold shrink-0">[{refIndex}]</span>
       <span className="text-zinc-600 dark:text-zinc-300 truncate max-w-[200px]">{snippet}</span>

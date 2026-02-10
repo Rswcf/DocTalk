@@ -55,7 +55,7 @@ export default function ModeSelector() {
                 className="accent-[var(--win98-navy)]"
               />
               <span>{t(mode.labelKey)}</span>
-              {!available && <Lock size={9} className="text-[var(--win98-dark-gray)]" />}
+              {!available && <Lock aria-hidden="true" size={9} className="text-[var(--win98-dark-gray)]" />}
             </label>
           );
         })}
@@ -73,14 +73,14 @@ export default function ModeSelector() {
             key={mode.id}
             onClick={() => choose(mode.id)}
             title={t(mode.descriptionKey)}
-            className={`relative flex items-center gap-1 px-3 py-1 text-xs rounded-md transition-colors ${
+            className={`relative flex items-center gap-1 px-3 py-1 text-xs rounded-md transition-colors focus-visible:ring-2 focus-visible:ring-zinc-400 dark:focus-visible:ring-zinc-500 focus-visible:ring-offset-1 ${
               isSelected
                 ? 'bg-white dark:bg-zinc-700 shadow-sm font-medium text-zinc-900 dark:text-zinc-100'
                 : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-300'
             }`}
           >
             <span>{t(mode.labelKey)}</span>
-            {!available && <Lock size={10} className="text-zinc-400" />}
+            {!available && <Lock aria-hidden="true" size={10} className="text-zinc-400" />}
           </button>
         );
       })}
