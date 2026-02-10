@@ -396,7 +396,7 @@ DocTalk currently offers a strong single-document PDF Q&A experience with citati
 
 | Competitor | Strengths | DocTalk Advantages |
 |-----------|-----------|-------------------|
-| **NotebookLM** | Free, multi-source, audio overviews, Google ecosystem | Precise page-level citations with bbox highlights, model choice (9 models with model-adaptive prompts), OCR, privacy (self-hosted option), encryption at rest, GDPR data export, security hardening, Pro features |
+| **NotebookLM** | Free, multi-source, audio overviews, Google ecosystem | Precise page-level citations with bbox highlights, model choice (3 performance modes with model-adaptive prompts), OCR, privacy (self-hosted option), encryption at rest, GDPR data export, security hardening, Pro features |
 | **ChatPDF** | Simple UX, low price ($5/mo) | Multi-model choice, dark mode, multi-session, auto-summary, streaming indicators |
 | **AskYourPDF** | Multi-format, API, Chrome extension, GPT plugin | Better citation UX (hover preview, page highlights), cleaner UI, multi-language |
 | **Humata** | Research-focused, multi-format | Better citation accuracy (small chunks), more model options, credits transparency |
@@ -405,7 +405,7 @@ DocTalk currently offers a strong single-document PDF Q&A experience with citati
 ### DocTalk's Defensible Moat (Post-Roadmap)
 
 1. **Citation precision**: Small-chunk retrieval + bbox page highlights -- the most precise citation UX in the market
-2. **Model flexibility**: 9+ LLM models via OpenRouter, user's choice, with model-adaptive prompts and benchmark-validated per-model tuning
+2. **Model flexibility**: 3 performance modes via OpenRouter, user's choice, with model-adaptive prompts and benchmark-validated per-model tuning
 3. **Multi-format + multi-document**: Combined with citation precision, creates unique value
 4. **API + UI**: Serves both end-users and developers
 5. **Privacy & Security**: Self-hostable architecture, no training on user data, encryption at rest (SSE-S3), SSRF protection, GDPR data export, cookie consent, structured security logging, non-root Docker, OAuth token minimization

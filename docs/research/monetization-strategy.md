@@ -68,7 +68,7 @@ A Pro user gets approximately:
 | **Mid Tier** | -- | -- | Pro: $14.99/mo (annual) | Expert: $9.99/mo (3 users) | Ultimate: ~$27/mo |
 | **Team/Enterprise** | -- | -- | Enterprise: custom | Team: $49/user/mo | Enterprise: ~$37/mo |
 | **Annual Discount** | None | $139.99/yr (saves ~42%) | 25% off annual | Not specified | ~20% off annual |
-| **Model Selection** | 9 models (user choice) | Not specified | GPT-5 family + Claude + Gemini (credits for premium) | GPT-5 | Not specified |
+| **Model Selection** | 3 performance modes (Quick/Balanced/Thorough) | Not specified | GPT-5 family + Claude + Gemini (credits for premium) | GPT-5 | Not specified |
 | **OCR** | Included (all tiers) | Not specified | Premium+ only | Team+ only ($49/user) | Not specified |
 | **Page Limits** | None (credit-gated) | 120 free / 2000 paid | 100 free / 6000 pro | 60 free / 5000 team | Not specified |
 | **File Size** | 25 MB (Free) / 50 MB (Plus) / 100 MB (Pro) | 32 MB (paid) | 877 MB (pro) | Not specified | Not specified |
@@ -81,7 +81,7 @@ A Pro user gets approximately:
 3. **Missing annual pricing** is a significant gap -- every competitor offers annual plans with 20-42% discounts
 4. **No team tier** puts DocTalk at a disadvantage vs. Humata ($49/user/mo) and AskYourPDF (Enterprise)
 5. **OCR included at all tiers** is a competitive advantage over Humata (Team+ only) and AskYourPDF (Premium+ only)
-6. **Model selection at all tiers** is a major differentiator -- no competitor offers 9 models across all plans
+6. **Model selection at all tiers** is a major differentiator -- no competitor offers 3 performance modes with model-adaptive prompts across all plans
 
 ---
 
@@ -123,7 +123,7 @@ A Pro user gets approximately:
 | Overage/pack purchases capture expansion revenue | Two metrics to track (plan + credits) |
 | Annual discounts drive commitment | -- |
 
-**Verdict**: DocTalk's current hybrid approach (subscription + credits + packs) is fundamentally sound. The credit system is the right choice for an AI product with variable inference costs across 9 models. The main improvements needed are: more tiers, better credit communication, annual pricing, and overage handling.
+**Verdict**: DocTalk's current hybrid approach (subscription + credits + packs) is fundamentally sound. The credit system is the right choice for an AI product with variable inference costs across 3 performance modes. The main improvements needed are: more tiers, better credit communication, annual pricing, and overage handling.
 
 ---
 
@@ -141,21 +141,21 @@ A Pro user gets approximately:
 #### Plus (Casual Users) -- NEW
 - **Price**: $7.99/month ($5.99/mo annual = $71.88/yr, save 25%)
 - **Credits**: 30,000/month
-- **Limits**: 20 documents stored, 50 MB max file size, all 9 models
+- **Limits**: 20 documents stored, 50 MB max file size, all 3 modes
 - **Features**: Multi-session, conversation export, OCR, PDF text search, priority parsing queue
 - **Goal**: Convert free users who need more than 5K credits but aren't power users
 
 #### Pro (Power Users)
 - **Price**: $14.99/month ($11.99/mo annual = $143.88/yr, save 20%)
 - **Credits**: 150,000/month (increased from 100K)
-- **Limits**: Unlimited documents, 100 MB max file size, all 9 models
+- **Limits**: Unlimited documents, 100 MB max file size, all 3 modes
 - **Features**: All Plus features + priority support, custom system prompts, API access (read-only), advanced analytics dashboard
 - **Goal**: Capture heavy individual users (researchers, analysts, lawyers)
 
 #### Team -- NEW
 - **Price**: $29.99/user/month ($24.99/mo annual)
 - **Credits**: 200,000/month per seat (shared pool)
-- **Limits**: Unlimited documents, 200 MB max file size, all models
+- **Limits**: Unlimited documents, 200 MB max file size, all 3 modes
 - **Features**: All Pro features + shared workspaces, admin console, usage analytics per member, SSO (SAML/OIDC), document sharing within team, role-based permissions
 - **Goal**: Small teams (3-20 seats) in legal, consulting, finance, research
 
@@ -196,7 +196,7 @@ This prevents hard stops that push users to competitors while capturing incremen
 | Monthly credits | 5K | 30K | 150K | 200K/seat | Custom |
 | Documents stored | 3 | 20 | Unlimited | Unlimited | Unlimited |
 | File size limit | 25 MB | 50 MB | 100 MB | 200 MB | Custom |
-| Models available | Budget + Standard | All 9 | All 9 | All 9 | All + custom |
+| Models available | Budget + Standard | All 3 modes | All 3 modes | All 3 modes | All + custom |
 | Sessions per doc | 1 | Unlimited | Unlimited | Unlimited | Unlimited |
 | OCR | No | Yes | Yes | Yes | Yes |
 | Conversation export | No | Markdown | Markdown + PDF | All formats | All formats |
@@ -392,7 +392,7 @@ Recommended improvements:
 | Too many tiers confuse users | Start with Free/Plus/Pro, add Team only when there's demand signal |
 | Credit system remains confusing | Always show "equivalent conversations" alongside credit numbers |
 | Team features require significant engineering | Start with shared document links (low-effort), build full admin later |
-| Competitors undercut on price | Compete on value (9 models, citation quality, OCR) not price |
+| Competitors undercut on price | Compete on value (3 performance modes, citation quality, OCR) not price |
 | Annual plans reduce short-term cash flow | Offer both; use annual as retention tool, not default |
 
 ---

@@ -354,5 +354,11 @@
   "consent.message": "हम अपनी सेवा को बेहतर बनाने के लिए एनालिटिक्स का उपयोग करते हैं।",
   "consent.accept": "स्वीकार करें",
   "consent.decline": "अस्वीकार करें",
-  "consent.learnMore": "और जानें"
+  "consent.learnMore": "और जानें",
+  "modes.quick": "त्वरित",
+  "modes.balanced": "संतुलित",
+  "modes.thorough": "गहन",
+  "modes.quickDesc": "सरल खोज के लिए तेज़ उत्तर",
+  "modes.balancedDesc": "गुणवत्ता और गति का सर्वोत्तम अनुपात",
+  "modes.thoroughDesc": "अधिकतम सटीकता के साथ गहन विश्लेषण"
 }

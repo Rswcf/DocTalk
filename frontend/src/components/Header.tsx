@@ -6,7 +6,7 @@ import { useTheme } from 'next-themes';
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { useDocTalkStore } from '../store';
-import ModelSelector from './ModelSelector';
+import ModeSelector from './ModeSelector';
 import LanguageSelector from './LanguageSelector';
 import UserMenu from './UserMenu';
 import { useLocale } from '../i18n';
@@ -69,7 +69,7 @@ export default function Header({ variant = 'full', isDemo, isLoggedIn }: HeaderP
         </Link>
       )}
       <div className="ml-auto flex items-center gap-1 sm:gap-2 shrink-0">
-        {!isMinimal && !(isDemo && !isLoggedIn) && <ModelSelector />}
+        {!isMinimal && !(isDemo && !isLoggedIn) && <ModeSelector />}
         {!isMinimal && (
           <button
             onClick={toggleTheme}

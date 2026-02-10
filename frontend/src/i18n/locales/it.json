@@ -354,5 +354,11 @@
   "consent.message": "Utilizziamo analisi per migliorare il nostro servizio.",
   "consent.accept": "Accetta",
   "consent.decline": "Rifiuta",
-  "consent.learnMore": "Scopri di più"
+  "consent.learnMore": "Scopri di più",
+  "modes.quick": "Veloce",
+  "modes.balanced": "Bilanciato",
+  "modes.thorough": "Approfondito",
+  "modes.quickDesc": "Risposte rapide per ricerche semplici",
+  "modes.balancedDesc": "Miglior rapporto qualità-velocità",
+  "modes.thoroughDesc": "Analisi approfondita con massima precisione"
 }

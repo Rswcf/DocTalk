@@ -1,7 +1,7 @@
 "use client";
 
 import { create } from 'zustand';
-import { AVAILABLE_MODELS, DEFAULT_MODEL_ID } from '../lib/models';
+import { DEFAULT_MODE } from '../lib/models';
 import type { PlanType } from '../lib/models';
 import type { Citation, Message, NormalizedBBox, SessionItem } from '../types';
 
@@ -31,7 +31,7 @@ export interface DocTalkStore {
   sessionId: string | null;
   messages: Message[];
   isStreaming: boolean;
-  selectedModel: string;
+  selectedMode: string;
   sessions: SessionItem[];
 
   // Document summary (auto-generated)
@@ -65,7 +65,7 @@ export interface DocTalkStore {
   addCitationToLastMessage: (citation: Citation) => void;
   setStreaming: (v: boolean) => void;
   setSessionId: (id: string) => void;
-  setSelectedModel: (id: string) => void;
+  setSelectedMode: (id: string) => void;
   setMessages: (msgs: Message[]) => void;
   setSessions: (sessions: SessionItem[]) => void;
   addSession: (session: SessionItem) => void;
@@ -97,10 +97,11 @@ const initialState = {
   messages: [] as Message[],
   isStreaming: false,
   scrollNonce: 0,
-  selectedModel: (() => {
-    const stored = typeof window !== 'undefined' ? localStorage.getItem('doctalk_model') : null;
-    const id = stored || DEFAULT_MODEL_ID;
-    return AVAILABLE_MODELS.some(m => m.id === id) ? id : DEFAULT_MODEL_ID;
+  selectedMode: (() => {
+    const stored = typeof window !== 'undefined' ? localStorage.getItem('doctalk_mode') : null;
+    // Migration: if stored value looks like an old model ID (contains '/'), reset to default
+    if (stored && stored.includes('/')) return DEFAULT_MODE;
+    return stored || DEFAULT_MODE;
   })(),
   sessions: [] as SessionItem[],
   documentSummary: null as string | null,
@@ -161,9 +162,9 @@ export const useDocTalkStore = create<DocTalkStore>((set, get) => ({
   },
   setStreaming: (v: boolean) => set({ isStreaming: v }),
   setSessionId: (id: string) => set({ sessionId: id }),
-  setSelectedModel: (id: string) => {
-    set({ selectedModel: id });
-    try { localStorage.setItem('doctalk_model', id); } catch {}
+  setSelectedMode: (id: string) => {
+    set({ selectedMode: id });
+    try { localStorage.setItem('doctalk_mode', id); } catch {}
   },
   setSessions: (sessions: SessionItem[]) => set({ sessions }),
   addSession: (session: SessionItem) => set((state) => ({
@@ -189,5 +190,5 @@ export const useDocTalkStore = create<DocTalkStore>((set, get) => ({
   setSearchQuery: (query: string) => set({ searchQuery: query }),
   setSearchMatches: (matches) => set({ searchMatches: matches }),
   setCurrentMatchIndex: (index: number) => set({ currentMatchIndex: index }),
-  reset: () => set((state) => ({ ...initialState, selectedModel: state.selectedModel, lastDocumentId: state.lastDocumentId, lastDocumentName: state.lastDocumentName })),
+  reset: () => set((state) => ({ ...initialState, selectedMode: state.selectedMode, lastDocumentId: state.lastDocumentId, lastDocumentName: state.lastDocumentName })),
 }));

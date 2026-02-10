@@ -9,7 +9,8 @@ from pydantic import BaseModel
 
 class ChatRequest(BaseModel):
     message: str
-    model: Optional[str] = None  # OpenRouter model ID override
+    mode: Optional[str] = None  # Performance mode: "quick"/"balanced"/"thorough"
+    model: Optional[str] = None  # OpenRouter model ID override (deprecated, use mode)
     locale: Optional[str] = None  # Frontend locale code (en/zh/es/fr/de)
 
 

@@ -178,6 +178,41 @@ MODEL_PROFILES: dict[str, ModelProfile] = {
         supports_stream_options=False,
         prompt_style="explicit_citation",
     ),
+    "qwen/qwen3-235b-a22b": ModelProfile(
+        temperature=0.2,
+        max_tokens=2048,
+        supports_cache_control=False,
+        supports_stream_options=False,
+        prompt_style="default",
+    ),
+    "mistralai/mistral-medium-3": ModelProfile(
+        temperature=0.2,
+        max_tokens=2048,
+        supports_cache_control=False,
+        supports_stream_options=False,
+        prompt_style="default",
+    ),
+    "mistralai/mistral-medium-3.1": ModelProfile(
+        temperature=0.2,
+        max_tokens=2048,
+        supports_cache_control=False,
+        supports_stream_options=False,
+        prompt_style="default",
+    ),
+    "mistralai/mistral-large-2512": ModelProfile(
+        temperature=0.2,
+        max_tokens=2048,
+        supports_cache_control=False,
+        supports_stream_options=False,
+        prompt_style="default",
+    ),
+    "bytedance-seed/seed-1.6": ModelProfile(
+        temperature=0.2,
+        max_tokens=2048,
+        supports_cache_control=False,
+        supports_stream_options=False,
+        prompt_style="default",
+    ),
 }
 
 # Fallback for unknown models

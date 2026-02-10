@@ -12,7 +12,7 @@ DocTalk helps heavy document readers quickly locate key information in long docu
 - **Cited Answers** — Ask questions and get responses with `[1]`, `[2]` references to exact passages
 - **Page Highlights** — Click or hover a citation to see the referenced text; click to jump to the page with bounding-box overlays (PDF) or text snippet highlighting (non-PDF)
 - **Split View** — Resizable chat panel (left) + PDF viewer (right) with drag-to-pan zoom
-- **9 LLM Models** — Switch between Claude, GPT, Gemini, DeepSeek, Grok, MiniMax, Kimi, and more via OpenRouter; model-adaptive prompts and parameters optimize each model's RAG performance
+- **3 Performance Modes** — Quick, Balanced, and Thorough analysis modes via OpenRouter; model-adaptive prompts and parameters optimize each mode's RAG performance
 - **Demo Mode** — Try 3 sample documents (NVIDIA 10-K, Attention paper, NDA contract) instantly with 5 free messages per document, progress bar indicator, and rate limiting
 - **Credits System** — Free (5K/month), Plus (30K/month), and Pro (150K/month) with Stripe subscriptions and annual billing
 - **11 Languages** — English, Chinese, Spanish, Japanese, German, French, Korean, Portuguese, Italian, Arabic, Hindi
@@ -36,7 +36,7 @@ DocTalk helps heavy document readers quickly locate key information in long docu
 - **Re-parse Documents** — Re-parse existing documents after config changes without re-uploading
 - **Keyboard Accessible** — Full keyboard navigation for menus, modals with focus traps, and ARIA compliance
 - **Pricing Comparison** — Free vs Plus vs Pro feature comparison table on the billing page
-- **Model Gating** — Premium models (Claude Opus 4.6) restricted to Plus+ plans
+- **Mode Gating** — Thorough mode (deep analysis) restricted to Plus+ plans
 - **Landing Page** — FAQ section, How-It-Works steps, social proof metrics, security cards, and final CTA
 - **SSRF Protection** — URL imports validated against private IP ranges, internal ports blocked, manual redirect following with per-hop validation
 - **Encryption at Rest** — MinIO server-side encryption (SSE-S3) on all stored files with bucket-level default policy

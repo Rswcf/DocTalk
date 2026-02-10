@@ -20,14 +20,14 @@ export async function chatStream(
   onCitation: (c: Citation) => void,
   onError: (e: ErrorPayload) => void,
   onDone: (d: DonePayload) => void,
-  model?: string,
+  mode?: string,
   locale?: string,
   signal?: AbortSignal,
 ) {
   const res = await fetch(`${PROXY_BASE}/api/sessions/${sessionId}/chat`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ message, ...(model ? { model } : {}), ...(locale ? { locale } : {}) }),
+    body: JSON.stringify({ message, ...(mode ? { mode } : {}), ...(locale ? { locale } : {}) }),
     signal,
   });
 

@@ -131,6 +131,7 @@ class ChatService:
         model: Optional[str] = None,
         user: Optional[User] = None,
         locale: Optional[str] = None,
+        mode: Optional[str] = None,
     ) -> AsyncGenerator[Dict[str, Any], None]:
         """Main chat streaming generator producing SSE event dicts.
 
@@ -177,20 +178,25 @@ class ChatService:
                 for drow in doc_rows.all():
                     collection_doc_names[drow[0]] = drow[1]
 
-        # Optional pre-chat credit check
-        effective_model = settings.LLM_MODEL
-        if model and model in settings.ALLOWED_MODELS:
+        # Resolve mode → model
+        effective_mode = mode or "balanced"
+        if mode and mode in settings.MODE_MODELS:
+            effective_model = settings.MODE_MODELS[mode]
+        elif model and model in settings.ALLOWED_MODELS:
             effective_model = model
+        else:
+            effective_model = settings.MODE_MODELS.get("balanced", settings.LLM_MODEL)
 
         # Force demo model for anonymous users on demo documents
         if user is None and doc and doc.demo_slug:
             effective_model = settings.DEMO_LLM_MODEL
+            effective_mode = "quick"
 
-        # Premium model gating: require Plus or Pro plan
-        if effective_model in settings.PREMIUM_MODELS:
+        # Premium mode gating: require Plus or Pro plan
+        if effective_mode in settings.PREMIUM_MODES:
             user_plan = (user.plan or "free").lower() if user else "free"
             if user_plan == "free":
-                yield sse("error", {"code": "MODEL_NOT_ALLOWED", "message": "Upgrade to Plus to use premium models"})
+                yield sse("error", {"code": "MODE_NOT_ALLOWED", "message": "Upgrade to Plus to use Thorough mode"})
                 return
 
         if user is not None:
@@ -409,7 +415,7 @@ class ChatService:
             pt = int(prompt_tokens or 0)
             ct = int(output_tokens or 0)
             try:
-                cost = credit_service.calculate_cost(pt, ct, effective_model)
+                cost = credit_service.calculate_cost(pt, ct, effective_model, mode=effective_mode)
                 ok = await credit_service.debit_credits(
                     db,
                     user_id=user.id,

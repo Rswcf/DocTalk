@@ -26,7 +26,7 @@ DocTalk is an AI-powered PDF reader with a unique competitive advantage: **citat
 - **Cross-document Q&A** is the #1 missing capability vs. NotebookLM
 
 ### DocTalk's Position Today
-- **Strengths**: Citation precision (small chunks + bbox highlights), 9 LLM models via OpenRouter with model-adaptive prompts and per-model parameter tuning (benchmark-validated), OCR, dark mode, multi-language (11 languages), ChatGPT-style chat UI (stop generation, scroll-to-bottom, compact citation pills, "+" action menu, hover action buttons, styled code blocks with copy, antialiased typography, max-width centering), streaming indicators, auto-summary, security hardening (SSRF protection, SSE-S3 encryption at rest, file validation, structured security logging, GDPR data export, cookie consent, non-root Docker)
+- **Strengths**: Citation precision (small chunks + bbox highlights), 3 performance modes (Quick/Balanced/Thorough) via OpenRouter with model-adaptive prompts and per-model parameter tuning (benchmark-validated), OCR, dark mode, multi-language (11 languages), ChatGPT-style chat UI (stop generation, scroll-to-bottom, compact citation pills, "+" action menu, hover action buttons, styled code blocks with copy, antialiased typography, max-width centering), streaming indicators, auto-summary, security hardening (SSRF protection, SSE-S3 encryption at rest, file validation, structured security logging, GDPR data export, cookie consent, non-root Docker)
 - **Weaknesses**: No team features, no API, no SSO
 
 ---
@@ -36,7 +36,7 @@ DocTalk is an AI-powered PDF reader with a unique competitive advantage: **citat
 ### Where DocTalk Wins Today
 | vs. Competitor | DocTalk Advantage |
 |----------------|-------------------|
-| **NotebookLM** | Page-level bbox citations, model choice (9 models), OCR, privacy, encryption at rest, GDPR data export |
+| **NotebookLM** | Page-level bbox citations, 3 performance modes, OCR, privacy, encryption at rest, GDPR data export |
 | **ChatPDF** | Multi-model, dark mode, multi-session, auto-summary, streaming UX |
 | **AskYourPDF** | Better citation UX (hover preview, page highlights), cleaner UI, multi-language |
 | **Humata** | Better citation accuracy (small chunks), more model options, credits transparency |
@@ -96,10 +96,10 @@ DocTalk is an AI-powered PDF reader with a unique competitive advantage: **citat
 | Tier | Monthly | Annual (save 20-25%) | Credits/mo | Documents | Models |
 |------|---------|---------------------|-----------|-----------|--------|
 | **Free** | $0 | — | 5,000 | 3 stored | Budget + Standard |
-| **Plus** (NEW) | $7.99 | $5.99/mo | 30,000 | 20 stored | All 9 |
-| **Pro** | $14.99 | $11.99/mo | 150,000 | Unlimited | All 9 |
-| **Team** (NEW) | $29.99/seat | $24.99/seat/mo | 200K/seat | Unlimited | All 9 |
-| **Enterprise** (NEW) | Custom | Custom | Custom | Unlimited | All + custom |
+| **Plus** (NEW) | $7.99 | $5.99/mo | 30,000 | 20 stored | Quick + Balanced |
+| **Pro** | $14.99 | $11.99/mo | 150,000 | Unlimited | All 3 modes |
+| **Team** (NEW) | $29.99/seat | $24.99/seat/mo | 200K/seat | Unlimited | All 3 modes |
+| **Enterprise** (NEW) | Custom | Custom | Custom | Unlimited | All 3 + custom |
 
 ### Key Changes
 1. **Reduce free tier** from 10K to 5K credits — create upgrade pressure by day 2-3 of active use
@@ -181,7 +181,7 @@ DocTalk is an AI-powered PDF reader with a unique competitive advantage: **citat
 | **Free tier reduction causes backlash** | MEDIUM | Grandfather existing users at 10K for 3 months; communicate with empathy |
 | **Multi-document Q&A quality degrades** | MEDIUM | Reranker (Cohere Rerank) for cross-doc retrieval quality; tune top_k |
 | **Enterprise sales cycle too long** for small team | HIGH | Focus on self-serve Team tier first; enterprise = later-stage |
-| **Competitors undercut on price** | LOW | Compete on value (9 models, citation quality, OCR), not price |
+| **Competitors undercut on price** | LOW | Compete on value (3 performance modes, citation quality, OCR), not price |
 | **SOC 2 takes too long** | MEDIUM | Foundation laid: structured security logging, encryption at rest, SSRF protection, non-root Docker, GDPR data export, OAuth token cleanup. Engage compliance automation tool (Vanta/Drata) for formal audit |
 | **Too many features dilute quality** | HIGH | Ship fewer features better; focus on citation precision as core differentiator |
 

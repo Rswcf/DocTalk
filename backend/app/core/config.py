@@ -25,15 +25,13 @@ class Settings(BaseSettings):
     LLM_MODEL: str = Field(default="anthropic/claude-sonnet-4.5")
     LLM_MAX_CONTEXT_TOKENS: int = Field(default=180000)
     ALLOWED_MODELS: list[str] = Field(default=[
-        "x-ai/grok-4.1-fast",
         "deepseek/deepseek-v3.2",
-        "minimax/minimax-m2.1",
-        "moonshotai/kimi-k2.5",
-        "google/gemini-3-flash-preview",
+        "mistralai/mistral-medium-3.1",
+        "mistralai/mistral-large-2512",
+        # Fallbacks
+        "qwen/qwen3-30b-a3b",
+        "mistralai/mistral-medium-3",
         "openai/gpt-5.2",
-        "google/gemini-3-pro-preview",
-        "anthropic/claude-sonnet-4.5",
-        "anthropic/claude-opus-4.6",
     ])
 
     # Object Storage (MinIO local / S3-compatible in production)
@@ -78,6 +76,19 @@ class Settings(BaseSettings):
     # Demo LLM — cheaper model for anonymous demo conversations
     DEMO_LLM_MODEL: str = "deepseek/deepseek-v3.2"
 
+    # Mode-based model selection (Quick/Balanced/Thorough)
+    MODE_MODELS: dict[str, str] = {
+        "quick": "deepseek/deepseek-v3.2",
+        "balanced": "mistralai/mistral-medium-3.1",
+        "thorough": "mistralai/mistral-large-2512",
+    }
+    MODE_CREDIT_MULTIPLIER: dict[str, float] = {
+        "quick": 0.5,
+        "balanced": 1.0,
+        "thorough": 3.0,
+    }
+    PREMIUM_MODES: list[str] = Field(default=["thorough"])
+
     # Sentry
     SENTRY_DSN: Optional[str] = None
     SENTRY_ENVIRONMENT: str = Field(default="production")
@@ -112,10 +123,8 @@ class Settings(BaseSettings):
     PLUS_MAX_FILE_SIZE_MB: int = 50
     PRO_MAX_FILE_SIZE_MB: int = 100
 
-    # Model access by plan — Premium models (claude-opus-4.6) require Plus+
-    PREMIUM_MODELS: list[str] = Field(default=[
-        "anthropic/claude-opus-4.6",
-    ])
+    # Model access by plan (legacy — replaced by PREMIUM_MODES)
+    PREMIUM_MODELS: list[str] = Field(default=[])
 
     # Admin access — comma-separated email list
     ADMIN_EMAILS: str = ""

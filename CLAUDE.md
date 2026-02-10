@@ -31,7 +31,7 @@ Railway 项目包含 5 个服务：backend, Postgres, Redis, qdrant-v2, minio-v2
 - **Auth**: Auth.js (NextAuth) v5 + Google OAuth + JWT
 - **Payments**: Stripe Checkout + Webhooks
 - **LLM/Embedding**: 统一通过 **OpenRouter** 网关调用
-  - LLM: 默认 `anthropic/claude-sonnet-4.5`，支持用户在前端切换（9 个模型可选）
+  - LLM: 3 种性能模式（Quick: DeepSeek V3.2 / Balanced: Mistral Medium 3.1 / Thorough: Mistral Large 2512），前端用户通过 ModeSelector 切换
   - Demo LLM: `deepseek/deepseek-v3.2`（匿名 Demo 用户使用低成本模型，降低 OpenRouter 消耗）
   - Embedding: `openai/text-embedding-3-small` (dim=1536)
 - **PDF Parse**: PyMuPDF (fitz)
@@ -46,15 +46,15 @@ Railway 项目包含 5 个服务：backend, Postgres, Redis, qdrant-v2, minio-v2
 - **认证**: Auth.js v5 + Google OAuth，JWT 策略，后端通过 `require_auth` 依赖校验
 - **API 代理**: 前端所有后端请求（含 SSE chat stream）通过 `/api/proxy/*` 路由，自动注入 Authorization header
 - **分层认证模型**:
-  - 未登录: 可试用 Demo（3 篇真实 PDF，5 条消息限制，服务端 + 客户端双重限制，匿名用户强制使用 DeepSeek V3.2（低成本）且隐藏 ModelSelector，IP 级速率限制 10 req/min）
+  - 未登录: 可试用 Demo（3 篇真实 PDF，5 条消息限制，服务端 + 客户端双重限制，匿名用户强制使用 DeepSeek V3.2（低成本）且隐藏 ModeSelector，IP 级速率限制 10 req/min）
   - 已登录: 可上传个人 PDF，服务端文档列表，Credits 系统；访问 Demo 文档使用 Credits，无消息限制
 - **Demo 系统**: 后端启动时自动种子 3 篇真实文档（NVIDIA 10-K、Attention 论文、NDA）到 MinIO + DB，通过 Celery 解析。`demo_slug` 列标识 Demo 文档，`is_demo` 属性暴露给前端。`GET /api/documents/demo` 返回 Demo 文档列表。`/demo` 页面从 API 获取文档 ID 后链接到 `/d/{docId}`，旧 `/demo/[sample]` 路由自动重定向
 - **Credits 系统**: 预付费模式，余额 + Ledger 双表记录，每次对话扣费
 - **订阅系统**: Free (5K credits/月) + Plus (30K credits/月, $7.99) + Pro (150K credits/月, $14.99) 三级，支持月付/年付（年付享 20-25% 折扣），月度 credits 惰性发放（`ensure_monthly_credits`），Stripe 订阅集成
-- **模型门控**: 高级模型（`anthropic/claude-opus-4.6`）仅限 Plus+ 套餐使用，后端 `chat_service.py` 校验 + 前端 `ModelSelector.tsx` 锁定图标。ModelSelector 根据认证状态显示不同 CTA：匿名用户点击锁定模型 → 登录模态框（`?auth=1`），已登录免费用户 → `/billing`
+- **模式门控**: Thorough 模式（深度分析）仅限 Plus+ 套餐使用，后端 `chat_service.py` 校验 + 前端 `ModeSelector.tsx` 锁定图标。ModeSelector 根据认证状态显示不同 CTA：匿名用户点击锁定模式 → 登录模态框（`?auth=1`），已登录免费用户 → `/billing`
 - **Profile 页面**: `/profile` 4 个 Tab (Profile/Credits/Usage/Account)，含交易历史、使用统计、账户删除
 - **API 网关**: 所有 LLM 和 Embedding 调用统一通过 OpenRouter（单一 API key）。匿名 Demo 用户使用 `DEMO_LLM_MODEL`（默认 `deepseek/deepseek-v3.2`）降低成本
-- **模型切换**: 前端用户可选择 LLM 模型，后端白名单 (`ALLOWED_MODELS`) 验证后透传给 OpenRouter
+- **模式切换**: 前端用户可选择性能模式（Quick/Balanced/Thorough），后端映射到具体模型并通过 OpenRouter 调用
 - **模型自适应提示**: `model_profiles.py` 为每个模型定义独立的 `ModelProfile`（temperature、max_tokens、supports_cache_control、supports_stream_options、prompt_style）。`chat_service.py` 根据模型 profile 动态调整系统提示规则和 API 参数。5 种 prompt_style 变体：`default`（MiniMax/Kimi/GPT/Gemini Pro）、`positive_framing`（DeepSeek — 避免消极表述过度遵从）、`constraints_at_end`（Gemini Flash — 约束放末尾防丢失）、`explicit_formatting`（Grok — 显式 markdown 指导）、`explicit_citation`（Claude — 强制每条陈述引用）。`cache_control` 仅对 Anthropic 模型发送（修复了之前对所有模型发送的 bug），`stream_options` 仅对 OpenAI 模型启用
 - **AI 回答语言**: 跟随用户提问语言（"Your response language MUST match the language of the user's question"），不受前端 UI locale 影响。前端 locale 仅控制界面文字展示
 - **RAG 基准测试**: `backend/scripts/` 包含 48 个测试用例（10 类别 × 3 demo 文档）、自动化 benchmark runner（`run_benchmark.py`）和评估器（`evaluate_benchmark.py`，8 维度自动评分 + 可选 LLM-as-judge）。评估维度：引用准确度、信息完整度、幻觉率、语言合规、Markdown 质量、指令遵从、否定案例准确度、首 token 延迟
@@ -267,7 +267,7 @@ SENTRY_TRACES_SAMPLE_RATE=0.1
 
 ### 前端相关
 - **UI 设计**: 单色 zinc 调色板，Inter 字体 + `antialiased` 字体渲染，dark mode 反转按钮 (`bg-zinc-900 dark:bg-zinc-50`)，全站无 `gray-*`/`blue-*` 类（保留 Google OAuth 品牌色和状态色）。卡片使用 `shadow-sm`/`shadow-md` 分层，模态框 `animate-fade-in`/`animate-slide-up` 动画，零 `transition-all` 策略（所有过渡使用具体属性 `transition-colors`/`transition-opacity`/`transition-shadow`）。Tailwind Typography 配置：prose 正文颜色覆盖为 zinc-950（`#09090b`，近纯黑，替代默认 gray-700 `#374151`），dark mode 为 zinc-50（`#fafafa`）；内联 `code` 去除反引号装饰 + 灰色背景药丸样式；段落/列表间距收紧
-- **Header variant**: `variant='minimal'`（首页/Demo/Auth：仅 Logo+UserMenu）vs `variant='full'`（文档页/Billing/Profile：完整控件）。额外支持 `isDemo`/`isLoggedIn` props，匿名 Demo 用户时隐藏 ModelSelector
+- **Header variant**: `variant='minimal'`（首页/Demo/Auth：仅 Logo+UserMenu）vs `variant='full'`（文档页/Billing/Profile：完整控件）。额外支持 `isDemo`/`isLoggedIn` props，匿名 Demo 用户时隐藏 ModeSelector
 - **Landing page**: HeroSection（大字标题+CTA）+ **ProductShowcase**（Remotion `<Player>` 动画演示：用户提问→AI流式引用回答→PDF高亮同步，300帧@30fps=10s循环，macOS window chrome 框架，lazy-loaded，支持 dark mode）+ **HowItWorks**（3步骤：Upload→Ask→Cited Answers）+ FeatureGrid（3列特性卡片）+ **SocialProof**（4项信任指标）+ **SecuritySection**（4张安全卡片）+ **FAQ**（6项手风琴）+ **FinalCTA**（转化CTA）+ PrivacyBadge + **Footer**（3列链接组件）
 - **动态 CTA**: 首页根据登录状态显示不同 UI（未登录→Landing page，已登录→Dashboard 上传区+文档列表）
 - **AuthModal**: 使用查询参数 `?auth=1` 触发登录模态框，ESC 可关闭，焦点陷阱（Tab 循环），backdrop 点击关闭。底部显示 AI 处理披露（`auth.aiDisclosure`：文档由第三方 AI 服务处理）和服务条款通知（`auth.termsNotice`）
@@ -275,7 +275,7 @@ SENTRY_TRACES_SAMPLE_RATE=0.1
 - **CCPA 合规**: Footer Legal 列新增 "Do Not Sell My Info" 链接
 - **数据导出**: Profile AccountActionsSection 新增 "Download My Data" 按钮，调用 `GET /api/users/me/export` 下载用户全部数据 JSON
 - **隐私声明修正**: 11 种语言的 i18n 文件中移除了虚假声明（"端到端加密"、"30 天自动删除"、"不与第三方共享"、"我们不保留任何内容"），替换为准确描述
-- **Demo 模式**: `/demo` 页面从后端 `GET /api/documents/demo` 获取真实文档列表，显示 "5 free messages" 提示信息，链接到 `/d/{docId}`；ChatPanel 通过 `maxUserMessages` prop 实现客户端 5 条限制 + 进度条（剩余 ≤2 时 amber 警告色）+ 登录 CTA；旧 `/demo/[sample]` 路由自动重定向到新路径。匿名用户在 Demo 文档页面 Header 中隐藏 ModelSelector（通过 `isDemo`/`isLoggedIn` props 控制）
+- **Demo 模式**: `/demo` 页面从后端 `GET /api/documents/demo` 获取真实文档列表，显示 "5 free messages" 提示信息，链接到 `/d/{docId}`；ChatPanel 通过 `maxUserMessages` prop 实现客户端 5 条限制 + 进度条（剩余 ≤2 时 amber 警告色）+ 登录 CTA；旧 `/demo/[sample]` 路由自动重定向到新路径。匿名用户在 Demo 文档页面 Header 中隐藏 ModeSelector（通过 `isDemo`/`isLoggedIn` props 控制）
 - **文档列表**: 服务端 + localStorage 合并，服务端优先
 - **前端全部 `"use client"`**: 无 SSR，所有页面和组件均为客户端渲染
 - **所有 API 走代理**: REST 和 SSE (chat stream) 均通过 `PROXY_BASE` (`/api/proxy`) 路由，`sse.ts` 的 `chatStream()` 也走代理以注入 JWT
@@ -292,7 +292,7 @@ SENTRY_TRACES_SAMPLE_RATE=0.1
 - **滚动到底部按钮**: 消息列表滚动离底部 >80px 时，显示浮动 ArrowDown 圆形按钮，点击平滑滚动到底部
 - **引用悬浮 Tooltip**: `MessageBubble.tsx` 中引用 `[n]` 按钮悬浮显示 textSnippet + page tooltip，减少验证点击次数
 - **流式状态指示**: streaming 时显示 3 点弹跳动画（"搜索文档中..."）和闪烁光标，区分 retrieval 阶段和生成阶段
-- **下拉菜单键盘导航**: UserMenu、ModelSelector、LanguageSelector、SessionDropdown 支持 Arrow/Home/End/Escape 键盘操作
+- **下拉菜单键盘导航**: UserMenu、ModeSelector、LanguageSelector、SessionDropdown 支持 Arrow/Home/End/Escape 键盘操作
 - **CreditsDisplay 自动刷新**: 每 60s 轮询 + 自定义事件 `doctalk:credits-refresh`（聊天完成/购买后触发），`triggerCreditsRefresh()` 导出供外部调用
 - **Billing 骨架屏**: 产品列表加载中显示 skeleton cards，失败显示 error + retry 按钮
 - **响应式**: Header 移动端间距/截断/CreditsDisplay 小屏隐藏，upload zone `p-8 sm:p-12`，billing `p-6 sm:p-8`
@@ -331,8 +331,8 @@ SENTRY_TRACES_SAMPLE_RATE=0.1
 - **PDF 文本搜索**: PdfViewer 通过 `pdfjs page.getTextContent()` 提取全文文本，存入 Zustand store (searchQuery/searchMatches/currentMatchIndex)。PageWithHighlights 的 `customTextRenderer` 同时处理引用高亮和搜索匹配高亮（`<mark class="pdf-search-match">`）。PdfToolbar 提供搜索 UI（Search 图标 + 输入框 + 匹配计数 + 上下翻页）
 
 ### 其他
-- **模型白名单**: 后端 `config.py:ALLOWED_MODELS` 定义允许的模型 ID 列表
-- **模型 Profile**: `model_profiles.py:MODEL_PROFILES` 为 9 个模型定义独立的 temperature/max_tokens/prompt_style。`get_model_profile()` 返回模型配置，`get_rules_for_model()` 返回模型专用规则文本
+- **模型白名单**: 后端 `config.py:ALLOWED_MODELS` 定义允许的模型 ID 列表（3 种模式对应的主模型 + 备选模型）
+- **模型 Profile**: `model_profiles.py:MODEL_PROFILES` 为各模型定义独立的 temperature/max_tokens/prompt_style。`get_model_profile()` 返回模型配置，`get_rules_for_model()` 返回模型专用规则文本
 - **react-resizable-panels v4 API**: 使用 `Group`/`Panel`/`Separator`
 - **Alembic 配置**: `sqlalchemy.url` 被 `env.py` 运行时覆盖
 
@@ -380,7 +380,7 @@ DocTalk/
 │   │   │   ├── rate_limit.py     # 内存级速率限制器 (匿名用户 chat 端点, 10K 条目自动清理)
 │   │   │   ├── url_validator.py  # SSRF 防护 (DNS 解析 + 私有 IP 阻断 + 端口封锁 + 重定向验证)
 │   │   │   ├── security_log.py   # 结构化 JSON 安全事件日志
-│   │   │   └── model_profiles.py # 模型自适应配置 (ModelProfile + 9 模型 profile + 5 种 prompt_style)
+│   │   │   └── model_profiles.py # 模型自适应配置 (ModelProfile + 各模型 profile + 5 种 prompt_style)
 │   │   ├── models/
 │   │   │   ├── tables.py         # ORM (User, Document, Collection, Session, Credits, Ledger...)
 │   │   │   ├── database.py       # Async engine
@@ -453,7 +453,7 @@ DocTalk/
 │   │   │   ├── api.ts            # REST 客户端 (含 PROXY_BASE)
 │   │   │   ├── auth.ts           # Auth.js 配置
 │   │   │   ├── authAdapter.ts    # FastAPI Adapter
-│   │   │   ├── models.ts         # AVAILABLE_MODELS 定义 (9 模型)
+│   │   │   ├── models.ts         # AVAILABLE_MODELS 定义 (3 性能模式)
 │   │   │   ├── export.ts         # 对话导出 (Markdown + 引用脚注)
 │   │   │   ├── utils.ts          # 工具函数 (sanitizeFilename: Unicode 规范化 + 控制字符剥离 + 双扩展名阻断)
 │   │   │   └── sse.ts            # SSE 流式客户端 (支持 AbortSignal 中断)

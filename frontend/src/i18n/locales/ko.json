@@ -354,5 +354,11 @@
   "consent.message": "서비스 개선을 위해 분석 도구를 사용합니다.",
   "consent.accept": "수락",
   "consent.decline": "거부",
-  "consent.learnMore": "자세히 알아보기"
+  "consent.learnMore": "자세히 알아보기",
+  "modes.quick": "빠른",
+  "modes.balanced": "균형",
+  "modes.thorough": "심층",
+  "modes.quickDesc": "간단한 검색을 위한 빠른 답변",
+  "modes.balancedDesc": "최적의 품질 대 속도 비율",
+  "modes.thoroughDesc": "최고 정확도의 심층 분석"
 }

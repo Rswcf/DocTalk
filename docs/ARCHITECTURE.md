@@ -504,7 +504,7 @@ graph TD
 
     subgraph HeaderComp["Header"]
         Logo["Logo"]
-        ModelSel["ModelSelector"]
+        ModelSel["ModeSelector"]
         LangSel["LanguageSelector"]
         SessionDrop["SessionDropdown"]
         CreditsDis["CreditsDisplay"]
@@ -578,7 +578,7 @@ graph TD
 
 **Header variants:**
 - `variant="minimal"` — Logo + UserMenu only (transparent background) — used on Home, Demo, Auth pages
-- `variant="full"` — All controls (ModelSelector, LanguageSelector, SessionDropdown, CreditsDisplay, UserMenu) — used on Document, Billing, Profile pages. Additional `isDemo`/`isLoggedIn` props hide ModelSelector for anonymous demo users
+- `variant="full"` — All controls (ModeSelector, LanguageSelector, SessionDropdown, CreditsDisplay, UserMenu) — used on Document, Billing, Profile pages. Additional `isDemo`/`isLoggedIn` props hide ModeSelector for anonymous demo users
 
 **Landing page sections** (in order): HeroSection → Product Showcase (Remotion `<Player>` animated demo, 300 frames @ 30fps, lazy-loaded) → HowItWorks → FeatureGrid → SocialProof → SecuritySection → FAQ → FinalCTA → PrivacyBadge → Footer
 

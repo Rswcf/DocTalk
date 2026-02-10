@@ -252,7 +252,7 @@ The market has progressed from novelty (2023) through commoditization of basic f
 | **Multi-document chat** | Yes (Collections) | Yes | Yes | Yes | Yes | Yes | Yes | Yes (10) |
 | **Multi-format support** | PDF+DOCX+PPTX+XLSX+TXT+MD+URL | PDF only | PDF+DOC+PPT+TXT | PDF | PDF+web+audio | PDF+DOC+EPUB | PDF+Docs+YT+web | PDF+DOC+PPT |
 | **OCR** | Yes | No | Yes | Yes (Team+) | No | Yes | No | No |
-| **Model selection** | Yes (9 models) | No | Yes (8+ models) | Yes (GPT-5) | Yes (multi) | Yes (GPT-4o) | No (Gemini only) | No |
+| **Model selection** | Yes (3 modes) | No | Yes (8+ models) | Yes (GPT-5) | Yes (multi) | Yes (GPT-4o) | No (Gemini only) | No |
 | **PDF text search** | Yes | No | No | No | No | No | No | Yes |
 | **Session management** | Yes (multi-session) | No | No | No | Yes (notebooks) | No | Yes (notebooks) | No |
 | **Auto-summary** | Yes | Yes | No | No | Yes | No | Yes | Yes |
@@ -342,7 +342,7 @@ Humata, Denser, and Anara are all moving upmarket. Enterprise features (SSO, SOC
 
 ### 5.5 Model Choice as a Feature
 
-Users increasingly expect to choose their AI model. AskYourPDF (8+ models), DocTalk (9 models), and Anara (multiple tiers of models) all offer model selection. This is becoming table stakes for power users.
+Users increasingly expect to choose their AI model. AskYourPDF (8+ models), DocTalk (3 performance modes), and Anara (multiple tiers of models) all offer model selection. This is becoming table stakes for power users.
 
 ### 5.6 Credit/Usage-Based Pricing
 
@@ -375,7 +375,7 @@ Any competitor relying purely on "chat with PDF" as their value proposition is v
 ### Strengths (Defend & Amplify)
 - **Visual bbox citation highlighting**: Best-in-class feature that no major competitor matches
 - **Side-by-side resizable panels**: Superior document reading experience
-- **9-model selection**: Matches or exceeds most competitors
+- **3-mode system**: Matches or exceeds most competitors
 - **PDF text search**: Rare feature among chat-first tools
 - **Multi-session per document**: Organized conversation management
 - **Auto-summary + suggested questions**: Reduces time-to-first-value

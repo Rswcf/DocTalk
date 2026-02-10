@@ -354,5 +354,11 @@
   "consent.message": "サービス改善のためにアナリティクスを使用しています。",
   "consent.accept": "同意する",
   "consent.decline": "拒否する",
-  "consent.learnMore": "詳しく"
+  "consent.learnMore": "詳しく",
+  "modes.quick": "クイック",
+  "modes.balanced": "バランス",
+  "modes.thorough": "詳細",
+  "modes.quickDesc": "簡単な検索に素早く回答",
+  "modes.balancedDesc": "品質と速度の最適なバランス",
+  "modes.thoroughDesc": "最高精度の深い分析"
 }

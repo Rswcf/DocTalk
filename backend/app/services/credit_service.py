@@ -12,28 +12,35 @@ from app.models.tables import CreditLedger, UsageRecord, User
 # Token-to-credit rates by model tier
 CREDIT_RATES = {
     # Budget tier: 1 input, 5 output per 1K tokens
-    "x-ai/grok-4.1-fast": (1, 5),
     "deepseek/deepseek-v3.2": (1, 5),
+    "qwen/qwen3-30b-a3b": (1, 5),
+    # Standard tier: 2 input, 10 output per 1K tokens
+    "mistralai/mistral-medium-3": (2, 10),
+    "mistralai/mistral-medium-3.1": (2, 10),
+    "mistralai/mistral-large-2512": (2, 10),
+    # Legacy rates (kept for historical usage records)
+    "openai/gpt-5.2": (3, 15),
+    "x-ai/grok-4.1-fast": (1, 5),
     "minimax/minimax-m2.1": (1, 5),
     "moonshotai/kimi-k2.5": (1, 5),
     "google/gemini-3-flash-preview": (1, 5),
-    # Standard tier: 3 input, 15 output per 1K tokens
-    "openai/gpt-5.2": (3, 15),
     "google/gemini-3-pro-preview": (3, 15),
     "anthropic/claude-sonnet-4.5": (3, 15),
-    # Premium tier: 15 input, 75 output per 1K tokens
     "anthropic/claude-opus-4.6": (15, 75),
 }
 DEFAULT_RATE = (3, 15)
 MIN_CREDITS_FOR_CHAT = 100
 
 
-def calculate_cost(prompt_tokens: int, completion_tokens: int, model: str) -> int:
-    """Calculate credit cost for token usage."""
+def calculate_cost(prompt_tokens: int, completion_tokens: int, model: str, mode: str | None = None) -> int:
+    """Calculate credit cost for token usage, with optional mode multiplier."""
     input_rate, output_rate = CREDIT_RATES.get(model, DEFAULT_RATE)
     input_cost = (prompt_tokens * input_rate) // 1000
     output_cost = (completion_tokens * output_rate) // 1000
-    return max(1, input_cost + output_cost)  # Minimum 1 credit
+    base_cost = max(1, input_cost + output_cost)
+    # Apply mode multiplier
+    multiplier = settings.MODE_CREDIT_MULTIPLIER.get(mode or "balanced", 1.0)
+    return max(1, int(base_cost * multiplier))
 
 
 async def get_user_credits(db: AsyncSession, user_id: UUID) -> int:

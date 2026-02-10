@@ -354,5 +354,11 @@
   "consent.message": "我们使用分析工具来改善我们的服务。",
   "consent.accept": "接受",
   "consent.decline": "拒绝",
-  "consent.learnMore": "了解更多"
+  "consent.learnMore": "了解更多",
+  "modes.quick": "快速",
+  "modes.balanced": "均衡",
+  "modes.thorough": "深度",
+  "modes.quickDesc": "适合简单查找的快速回答",
+  "modes.balancedDesc": "最佳质量与速度平衡",
+  "modes.thoroughDesc": "深度分析，准确度最高"
 }

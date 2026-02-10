@@ -354,5 +354,11 @@
   "consent.message": "نستخدم التحليلات لتحسين خدمتنا.",
   "consent.accept": "قبول",
   "consent.decline": "رفض",
-  "consent.learnMore": "اعرف المزيد"
+  "consent.learnMore": "اعرف المزيد",
+  "modes.quick": "سريع",
+  "modes.balanced": "متوازن",
+  "modes.thorough": "شامل",
+  "modes.quickDesc": "إجابات سريعة للاستعلامات البسيطة",
+  "modes.balancedDesc": "أفضل نسبة جودة إلى سرعة",
+  "modes.thoroughDesc": "تحليل عميق بأقصى دقة"
 }

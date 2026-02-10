@@ -84,7 +84,7 @@ const SUGGESTED_KEYS = ['chat.suggestedQ1', 'chat.suggestedQ2', 'chat.suggestedQ
 
 export default function ChatPanel({ sessionId, onCitationClick, maxUserMessages, suggestedQuestions, onOpenSettings, hasCustomInstructions }: ChatPanelProps) {
   const { messages, isStreaming, addMessage, updateLastMessage, addCitationToLastMessage, setStreaming, updateSessionActivity } = useDocTalkStore();
-  const selectedModel = useDocTalkStore((s) => s.selectedModel);
+  const selectedMode = useDocTalkStore((s) => s.selectedMode);
   const { t, locale } = useLocale();
   const [input, setInput] = useState('');
   const listRef = useRef<HTMLDivElement>(null);
@@ -213,12 +213,12 @@ export default function ChatPanel({ sessionId, onCitationClick, maxUserMessages,
         addMessage(errorMsg);
       },
       () => { setStreaming(false); abortRef.current = null; updateSessionActivity(sessionId); triggerCreditsRefresh(); },
-      selectedModel,
+      selectedMode,
       locale,
       controller.signal,
     );
     setInput('');
-  }, [isStreaming, demoLimitReached, sessionId, addMessage, updateLastMessage, addCitationToLastMessage, setStreaming, selectedModel, locale, t, updateSessionActivity, router]);
+  }, [isStreaming, demoLimitReached, sessionId, addMessage, updateLastMessage, addCitationToLastMessage, setStreaming, selectedMode, locale, t, updateSessionActivity, router]);
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -276,11 +276,11 @@ export default function ChatPanel({ sessionId, onCitationClick, maxUserMessages,
         if (isPaymentRequired) { setShowPaywall(true); }
       },
       () => { setStreaming(false); abortRef.current = null; updateSessionActivity(sessionId); triggerCreditsRefresh(); },
-      selectedModel,
+      selectedMode,
       locale,
       controller.signal,
     );
-  }, [isStreaming, sessionId, addMessage, updateLastMessage, addCitationToLastMessage, setStreaming, selectedModel, locale, updateSessionActivity]);
+  }, [isStreaming, sessionId, addMessage, updateLastMessage, addCitationToLastMessage, setStreaming, selectedMode, locale, updateSessionActivity]);
 
   const handleStop = useCallback(() => {
     abortRef.current?.abort();
