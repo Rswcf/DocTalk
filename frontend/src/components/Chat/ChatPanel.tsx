@@ -78,11 +78,12 @@ interface ChatPanelProps {
   suggestedQuestions?: string[];
   onOpenSettings?: () => void;
   hasCustomInstructions?: boolean;
+  userPlan?: string;
 }
 
 const SUGGESTED_KEYS = ['chat.suggestedQ1', 'chat.suggestedQ2', 'chat.suggestedQ3', 'chat.suggestedQ4'] as const;
 
-export default function ChatPanel({ sessionId, onCitationClick, maxUserMessages, suggestedQuestions, onOpenSettings, hasCustomInstructions }: ChatPanelProps) {
+export default function ChatPanel({ sessionId, onCitationClick, maxUserMessages, suggestedQuestions, onOpenSettings, hasCustomInstructions, userPlan }: ChatPanelProps) {
   const { messages, isStreaming, addMessage, updateLastMessage, addCitationToLastMessage, setStreaming, updateSessionActivity } = useDocTalkStore();
   const selectedMode = useDocTalkStore((s) => s.selectedMode);
   const { t, locale } = useLocale();
@@ -290,7 +291,7 @@ export default function ChatPanel({ sessionId, onCitationClick, maxUserMessages,
 
   // Determine which plus menu items to show
   const showCustomInstructions = !!onOpenSettings;
-  const showExportInMenu = messages.length > 0 && !isStreaming;
+  const showExportInMenu = messages.length > 0 && !isStreaming && (userPlan === 'plus' || userPlan === 'pro');
   const showPlusButton = showCustomInstructions || showExportInMenu;
 
   return (

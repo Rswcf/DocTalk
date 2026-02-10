@@ -10,35 +10,41 @@
 
 | Component | Details |
 |-----------|---------|
-| **Free Tier** | 10,000 credits/month (auto-granted, 30-day lazy eval) |
-| **Pro Subscription** | $9.99/month via Stripe, 100,000 credits/month |
+| **Free Tier** | 500 credits/month (auto-granted, 30-day lazy eval) |
+| **Plus Subscription** | $9.99/month via Stripe, 3,000 credits/month |
+| **Pro Subscription** | $19.99/month via Stripe, 9,000 credits/month |
 | **One-Time Credit Packs** | Starter ($5 / 50K credits), Pro ($15 / 200K credits), Enterprise ($50 / 1M credits) |
-| **Credit Rates** | Budget models: 1 input + 5 output per 1K tokens; Standard (Mistral): 2+10; Premium (Claude Opus 4.6): 15+75 |
+| **Credit Rates** | Quick (DeepSeek): 0.5x multiplier; Balanced (Mistral Medium): 1x; Thorough (Mistral Large): 3x |
 | **Demo** | 3 seeded documents, 5 messages/session for anonymous users, 50 sessions/doc cap (global), forced DeepSeek V3.2 (low-cost), 10 req/min/IP rate limit, ModeSelector hidden |
 | **Billing** | Stripe Checkout (one-time) + Stripe Subscriptions (recurring) + Stripe Customer Portal |
 
 ### Credit Economics
 
-A typical chat interaction (~500 prompt tokens, ~800 completion tokens) costs:
-- **Budget model** (e.g., DeepSeek): ~1 + 4 = **5 credits**
-- **Standard model** (e.g., Claude Sonnet 4.5): ~2 + 12 = **14 credits**
-- **Premium model** (Claude Opus 4.6): ~8 + 60 = **68 credits**
+A typical chat interaction costs (after ÷10 rescaling):
+- **Quick mode** (DeepSeek V3.2): ~**2 credits** per query
+- **Balanced mode** (Mistral Medium 3.1): ~**9 credits** per query
+- **Thorough mode** (Mistral Large 2512): ~**27 credits** per query
 
-This means a free user gets approximately:
-- ~2,000 budget queries/month
-- ~714 standard queries/month
-- ~147 premium queries/month
+This means a Free user (500 credits/month) gets approximately:
+- ~250 Quick queries/month
+- ~55 Balanced queries/month
+- ~18 Thorough queries/month
 
-A Pro user gets approximately:
-- ~20,000 budget queries/month
-- ~7,142 standard queries/month
-- ~1,470 premium queries/month
+A Plus user (3,000 credits/month) gets approximately:
+- ~1,500 Quick queries/month
+- ~333 Balanced queries/month
+- ~111 Thorough queries/month
+
+A Pro user (9,000 credits/month) gets approximately:
+- ~4,500 Quick queries/month
+- ~1,000 Balanced queries/month
+- ~333 Thorough queries/month
 
 ### Strengths
 
 1. **Hybrid model (subscription + credits + packs)** provides both recurring revenue and expansion revenue
 2. **Tiered credit rates by model** align cost to value -- premium models cost more, which is fair and transparent
-3. **Generous free tier** (10K credits = ~714 standard queries) is good for acquisition and demonstration of value
+3. **Right-sized free tier** (500 credits = ~250 Quick queries) demonstrates value while creating upgrade pressure
 4. **Demo system** with real documents allows zero-friction trial before sign-up
 5. **One-time packs** serve power users who need occasional bursts without ongoing commitment
 6. **Idempotent monthly grants** prevent double-crediting edge cases
@@ -46,16 +52,16 @@ A Pro user gets approximately:
 
 ### Weaknesses
 
-1. **Only 2 tiers** (Free/Pro) -- no middle ground for casual paid users, no team/enterprise tier
-2. **Credits are abstract** -- users don't intuitively know what "10,000 credits" means in terms of real usage; no clear mapping to "X conversations" or "X documents"
-3. **No annual discount** -- missing the most common SaaS conversion lever (typically 15-20% annual savings)
+1. ~~**Only 2 tiers**~~ **FIXED** — Free/Plus/Pro shipped with annual pricing
+2. **Credits are abstract** -- users don't intuitively know what "500 credits" means in terms of real usage; need clear mapping to "X conversations"
+3. ~~**No annual discount**~~ **FIXED** — 20-25% annual discount now available
 4. ~~**No per-document or per-page limits**~~ **FIXED** — per-plan document count limits enforced: FREE=3, PLUS=20, PRO=999
 5. ~~**Upload is free**~~ — upload still doesn't consume credits, but per-plan file size limits now enforced (FREE=25MB, PLUS=50MB, PRO=100MB) with magic-byte file validation
 6. ~~**No differentiation in document limits**~~ **FIXED** — per-plan document count and file size limits now enforced at upload endpoint
 7. **No team features** -- no shared workspaces, no admin controls, no seat-based pricing
 8. **No usage-based overages** -- when credits run out, the user is blocked rather than offered pay-as-you-go
-9. **Price-to-value gap at Pro** -- $9.99/month for 100K credits (7,142 standard queries) is extremely generous; power users get enormous value but there's no capture mechanism above Pro
-10. **Credit pack pricing is inconsistent** -- Starter = $0.10/1K credits, Pro = $0.075/1K, Enterprise = $0.05/1K, but monthly Pro = $0.0999/1K credits (more expensive per credit than one-time packs)
+9. **Pro plan margin thin (~13%)** -- $19.99/month for 9,000 credits; may need adjustment if usage patterns differ from projections
+10. **Credit pack pricing is inconsistent** -- pack pricing should incentivize subscription over one-time purchases
 
 ---
 
@@ -63,11 +69,11 @@ A Pro user gets approximately:
 
 | Feature | **DocTalk** (Current) | **ChatPDF** | **AskYourPDF** | **Humata** | **PDF.ai** |
 |---------|----------------------|-------------|----------------|------------|------------|
-| **Free Tier** | 10K credits/mo (~714 queries) | 2 PDFs/day, 120 pages each, 50 questions/day | 100 pages/doc, 15MB, 50 Q/day, 3 convos/day | 60 pages/mo, 10 answers | Basic (limited) |
-| **Entry Paid** | Pro: $9.99/mo | Plus: $19.99/mo | Premium: $11.99/mo (annual) | Student: $1.99/mo (edu) | Pro: ~$17/mo |
-| **Mid Tier** | -- | -- | Pro: $14.99/mo (annual) | Expert: $9.99/mo (3 users) | Ultimate: ~$27/mo |
+| **Free Tier** | 500 credits/mo (~250 queries) | 2 PDFs/day, 120 pages each, 50 questions/day | 100 pages/doc, 15MB, 50 Q/day, 3 convos/day | 60 pages/mo, 10 answers | Basic (limited) |
+| **Entry Paid** | Plus: $9.99/mo | Plus: $19.99/mo | Premium: $11.99/mo (annual) | Student: $1.99/mo (edu) | Pro: ~$17/mo |
+| **Mid Tier** | Pro: $19.99/mo | -- | Pro: $14.99/mo (annual) | Expert: $9.99/mo (3 users) | Ultimate: ~$27/mo |
 | **Team/Enterprise** | -- | -- | Enterprise: custom | Team: $49/user/mo | Enterprise: ~$37/mo |
-| **Annual Discount** | None | $139.99/yr (saves ~42%) | 25% off annual | Not specified | ~20% off annual |
+| **Annual Discount** | 20-25% off annual | $139.99/yr (saves ~42%) | 25% off annual | Not specified | ~20% off annual |
 | **Model Selection** | 3 performance modes (Quick/Balanced/Thorough) | Not specified | GPT-5 family + Claude + Gemini (credits for premium) | GPT-5 | Not specified |
 | **OCR** | Included (all tiers) | Not specified | Premium+ only | Team+ only ($49/user) | Not specified |
 | **Page Limits** | None (credit-gated) | 120 free / 2000 paid | 100 free / 6000 pro | 60 free / 5000 team | Not specified |
@@ -76,9 +82,9 @@ A Pro user gets approximately:
 
 ### Key Pricing Observations
 
-1. **DocTalk is underpriced** relative to competitors -- ChatPDF charges $19.99/mo for unlimited questions, AskYourPDF charges $14.99/mo for their pro tier, and DocTalk charges only $9.99/mo for 100K credits (~7,142 queries)
-2. **DocTalk's free tier is more generous** than competitors -- 714 standard queries/month vs. ChatPDF's 50/day (1,500/mo but limited to 2 PDFs) vs. Humata's 10 answers
-3. **Missing annual pricing** is a significant gap -- every competitor offers annual plans with 20-42% discounts
+1. **DocTalk pricing now competitive** -- Plus at $9.99/mo and Pro at $19.99/mo align with AskYourPDF ($14.99/mo) and ChatPDF ($19.99/mo)
+2. **DocTalk's free tier appropriately sized** -- 250 Quick queries/month creates upgrade pressure while still demonstrating value vs. ChatPDF's 50/day vs. Humata's 10 answers
+3. ~~**Missing annual pricing**~~ **FIXED** — 20-25% annual discount now available
 4. **No team tier** puts DocTalk at a disadvantage vs. Humata ($49/user/mo) and AskYourPDF (Enterprise)
 5. **OCR included at all tiers** is a competitive advantage over Humata (Team+ only) and AskYourPDF (Premium+ only)
 6. **Model selection at all tiers** is a major differentiator -- no competitor offers 3 performance modes with model-adaptive prompts across all plans
@@ -133,21 +139,21 @@ A Pro user gets approximately:
 
 #### Free (Acquisition)
 - **Price**: $0
-- **Credits**: 5,000/month (reduced from 10K to create more upgrade pressure)
-- **Limits**: 3 documents stored, 25 MB max file size, Budget + Standard models only (no Premium)
-- **Features**: Single user, 1 session per document, basic citations, community support
-- **Goal**: Demonstrate value, create habit, hit credit wall on day 2-3 of active use
+- **Credits**: 500/month
+- **Limits**: 3 documents stored, 25 MB max file size, Quick + Balanced modes only (no Thorough)
+- **Features**: Single user, basic citations, community support
+- **Goal**: Demonstrate value, create habit, hit credit wall quickly with active use
 
-#### Plus (Casual Users) -- NEW
-- **Price**: $7.99/month ($5.99/mo annual = $71.88/yr, save 25%)
-- **Credits**: 30,000/month
-- **Limits**: 20 documents stored, 50 MB max file size, all 3 modes
-- **Features**: Multi-session, conversation export, OCR, PDF text search, priority parsing queue
-- **Goal**: Convert free users who need more than 5K credits but aren't power users
+#### Plus (Casual Users)
+- **Price**: $9.99/month ($7.99/mo annual = $95.88/yr, save 20%)
+- **Credits**: 3,000/month
+- **Limits**: 20 documents stored, 50 MB max file size, Quick + Balanced modes
+- **Features**: Multi-session, conversation export, OCR, PDF text search
+- **Goal**: Convert free users who need more than 500 credits but aren't power users
 
 #### Pro (Power Users)
-- **Price**: $14.99/month ($11.99/mo annual = $143.88/yr, save 20%)
-- **Credits**: 150,000/month (increased from 100K)
+- **Price**: $19.99/month ($15.99/mo annual = $191.88/yr, save 20%)
+- **Credits**: 9,000/month
 - **Limits**: Unlimited documents, 100 MB max file size, all 3 modes
 - **Features**: All Plus features + priority support, custom system prompts, API access (read-only), advanced analytics dashboard
 - **Goal**: Capture heavy individual users (researchers, analysts, lawyers)
@@ -193,10 +199,10 @@ This prevents hard stops that push users to competitors while capturing incremen
 
 | Feature | Free | Plus | Pro | Team | Enterprise |
 |---------|------|------|-----|------|------------|
-| Monthly credits | 5K | 30K | 150K | 200K/seat | Custom |
+| Monthly credits | 500 | 3K | 9K | 200K/seat | Custom |
 | Documents stored | 3 | 20 | Unlimited | Unlimited | Unlimited |
 | File size limit | 25 MB | 50 MB | 100 MB | 200 MB | Custom |
-| Models available | Budget + Standard | All 3 modes | All 3 modes | All 3 modes | All + custom |
+| Models available | Quick + Balanced | Quick + Balanced | All 3 modes | All 3 modes | All + custom |
 | Sessions per doc | 1 | Unlimited | Unlimited | Unlimited | Unlimited |
 | OCR | No | Yes | Yes | Yes | Yes |
 | Conversation export | No | Markdown | Markdown + PDF | All formats | All formats |
@@ -221,32 +227,31 @@ This prevents hard stops that push users to competitors while capturing incremen
 3. **Time-based triggers**: Show upgrade prompts when users hit 80% of credit limit, not at 100% (reduces frustration)
 4. **Feature discovery**: Allow free users to see premium features exist (greyed out with "Upgrade" badge) to create awareness
 5. **OCR as mid-tier gate**: OCR is a strong differentiator and has real compute cost -- gating at Plus creates a clear reason to upgrade for users with scanned PDFs
-6. **Model gating at Free**: Restricting Premium models (Claude Opus 4.6) to paid tiers is justified by the 5-15x cost difference
+6. **Mode gating**: Thorough mode restricted to Pro tier, justified by 3x cost multiplier
 
 ---
 
 ## 6. Conversion Optimization Tactics
 
-### 6.1 Reduce Free Tier to Create Upgrade Pressure
+### 6.1 Free Tier Sizing (Deployed)
 
-**Current**: 10K credits/month (too generous -- a standard user can chat ~714 times)
-**Proposed**: 5K credits/month (~357 standard queries, or ~12 queries/day)
+**Current**: 500 credits/month (~250 Quick queries, ~55 Balanced queries)
 
-Rationale: 12 queries/day is enough to demonstrate value but not enough for regular work use. Active users should hit the wall within the first week, creating a natural upgrade trigger.
+Rationale: ~8-17 queries/day is enough to demonstrate value but not enough for regular work use. Active users should hit the wall within the first week, creating a natural upgrade trigger.
 
 ### 6.2 Implement In-App Upgrade Triggers
 
 - **Credit usage bar**: Show remaining credits prominently (already exists in CreditsDisplay)
 - **80% threshold notification**: "You've used 80% of your monthly credits. Upgrade to Plus for 6x more."
-- **Model gate prompt**: When free users attempt Premium models, show contextual upgrade modal: "Claude Opus 4.6 delivers deeper analysis. Upgrade to Plus for $7.99/mo."
+- **Model gate prompt**: When free users attempt Thorough mode, show contextual upgrade modal: "Thorough mode delivers deeper analysis. Upgrade to Pro for $19.99/mo."
 - **Document limit prompt**: When free users hit 3-document limit: "Upgrade to store up to 20 documents"
 
-### 6.3 Annual Pricing (Missing Today)
+### 6.3 Annual Pricing (Deployed)
 
-Offer 20-25% discount for annual commitment:
-- Plus: $5.99/mo (annual) vs $7.99/mo (monthly) -- save $24/year
-- Pro: $11.99/mo (annual) vs $14.99/mo (monthly) -- save $36/year
-- Team: $24.99/user/mo (annual) vs $29.99/user/mo (monthly) -- save $60/year
+20-25% discount for annual commitment:
+- Plus: $7.99/mo (annual) vs $9.99/mo (monthly) -- save $24/year
+- Pro: $15.99/mo (annual) vs $19.99/mo (monthly) -- save $48/year
+- Team: $24.99/user/mo (annual) vs $29.99/user/mo (monthly) -- save $60/year (planned)
 
 Annual plans typically see 40-60% of subscribers choosing annual, improving cash flow and reducing churn.
 
@@ -355,19 +360,19 @@ Recommended improvements:
 
 ## 8. Implementation Priority & Roadmap
 
-### Phase 1: Quick Wins (1-2 weeks)
-- [ ] Add annual pricing toggle with 20-25% discount
-- [ ] Reduce free tier from 10K to 5K credits
-- [ ] Add credit translator tooltips on billing page ("X credits = ~Y conversations")
-- [ ] Add "Most Popular" badge to recommended tier
+### Phase 1: Quick Wins (1-2 weeks) — ✅ Completed
+- [x] Add annual pricing toggle with 20-25% discount
+- [x] Rescale credits ÷10 (Free 500, Plus 3K, Pro 9K)
+- [x] Add credit translator tooltips on billing page ("X credits = ~Y conversations")
+- [x] Add "Most Popular" badge to recommended tier
 - [ ] Fix credit pack pricing to be more expensive per-credit than subscription
 
-### Phase 2: New Tiers (2-4 weeks)
-- [ ] Implement Plus tier ($7.99/mo, 30K credits)
-- [ ] Gate Premium models (Opus 4.6) to paid tiers only
+### Phase 2: New Tiers (2-4 weeks) — ✅ Completed
+- [x] Implement Plus tier ($9.99/mo, 3K credits)
+- [x] Gate Thorough mode to Pro tier
 - [ ] Gate OCR to Plus+
-- [ ] Implement document storage limits per tier
-- [ ] Add file size limits per tier
+- [x] Implement document storage limits per tier
+- [x] Add file size limits per tier
 
 ### Phase 3: Conversion Infrastructure (4-6 weeks)
 - [ ] Implement in-app upgrade prompts (80% credit usage, model gate, doc limit)
@@ -388,8 +393,8 @@ Recommended improvements:
 
 | Risk | Mitigation |
 |------|-----------|
-| Free tier reduction causes user backlash | Grandfather existing users at 10K for 3 months; communicate change with empathy |
-| Too many tiers confuse users | Start with Free/Plus/Pro, add Team only when there's demand signal |
+| Credit rescaling confuses users | Monitor comprehension; provide clear in-app credit explanations |
+| Too many tiers confuse users | Started with Free/Plus/Pro; add Team only when there's demand signal |
 | Credit system remains confusing | Always show "equivalent conversations" alongside credit numbers |
 | Team features require significant engineering | Start with shared document links (low-effort), build full admin later |
 | Competitors undercut on price | Compete on value (3 performance modes, citation quality, OCR) not price |

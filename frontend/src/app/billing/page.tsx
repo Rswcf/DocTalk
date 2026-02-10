@@ -131,16 +131,16 @@ function BillingContent() {
   }
 
   const plusFeatures = [
-    '30,000 credits/month',
+    '3,000 credits/month',
     'All 3 performance modes',
-    'OCR & Markdown export',
+    'Markdown export',
     '20 documents, 50MB files',
   ];
 
   const proFeatures = [
-    '150,000 credits/month',
+    '9,000 credits/month',
     'All 3 performance modes',
-    'Custom prompts & priority support',
+    'Custom prompts & export',
     'Unlimited documents, 100MB files',
   ];
 
@@ -196,7 +196,7 @@ function BillingContent() {
               <p className="text-zinc-500 dark:text-zinc-400 text-sm mb-4">{t("billing.plus.description")}</p>
               <div className="mb-4">
                 <span className="text-3xl font-bold text-zinc-900 dark:text-zinc-50">
-                  {billingPeriod === 'monthly' ? '$7.99' : '$5.99'}
+                  {billingPeriod === 'monthly' ? '$9.99' : '$7.99'}
                 </span>
                 <span className="text-zinc-500 dark:text-zinc-400 text-sm ml-1">
                   /{billingPeriod === 'monthly' ? 'mo' : 'mo'}
@@ -241,7 +241,7 @@ function BillingContent() {
             <p className="text-zinc-500 dark:text-zinc-400 text-sm mb-4">{t("billing.pro.description")}</p>
             <div className="mb-4">
               <span className="text-3xl font-bold text-zinc-900 dark:text-zinc-50">
-                {billingPeriod === 'monthly' ? '$14.99' : '$11.99'}
+                {billingPeriod === 'monthly' ? '$19.99' : '$15.99'}
               </span>
               <span className="text-zinc-500 dark:text-zinc-400 text-sm ml-1">
                 /mo

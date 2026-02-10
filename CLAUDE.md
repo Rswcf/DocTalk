@@ -50,7 +50,7 @@ Railway 项目包含 5 个服务：backend, Postgres, Redis, qdrant-v2, minio-v2
   - 已登录: 可上传个人 PDF，服务端文档列表，Credits 系统；访问 Demo 文档使用 Credits，无消息限制
 - **Demo 系统**: 后端启动时自动种子 3 篇真实文档（NVIDIA 10-K、Attention 论文、NDA）到 MinIO + DB，通过 Celery 解析。`demo_slug` 列标识 Demo 文档，`is_demo` 属性暴露给前端。`GET /api/documents/demo` 返回 Demo 文档列表。`/demo` 页面从 API 获取文档 ID 后链接到 `/d/{docId}`，旧 `/demo/[sample]` 路由自动重定向
 - **Credits 系统**: 预付费模式，余额 + Ledger 双表记录，每次对话扣费
-- **订阅系统**: Free (5K credits/月) + Plus (30K credits/月, $7.99) + Pro (150K credits/月, $14.99) 三级，支持月付/年付（年付享 20-25% 折扣），月度 credits 惰性发放（`ensure_monthly_credits`），Stripe 订阅集成
+- **订阅系统**: Free (500 credits/月) + Plus (3,000 credits/月, $9.99) + Pro (9,000 credits/月, $19.99) 三级，支持月付/年付（年付享 20% 折扣），月度 credits 惰性发放（`ensure_monthly_credits`），Stripe 订阅集成
 - **模式门控**: Thorough 模式（深度分析）仅限 Plus+ 套餐使用，后端 `chat_service.py` 校验 + 前端 `ModeSelector.tsx` 锁定图标。ModeSelector 根据认证状态显示不同 CTA：匿名用户点击锁定模式 → 登录模态框（`?auth=1`），已登录免费用户 → `/billing`
 - **Profile 页面**: `/profile` 4 个 Tab (Profile/Credits/Usage/Account)，含交易历史、使用统计、账户删除
 - **API 网关**: 所有 LLM 和 Embedding 调用统一通过 OpenRouter（单一 API key）。匿名 Demo 用户使用 `DEMO_LLM_MODEL`（默认 `deepseek/deepseek-v3.2`）降低成本

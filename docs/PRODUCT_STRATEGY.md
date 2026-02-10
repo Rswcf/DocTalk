@@ -85,39 +85,37 @@ DocTalk is an AI-powered PDF reader with a unique competitive advantage: **citat
 ## 5. Pricing & Monetization Proposal
 
 ### Current Issues
-- **Underpriced**: Pro at $9.99/month for 100K credits (7,142 queries) vs. competitors at $12-$20/month
-- **Only 2 tiers**: No mid-tier for casual users, no team/enterprise tier
-- **No annual pricing**: Missing the most common SaaS conversion lever (20-25% discount)
-- **Free tier too generous**: 10K credits = ~714 standard queries — most competitors limit to 50-60/day
-- **Credit packs cheaper than subscription per-credit**: Cannibalizes subscription revenue
+- **Pro plan margin thin (~13%)**: May need further adjustment if usage patterns differ from projections
+- **Priority Queue not yet implemented**: Feature shown in PricingTable but removed pending implementation
+- **Credit rescaling deployed (÷10)**: Monitor user comprehension of new credit amounts
 
 ### Proposed Pricing Structure
 
 | Tier | Monthly | Annual (save 20-25%) | Credits/mo | Documents | Models |
 |------|---------|---------------------|-----------|-----------|--------|
-| **Free** | $0 | — | 5,000 | 3 stored | Budget + Standard |
-| **Plus** (NEW) | $7.99 | $5.99/mo | 30,000 | 20 stored | Quick + Balanced |
-| **Pro** | $14.99 | $11.99/mo | 150,000 | Unlimited | All 3 modes |
+| **Free** | $0 | — | 500 | 3 stored | Quick + Balanced |
+| **Plus** | $9.99 | $7.99/mo | 3,000 | 20 stored | All 3 modes |
+| **Pro** | $19.99 | $15.99/mo | 9,000 | Unlimited | All 3 modes |
 | **Team** (NEW) | $29.99/seat | $24.99/seat/mo | 200K/seat | Unlimited | All 3 modes |
 | **Enterprise** (NEW) | Custom | Custom | Custom | Unlimited | All 3 + custom |
 
-### Key Changes
-1. **Reduce free tier** from 10K to 5K credits — create upgrade pressure by day 2-3 of active use
-2. **Add Plus tier** ($7.99/month) — capture casual users who need more than Free but aren't power users
-3. **Raise Pro price** to $14.99/month with 150K credits — align with market
-4. **Add Team tier** ($29.99/seat/month) — unlock B2B revenue
-5. **Add annual pricing** with 20-25% discount — improve LTV, reduce churn
-6. **Gate Premium models** (Opus 4.6) to paid tiers only
-7. **Gate OCR** to Plus+ — it has real compute cost and is a strong differentiator
-8. **Add credit overage option** — when credits exhausted, offer pay-as-you-go at $0.15/1K credits instead of hard block
+### Key Changes (Completed)
+1. **Reduced free tier** to 500 credits — creates upgrade pressure quickly
+2. **Added Plus tier** ($9.99/month) — captures casual users who need more than Free but aren't power users
+3. **Raised Pro price** to $19.99/month with 9,000 credits — aligns with market
+4. **Add Team tier** ($29.99/seat/month) — unlock B2B revenue (planned)
+5. **Added annual pricing** with 20-25% discount — improves LTV, reduces churn
+6. **Gate Thorough mode** to Plus+ tiers only
+7. **Gate OCR** to Plus+ — it has real compute cost and is a strong differentiator (planned)
+8. **Add credit overage option** — when credits exhausted, offer pay-as-you-go instead of hard block (planned)
 
 ### Feature Gating Summary
 
 | Feature | Free | Plus | Pro | Team | Enterprise |
 |---------|------|------|-----|------|------------|
 | Core citation chat | Yes | Yes | Yes | Yes | Yes |
-| Premium models | No | Yes | Yes | Yes | Yes |
-| OCR | No | Yes | Yes | Yes | Yes |
+| Thorough mode | No | Yes | Yes | Yes | Yes |
+| OCR | Yes | Yes | Yes | Yes | Yes |
 | Sessions per doc | 1 | Unlimited | Unlimited | Unlimited | Unlimited |
 | Custom prompts | No | No | Yes | Yes | Yes |
 | Conversation export | No | MD | MD + PDF | All | All |
@@ -132,13 +130,15 @@ DocTalk is an AI-powered PDF reader with a unique competitive advantage: **citat
 
 ### Phase 1: Foundation Expansion (Days 1-30)
 
-| # | Feature | Effort | Revenue Impact | Segment |
-|---|---------|--------|---------------|---------|
-| 1.1 | **Multi-format support** (DOCX, PPTX, XLSX, TXT, MD) | 2-3 weeks | HIGH — expands use cases 40% | All |
-| 1.2 | **Document collections & cross-document Q&A** | 3-4 weeks | HIGH — #1 gap vs. NotebookLM | Researchers, Legal, Finance |
-| 1.3 | **Custom AI instructions per document** | 1-2 weeks | MEDIUM — power user differentiator | Power users |
-| 1.4 | **URL/webpage ingestion** | 1-2 weeks | MEDIUM — broadens input sources | Researchers |
-| 1.5 | **Pricing restructure** (Plus tier, annual, reduced free) | 1 week | HIGH — immediate revenue lift | All |
+#### Completed
+
+| # | Feature | Status |
+|---|---------|--------|
+| 1.1 | **Multi-format support** (DOCX, PPTX, XLSX, TXT, MD) | ✅ Shipped |
+| 1.2 | **Document collections & cross-document Q&A** | ✅ Shipped |
+| 1.3 | **Custom AI instructions per document** | ✅ Shipped |
+| 1.4 | **URL/webpage ingestion** | ✅ Shipped |
+| 1.5 | **Pricing restructure** (Plus tier, annual, reduced free) | ✅ Shipped |
 
 **Expected Impact**: +20-30% signup conversion, +10-15% Free-to-Pro upgrade
 
@@ -178,7 +178,7 @@ DocTalk is an AI-powered PDF reader with a unique competitive advantage: **citat
 | Risk | Severity | Mitigation |
 |------|----------|-----------|
 | **NotebookLM goes paid** with better features | HIGH | Double down on citation precision + model choice — our defensible moats |
-| **Free tier reduction causes backlash** | MEDIUM | Grandfather existing users at 10K for 3 months; communicate with empathy |
+| **Credit rescaling causes confusion** | MEDIUM | Monitor user comprehension; provide clear in-app credit explanations |
 | **Multi-document Q&A quality degrades** | MEDIUM | Reranker (Cohere Rerank) for cross-doc retrieval quality; tune top_k |
 | **Enterprise sales cycle too long** for small team | HIGH | Focus on self-serve Team tier first; enterprise = later-stage |
 | **Competitors undercut on price** | LOW | Compete on value (3 performance modes, citation quality, OCR), not price |
@@ -211,10 +211,10 @@ DocTalk is an AI-powered PDF reader with a unique competitive advantage: **citat
 
 ## 9. Immediate Action Items (This Week)
 
-1. **Pricing page redesign**: Add annual toggle, credit translator tooltips, "Most Popular" badge
-2. **Free tier adjustment**: Plan the reduction from 10K to 5K credits with grandfathering
-3. **Start multi-format parsing**: Add python-docx, python-pptx, openpyxl to backend
-4. **Start collection data model**: Design Collection + collection_documents tables
+1. ~~**Pricing page redesign**: Add annual toggle, credit translator tooltips, "Most Popular" badge~~ ✅ Done
+2. ~~**Free tier adjustment**: Reduce credits with rescaling~~ ✅ Done
+3. ~~**Start multi-format parsing**: Add python-docx, python-pptx, openpyxl to backend~~ ✅ Done
+4. ~~**Start collection data model**: Design Collection + collection_documents tables~~ ✅ Done
 5. **Competitive monitoring**: Set up alerts for ChatPDF, AskYourPDF, Humata pricing changes
 
 ---

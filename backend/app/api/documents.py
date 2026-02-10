@@ -445,6 +445,11 @@ async def update_document(
     if body.custom_instructions is not None:
         if len(body.custom_instructions) > 2000:
             raise HTTPException(status_code=400, detail="Instructions too long (max 2000 chars)")
+        # Custom instructions require Pro plan
+        if body.custom_instructions.strip():
+            plan = (user.plan or "free").lower()
+            if plan != "pro":
+                raise HTTPException(status_code=403, detail="Custom instructions require Pro plan")
         doc.custom_instructions = body.custom_instructions if body.custom_instructions.strip() else None
     db.add(doc)
     await db.commit()

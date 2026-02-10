@@ -29,7 +29,7 @@ CREDIT_RATES = {
     "anthropic/claude-opus-4.6": (15, 75),
 }
 DEFAULT_RATE = (3, 15)
-MIN_CREDITS_FOR_CHAT = 100
+MIN_CREDITS_FOR_CHAT = 10
 
 
 def calculate_cost(prompt_tokens: int, completion_tokens: int, model: str, mode: str | None = None) -> int:

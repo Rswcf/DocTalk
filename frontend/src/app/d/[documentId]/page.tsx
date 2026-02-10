@@ -8,8 +8,9 @@ import TextViewer from '../../../components/TextViewer/TextViewer';
 import { ChatPanel } from '../../../components/Chat';
 import Header from '../../../components/Header';
 import CustomInstructionsModal from '../../../components/CustomInstructionsModal';
-import { listSessions, createSession, getDocument, getDocumentFileUrl, getMessages, updateDocumentInstructions } from '../../../lib/api';
+import { listSessions, createSession, getDocument, getDocumentFileUrl, getMessages, updateDocumentInstructions, getUserProfile } from '../../../lib/api';
 import { useDocTalkStore } from '../../../store';
+import type { UserProfile } from '../../../types';
 import { Panel, Group, Separator } from 'react-resizable-panels';
 import { useLocale } from '../../../i18n';
 import { sanitizeFilename } from '../../../lib/utils';
@@ -49,6 +50,13 @@ export default function DocumentReaderPage() {
   const suggestedQuestions = useDocTalkStore((s) => s.suggestedQuestions);
   const [showInstructions, setShowInstructions] = useState(false);
   const [customInstructions, setCustomInstructions] = useState<string | null>(null);
+  const [profile, setProfile] = useState<UserProfile | null>(null);
+
+  // Fetch profile for plan gating
+  useEffect(() => {
+    if (!isLoggedIn) return;
+    getUserProfile().then(setProfile).catch(() => {});
+  }, [isLoggedIn]);
 
   const documentStatus = useDocTalkStore((s) => s.documentStatus);
 
@@ -193,7 +201,7 @@ export default function DocumentReaderPage() {
             <div className="h-full min-w-0 sm:min-w-[320px] flex flex-col">
               <div className="flex-1 min-h-0">
                 {documentStatus === 'ready' && sessionId ? (
-                  <ChatPanel sessionId={sessionId} onCitationClick={navigateToCitation} maxUserMessages={isDemo && !isLoggedIn ? 5 : undefined} suggestedQuestions={suggestedQuestions.length > 0 ? suggestedQuestions : undefined} onOpenSettings={isLoggedIn ? () => setShowInstructions(true) : undefined} hasCustomInstructions={!!customInstructions} />
+                  <ChatPanel sessionId={sessionId} onCitationClick={navigateToCitation} maxUserMessages={isDemo && !isLoggedIn ? 5 : undefined} suggestedQuestions={suggestedQuestions.length > 0 ? suggestedQuestions : undefined} onOpenSettings={profile?.plan === 'pro' ? () => setShowInstructions(true) : undefined} hasCustomInstructions={!!customInstructions} userPlan={profile?.plan || (isLoggedIn ? 'free' : undefined)} />
                 ) : documentStatus !== 'ready' && !error ? (
                   <div className="h-full w-full flex flex-col items-center justify-center text-zinc-500 gap-3">
                     <div className="animate-spin rounded-full h-8 w-8 border-2 border-zinc-300 border-t-zinc-600" />
