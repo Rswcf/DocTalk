@@ -13,9 +13,9 @@
 .collab/
 ├── PROTOCOL.md          # 本文件 — 协作协议
 ├── plans/               # CC 发出的计划文档
-│   └── 001-tech-spec-v0.md
+│   └── 003-auth-credits-billing-v3.md
 ├── reviews/             # CX 对计划的审阅反馈
-│   └── 001-tech-spec-v0-review.md
+│   └── <plan-name>-review.md
 ├── tasks/               # CC 发给 CX 的执行任务
 │   ├── current.md       # 当前正在执行的任务
 │   └── backlog.md       # 待执行任务列表

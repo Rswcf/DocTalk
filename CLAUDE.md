@@ -39,7 +39,7 @@ Railway 项目包含 5 个服务：backend, Postgres, Redis, qdrant-v2, minio-v2
 - **i18n**: 轻量级 React Context 方案，支持 11 种语言（EN, ZH, ES, JA, DE, FR, KO, PT, IT, AR, HI）
 - **Monitoring**: Sentry 集成（后端 FastAPI + Celery，前端 Next.js），用于错误追踪和性能监控
 - **Analytics**: Vercel Web Analytics（页面访问和访客追踪，需 cookie 同意后加载）
-- **Security**: SSRF 防护（URL 验证 + 私有 IP 阻断）、MinIO SSE-S3 静态加密、magic-byte 文件验证、结构化安全事件日志、非 root Docker 容器
+- **Security**: SSRF 防护（URL 验证 + 私有 IP 阻断）、MinIO SSE-S3 静态加密、magic-byte 文件验证、结构化安全事件日志、非 root Docker 容器、CSP + 安全响应头（`next.config.mjs`）
 
 ### 核心架构决策
 
@@ -264,6 +264,7 @@ SENTRY_TRACES_SAMPLE_RATE=0.1
 - **GDPR 数据导出**: `GET /api/users/me/export` 返回包含用户所有数据的 JSON（GDPR Art. 20 数据可携带性）
 - **OAuth Token 清理**: `link_account()` 中剥离 access_token/refresh_token/id_token — DocTalk 仅需身份信息
 - **非 root Docker**: 容器以 `app` 用户（UID 1001）运行
+- **安全响应头**: `next.config.mjs` 配置 CSP（Content-Security-Policy）+ X-Frame-Options DENY + HSTS（2 年 + preload）+ X-Content-Type-Options nosniff + Referrer-Policy strict-origin-when-cross-origin + Permissions-Policy（禁用 camera/microphone/geolocation）。CSP 允许列表：`cdnjs.cloudflare.com`（pdf.js Worker）、`*.up.railway.app`（MinIO presigned URL + 后端 API）、`*.sentry.io`（错误追踪）、`va.vercel-scripts.com` / `vitals.vercel-insights.com`（Vercel Analytics）、`accounts.google.com`（OAuth form-action）
 
 ### 认证相关
 - **API 代理**: 所有后端接口（含 SSE chat stream）通过 `/api/proxy/*` 走前端代理，自动注入 JWT
