@@ -14,12 +14,14 @@ import type { UserProfile } from '../../../types';
 import { Panel, Group, Separator } from 'react-resizable-panels';
 import { useLocale } from '../../../i18n';
 import { sanitizeFilename } from '../../../lib/utils';
-import { useTheme } from 'next-themes';
+
 import { useWin98Theme } from '../../../components/win98/useWin98Theme';
 import { Win98Window } from '../../../components/win98/Win98Window';
 import { Win98Taskbar } from '../../../components/win98/Win98Taskbar';
-import { ChatIcon, DocumentIcon, CreditIcon, GlobeIcon } from '../../../components/win98/Win98Icons';
+import { ChatIcon, DocumentIcon, CreditIcon } from '../../../components/win98/Win98Icons';
 import { CreditsDisplay } from '../../../components/CreditsDisplay';
+import ThemeSelector from '../../../components/ThemeSelector';
+import LanguageSelector from '../../../components/LanguageSelector';
 
 export default function DocumentReaderPage() {
   const params = useParams<{ documentId: string }>();
@@ -30,7 +32,7 @@ export default function DocumentReaderPage() {
   const [error, setError] = useState<string | null>(null);
   const [isDemo, setIsDemo] = useState(false);
   const [fileType, setFileType] = useState<string>('pdf');
-  const { t, locale } = useLocale();
+  const { t } = useLocale();
   const {
     pdfUrl,
     currentPage,
@@ -58,7 +60,7 @@ export default function DocumentReaderPage() {
   const [customInstructions, setCustomInstructions] = useState<string | null>(null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const isWin98 = useWin98Theme();
-  const { setTheme } = useTheme();
+
   const totalPages = useDocTalkStore((s) => s.totalPages);
   const selectedMode = useDocTalkStore((s) => s.selectedMode);
 
@@ -298,18 +300,9 @@ export default function DocumentReaderPage() {
                     <CreditsDisplay />
                   </div>
                   <div className="win98-groove-v h-[14px]" />
-                  <button
-                    className="win98-button text-[11px] px-2 py-0 h-[18px] shrink-0"
-                    onClick={() => setTheme('light')}
-                    title="Switch to modern theme"
-                  >
-                    Theme: Win98
-                  </button>
+                  <ThemeSelector />
                   <div className="win98-groove-v h-[14px]" />
-                  <div className="flex items-center gap-1 shrink-0">
-                    <GlobeIcon size={14} />
-                    <span className="text-[11px]">{locale.toUpperCase()}</span>
-                  </div>
+                  <LanguageSelector />
                 </div>
               }
               statusBar={

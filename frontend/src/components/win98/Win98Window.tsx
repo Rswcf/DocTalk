@@ -105,7 +105,7 @@ export function Win98Window({
 
       {/* Toolbar */}
       {toolbar && (
-        <div className="bg-[var(--win98-button-face)] border-b border-b-[var(--win98-button-shadow)] px-1 py-[2px] shrink-0">
+        <div className="bg-[var(--win98-button-face)] border-b border-b-[var(--win98-button-shadow)] px-1 py-[2px] shrink-0 relative z-30">
           {toolbar}
         </div>
       )}

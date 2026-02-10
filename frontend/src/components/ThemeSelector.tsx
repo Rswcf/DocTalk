@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { Sun, Moon, Monitor, ChevronDown, Check } from 'lucide-react';
 import { useTheme } from 'next-themes';
 import { useLocale } from '../i18n';
@@ -16,16 +16,25 @@ export default function ThemeSelector() {
   const { t } = useLocale();
   const [open, setOpen] = useState(false);
   const [focusIndex, setFocusIndex] = useState(-1);
+  const [menuPos, setMenuPos] = useState<{ top: number; left: number }>({ top: 0, left: 0 });
   const ref = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
   const itemRefs = useRef<(HTMLButtonElement | null)[]>([]);
 
   const isWin98 = resolvedTheme === 'win98';
 
+  const updateMenuPos = useCallback(() => {
+    if (!triggerRef.current) return;
+    const rect = triggerRef.current.getBoundingClientRect();
+    setMenuPos({ top: rect.bottom + 4, left: rect.right - 176 }); // w-44 = 176px, right-aligned
+  }, []);
+
   useEffect(() => {
     function onDocClick(e: MouseEvent) {
-      if (!ref.current) return;
-      if (!ref.current.contains(e.target as Node)) setOpen(false);
+      if (ref.current?.contains(e.target as Node)) return;
+      if (menuRef.current?.contains(e.target as Node)) return;
+      setOpen(false);
     }
     document.addEventListener('mousedown', onDocClick);
     return () => document.removeEventListener('mousedown', onDocClick);
@@ -33,10 +42,11 @@ export default function ThemeSelector() {
 
   useEffect(() => {
     if (open) {
+      updateMenuPos();
       const idx = THEMES.findIndex((th) => th.id === resolvedTheme);
       setFocusIndex(idx >= 0 ? idx : 0);
     }
-  }, [open, resolvedTheme]);
+  }, [open, resolvedTheme, updateMenuPos]);
 
   useEffect(() => {
     if (open && focusIndex >= 0 && itemRefs.current[focusIndex]) {
@@ -80,7 +90,7 @@ export default function ThemeSelector() {
   const CurrentIcon = current.icon;
 
   return (
-    <div className="relative" ref={ref}>
+    <div ref={ref}>
       <button
         ref={triggerRef}
         type="button"
@@ -95,12 +105,14 @@ export default function ThemeSelector() {
         aria-label="Select theme"
         title={t(current.labelKey)}
       >
-        <CurrentIcon aria-hidden="true" size={18} />
-        <ChevronDown aria-hidden="true" size={14} className="opacity-70" />
+        <CurrentIcon aria-hidden="true" size={isWin98 ? 14 : 18} />
+        <ChevronDown aria-hidden="true" size={isWin98 ? 10 : 14} className="opacity-70" />
       </button>
       {open && (
         <div
-          className="absolute right-0 mt-1 w-44 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-md shadow-lg z-20 p-1"
+          ref={menuRef}
+          className="fixed w-44 bg-white border border-zinc-300 rounded-md shadow-lg z-[9999] p-1"
+          style={{ top: menuPos.top, left: menuPos.left }}
           onKeyDown={handleMenuKeyDown}
           role="listbox"
         >
@@ -111,7 +123,7 @@ export default function ThemeSelector() {
               <button
                 key={theme.id}
                 ref={(el) => { itemRefs.current[i] = el; }}
-                className={`w-full text-left flex items-center gap-2 px-2 py-1.5 rounded hover:bg-zinc-100 dark:hover:bg-zinc-800 text-sm transition-colors focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:ring-inset ${
+                className={`w-full text-left flex items-center gap-2 px-2 py-1.5 rounded hover:bg-zinc-100 text-sm text-zinc-900 transition-colors focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:ring-inset ${
                   isSelected ? 'font-medium' : ''
                 }`}
                 onClick={() => choose(theme.id)}
