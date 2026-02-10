@@ -112,11 +112,16 @@ export default function ChatPanel({ sessionId, onCitationClick, maxUserMessages,
 
   useEffect(() => {
     const el = listRef.current;
-    if (el) {
-      el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' });
-      setShowScrollBtn(false);
+    if (!el) return;
+
+    const isNearBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 100;
+
+    if (isNearBottom) {
+      el.scrollTo({ top: el.scrollHeight, behavior: isStreaming ? 'auto' : 'smooth' });
     }
-  }, [messages]);
+
+    setShowScrollBtn(!isNearBottom);
+  }, [messages, isStreaming]);
 
   // Auto-resize textarea
   useEffect(() => {
