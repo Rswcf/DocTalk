@@ -10,12 +10,10 @@ from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.config import settings
 from app.models.tables import Account, CreditLedger, User, VerificationToken
 
 logger = logging.getLogger(__name__)
-
-# Must match settings.SIGNUP_BONUS_CREDITS in config.py
-SIGNUP_BONUS_CREDITS = 1000
 
 
 def hash_token(token: str) -> str:
@@ -50,7 +48,7 @@ async def create_user(
         name=name,
         image=image,
         email_verified=email_verified,
-        credits_balance=SIGNUP_BONUS_CREDITS,
+        credits_balance=settings.SIGNUP_BONUS_CREDITS,
         signup_bonus_granted_at=datetime.utcnow(),
         monthly_credits_granted_at=datetime.utcnow(),
     )
@@ -66,8 +64,8 @@ async def create_user(
     # Record signup bonus in ledger
     ledger = CreditLedger(
         user_id=user.id,
-        delta=SIGNUP_BONUS_CREDITS,
-        balance_after=SIGNUP_BONUS_CREDITS,
+        delta=settings.SIGNUP_BONUS_CREDITS,
+        balance_after=settings.SIGNUP_BONUS_CREDITS,
         reason="signup_bonus",
     )
     db.add(ledger)

@@ -48,8 +48,10 @@ class Settings(BaseSettings):
 
     # Limits
     MAX_PDF_SIZE_MB: int = Field(default=50)
+    MAX_PDF_PAGES: int = Field(default=500)
     MAX_CHAT_HISTORY_TURNS: int = Field(default=6)
     MAX_RETRIEVAL_TOKENS: int = Field(default=1750)
+    LLM_MAX_CONTEXT_TOKENS: int = Field(default=180000)
 
     # OCR
     OCR_ENABLED: bool = Field(default=True)
@@ -132,6 +134,9 @@ _candidates = [Path(".env"), Path("..") / ".env"]
 _env_file = next((str(p) for p in _candidates if p.exists()), None)
 
 settings = Settings(_env_file=_env_file) if _env_file else Settings()
+
+# Reverse lookup: model → mode (for enforcing correct credit multiplier)
+MODEL_TO_MODE: dict[str, str] = {v: k for k, v in settings.MODE_MODELS.items()}
 
 FILE_TYPE_MAP = {
     'application/pdf': 'pdf',

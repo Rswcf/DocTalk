@@ -31,6 +31,14 @@ CREDIT_RATES = {
 DEFAULT_RATE = (3, 15)
 MIN_CREDITS_FOR_CHAT = 10
 
+# Estimated cost per mode for pre-debit (generous upper bound to avoid under-debit)
+MODE_ESTIMATED_COST: dict[str, int] = {"quick": 5, "balanced": 15, "thorough": 35}
+
+
+def get_estimated_cost(mode: str) -> int:
+    """Return estimated credit cost for a mode (used for pre-debit)."""
+    return MODE_ESTIMATED_COST.get(mode, MODE_ESTIMATED_COST["balanced"])
+
 
 def calculate_cost(prompt_tokens: int, completion_tokens: int, model: str, mode: str | None = None) -> int:
     """Calculate credit cost for token usage, with optional mode multiplier."""
@@ -151,6 +159,36 @@ async def record_usage(
     )
     db.add(usage)
     return usage
+
+
+async def reconcile_credits(
+    db: AsyncSession,
+    user_id: UUID,
+    pre_debited: int,
+    actual_cost: int,
+    ref_type: Optional[str] = None,
+    ref_id: Optional[str] = None,
+) -> None:
+    """Reconcile pre-debited credits against actual cost after streaming.
+
+    - If pre_debited > actual_cost → refund the difference
+    - If pre_debited < actual_cost → debit the difference (best-effort)
+    - If equal → no-op
+    """
+    diff = pre_debited - actual_cost
+    if diff > 0:
+        # Refund overpayment
+        await credit_credits(
+            db, user_id=user_id, amount=diff,
+            reason="chat_reconcile_refund", ref_type=ref_type, ref_id=ref_id,
+        )
+    elif diff < 0:
+        # Best-effort charge for underpayment
+        await debit_credits(
+            db, user_id=user_id, cost=-diff,
+            reason="chat_reconcile_charge", ref_type=ref_type, ref_id=ref_id,
+        )
+    # diff == 0: exact match, no-op
 
 
 async def ensure_monthly_credits(db: AsyncSession, user: User) -> None:

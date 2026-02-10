@@ -193,13 +193,16 @@ async def chat_stream(
         from app.services.credit_service import ensure_monthly_credits
         await ensure_monthly_credits(db, user)
         await db.commit()
+        # Use mode-specific estimated cost for pre-check (actual pre-debit happens in chat_service)
+        effective_mode = body.mode or "balanced"
+        estimated_cost = credit_service.get_estimated_cost(effective_mode)
         balance = await credit_service.get_user_credits(db, user.id)
-        if balance < credit_service.MIN_CREDITS_FOR_CHAT:
+        if balance < estimated_cost:
             return JSONResponse(
                 status_code=402,
                 content={
                     "detail": "Insufficient credits",
-                    "required": credit_service.MIN_CREDITS_FOR_CHAT,
+                    "required": estimated_cost,
                     "balance": balance,
                 },
             )

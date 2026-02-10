@@ -211,39 +211,15 @@ async def stripe_webhook(request: Request, db: AsyncSession = Depends(get_db_ses
             if customer_id and not user.stripe_customer_id:
                 user.stripe_customer_id = customer_id
 
-            allowance = _credits_for_plan(plan)
-
-            # Idempotency: only one monthly grant per subscription id at start
-            existing = await db.scalar(
-                select(CreditLedger).where(
-                    CreditLedger.ref_type == "stripe_subscription",
-                    CreditLedger.ref_id == (subscription_id or ""),
-                )
+            # Credits are granted solely via invoice.payment_succeeded to prevent
+            # double-granting (checkout.session.completed + first invoice both fire).
+            await db.commit()
+            logger.info(
+                "Subscription checkout completed: user_id=%s, plan=%s, subscription=%s (credits deferred to invoice)",
+                user.id,
+                plan,
+                subscription_id,
             )
-
-            if not existing and allowance > 0:
-                try:
-                    await credit_credits(
-                        db,
-                        user_id=user.id,
-                        amount=allowance,
-                        reason="monthly_allowance",
-                        ref_type="stripe_subscription",
-                        ref_id=subscription_id or "",
-                    )
-                    await db.commit()
-                    logger.info(
-                        "Subscription start credits granted: user_id=%s, plan=%s, subscription=%s",
-                        user.id,
-                        plan,
-                        subscription_id,
-                    )
-                except Exception as e:
-                    await db.rollback()
-                    logger.error("Failed to grant subscription start credits: %s", e)
-                    raise HTTPException(500, "Database error")
-            else:
-                await db.commit()
 
             return {"received": True}
 

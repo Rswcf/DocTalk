@@ -203,7 +203,7 @@ function BillingContent() {
                 </span>
                 {billingPeriod === 'annual' && (
                   <span className="ml-2 text-xs px-2 py-0.5 rounded-full bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 font-medium">
-                    {t('billing.savePercent', { percent: 25 })}
+                    {t('billing.savePercent', { percent: 20 })}
                   </span>
                 )}
               </div>

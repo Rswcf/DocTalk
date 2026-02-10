@@ -10,7 +10,7 @@ from sqlalchemy import asc, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.config import settings
+from app.core.config import MODEL_TO_MODE, settings
 from app.core.model_profiles import get_model_profile, get_rules_for_model
 from app.models.tables import ChatSession, Document, Message, User, collection_documents
 from app.services import credit_service
@@ -178,12 +178,14 @@ class ChatService:
                 for drow in doc_rows.all():
                     collection_doc_names[drow[0]] = drow[1]
 
-        # Resolve mode → model
+        # Resolve mode → model (enforce correct mode from model to prevent billing bypass)
         effective_mode = mode or "balanced"
         if mode and mode in settings.MODE_MODELS:
             effective_model = settings.MODE_MODELS[mode]
         elif model and model in settings.ALLOWED_MODELS:
             effective_model = model
+            # Enforce correct mode for credit multiplier (prevent billing bypass)
+            effective_mode = MODEL_TO_MODE.get(model, effective_mode)
         else:
             effective_model = settings.MODE_MODELS.get("balanced", settings.LLM_MODEL)
 
@@ -199,18 +201,25 @@ class ChatService:
                 yield sse("error", {"code": "MODE_NOT_ALLOWED", "message": "Upgrade to Plus to use Thorough mode"})
                 return
 
+        # Pre-debit estimated credits BEFORE streaming (prevents TOCTOU + free rides)
+        pre_debited = 0
         if user is not None:
-            try:
+            estimated = credit_service.get_estimated_cost(effective_mode)
+            ok = await credit_service.debit_credits(
+                db, user_id=user.id, cost=estimated,
+                reason="chat_predebit", ref_type="mode", ref_id=effective_mode,
+            )
+            if ok:
+                pre_debited = estimated
+                await db.commit()
+            else:
                 balance = await credit_service.get_user_credits(db, user.id)
-            except Exception:
-                balance = 0
-            if balance < credit_service.MIN_CREDITS_FOR_CHAT:
                 yield sse(
                     "error",
                     {
                         "code": "INSUFFICIENT_CREDITS",
                         "message": "Insufficient credits to start chat",
-                        "required": credit_service.MIN_CREDITS_FOR_CHAT,
+                        "required": estimated,
                         "balance": balance,
                     },
                 )
@@ -389,6 +398,16 @@ class ChatService:
                 yield ev
 
         except Exception as e:
+            # Refund pre-debited credits on LLM failure
+            if user is not None and pre_debited > 0:
+                try:
+                    await credit_service.credit_credits(
+                        db, user_id=user.id, amount=pre_debited,
+                        reason="chat_predebit_refund", ref_type="mode", ref_id=effective_mode,
+                    )
+                    await db.commit()
+                except Exception:
+                    pass  # best-effort refund
             yield sse("error", {"code": "LLM_ERROR", "message": str(e)})
             return
 
@@ -410,41 +429,26 @@ class ChatService:
             yield sse("error", {"code": "PERSIST_FAILED", "message": "Failed to save response"})
             return
 
-        # Credits: debit after successful chat and record usage
-        if user is not None:
+        # Credits: reconcile pre-debited estimate against actual cost
+        if user is not None and pre_debited > 0:
             pt = int(prompt_tokens or 0)
             ct = int(output_tokens or 0)
             try:
-                cost = credit_service.calculate_cost(pt, ct, effective_model, mode=effective_mode)
-                ok = await credit_service.debit_credits(
+                actual_cost = credit_service.calculate_cost(pt, ct, effective_model, mode=effective_mode)
+                await credit_service.reconcile_credits(
+                    db, user.id, pre_debited, actual_cost,
+                    ref_type="message", ref_id=str(asst_msg.id),
+                )
+                await credit_service.record_usage(
                     db,
                     user_id=user.id,
-                    cost=cost,
-                    reason="chat_completion",
-                    ref_type="message",
-                    ref_id=str(asst_msg.id),
+                    message_id=asst_msg.id,
+                    model=effective_model,
+                    prompt_tokens=pt,
+                    completion_tokens=ct,
+                    cost_credits=actual_cost,
                 )
-                if ok:
-                    await credit_service.record_usage(
-                        db,
-                        user_id=user.id,
-                        message_id=asst_msg.id,
-                        model=effective_model,
-                        prompt_tokens=pt,
-                        completion_tokens=ct,
-                        cost_credits=cost,
-                    )
-                    await db.commit()
-                else:
-                    # Insufficient at debit time: emit warning event
-                    yield sse(
-                        "warn",
-                        {
-                            "code": "DEBIT_FAILED",
-                            "message": "Could not debit credits due to low balance",
-                            "cost": cost,
-                        },
-                    )
+                await db.commit()
             except Exception as e:
                 # Non-fatal accounting error
                 yield sse("warn", {"code": "ACCOUNTING_ERROR", "message": str(e)})
