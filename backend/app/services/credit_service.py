@@ -11,15 +11,15 @@ from app.models.tables import CreditLedger, UsageRecord, User
 
 # Token-to-credit rates by model tier
 CREDIT_RATES = {
-    # Budget tier: 1 input, 5 output per 1K tokens
+    # Active models (reachable via mode system)
     "deepseek/deepseek-v3.2": (1, 5),
-    "qwen/qwen3-30b-a3b": (1, 5),
-    # Standard tier: 2 input, 10 output per 1K tokens
-    "mistralai/mistral-medium-3": (2, 10),
     "mistralai/mistral-medium-3.1": (2, 10),
     "mistralai/mistral-large-2512": (2, 10),
-    # Legacy rates (kept for historical usage records)
+    # Fallback models (in ALLOWED_MODELS)
+    "qwen/qwen3-30b-a3b": (1, 5),
+    "mistralai/mistral-medium-3": (2, 10),
     "openai/gpt-5.2": (3, 15),
+    # Legacy rates (kept for historical UsageRecord cost lookups)
     "x-ai/grok-4.1-fast": (1, 5),
     "minimax/minimax-m2.1": (1, 5),
     "moonshotai/kimi-k2.5": (1, 5),

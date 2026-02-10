@@ -103,7 +103,7 @@ sequenceDiagram
     W->>S3: Download PDF
     W->>W: PyMuPDF: extract text + bboxes per page
     W->>DB: INSERT pages (page_number, width, height)
-    W->>W: Chunk text (300-500 tokens)<br/>heading detection, header/footer filtering
+    W->>W: Chunk text (150–300 tokens)<br/>heading detection, header/footer filtering
     W->>DB: INSERT chunks (text, bboxes, page_start, page_end)
 
     loop For each batch of chunks
@@ -128,7 +128,7 @@ sequenceDiagram
 
 2. **Text Extraction**: Celery worker downloads the PDF and uses **PyMuPDF (fitz)** to extract text with bounding-box coordinates per page. Coordinates are normalized to `[0, 1]` range (top-left origin).
 
-3. **Chunking**: Text is split into 300–500 token windows with:
+3. **Chunking**: Text is split into 150–300 token windows with:
    - Heading detection for section titles
    - Header/footer filtering to remove repeated page elements
    - Each chunk stores `page_start`, `page_end`, and `bboxes` (JSONB array of normalized rectangles)
@@ -158,14 +158,14 @@ sequenceDiagram
     participant DB as PostgreSQL
 
     U->>CP: Type question & send
-    CP->>P: POST /api/proxy/sessions/{id}/chat<br/>{message, model?}
+    CP->>P: POST /api/proxy/sessions/{id}/chat<br/>{message, mode?, locale?}
     P->>API: Forward with JWT
 
     API->>CS: ensure_monthly_credits(user)
     API->>CS: check_balance(user)
     CS-->>API: OK (sufficient credits)
 
-    API->>Q: Vector search (top 5 chunks)
+    API->>Q: Vector search (top 8 chunks)
     Q-->>API: Matching chunks with scores
 
     API->>OR: POST /chat/completions (stream=true)<br/>System prompt + numbered fragments + user question
@@ -189,9 +189,9 @@ sequenceDiagram
 
 **Key components:**
 
-- **Retrieval**: Top-5 chunks by COSINE vector similarity from Qdrant. Each chunk includes text, page numbers, and bounding boxes.
+- **Retrieval**: Top-8 chunks by COSINE vector similarity from Qdrant. Each chunk includes text, page numbers, and bounding boxes.
 
-- **LLM Prompt**: System prompt instructs the model to cite sources using `[n]` notation matching the numbered document fragments provided. Anonymous demo users use a cheaper model (`DEMO_LLM_MODEL`, default DeepSeek V3.2) to reduce API costs. A **model-adaptive prompt system** (`model_profiles.py`) tailors the rules section and API parameters per model: DeepSeek uses `positive_framing` to avoid negative-framing over-compliance, Gemini Flash uses `constraints_at_end` to prevent constraint dropping, Grok uses `explicit_formatting` for better markdown, Claude uses `explicit_citation` for stronger citation pressure. Temperature, max_tokens, and feature flags (cache_control, stream_options) are also per-model.
+- **LLM Prompt**: System prompt instructs the model to cite sources using `[n]` notation matching the numbered document fragments provided. Anonymous demo users use a cheaper model (`DEMO_LLM_MODEL`, default DeepSeek V3.2) to reduce API costs. A **model-adaptive prompt system** (`model_profiles.py`) tailors the rules section and API parameters per model: DeepSeek uses `positive_framing` to avoid negative-framing over-compliance, other models use the `default` style. Temperature, max_tokens, and feature flags (stream_options) are also per-model.
 
 - **RefParserFSM**: A finite state machine in `chat_service.py` that handles `[n]` citation markers split across streaming token boundaries. For example, token `"[1"` followed by `"]"` is correctly parsed as citation reference 1.
 

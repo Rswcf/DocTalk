@@ -95,11 +95,13 @@ async def get_profile(
     )
 
     # Monthly allowance by plan
-    monthly_allowance = (
-        int(settings.PLAN_PRO_MONTHLY_CREDITS or 0)
-        if (user.plan or "").lower() == "pro"
-        else int(settings.PLAN_FREE_MONTHLY_CREDITS or 0)
-    )
+    plan = (user.plan or "free").lower()
+    if plan == "pro":
+        monthly_allowance = int(settings.PLAN_PRO_MONTHLY_CREDITS or 0)
+    elif plan == "plus":
+        monthly_allowance = int(settings.PLAN_PLUS_MONTHLY_CREDITS or 0)
+    else:
+        monthly_allowance = int(settings.PLAN_FREE_MONTHLY_CREDITS or 0)
 
     return {
         "id": str(user.id),

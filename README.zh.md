@@ -64,7 +64,7 @@ DocTalk 帮助高强度文档阅读者在超长文档中通过 AI 对话快速�
 | **存储** | MinIO (开发) / S3 兼容 (生产) |
 | **认证** | Auth.js (NextAuth) v5 + Google OAuth + JWT |
 | **支付** | Stripe Checkout + 订阅 + Webhooks |
-| **AI** | OpenRouter 网关 — LLM: `anthropic/claude-sonnet-4.5` (默认)，Embedding: `openai/text-embedding-3-small` |
+| **AI** | OpenRouter 网关 — 3 种性能模式: Quick (DeepSeek V3.2), Balanced (Mistral Medium 3.1), Thorough (Mistral Large 2512) |
 | **PDF 解析** | PyMuPDF (fitz)、Tesseract OCR |
 | **文档解析** | python-docx、python-pptx、openpyxl (DOCX/PPTX/XLSX)，httpx + BeautifulSoup4 (URL) |
 | **分析** | Vercel Web Analytics（需 cookie 同意后加载） |
@@ -184,7 +184,14 @@ DocTalk/
 │   │   └── types/
 │   └── public/
 ├── docs/
-│   └── ARCHITECTURE.md     # 架构详解与 Mermaid 图表
+│   ├── ARCHITECTURE.md
+│   ├── ARCHITECTURE.zh.md
+│   ├── PRODUCT_STRATEGY.md
+│   └── research/
+│       ├── competitive-analysis.md
+│       ├── feature-roadmap.md
+│       ├── monetization-strategy.md
+│       └── model-selection-research.md
 └── docker-compose.yml
 ```
 

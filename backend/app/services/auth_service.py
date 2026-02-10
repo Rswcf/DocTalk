@@ -14,6 +14,7 @@ from app.models.tables import Account, CreditLedger, User, VerificationToken
 
 logger = logging.getLogger(__name__)
 
+# Must match settings.SIGNUP_BONUS_CREDITS in config.py
 SIGNUP_BONUS_CREDITS = 10000
 
 

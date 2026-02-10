@@ -3,7 +3,7 @@
 from datetime import datetime, timedelta, timezone
 
 from fastapi import APIRouter, Depends, Query
-from sqlalchemy import case, func, select, text
+from sqlalchemy import case, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.deps import get_db_session, require_admin
@@ -60,13 +60,6 @@ async def admin_overview(
         "total_credits_spent": total_credits_spent,
         "total_credits_granted": total_credits_granted,
     }
-
-
-def _date_trunc_expr(period: str, column):
-    """Return a SQL date_trunc expression."""
-    if period not in ("day", "week", "month"):
-        period = "day"
-    return func.date_trunc(text(f"'{period}'"), column)
 
 
 @router.get("/trends")

@@ -103,7 +103,7 @@ sequenceDiagram
     W->>S3: 下载 PDF
     W->>W: PyMuPDF: 按页提取文本 + 边界框
     W->>DB: INSERT pages (page_number, width, height)
-    W->>W: 文本分块 (300-500 tokens)<br/>标题检测，页眉页脚过滤
+    W->>W: 文本分块 (150–300 tokens)<br/>标题检测，页眉页脚过滤
     W->>DB: INSERT chunks (text, bboxes, page_start, page_end)
 
     loop 按批次处理文本块
@@ -128,7 +128,7 @@ sequenceDiagram
 
 2. **文本提取**：Celery Worker 下载 PDF，使用 **PyMuPDF (fitz)** 按页提取文本及边界框坐标。坐标归一化到 `[0, 1]` 范围（左上角原点）。
 
-3. **分块**：文本被分割为 300–500 token 的窗口，具有以下特性：
+3. **分块**：文本被分割为 150–300 token 的窗口，具有以下特性：
    - 标题检测用于识别章节标题
    - 页眉/页脚过滤以移除重复的页面元素
    - 每个文本块存储 `page_start`、`page_end` 和 `bboxes`（归一化矩形的 JSONB 数组）
@@ -158,14 +158,14 @@ sequenceDiagram
     participant DB as PostgreSQL
 
     U->>CP: 输入问题并发送
-    CP->>P: POST /api/proxy/sessions/{id}/chat<br/>{message, model?}
+    CP->>P: POST /api/proxy/sessions/{id}/chat<br/>{message, mode?, locale?}
     P->>API: 携带 JWT 转发
 
     API->>CS: ensure_monthly_credits(user)
     API->>CS: check_balance(user)
     CS-->>API: OK（余额充足）
 
-    API->>Q: 向量搜索（top 5 文本块）
+    API->>Q: 向量搜索（top 8 文本块）
     Q-->>API: 匹配的文本块及分数
 
     API->>OR: POST /chat/completions (stream=true)<br/>系统提示 + 编号文档片段 + 用户问题
@@ -189,9 +189,9 @@ sequenceDiagram
 
 **关键组件：**
 
-- **检索**：从 Qdrant 按 COSINE 向量相似度检索 Top-5 文本块。每个文本块包含文本、页码和边界框。
+- **检索**：从 Qdrant 按 COSINE 向量相似度检索 Top-8 文本块。每个文本块包含文本、页码和边界框。
 
-- **LLM 提示词**：系统提示指示模型使用 `[n]` 标记引用来源，编号对应提供的文档片段。匿名 Demo 用户使用低成本模型（`DEMO_LLM_MODEL`，默认 DeepSeek V3.2）以降低 API 成本。**模型自适应提示系统**（`model_profiles.py`）为每个模型定制规则部分和 API 参数：DeepSeek 使用 `positive_framing` 避免消极表述过度遵从，Gemini Flash 使用 `constraints_at_end` 防止约束丢失，Grok 使用 `explicit_formatting` 改善 markdown 格式，Claude 使用 `explicit_citation` 强化引用要求。temperature、max_tokens 和功能标志（cache_control、stream_options）也按模型配置。
+- **LLM 提示词**：系统提示指示模型使用 `[n]` 标记引用来源，编号对应提供的文档片段。匿名 Demo 用户使用低成本模型（`DEMO_LLM_MODEL`，默认 DeepSeek V3.2）以降低 API 成本。**模型自适应提示系统**（`model_profiles.py`）为每个模型定制规则部分和 API 参数：DeepSeek 使用 `positive_framing` 避免消极表述过度遵从，其他模型使用 `default` 风格。temperature、max_tokens 和功能标志（stream_options）也按模型配置。
 
 - **RefParserFSM**：`chat_service.py` 中的有限状态机，处理流式 token 中跨边界的 `[n]` 引用标记。例如，token `"[1"` 后跟 `"]"` 会被正确解析为引用标记 1。
 

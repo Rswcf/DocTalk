@@ -75,7 +75,7 @@ DocTalk is an AI-powered PDF reader with a unique competitive advantage: **citat
 
 ### Priority 3: Academic Researchers & Students
 - **WTP**: $10-$25/month individual; $100-$500/seat/year institutional
-- **Fit**: Attention paper already a demo; 9-language support is a differentiator
+- **Fit**: Attention paper already a demo; 11-language support is a differentiator
 - **Revenue potential**: 3-5K paid users × $12/month = **$432K-$720K ARR** + institutional licensing
 - **Key needs**: Multi-paper Q&A, Zotero integration, literature review workflow
 - **Channel**: #AcademicTwitter, Reddit r/GradSchool, YouTube tutorials, university partnerships

@@ -51,44 +51,6 @@ PROMPT_RULES: dict[str, str] = {
         "7. Use Markdown: **bold** for emphasis, bullet lists for multiple points.\n"
         "8. Your response language MUST match the language of the user's question.\n"
     ),
-    # Gemini Flash — negative constraints at end to avoid being dropped
-    "constraints_at_end": (
-        "1. After key statements, cite sources with [n] (n = fragment number).\n"
-        "2. You may cite multiple fragments, e.g. [1][3].\n"
-        "3. Extract as much relevant information as possible from the fragments.\n"
-        "4. Use Markdown: **bold** for emphasis, bullet lists for multiple points.\n"
-        "5. Your response language MUST match the language of the user's question.\n"
-        "6. CRITICAL: If a question asks about something NOT in the fragments, "
-        "you MUST explicitly say the information is not found in the document.\n"
-        "7. CRITICAL: Do NOT fabricate information that is not in the fragments above.\n"
-        "8. CRITICAL: If information is not present in the fragments, state clearly that it was not found.\n"
-    ),
-    # Grok — explicit markdown formatting guidance
-    "explicit_formatting": (
-        "1. Only answer based on the fragments above. Do not fabricate information.\n"
-        "2. After key statements, cite sources with [n] (n = fragment number).\n"
-        "3. You may cite multiple fragments, e.g. [1][3].\n"
-        "4. Always extract as much relevant information as possible from the fragments. "
-        "Focus on what IS available.\n"
-        "5. If the question asks about a topic not covered in the fragments, "
-        "explicitly state that this information is not present in the document.\n"
-        "6. Format your response with proper Markdown: use **bold** for key terms, "
-        "use - for bullet lists, use | for tables if comparing data, use ``` for code/formulas.\n"
-        "7. Your response language MUST match the language of the user's question.\n"
-    ),
-    # Claude Sonnet/Opus — explicit citation pressure
-    "explicit_citation": (
-        "1. Only answer based on the fragments above. Do not fabricate information.\n"
-        "2. You MUST cite sources with [n] after EVERY factual claim. Never make an unsupported statement.\n"
-        "3. You may cite multiple fragments, e.g. [1][3].\n"
-        "4. Always extract as much relevant information as possible from the fragments. "
-        "Focus on what IS available rather than what is missing. "
-        "Only say the information was not found if the fragments are truly unrelated to the question.\n"
-        "5. If the question asks about a topic not covered in any of the fragments, "
-        "state explicitly that this information is not present in the document.\n"
-        "6. Use Markdown: **bold** for emphasis, bullet lists for multiple points.\n"
-        "7. Your response language MUST match the language of the user's question.\n"
-    ),
 }
 
 # Collection-session variants add a "mention which document" rule.
@@ -97,15 +59,6 @@ COLLECTION_EXTRA_RULES: dict[str, str] = {
         "4b. When relevant, mention which document the information comes from.\n"
     ),
     "positive_framing": (
-        "4b. When relevant, mention which document the information comes from.\n"
-    ),
-    "constraints_at_end": (
-        "3b. When relevant, mention which document the information comes from.\n"
-    ),
-    "explicit_formatting": (
-        "4b. When relevant, mention which document the information comes from.\n"
-    ),
-    "explicit_citation": (
         "4b. When relevant, mention which document the information comes from.\n"
     ),
 }
@@ -122,34 +75,6 @@ MODEL_PROFILES: dict[str, ModelProfile] = {
         supports_stream_options=False,
         prompt_style="positive_framing",
     ),
-    "google/gemini-3-flash-preview": ModelProfile(
-        temperature=0.0,
-        max_tokens=1536,
-        supports_cache_control=False,
-        supports_stream_options=False,
-        prompt_style="constraints_at_end",
-    ),
-    "x-ai/grok-4.1-fast": ModelProfile(
-        temperature=0.2,
-        max_tokens=1536,
-        supports_cache_control=False,
-        supports_stream_options=False,
-        prompt_style="explicit_formatting",
-    ),
-    "minimax/minimax-m2.1": ModelProfile(
-        temperature=0.3,
-        max_tokens=1536,
-        supports_cache_control=False,
-        supports_stream_options=False,
-        prompt_style="default",
-    ),
-    "moonshotai/kimi-k2.5": ModelProfile(
-        temperature=0.2,
-        max_tokens=1536,
-        supports_cache_control=False,
-        supports_stream_options=False,
-        prompt_style="default",
-    ),
     "openai/gpt-5.2": ModelProfile(
         temperature=0.0,
         max_tokens=2048,
@@ -157,30 +82,9 @@ MODEL_PROFILES: dict[str, ModelProfile] = {
         supports_stream_options=True,
         prompt_style="default",
     ),
-    "google/gemini-3-pro-preview": ModelProfile(
-        temperature=0.1,
-        max_tokens=2048,
-        supports_cache_control=False,
-        supports_stream_options=False,
-        prompt_style="default",
-    ),
-    "anthropic/claude-sonnet-4.5": ModelProfile(
-        temperature=0.3,
-        max_tokens=2048,
-        supports_cache_control=True,
-        supports_stream_options=False,
-        prompt_style="explicit_citation",
-    ),
-    "anthropic/claude-opus-4.6": ModelProfile(
-        temperature=0.5,
-        max_tokens=3072,
-        supports_cache_control=True,
-        supports_stream_options=False,
-        prompt_style="explicit_citation",
-    ),
-    "qwen/qwen3-235b-a22b": ModelProfile(
+    "qwen/qwen3-30b-a3b": ModelProfile(
         temperature=0.2,
-        max_tokens=2048,
+        max_tokens=1536,
         supports_cache_control=False,
         supports_stream_options=False,
         prompt_style="default",
@@ -200,13 +104,6 @@ MODEL_PROFILES: dict[str, ModelProfile] = {
         prompt_style="default",
     ),
     "mistralai/mistral-large-2512": ModelProfile(
-        temperature=0.2,
-        max_tokens=2048,
-        supports_cache_control=False,
-        supports_stream_options=False,
-        prompt_style="default",
-    ),
-    "bytedance-seed/seed-1.6": ModelProfile(
         temperature=0.2,
         max_tokens=2048,
         supports_cache_control=False,

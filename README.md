@@ -64,7 +64,7 @@ DocTalk helps heavy document readers quickly locate key information in long docu
 | **Storage** | MinIO (dev) / S3-compatible (prod) |
 | **Auth** | Auth.js (NextAuth) v5 + Google OAuth + JWT |
 | **Payments** | Stripe Checkout + Subscriptions + Webhooks |
-| **AI** | OpenRouter gateway — LLM: `anthropic/claude-sonnet-4.5` (default), Embedding: `openai/text-embedding-3-small` |
+| **AI** | OpenRouter gateway — 3 performance modes: Quick (DeepSeek V3.2), Balanced (Mistral Medium 3.1), Thorough (Mistral Large 2512) |
 | **PDF Parse** | PyMuPDF (fitz), Tesseract OCR |
 | **Document Parse** | python-docx, python-pptx, openpyxl (DOCX/PPTX/XLSX), httpx + BeautifulSoup4 (URL) |
 | **Analytics** | Vercel Web Analytics (cookie-consent-gated) |
@@ -184,7 +184,14 @@ DocTalk/
 │   │   └── types/
 │   └── public/
 ├── docs/
-│   └── ARCHITECTURE.md     # Architecture deep-dive with Mermaid diagrams
+│   ├── ARCHITECTURE.md
+│   ├── ARCHITECTURE.zh.md
+│   ├── PRODUCT_STRATEGY.md
+│   └── research/
+│       ├── competitive-analysis.md
+│       ├── feature-roadmap.md
+│       ├── monetization-strategy.md
+│       └── model-selection-research.md
 └── docker-compose.yml
 ```
 

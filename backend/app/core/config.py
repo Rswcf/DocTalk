@@ -22,8 +22,7 @@ class Settings(BaseSettings):
     QDRANT_COLLECTION: str = Field(default="doc_chunks")
 
     # LLM (通过 OpenRouter 调用)
-    LLM_MODEL: str = Field(default="anthropic/claude-sonnet-4.5")
-    LLM_MAX_CONTEXT_TOKENS: int = Field(default=180000)
+    LLM_MODEL: str = Field(default="mistralai/mistral-medium-3.1")
     ALLOWED_MODELS: list[str] = Field(default=[
         "deepseek/deepseek-v3.2",
         "mistralai/mistral-medium-3.1",
@@ -49,7 +48,6 @@ class Settings(BaseSettings):
 
     # Limits
     MAX_PDF_SIZE_MB: int = Field(default=50)
-    MAX_PDF_PAGES: int = Field(default=500)
     MAX_CHAT_HISTORY_TURNS: int = Field(default=6)
     MAX_RETRIEVAL_TOKENS: int = Field(default=1750)
 
@@ -122,9 +120,6 @@ class Settings(BaseSettings):
     FREE_MAX_FILE_SIZE_MB: int = 25
     PLUS_MAX_FILE_SIZE_MB: int = 50
     PRO_MAX_FILE_SIZE_MB: int = 100
-
-    # Model access by plan (legacy — replaced by PREMIUM_MODES)
-    PREMIUM_MODELS: list[str] = Field(default=[])
 
     # Admin access — comma-separated email list
     ADMIN_EMAILS: str = ""

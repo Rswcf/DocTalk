@@ -55,7 +55,7 @@ Railway 项目包含 5 个服务：backend, Postgres, Redis, qdrant-v2, minio-v2
 - **Profile 页面**: `/profile` 4 个 Tab (Profile/Credits/Usage/Account)，含交易历史、使用统计、账户删除
 - **API 网关**: 所有 LLM 和 Embedding 调用统一通过 OpenRouter（单一 API key）。匿名 Demo 用户使用 `DEMO_LLM_MODEL`（默认 `deepseek/deepseek-v3.2`）降低成本
 - **模式切换**: 前端用户可选择性能模式（Quick/Balanced/Thorough），后端映射到具体模型并通过 OpenRouter 调用
-- **模型自适应提示**: `model_profiles.py` 为每个模型定义独立的 `ModelProfile`（temperature、max_tokens、supports_cache_control、supports_stream_options、prompt_style）。`chat_service.py` 根据模型 profile 动态调整系统提示规则和 API 参数。5 种 prompt_style 变体：`default`（MiniMax/Kimi/GPT/Gemini Pro）、`positive_framing`（DeepSeek — 避免消极表述过度遵从）、`constraints_at_end`（Gemini Flash — 约束放末尾防丢失）、`explicit_formatting`（Grok — 显式 markdown 指导）、`explicit_citation`（Claude — 强制每条陈述引用）。`cache_control` 仅对 Anthropic 模型发送（修复了之前对所有模型发送的 bug），`stream_options` 仅对 OpenAI 模型启用
+- **模型自适应提示**: `model_profiles.py` 为每个模型定义独立的 `ModelProfile`（temperature、max_tokens、supports_cache_control、supports_stream_options、prompt_style）。`chat_service.py` 根据模型 profile 动态调整系统提示规则和 API 参数。2 种 prompt_style 变体：`default`（Mistral/GPT/Qwen 等通用模型）、`positive_framing`（DeepSeek — 避免消极表述过度遵从）。`stream_options` 仅对 OpenAI 模型启用
 - **AI 回答语言**: 跟随用户提问语言（"Your response language MUST match the language of the user's question"），不受前端 UI locale 影响。前端 locale 仅控制界面文字展示
 - **RAG 基准测试**: `backend/scripts/` 包含 48 个测试用例（10 类别 × 3 demo 文档）、自动化 benchmark runner（`run_benchmark.py`）和评估器（`evaluate_benchmark.py`，8 维度自动评分 + 可选 LLM-as-judge）。评估维度：引用准确度、信息完整度、幻觉率、语言合规、Markdown 质量、指令遵从、否定案例准确度、首 token 延迟
 - **布局**: Chat 面板在左侧, PDF 查看器在右侧，中间可拖拽调节宽度 (react-resizable-panels)
@@ -127,6 +127,13 @@ GET    /api/users/me/export               # GDPR 数据导出 (JSON，包含用�
 GET    /api/users/profile                 # 完整 Profile (含 stats, plan, accounts)
 GET    /api/users/usage-breakdown         # 按模型分组的使用统计
 DELETE /api/users/me                      # 删除账户 (级联清理)
+
+# 管理后台 (require_admin 保护)
+GET    /api/admin/overview               # KPI 概览 (用户数/文档数/token/credits)
+GET    /api/admin/trends                 # 时间序列趋势 (?period=day&days=30)
+GET    /api/admin/breakdowns             # 分类统计 (套餐/模型/文件类型/文档状态)
+GET    /api/admin/recent-users           # 最近注册用户 (?limit=20)
+GET    /api/admin/top-users              # 活跃用户排行 (?by=tokens&limit=20)
 
 # 内部 Auth (Adapter)
 POST   /api/internal/auth/users           # 创建用户
@@ -242,10 +249,10 @@ SENTRY_TRACES_SAMPLE_RATE=0.1
 ### 安全相关
 - **上传/删除需登录**: `upload_document` 和 `delete_document` 使用 `require_auth` 依赖，未登录返回 401
 - **搜索支持可选认证**: `search_document` 使用 `get_current_user_optional`，已登录用户可搜索自己的文档，匿名用户可搜索 demo 文档
-- **Demo 会话上限**: 匿名用户每个 demo 文档最多创建 50 个会话 (`DEMO_MAX_SESSIONS_PER_DOC=50`)，超限返回 429。上限较大是因为全局计数（含已登录用户的会话），真正的保护是每会话 5 条消息限制
+- **Demo 会话上限**: 匿名用户每个 demo 文档最多创建 500 个会话 (`DEMO_MAX_SESSIONS_PER_DOC=500`)，超限返回 429。上限较大是因为全局计数（含已登录用户的会话），真正的保护是每会话 5 条消息限制
 - **匿名速率限制**: `rate_limit.py` 提供内存级 token-bucket 速率限制器，匿名用户 chat 端点限制 10 req/min/IP，超限返回 429 + `Retry-After` header。bucket 字典超过 10K 条目时自动清理过期条目
 - **匿名 Demo 模型强制**: 匿名用户在 Demo 文档上的 chat 请求忽略 `model` 参数，强制使用 `settings.DEMO_LLM_MODEL`（默认 `deepseek/deepseek-v3.2`），通过 OpenRouter 调用。防止通过 API 直接调用高成本模型
-- **Admin 端点已移除**: 不再暴露 `/admin/retry-stuck`、`/admin/documents` 等无鉴权端点
+- **Admin 端点**: 旧无鉴权端点已移除，新增 `require_admin`（邮箱白名单）保护的分析端点
 - **依赖已锁定**: `requirements.txt` 中所有依赖版本已 pin（`==`），防止供应链攻击
 - **SSRF 防护**: `url_validator.py` 对 URL 导入端点执行 DNS 解析，阻断 RFC 1918/链路本地/云元数据地址段的私有 IP，封锁内部服务端口（5432/6379/6333/9000），手动跟踪最多 3 次重定向并在每跳验证目标安全性
 - **Magic-byte 文件验证**: 上传时检查 PDF `%PDF` 头、Office ZIP 结构 + `[Content_Types].xml`，以及 500MB zip bomb 保护
@@ -380,7 +387,7 @@ DocTalk/
 │   │   │   ├── rate_limit.py     # 内存级速率限制器 (匿名用户 chat 端点, 10K 条目自动清理)
 │   │   │   ├── url_validator.py  # SSRF 防护 (DNS 解析 + 私有 IP 阻断 + 端口封锁 + 重定向验证)
 │   │   │   ├── security_log.py   # 结构化 JSON 安全事件日志
-│   │   │   └── model_profiles.py # 模型自适应配置 (ModelProfile + 各模型 profile + 5 种 prompt_style)
+│   │   │   └── model_profiles.py # 模型自适应配置 (ModelProfile + 各模型 profile + 2 种 prompt_style)
 │   │   ├── models/
 │   │   │   ├── tables.py         # ORM (User, Document, Collection, Session, Credits, Ledger...)
 │   │   │   ├── database.py       # Async engine

@@ -103,16 +103,6 @@ class DocService:
         doc = res.scalar_one_or_none()
         return doc
 
-    async def mark_deleting(self, document_id: uuid.UUID, db: AsyncSession) -> bool:
-        res = await db.execute(select(Document).where(Document.id == document_id))
-        doc = res.scalar_one_or_none()
-        if not doc:
-            return False
-        doc.status = "deleting"
-        db.add(doc)
-        await db.commit()
-        return True
-
     async def delete_document(self, document_id: uuid.UUID, db: AsyncSession) -> bool:
         """Delete document and all related data via ORM cascade.
 
