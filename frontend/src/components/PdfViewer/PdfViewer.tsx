@@ -10,8 +10,10 @@ import { useTheme } from 'next-themes';
 import { useDocTalkStore } from '../../store';
 import { useLocale } from '../../i18n';
 
-// Configure pdf.js worker with explicit https protocol
-pdfjs.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.mjs`;
+// Load pdf.js worker from same origin to avoid CSP cross-origin issues.
+// The worker file is copied from node_modules/pdfjs-dist/build/ to public/.
+// Must re-copy when upgrading pdfjs-dist (same as cmaps/ and standard_fonts/).
+pdfjs.GlobalWorkerOptions.workerSrc = `/pdf.worker.min.mjs`;
 
 // CMap files are required for rendering CJK (Chinese/Japanese/Korean) fonts in PDFs.
 // Must use absolute URLs because the pdf.js Web Worker runs on the CDN origin,

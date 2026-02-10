@@ -7,8 +7,8 @@ const cspDirectives = [
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' blob: data: https://*.up.railway.app",
   "font-src 'self' data:",
-  "worker-src 'self' blob: https://cdnjs.cloudflare.com",
-  "connect-src 'self' https://*.up.railway.app https://*.sentry.io https://*.ingest.sentry.io https://va.vercel-scripts.com https://vitals.vercel-insights.com https://cdnjs.cloudflare.com",
+  "worker-src 'self' blob:",
+  "connect-src 'self' https://*.up.railway.app https://*.sentry.io https://*.ingest.sentry.io https://va.vercel-scripts.com https://vitals.vercel-insights.com",
   "frame-src 'none'",
   "frame-ancestors 'none'",
   "object-src 'none'",
@@ -37,8 +37,7 @@ const nextConfig = {
             key: "Strict-Transport-Security",
             value: "max-age=63072000; includeSubDomains; preload",
           },
-          // CSP temporarily disabled to debug PDF loading issue
-          // { key: "Content-Security-Policy", value: cspDirectives },
+          { key: "Content-Security-Policy", value: cspDirectives },
         ],
       },
     ];

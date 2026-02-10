@@ -264,7 +264,7 @@ SENTRY_TRACES_SAMPLE_RATE=0.1
 - **GDPR 数据导出**: `GET /api/users/me/export` 返回包含用户所有数据的 JSON（GDPR Art. 20 数据可携带性）
 - **OAuth Token 清理**: `link_account()` 中剥离 access_token/refresh_token/id_token — DocTalk 仅需身份信息
 - **非 root Docker**: 容器以 `app` 用户（UID 1001）运行
-- **安全响应头**: `next.config.mjs` 配置 CSP（Content-Security-Policy）+ X-Frame-Options DENY + HSTS（2 年 + preload）+ X-Content-Type-Options nosniff + Referrer-Policy strict-origin-when-cross-origin + Permissions-Policy（禁用 camera/microphone/geolocation）。CSP 允许列表：`cdnjs.cloudflare.com`（pdf.js Worker）、`*.up.railway.app`（MinIO presigned URL + 后端 API）、`*.sentry.io`（错误追踪）、`va.vercel-scripts.com` / `vitals.vercel-insights.com`（Vercel Analytics）、`accounts.google.com`（OAuth form-action）
+- **安全响应头**: `next.config.mjs` 配置 CSP（Content-Security-Policy）+ X-Frame-Options DENY + HSTS（2 年 + preload）+ X-Content-Type-Options nosniff + Referrer-Policy strict-origin-when-cross-origin + Permissions-Policy（禁用 camera/microphone/geolocation）。CSP 允许列表：`*.up.railway.app`（MinIO presigned URL + 后端 API）、`*.sentry.io`（错误追踪）、`va.vercel-scripts.com` / `vitals.vercel-insights.com`（Vercel Analytics）、`accounts.google.com`（OAuth form-action）。pdf.js Worker 从 `public/` 同源加载（非 CDN），避免 CSP 跨域问题
 
 ### 认证相关
 - **API 代理**: 所有后端接口（含 SSE chat stream）通过 `/api/proxy/*` 走前端代理，自动注入 JWT
@@ -331,7 +331,7 @@ SENTRY_TRACES_SAMPLE_RATE=0.1
 
 ### PDF 相关
 - **react-pdf v9 (pdf.js v4.8)**: 从 v7 升级到 v9 以支持 CJK 字体渲染。Worker 文件扩展名从 `.js` 改为 `.mjs`
-- **CJK CMap 支持**: CMap 文件（169 个）和标准字体文件（16 个）从 `pdfjs-dist` 复制到 `public/cmaps/` 和 `public/standard_fonts/`。`PDF_OPTIONS` 使用 `window.location.origin` 构建绝对 URL，因为 pdf.js Web Worker 运行在 CDN 域名上，相对路径无法解析。升级 react-pdf 或 pdfjs-dist 后需重新复制这些文件
+- **CJK CMap 支持**: CMap 文件（169 个）和标准字体文件（16 个）从 `pdfjs-dist` 复制到 `public/cmaps/` 和 `public/standard_fonts/`。`PDF_OPTIONS` 使用 `window.location.origin` 构建绝对 URL，因为 pdf.js Web Worker 与主线程同源但需正确解析路径。Worker 文件 `pdf.worker.min.mjs` 也从 `pdfjs-dist/build/` 复制到 `public/`（同源加载，避免 CSP 跨域问题）。升级 react-pdf 或 pdfjs-dist 后需重新复制这三类文件（cmaps、standard_fonts、worker）
 - **bbox 坐标**: 归一化到 [0,1]，top-left origin，前端渲染时乘以页面实际像素尺寸
 - **引用 FSM 解析器**: `chat_service.py:RefParserFSM` 处理 LLM 流式输出中跨 token 的 `[n]` 引用标记切断
 - **引用重编号**: `ChatPanel.tsx:renumberCitations()` 将后端返回的 refIndex 重编号为连续序列
