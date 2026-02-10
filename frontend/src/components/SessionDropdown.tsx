@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { ChevronDown, Plus, Trash2, Home } from 'lucide-react';
+import { ChevronDown, Plus, Trash2, Home, X } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useDocTalkStore } from '../store';
 import { useLocale } from '../i18n';
@@ -71,18 +71,25 @@ export default function SessionDropdown() {
     setOpen(false);
   };
 
-  const onDeleteCurrent = async () => {
-    if (!sessionId || isStreaming) return;
+  const onDeleteSessionById = async (targetId: string) => {
+    if (isStreaming) return;
     if (!window.confirm(t('session.deleteChatConfirm'))) return;
-    await deleteSession(sessionId);
-    removeSession(sessionId);
+    await deleteSession(targetId);
+    removeSession(targetId);
     const remaining = useDocTalkStore.getState().sessions;
-    if (remaining.length > 0) {
-      await onSwitchSession(remaining[0].session_id);
-    } else {
-      await onNewChat();
+    if (targetId === sessionId) {
+      if (remaining.length > 0) {
+        await onSwitchSession(remaining[0].session_id);
+      } else {
+        await onNewChat();
+      }
     }
     setOpen(false);
+  };
+
+  const onDeleteCurrent = () => {
+    if (!sessionId) return;
+    onDeleteSessionById(sessionId);
   };
 
   const onBackHome = () => {
@@ -166,25 +173,39 @@ export default function SessionDropdown() {
                 const label = s.title?.trim() || t('session.noTitle');
                 const idx = 1 + i;
                 return (
-                  <button
+                  <div
                     key={s.session_id}
-                    ref={(el) => { itemRefs.current[idx] = el; }}
-                    className={`w-full text-left flex items-center gap-2 px-2 py-1.5 rounded hover:bg-zinc-100 dark:hover:bg-zinc-800 text-sm text-zinc-700 dark:text-zinc-200 transition-colors focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:ring-inset ${
+                    className={`group flex items-center gap-1 rounded hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors ${
                       isCurrent ? 'font-medium' : ''
-                    } ${disabledClass}`}
-                    onClick={() => onSwitchSession(s.session_id)}
-                    disabled={isStreaming}
-                    tabIndex={focusIndex === idx ? 0 : -1}
-                    role="menuitem"
+                    }`}
                   >
-                    <span className="w-4 h-4 flex items-center justify-center">
-                      {isCurrent ? <span className="block w-2 h-2 rounded-full bg-zinc-600" aria-label="Current session" /> : null}
-                    </span>
-                    <span className="flex-1 truncate" title={label}>{label}</span>
-                    <span className="text-xs text-zinc-500 dark:text-zinc-400">
-                      {t('session.messageCount', { count: s.message_count })}
-                    </span>
-                  </button>
+                    <button
+                      ref={(el) => { itemRefs.current[idx] = el; }}
+                      className={`flex-1 min-w-0 text-left flex items-center gap-2 px-2 py-1.5 text-sm text-zinc-700 dark:text-zinc-200 focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:ring-inset rounded ${disabledClass}`}
+                      onClick={() => onSwitchSession(s.session_id)}
+                      disabled={isStreaming}
+                      tabIndex={focusIndex === idx ? 0 : -1}
+                      role="menuitem"
+                    >
+                      <span className="w-4 h-4 flex items-center justify-center shrink-0">
+                        {isCurrent ? <span className="block w-2 h-2 rounded-full bg-zinc-600" aria-label="Current session" /> : null}
+                      </span>
+                      <span className="flex-1 truncate" title={label}>{label}</span>
+                      <span className="text-xs text-zinc-500 dark:text-zinc-400 shrink-0">
+                        {t('session.messageCount', { count: s.message_count })}
+                      </span>
+                    </button>
+                    <button
+                      className={`shrink-0 p-1 mr-1 rounded opacity-0 group-hover:opacity-100 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-400 hover:text-red-500 dark:hover:text-red-400 transition-opacity focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-zinc-400 ${disabledClass}`}
+                      onClick={(e) => { e.stopPropagation(); onDeleteSessionById(s.session_id); }}
+                      disabled={isStreaming}
+                      title={t('session.deleteChat')}
+                      aria-label={t('session.deleteChat')}
+                      tabIndex={-1}
+                    >
+                      <X aria-hidden="true" size={14} />
+                    </button>
+                  </div>
                 );
               })
             )}
