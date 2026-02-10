@@ -5,7 +5,7 @@ const cspDirectives = [
   "default-src 'self'",
   "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://va.vercel-scripts.com https://*.sentry-cdn.com",
   "style-src 'self' 'unsafe-inline'",
-  "img-src 'self' blob: data: https://*.up.railway.app",
+  "img-src 'self' blob: data: https://*.up.railway.app https://*.googleusercontent.com",
   "font-src 'self' data:",
   "worker-src 'self' blob:",
   "connect-src 'self' https://*.up.railway.app https://*.sentry.io https://*.ingest.sentry.io https://va.vercel-scripts.com https://vitals.vercel-insights.com",
