@@ -2,45 +2,66 @@
 
 import React from 'react';
 import Link from 'next/link';
+import { ArrowRight } from 'lucide-react';
 import { useLocale } from '../../i18n';
+import ScrollReveal from './ScrollReveal';
 
 export default function HeroSection() {
   const { t } = useLocale();
 
   return (
-    <section className="max-w-6xl mx-auto px-6 py-24 md:py-32">
-      <div className="max-w-4xl mx-auto text-center">
-        {/* Headline */}
-        <h1 className="text-4xl md:text-5xl lg:text-6xl font-semibold text-zinc-900 dark:text-zinc-50 leading-[1.1] tracking-tight text-balance">
-          {t('landing.headline').split('\n').map((line: string, i: number) => (
-            <React.Fragment key={i}>
-              {i > 0 && <br />}
-              {line}
-            </React.Fragment>
-          ))}
-        </h1>
+    <ScrollReveal direction="up" delay={0}>
+      <section className="relative max-w-6xl mx-auto px-6 py-24 md:py-32 overflow-hidden">
+        {/* Subtle dot-pattern background */}
+        <div
+          aria-hidden="true"
+          className="dot-pattern absolute inset-0 opacity-[0.4] pointer-events-none"
+        />
 
-        {/* Subtitle */}
-        <p className="mt-4 text-xl md:text-2xl text-zinc-500 dark:text-zinc-400 font-normal">
-          {t('landing.subtitle')}
-        </p>
+        <div className="relative max-w-4xl mx-auto text-center">
+          {/* Badge pill */}
+          <span className="inline-block bg-accent-light text-accent text-xs font-medium tracking-widest uppercase px-3 py-1 rounded-full mb-6">
+            {t('landing.badge')}
+          </span>
 
-        {/* CTA buttons */}
-        <div className="mt-8 flex flex-wrap gap-4 justify-center">
-          <Link
-            href="/demo"
-            className="inline-flex items-center px-6 py-3 bg-zinc-900 dark:bg-zinc-50 text-white dark:text-zinc-900 rounded-lg font-medium hover:bg-zinc-800 dark:hover:bg-zinc-200 shadow-sm hover:shadow-md transition-colors focus-visible:ring-2 focus-visible:ring-zinc-400 dark:focus-visible:ring-zinc-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-900"
-          >
-            {t('landing.cta.demo')}
-          </Link>
-          <Link
-            href="#how-it-works"
-            className="inline-flex items-center px-6 py-3 border border-zinc-300 dark:border-zinc-700 text-zinc-700 dark:text-zinc-300 rounded-lg font-medium hover:bg-zinc-50 dark:hover:bg-zinc-900 transition-colors focus-visible:ring-2 focus-visible:ring-zinc-400 dark:focus-visible:ring-zinc-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-900"
-          >
-            {t('landing.cta.howItWorks')}
-          </Link>
+          {/* Headline */}
+          <h1 className="text-5xl md:text-6xl lg:text-7xl font-display text-zinc-900 dark:text-zinc-50 leading-[1.1] tracking-tight text-balance">
+            {t('landing.headline').split('\n').map((line: string, i: number) => (
+              <React.Fragment key={i}>
+                {i > 0 && <br />}
+                {line}
+              </React.Fragment>
+            ))}
+          </h1>
+
+          {/* Subtitle */}
+          <p className="mt-4 text-xl md:text-2xl text-zinc-500 dark:text-zinc-400 font-normal">
+            {t('landing.subtitle')}
+          </p>
+
+          {/* Description */}
+          <p className="mt-3 max-w-2xl mx-auto text-base md:text-lg text-zinc-600 dark:text-zinc-400 leading-relaxed">
+            {t('landing.description')}
+          </p>
+
+          {/* CTA buttons */}
+          <div className="mt-8 flex flex-wrap gap-4 justify-center">
+            <Link
+              href="/demo"
+              className="inline-flex items-center gap-2 px-6 py-3 bg-accent hover:bg-accent-hover text-accent-foreground rounded-lg font-medium shadow-sm hover:shadow-md transition-[box-shadow,color,background-color] motion-reduce:transition-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-950"
+            >
+              {t('landing.cta.demo')}
+              <ArrowRight aria-hidden="true" size={18} className="transition-transform motion-reduce:transform-none group-hover:translate-x-0.5" />
+            </Link>
+            <Link
+              href="#how-it-works"
+              className="inline-flex items-center px-6 py-3 border border-zinc-300 dark:border-zinc-700 text-zinc-700 dark:text-zinc-300 rounded-lg font-medium hover:border-accent hover:text-accent dark:hover:border-accent dark:hover:text-accent transition-colors motion-reduce:transition-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-950"
+            >
+              {t('landing.cta.howItWorks')}
+            </Link>
+          </div>
         </div>
-      </div>
-    </section>
+      </section>
+    </ScrollReveal>
   );
 }

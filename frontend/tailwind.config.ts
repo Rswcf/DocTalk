@@ -11,7 +11,16 @@ const config: Config = {
     extend: {
       fontFamily: {
         sans: ['var(--font-inter)', 'system-ui', 'sans-serif'],
+        display: ['var(--font-display)', 'Georgia', 'Times New Roman', 'serif'],
         win98: ["'MS Sans Serif'", "'Microsoft Sans Serif'", "'Segoe UI'", 'Tahoma', 'sans-serif'],
+      },
+      colors: {
+        accent: {
+          DEFAULT: 'var(--accent)',
+          hover: 'var(--accent-hover)',
+          light: 'var(--accent-light)',
+          foreground: 'var(--accent-foreground)',
+        },
       },
       keyframes: {
         'fade-in': {
@@ -22,10 +31,15 @@ const config: Config = {
           '0%': { opacity: '0', transform: 'translateY(8px)' },
           '100%': { opacity: '1', transform: 'translateY(0)' },
         },
+        'reveal-up': {
+          '0%': { opacity: '0', transform: 'translateY(24px)' },
+          '100%': { opacity: '1', transform: 'translateY(0)' },
+        },
       },
       animation: {
         'fade-in': 'fade-in 150ms ease-out',
         'slide-up': 'slide-up 200ms ease-out',
+        'reveal-up': 'reveal-up 600ms ease-out both',
       },
       typography: {
         DEFAULT: {

@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { ChevronDown } from 'lucide-react';
 import { useLocale } from '../../i18n';
+import ScrollReveal from './ScrollReveal';
 
 const FAQ_ITEMS = [
   { q: 'landing.faq.q1', a: 'landing.faq.a1' },
@@ -22,45 +23,49 @@ export default function FAQ() {
   };
 
   return (
-    <section className="py-20 px-6">
-      <div className="max-w-3xl mx-auto">
-        <h2 className="text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50 text-center mb-12 text-balance">
-          {t('landing.faq.title')}
-        </h2>
-        <div className="divide-y divide-zinc-200 dark:divide-zinc-800">
-          {FAQ_ITEMS.map((item, idx) => (
-            <div key={idx}>
-              <button
-                type="button"
-                id={`faq-btn-${idx}`}
-                onClick={() => toggle(idx)}
-                aria-expanded={openIndex === idx}
-                aria-controls={`faq-panel-${idx}`}
-                className="w-full flex items-center justify-between py-5 text-left text-zinc-900 dark:text-zinc-100 hover:text-zinc-600 dark:hover:text-zinc-300 transition-colors focus-visible:ring-2 focus-visible:ring-zinc-400 dark:focus-visible:ring-zinc-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-900"
-              >
-                <span className="text-base font-medium pr-4">{t(item.q)}</span>
-                <ChevronDown
-                  aria-hidden="true"
-                  size={20}
-                  className={`shrink-0 text-zinc-400 transition-transform duration-200 ${openIndex === idx ? 'rotate-180' : ''}`}
-                />
-              </button>
-              <div
-                id={`faq-panel-${idx}`}
-                role="region"
-                aria-labelledby={`faq-btn-${idx}`}
-                className={`overflow-hidden transition-[max-height,opacity] duration-300 motion-reduce:transition-none ${
-                  openIndex === idx ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'
-                }`}
-              >
-                <p className="pb-5 text-sm text-zinc-600 dark:text-zinc-400 leading-relaxed">
-                  {t(item.a)}
-                </p>
-              </div>
-            </div>
-          ))}
+    <ScrollReveal>
+      <section className="py-20 px-6">
+        <div className="max-w-3xl mx-auto">
+          <h2 className="font-display text-3xl tracking-tight text-zinc-900 dark:text-zinc-50 text-center mb-12 text-balance">
+            {t('landing.faq.title')}
+          </h2>
+          <div className="divide-y divide-zinc-200 dark:divide-zinc-800">
+            {FAQ_ITEMS.map((item, idx) => (
+              <ScrollReveal key={idx} delay={idx * 80}>
+                <div>
+                  <button
+                    type="button"
+                    id={`faq-btn-${idx}`}
+                    onClick={() => toggle(idx)}
+                    aria-expanded={openIndex === idx}
+                    aria-controls={`faq-panel-${idx}`}
+                    className="w-full flex items-center justify-between py-5 text-left text-zinc-900 dark:text-zinc-100 hover:text-accent transition-colors focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-900"
+                  >
+                    <span className="text-base font-medium pr-4">{t(item.q)}</span>
+                    <ChevronDown
+                      aria-hidden="true"
+                      size={20}
+                      className={`shrink-0 transition-[transform,color] duration-200 motion-reduce:transition-none ${openIndex === idx ? 'rotate-180 text-accent' : 'text-zinc-400'}`}
+                    />
+                  </button>
+                  <div
+                    id={`faq-panel-${idx}`}
+                    role="region"
+                    aria-labelledby={`faq-btn-${idx}`}
+                    className={`overflow-hidden transition-[max-height,opacity] duration-300 motion-reduce:transition-none ${
+                      openIndex === idx ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'
+                    }`}
+                  >
+                    <p className="pb-5 text-sm text-zinc-600 dark:text-zinc-400 leading-relaxed">
+                      {t(item.a)}
+                    </p>
+                  </div>
+                </div>
+              </ScrollReveal>
+            ))}
+          </div>
         </div>
-      </div>
-    </section>
+      </section>
+    </ScrollReveal>
   );
 }

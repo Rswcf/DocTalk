@@ -21,6 +21,7 @@ import SecuritySection from '../components/landing/SecuritySection';
 import FAQ from '../components/landing/FAQ';
 import FinalCTA from '../components/landing/FinalCTA';
 import Footer from '../components/Footer';
+import ScrollReveal from '../components/landing/ScrollReveal';
 
 type StoredDoc = { document_id: string; filename?: string; createdAt: number };
 
@@ -191,24 +192,48 @@ export default function HomePage() {
         <HeroSection />
 
         {/* Product Showcase */}
-        <section className="w-full px-4 sm:px-8 lg:px-16 py-24">
-          <div className="border-t border-zinc-200 dark:border-zinc-800 pt-12 max-w-5xl mx-auto">
-            <h2 className="text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50 text-center mb-8">
-              {t('landing.showcase.title')}
-            </h2>
-          </div>
-          <div className="rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-2xl overflow-hidden">
-            {/* macOS window chrome */}
-            <div className="flex items-center gap-2 px-4 py-3 bg-zinc-100 dark:bg-zinc-800 border-b border-zinc-200 dark:border-zinc-700">
-              <span aria-hidden="true" className="w-3 h-3 rounded-full bg-red-400" />
-              <span aria-hidden="true" className="w-3 h-3 rounded-full bg-yellow-400" />
-              <span aria-hidden="true" className="w-3 h-3 rounded-full bg-green-400" />
+        <ScrollReveal direction="up" delay={100}>
+          <section className="w-full px-4 sm:px-8 lg:px-16 py-24">
+            <div className="border-t border-zinc-200 dark:border-zinc-800 pt-12 max-w-6xl mx-auto">
+              <h2 className="font-display text-3xl tracking-tight text-zinc-900 dark:text-zinc-50 text-center mb-8">
+                {t('landing.showcase.title')}
+              </h2>
             </div>
-            <div className="aspect-video bg-zinc-50 dark:bg-zinc-900 relative">
-              <ShowcasePlayer />
+            <div className="relative max-w-6xl mx-auto">
+              {/* Accent glow behind showcase */}
+              <div
+                aria-hidden="true"
+                className="glow-accent absolute -inset-8 blur-2xl opacity-60 pointer-events-none"
+              />
+              <div className="relative rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-2xl overflow-hidden">
+                {/* macOS window chrome */}
+                <div className="flex items-center px-4 py-3 bg-zinc-100 dark:bg-zinc-800 border-b border-zinc-200 dark:border-zinc-700">
+                  {/* Traffic lights */}
+                  <div className="flex items-center gap-2">
+                    <span aria-hidden="true" className="w-3 h-3 rounded-full bg-red-400" />
+                    <span aria-hidden="true" className="w-3 h-3 rounded-full bg-yellow-400" />
+                    <span aria-hidden="true" className="w-3 h-3 rounded-full bg-green-400" />
+                  </div>
+                  {/* Fake URL bar */}
+                  <div className="flex-1 flex justify-center">
+                    <div className="bg-zinc-200 dark:bg-zinc-700 rounded-md px-4 py-1">
+                      <span className="text-xs text-zinc-400 dark:text-zinc-500 select-none">doctalk.site</span>
+                    </div>
+                  </div>
+                  {/* Spacer to balance traffic lights */}
+                  <div className="w-[52px]" aria-hidden="true" />
+                </div>
+                <div className="aspect-video bg-zinc-50 dark:bg-zinc-900 relative">
+                  <ShowcasePlayer />
+                </div>
+              </div>
             </div>
-          </div>
-        </section>
+            {/* Caption */}
+            <p className="mt-4 text-center text-sm text-zinc-400 dark:text-zinc-500">
+              {t('landing.showcase.caption')}
+            </p>
+          </section>
+        </ScrollReveal>
 
         <HowItWorks />
 
