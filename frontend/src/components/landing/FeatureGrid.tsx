@@ -18,11 +18,12 @@ export default function FeatureGrid() {
       <h2 className="text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50 text-center mb-12 text-balance">
         {t('landing.features.title')}
       </h2>
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-8" role="list">
         {features.map(({ icon: Icon, titleKey, descKey }) => (
           <div
             key={titleKey}
-            className="p-6 rounded-xl border border-zinc-100 dark:border-zinc-800 bg-white dark:bg-zinc-950 shadow-sm hover:shadow-md hover:-translate-y-1 transition-[box-shadow,transform] duration-150"
+            role="listitem"
+            className="p-6 rounded-xl border border-zinc-100 dark:border-zinc-800 bg-white dark:bg-zinc-950 shadow-sm hover:shadow-md hover:-translate-y-1 transition-[box-shadow,transform] duration-150 motion-reduce:transform-none motion-reduce:transition-none"
           >
             <div className="w-12 h-12 rounded-lg bg-zinc-50 dark:bg-zinc-800 border border-zinc-100 dark:border-zinc-800 flex items-center justify-center mb-4">
               <Icon aria-hidden="true" size={20} className="text-zinc-600 dark:text-zinc-400" />

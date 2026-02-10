@@ -177,7 +177,7 @@ export default function HomePage() {
   if (status === 'loading') {
     return (
       <div className="min-h-screen bg-white dark:bg-zinc-950 flex items-center justify-center">
-        <div className="animate-pulse text-zinc-400">Loading...</div>
+        <div className="animate-pulse text-zinc-400">{t('common.loading') || 'Loading...'}</div>
       </div>
     );
   }
@@ -265,7 +265,7 @@ export default function HomePage() {
               {t('upload.chooseFile')}
             </button>
             {progressText && (
-              <div className={`mt-4 text-sm ${uploading ? 'text-zinc-500' : 'text-red-600 dark:text-red-400'}`}>
+              <div aria-live="polite" className={`mt-4 text-sm ${uploading ? 'text-zinc-500' : 'text-red-600 dark:text-red-400'}`}>
                 {progressText}
               </div>
             )}
@@ -295,7 +295,7 @@ export default function HomePage() {
             </button>
           </div>
           {urlError && (
-            <p className="mt-2 text-center text-sm text-red-600 dark:text-red-400">{urlError}</p>
+            <p role="alert" className="mt-2 text-center text-sm text-red-600 dark:text-red-400">{urlError}</p>
           )}
 
           <div className="mt-3 text-center">

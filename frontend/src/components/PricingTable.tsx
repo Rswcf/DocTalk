@@ -108,7 +108,7 @@ export default function PricingTable({ currentPlan = 'free', onUpgrade }: Pricin
 
       {/* Desktop: table */}
       <div className="hidden lg:block rounded-xl border border-zinc-200 dark:border-zinc-800 overflow-hidden">
-        <table className="w-full text-sm">
+        <table className="w-full text-sm" aria-label="Plan comparison">
           <thead>
             <tr className="border-b border-zinc-200 dark:border-zinc-800">
               <th className="text-left py-4 px-6 font-medium text-zinc-500 dark:text-zinc-400 w-[34%]">

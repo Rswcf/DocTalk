@@ -139,7 +139,7 @@ export default function SessionDropdown() {
         <ChevronDown aria-hidden="true" size={14} className="opacity-70" />
       </button>
       {open && (
-        <div className="absolute left-0 mt-1 w-72 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-md shadow-lg z-20 p-1" onKeyDown={handleMenuKeyDown} role="menu">
+        <div className="absolute left-0 mt-1 w-72 max-w-[calc(100vw-2rem)] bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-md shadow-lg z-20 p-1" onKeyDown={handleMenuKeyDown} role="menu">
           <div className="py-1">
             <button
               ref={(el) => { itemRefs.current[0] = el; }}
@@ -178,7 +178,7 @@ export default function SessionDropdown() {
                     role="menuitem"
                   >
                     <span className="w-4 h-4 flex items-center justify-center">
-                      {isCurrent ? <span className="block w-2 h-2 rounded-full bg-zinc-600" /> : null}
+                      {isCurrent ? <span className="block w-2 h-2 rounded-full bg-zinc-600" aria-label="Current session" /> : null}
                     </span>
                     <span className="flex-1 truncate" title={label}>{label}</span>
                     <span className="text-xs text-zinc-500 dark:text-zinc-400">

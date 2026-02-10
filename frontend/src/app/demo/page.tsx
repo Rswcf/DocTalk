@@ -32,12 +32,19 @@ export default function DemoPage() {
   const { t } = useLocale();
   const [docs, setDocs] = useState<DemoDocument[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
 
-  useEffect(() => {
+  const fetchDocs = () => {
+    setLoading(true);
+    setError(false);
     getDemoDocuments()
       .then(setDocs)
-      .catch(() => setDocs([]))
+      .catch(() => setError(true))
       .finally(() => setLoading(false));
+  };
+
+  useEffect(() => {
+    fetchDocs();
   }, []);
 
   return (
@@ -56,6 +63,16 @@ export default function DemoPage() {
           <div className="flex items-center gap-2 text-zinc-500">
             <Loader2 aria-hidden="true" className="animate-spin" size={20} />
             <span>{t('common.loading')}</span>
+          </div>
+        ) : error ? (
+          <div className="text-center py-8 text-zinc-500 dark:text-zinc-400">
+            <p>{t('common.error') || 'Failed to load demo documents'}</p>
+            <button
+              onClick={fetchDocs}
+              className="mt-2 text-sm underline hover:text-zinc-700 dark:hover:text-zinc-300 focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:rounded-sm"
+            >
+              {t('common.retry') || 'Retry'}
+            </button>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-4xl w-full">

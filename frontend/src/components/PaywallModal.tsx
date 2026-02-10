@@ -11,22 +11,54 @@ interface PaywallModalProps {
 
 export function PaywallModal({ isOpen, onClose }: PaywallModalProps) {
   const { t } = useLocale();
-  const overlayRef = useRef<HTMLDivElement>(null);
+  const modalRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (isOpen) {
-      overlayRef.current?.focus();
+    if (!isOpen) return;
+    const previouslyFocused = document.activeElement as HTMLElement;
+    const modal = modalRef.current;
+    if (!modal) return;
+
+    const focusableSelector = 'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])';
+    const focusables = modal.querySelectorAll<HTMLElement>(focusableSelector);
+    focusables[0]?.focus();
+
+    function handleKeyDown(e: KeyboardEvent) {
+      if (e.key === 'Escape') {
+        onClose();
+        return;
+      }
+      if (e.key !== 'Tab') return;
+      const currentFocusables = modal!.querySelectorAll<HTMLElement>(focusableSelector);
+      const first = currentFocusables[0];
+      const last = currentFocusables[currentFocusables.length - 1];
+      if (e.shiftKey) {
+        if (document.activeElement === first) {
+          e.preventDefault();
+          last?.focus();
+        }
+      } else {
+        if (document.activeElement === last) {
+          e.preventDefault();
+          first?.focus();
+        }
+      }
     }
-  }, [isOpen]);
+
+    modal.addEventListener('keydown', handleKeyDown);
+    return () => {
+      modal.removeEventListener('keydown', handleKeyDown);
+      previouslyFocused?.focus();
+    };
+  }, [isOpen, onClose]);
 
   if (!isOpen) return null;
 
   return (
     <div
-      ref={overlayRef}
+      ref={modalRef}
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 animate-fade-in motion-reduce:animate-none overscroll-contain"
       onClick={onClose}
-      onKeyDown={(e) => e.key === "Escape" && onClose()}
       tabIndex={-1}
     >
       <div

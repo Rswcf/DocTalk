@@ -62,7 +62,7 @@ export default function CustomInstructionsModal({ isOpen, onClose, currentInstru
       onKeyDown={(e) => { if (e.key === 'Escape') onClose(); }}
     >
       <div
-        className="bg-white dark:bg-zinc-900 rounded-2xl shadow-xl w-full max-w-lg mx-4 p-6 animate-fade-in"
+        className="bg-white dark:bg-zinc-900 rounded-2xl shadow-xl w-full max-w-lg mx-4 p-6 animate-fade-in motion-reduce:animate-none"
         role="dialog"
         aria-modal="true"
         aria-labelledby="custom-instructions-title"
@@ -84,7 +84,7 @@ export default function CustomInstructionsModal({ isOpen, onClose, currentInstru
           value={text}
           onChange={(e) => setText(e.target.value.slice(0, MAX_CHARS))}
           placeholder={t('instructions.placeholder')}
-          className="w-full h-40 p-3 border border-zinc-200 dark:border-zinc-700 rounded-lg bg-zinc-50 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 text-sm resize-none focus:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400"
+          className="w-full h-40 p-3 border border-zinc-200 dark:border-zinc-600 rounded-lg bg-zinc-50 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 text-sm resize-none focus:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400"
           aria-label="Custom instructions"
         />
         <div className="flex items-center justify-between mt-2">

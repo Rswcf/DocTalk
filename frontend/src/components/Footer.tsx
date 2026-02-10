@@ -42,7 +42,7 @@ export default function Footer() {
                 </span>
               </li>
               <li>
-                <a href="mailto:support@doctalk.app" className="text-sm text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:rounded-sm outline-none">
+                <a href="mailto:support@doctalk.app" aria-label={t('footer.contactEmail') || 'Send email to support'} className="text-sm text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:rounded-sm outline-none">
                   {t('footer.contact')}
                 </a>
               </li>

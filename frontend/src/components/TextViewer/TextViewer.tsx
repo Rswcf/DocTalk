@@ -79,6 +79,9 @@ function findAllMatches(text: string, query: string): number[] {
   return indices;
 }
 
+const scrollBehavior = () =>
+  window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' as const : 'smooth' as const;
+
 export default function TextViewer({ documentId, fileType, targetPage, scrollNonce, highlightSnippet }: Props) {
   const [pages, setPages] = useState<TextPage[]>([]);
   const [loading, setLoading] = useState(true);
@@ -126,9 +129,9 @@ export default function TextViewer({ documentId, fileType, targetPage, scrollNon
       requestAnimationFrame(() => {
         const activeMark = el.querySelector('.search-match-active');
         if (activeMark) {
-          activeMark.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          activeMark.scrollIntoView({ behavior: scrollBehavior(), block: 'center' });
         } else {
-          el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          el.scrollIntoView({ behavior: scrollBehavior(), block: 'start' });
         }
       });
     }
@@ -180,11 +183,11 @@ export default function TextViewer({ documentId, fileType, targetPage, scrollNon
       // Use requestAnimationFrame to wait for highlight render
       requestAnimationFrame(() => {
         if (highlightRef.current) {
-          highlightRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          highlightRef.current.scrollIntoView({ behavior: scrollBehavior(), block: 'center' });
         } else {
           const el = pageRefs.current.get(targetPage);
           if (el) {
-            el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            el.scrollIntoView({ behavior: scrollBehavior(), block: 'start' });
           }
         }
       });
@@ -422,7 +425,7 @@ function PlainTextContent({
             <span
               key={i}
               ref={highlightRef}
-              className="bg-amber-200 dark:bg-amber-700/60 rounded-sm transition-colors duration-[3000ms]"
+              className="bg-amber-200 dark:bg-amber-700/60 rounded-sm transition-colors duration-500"
             >
               {seg.text}
             </span>
@@ -430,7 +433,7 @@ function PlainTextContent({
         }
         if (seg.type === 'search-active') {
           return (
-            <mark key={i} className="search-match-active bg-amber-400 dark:bg-amber-500 text-zinc-900 rounded-sm">
+            <mark key={i} className="search-match-active bg-amber-400 dark:bg-amber-500 dark:text-white text-zinc-900 rounded-sm">
               {seg.text}
             </mark>
           );

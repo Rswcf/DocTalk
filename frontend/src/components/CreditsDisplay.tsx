@@ -63,7 +63,8 @@ export function CreditsDisplay() {
     };
   }, [status, fetchCredits]);
 
-  if (status !== "authenticated" || credits === null) return null;
+  if (status !== "authenticated") return null;
+  if (credits === null) return <div className="w-16 h-4 bg-zinc-200 dark:bg-zinc-700 rounded animate-pulse" />;
 
   return (
     <div className={`flex items-center gap-1 ${isWin98 ? 'text-[11px] text-[var(--win98-black)]' : 'text-sm text-zinc-600 dark:text-zinc-400'}`}>

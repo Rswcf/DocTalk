@@ -104,6 +104,7 @@ export default function PdfToolbar({ currentPage, totalPages, scale, onPageChang
           }
           title={t('toolbar.search')}
           aria-label="Toggle search"
+          aria-pressed={searchOpen}
         >
           {isWin98 ? <SearchIcon size={12} /> : <Search aria-hidden="true" size={16} />}
         </button>
@@ -111,7 +112,7 @@ export default function PdfToolbar({ currentPage, totalPages, scale, onPageChang
         <div className={separatorClass} />
 
         {/* Page navigation */}
-        <button onClick={prevPage} disabled={currentPage <= 1} className={`${btnClass} disabled:opacity-30`} title={t('toolbar.prevPage')} aria-label="Previous page">
+        <button onClick={prevPage} disabled={currentPage <= 1} className={`${btnClass} disabled:opacity-30 disabled:cursor-not-allowed`} title={t('toolbar.prevPage')} aria-label="Previous page">
           {isWin98 ? <ChevronLeftIcon size={12} /> : <ChevronLeft size={16} />}
         </button>
         <div className="flex items-center gap-1">
@@ -129,7 +130,7 @@ export default function PdfToolbar({ currentPage, totalPages, scale, onPageChang
           />
           <span className={isWin98 ? 'text-[11px] text-[var(--win98-dark-gray)]' : 'text-xs text-zinc-500 dark:text-zinc-400'}>/ {totalPages}</span>
         </div>
-        <button onClick={nextPage} disabled={currentPage >= totalPages} className={`${btnClass} disabled:opacity-30`} title={t('toolbar.nextPage')} aria-label="Next page">
+        <button onClick={nextPage} disabled={currentPage >= totalPages} className={`${btnClass} disabled:opacity-30 disabled:cursor-not-allowed`} title={t('toolbar.nextPage')} aria-label="Next page">
           {isWin98 ? <ChevronRightIcon size={12} /> : <ChevronRight size={16} />}
         </button>
       </div>

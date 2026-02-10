@@ -430,7 +430,7 @@ export default function ChatPanel({ sessionId, onCitationClick, maxUserMessages,
               style={{ width: `${Math.max(0, (demoRemaining / maxUserMessages) * 100)}%` }}
             />
           </div>
-          <div className="px-4 py-2 text-sm text-zinc-600 dark:text-zinc-400 flex items-center justify-between">
+          <div className="px-4 py-2 text-sm text-zinc-600 dark:text-zinc-400 flex items-center justify-between" aria-live="polite">
             <span className={demoRemaining <= 2 ? 'text-amber-600 dark:text-amber-400 font-medium' : ''}>
               {t('demo.questionsRemaining', { remaining: Math.max(0, demoRemaining), total: maxUserMessages })}
             </span>

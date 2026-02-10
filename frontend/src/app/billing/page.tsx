@@ -162,6 +162,7 @@ function BillingContent() {
         <div className="flex items-center justify-center gap-3 mb-8">
           <button
             onClick={() => setBillingPeriod('monthly')}
+            aria-pressed={billingPeriod === 'monthly'}
             className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors focus-visible:ring-2 focus-visible:ring-zinc-400 dark:focus-visible:ring-zinc-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-900 ${
               billingPeriod === 'monthly'
                 ? 'bg-zinc-900 dark:bg-zinc-50 text-white dark:text-zinc-900'
@@ -172,6 +173,7 @@ function BillingContent() {
           </button>
           <button
             onClick={() => setBillingPeriod('annual')}
+            aria-pressed={billingPeriod === 'annual'}
             className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors focus-visible:ring-2 focus-visible:ring-zinc-400 dark:focus-visible:ring-zinc-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-900 ${
               billingPeriod === 'annual'
                 ? 'bg-zinc-900 dark:bg-zinc-50 text-white dark:text-zinc-900'

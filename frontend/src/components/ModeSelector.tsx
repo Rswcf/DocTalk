@@ -73,7 +73,7 @@ export default function ModeSelector() {
             key={mode.id}
             onClick={() => choose(mode.id)}
             title={t(mode.descriptionKey)}
-            className={`relative flex items-center gap-1 px-3 py-1 text-xs rounded-md transition-colors focus-visible:ring-2 focus-visible:ring-zinc-400 dark:focus-visible:ring-zinc-500 focus-visible:ring-offset-1 ${
+            className={`relative flex items-center gap-1 px-3 py-1 text-xs rounded-md transition-colors active:scale-[0.97] motion-reduce:transform-none focus-visible:ring-2 focus-visible:ring-zinc-400 dark:focus-visible:ring-zinc-500 focus-visible:ring-offset-1 ${
               isSelected
                 ? 'bg-white dark:bg-zinc-700 shadow-sm font-medium text-zinc-900 dark:text-zinc-100'
                 : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-300'

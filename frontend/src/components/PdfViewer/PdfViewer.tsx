@@ -51,6 +51,9 @@ export interface PdfViewerProps {
   scrollNonce: number;
 }
 
+const scrollBehavior = () =>
+  window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' as const : 'smooth' as const;
+
 export default function PdfViewer({ pdfUrl, currentPage, highlights, scale, scrollNonce }: PdfViewerProps) {
   const [numPages, setNumPages] = useState<number>(0);
   const [urlError, setUrlError] = useState<string | null>(null);
@@ -103,10 +106,10 @@ export default function PdfViewer({ pdfUrl, currentPage, highlights, scale, scro
         const scrollTarget = anchorCenterInContainer - containerRect.height / 2;
         container.scrollTo({
           top: Math.max(0, scrollTarget),
-          behavior: 'smooth',
+          behavior: scrollBehavior(),
         });
       } else {
-        target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        target.scrollIntoView({ behavior: scrollBehavior(), block: 'start' });
       }
     });
 

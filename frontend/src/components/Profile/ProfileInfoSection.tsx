@@ -85,7 +85,7 @@ export default function ProfileInfoSection({ profile }: Props) {
                 {acc.provider?.[0]?.toUpperCase() || "?"}
               </span>
               <span>
-                {t("profile.info.connectedWith", { provider: acc.provider })}
+                {t("profile.info.connectedWith", { provider: acc.provider ? acc.provider.charAt(0).toUpperCase() + acc.provider.slice(1) : acc.provider })}
               </span>
             </div>
           ))}

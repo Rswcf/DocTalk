@@ -25,6 +25,7 @@ export default function CreditsSection({ profile }: Props) {
   const [offset, setOffset] = useState<number>(0);
   const [loadingHistory, setLoadingHistory] = useState<boolean>(true);
   const [historyError, setHistoryError] = useState<string | null>(null);
+  const [retryCount, setRetryCount] = useState<number>(0);
 
   const balanceColor = useMemo(() => {
     const n = profile.credits_balance || 0;
@@ -63,7 +64,7 @@ export default function CreditsSection({ profile }: Props) {
     return () => {
       cancelled = true;
     };
-  }, [limit, offset]);
+  }, [limit, offset, retryCount]);
 
   const onUpgrade = async () => {
     setSubmitting(true);
@@ -124,7 +125,7 @@ export default function CreditsSection({ profile }: Props) {
             total: totalAllowance.toLocaleString(),
           })}
         </div>
-        <div className="mt-2 h-3 w-full rounded bg-zinc-200 dark:bg-zinc-800 overflow-hidden" role="progressbar" aria-valuenow={Math.round(percentUsed)} aria-valuemin={0} aria-valuemax={100}>
+        <div className="mt-2 h-3 w-full rounded bg-zinc-200 dark:bg-zinc-800 overflow-hidden" role="progressbar" aria-valuenow={Math.round(percentUsed)} aria-valuemin={0} aria-valuemax={100} aria-valuetext={`${Math.round(percentUsed)}% of monthly credits used`}>
           <div
             className={`${barColor} h-full`}
             style={{ width: `${percentUsed}%` }}
@@ -170,6 +171,17 @@ export default function CreditsSection({ profile }: Props) {
           <div className="flex items-center gap-2 text-zinc-600 dark:text-zinc-400">
             <div className="animate-spin h-5 w-5 border-2 border-zinc-300 border-t-transparent rounded-full" />
             <span>{t("common.loading")}</span>
+          </div>
+        ) : historyError ? (
+          <div className="text-center py-4 text-zinc-500 dark:text-zinc-400">
+            <p>{t("common.error") || "Failed to load history"}</p>
+            <button
+              type="button"
+              onClick={() => setRetryCount((c) => c + 1)}
+              className="mt-2 text-sm underline hover:text-zinc-700 dark:hover:text-zinc-300 focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:rounded-sm"
+            >
+              {t("common.retry") || "Retry"}
+            </button>
           </div>
         ) : items.length === 0 ? (
           <div className="text-zinc-600 dark:text-zinc-400">{t("profile.credits.noHistory")}</div>
@@ -217,21 +229,19 @@ export default function CreditsSection({ profile }: Props) {
           <div className="mt-3 flex items-center justify-end gap-2">
             <button
               type="button"
-              aria-label={t("profile.credits.history")}
+              aria-label={t("profile.credits.prevPage") || "Previous page"}
               disabled={!canPrev}
               onClick={() => setOffset(Math.max(0, offset - limit))}
               className="px-3 py-1 rounded border dark:border-zinc-700 disabled:opacity-40 focus-visible:ring-2 focus-visible:ring-zinc-400 dark:focus-visible:ring-zinc-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-900"
-              title="Prev"
             >
               ←
             </button>
             <button
               type="button"
-              aria-label={t("profile.credits.history")}
+              aria-label={t("profile.credits.nextPage") || "Next page"}
               disabled={!canNext}
               onClick={() => setOffset(offset + limit)}
               className="px-3 py-1 rounded border dark:border-zinc-700 disabled:opacity-40 focus-visible:ring-2 focus-visible:ring-zinc-400 dark:focus-visible:ring-zinc-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-900"
-              title="Next"
             >
               →
             </button>
