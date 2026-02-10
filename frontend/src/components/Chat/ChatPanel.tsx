@@ -12,6 +12,8 @@ import CitationCard from './CitationCard';
 import { useLocale } from '../../i18n';
 import { PaywallModal } from '../PaywallModal';
 import { triggerCreditsRefresh } from '../CreditsDisplay';
+import { useWin98Theme } from '../win98/useWin98Theme';
+import { SendIcon, StopIcon } from '../win98/Win98Icons';
 
 /**
  * Error boundary for individual messages to prevent one broken message
@@ -87,6 +89,7 @@ export default function ChatPanel({ sessionId, onCitationClick, maxUserMessages,
   const { messages, isStreaming, addMessage, updateLastMessage, addCitationToLastMessage, setStreaming, updateSessionActivity } = useDocTalkStore();
   const selectedMode = useDocTalkStore((s) => s.selectedMode);
   const { t, locale } = useLocale();
+  const isWin98 = useWin98Theme();
   const [input, setInput] = useState('');
   const listRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -299,22 +302,74 @@ export default function ChatPanel({ sessionId, onCitationClick, maxUserMessages,
   const showExportInMenu = messages.length > 0 && !isStreaming && (userPlan === 'plus' || userPlan === 'pro');
   const showPlusButton = showCustomInstructions || showExportInMenu;
 
+  // Shared message list renderer
+  const renderMessages = () => (
+    messages.map((m, idx) => {
+      const displayCitations = (m.role === 'assistant' && m.citations && m.citations.length > 0)
+        ? renumberCitations(m.citations)
+        : undefined;
+      const displayMessage = displayCitations ? { ...m, citations: displayCitations } : m;
+      const isLastMessage = idx === messages.length - 1;
+      const showStreaming = isLastMessage && isStreaming && m.role === 'assistant';
+      const isLastAssistantMsg = m.role === 'assistant' && !isStreaming && idx === messages.length - 1;
+
+      return (
+        <MessageErrorBoundary key={m.id} messageId={m.id}>
+          <div>
+            <MessageBubble message={displayMessage} onCitationClick={onCitationClick} isStreaming={showStreaming} onRegenerate={isLastAssistantMsg ? handleRegenerate : undefined} isLastAssistant={isLastAssistantMsg} />
+            {displayCitations && displayCitations.length > 0 && (() => {
+              const uniqueCitations = displayCitations
+                .filter((c, i, arr) => arr.findIndex((x) => x.refIndex === c.refIndex) === i)
+                .sort((a, b) => a.refIndex - b.refIndex);
+              return (
+              <div className={isWin98 ? 'flex flex-col gap-1 mt-1' : 'mt-2 pl-0 flex flex-wrap gap-1.5'}>
+                {uniqueCitations.map((c) => (
+                  <CitationCard
+                    key={`${m.id}-${c.refIndex}`}
+                    refIndex={c.refIndex}
+                    textSnippet={c.textSnippet}
+                    page={c.page}
+                    onClick={() => onCitationClick(c)}
+                  />
+                ))}
+              </div>
+              );
+            })()}
+          </div>
+        </MessageErrorBoundary>
+      );
+    })
+  );
+
   return (
-    <div className="flex h-full flex-col border-r dark:border-zinc-700">
+    <div className={isWin98 ? 'flex h-full flex-col' : 'flex h-full flex-col border-r dark:border-zinc-700'}>
       <PaywallModal isOpen={showPaywall} onClose={() => setShowPaywall(false)} />
       <div className="relative flex-1 min-h-0">
-        <div ref={listRef} onScroll={handleScroll} className="h-full overflow-auto p-6">
+        <div
+          ref={listRef}
+          onScroll={handleScroll}
+          className={isWin98
+            ? 'h-full overflow-y-auto win98-scrollbar bg-white p-3 win98-inset m-1'
+            : 'h-full overflow-auto p-6'
+          }
+        >
           {messages.length === 0 ? (
-            <div className="flex flex-col items-center justify-center h-full gap-5 px-4">
-              <p className="text-sm text-zinc-400 dark:text-zinc-500">{t('chat.trySuggested')}</p>
-              <div className="flex flex-wrap justify-center gap-2 max-w-lg">
+            <div className={isWin98
+              ? 'flex flex-col items-center justify-center h-full gap-3 px-2'
+              : 'flex flex-col items-center justify-center h-full gap-5 px-4'
+            }>
+              <p className={isWin98 ? 'text-[11px] text-[var(--win98-dark-gray)]' : 'text-sm text-zinc-400 dark:text-zinc-500'}>{t('chat.trySuggested')}</p>
+              <div className={isWin98 ? 'flex flex-wrap justify-center gap-1' : 'flex flex-wrap justify-center gap-2 max-w-lg'}>
               {(suggestedQuestions && suggestedQuestions.length > 0
                 ? suggestedQuestions.map((q, i) => (
                     <button
                       key={`sq-${i}`}
                       type="button"
                       onClick={() => handleSuggestedClick(q)}
-                      className="text-sm px-4 py-2 border border-zinc-200 dark:border-zinc-700 rounded-full hover:bg-zinc-50 dark:hover:bg-zinc-800 hover:border-zinc-300 dark:hover:border-zinc-600 transition-colors text-zinc-600 dark:text-zinc-400"
+                      className={isWin98
+                        ? 'win98-button text-[11px] px-2 py-[2px]'
+                        : 'text-sm px-4 py-2 border border-zinc-200 dark:border-zinc-700 rounded-full hover:bg-zinc-50 dark:hover:bg-zinc-800 hover:border-zinc-300 dark:hover:border-zinc-600 transition-colors text-zinc-600 dark:text-zinc-400'
+                      }
                     >
                       {q}
                     </button>
@@ -324,7 +379,10 @@ export default function ChatPanel({ sessionId, onCitationClick, maxUserMessages,
                       key={k}
                       type="button"
                       onClick={() => handleSuggestedClick(t(k))}
-                      className="text-sm px-4 py-2 border border-zinc-200 dark:border-zinc-700 rounded-full hover:bg-zinc-50 dark:hover:bg-zinc-800 hover:border-zinc-300 dark:hover:border-zinc-600 transition-colors text-zinc-600 dark:text-zinc-400"
+                      className={isWin98
+                        ? 'win98-button text-[11px] px-2 py-[2px]'
+                        : 'text-sm px-4 py-2 border border-zinc-200 dark:border-zinc-700 rounded-full hover:bg-zinc-50 dark:hover:bg-zinc-800 hover:border-zinc-300 dark:hover:border-zinc-600 transition-colors text-zinc-600 dark:text-zinc-400'
+                      }
                     >
                       {t(k)}
                     </button>
@@ -333,46 +391,12 @@ export default function ChatPanel({ sessionId, onCitationClick, maxUserMessages,
               </div>
             </div>
           ) : (
-            <div className="max-w-3xl mx-auto">
-            {messages.map((m, idx) => {
-              const displayCitations = (m.role === 'assistant' && m.citations && m.citations.length > 0)
-                ? renumberCitations(m.citations)
-                : undefined;
-              const displayMessage = displayCitations ? { ...m, citations: displayCitations } : m;
-              const isLastMessage = idx === messages.length - 1;
-              const showStreaming = isLastMessage && isStreaming && m.role === 'assistant';
-              const isLastAssistant = m.role === 'assistant' && !isStreaming && idx === messages.length - 1;
-
-              return (
-                <MessageErrorBoundary key={m.id} messageId={m.id}>
-                  <div>
-                    <MessageBubble message={displayMessage} onCitationClick={onCitationClick} isStreaming={showStreaming} onRegenerate={isLastAssistant ? handleRegenerate : undefined} isLastAssistant={isLastAssistant} />
-                    {displayCitations && displayCitations.length > 0 && (() => {
-                      const uniqueCitations = displayCitations
-                        .filter((c, i, arr) => arr.findIndex((x) => x.refIndex === c.refIndex) === i)
-                        .sort((a, b) => a.refIndex - b.refIndex);
-                      return (
-                      <div className="mt-2 pl-0 flex flex-wrap gap-1.5">
-                        {uniqueCitations.map((c) => (
-                          <CitationCard
-                            key={`${m.id}-${c.refIndex}`}
-                            refIndex={c.refIndex}
-                            textSnippet={c.textSnippet}
-                            page={c.page}
-                            onClick={() => onCitationClick(c)}
-                          />
-                        ))}
-                      </div>
-                      );
-                    })()}
-                  </div>
-                </MessageErrorBoundary>
-              );
-            })}
+            <div className={isWin98 ? 'flex flex-col gap-4' : 'max-w-3xl mx-auto'}>
+              {renderMessages()}
             </div>
           )}
         </div>
-        {showScrollBtn && (
+        {showScrollBtn && !isWin98 && (
           <div className="absolute bottom-2 left-0 right-0 flex justify-center pointer-events-none z-10">
             <button
               onClick={() => listRef.current?.scrollTo({ top: listRef.current.scrollHeight, behavior: 'smooth' })}
@@ -383,7 +407,7 @@ export default function ChatPanel({ sessionId, onCitationClick, maxUserMessages,
           </div>
         )}
       </div>
-      {maxUserMessages != null && (
+      {maxUserMessages != null && !isWin98 && (
         <div className="border-t dark:border-zinc-700">
           <div className="h-1 bg-zinc-200 dark:bg-zinc-800">
             <div
@@ -409,90 +433,136 @@ export default function ChatPanel({ sessionId, onCitationClick, maxUserMessages,
           </div>
         </div>
       )}
-      <form onSubmit={onSubmit} className="p-4 border-t dark:border-zinc-700">
-        <div className="max-w-3xl mx-auto">
-        <div className="flex items-end border border-zinc-200 dark:border-zinc-700 rounded-3xl bg-white dark:bg-zinc-800 shadow-sm focus-within:ring-2 focus-within:ring-zinc-400 dark:focus-within:ring-zinc-500 transition-shadow">
-          {showPlusButton && (
-            <div className="relative pl-2 pb-2 shrink-0" data-plus-menu>
-              <button
-                type="button"
-                onClick={() => setPlusMenuOpen((v) => !v)}
-                className="p-2 rounded-full text-zinc-400 hover:text-zinc-600 dark:text-zinc-500 dark:hover:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-700 transition-colors"
-              >
-                <Plus size={16} />
-              </button>
-              {plusMenuOpen && (
-                <div className="absolute bottom-full left-0 mb-2 w-56 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-xl shadow-lg z-20 py-1 animate-fade-in">
-                  {showCustomInstructions && (
-                    <button
-                      type="button"
-                      onClick={() => { onOpenSettings?.(); setPlusMenuOpen(false); }}
-                      className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors"
-                    >
-                      <Settings2 size={16} />
-                      <span>{t('chat.customInstructions') || 'Custom Instructions'}</span>
-                      {hasCustomInstructions && (
-                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                      )}
-                    </button>
-                  )}
-                  {showCustomInstructions && showExportInMenu && (
-                    <div className="border-t border-zinc-100 dark:border-zinc-700" />
-                  )}
-                  {showExportInMenu && (
-                    <button
-                      type="button"
-                      onClick={() => { handleExport(); setPlusMenuOpen(false); }}
-                      className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors"
-                    >
-                      <Download size={16} />
-                      <span>{t('chat.export')}</span>
-                    </button>
-                  )}
-                </div>
-              )}
-            </div>
-          )}
-          <textarea
-            ref={textareaRef}
-            className="flex-1 px-4 py-3 text-sm resize-none overflow-y-auto focus:outline-none bg-transparent dark:text-zinc-100 placeholder:text-zinc-400 dark:placeholder:text-zinc-500"
-            style={{ minHeight: '40px' }}
-            placeholder={demoLimitReached ? t('demo.signInToContinue') : t('chat.placeholder')}
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={onKeyDown}
-            disabled={isStreaming || demoLimitReached}
-            rows={1}
-          />
-          <div className="flex items-center gap-1 pr-2 pb-2 shrink-0">
+      {/* Win98 disclaimer */}
+      {isWin98 && (
+        <div className="text-center text-[10px] text-[var(--win98-dark-gray)] py-[2px] shrink-0">
+          {t('chat.disclaimer')}
+        </div>
+      )}
+      {/* Input Area */}
+      <form onSubmit={onSubmit} className={isWin98 ? 'px-2 pb-2 shrink-0' : 'p-4 border-t dark:border-zinc-700'}>
+        {isWin98 ? (
+          <div className="win98-inset flex items-end gap-1 p-1 bg-white">
+            <textarea
+              ref={textareaRef}
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyDown={onKeyDown}
+              placeholder={demoLimitReached ? t('demo.signInToContinue') : t('chat.placeholder')}
+              rows={2}
+              disabled={isStreaming || demoLimitReached}
+              className="flex-1 resize-none bg-white text-[12px] leading-[1.4] p-1 outline-none border-none select-text cursor-text"
+              style={{ fontFamily: 'inherit' }}
+            />
             {isStreaming ? (
               <button
                 type="button"
                 onClick={handleStop}
-                className="p-2 bg-zinc-900 dark:bg-zinc-50 text-white dark:text-zinc-900 rounded-full hover:bg-zinc-800 dark:hover:bg-zinc-200 transition-colors"
-                title={t('chat.stop') || 'Stop'}
+                className="win98-button flex items-center justify-center w-[28px] h-[24px] p-0 shrink-0"
+                aria-label="Stop"
               >
-                <Square size={14} />
+                <StopIcon />
               </button>
             ) : (
               <button
                 type="submit"
-                className="p-2 bg-zinc-900 dark:bg-zinc-50 text-white dark:text-zinc-900 rounded-full disabled:opacity-40 hover:bg-zinc-800 dark:hover:bg-zinc-200 transition-colors"
                 disabled={!input.trim() || demoLimitReached}
-                title={t('chat.send')}
+                className={`win98-button flex items-center justify-center w-[28px] h-[24px] p-0 shrink-0 ${
+                  !input.trim() ? 'opacity-50' : ''
+                }`}
+                aria-label="Send message"
               >
-                <SendHorizontal size={16} />
+                <SendIcon />
               </button>
             )}
           </div>
-        </div>
-        </div>
+        ) : (
+          <div className="max-w-3xl mx-auto">
+          <div className="flex items-end border border-zinc-200 dark:border-zinc-700 rounded-3xl bg-white dark:bg-zinc-800 shadow-sm focus-within:ring-2 focus-within:ring-zinc-400 dark:focus-within:ring-zinc-500 transition-shadow">
+            {showPlusButton && (
+              <div className="relative pl-2 pb-2 shrink-0" data-plus-menu>
+                <button
+                  type="button"
+                  onClick={() => setPlusMenuOpen((v) => !v)}
+                  className="p-2 rounded-full text-zinc-400 hover:text-zinc-600 dark:text-zinc-500 dark:hover:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-700 transition-colors"
+                >
+                  <Plus size={16} />
+                </button>
+                {plusMenuOpen && (
+                  <div className="absolute bottom-full left-0 mb-2 w-56 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-xl shadow-lg z-20 py-1 animate-fade-in">
+                    {showCustomInstructions && (
+                      <button
+                        type="button"
+                        onClick={() => { onOpenSettings?.(); setPlusMenuOpen(false); }}
+                        className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors"
+                      >
+                        <Settings2 size={16} />
+                        <span>{t('chat.customInstructions') || 'Custom Instructions'}</span>
+                        {hasCustomInstructions && (
+                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                        )}
+                      </button>
+                    )}
+                    {showCustomInstructions && showExportInMenu && (
+                      <div className="border-t border-zinc-100 dark:border-zinc-700" />
+                    )}
+                    {showExportInMenu && (
+                      <button
+                        type="button"
+                        onClick={() => { handleExport(); setPlusMenuOpen(false); }}
+                        className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors"
+                      >
+                        <Download size={16} />
+                        <span>{t('chat.export')}</span>
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+            <textarea
+              ref={textareaRef}
+              className="flex-1 px-4 py-3 text-sm resize-none overflow-y-auto focus:outline-none bg-transparent dark:text-zinc-100 placeholder:text-zinc-400 dark:placeholder:text-zinc-500"
+              style={{ minHeight: '40px' }}
+              placeholder={demoLimitReached ? t('demo.signInToContinue') : t('chat.placeholder')}
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyDown={onKeyDown}
+              disabled={isStreaming || demoLimitReached}
+              rows={1}
+            />
+            <div className="flex items-center gap-1 pr-2 pb-2 shrink-0">
+              {isStreaming ? (
+                <button
+                  type="button"
+                  onClick={handleStop}
+                  className="p-2 bg-zinc-900 dark:bg-zinc-50 text-white dark:text-zinc-900 rounded-full hover:bg-zinc-800 dark:hover:bg-zinc-200 transition-colors"
+                  title={t('chat.stop') || 'Stop'}
+                >
+                  <Square size={14} />
+                </button>
+              ) : (
+                <button
+                  type="submit"
+                  className="p-2 bg-zinc-900 dark:bg-zinc-50 text-white dark:text-zinc-900 rounded-full disabled:opacity-40 hover:bg-zinc-800 dark:hover:bg-zinc-200 transition-colors"
+                  disabled={!input.trim() || demoLimitReached}
+                  title={t('chat.send')}
+                >
+                  <SendHorizontal size={16} />
+                </button>
+              )}
+            </div>
+          </div>
+          </div>
+        )}
       </form>
-      <div className="text-center pb-2">
-        <p className="text-xs text-zinc-400 dark:text-zinc-500 max-w-3xl mx-auto">
-          {t('chat.disclaimer')}
-        </p>
-      </div>
+      {!isWin98 && (
+        <div className="text-center pb-2">
+          <p className="text-xs text-zinc-400 dark:text-zinc-500 max-w-3xl mx-auto">
+            {t('chat.disclaimer')}
+          </p>
+        </div>
+      )}
     </div>
   );
 }

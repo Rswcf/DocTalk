@@ -4,6 +4,7 @@ import React, { useEffect, useState, useRef, useMemo, useCallback } from 'react'
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { Search, ChevronLeft, ChevronRight, X } from 'lucide-react';
+import { useTheme } from 'next-themes';
 import { PROXY_BASE } from '../../lib/api';
 import { useLocale } from '../../i18n';
 
@@ -86,6 +87,8 @@ export default function TextViewer({ documentId, fileType, targetPage, scrollNon
   const pageRefs = useRef<Map<number, HTMLDivElement>>(new Map());
   const highlightRef = useRef<HTMLSpanElement>(null) as React.RefObject<HTMLSpanElement>;
   const { t } = useLocale();
+  const { resolvedTheme } = useTheme();
+  const isWin98 = resolvedTheme === 'win98';
   const isMarkdown = useMarkdownRendering(fileType);
 
   // Search state
@@ -231,18 +234,25 @@ export default function TextViewer({ documentId, fileType, targetPage, scrollNon
   }
 
   return (
-    <div ref={containerRef} className="h-full flex flex-col" tabIndex={-1}>
+    <div ref={containerRef} className={`h-full flex flex-col ${isWin98 ? 'bg-[var(--win98-button-face)]' : ''}`} tabIndex={-1}>
       {/* Search bar */}
       {searchOpen && (
-        <div className="flex items-center gap-2 px-3 py-1.5 bg-white/90 dark:bg-zinc-800/90 backdrop-blur border-b border-zinc-200 dark:border-zinc-700 text-sm shrink-0">
-          <Search size={14} className="text-zinc-400 shrink-0" />
+        <div className={`flex items-center gap-2 text-sm shrink-0 ${
+          isWin98
+            ? 'bg-[var(--win98-button-face)] px-2 py-[2px] border-b border-b-[var(--win98-button-shadow)] text-[11px]'
+            : 'px-3 py-1.5 bg-white/90 dark:bg-zinc-800/90 backdrop-blur border-b border-zinc-200 dark:border-zinc-700'
+        }`}>
+          <Search size={14} className={isWin98 ? 'text-[var(--win98-black)] shrink-0' : 'text-zinc-400 shrink-0'} />
           <input
             ref={searchInputRef}
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder={t('toolbar.searchPlaceholder')}
-            className="flex-1 min-w-0 border-none bg-transparent text-sm focus:outline-none dark:text-zinc-100 placeholder:text-zinc-400"
+            className={isWin98
+              ? 'win98-input flex-1 min-w-0 text-[11px] h-[18px]'
+              : 'flex-1 min-w-0 border-none bg-transparent text-sm focus:outline-none dark:text-zinc-100 placeholder:text-zinc-400'
+            }
             autoFocus
             onKeyDown={(e) => {
               if (e.key === 'Enter') {
@@ -254,24 +264,24 @@ export default function TextViewer({ documentId, fileType, targetPage, scrollNon
             }}
           />
           {searchQuery && (
-            <span className="text-xs text-zinc-400 tabular-nums whitespace-nowrap">
+            <span className={`tabular-nums whitespace-nowrap ${isWin98 ? 'text-[10px] text-[var(--win98-dark-gray)]' : 'text-xs text-zinc-400'}`}>
               {searchMatches.length > 0 ? t('toolbar.matchCount', { current: currentMatchIndex + 1, total: searchMatches.length }) : t('toolbar.noMatches')}
             </span>
           )}
-          <button onClick={searchPrev} disabled={searchMatches.length === 0} className="p-0.5 rounded hover:bg-zinc-100 dark:hover:bg-zinc-700 disabled:opacity-30" title={t('toolbar.prevPage')}>
-            <ChevronLeft size={14} />
+          <button onClick={searchPrev} disabled={searchMatches.length === 0} className={isWin98 ? 'win98-button flex items-center justify-center w-[20px] h-[20px] p-0 disabled:opacity-30' : 'p-0.5 rounded hover:bg-zinc-100 dark:hover:bg-zinc-700 disabled:opacity-30'} title={t('toolbar.prevPage')}>
+            <ChevronLeft size={isWin98 ? 10 : 14} />
           </button>
-          <button onClick={searchNext} disabled={searchMatches.length === 0} className="p-0.5 rounded hover:bg-zinc-100 dark:hover:bg-zinc-700 disabled:opacity-30" title={t('toolbar.nextPage')}>
-            <ChevronRight size={14} />
+          <button onClick={searchNext} disabled={searchMatches.length === 0} className={isWin98 ? 'win98-button flex items-center justify-center w-[20px] h-[20px] p-0 disabled:opacity-30' : 'p-0.5 rounded hover:bg-zinc-100 dark:hover:bg-zinc-700 disabled:opacity-30'} title={t('toolbar.nextPage')}>
+            <ChevronRight size={isWin98 ? 10 : 14} />
           </button>
-          <button onClick={searchClose} className="p-0.5 rounded hover:bg-zinc-100 dark:hover:bg-zinc-700">
-            <X size={14} />
+          <button onClick={searchClose} className={isWin98 ? 'win98-button flex items-center justify-center w-[20px] h-[20px] p-0' : 'p-0.5 rounded hover:bg-zinc-100 dark:hover:bg-zinc-700'}>
+            <X size={isWin98 ? 10 : 14} />
           </button>
         </div>
       )}
 
       {/* Page content */}
-      <div className="flex-1 overflow-y-auto p-6">
+      <div className={`flex-1 overflow-y-auto p-6 ${isWin98 ? 'win98-scrollbar win98-inset m-1 bg-white' : ''}`}>
         {pages.map((page) => {
           const citationMatch = highlightMatch?.pageNumber === page.page_number ? highlightMatch : null;
           // Search matches for this page
@@ -285,7 +295,7 @@ export default function TextViewer({ documentId, fileType, targetPage, scrollNon
               ref={(el) => { if (el) pageRefs.current.set(page.page_number, el); }}
               className="mb-8"
             >
-              <div className="flex items-center justify-between text-xs text-zinc-400 mb-2 sticky top-0 bg-white dark:bg-zinc-950 py-1 z-[1]">
+              <div className={`flex items-center justify-between text-xs mb-2 sticky top-0 py-1 z-[1] ${isWin98 ? 'text-[var(--win98-dark-gray)] bg-white text-[10px]' : 'text-zinc-400 bg-white dark:bg-zinc-950'}`}>
                 <span>{t('doc.page')} {page.page_number}</span>
                 {!searchOpen && (
                   <button

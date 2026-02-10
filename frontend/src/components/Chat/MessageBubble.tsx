@@ -6,6 +6,8 @@ import remarkGfm from 'remark-gfm';
 import { Copy, Check, ThumbsUp, ThumbsDown, RotateCcw } from 'lucide-react';
 import type { Citation, Message } from '../../types';
 import { useLocale } from '../../i18n';
+import { useWin98Theme } from '../win98/useWin98Theme';
+import { CopyIcon, ThumbUpIcon, ThumbDownIcon, RefreshIcon } from '../win98/Win98Icons';
 
 interface MessageBubbleProps {
   message: Message;
@@ -175,6 +177,7 @@ export default function MessageBubble({ message, onCitationClick, isStreaming, o
   const isError = !!message.isError;
   const isAssistant = !isUser;
   const { t } = useLocale();
+  const isWin98 = useWin98Theme();
 
   const [copied, setCopied] = useState(false);
   const [feedback, setFeedback] = useState<Feedback>(null);
@@ -216,6 +219,67 @@ export default function MessageBubble({ message, onCitationClick, isStreaming, o
     }
     return components;
   }, [message.citations, onCitationClick, t]);
+
+  if (isWin98) {
+    return (
+      <div className="flex flex-col gap-1 my-2">
+        {/* Message Header */}
+        <div className="flex items-center gap-1">
+          {isUser ? (
+            <span className="text-[11px] font-bold text-[#000080]">[You]</span>
+          ) : (
+            <span className="text-[11px] font-bold text-[#008000]">[DocTalk Assistant]</span>
+          )}
+        </div>
+        {/* Message Content */}
+        <div
+          className={`text-[12px] leading-[1.5] whitespace-pre-wrap select-text cursor-text ${
+            isUser
+              ? 'bg-[#FFFFCC] border border-[#808080] p-2'
+              : isError
+              ? 'bg-[#FF6666] text-white p-2'
+              : 'px-1'
+          }`}
+        >
+          {isUser ? (
+            message.text
+          ) : isStreaming && !message.text ? (
+            <span className="text-[11px] text-[var(--win98-dark-gray)] animate-pulse">DocTalk is typing...</span>
+          ) : (
+            <>
+              <div className="[&>*:first-child]:mt-0 [&>*:last-child]:mb-0 text-[12px]">
+                <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>
+                  {markdownText}
+                </ReactMarkdown>
+              </div>
+              {isStreaming && isAssistant && message.text && (
+                <span className="inline-block w-1.5 h-3 bg-black animate-pulse ml-0.5 align-text-bottom" />
+              )}
+            </>
+          )}
+        </div>
+        {/* Actions (assistant only) */}
+        {isAssistant && !isError && message.text && (
+          <div className="flex items-center gap-[2px] mt-1">
+            <button type="button" onClick={handleCopy} className="win98-button flex items-center justify-center w-[20px] h-[18px] p-0" aria-label="Copy">
+              <CopyIcon size={10} />
+            </button>
+            <button type="button" onClick={() => handleFeedback('up')} className="win98-button flex items-center justify-center w-[20px] h-[18px] p-0" aria-label="Like">
+              <ThumbUpIcon size={10} />
+            </button>
+            <button type="button" onClick={() => handleFeedback('down')} className="win98-button flex items-center justify-center w-[20px] h-[18px] p-0" aria-label="Dislike">
+              <ThumbDownIcon size={10} />
+            </button>
+            {isLastAssistant && onRegenerate && !isStreaming && (
+              <button type="button" onClick={onRegenerate} className="win98-button flex items-center justify-center w-[20px] h-[18px] p-0" aria-label="Regenerate">
+                <RefreshIcon size={10} />
+              </button>
+            )}
+          </div>
+        )}
+      </div>
+    );
+  }
 
   return (
     <div className={`w-full flex ${isUser ? 'justify-end' : 'justify-start'} ${isUser ? 'my-4' : 'my-6'} group`}>

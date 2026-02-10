@@ -6,6 +6,7 @@ import 'react-pdf/dist/esm/Page/TextLayer.css';
 import PageWithHighlights from './PageWithHighlights';
 import PdfToolbar from './PdfToolbar';
 import type { NormalizedBBox } from '../../types';
+import { useTheme } from 'next-themes';
 import { useDocTalkStore } from '../../store';
 import { useLocale } from '../../i18n';
 
@@ -59,6 +60,8 @@ export default function PdfViewer({ pdfUrl, currentPage, highlights, scale, scro
   const dragState = useRef({ isDragging: false, startX: 0, startY: 0, scrollLeft: 0, scrollTop: 0 });
   const [visiblePage, setVisiblePage] = useState(1);
   const isScrollingToPage = useRef(false);
+  const { resolvedTheme } = useTheme();
+  const isWin98 = resolvedTheme === 'win98';
   const { setScale, grabMode, setGrabMode, searchQuery, searchMatches, currentMatchIndex, setSearchQuery, setSearchMatches, setCurrentMatchIndex } = useDocTalkStore();
   const setStoreTotalPages = (n: number) => useDocTalkStore.setState({ totalPages: n });
   const { t } = useLocale();
@@ -255,7 +258,7 @@ export default function PdfViewer({ pdfUrl, currentPage, highlights, scale, scro
   const pages = useMemo(() => Array.from({ length: numPages }, (_, i) => i + 1), [numPages]);
 
   return (
-    <div className="w-full h-full flex flex-col bg-zinc-50 dark:bg-zinc-900">
+    <div className={`w-full h-full flex flex-col ${isWin98 ? 'bg-[var(--win98-button-face)]' : 'bg-zinc-50 dark:bg-zinc-900'}`}>
       {numPages > 0 && (
         <PdfToolbar
           currentPage={visiblePage}
@@ -275,7 +278,7 @@ export default function PdfViewer({ pdfUrl, currentPage, highlights, scale, scro
         />
       )}
       <div
-        className={`flex-1 overflow-auto ${grabMode ? (isDragging ? 'cursor-grabbing' : 'cursor-grab') : ''}`}
+        className={`flex-1 overflow-auto ${isWin98 ? 'win98-scrollbar win98-inset m-1 bg-[#808080]' : ''} ${grabMode ? (isDragging ? 'cursor-grabbing' : 'cursor-grab') : ''}`}
         style={grabMode ? { userSelect: 'none' } : undefined}
         ref={containerRef}
         onMouseDown={handleMouseDown}

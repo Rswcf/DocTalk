@@ -1,7 +1,7 @@
 "use client";
 
 import React from 'react';
-import { Sun, Moon, ArrowLeft, FolderOpen } from 'lucide-react';
+import { Sun, Moon, Monitor, ArrowLeft, FolderOpen } from 'lucide-react';
 import { useTheme } from 'next-themes';
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
@@ -29,15 +29,24 @@ export default function Header({ variant = 'full', isDemo, isLoggedIn }: HeaderP
   const isDocumentPage = pathname?.startsWith('/d/');
   const isMinimal = variant === 'minimal';
 
-  const toggleTheme = () => {
-    setTheme(theme === 'dark' ? 'light' : 'dark');
+  const isWin98 = theme === 'win98';
+
+  const cycleTheme = () => {
+    if (theme === 'light') setTheme('dark');
+    else if (theme === 'dark') setTheme('win98');
+    else setTheme('light');
   };
+
+  const themeIcon = theme === 'dark' ? <Moon size={18} /> : isWin98 ? <Monitor size={18} /> : <Sun size={18} />;
+  const themeTitle = theme === 'dark' ? t('header.darkMode') : isWin98 ? 'Windows 98' : t('header.lightMode');
 
   return (
     <header className={`h-14 flex items-center px-4 sm:px-6 gap-3 min-w-0 shrink-0 ${
       isMinimal
         ? 'bg-transparent'
-        : 'border-b border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950'
+        : isWin98
+          ? 'border-b-2 border-b-[var(--win98-button-highlight)] bg-[var(--win98-button-face)] text-black text-[11px]'
+          : 'border-b border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950'
     }`}>
       <Link href="/" className="font-semibold text-lg text-zinc-900 dark:text-zinc-100 hover:text-zinc-600 dark:hover:text-zinc-300 transition-colors shrink-0">
         {t('app.title')}
@@ -72,11 +81,15 @@ export default function Header({ variant = 'full', isDemo, isLoggedIn }: HeaderP
         {!isMinimal && !(isDemo && !isLoggedIn) && <ModeSelector />}
         {!isMinimal && (
           <button
-            onClick={toggleTheme}
-            className="p-2 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-600 dark:text-zinc-400 transition-colors"
-            title={theme === 'dark' ? t('header.lightMode') : t('header.darkMode')}
+            onClick={cycleTheme}
+            className={`p-2 rounded-lg transition-colors ${
+              isWin98
+                ? 'win98-button'
+                : 'hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-600 dark:text-zinc-400'
+            }`}
+            title={themeTitle}
           >
-            {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
+            {themeIcon}
           </button>
         )}
         {!isMinimal && <div className="hidden sm:block"><CreditsDisplay /></div>}

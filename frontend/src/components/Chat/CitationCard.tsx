@@ -1,6 +1,7 @@
 "use client";
 
 import React from 'react';
+import { useWin98Theme } from '../win98/useWin98Theme';
 
 interface CitationCardProps {
   refIndex: number;
@@ -21,12 +22,27 @@ function sanitizeText(text: string | null | undefined): string {
 }
 
 export default function CitationCard({ refIndex, textSnippet, page, onClick }: CitationCardProps) {
+  const isWin98 = useWin98Theme();
   // Sanitize and truncate the snippet
   const sanitized = sanitizeText(textSnippet);
   const snippet = sanitized.length > 60 ? sanitized.slice(0, 60) + '…' : sanitized;
 
   // Validate page number
   const validPage = typeof page === 'number' && isFinite(page) && page > 0 ? page : 1;
+
+  if (isWin98) {
+    return (
+      <button
+        type="button"
+        onClick={onClick}
+        className="flex items-center gap-1 text-[10px] bg-[var(--win98-light-gray)] border border-[var(--win98-dark-gray)] px-2 py-[2px] w-fit cursor-default"
+      >
+        <span className="text-[#000080] font-bold shrink-0">[{refIndex}]</span>
+        <span className="truncate max-w-[200px]">{snippet}</span>
+        <span className="text-[var(--win98-dark-gray)] shrink-0">p.{validPage}</span>
+      </button>
+    );
+  }
 
   return (
     <button

@@ -11,6 +11,7 @@ const config: Config = {
     extend: {
       fontFamily: {
         sans: ['var(--font-inter)', 'system-ui', 'sans-serif'],
+        win98: ["'MS Sans Serif'", "'Microsoft Sans Serif'", "'Segoe UI'", 'Tahoma', 'sans-serif'],
       },
       keyframes: {
         'fade-in': {
