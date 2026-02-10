@@ -1,12 +1,13 @@
 "use client";
 
 import React from 'react';
-import { Sun, Moon, Monitor, ArrowLeft, FolderOpen } from 'lucide-react';
+import { ArrowLeft, FolderOpen } from 'lucide-react';
 import { useTheme } from 'next-themes';
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { useDocTalkStore } from '../store';
 import ModeSelector from './ModeSelector';
+import ThemeSelector from './ThemeSelector';
 import LanguageSelector from './LanguageSelector';
 import UserMenu from './UserMenu';
 import { useLocale } from '../i18n';
@@ -23,22 +24,13 @@ export default function Header({ variant = 'full', isDemo, isLoggedIn }: HeaderP
   const documentName = useDocTalkStore((s) => s.documentName);
   const lastDocumentId = useDocTalkStore((s) => s.lastDocumentId);
   const lastDocumentName = useDocTalkStore((s) => s.lastDocumentName);
-  const { resolvedTheme, setTheme } = useTheme();
+  const { resolvedTheme } = useTheme();
   const { t } = useLocale();
   const pathname = usePathname();
   const isDocumentPage = pathname?.startsWith('/d/');
   const isMinimal = variant === 'minimal';
 
   const isWin98 = resolvedTheme === 'win98';
-
-  const cycleTheme = () => {
-    if (resolvedTheme === 'light') setTheme('dark');
-    else if (resolvedTheme === 'dark') setTheme('win98');
-    else setTheme('light'); // win98 or anything else → light
-  };
-
-  const themeIcon = resolvedTheme === 'dark' ? <Moon aria-hidden="true" size={18} /> : isWin98 ? <Monitor aria-hidden="true" size={18} /> : <Sun aria-hidden="true" size={18} />;
-  const themeTitle = resolvedTheme === 'dark' ? t('header.darkMode') : isWin98 ? 'Windows 98' : t('header.lightMode');
 
   return (
     <header className={`h-14 flex items-center px-4 sm:px-6 gap-3 min-w-0 shrink-0 ${
@@ -79,20 +71,7 @@ export default function Header({ variant = 'full', isDemo, isLoggedIn }: HeaderP
       )}
       <div className="ml-auto flex items-center gap-1 sm:gap-2 shrink-0">
         {!isMinimal && !(isDemo && !isLoggedIn) && <ModeSelector />}
-        {!isMinimal && (
-          <button
-            onClick={cycleTheme}
-            className={`p-2 rounded-lg transition-colors ${
-              isWin98
-                ? 'win98-button'
-                : 'hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-600 dark:text-zinc-400 focus-visible:ring-2 focus-visible:ring-zinc-400 dark:focus-visible:ring-zinc-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-900'
-            }`}
-            title={themeTitle}
-            aria-label="Toggle theme"
-          >
-            {themeIcon}
-          </button>
-        )}
+        {!isMinimal && <ThemeSelector />}
         {!isMinimal && <div className="hidden sm:block"><CreditsDisplay /></div>}
         <UserMenu />
         <LanguageSelector />
