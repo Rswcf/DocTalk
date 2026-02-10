@@ -6,8 +6,8 @@ import { useLocale } from '../../i18n';
 
 const metrics = [
   { icon: FileText, value: '10,000+', labelKey: 'landing.social.metric1' },
-  { icon: Globe, value: '9', labelKey: 'landing.social.metric2' },
-  { icon: Cpu, value: '9', labelKey: 'landing.social.metric3' },
+  { icon: Globe, value: '11', labelKey: 'landing.social.metric2' },
+  { icon: Cpu, value: '3', labelKey: 'landing.social.metric3' },
   { icon: Server, value: '99.9%', labelKey: 'landing.social.metric4' },
 ];
 

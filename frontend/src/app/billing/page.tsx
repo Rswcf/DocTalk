@@ -132,14 +132,14 @@ function BillingContent() {
 
   const plusFeatures = [
     '30,000 credits/month',
-    'All 9 AI models',
+    'All 3 performance modes',
     'OCR & Markdown export',
     '20 documents, 50MB files',
   ];
 
   const proFeatures = [
     '150,000 credits/month',
-    'All 9 AI models',
+    'All 3 performance modes',
     'Custom prompts & priority support',
     'Unlimited documents, 100MB files',
   ];

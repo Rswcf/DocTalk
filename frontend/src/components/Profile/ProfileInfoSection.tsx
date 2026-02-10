@@ -28,7 +28,7 @@ export default function ProfileInfoSection({ profile }: Props) {
     return days;
   }, [profile.created_at]);
 
-  const planLabel = profile.plan === "pro" ? t("profile.plan.pro") : t("profile.plan.free");
+  const planLabel = profile.plan === "pro" ? t("profile.plan.pro") : profile.plan === "plus" ? t("profile.plan.plus") : t("profile.plan.free");
 
   return (
     <div className="flex flex-col gap-6">
@@ -55,7 +55,7 @@ export default function ProfileInfoSection({ profile }: Props) {
             <span
               className={
                 `px-2 py-0.5 rounded text-xs font-medium ` +
-                (profile.plan === "pro"
+                (profile.plan === "pro" || profile.plan === "plus"
                   ? `bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900`
                   : `bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300`)
               }

@@ -106,12 +106,12 @@ export default function CreditsSection({ profile }: Props) {
           <span
             className={
               `px-2 py-1 rounded text-xs font-medium ` +
-              (profile.plan === "pro"
+              (profile.plan === "pro" || profile.plan === "plus"
                 ? `bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900`
                 : `bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300`)
             }
           >
-            {profile.plan === "pro" ? t("profile.plan.pro") : t("profile.plan.free")}
+            {profile.plan === "pro" ? t("profile.plan.pro") : profile.plan === "plus" ? t("profile.plan.plus") : t("profile.plan.free")}
           </span>
         </div>
       </div>

@@ -17,7 +17,7 @@ class ModelProfile:
     temperature: float = 0.3
     max_tokens: int = 2048
     supports_cache_control: bool = False
-    supports_stream_options: bool = False
+    supports_stream_options: bool = True
     prompt_style: str = "default"
 
 
@@ -72,7 +72,7 @@ MODEL_PROFILES: dict[str, ModelProfile] = {
         temperature=0.1,
         max_tokens=1536,
         supports_cache_control=False,
-        supports_stream_options=False,
+        supports_stream_options=True,
         prompt_style="positive_framing",
     ),
     "openai/gpt-5.2": ModelProfile(
@@ -86,28 +86,28 @@ MODEL_PROFILES: dict[str, ModelProfile] = {
         temperature=0.2,
         max_tokens=1536,
         supports_cache_control=False,
-        supports_stream_options=False,
+        supports_stream_options=True,
         prompt_style="default",
     ),
     "mistralai/mistral-medium-3": ModelProfile(
         temperature=0.2,
         max_tokens=2048,
         supports_cache_control=False,
-        supports_stream_options=False,
+        supports_stream_options=True,
         prompt_style="default",
     ),
     "mistralai/mistral-medium-3.1": ModelProfile(
         temperature=0.2,
         max_tokens=2048,
         supports_cache_control=False,
-        supports_stream_options=False,
+        supports_stream_options=True,
         prompt_style="default",
     ),
     "mistralai/mistral-large-2512": ModelProfile(
         temperature=0.2,
         max_tokens=2048,
         supports_cache_control=False,
-        supports_stream_options=False,
+        supports_stream_options=True,
         prompt_style="default",
     ),
 }
