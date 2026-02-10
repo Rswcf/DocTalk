@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { useSession } from "next-auth/react";
+import { useTheme } from "next-themes";
 import { useLocale } from "../i18n";
 import { useDocTalkStore } from "../store";
 
@@ -17,6 +18,8 @@ export function CreditsDisplay() {
   const [credits, setCredits] = useState<number | null>(null);
   const { t } = useLocale();
   const setUserPlan = useDocTalkStore((s) => s.setUserPlan);
+  const { resolvedTheme } = useTheme();
+  const isWin98 = resolvedTheme === 'win98';
 
   const fetchCredits = useCallback(async () => {
     try {
@@ -63,7 +66,7 @@ export function CreditsDisplay() {
   if (status !== "authenticated" || credits === null) return null;
 
   return (
-    <div className="flex items-center gap-1 text-sm text-zinc-600 dark:text-zinc-400">
+    <div className={`flex items-center gap-1 ${isWin98 ? 'text-[11px] text-[var(--win98-black)]' : 'text-sm text-zinc-600 dark:text-zinc-400'}`}>
       <span className="font-medium">{credits.toLocaleString()}</span>
       <span>{t("credits.credits")}</span>
     </div>

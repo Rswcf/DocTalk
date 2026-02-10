@@ -23,22 +23,22 @@ export default function Header({ variant = 'full', isDemo, isLoggedIn }: HeaderP
   const documentName = useDocTalkStore((s) => s.documentName);
   const lastDocumentId = useDocTalkStore((s) => s.lastDocumentId);
   const lastDocumentName = useDocTalkStore((s) => s.lastDocumentName);
-  const { theme, setTheme } = useTheme();
+  const { resolvedTheme, setTheme } = useTheme();
   const { t } = useLocale();
   const pathname = usePathname();
   const isDocumentPage = pathname?.startsWith('/d/');
   const isMinimal = variant === 'minimal';
 
-  const isWin98 = theme === 'win98';
+  const isWin98 = resolvedTheme === 'win98';
 
   const cycleTheme = () => {
-    if (theme === 'light') setTheme('dark');
-    else if (theme === 'dark') setTheme('win98');
-    else setTheme('light');
+    if (resolvedTheme === 'light') setTheme('dark');
+    else if (resolvedTheme === 'dark') setTheme('win98');
+    else setTheme('light'); // win98 or anything else → light
   };
 
-  const themeIcon = theme === 'dark' ? <Moon size={18} /> : isWin98 ? <Monitor size={18} /> : <Sun size={18} />;
-  const themeTitle = theme === 'dark' ? t('header.darkMode') : isWin98 ? 'Windows 98' : t('header.lightMode');
+  const themeIcon = resolvedTheme === 'dark' ? <Moon size={18} /> : isWin98 ? <Monitor size={18} /> : <Sun size={18} />;
+  const themeTitle = resolvedTheme === 'dark' ? t('header.darkMode') : isWin98 ? 'Windows 98' : t('header.lightMode');
 
   return (
     <header className={`h-14 flex items-center px-4 sm:px-6 gap-3 min-w-0 shrink-0 ${

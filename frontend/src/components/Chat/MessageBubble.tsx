@@ -33,6 +33,7 @@ function processCitationLinks(
   citations: Citation[],
   onClick?: (c: Citation) => void,
   t?: (key: string, params?: Record<string, string | number>) => string,
+  isWin98?: boolean,
 ): React.ReactNode {
   if (!citations || citations.length === 0) return children;
 
@@ -55,19 +56,30 @@ function processCitationLinks(
             <span key={`cite-${refNum}-${keyIdx++}`} className="relative inline-block group/cite">
               <button
                 type="button"
-                className="inline text-zinc-600 dark:text-zinc-400 hover:underline cursor-pointer select-none font-medium bg-transparent border-none p-0 text-inherit leading-inherit"
+                className={isWin98
+                  ? "inline text-[#000080] hover:underline cursor-pointer select-none font-bold bg-transparent border-none p-0 text-inherit leading-inherit"
+                  : "inline text-zinc-600 dark:text-zinc-400 hover:underline cursor-pointer select-none font-medium bg-transparent border-none p-0 text-inherit leading-inherit"
+                }
                 onClick={() => onClick?.(citation)}
                 title={t ? t('citation.jumpTo', { page: citation.page }) : `Jump to page ${citation.page}`}
               >
                 [{refNum}]
               </button>
               {citation.textSnippet && (
-                <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 text-xs rounded-lg shadow-lg whitespace-normal max-w-[280px] pointer-events-none opacity-0 group-hover/cite:opacity-100 transition-opacity z-50">
+                <span className={isWin98
+                  ? "absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 bg-[#FFFFE1] text-black text-[10px] border border-black shadow whitespace-normal max-w-[280px] pointer-events-none opacity-0 group-hover/cite:opacity-100 z-50"
+                  : "absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 text-xs rounded-lg shadow-lg whitespace-normal max-w-[280px] pointer-events-none opacity-0 group-hover/cite:opacity-100 transition-opacity z-50"
+                }>
                   <span className="line-clamp-3">{citation.textSnippet}</span>
-                  <span className="block mt-1 text-zinc-400 dark:text-zinc-500 text-[10px]">
+                  <span className={isWin98
+                    ? "block mt-1 text-[#808080] text-[9px]"
+                    : "block mt-1 text-zinc-400 dark:text-zinc-500 text-[10px]"
+                  }>
                     {t ? t('citation.page', { page: citation.page }) : `Page ${citation.page}`}
                   </span>
-                  <span className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-zinc-900 dark:border-t-zinc-100" />
+                  {!isWin98 && (
+                    <span className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-zinc-900 dark:border-t-zinc-100" />
+                  )}
                 </span>
               )}
             </span>
@@ -85,7 +97,7 @@ function processCitationLinks(
 
     if (React.isValidElement(child) && child.props?.children) {
       return React.cloneElement(child as React.ReactElement<any>, {
-        children: processCitationLinks(child.props.children, citations, onClick, t),
+        children: processCitationLinks(child.props.children, citations, onClick, t, isWin98),
       });
     }
 
@@ -98,9 +110,10 @@ function createCitationComponent(
   citations: Citation[],
   onClick?: (c: Citation) => void,
   t?: (key: string, params?: Record<string, string | number>) => string,
+  isWin98?: boolean,
 ) {
   return function CitationElement({ children, ...props }: any) {
-    return React.createElement(Tag, props, processCitationLinks(children, citations, onClick, t));
+    return React.createElement(Tag, props, processCitationLinks(children, citations, onClick, t, isWin98));
   };
 }
 
@@ -261,18 +274,20 @@ export default function MessageBubble({ message, onCitationClick, isStreaming, o
         {/* Actions (assistant only) */}
         {isAssistant && !isError && message.text && (
           <div className="flex items-center gap-[2px] mt-1">
-            <button type="button" onClick={handleCopy} className="win98-button flex items-center justify-center w-[20px] h-[18px] p-0" aria-label="Copy">
+            <button type="button" onClick={handleCopy} className="win98-button flex items-center gap-[3px] h-[18px] px-1 text-[10px]" title="Copy">
               <CopyIcon size={10} />
+              <span>{copied ? 'OK' : 'Copy'}</span>
             </button>
-            <button type="button" onClick={() => handleFeedback('up')} className="win98-button flex items-center justify-center w-[20px] h-[18px] p-0" aria-label="Like">
+            <button type="button" onClick={() => handleFeedback('up')} className={`win98-button flex items-center gap-[3px] h-[18px] px-1 text-[10px] ${feedback === 'up' ? 'win98-inset' : ''}`} title="Like">
               <ThumbUpIcon size={10} />
             </button>
-            <button type="button" onClick={() => handleFeedback('down')} className="win98-button flex items-center justify-center w-[20px] h-[18px] p-0" aria-label="Dislike">
+            <button type="button" onClick={() => handleFeedback('down')} className={`win98-button flex items-center gap-[3px] h-[18px] px-1 text-[10px] ${feedback === 'down' ? 'win98-inset' : ''}`} title="Dislike">
               <ThumbDownIcon size={10} />
             </button>
             {isLastAssistant && onRegenerate && !isStreaming && (
-              <button type="button" onClick={onRegenerate} className="win98-button flex items-center justify-center w-[20px] h-[18px] p-0" aria-label="Regenerate">
+              <button type="button" onClick={onRegenerate} className="win98-button flex items-center gap-[3px] h-[18px] px-1 text-[10px]" title="Retry">
                 <RefreshIcon size={10} />
+                <span>Retry</span>
               </button>
             )}
           </div>
