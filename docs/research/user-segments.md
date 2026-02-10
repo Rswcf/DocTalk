@@ -432,7 +432,7 @@ Peer at competitor      --> Check data security        --> Daily use for        
 | Elicit | Academic | Limited | $12/month | Institutional |
 | Hebbia | Finance/Legal | N/A | $3,000-$10,000/seat/year | Custom |
 | Harvey AI | Legal | N/A | Enterprise only (~$100K+/year) | Custom |
-| **DocTalk (current)** | **General** | **5K credits/month (3 docs, 25MB)** | **Plus: 30K / Pro: 150K credits/month** | **N/A** |
+| **DocTalk (current)** | **General** | **500 credits/month (3 docs, 25MB)** | **Plus: 3K ($9.99) / Pro: 9K ($19.99) credits/month** | **N/A** |
 
 ### Key Insight for DocTalk Pricing
 

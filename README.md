@@ -14,7 +14,7 @@ DocTalk helps heavy document readers quickly locate key information in long docu
 - **Split View** — Resizable chat panel (left) + PDF viewer (right) with drag-to-pan zoom
 - **3 Performance Modes** — Quick, Balanced, and Thorough analysis modes via OpenRouter; model-adaptive prompts and parameters optimize each mode's RAG performance
 - **Demo Mode** — Try 3 sample documents (NVIDIA 10-K, Attention paper, NDA contract) instantly with 5 free messages per document, progress bar indicator, and rate limiting
-- **Credits System** — Free (5K/month), Plus (30K/month), and Pro (150K/month) with Stripe subscriptions and annual billing
+- **Credits System** — Free (500/month), Plus (3K/month), and Pro (9K/month) with Stripe subscriptions and annual billing
 - **11 Languages** — English, Chinese, Spanish, Japanese, German, French, Korean, Portuguese, Italian, Arabic, Hindi
 - **Dark Mode** — Full dark theme with monochrome zinc palette
 - **Multi-Session** — Multiple independent chat sessions per document with auto-restore

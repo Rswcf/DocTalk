@@ -13,7 +13,7 @@
 | **Free Tier** | 500 credits/month (auto-granted, 30-day lazy eval) |
 | **Plus Subscription** | $9.99/month via Stripe, 3,000 credits/month |
 | **Pro Subscription** | $19.99/month via Stripe, 9,000 credits/month |
-| **One-Time Credit Packs** | Starter ($5 / 50K credits), Pro ($15 / 200K credits), Enterprise ($50 / 1M credits) |
+| **One-Time Credit Packs** | Starter ($5 / 5K credits), Pro ($15 / 20K credits), Enterprise ($50 / 100K credits) |
 | **Credit Rates** | Quick (DeepSeek): 0.5x multiplier; Balanced (Mistral Medium): 1x; Thorough (Mistral Large): 3x |
 | **Demo** | 3 seeded documents, 5 messages/session for anonymous users, 50 sessions/doc cap (global), forced DeepSeek V3.2 (low-cost), 10 req/min/IP rate limit, ModeSelector hidden |
 | **Billing** | Stripe Checkout (one-time) + Stripe Subscriptions (recurring) + Stripe Customer Portal |
@@ -160,7 +160,7 @@ A Pro user (9,000 credits/month) gets approximately:
 
 #### Team -- NEW
 - **Price**: $29.99/user/month ($24.99/mo annual)
-- **Credits**: 200,000/month per seat (shared pool)
+- **Credits**: 20,000/month per seat (shared pool)
 - **Limits**: Unlimited documents, 200 MB max file size, all 3 modes
 - **Features**: All Pro features + shared workspaces, admin console, usage analytics per member, SSO (SAML/OIDC), document sharing within team, role-based permissions
 - **Goal**: Small teams (3-20 seats) in legal, consulting, finance, research
@@ -199,7 +199,7 @@ This prevents hard stops that push users to competitors while capturing incremen
 
 | Feature | Free | Plus | Pro | Team | Enterprise |
 |---------|------|------|-----|------|------------|
-| Monthly credits | 500 | 3K | 9K | 200K/seat | Custom |
+| Monthly credits | 500 | 3K | 9K | 20K/seat | Custom |
 | Documents stored | 3 | 20 | Unlimited | Unlimited | Unlimited |
 | File size limit | 25 MB | 50 MB | 100 MB | 200 MB | Custom |
 | Models available | Quick + Balanced | Quick + Balanced | All 3 modes | All 3 modes | All + custom |
@@ -261,10 +261,10 @@ Current pricing page weaknesses:
 - No feature comparison is visible at the top (PricingTable exists but is below the fold)
 - No social proof (user counts, testimonials, case studies)
 - No annual toggle
-- Credit packs lack context (what does 50K credits actually get you?)
+- Credit packs lack context (what does 5K credits actually get you?)
 
 Recommended improvements:
-1. **Add "credit translator"**: "50K credits = ~3,500 conversations with Claude Sonnet" inline on pack cards
+1. **Add "credit translator"**: "5K credits = ~350 conversations with Quick mode" inline on pack cards
 2. **Annual/Monthly toggle** at top of pricing section
 3. **"Most Popular" badge** on recommended tier
 4. **Social proof**: "Trusted by X users" banner, testimonials from target segments

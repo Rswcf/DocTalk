@@ -225,7 +225,7 @@ The market has progressed from novelty (2023) through commoditization of basic f
 
 | Tool | Free Tier | Entry Paid | Mid Tier | Enterprise |
 |------|-----------|------------|----------|------------|
-| **DocTalk** | Demo (3 docs, 5 msg limit, rate limited) | Free (5K credits/mo, 3 docs, 25MB) | Plus (30K, 20 docs, 50MB) / Pro (150K credits/mo, 999 docs, 100MB) | -- |
+| **DocTalk** | Demo (3 docs, 5 msg limit, rate limited) | Free (500 credits/mo, 3 docs, 25MB) | Plus (3K, $9.99, 20 docs, 50MB) / Pro (9K credits/mo, $19.99, 999 docs, 100MB) | -- |
 | ChatPDF | 2 PDFs/day | $19.99/mo | -- | -- |
 | PDF.ai | 1 PDF total | $17/mo | $27/mo | $37/mo |
 | AskYourPDF | 1 doc/day | $11.99/mo | $14.99/mo | Custom |

@@ -49,13 +49,13 @@ Railway 项目包含 5 个服务：backend, Postgres, Redis, qdrant-v2, minio-v2
   - 未登录: 可试用 Demo（3 篇真实 PDF，5 条消息限制，服务端 + 客户端双重限制，匿名用户强制使用 DeepSeek V3.2（低成本）且隐藏 ModeSelector，IP 级速率限制 10 req/min）
   - 已登录: 可上传个人 PDF，服务端文档列表，Credits 系统；访问 Demo 文档使用 Credits，无消息限制
 - **Demo 系统**: 后端启动时自动种子 3 篇真实文档（NVIDIA 10-K、Attention 论文、NDA）到 MinIO + DB，通过 Celery 解析。`demo_slug` 列标识 Demo 文档，`is_demo` 属性暴露给前端。`GET /api/documents/demo` 返回 Demo 文档列表。`/demo` 页面从 API 获取文档 ID 后链接到 `/d/{docId}`，旧 `/demo/[sample]` 路由自动重定向
-- **Credits 系统**: 预付费模式，余额 + Ledger 双表记录，每次对话扣费
+- **Credits 系统**: 预付费模式，余额 + Ledger 双表记录。三阶段扣费：① chat 端点按模式预估余额检查（402 不足） → ② `chat_service` 调用 `pre_debit_credits()` 在流式输出前扣除预估额（`MODE_ESTIMATED_COST`: quick=5, balanced=15, thorough=35） → ③ 流式结束后 `reconcile_credits()` 按实际 token 计算差额退补。注册赠送 `SIGNUP_BONUS_CREDITS`（默认 1,000）
 - **订阅系统**: Free (500 credits/月) + Plus (3,000 credits/月, $9.99) + Pro (9,000 credits/月, $19.99) 三级，支持月付/年付（年付享 20% 折扣），月度 credits 惰性发放（`ensure_monthly_credits`），Stripe 订阅集成
-- **模式门控**: Thorough 模式（深度分析）仅限 Plus+ 套餐使用，后端 `chat_service.py` 校验 + 前端 `ModeSelector.tsx` 锁定图标。ModeSelector 根据认证状态显示不同 CTA：匿名用户点击锁定模式 → 登录模态框（`?auth=1`），已登录免费用户 → `/billing`
+- **模式门控**: Thorough 模式（深度分析）仅限 Plus+ 套餐使用，后端 `chat_service.py` 校验 + 前端 `ModeSelector.tsx` 锁定图标。ModeSelector 根据认证状态显示不同 CTA：匿名用户点击锁定模式 → 登录模态框（`?auth=1`），已登录免费用户 → `/billing`。chat 端点在进入流式前按 `MODE_ESTIMATED_COST` 预检余额，不足返回 402 + `required`/`balance` 字段
 - **Profile 页面**: `/profile` 4 个 Tab (Profile/Credits/Usage/Account)，含交易历史、使用统计、账户删除
 - **API 网关**: 所有 LLM 和 Embedding 调用统一通过 OpenRouter（单一 API key）。匿名 Demo 用户使用 `DEMO_LLM_MODEL`（默认 `deepseek/deepseek-v3.2`）降低成本
 - **模式切换**: 前端用户可选择性能模式（Quick/Balanced/Thorough），后端映射到具体模型并通过 OpenRouter 调用
-- **模型自适应提示**: `model_profiles.py` 为每个模型定义独立的 `ModelProfile`（temperature、max_tokens、supports_cache_control、supports_stream_options、prompt_style）。`chat_service.py` 根据模型 profile 动态调整系统提示规则和 API 参数。2 种 prompt_style 变体：`default`（Mistral/GPT/Qwen 等通用模型）、`positive_framing`（DeepSeek — 避免消极表述过度遵从）。`stream_options` 仅对 OpenAI 模型启用
+- **模型自适应提示**: `model_profiles.py` 为每个模型定义独立的 `ModelProfile`（temperature、max_tokens、supports_cache_control、supports_stream_options、prompt_style）。`chat_service.py` 根据模型 profile 动态调整系统提示规则和 API 参数。2 种 prompt_style 变体：`default`（Mistral/GPT/Qwen 等通用模型）、`positive_framing`（DeepSeek — 避免消极表述过度遵从）。`stream_options` 对所有模型启用（OpenRouter 统一支持）
 - **AI 回答语言**: 跟随用户提问语言（"Your response language MUST match the language of the user's question"），不受前端 UI locale 影响。前端 locale 仅控制界面文字展示
 - **RAG 基准测试**: `backend/scripts/` 包含 48 个测试用例（10 类别 × 3 demo 文档）、自动化 benchmark runner（`run_benchmark.py`）和评估器（`evaluate_benchmark.py`，8 维度自动评分 + 可选 LLM-as-judge）。评估维度：引用准确度、信息完整度、幻觉率、语言合规、Markdown 质量、指令遵从、否定案例准确度、首 token 延迟
 - **布局**: Chat 面板在左侧, PDF 查看器在右侧，中间可拖拽调节宽度 (react-resizable-panels)
@@ -312,7 +312,7 @@ SENTRY_TRACES_SAMPLE_RATE=0.1
 ### 后端相关
 - **Celery 用同步 DB**: Worker 使用 `psycopg`（同步），API 使用 `asyncpg`（异步）
 - **macOS Celery fork 安全**: 必须设置 `OBJC_DISABLE_INITIALIZE_FORK_SAFETY=YES`
-- **Credits 扣费**: 使用 `db.flush()` 确保 ledger 在同一事务中写入
+- **Credits 三阶段扣费**: ① `chat.py` 按 `MODE_ESTIMATED_COST` 预检余额（402 不足） → ② `chat_service.py` 调用 `pre_debit_credits()` 预扣估算额 → ③ 流式结束后 `reconcile_credits()` 按实际 token 差额退补。`db.flush()` 确保 ledger 在同一事务中写入
 - **FOR UPDATE 锁**: 验证 Token 使用行锁防止 TOCTOU 竞态
 - **OCR 回退**: `detect_scanned()` 检测到扫描 PDF 后，若 `OCR_ENABLED=true`，设 status="ocr" → 调用 `extract_pages_ocr()` → 验证文字 ≥50 chars → 继续 parsing。PyMuPDF `page.get_textpage_ocr(language=..., dpi=..., full=True)` 需要系统安装 Tesseract（Dockerfile 已包含 `tesseract-ocr-eng` + `tesseract-ocr-chi-sim`）
 - **OCR 容错**: 每页独立 try/except，一页 OCR 失败不影响其他页。OCR 文字不足 50 chars 时标记 error
@@ -325,7 +325,7 @@ SENTRY_TRACES_SAMPLE_RATE=0.1
 - **删除为同步级联**: `doc_service.delete_document()` 使用 ORM cascade 真正删除 DB 记录（非仅标记 status），同时 best-effort 清理 MinIO + Qdrant。清理失败时通过 `deletion_worker.py` Celery 任务重试（3 次，指数退避），所有删除操作记录结构化安全日志
 - **文档列表过滤**: `list_documents` 查询排除 `status="deleting"` 的文档
 - **月度 Credits 惰性发放**: `ensure_monthly_credits()` 在每次 chat 前检查，30 天周期，ledger 幂等，时区安全
-- **Stripe 订阅 Webhook**: `checkout.session.completed` 按 mode 分流 (subscription vs payment)；`invoice.payment_succeeded` 按 invoice.id 幂等；`customer.subscription.deleted` 清除 plan
+- **Stripe 订阅 Webhook**: `checkout.session.completed` 按 mode 分流 — subscription 模式仅更新 plan（不发 credits，避免与 invoice 双重发放），payment 模式按 payment_intent 幂等发放一次性包 credits；`invoice.payment_succeeded` 按 invoice.id 幂等发放订阅月度 credits；`customer.subscription.deleted` 清除 plan
 - **账户删除**: `DELETE /api/users/me` 先取消 Stripe 订阅，再逐文档清理 MinIO+Qdrant，最后 ORM cascade 删除用户
 
 ### PDF 相关
@@ -338,7 +338,7 @@ SENTRY_TRACES_SAMPLE_RATE=0.1
 - **PDF 文本搜索**: PdfViewer 通过 `pdfjs page.getTextContent()` 提取全文文本，存入 Zustand store (searchQuery/searchMatches/currentMatchIndex)。PageWithHighlights 的 `customTextRenderer` 同时处理引用高亮和搜索匹配高亮（`<mark class="pdf-search-match">`）。PdfToolbar 提供搜索 UI（Search 图标 + 输入框 + 匹配计数 + 上下翻页）
 
 ### 其他
-- **模型白名单**: 后端 `config.py:ALLOWED_MODELS` 定义允许的模型 ID 列表（3 种模式对应的主模型 + 备选模型）
+- **模型白名单 + 模式映射**: 后端 `config.py:ALLOWED_MODELS` 定义允许的模型 ID 列表（3 种模式对应的主模型 + 备选模型）。`MODE_MODELS` 正向映射 mode→model，`MODEL_TO_MODE` 反向映射 model→mode（防止用户通过直传 model 绕过模式计费）
 - **模型 Profile**: `model_profiles.py:MODEL_PROFILES` 为各模型定义独立的 temperature/max_tokens/prompt_style。`get_model_profile()` 返回模型配置，`get_rules_for_model()` 返回模型专用规则文本
 - **react-resizable-panels v4 API**: 使用 `Group`/`Panel`/`Separator`
 - **Alembic 配置**: `sqlalchemy.url` 被 `env.py` 运行时覆盖
@@ -382,7 +382,7 @@ DocTalk/
 │   │   │   ├── credits.py        # Credits 余额 + 历史
 │   │   │   └── users.py          # /me, /profile, /usage-breakdown, DELETE /me
 │   │   ├── core/
-│   │   │   ├── config.py         # Settings, ALLOWED_MODELS 白名单
+│   │   │   ├── config.py         # Settings, ALLOWED_MODELS 白名单, MODE_MODELS/MODEL_TO_MODE 映射
 │   │   │   ├── deps.py           # FastAPI 依赖 (require_auth, get_db)
 │   │   │   ├── rate_limit.py     # 内存级速率限制器 (匿名用户 chat 端点, 10K 条目自动清理)
 │   │   │   ├── url_validator.py  # SSRF 防护 (DNS 解析 + 私有 IP 阻断 + 端口封锁 + 重定向验证)
@@ -399,7 +399,7 @@ DocTalk/
 │   │   │   └── auth.py           # User/Account/VerificationToken schemas
 │   │   ├── services/
 │   │   │   ├── chat_service.py   # LLM 对话 + 引用解析 + 模型自适应提示/参数
-│   │   │   ├── credit_service.py # Credits debit/credit + ensure_monthly_credits
+│   │   │   ├── credit_service.py # Credits pre-debit/reconcile + ensure_monthly_credits
 │   │   │   ├── auth_service.py   # User/Account/Token 管理
 │   │   │   ├── demo_seed.py      # Demo 文档种子 (启动时自动执行)
 │   │   │   ├── summary_service.py # 自动摘要生成 (Celery 上下文, DeepSeek)

@@ -257,10 +257,10 @@ Auth.js v5 将会话令牌加密为 JWE（JSON Web Encryption），Python 后端
 ```mermaid
 flowchart TB
     subgraph Sources["积分来源"]
-        Signup["注册奖励<br/>10,000 积分"]
-        Monthly["月度发放<br/>Free: 5K / Plus: 30K / Pro: 150K"]
-        Purchase["一次性购买<br/>Starter: 50K / Pro: 200K / Enterprise: 1M"]
-        Subscription["Plus/Pro 订阅<br/>Plus: 30K / Pro: 150K 积分/月"]
+        Signup["注册奖励<br/>1,000 积分"]
+        Monthly["月度发放<br/>Free: 500 / Plus: 3K / Pro: 9K"]
+        Purchase["一次性购买<br/>Starter: 5K / Pro: 20K / Enterprise: 100K"]
+        Subscription["Plus/Pro 订阅<br/>Plus: 3K / Pro: 9K 积分/月"]
     end
 
     subgraph Stripe["Stripe 集成"]
@@ -277,10 +277,11 @@ flowchart TB
         UsageRecord["UsageRecord<br/>（按消息）"]
     end
 
-    subgraph Chat["对话扣费"]
+    subgraph Chat["对话扣费（三阶段）"]
         EnsureMonthly["ensure_monthly_credits()<br/>30 天惰性检查"]
-        CheckBalance["check_balance()"]
-        Debit["debit_credits()<br/>模型 + tokens → 费用"]
+        PreCheck["余额预检<br/>MODE_ESTIMATED_COST"]
+        PreDebit["pre_debit_credits()<br/>流式前预扣估算额"]
+        Reconcile["reconcile_credits()<br/>实际与估算差额退补"]
     end
 
     Signup --> CreditService
@@ -293,22 +294,23 @@ flowchart TB
     CreditService --> Balance
 
     EnsureMonthly --> CreditService
-    CheckBalance --> Balance
-    Debit --> CreditService
-    Debit --> UsageRecord
+    PreCheck --> Balance
+    PreDebit --> CreditService
+    Reconcile --> CreditService
+    Reconcile --> UsageRecord
 ```
 
 **积分生命周期：**
 
-1. **注册奖励**：新用户首次登录获得 10,000 积分（幂等操作，`signup_bonus_granted_at` 时间戳防止重复发放）。
+1. **注册奖励**：新用户首次登录获得 1,000 积分（通过 `SIGNUP_BONUS_CREDITS` 配置；幂等操作，`signup_bonus_granted_at` 时间戳防止重复发放）。
 
-2. **月度发放**：`ensure_monthly_credits()` 在每次对话请求前调用。检查 `monthly_credits_granted_at` — 若已过 30 天以上，根据用户套餐发放 Free（5K）、Plus（30K）或 Pro（150K）积分。Ledger 条目使用 `ref_type=monthly_grant` 和基于时间戳的 `ref_id` 保证幂等性。
+2. **月度发放**：`ensure_monthly_credits()` 在每次对话请求前调用。检查 `monthly_credits_granted_at` — 若已过 30 天以上，根据用户套餐发放 Free（500）、Plus（3K）或 Pro（9K）积分。Ledger 条目使用 `ref_type=monthly_grant` 和基于时间戳的 `ref_id` 保证幂等性。
 
-3. **一次性购买**：Stripe Checkout 创建支付会话。收到 `checkout.session.completed` Webhook（mode=payment）后，将积分添加到用户余额。
+3. **一次性购买**：Stripe Checkout 创建支付会话。收到 `checkout.session.completed` Webhook（mode=payment）后，将积分添加到用户余额。按 `payment_intent` ID 幂等。
 
-4. **Plus/Pro 订阅**：Stripe 循环订阅（月付或年付）。收到 `invoice.payment_succeeded` Webhook 后根据套餐发放月度积分（Plus: 30K，Pro: 150K），按 `invoice.id` 幂等。收到 `customer.subscription.deleted` 后将套餐重置为 Free。
+4. **Plus/Pro 订阅**：Stripe 循环订阅（月付或年付）。`checkout.session.completed`（mode=subscription）仅更新用户套餐——**不发放积分**（防止与 invoice Webhook 双重发放）。积分仅通过 `invoice.payment_succeeded` Webhook 发放（Plus: 3K，Pro: 9K），按 `invoice.id` 幂等。收到 `customer.subscription.deleted` 后将套餐重置为 Free。
 
-5. **对话扣费**：每条对话消息根据模型和 token 用量扣除积分。费用同时记录在 `CreditLedger`（余额追踪）和 `UsageRecord`（分析统计）中。
+5. **对话扣费（三阶段）**：① `chat.py` 预检余额 >= `MODE_ESTIMATED_COST`（quick=5, balanced=15, thorough=35），不足返回 402。② `chat_service.py` 调用 `pre_debit_credits()` 在 LLM 流式输出前预扣估算额。③ 流式结束后 `reconcile_credits()` 按实际 token 用量计算差额退补。所有操作记录在 `CreditLedger`（余额追踪）和 `UsageRecord`（分析统计）中。
 
 ---
 

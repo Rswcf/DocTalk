@@ -257,10 +257,10 @@ This cleanly separates the frontend auth system from the backend API authenticat
 ```mermaid
 flowchart TB
     subgraph Sources["Credit Sources"]
-        Signup["Signup Bonus<br/>10,000 credits"]
-        Monthly["Monthly Grant<br/>Free: 5K / Plus: 30K / Pro: 150K"]
-        Purchase["One-Time Purchase<br/>Starter: 50K / Pro: 200K / Enterprise: 1M"]
-        Subscription["Plus/Pro Subscription<br/>Plus: 30K / Pro: 150K credits/month"]
+        Signup["Signup Bonus<br/>1,000 credits"]
+        Monthly["Monthly Grant<br/>Free: 500 / Plus: 3K / Pro: 9K"]
+        Purchase["One-Time Purchase<br/>Starter: 5K / Pro: 20K / Enterprise: 100K"]
+        Subscription["Plus/Pro Subscription<br/>Plus: 3K / Pro: 9K credits/month"]
     end
 
     subgraph Stripe["Stripe Integration"]
@@ -277,10 +277,11 @@ flowchart TB
         UsageRecord["UsageRecord<br/>(per-message)"]
     end
 
-    subgraph Chat["Chat Debit"]
+    subgraph Chat["Chat Debit (3-phase)"]
         EnsureMonthly["ensure_monthly_credits()<br/>30-day lazy check"]
-        CheckBalance["check_balance()"]
-        Debit["debit_credits()<br/>model + tokens → cost"]
+        PreCheck["balance pre-check<br/>MODE_ESTIMATED_COST"]
+        PreDebit["pre_debit_credits()<br/>estimated cost before stream"]
+        Reconcile["reconcile_credits()<br/>actual vs estimated diff"]
     end
 
     Signup --> CreditService
@@ -293,22 +294,23 @@ flowchart TB
     CreditService --> Balance
 
     EnsureMonthly --> CreditService
-    CheckBalance --> Balance
-    Debit --> CreditService
-    Debit --> UsageRecord
+    PreCheck --> Balance
+    PreDebit --> CreditService
+    Reconcile --> CreditService
+    Reconcile --> UsageRecord
 ```
 
 **Credit lifecycle:**
 
-1. **Signup Bonus**: New users receive 10,000 credits on first login (idempotent, `signup_bonus_granted_at` timestamp guards against double-grant).
+1. **Signup Bonus**: New users receive 1,000 credits on first login (configurable via `SIGNUP_BONUS_CREDITS`; idempotent, `signup_bonus_granted_at` timestamp guards against double-grant).
 
-2. **Monthly Grant**: `ensure_monthly_credits()` is called before every chat request. It checks `monthly_credits_granted_at` — if 30+ days have elapsed, grants Free (5K), Plus (30K), or Pro (150K) credits based on the user's plan. The ledger entry uses `ref_type=monthly_grant` with a timestamp-based `ref_id` for idempotency.
+2. **Monthly Grant**: `ensure_monthly_credits()` is called before every chat request. It checks `monthly_credits_granted_at` — if 30+ days have elapsed, grants Free (500), Plus (3K), or Pro (9K) credits based on the user's plan. The ledger entry uses `ref_type=monthly_grant` with a timestamp-based `ref_id` for idempotency.
 
-3. **One-Time Purchase**: Stripe Checkout creates a payment session. On `checkout.session.completed` webhook (mode=payment), credits are added to the user's balance.
+3. **One-Time Purchase**: Stripe Checkout creates a payment session. On `checkout.session.completed` webhook (mode=payment), credits are added to the user's balance. Idempotent by `payment_intent` ID.
 
-4. **Plus/Pro Subscription**: Stripe recurring subscription (monthly or annual). On `invoice.payment_succeeded` webhook, monthly credits are granted based on plan (Plus: 30K, Pro: 150K). Idempotent by `invoice.id`. On `customer.subscription.deleted`, plan is reset to Free.
+4. **Plus/Pro Subscription**: Stripe recurring subscription (monthly or annual). `checkout.session.completed` (mode=subscription) only updates the user's plan — it does **not** grant credits (prevents double-grant with invoice webhook). Credits are granted solely via `invoice.payment_succeeded` webhook based on plan (Plus: 3K, Pro: 9K). Idempotent by `invoice.id`. On `customer.subscription.deleted`, plan is reset to Free.
 
-5. **Chat Debit**: Each chat message deducts credits based on model and token usage. The cost is recorded in both `CreditLedger` (balance tracking) and `UsageRecord` (analytics).
+5. **Chat Debit (3-phase)**: ① `chat.py` pre-checks balance >= `MODE_ESTIMATED_COST` (quick=5, balanced=15, thorough=35), returns 402 if insufficient. ② `chat_service.py` calls `pre_debit_credits()` to debit estimated cost before LLM streaming starts. ③ After streaming completes, `reconcile_credits()` computes actual cost from token usage and refunds or charges the difference. All operations recorded in `CreditLedger` (balance tracking) and `UsageRecord` (analytics).
 
 ---
 
