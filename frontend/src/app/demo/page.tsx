@@ -8,11 +8,11 @@ import Header from '../../components/Header';
 import { getDemoDocuments, type DemoDocument } from '../../lib/api';
 
 const SAMPLE_CONFIG: Record<string, { icon: typeof FileText; titleKey: string; descKey: string; questionKey: string }> = {
-  'nvidia-10k': {
+  'alphabet-earnings': {
     icon: FileText,
-    titleKey: 'demo.sample.10k.title',
-    descKey: 'demo.sample.10k.desc',
-    questionKey: 'demo.sample.10k.question',
+    titleKey: 'demo.sample.earnings.title',
+    descKey: 'demo.sample.earnings.desc',
+    questionKey: 'demo.sample.earnings.question',
   },
   'attention-paper': {
     icon: BookOpen,
@@ -20,11 +20,11 @@ const SAMPLE_CONFIG: Record<string, { icon: typeof FileText; titleKey: string; d
     descKey: 'demo.sample.paper.desc',
     questionKey: 'demo.sample.paper.question',
   },
-  'nda-contract': {
+  'court-filing': {
     icon: FileSignature,
-    titleKey: 'demo.sample.contract.title',
-    descKey: 'demo.sample.contract.desc',
-    questionKey: 'demo.sample.contract.question',
+    titleKey: 'demo.sample.court.title',
+    descKey: 'demo.sample.court.desc',
+    questionKey: 'demo.sample.court.question',
   },
 };
 

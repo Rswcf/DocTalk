@@ -55,7 +55,7 @@ class Document(Base):
     # Source URL for URL-ingested documents
     source_url: Mapped[Optional[str]] = mapped_column(sa.String(2000), nullable=True)
 
-    # Demo documents have a slug (e.g. "nvidia-10k"); user docs have None
+    # Demo documents have a slug (e.g. "alphabet-earnings"); user docs have None
     demo_slug: Mapped[Optional[str]] = mapped_column(
         sa.String(50), nullable=True, unique=True
     )

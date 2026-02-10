@@ -48,7 +48,7 @@ Railway 项目包含 5 个服务：backend, Postgres, Redis, qdrant-v2, minio-v2
 - **分层认证模型**:
   - 未登录: 可试用 Demo（3 篇真实 PDF，5 条消息限制，服务端 + 客户端双重限制，匿名用户强制使用 DeepSeek V3.2（低成本）且隐藏 ModeSelector，IP 级速率限制 10 req/min）
   - 已登录: 可上传个人 PDF，服务端文档列表，Credits 系统；访问 Demo 文档使用 Credits，无消息限制
-- **Demo 系统**: 后端启动时自动种子 3 篇真实文档（NVIDIA 10-K、Attention 论文、NDA）到 MinIO + DB，通过 Celery 解析。`demo_slug` 列标识 Demo 文档，`is_demo` 属性暴露给前端。`GET /api/documents/demo` 返回 Demo 文档列表。`/demo` 页面从 API 获取文档 ID 后链接到 `/d/{docId}`，旧 `/demo/[sample]` 路由自动重定向
+- **Demo 系统**: 后端启动时自动种子 3 篇真实文档（Alphabet Q4 财报、Attention 论文、美国联邦法院文书）到 MinIO + DB，通过 Celery 解析。`demo_slug` 列标识 Demo 文档，`is_demo` 属性暴露给前端。`GET /api/documents/demo` 返回 Demo 文档列表。`/demo` 页面从 API 获取文档 ID 后链接到 `/d/{docId}`，旧 `/demo/[sample]` 路由自动重定向
 - **Credits 系统**: 预付费模式，余额 + Ledger 双表记录。三阶段扣费：① chat 端点按模式预估余额检查（402 不足） → ② `chat_service` 调用 `pre_debit_credits()` 在流式输出前扣除预估额（`MODE_ESTIMATED_COST`: quick=5, balanced=15, thorough=35） → ③ 流式结束后 `reconcile_credits()` 按实际 token 计算差额退补。注册赠送 `SIGNUP_BONUS_CREDITS`（默认 1,000）
 - **订阅系统**: Free (500 credits/月) + Plus (3,000 credits/月, $9.99) + Pro (9,000 credits/月, $19.99) 三级，支持月付/年付（年付享 20% 折扣），月度 credits 惰性发放（`ensure_monthly_credits`），Stripe 订阅集成
 - **模式门控**: Thorough 模式（深度分析）仅限 Plus+ 套餐使用，后端 `chat_service.py` 校验 + 前端 `ModeSelector.tsx` 锁定图标。ModeSelector 根据认证状态显示不同 CTA：匿名用户点击锁定模式 → 登录模态框（`?auth=1`），已登录免费用户 → `/billing`。chat 端点在进入流式前按 `MODE_ESTIMATED_COST` 预检余额，不足返回 402 + `required`/`balance` 字段
@@ -320,7 +320,7 @@ SENTRY_TRACES_SAMPLE_RATE=0.1
 - **Parse worker 幂等**: 重新执行时先删除已有 pages/chunks，重置计数器，避免 UniqueViolation；支持 stuck 文档重试
 - **启动自动重试**: `main.py` 的 `on_startup` 在后台线程中检测 status=parsing/embedding 的文档，自动重新分发 parse 任务
 - **自动摘要生成**: `summary_service.generate_summary_sync(document_id)` 在 Celery 上下文中调用，加载前 20 个 chunks（max 8K chars），通过 OpenRouter 调用 `deepseek/deepseek-v3.2` 生成 JSON `{summary, questions}`。支持 markdown code fence 解析。不扣 credits（系统生成）。在 `parse_worker.py` 中 ready 后 try/except 调用，失败仅 warning 日志
-- **Demo 文档种子**: `on_startup` → `_seed_demo_documents()` → `demo_seed.seed_demo_documents()`，从 `backend/seed_data/` 读取 3 篇 PDF，上传 MinIO 并 dispatch parse。幂等：已 ready 跳过，stuck 重派，error 重建
+- **Demo 文档种子**: `on_startup` → `_seed_demo_documents()` → `demo_seed.seed_demo_documents()`，从 `backend/seed_data/` 读取 3 篇 PDF（Alphabet Q4 财报、Attention 论文、联邦法院文书），上传 MinIO 并 dispatch parse。幂等：已 ready 跳过，stuck 重派，error 重建
 - **Demo 5 条消息限制**: `chat.py:chat_stream` 中，匿名用户 + demo_slug 文档 → 查询 user messages 数量 → 超过 5 条返回 429。前端 ChatPanel 区分速率限制 429（"Rate limit exceeded" → `demo.rateLimitMessage`）和消息限制 429（→ `demo.limitReachedMessage`）
 - **Retrieval 容错**: `chat_service.py` 的 retrieval 调用包裹在 try/except 中，Qdrant 不可用时返回 `RETRIEVAL_ERROR` SSE 事件
 - **删除为同步级联**: `doc_service.delete_document()` 使用 ORM cascade 真正删除 DB 记录（非仅标记 status），同时 best-effort 清理 MinIO + Qdrant。清理失败时通过 `deletion_worker.py` Celery 任务重试（3 次，指数退避），所有删除操作记录结构化安全日志
@@ -420,7 +420,7 @@ DocTalk/
 │   │   ├── run_benchmark.py           # 自动化 benchmark runner
 │   │   ├── evaluate_benchmark.py      # 评分评估器 (自动指标 + LLM-as-judge)
 │   │   └── benchmark_results/         # 基准测试结果输出
-│   ├── seed_data/                # Demo PDF 文件 (nvidia-10k, attention-paper, nda-contract)
+│   ├── seed_data/                # Demo PDF 文件 (alphabet-earnings, attention-paper, court-filing)
 │   └── tests/
 ├── frontend/
 │   ├── src/

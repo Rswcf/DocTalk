@@ -7,9 +7,12 @@ import { getDemoDocuments } from '../../../lib/api';
 
 /** Legacy demo route — redirects to /d/{documentId} for the matching demo slug. */
 const SLUG_MAP: Record<string, string> = {
-  '10k': 'nvidia-10k',
+  'earnings': 'alphabet-earnings',
   'paper': 'attention-paper',
-  'contract': 'nda-contract',
+  'court': 'court-filing',
+  // Legacy redirects
+  '10k': 'alphabet-earnings',
+  'contract': 'court-filing',
 };
 
 export default function DemoRedirectPage() {

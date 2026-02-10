@@ -20,9 +20,9 @@ logger = logging.getLogger("doctalk.demo_seed")
 
 DEMO_DOCS = [
     {
-        "slug": "nvidia-10k",
-        "filename": "NVIDIA 10-K Annual Report (FY2024).pdf",
-        "local_path": "seed_data/nvidia-10k.pdf",
+        "slug": "alphabet-earnings",
+        "filename": "Alphabet Q4 2025 Earnings Release.pdf",
+        "local_path": "seed_data/alphabet-earnings.pdf",
     },
     {
         "slug": "attention-paper",
@@ -30,9 +30,9 @@ DEMO_DOCS = [
         "local_path": "seed_data/attention-paper.pdf",
     },
     {
-        "slug": "nda-contract",
-        "filename": "Mutual Non-Disclosure Agreement.pdf",
-        "local_path": "seed_data/nda-contract.pdf",
+        "slug": "court-filing",
+        "filename": "US District Court Filing (1:22-cv-00226).pdf",
+        "local_path": "seed_data/court-filing.pdf",
     },
 ]
 
