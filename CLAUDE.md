@@ -48,7 +48,7 @@ Railway 项目包含 5 个服务：backend, Postgres, Redis, qdrant-v2, minio-v2
 - **分层认证模型**:
   - 未登录: 可试用 Demo（3 篇真实 PDF，5 条消息限制，服务端 + 客户端双重限制，匿名用户强制使用 DeepSeek V3.2（低成本）且隐藏 ModeSelector，IP 级速率限制 10 req/min）
   - 已登录: 可上传个人 PDF，服务端文档列表，Credits 系统；访问 Demo 文档使用 Credits，无消息限制
-- **Demo 系统**: 后端启动时自动种子 3 篇真实文档（Alphabet Q4 财报、Attention 论文、美国联邦法院文书）到 MinIO + DB，通过 Celery 解析。`demo_slug` 列标识 Demo 文档，`is_demo` 属性暴露给前端。`GET /api/documents/demo` 返回 Demo 文档列表。`/demo` 页面从 API 获取文档 ID 后链接到 `/d/{docId}`，旧 `/demo/[sample]` 路由自动重定向
+- **Demo 系统**: 后端启动时自动种子 3 篇真实文档（Alphabet Q4 财报、Attention 论文、美国联邦法院文书）到 MinIO + DB，通过 Celery 解析。`demo_slug` 列标识 Demo 文档，`is_demo` 属性暴露给前端。`GET /api/documents/demo` 返回 Demo 文档列表。`/demo` 页面从 API 获取文档 ID 后链接到 `/d/{docId}`，旧 `/demo/[sample]` 路由自动重定向。**数据丢失自愈**：`demo_seed.py` 在启动时检查 "ready" 状态的 Demo 文档在 Qdrant 中是否有向量数据，若 Qdrant/MinIO 重启导致数据丢失（向量数为 0），自动删除 DB 记录并从 `seed_data/` 完整重建（重新上传 MinIO + 重新解析）
 - **Credits 系统**: 预付费模式，余额 + Ledger 双表记录。两阶段扣费：① chat 端点按模式预估余额检查（402 不足） → ② `chat_service` 调用 `debit_credits()` 在流式输出前预扣估算额（`MODE_ESTIMATED_COST`: quick=5, balanced=15, thorough=35），流式结束后 `reconcile_credits()` 原地更新同一条 ledger 条目为实际成本（不创建新条目）。每次聊天仅产生一条 "chat" ledger 记录。LLM 失败时删除 ledger 条目并全额退款（无痕迹）。注册赠送 `SIGNUP_BONUS_CREDITS`（默认 1,000）
 - **订阅系统**: Free (500 credits/月) + Plus (3,000 credits/月, $9.99) + Pro (9,000 credits/月, $19.99) 三级，支持月付/年付（年付享 20% 折扣），月度 credits 惰性发放（`ensure_monthly_credits`），Stripe 订阅集成
 - **模式门控**: Thorough 模式（深度分析）仅限 Plus+ 套餐使用，后端 `chat_service.py` 校验 + 前端 `ModeSelector.tsx` 锁定图标。ModeSelector 根据认证状态显示不同 CTA：匿名用户点击锁定模式 → 登录模态框（`?auth=1`），已登录免费用户 → `/billing`。chat 端点在进入流式前按 `MODE_ESTIMATED_COST` 预检余额，不足返回 402 + `required`/`balance` 字段
@@ -265,7 +265,7 @@ SENTRY_TRACES_SAMPLE_RATE=0.1
 - **依赖已锁定**: `requirements.txt` 中所有依赖版本已 pin（`==`），防止供应链攻击
 - **SSRF 防护**: `url_validator.py` 对 URL 导入端点执行 DNS 解析，阻断 RFC 1918/链路本地/云元数据地址段的私有 IP，封锁内部服务端口（5432/6379/6333/9000），手动跟踪最多 3 次重定向并在每跳验证目标安全性
 - **Magic-byte 文件验证**: 上传时检查 PDF `%PDF` 头、Office ZIP 结构 + `[Content_Types].xml`，以及 500MB zip bomb 保护
-- **MinIO SSE-S3 静态加密**: 所有 `put_object()` 调用附加 `SseS3()` + bucket 默认加密策略
+- **MinIO SSE-S3 静态加密**: 所有 `put_object()` 调用附加 `SseS3()` + bucket 默认加密策略。MinIO 客户端配置短超时（connect=5s, read=10s, 2 次重试），防止服务不可用时阻塞事件循环
 - **Per-plan 文档/文件限制**: FREE_MAX_DOCUMENTS=3, PLUS_MAX_DOCUMENTS=20, PRO_MAX_DOCUMENTS=999；按套餐文件大小限制（25/50/100 MB）在上传端点实际校验
 - **文件名清洗**: `sanitizeFilename()` 执行 Unicode 规范化、控制字符剥离、双扩展名阻断（.pdf.exe → _pdf.exe）、200 字符截断
 - **删除验证**: 结构化安全日志替代静默 `except: pass`；MinIO/Qdrant 清理失败时排入 `deletion_worker.py` Celery 重试任务（3 次重试，指数退避）
@@ -325,6 +325,8 @@ SENTRY_TRACES_SAMPLE_RATE=0.1
 
 ### 后端相关
 - **Celery 用同步 DB**: Worker 使用 `psycopg`（同步），API 使用 `asyncpg`（异步）
+- **MinIO 调用必须 `asyncio.to_thread()`**: `storage_service.py` 的 MinIO 客户端是同步的（urllib3），在 async 端点中直接调用会阻塞 asyncio 事件循环。当 MinIO 不可用时，urllib3 重试会阻塞数十秒，导致**所有**请求挂起（包括 /health）。所有 async 端点中的 MinIO 调用（`get_presigned_url`、`upload_file`、`delete_file`）必须用 `asyncio.to_thread()` 包裹。`storage_service.py` 已配置短超时（connect=5s, read=10s）和有限重试（2 次）避免长时间阻塞
+- **file-url 端点容错**: `get_document_file_url` 在 MinIO 不可用时返回 502 `"Storage service unavailable"` 而非挂起
 - **macOS Celery fork 安全**: 必须设置 `OBJC_DISABLE_INITIALIZE_FORK_SAFETY=YES`
 - **Credits 两阶段扣费**: ① `chat.py` 按 `MODE_ESTIMATED_COST` 预检余额（402 不足） → ② `chat_service.py` 调用 `debit_credits()` 预扣估算额（返回 ledger ID），流式结束后 `reconcile_credits()` 原地 UPDATE 同一条 ledger 条目（delta + balance_after）为实际成本。每次聊天仅 1 条 ledger 记录（reason="chat"）。LLM 失败时 DELETE ledger 条目 + 全额退余额（无痕迹）
 - **FOR UPDATE 锁**: 验证 Token 使用行锁防止 TOCTOU 竞态
@@ -333,7 +335,7 @@ SENTRY_TRACES_SAMPLE_RATE=0.1
 - **Parse worker 幂等**: 重新执行时先删除已有 pages/chunks，重置计数器，避免 UniqueViolation；支持 stuck 文档重试
 - **启动自动重试**: `main.py` 的 `on_startup` 在后台线程中检测 status=parsing/embedding 的文档，自动重新分发 parse 任务
 - **自动摘要生成**: `summary_service.generate_summary_sync(document_id)` 在 Celery 上下文中调用，加载前 20 个 chunks（max 8K chars），通过 OpenRouter 调用 `deepseek/deepseek-v3.2` 生成 JSON `{summary, questions}`。支持 markdown code fence 解析。不扣 credits（系统生成）。在 `parse_worker.py` 中 ready 后 try/except 调用，失败仅 warning 日志
-- **Demo 文档种子**: `on_startup` → `_seed_demo_documents()` → `demo_seed.seed_demo_documents()`，从 `backend/seed_data/` 读取 3 篇 PDF（Alphabet Q4 财报、Attention 论文、联邦法院文书），上传 MinIO 并 dispatch parse。幂等：已 ready 跳过，stuck 重派，error 重建
+- **Demo 文档种子**: `on_startup` → `_seed_demo_documents()` → `demo_seed.seed_demo_documents()`，从 `backend/seed_data/` 读取 3 篇 PDF（Alphabet Q4 财报、Attention 论文、联邦法院文书），上传 MinIO 并 dispatch parse。幂等：已 ready 跳过（除非 Qdrant 向量丢失则完整重建），stuck 重派，error 重建
 - **Demo 5 条消息限制**: `chat.py:chat_stream` 中，匿名用户 + demo_slug 文档 → 查询 user messages 数量 → 超过 5 条返回 429。前端 ChatPanel 区分速率限制 429（"Rate limit exceeded" → `demo.rateLimitMessage`）和消息限制 429（→ `demo.limitReachedMessage`）
 - **Retrieval 容错**: `chat_service.py` 的 retrieval 调用包裹在 try/except 中，Qdrant 不可用时返回 `RETRIEVAL_ERROR` SSE 事件
 - **删除为同步级联**: `doc_service.delete_document()` 使用 ORM cascade 真正删除 DB 记录（非仅标记 status），同时 best-effort 清理 MinIO + Qdrant。清理失败时通过 `deletion_worker.py` Celery 任务重试（3 次，指数退避），所有删除操作记录结构化安全日志
