@@ -1,5 +1,5 @@
 import type { Metadata } from 'next'
-import { Inter, Instrument_Serif } from 'next/font/google'
+import { Inter, Instrument_Serif, Sora } from 'next/font/google'
 import './globals.css'
 import ErrorBoundary from '../components/ErrorBoundary'
 import { ThemeProvider } from './ThemeProvider'
@@ -17,6 +17,12 @@ const instrumentSerif = Instrument_Serif({
   variable: '--font-display',
   display: 'swap',
 })
+const sora = Sora({
+  subsets: ['latin'],
+  variable: '--font-logo',
+  weight: ['600'],
+  display: 'swap',
+})
 
 export const metadata: Metadata = {
   title: 'DocTalk',
@@ -29,7 +35,7 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="en" suppressHydrationWarning className={`${inter.variable} ${instrumentSerif.variable}`}>
+    <html lang="en" suppressHydrationWarning className={`${inter.variable} ${instrumentSerif.variable} ${sora.variable}`}>
       <head>
         <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)" />
         <meta name="theme-color" content="#09090b" media="(prefers-color-scheme: dark)" />

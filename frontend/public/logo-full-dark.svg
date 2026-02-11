@@ -1,0 +1,9 @@
+<svg width="200" height="48" viewBox="0 0 200 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Icon -->
+  <g transform="translate(4, 4)">
+    <path d="M5 2H21Q24 2 24 5V16Q24 19 21 19H10L5 25V19Q2 19 2 16V5Q2 2 5 2Z" fill="rgba(129,140,248,0.25)"/>
+    <path d="M15 13H31Q34 13 34 16V26Q34 29 31 29H22L27 35L19 29H15Q12 29 12 26V16Q12 13 15 13Z" fill="#818cf8"/>
+  </g>
+  <!-- Wordmark (Sora SemiBold 600) -->
+  <text x="52" y="32" font-family="'Sora', system-ui, sans-serif" font-size="26" font-weight="600" fill="#fafafa">DocTalk</text>
+</svg>

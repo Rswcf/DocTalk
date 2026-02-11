@@ -6,6 +6,7 @@ import { useTheme } from 'next-themes';
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { useDocTalkStore } from '../store';
+import DocTalkLogo from './DocTalkLogo';
 import ModeSelector from './ModeSelector';
 import ThemeSelector from './ThemeSelector';
 import LanguageSelector from './LanguageSelector';
@@ -40,7 +41,8 @@ export default function Header({ variant = 'full', isDemo, isLoggedIn }: HeaderP
           ? 'border-b-2 border-b-[var(--win98-button-highlight)] bg-[var(--win98-button-face)] text-black text-[11px]'
           : 'border-b border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950'
     }`}>
-      <Link href="/" className="font-semibold text-lg text-zinc-900 dark:text-zinc-100 hover:text-zinc-600 dark:hover:text-zinc-300 transition-colors shrink-0 focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:rounded-sm">
+      <Link href="/" className="font-logo font-semibold text-xl text-zinc-900 dark:text-zinc-100 hover:text-zinc-600 dark:hover:text-zinc-300 transition-colors shrink-0 focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:rounded-sm inline-flex items-center gap-2">
+        <DocTalkLogo size={26} />
         {t('app.title')}
       </Link>
       {!isMinimal && documentName && (

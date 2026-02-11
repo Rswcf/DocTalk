@@ -4,6 +4,7 @@ import React from 'react';
 import Link from 'next/link';
 import { useLocale } from '../i18n';
 import ScrollReveal from './landing/ScrollReveal';
+import DocTalkLogo from './DocTalkLogo';
 
 export default function Footer() {
   const { t } = useLocale();
@@ -14,7 +15,10 @@ export default function Footer() {
         <ScrollReveal>
           {/* Logo / brand anchor */}
           <div className="mb-10">
-            <span className="font-display text-xl text-zinc-900 dark:text-zinc-50">DocTalk</span>
+            <Link href="/" className="inline-flex items-center gap-2.5 hover:opacity-80 transition-opacity">
+              <DocTalkLogo size={28} />
+              <span className="font-logo font-semibold text-xl text-zinc-900 dark:text-zinc-50">DocTalk</span>
+            </Link>
           </div>
 
           <div className="grid grid-cols-2 md:grid-cols-3 gap-8">
@@ -44,7 +48,7 @@ export default function Footer() {
               </h3>
               <ul className="space-y-3">
                 <li>
-                  <span className="text-sm text-zinc-500 dark:text-zinc-400">
+                  <span className="text-sm text-zinc-500 dark:text-zinc-400 font-logo">
                     DocTalk
                   </span>
                 </li>

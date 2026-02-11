@@ -4,6 +4,7 @@ import { Suspense } from "react";
 import { signIn } from "next-auth/react";
 import { useSearchParams } from "next/navigation";
 import { useLocale } from "../../i18n";
+import DocTalkLogo from "../../components/DocTalkLogo";
 
 function AuthContent() {
   const searchParams = useSearchParams();
@@ -14,8 +15,9 @@ function AuthContent() {
     <main className="min-h-screen flex items-center justify-center p-8 bg-white dark:bg-zinc-950">
       <div className="max-w-sm w-full">
         {/* Logo / Wordmark */}
-        <div className="text-center mb-8">
-          <p className="text-2xl font-bold text-zinc-900 dark:text-zinc-50">DocTalk</p>
+        <div className="flex items-center justify-center gap-2.5 mb-8">
+          <DocTalkLogo size={32} />
+          <span className="font-logo font-semibold text-2xl text-zinc-900 dark:text-zinc-50">DocTalk</span>
         </div>
 
         <div className="border border-zinc-200 dark:border-zinc-800 rounded-2xl p-8 shadow-sm bg-white dark:bg-zinc-900">

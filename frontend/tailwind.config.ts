@@ -12,6 +12,7 @@ const config: Config = {
       fontFamily: {
         sans: ['var(--font-inter)', 'system-ui', 'sans-serif'],
         display: ['var(--font-display)', 'Georgia', 'Times New Roman', 'serif'],
+        logo: ['var(--font-logo)', 'system-ui', 'sans-serif'],
         win98: ["'MS Sans Serif'", "'Microsoft Sans Serif'", "'Segoe UI'", 'Tahoma', 'sans-serif'],
       },
       colors: {
