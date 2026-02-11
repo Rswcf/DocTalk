@@ -2,18 +2,21 @@ from __future__ import annotations
 
 import json
 import uuid
-from datetime import datetime, timedelta, timezone
 from typing import AsyncGenerator, Optional
 
 from fastapi import APIRouter, Depends, Request, status
 from fastapi.responses import JSONResponse, StreamingResponse
-from sqlalchemy import asc, delete, desc, func, select
+from sqlalchemy import asc, desc, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.core.config import settings
 from app.core.deps import get_current_user_optional, get_db_session
-from app.core.rate_limit import demo_chat_limiter, demo_message_tracker
+from app.core.rate_limit import (
+    auth_chat_limiter,
+    demo_chat_limiter,
+    demo_message_tracker,
+)
 from app.core.security_log import log_security_event
 from app.models.tables import ChatSession, Document, Message, User
 from app.schemas.chat import (
@@ -29,7 +32,6 @@ from app.services.chat_service import chat_service
 
 DEMO_MESSAGE_LIMIT = 5
 DEMO_MAX_SESSIONS_PER_DOC = 500
-DEMO_SESSION_TTL_HOURS = 24
 
 chat_router = APIRouter(tags=["chat"])
 
@@ -111,16 +113,8 @@ async def create_session(
                 },
             )
 
-    # Limit anonymous users on demo documents; garbage-collect stale sessions first
+    # Limit anonymous users on demo documents
     if user is None and doc.demo_slug:
-        # Clean up demo sessions older than TTL (cascade deletes messages)
-        cutoff = datetime.now(timezone.utc) - timedelta(hours=DEMO_SESSION_TTL_HOURS)
-        await db.execute(
-            delete(ChatSession)
-            .where(ChatSession.document_id == document_id)
-            .where(ChatSession.created_at < cutoff)
-        )
-
         session_count = await db.execute(
             select(func.count(ChatSession.id))
             .where(ChatSession.document_id == document_id)
@@ -214,6 +208,14 @@ async def chat_stream(
                 content={"detail": "Rate limit exceeded", "retry_after": 60},
                 headers={"Retry-After": "60"},
             )
+    else:
+        # Rate limit authenticated users (30 req/min per user)
+        if not auth_chat_limiter.is_allowed(str(user.id)):
+            return JSONResponse(
+                status_code=429,
+                content={"detail": "Rate limit exceeded", "retry_after": 60},
+                headers={"Retry-After": "60"},
+            )
 
     # Enforce message limit for anonymous users on demo documents
     # Uses in-memory IP tracker (global across ALL demo docs) to survive
@@ -248,7 +250,7 @@ async def chat_stream(
 
     async def event_generator() -> AsyncGenerator[str, None]:
         async for ev in chat_service.chat_stream(
-            session_id, body.message, db, model=body.model, user=user, locale=body.locale, mode=body.mode
+            session_id, body.message, db, user=user, locale=body.locale, mode=body.mode
         ):
             # Format per SSE: event: <type>\ndata: {json}\n\n
             line = f"event: {ev['event']}\n"

@@ -2,15 +2,14 @@ from __future__ import annotations
 
 import uuid
 from datetime import datetime
-from typing import List, Optional
+from typing import List, Literal, Optional
 
 from pydantic import BaseModel
 
 
 class ChatRequest(BaseModel):
     message: str
-    mode: Optional[str] = None  # Performance mode: "quick"/"balanced"/"thorough"
-    model: Optional[str] = None  # OpenRouter model ID override (deprecated, use mode)
+    mode: Optional[Literal["quick", "balanced", "thorough"]] = None
     locale: Optional[str] = None  # Frontend locale code (en/zh/es/fr/de)
 
 

@@ -110,7 +110,7 @@ GET    /api/documents/{document_id}/sessions  # 列出文档的聊天会话
 
 # 会话与对话
 GET    /api/sessions/{session_id}/messages    # 获取历史消息
-POST   /api/sessions/{session_id}/chat        # 对话（SSE streaming, 可选 model 字段；匿名用户速率限制 10 req/min/IP；Demo 匿名用户限 5 条消息 + 强制默认模型，超限返回 429）
+POST   /api/sessions/{session_id}/chat        # 对话（SSE streaming, mode 字段选择性能模式；匿名 10 req/min/IP + 已登录 30 req/min/user；Demo 匿名限 5 条消息 + 强制默认模型，超限返回 429）
 DELETE /api/sessions/{session_id}             # 删除聊天会话
 
 # Credits & Billing
@@ -251,7 +251,7 @@ SENTRY_TRACES_SAMPLE_RATE=0.1
 - **上传/删除需登录**: `upload_document` 和 `delete_document` 使用 `require_auth` 依赖，未登录返回 401
 - **搜索支持可选认证**: `search_document` 使用 `get_current_user_optional`，已登录用户可搜索自己的文档，匿名用户可搜索 demo 文档
 - **Demo 会话上限**: 匿名用户每个 demo 文档最多创建 500 个会话 (`DEMO_MAX_SESSIONS_PER_DOC=500`)，超限返回 429。上限较大是因为全局计数（含已登录用户的会话），真正的保护是每会话 5 条消息限制
-- **匿名速率限制**: `rate_limit.py` 提供内存级 token-bucket 速率限制器，匿名用户 chat 端点限制 10 req/min/IP，超限返回 429 + `Retry-After` header。bucket 字典超过 10K 条目时自动清理过期条目
+- **速率限制**: `rate_limit.py` 提供内存级速率限制器。匿名用户 chat 端点限制 10 req/min/IP，已登录用户 30 req/min/user_id，超限返回 429 + `Retry-After` header。bucket 字典超过 10K 条目时自动清理过期条目
 - **匿名 Demo 模型强制**: 匿名用户在 Demo 文档上的 chat 请求忽略 `model` 参数，强制使用 `settings.DEMO_LLM_MODEL`（默认 `deepseek/deepseek-v3.2`），通过 OpenRouter 调用。防止通过 API 直接调用高成本模型
 - **Admin 端点**: 旧无鉴权端点已移除，新增 `require_admin`（邮箱白名单）保护的分析端点
 - **依赖已锁定**: `requirements.txt` 中所有依赖版本已 pin（`==`），防止供应链攻击
@@ -342,7 +342,7 @@ SENTRY_TRACES_SAMPLE_RATE=0.1
 - **PDF 文本搜索**: PdfViewer 通过 `pdfjs page.getTextContent()` 提取全文文本，存入 Zustand store (searchQuery/searchMatches/currentMatchIndex)。PageWithHighlights 的 `customTextRenderer` 同时处理引用高亮和搜索匹配高亮（`<mark class="pdf-search-match">`）。PdfToolbar 提供搜索 UI（Search 图标 + 输入框 + 匹配计数 + 上下翻页）
 
 ### 其他
-- **模型白名单 + 模式映射**: 后端 `config.py:ALLOWED_MODELS` 定义允许的模型 ID 列表（3 种模式对应的主模型 + 备选模型）。`MODE_MODELS` 正向映射 mode→model，`MODEL_TO_MODE` 反向映射 model→mode（防止用户通过直传 model 绕过模式计费）
+- **模型白名单 + 模式映射**: 后端 `config.py:ALLOWED_MODELS` 定义允许的模型 ID 列表（3 种模式对应的主模型 + 备选模型）。`MODE_MODELS` 正向映射 mode→model，`MODEL_TO_MODE` 反向映射 model→mode。`ChatRequest` 仅暴露 `mode` 字段（`model` 字段已移除），用户只能通过模式选择模型，防止直传 model 绕过模式计费
 - **模型 Profile**: `model_profiles.py:MODEL_PROFILES` 为各模型定义独立的 temperature/max_tokens/prompt_style。`get_model_profile()` 返回模型配置，`get_rules_for_model()` 返回模型专用规则文本
 - **react-resizable-panels v4 API**: 使用 `Group`/`Panel`/`Separator`
 - **Alembic 配置**: `sqlalchemy.url` 被 `env.py` 运行时覆盖
@@ -388,7 +388,7 @@ DocTalk/
 │   │   ├── core/
 │   │   │   ├── config.py         # Settings, ALLOWED_MODELS 白名单, MODE_MODELS/MODEL_TO_MODE 映射
 │   │   │   ├── deps.py           # FastAPI 依赖 (require_auth, get_db)
-│   │   │   ├── rate_limit.py     # 内存级速率限制器 (匿名用户 chat 端点, 10K 条目自动清理)
+│   │   │   ├── rate_limit.py     # 内存级速率限制器 (匿名 10/min/IP + 已登录 30/min/user, 10K 条目自动清理)
 │   │   │   ├── url_validator.py  # SSRF 防护 (DNS 解析 + 私有 IP 阻断 + 端口封锁 + 重定向验证)
 │   │   │   ├── security_log.py   # 结构化 JSON 安全事件日志
 │   │   │   └── model_profiles.py # 模型自适应配置 (ModelProfile + 各模型 profile + 2 种 prompt_style)

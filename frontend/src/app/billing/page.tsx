@@ -131,17 +131,17 @@ function BillingContent() {
   }
 
   const plusFeatures = [
-    '3,000 credits/month',
-    'All 3 performance modes',
-    'Markdown export',
-    '20 documents, 50MB files',
+    t('billing.features.plusCredits'),
+    t('billing.features.allModes'),
+    t('billing.features.markdownExport'),
+    t('billing.features.plusDocs'),
   ];
 
   const proFeatures = [
-    '9,000 credits/month',
-    'All 3 performance modes',
-    'Custom prompts & export',
-    'Unlimited documents, 100MB files',
+    t('billing.features.proCredits'),
+    t('billing.features.allModes'),
+    t('billing.features.customPromptsExport'),
+    t('billing.features.proDocs'),
   ];
 
   return (

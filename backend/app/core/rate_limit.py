@@ -1,4 +1,4 @@
-"""Simple in-memory rate limiter for anonymous demo endpoints."""
+"""Simple in-memory rate limiter for chat endpoints."""
 
 from __future__ import annotations
 
@@ -36,6 +36,7 @@ class RateLimiter:
 
 
 demo_chat_limiter = RateLimiter(max_requests=10, window_seconds=60)
+auth_chat_limiter = RateLimiter(max_requests=30, window_seconds=60)
 
 
 class DemoMessageTracker:

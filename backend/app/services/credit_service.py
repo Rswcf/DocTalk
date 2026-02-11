@@ -43,8 +43,8 @@ def get_estimated_cost(mode: str) -> int:
 def calculate_cost(prompt_tokens: int, completion_tokens: int, model: str, mode: str | None = None) -> int:
     """Calculate credit cost for token usage, with optional mode multiplier."""
     input_rate, output_rate = CREDIT_RATES.get(model, DEFAULT_RATE)
-    input_cost = (prompt_tokens * input_rate) // 1000
-    output_cost = (completion_tokens * output_rate) // 1000
+    input_cost = round(prompt_tokens * input_rate / 1000)
+    output_cost = round(completion_tokens * output_rate / 1000)
     base_cost = max(1, input_cost + output_cost)
     # Apply mode multiplier
     multiplier = settings.MODE_CREDIT_MULTIPLIER.get(mode or "balanced", 1.0)

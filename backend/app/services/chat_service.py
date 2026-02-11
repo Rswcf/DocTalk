@@ -10,7 +10,7 @@ from sqlalchemy import asc, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.config import MODEL_TO_MODE, settings
+from app.core.config import settings
 from app.core.model_profiles import get_model_profile, get_rules_for_model
 from app.models.tables import ChatSession, Document, Message, User, collection_documents
 from app.services import credit_service
@@ -128,7 +128,6 @@ class ChatService:
         session_id: uuid.UUID,
         user_message: str,
         db: AsyncSession,
-        model: Optional[str] = None,
         user: Optional[User] = None,
         locale: Optional[str] = None,
         mode: Optional[str] = None,
@@ -178,16 +177,9 @@ class ChatService:
                 for drow in doc_rows.all():
                     collection_doc_names[drow[0]] = drow[1]
 
-        # Resolve mode → model (enforce correct mode from model to prevent billing bypass)
-        effective_mode = mode or "balanced"
-        if mode and mode in settings.MODE_MODELS:
-            effective_model = settings.MODE_MODELS[mode]
-        elif model and model in settings.ALLOWED_MODELS:
-            effective_model = model
-            # Enforce correct mode for credit multiplier (prevent billing bypass)
-            effective_mode = MODEL_TO_MODE.get(model, effective_mode)
-        else:
-            effective_model = settings.MODE_MODELS.get("balanced", settings.LLM_MODEL)
+        # Resolve mode → model (mode is the ONLY way to select a model)
+        effective_mode = mode if mode in settings.MODE_MODELS else "balanced"
+        effective_model = settings.MODE_MODELS[effective_mode]
 
         # Force demo model for anonymous users on demo documents
         if user is None and doc and doc.demo_slug:
