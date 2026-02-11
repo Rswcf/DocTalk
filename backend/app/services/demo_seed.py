@@ -78,8 +78,9 @@ def seed_demo_documents() -> None:
                         # the vectors and files may be gone despite DB saying "ready".
                         needs_reseed = False
                         try:
-                            from app.models.tables import Chunk
                             from sqlalchemy import func as sa_func
+
+                            from app.models.tables import Chunk
                             chunk_count = db.scalar(
                                 select(sa_func.count()).select_from(Chunk)
                                 .where(Chunk.document_id == existing.id)
