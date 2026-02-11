@@ -52,7 +52,7 @@ Railway 项目包含 5 个服务：backend, Postgres, Redis, qdrant-v2, minio-v2
 - **Credits 系统**: 预付费模式，余额 + Ledger 双表记录。两阶段扣费：① chat 端点按模式预估余额检查（402 不足） → ② `chat_service` 调用 `debit_credits()` 在流式输出前预扣估算额（`MODE_ESTIMATED_COST`: quick=5, balanced=15, thorough=35），流式结束后 `reconcile_credits()` 原地更新同一条 ledger 条目为实际成本（不创建新条目）。每次聊天仅产生一条 "chat" ledger 记录。LLM 失败时删除 ledger 条目并全额退款（无痕迹）。注册赠送 `SIGNUP_BONUS_CREDITS`（默认 1,000）
 - **订阅系统**: Free (500 credits/月) + Plus (3,000 credits/月, $9.99) + Pro (9,000 credits/月, $19.99) 三级，支持月付/年付（年付享 20% 折扣），月度 credits 惰性发放（`ensure_monthly_credits`），Stripe 订阅集成
 - **模式门控**: Thorough 模式（深度分析）仅限 Plus+ 套餐使用，后端 `chat_service.py` 校验 + 前端 `ModeSelector.tsx` 锁定图标。ModeSelector 根据认证状态显示不同 CTA：匿名用户点击锁定模式 → 登录模态框（`?auth=1`），已登录免费用户 → `/billing`。chat 端点在进入流式前按 `MODE_ESTIMATED_COST` 预检余额，不足返回 402 + `required`/`balance` 字段
-- **Profile 页面**: `/profile` 4 个 Tab (Profile/Credits/Usage/Account)，含交易历史、使用统计、账户删除
+- **Profile 页面**: `/profile` 4 个 Tab (Profile/Credits/Usage/Account)，含交易历史、按模式分组的使用统计（Quick/Balanced/Thorough 摘要卡片 + 详细表格）、账户删除
 - **API 网关**: 所有 LLM 和 Embedding 调用统一通过 OpenRouter（单一 API key）。匿名 Demo 用户使用 `DEMO_LLM_MODEL`（默认 `deepseek/deepseek-v3.2`）降低成本
 - **模式切换**: 前端用户可选择性能模式（Quick/Balanced/Thorough），后端映射到具体模型并通过 OpenRouter 调用
 - **模型自适应提示**: `model_profiles.py` 为每个模型定义独立的 `ModelProfile`（temperature、max_tokens、supports_cache_control、supports_stream_options、prompt_style）。`chat_service.py` 根据模型 profile 动态调整系统提示规则和 API 参数。2 种 prompt_style 变体：`default`（Mistral/GPT/Qwen 等通用模型）、`positive_framing`（DeepSeek — 避免消极表述过度遵从）。`stream_options` 对所有模型启用（OpenRouter 统一支持）
@@ -126,7 +126,7 @@ POST   /api/billing/webhook               # Stripe Webhook
 GET    /api/users/me                      # 基本用户信息
 GET    /api/users/me/export               # GDPR 数据导出 (JSON，包含用户所有数据)
 GET    /api/users/profile                 # 完整 Profile (含 stats, plan, accounts)
-GET    /api/users/usage-breakdown         # 按模型分组的使用统计
+GET    /api/users/usage-breakdown         # 按模式分组的使用统计 (by_mode: quick/balanced/thorough/other)
 DELETE /api/users/me                      # 删除账户 (级联清理)
 
 # 管理后台 (require_admin 保护)
@@ -384,7 +384,7 @@ DocTalk/
 │   │   │   ├── auth.py           # 内部 Auth Adapter API
 │   │   │   ├── billing.py        # Stripe Checkout/Subscribe/Portal/Products + Webhook
 │   │   │   ├── credits.py        # Credits 余额 + 历史
-│   │   │   └── users.py          # /me, /profile, /usage-breakdown, DELETE /me
+│   │   │   └── users.py          # /me, /profile, /usage-breakdown (by_mode), DELETE /me
 │   │   ├── core/
 │   │   │   ├── config.py         # Settings, ALLOWED_MODELS 白名单, MODE_MODELS/MODEL_TO_MODE 映射
 │   │   │   ├── deps.py           # FastAPI 依赖 (require_auth, get_db)
