@@ -36,3 +36,26 @@ class RateLimiter:
 
 
 demo_chat_limiter = RateLimiter(max_requests=10, window_seconds=60)
+
+
+class DemoMessageTracker:
+    """Track total demo messages per IP+document (in-memory).
+
+    Survives session recreation — prevents bypassing the 5-message demo limit
+    by hard-refreshing the page (which creates a new session).
+    """
+
+    def __init__(self) -> None:
+        self._counts: dict[str, int] = {}
+
+    def get_count(self, key: str) -> int:
+        return self._counts.get(key, 0)
+
+    def increment(self, key: str) -> None:
+        # Auto-cleanup when dict grows too large (same pattern as RateLimiter)
+        if len(self._counts) > 10_000:
+            self._counts.clear()
+        self._counts[key] = self._counts.get(key, 0) + 1
+
+
+demo_message_tracker = DemoMessageTracker()

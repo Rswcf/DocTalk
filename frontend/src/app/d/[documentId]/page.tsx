@@ -34,6 +34,7 @@ export default function DocumentReaderPage() {
   const [isDemo, setIsDemo] = useState(false);
   const [fileType, setFileType] = useState<string>('pdf');
   const [hasConvertedPdf, setHasConvertedPdf] = useState(false);
+  const [demoMessagesUsed, setDemoMessagesUsed] = useState(0);
   const [convertedPdfUrl, setConvertedPdfUrl] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<'slide' | 'text'>('slide');
   const { t } = useLocale();
@@ -202,6 +203,9 @@ export default function DocumentReaderPage() {
           const s = await createSession(documentId);
           if (cancelled) return;
           setSessionId(s.session_id);
+          if (s.demo_messages_used != null) {
+            setDemoMessagesUsed(s.demo_messages_used);
+          }
           const now = s.created_at || new Date().toISOString();
           addSession({
             session_id: s.session_id,
@@ -281,7 +285,7 @@ export default function DocumentReaderPage() {
   );
 
   const chatContent = documentStatus === 'ready' && sessionId ? (
-    <ChatPanel sessionId={sessionId} onCitationClick={navigateToCitation} maxUserMessages={isDemo && !isLoggedIn ? 5 : undefined} suggestedQuestions={suggestedQuestions.length > 0 ? suggestedQuestions : undefined} onOpenSettings={profile?.plan === 'pro' ? () => setShowInstructions(true) : undefined} hasCustomInstructions={!!customInstructions} userPlan={profile?.plan || (isLoggedIn ? 'free' : undefined)} />
+    <ChatPanel sessionId={sessionId} onCitationClick={navigateToCitation} maxUserMessages={isDemo && !isLoggedIn ? 5 : undefined} demoMessagesUsed={isDemo && !isLoggedIn ? demoMessagesUsed : undefined} suggestedQuestions={suggestedQuestions.length > 0 ? suggestedQuestions : undefined} onOpenSettings={profile?.plan === 'pro' ? () => setShowInstructions(true) : undefined} hasCustomInstructions={!!customInstructions} userPlan={profile?.plan || (isLoggedIn ? 'free' : undefined)} />
   ) : documentStatus !== 'ready' && !error ? (
     <div className={`h-full w-full flex flex-col items-center justify-center gap-3 ${isWin98 ? 'text-[var(--win98-dark-gray)] text-[11px]' : 'text-zinc-500'}`} role="status">
       <div className={isWin98 ? 'text-[11px]' : 'animate-spin motion-reduce:animate-none rounded-full h-8 w-8 border-2 border-zinc-300 border-t-zinc-600'}>

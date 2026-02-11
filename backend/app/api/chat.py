@@ -12,7 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.core.deps import get_current_user_optional, get_db_session
-from app.core.rate_limit import demo_chat_limiter
+from app.core.rate_limit import demo_chat_limiter, demo_message_tracker
 from app.core.security_log import log_security_event
 from app.models.tables import ChatSession, Document, Message, User
 from app.schemas.chat import (
@@ -77,6 +77,7 @@ async def verify_document_access(
 @chat_router.post("/documents/{document_id}/sessions", status_code=status.HTTP_201_CREATED)
 async def create_session(
     document_id: uuid.UUID,
+    request: Request,
     user: Optional[User] = Depends(get_current_user_optional),
     db: AsyncSession = Depends(get_db_session),
 ):
@@ -109,12 +110,26 @@ async def create_session(
     db.add(sess)
     await db.commit()
     await db.refresh(sess)
-    return SessionResponse(
+
+    response = SessionResponse(
         session_id=sess.id,
         document_id=sess.document_id,
         title=sess.title,
         created_at=sess.created_at,
     )
+
+    # For anonymous demo sessions, include used message count so frontend
+    # can display the correct remaining count across page refreshes.
+    if user is None and doc.demo_slug:
+        client_ip = request.client.host if request.client else "unknown"
+        tracker_key = f"{client_ip}:{doc.id}"
+        used = demo_message_tracker.get_count(tracker_key)
+        return JSONResponse(
+            status_code=201,
+            content={**response.model_dump(mode="json"), "demo_messages_used": used},
+        )
+
+    return response
 
 
 @chat_router.get("/sessions/{session_id}/messages", response_model=SessionMessagesResponse)
@@ -176,17 +191,16 @@ async def chat_stream(
             )
 
     # Enforce message limit for anonymous users on demo documents
+    # Uses in-memory IP+document tracker to survive session recreation (hard refresh)
     if user is None and session.document and session.document.demo_slug:
-        msg_count = await db.execute(
-            select(func.count(Message.id))
-            .where(Message.session_id == session_id, Message.role == "user")
-        )
-        if msg_count.scalar() >= DEMO_MESSAGE_LIMIT:
-            log_security_event("demo_message_limit", session_id=session_id, document_id=session.document_id)
+        tracker_key = f"{client_ip}:{session.document_id}"
+        if demo_message_tracker.get_count(tracker_key) >= DEMO_MESSAGE_LIMIT:
+            log_security_event("demo_message_limit", ip=client_ip, document_id=session.document_id)
             return JSONResponse(
                 status_code=429,
                 content={"detail": "Demo message limit reached", "limit": DEMO_MESSAGE_LIMIT},
             )
+        demo_message_tracker.increment(tracker_key)
 
     # If authenticated, ensure sufficient credits before opening stream
     if user is not None:

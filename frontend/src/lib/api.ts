@@ -64,7 +64,7 @@ export async function getConvertedFileUrl(docId: string): Promise<{ url: string;
   return handle(res);
 }
 
-export async function createSession(docId: string): Promise<{ session_id: string; document_id: string; title: string | null; created_at: string }>
+export async function createSession(docId: string): Promise<{ session_id: string; document_id: string; title: string | null; created_at: string; demo_messages_used?: number }>
 {
   const res = await fetch(`${PROXY_BASE}/api/documents/${docId}/sessions`, {
     method: 'POST',
