@@ -46,6 +46,8 @@ echo "[entrypoint] Starting uvicorn..."
 uvicorn app.main:app \
     --host 0.0.0.0 \
     --port "${PORT:-8000}" \
+    --proxy-headers \
+    --forwarded-allow-ips='*' \
     --timeout-graceful-shutdown 30 &
 UVICORN_PID=$!
 

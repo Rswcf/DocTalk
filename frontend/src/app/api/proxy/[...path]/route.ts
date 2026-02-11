@@ -63,6 +63,13 @@ async function handler(req: NextRequest) {
     }
   });
 
+  // Forward the real client IP so backend rate limiting and demo message
+  // tracking work correctly (Railway sees Vercel's IP otherwise).
+  const clientIp = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim()
+    || req.ip
+    || "unknown";
+  headers.set("X-Forwarded-For", clientIp);
+
   // Add authorization if authenticated - create a backend-compatible JWT
   if (token?.sub) {
     try {

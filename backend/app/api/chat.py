@@ -33,6 +33,15 @@ DEMO_SESSION_TTL_HOURS = 24
 chat_router = APIRouter(tags=["chat"])
 
 
+def _get_client_ip(request: Request) -> str:
+    """Extract real client IP, preferring X-Forwarded-For (set by Vercel proxy)."""
+    forwarded = request.headers.get("x-forwarded-for")
+    if forwarded:
+        # First IP in the chain is the original client
+        return forwarded.split(",")[0].strip()
+    return request.client.host if request.client else "unknown"
+
+
 async def verify_session_access(
     session_id: uuid.UUID,
     user: Optional[User],
@@ -122,7 +131,7 @@ async def create_session(
     # can display the correct remaining count across page refreshes and
     # across different demo documents (limit is global per IP).
     if user is None and doc.demo_slug:
-        client_ip = request.client.host if request.client else "unknown"
+        client_ip = _get_client_ip(request)
         used = demo_message_tracker.get_count(client_ip)
         return JSONResponse(
             status_code=201,
@@ -181,7 +190,7 @@ async def chat_stream(
 
     # Rate limit anonymous users
     if user is None:
-        client_ip = request.client.host if request.client else "unknown"
+        client_ip = _get_client_ip(request)
         if not demo_chat_limiter.is_allowed(client_ip):
             log_security_event("demo_rate_limit", ip=client_ip, session_id=session_id)
             return JSONResponse(
