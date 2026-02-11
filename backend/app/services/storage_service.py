@@ -39,7 +39,19 @@ class StorageService:
         default_ttl = default_ttl or settings.MINIO_PRESIGN_TTL
 
         host, secure = _parse_minio_endpoint(endpoint)
-        self._client = Minio(host, access_key=access_key, secret_key=secret_key, secure=secure)
+        # Configure MinIO client with short timeouts to avoid blocking the
+        # asyncio event loop when MinIO is unreachable.  The default urllib3
+        # retry policy retries 502/503/504 responses multiple times with
+        # exponential backoff, which can block for 30+ seconds.
+        import urllib3
+        http_client = urllib3.PoolManager(
+            timeout=urllib3.Timeout(connect=5, read=10),
+            retries=urllib3.Retry(total=2, backoff_factor=0.5,
+                                  status_forcelist=[500, 502, 503, 504]),
+            cert_reqs="CERT_REQUIRED" if secure else "CERT_NONE",
+        )
+        self._client = Minio(host, access_key=access_key, secret_key=secret_key,
+                             secure=secure, http_client=http_client)
         self._bucket = bucket
         self._default_ttl = int(default_ttl)
 

@@ -73,7 +73,7 @@ class DocService:
             'md': 'text/markdown',
         }
         storage_content_type = mime_types.get(file_type, content_type)
-        storage_service.upload_file(data, storage_key, content_type=storage_content_type)
+        await asyncio.to_thread(storage_service.upload_file, data, storage_key, storage_content_type)
 
         # Create document row (status=parsing)
         doc = Document(

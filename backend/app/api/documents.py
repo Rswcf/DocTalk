@@ -236,11 +236,13 @@ async def ingest_url(
     except Exception as e:
         return JSONResponse(status_code=400, content={"error": f"Failed to fetch URL: {str(e)}"})
 
+    import asyncio
+
     if pdf_bytes:
         # URL returned a PDF — process through normal PDF pipeline
         doc_id = uuid.uuid4()
         storage_key = f"documents/{doc_id}/{title}"
-        storage_service.upload_file(pdf_bytes, storage_key, content_type='application/pdf')
+        await asyncio.to_thread(storage_service.upload_file, pdf_bytes, storage_key, 'application/pdf')
 
         from app.models.tables import Document
         doc = Document(
@@ -270,7 +272,7 @@ async def ingest_url(
         doc_id = uuid.uuid4()
         filename = f"{title[:100]}.txt"
         storage_key = f"documents/{doc_id}/{filename}"
-        storage_service.upload_file(text_bytes, storage_key, content_type='text/plain')
+        await asyncio.to_thread(storage_service.upload_file, text_bytes, storage_key, 'text/plain')
 
         from app.models.tables import Document
         doc = Document(
@@ -319,6 +321,8 @@ async def get_document_file_url(
     user: Optional[User] = Depends(get_current_user_optional),
     db: AsyncSession = Depends(get_db_session),
 ):
+    import asyncio
+
     doc = await doc_service.get_document(document_id, db)
     if not doc:
         return JSONResponse(status_code=404, content={"detail": "Document not found"})
@@ -326,12 +330,18 @@ async def get_document_file_url(
     if doc.user_id and (not user or doc.user_id != user.id):
         return JSONResponse(status_code=404, content={"detail": "Document not found"})
 
-    if variant == "converted":
-        if not doc.converted_storage_key:
-            return JSONResponse(status_code=404, content={"detail": "No converted PDF available"})
-        url = storage_service.get_presigned_url(doc.converted_storage_key, ttl=settings.MINIO_PRESIGN_TTL)
-    else:
-        url = storage_service.get_presigned_url(doc.storage_key, ttl=settings.MINIO_PRESIGN_TTL)
+    storage_key = doc.converted_storage_key if variant == "converted" else doc.storage_key
+    if variant == "converted" and not doc.converted_storage_key:
+        return JSONResponse(status_code=404, content={"detail": "No converted PDF available"})
+
+    # Run synchronous MinIO call in a thread to avoid blocking the event loop.
+    # When MinIO is unreachable, urllib3 retries can block for seconds.
+    try:
+        url = await asyncio.to_thread(
+            storage_service.get_presigned_url, storage_key, settings.MINIO_PRESIGN_TTL
+        )
+    except Exception:
+        return JSONResponse(status_code=502, content={"detail": "Storage service unavailable"})
 
     return DocumentFileUrlResponse(url=url, expires_in=int(settings.MINIO_PRESIGN_TTL))
 
