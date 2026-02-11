@@ -520,16 +520,16 @@ export default function ChatPanel({ sessionId, onCitationClick, maxUserMessages,
           </div>
         ) : (
           <div className="max-w-3xl mx-auto">
-          <div className="flex items-end border border-zinc-200 dark:border-zinc-700 rounded-3xl bg-white dark:bg-zinc-800 shadow-sm focus-within:ring-2 focus-within:ring-zinc-400 dark:focus-within:ring-zinc-500 transition-shadow">
+          <div className="flex items-end border border-zinc-300 dark:border-zinc-600 rounded-3xl bg-white dark:bg-zinc-800 focus-within:ring-1 focus-within:ring-zinc-400 dark:focus-within:ring-zinc-500 transition-shadow">
             {showPlusButton && (
-              <div className="relative pl-2 pb-2 shrink-0" data-plus-menu>
+              <div className="relative pl-3 pb-3 shrink-0" data-plus-menu>
                 <button
                   type="button"
                   onClick={() => setPlusMenuOpen((v) => !v)}
                   className="p-2 rounded-full text-zinc-400 hover:text-zinc-600 dark:text-zinc-500 dark:hover:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-700 transition-colors focus-visible:ring-2 focus-visible:ring-zinc-400 dark:focus-visible:ring-zinc-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-900"
                   aria-label="More options"
                 >
-                  <Plus size={16} />
+                  <Plus size={20} />
                 </button>
                 {plusMenuOpen && (
                   <div className="absolute bottom-full left-0 mb-2 w-56 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-xl shadow-lg z-20 py-1 animate-fade-in motion-reduce:animate-none">
@@ -565,8 +565,8 @@ export default function ChatPanel({ sessionId, onCitationClick, maxUserMessages,
             )}
             <textarea
               ref={textareaRef}
-              className="flex-1 px-4 py-3 text-sm resize-none overflow-y-auto focus:outline-none bg-transparent dark:text-zinc-100 placeholder:text-zinc-400 dark:placeholder:text-zinc-500"
-              style={{ minHeight: '40px' }}
+              className="flex-1 px-3 py-3.5 text-sm resize-none overflow-y-auto focus:outline-none bg-transparent dark:text-zinc-100 placeholder:text-zinc-400 dark:placeholder:text-zinc-500"
+              style={{ minHeight: '44px' }}
               placeholder={demoLimitReached ? t('demo.signInToContinue') : t('chat.placeholder')}
               value={input}
               onChange={(e) => setInput(e.target.value)}
@@ -575,26 +575,26 @@ export default function ChatPanel({ sessionId, onCitationClick, maxUserMessages,
               rows={1}
               aria-label="Ask a question"
             />
-            <div className="flex items-center gap-1 pr-2 pb-2 shrink-0">
+            <div className="flex items-center gap-1 pr-3 pb-3 shrink-0">
               {isStreaming ? (
                 <button
                   type="button"
                   onClick={handleStop}
-                  className="p-2 bg-zinc-900 dark:bg-zinc-50 text-white dark:text-zinc-900 rounded-full hover:bg-zinc-800 dark:hover:bg-zinc-200 transition-colors focus-visible:ring-2 focus-visible:ring-zinc-400 dark:focus-visible:ring-zinc-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-900"
+                  className="p-2.5 bg-zinc-900 dark:bg-zinc-50 text-white dark:text-zinc-900 rounded-full hover:bg-zinc-800 dark:hover:bg-zinc-200 transition-colors focus-visible:ring-2 focus-visible:ring-zinc-400 dark:focus-visible:ring-zinc-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-900"
                   title={t('chat.stop') || 'Stop'}
                   aria-label="Stop generating"
                 >
-                  <Square size={14} />
+                  <Square size={16} />
                 </button>
               ) : (
                 <button
                   type="submit"
-                  className="p-2 bg-zinc-900 dark:bg-zinc-50 text-white dark:text-zinc-900 rounded-full disabled:opacity-40 hover:bg-zinc-800 dark:hover:bg-zinc-200 transition-colors focus-visible:ring-2 focus-visible:ring-zinc-400 dark:focus-visible:ring-zinc-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-900"
+                  className="p-2.5 bg-zinc-900 dark:bg-zinc-50 text-white dark:text-zinc-900 rounded-full disabled:opacity-40 hover:bg-zinc-800 dark:hover:bg-zinc-200 transition-colors focus-visible:ring-2 focus-visible:ring-zinc-400 dark:focus-visible:ring-zinc-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-900"
                   disabled={!input.trim() || demoLimitReached}
                   title={t('chat.send')}
                   aria-label="Send message"
                 >
-                  <SendHorizontal size={16} />
+                  <SendHorizontal size={18} />
                 </button>
               )}
             </div>
