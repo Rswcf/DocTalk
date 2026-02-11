@@ -434,7 +434,7 @@ export default function DocumentReaderPage() {
 
   // Modern layout (light/dark)
   return (
-    <div className="flex flex-col h-screen w-full">
+    <div className="flex flex-col h-screen w-full overflow-hidden">
       <Header isDemo={isDemo} isLoggedIn={isLoggedIn} />
       {error ? (
         <div className="flex-1 flex items-center justify-center">
