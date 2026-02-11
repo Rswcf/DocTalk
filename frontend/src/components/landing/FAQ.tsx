@@ -26,7 +26,7 @@ export default function FAQ() {
     <ScrollReveal>
       <section className="py-20 px-6">
         <div className="max-w-3xl mx-auto">
-          <h2 className="font-display text-3xl tracking-tight text-zinc-900 dark:text-zinc-50 text-center mb-12 text-balance">
+          <h2 className="font-display font-medium text-3xl tracking-tight text-zinc-900 dark:text-zinc-50 text-center mb-12 text-balance">
             {t('landing.faq.title')}
           </h2>
           <div className="divide-y divide-zinc-200 dark:divide-zinc-800">

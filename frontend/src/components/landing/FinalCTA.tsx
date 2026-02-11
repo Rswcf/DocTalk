@@ -15,7 +15,7 @@ export default function FinalCTA() {
         {/* Dot pattern background */}
         <div className="dot-pattern absolute inset-0 opacity-40 dark:opacity-20" aria-hidden="true" />
         <div className="max-w-2xl mx-auto text-center relative z-10">
-          <h2 className="font-display text-3xl md:text-4xl tracking-tight text-zinc-900 dark:text-zinc-50 mb-4 text-balance">
+          <h2 className="font-display font-medium text-3xl md:text-4xl tracking-tight text-zinc-900 dark:text-zinc-50 mb-4 text-balance">
             {t('landing.finalCta.title')}
           </h2>
           <p className="text-zinc-600 dark:text-zinc-400 mb-8">

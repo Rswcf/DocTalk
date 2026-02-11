@@ -17,7 +17,7 @@ export default function HowItWorks() {
   return (
     <ScrollReveal>
       <section id="how-it-works" className="max-w-5xl mx-auto px-6 py-24">
-        <h2 className="font-display text-3xl tracking-tight text-zinc-900 dark:text-zinc-50 text-center mb-16 text-balance">
+        <h2 className="font-display font-medium text-3xl tracking-tight text-zinc-900 dark:text-zinc-50 text-center mb-16 text-balance">
           {t('landing.howItWorks.title')}
         </h2>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-12 md:gap-0 relative">

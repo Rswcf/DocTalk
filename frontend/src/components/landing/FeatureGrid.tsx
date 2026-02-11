@@ -18,7 +18,7 @@ export default function FeatureGrid() {
     <section id="features" className="bg-zinc-50 dark:bg-zinc-900/50 py-24">
       <div className="max-w-5xl mx-auto px-6">
         <ScrollReveal>
-          <h2 className="font-display text-3xl tracking-tight text-zinc-900 dark:text-zinc-50 text-center mb-12 text-balance">
+          <h2 className="font-display font-medium text-3xl tracking-tight text-zinc-900 dark:text-zinc-50 text-center mb-12 text-balance">
             {t('landing.features.title')}
           </h2>
         </ScrollReveal>

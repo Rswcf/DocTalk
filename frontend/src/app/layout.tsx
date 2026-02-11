@@ -1,5 +1,5 @@
 import type { Metadata } from 'next'
-import { Inter, Instrument_Serif, Sora } from 'next/font/google'
+import { Inter, Sora } from 'next/font/google'
 import './globals.css'
 import ErrorBoundary from '../components/ErrorBoundary'
 import { ThemeProvider } from './ThemeProvider'
@@ -11,16 +11,10 @@ import { AnalyticsWrapper } from '../components/AnalyticsWrapper'
 import { CookieConsentBanner } from '../components/CookieConsentBanner'
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter' })
-const instrumentSerif = Instrument_Serif({
-  weight: '400',
-  subsets: ['latin'],
-  variable: '--font-display',
-  display: 'swap',
-})
 const sora = Sora({
   subsets: ['latin'],
   variable: '--font-logo',
-  weight: ['600'],
+  weight: ['500', '600', '700'],
   display: 'swap',
 })
 
@@ -35,7 +29,7 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="en" suppressHydrationWarning className={`${inter.variable} ${instrumentSerif.variable} ${sora.variable}`}>
+    <html lang="en" suppressHydrationWarning className={`${inter.variable} ${sora.variable}`}>
       <head>
         <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)" />
         <meta name="theme-color" content="#09090b" media="(prefers-color-scheme: dark)" />

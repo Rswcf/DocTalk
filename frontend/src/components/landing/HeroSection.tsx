@@ -25,7 +25,7 @@ export default function HeroSection() {
           </span>
 
           {/* Headline */}
-          <h1 className="text-5xl md:text-6xl lg:text-7xl font-display text-zinc-900 dark:text-zinc-50 leading-[1.1] tracking-tight text-balance">
+          <h1 className="text-5xl md:text-6xl lg:text-7xl font-display font-semibold text-zinc-900 dark:text-zinc-50 leading-[1.1] tracking-tight text-balance">
             {t('landing.headline').split('\n').map((line: string, i: number) => (
               <React.Fragment key={i}>
                 {i > 0 && <br />}

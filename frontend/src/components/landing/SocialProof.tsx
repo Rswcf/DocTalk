@@ -66,7 +66,7 @@ export default function SocialProof() {
     <ScrollReveal>
       <section className="max-w-5xl mx-auto px-6 py-24">
         <div className="border-t border-zinc-200 dark:border-zinc-800 pt-16">
-          <h2 className="font-display text-3xl tracking-tight text-zinc-900 dark:text-zinc-50 text-center mb-12 text-balance">
+          <h2 className="font-display font-medium text-3xl tracking-tight text-zinc-900 dark:text-zinc-50 text-center mb-12 text-balance">
             {t('landing.social.title')}
           </h2>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
@@ -75,7 +75,7 @@ export default function SocialProof() {
                 key={metric.labelKey}
                 className="flex flex-col items-center text-center py-6"
               >
-                <div className="text-4xl md:text-5xl font-display text-zinc-900 dark:text-zinc-50 mb-2 tabular-nums">
+                <div className="text-4xl md:text-5xl font-display font-semibold text-zinc-900 dark:text-zinc-50 mb-2 tabular-nums">
                   {'staticValue' in metric ? (
                     metric.staticValue
                   ) : (

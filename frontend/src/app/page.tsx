@@ -195,7 +195,7 @@ export default function HomePage() {
         <ScrollReveal direction="up" delay={100}>
           <section className="w-full px-4 sm:px-8 lg:px-16 py-24">
             <div className="border-t border-zinc-200 dark:border-zinc-800 pt-12 max-w-6xl mx-auto">
-              <h2 className="font-display text-3xl tracking-tight text-zinc-900 dark:text-zinc-50 text-center mb-8">
+              <h2 className="font-display font-medium text-3xl tracking-tight text-zinc-900 dark:text-zinc-50 text-center mb-8">
                 {t('landing.showcase.title')}
               </h2>
             </div>
