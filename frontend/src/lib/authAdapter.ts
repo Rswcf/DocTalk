@@ -114,16 +114,23 @@ export function FastAPIAdapter(): Adapter {
     },
 
     async createVerificationToken(data) {
-      const vt = await fetchAdapter<VerificationToken>("/api/internal/auth/verification-tokens", {
-        method: "POST",
-        body: JSON.stringify({
-          identifier: (data as any).identifier,
-          token: (data as any).token,
-          expires: (data as any).expires.toISOString(),
-        }),
-      });
-      if (!vt) return null;
-      return { ...(vt as any), expires: new Date((vt as any).expires) } as any;
+      console.log("[ADAPTER] createVerificationToken called", { identifier: (data as any).identifier, hasToken: !!(data as any).token, expires: (data as any).expires }); // TODO: remove debug
+      try {
+        const vt = await fetchAdapter<VerificationToken>("/api/internal/auth/verification-tokens", {
+          method: "POST",
+          body: JSON.stringify({
+            identifier: (data as any).identifier,
+            token: (data as any).token,
+            expires: (data as any).expires.toISOString(),
+          }),
+        });
+        console.log("[ADAPTER] createVerificationToken result", vt); // TODO: remove debug
+        if (!vt) return null;
+        return { ...(vt as any), expires: new Date((vt as any).expires) } as any;
+      } catch (err) {
+        console.error("[ADAPTER] createVerificationToken ERROR", err); // TODO: remove debug
+        throw err;
+      }
     },
 
     async useVerificationToken({ identifier, token }) {

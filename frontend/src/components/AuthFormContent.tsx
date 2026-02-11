@@ -14,15 +14,27 @@ export function AuthFormContent({ callbackUrl }: AuthFormContentProps) {
   const [emailSent, setEmailSent] = useState(false);
   const [sentEmail, setSentEmail] = useState("");
   const [sending, setSending] = useState(false);
+  const [error, setError] = useState("");
 
   const handleEmailSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email.trim() || sending) return;
     setSending(true);
+    setError("");
     try {
-      await signIn("resend", { email: email.trim(), callbackUrl, redirect: false });
+      const result = await signIn("resend", { email: email.trim(), callbackUrl, redirect: false });
+      console.log("[EMAIL AUTH] signIn result:", result); // TODO: remove debug
+      if (result?.error) {
+        setError(result.error === "Configuration"
+          ? "Email sign-in is temporarily unavailable. Please try another method."
+          : result.error);
+        return;
+      }
       setSentEmail(email.trim());
       setEmailSent(true);
+    } catch (err) {
+      console.error("[EMAIL AUTH] signIn exception:", err); // TODO: remove debug
+      setError("An unexpected error occurred. Please try again.");
     } finally {
       setSending(false);
     }
@@ -31,8 +43,16 @@ export function AuthFormContent({ callbackUrl }: AuthFormContentProps) {
   const handleResend = async () => {
     if (sending) return;
     setSending(true);
+    setError("");
     try {
-      await signIn("resend", { email: sentEmail, callbackUrl, redirect: false });
+      const result = await signIn("resend", { email: sentEmail, callbackUrl, redirect: false });
+      console.log("[EMAIL AUTH] resend result:", result); // TODO: remove debug
+      if (result?.error) {
+        setError("Failed to resend. Please try again.");
+      }
+    } catch (err) {
+      console.error("[EMAIL AUTH] resend exception:", err); // TODO: remove debug
+      setError("An unexpected error occurred.");
     } finally {
       setSending(false);
     }
@@ -88,6 +108,13 @@ export function AuthFormContent({ callbackUrl }: AuthFormContentProps) {
           </span>
         </div>
       </div>
+
+      {/* Error display */}
+      {error && (
+        <div className="p-3 rounded-xl bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-sm text-red-700 dark:text-red-300">
+          {error}
+        </div>
+      )}
 
       {/* Email Magic Link */}
       {emailSent ? (
