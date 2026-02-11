@@ -23,7 +23,6 @@ export function AuthFormContent({ callbackUrl }: AuthFormContentProps) {
     setError("");
     try {
       const result = await signIn("resend", { email: email.trim(), callbackUrl, redirect: false });
-      console.log("[EMAIL AUTH] signIn result:", result); // TODO: remove debug
       if (result?.error) {
         setError(result.error === "Configuration"
           ? "Email sign-in is temporarily unavailable. Please try another method."
@@ -33,7 +32,6 @@ export function AuthFormContent({ callbackUrl }: AuthFormContentProps) {
       setSentEmail(email.trim());
       setEmailSent(true);
     } catch (err) {
-      console.error("[EMAIL AUTH] signIn exception:", err); // TODO: remove debug
       setError("An unexpected error occurred. Please try again.");
     } finally {
       setSending(false);
@@ -46,12 +44,10 @@ export function AuthFormContent({ callbackUrl }: AuthFormContentProps) {
     setError("");
     try {
       const result = await signIn("resend", { email: sentEmail, callbackUrl, redirect: false });
-      console.log("[EMAIL AUTH] resend result:", result); // TODO: remove debug
       if (result?.error) {
         setError("Failed to resend. Please try again.");
       }
     } catch (err) {
-      console.error("[EMAIL AUTH] resend exception:", err); // TODO: remove debug
       setError("An unexpected error occurred.");
     } finally {
       setSending(false);

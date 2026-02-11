@@ -41,18 +41,6 @@ if (process.env.RESEND_API_KEY) {
 }
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
-  debug: true, // TODO: remove after email magic link debugging
-  logger: {
-    error(error) {
-      console.error("[AUTH ERROR]", error);
-    },
-    warn(code) {
-      console.warn("[AUTH WARN]", code);
-    },
-    debug(message, metadata) {
-      console.log("[AUTH DEBUG]", message, metadata);
-    },
-  },
   secret: process.env.AUTH_SECRET,
   adapter: FastAPIAdapter(),
   session: {
