@@ -198,18 +198,8 @@ def parse_document(self, document_id: str) -> None:
             try:
                 pdf_bytes = convert_to_pdf(file_bytes, file_type)
                 converted_key = f"documents/{doc.id}/converted.pdf"
-                from io import BytesIO  # noqa: I001
-
-                from minio.sse import SseS3
-                minio_client = _get_minio_client()
-                minio_client.put_object(
-                    settings.MINIO_BUCKET,
-                    converted_key,
-                    BytesIO(pdf_bytes),
-                    length=len(pdf_bytes),
-                    content_type="application/pdf",
-                    sse=SseS3(),
-                )
+                from app.services.storage_service import storage_service as _storage
+                _storage.upload_file(pdf_bytes, converted_key, content_type="application/pdf")
                 doc.converted_storage_key = converted_key
                 db.add(doc)
                 db.commit()

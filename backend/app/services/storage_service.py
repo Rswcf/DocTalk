@@ -63,17 +63,35 @@ class StorageService:
             )
 
     def upload_file(self, file_bytes: bytes, storage_key: str, content_type: str = "application/pdf") -> None:
-        """Upload bytes to MinIO under the given storage_key."""
+        """Upload bytes to MinIO under the given storage_key.
+
+        Attempts SSE-S3 encryption first; falls back to unencrypted upload
+        if KMS is not configured on the MinIO instance.
+        """
         data = BytesIO(file_bytes)
         size = len(file_bytes)
-        self._client.put_object(
-            self._bucket,
-            storage_key,
-            data,
-            length=size,
-            content_type=content_type,
-            sse=SseS3(),
-        )
+        try:
+            self._client.put_object(
+                self._bucket,
+                storage_key,
+                data,
+                length=size,
+                content_type=content_type,
+                sse=SseS3(),
+            )
+        except S3Error as exc:
+            if "KMS" in str(exc) or exc.code == "NotImplemented":
+                # KMS not configured — upload without encryption
+                data.seek(0)
+                self._client.put_object(
+                    self._bucket,
+                    storage_key,
+                    data,
+                    length=size,
+                    content_type=content_type,
+                )
+            else:
+                raise
 
     def get_presigned_url(self, storage_key: str, ttl: Optional[int] = None) -> str:
         """Generate a presigned GET URL for the object."""
