@@ -74,8 +74,9 @@ def seed_demo_documents() -> None:
                 if existing:
                     if existing.status == "ready":
                         # Verify Qdrant actually has vectors for this doc.
-                        # If Qdrant was restarted without persistent volume,
-                        # the collection may be empty despite DB saying "ready".
+                        # If Qdrant/MinIO restarted without persistent volumes,
+                        # the vectors and files may be gone despite DB saying "ready".
+                        needs_reseed = False
                         try:
                             from app.models.tables import Chunk
                             from sqlalchemy import func as sa_func
@@ -90,17 +91,18 @@ def seed_demo_documents() -> None:
                                                      count_filter={"must": [{"key": "document_id", "match": {"value": str(existing.id)}}]},
                                                      exact=True).count
                                 if vec_count == 0:
-                                    logger.warning("Demo doc '%s' is ready but Qdrant has 0 vectors — re-parsing", slug)
-                                    existing.status = "parsing"
-                                    db.add(existing)
-                                    db.commit()
-                                    from app.workers.parse_worker import parse_document
-                                    parse_document.delay(str(existing.id))
-                                    continue
+                                    needs_reseed = True
                         except Exception as e:
                             logger.warning("Qdrant vector check failed for '%s': %s", slug, e)
-                        logger.info("Demo doc '%s' already ready, skipping", slug)
-                        continue
+                        if needs_reseed:
+                            # Delete and fully re-seed (MinIO files may also be gone)
+                            logger.warning("Demo doc '%s' lost Qdrant vectors — deleting and re-seeding", slug)
+                            db.delete(existing)
+                            db.commit()
+                            # Fall through to re-create below
+                        else:
+                            logger.info("Demo doc '%s' already ready, skipping", slug)
+                            continue
                     if existing.status in ("parsing", "embedding"):
                         logger.info("Demo doc '%s' stuck in %s, re-dispatching", slug, existing.status)
                         from app.workers.parse_worker import parse_document
