@@ -123,6 +123,7 @@
   "billing.pack.power": "Power Pack",
   "billing.pack.ultra": "Ultra Pack",
   "common.cancel": "Cancel",
+  "common.error": "Something went wrong. Please try again.",
   "common.loading": "Loading...",
   "common.retry": "Retry",
   "auth.loginToContinue": "Sign in to continue",

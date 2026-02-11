@@ -123,6 +123,7 @@
   "billing.pack.power": "Power-Paket",
   "billing.pack.ultra": "Ultra-Paket",
   "common.cancel": "Abbrechen",
+  "common.error": "Etwas ist schiefgelaufen. Bitte versuchen Sie es erneut.",
   "common.loading": "Wird geladen...",
   "common.retry": "Erneut versuchen",
   "auth.loginToContinue": "Anmelden, um fortzufahren",

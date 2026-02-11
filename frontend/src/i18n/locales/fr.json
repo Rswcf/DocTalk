@@ -64,6 +64,7 @@
   "citation.page": "Page {page}",
   "common.backToHome": "Retour à l'accueil",
   "common.cancel": "Cancel",
+  "common.error": "Une erreur est survenue. Veuillez réessayer.",
   "common.loading": "Loading...",
   "common.retry": "Réessayer",
   "copy.button": "Copier",

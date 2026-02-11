@@ -64,6 +64,7 @@
   "citation.page": "पृष्ठ {page}",
   "common.backToHome": "मुख्य पृष्ठ पर लौटें",
   "common.cancel": "Cancel",
+  "common.error": "कुछ गलत हो गया। कृपया पुनः प्रयास करें।",
   "common.loading": "Loading...",
   "common.retry": "पुनः प्रयास करें",
   "copy.button": "कॉपी करें",

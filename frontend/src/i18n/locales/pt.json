@@ -64,6 +64,7 @@
   "citation.page": "Página {page}",
   "common.backToHome": "Voltar ao inicio",
   "common.cancel": "Cancel",
+  "common.error": "Algo deu errado. Por favor, tente novamente.",
   "common.loading": "Loading...",
   "common.retry": "Tentar novamente",
   "copy.button": "Copiar",

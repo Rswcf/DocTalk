@@ -93,6 +93,7 @@
   "billing.purchaseCanceled": "Purchase was canceled.",
   "billing.error": "An error occurred. Please try again.",
   "common.cancel": "Cancel",
+  "common.error": "出错了，请稍后重试。",
   "common.loading": "Loading...",
   "common.retry": "重试",
   "auth.loginToContinue": "登录以继续",

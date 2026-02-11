@@ -123,6 +123,7 @@
   "billing.pack.power": "Pacchetto Power",
   "billing.pack.ultra": "Pacchetto Ultra",
   "common.cancel": "Annulla",
+  "common.error": "Qualcosa è andato storto. Riprova.",
   "common.loading": "Caricamento...",
   "common.retry": "Riprova",
   "auth.loginToContinue": "Accedi per continuare",

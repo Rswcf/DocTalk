@@ -123,6 +123,7 @@
   "billing.pack.power": "Power 팩",
   "billing.pack.ultra": "Ultra 팩",
   "common.cancel": "취소",
+  "common.error": "문제가 발생했습니다. 다시 시도해 주세요.",
   "common.loading": "로딩 중...",
   "common.retry": "다시 시도",
   "auth.loginToContinue": "계속하려면 로그인하세요",
