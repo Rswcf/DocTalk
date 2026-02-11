@@ -4,11 +4,12 @@
 
 :root {
   --background: #ffffff;
+  --page-background: #ffffff;
   --foreground: #09090b;
   --border: #e4e4e7;
   /* Highlight colors */
-  --highlight-base: rgba(56, 189, 248, 0.25);
-  --highlight-strong: rgba(56, 189, 248, 0.5);
+  --highlight-base: rgba(245, 158, 11, 0.25);
+  --highlight-strong: rgba(245, 158, 11, 0.5);
   /* Accent colors (indigo) */
   --accent: #4f46e5;
   --accent-hover: #4338ca;
@@ -18,11 +19,12 @@
 
 .dark {
   --background: #09090b;
+  --page-background: #18181b;
   --foreground: #fafafa;
   --border: #3f3f46;
   /* Dark mode highlight colors */
-  --highlight-base: rgba(56, 189, 248, 0.20);
-  --highlight-strong: rgba(56, 189, 248, 0.5);
+  --highlight-base: rgba(245, 158, 11, 0.20);
+  --highlight-strong: rgba(245, 158, 11, 0.5);
   /* Accent colors (indigo) */
   --accent: #818cf8;
   --accent-hover: #a5b4fc;
@@ -35,6 +37,7 @@
    ============================================================ */
 .win98 {
   --background: #c0c0c0;
+  --page-background: #c0c0c0;
   --foreground: #000000;
   --border: #808080;
   /* Highlight colors */
@@ -249,7 +252,7 @@ html, body {
 
 body {
   color: var(--foreground);
-  background: var(--background);
+  background: var(--page-background, var(--background));
 }
 
 /* Chat prose: tighten paragraph spacing vs. default prose */
@@ -283,17 +286,17 @@ body {
 
 /* Overlay-layer citation highlighting (always visible, even without text layer) */
 .citation-overlay {
-  background: rgba(56, 189, 248, 0.15);
-  border-left: 3px solid rgba(56, 189, 248, 0.6);
+  background: rgba(245, 158, 11, 0.15);
+  border-left: 3px solid rgba(245, 158, 11, 0.6);
   border-radius: 2px;
   pointer-events: none;
   animation: overlayPulse 1.5s ease-out;
 }
 
 @keyframes overlayPulse {
-  0% { background: rgba(56, 189, 248, 0.35); border-left-color: rgba(56, 189, 248, 0.9); }
-  40% { background: rgba(56, 189, 248, 0.2); border-left-color: rgba(56, 189, 248, 0.7); }
-  100% { background: rgba(56, 189, 248, 0.15); border-left-color: rgba(56, 189, 248, 0.6); }
+  0% { background: rgba(245, 158, 11, 0.35); border-left-color: rgba(245, 158, 11, 0.9); }
+  40% { background: rgba(245, 158, 11, 0.2); border-left-color: rgba(245, 158, 11, 0.7); }
+  100% { background: rgba(245, 158, 11, 0.15); border-left-color: rgba(245, 158, 11, 0.6); }
 }
 
 /* Cookie consent banner slide-up */

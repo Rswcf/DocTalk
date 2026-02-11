@@ -71,7 +71,13 @@ export default function LocaleProvider({ children }: { children: React.ReactNode
   const t = useCallback(
     (key: string, params?: Record<string, string | number>): string => {
       const activeTranslations = loadedTranslations[locale] || loadedTranslations.en;
-      let str = activeTranslations?.[key] || loadedTranslations.en?.[key] || key;
+      const translated = activeTranslations?.[key] ?? loadedTranslations.en?.[key];
+      let str = translated ?? key;
+
+      if (translated == null && process.env.NODE_ENV === 'development') {
+        console.warn('[i18n] Missing translation key:', key);
+      }
+
       if (params) {
         Object.entries(params).forEach(([k, v]) => {
           str = str.replace(`{${k}}`, String(v));

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { useSession } from "next-auth/react";
 import { useTheme } from "next-themes";
 import { useLocale } from "../i18n";
@@ -16,6 +16,7 @@ export function triggerCreditsRefresh() {
 export function CreditsDisplay() {
   const { status } = useSession();
   const [credits, setCredits] = useState<number | null>(null);
+  const pollingIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const { t } = useLocale();
   const setUserPlan = useDocTalkStore((s) => s.setUserPlan);
   const { resolvedTheme } = useTheme();
@@ -53,14 +54,21 @@ export function CreditsDisplay() {
     if (status !== "authenticated") return;
     fetchCredits();
 
+    if (pollingIntervalRef.current) {
+      clearInterval(pollingIntervalRef.current);
+    }
+
     // Periodic refresh every 60s
-    const interval = setInterval(fetchCredits, 60_000);
+    pollingIntervalRef.current = setInterval(fetchCredits, 60_000);
 
     // Listen for manual refresh events (after chat, purchase, etc.)
     window.addEventListener(CREDITS_REFRESH_EVENT, fetchCredits);
 
     return () => {
-      clearInterval(interval);
+      if (pollingIntervalRef.current) {
+        clearInterval(pollingIntervalRef.current);
+        pollingIntervalRef.current = null;
+      }
       window.removeEventListener(CREDITS_REFRESH_EVENT, fetchCredits);
     };
   }, [status, fetchCredits]);

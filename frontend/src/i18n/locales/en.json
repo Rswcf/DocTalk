@@ -34,7 +34,7 @@
   "chat.suggestedQ4": "List important data and findings",
   "chat.searching": "Searching document...",
   "chat.error": "Chat error: ",
-  "chat.networkError": "Network error, please try again later",
+  "chat.networkError": "Connection lost. Please check your internet and try again.",
   "chat.regenerate": "Regenerate",
   "chat.export": "Export chat as Markdown",
   "chat.stop": "Stop generating",
@@ -409,5 +409,14 @@
   "viewer.text": "Text",
   "auth.emailUnavailable": "Email sign-in is temporarily unavailable. Please try another method.",
   "auth.unexpectedError": "An unexpected error occurred. Please try again.",
-  "auth.resendFailed": "Failed to resend. Please try again."
+  "auth.resendFailed": "Failed to resend. Please try again.",
+  "hero.signUpFree": "Sign Up Free",
+  "dashboard.emptyTitle": "Upload your first document",
+  "dashboard.emptySubtitle": "Start chatting with your PDFs, DOCX, PPTX, and more",
+  "collections.emptyTitle": "No collections yet",
+  "collections.emptySubtitle": "Group documents together to ask questions across multiple files.",
+  "status.parsing": "Extracting text...",
+  "status.embedding": "Building search index...",
+  "status.ocr": "Running OCR...",
+  "status.processing": "Processing document..."
 }

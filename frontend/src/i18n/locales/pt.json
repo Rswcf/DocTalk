@@ -47,7 +47,7 @@
   "billing.title": "Purchase Credits",
   "chat.searching": "Pesquisando no documento...",
   "chat.error": "Erro no chat: ",
-  "chat.networkError": "Erro de rede, tente novamente mais tarde",
+  "chat.networkError": "Connection lost. Please check your internet and try again.",
   "chat.regenerate": "Regenerar",
   "chat.export": "Exportar conversa",
   "chat.stop": "Parar geração",
@@ -409,5 +409,14 @@
   "viewer.text": "Texto",
   "auth.emailUnavailable": "O login por e-mail está temporariamente indisponível. Tente outro método.",
   "auth.unexpectedError": "Ocorreu um erro inesperado. Tente novamente.",
-  "auth.resendFailed": "Falha ao reenviar. Tente novamente."
+  "auth.resendFailed": "Falha ao reenviar. Tente novamente.",
+  "hero.signUpFree": "Cadastre-se grátis",
+  "dashboard.emptyTitle": "Envie seu primeiro documento",
+  "dashboard.emptySubtitle": "Comece a conversar com seus PDFs, DOCX, PPTX e mais",
+  "collections.emptyTitle": "No collections yet",
+  "collections.emptySubtitle": "Group documents together to ask questions across multiple files.",
+  "status.parsing": "Extracting text...",
+  "status.embedding": "Building search index...",
+  "status.ocr": "Running OCR...",
+  "status.processing": "Processing document..."
 }

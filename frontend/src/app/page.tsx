@@ -4,10 +4,10 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import ShowcasePlayer from '../components/landing/ShowcasePlayer';
-import { useSession, signIn } from 'next-auth/react';
-import { getDocument, uploadDocument, deleteDocument, getMyDocuments, ingestUrl } from '../lib/api';
+import { useSession } from 'next-auth/react';
+import { getDocument, uploadDocument, deleteDocument, getMyDocuments, ingestUrl, getUserProfile } from '../lib/api';
 import type { DocumentBrief } from '../lib/api';
-import { Trash2, Link2 } from 'lucide-react';
+import { Trash2, Link2, FileUp } from 'lucide-react';
 import { useDocTalkStore } from '../store';
 import { useLocale } from '../i18n';
 import { sanitizeFilename } from '../lib/utils';
@@ -23,7 +23,14 @@ import FinalCTA from '../components/landing/FinalCTA';
 import Footer from '../components/Footer';
 import ScrollReveal from '../components/landing/ScrollReveal';
 
-type StoredDoc = { document_id: string; filename?: string; createdAt: number };
+type StoredDoc = { document_id: string; filename?: string; createdAt: number; status?: string };
+type PlanTier = 'free' | 'plus' | 'pro';
+
+const MAX_UPLOAD_MB_BY_PLAN: Record<PlanTier, number> = {
+  free: 25,
+  plus: 50,
+  pro: 100,
+};
 
 export default function HomePage() {
   const router = useRouter();
@@ -41,6 +48,7 @@ export default function HomePage() {
   const [urlInput, setUrlInput] = useState('');
   const [urlLoading, setUrlLoading] = useState(false);
   const [urlError, setUrlError] = useState('');
+  const [userPlan, setUserPlan] = useState<PlanTier>('free');
   const isLoggedIn = status === 'authenticated';
 
   useEffect(() => {
@@ -54,16 +62,54 @@ export default function HomePage() {
     }
   }, [isLoggedIn]);
 
+  useEffect(() => {
+    if (!isLoggedIn) {
+      setUserPlan('free');
+      return;
+    }
+
+    let mounted = true;
+    getUserProfile()
+      .then((profile) => {
+        if (!mounted) return;
+        const plan: PlanTier = profile.plan === 'plus' || profile.plan === 'pro' ? profile.plan : 'free';
+        setUserPlan(plan);
+      })
+      .catch(() => {
+        if (mounted) setUserPlan('free');
+      });
+
+    return () => {
+      mounted = false;
+    };
+  }, [isLoggedIn]);
+
   const allDocs = useMemo(() => {
     const serverIds = new Set(serverDocs.map((d) => d.id));
     const localOnly = myDocs.filter((d) => !serverIds.has(d.document_id));
     const mappedServer: StoredDoc[] = serverDocs.map((d) => ({
       document_id: d.id,
       filename: d.filename,
+      status: d.status,
       createdAt: d.created_at ? new Date(d.created_at).getTime() : Date.now(),
     }));
     return [...mappedServer, ...localOnly].sort((a, b) => b.createdAt - a.createdAt);
   }, [serverDocs, myDocs]);
+
+  const maxUploadMb = useMemo(() => MAX_UPLOAD_MB_BY_PLAN[userPlan] ?? MAX_UPLOAD_MB_BY_PLAN.free, [userPlan]);
+  const maxUploadBytes = maxUploadMb * 1024 * 1024;
+
+  const getDocStatusMeta = (status?: string) => {
+    const normalized = (status || '').toLowerCase();
+
+    if (normalized === 'error') {
+      return { dotClass: 'bg-red-500', label: 'Error' };
+    }
+    if (normalized === 'parsing' || normalized === 'embedding' || normalized === 'ocr' || normalized === 'uploading' || normalized === 'idle') {
+      return { dotClass: 'bg-amber-500 animate-pulse', label: 'Processing' };
+    }
+    return { dotClass: 'bg-emerald-500', label: 'Ready' };
+  };
 
   const onFiles = useCallback(async (file: File) => {
     if (!file) return;
@@ -81,8 +127,8 @@ export default function HomePage() {
       setProgressText(t('upload.unsupportedFormat'));
       return;
     }
-    if (file.size > 50 * 1024 * 1024) {
-      setProgressText(t('upload.tooLarge'));
+    if (file.size > maxUploadBytes) {
+      setProgressText(`File size limit: ${maxUploadMb}MB`);
       return;
     }
     setUploading(true);
@@ -93,7 +139,7 @@ export default function HomePage() {
       const docId = res.document_id;
       setDocument(docId);
       const docs: StoredDoc[] = JSON.parse(localStorage.getItem('doctalk_docs') || '[]');
-      const entry: StoredDoc = { document_id: docId, filename: res.filename, createdAt: Date.now() };
+      const entry: StoredDoc = { document_id: docId, filename: res.filename, status: res.status, createdAt: Date.now() };
       localStorage.setItem('doctalk_docs', JSON.stringify([entry, ...docs.filter(d => d.document_id !== docId)]));
       setMyDocs([entry, ...docs.filter(d => d.document_id !== docId)].sort((a, b) => b.createdAt - a.createdAt));
       getMyDocuments().then(setServerDocs).catch(console.error);
@@ -131,7 +177,7 @@ export default function HomePage() {
       setProgressText(t('upload.networkError'));
       setUploading(false);
     }
-  }, [router, setDocument, setDocumentStatus, t]);
+  }, [maxUploadBytes, maxUploadMb, router, setDocument, setDocumentStatus, t]);
 
   const onDrop = (e: React.DragEvent) => {
     e.preventDefault();
@@ -349,61 +395,78 @@ export default function HomePage() {
         <div className="max-w-4xl w-full">
           <h2 className="text-xl font-semibold mb-4 text-zinc-900 dark:text-zinc-100">{t('doc.myDocuments')}</h2>
           {allDocs.length === 0 ? (
-            <p className="text-zinc-500 text-sm">{t('doc.noDocuments')}</p>
+            <div className="flex flex-col items-center justify-center py-16 text-center rounded-2xl border border-dashed border-zinc-200 dark:border-zinc-800">
+              <FileUp aria-hidden="true" size={52} className="text-zinc-400 dark:text-zinc-500" />
+              <h3 className="mt-5 text-xl font-semibold text-zinc-900 dark:text-zinc-100">{t('dashboard.emptyTitle')}</h3>
+              <p className="mt-2 max-w-md text-sm text-zinc-500 dark:text-zinc-400">{t('dashboard.emptySubtitle')}</p>
+              <Link
+                href="/demo"
+                className="mt-6 inline-flex items-center px-5 py-2.5 rounded-full border border-zinc-300 dark:border-zinc-600 text-sm font-medium text-zinc-700 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
+              >
+                {t('home.cta.tryDemo')}
+              </Link>
+            </div>
           ) : (
             <div className="space-y-3">
-              {allDocs.map((d) => (
-                <div
-                  key={d.document_id}
-                  className="p-5 rounded-xl border border-zinc-100 dark:border-zinc-800 shadow-sm hover:shadow-md transition-shadow flex items-center justify-between"
-                >
-                  <Link href={`/d/${d.document_id}`} className="flex-1 min-w-0 focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:rounded-lg">
-                    <div className="font-medium text-zinc-900 dark:text-zinc-100">
-                      {d.filename ? sanitizeFilename(d.filename) : d.document_id}
-                    </div>
-                    <div className="text-xs text-zinc-500 mt-0.5">
-                      {new Date(d.createdAt).toLocaleString()}
-                    </div>
-                  </Link>
-                  <div className="flex items-center gap-2">
-                    <Link
-                      href={`/d/${d.document_id}`}
-                      className="px-4 py-2 text-sm bg-zinc-900 dark:bg-zinc-50 text-white dark:text-zinc-900 rounded-lg font-medium hover:bg-zinc-800 dark:hover:bg-zinc-200 shadow-sm transition-colors focus-visible:ring-2 focus-visible:ring-zinc-400 dark:focus-visible:ring-zinc-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-900"
-                    >
-                      {t('doc.open')}
-                    </Link>
-                    {confirmDeleteId === d.document_id ? (
-                      <div className="flex items-center gap-1.5 text-xs text-zinc-500 dark:text-zinc-400">
-                        <span>Delete?</span>
-                        <button
-                          className="px-2 py-1 rounded-md bg-red-600 text-white hover:bg-red-500 transition-colors focus-visible:ring-2 focus-visible:ring-zinc-400 dark:focus-visible:ring-zinc-500"
-                          disabled={deletingId === d.document_id}
-                          onClick={() => confirmDeleteDocument(d.document_id)}
-                        >
-                          Yes
-                        </button>
-                        <button
-                          className="px-2 py-1 rounded-md border border-zinc-200 dark:border-zinc-700 text-zinc-600 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors focus-visible:ring-2 focus-visible:ring-zinc-400 dark:focus-visible:ring-zinc-500"
-                          disabled={deletingId === d.document_id}
-                          onClick={() => setConfirmDeleteId(null)}
-                        >
-                          No
-                        </button>
+              {allDocs.map((d) => {
+                const statusMeta = getDocStatusMeta(d.status);
+                return (
+                  <div
+                    key={d.document_id}
+                    className="p-5 rounded-xl border border-zinc-100 dark:border-zinc-800 shadow-sm hover:shadow-md transition-shadow flex items-center justify-between"
+                  >
+                    <Link href={`/d/${d.document_id}`} className="flex-1 min-w-0 focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:rounded-lg">
+                      <div className="font-medium text-zinc-900 dark:text-zinc-100 flex items-center gap-2 min-w-0">
+                        <span className="truncate">{d.filename ? sanitizeFilename(d.filename) : d.document_id}</span>
+                        <span className="inline-flex items-center gap-1.5 text-xs text-zinc-500 dark:text-zinc-400 shrink-0">
+                          <span className={`w-2 h-2 rounded-full ${statusMeta.dotClass}`} />
+                          <span>{statusMeta.label}</span>
+                        </span>
                       </div>
-                    ) : (
-                      <button
-                        className="p-2 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-500 transition-colors disabled:opacity-50 focus-visible:ring-2 focus-visible:ring-zinc-400 dark:focus-visible:ring-zinc-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-900"
-                        disabled={deletingId === d.document_id}
-                        onClick={() => setConfirmDeleteId(d.document_id)}
-                        title={t('doc.deleteDoc')}
-                        aria-label="Delete document"
+                      <div className="text-xs text-zinc-500 mt-0.5">
+                        {new Date(d.createdAt).toLocaleString()}
+                      </div>
+                    </Link>
+                    <div className="flex items-center gap-2">
+                      <Link
+                        href={`/d/${d.document_id}`}
+                        className="px-4 py-2 text-sm bg-zinc-900 dark:bg-zinc-50 text-white dark:text-zinc-900 rounded-lg font-medium hover:bg-zinc-800 dark:hover:bg-zinc-200 shadow-sm transition-colors focus-visible:ring-2 focus-visible:ring-zinc-400 dark:focus-visible:ring-zinc-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-900"
                       >
-                        <Trash2 aria-hidden="true" size={16} />
-                      </button>
-                    )}
+                        {t('doc.open')}
+                      </Link>
+                      {confirmDeleteId === d.document_id ? (
+                        <div className="flex items-center gap-1.5 text-xs text-zinc-500 dark:text-zinc-400">
+                          <span>Delete?</span>
+                          <button
+                            className="px-2 py-1 rounded-md bg-red-600 text-white hover:bg-red-500 transition-colors focus-visible:ring-2 focus-visible:ring-zinc-400 dark:focus-visible:ring-zinc-500"
+                            disabled={deletingId === d.document_id}
+                            onClick={() => confirmDeleteDocument(d.document_id)}
+                          >
+                            Yes
+                          </button>
+                          <button
+                            className="px-2 py-1 rounded-md border border-zinc-200 dark:border-zinc-700 text-zinc-600 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors focus-visible:ring-2 focus-visible:ring-zinc-400 dark:focus-visible:ring-zinc-500"
+                            disabled={deletingId === d.document_id}
+                            onClick={() => setConfirmDeleteId(null)}
+                          >
+                            No
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          className="p-2 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-500 transition-colors disabled:opacity-50 focus-visible:ring-2 focus-visible:ring-zinc-400 dark:focus-visible:ring-zinc-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-900"
+                          disabled={deletingId === d.document_id}
+                          onClick={() => setConfirmDeleteId(d.document_id)}
+                          title={t('doc.deleteDoc')}
+                          aria-label="Delete document"
+                        >
+                          <Trash2 aria-hidden="true" size={16} />
+                        </button>
+                      )}
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>

@@ -34,7 +34,7 @@
   "chat.suggestedQ4": "重要なデータと発見を列挙してください",
   "chat.searching": "ドキュメントを検索中...",
   "chat.error": "チャットエラー：",
-  "chat.networkError": "ネットワークエラーです。後でもう一度お試しください",
+  "chat.networkError": "Connection lost. Please check your internet and try again.",
   "chat.regenerate": "再生成",
   "chat.export": "チャットをMarkdownでエクスポート",
   "chat.stop": "生成を停止",
@@ -409,5 +409,14 @@
   "viewer.text": "テキスト",
   "auth.emailUnavailable": "メールサインインは一時的に利用できません。別の方法をお試しください。",
   "auth.unexpectedError": "予期しないエラーが発生しました。もう一度お試しください。",
-  "auth.resendFailed": "再送信に失敗しました。もう一度お試しください。"
+  "auth.resendFailed": "再送信に失敗しました。もう一度お試しください。",
+  "hero.signUpFree": "無料で登録",
+  "dashboard.emptyTitle": "最初のドキュメントをアップロード",
+  "dashboard.emptySubtitle": "PDF、DOCX、PPTX などとチャットを始めましょう",
+  "collections.emptyTitle": "No collections yet",
+  "collections.emptySubtitle": "Group documents together to ask questions across multiple files.",
+  "status.parsing": "Extracting text...",
+  "status.embedding": "Building search index...",
+  "status.ocr": "Running OCR...",
+  "status.processing": "Processing document..."
 }

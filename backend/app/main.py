@@ -4,6 +4,7 @@ from contextlib import asynccontextmanager
 import sentry_sdk
 from fastapi import FastAPI, Query
 from fastapi.middleware.cors import CORSMiddleware
+from qdrant_client.models import PayloadSchemaType
 from sqlalchemy import text
 
 from .api import auth
@@ -45,6 +46,16 @@ async def lifespan(app: FastAPI):
         try:
             embedding_service.ensure_collection()
             logger.info("Qdrant collection ready")
+            try:
+                qdrant = embedding_service.get_qdrant_client()
+                qdrant.create_payload_index(
+                    collection_name=settings.QDRANT_COLLECTION,
+                    field_name="document_id",
+                    field_schema=PayloadSchemaType.KEYWORD,
+                )
+                logger.info("Qdrant payload index ready for field=document_id")
+            except Exception as e:
+                logger.info("Qdrant payload index create skipped or already exists: %s", e)
         except Exception as e:
             logger.warning("Qdrant collection check failed (will retry on first use): %s", e)
 

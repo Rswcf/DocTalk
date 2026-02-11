@@ -24,7 +24,7 @@ function ProfileContent() {
 
   const initialTab = useMemo(() => {
     const tab = searchParams.get("tab");
-    return tab || "credits";
+    return tab || "profile";
   }, [searchParams]);
 
   const [activeTab, setActiveTab] = useState<string>(initialTab);

@@ -2,7 +2,7 @@
 
 import React, { useEffect, useRef, useState, useCallback, Component, ErrorInfo, ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
-import { SendHorizontal, Download, ArrowDown, Plus, Settings2, Square } from 'lucide-react';
+import { SendHorizontal, Download, ArrowDown, Plus, Settings2, Square, Lock } from 'lucide-react';
 import { chatStream } from '../../lib/sse';
 import { exportConversationAsMarkdown } from '../../lib/export';
 import type { Citation, Message } from '../../types';
@@ -98,6 +98,8 @@ export default function ChatPanel({ sessionId, onCitationClick, maxUserMessages,
 
   // Phase 1: Plus menu state
   const [plusMenuOpen, setPlusMenuOpen] = useState(false);
+  const plusMenuRef = useRef<HTMLDivElement>(null);
+  const plusMenuButtonRef = useRef<HTMLButtonElement>(null);
 
   // Phase 2: Scroll-to-bottom button
   const [showScrollBtn, setShowScrollBtn] = useState(false);
@@ -112,6 +114,8 @@ export default function ChatPanel({ sessionId, onCitationClick, maxUserMessages,
   const totalUsed = demoMessagesUsed + localUserMsgCount;
   const demoRemaining = maxUserMessages != null ? maxUserMessages - totalUsed : Infinity;
   const demoLimitReached = maxUserMessages != null && demoRemaining <= 0;
+  const messagesUsed = maxUserMessages != null ? Math.min(maxUserMessages, Math.max(0, totalUsed)) : 0;
+  const maxMessages = maxUserMessages ?? 0;
 
   // Message history is loaded in page.tsx
 
@@ -150,6 +154,14 @@ export default function ChatPanel({ sessionId, onCitationClick, maxUserMessages,
     return () => document.removeEventListener('mousedown', handler);
   }, [plusMenuOpen]);
 
+  useEffect(() => {
+    if (!plusMenuOpen) return;
+    const frame = window.requestAnimationFrame(() => {
+      plusMenuRef.current?.querySelector<HTMLElement>('[role="menuitem"]')?.focus();
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [plusMenuOpen]);
+
   const handleScroll = useCallback(() => {
     const el = listRef.current;
     if (!el) return;
@@ -158,6 +170,72 @@ export default function ChatPanel({ sessionId, onCitationClick, maxUserMessages,
   }, []);
 
   const router = useRouter();
+
+  const getErrorMessage = useCallback((err: unknown): string => {
+    if (typeof err === 'object' && err && 'message' in err) {
+      return String((err as { message?: unknown }).message || '');
+    }
+    return '';
+  }, []);
+
+  const getFriendlyStreamError = useCallback((err: unknown): string | null => {
+    const message = getErrorMessage(err);
+    const name = typeof err === 'object' && err && 'name' in err
+      ? String((err as { name?: unknown }).name || '')
+      : '';
+
+    if (name === 'AbortError' || message.includes('AbortError')) {
+      return null;
+    }
+    if (message.includes('Failed to fetch')) {
+      return t('chat.networkError');
+    }
+    return t('chat.networkError');
+  }, [getErrorMessage, t]);
+
+  const handleMenuBillingRedirect = useCallback(() => {
+    setPlusMenuOpen(false);
+    router.push('/billing');
+  }, [router]);
+
+  const handlePlusMenuKeyDown = useCallback((e: React.KeyboardEvent<HTMLDivElement>) => {
+    const menuItems = plusMenuRef.current
+      ? Array.from(plusMenuRef.current.querySelectorAll<HTMLElement>('[role="menuitem"]'))
+      : [];
+    if (menuItems.length === 0) return;
+
+    const activeIndex = menuItems.findIndex((item) => item === document.activeElement);
+
+    if (e.key === 'Escape') {
+      e.preventDefault();
+      setPlusMenuOpen(false);
+      plusMenuButtonRef.current?.focus();
+      return;
+    }
+
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      const nextIndex = activeIndex >= 0 ? (activeIndex + 1) % menuItems.length : 0;
+      menuItems[nextIndex]?.focus();
+      return;
+    }
+
+    if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      const prevIndex = activeIndex >= 0
+        ? (activeIndex - 1 + menuItems.length) % menuItems.length
+        : menuItems.length - 1;
+      menuItems[prevIndex]?.focus();
+      return;
+    }
+
+    if ((e.key === 'Enter' || e.key === ' ') && document.activeElement instanceof HTMLElement) {
+      if (document.activeElement.getAttribute('role') === 'menuitem') {
+        e.preventDefault();
+        document.activeElement.click();
+      }
+    }
+  }, []);
 
   const sendMessage = useCallback(async (text: string) => {
     if (!text.trim() || isStreaming) return;
@@ -184,13 +262,15 @@ export default function ChatPanel({ sessionId, onCitationClick, maxUserMessages,
         flushPendingText();
         setStreaming(false);
         abortRef.current = null;
+        const errorMessage = getErrorMessage(err);
         // Detect insufficient credits (HTTP 402) and show paywall modal
-        const isPaymentRequired = typeof err?.message === 'string' && err.message.includes('HTTP 402');
+        const isPaymentRequired = errorMessage.includes('HTTP 402');
         if (isPaymentRequired) {
           setShowPaywall(true);
+          return;
         }
         // Detect document still processing (HTTP 409) — show processing message
-        const isProcessing = typeof err?.message === 'string' && err.message.includes('HTTP 409');
+        const isProcessing = errorMessage.includes('HTTP 409');
         if (isProcessing) {
           const processingMsg: Message = {
             id: `m_${Date.now()}_proc`,
@@ -202,9 +282,9 @@ export default function ChatPanel({ sessionId, onCitationClick, maxUserMessages,
           return;
         }
         // Detect demo limit or rate limit (HTTP 429)
-        const isDemoLimit = typeof err?.message === 'string' && err.message.includes('HTTP 429');
+        const isDemoLimit = errorMessage.includes('HTTP 429');
         if (isDemoLimit) {
-          const isRateLimit = err.message.includes('Rate limit exceeded');
+          const isRateLimit = errorMessage.includes('Rate limit exceeded');
           const limitMsg: Message = {
             id: `m_${Date.now()}_limit`,
             role: 'assistant',
@@ -214,7 +294,8 @@ export default function ChatPanel({ sessionId, onCitationClick, maxUserMessages,
           addMessage(limitMsg);
           return;
         }
-        const errText = `${t('chat.error')}${err?.message || t('chat.networkError')}`;
+        const errText = getFriendlyStreamError(err);
+        if (!errText) return;
         const errorMsg: Message = {
           id: `m_${Date.now()}_e`,
           role: 'assistant',
@@ -230,7 +311,7 @@ export default function ChatPanel({ sessionId, onCitationClick, maxUserMessages,
       controller.signal,
     );
     setInput('');
-  }, [isStreaming, demoLimitReached, sessionId, addMessage, updateLastMessage, addCitationToLastMessage, setStreaming, selectedMode, locale, t, updateSessionActivity, flushPendingText, router]);
+  }, [isStreaming, demoLimitReached, sessionId, addMessage, updateLastMessage, addCitationToLastMessage, setStreaming, selectedMode, locale, t, updateSessionActivity, flushPendingText, router, getErrorMessage, getFriendlyStreamError]);
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -248,6 +329,12 @@ export default function ChatPanel({ sessionId, onCitationClick, maxUserMessages,
     setInput(q);
     sendMessage(q);
   };
+  const suggestedQuestionButtonClassName = isWin98
+    ? 'win98-button text-[11px] px-2 py-[2px]'
+    : 'text-sm px-4 py-2 border border-zinc-200 dark:border-zinc-700 rounded-full hover:bg-zinc-50 dark:hover:bg-zinc-800 hover:border-zinc-300 dark:hover:border-zinc-600 transition-colors text-zinc-600 dark:text-zinc-400 focus-visible:ring-2 focus-visible:ring-zinc-400 dark:focus-visible:ring-zinc-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-900';
+  const displayedSuggestedQuestions = suggestedQuestions && suggestedQuestions.length > 0
+    ? suggestedQuestions
+    : SUGGESTED_KEYS.map((k) => t(k));
 
   const handleExport = useCallback(() => {
     const docName = useDocTalkStore.getState().documentName || 'document';
@@ -285,15 +372,48 @@ export default function ChatPanel({ sessionId, onCitationClick, maxUserMessages,
         flushPendingText();
         setStreaming(false);
         abortRef.current = null;
-        const isPaymentRequired = typeof err?.message === 'string' && err.message.includes('HTTP 402');
-        if (isPaymentRequired) { setShowPaywall(true); }
+        const errorMessage = getErrorMessage(err);
+        const isPaymentRequired = errorMessage.includes('HTTP 402');
+        if (isPaymentRequired) {
+          setShowPaywall(true);
+          return;
+        }
+        const isProcessing = errorMessage.includes('HTTP 409');
+        if (isProcessing) {
+          addMessage({
+            id: `m_${Date.now()}_proc`,
+            role: 'assistant',
+            text: t('doc.processing'),
+            createdAt: Date.now(),
+          });
+          return;
+        }
+        const isDemoLimit = errorMessage.includes('HTTP 429');
+        if (isDemoLimit) {
+          addMessage({
+            id: `m_${Date.now()}_limit`,
+            role: 'assistant',
+            text: errorMessage.includes('Rate limit exceeded') ? t('demo.rateLimitMessage') : t('demo.limitReachedMessage'),
+            createdAt: Date.now(),
+          });
+          return;
+        }
+        const errText = getFriendlyStreamError(err);
+        if (!errText) return;
+        addMessage({
+          id: `m_${Date.now()}_e`,
+          role: 'assistant',
+          text: errText,
+          isError: true,
+          createdAt: Date.now(),
+        });
       },
       () => { flushPendingText(); setStreaming(false); abortRef.current = null; updateSessionActivity(sessionId); triggerCreditsRefresh(); },
       selectedMode,
       locale,
       controller.signal,
     );
-  }, [isStreaming, sessionId, addMessage, updateLastMessage, addCitationToLastMessage, setStreaming, selectedMode, locale, updateSessionActivity, flushPendingText]);
+  }, [isStreaming, sessionId, addMessage, updateLastMessage, addCitationToLastMessage, setStreaming, selectedMode, locale, updateSessionActivity, flushPendingText, getErrorMessage, t, getFriendlyStreamError]);
 
   const handleStop = useCallback(() => {
     abortRef.current?.abort();
@@ -303,8 +423,10 @@ export default function ChatPanel({ sessionId, onCitationClick, maxUserMessages,
   }, [setStreaming, flushPendingText]);
 
   // Determine which plus menu items to show
-  const showCustomInstructions = !!onOpenSettings;
-  const showExportInMenu = messages.length > 0 && !isStreaming && (userPlan === 'plus' || userPlan === 'pro');
+  const canUseCustomInstructions = !!onOpenSettings;
+  const showCustomInstructions = canUseCustomInstructions || userPlan === 'free';
+  const canUseExport = messages.length > 0 && !isStreaming && (userPlan === 'plus' || userPlan === 'pro');
+  const showExportInMenu = messages.length > 0 && !isStreaming && (canUseExport || userPlan === 'free');
   const showPlusButton = showCustomInstructions || showExportInMenu;
 
   // Shared message list renderer
@@ -365,34 +487,16 @@ export default function ChatPanel({ sessionId, onCitationClick, maxUserMessages,
             }>
               <p className={isWin98 ? 'text-[11px] text-[var(--win98-dark-gray)]' : 'text-sm text-zinc-400 dark:text-zinc-500'}>{t('chat.trySuggested')}</p>
               <div className={isWin98 ? 'flex flex-wrap justify-center gap-1' : 'flex flex-wrap justify-center gap-2 max-w-lg'}>
-              {(suggestedQuestions && suggestedQuestions.length > 0
-                ? suggestedQuestions.map((q, i) => (
-                    <button
-                      key={`sq-${i}`}
-                      type="button"
-                      onClick={() => handleSuggestedClick(q)}
-                      className={isWin98
-                        ? 'win98-button text-[11px] px-2 py-[2px]'
-                        : 'text-sm px-4 py-2 border border-zinc-200 dark:border-zinc-700 rounded-full hover:bg-zinc-50 dark:hover:bg-zinc-800 hover:border-zinc-300 dark:hover:border-zinc-600 transition-colors text-zinc-600 dark:text-zinc-400 focus-visible:ring-2 focus-visible:ring-zinc-400 dark:focus-visible:ring-zinc-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-900'
-                      }
-                    >
-                      {q}
-                    </button>
-                  ))
-                : SUGGESTED_KEYS.map((k) => (
-                    <button
-                      key={k}
-                      type="button"
-                      onClick={() => handleSuggestedClick(t(k))}
-                      className={isWin98
-                        ? 'win98-button text-[11px] px-2 py-[2px]'
-                        : 'text-sm px-4 py-2 border border-zinc-200 dark:border-zinc-700 rounded-full hover:bg-zinc-50 dark:hover:bg-zinc-800 hover:border-zinc-300 dark:hover:border-zinc-600 transition-colors text-zinc-600 dark:text-zinc-400 focus-visible:ring-2 focus-visible:ring-zinc-400 dark:focus-visible:ring-zinc-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-900'
-                      }
-                    >
-                      {t(k)}
-                    </button>
-                  ))
-              )}
+                {displayedSuggestedQuestions.map((question, index) => (
+                  <button
+                    key={`sq-${index}`}
+                    type="button"
+                    onClick={() => handleSuggestedClick(question)}
+                    className={suggestedQuestionButtonClassName}
+                  >
+                    {question}
+                  </button>
+                ))}
               </div>
             </div>
           ) : (
@@ -429,6 +533,11 @@ export default function ChatPanel({ sessionId, onCitationClick, maxUserMessages,
         <div className="border-t dark:border-zinc-700">
           <div className="h-1 bg-zinc-200 dark:bg-zinc-800">
             <div
+              role="progressbar"
+              aria-valuenow={messagesUsed}
+              aria-valuemin={0}
+              aria-valuemax={maxMessages}
+              aria-label="Messages used"
               className={`h-full transition-[width] duration-300 ${
                 demoRemaining <= 2 ? 'bg-amber-500' : 'bg-zinc-400 dark:bg-zinc-500'
               }`}
@@ -473,14 +582,28 @@ export default function ChatPanel({ sessionId, onCitationClick, maxUserMessages,
             {(showCustomInstructions || showExportInMenu) && (
               <div className="flex items-center gap-[2px] mb-1">
                 {showCustomInstructions && (
-                  <button type="button" onClick={() => onOpenSettings?.()} className="win98-button text-[10px] px-2 h-[18px]" title={t('chat.customInstructions') || 'Custom Instructions'}>
+                  <button
+                    type="button"
+                    onClick={canUseCustomInstructions ? () => onOpenSettings?.() : handleMenuBillingRedirect}
+                    className="win98-button text-[10px] px-2 h-[18px] inline-flex items-center gap-1"
+                    title={t('chat.customInstructions') || 'Custom Instructions'}
+                  >
+                    {!canUseCustomInstructions && <Lock size={10} />}
                     {t('chat.customInstructions') || 'Instructions'}
-                    {hasCustomInstructions && <span className="ml-1 text-[#008000]">*</span>}
+                    {!canUseCustomInstructions && <span className="ml-1">Pro</span>}
+                    {canUseCustomInstructions && hasCustomInstructions && <span className="ml-1 text-[#008000]">*</span>}
                   </button>
                 )}
                 {showExportInMenu && (
-                  <button type="button" onClick={handleExport} className="win98-button text-[10px] px-2 h-[18px]" title={t('chat.export')}>
+                  <button
+                    type="button"
+                    onClick={canUseExport ? handleExport : handleMenuBillingRedirect}
+                    className="win98-button text-[10px] px-2 h-[18px] inline-flex items-center gap-1"
+                    title={t('chat.export')}
+                  >
+                    {!canUseExport && <Lock size={10} />}
                     {t('chat.export')}
+                    {!canUseExport && <span className="ml-1">Plus</span>}
                   </button>
                 )}
               </div>
@@ -527,24 +650,46 @@ export default function ChatPanel({ sessionId, onCitationClick, maxUserMessages,
             {showPlusButton && (
               <div className="relative shrink-0" data-plus-menu>
                 <button
+                  ref={plusMenuButtonRef}
                   type="button"
                   onClick={() => setPlusMenuOpen((v) => !v)}
                   className="p-1.5 rounded-full text-zinc-400 hover:text-zinc-600 dark:text-zinc-500 dark:hover:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-700 transition-colors focus-visible:ring-2 focus-visible:ring-zinc-400 dark:focus-visible:ring-zinc-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-900"
                   aria-label="More options"
+                  aria-haspopup="menu"
+                  aria-expanded={plusMenuOpen}
                 >
                   <Plus size={20} />
                 </button>
                 {plusMenuOpen && (
-                  <div className="absolute bottom-full left-0 mb-2 w-56 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-xl shadow-lg z-20 py-1 animate-fade-in motion-reduce:animate-none">
+                  <div
+                    ref={plusMenuRef}
+                    className="absolute bottom-full left-0 mb-2 w-56 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-xl shadow-lg z-20 py-1 animate-fade-in motion-reduce:animate-none"
+                    role="menu"
+                    onKeyDown={handlePlusMenuKeyDown}
+                  >
                     {showCustomInstructions && (
                       <button
+                        role="menuitem"
+                        tabIndex={-1}
                         type="button"
-                        onClick={() => { onOpenSettings?.(); setPlusMenuOpen(false); }}
+                        onClick={() => {
+                          if (canUseCustomInstructions) {
+                            onOpenSettings?.();
+                            setPlusMenuOpen(false);
+                            return;
+                          }
+                          handleMenuBillingRedirect();
+                        }}
                         className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:ring-inset"
                       >
-                        <Settings2 size={16} />
+                        {canUseCustomInstructions ? <Settings2 size={16} /> : <Lock size={16} />}
                         <span>{t('chat.customInstructions') || 'Custom Instructions'}</span>
-                        {hasCustomInstructions && (
+                        {!canUseCustomInstructions && (
+                          <span className="ml-auto text-[11px] px-1.5 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400">
+                            Pro
+                          </span>
+                        )}
+                        {canUseCustomInstructions && hasCustomInstructions && (
                           <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
                         )}
                       </button>
@@ -554,12 +699,26 @@ export default function ChatPanel({ sessionId, onCitationClick, maxUserMessages,
                     )}
                     {showExportInMenu && (
                       <button
+                        role="menuitem"
+                        tabIndex={-1}
                         type="button"
-                        onClick={() => { handleExport(); setPlusMenuOpen(false); }}
+                        onClick={() => {
+                          if (canUseExport) {
+                            handleExport();
+                            setPlusMenuOpen(false);
+                            return;
+                          }
+                          handleMenuBillingRedirect();
+                        }}
                         className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:ring-inset"
                       >
-                        <Download size={16} />
+                        {canUseExport ? <Download size={16} /> : <Lock size={16} />}
                         <span>{t('chat.export')}</span>
+                        {!canUseExport && (
+                          <span className="ml-auto text-[11px] px-1.5 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400">
+                            Plus
+                          </span>
+                        )}
                       </button>
                     )}
                   </div>

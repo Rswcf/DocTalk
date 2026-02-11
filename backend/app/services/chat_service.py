@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 import time
 import uuid
 from dataclasses import dataclass
@@ -23,6 +24,8 @@ from app.models.tables import (
 )
 from app.services import credit_service
 from app.services.retrieval_service import retrieval_service
+
+logger = logging.getLogger(__name__)
 
 # ---------------------------
 # SSE Event helpers
@@ -367,6 +370,9 @@ class ChatService:
         last_ping = time.monotonic()
         prompt_tokens: Optional[int] = None
         output_tokens: Optional[int] = None
+        llm_start = time.time()
+        first_token_logged = False
+        token_count = 0
 
         try:
             create_kwargs: dict[str, Any] = {
@@ -384,6 +390,11 @@ class ChatService:
                 # Extract text delta
                 if chunk.choices and chunk.choices[0].delta.content:
                     text = chunk.choices[0].delta.content
+                    token_count += 1
+                    if not first_token_logged:
+                        first_token_logged = True
+                        latency = time.time() - llm_start
+                        logger.info("LLM first_token_latency=%.2fs model=%s", latency, effective_model)
                     # 7) Feed FSM and emit events
                     for ev in fsm.feed(text):
                         if ev["event"] == "token":
@@ -408,6 +419,15 @@ class ChatService:
                 if ev["event"] == "token":
                     assistant_text_parts.append(ev["data"]["text"])
                 yield ev
+
+            total_time = time.time() - llm_start
+            final_token_count = int(output_tokens) if output_tokens is not None else token_count
+            logger.info(
+                "LLM total_latency=%.2fs tokens=%d model=%s",
+                total_time,
+                final_token_count,
+                effective_model,
+            )
 
         except Exception as e:
             # Refund pre-debited credits on LLM failure: restore balance and remove ledger entry

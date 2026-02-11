@@ -287,6 +287,14 @@ export default function DocumentReaderPage() {
     </div>
   );
 
+  const processingStatusText = documentStatus === 'parsing'
+    ? t('status.parsing')
+    : documentStatus === 'embedding'
+      ? t('status.embedding')
+      : documentStatus === 'ocr'
+        ? t('status.ocr')
+        : t('status.processing');
+
   const chatContent = documentStatus === 'ready' && sessionId ? (
     <ChatPanel sessionId={sessionId} onCitationClick={navigateToCitation} maxUserMessages={isDemo && !isLoggedIn ? 5 : undefined} suggestedQuestions={suggestedQuestions.length > 0 ? suggestedQuestions : undefined} onOpenSettings={profile?.plan === 'pro' ? () => setShowInstructions(true) : undefined} hasCustomInstructions={!!customInstructions} userPlan={profile?.plan || (isLoggedIn ? 'free' : undefined)} />
   ) : documentStatus !== 'ready' && !error ? (
@@ -295,6 +303,7 @@ export default function DocumentReaderPage() {
         {isWin98 ? 'Loading...' : null}
       </div>
       <p className={isWin98 ? '' : 'text-sm'}>{t('doc.processing')}</p>
+      <p className={isWin98 ? 'opacity-80' : 'text-xs text-zinc-400 dark:text-zinc-500'}>{processingStatusText}</p>
     </div>
   ) : (
     <div className={`h-full w-full flex items-center justify-center ${isWin98 ? 'text-[var(--win98-dark-gray)] text-[11px]' : 'text-zinc-500'}`}>{t('doc.initChat')}</div>

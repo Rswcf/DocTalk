@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
-import { Plus } from 'lucide-react';
+import { Plus, FolderOpen } from 'lucide-react';
 import Header from '../../components/Header';
 import CollectionList from '../../components/Collections/CollectionList';
 import CreateCollectionModal from '../../components/Collections/CreateCollectionModal';
@@ -68,11 +68,25 @@ export default function CollectionsPage() {
             </button>
           </div>
 
-          <CollectionList
-            collections={collections}
-            onDelete={handleDelete}
-            deletingId={deletingId}
-          />
+          {collections.length === 0 ? (
+            <div className="rounded-2xl border border-dashed border-zinc-300 dark:border-zinc-700 bg-zinc-50/80 dark:bg-zinc-900/40 p-10 sm:p-12 text-center flex flex-col items-center">
+              <div className="h-12 w-12 rounded-full bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 flex items-center justify-center mb-4">
+                <FolderOpen size={22} className="text-zinc-500 dark:text-zinc-400" />
+              </div>
+              <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100 mb-2">
+                {t('collections.emptyTitle')}
+              </h2>
+              <p className="text-sm text-zinc-600 dark:text-zinc-400 max-w-xl">
+                {t('collections.emptySubtitle')}
+              </p>
+            </div>
+          ) : (
+            <CollectionList
+              collections={collections}
+              onDelete={handleDelete}
+              deletingId={deletingId}
+            />
+          )}
         </div>
       </main>
 

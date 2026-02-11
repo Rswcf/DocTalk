@@ -54,6 +54,12 @@ export default function HeroSection() {
               <ArrowRight aria-hidden="true" size={18} className="transition-transform motion-reduce:transform-none group-hover:translate-x-0.5" />
             </Link>
             <Link
+              href="?auth=1"
+              className="rounded-full border border-zinc-300 dark:border-zinc-600 px-6 py-3 text-sm font-medium hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
+            >
+              {t('hero.signUpFree')}
+            </Link>
+            <Link
               href="#how-it-works"
               className="inline-flex items-center px-6 py-3 border border-zinc-300 dark:border-zinc-700 text-zinc-700 dark:text-zinc-300 rounded-lg font-medium hover:border-accent hover:text-accent dark:hover:border-accent dark:hover:text-accent transition-colors motion-reduce:transition-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-950"
             >

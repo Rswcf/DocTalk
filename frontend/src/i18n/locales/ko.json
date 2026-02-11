@@ -34,7 +34,7 @@
   "chat.suggestedQ4": "중요한 데이터와 발견 사항을 나열해 주세요",
   "chat.searching": "문서 검색 중...",
   "chat.error": "채팅 오류: ",
-  "chat.networkError": "네트워크 오류, 나중에 다시 시도하세요",
+  "chat.networkError": "Connection lost. Please check your internet and try again.",
   "chat.regenerate": "다시 생성",
   "chat.export": "채팅을 Markdown으로 내보내기",
   "chat.stop": "생성 중지",
@@ -409,5 +409,14 @@
   "viewer.text": "텍스트",
   "auth.emailUnavailable": "이메일 로그인을 현재 사용할 수 없습니다. 다른 방법을 시도해 주세요.",
   "auth.unexpectedError": "예기치 않은 오류가 발생했습니다. 다시 시도해 주세요.",
-  "auth.resendFailed": "재전송에 실패했습니다. 다시 시도해 주세요."
+  "auth.resendFailed": "재전송에 실패했습니다. 다시 시도해 주세요.",
+  "hero.signUpFree": "무료로 가입하기",
+  "dashboard.emptyTitle": "첫 문서를 업로드하세요",
+  "dashboard.emptySubtitle": "PDF, DOCX, PPTX 등과 대화를 시작하세요",
+  "collections.emptyTitle": "No collections yet",
+  "collections.emptySubtitle": "Group documents together to ask questions across multiple files.",
+  "status.parsing": "Extracting text...",
+  "status.embedding": "Building search index...",
+  "status.ocr": "Running OCR...",
+  "status.processing": "Processing document..."
 }

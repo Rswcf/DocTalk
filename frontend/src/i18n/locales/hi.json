@@ -47,7 +47,7 @@
   "billing.title": "Purchase Credits",
   "chat.searching": "दस्तावेज़ खोज रहा है…",
   "chat.error": "चैट त्रुटि: ",
-  "chat.networkError": "नेटवर्क त्रुटि, कृपया बाद में पुनः प्रयास करें",
+  "chat.networkError": "Connection lost. Please check your internet and try again.",
   "chat.regenerate": "पुनः उत्पन्न करें",
   "chat.export": "चैट निर्यात करें",
   "chat.stop": "जनरेशन रोकें",
@@ -409,5 +409,14 @@
   "viewer.text": "टेक्स्ट",
   "auth.emailUnavailable": "ईमेल साइन-इन फिलहाल उपलब्ध नहीं है। कृपया कोई दूसरा तरीका आज़माएं।",
   "auth.unexpectedError": "एक अनपेक्षित त्रुटि हुई। कृपया फिर से प्रयास करें।",
-  "auth.resendFailed": "दोबारा भेजना विफल रहा। कृपया फिर से प्रयास करें।"
+  "auth.resendFailed": "दोबारा भेजना विफल रहा। कृपया फिर से प्रयास करें।",
+  "hero.signUpFree": "मुफ़्त में साइन अप करें",
+  "dashboard.emptyTitle": "अपना पहला दस्तावेज़ अपलोड करें",
+  "dashboard.emptySubtitle": "अपने PDF, DOCX, PPTX और अन्य फ़ाइलों से चैट शुरू करें",
+  "collections.emptyTitle": "No collections yet",
+  "collections.emptySubtitle": "Group documents together to ask questions across multiple files.",
+  "status.parsing": "Extracting text...",
+  "status.embedding": "Building search index...",
+  "status.ocr": "Running OCR...",
+  "status.processing": "Processing document..."
 }

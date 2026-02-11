@@ -75,7 +75,7 @@ export default function SocialProof() {
                 key={metric.labelKey}
                 className="flex flex-col items-center text-center py-6"
               >
-                <div className="text-4xl md:text-5xl font-display font-semibold text-zinc-900 dark:text-zinc-50 mb-2 tabular-nums">
+                <div className="text-4xl md:text-5xl font-display font-semibold bg-gradient-to-r from-indigo-600 to-violet-600 dark:from-indigo-400 dark:to-violet-400 bg-clip-text text-transparent mb-2 tabular-nums">
                   {'staticValue' in metric ? (
                     metric.staticValue
                   ) : (

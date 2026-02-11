@@ -58,7 +58,7 @@ function processCitationLinks(
                 type="button"
                 className={isWin98
                   ? "inline text-[#000080] hover:underline cursor-pointer select-none font-bold bg-transparent border-none p-0 text-inherit leading-inherit"
-                  : "inline text-zinc-600 dark:text-zinc-400 hover:underline cursor-pointer select-none font-medium bg-transparent border-none p-0 text-inherit leading-inherit focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:rounded-sm"
+                  : "inline text-indigo-600 dark:text-indigo-400 hover:underline cursor-pointer select-none font-medium bg-transparent border-none p-0 text-inherit leading-inherit focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:rounded-sm"
                 }
                 onClick={() => onClick?.(citation)}
                 title={t ? t('citation.jumpTo', { page: citation.page }) : `Jump to page ${citation.page}`}

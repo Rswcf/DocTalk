@@ -35,9 +35,15 @@ export default function PricingTable({ currentPlan = 'free', onUpgrade }: Pricin
   const renderCell = (value: string | boolean) => {
     if (typeof value === 'boolean') {
       return value ? (
-        <Check aria-hidden="true" size={18} className="text-green-600 dark:text-green-400 mx-auto" />
+        <span className="inline-flex items-center justify-center">
+          <Check aria-label="Included" size={18} className="text-green-600 dark:text-green-400 mx-auto" />
+          <span className="sr-only">Included</span>
+        </span>
       ) : (
-        <X aria-hidden="true" size={18} className="text-zinc-300 dark:text-zinc-600 mx-auto" />
+        <span className="inline-flex items-center justify-center">
+          <X aria-label="Not included" size={18} className="text-zinc-300 dark:text-zinc-600 mx-auto" />
+          <span className="sr-only">Not included</span>
+        </span>
       );
     }
     // If value starts with "billing.", treat as i18n key

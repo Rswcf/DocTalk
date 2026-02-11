@@ -34,7 +34,7 @@
   "chat.suggestedQ4": "Nennen Sie wichtige Daten und Ergebnisse",
   "chat.searching": "Dokument wird durchsucht...",
   "chat.error": "Chat-Fehler: ",
-  "chat.networkError": "Netzwerkfehler, bitte versuchen Sie es später erneut",
+  "chat.networkError": "Connection lost. Please check your internet and try again.",
   "chat.regenerate": "Neu generieren",
   "chat.export": "Chat exportieren",
   "chat.stop": "Generierung stoppen",
@@ -409,5 +409,14 @@
   "viewer.text": "Text",
   "auth.emailUnavailable": "Die Anmeldung per E-Mail ist vorübergehend nicht verfügbar. Bitte versuche eine andere Methode.",
   "auth.unexpectedError": "Ein unerwarteter Fehler ist aufgetreten. Bitte versuche es erneut.",
-  "auth.resendFailed": "Erneutes Senden fehlgeschlagen. Bitte versuche es erneut."
+  "auth.resendFailed": "Erneutes Senden fehlgeschlagen. Bitte versuche es erneut.",
+  "hero.signUpFree": "Kostenlos registrieren",
+  "dashboard.emptyTitle": "Lade dein erstes Dokument hoch",
+  "dashboard.emptySubtitle": "Starte den Chat mit deinen PDFs, DOCX, PPTX und mehr",
+  "collections.emptyTitle": "No collections yet",
+  "collections.emptySubtitle": "Group documents together to ask questions across multiple files.",
+  "status.parsing": "Extracting text...",
+  "status.embedding": "Building search index...",
+  "status.ocr": "Running OCR...",
+  "status.processing": "Processing document..."
 }
