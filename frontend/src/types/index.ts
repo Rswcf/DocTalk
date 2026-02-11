@@ -108,11 +108,12 @@ export interface CreditHistoryResponse {
 }
 
 export interface UsageBreakdown {
-  by_model: Array<{
-    model: string;
+  by_mode: Array<{
+    mode: string;
     total_calls: number;
-    total_tokens: number;
     total_credits: number;
+    avg_credits_per_chat: number;
+    share: number;
   }>;
 }
 

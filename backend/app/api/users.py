@@ -11,7 +11,7 @@ from pydantic import BaseModel
 from sqlalchemy import asc, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.config import settings
+from app.core.config import MODEL_TO_MODE, settings
 from app.core.deps import get_db_session, require_auth
 from app.core.security_log import log_security_event
 from app.models.tables import (
@@ -143,24 +143,42 @@ async def get_usage_breakdown(
         select(
             UsageRecord.model.label("model"),
             func.count(UsageRecord.id).label("total_calls"),
-            func.coalesce(func.sum(UsageRecord.total_tokens), 0).label("total_tokens"),
             func.coalesce(func.sum(UsageRecord.cost_credits), 0).label("total_credits"),
         )
         .where(UsageRecord.user_id == user.id)
         .group_by(UsageRecord.model)
-        .order_by(UsageRecord.model)
     )
     results = rows.all()
 
+    # Aggregate by mode
+    mode_agg: dict[str, dict] = {}
+    for r in results:
+        mode = MODEL_TO_MODE.get(r.model, "other")
+        if mode not in mode_agg:
+            mode_agg[mode] = {"total_calls": 0, "total_credits": 0}
+        mode_agg[mode]["total_calls"] += int(r.total_calls or 0)
+        mode_agg[mode]["total_credits"] += int(r.total_credits or 0)
+
+    grand_total_credits = sum(m["total_credits"] for m in mode_agg.values())
+
+    # Sort order: quick, balanced, thorough, then "other" last
+    mode_order = {"quick": 0, "balanced": 1, "thorough": 2}
+    sorted_modes = sorted(mode_agg.keys(), key=lambda m: mode_order.get(m, 99))
+
     return {
-        "by_model": [
+        "by_mode": [
             {
-                "model": r.model,
-                "total_calls": int(r.total_calls or 0),
-                "total_tokens": int(r.total_tokens or 0),
-                "total_credits": int(r.total_credits or 0),
+                "mode": mode,
+                "total_calls": mode_agg[mode]["total_calls"],
+                "total_credits": mode_agg[mode]["total_credits"],
+                "avg_credits_per_chat": round(mode_agg[mode]["total_credits"] / mode_agg[mode]["total_calls"])
+                if mode_agg[mode]["total_calls"] > 0
+                else 0,
+                "share": round(mode_agg[mode]["total_credits"] / grand_total_credits * 100, 1)
+                if grand_total_credits > 0
+                else 0,
             }
-            for r in results
+            for mode in sorted_modes
         ]
     }
 
