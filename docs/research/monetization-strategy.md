@@ -13,7 +13,7 @@
 | **Free Tier** | 500 credits/month (auto-granted, 30-day lazy eval) |
 | **Plus Subscription** | $9.99/month via Stripe, 3,000 credits/month |
 | **Pro Subscription** | $19.99/month via Stripe, 9,000 credits/month |
-| **One-Time Credit Packs** | Starter ($5 / 5K credits), Pro ($15 / 20K credits), Enterprise ($50 / 100K credits) |
+| **One-Time Credit Packs** | Boost ($3.99 / 500 credits), Power ($9.99 / 2K credits), Ultra ($19.99 / 5K credits) |
 | **Credit Rates** | Quick (DeepSeek): 0.5x multiplier; Balanced (Mistral Medium): 1x; Thorough (Mistral Large): 3x |
 | **Demo** | 3 seeded documents, 5 messages/session for anonymous users, 50 sessions/doc cap (global), forced DeepSeek V3.2 (low-cost), 10 req/min/IP rate limit, ModeSelector hidden |
 | **Billing** | Stripe Checkout (one-time) + Stripe Subscriptions (recurring) + Stripe Customer Portal |
@@ -171,16 +171,15 @@ A Pro user (9,000 credits/month) gets approximately:
 - **Features**: All Team features + dedicated instance, SLA, SOC-2 compliance path, custom model fine-tuning, on-premise option, dedicated CSM, bulk document processing API, audit logs, data residency options
 - **Goal**: Organizations with compliance/security requirements
 
-### Credit Pack Adjustments (One-Time Top-Ups)
+### Credit Pack Adjustments (One-Time Top-Ups) — ✅ Implemented 2026-02-11
 
-| Pack | Credits | Price | Per 1K Credits |
-|------|---------|-------|---------------|
-| Boost | 25,000 | $3.99 | $0.16 |
-| Power | 100,000 | $12.99 | $0.13 |
-| Ultra | 500,000 | $49.99 | $0.10 |
-| Mega | 2,000,000 | $149.99 | $0.075 |
+| Pack | Credits | Price | Per 1K Credits | vs Plus Monthly ($3.33/1K) |
+|------|---------|-------|---------------|---------------------------|
+| Boost | 500 | $3.99 | $7.98 | 2.4x more expensive |
+| Power | 2,000 | $9.99 | $5.00 | 1.5x more expensive |
+| Ultra | 5,000 | $19.99 | $4.00 | 1.2x more expensive |
 
-**Key change**: Pack pricing is now consistently more expensive per-credit than subscription credits, incentivizing subscription over one-time purchases. Current structure has packs cheaper than Pro subscription, which cannibals subscription revenue.
+**Key change**: Pack pricing is now consistently more expensive per-credit than subscription credits, incentivizing subscription over one-time purchases. Even the cheapest pack (Ultra at $4.00/1K) is 2.25x more expensive than Pro annual ($1.78/1K).
 
 ### Credit Overage Option (NEW)
 
@@ -365,7 +364,7 @@ Recommended improvements:
 - [x] Rescale credits ÷10 (Free 500, Plus 3K, Pro 9K)
 - [x] Add credit translator tooltips on billing page ("X credits = ~Y conversations")
 - [x] Add "Most Popular" badge to recommended tier
-- [ ] Fix credit pack pricing to be more expensive per-credit than subscription
+- [x] Fix credit pack pricing to be more expensive per-credit than subscription (Boost/Power/Ultra, 2026-02-11)
 
 ### Phase 2: New Tiers (2-4 weeks) — ✅ Completed
 - [x] Implement Plus tier ($9.99/mo, 3K credits)

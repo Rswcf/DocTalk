@@ -116,7 +116,7 @@ DocTalk is an AI-powered PDF reader with a unique competitive advantage: **citat
 | Core citation chat | Yes | Yes | Yes | Yes | Yes |
 | Thorough mode | No | Yes | Yes | Yes | Yes |
 | OCR | Yes | Yes | Yes | Yes | Yes |
-| Sessions per doc | 1 | Unlimited | Unlimited | Unlimited | Unlimited |
+| Sessions per doc | 3 | Unlimited | Unlimited | Unlimited | Unlimited |
 | Custom prompts | No | No | Yes | Yes | Yes |
 | Conversation export | No | MD | MD + PDF | All | All |
 | API access | No | No | Read-only | Full | Full |

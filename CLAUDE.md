@@ -67,7 +67,7 @@ Railway 项目包含 5 个服务：backend, Postgres, Redis, qdrant-v2, minio-v2
 - **PDF 文件获取**: presigned URL (不走后端代理)
 - **向量维度**: 配置驱动 (EMBEDDING_DIM)，启动时校验 Qdrant collection
 - **删除**: 同步 ORM cascade delete（pages, chunks, sessions, messages），返回 202；同时 best-effort 清理 MinIO 文件和 Qdrant 向量。清理失败时通过 `deletion_worker.py` Celery 重试任务（3 次重试，指数退避）兜底，并记录结构化安全日志
-- **会话管理**: 每文档支持多个独立对话会话，重新打开文档自动恢复最近活跃会话
+- **会话管理**: 每文档支持多个独立对话会话，重新打开文档自动恢复最近活跃会话。Free 用户每文档限 `FREE_MAX_SESSIONS_PER_DOC`（默认 3）个会话，Plus/Pro 不限
 - **OCR 支持**: 扫描版 PDF 自动通过 PyMuPDF 内置 Tesseract OCR 提取文字（`extract_pages_ocr()`），支持中英文（`eng+chi_sim`），可配置 DPI。流程：`detect_scanned()` → 设 status="ocr" → OCR 提取 → 验证文字量 ≥50 chars → 继续正常 parsing/embedding 流程
 - **CI/CD**: GitHub Actions 3 并行 job — backend（ruff lint + pytest）、frontend（eslint + next build）、docker（Dockerfile 构建验证）
 - **Chunking 配置**: TARGET_MIN_TOKENS=150, TARGET_MAX_TOKENS=300, top_k=8 检索。小分块提升引用精准度，所有 bbox 不再限制数量（原先限制 5 个）
@@ -119,7 +119,7 @@ GET    /api/credits/history               # 交易历史 (?limit=20&offset=0)
 POST   /api/billing/checkout              # 创建 Stripe Checkout (一次性购买)
 POST   /api/billing/subscribe             # 创建 Stripe Subscription Checkout (Pro)
 POST   /api/billing/portal                # 创建 Stripe Customer Portal
-GET    /api/billing/products              # 列出 credit packs (starter/pro/enterprise)
+GET    /api/billing/products              # 列出 credit packs (boost/power/ultra)
 POST   /api/billing/webhook               # Stripe Webhook
 
 # 用户

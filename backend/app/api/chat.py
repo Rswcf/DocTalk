@@ -11,6 +11,7 @@ from sqlalchemy import asc, delete, desc, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from app.core.config import settings
 from app.core.deps import get_current_user_optional, get_db_session
 from app.core.rate_limit import demo_chat_limiter, demo_message_tracker
 from app.core.security_log import log_security_event
@@ -94,6 +95,21 @@ async def create_session(
     doc = await verify_document_access(document_id, user, db)
     if not doc:
         return JSONResponse(status_code=404, content={"detail": "Document not found"})
+
+    # Limit free-plan users to N sessions per document
+    if user is not None and (user.plan or "free").lower() == "free" and not doc.demo_slug:
+        session_count_result = await db.execute(
+            select(func.count(ChatSession.id))
+            .where(ChatSession.document_id == document_id)
+        )
+        if session_count_result.scalar() >= settings.FREE_MAX_SESSIONS_PER_DOC:
+            return JSONResponse(
+                status_code=403,
+                content={
+                    "detail": "Free plan session limit reached. Upgrade for unlimited sessions.",
+                    "limit": settings.FREE_MAX_SESSIONS_PER_DOC,
+                },
+            )
 
     # Limit anonymous users on demo documents; garbage-collect stale sessions first
     if user is None and doc.demo_slug:

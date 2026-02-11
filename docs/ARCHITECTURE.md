@@ -259,7 +259,7 @@ flowchart TB
     subgraph Sources["Credit Sources"]
         Signup["Signup Bonus<br/>1,000 credits"]
         Monthly["Monthly Grant<br/>Free: 500 / Plus: 3K / Pro: 9K"]
-        Purchase["One-Time Purchase<br/>Starter: 5K / Pro: 20K / Enterprise: 100K"]
+        Purchase["One-Time Purchase<br/>Boost: 500 / Power: 2K / Ultra: 5K"]
         Subscription["Plus/Pro Subscription<br/>Plus: 3K / Pro: 9K credits/month"]
     end
 

@@ -97,14 +97,14 @@ class Settings(BaseSettings):
     # Stripe
     STRIPE_SECRET_KEY: Optional[str] = None
     STRIPE_WEBHOOK_SECRET: Optional[str] = None
-    STRIPE_PRICE_STARTER: str = "price_starter"
-    STRIPE_PRICE_PRO: str = "price_pro"
-    STRIPE_PRICE_ENTERPRISE: str = "price_enterprise"
+    STRIPE_PRICE_BOOST: str = "price_boost"
+    STRIPE_PRICE_POWER: str = "price_power"
+    STRIPE_PRICE_ULTRA: str = "price_ultra"
 
     # Credit amounts
-    CREDITS_STARTER: int = 5000
-    CREDITS_PRO: int = 20000
-    CREDITS_ENTERPRISE: int = 100000
+    CREDITS_BOOST: int = 500
+    CREDITS_POWER: int = 2000
+    CREDITS_ULTRA: int = 5000
     SIGNUP_BONUS_CREDITS: int = 1000
     # Subscription tiers
     PLAN_FREE_MONTHLY_CREDITS: int = 500
@@ -119,6 +119,7 @@ class Settings(BaseSettings):
     FREE_MAX_DOCUMENTS: int = 3
     PLUS_MAX_DOCUMENTS: int = 20
     PRO_MAX_DOCUMENTS: int = 999
+    FREE_MAX_SESSIONS_PER_DOC: int = 3
     FREE_MAX_FILE_SIZE_MB: int = 25
     PLUS_MAX_FILE_SIZE_MB: int = 50
     PRO_MAX_FILE_SIZE_MB: int = 100

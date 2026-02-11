@@ -259,7 +259,7 @@ flowchart TB
     subgraph Sources["积分来源"]
         Signup["注册奖励<br/>1,000 积分"]
         Monthly["月度发放<br/>Free: 500 / Plus: 3K / Pro: 9K"]
-        Purchase["一次性购买<br/>Starter: 5K / Pro: 20K / Enterprise: 100K"]
+        Purchase["一次性购买<br/>Boost: 500 / Power: 2K / Ultra: 5K"]
         Subscription["Plus/Pro 订阅<br/>Plus: 3K / Pro: 9K 积分/月"]
     end
 

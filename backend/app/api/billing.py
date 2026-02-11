@@ -63,25 +63,25 @@ def _credits_for_plan(plan: str) -> int:
 async def list_products():
     return {
         "products": [
-            {"id": "starter", "credits": settings.CREDITS_STARTER, "price_usd": 5},
-            {"id": "pro", "credits": settings.CREDITS_PRO, "price_usd": 15},
-            {"id": "enterprise", "credits": settings.CREDITS_ENTERPRISE, "price_usd": 50},
+            {"id": "boost", "credits": settings.CREDITS_BOOST, "price_usd": 3.99},
+            {"id": "power", "credits": settings.CREDITS_POWER, "price_usd": 9.99},
+            {"id": "ultra", "credits": settings.CREDITS_ULTRA, "price_usd": 19.99},
         ]
     }
 
 
 @router.post("/checkout")
 async def create_checkout(
-    pack_id: Literal["starter", "pro", "enterprise"],
+    pack_id: Literal["boost", "power", "ultra"],
     user: User = Depends(require_auth),
 ):
     if not settings.STRIPE_SECRET_KEY:
         raise HTTPException(503, "Stripe not configured")
 
     price_map = {
-        "starter": (settings.STRIPE_PRICE_STARTER, settings.CREDITS_STARTER),
-        "pro": (settings.STRIPE_PRICE_PRO, settings.CREDITS_PRO),
-        "enterprise": (settings.STRIPE_PRICE_ENTERPRISE, settings.CREDITS_ENTERPRISE),
+        "boost": (settings.STRIPE_PRICE_BOOST, settings.CREDITS_BOOST),
+        "power": (settings.STRIPE_PRICE_POWER, settings.CREDITS_POWER),
+        "ultra": (settings.STRIPE_PRICE_ULTRA, settings.CREDITS_ULTRA),
     }
     price_id, credits = price_map[pack_id]
 
