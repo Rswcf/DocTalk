@@ -520,7 +520,7 @@ export default function ChatPanel({ sessionId, onCitationClick, maxUserMessages,
           </div>
         ) : (
           <div className="max-w-3xl mx-auto">
-          <div className="flex items-end p-3 gap-2 border border-zinc-300 dark:border-zinc-600 rounded-3xl bg-white dark:bg-zinc-800 focus-within:ring-1 focus-within:ring-zinc-400 dark:focus-within:ring-zinc-500 transition-shadow">
+          <div className="flex items-center p-3 gap-2 border border-zinc-300 dark:border-zinc-600 rounded-full bg-white dark:bg-zinc-800 focus-within:border-zinc-400 dark:focus-within:border-zinc-500 transition-colors">
             {showPlusButton && (
               <div className="relative shrink-0" data-plus-menu>
                 <button
