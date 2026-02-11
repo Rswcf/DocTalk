@@ -24,12 +24,12 @@ async function fetchAdapter<T>(path: string, options: RequestInit = {}): Promise
 
   if (!res.ok) {
     if (res.status === 404) return null;
-    // Log error without exposing details
-    console.error(`Adapter request failed: ${res.status} for ${path}`);
+    const body = await res.text().catch(() => "(unreadable)");
+    console.error(`[ADAPTER] request failed: ${res.status} ${path}`, body); // TODO: remove debug
     if (res.status >= 500) {
-      throw new Error("Auth service temporarily unavailable");
+      throw new Error(`Auth service error: ${res.status} ${path}`);
     }
-    throw new Error("Auth request failed");
+    throw new Error(`Auth request failed: ${res.status} ${path}`);
   }
   const text = await res.text();
   return text ? (JSON.parse(text) as T) : null;
@@ -38,6 +38,7 @@ async function fetchAdapter<T>(path: string, options: RequestInit = {}): Promise
 export function FastAPIAdapter(): Adapter {
   return {
     async createUser(data) {
+      console.log("[ADAPTER] createUser", { email: data.email, hasEmailVerified: !!data.emailVerified }); // TODO: remove debug
       const user = await fetchAdapter<AdapterUser>("/api/internal/auth/users", {
         method: "POST",
         body: JSON.stringify({
@@ -48,6 +49,7 @@ export function FastAPIAdapter(): Adapter {
         }),
       });
       if (!user) throw new Error("Failed to create user");
+      console.log("[ADAPTER] createUser result", { id: (user as any).id }); // TODO: remove debug
       return { ...(user as any), emailVerified: (user as any).email_verified ? new Date((user as any).email_verified) : null } as any;
     },
 
@@ -58,7 +60,9 @@ export function FastAPIAdapter(): Adapter {
     },
 
     async getUserByEmail(email) {
+      console.log("[ADAPTER] getUserByEmail", email); // TODO: remove debug
       const user = await fetchAdapter<any>(`/api/internal/auth/users/by-email/${encodeURIComponent(email)}`);
+      console.log("[ADAPTER] getUserByEmail result", user ? { id: user.id } : null); // TODO: remove debug
       if (!user) return null;
       return { ...user, emailVerified: user.email_verified ? new Date(user.email_verified) : null } as any;
     },
@@ -72,6 +76,7 @@ export function FastAPIAdapter(): Adapter {
     },
 
     async updateUser(data) {
+      console.log("[ADAPTER] updateUser", { id: data.id, hasEmailVerified: !!(data as any).emailVerified }); // TODO: remove debug
       const user = await fetchAdapter<any>(`/api/internal/auth/users/${data.id}`, {
         method: "PUT",
         body: JSON.stringify({
@@ -81,6 +86,7 @@ export function FastAPIAdapter(): Adapter {
         }),
       });
       if (!user) throw new Error("Failed to update user");
+      console.log("[ADAPTER] updateUser result", { id: user.id }); // TODO: remove debug
       return { ...user, emailVerified: user.email_verified ? new Date(user.email_verified) : null } as any;
     },
 
@@ -114,33 +120,29 @@ export function FastAPIAdapter(): Adapter {
     },
 
     async createVerificationToken(data) {
-      console.log("[ADAPTER] createVerificationToken called", { identifier: (data as any).identifier, hasToken: !!(data as any).token, expires: (data as any).expires }); // TODO: remove debug
-      try {
-        const vt = await fetchAdapter<VerificationToken>("/api/internal/auth/verification-tokens", {
-          method: "POST",
-          body: JSON.stringify({
-            identifier: (data as any).identifier,
-            token: (data as any).token,
-            expires: (data as any).expires.toISOString(),
-          }),
-        });
-        console.log("[ADAPTER] createVerificationToken result", vt); // TODO: remove debug
-        if (!vt) return null;
-        return { ...(vt as any), expires: new Date((vt as any).expires) } as any;
-      } catch (err) {
-        console.error("[ADAPTER] createVerificationToken ERROR", err); // TODO: remove debug
-        throw err;
-      }
+      console.log("[ADAPTER] createVerificationToken called", { identifier: (data as any).identifier }); // TODO: remove debug
+      const vt = await fetchAdapter<VerificationToken>("/api/internal/auth/verification-tokens", {
+        method: "POST",
+        body: JSON.stringify({
+          identifier: (data as any).identifier,
+          token: (data as any).token,
+          expires: (data as any).expires.toISOString(),
+        }),
+      });
+      console.log("[ADAPTER] createVerificationToken result", vt ? "ok" : "null"); // TODO: remove debug
+      if (!vt) return null;
+      return { ...(vt as any), expires: new Date((vt as any).expires) } as any;
     },
 
     async useVerificationToken({ identifier, token }) {
+      console.log("[ADAPTER] useVerificationToken called", { identifier }); // TODO: remove debug
       const vt = await fetchAdapter<any>("/api/internal/auth/verification-tokens/use", {
         method: "POST",
         body: JSON.stringify({ identifier, token }),
       });
+      console.log("[ADAPTER] useVerificationToken result", vt ? "found" : "null"); // TODO: remove debug
       if (!vt) return null;
       return { ...vt, expires: new Date(vt.expires) } as any;
     },
   };
 }
-
