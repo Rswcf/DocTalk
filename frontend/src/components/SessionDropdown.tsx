@@ -14,7 +14,7 @@ export default function SessionDropdown() {
   const sessions = useDocTalkStore((s) => s.sessions);
   const isStreaming = useDocTalkStore((s) => s.isStreaming);
 
-  const { addSession, setSessionId, setMessages, removeSession, reset } = useDocTalkStore();
+  const { addSession, setSessionId, setMessages, removeSession, reset, setDemoMessagesUsed } = useDocTalkStore();
   const { t } = useLocale();
   const router = useRouter();
 
@@ -58,6 +58,7 @@ export default function SessionDropdown() {
       last_activity_at: s.created_at,
     });
     setSessionId(s.session_id);
+    if (s.demo_messages_used != null) setDemoMessagesUsed(s.demo_messages_used);
     setMessages([]);
     setOpen(false);
   };

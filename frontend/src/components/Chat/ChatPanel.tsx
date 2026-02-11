@@ -77,7 +77,6 @@ interface ChatPanelProps {
   sessionId: string;
   onCitationClick: (c: Citation) => void;
   maxUserMessages?: number;
-  demoMessagesUsed?: number;
   suggestedQuestions?: string[];
   onOpenSettings?: () => void;
   hasCustomInstructions?: boolean;
@@ -86,9 +85,10 @@ interface ChatPanelProps {
 
 const SUGGESTED_KEYS = ['chat.suggestedQ1', 'chat.suggestedQ2', 'chat.suggestedQ3', 'chat.suggestedQ4'] as const;
 
-export default function ChatPanel({ sessionId, onCitationClick, maxUserMessages, demoMessagesUsed, suggestedQuestions, onOpenSettings, hasCustomInstructions, userPlan }: ChatPanelProps) {
+export default function ChatPanel({ sessionId, onCitationClick, maxUserMessages, suggestedQuestions, onOpenSettings, hasCustomInstructions, userPlan }: ChatPanelProps) {
   const { messages, isStreaming, addMessage, updateLastMessage, addCitationToLastMessage, setStreaming, updateSessionActivity } = useDocTalkStore();
   const selectedMode = useDocTalkStore((s) => s.selectedMode);
+  const demoMessagesUsed = useDocTalkStore((s) => s.demoMessagesUsed);
   const { t, locale } = useLocale();
   const isWin98 = useWin98Theme();
   const [input, setInput] = useState('');
@@ -105,11 +105,11 @@ export default function ChatPanel({ sessionId, onCitationClick, maxUserMessages,
   // Phase 9b: Abort controller for stop generation
   const abortRef = useRef<AbortController | null>(null);
 
-  // Demo mode: track user message count (cross-session via demoMessagesUsed)
+  // Demo mode: track user message count (cross-session, cross-document via store)
   const localUserMsgCount = maxUserMessages != null
     ? messages.filter((m) => m.role === 'user').length
     : 0;
-  const totalUsed = (demoMessagesUsed ?? 0) + localUserMsgCount;
+  const totalUsed = demoMessagesUsed + localUserMsgCount;
   const demoRemaining = maxUserMessages != null ? maxUserMessages - totalUsed : Infinity;
   const demoLimitReached = maxUserMessages != null && demoRemaining <= 0;
 

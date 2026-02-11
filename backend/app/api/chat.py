@@ -119,11 +119,11 @@ async def create_session(
     )
 
     # For anonymous demo sessions, include used message count so frontend
-    # can display the correct remaining count across page refreshes.
+    # can display the correct remaining count across page refreshes and
+    # across different demo documents (limit is global per IP).
     if user is None and doc.demo_slug:
         client_ip = request.client.host if request.client else "unknown"
-        tracker_key = f"{client_ip}:{doc.id}"
-        used = demo_message_tracker.get_count(tracker_key)
+        used = demo_message_tracker.get_count(client_ip)
         return JSONResponse(
             status_code=201,
             content={**response.model_dump(mode="json"), "demo_messages_used": used},
@@ -191,16 +191,16 @@ async def chat_stream(
             )
 
     # Enforce message limit for anonymous users on demo documents
-    # Uses in-memory IP+document tracker to survive session recreation (hard refresh)
+    # Uses in-memory IP tracker (global across ALL demo docs) to survive
+    # session recreation (hard refresh) and document switching.
     if user is None and session.document and session.document.demo_slug:
-        tracker_key = f"{client_ip}:{session.document_id}"
-        if demo_message_tracker.get_count(tracker_key) >= DEMO_MESSAGE_LIMIT:
+        if demo_message_tracker.get_count(client_ip) >= DEMO_MESSAGE_LIMIT:
             log_security_event("demo_message_limit", ip=client_ip, document_id=session.document_id)
             return JSONResponse(
                 status_code=429,
                 content={"detail": "Demo message limit reached", "limit": DEMO_MESSAGE_LIMIT},
             )
-        demo_message_tracker.increment(tracker_key)
+        demo_message_tracker.increment(client_ip)
 
     # If authenticated, ensure sufficient credits before opening stream
     if user is not None:

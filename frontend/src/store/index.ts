@@ -44,6 +44,9 @@ export interface DocTalkStore {
   // Text highlight (for non-PDF documents)
   highlightSnippet: string | null;
 
+  // Demo message tracking (cross-session, cross-document)
+  demoMessagesUsed: number;
+
   // PDF Search
   searchQuery: string;
   searchMatches: Array<{ page: number; index: number }>;
@@ -74,6 +77,7 @@ export interface DocTalkStore {
   setDocumentSummary: (summary: string | null) => void;
   setSuggestedQuestions: (questions: string[]) => void;
   setUserPlan: (plan: PlanType) => void;
+  setDemoMessagesUsed: (count: number) => void;
   setSearchQuery: (query: string) => void;
   setSearchMatches: (matches: Array<{ page: number; index: number }>) => void;
   setCurrentMatchIndex: (index: number) => void;
@@ -108,6 +112,7 @@ const initialState = {
   suggestedQuestions: [] as string[],
   userPlan: 'free' as PlanType,
   highlightSnippet: null as string | null,
+  demoMessagesUsed: 0,
   searchQuery: '',
   searchMatches: [] as Array<{ page: number; index: number }>,
   currentMatchIndex: -1,
@@ -187,6 +192,7 @@ export const useDocTalkStore = create<DocTalkStore>((set, get) => ({
   setDocumentSummary: (summary: string | null) => set({ documentSummary: summary }),
   setSuggestedQuestions: (questions: string[]) => set({ suggestedQuestions: questions }),
   setUserPlan: (plan: PlanType) => set({ userPlan: plan }),
+  setDemoMessagesUsed: (count: number) => set({ demoMessagesUsed: count }),
   setSearchQuery: (query: string) => set({ searchQuery: query }),
   setSearchMatches: (matches) => set({ searchMatches: matches }),
   setCurrentMatchIndex: (index: number) => set({ currentMatchIndex: index }),
