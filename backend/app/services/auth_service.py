@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional
 from uuid import UUID
 
@@ -173,7 +173,7 @@ async def use_verification_token(
         return None
 
     # Check expiration and delete in single transaction
-    if vt.expires < datetime.utcnow():
+    if vt.expires < datetime.now(timezone.utc):
         await db.delete(vt)
         await db.commit()
         return None
