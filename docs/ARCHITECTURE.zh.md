@@ -14,7 +14,7 @@ graph TB
 
     subgraph Vercel["Vercel (前端)"]
         NextJS["Next.js 14<br/>App Router"]
-        AuthJS["Auth.js v5<br/>Google OAuth"]
+        AuthJS["Auth.js v5<br/>Google + Microsoft OAuth<br/>+ Email Magic Link"]
         Proxy["API 代理<br/>/api/proxy/*<br/>JWT 注入"]
     end
 
@@ -34,6 +34,8 @@ graph TB
         OpenRouter["OpenRouter<br/>LLM + Embedding API"]
         Stripe["Stripe<br/>支付"]
         Google["Google OAuth"]
+        Microsoft["Microsoft OAuth"]
+        Resend["Resend<br/>邮箱 Magic Link"]
         Sentry["Sentry<br/>错误追踪"]
     end
 
@@ -53,6 +55,8 @@ graph TB
     Celery --> OpenRouter
     Redis -.->|任务队列| Celery
     AuthJS --> Google
+    AuthJS --> Microsoft
+    AuthJS --> Resend
     FastAPI --> Sentry
     NextJS --> Sentry
     Browser -->|Presigned URL| MinIO
@@ -63,7 +67,7 @@ graph TB
 | 组件 | 职责 |
 |------|------|
 | **Next.js** | 客户端渲染 SPA（`"use client"`），负责路由、国际化和 UI 状态管理（Zustand） |
-| **Auth.js v5** | Google OAuth 认证，加密 JWE 会话令牌 |
+| **Auth.js v5** | 通过 3 种方式认证：Google OAuth、Microsoft OAuth 和邮箱 Magic Link（via Resend）。加密 JWE 会话令牌 |
 | **API 代理** | 将 JWE 令牌转换为 HS256 JWT，为所有后端请求注入 `Authorization` 头 |
 | **FastAPI** | REST API + SSE 流式传输，处理对话、文档管理、计费、用户账户 |
 | **Celery** | 异步文档解析：文本提取 (PDF/DOCX/PPTX/XLSX/TXT/MD/URL) → 分块 → 向量化 → 索引。PPTX/DOCX 文件还通过 LibreOffice headless 转换为 PDF 进行可视化渲染 |
@@ -203,23 +207,27 @@ sequenceDiagram
 
 ## 4. 认证流程
 
+DocTalk 支持 3 种认证方式：**Google OAuth**、**Microsoft OAuth** 和**邮箱 Magic Link**（通过 Resend）。三者均遵循相同的 Auth.js v5 流程，初始握手阶段因提供商而异。
+
+### 4a. OAuth 流程（Google / Microsoft）
+
 ```mermaid
 sequenceDiagram
     participant U as 用户
     participant NJ as Next.js
     participant AJ as Auth.js v5
-    participant G as Google OAuth
+    participant OP as OAuth 提供商<br/>(Google / Microsoft)
     participant AD as FastAPI Adapter
     participant DB as PostgreSQL
     participant PX as API 代理
     participant API as FastAPI
 
-    U->>NJ: 点击 "使用 Google 登录"
-    NJ->>AJ: signIn("google")
-    AJ->>G: OAuth 重定向
-    G-->>AJ: 授权码
-    AJ->>G: 交换令牌
-    G-->>AJ: id_token, access_token
+    U->>NJ: 点击 "使用 Google 登录"<br/>或 "使用 Microsoft 登录"
+    NJ->>AJ: signIn("google") / signIn("microsoft-entra-id")
+    AJ->>OP: OAuth 重定向
+    OP-->>AJ: 授权码
+    AJ->>OP: 交换令牌
+    OP-->>AJ: id_token, access_token
 
     AJ->>AD: POST /api/internal/auth/users<br/>(X-Adapter-Secret 头)
     AD->>DB: UPSERT 用户 + 账户
@@ -238,7 +246,40 @@ sequenceDiagram
     PX-->>NJ: 转发响应
 ```
 
-**为什么需要双层 JWT？**
+### 4b. 邮箱 Magic Link 流程
+
+```mermaid
+sequenceDiagram
+    participant U as 用户
+    participant NJ as Next.js
+    participant AJ as Auth.js v5
+    participant RS as Resend<br/>(邮件服务)
+    participant AD as FastAPI Adapter
+    participant DB as PostgreSQL
+
+    U->>NJ: 输入邮箱地址
+    NJ->>AJ: signIn("resend", {email})
+    AJ->>AD: POST /api/internal/auth/verification-tokens
+    AD->>DB: INSERT 验证令牌
+    AD-->>AJ: token
+    AJ->>RS: 发送 Magic Link 邮件<br/>（包含验证令牌）
+    RS-->>U: 包含 Magic Link 的邮件
+
+    U->>NJ: 点击 Magic Link
+    NJ->>AJ: 验证回调令牌
+    AJ->>AD: POST /api/internal/auth/verification-tokens/use
+    AD->>DB: 验证 + DELETE 令牌 (FOR UPDATE 行锁)
+    AD-->>AJ: 有效
+
+    AJ->>AD: POST /api/internal/auth/users<br/>(X-Adapter-Secret 头)
+    AD->>DB: UPSERT 用户 (email_verified = now)
+    AD-->>AJ: UserResponse
+
+    AJ->>AJ: 创建加密 JWE 会话令牌
+    AJ-->>NJ: 设置会话 Cookie
+```
+
+### 为什么需要双层 JWT？
 
 Auth.js v5 将会话令牌加密为 JWE（JSON Web Encryption），Python 后端无法在不共享加密密钥和匹配加密算法的情况下解密。我们没有耦合两个系统，而是采用了以下方案：
 
@@ -247,6 +288,14 @@ Auth.js v5 将会话令牌加密为 JWE（JSON Web Encryption），Python 后端
 3. 后端使用共享的 `AUTH_SECRET` 验证这个简单的 JWT
 
 这样可以干净地将前端认证系统与后端 API 认证分离。
+
+### 认证提供商汇总
+
+| 提供商 | Auth.js Provider ID | 说明 |
+|--------|-------------------|------|
+| **Google** | `google` | 通过 Google Cloud Console 的 OAuth 2.0 |
+| **Microsoft** | `microsoft-entra-id` | 通过 Microsoft Entra ID（Azure AD）的 OAuth 2.0 |
+| **Email** | `resend` | 通过 Resend 邮件服务的无密码 Magic Link |
 
 **内部 Auth Adapter**：Auth.js 使用自定义 Adapter，调用 FastAPI 后端的 `/api/internal/auth/*` 端点（通过 `X-Adapter-Secret` 头保护）来管理 PostgreSQL 中的用户、账户和验证令牌。
 

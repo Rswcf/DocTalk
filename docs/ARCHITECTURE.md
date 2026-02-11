@@ -14,7 +14,7 @@ graph TB
 
     subgraph Vercel["Vercel (Frontend)"]
         NextJS["Next.js 14<br/>App Router"]
-        AuthJS["Auth.js v5<br/>Google OAuth"]
+        AuthJS["Auth.js v5<br/>Google + Microsoft OAuth<br/>+ Email Magic Link"]
         Proxy["API Proxy<br/>/api/proxy/*<br/>JWT Injection"]
     end
 
@@ -34,6 +34,8 @@ graph TB
         OpenRouter["OpenRouter<br/>LLM + Embedding API"]
         Stripe["Stripe<br/>Payments"]
         Google["Google OAuth"]
+        Microsoft["Microsoft OAuth"]
+        Resend["Resend<br/>Email Magic Link"]
         Sentry["Sentry<br/>Error Tracking"]
     end
 
@@ -53,6 +55,8 @@ graph TB
     Celery --> OpenRouter
     Redis -.->|Task Queue| Celery
     AuthJS --> Google
+    AuthJS --> Microsoft
+    AuthJS --> Resend
     FastAPI --> Sentry
     NextJS --> Sentry
     Browser -->|Presigned URL| MinIO
@@ -63,7 +67,7 @@ graph TB
 | Component | Role |
 |-----------|------|
 | **Next.js** | Client-side rendered SPA (`"use client"`), handles routing, i18n, and UI state (Zustand) |
-| **Auth.js v5** | Google OAuth authentication, encrypted JWE session tokens |
+| **Auth.js v5** | Authentication via 3 providers: Google OAuth, Microsoft OAuth, and Email Magic Link (via Resend). Encrypted JWE session tokens |
 | **API Proxy** | Translates JWE tokens to HS256 JWT, injects `Authorization` header for all backend requests |
 | **FastAPI** | REST API + SSE streaming for chat, document management, billing, user accounts |
 | **Celery** | Async document parsing: text extraction (PDF/DOCX/PPTX/XLSX/TXT/MD/URL) → chunking → embedding → vector indexing. PPTX/DOCX files are also converted to PDF via LibreOffice headless for visual rendering |
@@ -203,23 +207,27 @@ sequenceDiagram
 
 ## 4. Authentication Flow
 
+DocTalk supports 3 authentication providers: **Google OAuth**, **Microsoft OAuth**, and **Email Magic Link** (via Resend). All three follow the same Auth.js v5 flow with provider-specific differences in the initial handshake.
+
+### 4a. OAuth Flow (Google / Microsoft)
+
 ```mermaid
 sequenceDiagram
     participant U as User
     participant NJ as Next.js
     participant AJ as Auth.js v5
-    participant G as Google OAuth
+    participant OP as OAuth Provider<br/>(Google / Microsoft)
     participant AD as FastAPI Adapter
     participant DB as PostgreSQL
     participant PX as API Proxy
     participant API as FastAPI
 
-    U->>NJ: Click "Sign in with Google"
-    NJ->>AJ: signIn("google")
-    AJ->>G: OAuth redirect
-    G-->>AJ: Authorization code
-    AJ->>G: Exchange for tokens
-    G-->>AJ: id_token, access_token
+    U->>NJ: Click "Sign in with Google"<br/>or "Sign in with Microsoft"
+    NJ->>AJ: signIn("google") / signIn("microsoft-entra-id")
+    AJ->>OP: OAuth redirect
+    OP-->>AJ: Authorization code
+    AJ->>OP: Exchange for tokens
+    OP-->>AJ: id_token, access_token
 
     AJ->>AD: POST /api/internal/auth/users<br/>(X-Adapter-Secret header)
     AD->>DB: UPSERT user + account
@@ -238,7 +246,40 @@ sequenceDiagram
     PX-->>NJ: Forward response
 ```
 
-**Why dual JWT?**
+### 4b. Email Magic Link Flow
+
+```mermaid
+sequenceDiagram
+    participant U as User
+    participant NJ as Next.js
+    participant AJ as Auth.js v5
+    participant RS as Resend<br/>(Email Service)
+    participant AD as FastAPI Adapter
+    participant DB as PostgreSQL
+
+    U->>NJ: Enter email address
+    NJ->>AJ: signIn("resend", {email})
+    AJ->>AD: POST /api/internal/auth/verification-tokens
+    AD->>DB: INSERT verification token
+    AD-->>AJ: token
+    AJ->>RS: Send magic link email<br/>(contains verification token)
+    RS-->>U: Email with magic link
+
+    U->>NJ: Click magic link
+    NJ->>AJ: Verify callback token
+    AJ->>AD: POST /api/internal/auth/verification-tokens/use
+    AD->>DB: Validate + DELETE token (FOR UPDATE lock)
+    AD-->>AJ: Valid
+
+    AJ->>AD: POST /api/internal/auth/users<br/>(X-Adapter-Secret header)
+    AD->>DB: UPSERT user (email_verified = now)
+    AD-->>AJ: UserResponse
+
+    AJ->>AJ: Create encrypted JWE session token
+    AJ-->>NJ: Set session cookie
+```
+
+### Why dual JWT?
 
 Auth.js v5 encrypts session tokens as JWE (JSON Web Encryption), which the Python backend cannot decrypt without sharing the encryption key and matching the exact encryption algorithm. Instead of coupling the two systems:
 
@@ -247,6 +288,14 @@ Auth.js v5 encrypts session tokens as JWE (JSON Web Encryption), which the Pytho
 3. The backend validates this simple JWT using the shared `AUTH_SECRET`
 
 This cleanly separates the frontend auth system from the backend API authentication.
+
+### Auth providers summary
+
+| Provider | Auth.js Provider ID | Details |
+|----------|-------------------|---------|
+| **Google** | `google` | OAuth 2.0 via Google Cloud Console |
+| **Microsoft** | `microsoft-entra-id` | OAuth 2.0 via Microsoft Entra ID (Azure AD) |
+| **Email** | `resend` | Passwordless magic link via Resend email service |
 
 **Internal Auth Adapter**: Auth.js uses a custom adapter that calls the FastAPI backend's `/api/internal/auth/*` endpoints (protected by `X-Adapter-Secret` header) to manage users, accounts, and verification tokens in PostgreSQL.
 

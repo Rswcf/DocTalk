@@ -62,7 +62,7 @@ DocTalk 帮助高强度文档阅读者在超长文档中通过 AI 对话快速�
 | **后端** | FastAPI、Celery、Redis |
 | **数据库** | PostgreSQL 16 (Alembic 迁移)、Qdrant (向量搜索) |
 | **存储** | MinIO (开发) / S3 兼容 (生产) |
-| **认证** | Auth.js (NextAuth) v5 + Google OAuth + JWT |
+| **认证** | Auth.js (NextAuth) v5 + Google OAuth + Microsoft OAuth + Resend 邮箱 Magic Link + JWT |
 | **支付** | Stripe Checkout + 订阅 + Webhooks |
 | **AI** | OpenRouter 网关 — 3 种性能模式: Quick (DeepSeek V3.2), Balanced (Mistral Medium 3.1), Thorough (Mistral Large 2512) |
 | **PDF 解析** | PyMuPDF (fitz)、Tesseract OCR |
@@ -79,7 +79,8 @@ DocTalk 帮助高强度文档阅读者在超长文档中通过 AI 对话快速�
 - Python 3.11+
 - Node.js 18+
 - [OpenRouter](https://openrouter.ai) API key
-- [Google OAuth 凭证](https://console.cloud.google.com/)
+- [Google OAuth 凭证](https://console.cloud.google.com/)（和/或 [Microsoft OAuth 凭证](https://portal.azure.com/) 用于微软登录）
+- [Resend](https://resend.com) API key（用于邮箱 Magic Link 认证）
 
 ### 本地开发
 
@@ -157,6 +158,10 @@ npm run dev
 | `AUTH_SECRET` | 是 | 必须与后端 `AUTH_SECRET` 一致 |
 | `GOOGLE_CLIENT_ID` | 是 | Google OAuth 客户端 ID |
 | `GOOGLE_CLIENT_SECRET` | 是 | Google OAuth 客户端密钥 |
+| `MICROSOFT_CLIENT_ID` | 否 | Microsoft OAuth 客户端 ID（Azure AD 应用注册） |
+| `MICROSOFT_CLIENT_SECRET` | 否 | Microsoft OAuth 客户端密钥 |
+| `RESEND_API_KEY` | 否 | Resend API key，用于邮箱 Magic Link 认证 |
+| `EMAIL_FROM` | 否 | Magic Link 邮件发送地址（如 `noreply@doctalk.site`） |
 | `NEXT_PUBLIC_SENTRY_DSN` | 否 | Sentry DSN，前端错误追踪 |
 
 ## 项目结构

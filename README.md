@@ -62,7 +62,7 @@ DocTalk helps heavy document readers quickly locate key information in long docu
 | **Backend** | FastAPI, Celery, Redis |
 | **Database** | PostgreSQL 16 (Alembic migrations), Qdrant (vector search) |
 | **Storage** | MinIO (dev) / S3-compatible (prod) |
-| **Auth** | Auth.js (NextAuth) v5 + Google OAuth + JWT |
+| **Auth** | Auth.js (NextAuth) v5 + Google OAuth + Microsoft OAuth + Email Magic Link (via Resend) + JWT |
 | **Payments** | Stripe Checkout + Subscriptions + Webhooks |
 | **AI** | OpenRouter gateway — 3 performance modes: Quick (DeepSeek V3.2), Balanced (Mistral Medium 3.1), Thorough (Mistral Large 2512) |
 | **PDF Parse** | PyMuPDF (fitz), Tesseract OCR |
@@ -79,7 +79,8 @@ DocTalk helps heavy document readers quickly locate key information in long docu
 - Python 3.11+
 - Node.js 18+
 - An [OpenRouter](https://openrouter.ai) API key
-- [Google OAuth credentials](https://console.cloud.google.com/)
+- [Google OAuth credentials](https://console.cloud.google.com/) (and/or [Microsoft OAuth credentials](https://portal.azure.com/) for Microsoft login)
+- A [Resend](https://resend.com) API key (for Email Magic Link authentication)
 
 ### Local Development
 
@@ -157,6 +158,10 @@ Open [http://localhost:3000](http://localhost:3000) in your browser.
 | `AUTH_SECRET` | Yes | Must match backend `AUTH_SECRET` |
 | `GOOGLE_CLIENT_ID` | Yes | Google OAuth client ID |
 | `GOOGLE_CLIENT_SECRET` | Yes | Google OAuth client secret |
+| `MICROSOFT_CLIENT_ID` | No | Microsoft OAuth client ID (Azure AD app registration) |
+| `MICROSOFT_CLIENT_SECRET` | No | Microsoft OAuth client secret |
+| `RESEND_API_KEY` | No | Resend API key for Email Magic Link authentication |
+| `EMAIL_FROM` | No | Sender email address for magic link emails (e.g. `noreply@doctalk.site`) |
 | `NEXT_PUBLIC_SENTRY_DSN` | No | Sentry DSN for frontend error tracking |
 
 ## Project Structure

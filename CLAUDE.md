@@ -28,7 +28,7 @@ Railway 项目包含 5 个服务：backend, Postgres, Redis, qdrant-v2, minio-v2
 - **Backend**: FastAPI + Celery + Redis
 - **Database**: PostgreSQL 16 (Alembic migration) + Qdrant (向量搜索)
 - **Storage**: MinIO (dev) / S3-compatible (prod)
-- **Auth**: Auth.js (NextAuth) v5 + Google OAuth + JWT
+- **Auth**: Auth.js (NextAuth) v5 + Google OAuth + Microsoft OAuth + Resend Email Magic Link + JWT
 - **Payments**: Stripe Checkout + Webhooks
 - **LLM/Embedding**: 统一通过 **OpenRouter** 网关调用
   - LLM: 3 种性能模式（Quick: DeepSeek V3.2 / Balanced: Mistral Medium 3.1 / Thorough: Mistral Large 2512），前端用户通过 ModeSelector 切换
@@ -43,7 +43,7 @@ Railway 项目包含 5 个服务：backend, Postgres, Redis, qdrant-v2, minio-v2
 
 ### 核心架构决策
 
-- **认证**: Auth.js v5 + Google OAuth，JWT 策略，后端通过 `require_auth` 依赖校验
+- **认证**: Auth.js v5 + Google OAuth + Microsoft OAuth + Resend Email Magic Link，JWT 策略，`allowDangerousEmailAccountLinking` 启用跨 provider 同邮箱自动关联，后端通过 `require_auth` 依赖校验
 - **API 代理**: 前端所有后端请求（含 SSE chat stream）通过 `/api/proxy/*` 路由，自动注入 Authorization header
 - **分层认证模型**:
   - 未登录: 可试用 Demo（3 篇真实 PDF，5 条消息限制，服务端 + 客户端双重限制，匿名用户强制使用 DeepSeek V3.2（低成本）且隐藏 ModeSelector，IP 级速率限制 10 req/min）
@@ -207,6 +207,14 @@ STRIPE_PRICE_PRO_MONTHLY=price_...  # Stripe recurring price ID for Pro plan
 GOOGLE_CLIENT_ID=...
 GOOGLE_CLIENT_SECRET=...
 
+# Microsoft OAuth (前端)
+MICROSOFT_CLIENT_ID=...
+MICROSOFT_CLIENT_SECRET=...
+
+# Email Magic Link (前端)
+RESEND_API_KEY=re_...
+EMAIL_FROM=DocTalk <noreply@doctalk.site>
+
 # OCR (可选，默认值即可)
 OCR_ENABLED=true
 OCR_LANGUAGES=eng+chi_sim
@@ -266,6 +274,7 @@ SENTRY_TRACES_SAMPLE_RATE=0.1
 - **OAuth Token 清理**: `link_account()` 中剥离 access_token/refresh_token/id_token — DocTalk 仅需身份信息
 - **非 root Docker**: 容器以 `app` 用户（UID 1001）运行
 - **安全响应头**: `next.config.mjs` 配置 CSP（Content-Security-Policy）+ X-Frame-Options DENY + HSTS（2 年 + preload）+ X-Content-Type-Options nosniff + Referrer-Policy strict-origin-when-cross-origin + Permissions-Policy（禁用 camera/microphone/geolocation）。CSP 允许列表：`*.up.railway.app`（MinIO presigned URL + 后端 API）、`*.sentry.io`（错误追踪）、`va.vercel-scripts.com` / `vitals.vercel-insights.com`（Vercel Analytics）、`accounts.google.com`（OAuth form-action）。pdf.js Worker 从 `public/` 同源加载（非 CDN），避免 CSP 跨域问题
+- **CSP form-action**: 允许 Google (`accounts.google.com`) 和 Microsoft (`login.microsoftonline.com`) OAuth 重定向
 
 ### 认证相关
 - **API 代理**: 所有后端接口（含 SSE chat stream）通过 `/api/proxy/*` 走前端代理，自动注入 JWT
@@ -273,6 +282,7 @@ SENTRY_TRACES_SAMPLE_RATE=0.1
 - **JWT 校验**: 后端 `deps.py` 验证 exp/iat/sub claims
 - **Adapter Secret**: 内部 Auth API 使用 `X-Adapter-Secret` header 校验
 - **OAuth Token 清理**: `auth_service.py:link_account()` 剥离 OAuth 提供商返回的 access_token/refresh_token/id_token，DocTalk 仅保存身份绑定信息（provider + provider_account_id），不存储可用于访问用户第三方账户的令牌
+- **跨 Provider 账户关联**: `allowDangerousEmailAccountLinking: true` 启用同邮箱自动关联。Resend provider 无需额外后端支持，复用已有的 VerificationToken 表和 adapter 端点
 
 ### 前端相关
 - **UI 设计**: 单色 zinc 调色板 + indigo 强调色（`#4f46e5` light / `#818cf8` dark），`antialiased` 字体渲染，dark mode 反转按钮 (`bg-zinc-900 dark:bg-zinc-50`)，全站无 `gray-*`/`blue-*` 类（保留 Google OAuth 品牌色和状态色）。卡片使用 `shadow-sm`/`shadow-md` 分层，模态框 `animate-fade-in`/`animate-slide-up` 动画，零 `transition-all` 策略（所有过渡使用具体属性 `transition-colors`/`transition-opacity`/`transition-shadow`）。Tailwind Typography 配置：prose 正文颜色覆盖为 zinc-950（`#09090b`，近纯黑，替代默认 gray-700 `#374151`），dark mode 为 zinc-50（`#fafafa`）；内联 `code` 去除反引号装饰 + 灰色背景药丸样式；段落/列表间距收紧
@@ -280,7 +290,7 @@ SENTRY_TRACES_SAMPLE_RATE=0.1
 - **Header variant**: `variant='minimal'`（首页/Demo/Auth：仅 DocTalkLogo 图标 + Sora wordmark + UserMenu）vs `variant='full'`（文档页/Billing/Profile：完整控件）。额外支持 `isDemo`/`isLoggedIn` props，匿名 Demo 用户时隐藏 ModeSelector
 - **Landing page**: HeroSection（大字标题+CTA）+ **ProductShowcase**（Remotion `<Player>` 动画演示：用户提问→AI流式引用回答→PDF高亮同步，300帧@30fps=10s循环，macOS window chrome 框架，lazy-loaded，支持 dark mode）+ **HowItWorks**（3步骤：Upload→Ask→Cited Answers）+ FeatureGrid（3列特性卡片）+ **SocialProof**（4项信任指标）+ **SecuritySection**（4张安全卡片）+ **FAQ**（6项手风琴）+ **FinalCTA**（转化CTA）+ PrivacyBadge + **Footer**（3列链接组件）
 - **动态 CTA**: 首页根据登录状态显示不同 UI（未登录→Landing page，已登录→Dashboard 上传区+文档列表）
-- **AuthModal**: 使用查询参数 `?auth=1` 触发登录模态框，ESC 可关闭，焦点陷阱（Tab 循环），backdrop 点击关闭。底部显示 AI 处理披露（`auth.aiDisclosure`：文档由第三方 AI 服务处理）和服务条款通知（`auth.termsNotice`）
+- **AuthModal**: 使用查询参数 `?auth=1` 触发登录模态框，ESC 可关闭，焦点陷阱（Tab 循环），backdrop 点击关闭。底部显示 AI 处理披露（`auth.aiDisclosure`：文档由第三方 AI 服务处理）和服务条款通知（`auth.termsNotice`）。支持 Google OAuth、Microsoft OAuth、Email Magic Link 三种登录方式
 - **Cookie 同意**: `CookieConsentBanner.tsx` 底部横栏提供 Accept/Decline 按钮，控制 Vercel Analytics 加载（`AnalyticsWrapper.tsx` 条件渲染），consent 存储在 localStorage
 - **CCPA 合规**: Footer Legal 列新增 "Do Not Sell My Info" 链接
 - **数据导出**: Profile AccountActionsSection 新增 "Download My Data" 按钮，调用 `GET /api/users/me/export` 下载用户全部数据 JSON
@@ -431,6 +441,8 @@ DocTalk/
 │   │   ├── app/
 │   │   │   ├── page.tsx          # 首页 (动态 CTA)
 │   │   │   ├── auth/             # 登录页
+│   │   │   │   ├── verify-request/   # Magic link "查看邮箱" 页
+│   │   │   │   ├── error/            # 认证错误页
 │   │   │   ├── billing/          # 购买页 (含 Pro 订阅卡片)
 │   │   │   ├── profile/          # Profile 页 (4 tabs: info/credits/usage/account)
 │   │   │   ├── demo/             # Demo 选择页 + 旧路由重定向
@@ -445,6 +457,7 @@ DocTalk/
 │   │   │   ├── landing/          # HeroSection, ProductShowcase (Remotion), ShowcasePlayer, FeatureGrid, HowItWorks, SocialProof, SecuritySection, FAQ, FinalCTA
 │   │   │   ├── DocTalkLogo.tsx    # 品牌 Logo 图标 (Talk Flow: 两个重叠聊天气泡, indigo, dark mode 自适应)
 │   │   │   ├── AuthModal.tsx     # 登录模态框 (rounded-2xl, zinc)
+│   │   │   ├── AuthFormContent.tsx # 共享认证表单 (Google + Microsoft OAuth + Email Magic Link)
 │   │   │   ├── AuthButton.tsx    # 登录/登出按钮 (已被 UserMenu 替代)
 │   │   │   ├── UserMenu.tsx      # 头像下拉菜单 (Profile/Buy Credits/Sign Out)
 │   │   │   ├── PrivacyBadge.tsx  # 隐私承诺徽章
