@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useSession, signIn, signOut } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { useLocale } from "../i18n";
+import { useDropdownKeyboard } from "../lib/useDropdownKeyboard";
 
 export default function UserMenu() {
   const { data: session, status } = useSession();
@@ -40,6 +41,31 @@ export default function UserMenu() {
     }
   }, [open, focusIndex]);
 
+  const go = (path: string) => {
+    router.push(path);
+    setOpen(false);
+  };
+
+  const handleMenuKeyDown = useDropdownKeyboard(
+    3,
+    focusIndex,
+    setFocusIndex,
+    (index) => {
+      if (index === 0) {
+        go("/profile");
+      } else if (index === 1) {
+        go("/billing");
+      } else if (index === 2) {
+        setOpen(false);
+        signOut();
+      }
+    },
+    () => {
+      setOpen(false);
+      triggerRef.current?.focus();
+    },
+  );
+
   if (status === "loading") {
     return (
       <div className="w-8 h-8 rounded-full bg-zinc-200 dark:bg-zinc-700 animate-pulse" />
@@ -58,38 +84,6 @@ export default function UserMenu() {
   }
 
   const userImage = (session.user as any).image as string | undefined;
-
-  const go = (path: string) => {
-    router.push(path);
-    setOpen(false);
-  };
-
-  function handleMenuKeyDown(e: React.KeyboardEvent) {
-    const itemCount = itemRefs.current.length;
-    switch (e.key) {
-      case "ArrowDown":
-        e.preventDefault();
-        setFocusIndex((prev) => (prev + 1) % itemCount);
-        break;
-      case "ArrowUp":
-        e.preventDefault();
-        setFocusIndex((prev) => (prev - 1 + itemCount) % itemCount);
-        break;
-      case "Home":
-        e.preventDefault();
-        setFocusIndex(0);
-        break;
-      case "End":
-        e.preventDefault();
-        setFocusIndex(itemCount - 1);
-        break;
-      case "Escape":
-        e.preventDefault();
-        setOpen(false);
-        triggerRef.current?.focus();
-        break;
-    }
-  }
 
   return (
     <div className="relative" ref={menuRef}>

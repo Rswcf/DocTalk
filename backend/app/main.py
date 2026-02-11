@@ -1,6 +1,10 @@
+import os
+from contextlib import asynccontextmanager
+
 import sentry_sdk
-from fastapi import FastAPI
+from fastapi import FastAPI, Query
 from fastapi.middleware.cors import CORSMiddleware
+from sqlalchemy import text
 
 from .api import auth
 from .api.admin import router as admin_router
@@ -13,6 +17,7 @@ from .api.documents import documents_router
 from .api.search import search_router
 from .api.users import router as users_router
 from .core.config import settings
+from .models.database import AsyncSessionLocal
 from .services.embedding_service import embedding_service
 from .services.storage_service import storage_service
 
@@ -25,33 +30,8 @@ if settings.SENTRY_DSN:
         send_default_pii=False,
     )
 
-app = FastAPI(title="DocTalk API")
-
-# CORS configuration
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["http://localhost:3000", "http://localhost:3001", "http://localhost:3002", settings.FRONTEND_URL],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
-
-# Register API routers
-app.include_router(documents_router, prefix="/api")
-app.include_router(search_router, prefix="/api")
-app.include_router(chat_router, prefix="/api")
-app.include_router(chunks_router, prefix="/api")
-app.include_router(auth.router)
-app.include_router(credits_router)
-app.include_router(users_router)
-app.include_router(billing_router)
-app.include_router(collections_router)
-app.include_router(admin_router)
-
-
-@app.on_event("startup")
-def on_startup() -> None:
+@asynccontextmanager
+async def lifespan(app: FastAPI):
     import logging
     import threading
     logger = logging.getLogger("doctalk.startup")
@@ -109,8 +89,70 @@ def on_startup() -> None:
 
     t = threading.Thread(target=_startup_tasks, daemon=True)
     t.start()
+    yield
 
+
+app = FastAPI(title="DocTalk API", lifespan=lifespan)
+
+# CORS configuration
+environment = (os.getenv("ENVIRONMENT") or "").lower()
+sentry_environment = (settings.SENTRY_ENVIRONMENT or "").lower()
+is_production = environment == "production" or sentry_environment == "production"
+cors_origins = [settings.FRONTEND_URL] if is_production else [
+    "http://localhost:3000",
+    "http://localhost:3001",
+    "http://localhost:3002",
+    settings.FRONTEND_URL,
+]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=cors_origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+
+# Register API routers
+app.include_router(documents_router, prefix="/api")
+app.include_router(search_router, prefix="/api")
+app.include_router(chat_router, prefix="/api")
+app.include_router(chunks_router, prefix="/api")
+app.include_router(auth.router)
+app.include_router(credits_router)
+app.include_router(users_router)
+app.include_router(billing_router)
+app.include_router(collections_router)
+app.include_router(admin_router)
 
 @app.get("/health")
-async def health() -> dict:
-    return {"status": "ok"}
+async def health(deep: bool = Query(False)) -> dict:
+    if not deep:
+        return {"status": "ok"}
+
+    components: dict[str, dict[str, str]] = {
+        "database": {"status": "ok"},
+        "redis": {"status": "ok"},
+    }
+
+    try:
+        async with AsyncSessionLocal() as db:
+            await db.execute(text("SELECT 1"))
+    except Exception as e:
+        components["database"] = {"status": "error", "detail": str(e)}
+
+    redis_client = None
+    try:
+        import redis.asyncio as redis
+
+        redis_client = redis.from_url(settings.CELERY_BROKER_URL)
+        await redis_client.ping()
+    except Exception as e:
+        components["redis"] = {"status": "error", "detail": str(e)}
+    finally:
+        if redis_client is not None:
+            await redis_client.aclose()
+
+    overall = "ok" if all(comp["status"] == "ok" for comp in components.values()) else "degraded"
+    return {"status": overall, "components": components}

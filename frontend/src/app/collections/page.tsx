@@ -10,8 +10,11 @@ import CreateCollectionModal from '../../components/Collections/CreateCollection
 import { listCollections, deleteCollection } from '../../lib/api';
 import { useLocale } from '../../i18n';
 import type { CollectionBrief } from '../../types';
+import { usePageTitle } from '../../lib/usePageTitle';
 
 export default function CollectionsPage() {
+  usePageTitle('Collections');
+
   const router = useRouter();
   const { status } = useSession();
   const { t } = useLocale();

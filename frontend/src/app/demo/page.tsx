@@ -6,6 +6,7 @@ import { FileText, BookOpen, FileSignature, Loader2 } from 'lucide-react';
 import { useLocale } from '../../i18n';
 import Header from '../../components/Header';
 import { getDemoDocuments, type DemoDocument } from '../../lib/api';
+import { usePageTitle } from '../../lib/usePageTitle';
 
 const SAMPLE_CONFIG: Record<string, { icon: typeof FileText; titleKey: string; descKey: string; questionKey: string }> = {
   'alphabet-earnings': {
@@ -29,6 +30,8 @@ const SAMPLE_CONFIG: Record<string, { icon: typeof FileText; titleKey: string; d
 };
 
 export default function DemoPage() {
+  usePageTitle('Demo');
+
   const { t } = useLocale();
   const [docs, setDocs] = useState<DemoDocument[]>([]);
   const [loading, setLoading] = useState(true);

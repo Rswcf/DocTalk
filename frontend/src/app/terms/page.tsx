@@ -2,8 +2,11 @@
 
 import Link from 'next/link';
 import { useLocale } from '../../i18n';
+import { usePageTitle } from '../../lib/usePageTitle';
 
 export default function TermsPage() {
+  usePageTitle('Terms of Service');
+
   const { t } = useLocale();
 
   return (
@@ -44,4 +47,3 @@ export default function TermsPage() {
     </div>
   );
 }
-

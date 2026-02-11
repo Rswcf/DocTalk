@@ -402,5 +402,12 @@
   "auth.errorAccessDenied": "Zugriff verweigert. Bitte versuchen Sie es erneut.",
   "auth.errorAccountNotLinked": "Diese E-Mail ist bereits mit einer anderen Anmeldemethode verknüpft. Bitte verwenden Sie Ihre ursprüngliche Anmeldemethode.",
   "auth.errorDefault": "Bei der Anmeldung ist ein Fehler aufgetreten. Bitte versuchen Sie es erneut.",
-  "auth.tryAgain": "Erneut versuchen"
+  "auth.tryAgain": "Erneut versuchen",
+  "chat.copied": "Kopiert!",
+  "chat.copyCode": "Code kopieren",
+  "viewer.slides": "Folien",
+  "viewer.text": "Text",
+  "auth.emailUnavailable": "Die Anmeldung per E-Mail ist vorübergehend nicht verfügbar. Bitte versuche eine andere Methode.",
+  "auth.unexpectedError": "Ein unerwarteter Fehler ist aufgetreten. Bitte versuche es erneut.",
+  "auth.resendFailed": "Erneutes Senden fehlgeschlagen. Bitte versuche es erneut."
 }

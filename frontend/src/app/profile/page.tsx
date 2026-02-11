@@ -12,8 +12,11 @@ import ProfileInfoSection from "../../components/Profile/ProfileInfoSection";
 import CreditsSection from "../../components/Profile/CreditsSection";
 import UsageStatsSection from "../../components/Profile/UsageStatsSection";
 import AccountActionsSection from "../../components/Profile/AccountActionsSection";
+import { usePageTitle } from "../../lib/usePageTitle";
 
 function ProfileContent() {
+  usePageTitle("Profile");
+
   const { data: session, status } = useSession();
   const router = useRouter();
   const searchParams = useSearchParams();

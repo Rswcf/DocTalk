@@ -4,7 +4,7 @@ import json
 import uuid
 from typing import AsyncGenerator, Optional
 
-from fastapi import APIRouter, Depends, Request, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.responses import JSONResponse, StreamingResponse
 from sqlalchemy import asc, desc, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -18,7 +18,7 @@ from app.core.rate_limit import (
     demo_message_tracker,
 )
 from app.core.security_log import log_security_event
-from app.models.tables import ChatSession, Document, Message, User
+from app.models.tables import ChatSession, Collection, Document, Message, User
 from app.schemas.chat import (
     ChatMessageResponse,
     ChatRequest,
@@ -53,7 +53,7 @@ async def verify_session_access(
     """Verify user has access to the session. Returns session if authorized, None otherwise."""
     result = await db.execute(
         select(ChatSession)
-        .options(selectinload(ChatSession.document))
+        .options(selectinload(ChatSession.document), selectinload(ChatSession.collection))
         .where(ChatSession.id == session_id)
     )
     session = result.scalar_one_or_none()
@@ -63,6 +63,14 @@ async def verify_session_access(
     # If document has an owner, verify the user matches
     if session.document and session.document.user_id:
         if not user or session.document.user_id != user.id:
+            return None
+
+    # If collection has an owner, verify the user matches
+    if session.collection_id is not None:
+        collection = session.collection or await db.get(Collection, session.collection_id)
+        if not collection:
+            return None
+        if collection.user_id and (not user or collection.user_id != user.id):
             return None
 
     return session
@@ -96,7 +104,7 @@ async def create_session(
     # Verify document access
     doc = await verify_document_access(document_id, user, db)
     if not doc:
-        return JSONResponse(status_code=404, content={"detail": "Document not found"})
+        raise HTTPException(status_code=404, detail="Document not found")
 
     # Limit free-plan users to N sessions per document
     if user is not None and (user.plan or "free").lower() == "free" and not doc.demo_slug:
@@ -105,10 +113,10 @@ async def create_session(
             .where(ChatSession.document_id == document_id)
         )
         if session_count_result.scalar() >= settings.FREE_MAX_SESSIONS_PER_DOC:
-            return JSONResponse(
+            raise HTTPException(
                 status_code=403,
-                content={
-                    "detail": "Free plan session limit reached. Upgrade for unlimited sessions.",
+                detail={
+                    "message": "Free plan session limit reached. Upgrade for unlimited sessions.",
                     "limit": settings.FREE_MAX_SESSIONS_PER_DOC,
                 },
             )
@@ -120,9 +128,9 @@ async def create_session(
             .where(ChatSession.document_id == document_id)
         )
         if session_count.scalar() >= DEMO_MAX_SESSIONS_PER_DOC:
-            return JSONResponse(
+            raise HTTPException(
                 status_code=429,
-                content={"detail": "Demo session limit reached", "limit": DEMO_MAX_SESSIONS_PER_DOC},
+                detail={"message": "Demo session limit reached", "limit": DEMO_MAX_SESSIONS_PER_DOC},
             )
 
     sess = ChatSession(document_id=document_id)
@@ -160,7 +168,7 @@ async def get_session_messages(
     # Verify session access
     session = await verify_session_access(session_id, user, db)
     if not session:
-        return JSONResponse(status_code=404, content={"detail": "Session not found"})
+        raise HTTPException(status_code=404, detail="Session not found")
 
     rows = await db.execute(
         select(Message).where(Message.session_id == session_id).order_by(asc(Message.created_at))
@@ -278,7 +286,7 @@ async def list_sessions(
     # Verify document access
     doc = await verify_document_access(document_id, user, db)
     if not doc:
-        return JSONResponse(status_code=404, content={"detail": "Document not found"})
+        raise HTTPException(status_code=404, detail="Document not found")
 
     # Anonymous users on demo documents must never see previous sessions
     # (sessions have no user_id — returning all would leak other users' conversations)
@@ -327,7 +335,7 @@ async def delete_session(
     # Verify session access
     session = await verify_session_access(session_id, user, db)
     if not session:
-        return JSONResponse(status_code=404, content={"detail": "Session not found"})
+        raise HTTPException(status_code=404, detail="Session not found")
 
     await db.delete(session)
     await db.commit()

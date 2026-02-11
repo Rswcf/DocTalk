@@ -37,6 +37,7 @@ export default function HomePage() {
   const [myDocs, setMyDocs] = useState<StoredDoc[]>([]);
   const [serverDocs, setServerDocs] = useState<DocumentBrief[]>([]);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [urlInput, setUrlInput] = useState('');
   const [urlLoading, setUrlLoading] = useState(false);
   const [urlError, setUrlError] = useState('');
@@ -173,6 +174,21 @@ export default function HomePage() {
       setUrlLoading(false);
     }
   }, [urlInput, router, setDocument, t]);
+
+  const confirmDeleteDocument = useCallback(async (documentId: string) => {
+    setDeletingId(documentId);
+    try {
+      await deleteDocument(documentId);
+    } catch {}
+
+    const docs: StoredDoc[] = JSON.parse(localStorage.getItem('doctalk_docs') || '[]');
+    const next = docs.filter((x) => x.document_id !== documentId);
+    localStorage.setItem('doctalk_docs', JSON.stringify(next));
+    setMyDocs(next.sort((a, b) => b.createdAt - a.createdAt));
+    setServerDocs((prev) => prev.filter((s) => s.id !== documentId));
+    setDeletingId(null);
+    setConfirmDeleteId((prev) => (prev === documentId ? null : prev));
+  }, []);
 
   /* --- Loading guard (prevents flash of wrong content) --- */
   if (status === 'loading') {
@@ -356,25 +372,35 @@ export default function HomePage() {
                     >
                       {t('doc.open')}
                     </Link>
-                    <button
-                      className="p-2 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-500 transition-colors disabled:opacity-50 focus-visible:ring-2 focus-visible:ring-zinc-400 dark:focus-visible:ring-zinc-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-900"
-                      disabled={deletingId === d.document_id}
-                      onClick={async () => {
-                        if (!window.confirm(t('doc.deleteDocConfirm'))) return;
-                        setDeletingId(d.document_id);
-                        try { await deleteDocument(d.document_id); } catch {}
-                        const docs: StoredDoc[] = JSON.parse(localStorage.getItem('doctalk_docs') || '[]');
-                        const next = docs.filter((x) => x.document_id !== d.document_id);
-                        localStorage.setItem('doctalk_docs', JSON.stringify(next));
-                        setMyDocs(next.sort((a, b) => b.createdAt - a.createdAt));
-                        setServerDocs((prev) => prev.filter((s) => s.id !== d.document_id));
-                        setDeletingId(null);
-                      }}
-                      title={t('doc.deleteDoc')}
-                      aria-label="Delete document"
-                    >
-                      <Trash2 aria-hidden="true" size={16} />
-                    </button>
+                    {confirmDeleteId === d.document_id ? (
+                      <div className="flex items-center gap-1.5 text-xs text-zinc-500 dark:text-zinc-400">
+                        <span>Delete?</span>
+                        <button
+                          className="px-2 py-1 rounded-md bg-red-600 text-white hover:bg-red-500 transition-colors focus-visible:ring-2 focus-visible:ring-zinc-400 dark:focus-visible:ring-zinc-500"
+                          disabled={deletingId === d.document_id}
+                          onClick={() => confirmDeleteDocument(d.document_id)}
+                        >
+                          Yes
+                        </button>
+                        <button
+                          className="px-2 py-1 rounded-md border border-zinc-200 dark:border-zinc-700 text-zinc-600 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors focus-visible:ring-2 focus-visible:ring-zinc-400 dark:focus-visible:ring-zinc-500"
+                          disabled={deletingId === d.document_id}
+                          onClick={() => setConfirmDeleteId(null)}
+                        >
+                          No
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        className="p-2 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-500 transition-colors disabled:opacity-50 focus-visible:ring-2 focus-visible:ring-zinc-400 dark:focus-visible:ring-zinc-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-900"
+                        disabled={deletingId === d.document_id}
+                        onClick={() => setConfirmDeleteId(d.document_id)}
+                        title={t('doc.deleteDoc')}
+                        aria-label="Delete document"
+                      >
+                        <Trash2 aria-hidden="true" size={16} />
+                      </button>
+                    )}
                   </div>
                 </div>
               ))}

@@ -1,10 +1,11 @@
 "use client";
 
-import React, { useEffect, useRef, useState, useCallback } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 import { Globe, ChevronDown, Check } from 'lucide-react';
 import { LOCALES } from '../i18n';
 import { useLocale } from '../i18n';
 import { useTheme } from 'next-themes';
+import { useDropdownKeyboard } from '../lib/useDropdownKeyboard';
 
 export default function LanguageSelector() {
   const { locale, setLocale, t } = useLocale();
@@ -54,32 +55,19 @@ export default function LanguageSelector() {
     setOpen(false);
   };
 
-  function handleMenuKeyDown(e: React.KeyboardEvent) {
-    const itemCount = LOCALES.length;
-    switch (e.key) {
-      case 'ArrowDown':
-        e.preventDefault();
-        setFocusIndex((prev) => (prev + 1) % itemCount);
-        break;
-      case 'ArrowUp':
-        e.preventDefault();
-        setFocusIndex((prev) => (prev - 1 + itemCount) % itemCount);
-        break;
-      case 'Home':
-        e.preventDefault();
-        setFocusIndex(0);
-        break;
-      case 'End':
-        e.preventDefault();
-        setFocusIndex(itemCount - 1);
-        break;
-      case 'Escape':
-        e.preventDefault();
-        setOpen(false);
-        triggerRef.current?.focus();
-        break;
-    }
-  }
+  const handleMenuKeyDown = useDropdownKeyboard(
+    LOCALES.length,
+    focusIndex,
+    setFocusIndex,
+    (index) => {
+      const targetLocale = LOCALES[index];
+      if (targetLocale) choose(targetLocale.code);
+    },
+    () => {
+      setOpen(false);
+      triggerRef.current?.focus();
+    },
+  );
 
   const current = LOCALES.find((l) => l.code === locale);
 

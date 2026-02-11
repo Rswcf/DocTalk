@@ -51,6 +51,8 @@ export interface DocTalkStore {
   searchQuery: string;
   searchMatches: Array<{ page: number; index: number }>;
   currentMatchIndex: number;
+  _pendingText: string;
+  _flushTimer: ReturnType<typeof setTimeout> | null;
 
   // Actions
   setDocument: (id: string) => void;
@@ -81,6 +83,7 @@ export interface DocTalkStore {
   setSearchQuery: (query: string) => void;
   setSearchMatches: (matches: Array<{ page: number; index: number }>) => void;
   setCurrentMatchIndex: (index: number) => void;
+  flushPendingText: () => void;
   reset: () => void;
 }
 
@@ -116,6 +119,8 @@ const initialState = {
   searchQuery: '',
   searchMatches: [] as Array<{ page: number; index: number }>,
   currentMatchIndex: -1,
+  _pendingText: '',
+  _flushTimer: null as ReturnType<typeof setTimeout> | null,
 };
 
 export const useDocTalkStore = create<DocTalkStore>((set, get) => ({
@@ -151,11 +156,53 @@ export const useDocTalkStore = create<DocTalkStore>((set, get) => ({
   addMessage: (msg: Message) => set({ messages: [...get().messages, msg] }),
   setMessages: (msgs: Message[]) => set({ messages: msgs }),
   updateLastMessage: (text: string) => {
-    const msgs = get().messages;
-    if (msgs.length === 0) return;
+    if (!text) return;
+    const state = get();
+    set({ _pendingText: (state._pendingText || '') + text });
+
+    if (!state._flushTimer) {
+      const timer = setTimeout(() => {
+        const s = get();
+        const msgs = s.messages;
+
+        if (msgs.length === 0) {
+          set({ _pendingText: '', _flushTimer: null });
+          return;
+        }
+
+        const last = msgs[msgs.length - 1];
+        const updated = { ...last, text: (last.text || '') + s._pendingText };
+        set({
+          messages: [...msgs.slice(0, -1), updated],
+          _pendingText: '',
+          _flushTimer: null,
+        });
+      }, 50);
+
+      set({ _flushTimer: timer });
+    }
+  },
+  flushPendingText: () => {
+    const state = get();
+    if (state._flushTimer) clearTimeout(state._flushTimer);
+    if (!state._pendingText) {
+      set({ _flushTimer: null });
+      return;
+    }
+
+    const msgs = state.messages;
+    if (msgs.length === 0) {
+      set({ _pendingText: '', _flushTimer: null });
+      return;
+    }
+
     const last = msgs[msgs.length - 1];
-    const updated = { ...last, text: (last.text || '') + text };
-    set({ messages: [...msgs.slice(0, -1), updated] });
+    const updated = { ...last, text: (last.text || '') + state._pendingText };
+    set({
+      messages: [...msgs.slice(0, -1), updated],
+      _pendingText: '',
+      _flushTimer: null,
+    });
   },
   addCitationToLastMessage: (citation: Citation) => {
     const msgs = get().messages;
@@ -196,5 +243,9 @@ export const useDocTalkStore = create<DocTalkStore>((set, get) => ({
   setSearchQuery: (query: string) => set({ searchQuery: query }),
   setSearchMatches: (matches) => set({ searchMatches: matches }),
   setCurrentMatchIndex: (index: number) => set({ currentMatchIndex: index }),
-  reset: () => set((state) => ({ ...initialState, selectedMode: state.selectedMode, lastDocumentId: state.lastDocumentId, lastDocumentName: state.lastDocumentName })),
+  reset: () => {
+    const timer = get()._flushTimer;
+    if (timer) clearTimeout(timer);
+    set((state) => ({ ...initialState, selectedMode: state.selectedMode, lastDocumentId: state.lastDocumentId, lastDocumentName: state.lastDocumentName }));
+  },
 }));

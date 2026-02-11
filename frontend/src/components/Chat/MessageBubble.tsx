@@ -120,6 +120,7 @@ function createCitationComponent(
 /* ── Code block with header + copy button ── */
 function CodeBlock({ language, code }: { language: string; code: string }) {
   const [copied, setCopied] = useState(false);
+  const { t } = useLocale();
 
   const handleCopy = useCallback(() => {
     navigator.clipboard.writeText(code);
@@ -137,7 +138,7 @@ function CodeBlock({ language, code }: { language: string; code: string }) {
           className="flex items-center gap-1.5 hover:text-zinc-200 transition-colors focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:rounded-sm"
         >
           {copied ? <Check size={14} /> : <Copy size={14} />}
-          <span>{copied ? 'Copied!' : 'Copy code'}</span>
+          <span>{copied ? t('chat.copied') : t('chat.copyCode')}</span>
         </button>
       </div>
       <div className="overflow-x-auto p-4">

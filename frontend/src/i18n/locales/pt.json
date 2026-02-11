@@ -402,5 +402,12 @@
   "auth.errorAccessDenied": "Acesso negado. Tente novamente.",
   "auth.errorAccountNotLinked": "Este email já está associado a outro método de login. Use seu método de login original.",
   "auth.errorDefault": "Ocorreu um erro durante o login. Tente novamente.",
-  "auth.tryAgain": "Tentar novamente"
+  "auth.tryAgain": "Tentar novamente",
+  "chat.copied": "Copiado!",
+  "chat.copyCode": "Copiar código",
+  "viewer.slides": "Slides",
+  "viewer.text": "Texto",
+  "auth.emailUnavailable": "O login por e-mail está temporariamente indisponível. Tente outro método.",
+  "auth.unexpectedError": "Ocorreu um erro inesperado. Tente novamente.",
+  "auth.resendFailed": "Falha ao reenviar. Tente novamente."
 }

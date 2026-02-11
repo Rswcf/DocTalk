@@ -87,7 +87,7 @@ export default function PricingTable({ currentPlan = 'free', onUpgrade }: Pricin
                   {t(`billing.comparison.${plan}` as any)}
                 </h3>
                 {isPlus && (
-                  <span className="text-xs px-2 py-0.5 rounded-full bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 font-medium">
+                  <span className="text-xs px-2 py-0.5 rounded-full bg-indigo-600 dark:bg-indigo-500 text-white font-medium">
                     {t('billing.mostPopular')}
                   </span>
                 )}
@@ -119,7 +119,7 @@ export default function PricingTable({ currentPlan = 'free', onUpgrade }: Pricin
               </th>
               <th className="text-center py-4 px-3 w-[22%] border-x-2 border-zinc-900 dark:border-zinc-100 border-t-2 bg-zinc-50 dark:bg-zinc-900">
                 <div className="flex flex-col items-center gap-1">
-                  <span className="text-xs px-2 py-0.5 rounded-full bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 font-medium">
+                  <span className="text-xs px-2 py-0.5 rounded-full bg-indigo-600 dark:bg-indigo-500 text-white font-medium">
                     {t('billing.mostPopular')}
                   </span>
                   <span className="font-semibold text-zinc-900 dark:text-zinc-50">

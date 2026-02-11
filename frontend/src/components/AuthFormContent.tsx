@@ -25,14 +25,14 @@ export function AuthFormContent({ callbackUrl }: AuthFormContentProps) {
       const result = await signIn("resend", { email: email.trim(), callbackUrl, redirect: false });
       if (result?.error) {
         setError(result.error === "Configuration"
-          ? "Email sign-in is temporarily unavailable. Please try another method."
+          ? t("auth.emailUnavailable")
           : result.error);
         return;
       }
       setSentEmail(email.trim());
       setEmailSent(true);
     } catch (err) {
-      setError("An unexpected error occurred. Please try again.");
+      setError(t("auth.unexpectedError"));
     } finally {
       setSending(false);
     }
@@ -45,10 +45,10 @@ export function AuthFormContent({ callbackUrl }: AuthFormContentProps) {
     try {
       const result = await signIn("resend", { email: sentEmail, callbackUrl, redirect: false });
       if (result?.error) {
-        setError("Failed to resend. Please try again.");
+        setError(t("auth.resendFailed"));
       }
     } catch (err) {
-      setError("An unexpected error occurred.");
+      setError(t("auth.unexpectedError"));
     } finally {
       setSending(false);
     }

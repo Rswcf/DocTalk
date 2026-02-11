@@ -14,6 +14,7 @@ import type { UserProfile } from '../../../types';
 import { Panel, Group, Separator } from 'react-resizable-panels';
 import { useLocale } from '../../../i18n';
 import { sanitizeFilename } from '../../../lib/utils';
+import { usePageTitle } from '../../../lib/usePageTitle';
 
 import { Presentation, FileText } from 'lucide-react';
 import { useWin98Theme } from '../../../components/win98/useWin98Theme';
@@ -60,6 +61,7 @@ export default function DocumentReaderPage() {
     setDemoMessagesUsed,
   } = useDocTalkStore();
 
+  const documentName = useDocTalkStore((s) => s.documentName);
   const suggestedQuestions = useDocTalkStore((s) => s.suggestedQuestions);
   const [showInstructions, setShowInstructions] = useState(false);
   const [customInstructions, setCustomInstructions] = useState<string | null>(null);
@@ -68,6 +70,8 @@ export default function DocumentReaderPage() {
 
   const totalPages = useDocTalkStore((s) => s.totalPages);
   const selectedMode = useDocTalkStore((s) => s.selectedMode);
+
+  usePageTitle(documentName || undefined);
 
   // Win98 splitter state
   const [splitterPos, setSplitterPos] = useState(45);
@@ -100,7 +104,7 @@ export default function DocumentReaderPage() {
   // Fetch profile for plan gating
   useEffect(() => {
     if (!isLoggedIn) return;
-    getUserProfile().then(setProfile).catch(() => {});
+    getUserProfile().then(setProfile).catch((e) => console.error('Failed to load profile:', e));
   }, [isLoggedIn]);
 
   const documentStatus = useDocTalkStore((s) => s.documentStatus);
@@ -139,7 +143,7 @@ export default function DocumentReaderPage() {
             // Fetch converted PDF URL for visual rendering
             getConvertedFileUrl(documentId).then((file) => {
               if (!cancelled) setConvertedPdfUrl(file.url);
-            }).catch(() => {});
+            }).catch((e) => console.error('Failed to load converted PDF:', e));
           }
           if (intervalId) clearInterval(intervalId);
           return;
@@ -195,8 +199,8 @@ export default function DocumentReaderPage() {
           if (!cancelled) setMessages(msgsData.messages);
           sessionReady = true;
         }
-      } catch {
-        // listSessions endpoint may not exist yet — fall through to create
+      } catch (e) {
+        console.error('Failed to load sessions, falling back to create:', e);
       }
       if (!sessionReady && !cancelled) {
         try {
@@ -226,16 +230,15 @@ export default function DocumentReaderPage() {
           } else {
             setMessages([]);
           }
-        } catch {
-          // session creation failed — ChatPanel will show init message
+        } catch (e) {
+          console.error('Failed to create session:', e);
+          if (!cancelled) setError('Failed to initialize chat session.');
         }
       }
     })();
 
     return () => { cancelled = true; };
   }, [documentId, documentStatus]);
-
-  const documentName = useDocTalkStore((s) => s.documentName);
 
   // Determine which viewer to use:
   // - Native PDF: always PdfViewer with original URL
@@ -249,18 +252,18 @@ export default function DocumentReaderPage() {
       <button
         onClick={() => setViewMode('slide')}
         className={`flex items-center gap-1 px-2 py-1 rounded text-xs transition-colors ${viewMode === 'slide' ? 'bg-zinc-900 text-white dark:bg-zinc-50 dark:text-zinc-900' : 'text-zinc-600 dark:text-zinc-400 hover:bg-zinc-200 dark:hover:bg-zinc-700'}`}
-        title="Slide view"
+        title={t('viewer.slides')}
       >
         <Presentation size={14} />
-        <span>Slides</span>
+        <span>{t('viewer.slides')}</span>
       </button>
       <button
         onClick={() => setViewMode('text')}
         className={`flex items-center gap-1 px-2 py-1 rounded text-xs transition-colors ${viewMode === 'text' ? 'bg-zinc-900 text-white dark:bg-zinc-50 dark:text-zinc-900' : 'text-zinc-600 dark:text-zinc-400 hover:bg-zinc-200 dark:hover:bg-zinc-700'}`}
-        title="Text view"
+        title={t('viewer.text')}
       >
         <FileText size={14} />
-        <span>Text</span>
+        <span>{t('viewer.text')}</span>
       </button>
     </div>
   ) : null;
@@ -333,7 +336,9 @@ export default function DocumentReaderPage() {
                         setSessionId(s.session_id);
                         if (s.demo_messages_used != null) setDemoMessagesUsed(s.demo_messages_used);
                         setMessages([]);
-                      } catch {}
+                      } catch (e) {
+                        console.error('Failed to create session:', e);
+                      }
                     }}
                     title={t('session.newChat')}
                   >

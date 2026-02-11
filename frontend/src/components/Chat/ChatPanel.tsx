@@ -86,7 +86,7 @@ interface ChatPanelProps {
 const SUGGESTED_KEYS = ['chat.suggestedQ1', 'chat.suggestedQ2', 'chat.suggestedQ3', 'chat.suggestedQ4'] as const;
 
 export default function ChatPanel({ sessionId, onCitationClick, maxUserMessages, suggestedQuestions, onOpenSettings, hasCustomInstructions, userPlan }: ChatPanelProps) {
-  const { messages, isStreaming, addMessage, updateLastMessage, addCitationToLastMessage, setStreaming, updateSessionActivity } = useDocTalkStore();
+  const { messages, isStreaming, addMessage, updateLastMessage, addCitationToLastMessage, setStreaming, updateSessionActivity, flushPendingText } = useDocTalkStore();
   const selectedMode = useDocTalkStore((s) => s.selectedMode);
   const demoMessagesUsed = useDocTalkStore((s) => s.demoMessagesUsed);
   const { t, locale } = useLocale();
@@ -181,6 +181,7 @@ export default function ChatPanel({ sessionId, onCitationClick, maxUserMessages,
       ({ text: t }) => updateLastMessage(t || ''),
       (c) => addCitationToLastMessage(c),
       (err) => {
+        flushPendingText();
         setStreaming(false);
         abortRef.current = null;
         // Detect insufficient credits (HTTP 402) and show paywall modal
@@ -223,13 +224,13 @@ export default function ChatPanel({ sessionId, onCitationClick, maxUserMessages,
         };
         addMessage(errorMsg);
       },
-      () => { setStreaming(false); abortRef.current = null; updateSessionActivity(sessionId); triggerCreditsRefresh(); },
+      () => { flushPendingText(); setStreaming(false); abortRef.current = null; updateSessionActivity(sessionId); triggerCreditsRefresh(); },
       selectedMode,
       locale,
       controller.signal,
     );
     setInput('');
-  }, [isStreaming, demoLimitReached, sessionId, addMessage, updateLastMessage, addCitationToLastMessage, setStreaming, selectedMode, locale, t, updateSessionActivity, router]);
+  }, [isStreaming, demoLimitReached, sessionId, addMessage, updateLastMessage, addCitationToLastMessage, setStreaming, selectedMode, locale, t, updateSessionActivity, flushPendingText, router]);
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -281,23 +282,25 @@ export default function ChatPanel({ sessionId, onCitationClick, maxUserMessages,
       ({ text: t }) => updateLastMessage(t || ''),
       (c) => addCitationToLastMessage(c),
       (err) => {
+        flushPendingText();
         setStreaming(false);
         abortRef.current = null;
         const isPaymentRequired = typeof err?.message === 'string' && err.message.includes('HTTP 402');
         if (isPaymentRequired) { setShowPaywall(true); }
       },
-      () => { setStreaming(false); abortRef.current = null; updateSessionActivity(sessionId); triggerCreditsRefresh(); },
+      () => { flushPendingText(); setStreaming(false); abortRef.current = null; updateSessionActivity(sessionId); triggerCreditsRefresh(); },
       selectedMode,
       locale,
       controller.signal,
     );
-  }, [isStreaming, sessionId, addMessage, updateLastMessage, addCitationToLastMessage, setStreaming, selectedMode, locale, updateSessionActivity]);
+  }, [isStreaming, sessionId, addMessage, updateLastMessage, addCitationToLastMessage, setStreaming, selectedMode, locale, updateSessionActivity, flushPendingText]);
 
   const handleStop = useCallback(() => {
     abortRef.current?.abort();
     abortRef.current = null;
+    flushPendingText();
     setStreaming(false);
-  }, [setStreaming]);
+  }, [setStreaming, flushPendingText]);
 
   // Determine which plus menu items to show
   const showCustomInstructions = !!onOpenSettings;

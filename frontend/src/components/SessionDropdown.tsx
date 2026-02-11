@@ -1,11 +1,12 @@
 "use client";
 
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { ChevronDown, Plus, Trash2, Home, X } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useDocTalkStore } from '../store';
 import { useLocale } from '../i18n';
 import { createSession, getMessages, deleteSession } from '../lib/api';
+import { useDropdownKeyboard } from '../lib/useDropdownKeyboard';
 
 export default function SessionDropdown() {
   const documentName = useDocTalkStore((s) => s.documentName);
@@ -20,6 +21,7 @@ export default function SessionDropdown() {
 
   const [open, setOpen] = useState(false);
   const [focusIndex, setFocusIndex] = useState(-1);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const ref = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const itemRefs = useRef<(HTMLButtonElement | null)[]>([]);
@@ -36,6 +38,8 @@ export default function SessionDropdown() {
   useEffect(() => {
     if (open) {
       setFocusIndex(0);
+    } else {
+      setConfirmDeleteId(null);
     }
   }, [open]);
 
@@ -60,6 +64,7 @@ export default function SessionDropdown() {
     setSessionId(s.session_id);
     if (s.demo_messages_used != null) setDemoMessagesUsed(s.demo_messages_used);
     setMessages([]);
+    setConfirmDeleteId(null);
     setOpen(false);
   };
 
@@ -69,12 +74,13 @@ export default function SessionDropdown() {
     setSessionId(id);
     const msgs = await getMessages(id);
     setMessages(msgs.messages);
+    setConfirmDeleteId(null);
     setOpen(false);
   };
 
   const onDeleteSessionById = async (targetId: string) => {
     if (isStreaming) return;
-    if (!window.confirm(t('session.deleteChatConfirm'))) return;
+    setConfirmDeleteId(null);
     await deleteSession(targetId);
     removeSession(targetId);
     const remaining = useDocTalkStore.getState().sessions;
@@ -89,8 +95,13 @@ export default function SessionDropdown() {
   };
 
   const onDeleteCurrent = () => {
-    if (!sessionId) return;
-    onDeleteSessionById(sessionId);
+    if (!sessionId || isStreaming) return;
+    setConfirmDeleteId(sessionId);
+  };
+
+  const requestDeleteSession = (targetId: string) => {
+    if (isStreaming) return;
+    setConfirmDeleteId(targetId);
   };
 
   const onBackHome = () => {
@@ -106,31 +117,35 @@ export default function SessionDropdown() {
   // Total items: 1 (New Chat) + sessions + 1 (Delete) + 1 (Back Home)
   const totalItems = 1 + sortedSessions.length + 2;
 
-  function handleMenuKeyDown(e: React.KeyboardEvent) {
-    switch (e.key) {
-      case 'ArrowDown':
-        e.preventDefault();
-        setFocusIndex((prev) => (prev + 1) % totalItems);
-        break;
-      case 'ArrowUp':
-        e.preventDefault();
-        setFocusIndex((prev) => (prev - 1 + totalItems) % totalItems);
-        break;
-      case 'Home':
-        e.preventDefault();
-        setFocusIndex(0);
-        break;
-      case 'End':
-        e.preventDefault();
-        setFocusIndex(totalItems - 1);
-        break;
-      case 'Escape':
-        e.preventDefault();
-        setOpen(false);
-        triggerRef.current?.focus();
-        break;
+  const handleMenuSelect = (index: number) => {
+    if (index === 0) {
+      void onNewChat();
+      return;
     }
-  }
+    if (index >= 1 && index <= sortedSessions.length) {
+      const selected = sortedSessions[index - 1];
+      if (selected) void onSwitchSession(selected.session_id);
+      return;
+    }
+    if (index === 1 + sortedSessions.length) {
+      onDeleteCurrent();
+      return;
+    }
+    if (index === 2 + sortedSessions.length) {
+      onBackHome();
+    }
+  };
+
+  const handleMenuKeyDown = useDropdownKeyboard(
+    totalItems,
+    focusIndex,
+    setFocusIndex,
+    handleMenuSelect,
+    () => {
+      setOpen(false);
+      triggerRef.current?.focus();
+    },
+  );
 
   return (
     <div className="relative" ref={ref}>
@@ -196,16 +211,38 @@ export default function SessionDropdown() {
                         {t('session.messageCount', { count: s.message_count })}
                       </span>
                     </button>
-                    <button
-                      className={`shrink-0 p-1 mr-1 rounded opacity-0 group-hover:opacity-100 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-400 hover:text-red-500 dark:hover:text-red-400 transition-opacity focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-zinc-400 ${disabledClass}`}
-                      onClick={(e) => { e.stopPropagation(); onDeleteSessionById(s.session_id); }}
-                      disabled={isStreaming}
-                      title={t('session.deleteChat')}
-                      aria-label={t('session.deleteChat')}
-                      tabIndex={-1}
-                    >
-                      <X aria-hidden="true" size={14} />
-                    </button>
+                    {confirmDeleteId === s.session_id && s.session_id !== sessionId ? (
+                      <div className="shrink-0 mr-1 flex items-center gap-1 text-[11px] text-zinc-500 dark:text-zinc-400">
+                        <span>Delete?</span>
+                        <button
+                          className="px-1.5 py-0.5 rounded bg-red-600 text-white hover:bg-red-500 transition-colors"
+                          onClick={(e) => { e.stopPropagation(); onDeleteSessionById(s.session_id); }}
+                          disabled={isStreaming}
+                          tabIndex={-1}
+                        >
+                          Yes
+                        </button>
+                        <button
+                          className="px-1.5 py-0.5 rounded border border-zinc-300 dark:border-zinc-600 hover:bg-zinc-100 dark:hover:bg-zinc-700 transition-colors"
+                          onClick={(e) => { e.stopPropagation(); setConfirmDeleteId(null); }}
+                          disabled={isStreaming}
+                          tabIndex={-1}
+                        >
+                          No
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        className={`shrink-0 p-1 mr-1 rounded opacity-0 group-hover:opacity-100 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-400 hover:text-red-500 dark:hover:text-red-400 transition-opacity focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-zinc-400 ${disabledClass}`}
+                        onClick={(e) => { e.stopPropagation(); requestDeleteSession(s.session_id); }}
+                        disabled={isStreaming}
+                        title={t('session.deleteChat')}
+                        aria-label={t('session.deleteChat')}
+                        tabIndex={-1}
+                      >
+                        <X aria-hidden="true" size={14} />
+                      </button>
+                    )}
                   </div>
                 );
               })
@@ -224,6 +261,25 @@ export default function SessionDropdown() {
               <Trash2 aria-hidden="true" size={16} />
               <span>{t('session.deleteChat')}</span>
             </button>
+            {sessionId && confirmDeleteId === sessionId && (
+              <div className="flex items-center gap-1 px-2 py-1.5 text-xs text-zinc-500 dark:text-zinc-400">
+                <span>Delete?</span>
+                <button
+                  className="px-2 py-0.5 rounded bg-red-600 text-white hover:bg-red-500 transition-colors"
+                  onClick={() => onDeleteSessionById(sessionId)}
+                  disabled={isStreaming}
+                >
+                  Yes
+                </button>
+                <button
+                  className="px-2 py-0.5 rounded border border-zinc-300 dark:border-zinc-600 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
+                  onClick={() => setConfirmDeleteId(null)}
+                  disabled={isStreaming}
+                >
+                  No
+                </button>
+              </div>
+            )}
             <button
               ref={(el) => { itemRefs.current[2 + sortedSessions.length] = el; }}
               className="w-full text-left flex items-center gap-2 px-2 py-1.5 rounded hover:bg-zinc-100 dark:hover:bg-zinc-800 text-sm text-zinc-700 dark:text-zinc-200 transition-colors focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:ring-inset"

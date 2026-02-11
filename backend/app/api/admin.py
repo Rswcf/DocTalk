@@ -25,40 +25,54 @@ async def admin_overview(
     db: AsyncSession = Depends(get_db_session),
 ):
     """Top-level KPI snapshot."""
-    total_users = (await db.execute(select(func.count(User.id)))).scalar() or 0
-    paid_users = (await db.execute(
-        select(func.count(User.id)).where(User.plan != "free")
-    )).scalar() or 0
-    plus_users = (await db.execute(
-        select(func.count(User.id)).where(User.plan == "plus")
-    )).scalar() or 0
-    pro_users = (await db.execute(
-        select(func.count(User.id)).where(User.plan == "pro")
-    )).scalar() or 0
-    total_documents = (await db.execute(select(func.count(Document.id)))).scalar() or 0
-    total_sessions = (await db.execute(select(func.count(ChatSession.id)))).scalar() or 0
-    total_messages = (await db.execute(select(func.count(Message.id)))).scalar() or 0
-    total_tokens = (await db.execute(
-        select(func.coalesce(func.sum(UsageRecord.total_tokens), 0))
-    )).scalar() or 0
-    total_credits_spent = abs((await db.execute(
-        select(func.coalesce(func.sum(CreditLedger.delta), 0)).where(CreditLedger.delta < 0)
-    )).scalar() or 0)
-    total_credits_granted = (await db.execute(
-        select(func.coalesce(func.sum(CreditLedger.delta), 0)).where(CreditLedger.delta > 0)
-    )).scalar() or 0
+    user_stats = (
+        await db.execute(
+            select(
+                func.count(User.id).label("total_users"),
+                func.coalesce(func.sum(case((User.plan != "free", 1), else_=0)), 0).label("paid_users"),
+                func.coalesce(func.sum(case((User.plan == "plus", 1), else_=0)), 0).label("plus_users"),
+                func.coalesce(func.sum(case((User.plan == "pro", 1), else_=0)), 0).label("pro_users"),
+            )
+        )
+    ).one()
+
+    content_stats = (
+        await db.execute(
+            select(
+                func.coalesce(select(func.count(Document.id)).scalar_subquery(), 0).label("total_documents"),
+                func.coalesce(select(func.count(ChatSession.id)).scalar_subquery(), 0).label("total_sessions"),
+                func.coalesce(select(func.count(Message.id)).scalar_subquery(), 0).label("total_messages"),
+            )
+        )
+    ).one()
+
+    financial_stats = (
+        await db.execute(
+            select(
+                func.coalesce(select(func.sum(UsageRecord.total_tokens)).scalar_subquery(), 0).label("total_tokens"),
+                func.coalesce(
+                    select(func.sum(case((CreditLedger.delta < 0, -CreditLedger.delta), else_=0))).scalar_subquery(),
+                    0,
+                ).label("total_credits_spent"),
+                func.coalesce(
+                    select(func.sum(case((CreditLedger.delta > 0, CreditLedger.delta), else_=0))).scalar_subquery(),
+                    0,
+                ).label("total_credits_granted"),
+            )
+        )
+    ).one()
 
     return {
-        "total_users": total_users,
-        "paid_users": paid_users,
-        "plus_users": plus_users,
-        "pro_users": pro_users,
-        "total_documents": total_documents,
-        "total_sessions": total_sessions,
-        "total_messages": total_messages,
-        "total_tokens": total_tokens,
-        "total_credits_spent": total_credits_spent,
-        "total_credits_granted": total_credits_granted,
+        "total_users": int(user_stats.total_users or 0),
+        "paid_users": int(user_stats.paid_users or 0),
+        "plus_users": int(user_stats.plus_users or 0),
+        "pro_users": int(user_stats.pro_users or 0),
+        "total_documents": int(content_stats.total_documents or 0),
+        "total_sessions": int(content_stats.total_sessions or 0),
+        "total_messages": int(content_stats.total_messages or 0),
+        "total_tokens": int(financial_stats.total_tokens or 0),
+        "total_credits_spent": int(financial_stats.total_credits_spent or 0),
+        "total_credits_granted": int(financial_stats.total_credits_granted or 0),
     }
 
 

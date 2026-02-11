@@ -402,5 +402,12 @@
   "auth.errorAccessDenied": "Accesso negato. Riprova.",
   "auth.errorAccountNotLinked": "Questa email è già associata a un altro metodo di accesso. Usa il metodo di accesso originale.",
   "auth.errorDefault": "Si è verificato un errore durante l'accesso. Riprova.",
-  "auth.tryAgain": "Riprova"
+  "auth.tryAgain": "Riprova",
+  "chat.copied": "Copiato!",
+  "chat.copyCode": "Copia codice",
+  "viewer.slides": "Diapositive",
+  "viewer.text": "Testo",
+  "auth.emailUnavailable": "L'accesso tramite email è temporaneamente non disponibile. Prova un altro metodo.",
+  "auth.unexpectedError": "Si è verificato un errore imprevisto. Riprova.",
+  "auth.resendFailed": "Invio di nuovo non riuscito. Riprova."
 }

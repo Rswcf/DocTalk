@@ -49,8 +49,8 @@ async def create_user(
         image=image,
         email_verified=email_verified,
         credits_balance=settings.SIGNUP_BONUS_CREDITS,
-        signup_bonus_granted_at=datetime.utcnow(),
-        monthly_credits_granted_at=datetime.utcnow(),
+        signup_bonus_granted_at=datetime.now(timezone.utc),
+        monthly_credits_granted_at=datetime.now(timezone.utc),
     )
     db.add(user)
 

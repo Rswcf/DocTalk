@@ -8,8 +8,9 @@ import stripe
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import Response
 from pydantic import BaseModel
-from sqlalchemy import asc, func, select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from app.core.config import MODEL_TO_MODE, settings
 from app.core.deps import get_db_session, require_auth
@@ -59,35 +60,44 @@ async def get_profile(
     acc_rows = await db.execute(select(Account).where(Account.user_id == user.id))
     accounts: List[Account] = acc_rows.scalars().all()
 
-    # Aggregated stats
-    # Total documents
-    total_documents = await db.scalar(
-        select(func.count()).select_from(Document).where(Document.user_id == user.id)
-    )
-
-    # Total sessions (join sessions -> documents by user)
-    total_sessions = await db.scalar(
-        select(func.count())
-        .select_from(ChatSession)
-        .join(Document, ChatSession.document_id == Document.id)
-        .where(Document.user_id == user.id)
-    )
-
-    # Total messages (join messages -> sessions -> documents by user)
-    total_messages = await db.scalar(
-        select(func.count())
-        .select_from(Message)
-        .join(ChatSession, Message.session_id == ChatSession.id)
-        .join(Document, ChatSession.document_id == Document.id)
-        .where(Document.user_id == user.id)
-    )
-
-    # Total credits spent (sum of abs(delta) where delta < 0)
-    total_credits_spent = await db.scalar(
-        select(func.coalesce(func.sum(-CreditLedger.delta), 0))
-        .where(CreditLedger.user_id == user.id)
-        .where(CreditLedger.delta < 0)
-    )
+    # Aggregated stats (single round-trip for core counts/sums)
+    stats_row = (
+        await db.execute(
+            select(
+                func.coalesce(
+                    select(func.count())
+                    .select_from(Document)
+                    .where(Document.user_id == user.id)
+                    .scalar_subquery(),
+                    0,
+                ).label("total_documents"),
+                func.coalesce(
+                    select(func.count())
+                    .select_from(ChatSession)
+                    .join(Document, ChatSession.document_id == Document.id)
+                    .where(Document.user_id == user.id)
+                    .scalar_subquery(),
+                    0,
+                ).label("total_sessions"),
+                func.coalesce(
+                    select(func.count())
+                    .select_from(Message)
+                    .join(ChatSession, Message.session_id == ChatSession.id)
+                    .join(Document, ChatSession.document_id == Document.id)
+                    .where(Document.user_id == user.id)
+                    .scalar_subquery(),
+                    0,
+                ).label("total_messages"),
+                func.coalesce(
+                    select(func.sum(-CreditLedger.delta))
+                    .where(CreditLedger.user_id == user.id)
+                    .where(CreditLedger.delta < 0)
+                    .scalar_subquery(),
+                    0,
+                ).label("total_credits_spent"),
+            )
+        )
+    ).one()
 
     # Total tokens used
     total_tokens_used = await db.scalar(
@@ -125,10 +135,10 @@ async def get_profile(
             for acc in accounts
         ],
         "stats": {
-            "total_documents": int(total_documents or 0),
-            "total_sessions": int(total_sessions or 0),
-            "total_messages": int(total_messages or 0),
-            "total_credits_spent": int(total_credits_spent or 0),
+            "total_documents": int(stats_row.total_documents or 0),
+            "total_sessions": int(stats_row.total_sessions or 0),
+            "total_messages": int(stats_row.total_messages or 0),
+            "total_credits_spent": int(stats_row.total_credits_spent or 0),
             "total_tokens_used": int(total_tokens_used or 0),
         },
     }
@@ -216,10 +226,13 @@ async def export_my_data(
     }
 
     # 2. Documents metadata
-    doc_rows = await db.execute(
-        select(Document).where(Document.user_id == user.id).order_by(Document.created_at)
+    docs_result = await db.execute(
+        select(Document)
+        .where(Document.user_id == user.id)
+        .options(selectinload(Document.sessions).selectinload(ChatSession.messages))
+        .order_by(Document.created_at)
     )
-    docs = doc_rows.scalars().all()
+    docs = docs_result.scalars().unique().all()
     documents = [
         {
             "id": str(d.id),
@@ -235,12 +248,10 @@ async def export_my_data(
     # 3. Sessions and messages
     conversations = []
     for d in docs:
-        sess_rows = await db.execute(
-            select(ChatSession).where(ChatSession.document_id == d.id)
-        )
-        for sess in sess_rows.scalars():
-            msg_rows = await db.execute(
-                select(Message).where(Message.session_id == sess.id).order_by(asc(Message.created_at))
+        for sess in d.sessions:
+            sorted_messages = sorted(
+                sess.messages,
+                key=lambda m: m.created_at or datetime.min.replace(tzinfo=timezone.utc),
             )
             conversations.append({
                 "session_id": str(sess.id),
@@ -253,7 +264,7 @@ async def export_my_data(
                         "content": m.content,
                         "created_at": m.created_at.isoformat() if m.created_at else None,
                     }
-                    for m in msg_rows.scalars()
+                    for m in sorted_messages
                 ],
             })
 

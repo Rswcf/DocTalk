@@ -61,9 +61,13 @@ export default function PdfViewer({ pdfUrl, currentPage, highlights, scale, scro
   const [numPages, setNumPages] = useState<number>(0);
   const [urlError, setUrlError] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+  const [textCacheVersion, setTextCacheVersion] = useState(0);
   const containerRef = useRef<HTMLDivElement>(null);
   const pageRefs = useRef<(HTMLDivElement | null)[]>([]);
   const dragState = useRef({ isDragging: false, startX: 0, startY: 0, scrollLeft: 0, scrollTop: 0 });
+  const extractedTextRef = useRef<{ pages: string[]; pdfUrl: string } | null>(null);
+  const extractionRunIdRef = useRef(0);
   const [visiblePage, setVisiblePage] = useState(1);
   const isScrollingToPage = useRef(false);
   const { resolvedTheme } = useTheme();
@@ -81,6 +85,17 @@ export default function PdfViewer({ pdfUrl, currentPage, highlights, scale, scro
     setUrlError(null);
     return pdfUrl;
   }, [pdfUrl]);
+
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedSearch(searchQuery), 300);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
+  useEffect(() => {
+    extractedTextRef.current = null;
+    extractionRunIdRef.current += 1;
+    setTextCacheVersion((v) => v + 1);
+  }, [validPdfUrl]);
 
   // Scroll to page when currentPage changes (e.g. citation click or toolbar nav)
   // If highlights exist, center the viewport on the first highlight bbox
@@ -151,54 +166,69 @@ export default function PdfViewer({ pdfUrl, currentPage, highlights, scale, scro
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [numPages]); // re-observe after pages render
 
-  // Text search: extract text from pages and find matches
+  // Text search: use cached page text extracted once on document load.
   useEffect(() => {
-    if (!searchQuery.trim() || !validPdfUrl || !numPages) {
+    if (!debouncedSearch.trim() || !validPdfUrl || !numPages) {
       setSearchMatches([]);
       setCurrentMatchIndex(-1);
       return;
     }
 
-    const query = searchQuery.toLowerCase();
-    let cancelled = false;
+    const cached = extractedTextRef.current;
+    if (!cached || cached.pdfUrl !== validPdfUrl || cached.pages.length !== numPages) {
+      setSearchMatches([]);
+      setCurrentMatchIndex(-1);
+      return;
+    }
+
+    const query = debouncedSearch.toLowerCase();
+    const matches: Array<{ page: number; index: number }> = [];
+
+    cached.pages.forEach((pageText, pageIdx) => {
+      let startIdx = 0;
+      let matchIdx = 0;
+      while ((startIdx = pageText.indexOf(query, startIdx)) !== -1) {
+        matches.push({ page: pageIdx + 1, index: matchIdx++ });
+        startIdx += query.length;
+      }
+    });
+
+    setSearchMatches(matches);
+    setCurrentMatchIndex(matches.length > 0 ? 0 : -1);
+  }, [debouncedSearch, validPdfUrl, numPages, textCacheVersion, setSearchMatches, setCurrentMatchIndex]);
+
+  const onDocumentLoadSuccess = (pdf: any) => {
+    const n = pdf.numPages;
+    setNumPages(n);
+    setStoreTotalPages(n);
+    pageRefs.current = new Array(n).fill(null);
+
+    if (!validPdfUrl) return;
+    const runId = ++extractionRunIdRef.current;
 
     (async () => {
       try {
-        const pdf = await pdfjs.getDocument({ url: validPdfUrl, ...PDF_OPTIONS }).promise;
-        const matches: Array<{ page: number; index: number }> = [];
-
-        for (let p = 1; p <= numPages; p++) {
+        const pages: string[] = [];
+        for (let p = 1; p <= n; p++) {
           const page = await pdf.getPage(p);
           const textContent = await page.getTextContent();
           const pageText = textContent.items
             .map((item: any) => item.str || '')
             .join(' ')
             .toLowerCase();
-
-          let startIdx = 0;
-          let matchIdx = 0;
-          while ((startIdx = pageText.indexOf(query, startIdx)) !== -1) {
-            matches.push({ page: p, index: matchIdx++ });
-            startIdx += query.length;
-          }
+          pages.push(pageText);
         }
 
-        if (!cancelled) {
-          setSearchMatches(matches);
-          setCurrentMatchIndex(matches.length > 0 ? 0 : -1);
-        }
+        if (runId !== extractionRunIdRef.current) return;
+        extractedTextRef.current = { pages, pdfUrl: validPdfUrl };
+        setTextCacheVersion((v) => v + 1);
       } catch (err) {
+        if (runId !== extractionRunIdRef.current) return;
+        extractedTextRef.current = null;
+        setTextCacheVersion((v) => v + 1);
         console.error('Search text extraction failed:', err);
       }
     })();
-
-    return () => { cancelled = true; };
-  }, [searchQuery, validPdfUrl, numPages, setSearchMatches, setCurrentMatchIndex]);
-
-  const onDocumentLoadSuccess = ({ numPages: n }: { numPages: number }) => {
-    setNumPages(n);
-    setStoreTotalPages(n);
-    pageRefs.current = new Array(n).fill(null);
   };
 
   // removed onPageRender: no longer needed with text-level highlights

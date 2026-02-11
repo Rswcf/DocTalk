@@ -64,13 +64,19 @@ export default function ModeSelector() {
   }
 
   return (
-    <div className={`inline-flex rounded-full bg-zinc-100 dark:bg-zinc-800 p-0.5 ${isStreaming ? 'opacity-60 pointer-events-none' : ''}`}>
+    <div
+      role="radiogroup"
+      aria-label="Performance mode"
+      className={`inline-flex rounded-full bg-zinc-100 dark:bg-zinc-800 p-0.5 ${isStreaming ? 'opacity-60 pointer-events-none' : ''}`}
+    >
       {AVAILABLE_MODES.map((mode) => {
         const isSelected = selectedMode === mode.id;
         const available = isModeAvailable(mode.id, userPlan);
         return (
           <button
             key={mode.id}
+            role="radio"
+            aria-checked={isSelected}
             onClick={() => choose(mode.id)}
             title={t(mode.descriptionKey)}
             className={`relative flex items-center gap-1 px-3 py-1 text-sm rounded-full transition-colors active:scale-[0.97] motion-reduce:transform-none focus-visible:ring-2 focus-visible:ring-zinc-400 dark:focus-visible:ring-zinc-500 focus-visible:ring-offset-1 ${

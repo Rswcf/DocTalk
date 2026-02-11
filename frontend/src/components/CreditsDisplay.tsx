@@ -43,7 +43,9 @@ export function CreditsDisplay() {
           const data = await res.json();
           if (data.plan) setUserPlan(data.plan);
         }
-      } catch {}
+      } catch (e) {
+        console.error('Failed to load credits:', e);
+      }
     })();
   }, [status, setUserPlan]);
 

@@ -402,5 +402,12 @@
   "auth.errorAccessDenied": "アクセスが拒否されました。もう一度お試しください。",
   "auth.errorAccountNotLinked": "このメールアドレスは別のサインイン方法に関連付けられています。元のサインイン方法をご使用ください。",
   "auth.errorDefault": "サインイン中にエラーが発生しました。もう一度お試しください。",
-  "auth.tryAgain": "再試行"
+  "auth.tryAgain": "再試行",
+  "chat.copied": "コピーしました！",
+  "chat.copyCode": "コードをコピー",
+  "viewer.slides": "スライド",
+  "viewer.text": "テキスト",
+  "auth.emailUnavailable": "メールサインインは一時的に利用できません。別の方法をお試しください。",
+  "auth.unexpectedError": "予期しないエラーが発生しました。もう一度お試しください。",
+  "auth.resendFailed": "再送信に失敗しました。もう一度お試しください。"
 }

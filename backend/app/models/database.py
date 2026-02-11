@@ -18,6 +18,11 @@ def _get_database_url() -> str:
 
 # Create async engine and sessionmaker (expire_on_commit=False for FastAPI typical usage)
 DATABASE_URL = _get_database_url()
-async_engine: AsyncEngine = create_async_engine(DATABASE_URL, pool_pre_ping=True)
+async_engine: AsyncEngine = create_async_engine(
+    DATABASE_URL,
+    pool_pre_ping=True,
+    pool_size=10,
+    max_overflow=20,
+    pool_recycle=1800,
+)
 AsyncSessionLocal = async_sessionmaker(async_engine, expire_on_commit=False)
-

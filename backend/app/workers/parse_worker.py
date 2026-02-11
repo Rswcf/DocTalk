@@ -303,7 +303,6 @@ def parse_document(self, document_id: str) -> None:
                                 "document_id": str(doc.id),
                                 "chunk_index": int(c.chunk_index),
                                 "page_start": int(c.page_start),
-                                "text": c.text[:1000],  # cap payload size
                             },
                         )
                     )

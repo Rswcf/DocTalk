@@ -25,7 +25,7 @@ start_celery() {
         python -m celery -A app.workers.celery_app worker \
             --loglevel=info \
             -Q default,parse \
-            --concurrency=1 \
+            --concurrency=2 \
             --soft-time-limit=600 \
             --time-limit=660 &
         CELERY_PID=$!

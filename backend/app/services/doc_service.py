@@ -11,7 +11,6 @@ from typing import Optional
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.config import settings
 from app.core.security_log import log_security_event
 from app.models.tables import Document
 from app.services.storage_service import storage_service
@@ -55,9 +54,6 @@ class DocService:
         content_type: str = getattr(upload, "content_type", "application/pdf") or "application/pdf"
 
         data: bytes = await upload.read()
-        max_bytes = int(settings.MAX_PDF_SIZE_MB) * 1024 * 1024
-        if len(data) > max_bytes:
-            raise ValueError("FILE_TOO_LARGE")
 
         # Persist to object storage under namespaced key
         doc_id = uuid.uuid4()

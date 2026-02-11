@@ -402,5 +402,12 @@
   "auth.errorAccessDenied": "L'accès a été refusé. Veuillez réessayer.",
   "auth.errorAccountNotLinked": "Cet email est déjà associé à une autre méthode de connexion. Veuillez utiliser votre méthode de connexion originale.",
   "auth.errorDefault": "Une erreur est survenue lors de la connexion. Veuillez réessayer.",
-  "auth.tryAgain": "Réessayer"
+  "auth.tryAgain": "Réessayer",
+  "chat.copied": "Copié !",
+  "chat.copyCode": "Copier le code",
+  "viewer.slides": "Diapositives",
+  "viewer.text": "Texte",
+  "auth.emailUnavailable": "La connexion par e-mail est temporairement indisponible. Veuillez essayer une autre méthode.",
+  "auth.unexpectedError": "Une erreur inattendue s'est produite. Veuillez réessayer.",
+  "auth.resendFailed": "Échec du renvoi. Veuillez réessayer."
 }

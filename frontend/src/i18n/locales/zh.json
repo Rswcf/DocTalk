@@ -304,7 +304,7 @@
   "footer.pricing": "定价",
   "footer.company": "公司",
   "footer.legal": "法律",
-  "footer.copyright": "\u00a9 2026 DocTalk. 保留所有权利。",
+  "footer.copyright": "© 2026 DocTalk. 保留所有权利。",
   "billing.comparison.title": "方案对比",
   "billing.comparison.feature": "功能",
   "billing.comparison.free": "免费版",
@@ -402,5 +402,12 @@
   "auth.errorAccessDenied": "访问被拒绝，请重试。",
   "auth.errorAccountNotLinked": "此邮箱已关联其他登录方式，请使用原始登录方式。",
   "auth.errorDefault": "登录时发生错误，请重试。",
-  "auth.tryAgain": "重试"
+  "auth.tryAgain": "重试",
+  "chat.copied": "已复制！",
+  "chat.copyCode": "复制代码",
+  "viewer.slides": "幻灯片",
+  "viewer.text": "文本",
+  "auth.emailUnavailable": "邮箱登录暂时不可用。请尝试其他方式。",
+  "auth.unexpectedError": "发生未知错误，请重试。",
+  "auth.resendFailed": "重发失败，请重试。"
 }

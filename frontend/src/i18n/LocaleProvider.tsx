@@ -3,18 +3,19 @@ import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import { LocaleContext, Locale, LOCALES } from './index';
 
 import en from './locales/en.json';
-import zh from './locales/zh.json';
-import es from './locales/es.json';
-import ja from './locales/ja.json';
-import de from './locales/de.json';
-import fr from './locales/fr.json';
-import ko from './locales/ko.json';
-import pt from './locales/pt.json';
-import it from './locales/it.json';
-import ar from './locales/ar.json';
-import hi from './locales/hi.json';
 
-const translations: Record<Locale, Record<string, string>> = { en, zh, es, ja, de, fr, ko, pt, it, ar, hi };
+const localeLoaders: Record<string, () => Promise<{ default: Record<string, string> }>> = {
+  zh: () => import('./locales/zh.json'),
+  es: () => import('./locales/es.json'),
+  ja: () => import('./locales/ja.json'),
+  de: () => import('./locales/de.json'),
+  fr: () => import('./locales/fr.json'),
+  ko: () => import('./locales/ko.json'),
+  pt: () => import('./locales/pt.json'),
+  it: () => import('./locales/it.json'),
+  ar: () => import('./locales/ar.json'),
+  hi: () => import('./locales/hi.json'),
+};
 
 function detectLocale(): Locale {
   const stored = typeof window !== 'undefined' ? localStorage.getItem('doctalk_locale') : null;
@@ -30,6 +31,7 @@ function detectLocale(): Locale {
 
 export default function LocaleProvider({ children }: { children: React.ReactNode }) {
   const [locale, setLocaleState] = useState<Locale>('en');
+  const [loadedTranslations, setLoadedTranslations] = useState<Record<string, Record<string, string>>>({ en });
 
   useEffect(() => {
     setLocaleState(detectLocale());
@@ -48,9 +50,28 @@ export default function LocaleProvider({ children }: { children: React.ReactNode
     document.documentElement.dir = localeInfo?.dir === 'rtl' ? 'rtl' : 'ltr';
   }, [locale]);
 
+  useEffect(() => {
+    if (locale === 'en' || loadedTranslations[locale] || !localeLoaders[locale]) return;
+
+    let cancelled = false;
+    localeLoaders[locale]()
+      .then((mod) => {
+        if (cancelled) return;
+        setLoadedTranslations((prev) => ({ ...prev, [locale]: mod.default }));
+      })
+      .catch((err) => {
+        console.error(`Failed to load locale: ${locale}`, err);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [locale, loadedTranslations]);
+
   const t = useCallback(
     (key: string, params?: Record<string, string | number>): string => {
-      let str = translations[locale]?.[key] || translations['en']?.[key] || key;
+      const activeTranslations = loadedTranslations[locale] || loadedTranslations.en;
+      let str = activeTranslations?.[key] || loadedTranslations.en?.[key] || key;
       if (params) {
         Object.entries(params).forEach(([k, v]) => {
           str = str.replace(`{${k}}`, String(v));
@@ -58,11 +79,10 @@ export default function LocaleProvider({ children }: { children: React.ReactNode
       }
       return str;
     },
-    [locale]
+    [locale, loadedTranslations]
   );
 
   const value = useMemo(() => ({ locale, setLocale, t }), [locale, setLocale, t]);
 
   return <LocaleContext.Provider value={value}>{children}</LocaleContext.Provider>;
 }
-

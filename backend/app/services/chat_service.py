@@ -7,7 +7,7 @@ from typing import Any, AsyncGenerator, Dict, List, Optional
 
 import sqlalchemy as sa
 from openai import AsyncOpenAI
-from sqlalchemy import asc, select
+from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -30,6 +30,23 @@ from app.services.retrieval_service import retrieval_service
 
 def sse(event: str, data: Dict[str, Any]) -> Dict[str, Any]:
     return {"event": event, "data": data}
+
+
+_openai_client: AsyncOpenAI | None = None
+
+
+def _get_openai_client() -> AsyncOpenAI:
+    global _openai_client
+    if _openai_client is None:
+        _openai_client = AsyncOpenAI(
+            api_key=settings.OPENROUTER_API_KEY,
+            base_url=settings.OPENROUTER_BASE_URL,
+            default_headers={
+                "HTTP-Referer": settings.FRONTEND_URL,
+                "X-Title": "DocTalk",
+            },
+        )
+    return _openai_client
 
 
 # ---------------------------
@@ -244,10 +261,11 @@ class ChatService:
         msgs_row = await db.execute(
             select(Message)
             .where(Message.session_id == session_id)
-            .order_by(asc(Message.created_at))
+            .order_by(Message.created_at.desc())
+            .limit(max_msgs + 1)
         )
-        all_msgs: List[Message] = list(msgs_row.scalars())
-        history_msgs = all_msgs[-(max_msgs + 1) :]  # include the just-saved user message
+        history_msgs: List[Message] = list(msgs_row.scalars().all())
+        history_msgs.reverse()  # back to chronological order
 
         # Convert to Claude message format (excluding system)
         claude_messages: List[dict] = []
@@ -322,14 +340,7 @@ class ChatService:
             )
 
         # 6) Stream from OpenRouter (OpenAI-compatible)
-        client = AsyncOpenAI(
-            api_key=settings.OPENROUTER_API_KEY,
-            base_url=settings.OPENROUTER_BASE_URL,
-            default_headers={
-                "HTTP-Referer": settings.FRONTEND_URL,
-                "X-Title": "DocTalk",
-            },
-        )
+        client = _get_openai_client()
 
         # Build OpenAI-format messages (system + history)
         # cache_control is Anthropic-specific — only include for Anthropic models

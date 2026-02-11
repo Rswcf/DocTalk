@@ -1,9 +1,10 @@
 "use client";
 
-import React, { useEffect, useRef, useState, useCallback } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 import { Sun, Moon, Monitor, ChevronDown, Check } from 'lucide-react';
 import { useTheme } from 'next-themes';
 import { useLocale } from '../i18n';
+import { useDropdownKeyboard } from '../lib/useDropdownKeyboard';
 
 const THEMES = [
   { id: 'light', icon: Sun, labelKey: 'header.lightMode' },
@@ -59,32 +60,19 @@ export default function ThemeSelector() {
     setOpen(false);
   };
 
-  function handleMenuKeyDown(e: React.KeyboardEvent) {
-    const itemCount = THEMES.length;
-    switch (e.key) {
-      case 'ArrowDown':
-        e.preventDefault();
-        setFocusIndex((prev) => (prev + 1) % itemCount);
-        break;
-      case 'ArrowUp':
-        e.preventDefault();
-        setFocusIndex((prev) => (prev - 1 + itemCount) % itemCount);
-        break;
-      case 'Home':
-        e.preventDefault();
-        setFocusIndex(0);
-        break;
-      case 'End':
-        e.preventDefault();
-        setFocusIndex(itemCount - 1);
-        break;
-      case 'Escape':
-        e.preventDefault();
-        setOpen(false);
-        triggerRef.current?.focus();
-        break;
-    }
-  }
+  const handleMenuKeyDown = useDropdownKeyboard(
+    THEMES.length,
+    focusIndex,
+    setFocusIndex,
+    (index) => {
+      const targetTheme = THEMES[index];
+      if (targetTheme) choose(targetTheme.id);
+    },
+    () => {
+      setOpen(false);
+      triggerRef.current?.focus();
+    },
+  );
 
   const current = THEMES.find((th) => th.id === resolvedTheme) || THEMES[0];
   const CurrentIcon = current.icon;

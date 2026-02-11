@@ -11,6 +11,7 @@ import PricingTable from "../../components/PricingTable";
 import type { UserProfile } from "../../types";
 import type { PlanType } from "../../lib/models";
 import { Check } from "lucide-react";
+import { usePageTitle } from "../../lib/usePageTitle";
 
 interface Product {
   id: string;
@@ -19,6 +20,8 @@ interface Product {
 }
 
 function BillingContent() {
+  usePageTitle("Pricing");
+
   const { data: session, status } = useSession();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -187,11 +190,11 @@ function BillingContent() {
         {/* Subscription Cards */}
         <section className="mb-8 grid md:grid-cols-2 gap-6">
           {/* Plus Card */}
-          <div className="relative rounded-xl bg-gradient-to-r from-zinc-800 to-zinc-900 p-[2px]">
+          <div className="relative rounded-xl bg-gradient-to-r from-indigo-500 to-violet-500 p-[2px]">
             <div className="rounded-xl bg-white dark:bg-zinc-950 p-6 h-full flex flex-col">
               <div className="flex items-center gap-2 mb-1">
                 <h2 className="text-xl font-semibold text-zinc-900 dark:text-zinc-50">{t("billing.plus.title")}</h2>
-                <span className="text-xs px-2 py-0.5 rounded-full bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 font-medium">
+                <span className="text-xs px-2 py-0.5 rounded-full bg-indigo-600 dark:bg-indigo-500 text-white font-medium">
                   {t("billing.mostPopular")}
                 </span>
               </div>
@@ -229,7 +232,7 @@ function BillingContent() {
                 <button
                   onClick={() => handleSubscribe('plus')}
                   disabled={submitting === 'plus'}
-                  className="w-full px-4 py-2.5 rounded-lg bg-zinc-900 dark:bg-zinc-50 text-white dark:text-zinc-900 hover:bg-zinc-800 dark:hover:bg-zinc-200 disabled:opacity-50 shadow-sm hover:shadow-md transition-colors font-medium focus-visible:ring-2 focus-visible:ring-zinc-400 dark:focus-visible:ring-zinc-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-900"
+                  className="w-full px-4 py-2.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-500 dark:hover:bg-indigo-400 text-white disabled:opacity-50 shadow-sm hover:shadow-md transition-colors font-medium focus-visible:ring-2 focus-visible:ring-zinc-400 dark:focus-visible:ring-zinc-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-900"
                 >
                   {submitting === 'plus' ? t("common.loading") : `${t("billing.upgrade")} Plus`}
                 </button>

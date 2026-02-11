@@ -402,5 +402,12 @@
   "auth.errorAccessDenied": "접근이 거부되었습니다. 다시 시도해 주세요.",
   "auth.errorAccountNotLinked": "이 이메일은 이미 다른 로그인 방법과 연결되어 있습니다. 원래 로그인 방법을 사용해 주세요.",
   "auth.errorDefault": "로그인 중 오류가 발생했습니다. 다시 시도해 주세요.",
-  "auth.tryAgain": "다시 시도"
+  "auth.tryAgain": "다시 시도",
+  "chat.copied": "복사됨!",
+  "chat.copyCode": "코드 복사",
+  "viewer.slides": "슬라이드",
+  "viewer.text": "텍스트",
+  "auth.emailUnavailable": "이메일 로그인을 현재 사용할 수 없습니다. 다른 방법을 시도해 주세요.",
+  "auth.unexpectedError": "예기치 않은 오류가 발생했습니다. 다시 시도해 주세요.",
+  "auth.resendFailed": "재전송에 실패했습니다. 다시 시도해 주세요."
 }

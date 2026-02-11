@@ -149,7 +149,7 @@ async def get_collection(
     )
     coll = result.scalar_one_or_none()
     if not coll:
-        raise HTTPException(status_code=404)
+        raise HTTPException(status_code=404, detail="Collection not found")
 
     docs = [
         CollectionDocumentBrief(
@@ -179,7 +179,7 @@ async def delete_collection(
     """Delete collection (cascade sessions, keep documents)."""
     coll = await db.get(Collection, collection_id)
     if not coll or coll.user_id != user.id:
-        raise HTTPException(status_code=404)
+        raise HTTPException(status_code=404, detail="Collection not found")
     await db.delete(coll)
     await db.commit()
     return None
@@ -195,7 +195,7 @@ async def add_documents_to_collection(
     """Add documents to a collection."""
     coll = await db.get(Collection, collection_id)
     if not coll or coll.user_id != user.id:
-        raise HTTPException(status_code=404)
+        raise HTTPException(status_code=404, detail="Collection not found")
 
     added = 0
     for did_str in body.document_ids:
@@ -237,7 +237,7 @@ async def remove_document_from_collection(
     """Remove a document from a collection."""
     coll = await db.get(Collection, collection_id)
     if not coll or coll.user_id != user.id:
-        raise HTTPException(status_code=404)
+        raise HTTPException(status_code=404, detail="Collection not found")
 
     await db.execute(
         collection_documents.delete().where(
@@ -258,7 +258,7 @@ async def create_collection_session(
     """Create a chat session for a collection (cross-document Q&A)."""
     coll = await db.get(Collection, collection_id)
     if not coll or coll.user_id != user.id:
-        raise HTTPException(status_code=404)
+        raise HTTPException(status_code=404, detail="Collection not found")
 
     sess = ChatSession(collection_id=collection_id)
     db.add(sess)
@@ -281,7 +281,7 @@ async def list_collection_sessions(
     """List sessions for a collection."""
     coll = await db.get(Collection, collection_id)
     if not coll or coll.user_id != user.id:
-        raise HTTPException(status_code=404)
+        raise HTTPException(status_code=404, detail="Collection not found")
 
     from sqlalchemy import desc
 

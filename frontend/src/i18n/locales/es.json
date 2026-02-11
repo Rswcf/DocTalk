@@ -402,5 +402,12 @@
   "auth.errorAccessDenied": "Se denegó el acceso. Inténtalo de nuevo.",
   "auth.errorAccountNotLinked": "Este email ya está asociado con otro método de inicio de sesión. Usa tu método original.",
   "auth.errorDefault": "Ocurrió un error durante el inicio de sesión. Inténtalo de nuevo.",
-  "auth.tryAgain": "Intentar de nuevo"
+  "auth.tryAgain": "Intentar de nuevo",
+  "chat.copied": "¡Copiado!",
+  "chat.copyCode": "Copiar código",
+  "viewer.slides": "Diapositivas",
+  "viewer.text": "Texto",
+  "auth.emailUnavailable": "El inicio de sesión por correo no está disponible temporalmente. Prueba otro método.",
+  "auth.unexpectedError": "Ocurrió un error inesperado. Inténtalo de nuevo.",
+  "auth.resendFailed": "No se pudo reenviar. Inténtalo de nuevo."
 }

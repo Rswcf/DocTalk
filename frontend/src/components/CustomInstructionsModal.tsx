@@ -16,6 +16,7 @@ export default function CustomInstructionsModal({ isOpen, onClose, currentInstru
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const modalRef = useRef<HTMLDivElement>(null);
   const { t } = useLocale();
   const MAX_CHARS = 2000;
 
@@ -29,6 +30,41 @@ export default function CustomInstructionsModal({ isOpen, onClose, currentInstru
       textareaRef.current.focus();
     }
   }, [isOpen]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const modal = modalRef.current;
+    if (!modal) return;
+
+    const focusableSelector = 'textarea, button[data-modal-focus="true"]';
+
+    function handleKeyDown(e: KeyboardEvent) {
+      if (e.key === 'Escape') {
+        onClose();
+        return;
+      }
+      if (e.key !== 'Tab') return;
+
+      if (!modal) return;
+      const focusables = modal.querySelectorAll<HTMLElement>(focusableSelector);
+      const first = focusables[0];
+      const last = focusables[focusables.length - 1];
+      if (!first || !last) return;
+
+      if (e.shiftKey) {
+        if (document.activeElement === first) {
+          e.preventDefault();
+          last.focus();
+        }
+      } else if (document.activeElement === last) {
+        e.preventDefault();
+        first.focus();
+      }
+    }
+
+    modal.addEventListener('keydown', handleKeyDown);
+    return () => modal.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, onClose]);
 
   if (!isOpen) return null;
 
@@ -62,6 +98,7 @@ export default function CustomInstructionsModal({ isOpen, onClose, currentInstru
       onKeyDown={(e) => { if (e.key === 'Escape') onClose(); }}
     >
       <div
+        ref={modalRef}
         className="bg-white dark:bg-zinc-900 rounded-2xl shadow-xl w-full max-w-lg mx-4 p-6 animate-fade-in motion-reduce:animate-none"
         role="dialog"
         aria-modal="true"
@@ -99,13 +136,23 @@ export default function CustomInstructionsModal({ isOpen, onClose, currentInstru
           <button
             onClick={handleClear}
             disabled={saving || !text}
+            data-modal-focus="true"
             className="px-4 py-2 text-sm rounded-lg border border-zinc-200 dark:border-zinc-700 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors disabled:opacity-50 focus-visible:ring-2 focus-visible:ring-zinc-400 dark:focus-visible:ring-zinc-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-900"
           >
             {t('instructions.clear')}
           </button>
           <button
+            onClick={onClose}
+            disabled={saving}
+            data-modal-focus="true"
+            className="px-4 py-2 text-sm rounded-lg border border-zinc-200 dark:border-zinc-700 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors disabled:opacity-50 focus-visible:ring-2 focus-visible:ring-zinc-400 dark:focus-visible:ring-zinc-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-900"
+          >
+            {t('common.cancel')}
+          </button>
+          <button
             onClick={handleSave}
             disabled={saving}
+            data-modal-focus="true"
             className="px-4 py-2 text-sm rounded-lg bg-zinc-900 dark:bg-zinc-50 text-white dark:text-zinc-900 font-medium hover:bg-zinc-800 dark:hover:bg-zinc-200 transition-colors disabled:opacity-50 focus-visible:ring-2 focus-visible:ring-zinc-400 dark:focus-visible:ring-zinc-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-900"
           >
             {saving ? t('common.loading') : t('instructions.save')}
