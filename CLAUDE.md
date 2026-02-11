@@ -49,7 +49,7 @@ Railway 项目包含 5 个服务：backend, Postgres, Redis, qdrant-v2, minio-v2
   - 未登录: 可试用 Demo（3 篇真实 PDF，5 条消息限制，服务端 + 客户端双重限制，匿名用户强制使用 DeepSeek V3.2（低成本）且隐藏 ModeSelector，IP 级速率限制 10 req/min）
   - 已登录: 可上传个人 PDF，服务端文档列表，Credits 系统；访问 Demo 文档使用 Credits，无消息限制
 - **Demo 系统**: 后端启动时自动种子 3 篇真实文档（Alphabet Q4 财报、Attention 论文、美国联邦法院文书）到 MinIO + DB，通过 Celery 解析。`demo_slug` 列标识 Demo 文档，`is_demo` 属性暴露给前端。`GET /api/documents/demo` 返回 Demo 文档列表。`/demo` 页面从 API 获取文档 ID 后链接到 `/d/{docId}`，旧 `/demo/[sample]` 路由自动重定向
-- **Credits 系统**: 预付费模式，余额 + Ledger 双表记录。三阶段扣费：① chat 端点按模式预估余额检查（402 不足） → ② `chat_service` 调用 `pre_debit_credits()` 在流式输出前扣除预估额（`MODE_ESTIMATED_COST`: quick=5, balanced=15, thorough=35） → ③ 流式结束后 `reconcile_credits()` 按实际 token 计算差额退补。注册赠送 `SIGNUP_BONUS_CREDITS`（默认 1,000）
+- **Credits 系统**: 预付费模式，余额 + Ledger 双表记录。两阶段扣费：① chat 端点按模式预估余额检查（402 不足） → ② `chat_service` 调用 `debit_credits()` 在流式输出前预扣估算额（`MODE_ESTIMATED_COST`: quick=5, balanced=15, thorough=35），流式结束后 `reconcile_credits()` 原地更新同一条 ledger 条目为实际成本（不创建新条目）。每次聊天仅产生一条 "chat" ledger 记录。LLM 失败时删除 ledger 条目并全额退款（无痕迹）。注册赠送 `SIGNUP_BONUS_CREDITS`（默认 1,000）
 - **订阅系统**: Free (500 credits/月) + Plus (3,000 credits/月, $9.99) + Pro (9,000 credits/月, $19.99) 三级，支持月付/年付（年付享 20% 折扣），月度 credits 惰性发放（`ensure_monthly_credits`），Stripe 订阅集成
 - **模式门控**: Thorough 模式（深度分析）仅限 Plus+ 套餐使用，后端 `chat_service.py` 校验 + 前端 `ModeSelector.tsx` 锁定图标。ModeSelector 根据认证状态显示不同 CTA：匿名用户点击锁定模式 → 登录模态框（`?auth=1`），已登录免费用户 → `/billing`。chat 端点在进入流式前按 `MODE_ESTIMATED_COST` 预检余额，不足返回 402 + `required`/`balance` 字段
 - **Profile 页面**: `/profile` 4 个 Tab (Profile/Credits/Usage/Account)，含交易历史、使用统计、账户删除
@@ -316,7 +316,7 @@ SENTRY_TRACES_SAMPLE_RATE=0.1
 ### 后端相关
 - **Celery 用同步 DB**: Worker 使用 `psycopg`（同步），API 使用 `asyncpg`（异步）
 - **macOS Celery fork 安全**: 必须设置 `OBJC_DISABLE_INITIALIZE_FORK_SAFETY=YES`
-- **Credits 三阶段扣费**: ① `chat.py` 按 `MODE_ESTIMATED_COST` 预检余额（402 不足） → ② `chat_service.py` 调用 `pre_debit_credits()` 预扣估算额 → ③ 流式结束后 `reconcile_credits()` 按实际 token 差额退补。`db.flush()` 确保 ledger 在同一事务中写入
+- **Credits 两阶段扣费**: ① `chat.py` 按 `MODE_ESTIMATED_COST` 预检余额（402 不足） → ② `chat_service.py` 调用 `debit_credits()` 预扣估算额（返回 ledger ID），流式结束后 `reconcile_credits()` 原地 UPDATE 同一条 ledger 条目（delta + balance_after）为实际成本。每次聊天仅 1 条 ledger 记录（reason="chat"）。LLM 失败时 DELETE ledger 条目 + 全额退余额（无痕迹）
 - **FOR UPDATE 锁**: 验证 Token 使用行锁防止 TOCTOU 竞态
 - **OCR 回退**: `detect_scanned()` 检测到扫描 PDF 后，若 `OCR_ENABLED=true`，设 status="ocr" → 调用 `extract_pages_ocr()` → 验证文字 ≥50 chars → 继续 parsing。PyMuPDF `page.get_textpage_ocr(language=..., dpi=..., full=True)` 需要系统安装 Tesseract（Dockerfile 已包含 `tesseract-ocr-eng` + `tesseract-ocr-chi-sim`）
 - **OCR 容错**: 每页独立 try/except，一页 OCR 失败不影响其他页。OCR 文字不足 50 chars 时标记 error
@@ -403,7 +403,7 @@ DocTalk/
 │   │   │   └── auth.py           # User/Account/VerificationToken schemas
 │   │   ├── services/
 │   │   │   ├── chat_service.py   # LLM 对话 + 引用解析 + 模型自适应提示/参数
-│   │   │   ├── credit_service.py # Credits pre-debit/reconcile + ensure_monthly_credits
+│   │   │   ├── credit_service.py # Credits debit/reconcile (single ledger entry) + ensure_monthly_credits
 │   │   │   ├── auth_service.py   # User/Account/Token 管理
 │   │   │   ├── demo_seed.py      # Demo 文档种子 (启动时自动执行)
 │   │   │   ├── summary_service.py # 自动摘要生成 (Celery 上下文, DeepSeek)

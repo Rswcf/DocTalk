@@ -277,11 +277,11 @@ flowchart TB
         UsageRecord["UsageRecord<br/>(per-message)"]
     end
 
-    subgraph Chat["Chat Debit (3-phase)"]
+    subgraph Chat["Chat Debit (2-phase)"]
         EnsureMonthly["ensure_monthly_credits()<br/>30-day lazy check"]
         PreCheck["balance pre-check<br/>MODE_ESTIMATED_COST"]
-        PreDebit["pre_debit_credits()<br/>estimated cost before stream"]
-        Reconcile["reconcile_credits()<br/>actual vs estimated diff"]
+        PreDebit["debit_credits()<br/>estimated cost before stream"]
+        Reconcile["reconcile_credits()<br/>update ledger entry in-place"]
     end
 
     Signup --> CreditService
@@ -310,7 +310,7 @@ flowchart TB
 
 4. **Plus/Pro Subscription**: Stripe recurring subscription (monthly or annual). `checkout.session.completed` (mode=subscription) only updates the user's plan — it does **not** grant credits (prevents double-grant with invoice webhook). Credits are granted solely via `invoice.payment_succeeded` webhook based on plan (Plus: 3K, Pro: 9K). Idempotent by `invoice.id`. On `customer.subscription.deleted`, plan is reset to Free.
 
-5. **Chat Debit (3-phase)**: ① `chat.py` pre-checks balance >= `MODE_ESTIMATED_COST` (quick=5, balanced=15, thorough=35), returns 402 if insufficient. ② `chat_service.py` calls `pre_debit_credits()` to debit estimated cost before LLM streaming starts. ③ After streaming completes, `reconcile_credits()` computes actual cost from token usage and refunds or charges the difference. All operations recorded in `CreditLedger` (balance tracking) and `UsageRecord` (analytics).
+5. **Chat Debit (2-phase)**: ① `chat.py` pre-checks balance >= `MODE_ESTIMATED_COST` (quick=5, balanced=15, thorough=35), returns 402 if insufficient. ② `chat_service.py` calls `debit_credits()` to debit estimated cost before LLM streaming starts (returns ledger entry ID). After streaming completes, `reconcile_credits()` updates the **same ledger entry in-place** (delta and balance_after) to reflect actual token-based cost — no new entries are created. Each chat produces exactly one ledger row (reason="chat"). On LLM failure, the ledger entry is deleted and credits fully refunded (no trace). All operations recorded in `CreditLedger` (balance tracking) and `UsageRecord` (analytics).
 
 ---
 

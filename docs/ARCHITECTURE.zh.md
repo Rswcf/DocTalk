@@ -277,11 +277,11 @@ flowchart TB
         UsageRecord["UsageRecord<br/>（按消息）"]
     end
 
-    subgraph Chat["对话扣费（三阶段）"]
+    subgraph Chat["对话扣费（两阶段）"]
         EnsureMonthly["ensure_monthly_credits()<br/>30 天惰性检查"]
         PreCheck["余额预检<br/>MODE_ESTIMATED_COST"]
-        PreDebit["pre_debit_credits()<br/>流式前预扣估算额"]
-        Reconcile["reconcile_credits()<br/>实际与估算差额退补"]
+        PreDebit["debit_credits()<br/>流式前预扣估算额"]
+        Reconcile["reconcile_credits()<br/>原地更新 ledger 条目"]
     end
 
     Signup --> CreditService
@@ -310,7 +310,7 @@ flowchart TB
 
 4. **Plus/Pro 订阅**：Stripe 循环订阅（月付或年付）。`checkout.session.completed`（mode=subscription）仅更新用户套餐——**不发放积分**（防止与 invoice Webhook 双重发放）。积分仅通过 `invoice.payment_succeeded` Webhook 发放（Plus: 3K，Pro: 9K），按 `invoice.id` 幂等。收到 `customer.subscription.deleted` 后将套餐重置为 Free。
 
-5. **对话扣费（三阶段）**：① `chat.py` 预检余额 >= `MODE_ESTIMATED_COST`（quick=5, balanced=15, thorough=35），不足返回 402。② `chat_service.py` 调用 `pre_debit_credits()` 在 LLM 流式输出前预扣估算额。③ 流式结束后 `reconcile_credits()` 按实际 token 用量计算差额退补。所有操作记录在 `CreditLedger`（余额追踪）和 `UsageRecord`（分析统计）中。
+5. **对话扣费（两阶段）**：① `chat.py` 预检余额 >= `MODE_ESTIMATED_COST`（quick=5, balanced=15, thorough=35），不足返回 402。② `chat_service.py` 调用 `debit_credits()` 在 LLM 流式输出前预扣估算额（返回 ledger 条目 ID）。流式结束后 `reconcile_credits()` **原地更新同一条 ledger 条目**（delta 和 balance_after）为实际 token 成本——不创建新条目。每次聊天仅产生一条 ledger 记录（reason="chat"）。LLM 失败时删除 ledger 条目并全额退款（无痕迹）。所有操作记录在 `CreditLedger`（余额追踪）和 `UsageRecord`（分析统计）中。
 
 ---
 
