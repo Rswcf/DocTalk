@@ -384,5 +384,22 @@
   "modes.thorough": "Thorough",
   "modes.quickDesc": "Fast answers for simple lookups",
   "modes.balancedDesc": "Best quality-to-speed ratio",
-  "modes.thoroughDesc": "Deep analysis with maximum accuracy"
+  "modes.thoroughDesc": "Deep analysis with maximum accuracy",
+  "auth.continueWithMicrosoft": "Continue with Microsoft",
+  "auth.continueWithApple": "Continue with Apple",
+  "auth.continueWithEmail": "Continue with email",
+  "auth.orDivider": "or",
+  "auth.emailPlaceholder": "Enter your email address",
+  "auth.checkEmail": "Check your email",
+  "auth.checkEmailSubtitle": "We sent a sign-in link to your email. Click the link to sign in.",
+  "auth.resendEmail": "Resend email",
+  "auth.emailSent": "Email sent to {email}",
+  "auth.useDifferentEmail": "Use a different email",
+  "auth.backToSignIn": "Back to sign in",
+  "auth.error": "Authentication error",
+  "auth.errorVerification": "The sign-in link has expired or has already been used. Please request a new one.",
+  "auth.errorAccessDenied": "Access was denied. Please try again.",
+  "auth.errorAccountNotLinked": "This email is already associated with another sign-in method. Please use your original sign-in method.",
+  "auth.errorDefault": "An error occurred during sign in. Please try again.",
+  "auth.tryAgain": "Try again"
 }

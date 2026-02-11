@@ -384,5 +384,22 @@
   "modes.thorough": "Approfondi",
   "modes.quickDesc": "Réponses rapides pour les recherches simples",
   "modes.balancedDesc": "Meilleur rapport qualité-vitesse",
-  "modes.thoroughDesc": "Analyse approfondie avec une précision maximale"
+  "modes.thoroughDesc": "Analyse approfondie avec une précision maximale",
+  "auth.continueWithMicrosoft": "Continuer avec Microsoft",
+  "auth.continueWithApple": "Continuer avec Apple",
+  "auth.continueWithEmail": "Continuer avec l'email",
+  "auth.orDivider": "ou",
+  "auth.emailPlaceholder": "Entrez votre adresse email",
+  "auth.checkEmail": "Vérifiez votre email",
+  "auth.checkEmailSubtitle": "Nous avons envoyé un lien de connexion à votre email. Cliquez sur le lien pour vous connecter.",
+  "auth.resendEmail": "Renvoyer l'email",
+  "auth.emailSent": "Email envoyé à {email}",
+  "auth.useDifferentEmail": "Utiliser un autre email",
+  "auth.backToSignIn": "Retour à la connexion",
+  "auth.error": "Erreur d'authentification",
+  "auth.errorVerification": "Le lien de connexion a expiré ou a déjà été utilisé. Veuillez en demander un nouveau.",
+  "auth.errorAccessDenied": "L'accès a été refusé. Veuillez réessayer.",
+  "auth.errorAccountNotLinked": "Cet email est déjà associé à une autre méthode de connexion. Veuillez utiliser votre méthode de connexion originale.",
+  "auth.errorDefault": "Une erreur est survenue lors de la connexion. Veuillez réessayer.",
+  "auth.tryAgain": "Réessayer"
 }

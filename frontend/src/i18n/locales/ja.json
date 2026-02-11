@@ -384,5 +384,22 @@
   "modes.thorough": "詳細",
   "modes.quickDesc": "簡単な検索に素早く回答",
   "modes.balancedDesc": "品質と速度の最適なバランス",
-  "modes.thoroughDesc": "最高精度の深い分析"
+  "modes.thoroughDesc": "最高精度の深い分析",
+  "auth.continueWithMicrosoft": "Microsoftで続行",
+  "auth.continueWithApple": "Appleで続行",
+  "auth.continueWithEmail": "メールで続行",
+  "auth.orDivider": "または",
+  "auth.emailPlaceholder": "メールアドレスを入力",
+  "auth.checkEmail": "メールをご確認ください",
+  "auth.checkEmailSubtitle": "サインインリンクをメールに送信しました。リンクをクリックしてサインインしてください。",
+  "auth.resendEmail": "メールを再送信",
+  "auth.emailSent": "{email} にメールを送信しました",
+  "auth.useDifferentEmail": "別のメールアドレスを使用",
+  "auth.backToSignIn": "サインインに戻る",
+  "auth.error": "認証エラー",
+  "auth.errorVerification": "サインインリンクの有効期限が切れたか、すでに使用されています。新しいリンクをリクエストしてください。",
+  "auth.errorAccessDenied": "アクセスが拒否されました。もう一度お試しください。",
+  "auth.errorAccountNotLinked": "このメールアドレスは別のサインイン方法に関連付けられています。元のサインイン方法をご使用ください。",
+  "auth.errorDefault": "サインイン中にエラーが発生しました。もう一度お試しください。",
+  "auth.tryAgain": "再試行"
 }

@@ -1,5 +1,7 @@
 import NextAuth from "next-auth";
 import Google from "next-auth/providers/google";
+import MicrosoftEntraId from "next-auth/providers/microsoft-entra-id";
+import Resend from "next-auth/providers/resend";
 import { FastAPIAdapter } from "./authAdapter";
 
 // Validate required environment variables at build time
@@ -18,8 +20,17 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     Google({
       clientId: process.env.GOOGLE_CLIENT_ID as string,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET as string,
+      allowDangerousEmailAccountLinking: true,
     }),
-    // Apple and Email providers can be added later
+    MicrosoftEntraId({
+      clientId: process.env.MICROSOFT_CLIENT_ID as string,
+      clientSecret: process.env.MICROSOFT_CLIENT_SECRET as string,
+      allowDangerousEmailAccountLinking: true,
+    }),
+    Resend({
+      apiKey: process.env.RESEND_API_KEY as string,
+      from: process.env.EMAIL_FROM || "DocTalk <noreply@doctalk.site>",
+    }),
   ],
   callbacks: {
     async jwt({ token, user }) {
@@ -38,6 +49,8 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
   },
   pages: {
     signIn: "/auth",
+    verifyRequest: "/auth/verify-request",
+    error: "/auth/error",
   },
 });
 

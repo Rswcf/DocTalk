@@ -384,5 +384,22 @@
   "modes.thorough": "Profundo",
   "modes.quickDesc": "Respuestas rápidas para consultas simples",
   "modes.balancedDesc": "Mejor relación calidad-velocidad",
-  "modes.thoroughDesc": "Análisis profundo con máxima precisión"
+  "modes.thoroughDesc": "Análisis profundo con máxima precisión",
+  "auth.continueWithMicrosoft": "Continuar con Microsoft",
+  "auth.continueWithApple": "Continuar con Apple",
+  "auth.continueWithEmail": "Continuar con email",
+  "auth.orDivider": "o",
+  "auth.emailPlaceholder": "Ingresa tu dirección de email",
+  "auth.checkEmail": "Revisa tu email",
+  "auth.checkEmailSubtitle": "Te enviamos un enlace de inicio de sesión a tu email. Haz clic en el enlace para iniciar sesión.",
+  "auth.resendEmail": "Reenviar email",
+  "auth.emailSent": "Email enviado a {email}",
+  "auth.useDifferentEmail": "Usar otro email",
+  "auth.backToSignIn": "Volver a iniciar sesión",
+  "auth.error": "Error de autenticación",
+  "auth.errorVerification": "El enlace de inicio de sesión ha expirado o ya fue utilizado. Solicita uno nuevo.",
+  "auth.errorAccessDenied": "Se denegó el acceso. Inténtalo de nuevo.",
+  "auth.errorAccountNotLinked": "Este email ya está asociado con otro método de inicio de sesión. Usa tu método original.",
+  "auth.errorDefault": "Ocurrió un error durante el inicio de sesión. Inténtalo de nuevo.",
+  "auth.tryAgain": "Intentar de nuevo"
 }

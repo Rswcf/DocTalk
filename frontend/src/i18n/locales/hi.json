@@ -384,5 +384,22 @@
   "modes.thorough": "गहन",
   "modes.quickDesc": "सरल खोज के लिए तेज़ उत्तर",
   "modes.balancedDesc": "गुणवत्ता और गति का सर्वोत्तम अनुपात",
-  "modes.thoroughDesc": "अधिकतम सटीकता के साथ गहन विश्लेषण"
+  "modes.thoroughDesc": "अधिकतम सटीकता के साथ गहन विश्लेषण",
+  "auth.continueWithMicrosoft": "Microsoft से जारी रखें",
+  "auth.continueWithApple": "Apple से जारी रखें",
+  "auth.continueWithEmail": "ईमेल से जारी रखें",
+  "auth.orDivider": "या",
+  "auth.emailPlaceholder": "अपना ईमेल पता दर्ज करें",
+  "auth.checkEmail": "अपना ईमेल जांचें",
+  "auth.checkEmailSubtitle": "हमने आपके ईमेल पर एक साइन-इन लिंक भेजा है। साइन इन करने के लिए लिंक पर क्लिक करें।",
+  "auth.resendEmail": "ईमेल पुनः भेजें",
+  "auth.emailSent": "{email} पर ईमेल भेजा गया",
+  "auth.useDifferentEmail": "अलग ईमेल उपयोग करें",
+  "auth.backToSignIn": "साइन इन पर वापस जाएं",
+  "auth.error": "प्रमाणीकरण त्रुटि",
+  "auth.errorVerification": "साइन-इन लिंक समाप्त हो गया है या पहले ही उपयोग किया जा चुका है। कृपया एक नया अनुरोध करें।",
+  "auth.errorAccessDenied": "पहुंच अस्वीकार कर दी गई। कृपया पुनः प्रयास करें।",
+  "auth.errorAccountNotLinked": "यह ईमेल पहले से किसी अन्य साइन-इन विधि से जुड़ा है। कृपया अपनी मूल साइन-इन विधि का उपयोग करें।",
+  "auth.errorDefault": "साइन इन के दौरान एक त्रुटि हुई। कृपया पुनः प्रयास करें।",
+  "auth.tryAgain": "पुनः प्रयास करें"
 }

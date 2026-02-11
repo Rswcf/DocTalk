@@ -384,5 +384,22 @@
   "modes.thorough": "Approfondito",
   "modes.quickDesc": "Risposte rapide per ricerche semplici",
   "modes.balancedDesc": "Miglior rapporto qualità-velocità",
-  "modes.thoroughDesc": "Analisi approfondita con massima precisione"
+  "modes.thoroughDesc": "Analisi approfondita con massima precisione",
+  "auth.continueWithMicrosoft": "Continua con Microsoft",
+  "auth.continueWithApple": "Continua con Apple",
+  "auth.continueWithEmail": "Continua con email",
+  "auth.orDivider": "o",
+  "auth.emailPlaceholder": "Inserisci il tuo indirizzo email",
+  "auth.checkEmail": "Controlla la tua email",
+  "auth.checkEmailSubtitle": "Abbiamo inviato un link di accesso alla tua email. Clicca il link per accedere.",
+  "auth.resendEmail": "Rinvia email",
+  "auth.emailSent": "Email inviata a {email}",
+  "auth.useDifferentEmail": "Usa un'altra email",
+  "auth.backToSignIn": "Torna al login",
+  "auth.error": "Errore di autenticazione",
+  "auth.errorVerification": "Il link di accesso è scaduto o è già stato utilizzato. Richiedine uno nuovo.",
+  "auth.errorAccessDenied": "Accesso negato. Riprova.",
+  "auth.errorAccountNotLinked": "Questa email è già associata a un altro metodo di accesso. Usa il metodo di accesso originale.",
+  "auth.errorDefault": "Si è verificato un errore durante l'accesso. Riprova.",
+  "auth.tryAgain": "Riprova"
 }

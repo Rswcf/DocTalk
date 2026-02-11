@@ -384,5 +384,22 @@
   "modes.thorough": "심층",
   "modes.quickDesc": "간단한 검색을 위한 빠른 답변",
   "modes.balancedDesc": "최적의 품질 대 속도 비율",
-  "modes.thoroughDesc": "최고 정확도의 심층 분석"
+  "modes.thoroughDesc": "최고 정확도의 심층 분석",
+  "auth.continueWithMicrosoft": "Microsoft로 계속",
+  "auth.continueWithApple": "Apple로 계속",
+  "auth.continueWithEmail": "이메일로 계속",
+  "auth.orDivider": "또는",
+  "auth.emailPlaceholder": "이메일 주소를 입력하세요",
+  "auth.checkEmail": "이메일을 확인하세요",
+  "auth.checkEmailSubtitle": "로그인 링크를 이메일로 보냈습니다. 링크를 클릭하여 로그인하세요.",
+  "auth.resendEmail": "이메일 재발송",
+  "auth.emailSent": "{email}로 이메일이 발송되었습니다",
+  "auth.useDifferentEmail": "다른 이메일 사용",
+  "auth.backToSignIn": "로그인으로 돌아가기",
+  "auth.error": "인증 오류",
+  "auth.errorVerification": "로그인 링크가 만료되었거나 이미 사용되었습니다. 새 링크를 요청해 주세요.",
+  "auth.errorAccessDenied": "접근이 거부되었습니다. 다시 시도해 주세요.",
+  "auth.errorAccountNotLinked": "이 이메일은 이미 다른 로그인 방법과 연결되어 있습니다. 원래 로그인 방법을 사용해 주세요.",
+  "auth.errorDefault": "로그인 중 오류가 발생했습니다. 다시 시도해 주세요.",
+  "auth.tryAgain": "다시 시도"
 }

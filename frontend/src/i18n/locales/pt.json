@@ -384,5 +384,22 @@
   "modes.thorough": "Profundo",
   "modes.quickDesc": "Respostas rápidas para consultas simples",
   "modes.balancedDesc": "Melhor relação qualidade-velocidade",
-  "modes.thoroughDesc": "Análise profunda com máxima precisão"
+  "modes.thoroughDesc": "Análise profunda com máxima precisão",
+  "auth.continueWithMicrosoft": "Continuar com Microsoft",
+  "auth.continueWithApple": "Continuar com Apple",
+  "auth.continueWithEmail": "Continuar com email",
+  "auth.orDivider": "ou",
+  "auth.emailPlaceholder": "Digite seu endereço de email",
+  "auth.checkEmail": "Verifique seu email",
+  "auth.checkEmailSubtitle": "Enviamos um link de login para seu email. Clique no link para entrar.",
+  "auth.resendEmail": "Reenviar email",
+  "auth.emailSent": "Email enviado para {email}",
+  "auth.useDifferentEmail": "Usar outro email",
+  "auth.backToSignIn": "Voltar ao login",
+  "auth.error": "Erro de autenticação",
+  "auth.errorVerification": "O link de login expirou ou já foi utilizado. Solicite um novo.",
+  "auth.errorAccessDenied": "Acesso negado. Tente novamente.",
+  "auth.errorAccountNotLinked": "Este email já está associado a outro método de login. Use seu método de login original.",
+  "auth.errorDefault": "Ocorreu um erro durante o login. Tente novamente.",
+  "auth.tryAgain": "Tentar novamente"
 }

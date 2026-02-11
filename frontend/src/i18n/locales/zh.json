@@ -384,5 +384,22 @@
   "modes.thorough": "深度",
   "modes.quickDesc": "适合简单查找的快速回答",
   "modes.balancedDesc": "最佳质量与速度平衡",
-  "modes.thoroughDesc": "深度分析，准确度最高"
+  "modes.thoroughDesc": "深度分析，准确度最高",
+  "auth.continueWithMicrosoft": "使用 Microsoft 继续",
+  "auth.continueWithApple": "使用 Apple 继续",
+  "auth.continueWithEmail": "使用邮箱继续",
+  "auth.orDivider": "或",
+  "auth.emailPlaceholder": "输入您的邮箱地址",
+  "auth.checkEmail": "查看您的邮箱",
+  "auth.checkEmailSubtitle": "我们已发送登录链接到您的邮箱，请点击链接完成登录。",
+  "auth.resendEmail": "重新发送",
+  "auth.emailSent": "邮件已发送至 {email}",
+  "auth.useDifferentEmail": "使用其他邮箱",
+  "auth.backToSignIn": "返回登录",
+  "auth.error": "认证错误",
+  "auth.errorVerification": "登录链接已过期或已被使用，请重新获取。",
+  "auth.errorAccessDenied": "访问被拒绝，请重试。",
+  "auth.errorAccountNotLinked": "此邮箱已关联其他登录方式，请使用原始登录方式。",
+  "auth.errorDefault": "登录时发生错误，请重试。",
+  "auth.tryAgain": "重试"
 }

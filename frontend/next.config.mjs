@@ -13,7 +13,7 @@ const cspDirectives = [
   "frame-ancestors 'none'",
   "object-src 'none'",
   "base-uri 'self'",
-  "form-action 'self' https://accounts.google.com",
+  "form-action 'self' https://accounts.google.com https://login.microsoftonline.com",
 ].join("; ");
 
 /** @type {import('next').NextConfig} */
