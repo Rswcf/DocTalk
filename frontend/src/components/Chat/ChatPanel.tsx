@@ -352,7 +352,7 @@ export default function ChatPanel({ sessionId, onCitationClick, maxUserMessages,
           onScroll={handleScroll}
           className={isWin98
             ? 'h-full overflow-y-auto win98-scrollbar bg-white p-3 win98-inset m-1'
-            : 'h-full overflow-auto p-6'
+            : 'h-full overflow-y-auto overflow-x-hidden p-6'
           }
         >
           {messages.length === 0 ? (
