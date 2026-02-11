@@ -66,7 +66,7 @@ graph TB
 | **Auth.js v5** | Google OAuth 认证，加密 JWE 会话令牌 |
 | **API 代理** | 将 JWE 令牌转换为 HS256 JWT，为所有后端请求注入 `Authorization` 头 |
 | **FastAPI** | REST API + SSE 流式传输，处理对话、文档管理、计费、用户账户 |
-| **Celery** | 异步文档解析：文本提取 (PDF/DOCX/PPTX/XLSX/TXT/MD/URL) → 分块 → 向量化 → 索引 |
+| **Celery** | 异步文档解析：文本提取 (PDF/DOCX/PPTX/XLSX/TXT/MD/URL) → 分块 → 向量化 → 索引。PPTX/DOCX 文件还通过 LibreOffice headless 转换为 PDF 进行可视化渲染 |
 | **PostgreSQL** | 主数据存储：用户、文档、页面、文本块、会话、消息、积分 |
 | **Qdrant** | 向量数据库，语义搜索（COSINE 相似度，1536 维） |
 | **Redis** | Celery 任务代理和结果后端 |
@@ -364,6 +364,7 @@ erDiagram
         jsonb suggested_questions "AI 生成的推荐问题"
         text custom_instructions "用户自定义 AI 指令"
         string file_type "pdf | docx | pptx | xlsx | txt | md"
+        string converted_storage_key "PPTX/DOCX 转换后的 PDF"
         string source_url "导入网页的 URL"
         datetime created_at
         datetime updated_at
@@ -530,6 +531,7 @@ graph TD
         ResizablePanels["react-resizable-panels<br/>Group / Panel / Separator"]
         ChatPanel["ChatPanel<br/>消息 + 输入框"]
         PdfViewer["PdfViewer<br/>react-pdf"]
+        ViewToggle["视图切换<br/>幻灯片 / 文本<br/>(PPTX/DOCX)"]
         TextViewer["TextViewer<br/>非 PDF 查看器<br/>Markdown 渲染 + 搜索<br/>片段高亮"]
     end
 
@@ -676,7 +678,7 @@ graph LR
 | 方面 | 前端 (Vercel) | 后端 (Railway) |
 |------|---------------|----------------|
 | **触发方式** | `git push`（自动） | `railway up --detach`（手动） |
-| **构建** | 从 `frontend/` 导出 Next.js | 从项目根目录构建 Dockerfile |
+| **构建** | 从 `frontend/` 导出 Next.js | 从项目根目录构建 Dockerfile（含 LibreOffice headless + CJK 字体，用于 PPTX/DOCX→PDF 转换） |
 | **运行时** | Serverless 函数（Hobby 计划） | 单容器（`entrypoint.sh`）：alembic → celery（自动重启）→ uvicorn |
 | **域名** | `www.doctalk.site` | `backend-production-a62e.up.railway.app` |
 | **限制** | 4.5 MB 函数体积，60s 最大时长 | 容器内存取决于 Railway 计划 |

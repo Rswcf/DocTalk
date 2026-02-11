@@ -66,7 +66,7 @@ graph TB
 | **Auth.js v5** | Google OAuth authentication, encrypted JWE session tokens |
 | **API Proxy** | Translates JWE tokens to HS256 JWT, injects `Authorization` header for all backend requests |
 | **FastAPI** | REST API + SSE streaming for chat, document management, billing, user accounts |
-| **Celery** | Async document parsing: text extraction (PDF/DOCX/PPTX/XLSX/TXT/MD/URL) → chunking → embedding → vector indexing |
+| **Celery** | Async document parsing: text extraction (PDF/DOCX/PPTX/XLSX/TXT/MD/URL) → chunking → embedding → vector indexing. PPTX/DOCX files are also converted to PDF via LibreOffice headless for visual rendering |
 | **PostgreSQL** | Primary data store for users, documents, pages, chunks, sessions, messages, credits |
 | **Qdrant** | Vector database for semantic search (COSINE similarity, 1536 dimensions) |
 | **Redis** | Celery task broker and result backend |
@@ -364,6 +364,7 @@ erDiagram
         jsonb suggested_questions "AI-generated questions"
         text custom_instructions "User AI instructions"
         string file_type "pdf | docx | pptx | xlsx | txt | md"
+        string converted_storage_key "converted PDF for PPTX/DOCX"
         string source_url "URL for imported webpages"
         datetime created_at
         datetime updated_at
@@ -530,6 +531,7 @@ graph TD
         ResizablePanels["react-resizable-panels<br/>Group / Panel / Separator"]
         ChatPanel["ChatPanel<br/>Messages + Input"]
         PdfViewer["PdfViewer<br/>react-pdf"]
+        ViewToggle["View Toggle<br/>Slides / Text<br/>(PPTX/DOCX)"]
         TextViewer["TextViewer<br/>Non-PDF Viewer<br/>Markdown Rendering + Search<br/>Snippet Highlights"]
     end
 
@@ -676,7 +678,7 @@ graph LR
 | Aspect | Frontend (Vercel) | Backend (Railway) |
 |--------|-------------------|-------------------|
 | **Trigger** | `git push` (auto) | `railway up --detach` (manual) |
-| **Build** | Next.js static export from `frontend/` | Dockerfile from project root |
+| **Build** | Next.js static export from `frontend/` | Dockerfile from project root (includes LibreOffice headless + CJK fonts for PPTX/DOCX→PDF conversion) |
 | **Runtime** | Serverless functions (Hobby plan) | Single container (`entrypoint.sh`): alembic → celery (auto-restart) → uvicorn |
 | **Domain** | `www.doctalk.site` | `backend-production-a62e.up.railway.app` |
 | **Limits** | 4.5 MB function body, 60s max duration | Container memory based on Railway plan |

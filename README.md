@@ -23,7 +23,7 @@ DocTalk helps heavy document readers quickly locate key information in long docu
 - **Conversation Export** — Download any chat as a Markdown file with citations as footnotes
 - **PDF Text Search** — In-viewer Ctrl+F search with highlighted matches and prev/next navigation
 - **Custom AI Instructions** — Set per-document instructions to customize how the AI analyzes and responds
-- **Multi-Format Support** — Full support for PDF, Word (DOCX), PowerPoint (PPTX), Excel (XLSX), plain text, and Markdown. Tables extracted from DOCX/PPTX/XLSX render as formatted tables with borders and alternating rows
+- **Multi-Format Support** — Full support for PDF, Word (DOCX), PowerPoint (PPTX), Excel (XLSX), plain text, and Markdown. Tables extracted from DOCX/PPTX/XLSX render as formatted tables with borders and alternating rows. PPTX and DOCX files are also converted to PDF via LibreOffice headless for visual slide/page rendering with a Slides/Text view toggle
 - **URL Import** — Paste any webpage URL to import its content as a document for AI-powered Q&A
 - **Document Collections** — Group multiple documents into collections for cross-document questions with source attribution
 - **Citation Hover Preview** — Hover over any `[1]`, `[2]` citation to see a tooltip with the cited text snippet and page number
@@ -66,7 +66,7 @@ DocTalk helps heavy document readers quickly locate key information in long docu
 | **Payments** | Stripe Checkout + Subscriptions + Webhooks |
 | **AI** | OpenRouter gateway — 3 performance modes: Quick (DeepSeek V3.2), Balanced (Mistral Medium 3.1), Thorough (Mistral Large 2512) |
 | **PDF Parse** | PyMuPDF (fitz), Tesseract OCR |
-| **Document Parse** | python-docx, python-pptx, openpyxl (DOCX/PPTX/XLSX), httpx + BeautifulSoup4 (URL) |
+| **Document Parse** | python-docx, python-pptx, openpyxl (DOCX/PPTX/XLSX), httpx + BeautifulSoup4 (URL), LibreOffice headless (PPTX/DOCX→PDF visual conversion) |
 | **Analytics** | Vercel Web Analytics (cookie-consent-gated) |
 | **Monitoring** | Sentry (error tracking + performance) |
 | **Security** | SSRF protection, SSE-S3 encryption at rest, magic-byte file validation, structured security logging |
@@ -216,7 +216,7 @@ Key architectural decisions:
 - **Vector Search** — Chunks with bounding-box coordinates enable citation-to-page-highlight linking (PDF bbox overlays, non-PDF text snippet matching)
 - **Small Chunks** — 150--300 token chunks with 8 retrieval results for precise citation targeting
 - **Auto-Summary** — After parsing, Celery generates a document summary + suggested questions via budget LLM (DeepSeek)
-- **Multi-Format** — DOCX/PPTX/XLSX/TXT/MD files are processed through format-specific extractors (with table extraction as markdown tables, speaker notes for PPTX), then fed into the same chunking+embedding pipeline as PDFs. Non-PDF viewer renders markdown with react-markdown for rich table display
+- **Multi-Format** — DOCX/PPTX/XLSX/TXT/MD files are processed through format-specific extractors (with table extraction as markdown tables, speaker notes for PPTX), then fed into the same chunking+embedding pipeline as PDFs. PPTX and DOCX files are additionally converted to PDF via LibreOffice headless for visual rendering (slide layout, images, formatting preserved); users can toggle between Slides view (converted PDF in PdfViewer) and Text view (markdown). Citation highlighting in converted PDFs falls back to text-snippet matching when dummy bboxes are detected
 - **URL Ingestion** — Webpages are fetched via httpx, parsed with BeautifulSoup to extract text, then processed as text documents
 - **Collections** — Documents can be grouped into collections for cross-document Q&A; vector search uses Qdrant MatchAny filter across multiple document IDs
 - **OpenRouter Gateway** — Single API key for all LLM and embedding models

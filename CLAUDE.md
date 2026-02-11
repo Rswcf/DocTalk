@@ -35,7 +35,7 @@ Railway 项目包含 5 个服务：backend, Postgres, Redis, qdrant-v2, minio-v2
   - Demo LLM: `deepseek/deepseek-v3.2`（匿名 Demo 用户使用低成本模型，降低 OpenRouter 消耗）
   - Embedding: `openai/text-embedding-3-small` (dim=1536)
 - **PDF Parse**: PyMuPDF (fitz)
-- **Document Parse**: python-docx (DOCX), python-pptx (PPTX), openpyxl (XLSX), httpx + BeautifulSoup4 (URL)
+- **Document Parse**: python-docx (DOCX), python-pptx (PPTX), openpyxl (XLSX), httpx + BeautifulSoup4 (URL), LibreOffice headless (PPTX/DOCX→PDF visual conversion)
 - **i18n**: 轻量级 React Context 方案，支持 11 种语言（EN, ZH, ES, JA, DE, FR, KO, PT, IT, AR, HI）
 - **Monitoring**: Sentry 集成（后端 FastAPI + Celery，前端 Next.js），用于错误追踪和性能监控
 - **Analytics**: Vercel Web Analytics（页面访问和访客追踪，需 cookie 同意后加载）
@@ -61,7 +61,8 @@ Railway 项目包含 5 个服务：backend, Postgres, Redis, qdrant-v2, minio-v2
 - **布局**: Chat 面板在左侧, PDF 查看器在右侧，中间可拖拽调节宽度 (react-resizable-panels)
 - **i18n**: 客户端 React Context，11 语言 JSON 静态打包，`t()` 函数支持参数插值，Arabic 自动 RTL
 - **bbox 坐标**: 归一化 [0,1], top-left origin, 存于 chunks.bboxes (JSONB)
-- **引用高亮双策略**: PDF 文档使用 bbox 坐标定位高亮区域（PageWithHighlights）；非 PDF 文档使用 textSnippet 文本匹配定位高亮（TextViewer `findSnippetInPage()` 渐进前缀搜索）。Store 中 `highlights`（bbox）和 `highlightSnippet`（文本）由 `navigateToCitation` 同时设置
+- **PPTX/DOCX 可视化渲染**: Celery parse 后通过 LibreOffice headless 将 PPTX/DOCX 转换为 PDF，存入 MinIO `documents/{docId}/converted.pdf`。`Document.converted_storage_key` 记录转换后的存储路径。前端检测 `has_converted_pdf` 后默认显示幻灯片视图（PdfViewer + 转换 PDF），用户可通过 Slides/Text 切换按钮在可视化视图和文本视图间切换。转换失败（非阻塞）时回退到 TextViewer。`GET /api/documents/{id}/file-url?variant=converted` 返回转换 PDF 的 presigned URL。`conversion_service.py` 封装 LibreOffice subprocess，Dockerfile 包含 `libreoffice-core` + `libreoffice-impress` + `libreoffice-writer` + `fonts-noto-cjk`
+- **引用高亮三策略**: ① PDF 文档使用 bbox 坐标定位高亮区域（PageWithHighlights）；② 非 PDF 文档使用 textSnippet 文本匹配定位高亮（TextViewer `findSnippetInPage()` 渐进前缀搜索）；③ 转换 PDF（PPTX/DOCX 幻灯片视图）检测 dummy bbox（全为 0,0,1,1）时回退到 text-snippet 匹配在 PDF text layer 中高亮。Store 中 `highlights`（bbox）和 `highlightSnippet`（文本）由 `navigateToCitation` 同时设置，PdfViewer 新增 `highlightSnippet` prop 传递到 PageWithHighlights
 - **引用格式**: 编号 [1]..[K]，后端 FSM 解析器处理跨 token 切断；前端 `renumberCitations()` 按出现顺序重编号为连续序列
 - **PDF 文件获取**: presigned URL (不走后端代理)
 - **向量维度**: 配置驱动 (EMBEDDING_DIM)，启动时校验 Qdrant collection
@@ -83,7 +84,7 @@ Railway 项目包含 5 个服务：backend, Postgres, Redis, qdrant-v2, minio-v2
 - **FinalCTA**: `landing/FinalCTA.tsx` 转化 CTA (Try Demo + Sign Up)
 - **套餐对比表**: `PricingTable.tsx` Free vs Plus vs Pro 9 行对比，Check/X 图标，Plus 列 "Most Popular" 高亮
 - **自定义 AI 指令**: 每文档可设置 `custom_instructions`（最多 2000 字），通过 `PATCH /api/documents/{id}` 更新，`chat_service.py` 注入系统提示
-- **多格式支持**: DOCX/PPTX/XLSX/TXT/MD 文件通过 `backend/app/services/extractors/` 格式专用提取器处理，然后进入与 PDF 相同的分块+向量化流水线。`parse_worker.py` 按 `file_type` 分流。DOCX 提取器遍历 body 元素交错获取段落和表格（markdown table 格式）。XLSX 输出 markdown table（表头+分隔+数据行）。PPTX 提取幻灯片文本、表格和演讲者备注
+- **多格式支持**: DOCX/PPTX/XLSX/TXT/MD 文件通过 `backend/app/services/extractors/` 格式专用提取器处理，然后进入与 PDF 相同的分块+向量化流水线。`parse_worker.py` 按 `file_type` 分流。DOCX 提取器遍历 body 元素交错获取段落和表格（markdown table 格式）。XLSX 输出 markdown table（表头+分隔+数据行）。PPTX 提取幻灯片文本、表格和演讲者备注。PPTX/DOCX 文件在文本提取后额外通过 `conversion_service.py` 调用 LibreOffice headless 转换为 PDF（非阻塞，失败不影响文档状态）
 - **URL/网页导入**: `POST /api/documents/ingest-url` 端点接收 URL，经 `url_validator.py` SSRF 防护（DNS 解析 + 私有 IP 阻断 + 端口白名单 + 最多 3 次手动重定向验证）后，通过 httpx 抓取 + BeautifulSoup 提取文本，存为 txt 文件处理。PDF URL 自动走 PDF 流水线。前端 Dashboard 提供 URL 输入框
 - **文档集合**: `Collection` 模型 + `collection_documents` 多对多关联表，支持跨文档问答。`retrieval_service.search_multi()` 使用 Qdrant `MatchAny` 过滤器。`chat_service.py` 为集合会话构建跨文档系统提示，引用事件包含 `document_id` 和 `document_filename`。前端 `/collections` 列表页 + `/collections/[id]` 详情页（左侧 Chat + 右侧文档列表）
 - **Vercel Web Analytics**: `@vercel/analytics` 通过 `AnalyticsWrapper.tsx` 条件加载（仅在用户 cookie 同意后），`CookieConsentBanner.tsx` 提供 Accept/Decline 选择，consent 状态存储在 localStorage
@@ -102,7 +103,7 @@ GET    /api/documents/{document_id}/text-content  # 获取非 PDF 文档的文�
 PATCH  /api/documents/{document_id}       # 更新文档设置 (custom_instructions)
 DELETE /api/documents/{document_id}       # 删除文档（ORM cascade，同步删除）
 POST   /api/documents/{document_id}/reparse  # 重新解析文档（需登录，ready/error 状态）
-GET    /api/documents/{document_id}/file-url  # 获取 presigned URL
+GET    /api/documents/{document_id}/file-url  # 获取 presigned URL (?variant=converted 获取转换 PDF)
 POST   /api/documents/{document_id}/search    # 语义搜索
 POST   /api/documents/{document_id}/sessions  # 创建聊天会话
 GET    /api/documents/{document_id}/sessions  # 列出文档的聊天会话
@@ -238,7 +239,7 @@ SENTRY_TRACES_SAMPLE_RATE=0.1
 - 从项目根目录运行 `railway up --detach`
 - `entrypoint.sh` 进程管理器：Alembic migration → Celery worker (后台, concurrency=1, 崩溃自动重启) → uvicorn (前台)
 - SIGTERM 优雅关闭：trap 信号 → 先停 Celery 再停 uvicorn
-- 确保 Dockerfile 路径配置正确，验证 Docker Image 服务不接受 start 命令。容器以非 root 用户 `app` (UID 1001) 运行
+- 确保 Dockerfile 路径配置正确，验证 Docker Image 服务不接受 start 命令。容器以非 root 用户 `app` (UID 1001) 运行。Dockerfile 包含 LibreOffice headless（`libreoffice-core` + `libreoffice-impress` + `libreoffice-writer`）和 CJK 字体（`fonts-noto-cjk`），用于 PPTX/DOCX→PDF 转换。`HOME=/home/app` 必须设置以允许 LibreOffice 在非 root 用户下运行
 - 部署后始终确认后端运行的是**最新代码**（避免过时部署）
 - 测试前检查本地端口冲突
 
@@ -406,6 +407,7 @@ DocTalk/
 │   │   │   ├── demo_seed.py      # Demo 文档种子 (启动时自动执行)
 │   │   │   ├── summary_service.py # 自动摘要生成 (Celery 上下文, DeepSeek)
 │   │   │   ├── retrieval_service.py # 向量检索 (search + search_multi for collections)
+│   │   │   ├── conversion_service.py # LibreOffice headless PPTX/DOCX→PDF 转换
 │   │   │   ├── extractors/       # 多格式文档提取器
 │   │   │   │   ├── base.py       # ExtractedPage 数据类 + extract_document() 路由
 │   │   │   │   ├── docx_extractor.py  # Word 文档提取 (段落+表格交错，markdown table)
