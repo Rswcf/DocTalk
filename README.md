@@ -177,7 +177,7 @@ DocTalk/
 ├── frontend/
 │   ├── src/
 │   │   ├── app/            # Next.js pages (home, auth, billing, profile, demo, document viewer, collections)
-│   │   ├── components/     # React components (Chat, PdfViewer, TextViewer, Collections, Profile, landing, Header, Footer, PricingTable, CookieConsentBanner, AnalyticsWrapper)
+│   │   ├── components/     # React components (DocTalkLogo, Chat, PdfViewer, TextViewer, Collections, Profile, landing, Header, Footer, PricingTable, CookieConsentBanner, AnalyticsWrapper)
 │   │   ├── lib/            # API client, auth config, SSE client, model definitions, export utils, filename sanitization
 │   │   ├── i18n/           # 11 language locale files
 │   │   ├── store/          # Zustand state management

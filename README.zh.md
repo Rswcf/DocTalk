@@ -177,7 +177,7 @@ DocTalk/
 ├── frontend/
 │   ├── src/
 │   │   ├── app/            # Next.js 页面 (首页, 登录, 购买, 个人中心, Demo, 文档阅读, 集合)
-│   │   ├── components/     # React 组件 (Chat, PdfViewer, TextViewer, Collections, Profile, landing, Header, Footer, PricingTable, CookieConsentBanner, AnalyticsWrapper)
+│   │   ├── components/     # React 组件 (DocTalkLogo, Chat, PdfViewer, TextViewer, Collections, Profile, landing, Header, Footer, PricingTable, CookieConsentBanner, AnalyticsWrapper)
 │   │   ├── lib/            # API 客户端、Auth 配置、SSE 客户端、模型定义、导出工具、文件名清洗
 │   │   ├── i18n/           # 11 种语言翻译文件
 │   │   ├── store/          # Zustand 状态管理

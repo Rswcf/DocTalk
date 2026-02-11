@@ -24,7 +24,7 @@ Railway 项目包含 5 个服务：backend, Postgres, Redis, qdrant-v2, minio-v2
 
 ### 技术栈
 
-- **Frontend**: Next.js 14 (App Router) + Auth.js v5 + jose (JWT) + react-pdf v9 (pdf.js v4) + Remotion (animated product showcase) + react-resizable-panels + Zustand + Tailwind CSS (zinc palette) + Radix UI + Inter font (next/font/google)
+- **Frontend**: Next.js 14 (App Router) + Auth.js v5 + jose (JWT) + react-pdf v9 (pdf.js v4) + Remotion (animated product showcase) + react-resizable-panels + Zustand + Tailwind CSS (zinc palette) + Radix UI + 3 fonts via next/font/google: Inter (body), Instrument Serif (display), Sora (logo)
 - **Backend**: FastAPI + Celery + Redis
 - **Database**: PostgreSQL 16 (Alembic migration) + Qdrant (向量搜索)
 - **Storage**: MinIO (dev) / S3-compatible (prod)
@@ -80,7 +80,7 @@ Railway 项目包含 5 个服务：backend, Postgres, Redis, qdrant-v2, minio-v2
 - **PDF 文本搜索**: PdfViewer 通过 pdfjs `page.getTextContent()` 提取全文 → store 中 searchQuery/searchMatches/currentMatchIndex → customTextRenderer `<mark>` 高亮 → PdfToolbar 搜索 UI
 - **TextViewer 文本搜索**: Ctrl+F 打开搜索栏，大小写不敏感全文搜索，匹配计数 "X/Y"，上下翻页导航，当前匹配 amber 高亮 + 其他匹配 yellow 高亮，与引用高亮共存
 - **FAQ 手风琴**: `landing/FAQ.tsx` 6 项展开/折叠，`transition-[max-height,opacity]` 动画
-- **Footer 组件**: `Footer.tsx` 3 列 (Product/Company/Legal) + 版权底栏。Company 列含 Contact 链接，Legal 列含 CCPA "Do Not Sell My Info" 链接
+- **Footer 组件**: `Footer.tsx` DocTalkLogo 品牌锚点（图标 + Sora wordmark，链接到首页）+ 3 列 (Product/Company/Legal) + 版权底栏。Company 列含 Contact 链接，Legal 列含 CCPA "Do Not Sell My Info" 链接
 - **FinalCTA**: `landing/FinalCTA.tsx` 转化 CTA (Try Demo + Sign Up)
 - **套餐对比表**: `PricingTable.tsx` Free vs Plus vs Pro 9 行对比，Check/X 图标，Plus 列 "Most Popular" 高亮
 - **自定义 AI 指令**: 每文档可设置 `custom_instructions`（最多 2000 字），通过 `PATCH /api/documents/{id}` 更新，`chat_service.py` 注入系统提示
@@ -275,8 +275,9 @@ SENTRY_TRACES_SAMPLE_RATE=0.1
 - **OAuth Token 清理**: `auth_service.py:link_account()` 剥离 OAuth 提供商返回的 access_token/refresh_token/id_token，DocTalk 仅保存身份绑定信息（provider + provider_account_id），不存储可用于访问用户第三方账户的令牌
 
 ### 前端相关
-- **UI 设计**: 单色 zinc 调色板，Inter 字体 + `antialiased` 字体渲染，dark mode 反转按钮 (`bg-zinc-900 dark:bg-zinc-50`)，全站无 `gray-*`/`blue-*` 类（保留 Google OAuth 品牌色和状态色）。卡片使用 `shadow-sm`/`shadow-md` 分层，模态框 `animate-fade-in`/`animate-slide-up` 动画，零 `transition-all` 策略（所有过渡使用具体属性 `transition-colors`/`transition-opacity`/`transition-shadow`）。Tailwind Typography 配置：prose 正文颜色覆盖为 zinc-950（`#09090b`，近纯黑，替代默认 gray-700 `#374151`），dark mode 为 zinc-50（`#fafafa`）；内联 `code` 去除反引号装饰 + 灰色背景药丸样式；段落/列表间距收紧
-- **Header variant**: `variant='minimal'`（首页/Demo/Auth：仅 Logo+UserMenu）vs `variant='full'`（文档页/Billing/Profile：完整控件）。额外支持 `isDemo`/`isLoggedIn` props，匿名 Demo 用户时隐藏 ModeSelector
+- **UI 设计**: 单色 zinc 调色板 + indigo 强调色（`#4f46e5` light / `#818cf8` dark），`antialiased` 字体渲染，dark mode 反转按钮 (`bg-zinc-900 dark:bg-zinc-50`)，全站无 `gray-*`/`blue-*` 类（保留 Google OAuth 品牌色和状态色）。卡片使用 `shadow-sm`/`shadow-md` 分层，模态框 `animate-fade-in`/`animate-slide-up` 动画，零 `transition-all` 策略（所有过渡使用具体属性 `transition-colors`/`transition-opacity`/`transition-shadow`）。Tailwind Typography 配置：prose 正文颜色覆盖为 zinc-950（`#09090b`，近纯黑，替代默认 gray-700 `#374151`），dark mode 为 zinc-50（`#fafafa`）；内联 `code` 去除反引号装饰 + 灰色背景药丸样式；段落/列表间距收紧
+- **品牌 Logo**: "Talk Flow" 概念 — 两个重叠聊天气泡（后方浅色=文档来源，前方深色=AI 对话引用），indigo 双色。`DocTalkLogo.tsx` 组件通过 Tailwind `fill-indigo-*` + `dark:` 变体自动适配 dark mode。3 种字体分层：`font-logo`（Sora 600，品牌 wordmark）/ `font-display`（Instrument Serif 400，Landing 标题）/ `font-sans`（Inter，正文 UI）。Favicon 使用 `app/icon.svg`（Next.js 自动检测），Apple Touch Icon 使用 `app/apple-icon.svg`。静态导出：`public/logo-icon.svg`（512px 独立图标）、`public/logo-full-light.svg` / `logo-full-dark.svg`（组合标识）
+- **Header variant**: `variant='minimal'`（首页/Demo/Auth：仅 DocTalkLogo 图标 + Sora wordmark + UserMenu）vs `variant='full'`（文档页/Billing/Profile：完整控件）。额外支持 `isDemo`/`isLoggedIn` props，匿名 Demo 用户时隐藏 ModeSelector
 - **Landing page**: HeroSection（大字标题+CTA）+ **ProductShowcase**（Remotion `<Player>` 动画演示：用户提问→AI流式引用回答→PDF高亮同步，300帧@30fps=10s循环，macOS window chrome 框架，lazy-loaded，支持 dark mode）+ **HowItWorks**（3步骤：Upload→Ask→Cited Answers）+ FeatureGrid（3列特性卡片）+ **SocialProof**（4项信任指标）+ **SecuritySection**（4张安全卡片）+ **FAQ**（6项手风琴）+ **FinalCTA**（转化CTA）+ PrivacyBadge + **Footer**（3列链接组件）
 - **动态 CTA**: 首页根据登录状态显示不同 UI（未登录→Landing page，已登录→Dashboard 上传区+文档列表）
 - **AuthModal**: 使用查询参数 `?auth=1` 触发登录模态框，ESC 可关闭，焦点陷阱（Tab 循环），backdrop 点击关闭。底部显示 AI 处理披露（`auth.aiDisclosure`：文档由第三方 AI 服务处理）和服务条款通知（`auth.termsNotice`）
@@ -442,13 +443,14 @@ DocTalk/
 │   │   │       └── proxy/        # API 代理 (创建后端兼容 JWT)
 │   │   ├── components/
 │   │   │   ├── landing/          # HeroSection, ProductShowcase (Remotion), ShowcasePlayer, FeatureGrid, HowItWorks, SocialProof, SecuritySection, FAQ, FinalCTA
+│   │   │   ├── DocTalkLogo.tsx    # 品牌 Logo 图标 (Talk Flow: 两个重叠聊天气泡, indigo, dark mode 自适应)
 │   │   │   ├── AuthModal.tsx     # 登录模态框 (rounded-2xl, zinc)
 │   │   │   ├── AuthButton.tsx    # 登录/登出按钮 (已被 UserMenu 替代)
 │   │   │   ├── UserMenu.tsx      # 头像下拉菜单 (Profile/Buy Credits/Sign Out)
 │   │   │   ├── PrivacyBadge.tsx  # 隐私承诺徽章
 │   │   │   ├── CreditsDisplay.tsx # 余额显示 (自动刷新 + 事件驱动刷新)
 │   │   │   ├── PaywallModal.tsx  # 付费墙
-│   │   │   ├── Footer.tsx        # 页脚 (3 列链接: Product/Company/Legal + CCPA "Do Not Sell" + Contact)
+│   │   │   ├── Footer.tsx        # 页脚 (DocTalkLogo 品牌锚点 + 3 列链接: Product/Company/Legal + CCPA "Do Not Sell" + Contact)
 │   │   │   ├── PricingTable.tsx  # 套餐对比表 (Free vs Plus vs Pro)
 │   │   │   ├── CookieConsentBanner.tsx  # Cookie 同意横栏 (GDPR ePrivacy, Accept/Decline)
 │   │   │   ├── AnalyticsWrapper.tsx     # 条件 Vercel Analytics (仅 cookie 同意后加载)
@@ -472,6 +474,9 @@ DocTalk/
 │   │   ├── store/                # Zustand
 │   │   └── types/
 │   ├── public/
+│   │   ├── logo-icon.svg         # 品牌图标 (512x512, 独立使用)
+│   │   ├── logo-full-light.svg   # 组合标识 - 浅色背景 (图标 + Sora wordmark)
+│   │   ├── logo-full-dark.svg    # 组合标识 - 深色背景
 │   │   └── samples/              # (已清空，Demo PDF 现由后端 seed_data/ 提供)
 │   └── package.json
 ├── .collab/                      # CC ↔ CX 协作文档
