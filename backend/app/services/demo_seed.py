@@ -73,6 +73,32 @@ def seed_demo_documents() -> None:
 
                 if existing:
                     if existing.status == "ready":
+                        # Verify Qdrant actually has vectors for this doc.
+                        # If Qdrant was restarted without persistent volume,
+                        # the collection may be empty despite DB saying "ready".
+                        try:
+                            from app.models.tables import Chunk
+                            from sqlalchemy import func as sa_func
+                            chunk_count = db.scalar(
+                                select(sa_func.count()).select_from(Chunk)
+                                .where(Chunk.document_id == existing.id)
+                            )
+                            if chunk_count and chunk_count > 0:
+                                from qdrant_client import QdrantClient
+                                qc = QdrantClient(url=settings.QDRANT_URL)
+                                vec_count = qc.count(collection_name=settings.QDRANT_COLLECTION,
+                                                     count_filter={"must": [{"key": "document_id", "match": {"value": str(existing.id)}}]},
+                                                     exact=True).count
+                                if vec_count == 0:
+                                    logger.warning("Demo doc '%s' is ready but Qdrant has 0 vectors — re-parsing", slug)
+                                    existing.status = "parsing"
+                                    db.add(existing)
+                                    db.commit()
+                                    from app.workers.parse_worker import parse_document
+                                    parse_document.delay(str(existing.id))
+                                    continue
+                        except Exception as e:
+                            logger.warning("Qdrant vector check failed for '%s': %s", slug, e)
                         logger.info("Demo doc '%s' already ready, skipping", slug)
                         continue
                     if existing.status in ("parsing", "embedding"):
