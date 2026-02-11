@@ -5,6 +5,7 @@ import uuid
 from dataclasses import dataclass
 from typing import Any, AsyncGenerator, Dict, List, Optional
 
+import sqlalchemy as sa
 from openai import AsyncOpenAI
 from sqlalchemy import asc, select
 from sqlalchemy.exc import IntegrityError
@@ -12,7 +13,14 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
 from app.core.model_profiles import get_model_profile, get_rules_for_model
-from app.models.tables import ChatSession, Document, Message, User, collection_documents
+from app.models.tables import (
+    ChatSession,
+    CreditLedger,
+    Document,
+    Message,
+    User,
+    collection_documents,
+)
 from app.services import credit_service
 from app.services.retrieval_service import retrieval_service
 
@@ -195,13 +203,14 @@ class ChatService:
 
         # Pre-debit estimated credits BEFORE streaming (prevents TOCTOU + free rides)
         pre_debited = 0
+        predebit_ledger_id = None
         if user is not None:
             estimated = credit_service.get_estimated_cost(effective_mode)
-            ok = await credit_service.debit_credits(
+            predebit_ledger_id = await credit_service.debit_credits(
                 db, user_id=user.id, cost=estimated,
-                reason="chat_predebit", ref_type="mode", ref_id=effective_mode,
+                reason="chat", ref_type="mode", ref_id=effective_mode,
             )
-            if ok:
+            if predebit_ledger_id:
                 pre_debited = estimated
                 await db.commit()
             else:
@@ -390,12 +399,15 @@ class ChatService:
                 yield ev
 
         except Exception as e:
-            # Refund pre-debited credits on LLM failure
-            if user is not None and pre_debited > 0:
+            # Refund pre-debited credits on LLM failure: restore balance and remove ledger entry
+            if user is not None and pre_debited > 0 and predebit_ledger_id is not None:
                 try:
-                    await credit_service.credit_credits(
-                        db, user_id=user.id, amount=pre_debited,
-                        reason="chat_predebit_refund", ref_type="mode", ref_id=effective_mode,
+                    await db.execute(
+                        sa.update(User).where(User.id == user.id)
+                        .values(credits_balance=User.credits_balance + pre_debited)
+                    )
+                    await db.execute(
+                        sa.delete(CreditLedger).where(CreditLedger.id == predebit_ledger_id)
                     )
                     await db.commit()
                 except Exception:
@@ -422,14 +434,13 @@ class ChatService:
             return
 
         # Credits: reconcile pre-debited estimate against actual cost
-        if user is not None and pre_debited > 0:
+        if user is not None and pre_debited > 0 and predebit_ledger_id is not None:
             pt = int(prompt_tokens or 0)
             ct = int(output_tokens or 0)
             try:
                 actual_cost = credit_service.calculate_cost(pt, ct, effective_model, mode=effective_mode)
                 await credit_service.reconcile_credits(
-                    db, user.id, pre_debited, actual_cost,
-                    ref_type="message", ref_id=str(asst_msg.id),
+                    db, user.id, predebit_ledger_id, pre_debited, actual_cost,
                 )
                 await credit_service.record_usage(
                     db,

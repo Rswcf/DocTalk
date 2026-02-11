@@ -64,8 +64,8 @@ async def debit_credits(
     reason: str,
     ref_type: Optional[str] = None,
     ref_id: Optional[str] = None,
-) -> bool:
-    """Atomically debit credits. Returns True if successful, False if insufficient.
+) -> Optional[UUID]:
+    """Atomically debit credits. Returns the CreditLedger entry ID on success, None if insufficient.
 
     The balance update and ledger entry are written in the same transaction.
     Caller must call db.commit() to persist changes.
@@ -83,7 +83,7 @@ async def debit_credits(
     row = result.fetchone()
 
     if row is None:
-        return False
+        return None
 
     new_balance = row[0]
     ledger = CreditLedger(
@@ -97,7 +97,7 @@ async def debit_credits(
     db.add(ledger)
     # Flush to ensure ledger is written in same transaction as balance update
     await db.flush()
-    return True
+    return ledger.id
 
 
 async def credit_credits(
@@ -164,31 +164,48 @@ async def record_usage(
 async def reconcile_credits(
     db: AsyncSession,
     user_id: UUID,
+    predebit_ledger_id: UUID,
     pre_debited: int,
     actual_cost: int,
-    ref_type: Optional[str] = None,
-    ref_id: Optional[str] = None,
 ) -> None:
     """Reconcile pre-debited credits against actual cost after streaming.
 
-    - If pre_debited > actual_cost → refund the difference
-    - If pre_debited < actual_cost → debit the difference (best-effort)
-    - If equal → no-op
+    Updates the ORIGINAL ledger entry in-place so each chat produces exactly
+    one ledger row (reason="chat") instead of two (predebit + reconcile).
+
+    - If pre_debited == actual_cost → no-op
+    - If diff != 0 → adjust user balance and update the original ledger entry
     """
     diff = pre_debited - actual_cost
+    if diff == 0:
+        return
+
     if diff > 0:
         # Refund overpayment
-        await credit_credits(
-            db, user_id=user_id, amount=diff,
-            reason="chat_reconcile_refund", ref_type=ref_type, ref_id=ref_id,
+        await db.execute(
+            sa.update(User)
+            .where(User.id == user_id)
+            .values(credits_balance=User.credits_balance + diff)
         )
-    elif diff < 0:
-        # Best-effort charge for underpayment
-        await debit_credits(
-            db, user_id=user_id, cost=-diff,
-            reason="chat_reconcile_charge", ref_type=ref_type, ref_id=ref_id,
+    else:
+        # Best-effort charge for underpayment (don't go negative)
+        await db.execute(
+            sa.update(User)
+            .where(User.id == user_id)
+            .where(User.credits_balance >= -diff)
+            .values(credits_balance=User.credits_balance + diff)
         )
-    # diff == 0: exact match, no-op
+
+    # Update the original ledger entry to reflect actual cost
+    await db.execute(
+        sa.update(CreditLedger)
+        .where(CreditLedger.id == predebit_ledger_id)
+        .values(
+            delta=-actual_cost,
+            balance_after=CreditLedger.balance_after + diff,
+        )
+    )
+    await db.flush()
 
 
 async def ensure_monthly_credits(db: AsyncSession, user: User) -> None:
