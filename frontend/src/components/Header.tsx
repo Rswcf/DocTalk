@@ -34,7 +34,7 @@ export default function Header({ variant = 'full', isDemo, isLoggedIn }: HeaderP
   const isWin98 = resolvedTheme === 'win98';
 
   return (
-    <header className={`h-14 flex items-center px-4 sm:px-6 gap-3 min-w-0 shrink-0 ${
+    <header className={`h-14 flex items-center px-4 sm:px-6 gap-3 min-w-0 shrink-0 sticky top-0 z-30 ${
       isMinimal
         ? 'bg-transparent'
         : isWin98
