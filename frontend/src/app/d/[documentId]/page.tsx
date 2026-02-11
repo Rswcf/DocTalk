@@ -8,13 +8,14 @@ import TextViewer from '../../../components/TextViewer/TextViewer';
 import { ChatPanel } from '../../../components/Chat';
 import Header from '../../../components/Header';
 import CustomInstructionsModal from '../../../components/CustomInstructionsModal';
-import { listSessions, createSession, getDocument, getDocumentFileUrl, getMessages, updateDocumentInstructions, getUserProfile } from '../../../lib/api';
+import { listSessions, createSession, getDocument, getDocumentFileUrl, getConvertedFileUrl, getMessages, updateDocumentInstructions, getUserProfile } from '../../../lib/api';
 import { useDocTalkStore } from '../../../store';
 import type { UserProfile } from '../../../types';
 import { Panel, Group, Separator } from 'react-resizable-panels';
 import { useLocale } from '../../../i18n';
 import { sanitizeFilename } from '../../../lib/utils';
 
+import { Presentation, FileText } from 'lucide-react';
 import { useWin98Theme } from '../../../components/win98/useWin98Theme';
 import { Win98Window } from '../../../components/win98/Win98Window';
 import { Win98Taskbar } from '../../../components/win98/Win98Taskbar';
@@ -32,6 +33,9 @@ export default function DocumentReaderPage() {
   const [error, setError] = useState<string | null>(null);
   const [isDemo, setIsDemo] = useState(false);
   const [fileType, setFileType] = useState<string>('pdf');
+  const [hasConvertedPdf, setHasConvertedPdf] = useState(false);
+  const [convertedPdfUrl, setConvertedPdfUrl] = useState<string | null>(null);
+  const [viewMode, setViewMode] = useState<'slide' | 'text'>('slide');
   const { t } = useLocale();
   const {
     pdfUrl,
@@ -129,6 +133,13 @@ export default function DocumentReaderPage() {
           if (info.summary) setDocumentSummary(info.summary);
           if (info.suggested_questions) setSuggestedQuestions(info.suggested_questions);
           if (info.custom_instructions !== undefined) setCustomInstructions(info.custom_instructions ?? null);
+          if (info.has_converted_pdf) {
+            setHasConvertedPdf(true);
+            // Fetch converted PDF URL for visual rendering
+            getConvertedFileUrl(documentId).then((file) => {
+              if (!cancelled) setConvertedPdfUrl(file.url);
+            }).catch(() => {});
+          }
           if (intervalId) clearInterval(intervalId);
           return;
         }
@@ -222,15 +233,51 @@ export default function DocumentReaderPage() {
 
   const documentName = useDocTalkStore((s) => s.documentName);
 
-  // Shared viewer content
-  const viewerContent = fileType === 'pdf' ? (
-    pdfUrl ? (
-      <PdfViewer pdfUrl={pdfUrl} currentPage={currentPage} highlights={highlights} scale={scale} scrollNonce={scrollNonce} />
-    ) : (
-      <div className="h-full w-full flex items-center justify-center text-zinc-500">{t('doc.loading')}</div>
-    )
-  ) : (
-    <TextViewer documentId={documentId} fileType={fileType} targetPage={currentPage} scrollNonce={scrollNonce} highlightSnippet={highlightSnippet} />
+  // Determine which viewer to use:
+  // - Native PDF: always PdfViewer with original URL
+  // - PPTX/DOCX with converted PDF: PdfViewer (slide view) or TextViewer (text view), with toggle
+  // - Other non-PDF: TextViewer only
+  const useConvertedPdf = hasConvertedPdf && viewMode === 'slide' && convertedPdfUrl;
+  const showViewToggle = hasConvertedPdf && fileType !== 'pdf';
+
+  const viewToggle = showViewToggle ? (
+    <div className={`flex items-center gap-1 px-2 py-1 border-b ${isWin98 ? 'bg-[var(--win98-button-face)] border-[var(--win98-button-shadow)]' : 'bg-zinc-100 dark:bg-zinc-800 border-zinc-200 dark:border-zinc-700'}`}>
+      <button
+        onClick={() => setViewMode('slide')}
+        className={`flex items-center gap-1 px-2 py-1 rounded text-xs transition-colors ${viewMode === 'slide' ? 'bg-zinc-900 text-white dark:bg-zinc-50 dark:text-zinc-900' : 'text-zinc-600 dark:text-zinc-400 hover:bg-zinc-200 dark:hover:bg-zinc-700'}`}
+        title="Slide view"
+      >
+        <Presentation size={14} />
+        <span>Slides</span>
+      </button>
+      <button
+        onClick={() => setViewMode('text')}
+        className={`flex items-center gap-1 px-2 py-1 rounded text-xs transition-colors ${viewMode === 'text' ? 'bg-zinc-900 text-white dark:bg-zinc-50 dark:text-zinc-900' : 'text-zinc-600 dark:text-zinc-400 hover:bg-zinc-200 dark:hover:bg-zinc-700'}`}
+        title="Text view"
+      >
+        <FileText size={14} />
+        <span>Text</span>
+      </button>
+    </div>
+  ) : null;
+
+  const viewerContent = (
+    <div className="h-full flex flex-col">
+      {viewToggle}
+      <div className="flex-1 min-h-0">
+        {fileType === 'pdf' ? (
+          pdfUrl ? (
+            <PdfViewer pdfUrl={pdfUrl} currentPage={currentPage} highlights={highlights} scale={scale} scrollNonce={scrollNonce} highlightSnippet={highlightSnippet} />
+          ) : (
+            <div className="h-full w-full flex items-center justify-center text-zinc-500">{t('doc.loading')}</div>
+          )
+        ) : useConvertedPdf ? (
+          <PdfViewer pdfUrl={convertedPdfUrl} currentPage={currentPage} highlights={highlights} scale={scale} scrollNonce={scrollNonce} highlightSnippet={highlightSnippet} />
+        ) : (
+          <TextViewer documentId={documentId} fileType={fileType} targetPage={currentPage} scrollNonce={scrollNonce} highlightSnippet={highlightSnippet} />
+        )}
+      </div>
+    </div>
   );
 
   const chatContent = documentStatus === 'ready' && sessionId ? (

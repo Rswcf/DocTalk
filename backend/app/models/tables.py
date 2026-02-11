@@ -52,6 +52,9 @@ class Document(Base):
     # File type (pdf, docx, pptx, xlsx, txt, md)
     file_type: Mapped[str] = mapped_column(sa.String(20), nullable=False, server_default=sa.text("'pdf'"))
 
+    # Storage key for converted PDF (PPTX/DOCX → PDF via LibreOffice)
+    converted_storage_key: Mapped[Optional[str]] = mapped_column(sa.String(500), nullable=True)
+
     # Source URL for URL-ingested documents
     source_url: Mapped[Optional[str]] = mapped_column(sa.String(2000), nullable=True)
 

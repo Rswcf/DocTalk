@@ -123,6 +123,7 @@ class DocService:
         storage_ok = True
         qdrant_ok = True
         storage_key = doc.storage_key
+        converted_key = doc.converted_storage_key
 
         # Best-effort: clean up object storage (sync call, run off event loop)
         try:
@@ -130,6 +131,14 @@ class DocService:
         except Exception as e:
             storage_ok = False
             logger.error("MinIO deletion failed for doc %s: %s", document_id, e)
+
+        # Best-effort: clean up converted PDF if it exists
+        if converted_key:
+            try:
+                await asyncio.to_thread(storage_service.delete_file, converted_key)
+            except Exception as e:
+                storage_ok = False
+                logger.error("MinIO deletion of converted PDF failed for doc %s: %s", document_id, e)
 
         # Best-effort: clean up Qdrant vectors (sync call, run off event loop)
         try:

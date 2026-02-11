@@ -12,6 +12,7 @@ from sqlalchemy import select
 from app.core.config import settings
 from app.models.sync_database import SyncSessionLocal
 from app.models.tables import Chunk, Document, Page
+from app.services.conversion_service import CONVERTIBLE_TYPES, convert_to_pdf
 from app.services.embedding_service import embedding_service
 from app.services.parse_service import ParseService
 
@@ -191,6 +192,30 @@ def parse_document(self, document_id: str) -> None:
                 doc.status = "parsing"
                 db.add(doc)
                 db.commit()
+
+        # ---- Best-effort: convert PPTX/DOCX to PDF for visual rendering ----
+        if file_type in CONVERTIBLE_TYPES and not doc.converted_storage_key:
+            try:
+                pdf_bytes = convert_to_pdf(file_bytes, file_type)
+                converted_key = f"documents/{doc.id}/converted.pdf"
+                from io import BytesIO  # noqa: I001
+
+                from minio.sse import SseS3
+                minio_client = _get_minio_client()
+                minio_client.put_object(
+                    settings.MINIO_BUCKET,
+                    converted_key,
+                    BytesIO(pdf_bytes),
+                    length=len(pdf_bytes),
+                    content_type="application/pdf",
+                    sse=SseS3(),
+                )
+                doc.converted_storage_key = converted_key
+                db.add(doc)
+                db.commit()
+                logger.info("Converted %s to PDF for %s (%d bytes)", file_type, document_id, len(pdf_bytes))
+            except Exception as e:
+                logger.warning("PDF conversion failed for %s (non-blocking): %s", document_id, e)
 
         # ---- Shared path: persist pages, chunk, and embed ----
 

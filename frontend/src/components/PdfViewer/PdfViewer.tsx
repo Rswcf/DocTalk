@@ -51,12 +51,13 @@ export interface PdfViewerProps {
   highlights: NormalizedBBox[];
   scale: number;
   scrollNonce: number;
+  highlightSnippet?: string | null;
 }
 
 const scrollBehavior = () =>
   window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' as const : 'smooth' as const;
 
-export default function PdfViewer({ pdfUrl, currentPage, highlights, scale, scrollNonce }: PdfViewerProps) {
+export default function PdfViewer({ pdfUrl, currentPage, highlights, scale, scrollNonce, highlightSnippet }: PdfViewerProps) {
   const [numPages, setNumPages] = useState<number>(0);
   const [urlError, setUrlError] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
@@ -313,7 +314,7 @@ export default function PdfViewer({ pdfUrl, currentPage, highlights, scale, scro
                   className="relative"
                   data-page-number={pageNumber}
                 >
-                  <PageWithHighlights pageNumber={pageNumber} scale={scale} highlights={pageHighlights} searchQuery={searchQuery} />
+                  <PageWithHighlights pageNumber={pageNumber} scale={scale} highlights={pageHighlights} searchQuery={searchQuery} highlightSnippet={highlightSnippet} />
                 </div>
               );
             })}

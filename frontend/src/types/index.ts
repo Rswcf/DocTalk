@@ -44,6 +44,7 @@ export interface DocumentResponse {
   suggested_questions?: string[];
   custom_instructions?: string | null;
   file_type?: string;
+  has_converted_pdf?: boolean;
 }
 
 export interface SearchResult {

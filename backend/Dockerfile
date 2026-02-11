@@ -8,13 +8,18 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 WORKDIR /app
 
-# System deps for PyMuPDF
+# System deps for PyMuPDF + LibreOffice headless (PPTX/DOCX→PDF conversion) + CJK fonts
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
        build-essential \
        tesseract-ocr \
        tesseract-ocr-eng \
        tesseract-ocr-chi-sim \
+       libreoffice-core \
+       libreoffice-impress \
+       libreoffice-writer \
+       fonts-liberation \
+       fonts-noto-cjk \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Python dependencies

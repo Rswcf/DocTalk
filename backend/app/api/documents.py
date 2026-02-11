@@ -307,12 +307,15 @@ async def get_document(
     # Authorization: if document has owner, verify user matches
     if doc.user_id and (not user or doc.user_id != user.id):
         return JSONResponse(status_code=404, content={"detail": "Document not found"})
-    return doc
+    resp = DocumentResponse.model_validate(doc)
+    resp.has_converted_pdf = bool(doc.converted_storage_key)
+    return resp
 
 
 @documents_router.get("/{document_id}/file-url", response_model=DocumentFileUrlResponse)
 async def get_document_file_url(
     document_id: uuid.UUID,
+    variant: Optional[str] = Query(None, description="'converted' for converted PDF"),
     user: Optional[User] = Depends(get_current_user_optional),
     db: AsyncSession = Depends(get_db_session),
 ):
@@ -322,7 +325,14 @@ async def get_document_file_url(
     # Authorization: if document has owner, verify user matches
     if doc.user_id and (not user or doc.user_id != user.id):
         return JSONResponse(status_code=404, content={"detail": "Document not found"})
-    url = storage_service.get_presigned_url(doc.storage_key, ttl=settings.MINIO_PRESIGN_TTL)
+
+    if variant == "converted":
+        if not doc.converted_storage_key:
+            return JSONResponse(status_code=404, content={"detail": "No converted PDF available"})
+        url = storage_service.get_presigned_url(doc.converted_storage_key, ttl=settings.MINIO_PRESIGN_TTL)
+    else:
+        url = storage_service.get_presigned_url(doc.storage_key, ttl=settings.MINIO_PRESIGN_TTL)
+
     return DocumentFileUrlResponse(url=url, expires_in=int(settings.MINIO_PRESIGN_TTL))
 
 

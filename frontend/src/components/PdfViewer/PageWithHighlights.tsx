@@ -10,6 +10,12 @@ interface PageWithHighlightsProps {
   scale: number;
   highlights: NormalizedBBox[]; // 已过滤为本页的 bbox
   searchQuery?: string;
+  highlightSnippet?: string | null; // text snippet fallback for converted PDFs with dummy bboxes
+}
+
+// Detect dummy bboxes (0,0,1,1) used by non-PDF extractors
+function isDummyBbox(bbox: NormalizedBBox): boolean {
+  return bbox.x === 0 && bbox.y === 0 && bbox.w === 1 && bbox.h === 1;
 }
 
 // Validate bbox values are within expected bounds (allow h=0 for overlay estimation)
@@ -47,7 +53,7 @@ function escapeHtml(str: string): string {
     .replace(/\//g, '&#x2F;');
 }
 
-export default function PageWithHighlights({ pageNumber, scale, highlights, searchQuery }: PageWithHighlightsProps) {
+export default function PageWithHighlights({ pageNumber, scale, highlights, searchQuery, highlightSnippet }: PageWithHighlightsProps) {
   const { t } = useLocale();
   const [pageDims, setPageDims] = useState<{ w: number; h: number } | null>(null);
 
@@ -55,15 +61,27 @@ export default function PageWithHighlights({ pageNumber, scale, highlights, sear
     setPageDims({ w: page.originalWidth, h: page.originalHeight });
   }, []);
 
-  // Filter highlights to only valid ones
-  const validHighlights = useMemo(
-    () => highlights.filter(isValidBbox),
+  // Detect if all highlights are dummy bboxes (converted PDF from PPTX/DOCX)
+  const allDummy = useMemo(
+    () => highlights.length > 0 && highlights.every(isDummyBbox),
     [highlights]
   );
 
-  // customTextRenderer: 仅当有 highlights/searchQuery 且有 pageDims 时启用
+  // Filter highlights to only valid, non-dummy ones for bbox overlay
+  const validHighlights = useMemo(
+    () => allDummy ? [] : highlights.filter(isValidBbox),
+    [highlights, allDummy]
+  );
+
+  // Effective snippet for text-layer highlighting (only when bboxes are dummy)
+  const snippetForHighlight = allDummy && highlightSnippet ? highlightSnippet : null;
+
+  // customTextRenderer: 仅当有 highlights/searchQuery/snippetForHighlight 且有 pageDims 时启用
   const customTextRenderer = useMemo(() => {
-    if ((validHighlights.length === 0 && !searchQuery?.trim()) || !pageDims) return undefined;
+    if ((validHighlights.length === 0 && !searchQuery?.trim() && !snippetForHighlight) || !pageDims) return undefined;
+
+    // Pre-compute snippet matching words for text-snippet fallback
+    const snippetLower = snippetForHighlight?.toLowerCase() || null;
 
     return (textItem: any) => {
       const { str, transform, width, height } = textItem;
@@ -93,10 +111,13 @@ export default function PageWithHighlights({ pageNumber, scale, highlights, sear
         h: Math.max(0, Math.min(1, effectiveHeight / pageDims.h)),
       };
 
-      // 检查是否与任一 highlight bbox 相交
+      // Check bbox-based highlighting
       const isHighlighted = validHighlights.length > 0 && validHighlights.some((hl) => bboxOverlap(textRect, hl));
 
-      let result = isHighlighted
+      // Check text-snippet highlighting (for converted PDFs with dummy bboxes)
+      const isSnippetMatch = snippetLower && str.length > 1 && snippetLower.includes(str.toLowerCase());
+
+      let result = (isHighlighted || isSnippetMatch)
         ? `<mark class="pdf-highlight">${escapeHtml(str)}</mark>`
         : str;
 
@@ -114,7 +135,7 @@ export default function PageWithHighlights({ pageNumber, scale, highlights, sear
 
       return result;
     };
-  }, [validHighlights, pageDims, searchQuery]);
+  }, [validHighlights, pageDims, searchQuery, snippetForHighlight]);
 
   // Compute rendered dimensions for overlay positioning
   const renderedW = pageDims ? pageDims.w * scale : 0;

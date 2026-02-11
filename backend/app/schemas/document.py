@@ -31,6 +31,7 @@ class DocumentResponse(BaseModel):
     custom_instructions: Optional[str] = None
     file_type: Optional[str] = "pdf"
     source_url: Optional[str] = None
+    has_converted_pdf: bool = False
 
     class Config:
         from_attributes = True
