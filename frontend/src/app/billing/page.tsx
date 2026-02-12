@@ -295,7 +295,7 @@ function BillingContent() {
           <h2 className="text-sm font-medium text-zinc-500 dark:text-zinc-400 mb-4 uppercase tracking-wide">
             {t("billing.comparison.title")}
           </h2>
-          <PricingTable currentPlan={profile?.plan as PlanType || 'free'} onUpgrade={handleUpgrade} />
+          <PricingTable currentPlan={profile?.plan as PlanType || 'free'} onUpgrade={handleUpgrade} selectedPlan={selectedPlan} onSelectPlan={setSelectedPlan} />
         </section>
 
         <h2 className="text-sm font-medium text-zinc-500 dark:text-zinc-400 mb-4 uppercase tracking-wide">

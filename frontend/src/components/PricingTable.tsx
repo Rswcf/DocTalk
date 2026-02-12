@@ -27,9 +27,11 @@ const ROWS: RowDef[] = [
 interface PricingTableProps {
   currentPlan?: PlanType;
   onUpgrade?: (plan: PlanType) => void;
+  selectedPlan?: 'plus' | 'pro';
+  onSelectPlan?: (plan: 'plus' | 'pro') => void;
 }
 
-export default function PricingTable({ currentPlan = 'free', onUpgrade }: PricingTableProps) {
+export default function PricingTable({ currentPlan = 'free', onUpgrade, selectedPlan = 'plus', onSelectPlan }: PricingTableProps) {
   const { t } = useLocale();
 
   const renderCell = (value: string | boolean) => {
@@ -78,21 +80,22 @@ export default function PricingTable({ currentPlan = 'free', onUpgrade }: Pricin
       {/* Mobile: stacked cards */}
       <div className="block lg:hidden space-y-4">
         {(['free', 'plus', 'pro'] as PlanType[]).map((plan) => {
-          const isPlus = plan === 'plus';
+          const isSelected = plan === selectedPlan;
           return (
             <div
               key={plan}
+              onClick={() => (plan === 'plus' || plan === 'pro') ? onSelectPlan?.(plan) : undefined}
               className={`rounded-xl border p-5 ${
-                isPlus
-                  ? 'border-2 border-zinc-900 dark:border-zinc-100'
-                  : 'border-zinc-200 dark:border-zinc-800'
+                isSelected
+                  ? 'border-2 border-indigo-500 dark:border-indigo-400 cursor-pointer'
+                  : plan === 'free' ? 'border-zinc-200 dark:border-zinc-800' : 'border-zinc-200 dark:border-zinc-800 cursor-pointer'
               }`}
             >
               <div className="flex items-center gap-2 mb-4">
                 <h3 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50">
                   {t(`billing.comparison.${plan}` as any)}
                 </h3>
-                {isPlus && (
+                {plan === 'plus' && (
                   <span className="text-xs px-2 py-0.5 rounded-full bg-indigo-600 dark:bg-indigo-500 text-white font-medium">
                     {t('billing.mostPopular')}
                   </span>
@@ -123,7 +126,14 @@ export default function PricingTable({ currentPlan = 'free', onUpgrade }: Pricin
               <th className="text-center py-4 px-3 font-medium text-zinc-500 dark:text-zinc-400 w-[22%]">
                 {t('billing.comparison.free')}
               </th>
-              <th className="text-center py-4 px-3 w-[22%] border-x-2 border-zinc-900 dark:border-zinc-100 border-t-2 bg-zinc-50 dark:bg-zinc-900">
+              <th
+                onClick={() => onSelectPlan?.('plus')}
+                className={`text-center py-4 px-3 w-[22%] cursor-pointer ${
+                  selectedPlan === 'plus'
+                    ? 'border-x-2 border-t-2 border-indigo-500 dark:border-indigo-400 bg-indigo-50/50 dark:bg-indigo-950/20'
+                    : 'border-x border-t border-zinc-200 dark:border-zinc-800'
+                }`}
+              >
                 <div className="flex flex-col items-center gap-1">
                   <span className="text-xs px-2 py-0.5 rounded-full bg-indigo-600 dark:bg-indigo-500 text-white font-medium">
                     {t('billing.mostPopular')}
@@ -133,7 +143,14 @@ export default function PricingTable({ currentPlan = 'free', onUpgrade }: Pricin
                   </span>
                 </div>
               </th>
-              <th className="text-center py-4 px-3 font-semibold text-zinc-900 dark:text-zinc-50 w-[22%]">
+              <th
+                onClick={() => onSelectPlan?.('pro')}
+                className={`text-center py-4 px-3 w-[22%] cursor-pointer ${
+                  selectedPlan === 'pro'
+                    ? 'border-x-2 border-t-2 border-indigo-500 dark:border-indigo-400 bg-indigo-50/50 dark:bg-indigo-950/20'
+                    : 'font-semibold text-zinc-900 dark:text-zinc-50'
+                }`}
+              >
                 {t('billing.comparison.pro')}
               </th>
             </tr>
@@ -147,10 +164,24 @@ export default function PricingTable({ currentPlan = 'free', onUpgrade }: Pricin
                 <td className="py-3.5 px-3 text-center">
                   {renderCell(row.free)}
                 </td>
-                <td className="py-3.5 px-3 text-center border-x-2 border-zinc-900 dark:border-zinc-100 bg-zinc-50/50 dark:bg-zinc-900/50">
+                <td
+                  onClick={() => onSelectPlan?.('plus')}
+                  className={`py-3.5 px-3 text-center cursor-pointer ${
+                    selectedPlan === 'plus'
+                      ? 'border-x-2 border-indigo-500 dark:border-indigo-400 bg-indigo-50/50 dark:bg-indigo-950/20'
+                      : 'border-x border-zinc-200 dark:border-zinc-800'
+                  }`}
+                >
                   {renderCell(row.plus)}
                 </td>
-                <td className="py-3.5 px-3 text-center">
+                <td
+                  onClick={() => onSelectPlan?.('pro')}
+                  className={`py-3.5 px-3 text-center cursor-pointer ${
+                    selectedPlan === 'pro'
+                      ? 'border-x-2 border-indigo-500 dark:border-indigo-400 bg-indigo-50/50 dark:bg-indigo-950/20'
+                      : ''
+                  }`}
+                >
                   {renderCell(row.pro)}
                 </td>
               </tr>
@@ -161,10 +192,24 @@ export default function PricingTable({ currentPlan = 'free', onUpgrade }: Pricin
               <td className="py-4 px-3 text-center">
                 {renderCta('free')}
               </td>
-              <td className="py-4 px-3 text-center border-x-2 border-b-2 border-zinc-900 dark:border-zinc-100 bg-zinc-50/50 dark:bg-zinc-900/50 rounded-b-xl">
+              <td
+                onClick={() => onSelectPlan?.('plus')}
+                className={`py-4 px-3 text-center cursor-pointer ${
+                  selectedPlan === 'plus'
+                    ? 'border-x-2 border-b-2 border-indigo-500 dark:border-indigo-400 bg-indigo-50/50 dark:bg-indigo-950/20 rounded-b-xl'
+                    : 'border-x border-zinc-200 dark:border-zinc-800'
+                }`}
+              >
                 {renderCta('plus')}
               </td>
-              <td className="py-4 px-3 text-center">
+              <td
+                onClick={() => onSelectPlan?.('pro')}
+                className={`py-4 px-3 text-center cursor-pointer ${
+                  selectedPlan === 'pro'
+                    ? 'border-x-2 border-b-2 border-indigo-500 dark:border-indigo-400 bg-indigo-50/50 dark:bg-indigo-950/20 rounded-b-xl'
+                    : ''
+                }`}
+              >
                 {renderCta('pro')}
               </td>
             </tr>
