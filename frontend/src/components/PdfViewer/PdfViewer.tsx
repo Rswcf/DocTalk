@@ -115,22 +115,34 @@ export default function PdfViewer({ pdfUrl, currentPage, highlights, scale, scro
   // If highlights exist, center the viewport on the first highlight bbox
   useEffect(() => {
     if (!numPages || !containerRef.current) return;
-    // Ensure target page is in render range before scrolling
-    setVisibleRange(prev => ({
-      start: Math.min(prev.start, Math.max(1, currentPage - BUFFER)),
-      end: Math.max(prev.end, Math.min(numPages, currentPage + BUFFER)),
-    }));
+    // Teleport visible range directly to target page area.
+    // CRITICAL: Do NOT expand from prev range — jumping from page 1 to page 400
+    // would render 400+ pages simultaneously, crashing the browser.
+    setVisibleRange({
+      start: Math.max(1, currentPage - BUFFER),
+      end: Math.min(numPages, currentPage + BUFFER),
+    });
 
     isScrollingToPage.current = true;
     setVisiblePage(currentPage);
 
-    // Use double-rAF to wait for React re-render (range expansion) + DOM paint
-    // so the target page's highlight anchors are available
+    // Scroll to target page, retrying until highlight anchor is available
+    // (the <Page> component loads async, so the anchor may not exist on first paint)
+    let retryCount = 0;
+    const maxRetries = 10;
+
     const scrollToTarget = () => {
       const target = pageRefs.current[currentPage - 1];
       if (!target || !containerRef.current) return;
 
       const anchor = target.querySelector('[data-highlight-anchor="true"]') as HTMLElement | null;
+      if (!anchor && retryCount < maxRetries) {
+        // Page still loading — retry after a short delay
+        retryCount++;
+        requestAnimationFrame(scrollToTarget);
+        return;
+      }
+
       if (anchor) {
         const container = containerRef.current;
         const anchorRect = anchor.getBoundingClientRect();
@@ -156,7 +168,7 @@ export default function PdfViewer({ pdfUrl, currentPage, highlights, scale, scro
     });
 
     // Reset flag after scroll completes
-    setTimeout(() => { isScrollingToPage.current = false; }, 800);
+    setTimeout(() => { isScrollingToPage.current = false; }, 1200);
   }, [currentPage, scrollNonce, numPages, BUFFER]);
 
   // Observer A: track the most-visible page for toolbar display (no rootMargin)
