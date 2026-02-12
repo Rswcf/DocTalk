@@ -95,6 +95,10 @@ export async function chatStream(
                 message: typeof data.message === 'string' ? data.message : 'Unknown error',
               });
               break;
+            case 'truncated':
+              // LLM hit max_tokens — append a visual truncation indicator
+              onToken({ text: '\n\n⋯' });
+              break;
             case 'done':
               onDone({ message_id: typeof data.message_id === 'string' ? data.message_id : '' });
               break;
