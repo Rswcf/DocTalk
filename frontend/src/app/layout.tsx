@@ -9,7 +9,6 @@ import { Suspense } from 'react'
 import { AuthModal } from '../components/AuthModal'
 import { AnalyticsWrapper } from '../components/AnalyticsWrapper'
 import { CookieConsentBanner } from '../components/CookieConsentBanner'
-import NetworkBanner from '../components/NetworkBanner'
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter' })
 const sora = Sora({
@@ -45,7 +44,6 @@ export default function RootLayout({
           <Providers>
             <LocaleProvider>
               <ErrorBoundary>
-                <NetworkBanner />
                 {children}
                 <Suspense fallback={null}>
                   <AuthModal />
