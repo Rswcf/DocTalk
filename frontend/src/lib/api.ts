@@ -19,8 +19,8 @@ export interface DocumentBrief {
   created_at: string | null;
 }
 
-export async function getMyDocuments(): Promise<DocumentBrief[]> {
-  const res = await fetch(`${PROXY_BASE}/api/documents?mine=1`);
+export async function getMyDocuments(signal?: AbortSignal): Promise<DocumentBrief[]> {
+  const res = await fetch(`${PROXY_BASE}/api/documents`, { signal });
   if (!res.ok) {
     if (res.status === 401) return [];
     throw new Error(`Failed to fetch documents: ${res.status}`);

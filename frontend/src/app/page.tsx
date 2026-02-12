@@ -128,15 +128,27 @@ export default function HomePage() {
   const { profile } = useUserProfile();
 
   useEffect(() => {
+    if (status !== 'unauthenticated') return;
     const docs = JSON.parse(localStorage.getItem('doctalk_docs') || '[]') as StoredDoc[];
     setMyDocs(docs.sort((a, b) => b.createdAt - a.createdAt));
-  }, []);
+  }, [status]);
 
   useEffect(() => {
-    if (isLoggedIn) {
-      getMyDocuments().then(setServerDocs).catch(console.error);
-    }
+    if (!isLoggedIn) return;
+    const controller = new AbortController();
+    getMyDocuments(controller.signal).then(setServerDocs).catch((err) => {
+      if (err.name !== 'AbortError') console.error(err);
+    });
+    return () => controller.abort();
   }, [isLoggedIn]);
+
+  useEffect(() => {
+    if (status === 'unauthenticated') {
+      setMyDocs([]);
+      setServerDocs([]);
+      localStorage.removeItem('doctalk_docs');
+    }
+  }, [status]);
 
   const userPlan: PlanTier = useMemo(() => {
     if (!isLoggedIn) return 'free';
@@ -144,16 +156,18 @@ export default function HomePage() {
   }, [isLoggedIn, profile?.plan]);
 
   const allDocs = useMemo(() => {
-    const serverIds = new Set(serverDocs.map((d) => d.id));
-    const localOnly = myDocs.filter((d) => !serverIds.has(d.document_id));
-    const mappedServer: StoredDoc[] = serverDocs.map((d) => ({
-      document_id: d.id,
-      filename: d.filename,
-      status: d.status,
-      createdAt: d.created_at ? new Date(d.created_at).getTime() : Date.now(),
-    }));
-    return [...mappedServer, ...localOnly].sort((a, b) => b.createdAt - a.createdAt);
-  }, [serverDocs, myDocs]);
+    if (isLoggedIn) {
+      return serverDocs
+        .map((d) => ({
+          document_id: d.id,
+          filename: d.filename,
+          status: d.status,
+          createdAt: d.created_at ? new Date(d.created_at).getTime() : Date.now(),
+        }))
+        .sort((a, b) => b.createdAt - a.createdAt);
+    }
+    return myDocs;
+  }, [isLoggedIn, myDocs, serverDocs]);
 
   const maxUploadMb = useMemo(() => MAX_UPLOAD_MB_BY_PLAN[userPlan] ?? MAX_UPLOAD_MB_BY_PLAN.free, [userPlan]);
   const maxUploadBytes = maxUploadMb * 1024 * 1024;
@@ -197,10 +211,12 @@ export default function HomePage() {
       const res = await uploadDocument(file);
       const docId = res.document_id;
       setDocument(docId);
-      const docs: StoredDoc[] = JSON.parse(localStorage.getItem('doctalk_docs') || '[]');
-      const entry: StoredDoc = { document_id: docId, filename: res.filename, status: res.status, createdAt: Date.now() };
-      localStorage.setItem('doctalk_docs', JSON.stringify([entry, ...docs.filter(d => d.document_id !== docId)]));
-      setMyDocs([entry, ...docs.filter(d => d.document_id !== docId)].sort((a, b) => b.createdAt - a.createdAt));
+      if (!isLoggedIn) {
+        const docs: StoredDoc[] = JSON.parse(localStorage.getItem('doctalk_docs') || '[]');
+        const entry: StoredDoc = { document_id: docId, filename: res.filename, status: res.status, createdAt: Date.now() };
+        localStorage.setItem('doctalk_docs', JSON.stringify([entry, ...docs.filter((d) => d.document_id !== docId)]));
+        setMyDocs([entry, ...docs.filter((d) => d.document_id !== docId)].sort((a, b) => b.createdAt - a.createdAt));
+      }
       getMyDocuments().then(setServerDocs).catch(console.error);
 
       setProgressText(t('upload.parsing'));
@@ -236,7 +252,7 @@ export default function HomePage() {
       setProgressText(t('upload.networkError'));
       setUploading(false);
     }
-  }, [maxUploadBytes, maxUploadMb, router, setDocument, setDocumentStatus, t]);
+  }, [isLoggedIn, maxUploadBytes, maxUploadMb, router, setDocument, setDocumentStatus, t]);
 
   const onDrop = (e: React.DragEvent) => {
     e.preventDefault();
@@ -288,14 +304,16 @@ export default function HomePage() {
       console.error('Failed to delete document:', e);
     }
 
-    const docs: StoredDoc[] = JSON.parse(localStorage.getItem('doctalk_docs') || '[]');
-    const next = docs.filter((x) => x.document_id !== documentId);
-    localStorage.setItem('doctalk_docs', JSON.stringify(next));
-    setMyDocs(next.sort((a, b) => b.createdAt - a.createdAt));
+    if (!isLoggedIn) {
+      const docs: StoredDoc[] = JSON.parse(localStorage.getItem('doctalk_docs') || '[]');
+      const next = docs.filter((x) => x.document_id !== documentId);
+      localStorage.setItem('doctalk_docs', JSON.stringify(next));
+      setMyDocs(next.sort((a, b) => b.createdAt - a.createdAt));
+    }
     setServerDocs((prev) => prev.filter((s) => s.id !== documentId));
     setDeletingId(null);
     setConfirmDeleteId((prev) => (prev === documentId ? null : prev));
-  }, []);
+  }, [isLoggedIn]);
 
   /* --- Loading guard (prevents flash of wrong content) --- */
   if (status === 'loading') {

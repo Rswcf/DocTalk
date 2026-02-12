@@ -62,39 +62,37 @@ def _validate_file_content(data: bytes, file_type: str) -> bool:
 
 @documents_router.get("", response_model=list[DocumentBrief])
 async def list_documents(
-    mine: bool = Query(False, description="Filter by current user"),
     limit: int = Query(50, ge=1, le=100),
     offset: int = Query(0, ge=0),
     user: Optional[User] = Depends(get_current_user_optional),
     db: AsyncSession = Depends(get_db_session),
 ):
-    """List documents. Use ?mine=1 to get only current user's documents."""
-    if mine:
-        if not user:
-            raise HTTPException(status_code=401, detail="Authentication required")
-        from sqlalchemy import select
+    """List current user's documents. Returns empty list for anonymous users."""
+    if not user:
+        return []
 
-        from app.models.tables import Document
+    from sqlalchemy import select
 
-        result = await db.execute(
-            select(Document)
-            .where(Document.user_id == user.id)
-            .where(Document.status != "deleting")
-            .order_by(Document.created_at.desc())
-            .limit(limit)
-            .offset(offset)
+    from app.models.tables import Document
+
+    result = await db.execute(
+        select(Document)
+        .where(Document.user_id == user.id)
+        .where(Document.status != "deleting")
+        .order_by(Document.created_at.desc())
+        .limit(limit)
+        .offset(offset)
+    )
+    docs = result.scalars().all()
+    return [
+        DocumentBrief(
+            id=str(d.id),
+            filename=d.filename,
+            status=d.status,
+            created_at=d.created_at.isoformat() if d.created_at else None,
         )
-        docs = result.scalars().all()
-        return [
-            DocumentBrief(
-                id=str(d.id),
-                filename=d.filename,
-                status=d.status,
-                created_at=d.created_at.isoformat() if d.created_at else None,
-            )
-            for d in docs
-        ]
-    return []
+        for d in docs
+    ]
 
 
 @documents_router.get("/demo", response_model=list[DemoDocumentResponse])
