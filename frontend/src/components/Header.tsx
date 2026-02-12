@@ -38,6 +38,7 @@ export default function Header({ variant = 'full', isDemo, isLoggedIn }: HeaderP
       <Link href="/" className="font-logo font-semibold text-xl text-zinc-900 dark:text-zinc-100 hover:text-zinc-600 dark:hover:text-zinc-300 transition-colors shrink-0 focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:rounded-sm inline-flex items-center gap-2">
         <DocTalkLogo size={26} />
         {t('app.title')}
+        <span className="ml-1 -mt-2 px-1.5 py-0.5 text-[10px] font-medium leading-none rounded-full bg-indigo-100 text-indigo-600 dark:bg-indigo-900/50 dark:text-indigo-300 tracking-wide uppercase">Beta</span>
       </Link>
       {!isMinimal && documentName && (
         <>
