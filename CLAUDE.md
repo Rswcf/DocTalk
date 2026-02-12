@@ -301,27 +301,45 @@ SENTRY_TRACES_SAMPLE_RATE=0.1
 - **所有 API 走代理**: REST 和 SSE (chat stream) 均通过 `PROXY_BASE` (`/api/proxy`) 路由，`sse.ts` 的 `chatStream()` 也走代理以注入 JWT
 - **Proxy maxDuration**: `route.ts` 导出 `maxDuration = 60`（Vercel Hobby 上限），SSE chat 使用 60s fetch timeout，其他请求 30s
 - **UserMenu 替代 AuthButton**: Header 中 `AuthButton` 已被 `UserMenu` 下拉菜单替代，未登录时仍显示 Sign In 按钮
-- **Profile 页面**: `/profile?tab=credits` (默认 tab)，受保护路由，未登录重定向到 `/auth?callbackUrl=/profile`
+- **Profile 页面**: `/profile?tab=profile` (默认 tab)，受保护路由，未登录重定向到 `/auth?callbackUrl=/profile`
 - **Billing 页面**: 月付/年付切换 + Plus 订阅卡片（"Most Popular" 标记）+ Pro 订阅卡片；中间 PricingTable（Free vs Plus vs Pro 9 行对比）；下方 credit packs 卡片 (rounded-xl)
 - **Chat UI（ChatGPT 风格）**: AI 消息无卡片/边框/背景，`prose` 级别文本平铺渲染（用户消息 `rounded-3xl` 圆角气泡，浅色模式 `bg-zinc-100`，深色模式 `dark:bg-zinc-700`）。消息区域 + 输入栏使用 `max-w-3xl mx-auto` 居中，宽面板时保持舒适阅读宽度。Copy/ThumbsUp/ThumbsDown/Regenerate 按钮在 AI 消息下方 hover 显示（`opacity-0 group-hover:opacity-100`），最后一条 AI 消息始终可见。输入框为 `rounded-3xl` 药丸形容器（`shadow-sm` 静态阴影 + `focus-within:ring` 聚焦高亮），左侧 "+" 按钮弹出菜单（Custom Instructions + Export Chat），右侧 Send/Stop 按钮切换（streaming 时 Square 图标替换 SendHorizontal）。输入栏下方显示 AI 准确性免责声明（`chat.disclaimer`，11 语言）
 - **代码块**: `MessageBubble.tsx` 中 `PreBlock` 组件拦截 `<pre>` 元素，渲染为深色背景代码块（`bg-zinc-900` header + `bg-zinc-900` code body），顶部显示语言标签 + Copy code 按钮。`not-prose` 避免 Typography 样式干扰。内联 `code` 通过 `tailwind.config.ts` Typography 配置渲染为灰色背景药丸（无反引号装饰）
 - **Stop 生成**: `sse.ts` 支持 `AbortSignal` 参数，`ChatPanel` 通过 `AbortController` 实现流式中断。Streaming 时 Send 按钮变为 Stop 按钮（Square 图标），点击后立即中止 SSE 连接并保留已生成的部分回答
-- **"+" 菜单**: 输入栏左侧 Plus 按钮弹出下拉菜单，包含 Custom Instructions（Settings2 图标，指令已设置时显示翡翠色圆点指示器）和 Export Chat（Download 图标）。替代了原先 page.tsx 中的 Settings2 顶栏和输入框内嵌的 Export 按钮
+- **"+" 菜单**: 输入栏左侧 Plus 按钮弹出下拉菜单（`role="menu"` + 键盘导航 ArrowUp/Down/Escape/Enter），包含 Custom Instructions（Settings2 图标，指令已设置时显示翡翠色圆点指示器）和 Export Chat（Download 图标）。Free 用户可见但显示 Lock 图标 + Pro/Plus 标签，点击跳转 /billing 升级。替代了原先 page.tsx 中的 Settings2 顶栏和输入框内嵌的 Export 按钮
 - **引用卡片（紧凑模式）**: `CitationCard.tsx` 使用 `inline-flex` 紧凑药丸样式（`rounded-lg px-2.5 py-1.5 text-xs`），引用容器为 `flex flex-wrap gap-1.5` 水平排列，替代原先的全宽竖向卡片
 - **建议问题药丸**: 空消息状态下建议问题使用 `rounded-full` 药丸按钮 + `flex flex-wrap` 居中排列，替代原先的全宽竖向按钮
 - **滚动到底部按钮**: 消息列表滚动离底部 >80px 时，显示浮动 ArrowDown 圆形按钮，点击平滑滚动到底部
 - **引用悬浮 Tooltip**: `MessageBubble.tsx` 中引用 `[n]` 按钮悬浮显示 textSnippet + page tooltip，减少验证点击次数
 - **流式状态指示**: streaming 时显示 3 点弹跳动画（"搜索文档中..."）和闪烁光标，区分 retrieval 阶段和生成阶段
-- **下拉菜单键盘导航**: UserMenu、ThemeSelector、LanguageSelector、SessionDropdown 支持 Arrow/Home/End/Escape 键盘操作
+- **下拉菜单键盘导航**: UserMenu、ThemeSelector、LanguageSelector、SessionDropdown、ChatPanel "+" 菜单均通过 `useDropdownKeyboard` 共享 hook 支持 Arrow/Home/End/Escape 键盘操作
 - **ThemeSelector 下拉菜单**: 替代原先的主题图标循环按钮，用户可从下拉列表中选择 Light/Dark/Windows 98 主题，当前主题显示 Check 图标
 - **CreditsDisplay 自动刷新**: 每 60s 轮询 + 自定义事件 `doctalk:credits-refresh`（聊天完成/购买后触发），`triggerCreditsRefresh()` 导出供外部调用
 - **Billing 骨架屏**: 产品列表加载中显示 skeleton cards，失败显示 error + retry 按钮
 - **响应式**: Header 移动端间距/截断/CreditsDisplay 小屏隐藏，upload zone `p-8 sm:p-12`，billing `p-6 sm:p-8`
-- **自定义 AI 指令模态框**: `CustomInstructionsModal.tsx`，通过 ChatPanel "+" 菜单中的 Settings2 图标触发（`onOpenSettings` prop 从 page.tsx 传入），textarea 2000 字限制，Save/Clear 按钮
+- **自定义 AI 指令模态框**: `CustomInstructionsModal.tsx`，通过 ChatPanel "+" 菜单中的 Settings2 图标触发（`onOpenSettings` prop 从 page.tsx 传入），textarea 2000 字限制，Save/Clear/Cancel 按钮，焦点陷阱（Tab 循环限定在模态框内）
 - **多格式上传**: Dashboard 上传区 accept 属性包含 PDF/DOCX/PPTX/XLSX/TXT/MD 的 MIME 类型和扩展名
 - **TextViewer**: 非 PDF 文档使用 `TextViewer.tsx` 显示内容，PDF 文档使用 PdfViewer。支持两种渲染模式：md/docx/pptx/xlsx 使用 react-markdown + remark-gfm 渲染（Tailwind Typography prose 样式，表格带边框和交替行色），txt/url 使用纯文本 `<pre>` 渲染。引用高亮：`highlightSnippet` 通过 `findSnippetInPage()` 渐进前缀匹配定位（amber 背景）。全文搜索：Ctrl+F 打开搜索栏，跨页搜索+匹配计数+上下翻页（黄色高亮）。搜索和引用高亮共存，重叠时引用优先
 - **URL 导入**: Dashboard 上传区下方 URL 输入框（Link2 图标 + 输入 + Import URL 按钮），调用 `ingestUrl()` → 跳转到文档页
-- **文档集合**: `/collections` 列表页 + `/collections/[id]` 详情页（ChatPanel 左 + 文档列表侧栏右），Header full variant 新增 FolderOpen 集合入口
+- **文档集合**: `/collections` 列表页（含 FolderOpen 富空状态 + `collections.emptyTitle/emptySubtitle` i18n）+ `/collections/[id]` 详情页（ChatPanel 左 + 文档列表侧栏右），Header full variant 新增 FolderOpen 集合入口
+- **Dashboard 空状态**: 无文档时显示 FileUp 图标 + `dashboard.emptyTitle/emptySubtitle` + "Try Demo" 链接，替代纯文本 "No documents yet"
+- **文档状态指示器**: 文档列表每项显示状态圆点 — ready 绿色 / parsing+embedding+ocr 琥珀脉动 / error 红色
+- **前端上传大小校验**: 按用户套餐动态限制（free=25MB, plus=50MB, pro=100MB），替代硬编码 50MB
+- **引用高亮颜色**: amber 色调（`rgba(245, 158, 11, ...)`），替代原先的 sky blue。内联引用 `[n]` 按钮使用 indigo 强调色（`text-indigo-600 dark:text-indigo-400`）
+- **Dark mode 背景**: 页面背景使用 `--page-background: #18181b`（zinc-900），比 zinc-950 (#09090b) 减轻长时间阅读眼疲劳。组件背景不受影响
+- **路由级错误边界**: `d/[documentId]/error.tsx` 和 `collections/[collectionId]/error.tsx` 提供路由级错误恢复（Try again + Go home）
+- **动态页面标题**: `usePageTitle` hook 在 8 个页面设置动态 `document.title`（如 "DocTalk - Billing"）
+- **404 页面**: `app/not-found.tsx` 自定义 404 页面
+- **i18n 缺键警告**: 开发模式下 `t()` 函数找不到翻译键时 `console.warn('[i18n] Missing translation key:', key)`
+- **Locale 懒加载**: 仅 `en` 静态加载，其他 10 种语言按需动态 import（减少首屏 JS）
+- **Admin Recharts 代码分割**: `AdminCharts.tsx` 通过 `next/dynamic` 懒加载（`ssr: false`），Recharts 不影响其他页面 bundle
+- **流式更新节流**: Zustand store 的 `updateLastMessage` 以 50ms 间隔批量刷新，减少 GC 压力和 re-render
+- **PDF 搜索缓存**: 文本提取结果缓存在 ref 中（按 URL），搜索输入 300ms debounce，不再每次搜索重新下载 PDF
+- **Chat 网络错误**: 友好 i18n 消息替代原始错误文本（`chat.networkError`），AbortError 静默处理
+- **Hero "Sign Up Free" CTA**: Landing page hero 区域新增 "Sign Up Free" 按钮（`?auth=1` 触发 AuthModal）
+- **ModeSelector 无障碍**: `role="radiogroup"` + `aria-checked`，Demo 进度条 `role="progressbar"` + aria 属性
+- **SocialProof 渐变数字**: 指标数字使用 `bg-gradient-to-r from-indigo-600 to-violet-600` 渐变文字
+- **PricingTable 无障碍**: Check/X 图标添加 `aria-label` + `sr-only` 文字标签，支持色盲用户
 
 ### 后端相关
 - **Celery 用同步 DB**: Worker 使用 `psycopg`（同步），API 使用 `asyncpg`（异步）
@@ -332,12 +350,26 @@ SENTRY_TRACES_SAMPLE_RATE=0.1
 - **FOR UPDATE 锁**: 验证 Token 使用行锁防止 TOCTOU 竞态
 - **OCR 回退**: `detect_scanned()` 检测到扫描 PDF 后，若 `OCR_ENABLED=true`，设 status="ocr" → 调用 `extract_pages_ocr()` → 验证文字 ≥50 chars → 继续 parsing。PyMuPDF `page.get_textpage_ocr(language=..., dpi=..., full=True)` 需要系统安装 Tesseract（Dockerfile 已包含 `tesseract-ocr-eng` + `tesseract-ocr-chi-sim`）
 - **OCR 容错**: 每页独立 try/except，一页 OCR 失败不影响其他页。OCR 文字不足 50 chars 时标记 error
-- **Parse worker 幂等**: 重新执行时先删除已有 pages/chunks，重置计数器，避免 UniqueViolation；支持 stuck 文档重试
-- **启动自动重试**: `main.py` 的 `on_startup` 在后台线程中检测 status=parsing/embedding 的文档，自动重新分发 parse 任务
+- **Parse worker 幂等**: 重新执行时先删除已有 pages/chunks，重置计数器，避免 UniqueViolation；支持 stuck 文档重试。Celery task 配置 `time_limit=600`（10min 硬超时）+ `soft_time_limit=540`（9min 软超时，设 error 状态）+ `autoretry_for=(Exception,)` 最多 2 次重试（60s 退避）
+- **启动自动重试**: `main.py` 的 lifespan 启动阶段在后台线程中检测 status=parsing/embedding 的文档，自动重新分发 parse 任务
 - **自动摘要生成**: `summary_service.generate_summary_sync(document_id)` 在 Celery 上下文中调用，加载前 20 个 chunks（max 8K chars），通过 OpenRouter 调用 `deepseek/deepseek-v3.2` 生成 JSON `{summary, questions}`。支持 markdown code fence 解析。不扣 credits（系统生成）。在 `parse_worker.py` 中 ready 后 try/except 调用，失败仅 warning 日志
 - **Demo 文档种子**: `on_startup` → `_seed_demo_documents()` → `demo_seed.seed_demo_documents()`，从 `backend/seed_data/` 读取 3 篇 PDF（Alphabet Q4 财报、Attention 论文、联邦法院文书），上传 MinIO 并 dispatch parse。幂等：已 ready 跳过（除非 Qdrant 向量丢失则完整重建），stuck 重派，error 重建
 - **Demo 5 条消息限制**: `chat.py:chat_stream` 中，匿名用户 + demo_slug 文档 → 查询 user messages 数量 → 超过 5 条返回 429。前端 ChatPanel 区分速率限制 429（"Rate limit exceeded" → `demo.rateLimitMessage`）和消息限制 429（→ `demo.limitReachedMessage`）
 - **Retrieval 容错**: `chat_service.py` 的 retrieval 调用包裹在 try/except 中，Qdrant 不可用时返回 `RETRIEVAL_ERROR` SSE 事件
+- **AsyncOpenAI 单例**: `chat_service.py` 模块级 `_get_openai_client()` 复用 TCP 连接，避免每次 chat 创建新 TLS 握手
+- **LLM 延迟指标**: `chat_service.py` 在 streaming 时记录 `LLM first_token_latency` 和 `LLM total_latency` + token 数到 logger.info
+- **DB 连接池**: `pool_size=10, max_overflow=20, pool_recycle=1800`（`database.py`）
+- **DB 索引**: Alembic migration `20260211_0015` 添加 `sessions.document_id`、`sessions.collection_id`、`documents.status` 索引
+- **Qdrant payload 索引**: lifespan 启动时创建 `document_id` payload index（`PayloadSchemaType.KEYWORD`），加速按文档过滤检索
+- **Health 深度检查**: `GET /health?deep=true` 检测 DB (`SELECT 1`) + Redis (`ping()`) 连通性
+- **Lifespan 模式**: 使用 FastAPI `@asynccontextmanager` lifespan 替代已弃用的 `@app.on_event("startup")`
+- **错误响应统一**: 所有非 SSE 端点的错误使用 `HTTPException` 而非 `JSONResponse`（35+ 路径），前端可统一 `detail` 字段处理
+- **CORS 环境感知**: 生产环境仅允许 `FRONTEND_URL`，开发环境额外允许 localhost
+- **SQL 消息限制**: `chat_service` 使用 `ORDER BY created_at DESC LIMIT N` 替代加载全量后 Python 切片
+- **Profile/Admin 查询合并**: Profile 4 项统计合并为 1 条 SQL，Admin overview 10 次 count 合并为 3 条
+- **GDPR 导出优化**: `export_my_data` 使用 `selectinload` 预加载关联数据，消除 N+1
+- **Embedding 自适应间隔**: 批次间仅在处理时间 <200ms 时补充 sleep，替代固定 `sleep(0.2)`
+- **Celery concurrency=2**: `entrypoint.sh` 从 1 提升到 2，文档解析吞吐量翻倍
 - **删除为同步级联**: `doc_service.delete_document()` 使用 ORM cascade 真正删除 DB 记录（非仅标记 status），同时 best-effort 清理 MinIO + Qdrant。清理失败时通过 `deletion_worker.py` Celery 任务重试（3 次，指数退避），所有删除操作记录结构化安全日志
 - **文档列表过滤**: `list_documents` 查询排除 `status="deleting"` 的文档
 - **月度 Credits 惰性发放**: `ensure_monthly_credits()` 在每次 chat 前检查，30 天周期，ledger 幂等，时区安全
@@ -484,6 +516,8 @@ DocTalk/
 │   │   │   ├── models.ts         # AVAILABLE_MODELS 定义 (3 性能模式)
 │   │   │   ├── export.ts         # 对话导出 (Markdown + 引用脚注)
 │   │   │   ├── utils.ts          # 工具函数 (sanitizeFilename: Unicode 规范化 + 控制字符剥离 + 双扩展名阻断)
+│   │   │   ├── useDropdownKeyboard.ts  # 共享下拉菜单键盘导航 hook (Arrow/Home/End/Escape)
+│   │   │   └── usePageTitle.ts   # 动态页面标题 hook
 │   │   │   └── sse.ts            # SSE 流式客户端 (支持 AbortSignal 中断)
 │   │   ├── i18n/                 # 11 种语言
 │   │   ├── store/                # Zustand
