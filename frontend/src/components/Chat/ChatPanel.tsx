@@ -47,6 +47,7 @@ export default function ChatPanel({ sessionId, onCitationClick, maxUserMessages,
   const {
     sendMessage,
     regenerateLastResponse,
+    continueGenerating,
     stopStreaming,
     demoRemaining,
     demoLimitReached,
@@ -225,7 +226,7 @@ export default function ChatPanel({ sessionId, onCitationClick, maxUserMessages,
                 return (
                   <MessageErrorBoundary key={message.id} messageId={message.id}>
                     <div>
-                      <MessageBubble message={displayMessage} onCitationClick={onCitationClick} isStreaming={showStreaming} onRegenerate={isLastAssistantMsg ? () => void regenerateLastResponse() : undefined} isLastAssistant={isLastAssistantMsg} />
+                      <MessageBubble message={displayMessage} onCitationClick={onCitationClick} isStreaming={showStreaming} onRegenerate={isLastAssistantMsg ? () => void regenerateLastResponse() : undefined} isLastAssistant={isLastAssistantMsg} onContinue={isLastAssistantMsg && displayMessage.isTruncated ? () => void continueGenerating() : undefined} />
                       {displayCitations && displayCitations.length > 0 && (() => {
                         const uniqueCitations = displayCitations
                           .filter((citation, index, all) => all.findIndex((item) => item.refIndex === citation.refIndex) === index)

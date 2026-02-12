@@ -16,6 +16,7 @@ from app.core.config import settings
 from app.core.model_profiles import get_model_profile, get_rules_for_model
 from app.models.tables import (
     ChatSession,
+    Chunk,
     CreditLedger,
     Document,
     Message,
@@ -501,7 +502,337 @@ class ChatService:
                 yield sse("warn", {"code": "ACCOUNTING_ERROR", "message": str(e)})
 
         # 10) done
-        yield sse("done", {"message_id": str(asst_msg.id), "citations_count": len(citations)})
+        can_continue = asst_msg.continuation_count < settings.MAX_CONTINUATIONS_PER_MESSAGE
+        yield sse("done", {
+            "message_id": str(asst_msg.id),
+            "citations_count": len(citations),
+            "can_continue": can_continue and finish_reason == "length",
+            "continuation_count": asst_msg.continuation_count,
+        })
+
+    async def continue_stream(
+        self,
+        session_id: uuid.UUID,
+        message_id: Optional[uuid.UUID],
+        db: AsyncSession,
+        user: Optional[User] = None,
+        locale: Optional[str] = None,
+        mode: Optional[str] = None,
+    ) -> AsyncGenerator[Dict[str, Any], None]:
+        """Continue a truncated assistant response, appending to the existing message."""
+
+        # 1) Load session
+        row = await db.execute(select(ChatSession).where(ChatSession.id == session_id))
+        session_obj: Optional[ChatSession] = row.scalar_one_or_none()
+        if not session_obj:
+            yield sse("error", {"code": "SESSION_NOT_FOUND", "message": "Session not found"})
+            return
+
+        document_id = session_obj.document_id
+        collection_id = getattr(session_obj, "collection_id", None)
+        is_collection_session = collection_id is not None and document_id is None
+
+        doc = await db.get(Document, document_id) if document_id else None
+
+        # For collection sessions, load document names
+        collection_doc_names: dict[uuid.UUID, str] = {}
+        if is_collection_session:
+            from app.models.tables import collection_documents as cd_table
+            cd_rows = await db.execute(
+                select(cd_table.c.document_id).where(cd_table.c.collection_id == collection_id)
+            )
+            collection_doc_ids = [r[0] for r in cd_rows.all()]
+            if collection_doc_ids:
+                doc_rows = await db.execute(
+                    select(Document.id, Document.filename).where(Document.id.in_(collection_doc_ids))
+                )
+                for drow in doc_rows.all():
+                    collection_doc_names[drow[0]] = drow[1]
+
+        # 2) Load assistant message to continue
+        if message_id:
+            asst_msg = await db.get(Message, message_id)
+        else:
+            # Fall back to most recent assistant message in session
+            result = await db.execute(
+                select(Message)
+                .where(Message.session_id == session_id, Message.role == "assistant")
+                .order_by(Message.created_at.desc())
+                .limit(1)
+            )
+            asst_msg = result.scalar_one_or_none()
+
+        if not asst_msg or asst_msg.role != "assistant":
+            yield sse("error", {"code": "MESSAGE_NOT_FOUND", "message": "Assistant message not found"})
+            return
+
+        if asst_msg.session_id != session_id:
+            yield sse("error", {"code": "MESSAGE_NOT_FOUND", "message": "Message does not belong to this session"})
+            return
+
+        # 3) Check continuation limit
+        if asst_msg.continuation_count >= settings.MAX_CONTINUATIONS_PER_MESSAGE:
+            yield sse("error", {"code": "CONTINUATION_LIMIT", "message": "Maximum continuations reached"})
+            return
+
+        # 4) Resolve mode → model
+        effective_mode = mode if mode in settings.MODE_MODELS else "balanced"
+        effective_model = settings.MODE_MODELS[effective_mode]
+
+        if user is None and doc and doc.demo_slug:
+            effective_model = settings.DEMO_LLM_MODEL
+            effective_mode = "quick"
+
+        if effective_mode in settings.PREMIUM_MODES:
+            user_plan = (user.plan or "free").lower() if user else "free"
+            if user_plan == "free":
+                yield sse("error", {"code": "MODE_NOT_ALLOWED", "message": "Upgrade to Plus to use Thorough mode"})
+                return
+
+        # 5) Pre-debit credits
+        pre_debited = 0
+        predebit_ledger_id = None
+        if user is not None:
+            estimated = credit_service.get_estimated_cost(effective_mode)
+            predebit_ledger_id = await credit_service.debit_credits(
+                db, user_id=user.id, cost=estimated,
+                reason="chat", ref_type="mode", ref_id=effective_mode,
+            )
+            if predebit_ledger_id:
+                pre_debited = estimated
+                await db.commit()
+            else:
+                balance = await credit_service.get_user_credits(db, user.id)
+                yield sse("error", {
+                    "code": "INSUFFICIENT_CREDITS",
+                    "message": "Insufficient credits",
+                    "required": estimated,
+                    "balance": balance,
+                })
+                return
+
+        # 6) Reconstruct chunk_map from original citations
+        chunk_map: dict[int, _ChunkInfo] = {}
+        original_citations = asst_msg.citations or []
+        if original_citations:
+            chunk_ids_set: set[str] = set()
+            ref_to_chunk_id: dict[int, str] = {}
+            for cit in original_citations:
+                cid = cit.get("chunk_id")
+                ref = cit.get("ref_index")
+                if cid and ref is not None:
+                    chunk_ids_set.add(cid)
+                    ref_to_chunk_id[int(ref)] = cid
+
+            if chunk_ids_set:
+                chunk_uuids = [uuid.UUID(c) for c in chunk_ids_set]
+                chunk_rows = await db.execute(
+                    select(Chunk).where(Chunk.id.in_(chunk_uuids))
+                )
+                chunks_by_id: dict[str, Chunk] = {}
+                for ch in chunk_rows.scalars():
+                    chunks_by_id[str(ch.id)] = ch
+
+                for ref_num, cid in ref_to_chunk_id.items():
+                    ch = chunks_by_id.get(cid)
+                    if ch:
+                        chunk_map[ref_num] = _ChunkInfo(
+                            id=ch.id,
+                            page_start=ch.page_start,
+                            bboxes=ch.bboxes or [],
+                            text=ch.text,
+                            section_title=ch.section_title or "",
+                            document_id=ch.document_id,
+                            document_filename=collection_doc_names.get(ch.document_id, ""),
+                        )
+
+        # 7) Load conversation history
+        max_turns = int(settings.MAX_CHAT_HISTORY_TURNS or 6)
+        max_msgs = max_turns * 2
+        msgs_row = await db.execute(
+            select(Message)
+            .where(Message.session_id == session_id)
+            .order_by(Message.created_at.desc())
+            .limit(max_msgs + 1)
+        )
+        history_msgs: List[Message] = list(msgs_row.scalars().all())
+        history_msgs.reverse()
+
+        claude_messages: List[dict] = []
+        for m in history_msgs:
+            claude_messages.append({"role": m.role, "content": m.content})
+
+        # Add continuation prompt
+        claude_messages.append({
+            "role": "user",
+            "content": "Please continue your response from where you left off. Do not repeat what you already said.",
+        })
+
+        # 8) Build system prompt with chunk_map context
+        numbered_chunks: List[str] = []
+        for idx in sorted(chunk_map.keys()):
+            info = chunk_map[idx]
+            text = (info.text or "")[:1400]
+            doc_label = ""
+            if is_collection_session and info.document_id:
+                fname = collection_doc_names.get(info.document_id, "")
+                if fname:
+                    doc_label = f"(from: {fname}) "
+            numbered_chunks.append(f"[{idx}] {doc_label}{text}")
+
+        rules = get_rules_for_model(
+            effective_model, is_collection=is_collection_session
+        )
+
+        if is_collection_session:
+            doc_list = ", ".join(collection_doc_names.values()) if collection_doc_names else "(no documents)"
+            system_prompt = (
+                "You are a document analysis assistant. Answer the user's question based on fragments from multiple documents.\n\n"
+                f"## Available Documents\n{doc_list}\n\n"
+                "## Document Fragments\n"
+                + ("\n".join(numbered_chunks) if numbered_chunks else "(none)")
+                + "\n\n## Rules\n" + rules
+            )
+        else:
+            system_prompt = (
+                "You are a document analysis assistant. Answer the user's question based on the following document fragments.\n\n"
+                "## Document Fragments\n"
+                + ("\n".join(numbered_chunks) if numbered_chunks else "(none)")
+                + "\n\n## Rules\n" + rules
+            )
+
+        if doc and doc.custom_instructions:
+            system_prompt += (
+                "\n## Custom Instructions\n"
+                "The user has provided the following custom instructions for this document. Follow them:\n"
+                + doc.custom_instructions + "\n"
+            )
+
+        # 9) Stream from LLM
+        client = _get_openai_client()
+        profile = get_model_profile(effective_model)
+
+        if profile.supports_cache_control:
+            sys_msg: dict = {
+                "role": "system",
+                "content": [{"type": "text", "text": system_prompt, "cache_control": {"type": "ephemeral"}}],
+            }
+        else:
+            sys_msg = {"role": "system", "content": system_prompt}
+        openai_messages = [sys_msg] + claude_messages
+
+        continuation_text_parts: List[str] = []
+        new_citations: List[dict] = []
+        fsm = RefParserFSM(chunk_map)
+        fsm.char_offset = len(asst_msg.content)  # Offset citations relative to full text
+
+        last_ping = time.monotonic()
+        prompt_tokens: Optional[int] = None
+        output_tokens: Optional[int] = None
+        finish_reason: Optional[str] = None
+
+        try:
+            create_kwargs: dict[str, Any] = {
+                "model": effective_model,
+                "max_tokens": profile.max_tokens,
+                "temperature": profile.temperature,
+                "messages": openai_messages,
+                "stream": True,
+            }
+            if profile.supports_stream_options:
+                create_kwargs["stream_options"] = {"include_usage": True}
+            stream = await client.chat.completions.create(**create_kwargs)
+
+            async for chunk in stream:
+                if chunk.choices and chunk.choices[0].delta.content:
+                    text = chunk.choices[0].delta.content
+                    for ev in fsm.feed(text):
+                        if ev["event"] == "token":
+                            continuation_text_parts.append(ev["data"]["text"])
+                        elif ev["event"] == "citation":
+                            new_citations.append(ev["data"])
+                        yield ev
+
+                if chunk.choices and chunk.choices[0].finish_reason:
+                    finish_reason = chunk.choices[0].finish_reason
+
+                if hasattr(chunk, "usage") and chunk.usage:
+                    prompt_tokens = getattr(chunk.usage, "prompt_tokens", None)
+                    output_tokens = getattr(chunk.usage, "completion_tokens", None)
+
+                now = time.monotonic()
+                if now - last_ping >= 15.0:
+                    yield sse("ping", {})
+                    last_ping = now
+
+            for ev in fsm.flush():
+                if ev["event"] == "token":
+                    continuation_text_parts.append(ev["data"]["text"])
+                yield ev
+
+            if finish_reason == "length":
+                yield sse("truncated", {"reason": "max_tokens"})
+
+        except Exception as e:
+            if user is not None and pre_debited > 0 and predebit_ledger_id is not None:
+                try:
+                    await db.execute(
+                        sa.update(User).where(User.id == user.id)
+                        .values(credits_balance=User.credits_balance + pre_debited)
+                    )
+                    await db.execute(
+                        sa.delete(CreditLedger).where(CreditLedger.id == predebit_ledger_id)
+                    )
+                    await db.commit()
+                except Exception:
+                    pass
+            yield sse("error", {"code": "LLM_ERROR", "message": str(e)})
+            return
+
+        # 10) Update existing message (append text, merge citations, bump count)
+        continuation_text = "".join(continuation_text_parts)
+        try:
+            asst_msg.content = (asst_msg.content or "") + continuation_text
+            merged_citations = list(asst_msg.citations or []) + new_citations
+            asst_msg.citations = merged_citations if merged_citations else None
+            asst_msg.continuation_count = (asst_msg.continuation_count or 0) + 1
+            asst_msg.output_tokens = (asst_msg.output_tokens or 0) + (int(output_tokens) if output_tokens else 0)
+            await db.commit()
+        except Exception:
+            await db.rollback()
+            yield sse("error", {"code": "PERSIST_FAILED", "message": "Failed to save continuation"})
+            return
+
+        # Credits: reconcile
+        if user is not None and pre_debited > 0 and predebit_ledger_id is not None:
+            pt = int(prompt_tokens or 0)
+            ct = int(output_tokens or 0)
+            try:
+                actual_cost = credit_service.calculate_cost(pt, ct, effective_model, mode=effective_mode)
+                await credit_service.reconcile_credits(
+                    db, user.id, predebit_ledger_id, pre_debited, actual_cost,
+                )
+                await credit_service.record_usage(
+                    db,
+                    user_id=user.id,
+                    message_id=asst_msg.id,
+                    model=effective_model,
+                    prompt_tokens=pt,
+                    completion_tokens=ct,
+                    cost_credits=actual_cost,
+                )
+                await db.commit()
+            except Exception as e:
+                yield sse("warn", {"code": "ACCOUNTING_ERROR", "message": str(e)})
+
+        # 11) done
+        can_continue = asst_msg.continuation_count < settings.MAX_CONTINUATIONS_PER_MESSAGE
+        yield sse("done", {
+            "message_id": str(asst_msg.id),
+            "citations_count": len(merged_citations) if merged_citations else 0,
+            "can_continue": can_continue and finish_reason == "length",
+            "continuation_count": asst_msg.continuation_count,
+        })
 
 
 # Singleton service

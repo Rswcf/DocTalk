@@ -15,36 +15,20 @@ type CitationEventPayload = CitationPayload & {
   document_filename?: string;
 };
 type ErrorPayload = { code: string; message: string };
-type DonePayload = { message_id: string };
+type DonePayload = { message_id: string; can_continue?: boolean; continuation_count?: number };
 
-export async function chatStream(
-  sessionId: string,
-  message: string,
+async function _processSSEStream(
+  reader: ReadableStreamDefaultReader<Uint8Array>,
   onToken: (p: TokenPayload) => void,
   onCitation: (c: Citation) => void,
   onError: (e: ErrorPayload) => void,
   onDone: (d: DonePayload) => void,
-  mode?: string,
-  locale?: string,
+  onTruncated?: () => void,
   signal?: AbortSignal,
 ) {
-  const res = await fetch(`${PROXY_BASE}/api/sessions/${sessionId}/chat`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ message, ...(mode ? { mode } : {}), ...(locale ? { locale } : {}) }),
-    signal,
-  });
-
-  if (!res.ok || !res.body) {
-    if (signal?.aborted) return;
-    const msg = await res.text().catch(() => '');
-    onError({ code: 'http_error', message: `HTTP ${res.status}: ${msg}` });
-    return;
-  }
-
-  const reader = res.body.getReader();
   const decoder = new TextDecoder('utf-8');
   let buffer = '';
+  let receivedDone = false;
 
   try {
     while (true) {
@@ -96,11 +80,15 @@ export async function chatStream(
               });
               break;
             case 'truncated':
-              // LLM hit max_tokens — append a visual truncation indicator
-              onToken({ text: '\n\n⋯' });
+              onTruncated?.();
               break;
             case 'done':
-              onDone({ message_id: typeof data.message_id === 'string' ? data.message_id : '' });
+              receivedDone = true;
+              onDone({
+                message_id: typeof data.message_id === 'string' ? data.message_id : '',
+                can_continue: data.can_continue === true,
+                continuation_count: typeof data.continuation_count === 'number' ? data.continuation_count : undefined,
+              });
               break;
             default:
               // ignore pings and unknown events
@@ -116,4 +104,73 @@ export async function chatStream(
     if (signal?.aborted) return;
     onError({ code: 'stream_error', message: String(e) });
   }
+
+  if (!receivedDone && !signal?.aborted) {
+    onTruncated?.();
+    onDone({ message_id: '' });
+  }
+}
+
+export async function chatStream(
+  sessionId: string,
+  message: string,
+  onToken: (p: TokenPayload) => void,
+  onCitation: (c: Citation) => void,
+  onError: (e: ErrorPayload) => void,
+  onDone: (d: DonePayload) => void,
+  onTruncated?: () => void,
+  mode?: string,
+  locale?: string,
+  signal?: AbortSignal,
+) {
+  const res = await fetch(`${PROXY_BASE}/api/sessions/${sessionId}/chat`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ message, ...(mode ? { mode } : {}), ...(locale ? { locale } : {}) }),
+    signal,
+  });
+
+  if (!res.ok || !res.body) {
+    if (signal?.aborted) return;
+    const msg = await res.text().catch(() => '');
+    onError({ code: 'http_error', message: `HTTP ${res.status}: ${msg}` });
+    return;
+  }
+
+  const reader = res.body.getReader();
+  await _processSSEStream(reader, onToken, onCitation, onError, onDone, onTruncated, signal);
+}
+
+export async function continueStream(
+  sessionId: string,
+  messageId: string,
+  onToken: (p: TokenPayload) => void,
+  onCitation: (c: Citation) => void,
+  onError: (e: ErrorPayload) => void,
+  onDone: (d: DonePayload) => void,
+  onTruncated?: () => void,
+  mode?: string,
+  locale?: string,
+  signal?: AbortSignal,
+) {
+  const res = await fetch(`${PROXY_BASE}/api/sessions/${sessionId}/chat/continue`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      message_id: messageId || undefined,
+      ...(mode ? { mode } : {}),
+      ...(locale ? { locale } : {}),
+    }),
+    signal,
+  });
+
+  if (!res.ok || !res.body) {
+    if (signal?.aborted) return;
+    const msg = await res.text().catch(() => '');
+    onError({ code: 'http_error', message: `HTTP ${res.status}: ${msg}` });
+    return;
+  }
+
+  const reader = res.body.getReader();
+  await _processSSEStream(reader, onToken, onCitation, onError, onDone, onTruncated, signal);
 }

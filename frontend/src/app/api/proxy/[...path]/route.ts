@@ -82,7 +82,7 @@ async function handler(req: NextRequest) {
 
   try {
     // SSE chat endpoints need a longer timeout for streaming responses
-    const isChat = /\/sessions\/[^/]+\/chat$/.test(path);
+    const isChat = /\/sessions\/[^/]+\/chat(\/continue)?$/.test(path);
     const timeout = isChat ? 60000 : 30000;
 
     const response = await fetch(url, {

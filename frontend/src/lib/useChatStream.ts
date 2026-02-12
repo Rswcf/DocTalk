@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useMemo, useRef } from 'react';
-import { chatStream } from './sse';
+import { chatStream, continueStream } from './sse';
 import { useDocTalkStore } from '../store';
 import type { Message } from '../types';
 import { triggerCreditsRefresh } from '../components/CreditsDisplay';
@@ -19,6 +19,7 @@ interface UseChatStreamOptions {
 interface UseChatStreamResult {
   sendMessage: (text: string) => Promise<boolean>;
   regenerateLastResponse: () => Promise<void>;
+  continueGenerating: () => Promise<void>;
   stopStreaming: () => void;
   demoRemaining: number;
   demoLimitReached: boolean;
@@ -45,6 +46,8 @@ export function useChatStream({
     setStreaming,
     updateSessionActivity,
     flushPendingText,
+    markLastMessageTruncated,
+    updateLastMessageMeta,
   } = useDocTalkStore();
 
   const abortRef = useRef<AbortController | null>(null);
@@ -126,13 +129,24 @@ export function useChatStream({
     });
   }, [flushPendingText, setStreaming, getErrorMessage, onShowPaywall, addMessage, t, getFriendlyStreamError]);
 
-  const handleStreamDone = useCallback(() => {
+  const handleTruncated = useCallback(() => {
+    flushPendingText();
+    markLastMessageTruncated(true);
+  }, [flushPendingText, markLastMessageTruncated]);
+
+  const handleStreamDone = useCallback((d: { message_id: string; can_continue?: boolean; continuation_count?: number }) => {
     flushPendingText();
     setStreaming(false);
     abortRef.current = null;
     updateSessionActivity(sessionId);
     triggerCreditsRefresh();
-  }, [flushPendingText, setStreaming, updateSessionActivity, sessionId]);
+    if (d.message_id) {
+      updateLastMessageMeta({
+        backendId: d.message_id,
+        ...(d.continuation_count !== undefined ? { continuationCount: d.continuation_count } : {}),
+      });
+    }
+  }, [flushPendingText, setStreaming, updateSessionActivity, sessionId, updateLastMessageMeta]);
 
   const streamAssistantResponse = useCallback(async (prompt: string) => {
     const controller = new AbortController();
@@ -145,11 +159,12 @@ export function useChatStream({
       (citation) => addCitationToLastMessage(citation),
       handleStreamError,
       handleStreamDone,
+      handleTruncated,
       selectedMode,
       locale,
       controller.signal,
     );
-  }, [sessionId, updateLastMessage, addCitationToLastMessage, handleStreamError, handleStreamDone, selectedMode, locale]);
+  }, [sessionId, updateLastMessage, addCitationToLastMessage, handleStreamError, handleStreamDone, handleTruncated, selectedMode, locale]);
 
   const sendMessage = useCallback(async (text: string) => {
     if (!text.trim() || isStreaming) return false;
@@ -207,6 +222,34 @@ export function useChatStream({
     await streamAssistantResponse(lastUserText);
   }, [isStreaming, addMessage, setStreaming, streamAssistantResponse]);
 
+  const continueGenerating = useCallback(async () => {
+    if (isStreaming) return;
+
+    const msgs = useDocTalkStore.getState().messages;
+    const lastMsg = msgs[msgs.length - 1];
+    if (!lastMsg || lastMsg.role !== 'assistant' || !lastMsg.isTruncated) return;
+
+    // Clear truncated flag and start streaming
+    markLastMessageTruncated(false);
+    setStreaming(true);
+
+    const controller = new AbortController();
+    abortRef.current = controller;
+
+    await continueStream(
+      sessionId,
+      lastMsg.backendId || '',
+      ({ text }) => updateLastMessage(text || ''),
+      (citation) => addCitationToLastMessage(citation),
+      handleStreamError,
+      handleStreamDone,
+      handleTruncated,
+      selectedMode,
+      locale,
+      controller.signal,
+    );
+  }, [isStreaming, sessionId, markLastMessageTruncated, setStreaming, updateLastMessage, addCitationToLastMessage, handleStreamError, handleStreamDone, handleTruncated, selectedMode, locale]);
+
   const stopStreaming = useCallback(() => {
     abortRef.current?.abort();
     abortRef.current = null;
@@ -217,10 +260,11 @@ export function useChatStream({
   return useMemo(() => ({
     sendMessage,
     regenerateLastResponse,
+    continueGenerating,
     stopStreaming,
     demoRemaining,
     demoLimitReached,
     messagesUsed,
     maxMessages,
-  }), [sendMessage, regenerateLastResponse, stopStreaming, demoRemaining, demoLimitReached, messagesUsed, maxMessages]);
+  }), [sendMessage, regenerateLastResponse, continueGenerating, stopStreaming, demoRemaining, demoLimitReached, messagesUsed, maxMessages]);
 }

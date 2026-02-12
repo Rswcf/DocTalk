@@ -70,7 +70,7 @@ COLLECTION_EXTRA_RULES: dict[str, str] = {
 MODEL_PROFILES: dict[str, ModelProfile] = {
     "deepseek/deepseek-v3.2": ModelProfile(
         temperature=0.1,
-        max_tokens=4096,
+        max_tokens=2048,
         supports_cache_control=False,
         supports_stream_options=True,
         prompt_style="positive_framing",
@@ -105,7 +105,7 @@ MODEL_PROFILES: dict[str, ModelProfile] = {
     ),
     "mistralai/mistral-large-2512": ModelProfile(
         temperature=0.2,
-        max_tokens=4096,
+        max_tokens=8192,
         supports_cache_control=False,
         supports_stream_options=True,
         prompt_style="default",

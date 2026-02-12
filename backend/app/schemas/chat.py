@@ -13,6 +13,12 @@ class ChatRequest(BaseModel):
     locale: Optional[str] = None  # Frontend locale code (en/zh/es/fr/de)
 
 
+class ContinueRequest(BaseModel):
+    message_id: Optional[str] = None  # If absent, use most recent assistant message
+    mode: Optional[Literal["quick", "balanced", "thorough"]] = None
+    locale: Optional[str] = None
+
+
 class ChatMessageResponse(BaseModel):
     role: str
     content: str
