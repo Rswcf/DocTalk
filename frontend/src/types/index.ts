@@ -13,6 +13,7 @@ export interface Citation {
   refIndex: number; // [n] index starting from 1
   chunkId: string;
   page: number; // 1-based page number
+  pageEnd?: number;
   bboxes: NormalizedBBox[];
   textSnippet: string;
   offset: number; // character offset in assistant message text

@@ -53,6 +53,10 @@ def _get_openai_client() -> AsyncOpenAI:
     return _openai_client
 
 
+def _is_valid_bbox(bb: dict) -> bool:
+    return all(isinstance(bb.get(k), (int, float)) for k in ("x", "y", "w", "h"))
+
+
 # ---------------------------
 # RefParserFSM
 # ---------------------------
@@ -61,6 +65,7 @@ def _get_openai_client() -> AsyncOpenAI:
 class _ChunkInfo:
     id: uuid.UUID
     page_start: int
+    page_end: int
     bboxes: list
     text: str
     section_title: str = ""
@@ -100,22 +105,40 @@ class RefParserFSM:
                     if inner.isdigit() and (int(inner) in self.chunk_map):
                         ref_num = int(inner)
                         chunk = self.chunk_map[ref_num]
-                        # Filter and sort bboxes to current page (no artificial limit)
-                        page_bbs = [
+                        all_bbs = [
                             bb
                             for bb in (chunk.bboxes or [])
-                            if isinstance(bb, dict)
-                            and bb.get("page", chunk.page_start) == chunk.page_start
+                            if isinstance(bb, dict) and _is_valid_bbox(bb)
                         ]
-                        if not page_bbs:
-                            page_bbs = list(chunk.bboxes or [])
-                        page_bbs.sort(key=lambda b: (b.get("y", 0), b.get("x", 0)))
-                        limited_bboxes = page_bbs
+                        all_bbs.sort(
+                            key=lambda b: (
+                                int(b.get("page", chunk.page_start))
+                                if isinstance(b.get("page", chunk.page_start), (int, float))
+                                else chunk.page_start,
+                                b.get("y", 0),
+                                b.get("x", 0),
+                            )
+                        )
+                        page_counts: dict[int, int] = {}
+                        for bb in all_bbs:
+                            page_val = bb.get("page", chunk.page_start)
+                            page = (
+                                int(page_val)
+                                if isinstance(page_val, (int, float))
+                                else chunk.page_start
+                            )
+                            page_counts[page] = page_counts.get(page, 0) + 1
+                        best_page = (
+                            min(page_counts, key=lambda p: (-page_counts[p], p))
+                            if page_counts
+                            else chunk.page_start
+                        )
                         citation_data: Dict[str, Any] = {
                                     "ref_index": ref_num,
                                     "chunk_id": str(chunk.id),
-                                    "page": chunk.page_start,
-                                    "bboxes": limited_bboxes,
+                                    "page": best_page,
+                                    "page_end": chunk.page_end,
+                                    "bboxes": all_bbs,
                                     "text_snippet": ((f"{chunk.section_title}: " if chunk.section_title else "") + (chunk.text or ""))[:100],
                                     "offset": self.char_offset,
                         }
@@ -307,6 +330,7 @@ class ChatService:
             chunk_map[idx] = _ChunkInfo(
                 id=item["chunk_id"],
                 page_start=int(item["page"]),
+                page_end=int(item.get("page_end", item["page"])),
                 bboxes=item.get("bboxes") or [],
                 text=text,
                 section_title=item.get("section_title") or "",
@@ -639,6 +663,7 @@ class ChatService:
                         chunk_map[ref_num] = _ChunkInfo(
                             id=ch.id,
                             page_start=ch.page_start,
+                            page_end=ch.page_end,
                             bboxes=ch.bboxes or [],
                             text=ch.text,
                             section_title=ch.section_title or "",

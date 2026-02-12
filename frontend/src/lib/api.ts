@@ -82,9 +82,12 @@ export async function getMessages(sessionId: string): Promise<{ messages: Messag
           refIndex: c.ref_index,
           chunkId: c.chunk_id,
           page: c.page,
+          pageEnd: typeof c.page_end === 'number' ? c.page_end : undefined,
           bboxes: c.bboxes || [],
           textSnippet: c.text_snippet,
           offset: c.offset,
+          documentId: typeof c.document_id === 'string' ? c.document_id : undefined,
+          documentFilename: typeof c.document_filename === 'string' ? c.document_filename : undefined,
         }))
       : undefined;
 

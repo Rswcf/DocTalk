@@ -6,6 +6,7 @@ type CitationPayload = {
   ref_index: number;
   chunk_id: string;
   page: number;
+  page_end?: number;
   bboxes: { x: number; y: number; w: number; h: number; page?: number }[];
   text_snippet: string;
   offset: number;
@@ -65,6 +66,7 @@ async function _processSSEStream(
                 refIndex: p.ref_index,
                 chunkId: p.chunk_id,
                 page: p.page,
+                pageEnd: typeof p.page_end === 'number' ? p.page_end : undefined,
                 bboxes: p.bboxes || [],
                 textSnippet: p.text_snippet || '',
                 offset: p.offset ?? 0,
