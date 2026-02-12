@@ -1,6 +1,7 @@
 "use client";
 
 import { Suspense } from "react";
+import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useLocale } from "../../i18n";
 import DocTalkLogo from "../../components/DocTalkLogo";
@@ -15,10 +16,10 @@ function AuthContent() {
     <main className="min-h-screen flex items-center justify-center p-8 bg-white dark:bg-zinc-950">
       <div className="max-w-sm w-full">
         {/* Logo / Wordmark */}
-        <div className="flex items-center justify-center gap-2.5 mb-8">
+        <Link href="/" className="flex items-center justify-center gap-2.5 mb-8 hover:opacity-80 transition-opacity">
           <DocTalkLogo size={32} />
           <span className="font-logo font-semibold text-2xl text-zinc-900 dark:text-zinc-50">DocTalk</span>
-        </div>
+        </Link>
 
         <div className="border border-zinc-200 dark:border-zinc-800 rounded-2xl p-8 shadow-sm bg-white dark:bg-zinc-900">
           <div className="text-center mb-6">
