@@ -373,6 +373,7 @@ class ChatService:
         llm_start = time.time()
         first_token_logged = False
         token_count = 0
+        finish_reason: Optional[str] = None
 
         try:
             create_kwargs: dict[str, Any] = {
@@ -403,6 +404,10 @@ class ChatService:
                             citations.append(ev["data"])
                         yield ev
 
+                # Track finish_reason from choices
+                if chunk.choices and chunk.choices[0].finish_reason:
+                    finish_reason = chunk.choices[0].finish_reason
+
                 # Extract usage if present (last chunk)
                 if hasattr(chunk, "usage") and chunk.usage:
                     prompt_tokens = getattr(chunk.usage, "prompt_tokens", None)
@@ -419,6 +424,14 @@ class ChatService:
                 if ev["event"] == "token":
                     assistant_text_parts.append(ev["data"]["text"])
                 yield ev
+
+            # Warn if response was truncated due to token limit
+            if finish_reason == "length":
+                logger.warning(
+                    "LLM response truncated (finish_reason=length) model=%s max_tokens=%d output_tokens=%s",
+                    effective_model, profile.max_tokens, output_tokens,
+                )
+                yield sse("truncated", {"reason": "max_tokens"})
 
             total_time = time.time() - llm_start
             final_token_count = int(output_tokens) if output_tokens is not None else token_count
