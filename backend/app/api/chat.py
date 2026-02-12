@@ -22,6 +22,7 @@ from app.models.tables import ChatSession, Collection, Document, Message, User
 from app.schemas.chat import (
     ChatMessageResponse,
     ChatRequest,
+    ContinueRequest,
     SessionCreateResponse,
     SessionListItem,
     SessionListResponse,
@@ -265,6 +266,114 @@ async def chat_stream(
             session_id, body.message, db, user=user, locale=body.locale, mode=body.mode
         ):
             # Format per SSE: event: <type>\ndata: {json}\n\n
+            line = f"event: {ev['event']}\n"
+            payload = json.dumps(ev.get("data", {}), ensure_ascii=False)
+            data_line = f"data: {payload}\n\n"
+            yield line + data_line
+
+    return StreamingResponse(
+        event_generator(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache, no-transform",
+            "X-Accel-Buffering": "no",
+            "Connection": "keep-alive",
+        },
+    )
+
+
+@chat_router.post("/sessions/{session_id}/chat/continue")
+async def chat_continue(
+    session_id: uuid.UUID,
+    body: ContinueRequest,
+    request: Request,
+    user: Optional[User] = Depends(get_current_user_optional),
+    db: AsyncSession = Depends(get_db_session),
+):
+    # Verify session access
+    session = await verify_session_access(session_id, user, db)
+    if not session:
+        raise HTTPException(status_code=404, detail="Session not found")
+
+    # Block if document is not ready
+    if session.document and session.document.status != "ready":
+        raise HTTPException(
+            status_code=409,
+            detail={"message": "Document is still being processed", "status": session.document.status},
+        )
+
+    # Rate limit (same as chat_stream)
+    if user is None:
+        client_ip = _get_client_ip(request)
+        if not await demo_chat_limiter.is_allowed(client_ip):
+            log_security_event("demo_rate_limit", ip=client_ip, session_id=session_id)
+            raise HTTPException(
+                status_code=429,
+                detail={"message": "Rate limit exceeded", "retry_after": 60},
+                headers={"Retry-After": "60"},
+            )
+    else:
+        if not await auth_chat_limiter.is_allowed(str(user.id)):
+            raise HTTPException(
+                status_code=429,
+                detail={"message": "Rate limit exceeded", "retry_after": 60},
+                headers={"Retry-After": "60"},
+            )
+
+    # Demo message limit (continuations count against it)
+    if user is None and session.document and session.document.demo_slug:
+        client_ip = _get_client_ip(request)
+        if await demo_message_tracker.get_count(client_ip) >= DEMO_MESSAGE_LIMIT:
+            log_security_event("demo_message_limit", ip=client_ip, document_id=session.document_id)
+            raise HTTPException(
+                status_code=429,
+                detail={"message": "Demo message limit reached", "limit": DEMO_MESSAGE_LIMIT},
+            )
+        await demo_message_tracker.increment(client_ip)
+
+    # Check continuation limit
+    msg_id = uuid.UUID(body.message_id) if body.message_id else None
+    if msg_id:
+        from sqlalchemy import select as sa_select
+        msg_row = await db.execute(sa_select(Message).where(Message.id == msg_id))
+        msg = msg_row.scalar_one_or_none()
+    else:
+        msg_row = await db.execute(
+            select(Message)
+            .where(Message.session_id == session_id, Message.role == "assistant")
+            .order_by(Message.created_at.desc())
+            .limit(1)
+        )
+        msg = msg_row.scalar_one_or_none()
+
+    if not msg:
+        raise HTTPException(status_code=404, detail="Message not found")
+
+    if msg.continuation_count >= settings.MAX_CONTINUATIONS_PER_MESSAGE:
+        raise HTTPException(status_code=400, detail="Maximum continuations reached")
+
+    # Credit pre-check for authenticated users
+    if user is not None:
+        from app.services.credit_service import ensure_monthly_credits
+        await ensure_monthly_credits(db, user)
+        await db.commit()
+        effective_mode = body.mode or "balanced"
+        estimated_cost = credit_service.get_estimated_cost(effective_mode)
+        balance = await credit_service.get_user_credits(db, user.id)
+        if balance < estimated_cost:
+            raise HTTPException(
+                status_code=402,
+                detail={
+                    "message": "Insufficient credits",
+                    "required": estimated_cost,
+                    "balance": balance,
+                },
+            )
+
+    async def event_generator() -> AsyncGenerator[str, None]:
+        async for ev in chat_service.continue_stream(
+            session_id, msg_id, db, user=user, locale=body.locale, mode=body.mode
+        ):
             line = f"event: {ev['event']}\n"
             payload = json.dumps(ev.get("data", {}), ensure_ascii=False)
             data_line = f"data: {payload}\n\n"

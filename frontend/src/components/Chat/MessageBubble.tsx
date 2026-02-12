@@ -2,7 +2,7 @@
 
 import React, { Suspense, useMemo, useState, useCallback, useEffect } from 'react';
 import remarkGfm from 'remark-gfm';
-import { Copy, Check, ThumbsUp, ThumbsDown, RotateCcw } from 'lucide-react';
+import { Copy, Check, ThumbsUp, ThumbsDown, RotateCcw, ChevronsDown } from 'lucide-react';
 import type { Citation, Message } from '../../types';
 import { useLocale } from '../../i18n';
 
@@ -14,6 +14,7 @@ interface MessageBubbleProps {
   isStreaming?: boolean;
   onRegenerate?: () => void;
   isLastAssistant?: boolean;
+  onContinue?: () => void;
 }
 
 function insertCitationMarkers(text: string, citations: Citation[]): string {
@@ -175,7 +176,7 @@ function setFeedbackStorage(messageId: string, fb: Feedback) {
   }
 }
 
-export default function MessageBubble({ message, onCitationClick, isStreaming, onRegenerate, isLastAssistant }: MessageBubbleProps) {
+export default function MessageBubble({ message, onCitationClick, isStreaming, onRegenerate, isLastAssistant, onContinue }: MessageBubbleProps) {
   const isUser = message.role === 'user';
   const isError = !!message.isError;
   const isAssistant = !isUser;
@@ -308,6 +309,18 @@ export default function MessageBubble({ message, onCitationClick, isStreaming, o
               </button>
             )}
           </div>
+        )}
+
+        {/* Continue generating button */}
+        {isAssistant && message.isTruncated && !isStreaming && isLastAssistant && onContinue && (
+          <button
+            onClick={onContinue}
+            className="mt-2 flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950/50 border border-indigo-200 dark:border-indigo-800 rounded-full hover:bg-indigo-100 dark:hover:bg-indigo-900/50 transition-colors focus-visible:ring-2 focus-visible:ring-indigo-400"
+            title={t('chat.continueGenerating')}
+          >
+            <ChevronsDown size={14} />
+            {t('chat.continueGenerating')}
+          </button>
         )}
       </div>
     </div>

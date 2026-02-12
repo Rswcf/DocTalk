@@ -52,6 +52,7 @@ class Settings(BaseSettings):
     MAX_CHAT_HISTORY_TURNS: int = Field(default=6)
     MAX_RETRIEVAL_TOKENS: int = Field(default=1750)
     LLM_MAX_CONTEXT_TOKENS: int = Field(default=180000)
+    MAX_CONTINUATIONS_PER_MESSAGE: int = 3
 
     # OCR
     OCR_ENABLED: bool = Field(default=True)

@@ -177,6 +177,7 @@ class Message(Base):
     citations: Mapped[Optional[dict]] = mapped_column(JSONB)
     prompt_tokens: Mapped[Optional[int]] = mapped_column(sa.Integer)
     output_tokens: Mapped[Optional[int]] = mapped_column(sa.Integer)
+    continuation_count: Mapped[int] = mapped_column(sa.Integer, nullable=False, server_default=sa.text("0"))
     created_at: Mapped[sa.DateTime] = mapped_column(sa.DateTime(timezone=True), server_default=sa.text("now()"))
 
     session: Mapped[ChatSession] = relationship("ChatSession", back_populates="messages")

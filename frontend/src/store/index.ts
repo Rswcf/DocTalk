@@ -83,6 +83,8 @@ export interface DocTalkStore {
   setSearchQuery: (query: string) => void;
   setSearchMatches: (matches: Array<{ page: number; index: number }>) => void;
   setCurrentMatchIndex: (index: number) => void;
+  markLastMessageTruncated: (truncated: boolean) => void;
+  updateLastMessageMeta: (updates: Partial<Message>) => void;
   flushPendingText: () => void;
   reset: () => void;
 }
@@ -249,6 +251,18 @@ export const useDocTalkStore = create<DocTalkStore>((set, get) => ({
   setSearchQuery: (query: string) => set({ searchQuery: query }),
   setSearchMatches: (matches) => set({ searchMatches: matches }),
   setCurrentMatchIndex: (index: number) => set({ currentMatchIndex: index }),
+  markLastMessageTruncated: (truncated: boolean) => {
+    const msgs = get().messages;
+    if (msgs.length === 0) return;
+    const last = msgs[msgs.length - 1];
+    set({ messages: [...msgs.slice(0, -1), { ...last, isTruncated: truncated }] });
+  },
+  updateLastMessageMeta: (updates) => {
+    const msgs = get().messages;
+    if (msgs.length === 0) return;
+    const last = msgs[msgs.length - 1];
+    set({ messages: [...msgs.slice(0, -1), { ...last, ...updates }] });
+  },
   reset: () => {
     const timer = get()._flushTimer;
     if (timer) clearTimeout(timer);

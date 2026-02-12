@@ -27,6 +27,9 @@ export interface Message {
   citations?: Citation[];
   createdAt?: number;
   isError?: boolean;
+  isTruncated?: boolean;
+  continuationCount?: number;
+  backendId?: string;
 }
 
 export interface DocumentResponse {
