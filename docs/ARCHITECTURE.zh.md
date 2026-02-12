@@ -716,19 +716,21 @@ graph LR
         end
     end
 
-    Repo -->|"git push<br/>（自动部署）"| VBuild
+    Repo -->|"push stable<br/>（自动部署）"| VBuild
     VBuild --> VDeploy --> VDomain
-    Repo -->|"railway up<br/>（手动）"| RBuild
+    Repo -->|"railway up<br/>（手动，stable 分支）"| RBuild
     RBuild --> Alembic --> CeleryW --> Uvicorn
     Uvicorn --> RServices
     CeleryW --> RServices
 ```
 
+**分支策略**：`main`（开发）/ `stable`（生产）。推送 `main` → 仅 Vercel Preview。推送 `stable` → 生产部署。
+
 **部署详情：**
 
 | 方面 | 前端 (Vercel) | 后端 (Railway) |
 |------|---------------|----------------|
-| **触发方式** | `git push`（自动） | `railway up --detach`（手动） |
+| **触发方式** | 推送 `stable`（自动） | 从 `stable` 分支 `railway up --detach`（手动） |
 | **构建** | 从 `frontend/` 导出 Next.js | 从项目根目录构建 Dockerfile（含 LibreOffice headless + CJK 字体，用于 PPTX/DOCX→PDF 转换） |
 | **运行时** | Serverless 函数（Hobby 计划） | 单容器（`entrypoint.sh`）：alembic → celery（自动重启）→ uvicorn |
 | **域名** | `www.doctalk.site` | `backend-production-a62e.up.railway.app` |

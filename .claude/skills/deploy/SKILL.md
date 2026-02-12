@@ -1,10 +1,17 @@
 ## Deploy DocTalk
 
-1. Run all tests and ensure they pass
-2. Push latest code to GitHub (which auto-deploys to Vercel)
-3. Verify NEXT_PUBLIC_API_URL points to Railway production URL, not localhost
-4. Verify Vercel Root Directory is set correctly in dashboard
-5. Deploy backend to Railway - confirm latest code is live (not stale)
-6. Test full flow: login → upload → chat
-7. Update README.md and ARCHITECTURE.md with any deployment changes
-8. Push documentation updates to GitHub
+**Branches**: `main` (development) / `stable` (production).
+
+### Promote to Production
+1. Run all tests on `main` and ensure they pass
+2. Merge main → stable: `git checkout stable && git merge main`
+3. Push stable: `git push origin stable` (auto-deploys frontend to Vercel/doctalk.site)
+4. If backend changed: `railway up --detach` (from stable branch)
+5. Switch back: `git checkout main`
+6. Test full flow: login → upload → chat on doctalk.site
+
+### Checks
+- Verify `NEXT_PUBLIC_API_BASE` points to Railway production URL, not localhost
+- Verify Vercel production branch = `stable` in dashboard
+- Never deploy backend from `main` to production
+- DB migrations must be backward-compatible during beta (add-only)

@@ -716,19 +716,21 @@ graph LR
         end
     end
 
-    Repo -->|"git push<br/>(auto-deploy)"| VBuild
+    Repo -->|"push stable<br/>(auto-deploy)"| VBuild
     VBuild --> VDeploy --> VDomain
-    Repo -->|"railway up<br/>(manual)"| RBuild
+    Repo -->|"railway up<br/>(manual, stable)"| RBuild
     RBuild --> Alembic --> CeleryW --> Uvicorn
     Uvicorn --> RServices
     CeleryW --> RServices
 ```
 
+**Branching**: `main` (development) / `stable` (production). Push `main` → Vercel Preview only. Push `stable` → production deploy.
+
 **Deployment details:**
 
 | Aspect | Frontend (Vercel) | Backend (Railway) |
 |--------|-------------------|-------------------|
-| **Trigger** | `git push` (auto) | `railway up --detach` (manual) |
+| **Trigger** | Push `stable` (auto) | `railway up --detach` from `stable` (manual) |
 | **Build** | Next.js static export from `frontend/` | Dockerfile from project root (includes LibreOffice headless + CJK fonts for PPTX/DOCX→PDF conversion) |
 | **Runtime** | Serverless functions (Hobby plan) | Single container (`entrypoint.sh`): alembic → celery (auto-restart) → uvicorn |
 | **Domain** | `www.doctalk.site` | `backend-production-a62e.up.railway.app` |
