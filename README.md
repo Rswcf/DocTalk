@@ -230,15 +230,20 @@ Key architectural decisions:
 
 ## Deployment
 
+**Branching**: `main` (development) / `stable` (production). Vercel production branch = `stable`.
+
 **Frontend (Vercel):**
 - Root Directory is set to `frontend/` in Vercel project settings
-- Deploy via `git push` to GitHub (auto-deploy enabled)
+- Push to `stable` → auto-deploys to production (doctalk.site)
+- Push to `main` → creates Preview Deployment only (does not affect production)
 - Do NOT run `vercel --prod` from `frontend/` directory
 
 **Backend (Railway):**
-- Deploy from project root: `railway up --detach`
+- Deploy from `stable` branch: `git checkout stable && railway up --detach`
 - `entrypoint.sh` runs: Alembic migration → Celery worker (background, auto-restart) → uvicorn, with SIGTERM graceful shutdown. Container runs as non-root user `app` (UID 1001)
 - Railway project includes 5 services: backend, PostgreSQL, Redis, Qdrant, MinIO
+
+**Release workflow**: develop on `main` → merge to `stable` → push `stable` (frontend auto-deploys, backend manual `railway up`)
 
 ## Testing
 

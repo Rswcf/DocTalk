@@ -53,7 +53,7 @@ function escapeHtml(str: string): string {
     .replace(/\//g, '&#x2F;');
 }
 
-export default function PageWithHighlights({ pageNumber, scale, highlights, searchQuery, highlightSnippet }: PageWithHighlightsProps) {
+const PageWithHighlights = React.memo(function PageWithHighlights({ pageNumber, scale, highlights, searchQuery, highlightSnippet }: PageWithHighlightsProps) {
   const { t } = useLocale();
   const [pageDims, setPageDims] = useState<{ w: number; h: number } | null>(null);
 
@@ -173,7 +173,7 @@ export default function PageWithHighlights({ pageNumber, scale, highlights, sear
             const h = bbox.h > 0 ? bbox.h : 0.015;
             return (
               <div
-                key={i}
+                key={`${bbox.x.toFixed(4)}-${bbox.y.toFixed(4)}-${bbox.w.toFixed(4)}-${bbox.h.toFixed(4)}`}
                 className="citation-overlay"
                 data-highlight-anchor={i === 0 ? 'true' : undefined}
                 style={{
@@ -190,5 +190,7 @@ export default function PageWithHighlights({ pageNumber, scale, highlights, sear
       )}
     </div>
   );
-}
+});
+
+export default PageWithHighlights;
 

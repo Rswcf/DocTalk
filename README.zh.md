@@ -230,15 +230,20 @@ DocTalk/
 
 ## 部署
 
+**分支策略**：`main`（开发）/ `stable`（生产）。Vercel 生产分支 = `stable`。
+
 **前端 (Vercel):**
 - Vercel 项目设置中 Root Directory 为 `frontend/`
-- 通过 `git push` 到 GitHub 自动部署
+- 推送 `stable` → 自动部署到生产环境 (doctalk.site)
+- 推送 `main` → 仅创建 Preview Deployment（不影响生产）
 - 不要从 `frontend/` 目录运行 `vercel --prod`
 
 **后端 (Railway):**
-- 从项目根目录部署：`railway up --detach`
+- 从 `stable` 分支部署：`git checkout stable && railway up --detach`
 - `entrypoint.sh` 执行流程：Alembic 迁移 → Celery Worker（后台，崩溃自动重启）→ uvicorn，支持 SIGTERM 优雅关闭。容器以非 root 用户 `app` (UID 1001) 运行
 - Railway 项目包含 5 个服务：backend、PostgreSQL、Redis、Qdrant、MinIO
+
+**发布流程**：在 `main` 开发 → 合并到 `stable` → 推送 `stable`（前端自动部署，后端手动 `railway up`）
 
 ## 测试
 

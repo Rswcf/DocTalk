@@ -50,11 +50,25 @@ STRIPE_WEBHOOK_SECRET=whsec_...          # Optional
 
 Frontend: `NEXT_PUBLIC_API_BASE` (backend URL, **never** localhost in prod), `AUTH_SECRET`, `GOOGLE_CLIENT_ID`/`SECRET`, `MICROSOFT_CLIENT_ID`/`SECRET`, `RESEND_API_KEY`.
 
-### Deployment
+### Deployment — Two-Branch Workflow (Beta)
 
-**Vercel** (frontend): Deploy via `git push` (GitHub auto-deploy). Root Directory = `frontend/` in Dashboard. **Never** run `vercel --prod` from `frontend/`. `NEXT_PUBLIC_API_BASE` must point to Railway prod URL.
+**Branches**: `main` = development, `stable` = production. Vercel production branch = `stable`.
 
-**Railway** (backend): `railway up --detach` from project root. Container runs as non-root `app` (UID 1001). Dockerfile includes LibreOffice headless + CJK fonts for PPTX/DOCX→PDF conversion. `HOME=/home/app` required for LibreOffice.
+```bash
+# Daily development (does NOT affect testers)
+git push origin main          # → Vercel Preview URL only
+
+# Promote to production (when ready)
+git checkout stable && git merge main && git push origin stable  # → Vercel auto-deploys doctalk.site
+git checkout stable && railway up --detach                        # → Railway backend (if backend changed)
+git checkout main                                                 # → Back to development
+```
+
+**Vercel** (frontend): Auto-deploys `stable` → doctalk.site. Push to `main` creates Preview Deployments only. Root Directory = `frontend/`. **Never** run `vercel --prod`. `NEXT_PUBLIC_API_BASE` must point to Railway prod URL.
+
+**Railway** (backend): `railway up --detach` from `stable` branch. Container runs as non-root `app` (UID 1001). Dockerfile includes LibreOffice headless + CJK fonts. **Never deploy from `main` to production.**
+
+**DB migrations during beta**: Must be backward-compatible (add-only). Never drop/rename columns until stable catches up. See `.collab/plans/beta-testing-plan.md` for full rules.
 
 ---
 
