@@ -34,6 +34,7 @@ function BillingContent() {
   const [productsLoading, setProductsLoading] = useState(true);
   const [productsError, setProductsError] = useState(false);
   const [billingPeriod, setBillingPeriod] = useState<'monthly' | 'annual'>('monthly');
+  const [selectedPlan, setSelectedPlan] = useState<'plus' | 'pro'>('plus');
 
   useEffect(() => {
     if (searchParams.get("success")) {
@@ -178,7 +179,14 @@ function BillingContent() {
         {/* Subscription Cards */}
         <section className="mb-8 grid md:grid-cols-2 gap-6">
           {/* Plus Card */}
-          <div className="relative rounded-xl bg-gradient-to-r from-indigo-500 to-violet-500 p-[2px] shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-shadow transition-transform duration-200">
+          <div
+            onClick={() => setSelectedPlan('plus')}
+            className={`relative rounded-xl p-[2px] shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-shadow transition-transform duration-200 cursor-pointer ${
+              selectedPlan === 'plus'
+                ? 'bg-gradient-to-r from-indigo-500 to-violet-500'
+                : 'bg-zinc-200 dark:bg-zinc-800'
+            }`}
+          >
             <div className="rounded-xl bg-white dark:bg-zinc-900 p-6 h-full flex flex-col">
               <div className="flex items-center gap-2 mb-1">
                 <h2 className="text-xl font-semibold text-zinc-900 dark:text-zinc-50">{t("billing.plus.title")}</h2>
@@ -229,7 +237,15 @@ function BillingContent() {
           </div>
 
           {/* Pro Card */}
-          <div className="rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-6 flex flex-col shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-shadow transition-transform duration-200">
+          <div
+            onClick={() => setSelectedPlan('pro')}
+            className={`relative rounded-xl p-[2px] shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-shadow transition-transform duration-200 cursor-pointer ${
+              selectedPlan === 'pro'
+                ? 'bg-gradient-to-r from-indigo-500 to-violet-500'
+                : 'bg-zinc-200 dark:bg-zinc-800'
+            }`}
+          >
+          <div className="rounded-xl bg-white dark:bg-zinc-900 p-6 h-full flex flex-col">
             <h2 className="text-xl font-semibold text-zinc-900 dark:text-zinc-50 mb-1">{t("billing.pro.title")}</h2>
             <p className="text-zinc-500 dark:text-zinc-400 text-sm mb-4">{t("billing.pro.description")}</p>
             <div className="mb-4">
@@ -270,6 +286,7 @@ function BillingContent() {
                 {submitting === 'pro' ? t("common.loading") : `${t("billing.upgrade")} Pro`}
               </button>
             )}
+          </div>
           </div>
         </section>
 
