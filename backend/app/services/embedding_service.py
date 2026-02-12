@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import logging
 import threading
+import time
 from functools import lru_cache
 from typing import List, Optional
 
@@ -9,6 +11,8 @@ from qdrant_client import QdrantClient
 from qdrant_client.models import Distance, VectorParams
 
 from app.core.config import settings
+
+logger = logging.getLogger(__name__)
 
 
 class EmbeddingService:
@@ -38,14 +42,32 @@ class EmbeddingService:
                     )
         return self._client
 
-    def embed_texts(self, texts: List[str]) -> List[List[float]]:
-        """Return embeddings for a list of texts (order-preserving)."""
+    def embed_texts(self, texts: List[str], *, _max_retries: int = 3) -> List[List[float]]:
+        """Return embeddings for a list of texts (order-preserving).
+
+        Retries with exponential backoff on transient failures (e.g. OpenRouter
+        returning HTTP 200 with empty data).
+        """
         if not texts:
             return []
         client = self._get_client()
-        resp = client.embeddings.create(model=self.model, input=texts)
-        vectors: List[List[float]] = [d.embedding for d in resp.data]
-        return vectors
+        last_exc: Exception | None = None
+        for attempt in range(_max_retries):
+            try:
+                resp = client.embeddings.create(model=self.model, input=texts)
+                vectors: List[List[float]] = [d.embedding for d in resp.data]
+                if not vectors:
+                    raise ValueError("Empty embedding response")
+                return vectors
+            except (ValueError, Exception) as exc:
+                last_exc = exc
+                wait = 2 ** attempt  # 1s, 2s, 4s
+                logger.warning(
+                    "Embedding attempt %d/%d failed (%d texts): %s — retrying in %ds",
+                    attempt + 1, _max_retries, len(texts), exc, wait,
+                )
+                time.sleep(wait)
+        raise last_exc  # type: ignore[misc]
 
     # ---------------- Qdrant -----------------
     @lru_cache(maxsize=1)
