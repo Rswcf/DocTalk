@@ -80,7 +80,7 @@ export default function PdfViewer({ pdfUrl, currentPage, highlights, scale, scro
   const extractedTextRef = useRef<{ pages: string[]; pdfUrl: string } | null>(null);
   const extractionRunIdRef = useRef(0);
   const [visiblePage, setVisiblePage] = useState(1);
-  const [pageAspectRatios, setPageAspectRatios] = useState<number[]>([]);
+  const [pageDimensions, setPageDimensions] = useState<Array<{ width: number; aspectRatio: number }>>([]);
   const [visibleRange, setVisibleRange] = useState<{ start: number; end: number }>({ start: 1, end: 6 });
   const BUFFER = 3;
   const isScrollingToPage = useRef(false);
@@ -107,7 +107,7 @@ export default function PdfViewer({ pdfUrl, currentPage, highlights, scale, scro
     extractedTextRef.current = null;
     extractionRunIdRef.current += 1;
     setTextCacheVersion((v) => v + 1);
-    setPageAspectRatios([]);
+    setPageDimensions([]);
     setVisibleRange({ start: 1, end: 6 });
   }, [validPdfUrl]);
 
@@ -121,21 +121,20 @@ export default function PdfViewer({ pdfUrl, currentPage, highlights, scale, scro
       end: Math.max(prev.end, Math.min(numPages, currentPage + BUFFER)),
     }));
 
-    const target = pageRefs.current[currentPage - 1];
-    if (!target) return;
-
     isScrollingToPage.current = true;
     setVisiblePage(currentPage);
 
-    // Try to find the first highlight anchor and center on it
-    // Use requestAnimationFrame to wait for overlay elements to render
-    requestAnimationFrame(() => {
+    // Use double-rAF to wait for React re-render (range expansion) + DOM paint
+    // so the target page's highlight anchors are available
+    const scrollToTarget = () => {
+      const target = pageRefs.current[currentPage - 1];
+      if (!target || !containerRef.current) return;
+
       const anchor = target.querySelector('[data-highlight-anchor="true"]') as HTMLElement | null;
-      if (anchor && containerRef.current) {
+      if (anchor) {
         const container = containerRef.current;
         const anchorRect = anchor.getBoundingClientRect();
         const containerRect = container.getBoundingClientRect();
-        // Calculate where the anchor center is relative to the scroll container
         const anchorCenterInContainer =
           anchor.offsetTop +
           target.offsetTop -
@@ -149,37 +148,67 @@ export default function PdfViewer({ pdfUrl, currentPage, highlights, scale, scro
       } else {
         target.scrollIntoView({ behavior: scrollBehavior(), block: 'start' });
       }
+    };
+
+    // Double-rAF: first rAF fires after React commit, second after browser paint
+    requestAnimationFrame(() => {
+      requestAnimationFrame(scrollToTarget);
     });
 
     // Reset flag after scroll completes
     setTimeout(() => { isScrollingToPage.current = false; }, 800);
   }, [currentPage, scrollNonce, numPages, BUFFER]);
 
-  // IntersectionObserver to track visible page and virtualized range
+  // Observer A: track the most-visible page for toolbar display (no rootMargin)
   useEffect(() => {
     if (!numPages || !containerRef.current) return;
 
-    const visiblePages = new Set<number>();
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (isScrollingToPage.current) return;
+        let maxRatio = 0;
+        let maxPage = visiblePage;
+        entries.forEach((entry) => {
+          const pageNum = Number(entry.target.getAttribute('data-page-number'));
+          if (entry.intersectionRatio > maxRatio) {
+            maxRatio = entry.intersectionRatio;
+            maxPage = pageNum;
+          }
+        });
+        if (maxRatio > 0) {
+          setVisiblePage(maxPage);
+        }
+      },
+      { root: containerRef.current, threshold: [0, 0.1, 0.25, 0.5, 0.75] }
+    );
+
+    pageRefs.current.forEach((el) => {
+      if (el) observer.observe(el);
+    });
+
+    return () => observer.disconnect();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [numPages, scale]);
+
+  // Observer B: track which pages are near the viewport for virtualization (generous rootMargin)
+  useEffect(() => {
+    if (!numPages || !containerRef.current) return;
+
+    const nearbyPages = new Set<number>();
 
     const observer = new IntersectionObserver(
       (entries) => {
         entries.forEach((entry) => {
           const pageNum = Number(entry.target.getAttribute('data-page-number'));
           if (entry.isIntersecting) {
-            visiblePages.add(pageNum);
+            nearbyPages.add(pageNum);
           } else {
-            visiblePages.delete(pageNum);
+            nearbyPages.delete(pageNum);
           }
         });
 
-        if (visiblePages.size > 0) {
-          const sorted = [...visiblePages].sort((a, b) => a - b);
-          // Update visible page for toolbar (only when not programmatically scrolling)
-          if (!isScrollingToPage.current) {
-            const center = sorted[Math.floor(sorted.length / 2)];
-            setVisiblePage(center);
-          }
-          // Update visible range for virtualization
+        if (nearbyPages.size > 0) {
+          const sorted = [...nearbyPages].sort((a, b) => a - b);
           setVisibleRange({
             start: Math.max(1, sorted[0] - BUFFER),
             end: Math.min(numPages, sorted[sorted.length - 1] + BUFFER),
@@ -195,7 +224,7 @@ export default function PdfViewer({ pdfUrl, currentPage, highlights, scale, scro
 
     return () => observer.disconnect();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [numPages, BUFFER]); // re-observe after pages render
+  }, [numPages, BUFFER]);
 
   // Text search: use cached page text extracted once on document load.
   useEffect(() => {
@@ -234,15 +263,15 @@ export default function PdfViewer({ pdfUrl, currentPage, highlights, scale, scro
     setStoreTotalPages(n);
     pageRefs.current = new Array(n).fill(null);
 
-    // Extract page aspect ratios for placeholder height estimation
+    // Extract page dimensions for accurate placeholder sizing
     (async () => {
-      const ratios: number[] = [];
+      const dims: Array<{ width: number; aspectRatio: number }> = [];
       for (let p = 1; p <= n; p++) {
         const page = await pdf.getPage(p);
         const viewport = page.getViewport({ scale: 1 });
-        ratios.push(viewport.height / viewport.width);
+        dims.push({ width: viewport.width, aspectRatio: viewport.height / viewport.width });
       }
-      setPageAspectRatios(ratios);
+      setPageDimensions(dims);
     })();
 
     if (!validPdfUrl) return;
@@ -380,16 +409,18 @@ export default function PdfViewer({ pdfUrl, currentPage, highlights, scale, scro
             {pages.map((pageNumber) => {
               const isInRange = pageNumber >= visibleRange.start && pageNumber <= visibleRange.end;
 
-              if (!isInRange && pageAspectRatios.length > 0) {
-                // Placeholder with estimated height based on actual page aspect ratio
-                const aspectRatio = pageAspectRatios[pageNumber - 1] || 1.414;
+              if (!isInRange && pageDimensions.length > 0) {
+                // Placeholder with height/width matching actual PDF page dimensions
+                const dim = pageDimensions[pageNumber - 1];
+                const pageWidth = dim ? dim.width * scale : 612 * scale;
+                const pageHeight = dim ? dim.width * dim.aspectRatio * scale : 792 * scale;
                 return (
                   <div
                     key={pageNumber}
                     ref={(el) => { pageRefs.current[pageNumber - 1] = el; }}
                     data-page-number={pageNumber}
                     className="bg-zinc-100 dark:bg-zinc-800 rounded"
-                    style={{ height: `calc(${aspectRatio} * min(100%, 800px) * ${scale})`, width: '100%', maxWidth: 800 * scale }}
+                    style={{ height: pageHeight, width: pageWidth }}
                   />
                 );
               }
