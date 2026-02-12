@@ -8,7 +8,7 @@ export interface ModeOption {
   minPlan: PlanType;
 }
 
-export const DEFAULT_MODE: ModeId = 'balanced';
+export const DEFAULT_MODE: ModeId = 'quick';
 
 export const AVAILABLE_MODES: ModeOption[] = [
   { id: 'quick', labelKey: 'modes.quick', descriptionKey: 'modes.quickDesc', minPlan: 'free' },
