@@ -1,77 +1,20 @@
 "use client";
 
-import React, { useEffect, useRef, useState, useCallback, Component, ErrorInfo, ReactNode } from 'react';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { SendHorizontal, Download, ArrowDown, Plus, Settings2, Square, Lock } from 'lucide-react';
-import { chatStream } from '../../lib/sse';
+import { SendHorizontal, ArrowDown, Square } from 'lucide-react';
 import { exportConversationAsMarkdown } from '../../lib/export';
-import type { Citation, Message } from '../../types';
+import type { Citation } from '../../types';
 import { useDocTalkStore } from '../../store';
 import MessageBubble from './MessageBubble';
 import CitationCard from './CitationCard';
 import { useLocale } from '../../i18n';
 import { PaywallModal } from '../PaywallModal';
-import { triggerCreditsRefresh } from '../CreditsDisplay';
-import { useWin98Theme } from '../win98/useWin98Theme';
-import { SendIcon, StopIcon, ChevronDownIcon } from '../win98/Win98Icons';
-
-/**
- * Error boundary for individual messages to prevent one broken message
- * from crashing the entire chat panel.
- */
-interface MessageErrorBoundaryProps {
-  children: ReactNode;
-  messageId: string;
-}
-
-interface MessageErrorBoundaryState {
-  hasError: boolean;
-}
-
-class MessageErrorBoundary extends Component<MessageErrorBoundaryProps, MessageErrorBoundaryState> {
-  constructor(props: MessageErrorBoundaryProps) {
-    super(props);
-    this.state = { hasError: false };
-  }
-
-  static getDerivedStateFromError(): MessageErrorBoundaryState {
-    return { hasError: true };
-  }
-
-  componentDidCatch(error: Error, errorInfo: ErrorInfo) {
-    console.error(`Error rendering message ${this.props.messageId}:`, error, errorInfo);
-  }
-
-  render() {
-    if (this.state.hasError) {
-      return (
-        <div className="p-3 rounded-lg bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 text-sm">
-          Failed to render message
-        </div>
-      );
-    }
-    return this.props.children;
-  }
-}
-
-/** 将 citations 按出现顺序重编号为连续的 1, 2, 3, ... */
-function renumberCitations(citations: Citation[]): Citation[] {
-  if (!citations || citations.length === 0) return [];
-  // 按 refIndex 去重，保留首次出现
-  const unique = citations.filter(
-    (c, i, arr) => arr.findIndex((x) => x.refIndex === c.refIndex) === i
-  );
-  // 按 offset 排序（文本中出现顺序）
-  const sorted = [...unique].sort((a, b) => a.offset - b.offset);
-  // 建立映射: oldRefIndex → newSequentialIndex
-  const refMap = new Map<number, number>();
-  sorted.forEach((c, i) => refMap.set(c.refIndex, i + 1));
-  // 应用新编号到所有 citations（含重复引用）
-  return citations.map((c) => ({
-    ...c,
-    refIndex: refMap.get(c.refIndex) ?? c.refIndex,
-  }));
-}
+import PlusMenu from './PlusMenu';
+import MessageErrorBoundary from './MessageErrorBoundary';
+import { renumberCitations } from '../../lib/citations';
+import { SUGGESTED_KEYS } from '../../lib/constants';
+import { useChatStream } from '../../lib/useChatStream';
 
 interface ChatPanelProps {
   sessionId: string;
@@ -83,41 +26,41 @@ interface ChatPanelProps {
   userPlan?: string;
 }
 
-const SUGGESTED_KEYS = ['chat.suggestedQ1', 'chat.suggestedQ2', 'chat.suggestedQ3', 'chat.suggestedQ4'] as const;
-
 export default function ChatPanel({ sessionId, onCitationClick, maxUserMessages, suggestedQuestions, onOpenSettings, hasCustomInstructions, userPlan }: ChatPanelProps) {
-  const { messages, isStreaming, addMessage, updateLastMessage, addCitationToLastMessage, setStreaming, updateSessionActivity, flushPendingText } = useDocTalkStore();
+  const messages = useDocTalkStore((s) => s.messages);
+  const isStreaming = useDocTalkStore((s) => s.isStreaming);
   const selectedMode = useDocTalkStore((s) => s.selectedMode);
-  const demoMessagesUsed = useDocTalkStore((s) => s.demoMessagesUsed);
   const { t, locale } = useLocale();
-  const isWin98 = useWin98Theme();
+  const router = useRouter();
+
   const [input, setInput] = useState('');
   const listRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [showPaywall, setShowPaywall] = useState(false);
 
-  // Phase 1: Plus menu state
   const [plusMenuOpen, setPlusMenuOpen] = useState(false);
   const plusMenuRef = useRef<HTMLDivElement>(null);
   const plusMenuButtonRef = useRef<HTMLButtonElement>(null);
 
-  // Phase 2: Scroll-to-bottom button
   const [showScrollBtn, setShowScrollBtn] = useState(false);
 
-  // Phase 9b: Abort controller for stop generation
-  const abortRef = useRef<AbortController | null>(null);
-
-  // Demo mode: track user message count (cross-session, cross-document via store)
-  const localUserMsgCount = maxUserMessages != null
-    ? messages.filter((m) => m.role === 'user').length
-    : 0;
-  const totalUsed = demoMessagesUsed + localUserMsgCount;
-  const demoRemaining = maxUserMessages != null ? maxUserMessages - totalUsed : Infinity;
-  const demoLimitReached = maxUserMessages != null && demoRemaining <= 0;
-  const messagesUsed = maxUserMessages != null ? Math.min(maxUserMessages, Math.max(0, totalUsed)) : 0;
-  const maxMessages = maxUserMessages ?? 0;
-
-  // Message history is loaded in page.tsx
+  const {
+    sendMessage,
+    regenerateLastResponse,
+    stopStreaming,
+    demoRemaining,
+    demoLimitReached,
+    messagesUsed,
+    maxMessages,
+  } = useChatStream({
+    sessionId,
+    selectedMode,
+    locale,
+    t,
+    maxUserMessages,
+    onShowPaywall: () => setShowPaywall(true),
+    onRequireAuth: () => router.push('?auth=1', { scroll: false }),
+  });
 
   useEffect(() => {
     const el = listRef.current;
@@ -132,7 +75,6 @@ export default function ChatPanel({ sessionId, onCitationClick, maxUserMessages,
     setShowScrollBtn(!isNearBottom);
   }, [messages, isStreaming]);
 
-  // Auto-resize textarea
   useEffect(() => {
     const ta = textareaRef.current;
     if (ta) {
@@ -141,7 +83,6 @@ export default function ChatPanel({ sessionId, onCitationClick, maxUserMessages,
     }
   }, [input]);
 
-  // Close plus menu on outside click
   useEffect(() => {
     if (!plusMenuOpen) return;
     const handler = (e: MouseEvent) => {
@@ -168,35 +109,6 @@ export default function ChatPanel({ sessionId, onCitationClick, maxUserMessages,
     const atBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 80;
     setShowScrollBtn(!atBottom);
   }, []);
-
-  const router = useRouter();
-
-  const getErrorMessage = useCallback((err: unknown): string => {
-    if (typeof err === 'object' && err && 'message' in err) {
-      return String((err as { message?: unknown }).message || '');
-    }
-    return '';
-  }, []);
-
-  const getFriendlyStreamError = useCallback((err: unknown): string | null => {
-    const message = getErrorMessage(err);
-    const name = typeof err === 'object' && err && 'name' in err
-      ? String((err as { name?: unknown }).name || '')
-      : '';
-
-    if (name === 'AbortError' || message.includes('AbortError')) {
-      return null;
-    }
-    if (message.includes('Failed to fetch')) {
-      return t('chat.networkError');
-    }
-    return t('chat.networkError');
-  }, [getErrorMessage, t]);
-
-  const handleMenuBillingRedirect = useCallback(() => {
-    setPlusMenuOpen(false);
-    router.push('/billing');
-  }, [router]);
 
   const handlePlusMenuKeyDown = useCallback((e: React.KeyboardEvent<HTMLDivElement>) => {
     const menuItems = plusMenuRef.current
@@ -237,262 +149,62 @@ export default function ChatPanel({ sessionId, onCitationClick, maxUserMessages,
     }
   }, []);
 
-  const sendMessage = useCallback(async (text: string) => {
-    if (!text.trim() || isStreaming) return;
-    // Demo limit check (client-side)
-    if (demoLimitReached) {
-      router.push('?auth=1', { scroll: false });
-      return;
-    }
-    const userMsg: Message = { id: `m_${Date.now()}_u`, role: 'user', text, createdAt: Date.now() };
-    addMessage(userMsg);
-    const asstMsg: Message = { id: `m_${Date.now()}_a`, role: 'assistant', text: '', citations: [], createdAt: Date.now() };
-    addMessage(asstMsg);
-    setStreaming(true);
-
-    const controller = new AbortController();
-    abortRef.current = controller;
-
-    await chatStream(
-      sessionId,
-      text,
-      ({ text: t }) => updateLastMessage(t || ''),
-      (c) => addCitationToLastMessage(c),
-      (err) => {
-        flushPendingText();
-        setStreaming(false);
-        abortRef.current = null;
-        const errorMessage = getErrorMessage(err);
-        // Detect insufficient credits (HTTP 402) and show paywall modal
-        const isPaymentRequired = errorMessage.includes('HTTP 402');
-        if (isPaymentRequired) {
-          setShowPaywall(true);
-          return;
-        }
-        // Detect document still processing (HTTP 409) — show processing message
-        const isProcessing = errorMessage.includes('HTTP 409');
-        if (isProcessing) {
-          const processingMsg: Message = {
-            id: `m_${Date.now()}_proc`,
-            role: 'assistant',
-            text: t('doc.processing'),
-            createdAt: Date.now(),
-          };
-          addMessage(processingMsg);
-          return;
-        }
-        // Detect demo limit or rate limit (HTTP 429)
-        const isDemoLimit = errorMessage.includes('HTTP 429');
-        if (isDemoLimit) {
-          const isRateLimit = errorMessage.includes('Rate limit exceeded');
-          const limitMsg: Message = {
-            id: `m_${Date.now()}_limit`,
-            role: 'assistant',
-            text: isRateLimit ? t('demo.rateLimitMessage') : t('demo.limitReachedMessage'),
-            createdAt: Date.now(),
-          };
-          addMessage(limitMsg);
-          return;
-        }
-        const errText = getFriendlyStreamError(err);
-        if (!errText) return;
-        const errorMsg: Message = {
-          id: `m_${Date.now()}_e`,
-          role: 'assistant',
-          text: errText,
-          isError: true,
-          createdAt: Date.now(),
-        };
-        addMessage(errorMsg);
-      },
-      () => { flushPendingText(); setStreaming(false); abortRef.current = null; updateSessionActivity(sessionId); triggerCreditsRefresh(); },
-      selectedMode,
-      locale,
-      controller.signal,
-    );
-    setInput('');
-  }, [isStreaming, demoLimitReached, sessionId, addMessage, updateLastMessage, addCitationToLastMessage, setStreaming, selectedMode, locale, t, updateSessionActivity, flushPendingText, router, getErrorMessage, getFriendlyStreamError]);
-
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    sendMessage(input);
+    const sent = await sendMessage(input);
+    if (sent) setInput('');
   };
 
   const onKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
-      sendMessage(input);
+      void sendMessage(input).then((sent) => {
+        if (sent) setInput('');
+      });
     }
   };
 
-  const handleSuggestedClick = (q: string) => {
-    setInput(q);
-    sendMessage(q);
+  const handleSuggestedClick = (question: string) => {
+    setInput(question);
+    void sendMessage(question).then((sent) => {
+      if (sent) setInput('');
+    });
   };
-  const suggestedQuestionButtonClassName = isWin98
-    ? 'win98-button text-[11px] px-2 py-[2px]'
-    : 'text-sm px-4 py-2 border border-zinc-200 dark:border-zinc-700 rounded-full hover:bg-zinc-50 dark:hover:bg-zinc-800 hover:border-zinc-300 dark:hover:border-zinc-600 transition-colors text-zinc-600 dark:text-zinc-400 focus-visible:ring-2 focus-visible:ring-zinc-400 dark:focus-visible:ring-zinc-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-900';
-  const displayedSuggestedQuestions = suggestedQuestions && suggestedQuestions.length > 0
-    ? suggestedQuestions
-    : SUGGESTED_KEYS.map((k) => t(k));
 
   const handleExport = useCallback(() => {
     const docName = useDocTalkStore.getState().documentName || 'document';
     exportConversationAsMarkdown(messages, docName);
   }, [messages]);
 
-  const handleRegenerate = useCallback(() => {
-    if (isStreaming) return;
-    const msgs = useDocTalkStore.getState().messages;
-    // Find the last user message
-    let lastUserIdx = -1;
-    for (let i = msgs.length - 1; i >= 0; i--) {
-      if (msgs[i].role === 'user') { lastUserIdx = i; break; }
-    }
-    if (lastUserIdx === -1) return;
-    const lastUserText = msgs[lastUserIdx].text;
-    // Remove all messages after (and including) the last user message's response
-    const trimmed = msgs.slice(0, lastUserIdx + 1);
-    useDocTalkStore.getState().setMessages(trimmed);
-    // Re-send the last user message
-    // We need to manually trigger the stream without adding the user message again
-    const asstMsg: Message = { id: `m_${Date.now()}_a`, role: 'assistant', text: '', citations: [], createdAt: Date.now() };
-    addMessage(asstMsg);
-    setStreaming(true);
-
-    const controller = new AbortController();
-    abortRef.current = controller;
-
-    chatStream(
-      sessionId,
-      lastUserText,
-      ({ text: t }) => updateLastMessage(t || ''),
-      (c) => addCitationToLastMessage(c),
-      (err) => {
-        flushPendingText();
-        setStreaming(false);
-        abortRef.current = null;
-        const errorMessage = getErrorMessage(err);
-        const isPaymentRequired = errorMessage.includes('HTTP 402');
-        if (isPaymentRequired) {
-          setShowPaywall(true);
-          return;
-        }
-        const isProcessing = errorMessage.includes('HTTP 409');
-        if (isProcessing) {
-          addMessage({
-            id: `m_${Date.now()}_proc`,
-            role: 'assistant',
-            text: t('doc.processing'),
-            createdAt: Date.now(),
-          });
-          return;
-        }
-        const isDemoLimit = errorMessage.includes('HTTP 429');
-        if (isDemoLimit) {
-          addMessage({
-            id: `m_${Date.now()}_limit`,
-            role: 'assistant',
-            text: errorMessage.includes('Rate limit exceeded') ? t('demo.rateLimitMessage') : t('demo.limitReachedMessage'),
-            createdAt: Date.now(),
-          });
-          return;
-        }
-        const errText = getFriendlyStreamError(err);
-        if (!errText) return;
-        addMessage({
-          id: `m_${Date.now()}_e`,
-          role: 'assistant',
-          text: errText,
-          isError: true,
-          createdAt: Date.now(),
-        });
-      },
-      () => { flushPendingText(); setStreaming(false); abortRef.current = null; updateSessionActivity(sessionId); triggerCreditsRefresh(); },
-      selectedMode,
-      locale,
-      controller.signal,
-    );
-  }, [isStreaming, sessionId, addMessage, updateLastMessage, addCitationToLastMessage, setStreaming, selectedMode, locale, updateSessionActivity, flushPendingText, getErrorMessage, t, getFriendlyStreamError]);
-
-  const handleStop = useCallback(() => {
-    abortRef.current?.abort();
-    abortRef.current = null;
-    flushPendingText();
-    setStreaming(false);
-  }, [setStreaming, flushPendingText]);
-
-  // Determine which plus menu items to show
   const canUseCustomInstructions = !!onOpenSettings;
   const showCustomInstructions = canUseCustomInstructions || userPlan === 'free';
   const canUseExport = messages.length > 0 && !isStreaming && (userPlan === 'plus' || userPlan === 'pro');
   const showExportInMenu = messages.length > 0 && !isStreaming && (canUseExport || userPlan === 'free');
-  const showPlusButton = showCustomInstructions || showExportInMenu;
 
-  // Shared message list renderer
-  const renderMessages = () => (
-    messages.map((m, idx) => {
-      const displayCitations = (m.role === 'assistant' && m.citations && m.citations.length > 0)
-        ? renumberCitations(m.citations)
-        : undefined;
-      const displayMessage = displayCitations ? { ...m, citations: displayCitations } : m;
-      const isLastMessage = idx === messages.length - 1;
-      const showStreaming = isLastMessage && isStreaming && m.role === 'assistant';
-      const isLastAssistantMsg = m.role === 'assistant' && !isStreaming && idx === messages.length - 1;
-
-      return (
-        <MessageErrorBoundary key={m.id} messageId={m.id}>
-          <div>
-            <MessageBubble message={displayMessage} onCitationClick={onCitationClick} isStreaming={showStreaming} onRegenerate={isLastAssistantMsg ? handleRegenerate : undefined} isLastAssistant={isLastAssistantMsg} />
-            {displayCitations && displayCitations.length > 0 && (() => {
-              const uniqueCitations = displayCitations
-                .filter((c, i, arr) => arr.findIndex((x) => x.refIndex === c.refIndex) === i)
-                .sort((a, b) => a.refIndex - b.refIndex);
-              return (
-              <div className={isWin98 ? 'flex flex-col gap-1 mt-1' : 'mt-2 pl-0 flex flex-wrap gap-1.5'}>
-                {uniqueCitations.map((c) => (
-                  <CitationCard
-                    key={`${m.id}-${c.refIndex}`}
-                    refIndex={c.refIndex}
-                    textSnippet={c.textSnippet}
-                    page={c.page}
-                    onClick={() => onCitationClick(c)}
-                  />
-                ))}
-              </div>
-              );
-            })()}
-          </div>
-        </MessageErrorBoundary>
-      );
-    })
-  );
+  const displayedSuggestedQuestions = suggestedQuestions && suggestedQuestions.length > 0
+    ? suggestedQuestions
+    : SUGGESTED_KEYS.map((key) => t(key));
 
   return (
-    <div className={isWin98 ? 'flex h-full flex-col' : 'flex h-full flex-col border-r dark:border-zinc-700'}>
+    <div className="flex h-full flex-col border-r dark:border-zinc-700">
       <PaywallModal isOpen={showPaywall} onClose={() => setShowPaywall(false)} />
       <div className="relative flex-1 min-h-0">
         <div
           ref={listRef}
           onScroll={handleScroll}
-          className={isWin98
-            ? 'h-full overflow-y-auto win98-scrollbar bg-white p-3 win98-inset m-1'
-            : 'h-full overflow-y-auto overflow-x-hidden p-6'
-          }
+          data-tour="chat-area"
+          className="h-full overflow-y-auto overflow-x-hidden p-6"
         >
           {messages.length === 0 ? (
-            <div className={isWin98
-              ? 'flex flex-col items-center justify-center h-full gap-3 px-2'
-              : 'flex flex-col items-center justify-center h-full gap-5 px-4'
-            }>
-              <p className={isWin98 ? 'text-[11px] text-[var(--win98-dark-gray)]' : 'text-sm text-zinc-400 dark:text-zinc-500'}>{t('chat.trySuggested')}</p>
-              <div className={isWin98 ? 'flex flex-wrap justify-center gap-1' : 'flex flex-wrap justify-center gap-2 max-w-lg'}>
+            <div className="flex flex-col items-center justify-center h-full gap-5 px-4">
+              <p className="text-sm text-zinc-400 dark:text-zinc-500">{t('chat.trySuggested')}</p>
+              <div className="flex flex-wrap justify-center gap-2 max-w-lg">
                 {displayedSuggestedQuestions.map((question, index) => (
                   <button
                     key={`sq-${index}`}
                     type="button"
                     onClick={() => handleSuggestedClick(question)}
-                    className={suggestedQuestionButtonClassName}
+                    className="text-sm px-4 py-2 border border-zinc-200 dark:border-zinc-700 rounded-full hover:bg-zinc-50 dark:hover:bg-zinc-800 hover:border-zinc-300 dark:hover:border-zinc-600 transition-colors text-zinc-600 dark:text-zinc-400 focus-visible:ring-2 focus-visible:ring-zinc-400 dark:focus-visible:ring-zinc-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-900"
                   >
                     {question}
                   </button>
@@ -500,12 +212,46 @@ export default function ChatPanel({ sessionId, onCitationClick, maxUserMessages,
               </div>
             </div>
           ) : (
-            <div className={isWin98 ? 'flex flex-col gap-4' : 'max-w-3xl mx-auto'}>
-              {renderMessages()}
+            <div className="max-w-3xl mx-auto">
+              {messages.map((message, idx) => {
+                const displayCitations = (message.role === 'assistant' && message.citations && message.citations.length > 0)
+                  ? renumberCitations(message.citations)
+                  : undefined;
+                const displayMessage = displayCitations ? { ...message, citations: displayCitations } : message;
+                const isLastMessage = idx === messages.length - 1;
+                const showStreaming = isLastMessage && isStreaming && message.role === 'assistant';
+                const isLastAssistantMsg = message.role === 'assistant' && !isStreaming && idx === messages.length - 1;
+
+                return (
+                  <MessageErrorBoundary key={message.id} messageId={message.id}>
+                    <div>
+                      <MessageBubble message={displayMessage} onCitationClick={onCitationClick} isStreaming={showStreaming} onRegenerate={isLastAssistantMsg ? () => void regenerateLastResponse() : undefined} isLastAssistant={isLastAssistantMsg} />
+                      {displayCitations && displayCitations.length > 0 && (() => {
+                        const uniqueCitations = displayCitations
+                          .filter((citation, index, all) => all.findIndex((item) => item.refIndex === citation.refIndex) === index)
+                          .sort((a, b) => a.refIndex - b.refIndex);
+                        return (
+                          <div className="mt-2 pl-0 flex flex-wrap gap-1.5">
+                            {uniqueCitations.map((citation) => (
+                              <CitationCard
+                                key={`${message.id}-${citation.refIndex}`}
+                                refIndex={citation.refIndex}
+                                textSnippet={citation.textSnippet}
+                                page={citation.page}
+                                onClick={() => onCitationClick(citation)}
+                              />
+                            ))}
+                          </div>
+                        );
+                      })()}
+                    </div>
+                  </MessageErrorBoundary>
+                );
+              })}
             </div>
           )}
         </div>
-        {showScrollBtn && !isWin98 && (
+        {showScrollBtn && (
           <div className="absolute bottom-2 left-0 right-0 flex justify-center pointer-events-none z-10">
             <button
               onClick={() => listRef.current?.scrollTo({ top: listRef.current.scrollHeight, behavior: 'smooth' })}
@@ -516,20 +262,9 @@ export default function ChatPanel({ sessionId, onCitationClick, maxUserMessages,
             </button>
           </div>
         )}
-        {showScrollBtn && isWin98 && (
-          <div className="absolute bottom-1 right-2 z-10">
-            <button
-              onClick={() => listRef.current?.scrollTo({ top: listRef.current.scrollHeight, behavior: 'smooth' })}
-              className="win98-button flex items-center justify-center w-[22px] h-[20px] p-0"
-              title="Scroll to bottom"
-              aria-label="Scroll to bottom"
-            >
-              <ChevronDownIcon size={10} />
-            </button>
-          </div>
-        )}
       </div>
-      {maxUserMessages != null && !isWin98 && (
+
+      {maxUserMessages != null && (
         <div className="border-t dark:border-zinc-700">
           <div className="h-1 bg-zinc-200 dark:bg-zinc-800">
             <div
@@ -560,171 +295,29 @@ export default function ChatPanel({ sessionId, onCitationClick, maxUserMessages,
           </div>
         </div>
       )}
-      {/* Win98 demo progress */}
-      {maxUserMessages != null && isWin98 && (
-        <div className="px-2 py-[2px] text-[10px] text-[var(--win98-dark-gray)] flex items-center justify-between border-t border-t-[var(--win98-button-shadow)] shrink-0">
-          <span>{t('demo.questionsRemaining', { remaining: Math.max(0, demoRemaining), total: maxUserMessages })}</span>
-          <button type="button" onClick={() => router.push('?auth=1', { scroll: false })} className="text-[#000080] underline text-[10px]">
-            {demoLimitReached ? t('demo.signInToContinue') : t('demo.signInForUnlimited')}
-          </button>
-        </div>
-      )}
-      {/* Win98 disclaimer */}
-      {isWin98 && (
-        <div className="text-center text-[10px] text-[var(--win98-dark-gray)] py-[2px] shrink-0">
-          {t('chat.disclaimer')}
-        </div>
-      )}
-      {/* Input Area */}
-      <form onSubmit={onSubmit} className={isWin98 ? 'px-2 pb-2 shrink-0' : 'p-4 border-t dark:border-zinc-700'}>
-        {isWin98 ? (
-          <div>
-            {(showCustomInstructions || showExportInMenu) && (
-              <div className="flex items-center gap-[2px] mb-1">
-                {showCustomInstructions && (
-                  <button
-                    type="button"
-                    onClick={canUseCustomInstructions ? () => onOpenSettings?.() : handleMenuBillingRedirect}
-                    className="win98-button text-[10px] px-2 h-[18px] inline-flex items-center gap-1"
-                    title={t('chat.customInstructions') || 'Custom Instructions'}
-                  >
-                    {!canUseCustomInstructions && <Lock size={10} />}
-                    {t('chat.customInstructions') || 'Instructions'}
-                    {!canUseCustomInstructions && <span className="ml-1">Pro</span>}
-                    {canUseCustomInstructions && hasCustomInstructions && <span className="ml-1 text-[#008000]">*</span>}
-                  </button>
-                )}
-                {showExportInMenu && (
-                  <button
-                    type="button"
-                    onClick={canUseExport ? handleExport : handleMenuBillingRedirect}
-                    className="win98-button text-[10px] px-2 h-[18px] inline-flex items-center gap-1"
-                    title={t('chat.export')}
-                  >
-                    {!canUseExport && <Lock size={10} />}
-                    {t('chat.export')}
-                    {!canUseExport && <span className="ml-1">Plus</span>}
-                  </button>
-                )}
-              </div>
-            )}
-            <div className="win98-inset flex items-end gap-1 p-1 bg-white">
-            <textarea
-              ref={textareaRef}
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyDown={onKeyDown}
-              placeholder={demoLimitReached ? t('demo.signInToContinue') : t('chat.placeholder')}
-              rows={2}
-              disabled={isStreaming || demoLimitReached}
-              className="flex-1 resize-none bg-white text-[12px] leading-[1.4] p-1 outline-none border-none select-text cursor-text"
-              style={{ fontFamily: 'inherit' }}
-              aria-label="Ask a question"
-            />
-            {isStreaming ? (
-              <button
-                type="button"
-                onClick={handleStop}
-                className="win98-button flex items-center justify-center w-[28px] h-[24px] p-0 shrink-0"
-                aria-label="Stop"
-              >
-                <StopIcon />
-              </button>
-            ) : (
-              <button
-                type="submit"
-                disabled={!input.trim() || demoLimitReached}
-                className={`win98-button flex items-center justify-center w-[28px] h-[24px] p-0 shrink-0 ${
-                  !input.trim() ? 'opacity-50' : ''
-                }`}
-                aria-label="Send message"
-              >
-                <SendIcon />
-              </button>
-            )}
-          </div>
-          </div>
-        ) : (
-          <div className="max-w-3xl mx-auto">
+
+      <form onSubmit={onSubmit} className="p-4 border-t dark:border-zinc-700">
+        <div className="max-w-3xl mx-auto">
           <div className="flex items-center px-3 py-1.5 gap-2 border border-zinc-300 dark:border-zinc-600 rounded-full bg-white dark:bg-zinc-800 focus-within:border-zinc-400 dark:focus-within:border-zinc-500 transition-colors">
-            {showPlusButton && (
-              <div className="relative shrink-0" data-plus-menu>
-                <button
-                  ref={plusMenuButtonRef}
-                  type="button"
-                  onClick={() => setPlusMenuOpen((v) => !v)}
-                  className="p-1.5 rounded-full text-zinc-400 hover:text-zinc-600 dark:text-zinc-500 dark:hover:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-700 transition-colors focus-visible:ring-2 focus-visible:ring-zinc-400 dark:focus-visible:ring-zinc-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-900"
-                  aria-label="More options"
-                  aria-haspopup="menu"
-                  aria-expanded={plusMenuOpen}
-                >
-                  <Plus size={20} />
-                </button>
-                {plusMenuOpen && (
-                  <div
-                    ref={plusMenuRef}
-                    className="absolute bottom-full left-0 mb-2 w-56 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-xl shadow-lg z-20 py-1 animate-fade-in motion-reduce:animate-none"
-                    role="menu"
-                    onKeyDown={handlePlusMenuKeyDown}
-                  >
-                    {showCustomInstructions && (
-                      <button
-                        role="menuitem"
-                        tabIndex={-1}
-                        type="button"
-                        onClick={() => {
-                          if (canUseCustomInstructions) {
-                            onOpenSettings?.();
-                            setPlusMenuOpen(false);
-                            return;
-                          }
-                          handleMenuBillingRedirect();
-                        }}
-                        className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:ring-inset"
-                      >
-                        {canUseCustomInstructions ? <Settings2 size={16} /> : <Lock size={16} />}
-                        <span>{t('chat.customInstructions') || 'Custom Instructions'}</span>
-                        {!canUseCustomInstructions && (
-                          <span className="ml-auto text-[11px] px-1.5 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400">
-                            Pro
-                          </span>
-                        )}
-                        {canUseCustomInstructions && hasCustomInstructions && (
-                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                        )}
-                      </button>
-                    )}
-                    {showCustomInstructions && showExportInMenu && (
-                      <div className="border-t border-zinc-100 dark:border-zinc-700" />
-                    )}
-                    {showExportInMenu && (
-                      <button
-                        role="menuitem"
-                        tabIndex={-1}
-                        type="button"
-                        onClick={() => {
-                          if (canUseExport) {
-                            handleExport();
-                            setPlusMenuOpen(false);
-                            return;
-                          }
-                          handleMenuBillingRedirect();
-                        }}
-                        className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:ring-inset"
-                      >
-                        {canUseExport ? <Download size={16} /> : <Lock size={16} />}
-                        <span>{t('chat.export')}</span>
-                        {!canUseExport && (
-                          <span className="ml-auto text-[11px] px-1.5 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400">
-                            Plus
-                          </span>
-                        )}
-                      </button>
-                    )}
-                  </div>
-                )}
-              </div>
-            )}
+            <PlusMenu
+              isOpen={plusMenuOpen}
+              setIsOpen={setPlusMenuOpen}
+              menuRef={plusMenuRef}
+              buttonRef={plusMenuButtonRef}
+              onMenuKeyDown={handlePlusMenuKeyDown}
+              showCustomInstructions={showCustomInstructions}
+              showExportInMenu={showExportInMenu}
+              canUseCustomInstructions={canUseCustomInstructions}
+              hasCustomInstructions={hasCustomInstructions}
+              canUseExport={canUseExport}
+              onOpenSettings={onOpenSettings}
+              onExport={handleExport}
+              onBillingRedirect={() => {
+                setPlusMenuOpen(false);
+                router.push('/billing');
+              }}
+              t={t}
+            />
             <textarea
               ref={textareaRef}
               className="flex-1 px-1 py-1 text-sm resize-none overflow-y-auto focus:outline-none bg-transparent dark:text-zinc-100 placeholder:text-zinc-400 dark:placeholder:text-zinc-500"
@@ -741,7 +334,7 @@ export default function ChatPanel({ sessionId, onCitationClick, maxUserMessages,
               {isStreaming ? (
                 <button
                   type="button"
-                  onClick={handleStop}
+                  onClick={stopStreaming}
                   className="p-2 bg-zinc-900 dark:bg-zinc-50 text-white dark:text-zinc-900 rounded-full hover:bg-zinc-800 dark:hover:bg-zinc-200 transition-colors focus-visible:ring-2 focus-visible:ring-zinc-400 dark:focus-visible:ring-zinc-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-900"
                   title={t('chat.stop') || 'Stop'}
                   aria-label="Stop generating"
@@ -761,16 +354,14 @@ export default function ChatPanel({ sessionId, onCitationClick, maxUserMessages,
               )}
             </div>
           </div>
-          </div>
-        )}
-      </form>
-      {!isWin98 && (
-        <div className="text-center pb-2">
-          <p className="text-xs text-zinc-400 dark:text-zinc-500 max-w-3xl mx-auto">
-            {t('chat.disclaimer')}
-          </p>
         </div>
-      )}
+      </form>
+
+      <div className="text-center pb-2">
+        <p className="text-xs text-zinc-400 dark:text-zinc-500 max-w-3xl mx-auto">
+          {t('chat.disclaimer')}
+        </p>
+      </div>
     </div>
   );
 }

@@ -9,6 +9,7 @@ import { Suspense } from 'react'
 import { AuthModal } from '../components/AuthModal'
 import { AnalyticsWrapper } from '../components/AnalyticsWrapper'
 import { CookieConsentBanner } from '../components/CookieConsentBanner'
+import NetworkBanner from '../components/NetworkBanner'
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter' })
 const sora = Sora({
@@ -19,8 +20,13 @@ const sora = Sora({
 })
 
 export const metadata: Metadata = {
-  title: 'DocTalk',
-  description: 'DocTalk — PDF chat assistant',
+  title: 'DocTalk — AI Document Chat with Cited Answers',
+  description: 'Upload any document and chat with AI. Get instant answers with source citations that highlight in your document. Supports PDF, DOCX, PPTX, XLSX, and more.',
+  openGraph: {
+    title: 'DocTalk — AI Document Chat',
+    description: 'Chat with your documents. AI answers with page-level citations.',
+    type: 'website',
+  },
 }
 
 export default function RootLayout({
@@ -39,6 +45,7 @@ export default function RootLayout({
           <Providers>
             <LocaleProvider>
               <ErrorBoundary>
+                <NetworkBanner />
                 {children}
                 <Suspense fallback={null}>
                   <AuthModal />

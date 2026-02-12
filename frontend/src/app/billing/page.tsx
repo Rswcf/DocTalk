@@ -5,13 +5,13 @@ import { useSession } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useLocale } from "../../i18n";
 import Header from "../../components/Header";
-import { getUserProfile, createSubscription, createPortalSession } from "../../lib/api";
+import { createSubscription, createPortalSession } from "../../lib/api";
 import { triggerCreditsRefresh } from "../../components/CreditsDisplay";
 import PricingTable from "../../components/PricingTable";
-import type { UserProfile } from "../../types";
 import type { PlanType } from "../../lib/models";
 import { Check } from "lucide-react";
 import { usePageTitle } from "../../lib/usePageTitle";
+import { useUserProfile } from "../../lib/useUserProfile";
 
 interface Product {
   id: string;
@@ -29,7 +29,7 @@ function BillingContent() {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
-  const [profile, setProfile] = useState<UserProfile | null>(null);
+  const { profile } = useUserProfile();
   const [submitting, setSubmitting] = useState<string | null>(null);
   const [productsLoading, setProductsLoading] = useState(true);
   const [productsError, setProductsError] = useState(false);
@@ -71,18 +71,6 @@ function BillingContent() {
   useEffect(() => {
     fetchProducts();
   }, [fetchProducts]);
-
-  useEffect(() => {
-    async function fetchProfile() {
-      try {
-        const p = await getUserProfile();
-        setProfile(p);
-      } catch (e) {}
-    }
-    if (status === "authenticated") {
-      fetchProfile();
-    }
-  }, [status]);
 
   const handlePurchase = async (packId: string) => {
     setLoading(packId);
@@ -130,7 +118,7 @@ function BillingContent() {
   };
 
   if (status === "loading") {
-    return <div className="min-h-screen flex items-center justify-center bg-white dark:bg-zinc-950">Loading...</div>;
+    return <div className="min-h-screen flex items-center justify-center bg-[var(--page-background)]">Loading...</div>;
   }
 
   const plusFeatures = [
@@ -148,7 +136,7 @@ function BillingContent() {
   ];
 
   return (
-    <div className="min-h-screen bg-white dark:bg-zinc-950">
+    <div className="min-h-screen bg-[var(--page-background)]">
       <Header />
       <main className="max-w-5xl mx-auto p-6 sm:p-8">
         <h1 className="text-2xl font-bold mb-6 text-zinc-900 dark:text-zinc-50">
@@ -190,8 +178,8 @@ function BillingContent() {
         {/* Subscription Cards */}
         <section className="mb-8 grid md:grid-cols-2 gap-6">
           {/* Plus Card */}
-          <div className="relative rounded-xl bg-gradient-to-r from-indigo-500 to-violet-500 p-[2px]">
-            <div className="rounded-xl bg-white dark:bg-zinc-950 p-6 h-full flex flex-col">
+          <div className="relative rounded-xl bg-gradient-to-r from-indigo-500 to-violet-500 p-[2px] shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-shadow transition-transform duration-200">
+            <div className="rounded-xl bg-white dark:bg-zinc-900 p-6 h-full flex flex-col">
               <div className="flex items-center gap-2 mb-1">
                 <h2 className="text-xl font-semibold text-zinc-900 dark:text-zinc-50">{t("billing.plus.title")}</h2>
                 <span className="text-xs px-2 py-0.5 rounded-full bg-indigo-600 dark:bg-indigo-500 text-white font-medium">
@@ -241,7 +229,7 @@ function BillingContent() {
           </div>
 
           {/* Pro Card */}
-          <div className="rounded-xl border border-zinc-200 dark:border-zinc-800 p-6 flex flex-col">
+          <div className="rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-6 flex flex-col shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-shadow transition-transform duration-200">
             <h2 className="text-xl font-semibold text-zinc-900 dark:text-zinc-50 mb-1">{t("billing.pro.title")}</h2>
             <p className="text-zinc-500 dark:text-zinc-400 text-sm mb-4">{t("billing.pro.description")}</p>
             <div className="mb-4">
@@ -327,7 +315,7 @@ function BillingContent() {
             {products.map((product) => (
               <div
                 key={product.id}
-                className="border border-zinc-100 dark:border-zinc-800 rounded-xl p-6 flex flex-col shadow-sm hover:shadow-md transition-shadow"
+                className="border border-zinc-100 dark:border-zinc-800 bg-white dark:bg-zinc-900 rounded-xl p-6 flex flex-col shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-shadow transition-transform duration-200"
               >
                 <h3 className="text-lg font-medium text-zinc-900 dark:text-zinc-100">
                   {t(`billing.pack.${product.id}` as any)}
@@ -358,7 +346,7 @@ export default function BillingPage() {
   return (
     <Suspense
       fallback={
-        <div className="min-h-screen flex items-center justify-center bg-white dark:bg-zinc-950">
+        <div className="min-h-screen flex items-center justify-center bg-[var(--page-background)]">
           <div className="animate-pulse text-zinc-500">Loading...</div>
         </div>
       }

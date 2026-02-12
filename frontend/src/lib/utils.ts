@@ -1,3 +1,10 @@
+import { clsx, type ClassValue } from 'clsx';
+import { twMerge } from 'tailwind-merge';
+
+export function cn(...inputs: ClassValue[]) {
+  return twMerge(clsx(inputs));
+}
+
 export function sanitizeFilename(name: string, maxLength = 100): string {
   // Strip control characters and null bytes
   let clean = name.replace(/[\x00-\x1f\x7f]/g, '');

@@ -2,11 +2,11 @@
 
 import React, { useEffect, useMemo, useRef, useState, useCallback } from 'react';
 import { Document, Page, pdfjs } from 'react-pdf';
+import type { PDFDocumentProxy } from 'pdfjs-dist/types/src/display/api';
 import 'react-pdf/dist/esm/Page/TextLayer.css';
 import PageWithHighlights from './PageWithHighlights';
 import PdfToolbar from './PdfToolbar';
 import type { NormalizedBBox } from '../../types';
-import { useTheme } from 'next-themes';
 import { useDocTalkStore } from '../../store';
 import { useLocale } from '../../i18n';
 
@@ -24,6 +24,17 @@ const PDF_OPTIONS = {
   cMapPacked: true,
   standardFontDataUrl: `${origin}/standard_fonts/`,
 };
+
+interface PdfTextItemLike {
+  str: string;
+}
+
+function isPdfTextItemLike(item: unknown): item is PdfTextItemLike {
+  return typeof item === 'object'
+    && item !== null
+    && 'str' in item
+    && typeof (item as { str?: unknown }).str === 'string';
+}
 
 /**
  * Validate that the PDF URL is safe to load.
@@ -69,9 +80,10 @@ export default function PdfViewer({ pdfUrl, currentPage, highlights, scale, scro
   const extractedTextRef = useRef<{ pages: string[]; pdfUrl: string } | null>(null);
   const extractionRunIdRef = useRef(0);
   const [visiblePage, setVisiblePage] = useState(1);
+  const [pageAspectRatios, setPageAspectRatios] = useState<number[]>([]);
+  const [visibleRange, setVisibleRange] = useState<{ start: number; end: number }>({ start: 1, end: 6 });
+  const BUFFER = 3;
   const isScrollingToPage = useRef(false);
-  const { resolvedTheme } = useTheme();
-  const isWin98 = resolvedTheme === 'win98';
   const { setScale, grabMode, setGrabMode, searchQuery, searchMatches, currentMatchIndex, setSearchQuery, setSearchMatches, setCurrentMatchIndex } = useDocTalkStore();
   const setStoreTotalPages = (n: number) => useDocTalkStore.setState({ totalPages: n });
   const { t } = useLocale();
@@ -95,12 +107,20 @@ export default function PdfViewer({ pdfUrl, currentPage, highlights, scale, scro
     extractedTextRef.current = null;
     extractionRunIdRef.current += 1;
     setTextCacheVersion((v) => v + 1);
+    setPageAspectRatios([]);
+    setVisibleRange({ start: 1, end: 6 });
   }, [validPdfUrl]);
 
   // Scroll to page when currentPage changes (e.g. citation click or toolbar nav)
   // If highlights exist, center the viewport on the first highlight bbox
   useEffect(() => {
     if (!numPages || !containerRef.current) return;
+    // Ensure target page is in render range before scrolling
+    setVisibleRange(prev => ({
+      start: Math.min(prev.start, Math.max(1, currentPage - BUFFER)),
+      end: Math.max(prev.end, Math.min(numPages, currentPage + BUFFER)),
+    }));
+
     const target = pageRefs.current[currentPage - 1];
     if (!target) return;
 
@@ -133,29 +153,40 @@ export default function PdfViewer({ pdfUrl, currentPage, highlights, scale, scro
 
     // Reset flag after scroll completes
     setTimeout(() => { isScrollingToPage.current = false; }, 800);
-  }, [currentPage, scrollNonce, numPages]);
+  }, [currentPage, scrollNonce, numPages, BUFFER]);
 
-  // IntersectionObserver to track visible page
+  // IntersectionObserver to track visible page and virtualized range
   useEffect(() => {
     if (!numPages || !containerRef.current) return;
 
+    const visiblePages = new Set<number>();
+
     const observer = new IntersectionObserver(
       (entries) => {
-        if (isScrollingToPage.current) return;
-        let maxRatio = 0;
-        let maxPage = 1;
         entries.forEach((entry) => {
           const pageNum = Number(entry.target.getAttribute('data-page-number'));
-          if (entry.intersectionRatio > maxRatio) {
-            maxRatio = entry.intersectionRatio;
-            maxPage = pageNum;
+          if (entry.isIntersecting) {
+            visiblePages.add(pageNum);
+          } else {
+            visiblePages.delete(pageNum);
           }
         });
-        if (maxRatio > 0) {
-          setVisiblePage(maxPage);
+
+        if (visiblePages.size > 0) {
+          const sorted = [...visiblePages].sort((a, b) => a - b);
+          // Update visible page for toolbar (only when not programmatically scrolling)
+          if (!isScrollingToPage.current) {
+            const center = sorted[Math.floor(sorted.length / 2)];
+            setVisiblePage(center);
+          }
+          // Update visible range for virtualization
+          setVisibleRange({
+            start: Math.max(1, sorted[0] - BUFFER),
+            end: Math.min(numPages, sorted[sorted.length - 1] + BUFFER),
+          });
         }
       },
-      { root: containerRef.current, threshold: [0, 0.1, 0.3, 0.5, 0.7] }
+      { root: containerRef.current, rootMargin: '200% 0px', threshold: [0] }
     );
 
     pageRefs.current.forEach((el) => {
@@ -164,7 +195,7 @@ export default function PdfViewer({ pdfUrl, currentPage, highlights, scale, scro
 
     return () => observer.disconnect();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [numPages]); // re-observe after pages render
+  }, [numPages, BUFFER]); // re-observe after pages render
 
   // Text search: use cached page text extracted once on document load.
   useEffect(() => {
@@ -197,11 +228,22 @@ export default function PdfViewer({ pdfUrl, currentPage, highlights, scale, scro
     setCurrentMatchIndex(matches.length > 0 ? 0 : -1);
   }, [debouncedSearch, validPdfUrl, numPages, textCacheVersion, setSearchMatches, setCurrentMatchIndex]);
 
-  const onDocumentLoadSuccess = (pdf: any) => {
+  const onDocumentLoadSuccess = (pdf: PDFDocumentProxy) => {
     const n = pdf.numPages;
     setNumPages(n);
     setStoreTotalPages(n);
     pageRefs.current = new Array(n).fill(null);
+
+    // Extract page aspect ratios for placeholder height estimation
+    (async () => {
+      const ratios: number[] = [];
+      for (let p = 1; p <= n; p++) {
+        const page = await pdf.getPage(p);
+        const viewport = page.getViewport({ scale: 1 });
+        ratios.push(viewport.height / viewport.width);
+      }
+      setPageAspectRatios(ratios);
+    })();
 
     if (!validPdfUrl) return;
     const runId = ++extractionRunIdRef.current;
@@ -213,7 +255,7 @@ export default function PdfViewer({ pdfUrl, currentPage, highlights, scale, scro
           const page = await pdf.getPage(p);
           const textContent = await page.getTextContent();
           const pageText = textContent.items
-            .map((item: any) => item.str || '')
+            .map((item) => (isPdfTextItemLike(item) ? item.str : ''))
             .join(' ')
             .toLowerCase();
           pages.push(pageText);
@@ -294,7 +336,7 @@ export default function PdfViewer({ pdfUrl, currentPage, highlights, scale, scro
   const pages = useMemo(() => Array.from({ length: numPages }, (_, i) => i + 1), [numPages]);
 
   return (
-    <div className={`w-full h-full flex flex-col ${isWin98 ? 'bg-[var(--win98-button-face)]' : 'bg-zinc-50 dark:bg-zinc-900'}`}>
+    <div className="w-full h-full flex flex-col bg-zinc-50 dark:bg-zinc-900">
       {numPages > 0 && (
         <PdfToolbar
           currentPage={visiblePage}
@@ -314,7 +356,7 @@ export default function PdfViewer({ pdfUrl, currentPage, highlights, scale, scro
         />
       )}
       <div
-        className={`flex-1 overflow-auto ${isWin98 ? 'win98-scrollbar win98-inset m-1 bg-[#808080]' : ''} ${grabMode ? (isDragging ? 'cursor-grabbing' : 'cursor-grab') : ''}`}
+        className={`flex-1 overflow-auto ${grabMode ? (isDragging ? 'cursor-grabbing' : 'cursor-grab') : ''}`}
         style={grabMode ? { userSelect: 'none' } : undefined}
         ref={containerRef}
         onMouseDown={handleMouseDown}
@@ -336,6 +378,22 @@ export default function PdfViewer({ pdfUrl, currentPage, highlights, scale, scro
         >
           <div className="flex flex-col items-center gap-4 py-4">
             {pages.map((pageNumber) => {
+              const isInRange = pageNumber >= visibleRange.start && pageNumber <= visibleRange.end;
+
+              if (!isInRange && pageAspectRatios.length > 0) {
+                // Placeholder with estimated height based on actual page aspect ratio
+                const aspectRatio = pageAspectRatios[pageNumber - 1] || 1.414;
+                return (
+                  <div
+                    key={pageNumber}
+                    ref={(el) => { pageRefs.current[pageNumber - 1] = el; }}
+                    data-page-number={pageNumber}
+                    className="bg-zinc-100 dark:bg-zinc-800 rounded"
+                    style={{ height: `calc(${aspectRatio} * min(100%, 800px) * ${scale})`, width: '100%', maxWidth: 800 * scale }}
+                  />
+                );
+              }
+
               const pageHighlights = highlights.filter(h => h.page === pageNumber);
               return (
                 <div

@@ -6,6 +6,7 @@ from fastapi import APIRouter, Depends, Query
 from sqlalchemy import case, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.cache import cache_get, cache_set
 from app.core.deps import get_db_session, require_admin
 from app.models.tables import (
     ChatSession,
@@ -15,16 +16,28 @@ from app.models.tables import (
     UsageRecord,
     User,
 )
+from app.schemas.admin import (
+    AdminBreakdownsResponse,
+    AdminOverviewResponse,
+    AdminRecentUsersResponse,
+    AdminTopUsersResponse,
+    AdminTrendsResponse,
+)
 
 router = APIRouter(prefix="/api/admin", tags=["admin"])
 
 
-@router.get("/overview")
+@router.get("/overview", response_model=AdminOverviewResponse)
 async def admin_overview(
     _admin: User = Depends(require_admin),
     db: AsyncSession = Depends(get_db_session),
 ):
     """Top-level KPI snapshot."""
+    cache_key = "admin:overview"
+    cached = await cache_get(cache_key)
+    if isinstance(cached, dict):
+        return cached
+
     user_stats = (
         await db.execute(
             select(
@@ -62,7 +75,7 @@ async def admin_overview(
         )
     ).one()
 
-    return {
+    payload = {
         "total_users": int(user_stats.total_users or 0),
         "paid_users": int(user_stats.paid_users or 0),
         "plus_users": int(user_stats.plus_users or 0),
@@ -74,9 +87,11 @@ async def admin_overview(
         "total_credits_spent": int(financial_stats.total_credits_spent or 0),
         "total_credits_granted": int(financial_stats.total_credits_granted or 0),
     }
+    await cache_set(cache_key, payload, ttl_seconds=60)
+    return payload
 
 
-@router.get("/trends")
+@router.get("/trends", response_model=AdminTrendsResponse)
 async def admin_trends(
     _admin: User = Depends(require_admin),
     db: AsyncSession = Depends(get_db_session),
@@ -158,7 +173,7 @@ async def admin_trends(
     }
 
 
-@router.get("/breakdowns")
+@router.get("/breakdowns", response_model=AdminBreakdownsResponse)
 async def admin_breakdowns(
     _admin: User = Depends(require_admin),
     db: AsyncSession = Depends(get_db_session),
@@ -212,11 +227,12 @@ async def admin_breakdowns(
     }
 
 
-@router.get("/recent-users")
+@router.get("/recent-users", response_model=AdminRecentUsersResponse)
 async def admin_recent_users(
     _admin: User = Depends(require_admin),
     db: AsyncSession = Depends(get_db_session),
     limit: int = Query(20, ge=1, le=100),
+    offset: int = Query(0, ge=0),
 ):
     """Latest signups with activity stats."""
     # Subqueries for per-user counts
@@ -248,6 +264,7 @@ async def admin_recent_users(
         )
         .order_by(User.created_at.desc())
         .limit(limit)
+        .offset(offset)
     )
     rows = (await db.execute(q)).all()
     return {
@@ -267,11 +284,12 @@ async def admin_recent_users(
     }
 
 
-@router.get("/top-users")
+@router.get("/top-users", response_model=AdminTopUsersResponse)
 async def admin_top_users(
     _admin: User = Depends(require_admin),
     db: AsyncSession = Depends(get_db_session),
     limit: int = Query(20, ge=1, le=100),
+    offset: int = Query(0, ge=0),
     by: str = Query("tokens", regex="^(tokens|credits|documents)$"),
 ):
     """Power users ranked by tokens, credits, or document count."""
@@ -301,6 +319,7 @@ async def admin_top_users(
             )
             .order_by(doc_count_sq.desc())
             .limit(limit)
+            .offset(offset)
         )
     else:
         order_col = UsageRecord.total_tokens if by == "tokens" else UsageRecord.cost_credits
@@ -320,6 +339,7 @@ async def admin_top_users(
             .group_by(User.id, User.email, User.name, User.plan)
             .order_by(func.coalesce(func.sum(order_col), 0).desc())
             .limit(limit)
+            .offset(offset)
         )
 
     rows = (await db.execute(q)).all()

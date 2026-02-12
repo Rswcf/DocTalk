@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import ShowcasePlayer from '../components/landing/ShowcasePlayer';
 import { useSession } from 'next-auth/react';
-import { getDocument, uploadDocument, deleteDocument, getMyDocuments, ingestUrl, getUserProfile } from '../lib/api';
+import { getDocument, uploadDocument, deleteDocument, getMyDocuments, ingestUrl } from '../lib/api';
 import type { DocumentBrief } from '../lib/api';
 import { Trash2, Link2, FileUp } from 'lucide-react';
 import { useDocTalkStore } from '../store';
@@ -22,6 +22,7 @@ import FAQ from '../components/landing/FAQ';
 import FinalCTA from '../components/landing/FinalCTA';
 import Footer from '../components/Footer';
 import ScrollReveal from '../components/landing/ScrollReveal';
+import { useUserProfile } from '../lib/useUserProfile';
 
 type StoredDoc = { document_id: string; filename?: string; createdAt: number; status?: string };
 type PlanTier = 'free' | 'plus' | 'pro';
@@ -31,6 +32,81 @@ const MAX_UPLOAD_MB_BY_PLAN: Record<PlanTier, number> = {
   plus: 50,
   pro: 100,
 };
+
+function LandingPageContent() {
+  const { t } = useLocale();
+
+  return (
+    <div className="flex flex-col min-h-screen bg-[var(--page-background)]">
+      <Header variant="minimal" />
+
+      <HeroSection />
+
+      {/* Product Showcase */}
+      <ScrollReveal direction="up" delay={100}>
+        <section className="w-full px-4 sm:px-8 lg:px-16 py-24">
+          <div className="border-t border-zinc-200 dark:border-zinc-800 pt-12 max-w-6xl mx-auto">
+            <h2 className="font-display font-medium text-3xl tracking-tight text-zinc-900 dark:text-zinc-50 text-center mb-8">
+              {t('landing.showcase.title')}
+            </h2>
+          </div>
+          <div className="relative max-w-6xl mx-auto">
+            {/* Accent glow behind showcase */}
+            <div
+              aria-hidden="true"
+              className="glow-accent absolute -inset-8 blur-2xl opacity-60 pointer-events-none"
+            />
+            <div className="relative rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-2xl overflow-hidden">
+              {/* macOS window chrome */}
+              <div className="flex items-center px-4 py-3 bg-zinc-100 dark:bg-zinc-800 border-b border-zinc-200 dark:border-zinc-700">
+                {/* Traffic lights */}
+                <div className="flex items-center gap-2">
+                  <span aria-hidden="true" className="w-3 h-3 rounded-full bg-red-400" />
+                  <span aria-hidden="true" className="w-3 h-3 rounded-full bg-yellow-400" />
+                  <span aria-hidden="true" className="w-3 h-3 rounded-full bg-green-400" />
+                </div>
+                {/* Fake URL bar */}
+                <div className="flex-1 flex justify-center">
+                  <div className="bg-zinc-200 dark:bg-zinc-700 rounded-md px-4 py-1">
+                    <span className="text-xs text-zinc-400 dark:text-zinc-500 select-none">doctalk.site</span>
+                  </div>
+                </div>
+                {/* Spacer to balance traffic lights */}
+                <div className="w-[52px]" aria-hidden="true" />
+              </div>
+              <div className="aspect-video bg-zinc-50 dark:bg-zinc-900 relative">
+                <ShowcasePlayer />
+              </div>
+            </div>
+          </div>
+          {/* Caption */}
+          <p className="mt-4 text-center text-sm text-zinc-400 dark:text-zinc-500">
+            {t('landing.showcase.caption')}
+          </p>
+        </section>
+      </ScrollReveal>
+
+      <HowItWorks />
+
+      <FeatureGrid />
+
+      <SocialProof />
+
+      <SecuritySection />
+
+      <FAQ />
+
+      <FinalCTA />
+
+      {/* Privacy Badge */}
+      <section className="py-8 flex justify-center">
+        <PrivacyBadge />
+      </section>
+
+      <Footer />
+    </div>
+  );
+}
 
 export default function HomePage() {
   const router = useRouter();
@@ -48,8 +124,8 @@ export default function HomePage() {
   const [urlInput, setUrlInput] = useState('');
   const [urlLoading, setUrlLoading] = useState(false);
   const [urlError, setUrlError] = useState('');
-  const [userPlan, setUserPlan] = useState<PlanTier>('free');
   const isLoggedIn = status === 'authenticated';
+  const { profile } = useUserProfile();
 
   useEffect(() => {
     const docs = JSON.parse(localStorage.getItem('doctalk_docs') || '[]') as StoredDoc[];
@@ -62,27 +138,10 @@ export default function HomePage() {
     }
   }, [isLoggedIn]);
 
-  useEffect(() => {
-    if (!isLoggedIn) {
-      setUserPlan('free');
-      return;
-    }
-
-    let mounted = true;
-    getUserProfile()
-      .then((profile) => {
-        if (!mounted) return;
-        const plan: PlanTier = profile.plan === 'plus' || profile.plan === 'pro' ? profile.plan : 'free';
-        setUserPlan(plan);
-      })
-      .catch(() => {
-        if (mounted) setUserPlan('free');
-      });
-
-    return () => {
-      mounted = false;
-    };
-  }, [isLoggedIn]);
+  const userPlan: PlanTier = useMemo(() => {
+    if (!isLoggedIn) return 'free';
+    return profile?.plan === 'plus' || profile?.plan === 'pro' ? profile.plan : 'free';
+  }, [isLoggedIn, profile?.plan]);
 
   const allDocs = useMemo(() => {
     const serverIds = new Set(serverDocs.map((d) => d.id));
@@ -225,7 +284,9 @@ export default function HomePage() {
     setDeletingId(documentId);
     try {
       await deleteDocument(documentId);
-    } catch {}
+    } catch (e) {
+      console.error('Failed to delete document:', e);
+    }
 
     const docs: StoredDoc[] = JSON.parse(localStorage.getItem('doctalk_docs') || '[]');
     const next = docs.filter((x) => x.document_id !== documentId);
@@ -238,90 +299,17 @@ export default function HomePage() {
 
   /* --- Loading guard (prevents flash of wrong content) --- */
   if (status === 'loading') {
-    return (
-      <div className="min-h-screen bg-white dark:bg-zinc-950 flex items-center justify-center">
-        <div className="animate-pulse text-zinc-400">{t('common.loading') || 'Loading...'}</div>
-      </div>
-    );
+    return <LandingPageContent />;
   }
 
   /* --- Logged-out landing page --- */
   if (!isLoggedIn) {
-    return (
-      <div className="flex flex-col min-h-screen bg-white dark:bg-zinc-950">
-        <Header variant="minimal" />
-
-        <HeroSection />
-
-        {/* Product Showcase */}
-        <ScrollReveal direction="up" delay={100}>
-          <section className="w-full px-4 sm:px-8 lg:px-16 py-24">
-            <div className="border-t border-zinc-200 dark:border-zinc-800 pt-12 max-w-6xl mx-auto">
-              <h2 className="font-display font-medium text-3xl tracking-tight text-zinc-900 dark:text-zinc-50 text-center mb-8">
-                {t('landing.showcase.title')}
-              </h2>
-            </div>
-            <div className="relative max-w-6xl mx-auto">
-              {/* Accent glow behind showcase */}
-              <div
-                aria-hidden="true"
-                className="glow-accent absolute -inset-8 blur-2xl opacity-60 pointer-events-none"
-              />
-              <div className="relative rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-2xl overflow-hidden">
-                {/* macOS window chrome */}
-                <div className="flex items-center px-4 py-3 bg-zinc-100 dark:bg-zinc-800 border-b border-zinc-200 dark:border-zinc-700">
-                  {/* Traffic lights */}
-                  <div className="flex items-center gap-2">
-                    <span aria-hidden="true" className="w-3 h-3 rounded-full bg-red-400" />
-                    <span aria-hidden="true" className="w-3 h-3 rounded-full bg-yellow-400" />
-                    <span aria-hidden="true" className="w-3 h-3 rounded-full bg-green-400" />
-                  </div>
-                  {/* Fake URL bar */}
-                  <div className="flex-1 flex justify-center">
-                    <div className="bg-zinc-200 dark:bg-zinc-700 rounded-md px-4 py-1">
-                      <span className="text-xs text-zinc-400 dark:text-zinc-500 select-none">doctalk.site</span>
-                    </div>
-                  </div>
-                  {/* Spacer to balance traffic lights */}
-                  <div className="w-[52px]" aria-hidden="true" />
-                </div>
-                <div className="aspect-video bg-zinc-50 dark:bg-zinc-900 relative">
-                  <ShowcasePlayer />
-                </div>
-              </div>
-            </div>
-            {/* Caption */}
-            <p className="mt-4 text-center text-sm text-zinc-400 dark:text-zinc-500">
-              {t('landing.showcase.caption')}
-            </p>
-          </section>
-        </ScrollReveal>
-
-        <HowItWorks />
-
-        <FeatureGrid />
-
-        <SocialProof />
-
-        <SecuritySection />
-
-        <FAQ />
-
-        <FinalCTA />
-
-        {/* Privacy Badge */}
-        <section className="py-8 flex justify-center">
-          <PrivacyBadge />
-        </section>
-
-        <Footer />
-      </div>
-    );
+    return <LandingPageContent />;
   }
 
   /* --- Logged-in dashboard --- */
   return (
-    <div className="flex flex-col min-h-screen bg-white dark:bg-zinc-950">
+    <div className="flex flex-col min-h-screen bg-[var(--page-background)]">
       <Header variant="full" />
       <main className="flex-1 flex flex-col items-center p-6 sm:p-8 gap-10">
         <div className="max-w-4xl w-full">
@@ -413,7 +401,7 @@ export default function HomePage() {
                 return (
                   <div
                     key={d.document_id}
-                    className="p-5 rounded-xl border border-zinc-100 dark:border-zinc-800 shadow-sm hover:shadow-md transition-shadow flex items-center justify-between"
+                    className="p-5 rounded-xl border border-zinc-100 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-shadow transition-transform duration-200 flex items-center justify-between"
                   >
                     <Link href={`/d/${d.document_id}`} className="flex-1 min-w-0 focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:rounded-lg">
                       <div className="font-medium text-zinc-900 dark:text-zinc-100 flex items-center gap-2 min-w-0">

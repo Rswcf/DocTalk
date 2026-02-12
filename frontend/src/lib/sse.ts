@@ -10,6 +10,10 @@ type CitationPayload = {
   text_snippet: string;
   offset: number;
 };
+type CitationEventPayload = CitationPayload & {
+  document_id?: string;
+  document_filename?: string;
+};
 type ErrorPayload = { code: string; message: string };
 type DonePayload = { message_id: string };
 
@@ -66,13 +70,13 @@ export async function chatStream(
 
         if (!dataStr) continue;
         try {
-          const data = JSON.parse(dataStr);
+          const data = JSON.parse(dataStr) as Record<string, unknown>;
           switch (eventName) {
             case 'token':
-              onToken({ text: data.text || '' });
+              onToken({ text: typeof data.text === 'string' ? data.text : '' });
               break;
             case 'citation': {
-              const p: CitationPayload = data;
+              const p = data as CitationEventPayload;
               const c: Citation = {
                 refIndex: p.ref_index,
                 chunkId: p.chunk_id,
@@ -80,16 +84,19 @@ export async function chatStream(
                 bboxes: p.bboxes || [],
                 textSnippet: p.text_snippet || '',
                 offset: p.offset ?? 0,
-                documentId: (data as any).document_id || undefined,
-                documentFilename: (data as any).document_filename || undefined,
+                documentId: typeof p.document_id === 'string' ? p.document_id : undefined,
+                documentFilename: typeof p.document_filename === 'string' ? p.document_filename : undefined,
               };
               onCitation(c);
               break; }
             case 'error':
-              onError({ code: data.code || 'unknown', message: data.message || 'Unknown error' });
+              onError({
+                code: typeof data.code === 'string' ? data.code : 'unknown',
+                message: typeof data.message === 'string' ? data.message : 'Unknown error',
+              });
               break;
             case 'done':
-              onDone({ message_id: data.message_id });
+              onDone({ message_id: typeof data.message_id === 'string' ? data.message_id : '' });
               break;
             default:
               // ignore pings and unknown events

@@ -19,6 +19,12 @@ const cspDirectives = [
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
+  images: {
+    remotePatterns: [
+      { protocol: "https", hostname: "lh3.googleusercontent.com", pathname: "/**" },
+      { protocol: "https", hostname: "graph.microsoft.com", pathname: "/**" },
+    ],
+  },
   webpack: (config) => {
     // pdf.js requires 'canvas' on server side — stub it out for Next.js
     config.resolve.alias.canvas = false;

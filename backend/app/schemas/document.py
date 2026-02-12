@@ -47,3 +47,26 @@ class DocumentBrief(BaseModel):
     filename: str
     status: str
     created_at: Optional[str] = None
+
+
+class DemoDocumentResponse(BaseModel):
+    slug: Optional[str] = None
+    document_id: str
+    filename: str
+    status: str
+
+
+class DocumentIngestResponse(BaseModel):
+    document_id: str
+    status: str
+    filename: str
+
+
+class DocumentTextPage(BaseModel):
+    page_number: int
+    text: str
+
+
+class DocumentTextContentResponse(BaseModel):
+    file_type: str
+    pages: list[DocumentTextPage]

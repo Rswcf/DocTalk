@@ -4,7 +4,7 @@ import json
 import uuid
 from typing import AsyncGenerator, Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from fastapi.responses import JSONResponse, StreamingResponse
 from sqlalchemy import asc, desc, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -22,6 +22,7 @@ from app.models.tables import ChatSession, Collection, Document, Message, User
 from app.schemas.chat import (
     ChatMessageResponse,
     ChatRequest,
+    SessionCreateResponse,
     SessionListItem,
     SessionListResponse,
     SessionMessagesResponse,
@@ -33,7 +34,7 @@ from app.services.chat_service import chat_service
 DEMO_MESSAGE_LIMIT = 5
 DEMO_MAX_SESSIONS_PER_DOC = 500
 
-chat_router = APIRouter(tags=["chat"])
+chat_router = APIRouter(prefix="/api", tags=["chat"])
 
 
 def _get_client_ip(request: Request) -> str:
@@ -94,7 +95,11 @@ async def verify_document_access(
     return doc
 
 
-@chat_router.post("/documents/{document_id}/sessions", status_code=status.HTTP_201_CREATED)
+@chat_router.post(
+    "/documents/{document_id}/sessions",
+    status_code=status.HTTP_201_CREATED,
+    response_model=SessionCreateResponse,
+)
 async def create_session(
     document_id: uuid.UUID,
     request: Request,
@@ -150,7 +155,7 @@ async def create_session(
     # across different demo documents (limit is global per IP).
     if user is None and doc.demo_slug:
         client_ip = _get_client_ip(request)
-        used = demo_message_tracker.get_count(client_ip)
+        used = await demo_message_tracker.get_count(client_ip)
         return JSONResponse(
             status_code=201,
             content={**response.model_dump(mode="json"), "demo_messages_used": used},
@@ -197,45 +202,44 @@ async def chat_stream(
     # Verify session access
     session = await verify_session_access(session_id, user, db)
     if not session:
-        return JSONResponse(status_code=404, content={"detail": "Session not found"})
+        raise HTTPException(status_code=404, detail="Session not found")
 
     # Block chat if document is not fully processed
     if session.document and session.document.status != "ready":
-        return JSONResponse(
+        raise HTTPException(
             status_code=409,
-            content={"detail": "Document is still being processed", "status": session.document.status},
+            detail={"message": "Document is still being processed", "status": session.document.status},
         )
 
     # Rate limit anonymous users
     if user is None:
         client_ip = _get_client_ip(request)
-        if not demo_chat_limiter.is_allowed(client_ip):
+        if not await demo_chat_limiter.is_allowed(client_ip):
             log_security_event("demo_rate_limit", ip=client_ip, session_id=session_id)
-            return JSONResponse(
+            raise HTTPException(
                 status_code=429,
-                content={"detail": "Rate limit exceeded", "retry_after": 60},
+                detail={"message": "Rate limit exceeded", "retry_after": 60},
                 headers={"Retry-After": "60"},
             )
     else:
         # Rate limit authenticated users (30 req/min per user)
-        if not auth_chat_limiter.is_allowed(str(user.id)):
-            return JSONResponse(
+        if not await auth_chat_limiter.is_allowed(str(user.id)):
+            raise HTTPException(
                 status_code=429,
-                content={"detail": "Rate limit exceeded", "retry_after": 60},
+                detail={"message": "Rate limit exceeded", "retry_after": 60},
                 headers={"Retry-After": "60"},
             )
 
-    # Enforce message limit for anonymous users on demo documents
-    # Uses in-memory IP tracker (global across ALL demo docs) to survive
-    # session recreation (hard refresh) and document switching.
+    # Enforce message limit for anonymous users on demo documents.
+    # Tracker key is global per IP across demo docs and survives session recreation.
     if user is None and session.document and session.document.demo_slug:
-        if demo_message_tracker.get_count(client_ip) >= DEMO_MESSAGE_LIMIT:
+        if await demo_message_tracker.get_count(client_ip) >= DEMO_MESSAGE_LIMIT:
             log_security_event("demo_message_limit", ip=client_ip, document_id=session.document_id)
-            return JSONResponse(
+            raise HTTPException(
                 status_code=429,
-                content={"detail": "Demo message limit reached", "limit": DEMO_MESSAGE_LIMIT},
+                detail={"message": "Demo message limit reached", "limit": DEMO_MESSAGE_LIMIT},
             )
-        demo_message_tracker.increment(client_ip)
+        await demo_message_tracker.increment(client_ip)
 
     # If authenticated, ensure sufficient credits before opening stream
     if user is not None:
@@ -247,10 +251,10 @@ async def chat_stream(
         estimated_cost = credit_service.get_estimated_cost(effective_mode)
         balance = await credit_service.get_user_credits(db, user.id)
         if balance < estimated_cost:
-            return JSONResponse(
+            raise HTTPException(
                 status_code=402,
-                content={
-                    "detail": "Insufficient credits",
+                detail={
+                    "message": "Insufficient credits",
                     "required": estimated_cost,
                     "balance": balance,
                 },
@@ -280,6 +284,8 @@ async def chat_stream(
 @chat_router.get("/documents/{document_id}/sessions", response_model=SessionListResponse)
 async def list_sessions(
     document_id: uuid.UUID,
+    limit: int = Query(10, ge=1, le=100),
+    offset: int = Query(0, ge=0),
     user: Optional[User] = Depends(get_current_user_optional),
     db: AsyncSession = Depends(get_db_session),
 ):
@@ -309,7 +315,8 @@ async def list_sessions(
         .where(ChatSession.document_id == document_id)
         .group_by(ChatSession.id, ChatSession.title, ChatSession.created_at)
         .order_by(desc(last_activity))
-        .limit(10)
+        .limit(limit)
+        .offset(offset)
     )
     result = await db.execute(stmt)
     rows = result.all()

@@ -41,7 +41,9 @@ export default function LocaleProvider({ children }: { children: React.ReactNode
     setLocaleState(l);
     try {
       localStorage.setItem('doctalk_locale', l);
-    } catch {}
+    } catch {
+      // localStorage unavailable in private browsing
+    }
   }, []);
 
   useEffect(() => {

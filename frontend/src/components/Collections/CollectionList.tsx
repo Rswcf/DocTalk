@@ -26,7 +26,7 @@ export default function CollectionList({ collections, onDelete, deletingId }: Pr
       {collections.map((c) => (
         <div
           key={c.id}
-          className="p-5 rounded-xl border border-zinc-100 dark:border-zinc-800 shadow-sm hover:shadow-md transition-shadow cursor-pointer flex items-center justify-between"
+          className="p-5 rounded-xl border border-zinc-100 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-shadow transition-transform duration-200 cursor-pointer flex items-center justify-between"
         >
           <Link href={`/collections/${c.id}`} className="flex-1 min-w-0 focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:rounded-lg">
             <div className="flex items-center gap-3">

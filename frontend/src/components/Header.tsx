@@ -2,7 +2,6 @@
 
 import React from 'react';
 import { ArrowLeft, FolderOpen } from 'lucide-react';
-import { useTheme } from 'next-themes';
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { useDocTalkStore } from '../store';
@@ -25,21 +24,16 @@ export default function Header({ variant = 'full', isDemo, isLoggedIn }: HeaderP
   const documentName = useDocTalkStore((s) => s.documentName);
   const lastDocumentId = useDocTalkStore((s) => s.lastDocumentId);
   const lastDocumentName = useDocTalkStore((s) => s.lastDocumentName);
-  const { resolvedTheme } = useTheme();
   const { t } = useLocale();
   const pathname = usePathname();
   const isDocumentPage = pathname?.startsWith('/d/');
   const isMinimal = variant === 'minimal';
 
-  const isWin98 = resolvedTheme === 'win98';
-
   return (
     <header className={`h-14 flex items-center px-4 sm:px-6 gap-3 min-w-0 shrink-0 sticky top-0 z-30 ${
       isMinimal
         ? 'bg-transparent'
-        : isWin98
-          ? 'border-b-2 border-b-[var(--win98-button-highlight)] bg-[var(--win98-button-face)] text-black text-[11px]'
-          : 'border-b border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950'
+        : 'border-b border-zinc-200 dark:border-zinc-800 bg-[var(--page-background)]'
     }`}>
       <Link href="/" className="font-logo font-semibold text-xl text-zinc-900 dark:text-zinc-100 hover:text-zinc-600 dark:hover:text-zinc-300 transition-colors shrink-0 focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:rounded-sm inline-flex items-center gap-2">
         <DocTalkLogo size={26} />
@@ -59,7 +53,7 @@ export default function Header({ variant = 'full', isDemo, isLoggedIn }: HeaderP
           aria-label={t('header.backToDocument')}
         >
           <ArrowLeft aria-hidden="true" size={14} className="shrink-0" />
-          <span className="max-w-[160px] truncate">{lastDocumentName}</span>
+          <span className="max-w-[120px] sm:max-w-[200px] md:max-w-[300px] truncate">{lastDocumentName}</span>
         </Link>
       )}
       {!isMinimal && !isDocumentPage && (
@@ -73,10 +67,10 @@ export default function Header({ variant = 'full', isDemo, isLoggedIn }: HeaderP
       )}
       <div className="ml-auto flex items-center gap-1 sm:gap-2 shrink-0">
         {!isMinimal && !(isDemo && !isLoggedIn) && <ModeSelector />}
-        {!isMinimal && <ThemeSelector />}
+        {!isMinimal && <div className="hidden sm:flex"><ThemeSelector /></div>}
         {!isMinimal && <div className="hidden sm:block"><CreditsDisplay /></div>}
         <UserMenu />
-        <LanguageSelector />
+        <div className="hidden sm:flex"><LanguageSelector /></div>
       </div>
     </header>
   );

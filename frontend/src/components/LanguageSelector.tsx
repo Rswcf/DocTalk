@@ -4,13 +4,10 @@ import { useEffect, useRef, useState, useCallback } from 'react';
 import { Globe, ChevronDown, Check } from 'lucide-react';
 import { LOCALES } from '../i18n';
 import { useLocale } from '../i18n';
-import { useTheme } from 'next-themes';
 import { useDropdownKeyboard } from '../lib/useDropdownKeyboard';
 
 export default function LanguageSelector() {
   const { locale, setLocale, t } = useLocale();
-  const { resolvedTheme } = useTheme();
-  const isWin98 = resolvedTheme === 'win98';
   const [open, setOpen] = useState(false);
   const [focusIndex, setFocusIndex] = useState(-1);
   const [menuPos, setMenuPos] = useState<{ top: number; right: number }>({ top: 0, right: 0 });
@@ -77,19 +74,15 @@ export default function LanguageSelector() {
         ref={triggerRef}
         type="button"
         onClick={toggle}
-        className={`flex items-center gap-1.5 px-2 py-1 rounded-md text-sm transition-colors focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:ring-offset-2 ${
-          isWin98
-            ? 'win98-button'
-            : 'border border-zinc-200 text-zinc-700 dark:border-zinc-700 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 dark:focus-visible:ring-zinc-500 dark:focus-visible:ring-offset-zinc-900'
-        }`}
+        className="flex items-center gap-1.5 px-2 py-1 rounded-md text-sm transition-colors focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:ring-offset-2 border border-zinc-200 text-zinc-700 dark:border-zinc-700 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 dark:focus-visible:ring-zinc-500 dark:focus-visible:ring-offset-zinc-900"
         title={t('header.language')}
         aria-haspopup="listbox"
         aria-expanded={open}
         aria-label="Select language"
       >
-        <Globe aria-hidden="true" size={isWin98 ? 14 : 16} />
-        <span className={isWin98 ? '' : 'hidden sm:inline'}>{(current?.code || 'en').toUpperCase()}</span>
-        <ChevronDown aria-hidden="true" size={isWin98 ? 10 : 14} className="opacity-70" />
+        <Globe aria-hidden="true" size={16} />
+        <span className="hidden sm:inline">{(current?.code || 'en').toUpperCase()}</span>
+        <ChevronDown aria-hidden="true" size={14} className="opacity-70" />
       </button>
       {open && (
         <div

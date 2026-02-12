@@ -1,244 +1,51 @@
 "use client";
 
-import React, { useEffect, useState, useRef, useCallback } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { useSession } from 'next-auth/react';
 import { PdfViewer } from '../../../components/PdfViewer';
 import TextViewer from '../../../components/TextViewer/TextViewer';
 import { ChatPanel } from '../../../components/Chat';
 import Header from '../../../components/Header';
 import CustomInstructionsModal from '../../../components/CustomInstructionsModal';
-import { listSessions, createSession, getDocument, getDocumentFileUrl, getConvertedFileUrl, getMessages, updateDocumentInstructions, getUserProfile } from '../../../lib/api';
+import { updateDocumentInstructions } from '../../../lib/api';
 import { useDocTalkStore } from '../../../store';
-import type { UserProfile } from '../../../types';
 import { Panel, Group, Separator } from 'react-resizable-panels';
 import { useLocale } from '../../../i18n';
-import { sanitizeFilename } from '../../../lib/utils';
 import { usePageTitle } from '../../../lib/usePageTitle';
-
-import { Presentation, FileText } from 'lucide-react';
-import { useWin98Theme } from '../../../components/win98/useWin98Theme';
-import { Win98Window } from '../../../components/win98/Win98Window';
-import { Win98Taskbar } from '../../../components/win98/Win98Taskbar';
-import { ChatIcon, DocumentIcon, CreditIcon } from '../../../components/win98/Win98Icons';
-import { CreditsDisplay } from '../../../components/CreditsDisplay';
-import ThemeSelector from '../../../components/ThemeSelector';
-import LanguageSelector from '../../../components/LanguageSelector';
+import { Presentation, FileText, MessageSquare } from 'lucide-react';
+import { useDocumentLoader } from '../../../lib/useDocumentLoader';
+import { useChatSession } from '../../../lib/useChatSession';
+import { useUserPlanProfile } from '../../../lib/useUserPlanProfile';
+import type { Citation } from '../../../types';
+import { shouldShowTour, startOnboardingTour } from '../../../lib/onboarding';
 
 export default function DocumentReaderPage() {
   const params = useParams<{ documentId: string }>();
   const documentId = params?.documentId as string;
   const router = useRouter();
-  const { status: authStatus } = useSession();
-  const isLoggedIn = authStatus === 'authenticated';
-  const [error, setError] = useState<string | null>(null);
-  const [isDemo, setIsDemo] = useState(false);
-  const [fileType, setFileType] = useState<string>('pdf');
-  const [hasConvertedPdf, setHasConvertedPdf] = useState(false);
-  const [convertedPdfUrl, setConvertedPdfUrl] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<'slide' | 'text'>('slide');
+  const [mobileTab, setMobileTab] = useState<'chat' | 'document'>('chat');
   const { t } = useLocale();
-  const {
-    pdfUrl,
-    currentPage,
-    highlights,
-    highlightSnippet,
-    scale,
-    scrollNonce,
-    setPdfUrl,
-    setDocument,
-    setDocumentName,
-    setDocumentStatus,
-    setSessionId,
-    setSessions,
-    addSession,
-    setMessages,
-    sessionId,
-    navigateToCitation,
-    setLastDocument,
-    setDocumentSummary,
-    setSuggestedQuestions,
-    setDemoMessagesUsed,
-  } = useDocTalkStore();
+  const { pdfUrl, currentPage, highlights, highlightSnippet, scale, scrollNonce, sessionId, navigateToCitation } = useDocTalkStore();
 
   const documentName = useDocTalkStore((s) => s.documentName);
   const suggestedQuestions = useDocTalkStore((s) => s.suggestedQuestions);
+  const documentStatus = useDocTalkStore((s) => s.documentStatus);
   const [showInstructions, setShowInstructions] = useState(false);
-  const [customInstructions, setCustomInstructions] = useState<string | null>(null);
-  const [profile, setProfile] = useState<UserProfile | null>(null);
-  const isWin98 = useWin98Theme();
-
-  const totalPages = useDocTalkStore((s) => s.totalPages);
-  const selectedMode = useDocTalkStore((s) => s.selectedMode);
+  const {
+    error: loaderError,
+    isDemo,
+    fileType,
+    hasConvertedPdf,
+    convertedPdfUrl,
+    customInstructions,
+    setCustomInstructions,
+  } = useDocumentLoader(documentId);
+  const { sessionError } = useChatSession(documentId);
+  const { isLoggedIn, userPlan, canUseCustomInstructions } = useUserPlanProfile();
+  const error = loaderError || sessionError;
 
   usePageTitle(documentName || undefined);
-
-  // Win98 splitter state
-  const [splitterPos, setSplitterPos] = useState(45);
-  const win98ContainerRef = useRef<HTMLDivElement>(null);
-  const win98Dragging = useRef(false);
-
-  const onWin98SplitterDown = useCallback(() => {
-    win98Dragging.current = true;
-  }, []);
-
-  useEffect(() => {
-    if (!isWin98) return;
-    function onMouseMove(e: MouseEvent) {
-      if (!win98Dragging.current || !win98ContainerRef.current) return;
-      const rect = win98ContainerRef.current.getBoundingClientRect();
-      const percent = ((e.clientX - rect.left) / rect.width) * 100;
-      setSplitterPos(Math.max(20, Math.min(80, percent)));
-    }
-    function onMouseUp() {
-      win98Dragging.current = false;
-    }
-    window.addEventListener('mousemove', onMouseMove);
-    window.addEventListener('mouseup', onMouseUp);
-    return () => {
-      window.removeEventListener('mousemove', onMouseMove);
-      window.removeEventListener('mouseup', onMouseUp);
-    };
-  }, [isWin98]);
-
-  // Fetch profile for plan gating
-  useEffect(() => {
-    if (!isLoggedIn) return;
-    getUserProfile().then(setProfile).catch((e) => console.error('Failed to load profile:', e));
-  }, [isLoggedIn]);
-
-  const documentStatus = useDocTalkStore((s) => s.documentStatus);
-
-  // Effect 1: Initial load + polling until ready/error
-  useEffect(() => {
-    if (!documentId) return;
-    setDocument(documentId);
-
-    let intervalId: NodeJS.Timeout | null = null;
-    let cancelled = false;
-
-    const fetchStatus = async () => {
-      try {
-        const info = await getDocument(documentId);
-        if (cancelled) return;
-        setDocumentStatus(info.status);
-        if (info.is_demo) setIsDemo(true);
-        if (info.file_type) setFileType(info.file_type);
-        if (info.filename) {
-          const safeName = sanitizeFilename(info.filename);
-          setDocumentName(safeName);
-          setLastDocument(documentId, safeName);
-        }
-        if (info.status === 'error') {
-          setError(info.error_msg || t('upload.error'));
-          if (intervalId) clearInterval(intervalId);
-          return;
-        }
-        if (info.status === 'ready') {
-          if (info.summary) setDocumentSummary(info.summary);
-          if (info.suggested_questions) setSuggestedQuestions(info.suggested_questions);
-          if (info.custom_instructions !== undefined) setCustomInstructions(info.custom_instructions ?? null);
-          if (info.has_converted_pdf) {
-            setHasConvertedPdf(true);
-            // Fetch converted PDF URL for visual rendering
-            getConvertedFileUrl(documentId).then((file) => {
-              if (!cancelled) setConvertedPdfUrl(file.url);
-            }).catch((e) => console.error('Failed to load converted PDF:', e));
-          }
-          if (intervalId) clearInterval(intervalId);
-          return;
-        }
-      } catch (e: any) {
-        if (cancelled) return;
-        const msg = String(e?.message || e || '');
-        if (msg.includes('HTTP 404')) {
-          setError(t('doc.notFound'));
-        } else {
-          setError(t('doc.loadError'));
-        }
-        if (intervalId) clearInterval(intervalId);
-      }
-    };
-
-    // Fetch PDF file URL immediately (independent of status)
-    (async () => {
-      try {
-        const file = await getDocumentFileUrl(documentId);
-        if (!cancelled) setPdfUrl(file.url);
-      } catch {
-        // PdfViewer shows its own error
-      }
-    })();
-
-    // Initial fetch + start polling
-    fetchStatus();
-    intervalId = setInterval(fetchStatus, 3000);
-
-    return () => {
-      cancelled = true;
-      if (intervalId) clearInterval(intervalId);
-    };
-  }, [documentId]);
-
-  // Effect 2: Session setup when document is ready
-  useEffect(() => {
-    if (!documentId || documentStatus !== 'ready') return;
-
-    let cancelled = false;
-
-    (async () => {
-      let sessionReady = false;
-      try {
-        const sessionsData = await listSessions(documentId);
-        if (cancelled) return;
-        setSessions(sessionsData.sessions);
-        if (sessionsData.sessions.length > 0) {
-          const latest = sessionsData.sessions[0];
-          setSessionId(latest.session_id);
-          const msgsData = await getMessages(latest.session_id);
-          if (!cancelled) setMessages(msgsData.messages);
-          sessionReady = true;
-        }
-      } catch (e) {
-        console.error('Failed to load sessions, falling back to create:', e);
-      }
-      if (!sessionReady && !cancelled) {
-        try {
-          const s = await createSession(documentId);
-          if (cancelled) return;
-          setSessionId(s.session_id);
-          if (s.demo_messages_used != null) {
-            setDemoMessagesUsed(s.demo_messages_used);
-          }
-          const now = s.created_at || new Date().toISOString();
-          addSession({
-            session_id: s.session_id,
-            title: null,
-            message_count: 0,
-            created_at: now,
-            last_activity_at: now,
-          });
-          // Inject synthetic summary message if available
-          const summary = useDocTalkStore.getState().documentSummary;
-          if (summary) {
-            setMessages([{
-              id: 'summary_synthetic',
-              role: 'assistant',
-              text: summary,
-              createdAt: Date.now(),
-            }]);
-          } else {
-            setMessages([]);
-          }
-        } catch (e) {
-          console.error('Failed to create session:', e);
-          if (!cancelled) setError('Failed to initialize chat session.');
-        }
-      }
-    })();
-
-    return () => { cancelled = true; };
-  }, [documentId, documentStatus]);
 
   // Determine which viewer to use:
   // - Native PDF: always PdfViewer with original URL
@@ -248,7 +55,7 @@ export default function DocumentReaderPage() {
   const showViewToggle = hasConvertedPdf && fileType !== 'pdf';
 
   const viewToggle = showViewToggle ? (
-    <div className={`flex items-center gap-1 px-2 py-1 border-b ${isWin98 ? 'bg-[var(--win98-button-face)] border-[var(--win98-button-shadow)]' : 'bg-zinc-100 dark:bg-zinc-800 border-zinc-200 dark:border-zinc-700'}`}>
+    <div className="flex items-center gap-1 px-2 py-1 border-b bg-zinc-100 dark:bg-zinc-800 border-zinc-200 dark:border-zinc-700">
       <button
         onClick={() => setViewMode('slide')}
         className={`flex items-center gap-1 px-2 py-1 rounded text-xs transition-colors ${viewMode === 'slide' ? 'bg-zinc-900 text-white dark:bg-zinc-50 dark:text-zinc-900' : 'text-zinc-600 dark:text-zinc-400 hover:bg-zinc-200 dark:hover:bg-zinc-700'}`}
@@ -295,158 +102,57 @@ export default function DocumentReaderPage() {
         ? t('status.ocr')
         : t('status.processing');
 
+  const handleCitationClick = useCallback((citation: Citation) => {
+    navigateToCitation(citation);
+    if (typeof window !== 'undefined' && window.innerWidth < 640) {
+      setMobileTab('document');
+    }
+  }, [navigateToCitation]);
+
   const chatContent = documentStatus === 'ready' && sessionId ? (
-    <ChatPanel sessionId={sessionId} onCitationClick={navigateToCitation} maxUserMessages={isDemo && !isLoggedIn ? 5 : undefined} suggestedQuestions={suggestedQuestions.length > 0 ? suggestedQuestions : undefined} onOpenSettings={profile?.plan === 'pro' ? () => setShowInstructions(true) : undefined} hasCustomInstructions={!!customInstructions} userPlan={profile?.plan || (isLoggedIn ? 'free' : undefined)} />
+    <ChatPanel sessionId={sessionId} onCitationClick={handleCitationClick} maxUserMessages={isDemo && !isLoggedIn ? 5 : undefined} suggestedQuestions={suggestedQuestions.length > 0 ? suggestedQuestions : undefined} onOpenSettings={canUseCustomInstructions ? () => setShowInstructions(true) : undefined} hasCustomInstructions={!!customInstructions} userPlan={userPlan} />
   ) : documentStatus !== 'ready' && !error ? (
-    <div className={`h-full w-full flex flex-col items-center justify-center gap-3 ${isWin98 ? 'text-[var(--win98-dark-gray)] text-[11px]' : 'text-zinc-500'}`} role="status">
-      <div className={isWin98 ? 'text-[11px]' : 'animate-spin motion-reduce:animate-none rounded-full h-8 w-8 border-2 border-zinc-300 border-t-zinc-600'}>
-        {isWin98 ? 'Loading...' : null}
-      </div>
-      <p className={isWin98 ? '' : 'text-sm'}>{t('doc.processing')}</p>
-      <p className={isWin98 ? 'opacity-80' : 'text-xs text-zinc-400 dark:text-zinc-500'}>{processingStatusText}</p>
-    </div>
-  ) : (
-    <div className={`h-full w-full flex items-center justify-center ${isWin98 ? 'text-[var(--win98-dark-gray)] text-[11px]' : 'text-zinc-500'}`}>{t('doc.initChat')}</div>
-  );
-
-  if (isWin98) {
-    const taskbarItems = [
-      {
-        id: 'doctalk',
-        title: `DocTalk - ${documentName || 'Document'}`,
-        icon: <ChatIcon size={14} />,
-        active: true,
-      },
-    ];
-
-    return (
-      <div className="h-screen w-screen flex flex-col overflow-hidden" style={{ background: '#008080' }}>
-        {/* Desktop area */}
-        <div className="flex-1 relative min-h-0">
-          <div className="absolute inset-0" style={{ zIndex: 10 }}>
-            <Win98Window
-              title={`DocTalk - ${documentName || 'Document'}`}
-              icon={<ChatIcon size={14} />}
-              active={true}
-              onMinimize={() => {}}
-              onMaximize={() => {}}
-              onClose={() => router.push('/')}
-              menuItems={['File', 'Edit', 'View', 'Tools', 'Help']}
-              className="w-full h-full"
-              toolbar={
-                <div className="flex items-center gap-2 text-[11px]">
-                  <button
-                    className="win98-button text-[11px] px-2 py-0 h-[18px] shrink-0"
-                    onClick={async () => {
-                      if (!documentId) return;
-                      try {
-                        const s = await createSession(documentId);
-                        addSession({ session_id: s.session_id, title: null, message_count: 0, created_at: s.created_at || new Date().toISOString(), last_activity_at: s.created_at || new Date().toISOString() });
-                        setSessionId(s.session_id);
-                        if (s.demo_messages_used != null) setDemoMessagesUsed(s.demo_messages_used);
-                        setMessages([]);
-                      } catch (e) {
-                        console.error('Failed to create session:', e);
-                      }
-                    }}
-                    title={t('session.newChat')}
-                  >
-                    New Chat
-                  </button>
-                  <div className="win98-groove-v h-[14px]" />
-                  <span className="text-[11px] shrink-0">Document:</span>
-                  <div className="win98-inset flex-1 flex items-center bg-white h-[18px] px-1">
-                    <DocumentIcon size={12} />
-                    <span className="ml-1 text-[11px] truncate">
-                      C:\My Documents\{documentName || 'document'}
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-1 shrink-0">
-                    <CreditIcon size={14} />
-                    <CreditsDisplay />
-                  </div>
-                  <div className="win98-groove-v h-[14px]" />
-                  <ThemeSelector />
-                  <div className="win98-groove-v h-[14px]" />
-                  <LanguageSelector />
-                </div>
-              }
-              statusBar={
-                <>
-                  <div className="win98-statusbar-section flex-1">
-                    <span className="text-[10px]">{documentStatus === 'ready' ? 'Ready' : 'Loading...'}</span>
-                  </div>
-                  <div className="win98-statusbar-section">
-                    <span className="text-[10px]">Mode: {selectedMode.charAt(0).toUpperCase() + selectedMode.slice(1)}</span>
-                  </div>
-                  <div className="win98-statusbar-section">
-                    <span className="text-[10px]">Pages: {totalPages || '...'}</span>
-                  </div>
-                </>
-              }
-            >
-              {error ? (
-                <div className="flex items-center justify-center h-full text-[12px]">
-                  <div className="text-center">
-                    <div className="font-bold mb-2">{error}</div>
-                    <button className="win98-button" onClick={() => router.push('/')}>
-                      {t('doc.backHome')}
-                    </button>
-                  </div>
-                </div>
-              ) : (
-                <div ref={win98ContainerRef} className="flex h-full select-none">
-                  {/* Left: Chat */}
-                  <div style={{ width: `${splitterPos}%` }} className="min-w-0">
-                    {chatContent}
-                  </div>
-
-                  {/* Win98 Splitter */}
-                  <div
-                    className="w-[4px] bg-[var(--win98-button-face)] cursor-col-resize shrink-0 flex items-center justify-center hover:bg-[var(--win98-light-gray)]"
-                    onMouseDown={onWin98SplitterDown}
-                    role="separator"
-                    aria-orientation="vertical"
-                    aria-label="Resize panels"
-                    style={{
-                      borderLeft: '1px solid var(--win98-button-highlight)',
-                      borderRight: '1px solid var(--win98-button-shadow)',
-                    }}
-                  >
-                    <div className="flex flex-col gap-[2px]">
-                      <div className="w-[2px] h-[2px] bg-[var(--win98-dark-gray)]" />
-                      <div className="w-[2px] h-[2px] bg-[var(--win98-dark-gray)]" />
-                      <div className="w-[2px] h-[2px] bg-[var(--win98-dark-gray)]" />
-                    </div>
-                  </div>
-
-                  {/* Right: Viewer */}
-                  <div style={{ width: `${100 - splitterPos}%` }} className="min-w-0">
-                    {viewerContent}
-                  </div>
-                </div>
-              )}
-            </Win98Window>
+    <div className="h-full w-full flex flex-col items-center justify-center px-6 py-8 text-zinc-500" role="status" aria-live="polite">
+      <div className="w-full max-w-md space-y-3 animate-pulse motion-reduce:animate-none">
+        <div className="flex justify-start">
+          <div className="w-3/4 rounded-2xl bg-zinc-200 dark:bg-zinc-800 p-3">
+            <div className="h-2.5 w-11/12 rounded bg-zinc-300 dark:bg-zinc-700" />
           </div>
         </div>
-
-        {/* Taskbar */}
-        <Win98Taskbar items={taskbarItems} />
-
-        <CustomInstructionsModal
-          isOpen={showInstructions}
-          onClose={() => setShowInstructions(false)}
-          currentInstructions={customInstructions}
-          onSave={async (instructions) => {
-            await updateDocumentInstructions(documentId, instructions);
-            setCustomInstructions(instructions);
-          }}
-        />
+        <div className="flex justify-end">
+          <div className="w-2/3 rounded-2xl bg-zinc-200 dark:bg-zinc-800 p-3">
+            <div className="h-2.5 w-10/12 rounded bg-zinc-300 dark:bg-zinc-700" />
+          </div>
+        </div>
+        <div className="flex justify-start">
+          <div className="w-4/5 rounded-2xl bg-zinc-200 dark:bg-zinc-800 p-3 space-y-2">
+            <div className="h-2.5 w-full rounded bg-zinc-300 dark:bg-zinc-700" />
+            <div className="h-2.5 w-9/12 rounded bg-zinc-300 dark:bg-zinc-700" />
+          </div>
+        </div>
       </div>
-    );
-  }
+      <p className="mt-5 text-sm">{t('doc.processing')}</p>
+      <p className="mt-1 text-xs text-zinc-400 dark:text-zinc-500">{processingStatusText}</p>
+    </div>
+  ) : (
+    <div className="h-full w-full flex items-center justify-center text-zinc-500">{t('doc.initChat')}</div>
+  );
 
-  // Modern layout (light/dark)
+  // Onboarding tour — show once on first document ready
+  useEffect(() => {
+    if (documentStatus !== 'ready' || !sessionId) return;
+    if (!shouldShowTour()) return;
+
+    const timer = setTimeout(() => {
+      startOnboardingTour(t, {
+        showModeSelector: isLoggedIn && !isDemo,
+      });
+    }, 1500);
+
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [documentStatus, sessionId]);
+
   return (
     <div className="flex flex-col h-screen w-full overflow-hidden">
       <Header isDemo={isDemo} isLoggedIn={isLoggedIn} />
@@ -463,28 +169,74 @@ export default function DocumentReaderPage() {
           </div>
         </div>
       ) : (
-        <Group orientation="horizontal" className="flex-1 min-h-0">
-          <Panel defaultSize={50} minSize={25}>
-            <div className="h-full min-w-0 sm:min-w-[320px] flex flex-col">
-              <div className="flex-1 min-h-0">
-                {chatContent}
+        <>
+          {/* Desktop: side-by-side resizable panels */}
+          <div className="hidden sm:flex flex-1 min-h-0">
+            <Group orientation="horizontal" className="flex-1 min-h-0">
+              <Panel defaultSize={50} minSize={25}>
+                <div className="h-full min-w-0 sm:min-w-[320px] flex flex-col">
+                  <div className="flex-1 min-h-0">
+                    {chatContent}
+                  </div>
+                </div>
+              </Panel>
+              <Separator
+                className="w-3 sm:w-1.5 bg-zinc-200 dark:bg-zinc-700 hover:bg-zinc-400 dark:hover:bg-zinc-500 transition-colors cursor-col-resize flex items-center justify-center"
+                aria-label="Resize panels"
+              >
+                <div className="w-0.5 h-8 bg-zinc-400 dark:bg-zinc-500 rounded-full" />
+              </Separator>
+              <Panel defaultSize={50} minSize={35}>
+                <div className="h-full">
+                  {viewerContent}
+                </div>
+              </Panel>
+            </Group>
+          </div>
+
+          {/* Mobile: full-width tab layout with both panels mounted */}
+          <div className="flex sm:hidden flex-col flex-1 min-h-0">
+            <div className={`flex-1 min-h-0 ${mobileTab === 'chat' ? '' : 'hidden'}`}>
+              <div className="h-full min-w-0 flex flex-col">
+                <div className="flex-1 min-h-0">
+                  {chatContent}
+                </div>
               </div>
             </div>
-          </Panel>
-
-          <Separator
-            className="w-3 sm:w-1.5 bg-zinc-200 dark:bg-zinc-700 hover:bg-zinc-400 dark:hover:bg-zinc-500 transition-colors cursor-col-resize flex items-center justify-center"
-            aria-label="Resize panels"
-          >
-            <div className="w-0.5 h-8 bg-zinc-400 dark:bg-zinc-500 rounded-full" />
-          </Separator>
-
-          <Panel defaultSize={50} minSize={35}>
-            <div className="h-full">
-              {viewerContent}
+            <div className={`flex-1 min-h-0 ${mobileTab === 'document' ? '' : 'hidden'}`}>
+              <div className="h-full">
+                {viewerContent}
+              </div>
             </div>
-          </Panel>
-        </Group>
+            {/* Bottom tab bar */}
+            <div className="flex border-t border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-950 shrink-0" style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}>
+              <button
+                type="button"
+                onClick={() => setMobileTab('chat')}
+                className={`flex-1 py-3 text-xs font-medium flex flex-col items-center gap-1 transition-colors ${
+                  mobileTab === 'chat'
+                    ? 'text-indigo-600 dark:text-indigo-400'
+                    : 'text-zinc-400 dark:text-zinc-500'
+                }`}
+              >
+                <MessageSquare size={20} />
+                {t('mobile.chatTab')}
+              </button>
+              <button
+                type="button"
+                onClick={() => setMobileTab('document')}
+                className={`flex-1 py-3 text-xs font-medium flex flex-col items-center gap-1 transition-colors ${
+                  mobileTab === 'document'
+                    ? 'text-indigo-600 dark:text-indigo-400'
+                    : 'text-zinc-400 dark:text-zinc-500'
+                }`}
+              >
+                <FileText size={20} />
+                {t('mobile.documentTab')}
+              </button>
+            </div>
+          </div>
+        </>
       )}
       <CustomInstructionsModal
         isOpen={showInstructions}

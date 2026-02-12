@@ -11,7 +11,7 @@ from app.models.tables import Document, User
 from app.schemas.search import SearchRequest, SearchResponse, SearchResultItem
 from app.services.retrieval_service import retrieval_service
 
-search_router = APIRouter(prefix="/documents", tags=["search"])
+search_router = APIRouter(prefix="/api/documents", tags=["search"])
 
 
 @search_router.post("/{document_id}/search", response_model=SearchResponse)

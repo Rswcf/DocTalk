@@ -3,7 +3,7 @@ from __future__ import annotations
 import uuid
 from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pydantic import BaseModel, Field
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -65,6 +65,8 @@ class CollectionDetail(BaseModel):
 
 @collections_router.get("")
 async def list_collections(
+    limit: Optional[int] = Query(None, ge=1, le=100),
+    offset: int = Query(0, ge=0),
     user: User = Depends(require_auth),
     db: AsyncSession = Depends(get_db_session),
 ):
@@ -82,6 +84,9 @@ async def list_collections(
         .group_by(Collection.id)
         .order_by(Collection.updated_at.desc())
     )
+    if limit is not None:
+        stmt = stmt.limit(limit)
+    stmt = stmt.offset(offset)
     result = await db.execute(stmt)
     rows = result.all()
     return [

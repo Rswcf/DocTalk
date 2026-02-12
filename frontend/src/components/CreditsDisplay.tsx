@@ -2,7 +2,6 @@
 
 import { useEffect, useState, useCallback, useRef } from "react";
 import { useSession } from "next-auth/react";
-import { useTheme } from "next-themes";
 import { useLocale } from "../i18n";
 import { useDocTalkStore } from "../store";
 
@@ -19,8 +18,6 @@ export function CreditsDisplay() {
   const pollingIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const { t } = useLocale();
   const setUserPlan = useDocTalkStore((s) => s.setUserPlan);
-  const { resolvedTheme } = useTheme();
-  const isWin98 = resolvedTheme === 'win98';
 
   const fetchCredits = useCallback(async () => {
     try {
@@ -77,7 +74,7 @@ export function CreditsDisplay() {
   if (credits === null) return <div className="w-16 h-4 bg-zinc-200 dark:bg-zinc-700 rounded animate-pulse" />;
 
   return (
-    <div className={`flex items-center gap-1 ${isWin98 ? 'text-[11px] text-[var(--win98-black)]' : 'text-sm text-zinc-600 dark:text-zinc-400'}`}>
+    <div className="flex items-center gap-1 text-sm text-zinc-600 dark:text-zinc-400">
       <span className="font-medium">{credits.toLocaleString()}</span>
       <span>{t("credits.credits")}</span>
     </div>

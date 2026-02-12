@@ -77,7 +77,9 @@ export default function CollectionDetailPage() {
           if (!cancelled) setMessages(msgsData.messages);
           sessionReady = true;
         }
-      } catch {}
+      } catch (e) {
+        console.error('Failed to load collection sessions:', e);
+      }
       if (!sessionReady && !cancelled) {
         try {
           const s = await createCollectionSession(collectionId);
@@ -92,7 +94,9 @@ export default function CollectionDetailPage() {
             last_activity_at: now,
           });
           setMessages([]);
-        } catch {}
+        } catch (e) {
+          console.error('Failed to create collection session:', e);
+        }
       }
     })();
 

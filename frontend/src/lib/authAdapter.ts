@@ -3,6 +3,44 @@ import type { Adapter, AdapterUser, AdapterAccount, VerificationToken } from "@a
 const BACKEND_URL = process.env.BACKEND_INTERNAL_URL || process.env.NEXT_PUBLIC_API_BASE || "http://localhost:8000";
 const ADAPTER_SECRET = process.env.ADAPTER_SECRET;
 
+interface BackendUser {
+  id: string;
+  email: string;
+  name: string | null;
+  image: string | null;
+  email_verified?: string | null;
+  credits_balance?: number;
+  created_at?: string;
+  updated_at?: string;
+}
+
+interface BackendAccount {
+  id: string;
+  user_id: string;
+  type: string;
+  provider: string;
+  provider_account_id: string;
+}
+
+interface BackendVerificationToken {
+  identifier: string;
+  token: string;
+  expires: string;
+}
+
+interface BackendLinkAccountRequest {
+  user_id: string;
+  type: AdapterAccount["type"];
+  provider: string;
+  provider_account_id: string;
+  refresh_token?: string;
+  access_token?: string;
+  expires_at?: number;
+  token_type?: string;
+  scope?: string;
+  id_token?: string;
+}
+
 // Validate ADAPTER_SECRET at startup
 if (!ADAPTER_SECRET) {
   console.error("ADAPTER_SECRET environment variable is required for auth adapter");
@@ -35,10 +73,43 @@ async function fetchAdapter<T>(path: string, options: RequestInit = {}): Promise
   return text ? (JSON.parse(text) as T) : null;
 }
 
+function parseBackendDate(value?: string | null): Date | null {
+  if (!value) return null;
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
+function toAdapterUser(data: BackendUser): AdapterUser {
+  return {
+    id: data.id,
+    email: data.email,
+    name: data.name ?? null,
+    image: data.image ?? null,
+    emailVerified: parseBackendDate(data.email_verified),
+  };
+}
+
+function toAdapterAccount(data: BackendAccount): AdapterAccount {
+  return {
+    userId: data.user_id,
+    type: data.type as AdapterAccount["type"],
+    provider: data.provider,
+    providerAccountId: data.provider_account_id,
+  };
+}
+
+function toVerificationToken(data: BackendVerificationToken): VerificationToken {
+  return {
+    identifier: data.identifier,
+    token: data.token,
+    expires: new Date(data.expires),
+  };
+}
+
 export function FastAPIAdapter(): Adapter {
   return {
     async createUser(data) {
-      const user = await fetchAdapter<AdapterUser>("/api/internal/auth/users", {
+      const user = await fetchAdapter<BackendUser>("/api/internal/auth/users", {
         method: "POST",
         body: JSON.stringify({
           email: data.email,
@@ -48,40 +119,37 @@ export function FastAPIAdapter(): Adapter {
         }),
       });
       if (!user) throw new Error("Failed to create user");
-      return { ...(user as any), emailVerified: (user as any).email_verified ? new Date((user as any).email_verified) : null } as any;
+      return toAdapterUser(user);
     },
 
     async getUser(id) {
-      const user = await fetchAdapter<any>(`/api/internal/auth/users/${id}`);
-      if (!user) return null;
-      return { ...user, emailVerified: user.email_verified ? new Date(user.email_verified) : null } as any;
+      const user = await fetchAdapter<BackendUser>(`/api/internal/auth/users/${id}`);
+      return user ? toAdapterUser(user) : null;
     },
 
     async getUserByEmail(email) {
-      const user = await fetchAdapter<any>(`/api/internal/auth/users/by-email/${encodeURIComponent(email)}`);
-      if (!user) return null;
-      return { ...user, emailVerified: user.email_verified ? new Date(user.email_verified) : null } as any;
+      const user = await fetchAdapter<BackendUser>(`/api/internal/auth/users/by-email/${encodeURIComponent(email)}`);
+      return user ? toAdapterUser(user) : null;
     },
 
     async getUserByAccount({ provider, providerAccountId }) {
-      const user = await fetchAdapter<any>(
+      const user = await fetchAdapter<BackendUser>(
         `/api/internal/auth/users/by-account/${provider}/${encodeURIComponent(providerAccountId)}`
       );
-      if (!user) return null;
-      return { ...user, emailVerified: user.email_verified ? new Date(user.email_verified) : null } as any;
+      return user ? toAdapterUser(user) : null;
     },
 
     async updateUser(data) {
-      const user = await fetchAdapter<any>(`/api/internal/auth/users/${data.id}`, {
+      const user = await fetchAdapter<BackendUser>(`/api/internal/auth/users/${data.id}`, {
         method: "PUT",
         body: JSON.stringify({
-          name: (data as any).name,
-          image: (data as any).image,
-          email_verified: (data as any).emailVerified?.toISOString(),
+          name: data.name,
+          image: data.image,
+          email_verified: data.emailVerified?.toISOString(),
         }),
       });
       if (!user) throw new Error("Failed to update user");
-      return { ...user, emailVerified: user.email_verified ? new Date(user.email_verified) : null } as any;
+      return toAdapterUser(user);
     },
 
     async deleteUser(id) {
@@ -89,22 +157,26 @@ export function FastAPIAdapter(): Adapter {
     },
 
     async linkAccount(data) {
-      const account = await fetchAdapter<AdapterAccount>("/api/internal/auth/accounts", {
+      const payload: BackendLinkAccountRequest = {
+        user_id: data.userId,
+        type: data.type,
+        provider: data.provider,
+        provider_account_id: data.providerAccountId,
+      };
+
+      if (typeof data.refresh_token === "string") payload.refresh_token = data.refresh_token;
+      if (typeof data.access_token === "string") payload.access_token = data.access_token;
+      if (typeof data.expires_at === "number") payload.expires_at = data.expires_at;
+      if (typeof data.token_type === "string") payload.token_type = data.token_type;
+      if (typeof data.scope === "string") payload.scope = data.scope;
+      if (typeof data.id_token === "string") payload.id_token = data.id_token;
+
+      const account = await fetchAdapter<BackendAccount>("/api/internal/auth/accounts", {
         method: "POST",
-        body: JSON.stringify({
-          user_id: (data as any).userId,
-          type: (data as any).type,
-          provider: (data as any).provider,
-          provider_account_id: (data as any).providerAccountId,
-          refresh_token: (data as any).refresh_token,
-          access_token: (data as any).access_token,
-          expires_at: (data as any).expires_at,
-          token_type: (data as any).token_type,
-          scope: (data as any).scope,
-          id_token: (data as any).id_token,
-        }),
+        body: JSON.stringify(payload),
       });
-      return account as any;
+
+      return account ? toAdapterAccount(account) : null;
     },
 
     async unlinkAccount({ provider, providerAccountId }) {
@@ -114,25 +186,25 @@ export function FastAPIAdapter(): Adapter {
     },
 
     async createVerificationToken(data) {
-      const vt = await fetchAdapter<VerificationToken>("/api/internal/auth/verification-tokens", {
+      const vt = await fetchAdapter<BackendVerificationToken>("/api/internal/auth/verification-tokens", {
         method: "POST",
         body: JSON.stringify({
-          identifier: (data as any).identifier,
-          token: (data as any).token,
-          expires: (data as any).expires.toISOString(),
+          identifier: data.identifier,
+          token: data.token,
+          expires: data.expires.toISOString(),
         }),
       });
-      if (!vt) return null;
-      return { ...(vt as any), expires: new Date((vt as any).expires) } as any;
+
+      return vt ? toVerificationToken(vt) : null;
     },
 
     async useVerificationToken({ identifier, token }) {
-      const vt = await fetchAdapter<any>("/api/internal/auth/verification-tokens/use", {
+      const vt = await fetchAdapter<BackendVerificationToken>("/api/internal/auth/verification-tokens/use", {
         method: "POST",
         body: JSON.stringify({ identifier, token }),
       });
-      if (!vt) return null;
-      return { ...vt, expires: new Date(vt.expires) } as any;
+
+      return vt ? toVerificationToken(vt) : null;
     },
   };
 }

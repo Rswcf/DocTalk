@@ -19,6 +19,7 @@ from .api.search import search_router
 from .api.users import router as users_router
 from .core.config import settings
 from .models.database import AsyncSessionLocal
+from .schemas.common import HealthDeepResponse, HealthResponse
 from .services.embedding_service import embedding_service
 from .services.storage_service import storage_service
 
@@ -126,10 +127,10 @@ app.add_middleware(
 
 
 # Register API routers
-app.include_router(documents_router, prefix="/api")
-app.include_router(search_router, prefix="/api")
-app.include_router(chat_router, prefix="/api")
-app.include_router(chunks_router, prefix="/api")
+app.include_router(documents_router)
+app.include_router(search_router)
+app.include_router(chat_router)
+app.include_router(chunks_router)
 app.include_router(auth.router)
 app.include_router(credits_router)
 app.include_router(users_router)
@@ -137,7 +138,7 @@ app.include_router(billing_router)
 app.include_router(collections_router)
 app.include_router(admin_router)
 
-@app.get("/health")
+@app.get("/health", response_model=HealthDeepResponse | HealthResponse)
 async def health(deep: bool = Query(False)) -> dict:
     if not deep:
         return {"status": "ok"}

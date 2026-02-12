@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, useCallback } from 'react';
-import { Sun, Moon, Monitor, ChevronDown, Check } from 'lucide-react';
+import { Sun, Moon, ChevronDown, Check } from 'lucide-react';
 import { useTheme } from 'next-themes';
 import { useLocale } from '../i18n';
 import { useDropdownKeyboard } from '../lib/useDropdownKeyboard';
@@ -9,7 +9,6 @@ import { useDropdownKeyboard } from '../lib/useDropdownKeyboard';
 const THEMES = [
   { id: 'light', icon: Sun, labelKey: 'header.lightMode' },
   { id: 'dark', icon: Moon, labelKey: 'header.darkMode' },
-  { id: 'win98', icon: Monitor, labelKey: 'header.win98Mode' },
 ] as const;
 
 export default function ThemeSelector() {
@@ -22,8 +21,6 @@ export default function ThemeSelector() {
   const triggerRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
   const itemRefs = useRef<(HTMLButtonElement | null)[]>([]);
-
-  const isWin98 = resolvedTheme === 'win98';
 
   const updateMenuPos = useCallback(() => {
     if (!triggerRef.current) return;
@@ -83,18 +80,14 @@ export default function ThemeSelector() {
         ref={triggerRef}
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className={`flex items-center gap-1.5 p-2 rounded-lg transition-colors ${
-          isWin98
-            ? 'win98-button'
-            : 'hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-600 dark:text-zinc-400 focus-visible:ring-2 focus-visible:ring-zinc-400 dark:focus-visible:ring-zinc-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-900'
-        }`}
+        className="flex items-center gap-1.5 p-2 rounded-lg transition-colors hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-600 dark:text-zinc-400 focus-visible:ring-2 focus-visible:ring-zinc-400 dark:focus-visible:ring-zinc-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-900"
         aria-haspopup="listbox"
         aria-expanded={open}
         aria-label="Select theme"
         title={t(current.labelKey)}
       >
-        <CurrentIcon aria-hidden="true" size={isWin98 ? 14 : 18} />
-        <ChevronDown aria-hidden="true" size={isWin98 ? 10 : 14} className="opacity-70" />
+        <CurrentIcon aria-hidden="true" size={18} />
+        <ChevronDown aria-hidden="true" size={14} className="opacity-70" />
       </button>
       {open && (
         <div

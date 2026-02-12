@@ -30,6 +30,10 @@ class SessionResponse(BaseModel):
     created_at: datetime
 
 
+class SessionCreateResponse(SessionResponse):
+    demo_messages_used: Optional[int] = None
+
+
 class SessionMessagesResponse(BaseModel):
     messages: List[ChatMessageResponse]
 

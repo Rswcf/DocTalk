@@ -94,9 +94,9 @@ export default function AccountActionsSection({ email }: Props) {
           className="fixed inset-0 z-50 flex items-center justify-center overscroll-contain"
           onKeyDown={(e) => { if (e.key === 'Escape' && !deleting) setOpen(false); }}
         >
-          <div className="absolute inset-0 bg-black/50" onClick={() => !deleting && setOpen(false)} />
+          <div className="absolute inset-0 bg-black/50 animate-fade-in motion-reduce:animate-none" onClick={() => !deleting && setOpen(false)} />
           <div
-            className="relative bg-white dark:bg-zinc-900 border dark:border-zinc-700 rounded-lg p-6 w-full max-w-md shadow-lg"
+            className="relative bg-white dark:bg-zinc-900 border dark:border-zinc-700 rounded-lg p-6 w-full max-w-md shadow-lg animate-slide-up motion-reduce:animate-none"
             role="dialog"
             aria-modal="true"
             aria-labelledby="delete-account-title"

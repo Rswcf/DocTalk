@@ -5,14 +5,13 @@ import { useSession } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Header from "../../components/Header";
 import { useLocale } from "../../i18n";
-import { getUserProfile } from "../../lib/api";
-import type { UserProfile } from "../../types";
 import ProfileTabs from "../../components/Profile/ProfileTabs";
 import ProfileInfoSection from "../../components/Profile/ProfileInfoSection";
 import CreditsSection from "../../components/Profile/CreditsSection";
 import UsageStatsSection from "../../components/Profile/UsageStatsSection";
 import AccountActionsSection from "../../components/Profile/AccountActionsSection";
 import { usePageTitle } from "../../lib/usePageTitle";
+import { useUserProfile } from "../../lib/useUserProfile";
 
 function ProfileContent() {
   usePageTitle("Profile");
@@ -28,9 +27,7 @@ function ProfileContent() {
   }, [searchParams]);
 
   const [activeTab, setActiveTab] = useState<string>(initialTab);
-  const [profile, setProfile] = useState<UserProfile | null>(null);
-  const [loading, setLoading] = useState<boolean>(true);
-  const [error, setError] = useState<string | null>(null);
+  const { profile, loading, error } = useUserProfile();
 
   // Keep activeTab in sync with URL
   useEffect(() => {
@@ -44,28 +41,6 @@ function ProfileContent() {
     }
   }, [status, router]);
 
-  // Fetch profile data
-  useEffect(() => {
-    if (status !== "authenticated") return;
-    let cancelled = false;
-    async function run() {
-      setLoading(true);
-      setError(null);
-      try {
-        const data = await getUserProfile();
-        if (!cancelled) setProfile(data);
-      } catch (e) {
-        if (!cancelled) setError(t("error.somethingWrong"));
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    }
-    run();
-    return () => {
-      cancelled = true;
-    };
-  }, [status, t]);
-
   const handleTabChange = (tab: string) => {
     setActiveTab(tab);
     // Update URL without full navigation
@@ -74,14 +49,14 @@ function ProfileContent() {
 
   if (status === "loading") {
     return (
-      <div className="min-h-screen flex items-center justify-center dark:bg-zinc-950">
+      <div className="min-h-screen flex items-center justify-center bg-[var(--page-background)]">
         <div className="animate-pulse">{t("common.loading")}</div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen dark:bg-zinc-950">
+    <div className="min-h-screen bg-[var(--page-background)]">
       <Header />
       <main className="max-w-4xl mx-auto p-8">
         <h1 className="text-2xl font-semibold mb-6 dark:text-zinc-100">{t("profile.title")}</h1>
@@ -99,32 +74,32 @@ function ProfileContent() {
 
         {!loading && error && (
           <div className="p-4 rounded bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300 border border-red-200 dark:border-red-800">
-            {error}
+            {t("error.somethingWrong")}
           </div>
         )}
 
         {!loading && !error && profile && (
           <div className="space-y-6">
             {activeTab === "profile" && (
-              <section className="border rounded-lg p-6 dark:border-zinc-700">
+              <section className="border border-zinc-200 dark:border-zinc-700 rounded-lg p-6 bg-white dark:bg-zinc-900">
                 <ProfileInfoSection profile={profile} />
               </section>
             )}
 
             {activeTab === "credits" && (
-              <section className="border rounded-lg p-6 dark:border-zinc-700">
+              <section className="border border-zinc-200 dark:border-zinc-700 rounded-lg p-6 bg-white dark:bg-zinc-900">
                 <CreditsSection profile={profile} />
               </section>
             )}
 
             {activeTab === "usage" && (
-              <section className="border rounded-lg p-6 dark:border-zinc-700">
+              <section className="border border-zinc-200 dark:border-zinc-700 rounded-lg p-6 bg-white dark:bg-zinc-900">
                 <UsageStatsSection profile={profile} />
               </section>
             )}
 
             {activeTab === "account" && (
-              <section className="border rounded-lg p-6 dark:border-zinc-700">
+              <section className="border border-zinc-200 dark:border-zinc-700 rounded-lg p-6 bg-white dark:bg-zinc-900">
                 <AccountActionsSection email={profile.email} />
               </section>
             )}
@@ -139,7 +114,7 @@ export default function ProfilePage() {
   return (
     <Suspense
       fallback={
-        <div className="min-h-screen flex items-center justify-center dark:bg-zinc-950">
+        <div className="min-h-screen flex items-center justify-center bg-[var(--page-background)]">
           <div className="animate-pulse">Loading...</div>
         </div>
       }

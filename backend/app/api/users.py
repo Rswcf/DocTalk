@@ -12,6 +12,7 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from app.core.cache import cache_get, cache_set
 from app.core.config import MODEL_TO_MODE, settings
 from app.core.deps import get_db_session, require_auth
 from app.core.security_log import log_security_event
@@ -24,6 +25,8 @@ from app.models.tables import (
     UsageRecord,
     User,
 )
+from app.schemas.common import DeletedResponse
+from app.schemas.users import UsageBreakdownResponse, UserProfileResponse
 from app.services.doc_service import doc_service
 
 router = APIRouter(prefix="/api/users", tags=["users"])
@@ -51,58 +54,89 @@ async def get_me(user: User = Depends(require_auth)):
     }
 
 
-@router.get("/profile")
+@router.get("/profile", response_model=UserProfileResponse)
 async def get_profile(
     user: User = Depends(require_auth),
     db: AsyncSession = Depends(get_db_session),
 ):
-    # Connected accounts
-    acc_rows = await db.execute(select(Account).where(Account.user_id == user.id))
-    accounts: List[Account] = acc_rows.scalars().all()
+    cache_key = f"user:profile:{user.id}"
+    cached_profile = await cache_get(cache_key)
 
-    # Aggregated stats (single round-trip for core counts/sums)
-    stats_row = (
-        await db.execute(
-            select(
-                func.coalesce(
-                    select(func.count())
-                    .select_from(Document)
-                    .where(Document.user_id == user.id)
-                    .scalar_subquery(),
-                    0,
-                ).label("total_documents"),
-                func.coalesce(
-                    select(func.count())
-                    .select_from(ChatSession)
-                    .join(Document, ChatSession.document_id == Document.id)
-                    .where(Document.user_id == user.id)
-                    .scalar_subquery(),
-                    0,
-                ).label("total_sessions"),
-                func.coalesce(
-                    select(func.count())
-                    .select_from(Message)
-                    .join(ChatSession, Message.session_id == ChatSession.id)
-                    .join(Document, ChatSession.document_id == Document.id)
-                    .where(Document.user_id == user.id)
-                    .scalar_subquery(),
-                    0,
-                ).label("total_messages"),
-                func.coalesce(
-                    select(func.sum(-CreditLedger.delta))
-                    .where(CreditLedger.user_id == user.id)
-                    .where(CreditLedger.delta < 0)
-                    .scalar_subquery(),
-                    0,
-                ).label("total_credits_spent"),
+    connected_accounts: list[dict]
+    stats: dict[str, int]
+    if isinstance(cached_profile, dict) and isinstance(cached_profile.get("connected_accounts"), list) and isinstance(cached_profile.get("stats"), dict):
+        connected_accounts = cached_profile["connected_accounts"]
+        stats = cached_profile["stats"]
+    else:
+        # Connected accounts
+        acc_rows = await db.execute(select(Account).where(Account.user_id == user.id))
+        accounts: List[Account] = acc_rows.scalars().all()
+
+        # Aggregated stats (single round-trip for core counts/sums)
+        stats_row = (
+            await db.execute(
+                select(
+                    func.coalesce(
+                        select(func.count())
+                        .select_from(Document)
+                        .where(Document.user_id == user.id)
+                        .scalar_subquery(),
+                        0,
+                    ).label("total_documents"),
+                    func.coalesce(
+                        select(func.count())
+                        .select_from(ChatSession)
+                        .join(Document, ChatSession.document_id == Document.id)
+                        .where(Document.user_id == user.id)
+                        .scalar_subquery(),
+                        0,
+                    ).label("total_sessions"),
+                    func.coalesce(
+                        select(func.count())
+                        .select_from(Message)
+                        .join(ChatSession, Message.session_id == ChatSession.id)
+                        .join(Document, ChatSession.document_id == Document.id)
+                        .where(Document.user_id == user.id)
+                        .scalar_subquery(),
+                        0,
+                    ).label("total_messages"),
+                    func.coalesce(
+                        select(func.sum(-CreditLedger.delta))
+                        .where(CreditLedger.user_id == user.id)
+                        .where(CreditLedger.delta < 0)
+                        .scalar_subquery(),
+                        0,
+                    ).label("total_credits_spent"),
+                    func.coalesce(
+                        select(func.sum(UsageRecord.total_tokens))
+                        .where(UsageRecord.user_id == user.id)
+                        .scalar_subquery(),
+                        0,
+                    ).label("total_tokens_used"),
+                )
             )
-        )
-    ).one()
+        ).one()
 
-    # Total tokens used
-    total_tokens_used = await db.scalar(
-        select(func.coalesce(func.sum(UsageRecord.total_tokens), 0)).where(UsageRecord.user_id == user.id)
-    )
+        connected_accounts = [
+            {
+                "provider": acc.provider,
+                # Account model has no created_at column; return None for compatibility
+                "created_at": None,
+            }
+            for acc in accounts
+        ]
+        stats = {
+            "total_documents": int(stats_row.total_documents or 0),
+            "total_sessions": int(stats_row.total_sessions or 0),
+            "total_messages": int(stats_row.total_messages or 0),
+            "total_credits_spent": int(stats_row.total_credits_spent or 0),
+            "total_tokens_used": int(stats_row.total_tokens_used or 0),
+        }
+        await cache_set(
+            cache_key,
+            {"connected_accounts": connected_accounts, "stats": stats},
+            ttl_seconds=30,
+        )
 
     # Monthly allowance by plan
     plan = (user.plan or "free").lower()
@@ -126,25 +160,12 @@ async def get_profile(
         if user.monthly_credits_granted_at
         else None,
         "signup_bonus_granted": bool(user.signup_bonus_granted_at),
-        "connected_accounts": [
-            {
-                "provider": acc.provider,
-                # Account model has no created_at column; return None for compatibility
-                "created_at": None,
-            }
-            for acc in accounts
-        ],
-        "stats": {
-            "total_documents": int(stats_row.total_documents or 0),
-            "total_sessions": int(stats_row.total_sessions or 0),
-            "total_messages": int(stats_row.total_messages or 0),
-            "total_credits_spent": int(stats_row.total_credits_spent or 0),
-            "total_tokens_used": int(total_tokens_used or 0),
-        },
+        "connected_accounts": connected_accounts,
+        "stats": stats,
     }
 
 
-@router.get("/usage-breakdown")
+@router.get("/usage-breakdown", response_model=UsageBreakdownResponse)
 async def get_usage_breakdown(
     user: User = Depends(require_auth),
     db: AsyncSession = Depends(get_db_session),
@@ -304,7 +325,7 @@ async def export_my_data(
     )
 
 
-@router.delete("/me")
+@router.delete("/me", response_model=DeletedResponse)
 async def delete_me(
     user: User = Depends(require_auth),
     db: AsyncSession = Depends(get_db_session),

@@ -25,14 +25,20 @@ export default function HeroSection() {
           </span>
 
           {/* Headline */}
-          <h1 className="text-5xl md:text-6xl lg:text-7xl font-display font-semibold text-zinc-900 dark:text-zinc-50 leading-[1.1] tracking-tight text-balance">
-            {t('landing.headline').split('\n').map((line: string, i: number) => (
-              <React.Fragment key={i}>
-                {i > 0 && <br />}
-                {line}
-              </React.Fragment>
-            ))}
-          </h1>
+          <div className="relative">
+            <div
+              aria-hidden="true"
+              className="absolute left-1/2 top-1/2 h-48 w-full max-w-3xl -translate-x-1/2 -translate-y-1/2 bg-[radial-gradient(ellipse_at_center,var(--accent-light),transparent_70%)] opacity-80 pointer-events-none"
+            />
+            <h1 className="relative text-5xl md:text-6xl lg:text-7xl font-display font-semibold text-zinc-900 dark:text-zinc-50 leading-[1.1] tracking-tight text-balance">
+              {t('landing.headline').split('\n').map((line: string, i: number) => (
+                <React.Fragment key={i}>
+                  {i > 0 && <br />}
+                  {line}
+                </React.Fragment>
+              ))}
+            </h1>
+          </div>
 
           {/* Subtitle */}
           <p className="mt-4 text-xl md:text-2xl text-zinc-500 dark:text-zinc-400 font-normal">

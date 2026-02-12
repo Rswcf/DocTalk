@@ -104,7 +104,7 @@ function KPICard({
   value: number;
 }) {
   return (
-    <div className="border border-zinc-200 dark:border-zinc-700 rounded-lg p-5 flex items-start gap-4">
+    <div className="border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 rounded-lg p-5 flex items-start gap-4">
       <div className="p-2.5 rounded-lg bg-zinc-100 dark:bg-zinc-800">
         <Icon aria-hidden="true" className="w-5 h-5 text-zinc-600 dark:text-zinc-400" />
       </div>
@@ -192,7 +192,7 @@ export default function AdminPage() {
 
   if (status === "loading" || (status === "authenticated" && loading && !overview)) {
     return (
-      <div className="min-h-screen dark:bg-zinc-950">
+      <div className="min-h-screen bg-[var(--page-background)]">
         <Header />
         <main className="max-w-7xl mx-auto p-6 sm:p-8">
           <h1 className="text-2xl font-semibold mb-6 dark:text-zinc-100">
@@ -202,7 +202,7 @@ export default function AdminPage() {
             {Array.from({ length: 6 }).map((_, i) => (
               <div
                 key={i}
-                className="border border-zinc-200 dark:border-zinc-700 rounded-lg p-5 animate-pulse"
+                className="border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 rounded-lg p-5 animate-pulse"
               >
                 <div className="h-8 w-20 bg-zinc-200 dark:bg-zinc-700 rounded mb-2" />
                 <div className="h-4 w-28 bg-zinc-100 dark:bg-zinc-800 rounded" />
@@ -216,7 +216,7 @@ export default function AdminPage() {
 
   if (error) {
     return (
-      <div className="min-h-screen dark:bg-zinc-950">
+      <div className="min-h-screen bg-[var(--page-background)]">
         <Header />
         <main className="max-w-7xl mx-auto p-6 sm:p-8">
           <div className="p-4 rounded bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300 border border-red-200 dark:border-red-800">
@@ -228,7 +228,7 @@ export default function AdminPage() {
   }
 
   return (
-    <div className="min-h-screen dark:bg-zinc-950">
+    <div className="min-h-screen bg-[var(--page-background)]">
       <Header />
       <main className="max-w-7xl mx-auto p-6 sm:p-8">
         <h1 className="text-2xl font-semibold mb-6 dark:text-zinc-100">
@@ -262,7 +262,7 @@ export default function AdminPage() {
         {/* Tables */}
         <section className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
           {/* Recent Users */}
-          <div className="border border-zinc-200 dark:border-zinc-700 rounded-lg overflow-hidden">
+          <div className="border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 rounded-lg overflow-hidden">
             <div className="px-4 py-3 border-b border-zinc-200 dark:border-zinc-700">
               <h3 className="text-sm font-medium dark:text-zinc-100">
                 Recent Users
@@ -324,7 +324,7 @@ export default function AdminPage() {
           </div>
 
           {/* Top Users */}
-          <div className="border border-zinc-200 dark:border-zinc-700 rounded-lg overflow-hidden">
+          <div className="border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 rounded-lg overflow-hidden">
             <div className="px-4 py-3 border-b border-zinc-200 dark:border-zinc-700 flex items-center justify-between">
               <h3 className="text-sm font-medium dark:text-zinc-100">Top Users</h3>
               <select

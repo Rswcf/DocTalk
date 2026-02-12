@@ -134,7 +134,9 @@ export const useDocTalkStore = create<DocTalkStore>((set, get) => ({
     try {
       localStorage.setItem('doctalk_last_doc_id', id);
       localStorage.setItem('doctalk_last_doc_name', name);
-    } catch {}
+    } catch {
+      // localStorage unavailable in private browsing
+    }
   },
   setPdfUrl: (url: string) => set({ pdfUrl: url }),
   setPage: (page: number) => set({ currentPage: Math.max(1, page) }),
@@ -142,7 +144,7 @@ export const useDocTalkStore = create<DocTalkStore>((set, get) => ({
   setGrabMode: (v: boolean) => set({ grabMode: v }),
   setHighlights: (highlights: NormalizedBBox[]) => set({ highlights }),
   navigateToCitation: (citation: Citation) => {
-    const bboxes = (citation.bboxes || []).map((bb: any) => ({
+    const bboxes = (citation.bboxes || []).map((bb: NormalizedBBox) => ({
       ...bb,
       page: bb.page ?? citation.page,
     }));
@@ -216,7 +218,11 @@ export const useDocTalkStore = create<DocTalkStore>((set, get) => ({
   setSessionId: (id: string) => set({ sessionId: id }),
   setSelectedMode: (id: string) => {
     set({ selectedMode: id });
-    try { localStorage.setItem('doctalk_mode', id); } catch {}
+    try {
+      localStorage.setItem('doctalk_mode', id);
+    } catch {
+      // localStorage unavailable in private browsing
+    }
   },
   setSessions: (sessions: SessionItem[]) => set({ sessions }),
   addSession: (session: SessionItem) => set((state) => ({

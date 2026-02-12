@@ -13,7 +13,6 @@ const config: Config = {
         sans: ['var(--font-inter)', 'system-ui', 'sans-serif'],
         display: ['var(--font-logo)', 'system-ui', 'sans-serif'],
         logo: ['var(--font-logo)', 'system-ui', 'sans-serif'],
-        win98: ["'MS Sans Serif'", "'Microsoft Sans Serif'", "'Segoe UI'", 'Tahoma', 'sans-serif'],
       },
       colors: {
         accent: {

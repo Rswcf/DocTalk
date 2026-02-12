@@ -30,7 +30,7 @@ export default function CollectionsPage() {
 
   if (status === 'loading') {
     return (
-      <div className="min-h-screen bg-white dark:bg-zinc-950 flex items-center justify-center">
+      <div className="min-h-screen bg-[var(--page-background)] flex items-center justify-center">
         <div className="animate-pulse text-zinc-400">{t('common.loading')}</div>
       </div>
     );
@@ -46,12 +46,14 @@ export default function CollectionsPage() {
     try {
       await deleteCollection(id);
       setCollections(prev => prev.filter(c => c.id !== id));
-    } catch {}
+    } catch (e) {
+      console.error('Failed to delete collection:', e);
+    }
     setDeletingId(null);
   };
 
   return (
-    <div className="flex flex-col min-h-screen bg-white dark:bg-zinc-950">
+    <div className="flex flex-col min-h-screen bg-[var(--page-background)]">
       <Header variant="full" />
       <main className="flex-1 flex flex-col items-center p-6 sm:p-8">
         <div className="max-w-4xl w-full">
@@ -79,6 +81,13 @@ export default function CollectionsPage() {
               <p className="text-sm text-zinc-600 dark:text-zinc-400 max-w-xl">
                 {t('collections.emptySubtitle')}
               </p>
+              <button
+                onClick={() => setShowCreate(true)}
+                className="mt-6 inline-flex items-center gap-2 px-5 py-2.5 bg-zinc-900 dark:bg-zinc-50 text-white dark:text-zinc-900 rounded-lg font-medium text-sm shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-shadow transition-transform duration-200 focus-visible:ring-2 focus-visible:ring-zinc-400 dark:focus-visible:ring-zinc-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-900"
+              >
+                <Plus aria-hidden="true" size={16} />
+                {t('collections.create')}
+              </button>
             </div>
           ) : (
             <CollectionList
