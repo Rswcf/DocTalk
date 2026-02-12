@@ -376,6 +376,21 @@ export default function PdfViewer({ pdfUrl, currentPage, highlights, scale, scro
 
   const pages = useMemo(() => Array.from({ length: numPages }, (_, i) => i + 1), [numPages]);
 
+  const EMPTY_HIGHLIGHTS: NormalizedBBox[] = useMemo(() => [], []);
+  // Pre-compute highlights per page so each PageWithHighlights gets a stable reference.
+  // Without this, highlights.filter() inside the render loop creates a new array on every
+  // render, causing PageWithHighlights to re-render and CSS animations to replay.
+  const highlightsByPage = useMemo(() => {
+    const map = new Map<number, NormalizedBBox[]>();
+    for (const h of highlights) {
+      const pg = h.page ?? 0;
+      const arr = map.get(pg) || [];
+      arr.push(h);
+      map.set(pg, arr);
+    }
+    return map;
+  }, [highlights]);
+
   return (
     <div className="w-full h-full flex flex-col bg-zinc-50 dark:bg-zinc-900">
       {numPages > 0 && (
@@ -437,7 +452,7 @@ export default function PdfViewer({ pdfUrl, currentPage, highlights, scale, scro
                 );
               }
 
-              const pageHighlights = highlights.filter(h => h.page === pageNumber);
+              const pageHighlights = highlightsByPage.get(pageNumber) || EMPTY_HIGHLIGHTS;
               return (
                 <div
                   key={pageNumber}
