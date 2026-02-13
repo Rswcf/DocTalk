@@ -108,6 +108,11 @@ function BillingContent() {
     if (raw.includes("Cannot switch billing interval during beta")) {
       return t("billing.intervalMismatch");
     }
+    // Extract backend error detail for debugging
+    const detailMatch = raw.match(/"detail"\s*:\s*"([^"]+)"/);
+    if (detailMatch) {
+      return detailMatch[1];
+    }
     return t("billing.error");
   };
 
