@@ -215,6 +215,9 @@ async def ensure_monthly_credits(db: AsyncSession, user: User) -> None:
     """
     from datetime import datetime, timedelta, timezone
 
+    if (user.plan or "free").lower() != "free":
+        return
+
     # Determine if grant needed based on timestamp
     now = datetime.now(timezone.utc)
     last = user.monthly_credits_granted_at
@@ -239,14 +242,8 @@ async def ensure_monthly_credits(db: AsyncSession, user: User) -> None:
         await db.flush()
         return
 
-    # Determine allowance by plan
-    plan = (user.plan or "free").lower()
-    if plan == "pro":
-        allowance = int(settings.PLAN_PRO_MONTHLY_CREDITS or 0)
-    elif plan == "plus":
-        allowance = int(settings.PLAN_PLUS_MONTHLY_CREDITS or 0)
-    else:
-        allowance = int(settings.PLAN_FREE_MONTHLY_CREDITS or 0)
+    # Only free users are eligible in this path.
+    allowance = int(settings.PLAN_FREE_MONTHLY_CREDITS or 0)
 
     if allowance <= 0:
         # Nothing to grant
@@ -260,8 +257,8 @@ async def ensure_monthly_credits(db: AsyncSession, user: User) -> None:
         user_id=user.id,
         amount=allowance,
         reason="monthly_allowance",
-        ref_type=None,
-        ref_id=None,
+        ref_type="monthly_cycle",
+        ref_id=f"monthly_{now.year}_{now.month}",
     )
     user.monthly_credits_granted_at = now
     await db.flush()

@@ -267,6 +267,14 @@ class CreditLedger(Base):
     __table_args__ = (
         sa.Index("idx_credit_ledger_user_created", "user_id", "created_at"),
         sa.Index("idx_credit_ledger_ref", "ref_type", "ref_id"),
+        sa.Index(
+            "uq_credit_ledger_idempotency_ref",
+            "user_id",
+            "ref_type",
+            "ref_id",
+            unique=True,
+            postgresql_where=sa.text("ref_type IS NOT NULL AND ref_id IS NOT NULL"),
+        ),
     )
 
 

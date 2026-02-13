@@ -138,24 +138,41 @@ async def subscribe(
     if not price_id:
         raise HTTPException(400, f"Stripe price not configured for {body.plan}/{body.billing}")
 
-    # Ensure customer exists
-    if not user.stripe_customer_id:
-        cust = await asyncio.to_thread(
-            stripe.Customer.create, email=user.email, name=user.name or None
-        )
-        user.stripe_customer_id = cust.id
-        await db.commit()
+    # Atomic guard: prevent concurrent subscribe requests from creating
+    # multiple checkout sessions before webhook reconciliation.
+    user.stripe_subscription_id = "pending"
+    await db.commit()
 
-    # Create Checkout Session for subscription
-    session = await asyncio.to_thread(
-        stripe.checkout.Session.create,
-        mode="subscription",
-        line_items=[{"price": price_id, "quantity": 1}],
-        success_url=f"{settings.FRONTEND_URL}/billing",
-        cancel_url=f"{settings.FRONTEND_URL}/billing",
-        customer=user.stripe_customer_id,
-        client_reference_id=str(user.id),
-    )
+    try:
+        # Ensure customer exists
+        if not user.stripe_customer_id:
+            cust = await asyncio.to_thread(
+                stripe.Customer.create, email=user.email, name=user.name or None
+            )
+            user.stripe_customer_id = cust.id
+            await db.commit()
+
+        # Create Checkout Session for subscription
+        session = await asyncio.to_thread(
+            stripe.checkout.Session.create,
+            mode="subscription",
+            line_items=[{"price": price_id, "quantity": 1}],
+            success_url=f"{settings.FRONTEND_URL}/billing?success=1",
+            cancel_url=f"{settings.FRONTEND_URL}/billing",
+            customer=user.stripe_customer_id,
+            client_reference_id=str(user.id),
+        )
+    except stripe.StripeError as e:
+        logger.error("Failed to create subscription checkout: %s", e)
+        await db.rollback()
+        user.stripe_subscription_id = None
+        await db.commit()
+        raise HTTPException(502, "Failed to create subscription checkout")
+    except Exception:
+        await db.rollback()
+        user.stripe_subscription_id = None
+        await db.commit()
+        raise
     return {"checkout_url": session.url}
 
 
@@ -166,11 +183,15 @@ async def customer_portal(user: User = Depends(require_auth)):
     if not user.stripe_customer_id:
         raise HTTPException(400, "No Stripe customer for user")
 
-    portal = await asyncio.to_thread(
-        stripe.billing_portal.Session.create,
-        customer=user.stripe_customer_id,
-        return_url=f"{settings.FRONTEND_URL}/billing",
-    )
+    try:
+        portal = await asyncio.to_thread(
+            stripe.billing_portal.Session.create,
+            customer=user.stripe_customer_id,
+            return_url=f"{settings.FRONTEND_URL}/billing",
+        )
+    except stripe.StripeError as e:
+        logger.error("Failed to create billing portal session: %s", e)
+        raise HTTPException(502, "Failed to create billing portal session")
     return {"portal_url": portal.url}
 
 
@@ -247,7 +268,9 @@ async def change_plan(
     if is_upgrade:
         supplement = _credits_for_plan(body.plan) - _credits_for_plan(old_plan)
         if supplement > 0:
-            ref_id = f"{old_plan}_to_{body.plan}"
+            ref_id = (
+                f"plan_change_{user.stripe_subscription_id}_{sub.get('current_period_start', '')}"
+            )
             existing = await db.scalar(
                 select(CreditLedger).where(
                     CreditLedger.user_id == user.id,
@@ -299,6 +322,29 @@ async def _handle_checkout_session_subscription_completed(
     subscription_id = session.get("subscription")
     customer_id = session.get("customer")
 
+    if (
+        user.stripe_subscription_id
+        and user.stripe_subscription_id != "pending"
+        and user.stripe_subscription_id != subscription_id
+    ):
+        logger.warning(
+            "Duplicate subscription webhook: user=%s existing=%s incoming=%s",
+            user.id,
+            user.stripe_subscription_id,
+            subscription_id,
+        )
+        if subscription_id:
+            try:
+                await asyncio.to_thread(stripe.Subscription.cancel, subscription_id)
+            except Exception as e:
+                logger.warning(
+                    "Failed to cancel duplicate subscription %s for user %s: %s",
+                    subscription_id,
+                    user.id,
+                    e,
+                )
+        return {"received": True}
+
     # Determine plan from subscription price_id
     plan = "pro"  # default for backward compatibility
     if subscription_id:
@@ -311,8 +357,9 @@ async def _handle_checkout_session_subscription_completed(
                 detected = _plan_from_price_id(sub_price_id)
                 if detected:
                     plan = detected
-        except Exception as e:
-            logger.warning("Could not retrieve subscription to detect plan: %s", e)
+        except stripe.StripeError as e:
+            logger.error("Could not retrieve subscription to detect plan: %s", e)
+            raise HTTPException(500, "Failed to retrieve subscription")
 
     # Update user plan and subscription/customer ids
     user.plan = plan
@@ -499,9 +546,14 @@ async def _handle_subscription_deleted(
     if not user:
         return {"received": True}
 
+    if user.plan == "free" and not user.stripe_subscription_id:
+        return {"received": True}
+
+    was_already_free = user.plan == "free"
     user.plan = "free"
     user.stripe_subscription_id = None
-    user.monthly_credits_granted_at = None
+    if not was_already_free:
+        user.monthly_credits_granted_at = None
     await db.commit()
     await cache_delete(f"user:profile:{user.id}")
     return {"received": True}
@@ -510,6 +562,7 @@ async def _handle_subscription_deleted(
 async def _handle_subscription_updated(
     subscription: dict,
     db: AsyncSession,
+    event: dict,
 ):
     customer_id = subscription.get("customer")
     if not customer_id:
@@ -520,6 +573,12 @@ async def _handle_subscription_updated(
     user = await db.scalar(select(User).where(User.stripe_customer_id == customer_id))
     if not user:
         return {"received": True}
+    status = subscription.get("status", "")
+    if status not in ("active", "trialing"):
+        return {"received": True}
+    if subscription.get("id") != user.stripe_subscription_id:
+        return {"received": True}
+
     items = subscription.get("items", {}).get("data", [])
     if not items:
         return {"received": True}
@@ -531,13 +590,45 @@ async def _handle_subscription_updated(
         sub_id = subscription.get("id")
         if sub_id:
             user.stripe_subscription_id = sub_id
+
+        is_upgrade = PLAN_HIERARCHY.get(detected_plan, 0) > PLAN_HIERARCHY.get(old_plan, 0)
+        supplement = 0
+        if is_upgrade:
+            supplement = _credits_for_plan(detected_plan) - _credits_for_plan(old_plan)
+            if supplement > 0:
+                event_subscription = event.get("data", {}).get("object", {})
+                current_period_start = subscription.get(
+                    "current_period_start",
+                    event_subscription.get("current_period_start", ""),
+                )
+                ref_id = f"plan_change_{user.stripe_subscription_id}_{current_period_start}"
+                existing = await db.scalar(
+                    select(CreditLedger).where(
+                        CreditLedger.user_id == user.id,
+                        CreditLedger.ref_type == "plan_change",
+                        CreditLedger.ref_id == ref_id,
+                    )
+                )
+                if not existing:
+                    await credit_credits(
+                        db=db,
+                        user_id=user.id,
+                        amount=supplement,
+                        reason="plan_upgrade_supplement",
+                        ref_type="plan_change",
+                        ref_id=ref_id,
+                    )
+                else:
+                    supplement = 0
+
         await db.commit()
         await cache_delete(f"user:profile:{user.id}")
         logger.info(
-            "Plan synced from webhook: user=%s, %s -> %s",
+            "Plan synced from webhook: user=%s, %s -> %s, supplement=%s",
             user.id,
             old_plan,
             detected_plan,
+            supplement,
         )
     return {"received": True}
 
@@ -593,4 +684,6 @@ async def stripe_webhook(request: Request, db: AsyncSession = Depends(get_db_ses
             logger.error("Invalid event structure: missing data.object")
         return {"received": True}
 
+    if event["type"] == "customer.subscription.updated":
+        return await handler(obj, db, event)
     return await handler(obj, db)

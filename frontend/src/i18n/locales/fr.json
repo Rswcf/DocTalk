@@ -446,5 +446,11 @@
   "billing.confirmDowngrade.effectiveNow": "Le changement de forfait prend effet immédiatement",
   "billing.confirmDowngrade.nextBilling": "Votre prochaine facturation sera au tarif inférieur",
   "billing.confirmDowngrade.confirm": "Confirmer la rétrogradation",
+  "billing.confirmUpgrade.title": "Confirmer la mise à niveau",
+  "billing.confirmUpgrade.description": "Vous êtes sur le point de mettre à niveau votre forfait. Voici ce qui va se passer :",
+  "billing.confirmUpgrade.immediateCharge": "La différence de prix au prorata sera facturée immédiatement sur votre carte",
+  "billing.confirmUpgrade.bonusCredits": "Vous recevrez des crédits bonus pour la mise à niveau",
+  "billing.confirmUpgrade.effectiveNow": "Votre nouveau forfait prend effet immédiatement",
+  "billing.confirmUpgrade.confirm": "Confirmer la mise à niveau",
   "credits.plan_upgrade_supplement": "Bonus de montée en gamme"
 }

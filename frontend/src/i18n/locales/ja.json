@@ -446,5 +446,11 @@
   "billing.confirmDowngrade.effectiveNow": "プラン変更は即時に反映されます",
   "billing.confirmDowngrade.nextBilling": "次回の請求はより低い料金で行われます",
   "billing.confirmDowngrade.confirm": "ダウングレードを確定",
+  "billing.confirmUpgrade.title": "アップグレードの確認",
+  "billing.confirmUpgrade.description": "プランをアップグレードします。以下の内容をご確認ください：",
+  "billing.confirmUpgrade.immediateCharge": "日割り計算された差額がカードに即時請求されます",
+  "billing.confirmUpgrade.bonusCredits": "アップグレード特典としてボーナスクレジットが付与されます",
+  "billing.confirmUpgrade.effectiveNow": "新しいプランは即時に反映されます",
+  "billing.confirmUpgrade.confirm": "アップグレードを確定",
   "credits.plan_upgrade_supplement": "プランアップグレード特典"
 }

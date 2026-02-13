@@ -446,5 +446,11 @@
   "billing.confirmDowngrade.effectiveNow": "A mudança de plano entra em vigor imediatamente",
   "billing.confirmDowngrade.nextBilling": "Sua próxima cobrança será na tarifa mais baixa",
   "billing.confirmDowngrade.confirm": "Confirmar downgrade",
+  "billing.confirmUpgrade.title": "Confirmar upgrade",
+  "billing.confirmUpgrade.description": "Você está prestes a fazer upgrade do seu plano. Veja o que vai acontecer:",
+  "billing.confirmUpgrade.immediateCharge": "A diferença de preço proporcional será cobrada imediatamente no seu cartão",
+  "billing.confirmUpgrade.bonusCredits": "Você receberá créditos bônus pelo upgrade",
+  "billing.confirmUpgrade.effectiveNow": "Seu novo plano entra em vigor imediatamente",
+  "billing.confirmUpgrade.confirm": "Confirmar upgrade",
   "credits.plan_upgrade_supplement": "Bônus de upgrade de plano"
 }
