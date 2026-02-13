@@ -183,7 +183,22 @@ async def change_plan(
     if not settings.STRIPE_SECRET_KEY:
         raise HTTPException(503, "Stripe not configured")
     if not user.stripe_subscription_id:
-        raise HTTPException(400, "No active subscription. Use /subscribe instead.")
+        if user.stripe_customer_id:
+            try:
+                subs = await asyncio.to_thread(
+                    stripe.Subscription.list,
+                    customer=user.stripe_customer_id,
+                    status="active",
+                    limit=1,
+                )
+                if subs.data:
+                    user.stripe_subscription_id = subs.data[0].id
+                    await db.commit()
+                    logger.info("Auto-recovered subscription_id for user %s", user.id)
+            except stripe.StripeError as e:
+                logger.warning("Failed to lookup subscription for user %s: %s", user.id, e)
+        if not user.stripe_subscription_id:
+            raise HTTPException(400, "No active subscription. Use /subscribe instead.")
     if user.plan == body.plan:
         raise HTTPException(400, "You are already on this plan")
     if user.plan == "free":
