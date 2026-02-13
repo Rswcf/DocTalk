@@ -29,7 +29,7 @@ function BillingContent() {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
-  const { profile } = useUserProfile();
+  const { profile, refetch: refetchProfile } = useUserProfile();
   const [submitting, setSubmitting] = useState<string | null>(null);
   const [productsLoading, setProductsLoading] = useState(true);
   const [productsError, setProductsError] = useState(false);
@@ -99,7 +99,6 @@ function BillingContent() {
       window.location.href = res.checkout_url;
     } catch {
       setMessage(t("billing.error"));
-    } finally {
       setSubmitting(null);
     }
   };
@@ -135,6 +134,7 @@ function BillingContent() {
     try {
       const result = await changePlan({ plan, billing: billingPeriod });
       triggerCreditsRefresh();
+      await refetchProfile();
       if (result.credits_supplemented > 0) {
         setMessage(
           t("billing.upgradeSuccess", {
@@ -160,6 +160,7 @@ function BillingContent() {
         billing: confirmDowngrade.billing,
       });
       triggerCreditsRefresh();
+      await refetchProfile();
       setMessage(t("billing.downgradeSuccess"));
       setConfirmDowngrade(null);
     } catch (error) {
@@ -174,7 +175,8 @@ function BillingContent() {
     try {
       const res = await createPortalSession();
       window.location.href = res.portal_url;
-    } finally {
+    } catch {
+      setMessage(t("billing.error"));
       setSubmitting(null);
     }
   };

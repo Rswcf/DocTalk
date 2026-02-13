@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import json
 from datetime import datetime, timezone
 from typing import List, Optional
@@ -334,17 +335,10 @@ async def delete_me(
     try:
         if settings.STRIPE_SECRET_KEY and user.stripe_subscription_id:
             stripe.api_key = settings.STRIPE_SECRET_KEY
-            try:
-                # Prefer delete() which cancels the subscription
-                stripe.Subscription.delete(user.stripe_subscription_id)
-            except Exception:
-                try:
-                    # Fallback for environments expecting cancel()
-                    getattr(stripe.Subscription, "cancel")(user.stripe_subscription_id)
-                except Exception:
-                    pass
+            await asyncio.to_thread(
+                stripe.Subscription.cancel, user.stripe_subscription_id
+            )
     except Exception:
-        # Best-effort: ignore Stripe errors during account deletion
         pass
 
     # 2) Find all user documents
