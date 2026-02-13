@@ -16,7 +16,7 @@ export const AVAILABLE_MODES: ModeOption[] = [
   { id: 'thorough', labelKey: 'modes.thorough', descriptionKey: 'modes.thoroughDesc', minPlan: 'plus' },
 ];
 
-const PLAN_HIERARCHY: Record<PlanType, number> = { free: 0, plus: 1, pro: 2 };
+export const PLAN_HIERARCHY: Record<PlanType, number> = { free: 0, plus: 1, pro: 2 };
 
 export function isModeAvailable(modeId: ModeId, userPlan: string): boolean {
   const mode = AVAILABLE_MODES.find((m) => m.id === modeId);

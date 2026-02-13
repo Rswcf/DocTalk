@@ -434,5 +434,17 @@
   "tour.plus.title": "Plus d'options",
   "tour.plus.desc": "Définissez des instructions IA personnalisées ou exportez votre conversation.",
   "tour.session.title": "Sessions de chat",
-  "tour.session.desc": "Créez plusieurs chats par document pour explorer différents sujets."
+  "tour.session.desc": "Créez plusieurs chats par document pour explorer différents sujets.",
+  "billing.downgrade": "Rétrograder vers",
+  "billing.upgradeSuccess": "{credits} crédits bonus ont été ajoutés à votre compte !",
+  "billing.downgradeSuccess": "Forfait modifié avec succès. Vos crédits ont été conservés.",
+  "billing.planChanged": "Forfait modifié avec succès.",
+  "billing.intervalMismatch": "Impossible de changer la période de facturation pendant la bêta. Contactez le support.",
+  "billing.confirmDowngrade.title": "Confirmer le changement de forfait",
+  "billing.confirmDowngrade.description": "Vous êtes sur le point de rétrograder votre forfait. Voici ce qui va se passer :",
+  "billing.confirmDowngrade.creditsKept": "Vos crédits existants sont conservés définitivement",
+  "billing.confirmDowngrade.effectiveNow": "Le changement de forfait prend effet immédiatement",
+  "billing.confirmDowngrade.nextBilling": "Votre prochaine facturation sera au tarif inférieur",
+  "billing.confirmDowngrade.confirm": "Confirmer la rétrogradation",
+  "credits.plan_upgrade_supplement": "Bonus de montée en gamme"
 }

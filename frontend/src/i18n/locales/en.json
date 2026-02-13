@@ -434,5 +434,17 @@
   "tour.plus.title": "More Options",
   "tour.plus.desc": "Set custom AI instructions or export your conversation.",
   "tour.session.title": "Chat Sessions",
-  "tour.session.desc": "Create multiple chats per document to explore different topics."
+  "tour.session.desc": "Create multiple chats per document to explore different topics.",
+  "billing.downgrade": "Downgrade to",
+  "billing.upgradeSuccess": "{credits} bonus credits added to your account!",
+  "billing.downgradeSuccess": "Plan changed successfully. Your credits have been kept.",
+  "billing.planChanged": "Plan changed successfully.",
+  "billing.intervalMismatch": "Cannot switch billing interval during beta. Please contact support.",
+  "billing.confirmDowngrade.title": "Confirm Plan Change",
+  "billing.confirmDowngrade.description": "You're about to downgrade your plan. Here's what will happen:",
+  "billing.confirmDowngrade.creditsKept": "Your existing credits are permanently kept",
+  "billing.confirmDowngrade.effectiveNow": "Plan change takes effect immediately",
+  "billing.confirmDowngrade.nextBilling": "Your next billing will be at the lower rate",
+  "billing.confirmDowngrade.confirm": "Confirm Downgrade",
+  "credits.plan_upgrade_supplement": "Plan Upgrade Bonus"
 }

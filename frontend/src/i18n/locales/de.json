@@ -434,5 +434,17 @@
   "tour.plus.title": "Weitere Optionen",
   "tour.plus.desc": "Lege benutzerdefinierte KI-Anweisungen fest oder exportiere dein Gespräch.",
   "tour.session.title": "Chat-Sitzungen",
-  "tour.session.desc": "Erstelle mehrere Chats pro Dokument, um verschiedene Themen zu erkunden."
+  "tour.session.desc": "Erstelle mehrere Chats pro Dokument, um verschiedene Themen zu erkunden.",
+  "billing.downgrade": "Downgrade auf",
+  "billing.upgradeSuccess": "{credits} Bonus-Credits wurden Ihrem Konto hinzugefügt!",
+  "billing.downgradeSuccess": "Plan erfolgreich geändert. Ihre Credits wurden beibehalten.",
+  "billing.planChanged": "Plan erfolgreich geändert.",
+  "billing.intervalMismatch": "Während der Beta kann das Abrechnungsintervall nicht gewechselt werden. Bitte kontaktieren Sie den Support.",
+  "billing.confirmDowngrade.title": "Planänderung bestätigen",
+  "billing.confirmDowngrade.description": "Sie sind dabei, Ihren Plan herabzustufen. Das passiert dabei:",
+  "billing.confirmDowngrade.creditsKept": "Ihre vorhandenen Credits bleiben dauerhaft erhalten",
+  "billing.confirmDowngrade.effectiveNow": "Die Planänderung wird sofort wirksam",
+  "billing.confirmDowngrade.nextBilling": "Ihre nächste Abrechnung erfolgt zum niedrigeren Tarif",
+  "billing.confirmDowngrade.confirm": "Downgrade bestätigen",
+  "credits.plan_upgrade_supplement": "Plan-Upgrade-Bonus"
 }

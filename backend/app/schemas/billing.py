@@ -19,3 +19,10 @@ class CheckoutUrlResponse(BaseModel):
 
 class PortalUrlResponse(BaseModel):
     portal_url: str
+
+
+class ChangePlanResponse(BaseModel):
+    status: str
+    new_plan: str
+    effective: str
+    credits_supplemented: int

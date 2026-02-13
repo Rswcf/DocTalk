@@ -434,5 +434,17 @@
   "tour.plus.title": "更多选项",
   "tour.plus.desc": "设置自定义 AI 指令或导出对话记录。",
   "tour.session.title": "对话会话",
-  "tour.session.desc": "为每篇文档创建多个对话，探索不同主题。"
+  "tour.session.desc": "为每篇文档创建多个对话，探索不同主题。",
+  "billing.downgrade": "降级到",
+  "billing.upgradeSuccess": "已向你的账户补充 {credits} 奖励额度！",
+  "billing.downgradeSuccess": "方案已成功变更。你的额度已保留。",
+  "billing.planChanged": "方案已成功变更。",
+  "billing.intervalMismatch": "测试阶段暂不支持切换计费周期。请联系支持团队。",
+  "billing.confirmDowngrade.title": "确认变更方案",
+  "billing.confirmDowngrade.description": "你即将降级方案。将会发生以下变化：",
+  "billing.confirmDowngrade.creditsKept": "你现有的额度将永久保留",
+  "billing.confirmDowngrade.effectiveNow": "方案变更将立即生效",
+  "billing.confirmDowngrade.nextBilling": "你的下一次账单将按更低费率计费",
+  "billing.confirmDowngrade.confirm": "确认降级",
+  "credits.plan_upgrade_supplement": "方案升级奖励"
 }

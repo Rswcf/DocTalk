@@ -5,10 +5,10 @@ import { useSession } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useLocale } from "../../i18n";
 import Header from "../../components/Header";
-import { createSubscription, createPortalSession } from "../../lib/api";
+import { changePlan, createSubscription, createPortalSession } from "../../lib/api";
 import { triggerCreditsRefresh } from "../../components/CreditsDisplay";
 import PricingTable from "../../components/PricingTable";
-import type { PlanType } from "../../lib/models";
+import { PLAN_HIERARCHY, type PlanType } from "../../lib/models";
 import { Check } from "lucide-react";
 import { usePageTitle } from "../../lib/usePageTitle";
 import { useUserProfile } from "../../lib/useUserProfile";
@@ -22,7 +22,7 @@ interface Product {
 function BillingContent() {
   usePageTitle("Pricing");
 
-  const { data: session, status } = useSession();
+  const { status } = useSession();
   const router = useRouter();
   const searchParams = useSearchParams();
   const { t } = useLocale();
@@ -35,6 +35,7 @@ function BillingContent() {
   const [productsError, setProductsError] = useState(false);
   const [billingPeriod, setBillingPeriod] = useState<'monthly' | 'annual'>('monthly');
   const [selectedPlan, setSelectedPlan] = useState<'plus' | 'pro'>('plus');
+  const [confirmDowngrade, setConfirmDowngrade] = useState<{ plan: string; billing: string } | null>(null);
 
   useEffect(() => {
     if (searchParams.get("success")) {
@@ -91,13 +92,78 @@ function BillingContent() {
     setLoading(null);
   };
 
-  const handleSubscribe = async (plan: string) => {
+  const handleSubscribe = async (plan: 'plus' | 'pro') => {
     setSubmitting(plan);
     try {
       const res = await createSubscription({ plan, billing: billingPeriod });
       window.location.href = res.checkout_url;
     } catch {
       setMessage(t("billing.error"));
+    } finally {
+      setSubmitting(null);
+    }
+  };
+
+  const getBillingErrorMessage = (error: unknown) => {
+    const raw = error instanceof Error ? error.message : String(error || "");
+    if (raw.includes("Cannot switch billing interval during beta")) {
+      return t("billing.intervalMismatch");
+    }
+    return t("billing.error");
+  };
+
+  const handlePlanAction = async (plan: PlanType) => {
+    if (plan === 'free') return;
+    const currentPlan = (profile?.plan || 'free') as PlanType;
+
+    if (currentPlan === 'free') {
+      await handleSubscribe(plan);
+      return;
+    }
+
+    if (currentPlan === plan) {
+      return;
+    }
+
+    const isUpgrade = PLAN_HIERARCHY[plan] > PLAN_HIERARCHY[currentPlan];
+    if (!isUpgrade) {
+      setConfirmDowngrade({ plan, billing: billingPeriod });
+      return;
+    }
+
+    setSubmitting(plan);
+    try {
+      const result = await changePlan({ plan, billing: billingPeriod });
+      triggerCreditsRefresh();
+      if (result.credits_supplemented > 0) {
+        setMessage(
+          t("billing.upgradeSuccess", {
+            credits: result.credits_supplemented.toLocaleString(),
+          })
+        );
+      } else {
+        setMessage(t("billing.planChanged"));
+      }
+    } catch (error) {
+      setMessage(getBillingErrorMessage(error));
+    } finally {
+      setSubmitting(null);
+    }
+  };
+
+  const confirmDowngradeAction = async () => {
+    if (!confirmDowngrade) return;
+    setSubmitting("confirm-downgrade");
+    try {
+      await changePlan({
+        plan: confirmDowngrade.plan,
+        billing: confirmDowngrade.billing,
+      });
+      triggerCreditsRefresh();
+      setMessage(t("billing.downgradeSuccess"));
+      setConfirmDowngrade(null);
+    } catch (error) {
+      setMessage(getBillingErrorMessage(error));
     } finally {
       setSubmitting(null);
     }
@@ -115,7 +181,7 @@ function BillingContent() {
 
   const handleUpgrade = (plan: PlanType) => {
     if (plan === 'free') return;
-    handleSubscribe(plan);
+    handlePlanAction(plan);
   };
 
   if (status === "loading") {
@@ -224,9 +290,17 @@ function BillingContent() {
                 >
                   {t("billing.manage")}
                 </button>
+              ) : profile?.plan === 'pro' ? (
+                <button
+                  onClick={() => handlePlanAction('plus')}
+                  disabled={submitting === 'plus'}
+                  className="w-full px-4 py-2.5 rounded-lg bg-zinc-900 dark:bg-zinc-50 text-white dark:text-zinc-900 hover:bg-zinc-800 dark:hover:bg-zinc-200 disabled:opacity-50 shadow-sm hover:shadow-md transition-colors font-medium focus-visible:ring-2 focus-visible:ring-zinc-400 dark:focus-visible:ring-zinc-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-900"
+                >
+                  {submitting === 'plus' ? t("common.loading") : `${t("billing.downgrade")} Plus`}
+                </button>
               ) : (
                 <button
-                  onClick={() => handleSubscribe('plus')}
+                  onClick={() => handlePlanAction('plus')}
                   disabled={submitting === 'plus'}
                   className="w-full px-4 py-2.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-500 dark:hover:bg-indigo-400 text-white disabled:opacity-50 shadow-sm hover:shadow-md transition-colors font-medium focus-visible:ring-2 focus-visible:ring-zinc-400 dark:focus-visible:ring-zinc-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-900"
                 >
@@ -277,9 +351,17 @@ function BillingContent() {
               >
                 {t("billing.manage")}
               </button>
+            ) : profile?.plan === 'plus' ? (
+              <button
+                onClick={() => handlePlanAction('pro')}
+                disabled={submitting === 'pro'}
+                className="w-full px-4 py-2.5 rounded-lg bg-zinc-900 dark:bg-zinc-50 text-white dark:text-zinc-900 hover:bg-zinc-800 dark:hover:bg-zinc-200 disabled:opacity-50 shadow-sm hover:shadow-md transition-colors font-medium focus-visible:ring-2 focus-visible:ring-zinc-400 dark:focus-visible:ring-zinc-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-900"
+              >
+                {submitting === 'pro' ? t("common.loading") : `${t("billing.upgrade")} to ${t("billing.comparison.pro")}`}
+              </button>
             ) : (
               <button
-                onClick={() => handleSubscribe('pro')}
+                onClick={() => handlePlanAction('pro')}
                 disabled={submitting === 'pro'}
                 className="w-full px-4 py-2.5 rounded-lg bg-zinc-900 dark:bg-zinc-50 text-white dark:text-zinc-900 hover:bg-zinc-800 dark:hover:bg-zinc-200 disabled:opacity-50 shadow-sm hover:shadow-md transition-colors font-medium focus-visible:ring-2 focus-visible:ring-zinc-400 dark:focus-visible:ring-zinc-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-900"
               >
@@ -352,6 +434,51 @@ function BillingContent() {
                 </button>
               </div>
             ))}
+          </div>
+        )}
+
+        {confirmDowngrade && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center px-4 bg-zinc-950/40">
+            <div className="w-full max-w-md rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-6 shadow-xl">
+              <h3 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50">
+                {t("billing.confirmDowngrade.title")}
+              </h3>
+              <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">
+                {t("billing.confirmDowngrade.description")}
+              </p>
+              <ul className="mt-4 space-y-2 text-sm text-zinc-700 dark:text-zinc-300">
+                <li className="flex items-start gap-2">
+                  <Check size={16} className="mt-0.5 shrink-0 text-zinc-900 dark:text-zinc-100" />
+                  <span>{t("billing.confirmDowngrade.creditsKept")}</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <Check size={16} className="mt-0.5 shrink-0 text-zinc-900 dark:text-zinc-100" />
+                  <span>{t("billing.confirmDowngrade.effectiveNow")}</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <Check size={16} className="mt-0.5 shrink-0 text-zinc-900 dark:text-zinc-100" />
+                  <span>{t("billing.confirmDowngrade.nextBilling")}</span>
+                </li>
+              </ul>
+              <div className="mt-6 grid grid-cols-2 gap-3">
+                <button
+                  onClick={() => setConfirmDowngrade(null)}
+                  disabled={submitting === "confirm-downgrade"}
+                  className="px-4 py-2.5 rounded-lg bg-zinc-100 dark:bg-zinc-800 text-zinc-800 dark:text-zinc-100 hover:bg-zinc-200 dark:hover:bg-zinc-700 disabled:opacity-50 transition-colors font-medium"
+                >
+                  {t("common.cancel")}
+                </button>
+                <button
+                  onClick={confirmDowngradeAction}
+                  disabled={submitting === "confirm-downgrade"}
+                  className="px-4 py-2.5 rounded-lg bg-zinc-900 dark:bg-zinc-50 text-white dark:text-zinc-900 hover:bg-zinc-800 dark:hover:bg-zinc-200 disabled:opacity-50 transition-colors font-medium"
+                >
+                  {submitting === "confirm-downgrade"
+                    ? t("common.loading")
+                    : t("billing.confirmDowngrade.confirm")}
+                </button>
+              </div>
+            </div>
           </div>
         )}
       </main>

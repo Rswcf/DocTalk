@@ -434,5 +434,17 @@
   "tour.plus.title": "Más opciones",
   "tour.plus.desc": "Configura instrucciones personalizadas o exporta tu conversación.",
   "tour.session.title": "Sesiones de chat",
-  "tour.session.desc": "Crea múltiples chats por documento para explorar diferentes temas."
+  "tour.session.desc": "Crea múltiples chats por documento para explorar diferentes temas.",
+  "billing.downgrade": "Bajar a",
+  "billing.upgradeSuccess": "Se añadieron {credits} créditos de bonificación a tu cuenta.",
+  "billing.downgradeSuccess": "Plan cambiado correctamente. Tus créditos se han conservado.",
+  "billing.planChanged": "Plan cambiado correctamente.",
+  "billing.intervalMismatch": "No se puede cambiar el intervalo de facturación durante la beta. Contacta con soporte.",
+  "billing.confirmDowngrade.title": "Confirmar cambio de plan",
+  "billing.confirmDowngrade.description": "Estás a punto de bajar de plan. Esto es lo que pasará:",
+  "billing.confirmDowngrade.creditsKept": "Tus créditos existentes se conservan de forma permanente",
+  "billing.confirmDowngrade.effectiveNow": "El cambio de plan entra en vigor de inmediato",
+  "billing.confirmDowngrade.nextBilling": "Tu próxima factura será con la tarifa más baja",
+  "billing.confirmDowngrade.confirm": "Confirmar bajada",
+  "credits.plan_upgrade_supplement": "Bono por mejora de plan"
 }
