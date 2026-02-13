@@ -170,6 +170,22 @@ export async function createPortalSession(): Promise<{ portal_url: string }> {
   return handle(res);
 }
 
+export interface ChangePlanResult {
+  status: 'upgraded' | 'downgraded';
+  new_plan: string;
+  effective: string;
+  credits_supplemented: number;
+}
+
+export async function changePlan(params: { plan: string; billing: string }): Promise<ChangePlanResult> {
+  const res = await fetch(PROXY_BASE + '/api/billing/change-plan', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(params),
+  });
+  return handle(res);
+}
+
 export interface DemoDocument {
   slug: string;
   document_id: string;

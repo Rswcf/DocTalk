@@ -434,5 +434,17 @@
   "tour.plus.title": "अधिक विकल्प",
   "tour.plus.desc": "कस्टम AI निर्देश सेट करें या अपनी बातचीत निर्यात करें।",
   "tour.session.title": "चैट सत्र",
-  "tour.session.desc": "प्रत्येक दस्तावेज़ के लिए कई चैट बनाएं और विभिन्न विषयों का अन्वेषण करें।"
+  "tour.session.desc": "प्रत्येक दस्तावेज़ के लिए कई चैट बनाएं और विभिन्न विषयों का अन्वेषण करें।",
+  "billing.downgrade": "डाउनग्रेड करें",
+  "billing.upgradeSuccess": "{credits} बोनस क्रेडिट आपके खाते में जोड़ दिए गए हैं!",
+  "billing.downgradeSuccess": "योजना सफलतापूर्वक बदल दी गई। आपके क्रेडिट सुरक्षित रखे गए हैं।",
+  "billing.planChanged": "योजना सफलतापूर्वक बदल दी गई।",
+  "billing.intervalMismatch": "बीटा के दौरान बिलिंग अंतराल बदला नहीं जा सकता। कृपया सहायता टीम से संपर्क करें।",
+  "billing.confirmDowngrade.title": "योजना परिवर्तन की पुष्टि करें",
+  "billing.confirmDowngrade.description": "आप अपनी योजना डाउनग्रेड करने वाले हैं। यह होगा:",
+  "billing.confirmDowngrade.creditsKept": "आपके मौजूदा क्रेडिट स्थायी रूप से सुरक्षित रहेंगे",
+  "billing.confirmDowngrade.effectiveNow": "योजना परिवर्तन तुरंत प्रभावी होगा",
+  "billing.confirmDowngrade.nextBilling": "आपकी अगली बिलिंग कम दर पर होगी",
+  "billing.confirmDowngrade.confirm": "डाउनग्रेड की पुष्टि करें",
+  "credits.plan_upgrade_supplement": "योजना अपग्रेड बोनस"
 }

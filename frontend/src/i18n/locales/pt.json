@@ -434,5 +434,17 @@
   "tour.plus.title": "Mais opções",
   "tour.plus.desc": "Defina instruções personalizadas de IA ou exporte sua conversa.",
   "tour.session.title": "Sessões de chat",
-  "tour.session.desc": "Crie múltiplos chats por documento para explorar diferentes temas."
+  "tour.session.desc": "Crie múltiplos chats por documento para explorar diferentes temas.",
+  "billing.downgrade": "Fazer downgrade para",
+  "billing.upgradeSuccess": "{credits} créditos de bônus foram adicionados à sua conta!",
+  "billing.downgradeSuccess": "Plano alterado com sucesso. Seus créditos foram mantidos.",
+  "billing.planChanged": "Plano alterado com sucesso.",
+  "billing.intervalMismatch": "Não é possível mudar o intervalo de cobrança durante a beta. Entre em contato com o suporte.",
+  "billing.confirmDowngrade.title": "Confirmar mudança de plano",
+  "billing.confirmDowngrade.description": "Você está prestes a fazer downgrade do seu plano. Veja o que vai acontecer:",
+  "billing.confirmDowngrade.creditsKept": "Seus créditos atuais são mantidos permanentemente",
+  "billing.confirmDowngrade.effectiveNow": "A mudança de plano entra em vigor imediatamente",
+  "billing.confirmDowngrade.nextBilling": "Sua próxima cobrança será na tarifa mais baixa",
+  "billing.confirmDowngrade.confirm": "Confirmar downgrade",
+  "credits.plan_upgrade_supplement": "Bônus de upgrade de plano"
 }

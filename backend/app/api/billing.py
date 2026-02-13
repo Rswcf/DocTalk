@@ -16,6 +16,7 @@ from app.core.deps import get_db_session, require_auth
 from app.models.tables import CreditLedger, User
 from app.schemas.billing import (
     BillingProductsResponse,
+    ChangePlanResponse,
     CheckoutUrlResponse,
     PortalUrlResponse,
 )
@@ -66,6 +67,19 @@ def _credits_for_plan(plan: str) -> int:
     return int(settings.PLAN_FREE_MONTHLY_CREDITS or 0)
 
 
+PLAN_HIERARCHY = {"free": 0, "plus": 1, "pro": 2}
+
+
+def _interval_from_price_id(price_id: str) -> Optional[str]:
+    monthly = {settings.STRIPE_PRICE_PLUS_MONTHLY, settings.STRIPE_PRICE_PRO_MONTHLY}
+    annual = {settings.STRIPE_PRICE_PLUS_ANNUAL, settings.STRIPE_PRICE_PRO_ANNUAL}
+    if price_id in monthly:
+        return "monthly"
+    if price_id in annual:
+        return "annual"
+    return None
+
+
 @router.get("/products", response_model=BillingProductsResponse)
 async def list_products():
     return {
@@ -112,6 +126,11 @@ async def subscribe(
 ):
     if not settings.STRIPE_SECRET_KEY:
         raise HTTPException(503, "Stripe not configured")
+    if user.stripe_subscription_id:
+        raise HTTPException(
+            400,
+            "You already have an active subscription. Use /change-plan to switch plans.",
+        )
 
     price_id = _get_subscription_price_id(body.plan, body.billing)
     if not price_id:
@@ -147,6 +166,80 @@ async def customer_portal(user: User = Depends(require_auth)):
         return_url=f"{settings.FRONTEND_URL}/billing",
     )
     return {"portal_url": portal.url}
+
+
+@router.post("/change-plan", response_model=ChangePlanResponse)
+async def change_plan(
+    body: SubscribeRequest = SubscribeRequest(),
+    user: User = Depends(require_auth),
+    db: AsyncSession = Depends(get_db_session),
+):
+    if not settings.STRIPE_SECRET_KEY:
+        raise HTTPException(503, "Stripe not configured")
+    if not user.stripe_subscription_id:
+        raise HTTPException(400, "No active subscription. Use /subscribe instead.")
+    if user.plan == body.plan:
+        raise HTTPException(400, "You are already on this plan")
+    if user.plan == "free":
+        raise HTTPException(400, "Free users must use /subscribe")
+
+    old_plan = user.plan
+    try:
+        sub = stripe.Subscription.retrieve(user.stripe_subscription_id)
+    except stripe.error.StripeError as e:
+        logger.error("Stripe retrieve subscription failed: %s", e)
+        raise HTTPException(502, "Stripe subscription retrieval failed")
+
+    if sub.get("status") not in ("active", "trialing"):
+        raise HTTPException(400, "Subscription is not active")
+
+    items = sub.get("items", {}).get("data", [])
+    if not items:
+        raise HTTPException(400, "Subscription has no line items")
+    current_item = items[0]
+    current_price_id = current_item.get("price", {}).get("id", "")
+    current_interval = _interval_from_price_id(current_price_id)
+    if current_interval != body.billing:
+        raise HTTPException(400, "Cannot switch billing interval during beta")
+
+    new_price_id = _get_subscription_price_id(body.plan, body.billing)
+    if not new_price_id:
+        raise HTTPException(400, f"Stripe price not configured for {body.plan}/{body.billing}")
+
+    is_upgrade = PLAN_HIERARCHY.get(body.plan, 0) > PLAN_HIERARCHY.get(old_plan, 0)
+
+    try:
+        stripe.Subscription.modify(
+            user.stripe_subscription_id,
+            items=[{"id": current_item["id"], "price": new_price_id}],
+            proration_behavior="always_invoice" if is_upgrade else "none",
+        )
+    except stripe.error.StripeError as e:
+        logger.error("Stripe modify subscription failed: %s", e)
+        raise HTTPException(502, "Stripe subscription update failed")
+
+    user.plan = body.plan
+    supplement = 0
+    if is_upgrade:
+        supplement = _credits_for_plan(body.plan) - _credits_for_plan(old_plan)
+        if supplement > 0:
+            await credit_credits(
+                db=db,
+                user_id=user.id,
+                amount=supplement,
+                reason="plan_upgrade_supplement",
+                ref_type="plan_change",
+                ref_id=f"{old_plan}_to_{body.plan}",
+            )
+    await db.commit()
+    await cache_delete(f"user:profile:{user.id}")
+
+    return {
+        "status": "upgraded" if is_upgrade else "downgraded",
+        "new_plan": body.plan,
+        "effective": "immediate",
+        "credits_supplemented": supplement,
+    }
 
 
 async def _handle_checkout_session_subscription_completed(
@@ -374,6 +467,55 @@ async def _handle_subscription_deleted(
     return {"received": True}
 
 
+async def _handle_subscription_updated(
+    subscription: dict,
+    db: AsyncSession,
+):
+    customer_id = subscription.get("customer")
+    if not customer_id:
+        return {"received": True}
+    # Don't change plan if subscription is just marked for cancellation
+    if subscription.get("cancel_at_period_end"):
+        return {"received": True}
+    user = await db.scalar(select(User).where(User.stripe_customer_id == customer_id))
+    if not user:
+        return {"received": True}
+    items = subscription.get("items", {}).get("data", [])
+    if not items:
+        return {"received": True}
+    price_id = items[0].get("price", {}).get("id", "")
+    detected_plan = _plan_from_price_id(price_id)
+    if detected_plan and detected_plan != user.plan:
+        old_plan = user.plan
+        user.plan = detected_plan
+        sub_id = subscription.get("id")
+        if sub_id:
+            user.stripe_subscription_id = sub_id
+        await db.commit()
+        await cache_delete(f"user:profile:{user.id}")
+        logger.info(
+            "Plan synced from webhook: user=%s, %s -> %s",
+            user.id,
+            old_plan,
+            detected_plan,
+        )
+    return {"received": True}
+
+
+async def _handle_invoice_payment_failed(
+    invoice: dict,
+    _db: AsyncSession,
+):
+    customer_id = invoice.get("customer")
+    invoice_id = invoice.get("id")
+    logger.warning(
+        "Invoice payment failed: customer=%s, invoice=%s",
+        customer_id,
+        invoice_id,
+    )
+    return {"received": True}
+
+
 @router.post("/webhook", response_model=ReceivedResponse)
 async def stripe_webhook(request: Request, db: AsyncSession = Depends(get_db_session)):
     payload = await request.body()
@@ -398,6 +540,8 @@ async def stripe_webhook(request: Request, db: AsyncSession = Depends(get_db_ses
         "checkout.session.completed": _handle_checkout_session_completed,
         "invoice.payment_succeeded": _handle_invoice_payment_succeeded,
         "customer.subscription.deleted": _handle_subscription_deleted,
+        "customer.subscription.updated": _handle_subscription_updated,
+        "invoice.payment_failed": _handle_invoice_payment_failed,
     }
     handler = handlers.get(event["type"])
     if not handler:

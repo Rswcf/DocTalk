@@ -434,5 +434,17 @@
   "tour.plus.title": "خيارات إضافية",
   "tour.plus.desc": "عيّن تعليمات ذكاء اصطناعي مخصصة أو صدّر محادثتك.",
   "tour.session.title": "جلسات الدردشة",
-  "tour.session.desc": "أنشئ محادثات متعددة لكل مستند لاستكشاف مواضيع مختلفة."
+  "tour.session.desc": "أنشئ محادثات متعددة لكل مستند لاستكشاف مواضيع مختلفة.",
+  "billing.downgrade": "الرجوع إلى",
+  "billing.upgradeSuccess": "تمت إضافة {credits} من الأرصدة الإضافية إلى حسابك!",
+  "billing.downgradeSuccess": "تم تغيير الخطة بنجاح. تم الاحتفاظ بأرصدتك.",
+  "billing.planChanged": "تم تغيير الخطة بنجاح.",
+  "billing.intervalMismatch": "لا يمكن تبديل دورة الفوترة خلال المرحلة التجريبية. يرجى التواصل مع الدعم.",
+  "billing.confirmDowngrade.title": "تأكيد تغيير الخطة",
+  "billing.confirmDowngrade.description": "أنت على وشك خفض خطتك. إليك ما سيحدث:",
+  "billing.confirmDowngrade.creditsKept": "سيتم الاحتفاظ بأرصدتك الحالية بشكل دائم",
+  "billing.confirmDowngrade.effectiveNow": "يسري تغيير الخطة فورًا",
+  "billing.confirmDowngrade.nextBilling": "ستكون فاتورتك القادمة بالسعر الأقل",
+  "billing.confirmDowngrade.confirm": "تأكيد خفض الخطة",
+  "credits.plan_upgrade_supplement": "مكافأة ترقية الخطة"
 }

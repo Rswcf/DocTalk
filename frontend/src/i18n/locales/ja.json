@@ -434,5 +434,17 @@
   "tour.plus.title": "その他のオプション",
   "tour.plus.desc": "カスタムAI指示の設定や会話のエクスポートができます。",
   "tour.session.title": "チャットセッション",
-  "tour.session.desc": "ドキュメントごとに複数のチャットを作成し、さまざまなトピックを探索できます。"
+  "tour.session.desc": "ドキュメントごとに複数のチャットを作成し、さまざまなトピックを探索できます。",
+  "billing.downgrade": "ダウングレード先",
+  "billing.upgradeSuccess": "{credits} ボーナスクレジットをアカウントに追加しました！",
+  "billing.downgradeSuccess": "プランの変更が完了しました。クレジットは保持されています。",
+  "billing.planChanged": "プランの変更が完了しました。",
+  "billing.intervalMismatch": "ベータ期間中は請求サイクルを変更できません。サポートまでご連絡ください。",
+  "billing.confirmDowngrade.title": "プラン変更の確認",
+  "billing.confirmDowngrade.description": "プランをダウングレードしようとしています。以下の内容が適用されます。",
+  "billing.confirmDowngrade.creditsKept": "現在のクレジットは恒久的に保持されます",
+  "billing.confirmDowngrade.effectiveNow": "プラン変更は即時に反映されます",
+  "billing.confirmDowngrade.nextBilling": "次回の請求はより低い料金で行われます",
+  "billing.confirmDowngrade.confirm": "ダウングレードを確定",
+  "credits.plan_upgrade_supplement": "プランアップグレード特典"
 }
