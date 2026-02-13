@@ -20,7 +20,10 @@ def upgrade() -> None:
         "credit_ledger",
         ["user_id", "ref_type", "ref_id"],
         unique=True,
-        postgresql_where=sa.text("ref_type IS NOT NULL AND ref_id IS NOT NULL"),
+        postgresql_where=sa.text(
+            "ref_type IS NOT NULL AND ref_id IS NOT NULL "
+            "AND ref_type IN ('plan_change', 'stripe_payment', 'stripe_invoice', 'monthly_cycle')"
+        ),
     )
 
 
