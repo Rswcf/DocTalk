@@ -446,5 +446,11 @@
   "billing.confirmDowngrade.effectiveNow": "Plan change takes effect immediately",
   "billing.confirmDowngrade.nextBilling": "Your next billing will be at the lower rate",
   "billing.confirmDowngrade.confirm": "Confirm Downgrade",
+  "billing.confirmUpgrade.title": "Confirm Upgrade",
+  "billing.confirmUpgrade.description": "You're about to upgrade your plan. Here's what will happen:",
+  "billing.confirmUpgrade.immediateCharge": "The prorated price difference will be charged to your card immediately",
+  "billing.confirmUpgrade.bonusCredits": "You'll receive bonus credits for the upgrade",
+  "billing.confirmUpgrade.effectiveNow": "Your new plan takes effect immediately",
+  "billing.confirmUpgrade.confirm": "Confirm Upgrade",
   "credits.plan_upgrade_supplement": "Plan Upgrade Bonus"
 }

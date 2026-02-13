@@ -446,5 +446,11 @@
   "billing.confirmDowngrade.effectiveNow": "El cambio de plan entra en vigor de inmediato",
   "billing.confirmDowngrade.nextBilling": "Tu próxima factura será con la tarifa más baja",
   "billing.confirmDowngrade.confirm": "Confirmar bajada",
+  "billing.confirmUpgrade.title": "Confirmar mejora",
+  "billing.confirmUpgrade.description": "Estás a punto de mejorar tu plan. Esto es lo que sucederá:",
+  "billing.confirmUpgrade.immediateCharge": "La diferencia de precio prorrateada se cargará a tu tarjeta de inmediato",
+  "billing.confirmUpgrade.bonusCredits": "Recibirás créditos adicionales por la mejora",
+  "billing.confirmUpgrade.effectiveNow": "Tu nuevo plan entra en vigor de inmediato",
+  "billing.confirmUpgrade.confirm": "Confirmar mejora",
   "credits.plan_upgrade_supplement": "Bono por mejora de plan"
 }

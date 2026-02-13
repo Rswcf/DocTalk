@@ -446,5 +446,11 @@
   "billing.confirmDowngrade.effectiveNow": "플랜 변경은 즉시 적용됩니다",
   "billing.confirmDowngrade.nextBilling": "다음 결제부터 더 낮은 요금이 적용됩니다",
   "billing.confirmDowngrade.confirm": "다운그레이드 확인",
+  "billing.confirmUpgrade.title": "업그레이드 확인",
+  "billing.confirmUpgrade.description": "플랜을 업그레이드합니다. 다음과 같은 변경이 적용됩니다:",
+  "billing.confirmUpgrade.immediateCharge": "일할 계산된 가격 차액이 카드에서 즉시 결제됩니다",
+  "billing.confirmUpgrade.bonusCredits": "업그레이드 보너스 크레딧이 지급됩니다",
+  "billing.confirmUpgrade.effectiveNow": "새 플랜이 즉시 적용됩니다",
+  "billing.confirmUpgrade.confirm": "업그레이드 확인",
   "credits.plan_upgrade_supplement": "플랜 업그레이드 보너스"
 }

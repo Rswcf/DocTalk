@@ -446,5 +446,11 @@
   "billing.confirmDowngrade.effectiveNow": "方案变更将立即生效",
   "billing.confirmDowngrade.nextBilling": "你的下一次账单将按更低费率计费",
   "billing.confirmDowngrade.confirm": "确认降级",
+  "billing.confirmUpgrade.title": "确认升级",
+  "billing.confirmUpgrade.description": "您即将升级方案，以下是升级详情：",
+  "billing.confirmUpgrade.immediateCharge": "按比例计算的差价将立即从您的卡上扣除",
+  "billing.confirmUpgrade.bonusCredits": "您将获得升级赠送的额外积分",
+  "billing.confirmUpgrade.effectiveNow": "新方案立即生效",
+  "billing.confirmUpgrade.confirm": "确认升级",
   "credits.plan_upgrade_supplement": "方案升级奖励"
 }

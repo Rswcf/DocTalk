@@ -446,5 +446,11 @@
   "billing.confirmDowngrade.effectiveNow": "Il cambio piano ha effetto immediato",
   "billing.confirmDowngrade.nextBilling": "La prossima fatturazione sarà alla tariffa inferiore",
   "billing.confirmDowngrade.confirm": "Conferma downgrade",
+  "billing.confirmUpgrade.title": "Conferma upgrade",
+  "billing.confirmUpgrade.description": "Stai per effettuare l'upgrade del tuo piano. Ecco cosa succederà:",
+  "billing.confirmUpgrade.immediateCharge": "La differenza di prezzo proporzionale verrà addebitata immediatamente sulla tua carta",
+  "billing.confirmUpgrade.bonusCredits": "Riceverai crediti bonus per l'upgrade",
+  "billing.confirmUpgrade.effectiveNow": "Il nuovo piano sarà attivo immediatamente",
+  "billing.confirmUpgrade.confirm": "Conferma upgrade",
   "credits.plan_upgrade_supplement": "Bonus upgrade piano"
 }

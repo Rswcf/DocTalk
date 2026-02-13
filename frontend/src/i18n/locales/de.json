@@ -446,5 +446,11 @@
   "billing.confirmDowngrade.effectiveNow": "Die Planänderung wird sofort wirksam",
   "billing.confirmDowngrade.nextBilling": "Ihre nächste Abrechnung erfolgt zum niedrigeren Tarif",
   "billing.confirmDowngrade.confirm": "Downgrade bestätigen",
+  "billing.confirmUpgrade.title": "Upgrade bestätigen",
+  "billing.confirmUpgrade.description": "Sie sind dabei, Ihren Plan zu upgraden. Folgendes wird passieren:",
+  "billing.confirmUpgrade.immediateCharge": "Die anteilige Preisdifferenz wird sofort von Ihrer Karte abgebucht",
+  "billing.confirmUpgrade.bonusCredits": "Sie erhalten Bonus-Credits für das Upgrade",
+  "billing.confirmUpgrade.effectiveNow": "Ihr neuer Plan wird sofort wirksam",
+  "billing.confirmUpgrade.confirm": "Upgrade bestätigen",
   "credits.plan_upgrade_supplement": "Plan-Upgrade-Bonus"
 }

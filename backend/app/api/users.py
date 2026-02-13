@@ -338,8 +338,8 @@ async def delete_me(
             await asyncio.to_thread(
                 stripe.Subscription.cancel, user.stripe_subscription_id
             )
-    except Exception:
-        pass
+    except Exception as e:
+        log_security_event("stripe_cancel_failed", user_id=user.id, error=str(e))
 
     # 2) Find all user documents
     doc_rows = await db.execute(select(Document.id).where(Document.user_id == user.id))

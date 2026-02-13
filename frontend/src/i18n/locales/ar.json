@@ -446,5 +446,11 @@
   "billing.confirmDowngrade.effectiveNow": "يسري تغيير الخطة فورًا",
   "billing.confirmDowngrade.nextBilling": "ستكون فاتورتك القادمة بالسعر الأقل",
   "billing.confirmDowngrade.confirm": "تأكيد خفض الخطة",
+  "billing.confirmUpgrade.title": "تأكيد الترقية",
+  "billing.confirmUpgrade.description": "أنت على وشك ترقية خطتك. إليك ما سيحدث:",
+  "billing.confirmUpgrade.immediateCharge": "سيتم خصم فرق السعر المحسوب بالتناسب من بطاقتك فورًا",
+  "billing.confirmUpgrade.bonusCredits": "ستحصل على أرصدة مكافأة للترقية",
+  "billing.confirmUpgrade.effectiveNow": "خطتك الجديدة ستدخل حيز التنفيذ فورًا",
+  "billing.confirmUpgrade.confirm": "تأكيد الترقية",
   "credits.plan_upgrade_supplement": "مكافأة ترقية الخطة"
 }

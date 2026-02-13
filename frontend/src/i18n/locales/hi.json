@@ -446,5 +446,11 @@
   "billing.confirmDowngrade.effectiveNow": "योजना परिवर्तन तुरंत प्रभावी होगा",
   "billing.confirmDowngrade.nextBilling": "आपकी अगली बिलिंग कम दर पर होगी",
   "billing.confirmDowngrade.confirm": "डाउनग्रेड की पुष्टि करें",
+  "billing.confirmUpgrade.title": "अपग्रेड की पुष्टि करें",
+  "billing.confirmUpgrade.description": "आप अपनी योजना को अपग्रेड करने वाले हैं। यह होगा:",
+  "billing.confirmUpgrade.immediateCharge": "आनुपातिक मूल्य अंतर आपके कार्ड से तुरंत लिया जाएगा",
+  "billing.confirmUpgrade.bonusCredits": "आपको अपग्रेड के लिए बोनस क्रेडिट मिलेंगे",
+  "billing.confirmUpgrade.effectiveNow": "आपकी नई योजना तुरंत प्रभावी होगी",
+  "billing.confirmUpgrade.confirm": "अपग्रेड की पुष्टि करें",
   "credits.plan_upgrade_supplement": "योजना अपग्रेड बोनस"
 }
