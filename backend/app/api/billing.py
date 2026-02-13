@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import logging
 import uuid
 from typing import Literal, Optional
@@ -106,7 +107,8 @@ async def create_checkout(
     }
     price_id, credits = price_map[pack_id]
 
-    session = stripe.checkout.Session.create(
+    session = await asyncio.to_thread(
+        stripe.checkout.Session.create,
         mode="payment",
         line_items=[{"price": price_id, "quantity": 1}],
         success_url=f"{settings.FRONTEND_URL}/billing?success=1",
@@ -138,12 +140,15 @@ async def subscribe(
 
     # Ensure customer exists
     if not user.stripe_customer_id:
-        cust = stripe.Customer.create(email=user.email, name=user.name or None)
+        cust = await asyncio.to_thread(
+            stripe.Customer.create, email=user.email, name=user.name or None
+        )
         user.stripe_customer_id = cust.id
         await db.commit()
 
     # Create Checkout Session for subscription
-    session = stripe.checkout.Session.create(
+    session = await asyncio.to_thread(
+        stripe.checkout.Session.create,
         mode="subscription",
         line_items=[{"price": price_id, "quantity": 1}],
         success_url=f"{settings.FRONTEND_URL}/billing",
@@ -161,7 +166,8 @@ async def customer_portal(user: User = Depends(require_auth)):
     if not user.stripe_customer_id:
         raise HTTPException(400, "No Stripe customer for user")
 
-    portal = stripe.billing_portal.Session.create(
+    portal = await asyncio.to_thread(
+        stripe.billing_portal.Session.create,
         customer=user.stripe_customer_id,
         return_url=f"{settings.FRONTEND_URL}/billing",
     )
@@ -185,8 +191,10 @@ async def change_plan(
 
     old_plan = user.plan
     try:
-        sub = stripe.Subscription.retrieve(user.stripe_subscription_id)
-    except stripe.error.StripeError as e:
+        sub = await asyncio.to_thread(
+            stripe.Subscription.retrieve, user.stripe_subscription_id
+        )
+    except stripe.StripeError as e:
         logger.error("Stripe retrieve subscription failed: %s", e)
         raise HTTPException(502, "Stripe subscription retrieval failed")
 
@@ -209,12 +217,13 @@ async def change_plan(
     is_upgrade = PLAN_HIERARCHY.get(body.plan, 0) > PLAN_HIERARCHY.get(old_plan, 0)
 
     try:
-        stripe.Subscription.modify(
+        await asyncio.to_thread(
+            stripe.Subscription.modify,
             user.stripe_subscription_id,
             items=[{"id": current_item["id"], "price": new_price_id}],
-            proration_behavior="always_invoice" if is_upgrade else "none",
+            proration_behavior="always_invoice" if is_upgrade else "create_prorations",
         )
-    except stripe.error.StripeError as e:
+    except stripe.StripeError as e:
         logger.error("Stripe modify subscription failed: %s", e)
         raise HTTPException(502, "Stripe subscription update failed")
 
@@ -223,14 +232,25 @@ async def change_plan(
     if is_upgrade:
         supplement = _credits_for_plan(body.plan) - _credits_for_plan(old_plan)
         if supplement > 0:
-            await credit_credits(
-                db=db,
-                user_id=user.id,
-                amount=supplement,
-                reason="plan_upgrade_supplement",
-                ref_type="plan_change",
-                ref_id=f"{old_plan}_to_{body.plan}",
+            ref_id = f"{old_plan}_to_{body.plan}"
+            existing = await db.scalar(
+                select(CreditLedger).where(
+                    CreditLedger.user_id == user.id,
+                    CreditLedger.ref_type == "plan_change",
+                    CreditLedger.ref_id == ref_id,
+                )
             )
+            if not existing:
+                await credit_credits(
+                    db=db,
+                    user_id=user.id,
+                    amount=supplement,
+                    reason="plan_upgrade_supplement",
+                    ref_type="plan_change",
+                    ref_id=ref_id,
+                )
+            else:
+                supplement = 0
     await db.commit()
     await cache_delete(f"user:profile:{user.id}")
 
@@ -268,7 +288,9 @@ async def _handle_checkout_session_subscription_completed(
     plan = "pro"  # default for backward compatibility
     if subscription_id:
         try:
-            sub = stripe.Subscription.retrieve(subscription_id)
+            sub = await asyncio.to_thread(
+                stripe.Subscription.retrieve, subscription_id
+            )
             if sub.get("items") and sub["items"].get("data"):
                 sub_price_id = sub["items"]["data"][0].get("price", {}).get("id", "")
                 detected = _plan_from_price_id(sub_price_id)
@@ -404,7 +426,9 @@ async def _handle_invoice_payment_succeeded(
     subscription_id = invoice.get("subscription")
     if subscription_id:
         try:
-            sub = stripe.Subscription.retrieve(subscription_id)
+            sub = await asyncio.to_thread(
+                stripe.Subscription.retrieve, subscription_id
+            )
             if sub.get("items") and sub["items"].get("data"):
                 sub_price_id = sub["items"]["data"][0].get("price", {}).get("id", "")
                 detected = _plan_from_price_id(sub_price_id)
@@ -462,6 +486,7 @@ async def _handle_subscription_deleted(
 
     user.plan = "free"
     user.stripe_subscription_id = None
+    user.monthly_credits_granted_at = None
     await db.commit()
     await cache_delete(f"user:profile:{user.id}")
     return {"received": True}
@@ -532,7 +557,7 @@ async def stripe_webhook(request: Request, db: AsyncSession = Depends(get_db_ses
     except ValueError as e:
         logger.error("Webhook payload parsing error: %s", e)
         raise HTTPException(400, "Invalid payload")
-    except stripe.error.SignatureVerificationError as e:
+    except stripe.SignatureVerificationError as e:
         logger.error("Webhook signature verification failed: %s", e)
         raise HTTPException(401, "Invalid signature")
 
