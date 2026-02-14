@@ -1,210 +1,67 @@
-# DocTalk
+<p align="center">
+  <a href="README.md">English</a> ·
+  <a href="README.zh.md">中文</a> ·
+  <a href="README.fr.md">Français</a> ·
+  <a href="README.es.md">Español</a> ·
+  <a href="README.de.md">Deutsch</a> ·
+  <a href="README.pt.md">Português</a> ·
+  <a href="README.ja.md">日本語</a> ·
+  <a href="README.ko.md">한국어</a>
+</p>
 
-[English](README.md)
+<h1 align="center">DocTalk</h1>
 
-> AI 驱动的文档阅读器 — 与 PDF、文档和网页对话，获取带引用的回答并实时高亮跳转。
+<p align="center">
+  <strong>与任意文档对话。获取带引用的回答，高亮定位原文出处。</strong>
+</p>
 
-DocTalk 帮助高强度文档阅读者在超长文档中通过 AI 对话快速定位关键信息。支持上传 PDF、Word、PowerPoint、Excel、文本文件，或导入任意网页 — 然后与 AI 对话，精准找到所需信息。回答包含编号引用，点击即可跳转到原文对应位置并高亮显示。
+<p align="center">
+  <a href="https://github.com/Rswcf/DocTalk/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="MIT License" /></a>
+  <a href="https://github.com/Rswcf/DocTalk/stargazers"><img src="https://img.shields.io/github/stars/Rswcf/DocTalk?style=social" alt="GitHub Stars" /></a>
+  <a href="https://www.doctalk.site/demo"><img src="https://img.shields.io/badge/Live%20Demo-doctalk.site-brightgreen" alt="Live Demo" /></a>
+  <a href="https://github.com/Rswcf/DocTalk/pulls"><img src="https://img.shields.io/badge/PRs-welcome-orange.svg" alt="PRs Welcome" /></a>
+</p>
 
-## 功能特性
+<p align="center">
+  <a href="https://www.doctalk.site/demo">
+    <img src="https://www.doctalk.site/opengraph-image" alt="DocTalk Screenshot" width="720" />
+  </a>
+</p>
 
-- **上传与解析** — 上传 PDF、DOCX、PPTX、XLSX、TXT 或 Markdown 文件，AI 自动提取文本、检测章节、构建向量索引
-- **引用回答** — 提问后获得带 `[1]`、`[2]` 引用标记的回答，精确指向原文段落
-- **页面高亮** — 悬浮或点击引用即可预览引用文本；点击跳转到对应页面并高亮显示引用区域（PDF 使用边界框覆盖层，非 PDF 使用文本片段匹配高亮）
-- **分屏视图** — 可调节的聊天面板（左）+ PDF 查看器（右），支持拖拽缩放和平移
-- **3 种性能模式** — 快速、均衡、深度三种分析模式，通过 OpenRouter 调用；模型自适应提示和参数优化每种模式的 RAG 性能
-- **Demo 模式** — 无需注册即可体验 3 篇示例文档（Alphabet Q4 财报、Attention 论文、联邦法院文书），每个文档 5 条免费消息，带进度条指示和速率限制
-- **Credits 系统** — Free（500/月）、Plus（3K/月）和 Pro（9K/月），支持 Stripe 订阅和年付
-- **11 种语言** — 英语、中文、西班牙语、日语、德语、法语、韩语、葡萄牙语、意大利语、阿拉伯语、印地语
-- **暗色模式** — 完整的暗色主题，单色 zinc 调色板
-- **多会话** — 每个文档支持多个独立聊天会话，自动恢复最近活跃会话
-- **自动摘要** — AI 解析完成后自动生成文档摘要和 5 个推荐问题
-- **消息重新生成** — 一键重新生成上一条 AI 回答
-- **对话导出** — 将聊天记录下载为 Markdown 文件，引用转为脚注
-- **PDF 文本搜索** — 阅读器内 Ctrl+F 搜索，匹配高亮显示，支持上下翻页
-- **自定义 AI 指令** — 为每个文档设置自定义指令，定制 AI 的分析和回答方式
-- **多格式支持** — 完整支持 PDF、Word (DOCX)、PowerPoint (PPTX)、Excel (XLSX)、纯文本和 Markdown。DOCX/PPTX/XLSX 中的表格提取后以带边框、交替行色的格式化表格渲染。PPTX 和 DOCX 文件还通过 LibreOffice headless 转换为 PDF 进行可视化幻灯片/页面渲染，支持幻灯片/文本视图切换
-- **URL 导入** — 粘贴任意网页链接，导入其内容为文档进行 AI 问答
-- **文档集合** — 将多个文档分组为集合，支持跨文档提问并标注来源
-- **引用悬浮预览** — 将鼠标悬浮在 `[1]`、`[2]` 引用标记上，即可看到引用文本摘要和页码的提示框
-- **紧凑引用药丸** — 引用以内联药丸形式水平排列，便于快速浏览
-- **代码块样式** — 围栏代码块以深色背景渲染，顶部显示语言标签，支持一键复制代码
-- **流式状态指示** — 文档搜索时显示弹跳点动画，回答流式生成时显示闪烁光标
-- **停止生成** — 一键中止 AI 回答流式生成，已生成的部分回答保留
-- **滚动到底部** — 长对话中向上滚动时显示浮动箭头按钮，点击平滑滚动至底部
-- **OCR 支持** — 扫描版 PDF 自动通过 Tesseract OCR 处理（支持中英文）
-- **文档重新解析** — 配置变更后可重新解析已有文档，无需重新上传
-- **键盘无障碍** — 菜单、模态框完整键盘导航支持，焦点陷阱，ARIA 合规
-- **套餐对比** — 购买页展示 Free vs Plus vs Pro 功能对比表
-- **模式门控** — 深度分析模式仅限 Plus+ 套餐使用
-- **Landing 页面** — FAQ 常见问题、使用步骤、信任指标、安全卡片、底部 CTA
-- **SSRF 防护** — URL 导入验证私有 IP 范围，阻断内部端口，手动跟踪重定向并逐跳验证
-- **静态加密** — MinIO 服务端加密 (SSE-S3)，所有存储文件 + bucket 级默认策略
-- **文件验证** — Magic-byte 校验（PDF 头、Office ZIP 结构），zip bomb 防护（500MB 限制），双扩展名阻断
-- **按套餐限制** — 文档数量（3/20/999）和文件大小限制（25/50/100 MB）按订阅等级强制执行
-- **安全日志** — 结构化 JSON 事件日志，覆盖认证失败、速率限制、SSRF 阻断、上传和删除
-- **GDPR 数据导出** — 在个人中心页面下载所有个人数据为 JSON
-- **Cookie 同意** — GDPR 合规横栏控制分析加载；Vercel Analytics 仅在用户同意后激活
-- **CCPA 合规** — 页脚新增 "Do Not Sell My Info" 链接
-- **非 root Docker** — 生产容器以非特权用户运行 (UID 1001)
-- **文件名清洗** — Unicode 规范化、控制字符剥离、双扩展名阻断，前后端统一执行
+---
 
-## 在线体验
+上传 PDF、Word 文档、PowerPoint、电子表格或任意网页 — 然后用自然语言提问。DocTalk 返回 AI 生成的回答，附带编号引用（`[1]`、`[2]`），直接链接到原文出处。点击引用即可跳转到对应页面并高亮显示原文段落。
 
-- **应用**: [www.doctalk.site](https://www.doctalk.site)
-- **试用**: [www.doctalk.site/demo](https://www.doctalk.site/demo)
+## 为什么选择 DocTalk？
+
+- **带页面高亮的引用回答** — 每条回答都引用精确段落。点击引用即可跳转到对应页面并高亮显示原文。
+- **多格式支持** — PDF、DOCX、PPTX、XLSX、TXT、Markdown 以及 URL 导入。表格、幻灯片和电子表格全面支持。
+- **3 种 AI 性能模式** — 快速、均衡和深度分析，通过 OpenRouter 调用不同 LLM。按需选择速度或深度。
+- **11 种语言** — 完整的 UI 和 AI 回答支持英语、中文、西班牙语、日语、德语、法语、韩语、葡萄牙语、意大利语、阿拉伯语和印地语。
+- **分屏阅读器** — 可调节大小的聊天面板搭配 PDF 查看器，支持缩放、搜索和拖拽平移。
+- **文档集合** — 将多个文档分组，支持跨文档提问并标注来源。
+- **自动摘要** — 上传后 AI 自动生成文档摘要和推荐问题。
+- **隐私优先** — GDPR 数据导出、Cookie 同意、静态加密、SSRF 防护、非 root 容器。
+
+<p align="center">
+  <a href="https://www.doctalk.site/demo"><strong>试用在线 Demo &rarr;</strong></a>
+</p>
 
 ## 技术栈
 
 | 层级 | 技术 |
 |------|------|
-| **前端** | Next.js 14 (App Router)、Auth.js v5、react-pdf v9 (pdf.js v4)、Remotion（动画产品展示）、react-resizable-panels、Zustand、Tailwind CSS、Radix UI |
+| **前端** | Next.js 14 (App Router)、Auth.js v5、react-pdf v9、Tailwind CSS、Radix UI、Zustand |
 | **后端** | FastAPI、Celery、Redis |
-| **数据库** | PostgreSQL 16 (Alembic 迁移)、Qdrant (向量搜索) |
-| **存储** | MinIO (开发) / S3 兼容 (生产) |
-| **认证** | Auth.js (NextAuth) v5 + Google OAuth + Microsoft OAuth + Resend 邮箱 Magic Link + JWT |
-| **支付** | Stripe Checkout + 订阅 + Webhooks |
-| **AI** | OpenRouter 网关 — 3 种性能模式: Quick (DeepSeek V3.2), Balanced (Mistral Medium 3.1), Thorough (Mistral Large 2512) |
-| **PDF 解析** | PyMuPDF (fitz)、Tesseract OCR |
-| **文档解析** | python-docx、python-pptx、openpyxl (DOCX/PPTX/XLSX)，httpx + BeautifulSoup4 (URL)，LibreOffice headless (PPTX/DOCX→PDF 可视化转换) |
-| **分析** | Vercel Web Analytics（需 cookie 同意后加载） |
-| **监控** | Sentry（错误追踪 + 性能监控） |
-| **安全** | SSRF 防护、SSE-S3 静态加密、magic-byte 文件验证、结构化安全日志 |
-
-## 快速开始
-
-### 前置要求
-
-- Docker & Docker Compose
-- Python 3.11+
-- Node.js 18+
-- [OpenRouter](https://openrouter.ai) API key
-- [Google OAuth 凭证](https://console.cloud.google.com/)（和/或 [Microsoft OAuth 凭证](https://portal.azure.com/) 用于微软登录）
-- [Resend](https://resend.com) API key（用于邮箱 Magic Link 认证）
-
-### 本地开发
-
-**1. 克隆并配置：**
-
-```bash
-git clone https://github.com/Rswcf/DocTalk.git
-cd DocTalk
-cp .env.example .env   # 编辑填入你的 API Keys
-```
-
-**2. 启动基础设施服务：**
-
-```bash
-docker compose up -d   # PostgreSQL, Qdrant, Redis, MinIO
-```
-
-**3. 启动后端：**
-
-```bash
-cd backend
-pip install -r requirements.txt
-python3 -m alembic upgrade head
-python3 -m uvicorn app.main:app --reload
-```
-
-**4. 启动 Celery Worker**（新开终端）：
-
-```bash
-cd backend
-OBJC_DISABLE_INITIALIZE_FORK_SAFETY=YES python3 -m celery \
-  -A app.workers.celery_app worker --loglevel=info -Q default,parse
-```
-
-> `OBJC_DISABLE_INITIALIZE_FORK_SAFETY=YES` 仅在 macOS 上需要。
-
-**5. 启动前端**（新开终端）：
-
-```bash
-cd frontend
-npm install
-npm run dev
-```
-
-在浏览器中打开 [http://localhost:3000](http://localhost:3000)。
-
-### 环境变量
-
-**后端**（`backend/` 或项目根目录下的 `.env`）：
-
-| 变量 | 必需 | 说明 |
-|------|------|------|
-| `DATABASE_URL` | 是 | PostgreSQL 连接字符串（`postgresql+asyncpg://...`） |
-| `OPENROUTER_API_KEY` | 是 | OpenRouter API key |
-| `AUTH_SECRET` | 是 | 随机密钥字符串（需与前端一致） |
-| `ADAPTER_SECRET` | 是 | 内部 Auth API 密钥 |
-| `STRIPE_SECRET_KEY` | 否 | Stripe 密钥 |
-| `STRIPE_WEBHOOK_SECRET` | 否 | Stripe Webhook 签名密钥 |
-| `STRIPE_PRICE_PLUS_MONTHLY` | 否 | Stripe Plus 月付价格 ID |
-| `STRIPE_PRICE_PLUS_ANNUAL` | 否 | Stripe Plus 年付价格 ID |
-| `STRIPE_PRICE_PRO_MONTHLY` | 否 | Stripe Pro 月付价格 ID |
-| `STRIPE_PRICE_PRO_ANNUAL` | 否 | Stripe Pro 年付价格 ID |
-| `SENTRY_DSN` | 否 | Sentry DSN，后端错误追踪 |
-| `SENTRY_ENVIRONMENT` | 否 | Sentry 环境（默认: `production`） |
-| `SENTRY_TRACES_SAMPLE_RATE` | 否 | Sentry 性能采样率（默认: `0.1`） |
-| `OCR_ENABLED` | 否 | 启用扫描 PDF 的 OCR（默认: `true`） |
-| `OCR_LANGUAGES` | 否 | Tesseract 语言代码（默认: `eng+chi_sim`） |
-| `OCR_DPI` | 否 | OCR 渲染 DPI（默认: `300`） |
-
-**前端**（`frontend/` 下的 `.env.local`）：
-
-| 变量 | 必需 | 说明 |
-|------|------|------|
-| `NEXT_PUBLIC_API_BASE` | 是 | 后端 URL（默认: `http://localhost:8000`） |
-| `AUTH_SECRET` | 是 | 必须与后端 `AUTH_SECRET` 一致 |
-| `GOOGLE_CLIENT_ID` | 是 | Google OAuth 客户端 ID |
-| `GOOGLE_CLIENT_SECRET` | 是 | Google OAuth 客户端密钥 |
-| `MICROSOFT_CLIENT_ID` | 否 | Microsoft OAuth 客户端 ID（Azure AD 应用注册） |
-| `MICROSOFT_CLIENT_SECRET` | 否 | Microsoft OAuth 客户端密钥 |
-| `RESEND_API_KEY` | 否 | Resend API key，用于邮箱 Magic Link 认证 |
-| `EMAIL_FROM` | 否 | Magic Link 邮件发送地址（如 `noreply@doctalk.site`） |
-| `NEXT_PUBLIC_SENTRY_DSN` | 否 | Sentry DSN，前端错误追踪 |
-
-## 项目结构
-
-```
-DocTalk/
-├── backend/
-│   ├── app/
-│   │   ├── api/            # 路由处理 (documents, chat, search, billing, auth, users)
-│   │   ├── core/           # 配置、依赖注入、SSRF 防护、安全日志
-│   │   ├── models/         # SQLAlchemy ORM 模型
-│   │   ├── schemas/        # Pydantic 请求/响应模型
-│   │   ├── services/       # 业务逻辑 (chat, credits, parsing, retrieval, extractors, demo seed, summary)
-│   │   └── workers/        # Celery 任务定义
-│   ├── alembic/            # 数据库迁移
-│   ├── seed_data/          # Demo PDF 文件
-│   └── tests/
-├── frontend/
-│   ├── src/
-│   │   ├── app/            # Next.js 页面 (首页, 登录, 购买, 个人中心, Demo, 文档阅读, 集合)
-│   │   ├── components/     # React 组件 (DocTalkLogo, Chat, PdfViewer, TextViewer, Collections, Profile, landing, Header, Footer, PricingTable, CookieConsentBanner, AnalyticsWrapper)
-│   │   ├── lib/            # API 客户端、Auth 配置、SSE 客户端、模型定义、导出工具、文件名清洗
-│   │   ├── i18n/           # 11 种语言翻译文件
-│   │   ├── store/          # Zustand 状态管理
-│   │   └── types/
-│   └── public/
-├── docs/
-│   ├── ARCHITECTURE.md
-│   ├── ARCHITECTURE.zh.md
-│   ├── PRODUCT_STRATEGY.md
-│   └── research/
-│       ├── competitive-analysis.md
-│       ├── feature-roadmap.md
-│       ├── monetization-strategy.md
-│       └── model-selection-research.md
-└── docker-compose.yml
-```
+| **数据库** | PostgreSQL 16、Qdrant（向量搜索） |
+| **存储** | MinIO / S3 兼容 |
+| **认证** | Auth.js v5 — Google OAuth、Microsoft OAuth、Email Magic Link |
+| **支付** | Stripe Checkout + Subscriptions |
+| **AI** | OpenRouter — DeepSeek V3.2、Mistral Medium 3.1、Mistral Large 2512 |
+| **解析** | PyMuPDF、Tesseract OCR、python-docx、python-pptx、openpyxl、LibreOffice |
+| **监控** | Sentry、Vercel Analytics |
 
 ## 架构
-
-详细的架构图表（含数据流、认证流程、计费系统、数据库模型等），请参阅 **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)**。
-
-**总体概览：**
 
 ```
 浏览器 ──→ Vercel (Next.js) ──→ Railway (FastAPI) ──→ PostgreSQL
@@ -214,47 +71,152 @@ DocTalk/
                    (JWT 注入)
 ```
 
-核心架构决策：
+**工作原理：** 文档被分割为 150-300 token 的文本块并附带边界框坐标，嵌入到 Qdrant 进行向量搜索。当你提问时，系统检索相关文本块并发送给 LLM，指示其标注引用来源。引用映射回精确的页面位置，实现实时高亮。
 
-- **双层 JWT** — Auth.js v5 使用加密 JWE；API 代理将其转换为 HS256 JWT 以兼容后端
-- **SSE 流式传输** — 对话回答通过 Server-Sent Events 经代理层流式传输
-- **向量检索** — 带边界框坐标的文本块实现引用到页面高亮的链接（PDF 使用 bbox 覆盖层，非 PDF 使用文本片段匹配）
-- **精细分块** — 150–300 token 小分块配合 8 条检索结果，实现精准引用定位
-- **自动摘要** — 解析完成后，Celery 通过预算 LLM（DeepSeek）生成文档摘要 + 推荐问题
-- **多格式支持** — DOCX/PPTX/XLSX/TXT/MD 文件通过格式专用提取器处理（DOCX/XLSX 表格提取为 markdown table，PPTX 含演讲者备注），然后进入与 PDF 相同的分块+向量化流水线。PPTX 和 DOCX 文件额外通过 LibreOffice headless 转换为 PDF 进行可视化渲染（保留幻灯片布局、图片、格式）；用户可切换幻灯片视图（转换 PDF）和文本视图（markdown）。引用高亮在转换 PDF 中使用文本片段匹配回退
-- **URL 导入** — 通过 httpx 获取网页，使用 BeautifulSoup 解析提取文本，然后作为文本文档处理
-- **文档集合** — 文档可分组为集合进行跨文档问答；向量搜索使用 Qdrant MatchAny 过滤器跨多个文档 ID 检索
-- **OpenRouter 网关** — 单一 API key 调用所有 LLM 和 Embedding 模型
-- **纵深防御** — URL 导入 SSRF 验证、magic-byte 文件校验、SSE-S3 静态加密、按套餐上传限制、文件名清洗、非 root Docker 容器、结构化安全事件日志、Celery 重试清理失败的存储对象
-- **隐私与合规** — GDPR 数据导出端点、Cookie 同意横栏控制分析加载、登录流程 AI 处理披露、CCPA "Do Not Sell" 链接、OAuth 令牌清理（不存储 access/refresh token）
+详细架构图请参阅 [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)。
+
+## 快速开始
+
+### 前置要求
+
+- Docker & Docker Compose
+- Python 3.11+、Node.js 18+
+- [OpenRouter](https://openrouter.ai) API key
+- [Google OAuth 凭证](https://console.cloud.google.com/)
+
+### 安装配置
+
+```bash
+# 1. 克隆并配置
+git clone https://github.com/Rswcf/DocTalk.git
+cd DocTalk
+cp .env.example .env   # 编辑填入你的 API Keys
+
+# 2. 启动基础设施
+docker compose up -d   # PostgreSQL, Qdrant, Redis, MinIO
+
+# 3. 后端
+cd backend
+pip install -r requirements.txt
+python3 -m alembic upgrade head
+python3 -m uvicorn app.main:app --reload
+
+# 4. Celery Worker（新开终端）
+cd backend
+OBJC_DISABLE_INITIALIZE_FORK_SAFETY=YES python3 -m celery \
+  -A app.workers.celery_app worker --loglevel=info -Q default,parse
+
+# 5. 前端（新开终端）
+cd frontend
+npm install && npm run dev
+```
+
+在浏览器中打开 [http://localhost:3000](http://localhost:3000)。
+
+> `OBJC_DISABLE_INITIALIZE_FORK_SAFETY=YES` 仅在 macOS 上需要。
+
+<details>
+<summary><strong>环境变量</strong></summary>
+
+### 后端 (`.env`)
+
+| 变量 | 必需 | 说明 |
+|------|------|------|
+| `DATABASE_URL` | 是 | PostgreSQL 连接字符串（`postgresql+asyncpg://...`） |
+| `OPENROUTER_API_KEY` | 是 | OpenRouter API key |
+| `AUTH_SECRET` | 是 | 随机密钥（需与前端一致） |
+| `ADAPTER_SECRET` | 是 | 内部 Auth API 密钥 |
+| `STRIPE_SECRET_KEY` | 否 | Stripe 密钥 |
+| `STRIPE_WEBHOOK_SECRET` | 否 | Stripe Webhook 签名密钥 |
+| `SENTRY_DSN` | 否 | Sentry DSN，用于错误追踪 |
+| `OCR_ENABLED` | 否 | 启用扫描 PDF 的 OCR（默认: `true`） |
+| `OCR_LANGUAGES` | 否 | Tesseract 语言代码（默认: `eng+chi_sim`） |
+
+### 前端 (`.env.local`)
+
+| 变量 | 必需 | 说明 |
+|------|------|------|
+| `NEXT_PUBLIC_API_BASE` | 是 | 后端 URL（默认: `http://localhost:8000`） |
+| `AUTH_SECRET` | 是 | 必须与后端 `AUTH_SECRET` 一致 |
+| `GOOGLE_CLIENT_ID` | 是 | Google OAuth 客户端 ID |
+| `GOOGLE_CLIENT_SECRET` | 是 | Google OAuth 客户端密钥 |
+| `MICROSOFT_CLIENT_ID` | 否 | Microsoft OAuth 客户端 ID |
+| `MICROSOFT_CLIENT_SECRET` | 否 | Microsoft OAuth 客户端密钥 |
+| `RESEND_API_KEY` | 否 | Resend API key，用于 Magic Link 邮件 |
+
+</details>
+
+<details>
+<summary><strong>项目结构</strong></summary>
+
+```
+DocTalk/
+├── backend/
+│   ├── app/
+│   │   ├── api/            # 路由处理 (documents, chat, search, billing, auth, users)
+│   │   ├── core/           # 配置、依赖注入、SSRF 防护、安全日志
+│   │   ├── models/         # SQLAlchemy ORM 模型
+│   │   ├── schemas/        # Pydantic 请求/响应模型
+│   │   ├── services/       # 业务逻辑 (chat, credits, parsing, retrieval, extractors)
+│   │   └── workers/        # Celery 任务定义
+│   ├── alembic/            # 数据库迁移
+│   ├── seed_data/          # Demo PDF 文件
+│   └── tests/
+├── frontend/
+│   ├── src/
+│   │   ├── app/            # Next.js 页面
+│   │   ├── components/     # React 组件
+│   │   ├── lib/            # API 客户端、Auth 配置、SSE、工具函数
+│   │   ├── i18n/           # 11 种语言翻译文件
+│   │   ├── store/          # Zustand 状态管理
+│   │   └── types/
+│   └── public/
+├── docs/
+│   ├── ARCHITECTURE.md
+│   └── PRODUCT_STRATEGY.md
+└── docker-compose.yml
+```
+
+</details>
 
 ## 部署
 
-**分支策略**：`main`（开发）/ `stable`（生产）。Vercel 生产分支 = `stable`。
+**分支策略：** `main`（开发）/ `stable`（生产）。
 
-**前端 (Vercel):**
-- Vercel 项目设置中 Root Directory 为 `frontend/`
-- 推送 `stable` → 自动部署到生产环境 (doctalk.site)
-- 推送 `main` → 仅创建 Preview Deployment（不影响生产）
-- 不要从 `frontend/` 目录运行 `vercel --prod`
+| 目标 | 方式 |
+|------|------|
+| **前端** (Vercel) | 推送 `stable` → 自动部署。Root Directory: `frontend/`。 |
+| **后端** (Railway) | `git checkout stable && railway up --detach` |
 
-**后端 (Railway):**
-- 从 `stable` 分支部署：`git checkout stable && railway up --detach`
-- `entrypoint.sh` 执行流程：Alembic 迁移 → Celery Worker（后台，崩溃自动重启）→ uvicorn，支持 SIGTERM 优雅关闭。容器以非 root 用户 `app` (UID 1001) 运行
-- Railway 项目包含 5 个服务：backend、PostgreSQL、Redis、Qdrant、MinIO
-
-**发布流程**：在 `main` 开发 → 合并到 `stable` → 推送 `stable`（前端自动部署，后端手动 `railway up`）
+Railway 运行 5 个服务：backend、PostgreSQL、Redis、Qdrant、MinIO。
 
 ## 测试
 
 ```bash
-# Smoke 测试（需要 docker compose 基础设施运行）
-cd backend && python3 -m pytest tests/test_smoke.py -v
-
-# 集成测试
-cd backend && python3 -m pytest -m integration -v
+cd backend && python3 -m pytest tests/test_smoke.py -v     # Smoke 测试
+cd backend && python3 -m pytest -m integration -v           # 集成测试
+cd backend && python3 -m ruff check app/ tests/             # 代码检查
 ```
+
+## 参与贡献
+
+欢迎贡献！请先提交 Issue 讨论你想要修改的内容。
+
+1. Fork 本仓库
+2. 创建功能分支（`git checkout -b feature/amazing-feature`）
+3. 提交你的更改
+4. 推送分支并创建 Pull Request
 
 ## 许可证
 
-MIT
+[MIT](LICENSE)
+
+---
+
+<p align="center">
+  如果你觉得 DocTalk 有用，请考虑给一个 Star，帮助更多人发现这个项目。
+</p>
+
+<p align="center">
+  <a href="https://github.com/Rswcf/DocTalk/stargazers"><img src="https://img.shields.io/github/stars/Rswcf/DocTalk?style=social" alt="Star on GitHub" /></a>
+</p>

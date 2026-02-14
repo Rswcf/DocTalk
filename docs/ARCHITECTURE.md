@@ -262,6 +262,11 @@ sequenceDiagram
     AJ->>AD: POST /api/internal/auth/verification-tokens
     AD->>DB: INSERT verification token
     AD-->>AJ: token
+
+    Note over AJ: Custom sendVerificationRequest
+    AJ->>AD: GET /users/by-email (check if user exists)
+    AD-->>AJ: 200 OK / 404 Not Found
+    AJ->>AJ: Build branded email template<br/>(11 locales, sign-up/sign-in differentiation)
     AJ->>RS: Send magic link email<br/>(contains verification token)
     RS-->>U: Email with magic link
 
@@ -298,6 +303,14 @@ This cleanly separates the frontend auth system from the backend API authenticat
 | **Email** | `resend` | Passwordless magic link via Resend email service |
 
 **Internal Auth Adapter**: Auth.js uses a custom adapter that calls the FastAPI backend's `/api/internal/auth/*` endpoints (protected by `X-Adapter-Secret` header) to manage users, accounts, and verification tokens in PostgreSQL.
+
+**Email Magic Link System**: The Resend provider uses a custom `sendVerificationRequest` function (`frontend/src/lib/auth.ts`) that provides:
+- **Branded email templates** (`buildSignInEmail` from `emailTemplate.ts`) with DocTalk logo, styling, and branding
+- **11-locale i18n support** — subject and body text translated based on user's `NEXT_LOCALE` cookie
+- **Sign-up vs. sign-in differentiation** — checks if the user exists via backend API, then adjusts the email copy ("Welcome to DocTalk" vs. "Sign in to DocTalk")
+- **Reply-To header** pointing to `support@doctalk.site` for user inquiries
+
+**Expired token cleanup**: A Celery Beat periodic task (`cleanup_expired_verification_tokens`) runs daily to delete verification tokens that expired more than 48 hours ago, keeping the database clean.
 
 ---
 
@@ -732,9 +745,11 @@ graph LR
 |--------|-------------------|-------------------|
 | **Trigger** | Push `stable` (auto) | `railway up --detach` from `stable` (manual) |
 | **Build** | Next.js static export from `frontend/` | Dockerfile from project root (includes LibreOffice headless + CJK fonts for PPTX/DOCX→PDF conversion) |
-| **Runtime** | Serverless functions (Hobby plan) | Single container (`entrypoint.sh`): alembic → celery (auto-restart) → uvicorn |
+| **Runtime** | Serverless functions (Hobby plan) | Single container (`entrypoint.sh`): alembic → celery worker + celery beat (auto-restart) → uvicorn |
 | **Domain** | `www.doctalk.site` | `backend-production-a62e.up.railway.app` |
 | **Limits** | 4.5 MB function body, 60s max duration | Container memory based on Railway plan |
+
+**Celery Beat scheduler**: The backend container runs both the Celery worker (for async tasks) and Celery Beat (for periodic tasks). Beat schedule is defined in `celery_app.py` and includes daily cleanup of expired verification tokens.
 
 **Environment sync:**
 - `AUTH_SECRET` and `ADAPTER_SECRET` must match between Vercel and Railway
