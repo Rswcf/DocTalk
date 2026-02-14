@@ -96,6 +96,67 @@ function LandingPageContent() {
 
       <FAQ />
 
+      {/* FAQPage JSON-LD structured data for Google rich snippets */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify({
+            '@context': 'https://schema.org',
+            '@type': 'FAQPage',
+            mainEntity: [
+              {
+                '@type': 'Question',
+                name: 'How accurate are the AI answers?',
+                acceptedAnswer: {
+                  '@type': 'Answer',
+                  text: 'Every answer includes numbered citations that link to the exact passage in your document. Click any citation to jump to the source and see it highlighted. You always verify the AI\'s work yourself.',
+                },
+              },
+              {
+                '@type': 'Question',
+                name: 'What file types are supported?',
+                acceptedAnswer: {
+                  '@type': 'Answer',
+                  text: 'DocTalk supports PDF, DOCX, PPTX, XLSX, TXT, and Markdown files, plus web URLs. PDFs include scanned documents via built-in OCR. Files up to 50MB and 500 pages are supported.',
+                },
+              },
+              {
+                '@type': 'Question',
+                name: 'Is my data secure?',
+                acceptedAnswer: {
+                  '@type': 'Answer',
+                  text: 'Absolutely. Your documents are TLS encrypted in transit and AES-256 encrypted at rest, never used for AI training, and you can delete them anytime. We follow privacy-first principles.',
+                },
+              },
+              {
+                '@type': 'Question',
+                name: 'Which AI models can I use?',
+                acceptedAnswer: {
+                  '@type': 'Answer',
+                  text: 'DocTalk offers 3 performance modes — Quick, Balanced, and Thorough — each optimized with different AI models for different needs. Free users can use Quick and Balanced modes. Upgrade to Plus to unlock Thorough mode.',
+                },
+              },
+              {
+                '@type': 'Question',
+                name: 'Is there a free tier?',
+                acceptedAnswer: {
+                  '@type': 'Answer',
+                  text: 'Yes! Free accounts include 500 credits per month, enough for dozens of questions. No credit card required to get started.',
+                },
+              },
+              {
+                '@type': 'Question',
+                name: 'Can it handle long documents?',
+                acceptedAnswer: {
+                  '@type': 'Answer',
+                  text: 'Yes. DocTalk handles documents up to 500 pages with smart chunking and semantic search, ensuring accurate answers even from very long documents.',
+                },
+              },
+            ],
+          }),
+        }}
+      />
+
       <FinalCTA />
 
       {/* Privacy Badge */}

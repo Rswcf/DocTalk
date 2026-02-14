@@ -19,12 +19,24 @@ const sora = Sora({
 })
 
 export const metadata: Metadata = {
+  metadataBase: new URL('https://www.doctalk.site'),
   title: 'DocTalk — AI Document Chat with Cited Answers',
   description: 'Upload any document and chat with AI. Get instant answers with source citations that highlight in your document. Supports PDF, DOCX, PPTX, XLSX, and more.',
+  alternates: {
+    canonical: '/',
+  },
   openGraph: {
     title: 'DocTalk — AI Document Chat',
     description: 'Chat with your documents. AI answers with page-level citations.',
     type: 'website',
+    url: 'https://www.doctalk.site',
+    siteName: 'DocTalk',
+    locale: 'en_US',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'DocTalk — AI Document Chat',
+    description: 'Chat with your documents. AI answers with page-level citations.',
   },
 }
 
@@ -38,6 +50,33 @@ export default function RootLayout({
       <head>
         <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)" />
         <meta name="theme-color" content="#09090b" media="(prefers-color-scheme: dark)" />
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              '@context': 'https://schema.org',
+              '@graph': [
+                {
+                  '@type': 'WebSite',
+                  name: 'DocTalk',
+                  url: 'https://www.doctalk.site',
+                  description: 'AI document chat with cited answers',
+                },
+                {
+                  '@type': 'Organization',
+                  name: 'DocTalk',
+                  url: 'https://www.doctalk.site',
+                  logo: 'https://www.doctalk.site/logo-icon.svg',
+                  contactPoint: {
+                    '@type': 'ContactPoint',
+                    email: 'support@doctalk.app',
+                    contactType: 'customer support',
+                  },
+                },
+              ],
+            }),
+          }}
+        />
       </head>
       <body className="font-sans antialiased">
         <ThemeProvider>
