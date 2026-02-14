@@ -18,7 +18,7 @@ if settings.SENTRY_DSN:
 celery_app = Celery(
     "doctalk",
     broker=settings.CELERY_BROKER_URL,
-    include=["app.workers.parse_worker", "app.workers.deletion_worker"],
+    include=["app.workers.parse_worker", "app.workers.deletion_worker", "app.workers.cleanup_tasks"],
 )
 
 # Basic configuration and task routing
@@ -31,5 +31,13 @@ celery_app.conf.update(
 # Route parsing-related tasks to a dedicated queue
 celery_app.conf.task_routes = {
     "app.workers.parse_worker.parse_document": {"queue": "parse"},
+}
+
+# Periodic tasks (requires celery beat scheduler)
+celery_app.conf.beat_schedule = {
+    "cleanup-expired-tokens-daily": {
+        "task": "cleanup_expired_verification_tokens",
+        "schedule": 86400,  # Every 24 hours
+    },
 }
 
