@@ -59,6 +59,7 @@ export default function RootLayout({
                 {
                   '@type': 'WebSite',
                   name: 'DocTalk',
+                  alternateName: 'DocTalk AI',
                   url: 'https://www.doctalk.site',
                   description: 'AI document chat with cited answers',
                 },
@@ -66,7 +67,16 @@ export default function RootLayout({
                   '@type': 'Organization',
                   name: 'DocTalk',
                   url: 'https://www.doctalk.site',
-                  logo: 'https://www.doctalk.site/logo-icon.svg',
+                  logo: {
+                    '@type': 'ImageObject',
+                    url: 'https://www.doctalk.site/logo-icon.svg',
+                    width: 512,
+                    height: 512,
+                  },
+                  description:
+                    'AI-powered document chat app. Upload PDF, DOCX, PPTX, XLSX and get instant answers with source citations that highlight in your document.',
+                  foundingDate: '2025',
+                  sameAs: ['https://github.com/Rswcf/DocTalk'],
                   contactPoint: {
                     '@type': 'ContactPoint',
                     email: 'support@doctalk.app',
