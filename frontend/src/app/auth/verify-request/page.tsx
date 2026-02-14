@@ -27,8 +27,14 @@ export default function VerifyRequestPage() {
           <h1 className="text-2xl font-bold text-zinc-900 dark:text-zinc-50 mb-3">
             {t("auth.checkEmail")}
           </h1>
-          <p className="text-sm text-zinc-500 dark:text-zinc-400 mb-6">
+          <p className="text-sm text-zinc-500 dark:text-zinc-400 mb-4">
             {t("auth.checkEmailSubtitle")}
+          </p>
+          <p className="text-xs text-zinc-400 dark:text-zinc-500 mb-2">
+            {t("auth.checkSpamHint")}
+          </p>
+          <p className="text-xs text-zinc-400 dark:text-zinc-500 mb-6">
+            {t("auth.linkExpires")}
           </p>
 
           <Link

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { signIn } from "next-auth/react";
 import { useLocale } from "../i18n";
 
@@ -15,6 +15,29 @@ export function AuthFormContent({ callbackUrl }: AuthFormContentProps) {
   const [sentEmail, setSentEmail] = useState("");
   const [sending, setSending] = useState(false);
   const [error, setError] = useState("");
+  const [cooldown, setCooldown] = useState(0);
+  const [resendCount, setResendCount] = useState(0);
+  const cooldownRef = useRef<NodeJS.Timeout | null>(null);
+
+  const startCooldown = useCallback(() => {
+    setCooldown(60);
+    cooldownRef.current = setInterval(() => {
+      setCooldown((prev) => {
+        if (prev <= 1) {
+          if (cooldownRef.current) clearInterval(cooldownRef.current);
+          cooldownRef.current = null;
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (cooldownRef.current) clearInterval(cooldownRef.current);
+    };
+  }, []);
 
   const handleEmailSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -39,13 +62,16 @@ export function AuthFormContent({ callbackUrl }: AuthFormContentProps) {
   };
 
   const handleResend = async () => {
-    if (sending) return;
+    if (sending || cooldown > 0 || resendCount >= 3) return;
     setSending(true);
     setError("");
     try {
       const result = await signIn("resend", { email: sentEmail, callbackUrl, redirect: false });
       if (result?.error) {
         setError(t("auth.resendFailed"));
+      } else {
+        setResendCount((prev) => prev + 1);
+        startCooldown();
       }
     } catch (err) {
       setError(t("auth.unexpectedError"));
@@ -126,13 +152,20 @@ export function AuthFormContent({ callbackUrl }: AuthFormContentProps) {
           <p className="text-sm text-zinc-500 dark:text-zinc-400">
             {t("auth.emailSent").replace("{email}", sentEmail)}
           </p>
+          <p className="text-xs text-zinc-400 dark:text-zinc-500">
+            {t("auth.checkSpamHint")}
+          </p>
           <div className="flex items-center justify-center gap-3 text-sm">
             <button
               onClick={handleResend}
-              disabled={sending}
+              disabled={sending || cooldown > 0 || resendCount >= 3}
               className="text-zinc-600 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-zinc-50 underline underline-offset-2 transition-colors disabled:opacity-50"
             >
-              {t("auth.resendEmail")}
+              {resendCount >= 3
+                ? t("auth.resendMaxReached")
+                : cooldown > 0
+                  ? t("auth.resendCooldown").replace("{seconds}", String(cooldown))
+                  : t("auth.resendEmail")}
             </button>
             <span className="text-zinc-300 dark:text-zinc-600">|</span>
             <button
