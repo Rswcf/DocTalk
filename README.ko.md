@@ -6,7 +6,7 @@
   <a href="README.de.md">Deutsch</a> ·
   <a href="README.pt.md">Português</a> ·
   <a href="README.ja.md">日本語</a> ·
-  <a href="README.ko.md">한국어</a>
+  <strong>한국어</strong>
 </p>
 
 <h1 align="center">DocTalk</h1>
