@@ -1,210 +1,67 @@
-# DocTalk
+<p align="center">
+  <a href="README.md">English</a> ·
+  <a href="README.zh.md">中文</a> ·
+  <a href="README.fr.md">Français</a> ·
+  <a href="README.es.md">Español</a> ·
+  <a href="README.de.md">Deutsch</a> ·
+  <a href="README.pt.md">Português</a> ·
+  <a href="README.ja.md">日本語</a> ·
+  <a href="README.ko.md">한국어</a>
+</p>
 
-[中文版](README.zh.md)
+<h1 align="center">DocTalk</h1>
 
-> AI-powered document reader — chat with your PDFs, documents, and webpages, get cited answers with page highlights.
+<p align="center">
+  <strong>Chat with any document. Get answers with citations that highlight the source.</strong>
+</p>
 
-DocTalk helps heavy document readers quickly locate key information in long documents through AI conversation. Upload PDFs, Word documents, PowerPoints, spreadsheets, text files, or import any webpage — then chat with AI to find exactly what you need. Answers include numbered citations that link back to the original text with real-time page highlighting.
+<p align="center">
+  <a href="https://github.com/Rswcf/DocTalk/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="MIT License" /></a>
+  <a href="https://github.com/Rswcf/DocTalk/stargazers"><img src="https://img.shields.io/github/stars/Rswcf/DocTalk?style=social" alt="GitHub Stars" /></a>
+  <a href="https://www.doctalk.site/demo"><img src="https://img.shields.io/badge/Live%20Demo-doctalk.site-brightgreen" alt="Live Demo" /></a>
+  <a href="https://github.com/Rswcf/DocTalk/pulls"><img src="https://img.shields.io/badge/PRs-welcome-orange.svg" alt="PRs Welcome" /></a>
+</p>
 
-## Features
+<p align="center">
+  <a href="https://www.doctalk.site/demo">
+    <img src="https://www.doctalk.site/opengraph-image" alt="DocTalk Screenshot" width="720" />
+  </a>
+</p>
 
-- **Upload & Parse** — Upload PDF, DOCX, PPTX, XLSX, TXT, or Markdown files; AI extracts text, detects sections, and builds a vector index
-- **Cited Answers** — Ask questions and get responses with `[1]`, `[2]` references to exact passages
-- **Page Highlights** — Click or hover a citation to see the referenced text; click to jump to the page with bounding-box overlays (PDF) or text snippet highlighting (non-PDF)
-- **Split View** — Resizable chat panel (left) + PDF viewer (right) with drag-to-pan zoom
-- **3 Performance Modes** — Quick, Balanced, and Thorough analysis modes via OpenRouter; model-adaptive prompts and parameters optimize each mode's RAG performance
-- **Demo Mode** — Try 3 sample documents (Alphabet Q4 Earnings, Attention paper, US Court Filing) instantly with 5 free messages per document, progress bar indicator, and rate limiting
-- **Credits System** — Free (500/month), Plus (3K/month), and Pro (9K/month) with Stripe subscriptions and annual billing
-- **11 Languages** — English, Chinese, Spanish, Japanese, German, French, Korean, Portuguese, Italian, Arabic, Hindi
-- **Dark Mode** — Full dark theme with monochrome zinc palette
-- **Multi-Session** — Multiple independent chat sessions per document with auto-restore
-- **Auto-Summary** — AI automatically generates a document summary and 5 suggested questions after parsing
-- **Message Regenerate** — Re-generate the last AI response with one click
-- **Conversation Export** — Download any chat as a Markdown file with citations as footnotes
-- **PDF Text Search** — In-viewer Ctrl+F search with highlighted matches and prev/next navigation
-- **Custom AI Instructions** — Set per-document instructions to customize how the AI analyzes and responds
-- **Multi-Format Support** — Full support for PDF, Word (DOCX), PowerPoint (PPTX), Excel (XLSX), plain text, and Markdown. Tables extracted from DOCX/PPTX/XLSX render as formatted tables with borders and alternating rows. PPTX and DOCX files are also converted to PDF via LibreOffice headless for visual slide/page rendering with a Slides/Text view toggle
-- **URL Import** — Paste any webpage URL to import its content as a document for AI-powered Q&A
-- **Document Collections** — Group multiple documents into collections for cross-document questions with source attribution
-- **Citation Hover Preview** — Hover over any `[1]`, `[2]` citation to see a tooltip with the cited text snippet and page number
-- **Compact Citation Pills** — Citations display as inline pill chips in a horizontal wrap layout for quick scanning
-- **Styled Code Blocks** — Fenced code blocks render with dark background, language label header, and one-click Copy code button
-- **Streaming Indicators** — Bouncing dots during document search, blinking cursor during response streaming
-- **Stop Generation** — Abort AI responses mid-stream with one click; partial responses are preserved
-- **Scroll-to-Bottom** — Floating arrow button appears when scrolled up in long conversations
-- **OCR Support** — Scanned PDFs are automatically processed with Tesseract OCR (Chinese + English)
-- **Re-parse Documents** — Re-parse existing documents after config changes without re-uploading
-- **Keyboard Accessible** — Full keyboard navigation for menus, modals with focus traps, and ARIA compliance
-- **Pricing Comparison** — Free vs Plus vs Pro feature comparison table on the billing page
-- **Mode Gating** — Thorough mode (deep analysis) restricted to Plus+ plans
-- **Landing Page** — FAQ section, How-It-Works steps, social proof metrics, security cards, and final CTA
-- **SSRF Protection** — URL imports validated against private IP ranges, internal ports blocked, manual redirect following with per-hop validation
-- **Encryption at Rest** — MinIO server-side encryption (SSE-S3) on all stored files with bucket-level default policy
-- **File Validation** — Magic-byte verification (PDF headers, Office ZIP structure), zip bomb protection (500MB limit), double-extension blocking
-- **Per-Plan Limits** — Document count (3/20/999) and file size limits (25/50/100 MB) enforced per subscription tier
-- **Security Logging** — Structured JSON event logs for auth failures, rate limits, SSRF blocks, uploads, and deletions
-- **GDPR Data Export** — Download all personal data as JSON via Profile page
-- **Cookie Consent** — GDPR-compliant banner controlling analytics loading; Vercel Analytics only activates on user consent
-- **CCPA Compliance** — "Do Not Sell My Info" link in footer
-- **Non-Root Docker** — Production container runs as unprivileged user (UID 1001)
-- **Filename Sanitization** — Unicode normalization, control character stripping, double-extension blocking across frontend and backend
+---
 
-## Live Demo
+Upload PDFs, Word docs, PowerPoints, spreadsheets, or any webpage — then ask questions in natural language. DocTalk returns AI-generated answers with numbered citations (`[1]`, `[2]`) that link directly to the source text. Click a citation and the original passage highlights on the page.
 
-- **App**: [www.doctalk.site](https://www.doctalk.site)
-- **Try It**: [www.doctalk.site/demo](https://www.doctalk.site/demo)
+## Why DocTalk?
+
+- **Cited answers with page highlighting** — Every answer references exact passages. Click a citation to jump to the page with the text highlighted.
+- **Multi-format support** — PDF, DOCX, PPTX, XLSX, TXT, Markdown, and URL import. Tables, slides, and spreadsheets are all fully supported.
+- **3 AI performance modes** — Quick, Balanced, and Thorough analysis powered by different LLMs through OpenRouter. Pick speed or depth.
+- **11 languages** — Full UI and AI responses in English, Chinese, Spanish, Japanese, German, French, Korean, Portuguese, Italian, Arabic, and Hindi.
+- **Split-view reader** — Resizable chat panel alongside a PDF viewer with zoom, search, and drag-to-pan.
+- **Document collections** — Group documents together and ask cross-document questions with source attribution.
+- **Auto-summary** — AI generates a document summary and suggested questions after upload.
+- **Privacy-first** — GDPR data export, cookie consent, encryption at rest, SSRF protection, non-root containers.
+
+<p align="center">
+  <a href="https://www.doctalk.site/demo"><strong>Try the live demo &rarr;</strong></a>
+</p>
 
 ## Tech Stack
 
 | Layer | Technology |
-|-------|-----------|
-| **Frontend** | Next.js 14 (App Router), Auth.js v5, react-pdf v9 (pdf.js v4), Remotion (animated showcase), react-resizable-panels, Zustand, Tailwind CSS, Radix UI |
+|-------|------------|
+| **Frontend** | Next.js 14 (App Router), Auth.js v5, react-pdf v9, Tailwind CSS, Radix UI, Zustand |
 | **Backend** | FastAPI, Celery, Redis |
-| **Database** | PostgreSQL 16 (Alembic migrations), Qdrant (vector search) |
-| **Storage** | MinIO (dev) / S3-compatible (prod) |
-| **Auth** | Auth.js (NextAuth) v5 + Google OAuth + Microsoft OAuth + Email Magic Link (via Resend) + JWT |
-| **Payments** | Stripe Checkout + Subscriptions + Webhooks |
-| **AI** | OpenRouter gateway — 3 performance modes: Quick (DeepSeek V3.2), Balanced (Mistral Medium 3.1), Thorough (Mistral Large 2512) |
-| **PDF Parse** | PyMuPDF (fitz), Tesseract OCR |
-| **Document Parse** | python-docx, python-pptx, openpyxl (DOCX/PPTX/XLSX), httpx + BeautifulSoup4 (URL), LibreOffice headless (PPTX/DOCX→PDF visual conversion) |
-| **Analytics** | Vercel Web Analytics (cookie-consent-gated) |
-| **Monitoring** | Sentry (error tracking + performance) |
-| **Security** | SSRF protection, SSE-S3 encryption at rest, magic-byte file validation, structured security logging |
-
-## Getting Started
-
-### Prerequisites
-
-- Docker & Docker Compose
-- Python 3.11+
-- Node.js 18+
-- An [OpenRouter](https://openrouter.ai) API key
-- [Google OAuth credentials](https://console.cloud.google.com/) (and/or [Microsoft OAuth credentials](https://portal.azure.com/) for Microsoft login)
-- A [Resend](https://resend.com) API key (for Email Magic Link authentication)
-
-### Local Development
-
-**1. Clone and configure:**
-
-```bash
-git clone https://github.com/Rswcf/DocTalk.git
-cd DocTalk
-cp .env.example .env   # Edit with your keys
-```
-
-**2. Start infrastructure services:**
-
-```bash
-docker compose up -d   # PostgreSQL, Qdrant, Redis, MinIO
-```
-
-**3. Set up the backend:**
-
-```bash
-cd backend
-pip install -r requirements.txt
-python3 -m alembic upgrade head
-python3 -m uvicorn app.main:app --reload
-```
-
-**4. Start the Celery worker** (in a separate terminal):
-
-```bash
-cd backend
-OBJC_DISABLE_INITIALIZE_FORK_SAFETY=YES python3 -m celery \
-  -A app.workers.celery_app worker --loglevel=info -Q default,parse
-```
-
-> The `OBJC_DISABLE_INITIALIZE_FORK_SAFETY=YES` variable is required on macOS.
-
-**5. Start the frontend** (in a separate terminal):
-
-```bash
-cd frontend
-npm install
-npm run dev
-```
-
-Open [http://localhost:3000](http://localhost:3000) in your browser.
-
-### Environment Variables
-
-**Backend** (`.env` in `backend/` or project root):
-
-| Variable | Required | Description |
-|----------|----------|-------------|
-| `DATABASE_URL` | Yes | PostgreSQL connection string (`postgresql+asyncpg://...`) |
-| `OPENROUTER_API_KEY` | Yes | OpenRouter API key |
-| `AUTH_SECRET` | Yes | Random secret string (shared with frontend) |
-| `ADAPTER_SECRET` | Yes | Secret for internal auth API |
-| `STRIPE_SECRET_KEY` | No | Stripe secret key |
-| `STRIPE_WEBHOOK_SECRET` | No | Stripe webhook signing secret |
-| `STRIPE_PRICE_PLUS_MONTHLY` | No | Stripe recurring price ID for Plus monthly plan |
-| `STRIPE_PRICE_PLUS_ANNUAL` | No | Stripe recurring price ID for Plus annual plan |
-| `STRIPE_PRICE_PRO_MONTHLY` | No | Stripe recurring price ID for Pro monthly plan |
-| `STRIPE_PRICE_PRO_ANNUAL` | No | Stripe recurring price ID for Pro annual plan |
-| `SENTRY_DSN` | No | Sentry DSN for backend error tracking |
-| `SENTRY_ENVIRONMENT` | No | Sentry environment (default: `production`) |
-| `SENTRY_TRACES_SAMPLE_RATE` | No | Sentry performance sampling rate (default: `0.1`) |
-| `OCR_ENABLED` | No | Enable OCR for scanned PDFs (default: `true`) |
-| `OCR_LANGUAGES` | No | Tesseract language codes (default: `eng+chi_sim`) |
-| `OCR_DPI` | No | OCR rendering DPI (default: `300`) |
-
-**Frontend** (`.env.local` in `frontend/`):
-
-| Variable | Required | Description |
-|----------|----------|-------------|
-| `NEXT_PUBLIC_API_BASE` | Yes | Backend URL (default: `http://localhost:8000`) |
-| `AUTH_SECRET` | Yes | Must match backend `AUTH_SECRET` |
-| `GOOGLE_CLIENT_ID` | Yes | Google OAuth client ID |
-| `GOOGLE_CLIENT_SECRET` | Yes | Google OAuth client secret |
-| `MICROSOFT_CLIENT_ID` | No | Microsoft OAuth client ID (Azure AD app registration) |
-| `MICROSOFT_CLIENT_SECRET` | No | Microsoft OAuth client secret |
-| `RESEND_API_KEY` | No | Resend API key for Email Magic Link authentication |
-| `EMAIL_FROM` | No | Sender email address for magic link emails (e.g. `noreply@doctalk.site`) |
-| `NEXT_PUBLIC_SENTRY_DSN` | No | Sentry DSN for frontend error tracking |
-
-## Project Structure
-
-```
-DocTalk/
-├── backend/
-│   ├── app/
-│   │   ├── api/            # Route handlers (documents, chat, search, billing, auth, users)
-│   │   ├── core/           # Config, dependencies, SSRF protection, security logging
-│   │   ├── models/         # SQLAlchemy ORM models
-│   │   ├── schemas/        # Pydantic request/response schemas
-│   │   ├── services/       # Business logic (chat, credits, parsing, retrieval, extractors, demo seed, summary)
-│   │   └── workers/        # Celery task definitions
-│   ├── alembic/            # Database migrations
-│   ├── seed_data/          # Demo PDF files
-│   └── tests/
-├── frontend/
-│   ├── src/
-│   │   ├── app/            # Next.js pages (home, auth, billing, profile, demo, document viewer, collections)
-│   │   ├── components/     # React components (DocTalkLogo, Chat, PdfViewer, TextViewer, Collections, Profile, landing, Header, Footer, PricingTable, CookieConsentBanner, AnalyticsWrapper)
-│   │   ├── lib/            # API client, auth config, SSE client, model definitions, export utils, filename sanitization
-│   │   ├── i18n/           # 11 language locale files
-│   │   ├── store/          # Zustand state management
-│   │   └── types/
-│   └── public/
-├── docs/
-│   ├── ARCHITECTURE.md
-│   ├── ARCHITECTURE.zh.md
-│   ├── PRODUCT_STRATEGY.md
-│   └── research/
-│       ├── competitive-analysis.md
-│       ├── feature-roadmap.md
-│       ├── monetization-strategy.md
-│       └── model-selection-research.md
-└── docker-compose.yml
-```
+| **Database** | PostgreSQL 16, Qdrant (vector search) |
+| **Storage** | MinIO / S3-compatible |
+| **Auth** | Auth.js v5 — Google OAuth, Microsoft OAuth, Email Magic Link |
+| **Payments** | Stripe Checkout + Subscriptions |
+| **AI** | OpenRouter — DeepSeek V3.2, Mistral Medium 3.1, Mistral Large 2512 |
+| **Parsing** | PyMuPDF, Tesseract OCR, python-docx, python-pptx, openpyxl, LibreOffice |
+| **Monitoring** | Sentry, Vercel Analytics |
 
 ## Architecture
-
-For detailed architecture diagrams including data flows, authentication, billing, and database schema, see **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)**.
-
-**High-level overview:**
 
 ```
 Browser ──→ Vercel (Next.js) ──→ Railway (FastAPI) ──→ PostgreSQL
@@ -214,47 +71,152 @@ Browser ──→ Vercel (Next.js) ──→ Railway (FastAPI) ──→ Postgre
                    (JWT injection)
 ```
 
-Key architectural decisions:
+**How it works:** Documents are chunked into 150-300 token segments with bounding-box coordinates, embedded into Qdrant for vector search. When you ask a question, relevant chunks are retrieved and sent to the LLM with instructions to cite sources. Citations map back to exact page locations for real-time highlighting.
 
-- **Dual JWT** — Auth.js v5 uses encrypted JWE; API proxy translates to HS256 JWT for backend compatibility
-- **SSE Streaming** — Chat responses stream via Server-Sent Events through the proxy
-- **Vector Search** — Chunks with bounding-box coordinates enable citation-to-page-highlight linking (PDF bbox overlays, non-PDF text snippet matching)
-- **Small Chunks** — 150--300 token chunks with 8 retrieval results for precise citation targeting
-- **Auto-Summary** — After parsing, Celery generates a document summary + suggested questions via budget LLM (DeepSeek)
-- **Multi-Format** — DOCX/PPTX/XLSX/TXT/MD files are processed through format-specific extractors (with table extraction as markdown tables, speaker notes for PPTX), then fed into the same chunking+embedding pipeline as PDFs. PPTX and DOCX files are additionally converted to PDF via LibreOffice headless for visual rendering (slide layout, images, formatting preserved); users can toggle between Slides view (converted PDF in PdfViewer) and Text view (markdown). Citation highlighting in converted PDFs falls back to text-snippet matching when dummy bboxes are detected
-- **URL Ingestion** — Webpages are fetched via httpx, parsed with BeautifulSoup to extract text, then processed as text documents
-- **Collections** — Documents can be grouped into collections for cross-document Q&A; vector search uses Qdrant MatchAny filter across multiple document IDs
-- **OpenRouter Gateway** — Single API key for all LLM and embedding models
-- **Defense in Depth** — SSRF validation on URL imports, magic-byte file verification, SSE-S3 encryption at rest, per-plan upload limits, filename sanitization, non-root Docker container, structured security event logging, Celery retry for failed storage cleanup
-- **Privacy & Compliance** — GDPR data export endpoint, cookie consent banner gating analytics, AI processing disclosure in auth flow, CCPA "Do Not Sell" link, OAuth token cleanup (no access/refresh tokens stored)
+For detailed diagrams see [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
+
+## Quick Start
+
+### Prerequisites
+
+- Docker & Docker Compose
+- Python 3.11+, Node.js 18+
+- An [OpenRouter](https://openrouter.ai) API key
+- [Google OAuth credentials](https://console.cloud.google.com/)
+
+### Setup
+
+```bash
+# 1. Clone and configure
+git clone https://github.com/Rswcf/DocTalk.git
+cd DocTalk
+cp .env.example .env   # Edit with your keys
+
+# 2. Start infrastructure
+docker compose up -d   # PostgreSQL, Qdrant, Redis, MinIO
+
+# 3. Backend
+cd backend
+pip install -r requirements.txt
+python3 -m alembic upgrade head
+python3 -m uvicorn app.main:app --reload
+
+# 4. Celery worker (separate terminal)
+cd backend
+OBJC_DISABLE_INITIALIZE_FORK_SAFETY=YES python3 -m celery \
+  -A app.workers.celery_app worker --loglevel=info -Q default,parse
+
+# 5. Frontend (separate terminal)
+cd frontend
+npm install && npm run dev
+```
+
+Open [http://localhost:3000](http://localhost:3000).
+
+> `OBJC_DISABLE_INITIALIZE_FORK_SAFETY=YES` is only required on macOS.
+
+<details>
+<summary><strong>Environment Variables</strong></summary>
+
+### Backend (`.env`)
+
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `DATABASE_URL` | Yes | PostgreSQL connection string (`postgresql+asyncpg://...`) |
+| `OPENROUTER_API_KEY` | Yes | OpenRouter API key |
+| `AUTH_SECRET` | Yes | Random secret (shared with frontend) |
+| `ADAPTER_SECRET` | Yes | Secret for internal auth API |
+| `STRIPE_SECRET_KEY` | No | Stripe secret key |
+| `STRIPE_WEBHOOK_SECRET` | No | Stripe webhook signing secret |
+| `SENTRY_DSN` | No | Sentry DSN for error tracking |
+| `OCR_ENABLED` | No | Enable OCR for scanned PDFs (default: `true`) |
+| `OCR_LANGUAGES` | No | Tesseract language codes (default: `eng+chi_sim`) |
+
+### Frontend (`.env.local`)
+
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `NEXT_PUBLIC_API_BASE` | Yes | Backend URL (default: `http://localhost:8000`) |
+| `AUTH_SECRET` | Yes | Must match backend `AUTH_SECRET` |
+| `GOOGLE_CLIENT_ID` | Yes | Google OAuth client ID |
+| `GOOGLE_CLIENT_SECRET` | Yes | Google OAuth client secret |
+| `MICROSOFT_CLIENT_ID` | No | Microsoft OAuth client ID |
+| `MICROSOFT_CLIENT_SECRET` | No | Microsoft OAuth client secret |
+| `RESEND_API_KEY` | No | Resend API key for magic link emails |
+
+</details>
+
+<details>
+<summary><strong>Project Structure</strong></summary>
+
+```
+DocTalk/
+├── backend/
+│   ├── app/
+│   │   ├── api/            # Route handlers (documents, chat, search, billing, auth, users)
+│   │   ├── core/           # Config, dependencies, SSRF protection, security logging
+│   │   ├── models/         # SQLAlchemy ORM models
+│   │   ├── schemas/        # Pydantic request/response schemas
+│   │   ├── services/       # Business logic (chat, credits, parsing, retrieval, extractors)
+│   │   └── workers/        # Celery task definitions
+│   ├── alembic/            # Database migrations
+│   ├── seed_data/          # Demo PDF files
+│   └── tests/
+├── frontend/
+│   ├── src/
+│   │   ├── app/            # Next.js pages
+│   │   ├── components/     # React components
+│   │   ├── lib/            # API client, auth, SSE, utilities
+│   │   ├── i18n/           # 11 language locale files
+│   │   ├── store/          # Zustand state management
+│   │   └── types/
+│   └── public/
+├── docs/
+│   ├── ARCHITECTURE.md
+│   └── PRODUCT_STRATEGY.md
+└── docker-compose.yml
+```
+
+</details>
 
 ## Deployment
 
-**Branching**: `main` (development) / `stable` (production). Vercel production branch = `stable`.
+**Branching:** `main` (development) / `stable` (production).
 
-**Frontend (Vercel):**
-- Root Directory is set to `frontend/` in Vercel project settings
-- Push to `stable` → auto-deploys to production (doctalk.site)
-- Push to `main` → creates Preview Deployment only (does not affect production)
-- Do NOT run `vercel --prod` from `frontend/` directory
+| Target | Method |
+|--------|--------|
+| **Frontend** (Vercel) | Push to `stable` → auto-deploys. Root directory: `frontend/`. |
+| **Backend** (Railway) | `git checkout stable && railway up --detach` |
 
-**Backend (Railway):**
-- Deploy from `stable` branch: `git checkout stable && railway up --detach`
-- `entrypoint.sh` runs: Alembic migration → Celery worker (background, auto-restart) → uvicorn, with SIGTERM graceful shutdown. Container runs as non-root user `app` (UID 1001)
-- Railway project includes 5 services: backend, PostgreSQL, Redis, Qdrant, MinIO
-
-**Release workflow**: develop on `main` → merge to `stable` → push `stable` (frontend auto-deploys, backend manual `railway up`)
+Railway runs 5 services: backend, PostgreSQL, Redis, Qdrant, MinIO.
 
 ## Testing
 
 ```bash
-# Smoke tests (requires docker compose services running)
-cd backend && python3 -m pytest tests/test_smoke.py -v
-
-# Integration tests
-cd backend && python3 -m pytest -m integration -v
+cd backend && python3 -m pytest tests/test_smoke.py -v     # Smoke tests
+cd backend && python3 -m pytest -m integration -v           # Integration tests
+cd backend && python3 -m ruff check app/ tests/             # Lint
 ```
+
+## Contributing
+
+Contributions are welcome! Please open an issue first to discuss what you'd like to change.
+
+1. Fork the repository
+2. Create your feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes
+4. Push to the branch and open a Pull Request
 
 ## License
 
-MIT
+[MIT](LICENSE)
+
+---
+
+<p align="center">
+  If you find DocTalk useful, consider giving it a star. It helps others discover the project.
+</p>
+
+<p align="center">
+  <a href="https://github.com/Rswcf/DocTalk/stargazers"><img src="https://img.shields.io/github/stars/Rswcf/DocTalk?style=social" alt="Star on GitHub" /></a>
+</p>

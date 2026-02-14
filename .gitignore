@@ -1,8 +1,20 @@
 # General
 .DS_Store
+Thumbs.db
+
+# Environment variables
 .env
-.env.local
-.env.production
+.env.*
+!.env.example
+!.env.local.example
+
+# Secrets and credentials
+*.key
+*.pem
+*.p12
+*.pfx
+credentials.json
+service-account*.json
 
 # Python
 __pycache__/
@@ -13,6 +25,7 @@ env/
 venv/
 dist/
 build/
+*.egg-info/
 
 # Node/Next.js
 node_modules/
@@ -20,6 +33,27 @@ node_modules/
 .turbo/
 .vercel/
 *.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Testing and coverage
+coverage/
+.nyc_output/
+.pytest_cache/
+
+# Databases
+*.sqlite
+*.sqlite3
+*.db
+
+# IDE settings
+.idea/
+.vscode/
+*.swp
+*.swo
+*.bak
+*~
 
 # MinIO data (if bind-mount used)
 minio-data/

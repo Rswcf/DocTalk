@@ -26,7 +26,7 @@ DocTalk is an AI-powered PDF reader with a unique competitive advantage: **citat
 - **Cross-document Q&A** is the #1 missing capability vs. NotebookLM
 
 ### DocTalk's Position Today
-- **Strengths**: Citation precision (small chunks + bbox highlights), 3 performance modes (Quick/Balanced/Thorough) via OpenRouter with model-adaptive prompts and per-model parameter tuning (benchmark-validated), OCR, dark mode, multi-language (11 languages), ChatGPT-style chat UI (stop generation, scroll-to-bottom, compact citation pills, "+" action menu, hover action buttons, styled code blocks with copy, antialiased typography, max-width centering), streaming indicators, auto-summary, security hardening (SSRF protection, SSE-S3 encryption at rest, file validation, structured security logging, GDPR data export, cookie consent, non-root Docker)
+- **Strengths**: Citation precision (small chunks + bbox highlights), 3 performance modes (Quick=DeepSeek V3.2, Balanced=Mistral Medium 3.1, Thorough=Mistral Large 2512) via OpenRouter with model-adaptive prompts and per-model parameter tuning (benchmark-validated), OCR, dark mode, multi-language (11 languages), ChatGPT-style chat UI (stop generation, scroll-to-bottom, compact citation pills, "+" action menu, hover action buttons, styled code blocks with copy, antialiased typography, max-width centering), streaming indicators, auto-summary, security hardening (SSRF protection, SSE-S3 encryption at rest, file validation, structured security logging, GDPR data export, cookie consent, non-root Docker), branded email magic link with 11-locale i18n
 - **Weaknesses**: No team features, no API, no SSO
 
 ---
@@ -84,20 +84,32 @@ DocTalk is an AI-powered PDF reader with a unique competitive advantage: **citat
 
 ## 5. Pricing & Monetization Proposal
 
-### Current Issues
-- **Pro plan margin thin (~13%)**: May need further adjustment if usage patterns differ from projections
-- **Priority Queue not yet implemented**: Feature shown in PricingTable but removed pending implementation
-- **Credit rescaling deployed (÷10)**: Monitor user comprehension of new credit amounts
+### Pricing Implementation Status
+- ✅ **Credit rescaling deployed (÷10)**: All credit amounts reduced 10x for better unit economics (backend migration `20260210_0013_rescale_ledger.py`)
+- ✅ **Free tier reduced to 500 credits**: Creates upgrade pressure without blocking trial usage
+- ✅ **Plus tier launched ($9.99/month)**: Captures casual users between Free and Pro
+- ✅ **Annual pricing with 20% discount**: Reduces churn and improves LTV
+- ✅ **Credit packs repriced**: Boost/Power/Ultra now 1.2-2.4x more expensive per-credit than subscriptions, making subscriptions the better value
+- ✅ **Feature gating deployed**: Thorough mode (Plus+), Export (Plus+), Custom Instructions (Pro), Sessions (Free=3/doc)
+- ⏳ **Priority Queue**: Removed from pricing page pending implementation
+- ⏳ **Team tier**: Planned for Phase 3 (requires workspace, RBAC, SSO features)
 
-### Proposed Pricing Structure
+### Current Pricing Structure
 
-| Tier | Monthly | Annual (save 20-25%) | Credits/mo | Documents | Models |
+| Tier | Monthly | Annual (save 20%) | Credits/mo | Documents | Models |
 |------|---------|---------------------|-----------|-----------|--------|
 | **Free** | $0 | — | 500 | 3 stored | Quick + Balanced |
 | **Plus** | $9.99 | $7.99/mo | 3,000 | 20 stored | All 3 modes |
 | **Pro** | $19.99 | $15.99/mo | 9,000 | Unlimited | All 3 modes |
-| **Team** (NEW) | $29.99/seat | $24.99/seat/mo | 200K/seat | Unlimited | All 3 modes |
-| **Enterprise** (NEW) | Custom | Custom | Custom | Unlimited | All 3 + custom |
+| **Team** (PLANNED) | $29.99/seat | $24.99/seat/mo | 200K/seat | Unlimited | All 3 modes |
+| **Enterprise** (PLANNED) | Custom | Custom | Custom | Unlimited | All 3 + custom |
+
+**Credit Packs** (one-time purchases, more expensive per-credit than subscriptions):
+- **Boost**: 500 credits for $3.99 (0.798¢/credit)
+- **Power**: 2,000 credits for $9.99 (0.500¢/credit)
+- **Ultra**: 5,000 credits for $19.99 (0.400¢/credit)
+
+For comparison, subscriptions range from 0.167¢/credit (Pro annual) to 0.333¢/credit (Plus monthly), making them 1.2-2.4x more cost-effective than packs.
 
 ### Key Changes (Completed)
 1. **Reduced free tier** to 500 credits — creates upgrade pressure quickly

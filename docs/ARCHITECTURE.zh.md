@@ -262,6 +262,11 @@ sequenceDiagram
     AJ->>AD: POST /api/internal/auth/verification-tokens
     AD->>DB: INSERT 验证令牌
     AD-->>AJ: token
+
+    Note over AJ: 自定义 sendVerificationRequest
+    AJ->>AD: GET /users/by-email (检查用户是否存在)
+    AD-->>AJ: 200 OK / 404 Not Found
+    AJ->>AJ: 构建品牌化邮件模板<br/>（11 语言，区分注册/登录）
     AJ->>RS: 发送 Magic Link 邮件<br/>（包含验证令牌）
     RS-->>U: 包含 Magic Link 的邮件
 
@@ -298,6 +303,14 @@ Auth.js v5 将会话令牌加密为 JWE（JSON Web Encryption），Python 后端
 | **Email** | `resend` | 通过 Resend 邮件服务的无密码 Magic Link |
 
 **内部 Auth Adapter**：Auth.js 使用自定义 Adapter，调用 FastAPI 后端的 `/api/internal/auth/*` 端点（通过 `X-Adapter-Secret` 头保护）来管理 PostgreSQL 中的用户、账户和验证令牌。
+
+**邮箱 Magic Link 系统**：Resend 提供商使用自定义的 `sendVerificationRequest` 函数（`frontend/src/lib/auth.ts`），提供以下功能：
+- **品牌化邮件模板**（`emailTemplate.ts` 中的 `buildSignInEmail`）包含 DocTalk logo、样式和品牌元素
+- **11 语言国际化支持** — 基于用户的 `NEXT_LOCALE` cookie 翻译邮件主题和正文
+- **区分注册与登录** — 通过后端 API 检查用户是否存在，调整邮件文案（"欢迎加入 DocTalk" vs. "登录 DocTalk"）
+- **Reply-To 头** 指向 `support@doctalk.site` 以便用户咨询
+
+**过期令牌清理**：Celery Beat 定期任务（`cleanup_expired_verification_tokens`）每日运行，删除超过 48 小时过期的验证令牌，保持数据库整洁。
 
 ---
 
@@ -732,9 +745,11 @@ graph LR
 |------|---------------|----------------|
 | **触发方式** | 推送 `stable`（自动） | 从 `stable` 分支 `railway up --detach`（手动） |
 | **构建** | 从 `frontend/` 导出 Next.js | 从项目根目录构建 Dockerfile（含 LibreOffice headless + CJK 字体，用于 PPTX/DOCX→PDF 转换） |
-| **运行时** | Serverless 函数（Hobby 计划） | 单容器（`entrypoint.sh`）：alembic → celery（自动重启）→ uvicorn |
+| **运行时** | Serverless 函数（Hobby 计划） | 单容器（`entrypoint.sh`）：alembic → celery worker + celery beat（自动重启）→ uvicorn |
 | **域名** | `www.doctalk.site` | `backend-production-a62e.up.railway.app` |
 | **限制** | 4.5 MB 函数体积，60s 最大时长 | 容器内存取决于 Railway 计划 |
+
+**Celery Beat 调度器**：后端容器同时运行 Celery worker（异步任务）和 Celery Beat（定期任务）。Beat 调度配置在 `celery_app.py` 中，包括每日清理过期验证令牌。
 
 **环境变量同步：**
 - `AUTH_SECRET` 和 `ADAPTER_SECRET` 在 Vercel 和 Railway 之间必须一致
