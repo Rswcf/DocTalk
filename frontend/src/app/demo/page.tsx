@@ -5,6 +5,11 @@ export const metadata: Metadata = {
   title: { absolute: 'Try DocTalk Free — Interactive Demo' },
   description: 'Try DocTalk without signing up. Chat with sample documents and see AI-powered answers with real-time source citations.',
   alternates: { canonical: '/demo' },
+  openGraph: {
+    title: 'Try DocTalk Free — Interactive Demo',
+    description: 'Try DocTalk without signing up. Chat with sample documents and see AI-powered answers with real-time source citations.',
+    url: 'https://www.doctalk.site/demo',
+  },
 };
 
 export default function DemoPage() {

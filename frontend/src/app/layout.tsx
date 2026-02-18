@@ -11,7 +11,7 @@ import { AuthModal } from '../components/AuthModal'
 import { AnalyticsWrapper } from '../components/AnalyticsWrapper'
 import { CookieConsentBanner } from '../components/CookieConsentBanner'
 
-const inter = Inter({ subsets: ['latin'], variable: '--font-inter' })
+const inter = Inter({ subsets: ['latin'], variable: '--font-inter', display: 'swap' })
 const sora = Sora({
   subsets: ['latin'],
   variable: '--font-logo',
@@ -28,20 +28,6 @@ export const metadata: Metadata = {
   description: 'Upload any document and chat with AI. Get instant answers with source citations that highlight in your document. Supports PDF, DOCX, PPTX, XLSX, and more.',
   alternates: {
     canonical: '/',
-    languages: {
-      'x-default': 'https://www.doctalk.site',
-      'en': 'https://www.doctalk.site',
-      'zh': 'https://www.doctalk.site',
-      'es': 'https://www.doctalk.site',
-      'ja': 'https://www.doctalk.site',
-      'de': 'https://www.doctalk.site',
-      'fr': 'https://www.doctalk.site',
-      'ko': 'https://www.doctalk.site',
-      'pt': 'https://www.doctalk.site',
-      'it': 'https://www.doctalk.site',
-      'ar': 'https://www.doctalk.site',
-      'hi': 'https://www.doctalk.site',
-    },
   },
   openGraph: {
     title: 'DocTalk — AI Document Chat',

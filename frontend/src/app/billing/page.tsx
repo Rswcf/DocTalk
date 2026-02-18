@@ -5,6 +5,11 @@ export const metadata: Metadata = {
   title: 'Pricing',
   description: 'Choose your DocTalk plan. Free, Plus, and Pro tiers with AI document chat, source citations, and multi-format support.',
   alternates: { canonical: '/billing' },
+  openGraph: {
+    title: 'DocTalk Pricing — Free, Plus & Pro Plans',
+    description: 'Choose a DocTalk plan. Free with 500 credits/month, Plus for power users, Pro for professionals. Cancel anytime.',
+    url: 'https://www.doctalk.site/billing',
+  },
 };
 
 export default function BillingPage() {

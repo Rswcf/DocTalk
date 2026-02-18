@@ -5,6 +5,11 @@ export const metadata: Metadata = {
   title: 'Terms of Service',
   description: 'DocTalk terms of service. Read about acceptable use, intellectual property, limitations of liability, and account terms.',
   alternates: { canonical: '/terms' },
+  openGraph: {
+    title: 'Terms of Service — DocTalk',
+    description: 'DocTalk terms of service. Rules for using our AI document analysis platform.',
+    url: 'https://www.doctalk.site/terms',
+  },
 };
 
 export default function TermsPage() {

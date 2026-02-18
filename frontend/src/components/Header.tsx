@@ -40,6 +40,16 @@ export default function Header({ variant = 'full', isDemo, isLoggedIn }: HeaderP
         {t('app.title')}
         <span className="ml-1 -mt-2 px-1.5 py-0.5 text-[10px] font-medium leading-none rounded-full bg-indigo-100 text-indigo-600 dark:bg-indigo-900/50 dark:text-indigo-300 tracking-wide uppercase">Beta</span>
       </Link>
+      {isMinimal && (
+        <nav className="hidden sm:flex items-center gap-4 ml-4" aria-label="Main navigation">
+          <Link href="/demo" className="text-sm font-medium text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors">
+            {t('footer.demo')}
+          </Link>
+          <Link href="/billing" className="text-sm font-medium text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors">
+            {t('footer.pricing')}
+          </Link>
+        </nav>
+      )}
       {!isMinimal && documentName && (
         <>
           <span className="mx-3 text-zinc-300 dark:text-zinc-600">/</span>
