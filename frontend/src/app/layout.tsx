@@ -78,7 +78,7 @@ export default async function RootLayout({
                   url: 'https://www.doctalk.site',
                   logo: {
                     '@type': 'ImageObject',
-                    url: 'https://www.doctalk.site/logo-icon.svg',
+                    url: 'https://www.doctalk.site/logo-icon.png',
                     width: 512,
                     height: 512,
                   },
