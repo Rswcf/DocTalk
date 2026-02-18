@@ -255,21 +255,35 @@ def parse_document(self, document_id: str) -> None:
             # ---- Shared path: persist pages, chunk, and embed ----
 
             # Persist pages and update progress every 10 pages
-            for i, p in enumerate(pages, start=1):
-                db.add(
-                    Page(
-                        document_id=doc.id,
-                        page_number=p.page_number,
-                        width_pt=p.width_pt,
-                        height_pt=p.height_pt,
-                        rotation=p.rotation,
-                        content=extracted_content_map.get(p.page_number),
+            try:
+                for i, p in enumerate(pages, start=1):
+                    raw_content = extracted_content_map.get(p.page_number)
+                    db.add(
+                        Page(
+                            document_id=doc.id,
+                            page_number=p.page_number,
+                            width_pt=p.width_pt,
+                            height_pt=p.height_pt,
+                            rotation=p.rotation,
+                            content=raw_content.replace("\x00", "") if raw_content else raw_content,
+                        )
                     )
-                )
-                if (i % 10) == 0 or i == len(pages):
-                    doc.pages_parsed = i
+                    if (i % 10) == 0 or i == len(pages):
+                        doc.pages_parsed = i
+                        db.add(doc)
+                        db.commit()
+            except SoftTimeLimitExceeded:
+                raise
+            except Exception as e:
+                logger.exception("Failed to persist pages for %s: %s", document_id, e)
+                db.rollback()
+                doc = db.get(Document, uuid.UUID(document_id))
+                if doc:
+                    doc.status = "error"
+                    doc.error_msg = "Failed to save document pages to database"
                     db.add(doc)
                     db.commit()
+                return
 
             # Chunk document (includes cleaning + bbox normalization)
             try:
@@ -284,26 +298,39 @@ def parse_document(self, document_id: str) -> None:
                 db.commit()
                 return
 
-            # Persist chunks
+            # Persist chunks (sanitize text to remove NUL bytes for PostgreSQL)
             chunks_total = 0
-            for ch in chunk_infos:
-                db.add(
-                    Chunk(
-                        document_id=doc.id,
-                        chunk_index=ch.chunk_index,
-                        text=ch.text,
-                        token_count=ch.token_count,
-                        page_start=ch.page_start,
-                        page_end=ch.page_end,
-                        bboxes=ch.bboxes,
-                        section_title=ch.section_title,
+            try:
+                for ch in chunk_infos:
+                    db.add(
+                        Chunk(
+                            document_id=doc.id,
+                            chunk_index=ch.chunk_index,
+                            text=ch.text.replace("\x00", "") if ch.text else ch.text,
+                            token_count=ch.token_count,
+                            page_start=ch.page_start,
+                            page_end=ch.page_end,
+                            bboxes=ch.bboxes,
+                            section_title=ch.section_title,
+                        )
                     )
-                )
-                chunks_total += 1
+                    chunks_total += 1
 
-            doc.chunks_total = chunks_total
-            db.add(doc)
-            db.commit()
+                doc.chunks_total = chunks_total
+                db.add(doc)
+                db.commit()
+            except SoftTimeLimitExceeded:
+                raise
+            except Exception as e:
+                logger.exception("Failed to persist chunks for %s: %s", document_id, e)
+                db.rollback()
+                doc = db.get(Document, uuid.UUID(document_id))
+                if doc:
+                    doc.status = "error"
+                    doc.error_msg = "Failed to save document chunks to database"
+                    db.add(doc)
+                    db.commit()
+                return
 
             logger.info("Completed parse stage for %s: %d chunks", document_id, chunks_total)
 

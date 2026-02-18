@@ -110,6 +110,27 @@ MODEL_PROFILES: dict[str, ModelProfile] = {
         supports_stream_options=True,
         prompt_style="default",
     ),
+    "qwen/qwen3.5-397b-a17b": ModelProfile(
+        temperature=0.2,
+        max_tokens=4096,
+        supports_cache_control=False,
+        supports_stream_options=True,
+        prompt_style="default",
+    ),
+    "minimax/minimax-m2.5": ModelProfile(
+        temperature=0.2,
+        max_tokens=4096,
+        supports_cache_control=False,
+        supports_stream_options=True,
+        prompt_style="default",
+    ),
+    "z-ai/glm-5": ModelProfile(
+        temperature=0.2,
+        max_tokens=4096,
+        supports_cache_control=False,
+        supports_stream_options=True,
+        prompt_style="default",
+    ),
 }
 
 # Fallback for unknown models
