@@ -1,0 +1,53 @@
+[
+  {
+    "model": "minimax/minimax-m2.5",
+    "n_total": 48,
+    "n_errors": 0,
+    "n_valid": 48,
+    "error_rate": 0.0,
+    "avg_ttft_ms": 12869,
+    "p50_ttft_ms": 6760,
+    "p95_ttft_ms": 47523,
+    "avg_total_ms": 19861,
+    "citation_accuracy": 0.979,
+    "language_compliance": 1.0,
+    "avg_markdown_quality": 5.2,
+    "negative_case_accuracy": 0.875,
+    "avg_keyword_coverage": 0.737,
+    "_timestamp": "2026-02-17T23:31:55.320229+00:00"
+  },
+  {
+    "model": "qwen/qwen3.5-397b-a17b",
+    "n_total": 48,
+    "n_errors": 0,
+    "n_valid": 48,
+    "error_rate": 0.0,
+    "avg_ttft_ms": 8977,
+    "p50_ttft_ms": 918,
+    "p95_ttft_ms": 35263,
+    "avg_total_ms": 15719,
+    "citation_accuracy": 0.958,
+    "language_compliance": 0.958,
+    "avg_markdown_quality": 4.9,
+    "negative_case_accuracy": 1.0,
+    "avg_keyword_coverage": 0.698,
+    "_timestamp": "2026-02-17T23:31:55.320229+00:00"
+  },
+  {
+    "model": "z-ai/glm-5",
+    "n_total": 48,
+    "n_errors": 0,
+    "n_valid": 48,
+    "error_rate": 0.0,
+    "avg_ttft_ms": 18393,
+    "p50_ttft_ms": 14912,
+    "p95_ttft_ms": 49225,
+    "avg_total_ms": 22182,
+    "citation_accuracy": 0.979,
+    "language_compliance": 1.0,
+    "avg_markdown_quality": 4.8,
+    "negative_case_accuracy": 1.0,
+    "avg_keyword_coverage": 0.717,
+    "_timestamp": "2026-02-17T23:31:55.320229+00:00"
+  }
+]
