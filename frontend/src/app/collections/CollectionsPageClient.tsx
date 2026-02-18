@@ -1,0 +1,111 @@
+"use client";
+
+import React, { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { useSession } from 'next-auth/react';
+import { Plus, FolderOpen } from 'lucide-react';
+import Header from '../../components/Header';
+import CollectionList from '../../components/Collections/CollectionList';
+import CreateCollectionModal from '../../components/Collections/CreateCollectionModal';
+import { listCollections, deleteCollection } from '../../lib/api';
+import { useLocale } from '../../i18n';
+import type { CollectionBrief } from '../../types';
+import { usePageTitle } from '../../lib/usePageTitle';
+
+export default function CollectionsPageClient() {
+  usePageTitle('Collections');
+
+  const router = useRouter();
+  const { status } = useSession();
+  const { t } = useLocale();
+  const [collections, setCollections] = useState<CollectionBrief[]>([]);
+  const [showCreate, setShowCreate] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (status === 'authenticated') {
+      listCollections().then(setCollections).catch(console.error);
+    }
+  }, [status]);
+
+  if (status === 'loading') {
+    return (
+      <div className="min-h-screen bg-[var(--page-background)] flex items-center justify-center">
+        <div className="animate-pulse text-zinc-400">{t('common.loading')}</div>
+      </div>
+    );
+  }
+
+  if (status !== 'authenticated') {
+    router.push('/auth?callbackUrl=/collections');
+    return null;
+  }
+
+  const handleDelete = async (id: string) => {
+    setDeletingId(id);
+    try {
+      await deleteCollection(id);
+      setCollections(prev => prev.filter(c => c.id !== id));
+    } catch (e) {
+      console.error('Failed to delete collection:', e);
+    }
+    setDeletingId(null);
+  };
+
+  return (
+    <div className="flex flex-col min-h-screen bg-[var(--page-background)]">
+      <Header variant="full" />
+      <main className="flex-1 flex flex-col items-center p-6 sm:p-8">
+        <div className="max-w-4xl w-full">
+          <div className="flex items-center justify-between mb-6">
+            <h1 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100">
+              {t('collections.title')}
+            </h1>
+            <button
+              onClick={() => setShowCreate(true)}
+              className="inline-flex items-center gap-2 px-4 py-2 bg-zinc-900 dark:bg-zinc-50 text-white dark:text-zinc-900 rounded-lg font-medium text-sm hover:bg-zinc-800 dark:hover:bg-zinc-200 shadow-sm transition-colors focus-visible:ring-2 focus-visible:ring-zinc-400 dark:focus-visible:ring-zinc-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-900"
+            >
+              <Plus aria-hidden="true" size={16} />
+              {t('collections.create')}
+            </button>
+          </div>
+
+          {collections.length === 0 ? (
+            <div className="rounded-2xl border border-dashed border-zinc-300 dark:border-zinc-700 bg-zinc-50/80 dark:bg-zinc-900/40 p-10 sm:p-12 text-center flex flex-col items-center">
+              <div className="h-12 w-12 rounded-full bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 flex items-center justify-center mb-4">
+                <FolderOpen size={22} className="text-zinc-500 dark:text-zinc-400" />
+              </div>
+              <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100 mb-2">
+                {t('collections.emptyTitle')}
+              </h2>
+              <p className="text-sm text-zinc-600 dark:text-zinc-400 max-w-xl">
+                {t('collections.emptySubtitle')}
+              </p>
+              <button
+                onClick={() => setShowCreate(true)}
+                className="mt-6 inline-flex items-center gap-2 px-5 py-2.5 bg-zinc-900 dark:bg-zinc-50 text-white dark:text-zinc-900 rounded-lg font-medium text-sm shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-shadow transition-transform duration-200 focus-visible:ring-2 focus-visible:ring-zinc-400 dark:focus-visible:ring-zinc-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-900"
+              >
+                <Plus aria-hidden="true" size={16} />
+                {t('collections.create')}
+              </button>
+            </div>
+          ) : (
+            <CollectionList
+              collections={collections}
+              onDelete={handleDelete}
+              deletingId={deletingId}
+            />
+          )}
+        </div>
+      </main>
+
+      <CreateCollectionModal
+        isOpen={showCreate}
+        onClose={() => setShowCreate(false)}
+        onCreated={(id) => {
+          router.push(`/collections/${id}`);
+        }}
+      />
+    </div>
+  );
+}
