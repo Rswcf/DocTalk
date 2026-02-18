@@ -36,7 +36,16 @@ if settings.SENTRY_DSN:
 async def lifespan(app: FastAPI):
     import logging
     import threading
+
+    # Configure startup logger with a handler so messages actually appear.
+    # Python's lastResort handler only outputs WARNING+; we need INFO for
+    # "Found N stuck documents" and other startup diagnostics.
     logger = logging.getLogger("doctalk.startup")
+    if not logger.handlers:
+        handler = logging.StreamHandler()
+        handler.setFormatter(logging.Formatter("[%(name)s] %(message)s"))
+        logger.addHandler(handler)
+        logger.setLevel(logging.INFO)
 
     def _init_services() -> None:
         try:
