@@ -26,6 +26,11 @@ celery_app.conf.update(
     task_default_queue="default",
     task_acks_late=True,
     worker_prefetch_multiplier=1,
+    # Requeue unacked tasks after 10 minutes (must exceed task time_limit=600).
+    # Default is 3600s — too long; during zero-downtime deploys the old worker
+    # may reserve tasks and get killed, leaving them stuck in Redis "unacked"
+    # until visibility_timeout expires.
+    broker_transport_options={"visibility_timeout": 660},
 )
 
 # Route parsing-related tasks to a dedicated queue

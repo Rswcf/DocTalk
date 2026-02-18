@@ -17,6 +17,11 @@ from app.models.sync_database import SyncSessionLocal
 from app.models.tables import Document
 
 logger = logging.getLogger("doctalk.demo_seed")
+if not logger.handlers:
+    _handler = logging.StreamHandler()
+    _handler.setFormatter(logging.Formatter("[%(name)s] %(message)s"))
+    logger.addHandler(_handler)
+    logger.setLevel(logging.INFO)
 
 DEMO_DOCS = [
     {
