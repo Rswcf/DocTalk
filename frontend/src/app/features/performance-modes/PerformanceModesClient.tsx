@@ -65,9 +65,9 @@ const modes = [
 
 export default function PerformanceModesClient() {
   return (
-    <>
+    <div className="min-h-screen flex flex-col bg-white dark:bg-zinc-950">
       <Header variant="minimal" />
-      <main className="min-h-screen">
+      <main className="flex-1">
         {/* Hero */}
         <section className="bg-white dark:bg-zinc-950">
           <div className="max-w-4xl mx-auto px-6 pt-20 pb-16 text-center">
@@ -75,10 +75,10 @@ export default function PerformanceModesClient() {
               <Gauge className="w-4 h-4" />
               3 Modes
             </div>
-            <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-zinc-900 dark:text-zinc-100 mb-6 leading-tight">
+            <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-zinc-900 dark:text-zinc-100 tracking-tight mb-6 leading-tight">
               Choose Your AI Performance Mode
             </h1>
-            <p className="text-lg text-zinc-500 dark:text-zinc-400 max-w-2xl mx-auto mb-8">
+            <p className="text-lg text-zinc-600 dark:text-zinc-400 max-w-2xl mx-auto mb-8">
               Not every question needs the same depth. DocTalk offers three AI performance modes so
               you can balance speed, quality, and cost for every question. Switch modes anytime,
               even mid-conversation.
@@ -96,7 +96,7 @@ export default function PerformanceModesClient() {
         {/* Three Modes */}
         <section className="bg-zinc-50 dark:bg-zinc-900/50">
           <div className="max-w-4xl mx-auto px-6 py-16">
-            <h2 className="text-2xl sm:text-3xl font-bold text-zinc-900 dark:text-zinc-100 mb-12 text-center">
+            <h2 className="text-2xl sm:text-3xl font-bold text-zinc-900 dark:text-zinc-100 tracking-tight mb-12 text-center">
               Three Modes, Three Purposes
             </h2>
 
@@ -164,10 +164,10 @@ export default function PerformanceModesClient() {
         {/* When to Use Each */}
         <section className="bg-white dark:bg-zinc-950">
           <div className="max-w-4xl mx-auto px-6 py-16">
-            <h2 className="text-2xl sm:text-3xl font-bold text-zinc-900 dark:text-zinc-100 mb-6">
+            <h2 className="text-2xl sm:text-3xl font-bold text-zinc-900 dark:text-zinc-100 tracking-tight mb-6">
               When to Use Each Mode
             </h2>
-            <div className="space-y-4 text-zinc-500 dark:text-zinc-400 leading-relaxed">
+            <div className="space-y-4 text-zinc-600 dark:text-zinc-400 leading-relaxed">
               <p>
                 <strong className="text-zinc-900 dark:text-zinc-100">Quick mode</strong> is your
                 default for straightforward questions. Need to find a specific date, definition, or
@@ -200,7 +200,7 @@ export default function PerformanceModesClient() {
         {/* FAQ */}
         <section className="bg-zinc-50 dark:bg-zinc-900/50">
           <div className="max-w-4xl mx-auto px-6 py-16">
-            <h2 className="text-2xl sm:text-3xl font-bold text-zinc-900 dark:text-zinc-100 mb-10 text-center">
+            <h2 className="text-2xl sm:text-3xl font-bold text-zinc-900 dark:text-zinc-100 tracking-tight mb-10 text-center">
               Frequently Asked Questions
             </h2>
 
@@ -242,10 +242,10 @@ export default function PerformanceModesClient() {
         {/* CTA */}
         <section className="bg-white dark:bg-zinc-950">
           <div className="max-w-4xl mx-auto px-6 py-16 text-center">
-            <h2 className="text-2xl sm:text-3xl font-bold text-zinc-900 dark:text-zinc-100 mb-4">
+            <h2 className="text-2xl sm:text-3xl font-bold text-zinc-900 dark:text-zinc-100 tracking-tight mb-4">
               Try All Three Modes
             </h2>
-            <p className="text-zinc-500 dark:text-zinc-400 max-w-xl mx-auto mb-8">
+            <p className="text-zinc-600 dark:text-zinc-400 max-w-xl mx-auto mb-8">
               The free demo uses Quick mode. Sign up free to access Balanced mode with 500
               credits per month, or upgrade to Plus for Thorough mode.
             </p>
@@ -282,6 +282,6 @@ export default function PerformanceModesClient() {
         </section>
       </main>
       <Footer />
-    </>
+    </div>
   );
 }

@@ -47,9 +47,9 @@ const faqItems = [
 
 export default function ChatpdfClient() {
   return (
-    <>
+    <div className="min-h-screen flex flex-col bg-white dark:bg-zinc-950">
       <Header variant="minimal" />
-      <main className="min-h-screen bg-white dark:bg-zinc-950">
+      <main className="flex-1">
         {/* Hero */}
         <section className="max-w-4xl mx-auto px-6 pt-20 pb-12">
           <nav className="text-sm text-zinc-500 dark:text-zinc-400 mb-8">
@@ -60,7 +60,7 @@ export default function ChatpdfClient() {
             <span className="text-zinc-900 dark:text-zinc-100">DocTalk vs ChatPDF</span>
           </nav>
 
-          <h1 className="text-3xl sm:text-4xl font-bold text-zinc-900 dark:text-zinc-100 mb-6">
+          <h1 className="text-3xl sm:text-4xl font-bold text-zinc-900 dark:text-zinc-100 mb-6 tracking-tight">
             DocTalk vs ChatPDF: Full Comparison (2026)
           </h1>
           <p className="text-lg text-zinc-600 dark:text-zinc-400 leading-relaxed">
@@ -74,7 +74,7 @@ export default function ChatpdfClient() {
         {/* Quick Comparison Table */}
         <section className="bg-zinc-50 dark:bg-zinc-900/50">
           <div className="max-w-4xl mx-auto px-6 py-16">
-            <h2 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100 mb-8">
+            <h2 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100 tracking-tight mb-8">
               Quick Comparison
             </h2>
             <ComparisonTable features={features} competitorName="ChatPDF" />
@@ -83,7 +83,7 @@ export default function ChatpdfClient() {
 
         {/* What Is DocTalk? */}
         <section className="max-w-4xl mx-auto px-6 py-16">
-          <h2 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100 mb-4">
+          <h2 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100 tracking-tight mb-4">
             What Is DocTalk?
           </h2>
           <p className="text-zinc-600 dark:text-zinc-400 leading-relaxed">
@@ -101,7 +101,7 @@ export default function ChatpdfClient() {
         {/* What Is ChatPDF? */}
         <section className="bg-zinc-50 dark:bg-zinc-900/50">
           <div className="max-w-4xl mx-auto px-6 py-16">
-            <h2 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100 mb-4">
+            <h2 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100 tracking-tight mb-4">
               What Is ChatPDF?
             </h2>
             <p className="text-zinc-600 dark:text-zinc-400 leading-relaxed">
@@ -118,7 +118,7 @@ export default function ChatpdfClient() {
 
         {/* Feature-by-Feature Comparison */}
         <section className="max-w-4xl mx-auto px-6 py-16">
-          <h2 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100 mb-10">
+          <h2 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100 tracking-tight mb-10">
             Feature-by-Feature Comparison
           </h2>
 
@@ -278,7 +278,7 @@ export default function ChatpdfClient() {
         {/* Who Should Choose DocTalk? */}
         <section className="bg-zinc-50 dark:bg-zinc-900/50">
           <div className="max-w-4xl mx-auto px-6 py-16">
-            <h2 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100 mb-6">
+            <h2 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100 tracking-tight mb-6">
               Who Should Choose DocTalk?
             </h2>
             <ul className="space-y-3 text-zinc-600 dark:text-zinc-400">
@@ -308,7 +308,7 @@ export default function ChatpdfClient() {
 
         {/* Who Should Choose ChatPDF? */}
         <section className="max-w-4xl mx-auto px-6 py-16">
-          <h2 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100 mb-6">
+          <h2 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100 tracking-tight mb-6">
             Who Should Choose ChatPDF?
           </h2>
           <ul className="space-y-3 text-zinc-600 dark:text-zinc-400">
@@ -334,7 +334,7 @@ export default function ChatpdfClient() {
         {/* Verdict */}
         <section className="bg-zinc-50 dark:bg-zinc-900/50">
           <div className="max-w-4xl mx-auto px-6 py-16">
-            <h2 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100 mb-6">
+            <h2 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100 tracking-tight mb-6">
               Verdict
             </h2>
             <p className="text-zinc-600 dark:text-zinc-400 leading-relaxed mb-4">
@@ -362,7 +362,7 @@ export default function ChatpdfClient() {
 
         {/* FAQ */}
         <section className="max-w-4xl mx-auto px-6 py-16">
-          <h2 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100 mb-8">
+          <h2 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100 tracking-tight mb-8">
             Frequently Asked Questions
           </h2>
           <FAQSection items={faqItems} />
@@ -386,7 +386,7 @@ export default function ChatpdfClient() {
                 <Link
                   key={link.href}
                   href={link.href}
-                  className="px-4 py-2 text-sm bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg text-zinc-600 dark:text-zinc-400 hover:border-zinc-400 dark:hover:border-zinc-600 transition-colors"
+                  className="px-4 py-2 text-sm bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg text-zinc-600 dark:text-zinc-400 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-[box-shadow,transform] duration-200"
                 >
                   {link.label}
                 </Link>
@@ -397,6 +397,7 @@ export default function ChatpdfClient() {
 
         {/* CTA */}
         <CTABanner
+          variant="highlight"
           title="Try DocTalk Free — No Signup Required"
           description="Upload a document and see citation highlighting in action. No account needed."
           buttonText="Try the Demo"
@@ -404,6 +405,6 @@ export default function ChatpdfClient() {
         />
       </main>
       <Footer />
-    </>
+    </div>
   );
 }

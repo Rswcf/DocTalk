@@ -60,9 +60,9 @@ const formats = [
 
 export default function MultiFormatClient() {
   return (
-    <>
+    <div className="min-h-screen flex flex-col bg-white dark:bg-zinc-950">
       <Header variant="minimal" />
-      <main className="min-h-screen">
+      <main className="flex-1">
         {/* Hero */}
         <section className="bg-white dark:bg-zinc-950">
           <div className="max-w-4xl mx-auto px-6 pt-20 pb-16 text-center">
@@ -70,10 +70,10 @@ export default function MultiFormatClient() {
               <FileText className="w-4 h-4" />
               7 Formats Supported
             </div>
-            <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-zinc-900 dark:text-zinc-100 mb-6 leading-tight">
+            <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-zinc-900 dark:text-zinc-100 tracking-tight mb-6 leading-tight">
               Chat with Any Document Format Using AI
             </h1>
-            <p className="text-lg text-zinc-500 dark:text-zinc-400 max-w-2xl mx-auto mb-8">
+            <p className="text-lg text-zinc-600 dark:text-zinc-400 max-w-2xl mx-auto mb-8">
               Upload PDF, Word, PowerPoint, Excel, text files, Markdown, or paste any URL. DocTalk
               parses your document, understands its structure, and lets you ask questions with cited
               answers — regardless of the format.
@@ -91,10 +91,10 @@ export default function MultiFormatClient() {
         {/* Supported Formats Grid */}
         <section className="bg-zinc-50 dark:bg-zinc-900/50">
           <div className="max-w-4xl mx-auto px-6 py-16">
-            <h2 className="text-2xl sm:text-3xl font-bold text-zinc-900 dark:text-zinc-100 mb-4 text-center">
+            <h2 className="text-2xl sm:text-3xl font-bold text-zinc-900 dark:text-zinc-100 tracking-tight mb-4 text-center">
               Supported Formats
             </h2>
-            <p className="text-zinc-500 dark:text-zinc-400 text-center max-w-2xl mx-auto mb-12">
+            <p className="text-zinc-600 dark:text-zinc-400 text-center max-w-2xl mx-auto mb-12">
               DocTalk does not just open your file — it understands the structure, extracts the content
               intelligently, and preserves context for accurate AI analysis.
             </p>
@@ -129,10 +129,10 @@ export default function MultiFormatClient() {
         {/* Why Multi-Format Matters */}
         <section className="bg-white dark:bg-zinc-950">
           <div className="max-w-4xl mx-auto px-6 py-16">
-            <h2 className="text-2xl sm:text-3xl font-bold text-zinc-900 dark:text-zinc-100 mb-6">
+            <h2 className="text-2xl sm:text-3xl font-bold text-zinc-900 dark:text-zinc-100 tracking-tight mb-6">
               Why Multi-Format Matters
             </h2>
-            <div className="space-y-4 text-zinc-500 dark:text-zinc-400 leading-relaxed">
+            <div className="space-y-4 text-zinc-600 dark:text-zinc-400 leading-relaxed">
               <p>
                 Most AI document tools only support PDF. But your actual workflow involves far more
                 than PDFs. You receive Word documents from colleagues, review PowerPoint presentations
@@ -157,7 +157,7 @@ export default function MultiFormatClient() {
         {/* How It Works */}
         <section className="bg-zinc-50 dark:bg-zinc-900/50">
           <div className="max-w-4xl mx-auto px-6 py-16">
-            <h2 className="text-2xl sm:text-3xl font-bold text-zinc-900 dark:text-zinc-100 mb-12 text-center">
+            <h2 className="text-2xl sm:text-3xl font-bold text-zinc-900 dark:text-zinc-100 tracking-tight mb-12 text-center">
               How It Works
             </h2>
 
@@ -208,7 +208,7 @@ export default function MultiFormatClient() {
         {/* Format-Specific Features */}
         <section className="bg-white dark:bg-zinc-950">
           <div className="max-w-4xl mx-auto px-6 py-16">
-            <h2 className="text-2xl sm:text-3xl font-bold text-zinc-900 dark:text-zinc-100 mb-6">
+            <h2 className="text-2xl sm:text-3xl font-bold text-zinc-900 dark:text-zinc-100 tracking-tight mb-6">
               Format-Specific Features
             </h2>
             <div className="space-y-4">
@@ -236,10 +236,10 @@ export default function MultiFormatClient() {
         {/* Compared to PDF-Only Tools */}
         <section className="bg-zinc-50 dark:bg-zinc-900/50">
           <div className="max-w-4xl mx-auto px-6 py-16">
-            <h2 className="text-2xl sm:text-3xl font-bold text-zinc-900 dark:text-zinc-100 mb-4 text-center">
+            <h2 className="text-2xl sm:text-3xl font-bold text-zinc-900 dark:text-zinc-100 tracking-tight mb-4 text-center">
               Compared to PDF-Only Tools
             </h2>
-            <p className="text-zinc-500 dark:text-zinc-400 text-center max-w-2xl mx-auto mb-10">
+            <p className="text-zinc-600 dark:text-zinc-400 text-center max-w-2xl mx-auto mb-10">
               Most AI document chat tools only support PDF. DocTalk handles 7 formats natively.
             </p>
 
@@ -290,7 +290,7 @@ export default function MultiFormatClient() {
         {/* FAQ */}
         <section className="bg-white dark:bg-zinc-950">
           <div className="max-w-4xl mx-auto px-6 py-16">
-            <h2 className="text-2xl sm:text-3xl font-bold text-zinc-900 dark:text-zinc-100 mb-10 text-center">
+            <h2 className="text-2xl sm:text-3xl font-bold text-zinc-900 dark:text-zinc-100 tracking-tight mb-10 text-center">
               Frequently Asked Questions
             </h2>
 
@@ -336,10 +336,10 @@ export default function MultiFormatClient() {
         {/* CTA Banner */}
         <section className="bg-zinc-50 dark:bg-zinc-900/50">
           <div className="max-w-4xl mx-auto px-6 py-16 text-center">
-            <h2 className="text-2xl sm:text-3xl font-bold text-zinc-900 dark:text-zinc-100 mb-4">
+            <h2 className="text-2xl sm:text-3xl font-bold text-zinc-900 dark:text-zinc-100 tracking-tight mb-4">
               Upload Any Document and Start Chatting
             </h2>
-            <p className="text-zinc-500 dark:text-zinc-400 max-w-xl mx-auto mb-8">
+            <p className="text-zinc-600 dark:text-zinc-400 max-w-xl mx-auto mb-8">
               Try DocTalk free with sample documents, or sign up to upload your own. No credit card
               required for the free plan.
             </p>
@@ -376,6 +376,6 @@ export default function MultiFormatClient() {
         </section>
       </main>
       <Footer />
-    </>
+    </div>
   );
 }
