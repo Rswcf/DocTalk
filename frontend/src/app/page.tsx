@@ -23,15 +23,6 @@ export const metadata: Metadata = {
 export default function HomePage() {
   return (
     <>
-      {/* BreadcrumbList JSON-LD */}
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({
-        '@context': 'https://schema.org',
-        '@type': 'BreadcrumbList',
-        itemListElement: [
-          { '@type': 'ListItem', position: 1, name: 'Home', item: 'https://www.doctalk.site' },
-        ],
-      })}} />
-
       {/* FAQPage JSON-LD */}
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({
         '@context': 'https://schema.org',
@@ -103,6 +94,38 @@ export default function HomePage() {
           { '@type': 'Offer', price: '19.99', priceCurrency: 'USD', name: 'Pro', description: '9000 credits/month' },
         ],
         featureList: ['PDF chat', 'DOCX analysis', 'PPTX analysis', 'XLSX analysis', 'Citation highlighting', 'OCR support', '11 languages', '3 AI performance modes'],
+      })}} />
+
+      {/* HowTo JSON-LD */}
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({
+        '@context': 'https://schema.org',
+        '@type': 'HowTo',
+        name: 'How to chat with your documents using DocTalk',
+        description: 'Upload any document and get AI-powered answers with source citations in 3 simple steps.',
+        totalTime: 'PT2M',
+        step: [
+          {
+            '@type': 'HowToStep',
+            position: 1,
+            name: 'Upload your document',
+            text: 'Upload a PDF, Word, PowerPoint, Excel, or text file, or paste a web URL. Drag, drop, done.',
+            url: 'https://www.doctalk.site/#how-it-works',
+          },
+          {
+            '@type': 'HowToStep',
+            position: 2,
+            name: 'Ask questions',
+            text: 'Type naturally — like asking a colleague who just read the whole thing.',
+            url: 'https://www.doctalk.site/#how-it-works',
+          },
+          {
+            '@type': 'HowToStep',
+            position: 3,
+            name: 'Get verified answers',
+            text: 'Every answer cites specific pages. Click a citation to jump straight to the source.',
+            url: 'https://www.doctalk.site/#how-it-works',
+          },
+        ],
       })}} />
 
       <HomePageClient />

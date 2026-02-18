@@ -5,6 +5,11 @@ export const metadata: Metadata = {
   title: 'Privacy Policy',
   description: 'Learn how DocTalk handles your data. Our privacy policy covers data collection, storage, your rights, and GDPR compliance.',
   alternates: { canonical: '/privacy' },
+  openGraph: {
+    title: 'Privacy Policy — DocTalk',
+    description: 'How DocTalk handles your data. We use AES-256 encryption and never train AI on your documents.',
+    url: 'https://www.doctalk.site/privacy',
+  },
 };
 
 export default function PrivacyPage() {

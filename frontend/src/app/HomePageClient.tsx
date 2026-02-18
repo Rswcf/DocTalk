@@ -92,6 +92,12 @@ function LandingPageContent() {
 
       <SocialProof />
 
+      <div className="text-center py-8">
+        <Link href="/billing" className="text-sm font-medium text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors">
+          {t('footer.pricing')} &rarr;
+        </Link>
+      </div>
+
       <SecuritySection />
 
       <FAQ />

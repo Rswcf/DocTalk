@@ -4,13 +4,10 @@ import React from 'react';
 import Link from 'next/link';
 import { ArrowRight } from 'lucide-react';
 import { useLocale } from '../../i18n';
-import ScrollReveal from './ScrollReveal';
-
 export default function HeroSection() {
   const { t } = useLocale();
 
   return (
-    <ScrollReveal direction="up" delay={0}>
       <section className="relative max-w-6xl mx-auto px-6 py-24 md:py-32 overflow-hidden">
         {/* Subtle dot-pattern background */}
         <div
@@ -74,6 +71,5 @@ export default function HeroSection() {
           </div>
         </div>
       </section>
-    </ScrollReveal>
   );
 }
