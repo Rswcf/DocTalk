@@ -10,6 +10,5 @@ export default function robots(): MetadataRoute.Robots {
       },
     ],
     sitemap: "https://www.doctalk.site/sitemap.xml",
-    host: "https://www.doctalk.site",
   };
 }

@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import TermsPageClient from './TermsPageClient';
 
 export const metadata: Metadata = {
-  title: 'Terms of Service — DocTalk',
+  title: 'Terms of Service',
   description: 'DocTalk terms of service. Read about acceptable use, intellectual property, limitations of liability, and account terms.',
   alternates: { canonical: '/terms' },
 };

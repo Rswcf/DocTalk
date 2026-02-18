@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import { Inter, Sora } from 'next/font/google'
+import { cookies } from 'next/headers'
 import './globals.css'
 import ErrorBoundary from '../components/ErrorBoundary'
 import { ThemeProvider } from './ThemeProvider'
@@ -20,10 +21,27 @@ const sora = Sora({
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://www.doctalk.site'),
-  title: 'DocTalk — AI Document Chat with Cited Answers',
+  title: {
+    default: 'DocTalk — AI Document Chat with Cited Answers',
+    template: '%s | DocTalk',
+  },
   description: 'Upload any document and chat with AI. Get instant answers with source citations that highlight in your document. Supports PDF, DOCX, PPTX, XLSX, and more.',
   alternates: {
     canonical: '/',
+    languages: {
+      'x-default': 'https://www.doctalk.site',
+      'en': 'https://www.doctalk.site',
+      'zh': 'https://www.doctalk.site',
+      'es': 'https://www.doctalk.site',
+      'ja': 'https://www.doctalk.site',
+      'de': 'https://www.doctalk.site',
+      'fr': 'https://www.doctalk.site',
+      'ko': 'https://www.doctalk.site',
+      'pt': 'https://www.doctalk.site',
+      'it': 'https://www.doctalk.site',
+      'ar': 'https://www.doctalk.site',
+      'hi': 'https://www.doctalk.site',
+    },
   },
   openGraph: {
     title: 'DocTalk — AI Document Chat',
@@ -40,13 +58,16 @@ export const metadata: Metadata = {
   },
 }
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: {
   children: React.ReactNode
 }) {
+  const cookieStore = await cookies()
+  const locale = cookieStore.get('NEXT_LOCALE')?.value || 'en'
+
   return (
-    <html lang="en" suppressHydrationWarning className={`${inter.variable} ${sora.variable}`}>
+    <html lang={locale} suppressHydrationWarning className={`${inter.variable} ${sora.variable}`}>
       <head>
         <meta name="google-site-verification" content="168G1TYJfQ7MNp4sNdF-7gC2wDWKGeds618LyLdkCUM" />
         <meta name="msvalidate.01" content="50E7D296303C85BC31C1BE98539EA393" />
@@ -81,7 +102,7 @@ export default function RootLayout({
                   sameAs: ['https://github.com/Rswcf/DocTalk'],
                   contactPoint: {
                     '@type': 'ContactPoint',
-                    email: 'support@doctalk.app',
+                    email: 'support@doctalk.site',
                     contactType: 'customer support',
                   },
                 },
