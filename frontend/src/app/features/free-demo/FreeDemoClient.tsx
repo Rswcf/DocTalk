@@ -16,9 +16,9 @@ import {
 
 export default function FreeDemoClient() {
   return (
-    <>
+    <div className="min-h-screen flex flex-col bg-white dark:bg-zinc-950">
       <Header variant="minimal" />
-      <main className="min-h-screen">
+      <main className="flex-1">
         {/* Hero */}
         <section className="bg-white dark:bg-zinc-950">
           <div className="max-w-4xl mx-auto px-6 pt-20 pb-16 text-center">
@@ -26,10 +26,10 @@ export default function FreeDemoClient() {
               <PlayCircle className="w-4 h-4" />
               No Signup Required
             </div>
-            <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-zinc-900 dark:text-zinc-100 mb-6 leading-tight">
+            <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-zinc-900 dark:text-zinc-100 tracking-tight mb-6 leading-tight">
               Try DocTalk Free — No Account Required
             </h1>
-            <p className="text-lg text-zinc-500 dark:text-zinc-400 max-w-2xl mx-auto mb-8">
+            <p className="text-lg text-zinc-600 dark:text-zinc-400 max-w-2xl mx-auto mb-8">
               Chat with AI about sample documents instantly. No account, no credit card, no email.
               See citation highlighting, multi-format support, and performance modes in action with
               3 demo documents ready to explore.
@@ -47,10 +47,10 @@ export default function FreeDemoClient() {
         {/* Instant Demo */}
         <section className="bg-zinc-50 dark:bg-zinc-900/50">
           <div className="max-w-4xl mx-auto px-6 py-16">
-            <h2 className="text-2xl sm:text-3xl font-bold text-zinc-900 dark:text-zinc-100 mb-4 text-center">
+            <h2 className="text-2xl sm:text-3xl font-bold text-zinc-900 dark:text-zinc-100 tracking-tight mb-4 text-center">
               Instant Demo — No Setup
             </h2>
-            <p className="text-zinc-500 dark:text-zinc-400 text-center max-w-2xl mx-auto mb-12">
+            <p className="text-zinc-600 dark:text-zinc-400 text-center max-w-2xl mx-auto mb-12">
               Three sample documents are pre-loaded and ready to chat with. Click any document,
               type a question, and see how DocTalk works in seconds.
             </p>
@@ -92,7 +92,7 @@ export default function FreeDemoClient() {
         {/* What You Get */}
         <section className="bg-white dark:bg-zinc-950">
           <div className="max-w-4xl mx-auto px-6 py-16">
-            <h2 className="text-2xl sm:text-3xl font-bold text-zinc-900 dark:text-zinc-100 mb-6 text-center">
+            <h2 className="text-2xl sm:text-3xl font-bold text-zinc-900 dark:text-zinc-100 tracking-tight mb-6 text-center">
               What You Get in the Demo
             </h2>
 
@@ -122,10 +122,10 @@ export default function FreeDemoClient() {
         {/* Free Plan vs Paid */}
         <section className="bg-zinc-50 dark:bg-zinc-900/50">
           <div className="max-w-4xl mx-auto px-6 py-16">
-            <h2 className="text-2xl sm:text-3xl font-bold text-zinc-900 dark:text-zinc-100 mb-4 text-center">
+            <h2 className="text-2xl sm:text-3xl font-bold text-zinc-900 dark:text-zinc-100 tracking-tight mb-4 text-center">
               Demo vs Free Plan vs Paid Plans
             </h2>
-            <p className="text-zinc-500 dark:text-zinc-400 text-center max-w-2xl mx-auto mb-10">
+            <p className="text-zinc-600 dark:text-zinc-400 text-center max-w-2xl mx-auto mb-10">
               The demo is a preview. Free accounts unlock your own uploads. Paid plans unlock
               more credits and features.
             </p>
@@ -176,7 +176,7 @@ export default function FreeDemoClient() {
         {/* How to Get Started */}
         <section className="bg-white dark:bg-zinc-950">
           <div className="max-w-4xl mx-auto px-6 py-16">
-            <h2 className="text-2xl sm:text-3xl font-bold text-zinc-900 dark:text-zinc-100 mb-12 text-center">
+            <h2 className="text-2xl sm:text-3xl font-bold text-zinc-900 dark:text-zinc-100 tracking-tight mb-12 text-center">
               How to Get Started
             </h2>
 
@@ -230,7 +230,7 @@ export default function FreeDemoClient() {
         {/* FAQ */}
         <section className="bg-zinc-50 dark:bg-zinc-900/50">
           <div className="max-w-4xl mx-auto px-6 py-16">
-            <h2 className="text-2xl sm:text-3xl font-bold text-zinc-900 dark:text-zinc-100 mb-10 text-center">
+            <h2 className="text-2xl sm:text-3xl font-bold text-zinc-900 dark:text-zinc-100 tracking-tight mb-10 text-center">
               Frequently Asked Questions
             </h2>
 
@@ -276,10 +276,10 @@ export default function FreeDemoClient() {
         {/* CTA Banner */}
         <section className="bg-white dark:bg-zinc-950">
           <div className="max-w-4xl mx-auto px-6 py-20 text-center">
-            <h2 className="text-2xl sm:text-3xl font-bold text-zinc-900 dark:text-zinc-100 mb-4">
+            <h2 className="text-2xl sm:text-3xl font-bold text-zinc-900 dark:text-zinc-100 tracking-tight mb-4">
               Ready to Try It?
             </h2>
-            <p className="text-zinc-500 dark:text-zinc-400 max-w-xl mx-auto mb-8">
+            <p className="text-zinc-600 dark:text-zinc-400 max-w-xl mx-auto mb-8">
               No signup. No credit card. Just click and start chatting with AI about real documents.
             </p>
             <Link
@@ -307,6 +307,6 @@ export default function FreeDemoClient() {
         </section>
       </main>
       <Footer />
-    </>
+    </div>
   );
 }

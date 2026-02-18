@@ -33,9 +33,9 @@ const faqItems = [
 
 export default function NotebooklmAltsClient() {
   return (
-    <>
+    <div className="min-h-screen flex flex-col bg-white dark:bg-zinc-950">
       <Header variant="minimal" />
-      <main className="min-h-screen bg-white dark:bg-zinc-950">
+      <main className="flex-1">
         {/* Hero */}
         <section className="max-w-4xl mx-auto px-6 pt-20 pb-12">
           <nav className="text-sm text-zinc-500 dark:text-zinc-400 mb-8">
@@ -46,7 +46,7 @@ export default function NotebooklmAltsClient() {
             <span className="text-zinc-900 dark:text-zinc-100">NotebookLM Alternatives</span>
           </nav>
 
-          <h1 className="text-3xl sm:text-4xl font-bold text-zinc-900 dark:text-zinc-100 mb-6">
+          <h1 className="text-3xl sm:text-4xl font-bold text-zinc-900 dark:text-zinc-100 tracking-tight mb-6">
             6 Best NotebookLM Alternatives for Document Analysis (2026)
           </h1>
           <p className="text-lg text-zinc-600 dark:text-zinc-400 leading-relaxed">
@@ -63,7 +63,7 @@ export default function NotebooklmAltsClient() {
           <div className="max-w-4xl mx-auto px-6 py-16">
             <div className="flex items-center gap-3 mb-6">
               <span className="flex items-center justify-center w-8 h-8 rounded-full bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 text-sm font-bold">1</span>
-              <h2 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100">
+              <h2 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100 tracking-tight">
                 DocTalk — Best for Citations & Multi-Format
               </h2>
             </div>
@@ -117,7 +117,7 @@ export default function NotebooklmAltsClient() {
         <section className="max-w-4xl mx-auto px-6 py-16">
           <div className="flex items-center gap-3 mb-6">
             <span className="flex items-center justify-center w-8 h-8 rounded-full bg-zinc-200 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 text-sm font-bold">2</span>
-            <h2 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100">
+            <h2 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100 tracking-tight">
               ChatPDF — Simplest Alternative
             </h2>
           </div>
@@ -143,7 +143,7 @@ export default function NotebooklmAltsClient() {
           <div className="max-w-4xl mx-auto px-6 py-16">
             <div className="flex items-center gap-3 mb-6">
               <span className="flex items-center justify-center w-8 h-8 rounded-full bg-zinc-200 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 text-sm font-bold">3</span>
-              <h2 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100">
+              <h2 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100 tracking-tight">
                 AskYourPDF — Best for Researchers
               </h2>
             </div>
@@ -169,7 +169,7 @@ export default function NotebooklmAltsClient() {
         <section className="max-w-4xl mx-auto px-6 py-16">
           <div className="flex items-center gap-3 mb-6">
             <span className="flex items-center justify-center w-8 h-8 rounded-full bg-zinc-200 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 text-sm font-bold">4</span>
-            <h2 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100">
+            <h2 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100 tracking-tight">
               Humata — Best for Teams
             </h2>
           </div>
@@ -195,7 +195,7 @@ export default function NotebooklmAltsClient() {
           <div className="max-w-4xl mx-auto px-6 py-16">
             <div className="flex items-center gap-3 mb-6">
               <span className="flex items-center justify-center w-8 h-8 rounded-full bg-zinc-200 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 text-sm font-bold">5</span>
-              <h2 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100">
+              <h2 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100 tracking-tight">
                 Consensus — Best for Scientific Papers
               </h2>
             </div>
@@ -222,7 +222,7 @@ export default function NotebooklmAltsClient() {
         <section className="max-w-4xl mx-auto px-6 py-16">
           <div className="flex items-center gap-3 mb-6">
             <span className="flex items-center justify-center w-8 h-8 rounded-full bg-zinc-200 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 text-sm font-bold">6</span>
-            <h2 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100">
+            <h2 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100 tracking-tight">
               Elicit — Best for Literature Review
             </h2>
           </div>
@@ -248,7 +248,7 @@ export default function NotebooklmAltsClient() {
         {/* How to Choose */}
         <section className="bg-zinc-50 dark:bg-zinc-900/50">
           <div className="max-w-4xl mx-auto px-6 py-16">
-            <h2 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100 mb-6">
+            <h2 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100 tracking-tight mb-6">
               How to Choose the Right NotebookLM Alternative
             </h2>
             <p className="text-zinc-600 dark:text-zinc-400 leading-relaxed mb-6">
@@ -280,7 +280,7 @@ export default function NotebooklmAltsClient() {
 
         {/* FAQ */}
         <section className="max-w-4xl mx-auto px-6 py-16">
-          <h2 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100 mb-8">
+          <h2 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100 tracking-tight mb-8">
             Frequently Asked Questions
           </h2>
           <FAQSection items={faqItems} />
@@ -302,7 +302,7 @@ export default function NotebooklmAltsClient() {
                 <Link
                   key={link.href}
                   href={link.href}
-                  className="px-4 py-2 text-sm bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg text-zinc-600 dark:text-zinc-400 hover:border-zinc-400 dark:hover:border-zinc-600 transition-colors"
+                  className="px-4 py-2 text-sm bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg text-zinc-600 dark:text-zinc-400 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-[box-shadow,transform] duration-200"
                 >
                   {link.label}
                 </Link>
@@ -313,6 +313,7 @@ export default function NotebooklmAltsClient() {
 
         {/* CTA */}
         <CTABanner
+          variant="highlight"
           title="Try DocTalk Free — No Signup Required"
           description="No Google account needed. Upload a document and experience citation highlighting instantly."
           buttonText="Try the Demo"
@@ -320,6 +321,6 @@ export default function NotebooklmAltsClient() {
         />
       </main>
       <Footer />
-    </>
+    </div>
   );
 }

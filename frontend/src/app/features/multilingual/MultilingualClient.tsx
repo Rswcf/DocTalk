@@ -28,9 +28,9 @@ const languages = [
 
 export default function MultilingualClient() {
   return (
-    <>
+    <div className="min-h-screen flex flex-col bg-white dark:bg-zinc-950">
       <Header variant="minimal" />
-      <main className="min-h-screen">
+      <main className="flex-1">
         {/* Hero */}
         <section className="bg-white dark:bg-zinc-950">
           <div className="max-w-4xl mx-auto px-6 pt-20 pb-16 text-center">
@@ -38,10 +38,10 @@ export default function MultilingualClient() {
               <Languages className="w-4 h-4" />
               11 Languages
             </div>
-            <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-zinc-900 dark:text-zinc-100 mb-6 leading-tight">
+            <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-zinc-900 dark:text-zinc-100 tracking-tight mb-6 leading-tight">
               Chat with Documents in 11 Languages
             </h1>
-            <p className="text-lg text-zinc-500 dark:text-zinc-400 max-w-2xl mx-auto mb-8">
+            <p className="text-lg text-zinc-600 dark:text-zinc-400 max-w-2xl mx-auto mb-8">
               Upload a document in any language. Ask questions in any language. Get answers in your
               preferred language. DocTalk&apos;s AI understands context across languages — including
               full CJK support for Chinese, Japanese, and Korean PDFs.
@@ -59,10 +59,10 @@ export default function MultilingualClient() {
         {/* Supported Languages Grid */}
         <section className="bg-zinc-50 dark:bg-zinc-900/50">
           <div className="max-w-4xl mx-auto px-6 py-16">
-            <h2 className="text-2xl sm:text-3xl font-bold text-zinc-900 dark:text-zinc-100 mb-4 text-center">
+            <h2 className="text-2xl sm:text-3xl font-bold text-zinc-900 dark:text-zinc-100 tracking-tight mb-4 text-center">
               Supported Languages
             </h2>
-            <p className="text-zinc-500 dark:text-zinc-400 text-center max-w-2xl mx-auto mb-12">
+            <p className="text-zinc-600 dark:text-zinc-400 text-center max-w-2xl mx-auto mb-12">
               Both the interface and the AI chat are fully available in all 11 languages. Switch
               anytime from the language selector in the header.
             </p>
@@ -91,10 +91,10 @@ export default function MultilingualClient() {
         {/* How Multilingual Chat Works */}
         <section className="bg-white dark:bg-zinc-950">
           <div className="max-w-4xl mx-auto px-6 py-16">
-            <h2 className="text-2xl sm:text-3xl font-bold text-zinc-900 dark:text-zinc-100 mb-6">
+            <h2 className="text-2xl sm:text-3xl font-bold text-zinc-900 dark:text-zinc-100 tracking-tight mb-6">
               How Multilingual Chat Works
             </h2>
-            <div className="space-y-4 text-zinc-500 dark:text-zinc-400 leading-relaxed">
+            <div className="space-y-4 text-zinc-600 dark:text-zinc-400 leading-relaxed">
               <p>
                 DocTalk&apos;s multilingual support goes beyond simple translation. The AI models powering
                 DocTalk — DeepSeek, Mistral Medium, and Mistral Large — are natively multilingual,
@@ -120,10 +120,10 @@ export default function MultilingualClient() {
         {/* Cross-Language Analysis */}
         <section className="bg-zinc-50 dark:bg-zinc-900/50">
           <div className="max-w-4xl mx-auto px-6 py-16">
-            <h2 className="text-2xl sm:text-3xl font-bold text-zinc-900 dark:text-zinc-100 mb-4 text-center">
+            <h2 className="text-2xl sm:text-3xl font-bold text-zinc-900 dark:text-zinc-100 tracking-tight mb-4 text-center">
               Cross-Language Analysis
             </h2>
-            <p className="text-zinc-500 dark:text-zinc-400 text-center max-w-2xl mx-auto mb-12">
+            <p className="text-zinc-600 dark:text-zinc-400 text-center max-w-2xl mx-auto mb-12">
               Ask in one language about a document in another. DocTalk bridges the language gap.
             </p>
 
@@ -175,10 +175,10 @@ export default function MultilingualClient() {
         {/* Compared to Other Tools */}
         <section className="bg-white dark:bg-zinc-950">
           <div className="max-w-4xl mx-auto px-6 py-16">
-            <h2 className="text-2xl sm:text-3xl font-bold text-zinc-900 dark:text-zinc-100 mb-4 text-center">
+            <h2 className="text-2xl sm:text-3xl font-bold text-zinc-900 dark:text-zinc-100 tracking-tight mb-4 text-center">
               Language Support Compared
             </h2>
-            <p className="text-zinc-500 dark:text-zinc-400 text-center max-w-2xl mx-auto mb-10">
+            <p className="text-zinc-600 dark:text-zinc-400 text-center max-w-2xl mx-auto mb-10">
               Most AI document tools are English-first. DocTalk is multilingual by design.
             </p>
 
@@ -225,21 +225,21 @@ export default function MultilingualClient() {
         {/* CJK Support */}
         <section className="bg-zinc-50 dark:bg-zinc-900/50">
           <div className="max-w-4xl mx-auto px-6 py-16">
-            <h2 className="text-2xl sm:text-3xl font-bold text-zinc-900 dark:text-zinc-100 mb-6">
+            <h2 className="text-2xl sm:text-3xl font-bold text-zinc-900 dark:text-zinc-100 tracking-tight mb-6">
               CJK PDF Support
             </h2>
             <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl p-6">
-              <p className="text-zinc-500 dark:text-zinc-400 leading-relaxed mb-4">
+              <p className="text-zinc-600 dark:text-zinc-400 leading-relaxed mb-4">
                 Chinese, Japanese, and Korean PDFs require special handling that many AI document tools
                 get wrong. Characters display as boxes, tofu, or question marks. Tables break. Citation
                 navigation fails.
               </p>
-              <p className="text-zinc-500 dark:text-zinc-400 leading-relaxed mb-4">
+              <p className="text-zinc-600 dark:text-zinc-400 leading-relaxed mb-4">
                 DocTalk uses pdf.js with full CMap (Character Map) and standard font files to render
                 CJK characters correctly. Whether the PDF uses embedded fonts, system fonts, or
                 references standard CJK encodings, DocTalk displays every character as intended.
               </p>
-              <p className="text-zinc-500 dark:text-zinc-400 leading-relaxed">
+              <p className="text-zinc-600 dark:text-zinc-400 leading-relaxed">
                 Citation highlighting works with CJK text the same way as Latin text — click a citation
                 to jump to the source passage and see it highlighted on the page. The semantic search
                 engine indexes CJK text natively, so questions about Chinese, Japanese, or Korean
@@ -252,7 +252,7 @@ export default function MultilingualClient() {
         {/* FAQ */}
         <section className="bg-white dark:bg-zinc-950">
           <div className="max-w-4xl mx-auto px-6 py-16">
-            <h2 className="text-2xl sm:text-3xl font-bold text-zinc-900 dark:text-zinc-100 mb-10 text-center">
+            <h2 className="text-2xl sm:text-3xl font-bold text-zinc-900 dark:text-zinc-100 tracking-tight mb-10 text-center">
               Frequently Asked Questions
             </h2>
 
@@ -294,10 +294,10 @@ export default function MultilingualClient() {
         {/* CTA */}
         <section className="bg-zinc-50 dark:bg-zinc-900/50">
           <div className="max-w-4xl mx-auto px-6 py-16 text-center">
-            <h2 className="text-2xl sm:text-3xl font-bold text-zinc-900 dark:text-zinc-100 mb-4">
+            <h2 className="text-2xl sm:text-3xl font-bold text-zinc-900 dark:text-zinc-100 tracking-tight mb-4">
               Chat with Documents in Your Language
             </h2>
-            <p className="text-zinc-500 dark:text-zinc-400 max-w-xl mx-auto mb-8">
+            <p className="text-zinc-600 dark:text-zinc-400 max-w-xl mx-auto mb-8">
               Try the free demo to see multilingual document chat in action. Upload documents in
               any language and get AI answers with source citations.
             </p>
@@ -326,6 +326,6 @@ export default function MultilingualClient() {
         </section>
       </main>
       <Footer />
-    </>
+    </div>
   );
 }

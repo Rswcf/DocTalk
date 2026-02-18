@@ -21,9 +21,9 @@ import {
 
 export default function CitationsClient() {
   return (
-    <>
+    <div className="min-h-screen flex flex-col bg-white dark:bg-zinc-950">
       <Header variant="minimal" />
-      <main className="min-h-screen">
+      <main className="flex-1">
         {/* Hero */}
         <section className="bg-white dark:bg-zinc-950">
           <div className="max-w-4xl mx-auto px-6 pt-20 pb-16 text-center">
@@ -31,10 +31,10 @@ export default function CitationsClient() {
               <Quote className="w-4 h-4" />
               Core Feature
             </div>
-            <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-zinc-900 dark:text-zinc-100 mb-6 leading-tight">
+            <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-zinc-900 dark:text-zinc-100 tracking-tight mb-6 leading-tight">
               AI Answers You Can Trust: Source Citations with Real-Time Highlighting
             </h1>
-            <p className="text-lg text-zinc-500 dark:text-zinc-400 max-w-2xl mx-auto mb-8">
+            <p className="text-lg text-zinc-600 dark:text-zinc-400 max-w-2xl mx-auto mb-8">
               Every answer DocTalk generates includes numbered citations that link directly to
               the original text in your document. Click any citation to scroll to the source and
               see it highlighted. No more guessing whether the AI got it right.
@@ -52,10 +52,10 @@ export default function CitationsClient() {
         {/* How Citation Highlighting Works */}
         <section className="bg-zinc-50 dark:bg-zinc-900/50">
           <div className="max-w-4xl mx-auto px-6 py-16">
-            <h2 className="text-2xl sm:text-3xl font-bold text-zinc-900 dark:text-zinc-100 mb-4 text-center">
+            <h2 className="text-2xl sm:text-3xl font-bold text-zinc-900 dark:text-zinc-100 tracking-tight mb-4 text-center">
               How Citation Highlighting Works
             </h2>
-            <p className="text-zinc-500 dark:text-zinc-400 text-center max-w-2xl mx-auto mb-12">
+            <p className="text-zinc-600 dark:text-zinc-400 text-center max-w-2xl mx-auto mb-12">
               Three simple steps from question to verified answer. The entire process takes seconds.
             </p>
 
@@ -108,29 +108,29 @@ export default function CitationsClient() {
         {/* Why Citations Matter */}
         <section className="bg-white dark:bg-zinc-950">
           <div className="max-w-4xl mx-auto px-6 py-16">
-            <h2 className="text-2xl sm:text-3xl font-bold text-zinc-900 dark:text-zinc-100 mb-6">
+            <h2 className="text-2xl sm:text-3xl font-bold text-zinc-900 dark:text-zinc-100 tracking-tight mb-6">
               Why Citations Matter
             </h2>
             <div className="prose prose-zinc dark:prose-invert max-w-none">
-              <p className="text-zinc-500 dark:text-zinc-400 leading-relaxed mb-4">
+              <p className="text-zinc-600 dark:text-zinc-400 leading-relaxed mb-4">
                 AI hallucination is the biggest unsolved problem in AI document analysis. Language models
                 can produce fluent, confident answers that sound completely plausible — but are entirely
                 fabricated. Studies show that even the most advanced language models hallucinate facts
                 between 3% and 27% of the time, depending on the task.
               </p>
-              <p className="text-zinc-500 dark:text-zinc-400 leading-relaxed mb-4">
+              <p className="text-zinc-600 dark:text-zinc-400 leading-relaxed mb-4">
                 For professionals working with legal contracts, financial reports, academic papers, or
                 medical documents, a single hallucinated fact can lead to costly mistakes. The standard
                 AI chatbot response of &ldquo;Based on the document...&rdquo; with no source reference gives
                 you no way to distinguish a correct answer from a hallucinated one.
               </p>
-              <p className="text-zinc-500 dark:text-zinc-400 leading-relaxed mb-4">
+              <p className="text-zinc-600 dark:text-zinc-400 leading-relaxed mb-4">
                 DocTalk solves this with a citation-first approach. Every answer comes with numbered
                 source references. Every reference is clickable. Every click takes you to the exact
                 passage in the original document, highlighted so you can read it in context. The AI does
                 not just tell you the answer — it shows you where the answer comes from.
               </p>
-              <p className="text-zinc-500 dark:text-zinc-400 leading-relaxed">
+              <p className="text-zinc-600 dark:text-zinc-400 leading-relaxed">
                 This transforms the AI from a black box into a transparent research assistant. You get
                 the speed of AI with the verifiability of manual research. No more &ldquo;the AI said
                 so&rdquo; — you can check every claim, every time.
@@ -142,10 +142,10 @@ export default function CitationsClient() {
         {/* Three Layers of Citation Accuracy */}
         <section className="bg-zinc-50 dark:bg-zinc-900/50">
           <div className="max-w-4xl mx-auto px-6 py-16">
-            <h2 className="text-2xl sm:text-3xl font-bold text-zinc-900 dark:text-zinc-100 mb-4 text-center">
+            <h2 className="text-2xl sm:text-3xl font-bold text-zinc-900 dark:text-zinc-100 tracking-tight mb-4 text-center">
               Three Layers of Citation Accuracy
             </h2>
-            <p className="text-zinc-500 dark:text-zinc-400 text-center max-w-2xl mx-auto mb-12">
+            <p className="text-zinc-600 dark:text-zinc-400 text-center max-w-2xl mx-auto mb-12">
               DocTalk does not just append page numbers. It builds citations from three independent layers
               of document understanding.
             </p>
@@ -198,10 +198,10 @@ export default function CitationsClient() {
         {/* Citation Quality Compared */}
         <section className="bg-white dark:bg-zinc-950">
           <div className="max-w-4xl mx-auto px-6 py-16">
-            <h2 className="text-2xl sm:text-3xl font-bold text-zinc-900 dark:text-zinc-100 mb-4 text-center">
+            <h2 className="text-2xl sm:text-3xl font-bold text-zinc-900 dark:text-zinc-100 tracking-tight mb-4 text-center">
               Citation Quality Compared
             </h2>
-            <p className="text-zinc-500 dark:text-zinc-400 text-center max-w-2xl mx-auto mb-10">
+            <p className="text-zinc-600 dark:text-zinc-400 text-center max-w-2xl mx-auto mb-10">
               Not all AI document tools handle citations the same way. Here is how DocTalk compares.
             </p>
 
@@ -254,10 +254,10 @@ export default function CitationsClient() {
         {/* Use Cases */}
         <section className="bg-zinc-50 dark:bg-zinc-900/50">
           <div className="max-w-4xl mx-auto px-6 py-16">
-            <h2 className="text-2xl sm:text-3xl font-bold text-zinc-900 dark:text-zinc-100 mb-4 text-center">
+            <h2 className="text-2xl sm:text-3xl font-bold text-zinc-900 dark:text-zinc-100 tracking-tight mb-4 text-center">
               Use Cases for Cited Answers
             </h2>
-            <p className="text-zinc-500 dark:text-zinc-400 text-center max-w-2xl mx-auto mb-12">
+            <p className="text-zinc-600 dark:text-zinc-400 text-center max-w-2xl mx-auto mb-12">
               Citation highlighting is not a nice-to-have. For these professionals, it is essential.
             </p>
 
@@ -320,7 +320,7 @@ export default function CitationsClient() {
         {/* FAQ */}
         <section className="bg-white dark:bg-zinc-950">
           <div className="max-w-4xl mx-auto px-6 py-16">
-            <h2 className="text-2xl sm:text-3xl font-bold text-zinc-900 dark:text-zinc-100 mb-10 text-center">
+            <h2 className="text-2xl sm:text-3xl font-bold text-zinc-900 dark:text-zinc-100 tracking-tight mb-10 text-center">
               Frequently Asked Questions
             </h2>
 
@@ -366,10 +366,10 @@ export default function CitationsClient() {
         {/* CTA Banner */}
         <section className="bg-zinc-50 dark:bg-zinc-900/50">
           <div className="max-w-4xl mx-auto px-6 py-16 text-center">
-            <h2 className="text-2xl sm:text-3xl font-bold text-zinc-900 dark:text-zinc-100 mb-4">
+            <h2 className="text-2xl sm:text-3xl font-bold text-zinc-900 dark:text-zinc-100 tracking-tight mb-4">
               See Citations in Action
             </h2>
-            <p className="text-zinc-500 dark:text-zinc-400 max-w-xl mx-auto mb-8">
+            <p className="text-zinc-600 dark:text-zinc-400 max-w-xl mx-auto mb-8">
               Try the free demo to experience citation highlighting yourself. Upload a document
               or chat with one of our sample files. No account required.
             </p>
@@ -411,6 +411,6 @@ export default function CitationsClient() {
         </section>
       </main>
       <Footer />
-    </>
+    </div>
   );
 }

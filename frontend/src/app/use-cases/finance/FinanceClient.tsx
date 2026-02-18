@@ -47,9 +47,9 @@ const faqItems = [
 
 export default function FinanceClient() {
   return (
-    <>
+    <div className="min-h-screen flex flex-col bg-white dark:bg-zinc-950">
       <Header variant="minimal" />
-      <main className="min-h-screen bg-white dark:bg-zinc-950">
+      <main className="flex-1">
         {/* Breadcrumb */}
         <div className="max-w-4xl mx-auto px-6 pt-8">
           <nav className="flex items-center text-sm text-zinc-500 dark:text-zinc-400 space-x-1">
@@ -66,7 +66,7 @@ export default function FinanceClient() {
           <div className="w-14 h-14 rounded-2xl bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center mx-auto mb-6">
             <TrendingUp className="w-7 h-7 text-zinc-600 dark:text-zinc-300" />
           </div>
-          <h1 className="text-3xl sm:text-4xl font-bold text-zinc-900 dark:text-zinc-100 mb-4">
+          <h1 className="text-3xl sm:text-4xl font-bold text-zinc-900 dark:text-zinc-100 tracking-tight mb-4">
             AI-Powered Financial Report Analysis with Cited Sources
           </h1>
           <p className="text-lg text-zinc-500 dark:text-zinc-400 max-w-2xl mx-auto mb-8">
@@ -84,7 +84,7 @@ export default function FinanceClient() {
         {/* The Financial Analysis Challenge */}
         <section className="bg-zinc-50 dark:bg-zinc-900/50">
           <div className="max-w-4xl mx-auto px-6 py-16">
-            <h2 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100 mb-6">
+            <h2 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100 tracking-tight mb-6">
               The Financial Analysis Challenge
             </h2>
             <div className="prose-zinc max-w-none">
@@ -106,7 +106,7 @@ export default function FinanceClient() {
 
         {/* How DocTalk Helps Financial Analysts */}
         <section className="max-w-4xl mx-auto px-6 py-16">
-          <h2 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100 mb-8">
+          <h2 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100 tracking-tight mb-8">
             How DocTalk Helps Financial Analysts
           </h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
@@ -156,7 +156,7 @@ export default function FinanceClient() {
         {/* Supported Financial Document Types */}
         <section className="bg-zinc-50 dark:bg-zinc-900/50">
           <div className="max-w-4xl mx-auto px-6 py-16">
-            <h2 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100 mb-6">
+            <h2 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100 tracking-tight mb-6">
               Supported Financial Document Types
             </h2>
             <p className="text-zinc-600 dark:text-zinc-300 mb-6">
@@ -191,7 +191,7 @@ export default function FinanceClient() {
 
         {/* Real-World Use Cases */}
         <section className="max-w-4xl mx-auto px-6 py-16">
-          <h2 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100 mb-8">
+          <h2 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100 tracking-tight mb-8">
             Real-World Financial Use Cases
           </h2>
 
@@ -243,7 +243,7 @@ export default function FinanceClient() {
         {/* Why Cited Answers Matter for Finance */}
         <section className="bg-zinc-50 dark:bg-zinc-900/50">
           <div className="max-w-4xl mx-auto px-6 py-16">
-            <h2 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100 mb-6">
+            <h2 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100 tracking-tight mb-6">
               Why Cited Answers Matter for Finance
             </h2>
             <p className="text-zinc-600 dark:text-zinc-300 mb-4">
@@ -269,7 +269,7 @@ export default function FinanceClient() {
               <Table className="w-5 h-5 text-zinc-600 dark:text-zinc-300" />
             </div>
             <div>
-              <h2 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100 mb-3">
+              <h2 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100 tracking-tight mb-3">
                 Direct Excel Spreadsheet Support
               </h2>
               <p className="text-zinc-600 dark:text-zinc-300 mb-4">
@@ -288,7 +288,7 @@ export default function FinanceClient() {
         {/* FAQ */}
         <section className="bg-zinc-50 dark:bg-zinc-900/50">
           <div className="max-w-4xl mx-auto px-6 py-16">
-            <h2 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100 mb-8">
+            <h2 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100 tracking-tight mb-8">
               Frequently Asked Questions
             </h2>
             <div className="space-y-6">
@@ -311,7 +311,7 @@ export default function FinanceClient() {
 
         {/* CTA Banner */}
         <section className="max-w-4xl mx-auto px-6 py-16 text-center">
-          <h2 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100 mb-4">
+          <h2 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100 tracking-tight mb-4">
             Start Analyzing Financial Reports — Free, No Signup
           </h2>
           <p className="text-zinc-500 dark:text-zinc-400 mb-6 max-w-xl mx-auto">
@@ -335,6 +335,6 @@ export default function FinanceClient() {
         </section>
       </main>
       <Footer />
-    </>
+    </div>
   );
 }
