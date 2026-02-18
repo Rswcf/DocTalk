@@ -469,8 +469,10 @@ class ParseService:
 
     def _normalize_inline_text(self, text: str) -> str:
         # Collapse excessive whitespace but keep sentence punctuation
+        # Strip NUL bytes (PostgreSQL text fields cannot contain \x00)
+        t = text.replace("\x00", "")
         # Replace non-breaking spaces etc.
-        t = text.replace("\xa0", " ")
+        t = t.replace("\xa0", " ")
         # Collapse multiple spaces
         while "  " in t:
             t = t.replace("  ,", ",").replace("  .", ".").replace("  ", " ")
