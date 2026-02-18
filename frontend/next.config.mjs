@@ -3,12 +3,12 @@ import { withSentryConfig } from "@sentry/nextjs";
 // Content-Security-Policy directives
 const cspDirectives = [
   "default-src 'self'",
-  "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://va.vercel-scripts.com https://*.sentry-cdn.com",
+  "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://va.vercel-scripts.com https://*.sentry-cdn.com https://www.googletagmanager.com",
   "style-src 'self' 'unsafe-inline'",
-  "img-src 'self' blob: data: https://*.up.railway.app https://*.googleusercontent.com",
+  "img-src 'self' blob: data: https://*.up.railway.app https://*.googleusercontent.com https://www.google-analytics.com",
   "font-src 'self' data:",
   "worker-src 'self' blob:",
-  "connect-src 'self' https://*.up.railway.app https://*.sentry.io https://*.ingest.sentry.io https://va.vercel-scripts.com https://vitals.vercel-insights.com",
+  "connect-src 'self' https://*.up.railway.app https://*.sentry.io https://*.ingest.sentry.io https://va.vercel-scripts.com https://vitals.vercel-insights.com https://www.google-analytics.com https://analytics.google.com https://*.google-analytics.com https://*.analytics.google.com",
   "frame-src 'none'",
   "frame-ancestors 'none'",
   "object-src 'none'",
