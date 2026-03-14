@@ -9,6 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.deps import get_current_user_optional, get_db_session
 from app.models.tables import Document, User
 from app.schemas.search import SearchRequest, SearchResponse, SearchResultItem
+from app.services.doc_service import can_access_document
 from app.services.retrieval_service import retrieval_service
 
 search_router = APIRouter(prefix="/api/documents", tags=["search"])
@@ -24,7 +25,7 @@ async def search_document(
     doc = await db.get(Document, document_id)
     if not doc:
         raise HTTPException(status_code=404, detail="Document not found")
-    if doc.user_id and (not user or doc.user_id != user.id):
+    if not can_access_document(doc, user):
         raise HTTPException(status_code=404, detail="Document not found")
     results = await retrieval_service.search(body.query, document_id, body.top_k, db)
     return SearchResponse(results=[SearchResultItem(**r) for r in results])

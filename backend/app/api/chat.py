@@ -31,6 +31,7 @@ from app.schemas.chat import (
 )
 from app.services import credit_service
 from app.services.chat_service import chat_service
+from app.services.doc_service import can_access_document
 
 DEMO_MESSAGE_LIMIT = 5
 DEMO_MAX_SESSIONS_PER_DOC = 500
@@ -62,10 +63,8 @@ async def verify_session_access(
     if not session:
         return None
 
-    # If document has an owner, verify the user matches
-    if session.document and session.document.user_id:
-        if not user or session.document.user_id != user.id:
-            return None
+    if session.document and not can_access_document(session.document, user):
+        return None
 
     # If collection has an owner, verify the user matches
     if session.collection_id is not None:
@@ -88,12 +87,7 @@ async def verify_document_access(
     if not doc:
         return None
 
-    # If document has an owner, verify the user matches
-    if doc.user_id:
-        if not user or doc.user_id != user.id:
-            return None
-
-    return doc
+    return doc if can_access_document(doc, user) else None
 
 
 @chat_router.post(
