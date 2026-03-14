@@ -25,7 +25,7 @@ def cleanup_expired_verification_tokens():
     if not db_url:
         logger.error("DATABASE_URL not configured, skipping token cleanup")
         return
-    sync_url = db_url.replace("postgresql+asyncpg://", "postgresql+psycopg2://")
+    sync_url = db_url.replace("postgresql+asyncpg://", "postgresql+psycopg://")
 
     engine = sa.create_engine(sync_url)
     try:

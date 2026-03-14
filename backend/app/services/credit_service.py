@@ -180,31 +180,29 @@ async def reconcile_credits(
     if diff == 0:
         return
 
-    if diff > 0:
-        # Refund overpayment
-        await db.execute(
-            sa.update(User)
-            .where(User.id == user_id)
-            .values(credits_balance=User.credits_balance + diff)
-        )
-    else:
-        # Best-effort charge for underpayment (don't go negative)
-        await db.execute(
-            sa.update(User)
-            .where(User.id == user_id)
-            .where(User.credits_balance >= -diff)
-            .values(credits_balance=User.credits_balance + diff)
-        )
+    balance_result = await db.execute(
+        sa.update(User)
+        .where(User.id == user_id)
+        .values(credits_balance=User.credits_balance + diff)
+        .returning(User.credits_balance)
+    )
+    if balance_result.scalar_one_or_none() is None:
+        raise RuntimeError(f"User {user_id} not found during credit reconciliation")
 
     # Update the original ledger entry to reflect actual cost
-    await db.execute(
+    ledger_result = await db.execute(
         sa.update(CreditLedger)
         .where(CreditLedger.id == predebit_ledger_id)
         .values(
             delta=-actual_cost,
             balance_after=CreditLedger.balance_after + diff,
         )
+        .returning(CreditLedger.id)
     )
+    if ledger_result.scalar_one_or_none() is None:
+        raise RuntimeError(
+            f"Predebit ledger {predebit_ledger_id} not found during credit reconciliation"
+        )
     await db.flush()
 
 

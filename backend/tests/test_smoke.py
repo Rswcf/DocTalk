@@ -2,6 +2,8 @@ import uuid
 
 import pytest
 
+pytestmark = pytest.mark.asyncio(loop_scope="session")
+
 # Minimal valid-ish single-page PDF bytes for testing upload
 MINIMAL_PDF = (
     b"%PDF-1.0\n1 0 obj<</Type/Catalog/Pages 2 0 R>>endobj 2 0 obj<</Type/Pages/Kids[3 0 R]/Count 1>>endobj "
@@ -11,7 +13,6 @@ MINIMAL_PDF = (
 )
 
 
-@pytest.mark.asyncio
 async def test_health(client):
     resp = await client.get("/health")
     assert resp.status_code == 200
@@ -20,22 +21,21 @@ async def test_health(client):
 
 
 @pytest.mark.integration
-@pytest.mark.asyncio
-async def test_full_document_lifecycle(client):
+async def test_full_document_lifecycle(client, auth_headers):
     # 1) Upload PDF
     files = {"file": ("test.pdf", MINIMAL_PDF, "application/pdf")}
-    resp = await client.post("/api/documents/upload", files=files)
+    resp = await client.post("/api/documents/upload", files=files, headers=auth_headers)
     assert resp.status_code == 202
     payload = resp.json()
     assert "document_id" in payload
     document_id = payload["document_id"]
 
     # 2) Get document
-    resp = await client.get(f"/api/documents/{document_id}")
+    resp = await client.get(f"/api/documents/{document_id}", headers=auth_headers)
     assert resp.status_code == 200
 
     # 3) Create chat session
-    resp = await client.post(f"/api/documents/{document_id}/sessions")
+    resp = await client.post(f"/api/documents/{document_id}/sessions", headers=auth_headers)
     assert resp.status_code == 201
     session_payload = resp.json()
     assert "session_id" in session_payload
@@ -44,7 +44,7 @@ async def test_full_document_lifecycle(client):
     _ = uuid.UUID(session_id)
 
     # 4) Get session messages (should be empty list initially)
-    resp = await client.get(f"/api/sessions/{session_id}/messages")
+    resp = await client.get(f"/api/sessions/{session_id}/messages", headers=auth_headers)
     assert resp.status_code == 200
     data = resp.json()
     assert isinstance(data, dict)

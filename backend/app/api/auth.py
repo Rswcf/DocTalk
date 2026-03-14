@@ -24,10 +24,12 @@ from app.services import auth_service
 router = APIRouter(prefix="/api/internal/auth", tags=["auth-internal"])
 
 
-async def verify_adapter_secret(x_adapter_secret: str = Header(...)):
+async def verify_adapter_secret(x_adapter_secret: Optional[str] = Header(None)):
     """Verify the adapter secret for internal API calls using constant-time comparison."""
     if settings.ADAPTER_SECRET is None:
         raise HTTPException(status_code=401, detail="Adapter secret not configured")
+    if x_adapter_secret is None:
+        raise HTTPException(status_code=401, detail="Adapter secret required")
     # Use constant-time comparison to prevent timing attacks
     if not hmac.compare_digest(x_adapter_secret, settings.ADAPTER_SECRET):
         raise HTTPException(status_code=401, detail="Invalid adapter secret")
@@ -151,4 +153,3 @@ async def use_verification_token(
     if not vt:
         return None
     return {"identifier": vt.identifier, "token": data.token, "expires": vt.expires}
-

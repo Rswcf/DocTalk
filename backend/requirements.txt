@@ -1,6 +1,7 @@
 fastapi==0.125.0
 uvicorn==0.39.0
 sqlalchemy==2.0.46
+greenlet==3.3.2
 alembic==1.16.5
 asyncpg==0.31.0
 celery==5.6.2

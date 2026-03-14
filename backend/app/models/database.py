@@ -4,6 +4,7 @@ import os
 from typing import Optional
 
 from sqlalchemy.ext.asyncio import AsyncEngine, async_sessionmaker, create_async_engine
+from sqlalchemy.pool import NullPool
 
 from app.core.config import settings
 
@@ -18,11 +19,16 @@ def _get_database_url() -> str:
 
 # Create async engine and sessionmaker (expire_on_commit=False for FastAPI typical usage)
 DATABASE_URL = _get_database_url()
-async_engine: AsyncEngine = create_async_engine(
-    DATABASE_URL,
-    pool_pre_ping=True,
-    pool_size=10,
-    max_overflow=20,
-    pool_recycle=1800,
-)
+engine_kwargs: dict[str, object] = {"pool_pre_ping": True}
+
+if os.getenv("TESTING") == "1":
+    engine_kwargs["poolclass"] = NullPool
+else:
+    engine_kwargs.update(
+        pool_size=10,
+        max_overflow=20,
+        pool_recycle=1800,
+    )
+
+async_engine: AsyncEngine = create_async_engine(DATABASE_URL, **engine_kwargs)
 AsyncSessionLocal = async_sessionmaker(async_engine, expire_on_commit=False)

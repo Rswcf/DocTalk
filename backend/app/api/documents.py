@@ -24,7 +24,7 @@ from app.schemas.document import (
     DocumentResponse,
     DocumentTextContentResponse,
 )
-from app.services.doc_service import doc_service
+from app.services.doc_service import can_access_document, doc_service
 from app.services.storage_service import storage_service
 
 documents_router = APIRouter(prefix="/api/documents", tags=["documents"])
@@ -363,8 +363,7 @@ async def get_document(
     doc = await doc_service.get_document(document_id, db)
     if not doc:
         raise HTTPException(status_code=404, detail="Document not found")
-    # Authorization: if document has owner, verify user matches
-    if doc.user_id and (not user or doc.user_id != user.id):
+    if not can_access_document(doc, user):
         raise HTTPException(status_code=404, detail="Document not found")
     resp = DocumentResponse.model_validate(doc)
     resp.has_converted_pdf = bool(doc.converted_storage_key)
@@ -383,8 +382,7 @@ async def get_document_file_url(
     doc = await doc_service.get_document(document_id, db)
     if not doc:
         raise HTTPException(status_code=404, detail="Document not found")
-    # Authorization: if document has owner, verify user matches
-    if doc.user_id and (not user or doc.user_id != user.id):
+    if not can_access_document(doc, user):
         raise HTTPException(status_code=404, detail="Document not found")
 
     storage_key = doc.converted_storage_key if variant == "converted" else doc.storage_key
@@ -421,7 +419,7 @@ async def get_document_text_content(
     doc = await doc_service.get_document(document_id, db)
     if not doc:
         raise HTTPException(status_code=404, detail="Document not found")
-    if doc.user_id and (not user or doc.user_id != user.id):
+    if not can_access_document(doc, user):
         raise HTTPException(status_code=404, detail="Document not found")
 
     # Try Page.content first (available for newly parsed non-PDF documents)

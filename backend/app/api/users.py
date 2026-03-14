@@ -331,7 +331,29 @@ async def delete_me(
     user: User = Depends(require_auth),
     db: AsyncSession = Depends(get_db_session),
 ):
-    # 1) Cancel Stripe subscription if active
+    # 1) Find all user documents
+    doc_rows = await db.execute(select(Document.id).where(Document.user_id == user.id))
+    doc_ids = [row.id for row in doc_rows.all()]
+
+    # 2) Delete all documents before removing the user row.
+    failed_doc_ids: list[str] = []
+    for doc_id in doc_ids:
+        try:
+            await doc_service.delete_document(doc_id, db)
+        except Exception as e:
+            await db.rollback()
+            failed_doc_ids.append(str(doc_id))
+            log_security_event(
+                "account_delete_document_failed",
+                user_id=user.id,
+                document_id=doc_id,
+                error=str(e),
+            )
+
+    if failed_doc_ids:
+        raise HTTPException(status_code=500, detail="Failed to delete all user documents")
+
+    # 3) Cancel Stripe subscription if active
     try:
         if settings.STRIPE_SECRET_KEY and user.stripe_subscription_id:
             stripe.api_key = settings.STRIPE_SECRET_KEY
@@ -341,19 +363,7 @@ async def delete_me(
     except Exception as e:
         log_security_event("stripe_cancel_failed", user_id=user.id, error=str(e))
 
-    # 2) Find all user documents
-    doc_rows = await db.execute(select(Document.id).where(Document.user_id == user.id))
-    doc_ids = [row.id for row in doc_rows.all()]
-
-    # 3) Best-effort delete storage and vectors via service, 4) Delete documents
-    for doc_id in doc_ids:
-        try:
-            await doc_service.delete_document(doc_id, db)
-        except Exception:
-            # Continue deleting other documents even if one fails
-            pass
-
-    # 5) Delete user row (cascade handles accounts, credit_ledger, usage_records)
+    # 4) Delete user row (cascade handles accounts, credit_ledger, usage_records)
     try:
         await db.delete(user)
         await db.commit()
@@ -361,6 +371,6 @@ async def delete_me(
         # If deletion fails, return error
         raise HTTPException(status_code=500, detail="Failed to delete user")
 
-    # 6) Return confirmation
+    # 5) Return confirmation
     log_security_event("account_deleted", user_id=user.id, email=user.email)
     return {"deleted": True}

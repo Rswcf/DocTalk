@@ -6,7 +6,7 @@ import os
 import re
 import unicodedata
 import uuid
-from typing import Optional
+from typing import TYPE_CHECKING, Optional
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -16,6 +16,9 @@ from app.models.tables import Document
 from app.services.storage_service import storage_service
 
 logger = logging.getLogger(__name__)
+
+if TYPE_CHECKING:
+    from app.models.tables import User
 
 
 def sanitize_filename(name: str, max_length: int = 200) -> str:
@@ -33,6 +36,15 @@ def sanitize_filename(name: str, max_length: int = 200) -> str:
         base, ext = os.path.splitext(name)
         name = base[:max_length - len(ext)] + ext
     return name or "document"
+
+
+def can_access_document(doc: Optional[Document], user: Optional["User"]) -> bool:
+    """Only demo documents are public; all other documents require ownership."""
+    if doc is None:
+        return False
+    if doc.demo_slug is not None:
+        return True
+    return user is not None and doc.user_id == user.id
 
 
 class DocService:

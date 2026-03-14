@@ -9,6 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.deps import get_current_user_optional, get_db_session
 from app.models.tables import Chunk, Document, User
+from app.services.doc_service import can_access_document
 
 chunks_router = APIRouter(prefix="/api", tags=["chunks"])
 
@@ -29,9 +30,8 @@ async def get_chunk_detail(
     if not doc:
         raise HTTPException(status_code=404, detail="Chunk not found")
 
-    if doc.demo_slug is None:
-        if not user or doc.user_id != user.id:
-            raise HTTPException(status_code=404, detail="Chunk not found")
+    if not can_access_document(doc, user):
+        raise HTTPException(status_code=404, detail="Chunk not found")
 
     return {
         "chunk_id": str(ch.id),
