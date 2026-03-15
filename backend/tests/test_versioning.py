@@ -5,7 +5,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-from app.core.version import get_release_payload
+from app.core.version import get_build_identifier, get_release_payload
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 
@@ -19,7 +19,7 @@ def test_release_payload_matches_version_file():
     version_config = _version_config()
     assert release["version"] == version_config["version"]
     assert release["stage"] == version_config["stage"]
-    assert release["build"] is None
+    assert release["build"] == get_build_identifier()
 
 
 def test_version_consistency_script_passes():

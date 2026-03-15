@@ -4,6 +4,8 @@ from pathlib import Path
 
 import pytest
 
+from app.core.version import get_build_identifier
+
 pytestmark = pytest.mark.asyncio(loop_scope="session")
 
 # Minimal valid-ish single-page PDF bytes for testing upload
@@ -30,7 +32,7 @@ async def test_version_endpoint(client):
     assert resp.json() == {
         "version": _version_config()["version"],
         "stage": _version_config()["stage"],
-        "build": None,
+        "build": get_build_identifier(),
     }
 
 
