@@ -6,41 +6,37 @@ import { useLocale } from '../i18n';
 import ScrollReveal from './landing/ScrollReveal';
 import DocTalkLogo from './DocTalkLogo';
 
-const PRODUCT_LINKS = [
-  { href: '/demo', label: 'Demo' },
-  { href: '/pricing', label: 'Pricing' },
-  { href: '/features', label: 'Features' },
-  { href: '/features/free-demo', label: 'No-Signup Demo' },
-  { href: '/features/citations', label: 'Citation Highlighting' },
-  { href: '/features/performance-modes', label: 'Performance Modes' },
-];
-
-const USE_CASE_LINKS = [
-  { href: '/use-cases', label: 'Use Cases' },
-  { href: '/use-cases/students', label: 'Students' },
-  { href: '/use-cases/lawyers', label: 'Lawyers' },
-  { href: '/use-cases/finance', label: 'Finance' },
-  { href: '/use-cases/hr-contracts', label: 'HR & Contracts' },
-];
-
-const RESOURCE_LINKS = [
-  { href: '/compare', label: 'Compare Tools' },
-  { href: '/alternatives', label: 'Alternatives' },
-  { href: '/blog', label: 'Blog' },
-  { href: '/blog/category/comparisons', label: 'Comparison Guides' },
-  { href: '/features/multi-format', label: 'Multi-Format Support' },
-];
-
-const COMPANY_LINKS = [
-  { href: '/about', label: 'About' },
-  { href: '/contact', label: 'Contact' },
-  { href: '/privacy', label: 'Privacy Policy' },
-  { href: '/terms', label: 'Terms of Service' },
-  { href: '/privacy#ccpa', label: 'Do Not Sell My Info' },
-];
-
 export default function Footer() {
   const { t } = useLocale();
+  const productLinks = [
+    { href: '/demo', label: t('footer.demo') },
+    { href: '/pricing', label: t('footer.pricing') },
+    { href: '/features', label: t('footer.links.features') },
+    { href: '/features/free-demo', label: t('footer.links.noSignupDemo') },
+    { href: '/features/citations', label: t('footer.links.citationHighlighting') },
+    { href: '/features/performance-modes', label: t('footer.links.performanceModes') },
+  ];
+  const useCaseLinks = [
+    { href: '/use-cases', label: t('footer.links.useCases') },
+    { href: '/use-cases/students', label: t('footer.links.students') },
+    { href: '/use-cases/lawyers', label: t('footer.links.lawyers') },
+    { href: '/use-cases/finance', label: t('footer.links.finance') },
+    { href: '/use-cases/hr-contracts', label: t('footer.links.hrContracts') },
+  ];
+  const resourceLinks = [
+    { href: '/compare', label: t('footer.links.compareTools') },
+    { href: '/alternatives', label: t('footer.links.alternatives') },
+    { href: '/blog', label: t('footer.links.blog') },
+    { href: '/blog/category/comparisons', label: t('footer.links.comparisonGuides') },
+    { href: '/features/multi-format', label: t('footer.links.multiFormatSupport') },
+  ];
+  const companyLinks = [
+    { href: '/about', label: t('footer.links.about') },
+    { href: '/contact', label: t('footer.contact') },
+    { href: '/privacy', label: t('privacy.policyLink') },
+    { href: '/terms', label: t('terms.title') },
+    { href: '/privacy#ccpa', label: t('footer.doNotSell') },
+  ];
 
   return (
     <footer className="border-t border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950">
@@ -55,8 +51,7 @@ export default function Footer() {
           </div>
 
           <p className="max-w-2xl text-sm text-zinc-500 dark:text-zinc-400 mb-10 leading-relaxed">
-            AI document chat for PDFs, spreadsheets, contracts, and research reports. Explore
-            product features, role-based workflows, competitive comparisons, and practical guides.
+            {t('footer.description')}
           </p>
 
           <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
@@ -65,7 +60,7 @@ export default function Footer() {
                 {t('footer.product')}
               </h3>
               <ul className="space-y-3">
-                {PRODUCT_LINKS.map((item) => (
+                {productLinks.map((item) => (
                   <li key={item.href}>
                     <Link href={item.href} className="text-sm text-zinc-500 dark:text-zinc-400 hover:text-accent transition-colors focus-visible:ring-2 focus-visible:ring-accent focus-visible:rounded-sm">
                       {item.label}
@@ -77,10 +72,10 @@ export default function Footer() {
 
             <div>
               <h3 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100 mb-4">
-                Use Cases
+                {t('footer.useCases')}
               </h3>
               <ul className="space-y-3">
-                {USE_CASE_LINKS.map((item) => (
+                {useCaseLinks.map((item) => (
                   <li key={item.href}>
                     <Link href={item.href} className="text-sm text-zinc-500 dark:text-zinc-400 hover:text-accent transition-colors focus-visible:ring-2 focus-visible:ring-accent focus-visible:rounded-sm">
                       {item.label}
@@ -92,10 +87,10 @@ export default function Footer() {
 
             <div>
               <h3 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100 mb-4">
-                Resources
+                {t('footer.resources')}
               </h3>
               <ul className="space-y-3">
-                {RESOURCE_LINKS.map((item) => (
+                {resourceLinks.map((item) => (
                   <li key={item.href}>
                     <Link href={item.href} className="text-sm text-zinc-500 dark:text-zinc-400 hover:text-accent transition-colors focus-visible:ring-2 focus-visible:ring-accent focus-visible:rounded-sm">
                       {item.label}
@@ -110,7 +105,7 @@ export default function Footer() {
                 {t('footer.company')}
               </h3>
               <ul className="space-y-3">
-                {COMPANY_LINKS.map((item) => (
+                {companyLinks.map((item) => (
                   <li key={item.href}>
                     <Link href={item.href} className="text-sm text-zinc-500 dark:text-zinc-400 hover:text-accent transition-colors focus-visible:ring-2 focus-visible:ring-accent focus-visible:rounded-sm">
                       {item.label}

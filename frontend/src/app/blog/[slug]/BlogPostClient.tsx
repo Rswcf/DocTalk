@@ -9,14 +9,8 @@ import Header from '../../../components/Header';
 import Footer from '../../../components/Footer';
 import ArticleMeta from '../../../components/seo/ArticleMeta';
 import type { BlogPost } from '../../../lib/blog';
-
-const CATEGORY_LABELS: Record<string, string> = {
-  guides: 'Guides',
-  comparisons: 'Comparisons',
-  'use-cases': 'Use Cases',
-  product: 'Product',
-  'ai-insights': 'AI Insights',
-};
+import { useLocale } from '../../../i18n';
+import { getBlogCategoryLabel } from '../../../lib/publicI18n';
 
 interface TocItem {
   id: string;
@@ -40,6 +34,7 @@ function extractToc(content: string): TocItem[] {
 }
 
 function StickyTOC({ items }: { items: TocItem[] }) {
+  const { t } = useLocale();
   const [activeId, setActiveId] = useState('');
 
   useEffect(() => {
@@ -67,7 +62,7 @@ function StickyTOC({ items }: { items: TocItem[] }) {
   return (
     <nav className="hidden lg:block sticky top-24 self-start">
       <h2 className="text-xs font-semibold text-zinc-900 dark:text-zinc-100 mb-3 uppercase tracking-wider">
-        On this page
+        {t('blog.post.onThisPage')}
       </h2>
       <ul className="space-y-1 border-l border-zinc-200 dark:border-zinc-800">
         {items.map((item) => (
@@ -92,11 +87,12 @@ function StickyTOC({ items }: { items: TocItem[] }) {
 }
 
 function InlineTOC({ items }: { items: TocItem[] }) {
+  const { t } = useLocale();
   if (items.length === 0) return null;
   return (
     <nav className="lg:hidden mb-10 p-5 bg-zinc-50 dark:bg-zinc-900/50 border border-zinc-200 dark:border-zinc-800 rounded-xl">
       <h2 className="text-xs font-semibold text-zinc-900 dark:text-zinc-100 mb-3 uppercase tracking-wider">
-        Table of Contents
+        {t('blog.post.tableOfContents')}
       </h2>
       <ul className="space-y-1.5">
         {items.map((item) => (
@@ -115,11 +111,12 @@ function InlineTOC({ items }: { items: TocItem[] }) {
 }
 
 function RelatedPosts({ posts }: { posts: BlogPost[] }) {
+  const { t } = useLocale();
   if (posts.length === 0) return null;
   return (
     <section className="mt-16 pt-10 border-t border-zinc-200 dark:border-zinc-800">
       <h2 className="text-xl font-semibold text-zinc-900 dark:text-zinc-100 mb-6">
-        Related Articles
+        {t('blog.post.relatedArticles')}
       </h2>
       <div className="grid gap-5 sm:grid-cols-2">
         {posts.map((post) => (
@@ -147,6 +144,7 @@ interface BlogPostClientProps {
 }
 
 export default function BlogPostClient({ post, relatedPosts }: BlogPostClientProps) {
+  const { t } = useLocale();
   const toc = useMemo(() => extractToc(post.content), [post.content]);
 
   return (
@@ -161,7 +159,7 @@ export default function BlogPostClient({ post, relatedPosts }: BlogPostClientPro
             className="inline-flex items-center gap-1.5 text-sm text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors"
           >
             <ArrowLeft size={14} />
-            Back to Blog
+            {t('blog.post.backToBlog')}
           </Link>
         </div>
 
@@ -173,11 +171,11 @@ export default function BlogPostClient({ post, relatedPosts }: BlogPostClientPro
                 href={`/blog/category/${post.category}`}
                 className="inline-block px-2.5 py-0.5 text-xs font-medium rounded-full bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-colors"
               >
-                {CATEGORY_LABELS[post.category] || post.category}
+                {getBlogCategoryLabel(t, post.category)}
               </Link>
               <span className="flex items-center gap-1 text-xs text-zinc-500 dark:text-zinc-400">
                 <Clock size={12} />
-                {post.readingTime}
+                {t('blog.meta.minutesRead', { minutes: post.readingMinutes })}
               </span>
             </div>
             <h1 className="text-3xl sm:text-4xl font-bold text-zinc-900 dark:text-zinc-100 mb-4 leading-tight tracking-tight">
@@ -265,27 +263,24 @@ export default function BlogPostClient({ post, relatedPosts }: BlogPostClientPro
               {/* Author Box */}
               <div className="mt-12 p-6 bg-zinc-50 dark:bg-zinc-900/50 border border-zinc-200 dark:border-zinc-800 rounded-xl">
                 <h3 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100 mb-2">
-                  About DocTalk
+                  {t('blog.post.aboutTitle')}
                 </h3>
                 <p className="text-sm text-zinc-600 dark:text-zinc-400 mb-4 leading-relaxed">
-                  DocTalk is an AI-powered document chat app. Upload any document
-                  and get instant answers with source citations that highlight in your
-                  original text. Supports PDF, DOCX, PPTX, XLSX, and more in 11
-                  languages.
+                  {t('blog.post.aboutDescription')}
                 </p>
                 <div className="flex gap-3">
                   <Link
                     href="/demo"
                     className="group inline-flex items-center px-4 py-2 text-sm font-medium rounded-lg bg-zinc-900 dark:bg-zinc-50 text-white dark:text-zinc-900 hover:bg-zinc-800 dark:hover:bg-zinc-200 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400 dark:focus-visible:ring-zinc-500 focus-visible:ring-offset-2"
                   >
-                    Try Free Demo
+                    {t('blog.post.tryFreeDemo')}
                     <ArrowRight className="ml-1.5 w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
                   </Link>
                   <Link
-                    href="/"
+                    href="/features"
                     className="inline-flex items-center px-4 py-2 text-sm font-medium rounded-lg border border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-400 hover:border-zinc-400 dark:hover:border-zinc-600 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400 dark:focus-visible:ring-zinc-500 focus-visible:ring-offset-2"
                   >
-                    Explore DocTalk Features
+                    {t('blog.post.exploreFeatures')}
                   </Link>
                 </div>
               </div>
@@ -296,17 +291,16 @@ export default function BlogPostClient({ post, relatedPosts }: BlogPostClientPro
                 <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-indigo-500/10 via-transparent to-transparent" />
                 <div className="relative px-8 py-10 text-center">
                   <h3 className="text-xl font-semibold text-white dark:text-zinc-900 mb-2">
-                    Try DocTalk Free — No Signup Required
+                    {t('blog.post.cta.title')}
                   </h3>
                   <p className="text-sm text-zinc-400 dark:text-zinc-600 mb-5 max-w-md mx-auto">
-                    Chat with sample documents and see AI-powered answers with real-time
-                    source citations. No account needed.
+                    {t('blog.post.cta.description')}
                   </p>
                   <Link
                     href="/demo"
                     className="group inline-flex items-center px-6 py-2.5 text-sm font-medium rounded-lg bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-50 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
                   >
-                    Launch Demo
+                    {t('blog.post.cta.launchDemo')}
                     <ArrowRight className="ml-1.5 w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
                   </Link>
                 </div>

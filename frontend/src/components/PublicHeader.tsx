@@ -5,16 +5,15 @@ import DocTalkLogo from './DocTalkLogo';
 import LanguageSelector from './LanguageSelector';
 import { useLocale } from '../i18n';
 
-const PUBLIC_NAV = [
-  { href: '/features', label: 'Features' },
-  { href: '/use-cases', label: 'Use Cases' },
-  { href: '/compare', label: 'Compare' },
-  { href: '/blog', label: 'Blog' },
-  { href: '/pricing', label: 'Pricing' },
-];
-
 export default function PublicHeader() {
   const { t } = useLocale();
+  const publicNav = [
+    { href: '/features', label: t('public.nav.features') },
+    { href: '/use-cases', label: t('public.nav.useCases') },
+    { href: '/compare', label: t('public.nav.compare') },
+    { href: '/blog', label: t('public.nav.blog') },
+    { href: '/pricing', label: t('footer.pricing') },
+  ];
 
   return (
     <header className="h-14 flex items-center px-4 sm:px-6 gap-3 min-w-0 shrink-0 sticky top-0 z-30 border-b border-zinc-200 dark:border-zinc-800 bg-[var(--page-background)]/95 backdrop-blur supports-[backdrop-filter]:bg-[var(--page-background)]/80">
@@ -25,7 +24,7 @@ export default function PublicHeader() {
       </Link>
 
       <nav className="hidden lg:flex items-center gap-4 ml-4" aria-label="Public navigation">
-        {PUBLIC_NAV.map((item) => (
+        {publicNav.map((item) => (
           <Link
             key={item.href}
             href={item.href}
@@ -42,7 +41,7 @@ export default function PublicHeader() {
           href="/auth"
           className="hidden sm:inline-flex items-center px-3 py-1.5 text-sm text-zinc-600 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:rounded-md"
         >
-          Sign in to DocTalk
+          {t('auth.signIn')}
         </Link>
         <Link
           href="/demo"

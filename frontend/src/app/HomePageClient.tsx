@@ -38,38 +38,38 @@ function LandingPageContent() {
   const explorePaths = [
     {
       href: '/features/citations',
-      title: 'Citation Highlighting',
-      description: 'See how every answer links back to the exact source passage in your document.',
+      title: t('home.explore.cards.citations.title'),
+      description: t('home.explore.cards.citations.description'),
     },
     {
       href: '/features/multi-format',
-      title: 'Multi-Format Support',
-      description: 'Work across PDFs, DOCX, PPTX, spreadsheets, Markdown files, and live URLs.',
+      title: t('home.explore.cards.multiFormat.title'),
+      description: t('home.explore.cards.multiFormat.description'),
     },
     {
       href: '/features/free-demo',
-      title: 'No-Signup Demo',
-      description: 'Preview the product with sample documents before creating an account or uploading files.',
+      title: t('home.explore.cards.freeDemo.title'),
+      description: t('home.explore.cards.freeDemo.description'),
     },
     {
       href: '/features/performance-modes',
-      title: 'Performance Modes',
-      description: 'Choose the right balance of speed, depth, and credit usage for each question.',
+      title: t('home.explore.cards.performanceModes.title'),
+      description: t('home.explore.cards.performanceModes.description'),
     },
     {
       href: '/use-cases/finance',
-      title: 'Financial Analysis',
-      description: 'Review filings, earnings reports, and models with cited answers tied to the source.',
+      title: t('home.explore.cards.finance.title'),
+      description: t('home.explore.cards.finance.description'),
     },
     {
       href: '/use-cases/hr-contracts',
-      title: 'HR & Contract Review',
-      description: 'Navigate employment policies, clauses, and handbook details without losing context.',
+      title: t('home.explore.cards.hrContracts.title'),
+      description: t('home.explore.cards.hrContracts.description'),
     },
     {
       href: '/blog/category/comparisons',
-      title: 'Comparison Guides',
-      description: 'Read commercial-intent benchmarks across ChatPDF, NotebookLM, Humata, and more.',
+      title: t('home.explore.cards.comparisonGuides.title'),
+      description: t('home.explore.cards.comparisonGuides.description'),
     },
   ];
 
@@ -131,14 +131,13 @@ function LandingPageContent() {
           <div className="max-w-6xl mx-auto">
             <div className="max-w-2xl mb-10">
               <p className="text-sm font-medium uppercase tracking-[0.18em] text-zinc-500 dark:text-zinc-400 mb-3">
-                Explore by workflow
+                {t('home.explore.eyebrow')}
               </p>
               <h2 className="font-display font-medium text-3xl tracking-tight text-zinc-900 dark:text-zinc-50 mb-4">
-                Start with the page that matches your question
+                {t('home.explore.title')}
               </h2>
               <p className="text-base text-zinc-600 dark:text-zinc-400 leading-relaxed">
-                Whether you are evaluating features, comparing tools, or solving a document-heavy
-                workflow, these high-intent paths take you deeper than the homepage overview.
+                {t('home.explore.description')}
               </p>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
@@ -164,19 +163,19 @@ function LandingPageContent() {
             </div>
             <div className="mt-8 flex flex-wrap gap-3 text-sm">
               <Link href="/features" className="text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors">
-                All features
+                {t('home.explore.links.allFeatures')}
               </Link>
               <span className="text-zinc-300 dark:text-zinc-700">|</span>
               <Link href="/use-cases" className="text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors">
-                All use cases
+                {t('home.explore.links.allUseCases')}
               </Link>
               <span className="text-zinc-300 dark:text-zinc-700">|</span>
               <Link href="/compare" className="text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors">
-                Compare tools
+                {t('home.explore.links.compareTools')}
               </Link>
               <span className="text-zinc-300 dark:text-zinc-700">|</span>
               <Link href="/alternatives" className="text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors">
-                Browse alternatives
+                {t('home.explore.links.browseAlternatives')}
               </Link>
             </div>
           </div>
@@ -275,12 +274,12 @@ export default function HomePageClient() {
     const normalized = (status || '').toLowerCase();
 
     if (normalized === 'error') {
-      return { dotClass: 'bg-red-500', label: 'Error' };
+      return { dotClass: 'bg-red-500', label: t('dashboard.status.error') };
     }
     if (normalized === 'parsing' || normalized === 'embedding' || normalized === 'ocr' || normalized === 'uploading' || normalized === 'idle') {
-      return { dotClass: 'bg-amber-500 animate-pulse', label: 'Processing' };
+      return { dotClass: 'bg-amber-500 animate-pulse', label: t('dashboard.status.processing') };
     }
-    return { dotClass: 'bg-emerald-500', label: 'Ready' };
+    return { dotClass: 'bg-emerald-500', label: t('dashboard.status.ready') };
   };
 
   const onFiles = useCallback(async (file: File) => {
@@ -300,7 +299,7 @@ export default function HomePageClient() {
       return;
     }
     if (file.size > maxUploadBytes) {
-      setProgressText(`File size limit: ${maxUploadMb}MB`);
+      setProgressText(t('dashboard.fileSizeLimit', { size: maxUploadMb }));
       return;
     }
     setUploading(true);
@@ -541,20 +540,20 @@ export default function HomePageClient() {
                       </Link>
                       {confirmDeleteId === d.document_id ? (
                         <div className="flex items-center gap-1.5 text-xs text-zinc-500 dark:text-zinc-400">
-                          <span>Delete?</span>
+                          <span>{t('dashboard.deletePrompt')}</span>
                           <button
                             className="px-2 py-1 rounded-md bg-red-600 text-white hover:bg-red-500 transition-colors focus-visible:ring-2 focus-visible:ring-zinc-400 dark:focus-visible:ring-zinc-500"
                             disabled={deletingId === d.document_id}
                             onClick={() => confirmDeleteDocument(d.document_id)}
                           >
-                            Yes
+                            {t('common.yes')}
                           </button>
                           <button
                             className="px-2 py-1 rounded-md border border-zinc-200 dark:border-zinc-700 text-zinc-600 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors focus-visible:ring-2 focus-visible:ring-zinc-400 dark:focus-visible:ring-zinc-500"
                             disabled={deletingId === d.document_id}
                             onClick={() => setConfirmDeleteId(null)}
                           >
-                            No
+                            {t('common.no')}
                           </button>
                         </div>
                       ) : (

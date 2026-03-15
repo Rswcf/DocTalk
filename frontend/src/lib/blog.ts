@@ -17,6 +17,7 @@ export interface BlogPost {
   keywords: string[];
   content: string;
   readingTime: string;
+  readingMinutes: number;
 }
 
 const BLOG_DIR = path.join(process.cwd(), 'content', 'blog');
@@ -66,6 +67,7 @@ export function getPostBySlug(slug: string): BlogPost | null {
     keywords: data.keywords || [],
     content,
     readingTime: stats.text,
+    readingMinutes: Math.max(1, Math.ceil(stats.minutes)),
   };
 }
 
