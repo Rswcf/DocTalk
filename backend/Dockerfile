@@ -32,6 +32,7 @@ RUN addgroup --system --gid 1001 app && adduser --system --uid 1001 --ingroup ap
     && mkdir -p /home/app && chown app:app /home/app
 
 # Copy backend code and entrypoint
+COPY version.json /app/version.json
 COPY backend/ /app/
 
 EXPOSE 8000

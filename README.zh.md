@@ -190,12 +190,30 @@ DocTalk/
 
 Railway 运行 5 个服务：backend、PostgreSQL、Redis、Qdrant、MinIO。
 
+## 版本号规范
+
+DocTalk 采用 Semantic Versioning，但在 1.0 之前使用 `0.minor.patch`
+格式。唯一可信版本源是仓库根目录的 [`version.json`](version.json)。
+
+- `0.2.0` 表示：产品仍处于 1.0 之前阶段，但每次发布都使用稳定的三段式版本号。
+- 使用 `python3 scripts/bump_version.py patch` 发布补丁版本，例如
+  `0.2.0 -> 0.2.1`。
+- 使用 `python3 scripts/bump_version.py minor` 发布向后兼容的新功能版本，例如
+  `0.2.1 -> 0.3.0`。
+- 使用 `python3 scripts/check_version_consistency.py` 校验
+  `version.json`、`frontend/package.json`、`frontend/package-lock.json`
+  和更新日志是否保持一致。
+
+后端会通过 `/version` 暴露发布元数据，并在 `/health` 响应中附带当前版本。
+前端 Footer 也会显示当前发布标签。
+
 ## 测试
 
 ```bash
 cd backend && python3 -m pytest tests/test_smoke.py -v     # Smoke 测试
 cd backend && python3 -m pytest -m integration -v           # 集成测试
 cd backend && python3 -m ruff check app/ tests/             # 代码检查
+python3 scripts/check_version_consistency.py                # 版本元数据检查
 ```
 
 ## 参与贡献

@@ -5,9 +5,12 @@ import Link from 'next/link';
 import { useLocale } from '../i18n';
 import ScrollReveal from './landing/ScrollReveal';
 import DocTalkLogo from './DocTalkLogo';
+import { getReleaseLabel, getShortBuildSha } from '../lib/version';
 
 export default function Footer() {
   const { t } = useLocale();
+  const releaseLabel = getReleaseLabel();
+  const buildSha = getShortBuildSha();
   const productLinks = [
     { href: '/demo', label: t('footer.demo') },
     { href: '/pricing', label: t('footer.pricing') },
@@ -119,6 +122,10 @@ export default function Footer() {
           {/* Bottom row */}
           <div className="mt-12 pt-8 border-t border-zinc-200 dark:border-zinc-800 text-center text-sm text-zinc-400 dark:text-zinc-500">
             <p>{t('footer.copyright')}</p>
+            <p className="mt-2">
+              {releaseLabel}
+              {buildSha ? ` · ${buildSha}` : ''}
+            </p>
           </div>
         </ScrollReveal>
       </div>

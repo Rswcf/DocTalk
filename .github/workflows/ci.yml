@@ -24,6 +24,7 @@ jobs:
           cache: pip
           cache-dependency-path: backend/requirements-dev.txt
       - run: pip install -r requirements-dev.txt
+      - run: python ../scripts/check_version_consistency.py
       - run: ruff check app/ tests/
       - run: python -m pytest tests/test_smoke.py tests/test_parse_service.py -v
         env:

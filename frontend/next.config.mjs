@@ -1,4 +1,15 @@
+import fs from "node:fs";
+import path from "node:path";
 import { withSentryConfig } from "@sentry/nextjs";
+
+const repoRoot = path.resolve(process.cwd(), "..");
+const versionFile = path.join(repoRoot, "version.json");
+const releaseConfig = JSON.parse(fs.readFileSync(versionFile, "utf8"));
+const buildSha =
+  process.env.VERCEL_GIT_COMMIT_SHA ||
+  process.env.RAILWAY_GIT_COMMIT_SHA ||
+  process.env.GITHUB_SHA ||
+  "";
 
 // Content-Security-Policy directives
 const cspDirectives = [
@@ -24,6 +35,11 @@ const nextConfig = {
       { protocol: "https", hostname: "lh3.googleusercontent.com", pathname: "/**" },
       { protocol: "https", hostname: "graph.microsoft.com", pathname: "/**" },
     ],
+  },
+  env: {
+    NEXT_PUBLIC_APP_VERSION: releaseConfig.version,
+    NEXT_PUBLIC_RELEASE_STAGE: releaseConfig.stage,
+    NEXT_PUBLIC_BUILD_SHA: buildSha,
   },
   webpack: (config) => {
     // pdf.js requires 'canvas' on server side — stub it out for Next.js

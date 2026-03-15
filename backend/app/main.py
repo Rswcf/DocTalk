@@ -18,8 +18,9 @@ from .api.documents import documents_router
 from .api.search import search_router
 from .api.users import router as users_router
 from .core.config import settings
+from .core.version import get_product_version, get_release_payload
 from .models.database import AsyncSessionLocal
-from .schemas.common import HealthDeepResponse, HealthResponse
+from .schemas.common import HealthDeepResponse, HealthResponse, ReleaseInfo
 from .services.embedding_service import embedding_service
 from .services.storage_service import storage_service
 
@@ -113,7 +114,7 @@ async def lifespan(app: FastAPI):
     yield
 
 
-app = FastAPI(title="DocTalk API", lifespan=lifespan)
+app = FastAPI(title=f"DocTalk API {get_product_version()}", lifespan=lifespan)
 
 # CORS configuration
 environment = (os.getenv("ENVIRONMENT") or "").lower()
@@ -147,10 +148,16 @@ app.include_router(billing_router)
 app.include_router(collections_router)
 app.include_router(admin_router)
 
+@app.get("/version", response_model=ReleaseInfo)
+async def version() -> dict:
+    return get_release_payload()
+
+
 @app.get("/health", response_model=HealthDeepResponse | HealthResponse)
 async def health(deep: bool = Query(False)) -> dict:
+    release = get_release_payload()
     if not deep:
-        return {"status": "ok"}
+        return {"status": "ok", "release": release}
 
     components: dict[str, dict[str, str]] = {
         "database": {"status": "ok"},
@@ -176,4 +183,4 @@ async def health(deep: bool = Query(False)) -> dict:
             await redis_client.aclose()
 
     overall = "ok" if all(comp["status"] == "ok" for comp in components.values()) else "degraded"
-    return {"status": overall, "components": components}
+    return {"status": overall, "release": release, "components": components}

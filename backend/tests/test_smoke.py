@@ -1,4 +1,6 @@
+import json
 import uuid
+from pathlib import Path
 
 import pytest
 
@@ -18,6 +20,18 @@ async def test_health(client):
     assert resp.status_code == 200
     data = resp.json()
     assert data.get("status") == "ok"
+    assert data["release"]["version"] == _version_config()["version"]
+    assert data["release"]["stage"] == _version_config()["stage"]
+
+
+async def test_version_endpoint(client):
+    resp = await client.get("/version")
+    assert resp.status_code == 200
+    assert resp.json() == {
+        "version": _version_config()["version"],
+        "stage": _version_config()["stage"],
+        "build": None,
+    }
 
 
 @pytest.mark.integration
@@ -54,3 +68,8 @@ async def test_full_document_lifecycle(client, auth_headers):
     # 5) Health check still OK
     resp = await client.get("/health")
     assert resp.status_code == 200
+    assert resp.json()["release"]["version"] == _version_config()["version"]
+
+
+def _version_config() -> dict[str, str]:
+    return json.loads((Path(__file__).resolve().parents[2] / "version.json").read_text(encoding="utf-8"))

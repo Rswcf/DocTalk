@@ -190,12 +190,31 @@ DocTalk/
 
 Railway runs 5 services: backend, PostgreSQL, Redis, Qdrant, MinIO.
 
+## Versioning
+
+DocTalk uses Semantic Versioning with pre-1.0 release numbers in `0.minor.patch`
+format. The source of truth is the repository root [`version.json`](version.json).
+
+- `0.2.0` means: major API stability has not been promised yet, but releases still
+  follow a predictable three-part version.
+- Use `python3 scripts/bump_version.py patch` for bug-fix releases such as
+  `0.2.0 -> 0.2.1`.
+- Use `python3 scripts/bump_version.py minor` for backward-compatible feature
+  releases such as `0.2.1 -> 0.3.0`.
+- Use `python3 scripts/check_version_consistency.py` to verify that
+  `version.json`, `frontend/package.json`, `frontend/package-lock.json`, and the
+  changelog stay in sync.
+
+Runtime release metadata is exposed at backend `/version` and included in `/health`.
+The frontend footer also shows the current release label.
+
 ## Testing
 
 ```bash
 cd backend && python3 -m pytest tests/test_smoke.py -v     # Smoke tests
 cd backend && python3 -m pytest -m integration -v           # Integration tests
 cd backend && python3 -m ruff check app/ tests/             # Lint
+python3 scripts/check_version_consistency.py                # Version metadata check
 ```
 
 ## Contributing

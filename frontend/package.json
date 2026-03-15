@@ -1,12 +1,15 @@
 {
   "name": "doctalk-frontend",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "version:check": "python3 ../scripts/check_version_consistency.py",
+    "version:bump:patch": "python3 ../scripts/bump_version.py patch",
+    "version:bump:minor": "python3 ../scripts/bump_version.py minor"
   },
   "dependencies": {
     "@auth/core": "^0.32.0",
