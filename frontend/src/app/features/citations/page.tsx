@@ -3,12 +3,12 @@ import CitationsClient from './CitationsClient';
 import { buildMarketingMetadata } from '../../../lib/seo';
 
 export const metadata: Metadata = buildMarketingMetadata({
-  title: 'AI Answers with Source Citations & Highlighting | DocTalk',
+  title: 'AI Answers with Source Citations | DocTalk',
   description:
-    'Every AI answer includes numbered citations. Click any citation to jump to the exact source text, highlighted in your document. Verify every answer. Try free.',
+    'Every AI answer includes numbered citations. Click any citation to jump to the exact source text and verify every answer in your document.',
   path: '/features/citations',
   openGraph: {
-    title: 'AI Answers with Source Citations & Highlighting | DocTalk',
+    title: 'AI Answers with Source Citations | DocTalk',
     description:
       'Every AI answer includes numbered citations. Click any citation to jump to the exact source text, highlighted in your document. Verify every answer.',
   },

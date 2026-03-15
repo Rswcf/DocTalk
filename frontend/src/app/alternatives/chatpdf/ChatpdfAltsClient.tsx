@@ -4,6 +4,7 @@ import React from 'react';
 import Link from 'next/link';
 import Header from '../../../components/Header';
 import Footer from '../../../components/Footer';
+import ArticleMeta from '../../../components/seo/ArticleMeta';
 import ComparisonTable from '../../../components/seo/ComparisonTable';
 import FAQSection from '../../../components/seo/FAQSection';
 import CTABanner from '../../../components/seo/CTABanner';
@@ -64,6 +65,7 @@ export default function ChatpdfAltsClient() {
             better citations, team features, or a lower price, there are strong alternatives available. Here
             are the seven best ChatPDF alternatives in 2026, ranked by overall value for document analysis.
           </p>
+          <ArticleMeta author="DocTalk Team" published="2026-02-18" className="mt-6" />
         </section>
 
         {/* Quick Comparison Table */}

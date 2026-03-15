@@ -250,6 +250,7 @@ function BillingContent() {
       <div className="min-h-screen bg-[var(--page-background)]">
         <Header />
         <main id="main-content" className="flex min-h-[calc(100vh-4rem)] items-center justify-center p-8">
+          <h1 className="sr-only">DocTalk billing</h1>
           <p className="text-zinc-500 dark:text-zinc-400">Loading...</p>
         </main>
       </div>
@@ -261,6 +262,7 @@ function BillingContent() {
       <div className="min-h-screen bg-[var(--page-background)]">
         <Header />
         <main id="main-content" className="flex min-h-[calc(100vh-4rem)] items-center justify-center p-8">
+          <h1 className="sr-only">DocTalk billing</h1>
           <p className="text-zinc-500 dark:text-zinc-400">Redirecting...</p>
         </main>
       </div>

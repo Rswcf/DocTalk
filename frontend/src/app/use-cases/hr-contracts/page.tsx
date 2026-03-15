@@ -5,7 +5,7 @@ import { buildArticleJsonLd, buildMarketingMetadata } from '../../../lib/seo';
 export const metadata: Metadata = buildMarketingMetadata({
   title: 'AI Contract & HR Document Review Tool | DocTalk',
   description:
-    'Review employment contracts, HR policies, and company handbooks with AI. Get instant answers about specific clauses with source citations. Try free.',
+    'Review employment contracts, HR policies, and company handbooks with AI. Get instant answers about specific clauses with source citations.',
   path: '/use-cases/hr-contracts',
   openGraph: {
     title: 'AI Contract & HR Document Review Tool | DocTalk',

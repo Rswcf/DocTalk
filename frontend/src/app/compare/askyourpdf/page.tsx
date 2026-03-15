@@ -3,12 +3,12 @@ import AskyourpdfClient from './AskyourpdfClient';
 import { buildArticleJsonLd, buildMarketingMetadata } from '../../../lib/seo';
 
 export const metadata: Metadata = buildMarketingMetadata({
-  title: 'DocTalk vs AskYourPDF: Which AI PDF Tool Is Better?',
+  title: 'DocTalk vs AskYourPDF Comparison | DocTalk',
   description:
-    'Compare DocTalk and AskYourPDF for AI document analysis. DocTalk offers citation highlighting and 7 formats; AskYourPDF has Chrome extensions and API plugins. See the full breakdown.',
+    'Compare DocTalk and AskYourPDF for AI document analysis, citation quality, format support, integrations, and pricing.',
   path: '/compare/askyourpdf',
   openGraph: {
-    title: 'DocTalk vs AskYourPDF: Which AI PDF Tool Is Better? | DocTalk',
+    title: 'DocTalk vs AskYourPDF Comparison | DocTalk',
     description:
       'Feature comparison of DocTalk vs AskYourPDF. Citation highlighting, format support, integrations, and pricing.',
   },

@@ -4,6 +4,7 @@ import React from 'react';
 import Link from 'next/link';
 import Header from '../../../components/Header';
 import Footer from '../../../components/Footer';
+import ArticleMeta from '../../../components/seo/ArticleMeta';
 import {
   TrendingUp,
   Search,
@@ -72,6 +73,7 @@ export default function FinanceClient() {
           <p className="text-lg text-zinc-500 dark:text-zinc-400 max-w-2xl mx-auto mb-8">
             Upload 10-K filings, earnings reports, and investor presentations. Ask questions in plain language and get AI answers with citations pointing to exact figures and sections.
           </p>
+          <ArticleMeta author="DocTalk Team" published="2026-02-18" centered className="mb-8" />
           <Link
             href="/demo"
             className="inline-flex items-center px-6 py-3 bg-zinc-900 dark:bg-zinc-50 text-white dark:text-zinc-900 rounded-lg font-medium hover:bg-zinc-800 dark:hover:bg-zinc-200 transition-colors"

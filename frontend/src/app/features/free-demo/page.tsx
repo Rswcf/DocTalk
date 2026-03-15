@@ -3,12 +3,12 @@ import FreeDemoClient from './FreeDemoClient';
 import { buildMarketingMetadata } from '../../../lib/seo';
 
 export const metadata: Metadata = buildMarketingMetadata({
-  title: 'Try AI Document Chat Free — No Signup Required | DocTalk',
+  title: 'Free AI Document Chat Demo | DocTalk',
   description:
-    'Chat with AI about sample documents instantly. No account, no credit card, no signup. See citation highlighting in action. 3 demo documents ready to explore.',
+    'Try AI document chat instantly with 3 sample files. No signup, no credit card, and citation highlighting included from the first question.',
   path: '/features/free-demo',
   openGraph: {
-    title: 'Try AI Document Chat Free — No Signup Required | DocTalk',
+    title: 'Free AI Document Chat Demo | DocTalk',
     description:
       'Chat with AI about sample documents instantly. No account, no credit card, no signup. 3 demo documents ready to explore.',
   },

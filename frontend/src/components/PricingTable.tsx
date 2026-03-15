@@ -129,47 +129,57 @@ export default function PricingTable({
         <table className="w-full text-sm" aria-label="Plan comparison">
           <thead>
             <tr className="border-b border-zinc-200 dark:border-zinc-800">
-              <th className="text-left py-4 px-6 font-medium text-zinc-500 dark:text-zinc-400 w-[34%]">
+              <th scope="col" className="text-left py-4 px-6 font-medium text-zinc-500 dark:text-zinc-400 w-[34%]">
                 {t('billing.comparison.feature')}
               </th>
-              <th className="text-center py-4 px-3 font-medium text-zinc-500 dark:text-zinc-400 w-[22%]">
+              <th scope="col" className="text-center py-4 px-3 font-medium text-zinc-500 dark:text-zinc-400 w-[22%]">
                 {t('billing.comparison.free')}
               </th>
               <th
-                onClick={() => onSelectPlan?.('plus')}
+                scope="col"
                 className={`text-center py-4 px-3 w-[22%] cursor-pointer ${
                   selectedPlan === 'plus'
                     ? 'border-x-2 border-t-2 border-indigo-500 dark:border-indigo-400 bg-indigo-50/50 dark:bg-indigo-950/20'
                     : 'border-x border-t border-zinc-200 dark:border-zinc-800'
                 }`}
               >
-                <div className="flex flex-col items-center gap-1">
+                <button
+                  type="button"
+                  onClick={() => onSelectPlan?.('plus')}
+                  className="flex w-full flex-col items-center gap-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400 dark:focus-visible:ring-zinc-500"
+                >
                   <span className="text-xs px-2 py-0.5 rounded-full bg-indigo-600 dark:bg-indigo-500 text-white font-medium">
                     {t('billing.mostPopular')}
                   </span>
                   <span className="font-semibold text-zinc-900 dark:text-zinc-50">
                     {t('billing.comparison.plus')}
                   </span>
-                </div>
+                </button>
               </th>
               <th
-                onClick={() => onSelectPlan?.('pro')}
+                scope="col"
                 className={`text-center py-4 px-3 w-[22%] cursor-pointer ${
                   selectedPlan === 'pro'
                     ? 'border-x-2 border-t-2 border-indigo-500 dark:border-indigo-400 bg-indigo-50/50 dark:bg-indigo-950/20'
                     : 'font-semibold text-zinc-900 dark:text-zinc-50'
                 }`}
               >
-                {t('billing.comparison.pro')}
+                <button
+                  type="button"
+                  onClick={() => onSelectPlan?.('pro')}
+                  className="w-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400 dark:focus-visible:ring-zinc-500"
+                >
+                  {t('billing.comparison.pro')}
+                </button>
               </th>
             </tr>
           </thead>
           <tbody>
             {ROWS.map((row, idx) => (
               <tr key={idx} className="border-b border-zinc-100 dark:border-zinc-800/50 last:border-b-0">
-                <td className="py-3.5 px-6 text-zinc-700 dark:text-zinc-300">
+                <th scope="row" className="py-3.5 px-6 text-left font-normal text-zinc-700 dark:text-zinc-300">
                   {t(row.labelKey as any)}
-                </td>
+                </th>
                 <td className="py-3.5 px-3 text-center">
                   {renderCell(row.free)}
                 </td>
@@ -197,7 +207,9 @@ export default function PricingTable({
             ))}
             {/* CTA row */}
             <tr>
-              <td className="py-4 px-6" />
+              <th scope="row" className="py-4 px-6 text-left font-normal">
+                <span className="sr-only">Plan actions</span>
+              </th>
               <td className="py-4 px-3 text-center">
                 {renderCta('free')}
               </td>

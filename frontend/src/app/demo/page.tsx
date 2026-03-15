@@ -5,7 +5,7 @@ import { buildMarketingMetadata } from '../../lib/seo';
 export const metadata: Metadata = buildMarketingMetadata({
   title: { absolute: 'Try DocTalk Free — Interactive Demo' },
   description:
-    'Try DocTalk without signing up. Chat with sample documents and see AI-powered answers with real-time source citations.',
+    'Try DocTalk without signing up. Chat with sample documents, click source citations, and experience AI document Q&A before uploading your own files.',
   path: '/demo',
   openGraph: {
     title: 'Free AI Document Chat Demo | DocTalk',
