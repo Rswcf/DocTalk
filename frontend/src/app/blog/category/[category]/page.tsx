@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { getPostsByCategory, CATEGORY_META } from '../../../../lib/blog';
 import CategoryClient from './CategoryClient';
+import { buildMarketingMetadata } from '../../../../lib/seo';
 
 interface Props {
   params: { category: string };
@@ -17,16 +18,14 @@ export function generateMetadata({ params }: Props): Metadata {
   const meta = CATEGORY_META[params.category];
   if (!meta) return {};
 
-  return {
-    title: `${meta.label} | Blog`,
+  return buildMarketingMetadata({
+    title: `${meta.label} Articles on AI Document Analysis`,
     description: meta.description,
-    alternates: { canonical: `/blog/category/${params.category}` },
+    path: `/blog/category/${params.category}`,
     openGraph: {
       title: `${meta.label} | DocTalk Blog`,
-      description: meta.description,
-      url: `https://www.doctalk.site/blog/category/${params.category}`,
     },
-  };
+  });
 }
 
 export default function CategoryPage({ params }: Props) {

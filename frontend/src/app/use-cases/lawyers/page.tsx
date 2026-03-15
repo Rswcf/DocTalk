@@ -1,18 +1,18 @@
 import type { Metadata } from 'next';
 import LawyersClient from './LawyersClient';
+import { buildArticleJsonLd, buildMarketingMetadata } from '../../../lib/seo';
 
-export const metadata: Metadata = {
+export const metadata: Metadata = buildMarketingMetadata({
   title: 'AI Legal Document Analysis: Contracts, Filings & More | DocTalk',
   description:
     'Review contracts, court filings, and legal documents with AI. Get cited answers with exact clause references. Secure, private, and GDPR-compliant. Try free.',
-  alternates: { canonical: '/use-cases/lawyers' },
+  path: '/use-cases/lawyers',
   openGraph: {
     title: 'AI Legal Document Analysis: Contracts, Filings & More | DocTalk',
     description:
       'Review contracts, court filings, and legal documents with AI. Get cited answers with exact clause references. Secure, private, and GDPR-compliant. Try free.',
-    url: 'https://www.doctalk.site/use-cases/lawyers',
   },
-};
+});
 
 const faqItems = [
   {
@@ -48,17 +48,15 @@ export default function LawyersPage() {
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{
-          __html: JSON.stringify({
-            '@context': 'https://schema.org',
-            '@type': 'Article',
-            headline: 'AI-Powered Legal Document Analysis with Verifiable Citations',
-            description:
-              'How legal professionals use DocTalk to review contracts, court filings, and regulatory documents with AI-powered cited answers.',
-            author: { '@type': 'Organization', name: 'DocTalk' },
-            publisher: { '@type': 'Organization', name: 'DocTalk', url: 'https://www.doctalk.site' },
-            datePublished: '2026-02-18',
-            dateModified: '2026-02-18',
-          }),
+          __html: JSON.stringify(
+            buildArticleJsonLd({
+              title: 'AI-Powered Legal Document Analysis with Verifiable Citations',
+              description:
+                'How legal professionals use DocTalk to review contracts, court filings, and regulatory documents with AI-powered cited answers.',
+              path: '/use-cases/lawyers',
+              datePublished: '2026-02-18',
+            })
+          ),
         }}
       />
       <script

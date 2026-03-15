@@ -78,7 +78,7 @@ export default function LanguageSelector() {
         title={t('header.language')}
         aria-haspopup="listbox"
         aria-expanded={open}
-        aria-label="Select language"
+        aria-label={`${(current?.code || 'en').toUpperCase()} ${t('header.language')}`}
       >
         <Globe aria-hidden="true" size={16} />
         <span className="hidden sm:inline">{(current?.code || 'en').toUpperCase()}</span>

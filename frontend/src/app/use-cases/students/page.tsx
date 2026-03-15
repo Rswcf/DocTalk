@@ -1,18 +1,18 @@
 import type { Metadata } from 'next';
 import StudentsClient from './StudentsClient';
+import { buildArticleJsonLd, buildMarketingMetadata } from '../../../lib/seo';
 
-export const metadata: Metadata = {
+export const metadata: Metadata = buildMarketingMetadata({
   title: 'AI Research Paper Analysis for Students & Academics | DocTalk',
   description:
     'Analyze research papers, textbooks, and academic documents with AI. Get cited answers with page-level references. Upload PDF, DOCX, or paste a URL. Free to try.',
-  alternates: { canonical: '/use-cases/students' },
+  path: '/use-cases/students',
   openGraph: {
     title: 'AI Research Paper Analysis for Students & Academics | DocTalk',
     description:
       'Analyze research papers, textbooks, and academic documents with AI. Get cited answers with page-level references. Upload PDF, DOCX, or paste a URL. Free to try.',
-    url: 'https://www.doctalk.site/use-cases/students',
   },
-};
+});
 
 const faqItems = [
   {
@@ -48,17 +48,15 @@ export default function StudentsPage() {
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{
-          __html: JSON.stringify({
-            '@context': 'https://schema.org',
-            '@type': 'Article',
-            headline: 'AI-Powered Research Paper Analysis for Students and Academics',
-            description:
-              'How students and academics use DocTalk to analyze research papers, textbooks, and dissertations with AI-powered cited answers.',
-            author: { '@type': 'Organization', name: 'DocTalk' },
-            publisher: { '@type': 'Organization', name: 'DocTalk', url: 'https://www.doctalk.site' },
-            datePublished: '2026-02-18',
-            dateModified: '2026-02-18',
-          }),
+          __html: JSON.stringify(
+            buildArticleJsonLd({
+              title: 'AI-Powered Research Paper Analysis for Students and Academics',
+              description:
+                'How students and academics use DocTalk to analyze research papers, textbooks, and dissertations with AI-powered cited answers.',
+              path: '/use-cases/students',
+              datePublished: '2026-02-18',
+            })
+          ),
         }}
       />
       <script

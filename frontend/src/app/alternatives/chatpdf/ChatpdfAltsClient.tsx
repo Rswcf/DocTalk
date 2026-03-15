@@ -350,7 +350,7 @@ export default function ChatpdfAltsClient() {
                 { href: '/features/citations', label: 'Citation Highlighting' },
                 { href: '/features/multi-format', label: 'Multi-Format Support' },
                 { href: '/demo', label: 'Free Demo' },
-                { href: '/billing', label: 'Pricing' },
+                { href: '/pricing', label: 'Pricing' },
               ].map((link) => (
                 <Link
                   key={link.href}

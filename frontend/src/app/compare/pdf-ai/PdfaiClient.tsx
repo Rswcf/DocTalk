@@ -208,7 +208,7 @@ export default function PdfaiClient() {
               </Link>. Plus ($9.99/month) includes 3,000 credits with Thorough mode and export. Pro
               ($19.99/month) includes 9,000 credits with custom instructions. Credit packs are available for
               one-time top-ups. View{' '}
-              <Link href="/billing" className="text-indigo-600 dark:text-indigo-400 hover:underline">
+              <Link href="/pricing" className="text-indigo-600 dark:text-indigo-400 hover:underline">
                 full pricing
               </Link>.
             </p>
@@ -355,7 +355,7 @@ export default function PdfaiClient() {
                 { href: '/features/citations', label: 'Citation Highlighting' },
                 { href: '/features/multi-format', label: 'Multi-Format Support' },
                 { href: '/demo', label: 'Free Demo' },
-                { href: '/billing', label: 'Pricing' },
+                { href: '/pricing', label: 'Pricing' },
               ].map((link) => (
                 <Link
                   key={link.href}

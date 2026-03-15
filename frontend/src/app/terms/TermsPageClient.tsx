@@ -10,7 +10,7 @@ export default function TermsPageClient() {
   const { t } = useLocale();
 
   return (
-    <div className="min-h-screen bg-zinc-50 dark:bg-zinc-900 py-12 px-4">
+    <main id="main-content" className="min-h-screen bg-zinc-50 dark:bg-zinc-900 py-12 px-4">
       <div className="max-w-2xl mx-auto bg-white dark:bg-zinc-800 rounded-xl p-8 shadow-sm">
         <h1 className="text-2xl font-bold mb-6 dark:text-white">{t('terms.title')}</h1>
 
@@ -44,6 +44,6 @@ export default function TermsPageClient() {
           ← {t('common.backToHome')}
         </Link>
       </div>
-    </div>
+    </main>
   );
 }

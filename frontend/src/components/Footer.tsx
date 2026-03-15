@@ -34,7 +34,7 @@ export default function Footer() {
                   </Link>
                 </li>
                 <li>
-                  <Link href="/billing" className="text-sm text-zinc-500 dark:text-zinc-400 hover:text-accent transition-colors focus-visible:ring-2 focus-visible:ring-accent focus-visible:rounded-sm">
+                  <Link href="/pricing" className="text-sm text-zinc-500 dark:text-zinc-400 hover:text-accent transition-colors focus-visible:ring-2 focus-visible:ring-accent focus-visible:rounded-sm">
                     {t('footer.pricing')}
                   </Link>
                 </li>
@@ -48,14 +48,14 @@ export default function Footer() {
               </h3>
               <ul className="space-y-3">
                 <li>
-                  <span className="text-sm text-zinc-500 dark:text-zinc-400 font-logo">
-                    DocTalk
-                  </span>
+                  <Link href="/about" className="text-sm text-zinc-500 dark:text-zinc-400 hover:text-accent transition-colors focus-visible:ring-2 focus-visible:ring-accent focus-visible:rounded-sm">
+                    About
+                  </Link>
                 </li>
                 <li>
-                  <a href="mailto:support@doctalk.site" aria-label={t('footer.contactEmail') || 'Send email to support'} className="text-sm text-zinc-500 dark:text-zinc-400 hover:text-accent transition-colors focus-visible:ring-2 focus-visible:ring-accent focus-visible:rounded-sm outline-none">
+                  <Link href="/contact" className="text-sm text-zinc-500 dark:text-zinc-400 hover:text-accent transition-colors focus-visible:ring-2 focus-visible:ring-accent focus-visible:rounded-sm">
                     {t('footer.contact')}
-                  </a>
+                  </Link>
                 </li>
               </ul>
             </div>

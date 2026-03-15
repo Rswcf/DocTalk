@@ -15,6 +15,7 @@ import MessageErrorBoundary from './MessageErrorBoundary';
 import { renumberCitations } from '../../lib/citations';
 import { SUGGESTED_KEYS } from '../../lib/constants';
 import { useChatStream } from '../../lib/useChatStream';
+import { openAuthModal } from '../../lib/auth-modal';
 
 interface ChatPanelProps {
   sessionId: string;
@@ -60,7 +61,7 @@ export default function ChatPanel({ sessionId, onCitationClick, maxUserMessages,
     t,
     maxUserMessages,
     onShowPaywall: () => setShowPaywall(true),
-    onRequireAuth: () => router.push('?auth=1', { scroll: false }),
+    onRequireAuth: () => openAuthModal(),
   });
 
   useEffect(() => {
@@ -285,11 +286,11 @@ export default function ChatPanel({ sessionId, onCitationClick, maxUserMessages,
               {t('demo.questionsRemaining', { remaining: Math.max(0, demoRemaining), total: maxUserMessages })}
             </span>
             {!demoLimitReached ? (
-              <button type="button" onClick={() => router.push('?auth=1', { scroll: false })} className="text-zinc-600 dark:text-zinc-400 hover:underline text-sm focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:rounded-sm">
+              <button type="button" onClick={() => openAuthModal()} className="text-zinc-600 dark:text-zinc-400 hover:underline text-sm focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:rounded-sm">
                 {t('demo.signInForUnlimited')}
               </button>
             ) : (
-              <button type="button" onClick={() => router.push('?auth=1', { scroll: false })} className="text-zinc-600 dark:text-zinc-400 hover:underline text-sm font-medium focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:rounded-sm">
+              <button type="button" onClick={() => openAuthModal()} className="text-zinc-600 dark:text-zinc-400 hover:underline text-sm font-medium focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:rounded-sm">
                 {t('demo.signInToContinue')}
               </button>
             )}

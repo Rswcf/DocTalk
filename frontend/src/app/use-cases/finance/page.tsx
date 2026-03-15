@@ -1,18 +1,18 @@
 import type { Metadata } from 'next';
 import FinanceClient from './FinanceClient';
+import { buildArticleJsonLd, buildMarketingMetadata } from '../../../lib/seo';
 
-export const metadata: Metadata = {
+export const metadata: Metadata = buildMarketingMetadata({
   title: 'AI Financial Report Analysis: 10-K, Earnings & SEC Filings | DocTalk',
   description:
     'Analyze 10-K filings, earnings reports, and financial documents with AI. Ask questions and get cited answers referencing specific figures. Try free.',
-  alternates: { canonical: '/use-cases/finance' },
+  path: '/use-cases/finance',
   openGraph: {
     title: 'AI Financial Report Analysis: 10-K, Earnings & SEC Filings | DocTalk',
     description:
       'Analyze 10-K filings, earnings reports, and financial documents with AI. Ask questions and get cited answers referencing specific figures. Try free.',
-    url: 'https://www.doctalk.site/use-cases/finance',
   },
-};
+});
 
 const faqItems = [
   {
@@ -48,17 +48,15 @@ export default function FinancePage() {
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{
-          __html: JSON.stringify({
-            '@context': 'https://schema.org',
-            '@type': 'Article',
-            headline: 'AI-Powered Financial Report Analysis with Cited Sources',
-            description:
-              'How financial analysts use DocTalk to analyze 10-K filings, earnings reports, and SEC documents with AI-powered cited answers.',
-            author: { '@type': 'Organization', name: 'DocTalk' },
-            publisher: { '@type': 'Organization', name: 'DocTalk', url: 'https://www.doctalk.site' },
-            datePublished: '2026-02-18',
-            dateModified: '2026-02-18',
-          }),
+          __html: JSON.stringify(
+            buildArticleJsonLd({
+              title: 'AI-Powered Financial Report Analysis with Cited Sources',
+              description:
+                'How financial analysts use DocTalk to analyze 10-K filings, earnings reports, and SEC documents with AI-powered cited answers.',
+              path: '/use-cases/finance',
+              datePublished: '2026-02-18',
+            })
+          ),
         }}
       />
       <script

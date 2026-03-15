@@ -1,16 +1,18 @@
 import type { Metadata } from 'next';
 import NotebooklmAltsClient from './NotebooklmAltsClient';
+import { buildArticleJsonLd, buildMarketingMetadata } from '../../../lib/seo';
 
-export const metadata: Metadata = {
+export const metadata: Metadata = buildMarketingMetadata({
   title: '6 Best NotebookLM Alternatives for Document Analysis (2026)',
-  description: 'Looking for NotebookLM alternatives? Compare DocTalk, ChatPDF, AskYourPDF, Humata, Consensus, and Elicit. Find document AI tools without Google lock-in.',
-  alternates: { canonical: '/alternatives/notebooklm' },
+  description:
+    'Looking for NotebookLM alternatives? Compare DocTalk, ChatPDF, AskYourPDF, Humata, Consensus, and Elicit. Find document AI tools without Google lock-in.',
+  path: '/alternatives/notebooklm',
   openGraph: {
     title: '6 Best NotebookLM Alternatives for Document Analysis (2026) | DocTalk',
-    description: 'Top NotebookLM alternatives for AI document analysis. Citation highlighting, multi-format support, and privacy-first options.',
-    url: 'https://www.doctalk.site/alternatives/notebooklm',
+    description:
+      'Top NotebookLM alternatives for AI document analysis. Citation highlighting, multi-format support, and privacy-first options.',
   },
-};
+});
 
 const faqItems = [
   {
@@ -50,16 +52,15 @@ export default function NotebooklmAltsPage() {
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{
-          __html: JSON.stringify({
-            '@context': 'https://schema.org',
-            '@type': 'Article',
-            headline: '6 Best NotebookLM Alternatives for Document Analysis (2026)',
-            description: 'A comprehensive guide to the best NotebookLM alternatives for AI document analysis.',
-            author: { '@type': 'Organization', name: 'DocTalk' },
-            publisher: { '@type': 'Organization', name: 'DocTalk', url: 'https://www.doctalk.site' },
-            datePublished: '2026-02-18',
-            dateModified: '2026-02-18',
-          }),
+          __html: JSON.stringify(
+            buildArticleJsonLd({
+              title: '6 Best NotebookLM Alternatives for Document Analysis (2026)',
+              description:
+                'A comprehensive guide to the best NotebookLM alternatives for AI document analysis.',
+              path: '/alternatives/notebooklm',
+              datePublished: '2026-02-18',
+            })
+          ),
         }}
       />
       <script

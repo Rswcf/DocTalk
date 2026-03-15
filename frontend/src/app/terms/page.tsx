@@ -1,16 +1,17 @@
 import type { Metadata } from 'next';
 import TermsPageClient from './TermsPageClient';
+import { buildMarketingMetadata } from '../../lib/seo';
 
-export const metadata: Metadata = {
-  title: 'Terms of Service',
-  description: 'DocTalk terms of service. Read about acceptable use, intellectual property, limitations of liability, and account terms.',
-  alternates: { canonical: '/terms' },
+export const metadata: Metadata = buildMarketingMetadata({
+  title: 'Terms of Service for DocTalk',
+  description:
+    'Read the DocTalk terms of service covering acceptable use, account responsibilities, intellectual property, and service limitations.',
+  path: '/terms',
   openGraph: {
-    title: 'Terms of Service — DocTalk',
-    description: 'DocTalk terms of service. Rules for using our AI document analysis platform.',
-    url: 'https://www.doctalk.site/terms',
+    title: 'Terms of Service | DocTalk',
+    description: 'Rules and account terms for using the DocTalk AI document analysis platform.',
   },
-};
+});
 
 export default function TermsPage() {
   return (

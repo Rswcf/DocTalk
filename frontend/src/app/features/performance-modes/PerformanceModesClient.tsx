@@ -258,7 +258,7 @@ export default function PerformanceModesClient() {
                 <ArrowRight className="ml-2 w-4 h-4" />
               </Link>
               <Link
-                href="/billing"
+                href="/pricing"
                 className="inline-flex items-center px-6 py-3 border border-zinc-300 dark:border-zinc-700 text-zinc-700 dark:text-zinc-300 rounded-lg font-medium hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
               >
                 View Pricing
@@ -266,7 +266,7 @@ export default function PerformanceModesClient() {
             </div>
 
             <div className="mt-10 flex flex-wrap items-center justify-center gap-4 text-sm">
-              <Link href="/billing" className="text-indigo-600 dark:text-indigo-400 hover:underline">
+              <Link href="/pricing" className="text-indigo-600 dark:text-indigo-400 hover:underline">
                 Pricing
               </Link>
               <span className="text-zinc-300 dark:text-zinc-700">|</span>

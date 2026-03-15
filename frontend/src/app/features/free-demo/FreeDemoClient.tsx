@@ -291,7 +291,7 @@ export default function FreeDemoClient() {
             </Link>
 
             <div className="mt-10 flex flex-wrap items-center justify-center gap-4 text-sm">
-              <Link href="/billing" className="text-indigo-600 dark:text-indigo-400 hover:underline">
+              <Link href="/pricing" className="text-indigo-600 dark:text-indigo-400 hover:underline">
                 View Pricing
               </Link>
               <span className="text-zinc-300 dark:text-zinc-700">|</span>

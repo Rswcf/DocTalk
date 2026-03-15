@@ -1,16 +1,18 @@
 import type { Metadata } from 'next';
 import PdfaiClient from './PdfaiClient';
+import { buildArticleJsonLd, buildMarketingMetadata } from '../../../lib/seo';
 
-export const metadata: Metadata = {
+export const metadata: Metadata = buildMarketingMetadata({
   title: 'DocTalk vs PDF.ai: AI PDF Tool Comparison (2026)',
-  description: 'Compare DocTalk and PDF.ai for AI document analysis. DocTalk supports 7 formats with citation highlighting. PDF.ai is PDF-only with a simpler approach. Full feature comparison.',
-  alternates: { canonical: '/compare/pdf-ai' },
+  description:
+    'Compare DocTalk and PDF.ai for AI document analysis. DocTalk supports 7 formats with citation highlighting. PDF.ai is PDF-only with a simpler approach. Full feature comparison.',
+  path: '/compare/pdf-ai',
   openGraph: {
     title: 'DocTalk vs PDF.ai: AI PDF Tool Comparison (2026) | DocTalk',
-    description: 'DocTalk vs PDF.ai: multi-format support, citation highlighting, and pricing compared.',
-    url: 'https://www.doctalk.site/compare/pdf-ai',
+    description:
+      'DocTalk vs PDF.ai: multi-format support, citation highlighting, and pricing compared.',
   },
-};
+});
 
 const faqItems = [
   {
@@ -37,16 +39,15 @@ export default function ComparePdfaiPage() {
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{
-          __html: JSON.stringify({
-            '@context': 'https://schema.org',
-            '@type': 'Article',
-            headline: 'DocTalk vs PDF.ai: AI PDF Tool Comparison (2026)',
-            description: 'A comprehensive comparison of DocTalk and PDF.ai for AI-powered document analysis.',
-            author: { '@type': 'Organization', name: 'DocTalk' },
-            publisher: { '@type': 'Organization', name: 'DocTalk', url: 'https://www.doctalk.site' },
-            datePublished: '2026-02-18',
-            dateModified: '2026-02-18',
-          }),
+          __html: JSON.stringify(
+            buildArticleJsonLd({
+              title: 'DocTalk vs PDF.ai: AI PDF Tool Comparison (2026)',
+              description:
+                'A comprehensive comparison of DocTalk and PDF.ai for AI-powered document analysis.',
+              path: '/compare/pdf-ai',
+              datePublished: '2026-02-18',
+            })
+          ),
         }}
       />
       <script

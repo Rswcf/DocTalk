@@ -1,16 +1,18 @@
 import type { Metadata } from 'next';
 import ChatpdfClient from './ChatpdfClient';
+import { buildArticleJsonLd, buildMarketingMetadata } from '../../../lib/seo';
 
-export const metadata: Metadata = {
+export const metadata: Metadata = buildMarketingMetadata({
   title: 'DocTalk vs ChatPDF: Full Comparison (2026)',
-  description: 'Compare DocTalk and ChatPDF side by side. DocTalk supports 7 document formats with real-time citation highlighting, while ChatPDF is PDF-only. See features, pricing, and our honest verdict.',
-  alternates: { canonical: '/compare/chatpdf' },
+  description:
+    'Compare DocTalk and ChatPDF side by side. DocTalk supports 7 document formats with real-time citation highlighting, while ChatPDF is PDF-only. See features, pricing, and our honest verdict.',
+  path: '/compare/chatpdf',
   openGraph: {
     title: 'DocTalk vs ChatPDF: Full Comparison (2026) | DocTalk',
-    description: 'Feature-by-feature comparison of DocTalk and ChatPDF. Multi-format support, citation highlighting, pricing, and more.',
-    url: 'https://www.doctalk.site/compare/chatpdf',
+    description:
+      'Feature-by-feature comparison of DocTalk and ChatPDF. Multi-format support, citation highlighting, pricing, and more.',
   },
-};
+});
 
 const faqItems = [
   {
@@ -41,16 +43,15 @@ export default function CompareChatpdfPage() {
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{
-          __html: JSON.stringify({
-            '@context': 'https://schema.org',
-            '@type': 'Article',
-            headline: 'DocTalk vs ChatPDF: Full Comparison (2026)',
-            description: 'A detailed feature-by-feature comparison of DocTalk and ChatPDF for AI document analysis.',
-            author: { '@type': 'Organization', name: 'DocTalk' },
-            publisher: { '@type': 'Organization', name: 'DocTalk', url: 'https://www.doctalk.site' },
-            datePublished: '2026-02-18',
-            dateModified: '2026-02-18',
-          }),
+          __html: JSON.stringify(
+            buildArticleJsonLd({
+              title: 'DocTalk vs ChatPDF: Full Comparison (2026)',
+              description:
+                'A detailed feature-by-feature comparison of DocTalk and ChatPDF for AI document analysis.',
+              path: '/compare/chatpdf',
+              datePublished: '2026-02-18',
+            })
+          ),
         }}
       />
       <script

@@ -1,18 +1,18 @@
 import type { Metadata } from 'next';
 import PerformanceModesClient from './PerformanceModesClient';
+import { buildMarketingMetadata } from '../../../lib/seo';
 
-export const metadata: Metadata = {
+export const metadata: Metadata = buildMarketingMetadata({
   title: '3 AI Performance Modes: Quick, Balanced, Thorough | DocTalk',
   description:
     'Choose your AI speed and depth. Quick for fast answers, Balanced for everyday use, Thorough for deep analysis. Powered by DeepSeek, Mistral Medium, and Mistral Large.',
-  alternates: { canonical: '/features/performance-modes' },
+  path: '/features/performance-modes',
   openGraph: {
     title: '3 AI Performance Modes: Quick, Balanced, Thorough | DocTalk',
     description:
       'Choose your AI speed and depth. Quick for fast answers, Balanced for everyday use, Thorough for deep analysis.',
-    url: 'https://www.doctalk.site/features/performance-modes',
   },
-};
+});
 
 export default function PerformanceModesPage() {
   return (

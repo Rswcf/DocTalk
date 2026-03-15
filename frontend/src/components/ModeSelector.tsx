@@ -7,6 +7,7 @@ import { AVAILABLE_MODES, isModeAvailable, type ModeId } from '../lib/models';
 import { useDocTalkStore } from '../store';
 import { useLocale } from '../i18n';
 import { useRouter } from 'next/navigation';
+import { openAuthModal } from '../lib/auth-modal';
 
 export default function ModeSelector() {
   const selectedMode = useDocTalkStore((s) => s.selectedMode);
@@ -24,7 +25,7 @@ export default function ModeSelector() {
       if (isLoggedIn) {
         router.push('/billing');
       } else {
-        router.push('?auth=1', { scroll: false });
+        openAuthModal();
       }
       return;
     }

@@ -1,28 +1,59 @@
 import type { Metadata } from 'next';
 import HomePageClient from './HomePageClient';
+import { absoluteUrl, buildMarketingMetadata } from '../lib/seo';
 
-export const metadata: Metadata = {
+export const metadata: Metadata = buildMarketingMetadata({
   title: { absolute: 'DocTalk — AI Document Chat with Cited Answers' },
-  description: 'Upload any document and chat with AI. Get instant answers with source citations that highlight in your document. Supports PDF, DOCX, PPTX, XLSX, and more.',
-  alternates: { canonical: '/' },
+  description:
+    'Upload any document and chat with AI. Get instant answers with source citations that highlight in your document. Supports PDF, DOCX, PPTX, XLSX, and more.',
+  path: '/',
   openGraph: {
     title: 'DocTalk — AI Document Chat',
     description: 'Chat with your documents. AI answers with page-level citations.',
     type: 'website',
-    url: 'https://www.doctalk.site',
-    siteName: 'DocTalk',
-    locale: 'en_US',
   },
   twitter: {
-    card: 'summary_large_image',
     title: 'DocTalk — AI Document Chat',
     description: 'Chat with your documents. AI answers with page-level citations.',
   },
-};
+});
 
 export default function HomePage() {
   return (
     <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify({
+            '@context': 'https://schema.org',
+            '@graph': [
+              {
+                '@type': 'WebSite',
+                name: 'DocTalk',
+                alternateName: 'DocTalk AI',
+                url: 'https://www.doctalk.site',
+                description: 'AI document chat with cited answers.',
+              },
+              {
+                '@type': 'Organization',
+                name: 'DocTalk',
+                url: 'https://www.doctalk.site',
+                logo: absoluteUrl('/logo-icon.png'),
+                description:
+                  'AI-powered document chat app. Upload PDF, DOCX, PPTX, XLSX, TXT, Markdown, and URLs to get cited answers.',
+                foundingDate: '2025',
+                sameAs: ['https://github.com/Rswcf/DocTalk'],
+                contactPoint: {
+                  '@type': 'ContactPoint',
+                  email: 'support@doctalk.site',
+                  contactType: 'customer support',
+                },
+              },
+            ],
+          }),
+        }}
+      />
+
       {/* FAQPage JSON-LD */}
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({
         '@context': 'https://schema.org',

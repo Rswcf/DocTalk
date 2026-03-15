@@ -1,16 +1,18 @@
 import type { Metadata } from 'next';
 import NotebooklmClient from './NotebooklmClient';
+import { buildArticleJsonLd, buildMarketingMetadata } from '../../../lib/seo';
 
-export const metadata: Metadata = {
+export const metadata: Metadata = buildMarketingMetadata({
   title: 'DocTalk vs NotebookLM: Which AI Document Tool?',
-  description: 'Compare DocTalk and Google NotebookLM. DocTalk offers citation highlighting, 7 formats, and 11 languages with no vendor lock-in. NotebookLM is free with audio podcasts but Google-only.',
-  alternates: { canonical: '/compare/notebooklm' },
+  description:
+    'Compare DocTalk and Google NotebookLM. DocTalk offers citation highlighting, 7 formats, and 11 languages with no vendor lock-in. NotebookLM is free with audio podcasts but Google-only.',
+  path: '/compare/notebooklm',
   openGraph: {
     title: 'DocTalk vs NotebookLM: Which AI Document Tool? | DocTalk',
-    description: 'DocTalk vs Google NotebookLM: citation highlighting, format support, privacy, and pricing compared.',
-    url: 'https://www.doctalk.site/compare/notebooklm',
+    description:
+      'DocTalk vs Google NotebookLM: citation highlighting, format support, privacy, and pricing compared.',
   },
-};
+});
 
 const faqItems = [
   {
@@ -41,16 +43,15 @@ export default function CompareNotebooklmPage() {
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{
-          __html: JSON.stringify({
-            '@context': 'https://schema.org',
-            '@type': 'Article',
-            headline: 'DocTalk vs NotebookLM: Which AI Document Tool?',
-            description: 'A comprehensive comparison of DocTalk and Google NotebookLM for AI document analysis.',
-            author: { '@type': 'Organization', name: 'DocTalk' },
-            publisher: { '@type': 'Organization', name: 'DocTalk', url: 'https://www.doctalk.site' },
-            datePublished: '2026-02-18',
-            dateModified: '2026-02-18',
-          }),
+          __html: JSON.stringify(
+            buildArticleJsonLd({
+              title: 'DocTalk vs NotebookLM: Which AI Document Tool?',
+              description:
+                'A comprehensive comparison of DocTalk and Google NotebookLM for AI document analysis.',
+              path: '/compare/notebooklm',
+              datePublished: '2026-02-18',
+            })
+          ),
         }}
       />
       <script

@@ -1,18 +1,16 @@
 import type { Metadata } from 'next';
 import UseCasesHubClient from './UseCasesHubClient';
+import { buildMarketingMetadata } from '../../lib/seo';
 
-export const metadata: Metadata = {
-  title: 'Use Cases | DocTalk',
+export const metadata: Metadata = buildMarketingMetadata({
+  title: 'AI Document Analysis Use Cases for Students, Legal, Finance & HR',
   description:
-    'See how students, lawyers, financial analysts, and HR teams use DocTalk to analyze documents with AI. Get cited answers for any industry.',
-  alternates: { canonical: '/use-cases' },
+    'See how students, lawyers, financial analysts, and HR teams use DocTalk to analyze documents with AI and verify answers with citations.',
+  path: '/use-cases',
   openGraph: {
-    title: 'Use Cases | DocTalk',
-    description:
-      'See how students, lawyers, financial analysts, and HR teams use DocTalk to analyze documents with AI. Get cited answers for any industry.',
-    url: 'https://www.doctalk.site/use-cases',
+    title: 'AI Document Analysis Use Cases | DocTalk',
   },
-};
+});
 
 export default function UseCasesPage() {
   return (

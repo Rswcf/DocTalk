@@ -221,7 +221,7 @@ export default function NotebooklmClient() {
               for 3,000 credits and go up to $19.99/month (Pro) for 9,000 credits with advanced features. While
               not free like NotebookLM, DocTalk provides transparent, predictable pricing without vendor lock-in.
               View{' '}
-              <Link href="/billing" className="text-indigo-600 dark:text-indigo-400 hover:underline">pricing</Link>.
+              <Link href="/pricing" className="text-indigo-600 dark:text-indigo-400 hover:underline">pricing</Link>.
             </p>
           </div>
 

@@ -1,16 +1,18 @@
 import type { Metadata } from 'next';
 import ChatpdfAltsClient from './ChatpdfAltsClient';
+import { buildArticleJsonLd, buildMarketingMetadata } from '../../../lib/seo';
 
-export const metadata: Metadata = {
+export const metadata: Metadata = buildMarketingMetadata({
   title: '7 Best ChatPDF Alternatives in 2026 (Free & Paid)',
-  description: 'Looking for ChatPDF alternatives? Compare DocTalk, AskYourPDF, Humata, NotebookLM, PDF.ai, ChatDOC, and Sharly. Find the best AI document tool for your needs.',
-  alternates: { canonical: '/alternatives/chatpdf' },
+  description:
+    'Looking for ChatPDF alternatives? Compare DocTalk, AskYourPDF, Humata, NotebookLM, PDF.ai, ChatDOC, and Sharly. Find the best AI document tool for your needs.',
+  path: '/alternatives/chatpdf',
   openGraph: {
     title: '7 Best ChatPDF Alternatives in 2026 (Free & Paid) | DocTalk',
-    description: 'The top 7 ChatPDF alternatives ranked by features, pricing, and use case. Multi-format tools, citation systems, and free options.',
-    url: 'https://www.doctalk.site/alternatives/chatpdf',
+    description:
+      'The top 7 ChatPDF alternatives ranked by features, pricing, and use case. Multi-format tools, citation systems, and free options.',
   },
-};
+});
 
 const faqItems = [
   {
@@ -51,16 +53,15 @@ export default function ChatpdfAltsPage() {
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{
-          __html: JSON.stringify({
-            '@context': 'https://schema.org',
-            '@type': 'Article',
-            headline: '7 Best ChatPDF Alternatives in 2026 (Free & Paid)',
-            description: 'A comprehensive guide to the best ChatPDF alternatives for AI document analysis.',
-            author: { '@type': 'Organization', name: 'DocTalk' },
-            publisher: { '@type': 'Organization', name: 'DocTalk', url: 'https://www.doctalk.site' },
-            datePublished: '2026-02-18',
-            dateModified: '2026-02-18',
-          }),
+          __html: JSON.stringify(
+            buildArticleJsonLd({
+              title: '7 Best ChatPDF Alternatives in 2026 (Free & Paid)',
+              description:
+                'A comprehensive guide to the best ChatPDF alternatives for AI document analysis.',
+              path: '/alternatives/chatpdf',
+              datePublished: '2026-02-18',
+            })
+          ),
         }}
       />
       <script

@@ -209,7 +209,7 @@ export default function AskyourpdfClient() {
               includes 3,000 credits, Thorough mode, and export features. The Pro plan ($19.99/month)
               adds 9,000 credits and custom instructions. Credit packs are available for one-time top-ups.
               View{' '}
-              <Link href="/billing" className="text-indigo-600 dark:text-indigo-400 hover:underline">
+              <Link href="/pricing" className="text-indigo-600 dark:text-indigo-400 hover:underline">
                 full pricing
               </Link>.
             </p>
@@ -365,7 +365,7 @@ export default function AskyourpdfClient() {
                 { href: '/features/citations', label: 'Citation Highlighting' },
                 { href: '/features/multi-format', label: 'Multi-Format Support' },
                 { href: '/demo', label: 'Free Demo' },
-                { href: '/billing', label: 'Pricing' },
+                { href: '/pricing', label: 'Pricing' },
                 { href: '/compare/chatpdf', label: 'DocTalk vs ChatPDF' },
               ].map((link) => (
                 <Link

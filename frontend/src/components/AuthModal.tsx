@@ -1,23 +1,41 @@
 "use client";
 
-import { useEffect, useRef } from 'react';
-import { useSearchParams, useRouter } from 'next/navigation';
+import { useEffect, useRef, useState } from 'react';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { X } from 'lucide-react';
 import { useLocale } from '../i18n';
 import { AuthFormContent } from './AuthFormContent';
+import { AUTH_MODAL_HASH, getUrlWithoutAuthHash, isAuthModalHash } from '../lib/auth-modal';
 
 export function AuthModal() {
-  const searchParams = useSearchParams();
   const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
   const { t } = useLocale();
   const modalRef = useRef<HTMLDivElement>(null);
+  const [isOpen, setIsOpen] = useState(false);
 
-  const isOpen = searchParams.get('auth') === '1';
+  useEffect(() => {
+    const syncFromHash = () => setIsOpen(isAuthModalHash(window.location.hash));
+    syncFromHash();
+    window.addEventListener('hashchange', syncFromHash);
+    return () => window.removeEventListener('hashchange', syncFromHash);
+  }, []);
+
+  useEffect(() => {
+    if (searchParams.get('auth') !== '1') return;
+    const currentSearch = new URLSearchParams(searchParams.toString());
+    currentSearch.delete('auth');
+    const nextUrl = `${pathname}${currentSearch.size ? `?${currentSearch.toString()}` : ''}${AUTH_MODAL_HASH}`;
+    router.replace(nextUrl, { scroll: false });
+    setIsOpen(true);
+  }, [pathname, router, searchParams]);
 
   const handleClose = () => {
     const url = new URL(window.location.href);
-    url.searchParams.delete('auth');
-    router.replace(url.pathname + url.search, { scroll: false });
+    url.hash = '';
+    router.replace(getUrlWithoutAuthHash(url), { scroll: false });
+    setIsOpen(false);
   };
 
   useEffect(() => {
@@ -60,9 +78,8 @@ export function AuthModal() {
   if (!isOpen) return null;
 
   const callbackUrl = (() => {
-    const url = new URL(window.location.href);
-    url.searchParams.delete('auth');
-    return url.toString();
+    const currentSearch = searchParams.toString();
+    return `${window.location.origin}${pathname}${currentSearch ? `?${currentSearch}` : ''}`;
   })();
 
   return (
