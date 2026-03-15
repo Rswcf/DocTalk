@@ -3,7 +3,7 @@ import LawyersClient from './LawyersClient';
 import { buildArticleJsonLd, buildMarketingMetadata } from '../../../lib/seo';
 
 export const metadata: Metadata = buildMarketingMetadata({
-  title: 'AI Legal Document Analysis | DocTalk',
+  title: 'AI Legal Document Analysis',
   description:
     'Review contracts, court filings, and legal documents with AI. Get cited answers with exact clause references and verify every result.',
   path: '/use-cases/lawyers',

@@ -3,7 +3,7 @@ import HrContractsClient from './HrContractsClient';
 import { buildArticleJsonLd, buildMarketingMetadata } from '../../../lib/seo';
 
 export const metadata: Metadata = buildMarketingMetadata({
-  title: 'AI Contract & HR Document Review Tool | DocTalk',
+  title: 'AI Contract & HR Document Review Tool',
   description:
     'Review employment contracts, HR policies, and company handbooks with AI. Get instant answers about specific clauses with source citations.',
   path: '/use-cases/hr-contracts',

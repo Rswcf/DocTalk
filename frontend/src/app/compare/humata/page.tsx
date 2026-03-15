@@ -5,7 +5,7 @@ import { buildArticleJsonLd, buildMarketingMetadata } from '../../../lib/seo';
 export const metadata: Metadata = buildMarketingMetadata({
   title: 'DocTalk vs Humata: AI Document Tool Comparison',
   description:
-    'Compare DocTalk and Humata AI for document analysis. DocTalk offers citation highlighting and 11 languages at lower prices. Humata has team features and video support.',
+    'Compare DocTalk and Humata for AI document analysis, including citation quality, team features, language support, pricing, and video support.',
   path: '/compare/humata',
   openGraph: {
     title: 'DocTalk vs Humata: AI Document Tool Comparison | DocTalk',

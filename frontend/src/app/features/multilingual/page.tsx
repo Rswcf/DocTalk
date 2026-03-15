@@ -3,7 +3,7 @@ import MultilingualClient from './MultilingualClient';
 import { buildMarketingMetadata } from '../../../lib/seo';
 
 export const metadata: Metadata = buildMarketingMetadata({
-  title: 'AI Document Chat in 11 Languages | DocTalk',
+  title: 'AI Document Chat in 11 Languages',
   description:
     'Chat with documents in English, Chinese, Japanese, Spanish, German, French, Korean, Portuguese, Italian, Arabic, and Hindi. AI understands your language.',
   path: '/features/multilingual',

@@ -5,7 +5,7 @@ import { buildArticleJsonLd, buildMarketingMetadata } from '../../../lib/seo';
 export const metadata: Metadata = buildMarketingMetadata({
   title: 'DocTalk vs PDF.ai: AI PDF Tool Comparison (2026)',
   description:
-    'Compare DocTalk and PDF.ai for AI document analysis. DocTalk supports 7 formats with citation highlighting. PDF.ai is PDF-only with a simpler approach. Full feature comparison.',
+    'Compare DocTalk and PDF.ai across citation quality, format support, pricing, and which tool is better for modern document analysis.',
   path: '/compare/pdf-ai',
   openGraph: {
     title: 'DocTalk vs PDF.ai: AI PDF Tool Comparison (2026) | DocTalk',

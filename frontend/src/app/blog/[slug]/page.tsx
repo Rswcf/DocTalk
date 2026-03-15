@@ -73,7 +73,7 @@ export default function BlogPostPage({ params }: Props) {
               path: `/blog/${post.slug}`,
               datePublished: post.date,
               dateModified: post.updated,
-              authorName: 'DocTalk',
+              authorName: post.author,
               imagePath: post.image,
               keywords: post.keywords,
             })

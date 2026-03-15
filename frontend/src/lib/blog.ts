@@ -74,11 +74,11 @@ export function getAllCategories(): string[] {
 export const CATEGORY_META: Record<string, { label: string; description: string }> = {
   guides: {
     label: 'Guides & Tutorials',
-    description: 'Step-by-step guides for getting the most out of AI document analysis.',
+    description: 'Step-by-step guides for AI document analysis, including PDF chat, citation workflows, and practical ways to get better answers from DocTalk.',
   },
   comparisons: {
     label: 'Comparisons',
-    description: 'Side-by-side comparisons of AI document tools to help you choose the right one.',
+    description: 'Side-by-side comparisons of AI document tools, covering features, pricing, citation quality, and which product fits each workflow.',
   },
   'use-cases': {
     label: 'Use Cases',
@@ -86,10 +86,10 @@ export const CATEGORY_META: Record<string, { label: string; description: string 
   },
   product: {
     label: 'Product Updates',
-    description: 'Latest features, improvements, and announcements from DocTalk.',
+    description: 'Latest features, product improvements, releases, and announcements from the DocTalk team.',
   },
   'ai-insights': {
     label: 'AI Insights',
-    description: 'Deep dives into the AI technology behind document analysis.',
+    description: 'Deep dives into the retrieval, citation, and document analysis technology that powers DocTalk.',
   },
 };

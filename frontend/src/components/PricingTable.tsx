@@ -129,9 +129,9 @@ export default function PricingTable({
         <table className="w-full text-sm" aria-label="Plan comparison">
           <thead>
             <tr className="border-b border-zinc-200 dark:border-zinc-800">
-              <th scope="col" className="text-left py-4 px-6 font-medium text-zinc-500 dark:text-zinc-400 w-[34%]">
+              <td className="text-left py-4 px-6 font-medium text-zinc-500 dark:text-zinc-400 w-[34%]">
                 {t('billing.comparison.feature')}
-              </th>
+              </td>
               <th scope="col" className="text-center py-4 px-3 font-medium text-zinc-500 dark:text-zinc-400 w-[22%]">
                 {t('billing.comparison.free')}
               </th>

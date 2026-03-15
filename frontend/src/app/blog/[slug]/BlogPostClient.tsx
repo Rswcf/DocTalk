@@ -4,9 +4,10 @@ import React, { useMemo, useState, useEffect } from 'react';
 import Link from 'next/link';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import { ArrowLeft, Clock, Calendar, Tag, ArrowRight } from 'lucide-react';
+import { ArrowLeft, Clock, Tag, ArrowRight } from 'lucide-react';
 import Header from '../../../components/Header';
 import Footer from '../../../components/Footer';
+import ArticleMeta from '../../../components/seo/ArticleMeta';
 import type { BlogPost } from '../../../lib/blog';
 
 const CATEGORY_LABELS: Record<string, string> = {
@@ -185,29 +186,11 @@ export default function BlogPostClient({ post, relatedPosts }: BlogPostClientPro
             <p className="text-lg text-zinc-600 dark:text-zinc-400 mb-6 leading-relaxed">
               {post.description}
             </p>
-            <div className="flex items-center gap-4 text-sm text-zinc-500 dark:text-zinc-400">
-              <span className="font-medium text-zinc-900 dark:text-zinc-100">
-                {post.author}
-              </span>
-              <span className="flex items-center gap-1">
-                <Calendar size={12} />
-                {new Date(post.date).toLocaleDateString('en-US', {
-                  year: 'numeric',
-                  month: 'long',
-                  day: 'numeric',
-                })}
-              </span>
-              {post.updated !== post.date && (
-                <span className="text-xs">
-                  Updated{' '}
-                  {new Date(post.updated).toLocaleDateString('en-US', {
-                    year: 'numeric',
-                    month: 'long',
-                    day: 'numeric',
-                  })}
-                </span>
-              )}
-            </div>
+            <ArticleMeta
+              author={post.author}
+              published={post.date}
+              updated={post.updated}
+            />
           </div>
         </header>
 

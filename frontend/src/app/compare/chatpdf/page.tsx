@@ -5,7 +5,7 @@ import { buildArticleJsonLd, buildMarketingMetadata } from '../../../lib/seo';
 export const metadata: Metadata = buildMarketingMetadata({
   title: 'DocTalk vs ChatPDF: Full Comparison (2026)',
   description:
-    'Compare DocTalk and ChatPDF side by side. DocTalk supports 7 document formats with real-time citation highlighting, while ChatPDF is PDF-only. See features, pricing, and our honest verdict.',
+    'Compare DocTalk and ChatPDF for AI document analysis. See citation quality, format support, pricing, and which tool fits your workflow.',
   path: '/compare/chatpdf',
   openGraph: {
     title: 'DocTalk vs ChatPDF: Full Comparison (2026) | DocTalk',

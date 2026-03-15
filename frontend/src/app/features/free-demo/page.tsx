@@ -3,7 +3,7 @@ import FreeDemoClient from './FreeDemoClient';
 import { buildMarketingMetadata } from '../../../lib/seo';
 
 export const metadata: Metadata = buildMarketingMetadata({
-  title: 'Free AI Document Chat Demo | DocTalk',
+  title: 'Free AI Document Chat Demo',
   description:
     'Try AI document chat instantly with 3 sample files. No signup, no credit card, and citation highlighting included from the first question.',
   path: '/features/free-demo',

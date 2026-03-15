@@ -5,7 +5,7 @@ import { buildArticleJsonLd, buildMarketingMetadata } from '../../../lib/seo';
 export const metadata: Metadata = buildMarketingMetadata({
   title: 'DocTalk vs NotebookLM: Which AI Document Tool?',
   description:
-    'Compare DocTalk and Google NotebookLM. DocTalk offers citation highlighting, 7 formats, and 11 languages with no vendor lock-in. NotebookLM is free with audio podcasts but Google-only.',
+    'Compare DocTalk and Google NotebookLM across citations, format support, privacy, pricing, and the tradeoff between deep analysis and multi-source notebooks.',
   path: '/compare/notebooklm',
   openGraph: {
     title: 'DocTalk vs NotebookLM: Which AI Document Tool? | DocTalk',

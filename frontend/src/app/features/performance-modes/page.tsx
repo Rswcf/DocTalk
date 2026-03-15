@@ -3,7 +3,7 @@ import PerformanceModesClient from './PerformanceModesClient';
 import { buildMarketingMetadata } from '../../../lib/seo';
 
 export const metadata: Metadata = buildMarketingMetadata({
-  title: 'Quick, Balanced & Thorough Modes | DocTalk',
+  title: 'Quick, Balanced & Thorough Modes',
   description:
     'Choose Quick, Balanced, or Thorough mode for AI document chat. Match response speed, depth, and cost to the task at hand.',
   path: '/features/performance-modes',

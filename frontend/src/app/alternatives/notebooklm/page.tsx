@@ -3,7 +3,7 @@ import NotebooklmAltsClient from './NotebooklmAltsClient';
 import { buildArticleJsonLd, buildMarketingMetadata } from '../../../lib/seo';
 
 export const metadata: Metadata = buildMarketingMetadata({
-  title: 'Best NotebookLM Alternatives for Documents | DocTalk',
+  title: 'Best NotebookLM Alternatives for Documents',
   description:
     'Compare NotebookLM alternatives including DocTalk, ChatPDF, AskYourPDF, Humata, Consensus, and Elicit for document analysis without Google lock-in.',
   path: '/alternatives/notebooklm',

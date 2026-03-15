@@ -3,7 +3,7 @@ import StudentsClient from './StudentsClient';
 import { buildArticleJsonLd, buildMarketingMetadata } from '../../../lib/seo';
 
 export const metadata: Metadata = buildMarketingMetadata({
-  title: 'AI Research Paper Analysis for Students | DocTalk',
+  title: 'AI Research Paper Analysis for Students',
   description:
     'Analyze research papers, textbooks, and academic documents with AI. Get cited answers with page-level references from PDFs, DOCX files, and URLs.',
   path: '/use-cases/students',

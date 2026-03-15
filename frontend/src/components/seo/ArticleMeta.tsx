@@ -29,11 +29,15 @@ export default function ArticleMeta({
     <div
       className={`flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-zinc-500 dark:text-zinc-400 ${layoutClassName} ${className}`.trim()}
     >
-      <span className="font-medium text-zinc-900 dark:text-zinc-100">
-        {author}
+      <span className="flex items-center gap-1.5">
+        <span>By</span>
+        <span className="font-medium text-zinc-900 dark:text-zinc-100">
+          {author}
+        </span>
       </span>
       <span className="flex items-center gap-1.5">
         <Calendar aria-hidden="true" size={14} />
+        <span>Published</span>
         <time dateTime={published}>{formatDate(published)}</time>
       </span>
       {updated && updated !== published ? (

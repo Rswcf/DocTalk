@@ -1,5 +1,5 @@
 ---
-title: "How to Chat with a PDF Using AI: The Complete Guide"
+title: "How to Chat with a PDF Using AI"
 description: "Learn how to chat with any PDF using AI. Step-by-step guide covering RAG technology, citation highlighting, and tips for getting the best answers."
 date: "2026-02-18"
 updated: "2026-02-18"

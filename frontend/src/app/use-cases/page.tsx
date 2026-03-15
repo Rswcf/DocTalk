@@ -3,7 +3,7 @@ import UseCasesHubClient from './UseCasesHubClient';
 import { buildMarketingMetadata } from '../../lib/seo';
 
 export const metadata: Metadata = buildMarketingMetadata({
-  title: 'DocTalk Use Cases for Students, Legal, Finance & HR',
+  title: 'Use Cases for Students, Legal, Finance & HR',
   description:
     'See how students, lawyers, financial analysts, and HR teams use DocTalk to analyze documents with AI and verify answers with citations.',
   path: '/use-cases',

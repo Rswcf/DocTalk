@@ -3,7 +3,7 @@ import FinanceClient from './FinanceClient';
 import { buildArticleJsonLd, buildMarketingMetadata } from '../../../lib/seo';
 
 export const metadata: Metadata = buildMarketingMetadata({
-  title: 'AI Financial Report Analysis | DocTalk',
+  title: 'AI Financial Report Analysis',
   description:
     'Analyze 10-K filings, earnings reports, and financial documents with AI. Ask questions and get cited answers tied to specific figures and sections.',
   path: '/use-cases/finance',

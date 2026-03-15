@@ -3,7 +3,7 @@ import AskyourpdfClient from './AskyourpdfClient';
 import { buildArticleJsonLd, buildMarketingMetadata } from '../../../lib/seo';
 
 export const metadata: Metadata = buildMarketingMetadata({
-  title: 'DocTalk vs AskYourPDF Comparison | DocTalk',
+  title: 'DocTalk vs AskYourPDF Comparison',
   description:
     'Compare DocTalk and AskYourPDF for AI document analysis, citation quality, format support, integrations, and pricing.',
   path: '/compare/askyourpdf',

@@ -3,7 +3,7 @@ import CitationsClient from './CitationsClient';
 import { buildMarketingMetadata } from '../../../lib/seo';
 
 export const metadata: Metadata = buildMarketingMetadata({
-  title: 'AI Answers with Source Citations | DocTalk',
+  title: 'AI Answers with Source Citations',
   description:
     'Every AI answer includes numbered citations. Click any citation to jump to the exact source text and verify every answer in your document.',
   path: '/features/citations',

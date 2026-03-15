@@ -19,7 +19,7 @@ export function generateMetadata({ params }: Props): Metadata {
   if (!meta) return {};
 
   return buildMarketingMetadata({
-    title: `${meta.label} | DocTalk Blog`,
+    title: `${meta.label} Articles`,
     description: meta.description,
     path: `/blog/category/${params.category}`,
     openGraph: {
