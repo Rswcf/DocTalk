@@ -2,6 +2,12 @@ import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { getAllPosts, getPostBySlug } from '../../../lib/blog';
 import BlogPostClient from './BlogPostClient';
+import {
+  buildArticleJsonLd,
+  buildMarketingMetadata,
+  DEFAULT_SHARE_ALT,
+  resolveShareImage,
+} from '../../../lib/seo';
 
 interface Props {
   params: { slug: string };
@@ -16,27 +22,34 @@ export function generateMetadata({ params }: Props): Metadata {
   const post = getPostBySlug(params.slug);
   if (!post) return {};
 
-  return {
+  const shareImage = resolveShareImage(post.image);
+
+  return buildMarketingMetadata({
     title: post.title,
     description: post.description,
+    path: `/blog/${post.slug}`,
     keywords: post.keywords,
-    alternates: { canonical: `/blog/${post.slug}` },
     openGraph: {
       title: post.title,
-      description: post.description,
-      url: `https://www.doctalk.site/blog/${post.slug}`,
       type: 'article',
       publishedTime: post.date,
       modifiedTime: post.updated,
       authors: [post.author],
       tags: post.tags,
+      images: [
+        {
+          url: shareImage,
+          width: 1200,
+          height: 630,
+          alt: post.imageAlt || DEFAULT_SHARE_ALT,
+        },
+      ],
     },
     twitter: {
-      card: 'summary_large_image',
       title: post.title,
-      description: post.description,
+      images: [shareImage],
     },
-  };
+  });
 }
 
 export default function BlogPostPage({ params }: Props) {
@@ -53,33 +66,18 @@ export default function BlogPostPage({ params }: Props) {
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{
-          __html: JSON.stringify({
-            '@context': 'https://schema.org',
-            '@type': 'Article',
-            headline: post.title,
-            description: post.description,
-            datePublished: post.date,
-            dateModified: post.updated,
-            author: {
-              '@type': 'Organization',
-              name: 'DocTalk',
-              url: 'https://www.doctalk.site',
-            },
-            publisher: {
-              '@type': 'Organization',
-              name: 'DocTalk',
-              url: 'https://www.doctalk.site',
-              logo: {
-                '@type': 'ImageObject',
-                url: 'https://www.doctalk.site/logo-icon.png',
-              },
-            },
-            mainEntityOfPage: {
-              '@type': 'WebPage',
-              '@id': `https://www.doctalk.site/blog/${post.slug}`,
-            },
-            keywords: post.keywords.join(', '),
-          }),
+          __html: JSON.stringify(
+            buildArticleJsonLd({
+              title: post.title,
+              description: post.description,
+              path: `/blog/${post.slug}`,
+              datePublished: post.date,
+              dateModified: post.updated,
+              authorName: 'DocTalk',
+              imagePath: post.image,
+              keywords: post.keywords,
+            })
+          ),
         }}
       />
       <script

@@ -213,7 +213,7 @@ export default function HumataClient() {
               Plus ($9.99/month) includes 3,000 credits with Thorough mode and export. Pro ($19.99/month)
               includes 9,000 credits with custom instructions. Credits are consumed per question based on
               the AI mode used, not per document page. View{' '}
-              <Link href="/billing" className="text-indigo-600 dark:text-indigo-400 hover:underline">
+              <Link href="/pricing" className="text-indigo-600 dark:text-indigo-400 hover:underline">
                 pricing details
               </Link>.
             </p>
@@ -366,7 +366,7 @@ export default function HumataClient() {
                 { href: '/features/citations', label: 'Citation Highlighting' },
                 { href: '/features/multilingual', label: 'Multilingual' },
                 { href: '/demo', label: 'Free Demo' },
-                { href: '/billing', label: 'Pricing' },
+                { href: '/pricing', label: 'Pricing' },
                 { href: '/alternatives/humata', label: 'Humata Alternatives' },
               ].map((link) => (
                 <Link

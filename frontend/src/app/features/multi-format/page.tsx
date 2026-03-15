@@ -1,18 +1,18 @@
 import type { Metadata } from 'next';
 import MultiFormatClient from './MultiFormatClient';
+import { buildMarketingMetadata } from '../../../lib/seo';
 
-export const metadata: Metadata = {
+export const metadata: Metadata = buildMarketingMetadata({
   title: 'Chat with Any Document: PDF, DOCX, PPTX, XLSX & More | DocTalk',
   description:
     'Upload PDF, Word, PowerPoint, Excel, TXT, Markdown, or any URL. DocTalk\'s AI reads your document and answers questions with cited sources. Try free.',
-  alternates: { canonical: '/features/multi-format' },
+  path: '/features/multi-format',
   openGraph: {
     title: 'Chat with Any Document: PDF, DOCX, PPTX, XLSX & More | DocTalk',
     description:
       'Upload PDF, Word, PowerPoint, Excel, TXT, Markdown, or any URL. DocTalk\'s AI reads your document and answers questions with cited sources.',
-    url: 'https://www.doctalk.site/features/multi-format',
   },
-};
+});
 
 export default function MultiFormatPage() {
   return (

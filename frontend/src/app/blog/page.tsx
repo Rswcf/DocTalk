@@ -1,19 +1,17 @@
 import type { Metadata } from 'next';
 import { getAllPosts } from '../../lib/blog';
 import BlogIndexClient from './BlogIndexClient';
+import { buildMarketingMetadata } from '../../lib/seo';
 
-export const metadata: Metadata = {
-  title: 'Blog',
+export const metadata: Metadata = buildMarketingMetadata({
+  title: 'AI Document Analysis Blog: Guides, Comparisons & Tips',
   description:
-    'Guides, comparisons, and tips for AI document analysis. Learn how to chat with PDFs, DOCX, PPTX, and more.',
-  alternates: { canonical: '/blog' },
+    'Read practical guides, product comparisons, and AI document workflow tips for PDFs, DOCX, PPTX, spreadsheets, and web pages.',
+  path: '/blog',
   openGraph: {
-    title: 'Blog | DocTalk',
-    description:
-      'Guides, comparisons, and tips for AI document analysis. Learn how to chat with PDFs, DOCX, PPTX, and more.',
-    url: 'https://www.doctalk.site/blog',
+    title: 'AI Document Analysis Blog | DocTalk',
   },
-};
+});
 
 export default function BlogPage() {
   const posts = getAllPosts();

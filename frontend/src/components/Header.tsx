@@ -45,7 +45,7 @@ export default function Header({ variant = 'full', isDemo, isLoggedIn }: HeaderP
           <Link href="/demo" className="text-sm font-medium text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors">
             {t('footer.demo')}
           </Link>
-          <Link href="/billing" className="text-sm font-medium text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors">
+          <Link href="/pricing" className="text-sm font-medium text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors">
             {t('footer.pricing')}
           </Link>
         </nav>

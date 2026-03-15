@@ -59,50 +59,19 @@ export default async function RootLayout({
         <meta name="msvalidate.01" content="50E7D296303C85BC31C1BE98539EA393" />
         <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)" />
         <meta name="theme-color" content="#09090b" media="(prefers-color-scheme: dark)" />
-        <script
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{
-            __html: JSON.stringify({
-              '@context': 'https://schema.org',
-              '@graph': [
-                {
-                  '@type': 'WebSite',
-                  name: 'DocTalk',
-                  alternateName: 'DocTalk AI',
-                  url: 'https://www.doctalk.site',
-                  description: 'AI document chat with cited answers',
-                },
-                {
-                  '@type': 'Organization',
-                  name: 'DocTalk',
-                  url: 'https://www.doctalk.site',
-                  logo: {
-                    '@type': 'ImageObject',
-                    url: 'https://www.doctalk.site/logo-icon.png',
-                    width: 512,
-                    height: 512,
-                  },
-                  description:
-                    'AI-powered document chat app. Upload PDF, DOCX, PPTX, XLSX and get instant answers with source citations that highlight in your document.',
-                  foundingDate: '2025',
-                  sameAs: ['https://github.com/Rswcf/DocTalk'],
-                  contactPoint: {
-                    '@type': 'ContactPoint',
-                    email: 'support@doctalk.site',
-                    contactType: 'customer support',
-                  },
-                },
-              ],
-            }),
-          }}
-        />
       </head>
       <body className="font-sans antialiased">
+        <a
+          href="#page-content"
+          className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50 focus:rounded-md focus:bg-zinc-900 focus:px-4 focus:py-2 focus:text-sm focus:font-medium focus:text-white dark:focus:bg-zinc-100 dark:focus:text-zinc-900"
+        >
+          Skip to content
+        </a>
         <ThemeProvider>
           <Providers>
             <LocaleProvider>
               <ErrorBoundary>
-                {children}
+                <div id="page-content">{children}</div>
                 <Suspense fallback={null}>
                   <AuthModal />
                 </Suspense>

@@ -1,16 +1,18 @@
 import type { Metadata } from 'next';
 import AskyourpdfClient from './AskyourpdfClient';
+import { buildArticleJsonLd, buildMarketingMetadata } from '../../../lib/seo';
 
-export const metadata: Metadata = {
+export const metadata: Metadata = buildMarketingMetadata({
   title: 'DocTalk vs AskYourPDF: Which AI PDF Tool Is Better?',
-  description: 'Compare DocTalk and AskYourPDF for AI document analysis. DocTalk offers citation highlighting and 7 formats; AskYourPDF has Chrome extensions and API plugins. See the full breakdown.',
-  alternates: { canonical: '/compare/askyourpdf' },
+  description:
+    'Compare DocTalk and AskYourPDF for AI document analysis. DocTalk offers citation highlighting and 7 formats; AskYourPDF has Chrome extensions and API plugins. See the full breakdown.',
+  path: '/compare/askyourpdf',
   openGraph: {
     title: 'DocTalk vs AskYourPDF: Which AI PDF Tool Is Better? | DocTalk',
-    description: 'Feature comparison of DocTalk vs AskYourPDF. Citation highlighting, format support, integrations, and pricing.',
-    url: 'https://www.doctalk.site/compare/askyourpdf',
+    description:
+      'Feature comparison of DocTalk vs AskYourPDF. Citation highlighting, format support, integrations, and pricing.',
   },
-};
+});
 
 const faqItems = [
   {
@@ -37,16 +39,15 @@ export default function CompareAskyourpdfPage() {
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{
-          __html: JSON.stringify({
-            '@context': 'https://schema.org',
-            '@type': 'Article',
-            headline: 'DocTalk vs AskYourPDF: Which AI PDF Tool Is Better?',
-            description: 'A detailed comparison of DocTalk and AskYourPDF for AI-powered document analysis.',
-            author: { '@type': 'Organization', name: 'DocTalk' },
-            publisher: { '@type': 'Organization', name: 'DocTalk', url: 'https://www.doctalk.site' },
-            datePublished: '2026-02-18',
-            dateModified: '2026-02-18',
-          }),
+          __html: JSON.stringify(
+            buildArticleJsonLd({
+              title: 'DocTalk vs AskYourPDF: Which AI PDF Tool Is Better?',
+              description:
+                'A detailed comparison of DocTalk and AskYourPDF for AI-powered document analysis.',
+              path: '/compare/askyourpdf',
+              datePublished: '2026-02-18',
+            })
+          ),
         }}
       />
       <script

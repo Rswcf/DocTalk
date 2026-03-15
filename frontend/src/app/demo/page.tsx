@@ -1,16 +1,16 @@
 import type { Metadata } from 'next';
 import DemoPageClient from './DemoPageClient';
+import { buildMarketingMetadata } from '../../lib/seo';
 
-export const metadata: Metadata = {
+export const metadata: Metadata = buildMarketingMetadata({
   title: { absolute: 'Try DocTalk Free — Interactive Demo' },
-  description: 'Try DocTalk without signing up. Chat with sample documents and see AI-powered answers with real-time source citations.',
-  alternates: { canonical: '/demo' },
+  description:
+    'Try DocTalk without signing up. Chat with sample documents and see AI-powered answers with real-time source citations.',
+  path: '/demo',
   openGraph: {
-    title: 'Try DocTalk Free — Interactive Demo',
-    description: 'Try DocTalk without signing up. Chat with sample documents and see AI-powered answers with real-time source citations.',
-    url: 'https://www.doctalk.site/demo',
+    title: 'Free AI Document Chat Demo | DocTalk',
   },
-};
+});
 
 export default function DemoPage() {
   return (

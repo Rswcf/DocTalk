@@ -30,7 +30,7 @@ export default function FinalCTA() {
               <ArrowRight aria-hidden="true" size={18} />
             </Link>
             <Link
-              href="?auth=1"
+              href="#auth"
               scroll={false}
               className="px-6 py-3 border border-zinc-300 dark:border-zinc-700 text-zinc-900 dark:text-zinc-100 rounded-lg font-medium hover:border-accent hover:text-accent transition-colors focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-900"
             >

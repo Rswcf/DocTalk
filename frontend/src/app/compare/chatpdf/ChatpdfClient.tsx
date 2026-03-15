@@ -224,7 +224,7 @@ export default function ChatpdfClient() {
               and unlocks Thorough mode and export features. The Pro plan ($19.99/month) adds 9,000 credits
               and custom instructions. DocTalk is generally more affordable: the Plus plan at $9.99 offers
               comparable or better value than ChatPDF Plus at $19.99. View{' '}
-              <Link href="/billing" className="text-indigo-600 dark:text-indigo-400 hover:underline">
+              <Link href="/pricing" className="text-indigo-600 dark:text-indigo-400 hover:underline">
                 full pricing details
               </Link>.
             </p>
@@ -380,7 +380,7 @@ export default function ChatpdfClient() {
                 { href: '/features/multi-format', label: 'Multi-Format Support' },
                 { href: '/features/multilingual', label: 'Multilingual' },
                 { href: '/demo', label: 'Free Demo' },
-                { href: '/billing', label: 'Pricing' },
+                { href: '/pricing', label: 'Pricing' },
                 { href: '/alternatives/chatpdf', label: 'ChatPDF Alternatives' },
               ].map((link) => (
                 <Link

@@ -39,75 +39,76 @@ function LandingPageContent() {
   return (
     <div className="flex flex-col min-h-screen bg-[var(--page-background)]">
       <Header variant="minimal" />
+      <main id="main-content">
+        <HeroSection />
 
-      <HeroSection />
-
-      {/* Product Showcase */}
-      <ScrollReveal direction="up" delay={100}>
-        <section className="w-full px-4 sm:px-8 lg:px-16 py-24">
-          <div className="border-t border-zinc-200 dark:border-zinc-800 pt-12 max-w-6xl mx-auto">
-            <h2 className="font-display font-medium text-3xl tracking-tight text-zinc-900 dark:text-zinc-50 text-center mb-8">
-              {t('landing.showcase.title')}
-            </h2>
-          </div>
-          <div className="relative max-w-6xl mx-auto">
-            {/* Accent glow behind showcase */}
-            <div
-              aria-hidden="true"
-              className="glow-accent absolute -inset-8 blur-2xl opacity-60 pointer-events-none"
-            />
-            <div className="relative rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-2xl overflow-hidden">
-              {/* macOS window chrome */}
-              <div className="flex items-center px-4 py-3 bg-zinc-100 dark:bg-zinc-800 border-b border-zinc-200 dark:border-zinc-700">
-                {/* Traffic lights */}
-                <div className="flex items-center gap-2">
-                  <span aria-hidden="true" className="w-3 h-3 rounded-full bg-red-400" />
-                  <span aria-hidden="true" className="w-3 h-3 rounded-full bg-yellow-400" />
-                  <span aria-hidden="true" className="w-3 h-3 rounded-full bg-green-400" />
-                </div>
-                {/* Fake URL bar */}
-                <div className="flex-1 flex justify-center">
-                  <div className="bg-zinc-200 dark:bg-zinc-700 rounded-md px-4 py-1">
-                    <span className="text-xs text-zinc-400 dark:text-zinc-500 select-none">doctalk.site</span>
+        {/* Product Showcase */}
+        <ScrollReveal direction="up" delay={100}>
+          <section className="w-full px-4 sm:px-8 lg:px-16 py-24">
+            <div className="border-t border-zinc-200 dark:border-zinc-800 pt-12 max-w-6xl mx-auto">
+              <h2 className="font-display font-medium text-3xl tracking-tight text-zinc-900 dark:text-zinc-50 text-center mb-8">
+                {t('landing.showcase.title')}
+              </h2>
+            </div>
+            <div className="relative max-w-6xl mx-auto">
+              {/* Accent glow behind showcase */}
+              <div
+                aria-hidden="true"
+                className="glow-accent absolute -inset-8 blur-2xl opacity-60 pointer-events-none"
+              />
+              <div className="relative rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-2xl overflow-hidden">
+                {/* macOS window chrome */}
+                <div className="flex items-center px-4 py-3 bg-zinc-100 dark:bg-zinc-800 border-b border-zinc-200 dark:border-zinc-700">
+                  {/* Traffic lights */}
+                  <div className="flex items-center gap-2">
+                    <span aria-hidden="true" className="w-3 h-3 rounded-full bg-red-400" />
+                    <span aria-hidden="true" className="w-3 h-3 rounded-full bg-yellow-400" />
+                    <span aria-hidden="true" className="w-3 h-3 rounded-full bg-green-400" />
                   </div>
+                  {/* Fake URL bar */}
+                  <div className="flex-1 flex justify-center">
+                    <div className="bg-zinc-200 dark:bg-zinc-700 rounded-md px-4 py-1">
+                      <span className="text-xs text-zinc-400 dark:text-zinc-500 select-none">doctalk.site</span>
+                    </div>
+                  </div>
+                  {/* Spacer to balance traffic lights */}
+                  <div className="w-[52px]" aria-hidden="true" />
                 </div>
-                {/* Spacer to balance traffic lights */}
-                <div className="w-[52px]" aria-hidden="true" />
-              </div>
-              <div className="aspect-video bg-zinc-50 dark:bg-zinc-900 relative">
-                <ShowcasePlayer />
+                <div className="aspect-video bg-zinc-50 dark:bg-zinc-900 relative">
+                  <ShowcasePlayer />
+                </div>
               </div>
             </div>
-          </div>
-          {/* Caption */}
-          <p className="mt-4 text-center text-sm text-zinc-400 dark:text-zinc-500">
-            {t('landing.showcase.caption')}
-          </p>
+            {/* Caption */}
+            <p className="mt-4 text-center text-sm text-zinc-400 dark:text-zinc-500">
+              {t('landing.showcase.caption')}
+            </p>
+          </section>
+        </ScrollReveal>
+
+        <HowItWorks />
+
+        <FeatureGrid />
+
+        <SocialProof />
+
+        <div className="text-center py-8">
+          <Link href="/pricing" className="text-sm font-medium text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors">
+            {t('footer.pricing')} &rarr;
+          </Link>
+        </div>
+
+        <SecuritySection />
+
+        <FAQ />
+
+        <FinalCTA />
+
+        {/* Privacy Badge */}
+        <section className="py-8 flex justify-center">
+          <PrivacyBadge />
         </section>
-      </ScrollReveal>
-
-      <HowItWorks />
-
-      <FeatureGrid />
-
-      <SocialProof />
-
-      <div className="text-center py-8">
-        <Link href="/billing" className="text-sm font-medium text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors">
-          {t('footer.pricing')} &rarr;
-        </Link>
-      </div>
-
-      <SecuritySection />
-
-      <FAQ />
-
-      <FinalCTA />
-
-      {/* Privacy Badge */}
-      <section className="py-8 flex justify-center">
-        <PrivacyBadge />
-      </section>
+      </main>
 
       <Footer />
     </div>
@@ -335,7 +336,7 @@ export default function HomePageClient() {
   return (
     <div className="flex flex-col min-h-screen bg-[var(--page-background)]">
       <Header variant="full" />
-      <main className="flex-1 flex flex-col items-center p-6 sm:p-8 gap-10">
+      <main id="main-content" className="flex-1 flex flex-col items-center p-6 sm:p-8 gap-10">
         <div className="max-w-4xl w-full">
           <div className="mb-4 flex justify-center">
             <PrivacyBadge />

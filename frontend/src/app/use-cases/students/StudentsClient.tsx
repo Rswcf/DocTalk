@@ -393,7 +393,7 @@ export default function StudentsClient() {
                 <ArrowRight className="ml-2 w-4 h-4" />
               </Link>
               <Link
-                href="/billing"
+                href="/pricing"
                 className="inline-flex items-center px-6 py-3 border border-zinc-200 dark:border-zinc-700 text-zinc-900 dark:text-zinc-100 rounded-lg font-medium hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors"
               >
                 View Pricing

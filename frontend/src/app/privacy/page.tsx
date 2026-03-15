@@ -1,16 +1,17 @@
 import type { Metadata } from 'next';
 import PrivacyPageClient from './PrivacyPageClient';
+import { buildMarketingMetadata } from '../../lib/seo';
 
-export const metadata: Metadata = {
-  title: 'Privacy Policy',
-  description: 'Learn how DocTalk handles your data. Our privacy policy covers data collection, storage, your rights, and GDPR compliance.',
-  alternates: { canonical: '/privacy' },
+export const metadata: Metadata = buildMarketingMetadata({
+  title: 'Privacy Policy for DocTalk',
+  description:
+    'Learn how DocTalk handles your data, storage, deletion rights, and GDPR-aligned privacy controls for uploaded documents.',
+  path: '/privacy',
   openGraph: {
-    title: 'Privacy Policy — DocTalk',
-    description: 'How DocTalk handles your data. We use AES-256 encryption and never train AI on your documents.',
-    url: 'https://www.doctalk.site/privacy',
+    title: 'Privacy Policy | DocTalk',
+    description: 'How DocTalk handles your data, encryption, and document privacy controls.',
   },
-};
+});
 
 export default function PrivacyPage() {
   return (

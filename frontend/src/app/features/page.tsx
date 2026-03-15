@@ -1,16 +1,16 @@
 import type { Metadata } from 'next';
 import FeaturesHubClient from './FeaturesHubClient';
+import { buildMarketingMetadata } from '../../lib/seo';
 
-export const metadata: Metadata = {
-  title: 'Features | DocTalk',
-  description: 'Explore DocTalk\'s AI document analysis features: citation highlighting, multi-format support, 11 languages, free demo, and 3 performance modes.',
-  alternates: { canonical: '/features' },
+export const metadata: Metadata = buildMarketingMetadata({
+  title: 'AI Document Analysis Features: Citations, OCR & 11 Languages',
+  description:
+    'Explore DocTalk features for AI document analysis, including citation highlighting, multi-format uploads, OCR, multilingual support, and performance modes.',
+  path: '/features',
   openGraph: {
-    title: 'Features | DocTalk',
-    description: 'Explore DocTalk\'s AI document analysis features: citation highlighting, multi-format support, 11 languages, free demo, and 3 performance modes.',
-    url: 'https://www.doctalk.site/features',
+    title: 'AI Document Analysis Features | DocTalk',
   },
-};
+});
 
 export default function FeaturesPage() {
   return (

@@ -1,16 +1,18 @@
 import type { Metadata } from 'next';
 import HumataAltsClient from './HumataAltsClient';
+import { buildArticleJsonLd, buildMarketingMetadata } from '../../../lib/seo';
 
-export const metadata: Metadata = {
+export const metadata: Metadata = buildMarketingMetadata({
   title: '5 Best Humata AI Alternatives in 2026',
-  description: 'Looking for Humata alternatives? Compare DocTalk, ChatPDF, AskYourPDF, NotebookLM, and PDF.ai. Find AI document tools with better pricing, citations, and language support.',
-  alternates: { canonical: '/alternatives/humata' },
+  description:
+    'Looking for Humata alternatives? Compare DocTalk, ChatPDF, AskYourPDF, NotebookLM, and PDF.ai. Find AI document tools with better pricing, citations, and language support.',
+  path: '/alternatives/humata',
   openGraph: {
     title: '5 Best Humata AI Alternatives in 2026 | DocTalk',
-    description: 'Top Humata alternatives ranked by features, pricing, and use case. Citation highlighting, multi-format support, and free options.',
-    url: 'https://www.doctalk.site/alternatives/humata',
+    description:
+      'Top Humata alternatives ranked by features, pricing, and use case. Citation highlighting, multi-format support, and free options.',
   },
-};
+});
 
 const faqItems = [
   {
@@ -49,16 +51,15 @@ export default function HumataAltsPage() {
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{
-          __html: JSON.stringify({
-            '@context': 'https://schema.org',
-            '@type': 'Article',
-            headline: '5 Best Humata AI Alternatives in 2026',
-            description: 'A comprehensive guide to the best Humata AI alternatives for document analysis.',
-            author: { '@type': 'Organization', name: 'DocTalk' },
-            publisher: { '@type': 'Organization', name: 'DocTalk', url: 'https://www.doctalk.site' },
-            datePublished: '2026-02-18',
-            dateModified: '2026-02-18',
-          }),
+          __html: JSON.stringify(
+            buildArticleJsonLd({
+              title: '5 Best Humata AI Alternatives in 2026',
+              description:
+                'A comprehensive guide to the best Humata AI alternatives for document analysis.',
+              path: '/alternatives/humata',
+              datePublished: '2026-02-18',
+            })
+          ),
         }}
       />
       <script

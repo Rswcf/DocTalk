@@ -246,7 +246,25 @@ function BillingContent() {
   };
 
   if (status === "loading") {
-    return <div className="min-h-screen flex items-center justify-center bg-[var(--page-background)]">Loading...</div>;
+    return (
+      <div className="min-h-screen bg-[var(--page-background)]">
+        <Header />
+        <main id="main-content" className="flex min-h-[calc(100vh-4rem)] items-center justify-center p-8">
+          <p className="text-zinc-500 dark:text-zinc-400">Loading...</p>
+        </main>
+      </div>
+    );
+  }
+
+  if (status === "unauthenticated") {
+    return (
+      <div className="min-h-screen bg-[var(--page-background)]">
+        <Header />
+        <main id="main-content" className="flex min-h-[calc(100vh-4rem)] items-center justify-center p-8">
+          <p className="text-zinc-500 dark:text-zinc-400">Redirecting...</p>
+        </main>
+      </div>
+    );
   }
 
   const plusFeatures = [

@@ -1,18 +1,18 @@
 import type { Metadata } from 'next';
 import HrContractsClient from './HrContractsClient';
+import { buildArticleJsonLd, buildMarketingMetadata } from '../../../lib/seo';
 
-export const metadata: Metadata = {
+export const metadata: Metadata = buildMarketingMetadata({
   title: 'AI Contract & HR Document Review Tool | DocTalk',
   description:
     'Review employment contracts, HR policies, and company handbooks with AI. Get instant answers about specific clauses with source citations. Try free.',
-  alternates: { canonical: '/use-cases/hr-contracts' },
+  path: '/use-cases/hr-contracts',
   openGraph: {
     title: 'AI Contract & HR Document Review Tool | DocTalk',
     description:
       'Review employment contracts, HR policies, and company handbooks with AI. Get instant answers about specific clauses with source citations. Try free.',
-    url: 'https://www.doctalk.site/use-cases/hr-contracts',
   },
-};
+});
 
 const faqItems = [
   {
@@ -43,17 +43,15 @@ export default function HrContractsPage() {
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{
-          __html: JSON.stringify({
-            '@context': 'https://schema.org',
-            '@type': 'Article',
-            headline: 'AI-Powered Contract & HR Document Review',
-            description:
-              'How HR teams use DocTalk to review employment contracts, company handbooks, and HR policies with AI-powered cited answers.',
-            author: { '@type': 'Organization', name: 'DocTalk' },
-            publisher: { '@type': 'Organization', name: 'DocTalk', url: 'https://www.doctalk.site' },
-            datePublished: '2026-02-18',
-            dateModified: '2026-02-18',
-          }),
+          __html: JSON.stringify(
+            buildArticleJsonLd({
+              title: 'AI-Powered Contract & HR Document Review',
+              description:
+                'How HR teams use DocTalk to review employment contracts, company handbooks, and HR policies with AI-powered cited answers.',
+              path: '/use-cases/hr-contracts',
+              datePublished: '2026-02-18',
+            })
+          ),
         }}
       />
       <script

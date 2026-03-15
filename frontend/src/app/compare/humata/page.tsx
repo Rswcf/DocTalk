@@ -1,16 +1,18 @@
 import type { Metadata } from 'next';
 import HumataClient from './HumataClient';
+import { buildArticleJsonLd, buildMarketingMetadata } from '../../../lib/seo';
 
-export const metadata: Metadata = {
+export const metadata: Metadata = buildMarketingMetadata({
   title: 'DocTalk vs Humata: AI Document Tool Comparison',
-  description: 'Compare DocTalk and Humata AI for document analysis. DocTalk offers citation highlighting and 11 languages at lower prices. Humata has team features and video support.',
-  alternates: { canonical: '/compare/humata' },
+  description:
+    'Compare DocTalk and Humata AI for document analysis. DocTalk offers citation highlighting and 11 languages at lower prices. Humata has team features and video support.',
+  path: '/compare/humata',
   openGraph: {
     title: 'DocTalk vs Humata: AI Document Tool Comparison | DocTalk',
-    description: 'DocTalk vs Humata: citation highlighting, language support, team features, and pricing compared side by side.',
-    url: 'https://www.doctalk.site/compare/humata',
+    description:
+      'DocTalk vs Humata: citation highlighting, language support, team features, and pricing compared side by side.',
   },
-};
+});
 
 const faqItems = [
   {
@@ -37,16 +39,15 @@ export default function CompareHumataPage() {
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{
-          __html: JSON.stringify({
-            '@context': 'https://schema.org',
-            '@type': 'Article',
-            headline: 'DocTalk vs Humata: AI Document Tool Comparison',
-            description: 'A detailed comparison of DocTalk and Humata for AI document analysis, covering features, pricing, and use cases.',
-            author: { '@type': 'Organization', name: 'DocTalk' },
-            publisher: { '@type': 'Organization', name: 'DocTalk', url: 'https://www.doctalk.site' },
-            datePublished: '2026-02-18',
-            dateModified: '2026-02-18',
-          }),
+          __html: JSON.stringify(
+            buildArticleJsonLd({
+              title: 'DocTalk vs Humata: AI Document Tool Comparison',
+              description:
+                'A detailed comparison of DocTalk and Humata for AI document analysis, covering features, pricing, and use cases.',
+              path: '/compare/humata',
+              datePublished: '2026-02-18',
+            })
+          ),
         }}
       />
       <script
