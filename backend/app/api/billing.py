@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import uuid
+from datetime import datetime, timedelta, timezone
 from typing import Literal, Optional
 
 import stripe
@@ -69,6 +70,9 @@ def _credits_for_plan(plan: str) -> int:
 
 
 PLAN_HIERARCHY = {"free": 0, "plus": 1, "pro": 2}
+PENDING_SUBSCRIPTION_TTL = timedelta(minutes=10)
+_ALLOWANCE_INVOICE_REASONS = {"subscription_create", "subscription_cycle"}
+_ACTIVE_SUBSCRIPTION_STATUSES = {"active", "trialing"}
 
 
 def _interval_from_price_id(price_id: str) -> Optional[str]:
@@ -79,6 +83,80 @@ def _interval_from_price_id(price_id: str) -> Optional[str]:
     if price_id in annual:
         return "annual"
     return None
+
+
+def _as_utc(dt: Optional[datetime]) -> Optional[datetime]:
+    if dt is None:
+        return None
+    if dt.tzinfo is None:
+        return dt.replace(tzinfo=timezone.utc)
+    return dt.astimezone(timezone.utc)
+
+
+def _pending_subscription_is_stale(user: User) -> bool:
+    updated_at = _as_utc(getattr(user, "updated_at", None))
+    if updated_at is None:
+        return True
+    return datetime.now(timezone.utc) - updated_at >= PENDING_SUBSCRIPTION_TTL
+
+
+async def _list_customer_subscriptions(customer_id: str) -> list[dict]:
+    subs = await asyncio.to_thread(
+        stripe.Subscription.list,
+        customer=customer_id,
+        status="all",
+        limit=10,
+    )
+    return list(getattr(subs, "data", []) or [])
+
+
+async def _get_customer_active_subscription(customer_id: Optional[str]) -> Optional[dict]:
+    if not customer_id:
+        return None
+    for sub in await _list_customer_subscriptions(customer_id):
+        if sub.get("status") in _ACTIVE_SUBSCRIPTION_STATUSES:
+            return sub
+    return None
+
+
+async def _recover_pending_subscription(user: User, db: AsyncSession) -> bool:
+    """Recover or clear a stale pending subscription state.
+
+    Returns True when an actual active subscription was recovered and persisted.
+    Returns False when pending was cleared and checkout can continue.
+    Raises 409 when a recent pending checkout should still be treated as in-flight.
+    """
+    active_sub = await _get_customer_active_subscription(user.stripe_customer_id)
+    if active_sub:
+        user.stripe_subscription_id = active_sub["id"]
+        price_id = (
+            active_sub.get("items", {})
+            .get("data", [{}])[0]
+            .get("price", {})
+            .get("id", "")
+        )
+        detected_plan = _plan_from_price_id(price_id)
+        if detected_plan:
+            user.plan = detected_plan
+        await db.commit()
+        await cache_delete(f"user:profile:{user.id}")
+        logger.info(
+            "Recovered active subscription for user %s from pending state: %s",
+            user.id,
+            user.stripe_subscription_id,
+        )
+        return True
+
+    if not _pending_subscription_is_stale(user):
+        raise HTTPException(
+            409,
+            "A subscription checkout is already in progress. Please try again in a few minutes.",
+        )
+
+    user.stripe_subscription_id = None
+    await db.commit()
+    logger.info("Cleared stale pending subscription state for user %s", user.id)
+    return False
 
 
 @router.get("/products", response_model=BillingProductsResponse)
@@ -128,6 +206,13 @@ async def subscribe(
 ):
     if not settings.STRIPE_SECRET_KEY:
         raise HTTPException(503, "Stripe not configured")
+    if user.stripe_subscription_id == "pending":
+        recovered = await _recover_pending_subscription(user, db)
+        if recovered:
+            raise HTTPException(
+                400,
+                "You already have an active subscription. Use /change-plan to switch plans.",
+            )
     if user.stripe_subscription_id:
         raise HTTPException(
             400,
@@ -503,7 +588,16 @@ async def _handle_invoice_payment_succeeded(
         except Exception as e:
             logger.warning("Could not retrieve subscription to detect plan on invoice: %s", e)
 
-    allowance = _credits_for_plan(plan)
+    billing_reason = invoice.get("billing_reason")
+    should_grant_allowance = billing_reason in _ALLOWANCE_INVOICE_REASONS
+    if not should_grant_allowance:
+        logger.info(
+            "Skipping monthly allowance grant for invoice %s with billing_reason=%s",
+            invoice_id,
+            billing_reason,
+        )
+
+    allowance = _credits_for_plan(plan) if should_grant_allowance else 0
 
     # Idempotency: ensure we haven't granted for this invoice
     existing = await db.scalar(
@@ -546,6 +640,39 @@ async def _handle_subscription_deleted(
     if not user:
         return {"received": True}
 
+    deleted_subscription_id = subscription.get("id")
+    if (
+        deleted_subscription_id
+        and user.stripe_subscription_id
+        and deleted_subscription_id != user.stripe_subscription_id
+    ):
+        logger.info(
+            "Ignoring stale subscription.deleted webhook for user %s: deleted=%s current=%s",
+            user.id,
+            deleted_subscription_id,
+            user.stripe_subscription_id,
+        )
+        return {"received": True}
+
+    active_sub = await _get_customer_active_subscription(customer_id)
+    if active_sub and active_sub.get("id") != deleted_subscription_id:
+        active_sub_id = active_sub.get("id")
+        detected_plan = _plan_from_price_id(
+            active_sub.get("items", {}).get("data", [{}])[0].get("price", {}).get("id", "")
+        )
+        if active_sub_id and user.stripe_subscription_id != active_sub_id:
+            user.stripe_subscription_id = active_sub_id
+        if detected_plan:
+            user.plan = detected_plan
+        await db.commit()
+        await cache_delete(f"user:profile:{user.id}")
+        logger.info(
+            "Ignored subscription.deleted for user %s because active subscription %s still exists",
+            user.id,
+            active_sub_id,
+        )
+        return {"received": True}
+
     if user.plan == "free" and not user.stripe_subscription_id:
         return {"received": True}
 
@@ -556,6 +683,36 @@ async def _handle_subscription_deleted(
         user.monthly_credits_granted_at = None
     await db.commit()
     await cache_delete(f"user:profile:{user.id}")
+    return {"received": True}
+
+
+async def _handle_checkout_session_expired(
+    session: dict,
+    db: AsyncSession,
+):
+    try:
+        client_ref = session.get("client_reference_id")
+        if not client_ref:
+            return {"received": True}
+        user_id = uuid.UUID(client_ref)
+    except (ValueError, TypeError):
+        return {"received": True}
+
+    user = await db.get(User, user_id)
+    if not user or user.stripe_subscription_id != "pending":
+        return {"received": True}
+
+    active_sub = await _get_customer_active_subscription(user.stripe_customer_id)
+    if active_sub:
+        user.stripe_subscription_id = active_sub.get("id")
+        await db.commit()
+        await cache_delete(f"user:profile:{user.id}")
+        return {"received": True}
+
+    user.stripe_subscription_id = None
+    await db.commit()
+    await cache_delete(f"user:profile:{user.id}")
+    logger.info("Cleared pending subscription after checkout.session.expired for user %s", user.id)
     return {"received": True}
 
 
@@ -669,6 +826,7 @@ async def stripe_webhook(request: Request, db: AsyncSession = Depends(get_db_ses
 
     handlers = {
         "checkout.session.completed": _handle_checkout_session_completed,
+        "checkout.session.expired": _handle_checkout_session_expired,
         "invoice.payment_succeeded": _handle_invoice_payment_succeeded,
         "customer.subscription.deleted": _handle_subscription_deleted,
         "customer.subscription.updated": _handle_subscription_updated,

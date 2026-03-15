@@ -31,6 +31,7 @@ from app.schemas.users import UsageBreakdownResponse, UserProfileResponse
 from app.services.doc_service import doc_service
 
 router = APIRouter(prefix="/api/users", tags=["users"])
+_CANCELLABLE_SUBSCRIPTION_STATUSES = {"active", "trialing", "past_due", "unpaid"}
 
 
 class UserMeResponse(BaseModel):
@@ -42,6 +43,24 @@ class UserMeResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+async def _resolve_active_subscription_id(user: User) -> Optional[str]:
+    if user.stripe_subscription_id and user.stripe_subscription_id != "pending":
+        return user.stripe_subscription_id
+    if not user.stripe_customer_id:
+        return None
+
+    subs = await asyncio.to_thread(
+        stripe.Subscription.list,
+        customer=user.stripe_customer_id,
+        status="all",
+        limit=10,
+    )
+    for sub in getattr(subs, "data", []) or []:
+        if sub.get("status") in _CANCELLABLE_SUBSCRIPTION_STATUSES:
+            return sub.get("id")
+    return None
 
 
 @router.get("/me", response_model=UserMeResponse)
@@ -353,15 +372,29 @@ async def delete_me(
     if failed_doc_ids:
         raise HTTPException(status_code=500, detail="Failed to delete all user documents")
 
-    # 3) Cancel Stripe subscription if active
-    try:
-        if settings.STRIPE_SECRET_KEY and user.stripe_subscription_id:
-            stripe.api_key = settings.STRIPE_SECRET_KEY
+    # 3) Cancel Stripe subscription if active before deleting the user row.
+    active_subscription_id: Optional[str] = None
+    if settings.STRIPE_SECRET_KEY and (user.stripe_subscription_id or user.stripe_customer_id):
+        stripe.api_key = settings.STRIPE_SECRET_KEY
+        try:
+            active_subscription_id = await _resolve_active_subscription_id(user)
+        except Exception as e:
+            log_security_event("stripe_lookup_failed", user_id=user.id, error=str(e))
+            raise HTTPException(status_code=502, detail="Failed to inspect active subscription")
+
+    if active_subscription_id:
+        try:
             await asyncio.to_thread(
-                stripe.Subscription.cancel, user.stripe_subscription_id
+                stripe.Subscription.cancel, active_subscription_id
             )
-    except Exception as e:
-        log_security_event("stripe_cancel_failed", user_id=user.id, error=str(e))
+        except Exception as e:
+            log_security_event(
+                "stripe_cancel_failed",
+                user_id=user.id,
+                subscription_id=active_subscription_id,
+                error=str(e),
+            )
+            raise HTTPException(status_code=502, detail="Failed to cancel active subscription")
 
     # 4) Delete user row (cascade handles accounts, credit_ledger, usage_records)
     try:
