@@ -100,6 +100,37 @@ export default function FeaturesHubClient() {
             })}
           </div>
 
+          <div className="mt-12 rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900/40 p-6">
+            <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100 mb-2">
+              Pair these features with real workflows
+            </h2>
+            <p className="text-sm text-zinc-600 dark:text-zinc-400 mb-4">
+              DocTalk works best when you connect product capabilities to an actual job: research,
+              legal review, finance analysis, or tool evaluation.
+            </p>
+            <div className="flex flex-wrap gap-3 text-sm">
+              <Link href="/use-cases/students" className="text-indigo-600 dark:text-indigo-400 hover:underline">
+                Students & Academics
+              </Link>
+              <span className="text-zinc-300 dark:text-zinc-700">|</span>
+              <Link href="/use-cases/lawyers" className="text-indigo-600 dark:text-indigo-400 hover:underline">
+                Legal Professionals
+              </Link>
+              <span className="text-zinc-300 dark:text-zinc-700">|</span>
+              <Link href="/use-cases/finance" className="text-indigo-600 dark:text-indigo-400 hover:underline">
+                Financial Analysts
+              </Link>
+              <span className="text-zinc-300 dark:text-zinc-700">|</span>
+              <Link href="/compare/chatpdf" className="text-indigo-600 dark:text-indigo-400 hover:underline">
+                DocTalk vs ChatPDF
+              </Link>
+              <span className="text-zinc-300 dark:text-zinc-700">|</span>
+              <Link href="/blog/category/comparisons" className="text-indigo-600 dark:text-indigo-400 hover:underline">
+                Comparison guides
+              </Link>
+            </div>
+          </div>
+
           {/* CTA */}
           <div className="mt-16 pt-12 border-t border-zinc-200 dark:border-zinc-800 text-center">
             <p className="text-zinc-600 dark:text-zinc-400 mb-5">

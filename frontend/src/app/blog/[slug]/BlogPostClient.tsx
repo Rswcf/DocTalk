@@ -285,7 +285,7 @@ export default function BlogPostClient({ post, relatedPosts }: BlogPostClientPro
                     href="/"
                     className="inline-flex items-center px-4 py-2 text-sm font-medium rounded-lg border border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-400 hover:border-zinc-400 dark:hover:border-zinc-600 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400 dark:focus-visible:ring-zinc-500 focus-visible:ring-offset-2"
                   >
-                    Learn More
+                    Explore DocTalk Features
                   </Link>
                 </div>
               </div>

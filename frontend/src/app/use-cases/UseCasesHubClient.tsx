@@ -92,6 +92,37 @@ export default function UseCasesHubClient() {
             })}
           </div>
 
+          <div className="mt-12 rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900/40 p-6">
+            <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100 mb-2">
+              Match the workflow to the right capability
+            </h2>
+            <p className="text-sm text-zinc-600 dark:text-zinc-400 mb-4">
+              Use cases land better when readers can immediately see which feature or comparison page
+              answers the next question.
+            </p>
+            <div className="flex flex-wrap gap-3 text-sm">
+              <Link href="/features/citations" className="text-indigo-600 dark:text-indigo-400 hover:underline">
+                Citation highlighting
+              </Link>
+              <span className="text-zinc-300 dark:text-zinc-700">|</span>
+              <Link href="/features/multi-format" className="text-indigo-600 dark:text-indigo-400 hover:underline">
+                Multi-format support
+              </Link>
+              <span className="text-zinc-300 dark:text-zinc-700">|</span>
+              <Link href="/features/performance-modes" className="text-indigo-600 dark:text-indigo-400 hover:underline">
+                Performance modes
+              </Link>
+              <span className="text-zinc-300 dark:text-zinc-700">|</span>
+              <Link href="/compare/notebooklm" className="text-indigo-600 dark:text-indigo-400 hover:underline">
+                NotebookLM comparison
+              </Link>
+              <span className="text-zinc-300 dark:text-zinc-700">|</span>
+              <Link href="/compare/humata" className="text-indigo-600 dark:text-indigo-400 hover:underline">
+                Humata comparison
+              </Link>
+            </div>
+          </div>
+
           {/* CTA */}
           <div className="mt-16 pt-12 border-t border-zinc-200 dark:border-zinc-800 text-center">
             <p className="text-zinc-600 dark:text-zinc-400 mb-5">

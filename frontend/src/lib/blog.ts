@@ -82,14 +82,14 @@ export const CATEGORY_META: Record<string, { label: string; description: string 
   },
   'use-cases': {
     label: 'Use Cases',
-    description: 'Real-world applications of AI document chat across industries.',
+    description: 'Real-world workflows for AI document chat across finance, legal, HR, research, and other document-heavy teams that need verifiable answers.',
   },
   product: {
     label: 'Product Updates',
-    description: 'Latest features, product improvements, releases, and announcements from the DocTalk team.',
+    description: 'Latest DocTalk features, release notes, product improvements, roadmap updates, and announcements that affect how teams analyze documents.',
   },
   'ai-insights': {
     label: 'AI Insights',
-    description: 'Deep dives into the retrieval, citation, and document analysis technology that powers DocTalk.',
+    description: 'Deep dives into retrieval, citation systems, document parsing, and the AI workflow decisions behind DocTalk\'s document analysis stack.',
   },
 };

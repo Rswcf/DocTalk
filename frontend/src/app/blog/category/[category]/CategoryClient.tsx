@@ -13,12 +13,50 @@ interface CategoryClientProps {
   posts: BlogPost[];
 }
 
+const CATEGORY_LINKS = [
+  { href: '/blog/category/guides', label: 'Guides' },
+  { href: '/blog/category/comparisons', label: 'Comparisons' },
+  { href: '/blog/category/use-cases', label: 'Use Cases' },
+  { href: '/blog/category/product', label: 'Product' },
+  { href: '/blog/category/ai-insights', label: 'AI Insights' },
+];
+
+const RELATED_LINKS: Record<string, { href: string; label: string }[]> = {
+  comparisons: [
+    { href: '/compare', label: 'Compare AI document tools' },
+    { href: '/alternatives', label: 'Browse alternatives' },
+    { href: '/pricing', label: 'Review pricing' },
+  ],
+  guides: [
+    { href: '/features', label: 'Explore features' },
+    { href: '/demo', label: 'Try the demo' },
+    { href: '/use-cases', label: 'See use cases' },
+  ],
+  'use-cases': [
+    { href: '/use-cases', label: 'Use-case hub' },
+    { href: '/features/citations', label: 'Citation highlighting' },
+    { href: '/features/multi-format', label: 'Multi-format support' },
+  ],
+  product: [
+    { href: '/pricing', label: 'Pricing overview' },
+    { href: '/features/performance-modes', label: 'Performance modes' },
+    { href: '/demo', label: 'Try the demo' },
+  ],
+  'ai-insights': [
+    { href: '/blog', label: 'All blog posts' },
+    { href: '/compare', label: 'Commercial comparisons' },
+    { href: '/alternatives', label: 'Alternative roundups' },
+  ],
+};
+
 export default function CategoryClient({
   category,
   label,
   description,
   posts,
 }: CategoryClientProps) {
+  const relatedLinks = RELATED_LINKS[category] ?? RELATED_LINKS.guides;
+
   return (
     <div className="min-h-screen flex flex-col bg-white dark:bg-zinc-950">
       <Header variant="minimal" />
@@ -40,11 +78,48 @@ export default function CategoryClient({
             <p className="text-lg text-zinc-500 dark:text-zinc-400 max-w-2xl">
               {description}
             </p>
+            <div className="flex flex-wrap gap-2 mt-6">
+              {CATEGORY_LINKS.map((item) => {
+                const isActive = item.href.endsWith(`/${category}`);
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    className={`px-3 py-1.5 text-sm rounded-full border transition-colors ${
+                      isActive
+                        ? 'bg-zinc-900 dark:bg-zinc-50 text-white dark:text-zinc-900 border-zinc-900 dark:border-zinc-50'
+                        : 'bg-white dark:bg-zinc-900 text-zinc-600 dark:text-zinc-400 border-zinc-200 dark:border-zinc-800 hover:border-zinc-400 dark:hover:border-zinc-600'
+                    }`}
+                  >
+                    {item.label}
+                  </Link>
+                );
+              })}
+            </div>
           </div>
         </section>
 
         {/* Grid */}
         <section className="max-w-4xl mx-auto px-6 py-12">
+          <div className="rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900/40 p-6 mb-10">
+            <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100 mb-2">
+              Continue from this topic
+            </h2>
+            <p className="text-sm text-zinc-600 dark:text-zinc-400 mb-4">
+              Use this category as a jump-off point into the most relevant product and research pages.
+            </p>
+            <div className="flex flex-wrap gap-3 text-sm">
+              {relatedLinks.map((item, index) => (
+                <span key={item.href} className="contents">
+                  {index > 0 ? <span className="text-zinc-300 dark:text-zinc-700">|</span> : null}
+                  <Link href={item.href} className="text-indigo-600 dark:text-indigo-400 hover:underline">
+                    {item.label}
+                  </Link>
+                </span>
+              ))}
+            </div>
+          </div>
+
           {posts.length === 0 ? (
             <div className="text-center py-16">
               <p className="text-zinc-500 dark:text-zinc-400 mb-4">

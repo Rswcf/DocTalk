@@ -1,6 +1,3 @@
-"use client";
-
-import { useState } from 'react';
 import Link from 'next/link';
 import Header from '../../components/Header';
 import Footer from '../../components/Footer';
@@ -58,14 +55,7 @@ interface BlogIndexClientProps {
 }
 
 export default function BlogIndexClient({ posts }: BlogIndexClientProps) {
-  const [activeCategory, setActiveCategory] = useState('all');
-
   const categories = ['all', ...Array.from(new Set(posts.map((p) => p.category)))];
-
-  const filtered =
-    activeCategory === 'all'
-      ? posts
-      : posts.filter((p) => p.category === activeCategory);
 
   return (
     <div className="min-h-screen flex flex-col bg-white dark:bg-zinc-950">
@@ -92,31 +82,54 @@ export default function BlogIndexClient({ posts }: BlogIndexClientProps) {
 
         {/* Filters + Grid */}
         <section className="max-w-4xl mx-auto px-6 py-12">
-          {/* Category Filters */}
+          {/* Category Links */}
           <div className="flex flex-wrap gap-2 mb-10">
             {categories.map((cat) => (
-              <button
+              <Link
                 key={cat}
-                onClick={() => setActiveCategory(cat)}
-                className={`px-4 py-1.5 text-sm font-medium rounded-full border cursor-pointer transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400 dark:focus-visible:ring-zinc-500 focus-visible:ring-offset-2 ${
-                  activeCategory === cat
-                    ? 'bg-zinc-900 dark:bg-zinc-50 text-white dark:text-zinc-900 border-zinc-900 dark:border-zinc-50'
-                    : 'bg-white dark:bg-zinc-900 text-zinc-600 dark:text-zinc-400 border-zinc-200 dark:border-zinc-800 hover:border-zinc-400 dark:hover:border-zinc-600'
-                }`}
+                href={cat === 'all' ? '/blog' : `/blog/category/${cat}`}
+                className="px-4 py-1.5 text-sm font-medium rounded-full border cursor-pointer transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400 dark:focus-visible:ring-zinc-500 focus-visible:ring-offset-2 bg-white dark:bg-zinc-900 text-zinc-600 dark:text-zinc-400 border-zinc-200 dark:border-zinc-800 hover:border-zinc-400 dark:hover:border-zinc-600"
               >
                 {CATEGORY_LABELS[cat] || cat}
-              </button>
+              </Link>
             ))}
           </div>
 
+          <div className="rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900/40 p-6 mb-10">
+            <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100 mb-2">
+              Start with the highest-intent research paths
+            </h2>
+            <p className="text-sm text-zinc-600 dark:text-zinc-400 mb-4 max-w-2xl">
+              If you are evaluating AI document tools, jump into comparison guides, product
+              benchmarks, and hands-on workflow pages before browsing the full archive.
+            </p>
+            <div className="flex flex-wrap gap-3 text-sm">
+              <Link href="/blog/category/comparisons" className="text-indigo-600 dark:text-indigo-400 hover:underline">
+                Comparison Guides
+              </Link>
+              <span className="text-zinc-300 dark:text-zinc-700">|</span>
+              <Link href="/compare" className="text-indigo-600 dark:text-indigo-400 hover:underline">
+                Tool Comparisons
+              </Link>
+              <span className="text-zinc-300 dark:text-zinc-700">|</span>
+              <Link href="/alternatives" className="text-indigo-600 dark:text-indigo-400 hover:underline">
+                Alternatives
+              </Link>
+              <span className="text-zinc-300 dark:text-zinc-700">|</span>
+              <Link href="/use-cases" className="text-indigo-600 dark:text-indigo-400 hover:underline">
+                Use Cases
+              </Link>
+            </div>
+          </div>
+
           {/* Post Grid */}
-          {filtered.length === 0 ? (
+          {posts.length === 0 ? (
             <p className="text-center text-zinc-500 dark:text-zinc-400 py-16">
               No posts in this category yet.
             </p>
           ) : (
             <div className="grid gap-5 sm:grid-cols-2">
-              {filtered.map((post) => (
+              {posts.map((post) => (
                 <PostCard key={post.slug} post={post} />
               ))}
             </div>

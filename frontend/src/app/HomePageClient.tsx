@@ -35,6 +35,43 @@ const MAX_UPLOAD_MB_BY_PLAN: Record<PlanTier, number> = {
 
 function LandingPageContent() {
   const { t } = useLocale();
+  const explorePaths = [
+    {
+      href: '/features/citations',
+      title: 'Citation Highlighting',
+      description: 'See how every answer links back to the exact source passage in your document.',
+    },
+    {
+      href: '/features/multi-format',
+      title: 'Multi-Format Support',
+      description: 'Work across PDFs, DOCX, PPTX, spreadsheets, Markdown files, and live URLs.',
+    },
+    {
+      href: '/features/free-demo',
+      title: 'No-Signup Demo',
+      description: 'Preview the product with sample documents before creating an account or uploading files.',
+    },
+    {
+      href: '/features/performance-modes',
+      title: 'Performance Modes',
+      description: 'Choose the right balance of speed, depth, and credit usage for each question.',
+    },
+    {
+      href: '/use-cases/finance',
+      title: 'Financial Analysis',
+      description: 'Review filings, earnings reports, and models with cited answers tied to the source.',
+    },
+    {
+      href: '/use-cases/hr-contracts',
+      title: 'HR & Contract Review',
+      description: 'Navigate employment policies, clauses, and handbook details without losing context.',
+    },
+    {
+      href: '/blog/category/comparisons',
+      title: 'Comparison Guides',
+      description: 'Read commercial-intent benchmarks across ChatPDF, NotebookLM, Humata, and more.',
+    },
+  ];
 
   return (
     <div className="flex flex-col min-h-screen bg-[var(--page-background)]">
@@ -89,6 +126,61 @@ function LandingPageContent() {
         <HowItWorks />
 
         <FeatureGrid />
+
+        <section className="w-full px-6 py-20">
+          <div className="max-w-6xl mx-auto">
+            <div className="max-w-2xl mb-10">
+              <p className="text-sm font-medium uppercase tracking-[0.18em] text-zinc-500 dark:text-zinc-400 mb-3">
+                Explore by workflow
+              </p>
+              <h2 className="font-display font-medium text-3xl tracking-tight text-zinc-900 dark:text-zinc-50 mb-4">
+                Start with the page that matches your question
+              </h2>
+              <p className="text-base text-zinc-600 dark:text-zinc-400 leading-relaxed">
+                Whether you are evaluating features, comparing tools, or solving a document-heavy
+                workflow, these high-intent paths take you deeper than the homepage overview.
+              </p>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
+              {explorePaths.map((path) => (
+                <Link
+                  key={path.href}
+                  href={path.href}
+                  className="group rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-6 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-[box-shadow,transform] duration-200"
+                >
+                  <div className="flex items-start justify-between gap-4 mb-3">
+                    <h3 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">
+                      {path.title}
+                    </h3>
+                    <span className="text-sm text-zinc-400 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
+                      →
+                    </span>
+                  </div>
+                  <p className="text-sm text-zinc-600 dark:text-zinc-400 leading-relaxed">
+                    {path.description}
+                  </p>
+                </Link>
+              ))}
+            </div>
+            <div className="mt-8 flex flex-wrap gap-3 text-sm">
+              <Link href="/features" className="text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors">
+                All features
+              </Link>
+              <span className="text-zinc-300 dark:text-zinc-700">|</span>
+              <Link href="/use-cases" className="text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors">
+                All use cases
+              </Link>
+              <span className="text-zinc-300 dark:text-zinc-700">|</span>
+              <Link href="/compare" className="text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors">
+                Compare tools
+              </Link>
+              <span className="text-zinc-300 dark:text-zinc-700">|</span>
+              <Link href="/alternatives" className="text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors">
+                Browse alternatives
+              </Link>
+            </div>
+          </div>
+        </section>
 
         <SocialProof />
 

@@ -75,6 +75,37 @@ export default function CompareHubClient() {
             ))}
           </div>
 
+          <div className="mt-12 rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900/40 p-6">
+            <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100 mb-2">
+              Widen the research path
+            </h2>
+            <p className="text-sm text-zinc-600 dark:text-zinc-400 mb-4">
+              Head-to-head pages convert best when readers can branch into category guides,
+              alternatives, and the core features behind the verdict.
+            </p>
+            <div className="flex flex-wrap gap-3 text-sm">
+              <Link href="/alternatives" className="text-indigo-600 dark:text-indigo-400 hover:underline">
+                Alternatives hub
+              </Link>
+              <span className="text-zinc-300 dark:text-zinc-700">|</span>
+              <Link href="/blog/category/comparisons" className="text-indigo-600 dark:text-indigo-400 hover:underline">
+                Comparison guides
+              </Link>
+              <span className="text-zinc-300 dark:text-zinc-700">|</span>
+              <Link href="/features/citations" className="text-indigo-600 dark:text-indigo-400 hover:underline">
+                Citation highlighting
+              </Link>
+              <span className="text-zinc-300 dark:text-zinc-700">|</span>
+              <Link href="/features/multilingual" className="text-indigo-600 dark:text-indigo-400 hover:underline">
+                11-language support
+              </Link>
+              <span className="text-zinc-300 dark:text-zinc-700">|</span>
+              <Link href="/pricing" className="text-indigo-600 dark:text-indigo-400 hover:underline">
+                Pricing overview
+              </Link>
+            </div>
+          </div>
+
           {/* Link to alternatives */}
           <div className="mt-16 pt-12 border-t border-zinc-200 dark:border-zinc-800 text-center">
             <p className="text-zinc-600 dark:text-zinc-400 mb-5">
