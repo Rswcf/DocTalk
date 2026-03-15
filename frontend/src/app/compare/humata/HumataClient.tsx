@@ -4,6 +4,7 @@ import React from 'react';
 import Link from 'next/link';
 import Header from '../../../components/Header';
 import Footer from '../../../components/Footer';
+import ArticleMeta from '../../../components/seo/ArticleMeta';
 import ComparisonTable from '../../../components/seo/ComparisonTable';
 import FAQSection from '../../../components/seo/FAQSection';
 import CTABanner from '../../../components/seo/CTABanner';
@@ -65,6 +66,7 @@ export default function HumataClient() {
             real-time citation highlighting, seven document formats, and a fully multilingual interface at a
             more affordable price point. Here is how they stack up across every important dimension.
           </p>
+          <ArticleMeta author="DocTalk Team" published="2026-02-18" className="mt-6" />
         </section>
 
         {/* Quick Comparison Table */}

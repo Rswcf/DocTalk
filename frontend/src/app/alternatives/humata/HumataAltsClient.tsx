@@ -4,6 +4,7 @@ import React from 'react';
 import Link from 'next/link';
 import Header from '../../../components/Header';
 import Footer from '../../../components/Footer';
+import ArticleMeta from '../../../components/seo/ArticleMeta';
 import FAQSection from '../../../components/seo/FAQSection';
 import CTABanner from '../../../components/seo/CTABanner';
 import { Award, Check } from 'lucide-react';
@@ -55,6 +56,7 @@ export default function HumataAltsClient() {
             for improvement. Whether you need better citations, more document formats, multilingual support,
             or simply better value for individual use, these five alternatives are worth considering.
           </p>
+          <ArticleMeta author="DocTalk Team" published="2026-02-18" className="mt-6" />
         </section>
 
         {/* #1 DocTalk */}

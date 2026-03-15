@@ -4,9 +4,9 @@ import BlogIndexClient from './BlogIndexClient';
 import { buildMarketingMetadata } from '../../lib/seo';
 
 export const metadata: Metadata = buildMarketingMetadata({
-  title: 'AI Document Analysis Blog: Guides, Comparisons & Tips',
+  title: 'DocTalk Blog: Guides, Comparisons & Tips',
   description:
-    'Read practical guides, product comparisons, and AI document workflow tips for PDFs, DOCX, PPTX, spreadsheets, and web pages.',
+    'Read practical guides, product comparisons, and workflow tips for AI document analysis across PDFs, DOCX, PPTX, spreadsheets, and web pages.',
   path: '/blog',
   openGraph: {
     title: 'AI Document Analysis Blog | DocTalk',

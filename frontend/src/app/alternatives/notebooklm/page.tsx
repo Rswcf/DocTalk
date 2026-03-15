@@ -3,12 +3,12 @@ import NotebooklmAltsClient from './NotebooklmAltsClient';
 import { buildArticleJsonLd, buildMarketingMetadata } from '../../../lib/seo';
 
 export const metadata: Metadata = buildMarketingMetadata({
-  title: '6 Best NotebookLM Alternatives for Document Analysis (2026)',
+  title: 'Best NotebookLM Alternatives for Documents | DocTalk',
   description:
-    'Looking for NotebookLM alternatives? Compare DocTalk, ChatPDF, AskYourPDF, Humata, Consensus, and Elicit. Find document AI tools without Google lock-in.',
+    'Compare NotebookLM alternatives including DocTalk, ChatPDF, AskYourPDF, Humata, Consensus, and Elicit for document analysis without Google lock-in.',
   path: '/alternatives/notebooklm',
   openGraph: {
-    title: '6 Best NotebookLM Alternatives for Document Analysis (2026) | DocTalk',
+    title: 'Best NotebookLM Alternatives for Documents | DocTalk',
     description:
       'Top NotebookLM alternatives for AI document analysis. Citation highlighting, multi-format support, and privacy-first options.',
   },

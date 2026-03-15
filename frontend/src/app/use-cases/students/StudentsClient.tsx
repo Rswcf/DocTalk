@@ -4,6 +4,7 @@ import React from 'react';
 import Link from 'next/link';
 import Header from '../../../components/Header';
 import Footer from '../../../components/Footer';
+import ArticleMeta from '../../../components/seo/ArticleMeta';
 import {
   GraduationCap,
   BookOpen,
@@ -73,6 +74,7 @@ export default function StudentsClient() {
           <p className="text-lg text-zinc-500 dark:text-zinc-400 max-w-2xl mx-auto mb-8">
             Upload research papers, textbooks, or dissertations and get AI-powered answers with page-level citations you can verify. Spend less time reading and more time understanding.
           </p>
+          <ArticleMeta author="DocTalk Team" published="2026-02-18" centered className="mb-8" />
           <Link
             href="/demo"
             className="inline-flex items-center px-6 py-3 bg-zinc-900 dark:bg-zinc-50 text-white dark:text-zinc-900 rounded-lg font-medium hover:bg-zinc-800 dark:hover:bg-zinc-200 transition-colors"

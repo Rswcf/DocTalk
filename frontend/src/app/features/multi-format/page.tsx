@@ -3,12 +3,12 @@ import MultiFormatClient from './MultiFormatClient';
 import { buildMarketingMetadata } from '../../../lib/seo';
 
 export const metadata: Metadata = buildMarketingMetadata({
-  title: 'Chat with Any Document: PDF, DOCX, PPTX, XLSX & More | DocTalk',
+  title: 'Chat with PDF, DOCX, PPTX, XLSX & More | DocTalk',
   description:
-    'Upload PDF, Word, PowerPoint, Excel, TXT, Markdown, or any URL. DocTalk\'s AI reads your document and answers questions with cited sources. Try free.',
+    'Upload PDF, Word, PowerPoint, Excel, TXT, Markdown, or a URL. DocTalk reads your document and answers questions with cited sources. Try it free.',
   path: '/features/multi-format',
   openGraph: {
-    title: 'Chat with Any Document: PDF, DOCX, PPTX, XLSX & More | DocTalk',
+    title: 'Chat with PDF, DOCX, PPTX, XLSX & More | DocTalk',
     description:
       'Upload PDF, Word, PowerPoint, Excel, TXT, Markdown, or any URL. DocTalk\'s AI reads your document and answers questions with cited sources.',
   },

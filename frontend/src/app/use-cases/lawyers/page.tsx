@@ -3,12 +3,12 @@ import LawyersClient from './LawyersClient';
 import { buildArticleJsonLd, buildMarketingMetadata } from '../../../lib/seo';
 
 export const metadata: Metadata = buildMarketingMetadata({
-  title: 'AI Legal Document Analysis: Contracts, Filings & More | DocTalk',
+  title: 'AI Legal Document Analysis | DocTalk',
   description:
-    'Review contracts, court filings, and legal documents with AI. Get cited answers with exact clause references. Secure, private, and GDPR-compliant. Try free.',
+    'Review contracts, court filings, and legal documents with AI. Get cited answers with exact clause references and verify every result.',
   path: '/use-cases/lawyers',
   openGraph: {
-    title: 'AI Legal Document Analysis: Contracts, Filings & More | DocTalk',
+    title: 'AI Legal Document Analysis | DocTalk',
     description:
       'Review contracts, court filings, and legal documents with AI. Get cited answers with exact clause references. Secure, private, and GDPR-compliant. Try free.',
   },

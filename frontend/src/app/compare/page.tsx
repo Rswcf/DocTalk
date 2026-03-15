@@ -3,9 +3,9 @@ import CompareHubClient from './CompareHubClient';
 import { buildMarketingMetadata } from '../../lib/seo';
 
 export const metadata: Metadata = buildMarketingMetadata({
-  title: 'AI Document Tool Comparisons: ChatPDF, NotebookLM, Humata & More',
+  title: 'Compare DocTalk with ChatPDF, NotebookLM & More',
   description:
-    'Compare DocTalk with ChatPDF, AskYourPDF, NotebookLM, Humata, PDF.ai, and other document AI tools using feature tables, pricing, and verdicts.',
+    'Compare DocTalk with ChatPDF, AskYourPDF, NotebookLM, Humata, and PDF.ai using feature tables, pricing breakdowns, and honest verdicts.',
   path: '/compare',
   openGraph: {
     title: 'AI Document Tool Comparisons | DocTalk',

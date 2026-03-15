@@ -178,7 +178,11 @@ export function AuthFormContent({ callbackUrl }: AuthFormContentProps) {
         </div>
       ) : (
         <form onSubmit={handleEmailSubmit} className="space-y-3">
+          <label htmlFor="auth-email" className="sr-only">
+            {t("auth.emailPlaceholder")}
+          </label>
           <input
+            id="auth-email"
             type="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}

@@ -5,7 +5,7 @@ import { buildMarketingMetadata } from '../../lib/seo';
 export const metadata: Metadata = buildMarketingMetadata({
   title: 'Best Alternatives to ChatPDF, NotebookLM & Humata',
   description:
-    'Find the best alternatives to ChatPDF, NotebookLM, Humata, and other AI document tools with comparisons on features, pricing, and fit.',
+    'Find the best alternatives to ChatPDF, NotebookLM, Humata, and other AI document tools with comparisons on features, pricing, and best-fit use cases.',
   path: '/alternatives',
   openGraph: {
     title: 'AI Document Tool Alternatives | DocTalk',

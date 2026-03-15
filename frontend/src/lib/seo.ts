@@ -115,7 +115,7 @@ export function buildArticleJsonLd({
   path,
   datePublished,
   dateModified,
-  authorName = 'DocTalk',
+  authorName = 'DocTalk Team',
   imagePath,
   keywords,
 }: ArticleJsonLdOptions) {

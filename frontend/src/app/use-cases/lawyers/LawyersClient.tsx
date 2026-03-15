@@ -4,6 +4,7 @@ import React from 'react';
 import Link from 'next/link';
 import Header from '../../../components/Header';
 import Footer from '../../../components/Footer';
+import ArticleMeta from '../../../components/seo/ArticleMeta';
 import {
   Scale,
   Search,
@@ -75,6 +76,7 @@ export default function LawyersClient() {
           <p className="text-lg text-zinc-500 dark:text-zinc-400 max-w-2xl mx-auto mb-8">
             Review contracts, court filings, and regulatory documents faster with AI that cites exact clauses. Every answer links to the source text so you can verify before you rely.
           </p>
+          <ArticleMeta author="DocTalk Team" published="2026-02-18" centered className="mb-8" />
           <Link
             href="/demo"
             className="inline-flex items-center px-6 py-3 bg-zinc-900 dark:bg-zinc-50 text-white dark:text-zinc-900 rounded-lg font-medium hover:bg-zinc-800 dark:hover:bg-zinc-200 transition-colors"

@@ -6,7 +6,7 @@ export default function robots(): MetadataRoute.Robots {
       {
         userAgent: "*",
         allow: "/",
-        disallow: ["/api/", "/auth/", "/profile", "/collections", "/admin", "/d/"],
+        disallow: ["/api/", "/auth", "/billing", "/profile", "/collections", "/admin", "/d/"],
       },
     ],
     sitemap: "https://www.doctalk.site/sitemap.xml",

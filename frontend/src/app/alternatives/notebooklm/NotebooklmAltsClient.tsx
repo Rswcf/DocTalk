@@ -4,6 +4,7 @@ import React from 'react';
 import Link from 'next/link';
 import Header from '../../../components/Header';
 import Footer from '../../../components/Footer';
+import ArticleMeta from '../../../components/seo/ArticleMeta';
 import FAQSection from '../../../components/seo/FAQSection';
 import CTABanner from '../../../components/seo/CTABanner';
 import { Award, Check } from 'lucide-react';
@@ -56,6 +57,7 @@ export default function NotebooklmAltsClient() {
             citation verification, or a multilingual interface, these six alternatives offer compelling
             reasons to look beyond NotebookLM.
           </p>
+          <ArticleMeta author="DocTalk Team" published="2026-02-18" className="mt-6" />
         </section>
 
         {/* #1 DocTalk */}
