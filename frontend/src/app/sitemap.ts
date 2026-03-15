@@ -1,12 +1,11 @@
 import type { MetadataRoute } from "next";
-import { getAllCategories, getAllPosts } from "../lib/blog";
+import { getAllPosts, KNOWN_BLOG_CATEGORIES } from "../lib/blog";
 
 const BASE_URL = "https://www.doctalk.site";
 
 export default function sitemap(): MetadataRoute.Sitemap {
   const generatedAt = new Date();
   const posts = getAllPosts();
-  const categories = getAllCategories();
 
   return [
     // Static pages
@@ -44,7 +43,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     { url: `${BASE_URL}/use-cases/finance`, lastModified: generatedAt, changeFrequency: "monthly", priority: 0.7 },
     { url: `${BASE_URL}/use-cases/hr-contracts`, lastModified: generatedAt, changeFrequency: "monthly", priority: 0.6 },
     // Blog content
-    ...categories.map((category) => ({
+    ...KNOWN_BLOG_CATEGORIES.map((category) => ({
       url: `${BASE_URL}/blog/category/${category}`,
       lastModified: generatedAt,
       changeFrequency: "weekly" as const,

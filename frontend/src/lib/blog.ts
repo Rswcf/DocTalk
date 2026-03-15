@@ -21,6 +21,14 @@ export interface BlogPost {
 
 const BLOG_DIR = path.join(process.cwd(), 'content', 'blog');
 
+export const KNOWN_BLOG_CATEGORIES = [
+  'guides',
+  'comparisons',
+  'use-cases',
+  'product',
+  'ai-insights',
+] as const;
+
 export function getAllPosts(): BlogPost[] {
   if (!fs.existsSync(BLOG_DIR)) return [];
 
@@ -67,7 +75,8 @@ export function getPostsByCategory(category: string): BlogPost[] {
 
 export function getAllCategories(): string[] {
   const posts = getAllPosts();
-  const cats = new Set(posts.map((p) => p.category));
+  const cats = new Set<string>(KNOWN_BLOG_CATEGORIES);
+  posts.forEach((post) => cats.add(post.category));
   return Array.from(cats);
 }
 

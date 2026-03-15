@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
-import { getPostsByCategory, CATEGORY_META } from '../../../../lib/blog';
+import { getPostsByCategory, CATEGORY_META, KNOWN_BLOG_CATEGORIES } from '../../../../lib/blog';
 import CategoryClient from './CategoryClient';
 import { buildMarketingMetadata } from '../../../../lib/seo';
 
@@ -8,10 +8,8 @@ interface Props {
   params: { category: string };
 }
 
-const KNOWN_CATEGORIES = ['guides', 'comparisons', 'use-cases', 'product', 'ai-insights'];
-
 export function generateStaticParams() {
-  return KNOWN_CATEGORIES.map((category) => ({ category }));
+  return KNOWN_BLOG_CATEGORIES.map((category) => ({ category }));
 }
 
 export function generateMetadata({ params }: Props): Metadata {
