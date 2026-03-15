@@ -71,3 +71,38 @@ async def test_delete_me_aborts_when_any_document_delete_fails(monkeypatch: pyte
     db.rollback.assert_awaited_once()
     db.delete.assert_not_awaited()
     db.commit.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+async def test_delete_me_aborts_when_subscription_cancel_fails(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    user = SimpleNamespace(
+        id=uuid.uuid4(),
+        email="user@example.com",
+        stripe_subscription_id="sub_live",
+        stripe_customer_id=None,
+    )
+    db = SimpleNamespace(
+        execute=AsyncMock(return_value=SimpleNamespace(all=lambda: [])),
+        rollback=AsyncMock(),
+        delete=AsyncMock(),
+        commit=AsyncMock(),
+    )
+
+    async def fake_delete_document(_document_id: uuid.UUID, _db) -> bool:
+        return True
+
+    monkeypatch.setattr(users_api.doc_service, "delete_document", fake_delete_document)
+    monkeypatch.setattr(users_api.settings, "STRIPE_SECRET_KEY", "sk_test")
+    monkeypatch.setattr(
+        users_api.stripe.Subscription,
+        "cancel",
+        lambda _subscription_id: (_ for _ in ()).throw(RuntimeError("stripe down")),
+    )
+
+    with pytest.raises(HTTPException) as exc:
+        await users_api.delete_me(user=user, db=db)
+
+    assert exc.value.status_code == 502
+    db.delete.assert_not_awaited()

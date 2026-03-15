@@ -128,7 +128,8 @@ class DocService:
         if not doc:
             return False
 
-        storage_ok = True
+        original_storage_ok = True
+        converted_storage_ok = True
         qdrant_ok = True
         storage_key = doc.storage_key
         converted_key = doc.converted_storage_key
@@ -137,7 +138,7 @@ class DocService:
         try:
             await asyncio.to_thread(storage_service.delete_file, storage_key)
         except Exception as e:
-            storage_ok = False
+            original_storage_ok = False
             logger.error("MinIO deletion failed for doc %s: %s", document_id, e)
 
         # Best-effort: clean up converted PDF if it exists
@@ -145,7 +146,7 @@ class DocService:
             try:
                 await asyncio.to_thread(storage_service.delete_file, converted_key)
             except Exception as e:
-                storage_ok = False
+                converted_storage_ok = False
                 logger.error("MinIO deletion of converted PDF failed for doc %s: %s", document_id, e)
 
         # Best-effort: clean up Qdrant vectors (sync call, run off event loop)
@@ -173,16 +174,20 @@ class DocService:
 
         log_security_event(
             "document_deleted", document_id=document_id, user_id=doc.user_id,
-            storage_cleaned=storage_ok, vectors_cleaned=qdrant_ok,
+            storage_cleaned=original_storage_ok and converted_storage_ok,
+            original_storage_cleaned=original_storage_ok,
+            converted_storage_cleaned=converted_storage_ok,
+            vectors_cleaned=qdrant_ok,
         )
 
         # Queue retry task if any cleanup failed
-        if not storage_ok or not qdrant_ok:
+        if not original_storage_ok or not converted_storage_ok or not qdrant_ok:
             try:
                 from app.workers.deletion_worker import retry_failed_deletion
                 retry_failed_deletion.delay(
                     str(document_id),
-                    storage_key=storage_key if not storage_ok else None,
+                    original_storage_key=storage_key if not original_storage_ok else None,
+                    converted_storage_key=converted_key if not converted_storage_ok else None,
                     cleanup_qdrant=not qdrant_ok,
                 )
             except Exception:

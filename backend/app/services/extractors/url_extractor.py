@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from typing import List, Optional, Tuple
+from urllib.parse import urljoin, urlparse
 
 import httpx
 from bs4 import BeautifulSoup
@@ -15,7 +16,31 @@ FETCH_TIMEOUT = 30  # seconds
 MAX_REDIRECTS = 3
 
 
-def _fetch_with_safe_redirects(url: str) -> httpx.Response:
+def _read_response_bytes_limited(
+    response: httpx.Response,
+    *,
+    max_content_size: int = MAX_CONTENT_SIZE,
+) -> bytes:
+    content_length = response.headers.get("content-length")
+    if content_length:
+        try:
+            if int(content_length) > max_content_size:
+                raise ValueError("URL_CONTENT_TOO_LARGE")
+        except ValueError as exc:
+            if str(exc) == "URL_CONTENT_TOO_LARGE":
+                raise
+
+    chunks: list[bytes] = []
+    total = 0
+    for chunk in response.iter_bytes():
+        total += len(chunk)
+        if total > max_content_size:
+            raise ValueError("URL_CONTENT_TOO_LARGE")
+        chunks.append(chunk)
+    return b"".join(chunks)
+
+
+def _fetch_with_safe_redirects(url: str) -> tuple[str, str, str, bytes]:
     """Fetch a URL, manually following redirects and validating each hop."""
     validate_url(url)
     current_url = url
@@ -23,30 +48,31 @@ def _fetch_with_safe_redirects(url: str) -> httpx.Response:
 
     with httpx.Client(timeout=FETCH_TIMEOUT, follow_redirects=False) as client:
         for _hop in range(MAX_REDIRECTS + 1):
-            response = client.get(current_url, headers={
-                'User-Agent': 'Mozilla/5.0 (compatible; DocTalk/1.0)',
-            })
+            with client.stream(
+                "GET",
+                current_url,
+                headers={"User-Agent": "Mozilla/5.0 (compatible; DocTalk/1.0)"},
+            ) as response:
+                if response.is_redirect:
+                    location = response.headers.get("location", "")
+                    if not location:
+                        raise ValueError("REDIRECT_NO_LOCATION")
 
-            if response.is_redirect:
-                location = response.headers.get('location', '')
-                if not location:
-                    raise ValueError("REDIRECT_NO_LOCATION")
+                    redirect_url = urljoin(current_url, location)
 
-                # Resolve relative redirects
-                redirect_url = str(response.next_request.url) if response.next_request else location
+                    if redirect_url in seen_urls:
+                        raise ValueError("REDIRECT_LOOP")
+                    seen_urls.add(redirect_url)
 
-                # Detect redirect loops
-                if redirect_url in seen_urls:
-                    raise ValueError("REDIRECT_LOOP")
-                seen_urls.add(redirect_url)
+                    validate_url(redirect_url)
+                    current_url = redirect_url
+                    continue
 
-                # Validate the redirect target before following
-                validate_url(redirect_url)
-                current_url = redirect_url
-                continue
-
-            response.raise_for_status()
-            return response
+                response.raise_for_status()
+                content_type = response.headers.get("content-type", "").lower()
+                encoding = response.encoding or "utf-8"
+                body = _read_response_bytes_limited(response)
+                return current_url, content_type, encoding, body
 
     raise ValueError("TOO_MANY_REDIRECTS")
 
@@ -59,23 +85,19 @@ def fetch_and_extract_url(url: str) -> Tuple[str, List[ExtractedPage], Optional[
         - If the URL points to a PDF, returns (filename, [], pdf_bytes)
         - Otherwise returns (title, extracted_pages, None)
     """
-    response = _fetch_with_safe_redirects(url)
-
-    content_type = response.headers.get('content-type', '').lower()
-
-    if len(response.content) > MAX_CONTENT_SIZE:
-        raise ValueError("URL_CONTENT_TOO_LARGE")
+    final_url, content_type, encoding, response_body = _fetch_with_safe_redirects(url)
 
     # If URL returns a PDF, signal caller to use PDF pipeline
     if 'application/pdf' in content_type:
         # Extract filename from URL or Content-Disposition
-        filename = url.rstrip('/').split('/')[-1]
+        filename = urlparse(final_url).path.rstrip('/').split('/')[-1]
         if not filename.lower().endswith('.pdf'):
             filename = 'downloaded.pdf'
-        return filename, [], response.content
+        return filename, [], response_body
 
     # Parse HTML
-    soup = BeautifulSoup(response.text, 'html.parser')
+    html = response_body.decode(encoding, errors="replace")
+    soup = BeautifulSoup(html, 'html.parser')
 
     # Extract title
     title = ''

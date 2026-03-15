@@ -57,6 +57,28 @@ def _is_valid_bbox(bb: dict) -> bool:
     return all(isinstance(bb.get(k), (int, float)) for k in ("x", "y", "w", "h"))
 
 
+async def _refund_predebit(
+    db: AsyncSession,
+    user_id: uuid.UUID,
+    pre_debited: int,
+    predebit_ledger_id: uuid.UUID,
+) -> None:
+    """Best-effort refund for chat failures before final accounting."""
+    try:
+        await db.rollback()
+    except Exception:
+        pass
+
+    await db.execute(
+        sa.update(User).where(User.id == user_id)
+        .values(credits_balance=User.credits_balance + pre_debited)
+    )
+    await db.execute(
+        sa.delete(CreditLedger).where(CreditLedger.id == predebit_ledger_id)
+    )
+    await db.commit()
+
+
 # ---------------------------
 # RefParserFSM
 # ---------------------------
@@ -270,102 +292,122 @@ class ChatService:
                 )
                 return
 
-        # 2) Save user message
-        user_msg = Message(session_id=session_id, role="user", content=user_message)
-        db.add(user_msg)
-        await db.commit()
-
-        # Auto-set session title from first user message
-        session = await db.get(ChatSession, session_id)
-        if session and not session.title:
-            clean = user_message.replace("\n", " ").replace("\r", "").strip()
-            session.title = clean[:50]
+        setup_error_code = "CHAT_SETUP_ERROR"
+        try:
+            # 2) Save user message
+            user_msg = Message(session_id=session_id, role="user", content=user_message)
+            db.add(user_msg)
             await db.commit()
 
-        # 3) Load history (last N*2 messages before current user msg)
-        max_turns = int(settings.MAX_CHAT_HISTORY_TURNS or 6)
-        max_msgs = max_turns * 2
-        msgs_row = await db.execute(
-            select(Message)
-            .where(Message.session_id == session_id)
-            .order_by(Message.created_at.desc())
-            .limit(max_msgs + 1)
-        )
-        history_msgs: List[Message] = list(msgs_row.scalars().all())
-        history_msgs.reverse()  # back to chronological order
+            # Auto-set session title from first user message
+            session = await db.get(ChatSession, session_id)
+            if session and not session.title:
+                clean = user_message.replace("\n", " ").replace("\r", "").strip()
+                session.title = clean[:50]
+                await db.commit()
 
-        # Convert to Claude message format (excluding system)
-        claude_messages: List[dict] = []
-        for m in history_msgs:
-            claude_messages.append({"role": m.role, "content": m.content})
+            # 3) Load history (last N*2 messages before current user msg)
+            max_turns = int(settings.MAX_CHAT_HISTORY_TURNS or 6)
+            max_msgs = max_turns * 2
+            msgs_row = await db.execute(
+                select(Message)
+                .where(Message.session_id == session_id)
+                .order_by(Message.created_at.desc())
+                .limit(max_msgs + 1)
+            )
+            history_msgs: List[Message] = list(msgs_row.scalars().all())
+            history_msgs.reverse()  # back to chronological order
 
-        # 4) Retrieval (with error handling — e.g. Qdrant down or no vectors yet)
-        try:
+            # Convert to Claude message format (excluding system)
+            claude_messages: List[dict] = []
+            for m in history_msgs:
+                claude_messages.append({"role": m.role, "content": m.content})
+
+            # 4) Retrieval (with error handling — e.g. Qdrant down or no vectors yet)
+            setup_error_code = "RETRIEVAL_ERROR"
             if is_collection_session and collection_doc_ids:
                 retrieved = await retrieval_service.search_multi(
                     user_message, collection_doc_ids, top_k=8, db=db
                 )
             elif document_id:
-                retrieved = await retrieval_service.search(user_message, document_id, top_k=8, db=db)
+                retrieved = await retrieval_service.search(
+                    user_message, document_id, top_k=8, db=db
+                )
             else:
                 retrieved = []
+
+            # 5) Build prompt (system)
+            setup_error_code = "CHAT_SETUP_ERROR"
+            numbered_chunks: List[str] = []
+            chunk_map: dict[int, _ChunkInfo] = {}
+            for idx, item in enumerate(retrieved, start=1):
+                # Heuristic truncation to ~350 tokens (roughly 1200-1400 chars)
+                text = item["text"] or ""
+                truncated = text[:1400]
+                chunk_doc_id = item.get("document_id")
+                doc_label = ""
+                if is_collection_session and chunk_doc_id:
+                    fname = collection_doc_names.get(chunk_doc_id, "")
+                    if fname:
+                        doc_label = f"(from: {fname}) "
+                numbered_chunks.append(f"[{idx}] {doc_label}{truncated}")
+                chunk_map[idx] = _ChunkInfo(
+                    id=item["chunk_id"],
+                    page_start=int(item["page"]),
+                    page_end=int(item.get("page_end", item["page"])),
+                    bboxes=item.get("bboxes") or [],
+                    text=text,
+                    section_title=item.get("section_title") or "",
+                    document_id=chunk_doc_id if chunk_doc_id else document_id,
+                    document_filename=collection_doc_names.get(chunk_doc_id, "")
+                    if chunk_doc_id
+                    else "",
+                )
+
+            rules = get_rules_for_model(
+                effective_model, is_collection=is_collection_session
+            )
+
+            if is_collection_session:
+                doc_list = ", ".join(collection_doc_names.values()) if collection_doc_names else "(no documents)"
+                system_prompt = (
+                    "You are a document analysis assistant. Answer the user's question based on fragments from multiple documents.\n\n"
+                    f"## Available Documents\n{doc_list}\n\n"
+                    "## Document Fragments\n"
+                    + ("\n".join(numbered_chunks) if numbered_chunks else "(none)")
+                    + "\n\n## Rules\n" + rules
+                )
+            else:
+                system_prompt = (
+                    "You are a document analysis assistant. Answer the user's question based on the following document fragments.\n\n"
+                    "## Document Fragments\n"
+                    + ("\n".join(numbered_chunks) if numbered_chunks else "(none)")
+                    + "\n\n## Rules\n" + rules
+                )
+
+            # Inject custom instructions if present
+            if doc and doc.custom_instructions:
+                system_prompt += (
+                    "\n## Custom Instructions\n"
+                    "The user has provided the following custom instructions for this document. Follow them:\n"
+                    + doc.custom_instructions + "\n"
+                )
         except Exception as e:
-            yield sse("error", {"code": "RETRIEVAL_ERROR", "message": f"Document retrieval failed: {e}"})
+            if user is not None and pre_debited > 0 and predebit_ledger_id is not None:
+                try:
+                    await _refund_predebit(db, user.id, pre_debited, predebit_ledger_id)
+                except Exception:
+                    logger.exception(
+                        "Failed to refund pre-debited credits during chat setup failure for user %s",
+                        user.id,
+                    )
+            message = (
+                f"Document retrieval failed: {e}"
+                if setup_error_code == "RETRIEVAL_ERROR"
+                else str(e)
+            )
+            yield sse("error", {"code": setup_error_code, "message": message})
             return
-
-        # 5) Build prompt (system)
-        numbered_chunks: List[str] = []
-        chunk_map: dict[int, _ChunkInfo] = {}
-        for idx, item in enumerate(retrieved, start=1):
-            # Heuristic truncation to ~350 tokens (roughly 1200-1400 chars)
-            text = item["text"] or ""
-            truncated = text[:1400]
-            chunk_doc_id = item.get("document_id")
-            doc_label = ""
-            if is_collection_session and chunk_doc_id:
-                fname = collection_doc_names.get(chunk_doc_id, "")
-                if fname:
-                    doc_label = f"(from: {fname}) "
-            numbered_chunks.append(f"[{idx}] {doc_label}{truncated}")
-            chunk_map[idx] = _ChunkInfo(
-                id=item["chunk_id"],
-                page_start=int(item["page"]),
-                page_end=int(item.get("page_end", item["page"])),
-                bboxes=item.get("bboxes") or [],
-                text=text,
-                section_title=item.get("section_title") or "",
-                document_id=chunk_doc_id if chunk_doc_id else document_id,
-                document_filename=collection_doc_names.get(chunk_doc_id, "") if chunk_doc_id else "",
-            )
-
-        rules = get_rules_for_model(
-            effective_model, is_collection=is_collection_session
-        )
-
-        if is_collection_session:
-            doc_list = ", ".join(collection_doc_names.values()) if collection_doc_names else "(no documents)"
-            system_prompt = (
-                "You are a document analysis assistant. Answer the user's question based on fragments from multiple documents.\n\n"
-                f"## Available Documents\n{doc_list}\n\n"
-                "## Document Fragments\n"
-                + ("\n".join(numbered_chunks) if numbered_chunks else "(none)")
-                + "\n\n## Rules\n" + rules
-            )
-        else:
-            system_prompt = (
-                "You are a document analysis assistant. Answer the user's question based on the following document fragments.\n\n"
-                "## Document Fragments\n"
-                + ("\n".join(numbered_chunks) if numbered_chunks else "(none)")
-                + "\n\n## Rules\n" + rules
-            )
-
-        # Inject custom instructions if present
-        if doc and doc.custom_instructions:
-            system_prompt += (
-                "\n## Custom Instructions\n"
-                "The user has provided the following custom instructions for this document. Follow them:\n"
-                + doc.custom_instructions + "\n"
-            )
 
         # 6) Stream from OpenRouter (OpenAI-compatible)
         client = _get_openai_client()
@@ -471,16 +513,12 @@ class ChatService:
             # Refund pre-debited credits on LLM failure: restore balance and remove ledger entry
             if user is not None and pre_debited > 0 and predebit_ledger_id is not None:
                 try:
-                    await db.execute(
-                        sa.update(User).where(User.id == user.id)
-                        .values(credits_balance=User.credits_balance + pre_debited)
-                    )
-                    await db.execute(
-                        sa.delete(CreditLedger).where(CreditLedger.id == predebit_ledger_id)
-                    )
-                    await db.commit()
+                    await _refund_predebit(db, user.id, pre_debited, predebit_ledger_id)
                 except Exception:
-                    pass  # best-effort refund
+                    logger.exception(
+                        "Failed to refund pre-debited credits after LLM error for user %s",
+                        user.id,
+                    )
             yield sse("error", {"code": "LLM_ERROR", "message": str(e)})
             return
 
@@ -635,103 +673,115 @@ class ChatService:
                 })
                 return
 
-        # 6) Reconstruct chunk_map from original citations
-        chunk_map: dict[int, _ChunkInfo] = {}
-        original_citations = asst_msg.citations or []
-        if original_citations:
-            chunk_ids_set: set[str] = set()
-            ref_to_chunk_id: dict[int, str] = {}
-            for cit in original_citations:
-                cid = cit.get("chunk_id")
-                ref = cit.get("ref_index")
-                if cid and ref is not None:
-                    chunk_ids_set.add(cid)
-                    ref_to_chunk_id[int(ref)] = cid
+        try:
+            # 6) Reconstruct chunk_map from original citations
+            chunk_map: dict[int, _ChunkInfo] = {}
+            original_citations = asst_msg.citations or []
+            if original_citations:
+                chunk_ids_set: set[str] = set()
+                ref_to_chunk_id: dict[int, str] = {}
+                for cit in original_citations:
+                    cid = cit.get("chunk_id")
+                    ref = cit.get("ref_index")
+                    if cid and ref is not None:
+                        chunk_ids_set.add(cid)
+                        ref_to_chunk_id[int(ref)] = cid
 
-            if chunk_ids_set:
-                chunk_uuids = [uuid.UUID(c) for c in chunk_ids_set]
-                chunk_rows = await db.execute(
-                    select(Chunk).where(Chunk.id.in_(chunk_uuids))
+                if chunk_ids_set:
+                    chunk_uuids = [uuid.UUID(c) for c in chunk_ids_set]
+                    chunk_rows = await db.execute(
+                        select(Chunk).where(Chunk.id.in_(chunk_uuids))
+                    )
+                    chunks_by_id: dict[str, Chunk] = {}
+                    for ch in chunk_rows.scalars():
+                        chunks_by_id[str(ch.id)] = ch
+
+                    for ref_num, cid in ref_to_chunk_id.items():
+                        ch = chunks_by_id.get(cid)
+                        if ch:
+                            chunk_map[ref_num] = _ChunkInfo(
+                                id=ch.id,
+                                page_start=ch.page_start,
+                                page_end=ch.page_end,
+                                bboxes=ch.bboxes or [],
+                                text=ch.text,
+                                section_title=ch.section_title or "",
+                                document_id=ch.document_id,
+                                document_filename=collection_doc_names.get(ch.document_id, ""),
+                            )
+
+            # 7) Load conversation history
+            max_turns = int(settings.MAX_CHAT_HISTORY_TURNS or 6)
+            max_msgs = max_turns * 2
+            msgs_row = await db.execute(
+                select(Message)
+                .where(Message.session_id == session_id)
+                .order_by(Message.created_at.desc())
+                .limit(max_msgs + 1)
+            )
+            history_msgs: List[Message] = list(msgs_row.scalars().all())
+            history_msgs.reverse()
+
+            claude_messages: List[dict] = []
+            for m in history_msgs:
+                claude_messages.append({"role": m.role, "content": m.content})
+
+            # Add continuation prompt
+            claude_messages.append({
+                "role": "user",
+                "content": "Please continue your response from where you left off. Do not repeat what you already said.",
+            })
+
+            # 8) Build system prompt with chunk_map context
+            numbered_chunks: List[str] = []
+            for idx in sorted(chunk_map.keys()):
+                info = chunk_map[idx]
+                text = (info.text or "")[:1400]
+                doc_label = ""
+                if is_collection_session and info.document_id:
+                    fname = collection_doc_names.get(info.document_id, "")
+                    if fname:
+                        doc_label = f"(from: {fname}) "
+                numbered_chunks.append(f"[{idx}] {doc_label}{text}")
+
+            rules = get_rules_for_model(
+                effective_model, is_collection=is_collection_session
+            )
+
+            if is_collection_session:
+                doc_list = ", ".join(collection_doc_names.values()) if collection_doc_names else "(no documents)"
+                system_prompt = (
+                    "You are a document analysis assistant. Answer the user's question based on fragments from multiple documents.\n\n"
+                    f"## Available Documents\n{doc_list}\n\n"
+                    "## Document Fragments\n"
+                    + ("\n".join(numbered_chunks) if numbered_chunks else "(none)")
+                    + "\n\n## Rules\n" + rules
                 )
-                chunks_by_id: dict[str, Chunk] = {}
-                for ch in chunk_rows.scalars():
-                    chunks_by_id[str(ch.id)] = ch
+            else:
+                system_prompt = (
+                    "You are a document analysis assistant. Answer the user's question based on the following document fragments.\n\n"
+                    "## Document Fragments\n"
+                    + ("\n".join(numbered_chunks) if numbered_chunks else "(none)")
+                    + "\n\n## Rules\n" + rules
+                )
 
-                for ref_num, cid in ref_to_chunk_id.items():
-                    ch = chunks_by_id.get(cid)
-                    if ch:
-                        chunk_map[ref_num] = _ChunkInfo(
-                            id=ch.id,
-                            page_start=ch.page_start,
-                            page_end=ch.page_end,
-                            bboxes=ch.bboxes or [],
-                            text=ch.text,
-                            section_title=ch.section_title or "",
-                            document_id=ch.document_id,
-                            document_filename=collection_doc_names.get(ch.document_id, ""),
-                        )
-
-        # 7) Load conversation history
-        max_turns = int(settings.MAX_CHAT_HISTORY_TURNS or 6)
-        max_msgs = max_turns * 2
-        msgs_row = await db.execute(
-            select(Message)
-            .where(Message.session_id == session_id)
-            .order_by(Message.created_at.desc())
-            .limit(max_msgs + 1)
-        )
-        history_msgs: List[Message] = list(msgs_row.scalars().all())
-        history_msgs.reverse()
-
-        claude_messages: List[dict] = []
-        for m in history_msgs:
-            claude_messages.append({"role": m.role, "content": m.content})
-
-        # Add continuation prompt
-        claude_messages.append({
-            "role": "user",
-            "content": "Please continue your response from where you left off. Do not repeat what you already said.",
-        })
-
-        # 8) Build system prompt with chunk_map context
-        numbered_chunks: List[str] = []
-        for idx in sorted(chunk_map.keys()):
-            info = chunk_map[idx]
-            text = (info.text or "")[:1400]
-            doc_label = ""
-            if is_collection_session and info.document_id:
-                fname = collection_doc_names.get(info.document_id, "")
-                if fname:
-                    doc_label = f"(from: {fname}) "
-            numbered_chunks.append(f"[{idx}] {doc_label}{text}")
-
-        rules = get_rules_for_model(
-            effective_model, is_collection=is_collection_session
-        )
-
-        if is_collection_session:
-            doc_list = ", ".join(collection_doc_names.values()) if collection_doc_names else "(no documents)"
-            system_prompt = (
-                "You are a document analysis assistant. Answer the user's question based on fragments from multiple documents.\n\n"
-                f"## Available Documents\n{doc_list}\n\n"
-                "## Document Fragments\n"
-                + ("\n".join(numbered_chunks) if numbered_chunks else "(none)")
-                + "\n\n## Rules\n" + rules
-            )
-        else:
-            system_prompt = (
-                "You are a document analysis assistant. Answer the user's question based on the following document fragments.\n\n"
-                "## Document Fragments\n"
-                + ("\n".join(numbered_chunks) if numbered_chunks else "(none)")
-                + "\n\n## Rules\n" + rules
-            )
-
-        if doc and doc.custom_instructions:
-            system_prompt += (
-                "\n## Custom Instructions\n"
-                "The user has provided the following custom instructions for this document. Follow them:\n"
-                + doc.custom_instructions + "\n"
-            )
+            if doc and doc.custom_instructions:
+                system_prompt += (
+                    "\n## Custom Instructions\n"
+                    "The user has provided the following custom instructions for this document. Follow them:\n"
+                    + doc.custom_instructions + "\n"
+                )
+        except Exception as e:
+            if user is not None and pre_debited > 0 and predebit_ledger_id is not None:
+                try:
+                    await _refund_predebit(db, user.id, pre_debited, predebit_ledger_id)
+                except Exception:
+                    logger.exception(
+                        "Failed to refund pre-debited credits during continuation setup failure for user %s",
+                        user.id,
+                    )
+            yield sse("error", {"code": "CHAT_SETUP_ERROR", "message": str(e)})
+            return
 
         # 9) Stream from LLM
         client = _get_openai_client()
@@ -801,16 +851,12 @@ class ChatService:
         except Exception as e:
             if user is not None and pre_debited > 0 and predebit_ledger_id is not None:
                 try:
-                    await db.execute(
-                        sa.update(User).where(User.id == user.id)
-                        .values(credits_balance=User.credits_balance + pre_debited)
-                    )
-                    await db.execute(
-                        sa.delete(CreditLedger).where(CreditLedger.id == predebit_ledger_id)
-                    )
-                    await db.commit()
+                    await _refund_predebit(db, user.id, pre_debited, predebit_ledger_id)
                 except Exception:
-                    pass
+                    logger.exception(
+                        "Failed to refund pre-debited credits after continuation LLM error for user %s",
+                        user.id,
+                    )
             yield sse("error", {"code": "LLM_ERROR", "message": str(e)})
             return
 

@@ -9,24 +9,47 @@ logger = logging.getLogger(__name__)
 
 
 @celery_app.task(bind=True, max_retries=3, default_retry_delay=30)
-def retry_failed_deletion(self, document_id: str, storage_key: str | None = None, cleanup_qdrant: bool = False):
+def retry_failed_deletion(
+    self,
+    document_id: str,
+    storage_key: str | None = None,
+    cleanup_qdrant: bool = False,
+    original_storage_key: str | None = None,
+    converted_storage_key: str | None = None,
+):
     """Retry MinIO and/or Qdrant cleanup that failed during document deletion.
 
     Uses exponential backoff: 30s, 60s, 120s.
     """
     from app.core.security_log import log_security_event
 
-    storage_ok = True
+    original_storage_key = original_storage_key or storage_key
+
+    original_storage_ok = True
+    converted_storage_ok = True
     qdrant_ok = True
 
-    if storage_key:
+    if original_storage_key:
         try:
             from app.services.storage_service import storage_service
-            storage_service.delete_file(storage_key)
-            logger.info("Retry: MinIO cleanup succeeded for doc %s", document_id)
+            storage_service.delete_file(original_storage_key)
+            logger.info("Retry: MinIO cleanup succeeded for original file of doc %s", document_id)
         except Exception as e:
-            storage_ok = False
-            logger.error("Retry: MinIO cleanup failed for doc %s: %s", document_id, e)
+            original_storage_ok = False
+            logger.error("Retry: MinIO cleanup failed for original file of doc %s: %s", document_id, e)
+
+    if converted_storage_key:
+        try:
+            from app.services.storage_service import storage_service
+            storage_service.delete_file(converted_storage_key)
+            logger.info("Retry: MinIO cleanup succeeded for converted file of doc %s", document_id)
+        except Exception as e:
+            converted_storage_ok = False
+            logger.error(
+                "Retry: MinIO cleanup failed for converted file of doc %s: %s",
+                document_id,
+                e,
+            )
 
     if cleanup_qdrant:
         try:
@@ -47,18 +70,23 @@ def retry_failed_deletion(self, document_id: str, storage_key: str | None = None
             qdrant_ok = False
             logger.error("Retry: Qdrant cleanup failed for doc %s: %s", document_id, e)
 
-    if not storage_ok or not qdrant_ok:
+    if not original_storage_ok or not converted_storage_ok or not qdrant_ok:
         try:
             raise self.retry(countdown=30 * (2 ** self.request.retries))
         except self.MaxRetriesExceededError:
             log_security_event(
                 "deletion_cleanup_failed_permanently",
                 document_id=document_id,
-                storage_key=storage_key,
-                storage_ok=storage_ok,
+                original_storage_key=original_storage_key,
+                converted_storage_key=converted_storage_key,
+                original_storage_ok=original_storage_ok,
+                converted_storage_ok=converted_storage_ok,
                 qdrant_ok=qdrant_ok,
             )
             logger.critical(
-                "PERMANENT: Cleanup failed after all retries for doc %s (storage=%s, qdrant=%s)",
-                document_id, storage_ok, qdrant_ok,
+                "PERMANENT: Cleanup failed after all retries for doc %s (original=%s, converted=%s, qdrant=%s)",
+                document_id,
+                original_storage_ok,
+                converted_storage_ok,
+                qdrant_ok,
             )
