@@ -4,6 +4,7 @@ import React from 'react';
 import Link from 'next/link';
 import Header from '../../components/Header';
 import Footer from '../../components/Footer';
+import { useLocale } from '../../i18n';
 import {
   GraduationCap,
   Scale,
@@ -13,38 +14,19 @@ import {
   Briefcase,
 } from 'lucide-react';
 
-const useCases = [
-  {
-    slug: 'students',
-    icon: GraduationCap,
-    title: 'Students & Academics',
-    description:
-      'Analyze research papers, textbooks, and dissertations with AI. Get cited answers with page-level references to speed up literature reviews and exam prep.',
-  },
-  {
-    slug: 'lawyers',
-    icon: Scale,
-    title: 'Legal Professionals',
-    description:
-      'Review contracts, court filings, and regulatory documents with AI. Extract specific clauses, assess risk, and verify every finding against the source text.',
-  },
-  {
-    slug: 'finance',
-    icon: TrendingUp,
-    title: 'Financial Analysts',
-    description:
-      'Analyze 10-K filings, earnings reports, and investor presentations with AI. Extract key metrics and verify figures with citations pointing to original tables.',
-  },
-  {
-    slug: 'hr-contracts',
-    icon: FileText,
-    title: 'HR & Contract Review',
-    description:
-      'Navigate employment contracts, company handbooks, and HR policies with AI. Get instant answers about specific clauses with verifiable source citations.',
-  },
-];
+const useCaseIcons = [GraduationCap, Scale, TrendingUp, FileText];
+const useCaseSlugs = ['students', 'lawyers', 'finance', 'hr-contracts'];
 
 export default function UseCasesHubClient() {
+  const { t } = useLocale();
+
+  const useCases = useCaseSlugs.map((slug, i) => ({
+    slug,
+    icon: useCaseIcons[i],
+    title: t(`useCasesHub.cases.${slug}.title`),
+    description: t(`useCasesHub.cases.${slug}.description`),
+  }));
+
   return (
     <div className="min-h-screen flex flex-col bg-white dark:bg-zinc-950">
       <Header variant="minimal" />
@@ -56,12 +38,10 @@ export default function UseCasesHubClient() {
               <Briefcase className="w-6 h-6 text-zinc-600 dark:text-zinc-300" />
             </div>
             <h1 className="text-3xl sm:text-4xl font-bold text-zinc-900 dark:text-zinc-100 mb-4 tracking-tight">
-              AI Document Analysis for Every Profession
+              {t('useCasesHub.heroTitle')}
             </h1>
             <p className="text-lg text-zinc-600 dark:text-zinc-400 max-w-2xl mx-auto">
-              From academic research to legal due diligence, DocTalk helps professionals
-              across industries analyze documents faster with AI-powered answers backed by
-              verifiable source citations.
+              {t('useCasesHub.heroDescription')}
             </p>
           </div>
         </section>
@@ -94,31 +74,30 @@ export default function UseCasesHubClient() {
 
           <div className="mt-12 rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900/40 p-6">
             <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100 mb-2">
-              Match the workflow to the right capability
+              {t('useCasesHub.crossLinks.title')}
             </h2>
             <p className="text-sm text-zinc-600 dark:text-zinc-400 mb-4">
-              Use cases land better when readers can immediately see which feature or comparison page
-              answers the next question.
+              {t('useCasesHub.crossLinks.description')}
             </p>
             <div className="flex flex-wrap gap-3 text-sm">
               <Link href="/features/citations" className="text-indigo-600 dark:text-indigo-400 hover:underline">
-                Citation highlighting
+                {t('useCasesHub.crossLinks.citationHighlighting')}
               </Link>
               <span className="text-zinc-300 dark:text-zinc-700">|</span>
               <Link href="/features/multi-format" className="text-indigo-600 dark:text-indigo-400 hover:underline">
-                Multi-format support
+                {t('useCasesHub.crossLinks.multiFormatSupport')}
               </Link>
               <span className="text-zinc-300 dark:text-zinc-700">|</span>
               <Link href="/features/performance-modes" className="text-indigo-600 dark:text-indigo-400 hover:underline">
-                Performance modes
+                {t('useCasesHub.crossLinks.performanceModes')}
               </Link>
               <span className="text-zinc-300 dark:text-zinc-700">|</span>
               <Link href="/compare/notebooklm" className="text-indigo-600 dark:text-indigo-400 hover:underline">
-                NotebookLM comparison
+                {t('useCasesHub.crossLinks.notebookLMComparison')}
               </Link>
               <span className="text-zinc-300 dark:text-zinc-700">|</span>
               <Link href="/compare/humata" className="text-indigo-600 dark:text-indigo-400 hover:underline">
-                Humata comparison
+                {t('useCasesHub.crossLinks.humataComparison')}
               </Link>
             </div>
           </div>
@@ -126,13 +105,13 @@ export default function UseCasesHubClient() {
           {/* CTA */}
           <div className="mt-16 pt-12 border-t border-zinc-200 dark:border-zinc-800 text-center">
             <p className="text-zinc-600 dark:text-zinc-400 mb-5">
-              See DocTalk in action — try the free demo with sample documents, no signup required.
+              {t('useCasesHub.cta.description')}
             </p>
             <Link
               href="/demo"
               className="group inline-flex items-center px-6 py-3 bg-zinc-900 dark:bg-zinc-50 text-white dark:text-zinc-900 rounded-lg font-medium hover:bg-zinc-800 dark:hover:bg-zinc-200 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400 dark:focus-visible:ring-zinc-500 focus-visible:ring-offset-2"
             >
-              Try the Free Demo
+              {t('useCasesHub.cta.tryFreeDemo')}
               <ArrowRight className="ml-2 w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
             </Link>
           </div>

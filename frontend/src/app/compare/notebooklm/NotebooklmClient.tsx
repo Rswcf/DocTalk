@@ -8,45 +8,48 @@ import ArticleMeta from '../../../components/seo/ArticleMeta';
 import ComparisonTable from '../../../components/seo/ComparisonTable';
 import FAQSection from '../../../components/seo/FAQSection';
 import CTABanner from '../../../components/seo/CTABanner';
+import { useLocale } from '../../../i18n';
 import { FileText, Languages, Zap, Shield, DollarSign, Quote } from 'lucide-react';
 
-const features = [
-  { name: 'Supported Formats', doctalk: '7 (PDF, DOCX, PPTX, XLSX, TXT, MD, URL)', competitor: 'PDF, Google Docs, web URLs, text, YouTube' },
-  { name: 'Citation Highlighting', doctalk: 'Real-time visual highlighting', competitor: 'Inline source references' },
-  { name: 'Multi-Source Notebooks', doctalk: false, competitor: true },
-  { name: 'Audio Podcast Generation', doctalk: false, competitor: true },
-  { name: 'Interface Languages', doctalk: '11 languages', competitor: 'English primary' },
-  { name: 'Requires Google Account', doctalk: false, competitor: true },
-  { name: 'No-Signup Demo', doctalk: true, competitor: false },
-  { name: 'Free Tier', doctalk: '500 credits/mo', competitor: 'Free (Google account required)' },
-  { name: 'Multiple AI Modes', doctalk: '3 performance modes', competitor: 'Gemini only' },
-  { name: 'Data Encryption', doctalk: 'SSE-S3', competitor: 'Google standard' },
-];
-
-const faqItems = [
-  {
-    question: 'Is DocTalk better than NotebookLM?',
-    answer: 'DocTalk and NotebookLM serve different purposes. DocTalk excels at single-document deep analysis with real-time citation highlighting, 7 format support, and 11 languages. NotebookLM is better for multi-source notebooks and offers unique AI-generated audio podcasts. DocTalk is the better choice if you need citation verification and format flexibility; NotebookLM is better for free multi-source research.',
-  },
-  {
-    question: 'Is NotebookLM really free?',
-    answer: 'Yes, Google NotebookLM is currently free to use, though it requires a Google account. Google has not yet announced pricing for future premium features. However, being free means you are subject to Google data practices and potential changes in service terms.',
-  },
-  {
-    question: 'Does NotebookLM support citation highlighting?',
-    answer: 'NotebookLM shows inline citations that link to the source document within the notebook. However, it does not provide the real-time visual highlighting that DocTalk offers, where clicking a citation scrolls to and highlights the exact passage in a document viewer alongside the chat.',
-  },
-  {
-    question: 'Can I use DocTalk without a Google account?',
-    answer: 'Yes. DocTalk supports Google OAuth, Microsoft OAuth, and email magic links for authentication. You can also use the instant demo with no account at all. NotebookLM requires a Google account, which may be a concern for users who prefer not to use Google services.',
-  },
-  {
-    question: 'Which tool is more private?',
-    answer: 'DocTalk stores documents with SSE-S3 encryption, never trains AI on your data, and provides GDPR data export. NotebookLM is a Google product subject to Google privacy policies. DocTalk gives you more control and transparency over your data.',
-  },
-];
-
 export default function NotebooklmClient() {
+  const { t } = useLocale();
+
+  const features = [
+    { name: t('compareNotebooklm.table.supportedFormats'), doctalk: t('compareNotebooklm.table.doctalk.supportedFormats'), competitor: t('compareNotebooklm.table.competitor.supportedFormats') },
+    { name: t('compareNotebooklm.table.citationHighlighting'), doctalk: t('compareNotebooklm.table.doctalk.citationHighlighting'), competitor: t('compareNotebooklm.table.competitor.citationHighlighting') },
+    { name: t('compareNotebooklm.table.multiSourceNotebooks'), doctalk: false, competitor: true },
+    { name: t('compareNotebooklm.table.audioPodcast'), doctalk: false, competitor: true },
+    { name: t('compareNotebooklm.table.interfaceLanguages'), doctalk: t('compareNotebooklm.table.doctalk.interfaceLanguages'), competitor: t('compareNotebooklm.table.competitor.interfaceLanguages') },
+    { name: t('compareNotebooklm.table.requiresGoogle'), doctalk: false, competitor: true },
+    { name: t('compareNotebooklm.table.noSignupDemo'), doctalk: true, competitor: false },
+    { name: t('compareNotebooklm.table.freeTier'), doctalk: t('compareNotebooklm.table.doctalk.freeTier'), competitor: t('compareNotebooklm.table.competitor.freeTier') },
+    { name: t('compareNotebooklm.table.multipleAiModes'), doctalk: t('compareNotebooklm.table.doctalk.multipleAiModes'), competitor: t('compareNotebooklm.table.competitor.multipleAiModes') },
+    { name: t('compareNotebooklm.table.dataEncryption'), doctalk: t('compareNotebooklm.table.doctalk.dataEncryption'), competitor: t('compareNotebooklm.table.competitor.dataEncryption') },
+  ];
+
+  const faqItems = [
+    {
+      question: t('compareNotebooklm.faq.q1'),
+      answer: t('compareNotebooklm.faq.a1'),
+    },
+    {
+      question: t('compareNotebooklm.faq.q2'),
+      answer: t('compareNotebooklm.faq.a2'),
+    },
+    {
+      question: t('compareNotebooklm.faq.q3'),
+      answer: t('compareNotebooklm.faq.a3'),
+    },
+    {
+      question: t('compareNotebooklm.faq.q4'),
+      answer: t('compareNotebooklm.faq.a4'),
+    },
+    {
+      question: t('compareNotebooklm.faq.q5'),
+      answer: t('compareNotebooklm.faq.a5'),
+    },
+  ];
+
   return (
     <div className="min-h-screen flex flex-col bg-white dark:bg-zinc-950">
       <Header variant="minimal" />
@@ -54,31 +57,27 @@ export default function NotebooklmClient() {
         {/* Hero */}
         <section className="max-w-4xl mx-auto px-6 pt-20 pb-12">
           <nav className="text-sm text-zinc-500 dark:text-zinc-400 mb-8">
-            <Link href="/" className="hover:text-zinc-700 dark:hover:text-zinc-300">Home</Link>
+            <Link href="/" className="hover:text-zinc-700 dark:hover:text-zinc-300">{t('compareNotebooklm.breadcrumb.home')}</Link>
             <span className="mx-2">/</span>
-            <Link href="/compare" className="hover:text-zinc-700 dark:hover:text-zinc-300">Compare</Link>
+            <Link href="/compare" className="hover:text-zinc-700 dark:hover:text-zinc-300">{t('compareNotebooklm.breadcrumb.compare')}</Link>
             <span className="mx-2">/</span>
-            <span className="text-zinc-900 dark:text-zinc-100">DocTalk vs NotebookLM</span>
+            <span className="text-zinc-900 dark:text-zinc-100">{t('compareNotebooklm.breadcrumb.current')}</span>
           </nav>
 
           <h1 className="text-3xl sm:text-4xl font-bold text-zinc-900 dark:text-zinc-100 mb-6 tracking-tight">
-            DocTalk vs NotebookLM: Which AI Document Tool?
+            {t('compareNotebooklm.heroTitle')}
           </h1>
           <p className="text-lg text-zinc-600 dark:text-zinc-400 leading-relaxed">
-            Google NotebookLM and DocTalk represent two different philosophies in AI document analysis.
-            NotebookLM is a free, Google-integrated tool built around multi-source notebooks with a unique
-            audio podcast feature. DocTalk is an independent, privacy-first platform focused on deep
-            single-document analysis with real-time citation highlighting across seven formats and eleven
-            languages. Here is how they compare in detail.
+            {t('compareNotebooklm.heroDescription')}
           </p>
-          <ArticleMeta author="DocTalk Team" published="2026-02-18" className="mt-6" />
+          <ArticleMeta author={t('compareNotebooklm.author')} published="2026-02-18" className="mt-6" />
         </section>
 
         {/* Quick Comparison Table */}
         <section className="bg-zinc-50 dark:bg-zinc-900/50">
           <div className="max-w-4xl mx-auto px-6 py-16">
             <h2 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100 tracking-tight mb-8">
-              Quick Comparison
+              {t('compareNotebooklm.quickComparison')}
             </h2>
             <ComparisonTable features={features} competitorName="NotebookLM" />
           </div>
@@ -87,16 +86,10 @@ export default function NotebooklmClient() {
         {/* What Is DocTalk? */}
         <section className="max-w-4xl mx-auto px-6 py-16">
           <h2 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100 tracking-tight mb-4">
-            What Is DocTalk?
+            {t('compareNotebooklm.whatIsDocTalk')}
           </h2>
           <p className="text-zinc-600 dark:text-zinc-400 leading-relaxed">
-            DocTalk is an independent AI document Q&A platform designed for deep, verifiable analysis of
-            individual documents. It supports seven file formats (PDF, DOCX, PPTX, XLSX, TXT, Markdown,
-            and web URLs) and provides real-time citation highlighting: click any citation in an AI answer
-            to instantly scroll to and highlight the exact source passage in a side-by-side document viewer.
-            The interface is fully localized in 11 languages. Three AI performance modes (Quick, Balanced,
-            Thorough) let you choose between speed and depth. DocTalk requires no vendor lock-in. You can
-            sign in with Google, Microsoft, or email, and your data is encrypted and never used for AI training.
+            {t('compareNotebooklm.whatIsDocTalkDescription')}
           </p>
         </section>
 
@@ -104,16 +97,10 @@ export default function NotebooklmClient() {
         <section className="bg-zinc-50 dark:bg-zinc-900/50">
           <div className="max-w-4xl mx-auto px-6 py-16">
             <h2 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100 tracking-tight mb-4">
-              What Is NotebookLM?
+              {t('compareNotebooklm.whatIsNotebookLM')}
             </h2>
             <p className="text-zinc-600 dark:text-zinc-400 leading-relaxed">
-              Google NotebookLM (formerly Project Tailwind) is a free AI-powered research tool that lets you
-              create notebooks with multiple source documents. You can upload PDFs, link Google Docs, paste
-              text, and add web URLs or YouTube videos as sources. The AI synthesizes information across all
-              sources in a notebook, making it useful for literature reviews and research projects. NotebookLM
-              is unique in offering AI-generated audio podcasts that summarize your sources as a natural-sounding
-              conversation. It runs on Google Gemini and is deeply integrated with the Google ecosystem. A
-              Google account is required.
+              {t('compareNotebooklm.whatIsNotebookLMDescription')}
             </p>
           </div>
         </section>
@@ -121,7 +108,7 @@ export default function NotebooklmClient() {
         {/* Feature-by-Feature Comparison */}
         <section className="max-w-4xl mx-auto px-6 py-16">
           <h2 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100 tracking-tight mb-10">
-            Feature-by-Feature Comparison
+            {t('compareNotebooklm.featureByFeature')}
           </h2>
 
           {/* Document Format Support */}
@@ -129,23 +116,16 @@ export default function NotebooklmClient() {
             <div className="flex items-center gap-3 mb-4">
               <FileText className="w-5 h-5 text-zinc-700 dark:text-zinc-300" />
               <h3 className="text-xl font-semibold text-zinc-900 dark:text-zinc-100">
-                Document Format Support
+                {t('compareNotebooklm.feature.formatSupport')}
               </h3>
             </div>
             <p className="text-zinc-600 dark:text-zinc-400 leading-relaxed mb-4">
-              NotebookLM supports PDF files, Google Docs (natively via Drive), web URLs, pasted text, and
-              YouTube video transcripts. It does not natively support DOCX, PPTX, or XLSX files, though you
-              can upload Word documents to Google Drive and convert them. The YouTube integration is a unique
-              strength for video-based research.
+              {t('compareNotebooklm.feature.formatSupportP1')}
             </p>
             <p className="text-zinc-600 dark:text-zinc-400 leading-relaxed">
-              DocTalk directly accepts PDF, DOCX, PPTX, XLSX, TXT, Markdown, and web URLs with dedicated
-              parsers for each format. The XLSX parser preserves spreadsheet structure, and the PPTX parser
-              maintains slide order with speaker notes. No conversion step is needed. While DocTalk does not
-              support YouTube or Google Docs integration, it covers the most common business and academic
-              document formats. See{' '}
+              {t('compareNotebooklm.feature.formatSupportP2Pre')}
               <Link href="/features/multi-format" className="text-indigo-600 dark:text-indigo-400 hover:underline">
-                multi-format support
+                {t('compareNotebooklm.feature.formatSupportLink')}
               </Link>.
             </p>
           </div>
@@ -155,24 +135,16 @@ export default function NotebooklmClient() {
             <div className="flex items-center gap-3 mb-4">
               <Quote className="w-5 h-5 text-zinc-700 dark:text-zinc-300" />
               <h3 className="text-xl font-semibold text-zinc-900 dark:text-zinc-100">
-                AI Answer Quality & Citations
+                {t('compareNotebooklm.feature.citations')}
               </h3>
             </div>
             <p className="text-zinc-600 dark:text-zinc-400 leading-relaxed mb-4">
-              NotebookLM provides inline citations numbered with source references. Clicking a citation
-              highlights the relevant source in the notebook sidebar. The multi-source approach means answers
-              can synthesize information from multiple documents, which is powerful for cross-referencing. The
-              AI podcast feature creates engaging audio summaries, though it cannot replace detailed Q&A.
+              {t('compareNotebooklm.feature.citationsP1')}
             </p>
             <p className="text-zinc-600 dark:text-zinc-400 leading-relaxed">
-              DocTalk provides real-time citation highlighting in a dedicated side-by-side document viewer.
-              Click any citation and the viewer scrolls to the exact passage with a visual highlight overlay.
-              This is particularly effective for PDF documents where bounding-box coordinates enable precise
-              highlighting. While DocTalk focuses on single-document analysis rather than multi-source
-              synthesis, it provides deeper, more precise citations for individual documents. Learn more
-              about{' '}
+              {t('compareNotebooklm.feature.citationsP2Pre')}
               <Link href="/features/citations" className="text-indigo-600 dark:text-indigo-400 hover:underline">
-                citation highlighting
+                {t('compareNotebooklm.feature.citationsLink')}
               </Link>.
             </p>
           </div>
@@ -182,22 +154,16 @@ export default function NotebooklmClient() {
             <div className="flex items-center gap-3 mb-4">
               <Languages className="w-5 h-5 text-zinc-700 dark:text-zinc-300" />
               <h3 className="text-xl font-semibold text-zinc-900 dark:text-zinc-100">
-                Language Support
+                {t('compareNotebooklm.feature.languages')}
               </h3>
             </div>
             <p className="text-zinc-600 dark:text-zinc-400 leading-relaxed mb-4">
-              NotebookLM has a primarily English interface, though Gemini can process and respond in multiple
-              languages. The audio podcast feature currently works best in English. The Google ecosystem
-              provides some inherent multilingual support, but the NotebookLM interface itself is not fully
-              localized.
+              {t('compareNotebooklm.feature.languagesP1')}
             </p>
             <p className="text-zinc-600 dark:text-zinc-400 leading-relaxed">
-              DocTalk offers a fully localized interface in 11 languages: English, Chinese, Spanish, Japanese,
-              German, French, Korean, Portuguese, Italian, Arabic, and Hindi. Every interface element is
-              translated, and the AI responds in the language of your question. This makes DocTalk the
-              stronger choice for multilingual teams. See{' '}
+              {t('compareNotebooklm.feature.languagesP2Pre')}
               <Link href="/features/multilingual" className="text-indigo-600 dark:text-indigo-400 hover:underline">
-                multilingual support
+                {t('compareNotebooklm.feature.languagesLink')}
               </Link>.
             </p>
           </div>
@@ -207,23 +173,17 @@ export default function NotebooklmClient() {
             <div className="flex items-center gap-3 mb-4">
               <DollarSign className="w-5 h-5 text-zinc-700 dark:text-zinc-300" />
               <h3 className="text-xl font-semibold text-zinc-900 dark:text-zinc-100">
-                Pricing & Free Tier
+                {t('compareNotebooklm.feature.pricing')}
               </h3>
             </div>
             <p className="text-zinc-600 dark:text-zinc-400 leading-relaxed mb-4">
-              NotebookLM is currently free. This is its biggest advantage. Google has not disclosed future
-              pricing, but as with many Google products, it may remain free with usage limits while offering
-              premium features at a cost. The tradeoff is that you are building your workflow inside Google
-              ecosystem.
+              {t('compareNotebooklm.feature.pricingP1')}
             </p>
             <p className="text-zinc-600 dark:text-zinc-400 leading-relaxed">
-              DocTalk offers a{' '}
-              <Link href="/demo" className="text-indigo-600 dark:text-indigo-400 hover:underline">free demo</Link>{' '}
-              with no signup required, plus 500 free credits per month. Paid plans start at $9.99/month (Plus)
-              for 3,000 credits and go up to $19.99/month (Pro) for 9,000 credits with advanced features. While
-              not free like NotebookLM, DocTalk provides transparent, predictable pricing without vendor lock-in.
-              View{' '}
-              <Link href="/pricing" className="text-indigo-600 dark:text-indigo-400 hover:underline">pricing</Link>.
+              {t('compareNotebooklm.feature.pricingP2Pre')}
+              <Link href="/demo" className="text-indigo-600 dark:text-indigo-400 hover:underline">{t('compareNotebooklm.feature.pricingDemoLink')}</Link>
+              {t('compareNotebooklm.feature.pricingP2Mid')}
+              <Link href="/pricing" className="text-indigo-600 dark:text-indigo-400 hover:underline">{t('compareNotebooklm.feature.pricingPricingLink')}</Link>.
             </p>
           </div>
 
@@ -232,19 +192,14 @@ export default function NotebooklmClient() {
             <div className="flex items-center gap-3 mb-4">
               <Zap className="w-5 h-5 text-zinc-700 dark:text-zinc-300" />
               <h3 className="text-xl font-semibold text-zinc-900 dark:text-zinc-100">
-                Performance & Speed
+                {t('compareNotebooklm.feature.performance')}
               </h3>
             </div>
             <p className="text-zinc-600 dark:text-zinc-400 leading-relaxed mb-4">
-              NotebookLM runs on Google Gemini and benefits from Google infrastructure. Responses are generally
-              fast, though processing multiple large sources in a notebook can take time. The audio podcast
-              generation is a longer process, typically taking a minute or more to produce.
+              {t('compareNotebooklm.feature.performanceP1')}
             </p>
             <p className="text-zinc-600 dark:text-zinc-400 leading-relaxed">
-              DocTalk offers three performance modes. Quick mode (DeepSeek V3.2) provides the fastest responses.
-              Balanced mode (Mistral Medium) is ideal for most questions. Thorough mode (Mistral Large) delivers
-              the most comprehensive analysis. This flexibility is unavailable in NotebookLM, which is locked
-              to Gemini.
+              {t('compareNotebooklm.feature.performanceP2')}
             </p>
           </div>
 
@@ -253,21 +208,14 @@ export default function NotebooklmClient() {
             <div className="flex items-center gap-3 mb-4">
               <Shield className="w-5 h-5 text-zinc-700 dark:text-zinc-300" />
               <h3 className="text-xl font-semibold text-zinc-900 dark:text-zinc-100">
-                Security & Privacy
+                {t('compareNotebooklm.feature.security')}
               </h3>
             </div>
             <p className="text-zinc-600 dark:text-zinc-400 leading-relaxed mb-4">
-              NotebookLM is subject to Google privacy policies. While Google states that NotebookLM does not
-              use your data for training, it is still within the Google ecosystem, and your documents are
-              stored on Google servers. This may be a concern for organizations with strict data governance
-              requirements or those who prefer not to centralize data with a single tech company.
+              {t('compareNotebooklm.feature.securityP1')}
             </p>
             <p className="text-zinc-600 dark:text-zinc-400 leading-relaxed">
-              DocTalk is an independent platform with SSE-S3 encryption, SSRF protection, and GDPR compliance
-              features. Documents are never used for AI training. You can export all your data at any time, and
-              the platform supports multiple authentication providers (Google, Microsoft, email) to avoid vendor
-              lock-in. For organizations that need data sovereignty or want to avoid Google dependency, DocTalk
-              is the more private choice.
+              {t('compareNotebooklm.feature.securityP2')}
             </p>
           </div>
         </section>
@@ -276,28 +224,28 @@ export default function NotebooklmClient() {
         <section className="bg-zinc-50 dark:bg-zinc-900/50">
           <div className="max-w-4xl mx-auto px-6 py-16">
             <h2 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100 tracking-tight mb-6">
-              Who Should Choose DocTalk?
+              {t('compareNotebooklm.whoDocTalk')}
             </h2>
             <ul className="space-y-3 text-zinc-600 dark:text-zinc-400">
               <li className="flex items-start gap-3">
                 <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-zinc-400 shrink-0" />
-                <span>Users who need precise citation highlighting to verify AI answers against source text</span>
+                <span>{t('compareNotebooklm.whoDocTalk.item1')}</span>
               </li>
               <li className="flex items-start gap-3">
                 <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-zinc-400 shrink-0" />
-                <span>People working with DOCX, PPTX, or XLSX files that NotebookLM does not natively support</span>
+                <span>{t('compareNotebooklm.whoDocTalk.item2')}</span>
               </li>
               <li className="flex items-start gap-3">
                 <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-zinc-400 shrink-0" />
-                <span>Non-English speakers who need a fully localized interface in their language</span>
+                <span>{t('compareNotebooklm.whoDocTalk.item3')}</span>
               </li>
               <li className="flex items-start gap-3">
                 <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-zinc-400 shrink-0" />
-                <span>Organizations that need to avoid Google vendor lock-in or have strict data governance requirements</span>
+                <span>{t('compareNotebooklm.whoDocTalk.item4')}</span>
               </li>
               <li className="flex items-start gap-3">
                 <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-zinc-400 shrink-0" />
-                <span>Users who want to choose between multiple AI models for different tasks</span>
+                <span>{t('compareNotebooklm.whoDocTalk.item5')}</span>
               </li>
             </ul>
           </div>
@@ -306,28 +254,28 @@ export default function NotebooklmClient() {
         {/* Who Should Choose NotebookLM? */}
         <section className="max-w-4xl mx-auto px-6 py-16">
           <h2 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100 tracking-tight mb-6">
-            Who Should Choose NotebookLM?
+            {t('compareNotebooklm.whoNotebookLM')}
           </h2>
           <ul className="space-y-3 text-zinc-600 dark:text-zinc-400">
             <li className="flex items-start gap-3">
               <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-zinc-400 shrink-0" />
-              <span>Researchers who need to synthesize information across multiple documents simultaneously</span>
+              <span>{t('compareNotebooklm.whoNotebookLM.item1')}</span>
             </li>
             <li className="flex items-start gap-3">
               <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-zinc-400 shrink-0" />
-              <span>Users who want AI-generated audio podcasts summarizing their research</span>
+              <span>{t('compareNotebooklm.whoNotebookLM.item2')}</span>
             </li>
             <li className="flex items-start gap-3">
               <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-zinc-400 shrink-0" />
-              <span>People deeply embedded in the Google ecosystem (Drive, Docs, YouTube)</span>
+              <span>{t('compareNotebooklm.whoNotebookLM.item3')}</span>
             </li>
             <li className="flex items-start gap-3">
               <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-zinc-400 shrink-0" />
-              <span>Budget-conscious users who need a completely free tool</span>
+              <span>{t('compareNotebooklm.whoNotebookLM.item4')}</span>
             </li>
             <li className="flex items-start gap-3">
               <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-zinc-400 shrink-0" />
-              <span>Students working on literature reviews who need cross-document synthesis</span>
+              <span>{t('compareNotebooklm.whoNotebookLM.item5')}</span>
             </li>
           </ul>
         </section>
@@ -336,29 +284,20 @@ export default function NotebooklmClient() {
         <section className="bg-zinc-50 dark:bg-zinc-900/50">
           <div className="max-w-4xl mx-auto px-6 py-16">
             <h2 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100 tracking-tight mb-6">
-              Verdict
+              {t('compareNotebooklm.verdict')}
             </h2>
             <p className="text-zinc-600 dark:text-zinc-400 leading-relaxed mb-4">
-              NotebookLM and DocTalk solve different problems. NotebookLM excels at multi-source research
-              with its notebook paradigm and the unique audio podcast feature. Being free and backed by Google
-              infrastructure makes it a compelling choice for students and researchers who are comfortable
-              within the Google ecosystem.
+              {t('compareNotebooklm.verdictP1')}
             </p>
             <p className="text-zinc-600 dark:text-zinc-400 leading-relaxed mb-4">
-              DocTalk excels at deep, verifiable single-document analysis. The real-time citation highlighting
-              is in a class of its own for answer verification. Support for seven document formats (including
-              DOCX, PPTX, and XLSX that NotebookLM lacks) and 11 interface languages makes it more versatile
-              for professional and international use cases. The independence from any single tech platform is
-              a real advantage for organizations concerned about vendor lock-in.
+              {t('compareNotebooklm.verdictP2')}
             </p>
             <p className="text-zinc-600 dark:text-zinc-400 leading-relaxed font-medium">
-              If you primarily need multi-source synthesis and love Google products, NotebookLM is excellent.
-              If you need precise citation verification, work with business document formats, or want to
-              avoid Google dependency,{' '}
+              {t('compareNotebooklm.verdictP3Pre')}
               <Link href="/demo" className="text-indigo-600 dark:text-indigo-400 hover:underline">
-                try DocTalk
-              </Link>{' '}
-              for free.
+                {t('compareNotebooklm.verdictDemoLink')}
+              </Link>
+              {t('compareNotebooklm.verdictP3Post')}
             </p>
           </div>
         </section>
@@ -366,7 +305,7 @@ export default function NotebooklmClient() {
         {/* FAQ */}
         <section className="max-w-4xl mx-auto px-6 py-16">
           <h2 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100 tracking-tight mb-8">
-            Frequently Asked Questions
+            {t('compareNotebooklm.faqTitle')}
           </h2>
           <FAQSection items={faqItems} />
         </section>
@@ -375,15 +314,15 @@ export default function NotebooklmClient() {
         <section className="bg-zinc-50 dark:bg-zinc-900/50">
           <div className="max-w-4xl mx-auto px-6 py-12">
             <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100 mb-4">
-              Related Pages
+              {t('compareNotebooklm.relatedPages')}
             </h2>
             <div className="flex flex-wrap gap-3">
               {[
-                { href: '/features/citations', label: 'Citation Highlighting' },
-                { href: '/features/multi-format', label: 'Multi-Format Support' },
-                { href: '/features/multilingual', label: 'Multilingual' },
-                { href: '/demo', label: 'Free Demo' },
-                { href: '/alternatives/notebooklm', label: 'NotebookLM Alternatives' },
+                { href: '/features/citations', label: t('compareNotebooklm.related.citations') },
+                { href: '/features/multi-format', label: t('compareNotebooklm.related.multiFormat') },
+                { href: '/features/multilingual', label: t('compareNotebooklm.related.multilingual') },
+                { href: '/demo', label: t('compareNotebooklm.related.freeDemo') },
+                { href: '/alternatives/notebooklm', label: t('compareNotebooklm.related.notebooklmAlternatives') },
               ].map((link) => (
                 <Link
                   key={link.href}
@@ -400,9 +339,9 @@ export default function NotebooklmClient() {
         {/* CTA */}
         <CTABanner
           variant="highlight"
-          title="Try DocTalk Free — No Signup Required"
-          description="No Google account needed. Upload a document and experience citation highlighting instantly."
-          buttonText="Try the Demo"
+          title={t('compareNotebooklm.ctaTitle')}
+          description={t('compareNotebooklm.ctaDescription')}
+          buttonText={t('compareNotebooklm.ctaButton')}
           href="/demo"
         />
       </main>

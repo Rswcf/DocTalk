@@ -14,12 +14,11 @@ import { usePageTitle } from "../../lib/usePageTitle";
 import { useUserProfile } from "../../lib/useUserProfile";
 
 function ProfileContent() {
-  usePageTitle("Profile");
-
   const { data: session, status } = useSession();
   const router = useRouter();
   const searchParams = useSearchParams();
   const { t } = useLocale();
+  usePageTitle(t('profile.title'));
 
   const initialTab = useMemo(() => {
     const tab = searchParams.get("tab");

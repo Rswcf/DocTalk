@@ -5,9 +5,8 @@ import { useLocale } from '../../i18n';
 import { usePageTitle } from '../../lib/usePageTitle';
 
 export default function PrivacyPageClient() {
-  usePageTitle('Privacy Policy');
-
   const { t } = useLocale();
+  usePageTitle(t('privacy.title'));
 
   return (
     <main id="main-content" className="min-h-screen bg-zinc-50 dark:bg-zinc-900 py-12 px-4">

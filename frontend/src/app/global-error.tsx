@@ -1,5 +1,9 @@
 "use client";
 
+// NOTE: global-error.tsx renders its own <html> outside the app's <LocaleProvider>,
+// so useLocale/t() cannot be used here. English strings are kept as a fallback.
+// This is a known limitation of Next.js global error boundaries.
+
 import * as Sentry from "@sentry/nextjs";
 import { useEffect } from "react";
 

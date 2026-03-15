@@ -13,11 +13,10 @@ import type { CollectionBrief } from '../../types';
 import { usePageTitle } from '../../lib/usePageTitle';
 
 export default function CollectionsPageClient() {
-  usePageTitle('Collections');
-
   const router = useRouter();
   const { status } = useSession();
   const { t } = useLocale();
+  usePageTitle(t('collections.title'));
   const [collections, setCollections] = useState<CollectionBrief[]>([]);
   const [showCreate, setShowCreate] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);

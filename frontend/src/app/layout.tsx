@@ -61,6 +61,7 @@ export default async function RootLayout({
         <meta name="theme-color" content="#09090b" media="(prefers-color-scheme: dark)" />
       </head>
       <body className="font-sans antialiased">
+        {/* i18n: skip link is server-rendered, locale-specific version requires server-side i18n */}
         <a
           href="#page-content"
           className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50 focus:rounded-md focus:bg-zinc-900 focus:px-4 focus:py-2 focus:text-sm focus:font-medium focus:text-white dark:focus:bg-zinc-100 dark:focus:text-zinc-900"

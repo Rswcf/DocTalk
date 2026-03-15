@@ -76,7 +76,7 @@ export function useChatSession(documentId: string | undefined): UseChatSessionRe
           }
         } catch (e) {
           console.error('Failed to create session:', e);
-          if (!cancelled) setSessionError('Failed to initialize chat session.');
+          if (!cancelled) setSessionError('chat.sessionInitError');
         }
       }
     })();

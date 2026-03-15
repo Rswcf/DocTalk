@@ -214,14 +214,14 @@ export default function SessionDropdown() {
                     </button>
                     {confirmDeleteId === s.session_id && s.session_id !== sessionId ? (
                       <div className="shrink-0 mr-1 flex items-center gap-1 text-[11px] text-zinc-500 dark:text-zinc-400">
-                        <span>Delete?</span>
+                        <span>{t('dashboard.deletePrompt')}</span>
                         <button
                           className="px-1.5 py-0.5 rounded bg-red-600 text-white hover:bg-red-500 transition-colors"
                           onClick={(e) => { e.stopPropagation(); onDeleteSessionById(s.session_id); }}
                           disabled={isStreaming}
                           tabIndex={-1}
                         >
-                          Yes
+                          {t('common.yes')}
                         </button>
                         <button
                           className="px-1.5 py-0.5 rounded border border-zinc-300 dark:border-zinc-600 hover:bg-zinc-100 dark:hover:bg-zinc-700 transition-colors"
@@ -229,7 +229,7 @@ export default function SessionDropdown() {
                           disabled={isStreaming}
                           tabIndex={-1}
                         >
-                          No
+                          {t('common.no')}
                         </button>
                       </div>
                     ) : (
@@ -264,20 +264,20 @@ export default function SessionDropdown() {
             </button>
             {sessionId && confirmDeleteId === sessionId && (
               <div className="flex items-center gap-1 px-2 py-1.5 text-xs text-zinc-500 dark:text-zinc-400">
-                <span>Delete?</span>
+                <span>{t('dashboard.deletePrompt')}</span>
                 <button
                   className="px-2 py-0.5 rounded bg-red-600 text-white hover:bg-red-500 transition-colors"
                   onClick={() => onDeleteSessionById(sessionId)}
                   disabled={isStreaming}
                 >
-                  Yes
+                  {t('common.yes')}
                 </button>
                 <button
                   className="px-2 py-0.5 rounded border border-zinc-300 dark:border-zinc-600 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
                   onClick={() => setConfirmDeleteId(null)}
                   disabled={isStreaming}
                 >
-                  No
+                  {t('common.no')}
                 </button>
               </div>
             )}

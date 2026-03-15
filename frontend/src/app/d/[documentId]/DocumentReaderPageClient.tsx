@@ -43,7 +43,7 @@ export default function DocumentReaderPageClient() {
   } = useDocumentLoader(documentId);
   const { sessionError } = useChatSession(documentId);
   const { isLoggedIn, userPlan, canUseCustomInstructions } = useUserPlanProfile();
-  const error = loaderError || sessionError;
+  const error = loaderError || (sessionError ? t(sessionError) : null);
 
   usePageTitle(documentName || undefined);
 

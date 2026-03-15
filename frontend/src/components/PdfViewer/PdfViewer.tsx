@@ -91,7 +91,7 @@ export default function PdfViewer({ pdfUrl, currentPage, highlights, scale, scro
   // Validate PDF URL
   const validPdfUrl = useMemo(() => {
     if (!isValidPdfUrl(pdfUrl)) {
-      setUrlError('Invalid PDF URL');
+      setUrlError(t('doc.invalidPdfUrl'));
       return null;
     }
     setUrlError(null);

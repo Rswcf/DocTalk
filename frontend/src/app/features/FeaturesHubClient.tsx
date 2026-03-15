@@ -4,6 +4,7 @@ import React from 'react';
 import Link from 'next/link';
 import Header from '../../components/Header';
 import Footer from '../../components/Footer';
+import { useLocale } from '../../i18n';
 import {
   Quote,
   FileStack,
@@ -14,45 +15,42 @@ import {
   Sparkles,
 } from 'lucide-react';
 
-const features = [
-  {
-    slug: 'citations',
-    icon: Quote,
-    title: 'Citation Highlighting',
-    description:
-      'Every AI answer includes numbered citations. Click any citation to jump to the exact source text, highlighted in your document.',
-  },
-  {
-    slug: 'multi-format',
-    icon: FileStack,
-    title: 'Multi-Format Support',
-    description:
-      'Upload PDF, DOCX, PPTX, XLSX, TXT, Markdown, or any URL. Chat with any document format using AI.',
-  },
-  {
-    slug: 'multilingual',
-    icon: Languages,
-    title: '11 Languages',
-    description:
-      'Chat with documents in English, Chinese, Japanese, Spanish, German, French, Korean, Portuguese, Italian, Arabic, and Hindi.',
-  },
-  {
-    slug: 'free-demo',
-    icon: PlayCircle,
-    title: 'Free Demo',
-    description:
-      'Try AI document chat instantly. No signup, no credit card. 3 sample documents ready to explore.',
-  },
-  {
-    slug: 'performance-modes',
-    icon: Gauge,
-    title: '3 Performance Modes',
-    description:
-      'Quick for fast answers, Balanced for everyday use, Thorough for deep analysis. Choose the right speed and depth.',
-  },
-];
-
 export default function FeaturesHubClient() {
+  const { t } = useLocale();
+
+  const features = [
+    {
+      slug: 'citations',
+      icon: Quote,
+      title: t('featuresHub.citationsTitle'),
+      description: t('featuresHub.citationsDesc'),
+    },
+    {
+      slug: 'multi-format',
+      icon: FileStack,
+      title: t('featuresHub.multiFormatTitle'),
+      description: t('featuresHub.multiFormatDesc'),
+    },
+    {
+      slug: 'multilingual',
+      icon: Languages,
+      title: t('featuresHub.multilingualTitle'),
+      description: t('featuresHub.multilingualDesc'),
+    },
+    {
+      slug: 'free-demo',
+      icon: PlayCircle,
+      title: t('featuresHub.freeDemoTitle'),
+      description: t('featuresHub.freeDemoDesc'),
+    },
+    {
+      slug: 'performance-modes',
+      icon: Gauge,
+      title: t('featuresHub.performanceModesTitle'),
+      description: t('featuresHub.performanceModesDesc'),
+    },
+  ];
+
   return (
     <div className="min-h-screen flex flex-col bg-white dark:bg-zinc-950">
       <Header variant="minimal" />
@@ -64,12 +62,10 @@ export default function FeaturesHubClient() {
               <Sparkles className="w-6 h-6 text-zinc-600 dark:text-zinc-300" />
             </div>
             <h1 className="text-3xl sm:text-4xl font-bold text-zinc-900 dark:text-zinc-100 mb-4 tracking-tight">
-              DocTalk Features
+              {t('featuresHub.heroTitle')}
             </h1>
             <p className="text-lg text-zinc-600 dark:text-zinc-400 max-w-2xl mx-auto">
-              Upload any document, ask questions in natural language, and get AI-powered answers
-              with source citations you can verify. Explore the features that make DocTalk
-              the most transparent AI document tool.
+              {t('featuresHub.heroSubtitle')}
             </p>
           </div>
         </section>
@@ -102,31 +98,30 @@ export default function FeaturesHubClient() {
 
           <div className="mt-12 rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900/40 p-6">
             <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100 mb-2">
-              Pair these features with real workflows
+              {t('featuresHub.workflowsTitle')}
             </h2>
             <p className="text-sm text-zinc-600 dark:text-zinc-400 mb-4">
-              DocTalk works best when you connect product capabilities to an actual job: research,
-              legal review, finance analysis, or tool evaluation.
+              {t('featuresHub.workflowsDesc')}
             </p>
             <div className="flex flex-wrap gap-3 text-sm">
               <Link href="/use-cases/students" className="text-indigo-600 dark:text-indigo-400 hover:underline">
-                Students & Academics
+                {t('featuresHub.linkStudents')}
               </Link>
               <span className="text-zinc-300 dark:text-zinc-700">|</span>
               <Link href="/use-cases/lawyers" className="text-indigo-600 dark:text-indigo-400 hover:underline">
-                Legal Professionals
+                {t('featuresHub.linkLawyers')}
               </Link>
               <span className="text-zinc-300 dark:text-zinc-700">|</span>
               <Link href="/use-cases/finance" className="text-indigo-600 dark:text-indigo-400 hover:underline">
-                Financial Analysts
+                {t('featuresHub.linkFinance')}
               </Link>
               <span className="text-zinc-300 dark:text-zinc-700">|</span>
               <Link href="/compare/chatpdf" className="text-indigo-600 dark:text-indigo-400 hover:underline">
-                DocTalk vs ChatPDF
+                {t('featuresHub.linkVsChatPDF')}
               </Link>
               <span className="text-zinc-300 dark:text-zinc-700">|</span>
               <Link href="/blog/category/comparisons" className="text-indigo-600 dark:text-indigo-400 hover:underline">
-                Comparison guides
+                {t('featuresHub.linkComparisons')}
               </Link>
             </div>
           </div>
@@ -134,13 +129,13 @@ export default function FeaturesHubClient() {
           {/* CTA */}
           <div className="mt-16 pt-12 border-t border-zinc-200 dark:border-zinc-800 text-center">
             <p className="text-zinc-600 dark:text-zinc-400 mb-5">
-              See it all in action with the free demo — no account required.
+              {t('featuresHub.ctaText')}
             </p>
             <Link
               href="/demo"
               className="group inline-flex items-center px-6 py-3 bg-zinc-900 dark:bg-zinc-50 text-white dark:text-zinc-900 rounded-lg font-medium hover:bg-zinc-800 dark:hover:bg-zinc-200 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400 dark:focus-visible:ring-zinc-500 focus-visible:ring-offset-2"
             >
-              Try the Free Demo
+              {t('featuresHub.ctaButton')}
               <ArrowRight className="ml-2 w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
             </Link>
           </div>

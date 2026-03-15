@@ -20,12 +20,12 @@ interface Product {
 }
 
 function BillingContent() {
-  usePageTitle("Pricing");
+  const { t } = useLocale();
+  usePageTitle(t("footer.pricing"));
 
   const { status } = useSession();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { t } = useLocale();
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
@@ -251,7 +251,7 @@ function BillingContent() {
         <Header />
         <main id="main-content" className="flex min-h-[calc(100vh-4rem)] items-center justify-center p-8">
           <h1 className="sr-only">DocTalk billing</h1>
-          <p className="text-zinc-500 dark:text-zinc-400">Loading...</p>
+          <p className="text-zinc-500 dark:text-zinc-400">{t('common.loading')}</p>
         </main>
       </div>
     );
@@ -263,7 +263,7 @@ function BillingContent() {
         <Header />
         <main id="main-content" className="flex min-h-[calc(100vh-4rem)] items-center justify-center p-8">
           <h1 className="sr-only">DocTalk billing</h1>
-          <p className="text-zinc-500 dark:text-zinc-400">Redirecting...</p>
+          <p className="text-zinc-500 dark:text-zinc-400">{t('common.redirecting')}</p>
         </main>
       </div>
     );
@@ -378,7 +378,7 @@ function BillingContent() {
                       {billingPeriod === 'monthly' ? '$9.99' : '$7.99'}
                     </span>
                     <span className="text-zinc-500 dark:text-zinc-400 text-sm ml-1">
-                      /{billingPeriod === 'monthly' ? 'mo' : 'mo'}
+                      {t('billing.perMonth')}
                     </span>
                     {billingPeriod === 'annual' && (
                       <span className="ml-2 text-xs px-2 py-0.5 rounded-full bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 font-medium">
@@ -439,7 +439,7 @@ function BillingContent() {
                       {billingPeriod === 'monthly' ? '$19.99' : '$15.99'}
                     </span>
                     <span className="text-zinc-500 dark:text-zinc-400 text-sm ml-1">
-                      /mo
+                      {t('billing.perMonth')}
                     </span>
                     {billingPeriod === 'annual' && (
                       <span className="ml-2 text-xs px-2 py-0.5 rounded-full bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 font-medium">
@@ -669,15 +669,18 @@ function BillingContent() {
   );
 }
 
+function BillingSuspenseFallback() {
+  const { t } = useLocale();
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-[var(--page-background)]">
+      <div className="animate-pulse text-zinc-500">{t('common.loading')}</div>
+    </div>
+  );
+}
+
 export default function BillingPageClient() {
   return (
-    <Suspense
-      fallback={
-        <div className="min-h-screen flex items-center justify-center bg-[var(--page-background)]">
-          <div className="animate-pulse text-zinc-500">Loading...</div>
-        </div>
-      }
-    >
+    <Suspense fallback={<BillingSuspenseFallback />}>
       <BillingContent />
     </Suspense>
   );

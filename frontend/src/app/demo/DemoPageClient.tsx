@@ -30,9 +30,8 @@ const SAMPLE_CONFIG: Record<string, { icon: typeof FileText; titleKey: string; d
 };
 
 export default function DemoPageClient() {
-  usePageTitle('Demo');
-
   const { t } = useLocale();
+  usePageTitle(t('footer.demo'));
   const [docs, setDocs] = useState<DemoDocument[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);

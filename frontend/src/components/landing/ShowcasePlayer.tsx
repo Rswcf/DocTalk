@@ -2,6 +2,7 @@
 
 import React, { lazy, Suspense, useEffect, useState } from "react";
 import { useTheme } from "next-themes";
+import { useLocale } from "../../i18n";
 
 // Lazy load the entire player + composition wrapper
 const LazyShowcase = lazy(() => import("./ShowcasePlayerInner"));
@@ -13,9 +14,10 @@ function SkeletonFallback() {
 }
 
 function StaticFallback() {
+  const { t } = useLocale();
   return (
     <div className="aspect-video bg-zinc-100 dark:bg-zinc-800 rounded-sm flex items-center justify-center">
-      <p className="text-sm text-zinc-400">Product demo unavailable</p>
+      <p className="text-sm text-zinc-400">{t('landing.demoUnavailable')}</p>
     </div>
   );
 }

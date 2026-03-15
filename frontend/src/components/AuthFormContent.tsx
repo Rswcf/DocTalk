@@ -202,10 +202,10 @@ export function AuthFormContent({ callbackUrl }: AuthFormContentProps) {
 
       {/* Terms + Privacy */}
       <p className="text-xs text-center text-zinc-400 dark:text-zinc-500 mt-4">
-        {t("auth.termsNotice").split("Terms of Service")[0]}
-        <a href="/terms" target="_blank" rel="noopener noreferrer" className="underline hover:text-zinc-600 dark:hover:text-zinc-300">Terms of Service</a>
-        {" and "}
-        <a href="/privacy" target="_blank" rel="noopener noreferrer" className="underline hover:text-zinc-600 dark:hover:text-zinc-300">Privacy Policy</a>.
+        {t("auth.termsPrefix")}{" "}
+        <a href="/terms" target="_blank" rel="noopener noreferrer" className="underline hover:text-zinc-600 dark:hover:text-zinc-300">{t("auth.termsOfService")}</a>
+        {" "}{t("auth.and")}{" "}
+        <a href="/privacy" target="_blank" rel="noopener noreferrer" className="underline hover:text-zinc-600 dark:hover:text-zinc-300">{t("auth.privacyPolicy")}</a>.
       </p>
 
       {/* AI disclosure + free credits */}
