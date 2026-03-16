@@ -1,0 +1,40 @@
+# DocTalk
+
+> AI document chat with cited answers. Upload PDF, DOCX, PPTX, XLSX, TXT, Markdown, or a URL and chat with AI that cites original text with real-time highlight navigation.
+
+## Product
+
+- [Home](https://www.doctalk.site)
+- [Features](https://www.doctalk.site/features)
+- [Citation Highlighting](https://www.doctalk.site/features/citations)
+- [Multi-Format Support](https://www.doctalk.site/features/multi-format)
+- [Multilingual (11 Languages)](https://www.doctalk.site/features/multilingual)
+- [Free Demo (No Signup)](https://www.doctalk.site/demo)
+- [Pricing](https://www.doctalk.site/pricing)
+
+## Use Cases
+
+- [Students & Researchers](https://www.doctalk.site/use-cases/students)
+- [Legal Professionals](https://www.doctalk.site/use-cases/lawyers)
+- [Finance Teams](https://www.doctalk.site/use-cases/finance)
+- [HR & Contracts](https://www.doctalk.site/use-cases/hr-contracts)
+
+## Comparisons
+
+- [DocTalk vs ChatPDF](https://www.doctalk.site/compare/chatpdf)
+- [DocTalk vs AskYourPDF](https://www.doctalk.site/compare/askyourpdf)
+- [DocTalk vs NotebookLM](https://www.doctalk.site/compare/notebooklm)
+- [DocTalk vs Humata](https://www.doctalk.site/compare/humata)
+- [DocTalk vs PDF.ai](https://www.doctalk.site/compare/pdf-ai)
+
+## Blog
+
+- [Best AI PDF Tools 2026](https://www.doctalk.site/blog/best-ai-pdf-tools-2026)
+- [Free AI PDF Chat No Signup](https://www.doctalk.site/blog/free-ai-pdf-chat-no-signup)
+- [How to Chat with DOCX Using AI](https://www.doctalk.site/blog/how-to-chat-with-docx-ai)
+- [How to Chat with PDF Using AI](https://www.doctalk.site/blog/how-to-chat-with-pdf-ai)
+
+## About
+
+- [About DocTalk](https://www.doctalk.site/about)
+- [Contact](https://www.doctalk.site/contact)
