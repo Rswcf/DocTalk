@@ -17,6 +17,7 @@ from .api.chunks import chunks_router
 from .api.collections import collections_router
 from .api.credits import router as credits_router
 from .api.documents import documents_router
+from .api.export import router as export_router
 from .api.search import search_router
 from .api.users import router as users_router
 from .core.config import settings
@@ -151,8 +152,6 @@ app.include_router(users_router)
 app.include_router(billing_router)
 app.include_router(collections_router)
 app.include_router(admin_router)
-
-from app.api.export import router as export_router
 app.include_router(export_router)
 
 @app.get("/version", response_model=ReleaseInfo)
