@@ -47,7 +47,14 @@ const nextConfig = {
     return config;
   },
   async headers() {
+    const noindexHeader = { key: "X-Robots-Tag", value: "noindex, nofollow" };
     return [
+      { source: "/auth/:path*", headers: [noindexHeader] },
+      { source: "/billing/:path*", headers: [noindexHeader] },
+      { source: "/profile/:path*", headers: [noindexHeader] },
+      { source: "/collections/:path*", headers: [noindexHeader] },
+      { source: "/admin/:path*", headers: [noindexHeader] },
+      { source: "/d/:path*", headers: [noindexHeader] },
       {
         source: "/(.*)",
         headers: [
