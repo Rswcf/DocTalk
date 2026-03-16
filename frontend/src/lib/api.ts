@@ -265,6 +265,29 @@ export async function listCollectionSessions(collectionId: string): Promise<Sess
   return handle(res);
 }
 
+// --- Export API ---
+
+export async function exportSession(sessionId: string, format: 'pdf' | 'docx'): Promise<Blob> {
+  const res = await fetch(`${PROXY_BASE}/api/sessions/${sessionId}/export?format=${format}`);
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`Export failed: ${text}`);
+  }
+  return res.blob();
+}
+
+// --- Share API ---
+
+export async function createShare(sessionId: string): Promise<{ share_token: string; url: string }> {
+  const res = await fetch(`${PROXY_BASE}/api/sessions/${sessionId}/share`, { method: 'POST' });
+  return handle(res);
+}
+
+export async function revokeShare(sessionId: string): Promise<void> {
+  const res = await fetch(`${PROXY_BASE}/api/sessions/${sessionId}/share`, { method: 'DELETE' });
+  if (!res.ok && res.status !== 404) throw new Error(await res.text());
+}
+
 // --- Admin API ---
 
 export async function getAdminOverview() {

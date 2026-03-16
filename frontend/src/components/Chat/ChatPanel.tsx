@@ -178,10 +178,27 @@ export default function ChatPanel({ sessionId, onCitationClick, maxUserMessages,
     exportConversationAsMarkdown(messages, docName);
   }, [messages]);
 
+  const handleExportFormat = useCallback(async (format: 'pdf' | 'docx') => {
+    try {
+      const { exportSession } = await import('../../lib/api');
+      const blob = await exportSession(sessionId, format);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `conversation.${format}`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (e) {
+      console.error('Export failed:', e);
+    }
+  }, [sessionId]);
+
   const canUseCustomInstructions = !!onOpenSettings;
   const showCustomInstructions = canUseCustomInstructions || userPlan === 'free';
   const canUseExport = messages.length > 0 && !isStreaming && (userPlan === 'plus' || userPlan === 'pro');
-  const showExportInMenu = messages.length > 0 && !isStreaming && (canUseExport || userPlan === 'free');
+  const showExportInMenu = messages.length > 0 && !isStreaming;
 
   const displayedSuggestedQuestions = suggestedQuestions && suggestedQuestions.length > 0
     ? suggestedQuestions
@@ -314,6 +331,8 @@ export default function ChatPanel({ sessionId, onCitationClick, maxUserMessages,
               canUseExport={canUseExport}
               onOpenSettings={onOpenSettings}
               onExport={handleExport}
+              onExportPdf={() => handleExportFormat('pdf')}
+              onExportDocx={() => handleExportFormat('docx')}
               onBillingRedirect={() => {
                 setPlusMenuOpen(false);
                 router.push('/billing');

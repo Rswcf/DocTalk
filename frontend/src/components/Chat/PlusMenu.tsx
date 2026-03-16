@@ -1,7 +1,7 @@
 "use client";
 
 import React from 'react';
-import { Download, Lock, Plus, Settings2 } from 'lucide-react';
+import { Download, FileText, Lock, Plus, Settings2 } from 'lucide-react';
 
 interface PlusMenuProps {
   isOpen: boolean;
@@ -16,6 +16,8 @@ interface PlusMenuProps {
   canUseExport: boolean;
   onOpenSettings?: () => void;
   onExport: () => void;
+  onExportPdf?: () => void;
+  onExportDocx?: () => void;
   onBillingRedirect: () => void;
   t: (key: string) => string;
 }
@@ -33,6 +35,8 @@ export default function PlusMenu({
   canUseExport,
   onOpenSettings,
   onExport,
+  onExportPdf,
+  onExportDocx,
   onBillingRedirect,
   t,
 }: PlusMenuProps) {
@@ -92,14 +96,32 @@ export default function PlusMenu({
             <div className="border-t border-zinc-100 dark:border-zinc-700" />
           )}
 
+          {/* Markdown export — always available */}
           {showExportInMenu && (
             <button
               role="menuitem"
               tabIndex={-1}
               type="button"
               onClick={() => {
-                if (canUseExport) {
-                  onExport();
+                onExport();
+                setIsOpen(false);
+              }}
+              className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:ring-inset"
+            >
+              <FileText size={16} />
+              <span>{t('chat.exportMarkdown') || 'Export Markdown'}</span>
+            </button>
+          )}
+
+          {/* PDF export — Plus+ gated */}
+          {showExportInMenu && (
+            <button
+              role="menuitem"
+              tabIndex={-1}
+              type="button"
+              onClick={() => {
+                if (canUseExport && onExportPdf) {
+                  onExportPdf();
                   setIsOpen(false);
                   return;
                 }
@@ -108,7 +130,33 @@ export default function PlusMenu({
               className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:ring-inset"
             >
               {canUseExport ? <Download size={16} /> : <Lock size={16} />}
-              <span>{t('chat.export')}</span>
+              <span>{t('chat.exportPdf') || 'Export PDF'}</span>
+              {!canUseExport && (
+                <span className="ml-auto text-[11px] px-1.5 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400">
+                  Plus
+                </span>
+              )}
+            </button>
+          )}
+
+          {/* DOCX export — Plus+ gated */}
+          {showExportInMenu && (
+            <button
+              role="menuitem"
+              tabIndex={-1}
+              type="button"
+              onClick={() => {
+                if (canUseExport && onExportDocx) {
+                  onExportDocx();
+                  setIsOpen(false);
+                  return;
+                }
+                onBillingRedirect();
+              }}
+              className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:ring-inset"
+            >
+              {canUseExport ? <Download size={16} /> : <Lock size={16} />}
+              <span>{t('chat.exportDocx') || 'Export DOCX'}</span>
               {!canUseExport && (
                 <span className="ml-auto text-[11px] px-1.5 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400">
                   Plus
