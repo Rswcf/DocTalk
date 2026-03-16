@@ -93,7 +93,8 @@ export default function StudentsClient() {
                 {t('useCasesStudents.challenge.p1')}
               </p>
               <p className="text-zinc-600 dark:text-zinc-300 mb-4">
-                {t('useCasesStudents.challenge.p2')}
+                {t('useCasesStudents.challenge.p2')}{' '}
+                Tools like <a href="https://scholar.google.com" target="_blank" rel="noopener noreferrer" className="text-accent hover:underline">Google Scholar</a> and reference managers like <a href="https://www.zotero.org" target="_blank" rel="noopener noreferrer" className="text-accent hover:underline">Zotero</a> help find papers, but understanding them still takes time.
               </p>
               <p className="text-zinc-600 dark:text-zinc-300 mb-4">
                 {t('useCasesStudents.challenge.p3')}

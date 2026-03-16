@@ -93,10 +93,12 @@ export default function FinanceClient() {
                 {t('useCasesFinance.challenge.p1')}
               </p>
               <p className="text-zinc-600 dark:text-zinc-300 mb-4">
-                {t('useCasesFinance.challenge.p2')}
+                {t('useCasesFinance.challenge.p2')}{' '}
+                Public filings on <a href="https://www.sec.gov/edgar/searchedgar/companysearch" target="_blank" rel="noopener noreferrer" className="text-accent hover:underline">SEC EDGAR</a> can run hundreds of pages.
               </p>
               <p className="text-zinc-600 dark:text-zinc-300 mb-4">
-                {t('useCasesFinance.challenge.p3')}
+                {t('useCasesFinance.challenge.p3')}{' '}
+                Understanding <a href="https://www.investopedia.com/terms/a/annual-report.asp" target="_blank" rel="noopener noreferrer" className="text-accent hover:underline">annual reports</a> is critical for investment decisions.
               </p>
               <p className="text-zinc-600 dark:text-zinc-300">
                 {t('useCasesFinance.challenge.p4')}

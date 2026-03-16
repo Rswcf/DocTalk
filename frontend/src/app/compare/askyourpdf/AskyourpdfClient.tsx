@@ -85,7 +85,8 @@ export default function AskyourpdfClient() {
             {t('compareAskyourpdf.whatIsDocTalkTitle')}
           </h2>
           <p className="text-zinc-600 dark:text-zinc-300 leading-relaxed">
-            {t('compareAskyourpdf.whatIsDocTalkDescription')}
+            {t('compareAskyourpdf.whatIsDocTalkDescription')}{' '}
+            It is built on a <a href="https://arxiv.org/abs/2005.11401" target="_blank" rel="noopener noreferrer" className="text-accent hover:underline">RAG architecture</a> for grounded, cited answers.
           </p>
         </section>
 
@@ -96,6 +97,7 @@ export default function AskyourpdfClient() {
               {t('compareAskyourpdf.whatIsAskyourpdfTitle')}
             </h2>
             <p className="text-zinc-600 dark:text-zinc-300 leading-relaxed">
+              <a href="https://askyourpdf.com" target="_blank" rel="noopener noreferrer" className="text-accent hover:underline">AskYourPDF</a>{' '}
               {t('compareAskyourpdf.whatIsAskyourpdfDescription')}
             </p>
           </div>

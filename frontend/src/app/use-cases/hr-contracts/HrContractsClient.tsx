@@ -90,10 +90,12 @@ export default function HrContractsClient() {
                 {t('useCasesHr.challenge.p1')}
               </p>
               <p className="text-zinc-600 dark:text-zinc-300 mb-4">
-                {t('useCasesHr.challenge.p2')}
+                {t('useCasesHr.challenge.p2')}{' '}
+                Organizations like <a href="https://www.shrm.org" target="_blank" rel="noopener noreferrer" className="text-accent hover:underline">SHRM</a> provide guidance on best practices for policy management.
               </p>
               <p className="text-zinc-600 dark:text-zinc-300 mb-4">
-                {t('useCasesHr.challenge.p3')}
+                {t('useCasesHr.challenge.p3')}{' '}
+                Compliance with regulations from the <a href="https://www.dol.gov" target="_blank" rel="noopener noreferrer" className="text-accent hover:underline">U.S. Department of Labor</a> adds additional complexity.
               </p>
               <p className="text-zinc-600 dark:text-zinc-300">
                 {t('useCasesHr.challenge.p4')}

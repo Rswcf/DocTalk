@@ -11,7 +11,7 @@ imageAlt: "A user chatting with a PDF document using AI, with highlighted citati
 keywords: ["chat with pdf", "how to chat with pdf ai", "ai pdf reader", "pdf chatbot", "ask pdf questions", "ai document analysis"]
 ---
 
-If you have ever spent 20 minutes scrolling through a 50-page PDF trying to find one specific detail, you already know why AI document chat exists. Instead of reading every page, you ask a question in plain language and get an answer instantly — with a citation pointing you to the exact paragraph in the original document.
+If you have ever spent 20 minutes scrolling through a 50-page [Adobe PDF format](https://www.adobe.com/acrobat/about-adobe-pdf.html) document trying to find one specific detail, you already know why AI document chat exists. Instead of reading every page, you ask a question in plain language and get an answer instantly — with a citation pointing you to the exact paragraph in the original document.
 
 This guide walks you through everything: what AI PDF chat actually is, how the technology works under the hood, a step-by-step walkthrough using DocTalk, and practical tips for getting the best results.
 
@@ -25,7 +25,7 @@ Think of it as having a knowledgeable assistant who has just read the entire doc
 
 General-purpose AI models like ChatGPT work from their training data — they cannot read your specific PDF. When you paste text into ChatGPT, you are limited by context window size, you lose the document structure, and you get no source citations.
 
-AI PDF chat tools use a technique called Retrieval-Augmented Generation (RAG) that keeps your document as the single source of truth. Every answer is grounded in the actual text, and you can verify it by clicking through to the cited passage.
+AI PDF chat tools use a technique called Retrieval-Augmented Generation ([RAG paper](https://arxiv.org/abs/2005.11401)) that keeps your document as the single source of truth. Every answer is grounded in the actual text, and you can verify it by clicking through to the cited passage.
 
 ## How the Technology Works
 

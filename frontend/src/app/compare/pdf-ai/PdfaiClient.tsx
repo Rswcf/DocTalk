@@ -96,7 +96,9 @@ export default function PdfaiClient() {
               {t('comparePdfai.whatIsPdfaiTitle')}
             </h2>
             <p className="text-zinc-600 dark:text-zinc-300 leading-relaxed">
-              {t('comparePdfai.whatIsPdfaiDescription')}
+              <a href="https://pdf.ai" target="_blank" rel="noopener noreferrer" className="text-accent hover:underline">PDF.ai</a>{' '}
+              {t('comparePdfai.whatIsPdfaiDescription')}{' '}
+              It leverages <a href="https://arxiv.org/abs/2005.11401" target="_blank" rel="noopener noreferrer" className="text-accent hover:underline">retrieval-augmented generation</a> to provide cited answers from your documents.
             </p>
           </div>
         </section>

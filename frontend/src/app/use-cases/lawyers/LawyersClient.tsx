@@ -113,10 +113,12 @@ export default function LawyersClient() {
                 {t('useCasesLawyers.challenge.p1')}
               </p>
               <p className="text-zinc-600 dark:text-zinc-300 mb-4">
-                {t('useCasesLawyers.challenge.p2')}
+                {t('useCasesLawyers.challenge.p2')}{' '}
+                Resources like <a href="https://www.americanbar.org/groups/law_practice/resources/tech-tools/" target="_blank" rel="noopener noreferrer" className="text-accent hover:underline">ABA Legal Technology</a> highlight the growing role of AI in law practice.
               </p>
               <p className="text-zinc-600 dark:text-zinc-300 mb-4">
-                {t('useCasesLawyers.challenge.p3')}
+                {t('useCasesLawyers.challenge.p3')}{' '}
+                Platforms like <a href="https://www.thomsonreuters.com/en/artificial-intelligence.html" target="_blank" rel="noopener noreferrer" className="text-accent hover:underline">Thomson Reuters AI</a> are advancing legal document analysis.
               </p>
               <p className="text-zinc-600 dark:text-zinc-300">
                 {t('useCasesLawyers.challenge.p4')}

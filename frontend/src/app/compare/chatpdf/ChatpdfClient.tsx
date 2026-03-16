@@ -89,7 +89,8 @@ export default function ChatpdfClient() {
             {t('compareChatpdf.whatIsDocTalk')}
           </h2>
           <p className="text-zinc-600 dark:text-zinc-300 leading-relaxed">
-            {t('compareChatpdf.whatIsDocTalkDescription')}
+            {t('compareChatpdf.whatIsDocTalkDescription')}{' '}
+            DocTalk uses a <a href="https://arxiv.org/abs/2005.11401" target="_blank" rel="noopener noreferrer" className="text-accent hover:underline">Retrieval-Augmented Generation (RAG)</a> architecture to deliver accurate, cited answers.
           </p>
         </section>
 
@@ -100,6 +101,7 @@ export default function ChatpdfClient() {
               {t('compareChatpdf.whatIsChatPDF')}
             </h2>
             <p className="text-zinc-600 dark:text-zinc-300 leading-relaxed">
+              <a href="https://chatpdf.com" target="_blank" rel="noopener noreferrer" className="text-accent hover:underline">ChatPDF</a>{' '}
               {t('compareChatpdf.whatIsChatPDFDescription')}
             </p>
           </div>

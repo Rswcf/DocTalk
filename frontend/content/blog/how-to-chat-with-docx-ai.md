@@ -17,7 +17,7 @@ If you have been converting your DOCX files to PDF just to use an AI chat tool, 
 
 ## Why DOCX Support Matters
 
-Microsoft Word is the default document format for most businesses, law firms, government agencies, and academic institutions. According to Microsoft, there are over 1 billion Office users worldwide, and Word remains the most-used application in the suite.
+Microsoft Word is the default document format for most businesses, law firms, government agencies, and academic institutions. The format is based on [Microsoft's OOXML specification](https://learn.microsoft.com/en-us/openspecs/office_standards/ms-docx/). According to Microsoft, there are over 1 billion Office users worldwide, and Word remains the most-used application in the suite.
 
 Yet most AI PDF tools — including ChatPDF, AskYourPDF, and PDF.ai — require you to convert DOCX to PDF before uploading. This conversion step introduces several problems:
 

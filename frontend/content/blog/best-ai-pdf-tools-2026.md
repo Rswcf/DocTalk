@@ -53,7 +53,7 @@ We uploaded the same set of test documents to each tool: a 40-page financial ear
 
 [Try DocTalk free](/demo) — no signup required.
 
-### 2. ChatPDF — Simplest PDF Chat
+### 2. [ChatPDF](https://chatpdf.com) — Simplest PDF Chat
 
 **What it does**: Upload a PDF and chat with it. Focused exclusively on PDFs with a clean, minimal interface.
 
@@ -74,7 +74,7 @@ We uploaded the same set of test documents to each tool: a 40-page financial ear
 
 For a detailed comparison, see our [DocTalk vs. ChatPDF](/compare/chatpdf) analysis.
 
-### 3. AskYourPDF — Best for Researchers
+### 3. [AskYourPDF](https://askyourpdf.com) — Best for Researchers
 
 **What it does**: PDF chat with a focus on academic research workflows, including a Chrome extension and Zotero integration.
 
@@ -94,7 +94,7 @@ For a detailed comparison, see our [DocTalk vs. ChatPDF](/compare/chatpdf) analy
 
 **Limitations**: Primarily PDF-focused. Higher price point than many alternatives. Citation quality can vary — references pages rather than highlighting exact passages.
 
-### 4. NotebookLM — Best Free Option
+### 4. [NotebookLM](https://notebooklm.google.com) — Best Free Option
 
 **What it does**: Google's AI notebook tool. Upload PDFs, Google Docs, websites, and YouTube videos, then chat with them. Known for its "Audio Overview" feature that generates podcast-style summaries.
 
@@ -116,7 +116,7 @@ For a detailed comparison, see our [DocTalk vs. ChatPDF](/compare/chatpdf) analy
 
 See our [DocTalk vs. NotebookLM](/compare/notebooklm) comparison for a deeper analysis.
 
-### 5. Humata — Best for Teams
+### 5. [Humata](https://www.humata.ai) — Best for Teams
 
 **What it does**: AI document analysis with a focus on team collaboration. Upload documents, ask questions, get cited answers, and share findings with teammates.
 
@@ -136,7 +136,7 @@ See our [DocTalk vs. NotebookLM](/compare/notebooklm) comparison for a deeper an
 
 **Limitations**: Primarily PDF-focused. Free tier is very limited at 60 pages/month. Team features require higher-tier plans.
 
-### 6. PDF.ai — Simplest Interface
+### 6. [PDF.ai](https://pdf.ai) — Simplest Interface
 
 **What it does**: PDF chat with an emphasis on visual simplicity. The PDF renders in a clean viewer alongside the chat, with highlights appearing directly on the document.
 

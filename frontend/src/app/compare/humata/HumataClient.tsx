@@ -96,7 +96,9 @@ export default function HumataClient() {
               {t('compareHumata.whatIsHumataTitle')}
             </h2>
             <p className="text-zinc-600 dark:text-zinc-300 leading-relaxed">
-              {t('compareHumata.whatIsHumataDescription')}
+              <a href="https://www.humata.ai" target="_blank" rel="noopener noreferrer" className="text-accent hover:underline">Humata</a>{' '}
+              {t('compareHumata.whatIsHumataDescription')}{' '}
+              It uses a <a href="https://arxiv.org/abs/2005.11401" target="_blank" rel="noopener noreferrer" className="text-accent hover:underline">RAG-based approach</a> to generate answers from uploaded documents.
             </p>
           </div>
         </section>

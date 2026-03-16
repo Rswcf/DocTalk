@@ -163,7 +163,7 @@ The demo uses pre-loaded sample documents. To upload your own files, create a fr
 
 ### Is my data safe?
 
-DocTalk encrypts all documents with AES-256 at rest and TLS in transit. Documents are never used for AI training. You can delete your documents and account at any time. See the [privacy policy](/privacy) for details.
+DocTalk encrypts all documents with AES-256 at rest and TLS in transit. Documents are never used for AI training, in compliance with [GDPR](https://gdpr.eu/what-is-gdpr/) principles. You can delete your documents and account at any time. See the [privacy policy](/privacy) for details.
 
 ## Start Now
 
