@@ -22,3 +22,5 @@ python-pptx==1.0.2
 openpyxl==3.1.5
 httpx==0.28.1
 beautifulsoup4==4.13.4
+weasyprint==68.1
+markupsafe==3.0.3
