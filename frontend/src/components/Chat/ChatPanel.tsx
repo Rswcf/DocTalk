@@ -2,7 +2,7 @@
 
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { SendHorizontal, ArrowDown, Square } from 'lucide-react';
+import { SendHorizontal, ArrowDown, Square, Share2 } from 'lucide-react';
 import { exportConversationAsMarkdown } from '../../lib/export';
 import type { Citation } from '../../types';
 import { useDocTalkStore } from '../../store';
@@ -195,6 +195,24 @@ export default function ChatPanel({ sessionId, onCitationClick, maxUserMessages,
     }
   }, [sessionId]);
 
+  const [shareLoading, setShareLoading] = useState(false);
+  const handleShare = useCallback(async () => {
+    if (shareLoading) return;
+    setShareLoading(true);
+    try {
+      const { createShare } = await import('../../lib/api');
+      const result = await createShare(sessionId);
+      await navigator.clipboard.writeText(result.url);
+      // Simple alert-style feedback — could be replaced with toast component
+      window.alert('Link copied to clipboard!');
+    } catch (e) {
+      console.error('Share failed:', e);
+      window.alert('Failed to create share link.');
+    } finally {
+      setShareLoading(false);
+    }
+  }, [sessionId, shareLoading]);
+
   const canUseCustomInstructions = !!onOpenSettings;
   const showCustomInstructions = canUseCustomInstructions || userPlan === 'free';
   const canUseExport = messages.length > 0 && !isStreaming && (userPlan === 'plus' || userPlan === 'pro');
@@ -339,6 +357,18 @@ export default function ChatPanel({ sessionId, onCitationClick, maxUserMessages,
               }}
               t={t}
             />
+            {messages.length > 0 && !isStreaming && userPlan && userPlan !== 'free' && (
+              <button
+                type="button"
+                onClick={handleShare}
+                disabled={shareLoading}
+                className="p-1.5 rounded-full text-zinc-400 hover:text-zinc-600 dark:text-zinc-500 dark:hover:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-700 transition-colors focus-visible:ring-2 focus-visible:ring-zinc-400 dark:focus-visible:ring-zinc-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-900 disabled:opacity-50"
+                title={t('chat.share') || 'Share conversation'}
+                aria-label={t('chat.share') || 'Share conversation'}
+              >
+                <Share2 size={16} />
+              </button>
+            )}
             <textarea
               ref={textareaRef}
               className="flex-1 px-1 py-1 text-sm resize-none overflow-y-auto focus:outline-none bg-transparent dark:text-zinc-100 placeholder:text-zinc-400 dark:placeholder:text-zinc-500"
