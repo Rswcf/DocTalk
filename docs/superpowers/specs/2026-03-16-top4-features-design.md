@@ -19,7 +19,7 @@ GET /sessions/{session_id}/export?format=pdf|docx|md
 
 - Auth required (session owner only)
 - Returns file as streaming response with `Content-Disposition: attachment`
-- Gating: Free = Markdown only, Plus+ = PDF/DOCX (matches existing export gate)
+- Gating: Free = no server export (client-side Markdown only), Plus+ = PDF/DOCX via backend. This matches the existing export gate in `ChatPanel.tsx` and `PricingTable.tsx` where export is a Plus+ feature. Markdown export remains client-side for all users as a baseline.
 
 **Export content structure:**
 1. Header: document/collection name, date, DocTalk branding
@@ -43,18 +43,23 @@ weasyprint>=62.0
 **Backend implementation (`/backend/app/api/export.py`):**
 
 ```python
-@router.get("/sessions/{session_id}/export")
+# NOTE: Uses codebase conventions — get_db_session (not get_db), get_current_user from deps.py,
+# inline plan check (not check_subscription helper which doesn't exist).
+# New router must be registered in main.py app.include_router().
+
+@router.get("/api/sessions/{session_id}/export")
 async def export_session(
     session_id: UUID,
     format: Literal["pdf", "docx", "md"] = Query("md"),
     user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db_session),
 ):
     session = await verify_session_access(session_id, user, db)
     messages = await get_session_messages(session_id, db)
 
     if format in ("pdf", "docx"):
-        check_subscription(user, min_plan="plus")
+        if user.plan not in ("plus", "pro"):
+            raise HTTPException(403, "PDF/DOCX export requires Plus or Pro plan")
 
     if format == "md":
         content = render_markdown(session, messages)
@@ -65,6 +70,22 @@ async def export_session(
     elif format == "pdf":
         buffer = render_pdf(session, messages)
         return StreamingResponse(buffer, media_type="application/pdf", ...)
+```
+
+**PDF security:** HTML templates for weasyprint MUST escape all user content to prevent SSRF/resource fetch during render. Use `markupsafe.escape()` on all message content before passing to HTML template.
+
+**Deployment:** `weasyprint` requires system libraries (`pango`, `cairo`, `gdk-pixbuf`). Add to `Dockerfile`:
+```dockerfile
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libpango-1.0-0 libpangocairo-1.0-0 libgdk-pixbuf2.0-0 \
+    && rm -rf /var/lib/apt/lists/*
+```
+
+**Router registration in `main.py`:**
+```python
+from app.api import export, sharing
+app.include_router(export.router)
+app.include_router(sharing.router)
 ```
 
 **Frontend changes:**
@@ -83,9 +104,10 @@ CREATE TABLE shared_sessions (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     session_id UUID NOT NULL REFERENCES sessions(id) ON DELETE CASCADE,
     share_token UUID NOT NULL UNIQUE DEFAULT gen_random_uuid(),
-    created_by UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,  -- matches codebase convention (user_id not created_by)
     expires_at TIMESTAMPTZ,  -- NULL = never expires
-    created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    UNIQUE (session_id, user_id)  -- prevent race condition creating duplicate shares
 );
 CREATE INDEX idx_shared_sessions_token ON shared_sessions(share_token);
 ```
@@ -96,12 +118,12 @@ CREATE INDEX idx_shared_sessions_token ON shared_sessions(share_token);
 POST /sessions/{session_id}/share
   → { share_token, url, expires_at }
   Auth required (session owner only). Creates or returns existing share for this session.
-  Free plan enforcement: query COUNT(*) FROM shared_sessions WHERE created_by = user_id;
-  reject with 403 + error message if >= 3 active shares for free-plan users.
+  Free plan enforcement: query COUNT(*) FROM shared_sessions WHERE user_id = :uid AND (expires_at IS NULL OR expires_at > now());
+  reject with 403 + error message if >= 3 active (non-expired) shares for free-plan users.
 
 DELETE /sessions/{session_id}/share
   → 204
-  Auth required. Must verify created_by = current user (ownership guard).
+  Auth required. Must verify user_id = current_user.id (ownership guard).
 
 GET /shared/{share_token}
   → { session_title, messages[], document_name, created_at }
@@ -122,6 +144,8 @@ The UI should show a warning when deleting a session that has active share links
 - Mobile-responsive single-column layout
 - OG meta tags for link previews: title = session title, description = first assistant message preview
 - Server-side data fetch uses `BACKEND_INTERNAL_URL` (already configured for Vercel) to call `GET /shared/{token}` (no auth required)
+- Server-side fetch must forward `X-Forwarded-For` header from the incoming request so backend rate limiting uses the real client IP, not Vercel's server IP
+- Add `<meta name="robots" content="noindex">` to prevent search engine indexing of shared conversations
 
 **Frontend — share button in ChatPanel:**
 - New "Share" icon button in ChatPanel header (next to export)
@@ -139,7 +163,7 @@ def upgrade():
         sa.Column("id", sa.dialects.postgresql.UUID, primary_key=True, server_default=sa.text("gen_random_uuid()")),
         sa.Column("session_id", sa.dialects.postgresql.UUID, sa.ForeignKey("sessions.id", ondelete="CASCADE"), nullable=False),
         sa.Column("share_token", sa.dialects.postgresql.UUID, nullable=False, unique=True, server_default=sa.text("gen_random_uuid()")),
-        sa.Column("created_by", sa.dialects.postgresql.UUID, sa.ForeignKey("users.id", ondelete="CASCADE"), nullable=False),
+        sa.Column("created_by", sa.dialects.postgresql.UUID, sa.ForeignKey("users.id", ondelete="CASCADE"), nullable=False),  # column name: user_id
         sa.Column("expires_at", sa.DateTime(timezone=True), nullable=True),
         sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.text("now()"), nullable=False),
     )
@@ -199,21 +223,23 @@ citation = {
 
 **Bandwidth note:** ~300 chars per citation x 8 citations = ~2.4KB additional SSE data per message. Acceptable tradeoff for the UX value.
 
-**SSE citation event — include new fields:**
+**SSE citation event — include new fields (snake_case to match existing SSE contract):**
 
 ```json
 {"type": "citation", "data": {
-    "refIndex": 1,
-    "chunkId": "...",
+    "ref_index": 1,
+    "chunk_id": "...",
     "page": 3,
     "bboxes": [...],
-    "textSnippet": "...",
-    "confidenceScore": 0.87,
-    "contextText": "Extended context up to 300 chars...",
-    "documentId": "...",
-    "documentFilename": "contract.pdf"
+    "text_snippet": "...",
+    "confidence_score": 0.87,
+    "context_text": "Extended context up to 300 chars...",
+    "document_id": "...",
+    "document_filename": "contract.pdf"
 }}
 ```
+
+**NOTE:** Backend SSE uses snake_case (`ref_index`, `text_snippet`). Frontend `sse.ts` parser converts to camelCase for TypeScript types. New fields `confidence_score` → `confidenceScore` and `context_text` → `contextText` must be added to the SSE parser mapping.
 
 ### 2.2 Frontend Changes
 
@@ -259,9 +285,18 @@ The following already work:
 
 **Addition 1 — Plan limit enforcement:**
 
-Add checks in existing collection endpoints:
-- `POST /api/collections` — check `SELECT COUNT(*) FROM collections WHERE user_id = :uid` against plan limit (Free: 1, Plus: 5, Pro: unlimited). Reject with 403 if exceeded.
-- `POST /api/collections/{id}/documents` — check document count in collection against plan limit (Free: 3, Plus: 10, Pro: unlimited). Reject with 403 if exceeded.
+Add plan constants to `config.py` (following existing pattern for `PLAN_LIMITS`):
+```python
+PLAN_COLLECTION_LIMITS = {
+    "free": {"max_collections": 1, "max_docs_per_collection": 3},
+    "plus": {"max_collections": 5, "max_docs_per_collection": 10},
+    "pro": {"max_collections": 999, "max_docs_per_collection": 999},
+}
+```
+
+Add checks in existing collection endpoints (`collections.py`):
+- `POST /api/collections` — check `SELECT COUNT(*) FROM collections WHERE user_id = :uid` against plan limit. Reject with 403 if exceeded.
+- `POST /api/collections/{id}/documents` — check document count in collection against plan limit. Reject with 403 if exceeded.
 
 **Addition 2 — Frontend URL parameter for "View in original":**
 
@@ -269,7 +304,7 @@ Add checks in existing collection endpoints:
 GET /d/{documentId}?page=N&highlight=chunkId
 ```
 
-Frontend-only routing — the document reader already supports page navigation and bbox highlighting. Just need to read query params on mount. This link requires the user to be authenticated and own the document (existing auth checks apply). "View in original" links are only shown to the session owner, not in shared views.
+Frontend-only routing. `DocumentReaderPageClient.tsx` currently does NOT read URL query params on mount — this must be implemented. Use `useSearchParams()` to read `page` and `highlight` params, then trigger page navigation + bbox highlight via existing `scrollToPage()` and highlight functions. This link requires the user to be authenticated and own the document (existing auth checks apply). "View in original" links are only shown to the session owner, not in shared views.
 
 ### 3.2 Frontend — Collection Chat Page
 
@@ -319,7 +354,8 @@ When user clicks `[1]` in a collection chat message:
 **ChatPanel adaptation:**
 - `ChatPanel` already accepts `sessionId` — pass it the collection session ID
 - Chat API calls go through existing `/sessions/{id}/chat` endpoint (no change)
-- Mode selector and input are identical to single-doc chat
+- Mode selector currently lives in `AppHeaderShell.tsx`, not ChatPanel. For collection pages, the mode selector + domain mode toggle should be placed inside the collection chat area (either in the chat panel header or above the input). The collection page must pass `userPlan` to ChatPanel for gated controls.
+- The collection page currently has no session sidebar or new-chat UX — these must be built as new components
 
 ### 3.3 Mobile Layout
 
@@ -358,15 +394,30 @@ ALTER TABLE sessions ADD COLUMN domain_mode VARCHAR(20) DEFAULT NULL
     CHECK (domain_mode IN ('legal', 'academic'));
 ```
 
-**ChatRequest schema update:**
+**ChatRequest schema update (`/backend/app/schemas/chat.py`):**
 
 ```python
+# Matches existing ChatRequest pattern (Optional fields, no defaults that conflict)
 class ChatRequest(BaseModel):
     message: str
-    mode: Literal["quick", "balanced", "thorough"] = "balanced"
+    mode: Optional[Literal["quick", "balanced", "thorough"]] = None
     domain_mode: Optional[Literal["legal", "academic"]] = None  # NEW
-    locale: str = "en"
+    locale: Optional[str] = None
 ```
+
+**SessionListItem schema update** — expose `domain_mode` so frontend can restore on session switch:
+```python
+class SessionListItem(BaseModel):
+    session_id: uuid.UUID
+    title: Optional[str] = None
+    message_count: int
+    domain_mode: Optional[str] = None  # NEW
+    created_at: datetime
+    last_activity_at: datetime
+```
+
+**ChatSession model update (`/backend/app/models/tables.py`):**
+Add `domain_mode = Column(String(20), nullable=True)` to the `ChatSession` class.
 
 **Domain rules (`/backend/app/core/model_profiles.py`):**
 
@@ -394,9 +445,12 @@ DOMAIN_RULES: dict[str, list[str]] = {
 In system prompt construction, after the existing Rules section:
 
 ```python
+# In chat_service.py, after building the base rules_text from get_rules_for_model():
+# NOTE: `rules` is the list returned by get_rules_for_model(), available in scope.
+# Do NOT reference `base_rules` which doesn't exist.
 if domain_mode and domain_mode in DOMAIN_RULES:
     rules_text += f"\n\n## {domain_mode.title()} Mode Rules\n"
-    for i, rule in enumerate(DOMAIN_RULES[domain_mode], start=len(base_rules) + 1):
+    for i, rule in enumerate(DOMAIN_RULES[domain_mode], start=len(rules) + 1):
         rules_text += f"{i}. {rule}\n"
 ```
 
@@ -476,8 +530,8 @@ Each feature is a separate PR → merge to main → test → merge to stable →
 
 | Feature | Free | Plus ($9.99) | Pro ($19.99) |
 |---------|------|-------------|-------------|
-| Markdown export | Yes | Yes | Yes |
-| PDF/DOCX export | No | Yes | Yes |
+| Markdown export (client-side) | Yes | Yes | Yes |
+| PDF/DOCX export (server-side) | No | Yes | Yes |
 | Share links | 3 active | Unlimited | Unlimited |
 | Confidence hover | Yes | Yes | Yes |
 | Cross-doc Q&A | 1 collection, 3 docs | 5 collections, 10 docs | Unlimited |
