@@ -351,7 +351,7 @@ from fastapi.responses import StreamingResponse
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.deps import get_current_user, get_db_session
+from app.core.deps import require_auth, get_db_session
 from app.models.tables import ChatSession, Message, User
 from app.services.export_service import render_docx, render_markdown, render_pdf
 
@@ -367,15 +367,13 @@ def _sanitize_filename(name: str) -> str:
 async def export_session(
     session_id: UUID,
     format: Literal["pdf", "docx", "md"] = Query("md"),
-    user: User = Depends(get_current_user),
+    user: User = Depends(require_auth),
     db: AsyncSession = Depends(get_db_session),
 ):
-    # Load session with ownership check
-    result = await db.execute(
-        select(ChatSession).where(ChatSession.id == session_id)
-    )
-    session = result.scalar_one_or_none()
-    if not session or session.user_id != user.id:
+    # Load session with access check (reuse existing verify_session_access from chat.py)
+    from app.api.chat import verify_session_access
+    session = await verify_session_access(session_id, user, db)
+    if not session:
         raise HTTPException(404, "Session not found")
 
     # Plan gating for PDF/DOCX
@@ -398,6 +396,13 @@ async def export_session(
 
     safe_title = _sanitize_filename(title)
 
+    try:
+        return _render(format, title, doc_name, messages, safe_title)
+    except ValueError as e:
+        raise HTTPException(400, str(e))
+
+
+def _render(format, title, doc_name, messages, safe_title):
     if format == "md":
         content = render_markdown(title, doc_name, messages)
         return StreamingResponse(
@@ -571,7 +576,7 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
-from app.core.deps import get_current_user, get_db_session
+from app.core.deps import require_auth, get_db_session
 from app.models.tables import ChatSession, Message, SharedSession, User
 
 router = APIRouter(tags=["sharing"])
@@ -593,13 +598,13 @@ class SharedSessionView(BaseModel):
 @router.post("/api/sessions/{session_id}/share", response_model=ShareResponse)
 async def create_share(
     session_id: UUID,
-    user: User = Depends(get_current_user),
+    user: User = Depends(require_auth),
     db: AsyncSession = Depends(get_db_session),
 ):
-    # Verify session ownership
-    result = await db.execute(select(ChatSession).where(ChatSession.id == session_id))
-    session = result.scalar_one_or_none()
-    if not session or session.user_id != user.id:
+    # Verify session access (reuse existing verify_session_access from chat.py)
+    from app.api.chat import verify_session_access
+    session = await verify_session_access(session_id, user, db)
+    if not session:
         raise HTTPException(404, "Session not found")
 
     # Check existing share
@@ -644,7 +649,7 @@ async def create_share(
 @router.delete("/api/sessions/{session_id}/share", status_code=204)
 async def revoke_share(
     session_id: UUID,
-    user: User = Depends(get_current_user),
+    user: User = Depends(require_auth),
     db: AsyncSession = Depends(get_db_session),
 ):
     result = await db.execute(
@@ -667,6 +672,13 @@ async def view_shared(
     request: Request,
     db: AsyncSession = Depends(get_db_session),
 ):
+    # Rate limit: 30 req/min per IP (spec requirement)
+    from app.core.rate_limit import RedisRateLimiter
+    _shared_limiter = RedisRateLimiter(namespace="rate_limit:shared_view", max_requests=30, window_seconds=60)
+    client_ip = request.headers.get("x-forwarded-for", "").split(",")[0].strip() or (request.client.host if request.client else "unknown")
+    if not await _shared_limiter.is_allowed(client_ip):
+        raise HTTPException(429, "Too many requests")
+
     result = await db.execute(
         select(SharedSession).where(SharedSession.share_token == share_token)
     )
@@ -746,7 +758,8 @@ git commit -m "feat: add sharing API (create/view/revoke share links)"
 ### Task 6: Frontend — export dropdown (PDF/DOCX)
 
 **Files:**
-- Modify: `frontend/src/components/Chat/ChatPanel.tsx:177-185` (export button → dropdown)
+- Modify: `frontend/src/components/Chat/ChatPanel.tsx:177-185` (export callbacks)
+- Modify: `frontend/src/components/Chat/PlusMenu.tsx:6-21` (add per-format export options)
 - Modify: `frontend/src/lib/api.ts` (add exportSession helper)
 
 - [ ] **Step 1: Add exportSession to api.ts**
@@ -791,7 +804,7 @@ const handleExportFormat = useCallback(async (format: 'pdf' | 'docx') => {
 }, [sessionId]);
 ```
 
-Update the PlusMenu items to show Markdown (always), PDF and DOCX (Plus+ only with paywall prompt for free users).
+Update `PlusMenu.tsx` interface: replace single `onExport` prop with `onExportMarkdown`, `onExportPdf`, `onExportDocx` callbacks. Add 3 menu items: "Export as Markdown" (always), "Export as PDF" (Plus+ gated), "Export as DOCX" (Plus+ gated). Free users see PDF/DOCX items with lock icon and billing redirect on click. Update `ChatPanel.tsx` to pass the 3 callbacks.
 
 - [ ] **Step 3: Test manually**
 
@@ -1096,6 +1109,12 @@ export default function CitationPopover({ citation, children }: CitationPopoverP
 
 In the MessageBubble component where `[n]` markers are rendered as clickable spans, wrap each with `<CitationPopover citation={matchedCitation}>`.
 
+**ALSO update `frontend/src/lib/api.ts` `getMessages()` mapping** (around line 75): When loading historical messages, citations from the DB already include `confidence_score` and `context_text` (snake_case in JSONB). Map them to camelCase in the same place where other citation fields are mapped:
+```typescript
+confidenceScore: c.confidence_score,
+contextText: c.context_text,
+```
+
 - [ ] **Step 5: Test manually**
 
 1. Send a message → hover over [1] → popover shows confidence %, doc name, page, context
@@ -1147,8 +1166,9 @@ In the `create_collection` endpoint, before creating the collection, add:
         raise HTTPException(403, f"Your plan allows up to {max_collections} collections")
 ```
 
-In the `add_documents_to_collection` endpoint, add:
+In the `add_documents_to_collection` endpoint (which receives `body: AddDocumentsRequest`), add:
 ```python
+    from app.core.config import settings
     # Check doc count limit
     doc_count_result = await db.execute(
         select(func.count()).select_from(collection_documents).where(
@@ -1157,7 +1177,7 @@ In the `add_documents_to_collection` endpoint, add:
     )
     current_docs = doc_count_result.scalar() or 0
     max_docs = getattr(settings, f"{user.plan.upper()}_MAX_DOCS_PER_COLLECTION", 3)
-    if current_docs + len(request.document_ids) > max_docs:
+    if current_docs + len(body.document_ids) > max_docs:
         raise HTTPException(403, f"Your plan allows up to {max_docs} documents per collection")
 ```
 
@@ -1348,7 +1368,8 @@ useEffect(() => {
   const page = searchParams.get('page');
   const highlight = searchParams.get('highlight');
   if (page) {
-    setCurrentPage(parseInt(page, 10));
+    // Use store's setPage action (not setCurrentPage which doesn't exist)
+    useDocTalkStore.getState().setPage(parseInt(page, 10));
   }
   // highlight handling via existing bbox lookup
 }, [searchParams]);
@@ -1461,11 +1482,15 @@ Add `domain_mode` to `SessionListItem` (line 50):
 
 - [ ] **Step 3: Inject domain rules in chat_service.py**
 
+**Wiring: `chat.py` must pass `domain_mode` to `chat_service.chat_stream()`.**
+
+In `backend/app/api/chat.py`, the `chat_stream` endpoint reads `body.domain_mode` from `ChatRequest` and passes it as a new parameter to `chat_service.chat_stream()`. The `chat_service.chat_stream()` signature must add `domain_mode: Optional[str] = None`.
+
 After the system prompt is built (after line ~408, after custom instructions injection), add:
 ```python
             # Domain-specific rules (legal/academic mode)
-            domain_mode = body.domain_mode or session.domain_mode
-            if domain_mode and domain_mode in DOMAIN_RULES:
+            effective_domain = domain_mode or session.domain_mode
+            if effective_domain and effective_domain in DOMAIN_RULES:
                 from app.core.model_profiles import DOMAIN_RULES
                 domain_rules_text = f"\n\n## {domain_mode.title()} Mode Rules\n"
                 base_rule_count = len(rules.strip().split('\n'))
@@ -1474,16 +1499,32 @@ After the system prompt is built (after line ~408, after custom instructions inj
                 system_prompt += domain_rules_text
 
             # Persist domain_mode to session if changed
-            if body.domain_mode and body.domain_mode != session.domain_mode:
-                session.domain_mode = body.domain_mode
+            if domain_mode and domain_mode != session.domain_mode:
+                session.domain_mode = domain_mode
                 await db.commit()
 ```
 
 Import `DOMAIN_RULES` at the top of the file.
 
-- [ ] **Step 4: Update session list endpoint to include domain_mode**
+- [ ] **Step 4: Update session list endpoints to include domain_mode**
 
-In the session list query/response mapping, include `domain_mode` from the session.
+Update BOTH session list endpoints:
+- `backend/app/api/chat.py` `list_sessions` (line ~419): include `domain_mode` in response mapping
+- `backend/app/api/collections.py` `list_collection_sessions` (line ~280): include `domain_mode` in response mapping
+
+Update frontend `SessionItem` type in `frontend/src/types/index.ts` (line ~66):
+```typescript
+export interface SessionItem {
+  session_id: string;
+  title: string | null;
+  message_count: number;
+  domain_mode?: string | null;  // NEW
+  created_at: string;
+  last_activity_at: string;
+}
+```
+
+In `frontend/src/store/index.ts`, when switching sessions, restore `domainMode` from the session's `domain_mode` field.
 
 - [ ] **Step 5: Run tests**
 
@@ -1523,7 +1564,7 @@ And in the store creation:
 
 - [ ] **Step 2: Update SSE chatStream to pass domain_mode**
 
-In `frontend/src/lib/sse.ts`, add `domainMode` parameter to `chatStream()` (line 124) and include in the request body (line 131):
+In `frontend/src/lib/sse.ts`, add `domainMode` parameter to `chatStream()` (line 124) and include in the request body (line 131). Use `undefined` (omit) for no mode, explicit `null` to clear:
 ```typescript
 export async function chatStream(
   sessionId: string,
@@ -1532,7 +1573,7 @@ export async function chatStream(
   mode?: string,
   locale?: string,
   signal?: AbortSignal,
-  domainMode?: string,  // NEW
+  domainMode?: string | null,  // NEW: null = explicit clear, undefined = inherit
 ) {
   const res = await fetch(`${PROXY_BASE}/api/sessions/${sessionId}/chat`, {
     method: 'POST',
@@ -1541,10 +1582,25 @@ export async function chatStream(
       message,
       ...(mode ? { mode } : {}),
       ...(locale ? { locale } : {}),
-      ...(domainMode ? { domain_mode: domainMode } : {}),
+      // Include domain_mode: null to clear, omit if undefined (inherit from session)
+      ...(domainMode !== undefined ? { domain_mode: domainMode } : {}),
     }),
     signal,
   });
+```
+
+**ALSO update `frontend/src/lib/useChatStream.ts`** (line 155): Pass `domainMode` from store to `chatStream()`:
+```typescript
+// In streamAssistantResponse callback (around line 155):
+const domainMode = useDocTalkStore.getState().domainMode;
+await chatStream(
+  sessionId, prompt,
+  ({ text }) => updateLastMessage(text || ''),
+  (citation) => addCitationToLastMessage(citation),
+  handleStreamError, handleStreamDone, handleTruncated,
+  selectedMode, locale, controller.signal,
+  domainMode,  // NEW parameter
+);
 ```
 
 - [ ] **Step 3: Create DomainModeSelector component**
