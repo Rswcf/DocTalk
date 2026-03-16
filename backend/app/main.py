@@ -152,6 +152,9 @@ app.include_router(billing_router)
 app.include_router(collections_router)
 app.include_router(admin_router)
 
+from app.api.export import router as export_router
+app.include_router(export_router)
+
 @app.get("/version", response_model=ReleaseInfo)
 async def version() -> dict:
     return get_release_payload()
