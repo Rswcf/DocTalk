@@ -36,6 +36,21 @@ def sse(event: str, data: Dict[str, Any]) -> Dict[str, Any]:
     return {"event": event, "data": data}
 
 
+_USER_SAFE_ERRORS = {
+    "LLM_ERROR": "Failed to generate response. Please try again.",
+    "RETRIEVAL_ERROR": "Document retrieval failed. Please try again.",
+    "ACCOUNTING_ERROR": "Usage accounting issue occurred. Credits remain safe.",
+    "CHAT_SETUP_ERROR": "Failed to set up chat. Please try again.",
+    "PERSIST_FAILED": "Failed to save response. Please try again.",
+}
+
+
+def _safe_sse(event: str, code: str, exc: Exception, **ctx: Any) -> Dict[str, Any]:
+    """Log detailed error server-side, return sanitized SSE payload to client."""
+    logger.exception("SSE %s [%s] context=%s", event, code, ctx)
+    return sse(event, {"code": code, "message": _USER_SAFE_ERRORS.get(code, "An error occurred.")})
+
+
 _openai_client: AsyncOpenAI | None = None
 
 
@@ -401,12 +416,7 @@ class ChatService:
                         "Failed to refund pre-debited credits during chat setup failure for user %s",
                         user.id,
                     )
-            message = (
-                f"Document retrieval failed: {e}"
-                if setup_error_code == "RETRIEVAL_ERROR"
-                else str(e)
-            )
-            yield sse("error", {"code": setup_error_code, "message": message})
+            yield _safe_sse("error", setup_error_code, e, session_id=str(session_id))
             return
 
         # 6) Stream from OpenRouter (OpenAI-compatible)
@@ -519,7 +529,7 @@ class ChatService:
                         "Failed to refund pre-debited credits after LLM error for user %s",
                         user.id,
                     )
-            yield sse("error", {"code": "LLM_ERROR", "message": str(e)})
+            yield _safe_sse("error", "LLM_ERROR", e, session_id=str(session_id))
             return
 
         # 9) Save assistant message + citations
@@ -561,7 +571,7 @@ class ChatService:
                 await db.commit()
             except Exception as e:
                 # Non-fatal accounting error
-                yield sse("warn", {"code": "ACCOUNTING_ERROR", "message": str(e)})
+                yield _safe_sse("warn", "ACCOUNTING_ERROR", e, session_id=str(session_id))
 
         # 10) done
         can_continue = asst_msg.continuation_count < settings.MAX_CONTINUATIONS_PER_MESSAGE
@@ -780,7 +790,7 @@ class ChatService:
                         "Failed to refund pre-debited credits during continuation setup failure for user %s",
                         user.id,
                     )
-            yield sse("error", {"code": "CHAT_SETUP_ERROR", "message": str(e)})
+            yield _safe_sse("error", "CHAT_SETUP_ERROR", e, session_id=str(session_id))
             return
 
         # 9) Stream from LLM
@@ -857,7 +867,7 @@ class ChatService:
                         "Failed to refund pre-debited credits after continuation LLM error for user %s",
                         user.id,
                     )
-            yield sse("error", {"code": "LLM_ERROR", "message": str(e)})
+            yield _safe_sse("error", "LLM_ERROR", e, session_id=str(session_id))
             return
 
         # 10) Update existing message (append text, merge citations, bump count)
@@ -894,7 +904,7 @@ class ChatService:
                 )
                 await db.commit()
             except Exception as e:
-                yield sse("warn", {"code": "ACCOUNTING_ERROR", "message": str(e)})
+                yield _safe_sse("warn", "ACCOUNTING_ERROR", e, session_id=str(session_id))
 
         # 11) done
         can_continue = asst_msg.continuation_count < settings.MAX_CONTINUATIONS_PER_MESSAGE
