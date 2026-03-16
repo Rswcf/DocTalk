@@ -17,7 +17,22 @@ interface MarketingMetadataOptions {
   robots?: Metadata['robots'];
   openGraph?: Partial<OpenGraphInput>;
   twitter?: Partial<TwitterInput>;
+  locale?: string;
 }
+
+const OG_LOCALE_MAP: Record<string, string> = {
+  en: 'en_US',
+  zh: 'zh_CN',
+  es: 'es_ES',
+  ja: 'ja_JP',
+  de: 'de_DE',
+  fr: 'fr_FR',
+  ko: 'ko_KR',
+  pt: 'pt_BR',
+  it: 'it_IT',
+  ar: 'ar_SA',
+  hi: 'hi_IN',
+};
 
 interface ArticleJsonLdOptions {
   title: string;
@@ -72,6 +87,7 @@ export function buildMarketingMetadata({
   robots,
   openGraph,
   twitter,
+  locale,
 }: MarketingMetadataOptions): Metadata {
   const titleText = resolveTitleText(title);
 
@@ -88,7 +104,7 @@ export function buildMarketingMetadata({
       description,
       url: absoluteUrl(path),
       siteName: 'DocTalk',
-      locale: 'en_US',
+      locale: locale ? (OG_LOCALE_MAP[locale] ?? 'en_US') : 'en_US',
       images: [
         {
           url: absoluteUrl(DEFAULT_OG_IMAGE_PATH),
