@@ -8,6 +8,7 @@ export const metadata: Metadata = buildMarketingMetadata({
   description:
     'Read practical guides, product comparisons, and workflow tips for AI document analysis across PDFs, DOCX, PPTX, spreadsheets, and web pages.',
   path: '/blog',
+  keywords: ['ai document blog', 'pdf chat guides', 'document ai tutorials'],
   openGraph: {
     title: 'AI Document Analysis Blog | DocTalk',
   },

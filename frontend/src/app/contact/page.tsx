@@ -7,6 +7,7 @@ export const metadata: Metadata = buildMarketingMetadata({
   description:
     'Contact the DocTalk team for product support, billing questions, privacy requests, partnerships, bug reports, or general feedback.',
   path: '/contact',
+  keywords: ['contact doctalk', 'doctalk support', 'document ai help'],
   openGraph: {
     title: 'Contact DocTalk',
   },

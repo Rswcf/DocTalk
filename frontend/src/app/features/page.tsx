@@ -7,6 +7,7 @@ export const metadata: Metadata = buildMarketingMetadata({
   description:
     'Explore DocTalk features for AI document analysis, including citation highlighting, multi-format uploads, OCR, multilingual support, and AI performance modes.',
   path: '/features',
+  keywords: ['ai document features', 'pdf chat features', 'document ai capabilities'],
   openGraph: {
     title: 'AI Document Analysis Features | DocTalk',
   },

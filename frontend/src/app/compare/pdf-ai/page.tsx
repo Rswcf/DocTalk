@@ -7,6 +7,7 @@ export const metadata: Metadata = buildMarketingMetadata({
   description:
     'Compare DocTalk and PDF.ai across citation quality, format support, pricing, and which tool is better for modern document analysis.',
   path: '/compare/pdf-ai',
+  keywords: ['doctalk vs pdf ai', 'pdf ai alternative', 'pdf.ai comparison'],
   openGraph: {
     title: 'DocTalk vs PDF.ai: AI PDF Tool Comparison (2026) | DocTalk',
     description:

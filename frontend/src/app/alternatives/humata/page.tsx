@@ -7,6 +7,7 @@ export const metadata: Metadata = buildMarketingMetadata({
   description:
     'Compare the best Humata alternatives, including DocTalk, ChatPDF, AskYourPDF, NotebookLM, and PDF.ai, for pricing, citations, and language support.',
   path: '/alternatives/humata',
+  keywords: ['humata alternatives', 'best humata alternative', 'humata ai replacement'],
   openGraph: {
     title: '5 Best Humata AI Alternatives in 2026 | DocTalk',
     description:

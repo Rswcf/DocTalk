@@ -7,6 +7,7 @@ export const metadata: Metadata = buildMarketingMetadata({
   description:
     'Chat with documents in English, Chinese, Japanese, Spanish, German, French, Korean, Portuguese, Italian, Arabic, and Hindi. AI understands your language.',
   path: '/features/multilingual',
+  keywords: ['multilingual document ai', 'ai chat any language', 'document translation ai'],
   openGraph: {
     title: 'AI Document Chat in 11 Languages | DocTalk',
     description:

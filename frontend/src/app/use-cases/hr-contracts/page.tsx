@@ -7,6 +7,7 @@ export const metadata: Metadata = buildMarketingMetadata({
   description:
     'Review employment contracts, HR policies, and company handbooks with AI. Get instant answers about specific clauses with source citations.',
   path: '/use-cases/hr-contracts',
+  keywords: ['hr contract ai', 'employment document analysis', 'hr document review ai'],
   openGraph: {
     title: 'AI Contract & HR Document Review Tool | DocTalk',
     description:

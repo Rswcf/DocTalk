@@ -7,6 +7,7 @@ export const metadata: Metadata = buildMarketingMetadata({
   description:
     'Every AI answer includes numbered citations. Click any citation to jump to the exact source text and verify every answer in your document.',
   path: '/features/citations',
+  keywords: ['citation highlighting', 'ai citation', 'document citation', 'source verification ai'],
   openGraph: {
     title: 'AI Answers with Source Citations | DocTalk',
     description:

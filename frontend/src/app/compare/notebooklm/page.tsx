@@ -7,6 +7,7 @@ export const metadata: Metadata = buildMarketingMetadata({
   description:
     'Compare DocTalk and Google NotebookLM across citations, format support, privacy, pricing, and the tradeoff between deep analysis and multi-source notebooks.',
   path: '/compare/notebooklm',
+  keywords: ['doctalk vs notebooklm', 'notebooklm alternative', 'google notebooklm comparison'],
   openGraph: {
     title: 'DocTalk vs NotebookLM: Which AI Document Tool? | DocTalk',
     description:

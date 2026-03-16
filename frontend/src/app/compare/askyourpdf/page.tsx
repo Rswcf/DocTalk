@@ -7,6 +7,7 @@ export const metadata: Metadata = buildMarketingMetadata({
   description:
     'Compare DocTalk and AskYourPDF for AI document analysis, citation quality, format support, integrations, pricing, and everyday usability.',
   path: '/compare/askyourpdf',
+  keywords: ['doctalk vs askyourpdf', 'askyourpdf alternative', 'askyourpdf comparison'],
   openGraph: {
     title: 'DocTalk vs AskYourPDF Comparison | DocTalk',
     description:

@@ -7,6 +7,7 @@ export const metadata: Metadata = buildMarketingMetadata({
   description:
     'Find the best alternatives to ChatPDF, NotebookLM, Humata, and other AI document tools with comparisons on features, pricing, and best-fit use cases.',
   path: '/alternatives',
+  keywords: ['ai pdf alternatives', 'chatpdf alternatives', 'document ai tools'],
   openGraph: {
     title: 'AI Document Tool Alternatives | DocTalk',
   },

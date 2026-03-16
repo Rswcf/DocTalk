@@ -7,6 +7,7 @@ export const metadata: Metadata = buildMarketingMetadata({
   description:
     'See how students, lawyers, financial analysts, and HR teams use DocTalk to analyze documents with AI and verify answers with citations.',
   path: '/use-cases',
+  keywords: ['ai document use cases', 'pdf ai for business', 'document chat applications'],
   openGraph: {
     title: 'AI Document Analysis Use Cases | DocTalk',
   },

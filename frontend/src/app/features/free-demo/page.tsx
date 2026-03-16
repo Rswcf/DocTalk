@@ -7,6 +7,7 @@ export const metadata: Metadata = buildMarketingMetadata({
   description:
     'Try AI document chat instantly with 3 sample files. No signup, no credit card, and citation highlighting included from the first question.',
   path: '/features/free-demo',
+  keywords: ['free ai pdf demo', 'try document ai free', 'no signup pdf chat'],
   openGraph: {
     title: 'Free AI Document Chat Demo | DocTalk',
     description:

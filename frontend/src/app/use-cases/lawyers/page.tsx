@@ -7,6 +7,7 @@ export const metadata: Metadata = buildMarketingMetadata({
   description:
     'Review contracts, court filings, and legal documents with AI. Get cited answers with exact clause references and verify every result.',
   path: '/use-cases/lawyers',
+  keywords: ['ai for lawyers', 'legal document ai', 'contract analysis ai', 'legal pdf reader'],
   openGraph: {
     title: 'AI Legal Document Analysis | DocTalk',
     description:

@@ -7,6 +7,7 @@ export const metadata: Metadata = buildMarketingMetadata({
   description:
     'Compare NotebookLM alternatives including DocTalk, ChatPDF, AskYourPDF, Humata, Consensus, and Elicit for document analysis without Google lock-in.',
   path: '/alternatives/notebooklm',
+  keywords: ['notebooklm alternatives', 'best notebooklm alternative', 'google notebooklm replacement'],
   openGraph: {
     title: 'Best NotebookLM Alternatives for Documents | DocTalk',
     description:

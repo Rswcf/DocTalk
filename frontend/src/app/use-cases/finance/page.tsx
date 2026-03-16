@@ -7,6 +7,7 @@ export const metadata: Metadata = buildMarketingMetadata({
   description:
     'Analyze 10-K filings, earnings reports, and financial documents with AI. Ask questions and get cited answers tied to specific figures and sections.',
   path: '/use-cases/finance',
+  keywords: ['ai for finance', 'financial document ai', 'annual report ai analysis'],
   openGraph: {
     title: 'AI Financial Report Analysis | DocTalk',
     description:

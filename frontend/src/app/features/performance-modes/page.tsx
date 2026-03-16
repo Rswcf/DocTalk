@@ -7,6 +7,7 @@ export const metadata: Metadata = buildMarketingMetadata({
   description:
     'Choose Quick, Balanced, or Thorough mode for AI document chat. Match response speed, depth, and cost to the task at hand.',
   path: '/features/performance-modes',
+  keywords: ['ai performance modes', 'quick balanced thorough ai', 'ai model selection'],
   openGraph: {
     title: 'Quick, Balanced & Thorough Modes | DocTalk',
     description:

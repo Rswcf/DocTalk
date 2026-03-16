@@ -7,6 +7,7 @@ export const metadata: Metadata = buildMarketingMetadata({
   description:
     'Looking for ChatPDF alternatives? Compare DocTalk, AskYourPDF, Humata, NotebookLM, PDF.ai, ChatDOC, and Sharly. Find the best AI document tool for your needs.',
   path: '/alternatives/chatpdf',
+  keywords: ['chatpdf alternatives', 'best chatpdf alternative', 'chatpdf replacement'],
   openGraph: {
     title: '7 Best ChatPDF Alternatives in 2026 (Free & Paid) | DocTalk',
     description:

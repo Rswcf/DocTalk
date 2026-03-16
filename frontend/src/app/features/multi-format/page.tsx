@@ -7,6 +7,7 @@ export const metadata: Metadata = buildMarketingMetadata({
   description:
     'Upload PDF, Word, PowerPoint, Excel, TXT, Markdown, or a URL. DocTalk reads your document and answers questions with cited sources. Try it free.',
   path: '/features/multi-format',
+  keywords: ['multi format document ai', 'pdf docx pptx ai', 'document converter chat'],
   openGraph: {
     title: 'Chat with PDF, DOCX, PPTX, XLSX & More | DocTalk',
     description:

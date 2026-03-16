@@ -7,6 +7,7 @@ export const metadata: Metadata = buildMarketingMetadata({
   description:
     'Analyze research papers, textbooks, and academic documents with AI. Get cited answers with page-level references from PDFs, DOCX files, and URLs.',
   path: '/use-cases/students',
+  keywords: ['ai for students', 'student pdf tool', 'research paper ai', 'academic document chat'],
   openGraph: {
     title: 'AI Research Paper Analysis for Students | DocTalk',
     description:
