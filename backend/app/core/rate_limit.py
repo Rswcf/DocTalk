@@ -160,7 +160,40 @@ class RedisDemoTracker(_RedisClientMixin):
             await self._reset_client(e)
             self._fallback.increment(key)
 
+    async def check_and_increment(self, key: str, limit: int) -> tuple[bool, int]:
+        """Atomically increment counter and check against limit.
+
+        Returns (allowed, current_count). If over limit, decrements back.
+        """
+        client = await self._get_client()
+        if client is None:
+            current = self._fallback.get_count(key)
+            if current >= limit:
+                return False, current
+            self._fallback.increment(key)
+            return True, current + 1
+
+        redis_key = f"{self._namespace}:{key}"
+        try:
+            count = await client.incr(redis_key)
+            if count == 1:
+                await client.expire(redis_key, self.ttl_seconds)
+            if count > limit:
+                await client.decr(redis_key)
+                return False, limit
+            return True, int(count)
+        except Exception as e:
+            await self._reset_client(e)
+            current = self._fallback.get_count(key)
+            if current >= limit:
+                return False, current
+            self._fallback.increment(key)
+            return True, current + 1
+
 
 demo_chat_limiter = RedisRateLimiter(namespace="rate_limit:demo_chat", max_requests=10, window_seconds=60)
 auth_chat_limiter = RedisRateLimiter(namespace="rate_limit:auth_chat", max_requests=30, window_seconds=60)
 demo_message_tracker = RedisDemoTracker(namespace="rate_limit:demo_messages")
+demo_session_create_limiter = RedisRateLimiter(
+    namespace="rate_limit:demo_session_create", max_requests=5, window_seconds=300
+)

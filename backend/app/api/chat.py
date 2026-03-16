@@ -17,6 +17,7 @@ from app.core.rate_limit import (
     auth_chat_limiter,
     demo_chat_limiter,
     demo_message_tracker,
+    demo_session_create_limiter,
 )
 from app.core.security_log import log_security_event
 from app.models.tables import ChatSession, Collection, Document, Message, User
@@ -146,6 +147,14 @@ async def create_session(
 
     # Limit anonymous users on demo documents
     if user is None and doc.demo_slug:
+        # M2: Per-IP rate limit on demo session creation
+        client_ip = _get_client_ip(request)
+        if not await demo_session_create_limiter.is_allowed(client_ip):
+            raise HTTPException(
+                status_code=429,
+                detail={"message": "Too many demo sessions created", "retry_after": 300},
+                headers={"Retry-After": "300"},
+            )
         session_count = await db.execute(
             select(func.count(ChatSession.id))
             .where(ChatSession.document_id == document_id)
@@ -251,13 +260,13 @@ async def chat_stream(
     # Enforce message limit for anonymous users on demo documents.
     # Tracker key is global per IP across demo docs and survives session recreation.
     if user is None and session.document and session.document.demo_slug:
-        if await demo_message_tracker.get_count(client_ip) >= DEMO_MESSAGE_LIMIT:
+        allowed, _count = await demo_message_tracker.check_and_increment(client_ip, DEMO_MESSAGE_LIMIT)
+        if not allowed:
             log_security_event("demo_message_limit", ip=client_ip, document_id=session.document_id)
             raise HTTPException(
                 status_code=429,
                 detail={"message": "Demo message limit reached", "limit": DEMO_MESSAGE_LIMIT},
             )
-        await demo_message_tracker.increment(client_ip)
 
     # If authenticated, ensure sufficient credits before opening stream
     if user is not None:
@@ -340,13 +349,13 @@ async def chat_continue(
     # Demo message limit (continuations count against it)
     if user is None and session.document and session.document.demo_slug:
         client_ip = _get_client_ip(request)
-        if await demo_message_tracker.get_count(client_ip) >= DEMO_MESSAGE_LIMIT:
+        allowed, _count = await demo_message_tracker.check_and_increment(client_ip, DEMO_MESSAGE_LIMIT)
+        if not allowed:
             log_security_event("demo_message_limit", ip=client_ip, document_id=session.document_id)
             raise HTTPException(
                 status_code=429,
                 detail={"message": "Demo message limit reached", "limit": DEMO_MESSAGE_LIMIT},
             )
-        await demo_message_tracker.increment(client_ip)
 
     # Check continuation limit
     msg_id = uuid.UUID(body.message_id) if body.message_id else None

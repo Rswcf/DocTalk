@@ -206,14 +206,28 @@ async def subscribe(
 ):
     if not settings.STRIPE_SECRET_KEY:
         raise HTTPException(503, "Stripe not configured")
-    if user.stripe_subscription_id == "pending":
-        recovered = await _recover_pending_subscription(user, db)
+
+    # Lock the user row to prevent concurrent subscribe requests (M3)
+    locked_user = (
+        await db.execute(
+            select(User).where(User.id == user.id).with_for_update(of=User)
+        )
+    ).scalar_one()
+
+    if locked_user.stripe_subscription_id == "pending":
+        recovered = await _recover_pending_subscription(locked_user, db)
         if recovered:
             raise HTTPException(
                 400,
                 "You already have an active subscription. Use /change-plan to switch plans.",
             )
-    if user.stripe_subscription_id:
+        # Recovery may have committed (releasing lock). Re-lock to close gap.
+        locked_user = (
+            await db.execute(
+                select(User).where(User.id == user.id).with_for_update(of=User)
+            )
+        ).scalar_one()
+    if locked_user.stripe_subscription_id:
         raise HTTPException(
             400,
             "You already have an active subscription. Use /change-plan to switch plans.",
@@ -225,8 +239,9 @@ async def subscribe(
 
     # Atomic guard: prevent concurrent subscribe requests from creating
     # multiple checkout sessions before webhook reconciliation.
-    user.stripe_subscription_id = "pending"
+    locked_user.stripe_subscription_id = "pending"
     await db.commit()
+    user = locked_user  # Use locked instance for rest of endpoint
 
     try:
         # Ensure customer exists
