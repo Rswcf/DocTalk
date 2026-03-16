@@ -46,7 +46,7 @@ export default function CTABanner({ title, description, buttonText, href, varian
           {title}
         </h2>
         {description && (
-          <p className="text-zinc-600 dark:text-zinc-400 mb-8 max-w-2xl mx-auto text-[15px]">
+          <p className="text-zinc-600 dark:text-zinc-300 mb-8 max-w-2xl mx-auto text-[15px]">
             {description}
           </p>
         )}

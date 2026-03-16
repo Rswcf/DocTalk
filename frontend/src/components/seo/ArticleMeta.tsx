@@ -24,7 +24,7 @@ export default function ArticleMeta({
 
   return (
     <div
-      className={`flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-zinc-500 dark:text-zinc-400 ${layoutClassName} ${className}`.trim()}
+      className={`flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-zinc-500 dark:text-zinc-300 ${layoutClassName} ${className}`.trim()}
     >
       <span className="flex items-center gap-1.5">
         <span>{t('blog.meta.by')}</span>

@@ -56,7 +56,7 @@ function FAQAccordionItem({ item, isOpen, onToggle }: { item: FAQItem; isOpen: b
         }}
       >
         <div ref={contentRef} className="px-6 pb-5">
-          <p className="text-zinc-600 dark:text-zinc-400 leading-relaxed text-[15px]">
+          <p className="text-zinc-600 dark:text-zinc-300 leading-relaxed text-[15px]">
             {item.answer}
           </p>
         </div>

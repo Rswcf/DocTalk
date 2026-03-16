@@ -134,7 +134,7 @@ export default function HomePage() {
         ],
         featureList: ['PDF chat', 'DOCX analysis', 'PPTX analysis', 'XLSX analysis', 'Citation highlighting', 'OCR support', '11 languages', '3 AI performance modes'],
         datePublished: '2026-01-15',
-        dateModified: '2026-03-16',
+        dateModified: new Date().toISOString().split('T')[0],
       })}} />
 
       {/* HowTo JSON-LD */}

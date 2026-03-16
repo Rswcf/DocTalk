@@ -30,7 +30,7 @@ export default function FeatureList({ items }: FeatureListProps) {
           <h3 className="text-base font-semibold text-zinc-900 dark:text-zinc-100 mb-2">
             {item.title}
           </h3>
-          <p className="text-zinc-600 dark:text-zinc-400 text-sm leading-relaxed">
+          <p className="text-zinc-600 dark:text-zinc-300 text-sm leading-relaxed">
             {item.description}
           </p>
         </div>
