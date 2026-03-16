@@ -73,7 +73,7 @@ export default function CreateCollectionModal({ isOpen, onClose, onCreated }: Pr
           <h2 id="create-collection-title" className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">
             {t('collections.create')}
           </h2>
-          <button onClick={onClose} className="p-1 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-500 transition-colors focus-visible:ring-2 focus-visible:ring-zinc-400" aria-label="Close">
+          <button onClick={onClose} className="p-1 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-500 transition-colors focus-visible:ring-2 focus-visible:ring-zinc-400" aria-label={t('common.close')}>
             <X size={20} />
           </button>
         </div>
@@ -90,7 +90,7 @@ export default function CreateCollectionModal({ isOpen, onClose, onCreated }: Pr
               placeholder={t('collections.namePlaceholder')}
               className="w-full px-3 py-2 border border-zinc-200 dark:border-zinc-700 rounded-lg bg-zinc-50 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400"
               maxLength={200}
-              aria-label="Collection name"
+              aria-label={t('collections.name')}
             />
           </div>
 
@@ -102,7 +102,7 @@ export default function CreateCollectionModal({ isOpen, onClose, onCreated }: Pr
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               className="w-full h-20 px-3 py-2 border border-zinc-200 dark:border-zinc-700 rounded-lg bg-zinc-50 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 text-sm resize-none focus:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400"
-              aria-label="Collection description"
+              aria-label={t('collections.description')}
               maxLength={2000}
             />
           </div>

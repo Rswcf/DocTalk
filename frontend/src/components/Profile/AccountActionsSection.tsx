@@ -114,7 +114,7 @@ export default function AccountActionsSection({ email }: Props) {
               onChange={(e) => setConfirmEmail(e.target.value)}
               placeholder={email}
               disabled={deleting}
-              aria-label="Confirm email address"
+              aria-label={t('profile.account.confirmEmail')}
             />
             {error && (
               <div className="mt-3 text-sm text-red-600">{t("error.somethingWrong")}</div>

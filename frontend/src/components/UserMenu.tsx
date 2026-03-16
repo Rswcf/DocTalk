@@ -97,7 +97,7 @@ export default function UserMenu() {
         className="w-8 h-8 rounded-full overflow-hidden border border-zinc-200 dark:border-zinc-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400 dark:focus-visible:ring-zinc-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-900 transition-colors"
         aria-haspopup="menu"
         aria-expanded={open}
-        aria-label="User menu"
+        aria-label={t("userMenu.ariaLabel")}
       >
         {userImage ? (
           <Image src={userImage} alt="" width={32} height={32} className="w-8 h-8 object-cover" />

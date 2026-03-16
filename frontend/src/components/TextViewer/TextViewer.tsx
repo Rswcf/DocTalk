@@ -247,7 +247,7 @@ export default function TextViewer({ documentId, fileType, targetPage, scrollNon
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder={t('toolbar.searchPlaceholder')}
             className="flex-1 min-w-0 border-none bg-transparent text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400 dark:text-zinc-100 placeholder:text-zinc-400"
-            aria-label="Search in document"
+            aria-label={t('toolbar.search')}
             autoFocus
             onKeyDown={(e) => {
               if (e.key === 'Enter') {
@@ -263,13 +263,13 @@ export default function TextViewer({ documentId, fileType, targetPage, scrollNon
               {searchMatches.length > 0 ? t('toolbar.matchCount', { current: currentMatchIndex + 1, total: searchMatches.length }) : t('toolbar.noMatches')}
             </span>
           )}
-          <button onClick={searchPrev} disabled={searchMatches.length === 0} className="p-0.5 rounded hover:bg-zinc-100 dark:hover:bg-zinc-700 disabled:opacity-30 focus-visible:ring-2 focus-visible:ring-zinc-400" title={t('toolbar.prevPage')} aria-label="Previous match">
+          <button onClick={searchPrev} disabled={searchMatches.length === 0} className="p-0.5 rounded hover:bg-zinc-100 dark:hover:bg-zinc-700 disabled:opacity-30 focus-visible:ring-2 focus-visible:ring-zinc-400" title={t('toolbar.prevPage')} aria-label={t('toolbar.prevPage')}>
             <ChevronLeft size={14} />
           </button>
-          <button onClick={searchNext} disabled={searchMatches.length === 0} className="p-0.5 rounded hover:bg-zinc-100 dark:hover:bg-zinc-700 disabled:opacity-30 focus-visible:ring-2 focus-visible:ring-zinc-400" title={t('toolbar.nextPage')} aria-label="Next match">
+          <button onClick={searchNext} disabled={searchMatches.length === 0} className="p-0.5 rounded hover:bg-zinc-100 dark:hover:bg-zinc-700 disabled:opacity-30 focus-visible:ring-2 focus-visible:ring-zinc-400" title={t('toolbar.nextPage')} aria-label={t('toolbar.nextPage')}>
             <ChevronRight size={14} />
           </button>
-          <button onClick={searchClose} className="p-0.5 rounded hover:bg-zinc-100 dark:hover:bg-zinc-700 focus-visible:ring-2 focus-visible:ring-zinc-400" aria-label="Close search">
+          <button onClick={searchClose} className="p-0.5 rounded hover:bg-zinc-100 dark:hover:bg-zinc-700 focus-visible:ring-2 focus-visible:ring-zinc-400" aria-label={t('toolbar.closeSearch')}>
             <X size={14} />
           </button>
         </div>
@@ -297,7 +297,7 @@ export default function TextViewer({ documentId, fileType, targetPage, scrollNon
                     onClick={() => { setSearchOpen(true); requestAnimationFrame(() => searchInputRef.current?.focus()); }}
                     className="p-1 rounded hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors focus-visible:ring-2 focus-visible:ring-zinc-400"
                     title={t('toolbar.search')}
-                    aria-label="Search in document"
+                    aria-label={t('toolbar.search')}
                   >
                     <Search aria-hidden="true" size={12} />
                   </button>

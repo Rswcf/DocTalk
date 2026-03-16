@@ -182,7 +182,7 @@ export default function DocumentReaderPageClient() {
               </Panel>
               <Separator
                 className="w-3 sm:w-1.5 bg-zinc-200 dark:bg-zinc-700 hover:bg-zinc-400 dark:hover:bg-zinc-500 transition-colors cursor-col-resize flex items-center justify-center"
-                aria-label="Resize panels"
+                aria-label={t('doc.resizePanels')}
               >
                 <div className="w-0.5 h-8 bg-zinc-400 dark:bg-zinc-500 rounded-full" />
               </Separator>

@@ -258,7 +258,7 @@ export default function ChatPanel({ sessionId, onCitationClick, maxUserMessages,
             <button
               onClick={() => listRef.current?.scrollTo({ top: listRef.current.scrollHeight, behavior: 'smooth' })}
               className="pointer-events-auto p-2 rounded-full bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 shadow-md hover:shadow-lg text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 transition-shadow focus-visible:ring-2 focus-visible:ring-zinc-400 dark:focus-visible:ring-zinc-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-900"
-              aria-label="Scroll to bottom"
+              aria-label={t('chat.scrollToBottom')}
             >
               <ArrowDown size={16} />
             </button>
@@ -274,7 +274,7 @@ export default function ChatPanel({ sessionId, onCitationClick, maxUserMessages,
               aria-valuenow={messagesUsed}
               aria-valuemin={0}
               aria-valuemax={maxMessages}
-              aria-label="Messages used"
+              aria-label={t('chat.messagesUsed')}
               className={`h-full transition-[width] duration-300 ${
                 demoRemaining <= 2 ? 'bg-amber-500' : 'bg-zinc-400 dark:bg-zinc-500'
               }`}
@@ -330,7 +330,7 @@ export default function ChatPanel({ sessionId, onCitationClick, maxUserMessages,
               onKeyDown={onKeyDown}
               disabled={isStreaming || demoLimitReached}
               rows={1}
-              aria-label="Ask a question"
+              aria-label={t('chat.placeholder')}
             />
             <div className="flex items-center shrink-0">
               {isStreaming ? (
@@ -339,7 +339,7 @@ export default function ChatPanel({ sessionId, onCitationClick, maxUserMessages,
                   onClick={stopStreaming}
                   className="p-2 bg-zinc-900 dark:bg-zinc-50 text-white dark:text-zinc-900 rounded-full hover:bg-zinc-800 dark:hover:bg-zinc-200 transition-colors focus-visible:ring-2 focus-visible:ring-zinc-400 dark:focus-visible:ring-zinc-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-900"
                   title={t('chat.stop') || 'Stop'}
-                  aria-label="Stop generating"
+                  aria-label={t('chat.stop')}
                 >
                   <Square size={16} />
                 </button>
@@ -349,7 +349,7 @@ export default function ChatPanel({ sessionId, onCitationClick, maxUserMessages,
                   className="p-2 bg-zinc-900 dark:bg-zinc-50 text-white dark:text-zinc-900 rounded-full disabled:opacity-40 hover:bg-zinc-800 dark:hover:bg-zinc-200 transition-colors focus-visible:ring-2 focus-visible:ring-zinc-400 dark:focus-visible:ring-zinc-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-900"
                   disabled={!input.trim() || demoLimitReached}
                   title={t('chat.send')}
-                  aria-label="Send message"
+                  aria-label={t('chat.send')}
                 >
                   <SendHorizontal size={18} />
                 </button>

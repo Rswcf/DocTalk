@@ -60,7 +60,7 @@ export default function CollectionList({ collections, onDelete, deletingId }: Pr
                 }
               }}
               title={t('collections.delete')}
-              aria-label="Delete collection"
+              aria-label={t('collections.delete')}
             >
               <Trash2 size={16} />
             </button>

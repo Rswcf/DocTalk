@@ -35,7 +35,7 @@ export default function ModeSelector() {
   return (
     <div
       role="radiogroup"
-      aria-label="Performance mode"
+      aria-label={t('modes.ariaLabel')}
       data-tour="mode-selector"
       className={`inline-flex rounded-full bg-zinc-100 dark:bg-zinc-800 p-0.5 ${isStreaming ? 'opacity-60 pointer-events-none' : ''}`}
     >

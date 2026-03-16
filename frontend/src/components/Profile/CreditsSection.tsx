@@ -125,7 +125,7 @@ export default function CreditsSection({ profile }: Props) {
             total: totalAllowance.toLocaleString(),
           })}
         </div>
-        <div className="mt-2 h-3 w-full rounded bg-zinc-200 dark:bg-zinc-800 overflow-hidden" role="progressbar" aria-valuenow={Math.round(percentUsed)} aria-valuemin={0} aria-valuemax={100} aria-valuetext={`${Math.round(percentUsed)}% of monthly credits used`}>
+        <div className="mt-2 h-3 w-full rounded bg-zinc-200 dark:bg-zinc-800 overflow-hidden" role="progressbar" aria-valuenow={Math.round(percentUsed)} aria-valuemin={0} aria-valuemax={100} aria-valuetext={t('profile.credits.ariaProgress', { percent: Math.round(percentUsed).toString() })}>
           <div
             className={`${barColor} h-full`}
             style={{ width: `${percentUsed}%` }}

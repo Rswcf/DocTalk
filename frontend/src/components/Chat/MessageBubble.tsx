@@ -268,7 +268,7 @@ export default function MessageBubble({ message, onCitationClick, isStreaming, o
               onClick={handleCopy}
               className={`p-2 rounded transition-colors text-zinc-400 dark:text-zinc-500 hover:text-zinc-600 dark:hover:text-zinc-300 focus-visible:ring-2 focus-visible:ring-zinc-400`}
               title={copied ? t('copy.copied') : t('copy.button')}
-              aria-label="Copy message"
+              aria-label={t('copy.button')}
             >
               {copied ? <Check size={14} className="text-green-500" /> : <Copy size={14} />}
             </button>
@@ -280,7 +280,7 @@ export default function MessageBubble({ message, onCitationClick, isStreaming, o
                   : 'text-zinc-400 dark:text-zinc-500 hover:text-zinc-600 dark:hover:text-zinc-300'
               }`}
               title={t('feedback.helpful')}
-              aria-label="Good response"
+              aria-label={t('feedback.helpful')}
               aria-pressed={feedback === 'up'}
             >
               <ThumbsUp size={14} fill={feedback === 'up' ? 'currentColor' : 'none'} />
@@ -293,7 +293,7 @@ export default function MessageBubble({ message, onCitationClick, isStreaming, o
                   : 'text-zinc-400 dark:text-zinc-500 hover:text-zinc-600 dark:hover:text-zinc-300'
               }`}
               title={t('feedback.notHelpful')}
-              aria-label="Bad response"
+              aria-label={t('feedback.notHelpful')}
               aria-pressed={feedback === 'down'}
             >
               <ThumbsDown size={14} fill={feedback === 'down' ? 'currentColor' : 'none'} />
@@ -303,7 +303,7 @@ export default function MessageBubble({ message, onCitationClick, isStreaming, o
                 onClick={onRegenerate}
                 className={`p-2 rounded transition-colors text-zinc-400 dark:text-zinc-500 hover:text-zinc-600 dark:hover:text-zinc-300 focus-visible:ring-2 focus-visible:ring-zinc-400`}
                 title={t('chat.regenerate')}
-                aria-label="Regenerate response"
+                aria-label={t('chat.regenerate')}
               >
                 <RotateCcw size={14} />
               </button>

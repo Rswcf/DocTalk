@@ -104,7 +104,7 @@ export function AuthModal() {
           <button
             onClick={handleClose}
             className="p-1.5 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg transition-colors focus-visible:ring-2 focus-visible:ring-zinc-400"
-            aria-label="Close"
+            aria-label={t('common.close')}
           >
             <X size={20} className="text-zinc-400" />
           </button>

@@ -53,11 +53,11 @@ export default function PdfToolbar({ currentPage, totalPages, scale, onPageChang
     <>
       <div className="sticky top-0 z-10 flex items-center justify-center gap-2 shrink-0 px-3 py-1.5 bg-white/90 dark:bg-zinc-800/90 backdrop-blur border-b dark:border-zinc-700 text-sm">
         {/* Zoom controls */}
-        <button onClick={zoomOut} className={btnClass} title={t('toolbar.zoomOut')} aria-label="Zoom out">
+        <button onClick={zoomOut} className={btnClass} title={t('toolbar.zoomOut')} aria-label={t('toolbar.zoomOut')}>
           <ZoomOut size={16} />
         </button>
         <span className="w-12 text-center text-xs tabular-nums">{Math.round(scale * 100)}%</span>
-        <button onClick={zoomIn} className={btnClass} title={t('toolbar.zoomIn')} aria-label="Zoom in">
+        <button onClick={zoomIn} className={btnClass} title={t('toolbar.zoomIn')} aria-label={t('toolbar.zoomIn')}>
           <ZoomIn size={16} />
         </button>
 
@@ -67,7 +67,7 @@ export default function PdfToolbar({ currentPage, totalPages, scale, onPageChang
           onClick={onGrabModeToggle}
           className={`p-1 rounded focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:ring-offset-1 ${grabMode ? 'bg-zinc-100 dark:bg-zinc-900/50 text-zinc-600 dark:text-zinc-400' : 'hover:bg-zinc-100 dark:hover:bg-zinc-700'}`}
           title={t('toolbar.grabMode')}
-          aria-label="Toggle grab mode"
+          aria-label={t('toolbar.grabMode')}
         >
           <Hand size={16} />
         </button>
@@ -79,7 +79,7 @@ export default function PdfToolbar({ currentPage, totalPages, scale, onPageChang
           onClick={() => { setSearchOpen(!searchOpen); if (searchOpen) onSearchClose(); }}
           className={`p-1 rounded focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:ring-offset-1 ${searchOpen ? 'bg-zinc-100 dark:bg-zinc-900/50 text-zinc-600 dark:text-zinc-400' : 'hover:bg-zinc-100 dark:hover:bg-zinc-700'}`}
           title={t('toolbar.search')}
-          aria-label="Toggle search"
+          aria-label={t('toolbar.search')}
           aria-pressed={searchOpen}
         >
           <Search aria-hidden="true" size={16} />
@@ -88,7 +88,7 @@ export default function PdfToolbar({ currentPage, totalPages, scale, onPageChang
         <div className={separatorClass} />
 
         {/* Page navigation */}
-        <button onClick={prevPage} disabled={currentPage <= 1} className={`${btnClass} disabled:opacity-30 disabled:cursor-not-allowed`} title={t('toolbar.prevPage')} aria-label="Previous page">
+        <button onClick={prevPage} disabled={currentPage <= 1} className={`${btnClass} disabled:opacity-30 disabled:cursor-not-allowed`} title={t('toolbar.prevPage')} aria-label={t('toolbar.prevPage')}>
           <ChevronLeft size={16} />
         </button>
         <div className="flex items-center gap-1">
@@ -99,11 +99,11 @@ export default function PdfToolbar({ currentPage, totalPages, scale, onPageChang
             onKeyDown={handlePageSubmit}
             onBlur={() => setPageInput(String(currentPage))}
             className="w-10 text-center border rounded px-1 py-0.5 text-xs dark:bg-zinc-700 dark:border-zinc-600"
-            aria-label="Page number"
+            aria-label={t('doc.page')}
           />
           <span className="text-xs text-zinc-500 dark:text-zinc-400">/ {totalPages}</span>
         </div>
-        <button onClick={nextPage} disabled={currentPage >= totalPages} className={`${btnClass} disabled:opacity-30 disabled:cursor-not-allowed`} title={t('toolbar.nextPage')} aria-label="Next page">
+        <button onClick={nextPage} disabled={currentPage >= totalPages} className={`${btnClass} disabled:opacity-30 disabled:cursor-not-allowed`} title={t('toolbar.nextPage')} aria-label={t('toolbar.nextPage')}>
           <ChevronRight size={16} />
         </button>
       </div>
@@ -117,7 +117,7 @@ export default function PdfToolbar({ currentPage, totalPages, scale, onPageChang
             onChange={(e) => onSearchQueryChange(e.target.value)}
             placeholder={t('toolbar.searchPlaceholder')}
             className="flex-1 min-w-0 border-none bg-transparent text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400 dark:text-zinc-100 placeholder:text-zinc-400"
-            aria-label="Search in PDF"
+            aria-label={t('toolbar.search')}
             autoFocus
             onKeyDown={(e) => {
               if (e.key === 'Enter') {
@@ -134,13 +134,13 @@ export default function PdfToolbar({ currentPage, totalPages, scale, onPageChang
               {searchMatchCount > 0 ? t('toolbar.matchCount', { current: currentMatchIndex + 1, total: searchMatchCount }) : t('toolbar.noMatches')}
             </span>
           )}
-          <button onClick={onSearchPrev} disabled={searchMatchCount === 0} className="p-0.5 rounded hover:bg-zinc-100 dark:hover:bg-zinc-700 disabled:opacity-30 focus-visible:ring-2 focus-visible:ring-zinc-400" title={t('toolbar.prevPage')} aria-label="Previous match">
+          <button onClick={onSearchPrev} disabled={searchMatchCount === 0} className="p-0.5 rounded hover:bg-zinc-100 dark:hover:bg-zinc-700 disabled:opacity-30 focus-visible:ring-2 focus-visible:ring-zinc-400" title={t('toolbar.prevPage')} aria-label={t('toolbar.prevPage')}>
             <ChevronLeft size={14} />
           </button>
-          <button onClick={onSearchNext} disabled={searchMatchCount === 0} className="p-0.5 rounded hover:bg-zinc-100 dark:hover:bg-zinc-700 disabled:opacity-30 focus-visible:ring-2 focus-visible:ring-zinc-400" title={t('toolbar.nextPage')} aria-label="Next match">
+          <button onClick={onSearchNext} disabled={searchMatchCount === 0} className="p-0.5 rounded hover:bg-zinc-100 dark:hover:bg-zinc-700 disabled:opacity-30 focus-visible:ring-2 focus-visible:ring-zinc-400" title={t('toolbar.nextPage')} aria-label={t('toolbar.nextPage')}>
             <ChevronRight size={14} />
           </button>
-          <button onClick={() => { setSearchOpen(false); onSearchClose(); }} className="p-0.5 rounded hover:bg-zinc-100 dark:hover:bg-zinc-700 focus-visible:ring-2 focus-visible:ring-zinc-400" aria-label="Close search">
+          <button onClick={() => { setSearchOpen(false); onSearchClose(); }} className="p-0.5 rounded hover:bg-zinc-100 dark:hover:bg-zinc-700 focus-visible:ring-2 focus-visible:ring-zinc-400" aria-label={t('toolbar.closeSearch')}>
             <X size={14} />
           </button>
         </div>

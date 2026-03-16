@@ -109,7 +109,7 @@ export default function CustomInstructionsModal({ isOpen, onClose, currentInstru
           <h2 id="custom-instructions-title" className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">
             {t('instructions.title')}
           </h2>
-          <button onClick={onClose} className="p-1 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-500 transition-colors focus-visible:ring-2 focus-visible:ring-zinc-400" aria-label="Close">
+          <button onClick={onClose} className="p-1 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-500 transition-colors focus-visible:ring-2 focus-visible:ring-zinc-400" aria-label={t('common.close')}>
             <X size={20} />
           </button>
         </div>
@@ -122,7 +122,7 @@ export default function CustomInstructionsModal({ isOpen, onClose, currentInstru
           onChange={(e) => setText(e.target.value.slice(0, MAX_CHARS))}
           placeholder={t('instructions.placeholder')}
           className="w-full h-40 p-3 border border-zinc-200 dark:border-zinc-600 rounded-lg bg-zinc-50 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 text-sm resize-none focus:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400"
-          aria-label="Custom instructions"
+          aria-label={t('instructions.title')}
         />
         <div className="flex items-center justify-between mt-2">
           <span className="text-xs text-zinc-400">

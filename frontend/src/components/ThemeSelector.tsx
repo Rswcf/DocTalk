@@ -83,7 +83,7 @@ export default function ThemeSelector() {
         className="flex items-center gap-1.5 p-2 rounded-lg transition-colors hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-600 dark:text-zinc-400 focus-visible:ring-2 focus-visible:ring-zinc-400 dark:focus-visible:ring-zinc-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-900"
         aria-haspopup="listbox"
         aria-expanded={open}
-        aria-label="Select theme"
+        aria-label={t('header.theme')}
         title={t(current.labelKey)}
       >
         <CurrentIcon aria-hidden="true" size={18} />
