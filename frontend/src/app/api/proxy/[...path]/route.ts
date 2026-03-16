@@ -65,10 +65,16 @@ async function handler(req: NextRequest) {
 
   // Forward the real client IP so backend rate limiting and demo message
   // tracking work correctly (Railway sees Vercel's IP otherwise).
-  const clientIp = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim()
-    || req.ip
-    || "unknown";
-  headers.set("X-Forwarded-For", clientIp);
+  // Use Vercel's trusted req.ip (not forgeable by client), not x-forwarded-for.
+  const clientIp = req.ip || req.headers.get("x-real-ip");
+  if (clientIp) {
+    headers.set("X-Real-Client-IP", clientIp);
+    // Prove this header came from our proxy, not a direct attacker
+    const proxySecret = process.env.AUTH_SECRET;
+    if (proxySecret) {
+      headers.set("X-Proxy-IP-Secret", proxySecret);
+    }
+  }
 
   // Add authorization if authenticated - create a backend-compatible JWT
   if (token?.sub) {

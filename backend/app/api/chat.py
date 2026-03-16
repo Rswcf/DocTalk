@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hmac
 import json
 import uuid
 from typing import AsyncGenerator, Optional
@@ -40,11 +41,24 @@ chat_router = APIRouter(prefix="/api", tags=["chat"])
 
 
 def _get_client_ip(request: Request) -> str:
-    """Extract real client IP, preferring X-Forwarded-For (set by Vercel proxy)."""
-    forwarded = request.headers.get("x-forwarded-for")
-    if forwarded:
-        # First IP in the chain is the original client
-        return forwarded.split(",")[0].strip()
+    """Extract real client IP from trusted Vercel proxy.
+
+    The proxy sends X-Real-Client-IP (from Vercel's req.ip, not forgeable)
+    along with X-Proxy-IP-Secret (shared AUTH_SECRET) to prove authenticity.
+    Falls back to request.client.host for direct access (dev/testing).
+    """
+    proxied_ip = request.headers.get("x-real-client-ip")
+    proxy_secret = request.headers.get("x-proxy-ip-secret")
+    if (
+        proxied_ip
+        and proxy_secret
+        and settings.AUTH_SECRET
+        and hmac.compare_digest(proxy_secret, settings.AUTH_SECRET)
+    ):
+        return proxied_ip.strip()
+
+    # No trusted proxy header — use the direct connection IP.
+    # Do NOT trust X-Forwarded-For from untrusted sources (spoofable).
     return request.client.host if request.client else "unknown"
 
 
