@@ -117,14 +117,14 @@ export default function MultiFormatClient() {
         {/* Hero */}
         <section className="bg-white dark:bg-zinc-950">
           <div className="max-w-4xl mx-auto px-6 pt-20 pb-16 text-center">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-zinc-100 dark:bg-zinc-800 text-sm text-zinc-600 dark:text-zinc-400 mb-6">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-zinc-100 dark:bg-zinc-800 text-sm text-zinc-600 dark:text-zinc-300 mb-6">
               <FileText className="w-4 h-4" />
               {t('featuresMultiFormat.heroBadge')}
             </div>
             <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-zinc-900 dark:text-zinc-100 tracking-tight mb-6 leading-tight">
               {t('featuresMultiFormat.heroTitle')}
             </h1>
-            <p className="text-lg text-zinc-600 dark:text-zinc-400 max-w-2xl mx-auto mb-8">
+            <p className="text-lg text-zinc-600 dark:text-zinc-300 max-w-2xl mx-auto mb-8">
               {t('featuresMultiFormat.heroSubtitle')}
             </p>
             <Link
@@ -143,7 +143,7 @@ export default function MultiFormatClient() {
             <h2 className="text-2xl sm:text-3xl font-bold text-zinc-900 dark:text-zinc-100 tracking-tight mb-4 text-center">
               {t('featuresMultiFormat.formatsTitle')}
             </h2>
-            <p className="text-zinc-600 dark:text-zinc-400 text-center max-w-2xl mx-auto mb-12">
+            <p className="text-zinc-600 dark:text-zinc-300 text-center max-w-2xl mx-auto mb-12">
               {t('featuresMultiFormat.formatsSubtitle')}
             </p>
 
@@ -164,7 +164,7 @@ export default function MultiFormatClient() {
                         <span className="text-xs text-zinc-400 dark:text-zinc-500">{f.ext}</span>
                       </div>
                     </div>
-                    <p className="text-sm text-zinc-500 dark:text-zinc-400 leading-relaxed">
+                    <p className="text-sm text-zinc-500 dark:text-zinc-300 leading-relaxed">
                       {f.description}
                     </p>
                   </div>
@@ -180,7 +180,7 @@ export default function MultiFormatClient() {
             <h2 className="text-2xl sm:text-3xl font-bold text-zinc-900 dark:text-zinc-100 tracking-tight mb-6">
               {t('featuresMultiFormat.whyTitle')}
             </h2>
-            <div className="space-y-4 text-zinc-600 dark:text-zinc-400 leading-relaxed">
+            <div className="space-y-4 text-zinc-600 dark:text-zinc-300 leading-relaxed">
               <p>
                 {t('featuresMultiFormat.whyPara1')}
               </p>
@@ -213,7 +213,7 @@ export default function MultiFormatClient() {
                     <h3 className="font-semibold text-zinc-900 dark:text-zinc-100 mb-2">
                       {item.title}
                     </h3>
-                    <p className="text-sm text-zinc-500 dark:text-zinc-400 leading-relaxed">
+                    <p className="text-sm text-zinc-500 dark:text-zinc-300 leading-relaxed">
                       {item.description}
                     </p>
                   </div>
@@ -235,7 +235,7 @@ export default function MultiFormatClient() {
                   <span className="shrink-0 inline-flex items-center justify-center px-2.5 py-1 bg-zinc-100 dark:bg-zinc-800 rounded text-xs font-semibold text-zinc-700 dark:text-zinc-300 min-w-[64px] text-center">
                     {item.format}
                   </span>
-                  <p className="text-sm text-zinc-500 dark:text-zinc-400 leading-relaxed">
+                  <p className="text-sm text-zinc-500 dark:text-zinc-300 leading-relaxed">
                     {item.detail}
                   </p>
                 </div>
@@ -250,7 +250,7 @@ export default function MultiFormatClient() {
             <h2 className="text-2xl sm:text-3xl font-bold text-zinc-900 dark:text-zinc-100 tracking-tight mb-4 text-center">
               {t('featuresMultiFormat.compTitle')}
             </h2>
-            <p className="text-zinc-600 dark:text-zinc-400 text-center max-w-2xl mx-auto mb-10">
+            <p className="text-zinc-600 dark:text-zinc-300 text-center max-w-2xl mx-auto mb-10">
               {t('featuresMultiFormat.compSubtitle')}
             </p>
 
@@ -260,9 +260,9 @@ export default function MultiFormatClient() {
                   <tr className="bg-zinc-50 dark:bg-zinc-900">
                     <th className="text-left px-4 py-3 font-semibold text-zinc-900 dark:text-zinc-100">{t('featuresMultiFormat.compHeaderFormat')}</th>
                     <th className="text-center px-4 py-3 font-semibold text-zinc-900 dark:text-zinc-100">{t('featuresMultiFormat.compHeaderDocTalk')}</th>
-                    <th className="text-center px-4 py-3 font-semibold text-zinc-500 dark:text-zinc-400">{t('featuresMultiFormat.compHeaderChatPDF')}</th>
-                    <th className="text-center px-4 py-3 font-semibold text-zinc-500 dark:text-zinc-400">{t('featuresMultiFormat.compHeaderAskYourPDF')}</th>
-                    <th className="text-center px-4 py-3 font-semibold text-zinc-500 dark:text-zinc-400">{t('featuresMultiFormat.compHeaderNotebookLM')}</th>
+                    <th className="text-center px-4 py-3 font-semibold text-zinc-500 dark:text-zinc-300">{t('featuresMultiFormat.compHeaderChatPDF')}</th>
+                    <th className="text-center px-4 py-3 font-semibold text-zinc-500 dark:text-zinc-300">{t('featuresMultiFormat.compHeaderAskYourPDF')}</th>
+                    <th className="text-center px-4 py-3 font-semibold text-zinc-500 dark:text-zinc-300">{t('featuresMultiFormat.compHeaderNotebookLM')}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-zinc-200 dark:divide-zinc-800">
@@ -306,7 +306,7 @@ export default function MultiFormatClient() {
                   <h3 className="font-semibold text-zinc-900 dark:text-zinc-100 mb-2">
                     {item.q}
                   </h3>
-                  <p className="text-sm text-zinc-500 dark:text-zinc-400 leading-relaxed">
+                  <p className="text-sm text-zinc-500 dark:text-zinc-300 leading-relaxed">
                     {item.a}
                   </p>
                 </div>
@@ -321,7 +321,7 @@ export default function MultiFormatClient() {
             <h2 className="text-2xl sm:text-3xl font-bold text-zinc-900 dark:text-zinc-100 tracking-tight mb-4">
               {t('featuresMultiFormat.ctaTitle')}
             </h2>
-            <p className="text-zinc-600 dark:text-zinc-400 max-w-xl mx-auto mb-8">
+            <p className="text-zinc-600 dark:text-zinc-300 max-w-xl mx-auto mb-8">
               {t('featuresMultiFormat.ctaSubtitle')}
             </p>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">

@@ -52,7 +52,7 @@ export default function PdfaiClient() {
       <main className="flex-1">
         {/* Hero */}
         <section className="max-w-4xl mx-auto px-6 pt-20 pb-12">
-          <nav className="text-sm text-zinc-500 dark:text-zinc-400 mb-8">
+          <nav className="text-sm text-zinc-500 dark:text-zinc-300 mb-8">
             <Link href="/" className="hover:text-zinc-700 dark:hover:text-zinc-300">{t('comparePdfai.breadcrumbHome')}</Link>
             <span className="mx-2">/</span>
             <Link href="/compare" className="hover:text-zinc-700 dark:hover:text-zinc-300">{t('comparePdfai.breadcrumbCompare')}</Link>
@@ -63,7 +63,7 @@ export default function PdfaiClient() {
           <h1 className="text-3xl sm:text-4xl font-bold text-zinc-900 dark:text-zinc-100 mb-6 tracking-tight">
             {t('comparePdfai.heroTitle')}
           </h1>
-          <p className="text-lg text-zinc-600 dark:text-zinc-400 leading-relaxed">
+          <p className="text-lg text-zinc-600 dark:text-zinc-300 leading-relaxed">
             {t('comparePdfai.heroDescription')}
           </p>
           <ArticleMeta author="DocTalk Team" published="2026-02-18" className="mt-6" />
@@ -84,7 +84,7 @@ export default function PdfaiClient() {
           <h2 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100 tracking-tight mb-4">
             {t('comparePdfai.whatIsDocTalkTitle')}
           </h2>
-          <p className="text-zinc-600 dark:text-zinc-400 leading-relaxed">
+          <p className="text-zinc-600 dark:text-zinc-300 leading-relaxed">
             {t('comparePdfai.whatIsDocTalkDescription')}
           </p>
         </section>
@@ -95,7 +95,7 @@ export default function PdfaiClient() {
             <h2 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100 tracking-tight mb-4">
               {t('comparePdfai.whatIsPdfaiTitle')}
             </h2>
-            <p className="text-zinc-600 dark:text-zinc-400 leading-relaxed">
+            <p className="text-zinc-600 dark:text-zinc-300 leading-relaxed">
               {t('comparePdfai.whatIsPdfaiDescription')}
             </p>
           </div>
@@ -115,10 +115,10 @@ export default function PdfaiClient() {
                 {t('comparePdfai.documentFormatTitle')}
               </h3>
             </div>
-            <p className="text-zinc-600 dark:text-zinc-400 leading-relaxed mb-4">
+            <p className="text-zinc-600 dark:text-zinc-300 leading-relaxed mb-4">
               {t('comparePdfai.documentFormatCompetitor')}
             </p>
-            <p className="text-zinc-600 dark:text-zinc-400 leading-relaxed">
+            <p className="text-zinc-600 dark:text-zinc-300 leading-relaxed">
               {t('comparePdfai.documentFormatDocTalk')}{' '}
               <Link href="/features/multi-format" className="text-indigo-600 dark:text-indigo-400 hover:underline">
                 {t('comparePdfai.multiFormatLink')}
@@ -134,10 +134,10 @@ export default function PdfaiClient() {
                 {t('comparePdfai.citationsTitle')}
               </h3>
             </div>
-            <p className="text-zinc-600 dark:text-zinc-400 leading-relaxed mb-4">
+            <p className="text-zinc-600 dark:text-zinc-300 leading-relaxed mb-4">
               {t('comparePdfai.citationsCompetitor')}
             </p>
-            <p className="text-zinc-600 dark:text-zinc-400 leading-relaxed">
+            <p className="text-zinc-600 dark:text-zinc-300 leading-relaxed">
               {t('comparePdfai.citationsDocTalk')}{' '}
               <Link href="/features/citations" className="text-indigo-600 dark:text-indigo-400 hover:underline">
                 {t('comparePdfai.citationHighlightingLink')}
@@ -153,10 +153,10 @@ export default function PdfaiClient() {
                 {t('comparePdfai.languageSupportTitle')}
               </h3>
             </div>
-            <p className="text-zinc-600 dark:text-zinc-400 leading-relaxed mb-4">
+            <p className="text-zinc-600 dark:text-zinc-300 leading-relaxed mb-4">
               {t('comparePdfai.languageSupportCompetitor')}
             </p>
-            <p className="text-zinc-600 dark:text-zinc-400 leading-relaxed">
+            <p className="text-zinc-600 dark:text-zinc-300 leading-relaxed">
               {t('comparePdfai.languageSupportDocTalk')}
             </p>
           </div>
@@ -169,10 +169,10 @@ export default function PdfaiClient() {
                 {t('comparePdfai.pricingTitle')}
               </h3>
             </div>
-            <p className="text-zinc-600 dark:text-zinc-400 leading-relaxed mb-4">
+            <p className="text-zinc-600 dark:text-zinc-300 leading-relaxed mb-4">
               {t('comparePdfai.pricingCompetitor')}
             </p>
-            <p className="text-zinc-600 dark:text-zinc-400 leading-relaxed">
+            <p className="text-zinc-600 dark:text-zinc-300 leading-relaxed">
               {t('comparePdfai.pricingDocTalkPart1')}{' '}
               <Link href="/demo" className="text-indigo-600 dark:text-indigo-400 hover:underline">
                 {t('comparePdfai.noSignupDemoLink')}
@@ -191,10 +191,10 @@ export default function PdfaiClient() {
                 {t('comparePdfai.performanceTitle')}
               </h3>
             </div>
-            <p className="text-zinc-600 dark:text-zinc-400 leading-relaxed mb-4">
+            <p className="text-zinc-600 dark:text-zinc-300 leading-relaxed mb-4">
               {t('comparePdfai.performanceCompetitor')}
             </p>
-            <p className="text-zinc-600 dark:text-zinc-400 leading-relaxed">
+            <p className="text-zinc-600 dark:text-zinc-300 leading-relaxed">
               {t('comparePdfai.performanceDocTalk')}
             </p>
           </div>
@@ -207,10 +207,10 @@ export default function PdfaiClient() {
                 {t('comparePdfai.securityTitle')}
               </h3>
             </div>
-            <p className="text-zinc-600 dark:text-zinc-400 leading-relaxed mb-4">
+            <p className="text-zinc-600 dark:text-zinc-300 leading-relaxed mb-4">
               {t('comparePdfai.securityCompetitor')}
             </p>
-            <p className="text-zinc-600 dark:text-zinc-400 leading-relaxed">
+            <p className="text-zinc-600 dark:text-zinc-300 leading-relaxed">
               {t('comparePdfai.securityDocTalk')}
             </p>
           </div>
@@ -222,7 +222,7 @@ export default function PdfaiClient() {
             <h2 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100 tracking-tight mb-6">
               {t('comparePdfai.whoDocTalkTitle')}
             </h2>
-            <ul className="space-y-3 text-zinc-600 dark:text-zinc-400">
+            <ul className="space-y-3 text-zinc-600 dark:text-zinc-300">
               <li className="flex items-start gap-3">
                 <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-zinc-400 shrink-0" />
                 <span>{t('comparePdfai.whoDocTalk1')}</span>
@@ -252,7 +252,7 @@ export default function PdfaiClient() {
           <h2 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100 tracking-tight mb-6">
             {t('comparePdfai.whoPdfaiTitle')}
           </h2>
-          <ul className="space-y-3 text-zinc-600 dark:text-zinc-400">
+          <ul className="space-y-3 text-zinc-600 dark:text-zinc-300">
             <li className="flex items-start gap-3">
               <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-zinc-400 shrink-0" />
               <span>{t('comparePdfai.whoPdfai1')}</span>
@@ -274,13 +274,13 @@ export default function PdfaiClient() {
             <h2 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100 tracking-tight mb-6">
               {t('comparePdfai.verdictTitle')}
             </h2>
-            <p className="text-zinc-600 dark:text-zinc-400 leading-relaxed mb-4">
+            <p className="text-zinc-600 dark:text-zinc-300 leading-relaxed mb-4">
               {t('comparePdfai.verdictParagraph1')}
             </p>
-            <p className="text-zinc-600 dark:text-zinc-400 leading-relaxed mb-4">
+            <p className="text-zinc-600 dark:text-zinc-300 leading-relaxed mb-4">
               {t('comparePdfai.verdictParagraph2')}
             </p>
-            <p className="text-zinc-600 dark:text-zinc-400 leading-relaxed font-medium">
+            <p className="text-zinc-600 dark:text-zinc-300 leading-relaxed font-medium">
               {t('comparePdfai.verdictParagraph3')}{' '}
               <Link href="/demo" className="text-indigo-600 dark:text-indigo-400 hover:underline">
                 {t('comparePdfai.tryFreeDemoLink')}
@@ -314,7 +314,7 @@ export default function PdfaiClient() {
                 <Link
                   key={link.href}
                   href={link.href}
-                  className="px-4 py-2 text-sm bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg text-zinc-600 dark:text-zinc-400 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-[box-shadow,transform] duration-200"
+                  className="px-4 py-2 text-sm bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg text-zinc-600 dark:text-zinc-300 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-[box-shadow,transform] duration-200"
                 >
                   {link.label}
                 </Link>

@@ -130,13 +130,13 @@ function LandingPageContent() {
         <section className="w-full px-6 py-20">
           <div className="max-w-6xl mx-auto">
             <div className="max-w-2xl mb-10">
-              <p className="text-sm font-medium uppercase tracking-[0.18em] text-zinc-500 dark:text-zinc-400 mb-3">
+              <p className="text-sm font-medium uppercase tracking-[0.18em] text-zinc-500 dark:text-zinc-300 mb-3">
                 {t('home.explore.eyebrow')}
               </p>
               <h2 className="font-display font-medium text-3xl tracking-tight text-zinc-900 dark:text-zinc-50 mb-4">
                 {t('home.explore.title')}
               </h2>
-              <p className="text-base text-zinc-600 dark:text-zinc-400 leading-relaxed">
+              <p className="text-base text-zinc-600 dark:text-zinc-300 leading-relaxed">
                 {t('home.explore.description')}
               </p>
             </div>
@@ -155,26 +155,26 @@ function LandingPageContent() {
                       →
                     </span>
                   </div>
-                  <p className="text-sm text-zinc-600 dark:text-zinc-400 leading-relaxed">
+                  <p className="text-sm text-zinc-600 dark:text-zinc-300 leading-relaxed">
                     {path.description}
                   </p>
                 </Link>
               ))}
             </div>
             <div className="mt-8 flex flex-wrap gap-3 text-sm">
-              <Link href="/features" className="text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors">
+              <Link href="/features" className="text-zinc-600 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors">
                 {t('home.explore.links.allFeatures')}
               </Link>
               <span className="text-zinc-300 dark:text-zinc-700">|</span>
-              <Link href="/use-cases" className="text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors">
+              <Link href="/use-cases" className="text-zinc-600 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors">
                 {t('home.explore.links.allUseCases')}
               </Link>
               <span className="text-zinc-300 dark:text-zinc-700">|</span>
-              <Link href="/compare" className="text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors">
+              <Link href="/compare" className="text-zinc-600 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors">
                 {t('home.explore.links.compareTools')}
               </Link>
               <span className="text-zinc-300 dark:text-zinc-700">|</span>
-              <Link href="/alternatives" className="text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors">
+              <Link href="/alternatives" className="text-zinc-600 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors">
                 {t('home.explore.links.browseAlternatives')}
               </Link>
             </div>
@@ -184,7 +184,7 @@ function LandingPageContent() {
         <SocialProof />
 
         <div className="text-center py-8">
-          <Link href="/pricing" className="text-sm font-medium text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors">
+          <Link href="/pricing" className="text-sm font-medium text-zinc-500 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors">
             {t('footer.pricing')} &rarr;
           </Link>
         </div>
@@ -502,7 +502,7 @@ export default function HomePageClient() {
             <div className="flex flex-col items-center justify-center py-16 text-center rounded-2xl border border-dashed border-zinc-200 dark:border-zinc-800">
               <FileUp aria-hidden="true" size={52} className="text-zinc-400 dark:text-zinc-500" />
               <h3 className="mt-5 text-xl font-semibold text-zinc-900 dark:text-zinc-100">{t('dashboard.emptyTitle')}</h3>
-              <p className="mt-2 max-w-md text-sm text-zinc-500 dark:text-zinc-400">{t('dashboard.emptySubtitle')}</p>
+              <p className="mt-2 max-w-md text-sm text-zinc-500 dark:text-zinc-300">{t('dashboard.emptySubtitle')}</p>
               <Link
                 href="/demo"
                 className="mt-6 inline-flex items-center px-5 py-2.5 rounded-full border border-zinc-300 dark:border-zinc-600 text-sm font-medium text-zinc-700 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
@@ -522,7 +522,7 @@ export default function HomePageClient() {
                     <Link href={`/d/${d.document_id}`} className="flex-1 min-w-0 focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:rounded-lg">
                       <div className="font-medium text-zinc-900 dark:text-zinc-100 flex items-center gap-2 min-w-0">
                         <span className="truncate">{d.filename ? sanitizeFilename(d.filename) : d.document_id}</span>
-                        <span className="inline-flex items-center gap-1.5 text-xs text-zinc-500 dark:text-zinc-400 shrink-0">
+                        <span className="inline-flex items-center gap-1.5 text-xs text-zinc-500 dark:text-zinc-300 shrink-0">
                           <span className={`w-2 h-2 rounded-full ${statusMeta.dotClass}`} />
                           <span>{statusMeta.label}</span>
                         </span>
@@ -539,7 +539,7 @@ export default function HomePageClient() {
                         {t('doc.open')}
                       </Link>
                       {confirmDeleteId === d.document_id ? (
-                        <div className="flex items-center gap-1.5 text-xs text-zinc-500 dark:text-zinc-400">
+                        <div className="flex items-center gap-1.5 text-xs text-zinc-500 dark:text-zinc-300">
                           <span>{t('dashboard.deletePrompt')}</span>
                           <button
                             className="px-2 py-1 rounded-md bg-red-600 text-white hover:bg-red-500 transition-colors focus-visible:ring-2 focus-visible:ring-zinc-400 dark:focus-visible:ring-zinc-500"

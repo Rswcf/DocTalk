@@ -44,7 +44,7 @@ export default function AlternativesHubClient() {
             <h1 className="text-3xl sm:text-4xl font-bold text-zinc-900 dark:text-zinc-100 mb-4 tracking-tight">
               {t('altsHub.title')}
             </h1>
-            <p className="text-lg text-zinc-600 dark:text-zinc-400 max-w-2xl mx-auto">
+            <p className="text-lg text-zinc-600 dark:text-zinc-300 max-w-2xl mx-auto">
               {t('altsHub.subtitle')}
             </p>
           </div>
@@ -65,10 +65,10 @@ export default function AlternativesHubClient() {
                   </h2>
                   <ArrowRight className="w-4 h-4 text-zinc-400 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 group-hover:translate-x-0.5 transition-[color,transform] duration-200" />
                 </div>
-                <p className="text-sm text-zinc-600 dark:text-zinc-400 leading-relaxed mb-4">
+                <p className="text-sm text-zinc-600 dark:text-zinc-300 leading-relaxed mb-4">
                   {alt.tagline}
                 </p>
-                <span className="inline-flex items-center px-2.5 py-1 text-xs font-medium rounded-full bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400">
+                <span className="inline-flex items-center px-2.5 py-1 text-xs font-medium rounded-full bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300">
                   {t('altsHub.alternativesCompared', { count: alt.count })}
                 </span>
               </Link>
@@ -79,7 +79,7 @@ export default function AlternativesHubClient() {
             <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100 mb-2">
               {t('altsHub.decisionTitle')}
             </h2>
-            <p className="text-sm text-zinc-600 dark:text-zinc-400 mb-4">
+            <p className="text-sm text-zinc-600 dark:text-zinc-300 mb-4">
               {t('altsHub.decisionDescription')}
             </p>
             <div className="flex flex-wrap gap-3 text-sm">
@@ -107,7 +107,7 @@ export default function AlternativesHubClient() {
 
           {/* Link to comparisons */}
           <div className="mt-16 pt-12 border-t border-zinc-200 dark:border-zinc-800 text-center">
-            <p className="text-zinc-600 dark:text-zinc-400 mb-5">
+            <p className="text-zinc-600 dark:text-zinc-300 mb-5">
               {t('altsHub.comparePrompt')}
             </p>
             <Link

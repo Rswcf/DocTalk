@@ -74,7 +74,7 @@ function StickyTOC({ items }: { items: TocItem[] }) {
               } ${
                 activeId === item.id
                   ? 'text-indigo-600 dark:text-indigo-400 border-l-2 border-indigo-600 dark:border-indigo-400 -ml-px font-medium'
-                  : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100'
+                  : 'text-zinc-500 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-zinc-100'
               }`}
             >
               {item.text}
@@ -99,7 +99,7 @@ function InlineTOC({ items }: { items: TocItem[] }) {
           <li key={item.id} className={item.level === 3 ? 'ml-4' : ''}>
             <a
               href={`#${item.id}`}
-              className="text-sm text-zinc-500 dark:text-zinc-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
+              className="text-sm text-zinc-500 dark:text-zinc-300 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
             >
               {item.text}
             </a>
@@ -128,7 +128,7 @@ function RelatedPosts({ posts }: { posts: BlogPost[] }) {
             <h3 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors duration-200 mb-2 leading-snug">
               {post.title}
             </h3>
-            <p className="text-xs text-zinc-600 dark:text-zinc-400 line-clamp-2">
+            <p className="text-xs text-zinc-600 dark:text-zinc-300 line-clamp-2">
               {post.description}
             </p>
           </Link>
@@ -156,7 +156,7 @@ export default function BlogPostClient({ post, relatedPosts }: BlogPostClientPro
         <div className="max-w-5xl mx-auto px-6 pt-8">
           <Link
             href="/blog"
-            className="inline-flex items-center gap-1.5 text-sm text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors"
+            className="inline-flex items-center gap-1.5 text-sm text-zinc-500 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors"
           >
             <ArrowLeft size={14} />
             {t('blog.post.backToBlog')}
@@ -169,11 +169,11 @@ export default function BlogPostClient({ post, relatedPosts }: BlogPostClientPro
             <div className="flex items-center gap-3 mb-4">
               <Link
                 href={`/blog/category/${post.category}`}
-                className="inline-block px-2.5 py-0.5 text-xs font-medium rounded-full bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-colors"
+                className="inline-block px-2.5 py-0.5 text-xs font-medium rounded-full bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-colors"
               >
                 {getBlogCategoryLabel(t, post.category)}
               </Link>
-              <span className="flex items-center gap-1 text-xs text-zinc-500 dark:text-zinc-400">
+              <span className="flex items-center gap-1 text-xs text-zinc-500 dark:text-zinc-300">
                 <Clock size={12} />
                 {t('blog.meta.minutesRead', { minutes: post.readingMinutes })}
               </span>
@@ -181,7 +181,7 @@ export default function BlogPostClient({ post, relatedPosts }: BlogPostClientPro
             <h1 className="text-3xl sm:text-4xl font-bold text-zinc-900 dark:text-zinc-100 mb-4 leading-tight tracking-tight">
               {post.title}
             </h1>
-            <p className="text-lg text-zinc-600 dark:text-zinc-400 mb-6 leading-relaxed">
+            <p className="text-lg text-zinc-600 dark:text-zinc-300 mb-6 leading-relaxed">
               {post.description}
             </p>
             <ArticleMeta
@@ -252,7 +252,7 @@ export default function BlogPostClient({ post, relatedPosts }: BlogPostClientPro
                   {post.tags.map((tag) => (
                     <span
                       key={tag}
-                      className="px-2.5 py-0.5 text-xs rounded-full bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400"
+                      className="px-2.5 py-0.5 text-xs rounded-full bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300"
                     >
                       {tag}
                     </span>
@@ -265,7 +265,7 @@ export default function BlogPostClient({ post, relatedPosts }: BlogPostClientPro
                 <h3 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100 mb-2">
                   {t('blog.post.aboutTitle')}
                 </h3>
-                <p className="text-sm text-zinc-600 dark:text-zinc-400 mb-4 leading-relaxed">
+                <p className="text-sm text-zinc-600 dark:text-zinc-300 mb-4 leading-relaxed">
                   {t('blog.post.aboutDescription')}
                 </p>
                 <div className="flex gap-3">
@@ -278,7 +278,7 @@ export default function BlogPostClient({ post, relatedPosts }: BlogPostClientPro
                   </Link>
                   <Link
                     href="/features"
-                    className="inline-flex items-center px-4 py-2 text-sm font-medium rounded-lg border border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-400 hover:border-zinc-400 dark:hover:border-zinc-600 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400 dark:focus-visible:ring-zinc-500 focus-visible:ring-offset-2"
+                    className="inline-flex items-center px-4 py-2 text-sm font-medium rounded-lg border border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-300 hover:border-zinc-400 dark:hover:border-zinc-600 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400 dark:focus-visible:ring-zinc-500 focus-visible:ring-offset-2"
                   >
                     {t('blog.post.exploreFeatures')}
                   </Link>

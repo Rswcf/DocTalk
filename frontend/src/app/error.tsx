@@ -15,7 +15,7 @@ export default function RootError({
     <div className="min-h-screen bg-[var(--page-background)] flex items-center justify-center p-6">
       <div className="w-full max-w-md rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-6 shadow-sm">
         <h1 className="text-xl font-semibold text-zinc-900 dark:text-zinc-100">{t("error.title")}</h1>
-        <p className="mt-2 text-sm text-zinc-500 dark:text-zinc-400 break-words">{error.message}</p>
+        <p className="mt-2 text-sm text-zinc-500 dark:text-zinc-300 break-words">{error.message}</p>
         <button
           type="button"
           onClick={reset}

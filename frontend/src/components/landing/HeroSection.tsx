@@ -38,12 +38,12 @@ export default function HeroSection() {
           </div>
 
           {/* Subtitle */}
-          <p className="mt-4 text-xl md:text-2xl text-zinc-500 dark:text-zinc-400 font-normal">
+          <p className="mt-4 text-xl md:text-2xl text-zinc-500 dark:text-zinc-300 font-normal">
             {t('landing.subtitle')}
           </p>
 
           {/* Description */}
-          <p className="mt-3 max-w-2xl mx-auto text-base md:text-lg text-zinc-600 dark:text-zinc-400 leading-relaxed">
+          <p className="mt-3 max-w-2xl mx-auto text-base md:text-lg text-zinc-600 dark:text-zinc-300 leading-relaxed">
             {t('landing.description')}
           </p>
 

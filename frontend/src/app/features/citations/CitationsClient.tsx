@@ -125,14 +125,14 @@ export default function CitationsClient() {
         {/* Hero */}
         <section className="bg-white dark:bg-zinc-950">
           <div className="max-w-4xl mx-auto px-6 pt-20 pb-16 text-center">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-zinc-100 dark:bg-zinc-800 text-sm text-zinc-600 dark:text-zinc-400 mb-6">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-zinc-100 dark:bg-zinc-800 text-sm text-zinc-600 dark:text-zinc-300 mb-6">
               <Quote className="w-4 h-4" />
               {t('featuresCitations.heroBadge')}
             </div>
             <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-zinc-900 dark:text-zinc-100 tracking-tight mb-6 leading-tight">
               {t('featuresCitations.heroTitle')}
             </h1>
-            <p className="text-lg text-zinc-600 dark:text-zinc-400 max-w-2xl mx-auto mb-8">
+            <p className="text-lg text-zinc-600 dark:text-zinc-300 max-w-2xl mx-auto mb-8">
               {t('featuresCitations.heroSubtitle')}
             </p>
             <Link
@@ -151,7 +151,7 @@ export default function CitationsClient() {
             <h2 className="text-2xl sm:text-3xl font-bold text-zinc-900 dark:text-zinc-100 tracking-tight mb-4 text-center">
               {t('featuresCitations.howTitle')}
             </h2>
-            <p className="text-zinc-600 dark:text-zinc-400 text-center max-w-2xl mx-auto mb-12">
+            <p className="text-zinc-600 dark:text-zinc-300 text-center max-w-2xl mx-auto mb-12">
               {t('featuresCitations.howSubtitle')}
             </p>
 
@@ -169,7 +169,7 @@ export default function CitationsClient() {
                         {item.title}
                       </h3>
                     </div>
-                    <p className="text-sm text-zinc-500 dark:text-zinc-400 leading-relaxed">
+                    <p className="text-sm text-zinc-500 dark:text-zinc-300 leading-relaxed">
                       {item.description}
                     </p>
                   </div>
@@ -186,16 +186,16 @@ export default function CitationsClient() {
               {t('featuresCitations.whyTitle')}
             </h2>
             <div className="prose prose-zinc dark:prose-invert max-w-none">
-              <p className="text-zinc-600 dark:text-zinc-400 leading-relaxed mb-4">
+              <p className="text-zinc-600 dark:text-zinc-300 leading-relaxed mb-4">
                 {t('featuresCitations.whyPara1')}
               </p>
-              <p className="text-zinc-600 dark:text-zinc-400 leading-relaxed mb-4">
+              <p className="text-zinc-600 dark:text-zinc-300 leading-relaxed mb-4">
                 {t('featuresCitations.whyPara2')}
               </p>
-              <p className="text-zinc-600 dark:text-zinc-400 leading-relaxed mb-4">
+              <p className="text-zinc-600 dark:text-zinc-300 leading-relaxed mb-4">
                 {t('featuresCitations.whyPara3')}
               </p>
-              <p className="text-zinc-600 dark:text-zinc-400 leading-relaxed">
+              <p className="text-zinc-600 dark:text-zinc-300 leading-relaxed">
                 {t('featuresCitations.whyPara4')}
               </p>
             </div>
@@ -208,7 +208,7 @@ export default function CitationsClient() {
             <h2 className="text-2xl sm:text-3xl font-bold text-zinc-900 dark:text-zinc-100 tracking-tight mb-4 text-center">
               {t('featuresCitations.layersTitle')}
             </h2>
-            <p className="text-zinc-600 dark:text-zinc-400 text-center max-w-2xl mx-auto mb-12">
+            <p className="text-zinc-600 dark:text-zinc-300 text-center max-w-2xl mx-auto mb-12">
               {t('featuresCitations.layersSubtitle')}
             </p>
 
@@ -227,7 +227,7 @@ export default function CitationsClient() {
                       <h3 className="font-semibold text-zinc-900 dark:text-zinc-100 mb-2">
                         {item.title}
                       </h3>
-                      <p className="text-sm text-zinc-500 dark:text-zinc-400 leading-relaxed">
+                      <p className="text-sm text-zinc-500 dark:text-zinc-300 leading-relaxed">
                         {item.description}
                       </p>
                     </div>
@@ -244,7 +244,7 @@ export default function CitationsClient() {
             <h2 className="text-2xl sm:text-3xl font-bold text-zinc-900 dark:text-zinc-100 tracking-tight mb-4 text-center">
               {t('featuresCitations.compTitle')}
             </h2>
-            <p className="text-zinc-600 dark:text-zinc-400 text-center max-w-2xl mx-auto mb-10">
+            <p className="text-zinc-600 dark:text-zinc-300 text-center max-w-2xl mx-auto mb-10">
               {t('featuresCitations.compSubtitle')}
             </p>
 
@@ -254,9 +254,9 @@ export default function CitationsClient() {
                   <tr className="bg-zinc-50 dark:bg-zinc-900">
                     <th className="text-left px-4 py-3 font-semibold text-zinc-900 dark:text-zinc-100">{t('featuresCitations.compHeaderFeature')}</th>
                     <th className="text-center px-4 py-3 font-semibold text-zinc-900 dark:text-zinc-100">{t('featuresCitations.compHeaderDocTalk')}</th>
-                    <th className="text-center px-4 py-3 font-semibold text-zinc-500 dark:text-zinc-400">{t('featuresCitations.compHeaderChatPDF')}</th>
-                    <th className="text-center px-4 py-3 font-semibold text-zinc-500 dark:text-zinc-400">{t('featuresCitations.compHeaderAskYourPDF')}</th>
-                    <th className="text-center px-4 py-3 font-semibold text-zinc-500 dark:text-zinc-400">{t('featuresCitations.compHeaderHumata')}</th>
+                    <th className="text-center px-4 py-3 font-semibold text-zinc-500 dark:text-zinc-300">{t('featuresCitations.compHeaderChatPDF')}</th>
+                    <th className="text-center px-4 py-3 font-semibold text-zinc-500 dark:text-zinc-300">{t('featuresCitations.compHeaderAskYourPDF')}</th>
+                    <th className="text-center px-4 py-3 font-semibold text-zinc-500 dark:text-zinc-300">{t('featuresCitations.compHeaderHumata')}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-zinc-200 dark:divide-zinc-800">
@@ -292,7 +292,7 @@ export default function CitationsClient() {
             <h2 className="text-2xl sm:text-3xl font-bold text-zinc-900 dark:text-zinc-100 tracking-tight mb-4 text-center">
               {t('featuresCitations.useCasesTitle')}
             </h2>
-            <p className="text-zinc-600 dark:text-zinc-400 text-center max-w-2xl mx-auto mb-12">
+            <p className="text-zinc-600 dark:text-zinc-300 text-center max-w-2xl mx-auto mb-12">
               {t('featuresCitations.useCasesSubtitle')}
             </p>
 
@@ -310,7 +310,7 @@ export default function CitationsClient() {
                     <h3 className="font-semibold text-zinc-900 dark:text-zinc-100 mb-2">
                       {item.title}
                     </h3>
-                    <p className="text-sm text-zinc-500 dark:text-zinc-400 leading-relaxed mb-4">
+                    <p className="text-sm text-zinc-500 dark:text-zinc-300 leading-relaxed mb-4">
                       {item.description}
                     </p>
                     <Link
@@ -343,7 +343,7 @@ export default function CitationsClient() {
                   <h3 className="font-semibold text-zinc-900 dark:text-zinc-100 mb-2">
                     {item.q}
                   </h3>
-                  <p className="text-sm text-zinc-500 dark:text-zinc-400 leading-relaxed">
+                  <p className="text-sm text-zinc-500 dark:text-zinc-300 leading-relaxed">
                     {item.a}
                   </p>
                 </div>
@@ -358,7 +358,7 @@ export default function CitationsClient() {
             <h2 className="text-2xl sm:text-3xl font-bold text-zinc-900 dark:text-zinc-100 tracking-tight mb-4">
               {t('featuresCitations.ctaTitle')}
             </h2>
-            <p className="text-zinc-600 dark:text-zinc-400 max-w-xl mx-auto mb-8">
+            <p className="text-zinc-600 dark:text-zinc-300 max-w-xl mx-auto mb-8">
               {t('featuresCitations.ctaSubtitle')}
             </p>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">

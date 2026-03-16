@@ -53,7 +53,7 @@ export default function Footer() {
             </Link>
           </div>
 
-          <p className="max-w-2xl text-sm text-zinc-500 dark:text-zinc-400 mb-10 leading-relaxed">
+          <p className="max-w-2xl text-sm text-zinc-500 dark:text-zinc-300 mb-10 leading-relaxed">
             {t('footer.description')}
           </p>
 
@@ -65,7 +65,7 @@ export default function Footer() {
               <ul className="space-y-3">
                 {productLinks.map((item) => (
                   <li key={item.href}>
-                    <Link href={item.href} className="text-sm text-zinc-500 dark:text-zinc-400 hover:text-accent transition-colors focus-visible:ring-2 focus-visible:ring-accent focus-visible:rounded-sm">
+                    <Link href={item.href} className="text-sm text-zinc-500 dark:text-zinc-300 hover:text-accent transition-colors focus-visible:ring-2 focus-visible:ring-accent focus-visible:rounded-sm">
                       {item.label}
                     </Link>
                   </li>
@@ -80,7 +80,7 @@ export default function Footer() {
               <ul className="space-y-3">
                 {useCaseLinks.map((item) => (
                   <li key={item.href}>
-                    <Link href={item.href} className="text-sm text-zinc-500 dark:text-zinc-400 hover:text-accent transition-colors focus-visible:ring-2 focus-visible:ring-accent focus-visible:rounded-sm">
+                    <Link href={item.href} className="text-sm text-zinc-500 dark:text-zinc-300 hover:text-accent transition-colors focus-visible:ring-2 focus-visible:ring-accent focus-visible:rounded-sm">
                       {item.label}
                     </Link>
                   </li>
@@ -95,7 +95,7 @@ export default function Footer() {
               <ul className="space-y-3">
                 {resourceLinks.map((item) => (
                   <li key={item.href}>
-                    <Link href={item.href} className="text-sm text-zinc-500 dark:text-zinc-400 hover:text-accent transition-colors focus-visible:ring-2 focus-visible:ring-accent focus-visible:rounded-sm">
+                    <Link href={item.href} className="text-sm text-zinc-500 dark:text-zinc-300 hover:text-accent transition-colors focus-visible:ring-2 focus-visible:ring-accent focus-visible:rounded-sm">
                       {item.label}
                     </Link>
                   </li>
@@ -110,7 +110,7 @@ export default function Footer() {
               <ul className="space-y-3">
                 {companyLinks.map((item) => (
                   <li key={item.href}>
-                    <Link href={item.href} className="text-sm text-zinc-500 dark:text-zinc-400 hover:text-accent transition-colors focus-visible:ring-2 focus-visible:ring-accent focus-visible:rounded-sm">
+                    <Link href={item.href} className="text-sm text-zinc-500 dark:text-zinc-300 hover:text-accent transition-colors focus-visible:ring-2 focus-visible:ring-accent focus-visible:rounded-sm">
                       {item.label}
                     </Link>
                   </li>

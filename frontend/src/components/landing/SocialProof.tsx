@@ -82,7 +82,7 @@ export default function SocialProof() {
                     <AnimatedCounter target={metric.target} suffix={metric.suffix} />
                   )}
                 </div>
-                <div className="text-sm text-zinc-500 dark:text-zinc-400">
+                <div className="text-sm text-zinc-500 dark:text-zinc-300">
                   {t(metric.labelKey)}
                 </div>
               </div>

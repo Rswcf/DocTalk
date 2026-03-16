@@ -56,7 +56,7 @@ export default function NotebooklmClient() {
       <main className="flex-1">
         {/* Hero */}
         <section className="max-w-4xl mx-auto px-6 pt-20 pb-12">
-          <nav className="text-sm text-zinc-500 dark:text-zinc-400 mb-8">
+          <nav className="text-sm text-zinc-500 dark:text-zinc-300 mb-8">
             <Link href="/" className="hover:text-zinc-700 dark:hover:text-zinc-300">{t('compareNotebooklm.breadcrumb.home')}</Link>
             <span className="mx-2">/</span>
             <Link href="/compare" className="hover:text-zinc-700 dark:hover:text-zinc-300">{t('compareNotebooklm.breadcrumb.compare')}</Link>
@@ -67,7 +67,7 @@ export default function NotebooklmClient() {
           <h1 className="text-3xl sm:text-4xl font-bold text-zinc-900 dark:text-zinc-100 mb-6 tracking-tight">
             {t('compareNotebooklm.heroTitle')}
           </h1>
-          <p className="text-lg text-zinc-600 dark:text-zinc-400 leading-relaxed">
+          <p className="text-lg text-zinc-600 dark:text-zinc-300 leading-relaxed">
             {t('compareNotebooklm.heroDescription')}
           </p>
           <ArticleMeta author={t('compareNotebooklm.author')} published="2026-02-18" className="mt-6" />
@@ -88,7 +88,7 @@ export default function NotebooklmClient() {
           <h2 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100 tracking-tight mb-4">
             {t('compareNotebooklm.whatIsDocTalk')}
           </h2>
-          <p className="text-zinc-600 dark:text-zinc-400 leading-relaxed">
+          <p className="text-zinc-600 dark:text-zinc-300 leading-relaxed">
             {t('compareNotebooklm.whatIsDocTalkDescription')}
           </p>
         </section>
@@ -99,7 +99,7 @@ export default function NotebooklmClient() {
             <h2 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100 tracking-tight mb-4">
               {t('compareNotebooklm.whatIsNotebookLM')}
             </h2>
-            <p className="text-zinc-600 dark:text-zinc-400 leading-relaxed">
+            <p className="text-zinc-600 dark:text-zinc-300 leading-relaxed">
               {t('compareNotebooklm.whatIsNotebookLMDescription')}
             </p>
           </div>
@@ -119,10 +119,10 @@ export default function NotebooklmClient() {
                 {t('compareNotebooklm.feature.formatSupport')}
               </h3>
             </div>
-            <p className="text-zinc-600 dark:text-zinc-400 leading-relaxed mb-4">
+            <p className="text-zinc-600 dark:text-zinc-300 leading-relaxed mb-4">
               {t('compareNotebooklm.feature.formatSupportP1')}
             </p>
-            <p className="text-zinc-600 dark:text-zinc-400 leading-relaxed">
+            <p className="text-zinc-600 dark:text-zinc-300 leading-relaxed">
               {t('compareNotebooklm.feature.formatSupportP2Pre')}
               <Link href="/features/multi-format" className="text-indigo-600 dark:text-indigo-400 hover:underline">
                 {t('compareNotebooklm.feature.formatSupportLink')}
@@ -138,10 +138,10 @@ export default function NotebooklmClient() {
                 {t('compareNotebooklm.feature.citations')}
               </h3>
             </div>
-            <p className="text-zinc-600 dark:text-zinc-400 leading-relaxed mb-4">
+            <p className="text-zinc-600 dark:text-zinc-300 leading-relaxed mb-4">
               {t('compareNotebooklm.feature.citationsP1')}
             </p>
-            <p className="text-zinc-600 dark:text-zinc-400 leading-relaxed">
+            <p className="text-zinc-600 dark:text-zinc-300 leading-relaxed">
               {t('compareNotebooklm.feature.citationsP2Pre')}
               <Link href="/features/citations" className="text-indigo-600 dark:text-indigo-400 hover:underline">
                 {t('compareNotebooklm.feature.citationsLink')}
@@ -157,10 +157,10 @@ export default function NotebooklmClient() {
                 {t('compareNotebooklm.feature.languages')}
               </h3>
             </div>
-            <p className="text-zinc-600 dark:text-zinc-400 leading-relaxed mb-4">
+            <p className="text-zinc-600 dark:text-zinc-300 leading-relaxed mb-4">
               {t('compareNotebooklm.feature.languagesP1')}
             </p>
-            <p className="text-zinc-600 dark:text-zinc-400 leading-relaxed">
+            <p className="text-zinc-600 dark:text-zinc-300 leading-relaxed">
               {t('compareNotebooklm.feature.languagesP2Pre')}
               <Link href="/features/multilingual" className="text-indigo-600 dark:text-indigo-400 hover:underline">
                 {t('compareNotebooklm.feature.languagesLink')}
@@ -176,10 +176,10 @@ export default function NotebooklmClient() {
                 {t('compareNotebooklm.feature.pricing')}
               </h3>
             </div>
-            <p className="text-zinc-600 dark:text-zinc-400 leading-relaxed mb-4">
+            <p className="text-zinc-600 dark:text-zinc-300 leading-relaxed mb-4">
               {t('compareNotebooklm.feature.pricingP1')}
             </p>
-            <p className="text-zinc-600 dark:text-zinc-400 leading-relaxed">
+            <p className="text-zinc-600 dark:text-zinc-300 leading-relaxed">
               {t('compareNotebooklm.feature.pricingP2Pre')}
               <Link href="/demo" className="text-indigo-600 dark:text-indigo-400 hover:underline">{t('compareNotebooklm.feature.pricingDemoLink')}</Link>
               {t('compareNotebooklm.feature.pricingP2Mid')}
@@ -195,10 +195,10 @@ export default function NotebooklmClient() {
                 {t('compareNotebooklm.feature.performance')}
               </h3>
             </div>
-            <p className="text-zinc-600 dark:text-zinc-400 leading-relaxed mb-4">
+            <p className="text-zinc-600 dark:text-zinc-300 leading-relaxed mb-4">
               {t('compareNotebooklm.feature.performanceP1')}
             </p>
-            <p className="text-zinc-600 dark:text-zinc-400 leading-relaxed">
+            <p className="text-zinc-600 dark:text-zinc-300 leading-relaxed">
               {t('compareNotebooklm.feature.performanceP2')}
             </p>
           </div>
@@ -211,10 +211,10 @@ export default function NotebooklmClient() {
                 {t('compareNotebooklm.feature.security')}
               </h3>
             </div>
-            <p className="text-zinc-600 dark:text-zinc-400 leading-relaxed mb-4">
+            <p className="text-zinc-600 dark:text-zinc-300 leading-relaxed mb-4">
               {t('compareNotebooklm.feature.securityP1')}
             </p>
-            <p className="text-zinc-600 dark:text-zinc-400 leading-relaxed">
+            <p className="text-zinc-600 dark:text-zinc-300 leading-relaxed">
               {t('compareNotebooklm.feature.securityP2')}
             </p>
           </div>
@@ -226,7 +226,7 @@ export default function NotebooklmClient() {
             <h2 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100 tracking-tight mb-6">
               {t('compareNotebooklm.whoDocTalk')}
             </h2>
-            <ul className="space-y-3 text-zinc-600 dark:text-zinc-400">
+            <ul className="space-y-3 text-zinc-600 dark:text-zinc-300">
               <li className="flex items-start gap-3">
                 <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-zinc-400 shrink-0" />
                 <span>{t('compareNotebooklm.whoDocTalk.item1')}</span>
@@ -256,7 +256,7 @@ export default function NotebooklmClient() {
           <h2 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100 tracking-tight mb-6">
             {t('compareNotebooklm.whoNotebookLM')}
           </h2>
-          <ul className="space-y-3 text-zinc-600 dark:text-zinc-400">
+          <ul className="space-y-3 text-zinc-600 dark:text-zinc-300">
             <li className="flex items-start gap-3">
               <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-zinc-400 shrink-0" />
               <span>{t('compareNotebooklm.whoNotebookLM.item1')}</span>
@@ -286,13 +286,13 @@ export default function NotebooklmClient() {
             <h2 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100 tracking-tight mb-6">
               {t('compareNotebooklm.verdict')}
             </h2>
-            <p className="text-zinc-600 dark:text-zinc-400 leading-relaxed mb-4">
+            <p className="text-zinc-600 dark:text-zinc-300 leading-relaxed mb-4">
               {t('compareNotebooklm.verdictP1')}
             </p>
-            <p className="text-zinc-600 dark:text-zinc-400 leading-relaxed mb-4">
+            <p className="text-zinc-600 dark:text-zinc-300 leading-relaxed mb-4">
               {t('compareNotebooklm.verdictP2')}
             </p>
-            <p className="text-zinc-600 dark:text-zinc-400 leading-relaxed font-medium">
+            <p className="text-zinc-600 dark:text-zinc-300 leading-relaxed font-medium">
               {t('compareNotebooklm.verdictP3Pre')}
               <Link href="/demo" className="text-indigo-600 dark:text-indigo-400 hover:underline">
                 {t('compareNotebooklm.verdictDemoLink')}
@@ -327,7 +327,7 @@ export default function NotebooklmClient() {
                 <Link
                   key={link.href}
                   href={link.href}
-                  className="px-4 py-2 text-sm bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg text-zinc-600 dark:text-zinc-400 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-[box-shadow,transform] duration-200"
+                  className="px-4 py-2 text-sm bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg text-zinc-600 dark:text-zinc-300 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-[box-shadow,transform] duration-200"
                 >
                   {link.label}
                 </Link>

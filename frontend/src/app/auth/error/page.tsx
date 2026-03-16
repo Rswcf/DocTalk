@@ -44,7 +44,7 @@ function AuthErrorContent() {
           <h1 className="text-2xl font-bold text-zinc-900 dark:text-zinc-50 mb-3">
             {t("auth.error")}
           </h1>
-          <p className="text-sm text-zinc-500 dark:text-zinc-400 mb-6">
+          <p className="text-sm text-zinc-500 dark:text-zinc-300 mb-6">
             {getErrorMessage()}
           </p>
 

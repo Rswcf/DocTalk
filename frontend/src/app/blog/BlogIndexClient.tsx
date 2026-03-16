@@ -12,7 +12,7 @@ function CategoryBadge({ category }: { category: string }) {
   const { t } = useLocale();
 
   return (
-    <span className="inline-block px-2.5 py-0.5 text-xs font-medium rounded-full bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400">
+    <span className="inline-block px-2.5 py-0.5 text-xs font-medium rounded-full bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300">
       {getBlogCategoryLabel(t, category)}
     </span>
   );
@@ -28,14 +28,14 @@ function PostCard({ post }: { post: BlogPost }) {
     >
       <div className="flex items-center gap-3 mb-3">
         <CategoryBadge category={post.category} />
-        <span className="text-xs text-zinc-500 dark:text-zinc-400">
+        <span className="text-xs text-zinc-500 dark:text-zinc-300">
           {t('blog.meta.minutesRead', { minutes: post.readingMinutes })}
         </span>
       </div>
       <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors duration-200 mb-2 leading-snug">
         {post.title}
       </h2>
-      <p className="text-sm text-zinc-600 dark:text-zinc-400 line-clamp-2 mb-4 leading-relaxed">
+      <p className="text-sm text-zinc-600 dark:text-zinc-300 line-clamp-2 mb-4 leading-relaxed">
         {post.description}
       </p>
       <time className="text-xs text-zinc-500 dark:text-zinc-500">
@@ -69,7 +69,7 @@ export default function BlogIndexClient({ posts }: BlogIndexClientProps) {
                 {t('blog.index.title')}
               </h1>
             </div>
-            <p className="text-lg text-zinc-600 dark:text-zinc-400 max-w-2xl">
+            <p className="text-lg text-zinc-600 dark:text-zinc-300 max-w-2xl">
               {t('blog.index.description')}
             </p>
           </div>
@@ -83,7 +83,7 @@ export default function BlogIndexClient({ posts }: BlogIndexClientProps) {
               <Link
                 key={cat}
                 href={cat === 'all' ? '/blog' : `/blog/category/${cat}`}
-                className="px-4 py-1.5 text-sm font-medium rounded-full border cursor-pointer transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400 dark:focus-visible:ring-zinc-500 focus-visible:ring-offset-2 bg-white dark:bg-zinc-900 text-zinc-600 dark:text-zinc-400 border-zinc-200 dark:border-zinc-800 hover:border-zinc-400 dark:hover:border-zinc-600"
+                className="px-4 py-1.5 text-sm font-medium rounded-full border cursor-pointer transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400 dark:focus-visible:ring-zinc-500 focus-visible:ring-offset-2 bg-white dark:bg-zinc-900 text-zinc-600 dark:text-zinc-300 border-zinc-200 dark:border-zinc-800 hover:border-zinc-400 dark:hover:border-zinc-600"
               >
                 {getBlogCategoryLabel(t, cat)}
               </Link>
@@ -94,7 +94,7 @@ export default function BlogIndexClient({ posts }: BlogIndexClientProps) {
             <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100 mb-2">
               {t('blog.index.panel.title')}
             </h2>
-            <p className="text-sm text-zinc-600 dark:text-zinc-400 mb-4 max-w-2xl">
+            <p className="text-sm text-zinc-600 dark:text-zinc-300 mb-4 max-w-2xl">
               {t('blog.index.panel.description')}
             </p>
             <div className="flex flex-wrap gap-3 text-sm">
@@ -118,7 +118,7 @@ export default function BlogIndexClient({ posts }: BlogIndexClientProps) {
 
           {/* Post Grid */}
           {posts.length === 0 ? (
-            <p className="text-center text-zinc-500 dark:text-zinc-400 py-16">
+            <p className="text-center text-zinc-500 dark:text-zinc-300 py-16">
               {t('blog.index.empty')}
             </p>
           ) : (

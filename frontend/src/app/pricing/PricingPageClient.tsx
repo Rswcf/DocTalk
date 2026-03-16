@@ -95,13 +95,13 @@ export default function PricingPageClient() {
       <main id="main-content" className="flex-1 px-6 py-16">
         <div className="mx-auto max-w-6xl space-y-16">
           <section className="mx-auto max-w-3xl text-center space-y-5">
-            <p className="text-sm font-medium tracking-[0.18em] uppercase text-zinc-500 dark:text-zinc-400">
+            <p className="text-sm font-medium tracking-[0.18em] uppercase text-zinc-500 dark:text-zinc-300">
               {t('pricing.eyebrow')}
             </p>
             <h1 className="text-4xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50 sm:text-5xl">
               {t('pricing.headline')}
             </h1>
-            <p className="text-lg leading-8 text-zinc-600 dark:text-zinc-400">
+            <p className="text-lg leading-8 text-zinc-600 dark:text-zinc-300">
               {t('pricing.description')}
             </p>
             <div className="flex flex-wrap items-center justify-center gap-4">
@@ -138,14 +138,14 @@ export default function PricingPageClient() {
                     </span>
                   )}
                 </div>
-                <p className="mt-4 text-sm leading-7 text-zinc-600 dark:text-zinc-400">{t(plan.summaryKey)}</p>
+                <p className="mt-4 text-sm leading-7 text-zinc-600 dark:text-zinc-300">{t(plan.summaryKey)}</p>
                 <div className="mt-6 flex items-end gap-1">
                   <span className="text-4xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
                     {t(plan.priceKey)}
                   </span>
-                  <span className="pb-1 text-sm text-zinc-500 dark:text-zinc-400">{t(plan.cadenceKey)}</span>
+                  <span className="pb-1 text-sm text-zinc-500 dark:text-zinc-300">{t(plan.cadenceKey)}</span>
                 </div>
-                <ul className="mt-6 space-y-3 text-sm leading-7 text-zinc-600 dark:text-zinc-400">
+                <ul className="mt-6 space-y-3 text-sm leading-7 text-zinc-600 dark:text-zinc-300">
                   {plan.featureKeys.map((featureKey) => (
                     <li key={featureKey} className="flex gap-3">
                       <span className="mt-2 h-2 w-2 shrink-0 rounded-full bg-indigo-500 dark:bg-indigo-400" />
@@ -172,26 +172,26 @@ export default function PricingPageClient() {
               <h2 className="text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
                 {t('pricing.comparison.title')}
               </h2>
-              <p className="mt-4 text-base leading-8 text-zinc-600 dark:text-zinc-400">
+              <p className="mt-4 text-base leading-8 text-zinc-600 dark:text-zinc-300">
                 {t('pricing.comparison.description')}
               </p>
               <div className="mt-8 overflow-x-auto">
                 <table className="w-full min-w-[560px] text-left text-sm">
                   <thead>
                     <tr className="border-b border-zinc-200 dark:border-zinc-800">
-                      <th scope="col" className="py-3 pr-4 font-medium text-zinc-500 dark:text-zinc-400">{t('pricing.comparison.feature')}</th>
-                      <th scope="col" className="py-3 px-4 font-medium text-zinc-500 dark:text-zinc-400">{t('pricing.comparison.free')}</th>
-                      <th scope="col" className="py-3 px-4 font-medium text-zinc-500 dark:text-zinc-400">{t('pricing.comparison.plus')}</th>
-                      <th scope="col" className="py-3 pl-4 font-medium text-zinc-500 dark:text-zinc-400">{t('pricing.comparison.pro')}</th>
+                      <th scope="col" className="py-3 pr-4 font-medium text-zinc-500 dark:text-zinc-300">{t('pricing.comparison.feature')}</th>
+                      <th scope="col" className="py-3 px-4 font-medium text-zinc-500 dark:text-zinc-300">{t('pricing.comparison.free')}</th>
+                      <th scope="col" className="py-3 px-4 font-medium text-zinc-500 dark:text-zinc-300">{t('pricing.comparison.plus')}</th>
+                      <th scope="col" className="py-3 pl-4 font-medium text-zinc-500 dark:text-zinc-300">{t('pricing.comparison.pro')}</th>
                     </tr>
                   </thead>
                   <tbody>
                     {comparisonRows.map((row) => (
                       <tr key={row.labelKey} className="border-b border-zinc-100 dark:border-zinc-900">
                         <th scope="row" className="py-3 pr-4 font-medium text-zinc-700 dark:text-zinc-300">{t(row.labelKey)}</th>
-                        <td className="py-3 px-4 text-zinc-600 dark:text-zinc-400">{t(row.freeKey)}</td>
-                        <td className="py-3 px-4 text-zinc-600 dark:text-zinc-400">{t(row.plusKey)}</td>
-                        <td className="py-3 pl-4 text-zinc-600 dark:text-zinc-400">{t(row.proKey)}</td>
+                        <td className="py-3 px-4 text-zinc-600 dark:text-zinc-300">{t(row.freeKey)}</td>
+                        <td className="py-3 px-4 text-zinc-600 dark:text-zinc-300">{t(row.plusKey)}</td>
+                        <td className="py-3 pl-4 text-zinc-600 dark:text-zinc-300">{t(row.proKey)}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -203,7 +203,7 @@ export default function PricingPageClient() {
               <h2 className="text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
                 {t('pricing.bestFit.title')}
               </h2>
-              <ul className="mt-5 space-y-4 text-sm leading-7 text-zinc-600 dark:text-zinc-400">
+              <ul className="mt-5 space-y-4 text-sm leading-7 text-zinc-600 dark:text-zinc-300">
                 <li>
                   <strong className="text-zinc-900 dark:text-zinc-100">{t('pricing.bestFit.freeLabel')}</strong>{' '}
                   {t('pricing.bestFit.freeDesc')}
@@ -218,7 +218,7 @@ export default function PricingPageClient() {
                 </li>
               </ul>
               <div className="mt-8 rounded-2xl border border-zinc-200 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-950">
-                <p className="text-sm leading-7 text-zinc-600 dark:text-zinc-400">
+                <p className="text-sm leading-7 text-zinc-600 dark:text-zinc-300">
                   {t('pricing.bestFit.contextNote')}{' '}
                   <Link href="/demo" className="text-indigo-600 hover:underline dark:text-indigo-400">
                     {t('pricing.bestFit.publicDemo')}

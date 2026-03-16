@@ -19,7 +19,7 @@ export default function CollectionError({
           <AlertTriangle size={20} aria-hidden="true" />
         </div>
         <h2 className="text-xl font-semibold text-zinc-900 dark:text-zinc-100">{t('error.somethingWrong')}</h2>
-        <p className="mt-2 text-xs text-zinc-500 dark:text-zinc-400 break-words">
+        <p className="mt-2 text-xs text-zinc-500 dark:text-zinc-300 break-words">
           {error.message}
         </p>
         <div className="mt-6 flex items-center justify-center gap-3">

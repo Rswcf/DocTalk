@@ -33,13 +33,13 @@ export default function HowItWorks() {
                 </div>
                 {/* Icon */}
                 <div className="w-14 h-14 rounded-xl bg-zinc-50 dark:bg-zinc-800 border border-accent/20 flex items-center justify-center mb-4">
-                  <Icon aria-hidden="true" size={24} className="text-zinc-600 dark:text-zinc-400" />
+                  <Icon aria-hidden="true" size={24} className="text-zinc-600 dark:text-zinc-300" />
                 </div>
                 {/* Text */}
                 <h3 className="font-semibold text-zinc-900 dark:text-zinc-100 mb-2">
                   {t(titleKey)}
                 </h3>
-                <p className="text-sm text-zinc-600 dark:text-zinc-400 leading-relaxed max-w-xs">
+                <p className="text-sm text-zinc-600 dark:text-zinc-300 leading-relaxed max-w-xs">
                   {t(descKey)}
                 </p>
               </div>

@@ -87,14 +87,14 @@ export default function MultilingualClient() {
         {/* Hero */}
         <section className="bg-white dark:bg-zinc-950">
           <div className="max-w-4xl mx-auto px-6 pt-20 pb-16 text-center">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-zinc-100 dark:bg-zinc-800 text-sm text-zinc-600 dark:text-zinc-400 mb-6">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-zinc-100 dark:bg-zinc-800 text-sm text-zinc-600 dark:text-zinc-300 mb-6">
               <Languages className="w-4 h-4" />
               {t('featuresMultilingual.badge')}
             </div>
             <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-zinc-900 dark:text-zinc-100 tracking-tight mb-6 leading-tight">
               {t('featuresMultilingual.hero.title')}
             </h1>
-            <p className="text-lg text-zinc-600 dark:text-zinc-400 max-w-2xl mx-auto mb-8">
+            <p className="text-lg text-zinc-600 dark:text-zinc-300 max-w-2xl mx-auto mb-8">
               {t('featuresMultilingual.hero.subtitle')}
             </p>
             <Link
@@ -113,7 +113,7 @@ export default function MultilingualClient() {
             <h2 className="text-2xl sm:text-3xl font-bold text-zinc-900 dark:text-zinc-100 tracking-tight mb-4 text-center">
               {t('featuresMultilingual.supported.title')}
             </h2>
-            <p className="text-zinc-600 dark:text-zinc-400 text-center max-w-2xl mx-auto mb-12">
+            <p className="text-zinc-600 dark:text-zinc-300 text-center max-w-2xl mx-auto mb-12">
               {t('featuresMultilingual.supported.subtitle')}
             </p>
 
@@ -129,7 +129,7 @@ export default function MultilingualClient() {
                   <p className="font-semibold text-zinc-900 dark:text-zinc-100 text-sm">
                     {lang.native}
                   </p>
-                  <p className="text-xs text-zinc-500 dark:text-zinc-400">
+                  <p className="text-xs text-zinc-500 dark:text-zinc-300">
                     {t(lang.englishKey)}
                   </p>
                 </div>
@@ -144,7 +144,7 @@ export default function MultilingualClient() {
             <h2 className="text-2xl sm:text-3xl font-bold text-zinc-900 dark:text-zinc-100 tracking-tight mb-6">
               {t('featuresMultilingual.howItWorks.title')}
             </h2>
-            <div className="space-y-4 text-zinc-600 dark:text-zinc-400 leading-relaxed">
+            <div className="space-y-4 text-zinc-600 dark:text-zinc-300 leading-relaxed">
               <p>
                 {t('featuresMultilingual.howItWorks.p1')}
               </p>
@@ -164,7 +164,7 @@ export default function MultilingualClient() {
             <h2 className="text-2xl sm:text-3xl font-bold text-zinc-900 dark:text-zinc-100 tracking-tight mb-4 text-center">
               {t('featuresMultilingual.cross.title')}
             </h2>
-            <p className="text-zinc-600 dark:text-zinc-400 text-center max-w-2xl mx-auto mb-12">
+            <p className="text-zinc-600 dark:text-zinc-300 text-center max-w-2xl mx-auto mb-12">
               {t('featuresMultilingual.cross.subtitle')}
             </p>
 
@@ -183,7 +183,7 @@ export default function MultilingualClient() {
                       {item.to}
                     </span>
                   </div>
-                  <p className="text-sm text-zinc-500 dark:text-zinc-400 leading-relaxed">
+                  <p className="text-sm text-zinc-500 dark:text-zinc-300 leading-relaxed">
                     {item.example}
                   </p>
                 </div>
@@ -198,7 +198,7 @@ export default function MultilingualClient() {
             <h2 className="text-2xl sm:text-3xl font-bold text-zinc-900 dark:text-zinc-100 tracking-tight mb-4 text-center">
               {t('featuresMultilingual.compare.title')}
             </h2>
-            <p className="text-zinc-600 dark:text-zinc-400 text-center max-w-2xl mx-auto mb-10">
+            <p className="text-zinc-600 dark:text-zinc-300 text-center max-w-2xl mx-auto mb-10">
               {t('featuresMultilingual.compare.subtitle')}
             </p>
 
@@ -208,9 +208,9 @@ export default function MultilingualClient() {
                   <tr className="bg-zinc-50 dark:bg-zinc-900">
                     <th className="text-left px-4 py-3 font-semibold text-zinc-900 dark:text-zinc-100">{t('featuresMultilingual.compare.featureCol')}</th>
                     <th className="text-center px-4 py-3 font-semibold text-zinc-900 dark:text-zinc-100">DocTalk</th>
-                    <th className="text-center px-4 py-3 font-semibold text-zinc-500 dark:text-zinc-400">ChatPDF</th>
-                    <th className="text-center px-4 py-3 font-semibold text-zinc-500 dark:text-zinc-400">AskYourPDF</th>
-                    <th className="text-center px-4 py-3 font-semibold text-zinc-500 dark:text-zinc-400">NotebookLM</th>
+                    <th className="text-center px-4 py-3 font-semibold text-zinc-500 dark:text-zinc-300">ChatPDF</th>
+                    <th className="text-center px-4 py-3 font-semibold text-zinc-500 dark:text-zinc-300">AskYourPDF</th>
+                    <th className="text-center px-4 py-3 font-semibold text-zinc-500 dark:text-zinc-300">NotebookLM</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-zinc-200 dark:divide-zinc-800">
@@ -243,13 +243,13 @@ export default function MultilingualClient() {
               {t('featuresMultilingual.cjk.title')}
             </h2>
             <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl p-6">
-              <p className="text-zinc-600 dark:text-zinc-400 leading-relaxed mb-4">
+              <p className="text-zinc-600 dark:text-zinc-300 leading-relaxed mb-4">
                 {t('featuresMultilingual.cjk.p1')}
               </p>
-              <p className="text-zinc-600 dark:text-zinc-400 leading-relaxed mb-4">
+              <p className="text-zinc-600 dark:text-zinc-300 leading-relaxed mb-4">
                 {t('featuresMultilingual.cjk.p2')}
               </p>
-              <p className="text-zinc-600 dark:text-zinc-400 leading-relaxed">
+              <p className="text-zinc-600 dark:text-zinc-300 leading-relaxed">
                 {t('featuresMultilingual.cjk.p3')}
               </p>
             </div>
@@ -272,7 +272,7 @@ export default function MultilingualClient() {
                   <h3 className="font-semibold text-zinc-900 dark:text-zinc-100 mb-2">
                     {item.q}
                   </h3>
-                  <p className="text-sm text-zinc-500 dark:text-zinc-400 leading-relaxed">
+                  <p className="text-sm text-zinc-500 dark:text-zinc-300 leading-relaxed">
                     {item.a}
                   </p>
                 </div>
@@ -287,7 +287,7 @@ export default function MultilingualClient() {
             <h2 className="text-2xl sm:text-3xl font-bold text-zinc-900 dark:text-zinc-100 tracking-tight mb-4">
               {t('featuresMultilingual.cta.title')}
             </h2>
-            <p className="text-zinc-600 dark:text-zinc-400 max-w-xl mx-auto mb-8">
+            <p className="text-zinc-600 dark:text-zinc-300 max-w-xl mx-auto mb-8">
               {t('featuresMultilingual.cta.subtitle')}
             </p>
             <Link

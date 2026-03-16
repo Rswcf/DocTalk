@@ -54,7 +54,7 @@ export default function DemoPageClient() {
       <Header variant="minimal" />
       <main id="main-content" className="flex-1 flex flex-col items-center justify-center p-6">
         <h1 className="text-3xl font-bold mb-2 text-zinc-900 dark:text-zinc-50">{t('demo.title')}</h1>
-        <p className="text-zinc-500 dark:text-zinc-400 mb-3 text-center max-w-md">
+        <p className="text-zinc-500 dark:text-zinc-300 mb-3 text-center max-w-md">
           {t('demo.subtitle')}
         </p>
         <p className="text-sm text-zinc-400 dark:text-zinc-500 mb-10 text-center">
@@ -73,13 +73,13 @@ export default function DemoPageClient() {
                 >
                   <div className="flex items-center gap-3 mb-3">
                     <div className="p-2 bg-zinc-50 dark:bg-zinc-800 rounded-lg border border-zinc-100 dark:border-zinc-800 shrink-0">
-                      <Icon aria-hidden="true" size={24} className="text-zinc-600 dark:text-zinc-400" />
+                      <Icon aria-hidden="true" size={24} className="text-zinc-600 dark:text-zinc-300" />
                     </div>
                     <h2 className="font-semibold text-zinc-900 dark:text-zinc-100 min-w-0 break-words">
                       {t(config.titleKey)}
                     </h2>
                   </div>
-                  <p className="text-sm text-zinc-500 dark:text-zinc-400 mb-4">
+                  <p className="text-sm text-zinc-500 dark:text-zinc-300 mb-4">
                     {t(config.descKey)}
                   </p>
                   <div className="mt-auto pt-3 border-t border-zinc-200 dark:border-zinc-800">
@@ -104,13 +104,13 @@ export default function DemoPageClient() {
                   >
                     <div className="flex items-center gap-3 mb-3">
                       <div className="p-2 bg-zinc-50 dark:bg-zinc-800 rounded-lg border border-zinc-100 dark:border-zinc-800 shrink-0">
-                        <Icon aria-hidden="true" size={24} className="text-zinc-600 dark:text-zinc-400" />
+                        <Icon aria-hidden="true" size={24} className="text-zinc-600 dark:text-zinc-300" />
                       </div>
                       <h2 className="font-semibold text-zinc-900 dark:text-zinc-100 min-w-0 break-words">
                         {t(config.titleKey)}
                       </h2>
                     </div>
-                    <p className="text-sm text-zinc-500 dark:text-zinc-400 mb-4">
+                    <p className="text-sm text-zinc-500 dark:text-zinc-300 mb-4">
                       {t(config.descKey)}
                     </p>
                     <div className="mt-auto pt-3 border-t border-zinc-200 dark:border-zinc-800">
@@ -140,7 +140,7 @@ export default function DemoPageClient() {
                 <>
                   <div className="flex items-center gap-3 mb-3">
                     <div className="p-2 bg-zinc-50 dark:bg-zinc-800 rounded-lg border border-zinc-100 dark:border-zinc-800 shrink-0">
-                      <Icon aria-hidden="true" size={24} className="text-zinc-600 dark:text-zinc-400" />
+                      <Icon aria-hidden="true" size={24} className="text-zinc-600 dark:text-zinc-300" />
                     </div>
                     <h2 className="font-semibold text-zinc-900 dark:text-zinc-100 group-hover:text-zinc-600
                                    dark:group-hover:text-zinc-300 transition-colors min-w-0 break-words">
@@ -152,7 +152,7 @@ export default function DemoPageClient() {
                       </span>
                     )}
                   </div>
-                  <p className="text-sm text-zinc-500 dark:text-zinc-400 mb-4">
+                  <p className="text-sm text-zinc-500 dark:text-zinc-300 mb-4">
                     {t(config.descKey)}
                   </p>
                   <div className="mt-auto pt-3 border-t border-zinc-200 dark:border-zinc-800">
@@ -185,7 +185,7 @@ export default function DemoPageClient() {
           </div>
         )}
 
-        <p className="mt-10 text-sm text-zinc-500 dark:text-zinc-400">
+        <p className="mt-10 text-sm text-zinc-500 dark:text-zinc-300">
           {t('demo.hint')}
         </p>
 

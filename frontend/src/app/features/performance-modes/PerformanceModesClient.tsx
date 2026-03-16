@@ -90,14 +90,14 @@ export default function PerformanceModesClient() {
         {/* Hero */}
         <section className="bg-white dark:bg-zinc-950">
           <div className="max-w-4xl mx-auto px-6 pt-20 pb-16 text-center">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-zinc-100 dark:bg-zinc-800 text-sm text-zinc-600 dark:text-zinc-400 mb-6">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-zinc-100 dark:bg-zinc-800 text-sm text-zinc-600 dark:text-zinc-300 mb-6">
               <Gauge className="w-4 h-4" />
               {t('featuresPerformance.badge')}
             </div>
             <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-zinc-900 dark:text-zinc-100 tracking-tight mb-6 leading-tight">
               {t('featuresPerformance.hero.title')}
             </h1>
-            <p className="text-lg text-zinc-600 dark:text-zinc-400 max-w-2xl mx-auto mb-8">
+            <p className="text-lg text-zinc-600 dark:text-zinc-300 max-w-2xl mx-auto mb-8">
               {t('featuresPerformance.hero.subtitle')}
             </p>
             <Link
@@ -133,7 +133,7 @@ export default function PerformanceModesClient() {
                         <h3 className="font-bold text-zinc-900 dark:text-zinc-100">
                           {mode.name}
                         </h3>
-                        <p className="text-xs text-zinc-500 dark:text-zinc-400">
+                        <p className="text-xs text-zinc-500 dark:text-zinc-300">
                           {mode.model}
                         </p>
                       </div>
@@ -143,12 +143,12 @@ export default function PerformanceModesClient() {
                       <span className="inline-flex items-center px-2 py-1 bg-zinc-100 dark:bg-zinc-800 rounded text-xs font-semibold text-zinc-700 dark:text-zinc-300">
                         {mode.credits} {t('featuresPerformance.credits')}
                       </span>
-                      <span className="text-xs text-zinc-500 dark:text-zinc-400">
+                      <span className="text-xs text-zinc-500 dark:text-zinc-300">
                         {mode.speed}
                       </span>
                     </div>
 
-                    <p className="text-sm text-zinc-500 dark:text-zinc-400 leading-relaxed mb-4">
+                    <p className="text-sm text-zinc-500 dark:text-zinc-300 leading-relaxed mb-4">
                       {mode.description}
                     </p>
 
@@ -158,7 +158,7 @@ export default function PerformanceModesClient() {
                       </p>
                       <ul className="space-y-1">
                         {mode.bestFor.map((item, j) => (
-                          <li key={j} className="text-xs text-zinc-500 dark:text-zinc-400 flex items-start gap-1.5">
+                          <li key={j} className="text-xs text-zinc-500 dark:text-zinc-300 flex items-start gap-1.5">
                             <span className="text-zinc-400 dark:text-zinc-600 mt-0.5">&#x2022;</span>
                             {item}
                           </li>
@@ -184,7 +184,7 @@ export default function PerformanceModesClient() {
             <h2 className="text-2xl sm:text-3xl font-bold text-zinc-900 dark:text-zinc-100 tracking-tight mb-6">
               {t('featuresPerformance.whenToUse.title')}
             </h2>
-            <div className="space-y-4 text-zinc-600 dark:text-zinc-400 leading-relaxed">
+            <div className="space-y-4 text-zinc-600 dark:text-zinc-300 leading-relaxed">
               <p>
                 <strong className="text-zinc-900 dark:text-zinc-100">{t('featuresPerformance.mode.quick.name')}</strong> {t('featuresPerformance.whenToUse.quick')}
               </p>
@@ -217,7 +217,7 @@ export default function PerformanceModesClient() {
                   <h3 className="font-semibold text-zinc-900 dark:text-zinc-100 mb-2">
                     {item.q}
                   </h3>
-                  <p className="text-sm text-zinc-500 dark:text-zinc-400 leading-relaxed">
+                  <p className="text-sm text-zinc-500 dark:text-zinc-300 leading-relaxed">
                     {item.a}
                   </p>
                 </div>
@@ -232,7 +232,7 @@ export default function PerformanceModesClient() {
             <h2 className="text-2xl sm:text-3xl font-bold text-zinc-900 dark:text-zinc-100 tracking-tight mb-4">
               {t('featuresPerformance.cta.title')}
             </h2>
-            <p className="text-zinc-600 dark:text-zinc-400 max-w-xl mx-auto mb-8">
+            <p className="text-zinc-600 dark:text-zinc-300 max-w-xl mx-auto mb-8">
               {t('featuresPerformance.cta.subtitle')}
             </p>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">

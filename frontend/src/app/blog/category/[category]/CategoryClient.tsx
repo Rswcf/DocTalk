@@ -71,7 +71,7 @@ export default function CategoryClient({
           <div className="max-w-4xl mx-auto px-6 py-16">
             <Link
               href="/blog"
-              className="inline-flex items-center gap-1.5 text-sm text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors mb-6"
+              className="inline-flex items-center gap-1.5 text-sm text-zinc-500 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors mb-6"
             >
               <ArrowLeft size={14} />
               {t('blog.category.backAllPosts')}
@@ -79,7 +79,7 @@ export default function CategoryClient({
             <h1 className="text-3xl sm:text-4xl font-bold text-zinc-900 dark:text-zinc-100 mb-4">
               {localizedLabel}
             </h1>
-            <p className="text-lg text-zinc-500 dark:text-zinc-400 max-w-2xl">
+            <p className="text-lg text-zinc-500 dark:text-zinc-300 max-w-2xl">
               {localizedDescription === `blog.category.description.${category}` ? description : localizedDescription}
             </p>
             <div className="flex flex-wrap gap-2 mt-6">
@@ -92,7 +92,7 @@ export default function CategoryClient({
                     className={`px-3 py-1.5 text-sm rounded-full border transition-colors ${
                       isActive
                         ? 'bg-zinc-900 dark:bg-zinc-50 text-white dark:text-zinc-900 border-zinc-900 dark:border-zinc-50'
-                        : 'bg-white dark:bg-zinc-900 text-zinc-600 dark:text-zinc-400 border-zinc-200 dark:border-zinc-800 hover:border-zinc-400 dark:hover:border-zinc-600'
+                        : 'bg-white dark:bg-zinc-900 text-zinc-600 dark:text-zinc-300 border-zinc-200 dark:border-zinc-800 hover:border-zinc-400 dark:hover:border-zinc-600'
                     }`}
                   >
                     {item.label}
@@ -109,7 +109,7 @@ export default function CategoryClient({
             <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100 mb-2">
               {t('blog.category.panel.title')}
             </h2>
-            <p className="text-sm text-zinc-600 dark:text-zinc-400 mb-4">
+            <p className="text-sm text-zinc-600 dark:text-zinc-300 mb-4">
               {t('blog.category.panel.description')}
             </p>
             <div className="flex flex-wrap gap-3 text-sm">
@@ -126,12 +126,12 @@ export default function CategoryClient({
 
           {posts.length === 0 ? (
             <div className="text-center py-16">
-              <p className="text-zinc-500 dark:text-zinc-400 mb-4">
+              <p className="text-zinc-500 dark:text-zinc-300 mb-4">
                 {t('blog.category.empty')}
               </p>
               <Link
                 href="/blog"
-                className="inline-flex items-center px-4 py-2 text-sm font-medium rounded-lg border border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-400 hover:border-zinc-400 dark:hover:border-zinc-600 transition-colors"
+                className="inline-flex items-center px-4 py-2 text-sm font-medium rounded-lg border border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-300 hover:border-zinc-400 dark:hover:border-zinc-600 transition-colors"
               >
                 {t('blog.category.browseAllPosts')}
               </Link>
@@ -145,10 +145,10 @@ export default function CategoryClient({
                   className="group block bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl p-6 hover:border-zinc-400 dark:hover:border-zinc-600 transition-colors"
                 >
                   <div className="flex items-center gap-3 mb-3">
-                    <span className="inline-block px-2.5 py-0.5 text-xs font-medium rounded-full bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 border border-zinc-200 dark:border-zinc-700">
+                    <span className="inline-block px-2.5 py-0.5 text-xs font-medium rounded-full bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-700">
                       {localizedLabel}
                     </span>
-                    <span className="flex items-center gap-1 text-xs text-zinc-500 dark:text-zinc-400">
+                    <span className="flex items-center gap-1 text-xs text-zinc-500 dark:text-zinc-300">
                       <Clock size={12} />
                       {t('blog.meta.minutesRead', { minutes: post.readingMinutes })}
                     </span>
@@ -156,7 +156,7 @@ export default function CategoryClient({
                   <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors mb-2">
                     {post.title}
                   </h2>
-                  <p className="text-sm text-zinc-500 dark:text-zinc-400 line-clamp-2 mb-4">
+                  <p className="text-sm text-zinc-500 dark:text-zinc-300 line-clamp-2 mb-4">
                     {post.description}
                   </p>
                   <time className="text-xs text-zinc-400 dark:text-zinc-500">

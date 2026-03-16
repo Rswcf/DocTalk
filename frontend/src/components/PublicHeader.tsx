@@ -28,7 +28,7 @@ export default function PublicHeader() {
           <Link
             key={item.href}
             href={item.href}
-            className="text-sm font-medium text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors"
+            className="text-sm font-medium text-zinc-600 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors"
           >
             {item.label}
           </Link>

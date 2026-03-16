@@ -42,7 +42,7 @@ export default function NotebooklmAltsClient() {
       <main className="flex-1">
         {/* Hero */}
         <section className="max-w-4xl mx-auto px-6 pt-20 pb-12">
-          <nav className="text-sm text-zinc-500 dark:text-zinc-400 mb-8">
+          <nav className="text-sm text-zinc-500 dark:text-zinc-300 mb-8">
             <Link href="/" className="hover:text-zinc-700 dark:hover:text-zinc-300">{t('altsNotebooklm.breadcrumbHome')}</Link>
             <span className="mx-2">/</span>
             <Link href="/alternatives" className="hover:text-zinc-700 dark:hover:text-zinc-300">{t('altsNotebooklm.breadcrumbAlternatives')}</Link>
@@ -53,7 +53,7 @@ export default function NotebooklmAltsClient() {
           <h1 className="text-3xl sm:text-4xl font-bold text-zinc-900 dark:text-zinc-100 tracking-tight mb-6">
             {t('altsNotebooklm.heroTitle')}
           </h1>
-          <p className="text-lg text-zinc-600 dark:text-zinc-400 leading-relaxed">
+          <p className="text-lg text-zinc-600 dark:text-zinc-300 leading-relaxed">
             {t('altsNotebooklm.heroDescription')}
           </p>
           <ArticleMeta author="DocTalk Team" published="2026-02-18" className="mt-6" />
@@ -72,13 +72,13 @@ export default function NotebooklmAltsClient() {
               <Award className="w-4 h-4 text-amber-500" />
               <span className="text-sm font-medium text-amber-600 dark:text-amber-400">{t('altsNotebooklm.bestOverall')}</span>
             </div>
-            <p className="text-zinc-600 dark:text-zinc-400 leading-relaxed mb-4">
+            <p className="text-zinc-600 dark:text-zinc-300 leading-relaxed mb-4">
               {t('altsNotebooklm.alt1Desc1')}
             </p>
-            <p className="text-zinc-600 dark:text-zinc-400 leading-relaxed mb-4">
+            <p className="text-zinc-600 dark:text-zinc-300 leading-relaxed mb-4">
               {t('altsNotebooklm.alt1Desc2')}
             </p>
-            <p className="text-zinc-600 dark:text-zinc-400 leading-relaxed mb-4">
+            <p className="text-zinc-600 dark:text-zinc-300 leading-relaxed mb-4">
               {t('altsNotebooklm.alt1Desc3Pre')}{' '}
               <Link href="/compare/notebooklm" className="text-indigo-600 dark:text-indigo-400 hover:underline">
                 {t('altsNotebooklm.alt1CompareLink')}
@@ -95,7 +95,7 @@ export default function NotebooklmAltsClient() {
                   t('altsNotebooklm.adv5'),
                   t('altsNotebooklm.adv6'),
                 ].map((item) => (
-                  <li key={item} className="flex items-center gap-2 text-sm text-zinc-600 dark:text-zinc-400">
+                  <li key={item} className="flex items-center gap-2 text-sm text-zinc-600 dark:text-zinc-300">
                     <Check className="w-4 h-4 text-emerald-600 shrink-0" />
                     <span>{item}</span>
                   </li>
@@ -113,13 +113,13 @@ export default function NotebooklmAltsClient() {
               {t('altsNotebooklm.alt2Title')}
             </h2>
           </div>
-          <p className="text-zinc-600 dark:text-zinc-400 leading-relaxed mb-4">
+          <p className="text-zinc-600 dark:text-zinc-300 leading-relaxed mb-4">
             {t('altsNotebooklm.alt2Desc1')}
           </p>
-          <p className="text-zinc-600 dark:text-zinc-400 leading-relaxed mb-4">
+          <p className="text-zinc-600 dark:text-zinc-300 leading-relaxed mb-4">
             {t('altsNotebooklm.alt2Desc2')}
           </p>
-          <p className="text-zinc-600 dark:text-zinc-400 text-sm">
+          <p className="text-zinc-600 dark:text-zinc-300 text-sm">
             <strong>{t('altsNotebooklm.bestFor')}</strong> {t('altsNotebooklm.alt2BestFor')}
           </p>
         </section>
@@ -133,13 +133,13 @@ export default function NotebooklmAltsClient() {
                 {t('altsNotebooklm.alt3Title')}
               </h2>
             </div>
-            <p className="text-zinc-600 dark:text-zinc-400 leading-relaxed mb-4">
+            <p className="text-zinc-600 dark:text-zinc-300 leading-relaxed mb-4">
               {t('altsNotebooklm.alt3Desc1')}
             </p>
-            <p className="text-zinc-600 dark:text-zinc-400 leading-relaxed mb-4">
+            <p className="text-zinc-600 dark:text-zinc-300 leading-relaxed mb-4">
               {t('altsNotebooklm.alt3Desc2')}
             </p>
-            <p className="text-zinc-600 dark:text-zinc-400 text-sm">
+            <p className="text-zinc-600 dark:text-zinc-300 text-sm">
               <strong>{t('altsNotebooklm.bestFor')}</strong> {t('altsNotebooklm.alt3BestFor')}
             </p>
           </div>
@@ -153,13 +153,13 @@ export default function NotebooklmAltsClient() {
               {t('altsNotebooklm.alt4Title')}
             </h2>
           </div>
-          <p className="text-zinc-600 dark:text-zinc-400 leading-relaxed mb-4">
+          <p className="text-zinc-600 dark:text-zinc-300 leading-relaxed mb-4">
             {t('altsNotebooklm.alt4Desc1')}
           </p>
-          <p className="text-zinc-600 dark:text-zinc-400 leading-relaxed mb-4">
+          <p className="text-zinc-600 dark:text-zinc-300 leading-relaxed mb-4">
             {t('altsNotebooklm.alt4Desc2')}
           </p>
-          <p className="text-zinc-600 dark:text-zinc-400 text-sm">
+          <p className="text-zinc-600 dark:text-zinc-300 text-sm">
             <strong>{t('altsNotebooklm.bestFor')}</strong> {t('altsNotebooklm.alt4BestFor')}
           </p>
         </section>
@@ -173,13 +173,13 @@ export default function NotebooklmAltsClient() {
                 {t('altsNotebooklm.alt5Title')}
               </h2>
             </div>
-            <p className="text-zinc-600 dark:text-zinc-400 leading-relaxed mb-4">
+            <p className="text-zinc-600 dark:text-zinc-300 leading-relaxed mb-4">
               {t('altsNotebooklm.alt5Desc1')}
             </p>
-            <p className="text-zinc-600 dark:text-zinc-400 leading-relaxed mb-4">
+            <p className="text-zinc-600 dark:text-zinc-300 leading-relaxed mb-4">
               {t('altsNotebooklm.alt5Desc2')}
             </p>
-            <p className="text-zinc-600 dark:text-zinc-400 text-sm">
+            <p className="text-zinc-600 dark:text-zinc-300 text-sm">
               <strong>{t('altsNotebooklm.bestFor')}</strong> {t('altsNotebooklm.alt5BestFor')}
             </p>
           </div>
@@ -193,13 +193,13 @@ export default function NotebooklmAltsClient() {
               {t('altsNotebooklm.alt6Title')}
             </h2>
           </div>
-          <p className="text-zinc-600 dark:text-zinc-400 leading-relaxed mb-4">
+          <p className="text-zinc-600 dark:text-zinc-300 leading-relaxed mb-4">
             {t('altsNotebooklm.alt6Desc1')}
           </p>
-          <p className="text-zinc-600 dark:text-zinc-400 leading-relaxed mb-4">
+          <p className="text-zinc-600 dark:text-zinc-300 leading-relaxed mb-4">
             {t('altsNotebooklm.alt6Desc2')}
           </p>
-          <p className="text-zinc-600 dark:text-zinc-400 text-sm">
+          <p className="text-zinc-600 dark:text-zinc-300 text-sm">
             <strong>{t('altsNotebooklm.bestFor')}</strong> {t('altsNotebooklm.alt6BestFor')}
           </p>
         </section>
@@ -210,7 +210,7 @@ export default function NotebooklmAltsClient() {
             <h2 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100 tracking-tight mb-6">
               {t('altsNotebooklm.chooseTitle')}
             </h2>
-            <p className="text-zinc-600 dark:text-zinc-400 leading-relaxed mb-6">
+            <p className="text-zinc-600 dark:text-zinc-300 leading-relaxed mb-6">
               {t('altsNotebooklm.chooseDescription')}
             </p>
             <div className="space-y-4">
@@ -223,7 +223,7 @@ export default function NotebooklmAltsClient() {
                 { need: t('altsNotebooklm.chooseNeed6'), pick: 'Elicit', href: '/alternatives' },
               ].map((item) => (
                 <div key={item.need} className="flex items-start gap-4 py-3 border-b border-zinc-200 dark:border-zinc-800">
-                  <span className="text-zinc-600 dark:text-zinc-400 text-sm flex-1">{item.need}</span>
+                  <span className="text-zinc-600 dark:text-zinc-300 text-sm flex-1">{item.need}</span>
                   <Link
                     href={item.href}
                     className="text-sm font-medium text-indigo-600 dark:text-indigo-400 hover:underline whitespace-nowrap"
@@ -260,7 +260,7 @@ export default function NotebooklmAltsClient() {
                 <Link
                   key={link.href}
                   href={link.href}
-                  className="px-4 py-2 text-sm bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg text-zinc-600 dark:text-zinc-400 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-[box-shadow,transform] duration-200"
+                  className="px-4 py-2 text-sm bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg text-zinc-600 dark:text-zinc-300 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-[box-shadow,transform] duration-200"
                 >
                   {link.label}
                 </Link>

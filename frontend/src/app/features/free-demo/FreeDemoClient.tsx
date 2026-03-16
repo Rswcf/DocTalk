@@ -108,14 +108,14 @@ export default function FreeDemoClient() {
         {/* Hero */}
         <section className="bg-white dark:bg-zinc-950">
           <div className="max-w-4xl mx-auto px-6 pt-20 pb-16 text-center">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-zinc-100 dark:bg-zinc-800 text-sm text-zinc-600 dark:text-zinc-400 mb-6">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-zinc-100 dark:bg-zinc-800 text-sm text-zinc-600 dark:text-zinc-300 mb-6">
               <PlayCircle className="w-4 h-4" />
               {t('featuresDemo.badge')}
             </div>
             <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-zinc-900 dark:text-zinc-100 tracking-tight mb-6 leading-tight">
               {t('featuresDemo.hero.title')}
             </h1>
-            <p className="text-lg text-zinc-600 dark:text-zinc-400 max-w-2xl mx-auto mb-8">
+            <p className="text-lg text-zinc-600 dark:text-zinc-300 max-w-2xl mx-auto mb-8">
               {t('featuresDemo.hero.subtitle')}
             </p>
             <Link
@@ -134,7 +134,7 @@ export default function FreeDemoClient() {
             <h2 className="text-2xl sm:text-3xl font-bold text-zinc-900 dark:text-zinc-100 tracking-tight mb-4 text-center">
               {t('featuresDemo.instant.title')}
             </h2>
-            <p className="text-zinc-600 dark:text-zinc-400 text-center max-w-2xl mx-auto mb-12">
+            <p className="text-zinc-600 dark:text-zinc-300 text-center max-w-2xl mx-auto mb-12">
               {t('featuresDemo.instant.subtitle')}
             </p>
 
@@ -150,7 +150,7 @@ export default function FreeDemoClient() {
                   <h3 className="font-semibold text-zinc-900 dark:text-zinc-100 mb-2">
                     {doc.title}
                   </h3>
-                  <p className="text-sm text-zinc-500 dark:text-zinc-400 leading-relaxed">
+                  <p className="text-sm text-zinc-500 dark:text-zinc-300 leading-relaxed">
                     {doc.description}
                   </p>
                 </div>
@@ -174,7 +174,7 @@ export default function FreeDemoClient() {
                     <p className="font-medium text-zinc-900 dark:text-zinc-100 text-sm">
                       {item.label}
                     </p>
-                    <p className="text-xs text-zinc-500 dark:text-zinc-400">
+                    <p className="text-xs text-zinc-500 dark:text-zinc-300">
                       {item.description}
                     </p>
                   </div>
@@ -190,7 +190,7 @@ export default function FreeDemoClient() {
             <h2 className="text-2xl sm:text-3xl font-bold text-zinc-900 dark:text-zinc-100 tracking-tight mb-4 text-center">
               {t('featuresDemo.compare.title')}
             </h2>
-            <p className="text-zinc-600 dark:text-zinc-400 text-center max-w-2xl mx-auto mb-10">
+            <p className="text-zinc-600 dark:text-zinc-300 text-center max-w-2xl mx-auto mb-10">
               {t('featuresDemo.compare.subtitle')}
             </p>
 
@@ -199,7 +199,7 @@ export default function FreeDemoClient() {
                 <thead>
                   <tr className="bg-zinc-50 dark:bg-zinc-900">
                     <th className="text-left px-4 py-3 font-semibold text-zinc-900 dark:text-zinc-100">{t('featuresDemo.compare.featureCol')}</th>
-                    <th className="text-center px-4 py-3 font-semibold text-zinc-500 dark:text-zinc-400">{t('featuresDemo.compare.demoCol')}</th>
+                    <th className="text-center px-4 py-3 font-semibold text-zinc-500 dark:text-zinc-300">{t('featuresDemo.compare.demoCol')}</th>
                     <th className="text-center px-4 py-3 font-semibold text-zinc-900 dark:text-zinc-100">{t('featuresDemo.compare.freeCol')}</th>
                     <th className="text-center px-4 py-3 font-semibold text-zinc-900 dark:text-zinc-100">{t('featuresDemo.compare.plusCol')}</th>
                     <th className="text-center px-4 py-3 font-semibold text-zinc-900 dark:text-zinc-100">{t('featuresDemo.compare.proCol')}</th>
@@ -247,7 +247,7 @@ export default function FreeDemoClient() {
                     <h3 className="font-semibold text-zinc-900 dark:text-zinc-100 text-sm mb-1">
                       {item.title}
                     </h3>
-                    <p className="text-xs text-zinc-500 dark:text-zinc-400 leading-relaxed">
+                    <p className="text-xs text-zinc-500 dark:text-zinc-300 leading-relaxed">
                       {item.description}
                     </p>
                   </div>
@@ -273,7 +273,7 @@ export default function FreeDemoClient() {
                   <h3 className="font-semibold text-zinc-900 dark:text-zinc-100 mb-2">
                     {item.q}
                   </h3>
-                  <p className="text-sm text-zinc-500 dark:text-zinc-400 leading-relaxed">
+                  <p className="text-sm text-zinc-500 dark:text-zinc-300 leading-relaxed">
                     {item.a}
                   </p>
                 </div>
@@ -288,7 +288,7 @@ export default function FreeDemoClient() {
             <h2 className="text-2xl sm:text-3xl font-bold text-zinc-900 dark:text-zinc-100 tracking-tight mb-4">
               {t('featuresDemo.cta.title')}
             </h2>
-            <p className="text-zinc-600 dark:text-zinc-400 max-w-xl mx-auto mb-8">
+            <p className="text-zinc-600 dark:text-zinc-300 max-w-xl mx-auto mb-8">
               {t('featuresDemo.cta.subtitle')}
             </p>
             <Link

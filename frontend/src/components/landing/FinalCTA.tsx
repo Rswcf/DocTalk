@@ -18,7 +18,7 @@ export default function FinalCTA() {
           <h2 className="font-display font-medium text-3xl md:text-4xl tracking-tight text-zinc-900 dark:text-zinc-50 mb-4 text-balance">
             {t('landing.finalCta.title')}
           </h2>
-          <p className="text-zinc-600 dark:text-zinc-400 mb-8">
+          <p className="text-zinc-600 dark:text-zinc-300 mb-8">
             {t('landing.finalCta.subtitle')}
           </p>
           <div className="flex items-center justify-center gap-4 flex-wrap">

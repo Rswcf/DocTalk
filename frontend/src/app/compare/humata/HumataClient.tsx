@@ -52,7 +52,7 @@ export default function HumataClient() {
       <main className="flex-1">
         {/* Hero */}
         <section className="max-w-4xl mx-auto px-6 pt-20 pb-12">
-          <nav className="text-sm text-zinc-500 dark:text-zinc-400 mb-8">
+          <nav className="text-sm text-zinc-500 dark:text-zinc-300 mb-8">
             <Link href="/" className="hover:text-zinc-700 dark:hover:text-zinc-300">{t('compareHumata.breadcrumbHome')}</Link>
             <span className="mx-2">/</span>
             <Link href="/compare" className="hover:text-zinc-700 dark:hover:text-zinc-300">{t('compareHumata.breadcrumbCompare')}</Link>
@@ -63,7 +63,7 @@ export default function HumataClient() {
           <h1 className="text-3xl sm:text-4xl font-bold text-zinc-900 dark:text-zinc-100 mb-6 tracking-tight">
             {t('compareHumata.heroTitle')}
           </h1>
-          <p className="text-lg text-zinc-600 dark:text-zinc-400 leading-relaxed">
+          <p className="text-lg text-zinc-600 dark:text-zinc-300 leading-relaxed">
             {t('compareHumata.heroDescription')}
           </p>
           <ArticleMeta author="DocTalk Team" published="2026-02-18" className="mt-6" />
@@ -84,7 +84,7 @@ export default function HumataClient() {
           <h2 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100 tracking-tight mb-4">
             {t('compareHumata.whatIsDocTalkTitle')}
           </h2>
-          <p className="text-zinc-600 dark:text-zinc-400 leading-relaxed">
+          <p className="text-zinc-600 dark:text-zinc-300 leading-relaxed">
             {t('compareHumata.whatIsDocTalkDescription')}
           </p>
         </section>
@@ -95,7 +95,7 @@ export default function HumataClient() {
             <h2 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100 tracking-tight mb-4">
               {t('compareHumata.whatIsHumataTitle')}
             </h2>
-            <p className="text-zinc-600 dark:text-zinc-400 leading-relaxed">
+            <p className="text-zinc-600 dark:text-zinc-300 leading-relaxed">
               {t('compareHumata.whatIsHumataDescription')}
             </p>
           </div>
@@ -115,10 +115,10 @@ export default function HumataClient() {
                 {t('compareHumata.documentFormatTitle')}
               </h3>
             </div>
-            <p className="text-zinc-600 dark:text-zinc-400 leading-relaxed mb-4">
+            <p className="text-zinc-600 dark:text-zinc-300 leading-relaxed mb-4">
               {t('compareHumata.documentFormatCompetitor')}
             </p>
-            <p className="text-zinc-600 dark:text-zinc-400 leading-relaxed">
+            <p className="text-zinc-600 dark:text-zinc-300 leading-relaxed">
               {t('compareHumata.documentFormatDocTalk')}{' '}
               <Link href="/features/multi-format" className="text-indigo-600 dark:text-indigo-400 hover:underline">
                 {t('compareHumata.multiFormatLink')}
@@ -134,10 +134,10 @@ export default function HumataClient() {
                 {t('compareHumata.citationsTitle')}
               </h3>
             </div>
-            <p className="text-zinc-600 dark:text-zinc-400 leading-relaxed mb-4">
+            <p className="text-zinc-600 dark:text-zinc-300 leading-relaxed mb-4">
               {t('compareHumata.citationsCompetitor')}
             </p>
-            <p className="text-zinc-600 dark:text-zinc-400 leading-relaxed">
+            <p className="text-zinc-600 dark:text-zinc-300 leading-relaxed">
               {t('compareHumata.citationsDocTalk')}{' '}
               <Link href="/features/citations" className="text-indigo-600 dark:text-indigo-400 hover:underline">
                 {t('compareHumata.citationHighlightingLink')}
@@ -153,10 +153,10 @@ export default function HumataClient() {
                 {t('compareHumata.languageSupportTitle')}
               </h3>
             </div>
-            <p className="text-zinc-600 dark:text-zinc-400 leading-relaxed mb-4">
+            <p className="text-zinc-600 dark:text-zinc-300 leading-relaxed mb-4">
               {t('compareHumata.languageSupportCompetitor')}
             </p>
-            <p className="text-zinc-600 dark:text-zinc-400 leading-relaxed">
+            <p className="text-zinc-600 dark:text-zinc-300 leading-relaxed">
               {t('compareHumata.languageSupportDocTalk')}{' '}
               <Link href="/features/multilingual" className="text-indigo-600 dark:text-indigo-400 hover:underline">
                 {t('compareHumata.multilingualLink')}
@@ -172,10 +172,10 @@ export default function HumataClient() {
                 {t('compareHumata.pricingTitle')}
               </h3>
             </div>
-            <p className="text-zinc-600 dark:text-zinc-400 leading-relaxed mb-4">
+            <p className="text-zinc-600 dark:text-zinc-300 leading-relaxed mb-4">
               {t('compareHumata.pricingCompetitor')}
             </p>
-            <p className="text-zinc-600 dark:text-zinc-400 leading-relaxed">
+            <p className="text-zinc-600 dark:text-zinc-300 leading-relaxed">
               {t('compareHumata.pricingDocTalkPart1')}{' '}
               <Link href="/demo" className="text-indigo-600 dark:text-indigo-400 hover:underline">{t('compareHumata.noSignupDemoLink')}</Link>.
               {' '}{t('compareHumata.pricingDocTalkPart2')}{' '}
@@ -193,10 +193,10 @@ export default function HumataClient() {
                 {t('compareHumata.performanceTitle')}
               </h3>
             </div>
-            <p className="text-zinc-600 dark:text-zinc-400 leading-relaxed mb-4">
+            <p className="text-zinc-600 dark:text-zinc-300 leading-relaxed mb-4">
               {t('compareHumata.performanceCompetitor')}
             </p>
-            <p className="text-zinc-600 dark:text-zinc-400 leading-relaxed">
+            <p className="text-zinc-600 dark:text-zinc-300 leading-relaxed">
               {t('compareHumata.performanceDocTalk')}
             </p>
           </div>
@@ -209,10 +209,10 @@ export default function HumataClient() {
                 {t('compareHumata.securityTitle')}
               </h3>
             </div>
-            <p className="text-zinc-600 dark:text-zinc-400 leading-relaxed mb-4">
+            <p className="text-zinc-600 dark:text-zinc-300 leading-relaxed mb-4">
               {t('compareHumata.securityCompetitor')}
             </p>
-            <p className="text-zinc-600 dark:text-zinc-400 leading-relaxed">
+            <p className="text-zinc-600 dark:text-zinc-300 leading-relaxed">
               {t('compareHumata.securityDocTalk')}
             </p>
           </div>
@@ -224,7 +224,7 @@ export default function HumataClient() {
             <h2 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100 tracking-tight mb-6">
               {t('compareHumata.whoDocTalkTitle')}
             </h2>
-            <ul className="space-y-3 text-zinc-600 dark:text-zinc-400">
+            <ul className="space-y-3 text-zinc-600 dark:text-zinc-300">
               <li className="flex items-start gap-3">
                 <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-zinc-400 shrink-0" />
                 <span>{t('compareHumata.whoDocTalk1')}</span>
@@ -254,7 +254,7 @@ export default function HumataClient() {
           <h2 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100 tracking-tight mb-6">
             {t('compareHumata.whoHumataTitle')}
           </h2>
-          <ul className="space-y-3 text-zinc-600 dark:text-zinc-400">
+          <ul className="space-y-3 text-zinc-600 dark:text-zinc-300">
             <li className="flex items-start gap-3">
               <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-zinc-400 shrink-0" />
               <span>{t('compareHumata.whoHumata1')}</span>
@@ -280,13 +280,13 @@ export default function HumataClient() {
             <h2 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100 tracking-tight mb-6">
               {t('compareHumata.verdictTitle')}
             </h2>
-            <p className="text-zinc-600 dark:text-zinc-400 leading-relaxed mb-4">
+            <p className="text-zinc-600 dark:text-zinc-300 leading-relaxed mb-4">
               {t('compareHumata.verdictParagraph1')}
             </p>
-            <p className="text-zinc-600 dark:text-zinc-400 leading-relaxed mb-4">
+            <p className="text-zinc-600 dark:text-zinc-300 leading-relaxed mb-4">
               {t('compareHumata.verdictParagraph2')}
             </p>
-            <p className="text-zinc-600 dark:text-zinc-400 leading-relaxed font-medium">
+            <p className="text-zinc-600 dark:text-zinc-300 leading-relaxed font-medium">
               {t('compareHumata.verdictParagraph3')}{' '}
               <Link href="/demo" className="text-indigo-600 dark:text-indigo-400 hover:underline">
                 {t('compareHumata.tryDocTalkLink')}
@@ -321,7 +321,7 @@ export default function HumataClient() {
                 <Link
                   key={link.href}
                   href={link.href}
-                  className="px-4 py-2 text-sm bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg text-zinc-600 dark:text-zinc-400 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-[box-shadow,transform] duration-200"
+                  className="px-4 py-2 text-sm bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg text-zinc-600 dark:text-zinc-300 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-[box-shadow,transform] duration-200"
                 >
                   {link.label}
                 </Link>

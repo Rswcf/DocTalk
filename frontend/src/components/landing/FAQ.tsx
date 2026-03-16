@@ -56,7 +56,7 @@ export default function FAQ() {
                       openIndex === idx ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'
                     }`}
                   >
-                    <p className="pb-5 text-sm text-zinc-600 dark:text-zinc-400 leading-relaxed">
+                    <p className="pb-5 text-sm text-zinc-600 dark:text-zinc-300 leading-relaxed">
                       {t(item.a)}
                     </p>
                   </div>

@@ -52,7 +52,7 @@ export default function StudentsClient() {
       <main className="flex-1">
         {/* Breadcrumb */}
         <div className="max-w-4xl mx-auto px-6 pt-8">
-          <nav className="flex items-center text-sm text-zinc-500 dark:text-zinc-400 space-x-1">
+          <nav className="flex items-center text-sm text-zinc-500 dark:text-zinc-300 space-x-1">
             <Link href="/" className="hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">{t('useCasesStudents.breadcrumb.home')}</Link>
             <ChevronRight className="w-3 h-3" />
             <Link href="/use-cases" className="hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">{t('useCasesStudents.breadcrumb.useCases')}</Link>
@@ -69,7 +69,7 @@ export default function StudentsClient() {
           <h1 className="text-3xl sm:text-4xl font-bold text-zinc-900 dark:text-zinc-100 tracking-tight mb-4">
             {t('useCasesStudents.hero.title')}
           </h1>
-          <p className="text-lg text-zinc-500 dark:text-zinc-400 max-w-2xl mx-auto mb-8">
+          <p className="text-lg text-zinc-500 dark:text-zinc-300 max-w-2xl mx-auto mb-8">
             {t('useCasesStudents.hero.subtitle')}
           </p>
           <ArticleMeta author="DocTalk Team" published="2026-02-18" centered className="mb-8" />
@@ -150,7 +150,7 @@ export default function StudentsClient() {
                   <h3 className="text-base font-semibold text-zinc-900 dark:text-zinc-100 mb-2">
                     {item.title}
                   </h3>
-                  <p className="text-sm text-zinc-500 dark:text-zinc-400">
+                  <p className="text-sm text-zinc-500 dark:text-zinc-300">
                     {item.description}
                   </p>
                 </div>
@@ -186,7 +186,7 @@ export default function StudentsClient() {
                   <h3 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100 mb-1">
                     {item.format}
                   </h3>
-                  <p className="text-sm text-zinc-500 dark:text-zinc-400">
+                  <p className="text-sm text-zinc-500 dark:text-zinc-300">
                     {item.detail}
                   </p>
                 </div>
@@ -343,7 +343,7 @@ export default function StudentsClient() {
                     <h3 className="text-base font-semibold text-zinc-900 dark:text-zinc-100 mb-2">
                       {item.title}
                     </h3>
-                    <p className="text-sm text-zinc-500 dark:text-zinc-400">
+                    <p className="text-sm text-zinc-500 dark:text-zinc-300">
                       {item.description}
                     </p>
                   </div>
@@ -367,7 +367,7 @@ export default function StudentsClient() {
                 <h3 className="text-base font-semibold text-zinc-900 dark:text-zinc-100 mb-2">
                   {item.question}
                 </h3>
-                <p className="text-sm text-zinc-500 dark:text-zinc-400">
+                <p className="text-sm text-zinc-500 dark:text-zinc-300">
                   {item.answer}
                 </p>
               </div>
@@ -381,7 +381,7 @@ export default function StudentsClient() {
             <h2 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100 tracking-tight mb-4">
               {t('useCasesStudents.cta.title')}
             </h2>
-            <p className="text-zinc-500 dark:text-zinc-400 mb-6 max-w-xl mx-auto">
+            <p className="text-zinc-500 dark:text-zinc-300 mb-6 max-w-xl mx-auto">
               {t('useCasesStudents.cta.description')}
             </p>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">

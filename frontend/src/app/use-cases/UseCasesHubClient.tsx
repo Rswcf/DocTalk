@@ -40,7 +40,7 @@ export default function UseCasesHubClient() {
             <h1 className="text-3xl sm:text-4xl font-bold text-zinc-900 dark:text-zinc-100 mb-4 tracking-tight">
               {t('useCasesHub.heroTitle')}
             </h1>
-            <p className="text-lg text-zinc-600 dark:text-zinc-400 max-w-2xl mx-auto">
+            <p className="text-lg text-zinc-600 dark:text-zinc-300 max-w-2xl mx-auto">
               {t('useCasesHub.heroDescription')}
             </p>
           </div>
@@ -64,7 +64,7 @@ export default function UseCasesHubClient() {
                     <span>{uc.title}</span>
                     <ArrowRight className="w-4 h-4 text-zinc-400 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 group-hover:translate-x-0.5 transition-[color,transform] duration-200" />
                   </h2>
-                  <p className="text-sm text-zinc-600 dark:text-zinc-400 leading-relaxed">
+                  <p className="text-sm text-zinc-600 dark:text-zinc-300 leading-relaxed">
                     {uc.description}
                   </p>
                 </Link>
@@ -76,7 +76,7 @@ export default function UseCasesHubClient() {
             <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100 mb-2">
               {t('useCasesHub.crossLinks.title')}
             </h2>
-            <p className="text-sm text-zinc-600 dark:text-zinc-400 mb-4">
+            <p className="text-sm text-zinc-600 dark:text-zinc-300 mb-4">
               {t('useCasesHub.crossLinks.description')}
             </p>
             <div className="flex flex-wrap gap-3 text-sm">
@@ -104,7 +104,7 @@ export default function UseCasesHubClient() {
 
           {/* CTA */}
           <div className="mt-16 pt-12 border-t border-zinc-200 dark:border-zinc-800 text-center">
-            <p className="text-zinc-600 dark:text-zinc-400 mb-5">
+            <p className="text-zinc-600 dark:text-zinc-300 mb-5">
               {t('useCasesHub.cta.description')}
             </p>
             <Link
