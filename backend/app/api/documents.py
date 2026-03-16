@@ -179,16 +179,23 @@ async def upload_document(
             detail={"error": "DOCUMENT_LIMIT_REACHED", "limit": max_docs, "current": user_doc_count},
         )
 
-    # Validate size by reading bytes
-    data = await file.read()
+    # Validate size by streaming bytes with early abort to prevent memory DoS
     max_size_mb = {
         "free": settings.FREE_MAX_FILE_SIZE_MB,
         "plus": settings.PLUS_MAX_FILE_SIZE_MB,
         "pro": settings.PRO_MAX_FILE_SIZE_MB,
     }.get(plan, settings.FREE_MAX_FILE_SIZE_MB)
-    if len(data) > max_size_mb * 1024 * 1024:
-        log_security_event("upload_rejected", user_id=user.id, reason="file_too_large", size=len(data), max_mb=max_size_mb)
-        raise HTTPException(status_code=400, detail={"error": "FILE_TOO_LARGE", "max_mb": max_size_mb})
+    max_bytes = max_size_mb * 1024 * 1024
+    buf = bytearray()
+    while True:
+        chunk = await file.read(64 * 1024)
+        if not chunk:
+            break
+        buf.extend(chunk)
+        if len(buf) > max_bytes:
+            log_security_event("upload_rejected", user_id=user.id, reason="file_too_large", size=len(buf), max_mb=max_size_mb)
+            raise HTTPException(status_code=400, detail={"error": "FILE_TOO_LARGE", "max_mb": max_size_mb})
+    data = bytes(buf)
 
     # Validate file content matches declared type (magic bytes + structure)
     if not _validate_file_content(data, file_type):
@@ -268,8 +275,10 @@ async def ingest_url(
         )
 
     try:
+        import asyncio
+
         from app.services.extractors.url_extractor import fetch_and_extract_url
-        title, pages, pdf_bytes = fetch_and_extract_url(url)
+        title, pages, pdf_bytes = await asyncio.to_thread(fetch_and_extract_url, url)
     except ValueError as e:
         code = str(e)
         if code in ("BLOCKED_HOST", "BLOCKED_PORT", "INVALID_URL_SCHEME",
@@ -284,8 +293,6 @@ async def ingest_url(
     except Exception as e:
         logger.error("URL fetch failed for %s: %s", url, e)
         raise HTTPException(status_code=400, detail="Failed to fetch URL")
-
-    import asyncio
 
     max_size_mb = {
         "free": settings.FREE_MAX_FILE_SIZE_MB,
