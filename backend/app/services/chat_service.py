@@ -108,6 +108,7 @@ class _ChunkInfo:
     section_title: str = ""
     document_id: Optional[uuid.UUID] = None
     document_filename: str = ""
+    score: float = 0.0
 
 
 class RefParserFSM:
@@ -179,6 +180,8 @@ class RefParserFSM:
                                     "text_snippet": ((f"{chunk.section_title}: " if chunk.section_title else "") + (chunk.text or ""))[:100],
                                     "offset": self.char_offset,
                         }
+                        citation_data["confidence_score"] = round(chunk.score, 3)
+                        citation_data["context_text"] = (chunk.text or "")[:300]
                         if chunk.document_id:
                             citation_data["document_id"] = str(chunk.document_id)
                         if chunk.document_filename:
@@ -377,6 +380,7 @@ class ChatService:
                     document_filename=collection_doc_names.get(chunk_doc_id, "")
                     if chunk_doc_id
                     else "",
+                    score=item.get("score", 0.0),
                 )
 
             rules = get_rules_for_model(
