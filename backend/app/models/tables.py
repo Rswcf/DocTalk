@@ -151,10 +151,17 @@ class ChatSession(Base):
     collection_id: Mapped[Optional[uuid.UUID]] = mapped_column(
         UUID(as_uuid=True), sa.ForeignKey("collections.id", ondelete="CASCADE"), nullable=True
     )
+    user_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        UUID(as_uuid=True),
+        sa.ForeignKey("users.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
     title: Mapped[Optional[str]] = mapped_column(sa.String(200), nullable=True)
     created_at: Mapped[sa.DateTime] = mapped_column(sa.DateTime(timezone=True), server_default=sa.text("now()"))
     updated_at: Mapped[sa.DateTime] = mapped_column(sa.DateTime(timezone=True), server_default=sa.text("now()"), onupdate=sa.func.now())
 
+    user: Mapped[Optional["User"]] = relationship("User", foreign_keys=[user_id])
     document: Mapped[Optional[Document]] = relationship("Document", back_populates="sessions", foreign_keys=[document_id])
     collection: Mapped[Optional["Collection"]] = relationship("Collection", back_populates="sessions")
     messages: Mapped[List[Message]] = relationship("Message", back_populates="session", cascade="all, delete-orphan")

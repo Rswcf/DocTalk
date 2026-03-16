@@ -77,6 +77,15 @@ async def verify_session_access(
     if not session:
         return None
 
+    # Demo document session ownership enforcement
+    if session.document and session.document.demo_slug:
+        if user is None:
+            # Anonymous can only access anonymous sessions
+            return session if session.user_id is None else None
+        # Authenticated user can only access their own demo sessions
+        return session if session.user_id == user.id else None
+
+    # Non-demo document access check
     if session.document and not can_access_document(session.document, user):
         return None
 
@@ -147,7 +156,7 @@ async def create_session(
                 detail={"message": "Demo session limit reached", "limit": DEMO_MAX_SESSIONS_PER_DOC},
             )
 
-    sess = ChatSession(document_id=document_id)
+    sess = ChatSession(document_id=document_id, user_id=user.id if user else None)
     db.add(sess)
     await db.commit()
     await db.refresh(sess)
@@ -411,10 +420,12 @@ async def list_sessions(
     if not doc:
         raise HTTPException(status_code=404, detail="Document not found")
 
-    # Anonymous users on demo documents must never see previous sessions
-    # (sessions have no user_id — returning all would leak other users' conversations)
-    if doc.demo_slug and user is None:
-        return SessionListResponse(sessions=[])
+    # Demo documents: enforce session ownership
+    if doc.demo_slug:
+        if user is None:
+            # Anonymous users never see previous sessions
+            return SessionListResponse(sessions=[])
+        # Authenticated users only see their own demo sessions (handled in query below)
 
     last_activity = func.coalesce(
         func.max(Message.created_at), ChatSession.created_at
@@ -430,6 +441,7 @@ async def list_sessions(
         )
         .outerjoin(Message, Message.session_id == ChatSession.id)
         .where(ChatSession.document_id == document_id)
+        .where(ChatSession.user_id == user.id if (doc.demo_slug and user) else True)
         .group_by(ChatSession.id, ChatSession.title, ChatSession.created_at)
         .order_by(desc(last_activity))
         .limit(limit)
