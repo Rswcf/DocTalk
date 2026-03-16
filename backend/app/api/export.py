@@ -9,12 +9,16 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import StreamingResponse
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload
 
 from app.api.chat import verify_session_access
 from app.core.deps import get_db_session, require_auth
-from app.models.tables import ChatSession, Message, User
-from app.services.export_service import ExportError, render_docx, render_markdown, render_pdf
+from app.models.tables import Message, User
+from app.services.export_service import (
+    ExportError,
+    render_docx,
+    render_markdown,
+    render_pdf,
+)
 
 router = APIRouter(tags=["export"])
 
