@@ -1,13 +1,15 @@
 """Extract text content from URLs/webpages."""
 from __future__ import annotations
 
+import ipaddress
 from typing import List, Optional, Tuple
 from urllib.parse import urljoin, urlparse
 
 import httpx
 from bs4 import BeautifulSoup
+from httpx import URL
 
-from app.core.url_validator import validate_url
+from app.core.url_validator import validate_and_resolve_url
 
 from .base import ExtractedPage
 
@@ -40,18 +42,58 @@ def _read_response_bytes_limited(
     return b"".join(chunks)
 
 
+def _build_host_header(parsed: urlparse, resolved_ip: str) -> str:
+    """Build a correct Host header value.
+
+    Brackets IPv6 literals and includes port only when non-default for scheme.
+    """
+    hostname = parsed.hostname or ""
+    # Bracket IPv6 literals in Host header
+    try:
+        addr = ipaddress.ip_address(hostname)
+        if isinstance(addr, ipaddress.IPv6Address):
+            hostname = f"[{hostname}]"
+    except ValueError:
+        pass  # Regular hostname, no bracketing needed
+
+    port = parsed.port
+    default_port = 443 if parsed.scheme == "https" else 80
+    if port and port != default_port:
+        return f"{hostname}:{port}"
+    return hostname
+
+
 def _fetch_with_safe_redirects(url: str) -> tuple[str, str, str, bytes]:
-    """Fetch a URL, manually following redirects and validating each hop."""
-    validate_url(url)
-    current_url = url
+    """Fetch a URL, manually following redirects and validating each hop.
+
+    Uses DNS-pinned connections: validate_and_resolve_url returns a resolved IP
+    that is used directly for the connection, preventing DNS rebinding attacks.
+    A fresh httpx.Client is created per hop to avoid TLS connection reuse
+    with stale SNI context across different hostnames.
+    """
+    current_url, resolved_ip = validate_and_resolve_url(url)
     seen_urls: set[str] = {current_url}
 
-    with httpx.Client(timeout=FETCH_TIMEOUT, follow_redirects=False) as client:
-        for _hop in range(MAX_REDIRECTS + 1):
+    for _hop in range(MAX_REDIRECTS + 1):
+        # Pin connection to resolved IP to prevent DNS rebinding
+        parsed = urlparse(current_url)
+        pinned_url = str(URL(current_url).copy_with(host=resolved_ip))
+        host_header = _build_host_header(parsed, resolved_ip)
+
+        # Fresh client per hop to prevent TLS connection reuse with stale SNI
+        with httpx.Client(timeout=FETCH_TIMEOUT, follow_redirects=False) as client:
             with client.stream(
                 "GET",
-                current_url,
-                headers={"User-Agent": "Mozilla/5.0 (compatible; DocTalk/1.0)"},
+                pinned_url,
+                headers={
+                    "Host": host_header,
+                    "User-Agent": "Mozilla/5.0 (compatible; DocTalk/1.0)",
+                },
+                extensions=(
+                    {"sni_hostname": parsed.hostname}
+                    if parsed.scheme == "https"
+                    else None
+                ),
             ) as response:
                 if response.is_redirect:
                     location = response.headers.get("location", "")
@@ -64,8 +106,8 @@ def _fetch_with_safe_redirects(url: str) -> tuple[str, str, str, bytes]:
                         raise ValueError("REDIRECT_LOOP")
                     seen_urls.add(redirect_url)
 
-                    validate_url(redirect_url)
-                    current_url = redirect_url
+                    # Re-validate and re-resolve each redirect hop
+                    current_url, resolved_ip = validate_and_resolve_url(redirect_url)
                     continue
 
                 response.raise_for_status()

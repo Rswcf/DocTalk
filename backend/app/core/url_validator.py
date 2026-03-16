@@ -30,19 +30,31 @@ _BLOCKED_NETWORKS = [
 
 
 def _is_blocked_ip(ip_str: str) -> bool:
-    """Check whether an IP address falls within a blocked range."""
+    """Check whether an IP address falls within a blocked range.
+
+    Normalizes IPv4-mapped IPv6 addresses (e.g. ::ffff:127.0.0.1) to their
+    IPv4 equivalent before checking, preventing bypass via mapped forms.
+    """
     try:
         addr = ipaddress.ip_address(ip_str)
     except ValueError:
         return True  # unparseable = blocked
+
+    # Normalize IPv4-mapped IPv6 (::ffff:x.x.x.x) to plain IPv4
+    if isinstance(addr, ipaddress.IPv6Address) and addr.ipv4_mapped:
+        addr = addr.ipv4_mapped
+
     for net in _BLOCKED_NETWORKS:
         if addr in net:
             return True
     return False
 
 
-def validate_url(url: str) -> str:
-    """Validate a URL for safe fetching. Returns the normalized URL.
+def validate_and_resolve_url(url: str) -> tuple[str, str]:
+    """Validate a URL for safe fetching. Returns (url, resolved_ip).
+
+    The resolved IP should be used to pin the outbound connection,
+    preventing DNS rebinding attacks (TOCTOU between validation and fetch).
 
     Raises ValueError with a descriptive code on failure:
       - INVALID_URL_SCHEME: not http/https
@@ -63,10 +75,11 @@ def validate_url(url: str) -> str:
         raise ValueError("INVALID_URL_HOST")
 
     port = parsed.port
+    default_port = 443 if parsed.scheme == "https" else 80
 
     # Resolve hostname to IPs and check each against blocked ranges
     try:
-        addrinfos = socket.getaddrinfo(hostname, port or 443, proto=socket.IPPROTO_TCP)
+        addrinfos = socket.getaddrinfo(hostname, port or default_port, proto=socket.IPPROTO_TCP)
     except socket.gaierror:
         raise ValueError("DNS_RESOLUTION_FAILED")
 
@@ -84,4 +97,14 @@ def validate_url(url: str) -> str:
         log_security_event("ssrf_block", url=url, reason="BLOCKED_PORT", port=port)
         raise ValueError("BLOCKED_PORT")
 
-    return url
+    return url, addrinfos[0][4][0]
+
+
+def validate_url(url: str) -> str:
+    """Validate a URL for safe fetching. Returns the normalized URL.
+
+    Convenience wrapper around validate_and_resolve_url for callers
+    that don't need the resolved IP.
+    """
+    validated_url, _ = validate_and_resolve_url(url)
+    return validated_url
