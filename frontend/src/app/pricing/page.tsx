@@ -69,6 +69,49 @@ export default function PricingPage() {
           }),
         }}
       />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify({
+            '@context': 'https://schema.org',
+            '@type': 'SoftwareApplication',
+            name: 'DocTalk',
+            applicationCategory: 'ProductivityApplication',
+            operatingSystem: 'Web',
+            url: absoluteUrl('/pricing'),
+            offers: {
+              '@type': 'AggregateOffer',
+              priceCurrency: 'USD',
+              lowPrice: '0',
+              highPrice: '19.99',
+              offerCount: 3,
+              offers: [
+                {
+                  '@type': 'Offer',
+                  name: 'Free',
+                  price: '0',
+                  priceCurrency: 'USD',
+                  description: '500 credits/month, 3 documents, Quick & Balanced AI modes',
+                },
+                {
+                  '@type': 'Offer',
+                  name: 'Plus',
+                  price: '9.99',
+                  priceCurrency: 'USD',
+                  description: '3,000 credits/month, unlimited documents, all AI modes including Thorough',
+                },
+                {
+                  '@type': 'Offer',
+                  name: 'Pro',
+                  price: '19.99',
+                  priceCurrency: 'USD',
+                  description: '9,000 credits/month, unlimited documents, custom instructions, priority support',
+                },
+              ],
+            },
+          }),
+        }}
+      />
       <PricingPageClient />
     </>
   );
