@@ -346,3 +346,32 @@ class Collection(Base):
     sessions: Mapped[List[ChatSession]] = relationship(
         "ChatSession", back_populates="collection", cascade="all, delete-orphan"
     )
+
+
+class SharedSession(Base):
+    __tablename__ = "shared_sessions"
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, server_default=sa.text("gen_random_uuid()")
+    )
+    session_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), sa.ForeignKey("sessions.id", ondelete="CASCADE"), nullable=False
+    )
+    share_token: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), nullable=False, unique=True, server_default=sa.text("gen_random_uuid()")
+    )
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), sa.ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+    )
+    expires_at: Mapped[Optional[datetime]] = mapped_column(sa.DateTime(timezone=True), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        sa.DateTime(timezone=True), server_default=sa.text("now()")
+    )
+
+    session: Mapped[ChatSession] = relationship("ChatSession")
+    user: Mapped["User"] = relationship("User")
+
+    __table_args__ = (
+        sa.UniqueConstraint("session_id", "user_id", name="uq_shared_sessions_session_user"),
+        sa.Index("idx_shared_sessions_token", "share_token"),
+    )
