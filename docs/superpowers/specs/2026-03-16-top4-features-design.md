@@ -29,8 +29,16 @@ GET /sessions/{session_id}/export?format=pdf|docx|md
 
 **Libraries:**
 - DOCX: `python-docx` — creates Word document with styled paragraphs + footnotes table
-- PDF: `xhtml2pdf` — renders HTML template to PDF (lighter than weasyprint, no system deps)
-- Markdown: move existing frontend export logic to backend for consistency
+- PDF: `weasyprint` — renders HTML template to PDF with full CJK/Unicode support (required for 11-language support). Add `weasyprint` to `requirements.txt`.
+- Markdown: move to backend for PDF/DOCX consistency; **keep client-side `export.ts` as offline fallback for Markdown-only export**
+
+**Dependency additions to `requirements.txt`:**
+```
+python-docx>=1.1.0
+weasyprint>=62.0
+```
+
+**Message count limit:** Export capped at 500 messages per session to prevent memory exhaustion. Return 400 if exceeded.
 
 **Backend implementation (`/backend/app/api/export.py`):**
 
@@ -60,9 +68,9 @@ async def export_session(
 ```
 
 **Frontend changes:**
-- `ChatPanel.tsx`: Replace single "Export" button with dropdown: Markdown / PDF / DOCX
-- Remove `frontend/src/lib/export.ts` client-side export — all export via backend API
-- Download triggered via `window.open(proxyUrl)` or fetch + blob download
+- `ChatPanel.tsx`: Replace single "Export" button with dropdown: Markdown (client-side) / PDF / DOCX (backend)
+- Keep `frontend/src/lib/export.ts` for client-side Markdown export (works offline)
+- PDF/DOCX download via `fetch()` + `URL.createObjectURL(blob)` + programmatic `<a>` click (NOT `window.open`, which cannot carry JWT auth headers through the proxy)
 
 ### 1.2 Shareable Links
 
@@ -73,9 +81,9 @@ async def export_session(
 ```sql
 CREATE TABLE shared_sessions (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    session_id UUID NOT NULL REFERENCES chat_sessions(id) ON DELETE CASCADE,
+    session_id UUID NOT NULL REFERENCES sessions(id) ON DELETE CASCADE,
     share_token UUID NOT NULL UNIQUE DEFAULT gen_random_uuid(),
-    created_by UUID NOT NULL REFERENCES users(id),
+    created_by UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     expires_at TIMESTAMPTZ,  -- NULL = never expires
     created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
@@ -87,17 +95,23 @@ CREATE INDEX idx_shared_sessions_token ON shared_sessions(share_token);
 ```
 POST /sessions/{session_id}/share
   → { share_token, url, expires_at }
-  Auth required. Creates or returns existing share for this session.
+  Auth required (session owner only). Creates or returns existing share for this session.
+  Free plan enforcement: query COUNT(*) FROM shared_sessions WHERE created_by = user_id;
+  reject with 403 + error message if >= 3 active shares for free-plan users.
 
 DELETE /sessions/{session_id}/share
   → 204
-  Auth required. Revokes share link.
+  Auth required. Must verify created_by = current user (ownership guard).
 
 GET /shared/{share_token}
   → { session_title, messages[], document_name, created_at }
   No auth required (public).
+  Rate limited: 30 req/min per IP (consistent with existing rate limiting patterns).
   Messages include: role, content, citations (textSnippet + page + documentFilename only).
   Excludes: bboxes, documentId, chunkId, confidenceScore.
+
+Note: Deleting a session cascades to shared_sessions, automatically revoking all share links.
+The UI should show a warning when deleting a session that has active share links.
 ```
 
 **Frontend — new page `/shared/[token]/page.tsx`:**
@@ -107,6 +121,7 @@ GET /shared/{share_token}
 - Bottom CTA banner: "Powered by DocTalk — Try it free" → link to homepage
 - Mobile-responsive single-column layout
 - OG meta tags for link previews: title = session title, description = first assistant message preview
+- Server-side data fetch uses `BACKEND_INTERNAL_URL` (already configured for Vercel) to call `GET /shared/{token}` (no auth required)
 
 **Frontend — share button in ChatPanel:**
 - New "Share" icon button in ChatPanel header (next to export)
@@ -122,9 +137,9 @@ def upgrade():
     op.create_table(
         "shared_sessions",
         sa.Column("id", sa.dialects.postgresql.UUID, primary_key=True, server_default=sa.text("gen_random_uuid()")),
-        sa.Column("session_id", sa.dialects.postgresql.UUID, sa.ForeignKey("chat_sessions.id", ondelete="CASCADE"), nullable=False),
+        sa.Column("session_id", sa.dialects.postgresql.UUID, sa.ForeignKey("sessions.id", ondelete="CASCADE"), nullable=False),
         sa.Column("share_token", sa.dialects.postgresql.UUID, nullable=False, unique=True, server_default=sa.text("gen_random_uuid()")),
-        sa.Column("created_by", sa.dialects.postgresql.UUID, sa.ForeignKey("users.id"), nullable=False),
+        sa.Column("created_by", sa.dialects.postgresql.UUID, sa.ForeignKey("users.id", ondelete="CASCADE"), nullable=False),
         sa.Column("expires_at", sa.DateTime(timezone=True), nullable=True),
         sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.text("now()"), nullable=False),
     )
@@ -157,15 +172,32 @@ results = [
 
 **Chat service — include in citations:**
 
-In `RefParserFSM` output / citation construction, add:
+1. Add `score` field to `_ChunkInfo` dataclass (around line 101 of `chat_service.py`):
+```python
+@dataclass
+class _ChunkInfo:
+    # ... existing fields
+    score: float = 0.0  # NEW: Qdrant cosine similarity score
+```
 
+2. Populate `score` from retrieval results in the chunk_map construction loop (around line 369):
+```python
+chunk_info = _ChunkInfo(
+    # ... existing fields
+    score=item.get("score", 0.0),
+)
+```
+
+3. In citation construction, add new fields:
 ```python
 citation = {
     # ... existing fields
-    "confidence_score": round(chunk["score"], 3),  # NEW: 0.0-1.0
-    "context_text": chunk["text"][:300],  # NEW: extended context for hover
+    "confidence_score": round(chunk_info.score, 3),  # NEW: 0.0-1.0
+    "context_text": chunk_info.text[:300],  # NEW: extended context for hover
 }
 ```
+
+**Bandwidth note:** ~300 chars per citation x 8 citations = ~2.4KB additional SSE data per message. Acceptable tradeoff for the UX value.
 
 **SSE citation event — include new fields:**
 
@@ -216,7 +248,7 @@ Confidence scores and context text are NOT included in shared session responses 
 
 ## Feature 3: Cross-Document Q&A
 
-### 3.1 Backend (No Changes Needed)
+### 3.1 Backend (Minor Additions)
 
 The following already work:
 - `POST /collections/{id}/sessions` — creates collection-scoped session
@@ -225,15 +257,19 @@ The following already work:
 - Citations include `document_id` + `document_filename`
 - `GET /collections/{id}/sessions` — lists collection sessions
 
-**One small addition:**
+**Addition 1 — Plan limit enforcement:**
 
-Add a URL parameter to the document reader to support "view in original" links from collection Q&A:
+Add checks in existing collection endpoints:
+- `POST /api/collections` — check `SELECT COUNT(*) FROM collections WHERE user_id = :uid` against plan limit (Free: 1, Plus: 5, Pro: unlimited). Reject with 403 if exceeded.
+- `POST /api/collections/{id}/documents` — check document count in collection against plan limit (Free: 3, Plus: 10, Pro: unlimited). Reject with 403 if exceeded.
+
+**Addition 2 — Frontend URL parameter for "View in original":**
 
 ```
 GET /d/{documentId}?page=N&highlight=chunkId
 ```
 
-This is handled purely in frontend routing — the document reader already supports page navigation and bbox highlighting. Just need to read query params on mount.
+Frontend-only routing — the document reader already supports page navigation and bbox highlighting. Just need to read query params on mount. This link requires the user to be authenticated and own the document (existing auth checks apply). "View in original" links are only shown to the session owner, not in shared views.
 
 ### 3.2 Frontend — Collection Chat Page
 
@@ -318,8 +354,8 @@ Docs and sessions accessible via dropdown toggles at top.
 **Database migration — add domain_mode to sessions:**
 
 ```sql
-ALTER TABLE chat_sessions ADD COLUMN domain_mode VARCHAR(20) DEFAULT NULL;
--- Valid values: NULL (default), 'legal', 'academic'
+ALTER TABLE sessions ADD COLUMN domain_mode VARCHAR(20) DEFAULT NULL
+    CHECK (domain_mode IN ('legal', 'academic'));
 ```
 
 **ChatRequest schema update:**
@@ -369,19 +405,11 @@ if domain_mode and domain_mode in DOMAIN_RULES:
 When `domain_mode` is sent in ChatRequest:
 1. Update `session.domain_mode` in DB (so subsequent messages inherit it)
 2. Use the stored `domain_mode` if not provided in request (sticky per session)
+3. Known limitation: concurrent requests with different domain_mode values result in last-write-wins. Acceptable for v1 since users typically don't send concurrent messages.
 
-**Citation type classification (Legal mode only):**
+**Citation type classification — DEFERRED to Phase 2:**
 
-In legal mode, add post-processing to classify citations:
-
-```python
-if domain_mode == "legal":
-    for citation in citations:
-        chunk_text = citation["text_snippet"]
-        response_text = extract_surrounding_text(response, citation["offset"], window=100)
-        # Simple heuristic: if response quotes chunk verbatim (>80% overlap), it's "direct"
-        citation["citation_type"] = "direct_quote" if text_overlap(chunk_text, response_text) > 0.8 else "inference"
-```
+The original plan to classify citations as "direct_quote" vs "inference" via text overlap heuristics has reliability concerns (LLM paraphrasing, Unicode normalization, etc.). For v1, legal mode will use stricter prompts to encourage verbatim quoting but will NOT add `citation_type` labels. This avoids false "direct quote" labels on a legal tool which could create liability. Revisit with a more robust NLI-based approach after user feedback.
 
 ### 4.2 Frontend
 
@@ -400,10 +428,11 @@ Below the existing Quick/Balanced/Thorough selector, add a secondary row:
 - Academic = blue accent when active
 - Selection persists per session (stored in session, sent in ChatRequest)
 - Tooltip on each: "Legal: Strict citation mode for legal documents" / "Academic: Research-grade citations with source attribution"
+- Free/Demo users: buttons shown but disabled with lock icon + tooltip "Upgrade to Plus to unlock"
 
-**Legal mode citation enhancements:**
-- Citation cards show `citation_type` badge: "Direct Quote" (green) / "Inference" (yellow)
-- This helps lawyers distinguish between verbatim document text and AI interpretation
+**Legal mode citation enhancements (v1):**
+- Stricter prompt produces more verbatim-quote-heavy responses
+- Citation cards same as default (citation_type classification deferred to Phase 2)
 
 **Academic mode citation enhancements:**
 - Citation cards show `sectionTitle` prominently (already available in chunk data)
@@ -416,7 +445,8 @@ Below the existing Quick/Balanced/Thorough selector, add a secondary row:
 ```python
 # alembic migration: add_domain_mode_to_sessions
 def upgrade():
-    op.add_column("chat_sessions", sa.Column("domain_mode", sa.String(20), nullable=True))
+    op.add_column("sessions", sa.Column("domain_mode", sa.String(20), nullable=True))
+    op.create_check_constraint("ck_sessions_domain_mode", "sessions", "domain_mode IN ('legal', 'academic')")
 ```
 
 ---
