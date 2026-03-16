@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import io
+import logging
 import uuid
 import zipfile
 from typing import Optional
@@ -26,6 +27,8 @@ from app.schemas.document import (
 )
 from app.services.doc_service import can_access_document, doc_service
 from app.services.storage_service import storage_service
+
+logger = logging.getLogger(__name__)
 
 documents_router = APIRouter(prefix="/api/documents", tags=["documents"])
 
@@ -279,7 +282,8 @@ async def ingest_url(
             raise HTTPException(status_code=400, detail="NO_TEXT_CONTENT")
         raise HTTPException(status_code=400, detail=f"Failed to fetch URL: {code}")
     except Exception as e:
-        raise HTTPException(status_code=400, detail=f"Failed to fetch URL: {str(e)}")
+        logger.error("URL fetch failed for %s: %s", url, e)
+        raise HTTPException(status_code=400, detail="Failed to fetch URL")
 
     import asyncio
 

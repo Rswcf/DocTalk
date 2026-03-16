@@ -1,8 +1,10 @@
+import hmac
+import logging
 import os
 from contextlib import asynccontextmanager
 
 import sentry_sdk
-from fastapi import FastAPI, Query
+from fastapi import FastAPI, HTTPException, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
 from qdrant_client.models import PayloadSchemaType
 from sqlalchemy import text
@@ -23,6 +25,8 @@ from .models.database import AsyncSessionLocal
 from .schemas.common import HealthDeepResponse, HealthResponse, ReleaseInfo
 from .services.embedding_service import embedding_service
 from .services.storage_service import storage_service
+
+logger = logging.getLogger(__name__)
 
 # Initialize Sentry (no-op if DSN is not configured)
 if settings.SENTRY_DSN:
@@ -154,10 +158,16 @@ async def version() -> dict:
 
 
 @app.get("/health", response_model=HealthDeepResponse | HealthResponse)
-async def health(deep: bool = Query(False)) -> dict:
+async def health(request: Request, deep: bool = Query(False)) -> dict:
     release = get_release_payload()
     if not deep:
         return {"status": "ok", "release": release}
+
+    # Require shared secret for deep health checks to prevent info leakage
+    expected = settings.ADAPTER_SECRET
+    provided = request.headers.get("x-health-secret")
+    if not expected or not provided or not hmac.compare_digest(provided, expected):
+        raise HTTPException(status_code=403, detail="Unauthorized")
 
     components: dict[str, dict[str, str]] = {
         "database": {"status": "ok"},
@@ -167,8 +177,9 @@ async def health(deep: bool = Query(False)) -> dict:
     try:
         async with AsyncSessionLocal() as db:
             await db.execute(text("SELECT 1"))
-    except Exception as e:
-        components["database"] = {"status": "error", "detail": str(e)}
+    except Exception:
+        logger.exception("Health check database error")
+        components["database"] = {"status": "error"}
 
     redis_client = None
     try:
@@ -176,8 +187,9 @@ async def health(deep: bool = Query(False)) -> dict:
 
         redis_client = redis.from_url(settings.CELERY_BROKER_URL)
         await redis_client.ping()
-    except Exception as e:
-        components["redis"] = {"status": "error", "detail": str(e)}
+    except Exception:
+        logger.exception("Health check redis error")
+        components["redis"] = {"status": "error"}
     finally:
         if redis_client is not None:
             await redis_client.aclose()

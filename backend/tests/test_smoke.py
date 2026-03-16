@@ -26,6 +26,24 @@ async def test_health(client):
     assert data["release"]["stage"] == _version_config()["stage"]
 
 
+async def test_health_deep_requires_auth(client):
+    """H4: /health?deep=true without secret header returns 403."""
+    resp = await client.get("/health?deep=true")
+    assert resp.status_code == 403
+
+
+async def test_health_deep_with_valid_secret(client):
+    """H4: /health?deep=true with correct X-Health-Secret returns 200."""
+    resp = await client.get(
+        "/health?deep=true",
+        headers={"X-Health-Secret": "test-adapter-secret"},
+    )
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["status"] in ("ok", "degraded")
+    assert "components" in data
+
+
 async def test_version_endpoint(client):
     resp = await client.get("/version")
     assert resp.status_code == 200
