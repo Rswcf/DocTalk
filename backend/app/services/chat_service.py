@@ -223,6 +223,7 @@ class ChatService:
         user: Optional[User] = None,
         locale: Optional[str] = None,
         mode: Optional[str] = None,
+        domain_mode: Optional[str] = None,
     ) -> AsyncGenerator[Dict[str, Any], None]:
         """Main chat streaming generator producing SSE event dicts.
 
@@ -411,6 +412,24 @@ class ChatService:
                     "The user has provided the following custom instructions for this document. Follow them:\n"
                     + doc.custom_instructions + "\n"
                 )
+
+            # Inject domain-specific rules (legal/academic mode overlay)
+            effective_domain = domain_mode or session_obj.domain_mode
+            if effective_domain:
+                from app.core.model_profiles import DOMAIN_RULES
+                domain_rules = DOMAIN_RULES.get(effective_domain)
+                if domain_rules:
+                    base_rule_count = len(rules.strip().split('\n'))
+                    domain_rules_text = f"\n\n## {effective_domain.title()} Mode Rules\n"
+                    for i, rule in enumerate(domain_rules, start=base_rule_count + 1):
+                        domain_rules_text += f"{i}. {rule}\n"
+                    system_prompt += domain_rules_text
+
+                    # Persist domain_mode to session if changed
+                    if effective_domain != session_obj.domain_mode:
+                        session_obj.domain_mode = effective_domain
+                        await db.commit()
+
         except Exception as e:
             if user is not None and pre_debited > 0 and predebit_ledger_id is not None:
                 try:

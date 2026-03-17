@@ -10,6 +10,7 @@ from pydantic import BaseModel
 class ChatRequest(BaseModel):
     message: str
     mode: Optional[Literal["quick", "balanced", "thorough"]] = None
+    domain_mode: Optional[Literal["legal", "academic"]] = None
     locale: Optional[str] = None  # Frontend locale code (en/zh/es/fr/de)
 
 
@@ -48,6 +49,7 @@ class SessionListItem(BaseModel):
     session_id: uuid.UUID
     title: Optional[str] = None
     message_count: int
+    domain_mode: Optional[str] = None
     created_at: datetime
     last_activity_at: datetime
 

@@ -345,13 +345,14 @@ async def list_collection_sessions(
         select(
             ChatSession.id,
             ChatSession.title,
+            ChatSession.domain_mode,
             ChatSession.created_at,
             func.count(Message.id).label("message_count"),
             last_activity,
         )
         .outerjoin(Message, Message.session_id == ChatSession.id)
         .where(ChatSession.collection_id == collection_id)
-        .group_by(ChatSession.id, ChatSession.title, ChatSession.created_at)
+        .group_by(ChatSession.id, ChatSession.title, ChatSession.domain_mode, ChatSession.created_at)
         .order_by(desc(last_activity))
         .limit(10)
     )
@@ -363,6 +364,7 @@ async def list_collection_sessions(
                 "session_id": str(row.id),
                 "title": row.title,
                 "message_count": row.message_count,
+                "domain_mode": row.domain_mode,
                 "created_at": row.created_at.isoformat(),
                 "last_activity_at": row.last_activity_at.isoformat() if row.last_activity_at else row.created_at.isoformat(),
             }

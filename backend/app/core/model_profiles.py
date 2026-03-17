@@ -64,6 +64,32 @@ COLLECTION_EXTRA_RULES: dict[str, str] = {
 }
 
 # ---------------------------------------------------------------------------
+# Domain-specific rules (legal/academic mode overlay)
+# ---------------------------------------------------------------------------
+DOMAIN_RULES: dict[str, list[str]] = {
+    "legal": [
+        "Every factual claim MUST have a citation [n] to a specific document fragment. "
+        "If the document does not contain relevant information, state: "
+        "'The document does not contain information on this topic.'",
+        "Never generate, infer, or paraphrase legal conclusions not directly supported by the document text.",
+        "Use precise legal language: 'The document states...' rather than 'According to...' or 'It seems...'",
+        "When quoting, preserve the original wording exactly. Mark any omissions with [...].",
+        "If multiple interpretations are possible, present each with its supporting citation.",
+    ],
+    "academic": [
+        "Every claim MUST cite the specific document fragment with [n]. "
+        "Clearly distinguish direct quotes from paraphrased content.",
+        "For comparative questions, cite multiple sources and note agreements or contradictions between them.",
+        "Include section titles and page numbers in your analysis when referencing specific parts of a document.",
+        "Use academic register: hedging language for uncertain claims ('the data suggests...'), "
+        "definitive language only for directly quoted content.",
+        "If the documents do not contain sufficient evidence to answer, "
+        "explicitly state the limitation rather than speculating.",
+    ],
+}
+
+
+# ---------------------------------------------------------------------------
 # Model registry
 # ---------------------------------------------------------------------------
 

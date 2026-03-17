@@ -289,7 +289,8 @@ async def chat_stream(
 
     async def event_generator() -> AsyncGenerator[str, None]:
         async for ev in chat_service.chat_stream(
-            session_id, body.message, db, user=user, locale=body.locale, mode=body.mode
+            session_id, body.message, db, user=user, locale=body.locale, mode=body.mode,
+            domain_mode=body.domain_mode
         ):
             # Format per SSE: event: <type>\ndata: {json}\n\n
             line = f"event: {ev['event']}\n"
@@ -444,6 +445,7 @@ async def list_sessions(
         select(
             ChatSession.id,
             ChatSession.title,
+            ChatSession.domain_mode,
             ChatSession.created_at,
             func.count(Message.id).label("message_count"),
             last_activity,
@@ -451,7 +453,7 @@ async def list_sessions(
         .outerjoin(Message, Message.session_id == ChatSession.id)
         .where(ChatSession.document_id == document_id)
         .where(ChatSession.user_id == user.id if (doc.demo_slug and user) else True)
-        .group_by(ChatSession.id, ChatSession.title, ChatSession.created_at)
+        .group_by(ChatSession.id, ChatSession.title, ChatSession.domain_mode, ChatSession.created_at)
         .order_by(desc(last_activity))
         .limit(limit)
         .offset(offset)
@@ -463,6 +465,7 @@ async def list_sessions(
             session_id=row.id,
             title=row.title,
             message_count=row.message_count,
+            domain_mode=getattr(row, 'domain_mode', None),
             created_at=row.created_at,
             last_activity_at=row.last_activity_at,
         )
