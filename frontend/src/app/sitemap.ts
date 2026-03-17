@@ -36,12 +36,23 @@ export default function sitemap(): MetadataRoute.Sitemap {
     { url: `${BASE_URL}/alternatives/chatpdf`, lastModified: generatedAt, changeFrequency: "monthly", priority: 0.7 },
     { url: `${BASE_URL}/alternatives/notebooklm`, lastModified: generatedAt, changeFrequency: "monthly", priority: 0.7 },
     { url: `${BASE_URL}/alternatives/humata`, lastModified: generatedAt, changeFrequency: "monthly", priority: 0.7 },
+    { url: `${BASE_URL}/alternatives/askyourpdf`, lastModified: generatedAt, changeFrequency: "monthly", priority: 0.7 },
+    { url: `${BASE_URL}/alternatives/pdf-ai`, lastModified: generatedAt, changeFrequency: "monthly", priority: 0.7 },
     // Use case pages
     { url: `${BASE_URL}/use-cases`, lastModified: generatedAt, changeFrequency: "monthly", priority: 0.7 },
     { url: `${BASE_URL}/use-cases/students`, lastModified: generatedAt, changeFrequency: "monthly", priority: 0.7 },
     { url: `${BASE_URL}/use-cases/lawyers`, lastModified: generatedAt, changeFrequency: "monthly", priority: 0.7 },
     { url: `${BASE_URL}/use-cases/finance`, lastModified: generatedAt, changeFrequency: "monthly", priority: 0.7 },
     { url: `${BASE_URL}/use-cases/hr-contracts`, lastModified: generatedAt, changeFrequency: "monthly", priority: 0.6 },
+    { url: `${BASE_URL}/use-cases/teachers`, lastModified: generatedAt, changeFrequency: "monthly", priority: 0.7 },
+    { url: `${BASE_URL}/use-cases/consultants`, lastModified: generatedAt, changeFrequency: "monthly", priority: 0.7 },
+    { url: `${BASE_URL}/use-cases/real-estate`, lastModified: generatedAt, changeFrequency: "monthly", priority: 0.7 },
+    { url: `${BASE_URL}/use-cases/healthcare`, lastModified: generatedAt, changeFrequency: "monthly", priority: 0.7 },
+    { url: `${BASE_URL}/use-cases/compliance`, lastModified: generatedAt, changeFrequency: "monthly", priority: 0.7 },
+    // Tools pages
+    { url: `${BASE_URL}/tools`, lastModified: generatedAt, changeFrequency: "monthly", priority: 0.6 },
+    { url: `${BASE_URL}/tools/word-counter`, lastModified: generatedAt, changeFrequency: "monthly", priority: 0.6 },
+    { url: `${BASE_URL}/tools/reading-time`, lastModified: generatedAt, changeFrequency: "monthly", priority: 0.6 },
     // Blog content
     ...KNOWN_BLOG_CATEGORIES.map((category) => ({
       url: `${BASE_URL}/blog/category/${category}`,

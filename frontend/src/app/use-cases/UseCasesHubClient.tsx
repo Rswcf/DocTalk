@@ -12,10 +12,15 @@ import {
   FileText,
   ArrowRight,
   Briefcase,
+  BookOpen,
+  Users,
+  Home,
+  HeartPulse,
+  ShieldCheck,
 } from 'lucide-react';
 
-const useCaseIcons = [GraduationCap, Scale, TrendingUp, FileText];
-const useCaseSlugs = ['students', 'lawyers', 'finance', 'hr-contracts'];
+const useCaseIcons = [GraduationCap, Scale, TrendingUp, FileText, BookOpen, Users, Home, HeartPulse, ShieldCheck];
+const useCaseSlugs = ['students', 'lawyers', 'finance', 'hr-contracts', 'teachers', 'consultants', 'real-estate', 'healthcare', 'compliance'];
 
 export default function UseCasesHubClient() {
   const { t } = useLocale();

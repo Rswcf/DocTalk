@@ -18,6 +18,11 @@
 - [Legal Professionals](https://www.doctalk.site/use-cases/lawyers)
 - [Finance Teams](https://www.doctalk.site/use-cases/finance)
 - [HR & Contracts](https://www.doctalk.site/use-cases/hr-contracts)
+- [Teachers & Educators](https://www.doctalk.site/use-cases/teachers)
+- [Consultants](https://www.doctalk.site/use-cases/consultants)
+- [Real Estate Professionals](https://www.doctalk.site/use-cases/real-estate)
+- [Healthcare Professionals](https://www.doctalk.site/use-cases/healthcare)
+- [Compliance Officers](https://www.doctalk.site/use-cases/compliance)
 
 ## Comparisons
 
@@ -27,12 +32,41 @@
 - [DocTalk vs Humata](https://www.doctalk.site/compare/humata)
 - [DocTalk vs PDF.ai](https://www.doctalk.site/compare/pdf-ai)
 
+## Alternatives
+
+- [ChatPDF Alternatives](https://www.doctalk.site/alternatives/chatpdf)
+- [NotebookLM Alternatives](https://www.doctalk.site/alternatives/notebooklm)
+- [Humata Alternatives](https://www.doctalk.site/alternatives/humata)
+- [AskYourPDF Alternatives](https://www.doctalk.site/alternatives/askyourpdf)
+- [PDF.ai Alternatives](https://www.doctalk.site/alternatives/pdf-ai)
+
+## Tools
+
+- [Free Document Tools](https://www.doctalk.site/tools)
+- [Word Counter](https://www.doctalk.site/tools/word-counter)
+- [Reading Time Calculator](https://www.doctalk.site/tools/reading-time)
+
 ## Blog
 
 - [Best AI PDF Tools 2026](https://www.doctalk.site/blog/best-ai-pdf-tools-2026)
 - [Free AI PDF Chat No Signup](https://www.doctalk.site/blog/free-ai-pdf-chat-no-signup)
 - [How to Chat with DOCX Using AI](https://www.doctalk.site/blog/how-to-chat-with-docx-ai)
 - [How to Chat with PDF Using AI](https://www.doctalk.site/blog/how-to-chat-with-pdf-ai)
+- [How to Review a Contract with AI](https://www.doctalk.site/blog/ai-contract-review-guide)
+- [AI Document Analysis in 11 Languages](https://www.doctalk.site/blog/ai-document-analysis-languages)
+- [Is AI Document Chat Safe? Security and Privacy Guide](https://www.doctalk.site/blog/ai-document-security-privacy)
+- [AI-Powered Due Diligence Guide](https://www.doctalk.site/blog/ai-due-diligence-guide)
+- [How to Analyze Financial Reports with AI](https://www.doctalk.site/blog/ai-financial-report-analysis)
+- [AI for HR: Review Employment Contracts Faster](https://www.doctalk.site/blog/ai-hr-contract-review)
+- [How to Summarize a Research Paper with AI](https://www.doctalk.site/blog/ai-research-paper-summarizer)
+- [Best AI Tools for Academic Research 2026](https://www.doctalk.site/blog/best-ai-tools-academic-research-2026)
+- [How to Analyze Excel Spreadsheets with AI](https://www.doctalk.site/blog/chat-with-excel-spreadsheet-ai)
+- [How to Chat with a PowerPoint Using AI](https://www.doctalk.site/blog/chat-with-powerpoint-ai)
+- [ChatPDF Alternatives 2026](https://www.doctalk.site/blog/chatpdf-alternatives-2026)
+- [Why Citation Highlighting Matters](https://www.doctalk.site/blog/citation-highlighting-matters)
+- [How to Chat with Any Webpage Using AI](https://www.doctalk.site/blog/how-to-chat-with-url-webpage-ai)
+- [NotebookLM Alternatives 2026](https://www.doctalk.site/blog/notebooklm-alternatives-2026)
+- [What Is RAG? How AI Document Chat Works](https://www.doctalk.site/blog/rag-explained-simple)
 
 ## About
 

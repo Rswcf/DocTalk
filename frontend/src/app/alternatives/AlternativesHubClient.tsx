@@ -29,6 +29,18 @@ export default function AlternativesHubClient() {
       tagline: t('altsHub.humataTagline'),
       count: 5,
     },
+    {
+      slug: 'askyourpdf',
+      name: 'AskYourPDF',
+      tagline: t('altsHub.askyourpdfTagline'),
+      count: 7,
+    },
+    {
+      slug: 'pdf-ai',
+      name: 'PDF.ai',
+      tagline: t('altsHub.pdfaiTagline'),
+      count: 7,
+    },
   ];
 
   return (

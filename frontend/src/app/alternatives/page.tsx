@@ -3,9 +3,9 @@ import AlternativesHubClient from './AlternativesHubClient';
 import { buildMarketingMetadata } from '../../lib/seo';
 
 export const metadata: Metadata = buildMarketingMetadata({
-  title: 'Best Alternatives to ChatPDF, NotebookLM & Humata',
+  title: 'Best Alternatives to ChatPDF, NotebookLM, Humata & More',
   description:
-    'Find the best alternatives to ChatPDF, NotebookLM, Humata, and other AI document tools with comparisons on features, pricing, and best-fit use cases.',
+    'Find the best alternatives to ChatPDF, NotebookLM, Humata, AskYourPDF, PDF.ai, and other AI document tools with comparisons on features, pricing, and best-fit use cases.',
   path: '/alternatives',
   keywords: ['ai pdf alternatives', 'chatpdf alternatives', 'document ai tools'],
   openGraph: {
