@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useCallback, useEffect, useState } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { PdfViewer } from '../../../components/PdfViewer';
 import TextViewer from '../../../components/TextViewer/TextViewer';
 import { ChatPanel } from '../../../components/Chat';
@@ -46,6 +46,18 @@ export default function DocumentReaderPageClient() {
   const error = loaderError || (sessionError ? t(sessionError) : null);
 
   usePageTitle(documentName || undefined);
+
+  // Handle ?page=N&highlight=chunkId from "View in original" links
+  const searchParams = useSearchParams();
+  useEffect(() => {
+    const pageParam = searchParams.get('page');
+    if (pageParam) {
+      const pageNum = parseInt(pageParam, 10);
+      if (!isNaN(pageNum) && pageNum > 0) {
+        useDocTalkStore.getState().setPage(pageNum);
+      }
+    }
+  }, [searchParams]);
 
   // Determine which viewer to use:
   // - Native PDF: always PdfViewer with original URL

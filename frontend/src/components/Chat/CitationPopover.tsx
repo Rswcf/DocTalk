@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useRef } from 'react';
+import { ExternalLink } from 'lucide-react';
 import type { Citation } from '../../types';
 
 interface CitationPopoverProps {
@@ -26,7 +27,7 @@ export default function CitationPopover({ citation, children }: CitationPopoverP
     setShow(false);
   };
 
-  const hasExtra = citation.confidenceScore != null || citation.contextText;
+  const hasExtra = citation.confidenceScore != null || citation.contextText || citation.documentId;
   if (!hasExtra) return <>{children}</>;
 
   return (
@@ -57,6 +58,17 @@ export default function CitationPopover({ citation, children }: CitationPopoverP
             <p className="text-zinc-600 dark:text-zinc-400 line-clamp-4 mt-1">
               &ldquo;{citation.contextText}&rdquo;
             </p>
+          )}
+          {citation.documentId && (
+            <a
+              href={`/d/${citation.documentId}?page=${citation.page}&highlight=${citation.chunkId}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1 mt-2 text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300 transition-colors pointer-events-auto"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <ExternalLink size={10} /> View in original
+            </a>
           )}
         </div>
       )}
