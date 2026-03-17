@@ -9,6 +9,7 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from app.core.config import settings
 from app.core.deps import get_db_session, require_auth
 from app.models.tables import (
     ChatSession,
@@ -108,6 +109,23 @@ async def create_collection(
     db: AsyncSession = Depends(get_db_session),
 ):
     """Create a new collection with optional initial document_ids."""
+    # Plan limit: max collections
+    plan = (user.plan or "free").lower()
+    max_collections = {
+        "free": settings.FREE_MAX_COLLECTIONS,
+        "plus": settings.PLUS_MAX_COLLECTIONS,
+        "pro": settings.PRO_MAX_COLLECTIONS,
+    }.get(plan, settings.FREE_MAX_COLLECTIONS)
+    count_result = await db.execute(
+        select(func.count()).select_from(Collection).where(Collection.user_id == user.id)
+    )
+    current_count = count_result.scalar() or 0
+    if current_count >= max_collections:
+        raise HTTPException(
+            status_code=403,
+            detail=f"Your plan allows up to {max_collections} collections. Upgrade for more.",
+        )
+
     coll = Collection(
         name=body.name,
         description=body.description,
@@ -202,16 +220,34 @@ async def add_documents_to_collection(
     if not coll or coll.user_id != user.id:
         raise HTTPException(status_code=404, detail="Collection not found")
 
-    added = 0
+    # Plan limit: max docs per collection
+    plan = (user.plan or "free").lower()
+    max_docs = {
+        "free": settings.FREE_MAX_DOCS_PER_COLLECTION,
+        "plus": settings.PLUS_MAX_DOCS_PER_COLLECTION,
+        "pro": settings.PRO_MAX_DOCS_PER_COLLECTION,
+    }.get(plan, settings.FREE_MAX_DOCS_PER_COLLECTION)
+    doc_count_result = await db.execute(
+        select(func.count())
+        .select_from(collection_documents)
+        .where(collection_documents.c.collection_id == collection_id)
+    )
+    current_docs = doc_count_result.scalar() or 0
+
+    # Pre-filter: collect valid, non-duplicate doc IDs
+    seen_ids: set[uuid.UUID] = set()
+    valid_doc_ids = []
     for did_str in body.document_ids:
         try:
             did = uuid.UUID(did_str)
         except ValueError:
             continue
+        if did in seen_ids:
+            continue
+        seen_ids.add(did)
         doc = await db.get(Document, did)
         if not doc or doc.user_id != user.id:
             continue
-        # Check if already in collection
         existing = await db.execute(
             select(collection_documents)
             .where(
@@ -221,6 +257,17 @@ async def add_documents_to_collection(
         )
         if existing.first():
             continue
+        valid_doc_ids.append(did)
+
+    # Check limit against actual addable count
+    if current_docs + len(valid_doc_ids) > max_docs:
+        raise HTTPException(
+            status_code=403,
+            detail=f"Your plan allows up to {max_docs} documents per collection. Upgrade for more.",
+        )
+
+    added = 0
+    for did in valid_doc_ids:
         await db.execute(
             collection_documents.insert().values(
                 collection_id=collection_id, document_id=did

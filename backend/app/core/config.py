@@ -125,6 +125,14 @@ class Settings(BaseSettings):
     PLUS_MAX_FILE_SIZE_MB: int = 50
     PRO_MAX_FILE_SIZE_MB: int = 100
 
+    # Collection limits per plan
+    FREE_MAX_COLLECTIONS: int = 1
+    PLUS_MAX_COLLECTIONS: int = 5
+    PRO_MAX_COLLECTIONS: int = 999
+    FREE_MAX_DOCS_PER_COLLECTION: int = 3
+    PLUS_MAX_DOCS_PER_COLLECTION: int = 10
+    PRO_MAX_DOCS_PER_COLLECTION: int = 999
+
     # Admin access — comma-separated email list
     ADMIN_EMAILS: str = ""
 
