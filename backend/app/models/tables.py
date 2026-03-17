@@ -158,6 +158,7 @@ class ChatSession(Base):
         index=True,
     )
     title: Mapped[Optional[str]] = mapped_column(sa.String(200), nullable=True)
+    domain_mode: Mapped[Optional[str]] = mapped_column(sa.String(20), nullable=True)
     created_at: Mapped[sa.DateTime] = mapped_column(sa.DateTime(timezone=True), server_default=sa.text("now()"))
     updated_at: Mapped[sa.DateTime] = mapped_column(sa.DateTime(timezone=True), server_default=sa.text("now()"), onupdate=sa.func.now())
 
