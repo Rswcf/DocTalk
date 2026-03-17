@@ -11,6 +11,7 @@ import CitationCard from './CitationCard';
 import { useLocale } from '../../i18n';
 import { PaywallModal } from '../PaywallModal';
 import PlusMenu from './PlusMenu';
+import DomainModeSelector from './DomainModeSelector';
 import MessageErrorBoundary from './MessageErrorBoundary';
 import { renumberCitations } from '../../lib/citations';
 import { SUGGESTED_KEYS } from '../../lib/constants';
@@ -335,6 +336,11 @@ export default function ChatPanel({ sessionId, onCitationClick, maxUserMessages,
 
       <form onSubmit={onSubmit} className="p-4 border-t dark:border-zinc-700">
         <div className="max-w-3xl mx-auto">
+          {userPlan && (
+            <div className="mb-2 flex justify-end">
+              <DomainModeSelector userPlan={userPlan} />
+            </div>
+          )}
           <div className="flex items-center px-3 py-1.5 gap-2 border border-zinc-300 dark:border-zinc-600 rounded-full bg-white dark:bg-zinc-800 focus-within:border-zinc-400 dark:focus-within:border-zinc-500 transition-colors">
             <PlusMenu
               isOpen={plusMenuOpen}

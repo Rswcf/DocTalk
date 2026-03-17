@@ -32,6 +32,7 @@ export interface DocTalkStore {
   messages: Message[];
   isStreaming: boolean;
   selectedMode: string;
+  domainMode: string | null;
   sessions: SessionItem[];
 
   // Document summary (auto-generated)
@@ -71,6 +72,7 @@ export interface DocTalkStore {
   setStreaming: (v: boolean) => void;
   setSessionId: (id: string) => void;
   setSelectedMode: (id: string) => void;
+  setDomainMode: (mode: string | null) => void;
   setMessages: (msgs: Message[]) => void;
   setSessions: (sessions: SessionItem[]) => void;
   addSession: (session: SessionItem) => void;
@@ -112,6 +114,7 @@ const initialState = {
     if (stored && stored.includes('/')) return DEFAULT_MODE;
     return stored || DEFAULT_MODE;
   })(),
+  domainMode: null as string | null,
   sessions: [] as SessionItem[],
   documentSummary: null as string | null,
   suggestedQuestions: [] as string[],
@@ -226,6 +229,7 @@ export const useDocTalkStore = create<DocTalkStore>((set, get) => ({
       // localStorage unavailable in private browsing
     }
   },
+  setDomainMode: (mode: string | null) => set({ domainMode: mode }),
   setSessions: (sessions: SessionItem[]) => set({ sessions }),
   addSession: (session: SessionItem) => set((state) => ({
     sessions: [session, ...state.sessions],

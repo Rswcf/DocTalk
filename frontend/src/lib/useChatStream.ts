@@ -152,6 +152,7 @@ export function useChatStream({
     const controller = new AbortController();
     abortRef.current = controller;
 
+    const domainMode = useDocTalkStore.getState().domainMode;
     await chatStream(
       sessionId,
       prompt,
@@ -163,6 +164,7 @@ export function useChatStream({
       selectedMode,
       locale,
       controller.signal,
+      domainMode,
     );
   }, [sessionId, updateLastMessage, addCitationToLastMessage, handleStreamError, handleStreamDone, handleTruncated, selectedMode, locale]);
 

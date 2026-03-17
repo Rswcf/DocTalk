@@ -414,21 +414,22 @@ class ChatService:
                 )
 
             # Inject domain-specific rules (legal/academic mode overlay)
-            effective_domain = domain_mode or session_obj.domain_mode
-            if effective_domain:
+            # Frontend always sends domain_mode: null (default) or "legal"/"academic"
+            # domain_mode=None means Default (no extra rules), string means apply rules
+            if domain_mode:
                 from app.core.model_profiles import DOMAIN_RULES
-                domain_rules = DOMAIN_RULES.get(effective_domain)
+                domain_rules = DOMAIN_RULES.get(domain_mode)
                 if domain_rules:
                     base_rule_count = len(rules.strip().split('\n'))
-                    domain_rules_text = f"\n\n## {effective_domain.title()} Mode Rules\n"
+                    domain_rules_text = f"\n\n## {domain_mode.title()} Mode Rules\n"
                     for i, rule in enumerate(domain_rules, start=base_rule_count + 1):
                         domain_rules_text += f"{i}. {rule}\n"
                     system_prompt += domain_rules_text
 
-                    # Persist domain_mode to session if changed
-                    if effective_domain != session_obj.domain_mode:
-                        session_obj.domain_mode = effective_domain
-                        await db.commit()
+            # Persist domain_mode to session (null clears, string sets)
+            if domain_mode != session_obj.domain_mode:
+                session_obj.domain_mode = domain_mode
+                await db.commit()
 
         except Exception as e:
             if user is not None and pre_debited > 0 and predebit_ledger_id is not None:

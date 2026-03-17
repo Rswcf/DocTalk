@@ -128,11 +128,17 @@ export async function chatStream(
   mode?: string,
   locale?: string,
   signal?: AbortSignal,
+  domainMode?: string | null,
 ) {
   const res = await fetch(`${PROXY_BASE}/api/sessions/${sessionId}/chat`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ message, ...(mode ? { mode } : {}), ...(locale ? { locale } : {}) }),
+    body: JSON.stringify({
+      message,
+      ...(mode ? { mode } : {}),
+      ...(locale ? { locale } : {}),
+      domain_mode: domainMode ?? null,
+    }),
     signal,
   });
 
