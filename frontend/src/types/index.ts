@@ -19,6 +19,8 @@ export interface Citation {
   offset: number; // character offset in assistant message text
   documentId?: string; // for cross-document citations
   documentFilename?: string; // source document name
+  confidenceScore?: number; // Qdrant similarity score 0.0-1.0
+  contextText?: string; // extended context (~300 chars) for hover preview
 }
 
 export interface Message {

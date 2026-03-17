@@ -88,6 +88,8 @@ export async function getMessages(sessionId: string): Promise<{ messages: Messag
           offset: c.offset,
           documentId: typeof c.document_id === 'string' ? c.document_id : undefined,
           documentFilename: typeof c.document_filename === 'string' ? c.document_filename : undefined,
+          confidenceScore: typeof c.confidence_score === 'number' ? c.confidence_score : undefined,
+          contextText: typeof c.context_text === 'string' ? c.context_text : undefined,
         }))
       : undefined;
 

@@ -5,6 +5,7 @@ import remarkGfm from 'remark-gfm';
 import { Copy, Check, ThumbsUp, ThumbsDown, RotateCcw, ChevronsDown } from 'lucide-react';
 import type { Citation, Message } from '../../types';
 import { useLocale } from '../../i18n';
+import CitationPopover from './CitationPopover';
 
 const ReactMarkdown = React.lazy(() => import('react-markdown'));
 
@@ -52,7 +53,7 @@ function processCitationLinks(
         const citation = citations.find((c) => c.refIndex === refNum);
         if (citation) {
           parts.push(
-            <span key={`cite-${refNum}-${keyIdx++}`} className="relative inline-block group/cite">
+            <CitationPopover key={`cite-${refNum}-${keyIdx++}`} citation={citation}>
               <button
                 type="button"
                 className="inline text-indigo-600 dark:text-indigo-400 hover:underline cursor-pointer select-none font-medium bg-transparent border-none p-0 text-inherit leading-inherit focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:rounded-sm"
@@ -61,16 +62,7 @@ function processCitationLinks(
               >
                 [{refNum}]
               </button>
-              {citation.textSnippet && (
-                <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 bg-zinc-900 dark:bg-zinc-800 text-white dark:text-zinc-100 dark:border dark:border-zinc-700 text-xs rounded-lg shadow-lg whitespace-normal max-w-[280px] pointer-events-none opacity-0 group-hover/cite:opacity-100 transition-opacity z-50">
-                  <span className="line-clamp-3">{citation.textSnippet}</span>
-                  <span className="block mt-1 text-zinc-400 dark:text-zinc-500 text-[10px]">
-                    {t ? t('citation.page', { page: citation.page }) : `Page ${citation.page}`}
-                  </span>
-                  <span className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-zinc-900 dark:border-t-zinc-800" />
-                </span>
-              )}
-            </span>
+            </CitationPopover>
           );
         } else {
           parts.push(`[${refNum}]`);
