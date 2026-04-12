@@ -11,7 +11,14 @@ const buildSha =
   process.env.GITHUB_SHA ||
   "";
 
-// Content-Security-Policy directives
+// Content-Security-Policy directives.
+//
+// NOTE: script-src still allows 'unsafe-inline' pending a full nonce-based
+// rewrite (Next.js middleware + next/script nonce propagation). Tracked as a
+// P3 follow-up — removing 'unsafe-inline' requires staging CSP-report-only
+// observation for every third-party script path (GTM, Sentry CDN, Vercel
+// analytics) before flipping. Same rationale for style-src 'unsafe-inline'
+// (Tailwind + inline style attributes are pervasive in component code).
 const cspDirectives = [
   "default-src 'self'",
   `script-src 'self' 'unsafe-inline' ${process.env.NODE_ENV === "development" ? "'unsafe-eval'" : ""} https://va.vercel-scripts.com https://*.sentry-cdn.com https://www.googletagmanager.com`.replace(/  +/g, " ").trim(),
@@ -19,12 +26,14 @@ const cspDirectives = [
   "img-src 'self' blob: data: https://*.up.railway.app https://*.googleusercontent.com https://www.google-analytics.com",
   "font-src 'self' data:",
   "worker-src 'self' blob:",
+  "media-src 'none'",
   "connect-src 'self' https://*.up.railway.app https://*.sentry.io https://*.ingest.sentry.io https://va.vercel-scripts.com https://vitals.vercel-insights.com https://www.google-analytics.com https://analytics.google.com https://*.google-analytics.com https://*.analytics.google.com",
   "frame-src 'none'",
   "frame-ancestors 'none'",
   "object-src 'none'",
   "base-uri 'self'",
   "form-action 'self' https://accounts.google.com https://login.microsoftonline.com",
+  "upgrade-insecure-requests",
 ].join("; ");
 
 /** @type {import('next').NextConfig} */
