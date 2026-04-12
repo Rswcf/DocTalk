@@ -65,8 +65,16 @@ async function handler(req: NextRequest) {
 
   // Forward the real client IP so backend rate limiting and demo message
   // tracking work correctly (Railway sees Vercel's IP otherwise).
-  // Use Vercel's trusted req.ip (not forgeable by client), not x-forwarded-for.
-  const clientIp = req.ip || req.headers.get("x-real-ip");
+  // On Vercel, both req.ip (Edge) and x-real-ip / x-forwarded-for (Node Serverless)
+  // are injected by Vercel itself and strip client-supplied values — they are
+  // trustworthy. req.ip is commonly undefined on Node runtime; x-forwarded-for
+  // is the authoritative source there.
+  const xff = req.headers.get("x-forwarded-for");
+  const clientIp =
+    req.ip ||
+    (xff ? xff.split(",")[0]?.trim() : undefined) ||
+    req.headers.get("x-real-ip") ||
+    undefined;
   if (clientIp) {
     headers.set("X-Real-Client-IP", clientIp);
     // Prove this header came from our proxy, not a direct attacker

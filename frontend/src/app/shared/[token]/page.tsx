@@ -3,14 +3,26 @@ import { headers } from 'next/headers';
 import type { Metadata } from 'next';
 
 const BACKEND_URL = process.env.BACKEND_INTERNAL_URL || process.env.NEXT_PUBLIC_API_BASE || '';
+const AUTH_SECRET = process.env.AUTH_SECRET;
 
 async function fetchShared(token: string) {
   const headersList = await headers();
   const xff = headersList.get('x-forwarded-for') || '';
+  const clientIp = xff.split(',')[0]?.trim() || headersList.get('x-real-ip') || '';
+
+  const backendHeaders: Record<string, string> = {};
+  // Pass the real client IP with HMAC proxy-secret proof so backend rate
+  // limiting on /api/shared/{token} counts per real visitor, not per Vercel
+  // egress IP. Same trust model as /api/proxy.
+  if (clientIp && AUTH_SECRET) {
+    backendHeaders['X-Real-Client-IP'] = clientIp;
+    backendHeaders['X-Proxy-IP-Secret'] = AUTH_SECRET;
+  }
+
   try {
     const res = await fetch(`${BACKEND_URL}/api/shared/${token}`, {
-      headers: { 'X-Forwarded-For': xff },
-      next: { revalidate: 60 },
+      headers: backendHeaders,
+      cache: 'no-store',
     });
     if (!res.ok) return null;
     return res.json();
