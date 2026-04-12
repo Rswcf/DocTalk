@@ -260,6 +260,7 @@ export default function CollectionDetailPage() {
               sessionId={sessionId}
               onCitationClick={handleCitationClick}
               userPlan={userPlan}
+              supportsCustomInstructions={false}
             />
           ) : (
             <div className="h-full flex items-center justify-center text-zinc-500">

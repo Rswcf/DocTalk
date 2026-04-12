@@ -26,9 +26,13 @@ interface ChatPanelProps {
   onOpenSettings?: () => void;
   hasCustomInstructions?: boolean;
   userPlan?: string;
+  // Whether this surface supports custom instructions at all. Document reader
+  // uses it (true); collection chat doesn't (scope across multiple docs is
+  // undefined). Default true to preserve existing single-doc behavior.
+  supportsCustomInstructions?: boolean;
 }
 
-export default function ChatPanel({ sessionId, onCitationClick, maxUserMessages, suggestedQuestions, onOpenSettings, hasCustomInstructions, userPlan }: ChatPanelProps) {
+export default function ChatPanel({ sessionId, onCitationClick, maxUserMessages, suggestedQuestions, onOpenSettings, hasCustomInstructions, userPlan, supportsCustomInstructions = true }: ChatPanelProps) {
   const messages = useDocTalkStore((s) => s.messages);
   const isStreaming = useDocTalkStore((s) => s.isStreaming);
   const selectedMode = useDocTalkStore((s) => s.selectedMode);
@@ -217,7 +221,13 @@ export default function ChatPanel({ sessionId, onCitationClick, maxUserMessages,
   }, [sessionId, shareLoading]);
 
   const canUseCustomInstructions = !!onOpenSettings;
-  const showCustomInstructions = canUseCustomInstructions || userPlan === 'free';
+  // Show the entry only on surfaces that support the feature. Among those,
+  // show the Pro upgrade hook to Free + Plus (Plus was previously hidden, a
+  // UX inconsistency); Pro users see the unlocked, functional entry.
+  // Anonymous (userPlan=undefined) stays hidden.
+  const showCustomInstructions = supportsCustomInstructions && (
+    canUseCustomInstructions || userPlan === 'free' || userPlan === 'plus'
+  );
   const canUseExport = messages.length > 0 && !isStreaming && (userPlan === 'plus' || userPlan === 'pro');
   const showExportInMenu = messages.length > 0 && !isStreaming;
 
