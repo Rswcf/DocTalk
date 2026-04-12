@@ -9,7 +9,6 @@ from typing import Any, AsyncGenerator, Dict, List, Optional
 import sqlalchemy as sa
 from openai import AsyncOpenAI
 from sqlalchemy import select
-from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
@@ -78,19 +77,25 @@ async def _refund_predebit(
     pre_debited: int,
     predebit_ledger_id: uuid.UUID,
 ) -> None:
-    """Best-effort refund for chat failures before final accounting."""
+    """Idempotent refund for chat failures before final accounting.
+
+    Uses ledger delete as the single source of truth: only restore balance
+    if the pre-debit ledger row still exists (i.e., not already refunded or
+    reconciled away). Safe against double invocation.
+    """
     try:
         await db.rollback()
     except Exception:
         pass
 
-    await db.execute(
-        sa.update(User).where(User.id == user_id)
-        .values(credits_balance=User.credits_balance + pre_debited)
-    )
-    await db.execute(
+    result = await db.execute(
         sa.delete(CreditLedger).where(CreditLedger.id == predebit_ledger_id)
     )
+    if result.rowcount and result.rowcount > 0:
+        await db.execute(
+            sa.update(User).where(User.id == user_id)
+            .values(credits_balance=User.credits_balance + pre_debited)
+        )
     await db.commit()
 
 
@@ -569,8 +574,16 @@ class ChatService:
             )
             db.add(asst_msg)
             await db.commit()
-        except IntegrityError:
+        except Exception:
             await db.rollback()
+            if user is not None and pre_debited > 0 and predebit_ledger_id is not None:
+                try:
+                    await _refund_predebit(db, user.id, pre_debited, predebit_ledger_id)
+                except Exception:
+                    logger.exception(
+                        "Failed to refund pre-debited credits after PERSIST_FAILED for user %s",
+                        user.id,
+                    )
             yield sse("error", {"code": "PERSIST_FAILED", "message": "Failed to save response"})
             return
 
@@ -905,6 +918,14 @@ class ChatService:
             await db.commit()
         except Exception:
             await db.rollback()
+            if user is not None and pre_debited > 0 and predebit_ledger_id is not None:
+                try:
+                    await _refund_predebit(db, user.id, pre_debited, predebit_ledger_id)
+                except Exception:
+                    logger.exception(
+                        "Failed to refund pre-debited credits after continuation PERSIST_FAILED for user %s",
+                        user.id,
+                    )
             yield sse("error", {"code": "PERSIST_FAILED", "message": "Failed to save continuation"})
             return
 
