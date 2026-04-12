@@ -1,5 +1,7 @@
 # syntax=docker/dockerfile:1
-FROM python:3.12-slim
+# Pin to patch version for build reproducibility. Bump deliberately — major
+# or minor drift can change OpenSSL, sqlite3, or glibc under us.
+FROM python:3.12.7-slim
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
