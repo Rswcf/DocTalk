@@ -30,6 +30,42 @@ jobs:
         env:
           DATABASE_URL: postgresql+asyncpg://postgres:postgres@localhost:5432/postgres
 
+  migrations:
+    # Catches broken alembic downgrade() paths, which would silently make
+    # production rollback impossible.
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    services:
+      postgres:
+        image: postgres:16.6
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: doctalk_ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: backend/requirements-dev.txt
+      - run: pip install -r requirements-dev.txt
+      - run: python -m pytest tests/test_migrations.py -v -m integration
+        env:
+          DATABASE_URL: postgresql+asyncpg://postgres:postgres@localhost:5432/doctalk_ci
+          # conftest.py defaults SKIP_INTEGRATION=1 so integration tests skip
+          # locally; this job has a real postgres service and must run them.
+          SKIP_INTEGRATION: "0"
+
   frontend:
     runs-on: ubuntu-latest
     defaults:
