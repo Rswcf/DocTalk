@@ -1,6 +1,7 @@
 """Session export API — PDF, DOCX, Markdown."""
 from __future__ import annotations
 
+import logging
 import re
 from typing import Literal
 from uuid import UUID
@@ -20,6 +21,7 @@ from app.services.export_service import (
     render_pdf,
 )
 
+logger = logging.getLogger(__name__)
 router = APIRouter(tags=["export"])
 
 
@@ -82,6 +84,18 @@ async def export_session(
                 headers={"Content-Disposition": f'attachment; filename="{safe_title}.pdf"'},
             )
     except ValueError as e:
+        # Expected user-facing validation (e.g., message count limit, post-
+        # sanitization any remaining invalid chars). Log without stack to
+        # keep Railway log volume bounded.
+        logger.info(
+            "Export validation failed session=%s format=%s: %s",
+            session_id, format, e,
+        )
         raise HTTPException(400, str(e))
     except ExportError as e:
+        # Unexpected renderer failure — keep stack for diagnosis.
+        logger.error(
+            "Export renderer failed session=%s format=%s: %s",
+            session_id, format, e, exc_info=True,
+        )
         raise HTTPException(500, str(e))

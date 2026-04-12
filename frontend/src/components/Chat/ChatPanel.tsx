@@ -193,6 +193,8 @@ export default function ChatPanel({ sessionId, onCitationClick, maxUserMessages,
       URL.revokeObjectURL(url);
     } catch (e) {
       console.error('Export failed:', e);
+      const msg = e instanceof Error ? e.message : String(e);
+      window.alert(`Export failed: ${msg}`);
     }
   }, [sessionId]);
 

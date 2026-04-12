@@ -2,7 +2,12 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from app.services.export_service import render_docx, render_markdown, render_pdf
+from app.services.export_service import (
+    _sanitize_xml_text,
+    render_docx,
+    render_markdown,
+    render_pdf,
+)
 
 
 def _make_messages():
@@ -108,3 +113,55 @@ def test_citations_with_non_dict_items():
     msg = MagicMock(role="assistant", content="text", citations=["not-a-dict", 42])
     md = render_markdown("Test", "doc.pdf", [msg])
     assert "text" in md
+
+
+# --- XML sanitization regression tests (root cause of PDF/DOCX 400 bug) ---
+
+@pytest.mark.parametrize(
+    "raw,expected",
+    [
+        ("hello\x00world", "helloworld"),           # NUL
+        ("a\x01b\x02c\x08d", "abcd"),               # C0 controls
+        ("v\x0Bt\x0Cff", "vtff"),                   # vertical tab + form feed
+        ("e\x1Ff", "ef"),                           # unit separator
+        ("keep\ttabs\nlf\rcr", "keep\ttabs\nlf\rcr"),  # whitespace preserved
+        ("\uD800stray", "stray"),                   # unpaired high surrogate
+        ("bom\uFFFE", "bom"),                       # non-character U+FFFE
+        ("bad\uFFFFend", "badend"),                 # non-character U+FFFF
+        ("", ""),
+        (None, ""),
+        (42, "42"),                                 # coerce to str
+    ],
+)
+def test_sanitize_xml_text(raw, expected):
+    assert _sanitize_xml_text(raw) == expected
+
+
+def test_render_docx_accepts_nul_bytes():
+    """Root cause regression: DOCX used to 400 on NUL/control chars in content."""
+    msg = MagicMock(
+        role="assistant",
+        content="text with NUL\x00 and \x08 control \x1F bytes",
+        citations=None,
+    )
+    buf = render_docx("title\x00bad", "doc\x0C.pdf", [msg])
+    assert buf.getbuffer().nbytes > 0
+
+
+def test_render_markdown_passthrough_control_chars():
+    """Markdown does not sanitize — consumer treats it as plain text."""
+    msg = MagicMock(role="user", content="tab\there", citations=None)
+    md = render_markdown("Title", "doc.pdf", [msg])
+    assert "tab\there" in md
+
+
+@_skip_pdf
+def test_render_pdf_accepts_control_chars():
+    """PDF path must also tolerate control chars via _sanitize_xml_text."""
+    msg = MagicMock(
+        role="assistant",
+        content="NUL\x00 then \x0B vtab then \x0C formfeed",
+        citations=None,
+    )
+    buf = render_pdf("Title\x00", "doc.pdf", [msg])
+    assert buf.getvalue()[:5] == b"%PDF-"
