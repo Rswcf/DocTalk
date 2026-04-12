@@ -6,6 +6,7 @@ import { Copy, Check, ThumbsUp, ThumbsDown, RotateCcw, ChevronsDown } from 'luci
 import type { Citation, Message } from '../../types';
 import { useLocale } from '../../i18n';
 import CitationPopover from './CitationPopover';
+import { highlightCode } from '../../lib/highlight';
 
 const ReactMarkdown = React.lazy(() => import('react-markdown'));
 
@@ -56,11 +57,11 @@ function processCitationLinks(
             <CitationPopover key={`cite-${refNum}-${keyIdx++}`} citation={citation}>
               <button
                 type="button"
-                className="inline text-indigo-600 dark:text-indigo-400 hover:underline cursor-pointer select-none font-medium bg-transparent border-none p-0 text-inherit leading-inherit focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:rounded-sm"
+                className="not-prose align-super mx-0.5 inline-flex items-center justify-center min-w-[1.125rem] h-[1.125rem] px-1 rounded-full text-[10px] font-semibold leading-none select-none cursor-pointer bg-zinc-100 text-zinc-600 hover:bg-indigo-100 hover:text-indigo-700 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-indigo-900/50 dark:hover:text-indigo-300 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400"
                 onClick={() => onClick?.(citation)}
                 title={t ? t('citation.jumpTo', { page: citation.page }) : `Jump to page ${citation.page}`}
               >
-                [{refNum}]
+                {refNum}
               </button>
             </CitationPopover>
           );
@@ -96,10 +97,26 @@ function createCitationComponent(
   };
 }
 
-/* ── Code block with header + copy button ── */
+/* ── Code block with header + copy button + Shiki highlighting ── */
 function CodeBlock({ language, code }: { language: string; code: string }) {
   const [copied, setCopied] = useState(false);
+  const [html, setHtml] = useState<string | null>(null);
   const { t } = useLocale();
+
+  useEffect(() => {
+    let cancelled = false;
+    setHtml(null);
+    highlightCode(code, language)
+      .then((out) => {
+        if (!cancelled) setHtml(out);
+      })
+      .catch(() => {
+        if (!cancelled) setHtml(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [code, language]);
 
   const handleCopy = useCallback(() => {
     navigator.clipboard.writeText(code);
@@ -108,23 +125,28 @@ function CodeBlock({ language, code }: { language: string; code: string }) {
   }, [code]);
 
   return (
-    <div className="not-prose my-4 rounded-xl overflow-hidden bg-zinc-900">
-      <div className="flex items-center justify-between px-4 py-2 text-xs text-zinc-400 bg-zinc-800">
-        <span className="font-mono">{language}</span>
+    <div className="not-prose my-4 rounded-xl overflow-hidden border border-zinc-200 dark:border-zinc-700">
+      <div className="flex items-center justify-between px-4 py-2 text-xs text-zinc-500 dark:text-zinc-400 bg-zinc-50 dark:bg-zinc-800/60 border-b border-zinc-200 dark:border-zinc-700">
+        <span className="font-mono">{language || 'text'}</span>
         <button
           type="button"
           onClick={handleCopy}
-          className="flex items-center gap-1.5 hover:text-zinc-200 transition-colors focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:rounded-sm"
+          className="flex items-center gap-1.5 hover:text-zinc-800 dark:hover:text-zinc-200 transition-colors focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:rounded-sm"
         >
           {copied ? <Check size={14} /> : <Copy size={14} />}
           <span>{copied ? t('chat.copied') : t('chat.copyCode')}</span>
         </button>
       </div>
-      <div className="overflow-x-auto p-4">
-        <pre className="text-[13px] leading-relaxed text-zinc-100">
+      {html ? (
+        <div
+          className="shiki-container text-[13px] leading-relaxed [&_pre]:!m-0 [&_pre]:!p-4 [&_pre]:overflow-x-auto"
+          dangerouslySetInnerHTML={{ __html: html }}
+        />
+      ) : (
+        <pre className="text-[13px] leading-relaxed text-zinc-800 dark:text-zinc-100 bg-white dark:bg-zinc-900 overflow-x-auto p-4 m-0">
           <code>{code}</code>
         </pre>
-      </div>
+      )}
     </div>
   );
 }

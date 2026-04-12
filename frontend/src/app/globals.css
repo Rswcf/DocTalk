@@ -85,6 +85,24 @@ body {
   100% { background: rgba(245, 158, 11, 0.15); border-left-color: rgba(245, 158, 11, 0.6); }
 }
 
+/* Shiki dual-theme: switch CSS variables based on .dark class */
+.shiki-container .shiki,
+.shiki-container .shiki span {
+  color: var(--shiki-light);
+  background-color: var(--shiki-light-bg);
+  font-style: var(--shiki-light-font-style);
+  font-weight: var(--shiki-light-font-weight);
+  text-decoration: var(--shiki-light-text-decoration);
+}
+.dark .shiki-container .shiki,
+.dark .shiki-container .shiki span {
+  color: var(--shiki-dark);
+  background-color: var(--shiki-dark-bg);
+  font-style: var(--shiki-dark-font-style);
+  font-weight: var(--shiki-dark-font-weight);
+  text-decoration: var(--shiki-dark-text-decoration);
+}
+
 /* Cookie consent banner slide-up */
 @keyframes slideUp {
   from { transform: translateY(100%); }

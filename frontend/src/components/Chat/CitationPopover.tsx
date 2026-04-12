@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useState, useRef } from 'react';
+import React from 'react';
+import * as HoverCard from '@radix-ui/react-hover-card';
 import { ExternalLink } from 'lucide-react';
 import type { Citation } from '../../types';
 
@@ -16,30 +17,20 @@ function confidenceColor(score: number): string {
 }
 
 export default function CitationPopover({ citation, children }: CitationPopoverProps) {
-  const [show, setShow] = useState(false);
-  const timerRef = useRef<NodeJS.Timeout | null>(null);
-
-  const handleEnter = () => {
-    timerRef.current = setTimeout(() => setShow(true), 300);
-  };
-  const handleLeave = () => {
-    if (timerRef.current) clearTimeout(timerRef.current);
-    setShow(false);
-  };
-
   const hasExtra = citation.confidenceScore != null || citation.contextText || citation.documentId;
   if (!hasExtra) return <>{children}</>;
 
   return (
-    <span
-      className="relative inline-block"
-      onMouseEnter={handleEnter}
-      onMouseLeave={handleLeave}
-      onClick={() => setShow(!show)}
-    >
-      {children}
-      {show && (
-        <div className="absolute z-50 bottom-full left-1/2 -translate-x-1/2 mb-2 w-72 p-3 rounded-lg shadow-lg border bg-white dark:bg-zinc-800 border-zinc-200 dark:border-zinc-700 text-xs">
+    <HoverCard.Root openDelay={250} closeDelay={120}>
+      <HoverCard.Trigger asChild>{children}</HoverCard.Trigger>
+      <HoverCard.Portal>
+        <HoverCard.Content
+          side="top"
+          align="center"
+          sideOffset={6}
+          collisionPadding={12}
+          className="z-50 w-72 p-3 rounded-lg shadow-lg border bg-white dark:bg-zinc-800 border-zinc-200 dark:border-zinc-700 text-xs data-[state=open]:animate-fade-in"
+        >
           {citation.confidenceScore != null && (
             <div className="flex items-center gap-2 mb-2">
               <div className={`w-2 h-2 rounded-full ${confidenceColor(citation.confidenceScore)}`} />
@@ -64,14 +55,14 @@ export default function CitationPopover({ citation, children }: CitationPopoverP
               href={`/d/${citation.documentId}?page=${citation.page}&highlight=${citation.chunkId}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-1 mt-2 text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300 transition-colors pointer-events-auto"
-              onClick={(e) => e.stopPropagation()}
+              className="inline-flex items-center gap-1 mt-2 text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300 transition-colors"
             >
               <ExternalLink size={10} /> View in original
             </a>
           )}
-        </div>
-      )}
-    </span>
+          <HoverCard.Arrow className="fill-white dark:fill-zinc-800" />
+        </HoverCard.Content>
+      </HoverCard.Portal>
+    </HoverCard.Root>
   );
 }
