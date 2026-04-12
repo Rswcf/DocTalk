@@ -1,3 +1,4 @@
+import asyncio
 import hmac
 import logging
 import os
@@ -54,12 +55,35 @@ async def lifespan(app: FastAPI):
         logger.addHandler(handler)
         logger.setLevel(logging.INFO)
 
+    def _alert(exc: Exception, context: str) -> None:
+        """Log an error with traceback and send to Sentry if configured."""
+        logger.error("%s: %s", context, exc, exc_info=True)
+        if settings.SENTRY_DSN:
+            try:
+                import sentry_sdk
+                sentry_sdk.capture_exception(exc)
+            except Exception:
+                pass
+
+    def _is_already_exists(exc: Exception) -> bool:
+        """Detect Qdrant 409 Conflict (index/collection already exists).
+
+        qdrant-client raises UnexpectedResponse with .status_code for REST
+        non-2xx; fall back to 409 substring only if the attribute is absent.
+        """
+        status = getattr(exc, "status_code", None)
+        if isinstance(status, int):
+            return status == 409
+        # Fallback for wrappers that don't expose status_code
+        msg = str(exc)
+        return "409" in msg
+
     def _init_services() -> None:
         try:
             storage_service.ensure_bucket()
             logger.info("MinIO bucket ready")
         except Exception as e:
-            logger.warning("MinIO bucket check failed (will retry on first use): %s", e)
+            _alert(e, "MinIO bucket ensure failed at startup")
         try:
             embedding_service.ensure_collection()
             logger.info("Qdrant collection ready")
@@ -72,9 +96,15 @@ async def lifespan(app: FastAPI):
                 )
                 logger.info("Qdrant payload index ready for field=document_id")
             except Exception as e:
-                logger.info("Qdrant payload index create skipped or already exists: %s", e)
+                # 409 = already exists (expected on restart, not actionable).
+                # Any other failure degrades retrievals — alert.
+                if _is_already_exists(e):
+                    logger.info("Qdrant payload index already exists (skipping)")
+                else:
+                    _alert(e, "Qdrant payload index create failed")
         except Exception as e:
-            logger.warning("Qdrant collection check failed (will retry on first use): %s", e)
+            # Missing collection = all retrievals fail. Must alert.
+            _alert(e, "Qdrant collection ensure failed")
 
     def _retry_stuck_documents() -> None:
         """Re-dispatch parse tasks for documents stuck in 'parsing' status."""
@@ -176,27 +206,50 @@ async def health(request: Request, deep: bool = Query(False)) -> dict:
     components: dict[str, dict[str, str]] = {
         "database": {"status": "ok"},
         "redis": {"status": "ok"},
+        "qdrant": {"status": "ok"},
+        "minio": {"status": "ok"},
     }
 
-    try:
+    async def _check_db() -> None:
         async with AsyncSessionLocal() as db:
             await db.execute(text("SELECT 1"))
-    except Exception:
-        logger.exception("Health check database error")
-        components["database"] = {"status": "error"}
 
-    redis_client = None
-    try:
+    async def _check_redis() -> None:
         import redis.asyncio as redis
 
-        redis_client = redis.from_url(settings.CELERY_BROKER_URL)
-        await redis_client.ping()
-    except Exception:
-        logger.exception("Health check redis error")
-        components["redis"] = {"status": "error"}
-    finally:
-        if redis_client is not None:
-            await redis_client.aclose()
+        client = redis.from_url(settings.CELERY_BROKER_URL)
+        try:
+            await client.ping()
+        finally:
+            await client.aclose()
+
+    async def _check_qdrant() -> None:
+        # get_collections is the lightest healthy Qdrant REST call; sync client
+        # → wrap in to_thread so it does not block the event loop.
+        await asyncio.to_thread(
+            lambda: embedding_service.get_qdrant_client().get_collections()
+        )
+
+    async def _check_minio() -> None:
+        await asyncio.to_thread(storage_service.health_check)
+
+    probes = {
+        "database": _check_db(),
+        "redis": _check_redis(),
+        "qdrant": _check_qdrant(),
+        "minio": _check_minio(),
+    }
+    # Run probes concurrently with per-probe timeout so a single slow backend
+    # cannot push the whole deep-health response past its own timeout.
+    names = list(probes.keys())
+    results = await asyncio.gather(
+        *(asyncio.wait_for(coro, timeout=5.0) for coro in probes.values()),
+        return_exceptions=True,
+    )
+    for name, result in zip(names, results):
+        if isinstance(result, Exception):
+            logger.warning("Health check %s error: %s", name, result)
+            components[name] = {"status": "error"}
 
     overall = "ok" if all(comp["status"] == "ok" for comp in components.values()) else "degraded"
     return {"status": overall, "release": release, "components": components}

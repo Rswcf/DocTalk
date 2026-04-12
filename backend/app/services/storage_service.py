@@ -59,6 +59,14 @@ class StorageService:
     def bucket(self) -> str:
         return self._bucket
 
+    def health_check(self) -> bool:
+        """Probe MinIO liveness. Returns True if reachable; raises on error.
+
+        Used by the /health?deep=true endpoint. bucket_exists is the lightest
+        authenticated call and validates both connectivity and credentials.
+        """
+        return bool(self._client.bucket_exists(self._bucket))
+
     def ensure_bucket(self) -> None:
         """Create bucket if it does not exist. Sets default SSE-S3 encryption."""
         found = self._client.bucket_exists(self._bucket)
