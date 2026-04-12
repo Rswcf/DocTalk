@@ -4,6 +4,7 @@ from __future__ import annotations
 import logging
 import re
 from typing import Literal
+from urllib.parse import quote
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -27,6 +28,31 @@ router = APIRouter(tags=["export"])
 
 def _sanitize_filename(name: str) -> str:
     return re.sub(r"[^\w\s\-.]", "", name)[:100] or "export"
+
+
+def _content_disposition(filename: str) -> str:
+    """Build an RFC 6266 / RFC 5987 Content-Disposition value.
+
+    Defends against three failure modes that have all hit production:
+    - Non-ASCII (Chinese) title → latin-1 encode error on the raw header.
+    - CR/LF in title → header-injection vector.
+    - Double-quote / backslash in title → breaks the fallback quoted-string.
+
+    Both an ASCII fallback and a UTF-8 percent-encoded ``filename*`` are
+    emitted; modern browsers honor ``filename*``, legacy clients fall back.
+    """
+    # Strip CR/LF/TAB before anything else — header injection hardening.
+    clean = re.sub(r"[\r\n\t]", " ", filename)
+
+    # ASCII fallback: replace non-ASCII with '_'; also strip quoted-string
+    # specials (" and \) that would break the quoted form.
+    ascii_fallback = clean.encode("ascii", "replace").decode("ascii")
+    ascii_fallback = re.sub(r'[?"\\]', "_", ascii_fallback)
+    if not ascii_fallback.strip("_. "):
+        ascii_fallback = "export"
+
+    utf8_quoted = quote(clean, safe="")
+    return f"attachment; filename=\"{ascii_fallback}\"; filename*=UTF-8''{utf8_quoted}"
 
 
 @router.get("/api/sessions/{session_id}/export")
@@ -67,21 +93,21 @@ async def export_session(
             return StreamingResponse(
                 iter([content.encode("utf-8")]),
                 media_type="text/markdown; charset=utf-8",
-                headers={"Content-Disposition": f'attachment; filename="{safe_title}.md"'},
+                headers={"Content-Disposition": _content_disposition(f"{safe_title}.md")},
             )
         elif format == "docx":
             buf = render_docx(title, doc_name, messages)
             return StreamingResponse(
                 buf,
                 media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-                headers={"Content-Disposition": f'attachment; filename="{safe_title}.docx"'},
+                headers={"Content-Disposition": _content_disposition(f"{safe_title}.docx")},
             )
         elif format == "pdf":
             buf = render_pdf(title, doc_name, messages)
             return StreamingResponse(
                 buf,
                 media_type="application/pdf",
-                headers={"Content-Disposition": f'attachment; filename="{safe_title}.pdf"'},
+                headers={"Content-Disposition": _content_disposition(f"{safe_title}.pdf")},
             )
     except ValueError as e:
         # Expected user-facing validation (e.g., message count limit, post-

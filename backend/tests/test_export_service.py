@@ -165,3 +165,72 @@ def test_render_pdf_accepts_control_chars():
     )
     buf = render_pdf("Title\x00", "doc.pdf", [msg])
     assert buf.getvalue()[:5] == b"%PDF-"
+
+
+# --- Content-Disposition header encoding (root cause of 400 on Chinese titles) ---
+
+def test_content_disposition_ascii():
+    from app.api.export import _content_disposition
+    v = _content_disposition("export.pdf")
+    # latin-1 encodable → both params survive
+    assert 'filename="export.pdf"' in v
+    assert "filename*=UTF-8''export.pdf" in v
+    v.encode("latin-1")  # must not raise
+
+
+def test_content_disposition_chinese():
+    """Non-ASCII title was the real root cause: raw filename fails latin-1 encode."""
+    from app.api.export import _content_disposition
+    v = _content_disposition("中文会话.pdf")
+    # ASCII fallback replaces CJK with '_' or similar
+    assert 'filename="' in v
+    # RFC 5987 filename* carries percent-encoded UTF-8
+    assert "filename*=UTF-8''" in v
+    assert "%E4%B8%AD%E6%96%87" in v  # 中文
+    # Must be latin-1 encodable end-to-end (this is what failed before the fix)
+    v.encode("latin-1")
+
+
+def test_content_disposition_emoji_and_quotes():
+    """Quotes and emoji in user-supplied title should not break the header."""
+    from app.api.export import _content_disposition
+    v = _content_disposition('bad"title🎉.docx')
+    assert "filename*=UTF-8''" in v
+    v.encode("latin-1")
+
+
+def test_content_disposition_empty_after_strip():
+    from app.api.export import _content_disposition
+    v = _content_disposition("纯中文")
+    # Fallback becomes "export" when ASCII version is all underscores
+    assert 'filename="export"' in v or 'filename="_' in v
+    v.encode("latin-1")
+
+
+def test_content_disposition_crlf_stripped():
+    """Header injection hardening: CR/LF in title must not leak into header."""
+    from app.api.export import _content_disposition
+    v = _content_disposition("safe\r\nX-Evil: pwn.pdf")
+    assert "\r" not in v and "\n" not in v
+    # Even the percent-encoded UTF-8 form must not contain raw CR/LF
+    assert "%0D" not in v and "%0A" not in v  # CR/LF got stripped, not encoded
+    v.encode("latin-1")
+
+
+def test_content_disposition_quote_and_backslash():
+    """Quoted-string specials in fallback must be escaped/replaced."""
+    from app.api.export import _content_disposition
+    v = _content_disposition('bad"title\\.pdf')
+    # fallback quoted-string should not contain raw " or \
+    head = v.split(";")[1]  # ' filename="..."'
+    assert head.count('"') == 2  # opening + closing only
+    assert "\\" not in head
+    v.encode("latin-1")
+
+
+def test_content_disposition_very_long_name():
+    """Very long title should still produce valid header (upstream already caps at 100)."""
+    from app.api.export import _content_disposition
+    v = _content_disposition("a" * 500 + ".pdf")
+    v.encode("latin-1")
+    assert 'filename="' in v and "filename*=UTF-8''" in v
