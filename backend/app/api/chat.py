@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import hmac
 import json
 import uuid
 from typing import AsyncGenerator, Optional
@@ -18,6 +17,7 @@ from app.core.rate_limit import (
     demo_chat_limiter,
     demo_message_tracker,
     demo_session_create_limiter,
+    get_client_ip,
 )
 from app.core.security_log import log_security_event
 from app.models.tables import ChatSession, Collection, Document, Message, User
@@ -39,28 +39,6 @@ DEMO_MESSAGE_LIMIT = 5
 DEMO_MAX_SESSIONS_PER_DOC = 500
 
 chat_router = APIRouter(prefix="/api", tags=["chat"])
-
-
-def _get_client_ip(request: Request) -> str:
-    """Extract real client IP from trusted Vercel proxy.
-
-    The proxy sends X-Real-Client-IP (from Vercel's req.ip, not forgeable)
-    along with X-Proxy-IP-Secret (shared AUTH_SECRET) to prove authenticity.
-    Falls back to request.client.host for direct access (dev/testing).
-    """
-    proxied_ip = request.headers.get("x-real-client-ip")
-    proxy_secret = request.headers.get("x-proxy-ip-secret")
-    if (
-        proxied_ip
-        and proxy_secret
-        and settings.AUTH_SECRET
-        and hmac.compare_digest(proxy_secret, settings.AUTH_SECRET)
-    ):
-        return proxied_ip.strip()
-
-    # No trusted proxy header — use the direct connection IP.
-    # Do NOT trust X-Forwarded-For from untrusted sources (spoofable).
-    return request.client.host if request.client else "unknown"
 
 
 async def verify_session_access(
@@ -148,7 +126,7 @@ async def create_session(
     # Limit anonymous users on demo documents
     if user is None and doc.demo_slug:
         # M2: Per-IP rate limit on demo session creation
-        client_ip = _get_client_ip(request)
+        client_ip = get_client_ip(request)
         if not await demo_session_create_limiter.is_allowed(client_ip):
             raise HTTPException(
                 status_code=429,
@@ -181,7 +159,7 @@ async def create_session(
     # can display the correct remaining count across page refreshes and
     # across different demo documents (limit is global per IP).
     if user is None and doc.demo_slug:
-        client_ip = _get_client_ip(request)
+        client_ip = get_client_ip(request)
         used = await demo_message_tracker.get_count(client_ip)
         return JSONResponse(
             status_code=201,
@@ -240,7 +218,7 @@ async def chat_stream(
 
     # Rate limit anonymous users
     if user is None:
-        client_ip = _get_client_ip(request)
+        client_ip = get_client_ip(request)
         if not await demo_chat_limiter.is_allowed(client_ip):
             log_security_event("demo_rate_limit", ip=client_ip, session_id=session_id)
             raise HTTPException(
@@ -331,7 +309,7 @@ async def chat_continue(
 
     # Rate limit (same as chat_stream)
     if user is None:
-        client_ip = _get_client_ip(request)
+        client_ip = get_client_ip(request)
         if not await demo_chat_limiter.is_allowed(client_ip):
             log_security_event("demo_rate_limit", ip=client_ip, session_id=session_id)
             raise HTTPException(
@@ -349,7 +327,7 @@ async def chat_continue(
 
     # Demo message limit (continuations count against it)
     if user is None and session.document and session.document.demo_slug:
-        client_ip = _get_client_ip(request)
+        client_ip = get_client_ip(request)
         allowed, _count = await demo_message_tracker.check_and_increment(client_ip, DEMO_MESSAGE_LIMIT)
         if not allowed:
             log_security_event("demo_message_limit", ip=client_ip, document_id=session.document_id)
