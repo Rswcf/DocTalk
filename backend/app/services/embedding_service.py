@@ -59,7 +59,7 @@ class EmbeddingService:
                 if not vectors:
                     raise ValueError("Empty embedding response")
                 return vectors
-            except (ValueError, Exception) as exc:
+            except Exception as exc:
                 last_exc = exc
                 wait = 2 ** attempt  # 1s, 2s, 4s
                 logger.warning(
@@ -67,7 +67,10 @@ class EmbeddingService:
                     attempt + 1, _max_retries, len(texts), exc, wait,
                 )
                 time.sleep(wait)
-        raise last_exc  # type: ignore[misc]
+        # Explicit check (not assert) so behavior is identical under `python -O`.
+        if last_exc is not None:
+            raise last_exc
+        raise RuntimeError("embed_texts called with non-positive _max_retries")
 
     # ---------------- Qdrant -----------------
     @lru_cache(maxsize=1)
