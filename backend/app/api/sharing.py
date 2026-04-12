@@ -12,6 +12,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.chat import verify_session_access
 from app.core.config import settings
 from app.core.deps import get_db_session, require_auth
+from app.core.rate_limit import get_client_ip, shared_view_limiter
+from app.core.security_log import log_security_event
 from app.models.tables import ChatSession, Document, Message, SharedSession, User
 
 router = APIRouter(tags=["sharing"])
@@ -112,9 +114,16 @@ async def view_shared(
     request: Request,
     db: AsyncSession = Depends(get_db_session),
 ):
-    # Rate limit: 30 req/min per IP
-    # Note: Full rate limiting via RedisRateLimiter deferred until Redis is available in test env
-    # Production rate limiting handled by existing middleware patterns
+    # Rate limit anonymous public endpoint: 60 req/min per IP. Prevents
+    # share-token enumeration and traffic amplification on public URLs.
+    client_ip = get_client_ip(request)
+    if not await shared_view_limiter.is_allowed(client_ip):
+        log_security_event("shared_view_rate_limit", ip=client_ip)
+        raise HTTPException(
+            status_code=429,
+            detail={"message": "Too many requests", "retry_after": 60},
+            headers={"Retry-After": "60"},
+        )
 
     result = await db.execute(
         select(SharedSession).where(SharedSession.share_token == share_token)

@@ -2,19 +2,60 @@
 
 from __future__ import annotations
 
+import hmac
 import logging
 import time
 from collections import defaultdict
+from typing import TYPE_CHECKING
 
 import redis.asyncio as redis
 
 from app.core.config import settings
 from app.core.security_log import log_security_event
 
+if TYPE_CHECKING:
+    from fastapi import Request
+
 logger = logging.getLogger(__name__)
 
 _REDIS_RETRY_SECONDS = 30
 _DEMO_COUNTER_TTL_SECONDS = 24 * 60 * 60
+_SENTRY_ALERT_INTERVAL_SECONDS = 600  # 10 min between Sentry events per namespace
+
+# Per-namespace throttle for Sentry capture. Log every fallback, but only
+# forward to Sentry once every _SENTRY_ALERT_INTERVAL_SECONDS so a prolonged
+# outage doesn't burn through Sentry's monthly quota (4 namespaces × 30s
+# reconnect cadence would otherwise = ~11k events/day).
+_last_sentry_alert_at: dict[str, float] = {}
+
+
+def _alert_redis_fallback(namespace: str, exc: Exception) -> None:
+    """Log Redis fallback at error level and send to Sentry if configured.
+
+    Log volume: one per failed reconnect (~2/min/namespace worst case).
+    Sentry volume: one per namespace per _SENTRY_ALERT_INTERVAL_SECONDS.
+    In-memory fallback means counts reset on restart and do NOT share state
+    across replicas — this is a real correctness alert, not a noisy warning.
+    """
+    logger.error(
+        "Redis unavailable for %s; using in-memory fallback (counts will not persist): %s",
+        namespace, exc,
+    )
+    if not settings.SENTRY_DSN:
+        return
+    now = time.time()
+    last = _last_sentry_alert_at.get(namespace, 0.0)
+    if now - last < _SENTRY_ALERT_INTERVAL_SECONDS:
+        return
+    _last_sentry_alert_at[namespace] = now
+    try:
+        import sentry_sdk
+        with sentry_sdk.push_scope() as scope:
+            scope.set_tag("redis_namespace", namespace)
+            scope.set_tag("degraded", "redis_fallback")
+            sentry_sdk.capture_exception(exc)
+    except Exception:
+        pass
 
 
 class InMemoryRateLimiter:
@@ -75,7 +116,7 @@ class _RedisClientMixin:
             await self._redis_client.ping()
             return self._redis_client
         except Exception as e:
-            logger.warning("Redis unavailable for %s; using in-memory fallback: %s", self._namespace, e)
+            _alert_redis_fallback(self._namespace, e)
             self._next_retry_at = now + _REDIS_RETRY_SECONDS
             if self._redis_client is not None:
                 try:
@@ -86,7 +127,7 @@ class _RedisClientMixin:
             return None
 
     async def _reset_client(self, error: Exception) -> None:
-        logger.warning("Redis error for %s; using in-memory fallback: %s", self._namespace, error)
+        _alert_redis_fallback(self._namespace, error)
         self._next_retry_at = time.time() + _REDIS_RETRY_SECONDS
         if self._redis_client is not None:
             try:
@@ -197,3 +238,33 @@ demo_message_tracker = RedisDemoTracker(namespace="rate_limit:demo_messages")
 demo_session_create_limiter = RedisRateLimiter(
     namespace="rate_limit:demo_session_create", max_requests=5, window_seconds=300
 )
+# Public shared-view endpoint — anonymous, unauthenticated. Limit per IP to prevent
+# token enumeration and traffic amplification. 60/min is generous for legitimate
+# users refreshing but blocks brute-force UUID scanning.
+shared_view_limiter = RedisRateLimiter(
+    namespace="rate_limit:shared_view", max_requests=60, window_seconds=60
+)
+# Anonymous read endpoints for demo documents (search, chunk detail). Gated
+# behind can_access_document so logged-in traffic bypasses this limiter.
+anon_read_limiter = RedisRateLimiter(
+    namespace="rate_limit:anon_read", max_requests=120, window_seconds=60
+)
+
+
+def get_client_ip(request: "Request") -> str:
+    """Extract real client IP from trusted Vercel proxy.
+
+    The proxy sends X-Real-Client-IP along with X-Proxy-IP-Secret (shared
+    AUTH_SECRET) to prove authenticity. Falls back to request.client.host for
+    direct access (dev/testing). Never trust raw X-Forwarded-For.
+    """
+    proxied_ip = request.headers.get("x-real-client-ip")
+    proxy_secret = request.headers.get("x-proxy-ip-secret")
+    if (
+        proxied_ip
+        and proxy_secret
+        and settings.AUTH_SECRET
+        and hmac.compare_digest(proxy_secret, settings.AUTH_SECRET)
+    ):
+        return proxied_ip.strip()
+    return request.client.host if request.client else "unknown"
