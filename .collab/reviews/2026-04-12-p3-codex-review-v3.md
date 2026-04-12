@@ -1,0 +1,1 @@
+已核对 `.collab/plans/p3-csp-nonce-plan.md` 第66/73/87行。73、87与实现一致；`JsonLdScript.tsx` 为 pure（仅接收 `data` + 可选 `nonce`，不调用 `headers()`）。仍有两处不一致：66行未写“跨41文件”；51行称“本PR实际动作=加 Report-Only”，与67行及 `frontend/next.config.mjs`（当前未加）冲突。结论：需修改。

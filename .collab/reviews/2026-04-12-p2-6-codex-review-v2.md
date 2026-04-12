@@ -1,0 +1,1 @@
+结论：P2-6 v2 通过。`git diff docker-compose.yml` 已确认两点：① `qdrant/qdrant:latest`→`qdrant/qdrant:v1.14.1`；② 注释已写明“Prod 用 Railway managed Qdrant，docker-compose 仅 dev”。联网核验：Docker Hub 的 `qdrant/qdrant:v1.14.1` layers 页面可见（sha256-a9dc…、sha256-d758…），tag 存在且可拉取。故无需 1.13/1.14/1.15 备选。
