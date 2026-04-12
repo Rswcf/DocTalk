@@ -27,12 +27,14 @@ export interface LocaleContextValue {
   locale: Locale;
   setLocale: (l: Locale) => void;
   t: (key: string, params?: Record<string, string | number>) => string;
+  tOr: (key: string, fallback: string, params?: Record<string, string | number>) => string;
 }
 
 export const LocaleContext = createContext<LocaleContextValue>({
   locale: 'en',
   setLocale: () => {},
   t: (key) => key,
+  tOr: (_key, fallback) => fallback,
 });
 
 export function useLocale() {

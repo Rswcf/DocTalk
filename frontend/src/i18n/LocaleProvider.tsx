@@ -4,6 +4,23 @@ import { LocaleContext, Locale, LOCALES } from './index';
 
 import en from './locales/en.json';
 
+function applyParams(str: string, params?: Record<string, string | number>): string {
+  if (!params) return str;
+  let out = str;
+  Object.entries(params).forEach(([k, v]) => {
+    out = out.replace(`{${k}}`, String(v));
+  });
+  return out;
+}
+
+const warnedKeys = new Set<string>();
+function warnMissing(key: string, suffix = '') {
+  if (process.env.NODE_ENV !== 'development') return;
+  if (warnedKeys.has(key)) return;
+  warnedKeys.add(key);
+  console.warn(`[i18n] Missing translation key${suffix}:`, key);
+}
+
 const localeLoaders: Record<string, () => Promise<{ default: Record<string, string> }>> = {
   zh: () => import('./locales/zh.json'),
   es: () => import('./locales/es.json'),
@@ -70,27 +87,33 @@ export default function LocaleProvider({ children }: { children: React.ReactNode
     };
   }, [locale, loadedTranslations]);
 
-  const t = useCallback(
-    (key: string, params?: Record<string, string | number>): string => {
+  const resolve = useCallback(
+    (key: string): string | undefined => {
       const activeTranslations = loadedTranslations[locale] || loadedTranslations.en;
-      const translated = activeTranslations?.[key] ?? loadedTranslations.en?.[key];
-      let str = translated ?? key;
-
-      if (translated == null && process.env.NODE_ENV === 'development') {
-        console.warn('[i18n] Missing translation key:', key);
-      }
-
-      if (params) {
-        Object.entries(params).forEach(([k, v]) => {
-          str = str.replace(`{${k}}`, String(v));
-        });
-      }
-      return str;
+      return activeTranslations?.[key] ?? loadedTranslations.en?.[key];
     },
     [locale, loadedTranslations]
   );
 
-  const value = useMemo(() => ({ locale, setLocale, t }), [locale, setLocale, t]);
+  const t = useCallback(
+    (key: string, params?: Record<string, string | number>): string => {
+      const translated = resolve(key);
+      if (translated == null) warnMissing(key);
+      return applyParams(translated ?? key, params);
+    },
+    [resolve]
+  );
+
+  const tOr = useCallback(
+    (key: string, fallback: string, params?: Record<string, string | number>): string => {
+      const translated = resolve(key);
+      if (translated == null) warnMissing(key, ' (using fallback)');
+      return applyParams(translated ?? fallback, params);
+    },
+    [resolve]
+  );
+
+  const value = useMemo(() => ({ locale, setLocale, t, tOr }), [locale, setLocale, t, tOr]);
 
   return <LocaleContext.Provider value={value}>{children}</LocaleContext.Provider>;
 }
