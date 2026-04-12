@@ -62,3 +62,13 @@ minio-data/
 .collab/cx-output-*.md
 .collab/tasks/*-output.md
 
+# Local agent tool state (not portable)
+.agents/
+.codex/
+
+# Next.js incremental build cache
+frontend/tsconfig.tsbuildinfo
+
+# Personal IDE permission tweaks (keep repo defaults clean)
+.claude/settings.local.json
+
