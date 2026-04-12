@@ -1,0 +1,597 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DocTalk Logo — Talk Flow</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@400;500;600;700&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Inter', sans-serif;
+    background: #fafafa;
+    color: #18181b;
+    padding: 48px 24px;
+  }
+
+  h1 {
+    font-family: 'Instrument Serif', serif;
+    font-size: 40px;
+    text-align: center;
+    margin-bottom: 6px;
+    color: #09090b;
+  }
+
+  .subtitle {
+    text-align: center;
+    color: #71717a;
+    font-size: 14px;
+    margin-bottom: 56px;
+  }
+
+  .section {
+    max-width: 900px;
+    margin: 0 auto 64px;
+  }
+
+  .section-title {
+    font-family: 'Instrument Serif', serif;
+    font-size: 24px;
+    color: #09090b;
+    margin-bottom: 24px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid #e4e4e7;
+  }
+
+  /* Hero showcase */
+  .hero-showcase {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0;
+    border-radius: 20px;
+    overflow: hidden;
+    margin-bottom: 64px;
+    max-width: 900px;
+    margin-left: auto;
+    margin-right: auto;
+    box-shadow: 0 4px 24px rgba(0,0,0,0.08);
+  }
+
+  .hero-light, .hero-dark {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 56px 40px;
+    gap: 28px;
+  }
+
+  .hero-light {
+    background: #ffffff;
+  }
+
+  .hero-dark {
+    background: #09090b;
+  }
+
+  .hero-label {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    font-weight: 500;
+  }
+
+  .hero-light .hero-label { color: #a1a1aa; }
+  .hero-dark .hero-label { color: #52525b; }
+
+  /* Combination marks */
+  .combo-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .combo-text-light {
+    font-family: 'Instrument Serif', serif;
+    font-size: 30px;
+    color: #09090b;
+  }
+
+  .combo-text-dark {
+    font-family: 'Instrument Serif', serif;
+    font-size: 30px;
+    color: #fafafa;
+  }
+
+  /* Scale tests */
+  .scale-grid {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 24px;
+  }
+
+  .scale-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    padding: 24px 12px;
+    background: #fff;
+    border: 1px solid #e4e4e7;
+    border-radius: 12px;
+  }
+
+  .scale-item .size-label {
+    font-size: 11px;
+    color: #a1a1aa;
+    font-weight: 500;
+  }
+
+  .scale-item .px-label {
+    font-size: 10px;
+    color: #d4d4d8;
+  }
+
+  /* Variants */
+  .variants-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 24px;
+  }
+
+  .variant-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+    padding: 32px 24px;
+    border-radius: 16px;
+  }
+
+  .variant-card.on-white {
+    background: #ffffff;
+    border: 1px solid #e4e4e7;
+  }
+
+  .variant-card.on-dark {
+    background: #18181b;
+  }
+
+  .variant-card.on-indigo {
+    background: #4f46e5;
+  }
+
+  .variant-card .label {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    font-weight: 500;
+  }
+
+  .variant-card.on-white .label { color: #a1a1aa; }
+  .variant-card.on-dark .label { color: #52525b; }
+  .variant-card.on-indigo .label { color: rgba(255,255,255,0.6); }
+
+  /* Usage demos */
+  .usage-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+  }
+
+  .usage-card {
+    border-radius: 16px;
+    overflow: hidden;
+  }
+
+  .mock-header {
+    height: 56px;
+    display: flex;
+    align-items: center;
+    padding: 0 20px;
+    gap: 10px;
+    border-bottom: 1px solid;
+  }
+
+  .mock-header.light {
+    background: #fff;
+    border-color: #e4e4e7;
+  }
+
+  .mock-header.dark {
+    background: #09090b;
+    border-color: #27272a;
+  }
+
+  .mock-header .brand-text {
+    font-family: 'Inter', sans-serif;
+    font-size: 16px;
+    font-weight: 600;
+  }
+
+  .mock-header.light .brand-text { color: #09090b; }
+  .mock-header.dark .brand-text { color: #fafafa; }
+
+  .mock-header .separator {
+    font-size: 14px;
+  }
+
+  .mock-header.light .separator { color: #d4d4d8; }
+  .mock-header.dark .separator { color: #3f3f46; }
+
+  .mock-header .doc-name {
+    font-size: 13px;
+  }
+
+  .mock-header.light .doc-name { color: #71717a; }
+  .mock-header.dark .doc-name { color: #a1a1aa; }
+
+  .mock-header .spacer { flex: 1; }
+
+  .mock-pill {
+    padding: 4px 10px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 500;
+  }
+
+  .mock-header.light .mock-pill {
+    background: #f4f4f5;
+    color: #71717a;
+  }
+
+  .mock-header.dark .mock-pill {
+    background: #27272a;
+    color: #a1a1aa;
+  }
+
+  .mock-body {
+    height: 120px;
+  }
+
+  .mock-body.light { background: #fafafa; }
+  .mock-body.dark { background: #18181b; }
+
+  .usage-label {
+    text-align: center;
+    font-size: 12px;
+    color: #a1a1aa;
+    margin-top: 8px;
+  }
+
+  /* Clearspace */
+  .clearspace-demo {
+    display: flex;
+    justify-content: center;
+    padding: 48px;
+    background: #fff;
+    border: 1px solid #e4e4e7;
+    border-radius: 16px;
+  }
+
+  .clearspace-box {
+    position: relative;
+    padding: 40px;
+    border: 1px dashed #c7d2fe;
+  }
+
+  .clearspace-label {
+    position: absolute;
+    font-size: 10px;
+    color: #818cf8;
+    font-weight: 500;
+  }
+
+  /* Colors */
+  .color-row {
+    display: flex;
+    gap: 16px;
+    margin-bottom: 16px;
+  }
+
+  .color-swatch {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 16px;
+    background: #fff;
+    border: 1px solid #e4e4e7;
+    border-radius: 10px;
+    flex: 1;
+  }
+
+  .swatch-circle {
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    flex-shrink: 0;
+  }
+
+  .swatch-info {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .swatch-name {
+    font-size: 13px;
+    font-weight: 500;
+    color: #09090b;
+  }
+
+  .swatch-hex {
+    font-size: 11px;
+    color: #71717a;
+    font-family: 'SF Mono', 'Fira Code', monospace;
+  }
+</style>
+</head>
+<body>
+
+<h1>DocTalk — Talk Flow</h1>
+<p class="subtitle">Brand Mark Design System &mdash; Concept C Refined</p>
+
+<!-- ===================== HERO SHOWCASE ===================== -->
+<div class="hero-showcase">
+  <div class="hero-light">
+    <span class="hero-label">Light Mode</span>
+    <!-- Icon only -->
+    <svg width="72" height="72" viewBox="0 0 36 36" fill="none">
+      <path d="M5 2H21Q24 2 24 5V16Q24 19 21 19H10L5 25V19Q2 19 2 16V5Q2 2 5 2Z" fill="#c7d2fe"/>
+      <path d="M15 13H31Q34 13 34 16V26Q34 29 31 29H22L27 35L19 29H15Q12 29 12 26V16Q12 13 15 13Z" fill="#4f46e5"/>
+    </svg>
+    <!-- Combination mark -->
+    <div class="combo-row">
+      <svg width="36" height="36" viewBox="0 0 36 36" fill="none">
+        <path d="M5 2H21Q24 2 24 5V16Q24 19 21 19H10L5 25V19Q2 19 2 16V5Q2 2 5 2Z" fill="#c7d2fe"/>
+        <path d="M15 13H31Q34 13 34 16V26Q34 29 31 29H22L27 35L19 29H15Q12 29 12 26V16Q12 13 15 13Z" fill="#4f46e5"/>
+      </svg>
+      <span class="combo-text-light">DocTalk</span>
+    </div>
+  </div>
+  <div class="hero-dark">
+    <span class="hero-label">Dark Mode</span>
+    <!-- Icon only -->
+    <svg width="72" height="72" viewBox="0 0 36 36" fill="none">
+      <path d="M5 2H21Q24 2 24 5V16Q24 19 21 19H10L5 25V19Q2 19 2 16V5Q2 2 5 2Z" fill="rgba(129,140,248,0.25)"/>
+      <path d="M15 13H31Q34 13 34 16V26Q34 29 31 29H22L27 35L19 29H15Q12 29 12 26V16Q12 13 15 13Z" fill="#818cf8"/>
+    </svg>
+    <!-- Combination mark -->
+    <div class="combo-row">
+      <svg width="36" height="36" viewBox="0 0 36 36" fill="none">
+        <path d="M5 2H21Q24 2 24 5V16Q24 19 21 19H10L5 25V19Q2 19 2 16V5Q2 2 5 2Z" fill="rgba(129,140,248,0.25)"/>
+        <path d="M15 13H31Q34 13 34 16V26Q34 29 31 29H22L27 35L19 29H15Q12 29 12 26V16Q12 13 15 13Z" fill="#818cf8"/>
+      </svg>
+      <span class="combo-text-dark">DocTalk</span>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== SCALE TESTS ===================== -->
+<div class="section">
+  <h2 class="section-title">Scale Tests</h2>
+  <div class="scale-grid">
+    <div class="scale-item">
+      <svg width="64" height="64" viewBox="0 0 36 36" fill="none">
+        <path d="M5 2H21Q24 2 24 5V16Q24 19 21 19H10L5 25V19Q2 19 2 16V5Q2 2 5 2Z" fill="#c7d2fe"/>
+        <path d="M15 13H31Q34 13 34 16V26Q34 29 31 29H22L27 35L19 29H15Q12 29 12 26V16Q12 13 15 13Z" fill="#4f46e5"/>
+      </svg>
+      <span class="size-label">Large</span>
+      <span class="px-label">64px</span>
+    </div>
+    <div class="scale-item">
+      <svg width="48" height="48" viewBox="0 0 36 36" fill="none">
+        <path d="M5 2H21Q24 2 24 5V16Q24 19 21 19H10L5 25V19Q2 19 2 16V5Q2 2 5 2Z" fill="#c7d2fe"/>
+        <path d="M15 13H31Q34 13 34 16V26Q34 29 31 29H22L27 35L19 29H15Q12 29 12 26V16Q12 13 15 13Z" fill="#4f46e5"/>
+      </svg>
+      <span class="size-label">Medium</span>
+      <span class="px-label">48px</span>
+    </div>
+    <div class="scale-item">
+      <svg width="32" height="32" viewBox="0 0 36 36" fill="none">
+        <path d="M5 2H21Q24 2 24 5V16Q24 19 21 19H10L5 25V19Q2 19 2 16V5Q2 2 5 2Z" fill="#c7d2fe"/>
+        <path d="M15 13H31Q34 13 34 16V26Q34 29 31 29H22L27 35L19 29H15Q12 29 12 26V16Q12 13 15 13Z" fill="#4f46e5"/>
+      </svg>
+      <span class="size-label">Header</span>
+      <span class="px-label">32px</span>
+    </div>
+    <div class="scale-item">
+      <svg width="24" height="24" viewBox="0 0 36 36" fill="none">
+        <path d="M5 2H21Q24 2 24 5V16Q24 19 21 19H10L5 25V19Q2 19 2 16V5Q2 2 5 2Z" fill="#c7d2fe"/>
+        <path d="M15 13H31Q34 13 34 16V26Q34 29 31 29H22L27 35L19 29H15Q12 29 12 26V16Q12 13 15 13Z" fill="#4f46e5"/>
+      </svg>
+      <span class="size-label">Nav</span>
+      <span class="px-label">24px</span>
+    </div>
+    <div class="scale-item">
+      <svg width="16" height="16" viewBox="0 0 36 36" fill="none">
+        <path d="M5 2H21Q24 2 24 5V16Q24 19 21 19H10L5 25V19Q2 19 2 16V5Q2 2 5 2Z" fill="#c7d2fe"/>
+        <path d="M15 13H31Q34 13 34 16V26Q34 29 31 29H22L27 35L19 29H15Q12 29 12 26V16Q12 13 15 13Z" fill="#4f46e5"/>
+      </svg>
+      <span class="size-label">Favicon</span>
+      <span class="px-label">16px</span>
+    </div>
+    <div class="scale-item" style="background:#18181b; border-color:#27272a;">
+      <svg width="16" height="16" viewBox="0 0 36 36" fill="none">
+        <path d="M5 2H21Q24 2 24 5V16Q24 19 21 19H10L5 25V19Q2 19 2 16V5Q2 2 5 2Z" fill="rgba(129,140,248,0.25)"/>
+        <path d="M15 13H31Q34 13 34 16V26Q34 29 31 29H22L27 35L19 29H15Q12 29 12 26V16Q12 13 15 13Z" fill="#818cf8"/>
+      </svg>
+      <span class="size-label" style="color:#52525b;">Fav Dark</span>
+      <span class="px-label" style="color:#3f3f46;">16px</span>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== BACKGROUND VARIANTS ===================== -->
+<div class="section">
+  <h2 class="section-title">Background Variants</h2>
+  <div class="variants-grid">
+    <div class="variant-card on-white">
+      <svg width="56" height="56" viewBox="0 0 36 36" fill="none">
+        <path d="M5 2H21Q24 2 24 5V16Q24 19 21 19H10L5 25V19Q2 19 2 16V5Q2 2 5 2Z" fill="#c7d2fe"/>
+        <path d="M15 13H31Q34 13 34 16V26Q34 29 31 29H22L27 35L19 29H15Q12 29 12 26V16Q12 13 15 13Z" fill="#4f46e5"/>
+      </svg>
+      <span class="label">On White</span>
+    </div>
+    <div class="variant-card on-dark">
+      <svg width="56" height="56" viewBox="0 0 36 36" fill="none">
+        <path d="M5 2H21Q24 2 24 5V16Q24 19 21 19H10L5 25V19Q2 19 2 16V5Q2 2 5 2Z" fill="rgba(129,140,248,0.25)"/>
+        <path d="M15 13H31Q34 13 34 16V26Q34 29 31 29H22L27 35L19 29H15Q12 29 12 26V16Q12 13 15 13Z" fill="#818cf8"/>
+      </svg>
+      <span class="label">On Dark</span>
+    </div>
+    <div class="variant-card on-indigo">
+      <svg width="56" height="56" viewBox="0 0 36 36" fill="none">
+        <path d="M5 2H21Q24 2 24 5V16Q24 19 21 19H10L5 25V19Q2 19 2 16V5Q2 2 5 2Z" fill="rgba(255,255,255,0.25)"/>
+        <path d="M15 13H31Q34 13 34 16V26Q34 29 31 29H22L27 35L19 29H15Q12 29 12 26V16Q12 13 15 13Z" fill="#ffffff"/>
+      </svg>
+      <span class="label">On Brand</span>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== IN-CONTEXT USAGE ===================== -->
+<div class="section">
+  <h2 class="section-title">In-Context Usage</h2>
+  <div class="usage-grid">
+    <div>
+      <div class="usage-card">
+        <div class="mock-header light">
+          <svg width="22" height="22" viewBox="0 0 36 36" fill="none">
+            <path d="M5 2H21Q24 2 24 5V16Q24 19 21 19H10L5 25V19Q2 19 2 16V5Q2 2 5 2Z" fill="#c7d2fe"/>
+            <path d="M15 13H31Q34 13 34 16V26Q34 29 31 29H22L27 35L19 29H15Q12 29 12 26V16Q12 13 15 13Z" fill="#4f46e5"/>
+          </svg>
+          <span class="brand-text">DocTalk</span>
+          <span class="separator">/</span>
+          <span class="doc-name">Q4 Earnings Report.pdf</span>
+          <span class="spacer"></span>
+          <span class="mock-pill">Balanced</span>
+        </div>
+        <div class="mock-body light"></div>
+      </div>
+      <p class="usage-label">Light mode header</p>
+    </div>
+    <div>
+      <div class="usage-card">
+        <div class="mock-header dark">
+          <svg width="22" height="22" viewBox="0 0 36 36" fill="none">
+            <path d="M5 2H21Q24 2 24 5V16Q24 19 21 19H10L5 25V19Q2 19 2 16V5Q2 2 5 2Z" fill="rgba(129,140,248,0.25)"/>
+            <path d="M15 13H31Q34 13 34 16V26Q34 29 31 29H22L27 35L19 29H15Q12 29 12 26V16Q12 13 15 13Z" fill="#818cf8"/>
+          </svg>
+          <span class="brand-text">DocTalk</span>
+          <span class="separator">/</span>
+          <span class="doc-name">Q4 Earnings Report.pdf</span>
+          <span class="spacer"></span>
+          <span class="mock-pill">Balanced</span>
+        </div>
+        <div class="mock-body dark"></div>
+      </div>
+      <p class="usage-label">Dark mode header</p>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== COLOR SPECS ===================== -->
+<div class="section">
+  <h2 class="section-title">Color Specifications</h2>
+  <div class="color-row">
+    <div class="color-swatch">
+      <div class="swatch-circle" style="background: #4f46e5;"></div>
+      <div class="swatch-info">
+        <span class="swatch-name">Primary (Front Bubble)</span>
+        <span class="swatch-hex">#4f46e5 — Indigo 600</span>
+      </div>
+    </div>
+    <div class="color-swatch">
+      <div class="swatch-circle" style="background: #c7d2fe;"></div>
+      <div class="swatch-info">
+        <span class="swatch-name">Secondary (Back Bubble)</span>
+        <span class="swatch-hex">#c7d2fe — Indigo 200</span>
+      </div>
+    </div>
+  </div>
+  <div class="color-row">
+    <div class="color-swatch">
+      <div class="swatch-circle" style="background: #818cf8;"></div>
+      <div class="swatch-info">
+        <span class="swatch-name">Dark Mode (Front)</span>
+        <span class="swatch-hex">#818cf8 — Indigo 400</span>
+      </div>
+    </div>
+    <div class="color-swatch">
+      <div class="swatch-circle" style="background: rgba(129,140,248,0.25); border: 1px solid #e4e4e7;"></div>
+      <div class="swatch-info">
+        <span class="swatch-name">Dark Mode (Back)</span>
+        <span class="swatch-hex">rgba(129,140,248,0.25)</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== CLEARSPACE ===================== -->
+<div class="section">
+  <h2 class="section-title">Minimum Clearspace</h2>
+  <div class="clearspace-demo">
+    <div class="clearspace-box">
+      <span class="clearspace-label" style="top: -18px; left: 50%; transform: translateX(-50%);">1x</span>
+      <span class="clearspace-label" style="left: -20px; top: 50%; transform: translateY(-50%) rotate(-90deg);">1x</span>
+      <span class="clearspace-label" style="right: -20px; top: 50%; transform: translateY(-50%) rotate(90deg);">1x</span>
+      <span class="clearspace-label" style="bottom: -18px; left: 50%; transform: translateX(-50%);">1x</span>
+      <svg width="64" height="64" viewBox="0 0 36 36" fill="none">
+        <path d="M5 2H21Q24 2 24 5V16Q24 19 21 19H10L5 25V19Q2 19 2 16V5Q2 2 5 2Z" fill="#c7d2fe"/>
+        <path d="M15 13H31Q34 13 34 16V26Q34 29 31 29H22L27 35L19 29H15Q12 29 12 26V16Q12 13 15 13Z" fill="#4f46e5"/>
+      </svg>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== FILE INVENTORY ===================== -->
+<div class="section">
+  <h2 class="section-title">Asset Files</h2>
+  <table style="width:100%; font-size:13px; border-collapse:collapse;">
+    <thead>
+      <tr style="text-align:left; border-bottom:1px solid #e4e4e7;">
+        <th style="padding:8px 12px; color:#71717a; font-weight:500;">File</th>
+        <th style="padding:8px 12px; color:#71717a; font-weight:500;">Purpose</th>
+        <th style="padding:8px 12px; color:#71717a; font-weight:500;">Size</th>
+      </tr>
+    </thead>
+    <tbody style="color:#3f3f46;">
+      <tr style="border-bottom:1px solid #f4f4f5;">
+        <td style="padding:8px 12px; font-family:monospace; font-size:12px;">src/components/DocTalkLogo.tsx</td>
+        <td style="padding:8px 12px;">React component (dark mode via Tailwind)</td>
+        <td style="padding:8px 12px;">Dynamic</td>
+      </tr>
+      <tr style="border-bottom:1px solid #f4f4f5;">
+        <td style="padding:8px 12px; font-family:monospace; font-size:12px;">src/app/icon.svg</td>
+        <td style="padding:8px 12px;">Favicon (auto-detected by Next.js)</td>
+        <td style="padding:8px 12px;">32x32</td>
+      </tr>
+      <tr style="border-bottom:1px solid #f4f4f5;">
+        <td style="padding:8px 12px; font-family:monospace; font-size:12px;">src/app/apple-icon.svg</td>
+        <td style="padding:8px 12px;">Apple touch icon</td>
+        <td style="padding:8px 12px;">180x180</td>
+      </tr>
+      <tr style="border-bottom:1px solid #f4f4f5;">
+        <td style="padding:8px 12px; font-family:monospace; font-size:12px;">public/logo-icon.svg</td>
+        <td style="padding:8px 12px;">Standalone mark (social, docs)</td>
+        <td style="padding:8px 12px;">512x512</td>
+      </tr>
+      <tr style="border-bottom:1px solid #f4f4f5;">
+        <td style="padding:8px 12px; font-family:monospace; font-size:12px;">public/logo-full-light.svg</td>
+        <td style="padding:8px 12px;">Combination mark — light backgrounds</td>
+        <td style="padding:8px 12px;">200x48</td>
+      </tr>
+      <tr>
+        <td style="padding:8px 12px; font-family:monospace; font-size:12px;">public/logo-full-dark.svg</td>
+        <td style="padding:8px 12px;">Combination mark — dark backgrounds</td>
+        <td style="padding:8px 12px;">200x48</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+</body>
+</html>

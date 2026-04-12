@@ -1,0 +1,1 @@
+未发现阻断问题，APPROVED。1) 集合页现对全用户隐藏，逻辑成立。2) `default=true`可兼容现状，但有未来漏传风险；建议后续改必填、文档页显式`true`。3) 运行时调用点仅2处（文档页/集合页）。4) `supportsCustomInstructions`可读，备选`showCustomInstructionsEntry`。

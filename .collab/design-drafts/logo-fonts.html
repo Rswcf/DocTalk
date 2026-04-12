@@ -1,0 +1,782 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DocTalk — Wordmark Font Options</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@400;500;600;700&family=DM+Serif+Display&family=Playfair+Display:wght@400;500;600;700&family=Libre+Baskerville:wght@400;700&family=Lora:wght@400;500;600;700&family=Source+Serif+4:wght@400;500;600;700&family=Fraunces:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Outfit:wght@400;500;600;700&family=Sora:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&family=General+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&family=Bricolage+Grotesque:wght@400;500;600;700;800&family=Onest:wght@400;500;600;700&family=Geist:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Inter', sans-serif;
+    background: #fafafa;
+    color: #18181b;
+    padding: 48px 24px 80px;
+  }
+
+  h1 {
+    font-family: 'Instrument Serif', serif;
+    font-size: 36px;
+    text-align: center;
+    margin-bottom: 6px;
+    color: #09090b;
+  }
+
+  .subtitle {
+    text-align: center;
+    color: #71717a;
+    font-size: 14px;
+    margin-bottom: 48px;
+  }
+
+  .category-title {
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: #a1a1aa;
+    margin: 48px auto 20px;
+    max-width: 960px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid #e4e4e7;
+  }
+
+  .font-grid {
+    max-width: 960px;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .font-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+
+  .font-card {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 20px 24px;
+    border-radius: 14px;
+    border: 1px solid #e4e4e7;
+    transition: box-shadow 0.15s;
+  }
+
+  .font-card:hover {
+    box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+  }
+
+  .font-card.light-bg {
+    background: #ffffff;
+  }
+
+  .font-card.dark-bg {
+    background: #09090b;
+    border-color: #27272a;
+  }
+
+  .font-card.current {
+    border-color: #4f46e5;
+    box-shadow: 0 0 0 1px #4f46e5;
+  }
+
+  .combo {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex: 1;
+  }
+
+  .wordmark {
+    font-size: 24px;
+    white-space: nowrap;
+  }
+
+  .light-bg .wordmark { color: #09090b; }
+  .dark-bg .wordmark { color: #fafafa; }
+
+  .meta {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 2px;
+    min-width: 140px;
+  }
+
+  .font-name {
+    font-size: 11px;
+    font-weight: 500;
+    color: #71717a;
+  }
+
+  .dark-bg .font-name { color: #52525b; }
+
+  .font-weight-label {
+    font-size: 10px;
+    color: #a1a1aa;
+  }
+
+  .dark-bg .font-weight-label { color: #3f3f46; }
+
+  .tag {
+    display: inline-block;
+    font-size: 9px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    padding: 2px 6px;
+    border-radius: 4px;
+    margin-top: 2px;
+  }
+
+  .tag.current-tag {
+    background: #eef2ff;
+    color: #4f46e5;
+  }
+
+  .dark-bg .tag.current-tag {
+    background: rgba(129,140,248,0.15);
+    color: #818cf8;
+  }
+
+  /* Header mockup section */
+  .mockup-section {
+    max-width: 960px;
+    margin: 64px auto 0;
+  }
+
+  .mockup-title {
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: #a1a1aa;
+    margin-bottom: 20px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid #e4e4e7;
+  }
+
+  .mockup-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+  }
+
+  .mock-card {
+    border-radius: 14px;
+    overflow: hidden;
+    border: 1px solid #e4e4e7;
+  }
+
+  .mock-header {
+    height: 52px;
+    display: flex;
+    align-items: center;
+    padding: 0 16px;
+    gap: 8px;
+    border-bottom: 1px solid;
+  }
+
+  .mock-header.light {
+    background: #fff;
+    border-color: #e4e4e7;
+  }
+
+  .mock-header.dark {
+    background: #09090b;
+    border-color: #27272a;
+  }
+
+  .mock-brand {
+    font-size: 15px;
+    font-weight: 600;
+  }
+
+  .mock-header.light .mock-brand { color: #09090b; }
+  .mock-header.dark .mock-brand { color: #fafafa; }
+
+  .mock-sep {
+    font-size: 13px;
+  }
+
+  .mock-header.light .mock-sep { color: #d4d4d8; }
+  .mock-header.dark .mock-sep { color: #3f3f46; }
+
+  .mock-doc {
+    font-family: 'Inter', sans-serif;
+    font-size: 12px;
+  }
+
+  .mock-header.light .mock-doc { color: #71717a; }
+  .mock-header.dark .mock-doc { color: #a1a1aa; }
+
+  .mock-spacer { flex: 1; }
+
+  .mock-pill {
+    padding: 3px 8px;
+    border-radius: 999px;
+    font-size: 10px;
+    font-weight: 500;
+    font-family: 'Inter', sans-serif;
+  }
+
+  .mock-header.light .mock-pill { background: #f4f4f5; color: #71717a; }
+  .mock-header.dark .mock-pill { background: #27272a; color: #a1a1aa; }
+
+  .mock-body {
+    height: 80px;
+  }
+
+  .mock-body.light { background: #fafafa; }
+  .mock-body.dark { background: #18181b; }
+
+  .mock-label {
+    text-align: center;
+    font-size: 11px;
+    color: #a1a1aa;
+    margin-top: 8px;
+  }
+</style>
+</head>
+<body>
+
+<h1>Wordmark Font Options</h1>
+<p class="subtitle">Comparing typeface options for the "DocTalk" wordmark alongside the Talk Flow icon mark</p>
+
+<!-- ======================== SERIF FONTS ======================== -->
+<p class="category-title">Serif — Elegant & Authoritative</p>
+<div class="font-grid">
+
+  <div class="font-row">
+    <div class="font-card light-bg current">
+      <div class="combo">
+        <svg width="24" height="24" viewBox="0 0 36 36" fill="none">
+          <path d="M5 2H21Q24 2 24 5V16Q24 19 21 19H10L5 25V19Q2 19 2 16V5Q2 2 5 2Z" fill="#c7d2fe"/>
+          <path d="M15 13H31Q34 13 34 16V26Q34 29 31 29H22L27 35L19 29H15Q12 29 12 26V16Q12 13 15 13Z" fill="#4f46e5"/>
+        </svg>
+        <span class="wordmark" style="font-family:'Instrument Serif',serif; font-weight:400;">DocTalk</span>
+      </div>
+      <div class="meta">
+        <span class="font-name">Instrument Serif</span>
+        <span class="font-weight-label">Regular 400</span>
+        <span class="tag current-tag">Current</span>
+      </div>
+    </div>
+    <div class="font-card dark-bg current">
+      <div class="combo">
+        <svg width="24" height="24" viewBox="0 0 36 36" fill="none">
+          <path d="M5 2H21Q24 2 24 5V16Q24 19 21 19H10L5 25V19Q2 19 2 16V5Q2 2 5 2Z" fill="rgba(129,140,248,0.25)"/>
+          <path d="M15 13H31Q34 13 34 16V26Q34 29 31 29H22L27 35L19 29H15Q12 29 12 26V16Q12 13 15 13Z" fill="#818cf8"/>
+        </svg>
+        <span class="wordmark" style="font-family:'Instrument Serif',serif; font-weight:400;">DocTalk</span>
+      </div>
+      <div class="meta">
+        <span class="font-name">Instrument Serif</span>
+        <span class="font-weight-label">Regular 400</span>
+        <span class="tag current-tag">Current</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="font-row">
+    <div class="font-card light-bg">
+      <div class="combo">
+        <svg width="24" height="24" viewBox="0 0 36 36" fill="none">
+          <path d="M5 2H21Q24 2 24 5V16Q24 19 21 19H10L5 25V19Q2 19 2 16V5Q2 2 5 2Z" fill="#c7d2fe"/>
+          <path d="M15 13H31Q34 13 34 16V26Q34 29 31 29H22L27 35L19 29H15Q12 29 12 26V16Q12 13 15 13Z" fill="#4f46e5"/>
+        </svg>
+        <span class="wordmark" style="font-family:'DM Serif Display',serif; font-weight:400;">DocTalk</span>
+      </div>
+      <div class="meta">
+        <span class="font-name">DM Serif Display</span>
+        <span class="font-weight-label">Regular 400</span>
+      </div>
+    </div>
+    <div class="font-card dark-bg">
+      <div class="combo">
+        <svg width="24" height="24" viewBox="0 0 36 36" fill="none">
+          <path d="M5 2H21Q24 2 24 5V16Q24 19 21 19H10L5 25V19Q2 19 2 16V5Q2 2 5 2Z" fill="rgba(129,140,248,0.25)"/>
+          <path d="M15 13H31Q34 13 34 16V26Q34 29 31 29H22L27 35L19 29H15Q12 29 12 26V16Q12 13 15 13Z" fill="#818cf8"/>
+        </svg>
+        <span class="wordmark" style="font-family:'DM Serif Display',serif; font-weight:400;">DocTalk</span>
+      </div>
+      <div class="meta">
+        <span class="font-name">DM Serif Display</span>
+        <span class="font-weight-label">Regular 400</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="font-row">
+    <div class="font-card light-bg">
+      <div class="combo">
+        <svg width="24" height="24" viewBox="0 0 36 36" fill="none">
+          <path d="M5 2H21Q24 2 24 5V16Q24 19 21 19H10L5 25V19Q2 19 2 16V5Q2 2 5 2Z" fill="#c7d2fe"/>
+          <path d="M15 13H31Q34 13 34 16V26Q34 29 31 29H22L27 35L19 29H15Q12 29 12 26V16Q12 13 15 13Z" fill="#4f46e5"/>
+        </svg>
+        <span class="wordmark" style="font-family:'Playfair Display',serif; font-weight:600;">DocTalk</span>
+      </div>
+      <div class="meta">
+        <span class="font-name">Playfair Display</span>
+        <span class="font-weight-label">SemiBold 600</span>
+      </div>
+    </div>
+    <div class="font-card dark-bg">
+      <div class="combo">
+        <svg width="24" height="24" viewBox="0 0 36 36" fill="none">
+          <path d="M5 2H21Q24 2 24 5V16Q24 19 21 19H10L5 25V19Q2 19 2 16V5Q2 2 5 2Z" fill="rgba(129,140,248,0.25)"/>
+          <path d="M15 13H31Q34 13 34 16V26Q34 29 31 29H22L27 35L19 29H15Q12 29 12 26V16Q12 13 15 13Z" fill="#818cf8"/>
+        </svg>
+        <span class="wordmark" style="font-family:'Playfair Display',serif; font-weight:600;">DocTalk</span>
+      </div>
+      <div class="meta">
+        <span class="font-name">Playfair Display</span>
+        <span class="font-weight-label">SemiBold 600</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="font-row">
+    <div class="font-card light-bg">
+      <div class="combo">
+        <svg width="24" height="24" viewBox="0 0 36 36" fill="none">
+          <path d="M5 2H21Q24 2 24 5V16Q24 19 21 19H10L5 25V19Q2 19 2 16V5Q2 2 5 2Z" fill="#c7d2fe"/>
+          <path d="M15 13H31Q34 13 34 16V26Q34 29 31 29H22L27 35L19 29H15Q12 29 12 26V16Q12 13 15 13Z" fill="#4f46e5"/>
+        </svg>
+        <span class="wordmark" style="font-family:'Libre Baskerville',serif; font-weight:700;">DocTalk</span>
+      </div>
+      <div class="meta">
+        <span class="font-name">Libre Baskerville</span>
+        <span class="font-weight-label">Bold 700</span>
+      </div>
+    </div>
+    <div class="font-card dark-bg">
+      <div class="combo">
+        <svg width="24" height="24" viewBox="0 0 36 36" fill="none">
+          <path d="M5 2H21Q24 2 24 5V16Q24 19 21 19H10L5 25V19Q2 19 2 16V5Q2 2 5 2Z" fill="rgba(129,140,248,0.25)"/>
+          <path d="M15 13H31Q34 13 34 16V26Q34 29 31 29H22L27 35L19 29H15Q12 29 12 26V16Q12 13 15 13Z" fill="#818cf8"/>
+        </svg>
+        <span class="wordmark" style="font-family:'Libre Baskerville',serif; font-weight:700;">DocTalk</span>
+      </div>
+      <div class="meta">
+        <span class="font-name">Libre Baskerville</span>
+        <span class="font-weight-label">Bold 700</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="font-row">
+    <div class="font-card light-bg">
+      <div class="combo">
+        <svg width="24" height="24" viewBox="0 0 36 36" fill="none">
+          <path d="M5 2H21Q24 2 24 5V16Q24 19 21 19H10L5 25V19Q2 19 2 16V5Q2 2 5 2Z" fill="#c7d2fe"/>
+          <path d="M15 13H31Q34 13 34 16V26Q34 29 31 29H22L27 35L19 29H15Q12 29 12 26V16Q12 13 15 13Z" fill="#4f46e5"/>
+        </svg>
+        <span class="wordmark" style="font-family:'Lora',serif; font-weight:600;">DocTalk</span>
+      </div>
+      <div class="meta">
+        <span class="font-name">Lora</span>
+        <span class="font-weight-label">SemiBold 600</span>
+      </div>
+    </div>
+    <div class="font-card dark-bg">
+      <div class="combo">
+        <svg width="24" height="24" viewBox="0 0 36 36" fill="none">
+          <path d="M5 2H21Q24 2 24 5V16Q24 19 21 19H10L5 25V19Q2 19 2 16V5Q2 2 5 2Z" fill="rgba(129,140,248,0.25)"/>
+          <path d="M15 13H31Q34 13 34 16V26Q34 29 31 29H22L27 35L19 29H15Q12 29 12 26V16Q12 13 15 13Z" fill="#818cf8"/>
+        </svg>
+        <span class="wordmark" style="font-family:'Lora',serif; font-weight:600;">DocTalk</span>
+      </div>
+      <div class="meta">
+        <span class="font-name">Lora</span>
+        <span class="font-weight-label">SemiBold 600</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="font-row">
+    <div class="font-card light-bg">
+      <div class="combo">
+        <svg width="24" height="24" viewBox="0 0 36 36" fill="none">
+          <path d="M5 2H21Q24 2 24 5V16Q24 19 21 19H10L5 25V19Q2 19 2 16V5Q2 2 5 2Z" fill="#c7d2fe"/>
+          <path d="M15 13H31Q34 13 34 16V26Q34 29 31 29H22L27 35L19 29H15Q12 29 12 26V16Q12 13 15 13Z" fill="#4f46e5"/>
+        </svg>
+        <span class="wordmark" style="font-family:'Source Serif 4',serif; font-weight:600;">DocTalk</span>
+      </div>
+      <div class="meta">
+        <span class="font-name">Source Serif 4</span>
+        <span class="font-weight-label">SemiBold 600</span>
+      </div>
+    </div>
+    <div class="font-card dark-bg">
+      <div class="combo">
+        <svg width="24" height="24" viewBox="0 0 36 36" fill="none">
+          <path d="M5 2H21Q24 2 24 5V16Q24 19 21 19H10L5 25V19Q2 19 2 16V5Q2 2 5 2Z" fill="rgba(129,140,248,0.25)"/>
+          <path d="M15 13H31Q34 13 34 16V26Q34 29 31 29H22L27 35L19 29H15Q12 29 12 26V16Q12 13 15 13Z" fill="#818cf8"/>
+        </svg>
+        <span class="wordmark" style="font-family:'Source Serif 4',serif; font-weight:600;">DocTalk</span>
+      </div>
+      <div class="meta">
+        <span class="font-name">Source Serif 4</span>
+        <span class="font-weight-label">SemiBold 600</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="font-row">
+    <div class="font-card light-bg">
+      <div class="combo">
+        <svg width="24" height="24" viewBox="0 0 36 36" fill="none">
+          <path d="M5 2H21Q24 2 24 5V16Q24 19 21 19H10L5 25V19Q2 19 2 16V5Q2 2 5 2Z" fill="#c7d2fe"/>
+          <path d="M15 13H31Q34 13 34 16V26Q34 29 31 29H22L27 35L19 29H15Q12 29 12 26V16Q12 13 15 13Z" fill="#4f46e5"/>
+        </svg>
+        <span class="wordmark" style="font-family:'Fraunces',serif; font-weight:600;">DocTalk</span>
+      </div>
+      <div class="meta">
+        <span class="font-name">Fraunces</span>
+        <span class="font-weight-label">SemiBold 600</span>
+      </div>
+    </div>
+    <div class="font-card dark-bg">
+      <div class="combo">
+        <svg width="24" height="24" viewBox="0 0 36 36" fill="none">
+          <path d="M5 2H21Q24 2 24 5V16Q24 19 21 19H10L5 25V19Q2 19 2 16V5Q2 2 5 2Z" fill="rgba(129,140,248,0.25)"/>
+          <path d="M15 13H31Q34 13 34 16V26Q34 29 31 29H22L27 35L19 29H15Q12 29 12 26V16Q12 13 15 13Z" fill="#818cf8"/>
+        </svg>
+        <span class="wordmark" style="font-family:'Fraunces',serif; font-weight:600;">DocTalk</span>
+      </div>
+      <div class="meta">
+        <span class="font-name">Fraunces</span>
+        <span class="font-weight-label">SemiBold 600</span>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ======================== SANS-SERIF FONTS ======================== -->
+<p class="category-title">Sans-Serif — Modern & Clean</p>
+<div class="font-grid">
+
+  <div class="font-row">
+    <div class="font-card light-bg">
+      <div class="combo">
+        <svg width="24" height="24" viewBox="0 0 36 36" fill="none">
+          <path d="M5 2H21Q24 2 24 5V16Q24 19 21 19H10L5 25V19Q2 19 2 16V5Q2 2 5 2Z" fill="#c7d2fe"/>
+          <path d="M15 13H31Q34 13 34 16V26Q34 29 31 29H22L27 35L19 29H15Q12 29 12 26V16Q12 13 15 13Z" fill="#4f46e5"/>
+        </svg>
+        <span class="wordmark" style="font-family:'Inter',sans-serif; font-weight:700;">DocTalk</span>
+      </div>
+      <div class="meta">
+        <span class="font-name">Inter</span>
+        <span class="font-weight-label">Bold 700</span>
+      </div>
+    </div>
+    <div class="font-card dark-bg">
+      <div class="combo">
+        <svg width="24" height="24" viewBox="0 0 36 36" fill="none">
+          <path d="M5 2H21Q24 2 24 5V16Q24 19 21 19H10L5 25V19Q2 19 2 16V5Q2 2 5 2Z" fill="rgba(129,140,248,0.25)"/>
+          <path d="M15 13H31Q34 13 34 16V26Q34 29 31 29H22L27 35L19 29H15Q12 29 12 26V16Q12 13 15 13Z" fill="#818cf8"/>
+        </svg>
+        <span class="wordmark" style="font-family:'Inter',sans-serif; font-weight:700;">DocTalk</span>
+      </div>
+      <div class="meta">
+        <span class="font-name">Inter</span>
+        <span class="font-weight-label">Bold 700</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="font-row">
+    <div class="font-card light-bg">
+      <div class="combo">
+        <svg width="24" height="24" viewBox="0 0 36 36" fill="none">
+          <path d="M5 2H21Q24 2 24 5V16Q24 19 21 19H10L5 25V19Q2 19 2 16V5Q2 2 5 2Z" fill="#c7d2fe"/>
+          <path d="M15 13H31Q34 13 34 16V26Q34 29 31 29H22L27 35L19 29H15Q12 29 12 26V16Q12 13 15 13Z" fill="#4f46e5"/>
+        </svg>
+        <span class="wordmark" style="font-family:'Plus Jakarta Sans',sans-serif; font-weight:700;">DocTalk</span>
+      </div>
+      <div class="meta">
+        <span class="font-name">Plus Jakarta Sans</span>
+        <span class="font-weight-label">Bold 700</span>
+      </div>
+    </div>
+    <div class="font-card dark-bg">
+      <div class="combo">
+        <svg width="24" height="24" viewBox="0 0 36 36" fill="none">
+          <path d="M5 2H21Q24 2 24 5V16Q24 19 21 19H10L5 25V19Q2 19 2 16V5Q2 2 5 2Z" fill="rgba(129,140,248,0.25)"/>
+          <path d="M15 13H31Q34 13 34 16V26Q34 29 31 29H22L27 35L19 29H15Q12 29 12 26V16Q12 13 15 13Z" fill="#818cf8"/>
+        </svg>
+        <span class="wordmark" style="font-family:'Plus Jakarta Sans',sans-serif; font-weight:700;">DocTalk</span>
+      </div>
+      <div class="meta">
+        <span class="font-name">Plus Jakarta Sans</span>
+        <span class="font-weight-label">Bold 700</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="font-row">
+    <div class="font-card light-bg">
+      <div class="combo">
+        <svg width="24" height="24" viewBox="0 0 36 36" fill="none">
+          <path d="M5 2H21Q24 2 24 5V16Q24 19 21 19H10L5 25V19Q2 19 2 16V5Q2 2 5 2Z" fill="#c7d2fe"/>
+          <path d="M15 13H31Q34 13 34 16V26Q34 29 31 29H22L27 35L19 29H15Q12 29 12 26V16Q12 13 15 13Z" fill="#4f46e5"/>
+        </svg>
+        <span class="wordmark" style="font-family:'Outfit',sans-serif; font-weight:600;">DocTalk</span>
+      </div>
+      <div class="meta">
+        <span class="font-name">Outfit</span>
+        <span class="font-weight-label">SemiBold 600</span>
+      </div>
+    </div>
+    <div class="font-card dark-bg">
+      <div class="combo">
+        <svg width="24" height="24" viewBox="0 0 36 36" fill="none">
+          <path d="M5 2H21Q24 2 24 5V16Q24 19 21 19H10L5 25V19Q2 19 2 16V5Q2 2 5 2Z" fill="rgba(129,140,248,0.25)"/>
+          <path d="M15 13H31Q34 13 34 16V26Q34 29 31 29H22L27 35L19 29H15Q12 29 12 26V16Q12 13 15 13Z" fill="#818cf8"/>
+        </svg>
+        <span class="wordmark" style="font-family:'Outfit',sans-serif; font-weight:600;">DocTalk</span>
+      </div>
+      <div class="meta">
+        <span class="font-name">Outfit</span>
+        <span class="font-weight-label">SemiBold 600</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="font-row">
+    <div class="font-card light-bg">
+      <div class="combo">
+        <svg width="24" height="24" viewBox="0 0 36 36" fill="none">
+          <path d="M5 2H21Q24 2 24 5V16Q24 19 21 19H10L5 25V19Q2 19 2 16V5Q2 2 5 2Z" fill="#c7d2fe"/>
+          <path d="M15 13H31Q34 13 34 16V26Q34 29 31 29H22L27 35L19 29H15Q12 29 12 26V16Q12 13 15 13Z" fill="#4f46e5"/>
+        </svg>
+        <span class="wordmark" style="font-family:'Sora',sans-serif; font-weight:600;">DocTalk</span>
+      </div>
+      <div class="meta">
+        <span class="font-name">Sora</span>
+        <span class="font-weight-label">SemiBold 600</span>
+      </div>
+    </div>
+    <div class="font-card dark-bg">
+      <div class="combo">
+        <svg width="24" height="24" viewBox="0 0 36 36" fill="none">
+          <path d="M5 2H21Q24 2 24 5V16Q24 19 21 19H10L5 25V19Q2 19 2 16V5Q2 2 5 2Z" fill="rgba(129,140,248,0.25)"/>
+          <path d="M15 13H31Q34 13 34 16V26Q34 29 31 29H22L27 35L19 29H15Q12 29 12 26V16Q12 13 15 13Z" fill="#818cf8"/>
+        </svg>
+        <span class="wordmark" style="font-family:'Sora',sans-serif; font-weight:600;">DocTalk</span>
+      </div>
+      <div class="meta">
+        <span class="font-name">Sora</span>
+        <span class="font-weight-label">SemiBold 600</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="font-row">
+    <div class="font-card light-bg">
+      <div class="combo">
+        <svg width="24" height="24" viewBox="0 0 36 36" fill="none">
+          <path d="M5 2H21Q24 2 24 5V16Q24 19 21 19H10L5 25V19Q2 19 2 16V5Q2 2 5 2Z" fill="#c7d2fe"/>
+          <path d="M15 13H31Q34 13 34 16V26Q34 29 31 29H22L27 35L19 29H15Q12 29 12 26V16Q12 13 15 13Z" fill="#4f46e5"/>
+        </svg>
+        <span class="wordmark" style="font-family:'Space Grotesk',sans-serif; font-weight:600;">DocTalk</span>
+      </div>
+      <div class="meta">
+        <span class="font-name">Space Grotesk</span>
+        <span class="font-weight-label">SemiBold 600</span>
+      </div>
+    </div>
+    <div class="font-card dark-bg">
+      <div class="combo">
+        <svg width="24" height="24" viewBox="0 0 36 36" fill="none">
+          <path d="M5 2H21Q24 2 24 5V16Q24 19 21 19H10L5 25V19Q2 19 2 16V5Q2 2 5 2Z" fill="rgba(129,140,248,0.25)"/>
+          <path d="M15 13H31Q34 13 34 16V26Q34 29 31 29H22L27 35L19 29H15Q12 29 12 26V16Q12 13 15 13Z" fill="#818cf8"/>
+        </svg>
+        <span class="wordmark" style="font-family:'Space Grotesk',sans-serif; font-weight:600;">DocTalk</span>
+      </div>
+      <div class="meta">
+        <span class="font-name">Space Grotesk</span>
+        <span class="font-weight-label">SemiBold 600</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="font-row">
+    <div class="font-card light-bg">
+      <div class="combo">
+        <svg width="24" height="24" viewBox="0 0 36 36" fill="none">
+          <path d="M5 2H21Q24 2 24 5V16Q24 19 21 19H10L5 25V19Q2 19 2 16V5Q2 2 5 2Z" fill="#c7d2fe"/>
+          <path d="M15 13H31Q34 13 34 16V26Q34 29 31 29H22L27 35L19 29H15Q12 29 12 26V16Q12 13 15 13Z" fill="#4f46e5"/>
+        </svg>
+        <span class="wordmark" style="font-family:'Manrope',sans-serif; font-weight:700;">DocTalk</span>
+      </div>
+      <div class="meta">
+        <span class="font-name">Manrope</span>
+        <span class="font-weight-label">Bold 700</span>
+      </div>
+    </div>
+    <div class="font-card dark-bg">
+      <div class="combo">
+        <svg width="24" height="24" viewBox="0 0 36 36" fill="none">
+          <path d="M5 2H21Q24 2 24 5V16Q24 19 21 19H10L5 25V19Q2 19 2 16V5Q2 2 5 2Z" fill="rgba(129,140,248,0.25)"/>
+          <path d="M15 13H31Q34 13 34 16V26Q34 29 31 29H22L27 35L19 29H15Q12 29 12 26V16Q12 13 15 13Z" fill="#818cf8"/>
+        </svg>
+        <span class="wordmark" style="font-family:'Manrope',sans-serif; font-weight:700;">DocTalk</span>
+      </div>
+      <div class="meta">
+        <span class="font-name">Manrope</span>
+        <span class="font-weight-label">Bold 700</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="font-row">
+    <div class="font-card light-bg">
+      <div class="combo">
+        <svg width="24" height="24" viewBox="0 0 36 36" fill="none">
+          <path d="M5 2H21Q24 2 24 5V16Q24 19 21 19H10L5 25V19Q2 19 2 16V5Q2 2 5 2Z" fill="#c7d2fe"/>
+          <path d="M15 13H31Q34 13 34 16V26Q34 29 31 29H22L27 35L19 29H15Q12 29 12 26V16Q12 13 15 13Z" fill="#4f46e5"/>
+        </svg>
+        <span class="wordmark" style="font-family:'Bricolage Grotesque',sans-serif; font-weight:700;">DocTalk</span>
+      </div>
+      <div class="meta">
+        <span class="font-name">Bricolage Grotesque</span>
+        <span class="font-weight-label">Bold 700</span>
+      </div>
+    </div>
+    <div class="font-card dark-bg">
+      <div class="combo">
+        <svg width="24" height="24" viewBox="0 0 36 36" fill="none">
+          <path d="M5 2H21Q24 2 24 5V16Q24 19 21 19H10L5 25V19Q2 19 2 16V5Q2 2 5 2Z" fill="rgba(129,140,248,0.25)"/>
+          <path d="M15 13H31Q34 13 34 16V26Q34 29 31 29H22L27 35L19 29H15Q12 29 12 26V16Q12 13 15 13Z" fill="#818cf8"/>
+        </svg>
+        <span class="wordmark" style="font-family:'Bricolage Grotesque',sans-serif; font-weight:700;">DocTalk</span>
+      </div>
+      <div class="meta">
+        <span class="font-name">Bricolage Grotesque</span>
+        <span class="font-weight-label">Bold 700</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="font-row">
+    <div class="font-card light-bg">
+      <div class="combo">
+        <svg width="24" height="24" viewBox="0 0 36 36" fill="none">
+          <path d="M5 2H21Q24 2 24 5V16Q24 19 21 19H10L5 25V19Q2 19 2 16V5Q2 2 5 2Z" fill="#c7d2fe"/>
+          <path d="M15 13H31Q34 13 34 16V26Q34 29 31 29H22L27 35L19 29H15Q12 29 12 26V16Q12 13 15 13Z" fill="#4f46e5"/>
+        </svg>
+        <span class="wordmark" style="font-family:'Onest',sans-serif; font-weight:700;">DocTalk</span>
+      </div>
+      <div class="meta">
+        <span class="font-name">Onest</span>
+        <span class="font-weight-label">Bold 700</span>
+      </div>
+    </div>
+    <div class="font-card dark-bg">
+      <div class="combo">
+        <svg width="24" height="24" viewBox="0 0 36 36" fill="none">
+          <path d="M5 2H21Q24 2 24 5V16Q24 19 21 19H10L5 25V19Q2 19 2 16V5Q2 2 5 2Z" fill="rgba(129,140,248,0.25)"/>
+          <path d="M15 13H31Q34 13 34 16V26Q34 29 31 29H22L27 35L19 29H15Q12 29 12 26V16Q12 13 15 13Z" fill="#818cf8"/>
+        </svg>
+        <span class="wordmark" style="font-family:'Onest',sans-serif; font-weight:700;">DocTalk</span>
+      </div>
+      <div class="meta">
+        <span class="font-name">Onest</span>
+        <span class="font-weight-label">Bold 700</span>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ======================== HEADER MOCKUPS ======================== -->
+<div class="mockup-section">
+  <p class="mockup-title">In-Context Header Comparison (Top 4 Picks)</p>
+  <div class="mockup-grid">
+
+    <div>
+      <div class="mock-card">
+        <div class="mock-header light">
+          <svg width="20" height="20" viewBox="0 0 36 36" fill="none">
+            <path d="M5 2H21Q24 2 24 5V16Q24 19 21 19H10L5 25V19Q2 19 2 16V5Q2 2 5 2Z" fill="#c7d2fe"/>
+            <path d="M15 13H31Q34 13 34 16V26Q34 29 31 29H22L27 35L19 29H15Q12 29 12 26V16Q12 13 15 13Z" fill="#4f46e5"/>
+          </svg>
+          <span class="mock-brand" style="font-family:'Instrument Serif',serif; font-weight:400;">DocTalk</span>
+          <span class="mock-sep">/</span>
+          <span class="mock-doc">Q4 Report.pdf</span>
+          <span class="mock-spacer"></span>
+          <span class="mock-pill">Balanced</span>
+        </div>
+        <div class="mock-body light"></div>
+      </div>
+      <p class="mock-label">Instrument Serif (current)</p>
+    </div>
+
+    <div>
+      <div class="mock-card">
+        <div class="mock-header light">
+          <svg width="20" height="20" viewBox="0 0 36 36" fill="none">
+            <path d="M5 2H21Q24 2 24 5V16Q24 19 21 19H10L5 25V19Q2 19 2 16V5Q2 2 5 2Z" fill="#c7d2fe"/>
+            <path d="M15 13H31Q34 13 34 16V26Q34 29 31 29H22L27 35L19 29H15Q12 29 12 26V16Q12 13 15 13Z" fill="#4f46e5"/>
+          </svg>
+          <span class="mock-brand" style="font-family:'DM Serif Display',serif; font-weight:400;">DocTalk</span>
+          <span class="mock-sep">/</span>
+          <span class="mock-doc">Q4 Report.pdf</span>
+          <span class="mock-spacer"></span>
+          <span class="mock-pill">Balanced</span>
+        </div>
+        <div class="mock-body light"></div>
+      </div>
+      <p class="mock-label">DM Serif Display</p>
+    </div>
+
+    <div>
+      <div class="mock-card">
+        <div class="mock-header light">
+          <svg width="20" height="20" viewBox="0 0 36 36" fill="none">
+            <path d="M5 2H21Q24 2 24 5V16Q24 19 21 19H10L5 25V19Q2 19 2 16V5Q2 2 5 2Z" fill="#c7d2fe"/>
+            <path d="M15 13H31Q34 13 34 16V26Q34 29 31 29H22L27 35L19 29H15Q12 29 12 26V16Q12 13 15 13Z" fill="#4f46e5"/>
+          </svg>
+          <span class="mock-brand" style="font-family:'Plus Jakarta Sans',sans-serif; font-weight:700;">DocTalk</span>
+          <span class="mock-sep">/</span>
+          <span class="mock-doc">Q4 Report.pdf</span>
+          <span class="mock-spacer"></span>
+          <span class="mock-pill">Balanced</span>
+        </div>
+        <div class="mock-body light"></div>
+      </div>
+      <p class="mock-label">Plus Jakarta Sans</p>
+    </div>
+
+    <div>
+      <div class="mock-card">
+        <div class="mock-header light">
+          <svg width="20" height="20" viewBox="0 0 36 36" fill="none">
+            <path d="M5 2H21Q24 2 24 5V16Q24 19 21 19H10L5 25V19Q2 19 2 16V5Q2 2 5 2Z" fill="#c7d2fe"/>
+            <path d="M15 13H31Q34 13 34 16V26Q34 29 31 29H22L27 35L19 29H15Q12 29 12 26V16Q12 13 15 13Z" fill="#4f46e5"/>
+          </svg>
+          <span class="mock-brand" style="font-family:'Space Grotesk',sans-serif; font-weight:600;">DocTalk</span>
+          <span class="mock-sep">/</span>
+          <span class="mock-doc">Q4 Report.pdf</span>
+          <span class="mock-spacer"></span>
+          <span class="mock-pill">Balanced</span>
+        </div>
+        <div class="mock-body light"></div>
+      </div>
+      <p class="mock-label">Space Grotesk</p>
+    </div>
+
+  </div>
+</div>
+
+</body>
+</html>

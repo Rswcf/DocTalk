@@ -1,0 +1,10 @@
+APPROVE
+
+No blocking findings in the two changed files.
+
+- `HoverCard.Trigger asChild` is correctly composed with a single `button` child: [CitationPopover.tsx:25](/Users/mayijie/Projects/Code/010_DocTalk/frontend/src/components/Chat/CitationPopover.tsx:25), [MessageBubble.tsx:57](/Users/mayijie/Projects/Code/010_DocTalk/frontend/src/components/Chat/MessageBubble.tsx:57).
+- Keyboard focus path is intact (`button` is focusable, trigger is Radix-managed, visible focus ring present): [CitationPopover.tsx:24](/Users/mayijie/Projects/Code/010_DocTalk/frontend/src/components/Chat/CitationPopover.tsx:24), [MessageBubble.tsx:59](/Users/mayijie/Projects/Code/010_DocTalk/frontend/src/components/Chat/MessageBubble.tsx:59).
+- Click-to-PDF jump flow remains direct on button click (`onClick` unchanged in behavior; no popover click-toggle competing): [MessageBubble.tsx:60](/Users/mayijie/Projects/Code/010_DocTalk/frontend/src/components/Chat/MessageBubble.tsx:60), [CitationPopover.tsx:24](/Users/mayijie/Projects/Code/010_DocTalk/frontend/src/components/Chat/CitationPopover.tsx:24).
+- `not-prose`, `align-super`, and `min-w-[1.125rem]` are applied where needed in prose-rendered content: [MessageBubble.tsx:59](/Users/mayijie/Projects/Code/010_DocTalk/frontend/src/components/Chat/MessageBubble.tsx:59).
+- Radix Portal usage is in client components, so SSR risk is low in this setup: [CitationPopover.tsx:1](/Users/mayijie/Projects/Code/010_DocTalk/frontend/src/components/Chat/CitationPopover.tsx:1), [CitationPopover.tsx:26](/Users/mayijie/Projects/Code/010_DocTalk/frontend/src/components/Chat/CitationPopover.tsx:26), [MessageBubble.tsx:1](/Users/mayijie/Projects/Code/010_DocTalk/frontend/src/components/Chat/MessageBubble.tsx:1).
+- Bracket removal appears acceptable with the new superscript pill style (non-blocking UX preference): [MessageBubble.tsx:63](/Users/mayijie/Projects/Code/010_DocTalk/frontend/src/components/Chat/MessageBubble.tsx:63).
