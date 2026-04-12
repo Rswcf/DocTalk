@@ -10,6 +10,7 @@ import type { DocumentBrief } from '../lib/api';
 import { Trash2, Link2, FileUp } from 'lucide-react';
 import { useDocTalkStore } from '../store';
 import { useLocale } from '../i18n';
+import { clearAccountStorage } from '../lib/clearAccountStorage';
 import { sanitizeFilename } from '../lib/utils';
 import { PrivacyBadge } from '../components/PrivacyBadge';
 import Header from '../components/Header';
@@ -244,7 +245,7 @@ export default function HomePageClient() {
     if (status === 'unauthenticated') {
       setMyDocs([]);
       setServerDocs([]);
-      localStorage.removeItem('doctalk_docs');
+      clearAccountStorage();
     }
   }, [status]);
 

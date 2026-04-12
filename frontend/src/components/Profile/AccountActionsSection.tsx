@@ -4,6 +4,7 @@ import React, { useState } from "react";
 import { Download } from "lucide-react";
 import { useLocale } from "../../i18n";
 import { deleteUserAccount, exportUserData } from "../../lib/api";
+import { clearAccountStorage } from "../../lib/clearAccountStorage";
 import { signOut } from "next-auth/react";
 
 interface Props {
@@ -44,6 +45,7 @@ export default function AccountActionsSection({ email }: Props) {
     setError(null);
     try {
       await deleteUserAccount();
+      clearAccountStorage();
       await signOut({ callbackUrl: "/" });
     } catch (e) {
       setError("error");

@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
 import { LOCALES, useLocale } from "../i18n";
 import type { Locale } from "../i18n";
+import { clearAccountStorage } from "../lib/clearAccountStorage";
 import { useDropdownKeyboard } from "../lib/useDropdownKeyboard";
 
 export default function UserMenu() {
@@ -50,6 +51,12 @@ export default function UserMenu() {
     setOpen(false);
   };
 
+  const handleSignOut = () => {
+    setOpen(false);
+    clearAccountStorage();
+    signOut();
+  };
+
   const handleMenuKeyDown = useDropdownKeyboard(
     3,
     focusIndex,
@@ -60,8 +67,7 @@ export default function UserMenu() {
       } else if (index === 1) {
         go("/billing");
       } else if (index === 2) {
-        setOpen(false);
-        signOut();
+        handleSignOut();
       }
     },
     () => {
@@ -185,10 +191,7 @@ export default function UserMenu() {
             ref={(el) => { itemRefs.current[2] = el; }}
             type="button"
             className="w-full text-left px-4 py-2.5 text-sm text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800 cursor-pointer transition-colors focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:ring-inset"
-            onClick={() => {
-              setOpen(false);
-              signOut();
-            }}
+            onClick={handleSignOut}
             role="menuitem"
             tabIndex={focusIndex === 2 ? 0 : -1}
           >
