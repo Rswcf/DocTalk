@@ -745,13 +745,51 @@ graph LR
 |--------|-------------------|-------------------|
 | **Trigger** | Push `stable` (auto) | `railway up --detach` from `stable` (manual) |
 | **Build** | Next.js static export from `frontend/` | Dockerfile from project root (includes LibreOffice headless + CJK fonts for PPTX/DOCX→PDF conversion) |
-| **Runtime** | Serverless functions (Hobby plan) | Single container (`entrypoint.sh`): alembic → celery worker + celery beat (auto-restart) → uvicorn |
+| **Runtime** | Serverless functions (Hobby plan) | Single container (`entrypoint.sh`): alembic → celery worker + celery beat + uvicorn (parallel; any exit → container restart by Railway) |
 | **Domain** | `www.doctalk.site` | `backend-production-a62e.up.railway.app` |
 | **Limits** | 4.5 MB function body, 60s max duration | Container memory based on Railway plan |
 
-**Celery Beat scheduler**: The backend container runs both the Celery worker (for async tasks) and Celery Beat (for periodic tasks). Beat schedule is defined in `celery_app.py` and includes daily cleanup of expired verification tokens.
+**Celery Beat scheduler**: The backend container runs both the Celery worker (for async tasks) and Celery Beat (for periodic tasks). Beat schedule is defined in `celery_app.py` and includes daily cleanup of expired verification tokens. See §10 for the single-instance invariant when scaling replicas.
 
 **Environment sync:**
 - `AUTH_SECRET` and `ADAPTER_SECRET` must match between Vercel and Railway
 - `NEXT_PUBLIC_API_BASE` on Vercel must point to the Railway backend URL
 - `BACKEND_INTERNAL_URL` on Vercel is the same Railway URL (used by the auth adapter)
+
+---
+
+## 10. Runtime & Operational Integrity
+
+### Process Supervision (backend container)
+
+`entrypoint.sh` no longer tries to act as a supervisor. Celery worker, Celery Beat, and uvicorn are started as parallel background processes; `wait -n` returns as soon as any of them exits, and the script then kills the other two and exits. **Railway's container restart policy** is the supervisor — a crash in any one process triggers a whole-container restart so the three processes always share a consistent lifecycle.
+
+Requires `/bin/bash` (not POSIX `dash`) because of `wait -n`. `python:3.12.7-slim` ships bash at `/usr/bin/bash`.
+
+### Celery Beat — single-instance invariant
+
+Celery Beat schedules periodic tasks (currently: daily cleanup of expired verification tokens). **Exactly one Beat process must run across the whole backend fleet.** If the backend is ever horizontally scaled to multiple Railway replicas, set `ENABLE_CELERY_BEAT=0` on all-but-one replica (or factor Beat into its own dedicated Railway service). Duplicate Beats = duplicate scheduled side-effects.
+
+### Client IP trust chain
+
+Anonymous rate limiting counts per real visitor IP. The trust chain is:
+
+1. **Vercel edge** strips client-supplied `X-Forwarded-For` / `X-Real-IP` and rewrites them with the real client IP (see [Vercel request headers](https://vercel.com/docs/headers/request-headers#x-forwarded-for)).
+2. **Frontend proxy** (`/api/proxy/*`, and the SSR fetch in `/shared/[token]`) reads the rewritten headers, then forwards them to the backend as:
+   - `X-Real-Client-IP`: the IP
+   - `X-Proxy-IP-Secret`: HMAC-compared against `AUTH_SECRET`
+3. **Backend** `get_client_ip(request)` (in `app/core/rate_limit.py`) only trusts `X-Real-Client-IP` when the HMAC secret matches; otherwise falls back to `request.client.host`.
+
+Because the backend does **not** trust raw `X-Forwarded-For`, `--forwarded-allow-ips=127.0.0.1` (uvicorn default) is safe — no production env override is required.
+
+### Redis degradation behavior
+
+The rate limiter and demo-message tracker both have an in-memory fallback when Redis is unreachable. When that fallback activates, `_alert_redis_fallback` logs at `error` and emits one Sentry event **per namespace per 10 minutes** (to stay within the Sentry Free 5k/month quota during prolonged outages). Counts in the in-memory fallback do NOT persist across restarts and do NOT share state across replicas — degraded consistency is the correctness trade-off.
+
+### Deep health endpoint
+
+`GET /health?deep=true` (guarded by `X-Health-Secret` HMAC) probes all four data stores — Postgres, Redis, Qdrant, MinIO — concurrently with a 5 s per-probe timeout. Total response time is bounded by the slowest single probe, not by the sum of probes. Any probe failure flips `status` to `degraded` but does not return an error status code; callers must inspect `components`.
+
+### Pre-debit refund invariant
+
+Chat pre-debit refunds are now **fully idempotent**: `_refund_predebit` deletes the pre-debit ledger row first and only credits back the user balance when `DELETE` reports `rowcount > 0`. A double-invocation (e.g., retry on a partially-failed request) is safe. All SSE error branches (`LLM_ERROR`, `PERSIST_FAILED`, continuation variants) invoke the refund path before yielding the error.

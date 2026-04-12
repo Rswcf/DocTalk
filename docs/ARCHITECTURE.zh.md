@@ -745,13 +745,51 @@ graph LR
 |------|---------------|----------------|
 | **触发方式** | 推送 `stable`（自动） | 从 `stable` 分支 `railway up --detach`（手动） |
 | **构建** | 从 `frontend/` 导出 Next.js | 从项目根目录构建 Dockerfile（含 LibreOffice headless + CJK 字体，用于 PPTX/DOCX→PDF 转换） |
-| **运行时** | Serverless 函数（Hobby 计划） | 单容器（`entrypoint.sh`）：alembic → celery worker + celery beat（自动重启）→ uvicorn |
+| **运行时** | Serverless 函数（Hobby 计划） | 单容器（`entrypoint.sh`）：alembic → celery worker + celery beat + uvicorn 并行运行（任一退出 → Railway 重启整个容器） |
 | **域名** | `www.doctalk.site` | `backend-production-a62e.up.railway.app` |
 | **限制** | 4.5 MB 函数体积，60s 最大时长 | 容器内存取决于 Railway 计划 |
 
-**Celery Beat 调度器**：后端容器同时运行 Celery worker（异步任务）和 Celery Beat（定期任务）。Beat 调度配置在 `celery_app.py` 中，包括每日清理过期验证令牌。
+**Celery Beat 调度器**：后端容器同时运行 Celery worker（异步任务）和 Celery Beat（定期任务）。Beat 调度配置在 `celery_app.py` 中，包括每日清理过期验证令牌。横向扩展多副本时的单实例约束见 §10。
 
 **环境变量同步：**
 - `AUTH_SECRET` 和 `ADAPTER_SECRET` 在 Vercel 和 Railway 之间必须一致
 - Vercel 上的 `NEXT_PUBLIC_API_BASE` 必须指向 Railway 后端 URL
 - Vercel 上的 `BACKEND_INTERNAL_URL` 是相同的 Railway URL（Auth Adapter 使用）
+
+---
+
+## 10. 运行时与运维完整性
+
+### 进程监管（后端容器）
+
+`entrypoint.sh` 不再尝试扮演 supervisor 角色。Celery worker、Celery Beat、uvicorn 作为并行后台进程启动；`wait -n` 在任一进程退出时返回，脚本随后 kill 另外两个并退出。**Railway 的容器重启策略** 才是真正的 supervisor —— 任一进程崩溃触发整容器重启，保证三进程永远共享一致的生命周期。
+
+需要 `/bin/bash`（不是 POSIX 的 `dash`），因为用到 `wait -n`。`python:3.12.7-slim` 自带 `/usr/bin/bash`。
+
+### Celery Beat —— 单实例约束
+
+Celery Beat 调度定期任务（目前：每日清理过期验证令牌）。**整个后端集群只能有一个 Beat 进程运行。** 如未来后端横向扩展到多 Railway 副本，需在其他副本设置 `ENABLE_CELERY_BEAT=0`（或把 Beat 拆到独立的 Railway service）。重复 Beat = 重复的定时副作用。
+
+### 客户端 IP 信任链
+
+匿名限流按真实访问者 IP 计数。信任链如下：
+
+1. **Vercel edge** 剥离客户端自带的 `X-Forwarded-For` / `X-Real-IP` 并重写为真实客户端 IP（见 [Vercel request headers](https://vercel.com/docs/headers/request-headers#x-forwarded-for)）。
+2. **前端代理**（`/api/proxy/*`，以及 `/shared/[token]` 的 SSR fetch）读取重写后的头，转发到后端时附加：
+   - `X-Real-Client-IP`：真实 IP
+   - `X-Proxy-IP-Secret`：与 `AUTH_SECRET` 做 HMAC 比对
+3. **后端** `get_client_ip(request)`（在 `app/core/rate_limit.py`）仅在 HMAC 签名匹配时信任 `X-Real-Client-IP`，否则回退到 `request.client.host`。
+
+因为后端**不**信任原始 `X-Forwarded-For`，`--forwarded-allow-ips=127.0.0.1`（uvicorn 默认值）是安全的，生产无需覆盖该 env。
+
+### Redis 降级行为
+
+速率限制器和演示消息计数器在 Redis 不可达时都会回退到内存。降级触发时，`_alert_redis_fallback` 以 `error` 级记录日志，并**每个 namespace 每 10 分钟**最多发一次 Sentry 事件（避免持续故障打满 Sentry Free 5k/月配额）。内存 fallback 中的计数**不**跨重启持久化，也**不**跨副本共享 —— 一致性降级是该场景的正确性取舍。
+
+### 深度健康检查端点
+
+`GET /health?deep=true`（由 `X-Health-Secret` HMAC 守护）**并发**探活所有四个数据存储 —— Postgres、Redis、Qdrant、MinIO，每个 probe 5s 超时。总响应时间受限于**最慢单项**，不是各项之和。任一 probe 失败会把 `status` 标为 `degraded`，但不返回 error 状态码；调用方必须检查 `components`。
+
+### 预扣积分退款不变量
+
+聊天预扣积分退款现已**完全幂等**：`_refund_predebit` 先 DELETE 预扣的 ledger 行，仅当 `DELETE` 报告 `rowcount > 0` 时才恢复用户余额。重复调用（例如部分失败请求的重试）是安全的。所有 SSE 错误分支（`LLM_ERROR`、`PERSIST_FAILED`、续写变体）都在 yield 错误之前调用退款路径。
