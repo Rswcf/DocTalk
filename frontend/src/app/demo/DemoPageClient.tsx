@@ -30,7 +30,7 @@ const SAMPLE_CONFIG: Record<string, { icon: typeof FileText; titleKey: string; d
 };
 
 export default function DemoPageClient() {
-  const { t } = useLocale();
+  const { t, tOr } = useLocale();
   usePageTitle(t('footer.demo'));
   const [docs, setDocs] = useState<DemoDocument[]>([]);
   const [loading, setLoading] = useState(true);
@@ -126,7 +126,7 @@ export default function DemoPageClient() {
               onClick={fetchDocs}
               className="mt-4 text-sm text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-300 underline focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:rounded-sm"
             >
-              {t('common.retry') || 'Retry'}
+              {tOr('common.retry', 'Retry')}
             </button>
           </>
         ) : (

@@ -32,7 +32,7 @@ export default function ChatPanel({ sessionId, onCitationClick, maxUserMessages,
   const messages = useDocTalkStore((s) => s.messages);
   const isStreaming = useDocTalkStore((s) => s.isStreaming);
   const selectedMode = useDocTalkStore((s) => s.selectedMode);
-  const { t, locale } = useLocale();
+  const { t, tOr, locale } = useLocale();
   const router = useRouter();
 
   const [input, setInput] = useState('');
@@ -362,6 +362,7 @@ export default function ChatPanel({ sessionId, onCitationClick, maxUserMessages,
                 router.push('/billing');
               }}
               t={t}
+              tOr={tOr}
             />
             {messages.length > 0 && !isStreaming && userPlan && userPlan !== 'free' && (
               <button
@@ -369,8 +370,8 @@ export default function ChatPanel({ sessionId, onCitationClick, maxUserMessages,
                 onClick={handleShare}
                 disabled={shareLoading}
                 className="p-1.5 rounded-full text-zinc-400 hover:text-zinc-600 dark:text-zinc-500 dark:hover:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-700 transition-colors focus-visible:ring-2 focus-visible:ring-zinc-400 dark:focus-visible:ring-zinc-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-900 disabled:opacity-50"
-                title={t('chat.share') || 'Share conversation'}
-                aria-label={t('chat.share') || 'Share conversation'}
+                title={tOr('chat.share', 'Share conversation')}
+                aria-label={tOr('chat.share', 'Share conversation')}
               >
                 <Share2 size={16} />
               </button>
@@ -393,7 +394,7 @@ export default function ChatPanel({ sessionId, onCitationClick, maxUserMessages,
                   type="button"
                   onClick={stopStreaming}
                   className="p-2 bg-zinc-900 dark:bg-zinc-50 text-white dark:text-zinc-900 rounded-full hover:bg-zinc-800 dark:hover:bg-zinc-200 transition-colors focus-visible:ring-2 focus-visible:ring-zinc-400 dark:focus-visible:ring-zinc-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-900"
-                  title={t('chat.stop') || 'Stop'}
+                  title={tOr('chat.stop', 'Stop')}
                   aria-label={t('chat.stop')}
                 >
                   <Square size={16} />

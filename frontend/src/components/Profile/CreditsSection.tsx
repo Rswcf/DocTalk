@@ -15,7 +15,7 @@ interface Props {
 }
 
 export default function CreditsSection({ profile }: Props) {
-  const { t } = useLocale();
+  const { t, tOr } = useLocale();
   const router = useRouter();
 
   const [submitting, setSubmitting] = useState<boolean>(false);
@@ -174,13 +174,13 @@ export default function CreditsSection({ profile }: Props) {
           </div>
         ) : historyError ? (
           <div className="text-center py-4 text-zinc-500 dark:text-zinc-400">
-            <p>{t("common.error") || "Failed to load history"}</p>
+            <p>{tOr("common.error", "Failed to load history")}</p>
             <button
               type="button"
               onClick={() => setRetryCount((c) => c + 1)}
               className="mt-2 text-sm underline hover:text-zinc-700 dark:hover:text-zinc-300 focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:rounded-sm"
             >
-              {t("common.retry") || "Retry"}
+              {tOr("common.retry", "Retry")}
             </button>
           </div>
         ) : items.length === 0 ? (
@@ -229,7 +229,7 @@ export default function CreditsSection({ profile }: Props) {
           <div className="mt-3 flex items-center justify-end gap-2">
             <button
               type="button"
-              aria-label={t("profile.credits.prevPage") || "Previous page"}
+              aria-label={tOr("profile.credits.prevPage", "Previous page")}
               disabled={!canPrev}
               onClick={() => setOffset(Math.max(0, offset - limit))}
               className="px-3 py-1 rounded border dark:border-zinc-700 disabled:opacity-40 focus-visible:ring-2 focus-visible:ring-zinc-400 dark:focus-visible:ring-zinc-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-900"
@@ -238,7 +238,7 @@ export default function CreditsSection({ profile }: Props) {
             </button>
             <button
               type="button"
-              aria-label={t("profile.credits.nextPage") || "Next page"}
+              aria-label={tOr("profile.credits.nextPage", "Next page")}
               disabled={!canNext}
               onClick={() => setOffset(offset + limit)}
               className="px-3 py-1 rounded border dark:border-zinc-700 disabled:opacity-40 focus-visible:ring-2 focus-visible:ring-zinc-400 dark:focus-visible:ring-zinc-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-900"

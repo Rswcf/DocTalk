@@ -20,6 +20,7 @@ interface PlusMenuProps {
   onExportDocx?: () => void;
   onBillingRedirect: () => void;
   t: (key: string) => string;
+  tOr: (key: string, fallback: string) => string;
 }
 
 export default function PlusMenu({
@@ -39,6 +40,7 @@ export default function PlusMenu({
   onExportDocx,
   onBillingRedirect,
   t,
+  tOr,
 }: PlusMenuProps) {
   if (!showCustomInstructions && !showExportInMenu) {
     return null;
@@ -51,7 +53,7 @@ export default function PlusMenu({
         type="button"
         onClick={() => setIsOpen(!isOpen)}
         className="p-1.5 rounded-full text-zinc-400 hover:text-zinc-600 dark:text-zinc-500 dark:hover:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-700 transition-colors focus-visible:ring-2 focus-visible:ring-zinc-400 dark:focus-visible:ring-zinc-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-900"
-        aria-label="More options"
+        aria-label={tOr('chat.moreOptions', 'More options')}
         aria-haspopup="menu"
         aria-expanded={isOpen}
       >
@@ -80,7 +82,7 @@ export default function PlusMenu({
               className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:ring-inset"
             >
               {canUseCustomInstructions ? <Settings2 size={16} /> : <Lock size={16} />}
-              <span>{t('chat.customInstructions') || 'Custom Instructions'}</span>
+              <span>{tOr('chat.customInstructions', 'Custom Instructions')}</span>
               {!canUseCustomInstructions && (
                 <span className="ml-auto text-[11px] px-1.5 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400">
                   Pro
@@ -109,7 +111,7 @@ export default function PlusMenu({
               className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:ring-inset"
             >
               <FileText size={16} />
-              <span>{t('chat.exportMarkdown') || 'Export Markdown'}</span>
+              <span>{tOr('chat.exportMarkdown', 'Export Markdown')}</span>
             </button>
           )}
 
@@ -130,7 +132,7 @@ export default function PlusMenu({
               className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:ring-inset"
             >
               {canUseExport ? <Download size={16} /> : <Lock size={16} />}
-              <span>{t('chat.exportPdf') || 'Export PDF'}</span>
+              <span>{tOr('chat.exportPdf', 'Export PDF')}</span>
               {!canUseExport && (
                 <span className="ml-auto text-[11px] px-1.5 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400">
                   Plus
@@ -156,7 +158,7 @@ export default function PlusMenu({
               className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:ring-inset"
             >
               {canUseExport ? <Download size={16} /> : <Lock size={16} />}
-              <span>{t('chat.exportDocx') || 'Export DOCX'}</span>
+              <span>{tOr('chat.exportDocx', 'Export DOCX')}</span>
               {!canUseExport && (
                 <span className="ml-auto text-[11px] px-1.5 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400">
                   Plus
