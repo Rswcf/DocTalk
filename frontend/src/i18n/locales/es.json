@@ -132,7 +132,7 @@
   "home.cta.loginUpload": "Inicia sesión para subir tu PDF",
   "home.cta.tryDemo": "Probar demo",
   "landing.badge": "ASISTENTE PDF AI",
-  "landing.cta.demo": "Demo gratuita",
+  "landing.cta.demo": "Empieza con un documento de muestra",
   "landing.cta.getStarted": "Empezar",
   "landing.cta.howItWorks": "Cómo funciona",
   "landing.description": "Sube cualquier PDF y obtén respuestas instantáneas con citas. Cada respuesta enlaza directamente a la fuente exacta.",
@@ -2106,5 +2106,7 @@
   "useCasesHr.cta.title": "Start Reviewing HR Documents — Free, No Signup",
   "useCasesHr.cta.description": "Try DocTalk's free demo with sample documents. See how AI-powered citation highlighting works. No account required.",
   "useCasesHr.cta.tryDemo": "Try the Free Demo",
-  "useCasesHr.cta.viewPricing": "View Pricing"
+  "useCasesHr.cta.viewPricing": "View Pricing",
+  "dashboard.emptyTrySample": "Empieza con un documento de muestra",
+  "dashboard.emptyUploadOwn": "O sube el tuyo"
 }

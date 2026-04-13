@@ -2106,5 +2106,7 @@
   "useCasesHr.cta.title": "Start Reviewing HR Documents — Free, No Signup",
   "useCasesHr.cta.description": "Try DocTalk's free demo with sample documents. See how AI-powered citation highlighting works. No account required.",
   "useCasesHr.cta.tryDemo": "Try the Free Demo",
-  "useCasesHr.cta.viewPricing": "View Pricing"
+  "useCasesHr.cta.viewPricing": "View Pricing",
+  "dashboard.emptyTrySample": "Start with a sample doc",
+  "dashboard.emptyUploadOwn": "Or upload your own"
 }

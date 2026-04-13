@@ -255,7 +255,7 @@
   "landing.headline": "모든 PDF와\n즉시 채팅",
   "landing.subtitle": "AI 기반 리딩 도우미",
   "landing.description": "PDF를 업로드하고 인용 포함 즉각적인 답변을 받으세요. 모든 응답이 정확한 출처에 연결되어 원클릭으로 확인할 수 있습니다.",
-  "landing.cta.demo": "무료 데모 체험",
+  "landing.cta.demo": "샘플 문서로 시작하기",
   "landing.cta.getStarted": "시작하기",
   "landing.cta.howItWorks": "작동 방식",
   "landing.showcase.title": "직접 확인하세요",
@@ -2106,5 +2106,7 @@
   "useCasesHr.cta.title": "Start Reviewing HR Documents — Free, No Signup",
   "useCasesHr.cta.description": "Try DocTalk's free demo with sample documents. See how AI-powered citation highlighting works. No account required.",
   "useCasesHr.cta.tryDemo": "Try the Free Demo",
-  "useCasesHr.cta.viewPricing": "View Pricing"
+  "useCasesHr.cta.viewPricing": "View Pricing",
+  "dashboard.emptyTrySample": "샘플 문서로 시작하기",
+  "dashboard.emptyUploadOwn": "또는 직접 업로드"
 }

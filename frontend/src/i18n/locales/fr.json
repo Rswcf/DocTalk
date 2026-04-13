@@ -263,7 +263,7 @@
   "landing.headline": "Discutez avec n'importe quel PDF\nen quelques secondes",
   "landing.subtitle": "Votre compagnon de lecture IA",
   "landing.description": "Téléchargez n'importe quel PDF et obtenez des réponses instantanées avec citations. Chaque réponse renvoie à la source exacte.",
-  "landing.cta.demo": "Démo gratuite",
+  "landing.cta.demo": "Commencer avec un exemple",
   "landing.cta.getStarted": "Commencer",
   "landing.cta.howItWorks": "Comment ça marche",
   "landing.showcase.title": "Voyez-le en action",
@@ -2106,5 +2106,7 @@
   "useCasesHr.cta.title": "Commencez la révision de documents RH — Gratuit, sans inscription",
   "useCasesHr.cta.description": "Essayez la démo gratuite de DocTalk avec des exemples de documents. Voyez comment le surlignage des citations par IA fonctionne. Aucun compte requis.",
   "useCasesHr.cta.tryDemo": "Essayer la démo gratuite",
-  "useCasesHr.cta.viewPricing": "Voir les tarifs"
+  "useCasesHr.cta.viewPricing": "Voir les tarifs",
+  "dashboard.emptyTrySample": "Commencer avec un exemple",
+  "dashboard.emptyUploadOwn": "Ou téléverser le vôtre"
 }

@@ -1482,7 +1482,7 @@
   "instructions.saved": "Salvo!",
   "instructions.title": "Instruções personalizadas",
   "landing.badge": "ASSISTENTE DE DOCUMENTOS IA",
-  "landing.cta.demo": "Experimente grátis",
+  "landing.cta.demo": "Comece com um documento de amostra",
   "landing.cta.getStarted": "Começar",
   "landing.cta.howItWorks": "Saiba mais",
   "landing.demoUnavailable": "Demonstração do produto indisponível",
@@ -2106,5 +2106,7 @@
   "userMenu.profile": "Perfil",
   "userMenu.signOut": "Sair",
   "viewer.slides": "Slides",
-  "viewer.text": "Texto"
+  "viewer.text": "Texto",
+  "dashboard.emptyTrySample": "Comece com um documento de amostra",
+  "dashboard.emptyUploadOwn": "Ou envie o seu"
 }

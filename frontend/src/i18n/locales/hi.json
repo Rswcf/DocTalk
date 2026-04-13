@@ -132,7 +132,7 @@
   "home.cta.loginUpload": "अपना PDF अपलोड करने के लिए लॉगिन करें",
   "home.cta.tryDemo": "डेमो आज़माएँ",
   "landing.badge": "PDF AI सहायक",
-  "landing.cta.demo": "मुफ्त डेमो",
+  "landing.cta.demo": "नमूना दस्तावेज़ से शुरू करें",
   "landing.cta.getStarted": "शुरू करें",
   "landing.cta.howItWorks": "कैसे काम करता है",
   "landing.description": "कोई भी PDF अपलोड करें और तुरंत उद्धरण सहित सटीक उत्तर पाएं। हर उत्तर मूल स्रोत से जुड़ा होता है।",
@@ -2106,5 +2106,7 @@
   "useCasesHr.cta.title": "Start Reviewing HR Documents — Free, No Signup",
   "useCasesHr.cta.description": "Try DocTalk's free demo with sample documents. See how AI-powered citation highlighting works. No account required.",
   "useCasesHr.cta.tryDemo": "Try the Free Demo",
-  "useCasesHr.cta.viewPricing": "View Pricing"
+  "useCasesHr.cta.viewPricing": "View Pricing",
+  "dashboard.emptyTrySample": "नमूना दस्तावेज़ से शुरू करें",
+  "dashboard.emptyUploadOwn": "या अपना अपलोड करें"
 }

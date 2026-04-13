@@ -2145,5 +2145,7 @@
   "altsHub.ctaTryDemo": "免费试用演示",
   "altsHub.cardChatpdfFeatures": "7 种格式 · 引用高亮 · 11 种语言",
   "altsHub.cardNotebooklmFeatures": "7 种格式 · 引用高亮 · 11 种语言",
-  "altsHub.cardHumataFeatures": "7 种格式 · 引用高亮 · 11 种语言"
+  "altsHub.cardHumataFeatures": "7 种格式 · 引用高亮 · 11 种语言",
+  "dashboard.emptyTrySample": "从样例文档开始",
+  "dashboard.emptyUploadOwn": "或上传自己的文档"
 }

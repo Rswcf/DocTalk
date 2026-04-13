@@ -255,7 +255,7 @@
   "landing.headline": "Chatta con qualsiasi PDF\nin pochi secondi",
   "landing.subtitle": "Il tuo compagno di lettura basato sull'AI",
   "landing.description": "Carica qualsiasi PDF e ottieni risposte istantanee con citazioni. Ogni risposta rimanda alla fonte esatta — così puoi verificare con un clic.",
-  "landing.cta.demo": "Prova la demo gratuita",
+  "landing.cta.demo": "Inizia con un documento di esempio",
   "landing.cta.getStarted": "Inizia ora",
   "landing.cta.howItWorks": "Come funziona",
   "landing.showcase.title": "Guardalo in azione",
@@ -2106,5 +2106,7 @@
   "useCasesHr.cta.title": "Start Reviewing HR Documents — Free, No Signup",
   "useCasesHr.cta.description": "Try DocTalk's free demo with sample documents. See how AI-powered citation highlighting works. No account required.",
   "useCasesHr.cta.tryDemo": "Try the Free Demo",
-  "useCasesHr.cta.viewPricing": "View Pricing"
+  "useCasesHr.cta.viewPricing": "View Pricing",
+  "dashboard.emptyTrySample": "Inizia con un documento di esempio",
+  "dashboard.emptyUploadOwn": "O carica il tuo"
 }

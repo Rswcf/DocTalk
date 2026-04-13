@@ -81,26 +81,11 @@ export default function HeroArtifact() {
         </p>
       </div>
 
-      {/* SVG connector — citation pill → highlight on the page */}
-      <svg
-        className="absolute pointer-events-none"
-        style={{
-          top: "55%",
-          left: "30%",
-          width: "40%",
-          height: "20%",
-        }}
-        viewBox="0 0 100 40"
-        fill="none"
-      >
-        <path
-          d="M 5 30 Q 40 5, 80 5"
-          stroke="currentColor"
-          strokeWidth="1"
-          strokeDasharray="2 2"
-          className="text-accent/50"
-        />
-      </svg>
+      {/* Removed the absolute-positioned SVG connector — at narrow widths
+          the fixed coords drifted off the highlight↔pill anchors. The
+          visual story (highlight on page → matching colored pill in
+          chat) is conveyed by color + overlap; the dashed arc was
+          redundant and fragile. Codex P1 review flagged this. */}
     </div>
   );
 }

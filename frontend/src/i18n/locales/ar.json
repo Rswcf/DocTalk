@@ -132,7 +132,7 @@
   "home.cta.loginUpload": "سجّل الدخول لرفع PDF الخاص بك",
   "home.cta.tryDemo": "جرّب العرض التوضيحي",
   "landing.badge": "مساعد PDF بالذكاء الاصطناعي",
-  "landing.cta.demo": "تجربة مجانية",
+  "landing.cta.demo": "ابدأ بمستند نموذجي",
   "landing.cta.getStarted": "ابدأ الآن",
   "landing.cta.howItWorks": "كيف يعمل",
   "landing.description": "ارفع أي PDF واحصل على إجابات فورية مع اقتباسات. كل إجابة مرتبطة بالمصدر الأصلي.",
@@ -2106,5 +2106,7 @@
   "useCasesHr.cta.title": "Start Reviewing HR Documents — Free, No Signup",
   "useCasesHr.cta.description": "Try DocTalk's free demo with sample documents. See how AI-powered citation highlighting works. No account required.",
   "useCasesHr.cta.tryDemo": "Try the Free Demo",
-  "useCasesHr.cta.viewPricing": "View Pricing"
+  "useCasesHr.cta.viewPricing": "View Pricing",
+  "dashboard.emptyTrySample": "ابدأ بمستند نموذجي",
+  "dashboard.emptyUploadOwn": "أو حمّل مستندك"
 }

@@ -263,7 +263,7 @@
   "landing.headline": "Jede Antwort zitiert\ndie genaue Seite.",
   "landing.subtitle": "Laden Sie ein beliebiges Dokument hoch. Stellen Sie Fragen. Erhalten Sie Antworten mit seitengenauen Quellenangaben, die Sie mit einem Klick überprüfen können.",
   "landing.description": "Laden Sie ein PDF, Word-Dokument, eine Tabellenkalkulation oder URL hoch. Fragen Sie alles. DocTalk findet die Antwort und zeigt Ihnen genau, woher sie stammt — Seitennummer, hervorgehobene Passage, ein Klick zur Überprüfung.",
-  "landing.cta.demo": "Kostenlos testen",
+  "landing.cta.demo": "Mit Beispieldokument starten",
   "landing.cta.getStarted": "Loslegen",
   "landing.cta.howItWorks": "Mehr erfahren",
   "landing.showcase.title": "Sehen Sie es in Aktion",
@@ -2106,5 +2106,7 @@
   "useCasesHr.cta.title": "Jetzt HR-Dokumente überprüfen — kostenlos, ohne Anmeldung",
   "useCasesHr.cta.description": "Testen Sie die kostenlose Demo von DocTalk mit Beispieldokumenten. Sehen Sie, wie KI-gestützte Zitathervorhebung funktioniert. Kein Konto erforderlich.",
   "useCasesHr.cta.tryDemo": "Kostenlose Demo testen",
-  "useCasesHr.cta.viewPricing": "Preise ansehen"
+  "useCasesHr.cta.viewPricing": "Preise ansehen",
+  "dashboard.emptyTrySample": "Mit Beispieldokument starten",
+  "dashboard.emptyUploadOwn": "Oder eigenes hochladen"
 }

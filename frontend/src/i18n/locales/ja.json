@@ -255,7 +255,7 @@
   "landing.headline": "あらゆるPDFと\n瞬時にチャット",
   "landing.subtitle": "AI搭載のリーディングコンパニオン",
   "landing.description": "PDFをアップロードして、引用付きの即座の回答を取得。すべての回答が正確なソースにリンクされているので、ワンクリックで確認できます。",
-  "landing.cta.demo": "無料デモを試す",
+  "landing.cta.demo": "サンプル文書で始める",
   "landing.cta.getStarted": "始める",
   "landing.cta.howItWorks": "仕組み",
   "landing.showcase.title": "実際に見てみましょう",
@@ -2106,5 +2106,7 @@
   "useCasesHr.cta.title": "Start Reviewing HR Documents — Free, No Signup",
   "useCasesHr.cta.description": "Try DocTalk's free demo with sample documents. See how AI-powered citation highlighting works. No account required.",
   "useCasesHr.cta.tryDemo": "Try the Free Demo",
-  "useCasesHr.cta.viewPricing": "View Pricing"
+  "useCasesHr.cta.viewPricing": "View Pricing",
+  "dashboard.emptyTrySample": "サンプル文書で始める",
+  "dashboard.emptyUploadOwn": "または自分の文書をアップロード"
 }
