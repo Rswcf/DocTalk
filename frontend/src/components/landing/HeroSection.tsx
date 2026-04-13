@@ -19,8 +19,10 @@ export default function HeroSection() {
             {t('landing.badge')}
           </span>
 
-          {/* Headline */}
-          <h1 className="text-5xl md:text-6xl lg:text-7xl font-semibold text-zinc-900 dark:text-zinc-50 leading-[1.05] tracking-tight text-balance">
+          {/* Headline — dialed down from 5xl/7xl semibold to 4xl/6xl medium
+              with tighter tracking, per 30-agent "Linear whispered authority"
+              principle (weight contrast, not size contrast). */}
+          <h1 className="text-4xl md:text-5xl lg:text-6xl font-medium text-zinc-900 dark:text-zinc-50 leading-[1.05] tracking-[-0.035em] text-balance">
             {t('landing.headline').split('\n').map((line: string, i: number) => (
               <React.Fragment key={i}>
                 {i > 0 && <br />}

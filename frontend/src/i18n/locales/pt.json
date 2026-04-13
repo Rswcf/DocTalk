@@ -1486,7 +1486,7 @@
   "landing.cta.getStarted": "Começar",
   "landing.cta.howItWorks": "Saiba mais",
   "landing.demoUnavailable": "Demonstração do produto indisponível",
-  "landing.description": "Envie um PDF, documento Word, planilha ou URL. Pergunte qualquer coisa. O DocTalk encontra a resposta e mostra exatamente de onde ela veio — número da página, trecho destacado, um clique para verificar.",
+  "landing.description": "Solte um PDF, DOCX ou URL. Receba respostas com a página exata destacada — verifique com um clique.",
   "landing.faq.a1": "Cada resposta inclui citações numeradas que vinculam ao trecho exato do seu documento. Clique em qualquer citação para ir à fonte e vê-la destacada. Você sempre verifica o trabalho da IA pessoalmente.",
   "landing.faq.a2": "O DocTalk suporta PDF, DOCX, PPTX, XLSX, TXT e arquivos Markdown, além de URLs. PDFs incluem documentos digitalizados via OCR integrado. Arquivos de até 50MB e 500 páginas são suportados.",
   "landing.faq.a3": "Com certeza. Seus documentos são criptografados com TLS em trânsito e AES-256 em repouso, nunca usados para treinar IA, e você pode excluí-los a qualquer momento. Seguimos princípios de privacidade em primeiro lugar.",

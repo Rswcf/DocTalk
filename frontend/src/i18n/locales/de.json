@@ -262,7 +262,7 @@
   "landing.badge": "KI-DOKUMENTENASSISTENT",
   "landing.headline": "Jede Antwort zitiert\ndie genaue Seite.",
   "landing.subtitle": "Laden Sie ein beliebiges Dokument hoch. Stellen Sie Fragen. Erhalten Sie Antworten mit seitengenauen Quellenangaben, die Sie mit einem Klick überprüfen können.",
-  "landing.description": "Laden Sie ein PDF, Word-Dokument, eine Tabellenkalkulation oder URL hoch. Fragen Sie alles. DocTalk findet die Antwort und zeigt Ihnen genau, woher sie stammt — Seitennummer, hervorgehobene Passage, ein Klick zur Überprüfung.",
+  "landing.description": "Lade PDF, DOCX oder URL hoch. Erhalte Antworten mit exakt markierter Seite — ein Klick zur Prüfung.",
   "landing.cta.demo": "Mit Beispieldokument starten",
   "landing.cta.getStarted": "Loslegen",
   "landing.cta.howItWorks": "Mehr erfahren",

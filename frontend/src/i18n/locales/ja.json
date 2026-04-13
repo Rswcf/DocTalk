@@ -254,7 +254,7 @@
   "landing.badge": "PDF AIアシスタント",
   "landing.headline": "あらゆるPDFと\n瞬時にチャット",
   "landing.subtitle": "AI搭載のリーディングコンパニオン",
-  "landing.description": "PDFをアップロードして、引用付きの即座の回答を取得。すべての回答が正確なソースにリンクされているので、ワンクリックで確認できます。",
+  "landing.description": "PDF、DOCX、URL をアップロード。該当ページを自動ハイライト — ワンクリックで検証。",
   "landing.cta.demo": "サンプル文書で始める",
   "landing.cta.getStarted": "始める",
   "landing.cta.howItWorks": "仕組み",

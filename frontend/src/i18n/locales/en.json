@@ -262,7 +262,7 @@
   "landing.badge": "DOCUMENT AI ASSISTANT",
   "landing.headline": "Every answer cites\nthe exact page.",
   "landing.subtitle": "Upload any document. Ask questions. Get answers with page-level citations you can verify in one click.",
-  "landing.description": "Drop in a PDF, Word doc, spreadsheet, or URL. Ask anything. DocTalk finds the answer and shows you exactly where it came from — page number, highlighted passage, one click to verify.",
+  "landing.description": "Drop a PDF, DOCX, or URL. Get answers with the exact page highlighted — one click to verify.",
   "landing.cta.demo": "Start with a sample doc",
   "landing.cta.getStarted": "Get started",
   "landing.cta.howItWorks": "Learn more",
