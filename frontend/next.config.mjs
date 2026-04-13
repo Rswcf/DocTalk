@@ -11,7 +11,7 @@ const buildSha =
   process.env.GITHUB_SHA ||
   "";
 
-// Content-Security-Policy directives.
+// Content-Security-Policy directives (enforcing).
 //
 // NOTE: script-src still allows 'unsafe-inline' pending a full nonce-based
 // rewrite (Next.js middleware + next/script nonce propagation). Tracked as a
@@ -35,6 +35,35 @@ const cspDirectives = [
   "form-action 'self' https://accounts.google.com https://login.microsoftonline.com",
   "upgrade-insecure-requests",
 ].join("; ");
+
+// Content-Security-Policy-Report-Only directives (production only).
+//
+// Strict version without 'unsafe-inline' in script-src. Browser reports what
+// WOULD be blocked to /api/csp-report, no actual enforcement. Purpose: collect
+// 1-2 weeks of real-world violations to decide the nonce-migration strategy
+// (Plan: .collab/plans/p3-csp-nonce-plan.md).
+//
+// Style-src keeps 'unsafe-inline' because Tailwind generates thousands of
+// inline styles — reporting those would drown real violations.
+const cspReportOnlyDirectives = [
+  "default-src 'self'",
+  "script-src 'self' https://va.vercel-scripts.com https://*.sentry-cdn.com https://www.googletagmanager.com",
+  "style-src 'self' 'unsafe-inline'",
+  "img-src 'self' blob: data: https://*.up.railway.app https://*.googleusercontent.com https://www.google-analytics.com",
+  "font-src 'self' data:",
+  "worker-src 'self' blob:",
+  "media-src 'none'",
+  "connect-src 'self' https://*.up.railway.app https://*.sentry.io https://*.ingest.sentry.io https://va.vercel-scripts.com https://vitals.vercel-insights.com https://www.google-analytics.com https://analytics.google.com https://*.google-analytics.com https://*.analytics.google.com",
+  "frame-src 'none'",
+  "frame-ancestors 'none'",
+  "object-src 'none'",
+  "base-uri 'self'",
+  "form-action 'self' https://accounts.google.com https://login.microsoftonline.com",
+  "report-uri /api/csp-report",
+  "report-to csp-endpoint",
+].join("; ");
+
+const isProduction = process.env.NODE_ENV === "production";
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
@@ -76,6 +105,18 @@ const nextConfig = {
             value: "max-age=63072000; includeSubDomains; preload",
           },
           { key: "Content-Security-Policy", value: cspDirectives },
+          ...(isProduction
+            ? [
+                {
+                  key: "Content-Security-Policy-Report-Only",
+                  value: cspReportOnlyDirectives,
+                },
+                {
+                  key: "Reporting-Endpoints",
+                  value: 'csp-endpoint="/api/csp-report"',
+                },
+              ]
+            : []),
         ],
       },
     ];
