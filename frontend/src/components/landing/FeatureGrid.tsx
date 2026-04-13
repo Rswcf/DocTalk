@@ -191,13 +191,18 @@ interface Tile {
   hero?: boolean;
 }
 
+// Actual bento layout (Codex review corrected the original math):
+//   Row 1: Citations (6)
+//   Row 2: Formats (3) | Languages (3)
+//   Row 3: Modes (2)   | Free demo (2) | Privacy (2)
+// 6 + (3+3) + (2+2+2) = 18 cells across 3 rows of a 6-col grid.
 const tiles: Tile[] = [
   { Visual: VisualCitationsHero, titleKey: 'landing.feature.citations.title', descKey: 'landing.feature.citations.desc', lgSpan: 6, hero: true },
   { Visual: VisualFormats,       titleKey: 'landing.feature.formats.title',   descKey: 'landing.feature.formats.desc',   lgSpan: 3 },
   { Visual: VisualLanguages,     titleKey: 'landing.feature.languages.title', descKey: 'landing.feature.languages.desc', lgSpan: 3 },
-  { Visual: VisualModes,         titleKey: 'landing.feature.modes.title',     descKey: 'landing.feature.modes.desc',     lgSpan: 4 },
-  { Visual: VisualFreeDemo,      titleKey: 'landing.feature.freeDemo.title',  descKey: 'landing.feature.freeDemo.desc',  lgSpan: 4 },
-  { Visual: VisualPrivacy,       titleKey: 'landing.feature.privacy.title',   descKey: 'landing.feature.privacy.desc',   lgSpan: 4 },
+  { Visual: VisualModes,         titleKey: 'landing.feature.modes.title',     descKey: 'landing.feature.modes.desc',     lgSpan: 2 },
+  { Visual: VisualFreeDemo,      titleKey: 'landing.feature.freeDemo.title',  descKey: 'landing.feature.freeDemo.desc',  lgSpan: 2 },
+  { Visual: VisualPrivacy,       titleKey: 'landing.feature.privacy.title',   descKey: 'landing.feature.privacy.desc',   lgSpan: 2 },
 ];
 
 // Map span to static Tailwind classes (Tailwind JIT needs the full class
