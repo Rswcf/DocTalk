@@ -886,7 +886,7 @@
   "useCasesLawyers.faq.q3.question": "Quelle est la précision de l'IA pour l'analyse juridique ?",
   "useCasesLawyers.faq.q3.answer": "DocTalk utilise la génération augmentée par récupération (RAG) pour baser chaque réponse sur le texte réel de votre document. Chaque affirmation est accompagnée d'une citation vérifiable.",
   "useCasesLawyers.faq.q4.question": "Fonctionne-t-il avec les PDF numérisés ?",
-  "useCasesLawyers.faq.q4.answer": "DocTalk fonctionne mieux avec les PDF texte où la couche de texte est préservée. La plupart des documents juridiques modernes sont des PDF texte natifs.",
+  "useCasesLawyers.faq.q4.answer": "DocTalk fonctionne mieux avec les PDF texte où la couche de texte est préservée. Pour les PDF scannés ou uniquement images, DocTalk exécute automatiquement l'OCR via Tesseract (anglais + chinois simplifié) pour extraire le texte. La qualité de l'OCR varie selon la résolution du scan et la mise en page — pour un travail juridique exigeant une haute fidélité, les PDF texte restent la source la plus fiable.",
   "useCasesLawyers.faq.q5.question": "Y a-t-il un plan équipe ?",
   "useCasesLawyers.faq.q5.answer": "DocTalk propose actuellement des plans individuels : Gratuit (500 crédits/mois), Plus ($9.99/mois pour 3 000 crédits) et Pro ($19.99/mois pour 9 000 crédits).",
   "useCasesLawyers.cta.title": "Commencez la révision documentaire — Gratuit, sans inscription",

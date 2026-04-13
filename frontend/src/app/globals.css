@@ -11,6 +11,11 @@
   --page-background: #fafaf7;
   --foreground: #09090b;
   --border: #e4e4e7;
+  /* Surface elevation tokens. Use these instead of ad-hoc
+     bg-white/bg-zinc-100 so dark mode can lift surfaces properly. */
+  --surface-1: #ffffff;
+  --surface-2: #f4f4f5;
+  --surface-3: #e4e4e7;
   /* Highlight colors */
   --highlight-base: rgba(245, 158, 11, 0.25);
   --highlight-strong: rgba(245, 158, 11, 0.5);
@@ -28,14 +33,33 @@
   --page-background: #1c1b18;
   --foreground: #fafafa;
   --border: #3f3f46;
+  /* Dark mode surfaces lift progressively from the page canvas (vs.
+     inverting the light ramp). Designed-for-dark: closer values reduce
+     harsh contrast against pure black. */
+  --surface-1: #18181b;
+  --surface-2: #27272a;
+  --surface-3: #3f3f46;
   /* Dark mode highlight colors */
   --highlight-base: rgba(245, 158, 11, 0.20);
   --highlight-strong: rgba(245, 158, 11, 0.5);
-  /* Accent colors (indigo) */
-  --accent: #818cf8;
-  --accent-hover: #a5b4fc;
-  --accent-light: rgba(129, 140, 248, 0.1);
+  /* Accent colors (indigo). Dark mode drops saturation ~5% and lifts
+     to indigo-300 — indigo-400 (#818cf8) bounces too hard against pure
+     black. */
+  --accent: #a8b3f5;
+  --accent-hover: #c7d2fe;
+  --accent-light: rgba(168, 179, 245, 0.08);
   --accent-foreground: #09090b;
+}
+
+/* Designed-for-dark: scope the weight-shift to prose/headings only.
+   A blanket .dark .font-bold override misfires on numeric badges, CTA
+   titles, and status pills where bold IS the intent. */
+.dark h1, .dark h2, .dark h3, .dark h4, .dark h5, .dark h6 {
+  font-weight: 600;
+}
+.dark .prose strong,
+.dark .prose b {
+  font-weight: 500;
 }
 
 html, body {
@@ -139,6 +163,15 @@ body {
 /* Radial glow behind showcase */
 .glow-accent {
   background: radial-gradient(ellipse 60% 40% at 50% 50%, var(--accent-light) 0%, transparent 70%);
+}
+/* Dark mode: softer glow using desaturated indigo-300 at lower opacity
+   so the halo doesn't punch out against pure black canvas. */
+.dark .glow-accent {
+  background: radial-gradient(
+    ellipse 60% 40% at 50% 50%,
+    rgba(168, 179, 245, 0.18) 0%,
+    transparent 70%
+  );
 }
 
 /* Gradient text utility */

@@ -21,6 +21,11 @@ const config: Config = {
           light: 'var(--accent-light)',
           foreground: 'var(--accent-foreground)',
         },
+        surface: {
+          1: 'var(--surface-1)',
+          2: 'var(--surface-2)',
+          3: 'var(--surface-3)',
+        },
       },
       keyframes: {
         'fade-in': {

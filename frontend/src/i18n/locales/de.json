@@ -886,7 +886,7 @@
   "useCasesLawyers.faq.q3.question": "Wie genau ist KI für juristische Analyse?",
   "useCasesLawyers.faq.q3.answer": "DocTalk verwendet Retrieval-Augmented Generation (RAG), um jede Antwort auf dem tatsächlichen Text Ihres Dokuments zu basieren. Jede Antwort enthält nummerierte Zitate, damit Sie jede Behauptung überprüfen können. DocTalk ist ein Forschungsbeschleunigungstool, kein Ersatz für juristisches Urteil.",
   "useCasesLawyers.faq.q4.question": "Funktioniert es mit gescannten PDFs?",
-  "useCasesLawyers.faq.q4.answer": "DocTalk funktioniert am besten mit textbasierten PDFs, bei denen die Textschicht erhalten ist. Die meisten modernen juristischen Dokumente erzeugen textbasierte PDFs. Gescannte Bild-PDFs ohne OCR können eine eingeschränkte Textextraktion haben.",
+  "useCasesLawyers.faq.q4.answer": "DocTalk funktioniert am besten mit textbasierten PDFs, bei denen die Textschicht erhalten ist. Für gescannte oder reine Bild-PDFs führt DocTalk automatisch OCR mit Tesseract (Englisch + vereinfachtes Chinesisch) aus, um Text zu extrahieren. Die OCR-Qualität hängt von Scan-Auflösung und Seitenlayout ab — für juristische Arbeit mit hoher Genauigkeitsanforderung bleiben textbasierte PDFs die zuverlässigste Quelle.",
   "useCasesLawyers.faq.q5.question": "Gibt es einen Team-Plan?",
   "useCasesLawyers.faq.q5.answer": "DocTalk bietet derzeit Einzelpläne: Kostenlos (500 Credits/Monat), Plus ($9.99/Monat für 3.000 Credits) und Pro ($19.99/Monat für 9.000 Credits). Team- und Enterprise-Pläne sind in der Roadmap.",
   "useCasesLawyers.cta.title": "Jetzt Dokumente überprüfen — kostenlos, ohne Anmeldung",
