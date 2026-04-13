@@ -13,9 +13,6 @@ const config: Config = {
         sans: ['var(--font-inter)', 'system-ui', 'sans-serif'],
         display: ['var(--font-logo)', 'system-ui', 'sans-serif'],
         logo: ['var(--font-logo)', 'system-ui', 'sans-serif'],
-        // Editorial serif — reserved for marketing hero H1. CJK/Arabic/
-        // Hindi fall back to system serif (still serif, preserves intent).
-        serif: ['var(--font-serif)', 'ui-serif', 'Georgia', 'serif'],
       },
       colors: {
         accent: {

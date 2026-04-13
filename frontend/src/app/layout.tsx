@@ -1,5 +1,5 @@
 import type { Metadata } from 'next'
-import { Inter, Sora, Instrument_Serif } from 'next/font/google'
+import { Inter, Sora } from 'next/font/google'
 import { cookies } from 'next/headers'
 import './globals.css'
 import ErrorBoundary from '../components/ErrorBoundary'
@@ -16,18 +16,6 @@ const sora = Sora({
   subsets: ['latin'],
   variable: '--font-logo',
   weight: ['500', '600', '700'],
-  display: 'swap',
-})
-// Marketing hero H1 / editorial accent. Italic-friendly serif with high
-// contrast — used SOLELY for the landing hero headline so it carries the
-// "editorial product" feel (Granola/Notion pattern) without displacing
-// Inter elsewhere. CJK/Arabic/Hindi locales fall back to system serif
-// because Instrument Serif is Latin-only; this is acceptable — the
-// fallback still reads as a serif and preserves the visual intent.
-const instrumentSerif = Instrument_Serif({
-  subsets: ['latin'],
-  variable: '--font-serif',
-  weight: ['400'],
   display: 'swap',
 })
 
@@ -65,7 +53,7 @@ export default async function RootLayout({
   const locale = cookieStore.get('NEXT_LOCALE')?.value || 'en'
 
   return (
-    <html lang={locale} suppressHydrationWarning className={`${inter.variable} ${sora.variable} ${instrumentSerif.variable}`}>
+    <html lang={locale} suppressHydrationWarning className={`${inter.variable} ${sora.variable}`}>
       <head>
         <meta name="google-site-verification" content="168G1TYJfQ7MNp4sNdF-7gC2wDWKGeds618LyLdkCUM" />
         <meta name="msvalidate.01" content="50E7D296303C85BC31C1BE98539EA393" />
