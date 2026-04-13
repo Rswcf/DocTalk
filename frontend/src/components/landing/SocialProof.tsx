@@ -66,7 +66,7 @@ export default function SocialProof() {
     <ScrollReveal>
       <section className="max-w-5xl mx-auto px-6 py-24">
         <div className="border-t border-zinc-200 dark:border-zinc-800 pt-16">
-          <h2 className="font-semibold tracking-tight text-3xl tracking-tight text-zinc-900 dark:text-zinc-50 text-center mb-12 text-balance">
+          <h2 className="font-semibold tracking-tight text-3xl text-zinc-900 dark:text-zinc-50 text-center mb-12 text-balance">
             {t('landing.social.title')}
           </h2>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
