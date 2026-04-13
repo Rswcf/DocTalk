@@ -2119,5 +2119,9 @@
   "chat.sources.label": "{count} fontes",
   "chat.sources.ariaLabel": "Fontes da resposta",
   "chat.sources.retrieving": "Recuperando fontes…",
-  "chat.sources.retrievingAriaLabel": "Recuperando fontes"
+  "chat.sources.retrievingAriaLabel": "Recuperando fontes",
+  "footer.links.trust": "Confiança e Segurança",
+  "footer.github.label": "Código aberto no GitHub",
+  "footer.github.ariaLabel": "Repositório DocTalk no GitHub (abre em nova aba)",
+  "trust.title": "Confiança e Segurança"
 }

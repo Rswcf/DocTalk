@@ -36,6 +36,7 @@ export default function Footer() {
   const companyLinks = [
     { href: '/about', label: t('footer.links.about') },
     { href: '/contact', label: t('footer.contact') },
+    { href: '/trust', label: t('footer.links.trust') },
     { href: '/privacy', label: t('privacy.policyLink') },
     { href: '/terms', label: t('terms.title') },
     { href: '/privacy#ccpa', label: t('footer.doNotSell') },
@@ -120,12 +121,29 @@ export default function Footer() {
           </div>
 
           {/* Bottom row */}
-          <div className="mt-12 pt-8 border-t border-zinc-200 dark:border-zinc-800 text-center text-sm text-zinc-400 dark:text-zinc-500">
-            <p>{t('footer.copyright')}</p>
-            <p className="mt-2">
-              {releaseLabel}
-              {buildSha ? ` · ${buildSha}` : ''}
-            </p>
+          <div className="mt-12 pt-8 border-t border-zinc-200 dark:border-zinc-800 flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-zinc-400 dark:text-zinc-500">
+            <div className="text-center sm:text-left">
+              <p>{t('footer.copyright')}</p>
+              <p className="mt-1 font-mono text-xs">
+                {releaseLabel}
+                {buildSha ? ` · ${buildSha}` : ''}
+              </p>
+            </div>
+            {/* Open-source signal — per 30-agent indie credibility research,
+                a visible GitHub link is one of the strongest "real product,
+                real team" signals a small-team SaaS can offer. */}
+            <a
+              href="https://github.com/Rswcf/DocTalk"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 text-xs font-medium text-zinc-500 dark:text-zinc-400 hover:text-accent dark:hover:text-accent transition-colors focus-visible:ring-2 focus-visible:ring-accent focus-visible:rounded-sm"
+              aria-label={t('footer.github.ariaLabel')}
+            >
+              <svg aria-hidden="true" viewBox="0 0 24 24" className="w-4 h-4" fill="currentColor">
+                <path d="M12 .5C5.73.5.5 5.73.5 12c0 5.08 3.29 9.38 7.86 10.9.58.1.79-.25.79-.56v-2.01c-3.2.7-3.88-1.54-3.88-1.54-.52-1.33-1.27-1.68-1.27-1.68-1.04-.71.08-.7.08-.7 1.15.08 1.76 1.18 1.76 1.18 1.02 1.75 2.68 1.25 3.34.95.1-.74.4-1.25.72-1.54-2.56-.29-5.25-1.28-5.25-5.69 0-1.26.45-2.29 1.18-3.1-.12-.29-.51-1.45.11-3.03 0 0 .97-.31 3.17 1.18a11.04 11.04 0 0 1 5.77 0c2.2-1.49 3.17-1.18 3.17-1.18.62 1.58.23 2.74.11 3.03.74.81 1.18 1.84 1.18 3.1 0 4.42-2.69 5.4-5.26 5.68.41.36.78 1.06.78 2.14v3.17c0 .31.21.67.8.56A11.52 11.52 0 0 0 23.5 12C23.5 5.73 18.27.5 12 .5z" />
+              </svg>
+              <span>{t('footer.github.label')}</span>
+            </a>
           </div>
         </ScrollReveal>
       </div>

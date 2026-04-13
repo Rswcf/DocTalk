@@ -2119,5 +2119,9 @@
   "chat.sources.label": "{count} स्रोत",
   "chat.sources.ariaLabel": "उत्तर के स्रोत",
   "chat.sources.retrieving": "स्रोत प्राप्त किए जा रहे हैं…",
-  "chat.sources.retrievingAriaLabel": "स्रोत प्राप्त किए जा रहे हैं"
+  "chat.sources.retrievingAriaLabel": "स्रोत प्राप्त किए जा रहे हैं",
+  "footer.links.trust": "विश्वास और सुरक्षा",
+  "footer.github.label": "GitHub पर ओपन सोर्स",
+  "footer.github.ariaLabel": "DocTalk GitHub रिपॉजिटरी (नए टैब में खुलता है)",
+  "trust.title": "विश्वास और सुरक्षा"
 }

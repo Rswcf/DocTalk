@@ -2119,5 +2119,9 @@
   "chat.sources.label": "출처 {count}개",
   "chat.sources.ariaLabel": "답변 출처",
   "chat.sources.retrieving": "출처를 가져오는 중…",
-  "chat.sources.retrievingAriaLabel": "출처를 가져오는 중"
+  "chat.sources.retrievingAriaLabel": "출처를 가져오는 중",
+  "footer.links.trust": "신뢰와 보안",
+  "footer.github.label": "GitHub 오픈소스",
+  "footer.github.ariaLabel": "DocTalk GitHub 저장소 (새 탭에서 열림)",
+  "trust.title": "신뢰와 보안"
 }

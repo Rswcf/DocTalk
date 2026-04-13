@@ -2158,5 +2158,9 @@
   "chat.sources.label": "{count} 个来源",
   "chat.sources.ariaLabel": "答案来源",
   "chat.sources.retrieving": "正在检索来源…",
-  "chat.sources.retrievingAriaLabel": "正在检索来源"
+  "chat.sources.retrievingAriaLabel": "正在检索来源",
+  "footer.links.trust": "安全与信任",
+  "footer.github.label": "GitHub 开源",
+  "footer.github.ariaLabel": "DocTalk GitHub 仓库（新标签页打开）",
+  "trust.title": "安全与信任"
 }

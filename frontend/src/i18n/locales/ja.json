@@ -2119,5 +2119,9 @@
   "chat.sources.label": "{count} 件のソース",
   "chat.sources.ariaLabel": "回答のソース",
   "chat.sources.retrieving": "ソースを取得中…",
-  "chat.sources.retrievingAriaLabel": "ソースを取得中"
+  "chat.sources.retrievingAriaLabel": "ソースを取得中",
+  "footer.links.trust": "信頼とセキュリティ",
+  "footer.github.label": "GitHub でオープンソース",
+  "footer.github.ariaLabel": "DocTalk GitHub リポジトリ (新しいタブで開きます)",
+  "trust.title": "信頼とセキュリティ"
 }
