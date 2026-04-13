@@ -50,9 +50,30 @@ const cspDirectives = [
 // browsers, including Chrome) requires an absolute URL. Using a relative
 // path silently no-ops on those browsers. Derive an absolute URL from the
 // deployment origin so preview and production each report to themselves.
+//
+// Priority:
+//   1. NEXT_PUBLIC_SITE_URL (explicit override, e.g. custom domain)
+//   2. VERCEL_PROJECT_PRODUCTION_URL (Vercel's canonical production domain,
+//      e.g. "www.doctalk.site" — only set when VERCEL_ENV === "production")
+//   3. VERCEL_URL (per-deployment preview URL, for preview deploys)
+//   4. Hardcoded fallback (local dev / non-Vercel)
+//
+// VERCEL_URL alone is wrong for production because it resolves to the
+// per-build deployment hostname (e.g. "doctalk-abc.vercel.app"), which
+// causes visitors on the custom domain to send reports cross-origin to a
+// URL that rotates every deploy.
+const VERCEL_PROD_ORIGIN =
+  process.env.VERCEL_ENV === "production" &&
+  process.env.VERCEL_PROJECT_PRODUCTION_URL
+    ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
+    : "";
+const VERCEL_DEPLOY_ORIGIN = process.env.VERCEL_URL
+  ? `https://${process.env.VERCEL_URL}`
+  : "";
 const SITE_ORIGIN =
   process.env.NEXT_PUBLIC_SITE_URL ||
-  (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "") ||
+  VERCEL_PROD_ORIGIN ||
+  VERCEL_DEPLOY_ORIGIN ||
   "https://www.doctalk.site";
 const REPORT_ENDPOINT = `${SITE_ORIGIN}/api/csp-report`;
 
