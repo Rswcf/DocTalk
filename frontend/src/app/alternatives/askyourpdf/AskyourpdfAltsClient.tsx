@@ -59,7 +59,7 @@ export default function AskyourpdfAltsClient() {
             <span className="text-zinc-900 dark:text-zinc-100">AskYourPDF</span>
           </nav>
 
-          <h1 className="text-3xl sm:text-4xl font-bold text-zinc-900 dark:text-zinc-100 tracking-tight mb-6">
+          <h1 className="text-3xl sm:text-4xl font-semibold text-zinc-900 dark:text-zinc-100 tracking-tight mb-6">
             7 Best AskYourPDF Alternatives in 2026
           </h1>
           <p className="text-lg text-zinc-600 dark:text-zinc-300 leading-relaxed">
@@ -73,7 +73,7 @@ export default function AskyourpdfAltsClient() {
         {/* Quick Comparison Table */}
         <section className="bg-zinc-50 dark:bg-zinc-900/50">
           <div className="max-w-4xl mx-auto px-6 py-16">
-            <h2 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100 tracking-tight mb-8">
+            <h2 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100 tracking-tight mb-8">
               DocTalk vs AskYourPDF at a Glance
             </h2>
             <ComparisonTable features={quickCompare} competitorName="AskYourPDF" />
@@ -82,7 +82,7 @@ export default function AskyourpdfAltsClient() {
 
         {/* Why Look for Alternatives */}
         <section className="max-w-4xl mx-auto px-6 py-16">
-          <h2 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100 tracking-tight mb-6">
+          <h2 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100 tracking-tight mb-6">
             Why Look for AskYourPDF Alternatives?
           </h2>
           <p className="text-zinc-600 dark:text-zinc-300 leading-relaxed mb-4">
@@ -113,8 +113,8 @@ export default function AskyourpdfAltsClient() {
         <section className="bg-zinc-50 dark:bg-zinc-900/50">
           <div className="max-w-4xl mx-auto px-6 py-16">
             <div className="flex items-center gap-3 mb-6">
-              <span className="flex items-center justify-center w-8 h-8 rounded-full bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 text-sm font-bold">1</span>
-              <h2 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100 tracking-tight">
+              <span className="flex items-center justify-center w-8 h-8 rounded-full bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 text-sm font-semibold">1</span>
+              <h2 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100 tracking-tight">
                 DocTalk
               </h2>
             </div>
@@ -162,8 +162,8 @@ export default function AskyourpdfAltsClient() {
         {/* #2 ChatPDF */}
         <section className="max-w-4xl mx-auto px-6 py-16">
           <div className="flex items-center gap-3 mb-6">
-            <span className="flex items-center justify-center w-8 h-8 rounded-full bg-zinc-200 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 text-sm font-bold">2</span>
-            <h2 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100 tracking-tight">
+            <span className="flex items-center justify-center w-8 h-8 rounded-full bg-zinc-200 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 text-sm font-semibold">2</span>
+            <h2 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100 tracking-tight">
               ChatPDF
             </h2>
           </div>
@@ -188,8 +188,8 @@ export default function AskyourpdfAltsClient() {
         <section className="bg-zinc-50 dark:bg-zinc-900/50">
           <div className="max-w-4xl mx-auto px-6 py-16">
             <div className="flex items-center gap-3 mb-6">
-              <span className="flex items-center justify-center w-8 h-8 rounded-full bg-zinc-200 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 text-sm font-bold">3</span>
-              <h2 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100 tracking-tight">
+              <span className="flex items-center justify-center w-8 h-8 rounded-full bg-zinc-200 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 text-sm font-semibold">3</span>
+              <h2 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100 tracking-tight">
                 PDF.ai
               </h2>
             </div>
@@ -214,8 +214,8 @@ export default function AskyourpdfAltsClient() {
         {/* #4 Humata */}
         <section className="max-w-4xl mx-auto px-6 py-16">
           <div className="flex items-center gap-3 mb-6">
-            <span className="flex items-center justify-center w-8 h-8 rounded-full bg-zinc-200 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 text-sm font-bold">4</span>
-            <h2 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100 tracking-tight">
+            <span className="flex items-center justify-center w-8 h-8 rounded-full bg-zinc-200 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 text-sm font-semibold">4</span>
+            <h2 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100 tracking-tight">
               Humata
             </h2>
           </div>
@@ -240,8 +240,8 @@ export default function AskyourpdfAltsClient() {
         <section className="bg-zinc-50 dark:bg-zinc-900/50">
           <div className="max-w-4xl mx-auto px-6 py-16">
             <div className="flex items-center gap-3 mb-6">
-              <span className="flex items-center justify-center w-8 h-8 rounded-full bg-zinc-200 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 text-sm font-bold">5</span>
-              <h2 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100 tracking-tight">
+              <span className="flex items-center justify-center w-8 h-8 rounded-full bg-zinc-200 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 text-sm font-semibold">5</span>
+              <h2 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100 tracking-tight">
                 Google NotebookLM
               </h2>
             </div>
@@ -266,8 +266,8 @@ export default function AskyourpdfAltsClient() {
         {/* #6 ChatDOC */}
         <section className="max-w-4xl mx-auto px-6 py-16">
           <div className="flex items-center gap-3 mb-6">
-            <span className="flex items-center justify-center w-8 h-8 rounded-full bg-zinc-200 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 text-sm font-bold">6</span>
-            <h2 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100 tracking-tight">
+            <span className="flex items-center justify-center w-8 h-8 rounded-full bg-zinc-200 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 text-sm font-semibold">6</span>
+            <h2 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100 tracking-tight">
               ChatDOC
             </h2>
           </div>
@@ -289,8 +289,8 @@ export default function AskyourpdfAltsClient() {
         <section className="bg-zinc-50 dark:bg-zinc-900/50">
           <div className="max-w-4xl mx-auto px-6 py-16">
             <div className="flex items-center gap-3 mb-6">
-              <span className="flex items-center justify-center w-8 h-8 rounded-full bg-zinc-200 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 text-sm font-bold">7</span>
-              <h2 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100 tracking-tight">
+              <span className="flex items-center justify-center w-8 h-8 rounded-full bg-zinc-200 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 text-sm font-semibold">7</span>
+              <h2 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100 tracking-tight">
                 Consensus
               </h2>
             </div>
@@ -312,7 +312,7 @@ export default function AskyourpdfAltsClient() {
 
         {/* How to Choose */}
         <section className="max-w-4xl mx-auto px-6 py-16">
-          <h2 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100 tracking-tight mb-6">
+          <h2 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100 tracking-tight mb-6">
             How to Choose the Right AskYourPDF Alternative
           </h2>
           <p className="text-zinc-600 dark:text-zinc-300 leading-relaxed mb-6">
@@ -344,7 +344,7 @@ export default function AskyourpdfAltsClient() {
         {/* FAQ */}
         <section className="bg-zinc-50 dark:bg-zinc-900/50">
           <div className="max-w-4xl mx-auto px-6 py-16">
-            <h2 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100 tracking-tight mb-8">
+            <h2 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100 tracking-tight mb-8">
               Frequently Asked Questions
             </h2>
             <FAQSection items={faqItems} />

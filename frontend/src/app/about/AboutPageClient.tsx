@@ -25,7 +25,7 @@ export default function AboutPageClient() {
           </section>
 
           <section className="grid gap-6 md:grid-cols-2">
-            <div className="rounded-2xl border border-zinc-200 dark:border-zinc-800 p-6">
+            <div className="rounded-xl border border-zinc-200 dark:border-zinc-800 p-6">
               <h2 className="text-xl font-semibold text-zinc-900 dark:text-zinc-100">{t('about.optimizeFor.title')}</h2>
               <ul className="mt-4 space-y-3 text-sm leading-7 text-zinc-600 dark:text-zinc-300">
                 <li>{t('about.optimizeFor.item1')}</li>
@@ -34,7 +34,7 @@ export default function AboutPageClient() {
                 <li>{t('about.optimizeFor.item4')}</li>
               </ul>
             </div>
-            <div className="rounded-2xl border border-zinc-200 dark:border-zinc-800 p-6">
+            <div className="rounded-xl border border-zinc-200 dark:border-zinc-800 p-6">
               <h2 className="text-xl font-semibold text-zinc-900 dark:text-zinc-100">{t('about.whoUses.title')}</h2>
               <ul className="mt-4 space-y-3 text-sm leading-7 text-zinc-600 dark:text-zinc-300">
                 <li>{t('about.whoUses.item1')}</li>
@@ -58,13 +58,13 @@ export default function AboutPageClient() {
           </section>
 
           <section className="grid gap-6 md:grid-cols-2">
-            <div className="rounded-2xl border border-zinc-200 dark:border-zinc-800 p-6">
+            <div className="rounded-xl border border-zinc-200 dark:border-zinc-800 p-6">
               <h2 className="text-xl font-semibold text-zinc-900 dark:text-zinc-100">{t('about.howItWorks.title')}</h2>
               <p className="mt-3 text-sm leading-7 text-zinc-600 dark:text-zinc-300">
                 {t('about.howItWorks.description')}
               </p>
             </div>
-            <div className="rounded-2xl border border-zinc-200 dark:border-zinc-800 p-6">
+            <div className="rounded-xl border border-zinc-200 dark:border-zinc-800 p-6">
               <h2 className="text-xl font-semibold text-zinc-900 dark:text-zinc-100">{t('about.whatWePublish.title')}</h2>
               <p className="mt-3 text-sm leading-7 text-zinc-600 dark:text-zinc-300">
                 {t('about.whatWePublish.description')}
@@ -72,7 +72,7 @@ export default function AboutPageClient() {
             </div>
           </section>
 
-          <section className="rounded-2xl bg-zinc-50 dark:bg-zinc-900/60 border border-zinc-200 dark:border-zinc-800 p-6">
+          <section className="rounded-xl bg-zinc-50 dark:bg-zinc-900/60 border border-zinc-200 dark:border-zinc-800 p-6">
             <h2 className="text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-100">{t('about.contact.title')}</h2>
             <p className="mt-3 text-base leading-8 text-zinc-600 dark:text-zinc-300">
               {t('about.contact.description1')}{' '}

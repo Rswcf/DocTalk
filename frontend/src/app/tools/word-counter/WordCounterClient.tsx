@@ -132,7 +132,7 @@ export default function WordCounterClient() {
             <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-zinc-100 dark:bg-zinc-800 mb-5">
               <LetterText className="w-6 h-6 text-zinc-600 dark:text-zinc-300" />
             </div>
-            <h1 className="text-3xl sm:text-4xl font-bold text-zinc-900 dark:text-zinc-100 mb-3 tracking-tight">
+            <h1 className="text-3xl sm:text-4xl font-semibold text-zinc-900 dark:text-zinc-100 mb-3 tracking-tight">
               Free Document Word Counter
             </h1>
             <p className="text-base text-zinc-600 dark:text-zinc-300 max-w-xl mx-auto">
@@ -265,7 +265,7 @@ export default function WordCounterClient() {
           )}
 
           {/* DocTalk CTA */}
-          <div className="mt-10 rounded-2xl border border-indigo-100 dark:border-indigo-900/40 bg-indigo-50/50 dark:bg-indigo-950/20 p-6">
+          <div className="mt-10 rounded-xl border border-indigo-100 dark:border-indigo-900/40 bg-indigo-50/50 dark:bg-indigo-950/20 p-6">
             <h2 className="text-base font-semibold text-zinc-900 dark:text-zinc-100 mb-2">
               Need to analyze a PDF or DOCX file?
             </h2>

@@ -63,7 +63,7 @@ export default function CreateCollectionModal({ isOpen, onClose, onCreated }: Pr
       onKeyDown={(e) => { if (e.key === 'Escape') onClose(); }}
     >
       <div
-        className="bg-white dark:bg-zinc-900 rounded-2xl shadow-xl w-full max-w-lg mx-4 p-6 animate-fade-in motion-reduce:animate-none max-h-[80vh] flex flex-col"
+        className="bg-white dark:bg-zinc-900 rounded-xl shadow-xl w-full max-w-lg mx-4 p-6 animate-fade-in motion-reduce:animate-none max-h-[80vh] flex flex-col"
         role="dialog"
         aria-modal="true"
         aria-labelledby="create-collection-title"

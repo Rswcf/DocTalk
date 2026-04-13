@@ -33,7 +33,7 @@ function AuthErrorContent() {
           <span className="font-logo font-semibold text-2xl text-zinc-900 dark:text-zinc-50">DocTalk</span>
         </div>
 
-        <div className="border border-zinc-200 dark:border-zinc-800 rounded-2xl p-8 shadow-sm bg-white dark:bg-zinc-900 text-center">
+        <div className="border border-zinc-200 dark:border-zinc-800 rounded-xl p-8 shadow-sm bg-white dark:bg-zinc-900 text-center">
           {/* Error icon */}
           <div className="w-16 h-16 mx-auto mb-6 rounded-full bg-red-50 dark:bg-red-950/30 flex items-center justify-center">
             <svg className="w-8 h-8 text-red-500 dark:text-red-400" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">

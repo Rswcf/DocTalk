@@ -58,7 +58,7 @@ export default async function SharedPage({ params }: { params: Promise<{ token: 
         <div className="space-y-4">
           {data.messages.map((msg: { role: string; content: string; citations?: { text_snippet: string; page: number; document_filename: string }[] }, i: number) => (
             <div key={i} className={msg.role === 'user' ? 'flex justify-end' : ''}>
-              <div className={`max-w-[85%] rounded-2xl px-4 py-3 ${
+              <div className={`max-w-[85%] rounded-xl px-4 py-3 ${
                 msg.role === 'user'
                   ? 'bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900'
                   : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100'

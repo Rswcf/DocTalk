@@ -278,7 +278,7 @@ export default function CollectionDetailPage() {
           onKeyDown={(e) => { if (e.key === 'Escape') setShowAddDocs(false); }}
         >
           <div
-            className="bg-white dark:bg-zinc-900 rounded-2xl shadow-xl w-full max-w-md mx-4 p-6"
+            className="bg-white dark:bg-zinc-900 rounded-xl shadow-xl w-full max-w-md mx-4 p-6"
             role="dialog"
             aria-modal="true"
             aria-labelledby="add-docs-title"

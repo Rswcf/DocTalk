@@ -60,7 +60,7 @@ export default function HumataClient() {
             <span className="text-zinc-900 dark:text-zinc-100">{t('compareHumata.breadcrumbCurrent')}</span>
           </nav>
 
-          <h1 className="text-3xl sm:text-4xl font-bold text-zinc-900 dark:text-zinc-100 mb-6 tracking-tight">
+          <h1 className="text-3xl sm:text-4xl font-semibold text-zinc-900 dark:text-zinc-100 mb-6 tracking-tight">
             {t('compareHumata.heroTitle')}
           </h1>
           <p className="text-lg text-zinc-600 dark:text-zinc-300 leading-relaxed">
@@ -72,7 +72,7 @@ export default function HumataClient() {
         {/* Quick Comparison Table */}
         <section className="bg-zinc-50 dark:bg-zinc-900/50">
           <div className="max-w-4xl mx-auto px-6 py-16">
-            <h2 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100 tracking-tight mb-8">
+            <h2 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100 tracking-tight mb-8">
               {t('compareHumata.quickComparison')}
             </h2>
             <ComparisonTable features={features} competitorName="Humata" />
@@ -81,7 +81,7 @@ export default function HumataClient() {
 
         {/* What Is DocTalk? */}
         <section className="max-w-4xl mx-auto px-6 py-16">
-          <h2 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100 tracking-tight mb-4">
+          <h2 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100 tracking-tight mb-4">
             {t('compareHumata.whatIsDocTalkTitle')}
           </h2>
           <p className="text-zinc-600 dark:text-zinc-300 leading-relaxed">
@@ -92,7 +92,7 @@ export default function HumataClient() {
         {/* What Is Humata? */}
         <section className="bg-zinc-50 dark:bg-zinc-900/50">
           <div className="max-w-4xl mx-auto px-6 py-16">
-            <h2 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100 tracking-tight mb-4">
+            <h2 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100 tracking-tight mb-4">
               {t('compareHumata.whatIsHumataTitle')}
             </h2>
             <p className="text-zinc-600 dark:text-zinc-300 leading-relaxed">
@@ -105,7 +105,7 @@ export default function HumataClient() {
 
         {/* Feature-by-Feature Comparison */}
         <section className="max-w-4xl mx-auto px-6 py-16">
-          <h2 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100 tracking-tight mb-10">
+          <h2 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100 tracking-tight mb-10">
             {t('compareHumata.featureByFeatureTitle')}
           </h2>
 
@@ -223,7 +223,7 @@ export default function HumataClient() {
         {/* Who Should Choose DocTalk? */}
         <section className="bg-zinc-50 dark:bg-zinc-900/50">
           <div className="max-w-4xl mx-auto px-6 py-16">
-            <h2 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100 tracking-tight mb-6">
+            <h2 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100 tracking-tight mb-6">
               {t('compareHumata.whoDocTalkTitle')}
             </h2>
             <ul className="space-y-3 text-zinc-600 dark:text-zinc-300">
@@ -253,7 +253,7 @@ export default function HumataClient() {
 
         {/* Who Should Choose Humata? */}
         <section className="max-w-4xl mx-auto px-6 py-16">
-          <h2 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100 tracking-tight mb-6">
+          <h2 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100 tracking-tight mb-6">
             {t('compareHumata.whoHumataTitle')}
           </h2>
           <ul className="space-y-3 text-zinc-600 dark:text-zinc-300">
@@ -279,7 +279,7 @@ export default function HumataClient() {
         {/* Verdict */}
         <section className="bg-zinc-50 dark:bg-zinc-900/50">
           <div className="max-w-4xl mx-auto px-6 py-16">
-            <h2 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100 tracking-tight mb-6">
+            <h2 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100 tracking-tight mb-6">
               {t('compareHumata.verdictTitle')}
             </h2>
             <p className="text-zinc-600 dark:text-zinc-300 leading-relaxed mb-4">
@@ -300,7 +300,7 @@ export default function HumataClient() {
 
         {/* FAQ */}
         <section className="max-w-4xl mx-auto px-6 py-16">
-          <h2 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100 tracking-tight mb-8">
+          <h2 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100 tracking-tight mb-8">
             {t('compareHumata.faqTitle')}
           </h2>
           <FAQSection items={faqItems} />

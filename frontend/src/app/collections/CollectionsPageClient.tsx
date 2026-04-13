@@ -70,7 +70,7 @@ export default function CollectionsPageClient() {
           </div>
 
           {collections.length === 0 ? (
-            <div className="rounded-2xl border border-dashed border-zinc-300 dark:border-zinc-700 bg-zinc-50/80 dark:bg-zinc-900/40 p-10 sm:p-12 text-center flex flex-col items-center">
+            <div className="rounded-xl border border-dashed border-zinc-300 dark:border-zinc-700 bg-zinc-50/80 dark:bg-zinc-900/40 p-10 sm:p-12 text-center flex flex-col items-center">
               <div className="h-12 w-12 rounded-full bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 flex items-center justify-center mb-4">
                 <FolderOpen size={22} className="text-zinc-500 dark:text-zinc-400" />
               </div>

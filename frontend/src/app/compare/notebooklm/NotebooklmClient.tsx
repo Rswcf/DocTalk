@@ -64,7 +64,7 @@ export default function NotebooklmClient() {
             <span className="text-zinc-900 dark:text-zinc-100">{t('compareNotebooklm.breadcrumb.current')}</span>
           </nav>
 
-          <h1 className="text-3xl sm:text-4xl font-bold text-zinc-900 dark:text-zinc-100 mb-6 tracking-tight">
+          <h1 className="text-3xl sm:text-4xl font-semibold text-zinc-900 dark:text-zinc-100 mb-6 tracking-tight">
             {t('compareNotebooklm.heroTitle')}
           </h1>
           <p className="text-lg text-zinc-600 dark:text-zinc-300 leading-relaxed">
@@ -76,7 +76,7 @@ export default function NotebooklmClient() {
         {/* Quick Comparison Table */}
         <section className="bg-zinc-50 dark:bg-zinc-900/50">
           <div className="max-w-4xl mx-auto px-6 py-16">
-            <h2 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100 tracking-tight mb-8">
+            <h2 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100 tracking-tight mb-8">
               {t('compareNotebooklm.quickComparison')}
             </h2>
             <ComparisonTable features={features} competitorName="NotebookLM" />
@@ -85,7 +85,7 @@ export default function NotebooklmClient() {
 
         {/* What Is DocTalk? */}
         <section className="max-w-4xl mx-auto px-6 py-16">
-          <h2 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100 tracking-tight mb-4">
+          <h2 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100 tracking-tight mb-4">
             {t('compareNotebooklm.whatIsDocTalk')}
           </h2>
           <p className="text-zinc-600 dark:text-zinc-300 leading-relaxed">
@@ -96,7 +96,7 @@ export default function NotebooklmClient() {
         {/* What Is NotebookLM? */}
         <section className="bg-zinc-50 dark:bg-zinc-900/50">
           <div className="max-w-4xl mx-auto px-6 py-16">
-            <h2 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100 tracking-tight mb-4">
+            <h2 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100 tracking-tight mb-4">
               {t('compareNotebooklm.whatIsNotebookLM')}
             </h2>
             <p className="text-zinc-600 dark:text-zinc-300 leading-relaxed">
@@ -109,7 +109,7 @@ export default function NotebooklmClient() {
 
         {/* Feature-by-Feature Comparison */}
         <section className="max-w-4xl mx-auto px-6 py-16">
-          <h2 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100 tracking-tight mb-10">
+          <h2 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100 tracking-tight mb-10">
             {t('compareNotebooklm.featureByFeature')}
           </h2>
 
@@ -225,7 +225,7 @@ export default function NotebooklmClient() {
         {/* Who Should Choose DocTalk? */}
         <section className="bg-zinc-50 dark:bg-zinc-900/50">
           <div className="max-w-4xl mx-auto px-6 py-16">
-            <h2 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100 tracking-tight mb-6">
+            <h2 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100 tracking-tight mb-6">
               {t('compareNotebooklm.whoDocTalk')}
             </h2>
             <ul className="space-y-3 text-zinc-600 dark:text-zinc-300">
@@ -255,7 +255,7 @@ export default function NotebooklmClient() {
 
         {/* Who Should Choose NotebookLM? */}
         <section className="max-w-4xl mx-auto px-6 py-16">
-          <h2 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100 tracking-tight mb-6">
+          <h2 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100 tracking-tight mb-6">
             {t('compareNotebooklm.whoNotebookLM')}
           </h2>
           <ul className="space-y-3 text-zinc-600 dark:text-zinc-300">
@@ -285,7 +285,7 @@ export default function NotebooklmClient() {
         {/* Verdict */}
         <section className="bg-zinc-50 dark:bg-zinc-900/50">
           <div className="max-w-4xl mx-auto px-6 py-16">
-            <h2 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100 tracking-tight mb-6">
+            <h2 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100 tracking-tight mb-6">
               {t('compareNotebooklm.verdict')}
             </h2>
             <p className="text-zinc-600 dark:text-zinc-300 leading-relaxed mb-4">
@@ -306,7 +306,7 @@ export default function NotebooklmClient() {
 
         {/* FAQ */}
         <section className="max-w-4xl mx-auto px-6 py-16">
-          <h2 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100 tracking-tight mb-8">
+          <h2 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100 tracking-tight mb-8">
             {t('compareNotebooklm.faqTitle')}
           </h2>
           <FAQSection items={faqItems} />

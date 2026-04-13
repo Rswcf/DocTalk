@@ -53,7 +53,7 @@ export default function AlternativesHubClient() {
             <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-zinc-100 dark:bg-zinc-800 mb-6">
               <Repeat className="w-6 h-6 text-zinc-600 dark:text-zinc-300" />
             </div>
-            <h1 className="text-3xl sm:text-4xl font-bold text-zinc-900 dark:text-zinc-100 mb-4 tracking-tight">
+            <h1 className="text-3xl sm:text-4xl font-semibold text-zinc-900 dark:text-zinc-100 mb-4 tracking-tight">
               {t('altsHub.title')}
             </h1>
             <p className="text-lg text-zinc-600 dark:text-zinc-300 max-w-2xl mx-auto">
@@ -87,7 +87,7 @@ export default function AlternativesHubClient() {
             ))}
           </div>
 
-          <div className="mt-12 rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900/40 p-6">
+          <div className="mt-12 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900/40 p-6">
             <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100 mb-2">
               {t('altsHub.decisionTitle')}
             </h2>

@@ -99,7 +99,7 @@ export default function CustomInstructionsModal({ isOpen, onClose, currentInstru
     >
       <div
         ref={modalRef}
-        className="bg-white dark:bg-zinc-900 rounded-2xl shadow-xl w-full max-w-lg mx-4 p-6 animate-fade-in motion-reduce:animate-none"
+        className="bg-white dark:bg-zinc-900 rounded-xl shadow-xl w-full max-w-lg mx-4 p-6 animate-fade-in motion-reduce:animate-none"
         role="dialog"
         aria-modal="true"
         aria-labelledby="custom-instructions-title"

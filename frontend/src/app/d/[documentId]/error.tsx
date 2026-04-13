@@ -14,7 +14,7 @@ export default function DocumentError({
   const { t } = useLocale();
   return (
     <div className="min-h-[60vh] flex items-center justify-center px-6 py-12">
-      <div className="w-full max-w-md rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white/95 dark:bg-zinc-900/95 shadow-sm p-6 text-center">
+      <div className="w-full max-w-md rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white/95 dark:bg-zinc-900/95 shadow-sm p-6 text-center">
         <div className="mx-auto mb-4 flex h-11 w-11 items-center justify-center rounded-full bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-200">
           <AlertTriangle size={20} aria-hidden="true" />
         </div>

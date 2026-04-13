@@ -76,7 +76,7 @@ export default function CategoryClient({
               <ArrowLeft size={14} />
               {t('blog.category.backAllPosts')}
             </Link>
-            <h1 className="text-3xl sm:text-4xl font-bold text-zinc-900 dark:text-zinc-100 mb-4">
+            <h1 className="text-3xl sm:text-4xl font-semibold text-zinc-900 dark:text-zinc-100 mb-4">
               {localizedLabel}
             </h1>
             <p className="text-lg text-zinc-500 dark:text-zinc-300 max-w-2xl">
@@ -105,7 +105,7 @@ export default function CategoryClient({
 
         {/* Grid */}
         <section className="max-w-4xl mx-auto px-6 py-12">
-          <div className="rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900/40 p-6 mb-10">
+          <div className="rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900/40 p-6 mb-10">
             <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100 mb-2">
               {t('blog.category.panel.title')}
             </h2>

@@ -8,7 +8,7 @@ export default function NotFound() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-white dark:bg-zinc-950">
       <div className="text-center">
-        <h1 className="text-6xl font-bold text-zinc-900 dark:text-zinc-100 mb-4">404</h1>
+        <h1 className="text-6xl font-semibold text-zinc-900 dark:text-zinc-100 mb-4">404</h1>
         <p className="text-lg text-zinc-500 dark:text-zinc-300 mb-8">{t('error.pageNotFound')}</p>
         <div className="flex items-center gap-4">
           <Link

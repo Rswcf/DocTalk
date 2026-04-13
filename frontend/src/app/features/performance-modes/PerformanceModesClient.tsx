@@ -94,7 +94,7 @@ export default function PerformanceModesClient() {
               <Gauge className="w-4 h-4" />
               {t('featuresPerformance.badge')}
             </div>
-            <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-zinc-900 dark:text-zinc-100 tracking-tight mb-6 leading-tight">
+            <h1 className="text-3xl sm:text-4xl lg:text-5xl font-semibold text-zinc-900 dark:text-zinc-100 tracking-tight mb-6 leading-tight">
               {t('featuresPerformance.hero.title')}
             </h1>
             <p className="text-lg text-zinc-600 dark:text-zinc-300 max-w-2xl mx-auto mb-8">
@@ -113,7 +113,7 @@ export default function PerformanceModesClient() {
         {/* Three Modes */}
         <section className="bg-zinc-50 dark:bg-zinc-900/50">
           <div className="max-w-4xl mx-auto px-6 py-16">
-            <h2 className="text-2xl sm:text-3xl font-bold text-zinc-900 dark:text-zinc-100 tracking-tight mb-12 text-center">
+            <h2 className="text-2xl sm:text-3xl font-semibold text-zinc-900 dark:text-zinc-100 tracking-tight mb-12 text-center">
               {t('featuresPerformance.modes.title')}
             </h2>
 
@@ -130,7 +130,7 @@ export default function PerformanceModesClient() {
                         <Icon className="w-5 h-5 text-zinc-600 dark:text-zinc-300" />
                       </div>
                       <div>
-                        <h3 className="font-bold text-zinc-900 dark:text-zinc-100">
+                        <h3 className="font-semibold text-zinc-900 dark:text-zinc-100">
                           {mode.name}
                         </h3>
                         <p className="text-xs text-zinc-500 dark:text-zinc-300">
@@ -181,7 +181,7 @@ export default function PerformanceModesClient() {
         {/* When to Use Each */}
         <section className="bg-white dark:bg-zinc-950">
           <div className="max-w-4xl mx-auto px-6 py-16">
-            <h2 className="text-2xl sm:text-3xl font-bold text-zinc-900 dark:text-zinc-100 tracking-tight mb-6">
+            <h2 className="text-2xl sm:text-3xl font-semibold text-zinc-900 dark:text-zinc-100 tracking-tight mb-6">
               {t('featuresPerformance.whenToUse.title')}
             </h2>
             <div className="space-y-4 text-zinc-600 dark:text-zinc-300 leading-relaxed">
@@ -204,7 +204,7 @@ export default function PerformanceModesClient() {
         {/* FAQ */}
         <section className="bg-zinc-50 dark:bg-zinc-900/50">
           <div className="max-w-4xl mx-auto px-6 py-16">
-            <h2 className="text-2xl sm:text-3xl font-bold text-zinc-900 dark:text-zinc-100 tracking-tight mb-10 text-center">
+            <h2 className="text-2xl sm:text-3xl font-semibold text-zinc-900 dark:text-zinc-100 tracking-tight mb-10 text-center">
               {t('featuresPerformance.faq.title')}
             </h2>
 
@@ -229,7 +229,7 @@ export default function PerformanceModesClient() {
         {/* CTA */}
         <section className="bg-white dark:bg-zinc-950">
           <div className="max-w-4xl mx-auto px-6 py-16 text-center">
-            <h2 className="text-2xl sm:text-3xl font-bold text-zinc-900 dark:text-zinc-100 tracking-tight mb-4">
+            <h2 className="text-2xl sm:text-3xl font-semibold text-zinc-900 dark:text-zinc-100 tracking-tight mb-4">
               {t('featuresPerformance.cta.title')}
             </h2>
             <p className="text-zinc-600 dark:text-zinc-300 max-w-xl mx-auto mb-8">

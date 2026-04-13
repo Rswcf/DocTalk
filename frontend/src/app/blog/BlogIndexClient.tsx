@@ -65,7 +65,7 @@ export default function BlogIndexClient({ posts }: BlogIndexClientProps) {
               <div className="inline-flex items-center justify-center w-10 h-10 rounded-full bg-zinc-200 dark:bg-zinc-800">
                 <BookOpen className="w-5 h-5 text-zinc-600 dark:text-zinc-300" />
               </div>
-              <h1 className="text-3xl sm:text-4xl font-bold text-zinc-900 dark:text-zinc-100 tracking-tight">
+              <h1 className="text-3xl sm:text-4xl font-semibold text-zinc-900 dark:text-zinc-100 tracking-tight">
                 {t('blog.index.title')}
               </h1>
             </div>
@@ -90,7 +90,7 @@ export default function BlogIndexClient({ posts }: BlogIndexClientProps) {
             ))}
           </div>
 
-          <div className="rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900/40 p-6 mb-10">
+          <div className="rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900/40 p-6 mb-10">
             <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100 mb-2">
               {t('blog.index.panel.title')}
             </h2>

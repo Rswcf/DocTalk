@@ -145,10 +145,10 @@ export default function ComplianceClient() {
 
         {/* Hero */}
         <section className="max-w-4xl mx-auto px-6 pt-12 pb-16 text-center">
-          <div className="w-14 h-14 rounded-2xl bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center mx-auto mb-6">
+          <div className="w-14 h-14 rounded-xl bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center mx-auto mb-6">
             <Shield className="w-7 h-7 text-zinc-600 dark:text-zinc-300" />
           </div>
-          <h1 className="text-3xl sm:text-4xl font-bold text-zinc-900 dark:text-zinc-100 tracking-tight mb-4">
+          <h1 className="text-3xl sm:text-4xl font-semibold text-zinc-900 dark:text-zinc-100 tracking-tight mb-4">
             AI Document Analysis for Compliance and Risk Teams
           </h1>
           <p className="text-lg text-zinc-500 dark:text-zinc-300 max-w-2xl mx-auto mb-8">
@@ -166,7 +166,7 @@ export default function ComplianceClient() {
         {/* The Challenge */}
         <section className="bg-zinc-50 dark:bg-zinc-900/50">
           <div className="max-w-4xl mx-auto px-6 py-16">
-            <h2 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100 tracking-tight mb-6">
+            <h2 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100 tracking-tight mb-6">
               The Document Challenge for Compliance Teams
             </h2>
             <div className="prose-zinc max-w-none">
@@ -190,7 +190,7 @@ export default function ComplianceClient() {
 
         {/* How DocTalk Helps */}
         <section className="max-w-4xl mx-auto px-6 py-16">
-          <h2 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100 tracking-tight mb-8">
+          <h2 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100 tracking-tight mb-8">
             How DocTalk Helps Compliance Teams
           </h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
@@ -219,7 +219,7 @@ export default function ComplianceClient() {
         {/* Supported Document Types */}
         <section className="bg-zinc-50 dark:bg-zinc-900/50">
           <div className="max-w-4xl mx-auto px-6 py-16">
-            <h2 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100 tracking-tight mb-6">
+            <h2 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100 tracking-tight mb-6">
               Supported Compliance Document Types
             </h2>
             <p className="text-zinc-600 dark:text-zinc-300 mb-6">
@@ -249,7 +249,7 @@ export default function ComplianceClient() {
 
         {/* Real-World Use Cases */}
         <section className="max-w-4xl mx-auto px-6 py-16">
-          <h2 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100 tracking-tight mb-8">
+          <h2 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100 tracking-tight mb-8">
             Real-World Compliance Use Cases
           </h2>
           <div className="space-y-10">
@@ -269,7 +269,7 @@ export default function ComplianceClient() {
         {/* Example Questions */}
         <section className="bg-zinc-50 dark:bg-zinc-900/50">
           <div className="max-w-4xl mx-auto px-6 py-16">
-            <h2 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100 tracking-tight mb-6">
+            <h2 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100 tracking-tight mb-6">
               Example Questions for Compliance Documents
             </h2>
             <p className="text-zinc-600 dark:text-zinc-300 mb-6">
@@ -296,7 +296,7 @@ export default function ComplianceClient() {
               <Lock className="w-5 h-5 text-zinc-600 dark:text-zinc-300" />
             </div>
             <div>
-              <h2 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100 tracking-tight mb-3">
+              <h2 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100 tracking-tight mb-3">
                 Security for Compliance Documents
               </h2>
               <p className="text-zinc-600 dark:text-zinc-300 mb-4">
@@ -330,7 +330,7 @@ export default function ComplianceClient() {
         {/* Getting Started */}
         <section className="bg-zinc-50 dark:bg-zinc-900/50">
           <div className="max-w-4xl mx-auto px-6 py-16">
-            <h2 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100 tracking-tight mb-8 text-center">
+            <h2 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100 tracking-tight mb-8 text-center">
               Get Started in 3 Steps
             </h2>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
@@ -338,7 +338,7 @@ export default function ComplianceClient() {
                 const Icon = item.icon;
                 return (
                   <div key={item.step} className="text-center">
-                    <div className="w-12 h-12 rounded-full bg-zinc-900 dark:bg-zinc-50 text-white dark:text-zinc-900 flex items-center justify-center mx-auto mb-4 text-lg font-bold">
+                    <div className="w-12 h-12 rounded-full bg-zinc-900 dark:bg-zinc-50 text-white dark:text-zinc-900 flex items-center justify-center mx-auto mb-4 text-lg font-semibold">
                       {item.step}
                     </div>
                     <div className="w-10 h-10 rounded-lg bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center mx-auto mb-3">
@@ -359,7 +359,7 @@ export default function ComplianceClient() {
 
         {/* Related Use Cases */}
         <section className="max-w-4xl mx-auto px-6 py-16">
-          <h2 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100 tracking-tight mb-6">
+          <h2 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100 tracking-tight mb-6">
             Related Use Cases
           </h2>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -384,7 +384,7 @@ export default function ComplianceClient() {
         {/* FAQ */}
         <section className="bg-zinc-50 dark:bg-zinc-900/50">
           <div className="max-w-4xl mx-auto px-6 py-16">
-            <h2 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100 tracking-tight mb-8">
+            <h2 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100 tracking-tight mb-8">
               Frequently Asked Questions
             </h2>
             <FAQSection items={faqItems} />

@@ -62,7 +62,7 @@ export function PaywallModal({ isOpen, onClose }: PaywallModalProps) {
       tabIndex={-1}
     >
       <div
-        className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl p-6 max-w-md w-full mx-4 shadow-xl animate-slide-up motion-reduce:animate-none"
+        className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl p-6 max-w-md w-full mx-4 shadow-xl animate-slide-up motion-reduce:animate-none"
         role="dialog"
         aria-modal="true"
         aria-labelledby="paywall-title"

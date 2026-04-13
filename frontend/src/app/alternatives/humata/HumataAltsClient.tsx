@@ -50,7 +50,7 @@ export default function HumataAltsClient() {
             <span className="text-zinc-900 dark:text-zinc-100">{t('altsHumata.breadcrumbHumata')}</span>
           </nav>
 
-          <h1 className="text-3xl sm:text-4xl font-bold text-zinc-900 dark:text-zinc-100 tracking-tight mb-6">
+          <h1 className="text-3xl sm:text-4xl font-semibold text-zinc-900 dark:text-zinc-100 tracking-tight mb-6">
             {t('altsHumata.heroTitle')}
           </h1>
           <p className="text-lg text-zinc-600 dark:text-zinc-300 leading-relaxed">
@@ -63,8 +63,8 @@ export default function HumataAltsClient() {
         <section className="bg-zinc-50 dark:bg-zinc-900/50">
           <div className="max-w-4xl mx-auto px-6 py-16">
             <div className="flex items-center gap-3 mb-6">
-              <span className="flex items-center justify-center w-8 h-8 rounded-full bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 text-sm font-bold">1</span>
-              <h2 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100 tracking-tight">
+              <span className="flex items-center justify-center w-8 h-8 rounded-full bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 text-sm font-semibold">1</span>
+              <h2 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100 tracking-tight">
                 {t('altsHumata.alt1Title')}
               </h2>
             </div>
@@ -108,8 +108,8 @@ export default function HumataAltsClient() {
         {/* #2 ChatPDF */}
         <section className="max-w-4xl mx-auto px-6 py-16">
           <div className="flex items-center gap-3 mb-6">
-            <span className="flex items-center justify-center w-8 h-8 rounded-full bg-zinc-200 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 text-sm font-bold">2</span>
-            <h2 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100 tracking-tight">
+            <span className="flex items-center justify-center w-8 h-8 rounded-full bg-zinc-200 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 text-sm font-semibold">2</span>
+            <h2 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100 tracking-tight">
               {t('altsHumata.alt2Title')}
             </h2>
           </div>
@@ -128,8 +128,8 @@ export default function HumataAltsClient() {
         <section className="bg-zinc-50 dark:bg-zinc-900/50">
           <div className="max-w-4xl mx-auto px-6 py-16">
             <div className="flex items-center gap-3 mb-6">
-              <span className="flex items-center justify-center w-8 h-8 rounded-full bg-zinc-200 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 text-sm font-bold">3</span>
-              <h2 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100 tracking-tight">
+              <span className="flex items-center justify-center w-8 h-8 rounded-full bg-zinc-200 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 text-sm font-semibold">3</span>
+              <h2 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100 tracking-tight">
                 {t('altsHumata.alt3Title')}
               </h2>
             </div>
@@ -148,8 +148,8 @@ export default function HumataAltsClient() {
         {/* #4 NotebookLM */}
         <section className="max-w-4xl mx-auto px-6 py-16">
           <div className="flex items-center gap-3 mb-6">
-            <span className="flex items-center justify-center w-8 h-8 rounded-full bg-zinc-200 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 text-sm font-bold">4</span>
-            <h2 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100 tracking-tight">
+            <span className="flex items-center justify-center w-8 h-8 rounded-full bg-zinc-200 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 text-sm font-semibold">4</span>
+            <h2 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100 tracking-tight">
               {t('altsHumata.alt4Title')}
             </h2>
           </div>
@@ -168,8 +168,8 @@ export default function HumataAltsClient() {
         <section className="bg-zinc-50 dark:bg-zinc-900/50">
           <div className="max-w-4xl mx-auto px-6 py-16">
             <div className="flex items-center gap-3 mb-6">
-              <span className="flex items-center justify-center w-8 h-8 rounded-full bg-zinc-200 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 text-sm font-bold">5</span>
-              <h2 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100 tracking-tight">
+              <span className="flex items-center justify-center w-8 h-8 rounded-full bg-zinc-200 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 text-sm font-semibold">5</span>
+              <h2 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100 tracking-tight">
                 {t('altsHumata.alt5Title')}
               </h2>
             </div>
@@ -187,7 +187,7 @@ export default function HumataAltsClient() {
 
         {/* How to Choose */}
         <section className="max-w-4xl mx-auto px-6 py-16">
-          <h2 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100 tracking-tight mb-6">
+          <h2 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100 tracking-tight mb-6">
             {t('altsHumata.chooseTitle')}
           </h2>
           <p className="text-zinc-600 dark:text-zinc-300 leading-relaxed mb-6">
@@ -220,7 +220,7 @@ export default function HumataAltsClient() {
         {/* FAQ */}
         <section className="bg-zinc-50 dark:bg-zinc-900/50">
           <div className="max-w-4xl mx-auto px-6 py-16">
-            <h2 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100 tracking-tight mb-8">
+            <h2 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100 tracking-tight mb-8">
               {t('altsHumata.faqTitle')}
             </h2>
             <FAQSection items={faqItems} />

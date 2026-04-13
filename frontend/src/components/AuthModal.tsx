@@ -94,7 +94,7 @@ export function AuthModal() {
       onKeyDown={(e) => e.key === 'Escape' && handleClose()}
     >
       <div
-        className="bg-white dark:bg-zinc-900 rounded-2xl p-8 w-full max-w-md mx-4 shadow-xl border border-zinc-200 dark:border-zinc-800 animate-slide-up motion-reduce:animate-none"
+        className="bg-white dark:bg-zinc-900 rounded-xl p-8 w-full max-w-md mx-4 shadow-xl border border-zinc-200 dark:border-zinc-800 animate-slide-up motion-reduce:animate-none"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex justify-between items-center mb-6">

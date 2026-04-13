@@ -127,17 +127,17 @@ export default function DocumentReaderPageClient() {
     <div className="h-full w-full flex flex-col items-center justify-center px-6 py-8 text-zinc-500" role="status" aria-live="polite">
       <div className="w-full max-w-md space-y-3 animate-pulse motion-reduce:animate-none">
         <div className="flex justify-start">
-          <div className="w-3/4 rounded-2xl bg-zinc-200 dark:bg-zinc-800 p-3">
+          <div className="w-3/4 rounded-xl bg-zinc-200 dark:bg-zinc-800 p-3">
             <div className="h-2.5 w-11/12 rounded bg-zinc-300 dark:bg-zinc-700" />
           </div>
         </div>
         <div className="flex justify-end">
-          <div className="w-2/3 rounded-2xl bg-zinc-200 dark:bg-zinc-800 p-3">
+          <div className="w-2/3 rounded-xl bg-zinc-200 dark:bg-zinc-800 p-3">
             <div className="h-2.5 w-10/12 rounded bg-zinc-300 dark:bg-zinc-700" />
           </div>
         </div>
         <div className="flex justify-start">
-          <div className="w-4/5 rounded-2xl bg-zinc-200 dark:bg-zinc-800 p-3 space-y-2">
+          <div className="w-4/5 rounded-xl bg-zinc-200 dark:bg-zinc-800 p-3 space-y-2">
             <div className="h-2.5 w-full rounded bg-zinc-300 dark:bg-zinc-700" />
             <div className="h-2.5 w-9/12 rounded bg-zinc-300 dark:bg-zinc-700" />
           </div>

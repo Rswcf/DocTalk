@@ -112,7 +112,7 @@ export default function FreeDemoClient() {
               <PlayCircle className="w-4 h-4" />
               {t('featuresDemo.badge')}
             </div>
-            <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-zinc-900 dark:text-zinc-100 tracking-tight mb-6 leading-tight">
+            <h1 className="text-3xl sm:text-4xl lg:text-5xl font-semibold text-zinc-900 dark:text-zinc-100 tracking-tight mb-6 leading-tight">
               {t('featuresDemo.hero.title')}
             </h1>
             <p className="text-lg text-zinc-600 dark:text-zinc-300 max-w-2xl mx-auto mb-8">
@@ -131,7 +131,7 @@ export default function FreeDemoClient() {
         {/* Instant Demo */}
         <section className="bg-zinc-50 dark:bg-zinc-900/50">
           <div className="max-w-4xl mx-auto px-6 py-16">
-            <h2 className="text-2xl sm:text-3xl font-bold text-zinc-900 dark:text-zinc-100 tracking-tight mb-4 text-center">
+            <h2 className="text-2xl sm:text-3xl font-semibold text-zinc-900 dark:text-zinc-100 tracking-tight mb-4 text-center">
               {t('featuresDemo.instant.title')}
             </h2>
             <p className="text-zinc-600 dark:text-zinc-300 text-center max-w-2xl mx-auto mb-12">
@@ -162,7 +162,7 @@ export default function FreeDemoClient() {
         {/* What You Get */}
         <section className="bg-white dark:bg-zinc-950">
           <div className="max-w-4xl mx-auto px-6 py-16">
-            <h2 className="text-2xl sm:text-3xl font-bold text-zinc-900 dark:text-zinc-100 tracking-tight mb-6 text-center">
+            <h2 className="text-2xl sm:text-3xl font-semibold text-zinc-900 dark:text-zinc-100 tracking-tight mb-6 text-center">
               {t('featuresDemo.whatYouGet.title')}
             </h2>
 
@@ -187,7 +187,7 @@ export default function FreeDemoClient() {
         {/* Free Plan vs Paid */}
         <section className="bg-zinc-50 dark:bg-zinc-900/50">
           <div className="max-w-4xl mx-auto px-6 py-16">
-            <h2 className="text-2xl sm:text-3xl font-bold text-zinc-900 dark:text-zinc-100 tracking-tight mb-4 text-center">
+            <h2 className="text-2xl sm:text-3xl font-semibold text-zinc-900 dark:text-zinc-100 tracking-tight mb-4 text-center">
               {t('featuresDemo.compare.title')}
             </h2>
             <p className="text-zinc-600 dark:text-zinc-300 text-center max-w-2xl mx-auto mb-10">
@@ -231,7 +231,7 @@ export default function FreeDemoClient() {
         {/* How to Get Started */}
         <section className="bg-white dark:bg-zinc-950">
           <div className="max-w-4xl mx-auto px-6 py-16">
-            <h2 className="text-2xl sm:text-3xl font-bold text-zinc-900 dark:text-zinc-100 tracking-tight mb-12 text-center">
+            <h2 className="text-2xl sm:text-3xl font-semibold text-zinc-900 dark:text-zinc-100 tracking-tight mb-12 text-center">
               {t('featuresDemo.steps.title')}
             </h2>
 
@@ -240,7 +240,7 @@ export default function FreeDemoClient() {
                 const Icon = item.icon;
                 return (
                   <div key={item.step} className="text-center">
-                    <div className="w-12 h-12 rounded-full bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 flex items-center justify-center font-bold text-lg mx-auto mb-4">
+                    <div className="w-12 h-12 rounded-full bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 flex items-center justify-center font-semibold text-lg mx-auto mb-4">
                       {item.step}
                     </div>
                     <Icon className="w-6 h-6 text-zinc-600 dark:text-zinc-300 mx-auto mb-3" />
@@ -260,7 +260,7 @@ export default function FreeDemoClient() {
         {/* FAQ */}
         <section className="bg-zinc-50 dark:bg-zinc-900/50">
           <div className="max-w-4xl mx-auto px-6 py-16">
-            <h2 className="text-2xl sm:text-3xl font-bold text-zinc-900 dark:text-zinc-100 tracking-tight mb-10 text-center">
+            <h2 className="text-2xl sm:text-3xl font-semibold text-zinc-900 dark:text-zinc-100 tracking-tight mb-10 text-center">
               {t('featuresDemo.faq.title')}
             </h2>
 
@@ -285,7 +285,7 @@ export default function FreeDemoClient() {
         {/* CTA Banner */}
         <section className="bg-white dark:bg-zinc-950">
           <div className="max-w-4xl mx-auto px-6 py-20 text-center">
-            <h2 className="text-2xl sm:text-3xl font-bold text-zinc-900 dark:text-zinc-100 tracking-tight mb-4">
+            <h2 className="text-2xl sm:text-3xl font-semibold text-zinc-900 dark:text-zinc-100 tracking-tight mb-4">
               {t('featuresDemo.cta.title')}
             </h2>
             <p className="text-zinc-600 dark:text-zinc-300 max-w-xl mx-auto mb-8">

@@ -63,10 +63,10 @@ export default function FinanceClient() {
 
         {/* Hero */}
         <section className="max-w-4xl mx-auto px-6 pt-12 pb-16 text-center">
-          <div className="w-14 h-14 rounded-2xl bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center mx-auto mb-6">
+          <div className="w-14 h-14 rounded-xl bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center mx-auto mb-6">
             <TrendingUp className="w-7 h-7 text-zinc-600 dark:text-zinc-300" />
           </div>
-          <h1 className="text-3xl sm:text-4xl font-bold text-zinc-900 dark:text-zinc-100 tracking-tight mb-4">
+          <h1 className="text-3xl sm:text-4xl font-semibold text-zinc-900 dark:text-zinc-100 tracking-tight mb-4">
             {t('useCasesFinance.heroTitle')}
           </h1>
           <p className="text-lg text-zinc-500 dark:text-zinc-300 max-w-2xl mx-auto mb-8">
@@ -85,7 +85,7 @@ export default function FinanceClient() {
         {/* The Financial Analysis Challenge */}
         <section className="bg-zinc-50 dark:bg-zinc-900/50">
           <div className="max-w-4xl mx-auto px-6 py-16">
-            <h2 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100 tracking-tight mb-6">
+            <h2 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100 tracking-tight mb-6">
               {t('useCasesFinance.challenge.title')}
             </h2>
             <div className="prose-zinc max-w-none">
@@ -109,7 +109,7 @@ export default function FinanceClient() {
 
         {/* How DocTalk Helps Financial Analysts */}
         <section className="max-w-4xl mx-auto px-6 py-16">
-          <h2 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100 tracking-tight mb-8">
+          <h2 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100 tracking-tight mb-8">
             {t('useCasesFinance.howItHelps.title')}
           </h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
@@ -138,7 +138,7 @@ export default function FinanceClient() {
         {/* Supported Financial Document Types */}
         <section className="bg-zinc-50 dark:bg-zinc-900/50">
           <div className="max-w-4xl mx-auto px-6 py-16">
-            <h2 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100 tracking-tight mb-6">
+            <h2 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100 tracking-tight mb-6">
               {t('useCasesFinance.docTypes.title')}
             </h2>
             <p className="text-zinc-600 dark:text-zinc-300 mb-6">
@@ -168,7 +168,7 @@ export default function FinanceClient() {
 
         {/* Real-World Use Cases */}
         <section className="max-w-4xl mx-auto px-6 py-16">
-          <h2 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100 tracking-tight mb-8">
+          <h2 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100 tracking-tight mb-8">
             {t('useCasesFinance.realWorld.title')}
           </h2>
 
@@ -194,7 +194,7 @@ export default function FinanceClient() {
         {/* Why Cited Answers Matter for Finance */}
         <section className="bg-zinc-50 dark:bg-zinc-900/50">
           <div className="max-w-4xl mx-auto px-6 py-16">
-            <h2 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100 tracking-tight mb-6">
+            <h2 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100 tracking-tight mb-6">
               {t('useCasesFinance.whyCitations.title')}
             </h2>
             <p className="text-zinc-600 dark:text-zinc-300 mb-4">
@@ -220,7 +220,7 @@ export default function FinanceClient() {
               <Table className="w-5 h-5 text-zinc-600 dark:text-zinc-300" />
             </div>
             <div>
-              <h2 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100 tracking-tight mb-3">
+              <h2 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100 tracking-tight mb-3">
                 {t('useCasesFinance.excel.title')}
               </h2>
               <p className="text-zinc-600 dark:text-zinc-300 mb-4">
@@ -239,7 +239,7 @@ export default function FinanceClient() {
         {/* FAQ */}
         <section className="bg-zinc-50 dark:bg-zinc-900/50">
           <div className="max-w-4xl mx-auto px-6 py-16">
-            <h2 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100 tracking-tight mb-8">
+            <h2 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100 tracking-tight mb-8">
               {t('useCasesFinance.faq.title')}
             </h2>
             <div className="space-y-6">
@@ -262,7 +262,7 @@ export default function FinanceClient() {
 
         {/* CTA Banner */}
         <section className="max-w-4xl mx-auto px-6 py-16 text-center">
-          <h2 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100 tracking-tight mb-4">
+          <h2 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100 tracking-tight mb-4">
             {t('useCasesFinance.cta.title')}
           </h2>
           <p className="text-zinc-500 dark:text-zinc-300 mb-6 max-w-xl mx-auto">

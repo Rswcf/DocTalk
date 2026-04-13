@@ -16,7 +16,7 @@ export default function VerifyRequestPage() {
           <span className="font-logo font-semibold text-2xl text-zinc-900 dark:text-zinc-50">DocTalk</span>
         </div>
 
-        <div className="border border-zinc-200 dark:border-zinc-800 rounded-2xl p-8 shadow-sm bg-white dark:bg-zinc-900 text-center">
+        <div className="border border-zinc-200 dark:border-zinc-800 rounded-xl p-8 shadow-sm bg-white dark:bg-zinc-900 text-center">
           {/* Mail icon */}
           <div className="w-16 h-16 mx-auto mb-6 rounded-full bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center">
             <svg className="w-8 h-8 text-zinc-600 dark:text-zinc-300" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
@@ -24,7 +24,7 @@ export default function VerifyRequestPage() {
             </svg>
           </div>
 
-          <h1 className="text-2xl font-bold text-zinc-900 dark:text-zinc-50 mb-3">
+          <h1 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-50 mb-3">
             {t("auth.checkEmail")}
           </h1>
           <p className="text-sm text-zinc-500 dark:text-zinc-300 mb-4">

@@ -3,7 +3,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import ShowcasePlayer from '../components/landing/ShowcasePlayer';
 import { useSession } from 'next-auth/react';
 import { getDocument, uploadDocument, deleteDocument, getMyDocuments, ingestUrl } from '../lib/api';
 import type { DocumentBrief } from '../lib/api';
@@ -22,7 +21,6 @@ import SecuritySection from '../components/landing/SecuritySection';
 import FAQ from '../components/landing/FAQ';
 import FinalCTA from '../components/landing/FinalCTA';
 import Footer from '../components/Footer';
-import ScrollReveal from '../components/landing/ScrollReveal';
 import { useUserProfile } from '../lib/useUserProfile';
 
 type StoredDoc = { document_id: string; filename?: string; createdAt: number; status?: string };
@@ -80,50 +78,6 @@ function LandingPageContent() {
       <main id="main-content">
         <HeroSection />
 
-        {/* Product Showcase */}
-        <ScrollReveal direction="up" delay={100}>
-          <section className="w-full px-4 sm:px-8 lg:px-16 py-24">
-            <div className="border-t border-zinc-200 dark:border-zinc-800 pt-12 max-w-6xl mx-auto">
-              <h2 className="font-display font-medium text-3xl tracking-tight text-zinc-900 dark:text-zinc-50 text-center mb-8">
-                {t('landing.showcase.title')}
-              </h2>
-            </div>
-            <div className="relative max-w-6xl mx-auto">
-              {/* Accent glow behind showcase */}
-              <div
-                aria-hidden="true"
-                className="glow-accent absolute -inset-8 blur-2xl opacity-60 pointer-events-none"
-              />
-              <div className="relative rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-2xl overflow-hidden">
-                {/* macOS window chrome */}
-                <div className="flex items-center px-4 py-3 bg-zinc-100 dark:bg-zinc-800 border-b border-zinc-200 dark:border-zinc-700">
-                  {/* Traffic lights */}
-                  <div className="flex items-center gap-2">
-                    <span aria-hidden="true" className="w-3 h-3 rounded-full bg-red-400" />
-                    <span aria-hidden="true" className="w-3 h-3 rounded-full bg-yellow-400" />
-                    <span aria-hidden="true" className="w-3 h-3 rounded-full bg-green-400" />
-                  </div>
-                  {/* Fake URL bar */}
-                  <div className="flex-1 flex justify-center">
-                    <div className="bg-zinc-200 dark:bg-zinc-700 rounded-md px-4 py-1">
-                      <span className="text-xs text-zinc-400 dark:text-zinc-500 select-none">doctalk.site</span>
-                    </div>
-                  </div>
-                  {/* Spacer to balance traffic lights */}
-                  <div className="w-[52px]" aria-hidden="true" />
-                </div>
-                <div className="aspect-video bg-zinc-50 dark:bg-zinc-900 relative">
-                  <ShowcasePlayer />
-                </div>
-              </div>
-            </div>
-            {/* Caption */}
-            <p className="mt-4 text-center text-sm text-zinc-400 dark:text-zinc-500">
-              {t('landing.showcase.caption')}
-            </p>
-          </section>
-        </ScrollReveal>
-
         <HowItWorks />
 
         <FeatureGrid />
@@ -146,7 +100,7 @@ function LandingPageContent() {
                 <Link
                   key={path.href}
                   href={path.href}
-                  className="group rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-6 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-[box-shadow,transform] duration-200"
+                  className="group rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-6 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-[box-shadow,transform] duration-200"
                 >
                   <div className="flex items-start justify-between gap-4 mb-3">
                     <h3 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">
@@ -435,7 +389,7 @@ export default function HomePageClient() {
           </div>
 
           <div
-            className={`border-2 border-dashed rounded-2xl p-8 sm:p-12 text-center transition-colors ${
+            className={`border-2 border-dashed rounded-xl p-8 sm:p-12 text-center transition-colors ${
               isDragging
                 ? 'border-zinc-500 bg-zinc-50 dark:bg-zinc-900'
                 : 'border-zinc-300 dark:border-zinc-700'
@@ -500,7 +454,7 @@ export default function HomePageClient() {
         <div className="max-w-4xl w-full">
           <h2 className="text-xl font-semibold mb-4 text-zinc-900 dark:text-zinc-100">{t('doc.myDocuments')}</h2>
           {allDocs.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-16 text-center rounded-2xl border border-dashed border-zinc-200 dark:border-zinc-800">
+            <div className="flex flex-col items-center justify-center py-16 text-center rounded-xl border border-dashed border-zinc-200 dark:border-zinc-800">
               <FileUp aria-hidden="true" size={52} className="text-zinc-400 dark:text-zinc-500" />
               <h3 className="mt-5 text-xl font-semibold text-zinc-900 dark:text-zinc-100">{t('dashboard.emptyTitle')}</h3>
               <p className="mt-2 max-w-md text-sm text-zinc-500 dark:text-zinc-300">{t('dashboard.emptySubtitle')}</p>

@@ -91,7 +91,7 @@ export default function MultilingualClient() {
               <Languages className="w-4 h-4" />
               {t('featuresMultilingual.badge')}
             </div>
-            <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-zinc-900 dark:text-zinc-100 tracking-tight mb-6 leading-tight">
+            <h1 className="text-3xl sm:text-4xl lg:text-5xl font-semibold text-zinc-900 dark:text-zinc-100 tracking-tight mb-6 leading-tight">
               {t('featuresMultilingual.hero.title')}
             </h1>
             <p className="text-lg text-zinc-600 dark:text-zinc-300 max-w-2xl mx-auto mb-8">
@@ -110,7 +110,7 @@ export default function MultilingualClient() {
         {/* Supported Languages Grid */}
         <section className="bg-zinc-50 dark:bg-zinc-900/50">
           <div className="max-w-4xl mx-auto px-6 py-16">
-            <h2 className="text-2xl sm:text-3xl font-bold text-zinc-900 dark:text-zinc-100 tracking-tight mb-4 text-center">
+            <h2 className="text-2xl sm:text-3xl font-semibold text-zinc-900 dark:text-zinc-100 tracking-tight mb-4 text-center">
               {t('featuresMultilingual.supported.title')}
             </h2>
             <p className="text-zinc-600 dark:text-zinc-300 text-center max-w-2xl mx-auto mb-12">
@@ -141,7 +141,7 @@ export default function MultilingualClient() {
         {/* How Multilingual Chat Works */}
         <section className="bg-white dark:bg-zinc-950">
           <div className="max-w-4xl mx-auto px-6 py-16">
-            <h2 className="text-2xl sm:text-3xl font-bold text-zinc-900 dark:text-zinc-100 tracking-tight mb-6">
+            <h2 className="text-2xl sm:text-3xl font-semibold text-zinc-900 dark:text-zinc-100 tracking-tight mb-6">
               {t('featuresMultilingual.howItWorks.title')}
             </h2>
             <div className="space-y-4 text-zinc-600 dark:text-zinc-300 leading-relaxed">
@@ -161,7 +161,7 @@ export default function MultilingualClient() {
         {/* Cross-Language Analysis */}
         <section className="bg-zinc-50 dark:bg-zinc-900/50">
           <div className="max-w-4xl mx-auto px-6 py-16">
-            <h2 className="text-2xl sm:text-3xl font-bold text-zinc-900 dark:text-zinc-100 tracking-tight mb-4 text-center">
+            <h2 className="text-2xl sm:text-3xl font-semibold text-zinc-900 dark:text-zinc-100 tracking-tight mb-4 text-center">
               {t('featuresMultilingual.cross.title')}
             </h2>
             <p className="text-zinc-600 dark:text-zinc-300 text-center max-w-2xl mx-auto mb-12">
@@ -195,7 +195,7 @@ export default function MultilingualClient() {
         {/* Compared to Other Tools */}
         <section className="bg-white dark:bg-zinc-950">
           <div className="max-w-4xl mx-auto px-6 py-16">
-            <h2 className="text-2xl sm:text-3xl font-bold text-zinc-900 dark:text-zinc-100 tracking-tight mb-4 text-center">
+            <h2 className="text-2xl sm:text-3xl font-semibold text-zinc-900 dark:text-zinc-100 tracking-tight mb-4 text-center">
               {t('featuresMultilingual.compare.title')}
             </h2>
             <p className="text-zinc-600 dark:text-zinc-300 text-center max-w-2xl mx-auto mb-10">
@@ -239,7 +239,7 @@ export default function MultilingualClient() {
         {/* CJK Support */}
         <section className="bg-zinc-50 dark:bg-zinc-900/50">
           <div className="max-w-4xl mx-auto px-6 py-16">
-            <h2 className="text-2xl sm:text-3xl font-bold text-zinc-900 dark:text-zinc-100 tracking-tight mb-6">
+            <h2 className="text-2xl sm:text-3xl font-semibold text-zinc-900 dark:text-zinc-100 tracking-tight mb-6">
               {t('featuresMultilingual.cjk.title')}
             </h2>
             <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl p-6">
@@ -259,7 +259,7 @@ export default function MultilingualClient() {
         {/* FAQ */}
         <section className="bg-white dark:bg-zinc-950">
           <div className="max-w-4xl mx-auto px-6 py-16">
-            <h2 className="text-2xl sm:text-3xl font-bold text-zinc-900 dark:text-zinc-100 tracking-tight mb-10 text-center">
+            <h2 className="text-2xl sm:text-3xl font-semibold text-zinc-900 dark:text-zinc-100 tracking-tight mb-10 text-center">
               {t('featuresMultilingual.faq.title')}
             </h2>
 
@@ -284,7 +284,7 @@ export default function MultilingualClient() {
         {/* CTA */}
         <section className="bg-zinc-50 dark:bg-zinc-900/50">
           <div className="max-w-4xl mx-auto px-6 py-16 text-center">
-            <h2 className="text-2xl sm:text-3xl font-bold text-zinc-900 dark:text-zinc-100 tracking-tight mb-4">
+            <h2 className="text-2xl sm:text-3xl font-semibold text-zinc-900 dark:text-zinc-100 tracking-tight mb-4">
               {t('featuresMultilingual.cta.title')}
             </h2>
             <p className="text-zinc-600 dark:text-zinc-300 max-w-xl mx-auto mb-8">

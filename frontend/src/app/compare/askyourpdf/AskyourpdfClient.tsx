@@ -60,7 +60,7 @@ export default function AskyourpdfClient() {
             <span className="text-zinc-900 dark:text-zinc-100">{t('compareAskyourpdf.breadcrumbCurrent')}</span>
           </nav>
 
-          <h1 className="text-3xl sm:text-4xl font-bold text-zinc-900 dark:text-zinc-100 mb-6 tracking-tight">
+          <h1 className="text-3xl sm:text-4xl font-semibold text-zinc-900 dark:text-zinc-100 mb-6 tracking-tight">
             {t('compareAskyourpdf.heroTitle')}
           </h1>
           <p className="text-lg text-zinc-600 dark:text-zinc-300 leading-relaxed">
@@ -72,7 +72,7 @@ export default function AskyourpdfClient() {
         {/* Quick Comparison Table */}
         <section className="bg-zinc-50 dark:bg-zinc-900/50">
           <div className="max-w-4xl mx-auto px-6 py-16">
-            <h2 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100 tracking-tight mb-8">
+            <h2 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100 tracking-tight mb-8">
               {t('compareAskyourpdf.quickComparison')}
             </h2>
             <ComparisonTable features={features} competitorName="AskYourPDF" />
@@ -81,7 +81,7 @@ export default function AskyourpdfClient() {
 
         {/* What Is DocTalk? */}
         <section className="max-w-4xl mx-auto px-6 py-16">
-          <h2 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100 tracking-tight mb-4">
+          <h2 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100 tracking-tight mb-4">
             {t('compareAskyourpdf.whatIsDocTalkTitle')}
           </h2>
           <p className="text-zinc-600 dark:text-zinc-300 leading-relaxed">
@@ -93,7 +93,7 @@ export default function AskyourpdfClient() {
         {/* What Is AskYourPDF? */}
         <section className="bg-zinc-50 dark:bg-zinc-900/50">
           <div className="max-w-4xl mx-auto px-6 py-16">
-            <h2 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100 tracking-tight mb-4">
+            <h2 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100 tracking-tight mb-4">
               {t('compareAskyourpdf.whatIsAskyourpdfTitle')}
             </h2>
             <p className="text-zinc-600 dark:text-zinc-300 leading-relaxed">
@@ -105,7 +105,7 @@ export default function AskyourpdfClient() {
 
         {/* Feature-by-Feature Comparison */}
         <section className="max-w-4xl mx-auto px-6 py-16">
-          <h2 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100 tracking-tight mb-10">
+          <h2 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100 tracking-tight mb-10">
             {t('compareAskyourpdf.featureByFeatureTitle')}
           </h2>
 
@@ -221,7 +221,7 @@ export default function AskyourpdfClient() {
         {/* Who Should Choose DocTalk? */}
         <section className="bg-zinc-50 dark:bg-zinc-900/50">
           <div className="max-w-4xl mx-auto px-6 py-16">
-            <h2 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100 tracking-tight mb-6">
+            <h2 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100 tracking-tight mb-6">
               {t('compareAskyourpdf.whoDocTalkTitle')}
             </h2>
             <ul className="space-y-3 text-zinc-600 dark:text-zinc-300">
@@ -251,7 +251,7 @@ export default function AskyourpdfClient() {
 
         {/* Who Should Choose AskYourPDF? */}
         <section className="max-w-4xl mx-auto px-6 py-16">
-          <h2 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100 tracking-tight mb-6">
+          <h2 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100 tracking-tight mb-6">
             {t('compareAskyourpdf.whoAskyourpdfTitle')}
           </h2>
           <ul className="space-y-3 text-zinc-600 dark:text-zinc-300">
@@ -277,7 +277,7 @@ export default function AskyourpdfClient() {
         {/* Verdict */}
         <section className="bg-zinc-50 dark:bg-zinc-900/50">
           <div className="max-w-4xl mx-auto px-6 py-16">
-            <h2 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100 tracking-tight mb-6">
+            <h2 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100 tracking-tight mb-6">
               {t('compareAskyourpdf.verdictTitle')}
             </h2>
             <p className="text-zinc-600 dark:text-zinc-300 leading-relaxed mb-4">
@@ -302,7 +302,7 @@ export default function AskyourpdfClient() {
 
         {/* FAQ */}
         <section className="max-w-4xl mx-auto px-6 py-16">
-          <h2 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100 tracking-tight mb-8">
+          <h2 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100 tracking-tight mb-8">
             {t('compareAskyourpdf.faqTitle')}
           </h2>
           <FAQSection items={faqItems} />

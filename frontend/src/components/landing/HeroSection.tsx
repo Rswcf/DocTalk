@@ -4,54 +4,41 @@ import React from 'react';
 import Link from 'next/link';
 import { ArrowRight } from 'lucide-react';
 import { useLocale } from '../../i18n';
+import ShowcasePlayer from './ShowcasePlayer';
+
 export default function HeroSection() {
   const { t } = useLocale();
 
   return (
-      <section className="relative max-w-6xl mx-auto px-6 py-24 md:py-32 overflow-hidden">
-        {/* Subtle dot-pattern background */}
-        <div
-          aria-hidden="true"
-          className="dot-pattern absolute inset-0 opacity-[0.4] pointer-events-none"
-        />
-
-        <div className="relative max-w-4xl mx-auto text-center">
+    <section className="relative max-w-7xl mx-auto px-6 py-20 md:py-28 overflow-hidden">
+      <div className="grid lg:grid-cols-5 gap-12 lg:gap-16 items-center">
+        {/* Left: text — order-1 desktop, order-1 mobile */}
+        <div className="lg:col-span-3 text-center lg:text-left">
           {/* Badge pill */}
-          <span className="inline-block bg-accent-light text-accent text-xs font-medium tracking-widest uppercase px-3 py-1 rounded-full mb-6">
+          <span className="inline-block bg-accent-light text-accent text-xs font-semibold tracking-widest uppercase px-3 py-1 rounded-full mb-6">
             {t('landing.badge')}
           </span>
 
           {/* Headline */}
-          <div className="relative">
-            <div
-              aria-hidden="true"
-              className="absolute left-1/2 top-1/2 h-48 w-full max-w-3xl -translate-x-1/2 -translate-y-1/2 bg-[radial-gradient(ellipse_at_center,var(--accent-light),transparent_70%)] opacity-80 pointer-events-none"
-            />
-            <h1 className="relative text-5xl md:text-6xl lg:text-7xl font-display font-semibold text-zinc-900 dark:text-zinc-50 leading-[1.1] tracking-tight text-balance">
-              {t('landing.headline').split('\n').map((line: string, i: number) => (
-                <React.Fragment key={i}>
-                  {i > 0 && <br />}
-                  {line}
-                </React.Fragment>
-              ))}
-            </h1>
-          </div>
+          <h1 className="text-5xl md:text-6xl lg:text-7xl font-semibold text-zinc-900 dark:text-zinc-50 leading-[1.05] tracking-tight text-balance">
+            {t('landing.headline').split('\n').map((line: string, i: number) => (
+              <React.Fragment key={i}>
+                {i > 0 && <br />}
+                {line}
+              </React.Fragment>
+            ))}
+          </h1>
 
-          {/* Subtitle */}
-          <p className="mt-4 text-xl md:text-2xl text-zinc-500 dark:text-zinc-300 font-normal">
-            {t('landing.subtitle')}
-          </p>
-
-          {/* Description */}
-          <p className="mt-3 max-w-2xl mx-auto text-base md:text-lg text-zinc-600 dark:text-zinc-300 leading-relaxed">
+          {/* Single supporting line — keep description, drop subtitle */}
+          <p className="mt-5 text-lg md:text-xl text-zinc-600 dark:text-zinc-300 leading-relaxed max-w-xl lg:max-w-none">
             {t('landing.description')}
           </p>
 
-          {/* CTA buttons */}
-          <div className="mt-8 flex flex-wrap gap-4 justify-center">
+          {/* CTAs: ONE primary + ONE text link */}
+          <div className="mt-8 flex flex-wrap items-center gap-x-6 gap-y-4 justify-center lg:justify-start">
             <Link
               href="/demo"
-              className="inline-flex items-center gap-2 px-6 py-3 bg-accent hover:bg-accent-hover text-accent-foreground rounded-lg font-medium shadow-sm hover:shadow-md transition-[box-shadow,color,background-color] motion-reduce:transition-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-950"
+              className="group inline-flex items-center gap-2 px-6 py-3 bg-accent hover:bg-accent-hover text-accent-foreground rounded-lg font-semibold shadow-sm hover:shadow-md transition-[box-shadow,color,background-color] motion-reduce:transition-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-950"
             >
               {t('landing.cta.demo')}
               <ArrowRight aria-hidden="true" size={18} className="transition-transform motion-reduce:transform-none group-hover:translate-x-0.5" />
@@ -59,18 +46,44 @@ export default function HeroSection() {
             <Link
               href="#auth"
               scroll={false}
-              className="rounded-full border border-zinc-300 dark:border-zinc-600 px-6 py-3 text-sm font-medium hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
+              className="text-sm font-semibold text-zinc-700 dark:text-zinc-300 hover:text-accent dark:hover:text-accent transition-colors motion-reduce:transition-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:rounded-sm"
             >
               {t('hero.signUpFree')}
-            </Link>
-            <Link
-              href="#how-it-works"
-              className="inline-flex items-center px-6 py-3 border border-zinc-300 dark:border-zinc-700 text-zinc-700 dark:text-zinc-300 rounded-lg font-medium hover:border-accent hover:text-accent dark:hover:border-accent dark:hover:text-accent transition-colors motion-reduce:transition-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-950"
-            >
-              {t('landing.cta.howItWorks')}
+              <span aria-hidden="true" className="ml-1">→</span>
             </Link>
           </div>
         </div>
-      </section>
+
+        {/* Right: ShowcasePlayer in macOS chrome — order-2 desktop, order-2 mobile (stacks below text) */}
+        <div className="lg:col-span-2">
+          <div className="relative">
+            {/* Subtle accent glow */}
+            <div
+              aria-hidden="true"
+              className="glow-accent absolute -inset-4 blur-2xl opacity-50 pointer-events-none"
+            />
+            <div className="relative rounded-xl border border-zinc-200 dark:border-zinc-800 shadow-xl overflow-hidden bg-zinc-50 dark:bg-zinc-900">
+              {/* macOS window chrome — compact */}
+              <div className="flex items-center px-3 py-2 bg-zinc-100 dark:bg-zinc-800 border-b border-zinc-200 dark:border-zinc-700">
+                <div className="flex items-center gap-1.5">
+                  <span aria-hidden="true" className="w-2.5 h-2.5 rounded-full bg-red-400" />
+                  <span aria-hidden="true" className="w-2.5 h-2.5 rounded-full bg-yellow-400" />
+                  <span aria-hidden="true" className="w-2.5 h-2.5 rounded-full bg-green-400" />
+                </div>
+                <div className="flex-1 flex justify-center">
+                  <div className="bg-zinc-200 dark:bg-zinc-700 rounded-md px-3 py-0.5">
+                    <span className="text-[11px] text-zinc-500 dark:text-zinc-400 select-none">doctalk.site</span>
+                  </div>
+                </div>
+                <div className="w-[40px]" aria-hidden="true" />
+              </div>
+              <div className="aspect-video relative">
+                <ShowcasePlayer />
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
   );
 }

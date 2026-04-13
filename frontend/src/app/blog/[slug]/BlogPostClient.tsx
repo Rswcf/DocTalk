@@ -178,7 +178,7 @@ export default function BlogPostClient({ post, relatedPosts }: BlogPostClientPro
                 {t('blog.meta.minutesRead', { minutes: post.readingMinutes })}
               </span>
             </div>
-            <h1 className="text-3xl sm:text-4xl font-bold text-zinc-900 dark:text-zinc-100 mb-4 leading-tight tracking-tight">
+            <h1 className="text-3xl sm:text-4xl font-semibold text-zinc-900 dark:text-zinc-100 mb-4 leading-tight tracking-tight">
               {post.title}
             </h1>
             <p className="text-lg text-zinc-600 dark:text-zinc-300 mb-6 leading-relaxed">

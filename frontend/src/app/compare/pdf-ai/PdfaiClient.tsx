@@ -60,7 +60,7 @@ export default function PdfaiClient() {
             <span className="text-zinc-900 dark:text-zinc-100">{t('comparePdfai.breadcrumbCurrent')}</span>
           </nav>
 
-          <h1 className="text-3xl sm:text-4xl font-bold text-zinc-900 dark:text-zinc-100 mb-6 tracking-tight">
+          <h1 className="text-3xl sm:text-4xl font-semibold text-zinc-900 dark:text-zinc-100 mb-6 tracking-tight">
             {t('comparePdfai.heroTitle')}
           </h1>
           <p className="text-lg text-zinc-600 dark:text-zinc-300 leading-relaxed">
@@ -72,7 +72,7 @@ export default function PdfaiClient() {
         {/* Quick Comparison Table */}
         <section className="bg-zinc-50 dark:bg-zinc-900/50">
           <div className="max-w-4xl mx-auto px-6 py-16">
-            <h2 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100 tracking-tight mb-8">
+            <h2 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100 tracking-tight mb-8">
               {t('comparePdfai.quickComparison')}
             </h2>
             <ComparisonTable features={features} competitorName="PDF.ai" />
@@ -81,7 +81,7 @@ export default function PdfaiClient() {
 
         {/* What Is DocTalk? */}
         <section className="max-w-4xl mx-auto px-6 py-16">
-          <h2 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100 tracking-tight mb-4">
+          <h2 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100 tracking-tight mb-4">
             {t('comparePdfai.whatIsDocTalkTitle')}
           </h2>
           <p className="text-zinc-600 dark:text-zinc-300 leading-relaxed">
@@ -92,7 +92,7 @@ export default function PdfaiClient() {
         {/* What Is PDF.ai? */}
         <section className="bg-zinc-50 dark:bg-zinc-900/50">
           <div className="max-w-4xl mx-auto px-6 py-16">
-            <h2 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100 tracking-tight mb-4">
+            <h2 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100 tracking-tight mb-4">
               {t('comparePdfai.whatIsPdfaiTitle')}
             </h2>
             <p className="text-zinc-600 dark:text-zinc-300 leading-relaxed">
@@ -105,7 +105,7 @@ export default function PdfaiClient() {
 
         {/* Feature-by-Feature Comparison */}
         <section className="max-w-4xl mx-auto px-6 py-16">
-          <h2 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100 tracking-tight mb-10">
+          <h2 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100 tracking-tight mb-10">
             {t('comparePdfai.featureByFeatureTitle')}
           </h2>
 
@@ -221,7 +221,7 @@ export default function PdfaiClient() {
         {/* Who Should Choose DocTalk? */}
         <section className="bg-zinc-50 dark:bg-zinc-900/50">
           <div className="max-w-4xl mx-auto px-6 py-16">
-            <h2 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100 tracking-tight mb-6">
+            <h2 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100 tracking-tight mb-6">
               {t('comparePdfai.whoDocTalkTitle')}
             </h2>
             <ul className="space-y-3 text-zinc-600 dark:text-zinc-300">
@@ -251,7 +251,7 @@ export default function PdfaiClient() {
 
         {/* Who Should Choose PDF.ai? */}
         <section className="max-w-4xl mx-auto px-6 py-16">
-          <h2 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100 tracking-tight mb-6">
+          <h2 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100 tracking-tight mb-6">
             {t('comparePdfai.whoPdfaiTitle')}
           </h2>
           <ul className="space-y-3 text-zinc-600 dark:text-zinc-300">
@@ -273,7 +273,7 @@ export default function PdfaiClient() {
         {/* Verdict */}
         <section className="bg-zinc-50 dark:bg-zinc-900/50">
           <div className="max-w-4xl mx-auto px-6 py-16">
-            <h2 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100 tracking-tight mb-6">
+            <h2 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100 tracking-tight mb-6">
               {t('comparePdfai.verdictTitle')}
             </h2>
             <p className="text-zinc-600 dark:text-zinc-300 leading-relaxed mb-4">
@@ -294,7 +294,7 @@ export default function PdfaiClient() {
 
         {/* FAQ */}
         <section className="max-w-4xl mx-auto px-6 py-16">
-          <h2 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100 tracking-tight mb-8">
+          <h2 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100 tracking-tight mb-8">
             {t('comparePdfai.faqTitle')}
           </h2>
           <FAQSection items={faqItems} />

@@ -53,7 +53,7 @@ export default function DemoPageClient() {
     <div className="min-h-screen flex flex-col bg-white dark:bg-zinc-950">
       <Header variant="minimal" />
       <main id="main-content" className="flex-1 flex flex-col items-center justify-center p-6">
-        <h1 className="text-3xl font-bold mb-2 text-zinc-900 dark:text-zinc-50">{t('demo.title')}</h1>
+        <h1 className="text-3xl font-semibold mb-2 text-zinc-900 dark:text-zinc-50">{t('demo.title')}</h1>
         <p className="text-zinc-500 dark:text-zinc-300 mb-3 text-center max-w-md">
           {t('demo.subtitle')}
         </p>

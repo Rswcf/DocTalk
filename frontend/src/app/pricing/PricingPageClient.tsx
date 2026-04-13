@@ -124,7 +124,7 @@ export default function PricingPageClient() {
             {plans.map((plan) => (
               <article
                 key={plan.nameKey}
-                className={`rounded-3xl border p-8 shadow-sm ${
+                className={`rounded-xl border p-8 shadow-sm ${
                   plan.featured
                     ? 'border-indigo-500 bg-indigo-50/50 dark:border-indigo-400 dark:bg-indigo-950/20'
                     : 'border-zinc-200 dark:border-zinc-800'
@@ -168,7 +168,7 @@ export default function PricingPageClient() {
           </section>
 
           <section className="grid gap-8 lg:grid-cols-[1.2fr_0.8fr]">
-            <div className="rounded-3xl border border-zinc-200 p-8 dark:border-zinc-800">
+            <div className="rounded-xl border border-zinc-200 p-8 dark:border-zinc-800">
               <h2 className="text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
                 {t('pricing.comparison.title')}
               </h2>
@@ -199,7 +199,7 @@ export default function PricingPageClient() {
               </div>
             </div>
 
-            <aside className="rounded-3xl bg-zinc-50 p-8 dark:bg-zinc-900/60">
+            <aside className="rounded-xl bg-zinc-50 p-8 dark:bg-zinc-900/60">
               <h2 className="text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
                 {t('pricing.bestFit.title')}
               </h2>
@@ -217,7 +217,7 @@ export default function PricingPageClient() {
                   {t('pricing.bestFit.proDesc')}
                 </li>
               </ul>
-              <div className="mt-8 rounded-2xl border border-zinc-200 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-950">
+              <div className="mt-8 rounded-xl border border-zinc-200 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-950">
                 <p className="text-sm leading-7 text-zinc-600 dark:text-zinc-300">
                   {t('pricing.bestFit.contextNote')}{' '}
                   <Link href="/demo" className="text-indigo-600 hover:underline dark:text-indigo-400">

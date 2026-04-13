@@ -243,9 +243,9 @@ export default function MessageBubble({ message, onCitationClick, isStreaming, o
         <div
           className={
             isError
-              ? 'text-sm rounded-3xl px-4 py-3 bg-red-600 text-white'
+              ? 'text-sm rounded-xl px-4 py-3 bg-red-600 text-white'
               : isUser
-              ? 'text-sm rounded-3xl px-4 py-3 bg-zinc-100 dark:bg-zinc-700 text-zinc-900 dark:text-white shadow-sm'
+              ? 'text-sm rounded-xl px-4 py-3 bg-zinc-100 dark:bg-zinc-700 text-zinc-900 dark:text-white shadow-sm'
               : 'text-zinc-900 dark:text-zinc-100'
           }
         >
