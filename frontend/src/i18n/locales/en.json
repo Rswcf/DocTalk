@@ -2115,5 +2115,7 @@
   "landing.feature.modes.title": "3 answer modes",
   "landing.feature.modes.desc": "Quick, Balanced, Thorough. Trade speed for depth on any question — pick the right model for the job.",
   "landing.feature.freeDemo.title": "Try without signup",
-  "landing.feature.freeDemo.desc": "Three pre-loaded sample PDFs are ready to chat with — no account, no credit card, no email."
+  "landing.feature.freeDemo.desc": "Three pre-loaded sample PDFs are ready to chat with — no account, no credit card, no email.",
+  "chat.sources.label": "{count} sources",
+  "chat.sources.ariaLabel": "Answer sources"
 }

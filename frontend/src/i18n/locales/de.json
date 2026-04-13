@@ -2115,5 +2115,7 @@
   "landing.feature.modes.title": "3 Antwortmodi",
   "landing.feature.modes.desc": "Quick, Balanced, Thorough — tausche Tempo gegen Tiefe je nach Frage.",
   "landing.feature.freeDemo.title": "Ohne Registrierung testen",
-  "landing.feature.freeDemo.desc": "Drei vorgeladene Beispiel-PDFs zum sofortigen Chatten — kein Konto, keine Karte, keine E-Mail."
+  "landing.feature.freeDemo.desc": "Drei vorgeladene Beispiel-PDFs zum sofortigen Chatten — kein Konto, keine Karte, keine E-Mail.",
+  "chat.sources.label": "{count} Quellen",
+  "chat.sources.ariaLabel": "Antwortquellen"
 }

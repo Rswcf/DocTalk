@@ -6,6 +6,7 @@ import { Copy, Check, ThumbsUp, ThumbsDown, RotateCcw, ChevronsDown } from 'luci
 import type { Citation, Message } from '../../types';
 import { useLocale } from '../../i18n';
 import CitationPopover from './CitationPopover';
+import SourcesStrip from './SourcesStrip';
 import { highlightCode } from '../../lib/highlight';
 
 const ReactMarkdown = React.lazy(() => import('react-markdown'));
@@ -262,16 +263,29 @@ export default function MessageBubble({ message, onCitationClick, isStreaming, o
               <span>{t('chat.searching')}</span>
             </div>
           ) : (
-            <div className="prose dark:prose-invert max-w-none [&>*:first-child]:mt-0 [&>*:last-child]:mb-0">
-              <Suspense fallback={<span className="whitespace-pre-wrap">{markdownText}</span>}>
-                <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>
-                  {markdownText}
-                </ReactMarkdown>
-              </Suspense>
-              {isStreaming && isAssistant && message.text && (
-                <span aria-hidden="true" className="inline-block w-2 h-4 bg-zinc-400 dark:bg-zinc-500 animate-pulse motion-reduce:animate-none rounded-sm ml-0.5 align-text-bottom" />
+            <>
+              {/* Sources strip — Perplexity pattern. Renders above the prose
+                  when the assistant message has citations, so the
+                  "grounded-in-these-documents" signal is visible before the
+                  user reads the answer. Streaming messages without citations
+                  yet skip this (citations arrive with / after text). */}
+              {isAssistant && message.citations && message.citations.length > 0 && (
+                <SourcesStrip
+                  citations={message.citations}
+                  onCitationClick={onCitationClick}
+                />
               )}
-            </div>
+              <div className="prose dark:prose-invert max-w-none [&>*:first-child]:mt-0 [&>*:last-child]:mb-0">
+                <Suspense fallback={<span className="whitespace-pre-wrap">{markdownText}</span>}>
+                  <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>
+                    {markdownText}
+                  </ReactMarkdown>
+                </Suspense>
+                {isStreaming && isAssistant && message.text && (
+                  <span aria-hidden="true" className="inline-block w-2 h-4 bg-zinc-400 dark:bg-zinc-500 animate-pulse motion-reduce:animate-none rounded-sm ml-0.5 align-text-bottom" />
+                )}
+              </div>
+            </>
           )}
         </div>
 

@@ -2115,5 +2115,7 @@
   "landing.feature.modes.title": "3 modalità di risposta",
   "landing.feature.modes.desc": "Quick, Balanced, Thorough — bilancia velocità e profondità per ogni domanda.",
   "landing.feature.freeDemo.title": "Prova senza registrarti",
-  "landing.feature.freeDemo.desc": "Tre PDF di esempio pronti per chattare — senza account, carta o e-mail."
+  "landing.feature.freeDemo.desc": "Tre PDF di esempio pronti per chattare — senza account, carta o e-mail.",
+  "chat.sources.label": "{count} fonti",
+  "chat.sources.ariaLabel": "Fonti della risposta"
 }

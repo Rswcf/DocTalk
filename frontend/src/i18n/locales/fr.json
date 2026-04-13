@@ -2115,5 +2115,7 @@
   "landing.feature.modes.title": "3 modes de réponse",
   "landing.feature.modes.desc": "Quick, Balanced, Thorough — ajuste vitesse et profondeur selon la question.",
   "landing.feature.freeDemo.title": "Essayez sans inscription",
-  "landing.feature.freeDemo.desc": "Trois PDFs d'exemple prêts à discuter — sans compte, carte ou e-mail."
+  "landing.feature.freeDemo.desc": "Trois PDFs d'exemple prêts à discuter — sans compte, carte ou e-mail.",
+  "chat.sources.label": "{count} sources",
+  "chat.sources.ariaLabel": "Sources de la réponse"
 }

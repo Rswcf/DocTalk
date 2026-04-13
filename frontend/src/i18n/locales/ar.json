@@ -2115,5 +2115,7 @@
   "landing.feature.modes.title": "3 أوضاع للإجابة",
   "landing.feature.modes.desc": "Quick وBalanced وThorough — وازن بين السرعة والعمق حسب السؤال.",
   "landing.feature.freeDemo.title": "جرّب بدون تسجيل",
-  "landing.feature.freeDemo.desc": "ثلاثة ملفات PDF جاهزة للمحادثة — بدون حساب أو بطاقة ائتمان أو بريد إلكتروني."
+  "landing.feature.freeDemo.desc": "ثلاثة ملفات PDF جاهزة للمحادثة — بدون حساب أو بطاقة ائتمان أو بريد إلكتروني.",
+  "chat.sources.label": "{count} مصادر",
+  "chat.sources.ariaLabel": "مصادر الإجابة"
 }
