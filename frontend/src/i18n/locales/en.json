@@ -888,7 +888,7 @@
   "useCasesLawyers.faq.q3.question": "How accurate is AI for legal analysis?",
   "useCasesLawyers.faq.q3.answer": "DocTalk uses Retrieval-Augmented Generation (RAG) to base every answer on the actual text of your document. Every answer includes numbered citations so you can verify each claim. DocTalk is a research acceleration tool, not a substitute for legal judgment.",
   "useCasesLawyers.faq.q4.question": "Does it work with scanned PDFs?",
-  "useCasesLawyers.faq.q4.answer": "DocTalk works best with text-based PDFs where the text layer is preserved. Most modern legal documents produce text-based PDFs. Scanned image-only PDFs without OCR may have limited text extraction.",
+  "useCasesLawyers.faq.q4.answer": "DocTalk works best with text-based PDFs where the text layer is preserved. For scanned or image-only PDFs, DocTalk automatically runs OCR using Tesseract (English + Simplified Chinese) to extract text. OCR quality varies with scan resolution and page layout — for legal work requiring high fidelity, text-based PDFs remain the most reliable source.",
   "useCasesLawyers.faq.q5.question": "Is there a team plan?",
   "useCasesLawyers.faq.q5.answer": "DocTalk currently offers individual plans: Free (500 credits/month), Plus ($9.99/month for 3,000 credits), and Pro ($19.99/month for 9,000 credits). Team and enterprise plans are on the roadmap.",
   "useCasesLawyers.cta.title": "Start Reviewing Documents — Free, No Signup",

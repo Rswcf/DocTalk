@@ -888,7 +888,7 @@
   "useCasesLawyers.faq.q3.question": "AI 做法律分析的准确性如何？",
   "useCasesLawyers.faq.q3.answer": "DocTalk 使用检索增强生成（RAG）技术，确保每个回答都基于您文档的实际文本。每个回答都包含编号引用，让您可以验证来源。AI 帮助您更快找到信息——法律判断始终在您手中。",
   "useCasesLawyers.faq.q4.question": "支持扫描版 PDF 吗？",
-  "useCasesLawyers.faq.q4.answer": "DocTalk 在保留文本层的文本型 PDF 上效果最佳。大多数现代法律文件都能生成可搜索的文本型 PDF。对于不含文本层的扫描文件，建议先使用 OCR 工具处理。",
+  "useCasesLawyers.faq.q4.answer": "DocTalk 在保留文本层的文本型 PDF 上效果最佳。对于扫描件或纯图像 PDF，DocTalk 会自动使用 Tesseract（英文 + 简体中文）进行 OCR 提取。OCR 质量因扫描分辨率和版式而异 — 对高保真度要求的法律工作，文本型 PDF 仍是最可靠的输入。",
   "useCasesLawyers.faq.q5.question": "有团队计划吗？",
   "useCasesLawyers.faq.q5.answer": "DocTalk 目前提供个人计划：Free（500 积分/月）、Plus（$9.99/月，3,000 积分）和 Pro（$19.99/月，9,000 积分）。团队和企业计划已在规划中。",
   "useCasesLawyers.cta.title": "立即开始审查文档——免费，无需注册",
