@@ -359,7 +359,7 @@ function BillingContent() {
               {/* Plus Card */}
               <div
                 onClick={() => setSelectedPlan('plus')}
-                className={`relative rounded-xl p-[2px] shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-shadow transition-transform duration-200 cursor-pointer ${
+                className={`relative rounded-xl p-0.5 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-shadow transition-transform duration-200 cursor-pointer ${
                   selectedPlan === 'plus'
                     ? 'bg-gradient-to-r from-indigo-500 to-violet-500'
                     : 'bg-zinc-200 dark:bg-zinc-800'
@@ -425,7 +425,7 @@ function BillingContent() {
               {/* Pro Card */}
               <div
                 onClick={() => setSelectedPlan('pro')}
-                className={`relative rounded-xl p-[2px] shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-shadow transition-transform duration-200 cursor-pointer ${
+                className={`relative rounded-xl p-0.5 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-shadow transition-transform duration-200 cursor-pointer ${
                   selectedPlan === 'pro'
                     ? 'bg-gradient-to-r from-indigo-500 to-violet-500'
                     : 'bg-zinc-200 dark:bg-zinc-800'
