@@ -63,7 +63,7 @@ export default function NotebooklmAltsClient() {
         <section className="bg-zinc-50 dark:bg-zinc-900/50">
           <div className="max-w-4xl mx-auto px-6 py-16">
             <div className="flex items-center gap-3 mb-6">
-              <span className="flex items-center justify-center w-8 h-8 rounded-full bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 text-sm font-semibold">1</span>
+              <span className="flex items-center justify-center w-8 h-8 rounded-full bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 text-sm font-bold">1</span>
               <h2 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100 tracking-tight">
                 {t('altsNotebooklm.alt1Title')}
               </h2>
@@ -108,7 +108,7 @@ export default function NotebooklmAltsClient() {
         {/* #2 ChatPDF */}
         <section className="max-w-4xl mx-auto px-6 py-16">
           <div className="flex items-center gap-3 mb-6">
-            <span className="flex items-center justify-center w-8 h-8 rounded-full bg-zinc-200 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 text-sm font-semibold">2</span>
+            <span className="flex items-center justify-center w-8 h-8 rounded-full bg-zinc-200 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 text-sm font-bold">2</span>
             <h2 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100 tracking-tight">
               {t('altsNotebooklm.alt2Title')}
             </h2>
@@ -128,7 +128,7 @@ export default function NotebooklmAltsClient() {
         <section className="bg-zinc-50 dark:bg-zinc-900/50">
           <div className="max-w-4xl mx-auto px-6 py-16">
             <div className="flex items-center gap-3 mb-6">
-              <span className="flex items-center justify-center w-8 h-8 rounded-full bg-zinc-200 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 text-sm font-semibold">3</span>
+              <span className="flex items-center justify-center w-8 h-8 rounded-full bg-zinc-200 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 text-sm font-bold">3</span>
               <h2 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100 tracking-tight">
                 {t('altsNotebooklm.alt3Title')}
               </h2>
@@ -148,7 +148,7 @@ export default function NotebooklmAltsClient() {
         {/* #4 Humata */}
         <section className="max-w-4xl mx-auto px-6 py-16">
           <div className="flex items-center gap-3 mb-6">
-            <span className="flex items-center justify-center w-8 h-8 rounded-full bg-zinc-200 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 text-sm font-semibold">4</span>
+            <span className="flex items-center justify-center w-8 h-8 rounded-full bg-zinc-200 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 text-sm font-bold">4</span>
             <h2 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100 tracking-tight">
               {t('altsNotebooklm.alt4Title')}
             </h2>
@@ -168,7 +168,7 @@ export default function NotebooklmAltsClient() {
         <section className="bg-zinc-50 dark:bg-zinc-900/50">
           <div className="max-w-4xl mx-auto px-6 py-16">
             <div className="flex items-center gap-3 mb-6">
-              <span className="flex items-center justify-center w-8 h-8 rounded-full bg-zinc-200 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 text-sm font-semibold">5</span>
+              <span className="flex items-center justify-center w-8 h-8 rounded-full bg-zinc-200 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 text-sm font-bold">5</span>
               <h2 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100 tracking-tight">
                 {t('altsNotebooklm.alt5Title')}
               </h2>
@@ -188,7 +188,7 @@ export default function NotebooklmAltsClient() {
         {/* #6 Elicit */}
         <section className="max-w-4xl mx-auto px-6 py-16">
           <div className="flex items-center gap-3 mb-6">
-            <span className="flex items-center justify-center w-8 h-8 rounded-full bg-zinc-200 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 text-sm font-semibold">6</span>
+            <span className="flex items-center justify-center w-8 h-8 rounded-full bg-zinc-200 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 text-sm font-bold">6</span>
             <h2 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100 tracking-tight">
               {t('altsNotebooklm.alt6Title')}
             </h2>

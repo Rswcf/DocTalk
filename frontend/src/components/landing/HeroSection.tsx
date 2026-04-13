@@ -72,7 +72,7 @@ export default function HeroSection() {
                 </div>
                 <div className="flex-1 flex justify-center">
                   <div className="bg-zinc-200 dark:bg-zinc-700 rounded-md px-3 py-0.5">
-                    <span className="text-[11px] text-zinc-500 dark:text-zinc-400 select-none">doctalk.site</span>
+                    <span className="text-[11px] text-zinc-600 dark:text-zinc-300 select-none">doctalk.site</span>
                   </div>
                 </div>
                 <div className="w-[40px]" aria-hidden="true" />
