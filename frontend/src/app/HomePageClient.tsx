@@ -14,6 +14,9 @@ import { sanitizeFilename } from '../lib/utils';
 import { PrivacyBadge } from '../components/PrivacyBadge';
 import Header from '../components/Header';
 import HeroSection from '../components/landing/HeroSection';
+import dynamic from 'next/dynamic';
+// ShowcasePlayer lazy-loaded so it does not block hero LCP (Codex r1 flag).
+const ShowcasePlayerLazy = dynamic(() => import('../components/landing/ShowcasePlayer'), { ssr: false });
 import FeatureGrid from '../components/landing/FeatureGrid';
 import HowItWorks from '../components/landing/HowItWorks';
 import SocialProof from '../components/landing/SocialProof';
@@ -77,6 +80,41 @@ function LandingPageContent() {
       <Header variant="minimal" />
       <main id="main-content">
         <HeroSection />
+
+        {/* Live product demo — demoted from hero to a dedicated section below.
+            Hero now shows a static artifact (HeroArtifact); this is the
+            "see it actually run" proof for visitors who want more. */}
+        <section className="w-full px-4 sm:px-8 lg:px-16 py-16">
+          <div className="max-w-6xl mx-auto">
+            <h2 className="font-semibold tracking-tight text-3xl text-zinc-900 dark:text-zinc-50 text-center mb-8 text-balance">
+              {t('landing.showcase.title')}
+            </h2>
+          </div>
+          <div className="relative max-w-5xl mx-auto">
+            <div className="glow-accent absolute -inset-8 blur-2xl opacity-40 pointer-events-none" aria-hidden="true" />
+            <div className="relative rounded-xl border border-zinc-200 dark:border-zinc-800 shadow-xl overflow-hidden">
+              <div className="flex items-center px-4 py-2.5 bg-zinc-100 dark:bg-zinc-800 border-b border-zinc-200 dark:border-zinc-700">
+                <div className="flex items-center gap-1.5">
+                  <span aria-hidden="true" className="w-2.5 h-2.5 rounded-full bg-red-400" />
+                  <span aria-hidden="true" className="w-2.5 h-2.5 rounded-full bg-yellow-400" />
+                  <span aria-hidden="true" className="w-2.5 h-2.5 rounded-full bg-green-400" />
+                </div>
+                <div className="flex-1 flex justify-center">
+                  <div className="bg-zinc-200 dark:bg-zinc-700 rounded-md px-3 py-0.5">
+                    <span className="text-[11px] text-zinc-600 dark:text-zinc-300 select-none">doctalk.site</span>
+                  </div>
+                </div>
+                <div className="w-[52px]" aria-hidden="true" />
+              </div>
+              <div className="aspect-video bg-zinc-50 dark:bg-zinc-900 relative">
+                <ShowcasePlayerLazy />
+              </div>
+            </div>
+          </div>
+          <p className="mt-4 text-center text-sm text-zinc-500 dark:text-zinc-300">
+            {t('landing.showcase.caption')}
+          </p>
+        </section>
 
         <HowItWorks />
 
@@ -165,7 +203,7 @@ export default function HomePageClient() {
   const router = useRouter();
   const { status } = useSession();
   const { setDocument, setDocumentStatus } = useDocTalkStore();
-  const { t } = useLocale();
+  const { t, tOr } = useLocale();
   const [isDragging, setDragging] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [progressText, setProgressText] = useState('');
@@ -454,16 +492,30 @@ export default function HomePageClient() {
         <div className="max-w-4xl w-full">
           <h2 className="text-xl font-semibold mb-4 text-zinc-900 dark:text-zinc-100">{t('doc.myDocuments')}</h2>
           {allDocs.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-16 text-center rounded-xl border border-dashed border-zinc-200 dark:border-zinc-800">
+            <div className="flex flex-col items-center justify-center py-16 px-6 text-center rounded-xl border border-dashed border-zinc-200 dark:border-zinc-800">
               <FileUp aria-hidden="true" size={52} className="text-zinc-400 dark:text-zinc-500" />
               <h3 className="mt-5 text-xl font-semibold text-zinc-900 dark:text-zinc-100">{t('dashboard.emptyTitle')}</h3>
               <p className="mt-2 max-w-md text-sm text-zinc-500 dark:text-zinc-300">{t('dashboard.emptySubtitle')}</p>
-              <Link
-                href="/demo"
-                className="mt-6 inline-flex items-center px-5 py-2.5 rounded-full border border-zinc-300 dark:border-zinc-600 text-sm font-medium text-zinc-700 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
-              >
-                {t('home.cta.tryDemo')}
-              </Link>
+              {/* Dual CTA per Codex r1 + 30-agent onboarding research:
+                  primary "Start with a sample" bypasses the upload-and-wait
+                  cliff that's eating activation; secondary text link
+                  preserves "I have my own doc" path. */}
+              <div className="mt-6 flex flex-wrap items-center justify-center gap-x-6 gap-y-3">
+                <Link
+                  href="/demo"
+                  className="group inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-accent hover:bg-accent-hover text-accent-foreground text-sm font-semibold shadow-sm hover:shadow-md transition-[box-shadow,color,background-color] motion-reduce:transition-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-950"
+                >
+                  {tOr('dashboard.emptyTrySample', 'Start with a sample doc')}
+                  <span aria-hidden="true" className="transition-transform motion-reduce:transform-none group-hover:translate-x-0.5">→</span>
+                </Link>
+                <button
+                  type="button"
+                  onClick={() => inputRef.current?.click()}
+                  className="text-sm font-semibold text-zinc-700 dark:text-zinc-300 hover:text-accent dark:hover:text-accent transition-colors motion-reduce:transition-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:rounded-sm"
+                >
+                  {tOr('dashboard.emptyUploadOwn', 'Or upload your own')}
+                </button>
+              </div>
             </div>
           ) : (
             <div className="space-y-3">

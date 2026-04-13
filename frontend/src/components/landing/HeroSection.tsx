@@ -4,7 +4,7 @@ import React from 'react';
 import Link from 'next/link';
 import { ArrowRight } from 'lucide-react';
 import { useLocale } from '../../i18n';
-import ShowcasePlayer from './ShowcasePlayer';
+import HeroArtifact from './HeroArtifact';
 
 export default function HeroSection() {
   const { t } = useLocale();
@@ -54,34 +54,9 @@ export default function HeroSection() {
           </div>
         </div>
 
-        {/* Right: ShowcasePlayer in macOS chrome — order-2 desktop, order-2 mobile (stacks below text) */}
+        {/* Right: HeroArtifact (static product mock) — order-2 desktop, order-2 mobile (stacks below text) */}
         <div className="lg:col-span-2">
-          <div className="relative">
-            {/* Subtle accent glow */}
-            <div
-              aria-hidden="true"
-              className="glow-accent absolute -inset-4 blur-2xl opacity-50 pointer-events-none"
-            />
-            <div className="relative rounded-xl border border-zinc-200 dark:border-zinc-800 shadow-xl overflow-hidden bg-zinc-50 dark:bg-zinc-900">
-              {/* macOS window chrome — compact */}
-              <div className="flex items-center px-3 py-2 bg-zinc-100 dark:bg-zinc-800 border-b border-zinc-200 dark:border-zinc-700">
-                <div className="flex items-center gap-1.5">
-                  <span aria-hidden="true" className="w-2.5 h-2.5 rounded-full bg-red-400" />
-                  <span aria-hidden="true" className="w-2.5 h-2.5 rounded-full bg-yellow-400" />
-                  <span aria-hidden="true" className="w-2.5 h-2.5 rounded-full bg-green-400" />
-                </div>
-                <div className="flex-1 flex justify-center">
-                  <div className="bg-zinc-200 dark:bg-zinc-700 rounded-md px-3 py-0.5">
-                    <span className="text-[11px] text-zinc-600 dark:text-zinc-300 select-none">doctalk.site</span>
-                  </div>
-                </div>
-                <div className="w-[40px]" aria-hidden="true" />
-              </div>
-              <div className="aspect-video relative">
-                <ShowcasePlayer />
-              </div>
-            </div>
-          </div>
+          <HeroArtifact />
         </div>
       </div>
     </section>

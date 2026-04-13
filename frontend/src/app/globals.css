@@ -4,7 +4,11 @@
 
 :root {
   --background: #ffffff;
-  --page-background: #ffffff;
+  /* Page canvas: warm-tinted off-white. Replaces pure #ffffff so the
+     marketing surface reads as paper, not screen. Inspired by Notion's
+     #F7F6F3 and Linear's #F4F5F8. Move chosen by Codex r1
+     (.collab/dialogue/2026-04-13-design-overhaul-codex-r1.md). */
+  --page-background: #fafaf7;
   --foreground: #09090b;
   --border: #e4e4e7;
   /* Highlight colors */
@@ -19,7 +23,9 @@
 
 .dark {
   --background: #09090b;
-  --page-background: #09090b;
+  /* Warm-tinted near-black canvas (vs pure zinc-950). 2-tick warmer.
+     Pairs with the warm light canvas above. */
+  --page-background: #1c1b18;
   --foreground: #fafafa;
   --border: #3f3f46;
   /* Dark mode highlight colors */
