@@ -5,6 +5,8 @@ import Script from 'next/script';
 import { Analytics } from '@vercel/analytics/react';
 
 const CONSENT_KEY = 'doctalk_analytics_consent';
+// Must match the hard-coded ID inside frontend/public/ga-init.js. If you
+// change one, change both.
 const GA_MEASUREMENT_ID = 'G-4JYFBL77WL';
 
 export function AnalyticsWrapper() {

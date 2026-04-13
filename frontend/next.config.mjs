@@ -45,6 +45,22 @@ const cspDirectives = [
 //
 // Style-src keeps 'unsafe-inline' because Tailwind generates thousands of
 // inline styles — reporting those would drown real violations.
+//
+// Reporting endpoint: the Reporting-Endpoints header spec (and some
+// browsers, including Chrome) requires an absolute URL. Using a relative
+// path silently no-ops on those browsers. Derive an absolute URL from the
+// deployment origin so preview and production each report to themselves.
+const SITE_ORIGIN =
+  process.env.NEXT_PUBLIC_SITE_URL ||
+  (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "") ||
+  "https://www.doctalk.site";
+const REPORT_ENDPOINT = `${SITE_ORIGIN}/api/csp-report`;
+
+// report-uri (legacy) + report-to (modern Reporting API) are BOTH included
+// on purpose. Chromium 94+ and Firefox prefer report-to when present;
+// older browsers only understand report-uri. The Sentry fingerprint in
+// route.ts (directive + bucketized blocked-uri) collapses any duplicate
+// reports the rare browser that sends both would generate.
 const cspReportOnlyDirectives = [
   "default-src 'self'",
   "script-src 'self' https://va.vercel-scripts.com https://*.sentry-cdn.com https://www.googletagmanager.com",
@@ -59,7 +75,7 @@ const cspReportOnlyDirectives = [
   "object-src 'none'",
   "base-uri 'self'",
   "form-action 'self' https://accounts.google.com https://login.microsoftonline.com",
-  "report-uri /api/csp-report",
+  `report-uri ${REPORT_ENDPOINT}`,
   "report-to csp-endpoint",
 ].join("; ");
 
@@ -113,7 +129,7 @@ const nextConfig = {
                 },
                 {
                   key: "Reporting-Endpoints",
-                  value: 'csp-endpoint="/api/csp-report"',
+                  value: `csp-endpoint="${REPORT_ENDPOINT}"`,
                 },
               ]
             : []),

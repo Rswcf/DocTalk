@@ -25,20 +25,53 @@ const MAX_PAYLOAD_BYTES = 10 * 1024;
 const RATE_LIMIT_WINDOW_MS = 60_000;
 const RATE_LIMIT_MAX = 30;
 
-// Tiny in-memory rate limiter keyed by client IP. Acceptable for per-edge
-// deployment; for multi-region hardening, swap for Redis.
+// Tiny in-memory rate limiter keyed by client IP.
+//
+// LIMITATIONS (intentional, documented):
+// - Per-invocation state: serverless cold-starts reset the counter. A
+//   determined attacker gets RATE_LIMIT_MAX * concurrency free requests.
+// - Per-edge-region state: Vercel distributes traffic across regions; a
+//   single IP can get RATE_LIMIT_MAX per region.
+// These are acceptable for a defense-in-depth counter whose goal is to cap
+// log-amplification via Sentry, not to stop authentication abuse. For that
+// scenario Sentry fingerprint dedup is the real defense. Redis-backed
+// limiting is the upgrade path if this ever matters.
+const MAX_MAP_SIZE = 10_000;
 const ipHits = new Map<string, { count: number; windowStart: number }>();
 
 function clientIp(request: Request): string {
-  const xff = request.headers.get("x-forwarded-for");
-  if (xff) return xff.split(",")[0]!.trim();
+  // Vercel edge sets x-real-ip from its verified source (not forgeable by
+  // the browser). Fall back to x-forwarded-for leftmost entry when absent
+  // (e.g. local dev). Do NOT trust the raw client in either case — this IP
+  // is only used as a rate-limit bucket, not for authorization.
   const xri = request.headers.get("x-real-ip");
   if (xri) return xri.trim();
+  const xff = request.headers.get("x-forwarded-for");
+  if (xff) return xff.split(",")[0]!.trim();
   return "unknown";
+}
+
+function pruneExpired(now: number): void {
+  // Remove entries whose window has rolled over. Called only when the Map
+  // grows past MAX_MAP_SIZE so the amortized cost stays O(1) per request.
+  for (const [ip, entry] of ipHits) {
+    if (now - entry.windowStart > RATE_LIMIT_WINDOW_MS) {
+      ipHits.delete(ip);
+    }
+  }
 }
 
 function rateLimited(ip: string): boolean {
   const now = Date.now();
+  if (ipHits.size > MAX_MAP_SIZE) {
+    pruneExpired(now);
+    // If still full after pruning live entries, drop the oldest windowStart
+    // deterministically to prevent unbounded growth under sustained load.
+    if (ipHits.size > MAX_MAP_SIZE) {
+      const oldest = ipHits.keys().next().value;
+      if (oldest !== undefined) ipHits.delete(oldest);
+    }
+  }
   const entry = ipHits.get(ip);
   if (!entry || now - entry.windowStart > RATE_LIMIT_WINDOW_MS) {
     ipHits.set(ip, { count: 1, windowStart: now });
@@ -140,7 +173,10 @@ export async function POST(request: Request): Promise<NextResponse> {
     return new NextResponse(null, { status: 400 });
   }
 
-  if (body.length > MAX_PAYLOAD_BYTES) {
+  // body.length is UTF-16 char count; a payload of 5K characters holding
+  // multi-byte code points can exceed 10KB on the wire. Check actual bytes.
+  const bodyBytes = Buffer.byteLength(body, "utf8");
+  if (bodyBytes > MAX_PAYLOAD_BYTES) {
     return new NextResponse(null, { status: 413 });
   }
 
@@ -156,16 +192,33 @@ export async function POST(request: Request): Promise<NextResponse> {
     return new NextResponse(null, { status: 204 });
   }
 
-  // Sentry: dedup by (directive, blocked origin). Browsers report the exact
-  // blocked URI including query strings, which would explode event counts;
-  // we strip to origin.
-  let blockedOrigin = report.blockedUri;
-  try {
-    if (report.blockedUri && /^https?:/.test(report.blockedUri)) {
-      blockedOrigin = new URL(report.blockedUri).origin;
+  // Sentry: dedup by (directive, blocked bucket). The raw blockedUri can be:
+  //   - http(s)://... — strip to origin so per-page querystrings collapse
+  //   - inline / eval / "self" — CSP keywords, use as-is
+  //   - data: / blob: / filesystem: — collapse to scheme bucket
+  //   - parse failure / empty — opaque bucket so fingerprint stays stable
+  // Falling back to the raw blockedUri would reintroduce high cardinality
+  // and nullify the dedup.
+  let blockedBucket = "opaque";
+  const raw = report.blockedUri ?? "";
+  if (raw === "inline" || raw === "eval" || raw === "self" || raw === "data") {
+    blockedBucket = raw;
+  } else if (/^https?:/i.test(raw)) {
+    try {
+      blockedBucket = new URL(raw).origin;
+    } catch {
+      blockedBucket = "invalid-url";
     }
-  } catch {
-    // keep raw blockedUri
+  } else if (/^data:/i.test(raw)) {
+    blockedBucket = "data:";
+  } else if (/^blob:/i.test(raw)) {
+    blockedBucket = "blob:";
+  } else if (/^filesystem:/i.test(raw)) {
+    blockedBucket = "filesystem:";
+  } else if (raw) {
+    // Unknown scheme or relative path — keep first 32 chars only to prevent
+    // high-cardinality explosion while still giving a hint.
+    blockedBucket = `other:${raw.slice(0, 32)}`;
   }
 
   Sentry.captureMessage("CSP violation", {
@@ -175,11 +228,11 @@ export async function POST(request: Request): Promise<NextResponse> {
       "csp-directive": report.directive,
       "csp-disposition": report.disposition ?? "enforce",
     },
-    fingerprint: ["csp-violation", report.directive, blockedOrigin],
+    fingerprint: ["csp-violation", report.directive, blockedBucket],
     extra: {
       directive: report.directive,
       blockedUri: report.blockedUri,
-      blockedOrigin,
+      blockedBucket,
       sourceFile: report.sourceFile,
       documentUri: report.documentUri,
       disposition: report.disposition,
