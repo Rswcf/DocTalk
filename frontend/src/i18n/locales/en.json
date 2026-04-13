@@ -2109,5 +2109,13 @@
   "useCasesHr.cta.viewPricing": "View Pricing",
   "dashboard.emptyTrySample": "Start with a sample doc",
   "dashboard.emptyUploadOwn": "Or upload your own",
-  "header.systemMode": "System"
+  "header.systemMode": "System",
+  "landing.feature.formats.title": "All your formats",
+  "landing.feature.formats.desc": "PDF, DOCX, PPTX, XLSX, TXT, Markdown, and web URLs — no conversion required.",
+  "landing.feature.languages.title": "11 languages",
+  "landing.feature.languages.desc": "Full UI + AI responses in English, Chinese, Japanese, Spanish, German, French, Korean, Portuguese, Italian, Arabic, Hindi.",
+  "landing.feature.modes.title": "3 answer modes",
+  "landing.feature.modes.desc": "Quick, Balanced, Thorough. Trade speed for depth on any question — pick the right model for the job.",
+  "landing.feature.freeDemo.title": "Try without signup",
+  "landing.feature.freeDemo.desc": "Three pre-loaded sample PDFs are ready to chat with — no account, no credit card, no email."
 }

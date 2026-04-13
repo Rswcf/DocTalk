@@ -2109,5 +2109,13 @@
   "viewer.text": "Texto",
   "dashboard.emptyTrySample": "Comece com um documento de amostra",
   "dashboard.emptyUploadOwn": "Ou envie o seu",
-  "header.systemMode": "Sistema"
+  "header.systemMode": "Sistema",
+  "landing.feature.formats.title": "Todos os seus formatos",
+  "landing.feature.formats.desc": "PDF, DOCX, PPTX, XLSX, TXT, Markdown e URLs web — sem conversão.",
+  "landing.feature.languages.title": "11 idiomas",
+  "landing.feature.languages.desc": "UI completa + respostas de IA em 11 idiomas, incluindo português, inglês, chinês.",
+  "landing.feature.modes.title": "3 modos de resposta",
+  "landing.feature.modes.desc": "Quick, Balanced, Thorough — equilibre velocidade e profundidade por pergunta.",
+  "landing.feature.freeDemo.title": "Experimente sem cadastro",
+  "landing.feature.freeDemo.desc": "Três PDFs de amostra prontos para conversar — sem conta, cartão ou email."
 }

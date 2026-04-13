@@ -2109,5 +2109,13 @@
   "useCasesHr.cta.viewPricing": "View Pricing",
   "dashboard.emptyTrySample": "サンプル文書で始める",
   "dashboard.emptyUploadOwn": "または自分の文書をアップロード",
-  "header.systemMode": "システム"
+  "header.systemMode": "システム",
+  "landing.feature.formats.title": "あらゆる形式に対応",
+  "landing.feature.formats.desc": "PDF、DOCX、PPTX、XLSX、TXT、Markdown、Web URL — 変換不要。",
+  "landing.feature.languages.title": "11 言語",
+  "landing.feature.languages.desc": "完全な UI + AI 応答が 11 言語で、日本語・英語・中国語を含む。",
+  "landing.feature.modes.title": "3 つの応答モード",
+  "landing.feature.modes.desc": "Quick、Balanced、Thorough — 質問に応じて速度と深さを選べます。",
+  "landing.feature.freeDemo.title": "登録不要で試す",
+  "landing.feature.freeDemo.desc": "3 つのサンプル PDF がすぐ使える — アカウント・カード・メール不要。"
 }

@@ -2109,5 +2109,13 @@
   "useCasesHr.cta.viewPricing": "Voir les tarifs",
   "dashboard.emptyTrySample": "Commencer avec un exemple",
   "dashboard.emptyUploadOwn": "Ou téléverser le vôtre",
-  "header.systemMode": "Système"
+  "header.systemMode": "Système",
+  "landing.feature.formats.title": "Tous vos formats",
+  "landing.feature.formats.desc": "PDF, DOCX, PPTX, XLSX, TXT, Markdown et URLs web — pas de conversion.",
+  "landing.feature.languages.title": "11 langues",
+  "landing.feature.languages.desc": "UI complète + réponses IA en 11 langues, dont français, anglais, chinois.",
+  "landing.feature.modes.title": "3 modes de réponse",
+  "landing.feature.modes.desc": "Quick, Balanced, Thorough — ajuste vitesse et profondeur selon la question.",
+  "landing.feature.freeDemo.title": "Essayez sans inscription",
+  "landing.feature.freeDemo.desc": "Trois PDFs d'exemple prêts à discuter — sans compte, carte ou e-mail."
 }

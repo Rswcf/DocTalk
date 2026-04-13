@@ -2109,5 +2109,13 @@
   "useCasesHr.cta.viewPricing": "Preise ansehen",
   "dashboard.emptyTrySample": "Mit Beispieldokument starten",
   "dashboard.emptyUploadOwn": "Oder eigenes hochladen",
-  "header.systemMode": "System"
+  "header.systemMode": "System",
+  "landing.feature.formats.title": "Alle deine Formate",
+  "landing.feature.formats.desc": "PDF, DOCX, PPTX, XLSX, TXT, Markdown und Web-URLs — keine Konvertierung nötig.",
+  "landing.feature.languages.title": "11 Sprachen",
+  "landing.feature.languages.desc": "Vollständige UI + KI-Antworten in 11 Sprachen, einschließlich Deutsch, Englisch, Chinesisch.",
+  "landing.feature.modes.title": "3 Antwortmodi",
+  "landing.feature.modes.desc": "Quick, Balanced, Thorough — tausche Tempo gegen Tiefe je nach Frage.",
+  "landing.feature.freeDemo.title": "Ohne Registrierung testen",
+  "landing.feature.freeDemo.desc": "Drei vorgeladene Beispiel-PDFs zum sofortigen Chatten — kein Konto, keine Karte, keine E-Mail."
 }

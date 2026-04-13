@@ -2109,5 +2109,13 @@
   "useCasesHr.cta.viewPricing": "View Pricing",
   "dashboard.emptyTrySample": "ابدأ بمستند نموذجي",
   "dashboard.emptyUploadOwn": "أو حمّل مستندك",
-  "header.systemMode": "النظام"
+  "header.systemMode": "النظام",
+  "landing.feature.formats.title": "جميع الصيغ",
+  "landing.feature.formats.desc": "PDF وDOCX وPPTX وXLSX وTXT وMarkdown وروابط الويب — بدون تحويل.",
+  "landing.feature.languages.title": "11 لغة",
+  "landing.feature.languages.desc": "واجهة كاملة + ردود AI بـ 11 لغة بما فيها العربية والإنجليزية والصينية.",
+  "landing.feature.modes.title": "3 أوضاع للإجابة",
+  "landing.feature.modes.desc": "Quick وBalanced وThorough — وازن بين السرعة والعمق حسب السؤال.",
+  "landing.feature.freeDemo.title": "جرّب بدون تسجيل",
+  "landing.feature.freeDemo.desc": "ثلاثة ملفات PDF جاهزة للمحادثة — بدون حساب أو بطاقة ائتمان أو بريد إلكتروني."
 }

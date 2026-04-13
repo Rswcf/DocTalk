@@ -2109,5 +2109,13 @@
   "useCasesHr.cta.viewPricing": "View Pricing",
   "dashboard.emptyTrySample": "नमूना दस्तावेज़ से शुरू करें",
   "dashboard.emptyUploadOwn": "या अपना अपलोड करें",
-  "header.systemMode": "सिस्टम"
+  "header.systemMode": "सिस्टम",
+  "landing.feature.formats.title": "सभी प्रारूप",
+  "landing.feature.formats.desc": "PDF, DOCX, PPTX, XLSX, TXT, Markdown और वेब URL — कोई रूपांतरण नहीं।",
+  "landing.feature.languages.title": "11 भाषाएँ",
+  "landing.feature.languages.desc": "11 भाषाओं में पूर्ण UI + AI उत्तर, जिनमें हिंदी, अंग्रेज़ी, चीनी शामिल।",
+  "landing.feature.modes.title": "3 उत्तर मोड",
+  "landing.feature.modes.desc": "Quick, Balanced, Thorough — प्रश्न के अनुसार गति और गहराई का संतुलन।",
+  "landing.feature.freeDemo.title": "साइनअप बिना आज़माएँ",
+  "landing.feature.freeDemo.desc": "तीन नमूना PDF तैयार हैं — बिना खाता, कार्ड या ईमेल के।"
 }

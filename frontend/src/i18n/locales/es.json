@@ -2109,5 +2109,13 @@
   "useCasesHr.cta.viewPricing": "View Pricing",
   "dashboard.emptyTrySample": "Empieza con un documento de muestra",
   "dashboard.emptyUploadOwn": "O sube el tuyo",
-  "header.systemMode": "Sistema"
+  "header.systemMode": "Sistema",
+  "landing.feature.formats.title": "Todos tus formatos",
+  "landing.feature.formats.desc": "PDF, DOCX, PPTX, XLSX, TXT, Markdown y URLs web — sin conversión.",
+  "landing.feature.languages.title": "11 idiomas",
+  "landing.feature.languages.desc": "UI completa + respuestas de IA en 11 idiomas, incluidos español, inglés, chino.",
+  "landing.feature.modes.title": "3 modos de respuesta",
+  "landing.feature.modes.desc": "Quick, Balanced, Thorough — equilibra velocidad y profundidad por pregunta.",
+  "landing.feature.freeDemo.title": "Prueba sin registrarte",
+  "landing.feature.freeDemo.desc": "Tres PDFs de muestra listos para chatear — sin cuenta, sin tarjeta, sin correo."
 }

@@ -2148,5 +2148,13 @@
   "altsHub.cardHumataFeatures": "7 种格式 · 引用高亮 · 11 种语言",
   "dashboard.emptyTrySample": "从样例文档开始",
   "dashboard.emptyUploadOwn": "或上传自己的文档",
-  "header.systemMode": "系统"
+  "header.systemMode": "系统",
+  "landing.feature.formats.title": "全格式支持",
+  "landing.feature.formats.desc": "PDF、DOCX、PPTX、XLSX、TXT、Markdown 和网页 URL — 无需转换。",
+  "landing.feature.languages.title": "11 种语言",
+  "landing.feature.languages.desc": "完整 UI + AI 回答支持 11 种语言，含中英日法德意西葡韩阿印。",
+  "landing.feature.modes.title": "3 种应答模式",
+  "landing.feature.modes.desc": "Quick、Balanced、Thorough — 按问题复杂度选速度与深度的平衡。",
+  "landing.feature.freeDemo.title": "无需注册即可体验",
+  "landing.feature.freeDemo.desc": "3 份预置样例 PDF 可直接聊 — 无需账号、信用卡或邮箱。"
 }
