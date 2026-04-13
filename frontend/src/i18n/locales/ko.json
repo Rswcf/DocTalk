@@ -2108,5 +2108,6 @@
   "useCasesHr.cta.tryDemo": "Try the Free Demo",
   "useCasesHr.cta.viewPricing": "View Pricing",
   "dashboard.emptyTrySample": "샘플 문서로 시작하기",
-  "dashboard.emptyUploadOwn": "또는 직접 업로드"
+  "dashboard.emptyUploadOwn": "또는 직접 업로드",
+  "header.systemMode": "시스템"
 }

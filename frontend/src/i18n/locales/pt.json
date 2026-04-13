@@ -2108,5 +2108,6 @@
   "viewer.slides": "Slides",
   "viewer.text": "Texto",
   "dashboard.emptyTrySample": "Comece com um documento de amostra",
-  "dashboard.emptyUploadOwn": "Ou envie o seu"
+  "dashboard.emptyUploadOwn": "Ou envie o seu",
+  "header.systemMode": "Sistema"
 }

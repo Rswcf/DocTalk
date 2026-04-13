@@ -2108,5 +2108,6 @@
   "useCasesHr.cta.tryDemo": "Try the Free Demo",
   "useCasesHr.cta.viewPricing": "View Pricing",
   "dashboard.emptyTrySample": "サンプル文書で始める",
-  "dashboard.emptyUploadOwn": "または自分の文書をアップロード"
+  "dashboard.emptyUploadOwn": "または自分の文書をアップロード",
+  "header.systemMode": "システム"
 }

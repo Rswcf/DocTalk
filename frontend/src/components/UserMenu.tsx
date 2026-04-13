@@ -13,7 +13,7 @@ import { useDropdownKeyboard } from "../lib/useDropdownKeyboard";
 export default function UserMenu() {
   const { data: session, status } = useSession();
   const { t, locale, setLocale } = useLocale();
-  const { resolvedTheme, setTheme } = useTheme();
+  const { theme, resolvedTheme, setTheme } = useTheme();
   const router = useRouter();
 
   const [open, setOpen] = useState(false);
@@ -142,11 +142,11 @@ export default function UserMenu() {
             <p className="text-[11px] font-medium uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
               {t("header.theme")}
             </p>
-            <div className="mt-2 grid grid-cols-2 gap-2" onKeyDown={(e) => e.stopPropagation()}>
+            <div className="mt-2 grid grid-cols-3 gap-1.5" onKeyDown={(e) => e.stopPropagation()}>
               <button
                 type="button"
-                className={`rounded-md border px-2 py-1.5 text-xs font-medium transition-colors ${
-                  resolvedTheme === "light"
+                className={`rounded-md border px-1.5 py-1.5 text-xs font-medium transition-colors ${
+                  theme === "light"
                     ? "border-zinc-300 bg-zinc-100 text-zinc-900 dark:border-zinc-600 dark:bg-zinc-700 dark:text-zinc-100"
                     : "border-zinc-200 text-zinc-600 hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800"
                 }`}
@@ -156,14 +156,25 @@ export default function UserMenu() {
               </button>
               <button
                 type="button"
-                className={`rounded-md border px-2 py-1.5 text-xs font-medium transition-colors ${
-                  resolvedTheme === "dark"
+                className={`rounded-md border px-1.5 py-1.5 text-xs font-medium transition-colors ${
+                  theme === "dark"
                     ? "border-zinc-300 bg-zinc-100 text-zinc-900 dark:border-zinc-600 dark:bg-zinc-700 dark:text-zinc-100"
                     : "border-zinc-200 text-zinc-600 hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800"
                 }`}
                 onClick={() => setTheme("dark")}
               >
                 {t("header.darkMode")}
+              </button>
+              <button
+                type="button"
+                className={`rounded-md border px-1.5 py-1.5 text-xs font-medium transition-colors ${
+                  theme === "system" || !theme
+                    ? "border-zinc-300 bg-zinc-100 text-zinc-900 dark:border-zinc-600 dark:bg-zinc-700 dark:text-zinc-100"
+                    : "border-zinc-200 text-zinc-600 hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800"
+                }`}
+                onClick={() => setTheme("system")}
+              >
+                {t("header.systemMode")}
               </button>
             </div>
           </div>

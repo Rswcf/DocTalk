@@ -2108,5 +2108,6 @@
   "useCasesHr.cta.tryDemo": "Try the Free Demo",
   "useCasesHr.cta.viewPricing": "View Pricing",
   "dashboard.emptyTrySample": "ابدأ بمستند نموذجي",
-  "dashboard.emptyUploadOwn": "أو حمّل مستندك"
+  "dashboard.emptyUploadOwn": "أو حمّل مستندك",
+  "header.systemMode": "النظام"
 }

@@ -2108,5 +2108,6 @@
   "useCasesHr.cta.tryDemo": "Try the Free Demo",
   "useCasesHr.cta.viewPricing": "View Pricing",
   "dashboard.emptyTrySample": "Inizia con un documento di esempio",
-  "dashboard.emptyUploadOwn": "O carica il tuo"
+  "dashboard.emptyUploadOwn": "O carica il tuo",
+  "header.systemMode": "Sistema"
 }
