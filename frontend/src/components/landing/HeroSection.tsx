@@ -19,10 +19,11 @@ export default function HeroSection() {
             {t('landing.badge')}
           </span>
 
-          {/* Headline — dialed down from 5xl/7xl semibold to 4xl/6xl medium
-              with tighter tracking, per 30-agent "Linear whispered authority"
-              principle (weight contrast, not size contrast). */}
-          <h1 className="text-4xl md:text-5xl lg:text-6xl font-medium text-zinc-900 dark:text-zinc-50 leading-[1.05] tracking-[-0.035em] text-balance">
+          {/* Headline — Instrument Serif (font-serif) for editorial
+              "thinking tool" feel per 30-agent typography research. Weight
+              400 (the face's only cut) + negative tracking at scale. CJK
+              locales fall back to system serif via the font stack. */}
+          <h1 className="font-serif text-5xl md:text-6xl lg:text-7xl font-normal text-zinc-900 dark:text-zinc-50 leading-[1.02] tracking-[-0.02em] text-balance">
             {t('landing.headline').split('\n').map((line: string, i: number) => (
               <React.Fragment key={i}>
                 {i > 0 && <br />}
