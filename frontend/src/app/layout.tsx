@@ -1,6 +1,5 @@
 import type { Metadata } from 'next'
 import { Inter, Sora } from 'next/font/google'
-import { cookies } from 'next/headers'
 import './globals.css'
 import ErrorBoundary from '../components/ErrorBoundary'
 import { ThemeProvider } from './ThemeProvider'
@@ -44,16 +43,20 @@ export const metadata: Metadata = {
   },
 }
 
-export default async function RootLayout({
+export default function RootLayout({
   children,
 }: {
   children: React.ReactNode
 }) {
-  const cookieStore = await cookies()
-  const locale = cookieStore.get('NEXT_LOCALE')?.value || 'en'
-
+  // <html lang> starts at "en" at SSR time so every page can prerender
+  // statically and hit Vercel's CDN. LocaleProvider mutates
+  // document.documentElement.lang on mount via client-side detection
+  // (localStorage + navigator.language). The earlier `await cookies()`
+  // here — together with the removed middleware.ts locale cookie —
+  // was the direct cause of `Cache-Control: private, no-store` on every
+  // SEO page and is the single biggest unlock for organic traffic.
   return (
-    <html lang={locale} suppressHydrationWarning className={`${inter.variable} ${sora.variable}`}>
+    <html lang="en" suppressHydrationWarning className={`${inter.variable} ${sora.variable}`}>
       <head>
         <meta name="google-site-verification" content="168G1TYJfQ7MNp4sNdF-7gC2wDWKGeds618LyLdkCUM" />
         <meta name="msvalidate.01" content="50E7D296303C85BC31C1BE98539EA393" />
