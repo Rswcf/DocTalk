@@ -6,6 +6,7 @@ import { useSearchParams } from "next/navigation";
 import { useLocale } from "../../i18n";
 import DocTalkLogo from "../../components/DocTalkLogo";
 import { AuthFormContent } from "../../components/AuthFormContent";
+import { LoadingScreen } from "../../components/ui/LoadingScreen";
 
 function AuthContent() {
   const searchParams = useSearchParams();
@@ -41,9 +42,7 @@ function AuthContent() {
 export default function AuthPage() {
   return (
     <Suspense fallback={
-      <main className="min-h-screen flex items-center justify-center p-8 bg-white dark:bg-zinc-950">
-        <div className="animate-pulse text-zinc-500">Loading...</div>
-      </main>
+      <LoadingScreen />
     }>
       <AuthContent />
     </Suspense>

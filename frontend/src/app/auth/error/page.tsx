@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useLocale } from "../../../i18n";
 import DocTalkLogo from "../../../components/DocTalkLogo";
+import { LoadingScreen } from "../../../components/ui/LoadingScreen";
 
 function AuthErrorContent() {
   const searchParams = useSearchParams();
@@ -63,9 +64,7 @@ function AuthErrorContent() {
 export default function AuthErrorPage() {
   return (
     <Suspense fallback={
-      <main className="min-h-screen flex items-center justify-center p-8 bg-white dark:bg-zinc-950">
-        <div className="animate-pulse text-zinc-500">Loading...</div>
-      </main>
+      <LoadingScreen />
     }>
       <AuthErrorContent />
     </Suspense>

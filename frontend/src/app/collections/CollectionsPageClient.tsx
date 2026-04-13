@@ -11,6 +11,8 @@ import { listCollections, deleteCollection } from '../../lib/api';
 import { useLocale } from '../../i18n';
 import type { CollectionBrief } from '../../types';
 import { usePageTitle } from '../../lib/usePageTitle';
+import { LoadingScreen } from '../../components/ui/LoadingScreen';
+import { EmptyState } from '../../components/ui/EmptyState';
 
 export default function CollectionsPageClient() {
   const router = useRouter();
@@ -28,11 +30,7 @@ export default function CollectionsPageClient() {
   }, [status]);
 
   if (status === 'loading') {
-    return (
-      <div className="min-h-screen bg-[var(--page-background)] flex items-center justify-center">
-        <div className="animate-pulse text-zinc-400">{t('common.loading')}</div>
-      </div>
-    );
+    return <LoadingScreen label={t('common.loading')} />;
   }
 
   if (status !== 'authenticated') {

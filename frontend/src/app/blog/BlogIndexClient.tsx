@@ -3,8 +3,9 @@
 import Link from 'next/link';
 import Header from '../../components/Header';
 import Footer from '../../components/Footer';
-import { BookOpen } from 'lucide-react';
+import { BookOpen, Inbox } from 'lucide-react';
 import type { BlogPost } from '../../lib/blog';
+import { EmptyState } from '../../components/ui/EmptyState';
 import { useLocale } from '../../i18n';
 import { formatDateForLocale, getBlogCategoryLabel } from '../../lib/publicI18n';
 
@@ -50,7 +51,7 @@ interface BlogIndexClientProps {
 }
 
 export default function BlogIndexClient({ posts }: BlogIndexClientProps) {
-  const { t } = useLocale();
+  const { t, tOr } = useLocale();
   const categories = ['all', ...Array.from(new Set(posts.map((p) => p.category)))];
 
   return (
@@ -118,9 +119,16 @@ export default function BlogIndexClient({ posts }: BlogIndexClientProps) {
 
           {/* Post Grid */}
           {posts.length === 0 ? (
-            <p className="text-center text-zinc-500 dark:text-zinc-300 py-16">
-              {t('blog.index.empty')}
-            </p>
+            <EmptyState
+              icon={Inbox}
+              title={t('blog.index.empty')}
+              description={tOr(
+                'blog.index.emptyDescription',
+                'New posts are added regularly. In the meantime, try DocTalk on a real document.'
+              )}
+              actionLabel={tOr('blog.index.emptyAction', 'Try the free demo')}
+              actionHref="/demo"
+            />
           ) : (
             <div className="grid gap-5 sm:grid-cols-2">
               {posts.map((post) => (

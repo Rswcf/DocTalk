@@ -20,6 +20,7 @@ import { useDocTalkStore } from '../../../store';
 import { useLocale } from '../../../i18n';
 import { useUserPlanProfile } from '../../../lib/useUserPlanProfile';
 import type { CollectionDetail, SessionItem } from '../../../types';
+import { LoadingScreen } from '../../../components/ui/LoadingScreen';
 
 export default function CollectionDetailPage() {
   const params = useParams<{ collectionId: string }>();
@@ -162,11 +163,7 @@ export default function CollectionDetailPage() {
   }, []);
 
   if (status === 'loading' || loading) {
-    return (
-      <div className="min-h-screen bg-white dark:bg-zinc-950 flex items-center justify-center">
-        <div className="animate-pulse text-zinc-400">{t('common.loading')}</div>
-      </div>
-    );
+    return <LoadingScreen label={t('common.loading')} />;
   }
 
   if (status !== 'authenticated') {

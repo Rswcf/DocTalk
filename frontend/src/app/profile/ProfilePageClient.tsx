@@ -12,6 +12,8 @@ import UsageStatsSection from "../../components/Profile/UsageStatsSection";
 import AccountActionsSection from "../../components/Profile/AccountActionsSection";
 import { usePageTitle } from "../../lib/usePageTitle";
 import { useUserProfile } from "../../lib/useUserProfile";
+import { LoadingScreen } from "../../components/ui/LoadingScreen";
+import { InlineSpinner } from "../../components/ui/InlineSpinner";
 
 function ProfileContent() {
   const { data: session, status } = useSession();
@@ -47,11 +49,7 @@ function ProfileContent() {
   };
 
   if (status === "loading") {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-[var(--page-background)]">
-        <div className="animate-pulse">{t("common.loading")}</div>
-      </div>
-    );
+    return <LoadingScreen label={t("common.loading")} />;
   }
 
   return (
@@ -65,9 +63,8 @@ function ProfileContent() {
         </div>
 
         {loading && (
-          <div className="flex items-center justify-center py-12" role="status">
-            <div className="animate-spin motion-reduce:animate-none h-6 w-6 border-2 border-zinc-300 border-t-transparent rounded-full" />
-            <span className="ml-3 text-zinc-600 dark:text-zinc-400">{t("common.loading")}</span>
+          <div className="flex justify-center py-12">
+            <InlineSpinner label={t("common.loading")} />
           </div>
         )}
 
@@ -111,13 +108,7 @@ function ProfileContent() {
 
 export default function ProfilePageClient() {
   return (
-    <Suspense
-      fallback={
-        <div className="min-h-screen flex items-center justify-center bg-[var(--page-background)]">
-          <div className="animate-pulse">Loading...</div>
-        </div>
-      }
-    >
+    <Suspense fallback={<LoadingScreen />}>
       <ProfileContent />
     </Suspense>
   );

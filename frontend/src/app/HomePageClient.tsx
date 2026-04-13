@@ -88,7 +88,7 @@ function LandingPageContent() {
               <p className="text-sm font-medium uppercase tracking-[0.18em] text-zinc-500 dark:text-zinc-300 mb-3">
                 {t('home.explore.eyebrow')}
               </p>
-              <h2 className="font-display font-medium text-3xl tracking-tight text-zinc-900 dark:text-zinc-50 mb-4">
+              <h2 className="font-semibold tracking-tight text-3xl tracking-tight text-zinc-900 dark:text-zinc-50 mb-4">
                 {t('home.explore.title')}
               </h2>
               <p className="text-base text-zinc-600 dark:text-zinc-300 leading-relaxed">
