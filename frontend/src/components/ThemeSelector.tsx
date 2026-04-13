@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, useCallback } from 'react';
-import { Sun, Moon, ChevronDown, Check } from 'lucide-react';
+import { Sun, Moon, Monitor, ChevronDown, Check } from 'lucide-react';
 import { useTheme } from 'next-themes';
 import { useLocale } from '../i18n';
 import { useDropdownKeyboard } from '../lib/useDropdownKeyboard';
@@ -9,10 +9,11 @@ import { useDropdownKeyboard } from '../lib/useDropdownKeyboard';
 const THEMES = [
   { id: 'light', icon: Sun, labelKey: 'header.lightMode' },
   { id: 'dark', icon: Moon, labelKey: 'header.darkMode' },
+  { id: 'system', icon: Monitor, labelKey: 'header.systemMode' },
 ] as const;
 
 export default function ThemeSelector() {
-  const { resolvedTheme, setTheme } = useTheme();
+  const { theme, resolvedTheme, setTheme } = useTheme();
   const { t } = useLocale();
   const [open, setOpen] = useState(false);
   const [focusIndex, setFocusIndex] = useState(-1);
@@ -41,7 +42,8 @@ export default function ThemeSelector() {
   useEffect(() => {
     if (open) {
       updateMenuPos();
-      const idx = THEMES.findIndex((th) => th.id === resolvedTheme);
+      const currentId = theme ?? 'system';
+      const idx = THEMES.findIndex((th) => th.id === currentId);
       setFocusIndex(idx >= 0 ? idx : 0);
     }
   }, [open, resolvedTheme, updateMenuPos]);
@@ -71,7 +73,10 @@ export default function ThemeSelector() {
     },
   );
 
-  const current = THEMES.find((th) => th.id === resolvedTheme) || THEMES[0];
+  // Trigger icon shows the EFFECTIVE theme (what the user sees right now),
+  // so when theme="system" we show sun/moon matching the resolved value.
+  const triggerId = theme === 'system' || !theme ? (resolvedTheme ?? 'light') : theme;
+  const current = THEMES.find((th) => th.id === triggerId) || THEMES[0];
   const CurrentIcon = current.icon;
 
   return (
@@ -97,17 +102,21 @@ export default function ThemeSelector() {
           onKeyDown={handleMenuKeyDown}
           role="listbox"
         >
-          {THEMES.map((theme, i) => {
-            const isSelected = resolvedTheme === theme.id;
-            const Icon = theme.icon;
+          {THEMES.map((th, i) => {
+            // Selected state keys off the raw preference, so "System" can
+            // actually show as selected (resolvedTheme would always resolve
+            // to light or dark and never match "system").
+            const currentId = theme ?? 'system';
+            const isSelected = currentId === th.id;
+            const Icon = th.icon;
             return (
               <button
-                key={theme.id}
+                key={th.id}
                 ref={(el) => { itemRefs.current[i] = el; }}
                 className={`w-full text-left flex items-center gap-2 px-2 py-1.5 rounded hover:bg-zinc-100 text-sm text-zinc-900 transition-colors focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:ring-inset ${
                   isSelected ? 'font-medium' : ''
                 }`}
-                onClick={() => choose(theme.id)}
+                onClick={() => choose(th.id)}
                 tabIndex={focusIndex === i ? 0 : -1}
                 role="option"
                 aria-selected={isSelected}
@@ -116,7 +125,7 @@ export default function ThemeSelector() {
                   {isSelected ? <Check size={14} /> : null}
                 </span>
                 <Icon aria-hidden="true" size={16} />
-                <span className="flex-1">{t(theme.labelKey)}</span>
+                <span className="flex-1">{t(th.labelKey)}</span>
               </button>
             );
           })}
