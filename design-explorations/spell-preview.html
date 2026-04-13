@@ -1,0 +1,357 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<title>DocTalk · Spell Components A/B</title>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;1,9..144,400;1,9..144,500&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<style>
+  :root{
+    --accent:#1D4ED8;--accent-hover:#1E40AF;--accent-soft:#DBEAFE;
+    --bg:#fafaf7;--fg:#09090b;--mute:#71717a;--line:#e4e4e7;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'Inter',system-ui,sans-serif;background:#ECECEA;color:var(--fg);-webkit-font-smoothing:antialiased;padding:48px 32px 120px}
+  .shell{max-width:1440px;margin:0 auto}
+  header{padding-bottom:20px;border-bottom:1px solid #c7c7c2;margin-bottom:40px}
+  .brand{font-family:'JetBrains Mono',monospace;font-size:12px;letter-spacing:.12em;color:#52525b}
+  h1{font-family:'Fraunces',serif;font-weight:500;font-size:44px;letter-spacing:-0.02em;line-height:1;margin-top:8px}
+  .lede{margin-top:12px;color:#52525b;font-size:15px;max-width:720px;line-height:1.5}
+
+  .row{margin-top:56px}
+  .row-head{display:flex;justify-content:space-between;align-items:flex-end;padding-bottom:14px;border-bottom:1px dashed #c7c7c2;margin-bottom:20px;gap:20px}
+  .row-head h2{font-family:'Fraunces',serif;font-size:26px;font-weight:500;letter-spacing:-0.01em}
+  .row-head h2 em{font-style:italic;color:var(--mute);font-weight:400;margin-left:10px;font-size:18px}
+  .row-head .meta{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--mute);letter-spacing:.08em;text-align:right;line-height:1.5;white-space:nowrap}
+  .pair{display:grid;grid-template-columns:1fr 1fr;gap:22px}
+  .ab{border-radius:14px;overflow:hidden;position:relative;background:var(--bg);border:1px solid #00000010}
+  .ab .label{position:absolute;top:12px;left:12px;z-index:3;font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:.12em;padding:3px 8px;border-radius:4px;background:#ffffff;border:1px solid var(--line);color:#52525b}
+  .ab.after .label{background:#0f172a;color:#fff;border-color:#0f172a}
+  .stage{padding:56px 40px 48px;min-height:340px;position:relative;display:flex;flex-direction:column;justify-content:center;align-items:flex-start}
+  .center{align-items:center;text-align:center}
+  .kicker{font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--mute);font-weight:500;display:flex;align-items:center;gap:10px}
+  .kicker .num{color:var(--accent);font-weight:600}
+  .kicker::after{content:"";display:inline-block;width:28px;height:1px;background:var(--line)}
+  .hh{font-family:'Fraunces',serif;font-weight:500;font-size:40px;line-height:1.05;letter-spacing:-0.025em;margin-top:12px;color:var(--fg);max-width:560px}
+  .hh em{font-style:italic;color:var(--accent);font-weight:500}
+  .p{margin-top:14px;color:var(--mute);font-size:14px;line-height:1.55;max-width:460px}
+  .ctas{margin-top:22px;display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+  .btn{display:inline-flex;align-items:center;gap:6px;padding:11px 20px;border-radius:10px;font-weight:600;font-size:14px;text-decoration:none;border:0;cursor:pointer}
+  .btn.primary{background:var(--accent);color:#fff;transition:background-color .2s}
+  .btn.primary:hover{background:var(--accent-hover)}
+  .btn.ghost{color:var(--fg);border:1px solid var(--line);background:#fff}
+
+  /* ============ 1 · BLUR REVEAL ON H1 ============ */
+  @keyframes blurIn{
+    0%{opacity:0;filter:blur(10px);transform:translateY(10px)}
+    100%{opacity:1;filter:blur(0);transform:translateY(0)}
+  }
+  .row-1 .ab.after .hh span{display:inline-block;opacity:0;filter:blur(10px);animation:blurIn .8s ease-out forwards}
+  .row-1 .ab.after .hh span:nth-child(1){animation-delay:.05s}
+  .row-1 .ab.after .hh span:nth-child(2){animation-delay:.15s}
+  .row-1 .ab.after .hh span:nth-child(3){animation-delay:.25s}
+  .row-1 .ab.after .hh span:nth-child(4){animation-delay:.35s}
+  .row-1 .ab.after .hh span:nth-child(5){animation-delay:.45s}
+  .row-1 .ab.after .hh span:nth-child(6){animation-delay:.55s}
+  .row-1 .ab.after .hh span:nth-child(7){animation-delay:.65s}
+  .row-1 .ab.after .hh span:nth-child(8){animation-delay:.75s}
+  .row-1 .ab.after .p{opacity:0;animation:blurIn .6s ease-out forwards;animation-delay:.85s}
+  .row-1 .ab.after .ctas{opacity:0;animation:blurIn .6s ease-out forwards;animation-delay:1s}
+  .replay{position:absolute;top:12px;right:12px;z-index:3;font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:.1em;padding:5px 10px;background:#fff;border:1px solid var(--line);border-radius:6px;cursor:pointer;color:#52525b}
+  .replay:hover{background:#f4f4f5}
+
+  /* ============ 2 · FLOW BUTTON ============ */
+  .flow{position:relative;overflow:hidden;isolation:isolate}
+  .flow::before{content:"";position:absolute;inset:0;background:var(--accent-hover);transform:translateY(100%);transition:transform .45s cubic-bezier(.7,0,.2,1);z-index:-1}
+  .flow:hover::before{transform:translateY(0)}
+  .flow .arrow{transition:transform .45s cubic-bezier(.7,0,.2,1)}
+  .flow:hover .arrow{transform:translateX(4px)}
+
+  /* ============ 3 · TILT CARD ============ */
+  .tilt-wrap{perspective:1200px}
+  .tilt{transform-style:preserve-3d;transition:transform .3s cubic-bezier(.2,.8,.2,1);will-change:transform;position:relative}
+  .artifact{width:280px;height:210px;border-radius:14px;border:1px solid var(--line);background:#fff;padding:18px;box-shadow:0 1px 3px #00000010,0 8px 24px -12px #00000022;position:relative;overflow:hidden}
+  .artifact .top{display:flex;gap:6px;margin-bottom:14px}
+  .artifact .top span{width:8px;height:8px;border-radius:50%;background:#d4d4d8}
+  .artifact .doc{height:8px;background:#f4f4f5;border-radius:2px;margin-bottom:6px}
+  .artifact .doc.short{width:60%}
+  .artifact .doc.hi{background:rgba(29,78,216,.18);position:relative}
+  .artifact .cite{margin-top:10px;font-family:'JetBrains Mono',monospace;font-size:10px;background:var(--accent-soft);color:var(--accent);display:inline-block;padding:2px 6px;border-radius:4px}
+  .tilt-wrap .spot{position:absolute;inset:0;pointer-events:none;border-radius:14px;opacity:0;transition:opacity .2s;background:radial-gradient(circle 200px at var(--mx,50%) var(--my,50%),rgba(29,78,216,.18),transparent 60%);mix-blend-mode:multiply}
+
+  /* ============ 4 · WORDS STAGGER (How It Works) ============ */
+  @keyframes slideUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
+  .steps{display:flex;gap:28px;width:100%;justify-content:space-between}
+  .step{flex:1;border-top:1px solid var(--line);padding-top:16px}
+  .step .n{font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--accent);font-weight:600;letter-spacing:.1em}
+  .step h4{font-family:'Fraunces',serif;font-weight:500;font-size:22px;margin-top:8px;letter-spacing:-0.01em}
+  .step p{font-size:13px;color:var(--mute);margin-top:6px;line-height:1.5}
+  .row-4 .ab.after .step .n,
+  .row-4 .ab.after .step h4,
+  .row-4 .ab.after .step p{opacity:0;animation:slideUp .6s ease-out forwards}
+  .row-4 .ab.after .step:nth-child(1) .n{animation-delay:.1s}
+  .row-4 .ab.after .step:nth-child(1) h4{animation-delay:.2s}
+  .row-4 .ab.after .step:nth-child(1) p{animation-delay:.3s}
+  .row-4 .ab.after .step:nth-child(2) .n{animation-delay:.35s}
+  .row-4 .ab.after .step:nth-child(2) h4{animation-delay:.45s}
+  .row-4 .ab.after .step:nth-child(2) p{animation-delay:.55s}
+  .row-4 .ab.after .step:nth-child(3) .n{animation-delay:.6s}
+  .row-4 .ab.after .step:nth-child(3) h4{animation-delay:.7s}
+  .row-4 .ab.after .step:nth-child(3) p{animation-delay:.8s}
+
+  /* ============ 5 · TEXT MARQUEE (languages) ============ */
+  .mq{width:100%;overflow:hidden;border-top:1px solid var(--line);border-bottom:1px solid var(--line);padding:14px 0;position:relative;mask-image:linear-gradient(to right,transparent,#000 8%,#000 92%,transparent)}
+  .mq .row-lang{display:flex;gap:32px;font-family:'Fraunces',serif;font-size:18px;color:var(--fg);white-space:nowrap}
+  .mq .dot{color:var(--mute);font-weight:300}
+  @keyframes marq{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+  .row-5 .ab.after .mq .row-lang{animation:marq 28s linear infinite}
+  .row-5 .ab.after .mq:hover .row-lang{animation-play-state:paused}
+  .row-5 .ab.before .mq .row-lang{flex-wrap:wrap;white-space:normal}
+
+  /* ============ 6 · LOGOS CAROUSEL ============ */
+  .logos{display:flex;gap:28px;align-items:center;flex-wrap:wrap}
+  .logo{font-family:'Fraunces',serif;font-style:italic;font-weight:500;font-size:20px;color:var(--mute);opacity:.75;transition:opacity .3s,transform .3s;letter-spacing:-0.01em}
+  .logo:hover{opacity:1;transform:translateY(-2px);color:var(--fg)}
+  @keyframes pop{from{opacity:0;transform:scale(.9) translateY(8px)}to{opacity:.75;transform:scale(1) translateY(0)}}
+  .row-6 .ab.after .logo{opacity:0;animation:pop .55s cubic-bezier(.2,.8,.2,1) forwards}
+  .row-6 .ab.after .logo:nth-child(1){animation-delay:.05s}
+  .row-6 .ab.after .logo:nth-child(2){animation-delay:.13s}
+  .row-6 .ab.after .logo:nth-child(3){animation-delay:.21s}
+  .row-6 .ab.after .logo:nth-child(4){animation-delay:.29s}
+  .row-6 .ab.after .logo:nth-child(5){animation-delay:.37s}
+  .row-6 .ab.after .logo:nth-child(6){animation-delay:.45s}
+  .row-6 .ab.after .logo:nth-child(7){animation-delay:.53s}
+
+  .pick{margin-top:60px;padding:24px;border:1px dashed #00000025;border-radius:12px;background:#fff;display:flex;justify-content:space-between;align-items:center;gap:20px;flex-wrap:wrap}
+  .pick h3{font-family:'Fraunces',serif;font-weight:500;font-size:22px;letter-spacing:-0.01em}
+  .pick p{color:#52525b;font-size:14px;margin-top:4px;max-width:760px}
+  .pick .ans{font-family:'JetBrains Mono',monospace;font-size:13px;color:#18181b;background:#f4f4f5;padding:10px 14px;border-radius:8px}
+  footer{margin-top:40px;padding-top:20px;border-top:1px solid #c7c7c2;display:flex;justify-content:space-between;font-family:'JetBrains Mono',monospace;font-size:11px;color:#52525b;letter-spacing:.1em}
+</style>
+</head>
+<body>
+<div class="shell">
+  <header>
+    <div class="brand">DOCTALK · SPELL COMPONENTS · A/B</div>
+    <h1>Six micro-interactions from Spell UI, on DocTalk surfaces.</h1>
+    <p class="lede">Left = current style (static). Right = same element with a Spell component applied. Hover / scroll / wait for animations to fire — the "REPLAY" button on animated rows re-runs them.</p>
+  </header>
+
+  <!-- 1 · BLUR REVEAL -->
+  <section class="row row-1">
+    <div class="row-head">
+      <h2>① Blur Reveal · hero entrance <em>H1 words fade-blur in sequentially, then the sub + CTAs follow</em></h2>
+      <div class="meta">BEFORE · INSTANT<br/>AFTER · 1s CHOREOGRAPHED</div>
+    </div>
+    <div class="pair">
+      <div class="ab before"><span class="label">BEFORE · AS-IS</span><div class="stage">
+        <div class="kicker"><span class="num">01</span>Document Q&amp;A</div>
+        <h3 class="hh">Ask your documents.<br/>Get answers with <em>receipts</em>.</h3>
+        <p class="p">Upload a PDF, DOCX, or slide deck. Chat with AI that cites the exact passage.</p>
+        <div class="ctas"><a class="btn primary" href="#">Start free →</a><a class="btn ghost" href="#">How it works</a></div>
+      </div></div>
+      <div class="ab after" id="ab1"><span class="label">AFTER · BLUR REVEAL</span>
+        <button class="replay" onclick="replay('ab1')">↻ REPLAY</button>
+        <div class="stage">
+        <div class="kicker"><span class="num">01</span>Document Q&amp;A</div>
+        <h3 class="hh"><span>Ask</span> <span>your</span> <span>documents.</span> <span>Get</span> <span>answers</span> <span>with</span> <span><em>receipts</em></span><span>.</span></h3>
+        <p class="p">Upload a PDF, DOCX, or slide deck. Chat with AI that cites the exact passage.</p>
+        <div class="ctas"><a class="btn primary" href="#">Start free →</a><a class="btn ghost" href="#">How it works</a></div>
+      </div></div>
+    </div>
+  </section>
+
+  <!-- 2 · FLOW BUTTON -->
+  <section class="row row-2">
+    <div class="row-head">
+      <h2>② Flow Button · primary CTA <em>hover fills liquid from bottom, arrow slides</em></h2>
+      <div class="meta">BEFORE · BG-COLOR FADE<br/>AFTER · LIQUID FILL + SLIDE</div>
+    </div>
+    <div class="pair">
+      <div class="ab before"><span class="label">BEFORE · AS-IS</span><div class="stage center">
+        <p class="p" style="margin:0 0 20px">Hover the button ↓</p>
+        <a class="btn primary" href="#">Start free <span class="arrow">→</span></a>
+      </div></div>
+      <div class="ab after"><span class="label">AFTER · FLOW</span><div class="stage center">
+        <p class="p" style="margin:0 0 20px">Hover the button ↓</p>
+        <a class="btn primary flow" href="#">Start free <span class="arrow">→</span></a>
+      </div></div>
+    </div>
+  </section>
+
+  <!-- 3 · TILT CARD -->
+  <section class="row row-3">
+    <div class="row-head">
+      <h2>③ Tilt Card · HeroArtifact / Pricing recommended tier <em>3D tilt + spotlight follows cursor</em></h2>
+      <div class="meta">BEFORE · STATIC<br/>AFTER · 3D + SPOTLIGHT</div>
+    </div>
+    <div class="pair">
+      <div class="ab before"><span class="label">BEFORE · AS-IS</span><div class="stage center">
+        <p class="p" style="margin:0 0 20px">The product mock card, static.</p>
+        <div class="tilt-wrap"><div class="artifact">
+          <div class="top"><span></span><span></span><span></span></div>
+          <div class="doc"></div><div class="doc short"></div>
+          <div class="doc hi"></div>
+          <div class="doc"></div><div class="doc short"></div>
+          <span class="cite">Annual-Report.pdf · p.12 ¶3</span>
+        </div></div>
+      </div></div>
+      <div class="ab after"><span class="label">AFTER · TILT</span><div class="stage center">
+        <p class="p" style="margin:0 0 20px">Hover and move your cursor over the card ↓</p>
+        <div class="tilt-wrap" id="tilt-wrap"><div class="tilt" id="tilt"><div class="artifact">
+          <div class="top"><span></span><span></span><span></span></div>
+          <div class="doc"></div><div class="doc short"></div>
+          <div class="doc hi"></div>
+          <div class="doc"></div><div class="doc short"></div>
+          <span class="cite">Annual-Report.pdf · p.12 ¶3</span>
+          <div class="spot" id="spot"></div>
+        </div></div></div>
+      </div></div>
+    </div>
+  </section>
+
+  <!-- 4 · WORDS STAGGER -->
+  <section class="row row-4">
+    <div class="row-head">
+      <h2>④ Words Stagger · "How it works" 3-step <em>step number + title + description enter in cascade</em></h2>
+      <div class="meta">BEFORE · STATIC<br/>AFTER · STAGGERED CASCADE</div>
+    </div>
+    <div class="pair">
+      <div class="ab before"><span class="label">BEFORE · AS-IS</span><div class="stage">
+        <div class="steps">
+          <div class="step"><div class="n">01 — UPLOAD</div><h4>Drop a document</h4><p>PDF, DOCX, PPTX, XLSX, TXT, MD, or a URL.</p></div>
+          <div class="step"><div class="n">02 — PARSE</div><h4>We read every page</h4><p>OCR for scanned files, tables preserved, CJK intact.</p></div>
+          <div class="step"><div class="n">03 — ASK</div><h4>Chat with receipts</h4><p>Every answer cites the exact passage it came from.</p></div>
+        </div>
+      </div></div>
+      <div class="ab after" id="ab4"><span class="label">AFTER</span>
+        <button class="replay" onclick="replay('ab4')">↻ REPLAY</button>
+        <div class="stage">
+        <div class="steps">
+          <div class="step"><div class="n">01 — UPLOAD</div><h4>Drop a document</h4><p>PDF, DOCX, PPTX, XLSX, TXT, MD, or a URL.</p></div>
+          <div class="step"><div class="n">02 — PARSE</div><h4>We read every page</h4><p>OCR for scanned files, tables preserved, CJK intact.</p></div>
+          <div class="step"><div class="n">03 — ASK</div><h4>Chat with receipts</h4><p>Every answer cites the exact passage it came from.</p></div>
+        </div>
+      </div></div>
+    </div>
+  </section>
+
+  <!-- 5 · TEXT MARQUEE -->
+  <section class="row row-5">
+    <div class="row-head">
+      <h2>⑤ Text Marquee · 11-language strip <em>infinite horizontal scroll, pauses on hover</em></h2>
+      <div class="meta">BEFORE · STATIC WRAPPED<br/>AFTER · INFINITE MARQUEE</div>
+    </div>
+    <div class="pair">
+      <div class="ab before"><span class="label">BEFORE · AS-IS</span><div class="stage">
+        <p class="p" style="margin-bottom:14px">Supported languages</p>
+        <div class="mq"><div class="row-lang">
+          <span>English</span><span class="dot">·</span><span>中文</span><span class="dot">·</span>
+          <span>日本語</span><span class="dot">·</span><span>한국어</span><span class="dot">·</span>
+          <span>Español</span><span class="dot">·</span><span>Deutsch</span><span class="dot">·</span>
+          <span>Français</span><span class="dot">·</span><span>Português</span><span class="dot">·</span>
+          <span>Italiano</span><span class="dot">·</span><span>العربية</span><span class="dot">·</span>
+          <span>हिन्दी</span>
+        </div></div>
+      </div></div>
+      <div class="ab after"><span class="label">AFTER · MARQUEE</span><div class="stage">
+        <p class="p" style="margin-bottom:14px">Supported languages (hover to pause)</p>
+        <div class="mq"><div class="row-lang">
+          <span>English</span><span class="dot">·</span><span>中文</span><span class="dot">·</span>
+          <span>日本語</span><span class="dot">·</span><span>한국어</span><span class="dot">·</span>
+          <span>Español</span><span class="dot">·</span><span>Deutsch</span><span class="dot">·</span>
+          <span>Français</span><span class="dot">·</span><span>Português</span><span class="dot">·</span>
+          <span>Italiano</span><span class="dot">·</span><span>العربية</span><span class="dot">·</span>
+          <span>हिन्दी</span><span class="dot">·</span>
+          <span>English</span><span class="dot">·</span><span>中文</span><span class="dot">·</span>
+          <span>日本語</span><span class="dot">·</span><span>한국어</span><span class="dot">·</span>
+          <span>Español</span><span class="dot">·</span><span>Deutsch</span><span class="dot">·</span>
+          <span>Français</span><span class="dot">·</span><span>Português</span><span class="dot">·</span>
+          <span>Italiano</span><span class="dot">·</span><span>العربية</span><span class="dot">·</span>
+          <span>हिन्दी</span><span class="dot">·</span>
+        </div></div>
+      </div></div>
+    </div>
+  </section>
+
+  <!-- 6 · LOGOS CAROUSEL -->
+  <section class="row row-6">
+    <div class="row-head">
+      <h2>⑥ Logos Carousel · SocialProof <em>staggered entrance, hover lifts each logo</em></h2>
+      <div class="meta">BEFORE · ROW APPEARS AT ONCE<br/>AFTER · STAGGER + HOVER-LIFT</div>
+    </div>
+    <div class="pair">
+      <div class="ab before"><span class="label">BEFORE · AS-IS</span><div class="stage">
+        <p class="p" style="margin-bottom:18px">Trusted by teams at</p>
+        <div class="logos">
+          <span class="logo">Chronicle</span><span class="logo">Vantage</span>
+          <span class="logo">Corridor</span><span class="logo">Ledger &amp; Co.</span>
+          <span class="logo">Parallel</span><span class="logo">Meridian</span>
+          <span class="logo">Obsidian Labs</span>
+        </div>
+      </div></div>
+      <div class="ab after" id="ab6"><span class="label">AFTER</span>
+        <button class="replay" onclick="replay('ab6')">↻ REPLAY</button>
+        <div class="stage">
+        <p class="p" style="margin-bottom:18px">Trusted by teams at (hover each)</p>
+        <div class="logos">
+          <span class="logo">Chronicle</span><span class="logo">Vantage</span>
+          <span class="logo">Corridor</span><span class="logo">Ledger &amp; Co.</span>
+          <span class="logo">Parallel</span><span class="logo">Meridian</span>
+          <span class="logo">Obsidian Labs</span>
+        </div>
+      </div></div>
+    </div>
+  </section>
+
+  <div class="pick">
+    <div>
+      <h3>Which components do you want shipped to DocTalk?</h3>
+      <p>Reply with any combination — "全做" / "1,2,3" / "Tier 1 only" / "skip 5". I'll wire each one up as a real React component in <code>src/components/</code> and replace the corresponding live surface (hero, CTA, pricing card, footer, social proof).</p>
+    </div>
+    <div class="ans">→ SAY "1 2 3 4 5 6"</div>
+  </div>
+
+  <footer>
+    <span>DOCTALK · SPELL A/B PREVIEW</span>
+    <span>ACCENT · INK BLUE #1D4ED8</span>
+  </footer>
+</div>
+
+<script>
+  // Replay animation on a block by forcing reflow
+  function replay(id){
+    const el = document.getElementById(id);
+    el.classList.remove('after');
+    void el.offsetWidth;
+    el.classList.add('after');
+  }
+
+  // Tilt Card
+  (function(){
+    const wrap = document.getElementById('tilt-wrap');
+    const tilt = document.getElementById('tilt');
+    const spot = document.getElementById('spot');
+    if(!wrap) return;
+    const art = tilt.querySelector('.artifact');
+    wrap.addEventListener('mousemove', (e) => {
+      const r = art.getBoundingClientRect();
+      const x = (e.clientX - r.left) / r.width;
+      const y = (e.clientY - r.top) / r.height;
+      const rx = (0.5 - y) * 12;
+      const ry = (x - 0.5) * 14;
+      tilt.style.transform = `rotateX(${rx}deg) rotateY(${ry}deg)`;
+      spot.style.setProperty('--mx', (x*100)+'%');
+      spot.style.setProperty('--my', (y*100)+'%');
+      spot.style.opacity = '1';
+    });
+    wrap.addEventListener('mouseleave', () => {
+      tilt.style.transform = 'rotateX(0) rotateY(0)';
+      spot.style.opacity = '0';
+    });
+  })();
+</script>
+</body>
+</html>

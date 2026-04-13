@@ -4,6 +4,7 @@ import React from 'react';
 import { Check, X } from 'lucide-react';
 import { useLocale } from '../i18n';
 import { PLAN_HIERARCHY, type PlanType } from '../lib/models';
+import { ShimmerBadge } from './spell';
 
 interface RowDef {
   labelKey: string;
@@ -96,7 +97,7 @@ export default function PricingTable({
               onClick={() => (plan === 'plus' || plan === 'pro') ? onSelectPlan?.(plan) : undefined}
               className={`rounded-xl border p-5 ${
                 isSelected
-                  ? 'border-2 border-indigo-500 dark:border-indigo-400 cursor-pointer'
+                  ? 'border-2 border-blue-500 dark:border-blue-400 cursor-pointer'
                   : plan === 'free' ? 'border-zinc-200 dark:border-zinc-800' : 'border-zinc-200 dark:border-zinc-800 cursor-pointer'
               }`}
             >
@@ -105,9 +106,7 @@ export default function PricingTable({
                   {t(`billing.comparison.${plan}` as any)}
                 </h3>
                 {plan === 'plus' && (
-                  <span className="text-xs px-2 py-0.5 rounded-full bg-indigo-600 dark:bg-indigo-500 text-white font-medium">
-                    {t('billing.mostPopular')}
-                  </span>
+                  <ShimmerBadge>{t('billing.mostPopular')}</ShimmerBadge>
                 )}
               </div>
               <div className="space-y-3">
@@ -139,7 +138,7 @@ export default function PricingTable({
                 scope="col"
                 className={`text-center py-4 px-3 w-[22%] cursor-pointer ${
                   selectedPlan === 'plus'
-                    ? 'border-x-2 border-t-2 border-indigo-500 dark:border-indigo-400 bg-indigo-50/50 dark:bg-indigo-950/20'
+                    ? 'border-x-2 border-t-2 border-blue-500 dark:border-blue-400 bg-blue-50/50 dark:bg-blue-950/20'
                     : 'border-x border-t border-zinc-200 dark:border-zinc-800'
                 }`}
               >
@@ -148,9 +147,7 @@ export default function PricingTable({
                   onClick={() => onSelectPlan?.('plus')}
                   className="flex w-full flex-col items-center gap-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400 dark:focus-visible:ring-zinc-500"
                 >
-                  <span className="text-xs px-2 py-0.5 rounded-full bg-indigo-600 dark:bg-indigo-500 text-white font-medium">
-                    {t('billing.mostPopular')}
-                  </span>
+                  <ShimmerBadge>{t('billing.mostPopular')}</ShimmerBadge>
                   <span className="font-semibold text-zinc-900 dark:text-zinc-50">
                     {t('billing.comparison.plus')}
                   </span>
@@ -160,7 +157,7 @@ export default function PricingTable({
                 scope="col"
                 className={`text-center py-4 px-3 w-[22%] cursor-pointer ${
                   selectedPlan === 'pro'
-                    ? 'border-x-2 border-t-2 border-indigo-500 dark:border-indigo-400 bg-indigo-50/50 dark:bg-indigo-950/20'
+                    ? 'border-x-2 border-t-2 border-blue-500 dark:border-blue-400 bg-blue-50/50 dark:bg-blue-950/20'
                     : 'font-semibold text-zinc-900 dark:text-zinc-50'
                 }`}
               >
@@ -187,7 +184,7 @@ export default function PricingTable({
                   onClick={() => onSelectPlan?.('plus')}
                   className={`py-3.5 px-3 text-center cursor-pointer ${
                     selectedPlan === 'plus'
-                      ? 'border-x-2 border-indigo-500 dark:border-indigo-400 bg-indigo-50/50 dark:bg-indigo-950/20'
+                      ? 'border-x-2 border-blue-500 dark:border-blue-400 bg-blue-50/50 dark:bg-blue-950/20'
                       : 'border-x border-zinc-200 dark:border-zinc-800'
                   }`}
                 >
@@ -197,7 +194,7 @@ export default function PricingTable({
                   onClick={() => onSelectPlan?.('pro')}
                   className={`py-3.5 px-3 text-center cursor-pointer ${
                     selectedPlan === 'pro'
-                      ? 'border-x-2 border-indigo-500 dark:border-indigo-400 bg-indigo-50/50 dark:bg-indigo-950/20'
+                      ? 'border-x-2 border-blue-500 dark:border-blue-400 bg-blue-50/50 dark:bg-blue-950/20'
                       : ''
                   }`}
                 >
@@ -217,7 +214,7 @@ export default function PricingTable({
                 onClick={() => onSelectPlan?.('plus')}
                 className={`py-4 px-3 text-center cursor-pointer ${
                   selectedPlan === 'plus'
-                    ? 'border-x-2 border-b-2 border-indigo-500 dark:border-indigo-400 bg-indigo-50/50 dark:bg-indigo-950/20 rounded-b-xl'
+                    ? 'border-x-2 border-b-2 border-blue-500 dark:border-blue-400 bg-blue-50/50 dark:bg-blue-950/20 rounded-b-xl'
                     : 'border-x border-zinc-200 dark:border-zinc-800'
                 }`}
               >
@@ -227,7 +224,7 @@ export default function PricingTable({
                 onClick={() => onSelectPlan?.('pro')}
                 className={`py-4 px-3 text-center cursor-pointer ${
                   selectedPlan === 'pro'
-                    ? 'border-x-2 border-b-2 border-indigo-500 dark:border-indigo-400 bg-indigo-50/50 dark:bg-indigo-950/20 rounded-b-xl'
+                    ? 'border-x-2 border-b-2 border-blue-500 dark:border-blue-400 bg-blue-50/50 dark:bg-blue-950/20 rounded-b-xl'
                     : ''
                 }`}
               >

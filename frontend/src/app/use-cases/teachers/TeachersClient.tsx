@@ -107,9 +107,9 @@ export default function TeachersClient() {
         {/* Breadcrumb */}
         <div className="max-w-4xl mx-auto px-6 pt-8">
           <nav className="flex items-center text-sm text-zinc-500 dark:text-zinc-300 space-x-1">
-            <Link href="/" className="hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">Home</Link>
+            <Link href="/" className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors">Home</Link>
             <ChevronRight className="w-3 h-3" />
-            <Link href="/use-cases" className="hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">Use Cases</Link>
+            <Link href="/use-cases" className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors">Use Cases</Link>
             <ChevronRight className="w-3 h-3" />
             <span className="text-zinc-900 dark:text-zinc-100">Teachers &amp; Educators</span>
           </nav>
@@ -120,7 +120,7 @@ export default function TeachersClient() {
           <div className="w-14 h-14 rounded-xl bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center mx-auto mb-6">
             <Apple className="w-7 h-7 text-zinc-600 dark:text-zinc-300" />
           </div>
-          <h1 className="text-3xl sm:text-4xl font-semibold text-zinc-900 dark:text-zinc-100 tracking-tight mb-4">
+          <h1 className="font-serif text-3xl sm:text-4xl font-semibold text-zinc-900 dark:text-zinc-100 tracking-tight mb-4">
             AI Document Analysis for Teachers and Educators
           </h1>
           <p className="text-lg text-zinc-500 dark:text-zinc-300 max-w-2xl mx-auto mb-8">
@@ -150,7 +150,7 @@ export default function TeachersClient() {
               </p>
               <p className="text-zinc-600 dark:text-zinc-300 mb-4">
                 Resources like the{' '}
-                <a href="https://www.edweek.org/technology" target="_blank" rel="noopener noreferrer" className="text-indigo-600 dark:text-indigo-400 hover:underline">Education Week Technology section</a>
+                <a href="https://www.edweek.org/technology" target="_blank" rel="noopener noreferrer" className="text-blue-600 dark:text-blue-400 hover:underline">Education Week Technology section</a>
                 {' '}highlight how AI tools are helping educators work more efficiently without replacing pedagogical judgment.
               </p>
               <p className="text-zinc-600 dark:text-zinc-300">
@@ -196,7 +196,7 @@ export default function TeachersClient() {
             </h2>
             <p className="text-zinc-600 dark:text-zinc-300 mb-6">
               DocTalk works with the document formats teachers use every day. See{' '}
-              <Link href="/features/multi-format" className="text-indigo-600 dark:text-indigo-400 hover:underline">
+              <Link href="/features/multi-format" className="text-blue-600 dark:text-blue-400 hover:underline">
                 all supported formats
               </Link>
               {' '}for the full list.
@@ -233,7 +233,7 @@ export default function TeachersClient() {
                 key={q}
                 className="flex items-start gap-3 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl p-4"
               >
-                <MessageSquare className="w-4 h-4 text-indigo-600 dark:text-indigo-400 mt-0.5 shrink-0" />
+                <MessageSquare className="w-4 h-4 text-blue-600 dark:text-blue-400 mt-0.5 shrink-0" />
                 <span className="text-sm text-zinc-700 dark:text-zinc-200">{q}</span>
               </div>
             ))}
@@ -254,7 +254,7 @@ export default function TeachersClient() {
             </p>
             <p className="text-zinc-600 dark:text-zinc-300">
               Learn more about how{' '}
-              <Link href="/features/citations" className="text-indigo-600 dark:text-indigo-400 hover:underline">
+              <Link href="/features/citations" className="text-blue-600 dark:text-blue-400 hover:underline">
                 citation highlighting
               </Link>
               {' '}works in DocTalk, including real-time document navigation.
@@ -297,17 +297,17 @@ export default function TeachersClient() {
               Related Use Cases
             </h2>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <Link href="/use-cases/students" className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl p-5 hover:border-indigo-300 dark:hover:border-indigo-700 transition-colors">
+              <Link href="/use-cases/students" className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl p-5 hover:border-blue-300 dark:hover:border-blue-700 transition-colors">
                 <GraduationCap className="w-5 h-5 text-zinc-600 dark:text-zinc-300 mb-2" />
                 <h3 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100 mb-1">Students</h3>
                 <p className="text-xs text-zinc-500 dark:text-zinc-300">AI document analysis for students and researchers</p>
               </Link>
-              <Link href="/use-cases/healthcare" className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl p-5 hover:border-indigo-300 dark:hover:border-indigo-700 transition-colors">
+              <Link href="/use-cases/healthcare" className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl p-5 hover:border-blue-300 dark:hover:border-blue-700 transition-colors">
                 <FileText className="w-5 h-5 text-zinc-600 dark:text-zinc-300 mb-2" />
                 <h3 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100 mb-1">Healthcare</h3>
                 <p className="text-xs text-zinc-500 dark:text-zinc-300">Review clinical research and compliance documents</p>
               </Link>
-              <Link href="/use-cases/compliance" className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl p-5 hover:border-indigo-300 dark:hover:border-indigo-700 transition-colors">
+              <Link href="/use-cases/compliance" className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl p-5 hover:border-blue-300 dark:hover:border-blue-700 transition-colors">
                 <ClipboardCheck className="w-5 h-5 text-zinc-600 dark:text-zinc-300 mb-2" />
                 <h3 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100 mb-1">Compliance</h3>
                 <p className="text-xs text-zinc-500 dark:text-zinc-300">Analyze regulatory and policy documents</p>

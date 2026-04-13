@@ -3,6 +3,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import type { UserProfile, CreditHistoryItem } from "../../types";
 import { useLocale } from "../../i18n";
+import { Spinner } from "../spell";
 import {
   createPortalSession,
   createSubscription,
@@ -169,7 +170,7 @@ export default function CreditsSection({ profile }: Props) {
 
         {loadingHistory ? (
           <div className="flex items-center gap-2 text-zinc-600 dark:text-zinc-400">
-            <div className="animate-spin h-5 w-5 border-2 border-zinc-300 border-t-transparent rounded-full" />
+            <Spinner variant="circle" size="sm" label={t("common.loading")} />
             <span>{t("common.loading")}</span>
           </div>
         ) : historyError ? (

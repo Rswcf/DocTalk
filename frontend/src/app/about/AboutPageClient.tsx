@@ -16,7 +16,7 @@ export default function AboutPageClient() {
             <p className="text-sm font-medium tracking-[0.18em] uppercase text-zinc-500 dark:text-zinc-300">
               {t('about.eyebrow')}
             </p>
-            <h1 className="text-4xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
+            <h1 className="font-serif text-4xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
               {t('about.headline')}
             </h1>
             <p className="text-lg leading-8 text-zinc-600 dark:text-zinc-300">
@@ -78,14 +78,14 @@ export default function AboutPageClient() {
               {t('about.contact.description1')}{' '}
               <a
                 href="mailto:support@doctalk.site"
-                className="text-indigo-600 dark:text-indigo-400 hover:underline"
+                className="text-blue-600 dark:text-blue-400 hover:underline"
               >
                 support@doctalk.site
               </a>
               {t('about.contact.description2')}{' '}
               <a
                 href="https://github.com/Rswcf/DocTalk"
-                className="text-indigo-600 dark:text-indigo-400 hover:underline"
+                className="text-blue-600 dark:text-blue-400 hover:underline"
               >
                 GitHub
               </a>

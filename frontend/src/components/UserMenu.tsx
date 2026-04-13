@@ -9,6 +9,7 @@ import { LOCALES, useLocale } from "../i18n";
 import type { Locale } from "../i18n";
 import { clearAccountStorage } from "../lib/clearAccountStorage";
 import { useDropdownKeyboard } from "../lib/useDropdownKeyboard";
+import { FallbackAvatar } from "./spell";
 
 export default function UserMenu() {
   const { data: session, status } = useSession();
@@ -94,6 +95,7 @@ export default function UserMenu() {
   }
 
   const userImage = (session.user as any).image as string | undefined;
+  const userName = (session.user as any).name || (session.user as any).email || "User";
 
   return (
     <div className="relative" ref={menuRef}>
@@ -108,7 +110,7 @@ export default function UserMenu() {
         {userImage ? (
           <Image src={userImage} alt="" width={32} height={32} className="w-8 h-8 object-cover" />
         ) : (
-          <div className="w-8 h-8 bg-zinc-200 dark:bg-zinc-700" />
+          <FallbackAvatar name={userName} size={32} />
         )}
       </button>
 

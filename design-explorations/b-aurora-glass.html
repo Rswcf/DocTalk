@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>DocTalk AI | Chat with your Documents</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "on-primary-container": "#d9d8ff",
+                        "on-surface": "#e4e1e9",
+                        "on-primary-fixed": "#07006c",
+                        "tertiary-fixed": "#f0dbff",
+                        "on-tertiary-container": "#ebd2ff",
+                        "on-background": "#e4e1e9",
+                        "on-tertiary-fixed-variant": "#6900b3",
+                        "secondary": "#4cd7f6",
+                        "on-secondary-fixed": "#001f26",
+                        "inverse-on-surface": "#303036",
+                        "background": "#131318",
+                        "inverse-surface": "#e4e1e9",
+                        "on-tertiary": "#490080",
+                        "tertiary": "#ddb7ff",
+                        "secondary-container": "#03b5d3",
+                        "surface-variant": "#35343a",
+                        "surface-container-highest": "#35343a",
+                        "on-primary": "#1000a9",
+                        "tertiary-container": "#862dd4",
+                        "secondary-fixed-dim": "#4cd7f6",
+                        "surface-container-high": "#2a292f",
+                        "on-error-container": "#ffdad6",
+                        "surface-container-low": "#1b1b20",
+                        "on-tertiary-fixed": "#2c0051",
+                        "surface-container": "#1f1f25",
+                        "surface-dim": "#131318",
+                        "surface": "#131318",
+                        "on-secondary": "#003640",
+                        "outline-variant": "#464555",
+                        "surface-container-lowest": "#0e0e13",
+                        "surface-bright": "#39383e",
+                        "on-secondary-fixed-variant": "#004e5c",
+                        "on-error": "#690005",
+                        "error-container": "#93000a",
+                        "on-primary-fixed-variant": "#2f2ebe",
+                        "primary-fixed": "#e1e0ff",
+                        "error": "#ffb4ab",
+                        "primary-fixed-dim": "#c0c1ff",
+                        "secondary-fixed": "#acedff",
+                        "outline": "#918fa1",
+                        "on-surface-variant": "#c7c4d8",
+                        "tertiary-fixed-dim": "#ddb7ff",
+                        "primary-container": "#4b4dd8",
+                        "on-secondary-container": "#00424e",
+                        "inverse-primary": "#494bd6",
+                        "surface-tint": "#c0c1ff",
+                        "primary": "#c0c1ff"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.125rem",
+                        "lg": "0.25rem",
+                        "xl": "0.5rem",
+                        "full": "0.75rem"
+                    },
+                    "fontFamily": {
+                        "headline": ["Inter"],
+                        "body": ["Inter"],
+                        "label": ["Inter"]
+                    }
+                },
+            },
+        }
+    </script>
+<style>.material-symbols-outlined {
+    font-variation-settings: "FILL" 0, "wght" 400, "GRAD" 0, "opsz" 24
+    }
+.grain-overlay {
+    background-image: url(https://lh3.googleusercontent.com/aida-public/AB6AXuChyRtjvJN3oehGRftifZza1Lpg1doB9vtBLlxS1JAakHSDPesPYs25unF3MWOWgfX8JHCjuaUPCg2TzB687CdQ8kNtJvwVfzaamPYAUVmw47WZDvaKroZxJODQet-8ZCm59xG9SRE9QqV-ohBTiOSQ6CI9yhWD9_j1mBDE8ht9Znr34vNCLfolyPjY5xChAfmy3OewToINxo0c5s2UeXwubI2GbtpOpU3owGL0O0t8v04VtyQJEH-e92WU7rVmZaqR1a75KNiQ9vpj);
+    opacity: 0.05
+    }
+.aurora-blur {
+    filter: blur(120px)
+    }
+.text-gradient {
+    background: linear-gradient(180deg, #FFF 0%, #c0c1ff 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent
+    }
+.ghost-border {
+    border: 1px solid rgba(145, 143, 161, 0.2)
+    }</style>
+</head>
+<body class="bg-[#0A0A0F] text-on-surface font-body selection:bg-primary-container selection:text-white overflow-x-hidden">
+<!-- Global Grain Overlay -->
+<div class="fixed inset-0 pointer-events-none grain-overlay z-[100]"></div>
+<!-- Navigation Shell -->
+<nav class="fixed top-0 w-full z-50 bg-[#131318]/60 backdrop-blur-3xl border-b border-white/10">
+<div class="flex justify-between items-center h-16 px-6 max-w-7xl mx-auto">
+<div class="text-xl font-bold tracking-tighter text-white uppercase font-headline">DocTalk</div>
+<div class="hidden md:flex items-center gap-8 font-['Inter'] text-sm tracking-tight font-medium">
+<a class="text-slate-400 hover:text-white transition-colors" href="#">Features</a>
+<a class="text-slate-400 hover:text-white transition-colors" href="#">Case Studies</a>
+<a class="text-slate-400 hover:text-white transition-colors" href="#">Pricing</a>
+<a class="text-slate-400 hover:text-white transition-colors" href="#">API</a>
+</div>
+<div class="flex items-center gap-4">
+<button class="text-slate-400 hover:text-white transition-colors text-sm font-medium">Sign In</button>
+<button class="bg-primary-container text-white px-5 py-2 rounded-xl text-sm font-semibold shadow-[0_8px_32px_0_rgba(79,70,229,0.08)] active:scale-95 transition-transform">Get Started</button>
+</div>
+</div>
+</nav>
+<!-- Hero Section -->
+<main class="relative pt-32 pb-20 px-6 overflow-hidden">
+<!-- Aurora Background Elements -->
+<div class="absolute top-[-10%] left-1/2 -translate-x-1/2 w-[800px] h-[600px] opacity-20 pointer-events-none">
+<div class="absolute inset-0 aurora-blur bg-primary-container rounded-full mix-blend-screen transform translate-x-[-20%]"></div>
+<div class="absolute inset-0 aurora-blur bg-tertiary-container rounded-full mix-blend-screen transform translate-x-[20%]"></div>
+<div class="absolute inset-0 aurora-blur bg-secondary-container rounded-full mix-blend-screen opacity-50"></div>
+</div>
+<div class="max-w-4xl mx-auto text-center relative z-10">
+<!-- Pill Badge -->
+<div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-surface-variant/40 backdrop-blur-md ghost-border mb-8 animate-fade-in">
+<span class="text-secondary text-[10px] font-bold tracking-widest uppercase">New</span>
+<span class="text-on-surface-variant text-xs font-medium">✦ Now with OCR for scanned PDFs</span>
+</div>
+<!-- Main Heading -->
+<h1 class="text-5xl md:text-7xl font-black tracking-tighter mb-6 text-gradient leading-[1.1]">
+                Chat with your documents.<br/>Get answers with citations.
+            </h1>
+<!-- Subtext -->
+<p class="text-lg md:text-xl text-slate-400 mb-10 max-w-2xl mx-auto font-light leading-relaxed">
+                Connect your PDFs, DOCX, and PPTX files. Ask complex questions and receive precise answers with direct source citations across 11 languages.
+            </p>
+<!-- CTAs -->
+<div class="flex flex-col sm:flex-row items-center justify-center gap-4 mb-20">
+<button class="w-full sm:w-auto bg-gradient-to-r from-primary-container to-primary text-on-primary-fixed px-8 py-4 rounded-xl font-bold text-base shadow-[0_0_40px_rgba(75,77,216,0.3)] hover:brightness-110 transition-all active:scale-95">
+                    Start free
+                </button>
+<button class="w-full sm:w-auto px-8 py-4 rounded-xl font-bold text-base ghost-border bg-white/5 backdrop-blur-sm hover:bg-white/10 transition-all active:scale-95">
+                    See how it works
+                </button>
+</div>
+<!-- Featured Visual (Floating Glass Card) -->
+<div class="relative mt-12 px-4 group">
+<!-- Glowing Underlay -->
+<div class="absolute -inset-1 bg-gradient-to-r from-primary-container to-tertiary-container rounded-2xl blur opacity-20 group-hover:opacity-30 transition-opacity"></div>
+<div class="relative bg-surface-container-low/80 backdrop-blur-2xl rounded-2xl border border-white/10 overflow-hidden shadow-2xl flex flex-col md:flex-row">
+<!-- Left Sidebar (Mockup) -->
+<div class="w-full md:w-64 bg-surface-container-lowest p-6 border-b md:border-b-0 md:border-r border-white/5 text-left">
+<div class="flex items-center gap-3 mb-8">
+<div class="w-3 h-3 rounded-full bg-red-500/50"></div>
+<div class="w-3 h-3 rounded-full bg-amber-500/50"></div>
+<div class="w-3 h-3 rounded-full bg-emerald-500/50"></div>
+</div>
+<div class="space-y-4">
+<div class="h-2 w-3/4 bg-white/5 rounded-full"></div>
+<div class="h-2 w-1/2 bg-white/5 rounded-full"></div>
+<div class="h-8 w-full bg-primary-container/20 border border-primary-container/30 rounded-lg flex items-center px-3">
+<span class="material-symbols-outlined text-primary text-sm mr-2">description</span>
+<div class="h-2 w-16 bg-primary/40 rounded-full"></div>
+</div>
+<div class="h-2 w-2/3 bg-white/5 rounded-full"></div>
+</div>
+</div>
+<!-- Right Chat Content (Mockup) -->
+<div class="flex-1 p-8 text-left bg-gradient-to-br from-transparent to-primary/5">
+<div class="space-y-6">
+<!-- Question -->
+<div class="flex justify-end">
+<div class="bg-surface-container-high px-4 py-3 rounded-2xl rounded-tr-none max-w-md text-sm text-on-surface border border-white/5">
+                                    Summarize the Q3 revenue growth and list the key drivers mentioned on page 14.
+                                </div>
+</div>
+<!-- Answer -->
+<div class="flex gap-4">
+<div class="w-8 h-8 rounded-full bg-primary-container flex items-center justify-center shrink-0">
+<span class="material-symbols-outlined text-white text-xs">auto_awesome</span>
+</div>
+<div class="space-y-4">
+<div class="text-sm text-on-surface leading-relaxed max-w-lg">
+                                        Q3 revenue increased by <span class="text-secondary font-semibold">24% YoY</span>, primarily driven by international expansion and the new enterprise subscription tier.
+                                    </div>
+<!-- Source Chip -->
+<div class="inline-flex items-center gap-3 p-3 rounded-xl bg-surface-container-highest border border-white/10 shadow-lg">
+<div class="w-10 h-12 bg-surface-container-lowest rounded border border-white/10 flex items-center justify-center">
+<span class="material-symbols-outlined text-slate-500 text-lg">article</span>
+</div>
+<div>
+<div class="text-[10px] uppercase tracking-widest text-primary font-bold mb-1">Source Citation</div>
+<div class="text-xs text-on-surface-variant font-medium">Earnings_Report_Q3.pdf • Page 14</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</main>
+<!-- Support Marquee / Grid Section -->
+<section class="max-w-7xl mx-auto px-6 py-24">
+<div class="grid grid-cols-2 md:grid-cols-4 gap-8">
+<div class="flex flex-col items-center p-6 rounded-2xl bg-surface-container-low/30 ghost-border hover:bg-surface-container-low transition-colors group">
+<span class="material-symbols-outlined text-primary mb-4 text-3xl group-hover:scale-110 transition-transform">language</span>
+<h3 class="text-sm font-bold uppercase tracking-widest mb-1">11 Languages</h3>
+<p class="text-xs text-slate-500 text-center">Global support out of the box</p>
+</div>
+<div class="flex flex-col items-center p-6 rounded-2xl bg-surface-container-low/30 ghost-border hover:bg-surface-container-low transition-colors group">
+<span class="material-symbols-outlined text-secondary mb-4 text-3xl group-hover:scale-110 transition-transform">verified_user</span>
+<h3 class="text-sm font-bold uppercase tracking-widest mb-1">Citations</h3>
+<p class="text-xs text-slate-500 text-center">Verified source-backed answers</p>
+</div>
+<div class="flex flex-col items-center p-6 rounded-2xl bg-surface-container-low/30 ghost-border hover:bg-surface-container-low transition-colors group">
+<span class="material-symbols-outlined text-tertiary mb-4 text-3xl group-hover:scale-110 transition-transform">scanner</span>
+<h3 class="text-sm font-bold uppercase tracking-widest mb-1">Advanced OCR</h3>
+<p class="text-xs text-slate-500 text-center">Read scanned docs with ease</p>
+</div>
+<div class="flex flex-col items-center p-6 rounded-2xl bg-surface-container-low/30 ghost-border hover:bg-surface-container-low transition-colors group">
+<span class="material-symbols-outlined text-primary-fixed mb-4 text-3xl group-hover:scale-110 transition-transform">lock</span>
+<h3 class="text-sm font-bold uppercase tracking-widest mb-1">Secure</h3>
+<p class="text-xs text-slate-500 text-center">Enterprise-grade encryption</p>
+</div>
+</div>
+</section>
+<!-- Footer Shell -->
+<footer class="bg-[#0A0A0F] w-full py-12 border-t border-white/5">
+<div class="flex flex-col md:flex-row justify-between items-center px-8 max-w-7xl mx-auto gap-4">
+<div class="text-lg font-black text-white font-headline">DocTalk</div>
+<div class="flex gap-6">
+<a class="text-slate-500 hover:text-indigo-300 transition-colors text-xs uppercase tracking-widest font-label" href="#">Privacy Policy</a>
+<a class="text-slate-500 hover:text-indigo-300 transition-colors text-xs uppercase tracking-widest font-label" href="#">Terms of Service</a>
+<a class="text-slate-500 hover:text-indigo-300 transition-colors text-xs uppercase tracking-widest font-label" href="#">Security</a>
+<a class="text-slate-500 hover:text-indigo-300 transition-colors text-xs uppercase tracking-widest font-label" href="#">Status</a>
+</div>
+<p class="text-slate-500 text-xs uppercase tracking-widest font-label">
+                © 2024 DocTalk AI. Built for the celestial workbench.
+            </p>
+</div>
+</footer>
+</body></html>

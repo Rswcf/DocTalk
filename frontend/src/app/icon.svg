@@ -4,7 +4,7 @@
   <!-- Folded corner -->
   <path d="M24 4 L31 11 L24 11 Z" fill="#ffffff" opacity="0.9"/>
   <!-- Chat dots -->
-  <circle cx="12" cy="22" r="2" fill="#4f46e5"/>
-  <circle cx="18" cy="22" r="2" fill="#4f46e5"/>
-  <circle cx="24" cy="22" r="2" fill="#4f46e5"/>
+  <circle cx="12" cy="22" r="2" fill="#1D4ED8"/>
+  <circle cx="18" cy="22" r="2" fill="#1D4ED8"/>
+  <circle cx="24" cy="22" r="2" fill="#1D4ED8"/>
 </svg>

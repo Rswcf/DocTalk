@@ -51,7 +51,7 @@ export default function ComparisonTable({ features, competitorName }: Comparison
               <th className="text-left py-4 px-5 font-semibold text-zinc-900 dark:text-zinc-100 bg-zinc-50 dark:bg-zinc-900/80 w-[40%]">
                 {t('billing.comparison.feature')}
               </th>
-              <th className="text-center py-4 px-5 font-semibold text-zinc-900 dark:text-zinc-100 bg-indigo-50/60 dark:bg-indigo-950/20 w-[30%]">
+              <th className="text-center py-4 px-5 font-semibold text-zinc-900 dark:text-zinc-100 bg-blue-50/60 dark:bg-blue-950/20 w-[30%]">
                 <span className="inline-flex items-center gap-1.5">
                   DocTalk
                 </span>
@@ -74,7 +74,7 @@ export default function ComparisonTable({ features, competitorName }: Comparison
                 <td className="py-3.5 px-5 text-zinc-700 dark:text-zinc-300 font-medium">
                   {feature.name}
                 </td>
-                <td className="py-3.5 px-5 text-center text-zinc-700 dark:text-zinc-300 bg-indigo-50/30 dark:bg-indigo-950/10">
+                <td className="py-3.5 px-5 text-center text-zinc-700 dark:text-zinc-300 bg-blue-50/30 dark:bg-blue-950/10">
                   <CellValue value={feature.doctalk} />
                 </td>
                 <td className="py-3.5 px-5 text-center text-zinc-700 dark:text-zinc-300">

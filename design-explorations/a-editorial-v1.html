@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,600;1,6..72,400&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "surface": "#f9f9f6",
+                    "secondary-fixed": "#e2dfff",
+                    "on-secondary-fixed-variant": "#413f82",
+                    "surface-container-high": "#e8e8e5",
+                    "on-error-container": "#93000a",
+                    "inverse-surface": "#2f312f",
+                    "surface-variant": "#e2e3e0",
+                    "tertiary-fixed-dim": "#ffb695",
+                    "on-secondary-container": "#454386",
+                    "on-secondary-fixed": "#140f54",
+                    "error": "#ba1a1a",
+                    "primary-container": "#4f46e5",
+                    "primary-fixed-dim": "#c3c0ff",
+                    "error-container": "#ffdad6",
+                    "outline-variant": "#c7c4d8",
+                    "background": "#f9f9f6",
+                    "surface-dim": "#dadad7",
+                    "on-error": "#ffffff",
+                    "secondary": "#58579b",
+                    "surface-bright": "#f9f9f6",
+                    "on-surface": "#1a1c1b",
+                    "outline": "#777587",
+                    "secondary-fixed-dim": "#c3c0ff",
+                    "surface-container-lowest": "#ffffff",
+                    "primary": "#3525cd",
+                    "inverse-primary": "#c3c0ff",
+                    "surface-container-highest": "#e2e3e0",
+                    "on-primary-container": "#dad7ff",
+                    "surface-container": "#eeeeeb",
+                    "primary-fixed": "#e2dfff",
+                    "on-primary": "#ffffff",
+                    "surface-container-low": "#f4f4f1",
+                    "on-primary-fixed": "#0f0069",
+                    "on-tertiary-container": "#ffd2be",
+                    "on-tertiary": "#ffffff",
+                    "on-background": "#1a1c1b",
+                    "on-surface-variant": "#464555",
+                    "tertiary-fixed": "#ffdbcc",
+                    "on-tertiary-fixed-variant": "#7b2f00",
+                    "surface-tint": "#4d44e3",
+                    "on-primary-fixed-variant": "#3323cc",
+                    "inverse-on-surface": "#f1f1ee",
+                    "on-tertiary-fixed": "#351000",
+                    "secondary-container": "#b6b4ff",
+                    "tertiary-container": "#a44100",
+                    "tertiary": "#7e3000",
+                    "on-secondary": "#ffffff"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0px",
+                    "lg": "0px",
+                    "xl": "0px",
+                    "full": "9999px"
+            },
+            "fontFamily": {
+                    "headline": ["Newsreader", "serif"],
+                    "body": ["Inter", "sans-serif"],
+                    "label": ["Inter", "sans-serif"]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        body { background-color: #f9f9f6; }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 300, 'GRAD' 0, 'opsz' 24;
+        }
+        .serif-display { font-family: 'Newsreader', serif; }
+        .hairline-rule { height: 1px; background-color: #c7c4d8; opacity: 0.5; }
+        .vertical-rule { width: 1px; background-color: #c7c4d8; opacity: 0.5; }
+    </style>
+</head>
+<body class="font-body text-on-surface min-h-screen flex flex-col">
+<!-- Top Navigation -->
+<nav class="bg-[#f9f9f6] dark:bg-zinc-950 border-b border-zinc-300 dark:border-zinc-800 sticky top-0 z-50">
+<div class="flex justify-between items-center w-full px-6 py-4 max-w-screen-2xl mx-auto">
+<div class="text-2xl font-normal font-serif text-zinc-900 dark:text-zinc-50 tracking-tight">DocTalk</div>
+<div class="hidden md:flex items-center space-x-12">
+<a class="text-zinc-900 dark:text-zinc-50 border-b border-zinc-900 dark:border-zinc-50 pb-1 font-sans text-sm uppercase tracking-wider transition-colors duration-150" href="#">Product</a>
+<a class="text-zinc-500 dark:text-zinc-400 font-sans text-sm uppercase tracking-wider hover:text-[#3525cd] transition-colors duration-150" href="#">Pricing</a>
+<a class="text-zinc-500 dark:text-zinc-400 font-sans text-sm uppercase tracking-wider hover:text-[#3525cd] transition-colors duration-150" href="#">Docs</a>
+<a class="text-zinc-500 dark:text-zinc-400 font-sans text-sm uppercase tracking-wider hover:text-[#3525cd] transition-colors duration-150" href="#">Log in</a>
+</div>
+<button class="bg-[#3525cd] text-white px-6 py-2.5 font-sans text-sm uppercase tracking-widest hover:bg-primary-container transition-all duration-150">
+                Start free
+            </button>
+</div>
+</nav>
+<!-- Main Content Canvas -->
+<main class="flex-grow max-w-screen-2xl mx-auto w-full px-6 flex flex-col">
+<!-- Hero Section -->
+<section class="grid grid-cols-1 md:grid-cols-12 flex-grow pt-16 md:pt-24 pb-12 gap-8 md:gap-0">
+<!-- Left Column: Editorial Content (60%) -->
+<div class="md:col-span-7 flex flex-col justify-start md:pr-16 lg:pr-24">
+<div class="mb-12">
+<span class="font-label text-[10px] tracking-[0.2em] text-on-surface-variant uppercase font-semibold block mb-8">01 — Document Intelligence</span>
+<h1 class="serif-display text-6xl md:text-[84px] leading-[0.95] text-on-surface tracking-tighter mb-8">
+                        Ask your documents.<br/>Get answers, with receipts.
+                    </h1>
+<p class="text-lg md:text-xl text-on-surface-variant max-w-lg leading-relaxed mb-12">
+                        Navigate through thousands of technical specs, legal contracts, and historical archives with precision accuracy and instant citations.
+                    </p>
+<div class="flex items-center space-x-8">
+<button class="bg-primary text-on-primary px-10 py-4 font-sans text-xs uppercase tracking-[0.15em] font-bold hover:bg-primary-container transition-all duration-150">
+                            Start free
+                        </button>
+<a class="flex items-center space-x-2 group" href="#">
+<span class="text-xs uppercase tracking-[0.15em] font-bold border-b border-on-surface pb-0.5 group-hover:text-primary group-hover:border-primary transition-colors">Watch demo</span>
+<span class="material-symbols-outlined text-sm" data-icon="arrow_forward">arrow_forward</span>
+</a>
+</div>
+</div>
+</div>
+<!-- Vertical Separator (Hairline) -->
+<div class="hidden md:block vertical-rule"></div>
+<!-- Right Column: The Vignette (40%) -->
+<div class="md:col-span-4 flex flex-col justify-center relative mt-12 md:mt-0 md:pl-12 lg:pl-16">
+<!-- Document Snippet -->
+<div class="bg-surface-container-lowest border border-outline-variant p-8 relative">
+<div class="space-y-4 opacity-40">
+<div class="h-2 w-1/4 bg-on-surface-variant"></div>
+<div class="h-2 w-full bg-on-surface-variant"></div>
+<div class="h-2 w-full bg-on-surface-variant"></div>
+<div class="h-2 w-5/6 bg-on-surface-variant"></div>
+</div>
+<!-- Highlighted Section -->
+<div class="my-6 py-2 relative">
+<div class="absolute inset-0 bg-secondary-fixed opacity-40"></div>
+<p class="serif-display text-lg leading-relaxed relative z-10 text-on-surface italic">
+                            "The consistent growth patterns identified in the Q3 technical assessment suggest an untapped 14% margin efficiency..."
+                        </p>
+</div>
+<div class="space-y-4 opacity-40">
+<div class="h-2 w-full bg-on-surface-variant"></div>
+<div class="h-2 w-2/3 bg-on-surface-variant"></div>
+</div>
+<!-- Connection Line & Citation Card -->
+<div class="absolute -right-4 md:-right-12 top-1/2 flex items-center">
+<div class="w-12 h-[1px] bg-outline-variant"></div>
+<div class="bg-surface-container-high border border-outline-variant p-4 w-56 transform translate-x-4 shadow-sm">
+<div class="flex items-start justify-between mb-2">
+<span class="font-label text-[9px] tracking-widest text-on-surface-variant uppercase font-bold">Citation</span>
+<span class="material-symbols-outlined text-[14px] text-primary" data-icon="verified" style="font-variation-settings: 'FILL' 1;">verified</span>
+</div>
+<p class="font-body text-[11px] leading-tight text-on-surface font-medium">
+                                p. 12, ¶ 3 — Annual Report.pdf
+                            </p>
+<div class="mt-3 flex items-center justify-between text-[9px] text-zinc-400">
+<span class="uppercase tracking-tighter">Verified by LLM-4</span>
+<span class="underline underline-offset-2 uppercase tracking-tighter cursor-pointer hover:text-primary">View Source</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Metadata Marginalia -->
+<div class="mt-8">
+<div class="font-label text-[9px] tracking-widest text-on-surface-variant uppercase border-l-2 border-primary pl-4">
+                        Archive No. 429-B<br/>
+                        Status: Indexed
+                    </div>
+</div>
+</div>
+</section>
+<!-- Footer Language Row -->
+<footer class="bg-[#f9f9f6] dark:bg-zinc-950 border-t border-zinc-300 dark:border-zinc-800 mt-auto">
+<div class="flex flex-col md:flex-row justify-between items-center w-full px-6 py-8 max-w-screen-2xl mx-auto">
+<div class="flex flex-wrap justify-center md:justify-start gap-4 mb-4 md:mb-0">
+<span class="font-sans text-[10px] uppercase tracking-widest text-zinc-400">English</span>
+<span class="text-zinc-300">•</span>
+<span class="font-sans text-[10px] uppercase tracking-widest text-zinc-400">中文</span>
+<span class="text-zinc-300">•</span>
+<span class="font-sans text-[10px] uppercase tracking-widest text-zinc-400">日本語</span>
+<span class="text-zinc-300">•</span>
+<span class="font-sans text-[10px] uppercase tracking-widest text-zinc-400">한국어</span>
+<span class="text-zinc-300">•</span>
+<span class="font-sans text-[10px] uppercase tracking-widest text-zinc-400">Español</span>
+<span class="text-zinc-300">•</span>
+<span class="font-sans text-[10px] uppercase tracking-widest text-zinc-400">Deutsch</span>
+<span class="text-zinc-300">•</span>
+<span class="font-sans text-[10px] uppercase tracking-widest text-zinc-400">Français</span>
+<span class="text-zinc-300">•</span>
+<span class="font-sans text-[10px] uppercase tracking-widest text-zinc-400">Português</span>
+<span class="text-zinc-300">•</span>
+<span class="font-sans text-[10px] uppercase tracking-widest text-zinc-400">Italiano</span>
+<span class="text-zinc-300">•</span>
+<span class="font-sans text-[10px] uppercase tracking-widest text-zinc-400">العربية</span>
+<span class="text-zinc-300">•</span>
+<span class="font-sans text-[10px] uppercase tracking-widest text-zinc-400">हिन्दी</span>
+</div>
+<div class="font-sans text-xs uppercase tracking-widest text-zinc-500">
+                    © 2024 DOCTALK. ALL RIGHTS RESERVED.
+                </div>
+</div>
+</footer>
+</main>
+</body></html>

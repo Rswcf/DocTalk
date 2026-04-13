@@ -86,7 +86,7 @@ function LandingPageContent() {
             "see it actually run" proof for visitors who want more. */}
         <section className="w-full px-4 sm:px-8 lg:px-16 py-16">
           <div className="max-w-6xl mx-auto">
-            <h2 className="font-semibold tracking-tight text-3xl text-zinc-900 dark:text-zinc-50 text-center mb-8 text-balance">
+            <h2 className="font-serif font-semibold tracking-tight text-3xl text-zinc-900 dark:text-zinc-50 text-center mb-8 text-balance">
               {t('landing.showcase.title')}
             </h2>
           </div>
@@ -126,7 +126,7 @@ function LandingPageContent() {
               <p className="text-sm font-medium uppercase tracking-[0.18em] text-zinc-500 dark:text-zinc-300 mb-3">
                 {t('home.explore.eyebrow')}
               </p>
-              <h2 className="font-semibold tracking-tight text-3xl text-zinc-900 dark:text-zinc-50 mb-4">
+              <h2 className="font-serif font-semibold tracking-tight text-3xl text-zinc-900 dark:text-zinc-50 mb-4">
                 {t('home.explore.title')}
               </h2>
               <p className="text-base text-zinc-600 dark:text-zinc-300 leading-relaxed">
@@ -144,7 +144,7 @@ function LandingPageContent() {
                     <h3 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">
                       {path.title}
                     </h3>
-                    <span className="text-sm text-zinc-400 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
+                    <span className="text-sm text-zinc-400 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
                       →
                     </span>
                   </div>

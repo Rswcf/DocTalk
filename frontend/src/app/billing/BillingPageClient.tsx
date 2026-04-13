@@ -361,14 +361,14 @@ function BillingContent() {
                 onClick={() => setSelectedPlan('plus')}
                 className={`relative rounded-xl p-0.5 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-shadow transition-transform duration-200 cursor-pointer ${
                   selectedPlan === 'plus'
-                    ? 'bg-gradient-to-r from-indigo-500 to-violet-500'
+                    ? 'bg-gradient-to-r from-blue-500 to-violet-500'
                     : 'bg-zinc-200 dark:bg-zinc-800'
                 }`}
               >
                 <div className="rounded-xl bg-white dark:bg-zinc-900 p-6 h-full flex flex-col">
                   <div className="flex items-center gap-2 mb-1">
                     <h2 className="text-xl font-semibold text-zinc-900 dark:text-zinc-50">{t("billing.plus.title")}</h2>
-                    <span className="text-xs px-2 py-0.5 rounded-full bg-indigo-600 dark:bg-indigo-500 text-white font-medium">
+                    <span className="text-xs px-2 py-0.5 rounded-full bg-blue-600 dark:bg-blue-500 text-white font-medium">
                       {t("billing.mostPopular")}
                     </span>
                   </div>
@@ -414,7 +414,7 @@ function BillingContent() {
                     <button
                       onClick={() => handlePlanAction('plus')}
                       disabled={submitting !== null}
-                      className="w-full px-4 py-2.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-500 dark:hover:bg-indigo-400 text-white disabled:opacity-50 shadow-sm hover:shadow-md transition-colors font-medium focus-visible:ring-2 focus-visible:ring-zinc-400 dark:focus-visible:ring-zinc-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-900"
+                      className="w-full px-4 py-2.5 rounded-lg bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-400 text-white disabled:opacity-50 shadow-sm hover:shadow-md transition-colors font-medium focus-visible:ring-2 focus-visible:ring-zinc-400 dark:focus-visible:ring-zinc-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-900"
                     >
                       {submitting === 'plus' ? t("common.loading") : `${t("billing.upgrade")} Plus`}
                     </button>
@@ -427,7 +427,7 @@ function BillingContent() {
                 onClick={() => setSelectedPlan('pro')}
                 className={`relative rounded-xl p-0.5 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-shadow transition-transform duration-200 cursor-pointer ${
                   selectedPlan === 'pro'
-                    ? 'bg-gradient-to-r from-indigo-500 to-violet-500'
+                    ? 'bg-gradient-to-r from-blue-500 to-violet-500'
                     : 'bg-zinc-200 dark:bg-zinc-800'
                 }`}
               >

@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>DocTalk — Clinical Vanguard Viewer</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;900&amp;family=Space+Grotesk:wght@300..700&amp;family=Bricolage+Grotesque:wght@800&amp;family=JetBrains+Mono:wght@400;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "on-secondary": "#ffffff",
+                        "tertiary-fixed-dim": "#474747",
+                        "surface-dim": "#dcdad4",
+                        "on-secondary-fixed-variant": "#3b3b3b",
+                        "on-tertiary-fixed-variant": "#e2e2e2",
+                        "secondary-fixed-dim": "#ababab",
+                        "inverse-primary": "#c6c6c6",
+                        "on-error": "#ffffff",
+                        "surface-container-highest": "#e4e2dd",
+                        "on-secondary-container": "#1b1b1b",
+                        "surface-container-high": "#eae8e2",
+                        "on-primary-container": "#ffffff",
+                        "outline": "#777777",
+                        "surface-tint": "#5e5e5e",
+                        "on-background": "#1b1c18",
+                        "primary": "#000000",
+                        "on-tertiary-container": "#ffffff",
+                        "tertiary": "#3b3b3b",
+                        "surface-container-lowest": "#ffffff",
+                        "primary-fixed-dim": "#474747",
+                        "secondary-container": "#d4d4d4",
+                        "background": "#fbf9f3",
+                        "on-surface-variant": "#474747",
+                        "surface-variant": "#e4e2dd",
+                        "outline-variant": "#c6c6c6",
+                        "on-primary-fixed-variant": "#e2e2e2",
+                        "on-primary": "#e2e2e2",
+                        "primary-container": "#3b3b3b",
+                        "on-error-container": "#410002",
+                        "inverse-surface": "#30312d",
+                        "tertiary-fixed": "#5e5e5e",
+                        "surface-container": "#f0eee8",
+                        "inverse-on-surface": "#f3f1eb",
+                        "secondary-fixed": "#c6c6c6",
+                        "secondary": "#5e5e5e",
+                        "on-surface": "#1b1c18",
+                        "on-tertiary-fixed": "#ffffff",
+                        "tertiary-container": "#747474",
+                        "on-primary-fixed": "#ffffff",
+                        "on-secondary-fixed": "#1b1b1b",
+                        "surface-container-low": "#f5f3ed",
+                        "on-tertiary": "#e2e2e2",
+                        "surface": "#fbf9f3",
+                        "surface-bright": "#fbf9f3",
+                        "error-container": "#ffdad6",
+                        "error": "#ba1a1a"
+                    },
+                    fontFamily: {
+                        headline: ["Bricolage Grotesque", "Inter", "sans-serif"],
+                        mono: ["JetBrains Mono", "Space Grotesk", "monospace"],
+                        body: ["Inter", "sans-serif"]
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0px",
+                        "lg": "0px",
+                        "xl": "0px",
+                        "full": "0px"
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        body {
+            background-color: #fbf9f3;
+            color: #000000;
+        }
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #fbf9f3;
+            border-left: 1px solid #000000;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #000000;
+        }
+    </style>
+</head>
+<body class="flex h-screen overflow-hidden font-body selection:bg-black selection:text-white">
+<!-- SIDE NAV (240px) -->
+<aside class="w-64 flex flex-col h-full bg-[#fbf9f3] border-r-2 border-black z-30">
+<div class="px-6 py-8 border-b-2 border-black flex flex-col gap-1">
+<h1 class="font-headline text-3xl font-black tracking-tighter leading-none uppercase">DOCTALK</h1>
+<p class="font-mono text-[10px] tracking-widest text-black/60">V.01-ALPHA // CLINICAL_VANGUARD</p>
+</div>
+<div class="flex-1 overflow-y-auto p-4 space-y-3">
+<div class="flex items-center justify-between font-mono text-[10px] font-bold pb-2 opacity-50">
+<span>ACTIVE_ARCHIVE</span>
+<span class="material-symbols-outlined text-sm" data-icon="folder_open">folder_open</span>
+</div>
+<div class="space-y-2">
+<!-- Active Item -->
+<div class="border-2 border-black bg-black text-white p-3 flex flex-col gap-1 transition-none group cursor-pointer">
+<span class="font-mono text-[11px] font-bold leading-tight">ANNUAL-REPORT-2024.PDF</span>
+<div class="flex justify-between items-center opacity-60">
+<span class="font-mono text-[9px]">PDF / 12 PAGES</span>
+<span class="material-symbols-outlined text-xs" data-icon="check_circle" style="font-variation-settings: 'FILL' 1;">check_circle</span>
+</div>
+</div>
+<div class="border border-black bg-[#fbf9f3] text-black p-3 flex flex-col gap-1 hover:bg-black hover:text-white transition-none group cursor-pointer">
+<span class="font-mono text-[11px] font-bold leading-tight">QUARTERLY_STAKES.DOCX</span>
+<div class="flex justify-between items-center opacity-60">
+<span class="font-mono text-[9px]">DOCX / 04 PAGES</span>
+</div>
+</div>
+<div class="border border-black bg-[#fbf9f3] text-black p-3 flex flex-col gap-1 hover:bg-black hover:text-white transition-none group cursor-pointer">
+<span class="font-mono text-[11px] font-bold leading-tight">REVENUE_AUDIT_Q3.PDF</span>
+<div class="flex justify-between items-center opacity-60">
+<span class="font-mono text-[9px]">PDF / 88 PAGES</span>
+</div>
+</div>
+</div>
+</div>
+<div class="p-4 border-t-2 border-black">
+<button class="w-full bg-black text-white font-mono font-black text-sm py-4 border-2 border-black hover:bg-[#fbf9f3] hover:text-black transition-none flex items-center justify-center gap-2">
+<span class="material-symbols-outlined text-base" data-icon="add">add</span>
+                NEW SESSION
+            </button>
+<div class="mt-4 flex items-center gap-3 font-mono text-[10px] opacity-50 px-2">
+<span class="material-symbols-outlined text-sm" data-icon="logout">logout</span>
+<span>SYSTEM_LOGOUT</span>
+</div>
+</div>
+</aside>
+<main class="flex-1 flex flex-col relative">
+<!-- TOP BAR -->
+<header class="h-16 flex items-center justify-between px-6 border-b-2 border-black bg-[#fbf9f3] z-20">
+<div class="flex items-center gap-4 font-mono text-[11px] font-bold">
+<span class="opacity-40">HOME</span>
+<span class="opacity-40">/</span>
+<span class="opacity-40">DOCS</span>
+<span class="opacity-40">/</span>
+<span class="text-black">ANNUAL-REPORT-2024.PDF</span>
+</div>
+<div class="flex gap-0">
+<button class="font-mono text-[10px] font-bold border border-black px-4 py-1 hover:bg-black hover:text-white transition-none">QUICK</button>
+<button class="font-mono text-[10px] font-bold border border-black px-4 py-1 hover:bg-black hover:text-white transition-none">BALANCED</button>
+<button class="font-mono text-[10px] font-bold border-2 border-black bg-black text-white px-4 py-1 transition-none">THOROUGH</button>
+</div>
+<div class="flex items-center gap-4">
+<span class="material-symbols-outlined cursor-pointer hover:rotate-90 transition-none" data-icon="settings">settings</span>
+<div class="w-8 h-8 border-2 border-black bg-white flex items-center justify-center overflow-hidden">
+<img alt="User profile" class="w-full h-full object-cover" data-alt="close-up portrait of a professional in clinical attire against a minimalist beige studio background with sharp lighting" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCoPySS8RAJIT_yDUoXgXvQDfMAV4_f6dEV2nlH-TV5vvZ9drOgFpTKU1LlTFidHewyichxAh_ex_CIlzaNe2v9_JAFKbU8kv2-bq-vTJu2BGviZN1MxN8ZjMVq8CwStCwxJKjhnOt24x17BdASbiYs3PXhjuLn0CjGC1Wd_1M0R8vLkYVMh9IrN1_ye5OZlMMguAqeEJENZVNpljmQ74GjS6psUAgXA65GZGxgFNnpbqwAFny0yEV8K9oPrXC3BqDF0PL0Jrwz4-h2"/>
+</div>
+</div>
+</header>
+<div class="flex-1 flex overflow-hidden">
+<!-- CENTER PDF VIEWER (760px approx) -->
+<section class="flex-1 flex flex-col bg-[#f0eee8] overflow-hidden">
+<!-- Viewer Meta Header -->
+<div class="bg-black text-white py-1 px-6 flex justify-between items-center font-mono text-[9px] tracking-[0.2em]">
+<span>FILE: ANNUAL-REPORT-2024.PDF</span>
+<span>STATUS: ANALYZED_V.04</span>
+<span>PAGE 12 / 48</span>
+</div>
+<!-- PDF Content Area -->
+<div class="flex-1 overflow-y-auto p-12 flex justify-center">
+<div class="w-full max-w-2xl bg-[#fbf9f3] border-2 border-black p-16 relative">
+<!-- Navigation Overlays -->
+<div class="absolute inset-y-0 -left-6 flex items-center">
+<button class="w-12 h-12 bg-black text-white border-2 border-black flex items-center justify-center hover:bg-[#fbf9f3] hover:text-black transition-none">
+<span class="material-symbols-outlined" data-icon="arrow_back">arrow_back</span>
+</button>
+</div>
+<div class="absolute inset-y-0 -right-6 flex items-center">
+<button class="w-12 h-12 bg-black text-white border-2 border-black flex items-center justify-center hover:bg-[#fbf9f3] hover:text-black transition-none">
+<span class="material-symbols-outlined" data-icon="arrow_forward">arrow_forward</span>
+</button>
+</div>
+<!-- Typeset Content -->
+<div class="space-y-6 text-justify">
+<h2 class="font-headline text-4xl font-black leading-tight uppercase border-b-2 border-black pb-4 mb-8">Executive Fiscal Summary</h2>
+<p class="text-sm leading-relaxed text-black/80">
+                                The fiscal year ending 2024 demonstrated an unprecedented shift in clinical allocation strategies. We observed a persistent 14% delta in operational overhead compared to the projected Q3 baseline. This discrepancy is largely attributed to the accelerated deployment of automated diagnostic protocols within the Northeast clinical hubs.
+                            </p>
+<div class="bg-black text-white px-1 inline-block font-mono text-[10px] mb-2 uppercase">Analysis segment #024</div>
+<p class="text-sm leading-relaxed text-black/80">
+<span class="border-b-4 border-black font-bold">Preliminary data suggests that the integration of localized AI agents has reduced friction in document verification cycles by 400ms per transaction.</span> In contrast, standard manual review remains tethered to a 4.2-minute latency period per file. 
+                            </p>
+<p class="text-sm leading-relaxed text-black/80 italic border-l-4 border-black pl-4 py-1">
+                                "The velocity of information transfer is no longer a luxury; it is the fundamental infrastructure upon which modern clinical decisions are rendered."
+                            </p>
+<p class="text-sm leading-relaxed text-black/80">
+                                Future trajectories indicate a move toward decentralized data ingestion, where the document viewer itself becomes an active participant in the diagnostic chain rather than a passive interface. This requires a rethink of our archival protocols.
+                            </p>
+</div>
+<!-- Footer Ticket -->
+<div class="mt-20 pt-8 border-t border-black/20 flex justify-between font-mono text-[10px] opacity-40">
+<span>REF: 0092-2024-X-ALPHA</span>
+<span>PAGE_INDEX_12</span>
+</div>
+</div>
+</div>
+</section>
+<!-- RIGHT CHAT PANEL (420px) -->
+<section class="w-[420px] bg-[#fbf9f3] border-l-2 border-black flex flex-col h-full z-10">
+<div class="p-6 border-b-2 border-black flex items-center justify-between">
+<span class="font-mono text-[11px] font-black uppercase tracking-widest">SESSION_CHAT</span>
+<span class="w-2 h-2 bg-black animate-pulse"></span>
+</div>
+<div class="flex-1 overflow-y-auto p-6 space-y-6">
+<!-- User Message -->
+<div class="flex flex-col items-end gap-2">
+<div class="max-w-[85%] border-2 border-black p-4 bg-[#fbf9f3]">
+<p class="text-[13px] leading-tight">Summarize the fiscal shift mentioned on page 12 and its impact on Q3 overhead.</p>
+</div>
+<span class="font-mono text-[9px] opacity-40 uppercase">USER // 14:02:11</span>
+</div>
+<!-- AI Message -->
+<div class="flex flex-col items-start gap-2">
+<div class="max-w-[90%] bg-black text-white border-2 border-black p-4 relative">
+<div class="font-mono text-[9px] text-[#fbf9f3]/60 mb-2">// ANSWER_STREAMING</div>
+<p class="text-[13px] leading-relaxed">
+                                Based on Page 12, the fiscal shift is defined as a <span class="bg-white text-black px-1 font-bold">14% delta</span> in operational overhead. This was caused by the rapid deployment of automated diagnostic protocols. 
+                                <button class="inline-flex items-center gap-1 border border-white/40 px-1 ml-1 font-mono text-[9px] hover:bg-white hover:text-black">[01]</button>
+</p>
+<p class="text-[13px] leading-relaxed mt-3">
+                                The impact on Q3 is a transition toward automated verification cycles, reducing transaction friction significantly compared to manual baseline.
+                            </p>
+</div>
+<span class="font-mono text-[9px] opacity-40 uppercase">DOCTALK_CORE // 14:02:14</span>
+</div>
+<!-- User Message -->
+<div class="flex flex-col items-end gap-2">
+<div class="max-w-[85%] border-2 border-black p-4 bg-[#fbf9f3]">
+<p class="text-[13px] leading-tight">Does this suggest a headcount reduction?</p>
+</div>
+<span class="font-mono text-[9px] opacity-40 uppercase">USER // 14:04:45</span>
+</div>
+</div>
+<!-- Input Area -->
+<div class="p-6 border-t-2 border-black bg-[#fbf9f3]">
+<div class="relative flex items-center border-2 border-black bg-white group">
+<input class="w-full bg-transparent border-none focus:ring-0 font-mono text-sm py-4 px-4 placeholder:text-black/30 placeholder:uppercase" placeholder="TYPE_YOUR_QUESTION..." type="text"/>
+<button class="h-full px-6 bg-black text-white hover:bg-[#fbf9f3] hover:text-black border-l-2 border-black transition-none flex items-center justify-center">
+<span class="material-symbols-outlined" data-icon="arrow_forward">arrow_forward</span>
+</button>
+</div>
+<div class="mt-4 flex flex-wrap gap-2">
+<span class="border border-black px-2 py-1 font-mono text-[9px] cursor-pointer hover:bg-black hover:text-white transition-none">#REVENUE_ANALYSIS</span>
+<span class="border border-black px-2 py-1 font-mono text-[9px] cursor-pointer hover:bg-black hover:text-white transition-none">#PROTOCOL_AUDIT</span>
+<span class="border border-black px-2 py-1 font-mono text-[9px] cursor-pointer hover:bg-black hover:text-white transition-none">#Q3_BASELINE</span>
+</div>
+</div>
+</section>
+</div>
+</main>
+<!-- FLOATING STATUS BAR (BOTTOM) -->
+<footer class="fixed bottom-0 left-0 right-0 h-8 bg-black text-white border-t-2 border-black flex items-center px-6 justify-between z-50 font-mono text-[9px] tracking-widest pointer-events-none">
+<div class="flex gap-6">
+<span>NETWORK: SECURE_AES_256</span>
+<span>TOKEN_USAGE: 0.12%</span>
+</div>
+<div class="flex gap-6">
+<span>SYSTEM: NOMINAL</span>
+<span>2024-05-22 // 14:05:01</span>
+</div>
+</footer>
+</body></html>

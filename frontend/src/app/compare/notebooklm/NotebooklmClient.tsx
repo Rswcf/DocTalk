@@ -64,7 +64,7 @@ export default function NotebooklmClient() {
             <span className="text-zinc-900 dark:text-zinc-100">{t('compareNotebooklm.breadcrumb.current')}</span>
           </nav>
 
-          <h1 className="text-3xl sm:text-4xl font-semibold text-zinc-900 dark:text-zinc-100 mb-6 tracking-tight">
+          <h1 className="font-serif text-3xl sm:text-4xl font-semibold text-zinc-900 dark:text-zinc-100 mb-6 tracking-tight">
             {t('compareNotebooklm.heroTitle')}
           </h1>
           <p className="text-lg text-zinc-600 dark:text-zinc-300 leading-relaxed">
@@ -126,7 +126,7 @@ export default function NotebooklmClient() {
             </p>
             <p className="text-zinc-600 dark:text-zinc-300 leading-relaxed">
               {t('compareNotebooklm.feature.formatSupportP2Pre')}
-              <Link href="/features/multi-format" className="text-indigo-600 dark:text-indigo-400 hover:underline">
+              <Link href="/features/multi-format" className="text-blue-600 dark:text-blue-400 hover:underline">
                 {t('compareNotebooklm.feature.formatSupportLink')}
               </Link>.
             </p>
@@ -145,7 +145,7 @@ export default function NotebooklmClient() {
             </p>
             <p className="text-zinc-600 dark:text-zinc-300 leading-relaxed">
               {t('compareNotebooklm.feature.citationsP2Pre')}
-              <Link href="/features/citations" className="text-indigo-600 dark:text-indigo-400 hover:underline">
+              <Link href="/features/citations" className="text-blue-600 dark:text-blue-400 hover:underline">
                 {t('compareNotebooklm.feature.citationsLink')}
               </Link>.
             </p>
@@ -164,7 +164,7 @@ export default function NotebooklmClient() {
             </p>
             <p className="text-zinc-600 dark:text-zinc-300 leading-relaxed">
               {t('compareNotebooklm.feature.languagesP2Pre')}
-              <Link href="/features/multilingual" className="text-indigo-600 dark:text-indigo-400 hover:underline">
+              <Link href="/features/multilingual" className="text-blue-600 dark:text-blue-400 hover:underline">
                 {t('compareNotebooklm.feature.languagesLink')}
               </Link>.
             </p>
@@ -183,9 +183,9 @@ export default function NotebooklmClient() {
             </p>
             <p className="text-zinc-600 dark:text-zinc-300 leading-relaxed">
               {t('compareNotebooklm.feature.pricingP2Pre')}
-              <Link href="/demo" className="text-indigo-600 dark:text-indigo-400 hover:underline">{t('compareNotebooklm.feature.pricingDemoLink')}</Link>
+              <Link href="/demo" className="text-blue-600 dark:text-blue-400 hover:underline">{t('compareNotebooklm.feature.pricingDemoLink')}</Link>
               {t('compareNotebooklm.feature.pricingP2Mid')}
-              <Link href="/pricing" className="text-indigo-600 dark:text-indigo-400 hover:underline">{t('compareNotebooklm.feature.pricingPricingLink')}</Link>.
+              <Link href="/pricing" className="text-blue-600 dark:text-blue-400 hover:underline">{t('compareNotebooklm.feature.pricingPricingLink')}</Link>.
             </p>
           </div>
 
@@ -296,7 +296,7 @@ export default function NotebooklmClient() {
             </p>
             <p className="text-zinc-600 dark:text-zinc-300 leading-relaxed font-medium">
               {t('compareNotebooklm.verdictP3Pre')}
-              <Link href="/demo" className="text-indigo-600 dark:text-indigo-400 hover:underline">
+              <Link href="/demo" className="text-blue-600 dark:text-blue-400 hover:underline">
                 {t('compareNotebooklm.verdictDemoLink')}
               </Link>
               {t('compareNotebooklm.verdictP3Post')}

@@ -112,7 +112,7 @@ export default function FreeDemoClient() {
               <PlayCircle className="w-4 h-4" />
               {t('featuresDemo.badge')}
             </div>
-            <h1 className="text-3xl sm:text-4xl lg:text-5xl font-semibold text-zinc-900 dark:text-zinc-100 tracking-tight mb-6 leading-tight">
+            <h1 className="font-serif text-3xl sm:text-4xl lg:text-5xl font-semibold text-zinc-900 dark:text-zinc-100 tracking-tight mb-6 leading-tight">
               {t('featuresDemo.hero.title')}
             </h1>
             <p className="text-lg text-zinc-600 dark:text-zinc-300 max-w-2xl mx-auto mb-8">
@@ -131,7 +131,7 @@ export default function FreeDemoClient() {
         {/* Instant Demo */}
         <section className="bg-zinc-50 dark:bg-zinc-900/50">
           <div className="max-w-4xl mx-auto px-6 py-16">
-            <h2 className="text-2xl sm:text-3xl font-semibold text-zinc-900 dark:text-zinc-100 tracking-tight mb-4 text-center">
+            <h2 className="font-serif text-2xl sm:text-3xl font-semibold text-zinc-900 dark:text-zinc-100 tracking-tight mb-4 text-center">
               {t('featuresDemo.instant.title')}
             </h2>
             <p className="text-zinc-600 dark:text-zinc-300 text-center max-w-2xl mx-auto mb-12">
@@ -162,7 +162,7 @@ export default function FreeDemoClient() {
         {/* What You Get */}
         <section className="bg-white dark:bg-zinc-950">
           <div className="max-w-4xl mx-auto px-6 py-16">
-            <h2 className="text-2xl sm:text-3xl font-semibold text-zinc-900 dark:text-zinc-100 tracking-tight mb-6 text-center">
+            <h2 className="font-serif text-2xl sm:text-3xl font-semibold text-zinc-900 dark:text-zinc-100 tracking-tight mb-6 text-center">
               {t('featuresDemo.whatYouGet.title')}
             </h2>
 
@@ -187,7 +187,7 @@ export default function FreeDemoClient() {
         {/* Free Plan vs Paid */}
         <section className="bg-zinc-50 dark:bg-zinc-900/50">
           <div className="max-w-4xl mx-auto px-6 py-16">
-            <h2 className="text-2xl sm:text-3xl font-semibold text-zinc-900 dark:text-zinc-100 tracking-tight mb-4 text-center">
+            <h2 className="font-serif text-2xl sm:text-3xl font-semibold text-zinc-900 dark:text-zinc-100 tracking-tight mb-4 text-center">
               {t('featuresDemo.compare.title')}
             </h2>
             <p className="text-zinc-600 dark:text-zinc-300 text-center max-w-2xl mx-auto mb-10">
@@ -231,7 +231,7 @@ export default function FreeDemoClient() {
         {/* How to Get Started */}
         <section className="bg-white dark:bg-zinc-950">
           <div className="max-w-4xl mx-auto px-6 py-16">
-            <h2 className="text-2xl sm:text-3xl font-semibold text-zinc-900 dark:text-zinc-100 tracking-tight mb-12 text-center">
+            <h2 className="font-serif text-2xl sm:text-3xl font-semibold text-zinc-900 dark:text-zinc-100 tracking-tight mb-12 text-center">
               {t('featuresDemo.steps.title')}
             </h2>
 
@@ -260,7 +260,7 @@ export default function FreeDemoClient() {
         {/* FAQ */}
         <section className="bg-zinc-50 dark:bg-zinc-900/50">
           <div className="max-w-4xl mx-auto px-6 py-16">
-            <h2 className="text-2xl sm:text-3xl font-semibold text-zinc-900 dark:text-zinc-100 tracking-tight mb-10 text-center">
+            <h2 className="font-serif text-2xl sm:text-3xl font-semibold text-zinc-900 dark:text-zinc-100 tracking-tight mb-10 text-center">
               {t('featuresDemo.faq.title')}
             </h2>
 
@@ -285,7 +285,7 @@ export default function FreeDemoClient() {
         {/* CTA Banner */}
         <section className="bg-white dark:bg-zinc-950">
           <div className="max-w-4xl mx-auto px-6 py-20 text-center">
-            <h2 className="text-2xl sm:text-3xl font-semibold text-zinc-900 dark:text-zinc-100 tracking-tight mb-4">
+            <h2 className="font-serif text-2xl sm:text-3xl font-semibold text-zinc-900 dark:text-zinc-100 tracking-tight mb-4">
               {t('featuresDemo.cta.title')}
             </h2>
             <p className="text-zinc-600 dark:text-zinc-300 max-w-xl mx-auto mb-8">
@@ -300,15 +300,15 @@ export default function FreeDemoClient() {
             </Link>
 
             <div className="mt-10 flex flex-wrap items-center justify-center gap-4 text-sm">
-              <Link href="/pricing" className="text-indigo-600 dark:text-indigo-400 hover:underline">
+              <Link href="/pricing" className="text-blue-600 dark:text-blue-400 hover:underline">
                 {t('featuresDemo.cta.linkPricing')}
               </Link>
               <span className="text-zinc-300 dark:text-zinc-700">|</span>
-              <Link href="/features/citations" className="text-indigo-600 dark:text-indigo-400 hover:underline">
+              <Link href="/features/citations" className="text-blue-600 dark:text-blue-400 hover:underline">
                 {t('featuresDemo.cta.linkCitations')}
               </Link>
               <span className="text-zinc-300 dark:text-zinc-700">|</span>
-              <Link href="/features/multi-format" className="text-indigo-600 dark:text-indigo-400 hover:underline">
+              <Link href="/features/multi-format" className="text-blue-600 dark:text-blue-400 hover:underline">
                 {t('featuresDemo.cta.linkMultiFormat')}
               </Link>
             </div>

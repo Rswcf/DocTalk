@@ -64,7 +64,7 @@ export default function ChatpdfClient() {
             <span className="text-zinc-900 dark:text-zinc-100">{t('compareChatpdf.breadcrumb.current')}</span>
           </nav>
 
-          <h1 className="text-3xl sm:text-4xl font-semibold text-zinc-900 dark:text-zinc-100 mb-6 tracking-tight">
+          <h1 className="font-serif text-3xl sm:text-4xl font-semibold text-zinc-900 dark:text-zinc-100 mb-6 tracking-tight">
             {t('compareChatpdf.heroTitle')}
           </h1>
           <p className="text-lg text-zinc-600 dark:text-zinc-300 leading-relaxed">
@@ -126,7 +126,7 @@ export default function ChatpdfClient() {
             </p>
             <p className="text-zinc-600 dark:text-zinc-300 leading-relaxed">
               {t('compareChatpdf.feature.formatSupportP2Pre')}
-              <Link href="/features/multi-format" className="text-indigo-600 dark:text-indigo-400 hover:underline">
+              <Link href="/features/multi-format" className="text-blue-600 dark:text-blue-400 hover:underline">
                 {t('compareChatpdf.feature.formatSupportLink')}
               </Link>
               {t('compareChatpdf.feature.formatSupportP2Post')}
@@ -146,7 +146,7 @@ export default function ChatpdfClient() {
             </p>
             <p className="text-zinc-600 dark:text-zinc-300 leading-relaxed">
               {t('compareChatpdf.feature.citationsP2Pre')}
-              <Link href="/features/citations" className="text-indigo-600 dark:text-indigo-400 hover:underline">
+              <Link href="/features/citations" className="text-blue-600 dark:text-blue-400 hover:underline">
                 {t('compareChatpdf.feature.citationsLink')}
               </Link>.
             </p>
@@ -165,7 +165,7 @@ export default function ChatpdfClient() {
             </p>
             <p className="text-zinc-600 dark:text-zinc-300 leading-relaxed">
               {t('compareChatpdf.feature.languagesP2Pre')}
-              <Link href="/features/multilingual" className="text-indigo-600 dark:text-indigo-400 hover:underline">
+              <Link href="/features/multilingual" className="text-blue-600 dark:text-blue-400 hover:underline">
                 {t('compareChatpdf.feature.languagesLink')}
               </Link>
               {t('compareChatpdf.feature.languagesP2Post')}
@@ -185,9 +185,9 @@ export default function ChatpdfClient() {
             </p>
             <p className="text-zinc-600 dark:text-zinc-300 leading-relaxed">
               {t('compareChatpdf.feature.pricingP2Pre')}
-              <Link href="/demo" className="text-indigo-600 dark:text-indigo-400 hover:underline">{t('compareChatpdf.feature.pricingDemoLink')}</Link>
+              <Link href="/demo" className="text-blue-600 dark:text-blue-400 hover:underline">{t('compareChatpdf.feature.pricingDemoLink')}</Link>
               {t('compareChatpdf.feature.pricingP2Mid')}
-              <Link href="/pricing" className="text-indigo-600 dark:text-indigo-400 hover:underline">
+              <Link href="/pricing" className="text-blue-600 dark:text-blue-400 hover:underline">
                 {t('compareChatpdf.feature.pricingLink')}
               </Link>.
             </p>
@@ -296,7 +296,7 @@ export default function ChatpdfClient() {
             </p>
             <p className="text-zinc-600 dark:text-zinc-300 leading-relaxed font-medium">
               {t('compareChatpdf.verdictP3Pre')}
-              <Link href="/demo" className="text-indigo-600 dark:text-indigo-400 hover:underline">
+              <Link href="/demo" className="text-blue-600 dark:text-blue-400 hover:underline">
                 {t('compareChatpdf.verdictDemoLink')}
               </Link>
               {t('compareChatpdf.verdictP3Post')}

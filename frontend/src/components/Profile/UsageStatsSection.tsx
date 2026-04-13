@@ -4,6 +4,7 @@ import React, { useEffect, useState } from "react";
 import type { UserProfile, UsageBreakdown } from "../../types";
 import { useLocale } from "../../i18n";
 import { getUsageBreakdown } from "../../lib/api";
+import { Spinner } from "../spell";
 import {
   FileText,
   MessageSquare,
@@ -90,7 +91,7 @@ export default function UsageStatsSection({ profile }: Props) {
       {/* Mode breakdown */}
       {loading ? (
         <div className="flex items-center gap-2 text-zinc-600 dark:text-zinc-400">
-          <div className="animate-spin h-5 w-5 border-2 border-zinc-300 border-t-transparent rounded-full" />
+          <Spinner variant="circle" size="sm" label={t("common.loading")} />
           <span>{t("common.loading")}</span>
         </div>
       ) : error ? (

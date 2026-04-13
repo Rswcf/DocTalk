@@ -135,9 +135,9 @@ export default function ComplianceClient() {
         {/* Breadcrumb */}
         <div className="max-w-4xl mx-auto px-6 pt-8">
           <nav className="flex items-center text-sm text-zinc-500 dark:text-zinc-300 space-x-1">
-            <Link href="/" className="hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">Home</Link>
+            <Link href="/" className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors">Home</Link>
             <ChevronRight className="w-3 h-3" />
-            <Link href="/use-cases" className="hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">Use Cases</Link>
+            <Link href="/use-cases" className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors">Use Cases</Link>
             <ChevronRight className="w-3 h-3" />
             <span className="text-zinc-900 dark:text-zinc-100">Compliance &amp; Risk</span>
           </nav>
@@ -148,7 +148,7 @@ export default function ComplianceClient() {
           <div className="w-14 h-14 rounded-xl bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center mx-auto mb-6">
             <Shield className="w-7 h-7 text-zinc-600 dark:text-zinc-300" />
           </div>
-          <h1 className="text-3xl sm:text-4xl font-semibold text-zinc-900 dark:text-zinc-100 tracking-tight mb-4">
+          <h1 className="font-serif text-3xl sm:text-4xl font-semibold text-zinc-900 dark:text-zinc-100 tracking-tight mb-4">
             AI Document Analysis for Compliance and Risk Teams
           </h1>
           <p className="text-lg text-zinc-500 dark:text-zinc-300 max-w-2xl mx-auto mb-8">
@@ -178,7 +178,7 @@ export default function ComplianceClient() {
               </p>
               <p className="text-zinc-600 dark:text-zinc-300 mb-4">
                 Resources like the{' '}
-                <a href="https://www.complianceweek.com/" target="_blank" rel="noopener noreferrer" className="text-indigo-600 dark:text-indigo-400 hover:underline">Compliance Week</a>
+                <a href="https://www.complianceweek.com/" target="_blank" rel="noopener noreferrer" className="text-blue-600 dark:text-blue-400 hover:underline">Compliance Week</a>
                 {' '}report on how regulatory complexity continues to grow across industries, increasing the document review burden for compliance professionals.
               </p>
               <p className="text-zinc-600 dark:text-zinc-300">
@@ -224,7 +224,7 @@ export default function ComplianceClient() {
             </h2>
             <p className="text-zinc-600 dark:text-zinc-300 mb-6">
               DocTalk works with the document formats used in compliance and risk management. See{' '}
-              <Link href="/features/multi-format" className="text-indigo-600 dark:text-indigo-400 hover:underline">
+              <Link href="/features/multi-format" className="text-blue-600 dark:text-blue-400 hover:underline">
                 all supported formats
               </Link>
               {' '}for the full list.
@@ -281,7 +281,7 @@ export default function ComplianceClient() {
                   key={q}
                   className="flex items-start gap-3 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl p-4"
                 >
-                  <MessageSquare className="w-4 h-4 text-indigo-600 dark:text-indigo-400 mt-0.5 shrink-0" />
+                  <MessageSquare className="w-4 h-4 text-blue-600 dark:text-blue-400 mt-0.5 shrink-0" />
                   <span className="text-sm text-zinc-700 dark:text-zinc-200">{q}</span>
                 </div>
               ))}
@@ -363,17 +363,17 @@ export default function ComplianceClient() {
             Related Use Cases
           </h2>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <Link href="/use-cases/lawyers" className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl p-5 hover:border-indigo-300 dark:hover:border-indigo-700 transition-colors">
+            <Link href="/use-cases/lawyers" className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl p-5 hover:border-blue-300 dark:hover:border-blue-700 transition-colors">
               <Scale className="w-5 h-5 text-zinc-600 dark:text-zinc-300 mb-2" />
               <h3 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100 mb-1">Legal</h3>
               <p className="text-xs text-zinc-500 dark:text-zinc-300">Review contracts, court filings, and legal documents</p>
             </Link>
-            <Link href="/use-cases/finance" className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl p-5 hover:border-indigo-300 dark:hover:border-indigo-700 transition-colors">
+            <Link href="/use-cases/finance" className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl p-5 hover:border-blue-300 dark:hover:border-blue-700 transition-colors">
               <TrendingUp className="w-5 h-5 text-zinc-600 dark:text-zinc-300 mb-2" />
               <h3 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100 mb-1">Finance</h3>
               <p className="text-xs text-zinc-500 dark:text-zinc-300">Analyze financial reports and SEC filings</p>
             </Link>
-            <Link href="/use-cases/healthcare" className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl p-5 hover:border-indigo-300 dark:hover:border-indigo-700 transition-colors">
+            <Link href="/use-cases/healthcare" className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl p-5 hover:border-blue-300 dark:hover:border-blue-700 transition-colors">
               <Heart className="w-5 h-5 text-zinc-600 dark:text-zinc-300 mb-2" />
               <h3 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100 mb-1">Healthcare</h3>
               <p className="text-xs text-zinc-500 dark:text-zinc-300">Review clinical research and compliance documents</p>

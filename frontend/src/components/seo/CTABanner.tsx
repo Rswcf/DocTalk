@@ -17,9 +17,9 @@ export default function CTABanner({ title, description, buttonText, href, varian
     return (
       <section className="relative overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-br from-zinc-900 via-zinc-900 to-zinc-800 dark:from-zinc-50 dark:via-zinc-100 dark:to-zinc-200" />
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-indigo-500/10 via-transparent to-transparent" />
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-blue-500/10 via-transparent to-transparent" />
         <div className="relative max-w-4xl mx-auto px-6 py-20 text-center">
-          <h2 className="text-2xl sm:text-3xl font-bold text-white dark:text-zinc-900 mb-4 tracking-tight">
+          <h2 className="font-serif text-2xl sm:text-3xl font-bold text-white dark:text-zinc-900 mb-4 tracking-tight">
             {title}
           </h2>
           {description && (
@@ -42,7 +42,7 @@ export default function CTABanner({ title, description, buttonText, href, varian
   return (
     <section className="bg-zinc-50 dark:bg-zinc-900/50 border-y border-zinc-200 dark:border-zinc-800">
       <div className="max-w-4xl mx-auto px-6 py-16 text-center">
-        <h2 className="text-2xl sm:text-3xl font-bold text-zinc-900 dark:text-zinc-100 mb-4 tracking-tight">
+        <h2 className="font-serif text-2xl sm:text-3xl font-bold text-zinc-900 dark:text-zinc-100 mb-4 tracking-tight">
           {title}
         </h2>
         {description && (

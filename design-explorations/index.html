@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<title>DocTalk · Design Explorations</title>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,700;12..96,900&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet"/>
+<style>
+  :root{
+    --paper:#F5F2E8;
+    --ink:#0B0B0B;
+    --rule:#0B0B0B;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{background:var(--paper);color:var(--ink);font-family:'Bricolage Grotesque',sans-serif;-webkit-font-smoothing:antialiased}
+  .wrap{max-width:1280px;margin:0 auto;padding:48px 40px 120px}
+  header{display:flex;justify-content:space-between;align-items:flex-end;padding-bottom:28px;border-bottom:2px solid var(--ink);margin-bottom:48px}
+  .brand{font-family:'JetBrains Mono',monospace;font-weight:600;font-size:14px;letter-spacing:.1em}
+  .counter{font-family:'JetBrains Mono',monospace;font-size:12px;letter-spacing:.1em;color:#555}
+  h1{font-weight:900;font-size:clamp(56px,10vw,140px);line-height:.88;letter-spacing:-0.03em;text-transform:lowercase}
+  h1 em{font-style:normal;display:block;color:#888;font-weight:700}
+  .lede{max-width:680px;margin-top:24px;font-size:18px;line-height:1.5;color:#333}
+  .sec-title{font-family:'JetBrains Mono',monospace;font-size:12px;letter-spacing:.12em;color:#555;margin:72px 0 16px;padding-bottom:8px;border-bottom:1px solid #bbb}
+  .grid{display:grid;grid-template-columns:repeat(2,1fr);gap:28px}
+  .card{display:block;border:2px solid var(--ink);text-decoration:none;color:var(--ink);background:#fff;overflow:hidden;transition:transform .2s}
+  .card:hover{transform:translate(-3px,-3px);box-shadow:6px 6px 0 var(--ink)}
+  .card .thumb{aspect-ratio:16/10;overflow:hidden;position:relative;background:var(--paper);border-bottom:2px solid var(--ink)}
+  .card iframe{width:2560px;height:1600px;transform:scale(.25);transform-origin:top left;border:0;pointer-events:none}
+  .card .meta{padding:18px 20px 20px;display:flex;justify-content:space-between;align-items:flex-end;gap:12px}
+  .card .meta h3{font-weight:900;font-size:22px;letter-spacing:-0.01em;text-transform:lowercase}
+  .card .meta .tag{font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.1em;color:#666;white-space:nowrap}
+  .card .meta p{grid-column:1/-1;font-size:14px;line-height:1.4;color:#555;margin-top:4px}
+  .card .inner{padding:18px 20px 20px}
+  .card .inner h3{font-weight:900;font-size:22px;letter-spacing:-0.01em;text-transform:lowercase;margin-bottom:4px}
+  .card .inner .tag{font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.1em;color:#666}
+  .card .inner p{font-size:14px;line-height:1.45;color:#555;margin-top:10px}
+  .pending{opacity:.55;pointer-events:none;background:var(--paper)}
+  .pending::after{content:"// GENERATING";display:block;font-family:'JetBrains Mono',monospace;font-size:12px;letter-spacing:.1em;color:#aa0000}
+  footer{margin-top:80px;padding-top:20px;border-top:2px solid var(--ink);display:flex;justify-content:space-between;font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.1em;color:#666}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <div class="brand">DOCTALK · DESIGN_EXPLORATIONS</div>
+    </div>
+    <div class="counter">LOCAL · :7777 · 2026-04-13</div>
+  </header>
+
+  <h1>four directions.<em>one winner.</em></h1>
+  <p class="lede">Stitch-generated landing hero explorations. Picked direction: <strong>D — Brutalist</strong>. The next set extends that language to chat, pricing, upload and dashboard.</p>
+
+  <div class="sec-title">§01 — LANDING HERO VARIANTS</div>
+  <div class="grid">
+    <a class="card" href="d-brutalist.html">
+      <div class="thumb"><iframe src="d-brutalist.html" scrolling="no"></iframe></div>
+      <div class="meta"><h3>brutalist modern</h3><span class="tag">D · SELECTED</span></div>
+    </a>
+    <a class="card" href="a-editorial-v1.html">
+      <div class="thumb"><iframe src="a-editorial-v1.html" scrolling="no"></iframe></div>
+      <div class="meta"><h3>editorial · v1</h3><span class="tag">A</span></div>
+    </a>
+    <a class="card" href="a-editorial-v2.html">
+      <div class="thumb"><iframe src="a-editorial-v2.html" scrolling="no"></iframe></div>
+      <div class="meta"><h3>editorial · v2</h3><span class="tag">A</span></div>
+    </a>
+    <a class="card" href="b-aurora-glass.html">
+      <div class="thumb"><iframe src="b-aurora-glass.html" scrolling="no"></iframe></div>
+      <div class="meta"><h3>aurora glass</h3><span class="tag">B</span></div>
+    </a>
+    <a class="card" href="c-bento.html">
+      <div class="thumb"><iframe src="c-bento.html" scrolling="no"></iframe></div>
+      <div class="meta"><h3>bento expressive</h3><span class="tag">C</span></div>
+    </a>
+  </div>
+
+  <div class="sec-title">§02 — BRUTALIST — EXTENDED PAGES</div>
+  <div class="grid">
+    <a class="card" href="d-brutalist-chat.html">
+      <div class="thumb"><iframe src="d-brutalist-chat.html" scrolling="no"></iframe></div>
+      <div class="meta"><h3>chat / viewer</h3><span class="tag">D · CHAT</span></div>
+    </a>
+    <a class="card" href="d-brutalist-pricing.html">
+      <div class="thumb"><iframe src="d-brutalist-pricing.html" scrolling="no"></iframe></div>
+      <div class="meta"><h3>pricing</h3><span class="tag">D · PRICING</span></div>
+    </a>
+    <a class="card" href="d-brutalist-upload.html">
+      <div class="thumb"><iframe src="d-brutalist-upload.html" scrolling="no"></iframe></div>
+      <div class="meta"><h3>upload / empty</h3><span class="tag">D · UPLOAD</span></div>
+    </a>
+    <a class="card" href="d-brutalist-dashboard.html">
+      <div class="thumb"><iframe src="d-brutalist-dashboard.html" scrolling="no"></iframe></div>
+      <div class="meta"><h3>dashboard / archive</h3><span class="tag">D · DASHBOARD</span></div>
+    </a>
+  </div>
+
+  <footer>
+    <span>DOCTALK · DESIGN DIVISION</span>
+    <span>PICKED → BRUTALIST · 2026-04-13</span>
+  </footer>
+</div>
+</body>
+</html>

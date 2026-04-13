@@ -50,9 +50,9 @@ export default function HrContractsClient() {
         {/* Breadcrumb */}
         <div className="max-w-4xl mx-auto px-6 pt-8">
           <nav className="flex items-center text-sm text-zinc-500 dark:text-zinc-300 space-x-1">
-            <Link href="/" className="hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">{t('useCasesHr.breadcrumb.home')}</Link>
+            <Link href="/" className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors">{t('useCasesHr.breadcrumb.home')}</Link>
             <ChevronRight className="w-3 h-3" />
-            <Link href="/use-cases" className="hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">{t('useCasesHr.breadcrumb.useCases')}</Link>
+            <Link href="/use-cases" className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors">{t('useCasesHr.breadcrumb.useCases')}</Link>
             <ChevronRight className="w-3 h-3" />
             <span className="text-zinc-900 dark:text-zinc-100">{t('useCasesHr.breadcrumb.current')}</span>
           </nav>
@@ -63,7 +63,7 @@ export default function HrContractsClient() {
           <div className="w-14 h-14 rounded-xl bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center mx-auto mb-6">
             <FileText className="w-7 h-7 text-zinc-600 dark:text-zinc-300" />
           </div>
-          <h1 className="text-3xl sm:text-4xl font-semibold text-zinc-900 dark:text-zinc-100 tracking-tight mb-4">
+          <h1 className="font-serif text-3xl sm:text-4xl font-semibold text-zinc-900 dark:text-zinc-100 tracking-tight mb-4">
             {t('useCasesHr.hero.title')}
           </h1>
           <p className="text-lg text-zinc-500 dark:text-zinc-300 max-w-2xl mx-auto mb-8">
@@ -161,7 +161,7 @@ export default function HrContractsClient() {
             </h2>
             <p className="text-zinc-600 dark:text-zinc-300 mb-6">
               {t('useCasesHr.docTypes.intro')}{' '}
-              <Link href="/features/multi-format" className="text-indigo-600 dark:text-indigo-400 hover:underline">
+              <Link href="/features/multi-format" className="text-blue-600 dark:text-blue-400 hover:underline">
                 {t('useCasesHr.docTypes.formatLink')}
               </Link>
               {t('useCasesHr.docTypes.introSuffix')}
@@ -211,7 +211,7 @@ export default function HrContractsClient() {
               </h3>
               <p className="text-zinc-600 dark:text-zinc-300">
                 {t('useCasesHr.realWorld.nonCompete.p1')}
-                <Link href="/use-cases/lawyers" className="text-indigo-600 dark:text-indigo-400 hover:underline">
+                <Link href="/use-cases/lawyers" className="text-blue-600 dark:text-blue-400 hover:underline">
                   {t('useCasesHr.realWorld.nonCompete.link')}
                 </Link>{' '}
                 {t('useCasesHr.realWorld.nonCompete.p2')}

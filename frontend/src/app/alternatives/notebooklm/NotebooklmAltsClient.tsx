@@ -50,7 +50,7 @@ export default function NotebooklmAltsClient() {
             <span className="text-zinc-900 dark:text-zinc-100">{t('altsNotebooklm.breadcrumbNotebooklm')}</span>
           </nav>
 
-          <h1 className="text-3xl sm:text-4xl font-semibold text-zinc-900 dark:text-zinc-100 tracking-tight mb-6">
+          <h1 className="font-serif text-3xl sm:text-4xl font-semibold text-zinc-900 dark:text-zinc-100 tracking-tight mb-6">
             {t('altsNotebooklm.heroTitle')}
           </h1>
           <p className="text-lg text-zinc-600 dark:text-zinc-300 leading-relaxed">
@@ -80,7 +80,7 @@ export default function NotebooklmAltsClient() {
             </p>
             <p className="text-zinc-600 dark:text-zinc-300 leading-relaxed mb-4">
               {t('altsNotebooklm.alt1Desc3Pre')}{' '}
-              <Link href="/compare/notebooklm" className="text-indigo-600 dark:text-indigo-400 hover:underline">
+              <Link href="/compare/notebooklm" className="text-blue-600 dark:text-blue-400 hover:underline">
                 {t('altsNotebooklm.alt1CompareLink')}
               </Link>.
             </p>
@@ -226,7 +226,7 @@ export default function NotebooklmAltsClient() {
                   <span className="text-zinc-600 dark:text-zinc-300 text-sm flex-1">{item.need}</span>
                   <Link
                     href={item.href}
-                    className="text-sm font-medium text-indigo-600 dark:text-indigo-400 hover:underline whitespace-nowrap"
+                    className="text-sm font-medium text-blue-600 dark:text-blue-400 hover:underline whitespace-nowrap"
                   >
                     {item.pick}
                   </Link>

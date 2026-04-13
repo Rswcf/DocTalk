@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import { Spinner } from "../spell";
 
 interface LoadingScreenProps {
   /** Optional label, defaults to a sr-only string for screen readers. */
@@ -29,11 +30,7 @@ export function LoadingScreen({
   return (
     <div className={wrapper} role="status" aria-live="polite">
       <div className="flex items-center gap-3 text-sm text-zinc-600 dark:text-zinc-300">
-        <span
-          aria-hidden="true"
-          className="inline-block h-5 w-5 rounded-full border-2 border-zinc-300 border-t-transparent animate-spin motion-reduce:animate-none dark:border-zinc-600 dark:border-t-transparent"
-        />
-        <span className="sr-only">{label}</span>
+        <Spinner variant="circle" size="sm" label={label} />
         <span aria-hidden="true">{label}</span>
       </div>
     </div>

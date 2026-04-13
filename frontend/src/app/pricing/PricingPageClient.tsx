@@ -98,7 +98,7 @@ export default function PricingPageClient() {
             <p className="text-sm font-medium tracking-[0.18em] uppercase text-zinc-500 dark:text-zinc-300">
               {t('pricing.eyebrow')}
             </p>
-            <h1 className="text-4xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50 sm:text-5xl">
+            <h1 className="font-serif text-4xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50 sm:text-5xl">
               {t('pricing.headline')}
             </h1>
             <p className="text-lg leading-8 text-zinc-600 dark:text-zinc-300">
@@ -126,14 +126,14 @@ export default function PricingPageClient() {
                 key={plan.nameKey}
                 className={`rounded-xl border p-8 shadow-sm ${
                   plan.featured
-                    ? 'border-indigo-500 bg-indigo-50/50 dark:border-indigo-400 dark:bg-indigo-950/20'
+                    ? 'border-blue-500 bg-blue-50/50 dark:border-blue-400 dark:bg-blue-950/20'
                     : 'border-zinc-200 dark:border-zinc-800'
                 }`}
               >
                 <div className="flex items-center gap-3">
                   <h2 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-50">{t(plan.nameKey)}</h2>
                   {plan.featured && (
-                    <span className="rounded-full bg-indigo-600 px-2.5 py-1 text-xs font-medium text-white dark:bg-indigo-500">
+                    <span className="rounded-full bg-blue-600 px-2.5 py-1 text-xs font-medium text-white dark:bg-blue-500">
                       {t('pricing.mostPopular')}
                     </span>
                   )}
@@ -148,7 +148,7 @@ export default function PricingPageClient() {
                 <ul className="mt-6 space-y-3 text-sm leading-7 text-zinc-600 dark:text-zinc-300">
                   {plan.featureKeys.map((featureKey) => (
                     <li key={featureKey} className="flex gap-3">
-                      <span className="mt-2 h-2 w-2 shrink-0 rounded-full bg-indigo-500 dark:bg-indigo-400" />
+                      <span className="mt-2 h-2 w-2 shrink-0 rounded-full bg-blue-500 dark:bg-blue-400" />
                       <span>{t(featureKey)}</span>
                     </li>
                   ))}
@@ -157,7 +157,7 @@ export default function PricingPageClient() {
                   href={plan.ctaHref}
                   className={`mt-8 inline-flex w-full items-center justify-center rounded-lg px-5 py-3 text-sm font-medium transition-colors ${
                     plan.featured
-                      ? 'bg-indigo-600 text-white hover:bg-indigo-500 dark:bg-indigo-500 dark:hover:bg-indigo-400'
+                      ? 'bg-blue-600 text-white hover:bg-blue-500 dark:bg-blue-500 dark:hover:bg-blue-400'
                       : 'bg-zinc-900 text-white hover:bg-zinc-800 dark:bg-zinc-50 dark:text-zinc-900 dark:hover:bg-zinc-200'
                   }`}
                 >
@@ -220,15 +220,15 @@ export default function PricingPageClient() {
               <div className="mt-8 rounded-xl border border-zinc-200 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-950">
                 <p className="text-sm leading-7 text-zinc-600 dark:text-zinc-300">
                   {t('pricing.bestFit.contextNote')}{' '}
-                  <Link href="/demo" className="text-indigo-600 hover:underline dark:text-indigo-400">
+                  <Link href="/demo" className="text-blue-600 hover:underline dark:text-blue-400">
                     {t('pricing.bestFit.publicDemo')}
                   </Link>
                   {t('pricing.bestFit.readThe')}{' '}
-                  <Link href="/features" className="text-indigo-600 hover:underline dark:text-indigo-400">
+                  <Link href="/features" className="text-blue-600 hover:underline dark:text-blue-400">
                     {t('pricing.bestFit.featureOverview')}
                   </Link>
                   {t('pricing.bestFit.orCompare')}{' '}
-                  <Link href="/compare" className="text-indigo-600 hover:underline dark:text-indigo-400">
+                  <Link href="/compare" className="text-blue-600 hover:underline dark:text-blue-400">
                     {t('pricing.bestFit.comparisonHub')}
                   </Link>
                   .

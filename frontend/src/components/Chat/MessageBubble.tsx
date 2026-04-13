@@ -8,6 +8,7 @@ import { useLocale } from '../../i18n';
 import CitationPopover from './CitationPopover';
 import SourcesStrip from './SourcesStrip';
 import { highlightCode } from '../../lib/highlight';
+import { CopyButton } from '../spell';
 
 const ReactMarkdown = React.lazy(() => import('react-markdown'));
 
@@ -58,7 +59,7 @@ function processCitationLinks(
             <CitationPopover key={`cite-${refNum}-${keyIdx++}`} citation={citation}>
               <button
                 type="button"
-                className="not-prose align-super mx-0.5 inline-flex items-center justify-center min-w-[1.125rem] h-[1.125rem] px-1 rounded-full text-[10px] font-semibold leading-none select-none cursor-pointer bg-zinc-100 text-zinc-600 hover:bg-indigo-100 hover:text-indigo-700 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-indigo-900/50 dark:hover:text-indigo-300 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400"
+                className="not-prose align-super mx-0.5 inline-flex items-center justify-center min-w-[1.125rem] h-[1.125rem] px-1 rounded-full text-[10px] font-semibold leading-none select-none cursor-pointer bg-zinc-100 text-zinc-600 hover:bg-blue-100 hover:text-blue-700 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-blue-900/50 dark:hover:text-blue-300 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400"
                 onClick={() => onClick?.(citation)}
                 title={t ? t('citation.jumpTo', { page: citation.page }) : `Jump to page ${citation.page}`}
               >
@@ -100,7 +101,6 @@ function createCitationComponent(
 
 /* ── Code block with header + copy button + Shiki highlighting ── */
 function CodeBlock({ language, code }: { language: string; code: string }) {
-  const [copied, setCopied] = useState(false);
   const [html, setHtml] = useState<string | null>(null);
   const { t } = useLocale();
 
@@ -119,24 +119,11 @@ function CodeBlock({ language, code }: { language: string; code: string }) {
     };
   }, [code, language]);
 
-  const handleCopy = useCallback(() => {
-    navigator.clipboard.writeText(code);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  }, [code]);
-
   return (
     <div className="not-prose my-4 rounded-xl overflow-hidden border border-zinc-200 dark:border-zinc-700">
       <div className="flex items-center justify-between px-4 py-2 text-xs text-zinc-500 dark:text-zinc-400 bg-zinc-50 dark:bg-zinc-800/60 border-b border-zinc-200 dark:border-zinc-700">
         <span className="font-mono">{language || 'text'}</span>
-        <button
-          type="button"
-          onClick={handleCopy}
-          className="flex items-center gap-1.5 hover:text-zinc-800 dark:hover:text-zinc-200 transition-colors focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:rounded-sm"
-        >
-          {copied ? <Check size={14} /> : <Copy size={14} />}
-          <span>{copied ? t('chat.copied') : t('chat.copyCode')}</span>
-        </button>
+        <CopyButton value={code} label={t('chat.copyCode')} copiedLabel={t('chat.copied')} />
       </div>
       {html ? (
         <div
@@ -344,7 +331,7 @@ export default function MessageBubble({ message, onCitationClick, isStreaming, o
         {isAssistant && message.isTruncated && !isStreaming && isLastAssistant && onContinue && (
           <button
             onClick={onContinue}
-            className="mt-2 flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950/50 border border-indigo-200 dark:border-indigo-800 rounded-full hover:bg-indigo-100 dark:hover:bg-indigo-900/50 transition-colors focus-visible:ring-2 focus-visible:ring-indigo-400"
+            className="mt-2 flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/50 border border-blue-200 dark:border-blue-800 rounded-full hover:bg-blue-100 dark:hover:bg-blue-900/50 transition-colors focus-visible:ring-2 focus-visible:ring-blue-400"
             title={t('chat.continueGenerating')}
           >
             <ChevronsDown size={14} />

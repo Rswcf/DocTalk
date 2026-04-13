@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>DOCTALK | DOCUMENT ARCHIVE</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@800;900&amp;family=Space+Grotesk:wght@300;400;500;700&amp;family=JetBrains+Mono:wght@400;500;700&amp;family=Inter:wght@400;500;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+            display: inline-block;
+            line-height: 1;
+            text-transform: none;
+            letter-spacing: normal;
+            word-wrap: normal;
+            white-space: nowrap;
+            direction: ltr;
+        }
+        body {
+            background-color: #fcf9ef;
+            color: #000000;
+            font-family: 'Inter', sans-serif;
+        }
+        .brutalist-border {
+            border: 2px solid #000000;
+        }
+        .brutalist-border-b {
+            border-bottom: 2px solid #000000;
+        }
+        .brutalist-border-r {
+            border-right: 2px solid #000000;
+        }
+        .brutalist-border-t {
+            border-top: 2px solid #000000;
+        }
+        .mono {
+            font-family: 'JetBrains Mono', monospace;
+        }
+        .display-lg {
+            font-family: 'Bricolage Grotesque', sans-serif;
+            font-weight: 900;
+            font-size: 7.5rem;
+            line-height: 0.9;
+            letter-spacing: -0.05em;
+        }
+        /* Active State logic */
+        .active-nav-item {
+            text-decoration: underline;
+            text-underline-offset: 4px;
+            font-weight: 700;
+        }
+        .btn-active:active {
+            transform: translate(2px, 2px);
+        }
+    </style>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "surface-dim": "#dddad0",
+                        "primary-fixed-dim": "#474747",
+                        "on-primary-fixed-variant": "#e2e2e2",
+                        "on-background": "#1c1c16",
+                        "surface-tint": "#5e5e5e",
+                        "tertiary-fixed-dim": "#474747",
+                        "outline": "#777777",
+                        "on-secondary-container": "#1b1b1b",
+                        "secondary-container": "#d4d4d4",
+                        "surface-container-lowest": "#ffffff",
+                        "on-surface-variant": "#474747",
+                        "error": "#ba1a1a",
+                        "on-tertiary-fixed-variant": "#e2e2e2",
+                        "on-tertiary-fixed": "#ffffff",
+                        "surface-container-highest": "#e5e2d9",
+                        "on-error-container": "#410002",
+                        "surface-container-low": "#f7f4e9",
+                        "primary-container": "#3b3b3b",
+                        "on-surface": "#1c1c16",
+                        "on-primary-container": "#ffffff",
+                        "secondary": "#5e5e5e",
+                        "secondary-fixed-dim": "#ababab",
+                        "outline-variant": "#c6c6c6",
+                        "inverse-on-surface": "#f4f1e7",
+                        "primary": "#000000",
+                        "primary-fixed": "#5e5e5e",
+                        "tertiary-container": "#747474",
+                        "error-container": "#ffdad6",
+                        "on-tertiary": "#e2e2e2",
+                        "on-secondary": "#ffffff",
+                        "surface-container-high": "#ebe8de",
+                        "on-primary-fixed": "#ffffff",
+                        "on-secondary-fixed-variant": "#3b3b3b",
+                        "secondary-fixed": "#c6c6c6",
+                        "background": "#fcf9ef",
+                        "surface": "#fcf9ef",
+                        "on-primary": "#e2e2e2",
+                        "tertiary-fixed": "#5e5e5e",
+                        "inverse-surface": "#31312a",
+                        "on-secondary-fixed": "#1b1b1b",
+                        "inverse-primary": "#c6c6c6",
+                        "on-error": "#ffffff",
+                        "surface-container": "#f1eee4",
+                        "surface-bright": "#fcf9ef",
+                        "tertiary": "#3b3b3b",
+                        "on-tertiary-container": "#ffffff",
+                        "surface-variant": "#e5e2d9"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0px",
+                        "lg": "0px",
+                        "xl": "0px",
+                        "full": "9999px"
+                    },
+                    "fontFamily": {
+                        "headline": ["Space Grotesk"],
+                        "body": ["Inter"],
+                        "label": ["Space Grotesk"]
+                    }
+                },
+            },
+        }
+    </script>
+</head>
+<body class="bg-surface text-on-surface">
+<!-- TopNavBar (Shared Component) -->
+<nav class="bg-[#fcf9ef] dark:bg-stone-900 text-black dark:text-white font-['Space_Grotesk'] uppercase tracking-tighter brutalist-border-b docked full-width top-0 z-50">
+<div class="flex justify-between items-center w-full px-6 py-4">
+<div class="text-4xl font-[900] tracking-tighter text-black dark:text-white">DOCTALK</div>
+<div class="hidden md:flex items-center gap-8">
+<a class="text-black dark:text-white underline decoration-2 underline-offset-4 font-bold active:translate-x-[2px] active:translate-y-[2px] transition-none" href="#">ARCHIVE</a>
+<a class="text-stone-500 dark:text-stone-400 hover:bg-black hover:text-[#fcf9ef] dark:hover:bg-white dark:hover:text-black transition-none px-1" href="#">REPORTS</a>
+<a class="text-stone-500 dark:text-stone-400 hover:bg-black hover:text-[#fcf9ef] dark:hover:bg-white dark:hover:text-black transition-none px-1" href="#">COLLECTIONS</a>
+<a class="text-stone-500 dark:text-stone-400 hover:bg-black hover:text-[#fcf9ef] dark:hover:bg-white dark:hover:text-black transition-none px-1" href="#">SYSTEM</a>
+</div>
+<div class="flex items-center gap-4">
+<div class="relative hidden sm:block">
+<input class="bg-transparent border-2 border-black dark:border-white px-3 py-1 text-xs mono focus:bg-surface-container-highest outline-none w-48" placeholder="SEARCH_" type="text"/>
+</div>
+<div class="flex gap-2">
+<span class="material-symbols-outlined cursor-pointer hover:bg-black hover:text-[#fcf9ef] p-1">settings</span>
+<span class="material-symbols-outlined cursor-pointer hover:bg-black hover:text-[#fcf9ef] p-1">account_circle</span>
+</div>
+</div>
+</div>
+</nav>
+<main class="min-h-screen">
+<!-- Hero Row -->
+<section class="px-6 py-12 md:py-20 flex flex-col md:flex-row justify-between items-end gap-8">
+<h1 class="display-lg text-black lowercase">your archive.</h1>
+<div class="mono text-[10px] md:text-xs tracking-widest text-right mb-4">
+                14 DOCUMENTS · 128 SESSIONS · 4,820 CREDITS LEFT
+            </div>
+</section>
+<!-- Filter Bar -->
+<section class="w-full brutalist-border-t brutalist-border-b flex flex-col md:flex-row items-stretch">
+<div class="flex flex-wrap items-center bg-surface px-6 py-3 gap-0 overflow-x-auto">
+<button class="bg-black text-surface px-4 py-1 mono text-xs font-bold btn-active">ALL</button>
+<span class="px-3 text-black">|</span>
+<button class="text-black hover:bg-black hover:text-surface px-4 py-1 mono text-xs btn-active">PDF</button>
+<span class="px-3 text-black">|</span>
+<button class="text-black hover:bg-black hover:text-surface px-4 py-1 mono text-xs btn-active">DOCX</button>
+<span class="px-3 text-black">|</span>
+<button class="text-black hover:bg-black hover:text-surface px-4 py-1 mono text-xs btn-active">PPTX</button>
+<span class="px-3 text-black">|</span>
+<button class="text-black hover:bg-black hover:text-surface px-4 py-1 mono text-xs btn-active">XLSX</button>
+<span class="px-3 text-black">|</span>
+<button class="text-black hover:bg-black hover:text-surface px-4 py-1 mono text-xs btn-active">URL</button>
+</div>
+<div class="md:ml-auto md:brutalist-border-l flex items-center px-6 py-3 bg-surface-container-low min-w-[300px]">
+<span class="mono text-xs text-black mr-2">/ SEARCH ARCHIVE_</span>
+<input class="bg-transparent border-none focus:ring-0 mono text-xs w-full p-0" placeholder="..." type="text"/>
+<span class="material-symbols-outlined text-black cursor-pointer ml-2">arrow_right_alt</span>
+</div>
+</section>
+<!-- Main Content Area -->
+<div class="flex flex-col md:flex-row w-full">
+<!-- Document Table (Left) -->
+<section class="flex-grow p-6">
+<div class="w-full overflow-x-auto">
+<table class="w-full text-left border-collapse">
+<thead>
+<tr class="brutalist-border-b">
+<th class="mono text-[10px] pb-4 font-medium tracking-tighter">FILE</th>
+<th class="mono text-[10px] pb-4 font-medium tracking-tighter">FORMAT</th>
+<th class="mono text-[10px] pb-4 font-medium tracking-tighter">PAGES</th>
+<th class="mono text-[10px] pb-4 font-medium tracking-tighter">LAST ASKED</th>
+<th class="mono text-[10px] pb-4 font-medium tracking-tighter text-right">ACTIONS</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-black">
+<tr class="group hover:bg-surface-container-high transition-none">
+<td class="py-5 font-bold text-sm tracking-tight">ANNUAL-REPORT-2024</td>
+<td class="py-5 mono text-xs">PDF</td>
+<td class="py-5 mono text-xs">48</td>
+<td class="py-5 mono text-xs">2m ago</td>
+<td class="py-5 text-right">
+<button class="brutalist-border px-3 py-1 mono text-[10px] font-bold hover:bg-black hover:text-surface btn-active">[ASK →]</button>
+</td>
+</tr>
+<tr class="group hover:bg-surface-container-high transition-none">
+<td class="py-5 font-bold text-sm tracking-tight">TAX-FORMS-Q3</td>
+<td class="py-5 mono text-xs">XLSX</td>
+<td class="py-5 mono text-xs">12</td>
+<td class="py-5 mono text-xs">1h ago</td>
+<td class="py-5 text-right">
+<button class="brutalist-border px-3 py-1 mono text-[10px] font-bold hover:bg-black hover:text-surface btn-active">[ASK →]</button>
+</td>
+</tr>
+<tr class="group hover:bg-surface-container-high transition-none">
+<td class="py-5 font-bold text-sm tracking-tight">COMPANY-PLAYBOOK</td>
+<td class="py-5 mono text-xs">DOCX</td>
+<td class="py-5 mono text-xs">88</td>
+<td class="py-5 mono text-xs">yesterday</td>
+<td class="py-5 text-right">
+<button class="brutalist-border px-3 py-1 mono text-[10px] font-bold hover:bg-black hover:text-surface btn-active">[ASK →]</button>
+</td>
+</tr>
+<tr class="group hover:bg-surface-container-high transition-none">
+<td class="py-5 font-bold text-sm tracking-tight">RESEARCH-PAPER</td>
+<td class="py-5 mono text-xs">PDF</td>
+<td class="py-5 mono text-xs">24</td>
+<td class="py-5 mono text-xs">3d ago</td>
+<td class="py-5 text-right">
+<button class="brutalist-border px-3 py-1 mono text-[10px] font-bold hover:bg-black hover:text-surface btn-active">[ASK →]</button>
+</td>
+</tr>
+<tr class="group hover:bg-surface-container-high transition-none">
+<td class="py-5 font-bold text-sm tracking-tight">Q4-PROJECTIONS</td>
+<td class="py-5 mono text-xs">PPTX</td>
+<td class="py-5 mono text-xs">15</td>
+<td class="py-5 mono text-xs">1w ago</td>
+<td class="py-5 text-right">
+<button class="brutalist-border px-3 py-1 mono text-[10px] font-bold hover:bg-black hover:text-surface btn-active">[ASK →]</button>
+</td>
+</tr>
+<tr class="group hover:bg-surface-container-high transition-none">
+<td class="py-5 font-bold text-sm tracking-tight">LEGAL-TERMS-FINAL</td>
+<td class="py-5 mono text-xs">PDF</td>
+<td class="py-5 mono text-xs">104</td>
+<td class="py-5 mono text-xs">2w ago</td>
+<td class="py-5 text-right">
+<button class="brutalist-border px-3 py-1 mono text-[10px] font-bold hover:bg-black hover:text-surface btn-active">[ASK →]</button>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+</section>
+<!-- Right Rail -->
+<aside class="w-full md:w-[320px] p-6 md:brutalist-border-l bg-surface">
+<div class="brutalist-border p-4 mb-6">
+<div class="mono text-[10px] font-bold border-b border-black pb-2 mb-4 tracking-widest">STATS</div>
+<div class="mb-4">
+<div class="mono text-[10px] text-stone-500 uppercase">CREDITS LEFT</div>
+<div class="mono text-2xl font-bold">4,820</div>
+</div>
+<div class="mb-4">
+<div class="mono text-[10px] text-stone-500 uppercase">MODE MOST USED</div>
+<div class="mono text-lg font-bold">BALANCED</div>
+</div>
+<div class="mb-6">
+<div class="mono text-[10px] text-stone-500 uppercase">LONGEST SESSION</div>
+<div class="mono text-lg font-bold">42 TURNS</div>
+</div>
+<button class="w-full bg-black text-surface py-4 mono font-black text-sm tracking-widest hover:bg-surface hover:text-black brutalist-border transition-none btn-active">
+                        [+ NEW UPLOAD]
+                    </button>
+</div>
+<div class="bg-surface-container-highest p-4 brutalist-border">
+<div class="mono text-[10px] font-bold mb-2">SYSTEM_LOG</div>
+<div class="mono text-[9px] leading-relaxed opacity-70">
+                        &gt; SYNCING WITH CLOUD... OK<br/>
+                        &gt; VECTOR INDEX UPDATED<br/>
+                        &gt; 482MS LATENCY DETECTED<br/>
+                        &gt; TERMINAL ID: 492-X-11
+                    </div>
+</div>
+</aside>
+</div>
+</main>
+<!-- Footer (Shared Component) -->
+<footer class="bg-[#fcf9ef] dark:bg-stone-900 text-black dark:text-white font-['JetBrains_Mono'] text-[10px] uppercase tracking-[0.2em] brutalist-border-t docked full-width bottom-0 z-50">
+<div class="w-full py-3 px-6 flex justify-between items-center overflow-hidden whitespace-nowrap">
+<div class="flex gap-8 overflow-hidden marquee">
+<span class="shrink-0 font-bold">©2024 DOCTALK ARCHIVAL SYSTEM</span>
+<span class="shrink-0">ENGLISH</span>
+<span class="shrink-0">DEUTSCH</span>
+<span class="shrink-0">日本語</span>
+<span class="shrink-0">ESPAÑOL</span>
+<span class="shrink-0">FRANÇAIS</span>
+<span class="shrink-0">ITALIANO</span>
+<span class="shrink-0">PORTUGUÊS</span>
+</div>
+<div class="hidden sm:flex gap-6 items-center shrink-0 ml-4">
+<a class="text-stone-600 dark:text-stone-400 hover:text-black dark:hover:text-white underline transition-none" href="#">PRIVACY</a>
+<a class="text-stone-600 dark:text-stone-400 hover:text-black dark:hover:text-white underline transition-none" href="#">TERMS</a>
+<a class="text-stone-600 dark:text-stone-400 hover:text-black dark:hover:text-white underline transition-none" href="#">MANIFESTO</a>
+</div>
+</div>
+</footer>
+<style>
+        .marquee {
+            display: flex;
+            width: max-content;
+            animation: marquee 40s linear infinite;
+        }
+
+        @keyframes marquee {
+            0% { transform: translateX(0); }
+            100% { transform: translateX(-50%); }
+        }
+    </style>
+</body></html>

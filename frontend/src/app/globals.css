@@ -19,10 +19,12 @@
   /* Highlight colors */
   --highlight-base: rgba(245, 158, 11, 0.25);
   --highlight-strong: rgba(245, 158, 11, 0.5);
-  /* Accent colors (indigo) */
-  --accent: #4f46e5;
-  --accent-hover: #4338ca;
-  --accent-light: #eef2ff;
+  /* Accent colors (ink blue — replaced AI-purple indigo 2026-04-13).
+     Chosen for trust/authority ("book" feel) and to step out of the
+     generic indigo→violet AI gradient that every Next.js template wears. */
+  --accent: #1D4ED8;
+  --accent-hover: #1E40AF;
+  --accent-light: #DBEAFE;
   --accent-foreground: #ffffff;
 }
 
@@ -42,13 +44,13 @@
   /* Dark mode highlight colors */
   --highlight-base: rgba(245, 158, 11, 0.20);
   --highlight-strong: rgba(245, 158, 11, 0.5);
-  /* Accent colors (indigo). Dark mode drops saturation ~5% and lifts
-     to indigo-300 — indigo-400 (#818cf8) bounces too hard against pure
-     black. */
-  --accent: #a8b3f5;
-  --accent-hover: #c7d2fe;
-  --accent-light: rgba(168, 179, 245, 0.08);
-  --accent-foreground: #09090b;
+  /* Accent colors (ink blue dark). blue-400 (#60A5FA) sits well against
+     the warm near-black canvas without bouncing the way a pure sky-400
+     would. blue-300 (#93C5FD) for hover. */
+  --accent: #60A5FA;
+  --accent-hover: #93C5FD;
+  --accent-light: rgba(96, 165, 250, 0.10);
+  --accent-foreground: #0b1726;
 }
 
 /* Designed-for-dark: scope the weight-shift to prose/headings only.
@@ -69,7 +71,30 @@ html, body {
 body {
   color: var(--foreground);
   background: var(--page-background, var(--background));
+  position: relative;
 }
+
+/* Paper grain — 1.5% SVG turbulence noise over the body background.
+   Makes marketing pages feel "printed" rather than screen-rendered.
+   Applied as a pseudo-element so it sits below all content. Opacity is
+   dialed down in dark mode so the grain reads as depth, not dust. */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0.45;
+  mix-blend-mode: multiply;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='240' height='240'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 0.045 0'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>");
+}
+.dark body::before {
+  opacity: 0.35;
+  mix-blend-mode: screen;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='240' height='240'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0.95  0 0 0 0 0.95  0 0 0 0 0.9  0 0 0 0.05 0'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>");
+}
+/* Ensure page content sits above the grain */
+body > * { position: relative; z-index: 1; }
 
 /* Chat prose: tighten paragraph spacing vs. default prose */
 .prose p {
@@ -164,25 +189,28 @@ body {
 .glow-accent {
   background: radial-gradient(ellipse 60% 40% at 50% 50%, var(--accent-light) 0%, transparent 70%);
 }
-/* Dark mode: softer glow using desaturated indigo-300 at lower opacity
+/* Dark mode: softer glow using desaturated blue-400 at lower opacity
    so the halo doesn't punch out against pure black canvas. */
 .dark .glow-accent {
   background: radial-gradient(
     ellipse 60% 40% at 50% 50%,
-    rgba(168, 179, 245, 0.18) 0%,
+    rgba(96, 165, 250, 0.16) 0%,
     transparent 70%
   );
 }
 
-/* Gradient text utility */
+/* Gradient text utility — kept for legacy callsites, but we no longer
+   mix a violet stop (that was the "AI slop" tell). Same-family drift
+   only: ink blue → slightly brighter blue. Prefer a solid `text-accent`
+   for new usages; this is here so existing markup doesn't break. */
 .text-gradient-accent {
-  background: linear-gradient(135deg, var(--accent) 0%, #7c3aed 100%);
+  background: linear-gradient(135deg, var(--accent) 0%, #2563EB 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
 }
 .dark .text-gradient-accent {
-  background: linear-gradient(135deg, var(--accent) 0%, #c4b5fd 100%);
+  background: linear-gradient(135deg, var(--accent) 0%, #93C5FD 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;

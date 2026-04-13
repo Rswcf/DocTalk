@@ -5,6 +5,7 @@ import remarkGfm from 'remark-gfm';
 import { Search, ChevronLeft, ChevronRight, X } from 'lucide-react';
 import { PROXY_BASE } from '../../lib/api';
 import { useLocale } from '../../i18n';
+import { Spinner } from '../spell';
 
 const ReactMarkdown = React.lazy(() => import('react-markdown'));
 
@@ -221,7 +222,7 @@ export default function TextViewer({ documentId, fileType, targetPage, scrollNon
   if (loading) {
     return (
       <div className="h-full flex items-center justify-center text-zinc-500">
-        <div className="animate-spin motion-reduce:animate-none rounded-full h-8 w-8 border-2 border-zinc-300 border-t-zinc-600" role="status" />
+        <Spinner variant="bars" size="lg" label="Loading document" />
       </div>
     );
   }
@@ -453,8 +454,8 @@ function MarkdownContent({
   highlightRef: React.RefObject<HTMLSpanElement>;
 }) {
   const markdownFallback = (
-    <div className="flex items-center justify-center py-8" role="status">
-      <div className="animate-spin motion-reduce:animate-none rounded-full h-6 w-6 border-2 border-zinc-300 border-t-zinc-600" />
+    <div className="flex items-center justify-center py-8">
+      <Spinner variant="circle" size="md" label="Rendering content" />
     </div>
   );
 

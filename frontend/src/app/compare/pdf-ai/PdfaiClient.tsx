@@ -60,7 +60,7 @@ export default function PdfaiClient() {
             <span className="text-zinc-900 dark:text-zinc-100">{t('comparePdfai.breadcrumbCurrent')}</span>
           </nav>
 
-          <h1 className="text-3xl sm:text-4xl font-semibold text-zinc-900 dark:text-zinc-100 mb-6 tracking-tight">
+          <h1 className="font-serif text-3xl sm:text-4xl font-semibold text-zinc-900 dark:text-zinc-100 mb-6 tracking-tight">
             {t('comparePdfai.heroTitle')}
           </h1>
           <p className="text-lg text-zinc-600 dark:text-zinc-300 leading-relaxed">
@@ -122,7 +122,7 @@ export default function PdfaiClient() {
             </p>
             <p className="text-zinc-600 dark:text-zinc-300 leading-relaxed">
               {t('comparePdfai.documentFormatDocTalk')}{' '}
-              <Link href="/features/multi-format" className="text-indigo-600 dark:text-indigo-400 hover:underline">
+              <Link href="/features/multi-format" className="text-blue-600 dark:text-blue-400 hover:underline">
                 {t('comparePdfai.multiFormatLink')}
               </Link>.
             </p>
@@ -141,7 +141,7 @@ export default function PdfaiClient() {
             </p>
             <p className="text-zinc-600 dark:text-zinc-300 leading-relaxed">
               {t('comparePdfai.citationsDocTalk')}{' '}
-              <Link href="/features/citations" className="text-indigo-600 dark:text-indigo-400 hover:underline">
+              <Link href="/features/citations" className="text-blue-600 dark:text-blue-400 hover:underline">
                 {t('comparePdfai.citationHighlightingLink')}
               </Link>.
             </p>
@@ -176,10 +176,10 @@ export default function PdfaiClient() {
             </p>
             <p className="text-zinc-600 dark:text-zinc-300 leading-relaxed">
               {t('comparePdfai.pricingDocTalkPart1')}{' '}
-              <Link href="/demo" className="text-indigo-600 dark:text-indigo-400 hover:underline">
+              <Link href="/demo" className="text-blue-600 dark:text-blue-400 hover:underline">
                 {t('comparePdfai.noSignupDemoLink')}
               </Link>. {t('comparePdfai.pricingDocTalkPart2')}{' '}
-              <Link href="/pricing" className="text-indigo-600 dark:text-indigo-400 hover:underline">
+              <Link href="/pricing" className="text-blue-600 dark:text-blue-400 hover:underline">
                 {t('comparePdfai.fullPricingLink')}
               </Link>.
             </p>
@@ -284,7 +284,7 @@ export default function PdfaiClient() {
             </p>
             <p className="text-zinc-600 dark:text-zinc-300 leading-relaxed font-medium">
               {t('comparePdfai.verdictParagraph3')}{' '}
-              <Link href="/demo" className="text-indigo-600 dark:text-indigo-400 hover:underline">
+              <Link href="/demo" className="text-blue-600 dark:text-blue-400 hover:underline">
                 {t('comparePdfai.tryFreeDemoLink')}
               </Link>{' '}
               {t('comparePdfai.verdictParagraph3End')}

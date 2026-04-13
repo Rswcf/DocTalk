@@ -227,7 +227,7 @@ export default function DocumentReaderPageClient() {
                 onClick={() => setMobileTab('chat')}
                 className={`flex-1 py-3 text-xs font-medium flex flex-col items-center gap-1 transition-colors ${
                   mobileTab === 'chat'
-                    ? 'text-indigo-600 dark:text-indigo-400'
+                    ? 'text-blue-600 dark:text-blue-400'
                     : 'text-zinc-400 dark:text-zinc-500'
                 }`}
               >
@@ -239,7 +239,7 @@ export default function DocumentReaderPageClient() {
                 onClick={() => setMobileTab('document')}
                 className={`flex-1 py-3 text-xs font-medium flex flex-col items-center gap-1 transition-colors ${
                   mobileTab === 'document'
-                    ? 'text-indigo-600 dark:text-indigo-400'
+                    ? 'text-blue-600 dark:text-blue-400'
                     : 'text-zinc-400 dark:text-zinc-500'
                 }`}
               >

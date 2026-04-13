@@ -60,7 +60,7 @@ export default function AskyourpdfClient() {
             <span className="text-zinc-900 dark:text-zinc-100">{t('compareAskyourpdf.breadcrumbCurrent')}</span>
           </nav>
 
-          <h1 className="text-3xl sm:text-4xl font-semibold text-zinc-900 dark:text-zinc-100 mb-6 tracking-tight">
+          <h1 className="font-serif text-3xl sm:text-4xl font-semibold text-zinc-900 dark:text-zinc-100 mb-6 tracking-tight">
             {t('compareAskyourpdf.heroTitle')}
           </h1>
           <p className="text-lg text-zinc-600 dark:text-zinc-300 leading-relaxed">
@@ -122,7 +122,7 @@ export default function AskyourpdfClient() {
             </p>
             <p className="text-zinc-600 dark:text-zinc-300 leading-relaxed">
               {t('compareAskyourpdf.documentFormatDocTalk')}{' '}
-              <Link href="/features/multi-format" className="text-indigo-600 dark:text-indigo-400 hover:underline">
+              <Link href="/features/multi-format" className="text-blue-600 dark:text-blue-400 hover:underline">
                 {t('compareAskyourpdf.multiFormatLink')}
               </Link>{' '}
               {t('compareAskyourpdf.forDetails')}
@@ -142,7 +142,7 @@ export default function AskyourpdfClient() {
             </p>
             <p className="text-zinc-600 dark:text-zinc-300 leading-relaxed">
               {t('compareAskyourpdf.citationsDocTalk')}{' '}
-              <Link href="/features/citations" className="text-indigo-600 dark:text-indigo-400 hover:underline">
+              <Link href="/features/citations" className="text-blue-600 dark:text-blue-400 hover:underline">
                 {t('compareAskyourpdf.citationHighlightingLink')}
               </Link>.
             </p>
@@ -177,9 +177,9 @@ export default function AskyourpdfClient() {
             </p>
             <p className="text-zinc-600 dark:text-zinc-300 leading-relaxed">
               {t('compareAskyourpdf.pricingDocTalkPart1')}{' '}
-              <Link href="/demo" className="text-indigo-600 dark:text-indigo-400 hover:underline">{t('compareAskyourpdf.noSignupDemoLink')}</Link>{' '}
+              <Link href="/demo" className="text-blue-600 dark:text-blue-400 hover:underline">{t('compareAskyourpdf.noSignupDemoLink')}</Link>{' '}
               {t('compareAskyourpdf.pricingDocTalkPart2')}{' '}
-              <Link href="/pricing" className="text-indigo-600 dark:text-indigo-400 hover:underline">
+              <Link href="/pricing" className="text-blue-600 dark:text-blue-400 hover:underline">
                 {t('compareAskyourpdf.fullPricingLink')}
               </Link>.
             </p>
@@ -288,11 +288,11 @@ export default function AskyourpdfClient() {
             </p>
             <p className="text-zinc-600 dark:text-zinc-300 leading-relaxed font-medium">
               {t('compareAskyourpdf.verdictParagraph3')}{' '}
-              <Link href="/demo" className="text-indigo-600 dark:text-indigo-400 hover:underline">
+              <Link href="/demo" className="text-blue-600 dark:text-blue-400 hover:underline">
                 {t('compareAskyourpdf.tryDocTalkLink')}
               </Link>{' '}
               {t('compareAskyourpdf.verdictParagraph3Mid')}{' '}
-              <Link href="/compare/chatpdf" className="text-indigo-600 dark:text-indigo-400 hover:underline">
+              <Link href="/compare/chatpdf" className="text-blue-600 dark:text-blue-400 hover:underline">
                 {t('compareAskyourpdf.chatpdfComparisonLink')}
               </Link>{' '}
               {t('compareAskyourpdf.verdictParagraph3End')}

@@ -132,7 +132,7 @@ export default function WordCounterClient() {
             <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-zinc-100 dark:bg-zinc-800 mb-5">
               <LetterText className="w-6 h-6 text-zinc-600 dark:text-zinc-300" />
             </div>
-            <h1 className="text-3xl sm:text-4xl font-semibold text-zinc-900 dark:text-zinc-100 mb-3 tracking-tight">
+            <h1 className="font-serif text-3xl sm:text-4xl font-semibold text-zinc-900 dark:text-zinc-100 mb-3 tracking-tight">
               Free Document Word Counter
             </h1>
             <p className="text-base text-zinc-600 dark:text-zinc-300 max-w-xl mx-auto">
@@ -169,7 +169,7 @@ export default function WordCounterClient() {
               </div>
               <textarea
                 id="word-counter-input"
-                className="w-full h-64 sm:h-80 p-4 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 text-sm leading-relaxed resize-y focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent placeholder:text-zinc-400 dark:placeholder:text-zinc-500"
+                className="w-full h-64 sm:h-80 p-4 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 text-sm leading-relaxed resize-y focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent placeholder:text-zinc-400 dark:placeholder:text-zinc-500"
                 placeholder="Type or paste your text here to see word count, character count, reading time, and more..."
                 value={text}
                 onChange={(e) => setText(e.target.value)}
@@ -265,7 +265,7 @@ export default function WordCounterClient() {
           )}
 
           {/* DocTalk CTA */}
-          <div className="mt-10 rounded-xl border border-indigo-100 dark:border-indigo-900/40 bg-indigo-50/50 dark:bg-indigo-950/20 p-6">
+          <div className="mt-10 rounded-xl border border-blue-100 dark:border-blue-900/40 bg-blue-50/50 dark:bg-blue-950/20 p-6">
             <h2 className="text-base font-semibold text-zinc-900 dark:text-zinc-100 mb-2">
               Need to analyze a PDF or DOCX file?
             </h2>
@@ -275,7 +275,7 @@ export default function WordCounterClient() {
             </p>
             <Link
               href="/demo"
-              className="group inline-flex items-center px-5 py-2.5 bg-indigo-600 text-white text-sm rounded-lg font-medium hover:bg-indigo-700 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2"
+              className="group inline-flex items-center px-5 py-2.5 bg-blue-600 text-white text-sm rounded-lg font-medium hover:bg-blue-700 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
             >
               Try DocTalk Free
               <ArrowRight className="ml-2 w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
@@ -304,7 +304,7 @@ export default function WordCounterClient() {
                 This tool runs entirely in your browser &mdash; your text never leaves your device.
                 It works great for essays, articles, blog posts, and any pasted text.
                 For analyzing full PDF, DOCX, or PPTX files with AI,{' '}
-                <Link href="/demo" className="text-indigo-600 dark:text-indigo-400 hover:underline">
+                <Link href="/demo" className="text-blue-600 dark:text-blue-400 hover:underline">
                   try DocTalk&apos;s AI document chat
                 </Link>.
               </p>
@@ -314,19 +314,19 @@ export default function WordCounterClient() {
           {/* Related Links */}
           <div className="mt-10 pt-8 border-t border-zinc-200 dark:border-zinc-800">
             <div className="flex flex-wrap gap-3 text-sm justify-center">
-              <Link href="/tools" className="text-indigo-600 dark:text-indigo-400 hover:underline">
+              <Link href="/tools" className="text-blue-600 dark:text-blue-400 hover:underline">
                 All Tools
               </Link>
               <span className="text-zinc-300 dark:text-zinc-700">|</span>
-              <Link href="/tools/reading-time" className="text-indigo-600 dark:text-indigo-400 hover:underline">
+              <Link href="/tools/reading-time" className="text-blue-600 dark:text-blue-400 hover:underline">
                 Reading Time Calculator
               </Link>
               <span className="text-zinc-300 dark:text-zinc-700">|</span>
-              <Link href="/features/multi-format" className="text-indigo-600 dark:text-indigo-400 hover:underline">
+              <Link href="/features/multi-format" className="text-blue-600 dark:text-blue-400 hover:underline">
                 Multi-Format Support
               </Link>
               <span className="text-zinc-300 dark:text-zinc-700">|</span>
-              <Link href="/demo" className="text-indigo-600 dark:text-indigo-400 hover:underline">
+              <Link href="/demo" className="text-blue-600 dark:text-blue-400 hover:underline">
                 Free Demo
               </Link>
             </div>

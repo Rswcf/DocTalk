@@ -53,7 +53,7 @@ export default function ToolsHubClient() {
             <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-zinc-100 dark:bg-zinc-800 mb-6">
               <Wrench className="w-6 h-6 text-zinc-600 dark:text-zinc-300" />
             </div>
-            <h1 className="text-3xl sm:text-4xl font-semibold text-zinc-900 dark:text-zinc-100 mb-4 tracking-tight">
+            <h1 className="font-serif text-3xl sm:text-4xl font-semibold text-zinc-900 dark:text-zinc-100 mb-4 tracking-tight">
               Free AI Document Tools
             </h1>
             <p className="text-lg text-zinc-600 dark:text-zinc-300 max-w-2xl mx-auto">
@@ -74,12 +74,12 @@ export default function ToolsHubClient() {
                   href={`/tools/${tool.slug}`}
                   className="group bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl p-6 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-[box-shadow,transform] duration-200"
                 >
-                  <div className="w-10 h-10 rounded-lg bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center mb-4 group-hover:bg-indigo-50 dark:group-hover:bg-indigo-950/30 transition-colors duration-200">
-                    <Icon className="w-5 h-5 text-zinc-600 dark:text-zinc-300 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors duration-200" />
+                  <div className="w-10 h-10 rounded-lg bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center mb-4 group-hover:bg-blue-50 dark:group-hover:bg-blue-950/30 transition-colors duration-200">
+                    <Icon className="w-5 h-5 text-zinc-600 dark:text-zinc-300 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors duration-200" />
                   </div>
                   <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100 mb-2 flex items-center justify-between">
                     <span>{tool.title}</span>
-                    <ArrowRight className="w-4 h-4 text-zinc-400 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 group-hover:translate-x-0.5 transition-[color,transform] duration-200" />
+                    <ArrowRight className="w-4 h-4 text-zinc-400 group-hover:text-blue-600 dark:group-hover:text-blue-400 group-hover:translate-x-0.5 transition-[color,transform] duration-200" />
                   </h2>
                   <p className="text-sm text-zinc-600 dark:text-zinc-300 leading-relaxed mb-3">
                     {tool.description}
@@ -94,8 +94,8 @@ export default function ToolsHubClient() {
 
           {/* CTA Banner */}
           <div className="mt-16 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900/40 p-8 text-center">
-            <div className="inline-flex items-center justify-center w-10 h-10 rounded-full bg-indigo-50 dark:bg-indigo-950/40 mb-4">
-              <MessageSquareText className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
+            <div className="inline-flex items-center justify-center w-10 h-10 rounded-full bg-blue-50 dark:bg-blue-950/40 mb-4">
+              <MessageSquareText className="w-5 h-5 text-blue-600 dark:text-blue-400" />
             </div>
             <h2 className="text-xl font-semibold text-zinc-900 dark:text-zinc-100 mb-2">
               Need More Than Simple Tools?
@@ -107,7 +107,7 @@ export default function ToolsHubClient() {
             <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
               <Link
                 href="/demo"
-                className="group inline-flex items-center px-6 py-3 bg-indigo-600 text-white rounded-lg font-medium hover:bg-indigo-700 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2"
+                className="group inline-flex items-center px-6 py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
               >
                 Try the Free Demo
                 <ArrowRight className="ml-2 w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
@@ -124,19 +124,19 @@ export default function ToolsHubClient() {
           {/* Related Links */}
           <div className="mt-12 pt-8 border-t border-zinc-200 dark:border-zinc-800">
             <div className="flex flex-wrap gap-3 text-sm justify-center">
-              <Link href="/features/multi-format" className="text-indigo-600 dark:text-indigo-400 hover:underline">
+              <Link href="/features/multi-format" className="text-blue-600 dark:text-blue-400 hover:underline">
                 Multi-Format Support
               </Link>
               <span className="text-zinc-300 dark:text-zinc-700">|</span>
-              <Link href="/features/citations" className="text-indigo-600 dark:text-indigo-400 hover:underline">
+              <Link href="/features/citations" className="text-blue-600 dark:text-blue-400 hover:underline">
                 Citation Highlighting
               </Link>
               <span className="text-zinc-300 dark:text-zinc-700">|</span>
-              <Link href="/use-cases/students" className="text-indigo-600 dark:text-indigo-400 hover:underline">
+              <Link href="/use-cases/students" className="text-blue-600 dark:text-blue-400 hover:underline">
                 For Students
               </Link>
               <span className="text-zinc-300 dark:text-zinc-700">|</span>
-              <Link href="/pricing" className="text-indigo-600 dark:text-indigo-400 hover:underline">
+              <Link href="/pricing" className="text-blue-600 dark:text-blue-400 hover:underline">
                 Pricing
               </Link>
             </div>

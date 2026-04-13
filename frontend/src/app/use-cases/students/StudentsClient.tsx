@@ -53,9 +53,9 @@ export default function StudentsClient() {
         {/* Breadcrumb */}
         <div className="max-w-4xl mx-auto px-6 pt-8">
           <nav className="flex items-center text-sm text-zinc-500 dark:text-zinc-300 space-x-1">
-            <Link href="/" className="hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">{t('useCasesStudents.breadcrumb.home')}</Link>
+            <Link href="/" className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors">{t('useCasesStudents.breadcrumb.home')}</Link>
             <ChevronRight className="w-3 h-3" />
-            <Link href="/use-cases" className="hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">{t('useCasesStudents.breadcrumb.useCases')}</Link>
+            <Link href="/use-cases" className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors">{t('useCasesStudents.breadcrumb.useCases')}</Link>
             <ChevronRight className="w-3 h-3" />
             <span className="text-zinc-900 dark:text-zinc-100">{t('useCasesStudents.breadcrumb.current')}</span>
           </nav>
@@ -66,7 +66,7 @@ export default function StudentsClient() {
           <div className="w-14 h-14 rounded-xl bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center mx-auto mb-6">
             <GraduationCap className="w-7 h-7 text-zinc-600 dark:text-zinc-300" />
           </div>
-          <h1 className="text-3xl sm:text-4xl font-semibold text-zinc-900 dark:text-zinc-100 tracking-tight mb-4">
+          <h1 className="font-serif text-3xl sm:text-4xl font-semibold text-zinc-900 dark:text-zinc-100 tracking-tight mb-4">
             {t('useCasesStudents.hero.title')}
           </h1>
           <p className="text-lg text-zinc-500 dark:text-zinc-300 max-w-2xl mx-auto mb-8">
@@ -168,7 +168,7 @@ export default function StudentsClient() {
             </h2>
             <p className="text-zinc-600 dark:text-zinc-300 mb-6">
               {t('useCasesStudents.docTypes.intro')}{' '}
-              <Link href="/features/multi-format" className="text-indigo-600 dark:text-indigo-400 hover:underline">
+              <Link href="/features/multi-format" className="text-blue-600 dark:text-blue-400 hover:underline">
                 {t('useCasesStudents.docTypes.formatLink')}
               </Link>
               {t('useCasesStudents.docTypes.introSuffix')}
@@ -264,7 +264,7 @@ export default function StudentsClient() {
             </p>
             <p className="text-zinc-600 dark:text-zinc-300 mb-4">
               {t('useCasesStudents.citations.p2a')}
-              <Link href="/features/citations" className="text-indigo-600 dark:text-indigo-400 hover:underline">
+              <Link href="/features/citations" className="text-blue-600 dark:text-blue-400 hover:underline">
                 {t('useCasesStudents.citations.link')}
               </Link>{' '}
               {t('useCasesStudents.citations.p2b')}
@@ -293,7 +293,7 @@ export default function StudentsClient() {
               </p>
               <p className="text-zinc-600 dark:text-zinc-300 mb-4">
                 {t('useCasesStudents.multilingual.p2a')}
-                <Link href="/features/multilingual" className="text-indigo-600 dark:text-indigo-400 hover:underline">
+                <Link href="/features/multilingual" className="text-blue-600 dark:text-blue-400 hover:underline">
                   {t('useCasesStudents.multilingual.link')}
                 </Link>{' '}
                 {t('useCasesStudents.multilingual.p2b')}

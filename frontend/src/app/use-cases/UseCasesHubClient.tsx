@@ -42,7 +42,7 @@ export default function UseCasesHubClient() {
             <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-zinc-100 dark:bg-zinc-800 mb-6">
               <Briefcase className="w-6 h-6 text-zinc-600 dark:text-zinc-300" />
             </div>
-            <h1 className="text-3xl sm:text-4xl font-semibold text-zinc-900 dark:text-zinc-100 mb-4 tracking-tight">
+            <h1 className="font-serif text-3xl sm:text-4xl font-semibold text-zinc-900 dark:text-zinc-100 mb-4 tracking-tight">
               {t('useCasesHub.heroTitle')}
             </h1>
             <p className="text-lg text-zinc-600 dark:text-zinc-300 max-w-2xl mx-auto">
@@ -62,12 +62,12 @@ export default function UseCasesHubClient() {
                   href={`/use-cases/${uc.slug}`}
                   className="group bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl p-6 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-[box-shadow,transform] duration-200"
                 >
-                  <div className="w-10 h-10 rounded-lg bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center mb-4 group-hover:bg-indigo-50 dark:group-hover:bg-indigo-950/30 transition-colors duration-200">
-                    <Icon className="w-5 h-5 text-zinc-600 dark:text-zinc-300 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors duration-200" />
+                  <div className="w-10 h-10 rounded-lg bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center mb-4 group-hover:bg-blue-50 dark:group-hover:bg-blue-950/30 transition-colors duration-200">
+                    <Icon className="w-5 h-5 text-zinc-600 dark:text-zinc-300 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors duration-200" />
                   </div>
                   <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100 mb-2 flex items-center justify-between">
                     <span>{uc.title}</span>
-                    <ArrowRight className="w-4 h-4 text-zinc-400 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 group-hover:translate-x-0.5 transition-[color,transform] duration-200" />
+                    <ArrowRight className="w-4 h-4 text-zinc-400 group-hover:text-blue-600 dark:group-hover:text-blue-400 group-hover:translate-x-0.5 transition-[color,transform] duration-200" />
                   </h2>
                   <p className="text-sm text-zinc-600 dark:text-zinc-300 leading-relaxed">
                     {uc.description}
@@ -85,23 +85,23 @@ export default function UseCasesHubClient() {
               {t('useCasesHub.crossLinks.description')}
             </p>
             <div className="flex flex-wrap gap-3 text-sm">
-              <Link href="/features/citations" className="text-indigo-600 dark:text-indigo-400 hover:underline">
+              <Link href="/features/citations" className="text-blue-600 dark:text-blue-400 hover:underline">
                 {t('useCasesHub.crossLinks.citationHighlighting')}
               </Link>
               <span className="text-zinc-300 dark:text-zinc-700">|</span>
-              <Link href="/features/multi-format" className="text-indigo-600 dark:text-indigo-400 hover:underline">
+              <Link href="/features/multi-format" className="text-blue-600 dark:text-blue-400 hover:underline">
                 {t('useCasesHub.crossLinks.multiFormatSupport')}
               </Link>
               <span className="text-zinc-300 dark:text-zinc-700">|</span>
-              <Link href="/features/performance-modes" className="text-indigo-600 dark:text-indigo-400 hover:underline">
+              <Link href="/features/performance-modes" className="text-blue-600 dark:text-blue-400 hover:underline">
                 {t('useCasesHub.crossLinks.performanceModes')}
               </Link>
               <span className="text-zinc-300 dark:text-zinc-700">|</span>
-              <Link href="/compare/notebooklm" className="text-indigo-600 dark:text-indigo-400 hover:underline">
+              <Link href="/compare/notebooklm" className="text-blue-600 dark:text-blue-400 hover:underline">
                 {t('useCasesHub.crossLinks.notebookLMComparison')}
               </Link>
               <span className="text-zinc-300 dark:text-zinc-700">|</span>
-              <Link href="/compare/humata" className="text-indigo-600 dark:text-indigo-400 hover:underline">
+              <Link href="/compare/humata" className="text-blue-600 dark:text-blue-400 hover:underline">
                 {t('useCasesHub.crossLinks.humataComparison')}
               </Link>
             </div>

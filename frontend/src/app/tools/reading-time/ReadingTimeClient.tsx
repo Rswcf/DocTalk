@@ -106,7 +106,7 @@ export default function ReadingTimeClient() {
             <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-zinc-100 dark:bg-zinc-800 mb-5">
               <Clock className="w-6 h-6 text-zinc-600 dark:text-zinc-300" />
             </div>
-            <h1 className="text-3xl sm:text-4xl font-semibold text-zinc-900 dark:text-zinc-100 mb-3 tracking-tight">
+            <h1 className="font-serif text-3xl sm:text-4xl font-semibold text-zinc-900 dark:text-zinc-100 mb-3 tracking-tight">
               Reading Time Calculator
             </h1>
             <p className="text-base text-zinc-600 dark:text-zinc-300 max-w-xl mx-auto">
@@ -139,7 +139,7 @@ export default function ReadingTimeClient() {
             </div>
             <textarea
               id="reading-time-input"
-              className="w-full h-48 sm:h-56 p-4 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 text-sm leading-relaxed resize-y focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent placeholder:text-zinc-400 dark:placeholder:text-zinc-500"
+              className="w-full h-48 sm:h-56 p-4 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 text-sm leading-relaxed resize-y focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent placeholder:text-zinc-400 dark:placeholder:text-zinc-500"
               placeholder="Type or paste your text here to estimate reading and speaking times..."
               value={text}
               onChange={(e) => setText(e.target.value)}
@@ -179,7 +179,7 @@ export default function ReadingTimeClient() {
                     <div className="flex items-center gap-3">
                       <div className="flex-1 h-2 bg-zinc-100 dark:bg-zinc-800 rounded-full overflow-hidden">
                         <div
-                          className="h-full bg-indigo-500 dark:bg-indigo-400 rounded-full transition-[width] duration-300"
+                          className="h-full bg-blue-500 dark:bg-blue-400 rounded-full transition-[width] duration-300"
                           style={{
                             width: wordCount > 0
                               ? `${Math.min(100, (row.wpm / 350) * 100)}%`
@@ -286,7 +286,7 @@ export default function ReadingTimeClient() {
           </div>
 
           {/* DocTalk CTA */}
-          <div className="rounded-xl border border-indigo-100 dark:border-indigo-900/40 bg-indigo-50/50 dark:bg-indigo-950/20 p-6">
+          <div className="rounded-xl border border-blue-100 dark:border-blue-900/40 bg-blue-50/50 dark:bg-blue-950/20 p-6">
             <h2 className="text-base font-semibold text-zinc-900 dark:text-zinc-100 mb-2">
               Have a PDF or document to analyze?
             </h2>
@@ -296,7 +296,7 @@ export default function ReadingTimeClient() {
             </p>
             <Link
               href="/demo"
-              className="group inline-flex items-center px-5 py-2.5 bg-indigo-600 text-white text-sm rounded-lg font-medium hover:bg-indigo-700 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2"
+              className="group inline-flex items-center px-5 py-2.5 bg-blue-600 text-white text-sm rounded-lg font-medium hover:bg-blue-700 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
             >
               Try DocTalk Free
               <ArrowRight className="ml-2 w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
@@ -328,7 +328,7 @@ export default function ReadingTimeClient() {
               <p className="text-zinc-600 dark:text-zinc-300 leading-relaxed mt-3">
                 Everything runs locally in your browser &mdash; your text is never sent to any server.
                 For full document analysis with AI-powered Q&A,{' '}
-                <Link href="/demo" className="text-indigo-600 dark:text-indigo-400 hover:underline">
+                <Link href="/demo" className="text-blue-600 dark:text-blue-400 hover:underline">
                   try DocTalk&apos;s free demo
                 </Link>.
               </p>
@@ -338,19 +338,19 @@ export default function ReadingTimeClient() {
           {/* Related Links */}
           <div className="mt-10 pt-8 border-t border-zinc-200 dark:border-zinc-800">
             <div className="flex flex-wrap gap-3 text-sm justify-center">
-              <Link href="/tools" className="text-indigo-600 dark:text-indigo-400 hover:underline">
+              <Link href="/tools" className="text-blue-600 dark:text-blue-400 hover:underline">
                 All Tools
               </Link>
               <span className="text-zinc-300 dark:text-zinc-700">|</span>
-              <Link href="/tools/word-counter" className="text-indigo-600 dark:text-indigo-400 hover:underline">
+              <Link href="/tools/word-counter" className="text-blue-600 dark:text-blue-400 hover:underline">
                 Word Counter
               </Link>
               <span className="text-zinc-300 dark:text-zinc-700">|</span>
-              <Link href="/features/multi-format" className="text-indigo-600 dark:text-indigo-400 hover:underline">
+              <Link href="/features/multi-format" className="text-blue-600 dark:text-blue-400 hover:underline">
                 Multi-Format Support
               </Link>
               <span className="text-zinc-300 dark:text-zinc-700">|</span>
-              <Link href="/demo" className="text-indigo-600 dark:text-indigo-400 hover:underline">
+              <Link href="/demo" className="text-blue-600 dark:text-blue-400 hover:underline">
                 Free Demo
               </Link>
             </div>

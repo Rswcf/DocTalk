@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import { Spinner } from "../spell";
 
 interface InlineSpinnerProps {
   size?: "sm" | "md";
@@ -21,17 +22,13 @@ export function InlineSpinner({
   hideLabel = false,
   className = "",
 }: InlineSpinnerProps) {
-  const dim = size === "sm" ? "h-4 w-4 border-[1.5px]" : "h-6 w-6 border-2";
   return (
     <span
       className={`inline-flex items-center gap-2 text-sm text-zinc-600 dark:text-zinc-300 ${className}`}
       role="status"
       aria-live="polite"
     >
-      <span
-        aria-hidden="true"
-        className={`inline-block ${dim} rounded-full border-zinc-300 border-t-transparent animate-spin motion-reduce:animate-none dark:border-zinc-600 dark:border-t-transparent`}
-      />
+      <Spinner variant="circle" size={size} label={label} />
       <span className={hideLabel ? "sr-only" : ""}>{label}</span>
     </span>
   );

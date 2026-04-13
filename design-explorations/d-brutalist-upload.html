@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>DOCTALK — UPLOAD</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&amp;family=Space+Grotesk:wght@300;400;700&amp;family=Archivo+Black&amp;family=JetBrains+Mono:wght@400;700&amp;family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "tertiary": "#3b3b3b",
+                        "on-tertiary": "#e2e2e2",
+                        "secondary-fixed": "#c6c6c6",
+                        "on-tertiary-container": "#ffffff",
+                        "on-error-container": "#410002",
+                        "surface-tint": "#5e5e5e",
+                        "secondary-container": "#d4d4d4",
+                        "on-tertiary-fixed-variant": "#e2e2e2",
+                        "on-secondary-fixed": "#1b1b1b",
+                        "on-error": "#ffffff",
+                        "primary-fixed-dim": "#474747",
+                        "surface-variant": "#e4e2dd",
+                        "surface-container-low": "#f5f3ed",
+                        "on-primary-container": "#ffffff",
+                        "tertiary-fixed-dim": "#474747",
+                        "secondary": "#5e5e5e",
+                        "primary": "#000000",
+                        "on-background": "#1b1c18",
+                        "on-surface-variant": "#474747",
+                        "on-primary-fixed-variant": "#e2e2e2",
+                        "surface-bright": "#fbf9f3",
+                        "outline-variant": "#c6c6c6",
+                        "on-primary": "#e2e2e2",
+                        "surface": "#fbf9f3",
+                        "error-container": "#ffdad6",
+                        "on-secondary": "#ffffff",
+                        "on-secondary-container": "#1b1b1b",
+                        "primary-fixed": "#5e5e5e",
+                        "on-surface": "#1b1c18",
+                        "on-secondary-fixed-variant": "#3b3b3b",
+                        "surface-container": "#f0eee8",
+                        "inverse-primary": "#c6c6c6",
+                        "surface-container-highest": "#e4e2dd",
+                        "primary-container": "#3b3b3b",
+                        "error": "#ba1a1a",
+                        "background": "#fbf9f3",
+                        "tertiary-fixed": "#5e5e5e",
+                        "tertiary-container": "#747474",
+                        "surface-container-lowest": "#ffffff",
+                        "inverse-surface": "#30312d",
+                        "secondary-fixed-dim": "#ababab",
+                        "inverse-on-surface": "#f3f1eb",
+                        "surface-container-high": "#eae8e2",
+                        "surface-dim": "#dcdad4",
+                        "on-primary-fixed": "#ffffff",
+                        "outline": "#777777",
+                        "on-tertiary-fixed": "#ffffff"
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0px",
+                        "lg": "0px",
+                        "xl": "0px",
+                        "full": "9999px"
+                    },
+                    fontFamily: {
+                        "headline": ["Archivo Black", "Inter"],
+                        "body": ["Inter"],
+                        "label": ["Space Grotesk"],
+                        "mono": ["JetBrains Mono", "monospace"]
+                    }
+                },
+            },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        body {
+            background-color: #fbf9f3;
+            color: #000000;
+        }
+        .marquee {
+            overflow: hidden;
+            white-space: nowrap;
+        }
+        .marquee-content {
+            display: inline-block;
+            animation: marquee 20s linear infinite;
+        }
+        @keyframes marquee {
+            0% { transform: translateX(0); }
+            100% { transform: translateX(-50%); }
+        }
+    </style>
+</head>
+<body class="font-body selection:bg-black selection:text-[#fbf9f3]">
+<!-- SHARED COMPONENT: TopNavBar -->
+<nav class="bg-[#fbf9f3] dark:bg-black text-black dark:text-white font-['Inter'] uppercase tracking-tighter font-black border-b-2 border-black dark:border-white flex justify-between items-center w-full px-6 py-4 sticky top-0 z-50">
+<div class="text-2xl font-black tracking-tighter text-black dark:text-white">DOCTALK</div>
+<div class="hidden md:flex items-center gap-8">
+<a class="text-black/60 dark:text-white/60 font-mono hover:bg-black hover:text-[#fbf9f3] dark:hover:bg-white dark:hover:text-black transition-none px-2 py-1" href="#">RECORDS</a>
+<a class="text-black dark:text-white border-b-4 border-black dark:border-white pb-1 transition-none px-2" href="#">UPLOADS</a>
+<a class="text-black/60 dark:text-white/60 font-mono hover:bg-black hover:text-[#fbf9f3] dark:hover:bg-white dark:hover:text-black transition-none px-2 py-1" href="#">ARCHIVE</a>
+</div>
+<div class="flex items-center gap-4">
+<button class="bg-black text-[#e2e2e2] px-4 py-2 font-mono text-xs hover:bg-white hover:text-black border-2 border-black transition-none">NEW_SCAN</button>
+<span class="material-symbols-outlined cursor-pointer hover:scale-110 transition-transform" data-icon="settings">settings</span>
+<span class="material-symbols-outlined cursor-pointer hover:scale-110 transition-transform" data-icon="account_circle">account_circle</span>
+</div>
+</nav>
+<!-- MAIN CANVAS -->
+<main class="min-h-screen max-w-[1440px] mx-auto grid grid-cols-1 md:grid-cols-12 gap-0 relative">
+<!-- SIDEBAR METRICS (LEFT) -->
+<aside class="hidden md:flex md:col-span-1 border-r-2 border-black flex-col justify-end p-6">
+<div class="vertical-text rotate-180 [writing-mode:vertical-lr] font-mono text-[10px] tracking-widest text-black/40 gap-4 flex uppercase">
+<span>MAX 50MB</span>
+<span>•</span>
+<span>AV-SCANNED</span>
+<span>•</span>
+<span>STORED ENCRYPTED (SSE-S3)</span>
+</div>
+</aside>
+<!-- CONTENT AREA -->
+<section class="md:col-span-10 p-12 flex flex-col items-center justify-start min-h-[800px]">
+<!-- STEP KICKER -->
+<div class="w-full flex justify-between items-end mb-12 border-b-2 border-black pb-4">
+<h2 class="font-mono text-sm font-bold tracking-tighter">§ INGEST / STEP 1 OF 3</h2>
+<div class="text-[10px] font-mono uppercase tracking-[0.2em]">SYSTEM_STATUS: READY</div>
+</div>
+<!-- MASSIVE DROP ZONE -->
+<div class="w-full max-w-[1000px] aspect-[16/9] border-2 border-black border-dashed flex flex-col items-center justify-center p-12 text-center group cursor-pointer hover:bg-surface-container-low transition-colors duration-75 relative overflow-hidden">
+<!-- ASYMMETRIC ILLUSTRATION (RIGHT) -->
+<div class="absolute -right-12 top-1/2 -translate-y-1/2 opacity-10 pointer-events-none">
+<svg fill="none" height="400" viewbox="0 0 100 100" width="400" xmlns="http://www.w3.org/2000/svg">
+<path d="M10 20L90 10L60 90L50 60L10 20Z" stroke="black" stroke-width="0.5"></path>
+<path d="M50 60L90 10" stroke="black" stroke-width="0.5"></path>
+<path d="M50 60L10 20" stroke="black" stroke-width="0.5"></path>
+</svg>
+</div>
+<h1 class="font-headline text-6xl md:text-8xl tracking-tighter leading-[0.85] mb-8 select-none">
+                    drop a document.<br/>start a conversation.
+                </h1>
+<p class="font-mono text-xs tracking-widest mb-12 opacity-60">// OR CLICK TO SELECT</p>
+<button class="bg-black text-white px-12 py-6 font-headline text-2xl hover:bg-white hover:text-black border-4 border-black transition-none active:translate-x-1 active:translate-y-1 mb-12">
+                    [SELECT_FILE →]
+                </button>
+<!-- FILE TYPE CHIPS -->
+<div class="flex flex-wrap justify-center gap-2">
+<span class="border-2 border-black px-3 py-1 font-mono text-[10px] font-bold">PDF</span>
+<span class="border-2 border-black px-3 py-1 font-mono text-[10px] font-bold">DOCX</span>
+<span class="border-2 border-black px-3 py-1 font-mono text-[10px] font-bold">PPTX</span>
+<span class="border-2 border-black px-3 py-1 font-mono text-[10px] font-bold">XLSX</span>
+<span class="border-2 border-black px-3 py-1 font-mono text-[10px] font-bold">TXT</span>
+<span class="border-2 border-black px-3 py-1 font-mono text-[10px] font-bold">MD</span>
+<span class="border-2 border-black px-3 py-1 font-mono text-[10px] font-bold">URL</span>
+</div>
+</div>
+<!-- PROGRESS BLOCK -->
+<div class="mt-24 flex items-center gap-0 w-full max-w-2xl">
+<div class="flex-1 bg-black text-white border-2 border-black p-4 font-mono text-xs flex justify-between items-center">
+<span>01 — DROP</span>
+<span class="material-symbols-outlined text-sm" data-icon="check_circle">check_circle</span>
+</div>
+<div class="w-12 h-0.5 bg-black"></div>
+<div class="flex-1 border-2 border-black p-4 font-mono text-xs text-black/40 flex justify-between items-center bg-transparent">
+<span>02 — PARSE</span>
+</div>
+<div class="w-12 h-0.5 bg-black"></div>
+<div class="flex-1 border-2 border-black p-4 font-mono text-xs text-black/40 flex justify-between items-center bg-transparent">
+<span>03 — ASK</span>
+</div>
+</div>
+</section>
+<!-- SIDEBAR DECORATION (RIGHT) -->
+<aside class="hidden md:flex md:col-span-1 border-l-2 border-black flex-col items-center py-12 gap-8">
+<div class="w-1 h-32 bg-black"></div>
+<div class="font-mono text-[10px] [writing-mode:vertical-rl] tracking-widest font-bold">VANGUARD_BUILD_09.24</div>
+<div class="flex-grow"></div>
+<div class="p-4 border-2 border-black rotate-12 bg-white shadow-[8px_8px_0px_0px_rgba(0,0,0,1)]">
+<p class="font-mono text-[10px] font-black leading-tight">STAMP:<br/>SECURE_UPL</p>
+</div>
+</aside>
+</main>
+<!-- FOOTER MARQUEE -->
+<footer class="border-t-2 border-black bg-black text-[#fbf9f3] py-4 overflow-hidden">
+<div class="marquee font-headline text-2xl tracking-tighter uppercase">
+<div class="marquee-content inline-flex gap-12 items-center">
+<span>English</span>
+<span class="text-xs font-mono">/</span>
+<span>Español</span>
+<span class="text-xs font-mono">/</span>
+<span>Français</span>
+<span class="text-xs font-mono">/</span>
+<span>Deutsch</span>
+<span class="text-xs font-mono">/</span>
+<span>日本語</span>
+<span class="text-xs font-mono">/</span>
+<span>Português</span>
+<span class="text-xs font-mono">/</span>
+<span>Italiano</span>
+<span class="text-xs font-mono">/</span>
+<span>Русский</span>
+<span class="text-xs font-mono">/</span>
+<span>中文</span>
+<!-- Duplicate for seamless scroll -->
+<span>English</span>
+<span class="text-xs font-mono">/</span>
+<span>Español</span>
+<span class="text-xs font-mono">/</span>
+<span>Français</span>
+<span class="text-xs font-mono">/</span>
+<span>Deutsch</span>
+<span class="text-xs font-mono">/</span>
+<span>日本語</span>
+<span class="text-xs font-mono">/</span>
+<span>Português</span>
+<span class="text-xs font-mono">/</span>
+<span>Italiano</span>
+<span class="text-xs font-mono">/</span>
+<span>Русский</span>
+<span class="text-xs font-mono">/</span>
+<span>中文</span>
+</div>
+</div>
+</footer>
+</body></html>

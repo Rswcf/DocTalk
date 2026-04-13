@@ -33,7 +33,7 @@ function PostCard({ post }: { post: BlogPost }) {
           {t('blog.meta.minutesRead', { minutes: post.readingMinutes })}
         </span>
       </div>
-      <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors duration-200 mb-2 leading-snug">
+      <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors duration-200 mb-2 leading-snug">
         {post.title}
       </h2>
       <p className="text-sm text-zinc-600 dark:text-zinc-300 line-clamp-2 mb-4 leading-relaxed">
@@ -66,7 +66,7 @@ export default function BlogIndexClient({ posts }: BlogIndexClientProps) {
               <div className="inline-flex items-center justify-center w-10 h-10 rounded-full bg-zinc-200 dark:bg-zinc-800">
                 <BookOpen className="w-5 h-5 text-zinc-600 dark:text-zinc-300" />
               </div>
-              <h1 className="text-3xl sm:text-4xl font-semibold text-zinc-900 dark:text-zinc-100 tracking-tight">
+              <h1 className="font-serif text-3xl sm:text-4xl font-semibold text-zinc-900 dark:text-zinc-100 tracking-tight">
                 {t('blog.index.title')}
               </h1>
             </div>
@@ -99,19 +99,19 @@ export default function BlogIndexClient({ posts }: BlogIndexClientProps) {
               {t('blog.index.panel.description')}
             </p>
             <div className="flex flex-wrap gap-3 text-sm">
-              <Link href="/blog/category/comparisons" className="text-indigo-600 dark:text-indigo-400 hover:underline">
+              <Link href="/blog/category/comparisons" className="text-blue-600 dark:text-blue-400 hover:underline">
                 {t('blog.index.panel.compareGuides')}
               </Link>
               <span className="text-zinc-300 dark:text-zinc-700">|</span>
-              <Link href="/compare" className="text-indigo-600 dark:text-indigo-400 hover:underline">
+              <Link href="/compare" className="text-blue-600 dark:text-blue-400 hover:underline">
                 {t('blog.index.panel.toolComparisons')}
               </Link>
               <span className="text-zinc-300 dark:text-zinc-700">|</span>
-              <Link href="/alternatives" className="text-indigo-600 dark:text-indigo-400 hover:underline">
+              <Link href="/alternatives" className="text-blue-600 dark:text-blue-400 hover:underline">
                 {t('blog.index.panel.alternatives')}
               </Link>
               <span className="text-zinc-300 dark:text-zinc-700">|</span>
-              <Link href="/use-cases" className="text-indigo-600 dark:text-indigo-400 hover:underline">
+              <Link href="/use-cases" className="text-blue-600 dark:text-blue-400 hover:underline">
                 {t('blog.index.panel.useCases')}
               </Link>
             </div>

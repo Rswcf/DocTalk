@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&amp;family=Newsreader:ital,opsz,wght@0,6..72,200..800;1,6..72,200..800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "inverse-surface": "#2f312f",
+                        "on-primary": "#ffffff",
+                        "tertiary-fixed": "#e3e1ec",
+                        "surface": "#f9f9f6",
+                        "surface-variant": "#e2e3e0",
+                        "surface-container": "#eeeeeb",
+                        "on-tertiary-container": "#dbdae4",
+                        "tertiary": "#474750",
+                        "surface-bright": "#f9f9f6",
+                        "on-error": "#ffffff",
+                        "inverse-primary": "#c3c0ff",
+                        "on-secondary-fixed": "#1b1b1e",
+                        "secondary-fixed-dim": "#c8c5ca",
+                        "outline-variant": "#c7c4d8",
+                        "secondary": "#5f5e61",
+                        "background": "#f9f9f6",
+                        "secondary-fixed": "#e4e1e6",
+                        "on-secondary-fixed-variant": "#47464a",
+                        "on-primary-fixed": "#0f0069",
+                        "surface-container-high": "#e8e8e5",
+                        "on-secondary": "#ffffff",
+                        "on-tertiary": "#ffffff",
+                        "error-container": "#ffdad6",
+                        "tertiary-container": "#5f5f68",
+                        "primary": "#3525cd",
+                        "primary-fixed": "#e2dfff",
+                        "inverse-on-surface": "#f1f1ee",
+                        "surface-container-low": "#f4f4f1",
+                        "on-error-container": "#93000a",
+                        "surface-container-highest": "#e2e3e0",
+                        "on-tertiary-fixed": "#1a1b22",
+                        "on-tertiary-fixed-variant": "#46464e",
+                        "on-primary-container": "#dad7ff",
+                        "on-surface": "#1a1c1b",
+                        "primary-container": "#4f46e5",
+                        "surface-tint": "#4d44e3",
+                        "on-background": "#1a1c1b",
+                        "on-primary-fixed-variant": "#3323cc",
+                        "primary-fixed-dim": "#c3c0ff",
+                        "surface-dim": "#dadad7",
+                        "error": "#ba1a1a",
+                        "secondary-container": "#e4e1e6",
+                        "surface-container-lowest": "#ffffff",
+                        "on-surface-variant": "#464555",
+                        "on-secondary-container": "#656467",
+                        "outline": "#777587",
+                        "tertiary-fixed-dim": "#c6c5cf"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0px",
+                        "lg": "0px",
+                        "xl": "0px",
+                        "full": "9999px"
+                    },
+                    "fontFamily": {
+                        "headline": ["Newsreader", "serif"],
+                        "body": ["Inter", "sans-serif"],
+                        "label": ["Inter", "sans-serif"]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .small-caps {
+            font-variant: small-caps;
+            letter-spacing: 0.1em;
+        }
+        ::selection {
+            background-color: #3525cd;
+            color: #ffffff;
+        }
+    </style>
+</head>
+<body class="bg-surface text-on-surface font-body selection:bg-primary selection:text-on-primary">
+<!-- TopNavBar -->
+<nav class="bg-[#f9f9f6] dark:bg-zinc-950 border-b border-zinc-200 dark:border-zinc-800 flex justify-between items-center w-full px-8 py-4 max-w-none fixed top-0 z-50">
+<div class="text-2xl font-bold tracking-tight text-[#1a1c1b] dark:text-zinc-100 font-['Newsreader']">DocTalk</div>
+<div class="hidden md:flex items-center space-x-12">
+<a class="text-[#3525cd] dark:text-[#4f46e5] border-b border-[#3525cd] font-['Inter'] uppercase tracking-widest text-[10px] small-caps transition-colors duration-200" href="#">Product</a>
+<a class="text-zinc-500 dark:text-zinc-400 uppercase tracking-widest text-[10px] small-caps hover:text-[#3525cd] transition-colors duration-200" href="#">Pricing</a>
+<a class="text-zinc-500 dark:text-zinc-400 uppercase tracking-widest text-[10px] small-caps hover:text-[#3525cd] transition-colors duration-200" href="#">Docs</a>
+<a class="text-zinc-500 dark:text-zinc-400 uppercase tracking-widest text-[10px] small-caps hover:text-[#3525cd] transition-colors duration-200" href="#">Log in</a>
+</div>
+<button class="bg-primary text-on-primary px-6 py-2 text-xs uppercase tracking-widest font-bold hover:opacity-80 transition-opacity">
+            Start free
+        </button>
+</nav>
+<main class="pt-24 min-h-screen">
+<!-- Hero Section -->
+<section class="max-w-[1440px] mx-auto px-8 md:px-16 pt-16 pb-24 grid grid-cols-1 md:grid-cols-12 gap-12 items-start">
+<!-- Left Side: Content -->
+<div class="md:col-span-7 flex flex-col pt-12">
+<div class="mb-8 flex items-center space-x-4">
+<span class="text-xs font-medium uppercase tracking-[0.2em] text-secondary small-caps">01 — ASK</span>
+<div class="h-[1px] w-12 bg-outline-variant"></div>
+</div>
+<h1 class="font-headline text-6xl md:text-8xl leading-[1.05] tracking-tight mb-12 max-w-2xl">
+                    Informed <span class="italic">authority</span> for your research.
+                </h1>
+<div class="flex flex-col md:flex-row items-start md:items-center space-y-6 md:space-y-0 md:space-x-8 mb-16">
+<button class="bg-primary text-on-primary px-10 py-4 text-sm font-bold uppercase tracking-widest transition-opacity hover:opacity-90">
+                        Create Workspace
+                    </button>
+<a class="text-primary border-b border-primary/20 hover:border-primary pb-1 text-sm font-bold uppercase tracking-widest transition-all" href="#">
+                        View Case Studies
+                    </a>
+</div>
+<div class="max-w-md">
+<p class="text-secondary text-lg leading-relaxed mb-8">
+                        DocTalk transforms static documentation into a dynamic dialogue. Query thousands of pages with surgical precision and source-backed certainty.
+                    </p>
+<div class="flex items-start space-x-4">
+<span class="text-[10px] text-outline font-bold mt-1">†</span>
+<p class="text-xs text-secondary leading-relaxed opacity-70">
+                            Proprietary citation engine ensures every answer is anchored to a specific paragraph in your uploaded library. No hallucinations, only references.
+                        </p>
+</div>
+</div>
+</div>
+<!-- Right Side: Visual Vignette -->
+<div class="md:col-span-5 relative mt-12 md:mt-0">
+<div class="aspect-[3/4] bg-surface-container-lowest border border-outline-variant p-10 relative">
+<!-- Subtle Paper Texture Mockup -->
+<div class="h-full w-full flex flex-col space-y-6 overflow-hidden">
+<div class="h-4 w-1/3 bg-surface-container-high"></div>
+<div class="h-[1px] w-full bg-outline-variant/30"></div>
+<div class="space-y-3">
+<div class="h-3 w-full bg-surface-container"></div>
+<div class="h-3 w-full bg-surface-container"></div>
+<div class="h-3 w-4/5 bg-surface-container"></div>
+</div>
+<!-- Highlighted Passage -->
+<div class="relative bg-primary/10 py-1 -mx-2 px-2">
+<div class="h-3 w-full bg-primary/20"></div>
+<div class="h-3 w-2/3 bg-primary/20 mt-3"></div>
+<!-- Hairline Link to Citation -->
+<div class="absolute -right-16 top-1/2 w-16 h-[1px] bg-primary"></div>
+</div>
+<div class="space-y-3">
+<div class="h-3 w-full bg-surface-container"></div>
+<div class="h-3 w-full bg-surface-container"></div>
+<div class="h-3 w-1/2 bg-surface-container"></div>
+</div>
+</div>
+<!-- Floating Citation Callout -->
+<div class="absolute -right-8 top-1/2 -translate-y-1/2 w-64 bg-surface-container-lowest border border-primary p-6 shadow-xl">
+<div class="flex items-center space-x-2 mb-3">
+<span class="material-symbols-outlined text-primary text-sm" data-icon="menu_book">menu_book</span>
+<span class="text-[10px] uppercase tracking-widest font-bold text-primary small-caps">Source Found</span>
+</div>
+<p class="text-xs font-headline italic leading-relaxed text-on-surface mb-4">
+                            "The methodology implemented in Phase II reduces latency by 40% through localized indexing..."
+                        </p>
+<div class="pt-3 border-t border-outline-variant flex justify-between items-center">
+<span class="text-[9px] text-secondary font-bold uppercase tracking-tighter">Report_v2.pdf</span>
+<span class="text-[9px] text-secondary">p. 142</span>
+</div>
+</div>
+</div>
+<!-- Decorative elements -->
+<div class="absolute -bottom-6 -left-6 h-24 w-24 border-l border-b border-outline-variant"></div>
+</div>
+</section>
+<!-- Vertical Rule Separator -->
+<div class="max-w-[1440px] mx-auto px-8 md:px-16">
+<div class="h-[1px] w-full bg-zinc-200"></div>
+</div>
+<!-- Language Strip -->
+<section class="max-w-[1440px] mx-auto px-8 md:px-16 py-12 flex flex-wrap items-center justify-center gap-x-12 gap-y-6">
+<span class="text-[10px] uppercase tracking-[0.2em] text-outline font-bold small-caps">Multilingual Support:</span>
+<span class="text-xs text-secondary font-medium hover:text-primary transition-colors cursor-default">EN</span>
+<span class="text-xs text-secondary font-medium hover:text-primary transition-colors cursor-default">中文</span>
+<span class="text-xs text-secondary font-medium hover:text-primary transition-colors cursor-default">日本語</span>
+<span class="text-xs text-secondary font-medium hover:text-primary transition-colors cursor-default">한국어</span>
+<span class="text-xs text-secondary font-medium hover:text-primary transition-colors cursor-default">Español</span>
+<span class="text-xs text-secondary font-medium hover:text-primary transition-colors cursor-default">Deutsch</span>
+<span class="text-xs text-secondary font-medium hover:text-primary transition-colors cursor-default">Français</span>
+</section>
+<!-- Feature Teaser Section -->
+<section class="max-w-[1440px] mx-auto px-8 md:px-16 py-24 border-t border-zinc-200 grid grid-cols-1 md:grid-cols-3 gap-16">
+<div class="space-y-6">
+<span class="text-[10px] font-bold text-primary small-caps uppercase tracking-widest">Surgical Accuracy</span>
+<h3 class="font-headline text-2xl">Semantic understanding beyond keyword matching.</h3>
+<p class="text-sm text-secondary leading-relaxed">Our engine maps the conceptual landscape of your documents, finding meaning where others only see strings.</p>
+</div>
+<div class="space-y-6">
+<span class="text-[10px] font-bold text-primary small-caps uppercase tracking-widest">Team Synthesis</span>
+<h3 class="font-headline text-2xl">A shared consciousness for your entire department.</h3>
+<p class="text-sm text-secondary leading-relaxed">Collaborate on research threads, annotate shared sources, and build a collective knowledge base that never forgets.</p>
+</div>
+<div class="space-y-6">
+<span class="text-[10px] font-bold text-primary small-caps uppercase tracking-widest">Absolute Privacy</span>
+<h3 class="font-headline text-2xl">Your data is yours. Encrypted and siloed.</h3>
+<p class="text-sm text-secondary leading-relaxed">DocTalk never trains on your proprietary data. Your research remains confidential and secure behind industrial-grade walls.</p>
+</div>
+</section>
+</main>
+<!-- Footer -->
+<footer class="w-full px-8 py-12 flex flex-col md:flex-row justify-between items-center bg-[#f9f9f6] dark:bg-zinc-950 border-t border-zinc-200 dark:border-zinc-800">
+<div class="flex flex-col items-center md:items-start space-y-4 mb-8 md:mb-0">
+<div class="text-lg font-serif text-[#1a1c1b] dark:text-zinc-100">DocTalk</div>
+<p class="font-['Inter'] text-xs tracking-wide uppercase text-zinc-500 dark:text-zinc-500">© 2024 DocTalk. Informed Authority.</p>
+</div>
+<div class="flex space-x-12">
+<a class="font-['Inter'] text-xs tracking-wide uppercase text-zinc-500 dark:text-zinc-500 hover:text-[#1a1c1b] dark:hover:text-zinc-100 transition-colors" href="#">Privacy</a>
+<a class="font-['Inter'] text-xs tracking-wide uppercase text-zinc-500 dark:text-zinc-500 hover:text-[#1a1c1b] dark:hover:text-zinc-100 transition-colors" href="#">Terms</a>
+<a class="font-['Inter'] text-xs tracking-wide uppercase text-zinc-500 dark:text-zinc-500 hover:text-[#1a1c1b] dark:hover:text-zinc-100 transition-colors" href="#">Twitter</a>
+<a class="font-['Inter'] text-xs tracking-wide uppercase text-zinc-500 dark:text-zinc-500 hover:text-[#1a1c1b] dark:hover:text-zinc-100 transition-colors" href="#">Support</a>
+</div>
+</footer>
+</body></html>

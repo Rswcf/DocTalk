@@ -163,7 +163,7 @@ export default function TrustPageClient() {
           <p className="text-[11px] font-mono uppercase tracking-widest text-zinc-500 dark:text-zinc-400 mb-3">
             Trust Center
           </p>
-          <h1 className="text-3xl md:text-5xl font-medium tracking-[-0.03em] text-zinc-900 dark:text-zinc-50 text-balance mb-5">
+          <h1 className="font-serif text-3xl md:text-5xl font-medium tracking-[-0.03em] text-zinc-900 dark:text-zinc-50 text-balance mb-5">
             The real controls protecting your documents.
           </h1>
           <p className="text-lg text-zinc-600 dark:text-zinc-300 leading-relaxed max-w-2xl">

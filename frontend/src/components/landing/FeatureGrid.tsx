@@ -12,11 +12,11 @@ import ScrollReveal from './ScrollReveal';
 
 // Shared canvas for smaller (1-column) tiles — 96px tall.
 const bgSmall =
-  'relative h-24 w-full overflow-hidden rounded-lg bg-gradient-to-br from-indigo-50 to-zinc-50 dark:from-indigo-950/60 dark:to-zinc-800/60 mb-5';
+  'relative h-24 w-full overflow-hidden rounded-lg bg-gradient-to-br from-blue-50 to-zinc-50 dark:from-blue-950/60 dark:to-zinc-800/60 mb-5';
 
 // Larger canvas for the hero (Citations) tile — lives inside a 2-row span.
 const bgHero =
-  'relative h-48 md:h-56 w-full overflow-hidden rounded-lg bg-gradient-to-br from-indigo-50 to-zinc-50 dark:from-indigo-950/60 dark:to-zinc-800/60 mb-5';
+  'relative h-48 md:h-56 w-full overflow-hidden rounded-lg bg-gradient-to-br from-blue-50 to-zinc-50 dark:from-blue-950/60 dark:to-zinc-800/60 mb-5';
 
 function VisualCitationsHero() {
   return (
@@ -221,7 +221,7 @@ export default function FeatureGrid() {
     <section id="features" className="bg-zinc-50 dark:bg-zinc-900/50 py-24">
       <div className="max-w-6xl mx-auto px-6">
         <ScrollReveal>
-          <h2 className="font-medium tracking-[-0.03em] text-3xl md:text-4xl text-zinc-900 dark:text-zinc-50 text-center mb-12 text-balance">
+          <h2 className="font-serif font-medium tracking-[-0.03em] text-3xl md:text-4xl text-zinc-900 dark:text-zinc-50 text-center mb-12 text-balance">
             {t('landing.features.title')}
           </h2>
         </ScrollReveal>

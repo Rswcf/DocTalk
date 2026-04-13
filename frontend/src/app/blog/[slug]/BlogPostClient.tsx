@@ -73,7 +73,7 @@ function StickyTOC({ items }: { items: TocItem[] }) {
                 item.level === 3 ? 'pl-6' : 'pl-4'
               } ${
                 activeId === item.id
-                  ? 'text-indigo-600 dark:text-indigo-400 border-l-2 border-indigo-600 dark:border-indigo-400 -ml-px font-medium'
+                  ? 'text-blue-600 dark:text-blue-400 border-l-2 border-blue-600 dark:border-blue-400 -ml-px font-medium'
                   : 'text-zinc-500 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-zinc-100'
               }`}
             >
@@ -99,7 +99,7 @@ function InlineTOC({ items }: { items: TocItem[] }) {
           <li key={item.id} className={item.level === 3 ? 'ml-4' : ''}>
             <a
               href={`#${item.id}`}
-              className="text-sm text-zinc-500 dark:text-zinc-300 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
+              className="text-sm text-zinc-500 dark:text-zinc-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
             >
               {item.text}
             </a>
@@ -125,7 +125,7 @@ function RelatedPosts({ posts }: { posts: BlogPost[] }) {
             href={`/blog/${post.slug}`}
             className="group block bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl p-5 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-[box-shadow,transform] duration-200"
           >
-            <h3 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors duration-200 mb-2 leading-snug">
+            <h3 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors duration-200 mb-2 leading-snug">
               {post.title}
             </h3>
             <p className="text-xs text-zinc-600 dark:text-zinc-300 line-clamp-2">
@@ -178,7 +178,7 @@ export default function BlogPostClient({ post, relatedPosts }: BlogPostClientPro
                 {t('blog.meta.minutesRead', { minutes: post.readingMinutes })}
               </span>
             </div>
-            <h1 className="text-3xl sm:text-4xl font-semibold text-zinc-900 dark:text-zinc-100 mb-4 leading-tight tracking-tight">
+            <h1 className="font-serif text-3xl sm:text-4xl font-semibold text-zinc-900 dark:text-zinc-100 mb-4 leading-tight tracking-tight">
               {post.title}
             </h1>
             <p className="text-lg text-zinc-600 dark:text-zinc-300 mb-6 leading-relaxed">
@@ -204,7 +204,7 @@ export default function BlogPostClient({ post, relatedPosts }: BlogPostClientPro
             <div className="min-w-0">
               <InlineTOC items={toc} />
 
-              <div className="prose prose-zinc dark:prose-invert max-w-none prose-headings:scroll-mt-20 prose-headings:tracking-tight prose-a:text-indigo-600 dark:prose-a:text-indigo-400 prose-a:no-underline hover:prose-a:underline prose-img:rounded-xl prose-table:text-sm prose-p:text-zinc-600 dark:prose-p:text-zinc-400 prose-li:text-zinc-600 dark:prose-li:text-zinc-400">
+              <div className="prose prose-zinc dark:prose-invert max-w-none prose-headings:scroll-mt-20 prose-headings:tracking-tight prose-a:text-blue-600 dark:prose-a:text-blue-400 prose-a:no-underline hover:prose-a:underline prose-img:rounded-xl prose-table:text-sm prose-p:text-zinc-600 dark:prose-p:text-zinc-400 prose-li:text-zinc-600 dark:prose-li:text-zinc-400">
                 <ReactMarkdown
                   remarkPlugins={[remarkGfm]}
                   components={{
@@ -288,7 +288,7 @@ export default function BlogPostClient({ post, relatedPosts }: BlogPostClientPro
               {/* CTA Banner */}
               <div className="mt-10 relative overflow-hidden rounded-xl border border-zinc-200 dark:border-zinc-800">
                 <div className="absolute inset-0 bg-gradient-to-br from-zinc-900 via-zinc-900 to-zinc-800 dark:from-zinc-100 dark:via-zinc-50 dark:to-zinc-100" />
-                <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-indigo-500/10 via-transparent to-transparent" />
+                <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-blue-500/10 via-transparent to-transparent" />
                 <div className="relative px-8 py-10 text-center">
                   <h3 className="text-xl font-semibold text-white dark:text-zinc-900 mb-2">
                     {t('blog.post.cta.title')}

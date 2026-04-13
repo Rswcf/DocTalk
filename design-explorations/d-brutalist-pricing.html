@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&amp;family=Space+Grotesk:wght@300;400;700&amp;family=Bricolage+Grotesque:opsz,wght@12..96,800&amp;family=JetBrains+Mono:wght@400;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "surface-container-low": "#f5f3ed",
+                        "background": "#fbf9f3",
+                        "on-secondary": "#ffffff",
+                        "on-tertiary": "#e2e2e2",
+                        "on-background": "#1b1c18",
+                        "error-container": "#ffdad6",
+                        "tertiary-fixed": "#5e5e5e",
+                        "surface": "#fbf9f3",
+                        "primary-fixed": "#5e5e5e",
+                        "surface-container": "#f0eee8",
+                        "secondary": "#5e5e5e",
+                        "secondary-fixed": "#c6c6c6",
+                        "on-error": "#ffffff",
+                        "on-surface-variant": "#474747",
+                        "on-primary-fixed-variant": "#e2e2e2",
+                        "surface-variant": "#e4e2dd",
+                        "surface-bright": "#fbf9f3",
+                        "on-secondary-fixed": "#1b1b1b",
+                        "inverse-primary": "#c6c6c6",
+                        "inverse-surface": "#30312d",
+                        "tertiary": "#3b3b3b",
+                        "on-primary": "#e2e2e2",
+                        "inverse-on-surface": "#f3f1eb",
+                        "primary": "#000000",
+                        "surface-tint": "#5e5e5e",
+                        "on-primary-fixed": "#ffffff",
+                        "on-tertiary-fixed-variant": "#e2e2e2",
+                        "secondary-container": "#d4d4d4",
+                        "surface-container-highest": "#e4e2dd",
+                        "primary-fixed-dim": "#474747",
+                        "on-error-container": "#410002",
+                        "outline": "#777777",
+                        "surface-container-high": "#eae8e2",
+                        "outline-variant": "#c6c6c6",
+                        "on-tertiary-fixed": "#ffffff",
+                        "on-primary-container": "#ffffff",
+                        "secondary-fixed-dim": "#ababab",
+                        "on-secondary-fixed-variant": "#3b3b3b",
+                        "on-secondary-container": "#1b1b1b",
+                        "tertiary-container": "#747474",
+                        "error": "#ba1a1a",
+                        "tertiary-fixed-dim": "#474747",
+                        "primary-container": "#3b3b3b",
+                        "on-tertiary-container": "#ffffff",
+                        "on-surface": "#1b1c18",
+                        "surface-container-lowest": "#ffffff",
+                        "surface-dim": "#dcdad4"
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0rem",
+                        "lg": "0rem",
+                        "xl": "0rem",
+                        "full": "9999px"
+                    },
+                    fontFamily: {
+                        "headline": ["Inter", "sans-serif"],
+                        "body": ["Inter", "sans-serif"],
+                        "label": ["Space Grotesk", "monospace"],
+                        "mono": ["JetBrains Mono", "monospace"],
+                        "display": ["Bricolage Grotesque", "sans-serif"]
+                    }
+                },
+            },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .marquee {
+            white-space: nowrap;
+            overflow: hidden;
+            display: flex;
+        }
+        .marquee-content {
+            display: flex;
+            animation: scroll 30s linear infinite;
+        }
+        @keyframes scroll {
+            from { transform: translateX(0); }
+            to { transform: translateX(-50%); }
+        }
+        .diagonal-ribbon {
+            transform: rotate(45deg) translateY(-20px) translateX(40px);
+        }
+    </style>
+</head>
+<body class="bg-[#f5f2e8] text-primary font-body antialiased">
+<!-- TopNavBar -->
+<nav class="bg-[#fbf9f3] dark:bg-black text-black dark:text-[#fbf9f3] docked full-width top-0 border-b-2 border-black dark:border-[#fbf9f3] flex justify-between items-center w-full px-6 py-4 max-w-full z-50 sticky top-0">
+<div class="text-3xl font-black tracking-tighter text-black dark:text-white uppercase font-headline">DocTalk</div>
+<div class="hidden md:flex items-center gap-8">
+<a class="text-black/60 dark:text-[#fbf9f3]/60 font-medium font-['Inter'] uppercase tracking-tighter hover:bg-black hover:text-[#fbf9f3] dark:hover:bg-[#fbf9f3] dark:hover:text-black transition-none px-2 py-1" href="#">PRODUCT</a>
+<a class="text-black dark:text-white border-b-4 border-black dark:border-white pb-0 font-['Inter'] uppercase tracking-tighter transition-none px-2 py-1" href="#">PRICING</a>
+<a class="text-black/60 dark:text-[#fbf9f3]/60 font-medium font-['Inter'] uppercase tracking-tighter hover:bg-black hover:text-[#fbf9f3] dark:hover:bg-[#fbf9f3] dark:hover:text-black transition-none px-2 py-1" href="#">DOCS</a>
+</div>
+<div class="flex items-center gap-4">
+<a class="text-black/60 dark:text-[#fbf9f3]/60 font-medium font-['Inter'] uppercase tracking-tighter hover:bg-black hover:text-[#fbf9f3] transition-none px-4 py-2" href="#">LOG_IN</a>
+<button class="bg-black text-[#e2e2e2] px-6 py-2 font-black uppercase tracking-tighter border-2 border-black hover:bg-transparent hover:text-black transition-none active:translate-x-0.5 active:translate-y-0.5">GET_STARTED</button>
+</div>
+</nav>
+<main class="max-w-[1440px] mx-auto px-6 py-20">
+<!-- Hero Section -->
+<div class="mb-24">
+<p class="font-mono text-sm tracking-widest uppercase mb-4 text-black/60">§03 — PRICING / 2026</p>
+<h1 class="font-display text-[140px] leading-[0.85] tracking-[-0.06em] text-black mb-12 lowercase max-w-4xl">
+                pay for what you ask. not a cent more.
+            </h1>
+<!-- Toggle -->
+<div class="inline-flex border-2 border-black p-1 bg-surface-container-low">
+<button class="px-8 py-3 bg-black text-white font-mono uppercase text-sm tracking-widest">MONTHLY</button>
+<button class="px-8 py-3 bg-transparent text-black font-mono uppercase text-sm tracking-widest hover:bg-black/5">YEARLY −20%</button>
+</div>
+</div>
+<!-- Pricing Cards -->
+<div class="grid grid-cols-1 md:grid-cols-3 gap-0 border-2 border-black mb-32 bg-black">
+<!-- FREE -->
+<div class="bg-[#fbf9f3] p-10 flex flex-col min-h-[600px] border-r-2 border-black last:border-r-0">
+<div class="mb-12">
+<h2 class="font-mono text-xl uppercase font-bold mb-2">FREE</h2>
+<div class="flex items-baseline gap-2">
+<span class="text-5xl font-black font-headline tracking-tighter">$0</span>
+<span class="font-mono text-sm text-black/60 uppercase">/ MO</span>
+</div>
+</div>
+<div class="flex-grow">
+<p class="font-mono text-2xl font-bold mb-8 uppercase tracking-tight">500 CREDITS</p>
+<ul class="font-mono text-sm space-y-4 uppercase tracking-tighter border-t border-black pt-6">
+<li class="flex items-start gap-3">
+<span class="text-lg">→</span> 1 USER ACCOUNT
+                        </li>
+<li class="flex items-start gap-3">
+<span class="text-lg">→</span> BASIC CHAT MODE
+                        </li>
+<li class="flex items-start gap-3">
+<span class="text-lg">→</span> TXT / PDF SUPPORT
+                        </li>
+<li class="flex items-start gap-3 text-black/30">
+<span class="text-lg">→</span> NO EXPORT API
+                        </li>
+</ul>
+</div>
+<button class="mt-auto border-2 border-black py-4 font-black uppercase tracking-tighter hover:bg-black hover:text-[#fbf9f3] transition-none">
+                    [START FREE →]
+                </button>
+</div>
+<!-- PLUS -->
+<div class="bg-[#fbf9f3] p-10 flex flex-col min-h-[600px] border-r-2 border-black last:border-r-0 relative overflow-hidden">
+<!-- Diagonal Ribbon -->
+<div class="absolute top-0 right-0 w-48 h-12 bg-black text-[#fbf9f3] flex items-center justify-center font-mono text-xs uppercase tracking-widest diagonal-ribbon font-bold">
+                    MOST CHOSEN
+                </div>
+<div class="mb-12">
+<h2 class="font-mono text-xl uppercase font-bold mb-2">PLUS</h2>
+<div class="flex items-baseline gap-2">
+<span class="text-5xl font-black font-headline tracking-tighter">$9.99</span>
+<span class="font-mono text-sm text-black/60 uppercase">/ MO</span>
+</div>
+</div>
+<div class="flex-grow">
+<p class="font-mono text-2xl font-bold mb-8 uppercase tracking-tight">3,000 CREDITS</p>
+<ul class="font-mono text-sm space-y-4 uppercase tracking-tighter border-t border-black pt-6">
+<li class="flex items-start gap-3">
+<span class="text-lg">→</span> UNLIMITED PROJECTS
+                        </li>
+<li class="flex items-start gap-3 font-bold">
+<span class="text-lg">→</span> THOROUGH MODE (V3)
+                        </li>
+<li class="flex items-start gap-3">
+<span class="text-lg">→</span> EXPORT TO MD/DOCX
+                        </li>
+<li class="flex items-start gap-3">
+<span class="text-lg">→</span> SESSIONS SYNC
+                        </li>
+</ul>
+</div>
+<button class="mt-auto bg-black text-[#e2e2e2] border-2 border-black py-4 font-black uppercase tracking-tighter hover:bg-transparent hover:text-black transition-none">
+                    [UPGRADE →]
+                </button>
+</div>
+<!-- PRO -->
+<div class="bg-[#fbf9f3] p-10 flex flex-col min-h-[600px] border-r-2 border-black last:border-r-0">
+<div class="mb-12">
+<h2 class="font-mono text-xl uppercase font-bold mb-2">PRO</h2>
+<div class="flex items-baseline gap-2">
+<span class="text-5xl font-black font-headline tracking-tighter">$19.99</span>
+<span class="font-mono text-sm text-black/60 uppercase">/ MO</span>
+</div>
+</div>
+<div class="flex-grow">
+<p class="font-mono text-2xl font-bold mb-8 uppercase tracking-tight">9,000 CREDITS</p>
+<ul class="font-mono text-sm space-y-4 uppercase tracking-tighter border-t border-black pt-6">
+<li class="flex items-start gap-3">
+<span class="text-lg">→</span> ENTERPRISE ACCESS
+                        </li>
+<li class="flex items-start gap-3">
+<span class="text-lg">→</span> CUSTOM INSTRUCTIONS
+                        </li>
+<li class="flex items-start gap-3">
+<span class="text-lg">→</span> API RATE LIMITS x5
+                        </li>
+<li class="flex items-start gap-3">
+<span class="text-lg">→</span> 24/7 PRIORITY SUPPORT
+                        </li>
+</ul>
+</div>
+<button class="mt-auto border-2 border-black py-4 font-black uppercase tracking-tighter hover:bg-black hover:text-[#fbf9f3] transition-none">
+                    [GO PRO →]
+                </button>
+</div>
+</div>
+<!-- Section Split: Feature Comparison & Receipt -->
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-20 items-start mb-32">
+<!-- Feature Comparison Table -->
+<div class="border-2 border-black bg-surface">
+<div class="p-6 border-b-2 border-black bg-black text-white">
+<h3 class="font-mono text-lg uppercase tracking-widest font-bold">DETAILED SPECIFICATIONS</h3>
+</div>
+<table class="w-full font-mono uppercase text-sm border-collapse">
+<tbody>
+<tr class="border-b border-black">
+<td class="p-4 border-r border-black font-bold">THOROUGH MODE</td>
+<td class="p-4 text-center w-24 border-r border-black">—</td>
+<td class="p-4 text-center w-24 border-r border-black">✓</td>
+<td class="p-4 text-center w-24">✓</td>
+</tr>
+<tr class="border-b border-black">
+<td class="p-4 border-r border-black font-bold">EXPORT TO MD/DOCX</td>
+<td class="p-4 text-center w-24 border-r border-black">—</td>
+<td class="p-4 text-center w-24 border-r border-black">✓</td>
+<td class="p-4 text-center w-24">✓</td>
+</tr>
+<tr class="border-b border-black">
+<td class="p-4 border-r border-black font-bold">CUSTOM INSTRUCTIONS</td>
+<td class="p-4 text-center w-24 border-r border-black">—</td>
+<td class="p-4 text-center w-24 border-r border-black">—</td>
+<td class="p-4 text-center w-24">✓</td>
+</tr>
+<tr class="border-b border-black">
+<td class="p-4 border-r border-black font-bold">SESSIONS / DOC</td>
+<td class="p-4 text-center w-24 border-r border-black font-bold">3</td>
+<td class="p-4 text-center w-24 border-r border-black font-bold">50</td>
+<td class="p-4 text-center w-24 font-bold">∞</td>
+</tr>
+<tr>
+<td class="p-4 border-r border-black font-bold">MAX FILE SIZE</td>
+<td class="p-4 text-center w-24 border-r border-black">10MB</td>
+<td class="p-4 text-center w-24 border-r border-black">100MB</td>
+<td class="p-4 text-center w-24">1GB</td>
+</tr>
+</tbody>
+</table>
+</div>
+<!-- Credit Packs (Receipt Block) -->
+<div class="border-2 border-black bg-white p-8 font-mono shadow-[12px_12px_0px_0px_rgba(0,0,0,1)]">
+<div class="text-center mb-10 border-b-2 border-dashed border-black pb-8">
+<h3 class="text-2xl font-black mb-1">DOCTALK.AI</h3>
+<p class="text-xs uppercase">CREDIT REFILL MANIFEST — [SERIAL: 884-09]</p>
+</div>
+<div class="space-y-6 mb-10">
+<div class="flex justify-between items-center text-lg">
+<span class="font-bold">BOOST 500 CREDITS</span>
+<span>$3.99</span>
+</div>
+<div class="flex justify-between items-center text-lg">
+<span class="font-bold">POWER 2,000 CREDITS</span>
+<span>$12.99</span>
+</div>
+<div class="flex justify-between items-center text-lg">
+<span class="font-bold">MAX 10,000 CREDITS</span>
+<span>$49.99</span>
+</div>
+</div>
+<div class="border-t-2 border-black pt-8 mb-8">
+<div class="flex justify-between items-center text-sm mb-2 opacity-60">
+<span>SUBTOTAL</span>
+<span>--.--</span>
+</div>
+<div class="flex justify-between items-center text-sm mb-4 opacity-60">
+<span>TAX APPLIED</span>
+<span>00.00%</span>
+</div>
+<div class="flex justify-between items-center text-2xl font-black">
+<span>ORDER TOTAL</span>
+<span>$0.00</span>
+</div>
+</div>
+<div class="flex justify-center mb-6">
+<img class="h-16 w-full object-cover filter grayscale" data-alt="industrial black and white barcode sticker used for manufacturing identification and tracking" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCrrWdN8DPB1qLYzFE2pLHhLSUWWD3MKwCAWGwoZEgK6gv6u_Zn1e1pD-PXlupi_uEYIDUtT4Uip7ZSJfExS3LcYJ7mFIBDMES6hAprdCAVt4X2DAeAscoCtRdIhFsZfBEX-8TMp91x3dH7nDg3GcCOW5q5L9f7zLfFE4ZUEyVoQLvsbQo7x20irdq14Qr1Aks6c2RlS0iW1LCV5enJraCwx50VSlIusZ-GflWt9OoQi9fopF3xnuz4S_17s9JTEYcJfikHhY2_XHJE"/>
+</div>
+<button class="w-full py-4 border-2 border-black font-black hover:bg-black hover:text-white transition-none uppercase">
+                    ADD TO ACCOUNT
+                </button>
+</div>
+</div>
+</main>
+<!-- Footer Marquee -->
+<footer class="bg-black text-[#fbf9f3] docked full-width bottom-0 border-t-2 border-black dark:border-[#fbf9f3] w-full py-6 px-6 flex flex-col items-center overflow-hidden">
+<div class="marquee w-full mb-4">
+<div class="marquee-content font-mono uppercase text-3xl tracking-[0.2em] font-black space-x-12">
+<span>ENGLISH</span>
+<span>DEUTSCH</span>
+<span>FRANÇAIS</span>
+<span>日本語</span>
+<span>ESPAÑOL</span>
+<span>РУССКИЙ</span>
+<span>ENGLISH</span>
+<span>DEUTSCH</span>
+<span>FRANÇAIS</span>
+<span>日本語</span>
+<span>ESPAÑOL</span>
+<span>РУССКИЙ</span>
+</div>
+</div>
+<div class="w-full flex flex-col md:flex-row justify-between items-center px-6 pt-4 border-t border-white/20 mt-4 font-mono text-[10px] tracking-widest opacity-60">
+<span>©2024 DOCTALK INDUSTRIAL SYSTEMS. ALL RIGHTS RESERVED.</span>
+<div class="flex gap-8 mt-4 md:mt-0">
+<a class="hover:line-through" href="#">TERMS_OF_SERVICE</a>
+<a class="hover:line-through" href="#">PRIVACY_PROTOCOL</a>
+<a class="hover:line-through" href="#">SYSTEM_STATUS: OK</a>
+</div>
+</div>
+</footer>
+</body></html>

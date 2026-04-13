@@ -129,7 +129,7 @@ export default function CitationsClient() {
               <Quote className="w-4 h-4" />
               {t('featuresCitations.heroBadge')}
             </div>
-            <h1 className="text-3xl sm:text-4xl lg:text-5xl font-semibold text-zinc-900 dark:text-zinc-100 tracking-tight mb-6 leading-tight">
+            <h1 className="font-serif text-3xl sm:text-4xl lg:text-5xl font-semibold text-zinc-900 dark:text-zinc-100 tracking-tight mb-6 leading-tight">
               {t('featuresCitations.heroTitle')}
             </h1>
             <p className="text-lg text-zinc-600 dark:text-zinc-300 max-w-2xl mx-auto mb-8">
@@ -148,7 +148,7 @@ export default function CitationsClient() {
         {/* How Citation Highlighting Works */}
         <section className="bg-zinc-50 dark:bg-zinc-900/50">
           <div className="max-w-4xl mx-auto px-6 py-16">
-            <h2 className="text-2xl sm:text-3xl font-semibold text-zinc-900 dark:text-zinc-100 tracking-tight mb-4 text-center">
+            <h2 className="font-serif text-2xl sm:text-3xl font-semibold text-zinc-900 dark:text-zinc-100 tracking-tight mb-4 text-center">
               {t('featuresCitations.howTitle')}
             </h2>
             <p className="text-zinc-600 dark:text-zinc-300 text-center max-w-2xl mx-auto mb-12">
@@ -182,7 +182,7 @@ export default function CitationsClient() {
         {/* Why Citations Matter */}
         <section className="bg-white dark:bg-zinc-950">
           <div className="max-w-4xl mx-auto px-6 py-16">
-            <h2 className="text-2xl sm:text-3xl font-semibold text-zinc-900 dark:text-zinc-100 tracking-tight mb-6">
+            <h2 className="font-serif text-2xl sm:text-3xl font-semibold text-zinc-900 dark:text-zinc-100 tracking-tight mb-6">
               {t('featuresCitations.whyTitle')}
             </h2>
             <div className="prose prose-zinc dark:prose-invert max-w-none">
@@ -205,7 +205,7 @@ export default function CitationsClient() {
         {/* Three Layers of Citation Accuracy */}
         <section className="bg-zinc-50 dark:bg-zinc-900/50">
           <div className="max-w-4xl mx-auto px-6 py-16">
-            <h2 className="text-2xl sm:text-3xl font-semibold text-zinc-900 dark:text-zinc-100 tracking-tight mb-4 text-center">
+            <h2 className="font-serif text-2xl sm:text-3xl font-semibold text-zinc-900 dark:text-zinc-100 tracking-tight mb-4 text-center">
               {t('featuresCitations.layersTitle')}
             </h2>
             <p className="text-zinc-600 dark:text-zinc-300 text-center max-w-2xl mx-auto mb-12">
@@ -241,7 +241,7 @@ export default function CitationsClient() {
         {/* Citation Quality Compared */}
         <section className="bg-white dark:bg-zinc-950">
           <div className="max-w-4xl mx-auto px-6 py-16">
-            <h2 className="text-2xl sm:text-3xl font-semibold text-zinc-900 dark:text-zinc-100 tracking-tight mb-4 text-center">
+            <h2 className="font-serif text-2xl sm:text-3xl font-semibold text-zinc-900 dark:text-zinc-100 tracking-tight mb-4 text-center">
               {t('featuresCitations.compTitle')}
             </h2>
             <p className="text-zinc-600 dark:text-zinc-300 text-center max-w-2xl mx-auto mb-10">
@@ -289,7 +289,7 @@ export default function CitationsClient() {
         {/* Use Cases */}
         <section className="bg-zinc-50 dark:bg-zinc-900/50">
           <div className="max-w-4xl mx-auto px-6 py-16">
-            <h2 className="text-2xl sm:text-3xl font-semibold text-zinc-900 dark:text-zinc-100 tracking-tight mb-4 text-center">
+            <h2 className="font-serif text-2xl sm:text-3xl font-semibold text-zinc-900 dark:text-zinc-100 tracking-tight mb-4 text-center">
               {t('featuresCitations.useCasesTitle')}
             </h2>
             <p className="text-zinc-600 dark:text-zinc-300 text-center max-w-2xl mx-auto mb-12">
@@ -315,7 +315,7 @@ export default function CitationsClient() {
                     </p>
                     <Link
                       href={item.link}
-                      className="text-sm font-medium text-indigo-600 dark:text-indigo-400 hover:underline inline-flex items-center gap-1"
+                      className="text-sm font-medium text-blue-600 dark:text-blue-400 hover:underline inline-flex items-center gap-1"
                     >
                       {item.linkText}
                       <ArrowRight className="w-3 h-3" />
@@ -330,7 +330,7 @@ export default function CitationsClient() {
         {/* FAQ */}
         <section className="bg-white dark:bg-zinc-950">
           <div className="max-w-4xl mx-auto px-6 py-16">
-            <h2 className="text-2xl sm:text-3xl font-semibold text-zinc-900 dark:text-zinc-100 tracking-tight mb-10 text-center">
+            <h2 className="font-serif text-2xl sm:text-3xl font-semibold text-zinc-900 dark:text-zinc-100 tracking-tight mb-10 text-center">
               {t('featuresCitations.faqTitle')}
             </h2>
 
@@ -355,7 +355,7 @@ export default function CitationsClient() {
         {/* CTA Banner */}
         <section className="bg-zinc-50 dark:bg-zinc-900/50">
           <div className="max-w-4xl mx-auto px-6 py-16 text-center">
-            <h2 className="text-2xl sm:text-3xl font-semibold text-zinc-900 dark:text-zinc-100 tracking-tight mb-4">
+            <h2 className="font-serif text-2xl sm:text-3xl font-semibold text-zinc-900 dark:text-zinc-100 tracking-tight mb-4">
               {t('featuresCitations.ctaTitle')}
             </h2>
             <p className="text-zinc-600 dark:text-zinc-300 max-w-xl mx-auto mb-8">
@@ -379,19 +379,19 @@ export default function CitationsClient() {
 
             {/* Internal links */}
             <div className="mt-10 flex flex-wrap items-center justify-center gap-4 text-sm">
-              <Link href="/features/multi-format" className="text-indigo-600 dark:text-indigo-400 hover:underline">
+              <Link href="/features/multi-format" className="text-blue-600 dark:text-blue-400 hover:underline">
                 {t('featuresCitations.linkMultiFormat')}
               </Link>
               <span className="text-zinc-300 dark:text-zinc-700">|</span>
-              <Link href="/compare/chatpdf" className="text-indigo-600 dark:text-indigo-400 hover:underline">
+              <Link href="/compare/chatpdf" className="text-blue-600 dark:text-blue-400 hover:underline">
                 {t('featuresCitations.linkVsChatPDF')}
               </Link>
               <span className="text-zinc-300 dark:text-zinc-700">|</span>
-              <Link href="/use-cases/students" className="text-indigo-600 dark:text-indigo-400 hover:underline">
+              <Link href="/use-cases/students" className="text-blue-600 dark:text-blue-400 hover:underline">
                 {t('featuresCitations.linkStudents')}
               </Link>
               <span className="text-zinc-300 dark:text-zinc-700">|</span>
-              <Link href="/use-cases/lawyers" className="text-indigo-600 dark:text-indigo-400 hover:underline">
+              <Link href="/use-cases/lawyers" className="text-blue-600 dark:text-blue-400 hover:underline">
                 {t('featuresCitations.linkLawyers')}
               </Link>
             </div>

@@ -48,7 +48,7 @@ export default function CompareHubClient() {
             <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-zinc-100 dark:bg-zinc-800 mb-6">
               <GitCompareArrows className="w-6 h-6 text-zinc-600 dark:text-zinc-300" />
             </div>
-            <h1 className="text-3xl sm:text-4xl font-semibold text-zinc-900 dark:text-zinc-100 mb-4 tracking-tight">
+            <h1 className="font-serif text-3xl sm:text-4xl font-semibold text-zinc-900 dark:text-zinc-100 mb-4 tracking-tight">
               {t('compareHub.heroTitle')}
             </h1>
             <p className="text-lg text-zinc-600 dark:text-zinc-300 max-w-2xl mx-auto">
@@ -68,7 +68,7 @@ export default function CompareHubClient() {
               >
                 <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100 mb-2 flex items-center justify-between">
                   <span>{t('compareHub.vsLabel', { name: c.name })}</span>
-                  <ArrowRight className="w-4 h-4 text-zinc-400 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 group-hover:translate-x-0.5 transition-[color,transform] duration-200" />
+                  <ArrowRight className="w-4 h-4 text-zinc-400 group-hover:text-blue-600 dark:group-hover:text-blue-400 group-hover:translate-x-0.5 transition-[color,transform] duration-200" />
                 </h2>
                 <p className="text-sm text-zinc-600 dark:text-zinc-300 leading-relaxed">
                   {t(c.taglineKey)}
@@ -85,23 +85,23 @@ export default function CompareHubClient() {
               {t('compareHub.widenDescription')}
             </p>
             <div className="flex flex-wrap gap-3 text-sm">
-              <Link href="/alternatives" className="text-indigo-600 dark:text-indigo-400 hover:underline">
+              <Link href="/alternatives" className="text-blue-600 dark:text-blue-400 hover:underline">
                 {t('compareHub.link.alternativesHub')}
               </Link>
               <span className="text-zinc-300 dark:text-zinc-700">|</span>
-              <Link href="/blog/category/comparisons" className="text-indigo-600 dark:text-indigo-400 hover:underline">
+              <Link href="/blog/category/comparisons" className="text-blue-600 dark:text-blue-400 hover:underline">
                 {t('compareHub.link.comparisonGuides')}
               </Link>
               <span className="text-zinc-300 dark:text-zinc-700">|</span>
-              <Link href="/features/citations" className="text-indigo-600 dark:text-indigo-400 hover:underline">
+              <Link href="/features/citations" className="text-blue-600 dark:text-blue-400 hover:underline">
                 {t('compareHub.link.citationHighlighting')}
               </Link>
               <span className="text-zinc-300 dark:text-zinc-700">|</span>
-              <Link href="/features/multilingual" className="text-indigo-600 dark:text-indigo-400 hover:underline">
+              <Link href="/features/multilingual" className="text-blue-600 dark:text-blue-400 hover:underline">
                 {t('compareHub.link.languageSupport')}
               </Link>
               <span className="text-zinc-300 dark:text-zinc-700">|</span>
-              <Link href="/pricing" className="text-indigo-600 dark:text-indigo-400 hover:underline">
+              <Link href="/pricing" className="text-blue-600 dark:text-blue-400 hover:underline">
                 {t('compareHub.link.pricingOverview')}
               </Link>
             </div>

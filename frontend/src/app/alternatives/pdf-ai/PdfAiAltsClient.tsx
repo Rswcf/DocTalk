@@ -59,7 +59,7 @@ export default function PdfAiAltsClient() {
             <span className="text-zinc-900 dark:text-zinc-100">PDF.ai</span>
           </nav>
 
-          <h1 className="text-3xl sm:text-4xl font-semibold text-zinc-900 dark:text-zinc-100 tracking-tight mb-6">
+          <h1 className="font-serif text-3xl sm:text-4xl font-semibold text-zinc-900 dark:text-zinc-100 tracking-tight mb-6">
             7 Best PDF.ai Alternatives in 2026
           </h1>
           <p className="text-lg text-zinc-600 dark:text-zinc-300 leading-relaxed">
@@ -134,7 +134,7 @@ export default function PdfAiAltsClient() {
             </p>
             <p className="text-zinc-600 dark:text-zinc-300 leading-relaxed mb-4">
               See our{' '}
-              <Link href="/compare/pdf-ai" className="text-indigo-600 dark:text-indigo-400 hover:underline">
+              <Link href="/compare/pdf-ai" className="text-blue-600 dark:text-blue-400 hover:underline">
                 detailed DocTalk vs PDF.ai comparison
               </Link>{' '}
               for a complete feature-by-feature breakdown.
@@ -176,7 +176,7 @@ export default function PdfAiAltsClient() {
           <p className="text-zinc-600 dark:text-zinc-300 leading-relaxed mb-4">
             Like PDF.ai, ChatPDF is PDF-only, but it compensates with faster response times and a more generous
             free tier. See our{' '}
-            <Link href="/compare/chatpdf" className="text-indigo-600 dark:text-indigo-400 hover:underline">
+            <Link href="/compare/chatpdf" className="text-blue-600 dark:text-blue-400 hover:underline">
               ChatPDF comparison
             </Link>.
           </p>
@@ -202,7 +202,7 @@ export default function PdfAiAltsClient() {
             <p className="text-zinc-600 dark:text-zinc-300 leading-relaxed mb-4">
               AskYourPDF also focuses on PDFs but adds features like batch processing and a ChatGPT plugin that
               PDF.ai lacks. See our{' '}
-              <Link href="/compare/askyourpdf" className="text-indigo-600 dark:text-indigo-400 hover:underline">
+              <Link href="/compare/askyourpdf" className="text-blue-600 dark:text-blue-400 hover:underline">
                 AskYourPDF comparison
               </Link>.
             </p>
@@ -228,7 +228,7 @@ export default function PdfAiAltsClient() {
           <p className="text-zinc-600 dark:text-zinc-300 leading-relaxed mb-4">
             The Team plan at $49/user/month is pricier than PDF.ai, but includes features no other tool in this
             category offers. See our{' '}
-            <Link href="/compare/humata" className="text-indigo-600 dark:text-indigo-400 hover:underline">
+            <Link href="/compare/humata" className="text-blue-600 dark:text-blue-400 hover:underline">
               Humata comparison
             </Link>.
           </p>
@@ -254,7 +254,7 @@ export default function PdfAiAltsClient() {
             <p className="text-zinc-600 dark:text-zinc-300 leading-relaxed mb-4">
               While NotebookLM lacks the PDF editing features that PDF.ai offers, its multi-source notebook approach
               and free pricing make it ideal for research and learning. See our{' '}
-              <Link href="/compare/notebooklm" className="text-indigo-600 dark:text-indigo-400 hover:underline">
+              <Link href="/compare/notebooklm" className="text-blue-600 dark:text-blue-400 hover:underline">
                 NotebookLM comparison
               </Link>.
             </p>
@@ -332,7 +332,7 @@ export default function PdfAiAltsClient() {
                 <span className="text-zinc-600 dark:text-zinc-300 text-sm flex-1">{item.need}</span>
                 <Link
                   href={item.href}
-                  className="text-sm font-medium text-indigo-600 dark:text-indigo-400 hover:underline whitespace-nowrap"
+                  className="text-sm font-medium text-blue-600 dark:text-blue-400 hover:underline whitespace-nowrap"
                 >
                   {item.pick}
                 </Link>

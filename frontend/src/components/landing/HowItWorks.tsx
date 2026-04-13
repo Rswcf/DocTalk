@@ -4,6 +4,7 @@ import React from 'react';
 import { Upload, MessageSquare, BookOpen } from 'lucide-react';
 import { useLocale } from '../../i18n';
 import ScrollReveal from './ScrollReveal';
+import { StaggeredReveal } from '../spell';
 
 const steps = [
   { num: 1, icon: Upload, titleKey: 'landing.howItWorks.step1.title', descKey: 'landing.howItWorks.step1.desc' },
@@ -17,16 +18,19 @@ export default function HowItWorks() {
   return (
     <ScrollReveal>
       <section id="how-it-works" className="max-w-5xl mx-auto px-6 py-24">
-        <h2 className="font-semibold tracking-tight text-3xl text-zinc-900 dark:text-zinc-50 text-center mb-16 text-balance">
+        <h2 className="font-serif font-semibold tracking-tight text-3xl text-zinc-900 dark:text-zinc-50 text-center mb-16 text-balance">
           {t('landing.howItWorks.title')}
         </h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-12 md:gap-0 relative">
+        <div className="relative">
           {/* Connecting dashed line (desktop only) */}
           <div className="hidden md:block absolute top-10 left-[calc(16.67%+24px)] right-[calc(16.67%+24px)] border-t border-dashed border-accent/30" />
 
-          {steps.map(({ num, icon: Icon, titleKey, descKey }, index) => (
-            <ScrollReveal key={num} delay={index * 150}>
-              <div className="flex flex-col items-center text-center relative z-10">
+          <StaggeredReveal
+            stagger={0.18}
+            className="grid grid-cols-1 md:grid-cols-3 gap-12 md:gap-0"
+          >
+            {steps.map(({ num, icon: Icon, titleKey, descKey }) => (
+              <div key={num} className="flex flex-col items-center text-center relative z-10">
                 {/* Number badge */}
                 <div className="w-10 h-10 rounded-full bg-accent text-accent-foreground text-sm font-bold flex items-center justify-center mb-4">
                   {num}
@@ -43,8 +47,8 @@ export default function HowItWorks() {
                   {t(descKey)}
                 </p>
               </div>
-            </ScrollReveal>
-          ))}
+            ))}
+          </StaggeredReveal>
         </div>
       </section>
     </ScrollReveal>

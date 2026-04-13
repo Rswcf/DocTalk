@@ -59,7 +59,7 @@ export default function AskyourpdfAltsClient() {
             <span className="text-zinc-900 dark:text-zinc-100">AskYourPDF</span>
           </nav>
 
-          <h1 className="text-3xl sm:text-4xl font-semibold text-zinc-900 dark:text-zinc-100 tracking-tight mb-6">
+          <h1 className="font-serif text-3xl sm:text-4xl font-semibold text-zinc-900 dark:text-zinc-100 tracking-tight mb-6">
             7 Best AskYourPDF Alternatives in 2026
           </h1>
           <p className="text-lg text-zinc-600 dark:text-zinc-300 leading-relaxed">
@@ -133,7 +133,7 @@ export default function AskyourpdfAltsClient() {
             </p>
             <p className="text-zinc-600 dark:text-zinc-300 leading-relaxed mb-4">
               See our{' '}
-              <Link href="/compare/askyourpdf" className="text-indigo-600 dark:text-indigo-400 hover:underline">
+              <Link href="/compare/askyourpdf" className="text-blue-600 dark:text-blue-400 hover:underline">
                 detailed DocTalk vs AskYourPDF comparison
               </Link>{' '}
               for a feature-by-feature breakdown.
@@ -175,7 +175,7 @@ export default function AskyourpdfAltsClient() {
           <p className="text-zinc-600 dark:text-zinc-300 leading-relaxed mb-4">
             ChatPDF&apos;s free tier allows limited daily usage, making it a good option for occasional users. However, it
             lacks multi-format support and real-time citation highlighting. See our{' '}
-            <Link href="/compare/chatpdf" className="text-indigo-600 dark:text-indigo-400 hover:underline">
+            <Link href="/compare/chatpdf" className="text-blue-600 dark:text-blue-400 hover:underline">
               ChatPDF comparison
             </Link>.
           </p>
@@ -201,7 +201,7 @@ export default function AskyourpdfAltsClient() {
             <p className="text-zinc-600 dark:text-zinc-300 leading-relaxed mb-4">
               The tool is PDF-only like AskYourPDF, but its editing features make it useful for users who need to
               mark up documents alongside their AI analysis. See our{' '}
-              <Link href="/compare/pdf-ai" className="text-indigo-600 dark:text-indigo-400 hover:underline">
+              <Link href="/compare/pdf-ai" className="text-blue-600 dark:text-blue-400 hover:underline">
                 PDF.ai comparison
               </Link>.
             </p>
@@ -227,7 +227,7 @@ export default function AskyourpdfAltsClient() {
           <p className="text-zinc-600 dark:text-zinc-300 leading-relaxed mb-4">
             While more expensive than AskYourPDF (Team plan at $49/user/month), Humata justifies its price with
             enterprise features like admin dashboards, usage analytics, and priority support. See our{' '}
-            <Link href="/compare/humata" className="text-indigo-600 dark:text-indigo-400 hover:underline">
+            <Link href="/compare/humata" className="text-blue-600 dark:text-blue-400 hover:underline">
               Humata comparison
             </Link>.
           </p>
@@ -253,7 +253,7 @@ export default function AskyourpdfAltsClient() {
             <p className="text-zinc-600 dark:text-zinc-300 leading-relaxed mb-4">
               The biggest advantage over AskYourPDF is that NotebookLM is completely free. However, it requires a
               Google account and doesn&apos;t offer the same depth of single-document analysis. See our{' '}
-              <Link href="/compare/notebooklm" className="text-indigo-600 dark:text-indigo-400 hover:underline">
+              <Link href="/compare/notebooklm" className="text-blue-600 dark:text-blue-400 hover:underline">
                 NotebookLM comparison
               </Link>.
             </p>
@@ -332,7 +332,7 @@ export default function AskyourpdfAltsClient() {
                 <span className="text-zinc-600 dark:text-zinc-300 text-sm flex-1">{item.need}</span>
                 <Link
                   href={item.href}
-                  className="text-sm font-medium text-indigo-600 dark:text-indigo-400 hover:underline whitespace-nowrap"
+                  className="text-sm font-medium text-blue-600 dark:text-blue-400 hover:underline whitespace-nowrap"
                 >
                   {item.pick}
                 </Link>

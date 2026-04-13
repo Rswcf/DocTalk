@@ -1,0 +1,244 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<title>DocTalk · Accent Candidates</title>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;1,9..144,400&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'Inter',system-ui,sans-serif;background:#ECECEA;color:#18181b;-webkit-font-smoothing:antialiased;padding:48px 32px 120px}
+  .shell{max-width:1440px;margin:0 auto}
+  .header{display:flex;justify-content:space-between;align-items:flex-end;padding-bottom:20px;border-bottom:1px solid #c7c7c2;margin-bottom:40px}
+  .brand{font-family:'JetBrains Mono',monospace;font-size:12px;letter-spacing:.12em;color:#52525b}
+  h1{font-family:'Fraunces',serif;font-weight:500;font-size:48px;letter-spacing:-0.02em;line-height:1}
+  .lede{margin-top:12px;color:#52525b;font-size:15px;max-width:680px;line-height:1.5}
+  .row{margin-top:56px}
+  .row-label{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px}
+  .row-label .name{font-family:'Fraunces',serif;font-size:24px;font-weight:500;letter-spacing:-0.01em}
+  .row-label .name em{font-style:italic;color:#71717a;font-weight:400;margin-left:12px}
+  .row-label .hex{font-family:'JetBrains Mono',monospace;font-size:12px;color:#52525b;letter-spacing:.08em}
+  .pair{display:grid;grid-template-columns:1fr 1fr;gap:24px}
+  .card{border:1px solid #00000012;border-radius:14px;overflow:hidden;background:#fff}
+  .card .top{display:flex;justify-content:space-between;align-items:center;padding:10px 16px;border-bottom:1px solid #00000010;font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.1em;color:#71717a;text-transform:uppercase}
+  .card .top .dot{width:8px;height:8px;border-radius:50%;background:var(--accent)}
+  .hero{padding:40px 40px 48px;min-height:380px;display:flex;flex-direction:column;justify-content:space-between}
+  .kicker{font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.15em;text-transform:uppercase;color:color-mix(in srgb, var(--fg) 55%, transparent)}
+  .hero h2{font-family:'Fraunces',serif;font-weight:500;font-size:40px;line-height:1.05;letter-spacing:-0.025em;margin-top:14px;color:var(--fg)}
+  .hero h2 .grad{background:linear-gradient(135deg,var(--accent) 0%, var(--accent-2) 100%);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
+  .hero p{margin-top:14px;color:color-mix(in srgb, var(--fg) 70%, transparent);font-size:15px;line-height:1.55;max-width:480px}
+  .cta-row{display:flex;gap:12px;align-items:center;margin-top:26px;flex-wrap:wrap}
+  .btn{display:inline-flex;align-items:center;gap:6px;padding:10px 18px;border-radius:10px;font-weight:500;font-size:14px;border:1px solid transparent;cursor:pointer;text-decoration:none}
+  .btn.primary{background:var(--accent);color:var(--accent-fg)}
+  .btn.primary:hover{background:var(--accent-hover)}
+  .btn.ghost{color:var(--fg);border-color:color-mix(in srgb, var(--fg) 15%, transparent);background:transparent}
+  .chips{display:flex;gap:8px;flex-wrap:wrap;margin-top:22px}
+  .chip{font-size:12px;padding:4px 10px;border-radius:999px;background:var(--accent-soft);color:var(--accent);font-weight:500}
+  .chip.neutral{background:color-mix(in srgb, var(--fg) 6%, transparent);color:color-mix(in srgb, var(--fg) 70%, transparent)}
+  .link{color:var(--accent);font-weight:500;font-size:14px;text-decoration:underline;text-underline-offset:3px;text-decoration-thickness:1px}
+  .foot{display:flex;justify-content:space-between;align-items:center;padding:14px 40px;border-top:1px solid color-mix(in srgb, var(--fg) 8%, transparent);font-family:'JetBrains Mono',monospace;font-size:11px;color:color-mix(in srgb, var(--fg) 60%, transparent);letter-spacing:.1em;text-transform:uppercase}
+
+  /* Light variant */
+  .light{--bg:#fafaf7;--fg:#09090b;--accent-fg:#ffffff}
+  .light .hero{background:var(--bg)}
+  .light .foot{background:var(--bg)}
+
+  /* Dark variant */
+  .dark{--bg:#1c1b18;--fg:#fafafa}
+  .dark .hero{background:var(--bg)}
+  .dark .foot{background:var(--bg)}
+  .dark .card{border-color:#ffffff10}
+  .dark .card .top{background:#0f0e0c;border-color:#ffffff10;color:#a1a1aa}
+
+  /* ============ A · INK BLUE ============ */
+  .A.light{--accent:#1D4ED8;--accent-hover:#1E40AF;--accent-2:#2563eb;--accent-soft:#DBEAFE}
+  .A.dark{--accent:#60A5FA;--accent-hover:#93C5FD;--accent-2:#38BDF8;--accent-soft:rgba(96,165,250,.12);--accent-fg:#0b1726}
+
+  /* ============ B · FOREST ============ */
+  .B.light{--accent:#0F766E;--accent-hover:#115E59;--accent-2:#15803D;--accent-soft:#CCFBF1}
+  .B.dark{--accent:#5EEAD4;--accent-hover:#99F6E4;--accent-2:#86EFAC;--accent-soft:rgba(94,234,212,.10);--accent-fg:#052e2a}
+
+  /* ============ C · CHARCOAL ONLY ============ */
+  .C.light{--accent:#18181B;--accent-hover:#000;--accent-2:#52525B;--accent-soft:#F4F4F5;--accent-fg:#fafaf7}
+  .C.dark{--accent:#FAFAFA;--accent-hover:#ffffff;--accent-2:#A1A1AA;--accent-soft:rgba(255,255,255,.08);--accent-fg:#0b0b0c}
+
+  .swatches{display:flex;gap:18px;flex-wrap:wrap;margin-top:10px}
+  .sw{display:flex;align-items:center;gap:8px;font-family:'JetBrains Mono',monospace;font-size:11px;color:#52525b;letter-spacing:.05em}
+  .sw span.c{width:22px;height:22px;border-radius:6px;border:1px solid #00000014}
+  .pick{margin-top:60px;padding:24px;border:1px dashed #00000025;border-radius:12px;background:#fff;display:flex;justify-content:space-between;align-items:center;gap:20px;flex-wrap:wrap}
+  .pick h3{font-family:'Fraunces',serif;font-weight:500;font-size:22px;letter-spacing:-0.01em}
+  .pick p{color:#52525b;font-size:14px;margin-top:4px}
+  .pick .ans{font-family:'JetBrains Mono',monospace;font-size:13px;color:#18181b;background:#f4f4f5;padding:10px 14px;border-radius:8px}
+</style>
+</head>
+<body>
+<div class="shell">
+  <div class="header">
+    <div>
+      <div class="brand">DOCTALK · ACCENT CANDIDATES</div>
+      <h1 style="margin-top:8px">Three ways to kill the AI purple.</h1>
+      <p class="lede">Each row is one candidate, rendered twice: once on the warm paper canvas (light) and once on the warm near-black (dark). Same hero, same copy, same components — only the accent changes.</p>
+    </div>
+    <div class="swatches">
+      <div class="sw"><span class="c" style="background:#1D4ED8"></span>A · INK</div>
+      <div class="sw"><span class="c" style="background:#0F766E"></span>B · FOREST</div>
+      <div class="sw"><span class="c" style="background:#18181B"></span>C · CHARCOAL</div>
+    </div>
+  </div>
+
+  <!-- A · INK BLUE -->
+  <section class="row">
+    <div class="row-label">
+      <div class="name">A · Ink Blue <em>classic, trustworthy, fully off the AI-purple spectrum</em></div>
+      <div class="hex">LIGHT #1D4ED8 &nbsp;·&nbsp; DARK #60A5FA</div>
+    </div>
+    <div class="pair">
+      <div class="card A light">
+        <div class="top"><span>DOCTALK / LANDING / LIGHT</span><span class="dot"></span></div>
+        <div class="hero">
+          <div>
+            <div class="kicker">01 — Document Q&amp;A</div>
+            <h2>Ask your documents. <br/>Get answers with <span class="grad">receipts</span>.</h2>
+            <p>Upload a PDF, DOCX, or slide deck. Chat with AI that cites the exact passage it used — no more trusting a black box.</p>
+          </div>
+          <div>
+            <div class="chips"><span class="chip">PDF</span><span class="chip">DOCX</span><span class="chip">PPTX</span><span class="chip neutral">+ 4 more</span></div>
+            <div class="cta-row">
+              <a class="btn primary" href="#">Start free →</a>
+              <a class="btn ghost" href="#">See how it works</a>
+              <a class="link" href="#">Read the docs</a>
+            </div>
+          </div>
+        </div>
+        <div class="foot"><span>§ ACCENT · #1D4ED8</span><span>ENGLISH · 中文 · 日本語 · 한국어 · +7</span></div>
+      </div>
+      <div class="card A dark">
+        <div class="top"><span>DOCTALK / LANDING / DARK</span><span class="dot"></span></div>
+        <div class="hero">
+          <div>
+            <div class="kicker">01 — Document Q&amp;A</div>
+            <h2>Ask your documents. <br/>Get answers with <span class="grad">receipts</span>.</h2>
+            <p>Upload a PDF, DOCX, or slide deck. Chat with AI that cites the exact passage it used — no more trusting a black box.</p>
+          </div>
+          <div>
+            <div class="chips"><span class="chip">PDF</span><span class="chip">DOCX</span><span class="chip">PPTX</span><span class="chip neutral">+ 4 more</span></div>
+            <div class="cta-row">
+              <a class="btn primary" href="#">Start free →</a>
+              <a class="btn ghost" href="#">See how it works</a>
+              <a class="link" href="#">Read the docs</a>
+            </div>
+          </div>
+        </div>
+        <div class="foot"><span>§ ACCENT · #60A5FA</span><span>ENGLISH · 中文 · 日本語 · 한국어 · +7</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- B · FOREST -->
+  <section class="row">
+    <div class="row-label">
+      <div class="name">B · Forest <em>fresh, studious, rarer — pairs beautifully with amber citations</em></div>
+      <div class="hex">LIGHT #0F766E &nbsp;·&nbsp; DARK #5EEAD4</div>
+    </div>
+    <div class="pair">
+      <div class="card B light">
+        <div class="top"><span>DOCTALK / LANDING / LIGHT</span><span class="dot"></span></div>
+        <div class="hero">
+          <div>
+            <div class="kicker">01 — Document Q&amp;A</div>
+            <h2>Ask your documents. <br/>Get answers with <span class="grad">receipts</span>.</h2>
+            <p>Upload a PDF, DOCX, or slide deck. Chat with AI that cites the exact passage it used — no more trusting a black box.</p>
+          </div>
+          <div>
+            <div class="chips"><span class="chip">PDF</span><span class="chip">DOCX</span><span class="chip">PPTX</span><span class="chip neutral">+ 4 more</span></div>
+            <div class="cta-row">
+              <a class="btn primary" href="#">Start free →</a>
+              <a class="btn ghost" href="#">See how it works</a>
+              <a class="link" href="#">Read the docs</a>
+            </div>
+          </div>
+        </div>
+        <div class="foot"><span>§ ACCENT · #0F766E</span><span>ENGLISH · 中文 · 日本語 · 한국어 · +7</span></div>
+      </div>
+      <div class="card B dark">
+        <div class="top"><span>DOCTALK / LANDING / DARK</span><span class="dot"></span></div>
+        <div class="hero">
+          <div>
+            <div class="kicker">01 — Document Q&amp;A</div>
+            <h2>Ask your documents. <br/>Get answers with <span class="grad">receipts</span>.</h2>
+            <p>Upload a PDF, DOCX, or slide deck. Chat with AI that cites the exact passage it used — no more trusting a black box.</p>
+          </div>
+          <div>
+            <div class="chips"><span class="chip">PDF</span><span class="chip">DOCX</span><span class="chip">PPTX</span><span class="chip neutral">+ 4 more</span></div>
+            <div class="cta-row">
+              <a class="btn primary" href="#">Start free →</a>
+              <a class="btn ghost" href="#">See how it works</a>
+              <a class="link" href="#">Read the docs</a>
+            </div>
+          </div>
+        </div>
+        <div class="foot"><span>§ ACCENT · #5EEAD4</span><span>ENGLISH · 中文 · 日本語 · 한국어 · +7</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- C · CHARCOAL ONLY -->
+  <section class="row">
+    <div class="row-label">
+      <div class="name">C · Charcoal Only <em>most confident — monochrome, amber highlight is the only color left</em></div>
+      <div class="hex">LIGHT #18181B &nbsp;·&nbsp; DARK #FAFAFA</div>
+    </div>
+    <div class="pair">
+      <div class="card C light">
+        <div class="top"><span>DOCTALK / LANDING / LIGHT</span><span class="dot"></span></div>
+        <div class="hero">
+          <div>
+            <div class="kicker">01 — Document Q&amp;A</div>
+            <h2>Ask your documents. <br/>Get answers with <span class="grad">receipts</span>.</h2>
+            <p>Upload a PDF, DOCX, or slide deck. Chat with AI that cites the exact passage it used — no more trusting a black box.</p>
+          </div>
+          <div>
+            <div class="chips"><span class="chip">PDF</span><span class="chip">DOCX</span><span class="chip">PPTX</span><span class="chip neutral">+ 4 more</span></div>
+            <div class="cta-row">
+              <a class="btn primary" href="#">Start free →</a>
+              <a class="btn ghost" href="#">See how it works</a>
+              <a class="link" href="#">Read the docs</a>
+            </div>
+          </div>
+        </div>
+        <div class="foot"><span>§ ACCENT · #18181B</span><span>ENGLISH · 中文 · 日本語 · 한국어 · +7</span></div>
+      </div>
+      <div class="card C dark">
+        <div class="top"><span>DOCTALK / LANDING / DARK</span><span class="dot"></span></div>
+        <div class="hero">
+          <div>
+            <div class="kicker">01 — Document Q&amp;A</div>
+            <h2>Ask your documents. <br/>Get answers with <span class="grad">receipts</span>.</h2>
+            <p>Upload a PDF, DOCX, or slide deck. Chat with AI that cites the exact passage it used — no more trusting a black box.</p>
+          </div>
+          <div>
+            <div class="chips"><span class="chip">PDF</span><span class="chip">DOCX</span><span class="chip">PPTX</span><span class="chip neutral">+ 4 more</span></div>
+            <div class="cta-row">
+              <a class="btn primary" href="#">Start free →</a>
+              <a class="btn ghost" href="#">See how it works</a>
+              <a class="link" href="#">Read the docs</a>
+            </div>
+          </div>
+        </div>
+        <div class="foot"><span>§ ACCENT · #FAFAFA</span><span>ENGLISH · 中文 · 日本語 · 한국어 · +7</span></div>
+      </div>
+    </div>
+  </section>
+
+  <div class="pick">
+    <div>
+      <h3>Which one?</h3>
+      <p>Reply with A, B, or C. I'll keep the "more design feel" moves (Fraunces H1, small-caps kickers, hairlines, paper grain) as the second question.</p>
+    </div>
+    <div class="ans">→ SAY "A", "B", or "C"</div>
+  </div>
+</div>
+</body>
+</html>

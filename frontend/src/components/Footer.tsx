@@ -6,6 +6,17 @@ import { useLocale } from '../i18n';
 import ScrollReveal from './landing/ScrollReveal';
 import DocTalkLogo from './DocTalkLogo';
 import { getReleaseLabel, getShortBuildSha } from '../lib/version';
+import { TextMarquee } from './spell';
+
+// Eleven supported locales — rendered as an infinite marquee above the
+// bottom-row so every visitor sees their own language whiz past. The
+// underlying i18n runtime supports all of these; see
+// `src/i18n/LocaleProvider.tsx`.
+const SUPPORTED_LANGS = [
+  'English', '中文', '日本語', '한국어', 'Español',
+  'Deutsch', 'Français', 'Português', 'Italiano',
+  'العربية', 'हिन्दी',
+];
 
 export default function Footer() {
   const { t } = useLocale();
@@ -120,8 +131,21 @@ export default function Footer() {
             </div>
           </div>
 
+          {/* Language marquee — editorial strip that makes the 11-locale
+              breadth feel lived-in rather than hidden behind a switcher. */}
+          <div className="mt-12 pt-8 border-t border-zinc-200 dark:border-zinc-800">
+            <TextMarquee
+              items={SUPPORTED_LANGS}
+              speed={34}
+              gap={40}
+              separator="·"
+              className="py-2"
+              itemClassName="font-serif text-lg text-zinc-500 dark:text-zinc-400"
+            />
+          </div>
+
           {/* Bottom row */}
-          <div className="mt-12 pt-8 border-t border-zinc-200 dark:border-zinc-800 flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-zinc-400 dark:text-zinc-500">
+          <div className="mt-6 pt-6 border-t border-zinc-200 dark:border-zinc-800 flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-zinc-400 dark:text-zinc-500">
             <div className="text-center sm:text-left">
               <p>{t('footer.copyright')}</p>
               <p className="mt-1 font-mono text-xs">

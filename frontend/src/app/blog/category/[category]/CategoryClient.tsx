@@ -76,7 +76,7 @@ export default function CategoryClient({
               <ArrowLeft size={14} />
               {t('blog.category.backAllPosts')}
             </Link>
-            <h1 className="text-3xl sm:text-4xl font-semibold text-zinc-900 dark:text-zinc-100 mb-4">
+            <h1 className="font-serif text-3xl sm:text-4xl font-semibold text-zinc-900 dark:text-zinc-100 mb-4">
               {localizedLabel}
             </h1>
             <p className="text-lg text-zinc-500 dark:text-zinc-300 max-w-2xl">
@@ -116,7 +116,7 @@ export default function CategoryClient({
               {relatedLinks.map((item, index) => (
                 <span key={item.href} className="contents">
                   {index > 0 ? <span className="text-zinc-300 dark:text-zinc-700">|</span> : null}
-                  <Link href={item.href} className="text-indigo-600 dark:text-indigo-400 hover:underline">
+                  <Link href={item.href} className="text-blue-600 dark:text-blue-400 hover:underline">
                     {t(item.labelKey)}
                   </Link>
                 </span>
@@ -153,7 +153,7 @@ export default function CategoryClient({
                       {t('blog.meta.minutesRead', { minutes: post.readingMinutes })}
                     </span>
                   </div>
-                  <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors mb-2">
+                  <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors mb-2">
                     {post.title}
                   </h2>
                   <p className="text-sm text-zinc-500 dark:text-zinc-300 line-clamp-2 mb-4">

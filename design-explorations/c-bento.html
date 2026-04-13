@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&amp;family=Manrope:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "tertiary-container": "#d1fae5",
+                    "on-secondary": "#faf8ff",
+                    "tertiary-fixed": "#d1fae5",
+                    "inverse-on-surface": "#9c9d9d",
+                    "surface-container-low": "#f3f4f4",
+                    "secondary": "#5e5e67",
+                    "on-background": "#2f3334",
+                    "surface-container-high": "#e6e8e9",
+                    "on-secondary-container": "#595962",
+                    "error-container": "#f76a80",
+                    "tertiary": "#426656",
+                    "on-primary": "#fbf7ff",
+                    "background": "#f9f9f9",
+                    "surface-bright": "#f9f9f9",
+                    "on-error": "#fff7f7",
+                    "surface-dim": "#d7dbdb",
+                    "on-tertiary": "#e5fff0",
+                    "inverse-primary": "#8582ff",
+                    "on-surface": "#2f3334",
+                    "error": "#ac3149",
+                    "on-secondary-fixed-variant": "#63646c",
+                    "on-error-container": "#68001f",
+                    "on-tertiary-fixed": "#2b4f40",
+                    "inverse-surface": "#0c0f0f",
+                    "on-tertiary-container": "#3d6151",
+                    "on-primary-fixed": "#17008c",
+                    "on-secondary-fixed": "#474750",
+                    "tertiary-fixed-dim": "#c3ecd7",
+                    "surface-container-lowest": "#ffffff",
+                    "surface-container-highest": "#e0e3e4",
+                    "primary-dim": "#4135d8",
+                    "outline": "#777b7c",
+                    "surface-tint": "#4e45e4",
+                    "tertiary-dim": "#365a4b",
+                    "secondary-dim": "#52525b",
+                    "secondary-fixed": "#f1effa",
+                    "primary-fixed-dim": "#adabff",
+                    "primary": "#4e45e4",
+                    "secondary-fixed-dim": "#e3e1ec",
+                    "outline-variant": "#afb2b3",
+                    "error-dim": "#770326",
+                    "surface-container": "#eceeee",
+                    "on-tertiary-fixed-variant": "#476c5b",
+                    "primary-fixed": "#bdbaff",
+                    "on-surface-variant": "#5c6060",
+                    "secondary-container": "#f1effa",
+                    "primary-container": "#bdbaff",
+                    "surface": "#f9f9f9",
+                    "surface-variant": "#e0e3e4",
+                    "on-primary-fixed-variant": "#3220cb",
+                    "on-primary-container": "#270ac3"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.25rem",
+                    "lg": "0.5rem",
+                    "xl": "0.75rem",
+                    "2xl": "1.5rem",
+                    "full": "9999px"
+            },
+            "fontFamily": {
+                    "headline": ["Manrope"],
+                    "body": ["Inter"],
+                    "label": ["Inter"]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        .bento-inner-highlight {
+            box-shadow: inset 0 1px 0 0 rgba(255, 255, 255, 0.6);
+        }
+        .ambient-shadow {
+            box-shadow: 0px 24px 48px -12px rgba(47, 51, 52, 0.08);
+        }
+        .blinking-caret::after {
+            content: '|';
+            animation: blink 1s step-end infinite;
+        }
+        @keyframes blink {
+            from, to { opacity: 1; }
+            50% { opacity: 0; }
+        }
+    </style>
+</head>
+<body class="bg-background text-on-background font-body antialiased">
+<!-- TopNavBar -->
+<nav class="fixed top-0 w-full z-50 bg-zinc-50/80 dark:bg-zinc-950/80 backdrop-blur-xl">
+<div class="flex justify-between items-center px-8 py-4 max-w-7xl mx-auto">
+<div class="text-xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50 font-headline">DocTalk</div>
+<div class="hidden md:flex items-center gap-8">
+<a class="text-indigo-600 dark:text-indigo-400 font-semibold border-b-2 border-indigo-600 transition-colors" href="#">Product</a>
+<a class="text-zinc-600 dark:text-zinc-400 font-medium hover:text-indigo-500 transition-colors" href="#">Pricing</a>
+<a class="text-zinc-600 dark:text-zinc-400 font-medium hover:text-indigo-500 transition-colors" href="#">Docs</a>
+</div>
+<button class="bg-primary text-on-primary px-6 py-2 rounded-lg font-semibold hover:bg-primary-dim transition-all active:scale-95 duration-200 ease-out bento-inner-highlight">
+                Start free
+            </button>
+</div>
+</nav>
+<!-- Main Content Canvas -->
+<main class="pt-32 pb-24 px-6 max-w-[1440px] mx-auto">
+<!-- Bento Grid Section -->
+<div class="grid grid-cols-1 md:grid-cols-4 grid-rows-none md:grid-rows-3 gap-6">
+<!-- Biggest Tile (2x2, Top-Left) -->
+<section class="md:col-span-2 md:row-span-2 bg-surface-container-lowest p-10 flex flex-col justify-between rounded-2xl ambient-shadow bento-inner-highlight relative overflow-hidden">
+<div>
+<span class="font-label text-xs font-bold tracking-[0.2em] text-outline uppercase mb-6 block">01 — THE NEW STANDARD</span>
+<h1 class="font-headline text-6xl md:text-7xl font-extrabold tracking-tight text-on-background leading-[1.1] max-w-md">
+                        Read less. Ask <span class="relative inline-block">more.<svg class="absolute -bottom-2 left-0 w-full h-4 text-primary" preserveaspectratio="none" viewbox="0 0 100 20"><path d="M5 15 Q 50 20 95 15" fill="none" stroke="currentColor" stroke-linecap="round" stroke-width="4"></path></svg></span>
+</h1>
+</div>
+<div class="mt-12">
+<button class="bg-primary text-on-primary px-8 py-4 rounded-lg text-lg font-bold hover:bg-primary-dim transition-all bento-inner-highlight">
+                        Get Started for Free
+                    </button>
+</div>
+<!-- Decorative background element -->
+<div class="absolute -right-12 -bottom-12 w-64 h-64 bg-primary-container/20 rounded-full blur-3xl"></div>
+</section>
+<!-- Tile 2: Chat Citation -->
+<div class="md:col-span-1 bg-secondary-container p-8 rounded-2xl ambient-shadow bento-inner-highlight flex flex-col justify-center">
+<div class="space-y-4">
+<div class="bg-surface-container-lowest p-4 rounded-xl shadow-sm max-w-[90%]">
+<p class="text-sm text-on-surface leading-relaxed">Where is the revenue model explained?</p>
+</div>
+<div class="bg-primary text-on-primary p-4 rounded-xl shadow-md self-end ml-auto">
+<div class="flex items-center gap-2 mb-2">
+<span class="material-symbols-outlined text-sm" style="font-variation-settings: 'FILL' 1;">description</span>
+<span class="text-[10px] font-bold bg-on-primary/20 px-2 py-0.5 rounded-full">p. 12 ¶ 3</span>
+</div>
+<p class="text-sm font-medium">It's detailed in Section 4.2 under 'Monetization Strategy'.</p>
+</div>
+</div>
+</div>
+<!-- Tile 3: Isometric Files -->
+<div class="md:col-span-1 bg-surface-container-low p-8 rounded-2xl ambient-shadow bento-inner-highlight flex flex-col items-center justify-center gap-6 overflow-hidden">
+<div class="grid grid-cols-2 gap-4 transform rotate-12 scale-110">
+<div class="w-16 h-16 bg-white rounded-xl shadow-lg flex items-center justify-center">
+<span class="material-symbols-outlined text-red-500 text-3xl">picture_as_pdf</span>
+</div>
+<div class="w-16 h-16 bg-white rounded-xl shadow-lg flex items-center justify-center translate-y-4">
+<span class="material-symbols-outlined text-blue-500 text-3xl">description</span>
+</div>
+<div class="w-16 h-16 bg-white rounded-xl shadow-lg flex items-center justify-center -translate-y-4">
+<span class="material-symbols-outlined text-orange-500 text-3xl">slideshow</span>
+</div>
+<div class="w-16 h-16 bg-white rounded-xl shadow-lg flex items-center justify-center">
+<span class="material-symbols-outlined text-green-600 text-3xl">table_chart</span>
+</div>
+</div>
+<p class="font-headline font-bold text-lg mt-4">All formats welcome</p>
+</div>
+<!-- Tile 4: Languages World -->
+<div class="md:col-span-2 bg-[#fdf8f1] p-8 rounded-2xl ambient-shadow bento-inner-highlight overflow-hidden relative">
+<div class="flex flex-col h-full justify-between z-10 relative">
+<h3 class="font-headline text-2xl font-bold">Multilingual Intelligence</h3>
+<div class="flex flex-wrap gap-2 mt-8 max-w-sm">
+<span class="px-4 py-2 bg-white rounded-full text-xs font-bold shadow-sm border border-black/5">EN</span>
+<span class="px-4 py-2 bg-white rounded-full text-xs font-bold shadow-sm border border-black/5">ES</span>
+<span class="px-4 py-2 bg-white rounded-full text-xs font-bold shadow-sm border border-black/5">FR</span>
+<span class="px-4 py-2 bg-white rounded-full text-xs font-bold shadow-sm border border-black/5">DE</span>
+<span class="px-4 py-2 bg-white rounded-full text-xs font-bold shadow-sm border border-black/5">IT</span>
+<span class="px-4 py-2 bg-white rounded-full text-xs font-bold shadow-sm border border-black/5">JP</span>
+<span class="px-4 py-2 bg-white rounded-full text-xs font-bold shadow-sm border border-black/5">CN</span>
+<span class="px-4 py-2 bg-white rounded-full text-xs font-bold shadow-sm border border-black/5">PT</span>
+<span class="px-4 py-2 bg-white rounded-full text-xs font-bold shadow-sm border border-black/5">RU</span>
+<span class="px-4 py-2 bg-white rounded-full text-xs font-bold shadow-sm border border-black/5">AR</span>
+<span class="px-4 py-2 bg-white rounded-full text-xs font-bold shadow-sm border border-black/5">KR</span>
+</div>
+</div>
+<!-- Abstract Globe Pattern -->
+<div class="absolute -right-8 -bottom-8 opacity-10">
+<span class="material-symbols-outlined text-[200px]" style="font-variation-settings: 'opsz' 48;">public</span>
+</div>
+</div>
+<!-- Tile 5: Search Bar -->
+<div class="md:col-span-1 bg-inverse-surface p-8 rounded-2xl ambient-shadow bento-inner-highlight flex flex-col justify-center gap-4">
+<div class="relative">
+<div class="w-full bg-white/10 backdrop-blur-md rounded-xl p-4 flex items-center gap-3">
+<span class="material-symbols-outlined text-white/50 text-xl">search</span>
+<span class="text-white/80 font-medium blinking-caret">Ask anything</span>
+</div>
+</div>
+<p class="text-white/40 text-[10px] uppercase tracking-widest font-bold text-center">Instant Semantic Retrieval</p>
+</div>
+<!-- Tile 6: Cites Exact Passages -->
+<div class="md:col-span-1 bg-[#fffaf0] p-8 rounded-2xl ambient-shadow bento-inner-highlight relative overflow-hidden group">
+<div class="flex flex-col gap-2">
+<span class="font-headline font-black text-4xl text-on-background">99.9%</span>
+<p class="font-headline font-bold text-xl leading-tight">Cites exact passages</p>
+</div>
+<div class="mt-6 bg-white/80 p-3 rounded-lg border border-black/5 relative">
+<p class="text-[10px] text-zinc-500 italic leading-snug">"The Q3 results showed a <span class="bg-primary/20 text-on-background px-1 rounded">24% increase in YoY growth</span> compared to the..."</p>
+<span class="material-symbols-outlined absolute -top-4 -right-2 text-primary transform -rotate-45 group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform">north_east</span>
+</div>
+</div>
+<!-- Tile 7: Security Mint Card -->
+<div class="md:col-span-1 bg-tertiary-container p-6 rounded-2xl ambient-shadow bento-inner-highlight flex items-center gap-4">
+<div class="bg-white/40 p-3 rounded-xl">
+<span class="material-symbols-outlined text-on-tertiary-container" style="font-variation-settings: 'FILL' 1;">shield_with_heart</span>
+</div>
+<div>
+<h4 class="font-headline font-bold text-on-tertiary-container">Your docs stay yours</h4>
+<p class="text-xs text-on-tertiary-container/70 mt-0.5">Enterprise-grade encryption.</p>
+</div>
+</div>
+</div>
+</main>
+<!-- Footer -->
+<footer class="w-full border-t border-zinc-200/10 bg-zinc-100 dark:bg-zinc-900">
+<div class="flex flex-col md:flex-row justify-between items-center px-8 py-12 max-w-7xl mx-auto gap-4">
+<div class="text-lg font-black text-zinc-900 dark:text-zinc-50">DocTalk</div>
+<div class="flex gap-8">
+<a class="text-zinc-500 dark:text-zinc-400 text-[10px] uppercase tracking-wider font-medium hover:text-zinc-900 transition-opacity opacity-80 hover:opacity-100" href="#">Privacy</a>
+<a class="text-zinc-500 dark:text-zinc-400 text-[10px] uppercase tracking-wider font-medium hover:text-zinc-900 transition-opacity opacity-80 hover:opacity-100" href="#">Terms</a>
+<a class="text-zinc-500 dark:text-zinc-400 text-[10px] uppercase tracking-wider font-medium hover:text-zinc-900 transition-opacity opacity-80 hover:opacity-100" href="#">Twitter</a>
+<a class="text-zinc-500 dark:text-zinc-400 text-[10px] uppercase tracking-wider font-medium hover:text-zinc-900 transition-opacity opacity-80 hover:opacity-100" href="#">GitHub</a>
+</div>
+<div class="text-zinc-500 dark:text-zinc-400 text-[10px] uppercase tracking-wider font-medium">© 2024 DocTalk AI. All rights reserved.</div>
+</div>
+</footer>
+</body></html>

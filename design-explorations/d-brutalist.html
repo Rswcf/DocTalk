@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&amp;family=Space+Grotesk:wght@300;400;500;700&amp;family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "on-tertiary-fixed-variant": "#e2e2e2",
+                        "on-secondary": "#ffffff",
+                        "surface-container": "#f0eee8",
+                        "error-container": "#ffdad6",
+                        "inverse-primary": "#c6c6c6",
+                        "on-secondary-container": "#1b1b1b",
+                        "surface-bright": "#fbf9f3",
+                        "surface-tint": "#5e5e5e",
+                        "tertiary": "#3b3b3b",
+                        "on-secondary-fixed-variant": "#3b3b3b",
+                        "on-tertiary-fixed": "#ffffff",
+                        "on-primary-fixed": "#ffffff",
+                        "on-background": "#1b1c18",
+                        "surface-container-high": "#eae8e2",
+                        "outline-variant": "#c6c6c6",
+                        "on-surface": "#1b1c18",
+                        "tertiary-container": "#747474",
+                        "on-secondary-fixed": "#1b1b1b",
+                        "primary-fixed-dim": "#474747",
+                        "secondary-container": "#d4d4d4",
+                        "primary-fixed": "#5e5e5e",
+                        "on-surface-variant": "#474747",
+                        "surface-container-low": "#f5f3ed",
+                        "on-tertiary": "#e2e2e2",
+                        "primary": "#000000",
+                        "tertiary-fixed-dim": "#474747",
+                        "surface-dim": "#dcdad4",
+                        "on-primary": "#e2e2e2",
+                        "inverse-surface": "#30312d",
+                        "surface-variant": "#e4e2dd",
+                        "secondary": "#5e5e5e",
+                        "secondary-fixed": "#c6c6c6",
+                        "on-error-container": "#410002",
+                        "inverse-on-surface": "#f3f1eb",
+                        "surface-container-lowest": "#ffffff",
+                        "on-error": "#ffffff",
+                        "error": "#ba1a1a",
+                        "on-primary-fixed-variant": "#e2e2e2",
+                        "on-tertiary-container": "#ffffff",
+                        "secondary-fixed-dim": "#ababab",
+                        "tertiary-fixed": "#5e5e5e",
+                        "on-primary-container": "#ffffff",
+                        "surface-container-highest": "#e4e2dd",
+                        "surface": "#fbf9f3",
+                        "outline": "#777777",
+                        "background": "#fbf9f3",
+                        "primary-container": "#3b3b3b"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0rem",
+                        "lg": "0rem",
+                        "xl": "0rem",
+                        "full": "9999px"
+                    },
+                    "fontFamily": {
+                        "headline": ["Inter", "sans-serif"],
+                        "body": ["Inter", "sans-serif"],
+                        "label": ["Space Grotesk", "monospace"]
+                    }
+                },
+            },
+        }
+    </script>
+<style>
+        .marquee-container {
+            overflow: hidden;
+            white-space: nowrap;
+        }
+        .marquee-content {
+            display: inline-block;
+            animation: marquee 30s linear infinite;
+        }
+        @keyframes marquee {
+            0% { transform: translateX(0); }
+            100% { transform: translateX(-50%); }
+        }
+        .mechanical-hover:hover {
+            transform: translate(-2px, -2px);
+            box-shadow: 4px 4px 0px #000000;
+        }
+    </style>
+</head>
+<body class="bg-surface text-primary font-body antialiased selection:bg-primary selection:text-surface">
+<!-- TopNavBar -->
+<nav class="flex justify-between items-center px-6 py-4 w-full docked full-width top-0 border-b-2 border-black dark:border-white bg-[#fbf9f3] dark:bg-[#1a1a1a] z-50">
+<div class="text-2xl font-black tracking-tighter text-black dark:text-white font-['Space_Grotesk',monospace] uppercase tracking-tighter">
+            DOCTALK
+        </div>
+<div class="hidden md:flex gap-8">
+<a class="text-black/60 dark:text-white/60 font-['Space_Grotesk',monospace] uppercase tracking-tighter hover:bg-black hover:text-[#fbf9f3] dark:hover:bg-white dark:hover:text-black transition-none px-2 py-1" href="#">PATIENTS</a>
+<a class="text-black/60 dark:text-white/60 font-['Space_Grotesk',monospace] uppercase tracking-tighter hover:bg-black hover:text-[#fbf9f3] dark:hover:bg-white dark:hover:text-black transition-none px-2 py-1" href="#">PRACTITIONERS</a>
+<a class="text-black/60 dark:text-white/60 font-['Space_Grotesk',monospace] uppercase tracking-tighter hover:bg-black hover:text-[#fbf9f3] dark:hover:bg-white dark:hover:text-black transition-none px-2 py-1" href="#">MANIFESTO</a>
+<a class="text-black/60 dark:text-white/60 font-['Space_Grotesk',monospace] uppercase tracking-tighter hover:bg-black hover:text-[#fbf9f3] dark:hover:bg-white dark:hover:text-black transition-none px-2 py-1" href="#">ARCHIVE</a>
+</div>
+<button class="bg-primary text-on-primary px-4 py-2 font-['Space_Grotesk',monospace] uppercase tracking-tighter hover:invert transition-none">
+            GET_STARTED
+        </button>
+</nav>
+<main class="relative min-h-screen flex flex-col pt-12">
+<!-- Structural Grid Backdrop -->
+<div class="absolute inset-0 pointer-events-none z-0 border-x-2 border-black opacity-10 mx-6"></div>
+<!-- Hero Content Section -->
+<section class="relative z-10 flex flex-col md:flex-row flex-1 px-6 pt-16 pb-24 gap-12">
+<div class="flex-1 flex flex-col justify-start">
+<!-- Massive Headline -->
+<h1 class="font-headline font-black text-6xl md:text-[8rem] lg:text-[10rem] leading-[0.85] tracking-[-0.05em] mb-12 uppercase break-words">
+                    informed<br/>authority<br/>for your<br/>research.
+                </h1>
+<!-- Meta-block (Receipt style) -->
+<div class="border-2 border-black p-6 w-fit bg-surface-container-low mb-12">
+<div class="font-label text-xs md:text-sm tracking-widest leading-relaxed flex flex-col gap-1 uppercase">
+<span class="flex justify-between gap-12"><span>VERSION</span> <span>V1.0</span></span>
+<span class="flex justify-between gap-12"><span>ESTABLISHED</span> <span>2026</span></span>
+<span class="flex justify-between gap-12"><span>LOCALIZATION</span> <span>11 LANGUAGES</span></span>
+<span class="flex justify-between gap-12"><span>INTEGRITY</span> <span>CITES SOURCES</span></span>
+<span class="flex justify-between gap-12"><span>PRIVACY</span> <span>DOCS STAY YOURS</span></span>
+</div>
+</div>
+<!-- CTAs -->
+<div class="flex flex-col md:flex-row items-start md:items-center gap-8">
+<button class="bg-primary text-on-primary px-10 py-5 font-headline font-black text-xl uppercase mechanical-hover transition-none">
+                        start free →
+                    </button>
+<a class="font-label text-lg font-bold underline underline-offset-8 uppercase hover:opacity-70" href="#">
+                        see the archive
+                    </a>
+</div>
+</div>
+<!-- Illustration Container -->
+<div class="flex-1 flex items-center justify-center relative overflow-hidden md:overflow-visible">
+<div class="relative w-full max-w-[500px] aspect-square">
+<svg class="w-full h-full text-primary" fill="none" viewbox="0 0 400 500" xmlns="http://www.w3.org/2000/svg">
+<!-- Main Document Shape -->
+<path d="M40 20H280L360 100V460H40V20Z" stroke="currentColor" stroke-width="4"></path>
+<path d="M280 20V100H360" stroke="currentColor" stroke-width="4"></path>
+<!-- Abstract Content Lines -->
+<line stroke="currentColor" stroke-width="4" x1="80" x2="320" y1="160" y2="160"></line>
+<line stroke="currentColor" stroke-width="4" x1="80" x2="320" y1="200" y2="200"></line>
+<line stroke="currentColor" stroke-width="4" x1="80" x2="220" y1="240" y2="240"></line>
+<!-- Speech Bubble (Growing out of the doc) -->
+<path d="M180 280C140 280 110 310 110 350C110 390 140 420 180 420H240L280 460V420C320 420 350 390 350 350C350 310 320 280 280 280H180Z" fill="white" stroke="currentColor" stroke-width="4"></path>
+<!-- Bubble Dots -->
+<circle cx="180" cy="350" fill="currentColor" r="4"></circle>
+<circle cx="230" cy="350" fill="currentColor" r="4"></circle>
+<circle cx="280" cy="350" fill="currentColor" r="4"></circle>
+</svg>
+<!-- Stamp Badge -->
+<div class="absolute -top-10 -right-10 md:-right-20 rotate-12 bg-primary text-on-primary p-8 border-4 border-black z-20">
+<span class="font-label font-black text-2xl uppercase tracking-widest">VERIFIED AI</span>
+</div>
+</div>
+</div>
+</section>
+<!-- Scrolling Marquee -->
+<div class="marquee-container w-full border-y-2 border-black bg-surface-container py-3">
+<div class="marquee-content font-label text-sm font-bold tracking-[0.2em] uppercase">
+                ENGLISH · 中文 · 日本語 · 한국어 · ESPAÑOL · DEUTSCH · FRANÇAIS · PORTUGUÊS · ITALIANO · العربية · हिन्दी · ENGLISH · 中文 · 日本語 · 한국어 · ESPAÑOL · DEUTSCH · FRANÇAIS · PORTUGUÊS · ITALIANO · العربية · हिन्दी
+            </div>
+</div>
+</main>
+<!-- Footer -->
+<footer class="flex flex-col md:flex-row justify-between items-center px-6 py-8 w-full gap-4 bg-[#fbf9f3] dark:bg-[#1a1a1a] text-black dark:text-white font-['Space_Grotesk',monospace] text-xs tracking-widest docked full-width bottom border-t-2 border-black dark:border-white">
+<div class="font-black text-lg">DOCTALK INDUSTRIAL DIVISION.</div>
+<div class="opacity-80">©2024 ALL RIGHTS RESERVED.</div>
+<div class="flex gap-6">
+<a class="opacity-80 hover:underline hover:invert transition-none" href="#">PRIVACY_POLICY</a>
+<a class="opacity-80 hover:underline hover:invert transition-none" href="#">TERMINAL_LOGS</a>
+<a class="opacity-80 hover:underline hover:invert transition-none" href="#">SYSTEM_STATUS</a>
+</div>
+</footer>
+</body></html>
