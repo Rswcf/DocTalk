@@ -42,8 +42,8 @@ const encryptionControls: Control[] = [
     icon: Lock,
     title: "AES-256 encryption at rest",
     detail:
-      "Uploaded documents are stored with SSE-S3 server-side encryption. The MinIO bucket enforces the encryption policy at ingest; any object written without a valid encryption header is rejected.",
-    evidence: "backend/app/services/storage_service.py · SSE-S3 policy",
+      "Uploaded documents are written to MinIO with SSE-S3 server-side encryption by default. Production (Railway) runs MinIO with KMS enabled so SSE-S3 is always applied. In unsupported self-hosted deployments without KMS, MinIO may fall back to unencrypted writes — that is a deployment choice, not a silent downgrade in production.",
+    evidence: "backend/app/services/storage_service.py · upload_file()",
   },
   {
     icon: KeyRound,
@@ -55,7 +55,7 @@ const encryptionControls: Control[] = [
     icon: UserX,
     title: "No training on your data",
     detail:
-      "DocTalk routes LLM calls through OpenRouter with zero-retention agreements. Your documents and questions are not retained by model providers after the response completes, and are never used to train models.",
+      "DocTalk routes LLM calls through OpenRouter. Your documents and questions are never used by DocTalk to train models. Provider-side retention depends on the upstream model (DeepSeek / Mistral) — for guaranteed zero retention we rely on OpenRouter's account-level privacy setting (operational control, not yet code-enforced at the request level), and can tighten further with a provider allow-list on request.",
   },
 ];
 

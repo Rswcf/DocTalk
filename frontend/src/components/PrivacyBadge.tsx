@@ -1,49 +1,40 @@
 "use client";
 
-import { useState } from 'react';
-import { Shield, ChevronDown, ChevronUp } from 'lucide-react';
-import { useLocale } from '../i18n';
+import { Shield, Check } from 'lucide-react';
 import Link from 'next/link';
+import { useLocale } from '../i18n';
 
 export function PrivacyBadge() {
-  const [expanded, setExpanded] = useState(false);
-  const { t } = useLocale();
+  const { t, tOr } = useLocale();
 
   return (
-    <div className="w-full max-w-xl mb-6">
-      {/* Badge Line */}
-      <button
-        onClick={() => setExpanded(!expanded)}
-        aria-expanded={expanded}
-        className="flex items-center justify-center gap-2 text-sm text-zinc-600 dark:text-zinc-400
-                   hover:text-zinc-800 dark:hover:text-zinc-200 transition-colors w-full focus-visible:ring-2 focus-visible:ring-zinc-400 dark:focus-visible:ring-zinc-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-900"
-      >
-        <Shield aria-hidden="true" size={16} className="text-green-600" />
-        <span>{t('privacy.badge')}</span>
-        {expanded ? <ChevronUp aria-hidden="true" size={16} /> : <ChevronDown aria-hidden="true" size={16} />}
-      </button>
+    <div className="w-full max-w-xl mb-6 flex flex-col items-center gap-2 text-sm">
+      <div className="flex items-center gap-2 text-zinc-700 dark:text-zinc-300">
+        <Shield aria-hidden="true" size={16} className="text-emerald-600 dark:text-emerald-400" />
+        <span className="font-medium">{t('privacy.badge')}</span>
+      </div>
 
-      {/* Expanded Details */}
-      {expanded && (
-        <div className="mt-3 p-4 bg-zinc-50 dark:bg-zinc-800 rounded-lg text-sm space-y-2">
-          <p className="flex items-center gap-2">
-            <span className="text-green-600">✓</span>
-            <span className="text-zinc-700 dark:text-zinc-300">{t('privacy.noTraining')}</span>
-          </p>
-          <p className="flex items-center gap-2">
-            <span className="text-green-600">✓</span>
-            <span className="text-zinc-700 dark:text-zinc-300">{t('privacy.encrypted')}</span>
-          </p>
-          <p className="flex items-center gap-2">
-            <span className="text-green-600">✓</span>
-            <span className="text-zinc-700 dark:text-zinc-300">{t('privacy.deleteAnytime')}</span>
-          </p>
-          <div className="pt-2 border-t border-zinc-200 dark:border-zinc-700 flex gap-4 text-xs">
-            <Link href="/privacy" className="text-zinc-600 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200 transition-colors hover:underline focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:rounded-sm">{t('privacy.policyLink')}</Link>
-            <Link href="/terms" className="text-zinc-600 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200 transition-colors hover:underline focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:rounded-sm">{t('privacy.termsLink')}</Link>
-          </div>
-        </div>
-      )}
+      <ul className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1 text-zinc-600 dark:text-zinc-400">
+        <li className="flex items-center gap-1.5">
+          <Check aria-hidden="true" size={14} className="text-emerald-600 dark:text-emerald-400 shrink-0" />
+          <span>{t('privacy.encrypted')}</span>
+        </li>
+        <li className="flex items-center gap-1.5">
+          <Check aria-hidden="true" size={14} className="text-emerald-600 dark:text-emerald-400 shrink-0" />
+          <span>{t('privacy.noTraining')}</span>
+        </li>
+        <li className="flex items-center gap-1.5">
+          <Check aria-hidden="true" size={14} className="text-emerald-600 dark:text-emerald-400 shrink-0" />
+          <span>{t('privacy.deleteAnytime')}</span>
+        </li>
+      </ul>
+
+      <Link
+        href="/trust"
+        className="text-xs text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200 hover:underline focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:rounded-sm"
+      >
+        {tOr('privacy.trustLink', 'Trust Center')} →
+      </Link>
     </div>
   );
 }

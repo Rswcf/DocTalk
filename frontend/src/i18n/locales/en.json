@@ -87,6 +87,7 @@
   "privacy.noTraining": "We never use your data for model training",
   "privacy.encrypted": "TLS encrypted in transit, AES-256 at rest",
   "privacy.deleteAnytime": "Delete your data anytime",
+  "privacy.trustLink": "Trust Center",
   "privacy.policyLink": "Privacy Policy",
   "privacy.termsLink": "Terms",
   "home.cta.demoNow": "Try Example PDF Now",

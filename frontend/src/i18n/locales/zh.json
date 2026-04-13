@@ -87,6 +87,7 @@
   "privacy.noTraining": "不用于模型训练",
   "privacy.encrypted": "传输 TLS 加密，存储 AES-256 加密",
   "privacy.deleteAnytime": "随时可删除数据",
+  "privacy.trustLink": "信任中心",
   "privacy.policyLink": "隐私政策",
   "privacy.termsLink": "服务条款",
   "home.cta.demoNow": "立即体验示例 PDF",
