@@ -2156,5 +2156,7 @@
   "landing.feature.freeDemo.title": "无需注册即可体验",
   "landing.feature.freeDemo.desc": "3 份预置样例 PDF 可直接聊 — 无需账号、信用卡或邮箱。",
   "chat.sources.label": "{count} 个来源",
-  "chat.sources.ariaLabel": "答案来源"
+  "chat.sources.ariaLabel": "答案来源",
+  "chat.sources.retrieving": "正在检索来源…",
+  "chat.sources.retrievingAriaLabel": "正在检索来源"
 }

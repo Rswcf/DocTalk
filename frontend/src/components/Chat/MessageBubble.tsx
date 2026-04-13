@@ -264,15 +264,16 @@ export default function MessageBubble({ message, onCitationClick, isStreaming, o
             </div>
           ) : (
             <>
-              {/* Sources strip — Perplexity pattern. Renders above the prose
-                  when the assistant message has citations, so the
+              {/* Sources strip — rendered above the prose so the
                   "grounded-in-these-documents" signal is visible before the
-                  user reads the answer. Streaming messages without citations
-                  yet skip this (citations arrive with / after text). */}
-              {isAssistant && message.citations && message.citations.length > 0 && (
+                  user reads the answer. During streaming with no citations
+                  yet, SourcesStrip itself draws a skeleton so the block
+                  doesn't flicker into existence mid-answer. */}
+              {isAssistant && (
                 <SourcesStrip
-                  citations={message.citations}
+                  citations={message.citations ?? []}
                   onCitationClick={onCitationClick}
+                  isStreaming={isStreaming}
                 />
               )}
               <div className="prose dark:prose-invert max-w-none [&>*:first-child]:mt-0 [&>*:last-child]:mb-0">

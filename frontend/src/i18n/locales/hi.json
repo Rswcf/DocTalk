@@ -2117,5 +2117,7 @@
   "landing.feature.freeDemo.title": "साइनअप बिना आज़माएँ",
   "landing.feature.freeDemo.desc": "तीन नमूना PDF तैयार हैं — बिना खाता, कार्ड या ईमेल के।",
   "chat.sources.label": "{count} स्रोत",
-  "chat.sources.ariaLabel": "उत्तर के स्रोत"
+  "chat.sources.ariaLabel": "उत्तर के स्रोत",
+  "chat.sources.retrieving": "स्रोत प्राप्त किए जा रहे हैं…",
+  "chat.sources.retrievingAriaLabel": "स्रोत प्राप्त किए जा रहे हैं"
 }

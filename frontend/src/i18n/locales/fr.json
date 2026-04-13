@@ -2117,5 +2117,7 @@
   "landing.feature.freeDemo.title": "Essayez sans inscription",
   "landing.feature.freeDemo.desc": "Trois PDFs d'exemple prêts à discuter — sans compte, carte ou e-mail.",
   "chat.sources.label": "{count} sources",
-  "chat.sources.ariaLabel": "Sources de la réponse"
+  "chat.sources.ariaLabel": "Sources de la réponse",
+  "chat.sources.retrieving": "Récupération des sources…",
+  "chat.sources.retrievingAriaLabel": "Récupération des sources"
 }

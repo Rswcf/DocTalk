@@ -2117,5 +2117,7 @@
   "landing.feature.freeDemo.title": "Try without signup",
   "landing.feature.freeDemo.desc": "Three pre-loaded sample PDFs are ready to chat with — no account, no credit card, no email.",
   "chat.sources.label": "{count} sources",
-  "chat.sources.ariaLabel": "Answer sources"
+  "chat.sources.ariaLabel": "Answer sources",
+  "chat.sources.retrieving": "Retrieving sources…",
+  "chat.sources.retrievingAriaLabel": "Retrieving sources"
 }

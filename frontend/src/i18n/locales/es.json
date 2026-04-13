@@ -2117,5 +2117,7 @@
   "landing.feature.freeDemo.title": "Prueba sin registrarte",
   "landing.feature.freeDemo.desc": "Tres PDFs de muestra listos para chatear — sin cuenta, sin tarjeta, sin correo.",
   "chat.sources.label": "{count} fuentes",
-  "chat.sources.ariaLabel": "Fuentes de la respuesta"
+  "chat.sources.ariaLabel": "Fuentes de la respuesta",
+  "chat.sources.retrieving": "Recuperando fuentes…",
+  "chat.sources.retrievingAriaLabel": "Recuperando fuentes"
 }

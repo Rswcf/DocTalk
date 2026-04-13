@@ -2117,5 +2117,7 @@
   "landing.feature.freeDemo.title": "가입 없이 체험",
   "landing.feature.freeDemo.desc": "샘플 PDF 3개로 바로 시작 — 계정·카드·이메일 불필요.",
   "chat.sources.label": "출처 {count}개",
-  "chat.sources.ariaLabel": "답변 출처"
+  "chat.sources.ariaLabel": "답변 출처",
+  "chat.sources.retrieving": "출처를 가져오는 중…",
+  "chat.sources.retrievingAriaLabel": "출처를 가져오는 중"
 }

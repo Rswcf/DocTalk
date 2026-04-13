@@ -2117,5 +2117,7 @@
   "landing.feature.freeDemo.title": "جرّب بدون تسجيل",
   "landing.feature.freeDemo.desc": "ثلاثة ملفات PDF جاهزة للمحادثة — بدون حساب أو بطاقة ائتمان أو بريد إلكتروني.",
   "chat.sources.label": "{count} مصادر",
-  "chat.sources.ariaLabel": "مصادر الإجابة"
+  "chat.sources.ariaLabel": "مصادر الإجابة",
+  "chat.sources.retrieving": "جارٍ استرجاع المصادر…",
+  "chat.sources.retrievingAriaLabel": "جارٍ استرجاع المصادر"
 }

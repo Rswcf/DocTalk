@@ -8,46 +8,82 @@ import { useLocale } from "../../i18n";
 interface SourcesStripProps {
   citations: Citation[];
   onCitationClick?: (c: Citation) => void;
+  /** True while the assistant reply is still streaming. If no citations
+   *  have arrived yet but streaming is active, render a placeholder skeleton
+   *  so the "sources will appear above the answer" framing is visible
+   *  from the first token, not just after the first [n] is emitted. */
+  isStreaming?: boolean;
 }
 
 /**
- * Horizontal strip of deduplicated source chips, rendered at the top of an
- * assistant message. Perplexity-style "sources before answer" pattern —
- * makes DocTalk's citation-grounded promise visible at a glance instead of
- * scattering numeric [1][2] pills through prose.
+ * Horizontal strip of source chips, rendered at the top of an assistant
+ * message. Makes DocTalk's citation-grounded promise visible at a glance
+ * instead of scattering numeric [1][2] pills through prose.
  *
- * Deduplicates by (documentId, page) so a chunk cited 3 times in one answer
- * still renders as one chip. refIndex of the first occurrence is shown.
+ * Backend currently emits each Citation inline as the corresponding `[n]`
+ * token appears in the stream (see chat_service.py). So chips populate
+ * progressively ABOVE the answer as it streams — a step toward the full
+ * Perplexity "sources-before-tokens" pattern, which would need a new
+ * chunks_retrieved SSE event and is explicitly out of scope here.
  *
- * Click handler forwards to the same onCitationClick used by inline pills,
- * so behaviour is identical to clicking [1] — PdfViewer scrolls and the
- * highlight flashes.
+ * Deduplicates by chunkId (guaranteed unique, present on every Citation)
+ * so a chunk cited multiple times renders as one chip. The refIndex of
+ * the first occurrence is shown. Earlier (docId, page) key was broken on
+ * multi-doc Collections because docId falls back to "_" for the
+ * single-doc path, which then collapses cross-doc same-page citations.
+ *
+ * Click forwards to the same onCitationClick the inline pills use, so
+ * behaviour is identical — PdfViewer scrolls + highlight flashes.
  */
 export default function SourcesStrip({
   citations,
   onCitationClick,
+  isStreaming = false,
 }: SourcesStripProps) {
   const { t, tOr } = useLocale();
 
-  // Dedupe by docId+page while preserving the order the LLM surfaced them.
+  // Dedupe by chunkId (stable per chunk) while preserving LLM order.
   const unique = React.useMemo(() => {
     const seen = new Set<string>();
     const out: Citation[] = [];
     for (const c of citations) {
-      const key = `${c.documentId ?? "_"}::${c.page}`;
-      if (seen.has(key)) continue;
-      seen.add(key);
+      if (seen.has(c.chunkId)) continue;
+      seen.add(c.chunkId);
       out.push(c);
     }
     return out;
   }, [citations]);
 
-  if (unique.length === 0) return null;
+  // Streaming with no citations yet: render a skeleton placeholder so the
+  // user sees "sources are coming" rather than a blank space that later
+  // shifts layout when the first chip arrives.
+  if (unique.length === 0) {
+    if (!isStreaming) return null;
+    return (
+      <div
+        className="mb-3 flex flex-col gap-2"
+        aria-label={tOr("chat.sources.retrievingAriaLabel", "Retrieving sources")}
+        role="status"
+      >
+        <div className="text-[11px] font-mono uppercase tracking-widest text-zinc-400 dark:text-zinc-500">
+          {tOr("chat.sources.retrieving", "Retrieving sources…")}
+        </div>
+        <div className="flex flex-wrap gap-2" aria-hidden="true">
+          {[0, 1, 2].map((i) => (
+            <div
+              key={i}
+              className="h-7 w-36 rounded-md border border-zinc-200 dark:border-zinc-700 bg-zinc-100 dark:bg-zinc-800/60 animate-pulse motion-reduce:animate-none"
+            />
+          ))}
+        </div>
+      </div>
+    );
+  }
 
   const label = t("chat.sources.label", { count: unique.length });
 
   return (
-    <div
+    <section
       className="mb-3 flex flex-col gap-2"
       aria-label={tOr("chat.sources.ariaLabel", "Answer sources")}
     >
@@ -59,12 +95,14 @@ export default function SourcesStrip({
           const filename = c.documentFilename ?? "Document";
           const displayFilename =
             filename.length > 22 ? filename.slice(0, 20) + "…" : filename;
+          const jumpLabel = t("citation.jumpTo", { page: c.page });
           return (
             <button
-              key={`${c.documentId ?? "_"}-${c.page}-${c.refIndex}`}
+              key={c.chunkId}
               type="button"
               onClick={() => onCitationClick?.(c)}
-              title={t("citation.jumpTo", { page: c.page })}
+              title={jumpLabel}
+              aria-label={`${filename} — ${jumpLabel}`}
               className="group inline-flex items-center gap-2 max-w-xs rounded-md border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 px-2.5 py-1.5 text-xs text-zinc-700 dark:text-zinc-200 shadow-sm transition-colors motion-reduce:transition-none hover:border-accent hover:bg-accent/5 dark:hover:bg-accent/10 focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-900"
             >
               <span className="inline-flex items-center justify-center h-4 min-w-4 px-1 rounded bg-accent text-[10px] font-bold leading-none text-accent-foreground">
@@ -83,6 +121,6 @@ export default function SourcesStrip({
           );
         })}
       </div>
-    </div>
+    </section>
   );
 }

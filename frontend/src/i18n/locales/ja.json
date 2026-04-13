@@ -2117,5 +2117,7 @@
   "landing.feature.freeDemo.title": "登録不要で試す",
   "landing.feature.freeDemo.desc": "3 つのサンプル PDF がすぐ使える — アカウント・カード・メール不要。",
   "chat.sources.label": "{count} 件のソース",
-  "chat.sources.ariaLabel": "回答のソース"
+  "chat.sources.ariaLabel": "回答のソース",
+  "chat.sources.retrieving": "ソースを取得中…",
+  "chat.sources.retrievingAriaLabel": "ソースを取得中"
 }

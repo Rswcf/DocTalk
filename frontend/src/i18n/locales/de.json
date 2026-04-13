@@ -2117,5 +2117,7 @@
   "landing.feature.freeDemo.title": "Ohne Registrierung testen",
   "landing.feature.freeDemo.desc": "Drei vorgeladene Beispiel-PDFs zum sofortigen Chatten — kein Konto, keine Karte, keine E-Mail.",
   "chat.sources.label": "{count} Quellen",
-  "chat.sources.ariaLabel": "Antwortquellen"
+  "chat.sources.ariaLabel": "Antwortquellen",
+  "chat.sources.retrieving": "Quellen werden abgerufen…",
+  "chat.sources.retrievingAriaLabel": "Quellen werden abgerufen"
 }
