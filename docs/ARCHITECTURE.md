@@ -793,3 +793,57 @@ The rate limiter and demo-message tracker both have an in-memory fallback when R
 ### Pre-debit refund invariant
 
 Chat pre-debit refunds are now **fully idempotent**: `_refund_predebit` deletes the pre-debit ledger row first and only credits back the user balance when `DELETE` reports `rowcount > 0`. A double-invocation (e.g., retry on a partially-failed request) is safe. All SSE error branches (`LLM_ERROR`, `PERSIST_FAILED`, continuation variants) invoke the refund path before yielding the error.
+
+### Self-serve subscription cancel state machine
+
+`POST /api/billing/cancel` (introduced 2026-04-14) implements a six-branch
+state machine so every combination of `user.plan`, `user.stripe_subscription_id`,
+and `user.stripe_customer_id` maps deterministically to one action. Branches
+are evaluated in order **D → E → A → F → C → B**:
+
+| # | Precondition | Action | Return |
+|---|---|---|---|
+| D | `plan == "free"` | No-op | 400 |
+| E | `stripe_subscription_id == "pending"` | No-op (checkout in flight) | 409 |
+| A | `sub_id` starts with `sub_` (real Stripe ID) | `Subscription.retrieve` → dispatch on status: active/trialing/past_due → `modify(cancel_at_period_end=true)`; canceled → local sync to free; other → 409 | 200 `scheduled_cancel` or `immediate_revert` |
+| F | `sub_id` is non-empty, non-`pending`, not `sub_*` (malformed) | No local revert; fail closed | 409 |
+| C | no `sub_id` but `stripe_customer_id` present | List customer subs filtered by cancellable status. 1 → auto-heal + Branch A. 0 → fall through to Branch B. >1 → 409 ambiguous | (varies) |
+| B | no `sub_id` AND (no `customer_id` OR Branch C found 0) | Row-lock user, set `plan='free'`, null `stripe_subscription_id`, clear `monthly_credits_granted_at`, write `plan_transitions` audit row | 200 `immediate_revert` |
+
+Branch B is what closes the admin-promoted user gap (user whose plan was
+elevated directly in the DB with no Stripe customer).
+
+**Fail-closed contract**: any `stripe.StripeError` during Branch A retrieve,
+Branch A modify, Branch C list, or Branch C auto-heal modify returns **502
+without any local revert to Free and without writing an audit row**. Retry
+is user-driven. (One exception: Branch C auto-heal persists
+`stripe_subscription_id` on the user row BEFORE calling `Subscription.modify`,
+because the healed value has already been confirmed by Stripe's list call
+and is correct regardless of whether the subsequent modify succeeds —
+clearing data drift is a positive side-effect even on fail.)
+
+**Audit trail**: every successful cancel writes one row to `plan_transitions`
+(new table, migration `20260414_0021`) with `source='self_serve_cancel'`
+and a metadata blob including `sub_id`, `status_at_cancel`, and the reason
+code (`admin_promoted_revert`, `branch_c_auto_heal`, `stripe_already_canceled_sync`).
+Webhook / change-plan / admin audit writes are intentionally **deferred**
+to a follow-up PR to keep this scope tight.
+
+**`billing_state` projection**: `GET /api/users/profile` now returns a
+`billing_state` object (`managed_by`, `can_cancel`, `interval`, `period_end`,
+`cancel_at_period_end`, `status`) derived from Stripe (60 s Redis cache,
+invalidated on every cancel / change-plan / webhook plan mutation via
+`_invalidate_user_caches`). `can_cancel` is intentionally narrower than
+"plan != free" — it also excludes pending checkout, malformed sub_id,
+multi-sub drift, and already-scheduled cancel — so the frontend can trust
+the flag without duplicating state logic.
+
+**Frontend integration**: the `/billing` page shows a Current Plan panel
+above the Plus/Pro cards for any paid user. The Cancel CTA is BGB §312k
+compliant (visibly labeled "Cancel subscription" / "Abonnement kündigen",
+one click, no nested menus). Admin-managed users see "Return to Free plan"
+instead of "Manage billing in Stripe".
+
+Tests: `backend/tests/test_billing_cancel.py` (17 branch tests) and
+`backend/tests/test_billing_state.py` (11 projection tests) cover the
+happy path, failure modes, and all branch preconditions.
