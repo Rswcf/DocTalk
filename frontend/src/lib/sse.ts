@@ -17,7 +17,7 @@ type CitationEventPayload = CitationPayload & {
   confidence_score?: number;
   context_text?: string;
 };
-type ErrorPayload = { code: string; message: string };
+type ErrorPayload = { code: string; message: string; status?: number };
 type DonePayload = { message_id: string; can_continue?: boolean; continuation_count?: number };
 
 async function _processSSEStream(
@@ -144,8 +144,23 @@ export async function chatStream(
 
   if (!res.ok || !res.body) {
     if (signal?.aborted) return;
-    const msg = await res.text().catch(() => '');
-    onError({ code: 'http_error', message: `HTTP ${res.status}: ${msg}` });
+    const raw = await res.text().catch(() => '');
+    let code = 'http_error';
+    let message = `HTTP ${res.status}: ${raw}`;
+    try {
+      const parsed = JSON.parse(raw);
+      const d = parsed && typeof parsed === 'object' && 'detail' in parsed
+        ? (parsed as Record<string, unknown>).detail
+        : parsed;
+      if (d && typeof d === 'object') {
+        const detail = d as Record<string, unknown>;
+        if (typeof detail.error === 'string') code = detail.error;
+        if (typeof detail.message === 'string') message = detail.message;
+      }
+    } catch {
+      // leave http_error + raw message as fallback
+    }
+    onError({ code, message, status: res.status });
     return;
   }
 
@@ -178,8 +193,23 @@ export async function continueStream(
 
   if (!res.ok || !res.body) {
     if (signal?.aborted) return;
-    const msg = await res.text().catch(() => '');
-    onError({ code: 'http_error', message: `HTTP ${res.status}: ${msg}` });
+    const raw = await res.text().catch(() => '');
+    let code = 'http_error';
+    let message = `HTTP ${res.status}: ${raw}`;
+    try {
+      const parsed = JSON.parse(raw);
+      const d = parsed && typeof parsed === 'object' && 'detail' in parsed
+        ? (parsed as Record<string, unknown>).detail
+        : parsed;
+      if (d && typeof d === 'object') {
+        const detail = d as Record<string, unknown>;
+        if (typeof detail.error === 'string') code = detail.error;
+        if (typeof detail.message === 'string') message = detail.message;
+      }
+    } catch {
+      // leave http_error + raw message as fallback
+    }
+    onError({ code, message, status: res.status });
     return;
   }
 

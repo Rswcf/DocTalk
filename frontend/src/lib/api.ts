@@ -4,10 +4,56 @@ import type { UserProfile, CreditHistoryResponse, UsageBreakdown } from '../type
 export const API_BASE = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8000';
 export const PROXY_BASE = '/api/proxy';
 
+/**
+ * Structured error thrown by `handle()` for any non-2xx response.
+ *
+ * Wire contract (docs/ARCHITECTURE.md §10, coming in Phase 6):
+ * - `status`: HTTP status code (e.g. 403).
+ * - `code`: the canonical `detail.error` string from the backend, or null
+ *   if the body wasn't a JSON object with a string `error` field.
+ * - `detail`: the parsed `detail` object (or parsed body itself if the
+ *   backend didn't wrap it), or `{}` when parsing failed.
+ * - `raw`: the raw response body, verbatim.
+ *
+ * `message` MUST stay in the exact `HTTP <status>: <raw>` shape because
+ * legacy substring consumers still depend on it during the deprecation
+ * window (BillingPageClient regex at BillingPageClient.tsx:157-168,
+ * useChatStream HTTP/phrase matches at useChatStream.ts:95-114). Do not
+ * "simplify" the message format until Phase 5 ships.
+ */
+export class ApiError extends Error {
+  constructor(
+    public readonly status: number,
+    public readonly code: string | null,
+    public readonly detail: Record<string, unknown>,
+    public readonly raw: string,
+  ) {
+    super(`HTTP ${status}: ${raw}`);
+    this.name = 'ApiError';
+  }
+}
+
 async function handle<T>(res: Response): Promise<T> {
   if (!res.ok) {
-    const text = await res.text();
-    throw new Error(`HTTP ${res.status}: ${text}`);
+    const raw = await res.text();
+    let code: string | null = null;
+    let detail: Record<string, unknown> = {};
+    try {
+      const parsed = JSON.parse(raw);
+      // FastAPI HTTPException bodies are `{ detail: {...} }` or `{ detail: "..." }`.
+      // Earlier taxonomy rows used the whole body as the detail object.
+      const d = (parsed && typeof parsed === 'object' && 'detail' in parsed)
+        ? (parsed as Record<string, unknown>).detail
+        : parsed;
+      if (d && typeof d === 'object') {
+        detail = d as Record<string, unknown>;
+        const errField = (d as Record<string, unknown>).error;
+        if (typeof errField === 'string') code = errField;
+      }
+    } catch {
+      // non-JSON body (proxy HTML 502, network error upstream) → code stays null
+    }
+    throw new ApiError(res.status, code, detail, raw);
   }
   return res.json();
 }
