@@ -847,3 +847,92 @@ instead of "Manage billing in Stripe".
 Tests: `backend/tests/test_billing_cancel.py` (17 branch tests) and
 `backend/tests/test_billing_state.py` (11 projection tests) cover the
 happy path, failure modes, and all branch preconditions.
+
+### Error taxonomy (wire contract)
+
+Introduced 2026-04-14 to fix a class of bugs where the frontend surfaced
+generic "Upload failed, please check network…" copy for structured 4xx
+responses (the triggering case was 403 `DOCUMENT_LIMIT_REACHED` on a
+Free-plan user's fourth upload). The cure is a single wire-level code
+enum so the frontend can route once instead of each call-site
+substring-matching English prose.
+
+**Response shape** — every user-facing `HTTPException` returns:
+
+```jsonc
+{
+  "detail": {
+    "error": "UPPER_SNAKE_CODE",        // authoritative; frontend routes on this
+    "message": "English human fallback", // present during deprecation window, logs-only after
+    /* context fields, per-code, documented below */
+  }
+}
+```
+
+Codes in use (status · code · required context):
+
+- `400` — `UNSUPPORTED_FORMAT` · `INVALID_FILE_CONTENT` · `FILE_TOO_LARGE {max_mb, plan}` · `URL_INVALID` · `URL_FETCH_BLOCKED` · `URL_CONTENT_TOO_LARGE` · `NO_TEXT_CONTENT` · `URL_FETCH_FAILED` · `INSTRUCTIONS_TOO_LONG {max}` · `CONTINUATION_LIMIT {max}` · `EXPORT_VALIDATION_FAILED {reason}`
+- `402` — `INSUFFICIENT_CREDITS {required, balance}` (HTTP + SSE — same code across both transports)
+- `403` — `DOCUMENT_LIMIT_REACHED {limit, current}` · `SESSION_LIMIT_REACHED {limit, plan}` · `COLLECTION_LIMIT_REACHED {limit, plan}` · `COLLECTION_DOC_LIMIT_REACHED {limit, plan}` · `SHARE_LIMIT_REACHED {limit, plan}` · `EXPORT_REQUIRES_PAID_PLAN {format, required_plans}` · `CUSTOM_INSTRUCTIONS_REQUIRE_PRO`
+- `404` — `DOCUMENT_NOT_FOUND` · `SESSION_NOT_FOUND` · `MESSAGE_NOT_FOUND` · `COLLECTION_NOT_FOUND` · `CHUNK_NOT_FOUND` · `SHARE_NOT_FOUND` (identical copy regardless of existence-vs-authorization — no enumeration oracle)
+- `409` — `DOCUMENT_PROCESSING {status}`
+- `410` — `SHARE_EXPIRED`
+- `429` — `RATE_LIMITED {retry_after}` · `DEMO_SESSION_RATE_LIMITED {retry_after}` · `DEMO_SESSION_LIMIT_REACHED {limit}` · `DEMO_MESSAGE_LIMIT_REACHED {limit}`
+- `500` — `SERVER_ERROR` (unknown `ValueError` / uncaught exceptions; `str(e)` logged server-side only) · `EXPORT_RENDERER_FAILED`
+- `502` — `STORAGE_UNAVAILABLE` · `STRIPE_UNAVAILABLE`
+- SSE-only `event: error` frames — `MODE_NOT_ALLOWED {required_plan}` · `CHAT_SETUP_ERROR` · `RETRIEVAL_ERROR` · `LLM_ERROR` · `ACCOUNTING_ERROR` · `PERSIST_FAILED` · `INSUFFICIENT_CREDITS` (shared with HTTP 402)
+
+**Security posture:**
+
+1. **SSRF reason collapse.** The URL validator and extractor emit six
+   specific reasons (`BLOCKED_HOST` / `BLOCKED_PORT` /
+   `INVALID_URL_SCHEME` / `INVALID_URL_HOST` / `DNS_RESOLUTION_FAILED` /
+   `REDIRECT_LOOP` / `TOO_MANY_REDIRECTS`). All collapse to a single
+   wire code `URL_FETCH_BLOCKED`; the specific reason is logged via
+   `log_security_event(name="url_fetch_blocked", reason=..., url=...)`
+   and never returned to the client. This removes a network-topology
+   probing oracle.
+2. **Unknown `ValueError` → 500.** Service-layer `except ValueError` in
+   `documents.upload`, `documents.ingest_url`, and `export.export_session`
+   allowlists known codes and routes anything else to `500 SERVER_ERROR`
+   with the raw `str(e)` logged but not returned. An unexpected
+   exception is a bug, not user fault, and the raw string may leak
+   internals.
+3. **404 masking.** Every "not found" path returns identical copy
+   regardless of whether the resource exists but is inaccessible, or
+   doesn't exist at all — see `DOCUMENT_NOT_FOUND` etc.
+
+**Frontend contract:**
+
+- `frontend/src/lib/api.ts` throws an `ApiError { status, code, detail, raw }` from `handle()` for every non-2xx response. `ApiError.message` stays in the literal shape `HTTP <status>: <raw>` for **one deprecation window** (2026-04-14 + next release) so legacy substring consumers — specifically the billing detail regex at `BillingPageClient.tsx:157-168` — keep working. After the deprecation window `message` becomes non-authoritative (logs only) and consumers must read `code` + `status`.
+- `frontend/src/lib/sse.ts` does the same parsing on pre-stream HTTP failures in `chatStream` and `continueStream`, emitting `{ code, message, status }` so `useChatStream` routes by code/status instead of English prose.
+- `frontend/src/lib/errorCopy.ts` is the single consumer-facing mapper (`errorCopy(err, t, tOr) → { title, body, cta?, severity, openPaywall? }`). Paywall auto-open is gated to `402 INSUFFICIENT_CREDITS` and SSE `MODE_NOT_ALLOWED` only — all other plan-limit 403s ship an inline CTA button to `/pricing`. This avoids modal thrash on upload / collection / share flows.
+- English copy lives in `en.json` under the `errors.<CODE>.title/body` prefix. Ten other locales fall back through `tOr()` until a dedicated localization pass lands.
+
+**Parse-worker bridge** (`backend/app/workers/parse_worker.py`): the
+worker can't raise `HTTPException`, so error state is written to
+`Document.error_msg` as `ERR_CODE:<CODE>:<human>`. The `_set_doc_error`
+helper is idempotent — repeated calls on an already-prefixed message do
+**not** stack prefixes. Legacy rows written before this contract remain
+readable because the frontend's `parseWorkerErrorMsg()` gracefully falls
+back to the raw string when no prefix is present.
+
+**Deliberately scoped out of this contract migration:**
+
+- `backend/app/api/billing.py` HTTPExceptions — still emit English prose
+  detail. The billing page has its own surface and regex consumer; a
+  targeted follow-up PR will migrate it without breaking the regex.
+- `backend/app/core/deps.py` 401/403 — authentication/admin surface is
+  handled by proxy-level redirects, not a user-visible error toast.
+- The 10 non-English locales — `tOr` English fallback holds until the
+  next translation pass.
+
+Tests: `backend/tests/test_error_taxonomy.py` (40 tests, one per emitted
+code including the SSRF-reason-hiding oracle test and the
+`SERVER_ERROR`-for-unknown-`ValueError` leak test) and
+`backend/tests/test_parse_worker_bridge.py` (6 tests covering prefix
+happy path, unknown-code fallback, empty-string preservation,
+double-prefix idempotency, and `_set_timeout_error` integration).
+Frontend back-compat was paper-audited (billing regex, paywall trigger,
+429 phrase match) rather than unit-tested — adding a frontend unit
+runner is a follow-up.
