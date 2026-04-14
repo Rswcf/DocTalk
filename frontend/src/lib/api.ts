@@ -33,27 +33,36 @@ export class ApiError extends Error {
   }
 }
 
+/**
+ * Read the response body and throw a structured `ApiError`. Shared by
+ * `handle()`, `exportSession()`, and other helpers that don't fit the
+ * `res.json()` shape. Always throws — return type is `never`.
+ */
+async function throwApiError(res: Response): Promise<never> {
+  const raw = await res.text();
+  let code: string | null = null;
+  let detail: Record<string, unknown> = {};
+  try {
+    const parsed = JSON.parse(raw);
+    // FastAPI HTTPException bodies are `{ detail: {...} }` or `{ detail: "..." }`.
+    // Earlier taxonomy rows used the whole body as the detail object.
+    const d = (parsed && typeof parsed === 'object' && 'detail' in parsed)
+      ? (parsed as Record<string, unknown>).detail
+      : parsed;
+    if (d && typeof d === 'object') {
+      detail = d as Record<string, unknown>;
+      const errField = (d as Record<string, unknown>).error;
+      if (typeof errField === 'string') code = errField;
+    }
+  } catch {
+    // non-JSON body (proxy HTML 502, network error upstream) → code stays null
+  }
+  throw new ApiError(res.status, code, detail, raw);
+}
+
 async function handle<T>(res: Response): Promise<T> {
   if (!res.ok) {
-    const raw = await res.text();
-    let code: string | null = null;
-    let detail: Record<string, unknown> = {};
-    try {
-      const parsed = JSON.parse(raw);
-      // FastAPI HTTPException bodies are `{ detail: {...} }` or `{ detail: "..." }`.
-      // Earlier taxonomy rows used the whole body as the detail object.
-      const d = (parsed && typeof parsed === 'object' && 'detail' in parsed)
-        ? (parsed as Record<string, unknown>).detail
-        : parsed;
-      if (d && typeof d === 'object') {
-        detail = d as Record<string, unknown>;
-        const errField = (d as Record<string, unknown>).error;
-        if (typeof errField === 'string') code = errField;
-      }
-    } catch {
-      // non-JSON body (proxy HTML 502, network error upstream) → code stays null
-    }
-    throw new ApiError(res.status, code, detail, raw);
+    await throwApiError(res);
   }
   return res.json();
 }
@@ -262,10 +271,7 @@ export async function updateDocumentInstructions(docId: string, instructions: st
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ custom_instructions: instructions }),
   });
-  if (!res.ok) {
-    const text = await res.text();
-    throw new Error(`HTTP ${res.status}: ${text}`);
-  }
+  if (!res.ok) await throwApiError(res);
 }
 
 export async function getDemoDocuments(): Promise<DemoDocument[]> {
@@ -332,25 +338,7 @@ export async function listCollectionSessions(collectionId: string): Promise<Sess
 
 export async function exportSession(sessionId: string, format: 'pdf' | 'docx'): Promise<Blob> {
   const res = await fetch(`${PROXY_BASE}/api/sessions/${sessionId}/export?format=${format}`);
-  if (!res.ok) {
-    const raw = await res.text();
-    let code: string | null = null;
-    let detail: Record<string, unknown> = {};
-    try {
-      const parsed = JSON.parse(raw);
-      const d = parsed && typeof parsed === 'object' && 'detail' in parsed
-        ? (parsed as Record<string, unknown>).detail
-        : parsed;
-      if (d && typeof d === 'object') {
-        detail = d as Record<string, unknown>;
-        const errField = (d as Record<string, unknown>).error;
-        if (typeof errField === 'string') code = errField;
-      }
-    } catch {
-      // non-JSON response
-    }
-    throw new ApiError(res.status, code, detail, raw);
-  }
+  if (!res.ok) await throwApiError(res);
   return res.blob();
 }
 

@@ -155,11 +155,30 @@ function BillingContent() {
   };
 
   const getBillingErrorMessage = (error: unknown) => {
+    // Prefer structured ApiError.detail (new error-taxonomy shape) — the
+    // legacy regex below only matches bare-string detail payloads, so any
+    // future migration of billing.py to { error, message } detail would
+    // silently fall through without this check.
+    if (error && typeof error === "object") {
+      const maybeApi = error as { detail?: unknown };
+      if (maybeApi.detail && typeof maybeApi.detail === "object") {
+        const d = maybeApi.detail as Record<string, unknown>;
+        if (typeof d.message === "string" && d.message.length > 0) {
+          if (d.message.includes("Cannot switch billing interval during beta")) {
+            return t("billing.intervalMismatch");
+          }
+          return d.message;
+        }
+        if (typeof d.error === "string") return d.error;
+      }
+    }
+
     const raw = error instanceof Error ? error.message : String(error || "");
     if (raw.includes("Cannot switch billing interval during beta")) {
       return t("billing.intervalMismatch");
     }
-    // Extract backend error detail for debugging
+    // Legacy: extract backend string detail for any billing.py endpoint
+    // that still returns `{ detail: "..." }` (scope-out in Phase 1).
     const detailMatch = raw.match(/"detail"\s*:\s*"([^"]+)"/);
     if (detailMatch) {
       return detailMatch[1];

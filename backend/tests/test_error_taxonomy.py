@@ -15,11 +15,13 @@ from app.api import chunks as chunks_api
 from app.api import collections as collections_api
 from app.api import documents as documents_api
 from app.api import export as export_api
+from app.api import search as search_api
 from app.api import sharing as sharing_api
 from app.api import users as users_api
 from app.core import deps as deps_module
 from app.core import url_validator
 from app.core.config import settings
+from app.services import chat_service as chat_service_module
 from app.services.extractors import url_extractor
 
 _UNSET = object()
@@ -29,6 +31,7 @@ api_app.include_router(documents_api.documents_router)
 api_app.include_router(chat_api.chat_router)
 api_app.include_router(collections_api.collections_router)
 api_app.include_router(chunks_api.chunks_router)
+api_app.include_router(search_api.search_router)
 api_app.include_router(export_api.router)
 api_app.include_router(sharing_api.router)
 api_app.include_router(users_api.router)
@@ -830,6 +833,105 @@ async def test_users_delete_stripe_unavailable_cancel(
 
     response = await client.delete("/api/users/me")
     _assert_error(response, 502, "STRIPE_UNAVAILABLE")
+
+
+@pytest.mark.asyncio
+async def test_documents_not_found_masks_authz(
+    client: AsyncClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """
+    Codex r4 finding #3: 404 must look identical whether the doc is truly
+    missing or exists but belongs to another user. Any divergence creates
+    an enumeration oracle.
+    """
+    doc_id = uuid.uuid4()
+
+    # Case A: truly missing.
+    db_missing = _make_db()
+    _override_dependencies(db_missing, optional_user=_make_user())
+    monkeypatch.setattr(documents_api.doc_service, "get_document", AsyncMock(return_value=None))
+    resp_missing = await client.get(f"/api/documents/{doc_id}")
+
+    # Case B: exists but not yours. can_access_document returns False.
+    other_user = _make_user()
+    other_doc = SimpleNamespace(id=doc_id, user_id=uuid.uuid4(), demo_slug=None, converted_storage_key=None)
+    db_found = _make_db()
+    _override_dependencies(db_found, optional_user=other_user)
+    monkeypatch.setattr(documents_api.doc_service, "get_document", AsyncMock(return_value=other_doc))
+    monkeypatch.setattr(documents_api, "can_access_document", lambda _doc, _user: False)
+    resp_found = await client.get(f"/api/documents/{doc_id}")
+
+    assert resp_missing.status_code == 404
+    assert resp_found.status_code == 404
+    assert resp_missing.json() == resp_found.json(), "404 body diverges → enumeration oracle"
+
+
+@pytest.mark.asyncio
+async def test_search_rate_limited(client: AsyncClient, monkeypatch: pytest.MonkeyPatch) -> None:
+    db = _make_db()
+    _override_dependencies(db, optional_user=None)
+    monkeypatch.setattr(search_api.anon_read_limiter, "is_allowed", AsyncMock(return_value=False))
+
+    response = await client.post(
+        f"/api/documents/{uuid.uuid4()}/search",
+        json={"query": "hello", "top_k": 5},
+    )
+    detail = _assert_error(response, 429, "RATE_LIMITED")
+    assert detail["retry_after"] == 60
+    assert response.headers.get("retry-after") == "60"
+
+
+@pytest.mark.asyncio
+async def test_chunks_rate_limited(client: AsyncClient, monkeypatch: pytest.MonkeyPatch) -> None:
+    db = _make_db()
+    _override_dependencies(db, optional_user=None)
+    monkeypatch.setattr(chunks_api.anon_read_limiter, "is_allowed", AsyncMock(return_value=False))
+
+    response = await client.get(f"/api/chunks/{uuid.uuid4()}")
+    detail = _assert_error(response, 429, "RATE_LIMITED")
+    assert detail["retry_after"] == 60
+    assert response.headers.get("retry-after") == "60"
+
+
+@pytest.mark.asyncio
+async def test_chat_service_mode_not_allowed_sse_emits_required_plan() -> None:
+    """
+    chat_service emits MODE_NOT_ALLOWED as an SSE error frame (not an
+    HTTPException) when a Free-plan user requests Thorough mode. The
+    required_plan field was added in Phase 1 so the frontend can render
+    a targeted upgrade CTA. Regression test this contract directly.
+    """
+    user = _make_user(plan="free")
+    session_id = uuid.uuid4()
+
+    async def _fake_scalar(*_a, **_kw):
+        return SimpleNamespace(id=session_id, document_id=None, collection_id=None)
+
+    # Minimal DB stub that returns a session object on the first execute()
+    # call so chat_stream reaches the Thorough-mode gate before touching
+    # anything else. Use AsyncMock for call-site parity.
+    class _SessionResult:
+        def scalar_one_or_none(self):
+            return SimpleNamespace(id=session_id, document_id=None, collection_id=None)
+
+    db = _make_db(execute=AsyncMock(return_value=_SessionResult()))
+
+    svc = chat_service_module.ChatService()
+    gen = svc.chat_stream(
+        session_id=session_id,
+        user_message="hello",
+        db=db,  # type: ignore[arg-type]
+        user=user,
+        locale="en",
+        mode="thorough",
+        domain_mode=None,
+    )
+
+    first = await gen.__anext__()
+    assert first["event"] == "error"
+    assert first["data"]["code"] == "MODE_NOT_ALLOWED"
+    assert first["data"]["required_plan"] == "plus"
 
 
 @pytest.mark.asyncio
