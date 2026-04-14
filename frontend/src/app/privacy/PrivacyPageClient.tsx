@@ -5,7 +5,7 @@ import { useLocale } from '../../i18n';
 import { usePageTitle } from '../../lib/usePageTitle';
 
 export default function PrivacyPageClient() {
-  const { t } = useLocale();
+  const { t, tOr } = useLocale();
   usePageTitle(t('privacy.title'));
 
   return (
@@ -14,6 +14,27 @@ export default function PrivacyPageClient() {
         <h1 className="text-2xl font-semibold mb-6 dark:text-white">{t('privacy.title')}</h1>
 
         <div className="prose dark:prose-invert max-w-none space-y-6 text-zinc-700 dark:text-zinc-300">
+          <section className="rounded-lg border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-900/40 p-4">
+            <h2 className="text-lg font-semibold mb-2 dark:text-white">
+              {tOr('privacy.controller.title', 'Data Controller (GDPR Art. 4(7))')}
+            </h2>
+            <p className="mb-2">
+              {tOr(
+                'privacy.controller.intro',
+                'The controller responsible for the processing of personal data on this website is:'
+              )}
+            </p>
+            <address className="not-italic leading-7">
+              <strong className="text-zinc-900 dark:text-zinc-100">Yijie Ma</strong><br />
+              [BUSINESS_ADDRESS_LINE1]<br />
+              [PLZ] [CITY]<br />
+              Germany<br />
+              <a href="mailto:privacy@doctalk.site" className="text-blue-600 dark:text-blue-400 hover:underline">
+                privacy@doctalk.site
+              </a>
+            </address>
+          </section>
+
           <section>
             <h2 className="text-lg font-semibold mb-2 dark:text-white">{t('privacy.section1.title')}</h2>
             <p>{t('privacy.section1.content')}</p>

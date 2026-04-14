@@ -19,7 +19,7 @@ const SUPPORTED_LANGS = [
 ];
 
 export default function Footer() {
-  const { t } = useLocale();
+  const { t, tOr } = useLocale();
   const releaseLabel = getReleaseLabel();
   const buildSha = getShortBuildSha();
   const productLinks = [
@@ -50,6 +50,7 @@ export default function Footer() {
     { href: '/trust', label: t('footer.links.trust') },
     { href: '/privacy', label: t('privacy.policyLink') },
     { href: '/terms', label: t('terms.title') },
+    { href: '/imprint', label: tOr('footer.imprint', 'Imprint') },
     { href: '/privacy#ccpa', label: t('footer.doNotSell') },
   ];
 

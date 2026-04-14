@@ -5,7 +5,7 @@ import { useLocale } from '../../i18n';
 import { usePageTitle } from '../../lib/usePageTitle';
 
 export default function TermsPageClient() {
-  const { t } = useLocale();
+  const { t, tOr } = useLocale();
   usePageTitle(t('terms.title'));
 
   return (
@@ -32,6 +32,18 @@ export default function TermsPageClient() {
           <section>
             <h2 className="text-lg font-semibold mb-2 dark:text-white">{t('terms.section4.title')}</h2>
             <p>{t('terms.section4.content')}</p>
+          </section>
+
+          <section>
+            <h2 className="text-lg font-semibold mb-2 dark:text-white">
+              {tOr('terms.section5.title', 'User-Uploaded Content and Intellectual Property')}
+            </h2>
+            <p>
+              {tOr(
+                'terms.section5.content',
+                'You retain all rights to documents you upload. You confirm that you have the legal right to upload, store, and process each document via DocTalk — whether you own it, authored it, or have a valid licence or permission from the rights holder. Do not upload copyrighted material you do not have permission to use, trade secrets of third parties, or content that violates privacy or confidentiality obligations. DocTalk does not host or publish your documents to third parties; the service is limited to processing your own content to answer your questions. We may remove content that we believe in good faith to infringe intellectual property rights under our notice-and-takedown procedure.'
+              )}
+            </p>
           </section>
         </div>
 
