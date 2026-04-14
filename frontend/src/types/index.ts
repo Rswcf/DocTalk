@@ -77,6 +77,15 @@ export interface SessionListResponse {
   sessions: SessionItem[];
 }
 
+export interface BillingState {
+  managed_by: 'stripe' | 'admin' | 'none';
+  can_cancel: boolean;
+  interval: 'month' | 'year' | null;
+  period_end: string | null;
+  cancel_at_period_end: boolean;
+  status: 'active' | 'trialing' | 'past_due' | 'canceled' | 'pending' | 'none';
+}
+
 export interface UserProfile {
   id: string;
   email: string;
@@ -96,6 +105,7 @@ export interface UserProfile {
     total_credits_spent: number;
     total_tokens_used: number;
   };
+  billing_state: BillingState;
 }
 
 export interface CreditHistoryItem {

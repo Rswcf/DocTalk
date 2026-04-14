@@ -188,6 +188,21 @@ export async function changePlan(params: { plan: string; billing: string }): Pro
   return handle(res);
 }
 
+export interface CancelSubscriptionResult {
+  status: 'scheduled_cancel' | 'immediate_revert';
+  effective_at: string | null;
+  message: string;
+}
+
+export async function cancelSubscription(): Promise<CancelSubscriptionResult> {
+  const res = await fetch(PROXY_BASE + '/api/billing/cancel', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: '{}',
+  });
+  return handle(res);
+}
+
 export interface DemoDocument {
   slug: string;
   document_id: string;

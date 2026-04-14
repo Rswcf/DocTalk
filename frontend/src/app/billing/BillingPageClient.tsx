@@ -5,7 +5,12 @@ import { useSession } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useLocale } from "../../i18n";
 import Header from "../../components/Header";
-import { changePlan, createSubscription, createPortalSession } from "../../lib/api";
+import {
+  cancelSubscription,
+  changePlan,
+  createSubscription,
+  createPortalSession,
+} from "../../lib/api";
 import { triggerCreditsRefresh } from "../../components/CreditsDisplay";
 import PricingTable from "../../components/PricingTable";
 import { PLAN_HIERARCHY, type PlanType } from "../../lib/models";
@@ -20,7 +25,7 @@ interface Product {
 }
 
 function BillingContent() {
-  const { t } = useLocale();
+  const { t, locale } = useLocale();
   usePageTitle(t("footer.pricing"));
 
   const { status } = useSession();
@@ -42,6 +47,7 @@ function BillingContent() {
   const [selectedPlan, setSelectedPlan] = useState<'plus' | 'pro'>('plus');
   const [confirmDowngrade, setConfirmDowngrade] = useState<{ plan: string; billing: string } | null>(null);
   const [confirmUpgrade, setConfirmUpgrade] = useState<{ plan: string; billing: string } | null>(null);
+  const [confirmCancel, setConfirmCancel] = useState(false);
 
   useEffect(() => {
     const isSuccess = searchParams.get("success");
@@ -67,12 +73,13 @@ function BillingContent() {
   }, [status, router]);
 
   useEffect(() => {
-    if (!confirmUpgrade && !confirmDowngrade) return;
+    if (!confirmUpgrade && !confirmDowngrade && !confirmCancel) return;
 
     const handleEscape = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
         setConfirmUpgrade(null);
         setConfirmDowngrade(null);
+        setConfirmCancel(false);
       }
     };
 
@@ -80,17 +87,17 @@ function BillingContent() {
     return () => {
       document.removeEventListener("keydown", handleEscape);
     };
-  }, [confirmUpgrade, confirmDowngrade]);
+  }, [confirmUpgrade, confirmDowngrade, confirmCancel]);
 
   useEffect(() => {
-    if (!confirmUpgrade && !confirmDowngrade) return;
+    if (!confirmUpgrade && !confirmDowngrade && !confirmCancel) return;
 
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     return () => {
       document.body.style.overflow = previousOverflow;
     };
-  }, [confirmUpgrade, confirmDowngrade]);
+  }, [confirmUpgrade, confirmDowngrade, confirmCancel]);
 
   const fetchProducts = useCallback(async () => {
     setProductsLoading(true);
@@ -234,8 +241,32 @@ function BillingContent() {
     try {
       const res = await createPortalSession();
       window.location.href = res.portal_url;
-    } catch {
-      setMessage(t("billing.error"));
+    } catch (err) {
+      // Surface backend error detail instead of generic message (Codex R1 §6).
+      setMessage(err instanceof Error && err.message ? err.message : t("billing.error"));
+      setSubmitting(null);
+    }
+  };
+
+  const handleCancel = async () => {
+    if (submitting) return;
+    setSubmitting('cancel');
+    try {
+      const res = await cancelSubscription();
+      const date = res.effective_at
+        ? new Date(res.effective_at).toLocaleDateString(locale)
+        : '';
+      setMessage(
+        res.status === 'scheduled_cancel'
+          ? t('billing.cancel.successScheduled', { date })
+          : t('billing.cancel.successImmediate')
+      );
+      setConfirmCancel(false);
+      triggerCreditsRefresh();
+      await refetchProfile();
+    } catch (err) {
+      setMessage(err instanceof Error && err.message ? err.message : t('billing.error'));
+    } finally {
       setSubmitting(null);
     }
   };
@@ -295,6 +326,74 @@ function BillingContent() {
           <div className="mb-6 p-4 rounded-xl bg-zinc-100 dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-800">
             {message}
           </div>
+        )}
+
+        {/* Current Plan panel — BGB §312k-compliant cancel button.
+            Shown only for paid users (free plan has nothing to manage). */}
+        {profile && profile.plan !== 'free' && profile.billing_state && (
+          <section
+            className="mb-8 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-6"
+            aria-label={t('billing.currentPlan.title')}
+          >
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+              <div>
+                <p className="text-xs font-medium uppercase tracking-wider text-zinc-500 dark:text-zinc-400 mb-1">
+                  {t('billing.currentPlan.title')}
+                </p>
+                <p className="text-lg font-semibold text-zinc-900 dark:text-zinc-50">
+                  {profile.plan === 'plus' ? t('billing.plus.title') : t('billing.pro.title')}
+                  <span className="ml-2 text-sm font-normal text-zinc-500 dark:text-zinc-400">
+                    · {t(`billing.currentPlan.managed.${profile.billing_state.managed_by}`)}
+                  </span>
+                </p>
+                {profile.billing_state.cancel_at_period_end && profile.billing_state.period_end && (
+                  <p className="mt-2 text-sm text-amber-700 dark:text-amber-400">
+                    {t('billing.currentPlan.scheduledCancel', {
+                      date: new Date(profile.billing_state.period_end).toLocaleDateString(locale),
+                    })}
+                  </p>
+                )}
+                {!profile.billing_state.cancel_at_period_end &&
+                  profile.billing_state.period_end &&
+                  profile.billing_state.status === 'active' && (
+                    <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
+                      {t('billing.currentPlan.renewsOn', {
+                        date: new Date(profile.billing_state.period_end).toLocaleDateString(locale),
+                      })}
+                    </p>
+                  )}
+              </div>
+              <div className="flex flex-col items-stretch sm:items-end gap-2">
+                {profile.billing_state.can_cancel && (
+                  <button
+                    type="button"
+                    onClick={() => setConfirmCancel(true)}
+                    disabled={submitting !== null}
+                    className="px-4 py-2 rounded-lg border border-red-300 dark:border-red-700 text-red-700 dark:text-red-300 hover:bg-red-50 dark:hover:bg-red-950/30 disabled:opacity-50 transition-colors text-sm font-medium focus-visible:ring-2 focus-visible:ring-red-400 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-900"
+                  >
+                    {profile.billing_state.managed_by === 'admin'
+                      ? t('billing.cancel.buttonAdmin')
+                      : t('billing.cancel.button')}
+                  </button>
+                )}
+                {profile.billing_state.managed_by === 'stripe' && (
+                  <button
+                    type="button"
+                    onClick={handleManage}
+                    disabled={submitting !== null}
+                    className="text-sm text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 hover:underline disabled:opacity-50 focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:rounded-sm"
+                  >
+                    {t('billing.cancel.managePortal')}
+                  </button>
+                )}
+                {!profile.billing_state.can_cancel && profile.billing_state.status === 'pending' && (
+                  <p className="text-xs text-zinc-500 dark:text-zinc-400 max-w-xs text-right">
+                    {t('billing.cancel.tooltipPending')}
+                  </p>
+                )}
+              </div>
+            </div>
+          </section>
         )}
 
         {/* Billing Period Toggle */}
@@ -395,13 +494,22 @@ function BillingContent() {
                     ))}
                   </ul>
                   {profile?.plan === 'plus' ? (
-                    <button
-                      onClick={handleManage}
-                      disabled={submitting !== null}
-                      className="w-full px-4 py-2.5 rounded-lg bg-zinc-100 dark:bg-zinc-800 text-zinc-800 dark:text-zinc-100 hover:bg-zinc-200 dark:hover:bg-zinc-700 disabled:opacity-50 transition-colors font-medium focus-visible:ring-2 focus-visible:ring-zinc-400 dark:focus-visible:ring-zinc-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-900"
-                    >
-                      {t("billing.manage")}
-                    </button>
+                    profile?.billing_state?.managed_by === 'stripe' ? (
+                      <button
+                        onClick={handleManage}
+                        disabled={submitting !== null}
+                        className="w-full px-4 py-2.5 rounded-lg bg-zinc-100 dark:bg-zinc-800 text-zinc-800 dark:text-zinc-100 hover:bg-zinc-200 dark:hover:bg-zinc-700 disabled:opacity-50 transition-colors font-medium focus-visible:ring-2 focus-visible:ring-zinc-400 dark:focus-visible:ring-zinc-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-900"
+                      >
+                        {t("billing.manage")}
+                      </button>
+                    ) : (
+                      <button
+                        disabled
+                        className="w-full px-4 py-2.5 rounded-lg bg-zinc-50 dark:bg-zinc-800/60 text-zinc-400 dark:text-zinc-500 cursor-not-allowed font-medium"
+                      >
+                        {t("billing.currentPlan.title")}
+                      </button>
+                    )
                   ) : profile?.plan === 'pro' ? (
                     <button
                       onClick={() => handlePlanAction('plus')}
@@ -456,13 +564,22 @@ function BillingContent() {
                     ))}
                   </ul>
                   {profile?.plan === 'pro' ? (
-                    <button
-                      onClick={handleManage}
-                      disabled={submitting !== null}
-                      className="w-full px-4 py-2.5 rounded-lg bg-zinc-100 dark:bg-zinc-800 text-zinc-800 dark:text-zinc-100 hover:bg-zinc-200 dark:hover:bg-zinc-700 disabled:opacity-50 transition-colors font-medium focus-visible:ring-2 focus-visible:ring-zinc-400 dark:focus-visible:ring-zinc-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-900"
-                    >
-                      {t("billing.manage")}
-                    </button>
+                    profile?.billing_state?.managed_by === 'stripe' ? (
+                      <button
+                        onClick={handleManage}
+                        disabled={submitting !== null}
+                        className="w-full px-4 py-2.5 rounded-lg bg-zinc-100 dark:bg-zinc-800 text-zinc-800 dark:text-zinc-100 hover:bg-zinc-200 dark:hover:bg-zinc-700 disabled:opacity-50 transition-colors font-medium focus-visible:ring-2 focus-visible:ring-zinc-400 dark:focus-visible:ring-zinc-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-900"
+                      >
+                        {t("billing.manage")}
+                      </button>
+                    ) : (
+                      <button
+                        disabled
+                        className="w-full px-4 py-2.5 rounded-lg bg-zinc-50 dark:bg-zinc-800/60 text-zinc-400 dark:text-zinc-500 cursor-not-allowed font-medium"
+                      >
+                        {t("billing.currentPlan.title")}
+                      </button>
+                    )
                   ) : profile?.plan === 'plus' ? (
                     <button
                       onClick={() => handlePlanAction('pro')}
@@ -659,6 +776,65 @@ function BillingContent() {
                   {submitting === "confirm-downgrade"
                     ? t("common.loading")
                     : t("billing.confirmDowngrade.confirm")}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Cancel subscription confirmation — BGB §312k compliant copy.
+            Reuses the same overlay/animation style as the other confirm modals. */}
+        {confirmCancel && profile && profile.billing_state && (
+          <div
+            onClick={(e) => {
+              if (e.target === e.currentTarget) setConfirmCancel(false);
+            }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="confirm-cancel-title"
+          >
+            <div
+              onClick={(e) => e.stopPropagation()}
+              className="max-w-md w-full rounded-xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 p-6 shadow-xl"
+            >
+              <h2
+                id="confirm-cancel-title"
+                className="text-xl font-semibold text-zinc-900 dark:text-zinc-50 mb-3"
+              >
+                {t('billing.cancel.modal.title')}
+              </h2>
+              <p className="text-sm leading-7 text-zinc-600 dark:text-zinc-300 mb-6">
+                {profile.billing_state.managed_by === 'admin'
+                  ? t('billing.cancel.modal.bodyAdmin')
+                  : t('billing.cancel.modal.bodyStripe', {
+                      plan:
+                        profile.plan === 'plus'
+                          ? t('billing.plus.title')
+                          : t('billing.pro.title'),
+                      date: profile.billing_state.period_end
+                        ? new Date(profile.billing_state.period_end).toLocaleDateString(locale)
+                        : '—',
+                    })}
+              </p>
+              <div className="flex items-center justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={() => setConfirmCancel(false)}
+                  disabled={submitting === 'cancel'}
+                  className="px-4 py-2 rounded-lg bg-zinc-100 dark:bg-zinc-800 text-zinc-800 dark:text-zinc-100 hover:bg-zinc-200 dark:hover:bg-zinc-700 disabled:opacity-50 transition-colors text-sm font-medium focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-900"
+                >
+                  {t('billing.cancel.modal.back')}
+                </button>
+                <button
+                  type="button"
+                  onClick={handleCancel}
+                  disabled={submitting === 'cancel'}
+                  className="px-4 py-2 rounded-lg bg-red-600 hover:bg-red-700 dark:bg-red-500 dark:hover:bg-red-400 text-white disabled:opacity-50 shadow-sm transition-colors text-sm font-medium focus-visible:ring-2 focus-visible:ring-red-400 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-900"
+                >
+                  {submitting === 'cancel'
+                    ? t('common.loading')
+                    : t('billing.cancel.modal.confirm')}
                 </button>
               </div>
             </div>
