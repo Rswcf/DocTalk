@@ -13,6 +13,7 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from app.api.billing import compute_billing_state
 from app.core.cache import cache_get, cache_set
 from app.core.config import MODEL_TO_MODE, settings
 from app.core.deps import get_db_session, require_auth
@@ -167,6 +168,8 @@ async def get_profile(
     else:
         monthly_allowance = int(settings.PLAN_FREE_MONTHLY_CREDITS or 0)
 
+    billing_state = await compute_billing_state(user)
+
     return {
         "id": str(user.id),
         "email": user.email,
@@ -182,6 +185,7 @@ async def get_profile(
         "signup_bonus_granted": bool(user.signup_bonus_granted_at),
         "connected_accounts": connected_accounts,
         "stats": stats,
+        "billing_state": billing_state,
     }
 
 

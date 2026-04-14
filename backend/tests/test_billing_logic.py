@@ -43,7 +43,10 @@ async def test_recover_pending_subscription_syncs_active_subscription(
     assert user.stripe_subscription_id == "sub_live"
     assert user.plan == "pro"
     db.commit.assert_awaited_once()
-    cache_delete.assert_awaited_once_with(f"user:profile:{user.id}")
+    # Recovery path invalidates both profile and billing_state caches.
+    cache_delete.assert_any_await(f"user:profile:{user.id}")
+    cache_delete.assert_any_await(f"user:billing_state:{user.id}")
+    assert cache_delete.await_count == 2
 
 
 @pytest.mark.asyncio

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Optional
+from typing import Literal, Optional
 
 from pydantic import BaseModel
 
@@ -18,6 +18,20 @@ class UserProfileStatsResponse(BaseModel):
     total_tokens_used: int
 
 
+class BillingStateResponse(BaseModel):
+    """Billing capability snapshot; source of truth for UI rendering decisions.
+    Stripe-derived fields come via a 60s Redis cache (see `get_profile`).
+    """
+    managed_by: Literal["stripe", "admin", "none"]
+    can_cancel: bool
+    interval: Optional[Literal["month", "year"]] = None
+    period_end: Optional[str] = None          # ISO-8601 UTC
+    cancel_at_period_end: bool = False
+    status: Literal[
+        "active", "trialing", "past_due", "canceled", "pending", "none"
+    ] = "none"
+
+
 class UserProfileResponse(BaseModel):
     id: str
     email: str
@@ -31,6 +45,7 @@ class UserProfileResponse(BaseModel):
     signup_bonus_granted: bool
     connected_accounts: list[ConnectedAccountResponse]
     stats: UserProfileStatsResponse
+    billing_state: BillingStateResponse
 
 
 class UsageByModeResponse(BaseModel):
