@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState } from 'react';
-import { getDocument, getDocumentFileUrl, getConvertedFileUrl } from './api';
+import { ApiError, getDocument, getDocumentFileUrl, getConvertedFileUrl } from './api';
+import { errorCopy, parseWorkerErrorMsg } from './errorCopy';
 import { sanitizeFilename } from './utils';
 import { useLocale } from '../i18n';
 import { useDocTalkStore } from '../store';
@@ -17,7 +18,7 @@ interface UseDocumentLoaderResult {
 }
 
 export function useDocumentLoader(documentId: string | undefined): UseDocumentLoaderResult {
-  const { t } = useLocale();
+  const { t, tOr } = useLocale();
   const [error, setError] = useState<string | null>(null);
   const [isDemo, setIsDemo] = useState(false);
   const [fileType, setFileType] = useState<string>('pdf');
@@ -65,7 +66,13 @@ export function useDocumentLoader(documentId: string | undefined): UseDocumentLo
         }
 
         if (info.status === 'error') {
-          setError(info.error_msg || t('upload.error'));
+          const { code, fallback } = parseWorkerErrorMsg(info.error_msg);
+          if (code) {
+            const copy = errorCopy({ code, detail: {} }, t, tOr);
+            setError(copy.body);
+          } else {
+            setError(fallback || t('upload.error'));
+          }
           if (intervalId) clearInterval(intervalId);
           return;
         }
@@ -88,14 +95,12 @@ export function useDocumentLoader(documentId: string | undefined): UseDocumentLo
         }
       } catch (e: unknown) {
         if (cancelled) return;
-
-        const msg = String((e as { message?: unknown })?.message || e || '');
-        if (msg.includes('HTTP 404')) {
+        const copy = errorCopy(e, t, tOr);
+        if (e instanceof ApiError && e.status === 404) {
           setError(t('doc.notFound'));
         } else {
-          setError(t('doc.loadError'));
+          setError(copy.body || t('doc.loadError'));
         }
-
         if (intervalId) clearInterval(intervalId);
       }
     };
@@ -116,7 +121,7 @@ export function useDocumentLoader(documentId: string | undefined): UseDocumentLo
       cancelled = true;
       if (intervalId) clearInterval(intervalId);
     };
-  }, [documentId, setDocument, setPdfUrl, setDocumentName, setDocumentStatus, setLastDocument, setDocumentSummary, setSuggestedQuestions, t]);
+  }, [documentId, setDocument, setPdfUrl, setDocumentName, setDocumentStatus, setLastDocument, setDocumentSummary, setSuggestedQuestions, t, tOr]);
 
   return {
     error,

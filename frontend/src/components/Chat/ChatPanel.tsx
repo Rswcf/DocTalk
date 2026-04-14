@@ -17,6 +17,7 @@ import { renumberCitations } from '../../lib/citations';
 import { SUGGESTED_KEYS } from '../../lib/constants';
 import { useChatStream } from '../../lib/useChatStream';
 import { openAuthModal } from '../../lib/auth-modal';
+import { errorCopy } from '../../lib/errorCopy';
 
 interface ChatPanelProps {
   sessionId: string;
@@ -36,6 +37,7 @@ export default function ChatPanel({ sessionId, onCitationClick, maxUserMessages,
   const messages = useDocTalkStore((s) => s.messages);
   const isStreaming = useDocTalkStore((s) => s.isStreaming);
   const selectedMode = useDocTalkStore((s) => s.selectedMode);
+  const addMessage = useDocTalkStore((s) => s.addMessage);
   const { t, tOr, locale } = useLocale();
   const router = useRouter();
 
@@ -64,6 +66,7 @@ export default function ChatPanel({ sessionId, onCitationClick, maxUserMessages,
     selectedMode,
     locale,
     t,
+    tOr,
     maxUserMessages,
     onShowPaywall: () => setShowPaywall(true),
     onRequireAuth: () => openAuthModal(),
@@ -197,10 +200,16 @@ export default function ChatPanel({ sessionId, onCitationClick, maxUserMessages,
       URL.revokeObjectURL(url);
     } catch (e) {
       console.error('Export failed:', e);
-      const msg = e instanceof Error ? e.message : String(e);
-      window.alert(`Export failed: ${msg}`);
+      const copy = errorCopy(e, t, tOr);
+      addMessage({
+        id: `m_${Date.now()}_exp`,
+        role: 'assistant',
+        text: copy.body,
+        isError: true,
+        createdAt: Date.now(),
+      });
     }
-  }, [sessionId]);
+  }, [addMessage, sessionId, t, tOr]);
 
   const [shareLoading, setShareLoading] = useState(false);
   const handleShare = useCallback(async () => {
@@ -210,15 +219,26 @@ export default function ChatPanel({ sessionId, onCitationClick, maxUserMessages,
       const { createShare } = await import('../../lib/api');
       const result = await createShare(sessionId);
       await navigator.clipboard.writeText(result.url);
-      // Simple alert-style feedback — could be replaced with toast component
-      window.alert('Link copied to clipboard!');
+      addMessage({
+        id: `m_${Date.now()}_share_ok`,
+        role: 'assistant',
+        text: tOr('share.copied', 'Link copied to clipboard.'),
+        createdAt: Date.now(),
+      });
     } catch (e) {
       console.error('Share failed:', e);
-      window.alert('Failed to create share link.');
+      const copy = errorCopy(e, t, tOr);
+      addMessage({
+        id: `m_${Date.now()}_share_err`,
+        role: 'assistant',
+        text: copy.body,
+        isError: true,
+        createdAt: Date.now(),
+      });
     } finally {
       setShareLoading(false);
     }
-  }, [sessionId, shareLoading]);
+  }, [addMessage, sessionId, shareLoading, t, tOr]);
 
   const canUseCustomInstructions = !!onOpenSettings;
   // Show the entry only on surfaces that support the feature. Among those,

@@ -333,8 +333,23 @@ export async function listCollectionSessions(collectionId: string): Promise<Sess
 export async function exportSession(sessionId: string, format: 'pdf' | 'docx'): Promise<Blob> {
   const res = await fetch(`${PROXY_BASE}/api/sessions/${sessionId}/export?format=${format}`);
   if (!res.ok) {
-    const text = await res.text();
-    throw new Error(`Export failed: ${text}`);
+    const raw = await res.text();
+    let code: string | null = null;
+    let detail: Record<string, unknown> = {};
+    try {
+      const parsed = JSON.parse(raw);
+      const d = parsed && typeof parsed === 'object' && 'detail' in parsed
+        ? (parsed as Record<string, unknown>).detail
+        : parsed;
+      if (d && typeof d === 'object') {
+        detail = d as Record<string, unknown>;
+        const errField = (d as Record<string, unknown>).error;
+        if (typeof errField === 'string') code = errField;
+      }
+    } catch {
+      // non-JSON response
+    }
+    throw new ApiError(res.status, code, detail, raw);
   }
   return res.blob();
 }

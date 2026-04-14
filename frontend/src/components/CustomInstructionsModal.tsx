@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { X } from 'lucide-react';
 import { useLocale } from '../i18n';
+import { errorCopy } from '../lib/errorCopy';
 
 interface Props {
   isOpen: boolean;
@@ -15,14 +16,16 @@ export default function CustomInstructionsModal({ isOpen, onClose, currentInstru
   const [text, setText] = useState(currentInstructions || '');
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const modalRef = useRef<HTMLDivElement>(null);
-  const { t } = useLocale();
+  const { t, tOr } = useLocale();
   const MAX_CHARS = 2000;
 
   useEffect(() => {
     setText(currentInstructions || '');
     setSaved(false);
+    setError(null);
   }, [currentInstructions, isOpen]);
 
   useEffect(() => {
@@ -70,10 +73,14 @@ export default function CustomInstructionsModal({ isOpen, onClose, currentInstru
 
   const handleSave = async () => {
     setSaving(true);
+    setError(null);
     try {
       await onSave(text.trim() || null);
       setSaved(true);
       setTimeout(() => setSaved(false), 2000);
+    } catch (e) {
+      const copy = errorCopy(e, t, tOr);
+      setError(copy.body);
     } finally {
       setSaving(false);
     }
@@ -81,11 +88,15 @@ export default function CustomInstructionsModal({ isOpen, onClose, currentInstru
 
   const handleClear = async () => {
     setSaving(true);
+    setError(null);
     try {
       await onSave(null);
       setText('');
       setSaved(true);
       setTimeout(() => setSaved(false), 2000);
+    } catch (e) {
+      const copy = errorCopy(e, t, tOr);
+      setError(copy.body);
     } finally {
       setSaving(false);
     }
@@ -132,6 +143,7 @@ export default function CustomInstructionsModal({ isOpen, onClose, currentInstru
             <span className="text-xs text-green-600 dark:text-green-400" aria-live="polite">{t('instructions.saved')}</span>
           )}
         </div>
+        {error && <p className="mt-3 text-sm text-red-600 dark:text-red-400">{error}</p>}
         <div className="flex gap-3 mt-4">
           <button
             onClick={handleClear}

@@ -5,12 +5,14 @@ import { chatStream, continueStream } from './sse';
 import { useDocTalkStore } from '../store';
 import type { Message } from '../types';
 import { triggerCreditsRefresh } from '../components/CreditsDisplay';
+import { errorCopy } from './errorCopy';
 
 interface UseChatStreamOptions {
   sessionId: string;
   selectedMode: string;
   locale: string;
   t: (key: string, params?: Record<string, string | number>) => string;
+  tOr: (key: string, fallback: string, params?: Record<string, string | number>) => string;
   maxUserMessages?: number;
   onShowPaywall: () => void;
   onRequireAuth: () => void;
@@ -32,6 +34,7 @@ export function useChatStream({
   selectedMode,
   locale,
   t,
+  tOr,
   maxUserMessages,
   onShowPaywall,
   onRequireAuth,
@@ -61,43 +64,41 @@ export function useChatStream({
   const messagesUsed = maxUserMessages != null ? Math.min(maxUserMessages, Math.max(0, totalUsed)) : 0;
   const maxMessages = maxUserMessages ?? 0;
 
-  const getErrorMessage = useCallback((err: unknown): string => {
-    if (typeof err === 'object' && err && 'message' in err) {
-      return String((err as { message?: unknown }).message || '');
-    }
-    return '';
-  }, []);
-
-  const getFriendlyStreamError = useCallback((err: unknown): string | null => {
-    const message = getErrorMessage(err);
-    const name = typeof err === 'object' && err && 'name' in err
-      ? String((err as { name?: unknown }).name || '')
-      : '';
-
-    if (name === 'AbortError' || message.includes('AbortError')) {
-      return null;
-    }
-
-    if (message.includes('Failed to fetch')) {
-      return t('chat.networkError');
-    }
-
-    return t('chat.networkError');
-  }, [getErrorMessage, t]);
+  const getErrorMeta = useCallback(
+    (err: unknown): { message: string; code: string | null; status: number | null } => {
+      if (typeof err === 'object' && err) {
+        const anyErr = err as Record<string, unknown>;
+        return {
+          message: typeof anyErr.message === 'string' ? anyErr.message : '',
+          code: typeof anyErr.code === 'string' ? anyErr.code : null,
+          status: typeof anyErr.status === 'number' ? anyErr.status : null,
+        };
+      }
+      return { message: '', code: null, status: null };
+    },
+    [],
+  );
 
   const handleStreamError = useCallback((err: unknown) => {
     flushPendingText();
     setStreaming(false);
     abortRef.current = null;
 
-    const errorMessage = getErrorMessage(err);
+    const { message, code, status } = getErrorMeta(err);
+    const name = typeof err === 'object' && err && 'name' in err
+      ? String((err as { name?: unknown }).name || '')
+      : '';
 
-    if (errorMessage.includes('HTTP 402')) {
+    if (name === 'AbortError' || message.includes('AbortError')) {
+      return;
+    }
+
+    if (status === 402 || code === 'INSUFFICIENT_CREDITS' || code === 'MODE_NOT_ALLOWED') {
       onShowPaywall();
       return;
     }
 
-    if (errorMessage.includes('HTTP 409')) {
+    if (status === 409 || code === 'DOCUMENT_PROCESSING') {
       addMessage({
         id: `m_${Date.now()}_proc`,
         role: 'assistant',
@@ -107,27 +108,35 @@ export function useChatStream({
       return;
     }
 
-    if (errorMessage.includes('HTTP 429')) {
+    if (
+      status === 429
+      || code === 'RATE_LIMITED'
+      || code === 'DEMO_SESSION_RATE_LIMITED'
+      || code === 'DEMO_MESSAGE_LIMIT_REACHED'
+      || code === 'DEMO_SESSION_LIMIT_REACHED'
+    ) {
+      const isRateLimited = code === 'RATE_LIMITED'
+        || code === 'DEMO_SESSION_RATE_LIMITED'
+        || message.includes('Rate limit exceeded');
       addMessage({
         id: `m_${Date.now()}_limit`,
         role: 'assistant',
-        text: errorMessage.includes('Rate limit exceeded') ? t('demo.rateLimitMessage') : t('demo.limitReachedMessage'),
+        text: isRateLimited ? t('demo.rateLimitMessage') : t('demo.limitReachedMessage'),
         createdAt: Date.now(),
       });
       return;
     }
 
-    const errText = getFriendlyStreamError(err);
-    if (!errText) return;
+    const copy = errorCopy(err, t, tOr);
 
     addMessage({
       id: `m_${Date.now()}_e`,
       role: 'assistant',
-      text: errText,
+      text: copy.body,
       isError: true,
       createdAt: Date.now(),
     });
-  }, [flushPendingText, setStreaming, getErrorMessage, onShowPaywall, addMessage, t, getFriendlyStreamError]);
+  }, [addMessage, flushPendingText, getErrorMeta, onShowPaywall, setStreaming, t, tOr]);
 
   const handleTruncated = useCallback(() => {
     flushPendingText();

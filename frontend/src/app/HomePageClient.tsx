@@ -10,6 +10,7 @@ import { Trash2, Link2, FileUp } from 'lucide-react';
 import { useDocTalkStore } from '../store';
 import { useLocale } from '../i18n';
 import { clearAccountStorage } from '../lib/clearAccountStorage';
+import { errorCopy } from '../lib/errorCopy';
 import { sanitizeFilename } from '../lib/utils';
 import { PrivacyBadge } from '../components/PrivacyBadge';
 import Header from '../components/Header';
@@ -339,11 +340,12 @@ export default function HomePageClient() {
           setUploading(false);
         }
       }, 2000);
-    } catch (e: any) {
-      setProgressText(t('upload.networkError'));
+    } catch (e: unknown) {
+      const copy = errorCopy(e, t, tOr);
+      setProgressText(copy.body);
       setUploading(false);
     }
-  }, [isLoggedIn, maxUploadBytes, maxUploadMb, router, setDocument, setDocumentStatus, t]);
+  }, [isLoggedIn, maxUploadBytes, maxUploadMb, router, setDocument, setDocumentStatus, t, tOr]);
 
   const onDrop = (e: React.DragEvent) => {
     e.preventDefault();
@@ -373,19 +375,13 @@ export default function HomePageClient() {
       setUrlInput('');
       getMyDocuments().then(setServerDocs).catch(console.error);
       router.push(`/d/${docId}`);
-    } catch (e: any) {
-      const msg = e.message || '';
-      if (msg.includes('URL_CONTENT_TOO_LARGE')) {
-        setUrlError(t('upload.urlTooLarge'));
-      } else if (msg.includes('NO_TEXT_CONTENT')) {
-        setUrlError(t('upload.noTextContent'));
-      } else {
-        setUrlError(t('upload.urlError'));
-      }
+    } catch (e: unknown) {
+      const copy = errorCopy(e, t, tOr);
+      setUrlError(copy.body);
     } finally {
       setUrlLoading(false);
     }
-  }, [urlInput, router, setDocument, t]);
+  }, [urlInput, router, setDocument, t, tOr]);
 
   const confirmDeleteDocument = useCallback(async (documentId: string) => {
     setDeletingId(documentId);
