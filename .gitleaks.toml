@@ -1,0 +1,36 @@
+# Gitleaks configuration for DocTalk.
+# See https://github.com/gitleaks/gitleaks/blob/master/config/gitleaks.toml
+# for the default rule set (we extend it).
+
+[extend]
+# Inherit all default rules from gitleaks itself.
+useDefault = true
+
+# ---------------------------------------------------------------------------
+# Allowlist — known non-secret patterns that trigger false positives.
+# ---------------------------------------------------------------------------
+[allowlist]
+description = "Global allowlist for DocTalk repo"
+paths = [
+    # Test fixtures use literal string "test-adapter-secret" etc.
+    '''backend/tests/.*''',
+    # Example env files — contain placeholders, not real values.
+    '''.*\.env\.example''',
+    '''.*\.env\.local\.example''',
+    # Dependency manifests — false positives on npm/pip integrity hashes.
+    '''package-lock\.json''',
+    # PDF seed documents are binary; any "match" in binary is garbage.
+    '''backend/seed_data/.*''',
+]
+
+# Regex allowlist — specific patterns we know aren't secrets.
+regexes = [
+    # i18n translation keys:  freeKey: 'pricing.comparison.xxx', plusKey: 'xxx', etc.
+    '''(free|plus|pro|label|desc|message|title|subtitle)Key\s*:\s*['"][a-zA-Z0-9._-]+['"]''',
+    # Obvious placeholders in example files / docs.
+    '''sk[-_](live|test|or)[-_][xX*]{3,}''',
+    '''whsec[-_][xX*]{3,}''',
+    '''<random>|<placeholder>|REDACTED|your-.+-here|changeme''',
+    # Stripe account IDs (acct_*) — PUBLIC by Stripe's own classification.
+    '''acct_[A-Za-z0-9]{14,}''',
+]

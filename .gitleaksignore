@@ -1,0 +1,23 @@
+# Gitleaks fingerprint ignore list.
+# Format: <commit>:<path>:<rule>:<line>
+#
+# Each line below has been audited and confirmed NOT to be a real secret.
+# If you add entries, include a comment explaining why.
+
+# Historical `whsec_*` prefix in closeout notes for test-mode Stripe.
+# Key was test-mode and has since been superseded by the live-mode
+# webhook secret (2026-04-14). Test webhook secrets don't accept live
+# events and carry no financial risk.
+6cd7840f5fda9b1fb2f2f0520bac08379fa3f80d:.collab/tasks/2026-04-13-stripe-verification.md:generic-api-key:102
+
+# IndexNow protocol key. Not a secret — IndexNow requires publishing the
+# key at https://<host>/<key>.txt so Bing/Yandex can verify it. Endpoint
+# auth is via AUTH_SECRET; the IndexNow key itself is public by design.
+# See the file's own docstring (L11-13).
+169c979b92d05882a9a2b3a8302893e1f105ce30:frontend/src/app/api/indexnow/route.ts:generic-api-key:4
+
+# i18n translation key names (strings like 'pricing.comparison.docs3').
+# Matched by the `generic-api-key` rule on `<name>Key: 'value'` pattern.
+# These are locale file identifiers, not credentials.
+80ed730b7765c7dced92896978a98f08cef4deed:frontend/src/app/pricing/PricingPageClient.tsx:generic-api-key:71
+80ed730b7765c7dced92896978a98f08cef4deed:frontend/src/app/pricing/PricingPageClient.tsx:generic-api-key:72
