@@ -27,21 +27,34 @@ async def get_chunk_detail(
         if not await anon_read_limiter.is_allowed(client_ip):
             raise HTTPException(
                 status_code=429,
-                detail={"message": "Too many requests", "retry_after": 60},
+                detail={
+                    "error": "RATE_LIMITED",
+                    "message": "Too many requests",
+                    "retry_after": 60,
+                },
                 headers={"Retry-After": "60"},
             )
     row = await db.execute(select(Chunk).where(Chunk.id == chunk_id))
     ch: Chunk | None = row.scalar_one_or_none()
     if not ch:
-        raise HTTPException(status_code=404, detail="Chunk not found")
+        raise HTTPException(
+            status_code=404,
+            detail={"error": "CHUNK_NOT_FOUND", "message": "Chunk not found"},
+        )
 
     doc_row = await db.execute(select(Document).where(Document.id == ch.document_id))
     doc: Document | None = doc_row.scalar_one_or_none()
     if not doc:
-        raise HTTPException(status_code=404, detail="Chunk not found")
+        raise HTTPException(
+            status_code=404,
+            detail={"error": "CHUNK_NOT_FOUND", "message": "Chunk not found"},
+        )
 
     if not can_access_document(doc, user):
-        raise HTTPException(status_code=404, detail="Chunk not found")
+        raise HTTPException(
+            status_code=404,
+            detail={"error": "CHUNK_NOT_FOUND", "message": "Chunk not found"},
+        )
 
     return {
         "chunk_id": str(ch.id),

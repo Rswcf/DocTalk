@@ -40,6 +40,19 @@ DEMO_MAX_SESSIONS_PER_DOC = 500
 
 chat_router = APIRouter(prefix="/api", tags=["chat"])
 
+DOCUMENT_NOT_FOUND_DETAIL = {
+    "error": "DOCUMENT_NOT_FOUND",
+    "message": "Document not found",
+}
+SESSION_NOT_FOUND_DETAIL = {
+    "error": "SESSION_NOT_FOUND",
+    "message": "Session not found",
+}
+MESSAGE_NOT_FOUND_DETAIL = {
+    "error": "MESSAGE_NOT_FOUND",
+    "message": "Message not found",
+}
+
 
 async def verify_session_access(
     session_id: uuid.UUID,
@@ -106,7 +119,7 @@ async def create_session(
     # Verify document access
     doc = await verify_document_access(document_id, user, db)
     if not doc:
-        raise HTTPException(status_code=404, detail="Document not found")
+        raise HTTPException(status_code=404, detail=DOCUMENT_NOT_FOUND_DETAIL)
 
     # Limit free-plan users to N sessions per document
     if user is not None and (user.plan or "free").lower() == "free" and not doc.demo_slug:
@@ -118,8 +131,10 @@ async def create_session(
             raise HTTPException(
                 status_code=403,
                 detail={
+                    "error": "SESSION_LIMIT_REACHED",
                     "message": "Free plan session limit reached. Upgrade for unlimited sessions.",
                     "limit": settings.FREE_MAX_SESSIONS_PER_DOC,
+                    "plan": "free",
                 },
             )
 
@@ -130,7 +145,11 @@ async def create_session(
         if not await demo_session_create_limiter.is_allowed(client_ip):
             raise HTTPException(
                 status_code=429,
-                detail={"message": "Too many demo sessions created", "retry_after": 300},
+                detail={
+                    "error": "DEMO_SESSION_RATE_LIMITED",
+                    "message": "Too many demo sessions created",
+                    "retry_after": 300,
+                },
                 headers={"Retry-After": "300"},
             )
         session_count = await db.execute(
@@ -140,7 +159,11 @@ async def create_session(
         if session_count.scalar() >= DEMO_MAX_SESSIONS_PER_DOC:
             raise HTTPException(
                 status_code=429,
-                detail={"message": "Demo session limit reached", "limit": DEMO_MAX_SESSIONS_PER_DOC},
+                detail={
+                    "error": "DEMO_SESSION_LIMIT_REACHED",
+                    "message": "Demo session limit reached",
+                    "limit": DEMO_MAX_SESSIONS_PER_DOC,
+                },
             )
 
     sess = ChatSession(document_id=document_id, user_id=user.id if user else None)
@@ -178,7 +201,7 @@ async def get_session_messages(
     # Verify session access
     session = await verify_session_access(session_id, user, db)
     if not session:
-        raise HTTPException(status_code=404, detail="Session not found")
+        raise HTTPException(status_code=404, detail=SESSION_NOT_FOUND_DETAIL)
 
     rows = await db.execute(
         select(Message).where(Message.session_id == session_id).order_by(asc(Message.created_at))
@@ -207,13 +230,17 @@ async def chat_stream(
     # Verify session access
     session = await verify_session_access(session_id, user, db)
     if not session:
-        raise HTTPException(status_code=404, detail="Session not found")
+        raise HTTPException(status_code=404, detail=SESSION_NOT_FOUND_DETAIL)
 
     # Block chat if document is not fully processed
     if session.document and session.document.status != "ready":
         raise HTTPException(
             status_code=409,
-            detail={"message": "Document is still being processed", "status": session.document.status},
+            detail={
+                "error": "DOCUMENT_PROCESSING",
+                "message": "Document is still being processed",
+                "status": session.document.status,
+            },
         )
 
     # Rate limit anonymous users
@@ -223,7 +250,11 @@ async def chat_stream(
             log_security_event("demo_rate_limit", ip=client_ip, session_id=session_id)
             raise HTTPException(
                 status_code=429,
-                detail={"message": "Rate limit exceeded", "retry_after": 60},
+                detail={
+                    "error": "RATE_LIMITED",
+                    "message": "Rate limit exceeded",
+                    "retry_after": 60,
+                },
                 headers={"Retry-After": "60"},
             )
     else:
@@ -231,7 +262,11 @@ async def chat_stream(
         if not await auth_chat_limiter.is_allowed(str(user.id)):
             raise HTTPException(
                 status_code=429,
-                detail={"message": "Rate limit exceeded", "retry_after": 60},
+                detail={
+                    "error": "RATE_LIMITED",
+                    "message": "Rate limit exceeded",
+                    "retry_after": 60,
+                },
                 headers={"Retry-After": "60"},
             )
 
@@ -243,7 +278,11 @@ async def chat_stream(
             log_security_event("demo_message_limit", ip=client_ip, document_id=session.document_id)
             raise HTTPException(
                 status_code=429,
-                detail={"message": "Demo message limit reached", "limit": DEMO_MESSAGE_LIMIT},
+                detail={
+                    "error": "DEMO_MESSAGE_LIMIT_REACHED",
+                    "message": "Demo message limit reached",
+                    "limit": DEMO_MESSAGE_LIMIT,
+                },
             )
 
     # If authenticated, ensure sufficient credits before opening stream
@@ -259,6 +298,7 @@ async def chat_stream(
             raise HTTPException(
                 status_code=402,
                 detail={
+                    "error": "INSUFFICIENT_CREDITS",
                     "message": "Insufficient credits",
                     "required": estimated_cost,
                     "balance": balance,
@@ -298,13 +338,17 @@ async def chat_continue(
     # Verify session access
     session = await verify_session_access(session_id, user, db)
     if not session:
-        raise HTTPException(status_code=404, detail="Session not found")
+        raise HTTPException(status_code=404, detail=SESSION_NOT_FOUND_DETAIL)
 
     # Block if document is not ready
     if session.document and session.document.status != "ready":
         raise HTTPException(
             status_code=409,
-            detail={"message": "Document is still being processed", "status": session.document.status},
+            detail={
+                "error": "DOCUMENT_PROCESSING",
+                "message": "Document is still being processed",
+                "status": session.document.status,
+            },
         )
 
     # Rate limit (same as chat_stream)
@@ -314,14 +358,22 @@ async def chat_continue(
             log_security_event("demo_rate_limit", ip=client_ip, session_id=session_id)
             raise HTTPException(
                 status_code=429,
-                detail={"message": "Rate limit exceeded", "retry_after": 60},
+                detail={
+                    "error": "RATE_LIMITED",
+                    "message": "Rate limit exceeded",
+                    "retry_after": 60,
+                },
                 headers={"Retry-After": "60"},
             )
     else:
         if not await auth_chat_limiter.is_allowed(str(user.id)):
             raise HTTPException(
                 status_code=429,
-                detail={"message": "Rate limit exceeded", "retry_after": 60},
+                detail={
+                    "error": "RATE_LIMITED",
+                    "message": "Rate limit exceeded",
+                    "retry_after": 60,
+                },
                 headers={"Retry-After": "60"},
             )
 
@@ -333,7 +385,11 @@ async def chat_continue(
             log_security_event("demo_message_limit", ip=client_ip, document_id=session.document_id)
             raise HTTPException(
                 status_code=429,
-                detail={"message": "Demo message limit reached", "limit": DEMO_MESSAGE_LIMIT},
+                detail={
+                    "error": "DEMO_MESSAGE_LIMIT_REACHED",
+                    "message": "Demo message limit reached",
+                    "limit": DEMO_MESSAGE_LIMIT,
+                },
             )
 
     # Check continuation limit
@@ -352,10 +408,17 @@ async def chat_continue(
         msg = msg_row.scalar_one_or_none()
 
     if not msg:
-        raise HTTPException(status_code=404, detail="Message not found")
+        raise HTTPException(status_code=404, detail=MESSAGE_NOT_FOUND_DETAIL)
 
     if msg.continuation_count >= settings.MAX_CONTINUATIONS_PER_MESSAGE:
-        raise HTTPException(status_code=400, detail="Maximum continuations reached")
+        raise HTTPException(
+            status_code=400,
+            detail={
+                "error": "CONTINUATION_LIMIT",
+                "message": "Maximum continuations reached",
+                "max": settings.MAX_CONTINUATIONS_PER_MESSAGE,
+            },
+        )
 
     # Credit pre-check for authenticated users
     if user is not None:
@@ -369,6 +432,7 @@ async def chat_continue(
             raise HTTPException(
                 status_code=402,
                 detail={
+                    "error": "INSUFFICIENT_CREDITS",
                     "message": "Insufficient credits",
                     "required": estimated_cost,
                     "balance": balance,
@@ -406,7 +470,7 @@ async def list_sessions(
     # Verify document access
     doc = await verify_document_access(document_id, user, db)
     if not doc:
-        raise HTTPException(status_code=404, detail="Document not found")
+        raise HTTPException(status_code=404, detail=DOCUMENT_NOT_FOUND_DETAIL)
 
     # Demo documents: enforce session ownership
     if doc.demo_slug:
@@ -461,7 +525,7 @@ async def delete_session(
     # Verify session access
     session = await verify_session_access(session_id, user, db)
     if not session:
-        raise HTTPException(status_code=404, detail="Session not found")
+        raise HTTPException(status_code=404, detail=SESSION_NOT_FOUND_DETAIL)
 
     await db.delete(session)
     await db.commit()

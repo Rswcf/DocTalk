@@ -374,7 +374,10 @@ async def delete_me(
             )
 
     if failed_doc_ids:
-        raise HTTPException(status_code=500, detail="Failed to delete all user documents")
+        raise HTTPException(
+            status_code=500,
+            detail={"error": "SERVER_ERROR", "message": "Failed to delete all user documents"},
+        )
 
     # 3) Cancel Stripe subscription if active before deleting the user row.
     active_subscription_id: Optional[str] = None
@@ -384,7 +387,13 @@ async def delete_me(
             active_subscription_id = await _resolve_active_subscription_id(user)
         except Exception as e:
             log_security_event("stripe_lookup_failed", user_id=user.id, error=str(e))
-            raise HTTPException(status_code=502, detail="Failed to inspect active subscription")
+            raise HTTPException(
+                status_code=502,
+                detail={
+                    "error": "STRIPE_UNAVAILABLE",
+                    "message": "Failed to inspect active subscription",
+                },
+            )
 
     if active_subscription_id:
         try:
@@ -398,7 +407,13 @@ async def delete_me(
                 subscription_id=active_subscription_id,
                 error=str(e),
             )
-            raise HTTPException(status_code=502, detail="Failed to cancel active subscription")
+            raise HTTPException(
+                status_code=502,
+                detail={
+                    "error": "STRIPE_UNAVAILABLE",
+                    "message": "Failed to cancel active subscription",
+                },
+            )
 
     # 4) Delete user row (cascade handles accounts, credit_ledger, usage_records)
     try:
@@ -406,7 +421,10 @@ async def delete_me(
         await db.commit()
     except Exception:
         # If deletion fails, return error
-        raise HTTPException(status_code=500, detail="Failed to delete user")
+        raise HTTPException(
+            status_code=500,
+            detail={"error": "SERVER_ERROR", "message": "Failed to delete user"},
+        )
 
     # 5) Return confirmation
     log_security_event("account_deleted", user_id=user.id, email=user.email)

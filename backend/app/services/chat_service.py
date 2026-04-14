@@ -288,7 +288,14 @@ class ChatService:
         if effective_mode in settings.PREMIUM_MODES:
             user_plan = (user.plan or "free").lower() if user else "free"
             if user_plan == "free":
-                yield sse("error", {"code": "MODE_NOT_ALLOWED", "message": "Upgrade to Plus to use Thorough mode"})
+                yield sse(
+                    "error",
+                    {
+                        "code": "MODE_NOT_ALLOWED",
+                        "message": "Upgrade to Plus to use Thorough mode",
+                        "required_plan": "plus",
+                    },
+                )
                 return
 
         # Pre-debit estimated credits BEFORE streaming (prevents TOCTOU + free rides)
@@ -695,7 +702,14 @@ class ChatService:
         if effective_mode in settings.PREMIUM_MODES:
             user_plan = (user.plan or "free").lower() if user else "free"
             if user_plan == "free":
-                yield sse("error", {"code": "MODE_NOT_ALLOWED", "message": "Upgrade to Plus to use Thorough mode"})
+                yield sse(
+                    "error",
+                    {
+                        "code": "MODE_NOT_ALLOWED",
+                        "message": "Upgrade to Plus to use Thorough mode",
+                        "required_plan": "plus",
+                    },
+                )
                 return
 
         # 5) Pre-debit credits

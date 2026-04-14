@@ -25,6 +25,10 @@ from app.services.export_service import (
 logger = logging.getLogger(__name__)
 router = APIRouter(tags=["export"])
 
+_EXPORT_VALIDATION_REASON_MAP: dict[str, str] = {
+    "Export limited to": "MESSAGE_LIMIT_EXCEEDED",
+}
+
 
 def _sanitize_filename(name: str) -> str:
     return re.sub(r"[^\w\s\-.]", "", name)[:100] or "export"
@@ -65,12 +69,23 @@ async def export_session(
     # Verify session access
     session = await verify_session_access(session_id, user, db)
     if not session:
-        raise HTTPException(404, "Session not found")
+        raise HTTPException(
+            status_code=404,
+            detail={"error": "SESSION_NOT_FOUND", "message": "Session not found"},
+        )
 
     # Plan gating for PDF/DOCX
     if format in ("pdf", "docx"):
         if user.plan not in ("plus", "pro"):
-            raise HTTPException(403, "PDF/DOCX export requires Plus or Pro plan")
+            raise HTTPException(
+                status_code=403,
+                detail={
+                    "error": "EXPORT_REQUIRES_PAID_PLAN",
+                    "message": "PDF/DOCX export requires Plus or Pro plan",
+                    "format": format,
+                    "required_plans": ["plus", "pro"],
+                },
+            )
 
     # Load messages
     rows = await db.execute(
@@ -117,11 +132,32 @@ async def export_session(
             "Export validation failed session=%s format=%s: %s",
             session_id, format, e,
         )
-        raise HTTPException(400, str(e))
+        raw_reason = str(e)
+        for prefix, reason in _EXPORT_VALIDATION_REASON_MAP.items():
+            if raw_reason.startswith(prefix):
+                raise HTTPException(
+                    status_code=400,
+                    detail={
+                        "error": "EXPORT_VALIDATION_FAILED",
+                        "message": "Export validation failed",
+                        "reason": reason,
+                    },
+                )
+        logger.exception("Unexpected ValueError in export_session")
+        raise HTTPException(
+            status_code=500,
+            detail={"error": "SERVER_ERROR", "message": "Internal error"},
+        )
     except ExportError as e:
         # Unexpected renderer failure — keep stack for diagnosis.
         logger.error(
             "Export renderer failed session=%s format=%s: %s",
             session_id, format, e, exc_info=True,
         )
-        raise HTTPException(500, str(e))
+        raise HTTPException(
+            status_code=500,
+            detail={
+                "error": "EXPORT_RENDERER_FAILED",
+                "message": "Export renderer failed",
+            },
+        )

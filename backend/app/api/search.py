@@ -31,13 +31,23 @@ async def search_document(
         if not await anon_read_limiter.is_allowed(client_ip):
             raise HTTPException(
                 status_code=429,
-                detail={"message": "Too many requests", "retry_after": 60},
+                detail={
+                    "error": "RATE_LIMITED",
+                    "message": "Too many requests",
+                    "retry_after": 60,
+                },
                 headers={"Retry-After": "60"},
             )
     doc = await db.get(Document, document_id)
     if not doc:
-        raise HTTPException(status_code=404, detail="Document not found")
+        raise HTTPException(
+            status_code=404,
+            detail={"error": "DOCUMENT_NOT_FOUND", "message": "Document not found"},
+        )
     if not can_access_document(doc, user):
-        raise HTTPException(status_code=404, detail="Document not found")
+        raise HTTPException(
+            status_code=404,
+            detail={"error": "DOCUMENT_NOT_FOUND", "message": "Document not found"},
+        )
     results = await retrieval_service.search(body.query, document_id, body.top_k, db)
     return SearchResponse(results=[SearchResultItem(**r) for r in results])

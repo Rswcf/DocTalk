@@ -43,6 +43,34 @@ _MAGIC_SIGNATURES: dict[str, list[bytes]] = {
 
 _MAX_UNCOMPRESSED_SIZE = 500 * 1024 * 1024  # 500MB zip bomb protection
 
+DOCUMENT_NOT_FOUND_DETAIL = {
+    "error": "DOCUMENT_NOT_FOUND",
+    "message": "Document not found",
+}
+SERVER_ERROR_DETAIL = {
+    "error": "SERVER_ERROR",
+    "message": "Internal error",
+}
+URL_BLOCKED_REASONS = {
+    "BLOCKED_HOST",
+    "BLOCKED_PORT",
+    "INVALID_URL_SCHEME",
+    "INVALID_URL_HOST",
+    "DNS_RESOLUTION_FAILED",
+    "REDIRECT_LOOP",
+    "TOO_MANY_REDIRECTS",
+}
+_UPLOAD_VALUE_ERROR_MAP: dict[str, dict[str, object]] = {
+    "UNSUPPORTED_FORMAT": {
+        "error": "UNSUPPORTED_FORMAT",
+        "message": "Unsupported file format",
+    },
+    "INVALID_FILE_CONTENT": {
+        "error": "INVALID_FILE_CONTENT",
+        "message": "Invalid file content",
+    },
+}
+
 
 def _validate_file_content(data: bytes, file_type: str) -> bool:
     """Validate file content against expected magic bytes and structure."""
@@ -154,7 +182,10 @@ async def upload_document(
         file_type = EXTENSION_TYPE_MAP.get(ext)
 
     if file_type is None or file_type not in settings.ALLOWED_FILE_TYPES:
-        raise HTTPException(status_code=400, detail="UNSUPPORTED_FORMAT")
+        raise HTTPException(
+            status_code=400,
+            detail={"error": "UNSUPPORTED_FORMAT", "message": "Unsupported file format"},
+        )
 
     # Enforce per-plan document count limit
     from sqlalchemy import func
@@ -176,7 +207,12 @@ async def upload_document(
         log_security_event("plan_limit_hit", user_id=user.id, plan=plan, limit_type="documents", limit=max_docs, current=user_doc_count)
         raise HTTPException(
             status_code=403,
-            detail={"error": "DOCUMENT_LIMIT_REACHED", "limit": max_docs, "current": user_doc_count},
+            detail={
+                "error": "DOCUMENT_LIMIT_REACHED",
+                "message": "Document limit reached for current plan",
+                "limit": max_docs,
+                "current": user_doc_count,
+            },
         )
 
     # Validate size by streaming bytes with early abort to prevent memory DoS
@@ -194,13 +230,23 @@ async def upload_document(
         buf.extend(chunk)
         if len(buf) > max_bytes:
             log_security_event("upload_rejected", user_id=user.id, reason="file_too_large", size=len(buf), max_mb=max_size_mb)
-            raise HTTPException(status_code=400, detail={"error": "FILE_TOO_LARGE", "max_mb": max_size_mb})
+            raise HTTPException(
+                status_code=400,
+                detail={
+                    "error": "FILE_TOO_LARGE",
+                    "message": "File is too large",
+                    "max_mb": max_size_mb,
+                },
+            )
     data = bytes(buf)
 
     # Validate file content matches declared type (magic bytes + structure)
     if not _validate_file_content(data, file_type):
         log_security_event("upload_rejected", user_id=user.id, reason="invalid_magic_bytes", filename=file.filename, file_type=file_type)
-        raise HTTPException(status_code=400, detail="INVALID_FILE_CONTENT")
+        raise HTTPException(
+            status_code=400,
+            detail={"error": "INVALID_FILE_CONTENT", "message": "Invalid file content"},
+        )
 
     # FastAPI resets file after read? We already have bytes; reconstruct UploadFile-like
     # to pass filename/content_type to service: create an in-memory UploadFile proxy
@@ -214,9 +260,11 @@ async def upload_document(
     try:
         document_id = await doc_service.create_document(_MemUpload(), db, user_id=user.id, file_type=file_type)
     except ValueError as ve:
-        # Map known validation errors to spec error codes
         code = str(ve)
-        raise HTTPException(status_code=400, detail=code)
+        if code in _UPLOAD_VALUE_ERROR_MAP:
+            raise HTTPException(status_code=400, detail=_UPLOAD_VALUE_ERROR_MAP[code])
+        logger.exception("Unexpected ValueError in upload_document")
+        raise HTTPException(status_code=500, detail=SERVER_ERROR_DETAIL)
 
     log_security_event("file_upload", user_id=user.id, document_id=document_id, filename=file.filename, file_type=file_type, size=len(data))
     return JSONResponse(
@@ -242,14 +290,25 @@ async def ingest_url(
     """Ingest a URL/webpage as a document."""
     url = body.url.strip()
     if not url.startswith(('http://', 'https://')):
-        raise HTTPException(status_code=400, detail="URL must start with http:// or https://")
+        raise HTTPException(
+            status_code=400,
+            detail={"error": "URL_INVALID", "message": "URL must start with http:// or https://"},
+        )
 
     # Validate URL before fetching (SSRF protection)
     from app.core.url_validator import validate_url
     try:
         validate_url(url)
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        code = str(e)
+        if code in URL_BLOCKED_REASONS:
+            log_security_event("url_fetch_blocked", user_id=user.id, reason=code, url=url)
+            raise HTTPException(
+                status_code=400,
+                detail={"error": "URL_FETCH_BLOCKED", "message": "This URL can't be imported"},
+            )
+        logger.exception("Unexpected ValueError in ingest_url validation")
+        raise HTTPException(status_code=500, detail=SERVER_ERROR_DETAIL)
 
     # Enforce per-plan document count limit
     from sqlalchemy import func
@@ -271,7 +330,12 @@ async def ingest_url(
         log_security_event("plan_limit_hit", user_id=user.id, plan=plan, limit_type="documents", limit=max_docs, current=user_doc_count)
         raise HTTPException(
             status_code=403,
-            detail={"error": "DOCUMENT_LIMIT_REACHED", "limit": max_docs, "current": user_doc_count},
+            detail={
+                "error": "DOCUMENT_LIMIT_REACHED",
+                "message": "Document limit reached for current plan",
+                "limit": max_docs,
+                "current": user_doc_count,
+            },
         )
 
     try:
@@ -281,18 +345,40 @@ async def ingest_url(
         title, pages, pdf_bytes = await asyncio.to_thread(fetch_and_extract_url, url)
     except ValueError as e:
         code = str(e)
-        if code in ("BLOCKED_HOST", "BLOCKED_PORT", "INVALID_URL_SCHEME",
-                     "INVALID_URL_HOST", "DNS_RESOLUTION_FAILED",
-                     "REDIRECT_LOOP", "TOO_MANY_REDIRECTS"):
-            raise HTTPException(status_code=400, detail=code)
+        if code in URL_BLOCKED_REASONS:
+            log_security_event("url_fetch_blocked", user_id=user.id, reason=code, url=url)
+            raise HTTPException(
+                status_code=400,
+                detail={"error": "URL_FETCH_BLOCKED", "message": "This URL can't be imported"},
+            )
         if code == "URL_CONTENT_TOO_LARGE":
-            raise HTTPException(status_code=400, detail="URL_CONTENT_TOO_LARGE")
+            raise HTTPException(
+                status_code=400,
+                detail={
+                    "error": "URL_CONTENT_TOO_LARGE",
+                    "message": "URL content is too large",
+                },
+            )
         if code == "NO_TEXT_CONTENT":
-            raise HTTPException(status_code=400, detail="NO_TEXT_CONTENT")
-        raise HTTPException(status_code=400, detail=f"Failed to fetch URL: {code}")
+            raise HTTPException(
+                status_code=400,
+                detail={"error": "NO_TEXT_CONTENT", "message": "No text content found at URL"},
+            )
+        if code == "REDIRECT_NO_LOCATION":
+            log_security_event("url_fetch_failed", user_id=user.id, reason=code, url=url)
+            raise HTTPException(
+                status_code=400,
+                detail={"error": "URL_FETCH_FAILED", "message": "Failed to fetch URL"},
+            )
+        logger.exception("Unexpected ValueError in ingest_url fetch")
+        raise HTTPException(status_code=500, detail=SERVER_ERROR_DETAIL)
     except Exception as e:
         logger.error("URL fetch failed for %s: %s", url, e)
-        raise HTTPException(status_code=400, detail="Failed to fetch URL")
+        log_security_event("url_fetch_failed", user_id=user.id, reason=type(e).__name__, url=url)
+        raise HTTPException(
+            status_code=400,
+            detail={"error": "URL_FETCH_FAILED", "message": "Failed to fetch URL"},
+        )
 
     max_size_mb = {
         "free": settings.FREE_MAX_FILE_SIZE_MB,
@@ -303,7 +389,14 @@ async def ingest_url(
     if pdf_bytes:
         if len(pdf_bytes) > max_size_mb * 1024 * 1024:
             log_security_event("upload_rejected", user_id=user.id, reason="file_too_large", size=len(pdf_bytes), max_mb=max_size_mb)
-            raise HTTPException(status_code=400, detail={"error": "FILE_TOO_LARGE", "max_mb": max_size_mb})
+            raise HTTPException(
+                status_code=400,
+                detail={
+                    "error": "FILE_TOO_LARGE",
+                    "message": "File is too large",
+                    "max_mb": max_size_mb,
+                },
+            )
 
         # URL returned a PDF — process through normal PDF pipeline
         doc_id = uuid.uuid4()
@@ -336,7 +429,14 @@ async def ingest_url(
         text_bytes = text_content.encode('utf-8')
         if len(text_bytes) > max_size_mb * 1024 * 1024:
             log_security_event("upload_rejected", user_id=user.id, reason="file_too_large", size=len(text_bytes), max_mb=max_size_mb)
-            raise HTTPException(status_code=400, detail={"error": "FILE_TOO_LARGE", "max_mb": max_size_mb})
+            raise HTTPException(
+                status_code=400,
+                detail={
+                    "error": "FILE_TOO_LARGE",
+                    "message": "File is too large",
+                    "max_mb": max_size_mb,
+                },
+            )
 
         doc_id = uuid.uuid4()
         filename = f"{title[:100]}.txt"
@@ -373,9 +473,9 @@ async def get_document(
 ):
     doc = await doc_service.get_document(document_id, db)
     if not doc:
-        raise HTTPException(status_code=404, detail="Document not found")
+        raise HTTPException(status_code=404, detail=DOCUMENT_NOT_FOUND_DETAIL)
     if not can_access_document(doc, user):
-        raise HTTPException(status_code=404, detail="Document not found")
+        raise HTTPException(status_code=404, detail=DOCUMENT_NOT_FOUND_DETAIL)
     resp = DocumentResponse.model_validate(doc)
     resp.has_converted_pdf = bool(doc.converted_storage_key)
     return resp
@@ -392,13 +492,13 @@ async def get_document_file_url(
 
     doc = await doc_service.get_document(document_id, db)
     if not doc:
-        raise HTTPException(status_code=404, detail="Document not found")
+        raise HTTPException(status_code=404, detail=DOCUMENT_NOT_FOUND_DETAIL)
     if not can_access_document(doc, user):
-        raise HTTPException(status_code=404, detail="Document not found")
+        raise HTTPException(status_code=404, detail=DOCUMENT_NOT_FOUND_DETAIL)
 
     storage_key = doc.converted_storage_key if variant == "converted" else doc.storage_key
     if variant == "converted" and not doc.converted_storage_key:
-        raise HTTPException(status_code=404, detail="No converted PDF available")
+        raise HTTPException(status_code=404, detail=DOCUMENT_NOT_FOUND_DETAIL)
 
     # Run synchronous MinIO call in a thread to avoid blocking the event loop.
     # When MinIO is unreachable, urllib3 retries can block for seconds.
@@ -407,7 +507,13 @@ async def get_document_file_url(
             storage_service.get_presigned_url, storage_key, settings.MINIO_PRESIGN_TTL
         )
     except Exception:
-        raise HTTPException(status_code=502, detail="Storage service unavailable")
+        raise HTTPException(
+            status_code=502,
+            detail={
+                "error": "STORAGE_UNAVAILABLE",
+                "message": "Storage service unavailable",
+            },
+        )
 
     return DocumentFileUrlResponse(url=url, expires_in=int(settings.MINIO_PRESIGN_TTL))
 
@@ -429,9 +535,9 @@ async def get_document_text_content(
 
     doc = await doc_service.get_document(document_id, db)
     if not doc:
-        raise HTTPException(status_code=404, detail="Document not found")
+        raise HTTPException(status_code=404, detail=DOCUMENT_NOT_FOUND_DETAIL)
     if not can_access_document(doc, user):
-        raise HTTPException(status_code=404, detail="Document not found")
+        raise HTTPException(status_code=404, detail=DOCUMENT_NOT_FOUND_DETAIL)
 
     # Try Page.content first (available for newly parsed non-PDF documents)
     result = await db.execute(
@@ -489,9 +595,16 @@ async def reparse_document(
 
     doc = await db.get(Document, document_id)
     if not doc or doc.user_id != user.id:
-        raise HTTPException(status_code=404, detail="Document not found")
+        raise HTTPException(status_code=404, detail=DOCUMENT_NOT_FOUND_DETAIL)
     if doc.status not in ("ready", "error"):
-        raise HTTPException(status_code=409, detail="Document is still processing")
+        raise HTTPException(
+            status_code=409,
+            detail={
+                "error": "DOCUMENT_PROCESSING",
+                "message": "Document is still processing",
+                "status": doc.status,
+            },
+        )
     doc.status = "parsing"
     db.add(doc)
     await db.commit()
@@ -512,16 +625,16 @@ async def delete_document(
 ):
     doc = await doc_service.get_document(document_id, db)
     if not doc:
-        raise HTTPException(status_code=404, detail="Document not found")
+        raise HTTPException(status_code=404, detail=DOCUMENT_NOT_FOUND_DETAIL)
     # Only the document owner can delete; demo docs (user_id=None) are not deletable via API
     if doc.user_id != user.id:
-        raise HTTPException(status_code=404, detail="Document not found")
+        raise HTTPException(status_code=404, detail=DOCUMENT_NOT_FOUND_DETAIL)
     await doc_service.delete_document(document_id, db)
     return JSONResponse(status_code=202, content={"status": "deleted"})
 
 
 class UpdateDocumentRequest(BaseModel):
-    custom_instructions: Optional[str] = Field(None, max_length=2000)
+    custom_instructions: Optional[str] = Field(None)
 
 
 @documents_router.patch("/{document_id}", response_model=StatusResponse)
@@ -535,15 +648,28 @@ async def update_document(
 
     doc = await db.get(Document, document_id)
     if not doc or doc.user_id != user.id:
-        raise HTTPException(status_code=404, detail="Document not found")
+        raise HTTPException(status_code=404, detail=DOCUMENT_NOT_FOUND_DETAIL)
     if body.custom_instructions is not None:
         if len(body.custom_instructions) > 2000:
-            raise HTTPException(status_code=400, detail="Instructions too long (max 2000 chars)")
+            raise HTTPException(
+                status_code=400,
+                detail={
+                    "error": "INSTRUCTIONS_TOO_LONG",
+                    "message": "Instructions too long",
+                    "max": 2000,
+                },
+            )
         # Custom instructions require Pro plan
         if body.custom_instructions.strip():
             plan = (user.plan or "free").lower()
             if plan != "pro":
-                raise HTTPException(status_code=403, detail="Custom instructions require Pro plan")
+                raise HTTPException(
+                    status_code=403,
+                    detail={
+                        "error": "CUSTOM_INSTRUCTIONS_REQUIRE_PRO",
+                        "message": "Custom instructions require Pro plan",
+                    },
+                )
         doc.custom_instructions = body.custom_instructions if body.custom_instructions.strip() else None
     db.add(doc)
     await db.commit()

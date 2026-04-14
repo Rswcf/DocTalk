@@ -18,6 +18,11 @@ from app.models.tables import ChatSession, Document, Message, SharedSession, Use
 
 router = APIRouter(tags=["sharing"])
 
+SHARE_NOT_FOUND_DETAIL = {
+    "error": "SHARE_NOT_FOUND",
+    "message": "Share not found",
+}
+
 
 class ShareResponse(BaseModel):
     share_token: str
@@ -41,7 +46,7 @@ async def create_share(
     # Verify session access
     session = await verify_session_access(session_id, user, db)
     if not session:
-        raise HTTPException(404, "Session not found")
+        raise HTTPException(status_code=404, detail=SHARE_NOT_FOUND_DETAIL)
 
     # Check existing share
     existing = await db.execute(
@@ -71,9 +76,15 @@ async def create_share(
         )
         active_count = count_result.scalar() or 0
         if active_count >= 3:
+            plan = (user.plan or "free").lower()
             raise HTTPException(
-                403,
-                "Free plan limited to 3 active share links. Upgrade to Plus for unlimited.",
+                status_code=403,
+                detail={
+                    "error": "SHARE_LIMIT_REACHED",
+                    "message": "Free plan limited to 3 active share links. Upgrade to Plus for unlimited.",
+                    "limit": 3,
+                    "plan": plan,
+                },
             )
 
     # Create share
@@ -102,7 +113,7 @@ async def revoke_share(
     )
     share = result.scalar_one_or_none()
     if not share:
-        raise HTTPException(404, "Share not found")
+        raise HTTPException(status_code=404, detail=SHARE_NOT_FOUND_DETAIL)
 
     await db.delete(share)
     await db.commit()
@@ -121,7 +132,11 @@ async def view_shared(
         log_security_event("shared_view_rate_limit", ip=client_ip)
         raise HTTPException(
             status_code=429,
-            detail={"message": "Too many requests", "retry_after": 60},
+            detail={
+                "error": "RATE_LIMITED",
+                "message": "Too many requests",
+                "retry_after": 60,
+            },
             headers={"Retry-After": "60"},
         )
 
@@ -130,11 +145,14 @@ async def view_shared(
     )
     share = result.scalar_one_or_none()
     if not share:
-        raise HTTPException(404, "Shared session not found")
+        raise HTTPException(status_code=404, detail=SHARE_NOT_FOUND_DETAIL)
 
     # Check expiry
     if share.expires_at and share.expires_at < datetime.now(timezone.utc):
-        raise HTTPException(410, "Share link has expired")
+        raise HTTPException(
+            status_code=410,
+            detail={"error": "SHARE_EXPIRED", "message": "Share link has expired"},
+        )
 
     # Load session
     session_result = await db.execute(
@@ -142,7 +160,7 @@ async def view_shared(
     )
     session = session_result.scalar_one_or_none()
     if not session:
-        raise HTTPException(404, "Session no longer exists")
+        raise HTTPException(status_code=404, detail=SHARE_NOT_FOUND_DETAIL)
 
     # Load messages
     rows = await db.execute(

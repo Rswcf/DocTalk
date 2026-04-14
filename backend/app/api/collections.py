@@ -22,6 +22,11 @@ from app.models.tables import (
 
 collections_router = APIRouter(prefix="/api/collections", tags=["collections"])
 
+COLLECTION_NOT_FOUND_DETAIL = {
+    "error": "COLLECTION_NOT_FOUND",
+    "message": "Collection not found",
+}
+
 
 # --- Schemas ---
 
@@ -123,7 +128,12 @@ async def create_collection(
     if current_count >= max_collections:
         raise HTTPException(
             status_code=403,
-            detail=f"Your plan allows up to {max_collections} collections. Upgrade for more.",
+            detail={
+                "error": "COLLECTION_LIMIT_REACHED",
+                "message": f"Your plan allows up to {max_collections} collections. Upgrade for more.",
+                "limit": max_collections,
+                "plan": plan,
+            },
         )
 
     coll = Collection(
@@ -172,7 +182,7 @@ async def get_collection(
     )
     coll = result.scalar_one_or_none()
     if not coll:
-        raise HTTPException(status_code=404, detail="Collection not found")
+        raise HTTPException(status_code=404, detail=COLLECTION_NOT_FOUND_DETAIL)
 
     docs = [
         CollectionDocumentBrief(
@@ -202,7 +212,7 @@ async def delete_collection(
     """Delete collection (cascade sessions, keep documents)."""
     coll = await db.get(Collection, collection_id)
     if not coll or coll.user_id != user.id:
-        raise HTTPException(status_code=404, detail="Collection not found")
+        raise HTTPException(status_code=404, detail=COLLECTION_NOT_FOUND_DETAIL)
     await db.delete(coll)
     await db.commit()
     return None
@@ -218,7 +228,7 @@ async def add_documents_to_collection(
     """Add documents to a collection."""
     coll = await db.get(Collection, collection_id)
     if not coll or coll.user_id != user.id:
-        raise HTTPException(status_code=404, detail="Collection not found")
+        raise HTTPException(status_code=404, detail=COLLECTION_NOT_FOUND_DETAIL)
 
     # Plan limit: max docs per collection
     plan = (user.plan or "free").lower()
@@ -263,7 +273,12 @@ async def add_documents_to_collection(
     if current_docs + len(valid_doc_ids) > max_docs:
         raise HTTPException(
             status_code=403,
-            detail=f"Your plan allows up to {max_docs} documents per collection. Upgrade for more.",
+            detail={
+                "error": "COLLECTION_DOC_LIMIT_REACHED",
+                "message": f"Your plan allows up to {max_docs} documents per collection. Upgrade for more.",
+                "limit": max_docs,
+                "plan": plan,
+            },
         )
 
     added = 0
@@ -289,7 +304,7 @@ async def remove_document_from_collection(
     """Remove a document from a collection."""
     coll = await db.get(Collection, collection_id)
     if not coll or coll.user_id != user.id:
-        raise HTTPException(status_code=404, detail="Collection not found")
+        raise HTTPException(status_code=404, detail=COLLECTION_NOT_FOUND_DETAIL)
 
     await db.execute(
         collection_documents.delete().where(
@@ -310,7 +325,7 @@ async def create_collection_session(
     """Create a chat session for a collection (cross-document Q&A)."""
     coll = await db.get(Collection, collection_id)
     if not coll or coll.user_id != user.id:
-        raise HTTPException(status_code=404, detail="Collection not found")
+        raise HTTPException(status_code=404, detail=COLLECTION_NOT_FOUND_DETAIL)
 
     sess = ChatSession(collection_id=collection_id)
     db.add(sess)
@@ -333,7 +348,7 @@ async def list_collection_sessions(
     """List sessions for a collection."""
     coll = await db.get(Collection, collection_id)
     if not coll or coll.user_id != user.id:
-        raise HTTPException(status_code=404, detail="Collection not found")
+        raise HTTPException(status_code=404, detail=COLLECTION_NOT_FOUND_DETAIL)
 
     from sqlalchemy import desc
 
