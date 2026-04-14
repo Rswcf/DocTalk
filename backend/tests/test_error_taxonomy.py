@@ -864,7 +864,9 @@ async def test_documents_not_found_masks_authz(
 
     assert resp_missing.status_code == 404
     assert resp_found.status_code == 404
-    assert resp_missing.json() == resp_found.json(), "404 body diverges → enumeration oracle"
+    # Byte-exact: any whitespace or field-ordering difference is still an
+    # oracle. `.text` catches what `.json()` normalises away.
+    assert resp_missing.text == resp_found.text, "404 body diverges → enumeration oracle"
 
 
 @pytest.mark.asyncio

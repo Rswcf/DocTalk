@@ -89,9 +89,7 @@ export async function uploadDocument(file: File): Promise<{ document_id: string;
   // 1. Obtain a short-lived backend JWT via the lightweight /api/upload-token endpoint
   // 2. POST the file directly to the Railway backend with that JWT
   const tokenRes = await fetch('/api/upload-token');
-  if (!tokenRes.ok) {
-    throw new Error(`Failed to get upload token: ${tokenRes.status}`);
-  }
+  if (!tokenRes.ok) await throwApiError(tokenRes);
   const { token } = await tokenRes.json();
 
   const form = new FormData();
