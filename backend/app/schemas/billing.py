@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import Literal, Optional
+
 from pydantic import BaseModel
 
 
@@ -26,3 +28,9 @@ class ChangePlanResponse(BaseModel):
     new_plan: str
     effective: str
     credits_supplemented: int
+
+
+class CancelSubscriptionResponse(BaseModel):
+    status: Literal["scheduled_cancel", "immediate_revert"]
+    effective_at: Optional[str] = None
+    message: str

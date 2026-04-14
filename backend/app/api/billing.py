@@ -12,12 +12,13 @@ from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.cache import cache_delete
+from app.core.cache import cache_delete, cache_get, cache_set
 from app.core.config import settings
 from app.core.deps import get_db_session, require_auth
-from app.models.tables import CreditLedger, User
+from app.models.tables import CreditLedger, PlanTransition, User
 from app.schemas.billing import (
     BillingProductsResponse,
+    CancelSubscriptionResponse,
     ChangePlanResponse,
     CheckoutUrlResponse,
     PortalUrlResponse,
@@ -73,6 +74,14 @@ PLAN_HIERARCHY = {"free": 0, "plus": 1, "pro": 2}
 PENDING_SUBSCRIPTION_TTL = timedelta(minutes=10)
 _ALLOWANCE_INVOICE_REASONS = {"subscription_create", "subscription_cycle"}
 _ACTIVE_SUBSCRIPTION_STATUSES = {"active", "trialing"}
+# Statuses for which a subscription is still cancellable (i.e. Stripe will
+# accept `cancel_at_period_end=true`). `past_due` is cancellable so users
+# can stop recurring billing even while a payment is failing.
+_CANCELLABLE_SUBSCRIPTION_STATUSES = {"active", "trialing", "past_due"}
+# Sentinel used in users.stripe_subscription_id while a checkout session
+# is in flight (see /subscribe). Not a real Stripe ID.
+_PENDING_SENTINEL = "pending"
+_STRIPE_SUB_ID_PREFIX = "sub_"
 
 
 def _interval_from_price_id(price_id: str) -> Optional[str]:
@@ -139,7 +148,7 @@ async def _recover_pending_subscription(user: User, db: AsyncSession) -> bool:
         if detected_plan:
             user.plan = detected_plan
         await db.commit()
-        await cache_delete(f"user:profile:{user.id}")
+        await _invalidate_user_caches(user.id)
         logger.info(
             "Recovered active subscription for user %s from pending state: %s",
             user.id,
@@ -306,16 +315,19 @@ async def change_plan(
     if not user.stripe_subscription_id:
         if user.stripe_customer_id:
             try:
-                subs = await asyncio.to_thread(
-                    stripe.Subscription.list,
-                    customer=user.stripe_customer_id,
-                    status="active",
-                    limit=1,
-                )
-                if subs.data:
-                    user.stripe_subscription_id = subs.data[0].id
+                # Include trialing subs, not just active (Codex R1 §6).
+                candidates = [
+                    s for s in await _list_customer_subscriptions(user.stripe_customer_id)
+                    if s.get("status") in _ACTIVE_SUBSCRIPTION_STATUSES
+                ]
+                if candidates:
+                    user.stripe_subscription_id = candidates[0]["id"]
                     await db.commit()
-                    logger.info("Auto-recovered subscription_id for user %s", user.id)
+                    logger.info(
+                        "Auto-recovered subscription_id for user %s (status=%s)",
+                        user.id,
+                        candidates[0].get("status"),
+                    )
             except stripe.StripeError as e:
                 logger.warning("Failed to lookup subscription for user %s: %s", user.id, e)
         if not user.stripe_subscription_id:
@@ -390,13 +402,429 @@ async def change_plan(
             else:
                 supplement = 0
     await db.commit()
-    await cache_delete(f"user:profile:{user.id}")
+    await _invalidate_user_caches(user.id)
 
     return {
         "status": "upgraded" if is_upgrade else "downgraded",
         "new_plan": body.plan,
         "effective": "immediate",
         "credits_supplemented": supplement,
+    }
+
+
+_BILLING_STATE_CACHE_TTL = 60  # seconds
+
+
+async def _invalidate_user_caches(user_id) -> None:
+    """Invalidate both the profile cache and the billing_state cache for a user.
+
+    Called from every mutation path that changes `user.plan` or
+    `user.stripe_subscription_id` so the next profile fetch refreshes
+    `billing_state` within one call (not up to 60s stale).
+    """
+    await cache_delete(f"user:profile:{user_id}")
+    await cache_delete(f"user:billing_state:{user_id}")
+
+
+async def compute_billing_state(user: User) -> dict:
+    """Return the BillingStateResponse dict for a given user.
+
+    Stripe-derived fields are cached in Redis (60s) under
+    `user:billing_state:{user_id}`. Invalidated by any self_serve_cancel
+    write (see cancel_subscription). On Stripe error the last cached
+    value is returned; if no cache, a degraded `status="none"` response
+    is produced and a warning logged so the profile endpoint doesn't
+    500.
+    """
+    sub_id = user.stripe_subscription_id
+    plan = (user.plan or "free").lower()
+
+    # Fast paths that don't need Stripe.
+    if plan == "free" and not sub_id and not user.stripe_customer_id:
+        return {
+            "managed_by": "none",
+            "can_cancel": False,
+            "interval": None,
+            "period_end": None,
+            "cancel_at_period_end": False,
+            "status": "none",
+        }
+
+    if sub_id == _PENDING_SENTINEL:
+        return {
+            "managed_by": "stripe",
+            "can_cancel": False,  # checkout in flight — don't offer cancel
+            "interval": None,
+            "period_end": None,
+            "cancel_at_period_end": False,
+            "status": "pending",
+        }
+
+    if sub_id and not sub_id.startswith(_STRIPE_SUB_ID_PREFIX):
+        # Branch F precondition — malformed ID, do not offer a 409-guaranteed cancel.
+        return {
+            "managed_by": "stripe",
+            "can_cancel": False,
+            "interval": None,
+            "period_end": None,
+            "cancel_at_period_end": False,
+            "status": "none",
+        }
+
+    cache_key = f"user:billing_state:{user.id}"
+    cached = await cache_get(cache_key)
+    if isinstance(cached, dict) and cached.get("managed_by"):
+        return cached
+
+    try:
+        if sub_id and sub_id.startswith(_STRIPE_SUB_ID_PREFIX):
+            sub = await asyncio.to_thread(stripe.Subscription.retrieve, sub_id)
+            state = _billing_state_from_stripe_sub(plan, sub)
+        elif user.stripe_customer_id:
+            # No sub_id but there may be a live sub on the customer.
+            cancellable = [
+                s for s in await _list_customer_subscriptions(user.stripe_customer_id)
+                if s.get("status") in _CANCELLABLE_SUBSCRIPTION_STATUSES
+            ]
+            if len(cancellable) == 1:
+                state = _billing_state_from_stripe_sub(plan, cancellable[0])
+            elif len(cancellable) > 1:
+                state = {
+                    "managed_by": "stripe",
+                    "can_cancel": False,  # ambiguous; support must resolve
+                    "interval": None,
+                    "period_end": None,
+                    "cancel_at_period_end": False,
+                    "status": "active",  # best-effort label
+                }
+            else:
+                # No cancellable sub — user is admin-managed.
+                state = {
+                    "managed_by": "admin" if plan != "free" else "none",
+                    "can_cancel": plan != "free",
+                    "interval": None,
+                    "period_end": None,
+                    "cancel_at_period_end": False,
+                    "status": "none",
+                }
+        else:
+            state = {
+                "managed_by": "admin" if plan != "free" else "none",
+                "can_cancel": plan != "free",
+                "interval": None,
+                "period_end": None,
+                "cancel_at_period_end": False,
+                "status": "none",
+            }
+    except stripe.StripeError as e:
+        logger.warning(
+            "Stripe unavailable while computing billing_state for user %s: %s",
+            user.id,
+            e,
+        )
+        # Degraded fallback — best-effort local inference, flagged as "none".
+        state = {
+            "managed_by": "stripe" if sub_id else ("admin" if plan != "free" else "none"),
+            "can_cancel": plan != "free",
+            "interval": None,
+            "period_end": None,
+            "cancel_at_period_end": False,
+            "status": "none",
+        }
+        # Don't cache degraded results — want to retry on next call.
+        return state
+
+    await cache_set(cache_key, state, ttl_seconds=_BILLING_STATE_CACHE_TTL)
+    return state
+
+
+def _billing_state_from_stripe_sub(plan: str, sub: dict) -> dict:
+    """Project a Stripe subscription dict into BillingStateResponse fields."""
+    status = sub.get("status", "none")
+    items = sub.get("items", {}).get("data", [])
+    price = items[0].get("price", {}) if items else {}
+    recurring = price.get("recurring") or {}
+    stripe_interval = recurring.get("interval")  # 'month' | 'year' | None
+    interval: Optional[str] = stripe_interval if stripe_interval in {"month", "year"} else None
+    period_end = _iso(sub.get("current_period_end"))
+    cancel_at_period_end = bool(sub.get("cancel_at_period_end"))
+    can_cancel = (
+        status in _CANCELLABLE_SUBSCRIPTION_STATUSES
+        and not cancel_at_period_end
+        and plan != "free"
+    )
+    return {
+        "managed_by": "stripe",
+        "can_cancel": can_cancel,
+        "interval": interval,
+        "period_end": period_end,
+        "cancel_at_period_end": cancel_at_period_end,
+        "status": status if status in {"active", "trialing", "past_due", "canceled"} else "none",
+    }
+
+
+def _audit_plan_transition(
+    db: AsyncSession,
+    *,
+    user_id: uuid.UUID,
+    from_plan: str,
+    to_plan: str,
+    source: str,
+    metadata: Optional[dict] = None,
+    stripe_event_id: Optional[str] = None,
+) -> None:
+    """Append a plan_transitions audit row. Caller is responsible for commit."""
+    db.add(
+        PlanTransition(
+            user_id=user_id,
+            from_plan=from_plan,
+            to_plan=to_plan,
+            source=source,
+            stripe_event_id=stripe_event_id,
+            metadata_json=metadata or {},
+        )
+    )
+
+
+def _iso(dt_value) -> Optional[str]:
+    """Normalise a Stripe epoch int or datetime into ISO-8601 UTC string."""
+    if dt_value is None:
+        return None
+    if isinstance(dt_value, (int, float)):
+        dt = datetime.fromtimestamp(int(dt_value), tz=timezone.utc)
+    elif isinstance(dt_value, datetime):
+        dt = _as_utc(dt_value)
+    else:
+        return None
+    return dt.isoformat() if dt else None
+
+
+@router.post("/cancel", response_model=CancelSubscriptionResponse)
+async def cancel_subscription(
+    user: User = Depends(require_auth),
+    db: AsyncSession = Depends(get_db_session),
+):
+    """Self-serve cancel / downgrade-to-Free, implementing the state machine
+    described in `.collab/plans/billing-cancel-statemachine.md` §5.1.
+
+    Branches evaluated in order D → E → A → F → C → B.
+    """
+    if not settings.STRIPE_SECRET_KEY:
+        raise HTTPException(503, "Stripe not configured")
+
+    current_plan = user.plan
+    sub_id = user.stripe_subscription_id
+
+    # Branch D: already on Free — nothing to cancel.
+    if current_plan == "free":
+        raise HTTPException(400, "Already on the Free plan")
+
+    # Branch E: checkout in flight — don't interfere with pending state.
+    if sub_id == _PENDING_SENTINEL:
+        raise HTTPException(
+            409,
+            "A subscription checkout is in progress. Please try again in a few minutes.",
+        )
+
+    # Branch A: real Stripe subscription id present.
+    if sub_id and sub_id.startswith(_STRIPE_SUB_ID_PREFIX):
+        try:
+            sub = await asyncio.to_thread(stripe.Subscription.retrieve, sub_id)
+        except stripe.StripeError as e:
+            logger.error("Stripe retrieve failed during cancel for user %s: %s", user.id, e)
+            raise HTTPException(502, "Stripe temporarily unavailable, please try again")
+
+        status = sub.get("status")
+        if status in _CANCELLABLE_SUBSCRIPTION_STATUSES:
+            try:
+                updated = await asyncio.to_thread(
+                    stripe.Subscription.modify,
+                    sub_id,
+                    cancel_at_period_end=True,
+                )
+            except stripe.StripeError as e:
+                logger.error("Stripe modify (cancel) failed for user %s: %s", user.id, e)
+                raise HTTPException(502, "Stripe temporarily unavailable, please try again")
+
+            effective_at = _iso(updated.get("current_period_end") or sub.get("current_period_end"))
+            _audit_plan_transition(
+                db,
+                user_id=user.id,
+                from_plan=current_plan,
+                to_plan=current_plan,  # not yet demoted; webhook flips it at period_end
+                source="self_serve_cancel",
+                metadata={
+                    "sub_id": sub_id,
+                    "status_at_cancel": status,
+                    "cancel_at_period_end": True,
+                    "effective_at": effective_at,
+                },
+            )
+            await db.commit()
+            await _invalidate_user_caches(user.id)
+            logger.info("Self-serve cancel scheduled for user %s (sub=%s)", user.id, sub_id)
+            return {
+                "status": "scheduled_cancel",
+                "effective_at": effective_at,
+                "message": "Subscription will end at the current period end.",
+            }
+
+        # Already cancelled on Stripe side — sync local state (idempotent).
+        if status == "canceled":
+            locked = (
+                await db.execute(
+                    select(User).where(User.id == user.id).with_for_update(of=User)
+                )
+            ).scalar_one()
+            was_paid = locked.plan != "free"
+            locked.plan = "free"
+            locked.stripe_subscription_id = None
+            if was_paid:
+                locked.monthly_credits_granted_at = None
+            _audit_plan_transition(
+                db,
+                user_id=locked.id,
+                from_plan=current_plan,
+                to_plan="free",
+                source="self_serve_cancel",
+                metadata={
+                    "sub_id": sub_id,
+                    "status_at_cancel": status,
+                    "reason": "stripe_already_canceled_sync",
+                },
+            )
+            await db.commit()
+            await _invalidate_user_caches(user.id)
+            logger.info("Synced local state for user %s — Stripe sub already canceled", user.id)
+            return {
+                "status": "immediate_revert",
+                "effective_at": None,
+                "message": "Subscription was already canceled on Stripe; local state synced.",
+            }
+
+        # Other statuses (incomplete, unpaid, incomplete_expired) — not cancellable.
+        raise HTTPException(
+            409,
+            f"Subscription is in state '{status}'. Please contact support.",
+        )
+
+    # Branch F: sub_id present but malformed (not sub_*, not pending).
+    if sub_id:
+        logger.warning(
+            "Malformed stripe_subscription_id for user %s: %r", user.id, sub_id
+        )
+        raise HTTPException(
+            409,
+            "Subscription record is malformed. Please contact support.",
+        )
+
+    # No sub_id. Branch C vs B split on presence of customer_id.
+    customer_id = user.stripe_customer_id
+    if customer_id:
+        try:
+            candidates = [
+                s for s in await _list_customer_subscriptions(customer_id)
+                if s.get("status") in _CANCELLABLE_SUBSCRIPTION_STATUSES
+            ]
+        except stripe.StripeError as e:
+            logger.error("Stripe list failed for cancel Branch C user %s: %s", user.id, e)
+            raise HTTPException(502, "Stripe temporarily unavailable, please try again")
+
+        if len(candidates) > 1:
+            logger.warning(
+                "Cancel Branch C ambiguous for user %s: %d cancellable subs",
+                user.id,
+                len(candidates),
+            )
+            raise HTTPException(
+                409,
+                "Multiple subscriptions found. Please contact support.",
+            )
+
+        if len(candidates) == 1:
+            # Auto-heal: populate stripe_subscription_id, then act as Branch A.
+            healed = candidates[0]
+            healed_id = healed["id"]
+            locked = (
+                await db.execute(
+                    select(User).where(User.id == user.id).with_for_update(of=User)
+                )
+            ).scalar_one()
+            locked.stripe_subscription_id = healed_id
+            await db.commit()
+            logger.info(
+                "Cancel Branch C auto-healed user %s with sub %s", user.id, healed_id
+            )
+            try:
+                updated = await asyncio.to_thread(
+                    stripe.Subscription.modify,
+                    healed_id,
+                    cancel_at_period_end=True,
+                )
+            except stripe.StripeError as e:
+                logger.error("Stripe modify failed after auto-heal user %s: %s", user.id, e)
+                raise HTTPException(502, "Stripe temporarily unavailable, please try again")
+
+            effective_at = _iso(updated.get("current_period_end"))
+            _audit_plan_transition(
+                db,
+                user_id=user.id,
+                from_plan=current_plan,
+                to_plan=current_plan,
+                source="self_serve_cancel",
+                metadata={
+                    "sub_id": healed_id,
+                    "status_at_cancel": healed.get("status"),
+                    "cancel_at_period_end": True,
+                    "effective_at": effective_at,
+                    "reason": "branch_c_auto_heal",
+                },
+            )
+            await db.commit()
+            await _invalidate_user_caches(user.id)
+            return {
+                "status": "scheduled_cancel",
+                "effective_at": effective_at,
+                "message": "Subscription will end at the current period end.",
+            }
+
+        # len(candidates) == 0 → fall through to Branch B.
+
+    # Branch B: admin-promoted (or orphaned) — no Stripe linkage, revert locally.
+    # Concurrency note: the `customer.subscription.deleted` webhook handler
+    # also sets plan='free' + nulls stripe_subscription_id. Both paths are
+    # idempotent so racing them is safe; the lock-then-recheck below
+    # collapses duplicate Branch B requests into a single 400.
+    locked = (
+        await db.execute(
+            select(User).where(User.id == user.id).with_for_update(of=User)
+        )
+    ).scalar_one()
+    # Re-check under lock (Branch D repeat).
+    if locked.plan == "free":
+        raise HTTPException(400, "Already on the Free plan")
+    from_plan_locked = locked.plan
+    locked.plan = "free"
+    locked.stripe_subscription_id = None
+    locked.monthly_credits_granted_at = None
+    _audit_plan_transition(
+        db,
+        user_id=locked.id,
+        from_plan=from_plan_locked,
+        to_plan="free",
+        source="self_serve_cancel",
+        metadata={
+            "reason": "admin_promoted_revert",
+            "had_customer_id": bool(customer_id),
+        },
+    )
+    await db.commit()
+    await _invalidate_user_caches(user.id)
+    logger.info("Self-serve immediate revert to free for user %s", user.id)
+    return {
+        "status": "immediate_revert",
+        "effective_at": None,
+        "message": "You are now on the Free plan. Your existing credits are kept.",
     }
 
 
@@ -471,7 +899,7 @@ async def _handle_checkout_session_subscription_completed(
     # Credits are granted solely via invoice.payment_succeeded to prevent
     # double-granting (checkout.session.completed + first invoice both fire).
     await db.commit()
-    await cache_delete(f"user:profile:{user.id}")
+    await _invalidate_user_caches(user.id)
     logger.info(
         "Subscription checkout completed: user_id=%s, plan=%s, subscription=%s (credits deferred to invoice)",
         user.id,
@@ -639,7 +1067,7 @@ async def _handle_invoice_payment_succeeded(
     else:
         await db.commit()
     if plan_changed:
-        await cache_delete(f"user:profile:{user.id}")
+        await _invalidate_user_caches(user.id)
     return {"received": True}
 
 
@@ -680,7 +1108,7 @@ async def _handle_subscription_deleted(
         if detected_plan:
             user.plan = detected_plan
         await db.commit()
-        await cache_delete(f"user:profile:{user.id}")
+        await _invalidate_user_caches(user.id)
         logger.info(
             "Ignored subscription.deleted for user %s because active subscription %s still exists",
             user.id,
@@ -697,7 +1125,7 @@ async def _handle_subscription_deleted(
     if not was_already_free:
         user.monthly_credits_granted_at = None
     await db.commit()
-    await cache_delete(f"user:profile:{user.id}")
+    await _invalidate_user_caches(user.id)
     return {"received": True}
 
 
@@ -721,12 +1149,12 @@ async def _handle_checkout_session_expired(
     if active_sub:
         user.stripe_subscription_id = active_sub.get("id")
         await db.commit()
-        await cache_delete(f"user:profile:{user.id}")
+        await _invalidate_user_caches(user.id)
         return {"received": True}
 
     user.stripe_subscription_id = None
     await db.commit()
-    await cache_delete(f"user:profile:{user.id}")
+    await _invalidate_user_caches(user.id)
     logger.info("Cleared pending subscription after checkout.session.expired for user %s", user.id)
     return {"received": True}
 
@@ -794,7 +1222,7 @@ async def _handle_subscription_updated(
                     supplement = 0
 
         await db.commit()
-        await cache_delete(f"user:profile:{user.id}")
+        await _invalidate_user_caches(user.id)
         logger.info(
             "Plan synced from webhook: user=%s, %s -> %s, supplement=%s",
             user.id,

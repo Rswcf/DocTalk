@@ -376,3 +376,27 @@ class SharedSession(Base):
         sa.UniqueConstraint("session_id", "user_id", name="uq_shared_sessions_session_user"),
         sa.Index("idx_shared_sessions_token", "share_token"),
     )
+
+
+class PlanTransition(Base):
+    __tablename__ = "plan_transitions"
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, server_default=sa.text("gen_random_uuid()")
+    )
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), sa.ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+    )
+    from_plan: Mapped[str] = mapped_column(sa.String(16), nullable=False)
+    to_plan: Mapped[str] = mapped_column(sa.String(16), nullable=False)
+    source: Mapped[str] = mapped_column(sa.String(32), nullable=False)
+    stripe_event_id: Mapped[Optional[str]] = mapped_column(sa.String(128), nullable=True)
+    effective_at: Mapped[datetime] = mapped_column(
+        sa.DateTime(timezone=True), nullable=False, server_default=sa.text("now()")
+    )
+    metadata_json: Mapped[dict] = mapped_column(
+        JSONB, nullable=False, server_default=sa.text("'{}'::jsonb")
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        sa.DateTime(timezone=True), nullable=False, server_default=sa.text("now()")
+    )
