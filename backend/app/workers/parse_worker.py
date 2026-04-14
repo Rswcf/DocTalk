@@ -22,6 +22,38 @@ from .celery_app import celery_app
 logger = get_task_logger(__name__)
 
 
+_WORKER_ERROR_CODES: dict[str, str] = {
+    "PARSE_TIMEOUT": "Document parsing timed out",
+    "DOWNLOAD_FAILED": "Failed to download document file",
+    "EXTRACTION_FAILED": "Failed to extract document content",
+    "PDF_PARSE_FAILED": "PDF parsing failed, file may be corrupted",
+    "OCR_DISABLED": "This document is a scanned PDF without a text layer. OCR is disabled.",
+    "OCR_FAILED": "OCR text recognition failed",
+    "OCR_INSUFFICIENT_TEXT": "OCR could not extract sufficient text",
+    "PERSIST_PAGES_FAILED": "Failed to save document pages to database",
+    "CHUNKING_FAILED": "Document chunking failed",
+    "PERSIST_CHUNKS_FAILED": "Failed to save document chunks to database",
+    "NO_CHUNKS": "No text content could be extracted from the document",
+    "VECTORIZE_FAILED": "Vectorization or indexing failed",
+}
+
+
+def _set_doc_error(doc, code: str, human: str | None = None) -> None:
+    """Mark a Document as errored with a structured ERR_CODE prefix.
+
+    Wire contract (transitional bridge — full taxonomy is frontend/Phase 3):
+        doc.error_msg = "ERR_CODE:<CODE>:<human text>"
+    Idempotent: repeated calls on an already-prefixed message do NOT stack
+    additional ERR_CODE: prefixes. Legacy free-text rows written before
+    this migration remain readable by consumers that fall back to the raw
+    string when no ERR_CODE: prefix is present.
+    """
+    text = human if human is not None else _WORKER_ERROR_CODES.get(code, "Document processing failed")
+    payload = text if text.startswith("ERR_CODE:") else f"ERR_CODE:{code}:{text}"
+    doc.status = "error"
+    doc.error_msg = payload
+
+
 def _get_minio_client() -> Minio:
     from urllib.parse import urlparse
     endpoint = settings.MINIO_ENDPOINT
@@ -61,8 +93,7 @@ def _set_timeout_error(document_id: str, message: str) -> None:
         if not doc:
             logger.warning("Timeout handler could not find document: %s", document_id)
             return
-        doc.status = "error"
-        doc.error_msg = message
+        _set_doc_error(doc, "PARSE_TIMEOUT", message)
         db.add(doc)
         db.commit()
 
@@ -114,8 +145,7 @@ def parse_document(self, document_id: str) -> None:
                 raise
             except Exception as e:
                 logger.exception("Failed to download file for %s: %s", document_id, e)
-                doc.status = "error"
-                doc.error_msg = "Failed to download document file"
+                _set_doc_error(doc, "DOWNLOAD_FAILED", "Failed to download document file")
                 db.add(doc)
                 db.commit()
                 return
@@ -135,8 +165,7 @@ def parse_document(self, document_id: str) -> None:
                     raise
                 except Exception as e:
                     logger.exception("Extraction failed for %s (type=%s): %s", document_id, file_type, e)
-                    doc.status = "error"
-                    doc.error_msg = f"Failed to extract {file_type.upper()} content"
+                    _set_doc_error(doc, "EXTRACTION_FAILED", f"Failed to extract {file_type.upper()} content")
                     db.add(doc)
                     db.commit()
                     return
@@ -179,8 +208,7 @@ def parse_document(self, document_id: str) -> None:
                     raise
                 except Exception as e:
                     logger.exception("PyMuPDF extraction failed for %s: %s", document_id, e)
-                    doc.status = "error"
-                    doc.error_msg = "PDF parsing failed, file may be corrupted"
+                    _set_doc_error(doc, "PDF_PARSE_FAILED", "PDF parsing failed, file may be corrupted")
                     db.add(doc)
                     db.commit()
                     return
@@ -192,8 +220,11 @@ def parse_document(self, document_id: str) -> None:
                 # Detect scanned PDFs — attempt OCR fallback
                 if service.detect_scanned(pages):
                     if not settings.OCR_ENABLED:
-                        doc.status = "error"
-                        doc.error_msg = "This document is a scanned PDF without a text layer. OCR is disabled."
+                        _set_doc_error(
+                            doc,
+                            "OCR_DISABLED",
+                            "This document is a scanned PDF without a text layer. OCR is disabled.",
+                        )
                         db.add(doc)
                         db.commit()
                         logger.info("Document %s marked as scanned / error (OCR disabled)", document_id)
@@ -214,8 +245,7 @@ def parse_document(self, document_id: str) -> None:
                         raise
                     except Exception as e:
                         logger.exception("OCR extraction failed for %s: %s", document_id, e)
-                        doc.status = "error"
-                        doc.error_msg = "OCR text recognition failed"
+                        _set_doc_error(doc, "OCR_FAILED", "OCR text recognition failed")
                         db.add(doc)
                         db.commit()
                         return
@@ -223,8 +253,7 @@ def parse_document(self, document_id: str) -> None:
                     # Verify OCR produced enough text
                     total_chars = sum(sum(len(b.text) for b in p.blocks) for p in pages)
                     if total_chars < 50:
-                        doc.status = "error"
-                        doc.error_msg = "OCR could not extract sufficient text"
+                        _set_doc_error(doc, "OCR_INSUFFICIENT_TEXT", "OCR could not extract sufficient text")
                         db.add(doc)
                         db.commit()
                         logger.info("Document %s: OCR produced only %d chars", document_id, total_chars)
@@ -279,8 +308,7 @@ def parse_document(self, document_id: str) -> None:
                 db.rollback()
                 doc = db.get(Document, uuid.UUID(document_id))
                 if doc:
-                    doc.status = "error"
-                    doc.error_msg = "Failed to save document pages to database"
+                    _set_doc_error(doc, "PERSIST_PAGES_FAILED", "Failed to save document pages to database")
                     db.add(doc)
                     db.commit()
                 return
@@ -292,8 +320,7 @@ def parse_document(self, document_id: str) -> None:
                 raise
             except Exception as e:
                 logger.exception("Chunking failed for %s: %s", document_id, e)
-                doc.status = "error"
-                doc.error_msg = "Document chunking failed"
+                _set_doc_error(doc, "CHUNKING_FAILED", "Document chunking failed")
                 db.add(doc)
                 db.commit()
                 return
@@ -326,8 +353,7 @@ def parse_document(self, document_id: str) -> None:
                 db.rollback()
                 doc = db.get(Document, uuid.UUID(document_id))
                 if doc:
-                    doc.status = "error"
-                    doc.error_msg = "Failed to save document chunks to database"
+                    _set_doc_error(doc, "PERSIST_CHUNKS_FAILED", "Failed to save document chunks to database")
                     db.add(doc)
                     db.commit()
                 return
@@ -348,8 +374,7 @@ def parse_document(self, document_id: str) -> None:
                 rows = db.execute(select(Chunk).where(Chunk.document_id == doc.id).order_by(Chunk.chunk_index))
                 chunks: List[Chunk] = list(rows.scalars())
                 if not chunks:
-                    doc.status = "error"
-                    doc.error_msg = "No text content could be extracted from the document"
+                    _set_doc_error(doc, "NO_CHUNKS", "No text content could be extracted from the document")
                     db.add(doc)
                     db.commit()
                     logger.warning("No chunks to embed for %s; marked error", document_id)
@@ -422,8 +447,7 @@ def parse_document(self, document_id: str) -> None:
                 raise
             except Exception as e:
                 logger.exception("Embedding/indexing failed for %s: %s", document_id, e)
-                doc.status = "error"
-                doc.error_msg = "Vectorization or indexing failed"
+                _set_doc_error(doc, "VECTORIZE_FAILED", "Vectorization or indexing failed")
                 db.add(doc)
                 db.commit()
                 return
