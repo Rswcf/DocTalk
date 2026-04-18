@@ -1,0 +1,118 @@
+# Matrix A — externally-triggerable ingress
+# Each row: {key, label, paths}. Keys are immutable — findings reference them.
+rows:
+  - key: auth_adapter
+    label: Auth adapter + magic-link consumption
+    paths:
+      - "backend/app/api/auth.py:24"
+      - "backend/app/services/auth_service.py:153"
+  - key: documents
+    label: /api/documents/* (upload, URL ingest, delete)
+    paths:
+      - "backend/app/api/documents.py:162"
+      - "backend/app/api/documents.py:280"
+      - "backend/app/api/documents.py:616"
+  - key: chat_sse
+    label: /api/chat SSE (two-stage debit, mode)
+    paths:
+      - "backend/app/api/chat.py:222"
+      - "backend/app/api/chat.py:319"
+      - "backend/app/services/chat_service.py:278"
+  - key: billing_api
+    label: /api/billing/* (checkout, subscribe, portal)
+    paths:
+      - "backend/app/api/billing.py:182"
+      - "backend/app/api/billing.py:210"
+      - "backend/app/api/billing.py:288"
+  - key: billing_webhook
+    label: /api/billing/webhook (Stripe-signed)
+    paths:
+      - "backend/app/api/billing.py:1250"
+  - key: demo_plane
+    label: Demo anonymous plane (limits, forced model)
+    paths:
+      - "backend/app/api/chat.py:38"
+      - "backend/app/core/rate_limit.py:235"
+  - key: admin_api
+    label: /api/admin/* (privileged ops)
+    paths:
+      - "backend/app/api/admin.py:27"
+  - key: export_api
+    label: /api/export/* (Plus+ gated session export)
+    paths:
+      - "backend/app/api/export.py:62"
+  - key: user_crud
+    label: /api/{search,collections,sharing,chunks,users,credits}
+    paths:
+      - "backend/app/api/search.py:19"
+      - "backend/app/api/collections.py:72"
+      - "backend/app/api/sharing.py:40"
+      - "backend/app/api/chunks.py:18"
+      - "backend/app/api/users.py:67"
+      - "backend/app/api/credits.py:31"
+  - key: ops_endpoints
+    label: /version, /health, /health?deep=true
+    paths:
+      - "backend/app/main.py:189"
+      - "backend/app/main.py:194"
+  - key: backend_shared_token
+    label: Backend /api/shared/{token}
+    paths:
+      - "backend/app/api/sharing.py:40"
+  - key: fastapi_metadata
+    label: /openapi.json, /docs, /redoc
+    paths:
+      - "backend/app/main.py:153"
+  - key: parse_worker
+    label: parse_worker (untrusted bytes)
+    paths:
+      - "backend/app/workers/parse_worker.py:101"
+  - key: deletion_worker
+    label: deletion_worker (internal state)
+    paths:
+      - "backend/app/workers/deletion_worker.py:11"
+  - key: cleanup_tasks
+    label: cleanup_tasks (cron)
+    paths:
+      - "backend/app/workers/cleanup_tasks.py:15"
+  - key: download_url_mint
+    label: Download URL mint + direct MinIO domain
+    paths:
+      - "backend/app/api/documents.py:484"
+      - "backend/app/services/storage_service.py:116"
+  - key: upload_bootstrap
+    label: Upload bootstrap token path
+    paths:
+      - "frontend/src/app/api/upload-token/route.ts:15"
+      - "backend/app/api/documents.py:162"
+  - key: frontend_proxy
+    label: /api/proxy/[...path] (JWT inject, SSE forward)
+    paths:
+      - "frontend/src/app/api/proxy/[...path]/route.ts:46"
+  - key: nextauth_handlers
+    label: /api/auth/[...nextauth] (provider handlers)
+    paths:
+      - "frontend/src/lib/auth.ts:26"
+  - key: oauth_callbacks
+    label: OAuth/email callback subpaths
+    paths:
+      - "frontend/src/app/api/auth/[...nextauth]/route.ts:1"
+  - key: frontend_origin_apis
+    label: /api/indexnow, /api/csp-report, /api/contact
+    paths:
+      - "frontend/src/app/api/indexnow/route.ts:53"
+      - "frontend/src/app/api/csp-report/route.ts:149"
+      - "frontend/src/app/api/contact/route.ts:35"
+  - key: stripe_return_urls
+    label: Stripe return URL landing (/billing/success, /cancel, portal return)
+    paths:
+      - "backend/app/api/billing.py:201"
+  - key: seo_public_surfaces
+    label: robots.ts, sitemap.ts, IndexNow key file
+    paths:
+      - "frontend/src/app/robots.ts:1"
+      - "frontend/src/app/sitemap.ts:1"
+  - key: shared_token_ssr
+    label: /shared/[token] SSR fetch path
+    paths:
+      - "frontend/src/app/shared/[token]/page.tsx:8"

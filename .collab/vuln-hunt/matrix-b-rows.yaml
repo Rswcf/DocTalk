@@ -1,0 +1,18 @@
+# Matrix B — system-wide invariants
+rows:
+  - key: jwt_double_layer
+    label: JWT double-layer consistency (AUTH_SECRET JWE + backend HS256 verify)
+  - key: adapter_trust
+    label: Internal adapter trust (X-Adapter-Secret — separate from AUTH_SECRET)
+  - key: ip_trust_chain
+    label: IP trust chain (X-Real-Client-IP + X-Proxy-IP-Secret HMAC)
+  - key: feature_gate_split
+    label: Feature-gate enforcement split (backend Sessions/Thorough/Custom/Export)
+  - key: seed_self_heal
+    label: Seed demo self-heal (Qdrant count detection)
+  - key: minio_lifecycle
+    label: MinIO bucket lifecycle + SSE-S3 encryption
+  - key: middleware_discipline
+    label: No cookies in middleware / no await cookies() in layout
+  - key: secret_rotation
+    label: Secret rotation coherence (AUTH_SECRET, ADAPTER_SECRET, X-Proxy-IP-Secret, Stripe signing, x-health-secret)

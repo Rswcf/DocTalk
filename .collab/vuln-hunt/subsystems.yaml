@@ -1,0 +1,48 @@
+# Free-form deep-dive subsystem candidates + bucket constraints
+buckets:
+  billing: [S1, S2]
+  llm_processing: [S3, S6, S9a, S9b, S9c]
+  free: [S4, S5, S7, S8, S10]
+
+coverage_gate:
+  min_unique_subsystems: 5   # combined (Claude ∪ Codex) picks must cover this many
+  picks_per_agent: 3
+  required_buckets_per_agent: [billing, llm_processing]
+
+subsystems:
+  - key: S1
+    label: Credits state machine
+    scope: pre-debit → stream → reconcile → refund → monthly renewal
+  - key: S2
+    label: Stripe + subscription lifecycle
+    scope: checkout → webhook → renewal → cancel/downgrade → prorate
+  - key: S3
+    label: Parse worker failure modes
+    scope: malformed input, time-limit, retries, idempotency, MinIO/Qdrant consistency
+  - key: S4
+    label: Auth double-layer
+    scope: JWE → HS256 → adapter API, provider linking
+  - key: S5
+    label: Demo / anonymous plane
+    scope: limits, forced model, seed self-heal, crossing to logged-in
+  - key: S6
+    label: SSE chat pipeline
+    scope: stream, disconnect, token accounting, ApiError framing
+  - key: S7
+    label: Sharing + public access
+    scope: /shared/[token], limiter, enumeration
+  - key: S8
+    label: Feature gate plane
+    scope: Plus/Pro split, backend vs frontend, downgrade → data visibility
+  - key: S9a
+    label: LLM system-prompt integrity
+    scope: instruction hierarchy, policy override resistance
+  - key: S9b
+    label: LLM retrieval boundary
+    scope: tenant/document isolation, cross-doc leakage
+  - key: S9c
+    label: LLM output handling/rendering
+    scope: markdown/link/XSS/UI trust
+  - key: S10
+    label: Object Storage + Artifact Lifecycle Trust
+    scope: mint, access, revoke, delete race, shared-link interplay

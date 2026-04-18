@@ -1,0 +1,20 @@
+# Matrix B — failure modes
+columns:
+  - key: bypass
+    label: Bypass
+    definition: Invariant doesn't hold in some codepath
+  - key: desync
+    label: Desync
+    definition: Two sides of the invariant disagree
+  - key: secret_rotation_break
+    label: Secret-rotation break
+    definition: Rotating one secret silently breaks invariant
+  - key: replay_idempotency
+    label: Replay / idempotency
+    definition: Invariant-protected op replayable
+  - key: fail_open_fallback
+    label: Fail-open / degraded fallback abuse
+    definition: Fallback path (Redis/Qdrant down) itself exploitable
+  - key: observability_blind
+    label: Observability blind
+    definition: Invariant violation emits no log/metric/alert

@@ -1,0 +1,38 @@
+# Matrix A — threat columns
+columns:
+  - key: authn_bypass
+    label: AuthN bypass
+    definition: Can unauth caller reach endpoint as authenticated?
+  - key: authz_idor
+    label: AuthZ / IDOR
+    definition: Cross-tenant data access or privilege escalation
+  - key: interpreter_injection
+    label: Interpreter injection
+    definition: SQL / command / template / log / header / XSS / HTML / markdown sinks
+  - key: input_validation
+    label: Input validation
+    definition: Magic-byte / size / MIME / URL scheme / path-traversal / Unicode
+  - key: ssrf_outbound
+    label: SSRF / outbound
+    definition: Attacker controls where the server calls
+  - key: rate_limit_abuse
+    label: Rate limit / abuse
+    definition: Missing or bypassable limit, demo quota evasion, fan-out
+  - key: idempotency_replay
+    label: Idempotency / replay
+    definition: Replay causes double-effect
+  - key: sensitive_exposure_enum
+    label: Sensitive exposure / enumeration
+    definition: Secret leak in URL/log/error + account enumeration + timing oracle
+  - key: resource_exhaustion
+    label: Resource exhaustion
+    definition: Memory / CPU / DB pool / Celery slot / bandwidth
+  - key: browser_flow_integrity
+    label: Browser-flow integrity
+    definition: CSRF + Origin/Referer + OAuth state/nonce/PKCE + callbackUrl open-redirect
+  - key: concurrency_toctou
+    label: Concurrency / TOCTOU
+    definition: Race between state check and mutation
+  - key: llm_context_isolation
+    label: LLM prompt/context isolation
+    definition: Untrusted doc/chat content overrides system policy or exfiltrates cross-tenant context
