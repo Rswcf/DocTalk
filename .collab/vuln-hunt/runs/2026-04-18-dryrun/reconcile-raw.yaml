@@ -1,0 +1,15 @@
+records:
+- cell_id: A-03-C07
+  claude:
+    state: finding
+    severity: P1
+    confidence: high
+    finding_key: credit_refund_double_refund_on_retry
+  codex:
+    state: finding
+    severity: P0
+    confidence: medium
+    finding_key: credit_refund_double_refund_on_retry
+  alignment: same_finding_different_severity
+  severity_gap: 1
+  p0_asymmetry: true

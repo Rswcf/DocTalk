@@ -1,0 +1,5 @@
+- cell_id: A-03-C07
+  state: finding
+  severity: P0
+  confidence: medium
+  finding_ref: A-03-C07-01

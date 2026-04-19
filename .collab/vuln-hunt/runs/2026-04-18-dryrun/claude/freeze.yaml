@@ -1,0 +1,4 @@
+files:
+  findings/A-03-C07-double_refund.md: 637218bf32f2ffa3cc087d6bdbbb3f8fb262b2edd01f4548be3a0b77e72ed72c
+  manifest.yaml: a61830026d9221948bf6ad2ae6c02b5f7f1500fe0cac7355796eb16638191144
+timestamp: '2026-04-19T10:06:35.105232+00:00'
