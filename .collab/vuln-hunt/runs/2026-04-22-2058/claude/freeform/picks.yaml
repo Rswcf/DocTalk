@@ -1,0 +1,10 @@
+picks:
+  - key: S1
+    bucket: billing
+    justification: Credits state machine is the highest-blast-radius billing surface; revenue-critical + already surfaced real findings in the matrix pass (reconcile_drives_balance_negative, plan_fallback_to_pro_default).
+  - key: S9b
+    bucket: llm_processing
+    justification: Cross-tenant retrieval boundary is the product's core security invariant — every chat query hits Qdrant; isolation failures would leak arbitrary user docs into other tenants' answers.
+  - key: S4
+    bucket: free
+    justification: Auth double-layer is already implicated in two matrix findings (B-03-D01 IP bypass, B-08-D03 secret reuse). Narrative layer can trace the full JWE→HS256→adapter chain for emergent composition risks.

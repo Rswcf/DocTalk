@@ -1,0 +1,10 @@
+state: started
+git_sha: a8bc3138a6569e23d22c4ed5a60f9a78cc005ef0
+script_version: 1
+claude_matrix_done: true
+claude_freeform_done: true
+codex_done: false
+freeze_done: false
+reconcile_done: false
+tiebreak_done: false
+compose_done: false
