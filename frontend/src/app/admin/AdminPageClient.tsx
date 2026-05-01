@@ -240,7 +240,7 @@ function FunnelPanel({ funnel }: { funnel: AdminFunnel | null }) {
   if (!funnel) return null;
   const signupUsers = funnel.stages[0]?.users || 0;
   const hasPaidIntentEvents = funnel.stages
-    .filter((stage) => ["limit_hit", "billing_view", "upgrade_click", "checkout_created", "checkout_completed"].includes(stage.key))
+    .filter((stage) => ["paywall_opened", "limit_hit", "billing_view", "upgrade_click", "checkout_created", "checkout_completed"].includes(stage.key))
     .some((stage) => stage.users > 0);
   return (
     <section className="mb-8 rounded-lg border border-zinc-200 bg-white dark:border-zinc-700 dark:bg-zinc-900">

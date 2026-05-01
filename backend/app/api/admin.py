@@ -393,7 +393,7 @@ async def admin_funnel(
             )
             .where(ProductEvent.created_at >= cutoff)
             .where(ProductEvent.user_id.in_(select(cohort_user_ids.c.id)))
-            .where(ProductEvent.event_name.in_(["limit_hit", "upgrade_click", "billing_view"]))
+            .where(ProductEvent.event_name.in_(["paywall_opened", "limit_hit", "upgrade_click", "billing_view"]))
             .group_by(ProductEvent.event_name, ProductEvent.reason, ProductEvent.source, ProductEvent.plan)
             .order_by(func.count(ProductEvent.id).desc())
             .limit(50)
@@ -407,6 +407,7 @@ async def admin_funnel(
         {"key": "first_session", "label": "Created chat session", "users": int(session_users or 0)},
         {"key": "first_chat", "label": "Sent chat message", "users": int(chat_users or 0)},
         {"key": "five_chats", "label": "5+ chat messages", "users": int(five_message_users or 0)},
+        {"key": "paywall_opened", "label": "Saw paid prompt", "users": event_counts.get("paywall_opened", {}).get("users", 0)},
         {"key": "limit_hit", "label": "Hit paid limit", "users": event_counts.get("limit_hit", {}).get("users", 0)},
         {"key": "billing_view", "label": "Viewed billing", "users": event_counts.get("billing_view", {}).get("users", 0)},
         {"key": "upgrade_click", "label": "Clicked upgrade", "users": event_counts.get("upgrade_click", {}).get("users", 0)},

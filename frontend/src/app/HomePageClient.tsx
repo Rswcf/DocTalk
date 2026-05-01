@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { useSession } from 'next-auth/react';
 import { getDocument, uploadDocument, deleteDocument, getMyDocuments, ingestUrl } from '../lib/api';
 import type { DocumentBrief } from '../lib/api';
-import { Trash2, Link2, FileUp } from 'lucide-react';
+import { ArrowRight, Sparkles, Trash2, Link2, FileUp, X } from 'lucide-react';
 import { useDocTalkStore } from '../store';
 import { useLocale } from '../i18n';
 import { clearAccountStorage } from '../lib/clearAccountStorage';
@@ -37,6 +37,9 @@ const MAX_UPLOAD_MB_BY_PLAN: Record<PlanTier, number> = {
   plus: 50,
   pro: 100,
 };
+
+const DASHBOARD_NUDGE_DISMISS_KEY = 'doctalk_dashboard_upgrade_nudge_dismissed_at';
+const DASHBOARD_NUDGE_DISMISS_MS = 14 * 24 * 60 * 60 * 1000;
 
 function LandingPageContent() {
   const { t } = useLocale();
@@ -220,6 +223,8 @@ export default function HomePageClient() {
   const [urlLoading, setUrlLoading] = useState(false);
   const [urlError, setUrlError] = useState('');
   const [urlErrorCopy, setUrlErrorCopy] = useState<ErrorCopy | null>(null);
+  const [upgradeNudgeDismissed, setUpgradeNudgeDismissed] = useState(true);
+  const upgradeNudgeTrackedRef = useRef(false);
   const isLoggedIn = status === 'authenticated';
   const { profile } = useUserProfile();
 
@@ -268,6 +273,42 @@ export default function HomePageClient() {
   const maxUploadMb = useMemo(() => MAX_UPLOAD_MB_BY_PLAN[userPlan] ?? MAX_UPLOAD_MB_BY_PLAN.free, [userPlan]);
   const maxUploadBytes = maxUploadMb * 1024 * 1024;
   const uploadUpgradePlan = userPlan === 'plus' ? 'pro' : 'plus';
+  const activatedFreeUser = userPlan === 'free' && (
+    allDocs.length > 0 ||
+    (profile?.stats.total_documents || 0) > 0 ||
+    (profile?.stats.total_messages || 0) >= 3
+  );
+  const showUpgradeNudge = isLoggedIn && activatedFreeUser && !upgradeNudgeDismissed;
+
+  useEffect(() => {
+    if (!isLoggedIn) return;
+    try {
+      const dismissedAt = Number(localStorage.getItem(DASHBOARD_NUDGE_DISMISS_KEY) || '0');
+      setUpgradeNudgeDismissed(Boolean(dismissedAt && Date.now() - dismissedAt < DASHBOARD_NUDGE_DISMISS_MS));
+    } catch {
+      setUpgradeNudgeDismissed(false);
+    }
+  }, [isLoggedIn]);
+
+  useEffect(() => {
+    if (!showUpgradeNudge || upgradeNudgeTrackedRef.current) return;
+    upgradeNudgeTrackedRef.current = true;
+    trackEvent('paywall_opened', {
+      source: 'dashboard_activation_nudge',
+      reason: 'activated_free_user',
+      plan: 'plus',
+      period: 'monthly',
+    });
+  }, [showUpgradeNudge]);
+
+  const dismissUpgradeNudge = () => {
+    setUpgradeNudgeDismissed(true);
+    try {
+      localStorage.setItem(DASHBOARD_NUDGE_DISMISS_KEY, String(Date.now()));
+    } catch {
+      // localStorage may be unavailable in restricted browsers.
+    }
+  };
 
   const getDocStatusMeta = (status?: string) => {
     const normalized = (status || '').toLowerCase();
@@ -453,6 +494,52 @@ export default function HomePageClient() {
           <div className="mb-4 flex justify-center">
             <PrivacyBadge />
           </div>
+
+          {showUpgradeNudge && (
+            <section className="mb-5 rounded-xl border border-zinc-200 bg-white p-4 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+              <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex gap-3">
+                  <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-zinc-900 text-white dark:bg-zinc-50 dark:text-zinc-900">
+                    <Sparkles aria-hidden="true" size={18} />
+                  </div>
+                  <div>
+                    <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
+                      {tOr('dashboard.upgradeNudge.title', 'Ready for heavier document work?')}
+                    </h2>
+                    <p className="mt-1 max-w-2xl text-sm leading-6 text-zinc-600 dark:text-zinc-300">
+                      {tOr(
+                        'dashboard.upgradeNudge.body',
+                        'Plus gives you 20 documents, 50 MB uploads, all AI modes, and Markdown export before your next limit stops the workflow.'
+                      )}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex shrink-0 items-center gap-2 sm:self-start">
+                  <Link
+                    href={billingHref({ plan: 'plus', source: 'dashboard_activation_nudge', reason: 'activated_free_user' })}
+                    onClick={() => trackEvent('upgrade_click', {
+                      plan: 'plus',
+                      period: 'monthly',
+                      source: 'dashboard_activation_nudge',
+                      reason: 'activated_free_user',
+                    })}
+                    className="inline-flex items-center gap-2 rounded-lg bg-zinc-900 px-3.5 py-2 text-sm font-medium text-white transition-colors hover:bg-zinc-800 dark:bg-zinc-50 dark:text-zinc-900 dark:hover:bg-zinc-200 focus-visible:ring-2 focus-visible:ring-zinc-400 dark:focus-visible:ring-zinc-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-900"
+                  >
+                    {tOr('dashboard.upgradeNudge.cta', 'Upgrade')}
+                    <ArrowRight aria-hidden="true" size={15} />
+                  </Link>
+                  <button
+                    type="button"
+                    onClick={dismissUpgradeNudge}
+                    className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-zinc-500 transition-colors hover:bg-zinc-100 hover:text-zinc-900 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-100 focus-visible:ring-2 focus-visible:ring-zinc-400 dark:focus-visible:ring-zinc-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-900"
+                    aria-label={tOr('dashboard.upgradeNudge.dismiss', 'Dismiss upgrade prompt')}
+                  >
+                    <X aria-hidden="true" size={16} />
+                  </button>
+                </div>
+              </div>
+            </section>
+          )}
 
           <div
             className={`border-2 border-dashed rounded-xl p-8 sm:p-12 text-center transition-colors ${
