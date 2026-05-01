@@ -37,6 +37,8 @@ stripe.api_key = settings.STRIPE_SECRET_KEY
 class SubscribeRequest(BaseModel):
     plan: Literal["plus", "pro"] = "plus"
     billing: Literal["monthly", "annual"] = "monthly"
+    source: Optional[str] = None
+    reason: Optional[str] = None
 
 
 async def _record_product_event(
@@ -213,6 +215,7 @@ async def list_products():
 async def create_checkout(
     pack_id: Literal["boost", "power", "ultra"],
     user: User = Depends(require_auth),
+    db: AsyncSession = Depends(get_db_session),
 ):
     if not settings.STRIPE_SECRET_KEY:
         raise HTTPException(503, "Stripe not configured")
@@ -232,6 +235,14 @@ async def create_checkout(
         cancel_url=f"{settings.FRONTEND_URL}/billing?canceled=1",
         client_reference_id=str(user.id),
         metadata={"credits": str(credits), "pack_id": pack_id},
+    )
+    await _record_product_event(
+        db,
+        user_id=user.id,
+        event_name="checkout_created",
+        source="server",
+        reason="credit_pack",
+        metadata={"checkout_session_id": session.id, "pack_id": pack_id, "credits": credits},
     )
     return {"checkout_url": session.url}
 
@@ -291,6 +302,9 @@ async def subscribe(
             user.stripe_customer_id = cust.id
             await db.commit()
 
+        event_source = (body.source or "")[:64]
+        event_reason = (body.reason or "")[:64]
+
         # Create Checkout Session for subscription
         session = await asyncio.to_thread(
             stripe.checkout.Session.create,
@@ -300,8 +314,20 @@ async def subscribe(
             cancel_url=f"{settings.FRONTEND_URL}/billing",
             customer=user.stripe_customer_id,
             client_reference_id=str(user.id),
-            metadata={"plan": body.plan, "billing": body.billing},
-            subscription_data={"metadata": {"plan": body.plan, "billing": body.billing}},
+            metadata={
+                "plan": body.plan,
+                "billing": body.billing,
+                "source": event_source,
+                "reason": event_reason,
+            },
+            subscription_data={
+                "metadata": {
+                    "plan": body.plan,
+                    "billing": body.billing,
+                    "source": event_source,
+                    "reason": event_reason,
+                }
+            },
         )
         log_security_event(
             "subscription_checkout_created",
@@ -314,10 +340,15 @@ async def subscribe(
             db,
             user_id=user.id,
             event_name="checkout_created",
-            source="server",
+            source=event_source or "server",
             plan=body.plan,
             billing=body.billing,
-            metadata={"checkout_session_id": session.id},
+            reason=event_reason or None,
+            metadata={
+                "checkout_session_id": session.id,
+                "source": event_source,
+                "reason": event_reason,
+            },
         )
     except stripe.StripeError as e:
         logger.error("Failed to create subscription checkout: %s", e)
@@ -961,13 +992,20 @@ async def _handle_checkout_session_subscription_completed(
         subscription_id=subscription_id,
         customer_id=customer_id,
     )
+    session_metadata = session.get("metadata", {}) or {}
     await _record_product_event(
         db,
         user_id=user.id,
         event_name="checkout_completed",
-        source="stripe_webhook",
+        source=(session_metadata.get("source") or "stripe_webhook")[:64],
         plan=plan,
-        metadata={"subscription_id": subscription_id, "customer_id": customer_id},
+        reason=session_metadata.get("reason", "")[:64] or None,
+        metadata={
+            "subscription_id": subscription_id,
+            "customer_id": customer_id,
+            "source": session_metadata.get("source"),
+            "reason": session_metadata.get("reason"),
+        },
     )
     return {"received": True}
 
@@ -1038,6 +1076,20 @@ async def _handle_checkout_session_payment_completed(
                 user_id,
                 credits,
                 payment_intent,
+            )
+            metadata = session.get("metadata", {})
+            await _record_product_event(
+                db,
+                user_id=user_id,
+                event_name="checkout_completed",
+                source="server",
+                reason="credit_pack",
+                metadata={
+                    "checkout_session_id": session.get("id"),
+                    "payment_intent": payment_intent,
+                    "pack_id": metadata.get("pack_id"),
+                    "credits": credits,
+                },
             )
         except Exception as e:
             await db.rollback()

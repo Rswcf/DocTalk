@@ -393,7 +393,18 @@ async def admin_funnel(
             )
             .where(ProductEvent.created_at >= cutoff)
             .where(ProductEvent.user_id.in_(select(cohort_user_ids.c.id)))
-            .where(ProductEvent.event_name.in_(["paywall_opened", "limit_hit", "upgrade_click", "billing_view"]))
+            .where(
+                ProductEvent.event_name.in_(
+                    [
+                        "paywall_opened",
+                        "limit_hit",
+                        "upgrade_click",
+                        "billing_view",
+                        "checkout_created",
+                        "checkout_completed",
+                    ]
+                )
+            )
             .group_by(ProductEvent.event_name, ProductEvent.reason, ProductEvent.source, ProductEvent.plan)
             .order_by(func.count(ProductEvent.id).desc())
             .limit(50)

@@ -168,20 +168,16 @@ function BillingContent() {
   const handleSubscribe = async (plan: 'plus' | 'pro') => {
     if (submitting) return;
     setSubmitting(plan);
+    const source = searchParams.get("source") || "billing";
+    const reason = searchParams.get("reason");
     try {
       trackEvent("upgrade_click", {
         plan,
         period: billingPeriod,
-        source: searchParams.get("source") || "billing",
-        reason: searchParams.get("reason"),
+        source,
+        reason,
       });
-      const res = await createSubscription({ plan, billing: billingPeriod });
-      trackEvent("checkout_created", {
-        plan,
-        period: billingPeriod,
-        source: searchParams.get("source") || "billing",
-        reason: searchParams.get("reason"),
-      });
+      const res = await createSubscription({ plan, billing: billingPeriod, source, reason });
       window.location.href = res.checkout_url;
       return;
     } catch {

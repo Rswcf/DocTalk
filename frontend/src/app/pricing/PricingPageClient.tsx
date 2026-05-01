@@ -114,7 +114,7 @@ export default function PricingPageClient() {
                 onClick={() => trackEvent('upgrade_click', { plan: 'plus', period: 'monthly', source: 'pricing_hero' })}
                 className="inline-flex items-center rounded-lg bg-zinc-900 px-6 py-3 text-sm font-medium text-white transition-colors hover:bg-zinc-800 dark:bg-zinc-50 dark:text-zinc-900 dark:hover:bg-zinc-200"
               >
-                {t('pricing.startFree')}
+                {t('pricing.plus.cta')}
               </Link>
               <Link
                 href="/demo"

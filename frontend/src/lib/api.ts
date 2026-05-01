@@ -211,7 +211,14 @@ export async function deleteUserAccount(): Promise<void> {
   }
 }
 
-export async function createSubscription(params?: { plan?: string; billing?: string }): Promise<{ checkout_url: string }> {
+interface CreateSubscriptionParams {
+  plan?: string;
+  billing?: string;
+  source?: string;
+  reason?: string | null;
+}
+
+export async function createSubscription(params?: CreateSubscriptionParams): Promise<{ checkout_url: string }> {
   const res = await fetch(PROXY_BASE + '/api/billing/subscribe', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
