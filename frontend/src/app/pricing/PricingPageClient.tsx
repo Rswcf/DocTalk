@@ -4,6 +4,7 @@ import { useLocale } from '../../i18n';
 import Header from '../../components/Header';
 import Footer from '../../components/Footer';
 import { billingHref } from '../../lib/billingLinks';
+import { trackEvent } from '../../lib/analytics';
 
 const plans = [
   {
@@ -35,6 +36,7 @@ const plans = [
     ],
     ctaHref: billingHref({ plan: 'plus', source: 'pricing' }),
     ctaKey: 'pricing.plus.cta',
+    intentPlan: 'plus',
     featured: true,
   },
   {
@@ -51,6 +53,7 @@ const plans = [
     ],
     ctaHref: billingHref({ plan: 'pro', source: 'pricing' }),
     ctaKey: 'pricing.pro.cta',
+    intentPlan: 'pro',
   },
 ];
 
@@ -108,6 +111,7 @@ export default function PricingPageClient() {
             <div className="flex flex-wrap items-center justify-center gap-4">
               <Link
                 href={billingHref({ plan: 'plus', source: 'pricing_hero' })}
+                onClick={() => trackEvent('upgrade_click', { plan: 'plus', period: 'monthly', source: 'pricing_hero' })}
                 className="inline-flex items-center rounded-lg bg-zinc-900 px-6 py-3 text-sm font-medium text-white transition-colors hover:bg-zinc-800 dark:bg-zinc-50 dark:text-zinc-900 dark:hover:bg-zinc-200"
               >
                 {t('pricing.startFree')}
@@ -156,6 +160,11 @@ export default function PricingPageClient() {
                 </ul>
                 <Link
                   href={plan.ctaHref}
+                  onClick={() => {
+                    if (plan.intentPlan) {
+                      trackEvent('upgrade_click', { plan: plan.intentPlan, period: 'monthly', source: 'pricing' });
+                    }
+                  }}
                   className={`mt-8 inline-flex w-full items-center justify-center rounded-lg px-5 py-3 text-sm font-medium transition-colors ${
                     plan.featured
                       ? 'bg-blue-600 text-white hover:bg-blue-500 dark:bg-blue-500 dark:hover:bg-blue-400'

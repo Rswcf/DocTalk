@@ -324,26 +324,27 @@ async def admin_funnel(
     db: AsyncSession = Depends(get_db_session),
     days: int = Query(30, ge=1, le=365),
 ):
-    """Activation and monetization funnel snapshot."""
+    """Activation and monetization funnel snapshot for the signup cohort."""
     cutoff = datetime.now(timezone.utc) - timedelta(days=days)
+    cohort_user_ids = select(User.id).where(User.created_at >= cutoff).subquery()
 
-    signups = await db.scalar(select(func.count(User.id)).where(User.created_at >= cutoff))
+    signups = await db.scalar(select(func.count()).select_from(cohort_user_ids))
     upload_users = await db.scalar(
         select(func.count(func.distinct(Document.user_id)))
         .where(Document.created_at >= cutoff)
-        .where(Document.user_id.is_not(None))
+        .where(Document.user_id.in_(select(cohort_user_ids.c.id)))
     )
     session_users = await db.scalar(
         select(func.count(func.distinct(ChatSession.user_id)))
         .where(ChatSession.created_at >= cutoff)
-        .where(ChatSession.user_id.is_not(None))
+        .where(ChatSession.user_id.in_(select(cohort_user_ids.c.id)))
     )
     chat_users = await db.scalar(
         select(func.count(func.distinct(ChatSession.user_id)))
         .join(Message, Message.session_id == ChatSession.id)
         .where(Message.created_at >= cutoff)
         .where(Message.role == "user")
-        .where(ChatSession.user_id.is_not(None))
+        .where(ChatSession.user_id.in_(select(cohort_user_ids.c.id)))
     )
     power_user_sq = (
         select(
@@ -353,7 +354,7 @@ async def admin_funnel(
         .join(Message, Message.session_id == ChatSession.id)
         .where(Message.created_at >= cutoff)
         .where(Message.role == "user")
-        .where(ChatSession.user_id.is_not(None))
+        .where(ChatSession.user_id.in_(select(cohort_user_ids.c.id)))
         .group_by(ChatSession.user_id)
         .subquery()
     )
@@ -371,6 +372,7 @@ async def admin_funnel(
                 func.count(func.distinct(ProductEvent.user_id)).label("users"),
             )
             .where(ProductEvent.created_at >= cutoff)
+            .where(ProductEvent.user_id.in_(select(cohort_user_ids.c.id)))
             .group_by(ProductEvent.event_name)
         )
     ).all()
@@ -390,12 +392,14 @@ async def admin_funnel(
                 func.count(func.distinct(ProductEvent.user_id)).label("users"),
             )
             .where(ProductEvent.created_at >= cutoff)
+            .where(ProductEvent.user_id.in_(select(cohort_user_ids.c.id)))
             .where(ProductEvent.event_name.in_(["limit_hit", "upgrade_click", "billing_view"]))
             .group_by(ProductEvent.event_name, ProductEvent.reason, ProductEvent.source, ProductEvent.plan)
             .order_by(func.count(ProductEvent.id).desc())
             .limit(50)
         )
     ).all()
+    event_tracking_started_at = await db.scalar(select(func.min(ProductEvent.created_at)))
 
     stages = [
         {"key": "signup", "label": "Signups", "users": int(signups or 0)},
@@ -413,6 +417,8 @@ async def admin_funnel(
     return {
         "days": days,
         "since": cutoff.isoformat(),
+        "cohort": "signups",
+        "event_tracking_started_at": event_tracking_started_at.isoformat() if event_tracking_started_at else None,
         "stages": stages,
         "event_counts": event_counts,
         "reasons": [

@@ -238,22 +238,33 @@ function BillingHealthPanel({
 
 function FunnelPanel({ funnel }: { funnel: AdminFunnel | null }) {
   if (!funnel) return null;
+  const signupUsers = funnel.stages[0]?.users || 0;
+  const hasPaidIntentEvents = funnel.stages
+    .filter((stage) => ["limit_hit", "billing_view", "upgrade_click", "checkout_created", "checkout_completed"].includes(stage.key))
+    .some((stage) => stage.users > 0);
   return (
     <section className="mb-8 rounded-lg border border-zinc-200 bg-white dark:border-zinc-700 dark:bg-zinc-900">
       <div className="border-b border-zinc-200 px-4 py-3 dark:border-zinc-700">
         <h2 className="text-sm font-medium text-zinc-900 dark:text-zinc-100">Monetization Funnel</h2>
-        <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">Last {funnel.days} days, unique users per stage.</p>
+        <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
+          Last {funnel.days} days, signup cohort conversion by unique users.
+          {!funnel.event_tracking_started_at && " Paid-intent event tracking has no recorded events yet."}
+        </p>
+        {funnel.event_tracking_started_at && !hasPaidIntentEvents && (
+          <p className="mt-1 text-xs text-amber-700 dark:text-amber-300">
+            Paid-intent events are counted only since {new Date(funnel.event_tracking_started_at).toLocaleDateString()}; earlier pricing and billing activity is not backfilled.
+          </p>
+        )}
       </div>
       <div className="grid gap-3 p-4 sm:grid-cols-2 lg:grid-cols-5">
         {funnel.stages.map((stage, index) => {
-          const prev = index > 0 ? funnel.stages[index - 1]?.users || 0 : 0;
-          const rate = prev > 0 ? Math.round((stage.users / prev) * 100) : null;
+          const rate = index > 0 && signupUsers > 0 ? Math.round((stage.users / signupUsers) * 100) : null;
           return (
             <div key={stage.key} className="rounded border border-zinc-100 p-3 dark:border-zinc-800">
               <p className="text-xs text-zinc-500 dark:text-zinc-400">{stage.label}</p>
               <p className="mt-1 text-xl font-semibold tabular-nums text-zinc-900 dark:text-zinc-100">{formatNumber(stage.users)}</p>
               {rate != null && (
-                <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">{rate}% from previous</p>
+                <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">{rate}% of signups</p>
               )}
             </div>
           );

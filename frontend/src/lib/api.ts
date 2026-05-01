@@ -414,6 +414,8 @@ export interface AdminFunnelReason {
 export interface AdminFunnel {
   days: number;
   since: string;
+  cohort?: string;
+  event_tracking_started_at: string | null;
   stages: AdminFunnelStage[];
   event_counts: Record<string, { events: number; users: number }>;
   reasons: AdminFunnelReason[];
