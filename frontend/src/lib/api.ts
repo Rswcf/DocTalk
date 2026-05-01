@@ -369,6 +369,61 @@ export async function getAdminBreakdowns() {
   return handle(res);
 }
 
+export interface AdminBillingPriceStatus {
+  label: string;
+  configured: boolean;
+  id_hint: string | null;
+  livemode: boolean | null;
+  active: boolean | null;
+  currency: string | null;
+  interval: string | null;
+  error: string | null;
+}
+
+export interface AdminBillingHealth {
+  stripe_secret_configured: boolean;
+  stripe_secret_mode: 'missing' | 'live' | 'test' | 'unknown';
+  stripe_webhook_configured: boolean;
+  frontend_url_configured: boolean;
+  all_subscription_prices_configured: boolean;
+  remote_checked: boolean;
+  has_mode_mismatch: boolean;
+  prices: AdminBillingPriceStatus[];
+}
+
+export async function getAdminBillingHealth(remote = false): Promise<AdminBillingHealth> {
+  const res = await fetch(`${PROXY_BASE}/api/admin/billing-health?remote=${remote ? 'true' : 'false'}`);
+  return handle(res);
+}
+
+export interface AdminFunnelStage {
+  key: string;
+  label: string;
+  users: number;
+}
+
+export interface AdminFunnelReason {
+  event_name: string;
+  reason: string | null;
+  source: string | null;
+  plan: string | null;
+  events: number;
+  users: number;
+}
+
+export interface AdminFunnel {
+  days: number;
+  since: string;
+  stages: AdminFunnelStage[];
+  event_counts: Record<string, { events: number; users: number }>;
+  reasons: AdminFunnelReason[];
+}
+
+export async function getAdminFunnel(days = 30): Promise<AdminFunnel> {
+  const res = await fetch(`${PROXY_BASE}/api/admin/funnel?days=${days}`);
+  return handle(res);
+}
+
 export async function getAdminRecentUsers(limit = 20) {
   const res = await fetch(`${PROXY_BASE}/api/admin/recent-users?limit=${limit}`);
   return handle(res);

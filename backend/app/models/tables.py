@@ -400,3 +400,36 @@ class PlanTransition(Base):
     created_at: Mapped[datetime] = mapped_column(
         sa.DateTime(timezone=True), nullable=False, server_default=sa.text("now()")
     )
+
+
+class ProductEvent(Base):
+    __tablename__ = "product_events"
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, server_default=sa.text("gen_random_uuid()")
+    )
+    user_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        UUID(as_uuid=True),
+        sa.ForeignKey("users.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
+    event_name: Mapped[str] = mapped_column(sa.String(64), nullable=False, index=True)
+    source: Mapped[Optional[str]] = mapped_column(sa.String(64), nullable=True)
+    reason: Mapped[Optional[str]] = mapped_column(sa.String(64), nullable=True)
+    plan: Mapped[Optional[str]] = mapped_column(sa.String(16), nullable=True)
+    billing: Mapped[Optional[str]] = mapped_column(sa.String(16), nullable=True)
+    metadata_json: Mapped[dict] = mapped_column(
+        JSONB, nullable=False, server_default=sa.text("'{}'::jsonb")
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        sa.DateTime(timezone=True), nullable=False, server_default=sa.text("now()")
+    )
+
+    user: Mapped[Optional["User"]] = relationship("User")
+
+    __table_args__ = (
+        sa.Index("idx_product_events_created", sa.text("created_at DESC")),
+        sa.Index("idx_product_events_name_created", "event_name", sa.text("created_at DESC")),
+        sa.Index("idx_product_events_user_created", "user_id", sa.text("created_at DESC")),
+    )

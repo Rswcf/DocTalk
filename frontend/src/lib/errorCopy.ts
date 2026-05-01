@@ -1,4 +1,5 @@
 import type { ApiError } from './api';
+import { billingHref, type BillingPlanIntent } from './billingLinks';
 
 export interface ErrorCopy {
   /** Short, one-line summary — suitable for toast title / inline heading. */
@@ -79,6 +80,17 @@ export function errorCopy(err: ErrorInput, t: TFn, tOr: TOrFn): ErrorCopy {
 
 type Handler = (detail: Record<string, unknown>, tOr: TOrFn) => ErrorCopy;
 
+function targetPlan(detail: Record<string, unknown>, fallback: BillingPlanIntent = 'plus'): BillingPlanIntent {
+  return detail.plan === 'plus' ? 'pro' : fallback;
+}
+
+function upgradeCta(tOr: TOrFn, reason: string, plan: BillingPlanIntent = 'plus') {
+  return {
+    label: tOr('errors.cta.upgrade', 'Upgrade'),
+    href: billingHref({ plan, source: 'limit', reason }),
+  };
+}
+
 const CODE_TABLE: Record<string, Handler> = {
   // ─── Upload ───
   DOCUMENT_LIMIT_REACHED: (d, tOr) => ({
@@ -86,7 +98,7 @@ const CODE_TABLE: Record<string, Handler> = {
     body: tOr('errors.DOCUMENT_LIMIT_REACHED.body', 'You\'ve reached your plan\'s document limit ({limit}). Delete an old document or upgrade for more.', {
       limit: String(d.limit ?? ''),
     }),
-    cta: { label: tOr('errors.cta.upgrade', 'Upgrade'), href: '/pricing' },
+    cta: upgradeCta(tOr, 'document_limit', targetPlan(d)),
     severity: 'warning',
   }),
   FILE_TOO_LARGE: (d, tOr) => ({
@@ -94,7 +106,7 @@ const CODE_TABLE: Record<string, Handler> = {
     body: tOr('errors.FILE_TOO_LARGE.body', 'Maximum file size on your plan is {maxMb} MB. Upgrade for larger uploads.', {
       maxMb: String(d.max_mb ?? ''),
     }),
-    cta: { label: tOr('errors.cta.upgrade', 'Upgrade'), href: '/pricing' },
+    cta: upgradeCta(tOr, 'file_size', targetPlan(d)),
     severity: 'warning',
   }),
   UNSUPPORTED_FORMAT: (_d, tOr) => ({
@@ -161,7 +173,7 @@ const CODE_TABLE: Record<string, Handler> = {
   CUSTOM_INSTRUCTIONS_REQUIRE_PRO: (_d, tOr) => ({
     title: tOr('errors.CUSTOM_INSTRUCTIONS_REQUIRE_PRO.title', 'Pro plan required'),
     body: tOr('errors.CUSTOM_INSTRUCTIONS_REQUIRE_PRO.body', 'Custom instructions are available on the Pro plan.'),
-    cta: { label: tOr('errors.cta.upgrade', 'Upgrade'), href: '/pricing' },
+    cta: upgradeCta(tOr, 'custom_instructions', 'pro'),
     severity: 'warning',
   }),
 
@@ -171,7 +183,7 @@ const CODE_TABLE: Record<string, Handler> = {
     body: tOr('errors.SESSION_LIMIT_REACHED.body', 'Free plan is limited to {limit} chat sessions per document. Upgrade for unlimited.', {
       limit: String(d.limit ?? ''),
     }),
-    cta: { label: tOr('errors.cta.upgrade', 'Upgrade'), href: '/pricing' },
+    cta: upgradeCta(tOr, 'session_limit', 'plus'),
     severity: 'warning',
   }),
   SESSION_NOT_FOUND: (_d, tOr) => ({
@@ -215,7 +227,7 @@ const CODE_TABLE: Record<string, Handler> = {
       required: String(d.required ?? ''),
       balance: String(d.balance ?? ''),
     }),
-    cta: { label: tOr('errors.cta.upgrade', 'Upgrade'), href: '/pricing' },
+    cta: upgradeCta(tOr, 'credits', 'plus'),
     severity: 'warning',
     openPaywall: true,
   }),
@@ -229,7 +241,7 @@ const CODE_TABLE: Record<string, Handler> = {
   MODE_NOT_ALLOWED: (_d, tOr) => ({
     title: tOr('errors.MODE_NOT_ALLOWED.title', 'Plus plan required'),
     body: tOr('errors.MODE_NOT_ALLOWED.body', 'Thorough mode is available on the Plus plan.'),
-    cta: { label: tOr('errors.cta.upgrade', 'Upgrade'), href: '/pricing' },
+    cta: upgradeCta(tOr, 'thorough_mode', 'plus'),
     severity: 'warning',
     openPaywall: true,
   }),
@@ -240,7 +252,7 @@ const CODE_TABLE: Record<string, Handler> = {
     body: tOr('errors.COLLECTION_LIMIT_REACHED.body', 'Your plan allows up to {limit} collections. Upgrade for more.', {
       limit: String(d.limit ?? ''),
     }),
-    cta: { label: tOr('errors.cta.upgrade', 'Upgrade'), href: '/pricing' },
+    cta: upgradeCta(tOr, 'collection_limit', targetPlan(d)),
     severity: 'warning',
   }),
   COLLECTION_DOC_LIMIT_REACHED: (d, tOr) => ({
@@ -248,7 +260,7 @@ const CODE_TABLE: Record<string, Handler> = {
     body: tOr('errors.COLLECTION_DOC_LIMIT_REACHED.body', 'Your plan allows up to {limit} documents per collection. Upgrade for more.', {
       limit: String(d.limit ?? ''),
     }),
-    cta: { label: tOr('errors.cta.upgrade', 'Upgrade'), href: '/pricing' },
+    cta: upgradeCta(tOr, 'collection_doc_limit', targetPlan(d)),
     severity: 'warning',
   }),
   COLLECTION_NOT_FOUND: (_d, tOr) => ({
@@ -263,7 +275,7 @@ const CODE_TABLE: Record<string, Handler> = {
     body: tOr('errors.EXPORT_REQUIRES_PAID_PLAN.body', '{format} export requires a Plus or Pro plan.', {
       format: String(d.format ?? 'PDF/DOCX').toUpperCase(),
     }),
-    cta: { label: tOr('errors.cta.upgrade', 'Upgrade'), href: '/pricing' },
+    cta: upgradeCta(tOr, 'export', 'plus'),
     severity: 'warning',
   }),
   EXPORT_VALIDATION_FAILED: (_d, tOr) => ({
@@ -283,7 +295,7 @@ const CODE_TABLE: Record<string, Handler> = {
     body: tOr('errors.SHARE_LIMIT_REACHED.body', 'Free plan is limited to {limit} active share links. Upgrade for unlimited.', {
       limit: String(d.limit ?? 3),
     }),
-    cta: { label: tOr('errors.cta.upgrade', 'Upgrade'), href: '/pricing' },
+    cta: upgradeCta(tOr, 'share_limit', 'plus'),
     severity: 'warning',
   }),
   SHARE_EXPIRED: (_d, tOr) => ({

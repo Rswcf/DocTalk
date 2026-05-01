@@ -3,6 +3,8 @@
 import { useEffect, useRef } from "react";
 import Link from "next/link";
 import { useLocale } from "../i18n";
+import { billingHref } from "../lib/billingLinks";
+import { trackEvent } from "../lib/analytics";
 
 interface PaywallModalProps {
   isOpen: boolean;
@@ -76,7 +78,8 @@ export function PaywallModal({ isOpen, onClose }: PaywallModalProps) {
         </p>
         <div className="flex gap-3">
           <Link
-            href="/billing"
+            href={billingHref({ plan: 'plus', source: 'paywall_modal', reason: 'credits' })}
+            onClick={() => trackEvent('upgrade_click', { plan: 'plus', period: 'monthly', source: 'paywall_modal', reason: 'credits' })}
             className="flex-1 px-4 py-2 bg-zinc-900 dark:bg-zinc-50 text-white dark:text-zinc-900 rounded-lg hover:bg-zinc-800 dark:hover:bg-zinc-200 shadow-sm hover:shadow-md transition-colors text-center focus-visible:ring-2 focus-visible:ring-zinc-400 dark:focus-visible:ring-zinc-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-900"
           >
             {t("credits.buyCredits")}

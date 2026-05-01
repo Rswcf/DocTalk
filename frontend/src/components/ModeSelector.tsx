@@ -2,12 +2,12 @@
 
 import React from 'react';
 import { Lock } from 'lucide-react';
-import { useSession } from 'next-auth/react';
 import { AVAILABLE_MODES, isModeAvailable, type ModeId } from '../lib/models';
 import { useDocTalkStore } from '../store';
 import { useLocale } from '../i18n';
 import { useRouter } from 'next/navigation';
-import { openAuthModal } from '../lib/auth-modal';
+import { billingHref } from '../lib/billingLinks';
+import { trackEvent } from '../lib/analytics';
 
 export default function ModeSelector() {
   const selectedMode = useDocTalkStore((s) => s.selectedMode);
@@ -16,17 +16,12 @@ export default function ModeSelector() {
   const userPlan = useDocTalkStore((s) => s.userPlan);
   const { t } = useLocale();
   const router = useRouter();
-  const { status: authStatus } = useSession();
-  const isLoggedIn = authStatus === 'authenticated';
 
   const choose = (modeId: ModeId) => {
     if (isStreaming) return;
     if (!isModeAvailable(modeId, userPlan)) {
-      if (isLoggedIn) {
-        router.push('/billing');
-      } else {
-        openAuthModal();
-      }
+      trackEvent('upgrade_click', { plan: 'plus', period: 'monthly', source: 'mode_selector', reason: `${modeId}_mode` });
+      router.push(billingHref({ plan: 'plus', source: 'mode_selector', reason: `${modeId}_mode` }));
       return;
     }
     setSelectedMode(modeId);

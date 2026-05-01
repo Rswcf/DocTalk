@@ -6,10 +6,10 @@ import { useLocale } from "../../i18n";
 import { Spinner } from "../spell";
 import {
   createPortalSession,
-  createSubscription,
   getCreditHistory,
 } from "../../lib/api";
 import { useRouter } from "next/navigation";
+import { trackEvent } from "../../lib/analytics";
 
 interface Props {
   profile: UserProfile;
@@ -26,6 +26,7 @@ export default function CreditsSection({ profile }: Props) {
   const [offset, setOffset] = useState<number>(0);
   const [loadingHistory, setLoadingHistory] = useState<boolean>(true);
   const [historyError, setHistoryError] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
   const [retryCount, setRetryCount] = useState<number>(0);
 
   const balanceColor = useMemo(() => {
@@ -68,24 +69,18 @@ export default function CreditsSection({ profile }: Props) {
   }, [limit, offset, retryCount]);
 
   const onUpgrade = async () => {
-    setSubmitting(true);
-    try {
-      const res = await createSubscription();
-      window.location.href = res.checkout_url;
-    } catch (e) {
-      // swallow; could show toast
-    } finally {
-      setSubmitting(false);
-    }
+    trackEvent("upgrade_click", { plan: "plus", period: "monthly", source: "profile_credits" });
+    router.push("/billing?plan=plus&period=monthly&source=profile_credits");
   };
 
   const onManage = async () => {
     setSubmitting(true);
+    setActionError(null);
     try {
       const res = await createPortalSession();
       window.location.href = res.portal_url;
     } catch (e) {
-      // swallow; could show toast
+      setActionError(e instanceof Error && e.message ? e.message : tOr("billing.error", "Billing is unavailable. Please try again."));
     } finally {
       setSubmitting(false);
     }
@@ -163,6 +158,11 @@ export default function CreditsSection({ profile }: Props) {
           {t("profile.credits.buyMore")}
         </button>
       </div>
+      {actionError && (
+        <p role="alert" className="text-sm text-red-600 dark:text-red-400">
+          {actionError}
+        </p>
+      )}
 
       {/* History */}
       <div>
@@ -252,4 +252,3 @@ export default function CreditsSection({ profile }: Props) {
     </div>
   );
 }
-

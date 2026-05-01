@@ -3,6 +3,8 @@
 import React from 'react';
 import { Download, FileText, Lock, Plus, Settings2 } from 'lucide-react';
 
+type BillingIntent = { plan: 'plus' | 'pro'; reason: string };
+
 interface PlusMenuProps {
   isOpen: boolean;
   setIsOpen: (open: boolean) => void;
@@ -18,7 +20,7 @@ interface PlusMenuProps {
   onExport: () => void;
   onExportPdf?: () => void;
   onExportDocx?: () => void;
-  onBillingRedirect: () => void;
+  onBillingRedirect: (intent: BillingIntent) => void;
   t: (key: string) => string;
   tOr: (key: string, fallback: string) => string;
 }
@@ -77,7 +79,7 @@ export default function PlusMenu({
                   setIsOpen(false);
                   return;
                 }
-                onBillingRedirect();
+                onBillingRedirect({ plan: 'pro', reason: 'custom_instructions' });
               }}
               className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:ring-inset"
             >
@@ -127,7 +129,7 @@ export default function PlusMenu({
                   setIsOpen(false);
                   return;
                 }
-                onBillingRedirect();
+                onBillingRedirect({ plan: 'plus', reason: 'export_pdf' });
               }}
               className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:ring-inset"
             >
@@ -153,7 +155,7 @@ export default function PlusMenu({
                   setIsOpen(false);
                   return;
                 }
-                onBillingRedirect();
+                onBillingRedirect({ plan: 'plus', reason: 'export_docx' });
               }}
               className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:ring-inset"
             >

@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { useLocale } from '../../i18n';
 import Header from '../../components/Header';
 import Footer from '../../components/Footer';
+import { billingHref } from '../../lib/billingLinks';
 
 const plans = [
   {
@@ -32,7 +33,7 @@ const plans = [
       'pricing.plus.feature4',
       'pricing.plus.feature5',
     ],
-    ctaHref: '/auth?callbackUrl=%2Fbilling',
+    ctaHref: billingHref({ plan: 'plus', source: 'pricing' }),
     ctaKey: 'pricing.plus.cta',
     featured: true,
   },
@@ -48,7 +49,7 @@ const plans = [
       'pricing.pro.feature4',
       'pricing.pro.feature5',
     ],
-    ctaHref: '/auth?callbackUrl=%2Fbilling',
+    ctaHref: billingHref({ plan: 'pro', source: 'pricing' }),
     ctaKey: 'pricing.pro.cta',
   },
 ];
@@ -106,7 +107,7 @@ export default function PricingPageClient() {
             </p>
             <div className="flex flex-wrap items-center justify-center gap-4">
               <Link
-                href="/auth?callbackUrl=%2Fbilling"
+                href={billingHref({ plan: 'plus', source: 'pricing_hero' })}
                 className="inline-flex items-center rounded-lg bg-zinc-900 px-6 py-3 text-sm font-medium text-white transition-colors hover:bg-zinc-800 dark:bg-zinc-50 dark:text-zinc-900 dark:hover:bg-zinc-200"
               >
                 {t('pricing.startFree')}

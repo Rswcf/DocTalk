@@ -9,8 +9,12 @@ import {
   getAdminOverview,
   getAdminTrends,
   getAdminBreakdowns,
+  getAdminBillingHealth,
+  getAdminFunnel,
   getAdminRecentUsers,
   getAdminTopUsers,
+  type AdminBillingHealth,
+  type AdminFunnel,
 } from "../../lib/api";
 import {
   Users,
@@ -21,6 +25,9 @@ import {
   Gift,
   Crown,
   Star,
+  AlertTriangle,
+  ShieldCheck,
+  RefreshCw,
 } from "lucide-react";
 import { usePageTitle } from "../../lib/usePageTitle";
 
@@ -133,6 +140,148 @@ function PlanBadge({ plan }: { plan: string }) {
   );
 }
 
+function StatusPill({ ok, label }: { ok: boolean; label: string }) {
+  return (
+    <span className={`inline-flex items-center rounded px-2 py-0.5 text-xs font-medium ${
+      ok
+        ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300"
+        : "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300"
+    }`}>
+      {label}
+    </span>
+  );
+}
+
+function BillingHealthPanel({
+  health,
+  loadingRemote,
+  onRemoteCheck,
+}: {
+  health: AdminBillingHealth | null;
+  loadingRemote: boolean;
+  onRemoteCheck: () => void;
+}) {
+  if (!health) return null;
+  const liveReady = health.stripe_secret_mode === "live"
+    && health.stripe_webhook_configured
+    && health.all_subscription_prices_configured
+    && !health.has_mode_mismatch;
+
+  return (
+    <section className="mb-8 rounded-lg border border-zinc-200 bg-white dark:border-zinc-700 dark:bg-zinc-900">
+      <div className="flex flex-col gap-3 border-b border-zinc-200 px-4 py-3 dark:border-zinc-700 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-center gap-2">
+          {liveReady ? (
+            <ShieldCheck aria-hidden="true" className="h-4 w-4 text-emerald-600 dark:text-emerald-300" />
+          ) : (
+            <AlertTriangle aria-hidden="true" className="h-4 w-4 text-amber-600 dark:text-amber-300" />
+          )}
+          <h2 className="text-sm font-medium text-zinc-900 dark:text-zinc-100">Billing Health</h2>
+        </div>
+        <button
+          type="button"
+          onClick={onRemoteCheck}
+          disabled={loadingRemote}
+          className="inline-flex items-center justify-center gap-2 rounded border border-zinc-300 px-3 py-1.5 text-xs font-medium text-zinc-700 transition-colors hover:bg-zinc-50 disabled:opacity-50 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800"
+        >
+          <RefreshCw aria-hidden="true" className={`h-3.5 w-3.5 ${loadingRemote ? "animate-spin" : ""}`} />
+          Verify Stripe
+        </button>
+      </div>
+      <div className="grid gap-4 p-4 lg:grid-cols-[0.8fr_1.2fr]">
+        <div className="grid grid-cols-2 gap-3 text-sm">
+          <div>
+            <p className="text-xs text-zinc-500 dark:text-zinc-400">Secret Mode</p>
+            <StatusPill ok={health.stripe_secret_mode === "live"} label={health.stripe_secret_mode.toUpperCase()} />
+          </div>
+          <div>
+            <p className="text-xs text-zinc-500 dark:text-zinc-400">Webhook</p>
+            <StatusPill ok={health.stripe_webhook_configured} label={health.stripe_webhook_configured ? "Configured" : "Missing"} />
+          </div>
+          <div>
+            <p className="text-xs text-zinc-500 dark:text-zinc-400">Subscription Prices</p>
+            <StatusPill ok={health.all_subscription_prices_configured} label={health.all_subscription_prices_configured ? "Configured" : "Missing"} />
+          </div>
+          <div>
+            <p className="text-xs text-zinc-500 dark:text-zinc-400">Mode Match</p>
+            <StatusPill ok={!health.has_mode_mismatch} label={health.has_mode_mismatch ? "Mismatch" : "OK"} />
+          </div>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="w-full text-xs">
+            <thead>
+              <tr className="border-b border-zinc-100 text-left text-zinc-500 dark:border-zinc-800 dark:text-zinc-400">
+                <th className="py-1.5 pr-3 font-medium">Price</th>
+                <th className="px-3 py-1.5 font-medium">Configured</th>
+                <th className="px-3 py-1.5 font-medium">Mode</th>
+                <th className="px-3 py-1.5 font-medium">Active</th>
+                <th className="py-1.5 pl-3 font-medium">Interval</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800">
+              {health.prices.map((price) => (
+                <tr key={price.label}>
+                  <td className="py-1.5 pr-3 text-zinc-700 dark:text-zinc-300">{price.label}</td>
+                  <td className="px-3 py-1.5 text-zinc-600 dark:text-zinc-400">{price.configured ? price.id_hint || "yes" : "missing"}</td>
+                  <td className="px-3 py-1.5 text-zinc-600 dark:text-zinc-400">{price.livemode == null ? "-" : price.livemode ? "live" : "test"}</td>
+                  <td className="px-3 py-1.5 text-zinc-600 dark:text-zinc-400">{price.active == null ? "-" : price.active ? "yes" : "no"}</td>
+                  <td className="py-1.5 pl-3 text-zinc-600 dark:text-zinc-400">{price.interval || price.currency || "-"}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function FunnelPanel({ funnel }: { funnel: AdminFunnel | null }) {
+  if (!funnel) return null;
+  return (
+    <section className="mb-8 rounded-lg border border-zinc-200 bg-white dark:border-zinc-700 dark:bg-zinc-900">
+      <div className="border-b border-zinc-200 px-4 py-3 dark:border-zinc-700">
+        <h2 className="text-sm font-medium text-zinc-900 dark:text-zinc-100">Monetization Funnel</h2>
+        <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">Last {funnel.days} days, unique users per stage.</p>
+      </div>
+      <div className="grid gap-3 p-4 sm:grid-cols-2 lg:grid-cols-5">
+        {funnel.stages.map((stage, index) => {
+          const prev = index > 0 ? funnel.stages[index - 1]?.users || 0 : 0;
+          const rate = prev > 0 ? Math.round((stage.users / prev) * 100) : null;
+          return (
+            <div key={stage.key} className="rounded border border-zinc-100 p-3 dark:border-zinc-800">
+              <p className="text-xs text-zinc-500 dark:text-zinc-400">{stage.label}</p>
+              <p className="mt-1 text-xl font-semibold tabular-nums text-zinc-900 dark:text-zinc-100">{formatNumber(stage.users)}</p>
+              {rate != null && (
+                <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">{rate}% from previous</p>
+              )}
+            </div>
+          );
+        })}
+      </div>
+      {funnel.reasons.length > 0 && (
+        <div className="border-t border-zinc-100 p-4 dark:border-zinc-800">
+          <h3 className="mb-2 text-xs font-medium uppercase tracking-wide text-zinc-500 dark:text-zinc-400">Top Billing Reasons</h3>
+          <div className="overflow-x-auto">
+            <table className="w-full text-xs">
+              <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800">
+                {funnel.reasons.slice(0, 8).map((row, index) => (
+                  <tr key={`${row.event_name}-${row.reason}-${row.source}-${index}`}>
+                    <td className="py-1.5 pr-3 text-zinc-700 dark:text-zinc-300">{row.event_name}</td>
+                    <td className="px-3 py-1.5 text-zinc-600 dark:text-zinc-400">{row.reason || "-"}</td>
+                    <td className="px-3 py-1.5 text-zinc-600 dark:text-zinc-400">{row.source || "-"}</td>
+                    <td className="py-1.5 pl-3 text-right tabular-nums text-zinc-700 dark:text-zinc-300">{row.users} users</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+    </section>
+  );
+}
+
 export default function AdminPageClient() {
   usePageTitle("Admin");
 
@@ -142,9 +291,12 @@ export default function AdminPageClient() {
   const [overview, setOverview] = useState<Overview | null>(null);
   const [trends, setTrends] = useState<Trends | null>(null);
   const [breakdowns, setBreakdowns] = useState<Breakdowns | null>(null);
+  const [billingHealth, setBillingHealth] = useState<AdminBillingHealth | null>(null);
+  const [funnel, setFunnel] = useState<AdminFunnel | null>(null);
   const [recentUsers, setRecentUsers] = useState<RecentUser[]>([]);
   const [topUsers, setTopUsers] = useState<TopUser[]>([]);
   const [loading, setLoading] = useState(true);
+  const [billingRemoteLoading, setBillingRemoteLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [trendDays, setTrendDays] = useState(30);
   const [topBy, setTopBy] = useState<"tokens" | "credits" | "documents">("tokens");
@@ -161,18 +313,22 @@ export default function AdminPageClient() {
     setLoading(true);
     setError(null);
     try {
-      const [ov, tr, br, ru, tu] = await Promise.all([
+      const [ov, tr, br, ru, tu, bh, fn] = await Promise.all([
         getAdminOverview(),
         getAdminTrends("day", trendDays),
         getAdminBreakdowns(),
         getAdminRecentUsers(20),
         getAdminTopUsers(20, topBy),
+        getAdminBillingHealth(false),
+        getAdminFunnel(trendDays),
       ]);
       setOverview(ov as Overview);
       setTrends(tr as Trends);
       setBreakdowns(br as Breakdowns);
       setRecentUsers((ru as { users: RecentUser[] }).users);
       setTopUsers((tu as { users: TopUser[] }).users);
+      setBillingHealth(bh);
+      setFunnel(fn);
     } catch (e: any) {
       if (e?.message?.includes("403")) {
         router.push("/");
@@ -189,6 +345,18 @@ export default function AdminPageClient() {
       fetchData();
     }
   }, [status, fetchData]);
+
+  const verifyBillingRemote = useCallback(async () => {
+    setBillingRemoteLoading(true);
+    try {
+      const health = await getAdminBillingHealth(true);
+      setBillingHealth(health);
+    } catch (e: any) {
+      setError(e?.message || "Failed to verify billing health");
+    } finally {
+      setBillingRemoteLoading(false);
+    }
+  }, []);
 
   if (status === "loading" || (status === "authenticated" && loading && !overview)) {
     return (
@@ -249,6 +417,14 @@ export default function AdminPageClient() {
             <KPICard icon={Gift} label="Credits Granted" value={overview.total_credits_granted} />
           </div>
         )}
+
+        <BillingHealthPanel
+          health={billingHealth}
+          loadingRemote={billingRemoteLoading}
+          onRemoteCheck={verifyBillingRemote}
+        />
+
+        <FunnelPanel funnel={funnel} />
 
         {trends && breakdowns && (
           <AdminCharts

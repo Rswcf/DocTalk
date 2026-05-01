@@ -15,7 +15,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.cache import cache_delete, cache_get, cache_set
 from app.core.config import settings
 from app.core.deps import get_db_session, require_auth
-from app.models.tables import CreditLedger, PlanTransition, User
+from app.core.security_log import log_security_event
+from app.models.tables import CreditLedger, PlanTransition, ProductEvent, User
 from app.schemas.billing import (
     BillingProductsResponse,
     CancelSubscriptionResponse,
@@ -34,8 +35,37 @@ stripe.api_key = settings.STRIPE_SECRET_KEY
 
 
 class SubscribeRequest(BaseModel):
-    plan: Literal["plus", "pro"] = "pro"
+    plan: Literal["plus", "pro"] = "plus"
     billing: Literal["monthly", "annual"] = "monthly"
+
+
+async def _record_product_event(
+    db: AsyncSession,
+    *,
+    user_id: uuid.UUID,
+    event_name: str,
+    source: str,
+    plan: str | None = None,
+    billing: str | None = None,
+    reason: str | None = None,
+    metadata: dict | None = None,
+) -> None:
+    try:
+        db.add(
+            ProductEvent(
+                user_id=user_id,
+                event_name=event_name,
+                source=source,
+                reason=reason,
+                plan=plan,
+                billing=billing,
+                metadata_json=metadata or {},
+            )
+        )
+        await db.commit()
+    except Exception as e:
+        await db.rollback()
+        logger.warning("Failed to record product event %s for user %s: %s", event_name, user_id, e)
 
 
 def _get_subscription_price_id(plan: str, billing: str) -> str:
@@ -270,6 +300,24 @@ async def subscribe(
             cancel_url=f"{settings.FRONTEND_URL}/billing",
             customer=user.stripe_customer_id,
             client_reference_id=str(user.id),
+            metadata={"plan": body.plan, "billing": body.billing},
+            subscription_data={"metadata": {"plan": body.plan, "billing": body.billing}},
+        )
+        log_security_event(
+            "subscription_checkout_created",
+            user_id=user.id,
+            plan=body.plan,
+            billing=body.billing,
+            checkout_session_id=session.id,
+        )
+        await _record_product_event(
+            db,
+            user_id=user.id,
+            event_name="checkout_created",
+            source="server",
+            plan=body.plan,
+            billing=body.billing,
+            metadata={"checkout_session_id": session.id},
         )
     except stripe.StripeError as e:
         logger.error("Failed to create subscription checkout: %s", e)
@@ -905,6 +953,21 @@ async def _handle_checkout_session_subscription_completed(
         user.id,
         plan,
         subscription_id,
+    )
+    log_security_event(
+        "subscription_checkout_completed",
+        user_id=user.id,
+        plan=plan,
+        subscription_id=subscription_id,
+        customer_id=customer_id,
+    )
+    await _record_product_event(
+        db,
+        user_id=user.id,
+        event_name="checkout_completed",
+        source="stripe_webhook",
+        plan=plan,
+        metadata={"subscription_id": subscription_id, "customer_id": customer_id},
     )
     return {"received": True}
 

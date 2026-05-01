@@ -6,6 +6,7 @@ import { useDocTalkStore } from '../store';
 import type { Message } from '../types';
 import { triggerCreditsRefresh } from '../components/CreditsDisplay';
 import { errorCopy } from './errorCopy';
+import { trackEvent } from './analytics';
 
 interface UseChatStreamOptions {
   sessionId: string;
@@ -94,6 +95,8 @@ export function useChatStream({
     }
 
     if (status === 402 || code === 'INSUFFICIENT_CREDITS' || code === 'MODE_NOT_ALLOWED') {
+      trackEvent('limit_hit', { source: 'chat_stream', reason: code || 'paid_limit', plan: 'plus', period: 'monthly' });
+      trackEvent('paywall_opened', { source: 'chat_stream', reason: code || 'paid_limit', plan: 'plus', period: 'monthly' });
       onShowPaywall();
       return;
     }
@@ -115,6 +118,7 @@ export function useChatStream({
       || code === 'DEMO_MESSAGE_LIMIT_REACHED'
       || code === 'DEMO_SESSION_LIMIT_REACHED'
     ) {
+      trackEvent('limit_hit', { source: 'chat_stream', reason: code || 'rate_or_demo_limit' });
       const isRateLimited = code === 'RATE_LIMITED'
         || code === 'DEMO_SESSION_RATE_LIMITED'
         || message.includes('Rate limit exceeded');
@@ -149,13 +153,14 @@ export function useChatStream({
     abortRef.current = null;
     updateSessionActivity(sessionId);
     triggerCreditsRefresh();
+    trackEvent('chat_message_completed', { source: 'chat_stream', mode: selectedMode });
     if (d.message_id) {
       updateLastMessageMeta({
         backendId: d.message_id,
         ...(d.continuation_count !== undefined ? { continuationCount: d.continuation_count } : {}),
       });
     }
-  }, [flushPendingText, setStreaming, updateSessionActivity, sessionId, updateLastMessageMeta]);
+  }, [flushPendingText, setStreaming, updateSessionActivity, sessionId, selectedMode, updateLastMessageMeta]);
 
   const streamAssistantResponse = useCallback(async (prompt: string) => {
     const controller = new AbortController();
@@ -203,10 +208,11 @@ export function useChatStream({
     addMessage(userMsg);
     addMessage(asstMsg);
     setStreaming(true);
+    trackEvent('chat_message_sent', { source: 'chat_panel', mode: selectedMode });
 
     await streamAssistantResponse(text);
     return true;
-  }, [isStreaming, demoLimitReached, onRequireAuth, addMessage, setStreaming, streamAssistantResponse]);
+  }, [isStreaming, demoLimitReached, onRequireAuth, addMessage, setStreaming, streamAssistantResponse, selectedMode]);
 
   const regenerateLastResponse = useCallback(async () => {
     if (isStreaming) return;

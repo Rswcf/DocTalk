@@ -1,18 +1,22 @@
 """Admin analytics endpoints — protected by require_admin."""
 
+import asyncio
 from datetime import datetime, timedelta, timezone
 
+import stripe
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy import case, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.cache import cache_get, cache_set
+from app.core.config import settings
 from app.core.deps import get_db_session, require_admin
 from app.models.tables import (
     ChatSession,
     CreditLedger,
     Document,
     Message,
+    ProductEvent,
     UsageRecord,
     User,
 )
@@ -25,6 +29,54 @@ from app.schemas.admin import (
 )
 
 router = APIRouter(prefix="/api/admin", tags=["admin"])
+
+
+def _stripe_secret_mode() -> str:
+    key = settings.STRIPE_SECRET_KEY or ""
+    if not key:
+        return "missing"
+    if key.startswith("sk_live_"):
+        return "live"
+    if key.startswith("sk_test_"):
+        return "test"
+    return "unknown"
+
+
+def _price_hint(price_id: str) -> str | None:
+    if not price_id:
+        return None
+    if len(price_id) <= 14:
+        return price_id[:6] + "..."
+    return f"{price_id[:8]}...{price_id[-6:]}"
+
+
+async def _stripe_price_status(label: str, price_id: str, remote: bool) -> dict:
+    payload = {
+        "label": label,
+        "configured": bool(price_id),
+        "id_hint": _price_hint(price_id),
+        "livemode": None,
+        "active": None,
+        "currency": None,
+        "interval": None,
+        "error": None,
+    }
+    if not remote or not price_id or not settings.STRIPE_SECRET_KEY:
+        return payload
+
+    try:
+        stripe.api_key = settings.STRIPE_SECRET_KEY
+        price = await asyncio.to_thread(stripe.Price.retrieve, price_id)
+        recurring = price.get("recurring") or {}
+        payload.update({
+            "livemode": bool(price.get("livemode")),
+            "active": bool(price.get("active")),
+            "currency": price.get("currency"),
+            "interval": recurring.get("interval"),
+        })
+    except stripe.StripeError as e:
+        payload["error"] = str(e)[:200]
+    return payload
 
 
 @router.get("/overview", response_model=AdminOverviewResponse)
@@ -224,6 +276,156 @@ async def admin_breakdowns(
         "model_usage": model_usage,
         "file_types": file_types,
         "doc_status": doc_status,
+    }
+
+
+@router.get("/billing-health")
+async def admin_billing_health(
+    remote: bool = Query(False),
+    _admin: User = Depends(require_admin),
+):
+    """Non-secret billing configuration health check."""
+    prices = {
+        "plus_monthly": settings.STRIPE_PRICE_PLUS_MONTHLY,
+        "plus_annual": settings.STRIPE_PRICE_PLUS_ANNUAL,
+        "pro_monthly": settings.STRIPE_PRICE_PRO_MONTHLY,
+        "pro_annual": settings.STRIPE_PRICE_PRO_ANNUAL,
+        "boost_pack": settings.STRIPE_PRICE_BOOST,
+        "power_pack": settings.STRIPE_PRICE_POWER,
+        "ultra_pack": settings.STRIPE_PRICE_ULTRA,
+    }
+    price_statuses = [
+        await _stripe_price_status(label, price_id, remote)
+        for label, price_id in prices.items()
+    ]
+    subscription_prices = price_statuses[:4]
+    remote_modes = [p["livemode"] for p in price_statuses if p["livemode"] is not None]
+    secret_mode = _stripe_secret_mode()
+    has_mode_mismatch = (
+        secret_mode in {"live", "test"}
+        and any(mode is not None and mode != (secret_mode == "live") for mode in remote_modes)
+    )
+
+    return {
+        "stripe_secret_configured": bool(settings.STRIPE_SECRET_KEY),
+        "stripe_secret_mode": secret_mode,
+        "stripe_webhook_configured": bool(settings.STRIPE_WEBHOOK_SECRET),
+        "frontend_url_configured": bool(settings.FRONTEND_URL),
+        "all_subscription_prices_configured": all(p["configured"] for p in subscription_prices),
+        "remote_checked": remote,
+        "has_mode_mismatch": has_mode_mismatch,
+        "prices": price_statuses,
+    }
+
+
+@router.get("/funnel")
+async def admin_funnel(
+    _admin: User = Depends(require_admin),
+    db: AsyncSession = Depends(get_db_session),
+    days: int = Query(30, ge=1, le=365),
+):
+    """Activation and monetization funnel snapshot."""
+    cutoff = datetime.now(timezone.utc) - timedelta(days=days)
+
+    signups = await db.scalar(select(func.count(User.id)).where(User.created_at >= cutoff))
+    upload_users = await db.scalar(
+        select(func.count(func.distinct(Document.user_id)))
+        .where(Document.created_at >= cutoff)
+        .where(Document.user_id.is_not(None))
+    )
+    session_users = await db.scalar(
+        select(func.count(func.distinct(ChatSession.user_id)))
+        .where(ChatSession.created_at >= cutoff)
+        .where(ChatSession.user_id.is_not(None))
+    )
+    chat_users = await db.scalar(
+        select(func.count(func.distinct(ChatSession.user_id)))
+        .join(Message, Message.session_id == ChatSession.id)
+        .where(Message.created_at >= cutoff)
+        .where(Message.role == "user")
+        .where(ChatSession.user_id.is_not(None))
+    )
+    power_user_sq = (
+        select(
+            ChatSession.user_id.label("user_id"),
+            func.count(Message.id).label("message_count"),
+        )
+        .join(Message, Message.session_id == ChatSession.id)
+        .where(Message.created_at >= cutoff)
+        .where(Message.role == "user")
+        .where(ChatSession.user_id.is_not(None))
+        .group_by(ChatSession.user_id)
+        .subquery()
+    )
+    five_message_users = await db.scalar(
+        select(func.count())
+        .select_from(power_user_sq)
+        .where(power_user_sq.c.message_count >= 5)
+    )
+
+    event_rows = (
+        await db.execute(
+            select(
+                ProductEvent.event_name,
+                func.count(ProductEvent.id).label("events"),
+                func.count(func.distinct(ProductEvent.user_id)).label("users"),
+            )
+            .where(ProductEvent.created_at >= cutoff)
+            .group_by(ProductEvent.event_name)
+        )
+    ).all()
+    event_counts = {
+        r.event_name: {"events": int(r.events), "users": int(r.users)}
+        for r in event_rows
+    }
+
+    reason_rows = (
+        await db.execute(
+            select(
+                ProductEvent.event_name,
+                ProductEvent.reason,
+                ProductEvent.source,
+                ProductEvent.plan,
+                func.count(ProductEvent.id).label("events"),
+                func.count(func.distinct(ProductEvent.user_id)).label("users"),
+            )
+            .where(ProductEvent.created_at >= cutoff)
+            .where(ProductEvent.event_name.in_(["limit_hit", "upgrade_click", "billing_view"]))
+            .group_by(ProductEvent.event_name, ProductEvent.reason, ProductEvent.source, ProductEvent.plan)
+            .order_by(func.count(ProductEvent.id).desc())
+            .limit(50)
+        )
+    ).all()
+
+    stages = [
+        {"key": "signup", "label": "Signups", "users": int(signups or 0)},
+        {"key": "first_upload", "label": "Uploaded document", "users": int(upload_users or 0)},
+        {"key": "first_session", "label": "Created chat session", "users": int(session_users or 0)},
+        {"key": "first_chat", "label": "Sent chat message", "users": int(chat_users or 0)},
+        {"key": "five_chats", "label": "5+ chat messages", "users": int(five_message_users or 0)},
+        {"key": "limit_hit", "label": "Hit paid limit", "users": event_counts.get("limit_hit", {}).get("users", 0)},
+        {"key": "billing_view", "label": "Viewed billing", "users": event_counts.get("billing_view", {}).get("users", 0)},
+        {"key": "upgrade_click", "label": "Clicked upgrade", "users": event_counts.get("upgrade_click", {}).get("users", 0)},
+        {"key": "checkout_created", "label": "Checkout created", "users": event_counts.get("checkout_created", {}).get("users", 0)},
+        {"key": "checkout_completed", "label": "Checkout completed", "users": event_counts.get("checkout_completed", {}).get("users", 0)},
+    ]
+
+    return {
+        "days": days,
+        "since": cutoff.isoformat(),
+        "stages": stages,
+        "event_counts": event_counts,
+        "reasons": [
+            {
+                "event_name": r.event_name,
+                "reason": r.reason,
+                "source": r.source,
+                "plan": r.plan,
+                "events": int(r.events),
+                "users": int(r.users),
+            }
+            for r in reason_rows
+        ],
     }
 
 

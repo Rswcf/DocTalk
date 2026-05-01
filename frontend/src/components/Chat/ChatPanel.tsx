@@ -18,6 +18,8 @@ import { SUGGESTED_KEYS } from '../../lib/constants';
 import { useChatStream } from '../../lib/useChatStream';
 import { openAuthModal } from '../../lib/auth-modal';
 import { errorCopy } from '../../lib/errorCopy';
+import { billingHref } from '../../lib/billingLinks';
+import { trackEvent } from '../../lib/analytics';
 
 interface ChatPanelProps {
   sessionId: string;
@@ -389,9 +391,15 @@ export default function ChatPanel({ sessionId, onCitationClick, maxUserMessages,
               onExport={handleExport}
               onExportPdf={() => handleExportFormat('pdf')}
               onExportDocx={() => handleExportFormat('docx')}
-              onBillingRedirect={() => {
+              onBillingRedirect={(intent) => {
                 setPlusMenuOpen(false);
-                router.push('/billing');
+                trackEvent('upgrade_click', {
+                  plan: intent.plan,
+                  period: 'monthly',
+                  source: 'chat_plus_menu',
+                  reason: intent.reason,
+                });
+                router.push(billingHref({ plan: intent.plan, source: 'chat_plus_menu', reason: intent.reason }));
               }}
               t={t}
               tOr={tOr}

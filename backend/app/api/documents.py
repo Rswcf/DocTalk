@@ -212,6 +212,7 @@ async def upload_document(
                 "message": "Document limit reached for current plan",
                 "limit": max_docs,
                 "current": user_doc_count,
+                "plan": plan,
             },
         )
 
@@ -236,6 +237,7 @@ async def upload_document(
                     "error": "FILE_TOO_LARGE",
                     "message": "File is too large",
                     "max_mb": max_size_mb,
+                    "plan": plan,
                 },
             )
     data = bytes(buf)
@@ -335,6 +337,7 @@ async def ingest_url(
                 "message": "Document limit reached for current plan",
                 "limit": max_docs,
                 "current": user_doc_count,
+                "plan": plan,
             },
         )
 
@@ -395,6 +398,7 @@ async def ingest_url(
                     "error": "FILE_TOO_LARGE",
                     "message": "File is too large",
                     "max_mb": max_size_mb,
+                    "plan": plan,
                 },
             )
 
@@ -435,6 +439,7 @@ async def ingest_url(
                     "error": "FILE_TOO_LARGE",
                     "message": "File is too large",
                     "max_mb": max_size_mb,
+                    "plan": plan,
                 },
             )
 

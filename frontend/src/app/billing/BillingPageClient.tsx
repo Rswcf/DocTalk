@@ -14,6 +14,8 @@ import {
 import { triggerCreditsRefresh } from "../../components/CreditsDisplay";
 import PricingTable from "../../components/PricingTable";
 import { PLAN_HIERARCHY, type PlanType } from "../../lib/models";
+import { authHrefFor, type BillingPeriodIntent, type BillingPlanIntent } from "../../lib/billingLinks";
+import { trackEvent } from "../../lib/analytics";
 import { Check } from "lucide-react";
 import { usePageTitle } from "../../lib/usePageTitle";
 import { useUserProfile } from "../../lib/useUserProfile";
@@ -50,6 +52,26 @@ function BillingContent() {
   const [confirmCancel, setConfirmCancel] = useState(false);
 
   useEffect(() => {
+    const planParam = searchParams.get("plan");
+    const periodParam = searchParams.get("period") || searchParams.get("billing");
+
+    if (planParam === "plus" || planParam === "pro") {
+      setSelectedPlan(planParam as BillingPlanIntent);
+    }
+    if (periodParam === "monthly" || periodParam === "annual") {
+      setBillingPeriod(periodParam as BillingPeriodIntent);
+    }
+    if (planParam === "plus" || planParam === "pro" || searchParams.get("source") || searchParams.get("reason")) {
+      trackEvent("billing_view", {
+        plan: planParam || "plus",
+        period: periodParam || "monthly",
+        source: searchParams.get("source"),
+        reason: searchParams.get("reason"),
+      });
+    }
+  }, [searchParams]);
+
+  useEffect(() => {
     const isSuccess = searchParams.get("success");
     const isCanceled = searchParams.get("canceled");
 
@@ -68,9 +90,11 @@ function BillingContent() {
 
   useEffect(() => {
     if (status === "unauthenticated") {
-      router.push("/auth?callbackUrl=/billing");
+      const query = searchParams.toString();
+      const returnPath = query ? `/billing?${query}` : "/billing";
+      router.push(authHrefFor(returnPath));
     }
-  }, [status, router]);
+  }, [status, router, searchParams]);
 
   useEffect(() => {
     if (!confirmUpgrade && !confirmDowngrade && !confirmCancel) return;
@@ -145,7 +169,19 @@ function BillingContent() {
     if (submitting) return;
     setSubmitting(plan);
     try {
+      trackEvent("upgrade_click", {
+        plan,
+        period: billingPeriod,
+        source: searchParams.get("source") || "billing",
+        reason: searchParams.get("reason"),
+      });
       const res = await createSubscription({ plan, billing: billingPeriod });
+      trackEvent("checkout_created", {
+        plan,
+        period: billingPeriod,
+        source: searchParams.get("source") || "billing",
+        reason: searchParams.get("reason"),
+      });
       window.location.href = res.checkout_url;
       return;
     } catch {

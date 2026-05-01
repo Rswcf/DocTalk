@@ -10,7 +10,9 @@ import { Trash2, Link2, FileUp } from 'lucide-react';
 import { useDocTalkStore } from '../store';
 import { useLocale } from '../i18n';
 import { clearAccountStorage } from '../lib/clearAccountStorage';
-import { errorCopy } from '../lib/errorCopy';
+import { errorCopy, type ErrorCopy } from '../lib/errorCopy';
+import { billingHref } from '../lib/billingLinks';
+import { trackEvent } from '../lib/analytics';
 import { sanitizeFilename } from '../lib/utils';
 import { PrivacyBadge } from '../components/PrivacyBadge';
 import Header from '../components/Header';
@@ -208,6 +210,7 @@ export default function HomePageClient() {
   const [isDragging, setDragging] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [progressText, setProgressText] = useState('');
+  const [uploadErrorCopy, setUploadErrorCopy] = useState<ErrorCopy | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const [myDocs, setMyDocs] = useState<StoredDoc[]>([]);
   const [serverDocs, setServerDocs] = useState<DocumentBrief[]>([]);
@@ -216,6 +219,7 @@ export default function HomePageClient() {
   const [urlInput, setUrlInput] = useState('');
   const [urlLoading, setUrlLoading] = useState(false);
   const [urlError, setUrlError] = useState('');
+  const [urlErrorCopy, setUrlErrorCopy] = useState<ErrorCopy | null>(null);
   const isLoggedIn = status === 'authenticated';
   const { profile } = useUserProfile();
 
@@ -263,6 +267,7 @@ export default function HomePageClient() {
 
   const maxUploadMb = useMemo(() => MAX_UPLOAD_MB_BY_PLAN[userPlan] ?? MAX_UPLOAD_MB_BY_PLAN.free, [userPlan]);
   const maxUploadBytes = maxUploadMb * 1024 * 1024;
+  const uploadUpgradePlan = userPlan === 'plus' ? 'pro' : 'plus';
 
   const getDocStatusMeta = (status?: string) => {
     const normalized = (status || '').toLowerCase();
@@ -278,6 +283,7 @@ export default function HomePageClient() {
 
   const onFiles = useCallback(async (file: File) => {
     if (!file) return;
+    setUploadErrorCopy(null);
     const allowedTypes = [
       'application/pdf',
       'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
@@ -290,18 +296,32 @@ export default function HomePageClient() {
     const ext = file.name.toLowerCase().slice(file.name.lastIndexOf('.'));
     if (!allowedTypes.includes(file.type) && !allowedExtensions.includes(ext)) {
       setProgressText(t('upload.unsupportedFormat'));
+      setUploadErrorCopy(null);
       return;
     }
     if (file.size > maxUploadBytes) {
-      setProgressText(t('dashboard.fileSizeLimit', { size: maxUploadMb }));
+      const body = t('dashboard.fileSizeLimit', { size: maxUploadMb });
+      setProgressText(body);
+      setUploadErrorCopy({
+        title: tOr('errors.FILE_TOO_LARGE.title', 'File too large'),
+        body,
+        cta: {
+          label: tOr('errors.cta.upgrade', 'Upgrade'),
+          href: billingHref({ plan: uploadUpgradePlan, source: 'limit', reason: 'file_size' }),
+        },
+        severity: 'warning',
+      });
+      trackEvent('limit_hit', { source: 'dashboard_upload_precheck', reason: 'file_size', plan: userPlan });
       return;
     }
     setUploading(true);
     setProgressText(t('upload.uploading'));
+    setUploadErrorCopy(null);
     setDocumentStatus('uploading');
     try {
       const res = await uploadDocument(file);
       const docId = res.document_id;
+      trackEvent('document_upload_created', { source: 'dashboard_upload', plan: userPlan });
       setDocument(docId);
       if (!isLoggedIn) {
         const docs: StoredDoc[] = JSON.parse(localStorage.getItem('doctalk_docs') || '[]');
@@ -343,9 +363,13 @@ export default function HomePageClient() {
     } catch (e: unknown) {
       const copy = errorCopy(e, t, tOr);
       setProgressText(copy.body);
+      setUploadErrorCopy(copy.cta ? copy : null);
+      if (copy.cta) {
+        trackEvent('limit_hit', { source: 'dashboard_upload', reason: copy.cta.href.includes('file_size') ? 'file_size' : 'upload_limit', plan: userPlan });
+      }
       setUploading(false);
     }
-  }, [isLoggedIn, maxUploadBytes, maxUploadMb, router, setDocument, setDocumentStatus, t, tOr]);
+  }, [isLoggedIn, maxUploadBytes, maxUploadMb, router, setDocument, setDocumentStatus, t, tOr, uploadUpgradePlan, userPlan]);
 
   const onDrop = (e: React.DragEvent) => {
     e.preventDefault();
@@ -362,15 +386,19 @@ export default function HomePageClient() {
   const onUrlSubmit = useCallback(async () => {
     const url = urlInput.trim();
     if (!url) return;
+    setUrlErrorCopy(null);
     if (!url.startsWith('http://') && !url.startsWith('https://')) {
       setUrlError(t('upload.urlError'));
+      setUrlErrorCopy(null);
       return;
     }
     setUrlLoading(true);
     setUrlError('');
+    setUrlErrorCopy(null);
     try {
       const res = await ingestUrl(url);
       const docId = res.document_id;
+      trackEvent('url_ingest_created', { source: 'dashboard_url', plan: userPlan });
       setDocument(docId);
       setUrlInput('');
       getMyDocuments().then(setServerDocs).catch(console.error);
@@ -378,10 +406,14 @@ export default function HomePageClient() {
     } catch (e: unknown) {
       const copy = errorCopy(e, t, tOr);
       setUrlError(copy.body);
+      setUrlErrorCopy(copy.cta ? copy : null);
+      if (copy.cta) {
+        trackEvent('limit_hit', { source: 'dashboard_url', reason: copy.cta.href.includes('file_size') ? 'file_size' : 'url_limit', plan: userPlan });
+      }
     } finally {
       setUrlLoading(false);
     }
-  }, [urlInput, router, setDocument, t, tOr]);
+  }, [urlInput, router, setDocument, t, tOr, userPlan]);
 
   const confirmDeleteDocument = useCallback(async (documentId: string) => {
     setDeletingId(documentId);
@@ -446,7 +478,16 @@ export default function HomePageClient() {
             </button>
             {progressText && (
               <div aria-live="polite" className={`mt-4 text-sm ${uploading ? 'text-zinc-500' : 'text-red-600 dark:text-red-400'}`}>
-                {progressText}
+                <p>{progressText}</p>
+                {uploadErrorCopy?.cta && (
+                  <Link
+                    href={uploadErrorCopy.cta.href}
+                    onClick={() => trackEvent('upgrade_click', { source: 'upload_error', reason: 'upload_limit' })}
+                    className="mt-3 inline-flex items-center justify-center rounded-lg bg-zinc-900 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-zinc-800 dark:bg-zinc-50 dark:text-zinc-900 dark:hover:bg-zinc-200 focus-visible:ring-2 focus-visible:ring-zinc-400 dark:focus-visible:ring-zinc-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-900"
+                  >
+                    {uploadErrorCopy.cta.label}
+                  </Link>
+                )}
               </div>
             )}
           </div>
@@ -458,7 +499,7 @@ export default function HomePageClient() {
               <input
                 type="url"
                 value={urlInput}
-                onChange={(e) => { setUrlInput(e.target.value); setUrlError(''); }}
+                onChange={(e) => { setUrlInput(e.target.value); setUrlError(''); setUrlErrorCopy(null); }}
                 onKeyDown={(e) => { if (e.key === 'Enter') onUrlSubmit(); }}
                 placeholder={t('upload.urlPlaceholder')}
                 className="w-full pl-9 pr-3 py-2.5 rounded-lg border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-sm text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 focus:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400 dark:focus-visible:ring-zinc-500 transition-shadow"
@@ -475,7 +516,18 @@ export default function HomePageClient() {
             </button>
           </div>
           {urlError && (
-            <p role="alert" className="mt-2 text-center text-sm text-red-600 dark:text-red-400">{urlError}</p>
+            <div role="alert" className="mt-2 text-center text-sm text-red-600 dark:text-red-400">
+              <p>{urlError}</p>
+              {urlErrorCopy?.cta && (
+                <Link
+                  href={urlErrorCopy.cta.href}
+                  onClick={() => trackEvent('upgrade_click', { source: 'url_error', reason: 'url_limit' })}
+                  className="mt-3 inline-flex items-center justify-center rounded-lg bg-zinc-900 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-zinc-800 dark:bg-zinc-50 dark:text-zinc-900 dark:hover:bg-zinc-200 focus-visible:ring-2 focus-visible:ring-zinc-400 dark:focus-visible:ring-zinc-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-900"
+                >
+                  {urlErrorCopy.cta.label}
+                </Link>
+              )}
+            </div>
           )}
 
           <div className="mt-3 text-center">
