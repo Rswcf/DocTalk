@@ -50,7 +50,7 @@ None of these are dealbreakers for everyone. If you only work with English PDFs 
 - No collaborative annotation features
 - Smaller brand recognition compared to ChatPDF
 
-**Pricing:** Free tier (500 credits/month). Plus: $9.99/month (3,000 credits). Pro: $19.99/month (9,000 credits). Credit packs available for one-time purchases. See full [pricing](/pricing).
+**Pricing:** Free tier (300 credits/month). Plus: $9.99/month (3,000 credits). Pro: $19.99/month (9,000 credits). Credit packs available for one-time purchases. See full [pricing](/pricing).
 
 **Best for:** Users who work with multiple document formats and need to verify AI answers against the original source. Particularly strong for legal documents, research papers, and multilingual workflows.
 
@@ -204,7 +204,7 @@ None of these are dealbreakers for everyone. If you only work with English PDFs 
 
 | Tool | Formats | Citation Highlighting | Languages | Free Tier | Paid Plans |
 |---|---|---|---|---|---|
-| **DocTalk** | PDF, DOCX, PPTX, XLSX, TXT, MD, URL | Yes — click to highlight | 11 | 500 credits/mo | From $9.99/mo |
+| **DocTalk** | PDF, DOCX, PPTX, XLSX, TXT, MD, URL | Yes — click to highlight | 11 | 300 credits/mo | From $9.99/mo |
 | **AskYourPDF** | PDF only | No (page numbers) | ~5 | Limited daily | From $9.99/mo |
 | **PDF.ai** | PDF only | No (page numbers) | ~3 | Generous | From $15/mo |
 | **Humata** | PDF only | Partial | ~5 | 60 pages/PDF | From $1.99/mo |

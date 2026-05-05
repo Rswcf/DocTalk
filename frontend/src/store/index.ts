@@ -1,7 +1,7 @@
 "use client";
 
 import { create } from 'zustand';
-import { DEFAULT_MODE } from '../lib/models';
+import { DEFAULT_MODE, isKnownMode } from '../lib/models';
 import type { PlanType } from '../lib/models';
 import type { Citation, Message, NormalizedBBox, SessionItem } from '../types';
 
@@ -110,9 +110,9 @@ const initialState = {
   scrollNonce: 0,
   selectedMode: (() => {
     const stored = typeof window !== 'undefined' ? localStorage.getItem('doctalk_mode') : null;
-    // Migration: if stored value looks like an old model ID (contains '/'), reset to default
-    if (stored && stored.includes('/')) return DEFAULT_MODE;
-    return stored || DEFAULT_MODE;
+    // Migration: old model IDs or retired modes (for example "thorough") reset to Flash.
+    if (!isKnownMode(stored) || stored.includes('/')) return DEFAULT_MODE;
+    return stored;
   })(),
   domainMode: null as string | null,
   sessions: [] as SessionItem[],

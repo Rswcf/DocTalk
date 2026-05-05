@@ -18,7 +18,7 @@ export const metadata: Metadata = buildMarketingMetadata({
 const faqItems = [
   {
     question: 'What is the best free ChatPDF alternative?',
-    answer: 'Google NotebookLM is the best completely free alternative, offering multi-source notebooks and audio podcast generation with no usage limits (Google account required). DocTalk also offers a free demo with no signup required and a free tier with 500 credits per month.',
+    answer: 'Google NotebookLM is the best completely free alternative, offering multi-source notebooks and audio podcast generation with no usage limits (Google account required). DocTalk also offers a free demo with no signup required and a free tier with 300 credits per month.',
   },
   {
     question: 'Which ChatPDF alternative supports the most file formats?',

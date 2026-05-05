@@ -65,13 +65,13 @@ If you like the demo and want to upload your own documents, creating a free DocT
 | Credits per month | 500 |
 | Document uploads | 3 documents |
 | Max file size | 25 MB |
-| AI modes | Quick + Balanced |
+| AI modes | Quick + limited Balanced |
 | Sessions per document | 3 |
 | Citation highlighting | Yes |
 | Supported formats | PDF, DOCX, PPTX, XLSX, TXT, MD, URL |
 | Languages | 11 |
 
-500 credits per month is enough for approximately 50-250 questions depending on document length and AI mode. Quick mode uses about 2 credits per question, while Balanced mode uses about 8.
+300 credits per month is enough for approximately 50-250 questions depending on document length and AI mode. Quick mode uses about 2 credits per question, while Balanced mode uses about 8.
 
 Signing up requires only a Google account, Microsoft account, or email address. No credit card needed.
 
@@ -127,7 +127,7 @@ The free demo is useful for anyone who wants to:
 - **Show a colleague** what AI document chat looks like — share the demo link and they can try it immediately
 - **Students and researchers** — limited budget but need to understand documents quickly
 
-If you work with documents daily and find the tool useful, the free account (500 credits/month) covers light usage, and the Plus plan covers moderate use at $9.99/month.
+If you work with documents daily and find the tool useful, the free account (300 credits/month) covers light usage, and the Plus plan covers moderate use at $9.99/month.
 
 ## Tips for Getting the Most from Free Credits
 
@@ -151,11 +151,11 @@ Yes. The demo at [doctalk.site/demo](/demo) requires no account, no email, and n
 
 ### How many questions can I ask for free?
 
-The demo allows 5 messages per session and 50 sessions per document. With a free account (which requires signing up), you get 500 credits per month — enough for approximately 50-250 questions depending on the AI mode used.
+The demo allows 5 messages per session and 50 sessions per document. With a free account (which requires signing up), you get 300 credits per month — enough for approximately 50-250 questions depending on the AI mode used.
 
 ### Will I be asked to pay after the demo?
 
-No. The demo is self-contained. If you want to upload your own documents, you can create a free account (no credit card required) with 500 credits per month. Paid plans are available but never required.
+No. The demo is self-contained. If you want to upload your own documents, you can create a free account (no credit card required) with 300 credits per month. Paid plans are available but never required.
 
 ### Can I upload my own PDF in the demo?
 

@@ -30,7 +30,7 @@ const faqItems = [
   },
   {
     question: 'Is DocTalk more expensive than PDF.ai?',
-    answer: 'DocTalk offers a free demo with no signup and a free tier with 500 credits per month. Paid plans start at $9.99/month. PDF.ai pricing varies, but DocTalk generally provides more features per dollar, including citation highlighting, 7 format support, and 11 languages.',
+    answer: 'DocTalk offers a free demo with no signup and a free tier with 300 credits per month. Paid plans start at $9.99/month. PDF.ai pricing varies, but DocTalk generally provides more features per dollar, including citation highlighting, 7 format support, and 11 languages.',
   },
 ];
 

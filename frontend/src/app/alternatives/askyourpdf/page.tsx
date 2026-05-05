@@ -18,7 +18,7 @@ export const metadata: Metadata = buildMarketingMetadata({
 const faqItems = [
   {
     question: 'What is the best free AskYourPDF alternative?',
-    answer: 'Google NotebookLM is completely free with multi-source notebooks and audio summaries. DocTalk also offers a free demo with no signup and a free tier with 500 credits per month, making both strong options for users looking to switch from AskYourPDF without paying.',
+    answer: 'Google NotebookLM is completely free with multi-source notebooks and audio summaries. DocTalk also offers a free demo with no signup and a free tier with 300 credits per month, making both strong options for users looking to switch from AskYourPDF without paying.',
   },
   {
     question: 'Why do people switch from AskYourPDF to other tools?',

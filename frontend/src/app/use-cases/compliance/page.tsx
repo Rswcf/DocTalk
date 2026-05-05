@@ -39,7 +39,7 @@ const faqItems = [
   {
     question: 'What pricing works for compliance teams?',
     answer:
-      'DocTalk offers individual plans: Free (500 credits/month), Plus ($9.99/month for 3,000 credits), and Pro ($19.99/month for 9,000 credits). The Pro plan includes Thorough analysis mode for complex regulatory documents and custom instructions for specialized compliance frameworks. Team plans are on the roadmap.',
+      'DocTalk offers individual plans: Free (300 credits/month), Plus ($9.99/month for 3,000 credits), and Pro ($19.99/month for 9,000 credits). Paid plans include unrestricted Pro mode for complex regulatory documents and custom instructions for specialized compliance frameworks. Team plans are on the roadmap.',
   },
 ];
 

@@ -46,7 +46,7 @@ export default function PricingPage() {
                 name: 'How do DocTalk credits work?',
                 acceptedAnswer: {
                   '@type': 'Answer',
-                  text: 'Credits measure usage across document parsing and AI chat. Free accounts receive 500 credits per month, Plus includes 3,000 credits, and Pro includes 9,000 credits.',
+                  text: 'Credits measure usage across document parsing and AI chat. Free accounts receive 300 credits per month, Plus includes 3,000 credits, and Pro includes 9,000 credits.',
                 },
               },
               {
@@ -54,7 +54,7 @@ export default function PricingPage() {
                 name: 'Which plans include all AI modes?',
                 acceptedAnswer: {
                   '@type': 'Answer',
-                  text: 'Plus and Pro include Quick, Balanced, and Thorough modes. Free includes Quick and Balanced.',
+                  text: 'Plus and Pro include unrestricted Flash and Pro modes. Free includes Flash and limited Pro.',
                 },
               },
               {
@@ -91,14 +91,14 @@ export default function PricingPage() {
                   name: 'Free',
                   price: '0',
                   priceCurrency: 'USD',
-                  description: '500 credits/month, 3 documents, Quick & Balanced AI modes',
+                  description: '300 credits/month, 3 documents, Flash and limited Pro AI modes',
                 },
                 {
                   '@type': 'Offer',
                   name: 'Plus',
                   price: '9.99',
                   priceCurrency: 'USD',
-                  description: '3,000 credits/month, unlimited documents, all AI modes including Thorough',
+                  description: '3,000 credits/month, unlimited documents, unrestricted Flash and Pro modes',
                 },
                 {
                   '@type': 'Offer',

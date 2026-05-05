@@ -9,7 +9,6 @@ import {
   Gauge,
   Zap,
   Scale,
-  SearchCode,
   ArrowRight,
 } from 'lucide-react';
 
@@ -20,8 +19,8 @@ export default function PerformanceModesClient() {
     {
       icon: Zap,
       name: t('featuresPerformance.mode.quick.name'),
-      model: 'DeepSeek V3.2',
-      credits: 2,
+      model: 'DeepSeek V4 Flash',
+      credits: 3,
       speed: t('featuresPerformance.mode.quick.speed'),
       description: t('featuresPerformance.mode.quick.description'),
       bestFor: [
@@ -35,7 +34,7 @@ export default function PerformanceModesClient() {
     {
       icon: Scale,
       name: t('featuresPerformance.mode.balanced.name'),
-      model: 'Mistral Medium 3.1',
+      model: 'DeepSeek V4 Pro',
       credits: 8,
       speed: t('featuresPerformance.mode.balanced.speed'),
       description: t('featuresPerformance.mode.balanced.description'),
@@ -46,21 +45,6 @@ export default function PerformanceModesClient() {
         t('featuresPerformance.mode.balanced.bestFor4'),
       ],
       availability: t('featuresPerformance.mode.balanced.availability'),
-    },
-    {
-      icon: SearchCode,
-      name: t('featuresPerformance.mode.thorough.name'),
-      model: 'Mistral Large 2512',
-      credits: 24,
-      speed: t('featuresPerformance.mode.thorough.speed'),
-      description: t('featuresPerformance.mode.thorough.description'),
-      bestFor: [
-        t('featuresPerformance.mode.thorough.bestFor1'),
-        t('featuresPerformance.mode.thorough.bestFor2'),
-        t('featuresPerformance.mode.thorough.bestFor3'),
-        t('featuresPerformance.mode.thorough.bestFor4'),
-      ],
-      availability: t('featuresPerformance.mode.thorough.availability'),
     },
   ];
 
@@ -110,14 +94,14 @@ export default function PerformanceModesClient() {
           </div>
         </section>
 
-        {/* Three Modes */}
+        {/* Two Modes */}
         <section className="bg-zinc-50 dark:bg-zinc-900/50">
           <div className="max-w-4xl mx-auto px-6 py-16">
             <h2 className="font-serif text-2xl sm:text-3xl font-semibold text-zinc-900 dark:text-zinc-100 tracking-tight mb-12 text-center">
               {t('featuresPerformance.modes.title')}
             </h2>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {modes.map((mode) => {
                 const Icon = mode.icon;
                 return (
@@ -190,9 +174,6 @@ export default function PerformanceModesClient() {
               </p>
               <p>
                 <strong className="text-zinc-900 dark:text-zinc-100">{t('featuresPerformance.mode.balanced.name')}</strong> {t('featuresPerformance.whenToUse.balanced')}
-              </p>
-              <p>
-                <strong className="text-zinc-900 dark:text-zinc-100">{t('featuresPerformance.mode.thorough.name')}</strong> {t('featuresPerformance.whenToUse.thorough')}
               </p>
               <p>
                 {t('featuresPerformance.whenToUse.switching')}

@@ -48,7 +48,7 @@ export default function CitationsPage() {
             description:
               'AI document chat with numbered source citations and real-time highlight navigation. Upload PDF, DOCX, PPTX, XLSX and verify every answer.',
             offers: [
-              { '@type': 'Offer', price: '0', priceCurrency: 'USD', name: 'Free', description: '500 credits/month' },
+              { '@type': 'Offer', price: '0', priceCurrency: 'USD', name: 'Free', description: '300 credits/month' },
               { '@type': 'Offer', price: '9.99', priceCurrency: 'USD', name: 'Plus', description: '3000 credits/month' },
               { '@type': 'Offer', price: '19.99', priceCurrency: 'USD', name: 'Pro', description: '9000 credits/month' },
             ],
@@ -143,7 +143,7 @@ export default function CitationsPage() {
                 name: 'Are citations available on the free plan?',
                 acceptedAnswer: {
                   '@type': 'Answer',
-                  text: 'Yes. Citation highlighting is available on all plans, including the free tier. Free accounts get 500 credits per month. You can also try citation highlighting in the free demo without creating an account.',
+                  text: 'Yes. Citation highlighting is available on all plans, including the free tier. Free accounts get 300 credits per month. You can also try citation highlighting in the free demo without creating an account.',
                 },
               },
             ],

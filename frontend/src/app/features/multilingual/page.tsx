@@ -49,7 +49,7 @@ export default function MultilingualPage() {
               'AI document chat supporting 11 languages: English, Chinese, Japanese, Spanish, German, French, Korean, Portuguese, Italian, Arabic, and Hindi.',
             inLanguage: ['en', 'zh', 'ja', 'es', 'de', 'fr', 'ko', 'pt', 'it', 'ar', 'hi'],
             offers: [
-              { '@type': 'Offer', price: '0', priceCurrency: 'USD', name: 'Free', description: '500 credits/month' },
+              { '@type': 'Offer', price: '0', priceCurrency: 'USD', name: 'Free', description: '300 credits/month' },
               { '@type': 'Offer', price: '9.99', priceCurrency: 'USD', name: 'Plus', description: '3000 credits/month' },
               { '@type': 'Offer', price: '19.99', priceCurrency: 'USD', name: 'Pro', description: '9000 credits/month' },
             ],
@@ -94,7 +94,7 @@ export default function MultilingualPage() {
                 name: 'Is multilingual chat available on the free plan?',
                 acceptedAnswer: {
                   '@type': 'Answer',
-                  text: 'Yes. All 11 languages are available on every plan, including the free tier with 500 credits per month. There is no language restriction on any plan.',
+                  text: 'Yes. All 11 languages are available on every plan, including the free tier with 300 credits per month. There is no language restriction on any plan.',
                 },
               },
             ],

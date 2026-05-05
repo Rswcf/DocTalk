@@ -86,7 +86,7 @@ DocTalk is an AI-powered PDF reader with a unique competitive advantage: **citat
 
 ### Pricing Implementation Status
 - ✅ **Credit rescaling deployed (÷10)**: All credit amounts reduced 10x for better unit economics (backend migration `20260210_0013_rescale_ledger.py`)
-- ✅ **Free tier reduced to 500 credits**: Creates upgrade pressure without blocking trial usage
+- ✅ **Free tier reduced to 300 credits**: Creates upgrade pressure without blocking trial usage
 - ✅ **Plus tier launched ($9.99/month)**: Captures casual users between Free and Pro
 - ✅ **Annual pricing with 20% discount**: Reduces churn and improves LTV
 - ✅ **Credit packs repriced**: Boost/Power/Ultra now 1.2-2.4x more expensive per-credit than subscriptions, making subscriptions the better value
@@ -98,7 +98,7 @@ DocTalk is an AI-powered PDF reader with a unique competitive advantage: **citat
 
 | Tier | Monthly | Annual (save 20%) | Credits/mo | Documents | Models |
 |------|---------|---------------------|-----------|-----------|--------|
-| **Free** | $0 | — | 500 | 3 stored | Quick + Balanced |
+| **Free** | $0 | — | 300 | 3 stored | Quick + limited Balanced |
 | **Plus** | $9.99 | $7.99/mo | 3,000 | 20 stored | All 3 modes |
 | **Pro** | $19.99 | $15.99/mo | 9,000 | Unlimited | All 3 modes |
 | **Team** (PLANNED) | $29.99/seat | $24.99/seat/mo | 200K/seat | Unlimited | All 3 modes |
@@ -112,7 +112,7 @@ DocTalk is an AI-powered PDF reader with a unique competitive advantage: **citat
 For comparison, subscriptions range from 0.167¢/credit (Pro annual) to 0.333¢/credit (Plus monthly), making them 1.2-2.4x more cost-effective than packs.
 
 ### Key Changes (Completed)
-1. **Reduced free tier** to 500 credits — creates upgrade pressure quickly
+1. **Reduced free tier** to 300 credits — creates upgrade pressure quickly
 2. **Added Plus tier** ($9.99/month) — captures casual users who need more than Free but aren't power users
 3. **Raised Pro price** to $19.99/month with 9,000 credits — aligns with market
 4. **Add Team tier** ($29.99/seat/month) — unlock B2B revenue (planned)

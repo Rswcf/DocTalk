@@ -216,7 +216,7 @@ async def get_usage_breakdown(
 
     grand_total_credits = sum(m["total_credits"] for m in mode_agg.values())
 
-    # Sort order: quick, balanced, thorough, then "other" last
+    # Sort order: current modes first, legacy Thorough next, then "other" last.
     mode_order = {"quick": 0, "balanced": 1, "thorough": 2}
     sorted_modes = sorted(mode_agg.keys(), key=lambda m: mode_order.get(m, 99))
 

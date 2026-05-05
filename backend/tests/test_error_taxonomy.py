@@ -566,6 +566,38 @@ async def test_chat_insufficient_credits_precheck(
 
 
 @pytest.mark.asyncio
+async def test_chat_free_pro_monthly_limit_reached(
+    client: AsyncClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    user = _make_user(
+        plan="free",
+        monthly_credits_granted_at=datetime.now(timezone.utc),
+    )
+    db = _make_db(
+        scalar=AsyncMock(return_value=settings.FREE_BALANCED_MONTHLY_LIMIT),
+        commit=AsyncMock(),
+    )
+    _override_dependencies(db, optional_user=user)
+    session = SimpleNamespace(document=SimpleNamespace(status="ready", demo_slug=None), document_id=uuid.uuid4())
+    monkeypatch.setattr(chat_api, "verify_session_access", AsyncMock(return_value=session))
+    monkeypatch.setattr(chat_api.auth_chat_limiter, "is_allowed", AsyncMock(return_value=True))
+
+    async def _noop(*_args, **_kwargs):
+        return None
+
+    monkeypatch.setattr("app.services.credit_service.ensure_monthly_credits", _noop)
+
+    response = await client.post(
+        f"/api/sessions/{uuid.uuid4()}/chat",
+        json={"message": "Hello", "mode": "balanced"},
+    )
+    detail = _assert_error(response, 402, "PRO_MODE_LIMIT_REACHED")
+    assert detail["limit"] == settings.FREE_BALANCED_MONTHLY_LIMIT
+    assert detail["required_plan"] == "plus"
+
+
+@pytest.mark.asyncio
 async def test_chat_continue_continuation_limit(
     client: AsyncClient,
     monkeypatch: pytest.MonkeyPatch,
@@ -896,44 +928,20 @@ async def test_chunks_rate_limited(client: AsyncClient, monkeypatch: pytest.Monk
     assert response.headers.get("retry-after") == "60"
 
 
-@pytest.mark.asyncio
-async def test_chat_service_mode_not_allowed_sse_emits_required_plan() -> None:
-    """
-    chat_service emits MODE_NOT_ALLOWED as an SSE error frame (not an
-    HTTPException) when a Free-plan user requests Thorough mode. The
-    required_plan field was added in Phase 1 so the frontend can render
-    a targeted upgrade CTA. Regression test this contract directly.
-    """
-    user = _make_user(plan="free")
-    session_id = uuid.uuid4()
+def test_mode_registry_has_flash_and_pro_only() -> None:
+    """Current product surface exposes Flash and Pro; Thorough is legacy only."""
+    assert settings.MODE_MODELS == {
+        "quick": "deepseek-v4-flash",
+        "balanced": "deepseek-v4-pro",
+    }
+    assert settings.PREMIUM_MODES == []
+    assert "thorough" not in settings.MODE_MODELS
 
-    async def _fake_scalar(*_a, **_kw):
-        return SimpleNamespace(id=session_id, document_id=None, collection_id=None)
 
-    # Minimal DB stub that returns a session object on the first execute()
-    # call so chat_stream reaches the Thorough-mode gate before touching
-    # anything else. Use AsyncMock for call-site parity.
-    class _SessionResult:
-        def scalar_one_or_none(self):
-            return SimpleNamespace(id=session_id, document_id=None, collection_id=None)
-
-    db = _make_db(execute=AsyncMock(return_value=_SessionResult()))
-
-    svc = chat_service_module.ChatService()
-    gen = svc.chat_stream(
-        session_id=session_id,
-        user_message="hello",
-        db=db,  # type: ignore[arg-type]
-        user=user,
-        locale="en",
-        mode="thorough",
-        domain_mode=None,
-    )
-
-    first = await gen.__anext__()
-    assert first["event"] == "error"
-    assert first["data"]["code"] == "MODE_NOT_ALLOWED"
-    assert first["data"]["required_plan"] == "plus"
+def test_deepseek_chat_requests_disable_thinking_by_default() -> None:
+    kwargs: dict[str, object] = {}
+    chat_service_module._apply_provider_options(kwargs, "deepseek-v4-flash")
+    assert kwargs["extra_body"] == {"thinking": {"type": "disabled"}}
 
 
 @pytest.mark.asyncio

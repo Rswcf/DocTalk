@@ -100,21 +100,15 @@ function VisualModes() {
       <div className="absolute inset-0 flex items-center justify-center gap-2">
         <div className="flex flex-col items-center gap-1">
           <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 text-[10px] font-semibold text-zinc-600 dark:text-zinc-300">
-            Quick
+            Flash
           </span>
-          <span className="text-[8px] text-zinc-500 dark:text-zinc-400 font-mono">~2s</span>
+          <span className="text-[8px] text-zinc-500 dark:text-zinc-400 font-mono">fast</span>
         </div>
         <div className="flex flex-col items-center gap-1">
           <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-accent/10 border border-accent/40 text-[10px] font-semibold text-accent">
-            Balanced
+            Pro
           </span>
-          <span className="text-[8px] text-zinc-500 dark:text-zinc-400 font-mono">~5s</span>
-        </div>
-        <div className="flex flex-col items-center gap-1">
-          <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-zinc-900 dark:bg-zinc-100 border border-zinc-900 dark:border-zinc-100 text-[10px] font-semibold text-white dark:text-zinc-900">
-            Thorough
-          </span>
-          <span className="text-[8px] text-zinc-500 dark:text-zinc-400 font-mono">~15s</span>
+          <span className="text-[8px] text-zinc-500 dark:text-zinc-400 font-mono">deeper</span>
         </div>
       </div>
     </div>

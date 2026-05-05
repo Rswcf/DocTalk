@@ -45,6 +45,20 @@ def _make_db(session_obj, doc_obj, *, assistant_message=None, execute_side_effec
     )
 
 
+def test_continuation_prompt_preserves_locale_language() -> None:
+    prompt = chat_service_module._continuation_prompt("zh", "已经生成的中文回答")
+
+    assert "Continue in Chinese" in prompt
+    assert "Do not switch languages" in prompt
+
+
+def test_continuation_prompt_infers_existing_response_language() -> None:
+    prompt = chat_service_module._continuation_prompt(None, "这是已经生成的中文回答")
+
+    assert "Continue in Chinese" in prompt
+    assert "previous assistant response" in prompt
+
+
 @pytest.mark.asyncio
 async def test_chat_stream_refunds_predebit_when_retrieval_fails(
     monkeypatch: pytest.MonkeyPatch,

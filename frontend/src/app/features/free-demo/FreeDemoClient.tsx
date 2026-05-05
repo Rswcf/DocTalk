@@ -41,7 +41,7 @@ export default function FreeDemoClient() {
   ];
 
   const comparisonRows = [
-    { feature: t('featuresDemo.compare.monthlyCredits'), demo: t('featuresDemo.compare.fiveMsgs'), free: '500', plus: '3,000', pro: '9,000' },
+    { feature: t('featuresDemo.compare.monthlyCredits'), demo: t('featuresDemo.compare.fiveMsgs'), free: '300', plus: '3,000', pro: '9,000' },
     { feature: t('featuresDemo.compare.uploadOwn'), demo: false, free: true, plus: true, pro: true },
     { feature: t('featuresDemo.compare.citationHighlighting'), demo: true, free: true, plus: true, pro: true },
     { feature: t('featuresDemo.compare.quickBalanced'), demo: t('featuresDemo.compare.quickOnly'), free: true, plus: true, pro: true },

@@ -26,7 +26,7 @@ const faqItems = [
   },
   {
     question: 'Can I use DocTalk for free?',
-    answer: 'Yes. DocTalk offers an instant demo that requires no signup at all, plus a free tier with 500 credits per month after you create an account. ChatPDF offers a free tier limited to 2 PDFs per day with 3 questions each.',
+    answer: 'Yes. DocTalk offers an instant demo that requires no signup at all, plus a free tier with 300 credits per month after you create an account. ChatPDF offers a free tier limited to 2 PDFs per day with 3 questions each.',
   },
   {
     question: 'Which tool supports more languages?',

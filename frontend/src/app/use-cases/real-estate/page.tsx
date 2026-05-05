@@ -39,7 +39,7 @@ const faqItems = [
   {
     question: 'Is there a free tier for real estate agents?',
     answer:
-      'Yes. DocTalk offers a Free plan with 500 credits per month — enough to try the tool on several documents. The Plus plan ($9.99/month) provides 3,000 credits for regular use, and the Pro plan ($19.99/month) includes 9,000 credits with advanced features like Thorough analysis mode.',
+      'Yes. DocTalk offers a Free plan with 300 credits per month — enough to try the tool on several documents. The Plus plan ($9.99/month) provides 3,000 credits for regular use, and the Pro plan ($19.99/month) includes 9,000 credits with advanced features like Pro analysis mode.',
   },
 ];
 

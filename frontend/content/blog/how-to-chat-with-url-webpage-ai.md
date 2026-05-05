@@ -213,7 +213,7 @@ No. DocTalk fetches only the URL you provide. It does not access your browser hi
 
 ### Can I try this for free?
 
-Yes. The [free demo](/demo) includes the URL ingestion feature. Free accounts include 500 credits per month. No credit card required.
+Yes. The [free demo](/demo) includes the URL ingestion feature. Free accounts include 300 credits per month. No credit card required.
 
 ## Get Started
 

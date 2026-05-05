@@ -319,8 +319,8 @@ Auth.js v5 将会话令牌加密为 JWE（JSON Web Encryption），Python 后端
 ```mermaid
 flowchart TB
     subgraph Sources["积分来源"]
-        Signup["注册奖励<br/>1,000 积分"]
-        Monthly["月度发放<br/>Free: 500 / Plus: 3K / Pro: 9K"]
+        Signup["注册奖励<br/>500 积分"]
+        Monthly["月度发放<br/>Free: 300 / Plus: 3K / Pro: 9K"]
         Purchase["一次性购买<br/>Boost: 500 / Power: 2K / Ultra: 5K"]
         Subscription["Plus/Pro 订阅<br/>Plus: 3K / Pro: 9K 积分/月"]
     end
@@ -364,9 +364,9 @@ flowchart TB
 
 **积分生命周期：**
 
-1. **注册奖励**：新用户首次登录获得 1,000 积分（通过 `SIGNUP_BONUS_CREDITS` 配置；幂等操作，`signup_bonus_granted_at` 时间戳防止重复发放）。
+1. **注册奖励**：新用户首次登录获得 500 积分（通过 `SIGNUP_BONUS_CREDITS` 配置；幂等操作，`signup_bonus_granted_at` 时间戳防止重复发放）。
 
-2. **月度发放**：`ensure_monthly_credits()` 在每次对话请求前调用。检查 `monthly_credits_granted_at` — 若已过 30 天以上，根据用户套餐发放 Free（500）、Plus（3K）或 Pro（9K）积分。Ledger 条目使用 `ref_type=monthly_grant` 和基于时间戳的 `ref_id` 保证幂等性。
+2. **月度发放**：`ensure_monthly_credits()` 在每次对话请求前调用。检查 `monthly_credits_granted_at` — 若已过 30 天以上，根据用户套餐发放 Free（300）、Plus（3K）或 Pro（9K）积分。Ledger 条目使用 `ref_type=monthly_grant` 和基于时间戳的 `ref_id` 保证幂等性。
 
 3. **一次性购买**：Stripe Checkout 创建支付会话。收到 `checkout.session.completed` Webhook（mode=payment）后，将积分添加到用户余额。按 `payment_intent` ID 幂等。
 

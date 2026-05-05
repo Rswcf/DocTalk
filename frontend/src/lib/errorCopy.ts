@@ -11,7 +11,7 @@ export interface ErrorCopy {
   severity: 'error' | 'warning' | 'info';
   /**
    * Whether the consumer should auto-open the paywall modal.
-   * Only true for 402 INSUFFICIENT_CREDITS and SSE MODE_NOT_ALLOWED
+   * Only true for 402 credit/mode paywalls and SSE MODE_NOT_ALLOWED
    * (Codex r1 Q2: all other plan-limit 403s use inline CTA, never auto-modal).
    */
   openPaywall?: boolean;
@@ -231,6 +231,28 @@ const CODE_TABLE: Record<string, Handler> = {
     severity: 'warning',
     openPaywall: true,
   }),
+  BALANCED_MODE_LIMIT_REACHED: (d, tOr) => ({
+    title: tOr('errors.BALANCED_MODE_LIMIT_REACHED.title', 'Pro limit reached'),
+    body: tOr(
+      'errors.BALANCED_MODE_LIMIT_REACHED.body',
+      'Free includes up to {limit} Pro answers per month. Upgrade to Plus for unrestricted Pro mode.',
+      { limit: String(d.limit ?? 20) },
+    ),
+    cta: upgradeCta(tOr, 'pro_mode_limit', 'plus'),
+    severity: 'warning',
+    openPaywall: true,
+  }),
+  PRO_MODE_LIMIT_REACHED: (d, tOr) => ({
+    title: tOr('errors.PRO_MODE_LIMIT_REACHED.title', 'Pro limit reached'),
+    body: tOr(
+      'errors.PRO_MODE_LIMIT_REACHED.body',
+      'Free includes up to {limit} Pro answers per month. Upgrade to Plus for unrestricted Pro mode.',
+      { limit: String(d.limit ?? 20) },
+    ),
+    cta: upgradeCta(tOr, 'pro_mode_limit', 'plus'),
+    severity: 'warning',
+    openPaywall: true,
+  }),
   CONTINUATION_LIMIT: (d, tOr) => ({
     title: tOr('errors.CONTINUATION_LIMIT.title', 'Continue limit reached'),
     body: tOr('errors.CONTINUATION_LIMIT.body', 'You can only continue a response {max} times.', {
@@ -240,8 +262,8 @@ const CODE_TABLE: Record<string, Handler> = {
   }),
   MODE_NOT_ALLOWED: (_d, tOr) => ({
     title: tOr('errors.MODE_NOT_ALLOWED.title', 'Plus plan required'),
-    body: tOr('errors.MODE_NOT_ALLOWED.body', 'Thorough mode is available on the Plus plan.'),
-    cta: upgradeCta(tOr, 'thorough_mode', 'plus'),
+    body: tOr('errors.MODE_NOT_ALLOWED.body', 'This mode is available on the Plus plan.'),
+    cta: upgradeCta(tOr, 'mode_upgrade', 'plus'),
     severity: 'warning',
     openPaywall: true,
   }),

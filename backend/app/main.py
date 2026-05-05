@@ -3,6 +3,7 @@ import hmac
 import logging
 import os
 from contextlib import asynccontextmanager
+from typing import Union
 
 import sentry_sdk
 from fastapi import FastAPI, HTTPException, Query, Request
@@ -193,7 +194,7 @@ async def version() -> dict:
     return get_release_payload()
 
 
-@app.get("/health", response_model=HealthDeepResponse | HealthResponse)
+@app.get("/health", response_model=Union[HealthDeepResponse, HealthResponse])
 async def health(request: Request, deep: bool = Query(False)) -> dict:
     release = get_release_payload()
     if not deep:

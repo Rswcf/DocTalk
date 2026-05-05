@@ -39,7 +39,7 @@ const faqItems = [
   {
     question: 'Is there a team plan?',
     answer:
-      'DocTalk currently offers individual plans: Free (500 credits/month), Plus ($9.99/month for 3,000 credits), and Pro ($19.99/month for 9,000 credits). The Pro plan includes advanced features like Thorough analysis mode and custom instructions. Team and enterprise plans are on the roadmap.',
+      'DocTalk currently offers individual plans: Free (300 credits/month), Plus ($9.99/month for 3,000 credits), and Pro ($19.99/month for 9,000 credits). Paid plans include advanced features like unrestricted Pro mode and custom instructions. Team and enterprise plans are on the roadmap.',
   },
 ];
 

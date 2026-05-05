@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import uuid
+from datetime import datetime, timedelta, timezone
 from typing import AsyncGenerator, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
@@ -20,7 +21,14 @@ from app.core.rate_limit import (
     get_client_ip,
 )
 from app.core.security_log import log_security_event
-from app.models.tables import ChatSession, Collection, Document, Message, User
+from app.models.tables import (
+    ChatSession,
+    Collection,
+    Document,
+    Message,
+    UsageRecord,
+    User,
+)
 from app.schemas.chat import (
     ChatMessageResponse,
     ChatRequest,
@@ -52,6 +60,60 @@ MESSAGE_NOT_FOUND_DETAIL = {
     "error": "MESSAGE_NOT_FOUND",
     "message": "Message not found",
 }
+
+
+def _as_utc(dt):
+    if dt is None:
+        return None
+    if dt.tzinfo is None:
+        return dt.replace(tzinfo=timezone.utc)
+    return dt.astimezone(timezone.utc)
+
+
+async def enforce_free_mode_limits(db: AsyncSession, user: User, mode: Optional[str]) -> None:
+    """Limit Free-plan access to higher-cost modes without adding a new table."""
+    if (user.plan or "free").lower() != "free":
+        return
+
+    effective_mode = mode if mode in settings.MODE_MODELS else "balanced"
+    # Internal "balanced" now maps to the visible Pro mode.
+    if effective_mode != "balanced":
+        return
+
+    configured_limit = (
+        settings.FREE_PRO_MONTHLY_LIMIT
+        if settings.FREE_PRO_MONTHLY_LIMIT is not None
+        else settings.FREE_BALANCED_MONTHLY_LIMIT
+    )
+    limit = int(configured_limit or 0)
+    if limit <= 0:
+        return
+
+    window_start = _as_utc(getattr(user, "monthly_credits_granted_at", None))
+    if window_start is None:
+        window_start = datetime.now(timezone.utc) - timedelta(days=30)
+
+    pro_model = settings.MODE_MODELS["balanced"]
+    used = await db.scalar(
+        select(func.count())
+        .select_from(UsageRecord)
+        .where(UsageRecord.user_id == user.id)
+        .where(UsageRecord.model == pro_model)
+        .where(UsageRecord.created_at >= window_start)
+    )
+    used_count = int(used or 0)
+    if used_count >= limit:
+        raise HTTPException(
+            status_code=402,
+            detail={
+                "error": "PRO_MODE_LIMIT_REACHED",
+                "message": "Free plan Pro mode limit reached",
+                "mode": "balanced",
+                "limit": limit,
+                "used": used_count,
+                "required_plan": "plus",
+            },
+        )
 
 
 async def verify_session_access(
@@ -292,6 +354,7 @@ async def chat_stream(
         await db.commit()
         # Use mode-specific estimated cost for pre-check (actual pre-debit happens in chat_service)
         effective_mode = body.mode or "balanced"
+        await enforce_free_mode_limits(db, user, effective_mode)
         estimated_cost = credit_service.get_estimated_cost(effective_mode)
         balance = await credit_service.get_user_credits(db, user.id)
         if balance < estimated_cost:
@@ -426,6 +489,7 @@ async def chat_continue(
         await ensure_monthly_credits(db, user)
         await db.commit()
         effective_mode = body.mode or "balanced"
+        await enforce_free_mode_limits(db, user, effective_mode)
         estimated_cost = credit_service.get_estimated_cost(effective_mode)
         balance = await credit_service.get_user_credits(db, user.id)
         if balance < estimated_cost:

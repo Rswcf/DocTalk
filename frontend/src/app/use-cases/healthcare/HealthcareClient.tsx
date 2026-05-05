@@ -97,7 +97,7 @@ const faqItems = [
   {
     question: 'What pricing is available for healthcare professionals?',
     answer:
-      'DocTalk offers a Free plan (500 credits/month) to get started, Plus ($9.99/month for 3,000 credits), and Pro ($19.99/month for 9,000 credits). The Pro plan includes Thorough analysis mode, which uses a more capable AI model for complex research papers. Credit packs are also available for burst usage.',
+      'DocTalk offers a Free plan (300 credits/month) to get started, Plus ($9.99/month for 3,000 credits), and Pro ($19.99/month for 9,000 credits). Paid plans include unrestricted Pro mode for complex research papers. Credit packs are also available for burst usage.',
   },
 ];
 
@@ -281,7 +281,7 @@ export default function HealthcareClient() {
               </Link>
               {' '}works in DocTalk, and explore the{' '}
               <Link href="/features/performance-modes" className="text-blue-600 dark:text-blue-400 hover:underline">
-                Thorough analysis mode
+                Pro analysis mode
               </Link>
               {' '}for complex research papers.
             </p>

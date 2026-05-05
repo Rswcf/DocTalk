@@ -22,7 +22,7 @@ const faqItems = [
   },
   {
     question: 'Is there a free Humata alternative?',
-    answer: 'Google NotebookLM is completely free with a Google account. DocTalk offers a free demo with no signup required and a free tier with 500 credits per month. ChatPDF offers 2 free PDFs per day.',
+    answer: 'Google NotebookLM is completely free with a Google account. DocTalk offers a free demo with no signup required and a free tier with 300 credits per month. ChatPDF offers 2 free PDFs per day.',
   },
   {
     question: 'Which Humata alternative has team features?',

@@ -34,7 +34,7 @@ const faqItems = [
   {
     question: 'Is there a student discount?',
     answer:
-      'DocTalk offers a generous free tier with 500 credits per month, which is enough for regular academic use. You can also try the instant demo with no signup at all. The Plus plan at $9.99/month and Pro plan at $19.99/month are available for heavy users who need more credits and advanced features like Thorough analysis mode.',
+      'DocTalk offers a generous free tier with 300 credits per month, which is enough for regular academic use. You can also try the instant demo with no signup at all. The Plus plan at $9.99/month and Pro plan at $19.99/month are available for heavy users who need more credits and unrestricted Pro analysis mode.',
   },
   {
     question: 'Can I upload URLs to papers?',

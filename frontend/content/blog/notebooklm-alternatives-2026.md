@@ -59,7 +59,7 @@ DocTalk fills NotebookLM's two biggest gaps: format support and citation verific
 
 DocTalk also supports [11 languages](/features/multilingual) natively, including Chinese, Japanese, Korean, and Arabic — languages where NotebookLM's performance is less reliable.
 
-The tradeoff: DocTalk does not offer audio overviews, and its free tier (500 credits/month) is more limited than NotebookLM's unlimited free access.
+The tradeoff: DocTalk does not offer audio overviews, and its free tier (300 credits/month) is more limited than NotebookLM's unlimited free access.
 
 **Key differences from NotebookLM:**
 - Supports DOCX, PPTX, XLSX natively (no conversion needed)
@@ -68,7 +68,7 @@ The tradeoff: DocTalk does not offer audio overviews, and its free tier (500 cre
 - 3 AI modes (Quick, Balanced, Thorough)
 - Not free — has a free tier but paid plans for heavy use
 
-**Pricing:** Free (500 credits/month), Plus ($9.99/month), Pro ($19.99/month). See [pricing](/pricing).
+**Pricing:** Free (300 credits/month), Plus ($9.99/month), Pro ($19.99/month). See [pricing](/pricing).
 
 **Best for:** Users who work with Microsoft Office formats, need verifiable citations in the original document context, or work with documents in CJK or RTL languages.
 

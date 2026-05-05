@@ -18,7 +18,7 @@ export const metadata: Metadata = buildMarketingMetadata({
 const faqItems = [
   {
     question: 'What is the best free PDF.ai alternative?',
-    answer: 'Google NotebookLM is the best completely free alternative, offering multi-source notebooks and audio podcast generation. DocTalk also offers a free demo with no signup and a free tier with 500 credits per month, both providing more features than PDF.ai\'s free plan.',
+    answer: 'Google NotebookLM is the best completely free alternative, offering multi-source notebooks and audio podcast generation. DocTalk also offers a free demo with no signup and a free tier with 300 credits per month, both providing more features than PDF.ai\'s free plan.',
   },
   {
     question: 'Why do people switch from PDF.ai to other tools?',

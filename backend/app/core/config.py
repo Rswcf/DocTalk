@@ -12,6 +12,14 @@ class Settings(BaseSettings):
     OPENROUTER_API_KEY: Optional[str] = None
     OPENROUTER_BASE_URL: str = Field(default="https://openrouter.ai/api/v1")
 
+    # DeepSeek official API — production chat modes
+    DEEPSEEK_API_KEY: Optional[str] = None
+    DEEPSEEK_BASE_URL: str = Field(default="https://api.deepseek.com")
+    DEEPSEEK_OFFICIAL_MODELS: list[str] = Field(default=[
+        "deepseek-v4-flash",
+        "deepseek-v4-pro",
+    ])
+
     # Embedding — 模型与维度强绑定 (通过 OpenRouter 调用)
     EMBEDDING_MODEL: str = Field(default="openai/text-embedding-3-small")
     EMBEDDING_DIM: int = Field(default=1536)
@@ -21,9 +29,11 @@ class Settings(BaseSettings):
     QDRANT_API_KEY: Optional[str] = None
     QDRANT_COLLECTION: str = Field(default="doc_chunks")
 
-    # LLM (通过 OpenRouter 调用)
-    LLM_MODEL: str = Field(default="mistralai/mistral-medium-3.1")
+    # LLM defaults
+    LLM_MODEL: str = Field(default="deepseek-v4-pro")
     ALLOWED_MODELS: list[str] = Field(default=[
+        "deepseek-v4-flash",
+        "deepseek-v4-pro",
         "deepseek/deepseek-v3.2",
         "mistralai/mistral-medium-3.1",
         "mistralai/mistral-large-2512",
@@ -74,21 +84,21 @@ class Settings(BaseSettings):
     AUTH_SECRET: Optional[str] = None  # Shared with Next.js Auth.js
     ADAPTER_SECRET: Optional[str] = None  # For internal adapter API calls
 
-    # Demo LLM — cheaper model for anonymous demo conversations
-    DEMO_LLM_MODEL: str = "deepseek/deepseek-v3.2"
+    # Demo LLM — faster model for anonymous demo conversations
+    DEMO_LLM_MODEL: str = "deepseek-v4-flash"
 
-    # Mode-based model selection (Quick/Balanced/Thorough)
+    # Mode-based model selection.
+    # Internal IDs are kept for backwards compatibility:
+    # quick = Flash, balanced = Pro.
     MODE_MODELS: dict[str, str] = {
-        "quick": "deepseek/deepseek-v3.2",
-        "balanced": "mistralai/mistral-medium-3.1",
-        "thorough": "mistralai/mistral-large-2512",
+        "quick": "deepseek-v4-flash",
+        "balanced": "deepseek-v4-pro",
     }
     MODE_CREDIT_MULTIPLIER: dict[str, float] = {
-        "quick": 0.5,
+        "quick": 1.0,
         "balanced": 1.0,
-        "thorough": 3.0,
     }
-    PREMIUM_MODES: list[str] = Field(default=["thorough"])
+    PREMIUM_MODES: list[str] = Field(default=[])
 
     # Sentry
     SENTRY_DSN: Optional[str] = None
@@ -106,11 +116,14 @@ class Settings(BaseSettings):
     CREDITS_BOOST: int = 500
     CREDITS_POWER: int = 2000
     CREDITS_ULTRA: int = 5000
-    SIGNUP_BONUS_CREDITS: int = 1000
+    SIGNUP_BONUS_CREDITS: int = 500
     # Subscription tiers
-    PLAN_FREE_MONTHLY_CREDITS: int = 500
+    PLAN_FREE_MONTHLY_CREDITS: int = 300
     PLAN_PLUS_MONTHLY_CREDITS: int = 3000
     PLAN_PRO_MONTHLY_CREDITS: int = 9000
+    # Legacy name kept for existing env vars; this now limits Free-plan Pro answers.
+    FREE_BALANCED_MONTHLY_LIMIT: int = 20
+    FREE_PRO_MONTHLY_LIMIT: Optional[int] = None
     STRIPE_PRICE_PLUS_MONTHLY: str = ''
     STRIPE_PRICE_PLUS_ANNUAL: str = ''
     STRIPE_PRICE_PRO_MONTHLY: str = ''

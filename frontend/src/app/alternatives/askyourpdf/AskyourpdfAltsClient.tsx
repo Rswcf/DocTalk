@@ -18,14 +18,14 @@ export default function AskyourpdfAltsClient() {
     { name: 'File Formats', doctalk: '7 formats (PDF, DOCX, PPTX, XLSX, TXT, MD, URL)', competitor: 'PDF only' },
     { name: 'Citation Highlighting', doctalk: true, competitor: false },
     { name: 'Languages', doctalk: '11', competitor: '1' },
-    { name: 'Free Tier', doctalk: '500 credits/mo + free demo', competitor: 'Limited free plan' },
+    { name: 'Free Tier', doctalk: '300 credits/mo + free demo', competitor: 'Limited free plan' },
     { name: 'Starting Price', doctalk: '$9.99/mo', competitor: '$14.99/mo' },
   ];
 
   const faqItems = [
     {
       question: 'What is the best free AskYourPDF alternative?',
-      answer: 'Google NotebookLM is completely free with multi-source notebooks and audio summaries. DocTalk also offers a free demo with no signup and a free tier with 500 credits per month, making both strong options for users looking to switch from AskYourPDF without paying.',
+      answer: 'Google NotebookLM is completely free with multi-source notebooks and audio summaries. DocTalk also offers a free demo with no signup and a free tier with 300 credits per month, making both strong options for users looking to switch from AskYourPDF without paying.',
     },
     {
       question: 'Why do people switch from AskYourPDF to other tools?',
@@ -129,7 +129,7 @@ export default function AskyourpdfAltsClient() {
             </p>
             <p className="text-zinc-600 dark:text-zinc-300 leading-relaxed mb-4">
               Unlike AskYourPDF, DocTalk supports 11 languages natively, offers a completely free demo with no signup required,
-              and provides three AI performance modes (Quick, Balanced, Thorough) so you can optimize for speed or accuracy.
+              and provides two AI performance modes (Flash and Pro) so you can optimize for speed or accuracy.
             </p>
             <p className="text-zinc-600 dark:text-zinc-300 leading-relaxed mb-4">
               See our{' '}
@@ -146,7 +146,7 @@ export default function AskyourpdfAltsClient() {
                   'Real-time citation highlighting with visual verification',
                   '11 languages supported natively',
                   'Free demo with no signup required',
-                  'Three AI modes: Quick, Balanced, Thorough',
+                  'Two AI modes: Flash and Pro',
                   'Starting at $9.99/mo (vs $14.99/mo)',
                 ].map((item) => (
                   <li key={item} className="flex items-center gap-2 text-sm text-zinc-600 dark:text-zinc-300">

@@ -79,7 +79,7 @@ export default function FreeDemoPage() {
                 name: 'Do I need an account?',
                 acceptedAnswer: {
                   '@type': 'Answer',
-                  text: 'No. The demo works without any account. Just click and start chatting. If you want to upload your own documents, you can create a free account that comes with 500 credits per month.',
+                  text: 'No. The demo works without any account. Just click and start chatting. If you want to upload your own documents, you can create a free account that comes with 300 credits per month.',
                 },
               },
               {
@@ -87,7 +87,7 @@ export default function FreeDemoPage() {
                 name: 'What happens after the demo?',
                 acceptedAnswer: {
                   '@type': 'Answer',
-                  text: 'After the demo, you can create a free account to upload your own documents and get 500 credits per month. Or upgrade to Plus (3,000 credits) or Pro (9,000 credits) for more usage.',
+                  text: 'After the demo, you can create a free account to upload your own documents and get 300 credits per month. Or upgrade to Plus (3,000 credits) or Pro (9,000 credits) for more usage.',
                 },
               },
               {
@@ -95,7 +95,7 @@ export default function FreeDemoPage() {
                 name: 'Can I upload my own documents for free?',
                 acceptedAnswer: {
                   '@type': 'Answer',
-                  text: 'Yes. Free accounts can upload up to 3 documents (25MB each) and get 500 credits per month. Sign up with Google, Microsoft, or email — no credit card required.',
+                  text: 'Yes. Free accounts can upload up to 3 documents (25MB each) and get 300 credits per month. Sign up with Google, Microsoft, or email — no credit card required.',
                 },
               },
               {
@@ -103,7 +103,7 @@ export default function FreeDemoPage() {
                 name: 'How many credits do I get?',
                 acceptedAnswer: {
                   '@type': 'Answer',
-                  text: 'The demo does not use credits. Free accounts get 500 credits per month. Plus plans get 3,000 credits for $9.99/month, and Pro plans get 9,000 credits for $19.99/month.',
+                  text: 'The demo does not use credits. Free accounts get 300 credits per month. Plus plans get 3,000 credits for $9.99/month, and Pro plans get 9,000 credits for $19.99/month.',
                 },
               },
             ],

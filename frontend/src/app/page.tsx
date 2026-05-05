@@ -96,7 +96,7 @@ export default function HomePage() {
             name: 'Which AI models can I use?',
             acceptedAnswer: {
               '@type': 'Answer',
-              text: 'DocTalk offers 3 performance modes — Quick, Balanced, and Thorough — each optimized with different AI models for different needs. Free users can use Quick and Balanced modes. Upgrade to Plus to unlock Thorough mode.',
+              text: 'DocTalk offers 2 performance modes: Flash for fast cited answers and Pro for deeper document analysis. Free users can use Flash and limited Pro. Plus removes the Pro monthly cap.',
             },
           },
           {
@@ -104,7 +104,7 @@ export default function HomePage() {
             name: 'Is there a free tier?',
             acceptedAnswer: {
               '@type': 'Answer',
-              text: 'Yes! Free accounts include 500 credits per month, enough for dozens of questions. No credit card required to get started.',
+              text: 'Yes! Free accounts include 300 credits per month, enough for dozens of questions. No credit card required to get started.',
             },
           },
           {
@@ -128,7 +128,7 @@ export default function HomePage() {
         url: 'https://www.doctalk.site',
         description: 'AI-powered document chat with cited answers. Upload PDF, DOCX, PPTX, XLSX and get instant answers with source citations.',
         offers: [
-          { '@type': 'Offer', price: '0', priceCurrency: 'USD', name: 'Free', description: '500 credits/month' },
+          { '@type': 'Offer', price: '0', priceCurrency: 'USD', name: 'Free', description: '300 credits/month' },
           { '@type': 'Offer', price: '9.99', priceCurrency: 'USD', name: 'Plus', description: '3000 credits/month' },
           { '@type': 'Offer', price: '19.99', priceCurrency: 'USD', name: 'Pro', description: '9000 credits/month' },
         ],

@@ -319,8 +319,8 @@ This cleanly separates the frontend auth system from the backend API authenticat
 ```mermaid
 flowchart TB
     subgraph Sources["Credit Sources"]
-        Signup["Signup Bonus<br/>1,000 credits"]
-        Monthly["Monthly Grant<br/>Free: 500 / Plus: 3K / Pro: 9K"]
+        Signup["Signup Bonus<br/>500 credits"]
+        Monthly["Monthly Grant<br/>Free: 300 / Plus: 3K / Pro: 9K"]
         Purchase["One-Time Purchase<br/>Boost: 500 / Power: 2K / Ultra: 5K"]
         Subscription["Plus/Pro Subscription<br/>Plus: 3K / Pro: 9K credits/month"]
     end
@@ -364,9 +364,9 @@ flowchart TB
 
 **Credit lifecycle:**
 
-1. **Signup Bonus**: New users receive 1,000 credits on first login (configurable via `SIGNUP_BONUS_CREDITS`; idempotent, `signup_bonus_granted_at` timestamp guards against double-grant).
+1. **Signup Bonus**: New users receive 500 credits on first login (configurable via `SIGNUP_BONUS_CREDITS`; idempotent, `signup_bonus_granted_at` timestamp guards against double-grant).
 
-2. **Monthly Grant**: `ensure_monthly_credits()` is called before every chat request. It checks `monthly_credits_granted_at` — if 30+ days have elapsed, grants Free (500), Plus (3K), or Pro (9K) credits based on the user's plan. The ledger entry uses `ref_type=monthly_grant` with a timestamp-based `ref_id` for idempotency.
+2. **Monthly Grant**: `ensure_monthly_credits()` is called before every chat request. It checks `monthly_credits_granted_at` — if 30+ days have elapsed, grants Free (300), Plus (3K), or Pro (9K) credits based on the user's plan. The ledger entry uses `ref_type=monthly_grant` with a timestamp-based `ref_id` for idempotency.
 
 3. **One-Time Purchase**: Stripe Checkout creates a payment session. On `checkout.session.completed` webhook (mode=payment), credits are added to the user's balance. Idempotent by `payment_intent` ID.
 

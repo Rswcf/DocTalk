@@ -99,7 +99,7 @@ const faqItems = [
   {
     question: 'What pricing works for consulting firms?',
     answer:
-      'DocTalk offers individual plans: Free (500 credits/month), Plus ($9.99/month for 3,000 credits), and Pro ($19.99/month for 9,000 credits). Credit packs are also available for burst usage: Boost (500 credits for $3.99), Power (2,000 for $9.99), and Ultra (5,000 for $19.99). Team plans are on the roadmap.',
+      'DocTalk offers individual plans: Free (300 credits/month), Plus ($9.99/month for 3,000 credits), and Pro ($19.99/month for 9,000 credits). Credit packs are also available for burst usage: Boost (500 credits for $3.99), Power (2,000 for $9.99), and Ultra (5,000 for $19.99). Team plans are on the roadmap.',
   },
   {
     question: 'Can I export analysis results?',

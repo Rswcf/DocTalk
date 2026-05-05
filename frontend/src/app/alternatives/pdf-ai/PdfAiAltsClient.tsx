@@ -18,14 +18,14 @@ export default function PdfAiAltsClient() {
     { name: 'File Formats', doctalk: '7 formats (PDF, DOCX, PPTX, XLSX, TXT, MD, URL)', competitor: 'PDF only' },
     { name: 'Citation Highlighting', doctalk: true, competitor: false },
     { name: 'Languages', doctalk: '11', competitor: '1' },
-    { name: 'Free Tier', doctalk: '500 credits/mo + free demo', competitor: 'Limited free plan' },
+    { name: 'Free Tier', doctalk: '300 credits/mo + free demo', competitor: 'Limited free plan' },
     { name: 'Starting Price', doctalk: '$9.99/mo', competitor: '$15/mo' },
   ];
 
   const faqItems = [
     {
       question: 'What is the best free PDF.ai alternative?',
-      answer: 'Google NotebookLM is the best completely free alternative, offering multi-source notebooks and audio podcast generation. DocTalk also offers a free demo with no signup and a free tier with 500 credits per month, both providing more features than PDF.ai\'s free plan.',
+      answer: 'Google NotebookLM is the best completely free alternative, offering multi-source notebooks and audio podcast generation. DocTalk also offers a free demo with no signup and a free tier with 300 credits per month, both providing more features than PDF.ai\'s free plan.',
     },
     {
       question: 'Why do people switch from PDF.ai to other tools?',
@@ -147,7 +147,7 @@ export default function PdfAiAltsClient() {
                   'Real-time citation highlighting with visual verification',
                   '11 languages supported natively',
                   'Free demo with no signup required',
-                  'Three AI modes: Quick, Balanced, Thorough',
+                  'Two AI modes: Flash and Pro',
                   'Starting at $9.99/mo (vs $15/mo)',
                 ].map((item) => (
                   <li key={item} className="flex items-center gap-2 text-sm text-zinc-600 dark:text-zinc-300">

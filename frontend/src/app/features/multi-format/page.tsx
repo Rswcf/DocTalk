@@ -48,7 +48,7 @@ export default function MultiFormatPage() {
             description:
               'AI document chat supporting 7 formats: PDF, DOCX, PPTX, XLSX, TXT, Markdown, and web URLs. Upload any document and get cited answers.',
             offers: [
-              { '@type': 'Offer', price: '0', priceCurrency: 'USD', name: 'Free', description: '500 credits/month' },
+              { '@type': 'Offer', price: '0', priceCurrency: 'USD', name: 'Free', description: '300 credits/month' },
               { '@type': 'Offer', price: '9.99', priceCurrency: 'USD', name: 'Plus', description: '3000 credits/month' },
               { '@type': 'Offer', price: '19.99', priceCurrency: 'USD', name: 'Pro', description: '9000 credits/month' },
             ],

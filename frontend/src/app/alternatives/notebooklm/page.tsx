@@ -22,7 +22,7 @@ const faqItems = [
   },
   {
     question: 'Is there a free NotebookLM alternative?',
-    answer: 'DocTalk offers a free demo with no signup required and a free tier with 500 credits per month. ChatPDF offers 2 free PDFs per day. However, no other tool matches NotebookLM fully free unlimited usage, since it is subsidized by Google.',
+    answer: 'DocTalk offers a free demo with no signup required and a free tier with 300 credits per month. ChatPDF offers 2 free PDFs per day. However, no other tool matches NotebookLM fully free unlimited usage, since it is subsidized by Google.',
   },
   {
     question: 'Which NotebookLM alternative has the best citations?',

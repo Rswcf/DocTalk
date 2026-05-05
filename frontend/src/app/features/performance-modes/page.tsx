@@ -3,15 +3,15 @@ import PerformanceModesClient from './PerformanceModesClient';
 import { buildMarketingMetadata } from '../../../lib/seo';
 
 export const metadata: Metadata = buildMarketingMetadata({
-  title: 'Quick, Balanced & Thorough Modes',
+  title: 'Flash and Pro AI Modes',
   description:
-    'Choose Quick, Balanced, or Thorough mode for AI document chat. Match response speed, depth, and cost to the task at hand.',
+    'Choose Flash or Pro mode for AI document chat. Match response speed, depth, and cost to the task at hand.',
   path: '/features/performance-modes',
-  keywords: ['ai performance modes', 'quick balanced thorough ai', 'ai model selection'],
+  keywords: ['ai performance modes', 'flash pro ai modes', 'ai model selection'],
   openGraph: {
-    title: 'Quick, Balanced & Thorough Modes | DocTalk',
+    title: 'Flash and Pro AI Modes | DocTalk',
     description:
-      'Choose your AI speed and depth. Quick for fast answers, Balanced for everyday use, Thorough for deep analysis.',
+      'Choose your AI speed and depth. Flash for fast answers, Pro for deeper document analysis.',
   },
 });
 
@@ -46,11 +46,11 @@ export default function PerformanceModesPage() {
             operatingSystem: 'Web',
             url: 'https://www.doctalk.site',
             description:
-              'AI document chat with 3 performance modes: Quick (DeepSeek V3.2), Balanced (Mistral Medium 3.1), and Thorough (Mistral Large 2512).',
+              'AI document chat with 2 performance modes: Flash (DeepSeek V4 Flash) and Pro (DeepSeek V4 Pro).',
             offers: [
-              { '@type': 'Offer', price: '0', priceCurrency: 'USD', name: 'Free', description: 'Quick + Balanced modes, 500 credits/month' },
-              { '@type': 'Offer', price: '9.99', priceCurrency: 'USD', name: 'Plus', description: 'All 3 modes, 3000 credits/month' },
-              { '@type': 'Offer', price: '19.99', priceCurrency: 'USD', name: 'Pro', description: 'All 3 modes, 9000 credits/month' },
+              { '@type': 'Offer', price: '0', priceCurrency: 'USD', name: 'Free', description: 'Flash + limited Pro modes, 300 credits/month' },
+              { '@type': 'Offer', price: '9.99', priceCurrency: 'USD', name: 'Plus', description: 'Flash and Pro modes, 3000 credits/month' },
+              { '@type': 'Offer', price: '19.99', priceCurrency: 'USD', name: 'Pro', description: 'Flash and Pro modes, 9000 credits/month' },
             ],
           }),
         }}
@@ -66,10 +66,10 @@ export default function PerformanceModesPage() {
             mainEntity: [
               {
                 '@type': 'Question',
-                name: 'What is the difference between the three modes?',
+                name: 'What is the difference between Flash and Pro modes?',
                 acceptedAnswer: {
                   '@type': 'Answer',
-                  text: 'Quick mode uses DeepSeek V3.2 for fast, concise answers at 2 credits per question. Balanced mode uses Mistral Medium 3.1 for detailed everyday answers at 8 credits. Thorough mode uses Mistral Large 2512 for deep, nuanced analysis at 24 credits.',
+                  text: 'Flash mode uses DeepSeek V4 Flash for fast cited answers. Pro mode uses DeepSeek V4 Pro for more careful, detailed document analysis.',
                 },
               },
               {
@@ -82,10 +82,10 @@ export default function PerformanceModesPage() {
               },
               {
                 '@type': 'Question',
-                name: 'Is Thorough mode available on the free plan?',
+                name: 'Is Pro mode available on the free plan?',
                 acceptedAnswer: {
                   '@type': 'Answer',
-                  text: 'Thorough mode requires a Plus or Pro subscription. Free accounts have access to Quick and Balanced modes with 500 credits per month.',
+                  text: 'Free accounts have Flash mode plus up to 20 Pro answers per month with 300 credits per month. Plus and Pro plans remove that Pro-mode monthly cap.',
                 },
               },
               {
@@ -93,7 +93,7 @@ export default function PerformanceModesPage() {
                 name: 'Which mode should I use?',
                 acceptedAnswer: {
                   '@type': 'Answer',
-                  text: 'Use Quick for simple factual lookups and quick summaries. Use Balanced for general Q&A, explanations, and most everyday tasks. Use Thorough for complex analysis, multi-part questions, and when you need the most comprehensive answer.',
+                  text: 'Use Flash for simple factual lookups and quick summaries. Use Pro for general Q&A, explanations, comparisons, and questions where citation precision matters more than speed.',
                 },
               },
             ],

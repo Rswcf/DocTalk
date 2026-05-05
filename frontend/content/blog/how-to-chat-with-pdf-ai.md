@@ -186,7 +186,7 @@ DocTalk supports documents up to 500 pages. For very large documents, the AI may
 
 ### Can I try it for free?
 
-Yes. The [free demo](/demo) lets you chat with sample documents without creating an account. Free accounts include 500 credits per month — enough for dozens of questions. No credit card required.
+Yes. The [free demo](/demo) lets you chat with sample documents without creating an account. Free accounts include 300 credits per month — enough for dozens of questions. No credit card required.
 
 ## Get Started
 

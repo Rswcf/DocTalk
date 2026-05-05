@@ -12,6 +12,8 @@ from app.models.tables import CreditLedger, UsageRecord, User
 # Token-to-credit rates by model tier
 CREDIT_RATES = {
     # Active models (reachable via mode system)
+    "deepseek-v4-flash": (1, 3),
+    "deepseek-v4-pro": (2, 6),
     "deepseek/deepseek-v3.2": (1, 5),
     "mistralai/mistral-medium-3.1": (2, 10),
     "mistralai/mistral-large-2512": (2, 10),
@@ -31,8 +33,9 @@ CREDIT_RATES = {
 DEFAULT_RATE = (3, 15)
 MIN_CREDITS_FOR_CHAT = 10
 
-# Estimated cost per mode for pre-debit (generous upper bound to avoid under-debit)
-MODE_ESTIMATED_COST: dict[str, int] = {"quick": 5, "balanced": 15, "thorough": 35}
+# Estimated cost per mode for pre-debit (generous upper bound to avoid under-debit).
+# Internal mode IDs are kept for compatibility: quick=Flash, balanced=Pro.
+MODE_ESTIMATED_COST: dict[str, int] = {"quick": 5, "balanced": 15}
 
 
 def get_estimated_cost(mode: str) -> int:

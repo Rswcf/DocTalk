@@ -52,9 +52,9 @@ These tools let you upload specific papers or documents and interrogate their co
 **Limitations:**
 - Does not search for new papers — you need to have the file already
 - No bibliography/reference manager integration
-- Free tier limited to 500 credits/month
+- Free tier limited to 300 credits/month
 
-**Pricing:** Free (500 credits/month), Plus ($9.99/month), Pro ($19.99/month). See [pricing](/pricing).
+**Pricing:** Free (300 credits/month), Plus ($9.99/month), Pro ($19.99/month). See [pricing](/pricing).
 
 If you are a student deciding whether DocTalk fits your workflow, see our [student use case guide](/use-cases/students) for specific examples.
 
@@ -277,7 +277,7 @@ No single tool covers the full research lifecycle. Here is a practical workflow 
 
 | Tool | Category | Can Upload Docs? | Free Tier | Paid Plans | Best For |
 |---|---|---|---|---|---|
-| **DocTalk** | Document analysis | Yes (7 formats) | 500 credits/mo | From $9.99/mo | Multi-format Q&A with citations |
+| **DocTalk** | Document analysis | Yes (7 formats) | 300 credits/mo | From $9.99/mo | Multi-format Q&A with citations |
 | **NotebookLM** | Document analysis | Yes (PDF, Gdocs) | Unlimited | Free | Free research notebook |
 | **Claude** | Document analysis | Yes (PDF, text) | Limited msgs | From $20/mo | Deep reasoning |
 | **Consensus** | Literature search | No | Basic search | From $8.99/mo | Evidence synthesis |

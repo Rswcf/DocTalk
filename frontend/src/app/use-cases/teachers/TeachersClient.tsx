@@ -95,7 +95,7 @@ const faqItems = [
   {
     question: 'Is there a free plan for educators?',
     answer:
-      'DocTalk offers a Free plan with 500 credits per month, which is a great starting point for trying the tool. For heavier use, the Plus plan ($9.99/month) provides 3,000 credits, and the Pro plan ($19.99/month) includes 9,000 credits with advanced features like Thorough analysis mode and custom instructions.',
+      'DocTalk offers a Free plan with 300 credits per month, which is a great starting point for trying the tool. For heavier use, the Plus plan ($9.99/month) provides 3,000 credits, and the Pro plan ($19.99/month) includes 9,000 credits with advanced features like Pro analysis mode and custom instructions.',
   },
 ];
 

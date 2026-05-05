@@ -1,4 +1,4 @@
-export type ModeId = 'quick' | 'balanced' | 'thorough';
+export type ModeId = 'quick' | 'balanced';
 export type PlanType = 'free' | 'plus' | 'pro';
 
 export interface ModeOption {
@@ -13,8 +13,11 @@ export const DEFAULT_MODE: ModeId = 'quick';
 export const AVAILABLE_MODES: ModeOption[] = [
   { id: 'quick', labelKey: 'modes.quick', descriptionKey: 'modes.quickDesc', minPlan: 'free' },
   { id: 'balanced', labelKey: 'modes.balanced', descriptionKey: 'modes.balancedDesc', minPlan: 'free' },
-  { id: 'thorough', labelKey: 'modes.thorough', descriptionKey: 'modes.thoroughDesc', minPlan: 'plus' },
 ];
+
+export function isKnownMode(modeId: string | null): modeId is ModeId {
+  return modeId === 'quick' || modeId === 'balanced';
+}
 
 export const PLAN_HIERARCHY: Record<PlanType, number> = { free: 0, plus: 1, pro: 2 };
 

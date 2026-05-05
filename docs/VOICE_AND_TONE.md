@@ -103,7 +103,7 @@ State the cause if we know it. Never blame the user. Never apologize theatricall
 | Upload failed (network) | "Upload failed. Check your connection and try again." | "Oops! Something went wrong 😬" |
 | File too large | "File exceeds 50 MB. Try splitting or compressing it." | "Error: FILE_TOO_LARGE" |
 | OCR failed on scanned PDF | "OCR couldn't read this document. The scan quality may be too low." | "OCR text recognition failed" (current `upload.ocrFailed` — too terse, no next step) |
-| Out of credits | "You've used all 500 credits for this month. Upgrade for more." | "Insufficient Credits" + "You've run out of credits. Purchase more to continue chatting." (current — wordy, and "chatting" is too casual for paying users) |
+| Out of credits | "You've used all 300 credits for this month. Upgrade for more." | "Insufficient Credits" + "You've run out of credits. Purchase more to continue chatting." (current — wordy, and "chatting" is too casual for paying users) |
 | Backend 500 | "Something went wrong on our end. Try again in a moment." | "Internal Server Error (500)" |
 
 **Never use**:
@@ -175,7 +175,7 @@ However, the **actual session-delete UI in `SessionDropdown.tsx`** uses a differ
 
 Pricing copy is where honesty matters most. Never dark-pattern.
 
-- State the limit reached, not the FOMO: "You've used all 500 credits for this month." → not "Don't miss out on Pro!"
+- State the limit reached, not the FOMO: "You've used all 300 credits for this month." → not "Don't miss out on Pro!"
 - State what upgrading unlocks in **concrete** terms, not marketing adjectives: "3,000 credits/month" beats "Unlimited power".
 - Never auto-select the annual toggle without making the monthly price equally visible.
 - "Manage subscription" > "Cancel anytime" — the latter reads as reassurance to someone who already doesn't trust you.
@@ -226,7 +226,7 @@ Tour steps should be observational, not motivational.
 ### 5.3 Numbers
 
 - Use digits for all counts: "3 documents", not "three documents".
-- Credits always shown with unit: "500 credits", "500 left this month".
+- Credits always shown with unit: "500 credits", "300 left this month".
 - Prices: `$9.99/month`, `$9.99 per month` — never `USD 9.99`.
 
 ### 5.4 Tense & voice

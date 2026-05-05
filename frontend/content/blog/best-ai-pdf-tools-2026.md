@@ -45,7 +45,7 @@ We uploaded the same set of test documents to each tool: a 40-page financial ear
 - OCR for scanned PDFs
 - Documents up to 500 pages / 50 MB
 
-**Pricing**: Free tier (500 credits/month), Plus ($9.99/month for 3,000 credits), Pro ($19.99/month for 9,000 credits). Credit packs available for one-time purchases.
+**Pricing**: Free tier (300 credits/month), Plus ($9.99/month for 3,000 credits), Pro ($19.99/month for 9,000 credits). Credit packs available for one-time purchases.
 
 **Best for**: Users who work with multiple document formats and need verifiable, cited answers. Particularly strong for multilingual workflows and anyone who values being able to click a citation and see the source highlighted in context.
 
@@ -186,7 +186,7 @@ See our [DocTalk vs. NotebookLM](/compare/notebooklm) comparison for a deeper an
 | **URL support** | Yes | No | No | Yes | No | No | No |
 | **Citation highlighting** | Click-to-highlight | Page reference | Page reference | Inline ref | Page reference | In-doc highlight | Cell reference |
 | **Languages** | 11 | ~5 | ~5 | ~10 | English focus | English focus | EN + ZH |
-| **Free tier** | 500 credits/mo | 2 PDFs/day | Limited queries | Unlimited | 60 pages/mo | Limited | Limited |
+| **Free tier** | 300 credits/mo | 2 PDFs/day | Limited queries | Unlimited | 60 pages/mo | Limited | Limited |
 | **Paid plans** | From $9.99/mo | From $5/mo | From $14.99/mo | Free | From $1.99/mo | From $15/mo | From $5.99/mo |
 | **No-signup demo** | Yes | No | No | No | No | No | No |
 | **OCR** | Yes | Yes | No | N/A | Yes | No | Yes |
@@ -252,7 +252,7 @@ ChatPDF, AskYourPDF, NotebookLM, Humata, and ChatDOC all support multi-document 
 
 ### Which tool has the best free tier?
 
-NotebookLM is completely free with no limits. For tools with paid tiers, DocTalk offers the most generous free tier with 500 credits/month plus a [no-signup demo](/demo) that lets you try the tool immediately.
+NotebookLM is completely free with no limits. For tools with paid tiers, DocTalk offers the most generous free tier with 300 credits/month plus a [no-signup demo](/demo) that lets you try the tool immediately.
 
 ### Are there open-source alternatives?
 

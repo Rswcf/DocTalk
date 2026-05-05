@@ -10,7 +10,7 @@
 
 | Component | Details |
 |-----------|---------|
-| **Free Tier** | 500 credits/month (auto-granted, 30-day lazy eval) |
+| **Free Tier** | 300 credits/month (auto-granted, 30-day lazy eval) |
 | **Plus Subscription** | $9.99/month via Stripe, 3,000 credits/month |
 | **Pro Subscription** | $19.99/month via Stripe, 9,000 credits/month |
 | **One-Time Credit Packs** | Boost ($3.99 / 500 credits), Power ($9.99 / 2K credits), Ultra ($19.99 / 5K credits) |
@@ -25,10 +25,10 @@ A typical chat interaction costs (after ÷10 rescaling):
 - **Balanced mode** (Mistral Medium 3.1): ~**9 credits** per query
 - **Thorough mode** (Mistral Large 2512): ~**27 credits** per query
 
-This means a Free user (500 credits/month) gets approximately:
-- ~250 Quick queries/month
-- ~55 Balanced queries/month
-- ~18 Thorough queries/month
+This means a Free user (300 credits/month) gets approximately:
+- ~150 Quick queries/month
+- Up to 20 Balanced queries/month by plan limit (credits would otherwise allow ~33)
+- Thorough mode is unavailable on Free
 
 A Plus user (3,000 credits/month) gets approximately:
 - ~1,500 Quick queries/month
@@ -44,7 +44,7 @@ A Pro user (9,000 credits/month) gets approximately:
 
 1. **Hybrid model (subscription + credits + packs)** provides both recurring revenue and expansion revenue
 2. **Tiered credit rates by model** align cost to value -- premium models cost more, which is fair and transparent
-3. **Right-sized free tier** (500 credits = ~250 Quick queries) demonstrates value while creating upgrade pressure
+3. **Right-sized free tier** (300 credits = ~150 Quick queries or 20 Balanced answers) demonstrates value while creating upgrade pressure
 4. **Demo system** with real documents allows zero-friction trial before sign-up
 5. **One-time packs** serve power users who need occasional bursts without ongoing commitment
 6. **Idempotent monthly grants** prevent double-crediting edge cases
@@ -53,7 +53,7 @@ A Pro user (9,000 credits/month) gets approximately:
 ### Weaknesses
 
 1. ~~**Only 2 tiers**~~ **FIXED** — Free/Plus/Pro shipped with annual pricing
-2. **Credits are abstract** -- users don't intuitively know what "500 credits" means in terms of real usage; need clear mapping to "X conversations"
+2. **Credits are abstract** -- users don't intuitively know what "300 credits" means in terms of real usage; need clear mapping to "X conversations"
 3. ~~**No annual discount**~~ **FIXED** — 20-25% annual discount now available
 4. ~~**No per-document or per-page limits**~~ **FIXED** — per-plan document count limits enforced: FREE=3, PLUS=20, PRO=999
 5. ~~**Upload is free**~~ — upload still doesn't consume credits, but per-plan file size limits now enforced (FREE=25MB, PLUS=50MB, PRO=100MB) with magic-byte file validation
@@ -69,7 +69,7 @@ A Pro user (9,000 credits/month) gets approximately:
 
 | Feature | **DocTalk** (Current) | **ChatPDF** | **AskYourPDF** | **Humata** | **PDF.ai** |
 |---------|----------------------|-------------|----------------|------------|------------|
-| **Free Tier** | 500 credits/mo (~250 queries) | 2 PDFs/day, 120 pages each, 50 questions/day | 100 pages/doc, 15MB, 50 Q/day, 3 convos/day | 60 pages/mo, 10 answers | Basic (limited) |
+| **Free Tier** | 300 credits/mo (~150 Quick or 20 Balanced cap) | 2 PDFs/day, 120 pages each, 50 questions/day | 100 pages/doc, 15MB, 50 Q/day, 3 convos/day | 60 pages/mo, 10 answers | Basic (limited) |
 | **Entry Paid** | Plus: $9.99/mo | Plus: $19.99/mo | Premium: $11.99/mo (annual) | Student: $1.99/mo (edu) | Pro: ~$17/mo |
 | **Mid Tier** | Pro: $19.99/mo | -- | Pro: $14.99/mo (annual) | Expert: $9.99/mo (3 users) | Ultimate: ~$27/mo |
 | **Team/Enterprise** | -- | -- | Enterprise: custom | Team: $49/user/mo | Enterprise: ~$37/mo |
@@ -83,7 +83,7 @@ A Pro user (9,000 credits/month) gets approximately:
 ### Key Pricing Observations
 
 1. **DocTalk pricing now competitive** -- Plus at $9.99/mo and Pro at $19.99/mo align with AskYourPDF ($14.99/mo) and ChatPDF ($19.99/mo)
-2. **DocTalk's free tier appropriately sized** -- 250 Quick queries/month creates upgrade pressure while still demonstrating value vs. ChatPDF's 50/day vs. Humata's 10 answers
+2. **DocTalk's free tier appropriately sized** -- 150 Quick queries/month plus a 20-answer Balanced cap creates upgrade pressure while still demonstrating value vs. ChatPDF's 50/day vs. Humata's 10 answers
 3. ~~**Missing annual pricing**~~ **FIXED** — 20-25% annual discount now available
 4. **No team tier** puts DocTalk at a disadvantage vs. Humata ($49/user/mo) and AskYourPDF (Enterprise)
 5. **OCR included at all tiers** is a competitive advantage over Humata (Team+ only) and AskYourPDF (Premium+ only)
@@ -139,17 +139,17 @@ A Pro user (9,000 credits/month) gets approximately:
 
 #### Free (Acquisition)
 - **Price**: $0
-- **Credits**: 500/month
-- **Limits**: 3 documents stored, 25 MB max file size, Quick + Balanced modes only (no Thorough)
+- **Credits**: 300/month
+- **Limits**: 3 documents stored, 25 MB max file size, Quick + limited Balanced modes only (no Thorough)
 - **Features**: Single user, basic citations, community support
 - **Goal**: Demonstrate value, create habit, hit credit wall quickly with active use
 
 #### Plus (Casual Users)
 - **Price**: $9.99/month ($7.99/mo annual = $95.88/yr, save 20%)
 - **Credits**: 3,000/month
-- **Limits**: 20 documents stored, 50 MB max file size, Quick + Balanced modes
+- **Limits**: 20 documents stored, 50 MB max file size, all 3 modes
 - **Features**: Multi-session, conversation export, OCR, PDF text search
-- **Goal**: Convert free users who need more than 500 credits but aren't power users
+- **Goal**: Convert free users who need more than 300 credits or uncapped Balanced/Thorough access but aren't power users
 
 #### Pro (Power Users)
 - **Price**: $19.99/month ($15.99/mo annual = $191.88/yr, save 20%)
@@ -198,10 +198,10 @@ This prevents hard stops that push users to competitors while capturing incremen
 
 | Feature | Free | Plus | Pro | Team | Enterprise |
 |---------|------|------|-----|------|------------|
-| Monthly credits | 500 | 3K | 9K | 20K/seat | Custom |
+| Monthly credits | 300 | 3K | 9K | 20K/seat | Custom |
 | Documents stored | 3 | 20 | Unlimited | Unlimited | Unlimited |
 | File size limit | 25 MB | 50 MB | 100 MB | 200 MB | Custom |
-| Models available | Quick + Balanced | Quick + Balanced | All 3 modes | All 3 modes | All + custom |
+| Models available | Quick + limited Balanced | All 3 modes | All 3 modes | All 3 modes | All + custom |
 | Sessions per doc | 1 | Unlimited | Unlimited | Unlimited | Unlimited |
 | OCR | No | Yes | Yes | Yes | Yes |
 | Conversation export | No | Markdown | Markdown + PDF | All formats | All formats |
@@ -234,7 +234,7 @@ This prevents hard stops that push users to competitors while capturing incremen
 
 ### 6.1 Free Tier Sizing (Deployed)
 
-**Current**: 500 credits/month (~250 Quick queries, ~55 Balanced queries)
+**Current**: 300 credits/month (~150 Quick queries, up to 20 Balanced queries)
 
 Rationale: ~8-17 queries/day is enough to demonstrate value but not enough for regular work use. Active users should hit the wall within the first week, creating a natural upgrade trigger.
 
