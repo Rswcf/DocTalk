@@ -211,6 +211,6 @@ If you analyze financial documents regularly, try the workflow above with [DocTa
 
 For a deeper look at how finance professionals use AI document tools, see our [finance use case guide](/use-cases/finance). And if you work with contracts alongside financial documents (common in M&A and deal work), our guide on [AI contract review](/blog/ai-contract-review-guide) covers that workflow in detail.
 
-For professional use with higher volume and access to the most capable AI models for nuanced financial language, check out [DocTalk's pricing plans](/pricing). The Thorough mode, available on Plus and Pro plans, uses a more powerful model that handles complex financial documents with greater precision.
+For professional use with higher volume and access to more careful analysis for nuanced financial language, check out [DocTalk's pricing plans](/pricing). Pro mode is designed for complex financial documents where precision and context matter more than raw speed.
 
 The goal is not to automate financial analysis — it is to automate the *reading* portion so analysts can spend their time on the analysis that actually creates value.

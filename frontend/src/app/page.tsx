@@ -132,7 +132,7 @@ export default function HomePage() {
           { '@type': 'Offer', price: '9.99', priceCurrency: 'USD', name: 'Plus', description: '3000 credits/month' },
           { '@type': 'Offer', price: '19.99', priceCurrency: 'USD', name: 'Pro', description: '9000 credits/month' },
         ],
-        featureList: ['PDF chat', 'DOCX analysis', 'PPTX analysis', 'XLSX analysis', 'Citation highlighting', 'OCR support', '11 languages', '3 AI performance modes'],
+        featureList: ['PDF chat', 'DOCX analysis', 'PPTX analysis', 'XLSX analysis', 'Citation highlighting', 'OCR support', '11 languages', '2 AI performance modes'],
         datePublished: '2026-01-15',
         dateModified: new Date().toISOString().split('T')[0],
       })}} />

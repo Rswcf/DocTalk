@@ -216,7 +216,7 @@ In larger deals, multiple team members review different document categories in p
 
 If you are involved in deal work and want to test AI-assisted due diligence, start with a small set — upload 5-10 contracts from a current or recent deal to [DocTalk's free demo](/demo) and run the screening questions above. Evaluate the accuracy and time savings against your usual process.
 
-For teams that handle regular deal flow, [DocTalk's Plus and Pro plans](/pricing) offer the volume and model quality needed for full-scale due diligence review. The Thorough mode is particularly useful for complex legal documents where nuance matters.
+For teams that handle regular deal flow, [DocTalk's Plus and Pro plans](/pricing) offer the volume and model quality needed for full-scale due diligence review. Pro mode is particularly useful for complex legal documents where nuance matters.
 
 For more detail on specific document types, see our guides for [lawyers](/use-cases/lawyers) reviewing contracts, [finance professionals](/use-cases/finance) analyzing financial statements, and our step-by-step walkthrough of [AI contract review](/blog/ai-contract-review-guide).
 

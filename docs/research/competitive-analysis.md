@@ -342,7 +342,7 @@ Humata, Denser, and Anara are all moving upmarket. Enterprise features (SSO, SOC
 
 ### 5.5 Model Choice as a Feature
 
-Users increasingly expect to choose their AI model. AskYourPDF (8+ models), DocTalk (3 performance modes), and Anara (multiple tiers of models) all offer model selection. This is becoming table stakes for power users.
+Users increasingly expect to choose their AI model. AskYourPDF (8+ models), DocTalk (Flash/Pro modes), and Anara (multiple tiers of models) all offer model selection. This is becoming table stakes for power users.
 
 ### 5.6 Credit/Usage-Based Pricing
 

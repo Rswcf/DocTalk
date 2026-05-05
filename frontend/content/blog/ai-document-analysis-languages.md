@@ -125,9 +125,9 @@ Technical and domain-specific terms vary across languages. When querying, use th
 
 When the AI answers in a different language than the source document, always click the citations to check the original text. The LLM's cross-lingual synthesis is generally accurate, but specialized terminology, idiomatic expressions, and legal language can occasionally be paraphrased rather than precisely translated. The citation highlighting lets you catch these cases.
 
-### Use Balanced or Thorough Mode for Cross-Lingual Queries
+### Use Pro Mode for Cross-Lingual Queries
 
-Cross-lingual questions are inherently more complex for the AI. Using DocTalk's Balanced or Thorough mode (available with [Plus and Pro plans](/pricing)) gives the model more processing capacity to handle the language bridging accurately. Quick mode works well for same-language queries.
+Cross-lingual questions are inherently more complex for the AI. Using DocTalk's Pro mode gives the model more room for careful language bridging and citation-aware synthesis. Flash mode works well for same-language queries and quick lookups.
 
 ## How Cross-Lingual Embeddings Are Trained
 

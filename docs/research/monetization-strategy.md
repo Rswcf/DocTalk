@@ -20,20 +20,17 @@
 
 ### Credit Economics
 
-A typical chat interaction costs (after ÷10 rescaling):
-- **Quick mode** (DeepSeek V3.2): ~**2 credits** per query
-- **Balanced mode** (Mistral Medium 3.1): ~**9 credits** per query
-- **Thorough mode** (Mistral Large 2512): ~**27 credits** per query
+A typical chat interaction costs:
+- **Flash mode** (DeepSeek V4 Flash): ~**5 credits** reserved per query, reconciled to actual usage
+- **Pro mode** (DeepSeek V4 Pro): ~**15 credits** reserved per query, reconciled to actual usage
 
 This means a Free user (300 credits/month) gets approximately:
-- ~150 Quick queries/month
-- Up to 20 Balanced queries/month by plan limit (credits would otherwise allow ~33)
-- Thorough mode is unavailable on Free
+- ~60 Flash queries/month if using only Flash
+- Up to 20 Pro queries/month by plan limit
 
 A Plus user (3,000 credits/month) gets approximately:
-- ~1,500 Quick queries/month
-- ~333 Balanced queries/month
-- ~111 Thorough queries/month
+- ~600 Flash queries/month if using only Flash
+- ~200 Pro queries/month if using only Pro
 
 A Pro user (9,000 credits/month) gets approximately:
 - ~4,500 Quick queries/month
@@ -74,7 +71,7 @@ A Pro user (9,000 credits/month) gets approximately:
 | **Mid Tier** | Pro: $19.99/mo | -- | Pro: $14.99/mo (annual) | Expert: $9.99/mo (3 users) | Ultimate: ~$27/mo |
 | **Team/Enterprise** | -- | -- | Enterprise: custom | Team: $49/user/mo | Enterprise: ~$37/mo |
 | **Annual Discount** | 20-25% off annual | $139.99/yr (saves ~42%) | 25% off annual | Not specified | ~20% off annual |
-| **Model Selection** | 3 performance modes (Quick/Balanced/Thorough) | Not specified | GPT-5 family + Claude + Gemini (credits for premium) | GPT-5 | Not specified |
+| **Model Selection** | 2 modes (Flash/Pro) | Not specified | GPT-5 family + Claude + Gemini (credits for premium) | GPT-5 | Not specified |
 | **OCR** | Included (all tiers) | Not specified | Premium+ only | Team+ only ($49/user) | Not specified |
 | **Page Limits** | None (credit-gated) | 120 free / 2000 paid | 100 free / 6000 pro | 60 free / 5000 team | Not specified |
 | **File Size** | 25 MB (Free) / 50 MB (Plus) / 100 MB (Pro) | 32 MB (paid) | 877 MB (pro) | Not specified | Not specified |
@@ -83,11 +80,11 @@ A Pro user (9,000 credits/month) gets approximately:
 ### Key Pricing Observations
 
 1. **DocTalk pricing now competitive** -- Plus at $9.99/mo and Pro at $19.99/mo align with AskYourPDF ($14.99/mo) and ChatPDF ($19.99/mo)
-2. **DocTalk's free tier appropriately sized** -- 150 Quick queries/month plus a 20-answer Balanced cap creates upgrade pressure while still demonstrating value vs. ChatPDF's 50/day vs. Humata's 10 answers
+2. **DocTalk's free tier appropriately sized** -- about 60 Flash queries/month plus a 20-answer Pro cap creates upgrade pressure while still demonstrating value vs. ChatPDF's 50/day vs. Humata's 10 answers
 3. ~~**Missing annual pricing**~~ **FIXED** — 20-25% annual discount now available
 4. **No team tier** puts DocTalk at a disadvantage vs. Humata ($49/user/mo) and AskYourPDF (Enterprise)
 5. **OCR included at all tiers** is a competitive advantage over Humata (Team+ only) and AskYourPDF (Premium+ only)
-6. **Model selection at all tiers** is a major differentiator -- no competitor offers 3 performance modes with model-adaptive prompts across all plans
+6. **Model selection at all tiers** is a differentiator -- the Flash/Pro split is simple enough for mainstream users while still exposing model choice
 
 ---
 
@@ -129,7 +126,7 @@ A Pro user (9,000 credits/month) gets approximately:
 | Overage/pack purchases capture expansion revenue | Two metrics to track (plan + credits) |
 | Annual discounts drive commitment | -- |
 
-**Verdict**: DocTalk's current hybrid approach (subscription + credits + packs) is fundamentally sound. The credit system is the right choice for an AI product with variable inference costs across 3 performance modes. The main improvements needed are: more tiers, better credit communication, annual pricing, and overage handling.
+**Verdict**: DocTalk's current hybrid approach (subscription + credits + packs) is fundamentally sound. The credit system is the right choice for an AI product with variable inference costs across Flash and Pro modes. The main improvements needed are: more tiers, better credit communication, annual pricing, and overage handling.
 
 ---
 
@@ -140,7 +137,7 @@ A Pro user (9,000 credits/month) gets approximately:
 #### Free (Acquisition)
 - **Price**: $0
 - **Credits**: 300/month
-- **Limits**: 3 documents stored, 25 MB max file size, Quick + limited Balanced modes only (no Thorough)
+- **Limits**: 3 documents stored, 25 MB max file size, Flash + limited Pro modes
 - **Features**: Single user, basic citations, community support
 - **Goal**: Demonstrate value, create habit, hit credit wall quickly with active use
 
@@ -201,7 +198,7 @@ This prevents hard stops that push users to competitors while capturing incremen
 | Monthly credits | 300 | 3K | 9K | 20K/seat | Custom |
 | Documents stored | 3 | 20 | Unlimited | Unlimited | Unlimited |
 | File size limit | 25 MB | 50 MB | 100 MB | 200 MB | Custom |
-| Models available | Quick + limited Balanced | All 3 modes | All 3 modes | All 3 modes | All + custom |
+| Models available | Flash + limited Pro | Flash + Pro | Flash + Pro | Flash + Pro | Flash + Pro + custom |
 | Sessions per doc | 1 | Unlimited | Unlimited | Unlimited | Unlimited |
 | OCR | No | Yes | Yes | Yes | Yes |
 | Conversation export | No | Markdown | Markdown + PDF | All formats | All formats |
@@ -226,7 +223,7 @@ This prevents hard stops that push users to competitors while capturing incremen
 3. **Time-based triggers**: Show upgrade prompts when users hit 80% of credit limit, not at 100% (reduces frustration)
 4. **Feature discovery**: Allow free users to see premium features exist (greyed out with "Upgrade" badge) to create awareness
 5. **OCR as mid-tier gate**: OCR is a strong differentiator and has real compute cost -- gating at Plus creates a clear reason to upgrade for users with scanned PDFs
-6. **Mode gating**: Thorough mode restricted to Pro tier, justified by 3x cost multiplier
+6. **Mode gating**: Free users get a monthly Pro cap; Plus and Pro remove the cap
 
 ---
 
@@ -242,7 +239,7 @@ Rationale: ~8-17 queries/day is enough to demonstrate value but not enough for r
 
 - **Credit usage bar**: Show remaining credits prominently (already exists in CreditsDisplay)
 - **80% threshold notification**: "You've used 80% of your monthly credits. Upgrade to Plus for 6x more."
-- **Model gate prompt**: When free users attempt Thorough mode, show contextual upgrade modal: "Thorough mode delivers deeper analysis. Upgrade to Pro for $19.99/mo."
+- **Model gate prompt**: When free users hit the Pro cap, show contextual upgrade modal: "Pro mode delivers deeper analysis. Upgrade to Plus for unrestricted Pro usage."
 - **Document limit prompt**: When free users hit 3-document limit: "Upgrade to store up to 20 documents"
 
 ### 6.3 Annual Pricing (Deployed)
@@ -263,7 +260,7 @@ Current pricing page weaknesses:
 - Credit packs lack context (what does 5K credits actually get you?)
 
 Recommended improvements:
-1. **Add "credit translator"**: "5K credits = ~350 conversations with Quick mode" inline on pack cards
+1. **Add "credit translator"**: "5K credits = hundreds of Flash answers or deeper Pro work" inline on pack cards
 2. **Annual/Monthly toggle** at top of pricing section
 3. **"Most Popular" badge** on recommended tier
 4. **Social proof**: "Trusted by X users" banner, testimonials from target segments
@@ -368,7 +365,7 @@ Recommended improvements:
 
 ### Phase 2: New Tiers (2-4 weeks) — ✅ Completed
 - [x] Implement Plus tier ($9.99/mo, 3K credits)
-- [x] Gate Thorough mode to Pro tier
+- [x] Replace Thorough gate with Free-plan Pro monthly cap
 - [ ] Gate OCR to Plus+
 - [x] Implement document storage limits per tier
 - [x] Add file size limits per tier
@@ -396,7 +393,7 @@ Recommended improvements:
 | Too many tiers confuse users | Started with Free/Plus/Pro; add Team only when there's demand signal |
 | Credit system remains confusing | Always show "equivalent conversations" alongside credit numbers |
 | Team features require significant engineering | Start with shared document links (low-effort), build full admin later |
-| Competitors undercut on price | Compete on value (3 performance modes, citation quality, OCR) not price |
+| Competitors undercut on price | Compete on value (Flash/Pro model choice, citation quality, OCR) not price |
 | Annual plans reduce short-term cash flow | Offer both; use annual as retention tool, not default |
 
 ---

@@ -112,7 +112,7 @@ Begin with a high-level question to orient yourself, then ask progressively more
 
 ### Choose the Right Performance Mode
 
-DocTalk offers three performance modes. Quick mode is ideal for simple factual lookups. Balanced mode works well for most questions. Thorough mode is best for complex analysis that requires synthesizing information from multiple sections.
+DocTalk offers two performance modes. Flash mode is ideal for simple factual lookups and fast cited answers. Pro mode is best for deeper explanations, comparisons, and analysis that synthesizes information from multiple sections.
 
 ## What Types of Questions Work Best?
 

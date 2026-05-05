@@ -39,7 +39,7 @@ We uploaded the same set of test documents to each tool: a 40-page financial ear
 - 7 document formats (PDF, DOCX, PPTX, XLSX, TXT, MD, URL)
 - Citation highlighting with click-to-navigate
 - 11 languages supported (English, Chinese, Spanish, Japanese, German, French, Korean, Portuguese, Italian, Arabic, Hindi)
-- 3 AI performance modes (Quick, Balanced, Thorough)
+- 2 AI performance modes (Flash, Pro)
 - Free demo with no signup required
 - Multiple chat sessions per document
 - OCR for scanned PDFs

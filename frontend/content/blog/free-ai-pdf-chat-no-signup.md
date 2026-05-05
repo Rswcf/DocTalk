@@ -65,13 +65,13 @@ If you like the demo and want to upload your own documents, creating a free DocT
 | Credits per month | 500 |
 | Document uploads | 3 documents |
 | Max file size | 25 MB |
-| AI modes | Quick + limited Balanced |
+| AI modes | Flash + limited Pro |
 | Sessions per document | 3 |
 | Citation highlighting | Yes |
 | Supported formats | PDF, DOCX, PPTX, XLSX, TXT, MD, URL |
 | Languages | 11 |
 
-300 credits per month is enough for approximately 50-250 questions depending on document length and AI mode. Quick mode uses about 2 credits per question, while Balanced mode uses about 8.
+300 credits per month is enough for dozens of questions depending on document length, answer length, and AI mode. Flash is the lowest-cost mode, while Pro uses more credits for deeper synthesis.
 
 Signing up requires only a Google account, Microsoft account, or email address. No credit card needed.
 
@@ -83,7 +83,7 @@ If you use DocTalk regularly, the paid plans unlock more credits and features:
 - 3,000 credits/month
 - 20 documents
 - 50 MB file size
-- All 3 AI modes (Quick, Balanced, Thorough)
+- Flash and Pro AI modes
 - Unlimited sessions per document
 - Export conversations
 
@@ -91,7 +91,7 @@ If you use DocTalk regularly, the paid plans unlock more credits and features:
 - 9,000 credits/month
 - Unlimited documents
 - 100 MB file size
-- All 3 AI modes
+- Flash and Pro AI modes
 - Unlimited sessions
 - Custom instructions per document
 - Export conversations
@@ -131,9 +131,9 @@ If you work with documents daily and find the tool useful, the free account (300
 
 ## Tips for Getting the Most from Free Credits
 
-### Use Quick Mode for Simple Lookups
+### Use Flash Mode for Simple Lookups
 
-Quick mode costs about 2 credits per question and is ideal for straightforward factual queries: "What date is mentioned on page 5?" or "How many participants were in the study?" Save Balanced mode (8 credits) for questions that require synthesis across multiple sections.
+Flash mode is ideal for straightforward factual queries: "What date is mentioned on page 5?" or "How many participants were in the study?" Save Pro mode for questions that require synthesis across multiple sections.
 
 ### Be Specific
 

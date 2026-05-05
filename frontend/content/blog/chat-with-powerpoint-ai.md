@@ -153,7 +153,7 @@ Instead of "Compare the Q1 and Q2 results and explain the variance," try asking 
 
 ### Choose the Right Performance Mode
 
-For quick factual lookups from presentations, DocTalk's Quick mode works well. For questions that require synthesizing information from multiple slides — like "What is the overall strategy presented here?" — Balanced or Thorough mode produces better results.
+For quick factual lookups from presentations, DocTalk's Flash mode works well. For questions that require synthesizing information from multiple slides — like "What is the overall strategy presented here?" — Pro mode produces deeper results.
 
 ## What Elements Are Extracted from PPTX?
 

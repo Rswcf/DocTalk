@@ -26,7 +26,7 @@ DocTalk is an AI-powered PDF reader with a unique competitive advantage: **citat
 - **Cross-document Q&A** is the #1 missing capability vs. NotebookLM
 
 ### DocTalk's Position Today
-- **Strengths**: Citation precision (small chunks + bbox highlights), 3 performance modes (Quick=DeepSeek V3.2, Balanced=Mistral Medium 3.1, Thorough=Mistral Large 2512) via OpenRouter with model-adaptive prompts and per-model parameter tuning (benchmark-validated), OCR, dark mode, multi-language (11 languages), ChatGPT-style chat UI (stop generation, scroll-to-bottom, compact citation pills, "+" action menu, hover action buttons, styled code blocks with copy, antialiased typography, max-width centering), streaming indicators, auto-summary, security hardening (SSRF protection, SSE-S3 encryption at rest, file validation, structured security logging, GDPR data export, cookie consent, non-root Docker), branded email magic link with 11-locale i18n
+- **Strengths**: Citation precision (small chunks + bbox highlights), 2 DeepSeek V4 modes (Flash=fast cited answers, Pro=deeper analysis) with model-adaptive prompts and per-model parameter tuning (benchmark-validated), OCR, dark mode, multi-language (11 languages), ChatGPT-style chat UI (stop generation, scroll-to-bottom, compact citation pills, "+" action menu, hover action buttons, styled code blocks with copy, antialiased typography, max-width centering), streaming indicators, auto-summary, security hardening (SSRF protection, SSE-S3 encryption at rest, file validation, structured security logging, GDPR data export, cookie consent, non-root Docker), branded email magic link with 11-locale i18n
 - **Weaknesses**: No team features, no API, no SSO
 
 ---
@@ -36,7 +36,7 @@ DocTalk is an AI-powered PDF reader with a unique competitive advantage: **citat
 ### Where DocTalk Wins Today
 | vs. Competitor | DocTalk Advantage |
 |----------------|-------------------|
-| **NotebookLM** | Page-level bbox citations, 3 performance modes, OCR, privacy, encryption at rest, GDPR data export |
+| **NotebookLM** | Page-level bbox citations, Flash/Pro model choice, OCR, privacy, encryption at rest, GDPR data export |
 | **ChatPDF** | Multi-model, dark mode, multi-session, auto-summary, streaming UX |
 | **AskYourPDF** | Better citation UX (hover preview, page highlights), cleaner UI, multi-language |
 | **Humata** | Better citation accuracy (small chunks), more model options, credits transparency |
@@ -90,7 +90,7 @@ DocTalk is an AI-powered PDF reader with a unique competitive advantage: **citat
 - ✅ **Plus tier launched ($9.99/month)**: Captures casual users between Free and Pro
 - ✅ **Annual pricing with 20% discount**: Reduces churn and improves LTV
 - ✅ **Credit packs repriced**: Boost/Power/Ultra now 1.2-2.4x more expensive per-credit than subscriptions, making subscriptions the better value
-- ✅ **Feature gating deployed**: Thorough mode (Plus+), Export (Plus+), Custom Instructions (Pro), Sessions (Free=3/doc)
+- ✅ **Feature gating deployed**: Free-plan Pro monthly cap, Export (Plus+), Custom Instructions (Pro), Sessions (Free=3/doc)
 - ⏳ **Priority Queue**: Removed from pricing page pending implementation
 - ⏳ **Team tier**: Planned for Phase 3 (requires workspace, RBAC, SSO features)
 
@@ -98,11 +98,11 @@ DocTalk is an AI-powered PDF reader with a unique competitive advantage: **citat
 
 | Tier | Monthly | Annual (save 20%) | Credits/mo | Documents | Models |
 |------|---------|---------------------|-----------|-----------|--------|
-| **Free** | $0 | — | 300 | 3 stored | Quick + limited Balanced |
-| **Plus** | $9.99 | $7.99/mo | 3,000 | 20 stored | All 3 modes |
-| **Pro** | $19.99 | $15.99/mo | 9,000 | Unlimited | All 3 modes |
-| **Team** (PLANNED) | $29.99/seat | $24.99/seat/mo | 200K/seat | Unlimited | All 3 modes |
-| **Enterprise** (PLANNED) | Custom | Custom | Custom | Unlimited | All 3 + custom |
+| **Free** | $0 | — | 300 | 3 stored | Flash + limited Pro |
+| **Plus** | $9.99 | $7.99/mo | 3,000 | 20 stored | Flash + Pro |
+| **Pro** | $19.99 | $15.99/mo | 9,000 | Unlimited | Flash + Pro |
+| **Team** (PLANNED) | $29.99/seat | $24.99/seat/mo | 200K/seat | Unlimited | Flash + Pro |
+| **Enterprise** (PLANNED) | Custom | Custom | Custom | Unlimited | Flash + Pro + custom |
 
 **Credit Packs** (one-time purchases, more expensive per-credit than subscriptions):
 - **Boost**: 500 credits for $3.99 (0.798¢/credit)
@@ -117,7 +117,7 @@ For comparison, subscriptions range from 0.167¢/credit (Pro annual) to 0.333¢/
 3. **Raised Pro price** to $19.99/month with 9,000 credits — aligns with market
 4. **Add Team tier** ($29.99/seat/month) — unlock B2B revenue (planned)
 5. **Added annual pricing** with 20-25% discount — improves LTV, reduces churn
-6. **Gate Thorough mode** to Plus+ tiers only
+6. **Limit Free-plan Pro usage** while keeping Flash broadly available
 7. **Gate OCR** to Plus+ — it has real compute cost and is a strong differentiator (planned)
 8. **Add credit overage option** — when credits exhausted, offer pay-as-you-go instead of hard block (planned)
 
@@ -126,7 +126,7 @@ For comparison, subscriptions range from 0.167¢/credit (Pro annual) to 0.333¢/
 | Feature | Free | Plus | Pro | Team | Enterprise |
 |---------|------|------|-----|------|------------|
 | Core citation chat | Yes | Yes | Yes | Yes | Yes |
-| Thorough mode | No | Yes | Yes | Yes | Yes |
+| Pro mode | Limited | Yes | Yes | Yes | Yes |
 | OCR | Yes | Yes | Yes | Yes | Yes |
 | Sessions per doc | 3 | Unlimited | Unlimited | Unlimited | Unlimited |
 | Custom prompts | No | No | Yes | Yes | Yes |
@@ -193,7 +193,7 @@ For comparison, subscriptions range from 0.167¢/credit (Pro annual) to 0.333¢/
 | **Credit rescaling causes confusion** | MEDIUM | Monitor user comprehension; provide clear in-app credit explanations |
 | **Multi-document Q&A quality degrades** | MEDIUM | Reranker (Cohere Rerank) for cross-doc retrieval quality; tune top_k |
 | **Enterprise sales cycle too long** for small team | HIGH | Focus on self-serve Team tier first; enterprise = later-stage |
-| **Competitors undercut on price** | LOW | Compete on value (3 performance modes, citation quality, OCR), not price |
+| **Competitors undercut on price** | LOW | Compete on value (Flash/Pro model choice, citation quality, OCR), not price |
 | **SOC 2 takes too long** | MEDIUM | Foundation laid: structured security logging, encryption at rest, SSRF protection, non-root Docker, GDPR data export, OAuth token cleanup. Engage compliance automation tool (Vanta/Drata) for formal audit |
 | **Too many features dilute quality** | HIGH | Ship fewer features better; focus on citation precision as core differentiator |
 
