@@ -182,6 +182,141 @@ def _is_valid_bbox(bb: dict) -> bool:
     return all(isinstance(bb.get(k), (int, float)) for k in ("x", "y", "w", "h"))
 
 
+def _citation_payload(ref_num: int, chunk: "_ChunkInfo", offset: int) -> Dict[str, Any]:
+    all_bbs = [
+        bb
+        for bb in (chunk.bboxes or [])
+        if isinstance(bb, dict) and _is_valid_bbox(bb)
+    ]
+    all_bbs.sort(
+        key=lambda b: (
+            int(b.get("page", chunk.page_start))
+            if isinstance(b.get("page", chunk.page_start), (int, float))
+            else chunk.page_start,
+            b.get("y", 0),
+            b.get("x", 0),
+        )
+    )
+    page_counts: dict[int, int] = {}
+    for bb in all_bbs:
+        page_val = bb.get("page", chunk.page_start)
+        page = (
+            int(page_val)
+            if isinstance(page_val, (int, float))
+            else chunk.page_start
+        )
+        page_counts[page] = page_counts.get(page, 0) + 1
+    best_page = (
+        min(page_counts, key=lambda p: (-page_counts[p], p))
+        if page_counts
+        else chunk.page_start
+    )
+    citation_data: Dict[str, Any] = {
+        "ref_index": ref_num,
+        "chunk_id": str(chunk.id),
+        "page": best_page,
+        "page_end": chunk.page_end,
+        "bboxes": all_bbs,
+        "text_snippet": ((f"{chunk.section_title}: " if chunk.section_title else "") + (chunk.text or ""))[:100],
+        "offset": offset,
+    }
+    citation_data["confidence_score"] = round(chunk.score, 3)
+    citation_data["context_text"] = (chunk.text or "")[:300]
+    if chunk.document_id:
+        citation_data["document_id"] = str(chunk.document_id)
+    if chunk.document_filename:
+        citation_data["document_filename"] = chunk.document_filename
+    return citation_data
+
+
+_LATIN_WORD_RE = re.compile(r"[a-zA-Z][a-zA-Z0-9_\-]{2,}")
+_CJK_RE = re.compile(r"[\u4e00-\u9fff]")
+
+
+def _text_features(text: str) -> set[str]:
+    lowered = text.lower()
+    features = set(_LATIN_WORD_RE.findall(lowered))
+    cjk_chars = _CJK_RE.findall(text)
+    features.update(cjk_chars)
+    for i in range(len(cjk_chars) - 1):
+        features.add(cjk_chars[i] + cjk_chars[i + 1])
+    return features
+
+
+def _citation_anchor_offsets(text: str, *, limit: int = 8) -> list[tuple[int, str]]:
+    anchors: list[tuple[int, str]] = []
+    cursor = 0
+    for raw_line in text.splitlines(keepends=True):
+        line = raw_line.strip()
+        cursor += len(raw_line)
+        if not line:
+            continue
+        if len(line) < 24 and not re.match(r"^(\d+\.|[-*•])\s+", line):
+            continue
+        anchors.append((max(0, cursor - len(raw_line) + len(raw_line.rstrip("\n\r"))), line))
+        if len(anchors) >= limit:
+            return anchors
+
+    if anchors:
+        return anchors
+
+    stripped = text.strip()
+    return [(len(text), stripped)] if stripped else []
+
+
+def _fallback_citations(
+    assistant_text: str,
+    chunk_map: dict[int, "_ChunkInfo"],
+    *,
+    limit: int = 8,
+    base_offset: int = 0,
+) -> List[Dict[str, Any]]:
+    """Create deterministic citations when the model forgets bracket refs.
+
+    The primary path is still model-authored [n] markers. This fallback prevents
+    a cited-answer product from returning an uncited response when retrieval
+    succeeded but the model omitted markers.
+    """
+    if not assistant_text.strip() or not chunk_map:
+        return []
+
+    chunk_features = {
+        ref_num: _text_features(chunk.text or "")
+        for ref_num, chunk in chunk_map.items()
+    }
+    fallback: List[Dict[str, Any]] = []
+    used_offsets: set[int] = set()
+
+    for offset, anchor_text in _citation_anchor_offsets(assistant_text, limit=limit):
+        anchor_features = _text_features(anchor_text)
+        best_ref = None
+        best_score = 0
+        for ref_num, features in chunk_features.items():
+            score = len(anchor_features & features)
+            if score > best_score:
+                best_ref = ref_num
+                best_score = score
+        if best_ref is None:
+            best_ref = min(chunk_map.keys())
+
+        if offset in used_offsets:
+            continue
+        used_offsets.add(offset)
+        fallback.append(_citation_payload(best_ref, chunk_map[best_ref], base_offset + offset))
+
+    return fallback
+
+
+def _citation_contract() -> str:
+    return (
+        "\n\n## Citation Contract\n"
+        "- Every answer based on document fragments MUST include clickable bracket citations like [1].\n"
+        "- Put a citation at the end of every factual paragraph or bullet that uses document content.\n"
+        "- Use only the fragment numbers listed above. If no fragment supports a claim, do not make that claim.\n"
+        "- A response with no [n] citations is invalid unless there are no relevant fragments.\n"
+    )
+
+
 async def _refund_predebit(
     db: AsyncSession,
     user_id: uuid.UUID,
@@ -259,50 +394,7 @@ class RefParserFSM:
                     if inner.isdigit() and (int(inner) in self.chunk_map):
                         ref_num = int(inner)
                         chunk = self.chunk_map[ref_num]
-                        all_bbs = [
-                            bb
-                            for bb in (chunk.bboxes or [])
-                            if isinstance(bb, dict) and _is_valid_bbox(bb)
-                        ]
-                        all_bbs.sort(
-                            key=lambda b: (
-                                int(b.get("page", chunk.page_start))
-                                if isinstance(b.get("page", chunk.page_start), (int, float))
-                                else chunk.page_start,
-                                b.get("y", 0),
-                                b.get("x", 0),
-                            )
-                        )
-                        page_counts: dict[int, int] = {}
-                        for bb in all_bbs:
-                            page_val = bb.get("page", chunk.page_start)
-                            page = (
-                                int(page_val)
-                                if isinstance(page_val, (int, float))
-                                else chunk.page_start
-                            )
-                            page_counts[page] = page_counts.get(page, 0) + 1
-                        best_page = (
-                            min(page_counts, key=lambda p: (-page_counts[p], p))
-                            if page_counts
-                            else chunk.page_start
-                        )
-                        citation_data: Dict[str, Any] = {
-                                    "ref_index": ref_num,
-                                    "chunk_id": str(chunk.id),
-                                    "page": best_page,
-                                    "page_end": chunk.page_end,
-                                    "bboxes": all_bbs,
-                                    "text_snippet": ((f"{chunk.section_title}: " if chunk.section_title else "") + (chunk.text or ""))[:100],
-                                    "offset": self.char_offset,
-                        }
-                        citation_data["confidence_score"] = round(chunk.score, 3)
-                        citation_data["context_text"] = (chunk.text or "")[:300]
-                        if chunk.document_id:
-                            citation_data["document_id"] = str(chunk.document_id)
-                        if chunk.document_filename:
-                            citation_data["document_filename"] = chunk.document_filename
-                        events.append(sse("citation", citation_data))
+                        events.append(sse("citation", _citation_payload(ref_num, chunk, self.char_offset)))
                     else:
                         # 非有效引用，回退为普通文本
                         events.append(sse("token", {"text": self.buffer}))
@@ -520,6 +612,7 @@ class ChatService:
                     + "## Document Fragments\n"
                     + ("\n".join(numbered_chunks) if numbered_chunks else "(none)")
                     + "\n\n## Rules\n" + rules
+                    + _citation_contract()
                 )
             else:
                 system_prompt = (
@@ -528,6 +621,7 @@ class ChatService:
                     + "## Document Fragments\n"
                     + ("\n".join(numbered_chunks) if numbered_chunks else "(none)")
                     + "\n\n## Rules\n" + rules
+                    + _citation_contract()
                 )
 
             # Inject custom instructions if present
@@ -651,6 +745,19 @@ class ChatService:
                 if ev["event"] == "token":
                     assistant_text_parts.append(ev["data"]["text"])
                 yield ev
+
+            if not citations:
+                assistant_snapshot = "".join(assistant_text_parts)
+                fallback_citations = _fallback_citations(assistant_snapshot, chunk_map)
+                if fallback_citations:
+                    logger.warning(
+                        "LLM emitted no citation markers; generated %d fallback citations model=%s",
+                        len(fallback_citations),
+                        effective_model,
+                    )
+                    for citation in fallback_citations:
+                        citations.append(citation)
+                        yield sse("citation", citation)
 
             # Warn if response was truncated due to token limit
             if finish_reason == "length":
@@ -932,6 +1039,7 @@ class ChatService:
                     + "## Document Fragments\n"
                     + ("\n".join(numbered_chunks) if numbered_chunks else "(none)")
                     + "\n\n## Rules\n" + rules
+                    + _citation_contract()
                 )
             else:
                 system_prompt = (
@@ -940,6 +1048,7 @@ class ChatService:
                     + "## Document Fragments\n"
                     + ("\n".join(numbered_chunks) if numbered_chunks else "(none)")
                     + "\n\n## Rules\n" + rules
+                    + _citation_contract()
                 )
 
             if doc and doc.custom_instructions:
@@ -1024,6 +1133,23 @@ class ChatService:
                 if ev["event"] == "token":
                     continuation_text_parts.append(ev["data"]["text"])
                 yield ev
+
+            if not new_citations:
+                continuation_snapshot = "".join(continuation_text_parts)
+                fallback_citations = _fallback_citations(
+                    continuation_snapshot,
+                    chunk_map,
+                    base_offset=len(asst_msg.content or ""),
+                )
+                if fallback_citations:
+                    logger.warning(
+                        "LLM emitted no continuation citation markers; generated %d fallback citations model=%s",
+                        len(fallback_citations),
+                        effective_model,
+                    )
+                    for citation in fallback_citations:
+                        new_citations.append(citation)
+                        yield sse("citation", citation)
 
             if finish_reason == "length":
                 yield sse("truncated", {"reason": "max_tokens"})

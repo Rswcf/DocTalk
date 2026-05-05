@@ -59,6 +59,37 @@ def test_continuation_prompt_infers_existing_response_language() -> None:
     assert "previous assistant response" in prompt
 
 
+def test_citation_contract_rejects_uncited_answers() -> None:
+    contract = chat_service_module._citation_contract()
+
+    assert "Every answer" in contract
+    assert "no [n] citations is invalid" in contract
+
+
+def test_fallback_citations_anchor_uncited_answer_to_retrieved_chunks() -> None:
+    chunk_id = uuid.uuid4()
+    chunk = chat_service_module._ChunkInfo(
+        id=chunk_id,
+        page_start=8,
+        page_end=9,
+        bboxes=[{"x": 0.1, "y": 0.2, "w": 0.3, "h": 0.1, "page": 8}],
+        text="纳什均衡 合作最优 过度自动化 市场失灵 自动化率",
+        section_title="Equilibrium and Over-Automation",
+        score=0.91,
+    )
+
+    citations = chat_service_module._fallback_citations(
+        "文章使用纳什均衡分析企业自动化率，并与合作最优进行对比。",
+        {1: chunk},
+    )
+
+    assert citations
+    assert citations[0]["ref_index"] == 1
+    assert citations[0]["chunk_id"] == str(chunk_id)
+    assert citations[0]["page"] == 8
+    assert citations[0]["offset"] > 0
+
+
 @pytest.mark.asyncio
 async def test_chat_stream_refunds_predebit_when_retrieval_fails(
     monkeypatch: pytest.MonkeyPatch,
