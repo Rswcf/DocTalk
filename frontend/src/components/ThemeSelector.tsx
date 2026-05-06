@@ -46,7 +46,7 @@ export default function ThemeSelector() {
       const idx = THEMES.findIndex((th) => th.id === currentId);
       setFocusIndex(idx >= 0 ? idx : 0);
     }
-  }, [open, resolvedTheme, updateMenuPos]);
+  }, [open, theme, updateMenuPos]);
 
   useEffect(() => {
     if (open && focusIndex >= 0 && itemRefs.current[focusIndex]) {

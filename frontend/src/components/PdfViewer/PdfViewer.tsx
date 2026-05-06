@@ -70,7 +70,6 @@ const scrollBehavior = () =>
 
 export default function PdfViewer({ pdfUrl, currentPage, highlights, scale, scrollNonce, highlightSnippet }: PdfViewerProps) {
   const [numPages, setNumPages] = useState<number>(0);
-  const [urlError, setUrlError] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [textCacheVersion, setTextCacheVersion] = useState(0);
@@ -89,14 +88,12 @@ export default function PdfViewer({ pdfUrl, currentPage, highlights, scale, scro
   const { t } = useLocale();
 
   // Validate PDF URL
-  const validPdfUrl = useMemo(() => {
+  const { validPdfUrl, urlError } = useMemo(() => {
     if (!isValidPdfUrl(pdfUrl)) {
-      setUrlError(t('doc.invalidPdfUrl'));
-      return null;
+      return { validPdfUrl: null, urlError: t('doc.invalidPdfUrl') };
     }
-    setUrlError(null);
-    return pdfUrl;
-  }, [pdfUrl]);
+    return { validPdfUrl: pdfUrl, urlError: null };
+  }, [pdfUrl, t]);
 
   useEffect(() => {
     const timer = setTimeout(() => setDebouncedSearch(searchQuery), 300);

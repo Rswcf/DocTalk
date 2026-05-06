@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useMemo } from "react";
+import Image from "next/image";
 import type { UserProfile } from "../../types";
 import { useLocale } from "../../i18n";
 
@@ -35,10 +36,12 @@ export default function ProfileInfoSection({ profile }: Props) {
       <div className="flex items-center gap-4">
         {profile.image ? (
           // Avatar image
-          <img
+          <Image
             src={profile.image}
             alt={profile.name || profile.email}
-            className="w-16 h-16 rounded-full object-cover border border-zinc-200 dark:border-zinc-700"
+            width={64}
+            height={64}
+            className="h-16 w-16 rounded-full border border-zinc-200 object-cover dark:border-zinc-700"
           />
         ) : (
           // Initials fallback
@@ -94,4 +97,3 @@ export default function ProfileInfoSection({ profile }: Props) {
     </div>
   );
 }
-
