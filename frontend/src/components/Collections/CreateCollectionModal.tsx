@@ -33,12 +33,16 @@ export default function CreateCollectionModal({ isOpen, selectReadyOnOpen = fals
       getMyDocuments().then((documents) => {
         setDocs(documents);
         if (selectReadyOnOpen) {
-          setSelectedDocs(new Set(documents.filter(d => d.status === 'ready').map(d => d.id)));
+          const readyDocuments = documents.filter(d => d.status === 'ready');
+          setSelectedDocs(new Set(readyDocuments.map(d => d.id)));
+          if (readyDocuments.length > 0) {
+            setName(tOr('collections.defaultWorkspaceName', 'Workspace for {count} documents', { count: readyDocuments.length }));
+          }
         }
       }).catch(() => {});
       setTimeout(() => inputRef.current?.focus(), 100);
     }
-  }, [isOpen, selectReadyOnOpen]);
+  }, [isOpen, selectReadyOnOpen, tOr]);
 
   if (!isOpen) return null;
 
