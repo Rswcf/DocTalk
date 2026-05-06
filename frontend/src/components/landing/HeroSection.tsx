@@ -2,18 +2,32 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { ArrowRight } from 'lucide-react';
+import { ArrowRight, FileCheck2, Languages, ShieldCheck } from 'lucide-react';
 import { useLocale } from '../../i18n';
 import HeroArtifact from './HeroArtifact';
 import SectionKicker from '../design/SectionKicker';
 import { BlurReveal, FlowButton, TiltCard, LightRays } from '../spell';
 
 export default function HeroSection() {
-  const { t } = useLocale();
+  const { t, tOr } = useLocale();
   const headlineLines = t('landing.headline').split('\n');
+  const proofItems = [
+    {
+      icon: FileCheck2,
+      label: tOr('landing.proof.citations', 'Answers cite exact source passages'),
+    },
+    {
+      icon: ShieldCheck,
+      label: tOr('landing.proof.private', 'Documents are private and deletable'),
+    },
+    {
+      icon: Languages,
+      label: tOr('landing.proof.locales', 'Works across 11 interface languages'),
+    },
+  ];
 
   return (
-    <section className="relative max-w-7xl mx-auto px-6 py-20 md:py-28 overflow-hidden">
+    <section className="relative mx-auto max-w-7xl overflow-hidden px-6 py-20 md:py-24 lg:py-28">
       {/* Light rays atmosphere — dark mode only. Replaces the flat halo
           behind HeroArtifact with a slow-drifting conic gradient. Below
           all content; decorative. */}
@@ -55,6 +69,26 @@ export default function HeroSection() {
               {t('hero.signUpFree')}
               <span aria-hidden="true" className="ml-1">→</span>
             </Link>
+          </BlurReveal>
+
+          <BlurReveal
+            as="div"
+            delay={1.3}
+            className="mt-8 grid max-w-2xl grid-cols-1 gap-3 sm:grid-cols-3"
+          >
+            {proofItems.map(({ icon: Icon, label }) => (
+              <div
+                key={label}
+                className="flex min-h-16 items-center gap-3 rounded-lg border border-zinc-200/80 bg-white/70 px-3.5 py-3 text-left shadow-sm backdrop-blur dark:border-zinc-800 dark:bg-zinc-900/60"
+              >
+                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-accent-light text-accent">
+                  <Icon aria-hidden="true" size={17} />
+                </span>
+                <span className="text-xs font-medium leading-5 text-zinc-600 dark:text-zinc-300">
+                  {label}
+                </span>
+              </div>
+            ))}
           </BlurReveal>
         </div>
 

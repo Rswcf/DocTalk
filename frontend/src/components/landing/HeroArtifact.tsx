@@ -18,74 +18,114 @@ export default function HeroArtifact() {
   return (
     <div
       aria-hidden="true"
-      className="relative w-full max-w-md mx-auto lg:mx-0"
+      className="relative mx-auto w-full max-w-lg lg:mx-0"
     >
-      {/* Soft accent glow behind the artifact */}
-      <div className="glow-accent absolute -inset-6 blur-2xl opacity-50 pointer-events-none" />
+      <div className="glow-accent pointer-events-none absolute -inset-8 blur-2xl opacity-60" />
 
-      {/* PDF page mock — slightly tilted, sits behind the chat */}
-      <div className="relative rounded-lg border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 shadow-xl px-4 py-5 transform rotate-[-2deg] lg:rotate-[-1.5deg]">
-        {/* Page header (filename + page n) */}
-        <div className="flex items-center justify-between mb-3">
-          <span className="text-[10px] font-mono uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
-            alphabet-q4-2023.pdf
-          </span>
-          <span className="text-[10px] font-mono text-zinc-500 dark:text-zinc-400">
-            p. 4
-          </span>
+      <div className="relative overflow-hidden rounded-xl border border-zinc-200 bg-white shadow-2xl dark:border-zinc-800 dark:bg-zinc-950">
+        <div className="flex items-center justify-between border-b border-zinc-200 bg-zinc-50 px-3 py-2 dark:border-zinc-800 dark:bg-zinc-900">
+          <div className="flex items-center gap-1.5">
+            <span className="h-2.5 w-2.5 rounded-full bg-red-400" />
+            <span className="h-2.5 w-2.5 rounded-full bg-amber-400" />
+            <span className="h-2.5 w-2.5 rounded-full bg-emerald-400" />
+          </div>
+          <div className="rounded-md border border-zinc-200 bg-white px-2.5 py-1 font-mono text-[10px] text-zinc-500 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-400">
+            verified-reading-desk
+          </div>
+          <div className="w-12" />
         </div>
 
-        {/* Body text lines */}
-        <div className="space-y-1.5">
-          <div className="h-1.5 w-11/12 rounded-full bg-zinc-200 dark:bg-zinc-700" />
-          <div className="h-1.5 w-10/12 rounded-full bg-zinc-200 dark:bg-zinc-700" />
-          <div className="h-1.5 w-full rounded-full bg-zinc-200 dark:bg-zinc-700" />
-          {/* Highlighted sentence — yellow band the chat will cite */}
-          <div className="relative mt-2 mb-2 inline-block w-full">
-            <span className="absolute inset-0 rounded-sm bg-amber-200/70 dark:bg-amber-400/35" />
-            <div className="relative px-1 py-0.5">
-              <div className="h-1.5 w-11/12 rounded-full bg-zinc-700 dark:bg-zinc-300" />
-              <div className="h-1.5 w-9/12 rounded-full bg-zinc-700 dark:bg-zinc-300 mt-1.5" />
+        <div className="grid min-h-[360px] grid-cols-1 sm:grid-cols-[0.95fr_1.05fr]">
+          <div className="relative border-b border-zinc-200 bg-[#f4f1ea] p-4 dark:border-zinc-800 dark:bg-[#181713] sm:border-b-0 sm:border-r">
+            <div className="mb-3 flex items-center justify-between">
+              <span className="font-mono text-[10px] uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
+                The AI layoff trap.pdf
+              </span>
+              <span className="rounded bg-white px-1.5 py-0.5 font-mono text-[10px] text-zinc-500 shadow-sm dark:bg-zinc-900 dark:text-zinc-400">
+                p. 34
+              </span>
+            </div>
+
+            <div className="mx-auto min-h-[250px] max-w-[190px] rounded-sm border border-zinc-200 bg-white px-4 py-5 shadow-md dark:border-zinc-700 dark:bg-zinc-900">
+              <div className="mb-4 h-2 w-2/3 rounded-full bg-zinc-300 dark:bg-zinc-600" />
+              <div className="space-y-2">
+                <div className="h-1.5 w-full rounded-full bg-zinc-200 dark:bg-zinc-700" />
+                <div className="h-1.5 w-11/12 rounded-full bg-zinc-200 dark:bg-zinc-700" />
+                <div className="h-1.5 w-10/12 rounded-full bg-zinc-200 dark:bg-zinc-700" />
+                <div className="relative my-3 rounded-sm bg-amber-200/75 px-1 py-1 dark:bg-amber-400/30">
+                  <div className="h-1.5 w-full rounded-full bg-zinc-800 dark:bg-zinc-200" />
+                  <div className="mt-1.5 h-1.5 w-4/5 rounded-full bg-zinc-800 dark:bg-zinc-200" />
+                </div>
+                <div className="h-1.5 w-full rounded-full bg-zinc-200 dark:bg-zinc-700" />
+                <div className="h-1.5 w-9/12 rounded-full bg-zinc-200 dark:bg-zinc-700" />
+                <div className="h-1.5 w-10/12 rounded-full bg-zinc-200 dark:bg-zinc-700" />
+              </div>
+            </div>
+
+            <div className="absolute bottom-4 right-4 rounded-md border border-amber-200 bg-white px-2 py-1 font-mono text-[10px] font-semibold text-amber-700 shadow-sm dark:border-amber-400/30 dark:bg-zinc-900 dark:text-amber-300">
+              source highlight
             </div>
           </div>
-          <div className="h-1.5 w-10/12 rounded-full bg-zinc-200 dark:bg-zinc-700" />
-          <div className="h-1.5 w-8/12 rounded-full bg-zinc-200 dark:bg-zinc-700" />
+
+          <div className="flex flex-col bg-white p-4 dark:bg-zinc-950">
+            <div className="mb-3 flex justify-end">
+              <div className="max-w-[210px] rounded-lg rounded-br-sm bg-zinc-900 px-3 py-2 text-[12px] leading-5 text-white dark:bg-zinc-100 dark:text-zinc-950">
+                What is the core risk for workers?
+              </div>
+            </div>
+
+            <div className="rounded-lg border border-zinc-200 bg-zinc-50 p-3 text-[12px] leading-5 text-zinc-700 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-200">
+              <div className="mb-2 flex items-center gap-2">
+                <span className="flex h-5 w-5 items-center justify-center rounded-full bg-accent text-[10px] font-bold text-accent-foreground">
+                  D
+                </span>
+                <span className="font-mono text-[10px] uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
+                  answer with evidence
+                </span>
+              </div>
+              Competitive automation can reduce worker income faster than
+              demand recovers, creating an over-automation wedge
+              <span className="ml-1 inline-flex h-4 min-w-4 items-center justify-center rounded bg-accent px-1.5 align-baseline text-[10px] font-bold leading-none text-accent-foreground">
+                1
+              </span>
+              .
+            </div>
+
+            <div className="mt-3 space-y-2">
+              {[
+                ['1', 'Document', 'p. 34'],
+                ['2', 'Document', 'p. 36'],
+              ].map(([num, source, page]) => (
+                <div
+                  key={num}
+                  className="flex items-center gap-2 rounded-md border border-zinc-200 bg-white px-2.5 py-2 shadow-sm dark:border-zinc-800 dark:bg-zinc-950"
+                >
+                  <span className="flex h-5 w-5 items-center justify-center rounded bg-accent text-[10px] font-bold text-accent-foreground">
+                    {num}
+                  </span>
+                  <span className="text-xs font-medium text-zinc-700 dark:text-zinc-200">
+                    {source}
+                  </span>
+                  <span className="ml-auto font-mono text-[10px] text-zinc-500 dark:text-zinc-400">
+                    {page}
+                  </span>
+                </div>
+              ))}
+            </div>
+
+            <div className="mt-auto grid grid-cols-3 gap-2 pt-4">
+              {['Flash', 'Pro', 'OCR'].map((label) => (
+                <div
+                  key={label}
+                  className="rounded-md border border-zinc-200 bg-zinc-50 py-1.5 text-center font-mono text-[10px] text-zinc-500 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-400"
+                >
+                  {label}
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
       </div>
-
-      {/* Chat reply card — overlapping bottom-right of the page */}
-      <div className="relative -mt-8 ml-12 sm:ml-20 max-w-xs rounded-lg border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 shadow-2xl p-4 transform rotate-[1.5deg] lg:rotate-[1deg]">
-        {/* Avatar + label */}
-        <div className="flex items-center gap-2 mb-2">
-          <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-accent text-[10px] font-bold text-accent-foreground">
-            D
-          </span>
-          <span className="text-[10px] font-mono uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
-            doctalk
-          </span>
-        </div>
-
-        {/* Reply text — real-looking, ends with citation pill */}
-        <p className="text-[13px] leading-snug text-zinc-700 dark:text-zinc-200">
-          Q4 net revenue grew{" "}
-          <span className="text-zinc-900 dark:text-zinc-50 font-semibold">
-            13% YoY
-          </span>
-          , driven by Search and YouTube ad gains
-          {/* citation pill */}
-          <span className="ml-1 inline-flex items-center gap-1 align-baseline">
-            <span className="inline-flex items-center justify-center h-4 px-1.5 rounded bg-accent text-[10px] font-bold leading-none text-accent-foreground">
-              1
-            </span>
-          </span>
-        </p>
-      </div>
-
-      {/* Removed the absolute-positioned SVG connector — at narrow widths
-          the fixed coords drifted off the highlight↔pill anchors. The
-          visual story (highlight on page → matching colored pill in
-          chat) is conveyed by color + overlap; the dashed arc was
-          redundant and fragile. Codex P1 review flagged this. */}
     </div>
   );
 }
