@@ -21,7 +21,11 @@ ALLOWED_EVENTS = {
     "url_ingest_created",
     "chat_message_sent",
     "chat_message_completed",
+    "citation_clicked",
+    "export_clicked",
+    "feedback_submitted",
     "paywall_opened",
+    "share_created",
 }
 
 

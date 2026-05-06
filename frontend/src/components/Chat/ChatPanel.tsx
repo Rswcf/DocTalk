@@ -205,11 +205,13 @@ export default function ChatPanel({ sessionId, onCitationClick, maxUserMessages,
   };
 
   const handleExport = useCallback(() => {
+    trackEvent('export_clicked', { source: 'chat_plus_menu', format: 'markdown' });
     const docName = useDocTalkStore.getState().documentName || 'document';
     exportConversationAsMarkdown(messages, docName);
   }, [messages]);
 
   const handleExportFormat = useCallback(async (format: 'pdf' | 'docx') => {
+    trackEvent('export_clicked', { source: 'chat_plus_menu', format });
     try {
       const { exportSession } = await import('../../lib/api');
       const blob = await exportSession(sessionId, format);
@@ -242,6 +244,7 @@ export default function ChatPanel({ sessionId, onCitationClick, maxUserMessages,
       const { createShare } = await import('../../lib/api');
       const result = await createShare(sessionId);
       await navigator.clipboard.writeText(result.url);
+      trackEvent('share_created', { source: 'chat_panel', plan: userPlan || 'unknown' });
       addMessage({
         id: `m_${Date.now()}_share_ok`,
         role: 'assistant',
@@ -261,7 +264,7 @@ export default function ChatPanel({ sessionId, onCitationClick, maxUserMessages,
     } finally {
       setShareLoading(false);
     }
-  }, [addMessage, sessionId, shareLoading, t, tOr]);
+  }, [addMessage, sessionId, shareLoading, t, tOr, userPlan]);
 
   const canUseCustomInstructions = !!onOpenSettings;
   // Show the entry only on surfaces that support the feature. Among those,

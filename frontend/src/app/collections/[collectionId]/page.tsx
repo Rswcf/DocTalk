@@ -22,6 +22,7 @@ import { useLocale } from '../../../i18n';
 import { useUserPlanProfile } from '../../../lib/useUserPlanProfile';
 import type { Citation, CollectionDetail, SessionItem } from '../../../types';
 import { LoadingScreen } from '../../../components/ui/LoadingScreen';
+import { trackEvent } from '../../../lib/analytics';
 
 export default function CollectionDetailPage() {
   const params = useParams<{ collectionId: string }>();
@@ -159,6 +160,11 @@ export default function CollectionDetailPage() {
 
   const handleCitationClick = useCallback((citation: Citation) => {
     if (!citation.documentId) return;
+    trackEvent('citation_clicked', {
+      source: 'collection_reader',
+      page: citation.page,
+      has_bboxes: Boolean(citation.bboxes?.length),
+    });
     const params = new URLSearchParams({
       page: String(citation.page || 1),
     });

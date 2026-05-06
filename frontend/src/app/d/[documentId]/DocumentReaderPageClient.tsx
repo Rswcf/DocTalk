@@ -18,6 +18,7 @@ import { useChatSession } from '../../../lib/useChatSession';
 import { useUserPlanProfile } from '../../../lib/useUserPlanProfile';
 import type { Citation } from '../../../types';
 import { shouldShowTour, startOnboardingTour } from '../../../lib/onboarding';
+import { trackEvent } from '../../../lib/analytics';
 
 export default function DocumentReaderPageClient() {
   const params = useParams<{ documentId: string }>();
@@ -141,11 +142,16 @@ export default function DocumentReaderPageClient() {
         : t('status.processing');
 
   const handleCitationClick = useCallback((citation: Citation) => {
+    trackEvent('citation_clicked', {
+      source: isDemo ? 'demo_reader' : 'document_reader',
+      page: citation.page,
+      has_bboxes: Boolean(citation.bboxes?.length),
+    });
     navigateToCitation(citation);
     if (typeof window !== 'undefined' && window.innerWidth < 640) {
       setMobileTab('document');
     }
-  }, [navigateToCitation]);
+  }, [isDemo, navigateToCitation]);
 
   const chatContent = documentStatus === 'ready' && sessionId ? (
     <ChatPanel sessionId={sessionId} onCitationClick={handleCitationClick} maxUserMessages={isDemo && !isLoggedIn ? 5 : undefined} suggestedQuestions={suggestedQuestions.length > 0 ? suggestedQuestions : undefined} initialQuestion={initialQuestion} onOpenSettings={canUseCustomInstructions ? () => setShowInstructions(true) : undefined} hasCustomInstructions={!!customInstructions} userPlan={userPlan} />

@@ -9,6 +9,7 @@ import CitationPopover from './CitationPopover';
 import SourcesStrip from './SourcesStrip';
 import { highlightCode } from '../../lib/highlight';
 import { CopyButton } from '../spell';
+import { trackEvent } from '../../lib/analytics';
 
 const ReactMarkdown = React.lazy(() => import('react-markdown'));
 
@@ -204,7 +205,14 @@ export default function MessageBubble({ message, onCitationClick, isStreaming, o
     const newFb = feedback === fb ? null : fb;
     setFeedback(newFb);
     setFeedbackStorage(message.id, newFb);
-  }, [feedback, message.id]);
+    if (newFb) {
+      trackEvent('feedback_submitted', {
+        source: 'message_actions',
+        rating: newFb,
+        has_citations: Boolean(message.citations?.length),
+      });
+    }
+  }, [feedback, message.citations?.length, message.id]);
 
   const markdownText = useMemo(() => {
     if (isUser || isError) return message.text;
