@@ -41,7 +41,7 @@ None of these are dealbreakers for everyone. If you only work with English PDFs 
 - 7 document formats supported (PDF, DOCX, PPTX, XLSX, TXT, MD, URL)
 - Citation highlighting — click a citation to see the source passage highlighted in the original document
 - [11 languages](/features/multilingual) with native support (not just translation)
-- 3 AI modes: Quick (DeepSeek V3.2), Balanced (Mistral Medium), Thorough (Mistral Large)
+- 2 AI modes: Flash (DeepSeek V4 Flash) and Pro (DeepSeek V4 Pro)
 - [Free demo](/demo) with no signup required
 - Documents up to 500 pages / 50 MB
 

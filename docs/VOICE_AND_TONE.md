@@ -180,7 +180,16 @@ Pricing copy is where honesty matters most. Never dark-pattern.
 - Never auto-select the annual toggle without making the monthly price equally visible.
 - "Manage subscription" > "Cancel anytime" — the latter reads as reassurance to someone who already doesn't trust you.
 
-### 4.8 Disclaimers & trust copy
+### 4.8 Cancellation & refund review
+
+Cancellation copy must protect trust even when the user is leaving.
+
+- Cancellation remains a direct action: **Cancel subscription**. Do not hide it behind "Are you sure?" loops or retention-only screens.
+- Ask for a reason as optional feedback, not as a gate: "What made you decide to cancel?" is acceptable; "Tell us why before canceling" is not.
+- Refund language is precise: "Request a refund review" and "7-day fair-use refund" are acceptable. Avoid "no questions asked" unless the policy is truly automatic and unconditional.
+- Confirmation copy separates the two outcomes: cancellation scheduled/reverted first, refund request recorded second.
+
+### 4.9 Disclaimers & trust copy
 
 Where they live: below the chat input, on the pricing page footer, on marketing pages near the fold.
 
@@ -191,7 +200,7 @@ Where they live: below the chat input, on the pricing page footer, on marketing 
 | "We never use your data for model training" | ✅ Keep — factual, specific |
 | "TLS encrypted in transit, AES-256 at rest" | ✅ Keep — specific beats "secure" |
 
-### 4.9 Onboarding & tour (driver.js)
+### 4.10 Onboarding & tour (driver.js)
 
 Tour steps should be observational, not motivational.
 

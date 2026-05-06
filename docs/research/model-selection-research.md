@@ -4,6 +4,8 @@
 > **研究范围**: 市场竞品分析 + 心理学/UX 科学 + 产品策略 + 14 模型 RAG 性能 Benchmark + OpenRouter 定价/路由
 > **核心问题**: DocTalk 应该如何让用户选择 LLM 模型？最优的三模式配置是什么？
 
+> **2026-05-06 状态说明**: 本文是三模式研究快照，不再代表当前生产配置。当前生产聊天模式为 DeepSeek V4 Flash/Pro（内部 `quick`/`balanced`），OpenRouter 主要作为 embedding/fallback 网关。以 `backend/app/core/config.py` 为准。
+
 ---
 
 ## Executive Summary

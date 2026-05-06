@@ -65,7 +65,7 @@ The tradeoff: DocTalk does not offer audio overviews, and its free tier (300 cre
 - Supports DOCX, PPTX, XLSX natively (no conversion needed)
 - Citation highlighting in the original document layout
 - 11 languages with native support
-- 3 AI modes (Quick, Balanced, Thorough)
+- 2 AI modes (Flash and Pro)
 - Not free — has a free tier but paid plans for heavy use
 
 **Pricing:** Free (300 credits/month), Plus ($9.99/month), Pro ($19.99/month). See [pricing](/pricing).

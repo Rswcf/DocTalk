@@ -1,6 +1,6 @@
 # DocTalk Monetization & Pricing Strategy
 
-*Research Date: 2026-02-08*
+*Research Date: 2026-02-08 · Last updated: 2026-05-06*
 
 ---
 
@@ -14,9 +14,10 @@
 | **Plus Subscription** | $9.99/month via Stripe, 3,000 credits/month |
 | **Pro Subscription** | $19.99/month via Stripe, 9,000 credits/month |
 | **One-Time Credit Packs** | Boost ($3.99 / 500 credits), Power ($9.99 / 2K credits), Ultra ($19.99 / 5K credits) |
-| **Credit Rates** | Quick (DeepSeek): 0.5x multiplier; Balanced (Mistral Medium): 1x; Thorough (Mistral Large): 3x |
-| **Demo** | 3 seeded documents, 5 messages/session for anonymous users, 50 sessions/doc cap (global), forced DeepSeek V3.2 (low-cost), 10 req/min/IP rate limit, ModeSelector hidden |
+| **Credit Rates** | Flash (DeepSeek V4 Flash) and Pro (DeepSeek V4 Pro). Internal mode IDs remain `quick` and `balanced`; retired `thorough` values migrate to Flash. |
+| **Demo** | 3 seeded documents, 5 messages/session for anonymous users, 500 sessions/doc cap (global), forced DeepSeek V4 Flash (low-cost), 10 req/min/IP rate limit, ModeSelector hidden |
 | **Billing** | Stripe Checkout (one-time) + Stripe Subscriptions (recurring) + Stripe Customer Portal |
+| **Cancellation / Refund Review** | Self-serve cancel captures optional reason/feedback and an optional `refund_requested` review flag; Pricing/Billing communicate a 7-day fair-use refund review policy |
 
 ### Credit Economics
 
@@ -33,15 +34,14 @@ A Plus user (3,000 credits/month) gets approximately:
 - ~200 Pro queries/month if using only Pro
 
 A Pro user (9,000 credits/month) gets approximately:
-- ~4,500 Quick queries/month
-- ~1,000 Balanced queries/month
-- ~333 Thorough queries/month
+- ~1,800 Flash queries/month if using only Flash
+- ~600 Pro queries/month if using only Pro
 
 ### Strengths
 
 1. **Hybrid model (subscription + credits + packs)** provides both recurring revenue and expansion revenue
 2. **Tiered credit rates by model** align cost to value -- premium models cost more, which is fair and transparent
-3. **Right-sized free tier** (300 credits = ~150 Quick queries or 20 Balanced answers) demonstrates value while creating upgrade pressure
+3. **Right-sized free tier** (300 credits = ~60 Flash queries or up to 20 Pro answers/month) demonstrates value while creating upgrade pressure
 4. **Demo system** with real documents allows zero-friction trial before sign-up
 5. **One-time packs** serve power users who need occasional bursts without ongoing commitment
 6. **Idempotent monthly grants** prevent double-crediting edge cases
@@ -59,6 +59,7 @@ A Pro user (9,000 credits/month) gets approximately:
 8. **No usage-based overages** -- when credits run out, the user is blocked rather than offered pay-as-you-go
 9. **Pro plan margin thin (~13%)** -- $19.99/month for 9,000 credits; may need adjustment if usage patterns differ from projections
 10. **Credit pack pricing is inconsistent** -- pack pricing should incentivize subscription over one-time purchases
+11. **Refund and cancellation trust is only a first pass** -- the product now records cancel reasons and refund-review intent, but still lacks automated refund eligibility, pause, downgrade-save, and win-back loops
 
 ---
 
@@ -66,7 +67,7 @@ A Pro user (9,000 credits/month) gets approximately:
 
 | Feature | **DocTalk** (Current) | **ChatPDF** | **AskYourPDF** | **Humata** | **PDF.ai** |
 |---------|----------------------|-------------|----------------|------------|------------|
-| **Free Tier** | 300 credits/mo (~150 Quick or 20 Balanced cap) | 2 PDFs/day, 120 pages each, 50 questions/day | 100 pages/doc, 15MB, 50 Q/day, 3 convos/day | 60 pages/mo, 10 answers | Basic (limited) |
+| **Free Tier** | 300 credits/mo (~60 Flash or 20 Pro cap) | 2 PDFs/day, 120 pages each, 50 questions/day | 100 pages/doc, 15MB, 50 Q/day, 3 convos/day | 60 pages/mo, 10 answers | Basic (limited) |
 | **Entry Paid** | Plus: $9.99/mo | Plus: $19.99/mo | Premium: $11.99/mo (annual) | Student: $1.99/mo (edu) | Pro: ~$17/mo |
 | **Mid Tier** | Pro: $19.99/mo | -- | Pro: $14.99/mo (annual) | Expert: $9.99/mo (3 users) | Ultimate: ~$27/mo |
 | **Team/Enterprise** | -- | -- | Enterprise: custom | Team: $49/user/mo | Enterprise: ~$37/mo |
@@ -144,21 +145,21 @@ A Pro user (9,000 credits/month) gets approximately:
 #### Plus (Casual Users)
 - **Price**: $9.99/month ($7.99/mo annual = $95.88/yr, save 20%)
 - **Credits**: 3,000/month
-- **Limits**: 20 documents stored, 50 MB max file size, all 3 modes
+- **Limits**: 20 documents stored, 50 MB max file size, unrestricted Flash + Pro modes
 - **Features**: Multi-session, conversation export, OCR, PDF text search
-- **Goal**: Convert free users who need more than 300 credits or uncapped Balanced/Thorough access but aren't power users
+- **Goal**: Convert free users who need more than 300 credits or unrestricted Pro access but aren't power users
 
 #### Pro (Power Users)
 - **Price**: $19.99/month ($15.99/mo annual = $191.88/yr, save 20%)
 - **Credits**: 9,000/month
-- **Limits**: Unlimited documents, 100 MB max file size, all 3 modes
+- **Limits**: Unlimited documents, 100 MB max file size, unrestricted Flash + Pro modes
 - **Features**: All Plus features + priority support, custom system prompts, API access (read-only), advanced analytics dashboard
 - **Goal**: Capture heavy individual users (researchers, analysts, lawyers)
 
 #### Team -- NEW
 - **Price**: $29.99/user/month ($24.99/mo annual)
 - **Credits**: 20,000/month per seat (shared pool)
-- **Limits**: Unlimited documents, 200 MB max file size, all 3 modes
+- **Limits**: Unlimited documents, 200 MB max file size, unrestricted Flash + Pro modes
 - **Features**: All Pro features + shared workspaces, admin console, usage analytics per member, SSO (SAML/OIDC), document sharing within team, role-based permissions
 - **Goal**: Small teams (3-20 seats) in legal, consulting, finance, research
 
@@ -231,7 +232,7 @@ This prevents hard stops that push users to competitors while capturing incremen
 
 ### 6.1 Free Tier Sizing (Deployed)
 
-**Current**: 300 credits/month (~150 Quick queries, up to 20 Balanced queries)
+**Current**: 300 credits/month (~60 Flash queries, up to 20 Pro queries)
 
 Rationale: ~8-17 queries/day is enough to demonstrate value but not enough for regular work use. Active users should hit the wall within the first week, creating a natural upgrade trigger.
 
@@ -265,7 +266,7 @@ Recommended improvements:
 3. **"Most Popular" badge** on recommended tier
 4. **Social proof**: "Trusted by X users" banner, testimonials from target segments
 5. **FAQ section** on pricing page addressing "What happens when I run out of credits?" and "Can I switch plans?"
-6. **Money-back guarantee**: "14-day money-back, no questions asked" reduces purchase anxiety
+6. **Refund confidence copy**: DocTalk now uses a 7-day fair-use refund review promise. This is more conservative than unconditional refunds and better aligned with credit-based AI costs.
 
 ### 6.5 Onboarding Flow Optimization
 
@@ -279,7 +280,7 @@ Recommended improvements:
 - **Credit rollover** (limited): Allow up to 20% of unused monthly credits to roll over (max 1 month). This reduces "wasted credits" feeling without unlimited accumulation
 - **Win-back emails**: When users downgrade or churn, send a usage summary showing what they accomplished with DocTalk
 - **Usage reports**: Weekly email digest for Pro/Team users showing documents analyzed, questions asked, credits used
-- **Cancellation flow**: When users attempt to cancel, show usage stats and offer: (a) pause subscription for 1 month, (b) downgrade to Plus instead of canceling
+- **Cancellation flow**: First pass shipped — cancel reason, optional feedback, refund-review checkbox, and admin funnel events. Next improvements: show usage stats and offer (a) pause subscription for 1 month, (b) downgrade to Plus instead of canceling
 
 ---
 
@@ -358,14 +359,14 @@ Recommended improvements:
 
 ### Phase 1: Quick Wins (1-2 weeks) — ✅ Completed
 - [x] Add annual pricing toggle with 20-25% discount
-- [x] Rescale credits ÷10 (Free 500, Plus 3K, Pro 9K)
+- [x] Rescale credits ÷10 and tune Free to 300 credits/month (Plus 3K, Pro 9K)
 - [x] Add credit translator tooltips on billing page ("X credits = ~Y conversations")
 - [x] Add "Most Popular" badge to recommended tier
 - [x] Fix credit pack pricing to be more expensive per-credit than subscription (Boost/Power/Ultra, 2026-02-11)
 
 ### Phase 2: New Tiers (2-4 weeks) — ✅ Completed
 - [x] Implement Plus tier ($9.99/mo, 3K credits)
-- [x] Replace Thorough gate with Free-plan Pro monthly cap
+- [x] Retire Thorough as a visible mode and ship Free-plan Pro monthly cap
 - [ ] Gate OCR to Plus+
 - [x] Implement document storage limits per tier
 - [x] Add file size limits per tier
@@ -373,8 +374,9 @@ Recommended improvements:
 ### Phase 3: Conversion Infrastructure (4-6 weeks)
 - [ ] Implement in-app upgrade prompts (80% credit usage, model gate, doc limit)
 - [ ] Add overage billing option (auto-charge for extra credits)
-- [ ] Build pricing page with annual toggle, social proof, FAQ
-- [ ] Implement cancellation flow with downgrade/pause options
+- [x] Add 7-day fair-use refund review copy to Pricing/Billing
+- [x] Implement cancellation reason + refund-review capture
+- [ ] Add downgrade/pause save options to cancellation flow
 
 ### Phase 4: Team & Enterprise (6-12 weeks)
 - [ ] Build shared workspace infrastructure

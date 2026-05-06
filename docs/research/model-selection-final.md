@@ -4,6 +4,8 @@
 > **研究范围**: 开源模型 RAG 性能 + 闭源参考基准 + OpenRouter 定价/路由
 > **约束**: 排除所有 Anthropic/Claude 模型，优先开源模型
 
+> **2026-05-06 状态说明**: 本文是三模式方案的历史研究快照，不再代表当前生产配置。当前生产聊天模式为 DeepSeek V4 Flash/Pro（内部 `quick`/`balanced`），OpenRouter 主要作为 embedding/fallback 网关。以 `backend/app/core/config.py` 为准。
+
 ---
 
 ## Executive Summary

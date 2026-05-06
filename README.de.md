@@ -36,7 +36,7 @@ Laden Sie PDFs, Word-Dokumente, PowerPoint-Präsentationen, Tabellenkalkulatione
 
 - **Quellenbasierte Antworten mit Seitenhervorhebung** — Jede Antwort referenziert exakte Textpassagen. Klicken Sie auf einen Verweis, um zur entsprechenden Seite zu springen und den Text hervorgehoben zu sehen.
 - **Multi-Format-Unterstützung** — PDF, DOCX, PPTX, XLSX, TXT, Markdown und URL-Import. Tabellen, Folien und Tabellenkalkulationen werden vollständig unterstützt.
-- **3 KI-Leistungsmodi** — Schnelle, Ausgewogene und Gründliche Analyse, angetrieben durch verschiedene LLMs über OpenRouter. Wählen Sie zwischen Geschwindigkeit und Tiefe.
+- **2 KI-Leistungsmodi** — Flash für schnelle Antworten mit Zitaten und Pro für tiefere Analysen, angetrieben von DeepSeek V4.
 - **11 Sprachen** — Vollständige Benutzeroberfläche und KI-Antworten in Englisch, Chinesisch, Spanisch, Japanisch, Deutsch, Französisch, Koreanisch, Portugiesisch, Italienisch, Arabisch und Hindi.
 - **Geteilte Ansicht** — Größenveränderbares Chat-Panel neben einem PDF-Viewer mit Zoom, Suche und Drag-to-Pan.
 - **Dokumentsammlungen** — Gruppieren Sie Dokumente und stellen Sie dokumentübergreifende Fragen mit Quellenangabe.
@@ -57,7 +57,7 @@ Laden Sie PDFs, Word-Dokumente, PowerPoint-Präsentationen, Tabellenkalkulatione
 | **Speicher** | MinIO / S3-kompatibel |
 | **Authentifizierung** | Auth.js v5 — Google OAuth, Microsoft OAuth, E-Mail Magic Link |
 | **Zahlungen** | Stripe Checkout + Subscriptions |
-| **KI** | OpenRouter — DeepSeek V3.2, Mistral Medium 3.1, Mistral Large 2512 |
+| **KI** | DeepSeek V4 Flash/Pro für Chat; OpenRouter für Embeddings und Fallback-Modelle |
 | **Parsing** | PyMuPDF, Tesseract OCR, python-docx, python-pptx, openpyxl, LibreOffice |
 | **Monitoring** | Sentry, Vercel Analytics |
 

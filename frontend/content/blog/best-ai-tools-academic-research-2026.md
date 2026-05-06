@@ -46,7 +46,7 @@ These tools let you upload specific papers or documents and interrogate their co
 - 7 file formats (handles the supplementary DOCX/XLSX files that other tools cannot)
 - Click-to-verify citation highlighting
 - 11 languages — useful for papers in Chinese, Japanese, German, etc.
-- 3 AI modes: Quick for skimming, Thorough for careful analysis
+- 2 AI modes: Flash for skimming, Pro for careful analysis
 - [Free demo](/demo) requires no signup
 
 **Limitations:**

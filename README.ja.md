@@ -36,7 +36,7 @@ PDF、Wordドキュメント、PowerPoint、スプレッドシート、または
 
 - **ページハイライト付きの引用回答** — すべての回答が正確な箇所を参照します。引用をクリックすると、該当テキストがハイライトされたページに移動します。
 - **マルチフォーマット対応** — PDF、DOCX、PPTX、XLSX、TXT、Markdown、URLインポートに対応。テーブル、スライド、スプレッドシートをすべてサポートしています。
-- **3つのAIパフォーマンスモード** — OpenRouter経由で異なるLLMを使用した、クイック・バランス・詳細分析。速度と深度を選択できます。
+- **2つのAIパフォーマンスモード** — DeepSeek V4 による、素早い引用回答向けの Flash と、より深い分析向けの Pro。
 - **11言語対応** — 英語、中国語、スペイン語、日本語、ドイツ語、フランス語、韓国語、ポルトガル語、イタリア語、アラビア語、ヒンディー語でのUI表示およびAI応答に完全対応。
 - **分割ビューリーダー** — ズーム、検索、ドラッグ操作が可能なPDFビューアの横に、サイズ変更可能なチャットパネルを配置。
 - **ドキュメントコレクション** — 複数のドキュメントをグループ化し、出典を明示した横断的な質問が可能です。
@@ -57,7 +57,7 @@ PDF、Wordドキュメント、PowerPoint、スプレッドシート、または
 | **ストレージ** | MinIO / S3互換 |
 | **認証** | Auth.js v5 — Google OAuth, Microsoft OAuth, Emailマジックリンク |
 | **決済** | Stripe Checkout + Subscriptions |
-| **AI** | OpenRouter — DeepSeek V3.2, Mistral Medium 3.1, Mistral Large 2512 |
+| **AI** | チャットは DeepSeek V4 Flash/Pro、embeddings と fallback モデルは OpenRouter |
 | **パーシング** | PyMuPDF, Tesseract OCR, python-docx, python-pptx, openpyxl, LibreOffice |
 | **モニタリング** | Sentry, Vercel Analytics |
 

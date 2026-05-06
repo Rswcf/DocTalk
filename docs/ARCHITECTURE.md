@@ -195,7 +195,7 @@ sequenceDiagram
 
 - **Retrieval**: Top-8 chunks by COSINE vector similarity from Qdrant. Each chunk includes text, page numbers, and bounding boxes.
 
-- **LLM Prompt**: System prompt instructs the model to cite sources using `[n]` notation matching the numbered document fragments provided. Anonymous demo users use a cheaper model (`DEMO_LLM_MODEL`, default DeepSeek V3.2) to reduce API costs. A **model-adaptive prompt system** (`model_profiles.py`) tailors the rules section and API parameters per model: DeepSeek uses `positive_framing` to avoid negative-framing over-compliance, other models use the `default` style. Temperature, max_tokens, and feature flags (stream_options) are also per-model.
+- **LLM Prompt**: System prompt instructs the model to cite sources using `[n]` notation matching the numbered document fragments provided. Production chat modes use DeepSeek V4 (`quick` = Flash, `balanced` = Pro); anonymous demo users are forced to `DEMO_LLM_MODEL` (default DeepSeek V4 Flash) to control cost. A **model-adaptive prompt system** (`model_profiles.py`) tailors the rules section and API parameters per model: DeepSeek uses `positive_framing` to avoid negative-framing over-compliance, other models use the `default` style. Temperature, max_tokens, and feature flags (stream_options) are also per-model.
 
 - **RefParserFSM**: A finite state machine in `chat_service.py` that handles `[n]` citation markers split across streaming token boundaries. For example, token `"[1"` followed by `"]"` is correctly parsed as citation reference 1.
 
@@ -824,10 +824,17 @@ clearing data drift is a positive side-effect even on fail.)
 
 **Audit trail**: every successful cancel writes one row to `plan_transitions`
 (new table, migration `20260414_0021`) with `source='self_serve_cancel'`
-and a metadata blob including `sub_id`, `status_at_cancel`, and the reason
-code (`admin_promoted_revert`, `branch_c_auto_heal`, `stripe_already_canceled_sync`).
+and a metadata blob including `sub_id`, `status_at_cancel`, branch reason
+codes (`admin_promoted_revert`, `branch_c_auto_heal`,
+`stripe_already_canceled_sync`), plus user-supplied cancellation context:
+`cancel_reason`, `cancel_feedback`, and `refund_requested`.
 Webhook / change-plan / admin audit writes are intentionally **deferred**
 to a follow-up PR to keep this scope tight.
+
+`refund_requested` is only an internal review signal. The cancel endpoint does
+not call Stripe Refunds or automatically decide eligibility; refunds are
+handled by a separate manual/business process until an explicit refund
+workflow is implemented.
 
 **`billing_state` projection**: `GET /api/users/profile` now returns a
 `billing_state` object (`managed_by`, `can_cancel`, `interval`, `period_end`,
@@ -841,10 +848,19 @@ the flag without duplicating state logic.
 **Frontend integration**: the `/billing` page shows a Current Plan panel
 above the Plus/Pro cards for any paid user. The Cancel CTA is BGB §312k
 compliant (visibly labeled "Cancel subscription" / "Abonnement kündigen",
-one click, no nested menus). Admin-managed users see "Return to Free plan"
-instead of "Manage billing in Stripe".
+one click, no nested menus). The confirmation dialog may collect an optional
+reason, optional feedback, and a refund-review checkbox, but cancellation is
+not blocked on any of those fields. Admin-managed users see "Return to Free
+plan" instead of "Manage billing in Stripe". Pricing and Billing surfaces show
+the 7-day fair-use refund review copy to reduce purchase anxiety without
+promising automatic refunds.
 
-Tests: `backend/tests/test_billing_cancel.py` (17 branch tests) and
+**Analytics**: cancel intent emits `subscription_cancel_requested`; checking
+the refund-review option also emits `refund_requested`. The admin funnel
+includes both events after paid-plan intent so cancellation/refund pressure is
+visible without querying Stripe manually.
+
+Tests: `backend/tests/test_billing_cancel.py` (18 branch tests) and
 `backend/tests/test_billing_state.py` (11 projection tests) cover the
 happy path, failure modes, and all branch preconditions.
 

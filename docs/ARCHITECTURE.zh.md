@@ -195,7 +195,7 @@ sequenceDiagram
 
 - **检索**：从 Qdrant 按 COSINE 向量相似度检索 Top-8 文本块。每个文本块包含文本、页码和边界框。
 
-- **LLM 提示词**：系统提示指示模型使用 `[n]` 标记引用来源，编号对应提供的文档片段。匿名 Demo 用户使用低成本模型（`DEMO_LLM_MODEL`，默认 DeepSeek V3.2）以降低 API 成本。**模型自适应提示系统**（`model_profiles.py`）为每个模型定制规则部分和 API 参数：DeepSeek 使用 `positive_framing` 避免消极表述过度遵从，其他模型使用 `default` 风格。temperature、max_tokens 和功能标志（stream_options）也按模型配置。
+- **LLM 提示词**：系统提示指示模型使用 `[n]` 标记引用来源，编号对应提供的文档片段。生产聊天模式使用 DeepSeek V4（内部 `quick` = Flash，内部 `balanced` = Pro）；匿名 Demo 用户强制使用 `DEMO_LLM_MODEL`（默认 DeepSeek V4 Flash）以控制成本。**模型自适应提示系统**（`model_profiles.py`）为每个模型定制规则部分和 API 参数：DeepSeek 使用 `positive_framing` 避免消极表述过度遵从，其他模型使用 `default` 风格。temperature、max_tokens 和功能标志（stream_options）也按模型配置。
 
 - **RefParserFSM**：`chat_service.py` 中的有限状态机，处理流式 token 中跨边界的 `[n]` 引用标记。例如，token `"[1"` 后跟 `"]"` 会被正确解析为引用标记 1。
 
@@ -793,3 +793,24 @@ Celery Beat 调度定期任务（目前：每日清理过期验证令牌）。**
 ### 预扣积分退款不变量
 
 聊天预扣积分退款现已**完全幂等**：`_refund_predebit` 先 DELETE 预扣的 ledger 行，仅当 `DELETE` 报告 `rowcount > 0` 时才恢复用户余额。重复调用（例如部分失败请求的重试）是安全的。所有 SSE 错误分支（`LLM_ERROR`、`PERSIST_FAILED`、续写变体）都在 yield 错误之前调用退款路径。
+
+### 自助取消订阅状态机
+
+`POST /api/billing/cancel` 实现确定性的六分支状态机，覆盖 `user.plan`、`user.stripe_subscription_id`、`user.stripe_customer_id` 的组合。分支按 **D → E → A → F → C → B** 顺序执行：
+
+| # | 前置条件 | 动作 | 返回 |
+|---|---|---|---|
+| D | `plan == "free"` | 不处理 | 400 |
+| E | `stripe_subscription_id == "pending"` | 不处理（Checkout 进行中） | 409 |
+| A | `sub_id` 以 `sub_` 开头（真实 Stripe ID） | `Subscription.retrieve` 后按状态分发：active/trialing/past_due → `modify(cancel_at_period_end=true)`；canceled → 本地同步为 Free；其他状态 → 409 | 200 `scheduled_cancel` 或 `immediate_revert` |
+| F | `sub_id` 非空、非 `pending`、但不是 `sub_*`（格式异常） | fail closed，不做本地降级 | 409 |
+| C | 无 `sub_id` 但有 `stripe_customer_id` | 查询 customer 的可取消订阅。1 个 → auto-heal + 分支 A；0 个 → 进入分支 B；多个 → 409 ambiguous | 视情况而定 |
+| B | 无 `sub_id`，且无 `customer_id` 或分支 C 找到 0 个订阅 | 行锁用户，设为 `plan='free'`，清空 `stripe_subscription_id`，清空 `monthly_credits_granted_at`，写入 `plan_transitions` 审计行 | 200 `immediate_revert` |
+
+每次成功取消都会写入 `plan_transitions`，`source='self_serve_cancel'`。metadata 包含 `sub_id`、`status_at_cancel`、分支原因码（如 `admin_promoted_revert`、`branch_c_auto_heal`、`stripe_already_canceled_sync`），以及用户提供的取消上下文：`cancel_reason`、`cancel_feedback`、`refund_requested`。
+
+`refund_requested` 只是内部审核信号。取消端点不会调用 Stripe Refunds，也不会自动判定退款资格；在独立退款工作流实现前，退款仍由人工/业务流程处理。
+
+前端 `/billing` 的取消入口保持自助可达，确认弹窗可收集可选取消原因、可选反馈和退款审核勾选，但取消动作不依赖这些字段。Pricing 和 Billing 页面展示 7-day fair-use refund review 文案，用于降低付费焦虑但不承诺自动退款。
+
+取消意图会记录 `subscription_cancel_requested` 事件；勾选退款审核会额外记录 `refund_requested`。Admin funnel 已纳入这两个事件，便于跟踪付费后取消和退款压力。

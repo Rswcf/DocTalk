@@ -4,6 +4,8 @@
 > **研究方法**: 市场竞品分析 + 心理学/UX 科学 + 产品策略调研
 > **核心问题**: DocTalk 是否应该给用户开放 LLM 模型选择下拉框？如果不是最佳方案，什么才是？
 
+> **2026-05-06 状态说明**: 本文是三模式策略研究快照，不再代表当前生产配置。当前生产聊天模式为 DeepSeek V4 Flash/Pro（内部 `quick`/`balanced`），OpenRouter 主要作为 embedding/fallback 网关。以 `backend/app/core/config.py` 为准。
+
 ---
 
 ## Executive Summary

@@ -36,7 +36,7 @@
 
 - **带页面高亮的引用回答** — 每条回答都引用精确段落。点击引用即可跳转到对应页面并高亮显示原文。
 - **多格式支持** — PDF、DOCX、PPTX、XLSX、TXT、Markdown 以及 URL 导入。表格、幻灯片和电子表格全面支持。
-- **3 种 AI 性能模式** — 快速、均衡和深度分析，通过 OpenRouter 调用不同 LLM。按需选择速度或深度。
+- **2 种 AI 性能模式** — Flash 用于快速引用回答，Pro 用于更深入分析，均由 DeepSeek V4 驱动。
 - **11 种语言** — 完整的 UI 和 AI 回答支持英语、中文、西班牙语、日语、德语、法语、韩语、葡萄牙语、意大利语、阿拉伯语和印地语。
 - **分屏阅读器** — 可调节大小的聊天面板搭配 PDF 查看器，支持缩放、搜索和拖拽平移。
 - **文档集合** — 将多个文档分组，支持跨文档提问并标注来源。
@@ -57,7 +57,7 @@
 | **存储** | MinIO / S3 兼容 |
 | **认证** | Auth.js v5 — Google OAuth、Microsoft OAuth、Email Magic Link |
 | **支付** | Stripe Checkout + Subscriptions |
-| **AI** | OpenRouter — DeepSeek V3.2、Mistral Medium 3.1、Mistral Large 2512 |
+| **AI** | DeepSeek V4 Flash/Pro 用于聊天；OpenRouter 用于 embeddings 和 fallback 模型 |
 | **解析** | PyMuPDF、Tesseract OCR、python-docx、python-pptx、openpyxl、LibreOffice |
 | **监控** | Sentry、Vercel Analytics |
 

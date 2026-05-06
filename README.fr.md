@@ -36,7 +36,7 @@ Importez des PDF, des documents Word, des PowerPoint, des feuilles de calcul ou 
 
 - **Reponses citees avec surlignage** — Chaque reponse reference des passages precis. Cliquez sur une citation pour acceder a la page avec le texte surligne.
 - **Support multi-format** — PDF, DOCX, PPTX, XLSX, TXT, Markdown et import d'URL. Tableaux, diapositives et feuilles de calcul entierement pris en charge.
-- **3 modes de performance IA** — Analyse rapide, equilibree et approfondie, alimentee par differents LLM via OpenRouter. Choisissez entre vitesse et profondeur.
+- **2 modes de performance IA** — Flash pour des reponses citees rapides et Pro pour une analyse plus approfondie, alimentes par DeepSeek V4.
 - **11 langues** — Interface et reponses IA disponibles en anglais, chinois, espagnol, japonais, allemand, francais, coreen, portugais, italien, arabe et hindi.
 - **Lecteur en vue partagee** — Panneau de discussion redimensionnable a cote d'un lecteur PDF avec zoom, recherche et deplacement par glisser.
 - **Collections de documents** — Regroupez des documents et posez des questions transversales avec attribution des sources.
@@ -57,7 +57,7 @@ Importez des PDF, des documents Word, des PowerPoint, des feuilles de calcul ou 
 | **Stockage** | MinIO / Compatible S3 |
 | **Authentification** | Auth.js v5 — Google OAuth, Microsoft OAuth, Email Magic Link |
 | **Paiements** | Stripe Checkout + Subscriptions |
-| **IA** | OpenRouter — DeepSeek V3.2, Mistral Medium 3.1, Mistral Large 2512 |
+| **IA** | DeepSeek V4 Flash/Pro pour le chat ; OpenRouter pour les embeddings et les modeles de secours |
 | **Analyse de documents** | PyMuPDF, Tesseract OCR, python-docx, python-pptx, openpyxl, LibreOffice |
 | **Monitoring** | Sentry, Vercel Analytics |
 

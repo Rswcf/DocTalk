@@ -36,7 +36,7 @@ Faça upload de PDFs, documentos do Word, apresentações do PowerPoint, planilh
 
 - **Respostas citadas com destaque na página** — Cada resposta referencia passagens exatas. Clique em uma citação para ir diretamente à página com o texto destacado.
 - **Suporte a múltiplos formatos** — PDF, DOCX, PPTX, XLSX, TXT, Markdown e importação de URLs. Tabelas, slides e planilhas são totalmente suportados.
-- **3 modos de desempenho de IA** — Análise Rápida, Equilibrada e Aprofundada, com diferentes LLMs via OpenRouter. Escolha entre velocidade ou profundidade.
+- **2 modos de desempenho de IA** — Flash para respostas citadas rápidas e Pro para análise mais profunda, com DeepSeek V4.
 - **11 idiomas** — Interface completa e respostas de IA em Inglês, Chinês, Espanhol, Japonês, Alemão, Francês, Coreano, Português, Italiano, Árabe e Hindi.
 - **Visualização dividida** — Painel de chat redimensionável ao lado de um visualizador de PDF com zoom, busca e arrastar para navegar.
 - **Coleções de documentos** — Agrupe documentos e faça perguntas cruzadas entre documentos com atribuição de fonte.
@@ -57,7 +57,7 @@ Faça upload de PDFs, documentos do Word, apresentações do PowerPoint, planilh
 | **Armazenamento** | MinIO / compatível com S3 |
 | **Autenticação** | Auth.js v5 — Google OAuth, Microsoft OAuth, Email Magic Link |
 | **Pagamentos** | Stripe Checkout + Subscriptions |
-| **IA** | OpenRouter — DeepSeek V3.2, Mistral Medium 3.1, Mistral Large 2512 |
+| **IA** | DeepSeek V4 Flash/Pro para chat; OpenRouter para embeddings e modelos de fallback |
 | **Parsing** | PyMuPDF, Tesseract OCR, python-docx, python-pptx, openpyxl, LibreOffice |
 | **Monitoramento** | Sentry, Vercel Analytics |
 

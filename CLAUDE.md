@@ -11,7 +11,7 @@ DocTalk — AI document Q&A web app. Upload PDF / DOCX / PPTX / XLSX / TXT / MD 
 | Infra | Postgres 16, Qdrant, MinIO, Redis | Railway (5 services) |
 | Repo | GitHub (public) | https://github.com/Rswcf/DocTalk |
 
-LLM via OpenRouter — Quick=DeepSeek V3.2 · Balanced=Mistral Medium 3.1 · Thorough=Mistral Large 2512. Auth.js v5 (Google / Microsoft / email magic link). Stripe billing (test mode until live switch).
+LLM chat modes use DeepSeek V4 — internal `quick` = Flash, internal `balanced` = Pro. OpenRouter remains the embedding/fallback gateway. Auth.js v5 (Google / Microsoft / email magic link). Stripe billing is live in production; local/test environments may still use `sk_test_*`.
 
 ## Dev commands (Claude can't guess these)
 
@@ -57,7 +57,7 @@ Full procedure + guardrails: see `.claude/skills/deploy/SKILL.md` (invoked via `
 
 ## Key env vars
 
-- **Backend** (`.env` + Railway): `DATABASE_URL`, `OPENROUTER_API_KEY`, `AUTH_SECRET`, `ADAPTER_SECRET`, `STRIPE_SECRET_KEY` (currently `sk_test_*` — swap to `sk_live_*` before real selling), `STRIPE_WEBHOOK_SECRET`
+- **Backend** (`.env` + Railway): `DATABASE_URL`, `OPENROUTER_API_KEY`, `DEEPSEEK_API_KEY`, `AUTH_SECRET`, `ADAPTER_SECRET`, `STRIPE_SECRET_KEY` (`sk_live_*` in production; `sk_test_*` only for local/test), `STRIPE_WEBHOOK_SECRET`
 - **Frontend** (Vercel): `NEXT_PUBLIC_API_BASE` (**never** localhost in prod), `AUTH_SECRET`, `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET`, `MICROSOFT_CLIENT_ID` / `MICROSOFT_CLIENT_SECRET`, `RESEND_API_KEY`
 
 Cross-origin IP trust chain is HMAC-signed with `ADAPTER_SECRET` — frontend and backend values **must match**.

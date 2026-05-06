@@ -26,10 +26,10 @@ The [DocTalk demo](/demo) gives you instant access to three sample documents:
 For each document, you get:
 
 - **5 messages per session** — Enough to ask several questions and follow up
-- **50 sessions per document** — Start fresh conversations as needed
+- **500 sessions per document** — Start fresh conversations as needed
 - **Citation highlighting** — Click any citation to see the source highlighted in the document
 - **Full document viewer** — Scroll through the complete PDF alongside the chat
-- **Quick AI mode** — Powered by DeepSeek V3.2 for fast answers
+- **Flash AI mode** — Powered by DeepSeek V4 Flash for fast answers
 
 No account. No email. No credit card. Just click and chat.
 
@@ -151,7 +151,7 @@ Yes. The demo at [doctalk.site/demo](/demo) requires no account, no email, and n
 
 ### How many questions can I ask for free?
 
-The demo allows 5 messages per session and 50 sessions per document. With a free account (which requires signing up), you get 300 credits per month — enough for approximately 50-250 questions depending on the AI mode used.
+The demo allows 5 messages per session and 500 sessions per document. With a free account (which requires signing up), you get 300 credits per month — enough for dozens of questions depending on document length, answer length, and AI mode.
 
 ### Will I be asked to pay after the demo?
 

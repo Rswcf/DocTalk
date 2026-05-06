@@ -36,7 +36,7 @@ Upload PDFs, Word docs, PowerPoints, spreadsheets, or any webpage — then ask q
 
 - **Cited answers with page highlighting** — Every answer references exact passages. Click a citation to jump to the page with the text highlighted.
 - **Multi-format support** — PDF, DOCX, PPTX, XLSX, TXT, Markdown, and URL import. Tables, slides, and spreadsheets are all fully supported.
-- **3 AI performance modes** — Quick, Balanced, and Thorough analysis powered by different LLMs through OpenRouter. Pick speed or depth.
+- **2 AI performance modes** — Flash for fast cited answers and Pro for deeper analysis, powered by DeepSeek V4.
 - **11 languages** — Full UI and AI responses in English, Chinese, Spanish, Japanese, German, French, Korean, Portuguese, Italian, Arabic, and Hindi.
 - **Split-view reader** — Resizable chat panel alongside a PDF viewer with zoom, search, and drag-to-pan.
 - **Document collections** — Group documents together and ask cross-document questions with source attribution.
@@ -57,7 +57,7 @@ Upload PDFs, Word docs, PowerPoints, spreadsheets, or any webpage — then ask q
 | **Storage** | MinIO / S3-compatible |
 | **Auth** | Auth.js v5 — Google OAuth, Microsoft OAuth, Email Magic Link |
 | **Payments** | Stripe Checkout + Subscriptions |
-| **AI** | OpenRouter — DeepSeek V3.2, Mistral Medium 3.1, Mistral Large 2512 |
+| **AI** | DeepSeek V4 Flash/Pro for chat; OpenRouter for embeddings and fallback models |
 | **Parsing** | PyMuPDF, Tesseract OCR, python-docx, python-pptx, openpyxl, LibreOffice |
 | **Monitoring** | Sentry, Vercel Analytics |
 

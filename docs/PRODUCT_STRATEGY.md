@@ -91,6 +91,8 @@ DocTalk is an AI-powered PDF reader with a unique competitive advantage: **citat
 - ✅ **Annual pricing with 20% discount**: Reduces churn and improves LTV
 - ✅ **Credit packs repriced**: Boost/Power/Ultra now 1.2-2.4x more expensive per-credit than subscriptions, making subscriptions the better value
 - ✅ **Feature gating deployed**: Free-plan Pro monthly cap, Export (Plus+), Custom Instructions (Pro), Sessions (Free=3/doc)
+- ✅ **Cancellation feedback + refund review flow**: Billing cancel captures reason/feedback, optional refund-review intent, and exposes cancel/refund events in the admin funnel
+- ✅ **7-day fair-use refund copy**: Pricing and Billing now set refund expectations before and after purchase
 - ⏳ **Priority Queue**: Removed from pricing page pending implementation
 - ⏳ **Team tier**: Planned for Phase 3 (requires workspace, RBAC, SSO features)
 
@@ -111,6 +113,8 @@ DocTalk is an AI-powered PDF reader with a unique competitive advantage: **citat
 
 For comparison, subscriptions range from 0.167¢/credit (Pro annual) to 0.333¢/credit (Plus monthly), making them 1.2-2.4x more cost-effective than packs.
 
+**Refund trust policy**: users are told they can cancel within 7 days and request a fair-use refund review when usage is low. This is intentionally a review workflow, not an automatic refund promise.
+
 ### Key Changes (Completed)
 1. **Reduced free tier** to 300 credits — creates upgrade pressure quickly
 2. **Added Plus tier** ($9.99/month) — captures casual users who need more than Free but aren't power users
@@ -120,6 +124,7 @@ For comparison, subscriptions range from 0.167¢/credit (Pro annual) to 0.333¢/
 6. **Limit Free-plan Pro usage** while keeping Flash broadly available
 7. **Gate OCR** to Plus+ — it has real compute cost and is a strong differentiator (planned)
 8. **Add credit overage option** — when credits exhausted, offer pay-as-you-go instead of hard block (planned)
+9. **Collect cancellation intent data** — reason, optional feedback, and refund-review request are now captured before churn completes
 
 ### Feature Gating Summary
 
@@ -151,6 +156,7 @@ For comparison, subscriptions range from 0.167¢/credit (Pro annual) to 0.333¢/
 | 1.3 | **Custom AI instructions per document** | ✅ Shipped |
 | 1.4 | **URL/webpage ingestion** | ✅ Shipped |
 | 1.5 | **Pricing restructure** (Plus tier, annual, reduced free) | ✅ Shipped |
+| 1.6 | **Cancellation feedback + refund review** | ✅ Shipped |
 
 **Expected Impact**: +20-30% signup conversion, +10-15% Free-to-Pro upgrade
 
@@ -227,7 +233,8 @@ For comparison, subscriptions range from 0.167¢/credit (Pro annual) to 0.333¢/
 2. ~~**Free tier adjustment**: Reduce credits with rescaling~~ ✅ Done
 3. ~~**Start multi-format parsing**: Add python-docx, python-pptx, openpyxl to backend~~ ✅ Done
 4. ~~**Start collection data model**: Design Collection + collection_documents tables~~ ✅ Done
-5. **Competitive monitoring**: Set up alerts for ChatPDF, AskYourPDF, Humata pricing changes
+5. ~~**Add cancellation feedback + refund-review flow**~~ ✅ Done
+6. **Competitive monitoring**: Set up alerts for ChatPDF, AskYourPDF, Humata pricing changes
 
 ---
 
