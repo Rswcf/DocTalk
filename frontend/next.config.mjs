@@ -10,6 +10,10 @@ const buildSha =
   process.env.RAILWAY_GIT_COMMIT_SHA ||
   process.env.GITHUB_SHA ||
   "";
+const isProduction = process.env.NODE_ENV === "production";
+const localDevSources = isProduction
+  ? ""
+  : " http://localhost:8000 http://127.0.0.1:8000 http://localhost:9000 http://127.0.0.1:9000";
 
 // Content-Security-Policy directives (enforcing).
 //
@@ -23,17 +27,17 @@ const cspDirectives = [
   "default-src 'self'",
   `script-src 'self' 'unsafe-inline' ${process.env.NODE_ENV === "development" ? "'unsafe-eval'" : ""} https://va.vercel-scripts.com https://*.sentry-cdn.com https://www.googletagmanager.com`.replace(/  +/g, " ").trim(),
   "style-src 'self' 'unsafe-inline'",
-  "img-src 'self' blob: data: https://*.up.railway.app https://*.googleusercontent.com https://www.google-analytics.com",
+  `img-src 'self' blob: data: https://*.up.railway.app https://*.googleusercontent.com https://www.google-analytics.com${localDevSources}`,
   "font-src 'self' data:",
   "worker-src 'self' blob:",
   "media-src 'none'",
-  "connect-src 'self' https://*.up.railway.app https://*.sentry.io https://*.ingest.sentry.io https://va.vercel-scripts.com https://vitals.vercel-insights.com https://www.google-analytics.com https://analytics.google.com https://*.google-analytics.com https://*.analytics.google.com",
+  `connect-src 'self' https://*.up.railway.app https://*.sentry.io https://*.ingest.sentry.io https://va.vercel-scripts.com https://vitals.vercel-insights.com https://www.google-analytics.com https://analytics.google.com https://*.google-analytics.com https://*.analytics.google.com${localDevSources}`,
   "frame-src 'none'",
   "frame-ancestors 'none'",
   "object-src 'none'",
   "base-uri 'self'",
   "form-action 'self' https://accounts.google.com https://login.microsoftonline.com",
-  "upgrade-insecure-requests",
+  ...(isProduction ? ["upgrade-insecure-requests"] : []),
 ].join("; ");
 
 // Content-Security-Policy-Report-Only directives (production only).
@@ -99,8 +103,6 @@ const cspReportOnlyDirectives = [
   `report-uri ${REPORT_ENDPOINT}`,
   "report-to csp-endpoint",
 ].join("; ");
-
-const isProduction = process.env.NODE_ENV === "production";
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
