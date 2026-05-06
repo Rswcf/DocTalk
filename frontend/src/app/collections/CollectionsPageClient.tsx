@@ -20,6 +20,7 @@ export default function CollectionsPageClient() {
   usePageTitle(t('collections.title'));
   const [collections, setCollections] = useState<CollectionBrief[]>([]);
   const [showCreate, setShowCreate] = useState(false);
+  const [selectReadyOnCreateOpen, setSelectReadyOnCreateOpen] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const openedCreateFromQueryRef = useRef(false);
 
@@ -35,6 +36,7 @@ export default function CollectionsPageClient() {
     if (params.get('action') !== 'create') return;
 
     openedCreateFromQueryRef.current = true;
+    setSelectReadyOnCreateOpen(params.get('select') === 'ready');
     setShowCreate(true);
     window.history.replaceState(null, '', window.location.pathname);
   }, [status]);
@@ -141,7 +143,10 @@ export default function CollectionsPageClient() {
             </div>
             <button
               type="button"
-              onClick={() => setShowCreate(true)}
+              onClick={() => {
+                setSelectReadyOnCreateOpen(false);
+                setShowCreate(true);
+              }}
               className="inline-flex items-center justify-center gap-2 rounded-lg bg-zinc-900 px-4 py-2.5 text-sm font-medium text-white shadow-sm transition-colors hover:bg-zinc-800 dark:bg-zinc-50 dark:text-zinc-900 dark:hover:bg-zinc-200 focus-visible:ring-2 focus-visible:ring-zinc-400 dark:focus-visible:ring-zinc-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-900"
             >
               <Plus aria-hidden="true" size={16} />
@@ -165,7 +170,10 @@ export default function CollectionsPageClient() {
                   <div className="mt-6 flex flex-wrap items-center gap-3">
                     <button
                       type="button"
-                      onClick={() => setShowCreate(true)}
+                      onClick={() => {
+                        setSelectReadyOnCreateOpen(false);
+                        setShowCreate(true);
+                      }}
                       className="inline-flex items-center gap-2 rounded-lg bg-zinc-900 px-5 py-2.5 text-sm font-medium text-white shadow-sm transition-colors hover:bg-zinc-800 dark:bg-zinc-50 dark:text-zinc-900 dark:hover:bg-zinc-200 focus-visible:ring-2 focus-visible:ring-zinc-400 dark:focus-visible:ring-zinc-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-900"
                     >
                       <Plus aria-hidden="true" size={16} />
@@ -211,7 +219,11 @@ export default function CollectionsPageClient() {
 
       <CreateCollectionModal
         isOpen={showCreate}
-        onClose={() => setShowCreate(false)}
+        selectReadyOnOpen={selectReadyOnCreateOpen}
+        onClose={() => {
+          setShowCreate(false);
+          setSelectReadyOnCreateOpen(false);
+        }}
         onCreated={(id) => {
           router.push(`/collections/${id}`);
         }}

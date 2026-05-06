@@ -661,7 +661,7 @@ export default function HomePageClient() {
                   </div>
                 </div>
                 <Link
-                  href="/collections?action=create"
+                  href="/collections?action=create&select=ready"
                   className="inline-flex shrink-0 items-center justify-center gap-2 rounded-lg bg-zinc-900 px-4 py-2.5 text-sm font-medium text-white shadow-sm transition-colors hover:bg-zinc-800 dark:bg-zinc-50 dark:text-zinc-900 dark:hover:bg-zinc-200 focus-visible:ring-2 focus-visible:ring-zinc-400 dark:focus-visible:ring-zinc-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-900"
                 >
                   {tOr('dashboard.workspaceNudge.cta', 'Create workspace')}

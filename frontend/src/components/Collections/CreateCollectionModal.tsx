@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { X } from 'lucide-react';
 import { useLocale } from '../../i18n';
 import { getMyDocuments, createCollection } from '../../lib/api';
@@ -8,28 +8,37 @@ import type { DocumentBrief } from '../../lib/api';
 
 interface Props {
   isOpen: boolean;
+  selectReadyOnOpen?: boolean;
   onClose: () => void;
   onCreated: (id: string) => void;
 }
 
-export default function CreateCollectionModal({ isOpen, onClose, onCreated }: Props) {
+export default function CreateCollectionModal({ isOpen, selectReadyOnOpen = false, onClose, onCreated }: Props) {
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [docs, setDocs] = useState<DocumentBrief[]>([]);
   const [selectedDocs, setSelectedDocs] = useState<Set<string>>(new Set());
   const [creating, setCreating] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
-  const { t } = useLocale();
+  const { t, tOr } = useLocale();
+
+  const readyDocs = useMemo(() => docs.filter(d => d.status === 'ready'), [docs]);
 
   useEffect(() => {
     if (isOpen) {
       setName('');
       setDescription('');
+      setDocs([]);
       setSelectedDocs(new Set());
-      getMyDocuments().then(setDocs).catch(() => {});
+      getMyDocuments().then((documents) => {
+        setDocs(documents);
+        if (selectReadyOnOpen) {
+          setSelectedDocs(new Set(documents.filter(d => d.status === 'ready').map(d => d.id)));
+        }
+      }).catch(() => {});
       setTimeout(() => inputRef.current?.focus(), 100);
     }
-  }, [isOpen]);
+  }, [isOpen, selectReadyOnOpen]);
 
   if (!isOpen) return null;
 
@@ -80,10 +89,11 @@ export default function CreateCollectionModal({ isOpen, onClose, onCreated }: Pr
 
         <div className="space-y-4 flex-1 overflow-y-auto">
           <div>
-            <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
+            <label htmlFor="collection-name" className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
               {t('collections.name')}
             </label>
             <input
+              id="collection-name"
               ref={inputRef}
               value={name}
               onChange={(e) => setName(e.target.value)}
@@ -95,10 +105,11 @@ export default function CreateCollectionModal({ isOpen, onClose, onCreated }: Pr
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
+            <label htmlFor="collection-description" className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
               {t('collections.description')}
             </label>
             <textarea
+              id="collection-description"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               className="w-full h-20 px-3 py-2 border border-zinc-200 dark:border-zinc-700 rounded-lg bg-zinc-50 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 text-sm resize-none focus:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400"
@@ -109,22 +120,56 @@ export default function CreateCollectionModal({ isOpen, onClose, onCreated }: Pr
 
           {docs.length > 0 && (
             <div>
-              <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
-                {t('collections.addDocuments')}
-              </label>
-              <div className="space-y-1 max-h-40 overflow-y-auto">
-                {docs.filter(d => d.status === 'ready').map(d => (
-                  <label key={d.id} className="flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-zinc-50 dark:hover:bg-zinc-800 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={selectedDocs.has(d.id)}
-                      onChange={() => toggleDoc(d.id)}
-                      className="rounded border-zinc-300 dark:border-zinc-600"
-                    />
-                    <span className="text-sm text-zinc-800 dark:text-zinc-200 truncate">{d.filename}</span>
-                  </label>
-                ))}
+              <div className="mb-2 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <div className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
+                    {t('collections.addDocuments')}
+                  </div>
+                  {readyDocs.length > 0 && (
+                    <div className="mt-0.5 text-xs text-zinc-500 dark:text-zinc-400">
+                      {tOr('collections.selectedDocuments', '{count} selected', { count: selectedDocs.size })}
+                    </div>
+                  )}
+                </div>
+                {readyDocs.length > 0 && (
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setSelectedDocs(new Set(readyDocs.map(d => d.id)))}
+                      className="text-xs font-medium text-zinc-600 transition-colors hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100 focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:rounded-sm"
+                    >
+                      {tOr('collections.selectAll', 'Select all')}
+                    </button>
+                    <span aria-hidden="true" className="text-zinc-300 dark:text-zinc-700">/</span>
+                    <button
+                      type="button"
+                      onClick={() => setSelectedDocs(new Set())}
+                      className="text-xs font-medium text-zinc-600 transition-colors hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100 focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:rounded-sm"
+                    >
+                      {tOr('collections.clearSelection', 'Clear')}
+                    </button>
+                  </div>
+                )}
               </div>
+              {readyDocs.length > 0 ? (
+                <div className="space-y-1 max-h-40 overflow-y-auto rounded-lg border border-zinc-100 p-1 dark:border-zinc-800">
+                  {readyDocs.map(d => (
+                    <label key={d.id} className="flex min-h-10 cursor-pointer items-center gap-2 rounded-lg px-2 py-2 hover:bg-zinc-50 dark:hover:bg-zinc-800">
+                      <input
+                        type="checkbox"
+                        checked={selectedDocs.has(d.id)}
+                        onChange={() => toggleDoc(d.id)}
+                        className="rounded border-zinc-300 dark:border-zinc-600"
+                      />
+                      <span className="text-sm text-zinc-800 dark:text-zinc-200 truncate">{d.filename}</span>
+                    </label>
+                  ))}
+                </div>
+              ) : (
+                <p className="rounded-lg border border-zinc-100 bg-zinc-50 px-3 py-2 text-sm text-zinc-500 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-400">
+                  {tOr('collections.noReadyDocuments', 'No ready documents yet. Processing files can be added after they finish.')}
+                </p>
+              )}
             </div>
           )}
         </div>
