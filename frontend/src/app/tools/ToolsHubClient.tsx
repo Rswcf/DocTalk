@@ -5,11 +5,13 @@ import Link from 'next/link';
 import Header from '../../components/Header';
 import Footer from '../../components/Footer';
 import {
-  Wrench,
   LetterText,
   Clock,
   ArrowRight,
   MessageSquareText,
+  FileCheck2,
+  LockKeyhole,
+  Sparkles,
 } from 'lucide-react';
 
 const tools = [
@@ -19,7 +21,7 @@ const tools = [
     title: 'Word Counter',
     description:
       'Count words, characters, sentences, and paragraphs in any text. See reading time estimates and most frequent words.',
-    keywords: 'word counter, character counter, pdf word count',
+    meta: 'Text metrics',
   },
   {
     slug: 'reading-time',
@@ -27,17 +29,23 @@ const tools = [
     title: 'Reading Time Calculator',
     description:
       'Estimate how long it takes to read or present any text. Compare slow, average, and fast reading and speaking speeds.',
-    keywords: 'reading time calculator, how long to read, speaking time',
+    meta: 'Planning utility',
   },
+];
+
+const proofPoints = [
+  { icon: LockKeyhole, label: 'Browser-only text processing' },
+  { icon: FileCheck2, label: 'Built for document workflows' },
+  { icon: Sparkles, label: 'Ready to hand off to AI chat' },
 ];
 
 export default function ToolsHubClient() {
   return (
-    <div className="min-h-screen flex flex-col bg-white dark:bg-zinc-950">
+    <div className="flex min-h-screen flex-col bg-[var(--page-background)]">
       <Header variant="minimal" />
       <main className="flex-1">
         {/* Breadcrumb */}
-        <div className="max-w-4xl mx-auto px-6 pt-6">
+        <div className="mx-auto max-w-5xl px-6 pt-6">
           <nav className="flex items-center gap-1.5 text-sm text-zinc-500 dark:text-zinc-400">
             <Link href="/" className="hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors">
               Home
@@ -49,43 +57,67 @@ export default function ToolsHubClient() {
 
         {/* Hero */}
         <section className="border-b border-zinc-200 dark:border-zinc-800">
-          <div className="max-w-4xl mx-auto px-6 pt-16 pb-16 text-center">
-            <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-zinc-100 dark:bg-zinc-800 mb-6">
-              <Wrench className="w-6 h-6 text-zinc-600 dark:text-zinc-300" />
+          <div className="mx-auto grid max-w-5xl gap-8 px-6 py-14 lg:grid-cols-[1.15fr_0.85fr] lg:items-end">
+            <div>
+              <span className="mb-4 inline-flex rounded-md bg-accent-light px-2.5 py-1 font-mono text-[10px] font-semibold uppercase tracking-[0.16em] text-accent">
+                Free utilities
+              </span>
+              <h1 className="font-serif text-3xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-100 sm:text-4xl">
+                Document tools for quick checks before deeper AI analysis.
+              </h1>
+              <p className="mt-4 max-w-2xl text-base leading-7 text-zinc-600 dark:text-zinc-300">
+                Count, estimate, and prepare text locally. When the work needs source-grounded answers,
+                move the same document into DocTalk.
+              </p>
             </div>
-            <h1 className="font-serif text-3xl sm:text-4xl font-semibold text-zinc-900 dark:text-zinc-100 mb-4 tracking-tight">
-              Free AI Document Tools
-            </h1>
-            <p className="text-lg text-zinc-600 dark:text-zinc-300 max-w-2xl mx-auto">
-              Simple, fast, and free utilities for working with text and documents.
-              No sign-up required &mdash; everything runs in your browser.
-            </p>
+            <div className="grid gap-2 rounded-lg border border-zinc-200 bg-white p-3 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+              {proofPoints.map((item) => {
+                const Icon = item.icon;
+                return (
+                  <div key={item.label} className="flex items-center gap-3 rounded-md bg-zinc-50 px-3 py-2.5 dark:bg-zinc-950">
+                    <Icon aria-hidden="true" size={16} className="text-accent" />
+                    <span className="text-sm font-medium text-zinc-700 dark:text-zinc-300">{item.label}</span>
+                  </div>
+                );
+              })}
+            </div>
           </div>
         </section>
 
         {/* Tools Grid */}
-        <section className="max-w-4xl mx-auto px-6 py-16">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+        <section className="mx-auto max-w-5xl px-6 py-12">
+          <div className="mb-5 flex items-end justify-between gap-4">
+            <div>
+              <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">Available tools</h2>
+              <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">Small utilities for repeated document prep work.</p>
+            </div>
+          </div>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             {tools.map((tool) => {
               const Icon = tool.icon;
               return (
                 <Link
                   key={tool.slug}
                   href={`/tools/${tool.slug}`}
-                  className="group bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl p-6 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-[box-shadow,transform] duration-200"
+                  className="group rounded-lg border border-zinc-200 bg-white p-5 shadow-sm transition-[border-color,box-shadow,transform] duration-200 hover:-translate-y-0.5 hover:border-accent/30 hover:shadow-md dark:border-zinc-800 dark:bg-zinc-900"
                 >
-                  <div className="w-10 h-10 rounded-lg bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center mb-4 group-hover:bg-blue-50 dark:group-hover:bg-blue-950/30 transition-colors duration-200">
-                    <Icon className="w-5 h-5 text-zinc-600 dark:text-zinc-300 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors duration-200" />
+                  <div className="mb-4 flex items-start justify-between gap-3">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-lg border border-zinc-200 bg-zinc-50 transition-colors duration-200 group-hover:border-accent/30 group-hover:bg-accent-light dark:border-zinc-800 dark:bg-zinc-950">
+                      <Icon className="h-5 w-5 text-zinc-600 transition-colors duration-200 group-hover:text-accent dark:text-zinc-300" />
+                    </div>
+                    <span className="rounded-md bg-zinc-100 px-2 py-1 text-xs font-medium text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400">
+                      {tool.meta}
+                    </span>
                   </div>
-                  <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100 mb-2 flex items-center justify-between">
+                  <h3 className="mb-2 flex items-center justify-between text-lg font-semibold text-zinc-900 dark:text-zinc-100">
                     <span>{tool.title}</span>
-                    <ArrowRight className="w-4 h-4 text-zinc-400 group-hover:text-blue-600 dark:group-hover:text-blue-400 group-hover:translate-x-0.5 transition-[color,transform] duration-200" />
-                  </h2>
-                  <p className="text-sm text-zinc-600 dark:text-zinc-300 leading-relaxed mb-3">
+                    <ArrowRight className="h-4 w-4 text-zinc-400 transition-[color,transform] duration-200 group-hover:translate-x-0.5 group-hover:text-accent" />
+                  </h3>
+                  <p className="mb-4 text-sm leading-6 text-zinc-600 dark:text-zinc-300">
                     {tool.description}
                   </p>
-                  <span className="inline-flex items-center px-2.5 py-1 text-xs font-medium rounded-full bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-400">
-                    100% Free
+                  <span className="inline-flex items-center rounded-md border border-zinc-200 px-2.5 py-1 text-xs font-medium text-zinc-600 dark:border-zinc-700 dark:text-zinc-300">
+                    No sign-up required
                   </span>
                 </Link>
               );
@@ -93,30 +125,33 @@ export default function ToolsHubClient() {
           </div>
 
           {/* CTA Banner */}
-          <div className="mt-16 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900/40 p-8 text-center">
-            <div className="inline-flex items-center justify-center w-10 h-10 rounded-full bg-blue-50 dark:bg-blue-950/40 mb-4">
-              <MessageSquareText className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+          <div className="mt-12 rounded-lg border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-900 md:flex md:items-center md:justify-between md:gap-8">
+            <div className="flex gap-4">
+              <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-accent-light text-accent">
+                <MessageSquareText className="h-5 w-5" />
+              </span>
+              <div>
+                <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">
+                  Need cited answers from the original file?
+                </h2>
+                <p className="mt-2 max-w-2xl text-sm leading-6 text-zinc-600 dark:text-zinc-300">
+                  Upload a PDF, DOCX, PPTX, or spreadsheet to ask questions and inspect citations in context.
+                </p>
+              </div>
             </div>
-            <h2 className="text-xl font-semibold text-zinc-900 dark:text-zinc-100 mb-2">
-              Need More Than Simple Tools?
-            </h2>
-            <p className="text-sm text-zinc-600 dark:text-zinc-300 max-w-lg mx-auto mb-6">
-              Upload any PDF, DOCX, or PPTX to DocTalk and ask AI questions about your document.
-              Get instant answers with source citations that highlight right in the original text.
-            </p>
-            <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
+            <div className="mt-5 flex flex-col gap-3 sm:flex-row md:mt-0">
               <Link
                 href="/demo"
-                className="group inline-flex items-center px-6 py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
+                className="group inline-flex items-center justify-center rounded-lg bg-accent px-5 py-2.5 text-sm font-semibold text-accent-foreground shadow-sm transition-colors hover:bg-accent-hover focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-900"
               >
                 Try the Free Demo
-                <ArrowRight className="ml-2 w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
+                <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-0.5" />
               </Link>
               <Link
                 href="/features"
-                className="inline-flex items-center px-6 py-3 text-sm font-medium text-zinc-600 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors"
+                className="inline-flex items-center justify-center rounded-lg border border-zinc-200 px-5 py-2.5 text-sm font-semibold text-zinc-700 transition-colors hover:border-accent hover:text-accent dark:border-zinc-700 dark:text-zinc-300"
               >
-                Explore All Features
+                Explore features
               </Link>
             </div>
           </div>
@@ -124,19 +159,19 @@ export default function ToolsHubClient() {
           {/* Related Links */}
           <div className="mt-12 pt-8 border-t border-zinc-200 dark:border-zinc-800">
             <div className="flex flex-wrap gap-3 text-sm justify-center">
-              <Link href="/features/multi-format" className="text-blue-600 dark:text-blue-400 hover:underline">
+              <Link href="/features/multi-format" className="text-accent hover:underline">
                 Multi-Format Support
               </Link>
               <span className="text-zinc-300 dark:text-zinc-700">|</span>
-              <Link href="/features/citations" className="text-blue-600 dark:text-blue-400 hover:underline">
+              <Link href="/features/citations" className="text-accent hover:underline">
                 Citation Highlighting
               </Link>
               <span className="text-zinc-300 dark:text-zinc-700">|</span>
-              <Link href="/use-cases/students" className="text-blue-600 dark:text-blue-400 hover:underline">
+              <Link href="/use-cases/students" className="text-accent hover:underline">
                 For Students
               </Link>
               <span className="text-zinc-300 dark:text-zinc-700">|</span>
-              <Link href="/pricing" className="text-blue-600 dark:text-blue-400 hover:underline">
+              <Link href="/pricing" className="text-accent hover:underline">
                 Pricing
               </Link>
             </div>

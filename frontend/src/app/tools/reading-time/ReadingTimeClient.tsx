@@ -4,7 +4,19 @@ import React, { useState, useMemo } from 'react';
 import Link from 'next/link';
 import Header from '../../../components/Header';
 import Footer from '../../../components/Footer';
-import { Clock, ArrowRight, BookOpen, Mic, Trash2 } from 'lucide-react';
+import {
+  ArrowRight,
+  BookOpen,
+  Clock,
+  ClipboardPaste,
+  FileText,
+  GraduationCap,
+  Mail,
+  Mic,
+  Newspaper,
+  Trash2,
+} from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
 
 /* ---------- helpers ---------- */
 
@@ -46,6 +58,23 @@ interface SpeedRow {
   minutes: number;
 }
 
+interface ReferenceRow {
+  type: string;
+  words: number;
+  icon: LucideIcon;
+}
+
+const sampleText = `DocTalk turns long documents into cited answers. Instead of copying passages into a chat window, upload the original PDF, DOCX, PPTX, spreadsheet, or text file and ask questions against the source. Each answer stays connected to the relevant passage so readers can verify claims quickly.`;
+
+const referenceTable: ReferenceRow[] = [
+  { type: 'Email', words: 200, icon: Mail },
+  { type: 'News article', words: 800, icon: Newspaper },
+  { type: 'Blog post', words: 1500, icon: FileText },
+  { type: 'Research paper', words: 5000, icon: GraduationCap },
+  { type: 'Thesis chapter', words: 10000, icon: FileText },
+  { type: 'Novel', words: 80000, icon: BookOpen },
+];
+
 /* ---------- component ---------- */
 
 export default function ReadingTimeClient() {
@@ -71,18 +100,8 @@ export default function ReadingTimeClient() {
     [wordCount],
   );
 
-  /* For the comparison table: common document lengths */
-  const referenceTable = [
-    { type: 'Email', words: 200, icon: '✉' },
-    { type: 'Blog Post', words: 1500, icon: '📝' },
-    { type: 'News Article', words: 800, icon: '📰' },
-    { type: 'Research Paper', words: 5000, icon: '📄' },
-    { type: 'Thesis Chapter', words: 10000, icon: '📚' },
-    { type: 'Novel', words: 80000, icon: '📖' },
-  ];
-
   return (
-    <div className="min-h-screen flex flex-col bg-white dark:bg-zinc-950">
+    <div className="flex min-h-screen flex-col bg-[var(--page-background)]">
       <Header variant="minimal" />
       <main className="flex-1">
         {/* Breadcrumb */}
@@ -102,14 +121,14 @@ export default function ReadingTimeClient() {
 
         {/* Hero */}
         <section className="border-b border-zinc-200 dark:border-zinc-800">
-          <div className="max-w-4xl mx-auto px-6 pt-12 pb-12 text-center">
-            <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-zinc-100 dark:bg-zinc-800 mb-5">
-              <Clock className="w-6 h-6 text-zinc-600 dark:text-zinc-300" />
+          <div className="max-w-4xl mx-auto px-6 pt-12 pb-12">
+            <div className="mb-5 inline-flex h-11 w-11 items-center justify-center rounded-lg border border-zinc-200 bg-white text-accent shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+              <Clock className="h-5 w-5" />
             </div>
             <h1 className="font-serif text-3xl sm:text-4xl font-semibold text-zinc-900 dark:text-zinc-100 mb-3 tracking-tight">
               Reading Time Calculator
             </h1>
-            <p className="text-base text-zinc-600 dark:text-zinc-300 max-w-xl mx-auto">
+            <p className="max-w-2xl text-base leading-7 text-zinc-600 dark:text-zinc-300">
               Estimate how long it takes to read or present any text.
               Compare speeds for reading silently and speaking aloud.
             </p>
@@ -120,26 +139,37 @@ export default function ReadingTimeClient() {
         <section className="max-w-4xl mx-auto px-6 py-10">
           {/* Text Input */}
           <div className="mb-8">
-            <div className="flex items-center justify-between mb-2">
+            <div className="mb-2 flex items-center justify-between gap-3">
               <label
                 htmlFor="reading-time-input"
                 className="text-sm font-medium text-zinc-700 dark:text-zinc-200"
               >
                 Paste your text below
               </label>
-              {text.length > 0 && (
+              <div className="flex items-center gap-2">
+                {text.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => setText('')}
+                    className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs text-zinc-500 transition-colors hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-200"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                    Clear
+                  </button>
+                )}
                 <button
-                  onClick={() => setText('')}
-                  className="inline-flex items-center gap-1 px-2 py-1 text-xs text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 transition-colors rounded"
+                  type="button"
+                  onClick={() => setText(sampleText)}
+                  className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium text-accent transition-colors hover:bg-accent-light"
                 >
-                  <Trash2 className="w-3.5 h-3.5" />
-                  Clear
+                  <ClipboardPaste className="h-3.5 w-3.5" />
+                  Sample
                 </button>
-              )}
+              </div>
             </div>
             <textarea
               id="reading-time-input"
-              className="w-full h-48 sm:h-56 p-4 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 text-sm leading-relaxed resize-y focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent placeholder:text-zinc-400 dark:placeholder:text-zinc-500"
+              className="h-48 w-full resize-y rounded-lg border border-zinc-200 bg-white p-4 text-sm leading-relaxed text-zinc-900 placeholder:text-zinc-400 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-accent dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:placeholder:text-zinc-500 sm:h-56"
               placeholder="Type or paste your text here to estimate reading and speaking times..."
               value={text}
               onChange={(e) => setText(e.target.value)}
@@ -155,10 +185,23 @@ export default function ReadingTimeClient() {
             </div>
           </div>
 
+          <div className="mb-8 grid grid-cols-1 gap-3 sm:grid-cols-3">
+            {[
+              { label: 'Words', value: wordCount.toLocaleString() },
+              { label: 'Average reading', value: wordCount > 0 ? formatDuration(wordCount / 250) : '--' },
+              { label: 'Average speaking', value: wordCount > 0 ? formatSeconds(wordCount / 150) : '--' },
+            ].map((item) => (
+              <div key={item.label} className="rounded-lg border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900">
+                <p className="text-xs font-medium uppercase tracking-[0.12em] text-zinc-500 dark:text-zinc-400">{item.label}</p>
+                <p className="mt-2 text-2xl font-semibold tabular-nums text-zinc-900 dark:text-zinc-100">{item.value}</p>
+              </div>
+            ))}
+          </div>
+
           {/* Results Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-10">
             {/* Reading Time */}
-            <div className="rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 p-5">
+            <div className="rounded-lg border border-zinc-200 bg-white p-5 dark:border-zinc-700 dark:bg-zinc-900">
               <div className="flex items-center gap-2 mb-4">
                 <BookOpen className="w-4 h-4 text-zinc-500 dark:text-zinc-400" />
                 <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
@@ -179,7 +222,7 @@ export default function ReadingTimeClient() {
                     <div className="flex items-center gap-3">
                       <div className="flex-1 h-2 bg-zinc-100 dark:bg-zinc-800 rounded-full overflow-hidden">
                         <div
-                          className="h-full bg-blue-500 dark:bg-blue-400 rounded-full transition-[width] duration-300"
+                          className="h-full rounded-full bg-accent transition-[width] duration-300"
                           style={{
                             width: wordCount > 0
                               ? `${Math.min(100, (row.wpm / 350) * 100)}%`
@@ -197,7 +240,7 @@ export default function ReadingTimeClient() {
             </div>
 
             {/* Speaking Time */}
-            <div className="rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 p-5">
+            <div className="rounded-lg border border-zinc-200 bg-white p-5 dark:border-zinc-700 dark:bg-zinc-900">
               <div className="flex items-center gap-2 mb-4">
                 <Mic className="w-4 h-4 text-zinc-500 dark:text-zinc-400" />
                 <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
@@ -237,7 +280,7 @@ export default function ReadingTimeClient() {
           </div>
 
           {/* Comparison Reference Table */}
-          <div className="rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 p-5 mb-10">
+          <div className="mb-10 rounded-lg border border-zinc-200 bg-white p-5 dark:border-zinc-700 dark:bg-zinc-900">
             <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100 mb-4">
               Reading Time Reference by Document Type
             </h2>
@@ -260,33 +303,36 @@ export default function ReadingTimeClient() {
                   </tr>
                 </thead>
                 <tbody>
-                  {referenceTable.map((row) => (
-                    <tr
-                      key={row.type}
-                      className="border-b border-zinc-50 dark:border-zinc-800/50 last:border-0"
-                    >
-                      <td className="py-2.5 px-2 text-zinc-700 dark:text-zinc-300">
-                        <span className="mr-2">{row.icon}</span>
-                        {row.type}
-                      </td>
-                      <td className="py-2.5 px-2 text-right text-zinc-600 dark:text-zinc-400 tabular-nums">
-                        ~{row.words.toLocaleString()}
-                      </td>
-                      <td className="py-2.5 px-2 text-right text-zinc-900 dark:text-zinc-100 font-medium tabular-nums">
-                        {formatDuration(row.words / 250)}
-                      </td>
-                      <td className="py-2.5 px-2 text-right text-zinc-900 dark:text-zinc-100 font-medium tabular-nums">
-                        {formatDuration(row.words / 150)}
-                      </td>
-                    </tr>
-                  ))}
+                  {referenceTable.map((row) => {
+                    const Icon = row.icon;
+                    return (
+                      <tr
+                        key={row.type}
+                        className="border-b border-zinc-50 dark:border-zinc-800/50 last:border-0"
+                      >
+                        <td className="py-2.5 px-2 text-zinc-700 dark:text-zinc-300">
+                          <Icon aria-hidden="true" size={14} className="mr-2 inline-block text-zinc-400" />
+                          {row.type}
+                        </td>
+                        <td className="py-2.5 px-2 text-right text-zinc-600 dark:text-zinc-400 tabular-nums">
+                          ~{row.words.toLocaleString()}
+                        </td>
+                        <td className="py-2.5 px-2 text-right text-zinc-900 dark:text-zinc-100 font-medium tabular-nums">
+                          {formatDuration(row.words / 250)}
+                        </td>
+                        <td className="py-2.5 px-2 text-right text-zinc-900 dark:text-zinc-100 font-medium tabular-nums">
+                          {formatDuration(row.words / 150)}
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
           </div>
 
           {/* DocTalk CTA */}
-          <div className="rounded-xl border border-blue-100 dark:border-blue-900/40 bg-blue-50/50 dark:bg-blue-950/20 p-6">
+          <div className="rounded-lg border border-accent/20 bg-accent-light/50 p-6 dark:bg-accent-light">
             <h2 className="text-base font-semibold text-zinc-900 dark:text-zinc-100 mb-2">
               Have a PDF or document to analyze?
             </h2>
@@ -296,7 +342,7 @@ export default function ReadingTimeClient() {
             </p>
             <Link
               href="/demo"
-              className="group inline-flex items-center px-5 py-2.5 bg-blue-600 text-white text-sm rounded-lg font-medium hover:bg-blue-700 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
+              className="group inline-flex items-center rounded-lg bg-accent px-5 py-2.5 text-sm font-semibold text-accent-foreground transition-colors hover:bg-accent-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2"
             >
               Try DocTalk Free
               <ArrowRight className="ml-2 w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
@@ -328,7 +374,7 @@ export default function ReadingTimeClient() {
               <p className="text-zinc-600 dark:text-zinc-300 leading-relaxed mt-3">
                 Everything runs locally in your browser &mdash; your text is never sent to any server.
                 For full document analysis with AI-powered Q&A,{' '}
-                <Link href="/demo" className="text-blue-600 dark:text-blue-400 hover:underline">
+                <Link href="/demo" className="text-accent hover:underline">
                   try DocTalk&apos;s free demo
                 </Link>.
               </p>
@@ -338,19 +384,19 @@ export default function ReadingTimeClient() {
           {/* Related Links */}
           <div className="mt-10 pt-8 border-t border-zinc-200 dark:border-zinc-800">
             <div className="flex flex-wrap gap-3 text-sm justify-center">
-              <Link href="/tools" className="text-blue-600 dark:text-blue-400 hover:underline">
+              <Link href="/tools" className="text-accent hover:underline">
                 All Tools
               </Link>
               <span className="text-zinc-300 dark:text-zinc-700">|</span>
-              <Link href="/tools/word-counter" className="text-blue-600 dark:text-blue-400 hover:underline">
+              <Link href="/tools/word-counter" className="text-accent hover:underline">
                 Word Counter
               </Link>
               <span className="text-zinc-300 dark:text-zinc-700">|</span>
-              <Link href="/features/multi-format" className="text-blue-600 dark:text-blue-400 hover:underline">
+              <Link href="/features/multi-format" className="text-accent hover:underline">
                 Multi-Format Support
               </Link>
               <span className="text-zinc-300 dark:text-zinc-700">|</span>
-              <Link href="/demo" className="text-blue-600 dark:text-blue-400 hover:underline">
+              <Link href="/demo" className="text-accent hover:underline">
                 Free Demo
               </Link>
             </div>
