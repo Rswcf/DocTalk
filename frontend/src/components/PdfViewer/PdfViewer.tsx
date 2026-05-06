@@ -392,7 +392,7 @@ export default function PdfViewer({ pdfUrl, currentPage, highlights, scale, scro
   }, [highlights]);
 
   return (
-    <div className="w-full h-full flex flex-col bg-zinc-50 dark:bg-zinc-900">
+    <div className="dt-document-stage w-full h-full flex flex-col">
       {numPages > 0 && (
         <PdfToolbar
           currentPage={visiblePage}
@@ -432,7 +432,7 @@ export default function PdfViewer({ pdfUrl, currentPage, highlights, scale, scro
           loading={<div className="p-4" aria-live="polite">{t('doc.pdfLoading')}</div>}
           error={<div className="p-4 text-red-600" aria-live="polite">{t('doc.pdfLoadError')}</div>}
         >
-          <div className="flex flex-col items-center gap-4 py-4">
+          <div className="flex flex-col items-center gap-5 py-6">
             {pages.map((pageNumber) => {
               const isInRange = pageNumber >= visibleRange.start && pageNumber <= visibleRange.end;
 
@@ -446,7 +446,7 @@ export default function PdfViewer({ pdfUrl, currentPage, highlights, scale, scro
                     key={pageNumber}
                     ref={(el) => { pageRefs.current[pageNumber - 1] = el; }}
                     data-page-number={pageNumber}
-                    className="bg-zinc-100 dark:bg-zinc-800 rounded"
+                    className="rounded bg-white/55 dark:bg-zinc-800/70"
                     style={{ height: pageHeight, width: pageWidth }}
                   />
                 );

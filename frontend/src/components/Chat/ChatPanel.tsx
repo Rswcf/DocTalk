@@ -258,33 +258,43 @@ export default function ChatPanel({ sessionId, onCitationClick, maxUserMessages,
     : SUGGESTED_KEYS.map((key) => t(key));
 
   return (
-    <div className="flex h-full flex-col border-r dark:border-zinc-700">
+    <div className="dt-chat-shell flex h-full flex-col">
       <PaywallModal isOpen={showPaywall} onClose={() => setShowPaywall(false)} />
       <div className="relative flex-1 min-h-0">
         <div
           ref={listRef}
           onScroll={handleScroll}
           data-tour="chat-area"
-          className="h-full overflow-y-auto overflow-x-hidden p-6"
+          className="dt-chat-scroll h-full overflow-y-auto overflow-x-hidden px-4 pb-10 pt-5 sm:px-6 sm:pb-12 lg:px-7"
         >
           {messages.length === 0 ? (
-            <div className="flex flex-col items-center justify-center h-full gap-5 px-4">
-              <p className="text-sm text-zinc-400 dark:text-zinc-500">{t('chat.trySuggested')}</p>
-              <div className="flex flex-wrap justify-center gap-2 max-w-lg">
+            <div className="flex min-h-full flex-col items-center justify-center px-2 py-8">
+              <div className="dt-empty-workbench rounded-xl px-5 py-6 sm:px-7 sm:py-7">
+                <div className="mb-5 flex items-center justify-between gap-4 border-b border-[var(--reader-border)] pb-4">
+                  <div>
+                    <p className="text-[11px] font-mono uppercase tracking-[0.08em] text-[var(--reader-muted)]">DocTalk</p>
+                    <p className="mt-1 text-sm font-medium text-[var(--reader-ink)]">{t('chat.trySuggested')}</p>
+                  </div>
+                  <div className="hidden sm:flex h-9 w-9 items-center justify-center rounded-lg border border-[var(--reader-evidence-border)] bg-[var(--reader-evidence-soft)] text-xs font-mono font-semibold text-[var(--reader-evidence)]">
+                    01
+                  </div>
+                </div>
+                <div className="grid gap-2 sm:grid-cols-2">
                 {displayedSuggestedQuestions.map((question, index) => (
                   <button
                     key={`sq-${index}`}
                     type="button"
                     onClick={() => handleSuggestedClick(question)}
-                    className="text-sm px-4 py-2 border border-zinc-200 dark:border-zinc-700 rounded-full hover:bg-zinc-50 dark:hover:bg-zinc-800 hover:border-zinc-300 dark:hover:border-zinc-600 transition-colors text-zinc-600 dark:text-zinc-400 focus-visible:ring-2 focus-visible:ring-zinc-400 dark:focus-visible:ring-zinc-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-900"
+                    className="dt-suggested-question min-h-12 rounded-lg px-3 py-2 text-left text-sm leading-snug focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-900"
                   >
                     {question}
                   </button>
                 ))}
+                </div>
               </div>
             </div>
           ) : (
-            <div className="max-w-3xl mx-auto">
+            <div className="mx-auto max-w-4xl pb-2">
               {messages.map((message, idx) => {
                 const displayCitations = (message.role === 'assistant' && message.citations && message.citations.length > 0)
                   ? renumberCitations(message.citations)
@@ -303,7 +313,7 @@ export default function ChatPanel({ sessionId, onCitationClick, maxUserMessages,
                           .filter((citation, index, all) => all.findIndex((item) => item.refIndex === citation.refIndex) === index)
                           .sort((a, b) => a.refIndex - b.refIndex);
                         return (
-                          <div className="mt-2 pl-0 flex flex-wrap gap-1.5">
+                          <div className="mt-2 flex flex-wrap gap-1.5 pl-0">
                             {uniqueCitations.map((citation) => (
                               <CitationCard
                                 key={`${message.id}-${citation.refIndex}`}
@@ -337,7 +347,7 @@ export default function ChatPanel({ sessionId, onCitationClick, maxUserMessages,
       </div>
 
       {maxUserMessages != null && (
-        <div className="border-t dark:border-zinc-700">
+        <div className="border-t border-[var(--reader-border)]">
           <div className="h-1 bg-zinc-200 dark:bg-zinc-800">
             <div
               role="progressbar"
@@ -368,14 +378,14 @@ export default function ChatPanel({ sessionId, onCitationClick, maxUserMessages,
         </div>
       )}
 
-      <form onSubmit={onSubmit} className="p-4 border-t dark:border-zinc-700">
-        <div className="max-w-3xl mx-auto">
+      <form onSubmit={onSubmit} className="dt-composer-shell px-4 py-3 sm:px-6">
+        <div className="mx-auto max-w-4xl">
           {userPlan && (
             <div className="mb-2 flex justify-end">
               <DomainModeSelector userPlan={userPlan} />
             </div>
           )}
-          <div className="flex items-center px-3 py-1.5 gap-2 border border-zinc-300 dark:border-zinc-600 rounded-full bg-white dark:bg-zinc-800 focus-within:border-zinc-400 dark:focus-within:border-zinc-500 transition-colors">
+          <div className="dt-composer flex items-center gap-2 rounded-xl px-3 py-2 transition-[border-color,box-shadow]">
             <PlusMenu
               isOpen={plusMenuOpen}
               setIsOpen={setPlusMenuOpen}
@@ -409,7 +419,7 @@ export default function ChatPanel({ sessionId, onCitationClick, maxUserMessages,
                 type="button"
                 onClick={handleShare}
                 disabled={shareLoading}
-                className="p-1.5 rounded-full text-zinc-400 hover:text-zinc-600 dark:text-zinc-500 dark:hover:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-700 transition-colors focus-visible:ring-2 focus-visible:ring-zinc-400 dark:focus-visible:ring-zinc-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-900 disabled:opacity-50"
+                className="p-1.5 rounded-lg text-zinc-400 hover:text-zinc-600 dark:text-zinc-500 dark:hover:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-700 transition-colors focus-visible:ring-2 focus-visible:ring-zinc-400 dark:focus-visible:ring-zinc-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-900 disabled:opacity-50"
                 title={tOr('chat.share', 'Share conversation')}
                 aria-label={tOr('chat.share', 'Share conversation')}
               >
@@ -418,7 +428,7 @@ export default function ChatPanel({ sessionId, onCitationClick, maxUserMessages,
             )}
             <textarea
               ref={textareaRef}
-              className="flex-1 px-1 py-1 text-sm resize-none overflow-y-auto focus:outline-none bg-transparent dark:text-zinc-100 placeholder:text-zinc-400 dark:placeholder:text-zinc-500"
+              className="flex-1 resize-none overflow-y-auto bg-transparent px-1 py-1 text-sm text-[var(--reader-ink)] placeholder:text-zinc-400 focus:outline-none dark:placeholder:text-zinc-500"
               style={{ minHeight: '36px' }}
               placeholder={demoLimitReached ? t('demo.signInToContinue') : t('chat.placeholder')}
               value={input}
@@ -433,7 +443,7 @@ export default function ChatPanel({ sessionId, onCitationClick, maxUserMessages,
                 <button
                   type="button"
                   onClick={stopStreaming}
-                  className="p-2 bg-zinc-900 dark:bg-zinc-50 text-white dark:text-zinc-900 rounded-full hover:bg-zinc-800 dark:hover:bg-zinc-200 transition-colors focus-visible:ring-2 focus-visible:ring-zinc-400 dark:focus-visible:ring-zinc-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-900"
+                  className="p-2 bg-zinc-900 dark:bg-zinc-50 text-white dark:text-zinc-900 rounded-lg hover:bg-zinc-800 dark:hover:bg-zinc-200 transition-colors focus-visible:ring-2 focus-visible:ring-zinc-400 dark:focus-visible:ring-zinc-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-900"
                   title={tOr('chat.stop', 'Stop')}
                   aria-label={t('chat.stop')}
                 >
@@ -442,7 +452,7 @@ export default function ChatPanel({ sessionId, onCitationClick, maxUserMessages,
               ) : (
                 <button
                   type="submit"
-                  className="p-2 bg-zinc-900 dark:bg-zinc-50 text-white dark:text-zinc-900 rounded-full disabled:opacity-40 hover:bg-zinc-800 dark:hover:bg-zinc-200 transition-colors focus-visible:ring-2 focus-visible:ring-zinc-400 dark:focus-visible:ring-zinc-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-900"
+                  className="p-2 bg-zinc-900 dark:bg-zinc-50 text-white dark:text-zinc-900 rounded-lg disabled:opacity-40 hover:bg-zinc-800 dark:hover:bg-zinc-200 transition-colors focus-visible:ring-2 focus-visible:ring-zinc-400 dark:focus-visible:ring-zinc-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-900"
                   disabled={!input.trim() || demoLimitReached}
                   title={t('chat.send')}
                   aria-label={t('chat.send')}
@@ -455,8 +465,8 @@ export default function ChatPanel({ sessionId, onCitationClick, maxUserMessages,
         </div>
       </form>
 
-      <div className="text-center pb-2">
-        <p className="text-xs text-zinc-400 dark:text-zinc-500 max-w-3xl mx-auto">
+      <div className="bg-[var(--reader-panel-solid)] pb-2 text-center">
+        <p className="mx-auto max-w-4xl text-xs text-zinc-400 dark:text-zinc-500">
           {t('chat.disclaimer')}
         </p>
       </div>

@@ -26,6 +26,17 @@
   --accent-hover: #1E40AF;
   --accent-light: #DBEAFE;
   --accent-foreground: #ffffff;
+  --reader-bg: #f4f1ea;
+  --reader-panel: rgba(255, 255, 255, 0.9);
+  --reader-panel-solid: #ffffff;
+  --reader-panel-muted: #faf8f3;
+  --reader-border: #ded8ce;
+  --reader-border-strong: #cfc6b8;
+  --reader-ink: #1f2933;
+  --reader-muted: #716b63;
+  --reader-evidence: #b7791f;
+  --reader-evidence-soft: #fff4d6;
+  --reader-evidence-border: #f3d38c;
 }
 
 .dark {
@@ -51,6 +62,17 @@
   --accent-hover: #93C5FD;
   --accent-light: rgba(96, 165, 250, 0.10);
   --accent-foreground: #0b1726;
+  --reader-bg: #151410;
+  --reader-panel: rgba(28, 27, 24, 0.92);
+  --reader-panel-solid: #1f1e1a;
+  --reader-panel-muted: #25231f;
+  --reader-border: #3c3830;
+  --reader-border-strong: #575044;
+  --reader-ink: #f3eee4;
+  --reader-muted: #aaa399;
+  --reader-evidence: #f1b84b;
+  --reader-evidence-soft: rgba(241, 184, 75, 0.14);
+  --reader-evidence-border: rgba(241, 184, 75, 0.34);
 }
 
 /* Designed-for-dark: scope the weight-shift to prose/headings only.
@@ -239,4 +261,189 @@ body > * { position: relative; z-index: 1; }
   border-radius: 8px;
   font-size: 0.875rem;
   padding: 0.375rem 0.75rem;
+}
+
+/* ============================================================
+   Verified Reading Desk
+   ============================================================ */
+
+.dt-reading-workspace {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.36), transparent 220px),
+    var(--reader-bg);
+}
+
+.dt-reader-pane {
+  min-width: 0;
+  background: var(--reader-panel);
+  border-color: var(--reader-border);
+}
+
+.dt-reader-pane-document {
+  background:
+    radial-gradient(circle at 50% 0%, rgba(255, 255, 255, 0.5), transparent 32rem),
+    var(--reader-bg);
+}
+
+.dark .dt-reader-pane-document {
+  background:
+    radial-gradient(circle at 50% 0%, rgba(255, 255, 255, 0.04), transparent 30rem),
+    var(--reader-bg);
+}
+
+.dt-reader-resizer {
+  background: linear-gradient(180deg, transparent, var(--reader-border), transparent);
+  transition: background 150ms ease;
+}
+
+.dt-reader-resizer:hover {
+  background: linear-gradient(180deg, transparent, var(--reader-border-strong), transparent);
+}
+
+.dt-reader-resizer-grip {
+  width: 2px;
+  height: 40px;
+  border-radius: 999px;
+  background: var(--reader-border-strong);
+  box-shadow: 4px 0 0 color-mix(in srgb, var(--reader-border-strong) 52%, transparent);
+}
+
+.dt-chat-shell {
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--reader-panel-solid) 92%, transparent), color-mix(in srgb, var(--reader-panel-muted) 78%, transparent)),
+    var(--reader-panel-solid);
+}
+
+.dt-chat-scroll {
+  scrollbar-gutter: stable;
+}
+
+.dt-empty-workbench {
+  width: min(100%, 42rem);
+  border: 1px solid var(--reader-border);
+  background: color-mix(in srgb, var(--reader-panel-solid) 84%, transparent);
+  box-shadow: 0 18px 52px rgba(42, 34, 20, 0.08), 0 1px 0 rgba(255, 255, 255, 0.72) inset;
+}
+
+.dark .dt-empty-workbench {
+  box-shadow: 0 18px 52px rgba(0, 0, 0, 0.28), 0 1px 0 rgba(255, 255, 255, 0.04) inset;
+}
+
+.dt-suggested-question {
+  border: 1px solid var(--reader-border);
+  background: var(--reader-panel-solid);
+  color: var(--reader-ink);
+  transition: border-color 150ms ease, background 150ms ease, transform 150ms ease;
+}
+
+.dt-suggested-question:hover {
+  border-color: var(--reader-border-strong);
+  background: var(--reader-panel-muted);
+  transform: translateY(-1px);
+}
+
+.dt-answer-card {
+  position: relative;
+  border: 1px solid var(--reader-border);
+  border-radius: 12px;
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--reader-panel-solid) 96%, transparent), color-mix(in srgb, var(--reader-panel-muted) 88%, transparent));
+  box-shadow: 0 12px 34px rgba(42, 34, 20, 0.07), 0 1px 0 rgba(255, 255, 255, 0.68) inset;
+  padding: 1rem 1.125rem 1.05rem 1.25rem;
+}
+
+.dt-answer-card::before {
+  content: "";
+  position: absolute;
+  left: -1px;
+  top: 14px;
+  bottom: 14px;
+  width: 3px;
+  border-radius: 999px;
+  background: var(--reader-evidence);
+  opacity: 0.72;
+}
+
+.dark .dt-answer-card {
+  box-shadow: 0 14px 38px rgba(0, 0, 0, 0.26), 0 1px 0 rgba(255, 255, 255, 0.04) inset;
+}
+
+.dt-user-bubble {
+  border: 1px solid var(--reader-border);
+  background: var(--reader-panel-muted);
+  color: var(--reader-ink);
+  box-shadow: 0 6px 18px rgba(42, 34, 20, 0.06);
+}
+
+.dt-sources-strip {
+  border: 1px solid var(--reader-evidence-border);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--reader-evidence-soft) 72%, var(--reader-panel-solid));
+  padding: 0.75rem;
+}
+
+.dt-sources-label {
+  color: color-mix(in srgb, var(--reader-evidence) 82%, var(--reader-ink));
+  letter-spacing: 0.08em;
+}
+
+.dt-source-chip {
+  border: 1px solid color-mix(in srgb, var(--reader-evidence-border) 74%, var(--reader-border));
+  background: color-mix(in srgb, var(--reader-panel-solid) 88%, transparent);
+  color: var(--reader-ink);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.72) inset;
+  transition: border-color 150ms ease, background 150ms ease, transform 150ms ease;
+}
+
+.dt-source-chip:hover {
+  border-color: var(--reader-evidence);
+  background: var(--reader-panel-solid);
+  transform: translateY(-1px);
+}
+
+.dt-source-index {
+  background: var(--reader-evidence);
+  color: #fffaf0;
+}
+
+.dt-citation-card {
+  border: 1px solid var(--reader-border);
+  background: color-mix(in srgb, var(--reader-panel-solid) 90%, transparent);
+  color: var(--reader-ink);
+  box-shadow: 0 6px 18px rgba(42, 34, 20, 0.06);
+  transition: border-color 150ms ease, box-shadow 150ms ease, transform 150ms ease;
+}
+
+.dt-citation-card:hover {
+  border-color: var(--reader-evidence-border);
+  box-shadow: 0 10px 28px rgba(42, 34, 20, 0.1);
+  transform: translateY(-1px);
+}
+
+.dt-composer-shell {
+  border-top: 1px solid var(--reader-border);
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--reader-panel-solid) 88%, transparent), var(--reader-panel-solid));
+}
+
+.dt-composer {
+  border: 1px solid var(--reader-border-strong);
+  background: var(--reader-panel-solid);
+  box-shadow: 0 12px 34px rgba(42, 34, 20, 0.09), 0 1px 0 rgba(255, 255, 255, 0.78) inset;
+}
+
+.dt-composer:focus-within {
+  border-color: color-mix(in srgb, var(--accent) 62%, var(--reader-border-strong));
+  box-shadow: 0 14px 38px rgba(29, 78, 216, 0.12), 0 0 0 3px var(--accent-light);
+}
+
+.dt-view-toggle {
+  border-bottom: 1px solid var(--reader-border);
+  background: color-mix(in srgb, var(--reader-panel-muted) 92%, transparent);
+}
+
+.dt-document-stage {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.5), transparent 8rem),
+    var(--reader-bg);
 }

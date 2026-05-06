@@ -46,12 +46,12 @@ export default function PdfToolbar({ currentPage, totalPages, scale, onPageChang
   const prevPage = () => { if (currentPage > 1) onPageChange(currentPage - 1); };
   const nextPage = () => { if (currentPage < totalPages) onPageChange(currentPage + 1); };
 
-  const btnClass = 'p-1 rounded hover:bg-zinc-100 dark:hover:bg-zinc-700 focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:ring-offset-1';
-  const separatorClass = 'w-px h-5 bg-zinc-300 dark:bg-zinc-600 mx-1';
+  const btnClass = 'p-1 rounded-md hover:bg-[var(--reader-panel-muted)] focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:ring-offset-1';
+  const separatorClass = 'w-px h-5 bg-[var(--reader-border)] mx-1';
 
   return (
     <>
-      <div className="sticky top-0 z-10 flex items-center justify-center gap-2 shrink-0 px-3 py-1.5 bg-white/90 dark:bg-zinc-800/90 backdrop-blur border-b dark:border-zinc-700 text-sm">
+      <div className="sticky top-0 z-10 flex shrink-0 items-center justify-center gap-2 border-b border-[var(--reader-border)] bg-[var(--reader-panel-solid)]/92 px-3 py-2 text-sm text-[var(--reader-ink)] backdrop-blur">
         {/* Zoom controls */}
         <button onClick={zoomOut} className={btnClass} title={t('toolbar.zoomOut')} aria-label={t('toolbar.zoomOut')}>
           <ZoomOut size={16} />
@@ -65,7 +65,7 @@ export default function PdfToolbar({ currentPage, totalPages, scale, onPageChang
 
         <button
           onClick={onGrabModeToggle}
-          className={`p-1 rounded focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:ring-offset-1 ${grabMode ? 'bg-zinc-100 dark:bg-zinc-900/50 text-zinc-600 dark:text-zinc-400' : 'hover:bg-zinc-100 dark:hover:bg-zinc-700'}`}
+          className={`p-1 rounded-md focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:ring-offset-1 ${grabMode ? 'bg-[var(--reader-panel-muted)] text-[var(--reader-ink)]' : 'hover:bg-[var(--reader-panel-muted)]'}`}
           title={t('toolbar.grabMode')}
           aria-label={t('toolbar.grabMode')}
         >
@@ -77,7 +77,7 @@ export default function PdfToolbar({ currentPage, totalPages, scale, onPageChang
         {/* Search toggle */}
         <button
           onClick={() => { setSearchOpen(!searchOpen); if (searchOpen) onSearchClose(); }}
-          className={`p-1 rounded focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:ring-offset-1 ${searchOpen ? 'bg-zinc-100 dark:bg-zinc-900/50 text-zinc-600 dark:text-zinc-400' : 'hover:bg-zinc-100 dark:hover:bg-zinc-700'}`}
+          className={`p-1 rounded-md focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:ring-offset-1 ${searchOpen ? 'bg-[var(--reader-panel-muted)] text-[var(--reader-ink)]' : 'hover:bg-[var(--reader-panel-muted)]'}`}
           title={t('toolbar.search')}
           aria-label={t('toolbar.search')}
           aria-pressed={searchOpen}
@@ -98,7 +98,7 @@ export default function PdfToolbar({ currentPage, totalPages, scale, onPageChang
             onChange={(e) => setPageInput(e.target.value)}
             onKeyDown={handlePageSubmit}
             onBlur={() => setPageInput(String(currentPage))}
-            className="w-10 text-center border rounded px-1 py-0.5 text-xs dark:bg-zinc-700 dark:border-zinc-600"
+            className="w-10 rounded-md border border-[var(--reader-border)] bg-[var(--reader-panel-solid)] px-1 py-0.5 text-center text-xs"
             aria-label={t('doc.page')}
           />
           <span className="text-xs text-zinc-500 dark:text-zinc-400">/ {totalPages}</span>
@@ -109,7 +109,7 @@ export default function PdfToolbar({ currentPage, totalPages, scale, onPageChang
       </div>
 
       {searchOpen && (
-        <div className="flex items-center gap-2 text-sm px-3 py-1.5 bg-white/90 dark:bg-zinc-800/90 backdrop-blur border-b dark:border-zinc-700">
+        <div className="flex items-center gap-2 border-b border-[var(--reader-border)] bg-[var(--reader-panel-solid)]/92 px-3 py-2 text-sm backdrop-blur">
           <Search aria-hidden="true" size={14} className="text-zinc-400 shrink-0" />
           <input
             type="text"
@@ -134,13 +134,13 @@ export default function PdfToolbar({ currentPage, totalPages, scale, onPageChang
               {searchMatchCount > 0 ? t('toolbar.matchCount', { current: currentMatchIndex + 1, total: searchMatchCount }) : t('toolbar.noMatches')}
             </span>
           )}
-          <button onClick={onSearchPrev} disabled={searchMatchCount === 0} className="p-0.5 rounded hover:bg-zinc-100 dark:hover:bg-zinc-700 disabled:opacity-30 focus-visible:ring-2 focus-visible:ring-zinc-400" title={t('toolbar.prevPage')} aria-label={t('toolbar.prevPage')}>
+          <button onClick={onSearchPrev} disabled={searchMatchCount === 0} className="p-0.5 rounded hover:bg-[var(--reader-panel-muted)] disabled:opacity-30 focus-visible:ring-2 focus-visible:ring-zinc-400" title={t('toolbar.prevPage')} aria-label={t('toolbar.prevPage')}>
             <ChevronLeft size={14} />
           </button>
-          <button onClick={onSearchNext} disabled={searchMatchCount === 0} className="p-0.5 rounded hover:bg-zinc-100 dark:hover:bg-zinc-700 disabled:opacity-30 focus-visible:ring-2 focus-visible:ring-zinc-400" title={t('toolbar.nextPage')} aria-label={t('toolbar.nextPage')}>
+          <button onClick={onSearchNext} disabled={searchMatchCount === 0} className="p-0.5 rounded hover:bg-[var(--reader-panel-muted)] disabled:opacity-30 focus-visible:ring-2 focus-visible:ring-zinc-400" title={t('toolbar.nextPage')} aria-label={t('toolbar.nextPage')}>
             <ChevronRight size={14} />
           </button>
-          <button onClick={() => { setSearchOpen(false); onSearchClose(); }} className="p-0.5 rounded hover:bg-zinc-100 dark:hover:bg-zinc-700 focus-visible:ring-2 focus-visible:ring-zinc-400" aria-label={t('toolbar.closeSearch')}>
+          <button onClick={() => { setSearchOpen(false); onSearchClose(); }} className="p-0.5 rounded hover:bg-[var(--reader-panel-muted)] focus-visible:ring-2 focus-visible:ring-zinc-400" aria-label={t('toolbar.closeSearch')}>
             <X size={14} />
           </button>
         </div>

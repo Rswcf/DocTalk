@@ -67,10 +67,10 @@ export default function DocumentReaderPageClient() {
   const showViewToggle = hasConvertedPdf && fileType !== 'pdf';
 
   const viewToggle = showViewToggle ? (
-    <div className="flex items-center gap-1 px-2 py-1 border-b bg-zinc-100 dark:bg-zinc-800 border-zinc-200 dark:border-zinc-700">
+    <div className="dt-view-toggle flex items-center gap-1 px-2 py-1">
       <button
         onClick={() => setViewMode('slide')}
-        className={`flex items-center gap-1 px-2 py-1 rounded text-xs transition-colors ${viewMode === 'slide' ? 'bg-zinc-900 text-white dark:bg-zinc-50 dark:text-zinc-900' : 'text-zinc-600 dark:text-zinc-400 hover:bg-zinc-200 dark:hover:bg-zinc-700'}`}
+        className={`flex items-center gap-1 px-2 py-1 rounded-md text-xs transition-colors ${viewMode === 'slide' ? 'bg-zinc-900 text-white dark:bg-zinc-50 dark:text-zinc-900 shadow-sm' : 'text-zinc-600 dark:text-zinc-400 hover:bg-white/70 dark:hover:bg-zinc-800'}`}
         title={t('viewer.slides')}
       >
         <Presentation size={14} />
@@ -78,7 +78,7 @@ export default function DocumentReaderPageClient() {
       </button>
       <button
         onClick={() => setViewMode('text')}
-        className={`flex items-center gap-1 px-2 py-1 rounded text-xs transition-colors ${viewMode === 'text' ? 'bg-zinc-900 text-white dark:bg-zinc-50 dark:text-zinc-900' : 'text-zinc-600 dark:text-zinc-400 hover:bg-zinc-200 dark:hover:bg-zinc-700'}`}
+        className={`flex items-center gap-1 px-2 py-1 rounded-md text-xs transition-colors ${viewMode === 'text' ? 'bg-zinc-900 text-white dark:bg-zinc-50 dark:text-zinc-900 shadow-sm' : 'text-zinc-600 dark:text-zinc-400 hover:bg-white/70 dark:hover:bg-zinc-800'}`}
         title={t('viewer.text')}
       >
         <FileText size={14} />
@@ -88,7 +88,7 @@ export default function DocumentReaderPageClient() {
   ) : null;
 
   const viewerContent = (
-    <div className="h-full flex flex-col">
+    <div className="h-full flex flex-col dt-reader-pane-document">
       {viewToggle}
       <div className="flex-1 min-h-0">
         {fileType === 'pdf' ? (
@@ -166,7 +166,7 @@ export default function DocumentReaderPageClient() {
   }, [documentStatus, sessionId]);
 
   return (
-    <div className="flex flex-col h-screen w-full overflow-hidden">
+    <div className="dt-reading-workspace flex flex-col h-screen w-full overflow-hidden">
       <Header isDemo={isDemo} isLoggedIn={isLoggedIn} />
       {error ? (
         <div className="flex-1 flex items-center justify-center">
@@ -183,23 +183,23 @@ export default function DocumentReaderPageClient() {
       ) : (
         <>
           {/* Desktop: side-by-side resizable panels */}
-          <div className="hidden sm:flex flex-1 min-h-0">
+          <div className="hidden sm:flex flex-1 min-h-0 px-2 pb-2 gap-0">
             <Group orientation="horizontal" className="flex-1 min-h-0">
               <Panel defaultSize={50} minSize={25}>
-                <div className="h-full min-w-0 sm:min-w-[320px] flex flex-col">
+                <div className="dt-reader-pane h-full min-w-0 sm:min-w-[320px] flex flex-col border rounded-l-xl overflow-hidden">
                   <div className="flex-1 min-h-0">
                     {chatContent}
                   </div>
                 </div>
               </Panel>
               <Separator
-                className="w-3 sm:w-1.5 bg-zinc-200 dark:bg-zinc-700 hover:bg-zinc-400 dark:hover:bg-zinc-500 transition-colors cursor-col-resize flex items-center justify-center"
+                className="dt-reader-resizer w-4 sm:w-3 cursor-col-resize flex items-center justify-center"
                 aria-label={t('doc.resizePanels')}
               >
-                <div className="w-0.5 h-8 bg-zinc-400 dark:bg-zinc-500 rounded-full" />
+                <div className="dt-reader-resizer-grip" />
               </Separator>
               <Panel defaultSize={50} minSize={35}>
-                <div className="h-full">
+                <div className="dt-reader-pane h-full border rounded-r-xl overflow-hidden">
                   {viewerContent}
                 </div>
               </Panel>
@@ -221,7 +221,7 @@ export default function DocumentReaderPageClient() {
               </div>
             </div>
             {/* Bottom tab bar */}
-            <div className="flex border-t border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-950 shrink-0" style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}>
+            <div className="flex border-t border-[var(--reader-border)] bg-[var(--reader-panel-solid)] shrink-0" style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}>
               <button
                 type="button"
                 onClick={() => setMobileTab('chat')}

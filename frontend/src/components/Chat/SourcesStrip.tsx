@@ -61,18 +61,18 @@ export default function SourcesStrip({
     if (!isStreaming) return null;
     return (
       <div
-        className="mb-3 flex flex-col gap-2"
+        className="dt-sources-strip mb-3 flex flex-col gap-2"
         aria-label={tOr("chat.sources.retrievingAriaLabel", "Retrieving sources")}
         role="status"
       >
-        <div className="text-[11px] font-mono uppercase tracking-widest text-zinc-400 dark:text-zinc-500">
+        <div className="dt-sources-label text-[11px] font-mono uppercase">
           {tOr("chat.sources.retrieving", "Retrieving sources…")}
         </div>
         <div className="flex flex-wrap gap-2" aria-hidden="true">
           {[0, 1, 2].map((i) => (
             <div
               key={i}
-              className="h-7 w-36 rounded-md border border-zinc-200 dark:border-zinc-700 bg-zinc-100 dark:bg-zinc-800/60 animate-pulse motion-reduce:animate-none"
+              className="h-7 w-36 rounded-md border border-[var(--reader-evidence-border)] bg-[var(--reader-panel-solid)] animate-pulse motion-reduce:animate-none"
             />
           ))}
         </div>
@@ -84,10 +84,10 @@ export default function SourcesStrip({
 
   return (
     <section
-      className="mb-3 flex flex-col gap-2"
+      className="dt-sources-strip mb-3 flex flex-col gap-2"
       aria-label={tOr("chat.sources.ariaLabel", "Answer sources")}
     >
-      <div className="text-[11px] font-mono uppercase tracking-widest text-zinc-500 dark:text-zinc-400">
+      <div className="dt-sources-label text-[11px] font-mono uppercase">
         {label}
       </div>
       <div className="flex flex-wrap gap-2">
@@ -103,18 +103,18 @@ export default function SourcesStrip({
               onClick={() => onCitationClick?.(c)}
               title={jumpLabel}
               aria-label={`${filename} — ${jumpLabel}`}
-              className="group inline-flex items-center gap-2 max-w-xs rounded-md border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 px-2.5 py-1.5 text-xs text-zinc-700 dark:text-zinc-200 shadow-sm transition-colors motion-reduce:transition-none hover:border-accent hover:bg-accent/5 dark:hover:bg-accent/10 focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-900"
+              className="dt-source-chip group inline-flex max-w-xs items-center gap-2 rounded-md px-2.5 py-1.5 text-xs motion-reduce:transition-none focus-visible:ring-2 focus-visible:ring-[var(--reader-evidence)] focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-900"
             >
-              <span className="inline-flex items-center justify-center h-4 min-w-4 px-1 rounded bg-accent text-[10px] font-bold leading-none text-accent-foreground">
+              <span className="dt-source-index inline-flex h-4 min-w-4 items-center justify-center rounded px-1 text-[10px] font-bold leading-none">
                 {c.refIndex}
               </span>
               <FileText
                 aria-hidden="true"
                 size={12}
-                className="shrink-0 text-zinc-400 dark:text-zinc-500 group-hover:text-accent"
+                className="shrink-0 text-zinc-400 group-hover:text-[var(--reader-evidence)] dark:text-zinc-500"
               />
               <span className="truncate font-medium">{displayFilename}</span>
-              <span className="shrink-0 font-mono text-[10px] text-zinc-500 dark:text-zinc-400">
+              <span className="shrink-0 font-mono text-[10px] text-[var(--reader-muted)]">
                 p.{c.page}
               </span>
             </button>

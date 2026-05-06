@@ -34,12 +34,12 @@ export default function CitationCard({ refIndex, textSnippet, page, onClick }: C
     <button
       type="button"
       onClick={onClick}
-      className="inline-flex items-center gap-1.5 text-left border border-zinc-100 dark:border-zinc-700 rounded-lg px-2.5 py-2 bg-white dark:bg-zinc-950 shadow-sm hover:shadow-md transition-shadow text-xs focus-visible:ring-2 focus-visible:ring-zinc-400 dark:focus-visible:ring-zinc-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-900"
+      className="dt-citation-card inline-flex items-center gap-2 rounded-lg px-2.5 py-2 text-left text-xs focus-visible:ring-2 focus-visible:ring-[var(--reader-evidence)] focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-900"
       aria-label={`Citation ${refIndex}, page ${validPage}`}
     >
-      <span className="text-zinc-500 dark:text-zinc-400 font-semibold shrink-0">[{refIndex}]</span>
-      <span className="text-zinc-600 dark:text-zinc-300 truncate max-w-[200px]">{snippet}</span>
-      <span className="text-zinc-400 dark:text-zinc-500 shrink-0">{t('citation.page', { page: validPage })}</span>
+      <span className="dt-source-index inline-flex h-5 min-w-5 shrink-0 items-center justify-center rounded px-1 text-[10px] font-bold leading-none">{refIndex}</span>
+      <span className="max-w-[220px] truncate text-[var(--reader-muted)]">{snippet}</span>
+      <span className="shrink-0 font-mono text-[10px] text-[var(--reader-muted)]">{t('citation.page', { page: validPage })}</span>
     </button>
   );
 }

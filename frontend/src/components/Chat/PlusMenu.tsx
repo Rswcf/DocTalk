@@ -54,7 +54,7 @@ export default function PlusMenu({
         ref={buttonRef}
         type="button"
         onClick={() => setIsOpen(!isOpen)}
-        className="p-1.5 rounded-full text-zinc-400 hover:text-zinc-600 dark:text-zinc-500 dark:hover:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-700 transition-colors focus-visible:ring-2 focus-visible:ring-zinc-400 dark:focus-visible:ring-zinc-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-900"
+        className="p-1.5 rounded-lg text-zinc-400 hover:text-zinc-600 dark:text-zinc-500 dark:hover:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-700 transition-colors focus-visible:ring-2 focus-visible:ring-zinc-400 dark:focus-visible:ring-zinc-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-900"
         aria-label={tOr('chat.moreOptions', 'More options')}
         aria-haspopup="menu"
         aria-expanded={isOpen}
@@ -64,7 +64,7 @@ export default function PlusMenu({
       {isOpen && (
         <div
           ref={menuRef}
-          className="absolute bottom-full left-0 mb-2 w-56 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-xl shadow-lg z-20 py-1 animate-fade-in motion-reduce:animate-none"
+          className="absolute bottom-full left-0 z-20 mb-2 w-56 rounded-xl border border-[var(--reader-border)] bg-[var(--reader-panel-solid)] py-1 shadow-lg animate-fade-in motion-reduce:animate-none"
           role="menu"
           onKeyDown={onMenuKeyDown}
         >
@@ -81,7 +81,7 @@ export default function PlusMenu({
                 }
                 onBillingRedirect({ plan: 'pro', reason: 'custom_instructions' });
               }}
-              className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:ring-inset"
+              className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-[var(--reader-ink)] hover:bg-[var(--reader-panel-muted)] transition-colors focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:ring-inset"
             >
               {canUseCustomInstructions ? <Settings2 size={16} /> : <Lock size={16} />}
               <span>{tOr('chat.customInstructions', 'Custom Instructions')}</span>
@@ -97,7 +97,7 @@ export default function PlusMenu({
           )}
 
           {showCustomInstructions && showExportInMenu && (
-            <div className="border-t border-zinc-100 dark:border-zinc-700" />
+            <div className="border-t border-[var(--reader-border)]" />
           )}
 
           {/* Markdown export — always available */}
@@ -110,7 +110,7 @@ export default function PlusMenu({
                 onExport();
                 setIsOpen(false);
               }}
-              className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:ring-inset"
+              className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-[var(--reader-ink)] hover:bg-[var(--reader-panel-muted)] transition-colors focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:ring-inset"
             >
               <FileText size={16} />
               <span>{tOr('chat.exportMarkdown', 'Export Markdown')}</span>
@@ -131,7 +131,7 @@ export default function PlusMenu({
                 }
                 onBillingRedirect({ plan: 'plus', reason: 'export_pdf' });
               }}
-              className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:ring-inset"
+              className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-[var(--reader-ink)] hover:bg-[var(--reader-panel-muted)] transition-colors focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:ring-inset"
             >
               {canUseExport ? <Download size={16} /> : <Lock size={16} />}
               <span>{tOr('chat.exportPdf', 'Export PDF')}</span>
@@ -157,7 +157,7 @@ export default function PlusMenu({
                 }
                 onBillingRedirect({ plan: 'plus', reason: 'export_docx' });
               }}
-              className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:ring-inset"
+              className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-[var(--reader-ink)] hover:bg-[var(--reader-panel-muted)] transition-colors focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:ring-inset"
             >
               {canUseExport ? <Download size={16} /> : <Lock size={16} />}
               <span>{tOr('chat.exportDocx', 'Export DOCX')}</span>

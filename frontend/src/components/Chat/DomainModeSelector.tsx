@@ -21,7 +21,7 @@ export default function DomainModeSelector({ userPlan }: Props) {
   const canUse = userPlan === 'plus' || userPlan === 'pro';
 
   return (
-    <div className="flex gap-1">
+    <div className="flex gap-1 rounded-lg border border-[var(--reader-border)] bg-[var(--reader-panel-solid)] p-1 shadow-sm">
       {MODES.map((m) => {
         const active = domainMode === m.id;
         const disabled = !canUse && m.id !== null;
@@ -41,7 +41,7 @@ export default function DomainModeSelector({ userPlan }: Props) {
                   : m.id === 'academic'
                     ? 'border-blue-500 bg-blue-500/10 text-blue-600 dark:text-blue-400'
                     : 'border-zinc-400 bg-zinc-200 dark:bg-zinc-700 text-zinc-800 dark:text-zinc-200'
-                : 'border-zinc-300 dark:border-zinc-700 text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800'
+                : 'border-transparent text-zinc-500 hover:bg-[var(--reader-panel-muted)]'
             } ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
           >
             {disabled && <Lock size={10} />}

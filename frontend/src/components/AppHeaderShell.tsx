@@ -28,15 +28,15 @@ export default function AppHeaderShell({ isDemo, isLoggedIn }: AppHeaderShellPro
   const isDocumentPage = pathname?.startsWith('/d/');
 
   return (
-    <header className="h-14 flex items-center px-4 sm:px-6 gap-3 min-w-0 shrink-0 sticky top-0 z-30 border-b border-zinc-200 dark:border-zinc-800 bg-[var(--page-background)]">
-      <Link href="/" className="font-logo font-semibold text-xl text-zinc-900 dark:text-zinc-100 hover:text-zinc-600 dark:hover:text-zinc-300 transition-colors shrink-0 focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:rounded-sm inline-flex items-center gap-2">
+    <header className="h-14 flex items-center px-3 sm:px-6 gap-2 sm:gap-3 min-w-0 shrink-0 sticky top-0 z-30 border-b border-zinc-200 dark:border-zinc-800 bg-[var(--page-background)]">
+      <Link href="/" className="font-logo font-semibold text-lg sm:text-xl text-zinc-900 dark:text-zinc-100 hover:text-zinc-600 dark:hover:text-zinc-300 transition-colors shrink-0 focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:rounded-sm inline-flex items-center gap-1.5 sm:gap-2">
         <DocTalkLogo size={26} />
         {t('app.title')}
-        <span className="ml-1 -mt-2 px-1.5 py-0.5 text-[10px] font-medium leading-none rounded-full bg-blue-100 text-blue-600 dark:bg-blue-900/50 dark:text-blue-300 tracking-wide uppercase">Beta</span>
+        <span className="hidden sm:inline ml-1 -mt-2 px-1.5 py-0.5 text-[10px] font-medium leading-none rounded-full bg-blue-100 text-blue-600 dark:bg-blue-900/50 dark:text-blue-300 tracking-wide uppercase">Beta</span>
       </Link>
       {documentName && (
         <>
-          <span className="mx-3 text-zinc-300 dark:text-zinc-600">/</span>
+          <span className="mx-1 sm:mx-3 text-zinc-300 dark:text-zinc-600">/</span>
           <SessionDropdown />
         </>
       )}

@@ -148,13 +148,13 @@ export default function SessionDropdown() {
   );
 
   return (
-    <div className="relative" ref={ref}>
+    <div className="relative min-w-0" ref={ref}>
       <button
         ref={triggerRef}
         type="button"
         onClick={toggle}
         data-tour="session-dropdown"
-        className="text-sm text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200 transition-colors max-w-[120px] sm:max-w-[200px] md:max-w-[300px] truncate flex items-center gap-1.5 focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:rounded-sm"
+        className="text-sm text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200 transition-colors max-w-[72px] min-[375px]:max-w-[112px] sm:max-w-[200px] md:max-w-[300px] truncate flex items-center gap-1.5 focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:rounded-sm"
         title={titleText}
         aria-haspopup="menu"
         aria-expanded={open}

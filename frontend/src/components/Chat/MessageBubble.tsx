@@ -59,7 +59,7 @@ function processCitationLinks(
             <CitationPopover key={`cite-${refNum}-${keyIdx++}`} citation={citation}>
               <button
                 type="button"
-                className="not-prose align-super mx-0.5 inline-flex items-center justify-center min-w-[1.125rem] h-[1.125rem] px-1 rounded-full text-[10px] font-semibold leading-none select-none cursor-pointer bg-zinc-100 text-zinc-600 hover:bg-blue-100 hover:text-blue-700 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-blue-900/50 dark:hover:text-blue-300 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400"
+                className="not-prose dt-source-index align-super mx-0.5 inline-flex h-[1.125rem] min-w-[1.125rem] cursor-pointer select-none items-center justify-center rounded px-1 text-[10px] font-semibold leading-none transition-colors hover:brightness-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--reader-evidence)]"
                 onClick={() => onClick?.(citation)}
                 title={t ? t('citation.jumpTo', { page: citation.page }) : `Jump to page ${citation.page}`}
               >
@@ -233,8 +233,8 @@ export default function MessageBubble({ message, onCitationClick, isStreaming, o
             isError
               ? 'text-sm rounded-xl px-4 py-3 bg-red-600 text-white'
               : isUser
-              ? 'text-sm rounded-xl px-4 py-3 bg-zinc-100 dark:bg-zinc-700 text-zinc-900 dark:text-white shadow-sm'
-              : 'text-zinc-900 dark:text-zinc-100'
+              ? 'dt-user-bubble text-sm rounded-xl px-4 py-3'
+              : 'dt-answer-card text-zinc-900 dark:text-zinc-100'
           }
         >
           {isUser ? (
@@ -263,7 +263,7 @@ export default function MessageBubble({ message, onCitationClick, isStreaming, o
                   isStreaming={isStreaming}
                 />
               )}
-              <div className="prose dark:prose-invert max-w-none [&>*:first-child]:mt-0 [&>*:last-child]:mb-0">
+              <div className="prose prose-sm dark:prose-invert max-w-none [&>*:first-child]:mt-0 [&>*:last-child]:mb-0 sm:prose-base">
                 <Suspense fallback={<span className="whitespace-pre-wrap">{markdownText}</span>}>
                   <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>
                     {markdownText}
@@ -279,10 +279,10 @@ export default function MessageBubble({ message, onCitationClick, isStreaming, o
 
         {/* Copy + feedback buttons (assistant only) */}
         {isAssistant && !isError && message.text && (
-          <div className={`flex gap-2 mt-2 transition-opacity ${isLastAssistant ? '' : 'opacity-0 group-hover:opacity-100 group-focus-within:opacity-100'}`}>
+          <div className={`mt-2 flex gap-1.5 transition-opacity ${isLastAssistant ? '' : 'opacity-0 group-hover:opacity-100 group-focus-within:opacity-100'}`}>
             <button
               onClick={handleCopy}
-              className={`p-2 rounded transition-colors text-zinc-400 dark:text-zinc-500 hover:text-zinc-600 dark:hover:text-zinc-300 focus-visible:ring-2 focus-visible:ring-zinc-400`}
+              className="rounded-lg p-1.5 text-zinc-400 transition-colors hover:bg-white/70 hover:text-zinc-600 focus-visible:ring-2 focus-visible:ring-zinc-400 dark:text-zinc-500 dark:hover:bg-zinc-800 dark:hover:text-zinc-300"
               title={copied ? t('copy.copied') : t('copy.button')}
               aria-label={t('copy.button')}
             >
@@ -290,10 +290,10 @@ export default function MessageBubble({ message, onCitationClick, isStreaming, o
             </button>
             <button
               onClick={() => handleFeedback('up')}
-              className={`p-2 rounded transition-colors focus-visible:ring-2 focus-visible:ring-zinc-400 ${
+              className={`rounded-lg p-1.5 transition-colors focus-visible:ring-2 focus-visible:ring-zinc-400 ${
                 feedback === 'up'
                   ? 'text-zinc-600 dark:text-zinc-400'
-                  : 'text-zinc-400 dark:text-zinc-500 hover:text-zinc-600 dark:hover:text-zinc-300'
+                  : 'text-zinc-400 dark:text-zinc-500 hover:bg-white/70 hover:text-zinc-600 dark:hover:bg-zinc-800 dark:hover:text-zinc-300'
               }`}
               title={t('feedback.helpful')}
               aria-label={t('feedback.helpful')}
@@ -303,10 +303,10 @@ export default function MessageBubble({ message, onCitationClick, isStreaming, o
             </button>
             <button
               onClick={() => handleFeedback('down')}
-              className={`p-2 rounded transition-colors focus-visible:ring-2 focus-visible:ring-zinc-400 ${
+              className={`rounded-lg p-1.5 transition-colors focus-visible:ring-2 focus-visible:ring-zinc-400 ${
                 feedback === 'down'
                   ? 'text-red-500 dark:text-red-400'
-                  : 'text-zinc-400 dark:text-zinc-500 hover:text-zinc-600 dark:hover:text-zinc-300'
+                  : 'text-zinc-400 dark:text-zinc-500 hover:bg-white/70 hover:text-zinc-600 dark:hover:bg-zinc-800 dark:hover:text-zinc-300'
               }`}
               title={t('feedback.notHelpful')}
               aria-label={t('feedback.notHelpful')}
@@ -317,7 +317,7 @@ export default function MessageBubble({ message, onCitationClick, isStreaming, o
             {isLastAssistant && onRegenerate && !isStreaming && (
               <button
                 onClick={onRegenerate}
-                className={`p-2 rounded transition-colors text-zinc-400 dark:text-zinc-500 hover:text-zinc-600 dark:hover:text-zinc-300 focus-visible:ring-2 focus-visible:ring-zinc-400`}
+                className="rounded-lg p-1.5 text-zinc-400 transition-colors hover:bg-white/70 hover:text-zinc-600 focus-visible:ring-2 focus-visible:ring-zinc-400 dark:text-zinc-500 dark:hover:bg-zinc-800 dark:hover:text-zinc-300"
                 title={t('chat.regenerate')}
                 aria-label={t('chat.regenerate')}
               >
@@ -331,7 +331,7 @@ export default function MessageBubble({ message, onCitationClick, isStreaming, o
         {isAssistant && message.isTruncated && !isStreaming && isLastAssistant && onContinue && (
           <button
             onClick={onContinue}
-            className="mt-2 flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/50 border border-blue-200 dark:border-blue-800 rounded-full hover:bg-blue-100 dark:hover:bg-blue-900/50 transition-colors focus-visible:ring-2 focus-visible:ring-blue-400"
+            className="mt-2 flex items-center gap-1.5 rounded-lg border border-[var(--reader-evidence-border)] bg-[var(--reader-evidence-soft)] px-3 py-1.5 text-sm font-medium text-[var(--reader-evidence)] transition-colors hover:brightness-95 focus-visible:ring-2 focus-visible:ring-[var(--reader-evidence)]"
             title={t('chat.continueGenerating')}
           >
             <ChevronsDown size={14} />
