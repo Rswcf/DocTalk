@@ -23,7 +23,7 @@ export default function ProfileTabs({ activeTab, onChange }: Props) {
   return (
     <>
       {/* Mobile: horizontal tabs */}
-      <div className="flex gap-2 overflow-x-auto md:hidden" role="tablist">
+      <div className="flex gap-2 overflow-x-auto rounded-xl border border-zinc-200 bg-white p-2 shadow-sm dark:border-zinc-800 dark:bg-zinc-900 md:hidden" role="tablist">
         {TABS.map((tab) => {
           const isActive = activeTab === tab.key;
           return (
@@ -37,7 +37,7 @@ export default function ProfileTabs({ activeTab, onChange }: Props) {
                 `shrink-0 px-4 py-2 rounded-lg text-sm font-medium transition-colors focus-visible:ring-2 focus-visible:ring-zinc-400 dark:focus-visible:ring-zinc-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-900 ` +
                 (isActive
                   ? `bg-zinc-900 dark:bg-zinc-50 text-white dark:text-zinc-900`
-                  : `bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-700`)
+                  : `text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800`)
               }
             >
               {tOr(tab.labelKey, tab.fallback)}
@@ -48,7 +48,7 @@ export default function ProfileTabs({ activeTab, onChange }: Props) {
 
       {/* Desktop (md+): vertical sidebar */}
       <nav
-        className="hidden md:flex md:flex-col md:gap-1 md:sticky md:top-24"
+        className="hidden rounded-xl border border-zinc-200 bg-white p-2 shadow-sm dark:border-zinc-800 dark:bg-zinc-900 md:sticky md:top-24 md:flex md:flex-col md:gap-1"
         role="tablist"
         aria-orientation="vertical"
       >

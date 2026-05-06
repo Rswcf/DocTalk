@@ -14,10 +14,10 @@ import { usePageTitle } from "../../lib/usePageTitle";
 import { useUserProfile } from "../../lib/useUserProfile";
 import { LoadingScreen } from "../../components/ui/LoadingScreen";
 import { InlineSpinner } from "../../components/ui/InlineSpinner";
-import { Bell } from "lucide-react";
+import { Bell, Coins, FileText, MessageSquare, ShieldCheck } from "lucide-react";
 
 function ProfileContent() {
-  const { data: session, status } = useSession();
+  const { status } = useSession();
   const router = useRouter();
   const searchParams = useSearchParams();
   const { t, tOr } = useLocale();
@@ -49,6 +49,34 @@ function ProfileContent() {
     router.replace(`/profile?tab=${encodeURIComponent(tab)}`);
   };
 
+  const planLabel = profile
+    ? profile.plan === "pro"
+      ? t("profile.plan.pro")
+      : profile.plan === "plus"
+        ? t("profile.plan.plus")
+        : t("profile.plan.free")
+    : "";
+
+  const overviewStats = profile
+    ? [
+        {
+          icon: Coins,
+          label: tOr("profile.overview.credits", "Credits available"),
+          value: profile.credits_balance.toLocaleString(),
+        },
+        {
+          icon: FileText,
+          label: tOr("profile.overview.documents", "Documents"),
+          value: profile.stats.total_documents.toLocaleString(),
+        },
+        {
+          icon: MessageSquare,
+          label: tOr("profile.overview.messages", "Messages"),
+          value: profile.stats.total_messages.toLocaleString(),
+        },
+      ]
+    : [];
+
   if (status === "loading") {
     return <LoadingScreen label={t("common.loading")} />;
   }
@@ -56,10 +84,59 @@ function ProfileContent() {
   return (
     <div className="min-h-screen bg-[var(--page-background)]">
       <Header />
-      <main className="max-w-5xl mx-auto p-8">
-        <h1 className="text-2xl font-semibold mb-6 dark:text-zinc-100">{t("profile.title")}</h1>
+      <main className="mx-auto max-w-6xl px-6 py-8 sm:px-8">
+        <section className="mb-8 overflow-hidden rounded-xl border border-zinc-200 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+          <div className="grid gap-0 lg:grid-cols-[1fr_440px]">
+            <div className="p-6 sm:p-8">
+              <p className="mb-3 text-sm font-medium uppercase tracking-[0.18em] text-zinc-500 dark:text-zinc-400">
+                {tOr("profile.eyebrow", "Account workspace")}
+              </p>
+              <h1 className="font-serif text-4xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
+                {t("profile.title")}
+              </h1>
+              <p className="mt-3 max-w-2xl text-sm leading-6 text-zinc-600 dark:text-zinc-300 sm:text-base">
+                {tOr(
+                  "profile.subtitle",
+                  "Manage identity, credits, billing access, usage history, and privacy controls from one place."
+                )}
+              </p>
+              {profile && (
+                <div className="mt-5 inline-flex items-center gap-2 rounded-full border border-zinc-200 bg-zinc-50 px-3 py-1.5 text-sm text-zinc-600 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-300">
+                  <ShieldCheck aria-hidden="true" size={15} className="text-accent" />
+                  <span>{profile.email}</span>
+                  <span className="h-1 w-1 rounded-full bg-zinc-300 dark:bg-zinc-700" />
+                  <span className="font-medium text-zinc-900 dark:text-zinc-100">{planLabel}</span>
+                </div>
+              )}
+            </div>
 
-        <div className="md:grid md:grid-cols-[220px_1fr] md:gap-8">
+            <div className="border-t border-zinc-200 bg-zinc-50 p-5 dark:border-zinc-800 dark:bg-zinc-950 lg:border-l lg:border-t-0">
+              {profile ? (
+                <div className="grid h-full grid-cols-3 gap-3">
+                  {overviewStats.map(({ icon: Icon, label, value }) => (
+                    <div key={label} className="rounded-lg border border-zinc-200 bg-white p-3 dark:border-zinc-800 dark:bg-zinc-900">
+                      <Icon aria-hidden="true" size={16} className="mb-2 text-accent" />
+                      <div className="text-lg font-semibold tabular-nums text-zinc-900 dark:text-zinc-50">
+                        {value}
+                      </div>
+                      <div className="mt-1 text-[11px] font-medium leading-4 text-zinc-500 dark:text-zinc-400">
+                        {label}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="grid grid-cols-3 gap-3">
+                  {[1, 2, 3].map((item) => (
+                    <div key={item} className="h-24 animate-pulse rounded-lg bg-zinc-200 dark:bg-zinc-800" />
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </section>
+
+        <div className="md:grid md:grid-cols-[240px_1fr] md:gap-8">
           <aside className="mb-6 md:mb-0">
             <ProfileTabs activeTab={activeTab} onChange={handleTabChange} />
           </aside>
@@ -80,31 +157,31 @@ function ProfileContent() {
             {!loading && !error && profile && (
               <div className="space-y-6">
                 {activeTab === "profile" && (
-                  <section className="border border-zinc-200 dark:border-zinc-700 rounded-lg p-6 bg-white dark:bg-zinc-900">
+                  <section className="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
                     <ProfileInfoSection profile={profile} />
                   </section>
                 )}
 
                 {activeTab === "credits" && (
-                  <section className="border border-zinc-200 dark:border-zinc-700 rounded-lg p-6 bg-white dark:bg-zinc-900">
+                  <section className="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
                     <CreditsSection profile={profile} />
                   </section>
                 )}
 
                 {activeTab === "usage" && (
-                  <section className="border border-zinc-200 dark:border-zinc-700 rounded-lg p-6 bg-white dark:bg-zinc-900">
+                  <section className="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
                     <UsageStatsSection profile={profile} />
                   </section>
                 )}
 
                 {activeTab === "account" && (
-                  <section className="border border-zinc-200 dark:border-zinc-700 rounded-lg p-6 bg-white dark:bg-zinc-900">
+                  <section className="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
                     <AccountActionsSection email={profile.email} />
                   </section>
                 )}
 
                 {activeTab === "notifications" && (
-                  <section className="border border-zinc-200 dark:border-zinc-700 rounded-lg p-10 bg-white dark:bg-zinc-900 text-center">
+                  <section className="rounded-xl border border-zinc-200 bg-white p-10 text-center shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
                     <Bell aria-hidden size={28} className="mx-auto mb-3 text-zinc-400 dark:text-zinc-500" />
                     <h2 className="text-base font-semibold mb-1 text-zinc-900 dark:text-zinc-100">
                       {tOr("profile.notifications.title", "Notifications")}

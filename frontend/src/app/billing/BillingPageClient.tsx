@@ -16,7 +16,7 @@ import PricingTable from "../../components/PricingTable";
 import { PLAN_HIERARCHY, type PlanType } from "../../lib/models";
 import { authHrefFor, type BillingPeriodIntent, type BillingPlanIntent } from "../../lib/billingLinks";
 import { trackEvent } from "../../lib/analytics";
-import { Check } from "lucide-react";
+import { ArrowRight, CalendarDays, Check, Coins, CreditCard, ShieldCheck } from "lucide-react";
 import { usePageTitle } from "../../lib/usePageTitle";
 import { useUserProfile } from "../../lib/useUserProfile";
 
@@ -27,7 +27,7 @@ interface Product {
 }
 
 function BillingContent() {
-  const { t, locale } = useLocale();
+  const { t, tOr, locale } = useLocale();
   usePageTitle(t("footer.pricing"));
 
   const { status } = useSession();
@@ -365,13 +365,74 @@ function BillingContent() {
     t('billing.features.proDocs'),
   ];
 
+  const currentPlanLabel = profile
+    ? profile.plan === 'pro'
+      ? t('billing.pro.title')
+      : profile.plan === 'plus'
+        ? t('billing.plus.title')
+        : t('pricing.free.name')
+    : t('common.loading');
+
+  const billingOverview = [
+    {
+      icon: CreditCard,
+      label: tOr('billing.overview.plan', 'Current plan'),
+      value: currentPlanLabel,
+    },
+    {
+      icon: Coins,
+      label: tOr('billing.overview.credits', 'Credits available'),
+      value: profile ? profile.credits_balance.toLocaleString() : '...',
+    },
+    {
+      icon: CalendarDays,
+      label: tOr('billing.overview.renewal', 'Renewal'),
+      value: profile?.billing_state?.period_end
+        ? new Date(profile.billing_state.period_end).toLocaleDateString(locale)
+        : tOr('billing.overview.noRenewal', 'No renewal'),
+    },
+  ];
+
   return (
     <div className="min-h-screen bg-[var(--page-background)]">
       <Header />
-      <main className="max-w-5xl mx-auto p-6 sm:p-8">
-        <h1 className="text-2xl font-bold mb-6 text-zinc-900 dark:text-zinc-50">
-          {t("billing.title")}
-        </h1>
+      <main className="mx-auto max-w-6xl px-6 py-8 sm:px-8">
+        <section className="mb-8 grid gap-5 lg:grid-cols-[1fr_440px] lg:items-end">
+          <div>
+            <p className="mb-3 text-sm font-medium uppercase tracking-[0.18em] text-zinc-500 dark:text-zinc-400">
+              {tOr('billing.eyebrow', 'Plans and credits')}
+            </p>
+            <h1 className="font-serif text-4xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
+              {t("billing.title")}
+            </h1>
+            <p className="mt-3 max-w-2xl text-sm leading-6 text-zinc-600 dark:text-zinc-300 sm:text-base">
+              {tOr(
+                'billing.subtitle',
+                'Choose the plan that matches your document volume, manage your subscription, and add credits when a project needs extra room.'
+              )}
+            </p>
+          </div>
+
+          <aside className="rounded-xl border border-zinc-200 bg-white p-4 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+            <div className="mb-4 flex items-center gap-2 text-sm font-semibold text-zinc-900 dark:text-zinc-100">
+              <ShieldCheck aria-hidden="true" size={17} className="text-accent" />
+              {tOr('billing.overview.title', 'Billing overview')}
+            </div>
+            <div className="grid grid-cols-3 gap-3">
+              {billingOverview.map(({ icon: Icon, label, value }) => (
+                <div key={label} className="min-w-0 rounded-lg border border-zinc-200 bg-zinc-50 p-3 dark:border-zinc-800 dark:bg-zinc-950">
+                  <Icon aria-hidden="true" size={16} className="mb-2 text-accent" />
+                  <div className="truncate text-lg font-semibold text-zinc-900 dark:text-zinc-50">
+                    {value}
+                  </div>
+                  <div className="mt-1 text-[11px] font-medium leading-4 text-zinc-500 dark:text-zinc-400">
+                    {label}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </aside>
+        </section>
 
         {message && (
           <div className="mb-6 p-4 rounded-xl bg-zinc-100 dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-800">
@@ -448,29 +509,41 @@ function BillingContent() {
         )}
 
         {/* Billing Period Toggle */}
-        <div className="flex items-center justify-center gap-3 mb-8">
-          <button
-            onClick={() => setBillingPeriod('monthly')}
-            aria-pressed={billingPeriod === 'monthly'}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors focus-visible:ring-2 focus-visible:ring-zinc-400 dark:focus-visible:ring-zinc-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-900 ${
-              billingPeriod === 'monthly'
-                ? 'bg-zinc-900 dark:bg-zinc-50 text-white dark:text-zinc-900'
-                : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-200 dark:hover:bg-zinc-700'
-            }`}
-          >
-            {t('billing.monthly')}
-          </button>
-          <button
-            onClick={() => setBillingPeriod('annual')}
-            aria-pressed={billingPeriod === 'annual'}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors focus-visible:ring-2 focus-visible:ring-zinc-400 dark:focus-visible:ring-zinc-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-900 ${
-              billingPeriod === 'annual'
-                ? 'bg-zinc-900 dark:bg-zinc-50 text-white dark:text-zinc-900'
-                : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-200 dark:hover:bg-zinc-700'
-            }`}
-          >
-            {t('billing.annual')}
-          </button>
+        <div className="mb-6 flex flex-col gap-3 rounded-xl border border-zinc-200 bg-white p-4 shadow-sm dark:border-zinc-800 dark:bg-zinc-900 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
+              {tOr('billing.planSelector.title', 'Subscription plans')}
+            </h2>
+            <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
+              {tOr('billing.planSelector.subtitle', 'Annual billing keeps the same monthly credit allowance and lowers the effective price.')}
+            </p>
+          </div>
+          <div className="inline-flex rounded-lg border border-zinc-200 bg-zinc-50 p-1 dark:border-zinc-800 dark:bg-zinc-950">
+            <button
+              type="button"
+              onClick={() => setBillingPeriod('monthly')}
+              aria-pressed={billingPeriod === 'monthly'}
+              className={`rounded-md px-4 py-2 text-sm font-medium transition-colors focus-visible:ring-2 focus-visible:ring-zinc-400 dark:focus-visible:ring-zinc-500 ${
+                billingPeriod === 'monthly'
+                  ? 'bg-zinc-900 text-white shadow-sm dark:bg-zinc-50 dark:text-zinc-900'
+                  : 'text-zinc-600 hover:bg-white dark:text-zinc-400 dark:hover:bg-zinc-900'
+              }`}
+            >
+              {t('billing.monthly')}
+            </button>
+            <button
+              type="button"
+              onClick={() => setBillingPeriod('annual')}
+              aria-pressed={billingPeriod === 'annual'}
+              className={`rounded-md px-4 py-2 text-sm font-medium transition-colors focus-visible:ring-2 focus-visible:ring-zinc-400 dark:focus-visible:ring-zinc-500 ${
+                billingPeriod === 'annual'
+                  ? 'bg-zinc-900 text-white shadow-sm dark:bg-zinc-50 dark:text-zinc-900'
+                  : 'text-zinc-600 hover:bg-white dark:text-zinc-400 dark:hover:bg-zinc-900'
+              }`}
+            >
+              {t('billing.annual')}
+            </button>
+          </div>
         </div>
 
         {profileLoading ? (
@@ -509,16 +582,16 @@ function BillingContent() {
               {/* Plus Card */}
               <div
                 onClick={() => setSelectedPlan('plus')}
-                className={`relative rounded-xl p-0.5 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-shadow transition-transform duration-200 cursor-pointer ${
+                className={`relative rounded-xl border p-0 shadow-sm transition-[border-color,box-shadow,transform] duration-200 hover:-translate-y-0.5 hover:shadow-md cursor-pointer ${
                   selectedPlan === 'plus'
-                    ? 'bg-gradient-to-r from-blue-500 to-violet-500'
-                    : 'bg-zinc-200 dark:bg-zinc-800'
+                    ? 'border-accent bg-white ring-1 ring-accent/20 dark:bg-zinc-900'
+                    : 'border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900'
                 }`}
               >
-                <div className="rounded-xl bg-white dark:bg-zinc-900 p-6 h-full flex flex-col">
+                <div className="rounded-xl p-6 h-full flex flex-col">
                   <div className="flex items-center gap-2 mb-1">
                     <h2 className="text-xl font-semibold text-zinc-900 dark:text-zinc-50">{t("billing.plus.title")}</h2>
-                    <span className="text-xs px-2 py-0.5 rounded-full bg-blue-600 dark:bg-blue-500 text-white font-medium">
+                    <span className="text-xs px-2 py-0.5 rounded-full bg-accent text-accent-foreground font-medium">
                       {t("billing.mostPopular")}
                     </span>
                   </div>
@@ -573,7 +646,7 @@ function BillingContent() {
                     <button
                       onClick={() => handlePlanAction('plus')}
                       disabled={submitting !== null}
-                      className="w-full px-4 py-2.5 rounded-lg bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-400 text-white disabled:opacity-50 shadow-sm hover:shadow-md transition-colors font-medium focus-visible:ring-2 focus-visible:ring-zinc-400 dark:focus-visible:ring-zinc-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-900"
+                      className="w-full px-4 py-2.5 rounded-lg bg-accent hover:bg-accent-hover text-accent-foreground disabled:opacity-50 shadow-sm hover:shadow-md transition-colors font-medium focus-visible:ring-2 focus-visible:ring-zinc-400 dark:focus-visible:ring-zinc-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-900"
                     >
                       {submitting === 'plus' ? t("common.loading") : `${t("billing.upgrade")} Plus`}
                     </button>
@@ -584,13 +657,13 @@ function BillingContent() {
               {/* Pro Card */}
               <div
                 onClick={() => setSelectedPlan('pro')}
-                className={`relative rounded-xl p-0.5 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-shadow transition-transform duration-200 cursor-pointer ${
+                className={`relative rounded-xl border p-0 shadow-sm transition-[border-color,box-shadow,transform] duration-200 hover:-translate-y-0.5 hover:shadow-md cursor-pointer ${
                   selectedPlan === 'pro'
-                    ? 'bg-gradient-to-r from-blue-500 to-violet-500'
-                    : 'bg-zinc-200 dark:bg-zinc-800'
+                    ? 'border-accent bg-white ring-1 ring-accent/20 dark:bg-zinc-900'
+                    : 'border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900'
                 }`}
               >
-                <div className="rounded-xl bg-white dark:bg-zinc-900 p-6 h-full flex flex-col">
+                <div className="rounded-xl p-6 h-full flex flex-col">
                   <h2 className="text-xl font-semibold text-zinc-900 dark:text-zinc-50 mb-1">{t("billing.pro.title")}</h2>
                   <p className="text-zinc-500 dark:text-zinc-400 text-sm mb-4">{t("billing.pro.description")}</p>
                   <div className="mb-4">
@@ -716,9 +789,10 @@ function BillingContent() {
                 <button
                   onClick={() => handlePurchase(product.id)}
                   disabled={loading !== null || submitting !== null}
-                  className="mt-auto pt-4 px-4 py-2 bg-zinc-900 dark:bg-zinc-50 text-white dark:text-zinc-900 rounded-lg font-medium hover:bg-zinc-800 dark:hover:bg-zinc-200 disabled:opacity-50 shadow-sm hover:shadow-md transition-colors focus-visible:ring-2 focus-visible:ring-zinc-400 dark:focus-visible:ring-zinc-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-900"
+                  className="mt-auto inline-flex items-center justify-center gap-2 rounded-lg bg-zinc-900 px-4 py-2 text-sm font-medium text-white shadow-sm transition-colors hover:bg-zinc-800 disabled:opacity-50 dark:bg-zinc-50 dark:text-zinc-900 dark:hover:bg-zinc-200 focus-visible:ring-2 focus-visible:ring-zinc-400 dark:focus-visible:ring-zinc-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-900"
                 >
                   {loading === product.id ? t("common.loading") : t("billing.purchase")}
+                  {loading !== product.id && <ArrowRight aria-hidden="true" size={15} />}
                 </button>
               </div>
             ))}
