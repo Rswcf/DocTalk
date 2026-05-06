@@ -1,10 +1,13 @@
 "use client";
 
 import React, { useState, useEffect, useMemo, useRef } from 'react';
+import Link from 'next/link';
 import { X } from 'lucide-react';
 import { useLocale } from '../../i18n';
 import { getMyDocuments, createCollection } from '../../lib/api';
 import type { DocumentBrief } from '../../lib/api';
+import { errorCopy, type ErrorCopy } from '../../lib/errorCopy';
+import { trackEvent } from '../../lib/analytics';
 
 interface Props {
   isOpen: boolean;
@@ -18,6 +21,7 @@ export default function CreateCollectionModal({ isOpen, selectReadyOnOpen = fals
   const [description, setDescription] = useState('');
   const [docs, setDocs] = useState<DocumentBrief[]>([]);
   const [selectedDocs, setSelectedDocs] = useState<Set<string>>(new Set());
+  const [createErrorCopy, setCreateErrorCopy] = useState<ErrorCopy | null>(null);
   const [creating, setCreating] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const { t, tOr } = useLocale();
@@ -30,6 +34,7 @@ export default function CreateCollectionModal({ isOpen, selectReadyOnOpen = fals
       setDescription('');
       setDocs([]);
       setSelectedDocs(new Set());
+      setCreateErrorCopy(null);
       getMyDocuments().then((documents) => {
         setDocs(documents);
         if (selectReadyOnOpen) {
@@ -58,12 +63,20 @@ export default function CreateCollectionModal({ isOpen, selectReadyOnOpen = fals
   const handleCreate = async () => {
     if (!name.trim()) return;
     setCreating(true);
+    setCreateErrorCopy(null);
     try {
       const result = await createCollection(name.trim(), description.trim() || undefined, Array.from(selectedDocs));
       onCreated(result.id);
       onClose();
-    } catch {
-      // error handling
+    } catch (e) {
+      const copy = errorCopy(e, t, tOr);
+      setCreateErrorCopy(copy);
+      if (copy.cta) {
+        trackEvent('limit_hit', {
+          source: 'create_collection_modal',
+          reason: copy.cta.href.includes('collection_doc_limit') ? 'collection_doc_limit' : 'collection_limit',
+        });
+      }
     } finally {
       setCreating(false);
     }
@@ -177,6 +190,29 @@ export default function CreateCollectionModal({ isOpen, selectReadyOnOpen = fals
             </div>
           )}
         </div>
+
+        {createErrorCopy && (
+          <div
+            role="alert"
+            className={`mt-4 rounded-lg border px-3 py-2 text-sm ${
+              createErrorCopy.severity === 'warning'
+                ? 'border-amber-200 bg-amber-50 text-amber-950 dark:border-amber-900/60 dark:bg-amber-950/30 dark:text-amber-100'
+                : 'border-red-200 bg-red-50 text-red-950 dark:border-red-900/60 dark:bg-red-950/30 dark:text-red-100'
+            }`}
+          >
+            <p className="font-medium">{createErrorCopy.title}</p>
+            <p className="mt-1 leading-5 opacity-90">{createErrorCopy.body}</p>
+            {createErrorCopy.cta && (
+              <Link
+                href={createErrorCopy.cta.href}
+                onClick={() => trackEvent('upgrade_click', { source: 'create_collection_modal', reason: 'collection_limit' })}
+                className="mt-2 inline-flex items-center justify-center rounded-md bg-zinc-900 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-zinc-800 dark:bg-zinc-50 dark:text-zinc-900 dark:hover:bg-zinc-200 focus-visible:ring-2 focus-visible:ring-zinc-400 dark:focus-visible:ring-zinc-500"
+              >
+                {createErrorCopy.cta.label}
+              </Link>
+            )}
+          </div>
+        )}
 
         <div className="flex justify-end gap-3 mt-4 pt-4 border-t border-zinc-100 dark:border-zinc-800">
           <button
