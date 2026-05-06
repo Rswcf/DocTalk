@@ -145,6 +145,7 @@ export default function DemoPageClient() {
               const Icon = config.icon;
               const isReady = Boolean(doc && doc.status === 'ready');
               const isPending = loading || Boolean(doc && doc.status !== 'ready');
+              const suggestedQuestion = t(config.questionKey);
               const cardContent = (
                 <>
                   <div className={`mb-5 rounded-lg border border-zinc-200 bg-gradient-to-br ${config.accentClass} p-4 dark:border-zinc-800`}>
@@ -185,7 +186,7 @@ export default function DemoPageClient() {
                       {tOr('demo.suggestedQuestion', 'Suggested question')}
                     </p>
                     <p className="mt-2 text-sm leading-6 text-zinc-700 dark:text-zinc-200">
-                      &ldquo;{t(config.questionKey)}&rdquo;
+                      &ldquo;{suggestedQuestion}&rdquo;
                     </p>
                   </div>
                   <div className="mt-5 flex items-center justify-between border-t border-zinc-200 pt-4 text-sm dark:border-zinc-800">
@@ -203,7 +204,7 @@ export default function DemoPageClient() {
               return isReady && doc ? (
                 <Link
                   key={slug}
-                  href={`/d/${doc.document_id}`}
+                  href={`/d/${doc.document_id}?question=${encodeURIComponent(suggestedQuestion)}`}
                   className="group flex min-h-[390px] flex-col rounded-xl border border-zinc-200 bg-white p-5 shadow-sm transition-[box-shadow,transform,border-color] duration-200 hover:-translate-y-0.5 hover:border-zinc-300 hover:shadow-md dark:border-zinc-800 dark:bg-zinc-900 dark:hover:border-zinc-700 focus-visible:ring-2 focus-visible:ring-zinc-400 dark:focus-visible:ring-zinc-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-900"
                 >
                   {cardContent}

@@ -26,6 +26,7 @@ interface ChatPanelProps {
   onCitationClick: (c: Citation) => void;
   maxUserMessages?: number;
   suggestedQuestions?: string[];
+  initialQuestion?: string;
   onOpenSettings?: () => void;
   hasCustomInstructions?: boolean;
   userPlan?: string;
@@ -35,7 +36,7 @@ interface ChatPanelProps {
   supportsCustomInstructions?: boolean;
 }
 
-export default function ChatPanel({ sessionId, onCitationClick, maxUserMessages, suggestedQuestions, onOpenSettings, hasCustomInstructions, userPlan, supportsCustomInstructions = true }: ChatPanelProps) {
+export default function ChatPanel({ sessionId, onCitationClick, maxUserMessages, suggestedQuestions, initialQuestion, onOpenSettings, hasCustomInstructions, userPlan, supportsCustomInstructions = true }: ChatPanelProps) {
   const messages = useDocTalkStore((s) => s.messages);
   const isStreaming = useDocTalkStore((s) => s.isStreaming);
   const selectedMode = useDocTalkStore((s) => s.selectedMode);
@@ -98,6 +99,12 @@ export default function ChatPanel({ sessionId, onCitationClick, maxUserMessages,
       ta.style.height = Math.min(ta.scrollHeight, Math.max(160, window.innerHeight * 0.4)) + 'px';
     }
   }, [input]);
+
+  useEffect(() => {
+    if (!initialQuestion || input || messages.length > 0 || isStreaming) return;
+    setInput(initialQuestion);
+    textareaRef.current?.focus();
+  }, [initialQuestion, input, messages.length, isStreaming]);
 
   useEffect(() => {
     if (!plusMenuOpen) return;

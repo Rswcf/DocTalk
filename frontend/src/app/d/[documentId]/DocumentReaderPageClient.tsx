@@ -49,6 +49,7 @@ export default function DocumentReaderPageClient() {
 
   // Handle ?page=N&highlight=chunkId from "View in original" links
   const searchParams = useSearchParams();
+  const initialQuestion = searchParams.get('question') || undefined;
   useEffect(() => {
     const pageParam = searchParams.get('page');
     let fallbackPage = 1;
@@ -147,7 +148,7 @@ export default function DocumentReaderPageClient() {
   }, [navigateToCitation]);
 
   const chatContent = documentStatus === 'ready' && sessionId ? (
-    <ChatPanel sessionId={sessionId} onCitationClick={handleCitationClick} maxUserMessages={isDemo && !isLoggedIn ? 5 : undefined} suggestedQuestions={suggestedQuestions.length > 0 ? suggestedQuestions : undefined} onOpenSettings={canUseCustomInstructions ? () => setShowInstructions(true) : undefined} hasCustomInstructions={!!customInstructions} userPlan={userPlan} />
+    <ChatPanel sessionId={sessionId} onCitationClick={handleCitationClick} maxUserMessages={isDemo && !isLoggedIn ? 5 : undefined} suggestedQuestions={suggestedQuestions.length > 0 ? suggestedQuestions : undefined} initialQuestion={initialQuestion} onOpenSettings={canUseCustomInstructions ? () => setShowInstructions(true) : undefined} hasCustomInstructions={!!customInstructions} userPlan={userPlan} />
   ) : documentStatus !== 'ready' && !error ? (
     <div className="h-full w-full flex flex-col items-center justify-center px-6 py-8 text-zinc-500" role="status" aria-live="polite">
       <div className="w-full max-w-md space-y-3 animate-pulse motion-reduce:animate-none">
