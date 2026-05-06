@@ -15,7 +15,7 @@ interface UseChatStreamOptions {
   t: (key: string, params?: Record<string, string | number>) => string;
   tOr: (key: string, fallback: string, params?: Record<string, string | number>) => string;
   maxUserMessages?: number;
-  onShowPaywall: () => void;
+  onShowPaywall: (reason?: string) => void;
   onRequireAuth: () => void;
 }
 
@@ -94,10 +94,17 @@ export function useChatStream({
       return;
     }
 
-    if (status === 402 || code === 'INSUFFICIENT_CREDITS' || code === 'MODE_NOT_ALLOWED') {
-      trackEvent('limit_hit', { source: 'chat_stream', reason: code || 'paid_limit', plan: 'plus', period: 'monthly' });
-      trackEvent('paywall_opened', { source: 'chat_stream', reason: code || 'paid_limit', plan: 'plus', period: 'monthly' });
-      onShowPaywall();
+    if (
+      status === 402
+      || code === 'INSUFFICIENT_CREDITS'
+      || code === 'MODE_NOT_ALLOWED'
+      || code === 'PRO_MODE_LIMIT_REACHED'
+      || code === 'BALANCED_MODE_LIMIT_REACHED'
+    ) {
+      const reason = code || 'paid_limit';
+      trackEvent('limit_hit', { source: 'chat_stream', reason, plan: 'plus', period: 'monthly' });
+      trackEvent('paywall_opened', { source: 'chat_stream', reason, plan: 'plus', period: 'monthly' });
+      onShowPaywall(reason);
       return;
     }
 

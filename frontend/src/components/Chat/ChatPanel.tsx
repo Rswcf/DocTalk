@@ -47,6 +47,7 @@ export default function ChatPanel({ sessionId, onCitationClick, maxUserMessages,
   const listRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [showPaywall, setShowPaywall] = useState(false);
+  const [paywallReason, setPaywallReason] = useState<string | null>(null);
 
   const [plusMenuOpen, setPlusMenuOpen] = useState(false);
   const plusMenuRef = useRef<HTMLDivElement>(null);
@@ -70,7 +71,10 @@ export default function ChatPanel({ sessionId, onCitationClick, maxUserMessages,
     t,
     tOr,
     maxUserMessages,
-    onShowPaywall: () => setShowPaywall(true),
+    onShowPaywall: (reason) => {
+      setPaywallReason(reason ?? null);
+      setShowPaywall(true);
+    },
     onRequireAuth: () => openAuthModal(),
   });
 
@@ -176,6 +180,16 @@ export default function ChatPanel({ sessionId, onCitationClick, maxUserMessages,
     }
   };
 
+  const handleDemoAuthClick = useCallback(() => {
+    trackEvent('upgrade_click', {
+      source: 'demo_limit_panel',
+      reason: 'demo_message_limit',
+      plan: 'plus',
+      period: 'monthly',
+    });
+    openAuthModal();
+  }, []);
+
   const handleSuggestedClick = (question: string) => {
     setInput(question);
     void sendMessage(question).then((sent) => {
@@ -259,7 +273,7 @@ export default function ChatPanel({ sessionId, onCitationClick, maxUserMessages,
 
   return (
     <div className="dt-chat-shell flex h-full flex-col">
-      <PaywallModal isOpen={showPaywall} onClose={() => setShowPaywall(false)} />
+      <PaywallModal isOpen={showPaywall} onClose={() => setShowPaywall(false)} reason={paywallReason} />
       <div className="relative flex-1 min-h-0">
         <div
           ref={listRef}
@@ -361,20 +375,36 @@ export default function ChatPanel({ sessionId, onCitationClick, maxUserMessages,
               style={{ width: `${Math.max(0, (demoRemaining / maxUserMessages) * 100)}%` }}
             />
           </div>
-          <div className="px-4 py-2 text-sm text-zinc-600 dark:text-zinc-400 flex items-center justify-between" aria-live="polite">
-            <span className={demoRemaining <= 2 ? 'text-amber-600 dark:text-amber-400 font-medium' : ''}>
-              {t('demo.questionsRemaining', { remaining: Math.max(0, demoRemaining), total: maxUserMessages })}
-            </span>
-            {!demoLimitReached ? (
-              <button type="button" onClick={() => openAuthModal()} className="text-zinc-600 dark:text-zinc-400 hover:underline text-sm focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:rounded-sm">
+          {demoLimitReached ? (
+            <div className="px-4 py-3 sm:px-6" aria-live="polite">
+              <div className="mx-auto flex max-w-4xl flex-col gap-3 rounded-xl border border-blue-200 bg-blue-50 p-4 text-sm text-blue-950 shadow-sm dark:border-blue-900/60 dark:bg-blue-950/30 dark:text-blue-100 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <p className="font-semibold">
+                    {tOr('demo.limitPanel.title', 'Ready to use DocTalk on your own files?')}
+                  </p>
+                  <p className="mt-1 text-blue-800 dark:text-blue-200">
+                    {tOr('demo.limitPanel.body', 'Create a free account to upload documents, keep chats, and start with free credits.')}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleDemoAuthClick}
+                  className="inline-flex min-h-11 shrink-0 items-center justify-center rounded-lg bg-zinc-900 px-4 py-2 font-medium text-white shadow-sm transition-colors hover:bg-zinc-800 focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:ring-offset-2 focus-visible:ring-offset-blue-50 dark:bg-zinc-50 dark:text-zinc-900 dark:hover:bg-zinc-200 dark:focus-visible:ring-zinc-500 dark:focus-visible:ring-offset-blue-950"
+                >
+                  {tOr('demo.limitPanel.cta', 'Upload your own document')}
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="flex items-center justify-between px-4 py-2 text-sm text-zinc-600 dark:text-zinc-400" aria-live="polite">
+              <span className={demoRemaining <= 2 ? 'text-amber-600 dark:text-amber-400 font-medium' : ''}>
+                {t('demo.questionsRemaining', { remaining: Math.max(0, demoRemaining), total: maxUserMessages })}
+              </span>
+              <button type="button" onClick={() => openAuthModal()} className="text-sm text-zinc-600 hover:underline focus-visible:rounded-sm focus-visible:ring-2 focus-visible:ring-zinc-400 dark:text-zinc-400">
                 {t('demo.signInForUnlimited')}
               </button>
-            ) : (
-              <button type="button" onClick={() => openAuthModal()} className="text-zinc-600 dark:text-zinc-400 hover:underline text-sm font-medium focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:rounded-sm">
-                {t('demo.signInToContinue')}
-              </button>
-            )}
-          </div>
+            </div>
+          )}
         </div>
       )}
 

@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import Link from "next/link";
+import { CheckCircle2 } from "lucide-react";
 import { useLocale } from "../i18n";
 import { billingHref } from "../lib/billingLinks";
 import { trackEvent } from "../lib/analytics";
@@ -9,11 +10,31 @@ import { trackEvent } from "../lib/analytics";
 interface PaywallModalProps {
   isOpen: boolean;
   onClose: () => void;
+  reason?: string | null;
 }
 
-export function PaywallModal({ isOpen, onClose }: PaywallModalProps) {
-  const { t } = useLocale();
+function paywallCopy(reason: string | null | undefined, t: (key: string) => string, tOr: (key: string, fallback: string) => string) {
+  if (reason === 'PRO_MODE_LIMIT_REACHED' || reason === 'BALANCED_MODE_LIMIT_REACHED' || reason === 'MODE_NOT_ALLOWED') {
+    return {
+      title: tOr('paywall.proMode.title', 'Keep using Pro analysis'),
+      body: tOr('paywall.proMode.body', 'Free includes a limited number of Pro answers. Plus unlocks unrestricted Pro mode for deeper cited analysis.'),
+      primaryLabel: tOr('paywall.proMode.cta', 'Upgrade for Pro mode'),
+      reason: 'pro_mode_limit',
+    };
+  }
+
+  return {
+    title: t("credits.insufficientCredits"),
+    body: t("credits.purchasePrompt"),
+    primaryLabel: t("credits.upgradeToPlus"),
+    reason: 'credits',
+  };
+}
+
+export function PaywallModal({ isOpen, onClose, reason }: PaywallModalProps) {
+  const { t, tOr } = useLocale();
   const modalRef = useRef<HTMLDivElement>(null);
+  const copy = paywallCopy(reason, t, tOr);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -71,18 +92,30 @@ export function PaywallModal({ isOpen, onClose }: PaywallModalProps) {
         onClick={(e) => e.stopPropagation()}
       >
         <h2 id="paywall-title" className="text-xl font-semibold mb-4 text-zinc-900 dark:text-zinc-100">
-          {t("credits.insufficientCredits")}
+          {copy.title}
         </h2>
-        <p className="text-zinc-600 dark:text-zinc-400 mb-6">
-          {t("credits.purchasePrompt")}
+        <p className="text-zinc-600 dark:text-zinc-400 mb-4">
+          {copy.body}
         </p>
-        <div className="flex gap-3">
+        <ul className="mb-6 space-y-2 text-sm text-zinc-600 dark:text-zinc-400">
+          {[
+            tOr('paywall.benefit.credits', 'More monthly credits for active document work'),
+            tOr('paywall.benefit.modes', 'Flash and Pro modes without the free-plan cap'),
+            tOr('paywall.benefit.exports', 'PDF and DOCX exports for cited deliverables'),
+          ].map((benefit) => (
+            <li key={benefit} className="flex gap-2">
+              <CheckCircle2 size={16} className="mt-0.5 shrink-0 text-blue-600 dark:text-blue-400" aria-hidden="true" />
+              <span>{benefit}</span>
+            </li>
+          ))}
+        </ul>
+        <div className="flex flex-col gap-3 sm:flex-row">
           <Link
-            href={billingHref({ plan: 'plus', source: 'paywall_modal', reason: 'credits' })}
-            onClick={() => trackEvent('upgrade_click', { plan: 'plus', period: 'monthly', source: 'paywall_modal', reason: 'credits' })}
+            href={billingHref({ plan: 'plus', source: 'paywall_modal', reason: copy.reason })}
+            onClick={() => trackEvent('upgrade_click', { plan: 'plus', period: 'monthly', source: 'paywall_modal', reason: copy.reason })}
             className="flex-1 px-4 py-2 bg-zinc-900 dark:bg-zinc-50 text-white dark:text-zinc-900 rounded-lg hover:bg-zinc-800 dark:hover:bg-zinc-200 shadow-sm hover:shadow-md transition-colors text-center focus-visible:ring-2 focus-visible:ring-zinc-400 dark:focus-visible:ring-zinc-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-900"
           >
-            {t("credits.upgradeToPlus")}
+            {copy.primaryLabel}
           </Link>
           <button
             onClick={onClose}

@@ -14,7 +14,7 @@ interface RowDef {
 }
 
 const ROWS: RowDef[] = [
-  { labelKey: 'billing.comparison.monthlyCredits', free: '500', plus: '3,000', pro: '9,000' },
+  { labelKey: 'billing.comparison.monthlyCredits', free: 'pricing.free.feature1', plus: '3,000', pro: '9,000' },
   { labelKey: 'billing.comparison.uploads', free: '25 MB', plus: '50 MB', pro: '100 MB' },
   { labelKey: 'billing.comparison.documents', free: '3', plus: '20', pro: 'billing.comparison.documentsUnlimited' },
   { labelKey: 'billing.comparison.models', free: 'billing.comparison.modelsFree', plus: 'billing.comparison.modelsAll', pro: 'billing.comparison.modelsAll' },
@@ -56,8 +56,8 @@ export default function PricingTable({
         </span>
       );
     }
-    // If value starts with "billing.", treat as i18n key
-    const text = value.startsWith('billing.') ? t(value as any) : value;
+    // Dotted values are existing i18n keys; literal plan limits remain raw strings.
+    const text = value.includes('.') ? t(value as any) : value;
     return <span className="text-sm text-zinc-700 dark:text-zinc-300 tabular-nums">{text}</span>;
   };
 
