@@ -34,6 +34,9 @@ def test_version_consistency_script_passes():
 
 
 def test_bump_version_dry_run_reports_next_patch():
+    current = _version_config()["version"]
+    major, minor, patch = [int(part) for part in current.split(".")]
+    expected = f"{major}.{minor}.{patch + 1}"
     result = subprocess.run(
         [sys.executable, str(REPO_ROOT / "scripts" / "bump_version.py"), "patch", "--dry-run"],
         check=False,
@@ -41,4 +44,4 @@ def test_bump_version_dry_run_reports_next_patch():
         text=True,
     )
     assert result.returncode == 0, result.stderr
-    assert "0.2.0 -> 0.2.1" in result.stdout
+    assert f"{current} -> {expected}" in result.stdout

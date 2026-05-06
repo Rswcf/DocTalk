@@ -385,13 +385,17 @@ erDiagram
     User ||--o{ CreditLedger : "has"
     User ||--o{ UsageRecord : "has"
     User ||--o{ Collection : "owns"
+    User ||--o{ DocumentJob : "runs"
     Collection }o--o{ Document : "contains"
     Collection ||--o{ ChatSession : "has"
+    Collection ||--o{ DocumentJob : "scopes"
     Document ||--o{ Page : "contains"
     Document ||--o{ Chunk : "contains"
     Document ||--o{ ChatSession : "has"
+    Document ||--o{ DocumentJob : "scopes"
     ChatSession ||--o{ Message : "contains"
     Message ||--o| UsageRecord : "tracks"
+    DocumentJob ||--o| ExtractionResult : "stores"
 
     User {
         uuid id PK
@@ -513,6 +517,34 @@ erDiagram
         datetime created_at
     }
 
+    DocumentJob {
+        uuid id PK
+        uuid user_id FK
+        uuid document_id FK "nullable"
+        uuid collection_id FK "nullable"
+        string job_type "extraction | table_scan | batch_template | document_diff"
+        string status "queued | running | succeeded | failed"
+        jsonb input_scope
+        int cost_credits
+        string error_code
+        text error_message
+        jsonb metadata_json
+        datetime created_at
+        datetime updated_at
+        datetime completed_at
+    }
+
+    ExtractionResult {
+        uuid id PK
+        uuid job_id FK UK
+        string template_key
+        jsonb structured_json
+        text rendered_markdown
+        jsonb citations "page + bbox citation payload"
+        datetime created_at
+        datetime updated_at
+    }
+
     Collection {
         uuid id PK
         string name
@@ -539,12 +571,15 @@ erDiagram
 - `User → Collection`: CASCADE delete
 - `Collection → ChatSession`: CASCADE delete (via collection_id)
 - `Collection ↔ Document`: Many-to-many via `collection_documents` junction table
+- `User/Document/Collection → DocumentJob`: CASCADE delete for async workbench jobs
+- `DocumentJob → ExtractionResult`: CASCADE delete, one extraction payload per job
 
 **Unique constraints:**
 - `(Document.document_id, Page.page_number)` — one page per number per document
 - `(Document.document_id, Chunk.chunk_index)` — sequential chunk ordering
 - `(Account.provider, Account.provider_account_id)` — one account link per provider
 - `Document.demo_slug` — unique when not NULL
+- `ExtractionResult.job_id` — one rendered extraction result per async job
 
 ---
 
@@ -591,7 +626,9 @@ graph TD
 
     subgraph DocViewComp["Document Viewer"]
         ResizablePanels["react-resizable-panels<br/>Group / Panel / Separator"]
+        WorkbenchSwitch["Chat / Extract<br/>workspace switch"]
         ChatPanel["ChatPanel<br/>Messages + Input"]
+        ExtractionPanel["ExtractionPanel<br/>templates + job status<br/>cited results + export"]
         PdfViewer["PdfViewer<br/>react-pdf"]
         ViewToggle["View Toggle<br/>Slides / Text<br/>(PPTX/DOCX)"]
         TextViewer["TextViewer<br/>Non-PDF Viewer<br/>Markdown Rendering + Search<br/>Snippet Highlights"]
@@ -793,6 +830,15 @@ The rate limiter and demo-message tracker both have an in-memory fallback when R
 ### Pre-debit refund invariant
 
 Chat pre-debit refunds are now **fully idempotent**: `_refund_predebit` deletes the pre-debit ledger row first and only credits back the user balance when `DELETE` reports `rowcount > 0`. A double-invocation (e.g., retry on a partially-failed request) is safe. All SSE error branches (`LLM_ERROR`, `PERSIST_FAILED`, continuation variants) invoke the refund path before yielding the error.
+
+Structured Extraction uses the same accounting shape for async workbench jobs:
+`POST /api/documents/{id}/extractions` creates a `document_jobs` row, pre-debits
+25 credits, stores the ledger id in `metadata_json`, and queues
+`run_extraction_job` on Celery's `default` queue. The worker marks the job
+`running`, retrieves cited chunks, calls the configured Pro-quality model,
+stores an `extraction_results` payload, records `UsageRecord`, and reconciles
+the original ledger row to actual token cost. Queue/worker failure deletes the
+pre-debit ledger row before restoring the user's balance.
 
 ### Self-serve subscription cancel state machine
 

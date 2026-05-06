@@ -1,4 +1,4 @@
-import type { DocumentResponse, Message, SearchResponse, Citation, SessionListResponse, CollectionBrief, CollectionDetail, NormalizedBBox } from '../types';
+import type { DocumentResponse, Message, SearchResponse, Citation, SessionListResponse, CollectionBrief, CollectionDetail, NormalizedBBox, ExtractionJob, ExtractionTemplate } from '../types';
 import type { UserProfile, CreditHistoryResponse, UsageBreakdown } from '../types';
 
 export const API_BASE = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8000';
@@ -490,4 +490,45 @@ export async function ingestUrl(url: string): Promise<{ document_id: string; sta
     body: JSON.stringify({ url }),
   });
   return handle(res);
+}
+
+// --- Structured Extraction API ---
+
+export async function listExtractionTemplates(): Promise<ExtractionTemplate[]> {
+  const res = await fetch(`${PROXY_BASE}/api/extraction-templates`);
+  return handle(res);
+}
+
+export async function listDocumentExtractions(documentId: string): Promise<ExtractionJob[]> {
+  const res = await fetch(`${PROXY_BASE}/api/documents/${documentId}/extractions`);
+  return handle(res);
+}
+
+export async function createExtraction(params: {
+  documentId: string;
+  templateKey: string;
+  locale?: string;
+  domainMode?: 'legal' | 'academic' | null;
+}): Promise<ExtractionJob> {
+  const res = await fetch(`${PROXY_BASE}/api/documents/${params.documentId}/extractions`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      template_key: params.templateKey,
+      locale: params.locale,
+      domain_mode: params.domainMode || null,
+    }),
+  });
+  return handle(res);
+}
+
+export async function getExtraction(jobId: string): Promise<ExtractionJob> {
+  const res = await fetch(`${PROXY_BASE}/api/extractions/${jobId}`);
+  return handle(res);
+}
+
+export async function exportExtraction(jobId: string, format: 'md' | 'csv'): Promise<Blob> {
+  const res = await fetch(`${PROXY_BASE}/api/extractions/${jobId}/export?format=${format}`);
+  if (!res.ok) await throwApiError(res);
+  return res.blob();
 }

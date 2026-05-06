@@ -9,6 +9,21 @@
 
 DocTalk currently offers a strong single-document PDF Q&A experience with citations, multi-model support, OCR, and a freemium credits system. However, the competitive landscape has shifted significantly: NotebookLM offers free multi-source cross-document Q&A, AskYourPDF supports multi-format documents with API access, and enterprise buyers demand team workspaces, SSO, and compliance certifications. This roadmap prioritizes features by revenue impact, implementation effort, and competitive necessity to maximize commercial growth over 90 days.
 
+### 2026-05-07 Execution Update: Document Workbench Sequence
+
+The near-term roadmap has been re-ordered around the clearest individual-user
+paid value: professional document deliverables, not generic chat parity with
+free competitors. Team and public API work remains out of scope for the current
+build sequence.
+
+| Version | Feature | Status | Revenue Logic |
+|---|---|---|---|
+| `0.3.0 beta` | Structured Extraction | In implementation | Turns cited answers into exportable work product |
+| `0.4.0 beta` | Table Extraction | Next | Captures finance/research users who need CSV/Excel-ready data |
+| `0.5.0 beta` | Deep Link Answer Share | Planned | Adds referral loops around high-quality cited answers |
+| `0.6.0 beta` | Question Templates | Planned | Creates repeat workflows and credit-consuming batch value |
+| `0.7.0 beta` | Document Diff | Planned | Targets legal/business review pain with Pro-grade semantic comparison |
+
 ---
 
 ## 1. Feature Impact Matrix

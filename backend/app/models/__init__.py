@@ -5,6 +5,8 @@ from .tables import (
     Chunk,
     CreditLedger,
     Document,
+    DocumentJob,
+    ExtractionResult,
     Message,
     Page,
     UsageRecord,
@@ -24,4 +26,6 @@ __all__ = [
     "VerificationToken",
     "CreditLedger",
     "UsageRecord",
+    "DocumentJob",
+    "ExtractionResult",
 ]

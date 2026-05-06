@@ -433,3 +433,73 @@ class ProductEvent(Base):
         sa.Index("idx_product_events_name_created", "event_name", sa.text("created_at DESC")),
         sa.Index("idx_product_events_user_created", "user_id", sa.text("created_at DESC")),
     )
+
+
+class DocumentJob(Base):
+    __tablename__ = "document_jobs"
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, server_default=sa.text("gen_random_uuid()")
+    )
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), sa.ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    document_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        UUID(as_uuid=True), sa.ForeignKey("documents.id", ondelete="CASCADE"), nullable=True, index=True
+    )
+    collection_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        UUID(as_uuid=True), sa.ForeignKey("collections.id", ondelete="CASCADE"), nullable=True, index=True
+    )
+    job_type: Mapped[str] = mapped_column(sa.String(32), nullable=False)
+    status: Mapped[str] = mapped_column(sa.String(24), nullable=False, server_default=sa.text("'queued'"))
+    input_scope: Mapped[dict] = mapped_column(JSONB, nullable=False, server_default=sa.text("'{}'::jsonb"))
+    cost_credits: Mapped[int] = mapped_column(sa.Integer, nullable=False, server_default=sa.text("0"))
+    error_code: Mapped[Optional[str]] = mapped_column(sa.String(64), nullable=True)
+    error_message: Mapped[Optional[str]] = mapped_column(sa.Text, nullable=True)
+    metadata_json: Mapped[dict] = mapped_column(JSONB, nullable=False, server_default=sa.text("'{}'::jsonb"))
+    created_at: Mapped[datetime] = mapped_column(
+        sa.DateTime(timezone=True), nullable=False, server_default=sa.text("now()")
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        sa.DateTime(timezone=True), nullable=False, server_default=sa.text("now()"), onupdate=sa.func.now()
+    )
+    completed_at: Mapped[Optional[datetime]] = mapped_column(sa.DateTime(timezone=True), nullable=True)
+
+    user: Mapped["User"] = relationship("User")
+    document: Mapped[Optional["Document"]] = relationship("Document")
+    collection: Mapped[Optional["Collection"]] = relationship("Collection")
+    extraction_result: Mapped[Optional["ExtractionResult"]] = relationship(
+        "ExtractionResult", back_populates="job", cascade="all, delete-orphan"
+    )
+
+    __table_args__ = (
+        sa.Index("idx_document_jobs_user_created", "user_id", sa.text("created_at DESC")),
+        sa.Index("idx_document_jobs_type_status", "job_type", "status"),
+    )
+
+
+class ExtractionResult(Base):
+    __tablename__ = "extraction_results"
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, server_default=sa.text("gen_random_uuid()")
+    )
+    job_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), sa.ForeignKey("document_jobs.id", ondelete="CASCADE"), nullable=False, unique=True
+    )
+    template_key: Mapped[str] = mapped_column(sa.String(64), nullable=False)
+    structured_json: Mapped[dict] = mapped_column(JSONB, nullable=False, server_default=sa.text("'{}'::jsonb"))
+    rendered_markdown: Mapped[str] = mapped_column(sa.Text, nullable=False, server_default=sa.text("''"))
+    citations: Mapped[list] = mapped_column(JSONB, nullable=False, server_default=sa.text("'[]'::jsonb"))
+    created_at: Mapped[datetime] = mapped_column(
+        sa.DateTime(timezone=True), nullable=False, server_default=sa.text("now()")
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        sa.DateTime(timezone=True), nullable=False, server_default=sa.text("now()"), onupdate=sa.func.now()
+    )
+
+    job: Mapped[DocumentJob] = relationship("DocumentJob", back_populates="extraction_result")
+
+    __table_args__ = (
+        sa.Index("idx_extraction_results_template", "template_key"),
+    )

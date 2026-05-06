@@ -5,6 +5,7 @@ import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { PdfViewer } from '../../../components/PdfViewer';
 import TextViewer from '../../../components/TextViewer/TextViewer';
 import { ChatPanel } from '../../../components/Chat';
+import ExtractionPanel from '../../../components/Extraction/ExtractionPanel';
 import Header from '../../../components/Header';
 import CustomInstructionsModal from '../../../components/CustomInstructionsModal';
 import { getChunkDetail, updateDocumentInstructions } from '../../../lib/api';
@@ -12,7 +13,7 @@ import { useDocTalkStore } from '../../../store';
 import { Panel, Group, Separator } from 'react-resizable-panels';
 import { useLocale } from '../../../i18n';
 import { usePageTitle } from '../../../lib/usePageTitle';
-import { Presentation, FileText, MessageSquare } from 'lucide-react';
+import { FileSearch, Presentation, FileText, MessageSquare } from 'lucide-react';
 import { useDocumentLoader } from '../../../lib/useDocumentLoader';
 import { useChatSession } from '../../../lib/useChatSession';
 import { useUserPlanProfile } from '../../../lib/useUserPlanProfile';
@@ -26,7 +27,8 @@ export default function DocumentReaderPageClient() {
   const router = useRouter();
   const [viewMode, setViewMode] = useState<'slide' | 'text'>('slide');
   const [mobileTab, setMobileTab] = useState<'chat' | 'document'>('chat');
-  const { t } = useLocale();
+  const [workspaceMode, setWorkspaceMode] = useState<'chat' | 'extract'>('chat');
+  const { t, tOr } = useLocale();
   const { pdfUrl, currentPage, highlights, highlightSnippet, scale, scrollNonce, sessionId, navigateToCitation } = useDocTalkStore();
 
   const documentName = useDocTalkStore((s) => s.documentName);
@@ -85,6 +87,12 @@ export default function DocumentReaderPageClient() {
 
     return () => { cancelled = true; };
   }, [searchParams, navigateToCitation]);
+
+  useEffect(() => {
+    if (!isLoggedIn && workspaceMode === 'extract') {
+      setWorkspaceMode('chat');
+    }
+  }, [isLoggedIn, workspaceMode]);
 
   // Determine which viewer to use:
   // - Native PDF: always PdfViewer with original URL
@@ -153,8 +161,43 @@ export default function DocumentReaderPageClient() {
     }
   }, [isDemo, navigateToCitation]);
 
+  const canUseExtractionWorkspace = Boolean(isLoggedIn);
+
+  const workspaceSwitcher = documentStatus === 'ready' && sessionId && canUseExtractionWorkspace ? (
+    <div className="flex shrink-0 items-center gap-1 border-b border-[var(--reader-border)] bg-[var(--reader-panel-solid)] px-3 py-2">
+      <button
+        type="button"
+        onClick={() => setWorkspaceMode('chat')}
+        className={`inline-flex min-h-9 flex-1 items-center justify-center gap-2 rounded-lg px-3 text-sm font-medium transition-colors ${
+          workspaceMode === 'chat'
+            ? 'bg-zinc-900 text-white shadow-sm dark:bg-zinc-50 dark:text-zinc-900'
+            : 'text-[var(--reader-muted)] hover:bg-[var(--reader-panel-muted)]'
+        }`}
+      >
+        <MessageSquare size={15} aria-hidden="true" />
+        {t('mobile.chatTab')}
+      </button>
+      <button
+        type="button"
+        onClick={() => setWorkspaceMode('extract')}
+        className={`inline-flex min-h-9 flex-1 items-center justify-center gap-2 rounded-lg px-3 text-sm font-medium transition-colors ${
+          workspaceMode === 'extract'
+            ? 'bg-zinc-900 text-white shadow-sm dark:bg-zinc-50 dark:text-zinc-900'
+            : 'text-[var(--reader-muted)] hover:bg-[var(--reader-panel-muted)]'
+        }`}
+      >
+        <FileSearch size={15} aria-hidden="true" />
+        {tOr('extract.tab', 'Extract')}
+      </button>
+    </div>
+  ) : null;
+
   const chatContent = documentStatus === 'ready' && sessionId ? (
-    <ChatPanel sessionId={sessionId} onCitationClick={handleCitationClick} maxUserMessages={isDemo && !isLoggedIn ? 5 : undefined} suggestedQuestions={suggestedQuestions.length > 0 ? suggestedQuestions : undefined} initialQuestion={initialQuestion} onOpenSettings={canUseCustomInstructions ? () => setShowInstructions(true) : undefined} hasCustomInstructions={!!customInstructions} userPlan={userPlan} />
+    workspaceMode === 'extract' && canUseExtractionWorkspace ? (
+      <ExtractionPanel documentId={documentId} onCitationClick={handleCitationClick} userPlan={userPlan} />
+    ) : (
+      <ChatPanel sessionId={sessionId} onCitationClick={handleCitationClick} maxUserMessages={isDemo && !isLoggedIn ? 5 : undefined} suggestedQuestions={suggestedQuestions.length > 0 ? suggestedQuestions : undefined} initialQuestion={initialQuestion} onOpenSettings={canUseCustomInstructions ? () => setShowInstructions(true) : undefined} hasCustomInstructions={!!customInstructions} userPlan={userPlan} />
+    )
   ) : documentStatus !== 'ready' && !error ? (
     <div className="h-full w-full flex flex-col items-center justify-center px-6 py-8 text-zinc-500" role="status" aria-live="polite">
       <div className="w-full max-w-md space-y-3 animate-pulse motion-reduce:animate-none">
@@ -219,6 +262,7 @@ export default function DocumentReaderPageClient() {
             <Group orientation="horizontal" className="flex-1 min-h-0">
               <Panel defaultSize={50} minSize={25}>
                 <div className="dt-reader-pane h-full min-w-0 sm:min-w-[320px] flex flex-col border rounded-l-xl overflow-hidden">
+                  {workspaceSwitcher}
                   <div className="flex-1 min-h-0">
                     {chatContent}
                   </div>
@@ -242,6 +286,7 @@ export default function DocumentReaderPageClient() {
           <div className="flex sm:hidden flex-col flex-1 min-h-0">
             <div className={`flex-1 min-h-0 ${mobileTab === 'chat' ? '' : 'hidden'}`}>
               <div className="h-full min-w-0 flex flex-col">
+                {workspaceSwitcher}
                 <div className="flex-1 min-h-0">
                   {chatContent}
                 </div>

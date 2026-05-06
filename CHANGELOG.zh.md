@@ -8,11 +8,22 @@
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-05-07
+
 ### Added
+- 文档阅读页新增 Structured Extraction 工作区，支持 `Chat / Extract` 切换、
+  三个带引用的提取模板、异步任务状态、引用跳转以及 Markdown/CSV 导出。
+- 新增 `document_jobs` 与 `extraction_results` 表，作为文档工作台后续功能的
+  通用异步任务基础。
+- 新增 FastAPI 提取接口与 Celery `default` 队列任务，支持 queued extraction
+  jobs、预扣费与实际费用 reconcile。
+- 新增文档工作台连续交付执行台账。
 - 新增自助取消订阅反馈采集，并支持记录可选退款审核请求。
 - Pricing 与 Billing 页面新增 7-day fair-use refund review 文案。
 
 ### Changed
+- 版本元数据升级到 `0.3.0 beta`；版本测试改为根据 `version.json` 推导下一
+  个 patch dry-run，不再硬编码旧版本。
 - 当前文档已更新为生产聊天模式 DeepSeek V4 Flash/Pro，并标明 Stripe 生产环境已使用 live billing。
 
 ## [0.2.0] - 2026-03-15

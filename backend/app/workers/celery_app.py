@@ -18,7 +18,12 @@ if settings.SENTRY_DSN:
 celery_app = Celery(
     "doctalk",
     broker=settings.CELERY_BROKER_URL,
-    include=["app.workers.parse_worker", "app.workers.deletion_worker", "app.workers.cleanup_tasks"],
+    include=[
+        "app.workers.parse_worker",
+        "app.workers.extraction_worker",
+        "app.workers.deletion_worker",
+        "app.workers.cleanup_tasks",
+    ],
 )
 
 # Basic configuration and task routing
@@ -45,4 +50,3 @@ celery_app.conf.beat_schedule = {
         "schedule": 86400,  # Every 24 hours
     },
 }
-

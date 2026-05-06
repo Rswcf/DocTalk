@@ -157,3 +157,33 @@ export interface CollectionDetail {
   created_at: string;
   updated_at: string;
 }
+
+export interface ExtractionTemplate {
+  key: string;
+  title: string;
+  description: string;
+}
+
+export interface ExtractionResultPayload {
+  template_key: string;
+  structured_json: Record<string, unknown>;
+  rendered_markdown: string;
+  citations: Array<Record<string, unknown>>;
+  created_at: string;
+}
+
+export interface ExtractionJob {
+  id: string;
+  document_id: string | null;
+  collection_id: string | null;
+  job_type: string;
+  status: 'queued' | 'running' | 'succeeded' | 'failed';
+  input_scope: Record<string, unknown>;
+  cost_credits: number;
+  error_code: string | null;
+  error_message: string | null;
+  created_at: string;
+  updated_at: string;
+  completed_at: string | null;
+  result: ExtractionResultPayload | null;
+}
