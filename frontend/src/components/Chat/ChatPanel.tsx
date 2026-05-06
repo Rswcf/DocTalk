@@ -451,7 +451,7 @@ export default function ChatPanel({ sessionId, onCitationClick, maxUserMessages,
               t={t}
               tOr={tOr}
             />
-            {messages.length > 0 && !isStreaming && userPlan && userPlan !== 'free' && (
+            {messages.length > 0 && !isStreaming && userPlan && (
               <button
                 type="button"
                 onClick={handleShare}
