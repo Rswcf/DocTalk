@@ -3,6 +3,7 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
+import { FileText, MessageSquare, Plus, X } from 'lucide-react';
 import Header from '../../../components/Header';
 import { ChatPanel } from '../../../components/Chat';
 import CollectionSidebar from '../../../components/Collections/CollectionSidebar';
@@ -27,7 +28,7 @@ export default function CollectionDetailPage() {
   const collectionId = params?.collectionId as string;
   const router = useRouter();
   const { status } = useSession();
-  const { t } = useLocale();
+  const { t, tOr } = useLocale();
   const { userPlan } = useUserPlanProfile();
   const {
     sessionId,
@@ -62,7 +63,7 @@ export default function CollectionDetailPage() {
     })();
 
     return () => { cancelled = true; };
-  }, [collectionId, status]);
+  }, [collectionId, status, router]);
 
   // Setup session for collection
   useEffect(() => {
@@ -106,7 +107,7 @@ export default function CollectionDetailPage() {
     })();
 
     return () => { cancelled = true; };
-  }, [collectionId, collection]);
+  }, [collectionId, collection, setSessions, setSessionId, setMessages, addSession]);
 
   const handleSelectSession = useCallback(async (sid: string) => {
     setSessionId(sid);
@@ -172,32 +173,59 @@ export default function CollectionDetailPage() {
   }
 
   return (
-    <div className="flex flex-col h-screen w-full">
+    <div className="flex h-screen w-full flex-col bg-[var(--page-background)]">
       <Header variant="full" />
 
+      <div className="border-b border-zinc-200 bg-white px-4 py-3 dark:border-zinc-800 dark:bg-zinc-900 md:px-5">
+        <div className="flex items-center justify-between gap-3">
+          <div className="min-w-0">
+            <p className="font-mono text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-500 dark:text-zinc-400">
+              {tOr('collections.workspace', 'Collection workspace')}
+            </p>
+            <h1 className="truncate text-base font-semibold text-zinc-900 dark:text-zinc-50">
+              {collection?.name || t('collections.title')}
+            </h1>
+          </div>
+          <div className="hidden items-center gap-2 text-xs text-zinc-500 dark:text-zinc-400 sm:flex">
+            <span className="inline-flex items-center gap-1 rounded-full border border-zinc-200 bg-zinc-50 px-2.5 py-1 dark:border-zinc-800 dark:bg-zinc-950">
+              <FileText aria-hidden="true" size={13} className="text-accent" />
+              {collection?.documents?.length || 0} {tOr('collections.documents', 'documents')}
+            </span>
+            <span className="inline-flex items-center gap-1 rounded-full border border-zinc-200 bg-zinc-50 px-2.5 py-1 dark:border-zinc-800 dark:bg-zinc-950">
+              <MessageSquare aria-hidden="true" size={13} className="text-accent" />
+              {sessions.length} {tOr('collections.chats', 'chats')}
+            </span>
+          </div>
+        </div>
+      </div>
+
       {/* Mobile toggle bar */}
-      <div className="flex md:hidden border-b border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900">
+      <div className="flex border-b border-zinc-200 bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-900 md:hidden">
         <button
+          type="button"
           onClick={() => setShowMobileSidebar(showMobileSidebar === 'docs' ? null : 'docs')}
-          className={`flex-1 px-4 py-2 text-xs font-medium transition-colors ${
-            showMobileSidebar === 'docs' ? 'bg-zinc-200 dark:bg-zinc-700 text-zinc-900 dark:text-zinc-100' : 'text-zinc-500'
+          className={`flex flex-1 items-center justify-center gap-2 px-4 py-2.5 text-xs font-medium transition-colors ${
+            showMobileSidebar === 'docs' ? 'bg-white text-zinc-900 shadow-sm dark:bg-zinc-800 dark:text-zinc-100' : 'text-zinc-500'
           }`}
         >
-          Docs ({collection?.documents?.length || 0})
+          <FileText aria-hidden="true" size={14} />
+          {tOr('collections.documents', 'Documents')} ({collection?.documents?.length || 0})
         </button>
         <button
+          type="button"
           onClick={() => setShowMobileSidebar(showMobileSidebar === 'sessions' ? null : 'sessions')}
-          className={`flex-1 px-4 py-2 text-xs font-medium transition-colors ${
-            showMobileSidebar === 'sessions' ? 'bg-zinc-200 dark:bg-zinc-700 text-zinc-900 dark:text-zinc-100' : 'text-zinc-500'
+          className={`flex flex-1 items-center justify-center gap-2 px-4 py-2.5 text-xs font-medium transition-colors ${
+            showMobileSidebar === 'sessions' ? 'bg-white text-zinc-900 shadow-sm dark:bg-zinc-800 dark:text-zinc-100' : 'text-zinc-500'
           }`}
         >
-          Sessions ({sessions.length})
+          <MessageSquare aria-hidden="true" size={14} />
+          {tOr('collections.sessions', 'Sessions')} ({sessions.length})
         </button>
       </div>
 
       {/* Mobile sidebar content */}
       {showMobileSidebar && (
-        <div className="md:hidden border-b border-zinc-200 dark:border-zinc-800 max-h-60 overflow-y-auto bg-zinc-50 dark:bg-zinc-900">
+        <div className="max-h-72 overflow-y-auto border-b border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900 md:hidden">
           {showMobileSidebar === 'docs' && (
             <CollectionSidebar
               documents={collection?.documents || []}
@@ -216,21 +244,21 @@ export default function CollectionDetailPage() {
         </div>
       )}
 
-      <div className="flex-1 flex min-h-0">
+      <div className="flex min-h-0 flex-1">
         {/* Desktop left sidebar: Documents + Sessions */}
-        <div className="hidden md:flex w-64 border-r border-zinc-200 dark:border-zinc-800 flex-col bg-zinc-50 dark:bg-zinc-900">
-          <div className="p-3 border-b border-zinc-200 dark:border-zinc-800">
-            <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100 truncate">
+        <div className="hidden w-72 flex-col border-r border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900 md:flex">
+          <div className="border-b border-zinc-200 p-4 dark:border-zinc-800">
+            <h2 className="truncate text-sm font-semibold text-zinc-900 dark:text-zinc-100">
               {collection?.name || ''}
             </h2>
             {collection?.description && (
-              <p className="text-xs text-zinc-500 mt-1 line-clamp-2">{collection.description}</p>
+              <p className="mt-1 line-clamp-2 text-xs leading-5 text-zinc-500 dark:text-zinc-400">{collection.description}</p>
             )}
           </div>
 
-          <div className="flex-1 flex flex-col min-h-0">
+          <div className="flex min-h-0 flex-1 flex-col">
             {/* Documents section */}
-            <div className="flex-1 min-h-0 border-b border-zinc-200 dark:border-zinc-800">
+            <div className="min-h-0 flex-1 border-b border-zinc-200 dark:border-zinc-800">
               <CollectionSidebar
                 documents={collection?.documents || []}
                 onAddDocs={handleAddDocs}
@@ -251,7 +279,7 @@ export default function CollectionDetailPage() {
         </div>
 
         {/* Main: Chat Panel */}
-        <div className="flex-1 min-w-0">
+        <div className="min-w-0 flex-1 bg-white dark:bg-zinc-950">
           {sessionId ? (
             <ChatPanel
               sessionId={sessionId}
@@ -260,8 +288,11 @@ export default function CollectionDetailPage() {
               supportsCustomInstructions={false}
             />
           ) : (
-            <div className="h-full flex items-center justify-center text-zinc-500">
-              {t('doc.initChat')}
+            <div className="flex h-full items-center justify-center p-8 text-center text-zinc-500">
+              <div>
+                <MessageSquare aria-hidden="true" size={32} className="mx-auto mb-3 text-zinc-400" />
+                <p className="text-sm">{t('doc.initChat')}</p>
+              </div>
             </div>
           )}
         </div>
@@ -275,26 +306,49 @@ export default function CollectionDetailPage() {
           onKeyDown={(e) => { if (e.key === 'Escape') setShowAddDocs(false); }}
         >
           <div
-            className="bg-white dark:bg-zinc-900 rounded-xl shadow-xl w-full max-w-md mx-4 p-6"
+            className="mx-4 w-full max-w-md rounded-xl border border-zinc-200 bg-white p-6 shadow-xl dark:border-zinc-800 dark:bg-zinc-900"
             role="dialog"
             aria-modal="true"
             aria-labelledby="add-docs-title"
             onClick={(e) => e.stopPropagation()}
           >
-            <h3 id="add-docs-title" className="text-lg font-semibold text-zinc-900 dark:text-zinc-100 mb-4">
-              {t('collections.addDocuments')}
-            </h3>
+            <div className="mb-4 flex items-start justify-between gap-3">
+              <div>
+                <h3 id="add-docs-title" className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">
+                  {t('collections.addDocuments')}
+                </h3>
+                <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
+                  {tOr('collections.addDocumentsHint', 'Only ready documents that are not already in this collection are shown.')}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowAddDocs(false)}
+                className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-zinc-500 transition-colors hover:bg-zinc-100 hover:text-zinc-900 dark:hover:bg-zinc-800 dark:hover:text-zinc-100 focus-visible:ring-2 focus-visible:ring-zinc-400"
+                aria-label={t('common.close')}
+              >
+                <X aria-hidden="true" size={16} />
+              </button>
+            </div>
             {availableDocs.length === 0 ? (
-              <p className="text-sm text-zinc-500">{t('collections.noCollections')}</p>
+              <div className="rounded-lg border border-dashed border-zinc-300 bg-zinc-50 p-6 text-center dark:border-zinc-700 dark:bg-zinc-950">
+                <FileText aria-hidden="true" size={26} className="mx-auto mb-3 text-zinc-400" />
+                <p className="text-sm text-zinc-500 dark:text-zinc-400">
+                  {tOr('collections.noAvailableDocuments', 'No ready documents are available to add.')}
+                </p>
+              </div>
             ) : (
-              <div className="space-y-2 max-h-60 overflow-y-auto">
+              <div className="max-h-64 space-y-2 overflow-y-auto">
                 {availableDocs.map(d => (
                   <button
+                    type="button"
                     key={d.id}
                     onClick={() => handleAddDocument(d.id)}
-                    className="w-full text-left p-3 rounded-lg border border-zinc-100 dark:border-zinc-700 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors focus-visible:ring-2 focus-visible:ring-zinc-400 dark:focus-visible:ring-zinc-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-900"
+                    className="flex w-full items-center gap-3 rounded-lg border border-zinc-200 p-3 text-left transition-colors hover:bg-zinc-50 dark:border-zinc-700 dark:hover:bg-zinc-800 focus-visible:ring-2 focus-visible:ring-zinc-400 dark:focus-visible:ring-zinc-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-900"
                   >
-                    <span className="text-sm text-zinc-800 dark:text-zinc-200">{d.filename}</span>
+                    <FileText aria-hidden="true" size={16} className="shrink-0 text-accent" />
+                    <span className="min-w-0 truncate text-sm text-zinc-800 dark:text-zinc-200">{d.filename}</span>
+                    <Plus aria-hidden="true" size={14} className="ml-auto shrink-0 text-zinc-400" />
                   </button>
                 ))}
               </div>
