@@ -1,4 +1,4 @@
-import type { DocumentResponse, Message, SearchResponse, Citation, SessionListResponse, CollectionBrief, CollectionDetail } from '../types';
+import type { DocumentResponse, Message, SearchResponse, Citation, SessionListResponse, CollectionBrief, CollectionDetail, NormalizedBBox } from '../types';
 import type { UserProfile, CreditHistoryResponse, UsageBreakdown } from '../types';
 
 export const API_BASE = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8000';
@@ -164,6 +164,19 @@ export async function searchDocument(docId: string, query: string, topK?: number
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ query, top_k: topK }),
   });
+  return handle(res);
+}
+
+export interface ChunkDetail {
+  chunk_id: string;
+  page_start: number;
+  bboxes: NormalizedBBox[] | null;
+  text: string;
+  section_title: string | null;
+}
+
+export async function getChunkDetail(chunkId: string): Promise<ChunkDetail> {
+  const res = await fetch(`${PROXY_BASE}/api/chunks/${chunkId}`);
   return handle(res);
 }
 

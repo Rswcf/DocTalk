@@ -7,7 +7,7 @@ import TextViewer from '../../../components/TextViewer/TextViewer';
 import { ChatPanel } from '../../../components/Chat';
 import Header from '../../../components/Header';
 import CustomInstructionsModal from '../../../components/CustomInstructionsModal';
-import { updateDocumentInstructions } from '../../../lib/api';
+import { getChunkDetail, updateDocumentInstructions } from '../../../lib/api';
 import { useDocTalkStore } from '../../../store';
 import { Panel, Group, Separator } from 'react-resizable-panels';
 import { useLocale } from '../../../i18n';
@@ -51,13 +51,38 @@ export default function DocumentReaderPageClient() {
   const searchParams = useSearchParams();
   useEffect(() => {
     const pageParam = searchParams.get('page');
+    let fallbackPage = 1;
     if (pageParam) {
       const pageNum = parseInt(pageParam, 10);
       if (!isNaN(pageNum) && pageNum > 0) {
+        fallbackPage = pageNum;
         useDocTalkStore.getState().setPage(pageNum);
       }
     }
-  }, [searchParams]);
+
+    const highlightChunkId = searchParams.get('highlight');
+    if (!highlightChunkId) return;
+
+    let cancelled = false;
+    void getChunkDetail(highlightChunkId)
+      .then((chunk) => {
+        if (cancelled) return;
+        const page = chunk.page_start || fallbackPage;
+        navigateToCitation({
+          refIndex: 1,
+          chunkId: chunk.chunk_id,
+          page,
+          bboxes: chunk.bboxes || [],
+          textSnippet: chunk.text || '',
+          offset: 0,
+        });
+      })
+      .catch(() => {
+        // The page parameter still lands the reader near the cited passage.
+      });
+
+    return () => { cancelled = true; };
+  }, [searchParams, navigateToCitation]);
 
   // Determine which viewer to use:
   // - Native PDF: always PdfViewer with original URL

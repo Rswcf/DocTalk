@@ -20,7 +20,7 @@ import type { DocumentBrief } from '../../../lib/api';
 import { useDocTalkStore } from '../../../store';
 import { useLocale } from '../../../i18n';
 import { useUserPlanProfile } from '../../../lib/useUserPlanProfile';
-import type { CollectionDetail, SessionItem } from '../../../types';
+import type { Citation, CollectionDetail, SessionItem } from '../../../types';
 import { LoadingScreen } from '../../../components/ui/LoadingScreen';
 
 export default function CollectionDetailPage() {
@@ -157,10 +157,13 @@ export default function CollectionDetailPage() {
     window.open(`/d/${docId}`, '_blank');
   };
 
-  // Citation click in collection context — no PDF viewer, just log
-  const handleCitationClick = useCallback(() => {
-    // In collection view, citations are handled by CollectionCitationCard (expandable)
-    // No PDF navigation needed here
+  const handleCitationClick = useCallback((citation: Citation) => {
+    if (!citation.documentId) return;
+    const params = new URLSearchParams({
+      page: String(citation.page || 1),
+    });
+    if (citation.chunkId) params.set('highlight', citation.chunkId);
+    window.open(`/d/${citation.documentId}?${params.toString()}`, '_blank', 'noopener,noreferrer');
   }, []);
 
   if (status === 'loading' || loading) {
