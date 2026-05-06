@@ -19,7 +19,7 @@ backend changes from `stable`, and record the outcome here.
 
 | Order | Version | Feature | Status | Commit | Main Push | Stable Push | Deploy |
 |---|---:|---|---|---|---|---|---|
-| M1 | 0.3.0 | Structured Extraction | In progress | Pending | Pending | Pending | Pending |
+| M1 | 0.3.0 | Structured Extraction | Deployed | `5ac4d83` | Done | Done | Railway `0.3.0 beta` |
 | M2 | 0.4.0 | Table Extraction | Pending | Pending | Pending | Pending | Pending |
 | M3 | 0.5.0 | Deep Link Answer Share | Pending | Pending | Pending | Pending | Pending |
 | M4 | 0.6.0 | Question Templates | Pending | Pending | Pending | Pending | Pending |
@@ -29,6 +29,10 @@ backend changes from `stable`, and record the outcome here.
 
 - Started: 2026-05-07
 - Branch: `main`
+- Commit: `5ac4d83`
+- Tag: `v0.3.0-beta`
+- Push: `origin main` and `origin stable` complete
+- Deploy: Railway deploy accepted; production `/health` and `/version` return `0.3.0 beta`
 - Scope: version hygiene, document job foundation, extraction results,
   extraction worker/API, document-reader Extract workspace, tests and docs.
 - Required verification:
