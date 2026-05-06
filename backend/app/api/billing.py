@@ -19,6 +19,7 @@ from app.core.security_log import log_security_event
 from app.models.tables import CreditLedger, PlanTransition, ProductEvent, User
 from app.schemas.billing import (
     BillingProductsResponse,
+    CancelSubscriptionRequest,
     CancelSubscriptionResponse,
     ChangePlanResponse,
     CheckoutUrlResponse,
@@ -678,8 +679,24 @@ def _iso(dt_value) -> Optional[str]:
     return dt.isoformat() if dt else None
 
 
+def _cancel_request_metadata(body: CancelSubscriptionRequest | None) -> dict:
+    if body is None:
+        return {
+            "cancel_reason": None,
+            "cancel_feedback": None,
+            "refund_requested": False,
+        }
+    feedback = body.feedback.strip() if body.feedback else None
+    return {
+        "cancel_reason": body.reason,
+        "cancel_feedback": feedback or None,
+        "refund_requested": body.refund_requested,
+    }
+
+
 @router.post("/cancel", response_model=CancelSubscriptionResponse)
 async def cancel_subscription(
+    body: CancelSubscriptionRequest | None = None,
     user: User = Depends(require_auth),
     db: AsyncSession = Depends(get_db_session),
 ):
@@ -693,6 +710,7 @@ async def cancel_subscription(
 
     current_plan = user.plan
     sub_id = user.stripe_subscription_id
+    cancel_metadata = _cancel_request_metadata(body)
 
     # Branch D: already on Free — nothing to cancel.
     if current_plan == "free":
@@ -737,6 +755,7 @@ async def cancel_subscription(
                     "status_at_cancel": status,
                     "cancel_at_period_end": True,
                     "effective_at": effective_at,
+                    **cancel_metadata,
                 },
             )
             await db.commit()
@@ -746,6 +765,7 @@ async def cancel_subscription(
                 "status": "scheduled_cancel",
                 "effective_at": effective_at,
                 "message": "Subscription will end at the current period end.",
+                "refund_requested": cancel_metadata["refund_requested"],
             }
 
         # Already cancelled on Stripe side — sync local state (idempotent).
@@ -770,6 +790,7 @@ async def cancel_subscription(
                     "sub_id": sub_id,
                     "status_at_cancel": status,
                     "reason": "stripe_already_canceled_sync",
+                    **cancel_metadata,
                 },
             )
             await db.commit()
@@ -779,6 +800,7 @@ async def cancel_subscription(
                 "status": "immediate_revert",
                 "effective_at": None,
                 "message": "Subscription was already canceled on Stripe; local state synced.",
+                "refund_requested": cancel_metadata["refund_requested"],
             }
 
         # Other statuses (incomplete, unpaid, incomplete_expired) — not cancellable.
@@ -857,6 +879,7 @@ async def cancel_subscription(
                     "cancel_at_period_end": True,
                     "effective_at": effective_at,
                     "reason": "branch_c_auto_heal",
+                    **cancel_metadata,
                 },
             )
             await db.commit()
@@ -865,6 +888,7 @@ async def cancel_subscription(
                 "status": "scheduled_cancel",
                 "effective_at": effective_at,
                 "message": "Subscription will end at the current period end.",
+                "refund_requested": cancel_metadata["refund_requested"],
             }
 
         # len(candidates) == 0 → fall through to Branch B.
@@ -895,6 +919,7 @@ async def cancel_subscription(
         metadata={
             "reason": "admin_promoted_revert",
             "had_customer_id": bool(customer_id),
+            **cancel_metadata,
         },
     )
     await db.commit()
@@ -904,6 +929,7 @@ async def cancel_subscription(
         "status": "immediate_revert",
         "effective_at": None,
         "message": "You are now on the Free plan. Your existing credits are kept.",
+        "refund_requested": cancel_metadata["refund_requested"],
     }
 
 

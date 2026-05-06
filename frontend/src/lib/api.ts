@@ -265,13 +265,30 @@ export interface CancelSubscriptionResult {
   status: 'scheduled_cancel' | 'immediate_revert';
   effective_at: string | null;
   message: string;
+  refund_requested: boolean;
 }
 
-export async function cancelSubscription(): Promise<CancelSubscriptionResult> {
+export type CancelSubscriptionReason =
+  | 'not_a_fit'
+  | 'answer_quality'
+  | 'pdf_or_parsing'
+  | 'too_expensive'
+  | 'temporary_need'
+  | 'missing_feature'
+  | 'found_alternative'
+  | 'other';
+
+export interface CancelSubscriptionParams {
+  reason?: CancelSubscriptionReason | null;
+  feedback?: string;
+  refund_requested?: boolean;
+}
+
+export async function cancelSubscription(params: CancelSubscriptionParams = {}): Promise<CancelSubscriptionResult> {
   const res = await fetch(PROXY_BASE + '/api/billing/cancel', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: '{}',
+    body: JSON.stringify(params),
   });
   return handle(res);
 }

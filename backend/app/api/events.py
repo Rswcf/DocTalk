@@ -26,6 +26,8 @@ ALLOWED_EVENTS = {
     "feedback_submitted",
     "paywall_opened",
     "share_created",
+    "subscription_cancel_requested",
+    "refund_requested",
 }
 
 

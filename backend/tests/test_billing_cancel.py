@@ -100,15 +100,21 @@ async def test_branch_a_active_schedules_cancel(fake_db, monkeypatch):
     _patch_settings(monkeypatch)
     _patch_cache(monkeypatch)
     user = _user(stripe_subscription_id="sub_abc123")
+    body = billing_api.CancelSubscriptionRequest(
+        reason="answer_quality",
+        feedback="Citations did not match my workflow.",
+        refund_requested=True,
+    )
     monkeypatch.setattr(billing_api.asyncio, "to_thread", AsyncMock(side_effect=[
         {"status": "active", "current_period_end": 1_800_000_000},
         {"current_period_end": 1_800_000_000},
     ]))
 
-    result = await billing_api.cancel_subscription(user=user, db=fake_db)
+    result = await billing_api.cancel_subscription(body=body, user=user, db=fake_db)
 
     assert result["status"] == "scheduled_cancel"
     assert result["effective_at"] is not None
+    assert result["refund_requested"] is True
     # One audit row written.
     assert len(fake_db._added) == 1
     audit = fake_db._added[0]
@@ -117,6 +123,9 @@ async def test_branch_a_active_schedules_cancel(fake_db, monkeypatch):
     assert audit.to_plan == "pro"  # not yet demoted at cancel-at-period-end time
     assert audit.metadata_json["cancel_at_period_end"] is True
     assert audit.metadata_json["status_at_cancel"] == "active"
+    assert audit.metadata_json["cancel_reason"] == "answer_quality"
+    assert audit.metadata_json["cancel_feedback"] == "Citations did not match my workflow."
+    assert audit.metadata_json["refund_requested"] is True
 
 
 @pytest.mark.asyncio

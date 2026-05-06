@@ -404,6 +404,8 @@ async def admin_funnel(
                         "billing_view",
                         "checkout_created",
                         "checkout_completed",
+                        "subscription_cancel_requested",
+                        "refund_requested",
                     ]
                 )
             )
@@ -426,6 +428,8 @@ async def admin_funnel(
         {"key": "upgrade_click", "label": "Clicked upgrade", "users": event_counts.get("upgrade_click", {}).get("users", 0)},
         {"key": "checkout_created", "label": "Checkout created", "users": event_counts.get("checkout_created", {}).get("users", 0)},
         {"key": "checkout_completed", "label": "Checkout completed", "users": event_counts.get("checkout_completed", {}).get("users", 0)},
+        {"key": "subscription_cancel_requested", "label": "Canceled paid plan", "users": event_counts.get("subscription_cancel_requested", {}).get("users", 0)},
+        {"key": "refund_requested", "label": "Requested refund", "users": event_counts.get("refund_requested", {}).get("users", 0)},
     ]
 
     return {

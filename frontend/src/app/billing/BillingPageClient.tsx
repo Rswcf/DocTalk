@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, Suspense } from "react";
+import Link from "next/link";
 import { useSession } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useLocale } from "../../i18n";
@@ -10,6 +11,7 @@ import {
   changePlan,
   createSubscription,
   createPortalSession,
+  type CancelSubscriptionReason,
 } from "../../lib/api";
 import { triggerCreditsRefresh } from "../../components/CreditsDisplay";
 import PricingTable from "../../components/PricingTable";
@@ -25,6 +27,17 @@ interface Product {
   credits: number;
   price_usd: number;
 }
+
+const CANCEL_REASONS: Array<{ value: CancelSubscriptionReason; label: string; fallback: string }> = [
+  { value: "not_a_fit", label: "billing.cancel.reason.notFit", fallback: "Not a good fit for my needs" },
+  { value: "answer_quality", label: "billing.cancel.reason.answerQuality", fallback: "Answers or citations were not good enough" },
+  { value: "pdf_or_parsing", label: "billing.cancel.reason.parsing", fallback: "A document failed to load or parse" },
+  { value: "too_expensive", label: "billing.cancel.reason.tooExpensive", fallback: "Too expensive for my usage" },
+  { value: "temporary_need", label: "billing.cancel.reason.temporary", fallback: "I only needed it temporarily" },
+  { value: "missing_feature", label: "billing.cancel.reason.missingFeature", fallback: "A feature I need is missing" },
+  { value: "found_alternative", label: "billing.cancel.reason.alternative", fallback: "I found another tool" },
+  { value: "other", label: "billing.cancel.reason.other", fallback: "Other" },
+];
 
 function BillingContent() {
   const { t, tOr, locale } = useLocale();
@@ -50,6 +63,9 @@ function BillingContent() {
   const [confirmDowngrade, setConfirmDowngrade] = useState<{ plan: string; billing: string } | null>(null);
   const [confirmUpgrade, setConfirmUpgrade] = useState<{ plan: string; billing: string } | null>(null);
   const [confirmCancel, setConfirmCancel] = useState(false);
+  const [cancelReason, setCancelReason] = useState<CancelSubscriptionReason | null>(null);
+  const [cancelFeedback, setCancelFeedback] = useState("");
+  const [refundRequested, setRefundRequested] = useState(false);
 
   useEffect(() => {
     const planParam = searchParams.get("plan");
@@ -303,16 +319,40 @@ function BillingContent() {
     if (submitting) return;
     setSubmitting('cancel');
     try {
-      const res = await cancelSubscription();
+      const reason = cancelReason || undefined;
+      trackEvent('subscription_cancel_requested', {
+        source: 'billing_cancel_modal',
+        reason: reason || 'not_provided',
+        plan: profile?.plan || 'unknown',
+        refund_requested: refundRequested,
+      });
+      if (refundRequested) {
+        trackEvent('refund_requested', {
+          source: 'billing_cancel_modal',
+          reason: reason || 'not_provided',
+          plan: profile?.plan || 'unknown',
+        });
+      }
+      const res = await cancelSubscription({
+        reason,
+        feedback: cancelFeedback.trim() || undefined,
+        refund_requested: refundRequested,
+      });
       const date = res.effective_at
         ? new Date(res.effective_at).toLocaleDateString(locale)
         : '';
+      const baseMessage = res.status === 'scheduled_cancel'
+        ? t('billing.cancel.successScheduled', { date })
+        : t('billing.cancel.successImmediate');
       setMessage(
-        res.status === 'scheduled_cancel'
-          ? t('billing.cancel.successScheduled', { date })
-          : t('billing.cancel.successImmediate')
+        res.refund_requested
+          ? `${baseMessage} ${tOr('billing.cancel.refundRequested', 'Your refund request was recorded for review.')}`
+          : baseMessage
       );
       setConfirmCancel(false);
+      setCancelReason(null);
+      setCancelFeedback("");
+      setRefundRequested(false);
       triggerCreditsRefresh();
       await refetchProfile();
     } catch (err) {
@@ -392,6 +432,10 @@ function BillingContent() {
         : tOr('billing.overview.noRenewal', 'No renewal'),
     },
   ];
+  const hasReachedAhaMoment = Boolean(
+    profile && profile.stats.total_documents > 0 && profile.stats.total_messages > 0
+  );
+  const showFitCheck = profile?.plan === 'free' && !profileLoading && !hasReachedAhaMoment;
 
   return (
     <div className="min-h-screen bg-[var(--page-background)]">
@@ -438,6 +482,38 @@ function BillingContent() {
           <div className="mb-6 p-4 rounded-xl bg-zinc-100 dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-800">
             {message}
           </div>
+        )}
+
+        {showFitCheck && (
+          <section className="mb-6 rounded-xl border border-blue-200 bg-blue-50 p-4 text-blue-950 dark:border-blue-900/60 dark:bg-blue-950/30 dark:text-blue-100">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <h2 className="text-sm font-semibold">
+                  {tOr('billing.fitCheck.title', 'Try one cited answer before upgrading')}
+                </h2>
+                <p className="mt-1 max-w-2xl text-sm leading-6 text-blue-800 dark:text-blue-200">
+                  {tOr(
+                    'billing.fitCheck.body',
+                    'DocTalk works best after you test your own document, ask a real question, and click a citation back to the source.'
+                  )}
+                </p>
+              </div>
+              <div className="flex shrink-0 flex-wrap gap-2">
+                <Link
+                  href="/"
+                  className="inline-flex items-center justify-center rounded-lg bg-zinc-900 px-3.5 py-2 text-sm font-medium text-white transition-colors hover:bg-zinc-800 dark:bg-zinc-50 dark:text-zinc-900 dark:hover:bg-zinc-200 focus-visible:ring-2 focus-visible:ring-blue-400 focus-visible:ring-offset-2 focus-visible:ring-offset-blue-50 dark:focus-visible:ring-offset-blue-950"
+                >
+                  {tOr('billing.fitCheck.uploadCta', 'Upload a document')}
+                </Link>
+                <Link
+                  href="/demo"
+                  className="inline-flex items-center justify-center rounded-lg border border-blue-300 bg-white px-3.5 py-2 text-sm font-medium text-blue-900 transition-colors hover:border-blue-400 dark:border-blue-800 dark:bg-blue-950/40 dark:text-blue-100 dark:hover:border-blue-700 focus-visible:ring-2 focus-visible:ring-blue-400 focus-visible:ring-offset-2 focus-visible:ring-offset-blue-50 dark:focus-visible:ring-offset-blue-950"
+                >
+                  {tOr('billing.fitCheck.demoCta', 'Use sample demo')}
+                </Link>
+              </div>
+            </div>
+          </section>
         )}
 
         {/* Current Plan panel — BGB §312k-compliant cancel button.
@@ -730,6 +806,22 @@ function BillingContent() {
               <h2 className="text-sm font-medium text-zinc-500 dark:text-zinc-400 mb-4 uppercase tracking-wide">
                 {t("billing.comparison.title")}
               </h2>
+              <div className="mb-4 rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-950 dark:border-emerald-900/60 dark:bg-emerald-950/30 dark:text-emerald-100">
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                  <div>
+                    <p className="font-semibold">
+                      {tOr('billing.refundPolicy.title', '7-day fair-use refund')}
+                    </p>
+                    <p className="mt-1 leading-6 text-emerald-800 dark:text-emerald-200">
+                      {tOr(
+                        'billing.refundPolicy.body',
+                        'If DocTalk is not a fit and usage is low, cancel within 7 days and request a refund review from the cancel flow.'
+                      )}
+                    </p>
+                  </div>
+                  <ShieldCheck aria-hidden="true" size={18} className="mt-0.5 shrink-0 text-emerald-700 dark:text-emerald-300" />
+                </div>
+              </div>
               <PricingTable
                 currentPlan={profile?.plan as PlanType || 'free'}
                 onUpgrade={handleUpgrade}
@@ -942,6 +1034,71 @@ function BillingContent() {
                         : '—',
                     })}
               </p>
+
+              <div className="mb-5 space-y-4">
+                <div>
+                  <p className="mb-2 text-sm font-medium text-zinc-900 dark:text-zinc-100">
+                    {tOr('billing.cancel.reasonPrompt', 'What made you decide to cancel?')}
+                  </p>
+                  <div className="grid gap-2" role="radiogroup" aria-label={tOr('billing.cancel.reasonPrompt', 'What made you decide to cancel?')}>
+                    {CANCEL_REASONS.map((reason) => {
+                      const selected = cancelReason === reason.value;
+                      return (
+                        <button
+                          key={reason.value}
+                          type="button"
+                          role="radio"
+                          aria-checked={selected}
+                          onClick={() => setCancelReason(reason.value)}
+                          disabled={submitting === 'cancel'}
+                          className={`rounded-lg border px-3 py-2 text-left text-sm transition-colors focus-visible:ring-2 focus-visible:ring-zinc-400 dark:focus-visible:ring-zinc-500 ${
+                            selected
+                              ? 'border-zinc-900 bg-zinc-100 text-zinc-900 dark:border-zinc-100 dark:bg-zinc-800 dark:text-zinc-100'
+                              : 'border-zinc-200 text-zinc-600 hover:border-zinc-300 hover:text-zinc-900 dark:border-zinc-800 dark:text-zinc-300 dark:hover:border-zinc-700 dark:hover:text-zinc-100'
+                          }`}
+                        >
+                          {tOr(reason.label, reason.fallback)}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                <div>
+                  <label htmlFor="cancel-feedback" className="mb-1 block text-sm font-medium text-zinc-900 dark:text-zinc-100">
+                    {tOr('billing.cancel.feedbackLabel', 'Anything we should understand?')}
+                  </label>
+                  <textarea
+                    id="cancel-feedback"
+                    value={cancelFeedback}
+                    onChange={(event) => setCancelFeedback(event.target.value)}
+                    disabled={submitting === 'cancel'}
+                    maxLength={1000}
+                    rows={3}
+                    className="w-full resize-none rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900 placeholder:text-zinc-400 focus:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-100 dark:placeholder:text-zinc-500 dark:focus-visible:ring-zinc-500"
+                    placeholder={tOr('billing.cancel.feedbackPlaceholder', 'Optional. One sentence is enough.')}
+                  />
+                </div>
+
+                <label className="flex items-start gap-3 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-950 dark:border-emerald-900/60 dark:bg-emerald-950/30 dark:text-emerald-100">
+                  <input
+                    type="checkbox"
+                    checked={refundRequested}
+                    onChange={(event) => setRefundRequested(event.target.checked)}
+                    disabled={submitting === 'cancel'}
+                    className="mt-1 rounded border-emerald-300 text-emerald-700 focus-visible:ring-2 focus-visible:ring-emerald-400"
+                  />
+                  <span>
+                    <span className="block font-medium">
+                      {tOr('billing.cancel.refundCheckbox', 'Request a refund review')}
+                    </span>
+                    <span className="mt-0.5 block leading-5 text-emerald-800 dark:text-emerald-200">
+                      {tOr('billing.cancel.refundHint', 'Best for recent purchases with low usage. Cancellation is not blocked by this choice.')}
+                    </span>
+                  </span>
+                </label>
+              </div>
+
               <div className="flex items-center justify-end gap-3">
                 <button
                   type="button"

@@ -155,6 +155,13 @@ export default function PricingPageClient() {
                   {t('pricing.tryDemo')}
                 </Link>
               </div>
+              <div className="mt-5 inline-flex max-w-2xl items-start gap-3 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-950 dark:border-emerald-900/60 dark:bg-emerald-950/30 dark:text-emerald-100">
+                <ShieldCheck aria-hidden="true" size={18} className="mt-0.5 shrink-0 text-emerald-700 dark:text-emerald-300" />
+                <p className="leading-6">
+                  <strong>{tOr('pricing.refundPolicy.title', '7-day fair-use refund.')}</strong>{' '}
+                  {tOr('pricing.refundPolicy.body', 'If DocTalk is not a fit and usage is low, cancel within 7 days and request a refund review.')}
+                </p>
+              </div>
             </div>
 
             <aside className="rounded-xl border border-zinc-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
