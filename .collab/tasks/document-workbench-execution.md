@@ -20,7 +20,7 @@ backend changes from `stable`, and record the outcome here.
 | Order | Version | Feature | Status | Commit | Main Push | Stable Push | Deploy |
 |---|---:|---|---|---|---|---|---|
 | M1 | 0.3.0 | Structured Extraction | Deployed | `5ac4d83` | Done | Done | Railway `0.3.0 beta` |
-| M2 | 0.4.0 | Table Extraction | In progress | Pending | Pending | Pending | Pending |
+| M2 | 0.4.0 | Table Extraction | Deployed | `a945117` | Done | Done | Railway `0.4.0 beta` |
 | M3 | 0.5.0 | Deep Link Answer Share | Pending | Pending | Pending | Pending | Pending |
 | M4 | 0.6.0 | Question Templates | Pending | Pending | Pending | Pending | Pending |
 | M5 | 0.7.0 | Document Diff | Pending | Pending | Pending | Pending | Pending |
@@ -58,6 +58,10 @@ backend changes from `stable`, and record the outcome here.
 
 - Started: 2026-05-07
 - Branch: `main`
+- Commit: `a945117`
+- Tag: `v0.4.0-beta`
+- Push: `origin main` and `origin stable` complete
+- Deploy: Railway deploy accepted; production `/health` and `/version` return `0.4.0 beta`
 - Scope: version hygiene, `document_tables`, `table_scan` jobs, table scan/list/export API,
   Celery table worker, Extract workspace Tables view, tests and docs.
 - Required verification:
@@ -75,3 +79,6 @@ backend changes from `stable`, and record the outcome here.
 - `cd backend && python3 -m pytest tests/test_parse_service.py tests/test_table_service.py tests/test_tables_api.py tests/test_extraction_service.py tests/test_extractions_api.py tests/test_smoke.py tests/test_versioning.py -v` — PASS (`30 passed, 1 skipped`; integration lifecycle skipped by default)
 - `cd backend && python3 -m alembic heads` — PASS (`20260507_0024`)
 - `cd backend && python3 -m alembic upgrade head` — PASS against local `localhost/doctalk`
+- `railway up --detach` from `stable` — PASS
+- `curl https://backend-production-a62e.up.railway.app/health` — PASS (`0.4.0 beta`)
+- `curl https://backend-production-a62e.up.railway.app/version` — PASS (`0.4.0 beta`)
