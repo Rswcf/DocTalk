@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { ArrowRight, FileText, FolderOpen, Layers, Plus } from 'lucide-react';
@@ -21,11 +21,22 @@ export default function CollectionsPageClient() {
   const [collections, setCollections] = useState<CollectionBrief[]>([]);
   const [showCreate, setShowCreate] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const openedCreateFromQueryRef = useRef(false);
 
   useEffect(() => {
     if (status === 'authenticated') {
       listCollections().then(setCollections).catch(console.error);
     }
+  }, [status]);
+
+  useEffect(() => {
+    if (status !== 'authenticated' || openedCreateFromQueryRef.current) return;
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('action') !== 'create') return;
+
+    openedCreateFromQueryRef.current = true;
+    setShowCreate(true);
+    window.history.replaceState(null, '', window.location.pathname);
   }, [status]);
 
   const totalDocuments = useMemo(

@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { useSession } from 'next-auth/react';
 import { getDocument, uploadDocument, deleteDocument, getMyDocuments, ingestUrl } from '../lib/api';
 import type { DocumentBrief } from '../lib/api';
-import { ArrowRight, Sparkles, Trash2, Link2, FileUp, X } from 'lucide-react';
+import { ArrowRight, Sparkles, Trash2, Link2, FileUp, FolderOpen, X } from 'lucide-react';
 import { useDocTalkStore } from '../store';
 import { useLocale } from '../i18n';
 import { clearAccountStorage } from '../lib/clearAccountStorage';
@@ -273,12 +273,17 @@ export default function HomePageClient() {
   const maxUploadMb = useMemo(() => MAX_UPLOAD_MB_BY_PLAN[userPlan] ?? MAX_UPLOAD_MB_BY_PLAN.free, [userPlan]);
   const maxUploadBytes = maxUploadMb * 1024 * 1024;
   const uploadUpgradePlan = userPlan === 'plus' ? 'pro' : 'plus';
+  const readyDocumentCount = useMemo(
+    () => allDocs.filter((doc) => (doc.status || '').toLowerCase() === 'ready').length,
+    [allDocs]
+  );
   const activatedFreeUser = userPlan === 'free' && (
     allDocs.length > 0 ||
     (profile?.stats.total_documents || 0) > 0 ||
     (profile?.stats.total_messages || 0) >= 3
   );
   const showUpgradeNudge = isLoggedIn && activatedFreeUser && !upgradeNudgeDismissed;
+  const showWorkspaceNudge = readyDocumentCount >= 2;
 
   useEffect(() => {
     if (!isLoggedIn) return;
@@ -625,7 +630,47 @@ export default function HomePageClient() {
         </div>
 
         <div className="max-w-4xl w-full">
-          <h2 className="text-xl font-semibold mb-4 text-zinc-900 dark:text-zinc-100">{t('doc.myDocuments')}</h2>
+          <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <h2 className="text-xl font-semibold text-zinc-900 dark:text-zinc-100">{t('doc.myDocuments')}</h2>
+            <Link
+              href="/collections"
+              className="inline-flex items-center gap-2 self-start rounded-lg border border-zinc-200 bg-white px-3.5 py-2 text-sm font-medium text-zinc-700 transition-colors hover:border-zinc-300 hover:text-zinc-900 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:border-zinc-700 dark:hover:text-zinc-100 focus-visible:ring-2 focus-visible:ring-zinc-400 dark:focus-visible:ring-zinc-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-900 sm:self-auto"
+            >
+              <FolderOpen aria-hidden="true" size={16} />
+              {tOr('dashboard.workspacesLink', 'Workspaces')}
+            </Link>
+          </div>
+
+          {showWorkspaceNudge && (
+            <section className="mb-4 rounded-xl border border-zinc-200 bg-white p-4 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+              <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex gap-3">
+                  <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-zinc-200 bg-zinc-50 text-zinc-900 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-100">
+                    <FolderOpen aria-hidden="true" size={18} />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
+                      {tOr('dashboard.workspaceNudge.title', 'Turn related documents into a workspace')}
+                    </h3>
+                    <p className="mt-1 max-w-2xl text-sm leading-6 text-zinc-600 dark:text-zinc-300">
+                      {tOr(
+                        'dashboard.workspaceNudge.body',
+                        'You have ready documents. Group them to ask cross-document questions while keeping citations tied to the exact source file.'
+                      )}
+                    </p>
+                  </div>
+                </div>
+                <Link
+                  href="/collections?action=create"
+                  className="inline-flex shrink-0 items-center justify-center gap-2 rounded-lg bg-zinc-900 px-4 py-2.5 text-sm font-medium text-white shadow-sm transition-colors hover:bg-zinc-800 dark:bg-zinc-50 dark:text-zinc-900 dark:hover:bg-zinc-200 focus-visible:ring-2 focus-visible:ring-zinc-400 dark:focus-visible:ring-zinc-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-900"
+                >
+                  {tOr('dashboard.workspaceNudge.cta', 'Create workspace')}
+                  <ArrowRight aria-hidden="true" size={15} />
+                </Link>
+              </div>
+            </section>
+          )}
+
           {allDocs.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-16 px-6 text-center rounded-xl border border-dashed border-zinc-200 dark:border-zinc-800">
               <FileUp aria-hidden="true" size={52} className="text-zinc-400 dark:text-zinc-500" />
