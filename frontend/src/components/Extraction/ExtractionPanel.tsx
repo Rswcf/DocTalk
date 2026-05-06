@@ -10,20 +10,26 @@ import {
   FileSpreadsheet,
   ListChecks,
   Play,
+  RefreshCcw,
   Sparkles,
+  Table2,
 } from "lucide-react";
 import {
   ApiError,
   createExtraction,
+  exportDocumentTable,
   exportExtraction,
+  getTableScanJob,
+  listDocumentTables,
   listDocumentExtractions,
   listExtractionTemplates,
+  scanDocumentTables,
 } from "../../lib/api";
 import { billingHref } from "../../lib/billingLinks";
 import { trackEvent } from "../../lib/analytics";
 import { useLocale } from "../../i18n";
 import { useDocTalkStore } from "../../store";
-import type { Citation, ExtractionJob, ExtractionTemplate, NormalizedBBox } from "../../types";
+import type { Citation, DocumentTable, ExtractionJob, ExtractionTemplate, NormalizedBBox } from "../../types";
 
 interface ExtractionPanelProps {
   documentId: string;
@@ -83,17 +89,30 @@ function downloadBlob(blob: Blob, filename: string) {
 export default function ExtractionPanel({ documentId, onCitationClick, userPlan }: ExtractionPanelProps) {
   const { tOr, locale } = useLocale();
   const domainMode = useDocTalkStore((s) => s.domainMode);
+  const [activeView, setActiveView] = useState<"deliverables" | "tables">("deliverables");
   const [templates, setTemplates] = useState<ExtractionTemplate[]>([]);
   const [jobs, setJobs] = useState<ExtractionJob[]>([]);
+  const [tables, setTables] = useState<DocumentTable[]>([]);
+  const [tableJob, setTableJob] = useState<ExtractionJob | null>(null);
   const [selectedTemplate, setSelectedTemplate] = useState("executive_summary");
   const [loading, setLoading] = useState(true);
+  const [tableLoading, setTableLoading] = useState(true);
+  const [tableScanning, setTableScanning] = useState(false);
   const [running, setRunning] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [tableError, setTableError] = useState<string | null>(null);
   const [paywallCode, setPaywallCode] = useState<string | null>(null);
+  const [tablePaywallCode, setTablePaywallCode] = useState<string | null>(null);
 
   const refreshJobs = useCallback(async () => {
     const data = await listDocumentExtractions(documentId);
     setJobs(data);
+    return data;
+  }, [documentId]);
+
+  const refreshTables = useCallback(async () => {
+    const data = await listDocumentTables(documentId);
+    setTables(data);
     return data;
   }, [documentId]);
 
@@ -122,12 +141,45 @@ export default function ExtractionPanel({ documentId, onCitationClick, userPlan 
   }, [documentId, selectedTemplate]);
 
   useEffect(() => {
+    let cancelled = false;
+    setTableLoading(true);
+    refreshTables()
+      .then(() => {
+        if (!cancelled) setTableLoading(false);
+      })
+      .catch((err) => {
+        if (!cancelled) {
+          setTableError(err instanceof Error ? err.message : "Failed to load tables");
+          setTableLoading(false);
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [refreshTables]);
+
+  useEffect(() => {
     if (!jobs.some((job) => job.status === "queued" || job.status === "running")) return;
     const timer = window.setInterval(() => {
       void refreshJobs().catch(() => undefined);
     }, 2500);
     return () => window.clearInterval(timer);
   }, [jobs, refreshJobs]);
+
+  useEffect(() => {
+    if (!tableJob || (tableJob.status !== "queued" && tableJob.status !== "running")) return;
+    const timer = window.setInterval(() => {
+      void getTableScanJob(tableJob.id)
+        .then((job) => {
+          setTableJob(job);
+          if (job.status === "succeeded") {
+            void refreshTables().catch(() => undefined);
+          }
+        })
+        .catch(() => undefined);
+    }, 2500);
+    return () => window.clearInterval(timer);
+  }, [refreshTables, tableJob]);
 
   const activeJob = useMemo(() => jobs[0] || null, [jobs]);
   const selectedTemplateInfo = templates.find((item) => item.key === selectedTemplate);
@@ -175,6 +227,47 @@ export default function ExtractionPanel({ documentId, onCitationClick, userPlan 
       });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Export failed");
+    }
+  }, [userPlan]);
+
+  const handleScanTables = useCallback(async () => {
+    if (tableScanning) return;
+    setTableScanning(true);
+    setTableError(null);
+    setTablePaywallCode(null);
+    try {
+      const job = await scanDocumentTables(documentId);
+      setTableJob(job);
+      trackEvent("table_scan_created", {
+        source: "extraction_panel",
+        reason: "tables",
+        plan: userPlan,
+      });
+      window.setTimeout(() => {
+        void refreshTables().catch(() => undefined);
+      }, 1500);
+    } catch (err) {
+      setTableError(err instanceof Error ? err.message : "Table scan failed");
+    } finally {
+      setTableScanning(false);
+    }
+  }, [documentId, refreshTables, tableScanning, userPlan]);
+
+  const handleTableExport = useCallback(async (table: DocumentTable) => {
+    try {
+      const blob = await exportDocumentTable(table.id);
+      downloadBlob(blob, `table-p${table.page}-${table.table_index + 1}.csv`);
+      trackEvent("table_export_clicked", {
+        source: "extraction_panel",
+        reason: "csv",
+        plan: userPlan,
+      });
+    } catch (err) {
+      if (err instanceof ApiError && err.code === "PLAN_REQUIRED") {
+        setTablePaywallCode(err.code);
+      } else {
+        setTableError(err instanceof Error ? err.message : "Table export failed");
+      }
     }
   }, [userPlan]);
 
@@ -230,10 +323,48 @@ export default function ExtractionPanel({ documentId, onCitationClick, userPlan 
           </div>
           <Sparkles aria-hidden="true" size={18} className="text-[var(--reader-evidence)]" />
         </div>
+        <div className="mt-3 flex rounded-lg border border-[var(--reader-border)] bg-[var(--reader-panel-muted)] p-1">
+          <button
+            type="button"
+            onClick={() => setActiveView("deliverables")}
+            className={`inline-flex min-h-8 flex-1 items-center justify-center gap-2 rounded-md px-2 text-xs font-medium transition-colors ${
+              activeView === "deliverables"
+                ? "bg-[var(--reader-panel-solid)] text-[var(--reader-ink)] shadow-sm"
+                : "text-[var(--reader-muted)]"
+            }`}
+          >
+            <Sparkles size={13} aria-hidden="true" />
+            {tOr("extract.deliverablesTab", "Deliverables")}
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveView("tables")}
+            className={`inline-flex min-h-8 flex-1 items-center justify-center gap-2 rounded-md px-2 text-xs font-medium transition-colors ${
+              activeView === "tables"
+                ? "bg-[var(--reader-panel-solid)] text-[var(--reader-ink)] shadow-sm"
+                : "text-[var(--reader-muted)]"
+            }`}
+          >
+            <Table2 size={13} aria-hidden="true" />
+            {tOr("tables.tab", "Tables")}
+          </button>
+        </div>
       </div>
 
       <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4 sm:px-5">
-        {loading ? (
+        {activeView === "tables" ? (
+          <TablesView
+            tables={tables}
+            job={tableJob}
+            loading={tableLoading}
+            scanning={tableScanning}
+            error={tableError}
+            paywallCode={tablePaywallCode}
+            onScan={handleScanTables}
+            onExport={handleTableExport}
+            tOr={tOr}
+          />
+        ) : loading ? (
           <div className="text-sm text-[var(--reader-muted)]">{tOr("common.loading", "Loading...")}</div>
         ) : (
           <div className="mx-auto max-w-4xl space-y-4">
@@ -356,6 +487,138 @@ export default function ExtractionPanel({ documentId, onCitationClick, userPlan 
           </div>
         )}
       </div>
+    </div>
+  );
+}
+
+function TablesView({
+  tables,
+  job,
+  loading,
+  scanning,
+  error,
+  paywallCode,
+  onScan,
+  onExport,
+  tOr,
+}: {
+  tables: DocumentTable[];
+  job: ExtractionJob | null;
+  loading: boolean;
+  scanning: boolean;
+  error: string | null;
+  paywallCode: string | null;
+  onScan: () => void;
+  onExport: (table: DocumentTable) => void;
+  tOr: (key: string, fallback: string, params?: Record<string, string | number>) => string;
+}) {
+  const isWorking = scanning || job?.status === "queued" || job?.status === "running";
+  return (
+    <div className="mx-auto max-w-4xl space-y-4">
+      <section className="rounded-lg border border-[var(--reader-border)] bg-white/70 p-4 shadow-sm dark:bg-zinc-900/50">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <p className="text-xs font-mono uppercase text-[var(--reader-muted)]">
+              {tables.length > 0
+                ? tOr("tables.detected", "{count} tables detected", { count: tables.length })
+                : tOr("tables.noneYet", "No tables scanned yet")}
+            </p>
+            <h3 className="mt-1 text-sm font-semibold text-[var(--reader-ink)]">
+              {tOr("tables.title", "Extract tables to CSV")}
+            </h3>
+          </div>
+          <button
+            type="button"
+            onClick={() => onScan()}
+            disabled={isWorking}
+            className="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg bg-zinc-900 px-3 py-2 text-sm font-medium text-white shadow-sm transition-colors hover:bg-zinc-800 disabled:opacity-50 dark:bg-zinc-50 dark:text-zinc-900 dark:hover:bg-zinc-200"
+          >
+            <RefreshCcw size={14} aria-hidden="true" />
+            {isWorking ? tOr("tables.scanning", "Scanning...") : tOr("tables.scan", "Scan tables")}
+          </button>
+        </div>
+        {job && (
+          <p className="mt-3 text-xs text-[var(--reader-muted)]">
+            {job.status === "succeeded"
+              ? tOr("tables.scanReady", "Scan complete")
+              : job.status === "failed"
+                ? job.error_message || tOr("tables.scanFailed", "Table scan failed")
+                : tOr("tables.scanRunning", "DocTalk is detecting tables in this document.")}
+          </p>
+        )}
+        {paywallCode && (
+          <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900 dark:border-amber-900/60 dark:bg-amber-950/30 dark:text-amber-100">
+            <p className="font-medium">{tOr("tables.exportRequiresPlus", "CSV table export requires Plus.")}</p>
+            <Link
+              href={billingHref({ plan: "plus", source: "tables_panel", reason: paywallCode.toLowerCase() })}
+              className="mt-2 inline-flex text-sm font-medium underline"
+            >
+              {tOr("credits.upgradeToPlus", "Upgrade to Plus")}
+            </Link>
+          </div>
+        )}
+        {error && (
+          <div className="mt-3 flex gap-2 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-900 dark:border-red-900/60 dark:bg-red-950/30 dark:text-red-100">
+            <AlertTriangle size={16} className="mt-0.5 shrink-0" aria-hidden="true" />
+            <span>{error}</span>
+          </div>
+        )}
+      </section>
+
+      {loading ? (
+        <div className="text-sm text-[var(--reader-muted)]">{tOr("common.loading", "Loading...")}</div>
+      ) : tables.length === 0 ? (
+        <section className="rounded-lg border border-dashed border-[var(--reader-border)] bg-[var(--reader-panel-solid)] p-6 text-sm leading-6 text-[var(--reader-muted)]">
+          {tOr("tables.empty", "Run a scan to preview tables found in this document. CSV export is available on Plus and Pro.")}
+        </section>
+      ) : (
+        <div className="space-y-4">
+          {tables.map((table) => (
+            <section key={table.id} className="rounded-lg border border-[var(--reader-border)] bg-white/80 p-4 shadow-sm dark:bg-zinc-900/50">
+              <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <h4 className="text-sm font-semibold text-[var(--reader-ink)]">
+                    {tOr("tables.tableTitle", "Page {page} · Table {index}", {
+                      page: table.page,
+                      index: table.table_index + 1,
+                    })}
+                  </h4>
+                  <p className="text-xs text-[var(--reader-muted)]">
+                    {table.method} · {Math.round(table.confidence * 100)}%
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => onExport(table)}
+                  className="inline-flex items-center justify-center gap-1 rounded-md border border-[var(--reader-border)] px-2.5 py-1.5 text-xs font-medium hover:bg-[var(--reader-panel-muted)]"
+                >
+                  <Download size={13} aria-hidden="true" /> CSV
+                </button>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full min-w-[520px] text-left text-xs">
+                  <tbody>
+                    {table.rows.slice(0, 8).map((row, rowIndex) => (
+                      <tr key={rowIndex} className={rowIndex === 0 ? "font-semibold text-[var(--reader-ink)]" : ""}>
+                        {row.slice(0, 6).map((cell, cellIndex) => (
+                          <td key={cellIndex} className="border border-[var(--reader-border)] px-2 py-1.5 align-top">
+                            {cell || <span className="text-[var(--reader-muted)]">-</span>}
+                          </td>
+                        ))}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              {(table.rows.length > 8 || (table.rows[0]?.length || 0) > 6) && (
+                <p className="mt-2 text-xs text-[var(--reader-muted)]">
+                  {tOr("tables.previewTruncated", "Preview truncated. Export CSV for the full table.")}
+                </p>
+              )}
+            </section>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

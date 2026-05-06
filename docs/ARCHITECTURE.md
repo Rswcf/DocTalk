@@ -393,6 +393,7 @@ erDiagram
     Document ||--o{ Chunk : "contains"
     Document ||--o{ ChatSession : "has"
     Document ||--o{ DocumentJob : "scopes"
+    Document ||--o{ DocumentTable : "has"
     ChatSession ||--o{ Message : "contains"
     Message ||--o| UsageRecord : "tracks"
     DocumentJob ||--o| ExtractionResult : "stores"
@@ -545,6 +546,18 @@ erDiagram
         datetime updated_at
     }
 
+    DocumentTable {
+        uuid id PK
+        uuid document_id FK
+        int page
+        int table_index
+        jsonb cells "rows matrix"
+        float confidence
+        string method "pymupdf | markdown"
+        datetime created_at
+        datetime updated_at
+    }
+
     Collection {
         uuid id PK
         string name
@@ -573,6 +586,7 @@ erDiagram
 - `Collection ↔ Document`: Many-to-many via `collection_documents` junction table
 - `User/Document/Collection → DocumentJob`: CASCADE delete for async workbench jobs
 - `DocumentJob → ExtractionResult`: CASCADE delete, one extraction payload per job
+- `Document → DocumentTable`: CASCADE delete, on-demand table scan output
 
 **Unique constraints:**
 - `(Document.document_id, Page.page_number)` — one page per number per document
@@ -580,6 +594,7 @@ erDiagram
 - `(Account.provider, Account.provider_account_id)` — one account link per provider
 - `Document.demo_slug` — unique when not NULL
 - `ExtractionResult.job_id` — one rendered extraction result per async job
+- `(DocumentTable.document_id, page, table_index)` — stable table position per scan
 
 ---
 
@@ -629,6 +644,7 @@ graph TD
         WorkbenchSwitch["Chat / Extract<br/>workspace switch"]
         ChatPanel["ChatPanel<br/>Messages + Input"]
         ExtractionPanel["ExtractionPanel<br/>templates + job status<br/>cited results + export"]
+        TablesPanel["Tables tab<br/>scan + preview + CSV"]
         PdfViewer["PdfViewer<br/>react-pdf"]
         ViewToggle["View Toggle<br/>Slides / Text<br/>(PPTX/DOCX)"]
         TextViewer["TextViewer<br/>Non-PDF Viewer<br/>Markdown Rendering + Search<br/>Snippet Highlights"]
@@ -839,6 +855,13 @@ Structured Extraction uses the same accounting shape for async workbench jobs:
 stores an `extraction_results` payload, records `UsageRecord`, and reconciles
 the original ledger row to actual token cost. Queue/worker failure deletes the
 pre-debit ledger row before restoring the user's balance.
+
+Table Extraction reuses `document_jobs` with `job_type='table_scan'` but does
+not pre-debit credits because the MVP uses deterministic parsers rather than an
+LLM. The worker clears and rewrites `document_tables` for the document. Native
+PDFs use PyMuPDF `page.find_tables()`, while DOCX/PPTX/XLSX/TXT/MD/URL-derived
+documents fall back to markdown-table detection from stored `pages.content`.
+Free users can preview detected tables; CSV export is gated to Plus+.
 
 ### Self-serve subscription cancel state machine
 

@@ -8,6 +8,16 @@ releases use `0.minor.patch` semantics such as `0.2.0` and `0.2.1`.
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-05-07
+
+### Added
+- Table Extraction in the document workbench with `Tables` preview, on-demand
+  table scanning, PDF `find_tables()` support, markdown-table fallback for
+  converted/non-PDF documents, and Plus+ CSV export.
+- `document_tables` table and `table_scan` document job type for reusable
+  table extraction workflows.
+- FastAPI table scan/list/export endpoints and Celery table worker task.
+
 ## [0.3.0] - 2026-05-07
 
 ### Added

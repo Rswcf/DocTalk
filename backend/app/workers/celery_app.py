@@ -21,6 +21,7 @@ celery_app = Celery(
     include=[
         "app.workers.parse_worker",
         "app.workers.extraction_worker",
+        "app.workers.table_worker",
         "app.workers.deletion_worker",
         "app.workers.cleanup_tasks",
     ],

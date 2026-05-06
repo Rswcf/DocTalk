@@ -29,6 +29,8 @@ ALLOWED_EVENTS = {
     "extraction_created",
     "extraction_completed",
     "extraction_export_clicked",
+    "table_scan_created",
+    "table_export_clicked",
     "subscription_cancel_requested",
     "refund_requested",
 }

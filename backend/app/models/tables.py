@@ -503,3 +503,32 @@ class ExtractionResult(Base):
     __table_args__ = (
         sa.Index("idx_extraction_results_template", "template_key"),
     )
+
+
+class DocumentTable(Base):
+    __tablename__ = "document_tables"
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, server_default=sa.text("gen_random_uuid()")
+    )
+    document_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), sa.ForeignKey("documents.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    page: Mapped[int] = mapped_column(sa.Integer, nullable=False)
+    table_index: Mapped[int] = mapped_column(sa.Integer, nullable=False)
+    cells: Mapped[dict] = mapped_column(JSONB, nullable=False, server_default=sa.text("'{}'::jsonb"))
+    confidence: Mapped[float] = mapped_column(sa.Float, nullable=False, server_default=sa.text("0"))
+    method: Mapped[str] = mapped_column(sa.String(32), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        sa.DateTime(timezone=True), nullable=False, server_default=sa.text("now()")
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        sa.DateTime(timezone=True), nullable=False, server_default=sa.text("now()"), onupdate=sa.func.now()
+    )
+
+    document: Mapped["Document"] = relationship("Document")
+
+    __table_args__ = (
+        sa.UniqueConstraint("document_id", "page", "table_index", name="uq_document_tables_position"),
+        sa.Index("idx_document_tables_document_page", "document_id", "page"),
+    )

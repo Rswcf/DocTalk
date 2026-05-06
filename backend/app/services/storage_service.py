@@ -119,6 +119,15 @@ class StorageService:
         url = self._client.presigned_get_object(self._bucket, storage_key, expires=expires)
         return url
 
+    def download_file(self, storage_key: str) -> bytes:
+        """Download an object from MinIO as bytes."""
+        response = self._client.get_object(self._bucket, storage_key)
+        try:
+            return response.read()
+        finally:
+            response.close()
+            response.release_conn()
+
     def delete_file(self, storage_key: str) -> None:
         """Delete an object. No-op if not found."""
         try:
@@ -131,4 +140,3 @@ class StorageService:
 
 # Singleton instance for app-wide use
 storage_service = StorageService()
-

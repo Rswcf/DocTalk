@@ -187,3 +187,15 @@ export interface ExtractionJob {
   completed_at: string | null;
   result: ExtractionResultPayload | null;
 }
+
+export interface DocumentTable {
+  id: string;
+  document_id: string;
+  page: number;
+  table_index: number;
+  rows: string[][];
+  confidence: number;
+  method: string;
+  created_at: string;
+  updated_at: string;
+}

@@ -7,7 +7,7 @@
 
 ## 1. Executive Summary
 
-DocTalk is an AI-powered document workbench with a unique competitive advantage: **citation-precise answers with bounding-box page highlights** — the most accurate citation UX in the market. As of `0.3.0 beta`, the product is moving beyond general-purpose chat by adding **Structured Extraction**: users can turn a document into a cited deliverable (executive summary, facts/figures table, legal/academic evidence table) instead of leaving with only a chat transcript. DocTalk can capture significant revenue in three high-value segments: **finance professionals** (highest willingness to pay), **legal professionals** (underserved solo/small firms), and **academic researchers** (largest addressable market with viral growth).
+DocTalk is an AI-powered document workbench with a unique competitive advantage: **citation-precise answers with bounding-box page highlights** — the most accurate citation UX in the market. As of `0.4.0 beta`, the product is moving beyond general-purpose chat by adding **Structured Extraction** and **Table Extraction**: users can turn a document into a cited deliverable or CSV-ready table data instead of leaving with only a chat transcript. DocTalk can capture significant revenue in three high-value segments: **finance professionals** (highest willingness to pay), **legal professionals** (underserved solo/small firms), and **academic researchers** (largest addressable market with viral growth).
 
 ---
 
@@ -26,7 +26,7 @@ DocTalk is an AI-powered document workbench with a unique competitive advantage:
 - **Cross-document Q&A** is the #1 missing capability vs. NotebookLM
 
 ### DocTalk's Position Today
-- **Strengths**: Citation precision (small chunks + bbox highlights), Structured Extraction with cited Markdown/CSV deliverables, 2 DeepSeek V4 modes (Flash=fast cited answers, Pro=deeper analysis) with model-adaptive prompts and per-model parameter tuning (benchmark-validated), OCR, dark mode, multi-language (11 languages), ChatGPT-style chat UI (stop generation, scroll-to-bottom, compact citation pills, "+" action menu, hover action buttons, styled code blocks with copy, antialiased typography, max-width centering), streaming indicators, auto-summary, security hardening (SSRF protection, SSE-S3 encryption at rest, file validation, structured security logging, GDPR data export, cookie consent, non-root Docker), branded email magic link with 11-locale i18n
+- **Strengths**: Citation precision (small chunks + bbox highlights), Structured Extraction with cited Markdown/CSV deliverables, Table Extraction with CSV export, 2 DeepSeek V4 modes (Flash=fast cited answers, Pro=deeper analysis) with model-adaptive prompts and per-model parameter tuning (benchmark-validated), OCR, dark mode, multi-language (11 languages), ChatGPT-style chat UI (stop generation, scroll-to-bottom, compact citation pills, "+" action menu, hover action buttons, styled code blocks with copy, antialiased typography, max-width centering), streaming indicators, auto-summary, security hardening (SSRF protection, SSE-S3 encryption at rest, file validation, structured security logging, GDPR data export, cookie consent, non-root Docker), branded email magic link with 11-locale i18n
 - **Weaknesses**: No team features, no API, no SSO
 
 ---
@@ -94,6 +94,7 @@ DocTalk is an AI-powered document workbench with a unique competitive advantage:
 - ✅ **Cancellation feedback + refund review flow**: Billing cancel captures reason/feedback, optional refund-review intent, and exposes cancel/refund events in the admin funnel
 - ✅ **7-day fair-use refund copy**: Pricing and Billing now set refund expectations before and after purchase
 - ✅ **Structured Extraction launched (`0.3.0 beta`)**: Free users can try a limited number of cited extraction jobs; paid tiers continue through credit consumption and export value
+- ✅ **Table Extraction launched (`0.4.0 beta`)**: Table previews are available after scan; CSV export is a Plus+ conversion lever for finance/research workflows
 - ⏳ **Priority Queue**: Removed from pricing page pending implementation
 - ⏳ **Team tier**: Planned for Phase 3 (requires workspace, RBAC, SSO features)
 
@@ -133,6 +134,8 @@ For comparison, subscriptions range from 0.167¢/credit (Pro annual) to 0.333¢/
 |---------|------|------|-----|------|------------|
 | Core citation chat | Yes | Yes | Yes | Yes | Yes |
 | Structured extraction | 2/mo | Credits | Credits | Credits | Custom |
+| Table preview | Yes | Yes | Yes | Yes | Yes |
+| Table CSV export | No | Yes | Yes | Yes | Yes |
 | Pro mode | Limited | Yes | Yes | Yes | Yes |
 | OCR | Yes | Yes | Yes | Yes | Yes |
 | Sessions per doc | 3 | Unlimited | Unlimited | Unlimited | Unlimited |

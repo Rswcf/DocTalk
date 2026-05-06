@@ -6,6 +6,7 @@ from .tables import (
     CreditLedger,
     Document,
     DocumentJob,
+    DocumentTable,
     ExtractionResult,
     Message,
     Page,
@@ -27,5 +28,6 @@ __all__ = [
     "CreditLedger",
     "UsageRecord",
     "DocumentJob",
+    "DocumentTable",
     "ExtractionResult",
 ]

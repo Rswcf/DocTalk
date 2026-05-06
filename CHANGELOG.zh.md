@@ -8,6 +8,16 @@
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-05-07
+
+### Added
+- 文档工作台新增 Table Extraction，支持 `Tables` 预览、按需扫描表格、
+  PDF `find_tables()`、非 PDF/转换文档的 markdown table fallback，以及 Plus+
+  CSV 导出。
+- 新增 `document_tables` 表与 `table_scan` document job 类型，为表格提取工作流
+  提供可复用基础。
+- 新增 FastAPI 表格扫描/列表/导出接口与 Celery table worker 任务。
+
 ## [0.3.0] - 2026-05-07
 
 ### Added

@@ -24,6 +24,7 @@ from .api.export import router as export_router
 from .api.extractions import router as extractions_router
 from .api.search import search_router
 from .api.sharing import router as sharing_router
+from .api.tables import router as tables_router
 from .api.users import router as users_router
 from .core.config import settings
 from .core.version import get_product_version, get_release_payload
@@ -188,6 +189,7 @@ app.include_router(collections_router)
 app.include_router(admin_router)
 app.include_router(events_router)
 app.include_router(extractions_router)
+app.include_router(tables_router)
 app.include_router(export_router)
 app.include_router(sharing_router)
 

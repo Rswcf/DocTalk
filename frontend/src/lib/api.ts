@@ -1,4 +1,4 @@
-import type { DocumentResponse, Message, SearchResponse, Citation, SessionListResponse, CollectionBrief, CollectionDetail, NormalizedBBox, ExtractionJob, ExtractionTemplate } from '../types';
+import type { DocumentResponse, Message, SearchResponse, Citation, SessionListResponse, CollectionBrief, CollectionDetail, NormalizedBBox, ExtractionJob, ExtractionTemplate, DocumentTable } from '../types';
 import type { UserProfile, CreditHistoryResponse, UsageBreakdown } from '../types';
 
 export const API_BASE = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8000';
@@ -529,6 +529,29 @@ export async function getExtraction(jobId: string): Promise<ExtractionJob> {
 
 export async function exportExtraction(jobId: string, format: 'md' | 'csv'): Promise<Blob> {
   const res = await fetch(`${PROXY_BASE}/api/extractions/${jobId}/export?format=${format}`);
+  if (!res.ok) await throwApiError(res);
+  return res.blob();
+}
+
+// --- Table Extraction API ---
+
+export async function scanDocumentTables(documentId: string): Promise<ExtractionJob> {
+  const res = await fetch(`${PROXY_BASE}/api/documents/${documentId}/tables/scan`, { method: 'POST' });
+  return handle(res);
+}
+
+export async function listDocumentTables(documentId: string): Promise<DocumentTable[]> {
+  const res = await fetch(`${PROXY_BASE}/api/documents/${documentId}/tables`);
+  return handle(res);
+}
+
+export async function getTableScanJob(jobId: string): Promise<ExtractionJob> {
+  const res = await fetch(`${PROXY_BASE}/api/document-table-scans/${jobId}`);
+  return handle(res);
+}
+
+export async function exportDocumentTable(tableId: string): Promise<Blob> {
+  const res = await fetch(`${PROXY_BASE}/api/document-tables/${tableId}/export`);
   if (!res.ok) await throwApiError(res);
   return res.blob();
 }
