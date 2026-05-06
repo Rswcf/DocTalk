@@ -19,11 +19,11 @@ function CellValue({ value }: { value: string | boolean }) {
   const { t } = useLocale();
   if (typeof value === 'boolean') {
     return value ? (
-      <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-emerald-50 dark:bg-emerald-950/40">
+      <span className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-emerald-50 dark:bg-emerald-950/40">
         <Check className="w-4 h-4 text-emerald-600 dark:text-emerald-400" aria-label={t('common.yes')} />
       </span>
     ) : (
-      <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-zinc-100 dark:bg-zinc-800">
+      <span className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-zinc-100 dark:bg-zinc-800">
         <X className="w-4 h-4 text-zinc-400 dark:text-zinc-500" aria-label={t('common.no')} />
       </span>
     );
@@ -42,21 +42,21 @@ function CellValue({ value }: { value: string | boolean }) {
 export default function ComparisonTable({ features, competitorName }: ComparisonTableProps) {
   const { t } = useLocale();
   return (
-    <div className="relative rounded-xl border border-zinc-200 dark:border-zinc-800 overflow-hidden">
+    <div className="relative overflow-hidden rounded-xl border border-zinc-200 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
       {/* Mobile scroll hint */}
       <div className="overflow-x-auto">
         <table className="w-full border-collapse text-sm min-w-[480px]">
           <thead>
             <tr>
-              <th className="text-left py-4 px-5 font-semibold text-zinc-900 dark:text-zinc-100 bg-zinc-50 dark:bg-zinc-900/80 w-[40%]">
+              <th className="w-[40%] bg-zinc-50 px-5 py-4 text-left font-semibold text-zinc-900 dark:bg-zinc-950 dark:text-zinc-100">
                 {t('billing.comparison.feature')}
               </th>
-              <th className="text-center py-4 px-5 font-semibold text-zinc-900 dark:text-zinc-100 bg-blue-50/60 dark:bg-blue-950/20 w-[30%]">
+              <th className="w-[30%] border-x border-accent/15 bg-accent-light px-5 py-4 text-center font-semibold text-zinc-900 dark:text-zinc-100">
                 <span className="inline-flex items-center gap-1.5">
                   DocTalk
                 </span>
               </th>
-              <th className="text-center py-4 px-5 font-semibold text-zinc-900 dark:text-zinc-100 bg-zinc-50 dark:bg-zinc-900/80 w-[30%]">
+              <th className="w-[30%] bg-zinc-50 px-5 py-4 text-center font-semibold text-zinc-900 dark:bg-zinc-950 dark:text-zinc-100">
                 {competitorName}
               </th>
             </tr>
@@ -74,7 +74,7 @@ export default function ComparisonTable({ features, competitorName }: Comparison
                 <td className="py-3.5 px-5 text-zinc-700 dark:text-zinc-300 font-medium">
                   {feature.name}
                 </td>
-                <td className="py-3.5 px-5 text-center text-zinc-700 dark:text-zinc-300 bg-blue-50/30 dark:bg-blue-950/10">
+                <td className="border-x border-accent/10 bg-accent-light/60 px-5 py-3.5 text-center text-zinc-700 dark:text-zinc-300">
                   <CellValue value={feature.doctalk} />
                 </td>
                 <td className="py-3.5 px-5 text-center text-zinc-700 dark:text-zinc-300">

@@ -12,6 +12,7 @@ import {
   Globe2,
   AlertTriangle,
   Mail,
+  ArrowRight,
   type LucideIcon,
 } from "lucide-react";
 import Header from "../../components/Header";
@@ -127,11 +128,17 @@ const gaps = [
   },
 ];
 
+const trustStats = [
+  { label: "Encryption", value: "AES-256" },
+  { label: "Transport", value: "TLS 1.2+" },
+  { label: "Retention stance", value: "No training" },
+];
+
 function ControlCard({ icon: Icon, title, detail, evidence }: Control) {
   return (
-    <div className="p-5 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900">
-      <div className="flex items-center gap-3 mb-2">
-        <span className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-accent/10 text-accent">
+    <div className="group flex h-full flex-col rounded-xl border border-zinc-200 bg-white p-5 shadow-sm transition-[border-color,box-shadow,transform] duration-200 hover:-translate-y-0.5 hover:border-zinc-300 hover:shadow-md dark:border-zinc-800 dark:bg-zinc-900 dark:hover:border-zinc-700">
+      <div className="mb-3 flex items-center gap-3">
+        <span className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-zinc-200 bg-zinc-50 text-accent transition-colors group-hover:border-accent/30 group-hover:bg-accent-light dark:border-zinc-800 dark:bg-zinc-950">
           <Icon aria-hidden size={18} />
         </span>
         <h3 className="text-base font-semibold text-zinc-900 dark:text-zinc-100">
@@ -142,7 +149,7 @@ function ControlCard({ icon: Icon, title, detail, evidence }: Control) {
         {detail}
       </p>
       {evidence && (
-        <p className="mt-3 font-mono text-[11px] text-zinc-400 dark:text-zinc-500">
+        <p className="mt-auto border-t border-zinc-200 pt-3 font-mono text-[11px] leading-5 text-zinc-400 dark:border-zinc-800 dark:text-zinc-500">
           {evidence}
         </p>
       )}
@@ -158,19 +165,59 @@ export default function TrustPageClient() {
     <div className="flex flex-col min-h-screen bg-[var(--page-background)]">
       <Header variant="minimal" />
       <main id="main-content" className="flex-1">
-        {/* Hero */}
-        <section className="max-w-4xl mx-auto px-6 pt-16 pb-10">
-          <p className="text-[11px] font-mono uppercase tracking-widest text-zinc-500 dark:text-zinc-400 mb-3">
-            Trust Center
-          </p>
-          <h1 className="font-serif text-3xl md:text-5xl font-medium tracking-[-0.03em] text-zinc-900 dark:text-zinc-50 text-balance mb-5">
-            The real controls protecting your documents.
-          </h1>
-          <p className="text-lg text-zinc-600 dark:text-zinc-300 leading-relaxed max-w-2xl">
-            What DocTalk actually does to keep your uploads private, isolated,
-            and unused for model training. And — openly — what we haven&apos;t
-            certified yet.
-          </p>
+        <section className="mx-auto max-w-6xl px-6 pt-16 pb-10">
+          <div className="grid gap-8 lg:grid-cols-[1fr_420px] lg:items-end">
+            <div>
+              <p className="mb-3 font-mono text-[11px] uppercase tracking-widest text-zinc-500 dark:text-zinc-400">
+                Trust Center
+              </p>
+              <h1 className="mb-5 max-w-3xl text-balance font-serif text-3xl font-medium tracking-[-0.03em] text-zinc-900 dark:text-zinc-50 md:text-5xl">
+                The real controls protecting your documents.
+              </h1>
+              <p className="max-w-2xl text-lg leading-relaxed text-zinc-600 dark:text-zinc-300">
+                What DocTalk actually does to keep your uploads private, isolated,
+                and unused for model training. And openly, what we haven&apos;t
+                certified yet.
+              </p>
+              <div className="mt-7 flex flex-wrap gap-3">
+                <Link
+                  href="/privacy"
+                  className="inline-flex items-center gap-2 rounded-lg bg-zinc-900 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-zinc-800 dark:bg-zinc-50 dark:text-zinc-900 dark:hover:bg-zinc-200 focus-visible:ring-2 focus-visible:ring-zinc-400"
+                >
+                  Privacy policy
+                  <ArrowRight aria-hidden size={15} />
+                </Link>
+                <Link
+                  href="/contact"
+                  className="inline-flex items-center gap-2 rounded-lg border border-zinc-200 bg-white px-4 py-2.5 text-sm font-semibold text-zinc-700 transition-colors hover:border-zinc-300 hover:text-zinc-900 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:border-zinc-700 dark:hover:text-zinc-100 focus-visible:ring-2 focus-visible:ring-zinc-400"
+                >
+                  Report security issue
+                </Link>
+              </div>
+            </div>
+
+            <aside className="rounded-xl border border-zinc-200 bg-white p-4 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+              <div className="mb-4 flex items-center gap-2 text-sm font-semibold text-zinc-900 dark:text-zinc-100">
+                <ShieldCheck aria-hidden size={17} className="text-accent" />
+                Control summary
+              </div>
+              <div className="grid grid-cols-3 gap-3">
+                {trustStats.map((stat) => (
+                  <div key={stat.label} className="rounded-lg border border-zinc-200 bg-zinc-50 p-3 dark:border-zinc-800 dark:bg-zinc-950">
+                    <div className="text-lg font-semibold text-zinc-900 dark:text-zinc-50">
+                      {stat.value}
+                    </div>
+                    <div className="mt-1 text-[11px] font-medium leading-4 text-zinc-500 dark:text-zinc-400">
+                      {stat.label}
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <p className="mt-4 rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs leading-5 text-amber-800 dark:border-amber-900/60 dark:bg-amber-950/30 dark:text-amber-200">
+                Compliance badges are not claimed unless they are actually audited.
+              </p>
+            </aside>
+          </div>
         </section>
 
         {/* Encryption & transit */}
@@ -178,7 +225,7 @@ export default function TrustPageClient() {
           <h2 className="text-[11px] font-mono uppercase tracking-widest text-zinc-500 dark:text-zinc-400 mb-4">
             01 — Encryption & transit
           </h2>
-          <div className="grid md:grid-cols-3 gap-4">
+          <div className="grid gap-4 md:grid-cols-3">
             {encryptionControls.map((c) => (
               <ControlCard key={c.title} {...c} />
             ))}
@@ -190,7 +237,7 @@ export default function TrustPageClient() {
           <h2 className="text-[11px] font-mono uppercase tracking-widest text-zinc-500 dark:text-zinc-400 mb-4">
             02 — Ingest safety
           </h2>
-          <div className="grid md:grid-cols-3 gap-4">
+          <div className="grid gap-4 md:grid-cols-3">
             {ingestControls.map((c) => (
               <ControlCard key={c.title} {...c} />
             ))}
@@ -202,7 +249,7 @@ export default function TrustPageClient() {
           <h2 className="text-[11px] font-mono uppercase tracking-widest text-zinc-500 dark:text-zinc-400 mb-4">
             03 — Your data, your control
           </h2>
-          <div className="grid md:grid-cols-3 gap-4">
+          <div className="grid gap-4 md:grid-cols-3">
             {dataRightsControls.map((c) => (
               <ControlCard key={c.title} {...c} />
             ))}
@@ -214,9 +261,9 @@ export default function TrustPageClient() {
           <h2 className="text-[11px] font-mono uppercase tracking-widest text-zinc-500 dark:text-zinc-400 mb-4">
             04 — What we don&apos;t have yet
           </h2>
-          <div className="rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 divide-y divide-zinc-200 dark:divide-zinc-800">
+          <div className="divide-y divide-zinc-200 overflow-hidden rounded-xl border border-zinc-200 bg-white shadow-sm dark:divide-zinc-800 dark:border-zinc-800 dark:bg-zinc-900">
             {gaps.map((g) => (
-              <div key={g.name} className="flex flex-col md:flex-row md:items-start gap-2 md:gap-6 p-5">
+              <div key={g.name} className="flex flex-col gap-2 p-5 md:flex-row md:items-start md:gap-6">
                 <div className="md:w-64 shrink-0">
                   <div className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
                     {g.name}
@@ -236,7 +283,7 @@ export default function TrustPageClient() {
 
         {/* Contact */}
         <section className="max-w-5xl mx-auto px-6 py-12">
-          <div className="rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-6 md:p-8 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+          <div className="flex flex-col gap-4 rounded-xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-900 md:flex-row md:items-center md:justify-between md:p-8">
             <div>
               <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100 mb-1">
                 Report a security issue
