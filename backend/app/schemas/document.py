@@ -65,8 +65,12 @@ class DocumentIngestResponse(BaseModel):
 class DocumentTextPage(BaseModel):
     page_number: int
     text: str
+    section_title: Optional[str] = None
 
 
 class DocumentTextContentResponse(BaseModel):
     file_type: str
     pages: list[DocumentTextPage]
+    title: Optional[str] = None
+    source_url: Optional[str] = None
+    domain: Optional[str] = None

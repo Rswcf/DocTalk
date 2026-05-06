@@ -26,3 +26,48 @@ def test_read_response_bytes_limited_rejects_large_content_length_header() -> No
 
     with pytest.raises(ValueError, match="URL_CONTENT_TOO_LARGE"):
         url_extractor._read_response_bytes_limited(response, max_content_size=10)
+
+
+def test_fetch_and_extract_url_preserves_article_structure(monkeypatch: pytest.MonkeyPatch) -> None:
+    html = b"""
+    <html>
+      <head>
+        <title>Fallback title</title>
+        <meta property="og:title" content="Great Article">
+      </head>
+      <body>
+        <nav>Navigation should disappear</nav>
+        <article>
+          <h1>Great Article</h1>
+          <div class="share">Share this article</div>
+          <div>
+            <p>First paragraph with useful context.</p>
+          </div>
+          <ul>
+            <li>First point</li>
+            <li>Second point</li>
+          </ul>
+          <h2>Details</h2>
+          <p>More evidence in a second section.</p>
+        </article>
+      </body>
+    </html>
+    """
+
+    def _fake_fetch(url: str):
+        return url, "text/html; charset=utf-8", "utf-8", html
+
+    monkeypatch.setattr(url_extractor, "_fetch_with_safe_redirects", _fake_fetch)
+
+    title, pages, pdf_bytes = url_extractor.fetch_and_extract_url("https://example.com/article")
+    content = "\n\n".join(page.text for page in pages)
+
+    assert pdf_bytes is None
+    assert title == "Great Article"
+    assert "# Great Article" in content
+    assert "First paragraph with useful context." in content
+    assert "- First point" in content
+    assert "## Details" in content
+    assert "Navigation should disappear" not in content
+    assert "Share this article" not in content
+    assert content.count("First paragraph with useful context.") == 1

@@ -183,14 +183,24 @@ def parse_document(self, document_id: str) -> None:
 
                 pages = []
                 for ep in extracted:
-                    blocks = [
+                    blocks = []
+                    if ep.section_title:
+                        blocks.append(
+                            BlockInfo(
+                                page=ep.page_number,
+                                text=ep.section_title,
+                                bbox=(0.0, 0.0, 1.0, 0.08),
+                                font_size=18.0,
+                            )
+                        )
+                    blocks.append(
                         BlockInfo(
                             page=ep.page_number,
                             text=ep.text,
-                            bbox=(0.0, 0.0, 1.0, 1.0),
+                            bbox=(0.0, 0.1 if ep.section_title else 0.0, 1.0, 1.0),
                             font_size=12.0,
                         )
-                    ]
+                    )
                     pages.append(
                         PageInfo(
                             page_number=ep.page_number,

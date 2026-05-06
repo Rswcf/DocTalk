@@ -31,6 +31,6 @@ def extract_document(file_bytes: bytes, file_type: str) -> List[ExtractedPage]:
         return extract_text(file_bytes, file_type)
     elif file_type == 'url':
         from .text_extractor import extract_text
-        return extract_text(file_bytes, 'txt')
+        return extract_text(file_bytes, 'md')
     else:
         raise ValueError(f"Unsupported file type: {file_type}")

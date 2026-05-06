@@ -50,6 +50,7 @@ export interface DocumentResponse {
   suggested_questions?: string[];
   custom_instructions?: string | null;
   file_type?: string;
+  source_url?: string | null;
   has_converted_pdf?: boolean;
 }
 

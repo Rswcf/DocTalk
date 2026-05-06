@@ -4,6 +4,7 @@ import React from "react";
 import { FileText } from "lucide-react";
 import type { Citation } from "../../types";
 import { useLocale } from "../../i18n";
+import { useDocTalkStore } from "../../store";
 
 interface SourcesStripProps {
   citations: Citation[];
@@ -41,6 +42,7 @@ export default function SourcesStrip({
   isStreaming = false,
 }: SourcesStripProps) {
   const { t, tOr } = useLocale();
+  const currentDocumentName = useDocTalkStore((s) => s.documentName);
 
   // Dedupe by chunkId (stable per chunk) while preserving LLM order.
   const unique = React.useMemo(() => {
@@ -92,7 +94,7 @@ export default function SourcesStrip({
       </div>
       <div className="flex flex-wrap gap-2">
         {unique.map((c) => {
-          const filename = c.documentFilename ?? "Document";
+          const filename = c.documentFilename || currentDocumentName || "Document";
           const displayFilename =
             filename.length > 22 ? filename.slice(0, 20) + "…" : filename;
           const jumpLabel = t("citation.jumpTo", { page: c.page });

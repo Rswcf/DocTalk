@@ -5,6 +5,7 @@ import logging
 import uuid
 import zipfile
 from typing import Optional
+from urllib.parse import urlparse
 
 from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile, status
 from fastapi.responses import JSONResponse
@@ -25,7 +26,7 @@ from app.schemas.document import (
     DocumentResponse,
     DocumentTextContentResponse,
 )
-from app.services.doc_service import can_access_document, doc_service
+from app.services.doc_service import can_access_document, doc_service, sanitize_filename
 from app.services.storage_service import storage_service
 
 logger = logging.getLogger(__name__)
@@ -428,7 +429,8 @@ async def ingest_url(
             content={"document_id": str(doc_id), "status": "parsing", "filename": title},
         )
     else:
-        # URL returned HTML — store extracted text as .txt, process through text pipeline
+        # URL returned HTML: store a structured Markdown snapshot and process
+        # it through the URL text pipeline.
         text_content = '\n\n'.join(p.text for p in pages)
         text_bytes = text_content.encode('utf-8')
         if len(text_bytes) > max_size_mb * 1024 * 1024:
@@ -444,18 +446,19 @@ async def ingest_url(
             )
 
         doc_id = uuid.uuid4()
-        filename = f"{title[:100]}.txt"
-        storage_key = f"documents/{doc_id}/{filename}"
-        await asyncio.to_thread(storage_service.upload_file, text_bytes, storage_key, 'text/plain')
+        display_title = (title or urlparse(url).netloc or "Imported webpage")[:100]
+        storage_filename = sanitize_filename(f"{display_title}.md", max_length=140)
+        storage_key = f"documents/{doc_id}/{storage_filename}"
+        await asyncio.to_thread(storage_service.upload_file, text_bytes, storage_key, 'text/markdown')
 
         doc = Document(
             id=doc_id,
-            filename=filename,
+            filename=display_title,
             file_size=len(text_bytes),
             storage_key=storage_key,
             status="parsing",
             user_id=user.id,
-            file_type="txt",
+            file_type="url",
             source_url=url,
         )
         db.add(doc)
@@ -466,7 +469,7 @@ async def ingest_url(
 
         return JSONResponse(
             status_code=status.HTTP_202_ACCEPTED,
-            content={"document_id": str(doc_id), "status": "parsing", "filename": filename},
+            content={"document_id": str(doc_id), "status": "parsing", "filename": display_title},
         )
 
 
@@ -482,6 +485,8 @@ async def get_document(
     if not can_access_document(doc, user):
         raise HTTPException(status_code=404, detail=DOCUMENT_NOT_FOUND_DETAIL)
     resp = DocumentResponse.model_validate(doc)
+    if doc.source_url and resp.filename.lower().endswith((".txt", ".md")):
+        resp.filename = resp.filename.rsplit(".", 1)[0]
     resp.has_converted_pdf = bool(doc.converted_storage_key)
     return resp
 
@@ -552,12 +557,30 @@ async def get_document_text_content(
     )
     db_pages = result.scalars().all()
 
+    section_titles: dict[int, str] = {}
+    result = await db.execute(
+        sa_select(Chunk)
+        .where(Chunk.document_id == document_id)
+        .where(Chunk.section_title.is_not(None))
+        .order_by(Chunk.chunk_index)
+    )
+    for chunk in result.scalars().all():
+        title = (chunk.section_title or "").strip()
+        if not title:
+            continue
+        for page_num in range(chunk.page_start, chunk.page_end + 1):
+            section_titles.setdefault(page_num, title)
+
     # Check if any page has content stored
     has_content = any(p.content for p in db_pages)
 
     if has_content:
         pages_list = [
-            {"page_number": p.page_number, "text": p.content or ''}
+            {
+                "page_number": p.page_number,
+                "text": p.content or '',
+                "section_title": section_titles.get(p.page_number),
+            }
             for p in db_pages
             if p.content
         ]
@@ -578,11 +601,26 @@ async def get_document_text_content(
                 pages_dict[page_num].append(chunk.text)
 
         pages_list = [
-            {"page_number": pn, "text": "\n".join(texts)}
+            {
+                "page_number": pn,
+                "text": "\n".join(texts),
+                "section_title": section_titles.get(pn),
+            }
             for pn, texts in sorted(pages_dict.items())
         ]
 
-    return {"file_type": getattr(doc, 'file_type', 'pdf'), "pages": pages_list}
+    source_url = getattr(doc, 'source_url', None)
+    domain = urlparse(source_url).netloc if source_url else None
+    title = getattr(doc, 'filename', None)
+    if source_url and isinstance(title, str) and title.lower().endswith((".txt", ".md")):
+        title = title.rsplit(".", 1)[0]
+    return {
+        "file_type": getattr(doc, 'file_type', 'pdf'),
+        "pages": pages_list,
+        "title": title,
+        "source_url": source_url,
+        "domain": domain,
+    }
 
 
 @documents_router.post(

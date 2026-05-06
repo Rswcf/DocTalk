@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import ipaddress
+import re
 from typing import List, Optional, Tuple
 from urllib.parse import urljoin, urlparse
 
@@ -16,6 +17,47 @@ from .base import ExtractedPage
 MAX_CONTENT_SIZE = 10 * 1024 * 1024  # 10MB
 FETCH_TIMEOUT = 30  # seconds
 MAX_REDIRECTS = 3
+
+CONTENT_TAGS = [
+    "h1",
+    "h2",
+    "h3",
+    "h4",
+    "h5",
+    "h6",
+    "p",
+    "li",
+    "td",
+    "th",
+    "pre",
+    "blockquote",
+    "div",
+]
+HEADING_TAGS = {"h1", "h2", "h3", "h4", "h5", "h6"}
+NESTED_BLOCK_TAGS = [
+    "h1",
+    "h2",
+    "h3",
+    "h4",
+    "h5",
+    "h6",
+    "p",
+    "li",
+    "ul",
+    "ol",
+    "table",
+    "pre",
+    "blockquote",
+]
+BOILERPLATE_RE = re.compile(
+    r"\b("
+    r"ad|ads|advert|banner|breadcrumb|byline|cookie|comments?|consent|"
+    r"footer|header|login|menu|modal|nav|newsletter|popup|promo|"
+    r"recommend|related|share|sidebar|signin|signup|social|subscribe|toolbar"
+    r")\b",
+    re.IGNORECASE,
+)
+WHITESPACE_RE = re.compile(r"[ \t\r\f\v]+")
 
 
 def _read_response_bytes_limited(
@@ -119,6 +161,166 @@ def _fetch_with_safe_redirects(url: str) -> tuple[str, str, str, bytes]:
     raise ValueError("TOO_MANY_REDIRECTS")
 
 
+def _clean_text(text: str) -> str:
+    text = WHITESPACE_RE.sub(" ", text)
+    return re.sub(r"\n{3,}", "\n\n", text).strip()
+
+
+def _meta_content(soup: BeautifulSoup, *names: str) -> str:
+    for name in names:
+        tag = (
+            soup.find("meta", attrs={"name": name})
+            or soup.find("meta", attrs={"property": name})
+            or soup.find("meta", attrs={"itemprop": name})
+        )
+        if tag and tag.get("content"):
+            return _clean_text(str(tag["content"]))
+    return ""
+
+
+def _is_boilerplate_tag(tag) -> bool:
+    attrs: list[str] = []
+    for attr_name in ("id", "class", "role", "aria-label", "data-testid"):
+        value = tag.get(attr_name)
+        if isinstance(value, list):
+            attrs.extend(str(v) for v in value)
+        elif value:
+            attrs.append(str(value))
+    style = str(tag.get("style", ""))
+    if "display:none" in style.replace(" ", "").lower() or tag.has_attr("hidden"):
+        return True
+    return bool(attrs and BOILERPLATE_RE.search(" ".join(attrs)))
+
+
+def _inside_boilerplate(element, root) -> bool:
+    for parent in element.parents:
+        if parent is root:
+            return False
+        if getattr(parent, "name", None) in ("body", "html", "[document]"):
+            return False
+        if _is_boilerplate_tag(parent):
+            return True
+    return False
+
+
+def _should_skip_element(element, root) -> bool:
+    if _inside_boilerplate(element, root) or _is_boilerplate_tag(element):
+        return True
+
+    # Parent containers duplicate all child text. Keep div text only when it is
+    # an actual leaf-like text block, not a wrapper around article structure.
+    if element.name == "div" and element.find(NESTED_BLOCK_TAGS, recursive=True):
+        return True
+
+    if element.name in ("li", "td", "th") and element.find(["p", "ul", "ol"], recursive=True):
+        return True
+
+    if element.find_parent(["pre", "blockquote"]) and element.name not in ("pre", "blockquote"):
+        return True
+
+    return False
+
+
+def _format_element_text(element) -> str:
+    text = _clean_text(element.get_text(separator=" ", strip=True))
+    if not text:
+        return ""
+
+    if element.name in HEADING_TAGS:
+        level = min(max(int(element.name[1]), 1), 6)
+        return f"{'#' * level} {text}"
+    if element.name == "li":
+        return f"- {text}"
+    if element.name == "blockquote":
+        return "\n".join(f"> {line}" for line in text.splitlines() if line.strip())
+    if element.name == "pre":
+        return f"```\n{text}\n```"
+    return text
+
+
+def _dedupe_key(block: str) -> str:
+    text = block.lstrip("#- >").strip().lower()
+    text = re.sub(r"\s+", " ", text)
+    return text[:500]
+
+
+def _extract_article_blocks(soup: BeautifulSoup, title: str) -> list[str]:
+    for tag in soup.find_all(["script", "style", "nav", "footer", "header", "aside", "noscript", "iframe", "form", "svg"]):
+        tag.decompose()
+
+    for tag in soup.find_all(_is_boilerplate_tag):
+        tag.decompose()
+
+    main_content = (
+        soup.find("main")
+        or soup.find("article")
+        or soup.find(attrs={"role": "main"})
+        or soup.find(id="content")
+        or soup.find(class_="content")
+        or soup.body
+        or soup
+    )
+
+    blocks: list[str] = []
+    seen: set[str] = set()
+    for element in main_content.find_all(CONTENT_TAGS):
+        if _should_skip_element(element, main_content):
+            continue
+        block = _format_element_text(element)
+        if len(block.lstrip("#- >").strip()) < 2:
+            continue
+        key = _dedupe_key(block)
+        if key in seen:
+            continue
+        seen.add(key)
+        blocks.append(block)
+
+    if title and not any(block.startswith("# ") for block in blocks[:3]):
+        blocks.insert(0, f"# {title}")
+
+    return blocks
+
+
+def _split_blocks_into_pages(blocks: list[str], fallback_title: str) -> list[ExtractedPage]:
+    pages: list[ExtractedPage] = []
+    current_blocks: list[str] = []
+    current_title: str | None = fallback_title[:200] if fallback_title else None
+    current_chars = 0
+    page_num = 1
+
+    def flush_page() -> None:
+        nonlocal page_num, current_chars
+        if not current_blocks:
+            return
+        content = "\n\n".join(current_blocks).strip()
+        if content:
+            pages.append(
+                ExtractedPage(
+                    page_number=page_num,
+                    text=content,
+                    section_title=current_title,
+                )
+            )
+            page_num += 1
+        current_blocks.clear()
+        current_chars = 0
+
+    for block in blocks:
+        if block.startswith("#"):
+            heading = block.lstrip("#").strip()
+            if current_blocks:
+                flush_page()
+            current_title = heading[:200] if heading else current_title
+
+        current_blocks.append(block)
+        current_chars += len(block)
+        if current_chars >= 3000:
+            flush_page()
+
+    flush_page()
+    return pages
+
+
 def fetch_and_extract_url(url: str) -> Tuple[str, List[ExtractedPage], Optional[bytes]]:
     """Fetch URL and extract text content.
 
@@ -142,9 +344,12 @@ def fetch_and_extract_url(url: str) -> Tuple[str, List[ExtractedPage], Optional[
     soup = BeautifulSoup(html, 'html.parser')
 
     # Extract title
-    title = ''
+    title = ""
+    og_title = _meta_content(soup, "og:title", "twitter:title")
     if soup.title and soup.title.string:
         title = soup.title.string.strip()
+    if og_title:
+        title = og_title
     if not title:
         h1 = soup.find('h1')
         if h1:
@@ -152,69 +357,8 @@ def fetch_and_extract_url(url: str) -> Tuple[str, List[ExtractedPage], Optional[
     if not title:
         title = url.split('//')[-1].split('/')[0]  # domain as fallback
 
-    # Remove non-content elements
-    for tag in soup.find_all(['script', 'style', 'nav', 'footer', 'header',
-                               'aside', 'noscript', 'iframe', 'form']):
-        tag.decompose()
-
-    # Try to find main content area
-    main_content = (
-        soup.find('main') or
-        soup.find('article') or
-        soup.find(attrs={'role': 'main'}) or
-        soup.find(id='content') or
-        soup.find(class_='content') or
-        soup.body or
-        soup
-    )
-
-    # Extract text sections
-    pages: List[ExtractedPage] = []
-    current_text = []
-    current_title = None
-    page_num = 1
-
-    for element in main_content.find_all(['h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'p', 'li', 'td', 'th', 'pre', 'blockquote', 'div']):
-        text = element.get_text(separator=' ', strip=True)
-        if not text:
-            continue
-
-        if element.name in ('h1', 'h2', 'h3'):
-            # Start new section at headings
-            if current_text:
-                combined = '\n'.join(current_text)
-                if combined.strip():
-                    pages.append(ExtractedPage(
-                        page_number=page_num,
-                        text=combined,
-                        section_title=current_title,
-                    ))
-                    page_num += 1
-                current_text = []
-            current_title = text
-        else:
-            current_text.append(text)
-            # Split at ~3000 chars
-            if sum(len(t) for t in current_text) > 3000:
-                combined = '\n'.join(current_text)
-                pages.append(ExtractedPage(
-                    page_number=page_num,
-                    text=combined,
-                    section_title=current_title,
-                ))
-                page_num += 1
-                current_text = []
-                current_title = None
-
-    # Flush remaining
-    if current_text:
-        combined = '\n'.join(current_text)
-        if combined.strip():
-            pages.append(ExtractedPage(
-                page_number=page_num,
-                text=combined,
-                section_title=current_title,
-            ))
+    blocks = _extract_article_blocks(soup, _clean_text(title))
+    pages = _split_blocks_into_pages(blocks, _clean_text(title))
 
     if not pages:
         raise ValueError("NO_TEXT_CONTENT")
