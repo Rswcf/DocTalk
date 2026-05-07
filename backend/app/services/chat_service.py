@@ -24,9 +24,9 @@ from app.models.tables import (
     collection_documents,
 )
 from app.services import credit_service
+from app.services.corrective_retrieval_service import corrective_retrieval_service
 from app.services.document_brief_service import document_brief_service
 from app.services.query_router import QueryIntent, query_router
-from app.services.retrieval_service import retrieval_service
 
 logger = logging.getLogger(__name__)
 
@@ -319,6 +319,24 @@ def _citation_contract() -> str:
     )
 
 
+def _retrieval_quality_contract(evaluation: Any | None, strategy: str) -> str:
+    if evaluation is None:
+        return ""
+
+    missing_line = (
+        f"- Missing evidence-bearing query term count: {len(evaluation.missing_terms)}\n"
+        if evaluation.missing_terms
+        else ""
+    )
+    return (
+        "\n\n## Retrieval Quality\n"
+        f"- Retrieval strategy: {strategy}\n"
+        f"- Evidence status: {evaluation.status} ({evaluation.reason})\n"
+        f"- Guidance: {evaluation.prompt_note}\n"
+        f"{missing_line}"
+    )
+
+
 async def _refund_predebit(
     db: AsyncSession,
     user_id: uuid.UUID,
@@ -574,6 +592,7 @@ class ChatService:
             # selector until the durable hierarchical brief index lands.
             setup_error_code = "RETRIEVAL_ERROR"
             retrieval_strategy = "semantic_top_k"
+            retrieval_evaluation = None
             if (
                 query_route.primary_intent == QueryIntent.DOCUMENT_SUMMARY
                 and document_id
@@ -598,13 +617,27 @@ class ChatService:
                 )
                 retrieval_strategy = "collection_summary_context"
             elif is_collection_session and collection_doc_ids:
-                retrieved = await retrieval_service.search_multi(
-                    user_message, collection_doc_ids, top_k=8, db=db
+                corrective = await corrective_retrieval_service.retrieve_multi(
+                    user_message,
+                    query_route,
+                    collection_doc_ids,
+                    top_k=8,
+                    db=db,
                 )
+                retrieved = corrective.retrieved
+                retrieval_strategy = corrective.strategy
+                retrieval_evaluation = corrective.evaluation
             elif document_id:
-                retrieved = await retrieval_service.search(
-                    user_message, document_id, top_k=8, db=db
+                corrective = await corrective_retrieval_service.retrieve_single(
+                    user_message,
+                    query_route,
+                    document_id,
+                    top_k=8,
+                    db=db,
                 )
+                retrieved = corrective.retrieved
+                retrieval_strategy = corrective.strategy
+                retrieval_evaluation = corrective.evaluation
             else:
                 retrieved = []
 
@@ -666,6 +699,7 @@ class ChatService:
                     + f"## Available Documents\n{doc_list}\n\n"
                     + "## Document Fragments\n"
                     + ("\n".join(numbered_chunks) if numbered_chunks else "(none)")
+                    + _retrieval_quality_contract(retrieval_evaluation, retrieval_strategy)
                     + "\n\n## Rules\n" + rules
                     + _citation_contract()
                 )
@@ -694,6 +728,7 @@ class ChatService:
                     + SYSTEM_PROMPT_META_RULE
                     + "## Document Fragments\n"
                     + ("\n".join(numbered_chunks) if numbered_chunks else "(none)")
+                    + _retrieval_quality_contract(retrieval_evaluation, retrieval_strategy)
                     + "\n\n## Rules\n" + rules
                     + _citation_contract()
                 )

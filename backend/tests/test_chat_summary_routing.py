@@ -153,7 +153,7 @@ async def test_whole_document_summary_uses_brief_context_not_semantic_retrieval(
             }
         ]
     )
-    semantic_search = AsyncMock(return_value=[])
+    corrective_retrieval = AsyncMock(return_value=None)
     create = AsyncMock(
         return_value=_FakeStream(
             [
@@ -175,7 +175,11 @@ async def test_whole_document_summary_uses_brief_context_not_semantic_retrieval(
         "get_summary_context",
         summary_context,
     )
-    monkeypatch.setattr(chat_service_module.retrieval_service, "search", semantic_search)
+    monkeypatch.setattr(
+        chat_service_module.corrective_retrieval_service,
+        "retrieve_single",
+        corrective_retrieval,
+    )
     monkeypatch.setattr(chat_service_module, "_get_llm_client", lambda _model: fake_client)
 
     events = [
@@ -190,7 +194,7 @@ async def test_whole_document_summary_uses_brief_context_not_semantic_retrieval(
     ]
 
     summary_context.assert_awaited_once_with(db, document_id, max_chunks=18)
-    semantic_search.assert_not_awaited()
+    corrective_retrieval.assert_not_awaited()
     assert any(event["event"] == "citation" for event in events)
     assert events[-1]["event"] == "done"
 
@@ -226,7 +230,7 @@ async def test_collection_summary_uses_collection_brief_context_not_search_multi
             }
         ]
     )
-    semantic_search_multi = AsyncMock(return_value=[])
+    corrective_retrieval = AsyncMock(return_value=None)
     create = AsyncMock(
         return_value=_FakeStream(
             [
@@ -249,9 +253,9 @@ async def test_collection_summary_uses_collection_brief_context_not_search_multi
         collection_summary_context,
     )
     monkeypatch.setattr(
-        chat_service_module.retrieval_service,
-        "search_multi",
-        semantic_search_multi,
+        chat_service_module.corrective_retrieval_service,
+        "retrieve_multi",
+        corrective_retrieval,
     )
     monkeypatch.setattr(chat_service_module, "_get_llm_client", lambda _model: fake_client)
 
@@ -272,6 +276,6 @@ async def test_collection_summary_uses_collection_brief_context_not_search_multi
         max_chunks=24,
         max_docs=8,
     )
-    semantic_search_multi.assert_not_awaited()
+    corrective_retrieval.assert_not_awaited()
     assert any(event["event"] == "citation" for event in events)
     assert events[-1]["event"] == "done"

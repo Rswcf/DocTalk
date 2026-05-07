@@ -8,6 +8,28 @@ releases use `0.minor.patch` semantics such as `0.2.0` and `0.2.1`.
 
 ## [Unreleased]
 
+## [0.10.0] - 2026-05-07
+
+### Added
+- Added a retrieval quality evaluator for chat that scores ordinary RAG results
+  before generation, tracking empty evidence, weak exact-term coverage,
+  exhaustive-scan undercoverage, low vector scores, matched terms, and missing
+  terms.
+- Added corrective retrieval for local Q&A, table/numeric questions, citation
+  lookup, existence checks, and exhaustive scans. The corrective path keeps the
+  initial vector results, runs a scoped lexical fallback over document chunks,
+  de-duplicates by chunk, and passes an evidence-quality note into the prompt.
+- Added lexical fallback retrieval for single-document and collection sessions
+  using escaped `ILIKE` matching over chunk text and section titles, with
+  deterministic scoring for exact identifiers, numbers, and CJK bigrams.
+- Added regression tests for evaluator decisions, corrective retrieval merging,
+  chat prompt quality notes, and summary routing isolation.
+
+### Changed
+- Ordinary non-summary chat now routes through the corrective retrieval wrapper
+  instead of calling vector search directly. Whole-document and collection
+  summaries still use the persisted/representative brief context path.
+
 ## [0.9.0] - 2026-05-07
 
 ### Added

@@ -4,6 +4,7 @@ import asyncio
 import uuid
 from typing import List
 
+import sqlalchemy as sa
 from qdrant_client.models import FieldCondition, Filter, MatchAny, MatchValue
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -11,11 +12,66 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.config import settings
 from app.models.tables import Chunk
 from app.services.embedding_service import embedding_service
+from app.services.rag_evaluator_service import extract_query_terms
 
 # Minimum text length for a chunk to be useful in retrieval.
 # Shorter chunks are typically form fields, metadata footers, or page numbers
 # that pollute search results for vague queries.
 _MIN_CHUNK_TEXT_LEN = 200
+
+
+def _escape_like(term: str) -> str:
+    return (
+        term.replace("\\", "\\\\")
+        .replace("%", "\\%")
+        .replace("_", "\\_")
+    )
+
+
+def _lexical_score(text: str, terms: tuple[str, ...]) -> float:
+    if not terms:
+        return 0.0
+    lowered = text.lower()
+    matches = sum(1 for term in terms if term.lower() in lowered)
+    return min(0.99, 0.48 + (matches / max(len(terms), 1)) * 0.45)
+
+
+def _chunk_payload(ch: Chunk, *, score: float, include_document_id: bool = False) -> dict:
+    payload = {
+        "chunk_id": ch.id,
+        "text": ch.text,
+        "page": ch.page_start,
+        "page_end": ch.page_end,
+        "bboxes": ch.bboxes,
+        "score": score,
+        "section_title": ch.section_title,
+    }
+    if include_document_id:
+        payload["document_id"] = ch.document_id
+    return payload
+
+
+def _term_match_condition(term: str):
+    escaped = _escape_like(term)
+    pattern = f"%{escaped}%"
+    return sa.or_(
+        Chunk.text.ilike(pattern, escape="\\"),
+        Chunk.section_title.ilike(pattern, escape="\\"),
+    )
+
+
+def _lexical_query_parts(query: str):
+    evidence_terms = extract_query_terms(query)
+    terms = evidence_terms.lexical_terms
+    exact = {term.lower() for term in evidence_terms.exact_terms}
+    conditions = []
+    score_expr = sa.literal(0.0)
+    for term in terms[:8]:
+        condition = _term_match_condition(term)
+        conditions.append(condition)
+        weight = 3.0 if term.lower() in exact else 1.0
+        score_expr = score_expr + sa.case((condition, weight), else_=0.0)
+    return terms, conditions, score_expr
 
 
 class RetrievalService:
@@ -62,19 +118,40 @@ class RetrievalService:
             # Skip micro-chunks (form fields, metadata footers, page numbers)
             if len((ch.text or "").strip()) < _MIN_CHUNK_TEXT_LEN:
                 continue
-            results.append(
-                {
-                    "chunk_id": ch.id,
-                    "text": ch.text,
-                    "page": ch.page_start,
-                    "page_end": ch.page_end,
-                    "bboxes": ch.bboxes,
-                    "score": scores.get(ch.id, 0.0),
-                    "section_title": ch.section_title,
-                }
-            )
+            results.append(_chunk_payload(ch, score=scores.get(ch.id, 0.0)))
 
         return results[: int(top_k or 5)]
+
+    async def lexical_search(self, query: str, document_id: uuid.UUID, top_k: int, db: AsyncSession):
+        """Term-based fallback search for exact names, numbers, clauses, and page/source queries."""
+        terms, conditions, score_expr = _lexical_query_parts(query)
+        if not terms or not conditions:
+            return []
+
+        rows = await db.execute(
+            select(Chunk)
+            .where(Chunk.document_id == document_id)
+            .where(sa.func.length(sa.func.trim(Chunk.text)) >= _MIN_CHUNK_TEXT_LEN)
+            .where(sa.or_(*conditions))
+            .order_by(score_expr.desc(), Chunk.page_start, Chunk.chunk_index)
+            .limit(max(int(top_k or 8) * 4, 64))
+        )
+        chunks: List[Chunk] = list(rows.scalars())
+        ranked = sorted(
+            chunks,
+            key=lambda ch: (
+                _lexical_score(" ".join([ch.section_title or "", ch.text or ""]), terms),
+                -int(ch.page_start or 0),
+            ),
+            reverse=True,
+        )
+        return [
+            _chunk_payload(
+                ch,
+                score=_lexical_score(" ".join([ch.section_title or "", ch.text or ""]), terms),
+            )
+            for ch in ranked[: int(top_k or 8)]
+        ]
 
     async def search_multi(
         self, query: str, document_ids: List[uuid.UUID], top_k: int, db: AsyncSession
@@ -118,20 +195,45 @@ class RetrievalService:
         for ch in chunks:
             if len((ch.text or "").strip()) < _MIN_CHUNK_TEXT_LEN:
                 continue
-            results.append(
-                {
-                    "chunk_id": ch.id,
-                    "document_id": ch.document_id,
-                    "text": ch.text,
-                    "page": ch.page_start,
-                    "page_end": ch.page_end,
-                    "bboxes": ch.bboxes,
-                    "score": scores.get(ch.id, 0.0),
-                    "section_title": ch.section_title,
-                }
-            )
+            results.append(_chunk_payload(ch, score=scores.get(ch.id, 0.0), include_document_id=True))
 
         return results[: int(top_k or 8)]
+
+    async def lexical_search_multi(
+        self, query: str, document_ids: List[uuid.UUID], top_k: int, db: AsyncSession
+    ):
+        """Term-based fallback search across a collection."""
+        if not document_ids:
+            return []
+        terms, conditions, score_expr = _lexical_query_parts(query)
+        if not terms or not conditions:
+            return []
+
+        rows = await db.execute(
+            select(Chunk)
+            .where(Chunk.document_id.in_(document_ids))
+            .where(sa.func.length(sa.func.trim(Chunk.text)) >= _MIN_CHUNK_TEXT_LEN)
+            .where(sa.or_(*conditions))
+            .order_by(score_expr.desc(), Chunk.document_id, Chunk.page_start, Chunk.chunk_index)
+            .limit(max(int(top_k or 8) * 4, 96))
+        )
+        chunks: List[Chunk] = list(rows.scalars())
+        ranked = sorted(
+            chunks,
+            key=lambda ch: (
+                _lexical_score(" ".join([ch.section_title or "", ch.text or ""]), terms),
+                -int(ch.page_start or 0),
+            ),
+            reverse=True,
+        )
+        return [
+            _chunk_payload(
+                ch,
+                score=_lexical_score(" ".join([ch.section_title or "", ch.text or ""]), terms),
+                include_document_id=True,
+            )
+            for ch in ranked[: int(top_k or 8)]
+        ]
 
 
 # Singleton service

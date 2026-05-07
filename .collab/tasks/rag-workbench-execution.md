@@ -18,7 +18,7 @@ Owner: Codex
 | M0 | 0.8.0 beta | RAG execution ledger and golden routing tests | Shipped | `f1a5141` | Version check, lint, backend tests, frontend build, production health/version passed |
 | M1 | 0.8.0 beta | Query intent router and whole-document summary chat path | Shipped | `f1a5141` | Version check, lint, backend tests, frontend build, production health/version passed |
 | M2 | 0.9.0 beta | Hierarchical document brief | Shipped | `42c40da` | Full gate and production health/version passed |
-| M3 | 0.10.0 beta | Retrieval evaluator and corrective RAG | Pending | Pending | Pending |
+| M3 | 0.10.0 beta | Retrieval evaluator and corrective RAG | Verified, release pending | Pending | Full release gate passed locally; production deploy pending |
 | M4 | 0.11.0 beta | Parser integrity fixes | Pending | Pending | Pending |
 | M5 | 0.12.0 beta | Table-aware RAG | Pending | Pending | Pending |
 | M6 | 0.13.0 beta | Query planner, multi-hop, compare | Pending | Pending | Pending |
@@ -92,3 +92,27 @@ Owner: Codex
 - Railway deployment: `b11bcfca-d44c-4221-a3d0-86f8c82fb41b` (`SUCCESS`)
 - Production `/health`: `{"status":"ok","release":{"version":"0.9.0","stage":"beta","build":null}}`
 - Production `/version`: `{"version":"0.9.0","stage":"beta","build":null}`
+
+## M3 Checklist
+
+- [x] Add retrieval evaluator for empty/weak evidence, exact-term misses, low vector scores, and exhaustive undercoverage.
+- [x] Add scoped lexical fallback for single-document and collection retrieval.
+- [x] Add corrective retrieval wrapper that merges vector and lexical evidence without duplicate chunks.
+- [x] Route ordinary non-summary chat through corrective retrieval while preserving summary brief context routing.
+- [x] Inject retrieval quality guidance into non-summary chat prompts.
+- [x] Add targeted evaluator, corrective retrieval, chat prompt, refund, and summary-isolation tests.
+- [x] Run full release verification gate.
+- [ ] Commit, push `main`, merge/push `stable`, tag, deploy, and verify production.
+
+## M3 Verification Log
+
+- 2026-05-07: `cd backend && python3 -m ruff check app/services/rag_evaluator_service.py app/services/corrective_retrieval_service.py app/services/retrieval_service.py app/services/chat_service.py tests/test_rag_evaluator_service.py tests/test_corrective_retrieval_service.py tests/test_chat_corrective_retrieval.py tests/test_chat_setup_refunds.py tests/test_chat_summary_routing.py` passed.
+- 2026-05-07: `cd backend && python3 -m pytest tests/test_rag_evaluator_service.py tests/test_corrective_retrieval_service.py tests/test_chat_corrective_retrieval.py tests/test_chat_setup_refunds.py tests/test_chat_summary_routing.py -v` passed with 16 passed.
+- 2026-05-07: Adversarial review found lexical fallback SQL pre-limit could miss late exact hits and raw missing query terms were echoed into the system prompt; fixed weighted SQL ordering before limit, removed raw term echo, and added regression tests.
+- 2026-05-07: `python3 scripts/check_version_consistency.py` passed for `0.10.0 beta`.
+- 2026-05-07: `cd frontend && npm run build` passed.
+- 2026-05-07: `cd backend && python3 -m ruff check app/ tests/` passed.
+- 2026-05-07: `cd backend && python3 -m pytest tests/test_parse_service.py -v` passed with 7 passed.
+- 2026-05-07: `cd backend && python3 -m pytest tests/ -m 'not integration' -v` passed with 246 passed, 3 skipped, 4 deselected.
+- 2026-05-07: `cd backend && python3 -m pytest -m integration -v` ran; 4 integration tests skipped by local environment configuration.
+- 2026-05-07: `cd backend && python3 -m alembic heads && python3 -m alembic upgrade head` passed with `20260507_0026 (head)`.

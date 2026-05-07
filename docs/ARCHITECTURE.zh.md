@@ -202,11 +202,14 @@ sequenceDiagram
   router，用来识别摘要、局部问答、表格、对比、引用定位、存在性检查和
   穷尽扫描候选。全文摘要和集合摘要请求不会再进入普通语义 top-k 检索。
 
-- **检索**：局部问答仍从 Qdrant 按 COSINE 向量相似度检索 Top-8 文本块。
-  全文摘要优先使用持久化 `document_briefs.coverage`，缺失时使用按文档顺序
-  选择的代表性文本块；集合摘要使用按文档限额抽取的代表性覆盖，避免
-  “总结这篇文档” 这类宽泛问题只命中表格、附录或侧栏。每个片段都包含文本、
-  页码和边界框。
+- **检索**：全文摘要优先使用持久化 `document_briefs.coverage`，缺失时使用按
+  文档顺序选择的代表性文本块；集合摘要使用按文档限额抽取的代表性覆盖，避免
+  “总结这篇文档” 这类宽泛问题只命中表格、附录或侧栏。普通局部问答、表格/数字
+  问题、引用定位、存在性检查和穷尽扫描会先从 Qdrant 按 COSINE 向量相似度检索，
+  然后经过 retrieval evaluator。如果证据为空、较弱、缺少精确查询词，或穷尽扫描
+  覆盖不足，DocTalk 会在同一文档范围内对 chunk text 和 section title 执行
+  lexical fallback，按 chunk 去重合并，并把证据质量提示注入 LLM prompt。每个片段
+  都包含文本、页码和边界框。
 
 - **Document Brief**：文档解析并标记 ready 后，`brief_worker` 会在 Celery
   `default` 队列中生成持久化分层 brief，写入 `document_briefs`。Brief 保存摘要、

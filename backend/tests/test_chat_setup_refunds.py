@@ -117,8 +117,8 @@ async def test_chat_stream_refunds_predebit_when_retrieval_fails(
         AsyncMock(return_value=ledger_id),
     )
     monkeypatch.setattr(
-        chat_service_module.retrieval_service,
-        "search",
+        chat_service_module.corrective_retrieval_service,
+        "retrieve_single",
         AsyncMock(side_effect=RuntimeError("qdrant down")),
     )
     monkeypatch.setattr(chat_service_module, "_refund_predebit", refund_predebit)

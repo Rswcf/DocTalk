@@ -24,7 +24,8 @@ build sequence.
 | `0.6.0 beta` | Question Templates | Shipped | Creates repeat workflows and credit-consuming batch value |
 | `0.7.0 beta` | Document Diff | Shipped | Targets legal/business review pain with Pro-grade semantic comparison |
 | `0.8.0 beta` | Query Router + Summary Context | Shipped | Fixes the highest-trust failure: single-document and collection summaries no longer depend on ordinary top-k retrieval |
-| `0.9.0 beta` | Hierarchical Document Brief | In progress | Persists a cited document map so summaries and first-read UX do not depend on accidental top-k chunks |
+| `0.9.0 beta` | Hierarchical Document Brief | Shipped | Persists a cited document map so summaries and first-read UX do not depend on accidental top-k chunks |
+| `0.10.0 beta` | Retrieval Evaluator + Corrective RAG | In progress | Evaluates ordinary retrieval before generation and falls back to lexical evidence when vector top-k misses exact user terms |
 
 ### 2026-05-07 RAG Workbench Quality Sequence
 

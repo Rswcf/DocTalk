@@ -204,13 +204,17 @@ sequenceDiagram
   and collection summary requests are routed away from ordinary semantic top-k
   retrieval.
 
-- **Retrieval**: Local Q&A still uses top-8 chunks by COSINE vector similarity
-  from Qdrant. Whole-document summaries use ordered representative chunks across
-  the document, preferring persisted `document_briefs.coverage` when available,
-  and collection summaries use capped per-document representative coverage, so
-  vague prompts like "summarize this document" do not over-select tables,
-  appendices, or sidebars. Each fragment includes text, page numbers, and
-  bounding boxes.
+- **Retrieval**: Whole-document summaries use ordered representative chunks
+  across the document, preferring persisted `document_briefs.coverage` when
+  available, and collection summaries use capped per-document representative
+  coverage, so vague prompts like "summarize this document" do not over-select
+  tables, appendices, or sidebars. Ordinary local Q&A, table/numeric questions,
+  citation lookup, existence checks, and exhaustive scans first run Qdrant
+  COSINE vector search, then pass through a retrieval evaluator. If the evidence
+  is empty, weak, missing exact query terms, or under-covered for an exhaustive
+  route, DocTalk runs scoped lexical fallback over chunk text and section titles,
+  de-duplicates the result set, and injects an evidence-quality note into the
+  LLM prompt. Each fragment includes text, page numbers, and bounding boxes.
 
 - **Document Brief**: After parsing marks a document ready, `brief_worker`
   generates a persisted hierarchical brief in `document_briefs` on the Celery

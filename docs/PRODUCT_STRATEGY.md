@@ -7,7 +7,7 @@
 
 ## 1. Executive Summary
 
-DocTalk is an AI-powered document workbench with a unique competitive advantage: **citation-precise answers with bounding-box page highlights** — the most accurate citation UX in the market. As of `0.9.0 beta`, the product is moving beyond general-purpose chat by adding **Structured Extraction**, **Table Extraction**, **Deep Link Answer Share**, **Question Templates**, **Document Diff**, and a cited **Document Brief** workspace: users can turn a document into a cited deliverable, CSV-ready table data, a shareable cited answer, a reusable checklist, a cited semantic change report, or a first-read structural brief. DocTalk can capture significant revenue in three high-value segments: **finance professionals** (highest willingness to pay), **legal professionals** (underserved solo/small firms), and **academic researchers** (largest addressable market with viral growth).
+DocTalk is an AI-powered document workbench with a unique competitive advantage: **citation-precise answers with bounding-box page highlights** — the most accurate citation UX in the market. As of `0.10.0 beta`, the product is moving beyond general-purpose chat by adding **Structured Extraction**, **Table Extraction**, **Deep Link Answer Share**, **Question Templates**, **Document Diff**, a cited **Document Brief** workspace, and **Corrective RAG** that checks retrieval quality before generation: users can turn a document into a cited deliverable, CSV-ready table data, a shareable cited answer, a reusable checklist, a cited semantic change report, a first-read structural brief, or a better-supported answer when exact names/numbers need lexical evidence. DocTalk can capture significant revenue in three high-value segments: **finance professionals** (highest willingness to pay), **legal professionals** (underserved solo/small firms), and **academic researchers** (largest addressable market with viral growth).
 
 ---
 
@@ -99,6 +99,7 @@ DocTalk is an AI-powered document workbench with a unique competitive advantage:
 - ✅ **Question Templates launched (`0.6.0 beta`)**: Plus users can run reusable checklists on a document; Pro users can batch the same questions across Collections, creating repeat workflows and higher credit consumption
 - ✅ **Document Diff launched (`0.7.0 beta`)**: Pro users can compare two ready documents and receive a cited semantic added/removed/modified report, directly targeting legal, compliance, and business review pain
 - ✅ **Hierarchical Document Brief launched (`0.9.0 beta`)**: Every parsed document can expose a cited first-read workspace with summary, outline, key points, facts, and suggested questions, improving the first impression before users ask anything
+- ✅ **Corrective RAG launched (`0.10.0 beta`)**: Ordinary chat now evaluates retrieval quality and applies scoped lexical fallback when vector top-k misses exact identifiers, numbers, existence checks, citation lookups, or exhaustive questions
 - ⏳ **Priority Queue**: Removed from pricing page pending implementation
 - ⏳ **Team tier**: Planned for Phase 3 (requires workspace, RBAC, SSO features)
 

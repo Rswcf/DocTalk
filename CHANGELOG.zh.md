@@ -8,6 +8,24 @@
 
 ## [Unreleased]
 
+## [0.10.0] - 2026-05-07
+
+### 新增
+- 新增聊天检索质量 evaluator，在生成回答前评估普通 RAG 结果，识别空证据、
+  精确词覆盖不足、穷尽扫描覆盖不足、向量分数过低、已命中词和缺失词。
+- 新增纠错检索路径，用于局部问答、表格/数字问题、引用定位、存在性检查和
+  穷尽扫描。该路径保留初始向量结果，再对同一文档范围执行 lexical fallback，
+  按 chunk 去重合并，并将证据质量提示注入 prompt。
+- 新增单文档和 Collection 的 lexical fallback 检索，基于转义后的 `ILIKE`
+  匹配 chunk text 与 section title，并对精确标识符、数字和中文 bigram 进行
+  确定性打分。
+- 新增 evaluator 决策、纠错检索合并、聊天 prompt 质量提示和摘要路由隔离的
+  回归测试。
+
+### 变更
+- 普通非摘要聊天现在通过 corrective retrieval wrapper，而不是直接调用一次向量
+  检索。全文摘要和集合摘要仍继续使用持久化/代表性的 brief context 路径。
+
 ## [0.9.0] - 2026-05-07
 
 ### 新增
