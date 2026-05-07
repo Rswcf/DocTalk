@@ -8,6 +8,22 @@
 
 ## [Unreleased]
 
+## [0.12.0] - 2026-05-07
+
+### 新增
+- 新增面向表格和数字类聊天问题的 table-aware retrieval。当文档已有
+  `document_tables` 扫描结果时，匹配表格行会被格式化为可引用 evidence，并优先
+  合并到普通向量/lexical 片段之前。
+- 新增表格检索专用提示，要求数字回答精确保留行标签、单位、期间和币种。
+- 新增结构化表格 evidence 排序、通用表格请求、特定词过滤、表格优先纠错检索、
+  金融指标路由和表格 prompt guidance 的回归测试。
+
+### 变更
+- 表格/数字问题现在使用更低的 lexical chunk 长度阈值，避免短表格行在回答生成前
+  被过滤掉。
+- Query Router 现在可识别更多金融指标问题，例如 margin、target price、market cap、
+  EBITDA、cash flow、币种和百分比，同时不会把普通页码查询误判为表格问题。
+
 ## [0.11.0] - 2026-05-07
 
 ### 变更

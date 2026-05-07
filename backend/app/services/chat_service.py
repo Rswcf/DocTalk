@@ -19,6 +19,7 @@ from app.models.tables import (
     Chunk,
     CreditLedger,
     Document,
+    DocumentTable,
     Message,
     User,
     collection_documents,
@@ -27,6 +28,7 @@ from app.services import credit_service
 from app.services.corrective_retrieval_service import corrective_retrieval_service
 from app.services.document_brief_service import document_brief_service
 from app.services.query_router import QueryIntent, query_router
+from app.services.retrieval_service import table_evidence_text
 
 logger = logging.getLogger(__name__)
 
@@ -228,6 +230,10 @@ def _citation_payload(ref_num: int, chunk: "_ChunkInfo", offset: int) -> Dict[st
         citation_data["document_id"] = str(chunk.document_id)
     if chunk.document_filename:
         citation_data["document_filename"] = chunk.document_filename
+    if chunk.table_id:
+        citation_data["table_id"] = chunk.table_id
+        citation_data["retrieval_modality"] = chunk.retrieval_modality or "table"
+        citation_data["table_context"] = (chunk.text or "")[:1400]
     return citation_data
 
 
@@ -380,6 +386,31 @@ class _ChunkInfo:
     document_id: Optional[uuid.UUID] = None
     document_filename: str = ""
     score: float = 0.0
+    table_id: Optional[str] = None
+    retrieval_modality: str = "text"
+
+
+def _chunk_info_from_persisted_citation(
+    chunk: Chunk,
+    citation: dict,
+    collection_doc_names: dict[uuid.UUID, str],
+) -> _ChunkInfo:
+    table_id = str(citation.get("table_id") or "") or None
+    table_context = citation.get("table_context")
+    is_table = table_id is not None and isinstance(table_context, str) and table_context.strip()
+    return _ChunkInfo(
+        id=chunk.id,
+        page_start=int(citation.get("page") or chunk.page_start) if is_table else chunk.page_start,
+        page_end=int(citation.get("page_end") or citation.get("page") or chunk.page_end) if is_table else chunk.page_end,
+        bboxes=citation.get("bboxes") or [] if is_table else chunk.bboxes or [],
+        text=table_context if is_table else chunk.text,
+        section_title=(table_context.splitlines()[0][:200] if is_table else chunk.section_title or ""),
+        document_id=chunk.document_id,
+        document_filename=collection_doc_names.get(chunk.document_id, ""),
+        score=float(citation.get("confidence_score") or 0.0),
+        table_id=table_id,
+        retrieval_modality="table" if is_table else "text",
+    )
 
 
 class RefParserFSM:
@@ -668,6 +699,8 @@ class ChatService:
                     if chunk_doc_id
                     else "",
                     score=item.get("score", 0.0),
+                    table_id=str(item.get("table_id")) if item.get("table_id") else None,
+                    retrieval_modality=str(item.get("retrieval_modality") or "text"),
                 )
 
             rules = get_rules_for_model(
@@ -1071,12 +1104,28 @@ class ChatService:
             if original_citations:
                 chunk_ids_set: set[str] = set()
                 ref_to_chunk_id: dict[int, str] = {}
+                ref_to_citation: dict[int, dict] = {}
+                table_ids_set: set[str] = set()
                 for cit in original_citations:
+                    if not isinstance(cit, dict):
+                        continue
                     cid = cit.get("chunk_id")
                     ref = cit.get("ref_index")
                     if cid and ref is not None:
-                        chunk_ids_set.add(cid)
-                        ref_to_chunk_id[int(ref)] = cid
+                        try:
+                            normalized_ref = int(ref)
+                            normalized_cid = str(uuid.UUID(str(cid)))
+                        except Exception:
+                            continue
+                        chunk_ids_set.add(normalized_cid)
+                        ref_to_chunk_id[normalized_ref] = normalized_cid
+                        ref_to_citation[normalized_ref] = cit
+                        table_id = cit.get("table_id")
+                        if table_id:
+                            try:
+                                table_ids_set.add(str(uuid.UUID(str(table_id))))
+                            except Exception:
+                                pass
 
                 if chunk_ids_set:
                     chunk_uuids = [uuid.UUID(c) for c in chunk_ids_set]
@@ -1087,18 +1136,30 @@ class ChatService:
                     for ch in chunk_rows.scalars():
                         chunks_by_id[str(ch.id)] = ch
 
+                    tables_by_id: dict[str, DocumentTable] = {}
+                    if table_ids_set:
+                        table_uuids = [uuid.UUID(tid) for tid in table_ids_set]
+                        table_rows = await db.execute(
+                            select(DocumentTable).where(DocumentTable.id.in_(table_uuids))
+                        )
+                        for table in table_rows.scalars():
+                            tables_by_id[str(table.id)] = table
+
                     for ref_num, cid in ref_to_chunk_id.items():
                         ch = chunks_by_id.get(cid)
                         if ch:
-                            chunk_map[ref_num] = _ChunkInfo(
-                                id=ch.id,
-                                page_start=ch.page_start,
-                                page_end=ch.page_end,
-                                bboxes=ch.bboxes or [],
-                                text=ch.text,
-                                section_title=ch.section_title or "",
-                                document_id=ch.document_id,
-                                document_filename=collection_doc_names.get(ch.document_id, ""),
+                            citation = dict(ref_to_citation.get(ref_num) or {})
+                            table_id = citation.get("table_id")
+                            if table_id and not citation.get("table_context"):
+                                table = tables_by_id.get(str(table_id))
+                                if table:
+                                    citation["table_context"] = table_evidence_text(table)
+                                    citation["page"] = table.page
+                                    citation["page_end"] = table.page
+                            chunk_map[ref_num] = _chunk_info_from_persisted_citation(
+                                ch,
+                                citation,
+                                collection_doc_names,
                             )
 
             # 7) Load conversation history

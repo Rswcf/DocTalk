@@ -100,8 +100,11 @@ _SECTION_HINTS = (
 )
 
 _TABLE_MARKERS = (
-    r"\b(table|tables|spreadsheet|csv|excel|row|column|cell|amount|metric|revenue|valuation|eps)\b",
-    r"(表格|数据|数字|金额|收入|估值|导出|CSV|Excel|行|列|单元格)",
+    r"\b(table|tables|spreadsheet|csv|excel|row|rows|column|columns|cell|cells)\b",
+    r"\b(amount|metric|revenue|valuation|eps|margin|profit|target\s+price|share\s+price|market\s+cap)\b",
+    r"\b(growth|forecast|guidance|ebitda|capex|cash\s+flow|net\s+income|operating\s+income)\b",
+    r"[$€£¥]\s?\d|\b\d+(?:[.,]\d+)*(?:%|x|X)\b|\b\d+(?:[.,]\d+)*\s?(percent|million|billion|bn|m|k|rmb|usd|eur)\b",
+    r"(表格|数据|数字|金额|收入|估值|利润|利润率|毛利率|目标价|股价|市值|导出|CSV|Excel|行|列|单元格)",
 )
 
 _COMPARE_MARKERS = (

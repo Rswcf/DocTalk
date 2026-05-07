@@ -6,7 +6,7 @@ from typing import Literal
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.services.query_router import QueryRoute
+from app.services.query_router import QueryIntent, QueryRoute
 from app.services.rag_evaluator_service import (
     RetrievalEvaluation,
     rag_evaluator_service,
@@ -17,6 +17,8 @@ RetrievalStrategy = Literal[
     "semantic_top_k",
     "semantic_top_k+lexical_correction",
     "lexical_correction",
+    "semantic_top_k+table_evidence+lexical_correction",
+    "table_evidence+lexical_correction",
 ]
 
 
@@ -33,10 +35,10 @@ def _merge_results(primary: list[dict], secondary: list[dict], *, top_k: int) ->
 
     def add_items(items: list[dict]) -> None:
         for item in items:
-            chunk_id = str(item.get("chunk_id") or "")
-            if not chunk_id or chunk_id in seen:
+            dedupe_key = str(item.get("table_id") or item.get("chunk_id") or "")
+            if not dedupe_key or dedupe_key in seen:
                 continue
-            seen.add(chunk_id)
+            seen.add(dedupe_key)
             merged.append(item)
 
     add_items(primary)
@@ -63,9 +65,29 @@ class CorrectiveRetrievalService:
                 strategy="semantic_top_k",
             )
 
+        is_table_query = QueryIntent.TABLE_QUERY in route.intents
+        table_evidence = (
+            await retrieval_service.table_search(query, document_id, top_k=6, db=db)
+            if is_table_query
+            else []
+        )
         lexical_top_k = max(top_k, 12 if route.coverage == "exhaustive_scan" else top_k)
-        lexical = await retrieval_service.lexical_search(query, document_id, top_k=lexical_top_k, db=db)
-        if initial:
+        lexical = await retrieval_service.lexical_search(
+            query,
+            document_id,
+            top_k=lexical_top_k,
+            db=db,
+            min_text_len=20 if is_table_query else 200,
+        )
+        if table_evidence:
+            merged = _merge_results(table_evidence, initial, top_k=max(top_k, lexical_top_k, 12))
+            merged = _merge_results(merged, lexical, top_k=max(top_k, lexical_top_k, 12))
+            strategy: RetrievalStrategy = (
+                "semantic_top_k+table_evidence+lexical_correction"
+                if initial
+                else "table_evidence+lexical_correction"
+            )
+        elif initial:
             merged = _merge_results(initial, lexical, top_k=max(top_k, lexical_top_k))
             strategy: RetrievalStrategy = "semantic_top_k+lexical_correction"
         else:
@@ -92,9 +114,29 @@ class CorrectiveRetrievalService:
                 strategy="semantic_top_k",
             )
 
+        is_table_query = QueryIntent.TABLE_QUERY in route.intents
+        table_evidence = (
+            await retrieval_service.table_search_multi(query, document_ids, top_k=8, db=db)
+            if is_table_query
+            else []
+        )
         lexical_top_k = max(top_k, 14 if route.coverage == "exhaustive_scan" else top_k)
-        lexical = await retrieval_service.lexical_search_multi(query, document_ids, top_k=lexical_top_k, db=db)
-        if initial:
+        lexical = await retrieval_service.lexical_search_multi(
+            query,
+            document_ids,
+            top_k=lexical_top_k,
+            db=db,
+            min_text_len=20 if is_table_query else 200,
+        )
+        if table_evidence:
+            merged = _merge_results(table_evidence, initial, top_k=max(top_k, lexical_top_k, 14))
+            merged = _merge_results(merged, lexical, top_k=max(top_k, lexical_top_k, 14))
+            strategy: RetrievalStrategy = (
+                "semantic_top_k+table_evidence+lexical_correction"
+                if initial
+                else "table_evidence+lexical_correction"
+            )
+        elif initial:
             merged = _merge_results(initial, lexical, top_k=max(top_k, lexical_top_k))
             strategy: RetrievalStrategy = "semantic_top_k+lexical_correction"
         else:

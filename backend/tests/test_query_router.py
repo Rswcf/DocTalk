@@ -90,6 +90,19 @@ def test_routes_table_numeric_query() -> None:
     assert "table" in route.modality
 
 
+def test_routes_financial_metric_question_to_table_query() -> None:
+    route = query_router.route("What is the RMB 718 target price based on?")
+
+    assert route.primary_intent == QueryIntent.TABLE_QUERY
+    assert QueryIntent.TABLE_QUERY in route.intents
+
+
+def test_plain_page_number_lookup_does_not_become_table_query() -> None:
+    route = query_router.route("What is on page 5?")
+
+    assert QueryIntent.TABLE_QUERY not in route.intents
+
+
 def test_routes_existence_query_as_exhaustive_scan_candidate() -> None:
     route = query_router.route("Does this contract contain a non-compete clause?", domain_mode="legal")
 

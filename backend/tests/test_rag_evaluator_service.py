@@ -71,3 +71,16 @@ def test_evaluate_supported_exact_terms_is_sufficient() -> None:
 
     assert evaluation.status == "sufficient"
     assert evaluation.should_correct is False
+
+
+def test_table_query_prompt_note_preserves_numeric_precision() -> None:
+    evaluation = rag_evaluator_service.evaluate(
+        "What is MetaX 2028 revenue?",
+        [{"text": "Table p.7 #1\n| Company | 2028 Revenue |\n| MetaX | $42m |", "score": 0.92}],
+        _route(primary_intent=QueryIntent.TABLE_QUERY, intents=(QueryIntent.TABLE_QUERY,)),
+        corrected=True,
+    )
+
+    assert evaluation.status == "sufficient"
+    assert "preserve row labels" in evaluation.prompt_note
+    assert "numeric claim" in evaluation.prompt_note

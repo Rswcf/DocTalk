@@ -8,6 +8,26 @@ releases use `0.minor.patch` semantics such as `0.2.0` and `0.2.1`.
 
 ## [Unreleased]
 
+## [0.12.0] - 2026-05-07
+
+### Added
+- Added table-aware retrieval for table and numeric chat questions. When a
+  document already has scanned `document_tables`, matching table rows are
+  formatted as cited evidence and merged ahead of ordinary vector/lexical
+  fragments.
+- Added table-specific retrieval guidance so numeric answers preserve row
+  labels, units, periods, and currencies exactly.
+- Added regression tests for structured table evidence ranking, generic table
+  requests, specific-term filtering, table-first corrective retrieval, financial
+  metric routing, and table prompt guidance.
+
+### Changed
+- Table/numeric questions now use a lower lexical chunk-length threshold so
+  short parsed table rows are not filtered out before answer generation.
+- Query routing now recognizes more finance-style metric questions such as
+  margins, target prices, market cap, EBITDA, cash flow, and currency/percent
+  values without treating plain page-number lookups as table questions.
+
 ## [0.11.0] - 2026-05-07
 
 ### Changed

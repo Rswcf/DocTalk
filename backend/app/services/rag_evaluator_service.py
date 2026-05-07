@@ -179,6 +179,11 @@ def _prompt_note(status: RetrievalStatus, reason: str, *, corrected: bool, route
             "The user asked for broad or existence-style coverage. Treat the fragments as the searched evidence set, "
             "state limits clearly, and do not infer beyond cited text."
         )
+    elif QueryIntent.TABLE_QUERY in route.intents:
+        coverage_note = (
+            "The user is asking about tables, figures, or metrics; prioritize structured table evidence, preserve row labels, "
+            "units, periods, and currencies exactly, and cite the supporting fragment for each numeric claim."
+        )
     elif QueryIntent.CITATION_LOOKUP in route.intents:
         coverage_note = "The user is asking for source location or quotation; prioritize exact cited evidence over broad explanation."
 

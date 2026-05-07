@@ -101,6 +101,65 @@ def test_retrieval_quality_contract_does_not_echo_raw_user_terms() -> None:
     assert "Missing evidence-bearing query term count: 1" in prompt
 
 
+def test_table_citation_payload_persists_context_for_continuation() -> None:
+    chunk_id = uuid.uuid4()
+    table_id = uuid.uuid4()
+    chunk = chat_service_module._ChunkInfo(
+        id=chunk_id,
+        page_start=7,
+        page_end=7,
+        bboxes=[],
+        text="Table p.7 #1\n| Company | 2028 Revenue |\n| MetaX | $42m |",
+        section_title="Table p.7 #1",
+        score=0.96,
+        table_id=str(table_id),
+        retrieval_modality="table",
+    )
+
+    payload = chat_service_module._citation_payload(1, chunk, 12)
+
+    assert payload["chunk_id"] == str(chunk_id)
+    assert payload["table_id"] == str(table_id)
+    assert payload["retrieval_modality"] == "table"
+    assert "MetaX" in payload["table_context"]
+
+
+def test_persisted_table_citation_rehydrates_table_context_for_continuation() -> None:
+    document_id = uuid.uuid4()
+    chunk = SimpleNamespace(
+        id=uuid.uuid4(),
+        page_start=1,
+        page_end=1,
+        bboxes=[{"x": 0.1, "y": 0.1, "w": 0.2, "h": 0.1}],
+        text="Ordinary paragraph text from page one.",
+        section_title="Introduction",
+        document_id=document_id,
+    )
+    citation = {
+        "ref_index": 1,
+        "chunk_id": str(chunk.id),
+        "page": 7,
+        "page_end": 7,
+        "bboxes": [],
+        "table_id": str(uuid.uuid4()),
+        "retrieval_modality": "table",
+        "table_context": "Table p.7 #1\n| Company | 2028 Revenue |\n| MetaX | $42m |",
+        "confidence_score": 0.96,
+    }
+
+    info = chat_service_module._chunk_info_from_persisted_citation(
+        chunk,
+        citation,
+        {document_id: "report.pdf"},
+    )
+
+    assert info.text.startswith("Table p.7 #1")
+    assert info.page_start == 7
+    assert info.bboxes == []
+    assert info.table_id == citation["table_id"]
+    assert info.document_filename == "report.pdf"
+
+
 @pytest.mark.asyncio
 async def test_chat_prompt_includes_corrective_retrieval_quality(
     monkeypatch: pytest.MonkeyPatch,

@@ -220,6 +220,9 @@ sequenceDiagram
   route, DocTalk runs scoped lexical fallback over chunk text and section titles,
   de-duplicates the result set, and injects an evidence-quality note into the
   LLM prompt. Each fragment includes text, page numbers, and bounding boxes.
+  Table/numeric routes additionally consult scanned `document_tables` when
+  available, format matching rows as structured evidence, and lower the lexical
+  chunk-length threshold so short parsed table rows are not filtered out.
 
 - **Document Brief**: After parsing marks a document ready, `brief_worker`
   generates a persisted hierarchical brief in `document_briefs` on the Celery

@@ -213,6 +213,8 @@ sequenceDiagram
   覆盖不足，DocTalk 会在同一文档范围内对 chunk text 和 section title 执行
   lexical fallback，按 chunk 去重合并，并把证据质量提示注入 LLM prompt。每个片段
   都包含文本、页码和边界框。
+  表格/数字类路由会额外读取已扫描的 `document_tables`，把匹配表格行格式化为结构化
+  evidence，并降低 lexical chunk 长度阈值，避免短表格行在进入回答前被过滤掉。
 
 - **Document Brief**：文档解析并标记 ready 后，`brief_worker` 会在 Celery
   `default` 队列中生成持久化分层 brief，写入 `document_briefs`。Brief 保存摘要、

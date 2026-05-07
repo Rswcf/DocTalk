@@ -121,3 +121,50 @@ async def test_exhaustive_route_runs_correction_even_when_vector_has_hits(
         weak_vector["chunk_id"],
         lexical_chunk["chunk_id"],
     ]
+
+
+@pytest.mark.asyncio
+async def test_table_query_merges_structured_table_evidence_first(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    document_id = uuid.uuid4()
+    table_chunk_id = uuid.uuid4()
+    vector_chunk = {
+        "chunk_id": uuid.uuid4(),
+        "text": "MetaX revenue is discussed in the report.",
+        "page": 3,
+        "page_end": 3,
+        "bboxes": [],
+        "score": 0.78,
+    }
+    table_evidence = {
+        "chunk_id": table_chunk_id,
+        "table_id": str(uuid.uuid4()),
+        "text": "Table p.7 #1\n| Company | 2028 Revenue |\n| MetaX | $42m |",
+        "page": 7,
+        "page_end": 7,
+        "bboxes": [],
+        "score": 0.96,
+        "retrieval_modality": "table",
+    }
+
+    monkeypatch.setattr(corrective_module.retrieval_service, "search", AsyncMock(return_value=[vector_chunk]))
+    table_search = AsyncMock(return_value=[table_evidence])
+    lexical_search = AsyncMock(return_value=[])
+    monkeypatch.setattr(corrective_module.retrieval_service, "table_search", table_search)
+    monkeypatch.setattr(corrective_module.retrieval_service, "lexical_search", lexical_search)
+
+    result = await corrective_module.corrective_retrieval_service.retrieve_single(
+        "What is MetaX 2028 revenue?",
+        _route(primary_intent=QueryIntent.TABLE_QUERY, intents=(QueryIntent.TABLE_QUERY,)),
+        document_id,
+        top_k=8,
+        db=object(),
+    )
+
+    table_search.assert_awaited_once()
+    lexical_search.assert_awaited_once()
+    assert lexical_search.await_args.kwargs["min_text_len"] == 20
+    assert result.strategy == "semantic_top_k+table_evidence+lexical_correction"
+    assert result.retrieved[0]["table_id"] == table_evidence["table_id"]
+    assert result.retrieved[1]["chunk_id"] == vector_chunk["chunk_id"]
