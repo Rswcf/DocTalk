@@ -23,7 +23,8 @@ build sequence.
 | `0.5.0 beta` | Deep Link Answer Share | Shipped | Adds referral loops around high-quality cited answers |
 | `0.6.0 beta` | Question Templates | Shipped | Creates repeat workflows and credit-consuming batch value |
 | `0.7.0 beta` | Document Diff | Shipped | Targets legal/business review pain with Pro-grade semantic comparison |
-| `0.8.0 beta` | Query Router + Summary Context | Ready for release | Fixes the highest-trust failure: single-document and collection summaries no longer depend on ordinary top-k retrieval |
+| `0.8.0 beta` | Query Router + Summary Context | Shipped | Fixes the highest-trust failure: single-document and collection summaries no longer depend on ordinary top-k retrieval |
+| `0.9.0 beta` | Hierarchical Document Brief | In progress | Persists a cited document map so summaries and first-read UX do not depend on accidental top-k chunks |
 
 ### 2026-05-07 RAG Workbench Quality Sequence
 
@@ -35,7 +36,7 @@ tables or appendices in long, multi-column reports. The staged remediation is:
 1. `0.8.0 beta` — route whole-document and collection summary intent to ordered
    representative context.
 2. `0.9.0 beta` — persist a hierarchical Document Brief with summary, key
-   points, outline, FAQ, facts/figures, and coverage status.
+   points, outline, suggested questions, facts/figures, and coverage status.
 3. `0.10.0 beta` — add retrieval quality evaluation and corrective fallback
    before generation.
 4. `0.11.0 beta` — improve parser integrity for headings, multi-column reading

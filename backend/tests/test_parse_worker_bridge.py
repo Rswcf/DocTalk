@@ -87,3 +87,20 @@ def test_set_timeout_error_writes_prefixed_parse_timeout(
     assert doc.error_msg == "ERR_CODE:PARSE_TIMEOUT:timed out at 9m"
     assert stub_session.commits == 1
     assert stub_session.added == [doc]
+
+
+def test_queue_document_brief_dispatches_task(monkeypatch) -> None:
+    queued: list[str] = []
+
+    class _Task:
+        @staticmethod
+        def delay(document_id: str) -> None:
+            queued.append(document_id)
+
+    import app.workers.brief_worker as brief_worker
+
+    monkeypatch.setattr(brief_worker, "generate_document_brief", _Task)
+
+    parse_worker._queue_document_brief("doc-123")
+
+    assert queued == ["doc-123"]

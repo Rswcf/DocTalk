@@ -5,6 +5,7 @@ from .tables import (
     Chunk,
     CreditLedger,
     Document,
+    DocumentBrief,
     DocumentJob,
     DocumentTable,
     ExtractionResult,
@@ -19,6 +20,7 @@ from .tables import (
 __all__ = [
     "Base",
     "Document",
+    "DocumentBrief",
     "Page",
     "Chunk",
     "ChatSession",

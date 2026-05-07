@@ -5,6 +5,7 @@ import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { PdfViewer } from '../../../components/PdfViewer';
 import TextViewer from '../../../components/TextViewer/TextViewer';
 import { ChatPanel } from '../../../components/Chat';
+import DocumentBriefPanel from '../../../components/DocumentBrief/DocumentBriefPanel';
 import ExtractionPanel from '../../../components/Extraction/ExtractionPanel';
 import Header from '../../../components/Header';
 import CustomInstructionsModal from '../../../components/CustomInstructionsModal';
@@ -13,7 +14,7 @@ import { useDocTalkStore } from '../../../store';
 import { Panel, Group, Separator } from 'react-resizable-panels';
 import { useLocale } from '../../../i18n';
 import { usePageTitle } from '../../../lib/usePageTitle';
-import { FileSearch, Presentation, FileText, MessageSquare } from 'lucide-react';
+import { BookOpen, FileSearch, Presentation, FileText, MessageSquare } from 'lucide-react';
 import { useDocumentLoader } from '../../../lib/useDocumentLoader';
 import { useChatSession } from '../../../lib/useChatSession';
 import { useUserPlanProfile } from '../../../lib/useUserPlanProfile';
@@ -27,7 +28,7 @@ export default function DocumentReaderPageClient() {
   const router = useRouter();
   const [viewMode, setViewMode] = useState<'slide' | 'text'>('slide');
   const [mobileTab, setMobileTab] = useState<'chat' | 'document'>('chat');
-  const [workspaceMode, setWorkspaceMode] = useState<'chat' | 'extract'>('chat');
+  const [workspaceMode, setWorkspaceMode] = useState<'chat' | 'brief' | 'extract'>('chat');
   const { t, tOr } = useLocale();
   const { pdfUrl, currentPage, highlights, highlightSnippet, scale, scrollNonce, sessionId, navigateToCitation } = useDocTalkStore();
 
@@ -163,7 +164,7 @@ export default function DocumentReaderPageClient() {
 
   const canUseExtractionWorkspace = Boolean(isLoggedIn);
 
-  const workspaceSwitcher = documentStatus === 'ready' && sessionId && canUseExtractionWorkspace ? (
+  const workspaceSwitcher = documentStatus === 'ready' && sessionId ? (
     <div className="flex shrink-0 items-center gap-1 border-b border-[var(--reader-border)] bg-[var(--reader-panel-solid)] px-3 py-2">
       <button
         type="button"
@@ -179,6 +180,19 @@ export default function DocumentReaderPageClient() {
       </button>
       <button
         type="button"
+        onClick={() => setWorkspaceMode('brief')}
+        className={`inline-flex min-h-9 flex-1 items-center justify-center gap-2 rounded-lg px-3 text-sm font-medium transition-colors ${
+          workspaceMode === 'brief'
+            ? 'bg-zinc-900 text-white shadow-sm dark:bg-zinc-50 dark:text-zinc-900'
+            : 'text-[var(--reader-muted)] hover:bg-[var(--reader-panel-muted)]'
+        }`}
+      >
+        <BookOpen size={15} aria-hidden="true" />
+        {tOr('brief.tab', 'Brief')}
+      </button>
+      {canUseExtractionWorkspace ? (
+      <button
+        type="button"
         onClick={() => setWorkspaceMode('extract')}
         className={`inline-flex min-h-9 flex-1 items-center justify-center gap-2 rounded-lg px-3 text-sm font-medium transition-colors ${
           workspaceMode === 'extract'
@@ -189,11 +203,14 @@ export default function DocumentReaderPageClient() {
         <FileSearch size={15} aria-hidden="true" />
         {tOr('extract.tab', 'Extract')}
       </button>
+      ) : null}
     </div>
   ) : null;
 
   const chatContent = documentStatus === 'ready' && sessionId ? (
-    workspaceMode === 'extract' && canUseExtractionWorkspace ? (
+    workspaceMode === 'brief' ? (
+      <DocumentBriefPanel documentId={documentId} onCitationClick={handleCitationClick} />
+    ) : workspaceMode === 'extract' && canUseExtractionWorkspace ? (
       <ExtractionPanel documentId={documentId} onCitationClick={handleCitationClick} userPlan={userPlan} />
     ) : (
       <ChatPanel sessionId={sessionId} onCitationClick={handleCitationClick} maxUserMessages={isDemo && !isLoggedIn ? 5 : undefined} suggestedQuestions={suggestedQuestions.length > 0 ? suggestedQuestions : undefined} initialQuestion={initialQuestion} onOpenSettings={canUseCustomInstructions ? () => setShowInstructions(true) : undefined} hasCustomInstructions={!!customInstructions} userPlan={userPlan} />

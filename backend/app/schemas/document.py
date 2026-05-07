@@ -4,7 +4,7 @@ import uuid
 from datetime import datetime
 from typing import Optional
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class DocumentCreate(BaseModel):
@@ -40,6 +40,48 @@ class DocumentResponse(BaseModel):
 class DocumentFileUrlResponse(BaseModel):
     url: str
     expires_in: int
+
+
+class DocumentBriefSourceRef(BaseModel):
+    chunk_id: str
+    chunk_index: int
+    page: int
+    page_end: Optional[int] = None
+    bboxes: list[dict] = Field(default_factory=list)
+    text_snippet: str = ""
+
+
+class DocumentBriefOutlineItem(BaseModel):
+    title: str
+    level: int = 1
+    summary: str = ""
+    source_refs: list[DocumentBriefSourceRef] = Field(default_factory=list)
+
+
+class DocumentBriefKeyPoint(BaseModel):
+    text: str
+    source_refs: list[DocumentBriefSourceRef] = Field(default_factory=list)
+
+
+class DocumentBriefFact(BaseModel):
+    label: str
+    value: str
+    context: str = ""
+    source_refs: list[DocumentBriefSourceRef] = Field(default_factory=list)
+
+
+class DocumentHierarchicalBriefResponse(BaseModel):
+    status: str
+    updated_at: Optional[datetime] = None
+    generated_at: Optional[datetime] = None
+    summary: Optional[str] = None
+    outline: list[DocumentBriefOutlineItem] = Field(default_factory=list)
+    key_points: list[DocumentBriefKeyPoint] = Field(default_factory=list)
+    facts: list[DocumentBriefFact] = Field(default_factory=list)
+    questions: list[str] = Field(default_factory=list)
+    coverage: dict = Field(default_factory=dict)
+    error_code: Optional[str] = None
+    error_message: Optional[str] = None
 
 
 class DocumentBrief(BaseModel):

@@ -55,6 +55,48 @@ export interface DocumentResponse {
   has_converted_pdf?: boolean;
 }
 
+export interface DocumentBriefSourceRef {
+  chunk_id: string;
+  chunk_index: number;
+  page: number;
+  page_end?: number | null;
+  bboxes: NormalizedBBox[];
+  text_snippet: string;
+}
+
+export interface DocumentBriefOutlineItem {
+  title: string;
+  level: number;
+  summary: string;
+  source_refs: DocumentBriefSourceRef[];
+}
+
+export interface DocumentBriefKeyPoint {
+  text: string;
+  source_refs: DocumentBriefSourceRef[];
+}
+
+export interface DocumentBriefFact {
+  label: string;
+  value: string;
+  context: string;
+  source_refs: DocumentBriefSourceRef[];
+}
+
+export interface DocumentHierarchicalBrief {
+  status: 'ready' | 'pending' | 'empty' | 'failed' | string;
+  updated_at?: string | null;
+  generated_at?: string | null;
+  summary?: string | null;
+  outline: DocumentBriefOutlineItem[];
+  key_points: DocumentBriefKeyPoint[];
+  facts: DocumentBriefFact[];
+  questions: string[];
+  coverage: Record<string, unknown>;
+  error_code?: string | null;
+  error_message?: string | null;
+}
+
 export interface SearchResult {
   chunk_id: string;
   page: number;

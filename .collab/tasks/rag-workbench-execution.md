@@ -17,7 +17,7 @@ Owner: Codex
 | --- | --- | --- | --- | --- | --- |
 | M0 | 0.8.0 beta | RAG execution ledger and golden routing tests | Shipped | `f1a5141` | Version check, lint, backend tests, frontend build, production health/version passed |
 | M1 | 0.8.0 beta | Query intent router and whole-document summary chat path | Shipped | `f1a5141` | Version check, lint, backend tests, frontend build, production health/version passed |
-| M2 | 0.9.0 beta | Hierarchical document brief | Pending | Pending | Pending |
+| M2 | 0.9.0 beta | Hierarchical document brief | Verified, release pending | Pending | Full release gate passed locally; production deploy pending |
 | M3 | 0.10.0 beta | Retrieval evaluator and corrective RAG | Pending | Pending | Pending |
 | M4 | 0.11.0 beta | Parser integrity fixes | Pending | Pending | Pending |
 | M5 | 0.12.0 beta | Table-aware RAG | Pending | Pending | Pending |
@@ -57,3 +57,29 @@ Owner: Codex
 - Railway deployment: `78ae3d2f-ffa1-410c-93a3-6463468f3653` (`SUCCESS`)
 - Production `/health`: `{"status":"ok","release":{"version":"0.8.0","stage":"beta","build":null}}`
 - Production `/version`: `{"version":"0.8.0","stage":"beta","build":null}`
+
+## M2 Checklist
+
+- [x] Add `document_briefs` migration and SQLAlchemy model.
+- [x] Generate hierarchical briefs from representative chunks on the Celery `default` queue.
+- [x] Mirror brief summary/questions into legacy `documents.summary` and `documents.suggested_questions`.
+- [x] Make summary routing prefer persisted brief coverage before fallback representative selection.
+- [x] Add document brief API with document access masking and citation hydration.
+- [x] Add document-reader `Brief` workspace with cited summary, outline, key points, facts, and questions.
+- [x] Add i18n keys across all 11 locales.
+- [x] Add targeted backend tests for generation, failure isolation, routing context, worker dispatch, and API hydration.
+- [x] Run full release verification gate.
+- [ ] Commit, push `main`, merge/push `stable`, tag, deploy, and verify production.
+
+## M2 Verification Log
+
+- 2026-05-07: `cd backend && python3 -m ruff check app/models app/services/summary_service.py app/services/document_brief_service.py app/workers/parse_worker.py app/workers/brief_worker.py app/api/documents.py app/schemas/document.py tests/test_document_brief_generation.py tests/test_document_brief_service.py tests/test_parse_worker_bridge.py tests/test_document_briefs_api.py` passed.
+- 2026-05-07: `cd backend && python3 -m pytest tests/test_document_brief_generation.py tests/test_document_brief_service.py tests/test_parse_worker_bridge.py tests/test_document_briefs_api.py -v` passed with 19 passed.
+- 2026-05-07: Adversarial review fixed three issues before release: invalid LLM refs no longer invent fallback citations, stale reparse chunks cannot be committed after a slow brief generation call, and ready-but-empty brief polling is bounded.
+- 2026-05-07: `python3 scripts/check_version_consistency.py` passed for `0.9.0 beta`.
+- 2026-05-07: `cd frontend && npm run build` passed after the version bump.
+- 2026-05-07: `cd backend && python3 -m ruff check app/ tests/` passed.
+- 2026-05-07: `cd backend && python3 -m pytest tests/ -m 'not integration' -v` passed with 233 passed, 3 skipped, 4 deselected.
+- 2026-05-07: `cd backend && python3 -m pytest -m integration -v` ran; 4 integration tests skipped by local environment configuration.
+- 2026-05-07: `cd backend && python3 -m alembic heads && python3 -m alembic upgrade head` passed with `20260507_0026 (head)`.
+- 2026-05-07: Browser smoke passed for desktop and mobile on local production Next server with mocked APIs: Brief tab renders, citation click jumps/highlights source text, and no horizontal overflow was detected.

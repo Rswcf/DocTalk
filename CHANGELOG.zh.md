@@ -8,6 +8,26 @@
 
 ## [Unreleased]
 
+## [0.9.0] - 2026-05-07
+
+### 新增
+- 新增解析后持久化的分层 Document Brief。Brief 会保存精简摘要、结构大纲、
+  关键要点、事实/数据、建议问题、生成元数据以及代表性 chunk 覆盖范围。
+- 新增 `document_briefs` 表和 Celery `default` 队列 brief worker，使 parse
+  任务完成时不再在解析任务内部同步执行 LLM 摘要生成。
+- 新增 `GET /api/documents/{document_id}/brief`，访问控制与文档接口一致，
+  并从 chunk/page/bbox 元数据补全可点击引用。
+- 文档阅读页新增与 Chat、Extract 平级的 `Brief` 工作区，展示带引用的
+  大纲、要点、事实、建议问题和状态，并支持点击引用跳转原文高亮。
+- 新增 brief normalization、legacy summary 镜像、失败隔离、持久化覆盖检索、
+  parse-worker 分发、brief API 授权与引用补全等回归测试。
+
+### 变更
+- 兼容旧 UI 的 `documents.summary` 与 `documents.suggested_questions` 现在由
+  结构化 brief payload 派生。
+- 全文总结路由现在优先使用持久化 brief coverage；缺失时再回退到实时代表性
+  chunk 选择。
+
 ## [0.8.0] - 2026-05-07
 
 ### 新增

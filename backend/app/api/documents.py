@@ -22,6 +22,7 @@ from app.schemas.document import (
     DemoDocumentResponse,
     DocumentBrief,
     DocumentFileUrlResponse,
+    DocumentHierarchicalBriefResponse,
     DocumentIngestResponse,
     DocumentResponse,
     DocumentTextContentResponse,
@@ -501,6 +502,136 @@ async def get_document(
         resp.filename = resp.filename.rsplit(".", 1)[0]
     resp.has_converted_pdf = bool(doc.converted_storage_key)
     return resp
+
+
+def _brief_chunk_ids(*groups: list[dict]) -> list[uuid.UUID]:
+    chunk_ids: list[uuid.UUID] = []
+    seen: set[uuid.UUID] = set()
+    for group in groups:
+        for item in group or []:
+            if not isinstance(item, dict):
+                continue
+            refs = item.get("source_refs")
+            if not isinstance(refs, list):
+                continue
+            for ref in refs:
+                if not isinstance(ref, dict):
+                    continue
+                try:
+                    chunk_id = uuid.UUID(str(ref.get("chunk_id")))
+                except (TypeError, ValueError):
+                    continue
+                if chunk_id in seen:
+                    continue
+                seen.add(chunk_id)
+                chunk_ids.append(chunk_id)
+    return chunk_ids
+
+
+def _brief_ref_payload(chunk) -> dict:
+    bboxes = chunk.bboxes if isinstance(chunk.bboxes, list) else []
+    snippet = ((f"{chunk.section_title}: " if chunk.section_title else "") + (chunk.text or ""))[:180]
+    return {
+        "chunk_id": str(chunk.id),
+        "chunk_index": int(chunk.chunk_index),
+        "page": int(chunk.page_start),
+        "page_end": int(chunk.page_end),
+        "bboxes": bboxes,
+        "text_snippet": snippet,
+    }
+
+
+def _hydrate_brief_items(items: list[dict], chunks_by_id: dict[uuid.UUID, object]) -> list[dict]:
+    hydrated: list[dict] = []
+    for item in items or []:
+        if not isinstance(item, dict):
+            continue
+        copied = dict(item)
+        refs = item.get("source_refs")
+        hydrated_refs: list[dict] = []
+        expects_refs = "source_refs" in item
+        if isinstance(refs, list):
+            for ref in refs:
+                if not isinstance(ref, dict):
+                    continue
+                try:
+                    chunk_id = uuid.UUID(str(ref.get("chunk_id")))
+                except (TypeError, ValueError):
+                    continue
+                chunk = chunks_by_id.get(chunk_id)
+                if chunk is not None:
+                    hydrated_refs.append(_brief_ref_payload(chunk))
+        if expects_refs and not hydrated_refs:
+            continue
+        copied["source_refs"] = hydrated_refs
+        hydrated.append(copied)
+    return hydrated
+
+
+@documents_router.get("/{document_id}/brief", response_model=DocumentHierarchicalBriefResponse)
+async def get_document_brief(
+    document_id: uuid.UUID,
+    user: Optional[User] = Depends(get_current_user_optional),
+    db: AsyncSession = Depends(get_db_session),
+):
+    from sqlalchemy import select
+
+    from app.models.tables import Chunk
+    from app.models.tables import DocumentBrief as DocumentBriefModel
+
+    doc = await doc_service.get_document(document_id, db)
+    if not doc:
+        raise HTTPException(status_code=404, detail=DOCUMENT_NOT_FOUND_DETAIL)
+    if not can_access_document(doc, user):
+        raise HTTPException(status_code=404, detail=DOCUMENT_NOT_FOUND_DETAIL)
+
+    brief = (
+        await db.execute(
+            select(DocumentBriefModel).where(DocumentBriefModel.document_id == document_id)
+        )
+    ).scalar_one_or_none()
+
+    if brief is None:
+        if doc.summary or doc.suggested_questions:
+            return DocumentHierarchicalBriefResponse(
+                status="ready",
+                updated_at=doc.updated_at,
+                summary=doc.summary,
+                questions=doc.suggested_questions or [],
+                coverage={"status": "legacy_summary"},
+            )
+        return DocumentHierarchicalBriefResponse(
+            status="pending" if doc.status != "ready" else "empty",
+            coverage={"status": doc.status},
+        )
+
+    outline = brief.outline if isinstance(brief.outline, list) else []
+    key_points = brief.key_points if isinstance(brief.key_points, list) else []
+    facts = brief.facts if isinstance(brief.facts, list) else []
+    chunk_ids = _brief_chunk_ids(outline, key_points, facts)
+    chunks_by_id: dict[uuid.UUID, object] = {}
+    if chunk_ids:
+        rows = await db.execute(
+            select(Chunk)
+            .where(Chunk.document_id == document_id)
+            .where(Chunk.id.in_(chunk_ids))
+        )
+        chunks_by_id = {chunk.id: chunk for chunk in rows.scalars()}
+
+    status_value = "failed" if brief.error_code else "ready"
+    return DocumentHierarchicalBriefResponse(
+        status=status_value,
+        updated_at=brief.updated_at,
+        generated_at=brief.generated_at,
+        summary=brief.summary,
+        outline=_hydrate_brief_items(outline, chunks_by_id),
+        key_points=_hydrate_brief_items(key_points, chunks_by_id),
+        facts=_hydrate_brief_items(facts, chunks_by_id),
+        questions=brief.questions if isinstance(brief.questions, list) else [],
+        coverage=brief.coverage if isinstance(brief.coverage, dict) else {},
+        error_code=brief.error_code,
+        error_message=brief.error_message,
+    )
 
 
 @documents_router.get("/{document_id}/file-url", response_model=DocumentFileUrlResponse)

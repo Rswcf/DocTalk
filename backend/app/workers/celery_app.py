@@ -20,6 +20,7 @@ celery_app = Celery(
     broker=settings.CELERY_BROKER_URL,
     include=[
         "app.workers.parse_worker",
+        "app.workers.brief_worker",
         "app.workers.extraction_worker",
         "app.workers.table_worker",
         "app.workers.question_template_worker",

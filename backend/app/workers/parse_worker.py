@@ -12,7 +12,7 @@ from sqlalchemy import select
 
 from app.core.config import settings
 from app.models.sync_database import SyncSessionLocal
-from app.models.tables import Chunk, Document, Page
+from app.models.tables import Chunk, Document, DocumentBrief, Page
 from app.services.conversion_service import CONVERTIBLE_TYPES, convert_to_pdf
 from app.services.embedding_service import embedding_service
 from app.services.parse_service import ParseService
@@ -98,6 +98,15 @@ def _set_timeout_error(document_id: str, message: str) -> None:
         db.commit()
 
 
+def _queue_document_brief(document_id: str) -> None:
+    try:
+        from app.workers.brief_worker import generate_document_brief
+
+        generate_document_brief.delay(document_id)
+    except Exception as exc:
+        logger.warning("Failed to queue document brief generation for %s: %s", document_id, exc)
+
+
 @celery_app.task(
     name="app.workers.parse_worker.parse_document",
     bind=True,
@@ -128,11 +137,14 @@ def parse_document(self, document_id: str) -> None:
             # Clean up partial data from previous attempts (idempotent re-parse)
             from sqlalchemy import delete as sa_delete
 
+            db.execute(sa_delete(DocumentBrief).where(DocumentBrief.document_id == doc.id))
             db.execute(sa_delete(Chunk).where(Chunk.document_id == doc.id))
             db.execute(sa_delete(Page).where(Page.document_id == doc.id))
             doc.pages_parsed = 0
             doc.chunks_total = 0
             doc.chunks_indexed = 0
+            doc.summary = None
+            doc.suggested_questions = None
             doc.status = "parsing"
             db.add(doc)
             db.commit()
@@ -443,15 +455,8 @@ def parse_document(self, document_id: str) -> None:
                 db.commit()
                 logger.info("Embedding completed for %s: %d indexed", document_id, total_indexed)
 
-                # Best-effort: generate summary + suggested questions
-                try:
-                    from app.services.summary_service import generate_summary_sync
-
-                    generate_summary_sync(document_id)
-                except SoftTimeLimitExceeded:
-                    raise
-                except Exception as e:
-                    logger.warning("Summary generation failed for %s (non-blocking): %s", document_id, e)
+                # Best-effort: generate persisted brief + legacy summary fields in a separate task.
+                _queue_document_brief(document_id)
 
             except SoftTimeLimitExceeded:
                 raise

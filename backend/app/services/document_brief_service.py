@@ -7,7 +7,7 @@ from typing import Any, Sequence
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.tables import Chunk, Document
+from app.models.tables import Chunk, Document, DocumentBrief
 
 MIN_SUMMARY_CHUNK_CHARS = 80
 DEFAULT_MAX_SUMMARY_CHUNKS = 18
@@ -111,6 +111,14 @@ class DocumentBriefService:
         *,
         max_chunks: int = DEFAULT_MAX_SUMMARY_CHUNKS,
     ) -> list[dict[str, Any]]:
+        persisted = await self._get_persisted_summary_context(
+            db,
+            document_id,
+            max_chunks=max_chunks,
+        )
+        if persisted:
+            return persisted
+
         rows = await db.execute(
             select(Chunk)
             .where(Chunk.document_id == document_id)
@@ -122,6 +130,49 @@ class DocumentBriefService:
         return [
             _chunk_to_retrieval_item(chunk, 1.0 - (idx / (total + 1)) * 0.2)
             for idx, chunk in enumerate(selected)
+        ]
+
+    async def _get_persisted_summary_context(
+        self,
+        db: AsyncSession,
+        document_id: uuid.UUID,
+        *,
+        max_chunks: int,
+    ) -> list[dict[str, Any]]:
+        brief_row = await db.execute(
+            select(DocumentBrief.coverage).where(DocumentBrief.document_id == document_id)
+        )
+        coverage = brief_row.scalar_one_or_none()
+        if not isinstance(coverage, dict):
+            return []
+        raw_ids = coverage.get("selected_chunk_ids")
+        if not isinstance(raw_ids, list) or not raw_ids:
+            return []
+
+        chunk_ids: list[uuid.UUID] = []
+        for raw_id in raw_ids[:max_chunks]:
+            try:
+                chunk_ids.append(uuid.UUID(str(raw_id)))
+            except (TypeError, ValueError):
+                continue
+        if not chunk_ids:
+            return []
+
+        rows = await db.execute(
+            select(Chunk)
+            .where(Chunk.document_id == document_id)
+            .where(Chunk.id.in_(chunk_ids))
+        )
+        chunks_by_id = {chunk.id: chunk for chunk in rows.scalars()}
+        ordered = [
+            chunks_by_id[chunk_id]
+            for chunk_id in chunk_ids
+            if chunk_id in chunks_by_id
+        ]
+        total = max(1, len(ordered))
+        return [
+            _chunk_to_retrieval_item(chunk, 1.0 - (idx / (total + 1)) * 0.2)
+            for idx, chunk in enumerate(ordered)
         ]
 
     async def get_collection_summary_context(

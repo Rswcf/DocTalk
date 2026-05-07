@@ -203,13 +203,21 @@ sequenceDiagram
   穷尽扫描候选。全文摘要和集合摘要请求不会再进入普通语义 top-k 检索。
 
 - **检索**：局部问答仍从 Qdrant 按 COSINE 向量相似度检索 Top-8 文本块。
-  全文摘要使用按文档顺序选择的代表性文本块，集合摘要使用按文档限额抽取的
-  代表性覆盖，避免 “总结这篇文档” 这类宽泛问题只命中表格、附录或侧栏。
-  每个片段都包含文本、页码和边界框。
+  全文摘要优先使用持久化 `document_briefs.coverage`，缺失时使用按文档顺序
+  选择的代表性文本块；集合摘要使用按文档限额抽取的代表性覆盖，避免
+  “总结这篇文档” 这类宽泛问题只命中表格、附录或侧栏。每个片段都包含文本、
+  页码和边界框。
 
-- **摘要上下文**：M1 RAG 工作台路径会从文档开头、章节变化、均匀分布的正文位置
-  和结尾选择代表性 chunks，并跳过通常属于页脚或侧栏的过短 chunks。这是持久化
-  分层 `Document Brief` 索引上线前的过渡方案。
+- **Document Brief**：文档解析并标记 ready 后，`brief_worker` 会在 Celery
+  `default` 队列中生成持久化分层 brief，写入 `document_briefs`。Brief 保存摘要、
+  大纲、关键要点、事实、建议问题、生成错误和代表性 chunk 覆盖范围。兼容旧 UI 的
+  `documents.summary` 与 `documents.suggested_questions` 会从该 payload 镜像。
+  阅读页通过 `GET /api/documents/{id}/brief` 获取并展示 `Brief` 工作区，引用 chip
+  会从 chunk 的页码/bbox 元数据补全并支持跳转高亮。
+
+- **摘要上下文**：如果还没有持久化 brief coverage，RAG 工作台路径会从文档开头、
+  章节变化、均匀分布的正文位置和结尾选择代表性 chunks，并跳过通常属于页脚或
+  侧栏的过短 chunks。
 
 - **LLM 提示词**：系统提示指示模型使用 `[n]` 标记引用来源，编号对应提供的文档片段。生产聊天模式使用 DeepSeek V4（内部 `quick` = Flash，内部 `balanced` = Pro）；匿名 Demo 用户强制使用 `DEMO_LLM_MODEL`（默认 DeepSeek V4 Flash）以控制成本。**模型自适应提示系统**（`model_profiles.py`）为每个模型定制规则部分和 API 参数：DeepSeek 使用 `positive_framing` 避免消极表述过度遵从，其他模型使用 `default` 风格。temperature、max_tokens 和功能标志（stream_options）也按模型配置。
 

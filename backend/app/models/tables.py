@@ -78,6 +78,12 @@ class Document(Base):
         secondary="collection_documents",
         back_populates="documents",
     )
+    brief: Mapped[Optional["DocumentBrief"]] = relationship(
+        "DocumentBrief",
+        back_populates="document",
+        cascade="all, delete-orphan",
+        uselist=False,
+    )
 
 
 # Pages table
@@ -528,6 +534,45 @@ class QuestionTemplate(Base):
 
     __table_args__ = (
         sa.Index("idx_question_templates_user_updated", "user_id", sa.text("updated_at DESC")),
+    )
+
+
+class DocumentBrief(Base):
+    __tablename__ = "document_briefs"
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, server_default=sa.text("gen_random_uuid()")
+    )
+    document_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), sa.ForeignKey("documents.id", ondelete="CASCADE"), nullable=False, unique=True
+    )
+    schema_version: Mapped[int] = mapped_column(sa.Integer, nullable=False, server_default=sa.text("1"))
+    prompt_version: Mapped[str] = mapped_column(
+        sa.String(48), nullable=False, server_default=sa.text("'document_brief_v1'")
+    )
+    model: Mapped[Optional[str]] = mapped_column(sa.String(100), nullable=True)
+    summary: Mapped[Optional[str]] = mapped_column(sa.Text, nullable=True)
+    outline: Mapped[list] = mapped_column(JSONB, nullable=False, server_default=sa.text("'[]'::jsonb"))
+    key_points: Mapped[list] = mapped_column(JSONB, nullable=False, server_default=sa.text("'[]'::jsonb"))
+    facts: Mapped[list] = mapped_column(JSONB, nullable=False, server_default=sa.text("'[]'::jsonb"))
+    questions: Mapped[list] = mapped_column(JSONB, nullable=False, server_default=sa.text("'[]'::jsonb"))
+    coverage: Mapped[dict] = mapped_column(JSONB, nullable=False, server_default=sa.text("'{}'::jsonb"))
+    error_code: Mapped[Optional[str]] = mapped_column(sa.String(64), nullable=True)
+    error_message: Mapped[Optional[str]] = mapped_column(sa.Text, nullable=True)
+    generated_at: Mapped[datetime] = mapped_column(
+        sa.DateTime(timezone=True), nullable=False, server_default=sa.text("now()")
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        sa.DateTime(timezone=True), nullable=False, server_default=sa.text("now()")
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        sa.DateTime(timezone=True), nullable=False, server_default=sa.text("now()"), onupdate=sa.func.now()
+    )
+
+    document: Mapped["Document"] = relationship("Document", back_populates="brief")
+
+    __table_args__ = (
+        sa.Index("idx_document_briefs_document", "document_id"),
     )
 
 

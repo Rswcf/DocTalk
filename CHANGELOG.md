@@ -8,6 +8,31 @@ releases use `0.minor.patch` semantics such as `0.2.0` and `0.2.1`.
 
 ## [Unreleased]
 
+## [0.9.0] - 2026-05-07
+
+### Added
+- Added persisted hierarchical Document Briefs generated after parsing. Briefs
+  store a concise summary, outline, key points, facts/figures, suggested
+  questions, generation metadata, and representative chunk coverage.
+- Added a `document_briefs` table plus a Celery `default`-queue brief worker so
+  parse completion no longer performs best-effort LLM summary generation inside
+  the parse task.
+- Added `GET /api/documents/{document_id}/brief`, with access checks matching
+  the document endpoint and citation hydration from chunk/page/bbox metadata.
+- Added a document-reader `Brief` workspace available beside Chat and Extract,
+  including cited outline, key points, facts, questions, status states, and
+  citation chips that jump to the original page highlight.
+- Added regression tests for brief normalization, persisted legacy summary
+  mirroring, failure isolation, persisted-coverage retrieval, parse-worker
+  dispatch, and brief API authorization/citation hydration.
+
+### Changed
+- Legacy `documents.summary` and `documents.suggested_questions` are now derived
+  from the structured brief payload for compatibility with existing chat
+  suggested-question UI.
+- Whole-document summary routing now prefers persisted brief coverage before it
+  falls back to on-demand representative chunk selection.
+
 ## [0.8.0] - 2026-05-07
 
 ### Added

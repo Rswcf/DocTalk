@@ -1,4 +1,4 @@
-import type { DocumentResponse, Message, SearchResponse, Citation, SessionListResponse, CollectionBrief, CollectionDetail, NormalizedBBox, ExtractionJob, ExtractionTemplate, DocumentTable, QuestionTemplate } from '../types';
+import type { DocumentResponse, Message, SearchResponse, Citation, SessionListResponse, CollectionBrief, CollectionDetail, NormalizedBBox, ExtractionJob, ExtractionTemplate, DocumentTable, QuestionTemplate, DocumentHierarchicalBrief } from '../types';
 import type { UserProfile, CreditHistoryResponse, UsageBreakdown } from '../types';
 
 export const API_BASE = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8000';
@@ -104,6 +104,11 @@ export async function uploadDocument(file: File): Promise<{ document_id: string;
 
 export async function getDocument(docId: string): Promise<DocumentResponse> {
   const res = await fetch(`${PROXY_BASE}/api/documents/${docId}`);
+  return handle(res);
+}
+
+export async function getDocumentBrief(docId: string): Promise<DocumentHierarchicalBrief> {
+  const res = await fetch(`${PROXY_BASE}/api/documents/${docId}/brief`);
   return handle(res);
 }
 
