@@ -1,0 +1,503 @@
+{
+  "timestamp": "2026-05-05T09:33:31.137126+00:00",
+  "mode": "direct_openrouter",
+  "models": [
+    "deepseek/deepseek-v3.2",
+    "deepseek/deepseek-v4-flash",
+    "deepseek/deepseek-v4-pro",
+    "moonshotai/kimi-k2.6",
+    "moonshotai/kimi-k2.5",
+    "qwen/qwen3.6-flash",
+    "qwen/qwen3.6-plus",
+    "qwen/qwen3.5-plus-20260420",
+    "z-ai/glm-5.1",
+    "minimax/minimax-m2.7",
+    "baidu/ernie-4.5-300b-a47b",
+    "stepfun/step-3.5-flash",
+    "mistralai/mistral-large-2512"
+  ],
+  "total_cases": 1,
+  "total_runs": 13,
+  "pricing_snapshot": {
+    "fetched_at": "2026-05-05T09:33:31.317713+00:00",
+    "source": "https://openrouter.ai/api/v1/models",
+    "models": {
+      "deepseek/deepseek-v3.2": {
+        "context_length": 131072,
+        "pricing": {
+          "prompt": "0.000000252",
+          "completion": "0.000000378",
+          "input_cache_read": "0.0000000252"
+        }
+      },
+      "deepseek/deepseek-v4-flash": {
+        "context_length": 1048576,
+        "pricing": {
+          "prompt": "0.00000014",
+          "completion": "0.00000028",
+          "input_cache_read": "0.0000000028"
+        }
+      },
+      "deepseek/deepseek-v4-pro": {
+        "context_length": 1048576,
+        "pricing": {
+          "prompt": "0.000000435",
+          "completion": "0.00000087",
+          "input_cache_read": "0.000000003625"
+        }
+      },
+      "moonshotai/kimi-k2.6": {
+        "context_length": 262142,
+        "pricing": {
+          "prompt": "0.00000074",
+          "completion": "0.00000349",
+          "input_cache_read": "0.00000014"
+        }
+      },
+      "moonshotai/kimi-k2.5": {
+        "context_length": 262144,
+        "pricing": {
+          "prompt": "0.00000044",
+          "completion": "0.000002",
+          "input_cache_read": "0.00000022"
+        }
+      },
+      "qwen/qwen3.6-flash": {
+        "context_length": 1000000,
+        "pricing": {
+          "prompt": "0.00000025",
+          "completion": "0.0000015",
+          "input_cache_write": "0.0000003125"
+        }
+      },
+      "qwen/qwen3.6-plus": {
+        "context_length": 1000000,
+        "pricing": {
+          "prompt": "0.000000325",
+          "completion": "0.00000195",
+          "input_cache_write": "0.00000040625"
+        }
+      },
+      "qwen/qwen3.5-plus-20260420": {
+        "context_length": 1000000,
+        "pricing": {
+          "prompt": "0.0000004",
+          "completion": "0.0000024"
+        }
+      },
+      "z-ai/glm-5.1": {
+        "context_length": 202752,
+        "pricing": {
+          "prompt": "0.00000105",
+          "completion": "0.0000035",
+          "input_cache_read": "0.000000525"
+        }
+      },
+      "minimax/minimax-m2.7": {
+        "context_length": 196608,
+        "pricing": {
+          "prompt": "0.0000003",
+          "completion": "0.0000012",
+          "input_cache_read": "0.000000059"
+        }
+      },
+      "baidu/ernie-4.5-300b-a47b": {
+        "context_length": 123000,
+        "pricing": {
+          "prompt": "0.00000028",
+          "completion": "0.0000011"
+        }
+      },
+      "stepfun/step-3.5-flash": {
+        "context_length": 262144,
+        "pricing": {
+          "prompt": "0.0000001",
+          "completion": "0.0000003"
+        }
+      },
+      "mistralai/mistral-large-2512": {
+        "context_length": 262144,
+        "pricing": {
+          "prompt": "0.0000005",
+          "completion": "0.0000015",
+          "input_cache_read": "0.00000005"
+        }
+      }
+    }
+  },
+  "results": [
+    {
+      "test_id": "factual_nvidia_01",
+      "model": "deepseek/deepseek-v3.2",
+      "document_slug": "nvidia-10k",
+      "question": "What was NVIDIA's total revenue in fiscal year 2024?",
+      "language": "en",
+      "type": "factual",
+      "is_negative": false,
+      "expected_min_citations": 1,
+      "ground_truth_keywords": [
+        "revenue",
+        "60.9",
+        "billion"
+      ],
+      "response_text": "Based on the document fragments, NVIDIA's total revenue for fiscal year 2024 was **$60,922 million** (or $60.9 billion) [1][2][3].",
+      "citations": [
+        1,
+        2,
+        3
+      ],
+      "ttft_ms": 1826,
+      "total_ms": 3559,
+      "prompt_tokens": 2967,
+      "completion_tokens": 39,
+      "served_provider": "SiliconFlow",
+      "served_model_version": "deepseek/deepseek-v3.2-20251201",
+      "error": null,
+      "n_chunks": 8
+    },
+    {
+      "test_id": "factual_nvidia_01",
+      "model": "deepseek/deepseek-v4-flash",
+      "document_slug": "nvidia-10k",
+      "question": "What was NVIDIA's total revenue in fiscal year 2024?",
+      "language": "en",
+      "type": "factual",
+      "is_negative": false,
+      "expected_min_citations": 1,
+      "ground_truth_keywords": [
+        "revenue",
+        "60.9",
+        "billion"
+      ],
+      "response_text": "NVIDIA's total revenue for fiscal year 2024 was **$60.9 billion** (or $60,922 million) [1][2][3].",
+      "citations": [
+        1,
+        2,
+        3
+      ],
+      "ttft_ms": 4170,
+      "total_ms": 4833,
+      "prompt_tokens": 2973,
+      "completion_tokens": 157,
+      "served_provider": "Parasail",
+      "served_model_version": "deepseek/deepseek-v4-flash-20260423",
+      "error": null,
+      "n_chunks": 8
+    },
+    {
+      "test_id": "factual_nvidia_01",
+      "model": "deepseek/deepseek-v4-pro",
+      "document_slug": "nvidia-10k",
+      "question": "What was NVIDIA's total revenue in fiscal year 2024?",
+      "language": "en",
+      "type": "factual",
+      "is_negative": false,
+      "expected_min_citations": 1,
+      "ground_truth_keywords": [
+        "revenue",
+        "60.9",
+        "billion"
+      ],
+      "response_text": "NVIDIA's total revenue in fiscal year 2024 was **$60,922 million** (or $60.9 billion) [1][2][3].",
+      "citations": [
+        1,
+        2,
+        3
+      ],
+      "ttft_ms": 6537,
+      "total_ms": 7587,
+      "prompt_tokens": 2973,
+      "completion_tokens": 216,
+      "served_provider": "DeepSeek",
+      "served_model_version": "deepseek/deepseek-v4-pro-20260423",
+      "error": null,
+      "n_chunks": 8
+    },
+    {
+      "test_id": "factual_nvidia_01",
+      "model": "moonshotai/kimi-k2.6",
+      "document_slug": "nvidia-10k",
+      "question": "What was NVIDIA's total revenue in fiscal year 2024?",
+      "language": "en",
+      "type": "factual",
+      "is_negative": false,
+      "expected_min_citations": 1,
+      "ground_truth_keywords": [
+        "revenue",
+        "60.9",
+        "billion"
+      ],
+      "response_text": "NVIDIA's total revenue for fiscal year 2024 was **$60.9 billion** (or $60,922 million), representing an increase of 126% compared to the prior year [1][2][3].",
+      "citations": [
+        1,
+        2,
+        3
+      ],
+      "ttft_ms": 5371,
+      "total_ms": 6155,
+      "prompt_tokens": 2988,
+      "completion_tokens": 244,
+      "served_provider": "SiliconFlow",
+      "served_model_version": "moonshotai/kimi-k2.6-20260420",
+      "error": null,
+      "n_chunks": 8
+    },
+    {
+      "test_id": "factual_nvidia_01",
+      "model": "moonshotai/kimi-k2.5",
+      "document_slug": "nvidia-10k",
+      "question": "What was NVIDIA's total revenue in fiscal year 2024?",
+      "language": "en",
+      "type": "factual",
+      "is_negative": false,
+      "expected_min_citations": 1,
+      "ground_truth_keywords": [
+        "revenue",
+        "60.9",
+        "billion"
+      ],
+      "response_text": " NVIDIA's total revenue for fiscal year 2024 was **$60.9 billion** (or $60,922 million) [1][2][3].\n\nThis represented a **126% increase** from the prior year [1][2]. The revenue was primarily driven by the Compute & Networking segment ($47.4 billion) and the Graphics segment ($13.5 billion) [2].",
+      "citations": [
+        1,
+        2,
+        3
+      ],
+      "ttft_ms": 14887,
+      "total_ms": 19761,
+      "prompt_tokens": 2988,
+      "completion_tokens": 278,
+      "served_provider": "DeepInfra",
+      "served_model_version": "moonshotai/kimi-k2.5-0127",
+      "error": null,
+      "n_chunks": 8
+    },
+    {
+      "test_id": "factual_nvidia_01",
+      "model": "qwen/qwen3.6-flash",
+      "document_slug": "nvidia-10k",
+      "question": "What was NVIDIA's total revenue in fiscal year 2024?",
+      "language": "en",
+      "type": "factual",
+      "is_negative": false,
+      "expected_min_citations": 1,
+      "ground_truth_keywords": [
+        "revenue",
+        "60.9",
+        "billion"
+      ],
+      "response_text": "Based on the provided document, NVIDIA's total revenue for fiscal year 2024 was **$60.9 billion** ($60,922 million) [1][3].",
+      "citations": [
+        1,
+        3
+      ],
+      "ttft_ms": 4238,
+      "total_ms": 4419,
+      "prompt_tokens": 3544,
+      "completion_tokens": 825,
+      "served_provider": "Alibaba",
+      "served_model_version": null,
+      "error": null,
+      "n_chunks": 8
+    },
+    {
+      "test_id": "factual_nvidia_01",
+      "model": "qwen/qwen3.6-plus",
+      "document_slug": "nvidia-10k",
+      "question": "What was NVIDIA's total revenue in fiscal year 2024?",
+      "language": "en",
+      "type": "factual",
+      "is_negative": false,
+      "expected_min_citations": 1,
+      "ground_truth_keywords": [
+        "revenue",
+        "60.9",
+        "billion"
+      ],
+      "response_text": "Based on the provided document fragments, NVIDIA's total revenue for fiscal year 2024 was **$60.9 billion** ($60,922 million) [1][2][3]. This represented a 126% increase compared to fiscal year 2023 [1].",
+      "citations": [
+        1,
+        2,
+        3
+      ],
+      "ttft_ms": 14824,
+      "total_ms": 15987,
+      "prompt_tokens": 3544,
+      "completion_tokens": 825,
+      "served_provider": "Alibaba",
+      "served_model_version": "qwen/qwen3.6-plus-04-02",
+      "error": null,
+      "n_chunks": 8
+    },
+    {
+      "test_id": "factual_nvidia_01",
+      "model": "qwen/qwen3.5-plus-20260420",
+      "document_slug": "nvidia-10k",
+      "question": "What was NVIDIA's total revenue in fiscal year 2024?",
+      "language": "en",
+      "type": "factual",
+      "is_negative": false,
+      "expected_min_citations": 1,
+      "ground_truth_keywords": [
+        "revenue",
+        "60.9",
+        "billion"
+      ],
+      "response_text": "Based on the provided document fragments, NVIDIA's total revenue for fiscal year 2024 was **$60.9 billion** (or **$60,922 million**) [1][2][3].",
+      "citations": [
+        1,
+        2,
+        3
+      ],
+      "ttft_ms": 12999,
+      "total_ms": 13734,
+      "prompt_tokens": 3544,
+      "completion_tokens": 855,
+      "served_provider": "Alibaba",
+      "served_model_version": null,
+      "error": null,
+      "n_chunks": 8
+    },
+    {
+      "test_id": "factual_nvidia_01",
+      "model": "z-ai/glm-5.1",
+      "document_slug": "nvidia-10k",
+      "question": "What was NVIDIA's total revenue in fiscal year 2024?",
+      "language": "en",
+      "type": "factual",
+      "is_negative": false,
+      "expected_min_citations": 1,
+      "ground_truth_keywords": [
+        "revenue",
+        "60.9",
+        "billion"
+      ],
+      "response_text": "NVIDIA's total revenue in fiscal year 2024 was **$60,922 million** (or **$60.9 billion**), which was up 126% from the previous year [1][2][3].",
+      "citations": [
+        1,
+        2,
+        3
+      ],
+      "ttft_ms": 31487,
+      "total_ms": 32053,
+      "prompt_tokens": 3079,
+      "completion_tokens": 271,
+      "served_provider": "SiliconFlow",
+      "served_model_version": "z-ai/glm-5.1-20260406",
+      "error": null,
+      "n_chunks": 8
+    },
+    {
+      "test_id": "factual_nvidia_01",
+      "model": "minimax/minimax-m2.7",
+      "document_slug": "nvidia-10k",
+      "question": "What was NVIDIA's total revenue in fiscal year 2024?",
+      "language": "en",
+      "type": "factual",
+      "is_negative": false,
+      "expected_min_citations": 1,
+      "ground_truth_keywords": [
+        "revenue",
+        "60.9",
+        "billion"
+      ],
+      "response_text": "Based on the provided document fragments, NVIDIA's total revenue in fiscal year 2024 was **$60,922 million** (approximately **$60.9 billion**). This represented a **126% increase** compared to fiscal year 2023 revenue of $26,974 million [1][2].\n\nThis information is confirmed across multiple fragments, with fragment [1] stating \"Revenue for fiscal year 2024 was $60.9 billion, up 126% from a year ago\" and fragment [2] providing the exact figure of $60,922 million.",
+      "citations": [
+        1,
+        2
+      ],
+      "ttft_ms": 1108,
+      "total_ms": 1622,
+      "prompt_tokens": 2939,
+      "completion_tokens": 262,
+      "served_provider": "Fireworks",
+      "served_model_version": "minimax/minimax-m2.7-20260318",
+      "error": null,
+      "n_chunks": 8
+    },
+    {
+      "test_id": "factual_nvidia_01",
+      "model": "baidu/ernie-4.5-300b-a47b",
+      "document_slug": "nvidia-10k",
+      "question": "What was NVIDIA's total revenue in fiscal year 2024?",
+      "language": "en",
+      "type": "factual",
+      "is_negative": false,
+      "expected_min_citations": 1,
+      "ground_truth_keywords": [
+        "revenue",
+        "60.9",
+        "billion"
+      ],
+      "response_text": "NVIDIA's total revenue in fiscal year 2024 was **$60,922 million** [1][3].",
+      "citations": [
+        1,
+        3
+      ],
+      "ttft_ms": 2502,
+      "total_ms": 3640,
+      "prompt_tokens": 3555,
+      "completion_tokens": 29,
+      "served_provider": "Novita",
+      "served_model_version": null,
+      "error": null,
+      "n_chunks": 8
+    },
+    {
+      "test_id": "factual_nvidia_01",
+      "model": "stepfun/step-3.5-flash",
+      "document_slug": "nvidia-10k",
+      "question": "What was NVIDIA's total revenue in fiscal year 2024?",
+      "language": "en",
+      "type": "factual",
+      "is_negative": false,
+      "expected_min_citations": 1,
+      "ground_truth_keywords": [
+        "revenue",
+        "60.9",
+        "billion"
+      ],
+      "response_text": "Based on the provided document fragments, NVIDIA's total revenue for fiscal year 2024 was **$60.9 billion** (or $60,922 million) [1].\n\nThis represents a 126% increase compared to the previous fiscal year [1].",
+      "citations": [
+        1
+      ],
+      "ttft_ms": 68661,
+      "total_ms": 77758,
+      "prompt_tokens": 2986,
+      "completion_tokens": 297,
+      "served_provider": "SiliconFlow",
+      "served_model_version": null,
+      "error": null,
+      "n_chunks": 8
+    },
+    {
+      "test_id": "factual_nvidia_01",
+      "model": "mistralai/mistral-large-2512",
+      "document_slug": "nvidia-10k",
+      "question": "What was NVIDIA's total revenue in fiscal year 2024?",
+      "language": "en",
+      "type": "factual",
+      "is_negative": false,
+      "expected_min_citations": 1,
+      "ground_truth_keywords": [
+        "revenue",
+        "60.9",
+        "billion"
+      ],
+      "response_text": "NVIDIA's total revenue in fiscal year 2024 was **$60.9 billion**, representing a **126% increase** from the previous fiscal year [1][2][3][8].",
+      "citations": [
+        1,
+        2,
+        3,
+        8
+      ],
+      "ttft_ms": 887,
+      "total_ms": 1629,
+      "prompt_tokens": 3624,
+      "completion_tokens": 47,
+      "served_provider": "Mistral",
+      "served_model_version": null,
+      "error": null,
+      "n_chunks": 8
+    }
+  ]
+}

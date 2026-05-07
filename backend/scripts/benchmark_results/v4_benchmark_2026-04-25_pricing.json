@@ -1,0 +1,62 @@
+{
+  "fetched_at": "2026-04-25T08:20:48.303211+00:00",
+  "source": "https://openrouter.ai/api/v1/models",
+  "models": {
+    "deepseek-v3.2 [prod-quick]": {
+      "context_length": 131072,
+      "pricing": {
+        "prompt": "0.000000252",
+        "completion": "0.000000378",
+        "input_cache_read": "0.0000000252"
+      }
+    },
+    "mistral-medium-3.1 [prod-balanced]": {
+      "context_length": 131072,
+      "pricing": {
+        "prompt": "0.0000004",
+        "completion": "0.000002",
+        "input_cache_read": "0.00000004"
+      }
+    },
+    "mistral-large-2512 [prod-thorough]": {
+      "context_length": 262144,
+      "pricing": {
+        "prompt": "0.0000005",
+        "completion": "0.0000015",
+        "input_cache_read": "0.00000005"
+      }
+    },
+    "deepseek-v4-flash [no-think]": {
+      "context_length": 1048576,
+      "pricing": {
+        "prompt": "0.00000014",
+        "completion": "0.00000028",
+        "input_cache_read": "0.000000028"
+      }
+    },
+    "deepseek-v4-flash [think:low]": {
+      "context_length": 1048576,
+      "pricing": {
+        "prompt": "0.00000014",
+        "completion": "0.00000028",
+        "input_cache_read": "0.000000028"
+      }
+    },
+    "deepseek-v4-pro [no-think]": {
+      "context_length": 1048576,
+      "pricing": {
+        "prompt": "0.00000174",
+        "completion": "0.00000348",
+        "input_cache_read": "0.000000145"
+      }
+    },
+    "deepseek-v4-pro [think:medium]": {
+      "context_length": 1048576,
+      "pricing": {
+        "prompt": "0.00000174",
+        "completion": "0.00000348",
+        "input_cache_read": "0.000000145"
+      }
+    }
+  }
+}
