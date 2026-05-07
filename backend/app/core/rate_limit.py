@@ -249,6 +249,9 @@ shared_view_limiter = RedisRateLimiter(
 anon_read_limiter = RedisRateLimiter(
     namespace="rate_limit:anon_read", max_requests=120, window_seconds=60
 )
+public_event_limiter = RedisRateLimiter(
+    namespace="rate_limit:public_events", max_requests=30, window_seconds=60
+)
 
 
 def get_client_ip(request: "Request") -> str:

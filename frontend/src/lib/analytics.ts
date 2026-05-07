@@ -9,11 +9,15 @@ declare global {
 export function trackEvent(eventName: string, params: EventParams = {}) {
   if (typeof window === 'undefined') return;
   try {
-    window.gtag?.('event', eventName, params);
+    const safeParams: EventParams = {
+      path: window.location.pathname,
+      ...params,
+    };
+    window.gtag?.('event', eventName, safeParams);
     void fetch('/api/proxy/api/events', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ event_name: eventName, properties: params }),
+      body: JSON.stringify({ event_name: eventName, properties: safeParams }),
       keepalive: true,
     }).catch(() => undefined);
   } catch {

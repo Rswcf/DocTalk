@@ -3,12 +3,14 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { signIn } from "next-auth/react";
 import { useLocale } from "../i18n";
+import { trackEvent } from "../lib/analytics";
 
 interface AuthFormContentProps {
   callbackUrl: string;
+  surface?: "page" | "modal";
 }
 
-export function AuthFormContent({ callbackUrl }: AuthFormContentProps) {
+export function AuthFormContent({ callbackUrl, surface = "page" }: AuthFormContentProps) {
   const { t } = useLocale();
   const [email, setEmail] = useState("");
   const [emailSent, setEmailSent] = useState(false);
@@ -39,22 +41,48 @@ export function AuthFormContent({ callbackUrl }: AuthFormContentProps) {
     };
   }, []);
 
+  const authEventSource = `auth_${surface}`;
+
+  const handleProviderSignIn = (provider: "google" | "microsoft-entra-id") => {
+    trackEvent("auth_provider_clicked", {
+      source: authEventSource,
+      provider,
+    });
+    void signIn(provider, { callbackUrl });
+  };
+
   const handleEmailSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email.trim() || sending) return;
     setSending(true);
     setError("");
+    trackEvent("auth_email_link_requested", {
+      source: authEventSource,
+      reason: "initial",
+    });
     try {
       const result = await signIn("resend", { email: email.trim(), callbackUrl, redirect: false });
       if (result?.error) {
+        trackEvent("auth_email_link_failed", {
+          source: authEventSource,
+          reason: result.error,
+        });
         setError(result.error === "Configuration"
           ? t("auth.emailUnavailable")
           : result.error);
         return;
       }
+      trackEvent("auth_email_link_sent", {
+        source: authEventSource,
+        reason: "initial",
+      });
       setSentEmail(email.trim());
       setEmailSent(true);
     } catch (err) {
+      trackEvent("auth_email_link_failed", {
+        source: authEventSource,
+        reason: "unexpected",
+      });
       setError(t("auth.unexpectedError"));
     } finally {
       setSending(false);
@@ -65,15 +93,31 @@ export function AuthFormContent({ callbackUrl }: AuthFormContentProps) {
     if (sending || cooldown > 0 || resendCount >= 3) return;
     setSending(true);
     setError("");
+    trackEvent("auth_email_link_requested", {
+      source: authEventSource,
+      reason: "resend",
+    });
     try {
       const result = await signIn("resend", { email: sentEmail, callbackUrl, redirect: false });
       if (result?.error) {
+        trackEvent("auth_email_link_failed", {
+          source: authEventSource,
+          reason: result.error,
+        });
         setError(t("auth.resendFailed"));
       } else {
+        trackEvent("auth_email_link_sent", {
+          source: authEventSource,
+          reason: "resend",
+        });
         setResendCount((prev) => prev + 1);
         startCooldown();
       }
     } catch (err) {
+      trackEvent("auth_email_link_failed", {
+        source: authEventSource,
+        reason: "unexpected",
+      });
       setError(t("auth.unexpectedError"));
     } finally {
       setSending(false);
@@ -93,7 +137,7 @@ export function AuthFormContent({ callbackUrl }: AuthFormContentProps) {
     <div className="space-y-3">
       {/* Google OAuth */}
       <button
-        onClick={() => signIn("google", { callbackUrl })}
+        onClick={() => handleProviderSignIn("google")}
         className={oauthButtonClass}
       >
         <svg aria-hidden="true" className="w-5 h-5" viewBox="0 0 24 24">
@@ -107,7 +151,7 @@ export function AuthFormContent({ callbackUrl }: AuthFormContentProps) {
 
       {/* Microsoft OAuth */}
       <button
-        onClick={() => signIn("microsoft-entra-id", { callbackUrl })}
+        onClick={() => handleProviderSignIn("microsoft-entra-id")}
         className={oauthButtonClass}
       >
         <svg aria-hidden="true" className="w-5 h-5" viewBox="0 0 21 21">

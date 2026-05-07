@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { ArrowRight } from 'lucide-react';
 import { useLocale } from '../../i18n';
 import ScrollReveal from './ScrollReveal';
+import { trackEvent } from '../../lib/analytics';
 
 export default function FinalCTA() {
   const { t } = useLocale();
@@ -24,6 +25,7 @@ export default function FinalCTA() {
           <div className="flex items-center justify-center gap-4 flex-wrap">
             <Link
               href="/demo"
+              onClick={() => trackEvent('landing_cta_clicked', { source: 'final_cta', reason: 'demo' })}
               className="inline-flex items-center gap-2 px-6 py-3 bg-accent hover:bg-accent-hover text-accent-foreground rounded-lg font-medium shadow-sm hover:shadow-md transition-[box-shadow,background-color] duration-150 focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-900"
             >
               {t('landing.finalCta.demo')}
@@ -32,6 +34,7 @@ export default function FinalCTA() {
             <Link
               href="#auth"
               scroll={false}
+              onClick={() => trackEvent('landing_cta_clicked', { source: 'final_cta', reason: 'sign_up' })}
               className="px-6 py-3 border border-zinc-300 dark:border-zinc-700 text-zinc-900 dark:text-zinc-100 rounded-lg font-medium hover:border-accent hover:text-accent transition-colors focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-900"
             >
               {t('landing.finalCta.signUp')}

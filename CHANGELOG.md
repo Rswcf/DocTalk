@@ -8,6 +8,17 @@ releases use `0.minor.patch` semantics such as `0.2.0` and `0.2.1`.
 
 ## [Unreleased]
 
+## [0.7.3] - 2026-05-07
+
+### Changed
+- Made the public mobile header expose `Sign Up Free` as the primary action,
+  with Demo as the secondary path, to restore a clear registration entry point.
+
+### Added
+- Added anonymous, rate-limited auth-funnel telemetry for landing CTA clicks,
+  auth modal opens, OAuth provider clicks, and email magic-link outcomes without
+  storing email addresses or client IPs.
+
 ## [0.7.2] - 2026-05-07
 
 ### Fixed

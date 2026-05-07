@@ -7,6 +7,7 @@ import { useLocale } from '../../i18n';
 import HeroArtifact from './HeroArtifact';
 import SectionKicker from '../design/SectionKicker';
 import { BlurReveal, FlowButton, TiltCard, LightRays } from '../spell';
+import { trackEvent } from '../../lib/analytics';
 
 export default function HeroSection() {
   const { t, tOr } = useLocale();
@@ -64,6 +65,7 @@ export default function HeroSection() {
             <Link
               href="#auth"
               scroll={false}
+              onClick={() => trackEvent('landing_cta_clicked', { source: 'hero', reason: 'sign_up' })}
               className="text-sm font-semibold text-zinc-700 dark:text-zinc-300 hover:text-accent dark:hover:text-accent transition-colors motion-reduce:transition-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:rounded-sm"
             >
               {t('hero.signUpFree')}

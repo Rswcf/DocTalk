@@ -4,6 +4,7 @@ import Link from 'next/link';
 import DocTalkLogo from './DocTalkLogo';
 import LanguageSelector from './LanguageSelector';
 import { useLocale } from '../i18n';
+import { trackEvent } from '../lib/analytics';
 
 export default function PublicHeader() {
   const { t } = useLocale();
@@ -38,16 +39,18 @@ export default function PublicHeader() {
       <div className="ml-auto flex items-center gap-2 shrink-0">
         <div className="hidden sm:flex"><LanguageSelector /></div>
         <Link
-          href="/auth"
+          href="/demo"
+          onClick={() => trackEvent('landing_cta_clicked', { source: 'public_header', reason: 'demo' })}
           className="hidden sm:inline-flex items-center px-3 py-1.5 text-sm text-zinc-600 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:rounded-md"
         >
-          {t('auth.signIn')}
+          {t('footer.demo')}
         </Link>
         <Link
-          href="/demo"
+          href="/auth"
+          onClick={() => trackEvent('landing_cta_clicked', { source: 'public_header', reason: 'sign_up' })}
           className="inline-flex items-center px-3 py-1.5 text-sm bg-zinc-900 dark:bg-zinc-50 text-white dark:text-zinc-900 rounded-md hover:bg-zinc-800 dark:hover:bg-zinc-200 shadow-sm transition-colors focus-visible:ring-2 focus-visible:ring-zinc-400 dark:focus-visible:ring-zinc-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-900"
         >
-          {t('footer.demo')}
+          {t('hero.signUpFree')}
         </Link>
       </div>
     </header>

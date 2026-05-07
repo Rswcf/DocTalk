@@ -2,11 +2,12 @@ from __future__ import annotations
 
 from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException, Response
+from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.deps import get_db_session, require_auth
+from app.core.deps import get_current_user_optional, get_db_session
+from app.core.rate_limit import get_client_ip, public_event_limiter
 from app.models.tables import ProductEvent, User
 
 router = APIRouter(prefix="/api/events", tags=["events"])
@@ -38,6 +39,24 @@ ALLOWED_EVENTS = {
     "document_diff_export_clicked",
     "subscription_cancel_requested",
     "refund_requested",
+    "landing_cta_clicked",
+    "auth_modal_opened",
+    "auth_provider_clicked",
+    "auth_email_link_requested",
+    "auth_email_link_sent",
+    "auth_email_link_failed",
+}
+
+PUBLIC_EVENTS = {
+    "landing_cta_clicked",
+    "auth_modal_opened",
+    "auth_provider_clicked",
+    "auth_email_link_requested",
+    "auth_email_link_sent",
+    "auth_email_link_failed",
+    "upgrade_click",
+    "paywall_opened",
+    "limit_hit",
 }
 
 
@@ -71,15 +90,22 @@ def _safe_properties(raw: dict[str, Any]) -> dict[str, Any]:
 @router.post("", status_code=204)
 async def record_product_event(
     body: ProductEventRequest,
-    user: User = Depends(require_auth),
+    request: Request,
+    user: User | None = Depends(get_current_user_optional),
     db: AsyncSession = Depends(get_db_session),
 ):
     if body.event_name not in ALLOWED_EVENTS:
         raise HTTPException(status_code=400, detail="Unsupported event")
+    if user is None:
+        if body.event_name not in PUBLIC_EVENTS:
+            raise HTTPException(status_code=401, detail="Authentication required")
+        client_ip = get_client_ip(request)
+        if not await public_event_limiter.is_allowed(client_ip):
+            raise HTTPException(status_code=429, detail="Too many events")
 
     properties = _safe_properties(body.properties)
     event = ProductEvent(
-        user_id=user.id,
+        user_id=user.id if user else None,
         event_name=body.event_name,
         source=_safe_text(properties.get("source")),
         reason=_safe_text(properties.get("reason")),

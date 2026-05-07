@@ -8,6 +8,16 @@
 
 ## [Unreleased]
 
+## [0.7.3] - 2026-05-07
+
+### Changed
+- public mobile header 现在将 `Sign Up Free` 作为主入口，Demo 调整为次级路径，
+  恢复清晰的注册入口。
+
+### Added
+- 新增匿名且带限流的注册漏斗事件，包括 landing CTA 点击、auth modal 打开、
+  OAuth provider 点击、email magic-link 结果；不记录邮箱地址或客户端 IP。
+
 ## [0.7.2] - 2026-05-07
 
 ### Fixed

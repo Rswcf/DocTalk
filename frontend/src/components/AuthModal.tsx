@@ -6,6 +6,7 @@ import { X } from 'lucide-react';
 import { useLocale } from '../i18n';
 import { AuthFormContent } from './AuthFormContent';
 import { AUTH_MODAL_HASH, getUrlWithoutAuthHash, isAuthModalHash } from '../lib/auth-modal';
+import { trackEvent } from '../lib/analytics';
 
 export function AuthModal() {
   const router = useRouter();
@@ -40,6 +41,7 @@ export function AuthModal() {
 
   useEffect(() => {
     if (!isOpen) return;
+    trackEvent('auth_modal_opened', { source: 'auth_modal' });
     const previouslyFocused = document.activeElement as HTMLElement;
     const modal = modalRef.current;
     if (!modal) return;
@@ -114,7 +116,7 @@ export function AuthModal() {
           {t('auth.loginBenefits')}
         </p>
 
-        <AuthFormContent callbackUrl={callbackUrl} />
+        <AuthFormContent callbackUrl={callbackUrl} surface="modal" />
       </div>
     </div>
   );
