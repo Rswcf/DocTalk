@@ -24,6 +24,7 @@ backend changes from `stable`, and record the outcome here.
 | M3 | 0.5.0 | Deep Link Answer Share | Deployed | `3e6cd9f` | Done | Done | Railway `0.5.0 beta` |
 | M4 | 0.6.0 | Question Templates | Deployed | `5906545` | Done | Done | Railway `0.6.0 beta` |
 | M5 | 0.7.0 | Document Diff | Deployed | `7a326b8` | Done | Done | Railway `0.7.0 beta` |
+| Hotfix | 0.7.1 | Async Job Response Lazy-Load Fix | In progress | Pending | Pending | Pending | Pending |
 
 ## Current Cycle: M1 Structured Extraction
 
@@ -187,3 +188,27 @@ backend changes from `stable`, and record the outcome here.
 - `railway up --detach` from `stable` — PASS
 - `curl https://backend-production-a62e.up.railway.app/health` — PASS (`0.7.0 beta`)
 - `curl https://backend-production-a62e.up.railway.app/version` — PASS (`0.7.0 beta`)
+
+## Current Cycle: Hotfix 0.7.1 Async Job Response Lazy-Load Fix
+
+- Started: 2026-05-07
+- Branch: `main`
+- Commit: Pending
+- Tag: Pending
+- Push: Pending
+- Deploy: Pending
+- Scope: prevent async SQLAlchemy relationship lazy-loads while building
+  queued/completed document-workbench job responses for Structured Extraction,
+  Question Templates, and Document Diff.
+- Required verification:
+  - `python3 scripts/check_version_consistency.py`
+  - `cd frontend && npm run build`
+  - `cd backend && python3 -m ruff check app/ tests/`
+  - `cd backend && python3 -m pytest tests/test_parse_service.py -v`
+  - Hotfix API regression tests for extraction, question-template, and diff
+    response serialization.
+
+### Hotfix 0.7.1 Verification Log
+
+- `cd backend && python3 -m ruff check app/ tests/` — PASS
+- `cd backend && python3 -m pytest tests/test_extractions_api.py tests/test_question_templates_api.py tests/test_document_diffs_api.py -v` — PASS (`19 passed`)

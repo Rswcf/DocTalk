@@ -102,10 +102,16 @@ def _template_response(template: QuestionTemplate) -> QuestionTemplatePayload:
     )
 
 
+def _loaded_extraction_result(job: Any) -> Any | None:
+    # Async SQLAlchemy cannot lazy-load relationships during response building.
+    # Use only values already loaded by selectinload or explicitly assigned.
+    return job.__dict__.get("extraction_result")
+
+
 def _run_response(job: DocumentJob) -> QuestionTemplateRunResponse:
     result = None
-    if job.extraction_result:
-        er = job.extraction_result
+    er = _loaded_extraction_result(job)
+    if er:
         result = ExtractionResultPayload(
             template_key=er.template_key,
             structured_json=er.structured_json or {},
@@ -531,12 +537,12 @@ async def export_question_template_run(
         .where(DocumentJob.job_type == BATCH_TEMPLATE_JOB_TYPE)
     )
     job = row.scalar_one_or_none()
-    if not job or not job.extraction_result:
+    result = _loaded_extraction_result(job) if job else None
+    if not job or not result:
         raise HTTPException(
             status_code=404,
             detail={"error": "QUESTION_TEMPLATE_RUN_NOT_FOUND", "message": "Question template run not found"},
         )
-    result = job.extraction_result
     stem = f"question-template-{str(job.id)[:8]}"
     if format == "csv":
         content = render_question_template_csv(result.structured_json or {})

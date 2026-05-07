@@ -8,6 +8,13 @@
 
 ## [Unreleased]
 
+## [0.7.1] - 2026-05-07
+
+### Fixed
+- 修复 queued extraction、question-template、document-diff job 返回响应时触发
+  async SQLAlchemy lazy-load 的问题，避免用户启动文档工作台异步任务后出现生产
+  `HTTP 500`。
+
 ## [0.7.0] - 2026-05-07
 
 ### Added

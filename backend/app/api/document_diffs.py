@@ -73,10 +73,16 @@ def _content_disposition(filename: str) -> str:
     return f"attachment; filename=\"{ascii_fallback}\"; filename*=UTF-8''{quote(clean, safe='')}"
 
 
+def _loaded_extraction_result(job: Any) -> Any | None:
+    # Async SQLAlchemy cannot lazy-load relationships during response building.
+    # Use only values already loaded by selectinload or explicitly assigned.
+    return job.__dict__.get("extraction_result")
+
+
 def _run_response(job: DocumentJob) -> DocumentDiffRunResponse:
     result = None
-    if job.extraction_result:
-        er = job.extraction_result
+    er = _loaded_extraction_result(job)
+    if er:
         result = ExtractionResultPayload(
             template_key=er.template_key,
             structured_json=er.structured_json or {},
@@ -341,21 +347,22 @@ async def export_document_diff(
         .where(DocumentJob.job_type == DOCUMENT_DIFF_JOB_TYPE)
     )
     job = row.scalar_one_or_none()
-    if not job or not job.extraction_result:
+    result = _loaded_extraction_result(job) if job else None
+    if not job or not result:
         raise HTTPException(
             status_code=404,
             detail={"error": "DOCUMENT_DIFF_NOT_FOUND", "message": "Document comparison not found"},
         )
     stem = f"document-diff-{str(job.id)[:8]}"
     if format == "csv":
-        content = render_document_diff_csv(job.extraction_result.structured_json or {})
+        content = render_document_diff_csv(result.structured_json or {})
         return StreamingResponse(
             iter([content.encode("utf-8-sig")]),
             media_type="text/csv; charset=utf-8",
             headers={"Content-Disposition": _content_disposition(f"{stem}.csv")},
         )
     return StreamingResponse(
-        iter([(job.extraction_result.rendered_markdown or "").encode("utf-8")]),
+        iter([(result.rendered_markdown or "").encode("utf-8")]),
         media_type="text/markdown; charset=utf-8",
         headers={"Content-Disposition": _content_disposition(f"{stem}.md")},
     )

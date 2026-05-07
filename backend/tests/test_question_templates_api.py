@@ -111,6 +111,27 @@ def _make_template(user: SimpleNamespace, *, questions: list[str] | None = None)
     )
 
 
+class _LazyTrapTemplateRun:
+    def __init__(self) -> None:
+        now = datetime.now(timezone.utc)
+        self.id = uuid.uuid4()
+        self.document_id = uuid.uuid4()
+        self.collection_id = None
+        self.job_type = "batch_template"
+        self.status = "queued"
+        self.input_scope = {}
+        self.cost_credits = 0
+        self.error_code = None
+        self.error_message = None
+        self.created_at = now
+        self.updated_at = now
+        self.completed_at = None
+
+    @property
+    def extraction_result(self):
+        raise AssertionError("lazy extraction_result relationship was accessed")
+
+
 def _override_dependencies(db: object, user: object) -> None:
     async def _get_db():
         yield db
@@ -236,6 +257,13 @@ async def test_collection_template_run_requires_ready_documents(client: AsyncCli
     )
 
     _assert_error(response, 409, "DOCUMENT_NOT_READY")
+
+
+def test_question_template_run_response_does_not_lazy_load_unloaded_result() -> None:
+    body = templates_api._run_response(_LazyTrapTemplateRun())
+
+    assert body.status == "queued"
+    assert body.result is None
 
 
 @pytest.mark.asyncio

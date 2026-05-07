@@ -20,7 +20,6 @@ from app.models.tables import (
     CreditLedger,
     Document,
     DocumentJob,
-    ExtractionResult,
     ProductEvent,
     User,
 )
@@ -91,10 +90,16 @@ def _content_disposition(filename: str) -> str:
     return f"attachment; filename=\"{ascii_fallback}\"; filename*=UTF-8''{quote(clean, safe='')}"
 
 
+def _loaded_extraction_result(job: Any) -> Any | None:
+    # Async SQLAlchemy cannot lazy-load relationships during response building.
+    # Use only values already loaded by selectinload or explicitly assigned.
+    return job.__dict__.get("extraction_result")
+
+
 def _job_response(job: DocumentJob) -> ExtractionJobResponse:
     result = None
-    if job.extraction_result:
-        er = job.extraction_result
+    er = _loaded_extraction_result(job)
+    if er:
         result = ExtractionResultPayload(
             template_key=er.template_key,
             structured_json=er.structured_json or {},
@@ -320,12 +325,12 @@ async def export_extraction(
         .where(DocumentJob.job_type == EXTRACTION_JOB_TYPE)
     )
     job = row.scalar_one_or_none()
-    if not job or not job.extraction_result:
+    result = _loaded_extraction_result(job) if job else None
+    if not job or not result:
         raise HTTPException(
             status_code=404,
             detail={"error": "EXTRACTION_NOT_FOUND", "message": "Extraction not found"},
         )
-    result: ExtractionResult = job.extraction_result
     stem = f"extraction-{result.template_key}-{str(job.id)[:8]}"
     if format == "csv":
         content = render_csv(result.template_key, result.structured_json or {})

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import uuid
+from datetime import datetime, timezone
 from types import SimpleNamespace
 from unittest.mock import AsyncMock
 
@@ -55,6 +56,27 @@ def _make_db(**overrides: object) -> SimpleNamespace:
     }
     payload.update(overrides)
     return SimpleNamespace(**payload)
+
+
+class _LazyTrapExtractionJob:
+    def __init__(self) -> None:
+        now = datetime.now(timezone.utc)
+        self.id = uuid.uuid4()
+        self.document_id = uuid.uuid4()
+        self.collection_id = None
+        self.job_type = "extraction"
+        self.status = "queued"
+        self.input_scope = {}
+        self.cost_credits = 0
+        self.error_code = None
+        self.error_message = None
+        self.created_at = now
+        self.updated_at = now
+        self.completed_at = None
+
+    @property
+    def extraction_result(self):
+        raise AssertionError("lazy extraction_result relationship was accessed")
 
 
 def _override_dependencies(db: object, user: object) -> None:
@@ -146,6 +168,13 @@ async def test_create_extraction_insufficient_credits_rolls_back(
     assert detail["required"] == 25
     assert detail["balance"] == 12
     db.rollback.assert_awaited_once()
+
+
+def test_extraction_job_response_does_not_lazy_load_unloaded_result() -> None:
+    body = extractions_api._job_response(_LazyTrapExtractionJob())
+
+    assert body.status == "queued"
+    assert body.result is None
 
 
 @pytest.mark.asyncio

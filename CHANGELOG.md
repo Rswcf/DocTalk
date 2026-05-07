@@ -8,6 +8,13 @@ releases use `0.minor.patch` semantics such as `0.2.0` and `0.2.1`.
 
 ## [Unreleased]
 
+## [0.7.1] - 2026-05-07
+
+### Fixed
+- Prevented async SQLAlchemy lazy-loading while serializing queued extraction,
+  question-template, and document-diff job responses. This fixes production
+  `HTTP 500` errors after users start an async document-workbench job.
+
 ## [0.7.0] - 2026-05-07
 
 ### Added

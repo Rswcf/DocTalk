@@ -91,6 +91,27 @@ def _make_doc(user: SimpleNamespace, *, status: str = "ready", filename: str = "
     return SimpleNamespace(id=uuid.uuid4(), user_id=user.id, status=status, demo_slug=None, filename=filename)
 
 
+class _LazyTrapDocumentDiffRun:
+    def __init__(self) -> None:
+        now = datetime.now(timezone.utc)
+        self.id = uuid.uuid4()
+        self.document_id = uuid.uuid4()
+        self.collection_id = None
+        self.job_type = "document_diff"
+        self.status = "queued"
+        self.input_scope = {}
+        self.cost_credits = 0
+        self.error_code = None
+        self.error_message = None
+        self.created_at = now
+        self.updated_at = now
+        self.completed_at = None
+
+    @property
+    def extraction_result(self):
+        raise AssertionError("lazy extraction_result relationship was accessed")
+
+
 def _override_dependencies(db: object, user: object) -> None:
     async def _get_db():
         yield db
@@ -217,6 +238,13 @@ async def test_create_document_diff_requires_docs_in_collection(client: AsyncCli
     )
 
     _assert_error(response, 400, "DOCUMENT_DIFF_COLLECTION_MISMATCH")
+
+
+def test_document_diff_run_response_does_not_lazy_load_unloaded_result() -> None:
+    body = diffs_api._run_response(_LazyTrapDocumentDiffRun())
+
+    assert body.status == "queued"
+    assert body.result is None
 
 
 @pytest.mark.asyncio
