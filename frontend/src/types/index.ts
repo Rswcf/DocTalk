@@ -200,3 +200,12 @@ export interface DocumentTable {
   created_at: string;
   updated_at: string;
 }
+
+export interface QuestionTemplate {
+  id: string;
+  name: string;
+  description: string | null;
+  questions: string[];
+  created_at: string;
+  updated_at: string;
+}

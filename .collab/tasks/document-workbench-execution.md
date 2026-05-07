@@ -22,7 +22,7 @@ backend changes from `stable`, and record the outcome here.
 | M1 | 0.3.0 | Structured Extraction | Deployed | `5ac4d83` | Done | Done | Railway `0.3.0 beta` |
 | M2 | 0.4.0 | Table Extraction | Deployed | `a945117` | Done | Done | Railway `0.4.0 beta` |
 | M3 | 0.5.0 | Deep Link Answer Share | Deployed | `3e6cd9f` | Done | Done | Railway `0.5.0 beta` |
-| M4 | 0.6.0 | Question Templates | Pending | Pending | Pending | Pending | Pending |
+| M4 | 0.6.0 | Question Templates | Verified locally | Pending | Pending | Pending | Pending |
 | M5 | 0.7.0 | Document Diff | Pending | Pending | Pending | Pending | Pending |
 
 ## Current Cycle: M1 Structured Extraction
@@ -112,3 +112,38 @@ backend changes from `stable`, and record the outcome here.
 - `railway up --detach` from `stable` — PASS
 - `curl https://backend-production-a62e.up.railway.app/health` — PASS (`0.5.0 beta`)
 - `curl https://backend-production-a62e.up.railway.app/version` — PASS (`0.5.0 beta`)
+
+## Current Cycle: M4 Question Templates
+
+- Started: 2026-05-07
+- Branch: `main`
+- Commit: Pending
+- Tag: Pending
+- Push: Pending
+- Deploy: Pending
+- Scope: version hygiene, `question_templates`, `batch_template` jobs,
+  question-template worker/API, document-reader Templates tab, Collection
+  Templates workspace, cited answer matrix, Markdown/CSV export, tests, i18n
+  and docs.
+- Required verification:
+  - `python3 scripts/check_version_consistency.py`
+  - `cd frontend && npm run build`
+  - `cd backend && python3 -m ruff check app/ tests/`
+  - `cd backend && python3 -m pytest tests/test_parse_service.py -v`
+  - M4 question-template-specific tests
+
+### M4 Verification Log
+
+- `python3 scripts/check_version_consistency.py` — PASS (`0.6.0 beta`)
+- `cd frontend && npm run build` — PASS
+- `cd backend && python3 -m ruff check app/ tests/` — PASS
+- `cd backend && python3 -m pytest tests/test_parse_service.py tests/test_question_templates_api.py tests/test_question_template_service.py -v` — PASS (`17 passed`)
+- `cd backend && python3 -m pytest tests/test_extractions_api.py tests/test_extraction_service.py tests/test_tables_api.py tests/test_table_service.py tests/test_sharing_api.py tests/test_share_anchor_service.py tests/test_smoke.py tests/test_versioning.py -v` — PASS (`27 passed, 1 skipped`)
+- `cd backend && python3 -m pytest tests/test_error_taxonomy.py tests/test_billing_cancel.py tests/test_credit_reconcile.py -v` — PASS (`67 passed`)
+- `cd backend && python3 -m alembic heads` — PASS (`20260507_0025`)
+- `cd backend && python3 -m alembic upgrade head` — PASS against local `localhost/doctalk`
+- Browser smoke: local production Next server on `127.0.0.1:3100` with mocked
+  authenticated API responses rendered `/d/mock-doc`, navigated
+  `Extract → Templates`, displayed a saved template and cited answer matrix,
+  and passed desktop/mobile screenshots. A mobile overflow issue and a
+  split-pane desktop layout squeeze were found and fixed before this PASS.

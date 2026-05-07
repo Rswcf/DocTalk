@@ -3,11 +3,12 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
-import { FileText, MessageSquare, Plus, X } from 'lucide-react';
+import { ClipboardList, FileText, MessageSquare, Plus, X } from 'lucide-react';
 import Header from '../../../components/Header';
 import { ChatPanel } from '../../../components/Chat';
 import CollectionSidebar from '../../../components/Collections/CollectionSidebar';
 import SessionList from '../../../components/Collections/SessionList';
+import QuestionTemplatesPanel from '../../../components/Templates/QuestionTemplatesPanel';
 import {
   getCollection,
   getMessages,
@@ -44,6 +45,7 @@ export default function CollectionDetailPage() {
   const [loading, setLoading] = useState(true);
   const [showAddDocs, setShowAddDocs] = useState(false);
   const [availableDocs, setAvailableDocs] = useState<DocumentBrief[]>([]);
+  const [workspaceMode, setWorkspaceMode] = useState<'chat' | 'templates'>('chat');
   // Mobile sidebar toggle
   const [showMobileSidebar, setShowMobileSidebar] = useState<'docs' | 'sessions' | null>(null);
 
@@ -196,6 +198,32 @@ export default function CollectionDetailPage() {
             </h1>
           </div>
           <div className="hidden items-center gap-2 text-xs text-zinc-500 dark:text-zinc-400 sm:flex">
+            <div className="mr-1 flex rounded-lg border border-zinc-200 bg-zinc-50 p-1 dark:border-zinc-800 dark:bg-zinc-950">
+              <button
+                type="button"
+                onClick={() => setWorkspaceMode('chat')}
+                className={`inline-flex min-h-8 items-center gap-1.5 rounded-md px-2.5 font-medium transition-colors ${
+                  workspaceMode === 'chat'
+                    ? 'bg-white text-zinc-900 shadow-sm dark:bg-zinc-800 dark:text-zinc-100'
+                    : 'text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100'
+                }`}
+              >
+                <MessageSquare aria-hidden="true" size={13} />
+                {t('mobile.chatTab')}
+              </button>
+              <button
+                type="button"
+                onClick={() => setWorkspaceMode('templates')}
+                className={`inline-flex min-h-8 items-center gap-1.5 rounded-md px-2.5 font-medium transition-colors ${
+                  workspaceMode === 'templates'
+                    ? 'bg-white text-zinc-900 shadow-sm dark:bg-zinc-800 dark:text-zinc-100'
+                    : 'text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100'
+                }`}
+              >
+                <ClipboardList aria-hidden="true" size={13} />
+                {tOr('templates.tab', 'Templates')}
+              </button>
+            </div>
             <span className="inline-flex items-center gap-1 rounded-full border border-zinc-200 bg-zinc-50 px-2.5 py-1 dark:border-zinc-800 dark:bg-zinc-950">
               <FileText aria-hidden="true" size={13} className="text-accent" />
               {collection?.documents?.length || 0} {tOr('collections.documents', 'documents')}
@@ -219,6 +247,19 @@ export default function CollectionDetailPage() {
         >
           <FileText aria-hidden="true" size={14} />
           {tOr('collections.documents', 'Documents')} ({collection?.documents?.length || 0})
+        </button>
+        <button
+          type="button"
+          onClick={() => {
+            setWorkspaceMode(workspaceMode === 'templates' ? 'chat' : 'templates');
+            setShowMobileSidebar(null);
+          }}
+          className={`flex flex-1 items-center justify-center gap-2 px-4 py-2.5 text-xs font-medium transition-colors ${
+            workspaceMode === 'templates' ? 'bg-white text-zinc-900 shadow-sm dark:bg-zinc-800 dark:text-zinc-100' : 'text-zinc-500'
+          }`}
+        >
+          <ClipboardList aria-hidden="true" size={14} />
+          {tOr('templates.tab', 'Templates')}
         </button>
         <button
           type="button"
@@ -287,9 +328,16 @@ export default function CollectionDetailPage() {
           </div>
         </div>
 
-        {/* Main: Chat Panel */}
+        {/* Main: Chat or Templates workspace */}
         <div className="min-w-0 flex-1 bg-white dark:bg-zinc-950">
-          {sessionId ? (
+          {workspaceMode === 'templates' ? (
+            <QuestionTemplatesPanel
+              scope={{ type: 'collection', collectionId }}
+              onCitationClick={handleCitationClick}
+              userPlan={userPlan}
+              documentCount={collection?.documents?.length || 0}
+            />
+          ) : sessionId ? (
             <ChatPanel
               sessionId={sessionId}
               onCitationClick={handleCitationClick}

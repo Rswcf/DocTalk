@@ -505,6 +505,32 @@ class ExtractionResult(Base):
     )
 
 
+class QuestionTemplate(Base):
+    __tablename__ = "question_templates"
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, server_default=sa.text("gen_random_uuid()")
+    )
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), sa.ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    name: Mapped[str] = mapped_column(sa.String(160), nullable=False)
+    description: Mapped[Optional[str]] = mapped_column(sa.Text, nullable=True)
+    questions: Mapped[list] = mapped_column(JSONB, nullable=False, server_default=sa.text("'[]'::jsonb"))
+    created_at: Mapped[datetime] = mapped_column(
+        sa.DateTime(timezone=True), nullable=False, server_default=sa.text("now()")
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        sa.DateTime(timezone=True), nullable=False, server_default=sa.text("now()"), onupdate=sa.func.now()
+    )
+
+    user: Mapped["User"] = relationship("User")
+
+    __table_args__ = (
+        sa.Index("idx_question_templates_user_updated", "user_id", sa.text("updated_at DESC")),
+    )
+
+
 class DocumentTable(Base):
     __tablename__ = "document_tables"
 

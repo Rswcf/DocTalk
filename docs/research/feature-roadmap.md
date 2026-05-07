@@ -20,8 +20,8 @@ build sequence.
 |---|---|---|---|
 | `0.3.0 beta` | Structured Extraction | Shipped | Turns cited answers into exportable work product |
 | `0.4.0 beta` | Table Extraction | Shipped | Captures finance/research users who need CSV/Excel-ready data |
-| `0.5.0 beta` | Deep Link Answer Share | In implementation | Adds referral loops around high-quality cited answers |
-| `0.6.0 beta` | Question Templates | Planned | Creates repeat workflows and credit-consuming batch value |
+| `0.5.0 beta` | Deep Link Answer Share | Shipped | Adds referral loops around high-quality cited answers |
+| `0.6.0 beta` | Question Templates | Shipped | Creates repeat workflows and credit-consuming batch value |
 | `0.7.0 beta` | Document Diff | Planned | Targets legal/business review pain with Pro-grade semantic comparison |
 
 ---

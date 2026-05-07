@@ -546,6 +546,16 @@ erDiagram
         datetime updated_at
     }
 
+    QuestionTemplate {
+        uuid id PK
+        uuid user_id FK
+        string name
+        text description
+        jsonb questions
+        datetime created_at
+        datetime updated_at
+    }
+
     DocumentTable {
         uuid id PK
         uuid document_id FK
@@ -586,6 +596,7 @@ erDiagram
 - `Collection ↔ Document`: Many-to-many via `collection_documents` junction table
 - `User/Document/Collection → DocumentJob`: CASCADE delete for async workbench jobs
 - `DocumentJob → ExtractionResult`: CASCADE delete, one extraction payload per job
+- `User → QuestionTemplate`: CASCADE delete, personal reusable question checklists
 - `Document → DocumentTable`: CASCADE delete, on-demand table scan output
 
 **Unique constraints:**
@@ -867,6 +878,15 @@ LLM. The worker clears and rewrites `document_tables` for the document. Native
 PDFs use PyMuPDF `page.find_tables()`, while DOCX/PPTX/XLSX/TXT/MD/URL-derived
 documents fall back to markdown-table detection from stored `pages.content`.
 Free users can preview detected tables; CSV export is gated to Plus+.
+
+Question Templates reuse `document_jobs` with `job_type='batch_template'` and
+store outputs in `extraction_results` with `template_key='question_template'`.
+`question_templates` stores per-user saved checklists as JSONB question arrays.
+Single-document runs are gated to Plus+, Collection batch runs are gated to Pro,
+and each answer cell uses the same cited retrieval/LLM path as Structured
+Extraction. Runs pre-debit credits by question × document count, queue
+`run_batch_template_job` on Celery's `default` queue, then reconcile the
+original ledger row to actual token cost.
 
 Public shared-session responses expose only safe message anchors, role/content,
 and page/snippet/document-filename citation summaries. They intentionally omit

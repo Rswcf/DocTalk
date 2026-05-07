@@ -10,6 +10,7 @@ from .tables import (
     ExtractionResult,
     Message,
     Page,
+    QuestionTemplate,
     UsageRecord,
     User,
     VerificationToken,
@@ -30,4 +31,5 @@ __all__ = [
     "DocumentJob",
     "DocumentTable",
     "ExtractionResult",
+    "QuestionTemplate",
 ]

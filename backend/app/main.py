@@ -22,6 +22,7 @@ from .api.documents import documents_router
 from .api.events import router as events_router
 from .api.export import router as export_router
 from .api.extractions import router as extractions_router
+from .api.question_templates import router as question_templates_router
 from .api.search import search_router
 from .api.sharing import router as sharing_router
 from .api.tables import router as tables_router
@@ -189,6 +190,7 @@ app.include_router(collections_router)
 app.include_router(admin_router)
 app.include_router(events_router)
 app.include_router(extractions_router)
+app.include_router(question_templates_router)
 app.include_router(tables_router)
 app.include_router(export_router)
 app.include_router(sharing_router)

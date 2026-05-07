@@ -5,6 +5,7 @@ import Link from "next/link";
 import {
   AlertTriangle,
   CheckCircle2,
+  ClipboardList,
   Clock3,
   Download,
   FileSpreadsheet,
@@ -30,6 +31,7 @@ import { trackEvent } from "../../lib/analytics";
 import { useLocale } from "../../i18n";
 import { useDocTalkStore } from "../../store";
 import type { Citation, DocumentTable, ExtractionJob, ExtractionTemplate, NormalizedBBox } from "../../types";
+import QuestionTemplatesPanel from "../Templates/QuestionTemplatesPanel";
 
 interface ExtractionPanelProps {
   documentId: string;
@@ -89,7 +91,7 @@ function downloadBlob(blob: Blob, filename: string) {
 export default function ExtractionPanel({ documentId, onCitationClick, userPlan }: ExtractionPanelProps) {
   const { tOr, locale } = useLocale();
   const domainMode = useDocTalkStore((s) => s.domainMode);
-  const [activeView, setActiveView] = useState<"deliverables" | "tables">("deliverables");
+  const [activeView, setActiveView] = useState<"deliverables" | "tables" | "templates">("deliverables");
   const [templates, setTemplates] = useState<ExtractionTemplate[]>([]);
   const [jobs, setJobs] = useState<ExtractionJob[]>([]);
   const [tables, setTables] = useState<DocumentTable[]>([]);
@@ -348,11 +350,32 @@ export default function ExtractionPanel({ documentId, onCitationClick, userPlan 
             <Table2 size={13} aria-hidden="true" />
             {tOr("tables.tab", "Tables")}
           </button>
+          <button
+            type="button"
+            onClick={() => setActiveView("templates")}
+            className={`inline-flex min-h-8 flex-1 items-center justify-center gap-2 rounded-md px-2 text-xs font-medium transition-colors ${
+              activeView === "templates"
+                ? "bg-[var(--reader-panel-solid)] text-[var(--reader-ink)] shadow-sm"
+                : "text-[var(--reader-muted)]"
+            }`}
+          >
+            <ClipboardList size={13} aria-hidden="true" />
+            {tOr("templates.tab", "Templates")}
+          </button>
         </div>
       </div>
 
       <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4 sm:px-5">
-        {activeView === "tables" ? (
+        {activeView === "templates" ? (
+          <div className="-mx-4 -my-4 h-[calc(100%+2rem)] sm:-mx-5">
+            <QuestionTemplatesPanel
+              scope={{ type: "document", documentId }}
+              onCitationClick={onCitationClick}
+              userPlan={userPlan}
+              documentCount={1}
+            />
+          </div>
+        ) : activeView === "tables" ? (
           <TablesView
             tables={tables}
             job={tableJob}

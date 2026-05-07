@@ -31,6 +31,9 @@ ALLOWED_EVENTS = {
     "extraction_export_clicked",
     "table_scan_created",
     "table_export_clicked",
+    "question_template_created",
+    "question_template_run_created",
+    "question_template_export_clicked",
     "subscription_cancel_requested",
     "refund_requested",
 }

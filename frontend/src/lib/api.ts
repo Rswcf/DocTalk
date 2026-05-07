@@ -1,4 +1,4 @@
-import type { DocumentResponse, Message, SearchResponse, Citation, SessionListResponse, CollectionBrief, CollectionDetail, NormalizedBBox, ExtractionJob, ExtractionTemplate, DocumentTable } from '../types';
+import type { DocumentResponse, Message, SearchResponse, Citation, SessionListResponse, CollectionBrief, CollectionDetail, NormalizedBBox, ExtractionJob, ExtractionTemplate, DocumentTable, QuestionTemplate } from '../types';
 import type { UserProfile, CreditHistoryResponse, UsageBreakdown } from '../types';
 
 export const API_BASE = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8000';
@@ -554,6 +554,100 @@ export async function getTableScanJob(jobId: string): Promise<ExtractionJob> {
 
 export async function exportDocumentTable(tableId: string): Promise<Blob> {
   const res = await fetch(`${PROXY_BASE}/api/document-tables/${tableId}/export`);
+  if (!res.ok) await throwApiError(res);
+  return res.blob();
+}
+
+// --- Question Templates API ---
+
+export async function listQuestionTemplates(): Promise<QuestionTemplate[]> {
+  const res = await fetch(`${PROXY_BASE}/api/question-templates`);
+  return handle(res);
+}
+
+export async function createQuestionTemplate(params: {
+  name: string;
+  description?: string | null;
+  questions: string[];
+}): Promise<QuestionTemplate> {
+  const res = await fetch(`${PROXY_BASE}/api/question-templates`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      name: params.name,
+      description: params.description || null,
+      questions: params.questions,
+    }),
+  });
+  return handle(res);
+}
+
+export async function updateQuestionTemplate(params: {
+  templateId: string;
+  name: string;
+  description?: string | null;
+  questions: string[];
+}): Promise<QuestionTemplate> {
+  const res = await fetch(`${PROXY_BASE}/api/question-templates/${params.templateId}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      name: params.name,
+      description: params.description || null,
+      questions: params.questions,
+    }),
+  });
+  return handle(res);
+}
+
+export async function deleteQuestionTemplate(templateId: string): Promise<void> {
+  const res = await fetch(`${PROXY_BASE}/api/question-templates/${templateId}`, { method: 'DELETE' });
+  if (!res.ok) await throwApiError(res);
+}
+
+export async function listDocumentQuestionTemplateRuns(documentId: string): Promise<ExtractionJob[]> {
+  const res = await fetch(`${PROXY_BASE}/api/documents/${documentId}/question-template-runs`);
+  return handle(res);
+}
+
+export async function runDocumentQuestionTemplate(params: {
+  documentId: string;
+  templateId: string;
+  locale?: string;
+}): Promise<ExtractionJob> {
+  const res = await fetch(`${PROXY_BASE}/api/documents/${params.documentId}/question-template-runs`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ template_id: params.templateId, locale: params.locale }),
+  });
+  return handle(res);
+}
+
+export async function listCollectionQuestionTemplateRuns(collectionId: string): Promise<ExtractionJob[]> {
+  const res = await fetch(`${PROXY_BASE}/api/collections/${collectionId}/question-template-runs`);
+  return handle(res);
+}
+
+export async function runCollectionQuestionTemplate(params: {
+  collectionId: string;
+  templateId: string;
+  locale?: string;
+}): Promise<ExtractionJob> {
+  const res = await fetch(`${PROXY_BASE}/api/collections/${params.collectionId}/question-template-runs`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ template_id: params.templateId, locale: params.locale }),
+  });
+  return handle(res);
+}
+
+export async function getQuestionTemplateRun(jobId: string): Promise<ExtractionJob> {
+  const res = await fetch(`${PROXY_BASE}/api/question-template-runs/${jobId}`);
+  return handle(res);
+}
+
+export async function exportQuestionTemplateRun(jobId: string, format: 'md' | 'csv'): Promise<Blob> {
+  const res = await fetch(`${PROXY_BASE}/api/question-template-runs/${jobId}/export?format=${format}`);
   if (!res.ok) await throwApiError(res);
   return res.blob();
 }

@@ -8,6 +8,18 @@ releases use `0.minor.patch` semantics such as `0.2.0` and `0.2.1`.
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-05-07
+
+### Added
+- Reusable Question Templates for the document workbench. Users can create
+  saved checklists, run them against a single document on Plus+, and export the
+  cited answer matrix as Markdown or CSV.
+- Pro-only Collection template runs that apply the same checklist across every
+  ready document in a collection and render the answers as a cited matrix.
+- `question_templates` table, `batch_template` document job type, FastAPI
+  template/run/export endpoints, and a Celery worker task for queued template
+  execution with credit pre-debit/reconciliation.
+
 ## [0.5.0] - 2026-05-07
 
 ### Added

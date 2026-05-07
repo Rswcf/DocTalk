@@ -8,6 +8,17 @@
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-05-07
+
+### Added
+- 文档工作台新增可复用 Question Templates。用户可以创建保存的检查清单，
+  在 Plus+ 上对单篇文档运行，并将带引用的答案矩阵导出为 Markdown 或 CSV。
+- Pro 支持 Collection 批量模板运行，可对集合中的每份 ready 文档应用同一组
+  问题，并展示带引用的答案矩阵。
+- 新增 `question_templates` 表、`batch_template` document job 类型、FastAPI
+  模板/运行/导出接口，以及用于队列化模板执行和 credits 预扣费/reconcile 的
+  Celery worker 任务。
+
 ## [0.5.0] - 2026-05-07
 
 ### Added
