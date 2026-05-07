@@ -18,7 +18,7 @@ Owner: Codex
 | M0 | 0.8.0 beta | RAG execution ledger and golden routing tests | Shipped | `f1a5141` | Version check, lint, backend tests, frontend build, production health/version passed |
 | M1 | 0.8.0 beta | Query intent router and whole-document summary chat path | Shipped | `f1a5141` | Version check, lint, backend tests, frontend build, production health/version passed |
 | M2 | 0.9.0 beta | Hierarchical document brief | Shipped | `42c40da` | Full gate and production health/version passed |
-| M3 | 0.10.0 beta | Retrieval evaluator and corrective RAG | Verified, release pending | Pending | Full release gate passed locally; production deploy pending |
+| M3 | 0.10.0 beta | Retrieval evaluator and corrective RAG | Shipped | `30e7c05` | Full gate and production health/version passed |
 | M4 | 0.11.0 beta | Parser integrity fixes | Pending | Pending | Pending |
 | M5 | 0.12.0 beta | Table-aware RAG | Pending | Pending | Pending |
 | M6 | 0.13.0 beta | Query planner, multi-hop, compare | Pending | Pending | Pending |
@@ -102,7 +102,7 @@ Owner: Codex
 - [x] Inject retrieval quality guidance into non-summary chat prompts.
 - [x] Add targeted evaluator, corrective retrieval, chat prompt, refund, and summary-isolation tests.
 - [x] Run full release verification gate.
-- [ ] Commit, push `main`, merge/push `stable`, tag, deploy, and verify production.
+- [x] Commit, push `main`, merge/push `stable`, tag, deploy, and verify production.
 
 ## M3 Verification Log
 
@@ -116,3 +116,12 @@ Owner: Codex
 - 2026-05-07: `cd backend && python3 -m pytest tests/ -m 'not integration' -v` passed with 246 passed, 3 skipped, 4 deselected.
 - 2026-05-07: `cd backend && python3 -m pytest -m integration -v` ran; 4 integration tests skipped by local environment configuration.
 - 2026-05-07: `cd backend && python3 -m alembic heads && python3 -m alembic upgrade head` passed with `20260507_0026 (head)`.
+
+## M3 Release Log
+
+- Commit: `30e7c05` (`feat(rag): add corrective retrieval evaluator`)
+- Pushed: `origin/main`, `origin/stable`
+- Tag: `v0.10.0-beta`
+- Railway deployment: `385509f1-7a2e-4b52-8881-16e2313a8a80` (`SUCCESS`)
+- Production `/health`: `{"status":"ok","release":{"version":"0.10.0","stage":"beta","build":null}}`
+- Production `/version`: `{"version":"0.10.0","stage":"beta","build":null}`
