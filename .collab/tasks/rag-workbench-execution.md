@@ -22,7 +22,7 @@ Owner: Codex
 | M4 | 0.11.0 beta | Parser integrity fixes | Shipped | `7436c2a` | Full gate and production health/version passed |
 | M5 | 0.12.0 beta | Table-aware RAG | Shipped | `ac4ee84` | Full gate and production health/version passed |
 | M6 | 0.13.0 beta | Query planner, multi-hop, compare | Shipped | `55b0a6f` | Full gate and production health/version passed |
-| M7 | 0.14.0 beta | Claim verifier and evaluation dashboard | In verification | Pending | Targeted backend tests passed; full gate pending |
+| M7 | 0.14.0 beta | Claim verifier and evaluation dashboard | Shipped | `ee97025` | Full gate and production health/version passed |
 
 ## M0 / M1 Checklist
 
@@ -240,7 +240,7 @@ Owner: Codex
 - [x] Add targeted tests for verifier decisions, admin aggregation, chat-stream event recording, and continuation verification.
 - [x] Run full release verification gate.
 - [x] Complete adversarial review.
-- [ ] Commit, push `main`, merge/push `stable`, tag, deploy, and verify production.
+- [x] Commit, push `main`, merge/push `stable`, tag, deploy, and verify production.
 
 ## M7 Verification Log
 
@@ -259,3 +259,12 @@ Owner: Codex
 - 2026-05-07: `cd backend && python3 -m pytest tests/ -m 'not integration' -v` passed with 283 passed, 3 skipped, 4 deselected.
 - 2026-05-07: `cd backend && python3 -m pytest -m integration -v` ran; 4 integration tests skipped by local environment configuration.
 - 2026-05-07: `cd backend && python3 -m alembic heads && python3 -m alembic upgrade head` passed with `20260507_0026 (head)`.
+
+## M7 Release Log
+
+- Commit: `ee97025` (`feat(rag): add claim verification reporting`)
+- Pushed: `origin/main`, `origin/stable`
+- Tag: `v0.14.0-beta`
+- Railway deployment: `78bc79c0-91dd-4b68-a5f5-391a0d4edc62` (`SUCCESS`)
+- Production `/health`: `{"status":"ok","release":{"version":"0.14.0","stage":"beta","build":null}}`
+- Production `/version`: `{"version":"0.14.0","stage":"beta","build":null}`
