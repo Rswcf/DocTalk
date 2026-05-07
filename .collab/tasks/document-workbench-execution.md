@@ -25,7 +25,7 @@ backend changes from `stable`, and record the outcome here.
 | M4 | 0.6.0 | Question Templates | Deployed | `5906545` | Done | Done | Railway `0.6.0 beta` |
 | M5 | 0.7.0 | Document Diff | Deployed | `7a326b8` | Done | Done | Railway `0.7.0 beta` |
 | Hotfix | 0.7.1 | Async Job Response Lazy-Load Fix | Deployed | `fc73d34` | Done | Done | Railway `0.7.1 beta` |
-| Hotfix | 0.7.2 | MinIO Upload Private Endpoint Fix | In progress | Pending | Pending | Pending | Pending |
+| Hotfix | 0.7.2 | MinIO Upload Private Endpoint Fix | Deployed | `5214ad4` | Done | Done | Railway `0.7.2 beta` |
 
 ## Current Cycle: M1 Structured Extraction
 
@@ -224,10 +224,10 @@ backend changes from `stable`, and record the outcome here.
 
 - Started: 2026-05-07
 - Branch: `main`
-- Commit: Pending
-- Tag: Pending
-- Push: Pending
-- Deploy: Pending
+- Commit: `5214ad4`
+- Tag: `v0.7.2-beta`
+- Push: `origin main` and `origin stable` complete
+- Deploy: Railway deploy accepted; production `/health`, `/version`, and authorized `/health?deep=true` return `0.7.2 beta`
 - Scope: separate server-side MinIO upload/download endpoint from browser-facing
   presigned URL endpoint, handle storage upload failures with structured
   `STORAGE_UNAVAILABLE`, and switch production backend to Railway private
@@ -243,3 +243,13 @@ backend changes from `stable`, and record the outcome here.
 
 - `cd backend && python3 -m ruff check app/ tests/` — PASS
 - `cd backend && python3 -m pytest tests/test_storage_service.py tests/test_error_taxonomy.py::test_upload_storage_unavailable_returns_structured_error tests/test_error_taxonomy.py::test_document_file_url_storage_unavailable -v` — PASS (`5 passed`)
+- `python3 scripts/check_version_consistency.py` — PASS (`0.7.2 beta`)
+- `cd frontend && npm run build` — PASS
+- `cd backend && python3 -m pytest tests/test_parse_service.py -v` — PASS (`7 passed`)
+- `cd backend && python3 -m pytest tests/test_error_taxonomy.py -v` — PASS (`47 passed`)
+- Railway variables set: `MINIO_ENDPOINT=minio-v2.railway.internal:9000`, `MINIO_SECURE=false`, `MINIO_PUBLIC_ENDPOINT=https://minio-v2-production.up.railway.app`
+- `railway up --detach` from `stable` — PASS
+- `curl https://backend-production-a62e.up.railway.app/health` — PASS (`0.7.2 beta`)
+- `curl https://backend-production-a62e.up.railway.app/version` — PASS (`0.7.2 beta`)
+- Authorized `curl https://backend-production-a62e.up.railway.app/health?deep=true` — PASS; MinIO component `ok`
+- Demo document `/file-url` smoke — PASS; presigned URL uses public MinIO endpoint
