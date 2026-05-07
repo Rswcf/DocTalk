@@ -28,6 +28,7 @@ build sequence.
 | `0.10.0 beta` | Retrieval Evaluator + Corrective RAG | Shipped | Evaluates ordinary retrieval before generation and falls back to lexical evidence when vector top-k misses exact user terms |
 | `0.11.0 beta` | Parser Integrity | Shipped | Improves two-column reading order, English block joining, and short-document chunk retention before retrieval ever runs |
 | `0.12.0 beta` | Table-aware RAG | Shipped | Adds scanned-table row evidence and short-row lexical fallback for table/numeric questions |
+| `0.13.0 beta` | Query Planner + Multi-hop Compare | Shipped | Decomposes comparison/multi-entity questions and adds balanced per-document evidence for collection comparison |
 
 ### 2026-05-07 RAG Workbench Quality Sequence
 

@@ -205,6 +205,11 @@ sequenceDiagram
   router，用来识别摘要、局部问答、表格、对比、引用定位、存在性检查和
   穷尽扫描候选。全文摘要和集合摘要请求不会再进入普通语义 top-k 检索。
 
+- **Query Planner**：对比、多跳、穷尽扫描和多实体指标问题会在 corrective retrieval
+  前进入确定性 planner。Planner 会生成有上限的 evidence steps，例如实体-指标覆盖
+  和按文档对比覆盖，并用受控 step 名称标记检索片段。原始 planned query 不会被回写
+  进 system prompt。
+
 - **检索**：全文摘要优先使用持久化 `document_briefs.coverage`，缺失时使用按
   文档顺序选择的代表性文本块；集合摘要使用按文档限额抽取的代表性覆盖，避免
   “总结这篇文档” 这类宽泛问题只命中表格、附录或侧栏。普通局部问答、表格/数字
@@ -215,6 +220,8 @@ sequenceDiagram
   都包含文本、页码和边界框。
   表格/数字类路由会额外读取已扫描的 `document_tables`，把匹配表格行格式化为结构化
   evidence，并降低 lexical chunk 长度阈值，避免短表格行在进入回答前被过滤掉。
+  Collection 对比路由会额外补充按文档均衡的 evidence，避免一个强匹配文档挤掉其他
+  需要被比较的文档。
 
 - **Document Brief**：文档解析并标记 ready 后，`brief_worker` 会在 Celery
   `default` 队列中生成持久化分层 brief，写入 `document_briefs`。Brief 保存摘要、

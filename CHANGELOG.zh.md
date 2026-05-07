@@ -8,6 +8,22 @@
 
 ## [Unreleased]
 
+## [0.13.0] - 2026-05-07
+
+### 新增
+- 新增确定性的 Query Planner，用于对比、多跳、穷尽扫描和多实体指标问题。计划化
+  检索会补充受控子查询 evidence，不再只依赖一次普通 top-k 检索。
+- 新增 Collection 对比问题的按文档均衡 evidence 覆盖，避免一个强匹配文档挤掉
+  其他需要被比较的文档。
+- 新增 query-plan prompt contract，指导模型综合多跳/对比 evidence，同时不会把原始
+  planned query 回写进 system prompt。
+- 新增 direct vs planned routing、实体/指标拆解、Collection 对比覆盖、计划化纠错
+  检索以及 query-plan prompt 注入安全的回归测试。
+
+### 变更
+- 表格和数字问题现在会始终尝试 table/lexical evidence 与向量检索并行补充，即使
+  vector search 看似足够，也能保留金融类短表格行的召回。
+
 ## [0.12.0] - 2026-05-07
 
 ### 新增

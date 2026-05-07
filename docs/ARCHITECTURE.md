@@ -209,6 +209,13 @@ sequenceDiagram
   and collection summary requests are routed away from ordinary semantic top-k
   retrieval.
 
+- **Query Planner**: Comparison, multi-hop, exhaustive, and multi-entity metric
+  routes are passed through a deterministic planner before corrective retrieval.
+  The planner creates bounded evidence steps such as entity-metric coverage and
+  per-document comparison coverage, then labels retrieved fragments with
+  controlled step names. Raw planned queries are not echoed into the system
+  prompt.
+
 - **Retrieval**: Whole-document summaries use ordered representative chunks
   across the document, preferring persisted `document_briefs.coverage` when
   available, and collection summaries use capped per-document representative
@@ -223,6 +230,8 @@ sequenceDiagram
   Table/numeric routes additionally consult scanned `document_tables` when
   available, format matching rows as structured evidence, and lower the lexical
   chunk-length threshold so short parsed table rows are not filtered out.
+  Collection comparison routes add balanced per-document evidence so one strong
+  hit cannot crowd out the other documents being compared.
 
 - **Document Brief**: After parsing marks a document ready, `brief_worker`
   generates a persisted hierarchical brief in `document_briefs` on the Celery

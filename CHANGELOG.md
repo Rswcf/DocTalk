@@ -8,6 +8,27 @@ releases use `0.minor.patch` semantics such as `0.2.0` and `0.2.1`.
 
 ## [Unreleased]
 
+## [0.13.0] - 2026-05-07
+
+### Added
+- Added a deterministic query planner for comparison, multi-hop, exhaustive,
+  and multi-entity metric questions. Planned retrieval now adds controlled
+  subquery evidence instead of relying on one ordinary top-k search.
+- Added balanced per-document evidence coverage for collection comparison
+  questions so one strongly matching document does not crowd out the other
+  documents being compared.
+- Added a query-plan prompt contract that tells the model how to synthesize
+  multi-hop/comparison evidence without echoing raw planned queries into the
+  system prompt.
+- Added regression tests for direct vs planned routing, entity/metric
+  decomposition, collection comparison coverage, planned corrective retrieval,
+  and prompt-injection-safe query-plan guidance.
+
+### Changed
+- Table and numeric questions now always attempt table/lexical evidence
+  alongside vector retrieval, preserving short-row recall for finance-style
+  questions even when vector search appears superficially sufficient.
+
 ## [0.12.0] - 2026-05-07
 
 ### Added

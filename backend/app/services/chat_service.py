@@ -27,6 +27,7 @@ from app.models.tables import (
 from app.services import credit_service
 from app.services.corrective_retrieval_service import corrective_retrieval_service
 from app.services.document_brief_service import document_brief_service
+from app.services.query_planner_service import QueryPlan
 from app.services.query_router import QueryIntent, query_router
 from app.services.retrieval_service import table_evidence_text
 
@@ -343,6 +344,32 @@ def _retrieval_quality_contract(evaluation: Any | None, strategy: str) -> str:
     )
 
 
+def _query_plan_contract(plan: QueryPlan | None) -> str:
+    if plan is None or not plan.is_active:
+        return ""
+    purposes = sorted({step.purpose for step in plan.steps})
+    purpose_text = ", ".join(purposes) if purposes else "direct-answer"
+    balanced = (
+        "- Balanced per-document coverage was requested for this comparison.\n"
+        if plan.needs_balanced_coverage
+        else ""
+    )
+    return (
+        "\n\n## Query Plan\n"
+        f"- Retrieval was decomposed into {len(plan.steps)} controlled evidence step(s): {purpose_text}.\n"
+        f"{balanced}"
+        "- For comparison or multi-hop questions, cover each supported side before synthesizing.\n"
+        "- If one side has evidence and another side does not, state that asymmetry with citations instead of filling the gap.\n"
+    )
+
+
+def _safe_plan_label(value: Any) -> str:
+    label = str(value or "").strip().lower()
+    if not label:
+        return ""
+    return re.sub(r"[^a-z0-9_\-]+", "-", label)[:40]
+
+
 async def _refund_predebit(
     db: AsyncSession,
     user_id: uuid.UUID,
@@ -624,6 +651,7 @@ class ChatService:
             setup_error_code = "RETRIEVAL_ERROR"
             retrieval_strategy = "semantic_top_k"
             retrieval_evaluation = None
+            retrieval_plan: QueryPlan | None = None
             if (
                 query_route.primary_intent == QueryIntent.DOCUMENT_SUMMARY
                 and document_id
@@ -658,6 +686,7 @@ class ChatService:
                 retrieved = corrective.retrieved
                 retrieval_strategy = corrective.strategy
                 retrieval_evaluation = corrective.evaluation
+                retrieval_plan = corrective.plan
             elif document_id:
                 corrective = await corrective_retrieval_service.retrieve_single(
                     user_message,
@@ -669,6 +698,7 @@ class ChatService:
                 retrieved = corrective.retrieved
                 retrieval_strategy = corrective.strategy
                 retrieval_evaluation = corrective.evaluation
+                retrieval_plan = corrective.plan
             else:
                 retrieved = []
 
@@ -686,7 +716,9 @@ class ChatService:
                     fname = collection_doc_names.get(chunk_doc_id, "")
                     if fname:
                         doc_label = f"(from: {fname}) "
-                numbered_chunks.append(f"[{idx}] {doc_label}{truncated}")
+                plan_label = _safe_plan_label(item.get("retrieval_plan_step"))
+                evidence_label = f"(evidence: {plan_label}) " if plan_label else ""
+                numbered_chunks.append(f"[{idx}] {doc_label}{evidence_label}{truncated}")
                 chunk_map[idx] = _ChunkInfo(
                     id=item["chunk_id"],
                     page_start=int(item["page"]),
@@ -733,6 +765,7 @@ class ChatService:
                     + "## Document Fragments\n"
                     + ("\n".join(numbered_chunks) if numbered_chunks else "(none)")
                     + _retrieval_quality_contract(retrieval_evaluation, retrieval_strategy)
+                    + _query_plan_contract(retrieval_plan)
                     + "\n\n## Rules\n" + rules
                     + _citation_contract()
                 )
@@ -762,6 +795,7 @@ class ChatService:
                     + "## Document Fragments\n"
                     + ("\n".join(numbered_chunks) if numbered_chunks else "(none)")
                     + _retrieval_quality_contract(retrieval_evaluation, retrieval_strategy)
+                    + _query_plan_contract(retrieval_plan)
                     + "\n\n## Rules\n" + rules
                     + _citation_contract()
                 )

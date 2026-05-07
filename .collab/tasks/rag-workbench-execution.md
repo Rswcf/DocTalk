@@ -21,7 +21,7 @@ Owner: Codex
 | M3 | 0.10.0 beta | Retrieval evaluator and corrective RAG | Shipped | `30e7c05` | Full gate and production health/version passed |
 | M4 | 0.11.0 beta | Parser integrity fixes | Shipped | `7436c2a` | Full gate and production health/version passed |
 | M5 | 0.12.0 beta | Table-aware RAG | Shipped | `ac4ee84` | Full gate and production health/version passed |
-| M6 | 0.13.0 beta | Query planner, multi-hop, compare | Pending | Pending | Pending |
+| M6 | 0.13.0 beta | Query planner, multi-hop, compare | Ready for release | Pending | Full gate passed |
 | M7 | 0.14.0 beta | Claim verifier and evaluation dashboard | Pending | Pending | Pending |
 
 ## M0 / M1 Checklist
@@ -197,3 +197,26 @@ Owner: Codex
 - Railway deployment: `6249f1bb-9f1c-4d7c-8fc9-711d92f9fdd6` (`SUCCESS`)
 - Production `/health`: `{"status":"ok","release":{"version":"0.12.0","stage":"beta","build":null}}`
 - Production `/version`: `{"version":"0.12.0","stage":"beta","build":null}`
+
+## M6 Checklist
+
+- [x] Add deterministic query planner for comparison, multi-hop, exhaustive, and multi-entity metric questions.
+- [x] Add planned single-document corrective retrieval that supplements ordinary vector search with controlled subquery evidence.
+- [x] Add collection comparison retrieval with balanced per-document evidence coverage.
+- [x] Add query-plan prompt contract without echoing raw planned queries into the system prompt.
+- [x] Add targeted tests for planner decisions, planned retrieval, balanced comparison coverage, and prompt safety.
+- [x] Run full release verification gate.
+- [ ] Commit, push `main`, merge/push `stable`, tag, deploy, and verify production.
+
+## M6 Verification Log
+
+- 2026-05-07: `cd backend && python3 -m ruff check app/services/query_planner_service.py app/services/corrective_retrieval_service.py app/services/chat_service.py tests/test_query_planner_service.py tests/test_corrective_retrieval_service.py tests/test_chat_corrective_retrieval.py` passed.
+- 2026-05-07: `cd backend && python3 -m pytest tests/test_query_planner_service.py tests/test_corrective_retrieval_service.py tests/test_chat_corrective_retrieval.py -v` passed with 16 passed.
+- 2026-05-07: Adversarial review found two collection-comparison release blockers before release: balanced comparison could drop the last compared document under the result cap, and balanced extras could starve table evidence in table/numeric collection comparisons. Fixed by preserving required per-document coverage first, merging table evidence before balanced extras, and adding 8-document regression coverage. Follow-up adversarial review found no release blockers.
+- 2026-05-07: `python3 scripts/check_version_consistency.py` passed for `0.13.0 beta`.
+- 2026-05-07: `cd frontend && npm run build` passed with only existing Sentry, metadata, edge-runtime, and unset `RESEND_API_KEY` warnings.
+- 2026-05-07: `cd backend && python3 -m ruff check app/ tests/` passed.
+- 2026-05-07: `cd backend && python3 -m pytest tests/test_parse_service.py -v` passed with 13 passed.
+- 2026-05-07: `cd backend && python3 -m pytest tests/ -m 'not integration' -v` passed with 272 passed, 3 skipped, 4 deselected.
+- 2026-05-07: `cd backend && python3 -m pytest -m integration -v` ran; 4 integration tests skipped by local environment configuration.
+- 2026-05-07: `cd backend && python3 -m alembic heads && python3 -m alembic upgrade head` passed with `20260507_0026 (head)`.
