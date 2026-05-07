@@ -71,7 +71,7 @@ Browser ──→ Vercel (Next.js) ──→ Railway (FastAPI) ──→ Postgre
                    (JWT injection)
 ```
 
-**How it works:** Documents are chunked into 150-300 token segments with bounding-box coordinates, embedded into Qdrant for vector search. When you ask a question, relevant chunks are retrieved and sent to the LLM with instructions to cite sources. Citations map back to exact page locations for real-time highlighting.
+**How it works:** Documents are chunked into 150-300 token segments with bounding-box coordinates, embedded into Qdrant for vector search, and routed by query type. Local questions retrieve relevant chunks from Qdrant; whole-document summary prompts use ordered representative context across the document so long reports are not summarized from a few accidental table/sidebar hits. Citations map back to exact page locations for real-time highlighting.
 
 For detailed diagrams see [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 

@@ -169,8 +169,13 @@ sequenceDiagram
     API->>CS: check_balance(user)
     CS-->>API: OK（余额充足）
 
-    API->>Q: 向量搜索（top 8 文本块）
-    Q-->>API: 匹配的文本块及分数
+    API->>API: Query Router<br/>摘要 / 局部问答 / 表格 / 对比候选
+    alt 全文或集合摘要意图
+        API->>DB: 加载有序代表性文本块<br/>（单文档覆盖或集合内按文档限额覆盖）
+    else 局部问答意图
+        API->>Q: 向量搜索（top 8 文本块）
+        Q-->>API: 匹配的文本块及分数
+    end
 
     API->>OR: POST /chat/completions (stream=true)<br/>系统提示 + 编号文档片段 + 用户问题
 
@@ -193,7 +198,18 @@ sequenceDiagram
 
 **关键组件：**
 
-- **检索**：从 Qdrant 按 COSINE 向量相似度检索 Top-8 文本块。每个文本块包含文本、页码和边界框。
+- **Query Router**：聊天请求会先经过一个确定性的、可扩展为多标签的
+  router，用来识别摘要、局部问答、表格、对比、引用定位、存在性检查和
+  穷尽扫描候选。全文摘要和集合摘要请求不会再进入普通语义 top-k 检索。
+
+- **检索**：局部问答仍从 Qdrant 按 COSINE 向量相似度检索 Top-8 文本块。
+  全文摘要使用按文档顺序选择的代表性文本块，集合摘要使用按文档限额抽取的
+  代表性覆盖，避免 “总结这篇文档” 这类宽泛问题只命中表格、附录或侧栏。
+  每个片段都包含文本、页码和边界框。
+
+- **摘要上下文**：M1 RAG 工作台路径会从文档开头、章节变化、均匀分布的正文位置
+  和结尾选择代表性 chunks，并跳过通常属于页脚或侧栏的过短 chunks。这是持久化
+  分层 `Document Brief` 索引上线前的过渡方案。
 
 - **LLM 提示词**：系统提示指示模型使用 `[n]` 标记引用来源，编号对应提供的文档片段。生产聊天模式使用 DeepSeek V4（内部 `quick` = Flash，内部 `balanced` = Pro）；匿名 Demo 用户强制使用 `DEMO_LLM_MODEL`（默认 DeepSeek V4 Flash）以控制成本。**模型自适应提示系统**（`model_profiles.py`）为每个模型定制规则部分和 API 参数：DeepSeek 使用 `positive_framing` 避免消极表述过度遵从，其他模型使用 `default` 风格。temperature、max_tokens 和功能标志（stream_options）也按模型配置。
 

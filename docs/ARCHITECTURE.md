@@ -169,8 +169,13 @@ sequenceDiagram
     API->>CS: check_balance(user)
     CS-->>API: OK (sufficient credits)
 
-    API->>Q: Vector search (top 8 chunks)
-    Q-->>API: Matching chunks with scores
+    API->>API: Query Router<br/>summary / local Q&A / table / compare candidates
+    alt Whole-document or collection summary intent
+        API->>DB: Load ordered representative chunks<br/>(document coverage or capped per-document collection coverage)
+    else Local Q&A intent
+        API->>Q: Vector search (top 8 chunks)
+        Q-->>API: Matching chunks with scores
+    end
 
     API->>OR: POST /chat/completions (stream=true)<br/>System prompt + numbered fragments + user question
 
@@ -193,7 +198,24 @@ sequenceDiagram
 
 **Key components:**
 
-- **Retrieval**: Top-8 chunks by COSINE vector similarity from Qdrant. Each chunk includes text, page numbers, and bounding boxes.
+- **Query Router**: Chat requests first pass through a deterministic,
+  multi-label-ready router that classifies summary, local Q&A, table, compare,
+  citation lookup, existence-check, and exhaustive-scan candidates. Whole-document
+  and collection summary requests are routed away from ordinary semantic top-k
+  retrieval.
+
+- **Retrieval**: Local Q&A still uses top-8 chunks by COSINE vector similarity
+  from Qdrant. Whole-document summaries use ordered representative chunks across
+  the document, and collection summaries use capped per-document representative
+  coverage, so vague prompts like "summarize this document" do not over-select
+  tables, appendices, or sidebars. Each fragment includes text, page numbers, and
+  bounding boxes.
+
+- **Summary Context**: The M1 RAG workbench path selects representative chunks
+  from the beginning, section changes, evenly spaced body positions, and the tail
+  of the document, skipping tiny chunks that are usually footers or sidebars.
+  This is an interim bridge before the durable hierarchical `Document Brief`
+  index.
 
 - **LLM Prompt**: System prompt instructs the model to cite sources using `[n]` notation matching the numbered document fragments provided. Production chat modes use DeepSeek V4 (`quick` = Flash, `balanced` = Pro); anonymous demo users are forced to `DEMO_LLM_MODEL` (default DeepSeek V4 Flash) to control cost. A **model-adaptive prompt system** (`model_profiles.py`) tailors the rules section and API parameters per model: DeepSeek uses `positive_framing` to avoid negative-framing over-compliance, other models use the `default` style. Temperature, max_tokens, and feature flags (stream_options) are also per-model.
 

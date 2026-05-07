@@ -1,0 +1,247 @@
+from __future__ import annotations
+
+import re
+from dataclasses import dataclass, field
+from enum import Enum
+from typing import Literal
+
+
+class QueryIntent(str, Enum):
+    DOCUMENT_SUMMARY = "document_summary"
+    SECTION_SUMMARY = "section_summary"
+    LOCAL_QA = "local_qa"
+    TABLE_QUERY = "table_query"
+    COMPARISON = "comparison"
+    CITATION_LOOKUP = "citation_lookup"
+    EXISTENCE_CHECK = "existence_check"
+    EXHAUSTIVE_SCAN = "exhaustive_scan"
+
+
+QueryScope = Literal["single_doc", "collection", "unknown"]
+QueryCoverage = Literal["whole_doc", "section", "top_hits", "exhaustive_scan"]
+
+
+@dataclass(frozen=True)
+class QueryRoute:
+    """Structured route decision for document chat.
+
+    The first implementation is deterministic and intentionally conservative.
+    The schema is broader than M1 needs so later phases can add LLM routing,
+    planner output, and tool-specific execution without changing chat contracts.
+    """
+
+    primary_intent: QueryIntent
+    intents: tuple[QueryIntent, ...]
+    scope: QueryScope
+    coverage: QueryCoverage
+    confidence: float
+    needs_decomposition: bool = False
+    modality: tuple[str, ...] = ("text",)
+    reason: str = ""
+    rewritten_queries: tuple[str, ...] = field(default_factory=tuple)
+
+
+_WHOLE_DOCUMENT_MARKERS = (
+    # English
+    r"\bwhole\s+(document|doc|pdf|paper|report|file)\b",
+    r"\bentire\s+(document|doc|pdf|paper|report|file)\b",
+    r"\bthis\s+(document|doc|pdf|paper|report|file)\b",
+    r"\bthe\s+(document|doc|pdf|paper|report|file)\b",
+    # Chinese / Japanese / Korean
+    r"(整篇|全文|这篇|本文|整份|这份|整个)(文档|文件|论文|报告|pdf|PDF)?",
+    r"(この|本|全体|全文).*(文書|論文|レポート|資料)",
+        r"(전체|이)\s*(문서|논문|보고서|자료)",
+        # Romance / German common forms
+        r"\b(todo|este|el)\s+(documento|pdf|informe|art[ií]culo)\b",
+        r"\b(r[eé]sum[eé]|résumé|resumen|zusammenfassung)\b",
+        r"\b(dieses|das|gesamte)\s+(dokument|pdf|papier|bericht)\b",
+        r"\b(este|todo|o)\s+(documento|relat[oó]rio|pdf|artigo)\b",
+        r"\b(questo|intero|il)\s+(documento|pdf|rapporto|articolo)\b",
+        r"(المستند|الوثيقة|التقرير|هذا الملف|هذا المستند)",
+        r"(इस|पूरे|यह)\s*(दस्तावेज़|दस्तावेज|रिपोर्ट|पीडीएफ)",
+)
+
+_SUMMARY_MARKERS = (
+    r"\bsummar(y|ize|ise|ise)\b",
+    r"\bkey\s+(points|takeaways|findings|ideas|insights)\b",
+    r"\bmain\s+(points|idea|ideas|argument|findings|conclusions)\b",
+    r"\bexecutive\s+summary\b",
+    r"\boverview\b",
+    r"\bbrief(ing)?\b",
+    r"\btldr\b",
+    r"\btl;dr\b",
+    r"总结",
+    r"概括",
+    r"要点",
+    r"摘要",
+    r"重点",
+    r"主要内容",
+    r"主旨",
+    r"结论",
+    r"まとめ",
+    r"要約",
+    r"概要",
+    r"핵심",
+    r"요약",
+        r"resumen",
+        r"résumé",
+        r"zusammenfassung",
+        r"resuma",
+        r"resumo",
+        r"riassum",
+        r"riassunto",
+        r"(لخص|ملخص|تلخيص)",
+        r"(सारांश|संक्षेप|सार)",
+)
+
+_SECTION_HINTS = (
+    r"\b(section|chapter|part|page|pages|risk factors?|methodology|methods?|conclusion|appendix)\b",
+    r"(第.+章|第.+节|风险|方法|结论|附录|页面|第.+页)",
+)
+
+_TABLE_MARKERS = (
+    r"\b(table|tables|spreadsheet|csv|excel|row|column|cell|amount|metric|revenue|valuation|eps)\b",
+    r"(表格|数据|数字|金额|收入|估值|导出|CSV|Excel|行|列|单元格)",
+)
+
+_COMPARE_MARKERS = (
+    r"\b(compare|contrast|difference|diff|versus|vs\.?|changed?|changes?)\b",
+    r"(比较|对比|区别|差异|变化|不同|diff)",
+)
+
+_EXISTENCE_MARKERS = (
+    r"\b(is there|are there|does it mention|whether|if there is|contains?)\b",
+    r"(有没有|是否|是不是|是否提到|是否包含|有无)",
+)
+
+_EXHAUSTIVE_MARKERS = (
+    r"\b(all|every|list all|find all|extract all)\b",
+    r"(所有|全部|每个|列出全部|找出所有|提取所有)",
+)
+
+_CITATION_MARKERS = (
+    r"\b(where|which page|quote|source|citation|cite|original text|verbatim)\b",
+    r"(在哪页|原文|引用|出处|来源|定位|高亮)",
+)
+
+
+def _matches_any(text: str, patterns: tuple[str, ...]) -> bool:
+    return any(re.search(pattern, text, flags=re.IGNORECASE) for pattern in patterns)
+
+
+def _route_scope(*, is_collection: bool) -> QueryScope:
+    return "collection" if is_collection else "single_doc"
+
+
+class QueryRouter:
+    def route(
+        self,
+        query: str,
+        *,
+        is_collection: bool = False,
+        domain_mode: str | None = None,
+    ) -> QueryRoute:
+        normalized = " ".join((query or "").strip().split())
+        if not normalized:
+            return QueryRoute(
+                primary_intent=QueryIntent.LOCAL_QA,
+                intents=(QueryIntent.LOCAL_QA,),
+                scope=_route_scope(is_collection=is_collection),
+                coverage="top_hits",
+                confidence=0.2,
+                reason="empty query",
+            )
+
+        intents: list[QueryIntent] = []
+        modality = {"text"}
+        needs_decomposition = False
+        coverage: QueryCoverage = "top_hits"
+        confidence = 0.6
+        reason = "default local question"
+
+        has_summary = _matches_any(normalized, _SUMMARY_MARKERS)
+        has_whole_doc = _matches_any(normalized, _WHOLE_DOCUMENT_MARKERS)
+        has_section = _matches_any(normalized, _SECTION_HINTS)
+        has_table = _matches_any(normalized, _TABLE_MARKERS)
+        has_compare = _matches_any(normalized, _COMPARE_MARKERS)
+        has_existence = _matches_any(normalized, _EXISTENCE_MARKERS)
+        has_exhaustive = _matches_any(normalized, _EXHAUSTIVE_MARKERS)
+        has_citation = _matches_any(normalized, _CITATION_MARKERS)
+
+        if has_summary and has_whole_doc and not has_section:
+            intents.append(QueryIntent.DOCUMENT_SUMMARY)
+            coverage = "whole_doc"
+            confidence = 0.92
+            reason = "whole-document summary markers"
+        elif has_summary and not has_section and not has_table and not has_compare:
+            intents.append(QueryIntent.DOCUMENT_SUMMARY)
+            coverage = "whole_doc"
+            confidence = 0.78
+            reason = "generic summary marker in document chat"
+        elif has_summary and has_section:
+            intents.append(QueryIntent.SECTION_SUMMARY)
+            coverage = "section"
+            confidence = 0.82
+            reason = "section summary markers"
+
+        if has_table:
+            intents.append(QueryIntent.TABLE_QUERY)
+            modality.add("table")
+            confidence = max(confidence, 0.78)
+            reason = "table or numeric markers" if not intents else reason
+
+        if has_compare or (is_collection and has_summary):
+            intents.append(QueryIntent.COMPARISON)
+            needs_decomposition = True
+            confidence = max(confidence, 0.76)
+            reason = "comparison or collection synthesis markers" if not intents else reason
+
+        if has_existence:
+            intents.append(QueryIntent.EXISTENCE_CHECK)
+            coverage = "exhaustive_scan"
+            confidence = max(confidence, 0.75)
+            reason = "existence-check markers" if not intents else reason
+
+        if has_exhaustive:
+            intents.append(QueryIntent.EXHAUSTIVE_SCAN)
+            coverage = "exhaustive_scan"
+            confidence = max(confidence, 0.8)
+            reason = "exhaustive scan markers" if not intents else reason
+
+        if has_citation:
+            intents.append(QueryIntent.CITATION_LOOKUP)
+            confidence = max(confidence, 0.74)
+            reason = "citation lookup markers" if not intents else reason
+
+        if not intents:
+            intents.append(QueryIntent.LOCAL_QA)
+
+        primary = intents[0]
+        if QueryIntent.DOCUMENT_SUMMARY in intents:
+            primary = QueryIntent.DOCUMENT_SUMMARY
+        elif QueryIntent.SECTION_SUMMARY in intents:
+            primary = QueryIntent.SECTION_SUMMARY
+        elif QueryIntent.COMPARISON in intents and is_collection:
+            primary = QueryIntent.COMPARISON
+        elif QueryIntent.TABLE_QUERY in intents and not has_summary:
+            primary = QueryIntent.TABLE_QUERY
+
+        if domain_mode in {"legal", "academic"} and QueryIntent.EXISTENCE_CHECK in intents:
+            coverage = "exhaustive_scan"
+            confidence = max(confidence, 0.8)
+
+        deduped = tuple(dict.fromkeys(intents))
+        return QueryRoute(
+            primary_intent=primary,
+            intents=deduped,
+            scope=_route_scope(is_collection=is_collection),
+            coverage=coverage,
+            confidence=min(confidence, 0.99),
+            needs_decomposition=needs_decomposition,
+            modality=tuple(sorted(modality)),
+            reason=reason,
+            rewritten_queries=(normalized,),
+        )
+
+
+query_router = QueryRouter()

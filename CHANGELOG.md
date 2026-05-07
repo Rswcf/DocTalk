@@ -8,6 +8,32 @@ releases use `0.minor.patch` semantics such as `0.2.0` and `0.2.1`.
 
 ## [Unreleased]
 
+## [0.8.0] - 2026-05-07
+
+### Added
+- Added a multi-label-ready query router for document chat. Whole-document
+  summary requests such as "summarize this document" and "请总结这篇文档的要点"
+  now route to a representative document-summary context path instead of
+  ordinary semantic top-8 retrieval, with golden coverage across all 11
+  supported locales.
+- Added representative summary context selection that samples ordered chunks
+  across the beginning, middle, section changes, and tail of a document while
+  skipping tiny sidebar/footer chunks.
+- Added collection-summary routing to sample representative coverage from each
+  document instead of summarizing collections from semantic top-k hits.
+- Added RAG routing regression tests covering multilingual summary prompts,
+  table/numeric queries, existence checks, collection comparison candidates,
+  and the chat integration path.
+- Added a RAG workbench execution ledger for the staged router, brief,
+  corrective retrieval, parser, table, planner, and verifier rollout.
+
+### Changed
+- Whole-document summary prompts now use summary-specific system instructions
+  that prevent the model from calling a ready document "incomplete" just
+  because the provided context is representative excerpts.
+- Summary chat requests pre-debit a larger credit estimate to reduce
+  post-stream undercharge exposure from broader representative contexts.
+
 ## [0.7.3] - 2026-05-07
 
 ### Changed

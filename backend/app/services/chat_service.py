@@ -24,6 +24,8 @@ from app.models.tables import (
     collection_documents,
 )
 from app.services import credit_service
+from app.services.document_brief_service import document_brief_service
+from app.services.query_router import QueryIntent, query_router
 from app.services.retrieval_service import retrieval_service
 
 logger = logging.getLogger(__name__)
@@ -501,11 +503,19 @@ class ChatService:
                 )
                 return
 
+        query_route = query_router.route(
+            user_message,
+            is_collection=is_collection_session,
+            domain_mode=domain_mode,
+        )
+
         # Pre-debit estimated credits BEFORE streaming (prevents TOCTOU + free rides)
         pre_debited = 0
         predebit_ledger_id = None
         if user is not None:
             estimated = credit_service.get_estimated_cost(effective_mode)
+            if query_route.primary_intent == QueryIntent.DOCUMENT_SUMMARY:
+                estimated = max(estimated, estimated * 2)
             predebit_ledger_id = await credit_service.debit_credits(
                 db, user_id=user.id, cost=estimated,
                 reason="chat", ref_type="mode", ref_id=effective_mode,
@@ -557,9 +567,37 @@ class ChatService:
             for m in history_msgs:
                 claude_messages.append({"role": m.role, "content": m.content})
 
-            # 4) Retrieval (with error handling — e.g. Qdrant down or no vectors yet)
+            # 4) Route + retrieval (with error handling — e.g. Qdrant down or no vectors yet).
+            # Whole-document summaries must not use ordinary semantic top-k: vague
+            # summary prompts frequently retrieve tables/appendices instead of
+            # representative document structure. Route them to an ordered context
+            # selector until the durable hierarchical brief index lands.
             setup_error_code = "RETRIEVAL_ERROR"
-            if is_collection_session and collection_doc_ids:
+            retrieval_strategy = "semantic_top_k"
+            if (
+                query_route.primary_intent == QueryIntent.DOCUMENT_SUMMARY
+                and document_id
+                and not is_collection_session
+            ):
+                retrieved = await document_brief_service.get_summary_context(
+                    db,
+                    document_id,
+                    max_chunks=18,
+                )
+                retrieval_strategy = "document_summary_context"
+            elif (
+                query_route.primary_intent == QueryIntent.DOCUMENT_SUMMARY
+                and is_collection_session
+                and collection_doc_ids
+            ):
+                retrieved = await document_brief_service.get_collection_summary_context(
+                    db,
+                    collection_doc_ids,
+                    max_chunks=24,
+                    max_docs=8,
+                )
+                retrieval_strategy = "collection_summary_context"
+            elif is_collection_session and collection_doc_ids:
                 retrieved = await retrieval_service.search_multi(
                     user_message, collection_doc_ids, top_k=8, db=db
                 )
@@ -603,7 +641,24 @@ class ChatService:
                 effective_model, is_collection=is_collection_session
             )
 
-            if is_collection_session:
+            if is_collection_session and retrieval_strategy == "collection_summary_context":
+                doc_list = ", ".join(collection_doc_names.values()) if collection_doc_names else "(no documents)"
+                system_prompt = (
+                    "You are a document analysis assistant. The user is asking for a broad summary across a document collection.\n\n"
+                    + SYSTEM_PROMPT_META_RULE
+                    + f"## Available Documents\n{doc_list}\n\n"
+                    + "## Collection Coverage Fragments\n"
+                    + ("\n".join(numbered_chunks) if numbered_chunks else "(none)")
+                    + "\n\n## Summary Rules\n"
+                    + "1. Treat these fragments as representative coverage selected across the collection, not as semantic search results for a narrow question.\n"
+                    + "2. Do NOT say the collection is just unrelated fragments merely because the context is excerpted.\n"
+                    + "3. Summarize shared themes, document-specific points, and important caveats when supported.\n"
+                    + "4. If coverage is incomplete, say the answer is based on the cited representative sections instead of refusing.\n"
+                    + "5. Cite every factual paragraph or bullet using the fragment numbers listed above.\n"
+                    + "6. Your response language MUST match the language of the user's question.\n"
+                    + _citation_contract()
+                )
+            elif is_collection_session:
                 doc_list = ", ".join(collection_doc_names.values()) if collection_doc_names else "(no documents)"
                 system_prompt = (
                     "You are a document analysis assistant. Answer the user's question based on fragments from multiple documents.\n\n"
@@ -612,6 +667,25 @@ class ChatService:
                     + "## Document Fragments\n"
                     + ("\n".join(numbered_chunks) if numbered_chunks else "(none)")
                     + "\n\n## Rules\n" + rules
+                    + _citation_contract()
+                )
+            elif retrieval_strategy == "document_summary_context":
+                system_prompt = (
+                    "You are a document analysis assistant. The user is asking for a broad, whole-document summary.\n\n"
+                    + SYSTEM_PROMPT_META_RULE
+                    + "## Document Coverage Fragments\n"
+                    + (
+                        "\n".join(numbered_chunks)
+                        if numbered_chunks
+                        else "(none)"
+                    )
+                    + "\n\n## Summary Rules\n"
+                    + "1. Treat these fragments as representative coverage selected across the document, not as semantic search results for a narrow question.\n"
+                    + "2. Do NOT say the user's ready document is not a complete document merely because the context is excerpted.\n"
+                    + "3. Produce a useful document-level summary with clear headings, key points, and important caveats when supported.\n"
+                    + "4. If coverage is incomplete, say the answer is based on the cited representative sections instead of refusing.\n"
+                    + "5. Cite every factual paragraph or bullet using the fragment numbers listed above.\n"
+                    + "6. Your response language MUST match the language of the user's question.\n"
                     + _citation_contract()
                 )
             else:
