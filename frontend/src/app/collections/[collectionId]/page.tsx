@@ -1,13 +1,14 @@
 "use client";
 
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
-import { ClipboardList, FileText, MessageSquare, Plus, X } from 'lucide-react';
+import { ClipboardList, FileText, GitCompare, MessageSquare, Plus, X } from 'lucide-react';
 import Header from '../../../components/Header';
 import { ChatPanel } from '../../../components/Chat';
 import CollectionSidebar from '../../../components/Collections/CollectionSidebar';
 import SessionList from '../../../components/Collections/SessionList';
+import DocumentDiffPanel from '../../../components/Diff/DocumentDiffPanel';
 import QuestionTemplatesPanel from '../../../components/Templates/QuestionTemplatesPanel';
 import {
   getCollection,
@@ -45,7 +46,7 @@ export default function CollectionDetailPage() {
   const [loading, setLoading] = useState(true);
   const [showAddDocs, setShowAddDocs] = useState(false);
   const [availableDocs, setAvailableDocs] = useState<DocumentBrief[]>([]);
-  const [workspaceMode, setWorkspaceMode] = useState<'chat' | 'templates'>('chat');
+  const [workspaceMode, setWorkspaceMode] = useState<'chat' | 'templates' | 'diff'>('chat');
   // Mobile sidebar toggle
   const [showMobileSidebar, setShowMobileSidebar] = useState<'docs' | 'sessions' | null>(null);
 
@@ -174,6 +175,15 @@ export default function CollectionDetailPage() {
     window.open(`/d/${citation.documentId}?${params.toString()}`, '_blank', 'noopener,noreferrer');
   }, []);
 
+  const diffDocuments = useMemo(
+    () => (collection?.documents || []).map((doc) => ({
+      id: doc.id,
+      filename: doc.filename,
+      status: doc.status,
+    })),
+    [collection?.documents]
+  );
+
   if (status === 'loading' || loading) {
     return <LoadingScreen label={t('common.loading')} />;
   }
@@ -223,6 +233,18 @@ export default function CollectionDetailPage() {
                 <ClipboardList aria-hidden="true" size={13} />
                 {tOr('templates.tab', 'Templates')}
               </button>
+              <button
+                type="button"
+                onClick={() => setWorkspaceMode('diff')}
+                className={`inline-flex min-h-8 items-center gap-1.5 rounded-md px-2.5 font-medium transition-colors ${
+                  workspaceMode === 'diff'
+                    ? 'bg-white text-zinc-900 shadow-sm dark:bg-zinc-800 dark:text-zinc-100'
+                    : 'text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100'
+                }`}
+              >
+                <GitCompare aria-hidden="true" size={13} />
+                {tOr('diff.tab', 'Compare')}
+              </button>
             </div>
             <span className="inline-flex items-center gap-1 rounded-full border border-zinc-200 bg-zinc-50 px-2.5 py-1 dark:border-zinc-800 dark:bg-zinc-950">
               <FileText aria-hidden="true" size={13} className="text-accent" />
@@ -260,6 +282,19 @@ export default function CollectionDetailPage() {
         >
           <ClipboardList aria-hidden="true" size={14} />
           {tOr('templates.tab', 'Templates')}
+        </button>
+        <button
+          type="button"
+          onClick={() => {
+            setWorkspaceMode(workspaceMode === 'diff' ? 'chat' : 'diff');
+            setShowMobileSidebar(null);
+          }}
+          className={`flex flex-1 items-center justify-center gap-2 px-4 py-2.5 text-xs font-medium transition-colors ${
+            workspaceMode === 'diff' ? 'bg-white text-zinc-900 shadow-sm dark:bg-zinc-800 dark:text-zinc-100' : 'text-zinc-500'
+          }`}
+        >
+          <GitCompare aria-hidden="true" size={14} />
+          {tOr('diff.tab', 'Compare')}
         </button>
         <button
           type="button"
@@ -336,6 +371,13 @@ export default function CollectionDetailPage() {
               onCitationClick={handleCitationClick}
               userPlan={userPlan}
               documentCount={collection?.documents?.length || 0}
+            />
+          ) : workspaceMode === 'diff' ? (
+            <DocumentDiffPanel
+              collectionId={collectionId}
+              documents={diffDocuments}
+              onCitationClick={handleCitationClick}
+              userPlan={userPlan}
             />
           ) : sessionId ? (
             <ChatPanel

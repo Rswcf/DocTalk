@@ -8,6 +8,17 @@ releases use `0.minor.patch` semantics such as `0.2.0` and `0.2.1`.
 
 ## [Unreleased]
 
+## [0.7.0] - 2026-05-07
+
+### Added
+- Pro-only Document Diff workflow for semantic comparison between two ready
+  user-owned documents. The report groups added, removed, and modified changes
+  and attaches old/new citation chips that jump back to the source documents.
+- Global `/document-diff` workspace and Collection-level Compare tab so users can
+  run version comparisons from the dashboard or inside a document workspace.
+- `document_diff` document job type, FastAPI run/list/get/export endpoints,
+  and a Celery worker task with credit pre-debit and actual-cost reconcile.
+
 ## [0.6.0] - 2026-05-07
 
 ### Added

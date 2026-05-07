@@ -13,7 +13,7 @@ function AuthContent() {
   const searchParams = useSearchParams();
   const callbackUrl = searchParams.get("callbackUrl") || "/";
   const { t, tOr } = useLocale();
-  const isDocumentContinuation = callbackUrl.includes("/d/") || callbackUrl.includes("/collections");
+  const isDocumentContinuation = callbackUrl.includes("/d/") || callbackUrl.includes("/collections") || callbackUrl.includes("/document-diff");
   const benefits = [
     {
       icon: FileCheck2,

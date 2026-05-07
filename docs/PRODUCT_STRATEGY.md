@@ -7,7 +7,7 @@
 
 ## 1. Executive Summary
 
-DocTalk is an AI-powered document workbench with a unique competitive advantage: **citation-precise answers with bounding-box page highlights** — the most accurate citation UX in the market. As of `0.6.0 beta`, the product is moving beyond general-purpose chat by adding **Structured Extraction**, **Table Extraction**, **Deep Link Answer Share**, and **Question Templates**: users can turn a document into a cited deliverable, CSV-ready table data, a shareable cited answer, or a reusable checklist that produces an answer matrix across one document or an entire collection. DocTalk can capture significant revenue in three high-value segments: **finance professionals** (highest willingness to pay), **legal professionals** (underserved solo/small firms), and **academic researchers** (largest addressable market with viral growth).
+DocTalk is an AI-powered document workbench with a unique competitive advantage: **citation-precise answers with bounding-box page highlights** — the most accurate citation UX in the market. As of `0.7.0 beta`, the product is moving beyond general-purpose chat by adding **Structured Extraction**, **Table Extraction**, **Deep Link Answer Share**, **Question Templates**, and **Document Diff**: users can turn a document into a cited deliverable, CSV-ready table data, a shareable cited answer, a reusable checklist, or a cited semantic change report between two document versions. DocTalk can capture significant revenue in three high-value segments: **finance professionals** (highest willingness to pay), **legal professionals** (underserved solo/small firms), and **academic researchers** (largest addressable market with viral growth).
 
 ---
 
@@ -26,7 +26,7 @@ DocTalk is an AI-powered document workbench with a unique competitive advantage:
 - **Cross-document Q&A** is the #1 missing capability vs. NotebookLM
 
 ### DocTalk's Position Today
-- **Strengths**: Citation precision (small chunks + bbox highlights), Structured Extraction with cited Markdown/CSV deliverables, Table Extraction with CSV export, Question Templates for repeat single-document and Pro collection checklist workflows, per-answer deep link sharing for referral loops, 2 DeepSeek V4 modes (Flash=fast cited answers, Pro=deeper analysis) with model-adaptive prompts and per-model parameter tuning (benchmark-validated), OCR, dark mode, multi-language (11 languages), ChatGPT-style chat UI (stop generation, scroll-to-bottom, compact citation pills, "+" action menu, hover action buttons, styled code blocks with copy, antialiased typography, max-width centering), streaming indicators, auto-summary, security hardening (SSRF protection, SSE-S3 encryption at rest, file validation, structured security logging, GDPR data export, cookie consent, non-root Docker), branded email magic link with 11-locale i18n
+- **Strengths**: Citation precision (small chunks + bbox highlights), Structured Extraction with cited Markdown/CSV deliverables, Table Extraction with CSV export, Question Templates for repeat single-document and Pro collection checklist workflows, Pro Document Diff for cited semantic version comparison, per-answer deep link sharing for referral loops, 2 DeepSeek V4 modes (Flash=fast cited answers, Pro=deeper analysis) with model-adaptive prompts and per-model parameter tuning (benchmark-validated), OCR, dark mode, multi-language (11 languages), ChatGPT-style chat UI (stop generation, scroll-to-bottom, compact citation pills, "+" action menu, hover action buttons, styled code blocks with copy, antialiased typography, max-width centering), streaming indicators, auto-summary, security hardening (SSRF protection, SSE-S3 encryption at rest, file validation, structured security logging, GDPR data export, cookie consent, non-root Docker), branded email magic link with 11-locale i18n
 - **Weaknesses**: No team features, no API, no SSO
 
 ---
@@ -97,6 +97,7 @@ DocTalk is an AI-powered document workbench with a unique competitive advantage:
 - ✅ **Table Extraction launched (`0.4.0 beta`)**: Table previews are available after scan; CSV export is a Plus+ conversion lever for finance/research workflows
 - ✅ **Deep Link Answer Share launched (`0.5.0 beta`)**: Every cited answer can become a precise shared link, adding low-friction referral loops while keeping private citation internals redacted
 - ✅ **Question Templates launched (`0.6.0 beta`)**: Plus users can run reusable checklists on a document; Pro users can batch the same questions across Collections, creating repeat workflows and higher credit consumption
+- ✅ **Document Diff launched (`0.7.0 beta`)**: Pro users can compare two ready documents and receive a cited semantic added/removed/modified report, directly targeting legal, compliance, and business review pain
 - ⏳ **Priority Queue**: Removed from pricing page pending implementation
 - ⏳ **Team tier**: Planned for Phase 3 (requires workspace, RBAC, SSO features)
 

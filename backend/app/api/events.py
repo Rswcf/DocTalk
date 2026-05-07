@@ -34,6 +34,8 @@ ALLOWED_EVENTS = {
     "question_template_created",
     "question_template_run_created",
     "question_template_export_clicked",
+    "document_diff_created",
+    "document_diff_export_clicked",
     "subscription_cancel_requested",
     "refund_requested",
 }

@@ -8,6 +8,16 @@
 
 ## [Unreleased]
 
+## [0.7.0] - 2026-05-07
+
+### Added
+- 新增 Pro-only Document Diff 工作流，可对比两份 ready 且属于同一用户的文档。
+  报告按新增、删除、修改分组，并提供旧版/新版引用 chip，可跳回对应源文档。
+- 新增全局 `/document-diff` 工作台与 Collection 内 Compare 标签，用户可从 dashboard
+  或集合工作区启动版本对比。
+- 新增 `document_diff` document job 类型、FastAPI 运行/列表/获取/导出接口，
+  以及支持 credits 预扣费和实际费用 reconcile 的 Celery worker 任务。
+
 ## [0.6.0] - 2026-05-07
 
 ### Added

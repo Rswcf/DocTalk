@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { useSession } from 'next-auth/react';
 import { getDocument, uploadDocument, deleteDocument, getMyDocuments, ingestUrl } from '../lib/api';
 import type { DocumentBrief } from '../lib/api';
-import { ArrowRight, Sparkles, Trash2, Link2, FileUp, FolderOpen, X } from 'lucide-react';
+import { ArrowRight, Sparkles, Trash2, Link2, FileUp, FolderOpen, GitCompare, X } from 'lucide-react';
 import { useDocTalkStore } from '../store';
 import { useLocale } from '../i18n';
 import { clearAccountStorage } from '../lib/clearAccountStorage';
@@ -632,13 +632,22 @@ export default function HomePageClient() {
         <div className="max-w-4xl w-full">
           <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <h2 className="text-xl font-semibold text-zinc-900 dark:text-zinc-100">{t('doc.myDocuments')}</h2>
-            <Link
-              href="/collections"
-              className="inline-flex items-center gap-2 self-start rounded-lg border border-zinc-200 bg-white px-3.5 py-2 text-sm font-medium text-zinc-700 transition-colors hover:border-zinc-300 hover:text-zinc-900 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:border-zinc-700 dark:hover:text-zinc-100 focus-visible:ring-2 focus-visible:ring-zinc-400 dark:focus-visible:ring-zinc-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-900 sm:self-auto"
-            >
-              <FolderOpen aria-hidden="true" size={16} />
-              {tOr('dashboard.workspacesLink', 'Workspaces')}
-            </Link>
+            <div className="flex flex-wrap items-center gap-2 self-start sm:self-auto">
+              <Link
+                href="/document-diff"
+                className="inline-flex items-center gap-2 rounded-lg border border-zinc-200 bg-white px-3.5 py-2 text-sm font-medium text-zinc-700 transition-colors hover:border-zinc-300 hover:text-zinc-900 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:border-zinc-700 dark:hover:text-zinc-100 focus-visible:ring-2 focus-visible:ring-zinc-400 dark:focus-visible:ring-zinc-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-900"
+              >
+                <GitCompare aria-hidden="true" size={16} />
+                {tOr('diff.tab', 'Compare')}
+              </Link>
+              <Link
+                href="/collections"
+                className="inline-flex items-center gap-2 rounded-lg border border-zinc-200 bg-white px-3.5 py-2 text-sm font-medium text-zinc-700 transition-colors hover:border-zinc-300 hover:text-zinc-900 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:border-zinc-700 dark:hover:text-zinc-100 focus-visible:ring-2 focus-visible:ring-zinc-400 dark:focus-visible:ring-zinc-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-900"
+              >
+                <FolderOpen aria-hidden="true" size={16} />
+                {tOr('dashboard.workspacesLink', 'Workspaces')}
+              </Link>
+            </div>
           </div>
 
           {showWorkspaceNudge && (

@@ -888,6 +888,17 @@ Extraction. Runs pre-debit credits by question × document count, queue
 `run_batch_template_job` on Celery's `default` queue, then reconcile the
 original ledger row to actual token cost.
 
+Document Diff reuses the same job/result foundation with
+`job_type='document_diff'` and `template_key='document_diff'`. It is gated to
+Pro, requires two different ready documents owned by the same user, optionally
+scopes the run to a Collection, and pre-debits 60 credits before queueing
+`run_document_diff_job` on Celery's `default` queue. The worker retrieves cited
+chunks from both the old and new document, asks the Pro-quality model for a
+semantic added/removed/modified report, stores old/new citation payloads in
+`extraction_results.citations`, records `UsageRecord`, and reconciles the
+original ledger row to actual token cost. The MVP is a cited semantic change
+report, not a byte-level redline renderer.
+
 Public shared-session responses expose only safe message anchors, role/content,
 and page/snippet/document-filename citation summaries. They intentionally omit
 bbox coordinates, chunk ids, document ids, and confidence scores; private

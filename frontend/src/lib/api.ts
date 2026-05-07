@@ -651,3 +651,41 @@ export async function exportQuestionTemplateRun(jobId: string, format: 'md' | 'c
   if (!res.ok) await throwApiError(res);
   return res.blob();
 }
+
+// --- Document Diff API ---
+
+export async function listDocumentDiffRuns(collectionId?: string): Promise<ExtractionJob[]> {
+  const query = collectionId ? `?collection_id=${encodeURIComponent(collectionId)}` : '';
+  const res = await fetch(`${PROXY_BASE}/api/document-diffs${query}`);
+  return handle(res);
+}
+
+export async function runDocumentDiff(params: {
+  oldDocumentId: string;
+  newDocumentId: string;
+  collectionId?: string;
+  locale?: string;
+}): Promise<ExtractionJob> {
+  const res = await fetch(`${PROXY_BASE}/api/document-diffs`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      old_document_id: params.oldDocumentId,
+      new_document_id: params.newDocumentId,
+      collection_id: params.collectionId || null,
+      locale: params.locale,
+    }),
+  });
+  return handle(res);
+}
+
+export async function getDocumentDiffRun(jobId: string): Promise<ExtractionJob> {
+  const res = await fetch(`${PROXY_BASE}/api/document-diffs/${jobId}`);
+  return handle(res);
+}
+
+export async function exportDocumentDiffRun(jobId: string, format: 'md' | 'csv'): Promise<Blob> {
+  const res = await fetch(`${PROXY_BASE}/api/document-diffs/${jobId}/export?format=${format}`);
+  if (!res.ok) await throwApiError(res);
+  return res.blob();
+}

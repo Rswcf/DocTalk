@@ -23,7 +23,7 @@ backend changes from `stable`, and record the outcome here.
 | M2 | 0.4.0 | Table Extraction | Deployed | `a945117` | Done | Done | Railway `0.4.0 beta` |
 | M3 | 0.5.0 | Deep Link Answer Share | Deployed | `3e6cd9f` | Done | Done | Railway `0.5.0 beta` |
 | M4 | 0.6.0 | Question Templates | Deployed | `5906545` | Done | Done | Railway `0.6.0 beta` |
-| M5 | 0.7.0 | Document Diff | Pending | Pending | Pending | Pending | Pending |
+| M5 | 0.7.0 | Document Diff | In progress | Pending | Pending | Pending | Pending |
 
 ## Current Cycle: M1 Structured Extraction
 
@@ -150,3 +150,37 @@ backend changes from `stable`, and record the outcome here.
 - `railway up --detach` from `stable` — PASS
 - `curl https://backend-production-a62e.up.railway.app/health` — PASS (`0.6.0 beta`)
 - `curl https://backend-production-a62e.up.railway.app/version` — PASS (`0.6.0 beta`)
+
+## Current Cycle: M5 Document Diff
+
+- Started: 2026-05-07
+- Branch: `main`
+- Commit: Pending
+- Tag: Pending
+- Push: Pending
+- Deploy: Pending
+- Scope: version hygiene, Pro-only `document_diff` jobs, semantic diff
+  worker/API, global Compare workspace, Collection Compare tab, old/new
+  citation jumps, Markdown/CSV export, tests, i18n and docs.
+- Required verification:
+  - `python3 scripts/check_version_consistency.py`
+  - `cd frontend && npm run build`
+  - `cd backend && python3 -m ruff check app/ tests/`
+  - `cd backend && python3 -m pytest tests/test_parse_service.py -v`
+  - M5 document-diff-specific tests
+
+### M5 Verification Log
+
+- `python3 scripts/check_version_consistency.py` — PASS (`0.7.0 beta`)
+- `cd frontend && npm run build` — PASS
+- `cd backend && python3 -m ruff check app/ tests/` — PASS
+- `cd backend && python3 -m pytest tests/test_parse_service.py tests/test_document_diffs_api.py tests/test_document_diff_service.py -v` — PASS (`16 passed`)
+- `cd backend && python3 -m pytest tests/test_extractions_api.py tests/test_extraction_service.py tests/test_tables_api.py tests/test_table_service.py tests/test_question_templates_api.py tests/test_question_template_service.py tests/test_sharing_api.py tests/test_share_anchor_service.py tests/test_smoke.py tests/test_versioning.py -v` — PASS (`37 passed, 1 skipped`)
+- `cd backend && python3 -m pytest tests/test_error_taxonomy.py tests/test_billing_cancel.py tests/test_credit_reconcile.py -v` — PASS (`67 passed`)
+- `cd backend && python3 -m alembic heads` — PASS (`20260507_0025`)
+- `cd backend && python3 -m alembic upgrade head` — PASS against local `localhost/doctalk`
+- Browser smoke: local production Next server on `127.0.0.1:3100` with mocked
+  authenticated API responses rendered `/document-diff`, loaded two ready
+  documents plus a completed diff run, displayed added/modified changes and
+  old/new citation chips, preserved the public `/compare` marketing page, and
+  passed desktop/mobile screenshots with no mobile horizontal overflow.
