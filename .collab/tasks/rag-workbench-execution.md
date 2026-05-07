@@ -19,7 +19,7 @@ Owner: Codex
 | M1 | 0.8.0 beta | Query intent router and whole-document summary chat path | Shipped | `f1a5141` | Version check, lint, backend tests, frontend build, production health/version passed |
 | M2 | 0.9.0 beta | Hierarchical document brief | Shipped | `42c40da` | Full gate and production health/version passed |
 | M3 | 0.10.0 beta | Retrieval evaluator and corrective RAG | Shipped | `30e7c05` | Full gate and production health/version passed |
-| M4 | 0.11.0 beta | Parser integrity fixes | Ready for release | Pending | Full gate passed |
+| M4 | 0.11.0 beta | Parser integrity fixes | Shipped | `7436c2a` | Full gate and production health/version passed |
 | M5 | 0.12.0 beta | Table-aware RAG | Pending | Pending | Pending |
 | M6 | 0.13.0 beta | Query planner, multi-hop, compare | Pending | Pending | Pending |
 | M7 | 0.14.0 beta | Claim verifier and evaluation dashboard | Pending | Pending | Pending |
@@ -133,7 +133,7 @@ Owner: Codex
 - [x] Keep concise documents searchable when all generated chunks are below the micro-chunk threshold.
 - [x] Add parser integrity regression tests for two-column ordering and block joining.
 - [x] Run full release verification gate.
-- [ ] Commit, push `main`, merge/push `stable`, tag, deploy, and verify production.
+- [x] Commit, push `main`, merge/push `stable`, tag, deploy, and verify production.
 
 ## M4 Verification Log
 
@@ -155,3 +155,12 @@ Owner: Codex
 - 2026-05-07: `cd backend && python3 -m pytest tests/ -m 'not integration' -v` passed with 252 passed, 3 skipped, 4 deselected.
 - 2026-05-07: `cd backend && python3 -m pytest -m integration -v` ran; 4 integration tests skipped by local environment configuration.
 - 2026-05-07: `cd backend && python3 -m alembic heads && python3 -m alembic upgrade head` passed with `20260507_0026 (head)`.
+
+## M4 Release Log
+
+- Commit: `7436c2a` (`fix(parse): improve parser reading order integrity`)
+- Pushed: `origin/main`, `origin/stable`
+- Tag: `v0.11.0-beta`
+- Railway deployment: `3fec3586-5e42-4786-a8ec-738549a9198c` (`SUCCESS`)
+- Production `/health`: `{"status":"ok","release":{"version":"0.11.0","stage":"beta","build":null}}`
+- Production `/version`: `{"version":"0.11.0","stage":"beta","build":null}`
