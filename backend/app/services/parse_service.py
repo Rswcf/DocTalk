@@ -236,9 +236,7 @@ class ParseService:
             cleaned = self.clean_text_blocks(
                 p.blocks, p.width_pt, p.height_pt, header_texts=header_texts, footer_texts=footer_texts
             )
-            # Keep display order roughly top-to-bottom, left-to-right
-            cleaned.sort(key=lambda cb: (cb.bbox[1], cb.bbox[0]))
-            all_clean_blocks.extend(cleaned)
+            all_clean_blocks.extend(self._order_blocks_for_reading(cleaned, p.width_pt, p.height_pt))
 
         if not all_clean_blocks:
             return []
@@ -252,7 +250,7 @@ class ParseService:
         sentences: List[tuple[str, int, Tuple[float, float, float, float], Optional[str]]] = []
 
         for cb in all_clean_blocks:
-            if cb.font_size > (median_size * 1.3):
+            if self._is_heading_block(cb, median_size):
                 # Heading: update current section title; do not include in content
                 title = cb.text.strip()
                 # Avoid overly long titles
@@ -298,7 +296,7 @@ class ParseService:
 
             # Aggregate text and bboxes
             sel = sentences[start_idx:end_idx]
-            text = "".join([s for (s, _pg, _bb, _sec) in sel])
+            text = self._join_text_units([s for (s, _pg, _bb, _sec) in sel])
             pages_range = [pg for (_t, pg, _bb, _sec) in sel]
             page_start = min(pages_range) if pages_range else 1
             page_end = max(pages_range) if pages_range else page_start
@@ -346,23 +344,31 @@ class ParseService:
         # Post-process: remove micro-chunks that provide no retrieval value.
         # These arise from form fields, metadata footers, or single short lines.
         MIN_CHUNK_CHARS = 50
-        filtered = []
+        filtered: List[ChunkInfo] = []
+        pending_micro: List[ChunkInfo] = []
         for c in chunks:
             if len(c.text.strip()) >= MIN_CHUNK_CHARS:
+                if pending_micro:
+                    prefix = pending_micro[0]
+                    for micro in pending_micro[1:]:
+                        prefix = self._merge_adjacent_chunks(prefix, micro)
+                    c = self._merge_adjacent_chunks(prefix, c)
+                    pending_micro = []
                 filtered.append(c)
             elif filtered:
                 # Merge micro-chunk text into previous chunk
                 prev = filtered[-1]
-                filtered[-1] = ChunkInfo(
-                    text=prev.text + c.text,
-                    chunk_index=prev.chunk_index,
-                    page_start=prev.page_start,
-                    page_end=max(prev.page_end, c.page_end),
-                    bboxes=prev.bboxes + c.bboxes,
-                    section_title=prev.section_title,
-                    token_count=prev.token_count + c.token_count,
-                )
-            # else: first chunk is micro — skip it entirely (very rare)
+                filtered[-1] = self._merge_adjacent_chunks(prev, c)
+            else:
+                pending_micro.append(c)
+
+        if pending_micro and not filtered:
+            # Short documents still need a searchable chunk; do not filter the
+            # whole document down to nothing.
+            combined = pending_micro[0]
+            for micro in pending_micro[1:]:
+                combined = self._merge_adjacent_chunks(combined, micro)
+            filtered.append(combined)
 
         # Re-index chunk_index after filtering
         for i, c in enumerate(filtered):
@@ -380,6 +386,119 @@ class ParseService:
         return filtered
 
     # -------------------------- Helpers --------------------------
+    def _order_blocks_for_reading(
+        self,
+        blocks: Sequence[CleanBlock],
+        page_width: float,
+        page_height: float,
+    ) -> List[CleanBlock]:
+        """Return blocks in reading order, including simple two-column layouts."""
+        if len(blocks) < 6 or page_width <= 0:
+            return sorted(blocks, key=lambda cb: (cb.bbox[1], cb.bbox[0]))
+
+        full_width: List[CleanBlock] = []
+        column_candidates: List[CleanBlock] = []
+        for block in blocks:
+            x0, _y0, x1, _y1 = block.bbox
+            width_ratio = max(0.0, x1 - x0) / page_width
+            crosses_center = x0 < page_width * 0.42 and x1 > page_width * 0.58
+            if width_ratio >= 0.62 or crosses_center:
+                full_width.append(block)
+            else:
+                column_candidates.append(block)
+
+        if len(column_candidates) < 6:
+            return sorted(blocks, key=lambda cb: (cb.bbox[1], cb.bbox[0]))
+
+        centers = sorted((cb.bbox[0] + cb.bbox[2]) / 2 for cb in column_candidates)
+        gaps = [
+            (centers[i + 1] - centers[i], i)
+            for i in range(len(centers) - 1)
+        ]
+        max_gap, split_idx = max(gaps, default=(0.0, 0), key=lambda item: item[0])
+        if max_gap < page_width * 0.16:
+            return sorted(blocks, key=lambda cb: (cb.bbox[1], cb.bbox[0]))
+
+        split_x = (centers[split_idx] + centers[split_idx + 1]) / 2
+        left = [cb for cb in column_candidates if ((cb.bbox[0] + cb.bbox[2]) / 2) <= split_x]
+        right = [cb for cb in column_candidates if ((cb.bbox[0] + cb.bbox[2]) / 2) > split_x]
+        if len(left) < 2 or len(right) < 2:
+            return sorted(blocks, key=lambda cb: (cb.bbox[1], cb.bbox[0]))
+
+        def order_column_band(band: Sequence[CleanBlock]) -> List[CleanBlock]:
+            band_left = [cb for cb in band if ((cb.bbox[0] + cb.bbox[2]) / 2) <= split_x]
+            band_right = [cb for cb in band if ((cb.bbox[0] + cb.bbox[2]) / 2) > split_x]
+            if band_left and band_right:
+                return (
+                    sorted(band_left, key=lambda cb: (cb.bbox[1], cb.bbox[0]))
+                    + sorted(band_right, key=lambda cb: (cb.bbox[1], cb.bbox[0]))
+                )
+            return sorted(band, key=lambda cb: (cb.bbox[1], cb.bbox[0]))
+
+        result: List[CleanBlock] = []
+        current_cut_y = float("-inf")
+        sorted_full = sorted(full_width, key=lambda cb: (cb.bbox[1], cb.bbox[0]))
+        for full_block in sorted_full:
+            band = [
+                cb
+                for cb in column_candidates
+                if current_cut_y <= cb.bbox[1] < full_block.bbox[1]
+            ]
+            result.extend(order_column_band(band))
+            result.append(full_block)
+            current_cut_y = max(current_cut_y, full_block.bbox[1])
+
+        trailing_band = [cb for cb in column_candidates if cb.bbox[1] >= current_cut_y]
+        result.extend(order_column_band(trailing_band))
+        return result
+
+    def _is_heading_block(self, block: CleanBlock, median_size: float) -> bool:
+        text = block.text.strip()
+        if not text or len(text) > 220:
+            return False
+        if text[-1:] in self.SENTENCE_DELIMS and len(text) > 45:
+            return False
+        if not any(ch.isalpha() or "\u4e00" <= ch <= "\u9fff" for ch in text):
+            return False
+        if block.font_size > (median_size * 1.25):
+            return True
+        words = text.split()
+        if 1 <= len(words) <= 12 and len(text) <= 90 and text[-1:] not in self.SENTENCE_DELIMS:
+            alpha = "".join(ch for ch in text if ch.isalpha())
+            if alpha and alpha.isupper():
+                return True
+        return False
+
+    def _join_text_units(self, units: Sequence[str]) -> str:
+        text = ""
+        for raw in units:
+            part = (raw or "").strip()
+            if not part:
+                continue
+            if not text:
+                text = part
+                continue
+            prev = text[-1]
+            first = part[0]
+            needs_space = (
+                prev not in " \n([{"
+                and first not in " \n,.;:!?)]}。！？；，、"
+                and not ("\u4e00" <= prev <= "\u9fff" and "\u4e00" <= first <= "\u9fff")
+            )
+            text += (" " if needs_space else "") + part
+        return text
+
+    def _merge_adjacent_chunks(self, left: ChunkInfo, right: ChunkInfo) -> ChunkInfo:
+        return ChunkInfo(
+            text=self._join_text_units([left.text, right.text]),
+            chunk_index=left.chunk_index,
+            page_start=left.page_start,
+            page_end=max(left.page_end, right.page_end),
+            bboxes=left.bboxes + right.bboxes,
+            section_title=left.section_title or right.section_title,
+            token_count=left.token_count + right.token_count,
+        )
+
     def _build_block_text_and_size(self, lines: Sequence[dict]) -> Tuple[str, float]:
         """Flatten spans into a paragraph text and estimate average font size.
 

@@ -8,6 +8,21 @@ releases use `0.minor.patch` semantics such as `0.2.0` and `0.2.1`.
 
 ## [Unreleased]
 
+## [0.11.0] - 2026-05-07
+
+### Changed
+- Improved parser reading order for simple two-column PDF pages so left-column
+  body text is chunked before right-column text instead of interleaving rows.
+- Tightened chunk assembly so English block boundaries preserve word spacing
+  while CJK adjacency and punctuation remain compact.
+- Preserved short documents during micro-chunk filtering instead of filtering
+  an entire concise document down to zero searchable chunks.
+
+### Added
+- Added parser integrity regression tests for two-column reading order and
+  mid-page full-width blocks, Title Case body-line retention, English sentence
+  boundary joining, concise documents, and CJK punctuation joins.
+
 ## [0.10.0] - 2026-05-07
 
 ### Added

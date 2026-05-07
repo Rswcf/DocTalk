@@ -19,7 +19,7 @@ Owner: Codex
 | M1 | 0.8.0 beta | Query intent router and whole-document summary chat path | Shipped | `f1a5141` | Version check, lint, backend tests, frontend build, production health/version passed |
 | M2 | 0.9.0 beta | Hierarchical document brief | Shipped | `42c40da` | Full gate and production health/version passed |
 | M3 | 0.10.0 beta | Retrieval evaluator and corrective RAG | Shipped | `30e7c05` | Full gate and production health/version passed |
-| M4 | 0.11.0 beta | Parser integrity fixes | Pending | Pending | Pending |
+| M4 | 0.11.0 beta | Parser integrity fixes | Ready for release | Pending | Full gate passed |
 | M5 | 0.12.0 beta | Table-aware RAG | Pending | Pending | Pending |
 | M6 | 0.13.0 beta | Query planner, multi-hop, compare | Pending | Pending | Pending |
 | M7 | 0.14.0 beta | Claim verifier and evaluation dashboard | Pending | Pending | Pending |
@@ -125,3 +125,33 @@ Owner: Codex
 - Railway deployment: `385509f1-7a2e-4b52-8881-16e2313a8a80` (`SUCCESS`)
 - Production `/health`: `{"status":"ok","release":{"version":"0.10.0","stage":"beta","build":null}}`
 - Production `/version`: `{"version":"0.10.0","stage":"beta","build":null}`
+
+## M4 Checklist
+
+- [x] Improve parser reading order for simple two-column PDF layouts before chunking.
+- [x] Preserve English word boundaries when joining text blocks and sentences.
+- [x] Keep concise documents searchable when all generated chunks are below the micro-chunk threshold.
+- [x] Add parser integrity regression tests for two-column ordering and block joining.
+- [x] Run full release verification gate.
+- [ ] Commit, push `main`, merge/push `stable`, tag, deploy, and verify production.
+
+## M4 Verification Log
+
+- 2026-05-07: `cd backend && python3 -m ruff check app/services/parse_service.py tests/test_parse_service.py` passed.
+- 2026-05-07: `cd backend && python3 -m pytest tests/test_parse_service.py -v` passed with 9 passed.
+- 2026-05-07: Adversarial review found mid-page full-width blocks could be
+  moved to the page tail and normal-font Title Case body lines could be dropped
+  as headings; fixed segmented two-column ordering, constrained fallback
+  heading detection to uppercase labels, and expanded parser integrity tests to
+  13 passed.
+- 2026-05-07: Follow-up adversarial review found overlapping column blocks
+  whose `y0` fell inside a full-width block could be dropped; fixed the band cut
+  to advance from the full-width block top and added a regression row.
+- 2026-05-07: Final adversarial review found no release blockers.
+- 2026-05-07: `python3 scripts/check_version_consistency.py` passed for `0.11.0 beta`.
+- 2026-05-07: `cd frontend && npm run build` passed.
+- 2026-05-07: `cd backend && python3 -m ruff check app/ tests/` passed.
+- 2026-05-07: `cd backend && python3 -m pytest tests/test_parse_service.py -v` passed with 13 passed.
+- 2026-05-07: `cd backend && python3 -m pytest tests/ -m 'not integration' -v` passed with 252 passed, 3 skipped, 4 deselected.
+- 2026-05-07: `cd backend && python3 -m pytest -m integration -v` ran; 4 integration tests skipped by local environment configuration.
+- 2026-05-07: `cd backend && python3 -m alembic heads && python3 -m alembic upgrade head` passed with `20260507_0026 (head)`.

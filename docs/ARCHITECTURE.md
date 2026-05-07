@@ -135,6 +135,11 @@ sequenceDiagram
 3. **Chunking**: Text is split into 150–300 token windows with:
    - Heading detection for section titles
    - Header/footer filtering to remove repeated page elements
+   - Simple two-column reading-order detection so body text is chunked by
+     column instead of interleaving left/right rows
+   - Language-aware block joining that preserves English word boundaries while
+     avoiding unnecessary spaces before punctuation or between adjacent CJK
+     characters
    - Each chunk stores `page_start`, `page_end`, and `bboxes` (JSONB array of normalized rectangles)
 
 4. **Embedding**: Chunks are sent to OpenRouter's `openai/text-embedding-3-small` endpoint in batches, producing 1536-dimensional vectors.
