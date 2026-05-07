@@ -17,7 +17,7 @@ Owner: Codex
 | --- | --- | --- | --- | --- | --- |
 | M0 | 0.8.0 beta | RAG execution ledger and golden routing tests | Shipped | `f1a5141` | Version check, lint, backend tests, frontend build, production health/version passed |
 | M1 | 0.8.0 beta | Query intent router and whole-document summary chat path | Shipped | `f1a5141` | Version check, lint, backend tests, frontend build, production health/version passed |
-| M2 | 0.9.0 beta | Hierarchical document brief | Verified, release pending | Pending | Full release gate passed locally; production deploy pending |
+| M2 | 0.9.0 beta | Hierarchical document brief | Shipped | `42c40da` | Full gate and production health/version passed |
 | M3 | 0.10.0 beta | Retrieval evaluator and corrective RAG | Pending | Pending | Pending |
 | M4 | 0.11.0 beta | Parser integrity fixes | Pending | Pending | Pending |
 | M5 | 0.12.0 beta | Table-aware RAG | Pending | Pending | Pending |
@@ -69,7 +69,7 @@ Owner: Codex
 - [x] Add i18n keys across all 11 locales.
 - [x] Add targeted backend tests for generation, failure isolation, routing context, worker dispatch, and API hydration.
 - [x] Run full release verification gate.
-- [ ] Commit, push `main`, merge/push `stable`, tag, deploy, and verify production.
+- [x] Commit, push `main`, merge/push `stable`, tag, deploy, and verify production.
 
 ## M2 Verification Log
 
@@ -83,3 +83,12 @@ Owner: Codex
 - 2026-05-07: `cd backend && python3 -m pytest -m integration -v` ran; 4 integration tests skipped by local environment configuration.
 - 2026-05-07: `cd backend && python3 -m alembic heads && python3 -m alembic upgrade head` passed with `20260507_0026 (head)`.
 - 2026-05-07: Browser smoke passed for desktop and mobile on local production Next server with mocked APIs: Brief tab renders, citation click jumps/highlights source text, and no horizontal overflow was detected.
+
+## M2 Release Log
+
+- Commit: `42c40da` (`feat(brief): add hierarchical document briefs`)
+- Pushed: `origin/main`, `origin/stable`
+- Tag: `v0.9.0-beta`
+- Railway deployment: `b11bcfca-d44c-4221-a3d0-86f8c82fb41b` (`SUCCESS`)
+- Production `/health`: `{"status":"ok","release":{"version":"0.9.0","stage":"beta","build":null}}`
+- Production `/version`: `{"version":"0.9.0","stage":"beta","build":null}`
