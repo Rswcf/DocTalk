@@ -23,7 +23,7 @@ backend changes from `stable`, and record the outcome here.
 | M2 | 0.4.0 | Table Extraction | Deployed | `a945117` | Done | Done | Railway `0.4.0 beta` |
 | M3 | 0.5.0 | Deep Link Answer Share | Deployed | `3e6cd9f` | Done | Done | Railway `0.5.0 beta` |
 | M4 | 0.6.0 | Question Templates | Deployed | `5906545` | Done | Done | Railway `0.6.0 beta` |
-| M5 | 0.7.0 | Document Diff | In progress | Pending | Pending | Pending | Pending |
+| M5 | 0.7.0 | Document Diff | Deployed | `7a326b8` | Done | Done | Railway `0.7.0 beta` |
 
 ## Current Cycle: M1 Structured Extraction
 
@@ -155,10 +155,10 @@ backend changes from `stable`, and record the outcome here.
 
 - Started: 2026-05-07
 - Branch: `main`
-- Commit: Pending
-- Tag: Pending
-- Push: Pending
-- Deploy: Pending
+- Commit: `7a326b8`
+- Tag: `v0.7.0-beta`
+- Push: `origin main` and `origin stable` complete
+- Deploy: Railway deploy accepted; production `/health` and `/version` return `0.7.0 beta`
 - Scope: version hygiene, Pro-only `document_diff` jobs, semantic diff
   worker/API, global Compare workspace, Collection Compare tab, old/new
   citation jumps, Markdown/CSV export, tests, i18n and docs.
@@ -184,3 +184,6 @@ backend changes from `stable`, and record the outcome here.
   documents plus a completed diff run, displayed added/modified changes and
   old/new citation chips, preserved the public `/compare` marketing page, and
   passed desktop/mobile screenshots with no mobile horizontal overflow.
+- `railway up --detach` from `stable` — PASS
+- `curl https://backend-production-a62e.up.railway.app/health` — PASS (`0.7.0 beta`)
+- `curl https://backend-production-a62e.up.railway.app/version` — PASS (`0.7.0 beta`)
