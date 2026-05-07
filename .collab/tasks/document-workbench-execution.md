@@ -22,7 +22,7 @@ backend changes from `stable`, and record the outcome here.
 | M1 | 0.3.0 | Structured Extraction | Deployed | `5ac4d83` | Done | Done | Railway `0.3.0 beta` |
 | M2 | 0.4.0 | Table Extraction | Deployed | `a945117` | Done | Done | Railway `0.4.0 beta` |
 | M3 | 0.5.0 | Deep Link Answer Share | Deployed | `3e6cd9f` | Done | Done | Railway `0.5.0 beta` |
-| M4 | 0.6.0 | Question Templates | Verified locally | Pending | Pending | Pending | Pending |
+| M4 | 0.6.0 | Question Templates | Deployed | `5906545` | Done | Done | Railway `0.6.0 beta` |
 | M5 | 0.7.0 | Document Diff | Pending | Pending | Pending | Pending | Pending |
 
 ## Current Cycle: M1 Structured Extraction
@@ -117,10 +117,10 @@ backend changes from `stable`, and record the outcome here.
 
 - Started: 2026-05-07
 - Branch: `main`
-- Commit: Pending
-- Tag: Pending
-- Push: Pending
-- Deploy: Pending
+- Commit: `5906545`
+- Tag: `v0.6.0-beta`
+- Push: `origin main` and `origin stable` complete
+- Deploy: Railway deploy accepted; production `/health` and `/version` return `0.6.0 beta`
 - Scope: version hygiene, `question_templates`, `batch_template` jobs,
   question-template worker/API, document-reader Templates tab, Collection
   Templates workspace, cited answer matrix, Markdown/CSV export, tests, i18n
@@ -147,3 +147,6 @@ backend changes from `stable`, and record the outcome here.
   `Extract → Templates`, displayed a saved template and cited answer matrix,
   and passed desktop/mobile screenshots. A mobile overflow issue and a
   split-pane desktop layout squeeze were found and fixed before this PASS.
+- `railway up --detach` from `stable` — PASS
+- `curl https://backend-production-a62e.up.railway.app/health` — PASS (`0.6.0 beta`)
+- `curl https://backend-production-a62e.up.railway.app/version` — PASS (`0.6.0 beta`)
