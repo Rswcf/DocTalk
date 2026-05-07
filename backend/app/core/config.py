@@ -50,6 +50,10 @@ class Settings(BaseSettings):
     MINIO_BUCKET: str = Field(default="doctalk-pdfs")
     MINIO_PRESIGN_TTL: int = Field(default=300)
     MINIO_SECURE: bool = Field(default=False)
+    # Optional browser-facing endpoint used only for presigned file URLs.
+    # Server-side upload/download should use MINIO_ENDPOINT, preferably via
+    # Railway private networking in production.
+    MINIO_PUBLIC_ENDPOINT: Optional[str] = None
 
     # Celery
     CELERY_BROKER_URL: str = Field(default="redis://localhost:6379/0")

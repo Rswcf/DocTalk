@@ -25,6 +25,7 @@ backend changes from `stable`, and record the outcome here.
 | M4 | 0.6.0 | Question Templates | Deployed | `5906545` | Done | Done | Railway `0.6.0 beta` |
 | M5 | 0.7.0 | Document Diff | Deployed | `7a326b8` | Done | Done | Railway `0.7.0 beta` |
 | Hotfix | 0.7.1 | Async Job Response Lazy-Load Fix | Deployed | `fc73d34` | Done | Done | Railway `0.7.1 beta` |
+| Hotfix | 0.7.2 | MinIO Upload Private Endpoint Fix | In progress | Pending | Pending | Pending | Pending |
 
 ## Current Cycle: M1 Structured Extraction
 
@@ -218,3 +219,27 @@ backend changes from `stable`, and record the outcome here.
 - `railway up --detach` from `stable` — PASS
 - `curl https://backend-production-a62e.up.railway.app/health` — PASS (`0.7.1 beta`)
 - `curl https://backend-production-a62e.up.railway.app/version` — PASS (`0.7.1 beta`)
+
+## Current Cycle: Hotfix 0.7.2 MinIO Upload Private Endpoint Fix
+
+- Started: 2026-05-07
+- Branch: `main`
+- Commit: Pending
+- Tag: Pending
+- Push: Pending
+- Deploy: Pending
+- Scope: separate server-side MinIO upload/download endpoint from browser-facing
+  presigned URL endpoint, handle storage upload failures with structured
+  `STORAGE_UNAVAILABLE`, and switch production backend to Railway private
+  networking for object storage writes.
+- Required verification:
+  - `python3 scripts/check_version_consistency.py`
+  - `cd frontend && npm run build`
+  - `cd backend && python3 -m ruff check app/ tests/`
+  - `cd backend && python3 -m pytest tests/test_parse_service.py -v`
+  - Storage endpoint and upload error taxonomy regression tests.
+
+### Hotfix 0.7.2 Verification Log
+
+- `cd backend && python3 -m ruff check app/ tests/` — PASS
+- `cd backend && python3 -m pytest tests/test_storage_service.py tests/test_error_taxonomy.py::test_upload_storage_unavailable_returns_structured_error tests/test_error_taxonomy.py::test_document_file_url_storage_unavailable -v` — PASS (`5 passed`)

@@ -269,6 +269,28 @@ async def test_upload_invalid_file_content(client: AsyncClient) -> None:
 
 
 @pytest.mark.asyncio
+async def test_upload_storage_unavailable_returns_structured_error(
+    client: AsyncClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    user = _make_user(plan="free")
+    db = _make_db(scalar=AsyncMock(return_value=0))
+    _override_dependencies(db, auth_user=user)
+    monkeypatch.setattr(
+        documents_api.doc_service,
+        "create_document",
+        AsyncMock(side_effect=documents_api.StorageUnavailableError("minio down")),
+    )
+
+    response = await client.post(
+        "/api/documents/upload",
+        files={"file": ("report.pdf", b"%PDF-1.4\nok", "application/pdf")},
+    )
+
+    _assert_error(response, 503, "STORAGE_UNAVAILABLE")
+
+
+@pytest.mark.asyncio
 async def test_ingest_url_invalid_scheme(client: AsyncClient) -> None:
     user = _make_user(plan="free")
     db = _make_db()

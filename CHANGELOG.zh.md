@@ -8,6 +8,14 @@
 
 ## [Unreleased]
 
+## [0.7.2] - 2026-05-07
+
+### Fixed
+- 新增 MinIO 后端内部 endpoint 与浏览器可访问 endpoint 的分离配置，使生产上传
+  可走 Railway private networking，同时保持文档 presigned URL 可在浏览器访问。
+- 当对象存储无法接收文件时，上传和 URL 导入现在会返回结构化
+  `STORAGE_UNAVAILABLE`，不再暴露内部 500。
+
 ## [0.7.1] - 2026-05-07
 
 ### Fixed

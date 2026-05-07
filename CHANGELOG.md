@@ -8,6 +8,15 @@ releases use `0.minor.patch` semantics such as `0.2.0` and `0.2.1`.
 
 ## [Unreleased]
 
+## [0.7.2] - 2026-05-07
+
+### Fixed
+- Added separate server-side and browser-facing MinIO endpoints so production
+  uploads can use Railway private networking while presigned document URLs
+  remain reachable from the browser.
+- Upload and URL ingestion now return structured `STORAGE_UNAVAILABLE` errors
+  when object storage cannot accept a file instead of leaking an internal 500.
+
 ## [0.7.1] - 2026-05-07
 
 ### Fixed

@@ -27,7 +27,7 @@ from app.schemas.document import (
     DocumentTextContentResponse,
 )
 from app.services.doc_service import can_access_document, doc_service, sanitize_filename
-from app.services.storage_service import storage_service
+from app.services.storage_service import StorageUnavailableError, storage_service
 
 logger = logging.getLogger(__name__)
 
@@ -51,6 +51,10 @@ DOCUMENT_NOT_FOUND_DETAIL = {
 SERVER_ERROR_DETAIL = {
     "error": "SERVER_ERROR",
     "message": "Internal error",
+}
+STORAGE_UNAVAILABLE_DETAIL = {
+    "error": "STORAGE_UNAVAILABLE",
+    "message": "Document storage is temporarily unavailable",
 }
 URL_BLOCKED_REASONS = {
     "BLOCKED_HOST",
@@ -262,6 +266,8 @@ async def upload_document(
 
     try:
         document_id = await doc_service.create_document(_MemUpload(), db, user_id=user.id, file_type=file_type)
+    except StorageUnavailableError:
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=STORAGE_UNAVAILABLE_DETAIL)
     except ValueError as ve:
         code = str(ve)
         if code in _UPLOAD_VALUE_ERROR_MAP:
@@ -406,7 +412,10 @@ async def ingest_url(
         # URL returned a PDF — process through normal PDF pipeline
         doc_id = uuid.uuid4()
         storage_key = f"documents/{doc_id}/{title}"
-        await asyncio.to_thread(storage_service.upload_file, pdf_bytes, storage_key, 'application/pdf')
+        try:
+            await asyncio.to_thread(storage_service.upload_file, pdf_bytes, storage_key, 'application/pdf')
+        except StorageUnavailableError:
+            raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=STORAGE_UNAVAILABLE_DETAIL)
 
         doc = Document(
             id=doc_id,
@@ -449,7 +458,10 @@ async def ingest_url(
         display_title = (title or urlparse(url).netloc or "Imported webpage")[:100]
         storage_filename = sanitize_filename(f"{display_title}.md", max_length=140)
         storage_key = f"documents/{doc_id}/{storage_filename}"
-        await asyncio.to_thread(storage_service.upload_file, text_bytes, storage_key, 'text/markdown')
+        try:
+            await asyncio.to_thread(storage_service.upload_file, text_bytes, storage_key, 'text/markdown')
+        except StorageUnavailableError:
+            raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=STORAGE_UNAVAILABLE_DETAIL)
 
         doc = Document(
             id=doc_id,
