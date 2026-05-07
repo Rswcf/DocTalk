@@ -21,7 +21,7 @@ Owner: Codex
 | M3 | 0.10.0 beta | Retrieval evaluator and corrective RAG | Shipped | `30e7c05` | Full gate and production health/version passed |
 | M4 | 0.11.0 beta | Parser integrity fixes | Shipped | `7436c2a` | Full gate and production health/version passed |
 | M5 | 0.12.0 beta | Table-aware RAG | Shipped | `ac4ee84` | Full gate and production health/version passed |
-| M6 | 0.13.0 beta | Query planner, multi-hop, compare | Ready for release | Pending | Full gate passed |
+| M6 | 0.13.0 beta | Query planner, multi-hop, compare | Shipped | `55b0a6f` | Full gate and production health/version passed |
 | M7 | 0.14.0 beta | Claim verifier and evaluation dashboard | Pending | Pending | Pending |
 
 ## M0 / M1 Checklist
@@ -206,7 +206,7 @@ Owner: Codex
 - [x] Add query-plan prompt contract without echoing raw planned queries into the system prompt.
 - [x] Add targeted tests for planner decisions, planned retrieval, balanced comparison coverage, and prompt safety.
 - [x] Run full release verification gate.
-- [ ] Commit, push `main`, merge/push `stable`, tag, deploy, and verify production.
+- [x] Commit, push `main`, merge/push `stable`, tag, deploy, and verify production.
 
 ## M6 Verification Log
 
@@ -220,3 +220,12 @@ Owner: Codex
 - 2026-05-07: `cd backend && python3 -m pytest tests/ -m 'not integration' -v` passed with 272 passed, 3 skipped, 4 deselected.
 - 2026-05-07: `cd backend && python3 -m pytest -m integration -v` ran; 4 integration tests skipped by local environment configuration.
 - 2026-05-07: `cd backend && python3 -m alembic heads && python3 -m alembic upgrade head` passed with `20260507_0026 (head)`.
+
+## M6 Release Log
+
+- Commit: `55b0a6f` (`feat(rag): add query planner for comparisons`)
+- Pushed: `origin/main`, `origin/stable`
+- Tag: `v0.13.0-beta`
+- Railway deployment: `4bf7827f-2dd8-4f73-93e0-daee7581da37` (`SUCCESS`)
+- Production `/health`: `{"status":"ok","release":{"version":"0.13.0","stage":"beta","build":null}}`
+- Production `/version`: `{"version":"0.13.0","stage":"beta","build":null}`
