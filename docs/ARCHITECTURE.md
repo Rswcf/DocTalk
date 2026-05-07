@@ -714,6 +714,11 @@ graph TD
 - **Auto-Summary**: New sessions inject a synthetic assistant message with the AI-generated document summary
 - **Regenerate**: Re-send the last user message to get a new AI response
 - **Export**: Download the full conversation as a Markdown file with citations converted to footnotes (accessed via "+" menu)
+- **Per-answer deep links**: Assistant message actions include `Share this answer`
+  when the message has a persisted backend id. The frontend derives the same
+  safe `msg-*` anchor as the backend, reuses the existing session share token,
+  and copies `/shared/{token}#msg-*` so public viewers land on the highlighted
+  answer.
 
 **PDF Search**: Ctrl+F triggers an in-viewer search bar. Text is extracted via `pdfjs page.getTextContent()`, matches are highlighted using `customTextRenderer` with `<mark>` tags, and prev/next navigation scrolls between matches.
 
@@ -862,6 +867,12 @@ LLM. The worker clears and rewrites `document_tables` for the document. Native
 PDFs use PyMuPDF `page.find_tables()`, while DOCX/PPTX/XLSX/TXT/MD/URL-derived
 documents fall back to markdown-table detection from stored `pages.content`.
 Free users can preview detected tables; CSV export is gated to Plus+.
+
+Public shared-session responses expose only safe message anchors, role/content,
+and page/snippet/document-filename citation summaries. They intentionally omit
+bbox coordinates, chunk ids, document ids, and confidence scores; private
+authenticated document pages remain the only surfaces that can jump to exact
+bbox highlights.
 
 ### Self-serve subscription cancel state machine
 

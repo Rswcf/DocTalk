@@ -7,7 +7,7 @@
 
 ## 1. Executive Summary
 
-DocTalk is an AI-powered document workbench with a unique competitive advantage: **citation-precise answers with bounding-box page highlights** — the most accurate citation UX in the market. As of `0.4.0 beta`, the product is moving beyond general-purpose chat by adding **Structured Extraction** and **Table Extraction**: users can turn a document into a cited deliverable or CSV-ready table data instead of leaving with only a chat transcript. DocTalk can capture significant revenue in three high-value segments: **finance professionals** (highest willingness to pay), **legal professionals** (underserved solo/small firms), and **academic researchers** (largest addressable market with viral growth).
+DocTalk is an AI-powered document workbench with a unique competitive advantage: **citation-precise answers with bounding-box page highlights** — the most accurate citation UX in the market. As of `0.5.0 beta`, the product is moving beyond general-purpose chat by adding **Structured Extraction**, **Table Extraction**, and **Deep Link Answer Share**: users can turn a document into a cited deliverable, CSV-ready table data, or a shareable answer that lands collaborators directly on the relevant analysis. DocTalk can capture significant revenue in three high-value segments: **finance professionals** (highest willingness to pay), **legal professionals** (underserved solo/small firms), and **academic researchers** (largest addressable market with viral growth).
 
 ---
 
@@ -26,7 +26,7 @@ DocTalk is an AI-powered document workbench with a unique competitive advantage:
 - **Cross-document Q&A** is the #1 missing capability vs. NotebookLM
 
 ### DocTalk's Position Today
-- **Strengths**: Citation precision (small chunks + bbox highlights), Structured Extraction with cited Markdown/CSV deliverables, Table Extraction with CSV export, 2 DeepSeek V4 modes (Flash=fast cited answers, Pro=deeper analysis) with model-adaptive prompts and per-model parameter tuning (benchmark-validated), OCR, dark mode, multi-language (11 languages), ChatGPT-style chat UI (stop generation, scroll-to-bottom, compact citation pills, "+" action menu, hover action buttons, styled code blocks with copy, antialiased typography, max-width centering), streaming indicators, auto-summary, security hardening (SSRF protection, SSE-S3 encryption at rest, file validation, structured security logging, GDPR data export, cookie consent, non-root Docker), branded email magic link with 11-locale i18n
+- **Strengths**: Citation precision (small chunks + bbox highlights), Structured Extraction with cited Markdown/CSV deliverables, Table Extraction with CSV export, per-answer deep link sharing for referral loops, 2 DeepSeek V4 modes (Flash=fast cited answers, Pro=deeper analysis) with model-adaptive prompts and per-model parameter tuning (benchmark-validated), OCR, dark mode, multi-language (11 languages), ChatGPT-style chat UI (stop generation, scroll-to-bottom, compact citation pills, "+" action menu, hover action buttons, styled code blocks with copy, antialiased typography, max-width centering), streaming indicators, auto-summary, security hardening (SSRF protection, SSE-S3 encryption at rest, file validation, structured security logging, GDPR data export, cookie consent, non-root Docker), branded email magic link with 11-locale i18n
 - **Weaknesses**: No team features, no API, no SSO
 
 ---
@@ -95,6 +95,7 @@ DocTalk is an AI-powered document workbench with a unique competitive advantage:
 - ✅ **7-day fair-use refund copy**: Pricing and Billing now set refund expectations before and after purchase
 - ✅ **Structured Extraction launched (`0.3.0 beta`)**: Free users can try a limited number of cited extraction jobs; paid tiers continue through credit consumption and export value
 - ✅ **Table Extraction launched (`0.4.0 beta`)**: Table previews are available after scan; CSV export is a Plus+ conversion lever for finance/research workflows
+- ✅ **Deep Link Answer Share launched (`0.5.0 beta`)**: Every cited answer can become a precise shared link, adding low-friction referral loops while keeping private citation internals redacted
 - ⏳ **Priority Queue**: Removed from pricing page pending implementation
 - ⏳ **Team tier**: Planned for Phase 3 (requires workspace, RBAC, SSO features)
 

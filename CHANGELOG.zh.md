@@ -8,6 +8,17 @@
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-05-07
+
+### Added
+- AI 回复操作区新增单条回答深链分享。回答分享复用现有 session share token，
+  并附加稳定 message anchor，让接收者直接定位到对应的带引用回答。
+- 公共分享页新增安全 message anchor，并在 URL fragment 命中时高亮目标回答。
+
+### Security
+- 公共分享响应继续隐藏 bbox 坐标、chunk id、document id、confidence score 等
+  私有引用字段。
+
 ## [0.4.0] - 2026-05-07
 
 ### Added

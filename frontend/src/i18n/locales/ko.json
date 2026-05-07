@@ -41,6 +41,8 @@
   "chat.exportPdf": "PDF로 내보내기",
   "chat.exportDocx": "DOCX로 내보내기",
   "chat.share": "대화 공유",
+  "chat.shareAnswer": "이 답변 공유",
+  "share.answerCopied": "답변 링크가 클립보드에 복사되었습니다.",
   "chat.moreOptions": "더 많은 옵션",
   "chat.stop": "생성 중지",
   "chat.customInstructions": "사용자 지정 지시",

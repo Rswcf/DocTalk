@@ -15,6 +15,7 @@ from app.core.deps import get_db_session, require_auth
 from app.core.rate_limit import get_client_ip, shared_view_limiter
 from app.core.security_log import log_security_event
 from app.models.tables import ChatSession, Document, Message, SharedSession, User
+from app.services.share_anchor_service import message_share_anchor
 
 router = APIRouter(tags=["sharing"])
 
@@ -173,7 +174,11 @@ async def view_shared(
     # Build safe response — exclude bboxes, documentId, chunkId, confidence
     safe_messages = []
     for msg in messages:
-        safe_msg: dict = {"role": msg.role, "content": msg.content}
+        safe_msg: dict = {
+            "id": message_share_anchor(msg.id),
+            "role": msg.role,
+            "content": msg.content,
+        }
         if msg.citations:
             safe_citations = []
             for c in msg.citations:

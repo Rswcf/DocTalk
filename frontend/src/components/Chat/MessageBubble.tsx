@@ -2,7 +2,7 @@
 
 import React, { Suspense, useMemo, useState, useCallback, useEffect } from 'react';
 import remarkGfm from 'remark-gfm';
-import { Copy, Check, ThumbsUp, ThumbsDown, RotateCcw, ChevronsDown } from 'lucide-react';
+import { Copy, Check, ThumbsUp, ThumbsDown, RotateCcw, ChevronsDown, Share2 } from 'lucide-react';
 import type { Citation, Message } from '../../types';
 import { useLocale } from '../../i18n';
 import CitationPopover from './CitationPopover';
@@ -20,6 +20,8 @@ interface MessageBubbleProps {
   onRegenerate?: () => void;
   isLastAssistant?: boolean;
   onContinue?: () => void;
+  onShareAnswer?: (message: Message) => void;
+  isSharingAnswer?: boolean;
 }
 
 function insertCitationMarkers(text: string, citations: Citation[]): string {
@@ -179,7 +181,16 @@ function setFeedbackStorage(messageId: string, fb: Feedback) {
   }
 }
 
-export default function MessageBubble({ message, onCitationClick, isStreaming, onRegenerate, isLastAssistant, onContinue }: MessageBubbleProps) {
+export default function MessageBubble({
+  message,
+  onCitationClick,
+  isStreaming,
+  onRegenerate,
+  isLastAssistant,
+  onContinue,
+  onShareAnswer,
+  isSharingAnswer,
+}: MessageBubbleProps) {
   const isUser = message.role === 'user';
   const isError = !!message.isError;
   const isAssistant = !isUser;
@@ -322,6 +333,17 @@ export default function MessageBubble({ message, onCitationClick, isStreaming, o
             >
               <ThumbsDown size={14} fill={feedback === 'down' ? 'currentColor' : 'none'} />
             </button>
+            {message.shareAnchor && onShareAnswer && !isStreaming && (
+              <button
+                onClick={() => onShareAnswer(message)}
+                disabled={isSharingAnswer}
+                className="rounded-lg p-1.5 text-zinc-400 transition-colors hover:bg-white/70 hover:text-zinc-600 focus-visible:ring-2 focus-visible:ring-zinc-400 disabled:opacity-50 dark:text-zinc-500 dark:hover:bg-zinc-800 dark:hover:text-zinc-300"
+                title={t('chat.shareAnswer')}
+                aria-label={t('chat.shareAnswer')}
+              >
+                <Share2 size={14} />
+              </button>
+            )}
             {isLastAssistant && onRegenerate && !isStreaming && (
               <button
                 onClick={onRegenerate}

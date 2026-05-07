@@ -8,6 +8,19 @@ releases use `0.minor.patch` semantics such as `0.2.0` and `0.2.1`.
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-05-07
+
+### Added
+- Per-answer deep link sharing from assistant message actions. Shared answer
+  URLs reuse the existing session share token and append a stable message
+  anchor so recipients land directly on the cited answer.
+- Public shared-session pages now expose safe message anchors and highlight the
+  targeted answer via the URL fragment.
+
+### Security
+- Public share responses continue to redact private citation internals such as
+  bbox coordinates, chunk ids, document ids, and confidence scores.
+
 ## [0.4.0] - 2026-05-07
 
 ### Added

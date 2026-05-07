@@ -54,6 +54,8 @@
   "chat.exportPdf": "PDF में निर्यात करें",
   "chat.exportDocx": "DOCX में निर्यात करें",
   "chat.share": "बातचीत साझा करें",
+  "chat.shareAnswer": "यह उत्तर साझा करें",
+  "share.answerCopied": "उत्तर लिंक क्लिपबोर्ड पर कॉपी हो गया।",
   "chat.moreOptions": "अधिक विकल्प",
   "chat.stop": "जनरेशन रोकें",
   "chat.customInstructions": "कस्टम निर्देश",

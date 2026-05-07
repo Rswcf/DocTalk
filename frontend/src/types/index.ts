@@ -33,6 +33,7 @@ export interface Message {
   isTruncated?: boolean;
   continuationCount?: number;
   backendId?: string;
+  shareAnchor?: string;
 }
 
 export interface DocumentResponse {

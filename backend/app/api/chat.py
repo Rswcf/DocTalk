@@ -42,6 +42,7 @@ from app.schemas.chat import (
 from app.services import credit_service
 from app.services.chat_service import chat_service
 from app.services.doc_service import can_access_document
+from app.services.share_anchor_service import message_share_anchor
 
 DEMO_MESSAGE_LIMIT = 5
 DEMO_MAX_SESSIONS_PER_DOC = 500
@@ -272,6 +273,8 @@ async def get_session_messages(
     for m in rows.scalars():
         items.append(
             ChatMessageResponse(
+                id=m.id,
+                share_anchor=message_share_anchor(m.id),
                 role=m.role,
                 content=m.content,
                 citations=m.citations,

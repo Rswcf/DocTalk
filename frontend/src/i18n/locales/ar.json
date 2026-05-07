@@ -54,6 +54,8 @@
   "chat.exportPdf": "تصدير PDF",
   "chat.exportDocx": "تصدير DOCX",
   "chat.share": "مشاركة المحادثة",
+  "chat.shareAnswer": "مشاركة هذه الإجابة",
+  "share.answerCopied": "تم نسخ رابط الإجابة إلى الحافظة.",
   "chat.moreOptions": "المزيد من الخيارات",
   "chat.stop": "إيقاف التوليد",
   "chat.customInstructions": "تعليمات مخصصة",

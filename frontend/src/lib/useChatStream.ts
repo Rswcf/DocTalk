@@ -7,6 +7,7 @@ import type { Message } from '../types';
 import { triggerCreditsRefresh } from '../components/CreditsDisplay';
 import { errorCopy } from './errorCopy';
 import { trackEvent } from './analytics';
+import { messageShareAnchorFromId } from './shareAnchors';
 
 interface UseChatStreamOptions {
   sessionId: string;
@@ -164,6 +165,7 @@ export function useChatStream({
     if (d.message_id) {
       updateLastMessageMeta({
         backendId: d.message_id,
+        shareAnchor: messageShareAnchorFromId(d.message_id),
         ...(d.continuation_count !== undefined ? { continuationCount: d.continuation_count } : {}),
       });
     }

@@ -21,6 +21,8 @@ class ContinueRequest(BaseModel):
 
 
 class ChatMessageResponse(BaseModel):
+    id: uuid.UUID
+    share_anchor: str
     role: str
     content: str
     citations: Optional[List[dict]] = None

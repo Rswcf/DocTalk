@@ -42,6 +42,8 @@
   "chat.exportPdf": "Export PDF",
   "chat.exportDocx": "Export DOCX",
   "chat.share": "Share conversation",
+  "chat.shareAnswer": "Share this answer",
+  "share.answerCopied": "Answer link copied to clipboard.",
   "chat.moreOptions": "More options",
   "chat.stop": "Stop generating",
   "chat.customInstructions": "Custom Instructions",

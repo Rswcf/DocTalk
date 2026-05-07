@@ -41,6 +41,8 @@
   "chat.exportPdf": "PDF でエクスポート",
   "chat.exportDocx": "DOCX でエクスポート",
   "chat.share": "会話を共有",
+  "chat.shareAnswer": "この回答を共有",
+  "share.answerCopied": "回答リンクをクリップボードにコピーしました。",
   "chat.moreOptions": "その他のオプション",
   "chat.stop": "生成を停止",
   "chat.customInstructions": "カスタム指示",

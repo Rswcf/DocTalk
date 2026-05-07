@@ -5,6 +5,19 @@ import type { Metadata } from 'next';
 const BACKEND_URL = process.env.BACKEND_INTERNAL_URL || process.env.NEXT_PUBLIC_API_BASE || '';
 const AUTH_SECRET = process.env.AUTH_SECRET;
 
+interface SharedCitation {
+  text_snippet: string;
+  page: number;
+  document_filename: string;
+}
+
+interface SharedMessage {
+  id: string;
+  role: string;
+  content: string;
+  citations?: SharedCitation[];
+}
+
 async function fetchShared(token: string) {
   const headersList = await headers();
   const xff = headersList.get('x-forwarded-for') || '';
@@ -35,7 +48,7 @@ export async function generateMetadata({ params }: { params: Promise<{ token: st
   const { token } = await params;
   const data = await fetchShared(token);
   if (!data) return { title: 'Not Found' };
-  const preview = data.messages?.find((m: { role: string }) => m.role === 'assistant')?.content?.slice(0, 150) || '';
+  const preview = data.messages?.find((m: SharedMessage) => m.role === 'assistant')?.content?.slice(0, 150) || '';
   return {
     title: data.session_title,
     description: preview,
@@ -56,8 +69,14 @@ export default async function SharedPage({ params }: { params: Promise<{ token: 
         <p className="text-sm text-zinc-500 mb-6">Document: {data.document_name}</p>
 
         <div className="space-y-4">
-          {data.messages.map((msg: { role: string; content: string; citations?: { text_snippet: string; page: number; document_filename: string }[] }, i: number) => (
-            <div key={i} className={msg.role === 'user' ? 'flex justify-end' : ''}>
+          {data.messages.map((msg: SharedMessage, i: number) => (
+            <div
+              key={msg.id || i}
+              id={msg.id}
+              className={`scroll-mt-6 rounded-2xl transition-[background-color,box-shadow] target:bg-indigo-50 target:ring-2 target:ring-indigo-300 target:ring-offset-4 target:ring-offset-white dark:target:bg-indigo-950/30 dark:target:ring-indigo-700 dark:target:ring-offset-zinc-950 ${
+                msg.role === 'user' ? 'flex justify-end' : ''
+              }`}
+            >
               <div className={`max-w-[85%] rounded-xl px-4 py-3 ${
                 msg.role === 'user'
                   ? 'bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900'

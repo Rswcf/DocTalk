@@ -4,7 +4,7 @@ import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { SendHorizontal, ArrowDown, Square, Share2 } from 'lucide-react';
 import { exportConversationAsMarkdown } from '../../lib/export';
-import type { Citation } from '../../types';
+import type { Citation, Message } from '../../types';
 import { useDocTalkStore } from '../../store';
 import MessageBubble from './MessageBubble';
 import CitationCard from './CitationCard';
@@ -20,6 +20,7 @@ import { openAuthModal } from '../../lib/auth-modal';
 import { errorCopy } from '../../lib/errorCopy';
 import { billingHref } from '../../lib/billingLinks';
 import { trackEvent } from '../../lib/analytics';
+import { withShareAnchor } from '../../lib/shareAnchors';
 
 interface ChatPanelProps {
   sessionId: string;
@@ -237,13 +238,32 @@ export default function ChatPanel({ sessionId, onCitationClick, maxUserMessages,
   }, [addMessage, sessionId, t, tOr]);
 
   const [shareLoading, setShareLoading] = useState(false);
+  const [shareAnswerLoadingId, setShareAnswerLoadingId] = useState<string | null>(null);
+
+  const copyShareUrl = useCallback(async (url: string) => {
+    try {
+      await navigator.clipboard.writeText(url);
+      return;
+    } catch {
+      const textarea = document.createElement('textarea');
+      textarea.value = url;
+      textarea.setAttribute('readonly', '');
+      textarea.style.position = 'fixed';
+      textarea.style.opacity = '0';
+      document.body.appendChild(textarea);
+      textarea.select();
+      document.execCommand('copy');
+      document.body.removeChild(textarea);
+    }
+  }, []);
+
   const handleShare = useCallback(async () => {
     if (shareLoading) return;
     setShareLoading(true);
     try {
       const { createShare } = await import('../../lib/api');
       const result = await createShare(sessionId);
-      await navigator.clipboard.writeText(result.url);
+      await copyShareUrl(result.url);
       trackEvent('share_created', { source: 'chat_panel', plan: userPlan || 'unknown' });
       addMessage({
         id: `m_${Date.now()}_share_ok`,
@@ -264,7 +284,37 @@ export default function ChatPanel({ sessionId, onCitationClick, maxUserMessages,
     } finally {
       setShareLoading(false);
     }
-  }, [addMessage, sessionId, shareLoading, t, tOr, userPlan]);
+  }, [addMessage, copyShareUrl, sessionId, shareLoading, t, tOr, userPlan]);
+
+  const handleShareAnswer = useCallback(async (message: Message) => {
+    if (!message.shareAnchor || shareAnswerLoadingId) return;
+    setShareAnswerLoadingId(message.id);
+    try {
+      const { createShare } = await import('../../lib/api');
+      const result = await createShare(sessionId);
+      const answerUrl = withShareAnchor(result.url, message.shareAnchor);
+      await copyShareUrl(answerUrl);
+      trackEvent('share_created', { source: 'answer_action', plan: userPlan || 'unknown' });
+      addMessage({
+        id: `m_${Date.now()}_share_answer_ok`,
+        role: 'assistant',
+        text: tOr('share.answerCopied', 'Answer link copied to clipboard.'),
+        createdAt: Date.now(),
+      });
+    } catch (e) {
+      console.error('Answer share failed:', e);
+      const copy = errorCopy(e, t, tOr);
+      addMessage({
+        id: `m_${Date.now()}_share_answer_err`,
+        role: 'assistant',
+        text: copy.body,
+        isError: true,
+        createdAt: Date.now(),
+      });
+    } finally {
+      setShareAnswerLoadingId(null);
+    }
+  }, [addMessage, copyShareUrl, sessionId, shareAnswerLoadingId, t, tOr, userPlan]);
 
   const canUseCustomInstructions = !!onOpenSettings;
   // Show the entry only on surfaces that support the feature. Among those,
@@ -331,7 +381,16 @@ export default function ChatPanel({ sessionId, onCitationClick, maxUserMessages,
                 return (
                   <MessageErrorBoundary key={message.id} messageId={message.id}>
                     <div>
-                      <MessageBubble message={displayMessage} onCitationClick={onCitationClick} isStreaming={showStreaming} onRegenerate={isLastAssistantMsg ? () => void regenerateLastResponse() : undefined} isLastAssistant={isLastAssistantMsg} onContinue={isLastAssistantMsg && displayMessage.isTruncated ? () => void continueGenerating() : undefined} />
+                      <MessageBubble
+                        message={displayMessage}
+                        onCitationClick={onCitationClick}
+                        isStreaming={showStreaming}
+                        onRegenerate={isLastAssistantMsg ? () => void regenerateLastResponse() : undefined}
+                        isLastAssistant={isLastAssistantMsg}
+                        onContinue={isLastAssistantMsg && displayMessage.isTruncated ? () => void continueGenerating() : undefined}
+                        onShareAnswer={userPlan ? (msg) => void handleShareAnswer(msg) : undefined}
+                        isSharingAnswer={shareAnswerLoadingId === displayMessage.id}
+                      />
                       {displayCitations && displayCitations.length > 0 && (() => {
                         const uniqueCitations = displayCitations
                           .filter((citation, index, all) => all.findIndex((item) => item.refIndex === citation.refIndex) === index)

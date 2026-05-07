@@ -127,7 +127,7 @@ export async function createSession(docId: string): Promise<{ session_id: string
 
 export async function getMessages(sessionId: string): Promise<{ messages: Message[] }> {
   const res = await fetch(`${PROXY_BASE}/api/sessions/${sessionId}/messages`);
-  const data: { messages: Array<{ role: Message['role']; content: string; citations?: any[]; created_at: string }> } = await handle(res);
+  const data: { messages: Array<{ id?: string; share_anchor?: string; role: Message['role']; content: string; citations?: any[]; created_at: string }> } = await handle(res);
 
   const mapped = (data.messages || []).map((m, idx) => {
     const citations: Citation[] | undefined = m.citations
@@ -147,11 +147,13 @@ export async function getMessages(sessionId: string): Promise<{ messages: Messag
       : undefined;
 
     return {
-      id: `msg_${idx}`,
+      id: m.id ? `msg_${m.id}` : `msg_${idx}`,
       role: m.role,
       text: m.content,
       citations,
       createdAt: Date.parse(m.created_at),
+      backendId: m.id,
+      shareAnchor: m.share_anchor,
     } as Message;
   });
 

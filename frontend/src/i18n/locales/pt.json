@@ -444,6 +444,8 @@
   "chat.exportPdf": "Exportar PDF",
   "chat.exportDocx": "Exportar DOCX",
   "chat.share": "Compartilhar conversa",
+  "chat.shareAnswer": "Compartilhar esta resposta",
+  "share.answerCopied": "Link da resposta copiado para a área de transferência.",
   "chat.moreOptions": "Mais opções",
   "chat.messagesUsed": "Mensagens usadas",
   "chat.networkError": "Conexão perdida. Verifique sua internet e tente novamente.",
