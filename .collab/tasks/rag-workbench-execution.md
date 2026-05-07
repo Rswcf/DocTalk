@@ -22,7 +22,7 @@ Owner: Codex
 | M4 | 0.11.0 beta | Parser integrity fixes | Shipped | `7436c2a` | Full gate and production health/version passed |
 | M5 | 0.12.0 beta | Table-aware RAG | Shipped | `ac4ee84` | Full gate and production health/version passed |
 | M6 | 0.13.0 beta | Query planner, multi-hop, compare | Shipped | `55b0a6f` | Full gate and production health/version passed |
-| M7 | 0.14.0 beta | Claim verifier and evaluation dashboard | Pending | Pending | Pending |
+| M7 | 0.14.0 beta | Claim verifier and evaluation dashboard | In verification | Pending | Targeted backend tests passed; full gate pending |
 
 ## M0 / M1 Checklist
 
@@ -229,3 +229,33 @@ Owner: Codex
 - Railway deployment: `4bf7827f-2dd8-4f73-93e0-daee7581da37` (`SUCCESS`)
 - Production `/health`: `{"status":"ok","release":{"version":"0.13.0","stage":"beta","build":null}}`
 - Production `/version`: `{"version":"0.13.0","stage":"beta","build":null}`
+
+## M7 Checklist
+
+- [x] Add post-generation claim verification for missing citations, invalid refs, uncited claim units, and low-overlap source support.
+- [x] Add numeric claim/source matching so contradictory table values cannot pass on entity overlap alone.
+- [x] Record internal `rag_verification_completed` product events from chat without exposing bbox/chunk internals via public analytics.
+- [x] Add admin `/api/admin/rag-quality` aggregation endpoint.
+- [x] Add Admin RAG Quality panel for answer counts, pass/warn/fail rates, score, uncited claims, and recent verification rows.
+- [x] Add targeted tests for verifier decisions, admin aggregation, chat-stream event recording, and continuation verification.
+- [x] Run full release verification gate.
+- [x] Complete adversarial review.
+- [ ] Commit, push `main`, merge/push `stable`, tag, deploy, and verify production.
+
+## M7 Verification Log
+
+- 2026-05-07: `cd backend && python3 -m ruff check app/services/claim_verifier_service.py app/services/chat_service.py app/api/admin.py tests/test_claim_verifier_service.py tests/test_admin_rag_quality.py tests/test_chat_corrective_retrieval.py` passed.
+- 2026-05-07: `cd backend && python3 -m pytest tests/test_claim_verifier_service.py tests/test_admin_rag_quality.py tests/test_chat_corrective_retrieval.py -v` passed with 14 passed.
+- 2026-05-07: After extending verification to continuation responses, `cd backend && python3 -m ruff check app/services/chat_service.py tests/test_chat_setup_refunds.py tests/test_chat_corrective_retrieval.py tests/test_claim_verifier_service.py tests/test_admin_rag_quality.py` passed.
+- 2026-05-07: `cd backend && python3 -m pytest tests/test_chat_setup_refunds.py tests/test_chat_corrective_retrieval.py tests/test_claim_verifier_service.py tests/test_admin_rag_quality.py -v` passed with 21 passed.
+- 2026-05-07: Adversarial review found one release blocker: numeric claim mismatches could pass if entity words overlapped. Fixed by requiring cited context to contain the claim's numeric tokens, added numeric mismatch reporting, and exposed the admin 1000-row sample cap explicitly.
+- 2026-05-07: `cd backend && python3 -m ruff check app/services/claim_verifier_service.py app/services/chat_service.py app/api/admin.py tests/test_claim_verifier_service.py tests/test_admin_rag_quality.py tests/test_chat_setup_refunds.py tests/test_chat_corrective_retrieval.py` passed after the numeric verifier fix.
+- 2026-05-07: `cd backend && python3 -m pytest tests/test_claim_verifier_service.py tests/test_admin_rag_quality.py tests/test_chat_setup_refunds.py tests/test_chat_corrective_retrieval.py -v` passed with 22 passed.
+- 2026-05-07: Final adversarial blocker-only review found no release blockers; reviewer reran `python3 -m pytest tests/test_claim_verifier_service.py tests/test_admin_rag_quality.py -q` with 10 passed.
+- 2026-05-07: `python3 scripts/check_version_consistency.py` passed for `0.14.0 beta`.
+- 2026-05-07: `cd frontend && npm run build` passed with only existing twitter-image runtime, Sentry, edge-runtime, and unset `RESEND_API_KEY` warnings.
+- 2026-05-07: `cd backend && python3 -m ruff check app/ tests/` passed.
+- 2026-05-07: `cd backend && python3 -m pytest tests/test_parse_service.py -v` passed with 13 passed.
+- 2026-05-07: `cd backend && python3 -m pytest tests/ -m 'not integration' -v` passed with 283 passed, 3 skipped, 4 deselected.
+- 2026-05-07: `cd backend && python3 -m pytest -m integration -v` ran; 4 integration tests skipped by local environment configuration.
+- 2026-05-07: `cd backend && python3 -m alembic heads && python3 -m alembic upgrade head` passed with `20260507_0026 (head)`.

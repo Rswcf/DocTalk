@@ -8,6 +8,27 @@
 
 ## [Unreleased]
 
+## [0.14.0] - 2026-05-07
+
+### 新增
+- 新增聊天回答的 claim-level RAG verification。DocTalk 现在会检查可由文档支持的
+  回答是否带引用、引用编号是否对应本轮检索 evidence，以及引用文本是否与回答中的
+  具体 claim 有实际重叠。
+- 新增内部 `rag_verification_completed` 产品事件，用于持续监控回答质量，同时不通过
+  公共 events API 暴露 bbox/chunk 等内部证据细节。
+- 追加生成的 continuation response 也会写入同一套 verification reporting，避免长回答
+  在质量面板中漏数。
+- Admin 后台新增 RAG Quality 面板，展示已评估回答数量、平均验证分、pass/warn/fail
+  比例、未引用 claim 数、低重叠引用数、数字不匹配数以及最近验证记录。
+- 新增有效引用、缺失引用、无效 ref、未引用 claim、低重叠引用、admin 聚合、
+  chat-stream verification event 写入和 continuation verification 的回归测试。
+
+### 变更
+- 引用重叠评分现在会先过滤常见英文停用词，避免因为 “the”“and” 等泛词重叠而把
+  低相关引用误判为支持了回答中的 claim。
+- 数字类 claim 现在要求引用来源上下文包含相同数字 token，避免表格值互相矛盾时
+  仅因为实体名称重叠就被误判为通过。
+
 ## [0.13.0] - 2026-05-07
 
 ### 新增

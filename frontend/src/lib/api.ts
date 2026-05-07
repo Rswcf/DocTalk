@@ -470,6 +470,41 @@ export async function getAdminFunnel(days = 30): Promise<AdminFunnel> {
   return handle(res);
 }
 
+export interface AdminRagQualityRecent {
+  created_at: string | null;
+  status: string;
+  score: number;
+  route: string | null;
+  strategy: string | null;
+  claim_count: number;
+  citation_count: number;
+  uncited_claim_count: number;
+  numeric_mismatch_citation_count: number;
+}
+
+export interface AdminRagQuality {
+  days: number;
+  since: string;
+  sample_limit: number;
+  is_sampled: boolean;
+  evaluated_answers: number;
+  average_score: number;
+  pass_rate: number;
+  warn_rate: number;
+  fail_rate: number;
+  status_counts: Record<string, number>;
+  uncited_claims: number;
+  invalid_citations: number;
+  low_overlap_citations: number;
+  numeric_mismatch_citations: number;
+  recent: AdminRagQualityRecent[];
+}
+
+export async function getAdminRagQuality(days = 30): Promise<AdminRagQuality> {
+  const res = await fetch(`${PROXY_BASE}/api/admin/rag-quality?days=${days}`);
+  return handle(res);
+}
+
 export async function getAdminRecentUsers(limit = 20) {
   const res = await fetch(`${PROXY_BASE}/api/admin/recent-users?limit=${limit}`);
   return handle(res);

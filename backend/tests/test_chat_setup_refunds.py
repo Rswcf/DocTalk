@@ -7,7 +7,7 @@ from unittest.mock import AsyncMock
 import pytest
 
 import app.services.chat_service as chat_service_module
-from app.models.tables import ChatSession, Document, Message
+from app.models.tables import ChatSession, Document, Message, ProductEvent
 
 
 class _ScalarOneResult:
@@ -26,6 +26,47 @@ class _MessagesResult:
         return SimpleNamespace(all=lambda: self._messages)
 
 
+class _ScalarsResult:
+    def __init__(self, values):
+        self._values = values
+
+    def scalars(self):
+        values = self._values
+
+        class _Scalars:
+            def __iter__(self):
+                return iter(values)
+
+            def all(self):
+                return values
+
+        return _Scalars()
+
+
+class _FakeChoice:
+    def __init__(self, content: str | None = None, finish_reason: str | None = None):
+        self.delta = SimpleNamespace(content=content)
+        self.finish_reason = finish_reason
+
+
+class _FakeChunk:
+    def __init__(self, content: str | None = None, *, finish_reason: str | None = None, usage=None):
+        self.choices = [_FakeChoice(content=content, finish_reason=finish_reason)]
+        self.usage = usage
+
+
+class _FakeStream:
+    def __init__(self, chunks):
+        self._chunks = chunks
+
+    def __aiter__(self):
+        return self._iterate()
+
+    async def _iterate(self):
+        for chunk in self._chunks:
+            yield chunk
+
+
 def _make_db(session_obj, doc_obj, *, assistant_message=None, execute_side_effect=None):
     async def fake_get(model, _id):
         if model is Document:
@@ -36,10 +77,16 @@ def _make_db(session_obj, doc_obj, *, assistant_message=None, execute_side_effec
             return assistant_message
         return None
 
+    added: list[object] = []
+
+    def add(obj):
+        added.append(obj)
+
     return SimpleNamespace(
         execute=AsyncMock(side_effect=execute_side_effect or []),
         get=AsyncMock(side_effect=fake_get),
-        add=lambda _obj: None,
+        add=add,
+        added=added,
         commit=AsyncMock(),
         rollback=AsyncMock(),
     )
@@ -187,3 +234,84 @@ async def test_continue_stream_refunds_predebit_when_setup_fails(
     assert events[-1]["event"] == "error"
     assert events[-1]["data"]["code"] == "CHAT_SETUP_ERROR"
     refund_predebit.assert_awaited_once_with(db, user_id, 15, ledger_id)
+
+
+@pytest.mark.asyncio
+async def test_continue_stream_records_rag_verification_event(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    session_id = uuid.uuid4()
+    document_id = uuid.uuid4()
+    message_id = uuid.uuid4()
+    chunk_id = uuid.uuid4()
+    session_obj = SimpleNamespace(id=session_id, document_id=document_id, collection_id=None)
+    doc_obj = SimpleNamespace(demo_slug=None, custom_instructions=None)
+    original_citation = {
+        "ref_index": 1,
+        "chunk_id": str(chunk_id),
+        "page": 7,
+        "page_end": 7,
+        "bboxes": [],
+        "context_text": "MetaX 2028 revenue is listed as RMB 7.8 billion in the valuation table.",
+    }
+    assistant_message = SimpleNamespace(
+        id=message_id,
+        role="assistant",
+        session_id=session_id,
+        citations=[original_citation],
+        content="MetaX 2028 revenue is listed as RMB 7.8 billion in the valuation table.",
+        continuation_count=0,
+        output_tokens=10,
+    )
+    chunk = SimpleNamespace(
+        id=chunk_id,
+        page_start=7,
+        page_end=7,
+        bboxes=[],
+        text="MetaX 2028 revenue is listed as RMB 7.8 billion in the valuation table.",
+        section_title="Valuation",
+        document_id=document_id,
+    )
+    db = _make_db(
+        session_obj,
+        doc_obj,
+        assistant_message=assistant_message,
+        execute_side_effect=[
+            _ScalarOneResult(session_obj),
+            _ScalarsResult([chunk]),
+            _MessagesResult([assistant_message]),
+        ],
+    )
+    create = AsyncMock(
+        return_value=_FakeStream(
+            [
+                _FakeChunk(" Continued analysis keeps the same MetaX revenue citation.[1]"),
+                _FakeChunk(
+                    None,
+                    finish_reason="stop",
+                    usage=SimpleNamespace(prompt_tokens=8, completion_tokens=7),
+                ),
+            ]
+        )
+    )
+    fake_client = SimpleNamespace(chat=SimpleNamespace(completions=SimpleNamespace(create=create)))
+    monkeypatch.setattr(chat_service_module, "_get_llm_client", lambda _model: fake_client)
+
+    events = [
+        event
+        async for event in chat_service_module.chat_service.continue_stream(
+            session_id=session_id,
+            message_id=message_id,
+            db=db,
+            user=None,
+            mode="quick",
+        )
+    ]
+
+    assert events[-1]["event"] == "done"
+    assert events[-1]["data"]["verification"]["status"] == "pass"
+    assert assistant_message.continuation_count == 1
+    verification_events = [item for item in db.added if isinstance(item, ProductEvent)]
+    assert len(verification_events) == 1
+    assert verification_events[0].event_name == "rag_verification_completed"
+    assert verification_events[0].metadata_json["retrieval_strategy"] == "continuation"

@@ -251,6 +251,19 @@ sequenceDiagram
 
 - **RefParserFSM**: A finite state machine in `chat_service.py` that handles `[n]` citation markers split across streaming token boundaries. For example, token `"[1"` followed by `"]"` is correctly parsed as citation reference 1.
 
+- **Claim Verification**: After generation, `claim_verifier_service.py`
+  evaluates the final assistant text and citation payload before the `done`
+  SSE event. It counts claim-like answer units, checks missing citations,
+  rejects citation refs that do not map to retrieved evidence, and flags
+  citations whose source text/table context has low overlap with the cited
+  claim after stopword filtering. Numeric claims additionally require the cited
+  context to contain the same numeric tokens, so a table row with a different
+  revenue/date/percentage is reported as a mismatch even when the entity name
+  overlaps. The result is returned in the `done` payload and stored as an
+  internal `rag_verification_completed` `ProductEvent`; the admin
+  `/api/admin/rag-quality` endpoint aggregates these events for quality
+  monitoring without exposing bbox/chunk internals through public analytics.
+
 - **Frontend Rendering**: `renumberCitations()` in ChatPanel reassigns citation numbers to a sequential series `[1], [2], [3]...` based on order of appearance, regardless of the backend's original numbering.
 
 - **PDF Highlight**: When a user clicks a citation, the PDF viewer scrolls to the referenced page and renders translucent overlay rectangles using the chunk's normalized bbox coordinates multiplied by the page's pixel dimensions.

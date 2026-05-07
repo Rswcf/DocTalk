@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 from datetime import datetime, timedelta, timezone
+from typing import Any
 
 import stripe
 from fastapi import APIRouter, Depends, Query
@@ -449,6 +450,90 @@ async def admin_funnel(
                 "users": int(r.users),
             }
             for r in reason_rows
+        ],
+    }
+
+
+def _metadata_number(metadata: dict[str, Any], key: str) -> float:
+    value = metadata.get(key)
+    if isinstance(value, (int, float)):
+        return float(value)
+    try:
+        return float(str(value))
+    except (TypeError, ValueError):
+        return 0.0
+
+
+RAG_QUALITY_SAMPLE_LIMIT = 1000
+
+
+@router.get("/rag-quality")
+async def admin_rag_quality(
+    _admin: User = Depends(require_admin),
+    db: AsyncSession = Depends(get_db_session),
+    days: int = Query(30, ge=1, le=365),
+):
+    """RAG answer verification quality snapshot."""
+    cutoff = datetime.now(timezone.utc) - timedelta(days=days)
+    rows = (
+        await db.execute(
+            select(ProductEvent)
+            .where(ProductEvent.event_name == "rag_verification_completed")
+            .where(ProductEvent.created_at >= cutoff)
+            .order_by(ProductEvent.created_at.desc())
+            .limit(RAG_QUALITY_SAMPLE_LIMIT)
+        )
+    ).scalars().all()
+
+    status_counts = {"pass": 0, "warn": 0, "fail": 0, "unknown": 0}
+    score_total = 0.0
+    uncited_claims = 0
+    invalid_citations = 0
+    low_overlap_citations = 0
+    numeric_mismatch_citations = 0
+    for event in rows:
+        metadata = event.metadata_json or {}
+        status = str(metadata.get("status") or event.reason or "unknown").lower()
+        if status not in status_counts:
+            status = "unknown"
+        status_counts[status] += 1
+        score_total += _metadata_number(metadata, "score")
+        uncited_claims += int(_metadata_number(metadata, "uncited_claim_count"))
+        invalid_citations += int(_metadata_number(metadata, "invalid_citation_count"))
+        low_overlap_citations += int(_metadata_number(metadata, "low_overlap_citation_count"))
+        numeric_mismatch_citations += int(_metadata_number(metadata, "numeric_mismatch_citation_count"))
+
+    total = len(rows)
+    return {
+        "days": days,
+        "since": cutoff.isoformat(),
+        "sample_limit": RAG_QUALITY_SAMPLE_LIMIT,
+        "is_sampled": total >= RAG_QUALITY_SAMPLE_LIMIT,
+        "evaluated_answers": total,
+        "average_score": round(score_total / total, 3) if total else 0.0,
+        "pass_rate": round(status_counts["pass"] / total, 3) if total else 0.0,
+        "warn_rate": round(status_counts["warn"] / total, 3) if total else 0.0,
+        "fail_rate": round(status_counts["fail"] / total, 3) if total else 0.0,
+        "status_counts": status_counts,
+        "uncited_claims": uncited_claims,
+        "invalid_citations": invalid_citations,
+        "low_overlap_citations": low_overlap_citations,
+        "numeric_mismatch_citations": numeric_mismatch_citations,
+        "recent": [
+            {
+                "created_at": event.created_at.isoformat() if event.created_at else None,
+                "status": str((event.metadata_json or {}).get("status") or event.reason or "unknown"),
+                "score": _metadata_number(event.metadata_json or {}, "score"),
+                "route": (event.metadata_json or {}).get("route"),
+                "strategy": (event.metadata_json or {}).get("retrieval_strategy"),
+                "claim_count": int(_metadata_number(event.metadata_json or {}, "claim_count")),
+                "citation_count": int(_metadata_number(event.metadata_json or {}, "citation_count")),
+                "uncited_claim_count": int(_metadata_number(event.metadata_json or {}, "uncited_claim_count")),
+                "numeric_mismatch_citation_count": int(
+                    _metadata_number(event.metadata_json or {}, "numeric_mismatch_citation_count")
+                ),
+            }
+            for event in rows[:20]
         ],
     }
 

@@ -8,6 +8,32 @@ releases use `0.minor.patch` semantics such as `0.2.0` and `0.2.1`.
 
 ## [Unreleased]
 
+## [0.14.0] - 2026-05-07
+
+### Added
+- Added claim-level RAG verification for generated chat answers. DocTalk now
+  checks whether supported answers contain citations, whether citation refs map
+  to retrieved evidence, and whether cited text overlaps the claim being made.
+- Added internal `rag_verification_completed` product events so answer quality
+  can be monitored over time without exposing bbox/chunk internals through the
+  public events API.
+- Added the same verification reporting to continuation responses so long
+  answers that users extend are included in the quality dashboard.
+- Added an admin RAG Quality panel with evaluated-answer counts, average
+  verification score, pass/warn/fail rates, uncited-claim totals, low-overlap
+  citation totals, numeric mismatch totals, and recent verification rows.
+- Added regression tests for valid citations, missing citations, invalid refs,
+  uncited claim units, low-overlap citation detection, admin aggregation,
+  chat-stream verification event recording, and continuation verification.
+
+### Changed
+- Citation overlap scoring now filters common English stopwords before deciding
+  that a claim is supported by a cited fragment, reducing false-positive support
+  from generic words such as "the" or "and".
+- Numeric claims now require the cited source context to contain the same
+  numeric tokens, preventing contradictory table values from passing just
+  because entity names overlap.
+
 ## [0.13.0] - 2026-05-07
 
 ### Added

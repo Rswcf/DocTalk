@@ -11,10 +11,12 @@ import {
   getAdminBreakdowns,
   getAdminBillingHealth,
   getAdminFunnel,
+  getAdminRagQuality,
   getAdminRecentUsers,
   getAdminTopUsers,
   type AdminBillingHealth,
   type AdminFunnel,
+  type AdminRagQuality,
 } from "../../lib/api";
 import {
   Users,
@@ -99,6 +101,10 @@ function formatNumber(n: number): string {
   if (n >= 1_000_000) return (n / 1_000_000).toFixed(1) + "M";
   if (n >= 1_000) return (n / 1_000).toFixed(1) + "K";
   return n.toString();
+}
+
+function formatPercent(n: number): string {
+  return `${Math.round(n * 100)}%`;
 }
 
 function KPICard({
@@ -302,6 +308,78 @@ function FunnelPanel({ funnel }: { funnel: AdminFunnel | null }) {
   );
 }
 
+function RagQualityPanel({ quality }: { quality: AdminRagQuality | null }) {
+  if (!quality) return null;
+  const healthy = quality.evaluated_answers === 0 || quality.fail_rate < 0.05;
+  return (
+    <section className="mb-8 rounded-lg border border-zinc-200 bg-white dark:border-zinc-700 dark:bg-zinc-900">
+      <div className="flex flex-col gap-2 border-b border-zinc-200 px-4 py-3 dark:border-zinc-700 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-center gap-2">
+          {healthy ? (
+            <ShieldCheck aria-hidden="true" className="h-4 w-4 text-emerald-600 dark:text-emerald-300" />
+          ) : (
+            <AlertTriangle aria-hidden="true" className="h-4 w-4 text-amber-600 dark:text-amber-300" />
+          )}
+          <h2 className="text-sm font-medium text-zinc-900 dark:text-zinc-100">RAG Quality</h2>
+        </div>
+        <p className="text-xs text-zinc-500 dark:text-zinc-400">
+          Last {quality.days} days{quality.is_sampled ? ` · latest ${formatNumber(quality.sample_limit)} sample` : ""}
+        </p>
+      </div>
+      <div className="grid gap-3 p-4 sm:grid-cols-2 lg:grid-cols-6">
+        <div className="rounded border border-zinc-100 p-3 dark:border-zinc-800">
+          <p className="text-xs text-zinc-500 dark:text-zinc-400">Evaluated answers</p>
+          <p className="mt-1 text-xl font-semibold tabular-nums text-zinc-900 dark:text-zinc-100">{formatNumber(quality.evaluated_answers)}</p>
+        </div>
+        <div className="rounded border border-zinc-100 p-3 dark:border-zinc-800">
+          <p className="text-xs text-zinc-500 dark:text-zinc-400">Average score</p>
+          <p className="mt-1 text-xl font-semibold tabular-nums text-zinc-900 dark:text-zinc-100">{formatPercent(quality.average_score)}</p>
+        </div>
+        <div className="rounded border border-zinc-100 p-3 dark:border-zinc-800">
+          <p className="text-xs text-zinc-500 dark:text-zinc-400">Pass / warn / fail</p>
+          <p className="mt-1 text-xl font-semibold tabular-nums text-zinc-900 dark:text-zinc-100">
+            {formatPercent(quality.pass_rate)} / {formatPercent(quality.warn_rate)} / {formatPercent(quality.fail_rate)}
+          </p>
+        </div>
+        <div className="rounded border border-zinc-100 p-3 dark:border-zinc-800">
+          <p className="text-xs text-zinc-500 dark:text-zinc-400">Uncited claims</p>
+          <p className="mt-1 text-xl font-semibold tabular-nums text-zinc-900 dark:text-zinc-100">{formatNumber(quality.uncited_claims)}</p>
+        </div>
+        <div className="rounded border border-zinc-100 p-3 dark:border-zinc-800">
+          <p className="text-xs text-zinc-500 dark:text-zinc-400">Low-overlap cites</p>
+          <p className="mt-1 text-xl font-semibold tabular-nums text-zinc-900 dark:text-zinc-100">{formatNumber(quality.low_overlap_citations)}</p>
+        </div>
+        <div className="rounded border border-zinc-100 p-3 dark:border-zinc-800">
+          <p className="text-xs text-zinc-500 dark:text-zinc-400">Number mismatches</p>
+          <p className="mt-1 text-xl font-semibold tabular-nums text-zinc-900 dark:text-zinc-100">{formatNumber(quality.numeric_mismatch_citations)}</p>
+        </div>
+      </div>
+      {quality.recent.length > 0 && (
+        <div className="border-t border-zinc-100 p-4 dark:border-zinc-800">
+          <h3 className="mb-2 text-xs font-medium uppercase tracking-wide text-zinc-500 dark:text-zinc-400">Recent verification events</h3>
+          <div className="overflow-x-auto">
+            <table className="w-full text-xs">
+              <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800">
+                {quality.recent.slice(0, 8).map((row, index) => (
+                  <tr key={`${row.created_at}-${index}`}>
+                    <td className="py-1.5 pr-3 text-zinc-700 dark:text-zinc-300">{row.status}</td>
+                    <td className="px-3 py-1.5 tabular-nums text-zinc-600 dark:text-zinc-400">{formatPercent(row.score)}</td>
+                    <td className="px-3 py-1.5 text-zinc-600 dark:text-zinc-400">{row.route || "-"}</td>
+                    <td className="px-3 py-1.5 text-zinc-600 dark:text-zinc-400">{row.strategy || "-"}</td>
+                    <td className="py-1.5 pl-3 text-right tabular-nums text-zinc-700 dark:text-zinc-300">
+                      {row.claim_count} claims / {row.citation_count} cites / {row.numeric_mismatch_citation_count} numeric mismatches
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+    </section>
+  );
+}
+
 export default function AdminPageClient() {
   usePageTitle("Admin");
 
@@ -313,6 +391,7 @@ export default function AdminPageClient() {
   const [breakdowns, setBreakdowns] = useState<Breakdowns | null>(null);
   const [billingHealth, setBillingHealth] = useState<AdminBillingHealth | null>(null);
   const [funnel, setFunnel] = useState<AdminFunnel | null>(null);
+  const [ragQuality, setRagQuality] = useState<AdminRagQuality | null>(null);
   const [recentUsers, setRecentUsers] = useState<RecentUser[]>([]);
   const [topUsers, setTopUsers] = useState<TopUser[]>([]);
   const [loading, setLoading] = useState(true);
@@ -333,7 +412,7 @@ export default function AdminPageClient() {
     setLoading(true);
     setError(null);
     try {
-      const [ov, tr, br, ru, tu, bh, fn] = await Promise.all([
+      const [ov, tr, br, ru, tu, bh, fn, rq] = await Promise.all([
         getAdminOverview(),
         getAdminTrends("day", trendDays),
         getAdminBreakdowns(),
@@ -341,6 +420,7 @@ export default function AdminPageClient() {
         getAdminTopUsers(20, topBy),
         getAdminBillingHealth(false),
         getAdminFunnel(trendDays),
+        getAdminRagQuality(trendDays),
       ]);
       setOverview(ov as Overview);
       setTrends(tr as Trends);
@@ -349,6 +429,7 @@ export default function AdminPageClient() {
       setTopUsers((tu as { users: TopUser[] }).users);
       setBillingHealth(bh);
       setFunnel(fn);
+      setRagQuality(rq);
     } catch (e: any) {
       if (e?.message?.includes("403")) {
         router.push("/");
@@ -445,6 +526,8 @@ export default function AdminPageClient() {
         />
 
         <FunnelPanel funnel={funnel} />
+
+        <RagQualityPanel quality={ragQuality} />
 
         {trends && breakdowns && (
           <AdminCharts

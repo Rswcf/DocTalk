@@ -21,10 +21,12 @@ from app.models.tables import (
     Document,
     DocumentTable,
     Message,
+    ProductEvent,
     User,
     collection_documents,
 )
 from app.services import credit_service
+from app.services.claim_verifier_service import claim_verifier_service
 from app.services.corrective_retrieval_service import corrective_retrieval_service
 from app.services.document_brief_service import document_brief_service
 from app.services.query_planner_service import QueryPlan
@@ -396,6 +398,47 @@ async def _refund_predebit(
             .values(credits_balance=User.credits_balance + pre_debited)
         )
     await db.commit()
+
+
+async def _record_rag_verification_event(
+    db: AsyncSession,
+    *,
+    user: Optional[User],
+    message_id: uuid.UUID | None,
+    verification: dict,
+    retrieval_strategy: str,
+    query_route: Any,
+    retrieved_count: int,
+) -> None:
+    try:
+        db.add(
+            ProductEvent(
+                user_id=user.id if user else None,
+                event_name="rag_verification_completed",
+                source="chat",
+                reason=str(verification.get("status") or "unknown")[:64],
+                plan=(user.plan if user else None),
+                metadata_json={
+                    "message_id": str(message_id) if message_id else None,
+                    "status": verification.get("status"),
+                    "score": verification.get("score"),
+                    "claim_count": verification.get("claim_count"),
+                    "cited_claim_count": verification.get("cited_claim_count"),
+                    "uncited_claim_count": verification.get("uncited_claim_count"),
+                    "citation_count": verification.get("citation_count"),
+                    "invalid_citation_count": verification.get("invalid_citation_count"),
+                    "low_overlap_citation_count": verification.get("low_overlap_citation_count"),
+                    "numeric_mismatch_citation_count": verification.get("numeric_mismatch_citation_count"),
+                    "retrieved_count": retrieved_count,
+                    "retrieval_strategy": retrieval_strategy,
+                    "route": getattr(getattr(query_route, "primary_intent", None), "value", None),
+                },
+            )
+        )
+        await db.commit()
+    except Exception:
+        await db.rollback()
+        logger.warning("Failed to record RAG verification event", exc_info=True)
 
 
 # ---------------------------
@@ -967,6 +1010,22 @@ class ChatService:
 
         # 9) Save assistant message + citations
         assistant_text = "".join(assistant_text_parts)
+        verification_report = claim_verifier_service.verify(
+            assistant_text,
+            citations,
+            set(chunk_map.keys()),
+            retrieved_count=len(chunk_map),
+        )
+        verification_payload = verification_report.to_payload()
+        if verification_report.status != "pass":
+            logger.warning(
+                "RAG verification status=%s score=%.3f claims=%d citations=%d reasons=%s",
+                verification_report.status,
+                verification_report.score,
+                verification_report.claim_count,
+                verification_report.citation_count,
+                ",".join(verification_report.reasons),
+            )
         try:
             asst_msg = Message(
                 session_id=session_id,
@@ -990,6 +1049,16 @@ class ChatService:
                     )
             yield sse("error", {"code": "PERSIST_FAILED", "message": "Failed to save response"})
             return
+
+        await _record_rag_verification_event(
+            db,
+            user=user,
+            message_id=getattr(asst_msg, "id", None),
+            verification=verification_payload,
+            retrieval_strategy=retrieval_strategy,
+            query_route=query_route,
+            retrieved_count=len(chunk_map),
+        )
 
         # Credits: reconcile pre-debited estimate against actual cost
         if user is not None and pre_debited > 0 and predebit_ledger_id is not None:
@@ -1019,6 +1088,7 @@ class ChatService:
         yield sse("done", {
             "message_id": str(asst_msg.id),
             "citations_count": len(citations),
+            "verification": verification_payload,
             "can_continue": can_continue and finish_reason == "length",
             "continuation_count": asst_msg.continuation_count,
         })
@@ -1372,9 +1442,26 @@ class ChatService:
 
         # 10) Update existing message (append text, merge citations, bump count)
         continuation_text = "".join(continuation_text_parts)
+        full_assistant_text = (asst_msg.content or "") + continuation_text
+        merged_citations = list(asst_msg.citations or []) + new_citations
+        verification_report = claim_verifier_service.verify(
+            full_assistant_text,
+            merged_citations,
+            set(chunk_map.keys()),
+            retrieved_count=len(chunk_map),
+        )
+        verification_payload = verification_report.to_payload()
+        if verification_report.status != "pass":
+            logger.warning(
+                "RAG continuation verification status=%s score=%.3f claims=%d citations=%d reasons=%s",
+                verification_report.status,
+                verification_report.score,
+                verification_report.claim_count,
+                verification_report.citation_count,
+                ",".join(verification_report.reasons),
+            )
         try:
-            asst_msg.content = (asst_msg.content or "") + continuation_text
-            merged_citations = list(asst_msg.citations or []) + new_citations
+            asst_msg.content = full_assistant_text
             asst_msg.citations = merged_citations if merged_citations else None
             asst_msg.continuation_count = (asst_msg.continuation_count or 0) + 1
             asst_msg.output_tokens = (asst_msg.output_tokens or 0) + (int(output_tokens) if output_tokens else 0)
@@ -1391,6 +1478,16 @@ class ChatService:
                     )
             yield sse("error", {"code": "PERSIST_FAILED", "message": "Failed to save continuation"})
             return
+
+        await _record_rag_verification_event(
+            db,
+            user=user,
+            message_id=getattr(asst_msg, "id", None),
+            verification=verification_payload,
+            retrieval_strategy="continuation",
+            query_route=None,
+            retrieved_count=len(chunk_map),
+        )
 
         # Credits: reconcile
         if user is not None and pre_debited > 0 and predebit_ledger_id is not None:
@@ -1419,6 +1516,7 @@ class ChatService:
         yield sse("done", {
             "message_id": str(asst_msg.id),
             "citations_count": len(merged_citations) if merged_citations else 0,
+            "verification": verification_payload,
             "can_continue": can_continue and finish_reason == "length",
             "continuation_count": asst_msg.continuation_count,
         })

@@ -29,6 +29,7 @@ build sequence.
 | `0.11.0 beta` | Parser Integrity | Shipped | Improves two-column reading order, English block joining, and short-document chunk retention before retrieval ever runs |
 | `0.12.0 beta` | Table-aware RAG | Shipped | Adds scanned-table row evidence and short-row lexical fallback for table/numeric questions |
 | `0.13.0 beta` | Query Planner + Multi-hop Compare | Shipped | Decomposes comparison/multi-entity questions and adds balanced per-document evidence for collection comparison |
+| `0.14.0 beta` | Claim Verifier + RAG Quality Dashboard | Shipped | Adds post-generation citation support checks and admin monitoring for unsupported or weakly cited answers |
 
 ### 2026-05-07 RAG Workbench Quality Sequence
 
@@ -50,6 +51,9 @@ tables or appendices in long, multi-column reports. The staged remediation is:
 6. `0.13.0 beta` — add a query planner for multi-hop, cross-document, and
    comparison workflows.
 7. `0.14.0 beta` — add claim-level verification and RAG evaluation reporting.
+
+The sequence above is now shipped through `0.14.0 beta`; follow-on RAG work
+should be driven by dashboard evidence rather than assumptions.
 
 ---
 

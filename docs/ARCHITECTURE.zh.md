@@ -238,6 +238,16 @@ sequenceDiagram
 
 - **RefParserFSM**：`chat_service.py` 中的有限状态机，处理流式 token 中跨边界的 `[n]` 引用标记。例如，token `"[1"` 后跟 `"]"` 会被正确解析为引用标记 1。
 
+- **Claim Verification**：回答生成完成后，`claim_verifier_service.py` 会在
+  `done` SSE event 之前评估最终 assistant text 和 citation payload。它会统计回答中的
+  claim-like 单元，检查缺失引用，拒绝未映射到本轮检索 evidence 的引用编号，并在
+  停用词过滤后标记与 claim 低重叠的 source text/table context。数字类 claim 还要求
+  引用上下文包含相同数字 token，因此表格行中的 revenue/date/percentage 不一致时，
+  即使实体名称重叠也会被记录为 mismatch。验证结果会返回在 `done` payload 中，并作为
+  内部 `rag_verification_completed` `ProductEvent` 保存；admin
+  `/api/admin/rag-quality` 接口基于这些事件聚合质量指标，同时不会通过公共分析接口暴露
+  bbox/chunk 等内部证据细节。
+
 - **前端渲染**：ChatPanel 中的 `renumberCitations()` 将引用编号按出现顺序重新分配为连续序列 `[1], [2], [3]...`，不依赖后端的原始编号。
 
 - **PDF 高亮**：当用户点击引用时，PDF 查看器滚动到对应页面，使用文本块的归一化边界框坐标乘以页面像素尺寸，渲染半透明覆盖矩形。

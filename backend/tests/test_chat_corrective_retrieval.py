@@ -7,7 +7,7 @@ from unittest.mock import AsyncMock
 import pytest
 
 import app.services.chat_service as chat_service_module
-from app.models.tables import ChatSession, Document, Message
+from app.models.tables import ChatSession, Document, Message, ProductEvent
 from app.services.corrective_retrieval_service import CorrectiveRetrievalResult
 from app.services.query_planner_service import QueryPlan, QueryPlanStep
 from app.services.rag_evaluator_service import RetrievalEvaluation
@@ -61,7 +61,10 @@ def _make_db(session_obj, doc_obj):
             return session_obj
         return None
 
+    added: list[object] = []
+
     def add(obj):
+        added.append(obj)
         if isinstance(obj, Message):
             obj.id = getattr(obj, "id", None) or uuid.uuid4()
             if obj.role == "assistant" and getattr(obj, "continuation_count", None) is None:
@@ -76,6 +79,7 @@ def _make_db(session_obj, doc_obj):
         ),
         get=AsyncMock(side_effect=fake_get),
         add=add,
+        added=added,
         commit=AsyncMock(),
         rollback=AsyncMock(),
     )
@@ -267,3 +271,9 @@ async def test_chat_prompt_includes_corrective_retrieval_quality(
     assert "evidence_sufficient" in system_prompt
     assert any(event["event"] == "citation" for event in events)
     assert events[-1]["event"] == "done"
+    assert events[-1]["data"]["verification"]["status"] == "pass"
+    verification_events = [item for item in db.added if isinstance(item, ProductEvent)]
+    assert len(verification_events) == 1
+    assert verification_events[0].event_name == "rag_verification_completed"
+    assert verification_events[0].metadata_json["status"] == "pass"
+    assert verification_events[0].metadata_json["retrieval_strategy"] == "semantic_top_k+lexical_correction"
