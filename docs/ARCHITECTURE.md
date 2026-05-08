@@ -238,9 +238,19 @@ sequenceDiagram
   `default` queue. The brief stores summary, outline, key points, facts,
   suggested questions, generation errors, and representative chunk coverage.
   The legacy `documents.summary` and `documents.suggested_questions` fields are
-  mirrored from this payload for compatibility. The reader UI fetches
-  `GET /api/documents/{id}/brief` and renders a `Brief` workspace with citation
-  chips hydrated from chunk page/bbox metadata.
+  mirrored from this payload for compatibility. Brief remains an internal
+  capability used by summary routing and APIs; the primary reader UI no longer
+  exposes a separate Brief workspace.
+
+- **Chat-Native Tools**: Starting in `0.15.0 beta`, chat requests first pass
+  through `ActionPlanner`. Ordinary Q&A, summaries, and citation lookups stay on
+  the RAG path. Tool-like requests such as "extract all tables as CSV",
+  "generate an executive summary", "create a checklist", or "compare with the
+  old version" route to `ChatToolExecutor`, which creates or reuses existing
+  `document_jobs` while preserving ownership checks, plan gating, quotas, and
+  credits. The assistant message persists an `artifacts` array in
+  `messages.metadata_json`; clients receive optional `tool_status` and
+  `artifact` SSE events and poll `GET /api/document-jobs/{job_id}` for updates.
 
 - **Summary Context**: If no persisted brief coverage exists yet, the RAG
   workbench path selects representative chunks from the beginning, section
@@ -541,6 +551,7 @@ erDiagram
         string role "user | assistant"
         text content
         jsonb citations
+        jsonb metadata_json "chat artifacts + action metadata"
         int prompt_tokens
         int output_tokens
         datetime created_at
@@ -717,10 +728,8 @@ graph TD
 
     subgraph DocViewComp["Document Viewer"]
         ResizablePanels["react-resizable-panels<br/>Group / Panel / Separator"]
-        WorkbenchSwitch["Chat / Extract<br/>workspace switch"]
-        ChatPanel["ChatPanel<br/>Messages + Input"]
-        ExtractionPanel["ExtractionPanel<br/>templates + job status<br/>cited results + export"]
-        TablesPanel["Tables tab<br/>scan + preview + CSV"]
+        ChatPanel["ChatPanel<br/>Messages + Input<br/>single primary workspace"]
+        ArtifactCard["ChatArtifactCard<br/>job status + preview<br/>download + citations"]
         PdfViewer["PdfViewer<br/>react-pdf"]
         ViewToggle["View Toggle<br/>Slides / Text<br/>(PPTX/DOCX)"]
         TextViewer["TextViewer<br/>Non-PDF Viewer<br/>Markdown Rendering + Search<br/>Snippet Highlights"]
@@ -937,12 +946,22 @@ stores an `extraction_results` payload, records `UsageRecord`, and reconciles
 the original ledger row to actual token cost. Queue/worker failure deletes the
 pre-debit ledger row before restoring the user's balance.
 
+Chat-native structured extraction can create the same extraction jobs from a
+chat turn. The tool executor stores a `source='chat_tool'` marker in job
+metadata and returns an `extraction` artifact card with Markdown/CSV export URLs
+instead of requiring the user to open the retired Extract workspace.
+
 Table Extraction reuses `document_jobs` with `job_type='table_scan'` but does
 not pre-debit credits because the MVP uses deterministic parsers rather than an
 LLM. The worker clears and rewrites `document_tables` for the document. Native
 PDFs use PyMuPDF `page.find_tables()`, while DOCX/PPTX/XLSX/TXT/MD/URL-derived
 documents fall back to markdown-table detection from stored `pages.content`.
 Free users can preview detected tables; CSV export is gated to Plus+.
+
+Chat-native table requests reuse the same `table_scan` jobs. If tables already
+exist, the executor returns an immediate `table_scan` or `table_export` artifact
+preview. If a Free user asks for CSV, the artifact shows the Plus requirement
+instead of exposing a download link that would fail later.
 
 Question Templates reuse `document_jobs` with `job_type='batch_template'` and
 store outputs in `extraction_results` with `template_key='question_template'`.

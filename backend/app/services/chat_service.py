@@ -26,6 +26,8 @@ from app.models.tables import (
     collection_documents,
 )
 from app.services import credit_service
+from app.services.action_planner import action_planner
+from app.services.chat_tool_executor import chat_tool_executor
 from app.services.claim_verifier_service import claim_verifier_service
 from app.services.corrective_retrieval_service import corrective_retrieval_service
 from app.services.document_brief_service import document_brief_service
@@ -544,6 +546,91 @@ class RefParserFSM:
 
 
 class ChatService:
+    async def _persist_user_message_and_title(
+        self,
+        *,
+        db: AsyncSession,
+        session_id: uuid.UUID,
+        user_message: str,
+    ) -> None:
+        user_msg = Message(session_id=session_id, role="user", content=user_message)
+        db.add(user_msg)
+        await db.commit()
+
+        session = await db.get(ChatSession, session_id)
+        if session and not session.title:
+            clean = user_message.replace("\n", " ").replace("\r", "").strip()
+            session.title = clean[:50]
+            await db.commit()
+
+    async def _tool_action_stream(
+        self,
+        *,
+        session_id: uuid.UUID,
+        user_message: str,
+        db: AsyncSession,
+        user: Optional[User],
+        locale: Optional[str],
+        domain_mode: Optional[str],
+        document_id: uuid.UUID | None,
+        collection_doc_ids: list[uuid.UUID],
+        action_plan: Any,
+    ) -> AsyncGenerator[Dict[str, Any], None]:
+        try:
+            await self._persist_user_message_and_title(
+                db=db,
+                session_id=session_id,
+                user_message=user_message,
+            )
+            if action_plan.user_visible_status:
+                yield sse("tool_status", {"message": action_plan.user_visible_status})
+            execution = await chat_tool_executor.execute(
+                action_plan,
+                user=user,
+                db=db,
+                document_id=document_id,
+                collection_doc_ids=collection_doc_ids,
+                locale=locale,
+                domain_mode=domain_mode,
+            )
+            assistant_text = execution.message
+            artifact_payload = execution.artifact.to_payload() if execution.artifact else None
+            if artifact_payload:
+                yield sse("artifact", artifact_payload)
+            if assistant_text:
+                yield sse("token", {"text": assistant_text})
+
+            asst_msg = Message(
+                session_id=session_id,
+                role="assistant",
+                content=assistant_text,
+                citations=(artifact_payload or {}).get("citations") if artifact_payload else None,
+                metadata_json={
+                    "action_plan": {
+                        "action": action_plan.action.value,
+                        "confidence": action_plan.confidence,
+                        "reason": action_plan.reason,
+                    },
+                    "artifacts": [artifact_payload] if artifact_payload else [],
+                },
+            )
+            db.add(asst_msg)
+            await db.commit()
+            yield sse(
+                "done",
+                {
+                    "message_id": str(asst_msg.id),
+                    "citations_count": 0,
+                    "verification": None,
+                    "can_continue": False,
+                    "continuation_count": asst_msg.continuation_count,
+                    "artifact_count": 1 if artifact_payload else 0,
+                },
+            )
+        except Exception as exc:
+            await db.rollback()
+            yield _safe_sse("error", "CHAT_SETUP_ERROR", exc, session_id=str(session_id))
+
     async def chat_stream(
         self,
         session_id: uuid.UUID,
@@ -622,6 +709,26 @@ class ChatService:
                 )
                 return
 
+        action_plan = await action_planner.plan(
+            user_message,
+            is_collection=is_collection_session,
+            locale=locale,
+        )
+        if not action_plan.uses_rag_answer_path:
+            async for ev in self._tool_action_stream(
+                session_id=session_id,
+                user_message=user_message,
+                db=db,
+                user=user,
+                locale=locale,
+                domain_mode=domain_mode,
+                document_id=document_id,
+                collection_doc_ids=collection_doc_ids,
+                action_plan=action_plan,
+            ):
+                yield ev
+            return
+
         query_route = query_router.route(
             user_message,
             is_collection=is_collection_session,
@@ -658,16 +765,11 @@ class ChatService:
         setup_error_code = "CHAT_SETUP_ERROR"
         try:
             # 2) Save user message
-            user_msg = Message(session_id=session_id, role="user", content=user_message)
-            db.add(user_msg)
-            await db.commit()
-
-            # Auto-set session title from first user message
-            session = await db.get(ChatSession, session_id)
-            if session and not session.title:
-                clean = user_message.replace("\n", " ").replace("\r", "").strip()
-                session.title = clean[:50]
-                await db.commit()
+            await self._persist_user_message_and_title(
+                db=db,
+                session_id=session_id,
+                user_message=user_message,
+            )
 
             # 3) Load history (last N*2 messages before current user msg)
             max_turns = int(settings.MAX_CHAT_HISTORY_TURNS or 6)
@@ -882,7 +984,19 @@ class ChatService:
             return
 
         # 6) Stream from the configured OpenAI-compatible LLM provider
-        client = _get_llm_client(effective_model)
+        try:
+            client = _get_llm_client(effective_model)
+        except Exception as e:
+            if user is not None and pre_debited > 0 and predebit_ledger_id is not None:
+                try:
+                    await _refund_predebit(db, user.id, pre_debited, predebit_ledger_id)
+                except Exception:
+                    logger.exception(
+                        "Failed to refund pre-debited credits before LLM client setup for user %s",
+                        user.id,
+                    )
+            yield _safe_sse("error", "LLM_ERROR", e, session_id=str(session_id))
+            return
 
         # Build OpenAI-format messages (system + history)
         # cache_control is Anthropic-specific — only include for Anthropic models

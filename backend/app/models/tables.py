@@ -189,6 +189,9 @@ class Message(Base):
     role: Mapped[str] = mapped_column(sa.String(10), nullable=False)
     content: Mapped[str] = mapped_column(sa.Text, nullable=False)
     citations: Mapped[Optional[dict]] = mapped_column(JSONB)
+    metadata_json: Mapped[dict] = mapped_column(
+        JSONB, nullable=False, server_default=sa.text("'{}'::jsonb")
+    )
     prompt_tokens: Mapped[Optional[int]] = mapped_column(sa.Integer)
     output_tokens: Mapped[Optional[int]] = mapped_column(sa.Integer)
     continuation_count: Mapped[int] = mapped_column(sa.Integer, nullable=False, server_default=sa.text("0"))

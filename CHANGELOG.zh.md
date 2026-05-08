@@ -8,6 +8,25 @@
 
 ## [Unreleased]
 
+## [0.15.0] - 2026-05-09
+
+### 新增
+- 新增 chat-native Action Planner，在每次聊天开始时判断用户是在普通问答、总结、
+  生成 executive summary、提取关键事实、扫描/导出表格、创建模板、运行模板、做文档
+  对比，还是定位引用页码。
+- 新增聊天内工具 artifact。后台工具现在可以通过 SSE 推送 `tool_status` 和
+  `artifact` 事件，把 artifact metadata 持久化到 `messages.metadata_json`，并通过
+  统一的 `/api/document-jobs/{job_id}` 查询状态。
+- 新增聊天 artifact card，支持 queued/running/succeeded/failed 状态、结果预览、
+  引用按钮、Plus 限制的 CSV 下载入口，以及轮询刷新 job 状态。
+- 新增整篇文档所有已检测表格的 Plus+ CSV 合并导出接口。
+
+### 变更
+- 文档阅读页现在只保留 Chat 作为主入口。Brief、Extract、Tables、Templates、Diff
+  继续作为内部工具能力存在，但主页面不再展示独立的 `Brief` 或 `Extract` 标签。
+- 推荐问题 chip 现在可以直接触发聊天内动作，例如“提取表格”和“对比版本”，不再把
+  用户引导到新的工作区。
+
 ## [0.14.0] - 2026-05-07
 
 ### 新增

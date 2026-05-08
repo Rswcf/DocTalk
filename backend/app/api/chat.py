@@ -278,6 +278,7 @@ async def get_session_messages(
                 role=m.role,
                 content=m.content,
                 citations=m.citations,
+                metadata_json=getattr(m, "metadata_json", {}) or {},
                 created_at=m.created_at,
             )
         )

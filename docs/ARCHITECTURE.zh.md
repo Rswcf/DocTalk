@@ -227,8 +227,16 @@ sequenceDiagram
   `default` 队列中生成持久化分层 brief，写入 `document_briefs`。Brief 保存摘要、
   大纲、关键要点、事实、建议问题、生成错误和代表性 chunk 覆盖范围。兼容旧 UI 的
   `documents.summary` 与 `documents.suggested_questions` 会从该 payload 镜像。
-  阅读页通过 `GET /api/documents/{id}/brief` 获取并展示 `Brief` 工作区，引用 chip
-  会从 chunk 的页码/bbox 元数据补全并支持跳转高亮。
+  Brief 现在保留为摘要路由和 API 使用的内部能力；主阅读页不再暴露独立的 Brief
+  工作区。
+
+- **Chat-native 工具**：从 `0.15.0 beta` 开始，聊天请求会先经过
+  `ActionPlanner`。普通问答、总结和引用定位继续走 RAG；类似“提取所有表格并导出
+  CSV”“生成 executive summary”“创建检查清单”“和旧版对比”的工具型需求会路由到
+  `ChatToolExecutor`。Executor 复用现有 `document_jobs`，且不会绕过 ownership、
+  plan gating、quota 或 credits 校验。Assistant message 会在
+  `messages.metadata_json` 中保存 `artifacts` 数组；前端通过可选的 `tool_status` 和
+  `artifact` SSE event 展示卡片，并用 `GET /api/document-jobs/{job_id}` 刷新状态。
 
 - **摘要上下文**：如果还没有持久化 brief coverage，RAG 工作台路径会从文档开头、
   章节变化、均匀分布的正文位置和结尾选择代表性 chunks，并跳过通常属于页脚或
@@ -520,6 +528,7 @@ erDiagram
         string role "user | assistant"
         text content
         jsonb citations
+        jsonb metadata_json "chat artifacts + action metadata"
         int prompt_tokens
         int output_tokens
         datetime created_at
@@ -640,7 +649,8 @@ graph TD
 
     subgraph DocViewComp["文档阅读器"]
         ResizablePanels["react-resizable-panels<br/>Group / Panel / Separator"]
-        ChatPanel["ChatPanel<br/>消息 + 输入框"]
+        ChatPanel["ChatPanel<br/>消息 + 输入框<br/>唯一主工作区"]
+        ArtifactCard["ChatArtifactCard<br/>job 状态 + 预览<br/>下载 + 引用"]
         PdfViewer["PdfViewer<br/>react-pdf"]
         ViewToggle["视图切换<br/>幻灯片 / 文本<br/>(PPTX/DOCX)"]
         TextViewer["TextViewer<br/>非 PDF 查看器<br/>Markdown 渲染 + 搜索<br/>片段高亮"]
@@ -699,6 +709,7 @@ graph TD
 
 **Chat 功能：**
 - **ChatGPT 风格 UI**：AI 消息无卡片/边框/背景，基础 `prose` 级别全宽渲染；用户消息 `rounded-3xl` 圆角气泡（浅色模式 `bg-zinc-100`，深色模式 `dark:bg-zinc-700`）。消息区域 + 输入栏使用 `max-w-3xl mx-auto` 居中，宽面板时保持舒适阅读宽度。操作按钮（复制/点赞/点踩/重新生成）在旧消息上 hover 显示（`opacity-0 group-hover:opacity-100`），最新 AI 消息始终可见
+- **单一入口**：文档阅读页只保留 Chat + 文档查看器，不再显示 Brief/Extract 主标签。结构化提取、表格导出、模板和对比都通过自然语言聊天触发，并以 artifact card 回到同一条 assistant 消息中。
 - **品牌 Logo**："Talk Flow" 标识 — 两个重叠聊天气泡（后方气泡=文档来源，Indigo 200 `#c7d2fe`；前方气泡=AI 对话，Indigo 600 `#4f46e5`）。`DocTalkLogo.tsx` 组件通过 Tailwind `fill-indigo-*` + `dark:` 变体自动适配 dark mode。Favicon 通过 `app/icon.svg`（Next.js 自动检测），Apple Touch Icon 通过 `app/apple-icon.svg`。静态导出：`public/logo-icon.svg`（512px）、`public/logo-full-light.svg` / `logo-full-dark.svg`（组合标识 + Sora wordmark）
 - **字体体系**：通过 `next/font/google` 加载 3 种字体 — `font-logo`（Sora 600）用于品牌 wordmark "DocTalk"，`font-display`（Instrument Serif 400）用于 Landing 页面标题，`font-sans`（Inter）用于正文和 UI。CSS 变量：`--font-logo`、`--font-display`、`--font-inter`
 - **排版精修**：body 添加 `antialiased` 字体渲染，Retina 屏上更细腻。prose 正文颜色从 Tailwind Typography 默认 gray-700（`#374151`）覆盖为 zinc-950（`#09090b`，近纯黑）；dark mode 为 zinc-50（`#fafafa`）。段落和列表间距收紧，chat 输出更紧凑易读

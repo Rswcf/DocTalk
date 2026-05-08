@@ -68,6 +68,12 @@ class Settings(BaseSettings):
     LLM_MAX_CONTEXT_TOKENS: int = Field(default=180000)
     MAX_CONTINUATIONS_PER_MESSAGE: int = 3
 
+    # Chat-native tool planning. The planner may call the low-latency chat
+    # model to classify ambiguous user requests, then falls back to the
+    # deterministic router when the model or provider is unavailable.
+    ACTION_PLANNER_USE_LLM: bool = Field(default=True)
+    ACTION_PLANNER_TIMEOUT_SECONDS: float = Field(default=3.0)
+
     # OCR
     OCR_ENABLED: bool = Field(default=True)
     OCR_LANGUAGES: str = Field(default="eng+chi_sim")

@@ -71,7 +71,14 @@ Browser ──→ Vercel (Next.js) ──→ Railway (FastAPI) ──→ Postgre
                    (JWT injection)
 ```
 
-**How it works:** Documents are chunked into 150-300 token segments with bounding-box coordinates, embedded into Qdrant for vector search, and routed by query type. Local questions retrieve relevant chunks from Qdrant; whole-document summary prompts prefer persisted Document Brief coverage and otherwise use ordered representative context across the document so long reports are not summarized from a few accidental table/sidebar hits. Citations map back to exact page locations for real-time highlighting.
+**How it works:** The reader is chat-native: users ask in natural language, and
+an action planner decides whether the request should use ordinary cited RAG,
+whole-document summary context, structured extraction, table scan/export,
+template guidance, document comparison clarification, or citation lookup.
+Documents are still chunked with bounding-box coordinates and embedded into
+Qdrant for local questions, but async work products return as artifact cards in
+the same chat instead of separate workspace tabs. Citations map back to exact
+page locations for real-time highlighting.
 
 For detailed diagrams see [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 

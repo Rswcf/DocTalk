@@ -23,11 +23,32 @@ export interface Citation {
   contextText?: string; // extended context (~300 chars) for hover preview
 }
 
+export interface ChatArtifactDownload {
+  label: string;
+  format: string;
+  url: string;
+}
+
+export interface ChatArtifact {
+  artifactType: 'table_scan' | 'table_export' | 'extraction' | 'template_run' | 'document_diff' | string;
+  status: 'queued' | 'running' | 'succeeded' | 'failed' | string;
+  jobId?: string | null;
+  title: string;
+  summary: string;
+  preview?: unknown;
+  downloadUrls?: ChatArtifactDownload[];
+  citations?: Citation[];
+  warning?: string | null;
+  requiredPlan?: string | null;
+}
+
 export interface Message {
   id: string;
   role: Role;
   text: string;
   citations?: Citation[];
+  artifacts?: ChatArtifact[];
+  toolStatus?: string;
   createdAt?: number;
   isError?: boolean;
   isTruncated?: boolean;

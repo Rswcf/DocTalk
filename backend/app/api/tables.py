@@ -181,6 +181,41 @@ async def list_document_tables(
     return [_table_response(table) for table in rows.scalars()]
 
 
+@router.get("/documents/{document_id}/tables/export")
+async def export_document_tables(
+    document_id: uuid.UUID,
+    user: User = Depends(require_auth),
+    db: AsyncSession = Depends(get_db_session),
+):
+    if (user.plan or "free").lower() not in {"plus", "pro"}:
+        raise HTTPException(
+            status_code=403,
+            detail={"error": "PLAN_REQUIRED", "message": "CSV export requires Plus", "required_plan": "plus"},
+        )
+    doc = await _verify_document(document_id, user, db)
+    rows = await db.execute(
+        select(DocumentTable)
+        .where(DocumentTable.document_id == doc.id)
+        .order_by(DocumentTable.page, DocumentTable.table_index)
+    )
+    tables = list(rows.scalars())
+    csv_parts: list[str] = []
+    for table in tables:
+        table_rows = (table.cells or {}).get("rows")
+        if not isinstance(table_rows, list) or not table_rows:
+            continue
+        csv_parts.append(f"# Page {table.page} Table {table.table_index + 1}\n")
+        csv_parts.append(render_table_csv(table_rows))
+        csv_parts.append("\n")
+    content = "".join(csv_parts)
+    stem = f"{doc.filename.rsplit('.', 1)[0]}-tables.csv"
+    return StreamingResponse(
+        iter([content.encode("utf-8-sig")]),
+        media_type="text/csv; charset=utf-8",
+        headers={"Content-Disposition": _content_disposition(stem)},
+    )
+
+
 @router.get("/document-table-scans/{job_id}", response_model=DocumentJobResponse)
 async def get_table_scan_job(
     job_id: uuid.UUID,

@@ -3,7 +3,7 @@
 import { create } from 'zustand';
 import { DEFAULT_MODE, isKnownMode } from '../lib/models';
 import type { PlanType } from '../lib/models';
-import type { Citation, Message, NormalizedBBox, SessionItem } from '../types';
+import type { ChatArtifact, Citation, Message, NormalizedBBox, SessionItem } from '../types';
 
 type DocStatus = 'idle' | 'uploading' | 'parsing' | 'ocr' | 'embedding' | 'ready' | 'error';
 
@@ -69,6 +69,8 @@ export interface DocTalkStore {
   addMessage: (msg: Message) => void;
   updateLastMessage: (text: string) => void;
   addCitationToLastMessage: (citation: Citation) => void;
+  addArtifactToLastMessage: (artifact: ChatArtifact) => void;
+  setLastMessageToolStatus: (message: string) => void;
   setStreaming: (v: boolean) => void;
   setSessionId: (id: string) => void;
   setSelectedMode: (id: string) => void;
@@ -218,6 +220,22 @@ export const useDocTalkStore = create<DocTalkStore>((set, get) => ({
     const citations = [...(last.citations || []), citation];
     const updated = { ...last, citations } as Message;
     set({ messages: [...msgs.slice(0, -1), updated] });
+  },
+  addArtifactToLastMessage: (artifact: ChatArtifact) => {
+    const msgs = get().messages;
+    if (msgs.length === 0) return;
+    const last = msgs[msgs.length - 1];
+    const existing = last.artifacts || [];
+    const next = artifact.jobId
+      ? existing.filter((item) => item.jobId !== artifact.jobId)
+      : existing;
+    set({ messages: [...msgs.slice(0, -1), { ...last, artifacts: [...next, artifact] }] });
+  },
+  setLastMessageToolStatus: (message: string) => {
+    const msgs = get().messages;
+    if (msgs.length === 0) return;
+    const last = msgs[msgs.length - 1];
+    set({ messages: [...msgs.slice(0, -1), { ...last, toolStatus: message }] });
   },
   setStreaming: (v: boolean) => set({ isStreaming: v }),
   setSessionId: (id: string) => set({ sessionId: id }),

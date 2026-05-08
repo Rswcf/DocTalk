@@ -129,6 +129,31 @@ async def test_export_table_returns_csv_for_paid_user(client: AsyncClient) -> No
 
 
 @pytest.mark.asyncio
+async def test_export_all_document_tables_returns_combined_csv(client: AsyncClient) -> None:
+    user = _make_user(plan="plus")
+    doc = _make_doc(user)
+    table = SimpleNamespace(
+        id=uuid.uuid4(),
+        document_id=doc.id,
+        page=3,
+        table_index=1,
+        cells={"rows": [["公司", "评级"], ["MetaX", "Equal-weight"]]},
+    )
+    db = _make_db(
+        get=AsyncMock(return_value=doc),
+        execute=AsyncMock(return_value=_Result(scalars_all=[table])),
+    )
+    _override_dependencies(db, user)
+
+    response = await client.get(f"/api/documents/{doc.id}/tables/export")
+
+    assert response.status_code == 200
+    assert response.headers["content-type"].startswith("text/csv")
+    assert response.content.startswith(b"\xef\xbb\xbf")
+    assert "MetaX".encode() in response.content
+
+
+@pytest.mark.asyncio
 async def test_list_document_tables_serializes_rows(client: AsyncClient) -> None:
     user = _make_user(plan="plus")
     doc = _make_doc(user)

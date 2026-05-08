@@ -1,0 +1,58 @@
+# DocTalk Chat-Native Document Intelligence Execution Ledger
+
+## Objective
+
+Move DocTalk from multiple visible workbench entrances to a single chat-native
+document intelligence system. Users ask naturally in chat; backend planning and
+tool execution decide whether to answer with RAG, launch an async deliverable,
+scan/export tables, guide template creation, clarify comparison inputs, or look
+up citations.
+
+## Release Sequence
+
+| Milestone | Version | Scope | Status | Commit | Verification |
+|---|---|---|---|---|---|
+| M1 | 0.15.0 beta | Chat-native tool routing, artifact cards, hidden Brief/Extract tabs | Release gate passed; git release pending | Pending release commit | Version check, frontend build, ruff, parse tests, new feature tests, backend non-integration suite, browser UI check passed |
+| M2 | 0.16.0 beta | Azure Document Intelligence layout/table provider with PyMuPDF fallback | Pending | TBD | Pending |
+| M3 | 0.17.0 beta | Canonical document elements and element-aware retrieval | Pending | TBD | Pending |
+
+## Execution Rules
+
+- Finish one milestone before starting the next.
+- For each milestone: inspect affected code, implement the smallest complete
+  vertical slice, add tests, update docs/version, run required gates, commit on
+  `main`, push `main`, merge/push `stable`, deploy Railway if backend changed,
+  verify `/health` and `/version`, then tag `v0.x.0-beta`.
+- Do not stage unrelated files. If the tree is dirty from unrelated work, work
+  around it instead of reverting it.
+- Any code/test/build failure is a code issue to fix before release; only
+  external outages such as GitHub, Railway, missing secrets, or unavailable
+  production endpoints may pause the loop.
+
+## M1 Checklist
+
+- [x] Hide reader `Brief` / `Extract` primary tabs and keep Chat as the only
+  visible workspace.
+- [x] Add `ActionPlanner` with deterministic and optional LLM-backed routing.
+- [x] Add `ChatToolExecutor` that reuses existing document jobs without
+  bypassing access control, plan gates, quotas, or credits.
+- [x] Persist assistant artifacts in `messages.metadata_json`.
+- [x] Add `artifact` and `tool_status` SSE handling.
+- [x] Add chat artifact cards with polling, previews, downloads, and citation
+  actions.
+- [x] Add unified document job status API.
+- [x] Add combined document-table CSV export endpoint.
+- [x] Add backend tests for planner, executor, job artifacts, and CSV export.
+- [x] Run full release gate.
+- [ ] Commit/push `main`, merge/push `stable`, deploy, verify, tag.
+
+## Notes
+
+- M1 intentionally does not improve table extraction quality. It makes the UX
+  chat-native while reusing the existing table/extraction/template/diff
+  foundations.
+- M2 owns provider quality. Azure AI Document Intelligence is the default target
+  provider; PyMuPDF remains the safe fallback when cloud credentials are absent
+  or provider calls fail.
+- M3 owns retrieval quality. Chunk RAG remains for local text Q&A; tables,
+  all-document extraction, and semantic diff should move to canonical elements.

@@ -329,7 +329,11 @@ export default function ChatPanel({ sessionId, onCitationClick, maxUserMessages,
 
   const displayedSuggestedQuestions = suggestedQuestions && suggestedQuestions.length > 0
     ? suggestedQuestions
-    : SUGGESTED_KEYS.map((key) => t(key));
+    : [
+        ...SUGGESTED_KEYS.map((key) => t(key)),
+        tOr('chat.suggestedExtractTables', 'Extract all tables as CSV'),
+        tOr('chat.suggestedCompareVersions', 'Compare this with an older version'),
+      ];
 
   return (
     <div className="dt-chat-shell flex h-full flex-col">

@@ -187,6 +187,57 @@ async def test_chat_stream_refunds_predebit_when_retrieval_fails(
 
 
 @pytest.mark.asyncio
+async def test_chat_stream_returns_sse_error_when_llm_client_unavailable(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    session_id = uuid.uuid4()
+    document_id = uuid.uuid4()
+    user_id = uuid.uuid4()
+    ledger_id = uuid.uuid4()
+    session_obj = SimpleNamespace(id=session_id, document_id=document_id, collection_id=None, title=None, domain_mode=None)
+    doc_obj = SimpleNamespace(id=document_id, demo_slug=None, custom_instructions=None)
+    db = _make_db(
+        session_obj,
+        doc_obj,
+        execute_side_effect=[
+            _ScalarOneResult(session_obj),
+            _MessagesResult([SimpleNamespace(role="user", content="hello")]),
+        ],
+    )
+    refund_predebit = AsyncMock()
+    corrective_result = SimpleNamespace(retrieved=[], strategy="semantic_top_k", evaluation=None, plan=None)
+
+    monkeypatch.setattr(chat_service_module.credit_service, "get_estimated_cost", lambda _mode: 15)
+    monkeypatch.setattr(
+        chat_service_module.credit_service,
+        "debit_credits",
+        AsyncMock(return_value=ledger_id),
+    )
+    monkeypatch.setattr(
+        chat_service_module.corrective_retrieval_service,
+        "retrieve_single",
+        AsyncMock(return_value=corrective_result),
+    )
+    monkeypatch.setattr(chat_service_module, "_get_llm_client", lambda _model: (_ for _ in ()).throw(RuntimeError("missing key")))
+    monkeypatch.setattr(chat_service_module, "_refund_predebit", refund_predebit)
+
+    events = [
+        event
+        async for event in chat_service_module.chat_service.chat_stream(
+            session_id=session_id,
+            user_message="hello",
+            db=db,
+            user=SimpleNamespace(id=user_id, plan="pro"),
+            mode="balanced",
+        )
+    ]
+
+    assert events[-1]["event"] == "error"
+    assert events[-1]["data"]["code"] == "LLM_ERROR"
+    refund_predebit.assert_awaited_once_with(db, user_id, 15, ledger_id)
+
+
+@pytest.mark.asyncio
 async def test_continue_stream_refunds_predebit_when_setup_fails(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

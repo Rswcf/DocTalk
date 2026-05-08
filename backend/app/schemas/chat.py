@@ -4,7 +4,7 @@ import uuid
 from datetime import datetime
 from typing import List, Literal, Optional
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class ChatRequest(BaseModel):
@@ -26,6 +26,7 @@ class ChatMessageResponse(BaseModel):
     role: str
     content: str
     citations: Optional[List[dict]] = None
+    metadata_json: dict = Field(default_factory=dict)
     created_at: datetime
 
     class Config:

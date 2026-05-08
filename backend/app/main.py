@@ -19,6 +19,7 @@ from .api.chunks import chunks_router
 from .api.collections import collections_router
 from .api.credits import router as credits_router
 from .api.document_diffs import router as document_diffs_router
+from .api.document_jobs import router as document_jobs_router
 from .api.documents import documents_router
 from .api.events import router as events_router
 from .api.export import router as export_router
@@ -193,6 +194,7 @@ app.include_router(events_router)
 app.include_router(extractions_router)
 app.include_router(question_templates_router)
 app.include_router(document_diffs_router)
+app.include_router(document_jobs_router)
 app.include_router(tables_router)
 app.include_router(export_router)
 app.include_router(sharing_router)

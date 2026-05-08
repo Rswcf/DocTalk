@@ -8,6 +8,31 @@ releases use `0.minor.patch` semantics such as `0.2.0` and `0.2.1`.
 
 ## [Unreleased]
 
+## [0.15.0] - 2026-05-09
+
+### Added
+- Added chat-native action planning so document requests such as table export,
+  executive-summary deliverables, key facts, templates, comparisons, and page
+  lookups are classified at the start of a chat turn.
+- Added chat tool execution artifacts stored on assistant messages. Tool jobs
+  can now stream `tool_status` and `artifact` SSE events, persist artifact
+  metadata in `messages.metadata_json`, and refresh through the unified
+  `/api/document-jobs/{job_id}` endpoint.
+- Added artifact cards in chat for queued, running, succeeded, and failed
+  document jobs, including previews, citation buttons, Plus-gated CSV download
+  links, and polling-based status updates.
+- Added a combined Plus+ CSV export endpoint for all tables detected in a
+  document.
+
+### Changed
+- The document reader now keeps Chat as the only primary workspace. Brief,
+  Extract, Tables, Templates, and Diff remain available as internal tool
+  capabilities, but the main page no longer shows separate `Brief` or `Extract`
+  tabs.
+- Suggested prompt chips now include lightweight chat-native actions such as
+  table export and version comparison instead of sending users into separate
+  workspaces.
+
 ## [0.14.0] - 2026-05-07
 
 ### Added

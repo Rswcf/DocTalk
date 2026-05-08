@@ -30,6 +30,7 @@ build sequence.
 | `0.12.0 beta` | Table-aware RAG | Shipped | Adds scanned-table row evidence and short-row lexical fallback for table/numeric questions |
 | `0.13.0 beta` | Query Planner + Multi-hop Compare | Shipped | Decomposes comparison/multi-entity questions and adds balanced per-document evidence for collection comparison |
 | `0.14.0 beta` | Claim Verifier + RAG Quality Dashboard | Shipped | Adds post-generation citation support checks and admin monitoring for unsupported or weakly cited answers |
+| `0.15.0 beta` | Chat-Native Tool Routing | Shipped | Reduces UI cognitive load by turning extraction, table export, templates, and comparison into chat-triggered artifact workflows |
 
 ### 2026-05-07 RAG Workbench Quality Sequence
 
@@ -52,8 +53,23 @@ tables or appendices in long, multi-column reports. The staged remediation is:
    comparison workflows.
 7. `0.14.0 beta` — add claim-level verification and RAG evaluation reporting.
 
-The sequence above is now shipped through `0.14.0 beta`; follow-on RAG work
-should be driven by dashboard evidence rather than assumptions.
+The sequence above is now shipped through `0.15.0 beta`. The next document
+intelligence wave should upgrade parsing/layout quality under the same
+chat-native UI: first cloud layout/table intelligence, then canonical
+document elements that keep tables, sections, captions, figures, and paragraphs
+as first-class retrieval units.
+
+### 2026-05-09 Chat-Native Document Intelligence Sequence
+
+The product direction is now "one chat box, tool pipeline behind it." New
+capabilities should not add primary tabs unless there is a clear reason the
+user must leave chat.
+
+| Version | Feature | Status | Engineering Focus |
+|---|---|---|---|
+| `0.15.0 beta` | Chat-native tools | Shipped | ActionPlanner, ToolExecutor, ChatArtifact cards, hidden Brief/Extract tabs |
+| `0.16.0 beta` | Cloud layout/table intelligence | Next | Azure AI Document Intelligence `prebuilt-layout` provider with PyMuPDF fallback |
+| `0.17.0 beta` | Element-aware retrieval | Next | Canonical `document_elements` and retrieval strategies that no longer rely on chunk RAG for tables/full-document/diff |
 
 ---
 

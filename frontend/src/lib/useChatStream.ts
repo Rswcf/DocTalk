@@ -48,6 +48,8 @@ export function useChatStream({
     addMessage,
     updateLastMessage,
     addCitationToLastMessage,
+    addArtifactToLastMessage,
+    setLastMessageToolStatus,
     setStreaming,
     updateSessionActivity,
     flushPendingText,
@@ -188,8 +190,10 @@ export function useChatStream({
       locale,
       controller.signal,
       domainMode,
+      (artifact) => addArtifactToLastMessage(artifact),
+      ({ message }) => setLastMessageToolStatus(message),
     );
-  }, [sessionId, updateLastMessage, addCitationToLastMessage, handleStreamError, handleStreamDone, handleTruncated, selectedMode, locale]);
+  }, [sessionId, updateLastMessage, addCitationToLastMessage, addArtifactToLastMessage, setLastMessageToolStatus, handleStreamError, handleStreamDone, handleTruncated, selectedMode, locale]);
 
   const sendMessage = useCallback(async (text: string) => {
     if (!text.trim() || isStreaming) return false;
@@ -273,8 +277,10 @@ export function useChatStream({
       selectedMode,
       locale,
       controller.signal,
+      (artifact) => addArtifactToLastMessage(artifact),
+      ({ message }) => setLastMessageToolStatus(message),
     );
-  }, [isStreaming, sessionId, markLastMessageTruncated, setStreaming, updateLastMessage, addCitationToLastMessage, handleStreamError, handleStreamDone, handleTruncated, selectedMode, locale]);
+  }, [isStreaming, sessionId, markLastMessageTruncated, setStreaming, updateLastMessage, addCitationToLastMessage, addArtifactToLastMessage, setLastMessageToolStatus, handleStreamError, handleStreamDone, handleTruncated, selectedMode, locale]);
 
   const stopStreaming = useCallback(() => {
     abortRef.current?.abort();

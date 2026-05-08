@@ -1,4 +1,4 @@
-import type { DocumentResponse, Message, SearchResponse, Citation, SessionListResponse, CollectionBrief, CollectionDetail, NormalizedBBox, ExtractionJob, ExtractionTemplate, DocumentTable, QuestionTemplate, DocumentHierarchicalBrief } from '../types';
+import type { DocumentResponse, Message, SearchResponse, Citation, SessionListResponse, CollectionBrief, CollectionDetail, NormalizedBBox, ExtractionJob, ExtractionTemplate, DocumentTable, QuestionTemplate, DocumentHierarchicalBrief, ChatArtifact } from '../types';
 import type { UserProfile, CreditHistoryResponse, UsageBreakdown } from '../types';
 
 export const API_BASE = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8000';
@@ -67,6 +67,38 @@ async function handle<T>(res: Response): Promise<T> {
   return res.json();
 }
 
+export function mapCitationPayload(c: any): Citation {
+  return {
+    refIndex: c.ref_index ?? c.refIndex,
+    chunkId: c.chunk_id ?? c.chunkId,
+    page: c.page,
+    pageEnd: typeof c.page_end === 'number' ? c.page_end : (typeof c.pageEnd === 'number' ? c.pageEnd : undefined),
+    bboxes: c.bboxes || [],
+    textSnippet: c.text_snippet ?? c.textSnippet ?? '',
+    offset: c.offset ?? 0,
+    documentId: typeof c.document_id === 'string' ? c.document_id : (typeof c.documentId === 'string' ? c.documentId : undefined),
+    documentFilename: typeof c.document_filename === 'string' ? c.document_filename : (typeof c.documentFilename === 'string' ? c.documentFilename : undefined),
+    confidenceScore: typeof c.confidence_score === 'number' ? c.confidence_score : (typeof c.confidenceScore === 'number' ? c.confidenceScore : undefined),
+    contextText: typeof c.context_text === 'string' ? c.context_text : (typeof c.contextText === 'string' ? c.contextText : undefined),
+  };
+}
+
+export function mapArtifactPayload(raw: any): ChatArtifact {
+  const citations = Array.isArray(raw?.citations) ? raw.citations.map(mapCitationPayload) : [];
+  return {
+    artifactType: raw?.artifact_type ?? raw?.artifactType ?? 'artifact',
+    status: raw?.status ?? 'queued',
+    jobId: raw?.job_id ?? raw?.jobId ?? null,
+    title: raw?.title ?? 'Artifact',
+    summary: raw?.summary ?? '',
+    preview: raw?.preview,
+    downloadUrls: Array.isArray(raw?.download_urls) ? raw.download_urls : (Array.isArray(raw?.downloadUrls) ? raw.downloadUrls : []),
+    citations,
+    warning: raw?.warning ?? null,
+    requiredPlan: raw?.required_plan ?? raw?.requiredPlan ?? null,
+  };
+}
+
 export interface DocumentBrief {
   id: string;
   filename: string;
@@ -132,23 +164,14 @@ export async function createSession(docId: string): Promise<{ session_id: string
 
 export async function getMessages(sessionId: string): Promise<{ messages: Message[] }> {
   const res = await fetch(`${PROXY_BASE}/api/sessions/${sessionId}/messages`);
-  const data: { messages: Array<{ id?: string; share_anchor?: string; role: Message['role']; content: string; citations?: any[]; created_at: string }> } = await handle(res);
+  const data: { messages: Array<{ id?: string; share_anchor?: string; role: Message['role']; content: string; citations?: any[]; metadata_json?: any; created_at: string }> } = await handle(res);
 
   const mapped = (data.messages || []).map((m, idx) => {
     const citations: Citation[] | undefined = m.citations
-      ? m.citations.map((c: any) => ({
-          refIndex: c.ref_index,
-          chunkId: c.chunk_id,
-          page: c.page,
-          pageEnd: typeof c.page_end === 'number' ? c.page_end : undefined,
-          bboxes: c.bboxes || [],
-          textSnippet: c.text_snippet,
-          offset: c.offset,
-          documentId: typeof c.document_id === 'string' ? c.document_id : undefined,
-          documentFilename: typeof c.document_filename === 'string' ? c.document_filename : undefined,
-          confidenceScore: typeof c.confidence_score === 'number' ? c.confidence_score : undefined,
-          contextText: typeof c.context_text === 'string' ? c.context_text : undefined,
-        }))
+      ? m.citations.map(mapCitationPayload)
+      : undefined;
+    const artifacts = Array.isArray(m.metadata_json?.artifacts)
+      ? m.metadata_json.artifacts.map(mapArtifactPayload)
       : undefined;
 
     return {
@@ -156,6 +179,7 @@ export async function getMessages(sessionId: string): Promise<{ messages: Messag
       role: m.role,
       text: m.content,
       citations,
+      artifacts,
       createdAt: Date.parse(m.created_at),
       backendId: m.id,
       shareAnchor: m.share_anchor,
@@ -163,6 +187,24 @@ export async function getMessages(sessionId: string): Promise<{ messages: Messag
   });
 
   return { messages: mapped };
+}
+
+export interface DocumentJobDetail {
+  id: string;
+  document_id: string | null;
+  collection_id: string | null;
+  job_type: string;
+  status: string;
+  artifact: ChatArtifact;
+}
+
+export async function getDocumentJob(jobId: string): Promise<DocumentJobDetail> {
+  const res = await fetch(`${PROXY_BASE}/api/document-jobs/${jobId}`);
+  const data: any = await handle(res);
+  return {
+    ...data,
+    artifact: mapArtifactPayload(data.artifact),
+  };
 }
 
 export async function searchDocument(docId: string, query: string, topK?: number): Promise<SearchResponse> {

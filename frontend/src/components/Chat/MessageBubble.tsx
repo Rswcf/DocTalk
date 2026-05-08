@@ -7,6 +7,7 @@ import type { Citation, Message } from '../../types';
 import { useLocale } from '../../i18n';
 import CitationPopover from './CitationPopover';
 import SourcesStrip from './SourcesStrip';
+import ChatArtifactCard from './ChatArtifactCard';
 import { highlightCode } from '../../lib/highlight';
 import { CopyButton } from '../spell';
 import { trackEvent } from '../../lib/analytics';
@@ -292,6 +293,16 @@ export default function MessageBubble({
                   <span aria-hidden="true" className="inline-block w-2 h-4 bg-zinc-400 dark:bg-zinc-500 animate-pulse motion-reduce:animate-none rounded-sm ml-0.5 align-text-bottom" />
                 )}
               </div>
+              {isAssistant && !message.text && message.toolStatus ? (
+                <p className="mt-3 text-sm text-[var(--reader-muted)]">{message.toolStatus}</p>
+              ) : null}
+              {isAssistant && message.artifacts?.map((artifact, index) => (
+                <ChatArtifactCard
+                  key={`${artifact.jobId || artifact.title}-${index}`}
+                  artifact={artifact}
+                  onCitationClick={onCitationClick}
+                />
+              ))}
             </>
           )}
         </div>
