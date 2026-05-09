@@ -142,6 +142,27 @@ export function useChatStream({
     }
 
     const copy = errorCopy(err, t, tOr);
+    const state = useDocTalkStore.getState();
+    const currentMessages = state.messages;
+    const lastMessage = currentMessages[currentMessages.length - 1];
+    const lastAssistantIsEmpty = lastMessage?.role === 'assistant'
+      && !lastMessage.text
+      && !lastMessage.toolStatus
+      && (!lastMessage.citations || lastMessage.citations.length === 0)
+      && (!lastMessage.artifacts || lastMessage.artifacts.length === 0);
+
+    if (lastAssistantIsEmpty) {
+      state.setMessages([
+        ...currentMessages.slice(0, -1),
+        {
+          ...lastMessage,
+          text: copy.body,
+          isError: true,
+          isTruncated: false,
+        },
+      ]);
+      return;
+    }
 
     addMessage({
       id: `m_${Date.now()}_e`,

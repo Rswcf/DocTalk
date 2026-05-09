@@ -61,7 +61,7 @@ def sse(event: str, data: Dict[str, Any]) -> Dict[str, Any]:
 
 
 _USER_SAFE_ERRORS = {
-    "LLM_ERROR": "Failed to generate response. Please try again.",
+    "LLM_ERROR": "The AI provider is temporarily unavailable. Please try again shortly.",
     "RETRIEVAL_ERROR": "Document retrieval failed. Please try again.",
     "ACCOUNTING_ERROR": "Usage accounting issue occurred. Credits remain safe.",
     "CHAT_SETUP_ERROR": "Failed to set up chat. Please try again.",

@@ -22,6 +22,7 @@ export default function ShowcasePlayerInner({ isDark }: ShowcasePlayerInnerProps
       loop
       style={{ width: "100%", height: "100%" }}
       controls={false}
+      acknowledgeRemotionLicense
     />
   );
 }

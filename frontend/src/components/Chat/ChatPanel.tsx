@@ -420,7 +420,7 @@ export default function ChatPanel({ sessionId, onCitationClick, maxUserMessages,
             </div>
           )}
         </div>
-        {showScrollBtn && (
+        {messages.length > 0 && showScrollBtn && (
           <div className="absolute bottom-2 left-0 right-0 flex justify-center pointer-events-none z-10">
             <button
               onClick={() => listRef.current?.scrollTo({ top: listRef.current.scrollHeight, behavior: 'smooth' })}

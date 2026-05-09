@@ -35,6 +35,7 @@ async function _processSSEStream(
   const decoder = new TextDecoder('utf-8');
   let buffer = '';
   let receivedDone = false;
+  let receivedTerminalError = false;
 
   try {
     while (true) {
@@ -83,11 +84,13 @@ async function _processSSEStream(
               onCitation(c);
               break; }
             case 'error':
+              receivedTerminalError = true;
               onError({
                 code: typeof data.code === 'string' ? data.code : 'unknown',
                 message: typeof data.message === 'string' ? data.message : 'Unknown error',
               });
-              break;
+              await reader.cancel().catch(() => {});
+              return;
             case 'truncated':
               onTruncated?.();
               break;
@@ -111,16 +114,20 @@ async function _processSSEStream(
           }
         } catch (e) {
           if (signal?.aborted) return;
+          receivedTerminalError = true;
           onError({ code: 'parse_error', message: String(e) });
+          await reader.cancel().catch(() => {});
+          return;
         }
       }
     }
   } catch (e) {
     if (signal?.aborted) return;
+    receivedTerminalError = true;
     onError({ code: 'stream_error', message: String(e) });
   }
 
-  if (!receivedDone && !signal?.aborted) {
+  if (!receivedDone && !receivedTerminalError && !signal?.aborted) {
     onTruncated?.();
     onDone({ message_id: '' });
   }

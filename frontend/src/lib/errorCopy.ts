@@ -356,7 +356,7 @@ const CODE_TABLE: Record<string, Handler> = {
   }),
   LLM_ERROR: (_d, tOr) => ({
     title: tOr('errors.LLM_ERROR.title', 'Response failed'),
-    body: tOr('errors.LLM_ERROR.body', 'The AI didn\'t respond. Please try again.'),
+    body: tOr('errors.LLM_ERROR.body', 'The AI provider is temporarily unavailable. Please try again shortly.'),
     severity: 'error',
   }),
   ACCOUNTING_ERROR: (_d, tOr) => ({

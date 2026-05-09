@@ -234,6 +234,7 @@ async def test_chat_stream_returns_sse_error_when_llm_client_unavailable(
 
     assert events[-1]["event"] == "error"
     assert events[-1]["data"]["code"] == "LLM_ERROR"
+    assert "temporarily unavailable" in events[-1]["data"]["message"]
     refund_predebit.assert_awaited_once_with(db, user_id, 15, ledger_id)
 
 

@@ -6,7 +6,7 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint",
+    "lint": "next lint && node scripts/check-chat-prompt-i18n.js",
     "version:check": "python3 ../scripts/check_version_consistency.py",
     "version:bump:patch": "python3 ../scripts/bump_version.py patch",
     "version:bump:minor": "python3 ../scripts/bump_version.py minor"
