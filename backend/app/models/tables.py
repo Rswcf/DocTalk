@@ -69,6 +69,11 @@ class Document(Base):
 
     pages: Mapped[List[Page]] = relationship("Page", back_populates="document", cascade="all, delete-orphan")
     chunks: Mapped[List[Chunk]] = relationship("Chunk", back_populates="document", cascade="all, delete-orphan")
+    elements: Mapped[List["DocumentElement"]] = relationship(
+        "DocumentElement",
+        back_populates="document",
+        cascade="all, delete-orphan",
+    )
     sessions: Mapped[List[ChatSession]] = relationship(
         "ChatSession", back_populates="document", cascade="all, delete-orphan",
         foreign_keys="ChatSession.document_id",
@@ -139,6 +144,44 @@ class Chunk(Base):
     __table_args__ = (
         sa.UniqueConstraint("document_id", "chunk_index", name="uq_chunks_document_index"),
         sa.Index("idx_chunks_document", "document_id"),
+    )
+
+
+class DocumentElement(Base):
+    __tablename__ = "document_elements"
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        primary_key=True,
+        server_default=sa.text("gen_random_uuid()"),
+    )
+    document_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), sa.ForeignKey("documents.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    element_type: Mapped[str] = mapped_column(sa.String(32), nullable=False)
+    page_start: Mapped[int] = mapped_column(sa.Integer, nullable=False)
+    page_end: Mapped[int] = mapped_column(sa.Integer, nullable=False)
+    bbox: Mapped[dict] = mapped_column(JSONB, nullable=False, server_default=sa.text("'{}'::jsonb"))
+    text: Mapped[str] = mapped_column(sa.Text, nullable=False)
+    reading_order: Mapped[int] = mapped_column(sa.Integer, nullable=False)
+    parent_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        UUID(as_uuid=True), sa.ForeignKey("document_elements.id", ondelete="SET NULL"), nullable=True
+    )
+    metadata_json: Mapped[dict] = mapped_column(
+        JSONB, nullable=False, server_default=sa.text("'{}'::jsonb")
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        sa.DateTime(timezone=True), nullable=False, server_default=sa.text("now()")
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        sa.DateTime(timezone=True), nullable=False, server_default=sa.text("now()"), onupdate=sa.func.now()
+    )
+
+    document: Mapped["Document"] = relationship("Document", back_populates="elements")
+
+    __table_args__ = (
+        sa.Index("idx_document_elements_doc_type_order", "document_id", "element_type", "reading_order"),
+        sa.Index("idx_document_elements_doc_pages", "document_id", "page_start", "page_end"),
     )
 
 

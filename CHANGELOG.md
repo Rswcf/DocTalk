@@ -8,6 +8,29 @@ releases use `0.minor.patch` semantics such as `0.2.0` and `0.2.1`.
 
 ## [Unreleased]
 
+## [0.17.0] - 2026-05-09
+
+### Added
+- Added canonical `document_elements` for headings, paragraphs, and detected
+  tables so DocTalk can reason over document structure before falling back to
+  chunk windows.
+- Added parser-side element generation during document parsing and table-side
+  element generation during table scans, including table ids, provider metadata,
+  confidence, and layout-run linkage.
+- Added element-aware context selection for whole-document summaries,
+  structured extraction, semantic document diff, and table-aware retrieval.
+- Added regression tests for element generation, representative element
+  coverage, element-first extraction/diff context, table element persistence,
+  and table evidence fallback when no same-page chunk exists.
+
+### Changed
+- Chunk RAG now remains focused on ordinary local Q&A and citation anchoring,
+  while full-document, table, and diff workflows first use canonical document
+  structure for broader and more stable coverage.
+- Table retrieval no longer drops a scanned table solely because the parser did
+  not produce a chunk on the exact table page; it falls back to a document chunk
+  anchor while preserving the table page in the evidence payload.
+
 ## [0.16.0] - 2026-05-09
 
 ### Added

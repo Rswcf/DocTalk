@@ -236,6 +236,26 @@ class TestChunkDocumentIntegrity:
 
         assert "Revenue Increased In Europe" in text
 
+    def test_extract_elements_keeps_heading_and_paragraph_order(self):
+        page = PageInfo(
+            page_number=1,
+            width_pt=600,
+            height_pt=800,
+            rotation=0,
+            blocks=[
+                BlockInfo(page=1, text="Executive Summary", bbox=(50, 50, 300, 70), font_size=18),
+                BlockInfo(page=1, text="First material paragraph.", bbox=(50, 100, 350, 116), font_size=10),
+                BlockInfo(page=1, text="Second material paragraph.", bbox=(50, 130, 350, 146), font_size=10),
+            ],
+        )
+
+        elements = self.svc.extract_elements([page])
+
+        assert [element.element_type for element in elements] == ["heading", "paragraph", "paragraph"]
+        assert [element.reading_order for element in elements] == [10000, 10001, 10002]
+        assert elements[1].metadata_json["section_title"] == "Executive Summary"
+        assert elements[0].bbox["page"] == 1
+
     def test_short_document_keeps_micro_chunk(self):
         page = PageInfo(
             page_number=1,

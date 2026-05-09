@@ -216,12 +216,16 @@ sequenceDiagram
   controlled step names. Raw planned queries are not echoed into the system
   prompt.
 
-- **Retrieval**: Whole-document summaries use ordered representative chunks
-  across the document, preferring persisted `document_briefs.coverage` when
-  available, and collection summaries use capped per-document representative
-  coverage, so vague prompts like "summarize this document" do not over-select
-  tables, appendices, or sidebars. Ordinary local Q&A, table/numeric questions,
-  citation lookup, existence checks, and exhaustive scans first run Qdrant
+- **Retrieval**: Chunk RAG remains the citation anchor and ordinary local-Q&A
+  path. As of `0.17.0 beta`, parsing and table scans also write canonical
+  `document_elements` for headings, paragraphs, and tables. Whole-document
+  summaries, structured extraction, semantic diff, and table/numeric workflows
+  first select broad element-aware coverage, then fall back to vector/lexical
+  chunks when needed. Whole-document summaries still prefer persisted
+  `document_briefs.coverage` when available, and collection summaries use capped
+  per-document representative coverage, so vague prompts like "summarize this
+  document" do not over-select tables, appendices, or sidebars. Ordinary local
+  Q&A, citation lookup, existence checks, and exhaustive scans first run Qdrant
   COSINE vector search, then pass through a retrieval evaluator. If the evidence
   is empty, weak, missing exact query terms, or under-covered for an exhaustive
   route, DocTalk runs scoped lexical fallback over chunk text and section titles,
@@ -253,9 +257,11 @@ sequenceDiagram
   `artifact` SSE events and poll `GET /api/document-jobs/{job_id}` for updates.
 
 - **Summary Context**: If no persisted brief coverage exists yet, the RAG
-  workbench path selects representative chunks from the beginning, section
-  changes, evenly spaced body positions, and the tail of the document, skipping
-  tiny chunks that are usually footers or sidebars.
+  workbench path first uses `document_elements` to cover headings, representative
+  paragraphs, table locations, evenly spaced body positions, and the tail of the
+  document. If no elements exist for legacy documents, it falls back to
+  representative chunks while skipping tiny chunks that are usually footers or
+  sidebars.
 
 - **LLM Prompt**: System prompt instructs the model to cite sources using `[n]` notation matching the numbered document fragments provided. Production chat modes use DeepSeek V4 (`quick` = Flash, `balanced` = Pro); anonymous demo users are forced to `DEMO_LLM_MODEL` (default DeepSeek V4 Flash) to control cost. A **model-adaptive prompt system** (`model_profiles.py`) tailors the rules section and API parameters per model: DeepSeek uses `positive_framing` to avoid negative-framing over-compliance, other models use the `default` style. Temperature, max_tokens, and feature flags (stream_options) are also per-model.
 
@@ -644,6 +650,21 @@ erDiagram
         datetime updated_at
     }
 
+    DocumentElement {
+        uuid id PK
+        uuid document_id FK
+        string element_type "heading | paragraph | table | figure | caption | footnote"
+        int page_start
+        int page_end
+        jsonb bbox
+        text text
+        int reading_order
+        uuid parent_id FK "nullable"
+        jsonb metadata_json
+        datetime created_at
+        datetime updated_at
+    }
+
     DocumentLayoutRun {
         uuid id PK
         uuid document_id FK
@@ -689,6 +710,7 @@ erDiagram
 - `DocumentJob → ExtractionResult`: CASCADE delete, one extraction payload per job
 - `User → QuestionTemplate`: CASCADE delete, personal reusable question checklists
 - `Document → DocumentTable`: CASCADE delete, on-demand table scan output
+- `Document → DocumentElement`: CASCADE delete, canonical heading/paragraph/table model
 
 **Unique constraints:**
 - `(Document.document_id, Page.page_number)` — one page per number per document
@@ -697,6 +719,12 @@ erDiagram
 - `Document.demo_slug` — unique when not NULL
 - `ExtractionResult.job_id` — one rendered extraction result per async job
 - `(DocumentTable.document_id, page, table_index)` — stable table position per scan
+
+**Retrieval indexes:**
+- `(DocumentElement.document_id, element_type, reading_order)` — ordered element
+  scans by type
+- `(DocumentElement.document_id, page_start, page_end)` — overlap selection for
+  chunk anchors and table/page workflows
 
 ---
 
@@ -987,6 +1015,11 @@ preview. If a Free user asks for CSV, the artifact shows the Plus requirement
 instead of exposing a download link that would fail later. Polling
 `/api/document-jobs/{job_id}` returns provider/fallback metadata so the artifact
 can show confidence and fallback warnings without exposing raw layout payloads.
+Each successful scan also writes `document_elements.element_type='table'` rows
+with the stable `document_tables.id`, provider metadata, confidence, page span,
+and compact table text. Table-aware retrieval uses these canonical table
+locations for coverage and falls back to any same-document chunk as a citation
+anchor if the chunker did not create a fragment on the exact table page.
 
 Question Templates reuse `document_jobs` with `job_type='batch_template'` and
 store outputs in `extraction_results` with `template_key='question_template'`.

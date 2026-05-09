@@ -13,8 +13,8 @@ up citations.
 | Milestone | Version | Scope | Status | Commit | Verification |
 |---|---|---|---|---|---|
 | M1 | 0.15.0 beta | Chat-native tool routing, artifact cards, hidden Brief/Extract tabs | Released to production and tagged | `7a1546a` / `v0.15.0-beta` | Version check, frontend build, ruff, parse tests, new feature tests, backend non-integration suite, browser UI check, Railway `/version` + `/health` passed |
-| M2 | 0.16.0 beta | Azure Document Intelligence layout/table provider with PyMuPDF fallback | Release gate passed; git release pending | TBD | Version check, ruff, parse tests, new provider/table/job tests, backend non-integration suite, frontend build, Alembic upgrade, desktop/mobile browser smoke passed |
-| M3 | 0.17.0 beta | Canonical document elements and element-aware retrieval | Pending | TBD | Pending |
+| M2 | 0.16.0 beta | Azure Document Intelligence layout/table provider with PyMuPDF fallback | Released to production and tagged | `a2ba679` / `v0.16.0-beta` | Version check, ruff, parse tests, new provider/table/job tests, backend non-integration suite, frontend build, Alembic upgrade, desktop/mobile browser smoke, Railway `/version` + `/health` passed |
+| M3 | 0.17.0 beta | Canonical document elements and element-aware retrieval | Release gate passed; git release pending | TBD | Version check, diff check, ruff, parse tests, new element/workflow tests, backend non-integration suite, frontend build, Alembic upgrade passed |
 
 ## Execution Rules
 
@@ -72,3 +72,16 @@ up citations.
   or provider calls fail.
 - M3 owns retrieval quality. Chunk RAG remains for local text Q&A; tables,
   all-document extraction, and semantic diff should move to canonical elements.
+
+## M3 Checklist
+
+- [x] Add `document_elements` model and add-only migration.
+- [x] Generate heading/paragraph elements during parse.
+- [x] Generate table elements during table scan, linked to `document_tables`.
+- [x] Add element-aware context selection service.
+- [x] Use element-aware coverage for summaries, structured extraction, document
+  diff, and table-aware retrieval fallback.
+- [x] Add focused unit tests for element generation, context selection, table
+  elements, extraction/diff context, and table fallback.
+- [x] Run full release gate.
+- [ ] Commit/push `main`, merge/push `stable`, deploy, verify, tag.

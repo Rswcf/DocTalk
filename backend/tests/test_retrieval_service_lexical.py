@@ -144,7 +144,7 @@ def test_table_payloads_select_matching_rows_and_keep_real_chunk_id() -> None:
     assert "Other 19" not in payloads[0]["text"]
 
 
-def test_table_payloads_skip_tables_without_same_page_representative_chunk() -> None:
+def test_table_payloads_fallback_to_document_chunk_when_table_page_chunk_missing() -> None:
     document_id = uuid.uuid4()
     table = SimpleNamespace(
         id=uuid.uuid4(),
@@ -164,7 +164,9 @@ def test_table_payloads_skip_tables_without_same_page_representative_chunk() -> 
 
     payloads = _table_payloads_from_tables("What is MetaX revenue?", [table], [chunk], top_k=4)
 
-    assert payloads == []
+    assert len(payloads) == 1
+    assert payloads[0]["chunk_id"] == chunk.id
+    assert payloads[0]["page"] == 7
 
 
 def test_table_payloads_support_generic_table_requests_without_terms() -> None:

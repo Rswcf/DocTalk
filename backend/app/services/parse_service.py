@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from statistics import median
-from typing import List, Optional, Sequence, Tuple
+from typing import Any, List, Optional, Sequence, Tuple
 
 import fitz  # PyMuPDF
 
@@ -41,6 +41,17 @@ class ChunkInfo:
     bboxes: List[dict]  # [{page, x, y, w, h}] normalized to [0,1]
     section_title: Optional[str]
     token_count: int
+
+
+@dataclass
+class ElementInfo:
+    element_type: str
+    page_start: int
+    page_end: int
+    bbox: dict[str, Any]
+    text: str
+    reading_order: int
+    metadata_json: dict[str, Any]
 
 
 class ParseService:
@@ -384,6 +395,77 @@ class ParseService:
                 )
 
         return filtered
+
+    def extract_elements(self, pages: Sequence[PageInfo]) -> List[ElementInfo]:
+        """Build a canonical reading-order element stream from parsed pages.
+
+        Chunks remain the citation anchor for existing RAG. Elements are a
+        higher-level document model used by summary, extraction, diff, and
+        table-aware retrieval so those workflows do not have to infer document
+        structure from arbitrary chunk windows.
+        """
+        header_texts, footer_texts = self._detect_header_footer_texts(pages)
+
+        all_clean_blocks: List[CleanBlock] = []
+        page_dims: dict[int, Tuple[float, float]] = {}
+        for p in pages:
+            page_dims[p.page_number] = (p.width_pt, p.height_pt)
+            cleaned = self.clean_text_blocks(
+                p.blocks,
+                p.width_pt,
+                p.height_pt,
+                header_texts=header_texts,
+                footer_texts=footer_texts,
+            )
+            all_clean_blocks.extend(self._order_blocks_for_reading(cleaned, p.width_pt, p.height_pt))
+
+        if not all_clean_blocks:
+            return []
+
+        font_sizes = [cb.font_size for cb in all_clean_blocks if cb.font_size > 0]
+        median_size = median(font_sizes) if font_sizes else 12.0
+
+        elements: List[ElementInfo] = []
+        current_section_title: Optional[str] = None
+        current_heading_order: Optional[int] = None
+        page_block_orders: dict[int, int] = {}
+        for block in all_clean_blocks:
+            text = block.text.strip().replace("\x00", "")
+            if not text:
+                continue
+            page_block_order = page_block_orders.get(block.page, 0)
+            page_block_orders[block.page] = page_block_order + 1
+            reading_order = block.page * 10000 + page_block_order
+            page_width, page_height = page_dims.get(block.page, (1.0, 1.0))
+            bbox = self._normalize_bbox(block.page, block.bbox, page_width, page_height)
+            is_heading = self._is_heading_block(block, median_size)
+            metadata: dict[str, Any] = {
+                "font_size": round(float(block.font_size or 0.0), 2),
+            }
+            if is_heading:
+                element_type = "heading"
+                current_section_title = text[:200]
+                current_heading_order = reading_order
+            else:
+                element_type = "paragraph"
+                if current_section_title:
+                    metadata["section_title"] = current_section_title
+                if current_heading_order is not None:
+                    metadata["parent_reading_order"] = current_heading_order
+
+            elements.append(
+                ElementInfo(
+                    element_type=element_type,
+                    page_start=block.page,
+                    page_end=block.page,
+                    bbox=bbox,
+                    text=text,
+                    reading_order=reading_order,
+                    metadata_json=metadata,
+                )
+            )
+
+        return elements
 
     # -------------------------- Helpers --------------------------
     def _order_blocks_for_reading(

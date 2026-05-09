@@ -18,6 +18,7 @@ from sqlalchemy.orm import Session
 from app.core.config import settings
 from app.models.tables import (
     Document,
+    DocumentElement,
     DocumentJob,
     DocumentLayoutRun,
     DocumentTable,
@@ -340,6 +341,26 @@ def _table_cells_payload(item: dict[str, Any], *, layout_run_id: uuid.UUID | Non
     return payload
 
 
+def _table_element_text(page: int, table_index: int, rows: list[list[str]], *, max_chars: int = 12000) -> tuple[str, bool]:
+    lines = [f"Table page {page} #{table_index + 1}"]
+    for row in rows:
+        lines.append(" | ".join(str(cell or "").strip() for cell in row))
+    text = "\n".join(lines).replace("\x00", "")
+    if len(text) <= max_chars:
+        return text, False
+    return text[:max_chars].rstrip() + "\n...", True
+
+
+def _table_element_bbox(item: dict[str, Any]) -> dict[str, Any]:
+    region_bbox = _table_region_bbox(item)
+    if not region_bbox:
+        return {}
+    return {
+        "provider_bbox": region_bbox,
+        "bbox_format": "provider_layout_units",
+    }
+
+
 def scan_document_tables_with_outcome(db: Session, document: Document) -> TableScanOutcome:
     if (document.file_type or "pdf").lower() == "pdf":
         pdf_bytes = storage_service.download_file(document.storage_key)
@@ -350,19 +371,51 @@ def scan_document_tables_with_outcome(db: Session, document: Document) -> TableS
 
     detected = merge_continued_tables(detected)
     db.execute(sa.delete(DocumentTable).where(DocumentTable.document_id == document.id))
+    db.execute(
+        sa.delete(DocumentElement)
+        .where(DocumentElement.document_id == document.id)
+        .where(DocumentElement.element_type == "table")
+    )
     page_indexes: dict[int, int] = {}
     for item in detected:
         page = int(item["page"])
+        page_end = int(item.get("page_end") or page)
         table_index = page_indexes.get(page, 0)
         page_indexes[page] = table_index + 1
+        table_id = uuid.uuid4()
+        rows = item.get("rows") if isinstance(item.get("rows"), list) else []
+        element_text, truncated = _table_element_text(page, table_index, rows)
+        metadata = dict(item.get("metadata") or {})
+        metadata.update({
+            "table_id": str(table_id),
+            "method": str(item["method"])[:32],
+            "confidence": float(item["confidence"] or 0),
+        })
+        if truncated:
+            metadata["text_truncated"] = True
+        if outcome.layout_run_id:
+            metadata["layout_run_id"] = str(outcome.layout_run_id)
         db.add(
             DocumentTable(
+                id=table_id,
                 document_id=document.id,
                 page=page,
                 table_index=table_index,
                 cells=_table_cells_payload(item, layout_run_id=outcome.layout_run_id),
                 confidence=item["confidence"],
                 method=str(item["method"])[:32],
+            )
+        )
+        db.add(
+            DocumentElement(
+                document_id=document.id,
+                element_type="table",
+                page_start=page,
+                page_end=page_end,
+                bbox=_table_element_bbox(item),
+                text=element_text,
+                reading_order=page * 10000 + 8000 + table_index,
+                metadata_json=metadata,
             )
         )
     return TableScanOutcome(

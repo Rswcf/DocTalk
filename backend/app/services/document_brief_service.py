@@ -8,6 +8,10 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.tables import Chunk, Document, DocumentBrief
+from app.services.document_element_service import (
+    chunk_to_retrieval_item,
+    get_element_aware_chunks_async,
+)
 
 MIN_SUMMARY_CHUNK_CHARS = 80
 DEFAULT_MAX_SUMMARY_CHUNKS = 18
@@ -118,6 +122,17 @@ class DocumentBriefService:
         )
         if persisted:
             return persisted
+
+        element_chunks = await get_element_aware_chunks_async(
+            db,
+            document_id,
+            max_chunks=max_chunks,
+        )
+        if element_chunks:
+            return [
+                chunk_to_retrieval_item(chunk, score, include_document_id=True)
+                for chunk, score in element_chunks
+            ]
 
         rows = await db.execute(
             select(Chunk)

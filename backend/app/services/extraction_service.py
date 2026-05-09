@@ -27,6 +27,7 @@ from app.models.tables import (
     User,
 )
 from app.services.credit_service import calculate_cost
+from app.services.document_element_service import get_element_aware_chunks
 from app.services.embedding_service import embedding_service
 
 logger = logging.getLogger(__name__)
@@ -222,6 +223,15 @@ def retrieve_extraction_chunks(
 ) -> list[tuple[Chunk, float]]:
     seen: set[uuid.UUID] = set()
     selected: list[tuple[Chunk, float]] = []
+    element_budget = max(2, max_chunks // 2)
+    for chunk, score in get_element_aware_chunks(db, document_id, max_chunks=element_budget):
+        if chunk.id in seen:
+            continue
+        seen.add(chunk.id)
+        selected.append((chunk, score))
+        if len(selected) >= max_chunks:
+            return selected
+
     per_query = max(3, max_chunks // max(1, len(template.query_prompts)) + 1)
     for query in template.query_prompts:
         for chunk, score in _retrieve_by_query(db, document_id, query, per_query):

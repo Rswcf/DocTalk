@@ -183,3 +183,47 @@ def test_merge_continued_tables_does_not_merge_same_header_without_layout_signal
     )
 
     assert len(merged) == 2
+
+
+def test_table_scan_persists_table_elements(monkeypatch) -> None:
+    class FakeDb:
+        def __init__(self) -> None:
+            self.added = []
+            self.executed = []
+
+        def execute(self, statement):
+            self.executed.append(statement)
+
+        def add(self, item) -> None:
+            self.added.append(item)
+
+    doc = SimpleNamespace(id=uuid.uuid4(), storage_key="doc.pdf", file_type="pdf")
+    detected = [
+        {
+            "page": 3,
+            "table_index": 0,
+            "rows": [["Company", "Rating"], ["MetaX", "Equal-weight"]],
+            "confidence": 0.91,
+            "method": "azure",
+            "metadata": {"provider": "azure"},
+        }
+    ]
+    monkeypatch.setattr(table_service.storage_service, "download_file", lambda _key: b"%PDF")
+    monkeypatch.setattr(
+        table_service,
+        "_scan_pdf_tables_with_provider",
+        lambda *_args: (
+            detected,
+            table_service.TableScanOutcome(count=1, provider="azure", layout_run_id=uuid.uuid4()),
+        ),
+    )
+
+    db = FakeDb()
+    table_service.scan_document_tables_with_outcome(db, doc)
+
+    table = next(item for item in db.added if item.__class__.__name__ == "DocumentTable")
+    element = next(item for item in db.added if item.__class__.__name__ == "DocumentElement")
+    assert str(table.id) == element.metadata_json["table_id"]
+    assert element.element_type == "table"
+    assert element.page_start == 3
+    assert "MetaX | Equal-weight" in element.text

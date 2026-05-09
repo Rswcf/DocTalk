@@ -124,10 +124,14 @@ def _select_relevant_table_rows(rows: list[list[str]], terms: tuple[str, ...]) -
 
 
 def _representative_chunk_for_table(table: DocumentTable, chunks: Iterable[Chunk]) -> Chunk | None:
+    same_document_chunks: list[Chunk] = []
     for chunk in chunks:
-        if chunk.document_id == table.document_id and int(chunk.page_start or 0) <= table.page <= int(chunk.page_end or 0):
+        if chunk.document_id != table.document_id:
+            continue
+        same_document_chunks.append(chunk)
+        if int(chunk.page_start or 0) <= table.page <= int(chunk.page_end or 0):
             return chunk
-    return None
+    return same_document_chunks[0] if same_document_chunks else None
 
 
 def _table_score(rows: list[list[str]], terms: tuple[str, ...], *, generic_table_query: bool) -> float:
@@ -417,6 +421,14 @@ class RetrievalService:
             .order_by(Chunk.page_start, Chunk.chunk_index)
         )
         chunks: List[Chunk] = list(chunk_rows.scalars())
+        if not chunks:
+            fallback_rows = await db.execute(
+                select(Chunk)
+                .where(Chunk.document_id == document_id)
+                .order_by(Chunk.chunk_index)
+                .limit(1)
+            )
+            chunks = list(fallback_rows.scalars())
         return _table_payloads_from_tables(query, tables, chunks, top_k=top_k)
 
     async def table_search_multi(
@@ -448,6 +460,18 @@ class RetrievalService:
             .order_by(Chunk.document_id, Chunk.page_start, Chunk.chunk_index)
         )
         chunks: List[Chunk] = list(chunk_rows.scalars())
+        chunk_doc_ids = {chunk.document_id for chunk in chunks}
+        missing_doc_ids = [doc_id for doc_id in document_ids if doc_id not in chunk_doc_ids]
+        if missing_doc_ids:
+            fallback_rows = await db.execute(
+                select(Chunk)
+                .where(Chunk.document_id.in_(missing_doc_ids))
+                .order_by(Chunk.document_id, Chunk.chunk_index)
+            )
+            fallback_by_doc: dict[uuid.UUID, Chunk] = {}
+            for chunk in fallback_rows.scalars():
+                fallback_by_doc.setdefault(chunk.document_id, chunk)
+            chunks.extend(fallback_by_doc.values())
         return _table_payloads_from_tables(
             query,
             tables,

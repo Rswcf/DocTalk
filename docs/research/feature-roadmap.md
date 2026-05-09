@@ -31,6 +31,8 @@ build sequence.
 | `0.13.0 beta` | Query Planner + Multi-hop Compare | Shipped | Decomposes comparison/multi-entity questions and adds balanced per-document evidence for collection comparison |
 | `0.14.0 beta` | Claim Verifier + RAG Quality Dashboard | Shipped | Adds post-generation citation support checks and admin monitoring for unsupported or weakly cited answers |
 | `0.15.0 beta` | Chat-Native Tool Routing | Shipped | Reduces UI cognitive load by turning extraction, table export, templates, and comparison into chat-triggered artifact workflows |
+| `0.16.0 beta` | Cloud Layout/Table Intelligence | Shipped | Uses Azure `prebuilt-layout` with PyMuPDF fallback for higher-fidelity table objects |
+| `0.17.0 beta` | Element-Aware Retrieval | Shipped | Adds canonical heading/paragraph/table elements so full-document and table workflows stop depending only on chunk top-k |
 
 ### 2026-05-07 RAG Workbench Quality Sequence
 
@@ -53,10 +55,10 @@ tables or appendices in long, multi-column reports. The staged remediation is:
    comparison workflows.
 7. `0.14.0 beta` — add claim-level verification and RAG evaluation reporting.
 
-The sequence above is now shipped through `0.16.0 beta`. The next document
-intelligence wave should upgrade retrieval quality under the same chat-native
-UI by turning canonical document elements into first-class retrieval units for
-tables, sections, captions, figures, and paragraphs.
+The sequence above is now shipped through `0.17.0 beta`. DocTalk now writes
+canonical `document_elements` for headings, paragraphs, and table scans, then
+uses those elements for summary, extraction, diff, and table context before
+falling back to chunk retrieval.
 
 ### 2026-05-09 Chat-Native Document Intelligence Sequence
 
@@ -68,7 +70,7 @@ user must leave chat.
 |---|---|---|---|
 | `0.15.0 beta` | Chat-native tools | Shipped | ActionPlanner, ToolExecutor, ChatArtifact cards, hidden Brief/Extract tabs |
 | `0.16.0 beta` | Cloud layout/table intelligence | Shipped | Azure AI Document Intelligence `prebuilt-layout` provider with PyMuPDF fallback and layout run metadata |
-| `0.17.0 beta` | Element-aware retrieval | Next | Canonical `document_elements` and retrieval strategies that no longer rely on chunk RAG for tables/full-document/diff |
+| `0.17.0 beta` | Element-aware retrieval | Shipped | Canonical `document_elements` and retrieval strategies that no longer rely on chunk RAG for tables/full-document/diff |
 
 ---
 

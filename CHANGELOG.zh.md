@@ -8,6 +8,24 @@
 
 ## [Unreleased]
 
+## [0.17.0] - 2026-05-09
+
+### 新增
+- 新增 canonical `document_elements`，把 heading、paragraph 和已检测表格作为
+  一等文档结构保存，避免全文任务继续只依赖任意 chunk window。
+- 新增解析阶段的文本 element 生成，以及表格扫描阶段的 table element 生成；table
+  element 会记录 table id、provider metadata、confidence 和 layout run 关联。
+- 新增 element-aware 上下文选择，用于全文摘要、结构化提取、语义文档对比和
+  table-aware retrieval。
+- 新增 element 生成、代表性 element 覆盖、extraction/diff element-first context、
+  table element 持久化，以及缺少同页 chunk 时表格 evidence fallback 的回归测试。
+
+### 变更
+- Chunk RAG 现在更明确地负责普通局部问答和 citation anchor；全文、表格和 diff
+  工作流会先使用 canonical document structure 来获得更稳定的覆盖。
+- 表格检索不会再因为 parser 没有生成同页 chunk 就丢弃已扫描表格；系统会 fallback
+  到同文档 chunk 作为 citation anchor，同时保留 evidence payload 中的表格页码。
+
 ## [0.16.0] - 2026-05-09
 
 ### 新增

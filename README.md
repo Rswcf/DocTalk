@@ -80,6 +80,11 @@ Qdrant for local questions, but async work products return as artifact cards in
 the same chat instead of separate workspace tabs. Citations map back to exact
 page locations for real-time highlighting.
 
+Parsing now also writes canonical document elements for headings, paragraphs,
+and detected tables. Chunk RAG remains the citation anchor and local Q&A path,
+while summaries, structured extraction, table questions, and semantic diff use
+element-aware coverage before falling back to chunk retrieval.
+
 For PDF tables, production can use Azure AI Document Intelligence
 `prebuilt-layout` to extract table cells, headers, merged-cell spans, and layout
 regions before falling back to PyMuPDF. This keeps table export and table-aware

@@ -151,6 +151,7 @@ async def test_summary_context_falls_back_when_persisted_coverage_is_stale() -> 
             side_effect=[
                 _ScalarOneOrNoneResult({"selected_chunk_ids": [str(uuid.uuid4())]}),
                 _ScalarsResult([]),
+                _ScalarsResult([]),
                 _ScalarsResult(chunks),
             ]
         )
@@ -159,3 +160,34 @@ async def test_summary_context_falls_back_when_persisted_coverage_is_stale() -> 
     contexts = await DocumentBriefService().get_summary_context(db, document_id, max_chunks=8)
 
     assert [item["chunk_id"] for item in contexts] == [chunk.id for chunk in chunks]
+
+
+@pytest.mark.asyncio
+async def test_summary_context_uses_document_elements_before_chunk_fallback() -> None:
+    document_id = uuid.uuid4()
+    first = _chunk(0, text="Intro narrative " * 20)
+    table_page = _chunk(1, text="Target price table context " * 20)
+    first.document_id = document_id
+    table_page.document_id = document_id
+    table_page.page_start = 7
+    table_page.page_end = 7
+    element = SimpleNamespace(
+        element_type="table",
+        page_start=7,
+        page_end=7,
+        reading_order=70_000,
+        text="Table page 7\nCompany | Rating | Target price",
+    )
+    db = SimpleNamespace(
+        execute=AsyncMock(
+            side_effect=[
+                _ScalarOneOrNoneResult(None),
+                _ScalarsResult([element]),
+                _ScalarsResult([first, table_page]),
+            ]
+        )
+    )
+
+    contexts = await DocumentBriefService().get_summary_context(db, document_id, max_chunks=4)
+
+    assert contexts[0]["chunk_id"] == table_page.id

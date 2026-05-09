@@ -210,14 +210,16 @@ sequenceDiagram
   和按文档对比覆盖，并用受控 step 名称标记检索片段。原始 planned query 不会被回写
   进 system prompt。
 
-- **检索**：全文摘要优先使用持久化 `document_briefs.coverage`，缺失时使用按
-  文档顺序选择的代表性文本块；集合摘要使用按文档限额抽取的代表性覆盖，避免
-  “总结这篇文档” 这类宽泛问题只命中表格、附录或侧栏。普通局部问答、表格/数字
-  问题、引用定位、存在性检查和穷尽扫描会先从 Qdrant 按 COSINE 向量相似度检索，
-  然后经过 retrieval evaluator。如果证据为空、较弱、缺少精确查询词，或穷尽扫描
-  覆盖不足，DocTalk 会在同一文档范围内对 chunk text 和 section title 执行
-  lexical fallback，按 chunk 去重合并，并把证据质量提示注入 LLM prompt。每个片段
-  都包含文本、页码和边界框。
+- **检索**：Chunk RAG 继续作为 citation anchor 和普通局部问答路径。从
+  `0.17.0 beta` 开始，解析和表格扫描还会写入 canonical `document_elements`，保存
+  heading、paragraph 和 table。全文摘要、结构化提取、语义 diff、表格/数字工作流会先
+  使用 element-aware coverage，再按需 fallback 到 vector/lexical chunks。全文摘要仍优先
+  使用持久化 `document_briefs.coverage`；集合摘要使用按文档限额抽取的代表性覆盖，避免
+  “总结这篇文档” 这类宽泛问题只命中表格、附录或侧栏。普通局部问答、引用定位、
+  存在性检查和穷尽扫描会先从 Qdrant 按 COSINE 向量相似度检索，然后经过 retrieval
+  evaluator。如果证据为空、较弱、缺少精确查询词，或穷尽扫描覆盖不足，DocTalk 会在
+  同一文档范围内对 chunk text 和 section title 执行 lexical fallback，按 chunk 去重合并，
+  并把证据质量提示注入 LLM prompt。每个片段都包含文本、页码和边界框。
   表格/数字类路由会额外读取已扫描的 `document_tables`，把匹配表格行格式化为结构化
   evidence，并降低 lexical chunk 长度阈值，避免短表格行在进入回答前被过滤掉。
   Collection 对比路由会额外补充按文档均衡的 evidence，避免一个强匹配文档挤掉其他
@@ -238,9 +240,10 @@ sequenceDiagram
   `messages.metadata_json` 中保存 `artifacts` 数组；前端通过可选的 `tool_status` 和
   `artifact` SSE event 展示卡片，并用 `GET /api/document-jobs/{job_id}` 刷新状态。
 
-- **摘要上下文**：如果还没有持久化 brief coverage，RAG 工作台路径会从文档开头、
-  章节变化、均匀分布的正文位置和结尾选择代表性 chunks，并跳过通常属于页脚或
-  侧栏的过短 chunks。
+- **摘要上下文**：如果还没有持久化 brief coverage，RAG 工作台路径会先使用
+  `document_elements` 覆盖 heading、代表性 paragraph、table 位置、均匀分布的正文和
+  文档结尾。若旧文档还没有 elements，则 fallback 到代表性 chunks，并跳过通常属于页脚
+  或侧栏的过短 chunks。
 
 - **LLM 提示词**：系统提示指示模型使用 `[n]` 标记引用来源，编号对应提供的文档片段。生产聊天模式使用 DeepSeek V4（内部 `quick` = Flash，内部 `balanced` = Pro）；匿名 Demo 用户强制使用 `DEMO_LLM_MODEL`（默认 DeepSeek V4 Flash）以控制成本。**模型自适应提示系统**（`model_profiles.py`）为每个模型定制规则部分和 API 参数：DeepSeek 使用 `positive_framing` 避免消极表述过度遵从，其他模型使用 `default` 风格。temperature、max_tokens 和功能标志（stream_options）也按模型配置。
 
@@ -571,6 +574,21 @@ erDiagram
         datetime created_at
     }
 
+    DocumentElement {
+        uuid id PK
+        uuid document_id FK
+        string element_type "heading | paragraph | table | figure | caption | footnote"
+        int page_start
+        int page_end
+        jsonb bbox
+        text text
+        int reading_order
+        uuid parent_id FK "可空"
+        jsonb metadata_json
+        datetime created_at
+        datetime updated_at
+    }
+
     Collection {
         uuid id PK
         string name
@@ -597,12 +615,17 @@ erDiagram
 - `User → Collection`：CASCADE 删除
 - `Collection → ChatSession`：CASCADE 删除（通过 collection_id）
 - `Collection ↔ Document`：多对多关系，通过 `collection_documents` 关联表
+- `Document → DocumentElement`：CASCADE 删除，canonical heading/paragraph/table 文档模型
 
 **唯一约束：**
 - `(Document.document_id, Page.page_number)` — 每个文档每个页码唯一
 - `(Document.document_id, Chunk.chunk_index)` — 文本块顺序编号
 - `(Account.provider, Account.provider_account_id)` — 每个提供商一个账户链接
 - `Document.demo_slug` — 非空时唯一
+
+**检索索引：**
+- `(DocumentElement.document_id, element_type, reading_order)` — 按类型读取有序 elements
+- `(DocumentElement.document_id, page_start, page_end)` — 为 chunk anchor 和表格/页码工作流做页范围重叠选择
 
 ---
 
@@ -875,6 +898,10 @@ Chat-native 表格请求复用同一套 `table_scan` job。若已有表格，exe
 Plus 要求，不暴露稍后会失败的下载链接。`/api/document-jobs/{job_id}` 会返回
 provider/fallback metadata，使 artifact 能展示 confidence 和 fallback warning，但不会
 暴露原始 layout payload。
+每次成功扫描还会写入 `document_elements.element_type='table'`，保存稳定的
+`document_tables.id`、provider metadata、confidence、页码范围和压缩后的表格文本。
+Table-aware retrieval 会使用这些 canonical table 位置做覆盖选择；如果 chunker 没有在
+精确表格页生成片段，则 fallback 到同文档 chunk 作为 citation anchor，同时保留表格页码。
 
 ### 自助取消订阅状态机
 

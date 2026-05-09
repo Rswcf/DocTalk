@@ -12,7 +12,7 @@ from sqlalchemy import select
 
 from app.core.config import settings
 from app.models.sync_database import SyncSessionLocal
-from app.models.tables import Chunk, Document, DocumentBrief, Page
+from app.models.tables import Chunk, Document, DocumentBrief, DocumentElement, Page
 from app.services.conversion_service import CONVERTIBLE_TYPES, convert_to_pdf
 from app.services.embedding_service import embedding_service
 from app.services.parse_service import ParseService
@@ -31,6 +31,7 @@ _WORKER_ERROR_CODES: dict[str, str] = {
     "OCR_FAILED": "OCR text recognition failed",
     "OCR_INSUFFICIENT_TEXT": "OCR could not extract sufficient text",
     "PERSIST_PAGES_FAILED": "Failed to save document pages to database",
+    "PERSIST_ELEMENTS_FAILED": "Failed to save document structure to database",
     "CHUNKING_FAILED": "Document chunking failed",
     "PERSIST_CHUNKS_FAILED": "Failed to save document chunks to database",
     "NO_CHUNKS": "No text content could be extracted from the document",
@@ -138,6 +139,7 @@ def parse_document(self, document_id: str) -> None:
             from sqlalchemy import delete as sa_delete
 
             db.execute(sa_delete(DocumentBrief).where(DocumentBrief.document_id == doc.id))
+            db.execute(sa_delete(DocumentElement).where(DocumentElement.document_id == doc.id))
             db.execute(sa_delete(Chunk).where(Chunk.document_id == doc.id))
             db.execute(sa_delete(Page).where(Page.document_id == doc.id))
             doc.pages_parsed = 0
@@ -331,6 +333,35 @@ def parse_document(self, document_id: str) -> None:
                 doc = db.get(Document, uuid.UUID(document_id))
                 if doc:
                     _set_doc_error(doc, "PERSIST_PAGES_FAILED", "Failed to save document pages to database")
+                    db.add(doc)
+                    db.commit()
+                return
+
+            # Persist canonical document elements (heading/paragraph stream).
+            try:
+                element_infos = service.extract_elements(pages)
+                for el in element_infos:
+                    db.add(
+                        DocumentElement(
+                            document_id=doc.id,
+                            element_type=el.element_type,
+                            page_start=el.page_start,
+                            page_end=el.page_end,
+                            bbox=el.bbox,
+                            text=el.text,
+                            reading_order=el.reading_order,
+                            metadata_json=el.metadata_json,
+                        )
+                    )
+                db.commit()
+            except SoftTimeLimitExceeded:
+                raise
+            except Exception as e:
+                logger.exception("Failed to persist document elements for %s: %s", document_id, e)
+                db.rollback()
+                doc = db.get(Document, uuid.UUID(document_id))
+                if doc:
+                    _set_doc_error(doc, "PERSIST_ELEMENTS_FAILED", "Failed to save document structure to database")
                     db.add(doc)
                     db.commit()
                 return
