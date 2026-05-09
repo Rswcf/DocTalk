@@ -31,6 +31,12 @@ export default function CollectionsPageClient() {
   }, [status]);
 
   useEffect(() => {
+    if (status === 'unauthenticated') {
+      router.push('/auth?callbackUrl=/collections');
+    }
+  }, [router, status]);
+
+  useEffect(() => {
     if (status !== 'authenticated' || openedCreateFromQueryRef.current) return;
     const params = new URLSearchParams(window.location.search);
     if (params.get('action') !== 'create') return;
@@ -79,8 +85,7 @@ export default function CollectionsPageClient() {
   }
 
   if (status !== 'authenticated') {
-    router.push('/auth?callbackUrl=/collections');
-    return null;
+    return <LoadingScreen label={t('common.loading')} />;
   }
 
   const handleDelete = async (id: string) => {

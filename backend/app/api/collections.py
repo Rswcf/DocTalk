@@ -327,7 +327,7 @@ async def create_collection_session(
     if not coll or coll.user_id != user.id:
         raise HTTPException(status_code=404, detail=COLLECTION_NOT_FOUND_DETAIL)
 
-    sess = ChatSession(collection_id=collection_id)
+    sess = ChatSession(collection_id=collection_id, user_id=user.id)
     db.add(sess)
     await db.commit()
     await db.refresh(sess)

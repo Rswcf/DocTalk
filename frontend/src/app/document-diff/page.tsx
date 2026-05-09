@@ -26,7 +26,7 @@ export default function DocumentDiffPage() {
   }
 
   if (status !== "authenticated") {
-    return null;
+    return <LoadingScreen label={t("common.loading")} />;
   }
 
   return (

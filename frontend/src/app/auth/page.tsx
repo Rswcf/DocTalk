@@ -48,11 +48,11 @@ function AuthContent() {
                   ? tOr("auth.continueEyebrow", "Continue workspace")
                   : tOr("auth.accessEyebrow", "Account access")}
               </p>
-              <h1 className="font-serif text-4xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50 sm:text-5xl">
+              <h2 className="font-serif text-4xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50 sm:text-5xl">
                 {isDocumentContinuation
                   ? tOr("auth.continueTitle", "Keep reading with your cited answers.")
                   : t("auth.signIn")}
-              </h1>
+              </h2>
               <p className="mt-4 text-lg leading-8 text-zinc-600 dark:text-zinc-300">
                 {isDocumentContinuation
                   ? tOr("auth.continueSubtitle", "Sign in to save this workflow, upload your own documents, and return to citations across devices.")
@@ -111,9 +111,9 @@ function AuthContent() {
 
           <div className="order-1 rounded-xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-900 sm:p-8 lg:order-2">
             <div className="mb-6 text-center">
-              <h2 className="text-3xl font-semibold text-zinc-900 dark:text-zinc-50">
+              <h1 className="text-3xl font-semibold text-zinc-900 dark:text-zinc-50">
                 {t("auth.signIn")}
-              </h2>
+              </h1>
               <p className="mt-2 text-zinc-500 dark:text-zinc-300">
                 {t("auth.signInSubtitle")}
               </p>

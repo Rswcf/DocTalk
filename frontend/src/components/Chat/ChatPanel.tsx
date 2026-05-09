@@ -38,6 +38,8 @@ interface ChatPanelProps {
   supportsCustomInstructions?: boolean;
 }
 
+const autoSubmittedInitialQuestions = new Set<string>();
+
 export default function ChatPanel({ sessionId, onCitationClick, maxUserMessages, suggestedQuestions, initialQuestion, onOpenSettings, hasCustomInstructions, userPlan, autoSubmitInitialQuestion = false, supportsCustomInstructions = true }: ChatPanelProps) {
   const messages = useDocTalkStore((s) => s.messages);
   const isStreaming = useDocTalkStore((s) => s.isStreaming);
@@ -108,11 +110,17 @@ export default function ChatPanel({ sessionId, onCitationClick, maxUserMessages,
     if (!initialQuestion || hasConversationMessages || isStreaming) return;
 
     if (autoSubmitInitialQuestion) {
-      if (initialQuestionSubmittedRef.current === initialQuestion) return;
+      const autoSubmitKey = `${sessionId}:${initialQuestion}`;
+      if (
+        initialQuestionSubmittedRef.current === initialQuestion
+        || autoSubmittedInitialQuestions.has(autoSubmitKey)
+      ) return;
       initialQuestionSubmittedRef.current = initialQuestion;
+      autoSubmittedInitialQuestions.add(autoSubmitKey);
       void sendMessage(initialQuestion).then((sent) => {
         if (!sent) {
           initialQuestionSubmittedRef.current = null;
+          autoSubmittedInitialQuestions.delete(autoSubmitKey);
           setInput(initialQuestion);
           textareaRef.current?.focus();
         }
@@ -123,7 +131,7 @@ export default function ChatPanel({ sessionId, onCitationClick, maxUserMessages,
     if (input) return;
     setInput(initialQuestion);
     textareaRef.current?.focus();
-  }, [autoSubmitInitialQuestion, initialQuestion, input, messages, isStreaming, sendMessage]);
+  }, [autoSubmitInitialQuestion, initialQuestion, input, messages, isStreaming, sendMessage, sessionId]);
 
   useEffect(() => {
     if (!plusMenuOpen) return;

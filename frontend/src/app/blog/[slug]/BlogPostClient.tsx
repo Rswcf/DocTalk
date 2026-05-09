@@ -18,16 +18,38 @@ interface TocItem {
   level: number;
 }
 
+function slugifyHeading(text: string): string {
+  return text
+    .toLowerCase()
+    .replace(/[^\w\s-]/g, '')
+    .trim()
+    .replace(/\s+/g, '-');
+}
+
+function uniqueHeadingId(baseId: string, seen: Map<string, number>): string {
+  const base = baseId || 'section';
+  const count = seen.get(base) ?? 0;
+  seen.set(base, count + 1);
+  return count === 0 ? base : `${base}-${count + 1}`;
+}
+
+function getNodeText(node: React.ReactNode): string {
+  if (typeof node === 'string' || typeof node === 'number') return String(node);
+  if (Array.isArray(node)) return node.map(getNodeText).join('');
+  if (React.isValidElement<{ children?: React.ReactNode }>(node)) {
+    return getNodeText(node.props.children);
+  }
+  return '';
+}
+
 function extractToc(content: string): TocItem[] {
   const headingRegex = /^(#{2,3})\s+(.+)$/gm;
   const items: TocItem[] = [];
+  const seen = new Map<string, number>();
   let match;
   while ((match = headingRegex.exec(content)) !== null) {
     const text = match[2].trim();
-    const id = text
-      .toLowerCase()
-      .replace(/[^\w\s-]/g, '')
-      .replace(/\s+/g, '-');
+    const id = uniqueHeadingId(slugifyHeading(text), seen);
     items.push({ id, text, level: match[1].length });
   }
   return items;
@@ -146,6 +168,10 @@ interface BlogPostClientProps {
 export default function BlogPostClient({ post, relatedPosts }: BlogPostClientProps) {
   const { t } = useLocale();
   const toc = useMemo(() => extractToc(post.content), [post.content]);
+  const headingIds = new Map<string, number>();
+  const getHeadingId = (children: React.ReactNode) => (
+    uniqueHeadingId(slugifyHeading(getNodeText(children)), headingIds)
+  );
 
   return (
     <div className="min-h-screen flex flex-col bg-white dark:bg-zinc-950">
@@ -209,19 +235,11 @@ export default function BlogPostClient({ post, relatedPosts }: BlogPostClientPro
                   remarkPlugins={[remarkGfm]}
                   components={{
                     h2: ({ children, ...props }) => {
-                      const text = typeof children === 'string' ? children : String(children);
-                      const id = text
-                        .toLowerCase()
-                        .replace(/[^\w\s-]/g, '')
-                        .replace(/\s+/g, '-');
+                      const id = getHeadingId(children);
                       return <h2 id={id} {...props}>{children}</h2>;
                     },
                     h3: ({ children, ...props }) => {
-                      const text = typeof children === 'string' ? children : String(children);
-                      const id = text
-                        .toLowerCase()
-                        .replace(/[^\w\s-]/g, '')
-                        .replace(/\s+/g, '-');
+                      const id = getHeadingId(children);
                       return <h3 id={id} {...props}>{children}</h3>;
                     },
                     a: ({ href, children, ...props }) => {
