@@ -14,7 +14,7 @@ up citations.
 |---|---|---|---|---|---|
 | M1 | 0.15.0 beta | Chat-native tool routing, artifact cards, hidden Brief/Extract tabs | Released to production and tagged | `7a1546a` / `v0.15.0-beta` | Version check, frontend build, ruff, parse tests, new feature tests, backend non-integration suite, browser UI check, Railway `/version` + `/health` passed |
 | M2 | 0.16.0 beta | Azure Document Intelligence layout/table provider with PyMuPDF fallback | Released to production and tagged | `a2ba679` / `v0.16.0-beta` | Version check, ruff, parse tests, new provider/table/job tests, backend non-integration suite, frontend build, Alembic upgrade, desktop/mobile browser smoke, Railway `/version` + `/health` passed |
-| M3 | 0.17.0 beta | Canonical document elements and element-aware retrieval | Release gate passed; git release pending | TBD | Version check, diff check, ruff, parse tests, new element/workflow tests, backend non-integration suite, frontend build, Alembic upgrade passed |
+| M3 | 0.17.0 beta | Canonical document elements and element-aware retrieval | Released to production and tagged | `43e9593` / `v0.17.0-beta` | Version check, diff check, ruff, parse tests, new element/workflow tests, backend non-integration suite, frontend build, Alembic upgrade, Railway `/version` + `/health` passed |
 
 ## Execution Rules
 
@@ -60,7 +60,7 @@ up citations.
 - [x] Add focused backend tests for provider mapping, fallback, layout run
   recording, continued-table merging, and CSV escaping.
 - [x] Run full release gate.
-- [ ] Commit/push `main`, merge/push `stable`, deploy, verify, tag.
+- [x] Commit/push `main`, merge/push `stable`, deploy, verify, tag.
 
 ## Notes
 
