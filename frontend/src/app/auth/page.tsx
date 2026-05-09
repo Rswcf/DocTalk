@@ -35,28 +35,30 @@ function AuthContent() {
   return (
     <main className="min-h-screen bg-[var(--page-background)] px-6 py-8 sm:px-8">
       <div className="mx-auto flex min-h-[calc(100vh-4rem)] max-w-6xl flex-col">
-        <Link href="/" className="mb-10 inline-flex w-fit items-center gap-2.5 transition-opacity hover:opacity-80 focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:rounded-sm">
+        <Link href="/" className="mb-6 inline-flex w-fit items-center gap-2.5 transition-opacity hover:opacity-80 focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:rounded-sm lg:mb-10">
           <DocTalkLogo size={32} />
           <span className="font-logo text-2xl font-semibold text-zinc-900 dark:text-zinc-50">DocTalk</span>
         </Link>
 
         <div className="grid flex-1 items-center gap-8 lg:grid-cols-[1fr_430px]">
-          <section className="max-w-2xl">
-            <p className="mb-4 text-sm font-medium uppercase tracking-[0.18em] text-zinc-500 dark:text-zinc-400">
-              {isDocumentContinuation
-                ? tOr("auth.continueEyebrow", "Continue workspace")
-                : tOr("auth.accessEyebrow", "Account access")}
-            </p>
-            <h1 className="font-serif text-4xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50 sm:text-5xl">
-              {isDocumentContinuation
-                ? tOr("auth.continueTitle", "Keep reading with your cited answers.")
-                : t("auth.signIn")}
-            </h1>
-            <p className="mt-4 text-lg leading-8 text-zinc-600 dark:text-zinc-300">
-              {isDocumentContinuation
-                ? tOr("auth.continueSubtitle", "Sign in to save this workflow, upload your own documents, and return to citations across devices.")
-                : t("auth.signInSubtitle")}
-            </p>
+          <section className="order-2 max-w-2xl lg:order-1">
+            <div className="hidden lg:block">
+              <p className="mb-4 text-sm font-medium uppercase tracking-[0.18em] text-zinc-500 dark:text-zinc-400">
+                {isDocumentContinuation
+                  ? tOr("auth.continueEyebrow", "Continue workspace")
+                  : tOr("auth.accessEyebrow", "Account access")}
+              </p>
+              <h1 className="font-serif text-4xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50 sm:text-5xl">
+                {isDocumentContinuation
+                  ? tOr("auth.continueTitle", "Keep reading with your cited answers.")
+                  : t("auth.signIn")}
+              </h1>
+              <p className="mt-4 text-lg leading-8 text-zinc-600 dark:text-zinc-300">
+                {isDocumentContinuation
+                  ? tOr("auth.continueSubtitle", "Sign in to save this workflow, upload your own documents, and return to citations across devices.")
+                  : t("auth.signInSubtitle")}
+              </p>
+            </div>
 
             <div className="mt-8 grid gap-3 sm:grid-cols-3">
               {benefits.map(({ icon: Icon, title, body }) => (
@@ -70,7 +72,7 @@ function AuthContent() {
               ))}
             </div>
 
-            <div className="mt-8 rounded-xl border border-zinc-200 bg-white p-4 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+            <div className="mt-8 hidden rounded-xl border border-zinc-200 bg-white p-4 shadow-sm dark:border-zinc-800 dark:bg-zinc-900 lg:block">
               <div className="flex items-center justify-between border-b border-zinc-200 pb-3 dark:border-zinc-800">
                 <span className="font-mono text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-500 dark:text-zinc-400">
                   {tOr("auth.preview.label", "Saved workflow")}
@@ -107,7 +109,7 @@ function AuthContent() {
             </div>
           </section>
 
-          <div className="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-900 sm:p-8">
+          <div className="order-1 rounded-xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-900 sm:p-8 lg:order-2">
             <div className="mb-6 text-center">
               <h2 className="text-3xl font-semibold text-zinc-900 dark:text-zinc-50">
                 {t("auth.signIn")}

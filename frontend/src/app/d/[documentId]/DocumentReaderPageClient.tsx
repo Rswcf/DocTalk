@@ -17,7 +17,6 @@ import { useDocumentLoader } from '../../../lib/useDocumentLoader';
 import { useChatSession } from '../../../lib/useChatSession';
 import { useUserPlanProfile } from '../../../lib/useUserPlanProfile';
 import type { Citation } from '../../../types';
-import { shouldShowTour, startOnboardingTour } from '../../../lib/onboarding';
 import { trackEvent } from '../../../lib/analytics';
 
 export default function DocumentReaderPageClient() {
@@ -154,7 +153,7 @@ export default function DocumentReaderPageClient() {
   }, [isDemo, navigateToCitation]);
 
   const chatContent = documentStatus === 'ready' && sessionId ? (
-    <ChatPanel sessionId={sessionId} onCitationClick={handleCitationClick} maxUserMessages={isDemo && !isLoggedIn ? 5 : undefined} suggestedQuestions={suggestedQuestions.length > 0 ? suggestedQuestions : undefined} initialQuestion={initialQuestion} onOpenSettings={canUseCustomInstructions ? () => setShowInstructions(true) : undefined} hasCustomInstructions={!!customInstructions} userPlan={userPlan} />
+    <ChatPanel sessionId={sessionId} onCitationClick={handleCitationClick} maxUserMessages={isDemo && !isLoggedIn ? 5 : undefined} suggestedQuestions={suggestedQuestions.length > 0 ? suggestedQuestions : undefined} initialQuestion={initialQuestion} autoSubmitInitialQuestion={isDemo} onOpenSettings={canUseCustomInstructions ? () => setShowInstructions(true) : undefined} hasCustomInstructions={!!customInstructions} userPlan={userPlan} />
   ) : documentStatus !== 'ready' && !error ? (
     <div className="h-full w-full flex flex-col items-center justify-center px-6 py-8 text-zinc-500" role="status" aria-live="polite">
       <div className="w-full max-w-md space-y-3 animate-pulse motion-reduce:animate-none">
@@ -181,21 +180,6 @@ export default function DocumentReaderPageClient() {
   ) : (
     <div className="h-full w-full flex items-center justify-center text-zinc-500">{t('doc.initChat')}</div>
   );
-
-  // Onboarding tour — show once on first document ready
-  useEffect(() => {
-    if (documentStatus !== 'ready' || !sessionId) return;
-    if (!shouldShowTour()) return;
-
-    const timer = setTimeout(() => {
-      startOnboardingTour(t, {
-        showModeSelector: isLoggedIn && !isDemo,
-      });
-    }, 1500);
-
-    return () => clearTimeout(timer);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [documentStatus, sessionId]);
 
   return (
     <div className="dt-reading-workspace flex flex-col h-screen w-full overflow-hidden">

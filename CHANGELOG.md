@@ -8,6 +8,18 @@ releases use `0.minor.patch` semantics such as `0.2.0` and `0.2.1`.
 
 ## [Unreleased]
 
+## [0.17.1] - 2026-05-09
+
+### Changed
+- Reduced first-run friction in the public demo by auto-submitting sample
+  questions and removing the blocking document tour overlay from the reader.
+- Changed the analytics consent banner from a full-width bottom bar to a compact
+  floating card so it no longer covers the document composer or mobile app tabs.
+- Improved mobile conversion flow by showing the sign-in form first on `/auth`
+  and adding a compact public navigation menu to the mobile header.
+- Made the homepage hero value proposition visible immediately instead of
+  waiting for entrance animation hydration.
+
 ## [0.17.0] - 2026-05-09
 
 ### Added

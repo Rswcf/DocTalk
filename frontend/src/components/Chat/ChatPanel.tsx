@@ -31,13 +31,14 @@ interface ChatPanelProps {
   onOpenSettings?: () => void;
   hasCustomInstructions?: boolean;
   userPlan?: string;
+  autoSubmitInitialQuestion?: boolean;
   // Whether this surface supports custom instructions at all. Document reader
   // uses it (true); collection chat doesn't (scope across multiple docs is
   // undefined). Default true to preserve existing single-doc behavior.
   supportsCustomInstructions?: boolean;
 }
 
-export default function ChatPanel({ sessionId, onCitationClick, maxUserMessages, suggestedQuestions, initialQuestion, onOpenSettings, hasCustomInstructions, userPlan, supportsCustomInstructions = true }: ChatPanelProps) {
+export default function ChatPanel({ sessionId, onCitationClick, maxUserMessages, suggestedQuestions, initialQuestion, onOpenSettings, hasCustomInstructions, userPlan, autoSubmitInitialQuestion = false, supportsCustomInstructions = true }: ChatPanelProps) {
   const messages = useDocTalkStore((s) => s.messages);
   const isStreaming = useDocTalkStore((s) => s.isStreaming);
   const selectedMode = useDocTalkStore((s) => s.selectedMode);
@@ -54,6 +55,7 @@ export default function ChatPanel({ sessionId, onCitationClick, maxUserMessages,
   const [plusMenuOpen, setPlusMenuOpen] = useState(false);
   const plusMenuRef = useRef<HTMLDivElement>(null);
   const plusMenuButtonRef = useRef<HTMLButtonElement>(null);
+  const initialQuestionSubmittedRef = useRef<string | null>(null);
 
   const [showScrollBtn, setShowScrollBtn] = useState(false);
 
@@ -102,10 +104,26 @@ export default function ChatPanel({ sessionId, onCitationClick, maxUserMessages,
   }, [input]);
 
   useEffect(() => {
-    if (!initialQuestion || input || messages.length > 0 || isStreaming) return;
+    const hasConversationMessages = messages.some((message) => message.id !== 'summary_synthetic');
+    if (!initialQuestion || hasConversationMessages || isStreaming) return;
+
+    if (autoSubmitInitialQuestion) {
+      if (initialQuestionSubmittedRef.current === initialQuestion) return;
+      initialQuestionSubmittedRef.current = initialQuestion;
+      void sendMessage(initialQuestion).then((sent) => {
+        if (!sent) {
+          initialQuestionSubmittedRef.current = null;
+          setInput(initialQuestion);
+          textareaRef.current?.focus();
+        }
+      });
+      return;
+    }
+
+    if (input) return;
     setInput(initialQuestion);
     textareaRef.current?.focus();
-  }, [initialQuestion, input, messages.length, isStreaming]);
+  }, [autoSubmitInitialQuestion, initialQuestion, input, messages, isStreaming, sendMessage]);
 
   useEffect(() => {
     if (!plusMenuOpen) return;

@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import { useLocale } from '../i18n';
 
 const CONSENT_KEY = 'doctalk_analytics_consent';
@@ -9,6 +10,7 @@ const CONSENT_KEY = 'doctalk_analytics_consent';
 export function CookieConsentBanner() {
   const [visible, setVisible] = useState(false);
   const { t } = useLocale();
+  const pathname = usePathname();
 
   useEffect(() => {
     const consent = localStorage.getItem(CONSENT_KEY);
@@ -18,6 +20,13 @@ export function CookieConsentBanner() {
   }, []);
 
   if (!visible) return null;
+
+  const isWorkspaceRoute = Boolean(
+    pathname?.startsWith('/d/')
+      || pathname?.startsWith('/collections')
+      || pathname?.startsWith('/shared/')
+      || pathname === '/document-diff',
+  );
 
   const handleAccept = () => {
     localStorage.setItem(CONSENT_KEY, 'accepted');
@@ -32,13 +41,16 @@ export function CookieConsentBanner() {
 
   return (
     <div
-      className="fixed bottom-0 left-0 right-0 z-50 border-t border-zinc-200 dark:border-zinc-800
-                 bg-white dark:bg-zinc-950 px-4 py-3 sm:px-6 sm:py-4
-                 animate-[slideUp_0.3s_ease-out]
-                 motion-reduce:animate-none"
+      className={`fixed z-50 rounded-xl border border-zinc-200 bg-white/95 px-4 py-3 shadow-xl backdrop-blur dark:border-zinc-800 dark:bg-zinc-950/95
+                 animate-[slideUp_0.3s_ease-out] motion-reduce:animate-none
+                 ${isWorkspaceRoute
+                   ? 'bottom-[calc(env(safe-area-inset-bottom,0px)+4.75rem)] left-3 right-3 sm:bottom-4 sm:left-auto sm:right-4 sm:w-[min(26rem,calc(100vw-2rem))]'
+                   : 'bottom-3 left-3 right-3 sm:left-auto sm:right-4 sm:w-[min(28rem,calc(100vw-2rem))]'}`}
+      role="region"
+      aria-label={t('consent.message')}
     >
-      <div className="mx-auto max-w-4xl flex flex-col sm:flex-row items-center gap-3 sm:gap-4">
-        <p className="text-sm text-zinc-600 dark:text-zinc-400 flex-1 text-center sm:text-left">
+      <div className="flex flex-col gap-3">
+        <p className="text-sm leading-6 text-zinc-600 dark:text-zinc-400">
           {t('consent.message')}{' '}
           <Link
             href="/privacy"
@@ -47,7 +59,7 @@ export function CookieConsentBanner() {
             {t('consent.learnMore')}
           </Link>
         </p>
-        <div className="flex gap-2 shrink-0">
+        <div className="flex justify-end gap-2">
           <button
             onClick={handleDecline}
             className="px-4 py-1.5 text-sm rounded-lg border border-zinc-300 dark:border-zinc-700

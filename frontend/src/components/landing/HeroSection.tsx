@@ -6,7 +6,7 @@ import { ArrowRight, FileCheck2, Languages, ShieldCheck } from 'lucide-react';
 import { useLocale } from '../../i18n';
 import HeroArtifact from './HeroArtifact';
 import SectionKicker from '../design/SectionKicker';
-import { BlurReveal, FlowButton, TiltCard, LightRays } from '../spell';
+import { FlowButton, TiltCard, LightRays } from '../spell';
 import { trackEvent } from '../../lib/analytics';
 
 export default function HeroSection() {
@@ -36,28 +36,25 @@ export default function HeroSection() {
       <div className="relative grid lg:grid-cols-5 gap-12 lg:gap-16 items-center">
         {/* Left: text — order-1 desktop, order-1 mobile */}
         <div className="lg:col-span-3 text-center lg:text-left">
-          {/* Editorial kicker — blur-reveal on first visit for an editorial "word-by-word lands on the page" entrance. */}
-          <BlurReveal as="div" delay={0} className="mb-6 inline-block">
+          <div className="mb-6 inline-block">
             <SectionKicker num="01" centered>{t('landing.badge')}</SectionKicker>
-          </BlurReveal>
+          </div>
 
-          {/* Headline — Fraunces serif + blur-reveal per word. Each line
-              is its own BlurReveal so line breaks stay semantic. */}
           <h1 className="font-serif text-4xl md:text-5xl lg:text-6xl font-medium text-zinc-900 dark:text-zinc-50 leading-[1.05] tracking-[-0.025em] text-balance">
             {headlineLines.map((line: string, i: number) => (
               <React.Fragment key={i}>
                 {i > 0 && <br />}
-                <BlurReveal text={line} delay={0.15 + i * 0.25} stagger={0.06} />
+                {line}
               </React.Fragment>
             ))}
           </h1>
 
-          <BlurReveal as="p" delay={0.9} className="mt-5 text-lg md:text-xl text-zinc-600 dark:text-zinc-300 leading-relaxed max-w-xl lg:max-w-none">
+          <p className="mt-5 text-lg md:text-xl text-zinc-600 dark:text-zinc-300 leading-relaxed max-w-xl lg:max-w-none">
             {t('landing.description')}
-          </BlurReveal>
+          </p>
 
           {/* CTAs: primary FlowButton (liquid-fill hover) + ghost text link */}
-          <BlurReveal as="div" delay={1.15} className="mt-8 flex flex-wrap items-center gap-x-6 gap-y-4 justify-center lg:justify-start">
+          <div className="mt-8 flex flex-wrap items-center gap-x-6 gap-y-4 justify-center lg:justify-start">
             <FlowButton href="/demo" variant="primary">
               {t('landing.cta.demo')}
               <ArrowRight aria-hidden="true" size={18} className="transition-transform motion-reduce:transform-none group-hover:translate-x-0.5" />
@@ -71,13 +68,9 @@ export default function HeroSection() {
               {t('hero.signUpFree')}
               <span aria-hidden="true" className="ml-1">→</span>
             </Link>
-          </BlurReveal>
+          </div>
 
-          <BlurReveal
-            as="div"
-            delay={1.3}
-            className="mt-8 grid max-w-2xl grid-cols-1 gap-3 sm:grid-cols-3"
-          >
+          <div className="mt-8 grid max-w-2xl grid-cols-1 gap-3 sm:grid-cols-3">
             {proofItems.map(({ icon: Icon, label }) => (
               <div
                 key={label}
@@ -91,7 +84,7 @@ export default function HeroSection() {
                 </span>
               </div>
             ))}
-          </BlurReveal>
+          </div>
         </div>
 
         {/* Right: HeroArtifact wrapped in TiltCard for spotlight 3D */}
