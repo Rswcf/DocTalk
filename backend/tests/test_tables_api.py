@@ -154,6 +154,32 @@ async def test_export_all_document_tables_returns_combined_csv(client: AsyncClie
 
 
 @pytest.mark.asyncio
+async def test_export_document_tables_escapes_commas_quotes_and_chinese(client: AsyncClient) -> None:
+    user = _make_user(plan="plus")
+    doc = _make_doc(user)
+    table = SimpleNamespace(
+        id=uuid.uuid4(),
+        document_id=doc.id,
+        page=1,
+        table_index=0,
+        cells={"rows": [["公司", "备注"], ["MetaX", 'target, "raised"'], ["空值", ""]]},
+    )
+    db = _make_db(
+        get=AsyncMock(return_value=doc),
+        execute=AsyncMock(return_value=_Result(scalars_all=[table])),
+    )
+    _override_dependencies(db, user)
+
+    response = await client.get(f"/api/documents/{doc.id}/tables/export")
+
+    assert response.status_code == 200
+    text = response.content.decode("utf-8-sig")
+    assert "公司,备注" in text
+    assert '"target, ""raised"""' in text
+    assert "空值," in text
+
+
+@pytest.mark.asyncio
 async def test_list_document_tables_serializes_rows(client: AsyncClient) -> None:
     user = _make_user(plan="plus")
     doc = _make_doc(user)

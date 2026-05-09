@@ -53,11 +53,10 @@ tables or appendices in long, multi-column reports. The staged remediation is:
    comparison workflows.
 7. `0.14.0 beta` — add claim-level verification and RAG evaluation reporting.
 
-The sequence above is now shipped through `0.15.0 beta`. The next document
-intelligence wave should upgrade parsing/layout quality under the same
-chat-native UI: first cloud layout/table intelligence, then canonical
-document elements that keep tables, sections, captions, figures, and paragraphs
-as first-class retrieval units.
+The sequence above is now shipped through `0.16.0 beta`. The next document
+intelligence wave should upgrade retrieval quality under the same chat-native
+UI by turning canonical document elements into first-class retrieval units for
+tables, sections, captions, figures, and paragraphs.
 
 ### 2026-05-09 Chat-Native Document Intelligence Sequence
 
@@ -68,7 +67,7 @@ user must leave chat.
 | Version | Feature | Status | Engineering Focus |
 |---|---|---|---|
 | `0.15.0 beta` | Chat-native tools | Shipped | ActionPlanner, ToolExecutor, ChatArtifact cards, hidden Brief/Extract tabs |
-| `0.16.0 beta` | Cloud layout/table intelligence | Next | Azure AI Document Intelligence `prebuilt-layout` provider with PyMuPDF fallback |
+| `0.16.0 beta` | Cloud layout/table intelligence | Shipped | Azure AI Document Intelligence `prebuilt-layout` provider with PyMuPDF fallback and layout run metadata |
 | `0.17.0 beta` | Element-aware retrieval | Next | Canonical `document_elements` and retrieval strategies that no longer rely on chunk RAG for tables/full-document/diff |
 
 ---

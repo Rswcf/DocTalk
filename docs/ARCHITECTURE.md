@@ -637,11 +637,26 @@ erDiagram
         uuid document_id FK
         int page
         int table_index
-        jsonb cells "rows matrix"
+        jsonb cells "rows + cell metadata"
         float confidence
-        string method "pymupdf | markdown"
+        string method "azure | pymupdf | markdown"
         datetime created_at
         datetime updated_at
+    }
+
+    DocumentLayoutRun {
+        uuid id PK
+        uuid document_id FK
+        string provider "azure"
+        string status "queued | running | succeeded | failed"
+        text raw_storage_key
+        int pages_count
+        int tables_count
+        string error_code
+        text error_message
+        datetime created_at
+        datetime updated_at
+        datetime completed_at
     }
 
     Collection {
@@ -952,16 +967,26 @@ metadata and returns an `extraction` artifact card with Markdown/CSV export URLs
 instead of requiring the user to open the retired Extract workspace.
 
 Table Extraction reuses `document_jobs` with `job_type='table_scan'` but does
-not pre-debit credits because the MVP uses deterministic parsers rather than an
-LLM. The worker clears and rewrites `document_tables` for the document. Native
-PDFs use PyMuPDF `page.find_tables()`, while DOCX/PPTX/XLSX/TXT/MD/URL-derived
-documents fall back to markdown-table detection from stored `pages.content`.
-Free users can preview detected tables; CSV export is gated to Plus+.
+not pre-debit credits because table detection is parser/provider work rather
+than an LLM call. As of `0.16.0 beta`, native PDFs prefer Azure AI Document
+Intelligence `prebuilt-layout` when `DOCUMENT_INTELLIGENCE_PROVIDER=azure` and
+`AZURE_DOCUMENT_INTELLIGENCE_ENDPOINT` / `AZURE_DOCUMENT_INTELLIGENCE_KEY` are
+configured. Each Azure attempt writes a `document_layout_runs` row, stores the
+raw layout payload in object storage when possible, and maps Azure tables into
+`document_tables.cells` with rows, cell regions, header metadata, merged-cell
+spans, provider metadata, and the layout run id. If Azure is not configured or
+fails due SDK, auth, timeout, malformed response, or service error, the worker
+records the failed run and falls back to PyMuPDF `page.find_tables()`.
+DOCX/PPTX/XLSX/TXT/MD/URL-derived documents continue to use markdown-table
+detection from stored `pages.content`. Free users can preview detected tables;
+CSV export is gated to Plus+.
 
 Chat-native table requests reuse the same `table_scan` jobs. If tables already
 exist, the executor returns an immediate `table_scan` or `table_export` artifact
 preview. If a Free user asks for CSV, the artifact shows the Plus requirement
-instead of exposing a download link that would fail later.
+instead of exposing a download link that would fail later. Polling
+`/api/document-jobs/{job_id}` returns provider/fallback metadata so the artifact
+can show confidence and fallback warnings without exposing raw layout payloads.
 
 Question Templates reuse `document_jobs` with `job_type='batch_template'` and
 store outputs in `extraction_results` with `template_key='question_template'`.

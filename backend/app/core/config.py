@@ -74,6 +74,15 @@ class Settings(BaseSettings):
     ACTION_PLANNER_USE_LLM: bool = Field(default=True)
     ACTION_PLANNER_TIMEOUT_SECONDS: float = Field(default=3.0)
 
+    # Document Intelligence providers. Azure prebuilt-layout is the preferred
+    # provider for PDF layout/table extraction; PyMuPDF remains the safe local
+    # fallback when Azure is not configured or unavailable.
+    DOCUMENT_INTELLIGENCE_PROVIDER: str = Field(default="azure")
+    AZURE_DOCUMENT_INTELLIGENCE_ENDPOINT: Optional[str] = None
+    AZURE_DOCUMENT_INTELLIGENCE_KEY: Optional[str] = None
+    DOCUMENT_INTELLIGENCE_TIMEOUT_SECONDS: int = Field(default=120)
+    DOCUMENT_INTELLIGENCE_FALLBACK_PROVIDER: str = Field(default="pymupdf")
+
     # OCR
     OCR_ENABLED: bool = Field(default=True)
     OCR_LANGUAGES: str = Field(default="eng+chi_sim")

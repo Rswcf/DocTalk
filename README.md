@@ -58,7 +58,7 @@ Upload PDFs, Word docs, PowerPoints, spreadsheets, or any webpage — then ask q
 | **Auth** | Auth.js v5 — Google OAuth, Microsoft OAuth, Email Magic Link |
 | **Payments** | Stripe Checkout + Subscriptions |
 | **AI** | DeepSeek V4 Flash/Pro for chat; OpenRouter for embeddings and fallback models |
-| **Parsing** | PyMuPDF, Tesseract OCR, python-docx, python-pptx, openpyxl, LibreOffice |
+| **Parsing** | Azure AI Document Intelligence, PyMuPDF, Tesseract OCR, python-docx, python-pptx, openpyxl, LibreOffice |
 | **Monitoring** | Sentry, Vercel Analytics |
 
 ## Architecture
@@ -79,6 +79,11 @@ Documents are still chunked with bounding-box coordinates and embedded into
 Qdrant for local questions, but async work products return as artifact cards in
 the same chat instead of separate workspace tabs. Citations map back to exact
 page locations for real-time highlighting.
+
+For PDF tables, production can use Azure AI Document Intelligence
+`prebuilt-layout` to extract table cells, headers, merged-cell spans, and layout
+regions before falling back to PyMuPDF. This keeps table export and table-aware
+RAG grounded in table objects rather than ad hoc chunk reconstruction.
 
 For detailed diagrams see [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 

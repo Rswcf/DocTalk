@@ -606,3 +606,34 @@ class DocumentTable(Base):
         sa.UniqueConstraint("document_id", "page", "table_index", name="uq_document_tables_position"),
         sa.Index("idx_document_tables_document_page", "document_id", "page"),
     )
+
+
+class DocumentLayoutRun(Base):
+    __tablename__ = "document_layout_runs"
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, server_default=sa.text("gen_random_uuid()")
+    )
+    document_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), sa.ForeignKey("documents.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    provider: Mapped[str] = mapped_column(sa.String(64), nullable=False)
+    status: Mapped[str] = mapped_column(sa.String(32), nullable=False, server_default=sa.text("'queued'"))
+    raw_storage_key: Mapped[Optional[str]] = mapped_column(sa.Text, nullable=True)
+    pages_count: Mapped[int] = mapped_column(sa.Integer, nullable=False, server_default=sa.text("0"))
+    tables_count: Mapped[int] = mapped_column(sa.Integer, nullable=False, server_default=sa.text("0"))
+    error_code: Mapped[Optional[str]] = mapped_column(sa.String(64), nullable=True)
+    error_message: Mapped[Optional[str]] = mapped_column(sa.Text, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        sa.DateTime(timezone=True), nullable=False, server_default=sa.text("now()")
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        sa.DateTime(timezone=True), nullable=False, server_default=sa.text("now()"), onupdate=sa.func.now()
+    )
+    completed_at: Mapped[Optional[datetime]] = mapped_column(sa.DateTime(timezone=True), nullable=True)
+
+    document: Mapped["Document"] = relationship("Document")
+
+    __table_args__ = (
+        sa.Index("idx_document_layout_runs_document_provider", "document_id", "provider", "created_at"),
+    )

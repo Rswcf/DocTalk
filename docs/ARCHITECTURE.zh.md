@@ -854,6 +854,28 @@ Celery Beat 调度定期任务（目前：每日清理过期验证令牌）。**
 
 聊天预扣积分退款现已**完全幂等**：`_refund_predebit` 先 DELETE 预扣的 ledger 行，仅当 `DELETE` 报告 `rowcount > 0` 时才恢复用户余额。重复调用（例如部分失败请求的重试）是安全的。所有 SSE 错误分支（`LLM_ERROR`、`PERSIST_FAILED`、续写变体）都在 yield 错误之前调用退款路径。
 
+### 表格扫描与 Document Intelligence
+
+Table Extraction 复用 `document_jobs`，`job_type='table_scan'`。因为表格扫描是
+parser/provider 工作而不是 LLM 调用，目前不预扣 credits。从 `0.16.0 beta` 开始，
+原生 PDF 在配置 `DOCUMENT_INTELLIGENCE_PROVIDER=azure` 且提供
+`AZURE_DOCUMENT_INTELLIGENCE_ENDPOINT` / `AZURE_DOCUMENT_INTELLIGENCE_KEY` 时，
+优先调用 Azure AI Document Intelligence `prebuilt-layout`。每次 Azure 尝试都会写入
+`document_layout_runs`，记录 provider、状态、页数/表格数、原始 layout payload 的
+对象存储 key 和失败 metadata。
+
+Azure 表格会被映射到 `document_tables.cells`，保存 rows、cell region、表头行/列、
+合并单元格 span、provider metadata 和 layout run id。若 Azure 未配置、SDK 不可用、
+鉴权失败、超时或服务调用失败，worker 会记录失败 run，并 fallback 到 PyMuPDF
+`page.find_tables()`。DOCX/PPTX/XLSX/TXT/MD/URL 派生文档仍使用 `pages.content` 中的
+markdown table detection。Free 用户可以预览表格，CSV 导出限制为 Plus+。
+
+Chat-native 表格请求复用同一套 `table_scan` job。若已有表格，executor 直接返回
+`table_scan` 或 `table_export` artifact preview；若 Free 用户请求 CSV，artifact 显示
+Plus 要求，不暴露稍后会失败的下载链接。`/api/document-jobs/{job_id}` 会返回
+provider/fallback metadata，使 artifact 能展示 confidence 和 fallback warning，但不会
+暴露原始 layout payload。
+
 ### 自助取消订阅状态机
 
 `POST /api/billing/cancel` 实现确定性的六分支状态机，覆盖 `user.plan`、`user.stripe_subscription_id`、`user.stripe_customer_id` 的组合。分支按 **D → E → A → F → C → B** 顺序执行：

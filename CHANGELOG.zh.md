@@ -8,6 +8,25 @@
 
 ## [Unreleased]
 
+## [0.16.0] - 2026-05-09
+
+### 新增
+- 新增 Azure AI Document Intelligence `prebuilt-layout` provider，用于
+  cloud-first PDF layout 和表格提取；SDK 采用 lazy import，避免本地或生产未配置
+  Azure 时影响服务启动。
+- 新增 `document_layout_runs` 表，记录 provider 执行、页数/表格数、原始 layout
+  payload 的存储 key，以及失败原因。
+- 新增 Azure 表格 cell metadata 保存，包括单元格区域、表头行/列、合并单元格 span、
+  provider metadata 和 layout run id。
+- 新增 Azure 表格映射、Azure 失败 fallback、layout run 记录、跨页续表合并以及 CSV
+  转义的回归测试。
+
+### 变更
+- 表格扫描 job 现在对原生 PDF 优先使用 Azure layout analysis；当 Azure 凭据、SDK、
+  鉴权、超时或服务调用失败时自动 fallback 到 PyMuPDF。
+- 表格 artifact 轮询现在会展示使用的 provider，并在 Azure 不可用时显示 fallback
+  warning。
+
 ## [0.15.0] - 2026-05-09
 
 ### 新增

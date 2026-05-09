@@ -81,7 +81,8 @@ async def _artifact_for_job(job: DocumentJob, db: AsyncSession, user: User) -> D
         plan = (user.plan or "free").lower()
         download_urls = []
         required_plan = None
-        warning = job.error_message
+        job_metadata = job.metadata_json or {}
+        warning = job.error_message or job_metadata.get("fallback_warning")
         if export_requested and job.document_id:
             if plan in {"plus", "pro"}:
                 download_urls.append(
@@ -90,7 +91,12 @@ async def _artifact_for_job(job: DocumentJob, db: AsyncSession, user: User) -> D
             else:
                 required_plan = "plus"
                 warning = warning or "CSV export requires Plus."
-        summary = f"{len(tables)} table(s) detected." if job.status == "succeeded" else "Scanning document tables."
+        provider = job_metadata.get("provider")
+        summary = f"{len(tables)} table(s) detected."
+        if provider and job.status == "succeeded":
+            summary = f"{summary} Provider: {provider}."
+        if job.status != "succeeded":
+            summary = "Scanning document tables."
         return DocumentJobArtifactResponse(
             artifact_type="table_export" if export_requested else "table_scan",
             status=job.status,

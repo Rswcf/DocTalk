@@ -74,7 +74,7 @@ async def test_document_job_api_returns_table_artifact(client: AsyncClient) -> N
         cost_credits=0,
         error_code=None,
         error_message=None,
-        metadata_json={},
+        metadata_json={"provider": "pymupdf", "fallback_warning": "Azure layout unavailable; used PyMuPDF fallback."},
         created_at=now,
         updated_at=now,
         completed_at=now,
@@ -99,4 +99,6 @@ async def test_document_job_api_returns_table_artifact(client: AsyncClient) -> N
     artifact = response.json()["artifact"]
     assert artifact["artifact_type"] == "table_export"
     assert artifact["status"] == "succeeded"
+    assert "Provider: pymupdf" in artifact["summary"]
+    assert artifact["warning"] == "Azure layout unavailable; used PyMuPDF fallback."
     assert artifact["preview"][0]["rows"][0] == ["A", "B"]

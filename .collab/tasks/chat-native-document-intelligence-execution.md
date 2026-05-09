@@ -12,8 +12,8 @@ up citations.
 
 | Milestone | Version | Scope | Status | Commit | Verification |
 |---|---|---|---|---|---|
-| M1 | 0.15.0 beta | Chat-native tool routing, artifact cards, hidden Brief/Extract tabs | Release gate passed; git release pending | Pending release commit | Version check, frontend build, ruff, parse tests, new feature tests, backend non-integration suite, browser UI check passed |
-| M2 | 0.16.0 beta | Azure Document Intelligence layout/table provider with PyMuPDF fallback | Pending | TBD | Pending |
+| M1 | 0.15.0 beta | Chat-native tool routing, artifact cards, hidden Brief/Extract tabs | Released to production and tagged | `7a1546a` / `v0.15.0-beta` | Version check, frontend build, ruff, parse tests, new feature tests, backend non-integration suite, browser UI check, Railway `/version` + `/health` passed |
+| M2 | 0.16.0 beta | Azure Document Intelligence layout/table provider with PyMuPDF fallback | Release gate passed; git release pending | TBD | Version check, ruff, parse tests, new provider/table/job tests, backend non-integration suite, frontend build, Alembic upgrade, desktop/mobile browser smoke passed |
 | M3 | 0.17.0 beta | Canonical document elements and element-aware retrieval | Pending | TBD | Pending |
 
 ## Execution Rules
@@ -43,6 +43,22 @@ up citations.
 - [x] Add unified document job status API.
 - [x] Add combined document-table CSV export endpoint.
 - [x] Add backend tests for planner, executor, job artifacts, and CSV export.
+- [x] Run full release gate.
+- [x] Commit/push `main`, merge/push `stable`, deploy, verify, tag.
+
+## M2 Checklist
+
+- [x] Add Azure Document Intelligence provider abstraction with lazy SDK import.
+- [x] Add `document_layout_runs` add-only migration and model.
+- [x] Record provider status, raw layout storage key, page/table counts, and
+  fallback errors.
+- [x] Store Azure table rows, cell regions, headers, merged cells, and provider
+  metadata inside `document_tables.cells`.
+- [x] Fall back to PyMuPDF when Azure is not configured or fails.
+- [x] Keep markdown table extraction for non-PDF documents.
+- [x] Surface provider/fallback warnings through chat artifact polling.
+- [x] Add focused backend tests for provider mapping, fallback, layout run
+  recording, continued-table merging, and CSV escaping.
 - [x] Run full release gate.
 - [ ] Commit/push `main`, merge/push `stable`, deploy, verify, tag.
 

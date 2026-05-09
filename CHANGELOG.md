@@ -8,6 +8,25 @@ releases use `0.minor.patch` semantics such as `0.2.0` and `0.2.1`.
 
 ## [Unreleased]
 
+## [0.16.0] - 2026-05-09
+
+### Added
+- Added an Azure AI Document Intelligence `prebuilt-layout` provider for
+  cloud-first PDF layout and table extraction, with lazy SDK import so local
+  development and production startup remain safe when Azure is not configured.
+- Added `document_layout_runs` to persist provider attempts, page/table counts,
+  raw layout payload storage keys, and failure metadata.
+- Added table-cell metadata capture for Azure output, including cell regions,
+  header rows/columns, merged-cell spans, provider metadata, and layout run ids.
+- Added regression tests for Azure table mapping, Azure failure fallback,
+  layout run recording, continued-table merging, and CSV escaping.
+
+### Changed
+- Table scan jobs now prefer Azure layout analysis for native PDFs and fall back
+  to PyMuPDF when Azure credentials, SDK, auth, timeout, or service calls fail.
+- Table artifact polling now surfaces the provider used and a fallback warning
+  when Azure is unavailable.
+
 ## [0.15.0] - 2026-05-09
 
 ### Added
