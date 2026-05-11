@@ -60,7 +60,7 @@ export interface DocTalkStore {
   setDocumentName: (name: string) => void;
   setDocumentStatus: (status: DocStatus) => void;
   setLastDocument: (id: string, name: string) => void;
-  setPdfUrl: (url: string) => void;
+  setPdfUrl: (url: string | null) => void;
   setPage: (page: number) => void;
   setScale: (scale: number) => void;
   setGrabMode: (v: boolean) => void;
@@ -145,7 +145,7 @@ export const useDocTalkStore = create<DocTalkStore>((set, get) => ({
       // localStorage unavailable in private browsing
     }
   },
-  setPdfUrl: (url: string) => set({ pdfUrl: url }),
+  setPdfUrl: (url: string | null) => set({ pdfUrl: url }),
   setPage: (page: number) => set({ currentPage: Math.max(1, page) }),
   setScale: (scale: number) => set({ scale: Math.max(0.25, scale) }),
   setGrabMode: (v: boolean) => set({ grabMode: v }),

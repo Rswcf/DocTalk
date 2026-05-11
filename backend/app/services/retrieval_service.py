@@ -19,6 +19,7 @@ from app.services.rag_evaluator_service import extract_query_terms
 # Shorter chunks are typically form fields, metadata footers, or page numbers
 # that pollute search results for vague queries.
 _MIN_CHUNK_TEXT_LEN = 200
+_MIN_SHORT_CHUNK_TEXT_LEN = 20
 _MIN_TABLE_CHUNK_TEXT_LEN = 20
 _TABLE_ROW_LIMIT = 12
 _GENERIC_TABLE_QUERY_RE = re.compile(
@@ -70,6 +71,10 @@ def _chunk_payload(ch: Chunk, *, score: float, include_document_id: bool = False
     if include_document_id:
         payload["document_id"] = ch.document_id
     return payload
+
+
+def _is_usable_chunk_text(text: str | None, *, min_text_len: int) -> bool:
+    return len((text or "").strip()) >= int(min_text_len)
 
 
 def _coerce_table_rows(table: DocumentTable) -> list[list[str]]:
@@ -235,7 +240,7 @@ class RetrievalService:
         # 2) Qdrant search — over-fetch to compensate for micro-chunk filtering
         client = embedding_service.get_qdrant_client()
         flt = Filter(must=[FieldCondition(key="document_id", match=MatchValue(value=str(document_id)))])
-        fetch_limit = int(top_k or 5) * 3
+        fetch_limit = max(int(top_k or 5) * 3, 24)
         res = await asyncio.to_thread(
             client.query_points,
             collection_name=settings.QDRANT_COLLECTION,
@@ -267,9 +272,19 @@ class RetrievalService:
         results = []
         for ch in chunks:
             # Skip micro-chunks (form fields, metadata footers, page numbers)
-            if len((ch.text or "").strip()) < _MIN_CHUNK_TEXT_LEN:
+            if not _is_usable_chunk_text(ch.text, min_text_len=_MIN_CHUNK_TEXT_LEN):
                 continue
             results.append(_chunk_payload(ch, score=scores.get(ch.id, 0.0)))
+
+        # Short URL/TXT/MD documents may legitimately be smaller than the
+        # ordinary anti-noise floor. If every retrieved chunk was filtered out,
+        # backfill with short but non-empty hits instead of giving chat no
+        # context at all.
+        if not results:
+            for ch in chunks:
+                if not _is_usable_chunk_text(ch.text, min_text_len=_MIN_SHORT_CHUNK_TEXT_LEN):
+                    continue
+                results.append(_chunk_payload(ch, score=scores.get(ch.id, 0.0)))
 
         return results[: int(top_k or 5)]
 
@@ -287,7 +302,7 @@ class RetrievalService:
         if not terms or not conditions:
             return []
 
-        rows = await db.execute(
+        statement = (
             select(Chunk)
             .where(Chunk.document_id == document_id)
             .where(sa.func.length(sa.func.trim(Chunk.text)) >= int(min_text_len))
@@ -295,7 +310,19 @@ class RetrievalService:
             .order_by(score_expr.desc(), Chunk.page_start, Chunk.chunk_index)
             .limit(max(int(top_k or 8) * 4, 64))
         )
+        rows = await db.execute(statement)
         chunks: List[Chunk] = list(rows.scalars())
+        if not chunks and int(min_text_len) > _MIN_SHORT_CHUNK_TEXT_LEN:
+            short_statement = (
+                select(Chunk)
+                .where(Chunk.document_id == document_id)
+                .where(sa.func.length(sa.func.trim(Chunk.text)) >= _MIN_SHORT_CHUNK_TEXT_LEN)
+                .where(sa.or_(*conditions))
+                .order_by(score_expr.desc(), Chunk.page_start, Chunk.chunk_index)
+                .limit(max(int(top_k or 8) * 4, 64))
+            )
+            rows = await db.execute(short_statement)
+            chunks = list(rows.scalars())
         ranked = sorted(
             chunks,
             key=lambda ch: (
@@ -324,7 +351,7 @@ class RetrievalService:
         client = embedding_service.get_qdrant_client()
         doc_id_strs = [str(did) for did in document_ids]
         flt = Filter(must=[FieldCondition(key="document_id", match=MatchAny(any=doc_id_strs))])
-        fetch_limit = int(top_k or 8) * 3
+        fetch_limit = max(int(top_k or 8) * 3, 24)
         res = await asyncio.to_thread(
             client.query_points,
             collection_name=settings.QDRANT_COLLECTION,

@@ -121,7 +121,7 @@ Transparency matters, so here is how DocTalk handles the concerns above. We are 
 
 - **Authentication** via [Auth.js v5](https://authjs.dev/) with Google OAuth, Microsoft OAuth, and email magic link sign-in.
 - **Per-user data isolation:** Documents are scoped to the authenticated user. Database queries include user ID filters. Vector search is scoped to the user's collection. No cross-user data leakage.
-- **SSRF protection:** URL ingestion (web page upload) validates against internal network ranges to prevent [Server-Side Request Forgery](https://owasp.org/www-community/attacks/Server-Side_Request_Forgery).
+- **SSRF protection:** URL ingestion (web page upload) validates against internal network ranges to prevent [Server-Side Request Forgery](https://owasp.org/www-community/attacks/Server_Side_Request_Forgery).
 - **File validation:** Uploaded files are validated by magic bytes (not just file extension) to prevent malicious file uploads.
 
 ### Infrastructure

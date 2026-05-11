@@ -10,6 +10,7 @@ const PROFILE_STALE_MS = 60_000;
 let cachedProfile: UserProfile | null = null;
 let cachedAt = 0;
 let inflightRequest: Promise<UserProfile> | null = null;
+let requestSeq = 0;
 
 interface UseUserProfileResult {
   profile: UserProfile | null;
@@ -45,22 +46,32 @@ export function useUserProfile(): UseUserProfileResult {
     }
     setError(null);
 
+    let request: Promise<UserProfile> | null = null;
     try {
-      if (!inflightRequest) {
-        inflightRequest = getUserProfile();
+      request = inflightRequest;
+      let seq = requestSeq;
+      if (force || !request) {
+        request = getUserProfile();
+        inflightRequest = request;
+        seq = requestSeq + 1;
+        requestSeq = seq;
       }
-      const data = await inflightRequest;
-      cachedProfile = data;
-      cachedAt = Date.now();
-      lastFetchedRef.current = cachedAt;
-      setProfile(data);
+      const data = await request;
+      if (seq === requestSeq) {
+        cachedProfile = data;
+        cachedAt = Date.now();
+        lastFetchedRef.current = cachedAt;
+        setProfile(data);
+      }
       return data;
     } catch (e) {
       const message = e instanceof Error ? e.message : 'Failed to load profile';
       setError(message);
       return null;
     } finally {
-      inflightRequest = null;
+      if (inflightRequest === request) {
+        inflightRequest = null;
+      }
       setLoading(false);
     }
   }, [status]);
@@ -70,6 +81,7 @@ export function useUserProfile(): UseUserProfileResult {
       cachedProfile = null;
       cachedAt = 0;
       inflightRequest = null;
+      requestSeq += 1;
       lastFetchedRef.current = 0;
       setProfile(null);
       setError(null);

@@ -19,12 +19,28 @@ import { useUserPlanProfile } from '../../../lib/useUserPlanProfile';
 import type { Citation } from '../../../types';
 import { trackEvent } from '../../../lib/analytics';
 
+function useDesktopReaderLayout() {
+  const [isDesktopLayout, setIsDesktopLayout] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const media = window.matchMedia('(min-width: 640px)');
+    const sync = () => setIsDesktopLayout(media.matches);
+    sync();
+    media.addEventListener('change', sync);
+    return () => media.removeEventListener('change', sync);
+  }, []);
+
+  return isDesktopLayout;
+}
+
 export default function DocumentReaderPageClient() {
   const params = useParams<{ documentId: string }>();
   const documentId = params?.documentId as string;
   const router = useRouter();
   const [viewMode, setViewMode] = useState<'slide' | 'text'>('slide');
   const [mobileTab, setMobileTab] = useState<'chat' | 'document'>('chat');
+  const isDesktopLayout = useDesktopReaderLayout();
   const { t } = useLocale();
   const { pdfUrl, currentPage, highlights, highlightSnippet, scale, scrollNonce, sessionId, navigateToCitation } = useDocTalkStore();
 
@@ -50,6 +66,12 @@ export default function DocumentReaderPageClient() {
   // Handle ?page=N&highlight=chunkId from "View in original" links
   const searchParams = useSearchParams();
   const initialQuestion = searchParams.get('question') || undefined;
+  const revealMobileDocumentPane = useCallback(() => {
+    if (typeof window !== 'undefined' && window.innerWidth < 640) {
+      setMobileTab('document');
+    }
+  }, []);
+
   useEffect(() => {
     const pageParam = searchParams.get('page');
     let fallbackPage = 1;
@@ -58,11 +80,13 @@ export default function DocumentReaderPageClient() {
       if (!isNaN(pageNum) && pageNum > 0) {
         fallbackPage = pageNum;
         useDocTalkStore.getState().setPage(pageNum);
+        revealMobileDocumentPane();
       }
     }
 
     const highlightChunkId = searchParams.get('highlight');
     if (!highlightChunkId) return;
+    revealMobileDocumentPane();
 
     let cancelled = false;
     void getChunkDetail(highlightChunkId)
@@ -83,7 +107,7 @@ export default function DocumentReaderPageClient() {
       });
 
     return () => { cancelled = true; };
-  }, [searchParams, navigateToCitation]);
+  }, [searchParams, navigateToCitation, revealMobileDocumentPane]);
 
   // Determine which viewer to use:
   // - Native PDF: always PdfViewer with original URL
@@ -147,10 +171,23 @@ export default function DocumentReaderPageClient() {
       has_bboxes: Boolean(citation.bboxes?.length),
     });
     navigateToCitation(citation);
-    if (typeof window !== 'undefined' && window.innerWidth < 640) {
-      setMobileTab('document');
-    }
-  }, [isDemo, navigateToCitation]);
+    revealMobileDocumentPane();
+  }, [isDemo, navigateToCitation, revealMobileDocumentPane]);
+
+  useEffect(() => {
+    if (isDesktopLayout !== false || mobileTab !== 'document') return;
+    if (highlights.length === 0 && !highlightSnippet) return;
+    let secondFrame: number | null = null;
+    const firstFrame = requestAnimationFrame(() => {
+      secondFrame = requestAnimationFrame(() => {
+        useDocTalkStore.setState((state) => ({ scrollNonce: state.scrollNonce + 1 }));
+      });
+    });
+    return () => {
+      cancelAnimationFrame(firstFrame);
+      if (secondFrame !== null) cancelAnimationFrame(secondFrame);
+    };
+  }, [isDesktopLayout, mobileTab, currentPage, highlights, highlightSnippet]);
 
   const chatContent = documentStatus === 'ready' && sessionId ? (
     <ChatPanel sessionId={sessionId} onCitationClick={handleCitationClick} maxUserMessages={isDemo && !isLoggedIn ? 5 : undefined} suggestedQuestions={suggestedQuestions.length > 0 ? suggestedQuestions : undefined} initialQuestion={initialQuestion} autoSubmitInitialQuestion={isDemo} onOpenSettings={canUseCustomInstructions ? () => setShowInstructions(true) : undefined} hasCustomInstructions={!!customInstructions} userPlan={userPlan} />
@@ -198,72 +235,77 @@ export default function DocumentReaderPageClient() {
         </div>
       ) : (
         <>
-          {/* Desktop: side-by-side resizable panels */}
-          <div className="hidden sm:flex flex-1 min-h-0 px-2 pb-2 gap-0">
-            <Group orientation="horizontal" className="flex-1 min-h-0">
-              <Panel defaultSize={50} minSize={25}>
-                <div className="dt-reader-pane h-full min-w-0 sm:min-w-[320px] flex flex-col border rounded-l-xl overflow-hidden">
+          {isDesktopLayout === null ? (
+            <div className="flex-1 min-h-0 px-2 pb-2">
+              <div className="dt-reader-pane h-full border rounded-xl overflow-hidden flex items-center justify-center text-zinc-500">
+                {t('doc.loading')}
+              </div>
+            </div>
+          ) : isDesktopLayout ? (
+            <div className="flex flex-1 min-h-0 px-2 pb-2 gap-0">
+              <Group orientation="horizontal" className="flex-1 min-h-0">
+                <Panel defaultSize={50} minSize={25}>
+                  <div className="dt-reader-pane h-full min-w-0 sm:min-w-[320px] flex flex-col border rounded-l-xl overflow-hidden">
+                    <div className="flex-1 min-h-0">
+                      {chatContent}
+                    </div>
+                  </div>
+                </Panel>
+                <Separator
+                  className="dt-reader-resizer w-4 sm:w-3 cursor-col-resize flex items-center justify-center"
+                  aria-label={t('doc.resizePanels')}
+                >
+                  <div className="dt-reader-resizer-grip" />
+                </Separator>
+                <Panel defaultSize={50} minSize={35}>
+                  <div className="dt-reader-pane h-full border rounded-r-xl overflow-hidden">
+                    {viewerContent}
+                  </div>
+                </Panel>
+              </Group>
+            </div>
+          ) : (
+            <div className="flex flex-col flex-1 min-h-0">
+              <div className={`flex-1 min-h-0 ${mobileTab === 'chat' ? '' : 'hidden'}`}>
+                <div className="h-full min-w-0 flex flex-col">
                   <div className="flex-1 min-h-0">
                     {chatContent}
                   </div>
                 </div>
-              </Panel>
-              <Separator
-                className="dt-reader-resizer w-4 sm:w-3 cursor-col-resize flex items-center justify-center"
-                aria-label={t('doc.resizePanels')}
-              >
-                <div className="dt-reader-resizer-grip" />
-              </Separator>
-              <Panel defaultSize={50} minSize={35}>
-                <div className="dt-reader-pane h-full border rounded-r-xl overflow-hidden">
+              </div>
+              <div className={`flex-1 min-h-0 ${mobileTab === 'document' ? '' : 'hidden'}`}>
+                <div className="h-full">
                   {viewerContent}
                 </div>
-              </Panel>
-            </Group>
-          </div>
-
-          {/* Mobile: full-width tab layout with both panels mounted */}
-          <div className="flex sm:hidden flex-col flex-1 min-h-0">
-            <div className={`flex-1 min-h-0 ${mobileTab === 'chat' ? '' : 'hidden'}`}>
-              <div className="h-full min-w-0 flex flex-col">
-                <div className="flex-1 min-h-0">
-                  {chatContent}
-                </div>
+              </div>
+              <div className="flex border-t border-[var(--reader-border)] bg-[var(--reader-panel-solid)] shrink-0" style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}>
+                <button
+                  type="button"
+                  onClick={() => setMobileTab('chat')}
+                  className={`flex-1 py-3 text-xs font-medium flex flex-col items-center gap-1 transition-colors ${
+                    mobileTab === 'chat'
+                      ? 'text-blue-600 dark:text-blue-400'
+                      : 'text-zinc-400 dark:text-zinc-500'
+                  }`}
+                >
+                  <MessageSquare size={20} />
+                  {t('mobile.chatTab')}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setMobileTab('document')}
+                  className={`flex-1 py-3 text-xs font-medium flex flex-col items-center gap-1 transition-colors ${
+                    mobileTab === 'document'
+                      ? 'text-blue-600 dark:text-blue-400'
+                      : 'text-zinc-400 dark:text-zinc-500'
+                  }`}
+                >
+                  <FileText size={20} />
+                  {t('mobile.documentTab')}
+                </button>
               </div>
             </div>
-            <div className={`flex-1 min-h-0 ${mobileTab === 'document' ? '' : 'hidden'}`}>
-              <div className="h-full">
-                {viewerContent}
-              </div>
-            </div>
-            {/* Bottom tab bar */}
-            <div className="flex border-t border-[var(--reader-border)] bg-[var(--reader-panel-solid)] shrink-0" style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}>
-              <button
-                type="button"
-                onClick={() => setMobileTab('chat')}
-                className={`flex-1 py-3 text-xs font-medium flex flex-col items-center gap-1 transition-colors ${
-                  mobileTab === 'chat'
-                    ? 'text-blue-600 dark:text-blue-400'
-                    : 'text-zinc-400 dark:text-zinc-500'
-                }`}
-              >
-                <MessageSquare size={20} />
-                {t('mobile.chatTab')}
-              </button>
-              <button
-                type="button"
-                onClick={() => setMobileTab('document')}
-                className={`flex-1 py-3 text-xs font-medium flex flex-col items-center gap-1 transition-colors ${
-                  mobileTab === 'document'
-                    ? 'text-blue-600 dark:text-blue-400'
-                    : 'text-zinc-400 dark:text-zinc-500'
-                }`}
-              >
-                <FileText size={20} />
-                {t('mobile.documentTab')}
-              </button>
-            </div>
-          </div>
+          )}
         </>
       )}
       <CustomInstructionsModal

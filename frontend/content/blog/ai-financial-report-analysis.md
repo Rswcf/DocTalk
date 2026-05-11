@@ -120,7 +120,7 @@ Risk factors sections are notoriously long and formulaic, making them perfect fo
 
 ## Key Metrics to Extract
 
-Here is a reference framework for the metrics analysts most commonly need from financial filings. [Investopedia's guide to financial statement analysis](https://www.investopedia.com/terms/f/financial-statement-analysis.asp) provides additional background on these metrics. Use these as a starting point for your questions:
+Here is a reference framework for the metrics analysts most commonly need from financial filings. The SEC's [Beginner's Guide to Financial Statements](https://www.sec.gov/about/reports-publications/beginners-guide-financial-statements) provides additional background on these metrics. Use these as a starting point for your questions:
 
 **Growth Metrics**
 - Revenue growth (total and by segment)

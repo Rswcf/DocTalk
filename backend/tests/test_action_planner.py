@@ -34,6 +34,20 @@ def test_planner_keeps_plain_summary_on_rag_path() -> None:
     assert plan.uses_rag_answer_path
 
 
+def test_planner_keeps_plain_academic_paper_question_on_rag_path() -> None:
+    plan = deterministic_plan("What is the central argument or subject of this academic paper? Answer concisely and cite the source.")
+
+    assert plan.action == ChatAction.CITATION_LOOKUP
+    assert plan.uses_rag_answer_path
+
+
+def test_planner_routes_explicit_evidence_table_deliverable() -> None:
+    plan = deterministic_plan("Generate an academic evidence table with cited claims")
+
+    assert plan.action == ChatAction.EXTRACT_DELIVERABLE
+    assert plan.template_key == "evidence_table"
+
+
 @pytest.mark.asyncio
 async def test_planner_keeps_plain_greeting_on_rag_path(monkeypatch: pytest.MonkeyPatch) -> None:
     def _unexpected_client(_model: str):

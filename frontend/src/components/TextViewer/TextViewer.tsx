@@ -528,6 +528,18 @@ function WebArticleView({
               const citationMatch = highlightMatch?.pageNumber === page.page_number ? highlightMatch : null;
               const pageTitle = page.section_title?.trim() || leadingMarkdownHeading(page.text);
               const body = stripLeadingMatchingHeading(page.text, pageTitle);
+              const bodyStart = page.text.indexOf(body);
+              const adjustedCitationMatch = citationMatch && bodyStart >= 0
+                ? {
+                    ...citationMatch,
+                    start: citationMatch.start - bodyStart,
+                  }
+                : citationMatch;
+              const bodyCitationMatch = adjustedCitationMatch
+                && adjustedCitationMatch.start >= 0
+                && adjustedCitationMatch.start < body.length
+                ? adjustedCitationMatch
+                : null;
 
               return (
                 <section
@@ -551,7 +563,7 @@ function WebArticleView({
                   )}
                   <MarkdownContent
                     text={body}
-                    citationMatch={citationMatch}
+                    citationMatch={bodyCitationMatch}
                     highlightRef={highlightRef}
                     articleMode
                   />

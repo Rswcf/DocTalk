@@ -321,6 +321,32 @@ async def test_ingest_url_fetch_blocked_hides_reason(
     assert "BLOCKED_HOST" not in response.text
 
 
+@pytest.mark.parametrize(
+    "blocked_reason",
+    ["BLOCKED_HOST", "BLOCKED_PORT", "REDIRECT_LOOP", "TOO_MANY_REDIRECTS"],
+)
+@pytest.mark.asyncio
+async def test_ingest_url_blocked_fetch_reasons_share_safe_error_copy(
+    client: AsyncClient,
+    monkeypatch: pytest.MonkeyPatch,
+    blocked_reason: str,
+) -> None:
+    user = _make_user(plan="free")
+    db = _make_db(scalar=AsyncMock(return_value=0))
+    _override_dependencies(db, auth_user=user)
+    monkeypatch.setattr(url_validator, "validate_url", lambda url: url)
+
+    def _raise_blocked(_url: str):
+        raise ValueError(blocked_reason)
+
+    monkeypatch.setattr(url_extractor, "fetch_and_extract_url", _raise_blocked)
+
+    response = await client.post("/api/documents/ingest-url", json={"url": "https://example.com"})
+    detail = _assert_error(response, 400, "URL_FETCH_BLOCKED")
+    assert "reason" not in detail
+    assert blocked_reason not in response.text
+
+
 @pytest.mark.asyncio
 async def test_ingest_url_content_too_large(
     client: AsyncClient,

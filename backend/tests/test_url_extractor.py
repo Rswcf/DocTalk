@@ -71,3 +71,24 @@ def test_fetch_and_extract_url_preserves_article_structure(monkeypatch: pytest.M
     assert "Navigation should disappear" not in content
     assert "Share this article" not in content
     assert content.count("First paragraph with useful context.") == 1
+
+
+def test_fetch_and_extract_url_rejects_image_only_title_page(monkeypatch: pytest.MonkeyPatch) -> None:
+    html = b"""
+    <html>
+      <head><title>Image Only Landing</title></head>
+      <body>
+        <main>
+          <img src="/chart.png" alt="Quarterly chart">
+        </main>
+      </body>
+    </html>
+    """
+
+    def _fake_fetch(url: str):
+        return url, "text/html; charset=utf-8", "utf-8", html
+
+    monkeypatch.setattr(url_extractor, "_fetch_with_safe_redirects", _fake_fetch)
+
+    with pytest.raises(ValueError, match="NO_TEXT_CONTENT"):
+        url_extractor.fetch_and_extract_url("https://example.com/image-only")

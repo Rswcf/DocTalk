@@ -173,7 +173,7 @@ const PageWithHighlights = React.memo(function PageWithHighlights({ pageNumber, 
             const h = bbox.h > 0 ? bbox.h : 0.015;
             return (
               <div
-                key={`${bbox.x.toFixed(4)}-${bbox.y.toFixed(4)}-${bbox.w.toFixed(4)}-${bbox.h.toFixed(4)}`}
+                key={`${i}-${bbox.x.toFixed(4)}-${bbox.y.toFixed(4)}-${bbox.w.toFixed(4)}-${bbox.h.toFixed(4)}`}
                 className="citation-overlay"
                 data-highlight-anchor={i === 0 ? 'true' : undefined}
                 style={{
@@ -193,4 +193,3 @@ const PageWithHighlights = React.memo(function PageWithHighlights({ pageNumber, 
 });
 
 export default PageWithHighlights;
-

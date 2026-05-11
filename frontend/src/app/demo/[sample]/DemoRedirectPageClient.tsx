@@ -40,7 +40,7 @@ export default function DemoRedirectPageClient() {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
-          <p className="text-zinc-600 dark:text-zinc-300 mb-4">{t('demo.notFound')}</p>
+          <h1 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100 mb-4">{t('demo.notFound')}</h1>
           <button
             onClick={() => router.push('/demo')}
             className="px-4 py-2 bg-zinc-600 text-white rounded-lg hover:bg-zinc-700 focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:ring-offset-2"
@@ -53,8 +53,9 @@ export default function DemoRedirectPageClient() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center">
-      <Loader2 className="animate-spin text-zinc-400" size={32} />
+    <div className="min-h-screen flex flex-col items-center justify-center gap-3 text-center px-6">
+      <Loader2 className="animate-spin text-zinc-400" size={32} aria-hidden="true" />
+      <h1 className="text-sm font-medium text-zinc-600 dark:text-zinc-300">{t('common.loading')}</h1>
     </div>
   );
 }

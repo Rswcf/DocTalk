@@ -41,6 +41,33 @@ async def test_lexical_search_orders_by_weighted_match_before_page_limit() -> No
 
 
 @pytest.mark.asyncio
+async def test_lexical_search_backfills_short_document_chunks_when_long_floor_empty() -> None:
+    short_chunk = SimpleNamespace(
+        id=uuid.uuid4(),
+        document_id=uuid.uuid4(),
+        text="This domain is for use in documentation examples.",
+        page_start=1,
+        page_end=1,
+        bboxes=[],
+        section_title=None,
+    )
+    calls = []
+
+    async def execute(statement):
+        calls.append(statement)
+        return _Rows([] if len(calls) == 1 else [short_chunk])
+
+    db = SimpleNamespace(execute=AsyncMock(side_effect=execute))
+
+    payloads = await retrieval_service.lexical_search("Example Domain documentation", short_chunk.document_id, 8, db)
+
+    assert len(calls) == 2
+    assert len(payloads) == 1
+    assert payloads[0]["chunk_id"] == short_chunk.id
+    assert payloads[0]["text"] == short_chunk.text
+
+
+@pytest.mark.asyncio
 async def test_lexical_search_multi_orders_by_weighted_match_before_page_limit() -> None:
     captured = {}
 
@@ -61,6 +88,41 @@ async def test_lexical_search_multi_orders_by_weighted_match_before_page_limit()
     assert order_by
     assert "CASE" in str(order_by[0]).upper()
     assert "chunks.document_id" not in str(order_by[0])
+
+
+@pytest.mark.asyncio
+async def test_semantic_search_backfills_short_chunks_when_all_hits_filtered(monkeypatch) -> None:
+    document_id = uuid.uuid4()
+    chunk_id = uuid.uuid4()
+    short_chunk = SimpleNamespace(
+        id=chunk_id,
+        document_id=document_id,
+        text="This domain is for use in documentation examples.",
+        page_start=1,
+        page_end=1,
+        bboxes=[],
+        section_title=None,
+    )
+
+    monkeypatch.setattr(
+        "app.services.retrieval_service.embedding_service.embed_texts",
+        lambda _texts: [[0.1, 0.2, 0.3]],
+    )
+    monkeypatch.setattr(
+        "app.services.retrieval_service.embedding_service.get_qdrant_client",
+        lambda: SimpleNamespace(
+            query_points=lambda **_kwargs: SimpleNamespace(
+                points=[SimpleNamespace(id=str(chunk_id), score=0.82)]
+            )
+        ),
+    )
+    db = SimpleNamespace(execute=AsyncMock(return_value=_Rows([short_chunk])))
+
+    payloads = await retrieval_service.search("Example Domain documentation", document_id, 8, db)
+
+    assert len(payloads) == 1
+    assert payloads[0]["chunk_id"] == chunk_id
+    assert payloads[0]["text"] == short_chunk.text
 
 
 @pytest.mark.asyncio

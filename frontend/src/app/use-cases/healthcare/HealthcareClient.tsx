@@ -143,9 +143,9 @@ export default function HealthcareClient() {
             <div className="flex items-start gap-3">
               <AlertTriangle className="w-5 h-5 text-amber-600 dark:text-amber-400 mt-0.5 shrink-0" />
               <div>
-                <h3 className="text-sm font-semibold text-amber-900 dark:text-amber-200 mb-1">
+                <h2 className="text-sm font-semibold text-amber-900 dark:text-amber-200 mb-1">
                   Important: Not HIPAA-Certified
-                </h3>
+                </h2>
                 <p className="text-sm text-amber-700 dark:text-amber-300">
                   DocTalk is a general-purpose document analysis tool. It is not HIPAA-certified and should not be used with documents containing Protected Health Information (PHI). It is ideal for reviewing published research, compliance frameworks, protocols, and educational materials.
                 </p>

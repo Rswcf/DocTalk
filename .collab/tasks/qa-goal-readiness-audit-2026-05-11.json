@@ -1,0 +1,310 @@
+{
+  "generated_at": "2026-05-11T05:44:28.476292+00:00",
+  "objective": "DocTalk long-running full-product QA readiness audit",
+  "complete": false,
+  "environment": {
+    "DEEPSEEK_API_KEY": false,
+    "RESEND_API_KEY": false,
+    "oauth_credentials_complete": false,
+    "STRIPE_SECRET_KEY": false,
+    "frontend_3000_listening": false,
+    "backend_8000_listening": false
+  },
+  "suites": [
+    {
+      "key": "surface_coverage_mapping",
+      "label": "Route/API/function surface coverage evidence mapping",
+      "status": "complete",
+      "evidence": [
+        {
+          "path": ".collab/tasks/qa-run-2026-05-11-surface-coverage-audit.md",
+          "exists": true,
+          "status": null
+        },
+        {
+          "path": ".collab/tasks/qa-surface-coverage-audit-2026-05-11.json",
+          "exists": true,
+          "status": ""
+        }
+      ],
+      "commands": [
+        "python3 .collab/scripts/qa_surface_coverage_audit.py --json-out .collab/tasks/qa-surface-coverage-audit-2026-05-11.json"
+      ],
+      "blockers": [],
+      "notes": [
+        "Maps 81 concrete routes, 6 dynamic templates, 6 frontend API routes, and 13 objective axes to concrete evidence; it is not a completion pass for blocked live-quality suites."
+      ]
+    },
+    {
+      "key": "production_contact_form_ux",
+      "label": "Production public contact form browser UX",
+      "status": "complete",
+      "evidence": [
+        {
+          "path": ".collab/tasks/qa-run-2026-05-11-production-contact-form-ux.md",
+          "exists": true,
+          "status": null
+        },
+        {
+          "path": ".collab/tasks/qa-production-contact-form-ux-2026-05-11.json",
+          "exists": true,
+          "status": "pass"
+        }
+      ],
+      "commands": [
+        "node .collab/scripts/qa_production_contact_form_ux.js --base-url https://www.doctalk.site --json-out .collab/tasks/qa-production-contact-form-ux-2026-05-11.json"
+      ],
+      "blockers": [],
+      "notes": [
+        "Desktop/mobile validation and mocked success states passed; real production calls are limited to non-email-sending validation paths."
+      ]
+    },
+    {
+      "key": "production_tools_ux",
+      "label": "Production public tools browser UX",
+      "status": "complete",
+      "evidence": [
+        {
+          "path": ".collab/tasks/qa-run-2026-05-11-production-tools-ux.md",
+          "exists": true,
+          "status": null
+        },
+        {
+          "path": ".collab/tasks/qa-production-tools-ux-2026-05-11.json",
+          "exists": true,
+          "status": "pass"
+        }
+      ],
+      "commands": [
+        "node .collab/scripts/qa_production_tools_ux.js --base-url https://www.doctalk.site --json-out .collab/tasks/qa-production-tools-ux-2026-05-11.json"
+      ],
+      "blockers": [],
+      "notes": [
+        "Desktop/mobile /tools hub, word counter, and reading-time interactions passed; harness asserts no non-auth API requests during text processing."
+      ]
+    },
+    {
+      "key": "pdf_full_corpus_live_rag",
+      "label": "PDF full-corpus live RAG answer-quality matrix",
+      "status": "blocked",
+      "evidence": [
+        {
+          "path": ".collab/tasks/qa-run-2026-05-11-live-rag-full-corpus-plan.md",
+          "exists": true,
+          "status": null
+        },
+        {
+          "path": ".collab/tasks/qa-live-rag-multi-prompt-full-corpus-plan-2026-05-11.json",
+          "exists": true,
+          "status": "plan_only"
+        },
+        {
+          "path": ".collab/tasks/qa-live-rag-multi-prompt-full-corpus-plan-shard0-2026-05-11.json",
+          "exists": true,
+          "status": "plan_only"
+        }
+      ],
+      "commands": [
+        "python3 .collab/scripts/qa_live_rag_multi_prompt_matrix.py --from-inventory --start-index 0 --max-cases 5 --json-out .collab/tasks/qa-live-rag-multi-prompt-full-corpus-shard0-2026-05-11.json"
+      ],
+      "blockers": [
+        "DEEPSEEK_API_KEY is not configured in this process"
+      ],
+      "notes": [
+        "Plan-only coverage exists for 50 PDFs and 239 prompts; live execution is not complete."
+      ]
+    },
+    {
+      "key": "nonpdf_live_rag",
+      "label": "DOCX/PPTX/XLSX/TXT/MD live RAG answer-quality matrix",
+      "status": "blocked",
+      "evidence": [
+        {
+          "path": ".collab/tasks/qa-run-2026-05-11-live-rag-nonpdf-plan.md",
+          "exists": true,
+          "status": null
+        },
+        {
+          "path": ".collab/tasks/qa-live-rag-nonpdf-plan-2026-05-11.json",
+          "exists": true,
+          "status": "plan_only"
+        }
+      ],
+      "commands": [
+        "python3 .collab/scripts/qa_live_rag_nonpdf_matrix.py --json-out .collab/tasks/qa-live-rag-nonpdf-2026-05-11.json"
+      ],
+      "blockers": [
+        "DEEPSEEK_API_KEY is not configured in this process"
+      ],
+      "notes": [
+        "Plan-only coverage exists for 5 generated non-PDF formats and 24 prompts."
+      ]
+    },
+    {
+      "key": "structured_output_live_quality",
+      "label": "Live structured extraction and question-template output quality",
+      "status": "blocked",
+      "evidence": [
+        {
+          "path": ".collab/tasks/qa-run-2026-05-11-live-structured-outputs.md",
+          "exists": true,
+          "status": null
+        },
+        {
+          "path": ".collab/tasks/qa-live-structured-outputs-plan-2026-05-11.json",
+          "exists": true,
+          "status": "plan_only"
+        },
+        {
+          "path": ".collab/tasks/qa-live-structured-outputs-blocked-no-env-2026-05-11.json",
+          "exists": true,
+          "status": "blocked"
+        }
+      ],
+      "commands": [
+        "python3 .collab/scripts/qa_live_structured_outputs_matrix.py --json-out .collab/tasks/qa-live-structured-outputs-2026-05-11.json"
+      ],
+      "blockers": [
+        "DEEPSEEK_API_KEY is not configured in this process"
+      ],
+      "notes": [
+        "Worker path was exercised and correctly classified as blocked without provider config."
+      ]
+    },
+    {
+      "key": "production_post_deploy_regression",
+      "label": "Post-deploy public production regression",
+      "status": "ready_manual",
+      "evidence": [
+        {
+          "path": ".collab/tasks/qa-run-2026-05-11-post-deploy-public-regression-orchestrator.md",
+          "exists": true,
+          "status": null
+        },
+        {
+          "path": ".collab/tasks/qa-post-deploy-public-regression-dry-run-performance-2026-05-11.json",
+          "exists": true,
+          "status": "pass"
+        },
+        {
+          "path": ".collab/tasks/qa-run-2026-05-11-production-current-public-regression.md",
+          "exists": true,
+          "status": null
+        },
+        {
+          "path": ".collab/tasks/qa-post-deploy-public-regression-production-current-2026-05-11.json",
+          "exists": true,
+          "status": "fail"
+        },
+        {
+          "path": ".collab/tasks/qa-run-2026-05-11-production-current-demo-reader-ux.md",
+          "exists": true,
+          "status": null
+        },
+        {
+          "path": ".collab/tasks/qa-production-current-demo-reader-ux-2026-05-11.json",
+          "exists": true,
+          "status": "fail"
+        }
+      ],
+      "commands": [
+        "python3 .collab/scripts/qa_post_deploy_public_regression.py --include-demo-reader --json-out .collab/tasks/qa-post-deploy-public-regression-2026-05-11.json"
+      ],
+      "blockers": [
+        "Requires frontend deploy of local fixes before results can close production drift bugs."
+      ],
+      "notes": [
+        "Current production still has known deploy drift for CSP, icon/manifest, fragment/external links, healthcare heading, and demo direct citation highlight."
+      ]
+    },
+    {
+      "key": "oauth_email_delivery",
+      "label": "OAuth callback and email magic-link delivery",
+      "status": "blocked",
+      "evidence": [
+        {
+          "path": ".collab/tasks/qa-run-2026-05-11-auth-provider-availability-ux.md",
+          "exists": true,
+          "status": null
+        },
+        {
+          "path": ".collab/tasks/qa-run-2026-05-11-production-auth-provider-availability-ux.md",
+          "exists": true,
+          "status": null
+        }
+      ],
+      "commands": [],
+      "blockers": [
+        "RESEND_API_KEY is not configured",
+        "OAuth client credentials are not fully configured in this process",
+        "Requires safe external test accounts and inbox/callback handling"
+      ],
+      "notes": [
+        "Provider discovery and UI availability are covered; successful callback/delivery is not."
+      ]
+    },
+    {
+      "key": "production_payment_safe_account",
+      "label": "Authenticated production Checkout/Portal and manual refund-review operations",
+      "status": "blocked",
+      "evidence": [
+        {
+          "path": ".collab/tasks/qa-run-2026-05-10-stripe-hosted-browser.md",
+          "exists": true,
+          "status": null
+        },
+        {
+          "path": ".collab/tasks/qa-run-2026-05-10-refund-review-workflow.md",
+          "exists": true,
+          "status": null
+        },
+        {
+          "path": ".collab/tasks/qa-run-2026-05-11-production-payment-public-sanity-rerun.md",
+          "exists": true,
+          "status": null
+        }
+      ],
+      "commands": [],
+      "blockers": [
+        "Requires safe production account/business approval",
+        "STRIPE_SECRET_KEY is not configured in this process"
+      ],
+      "notes": [
+        "Test-mode and non-destructive production public sanity are covered; authenticated production operation is not."
+      ]
+    },
+    {
+      "key": "browser_real_worker_document_diff",
+      "label": "Browser-orchestrated real worker document-diff result",
+      "status": "blocked",
+      "evidence": [
+        {
+          "path": ".collab/tasks/qa-run-2026-05-11-document-diff-live-llm.md",
+          "exists": true,
+          "status": null
+        },
+        {
+          "path": ".collab/tasks/qa-run-2026-05-11-browser-document-diff-polling-ux.md",
+          "exists": true,
+          "status": null
+        }
+      ],
+      "commands": [],
+      "blockers": [
+        "DEEPSEEK_API_KEY is not configured in this process",
+        "Frontend dev server is not listening on 127.0.0.1:3000",
+        "Backend server is not listening on 127.0.0.1:8000"
+      ],
+      "notes": [
+        "Real diff worker output and browser polling UX are separately covered; one browser-orchestrated real worker flow remains unverified."
+      ]
+    }
+  ],
+  "summary": {
+    "total": 10,
+    "blocked": 6,
+    "ready": 0,
+    "ready_manual": 1,
+    "complete": 3
+  }
+}

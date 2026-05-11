@@ -1460,7 +1460,19 @@ class ChatService:
             return
 
         # 9) Stream from LLM
-        client = _get_llm_client(effective_model)
+        try:
+            client = _get_llm_client(effective_model)
+        except Exception as e:
+            if user is not None and pre_debited > 0 and predebit_ledger_id is not None:
+                try:
+                    await _refund_predebit(db, user.id, pre_debited, predebit_ledger_id)
+                except Exception:
+                    logger.exception(
+                        "Failed to refund pre-debited credits before continuation LLM client setup for user %s",
+                        user.id,
+                    )
+            yield _safe_sse("error", "LLM_ERROR", e, session_id=str(session_id))
+            return
         profile = get_model_profile(effective_model)
 
         if profile.supports_cache_control:

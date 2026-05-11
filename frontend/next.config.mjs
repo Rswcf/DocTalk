@@ -13,7 +13,15 @@ const buildSha =
 const isProduction = process.env.NODE_ENV === "production";
 const localDevSources = isProduction
   ? ""
-  : " http://localhost:8000 http://127.0.0.1:8000 http://localhost:9000 http://127.0.0.1:9000";
+  : [
+      "http://localhost:8000",
+      "http://127.0.0.1:8000",
+      "http://localhost:8001",
+      "http://127.0.0.1:8001",
+      "http://localhost:9000",
+      "http://127.0.0.1:9000",
+      "http://host.docker.internal:9000",
+    ].map((source) => ` ${source}`).join("");
 
 // Content-Security-Policy directives (enforcing).
 //
@@ -30,7 +38,7 @@ const cspDirectives = [
   `img-src 'self' blob: data: https://*.up.railway.app https://*.googleusercontent.com https://www.google-analytics.com${localDevSources}`,
   "font-src 'self' data:",
   "worker-src 'self' blob:",
-  "media-src 'none'",
+  "media-src 'self' data:",
   `connect-src 'self' https://*.up.railway.app https://*.sentry.io https://*.ingest.sentry.io https://va.vercel-scripts.com https://vitals.vercel-insights.com https://www.google-analytics.com https://analytics.google.com https://*.google-analytics.com https://*.analytics.google.com${localDevSources}`,
   "frame-src 'none'",
   "frame-ancestors 'none'",
@@ -93,7 +101,7 @@ const cspReportOnlyDirectives = [
   "img-src 'self' blob: data: https://*.up.railway.app https://*.googleusercontent.com https://www.google-analytics.com",
   "font-src 'self' data:",
   "worker-src 'self' blob:",
-  "media-src 'none'",
+  "media-src 'self' data:",
   "connect-src 'self' https://*.up.railway.app https://*.sentry.io https://*.ingest.sentry.io https://va.vercel-scripts.com https://vitals.vercel-insights.com https://www.google-analytics.com https://analytics.google.com https://*.google-analytics.com https://*.analytics.google.com",
   "frame-src 'none'",
   "frame-ancestors 'none'",

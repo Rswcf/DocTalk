@@ -321,6 +321,18 @@ def _split_blocks_into_pages(blocks: list[str], fallback_title: str) -> list[Ext
     return pages
 
 
+def _has_meaningful_content(blocks: list[str], title: str) -> bool:
+    title_key = _dedupe_key(title) if title else ""
+    for block in blocks:
+        text = block.lstrip("#- >").strip()
+        if not text:
+            continue
+        if block.startswith("#") and title_key and _dedupe_key(text) == title_key:
+            continue
+        return True
+    return False
+
+
 def fetch_and_extract_url(url: str) -> Tuple[str, List[ExtractedPage], Optional[bytes]]:
     """Fetch URL and extract text content.
 
@@ -358,6 +370,9 @@ def fetch_and_extract_url(url: str) -> Tuple[str, List[ExtractedPage], Optional[
         title = url.split('//')[-1].split('/')[0]  # domain as fallback
 
     blocks = _extract_article_blocks(soup, _clean_text(title))
+    if not _has_meaningful_content(blocks, _clean_text(title)):
+        raise ValueError("NO_TEXT_CONTENT")
+
     pages = _split_blocks_into_pages(blocks, _clean_text(title))
 
     if not pages:

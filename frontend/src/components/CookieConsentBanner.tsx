@@ -9,6 +9,7 @@ const CONSENT_KEY = 'doctalk_analytics_consent';
 
 export function CookieConsentBanner() {
   const [visible, setVisible] = useState(false);
+  const [dialogOpen, setDialogOpen] = useState(false);
   const { t } = useLocale();
   const pathname = usePathname();
 
@@ -19,7 +20,20 @@ export function CookieConsentBanner() {
     }
   }, []);
 
-  if (!visible) return null;
+  useEffect(() => {
+    if (!visible) return;
+
+    const syncDialogState = () => {
+      setDialogOpen(Boolean(document.querySelector('[role="dialog"][aria-modal="true"]')));
+    };
+    syncDialogState();
+
+    const observer = new MutationObserver(syncDialogState);
+    observer.observe(document.body, { childList: true, subtree: true });
+    return () => observer.disconnect();
+  }, [visible]);
+
+  if (!visible || dialogOpen) return null;
 
   const isWorkspaceRoute = Boolean(
     pathname?.startsWith('/d/')
@@ -27,6 +41,7 @@ export function CookieConsentBanner() {
       || pathname?.startsWith('/shared/')
       || pathname === '/document-diff',
   );
+  const isCollectionWorkspace = Boolean(pathname?.startsWith('/collections'));
 
   const handleAccept = () => {
     localStorage.setItem(CONSENT_KEY, 'accepted');
@@ -41,10 +56,10 @@ export function CookieConsentBanner() {
 
   return (
     <div
-      className={`fixed z-50 rounded-xl border border-zinc-200 bg-white/95 px-4 py-3 shadow-xl backdrop-blur dark:border-zinc-800 dark:bg-zinc-950/95
+      className={`fixed z-40 rounded-xl border border-zinc-200 bg-white/95 px-4 py-3 shadow-xl backdrop-blur dark:border-zinc-800 dark:bg-zinc-950/95
                  animate-[slideUp_0.3s_ease-out] motion-reduce:animate-none
                  ${isWorkspaceRoute
-                   ? 'bottom-[calc(env(safe-area-inset-bottom,0px)+4.75rem)] left-3 right-3 sm:bottom-4 sm:left-auto sm:right-4 sm:w-[min(26rem,calc(100vw-2rem))]'
+                   ? `${isCollectionWorkspace ? 'top-[calc(env(safe-area-inset-top,0px)+9.5rem)] sm:top-[calc(env(safe-area-inset-top,0px)+4.75rem)]' : 'top-[calc(env(safe-area-inset-top,0px)+4.75rem)]'} left-3 right-3 sm:left-auto sm:right-4 sm:w-[min(26rem,calc(100vw-2rem))]`
                    : 'bottom-3 left-3 right-3 sm:left-auto sm:right-4 sm:w-[min(28rem,calc(100vw-2rem))]'}`}
       role="region"
       aria-label={t('consent.message')}

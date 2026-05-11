@@ -12,7 +12,7 @@ import { useUserPlanProfile } from "../../lib/useUserPlanProfile";
 export default function DocumentDiffPage() {
   const router = useRouter();
   const { status } = useSession();
-  const { t } = useLocale();
+  const { t, tOr } = useLocale();
   const { userPlan } = useUserPlanProfile();
 
   useEffect(() => {
@@ -33,6 +33,7 @@ export default function DocumentDiffPage() {
     <div className="flex h-screen w-full flex-col bg-[var(--page-background)]">
       <Header variant="full" />
       <main className="min-h-0 flex-1">
+        <h1 className="sr-only">{tOr("diff.pageTitle", "Document diff")}</h1>
         <DocumentDiffPanel userPlan={userPlan} />
       </main>
     </div>

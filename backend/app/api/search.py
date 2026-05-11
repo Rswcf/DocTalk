@@ -16,6 +16,20 @@ from app.services.retrieval_service import retrieval_service
 search_router = APIRouter(prefix="/api/documents", tags=["search"])
 
 
+def _merge_search_results(primary: list[dict], fallback: list[dict], *, top_k: int) -> list[dict]:
+    merged: list[dict] = []
+    seen: set[str] = set()
+    for item in [*primary, *fallback]:
+        chunk_id = str(item.get("chunk_id") or "")
+        if not chunk_id or chunk_id in seen:
+            continue
+        seen.add(chunk_id)
+        merged.append(item)
+        if len(merged) >= int(top_k or 5):
+            break
+    return merged
+
+
 @search_router.post("/{document_id}/search", response_model=SearchResponse)
 async def search_document(
     document_id: uuid.UUID,
@@ -50,4 +64,12 @@ async def search_document(
             detail={"error": "DOCUMENT_NOT_FOUND", "message": "Document not found"},
         )
     results = await retrieval_service.search(body.query, document_id, body.top_k, db)
+    if len(results) < body.top_k:
+        lexical_results = await retrieval_service.lexical_search(
+            body.query,
+            document_id,
+            body.top_k,
+            db,
+        )
+        results = _merge_search_results(results, lexical_results, top_k=body.top_k)
     return SearchResponse(results=[SearchResultItem(**r) for r in results])

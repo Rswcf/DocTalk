@@ -158,8 +158,8 @@ export default function ConsultantsClient() {
                 The pressure to deliver thorough analysis quickly means consultants often need to extract specific data points from dense documents under tight deadlines. Missing a key requirement in an RFP or overlooking a risk factor in a financial report can have serious consequences.
               </p>
               <p className="text-zinc-600 dark:text-zinc-300 mb-4">
-                Resources like{' '}
-                <a href="https://www.mckinsey.com/capabilities/mckinsey-digital/our-insights" target="_blank" rel="noopener noreferrer" className="text-blue-600 dark:text-blue-400 hover:underline">McKinsey Digital Insights</a>
+                Reports like Thomson Reuters&apos;{' '}
+                <a href="https://www.thomsonreuters.com/content/dam/ewp-m/documents/thomsonreuters/en/pdf/reports/2026-ai-in-professional-services-report.pdf" target="_blank" rel="noopener noreferrer" className="text-blue-600 dark:text-blue-400 hover:underline">AI in Professional Services report</a>
                 {' '}highlight how AI is transforming knowledge work and document analysis in professional services.
               </p>
               <p className="text-zinc-600 dark:text-zinc-300">

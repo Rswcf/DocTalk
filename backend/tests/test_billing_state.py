@@ -120,6 +120,31 @@ async def test_active_sub_projects_correctly(monkeypatch):
 
 
 @pytest.mark.asyncio
+async def test_active_sub_projects_item_period_end_when_top_level_missing(monkeypatch):
+    _patch_cache_miss(monkeypatch)
+    user = _user(stripe_subscription_id="sub_item_period")
+    monkeypatch.setattr(
+        billing_api.asyncio,
+        "to_thread",
+        AsyncMock(return_value={
+            "status": "active",
+            "cancel_at_period_end": False,
+            "items": {
+                "data": [
+                    {
+                        "current_period_end": 1_800_000_000,
+                        "price": {"recurring": {"interval": "month"}},
+                    }
+                ]
+            },
+        }),
+    )
+    state = await billing_api.compute_billing_state(user)
+    assert state["period_end"] == "2027-01-15T08:00:00+00:00"
+    assert state["can_cancel"] is True
+
+
+@pytest.mark.asyncio
 async def test_already_cancel_at_period_end_disables_cancel(monkeypatch):
     """After user clicks cancel, can_cancel should flip off to avoid double-click."""
     _patch_cache_miss(monkeypatch)

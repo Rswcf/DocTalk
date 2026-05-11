@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useState, useCallback, useMemo } from 'react';
+import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { ClipboardList, FileText, GitCompare, MessageSquare, Plus, X } from 'lucide-react';
@@ -22,6 +23,7 @@ import type { DocumentBrief } from '../../../lib/api';
 import { useDocTalkStore } from '../../../store';
 import { useLocale } from '../../../i18n';
 import { useUserPlanProfile } from '../../../lib/useUserPlanProfile';
+import { errorCopy, type ErrorCopy } from '../../../lib/errorCopy';
 import type { Citation, CollectionDetail, SessionItem } from '../../../types';
 import { LoadingScreen } from '../../../components/ui/LoadingScreen';
 import { trackEvent } from '../../../lib/analytics';
@@ -46,6 +48,8 @@ export default function CollectionDetailPage() {
   const [loading, setLoading] = useState(true);
   const [showAddDocs, setShowAddDocs] = useState(false);
   const [availableDocs, setAvailableDocs] = useState<DocumentBrief[]>([]);
+  const [addDocsErrorCopy, setAddDocsErrorCopy] = useState<ErrorCopy | null>(null);
+  const [addingDocId, setAddingDocId] = useState<string | null>(null);
   const [workspaceMode, setWorkspaceMode] = useState<'chat' | 'templates' | 'diff'>('chat');
   // Mobile sidebar toggle
   const [showMobileSidebar, setShowMobileSidebar] = useState<'docs' | 'sessions' | null>(null);
@@ -147,14 +151,36 @@ export default function CollectionDetailPage() {
     const docs = await getMyDocuments();
     const existingIds = new Set((collection?.documents || []).map(d => d.id));
     setAvailableDocs(docs.filter(d => d.status === 'ready' && !existingIds.has(d.id)));
+    setAddDocsErrorCopy(null);
     setShowAddDocs(true);
   };
 
   const handleAddDocument = async (docId: string) => {
-    await addDocumentsToCollection(collectionId, [docId]);
-    const coll = await getCollection(collectionId);
-    setCollection(coll);
+    setAddingDocId(docId);
+    setAddDocsErrorCopy(null);
+    try {
+      await addDocumentsToCollection(collectionId, [docId]);
+      const coll = await getCollection(collectionId);
+      setCollection(coll);
+      setShowAddDocs(false);
+    } catch (e) {
+      const copy = errorCopy(e, t, tOr);
+      setAddDocsErrorCopy(copy);
+      if (copy.cta) {
+        trackEvent('limit_hit', {
+          source: 'collection_add_documents_modal',
+          reason: copy.cta.href.includes('collection_doc_limit') ? 'collection_doc_limit' : 'collection_limit',
+        });
+      }
+    } finally {
+      setAddingDocId(null);
+    }
+  };
+
+  const closeAddDocsModal = () => {
     setShowAddDocs(false);
+    setAddDocsErrorCopy(null);
+    setAddingDocId(null);
   };
 
   const handleOpenDoc = (docId: string) => {
@@ -401,8 +427,8 @@ export default function CollectionDetailPage() {
       {showAddDocs && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 overscroll-contain"
-          onClick={() => setShowAddDocs(false)}
-          onKeyDown={(e) => { if (e.key === 'Escape') setShowAddDocs(false); }}
+          onClick={closeAddDocsModal}
+          onKeyDown={(e) => { if (e.key === 'Escape') closeAddDocsModal(); }}
         >
           <div
             className="mx-4 w-full max-w-md rounded-xl border border-zinc-200 bg-white p-6 shadow-xl dark:border-zinc-800 dark:bg-zinc-900"
@@ -422,7 +448,7 @@ export default function CollectionDetailPage() {
               </div>
               <button
                 type="button"
-                onClick={() => setShowAddDocs(false)}
+                onClick={closeAddDocsModal}
                 className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-zinc-500 transition-colors hover:bg-zinc-100 hover:text-zinc-900 dark:hover:bg-zinc-800 dark:hover:text-zinc-100 focus-visible:ring-2 focus-visible:ring-zinc-400"
                 aria-label={t('common.close')}
               >
@@ -443,7 +469,8 @@ export default function CollectionDetailPage() {
                     type="button"
                     key={d.id}
                     onClick={() => handleAddDocument(d.id)}
-                    className="flex w-full items-center gap-3 rounded-lg border border-zinc-200 p-3 text-left transition-colors hover:bg-zinc-50 dark:border-zinc-700 dark:hover:bg-zinc-800 focus-visible:ring-2 focus-visible:ring-zinc-400 dark:focus-visible:ring-zinc-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-900"
+                    disabled={addingDocId === d.id}
+                    className="flex w-full items-center gap-3 rounded-lg border border-zinc-200 p-3 text-left transition-colors hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-60 dark:border-zinc-700 dark:hover:bg-zinc-800 focus-visible:ring-2 focus-visible:ring-zinc-400 dark:focus-visible:ring-zinc-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-900"
                   >
                     <FileText aria-hidden="true" size={16} className="shrink-0 text-accent" />
                     <span className="min-w-0 truncate text-sm text-zinc-800 dark:text-zinc-200">{d.filename}</span>
@@ -452,9 +479,31 @@ export default function CollectionDetailPage() {
                 ))}
               </div>
             )}
+            {addDocsErrorCopy && (
+              <div
+                role="alert"
+                className={`mt-4 rounded-lg border px-3 py-2 text-sm ${
+                  addDocsErrorCopy.severity === 'warning'
+                    ? 'border-amber-200 bg-amber-50 text-amber-950 dark:border-amber-900/60 dark:bg-amber-950/30 dark:text-amber-100'
+                    : 'border-red-200 bg-red-50 text-red-950 dark:border-red-900/60 dark:bg-red-950/30 dark:text-red-100'
+                }`}
+              >
+                <p className="font-medium">{addDocsErrorCopy.title}</p>
+                <p className="mt-1 leading-5 opacity-90">{addDocsErrorCopy.body}</p>
+                {addDocsErrorCopy.cta && (
+                  <Link
+                    href={addDocsErrorCopy.cta.href}
+                    onClick={() => trackEvent('upgrade_click', { source: 'collection_add_documents_modal', reason: 'collection_doc_limit' })}
+                    className="mt-2 inline-flex items-center justify-center rounded-md bg-zinc-900 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-zinc-800 dark:bg-zinc-50 dark:text-zinc-900 dark:hover:bg-zinc-200 focus-visible:ring-2 focus-visible:ring-zinc-400 dark:focus-visible:ring-zinc-500"
+                  >
+                    {addDocsErrorCopy.cta.label}
+                  </Link>
+                )}
+              </div>
+            )}
             <div className="mt-4 flex justify-end">
               <button
-                onClick={() => setShowAddDocs(false)}
+                onClick={closeAddDocsModal}
                 className="px-4 py-2 text-sm rounded-lg border border-zinc-200 dark:border-zinc-700 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors focus-visible:ring-2 focus-visible:ring-zinc-400 dark:focus-visible:ring-zinc-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-900"
               >
                 {t('common.cancel')}

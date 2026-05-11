@@ -168,7 +168,7 @@ def deterministic_plan(message: str, *, is_collection: bool = False) -> ActionPl
             reason="table scan markers",
         )
 
-    if has_evidence:
+    if has_evidence and wants_deliverable:
         return ActionPlan(
             action=ChatAction.EXTRACT_DELIVERABLE,
             confidence=0.84,

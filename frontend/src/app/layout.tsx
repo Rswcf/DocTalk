@@ -52,6 +52,10 @@ export const metadata: Metadata = {
     title: 'DocTalk — AI Document Chat',
     description: 'Chat with your documents. AI answers with page-level citations.',
   },
+  icons: {
+    icon: [{ url: '/icon.svg', type: 'image/svg+xml', sizes: 'any' }],
+    apple: [{ url: '/logo-icon.png', type: 'image/png', sizes: '512x512' }],
+  },
 }
 
 export default function RootLayout({

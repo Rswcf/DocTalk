@@ -2,10 +2,13 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { ChevronDown, Plus, Trash2, Home, X } from 'lucide-react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useDocTalkStore } from '../store';
 import { useLocale } from '../i18n';
 import { createSession, getMessages, deleteSession } from '../lib/api';
+import { errorCopy, type ErrorCopy } from '../lib/errorCopy';
+import { trackEvent } from '../lib/analytics';
 import { useDropdownKeyboard } from '../lib/useDropdownKeyboard';
 
 export default function SessionDropdown() {
@@ -16,12 +19,13 @@ export default function SessionDropdown() {
   const isStreaming = useDocTalkStore((s) => s.isStreaming);
 
   const { addSession, setSessionId, setMessages, removeSession, reset, setDemoMessagesUsed } = useDocTalkStore();
-  const { t } = useLocale();
+  const { t, tOr } = useLocale();
   const router = useRouter();
 
   const [open, setOpen] = useState(false);
   const [focusIndex, setFocusIndex] = useState(-1);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  const [sessionErrorCopy, setSessionErrorCopy] = useState<ErrorCopy | null>(null);
   const ref = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const itemRefs = useRef<(HTMLButtonElement | null)[]>([]);
@@ -53,23 +57,33 @@ export default function SessionDropdown() {
 
   const onNewChat = async () => {
     if (!documentId || isStreaming) return;
-    const s = await createSession(documentId);
-    addSession({
-      session_id: s.session_id,
-      title: null,
-      message_count: 0,
-      created_at: s.created_at,
-      last_activity_at: s.created_at,
-    });
-    setSessionId(s.session_id);
-    if (s.demo_messages_used != null) setDemoMessagesUsed(s.demo_messages_used);
-    setMessages([]);
-    setConfirmDeleteId(null);
-    setOpen(false);
+    setSessionErrorCopy(null);
+    try {
+      const s = await createSession(documentId);
+      addSession({
+        session_id: s.session_id,
+        title: null,
+        message_count: 0,
+        created_at: s.created_at,
+        last_activity_at: s.created_at,
+      });
+      setSessionId(s.session_id);
+      if (s.demo_messages_used != null) setDemoMessagesUsed(s.demo_messages_used);
+      setMessages([]);
+      setConfirmDeleteId(null);
+      setOpen(false);
+    } catch (e) {
+      const copy = errorCopy(e, t, tOr);
+      setSessionErrorCopy(copy);
+      if (copy.cta) {
+        trackEvent('limit_hit', { source: 'session_dropdown', reason: 'session_limit' });
+      }
+    }
   };
 
   const onSwitchSession = async (id: string) => {
     if (isStreaming) return;
+    setSessionErrorCopy(null);
     setMessages([]);
     setSessionId(id);
     const msgs = await getMessages(id);
@@ -80,6 +94,7 @@ export default function SessionDropdown() {
 
   const onDeleteSessionById = async (targetId: string) => {
     if (isStreaming) return;
+    setSessionErrorCopy(null);
     setConfirmDeleteId(null);
     await deleteSession(targetId);
     removeSession(targetId);
@@ -96,11 +111,13 @@ export default function SessionDropdown() {
 
   const onDeleteCurrent = () => {
     if (!sessionId || isStreaming) return;
+    setSessionErrorCopy(null);
     setConfirmDeleteId(sessionId);
   };
 
   const requestDeleteSession = (targetId: string) => {
     if (isStreaming) return;
+    setSessionErrorCopy(null);
     setConfirmDeleteId(targetId);
   };
 
@@ -176,6 +193,28 @@ export default function SessionDropdown() {
               <Plus aria-hidden="true" size={16} />
               <span>{t('session.newChat')}</span>
             </button>
+            {sessionErrorCopy && (
+              <div
+                role="alert"
+                className={`mx-1 mt-2 rounded-lg border px-3 py-2 text-xs ${
+                  sessionErrorCopy.severity === 'warning'
+                    ? 'border-amber-200 bg-amber-50 text-amber-950 dark:border-amber-900/60 dark:bg-amber-950/30 dark:text-amber-100'
+                    : 'border-red-200 bg-red-50 text-red-950 dark:border-red-900/60 dark:bg-red-950/30 dark:text-red-100'
+                }`}
+              >
+                <p className="font-medium">{sessionErrorCopy.title}</p>
+                <p className="mt-1 leading-5 opacity-90">{sessionErrorCopy.body}</p>
+                {sessionErrorCopy.cta && (
+                  <Link
+                    href={sessionErrorCopy.cta.href}
+                    onClick={() => trackEvent('upgrade_click', { source: 'session_dropdown', reason: 'session_limit' })}
+                    className="mt-2 inline-flex items-center justify-center rounded-md bg-zinc-900 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-zinc-800 dark:bg-zinc-50 dark:text-zinc-900 dark:hover:bg-zinc-200 focus-visible:ring-2 focus-visible:ring-zinc-400 dark:focus-visible:ring-zinc-500"
+                  >
+                    {sessionErrorCopy.cta.label}
+                  </Link>
+                )}
+              </div>
+            )}
           </div>
           <div className="my-1 h-px bg-zinc-200 dark:bg-zinc-700" />
           <div className="px-2 py-1 text-xs uppercase tracking-wide text-zinc-500 dark:text-zinc-400">

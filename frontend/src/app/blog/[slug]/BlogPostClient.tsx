@@ -26,6 +26,15 @@ function slugifyHeading(text: string): string {
     .replace(/\s+/g, '-');
 }
 
+function headingTextFromMarkdown(text: string): string {
+  return text
+    .replace(/!\[([^\]]*)\]\([^)]+\)/g, '$1')
+    .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
+    .replace(/[`*_~]/g, '')
+    .replace(/<[^>]+>/g, '')
+    .trim();
+}
+
 function uniqueHeadingId(baseId: string, seen: Map<string, number>): string {
   const base = baseId || 'section';
   const count = seen.get(base) ?? 0;
@@ -48,11 +57,23 @@ function extractToc(content: string): TocItem[] {
   const seen = new Map<string, number>();
   let match;
   while ((match = headingRegex.exec(content)) !== null) {
-    const text = match[2].trim();
+    const text = headingTextFromMarkdown(match[2].trim());
     const id = uniqueHeadingId(slugifyHeading(text), seen);
     items.push({ id, text, level: match[1].length });
   }
   return items;
+}
+
+function extractHeadingIdsByOffset(content: string): Map<number, string> {
+  const headingRegex = /^(#{2,3})\s+(.+)$/gm;
+  const ids = new Map<number, string>();
+  const seen = new Map<string, number>();
+  let match;
+  while ((match = headingRegex.exec(content)) !== null) {
+    const text = headingTextFromMarkdown(match[2].trim());
+    ids.set(match.index, uniqueHeadingId(slugifyHeading(text), seen));
+  }
+  return ids;
 }
 
 function StickyTOC({ items }: { items: TocItem[] }) {
@@ -168,10 +189,14 @@ interface BlogPostClientProps {
 export default function BlogPostClient({ post, relatedPosts }: BlogPostClientProps) {
   const { t } = useLocale();
   const toc = useMemo(() => extractToc(post.content), [post.content]);
-  const headingIds = new Map<string, number>();
-  const getHeadingId = (children: React.ReactNode) => (
-    uniqueHeadingId(slugifyHeading(getNodeText(children)), headingIds)
-  );
+  const headingIdsByOffset = useMemo(() => extractHeadingIdsByOffset(post.content), [post.content]);
+  const getHeadingId = (children: React.ReactNode, node: unknown) => {
+    const offset = (node as { position?: { start?: { offset?: number } } } | undefined)
+      ?.position?.start?.offset;
+    return typeof offset === 'number'
+      ? headingIdsByOffset.get(offset) || slugifyHeading(getNodeText(children))
+      : slugifyHeading(getNodeText(children));
+  };
 
   return (
     <div className="min-h-screen flex flex-col bg-white dark:bg-zinc-950">
@@ -234,12 +259,12 @@ export default function BlogPostClient({ post, relatedPosts }: BlogPostClientPro
                 <ReactMarkdown
                   remarkPlugins={[remarkGfm]}
                   components={{
-                    h2: ({ children, ...props }) => {
-                      const id = getHeadingId(children);
+                    h2: ({ children, node, ...props }) => {
+                      const id = getHeadingId(children, node);
                       return <h2 id={id} {...props}>{children}</h2>;
                     },
-                    h3: ({ children, ...props }) => {
-                      const id = getHeadingId(children);
+                    h3: ({ children, node, ...props }) => {
+                      const id = getHeadingId(children, node);
                       return <h3 id={id} {...props}>{children}</h3>;
                     },
                     a: ({ href, children, ...props }) => {

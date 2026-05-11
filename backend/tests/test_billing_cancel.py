@@ -129,6 +129,28 @@ async def test_branch_a_active_schedules_cancel(fake_db, monkeypatch):
 
 
 @pytest.mark.asyncio
+async def test_branch_a_active_uses_item_period_end_when_top_level_missing(fake_db, monkeypatch):
+    _patch_settings(monkeypatch)
+    _patch_cache(monkeypatch)
+    user = _user(stripe_subscription_id="sub_item_period")
+    stripe_sub = {
+        "status": "active",
+        "items": {"data": [{"current_period_end": 1_800_000_000}]},
+    }
+    monkeypatch.setattr(
+        billing_api.asyncio,
+        "to_thread",
+        AsyncMock(side_effect=[stripe_sub, stripe_sub]),
+    )
+
+    result = await billing_api.cancel_subscription(user=user, db=fake_db)
+
+    assert result["status"] == "scheduled_cancel"
+    assert result["effective_at"] == "2027-01-15T08:00:00+00:00"
+    assert fake_db._added[0].metadata_json["effective_at"] == result["effective_at"]
+
+
+@pytest.mark.asyncio
 async def test_branch_a_trialing_also_cancellable(fake_db, monkeypatch):
     _patch_settings(monkeypatch)
     _patch_cache(monkeypatch)
@@ -258,6 +280,31 @@ async def test_branch_c_single_sub_auto_heals(fake_db, monkeypatch):
     assert user.stripe_subscription_id == "sub_healed"
     assert len(fake_db._added) == 1
     assert fake_db._added[0].metadata_json["reason"] == "branch_c_auto_heal"
+
+
+@pytest.mark.asyncio
+async def test_branch_c_auto_heal_uses_item_period_end_when_top_level_missing(fake_db, monkeypatch):
+    _patch_settings(monkeypatch)
+    _patch_cache(monkeypatch)
+    user = _user(stripe_subscription_id=None)
+    healed = {
+        "id": "sub_healed",
+        "status": "active",
+        "items": {"data": [{"current_period_end": 1_800_000_000}]},
+    }
+    monkeypatch.setattr(
+        billing_api,
+        "_list_customer_subscriptions",
+        AsyncMock(return_value=[healed]),
+    )
+    monkeypatch.setattr(billing_api.asyncio, "to_thread", AsyncMock(return_value=healed))
+    fake_db.execute = AsyncMock(return_value=_lock_result(user))
+
+    result = await billing_api.cancel_subscription(user=user, db=fake_db)
+
+    assert result["status"] == "scheduled_cancel"
+    assert result["effective_at"] == "2027-01-15T08:00:00+00:00"
+    assert fake_db._added[0].metadata_json["effective_at"] == result["effective_at"]
 
 
 @pytest.mark.asyncio

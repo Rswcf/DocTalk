@@ -130,7 +130,14 @@ export default function PdfViewer({ pdfUrl, currentPage, highlights, scale, scro
 
     const scrollToTarget = () => {
       const target = pageRefs.current[currentPage - 1];
-      if (!target || !containerRef.current) return;
+      const container = containerRef.current;
+      if (!target || !container || container.clientHeight === 0) {
+        if (retryCount < maxRetries) {
+          retryCount++;
+          requestAnimationFrame(scrollToTarget);
+        }
+        return;
+      }
 
       const anchor = target.querySelector('[data-highlight-anchor="true"]') as HTMLElement | null;
       if (!anchor && retryCount < maxRetries) {
@@ -141,7 +148,6 @@ export default function PdfViewer({ pdfUrl, currentPage, highlights, scale, scro
       }
 
       if (anchor) {
-        const container = containerRef.current;
         const anchorRect = anchor.getBoundingClientRect();
         const containerRect = container.getBoundingClientRect();
         const anchorCenterInContainer =
@@ -155,7 +161,11 @@ export default function PdfViewer({ pdfUrl, currentPage, highlights, scale, scro
           behavior: scrollBehavior(),
         });
       } else {
-        target.scrollIntoView({ behavior: scrollBehavior(), block: 'start' });
+        const scrollTarget = target.offsetTop - container.offsetTop;
+        container.scrollTo({
+          top: Math.max(0, scrollTarget),
+          behavior: scrollBehavior(),
+        });
       }
     };
 

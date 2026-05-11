@@ -67,6 +67,11 @@ export default function PrivacyPageClient() {
               <h2 className="text-lg font-semibold mb-2 dark:text-white">{t('privacy.section5.title')}</h2>
               <p>{t('privacy.section5.content')}</p>
             </section>
+
+            <section id="ccpa" className="scroll-mt-24">
+              <h2 className="text-lg font-semibold mb-2 dark:text-white">{t('privacy.ccpa.title')}</h2>
+              <p>{t('privacy.ccpa.content')}</p>
+            </section>
           </div>
 
           <div className="mt-8 pt-6 border-t dark:border-zinc-700 text-sm text-zinc-500">

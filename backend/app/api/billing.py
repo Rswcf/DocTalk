@@ -626,7 +626,7 @@ def _billing_state_from_stripe_sub(plan: str, sub: dict) -> dict:
     recurring = price.get("recurring") or {}
     stripe_interval = recurring.get("interval")  # 'month' | 'year' | None
     interval: Optional[str] = stripe_interval if stripe_interval in {"month", "year"} else None
-    period_end = _iso(sub.get("current_period_end"))
+    period_end = _iso(_subscription_period_end(sub))
     cancel_at_period_end = bool(sub.get("cancel_at_period_end"))
     can_cancel = (
         status in _CANCELLABLE_SUBSCRIPTION_STATUSES
@@ -677,6 +677,21 @@ def _iso(dt_value) -> Optional[str]:
     else:
         return None
     return dt.isoformat() if dt else None
+
+
+def _subscription_period_end(sub: dict) -> Optional[int]:
+    """Return the subscription period end across Stripe API shapes.
+
+    Some Stripe API versions/resources expose `current_period_end` on the
+    subscription item rather than the subscription object itself.
+    """
+    direct = sub.get("current_period_end")
+    if direct is not None:
+        return direct
+    items = sub.get("items", {}).get("data", [])
+    if not items:
+        return None
+    return items[0].get("current_period_end")
 
 
 def _cancel_request_metadata(body: CancelSubscriptionRequest | None) -> dict:
@@ -743,7 +758,7 @@ async def cancel_subscription(
                 logger.error("Stripe modify (cancel) failed for user %s: %s", user.id, e)
                 raise HTTPException(502, "Stripe temporarily unavailable, please try again")
 
-            effective_at = _iso(updated.get("current_period_end") or sub.get("current_period_end"))
+            effective_at = _iso(_subscription_period_end(updated) or _subscription_period_end(sub))
             _audit_plan_transition(
                 db,
                 user_id=user.id,
@@ -866,7 +881,7 @@ async def cancel_subscription(
                 logger.error("Stripe modify failed after auto-heal user %s: %s", user.id, e)
                 raise HTTPException(502, "Stripe temporarily unavailable, please try again")
 
-            effective_at = _iso(updated.get("current_period_end"))
+            effective_at = _iso(_subscription_period_end(updated) or _subscription_period_end(healed))
             _audit_plan_transition(
                 db,
                 user_id=user.id,

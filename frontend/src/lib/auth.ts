@@ -19,13 +19,17 @@ if (!process.env.AUTH_SECRET) {
 }
 
 // Build providers list dynamically — skip providers with missing env vars
-const providers: Provider[] = [
-  Google({
+const providers: Provider[] = [];
+
+if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
+  providers.push(Google({
     clientId: process.env.GOOGLE_CLIENT_ID as string,
     clientSecret: process.env.GOOGLE_CLIENT_SECRET as string,
     allowDangerousEmailAccountLinking: true,
-  }),
-];
+  }));
+} else {
+  console.warn("GOOGLE_CLIENT_ID/GOOGLE_CLIENT_SECRET not set — Google provider disabled");
+}
 
 if (process.env.MICROSOFT_CLIENT_ID && process.env.MICROSOFT_CLIENT_SECRET) {
   providers.push(
@@ -142,4 +146,3 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     error: "/auth/error",
   },
 });
-

@@ -102,7 +102,7 @@ export default function NotebooklmClient() {
             <p className="text-zinc-600 dark:text-zinc-300 leading-relaxed">
               <a href="https://notebooklm.google.com" target="_blank" rel="noopener noreferrer" className="text-accent hover:underline">NotebookLM</a>{' '}
               {t('compareNotebooklm.whatIsNotebookLMDescription')}{' '}
-              Learn more about <a href="https://blog.google/technology/ai/notebooklm/" target="_blank" rel="noopener noreferrer" className="text-accent hover:underline">{"Google's AI notebook"}</a>.
+              Learn more about <a href="https://blog.google/technology/ai/notebooklm-google-ai/" target="_blank" rel="noopener noreferrer" className="text-accent hover:underline">{"Google's AI notebook"}</a>.
             </p>
           </div>
         </section>

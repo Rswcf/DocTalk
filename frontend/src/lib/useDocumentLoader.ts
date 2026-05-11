@@ -46,6 +46,7 @@ export function useDocumentLoader(documentId: string | undefined): UseDocumentLo
     setConvertedPdfUrl(null);
     setCustomInstructions(null);
     setDocument(documentId);
+    setPdfUrl(null);
 
     let intervalId: NodeJS.Timeout | null = null;
     let cancelled = false;
@@ -81,6 +82,15 @@ export function useDocumentLoader(documentId: string | undefined): UseDocumentLo
           if (info.summary) setDocumentSummary(info.summary);
           if (info.suggested_questions) setSuggestedQuestions(info.suggested_questions);
           if (info.custom_instructions !== undefined) setCustomInstructions(info.custom_instructions ?? null);
+          const readyFileType = info.file_type || 'pdf';
+
+          if (readyFileType === 'pdf') {
+            getDocumentFileUrl(documentId)
+              .then((file) => {
+                if (!cancelled) setPdfUrl(file.url);
+              })
+              .catch((e) => console.error('Failed to load PDF:', e));
+          }
 
           if (info.has_converted_pdf) {
             setHasConvertedPdf(true);
@@ -104,15 +114,6 @@ export function useDocumentLoader(documentId: string | undefined): UseDocumentLo
         if (intervalId) clearInterval(intervalId);
       }
     };
-
-    (async () => {
-      try {
-        const file = await getDocumentFileUrl(documentId);
-        if (!cancelled) setPdfUrl(file.url);
-      } catch {
-        // PdfViewer shows its own error state.
-      }
-    })();
 
     fetchStatus();
     intervalId = setInterval(fetchStatus, 3000);
