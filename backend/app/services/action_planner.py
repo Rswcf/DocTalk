@@ -92,6 +92,14 @@ def deterministic_plan(message: str, *, is_collection: bool = False) -> ActionPl
     has_compare = bool(_COMPARE_RE.search(text))
     has_template = bool(_TEMPLATE_RE.search(text))
     has_citation = bool(_CITATION_RE.search(text))
+    wants_direct_chat_answer = bool(
+        re.search(
+            r"\b(answer directly|directly in chat|do not start|do not create|no separate)\b"
+            r"|直接在聊天|不要启动|不要生成.*任务|不要.*结构化",
+            text,
+            re.IGNORECASE,
+        )
+    )
     wants_deliverable = bool(
         re.search(r"\b(all|extract|list|find all|make|create|generate|table)\b|所有|全部|提取|列出|找出|整理|生成|做成", text, re.IGNORECASE)
     )
@@ -138,6 +146,15 @@ def deterministic_plan(message: str, *, is_collection: bool = False) -> ActionPl
                 "我会把文档中的表格整理为可导出的 CSV。",
             ),
             reason="table export markers",
+        )
+
+    if wants_direct_chat_answer:
+        return ActionPlan(
+            action=ChatAction.CITATION_LOOKUP if has_citation else ChatAction.ANSWER_WITH_RAG,
+            confidence=0.82,
+            requires_confirmation=False,
+            user_visible_status="",
+            reason="explicit direct chat answer requested",
         )
 
     if has_fact and wants_deliverable:
