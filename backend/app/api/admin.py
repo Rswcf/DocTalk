@@ -8,7 +8,7 @@ from typing import Any
 
 import stripe
 from fastapi import APIRouter, Depends, Query
-from sqlalchemy import case, func, select
+from sqlalchemy import case, func, select, text, union_all
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.cache import cache_get, cache_set
@@ -22,6 +22,7 @@ from app.models.tables import (
     ProductEvent,
     UsageRecord,
     User,
+    UserFeedback,
 )
 from app.schemas.admin import (
     AdminBreakdownsResponse,
@@ -29,9 +30,79 @@ from app.schemas.admin import (
     AdminRecentUsersResponse,
     AdminTopUsersResponse,
     AdminTrendsResponse,
+    AdminUserActivityResponse,
 )
 
 router = APIRouter(prefix="/api/admin", tags=["admin"])
+
+PAID_INTENT_EVENTS = [
+    "paywall_opened",
+    "limit_hit",
+    "billing_view",
+    "upgrade_click",
+    "checkout_created",
+    "checkout_completed",
+    "subscription_cancel_requested",
+    "refund_requested",
+]
+
+
+def _rate(numerator: int | float, denominator: int | float) -> float:
+    return round(float(numerator) / float(denominator), 4) if denominator else 0.0
+
+
+def _delta_payload(current: int | float, previous: int | float) -> dict[str, int | float | None]:
+    delta = current - previous
+    return {
+        "current": current,
+        "previous": previous,
+        "delta": delta,
+        "delta_percent": round((delta / previous) * 100, 1) if previous else None,
+    }
+
+
+def _date_label(value: Any) -> str:
+    if hasattr(value, "date"):
+        return str(value.date())
+    return str(value)[:10]
+
+
+def _activity_subquery(start: datetime, end: datetime | None = None):
+    usage_q = (
+        select(UsageRecord.user_id.label("user_id"), UsageRecord.created_at.label("created_at"))
+        .where(UsageRecord.user_id.is_not(None))
+        .where(UsageRecord.created_at >= start)
+    )
+    message_q = (
+        select(ChatSession.user_id.label("user_id"), Message.created_at.label("created_at"))
+        .join(ChatSession, Message.session_id == ChatSession.id)
+        .where(ChatSession.user_id.is_not(None))
+        .where(Message.role == "user")
+        .where(Message.created_at >= start)
+    )
+    document_q = (
+        select(Document.user_id.label("user_id"), Document.created_at.label("created_at"))
+        .where(Document.user_id.is_not(None))
+        .where(Document.demo_slug.is_(None))
+        .where(Document.created_at >= start)
+    )
+    event_q = (
+        select(ProductEvent.user_id.label("user_id"), ProductEvent.created_at.label("created_at"))
+        .where(ProductEvent.user_id.is_not(None))
+        .where(ProductEvent.created_at >= start)
+    )
+    feedback_q = (
+        select(UserFeedback.user_id.label("user_id"), UserFeedback.created_at.label("created_at"))
+        .where(UserFeedback.user_id.is_not(None))
+        .where(UserFeedback.created_at >= start)
+    )
+    if end is not None:
+        usage_q = usage_q.where(UsageRecord.created_at < end)
+        message_q = message_q.where(Message.created_at < end)
+        document_q = document_q.where(Document.created_at < end)
+        event_q = event_q.where(ProductEvent.created_at < end)
+        feedback_q = feedback_q.where(UserFeedback.created_at < end)
+    return union_all(usage_q, message_q, document_q, event_q, feedback_q).subquery()
 
 
 def _stripe_secret_mode() -> str:
@@ -279,6 +350,560 @@ async def admin_breakdowns(
         "model_usage": model_usage,
         "file_types": file_types,
         "doc_status": doc_status,
+    }
+
+
+@router.get("/user-activity", response_model=AdminUserActivityResponse)
+async def admin_user_activity(
+    _admin: User = Depends(require_admin),
+    db: AsyncSession = Depends(get_db_session),
+    period: str = Query("day", regex="^(day|week|month)$"),
+    days: int = Query(30, ge=1, le=365),
+):
+    """Composite user activity, retention, paid intent, and feedback analytics."""
+    now = datetime.now(timezone.utc)
+    cutoff = now - timedelta(days=days)
+    previous_cutoff = cutoff - timedelta(days=days)
+    trunc = lambda col: func.date_trunc(period, col)  # noqa: E731
+
+    async def composite_users(start: datetime, end: datetime | None = None) -> int:
+        activity_sq = _activity_subquery(start, end)
+        value = await db.scalar(
+            select(func.count(func.distinct(activity_sq.c.user_id))).select_from(activity_sq)
+        )
+        return int(value or 0)
+
+    dau = await composite_users(now - timedelta(days=1))
+    wau = await composite_users(now - timedelta(days=7))
+    mau = await composite_users(now - timedelta(days=30))
+    active_users = await composite_users(cutoff)
+    previous_active_users = await composite_users(previous_cutoff, cutoff)
+
+    signups = int(await db.scalar(select(func.count(User.id)).where(User.created_at >= cutoff)) or 0)
+    previous_signups = int(
+        await db.scalar(
+            select(func.count(User.id))
+            .where(User.created_at >= previous_cutoff)
+            .where(User.created_at < cutoff)
+        )
+        or 0
+    )
+    total_users = int(await db.scalar(select(func.count(User.id))) or 0)
+    paid_users = int(await db.scalar(select(func.count(User.id)).where(User.plan != "free")) or 0)
+
+    upload_users = int(
+        await db.scalar(
+            select(func.count(func.distinct(Document.user_id)))
+            .where(Document.created_at >= cutoff)
+            .where(Document.demo_slug.is_(None))
+            .where(Document.user_id.is_not(None))
+        )
+        or 0
+    )
+    previous_upload_users = int(
+        await db.scalar(
+            select(func.count(func.distinct(Document.user_id)))
+            .where(Document.created_at >= previous_cutoff)
+            .where(Document.created_at < cutoff)
+            .where(Document.demo_slug.is_(None))
+            .where(Document.user_id.is_not(None))
+        )
+        or 0
+    )
+    chat_users = int(
+        await db.scalar(
+            select(func.count(func.distinct(ChatSession.user_id)))
+            .join(Message, Message.session_id == ChatSession.id)
+            .where(Message.created_at >= cutoff)
+            .where(Message.role == "user")
+            .where(ChatSession.user_id.is_not(None))
+        )
+        or 0
+    )
+    previous_chat_users = int(
+        await db.scalar(
+            select(func.count(func.distinct(ChatSession.user_id)))
+            .join(Message, Message.session_id == ChatSession.id)
+            .where(Message.created_at >= previous_cutoff)
+            .where(Message.created_at < cutoff)
+            .where(Message.role == "user")
+            .where(ChatSession.user_id.is_not(None))
+        )
+        or 0
+    )
+    activated_users = int(
+        await db.scalar(
+            select(func.count(func.distinct(Document.user_id)))
+            .join(ChatSession, ChatSession.user_id == Document.user_id)
+            .join(Message, Message.session_id == ChatSession.id)
+            .where(Document.created_at >= cutoff)
+            .where(Document.demo_slug.is_(None))
+            .where(Message.role == "user")
+            .where(Message.created_at >= cutoff)
+            .where(Document.user_id.is_not(None))
+        )
+        or 0
+    )
+
+    checkout_completed_users = int(
+        await db.scalar(
+            select(func.count(func.distinct(ProductEvent.user_id)))
+            .where(ProductEvent.created_at >= cutoff)
+            .where(ProductEvent.event_name == "checkout_completed")
+            .where(ProductEvent.user_id.is_not(None))
+        )
+        or 0
+    )
+    previous_checkout_completed_users = int(
+        await db.scalar(
+            select(func.count(func.distinct(ProductEvent.user_id)))
+            .where(ProductEvent.created_at >= previous_cutoff)
+            .where(ProductEvent.created_at < cutoff)
+            .where(ProductEvent.event_name == "checkout_completed")
+            .where(ProductEvent.user_id.is_not(None))
+        )
+        or 0
+    )
+
+    series_map: dict[str, dict[str, int | str]] = {}
+
+    def point_for(value: Any) -> dict[str, int | str]:
+        label = _date_label(value)
+        if label not in series_map:
+            series_map[label] = {
+                "date": label,
+                "signups": 0,
+                "active_users": 0,
+                "ai_active_users": 0,
+                "uploads": 0,
+                "upload_users": 0,
+                "chat_users": 0,
+                "messages": 0,
+                "credits_spent": 0,
+                "paywall_opened": 0,
+                "limit_hit": 0,
+                "billing_view": 0,
+                "upgrade_click": 0,
+                "checkout_created": 0,
+                "checkout_completed": 0,
+                "feedback_submissions": 0,
+            }
+        return series_map[label]
+
+    signup_rows = (
+        await db.execute(
+            select(trunc(User.created_at).label("date"), func.count(User.id).label("count"))
+            .where(User.created_at >= cutoff)
+            .group_by("date")
+            .order_by("date")
+        )
+    ).all()
+    for row in signup_rows:
+        point_for(row.date)["signups"] = int(row.count or 0)
+
+    activity_sq = _activity_subquery(cutoff)
+    active_rows = (
+        await db.execute(
+            select(
+                trunc(activity_sq.c.created_at).label("date"),
+                func.count(func.distinct(activity_sq.c.user_id)).label("count"),
+            )
+            .select_from(activity_sq)
+            .group_by("date")
+            .order_by("date")
+        )
+    ).all()
+    for row in active_rows:
+        point_for(row.date)["active_users"] = int(row.count or 0)
+
+    ai_active_rows = (
+        await db.execute(
+            select(
+                trunc(UsageRecord.created_at).label("date"),
+                func.count(func.distinct(UsageRecord.user_id)).label("count"),
+            )
+            .where(UsageRecord.created_at >= cutoff)
+            .group_by("date")
+            .order_by("date")
+        )
+    ).all()
+    for row in ai_active_rows:
+        point_for(row.date)["ai_active_users"] = int(row.count or 0)
+
+    upload_rows = (
+        await db.execute(
+            select(
+                trunc(Document.created_at).label("date"),
+                func.count(Document.id).label("uploads"),
+                func.count(func.distinct(Document.user_id)).label("users"),
+            )
+            .where(Document.created_at >= cutoff)
+            .where(Document.demo_slug.is_(None))
+            .where(Document.user_id.is_not(None))
+            .group_by("date")
+            .order_by("date")
+        )
+    ).all()
+    for row in upload_rows:
+        point = point_for(row.date)
+        point["uploads"] = int(row.uploads or 0)
+        point["upload_users"] = int(row.users or 0)
+
+    chat_rows = (
+        await db.execute(
+            select(
+                trunc(Message.created_at).label("date"),
+                func.count(Message.id).label("messages"),
+                func.count(func.distinct(ChatSession.user_id)).label("users"),
+            )
+            .join(ChatSession, Message.session_id == ChatSession.id)
+            .where(Message.created_at >= cutoff)
+            .where(Message.role == "user")
+            .where(ChatSession.user_id.is_not(None))
+            .group_by("date")
+            .order_by("date")
+        )
+    ).all()
+    for row in chat_rows:
+        point = point_for(row.date)
+        point["messages"] = int(row.messages or 0)
+        point["chat_users"] = int(row.users or 0)
+
+    credit_rows = (
+        await db.execute(
+            select(
+                trunc(CreditLedger.created_at).label("date"),
+                func.coalesce(
+                    func.sum(case((CreditLedger.delta < 0, func.abs(CreditLedger.delta)), else_=0)),
+                    0,
+                ).label("amount"),
+            )
+            .where(CreditLedger.created_at >= cutoff)
+            .group_by("date")
+            .order_by("date")
+        )
+    ).all()
+    for row in credit_rows:
+        point_for(row.date)["credits_spent"] = int(row.amount or 0)
+
+    event_rows = (
+        await db.execute(
+            select(
+                trunc(ProductEvent.created_at).label("date"),
+                ProductEvent.event_name.label("event_name"),
+                func.count(ProductEvent.id).label("count"),
+            )
+            .where(ProductEvent.created_at >= cutoff)
+            .where(ProductEvent.event_name.in_(PAID_INTENT_EVENTS))
+            .group_by("date", ProductEvent.event_name)
+            .order_by("date")
+        )
+    ).all()
+    for row in event_rows:
+        if row.event_name in point_for(row.date):
+            point_for(row.date)[row.event_name] = int(row.count or 0)
+
+    feedback_series_rows = (
+        await db.execute(
+            select(
+                trunc(UserFeedback.created_at).label("date"),
+                func.count(UserFeedback.id).label("count"),
+            )
+            .where(UserFeedback.created_at >= cutoff)
+            .group_by("date")
+            .order_by("date")
+        )
+    ).all()
+    for row in feedback_series_rows:
+        point_for(row.date)["feedback_submissions"] = int(row.count or 0)
+
+    cohort_user_ids = select(User.id).where(User.created_at >= cutoff).subquery()
+    cohort_upload_users = int(
+        await db.scalar(
+            select(func.count(func.distinct(Document.user_id)))
+            .where(Document.created_at >= cutoff)
+            .where(Document.demo_slug.is_(None))
+            .where(Document.user_id.in_(select(cohort_user_ids.c.id)))
+        )
+        or 0
+    )
+    session_users = int(
+        await db.scalar(
+            select(func.count(func.distinct(ChatSession.user_id)))
+            .where(ChatSession.created_at >= cutoff)
+            .where(ChatSession.user_id.in_(select(cohort_user_ids.c.id)))
+        )
+        or 0
+    )
+    first_chat_users = int(
+        await db.scalar(
+            select(func.count(func.distinct(ChatSession.user_id)))
+            .join(Message, Message.session_id == ChatSession.id)
+            .where(Message.created_at >= cutoff)
+            .where(Message.role == "user")
+            .where(ChatSession.user_id.in_(select(cohort_user_ids.c.id)))
+        )
+        or 0
+    )
+    power_user_sq = (
+        select(ChatSession.user_id.label("user_id"), func.count(Message.id).label("message_count"))
+        .join(Message, Message.session_id == ChatSession.id)
+        .where(Message.created_at >= cutoff)
+        .where(Message.role == "user")
+        .where(ChatSession.user_id.in_(select(cohort_user_ids.c.id)))
+        .group_by(ChatSession.user_id)
+        .subquery()
+    )
+    five_message_users = int(
+        await db.scalar(select(func.count()).select_from(power_user_sq).where(power_user_sq.c.message_count >= 5))
+        or 0
+    )
+    cohort_event_rows = (
+        await db.execute(
+            select(
+                ProductEvent.event_name,
+                func.count(func.distinct(ProductEvent.user_id)).label("users"),
+            )
+            .where(ProductEvent.created_at >= cutoff)
+            .where(ProductEvent.user_id.in_(select(cohort_user_ids.c.id)))
+            .where(ProductEvent.event_name.in_(PAID_INTENT_EVENTS))
+            .group_by(ProductEvent.event_name)
+        )
+    ).all()
+    cohort_event_counts = {row.event_name: int(row.users or 0) for row in cohort_event_rows}
+
+    raw_stages = [
+        ("signup", "Signups", signups),
+        ("first_upload", "Uploaded document", cohort_upload_users),
+        ("first_session", "Created chat session", session_users),
+        ("first_chat", "Sent chat message", first_chat_users),
+        ("five_chats", "5+ chat messages", five_message_users),
+        ("paywall_opened", "Saw paid prompt", cohort_event_counts.get("paywall_opened", 0)),
+        ("limit_hit", "Hit paid limit", cohort_event_counts.get("limit_hit", 0)),
+        ("billing_view", "Viewed billing", cohort_event_counts.get("billing_view", 0)),
+        ("upgrade_click", "Clicked upgrade", cohort_event_counts.get("upgrade_click", 0)),
+        ("checkout_created", "Checkout created", cohort_event_counts.get("checkout_created", 0)),
+        ("checkout_completed", "Checkout completed", cohort_event_counts.get("checkout_completed", 0)),
+    ]
+    funnel = []
+    previous_stage_users: int | None = None
+    for key, label, users in raw_stages:
+        funnel.append({
+            "key": key,
+            "label": label,
+            "users": users,
+            "rate_from_signup": _rate(users, signups) if key != "signup" else None,
+            "rate_from_previous": _rate(users, previous_stage_users) if previous_stage_users else None,
+        })
+        previous_stage_users = users
+
+    retention_rows = (
+        await db.execute(
+            text(
+                """
+                WITH cohort AS (
+                    SELECT id, date_trunc('day', created_at)::date AS cohort_date
+                    FROM users
+                    WHERE created_at >= :cutoff
+                ),
+                activity AS (
+                    SELECT user_id, date_trunc('day', created_at)::date AS activity_date
+                    FROM usage_records
+                    WHERE created_at >= :cutoff AND user_id IS NOT NULL
+                    UNION ALL
+                    SELECT s.user_id, date_trunc('day', m.created_at)::date AS activity_date
+                    FROM messages m
+                    JOIN sessions s ON s.id = m.session_id
+                    WHERE m.created_at >= :cutoff AND m.role = 'user' AND s.user_id IS NOT NULL
+                    UNION ALL
+                    SELECT user_id, date_trunc('day', created_at)::date AS activity_date
+                    FROM documents
+                    WHERE created_at >= :cutoff AND demo_slug IS NULL AND user_id IS NOT NULL
+                    UNION ALL
+                    SELECT user_id, date_trunc('day', created_at)::date AS activity_date
+                    FROM product_events
+                    WHERE created_at >= :cutoff AND user_id IS NOT NULL
+                    UNION ALL
+                    SELECT user_id, date_trunc('day', created_at)::date AS activity_date
+                    FROM user_feedback
+                    WHERE created_at >= :cutoff AND user_id IS NOT NULL
+                )
+                SELECT
+                    c.cohort_date::text AS cohort_date,
+                    count(DISTINCT c.id)::int AS cohort_size,
+                    count(DISTINCT c.id) FILTER (WHERE a.activity_date = c.cohort_date)::int AS d0,
+                    count(DISTINCT c.id) FILTER (WHERE a.activity_date = c.cohort_date + 1)::int AS d1,
+                    count(DISTINCT c.id) FILTER (WHERE a.activity_date = c.cohort_date + 7)::int AS d7,
+                    count(DISTINCT c.id) FILTER (WHERE a.activity_date = c.cohort_date + 30)::int AS d30
+                FROM cohort c
+                LEFT JOIN activity a ON a.user_id = c.id
+                GROUP BY c.cohort_date
+                ORDER BY c.cohort_date DESC
+                LIMIT 30
+                """
+            ),
+            {"cutoff": cutoff},
+        )
+    ).all()
+    retention = [
+        {
+            "cohort_date": row.cohort_date,
+            "cohort_size": int(row.cohort_size or 0),
+            "d0": int(row.d0 or 0),
+            "d1": int(row.d1 or 0),
+            "d7": int(row.d7 or 0),
+            "d30": int(row.d30 or 0),
+            "d0_rate": _rate(row.d0 or 0, row.cohort_size or 0),
+            "d1_rate": _rate(row.d1 or 0, row.cohort_size or 0),
+            "d7_rate": _rate(row.d7 or 0, row.cohort_size or 0),
+            "d30_rate": _rate(row.d30 or 0, row.cohort_size or 0),
+        }
+        for row in retention_rows
+    ]
+    retention_explanation = None
+    if not retention:
+        retention_explanation = "No signup cohorts in the selected window."
+    elif days < 30:
+        retention_explanation = "D30 retention is incomplete for windows shorter than 30 days."
+
+    plan_rows = (
+        await db.execute(
+            select(User.plan.label("key"), func.count(User.id).label("count"))
+            .group_by(User.plan)
+            .order_by(func.count(User.id).desc())
+        )
+    ).all()
+    file_type_rows = (
+        await db.execute(
+            select(Document.file_type.label("key"), func.count(Document.id).label("count"))
+            .where(Document.created_at >= cutoff)
+            .where(Document.demo_slug.is_(None))
+            .group_by(Document.file_type)
+            .order_by(func.count(Document.id).desc())
+        )
+    ).all()
+    paid_reason_rows = (
+        await db.execute(
+            select(
+                ProductEvent.event_name,
+                ProductEvent.reason,
+                ProductEvent.source,
+                ProductEvent.plan,
+                func.count(ProductEvent.id).label("events"),
+                func.count(func.distinct(ProductEvent.user_id)).label("users"),
+            )
+            .where(ProductEvent.created_at >= cutoff)
+            .where(ProductEvent.event_name.in_(PAID_INTENT_EVENTS))
+            .group_by(ProductEvent.event_name, ProductEvent.reason, ProductEvent.source, ProductEvent.plan)
+            .order_by(func.count(ProductEvent.id).desc())
+            .limit(50)
+        )
+    ).all()
+    paid_intent_reasons = [
+        {
+            "event_name": row.event_name,
+            "reason": row.reason,
+            "source": row.source,
+            "plan": row.plan,
+            "events": int(row.events or 0),
+            "users": int(row.users or 0),
+        }
+        for row in paid_reason_rows
+    ]
+    conversion_blockers = [
+        item for item in paid_intent_reasons if item["event_name"] in {"limit_hit", "paywall_opened", "refund_requested"}
+    ][:20]
+
+    async def feedback_group(column) -> list[dict[str, int | str]]:
+        rows = (
+            await db.execute(
+                select(column.label("key"), func.count(UserFeedback.id).label("count"))
+                .where(UserFeedback.created_at >= cutoff)
+                .group_by(column)
+                .order_by(func.count(UserFeedback.id).desc())
+            )
+        ).all()
+        return [{"key": row.key or "unknown", "count": int(row.count or 0), "users": None} for row in rows]
+
+    feedback_total = int(
+        await db.scalar(select(func.count(UserFeedback.id)).where(UserFeedback.created_at >= cutoff)) or 0
+    )
+    feedback_recent_rows = (
+        await db.execute(
+            select(UserFeedback)
+            .where(UserFeedback.created_at >= cutoff)
+            .order_by(UserFeedback.created_at.desc())
+            .limit(20)
+        )
+    ).scalars().all()
+    feedback_recent = []
+    for item in feedback_recent_rows:
+        message = item.message or ""
+        feedback_recent.append({
+            "id": str(item.id),
+            "created_at": item.created_at.isoformat() if item.created_at else None,
+            "type": item.type,
+            "area": item.area,
+            "severity": item.severity,
+            "status": item.status,
+            "path": item.path,
+            "locale": item.locale,
+            "plan": item.plan,
+            "has_message": bool(message),
+            "message_preview": message[:180] if message else None,
+        })
+
+    return {
+        "days": days,
+        "period": period,
+        "since": cutoff.isoformat(),
+        "generated_at": now.isoformat(),
+        "summary": {
+            "dau": dau,
+            "wau": wau,
+            "mau": mau,
+            "signups": signups,
+            "activated_users": activated_users,
+            "upload_users": upload_users,
+            "chat_users": chat_users,
+            "paid_users": paid_users,
+            "total_users": total_users,
+            "free_to_paid_rate": _rate(paid_users, total_users),
+            "deltas": {
+                "signups": _delta_payload(signups, previous_signups),
+                "active_users": _delta_payload(active_users, previous_active_users),
+                "upload_users": _delta_payload(upload_users, previous_upload_users),
+                "chat_users": _delta_payload(chat_users, previous_chat_users),
+                "checkout_completed": _delta_payload(
+                    checkout_completed_users,
+                    previous_checkout_completed_users,
+                ),
+            },
+        },
+        "series": [series_map[key] for key in sorted(series_map)],
+        "funnel": funnel,
+        "retention": retention,
+        "retention_explanation": retention_explanation,
+        "segments": {
+            "plan_distribution": [
+                {"key": row.key or "unknown", "count": int(row.count or 0), "users": None}
+                for row in plan_rows
+            ],
+            "file_types": [
+                {"key": row.key or "unknown", "count": int(row.count or 0), "users": None}
+                for row in file_type_rows
+            ],
+            "paid_intent_reasons": paid_intent_reasons,
+            "conversion_blockers": conversion_blockers,
+        },
+        "feedback": {
+            "total": feedback_total,
+            "by_type": await feedback_group(UserFeedback.type),
+            "by_area": await feedback_group(UserFeedback.area),
+            "by_severity": await feedback_group(UserFeedback.severity),
+            "by_status": await feedback_group(UserFeedback.status),
+            "recent": feedback_recent,
+        },
     }
 
 

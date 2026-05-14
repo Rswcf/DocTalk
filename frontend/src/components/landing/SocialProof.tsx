@@ -55,7 +55,7 @@ function AnimatedCounter({ target, suffix = '' }: { target: number; suffix?: str
 const metrics = [
   { target: 10000, suffix: '+', labelKey: 'landing.social.metric1' },
   { target: 11, suffix: '', labelKey: 'landing.social.metric2' },
-  { target: 3, suffix: '', labelKey: 'landing.social.metric3' },
+  { target: 2, suffix: '', labelKey: 'landing.social.metric3' },
   { staticValue: '99.9%', labelKey: 'landing.social.metric4' },
 ] as const;
 

@@ -13,6 +13,7 @@ import UserMenu from './UserMenu';
 import { useLocale } from '../i18n';
 import SessionDropdown from './SessionDropdown';
 import { CreditsDisplay } from './CreditsDisplay';
+import FeedbackButton from './FeedbackButton';
 
 interface AppHeaderShellProps {
   isDemo?: boolean;
@@ -63,6 +64,7 @@ export default function AppHeaderShell({ isDemo, isLoggedIn }: AppHeaderShellPro
       <div className="ml-auto flex items-center gap-1 sm:gap-2 shrink-0">
         {!(isDemo && !isLoggedIn) && <ModeSelector />}
         <div className="hidden sm:flex"><ThemeSelector /></div>
+        {!(isDemo && !isLoggedIn) && <FeedbackButton />}
         <div className="hidden sm:block"><CreditsDisplay /></div>
         <UserMenu />
         <div className="hidden sm:flex"><LanguageSelector /></div>

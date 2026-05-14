@@ -438,6 +438,33 @@ export async function revokeShare(sessionId: string): Promise<void> {
   if (!res.ok && res.status !== 404) throw new Error(await res.text());
 }
 
+// --- Feedback API ---
+
+export interface FeedbackRequest {
+  type: 'feature_request' | 'bug' | 'answer_quality' | 'citation_problem' | 'billing_pricing' | 'usability' | 'other';
+  area: 'upload_parse' | 'chat_answer' | 'citation_jump' | 'collections' | 'export' | 'billing' | 'account' | 'performance' | 'mobile' | 'localization';
+  severity: 'low' | 'medium' | 'high' | 'blocking';
+  selected_options: string[];
+  message?: string | null;
+  path?: string | null;
+  locale?: string | null;
+  plan?: string | null;
+}
+
+export interface FeedbackResponse {
+  id: string;
+  status: 'received';
+}
+
+export async function submitFeedback(payload: FeedbackRequest): Promise<FeedbackResponse> {
+  const res = await fetch(`${PROXY_BASE}/api/feedback`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  return handle(res);
+}
+
 // --- Admin API ---
 
 export async function getAdminOverview() {
@@ -544,6 +571,132 @@ export interface AdminRagQuality {
 
 export async function getAdminRagQuality(days = 30): Promise<AdminRagQuality> {
   const res = await fetch(`${PROXY_BASE}/api/admin/rag-quality?days=${days}`);
+  return handle(res);
+}
+
+export interface AdminMetricDelta {
+  current: number;
+  previous: number;
+  delta: number;
+  delta_percent: number | null;
+}
+
+export interface AdminUserActivitySummary {
+  dau: number;
+  wau: number;
+  mau: number;
+  signups: number;
+  activated_users: number;
+  upload_users: number;
+  chat_users: number;
+  paid_users: number;
+  total_users: number;
+  free_to_paid_rate: number;
+  deltas: Record<string, AdminMetricDelta>;
+}
+
+export interface AdminUserActivityPoint {
+  date: string;
+  signups: number;
+  active_users: number;
+  ai_active_users: number;
+  uploads: number;
+  upload_users: number;
+  chat_users: number;
+  messages: number;
+  credits_spent: number;
+  paywall_opened: number;
+  limit_hit: number;
+  billing_view: number;
+  upgrade_click: number;
+  checkout_created: number;
+  checkout_completed: number;
+  feedback_submissions: number;
+}
+
+export interface AdminUserActivityFunnelStage {
+  key: string;
+  label: string;
+  users: number;
+  rate_from_signup: number | null;
+  rate_from_previous: number | null;
+}
+
+export interface AdminUserRetentionRow {
+  cohort_date: string;
+  cohort_size: number;
+  d0: number;
+  d1: number;
+  d7: number;
+  d30: number;
+  d0_rate: number;
+  d1_rate: number;
+  d7_rate: number;
+  d30_rate: number;
+}
+
+export interface AdminUserActivitySegmentItem {
+  key: string;
+  count: number;
+  users: number | null;
+}
+
+export interface AdminPaidIntentReasonItem {
+  event_name: string;
+  reason: string | null;
+  source: string | null;
+  plan: string | null;
+  events: number;
+  users: number;
+}
+
+export interface AdminFeedbackRecentItem {
+  id: string;
+  created_at: string | null;
+  type: string;
+  area: string;
+  severity: string;
+  status: string;
+  path: string | null;
+  locale: string | null;
+  plan: string | null;
+  has_message: boolean;
+  message_preview: string | null;
+}
+
+export interface AdminFeedbackSummary {
+  total: number;
+  by_type: AdminUserActivitySegmentItem[];
+  by_area: AdminUserActivitySegmentItem[];
+  by_severity: AdminUserActivitySegmentItem[];
+  by_status: AdminUserActivitySegmentItem[];
+  recent: AdminFeedbackRecentItem[];
+}
+
+export interface AdminUserActivity {
+  days: number;
+  period: string;
+  since: string;
+  generated_at: string;
+  summary: AdminUserActivitySummary;
+  series: AdminUserActivityPoint[];
+  funnel: AdminUserActivityFunnelStage[];
+  retention: AdminUserRetentionRow[];
+  retention_explanation: string | null;
+  segments: {
+    plan_distribution: AdminUserActivitySegmentItem[];
+    file_types: AdminUserActivitySegmentItem[];
+    paid_intent_reasons: AdminPaidIntentReasonItem[];
+    conversion_blockers: AdminPaidIntentReasonItem[];
+  };
+  feedback: AdminFeedbackSummary;
+}
+
+export async function getAdminUserActivity(
+  days = 30,
+  period: 'day' | 'week' | 'month' = 'day',
+): Promise<AdminUserActivity> {
+  const res = await fetch(`${PROXY_BASE}/api/admin/user-activity?period=${period}&days=${days}`);
   return handle(res);
 }
 

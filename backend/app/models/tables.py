@@ -487,6 +487,48 @@ class ProductEvent(Base):
     )
 
 
+class UserFeedback(Base):
+    __tablename__ = "user_feedback"
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, server_default=sa.text("gen_random_uuid()")
+    )
+    user_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        UUID(as_uuid=True),
+        sa.ForeignKey("users.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
+    type: Mapped[str] = mapped_column(sa.String(32), nullable=False)
+    area: Mapped[str] = mapped_column(sa.String(32), nullable=False)
+    severity: Mapped[str] = mapped_column(sa.String(16), nullable=False)
+    selected_options: Mapped[dict] = mapped_column(
+        JSONB, nullable=False, server_default=sa.text("'{}'::jsonb")
+    )
+    message: Mapped[Optional[str]] = mapped_column(sa.Text, nullable=True)
+    path: Mapped[Optional[str]] = mapped_column(sa.String(256), nullable=True)
+    locale: Mapped[Optional[str]] = mapped_column(sa.String(16), nullable=True)
+    plan: Mapped[Optional[str]] = mapped_column(sa.String(16), nullable=True)
+    status: Mapped[str] = mapped_column(sa.String(16), nullable=False, server_default=sa.text("'new'"))
+    user_agent: Mapped[Optional[str]] = mapped_column(sa.String(256), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        sa.DateTime(timezone=True), nullable=False, server_default=sa.text("now()")
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        sa.DateTime(timezone=True), nullable=False, server_default=sa.text("now()"), onupdate=sa.func.now()
+    )
+
+    user: Mapped[Optional["User"]] = relationship("User")
+
+    __table_args__ = (
+        sa.Index("idx_user_feedback_created", sa.text("created_at DESC")),
+        sa.Index("idx_user_feedback_status_created", "status", sa.text("created_at DESC")),
+        sa.Index("idx_user_feedback_type_created", "type", sa.text("created_at DESC")),
+        sa.Index("idx_user_feedback_area_created", "area", sa.text("created_at DESC")),
+        sa.Index("idx_user_feedback_user_created", "user_id", sa.text("created_at DESC")),
+    )
+
+
 class DocumentJob(Base):
     __tablename__ = "document_jobs"
 

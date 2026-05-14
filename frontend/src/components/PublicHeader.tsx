@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { Menu, X } from 'lucide-react';
 import DocTalkLogo from './DocTalkLogo';
 import LanguageSelector from './LanguageSelector';
+import FeedbackButton from './FeedbackButton';
 import { useLocale } from '../i18n';
 import { trackEvent } from '../lib/analytics';
 
@@ -41,6 +42,7 @@ export default function PublicHeader() {
 
       <div className="ml-auto flex items-center gap-2 shrink-0">
         <div className="hidden sm:flex"><LanguageSelector /></div>
+        <div className="hidden md:flex"><FeedbackButton /></div>
         <button
           type="button"
           onClick={() => setMobileMenuOpen((open) => !open)}

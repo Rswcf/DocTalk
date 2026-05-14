@@ -12,11 +12,13 @@ import {
   getAdminBillingHealth,
   getAdminFunnel,
   getAdminRagQuality,
+  getAdminUserActivity,
   getAdminRecentUsers,
   getAdminTopUsers,
   type AdminBillingHealth,
   type AdminFunnel,
   type AdminRagQuality,
+  type AdminUserActivity,
 } from "../../lib/api";
 import {
   Users,
@@ -96,6 +98,10 @@ const AdminCharts = dynamic<{
   trendDays: number;
   onTrendDaysChange: (days: number) => void;
 }>(() => import("../../components/AdminCharts"), { ssr: false });
+
+const AdminUserActivityCharts = dynamic<{
+  activity: AdminUserActivity;
+}>(() => import("../../components/AdminUserActivityCharts"), { ssr: false });
 
 function formatNumber(n: number): string {
   if (n >= 1_000_000) return (n / 1_000_000).toFixed(1) + "M";
@@ -392,12 +398,16 @@ export default function AdminPageClient() {
   const [billingHealth, setBillingHealth] = useState<AdminBillingHealth | null>(null);
   const [funnel, setFunnel] = useState<AdminFunnel | null>(null);
   const [ragQuality, setRagQuality] = useState<AdminRagQuality | null>(null);
+  const [userActivity, setUserActivity] = useState<AdminUserActivity | null>(null);
   const [recentUsers, setRecentUsers] = useState<RecentUser[]>([]);
   const [topUsers, setTopUsers] = useState<TopUser[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [billingRemoteLoading, setBillingRemoteLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [trendDays, setTrendDays] = useState(30);
+  const [refreshInterval, setRefreshInterval] = useState(60);
+  const [lastRefreshedAt, setLastRefreshedAt] = useState<string | null>(null);
   const [topBy, setTopBy] = useState<"tokens" | "credits" | "documents">("tokens");
 
   // Auth guard
@@ -408,11 +418,15 @@ export default function AdminPageClient() {
   }, [status, router]);
 
   // Fetch all data
-  const fetchData = useCallback(async () => {
-    setLoading(true);
+  const fetchData = useCallback(async (silent = false) => {
+    if (silent) {
+      setRefreshing(true);
+    } else {
+      setLoading(true);
+    }
     setError(null);
     try {
-      const [ov, tr, br, ru, tu, bh, fn, rq] = await Promise.all([
+      const [ov, tr, br, ru, tu, bh, fn, rq, ua] = await Promise.all([
         getAdminOverview(),
         getAdminTrends("day", trendDays),
         getAdminBreakdowns(),
@@ -421,6 +435,7 @@ export default function AdminPageClient() {
         getAdminBillingHealth(false),
         getAdminFunnel(trendDays),
         getAdminRagQuality(trendDays),
+        getAdminUserActivity(trendDays, "day"),
       ]);
       setOverview(ov as Overview);
       setTrends(tr as Trends);
@@ -430,6 +445,8 @@ export default function AdminPageClient() {
       setBillingHealth(bh);
       setFunnel(fn);
       setRagQuality(rq);
+      setUserActivity(ua);
+      setLastRefreshedAt(new Date().toISOString());
     } catch (e: any) {
       if (e?.message?.includes("403")) {
         router.push("/");
@@ -437,15 +454,27 @@ export default function AdminPageClient() {
       }
       setError(e?.message || "Failed to load admin data");
     } finally {
-      setLoading(false);
+      if (silent) {
+        setRefreshing(false);
+      } else {
+        setLoading(false);
+      }
     }
   }, [trendDays, topBy, router]);
 
   useEffect(() => {
     if (status === "authenticated") {
-      fetchData();
+      void fetchData();
     }
   }, [status, fetchData]);
+
+  useEffect(() => {
+    if (status !== "authenticated" || refreshInterval <= 0) return;
+    const timer = window.setInterval(() => {
+      void fetchData(true);
+    }, refreshInterval * 1000);
+    return () => window.clearInterval(timer);
+  }, [status, refreshInterval, fetchData]);
 
   const verifyBillingRemote = useCallback(async () => {
     setBillingRemoteLoading(true);
@@ -500,9 +529,49 @@ export default function AdminPageClient() {
     <div className="min-h-screen bg-[var(--page-background)]">
       <Header />
       <main className="max-w-7xl mx-auto p-6 sm:p-8">
-        <h1 className="text-2xl font-semibold mb-6 dark:text-zinc-100">
-          Admin Dashboard
-        </h1>
+        <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h1 className="text-2xl font-semibold dark:text-zinc-100">
+              Admin Dashboard
+            </h1>
+            <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
+              {lastRefreshedAt ? `Last refreshed ${new Date(lastRefreshedAt).toLocaleTimeString()}` : "Loading live metrics"}
+            </p>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <select
+              value={trendDays}
+              onChange={(event) => setTrendDays(Number(event.target.value))}
+              className="rounded-md border border-zinc-200 bg-white px-2.5 py-2 text-sm text-zinc-700 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-200"
+              aria-label="Activity window"
+            >
+              <option value={7}>7 days</option>
+              <option value={30}>30 days</option>
+              <option value={90}>90 days</option>
+              <option value={180}>180 days</option>
+            </select>
+            <select
+              value={refreshInterval}
+              onChange={(event) => setRefreshInterval(Number(event.target.value))}
+              className="rounded-md border border-zinc-200 bg-white px-2.5 py-2 text-sm text-zinc-700 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-200"
+              aria-label="Auto-refresh interval"
+            >
+              <option value={0}>Manual refresh</option>
+              <option value={30}>30s refresh</option>
+              <option value={60}>60s refresh</option>
+              <option value={300}>5m refresh</option>
+            </select>
+            <button
+              type="button"
+              onClick={() => void fetchData(true)}
+              disabled={refreshing || loading}
+              className="inline-flex items-center gap-2 rounded-md border border-zinc-200 px-3 py-2 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-50 disabled:opacity-50 dark:border-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-900"
+            >
+              <RefreshCw aria-hidden="true" className={`h-4 w-4 ${refreshing || loading ? "animate-spin" : ""}`} />
+              Refresh
+            </button>
+          </div>
+        </div>
 
         {/* KPI Cards */}
         {overview && (
@@ -517,6 +586,10 @@ export default function AdminPageClient() {
             <KPICard icon={CreditCard} label="Credits Spent" value={overview.total_credits_spent} />
             <KPICard icon={Gift} label="Credits Granted" value={overview.total_credits_granted} />
           </div>
+        )}
+
+        {userActivity && (
+          <AdminUserActivityCharts activity={userActivity} />
         )}
 
         <BillingHealthPanel

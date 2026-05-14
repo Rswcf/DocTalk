@@ -1,10 +1,12 @@
+import packageJson from '../../package.json';
+
 export type ReleaseInfo = {
   version: string;
   stage: string;
   build?: string | null;
 };
 
-export const PRODUCT_VERSION = (process.env.NEXT_PUBLIC_APP_VERSION || '0.0.0').trim();
+export const PRODUCT_VERSION = (process.env.NEXT_PUBLIC_APP_VERSION || packageJson.version || '0.0.0').trim();
 export const RELEASE_STAGE = (process.env.NEXT_PUBLIC_RELEASE_STAGE || 'beta').trim().toLowerCase();
 export const BUILD_SHA = (process.env.NEXT_PUBLIC_BUILD_SHA || '').trim();
 
