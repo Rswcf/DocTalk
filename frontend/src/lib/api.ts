@@ -520,6 +520,8 @@ export interface AdminFunnelReason {
   reason: string | null;
   source: string | null;
   plan: string | null;
+  label: string | null;
+  description: string | null;
   events: number;
   users: number;
 }
@@ -542,13 +544,35 @@ export async function getAdminFunnel(days = 30): Promise<AdminFunnel> {
 export interface AdminRagQualityRecent {
   created_at: string | null;
   status: string;
+  status_label: string;
   score: number;
   route: string | null;
+  route_label: string;
   strategy: string | null;
+  strategy_label: string;
+  main_issue: AdminRagQualityIssue | null;
   claim_count: number;
   citation_count: number;
   uncited_claim_count: number;
   numeric_mismatch_citation_count: number;
+}
+
+export interface AdminRagQualityIssue {
+  key: string;
+  label: string;
+  description: string;
+  count?: number;
+  affected_answers?: number;
+}
+
+export interface AdminRagQualityStrategy {
+  key: string;
+  label: string;
+  description: string;
+  answers: number;
+  needs_review: number;
+  needs_review_rate: number;
+  average_score: number;
 }
 
 export interface AdminRagQuality {
@@ -557,6 +581,8 @@ export interface AdminRagQuality {
   sample_limit: number;
   is_sampled: boolean;
   evaluated_answers: number;
+  health_label: string;
+  health_explanation: string;
   average_score: number;
   pass_rate: number;
   warn_rate: number;
@@ -566,6 +592,8 @@ export interface AdminRagQuality {
   invalid_citations: number;
   low_overlap_citations: number;
   numeric_mismatch_citations: number;
+  issue_breakdown: AdminRagQualityIssue[];
+  strategy_breakdown: AdminRagQualityStrategy[];
   recent: AdminRagQualityRecent[];
 }
 
@@ -605,6 +633,7 @@ export interface AdminUserActivityPoint {
   chat_users: number;
   messages: number;
   credits_spent: number;
+  upgrade_nudge_shown: number;
   paywall_opened: number;
   limit_hit: number;
   billing_view: number;
@@ -646,6 +675,8 @@ export interface AdminPaidIntentReasonItem {
   reason: string | null;
   source: string | null;
   plan: string | null;
+  label: string | null;
+  description: string | null;
   events: number;
   users: number;
 }

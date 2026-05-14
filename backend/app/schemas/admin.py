@@ -128,6 +128,7 @@ class AdminUserActivityPoint(BaseModel):
     chat_users: int = 0
     messages: int = 0
     credits_spent: int = 0
+    upgrade_nudge_shown: int = 0
     paywall_opened: int = 0
     limit_hit: int = 0
     billing_view: int = 0
@@ -169,6 +170,8 @@ class AdminPaidIntentReasonItem(BaseModel):
     reason: str | None = None
     source: str | None = None
     plan: str | None = None
+    label: str | None = None
+    description: str | None = None
     events: int
     users: int
 

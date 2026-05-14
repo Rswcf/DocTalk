@@ -1,5 +1,5 @@
 import type { ChatArtifact, Citation } from '../types';
-import { mapArtifactPayload, PROXY_BASE } from './api';
+import { mapArtifactPayload, mapCitationPayload, PROXY_BASE } from './api';
 
 type TokenPayload = { text: string };
 type CitationPayload = {
@@ -20,6 +20,7 @@ type CitationEventPayload = CitationPayload & {
 type ErrorPayload = { code: string; message: string; status?: number };
 type DonePayload = { message_id: string; can_continue?: boolean; continuation_count?: number };
 type ToolStatusPayload = { message: string };
+type AnswerRepairedPayload = { text: string; citations: Citation[]; verification?: unknown };
 
 async function _processSSEStream(
   reader: ReadableStreamDefaultReader<Uint8Array>,
@@ -30,6 +31,7 @@ async function _processSSEStream(
   onTruncated?: () => void,
   onArtifact?: (artifact: ChatArtifact) => void,
   onToolStatus?: (status: ToolStatusPayload) => void,
+  onAnswerRepaired?: (payload: AnswerRepairedPayload) => void,
   signal?: AbortSignal,
 ) {
   const decoder = new TextDecoder('utf-8');
@@ -100,6 +102,13 @@ async function _processSSEStream(
             case 'tool_status':
               onToolStatus?.({ message: typeof data.message === 'string' ? data.message : '' });
               break;
+            case 'answer_repaired':
+              onAnswerRepaired?.({
+                text: typeof data.text === 'string' ? data.text : '',
+                citations: Array.isArray(data.citations) ? data.citations.map(mapCitationPayload) : [],
+                verification: data.verification,
+              });
+              break;
             case 'done':
               receivedDone = true;
               onDone({
@@ -147,6 +156,7 @@ export async function chatStream(
   domainMode?: string | null,
   onArtifact?: (artifact: ChatArtifact) => void,
   onToolStatus?: (status: ToolStatusPayload) => void,
+  onAnswerRepaired?: (payload: AnswerRepairedPayload) => void,
 ) {
   const res = await fetch(`${PROXY_BASE}/api/sessions/${sessionId}/chat`, {
     method: 'POST',
@@ -183,7 +193,7 @@ export async function chatStream(
   }
 
   const reader = res.body.getReader();
-  await _processSSEStream(reader, onToken, onCitation, onError, onDone, onTruncated, onArtifact, onToolStatus, signal);
+  await _processSSEStream(reader, onToken, onCitation, onError, onDone, onTruncated, onArtifact, onToolStatus, onAnswerRepaired, signal);
 }
 
 export async function continueStream(
@@ -199,6 +209,7 @@ export async function continueStream(
   signal?: AbortSignal,
   onArtifact?: (artifact: ChatArtifact) => void,
   onToolStatus?: (status: ToolStatusPayload) => void,
+  onAnswerRepaired?: (payload: AnswerRepairedPayload) => void,
 ) {
   const res = await fetch(`${PROXY_BASE}/api/sessions/${sessionId}/chat/continue`, {
     method: 'POST',
@@ -234,5 +245,5 @@ export async function continueStream(
   }
 
   const reader = res.body.getReader();
-  await _processSSEStream(reader, onToken, onCitation, onError, onDone, onTruncated, onArtifact, onToolStatus, signal);
+  await _processSSEStream(reader, onToken, onCitation, onError, onDone, onTruncated, onArtifact, onToolStatus, onAnswerRepaired, signal);
 }

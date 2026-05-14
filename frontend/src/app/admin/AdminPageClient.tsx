@@ -253,6 +253,7 @@ function FunnelPanel({ funnel }: { funnel: AdminFunnel | null }) {
   const signupUsers = funnel.stages[0]?.users || 0;
   const hasPaidIntentEvents = funnel.stages
     .filter((stage) => [
+      "upgrade_nudge_shown",
       "paywall_opened",
       "limit_hit",
       "billing_view",
@@ -268,7 +269,7 @@ function FunnelPanel({ funnel }: { funnel: AdminFunnel | null }) {
       <div className="border-b border-zinc-200 px-4 py-3 dark:border-zinc-700">
         <h2 className="text-sm font-medium text-zinc-900 dark:text-zinc-100">Monetization Funnel</h2>
         <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
-          Last {funnel.days} days, signup cohort conversion by unique users.
+          Last {funnel.days} days, signup cohort conversion by unique users. Upgrade reminders are separated from blocking paywalls.
           {!funnel.event_tracking_started_at && " Paid-intent event tracking has no recorded events yet."}
         </p>
         {funnel.event_tracking_started_at && !hasPaidIntentEvents && (
@@ -299,10 +300,13 @@ function FunnelPanel({ funnel }: { funnel: AdminFunnel | null }) {
               <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800">
                 {funnel.reasons.slice(0, 8).map((row, index) => (
                   <tr key={`${row.event_name}-${row.reason}-${row.source}-${index}`}>
-                    <td className="py-1.5 pr-3 text-zinc-700 dark:text-zinc-300">{row.event_name}</td>
-                    <td className="px-3 py-1.5 text-zinc-600 dark:text-zinc-400">{row.reason || "-"}</td>
-                    <td className="px-3 py-1.5 text-zinc-600 dark:text-zinc-400">{row.source || "-"}</td>
-                    <td className="py-1.5 pl-3 text-right tabular-nums text-zinc-700 dark:text-zinc-300">{row.users} users</td>
+                    <td className="py-2 pr-3">
+                      <p className="font-medium text-zinc-800 dark:text-zinc-100">{row.label || "Paid signal"}</p>
+                      <p className="mt-0.5 max-w-xl text-zinc-500 dark:text-zinc-400">{row.description || "No context recorded."}</p>
+                    </td>
+                    <td className="py-2 pl-3 text-right tabular-nums text-zinc-700 dark:text-zinc-300">
+                      {row.users} users / {row.events} events
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -316,7 +320,9 @@ function FunnelPanel({ funnel }: { funnel: AdminFunnel | null }) {
 
 function RagQualityPanel({ quality }: { quality: AdminRagQuality | null }) {
   if (!quality) return null;
-  const healthy = quality.evaluated_answers === 0 || quality.fail_rate < 0.05;
+  const healthy = quality.evaluated_answers === 0 || (quality.fail_rate < 0.05 && quality.warn_rate < 0.1);
+  const issueRows = quality.issue_breakdown.filter((item) => (item.count || 0) > 0).slice(0, 4);
+  const strategyRows = quality.strategy_breakdown.slice(0, 4);
   return (
     <section className="mb-8 rounded-lg border border-zinc-200 bg-white dark:border-zinc-700 dark:bg-zinc-900">
       <div className="flex flex-col gap-2 border-b border-zinc-200 px-4 py-3 dark:border-zinc-700 sm:flex-row sm:items-center sm:justify-between">
@@ -326,33 +332,36 @@ function RagQualityPanel({ quality }: { quality: AdminRagQuality | null }) {
           ) : (
             <AlertTriangle aria-hidden="true" className="h-4 w-4 text-amber-600 dark:text-amber-300" />
           )}
-          <h2 className="text-sm font-medium text-zinc-900 dark:text-zinc-100">RAG Quality</h2>
+          <div>
+            <h2 className="text-sm font-medium text-zinc-900 dark:text-zinc-100">Answer Citation Quality</h2>
+            <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">{quality.health_explanation}</p>
+          </div>
         </div>
         <p className="text-xs text-zinc-500 dark:text-zinc-400">
-          Last {quality.days} days{quality.is_sampled ? ` · latest ${formatNumber(quality.sample_limit)} sample` : ""}
+          {quality.health_label} · Last {quality.days} days{quality.is_sampled ? ` · latest ${formatNumber(quality.sample_limit)} sample` : ""}
         </p>
       </div>
       <div className="grid gap-3 p-4 sm:grid-cols-2 lg:grid-cols-6">
         <div className="rounded border border-zinc-100 p-3 dark:border-zinc-800">
-          <p className="text-xs text-zinc-500 dark:text-zinc-400">Evaluated answers</p>
+          <p className="text-xs text-zinc-500 dark:text-zinc-400">Answers checked</p>
           <p className="mt-1 text-xl font-semibold tabular-nums text-zinc-900 dark:text-zinc-100">{formatNumber(quality.evaluated_answers)}</p>
         </div>
         <div className="rounded border border-zinc-100 p-3 dark:border-zinc-800">
-          <p className="text-xs text-zinc-500 dark:text-zinc-400">Average score</p>
+          <p className="text-xs text-zinc-500 dark:text-zinc-400">Grounding score</p>
           <p className="mt-1 text-xl font-semibold tabular-nums text-zinc-900 dark:text-zinc-100">{formatPercent(quality.average_score)}</p>
         </div>
         <div className="rounded border border-zinc-100 p-3 dark:border-zinc-800">
-          <p className="text-xs text-zinc-500 dark:text-zinc-400">Pass / warn / fail</p>
+          <p className="text-xs text-zinc-500 dark:text-zinc-400">Grounded / review / failed</p>
           <p className="mt-1 text-xl font-semibold tabular-nums text-zinc-900 dark:text-zinc-100">
             {formatPercent(quality.pass_rate)} / {formatPercent(quality.warn_rate)} / {formatPercent(quality.fail_rate)}
           </p>
         </div>
         <div className="rounded border border-zinc-100 p-3 dark:border-zinc-800">
-          <p className="text-xs text-zinc-500 dark:text-zinc-400">Uncited claims</p>
+          <p className="text-xs text-zinc-500 dark:text-zinc-400">Statements missing citations</p>
           <p className="mt-1 text-xl font-semibold tabular-nums text-zinc-900 dark:text-zinc-100">{formatNumber(quality.uncited_claims)}</p>
         </div>
         <div className="rounded border border-zinc-100 p-3 dark:border-zinc-800">
-          <p className="text-xs text-zinc-500 dark:text-zinc-400">Low-overlap cites</p>
+          <p className="text-xs text-zinc-500 dark:text-zinc-400">Weak source matches</p>
           <p className="mt-1 text-xl font-semibold tabular-nums text-zinc-900 dark:text-zinc-100">{formatNumber(quality.low_overlap_citations)}</p>
         </div>
         <div className="rounded border border-zinc-100 p-3 dark:border-zinc-800">
@@ -360,20 +369,75 @@ function RagQualityPanel({ quality }: { quality: AdminRagQuality | null }) {
           <p className="mt-1 text-xl font-semibold tabular-nums text-zinc-900 dark:text-zinc-100">{formatNumber(quality.numeric_mismatch_citations)}</p>
         </div>
       </div>
+      {(issueRows.length > 0 || strategyRows.length > 0) && (
+        <div className="grid gap-4 border-t border-zinc-100 p-4 dark:border-zinc-800 lg:grid-cols-2">
+          <div>
+            <h3 className="mb-3 text-xs font-medium uppercase tracking-wide text-zinc-500 dark:text-zinc-400">What needs fixing</h3>
+            <div className="space-y-3">
+              {issueRows.length === 0 && (
+                <p className="rounded-md border border-zinc-100 p-3 text-xs text-zinc-500 dark:border-zinc-800 dark:text-zinc-400">
+                  No citation issues in this window.
+                </p>
+              )}
+              {issueRows.map((item) => (
+                <div key={item.key} className="rounded-md border border-zinc-100 p-3 dark:border-zinc-800">
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <p className="text-sm font-medium text-zinc-800 dark:text-zinc-100">{item.label}</p>
+                      <p className="mt-1 text-xs leading-5 text-zinc-500 dark:text-zinc-400">{item.description}</p>
+                    </div>
+                    <div className="text-right text-xs tabular-nums text-zinc-700 dark:text-zinc-300">
+                      <p className="font-semibold">{formatNumber(item.count || 0)}</p>
+                      <p className="mt-0.5 text-zinc-400">{formatNumber(item.affected_answers || 0)} answers</p>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+          <div>
+            <h3 className="mb-3 text-xs font-medium uppercase tracking-wide text-zinc-500 dark:text-zinc-400">Where it happens</h3>
+            <div className="space-y-3">
+              {strategyRows.length === 0 && (
+                <p className="rounded-md border border-zinc-100 p-3 text-xs text-zinc-500 dark:border-zinc-800 dark:text-zinc-400">
+                  No retrieval paths recorded yet.
+                </p>
+              )}
+              {strategyRows.map((item) => (
+                <div key={item.key} className="rounded-md border border-zinc-100 p-3 dark:border-zinc-800">
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <p className="text-sm font-medium text-zinc-800 dark:text-zinc-100">{item.label}</p>
+                      <p className="mt-1 text-xs leading-5 text-zinc-500 dark:text-zinc-400">{item.description}</p>
+                    </div>
+                    <div className="text-right text-xs tabular-nums text-zinc-700 dark:text-zinc-300">
+                      <p className="font-semibold">{formatPercent(item.needs_review_rate)}</p>
+                      <p className="mt-0.5 text-zinc-400">{item.needs_review}/{item.answers} need review</p>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
       {quality.recent.length > 0 && (
         <div className="border-t border-zinc-100 p-4 dark:border-zinc-800">
-          <h3 className="mb-2 text-xs font-medium uppercase tracking-wide text-zinc-500 dark:text-zinc-400">Recent verification events</h3>
+          <h3 className="mb-2 text-xs font-medium uppercase tracking-wide text-zinc-500 dark:text-zinc-400">Recent checked answers</h3>
           <div className="overflow-x-auto">
             <table className="w-full text-xs">
               <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800">
                 {quality.recent.slice(0, 8).map((row, index) => (
                   <tr key={`${row.created_at}-${index}`}>
-                    <td className="py-1.5 pr-3 text-zinc-700 dark:text-zinc-300">{row.status}</td>
+                    <td className="py-2 pr-3 text-zinc-700 dark:text-zinc-300">{row.status_label}</td>
                     <td className="px-3 py-1.5 tabular-nums text-zinc-600 dark:text-zinc-400">{formatPercent(row.score)}</td>
-                    <td className="px-3 py-1.5 text-zinc-600 dark:text-zinc-400">{row.route || "-"}</td>
-                    <td className="px-3 py-1.5 text-zinc-600 dark:text-zinc-400">{row.strategy || "-"}</td>
-                    <td className="py-1.5 pl-3 text-right tabular-nums text-zinc-700 dark:text-zinc-300">
-                      {row.claim_count} claims / {row.citation_count} cites / {row.numeric_mismatch_citation_count} numeric mismatches
+                    <td className="px-3 py-2 text-zinc-600 dark:text-zinc-400">{row.route_label || "Unknown question type"}</td>
+                    <td className="px-3 py-2 text-zinc-600 dark:text-zinc-400">{row.strategy_label || "Unknown retrieval path"}</td>
+                    <td className="py-2 pl-3 text-right text-zinc-700 dark:text-zinc-300">
+                      <p>{row.main_issue?.label || "No major issue"}</p>
+                      <p className="mt-0.5 tabular-nums text-zinc-400">
+                        {row.claim_count} statements / {row.citation_count} citations
+                      </p>
                     </td>
                   </tr>
                 ))}

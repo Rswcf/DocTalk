@@ -230,7 +230,7 @@ def _citation_payload(ref_num: int, chunk: "_ChunkInfo", offset: int) -> Dict[st
         "offset": offset,
     }
     citation_data["confidence_score"] = round(chunk.score, 3)
-    citation_data["context_text"] = (chunk.text or "")[:300]
+    citation_data["context_text"] = (chunk.text or "")[:900]
     if chunk.document_id:
         citation_data["document_id"] = str(chunk.document_id)
     if chunk.document_filename:
@@ -320,11 +320,163 @@ def _fallback_citations(
     return fallback
 
 
+def _parse_cited_answer(
+    answer_text: str,
+    chunk_map: dict[int, "_ChunkInfo"],
+) -> tuple[str, List[dict]]:
+    fsm = RefParserFSM(chunk_map)
+    text_parts: List[str] = []
+    citations: List[dict] = []
+    for ev in [*fsm.feed(answer_text or ""), *fsm.flush()]:
+        if ev["event"] == "token":
+            text_parts.append(ev["data"]["text"])
+        elif ev["event"] == "citation":
+            citations.append(ev["data"])
+
+    clean_text = "".join(text_parts)
+    if not citations:
+        citations = _fallback_citations(clean_text, chunk_map)
+    return clean_text, citations
+
+
+def _verification_issue_total(verification: dict) -> int:
+    total = 0
+    for key in (
+        "uncited_claim_count",
+        "invalid_citation_count",
+        "low_overlap_citation_count",
+        "numeric_mismatch_citation_count",
+    ):
+        try:
+            total += int(verification.get(key) or 0)
+        except (TypeError, ValueError):
+            continue
+    return total
+
+
+def _should_apply_repair(initial: dict, repaired: dict) -> bool:
+    initial_issues = _verification_issue_total(initial)
+    repaired_issues = _verification_issue_total(repaired)
+    initial_score = float(initial.get("score") or 0.0)
+    repaired_score = float(repaired.get("score") or 0.0)
+    if repaired.get("status") == "pass" and initial.get("status") != "pass":
+        return True
+    if repaired_issues < initial_issues:
+        return True
+    return repaired_issues == initial_issues and repaired_score >= initial_score + 0.15
+
+
+async def _try_repair_rag_answer(
+    *,
+    client: Any,
+    model: str,
+    profile: Any,
+    user_message: str,
+    assistant_text: str,
+    citations: List[dict],
+    chunk_map: dict[int, "_ChunkInfo"],
+    numbered_chunks: List[str],
+    verification: dict,
+    locale: Optional[str],
+) -> _CitationRepairResult | None:
+    if verification.get("status") == "pass" or not chunk_map or not assistant_text.strip():
+        return None
+
+    language = _continuation_language_label(locale, assistant_text) or "the same language as the user's question"
+    metadata: dict[str, Any] = {
+        "repair_attempted": True,
+        "repair_applied": False,
+        "repair_initial_status": verification.get("status"),
+        "repair_initial_score": verification.get("score"),
+        "repair_initial_reasons": verification.get("reasons") or [],
+    }
+    context = "\n".join(numbered_chunks) if numbered_chunks else "(none)"
+    system_prompt = (
+        "You repair a document-grounded answer before it is shown as final.\n"
+        "Use only the numbered fragments provided by the system. Do not add outside knowledge.\n"
+        "Remove any statement that is not supported by a fragment.\n"
+        "Every factual sentence, paragraph, or bullet must end with one or more bracket citations like [1].\n"
+        "For numbers, dates, percentages, currencies, and units, copy them only when the cited fragment contains the exact value.\n"
+        "Prefer concise bullets with one main factual claim per bullet.\n"
+        f"Write in {language}. Return only the corrected final answer, with citations."
+    )
+    user_prompt = (
+        "## User question\n"
+        f"{user_message}\n\n"
+        "## Retrieved document fragments\n"
+        f"{context}\n\n"
+        "## Draft answer to repair\n"
+        f"{assistant_text}\n\n"
+        "## Verification issues found\n"
+        f"{', '.join(str(item) for item in (verification.get('reasons') or [])) or 'source-support issues'}\n\n"
+        "Rewrite the draft so every factual claim is supported by the cited fragments. "
+        "Do not mention that this is a repair pass."
+    )
+    prompt_tokens = 0
+    output_tokens = 0
+    try:
+        create_kwargs: dict[str, Any] = {
+            "model": model,
+            "max_tokens": min(int(getattr(profile, "max_tokens", 2048) or 2048), 2048),
+            "temperature": 0,
+            "messages": [
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_prompt},
+            ],
+            "stream": False,
+        }
+        _apply_provider_options(create_kwargs, model)
+        response = await client.chat.completions.create(**create_kwargs)
+        usage = getattr(response, "usage", None)
+        prompt_tokens = int(getattr(usage, "prompt_tokens", 0) or 0)
+        output_tokens = int(getattr(usage, "completion_tokens", 0) or 0)
+        choice = response.choices[0] if getattr(response, "choices", None) else None
+        repaired_raw = str(getattr(getattr(choice, "message", None), "content", "") or "").strip()
+        repaired_text, repaired_citations = _parse_cited_answer(repaired_raw, chunk_map)
+        repaired_report = claim_verifier_service.verify(
+            repaired_text,
+            repaired_citations,
+            set(chunk_map.keys()),
+            retrieved_count=len(chunk_map),
+        )
+        repaired_payload = repaired_report.to_payload()
+        metadata.update({
+            "repair_status": repaired_payload.get("status"),
+            "repair_score": repaired_payload.get("score"),
+            "repair_reasons": repaired_payload.get("reasons") or [],
+            "repair_issue_delta": _verification_issue_total(verification) - _verification_issue_total(repaired_payload),
+        })
+        applied = bool(repaired_text.strip() and _should_apply_repair(verification, repaired_payload))
+        metadata["repair_applied"] = applied
+        return _CitationRepairResult(
+            text=repaired_text if applied else assistant_text,
+            citations=repaired_citations if applied else citations,
+            verification=repaired_payload if applied else verification,
+            metadata=metadata,
+            prompt_tokens=prompt_tokens,
+            output_tokens=output_tokens,
+            applied=applied,
+        )
+    except Exception:
+        logger.warning("Failed to repair RAG answer citations", exc_info=True)
+        metadata["repair_error"] = "repair_failed"
+        return _CitationRepairResult(
+            text=assistant_text,
+            citations=citations,
+            verification=verification,
+            metadata=metadata,
+            prompt_tokens=prompt_tokens,
+            output_tokens=output_tokens,
+            applied=False,
+        )
+
+
 def _citation_contract() -> str:
     return (
         "\n\n## Citation Contract\n"
         "- Every answer based on document fragments MUST include clickable bracket citations like [1].\n"
         "- Put a citation at the end of every factual paragraph or bullet that uses document content.\n"
+        "- Prefer short factual bullets over dense paragraphs; one bullet should contain one main claim and its citation.\n"
         "- Use only the fragment numbers listed above. If no fragment supports a claim, do not make that claim.\n"
         "- A response with no [n] citations is invalid unless there are no relevant fragments.\n"
     )
@@ -411,8 +563,27 @@ async def _record_rag_verification_event(
     retrieval_strategy: str,
     query_route: Any,
     retrieved_count: int,
+    repair_metadata: dict[str, Any] | None = None,
 ) -> None:
     try:
+        metadata_json = {
+            "message_id": str(message_id) if message_id else None,
+            "status": verification.get("status"),
+            "score": verification.get("score"),
+            "reasons": verification.get("reasons") or [],
+            "claim_count": verification.get("claim_count"),
+            "cited_claim_count": verification.get("cited_claim_count"),
+            "uncited_claim_count": verification.get("uncited_claim_count"),
+            "citation_count": verification.get("citation_count"),
+            "invalid_citation_count": verification.get("invalid_citation_count"),
+            "low_overlap_citation_count": verification.get("low_overlap_citation_count"),
+            "numeric_mismatch_citation_count": verification.get("numeric_mismatch_citation_count"),
+            "retrieved_count": retrieved_count,
+            "retrieval_strategy": retrieval_strategy,
+            "route": getattr(getattr(query_route, "primary_intent", None), "value", None),
+        }
+        if repair_metadata:
+            metadata_json.update(repair_metadata)
         db.add(
             ProductEvent(
                 user_id=user.id if user else None,
@@ -420,21 +591,7 @@ async def _record_rag_verification_event(
                 source="chat",
                 reason=str(verification.get("status") or "unknown")[:64],
                 plan=(user.plan if user else None),
-                metadata_json={
-                    "message_id": str(message_id) if message_id else None,
-                    "status": verification.get("status"),
-                    "score": verification.get("score"),
-                    "claim_count": verification.get("claim_count"),
-                    "cited_claim_count": verification.get("cited_claim_count"),
-                    "uncited_claim_count": verification.get("uncited_claim_count"),
-                    "citation_count": verification.get("citation_count"),
-                    "invalid_citation_count": verification.get("invalid_citation_count"),
-                    "low_overlap_citation_count": verification.get("low_overlap_citation_count"),
-                    "numeric_mismatch_citation_count": verification.get("numeric_mismatch_citation_count"),
-                    "retrieved_count": retrieved_count,
-                    "retrieval_strategy": retrieval_strategy,
-                    "route": getattr(getattr(query_route, "primary_intent", None), "value", None),
-                },
+                metadata_json=metadata_json,
             )
         )
         await db.commit()
@@ -460,6 +617,17 @@ class _ChunkInfo:
     score: float = 0.0
     table_id: Optional[str] = None
     retrieval_modality: str = "text"
+
+
+@dataclass
+class _CitationRepairResult:
+    text: str
+    citations: List[dict]
+    verification: dict
+    metadata: dict[str, Any]
+    prompt_tokens: int = 0
+    output_tokens: int = 0
+    applied: bool = False
 
 
 def _chunk_info_from_persisted_citation(
@@ -1131,6 +1299,46 @@ class ChatService:
             retrieved_count=len(chunk_map),
         )
         verification_payload = verification_report.to_payload()
+        repair_metadata: dict[str, Any] | None = None
+        if verification_report.status != "pass" and finish_reason != "length":
+            yield sse("tool_status", {"message": "Checking citation support..."})
+            repair = await _try_repair_rag_answer(
+                client=client,
+                model=effective_model,
+                profile=profile,
+                user_message=user_message,
+                assistant_text=assistant_text,
+                citations=citations,
+                chunk_map=chunk_map,
+                numbered_chunks=numbered_chunks,
+                verification=verification_payload,
+                locale=locale,
+            )
+            if repair is not None:
+                repair_metadata = repair.metadata
+                if repair.prompt_tokens:
+                    prompt_tokens = int(prompt_tokens or 0) + repair.prompt_tokens
+                if repair.output_tokens:
+                    output_tokens = int(output_tokens or 0) + repair.output_tokens
+                if repair.applied:
+                    assistant_text = repair.text
+                    citations = repair.citations
+                    verification_payload = repair.verification
+                    verification_report = claim_verifier_service.verify(
+                        assistant_text,
+                        citations,
+                        set(chunk_map.keys()),
+                        retrieved_count=len(chunk_map),
+                    )
+                    verification_payload = verification_report.to_payload()
+                    yield sse(
+                        "answer_repaired",
+                        {
+                            "text": assistant_text,
+                            "citations": citations,
+                            "verification": verification_payload,
+                        },
+                    )
         if verification_report.status != "pass":
             logger.warning(
                 "RAG verification status=%s score=%.3f claims=%d citations=%d reasons=%s",
@@ -1172,6 +1380,7 @@ class ChatService:
             retrieval_strategy=retrieval_strategy,
             query_route=query_route,
             retrieved_count=len(chunk_map),
+            repair_metadata=repair_metadata,
         )
 
         # Credits: reconcile pre-debited estimate against actual cost
@@ -1203,6 +1412,7 @@ class ChatService:
             "message_id": str(asst_msg.id),
             "citations_count": len(citations),
             "verification": verification_payload,
+            "repair": repair_metadata,
             "can_continue": can_continue and finish_reason == "length",
             "continuation_count": asst_msg.continuation_count,
         })
@@ -1577,6 +1787,45 @@ class ChatService:
             retrieved_count=len(chunk_map),
         )
         verification_payload = verification_report.to_payload()
+        repair_metadata: dict[str, Any] | None = None
+        if verification_report.status != "pass" and finish_reason != "length":
+            yield sse("tool_status", {"message": "Checking citation support..."})
+            repair = await _try_repair_rag_answer(
+                client=client,
+                model=effective_model,
+                profile=profile,
+                user_message=_continuation_prompt(locale, asst_msg.content),
+                assistant_text=full_assistant_text,
+                citations=merged_citations,
+                chunk_map=chunk_map,
+                numbered_chunks=numbered_chunks,
+                verification=verification_payload,
+                locale=locale,
+            )
+            if repair is not None:
+                repair_metadata = repair.metadata
+                if repair.prompt_tokens:
+                    prompt_tokens = int(prompt_tokens or 0) + repair.prompt_tokens
+                if repair.output_tokens:
+                    output_tokens = int(output_tokens or 0) + repair.output_tokens
+                if repair.applied:
+                    full_assistant_text = repair.text
+                    merged_citations = repair.citations
+                    verification_report = claim_verifier_service.verify(
+                        full_assistant_text,
+                        merged_citations,
+                        set(chunk_map.keys()),
+                        retrieved_count=len(chunk_map),
+                    )
+                    verification_payload = verification_report.to_payload()
+                    yield sse(
+                        "answer_repaired",
+                        {
+                            "text": full_assistant_text,
+                            "citations": merged_citations,
+                            "verification": verification_payload,
+                        },
+                    )
         if verification_report.status != "pass":
             logger.warning(
                 "RAG continuation verification status=%s score=%.3f claims=%d citations=%d reasons=%s",
@@ -1613,6 +1862,7 @@ class ChatService:
             retrieval_strategy="continuation",
             query_route=None,
             retrieved_count=len(chunk_map),
+            repair_metadata=repair_metadata,
         )
 
         # Credits: reconcile
@@ -1643,6 +1893,7 @@ class ChatService:
             "message_id": str(asst_msg.id),
             "citations_count": len(merged_citations) if merged_citations else 0,
             "verification": verification_payload,
+            "repair": repair_metadata,
             "can_continue": can_continue and finish_reason == "length",
             "continuation_count": asst_msg.continuation_count,
         })

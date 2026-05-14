@@ -39,7 +39,11 @@ const MAX_UPLOAD_MB_BY_PLAN: Record<PlanTier, number> = {
 };
 
 const DASHBOARD_NUDGE_DISMISS_KEY = 'doctalk_dashboard_upgrade_nudge_dismissed_at';
+const DASHBOARD_NUDGE_LAST_SHOWN_KEY = 'doctalk_dashboard_upgrade_nudge_last_shown_at';
+const DASHBOARD_NUDGE_IMPRESSIONS_KEY = 'doctalk_dashboard_upgrade_nudge_impressions';
 const DASHBOARD_NUDGE_DISMISS_MS = 14 * 24 * 60 * 60 * 1000;
+const DASHBOARD_NUDGE_SHOW_MS = 7 * 24 * 60 * 60 * 1000;
+const DASHBOARD_NUDGE_MAX_IMPRESSIONS = 3;
 
 function LandingPageContent() {
   const { t } = useLocale();
@@ -277,30 +281,47 @@ export default function HomePageClient() {
     () => allDocs.filter((doc) => (doc.status || '').toLowerCase() === 'ready').length,
     [allDocs]
   );
-  const activatedFreeUser = userPlan === 'free' && (
-    allDocs.length > 0 ||
-    (profile?.stats.total_documents || 0) > 0 ||
-    (profile?.stats.total_messages || 0) >= 3
+  const durableFreeUsage = userPlan === 'free' && (
+    readyDocumentCount >= 2 ||
+    (profile?.stats.total_documents || 0) >= 2 ||
+    (profile?.stats.total_messages || 0) >= 8
   );
-  const showUpgradeNudge = isLoggedIn && activatedFreeUser && !upgradeNudgeDismissed;
+  const showUpgradeNudge = isLoggedIn && durableFreeUsage && !upgradeNudgeDismissed;
   const showWorkspaceNudge = readyDocumentCount >= 2;
 
   useEffect(() => {
-    if (!isLoggedIn) return;
+    if (!isLoggedIn || userPlan !== 'free') {
+      setUpgradeNudgeDismissed(true);
+      return;
+    }
     try {
+      const now = Date.now();
       const dismissedAt = Number(localStorage.getItem(DASHBOARD_NUDGE_DISMISS_KEY) || '0');
-      setUpgradeNudgeDismissed(Boolean(dismissedAt && Date.now() - dismissedAt < DASHBOARD_NUDGE_DISMISS_MS));
+      const lastShownAt = Number(localStorage.getItem(DASHBOARD_NUDGE_LAST_SHOWN_KEY) || '0');
+      const impressions = Number(localStorage.getItem(DASHBOARD_NUDGE_IMPRESSIONS_KEY) || '0');
+      setUpgradeNudgeDismissed(Boolean(
+        (dismissedAt && now - dismissedAt < DASHBOARD_NUDGE_DISMISS_MS) ||
+        (lastShownAt && now - lastShownAt < DASHBOARD_NUDGE_SHOW_MS) ||
+        impressions >= DASHBOARD_NUDGE_MAX_IMPRESSIONS
+      ));
     } catch {
       setUpgradeNudgeDismissed(false);
     }
-  }, [isLoggedIn]);
+  }, [isLoggedIn, userPlan]);
 
   useEffect(() => {
     if (!showUpgradeNudge || upgradeNudgeTrackedRef.current) return;
     upgradeNudgeTrackedRef.current = true;
-    trackEvent('paywall_opened', {
-      source: 'dashboard_activation_nudge',
-      reason: 'activated_free_user',
+    try {
+      const impressions = Number(localStorage.getItem(DASHBOARD_NUDGE_IMPRESSIONS_KEY) || '0');
+      localStorage.setItem(DASHBOARD_NUDGE_LAST_SHOWN_KEY, String(Date.now()));
+      localStorage.setItem(DASHBOARD_NUDGE_IMPRESSIONS_KEY, String(impressions + 1));
+    } catch {
+      // localStorage may be unavailable in restricted browsers.
+    }
+    trackEvent('upgrade_nudge_shown', {
+      source: 'dashboard_upgrade_reminder',
+      reason: 'sustained_free_usage',
       plan: 'plus',
       period: 'monthly',
     });
@@ -520,14 +541,14 @@ export default function HomePageClient() {
                   </div>
                 </div>
                 <div className="flex shrink-0 items-center gap-2 sm:self-start">
-                  <Link
-                    href={billingHref({ plan: 'plus', source: 'dashboard_activation_nudge', reason: 'activated_free_user' })}
-                    onClick={() => trackEvent('upgrade_click', {
-                      plan: 'plus',
-                      period: 'monthly',
-                      source: 'dashboard_activation_nudge',
-                      reason: 'activated_free_user',
-                    })}
+	                  <Link
+	                    href={billingHref({ plan: 'plus', source: 'dashboard_upgrade_reminder', reason: 'sustained_free_usage' })}
+	                    onClick={() => trackEvent('upgrade_click', {
+	                      plan: 'plus',
+	                      period: 'monthly',
+	                      source: 'dashboard_upgrade_reminder',
+	                      reason: 'sustained_free_usage',
+	                    })}
                     className="inline-flex items-center gap-2 rounded-lg bg-zinc-900 px-3.5 py-2 text-sm font-medium text-white transition-colors hover:bg-zinc-800 dark:bg-zinc-50 dark:text-zinc-900 dark:hover:bg-zinc-200 focus-visible:ring-2 focus-visible:ring-zinc-400 dark:focus-visible:ring-zinc-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-900"
                   >
                     {tOr('dashboard.upgradeNudge.cta', 'Upgrade')}

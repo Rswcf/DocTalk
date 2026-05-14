@@ -36,6 +36,7 @@ from app.schemas.admin import (
 router = APIRouter(prefix="/api/admin", tags=["admin"])
 
 PAID_INTENT_EVENTS = [
+    "upgrade_nudge_shown",
     "paywall_opened",
     "limit_hit",
     "billing_view",
@@ -45,6 +46,106 @@ PAID_INTENT_EVENTS = [
     "subscription_cancel_requested",
     "refund_requested",
 ]
+
+
+PAID_SIGNAL_LABELS = {
+    "upgrade_nudge_shown": "Upgrade reminder shown",
+    "paywall_opened": "Paywall shown",
+    "limit_hit": "User hit a plan limit",
+    "billing_view": "Billing page viewed",
+    "upgrade_click": "Upgrade clicked",
+    "checkout_created": "Checkout started",
+    "checkout_completed": "Checkout completed",
+    "subscription_cancel_requested": "Cancellation requested",
+    "refund_requested": "Refund review requested",
+}
+
+PAID_REASON_LABELS = {
+    "sustained_free_usage": "User has repeated free usage",
+    "activated_free_user": "Early free-user reminder",
+    "file_size": "Uploaded file was too large",
+    "upload_limit": "Document upload limit reached",
+    "url_limit": "URL import limit reached",
+    "collection_limit": "Collection limit reached",
+    "collection_doc_limit": "Collection document limit reached",
+    "session_limit": "Chat session limit reached",
+    "insufficient_credits": "Not enough credits",
+    "mode_not_allowed": "Selected mode requires upgrade",
+    "balanced_mode": "Pro analysis mode selected",
+    "quick_mode": "Flash mode selected",
+}
+
+PAID_SOURCE_LABELS = {
+    "dashboard_upgrade_reminder": "Dashboard upgrade reminder",
+    "dashboard_activation_nudge": "Dashboard upgrade reminder",
+    "dashboard_upload": "Dashboard upload",
+    "dashboard_upload_precheck": "Dashboard upload pre-check",
+    "dashboard_url": "Dashboard URL import",
+    "chat_stream": "Chat response",
+    "paywall_modal": "Paywall modal",
+    "mode_selector": "Mode selector",
+    "session_dropdown": "Chat session menu",
+    "create_collection_modal": "Create collection modal",
+    "collection_add_documents_modal": "Add documents to collection",
+    "document_diff": "Document comparison",
+    "question_templates": "Question templates",
+    "extraction_panel": "Structured extraction",
+    "tables_panel": "Table tools",
+    "profile_credits": "Profile credits panel",
+    "pricing": "Pricing page",
+    "pricing_hero": "Pricing page hero",
+}
+
+
+def _humanize_code(value: str | None) -> str | None:
+    if not value:
+        return None
+    text_value = str(value).replace("_", " ").replace("-", " ").strip()
+    if not text_value:
+        return None
+    return text_value[:1].upper() + text_value[1:]
+
+
+def _paid_signal_label(event_name: str | None) -> str:
+    return PAID_SIGNAL_LABELS.get(str(event_name or ""), _humanize_code(event_name) or "Paid signal")
+
+
+def _paid_signal_description(
+    event_name: str | None,
+    reason: str | None,
+    source: str | None,
+    plan: str | None,
+) -> str:
+    source_label = PAID_SOURCE_LABELS.get(str(source or ""), _humanize_code(source))
+    reason_label = PAID_REASON_LABELS.get(str(reason or "").lower(), _humanize_code(reason))
+    pieces: list[str] = []
+    if event_name == "upgrade_nudge_shown":
+        pieces.append("Non-blocking upgrade reminder.")
+    elif event_name == "paywall_opened":
+        pieces.append("A blocking upgrade prompt was shown.")
+    elif event_name == "limit_hit":
+        pieces.append("The user tried something their current plan does not allow.")
+    if reason_label:
+        pieces.append(f"Reason: {reason_label}.")
+    if source_label:
+        pieces.append(f"Surface: {source_label}.")
+    if plan:
+        pieces.append(f"Target plan: {str(plan).upper()}.")
+    return " ".join(pieces) or _paid_signal_label(event_name)
+
+
+def _paid_intent_payload(row: Any) -> dict[str, Any]:
+    event_name = str(row.event_name or "")
+    return {
+        "event_name": event_name,
+        "reason": row.reason,
+        "source": row.source,
+        "plan": row.plan,
+        "label": _paid_signal_label(event_name),
+        "description": _paid_signal_description(event_name, row.reason, row.source, row.plan),
+        "events": int(row.events or 0),
+        "users": int(row.users or 0),
+    }
 
 
 def _rate(numerator: int | float, denominator: int | float) -> float:
@@ -480,6 +581,7 @@ async def admin_user_activity(
                 "chat_users": 0,
                 "messages": 0,
                 "credits_spent": 0,
+                "upgrade_nudge_shown": 0,
                 "paywall_opened": 0,
                 "limit_hit": 0,
                 "billing_view": 0,
@@ -678,8 +780,9 @@ async def admin_user_activity(
         ("first_session", "Created chat session", session_users),
         ("first_chat", "Sent chat message", first_chat_users),
         ("five_chats", "5+ chat messages", five_message_users),
-        ("paywall_opened", "Saw paid prompt", cohort_event_counts.get("paywall_opened", 0)),
+        ("upgrade_nudge_shown", "Saw upgrade reminder", cohort_event_counts.get("upgrade_nudge_shown", 0)),
         ("limit_hit", "Hit paid limit", cohort_event_counts.get("limit_hit", 0)),
+        ("paywall_opened", "Saw blocking paywall", cohort_event_counts.get("paywall_opened", 0)),
         ("billing_view", "Viewed billing", cohort_event_counts.get("billing_view", 0)),
         ("upgrade_click", "Clicked upgrade", cohort_event_counts.get("upgrade_click", 0)),
         ("checkout_created", "Checkout created", cohort_event_counts.get("checkout_created", 0)),
@@ -799,17 +902,7 @@ async def admin_user_activity(
             .limit(50)
         )
     ).all()
-    paid_intent_reasons = [
-        {
-            "event_name": row.event_name,
-            "reason": row.reason,
-            "source": row.source,
-            "plan": row.plan,
-            "events": int(row.events or 0),
-            "users": int(row.users or 0),
-        }
-        for row in paid_reason_rows
-    ]
+    paid_intent_reasons = [_paid_intent_payload(row) for row in paid_reason_rows]
     conversion_blockers = [
         item for item in paid_intent_reasons if item["event_name"] in {"limit_hit", "paywall_opened", "refund_requested"}
     ][:20]
@@ -1022,18 +1115,7 @@ async def admin_funnel(
             .where(ProductEvent.created_at >= cutoff)
             .where(ProductEvent.user_id.in_(select(cohort_user_ids.c.id)))
             .where(
-                ProductEvent.event_name.in_(
-                    [
-                        "paywall_opened",
-                        "limit_hit",
-                        "upgrade_click",
-                        "billing_view",
-                        "checkout_created",
-                        "checkout_completed",
-                        "subscription_cancel_requested",
-                        "refund_requested",
-                    ]
-                )
+                ProductEvent.event_name.in_(PAID_INTENT_EVENTS)
             )
             .group_by(ProductEvent.event_name, ProductEvent.reason, ProductEvent.source, ProductEvent.plan)
             .order_by(func.count(ProductEvent.id).desc())
@@ -1048,8 +1130,9 @@ async def admin_funnel(
         {"key": "first_session", "label": "Created chat session", "users": int(session_users or 0)},
         {"key": "first_chat", "label": "Sent chat message", "users": int(chat_users or 0)},
         {"key": "five_chats", "label": "5+ chat messages", "users": int(five_message_users or 0)},
-        {"key": "paywall_opened", "label": "Saw paid prompt", "users": event_counts.get("paywall_opened", {}).get("users", 0)},
+        {"key": "upgrade_nudge_shown", "label": "Saw upgrade reminder", "users": event_counts.get("upgrade_nudge_shown", {}).get("users", 0)},
         {"key": "limit_hit", "label": "Hit paid limit", "users": event_counts.get("limit_hit", {}).get("users", 0)},
+        {"key": "paywall_opened", "label": "Saw blocking paywall", "users": event_counts.get("paywall_opened", {}).get("users", 0)},
         {"key": "billing_view", "label": "Viewed billing", "users": event_counts.get("billing_view", {}).get("users", 0)},
         {"key": "upgrade_click", "label": "Clicked upgrade", "users": event_counts.get("upgrade_click", {}).get("users", 0)},
         {"key": "checkout_created", "label": "Checkout created", "users": event_counts.get("checkout_created", {}).get("users", 0)},
@@ -1065,17 +1148,7 @@ async def admin_funnel(
         "event_tracking_started_at": event_tracking_started_at.isoformat() if event_tracking_started_at else None,
         "stages": stages,
         "event_counts": event_counts,
-        "reasons": [
-            {
-                "event_name": r.event_name,
-                "reason": r.reason,
-                "source": r.source,
-                "plan": r.plan,
-                "events": int(r.events),
-                "users": int(r.users),
-            }
-            for r in reason_rows
-        ],
+        "reasons": [_paid_intent_payload(r) for r in reason_rows],
     }
 
 
@@ -1087,6 +1160,109 @@ def _metadata_number(metadata: dict[str, Any], key: str) -> float:
         return float(str(value))
     except (TypeError, ValueError):
         return 0.0
+
+
+RAG_ISSUE_DEFINITIONS = [
+    {
+        "key": "uncited_claims",
+        "metadata_key": "uncited_claim_count",
+        "label": "Answer includes statements without citations",
+        "description": "The answer made factual claims that were not tied to any source marker.",
+    },
+    {
+        "key": "weak_source_match",
+        "metadata_key": "low_overlap_citation_count",
+        "label": "Citations do not closely match the answer",
+        "description": "A citation exists, but the cited passage does not share enough evidence with the claim.",
+    },
+    {
+        "key": "number_mismatch",
+        "metadata_key": "numeric_mismatch_citation_count",
+        "label": "Numbers, dates, or percentages may not match the source",
+        "description": "The answer cited evidence, but a numeric value in the answer was not found in that source.",
+    },
+    {
+        "key": "broken_citation",
+        "metadata_key": "invalid_citation_count",
+        "label": "Citation points to a missing source",
+        "description": "The answer referenced a source number that was not available in the retrieved evidence.",
+    },
+]
+
+RAG_STATUS_LABELS = {
+    "pass": "Grounded",
+    "warn": "Needs review",
+    "fail": "Citation failed",
+    "unknown": "Not classified",
+}
+
+RAG_ROUTE_LABELS = {
+    "document_summary": "Whole-document summary",
+    "section_summary": "Section summary",
+    "summary": "Summary question",
+    "comparison": "Comparison question",
+    "table_query": "Table or metrics question",
+    "citation_lookup": "Source lookup",
+    "existence_check": "Existence check",
+    "exhaustive_scan": "Broad scan question",
+    "local_qa": "Question about one document",
+    "multi_doc_qa": "Question across documents",
+    "unknown": "Unknown question type",
+}
+
+RAG_STRATEGY_LABELS = {
+    "semantic_top_k": "Direct passage search",
+    "semantic_top_k+lexical_correction": "Fallback keyword search after weak match",
+    "semantic_top_k+table": "Passage and table search",
+    "document_summary_context": "Whole-document summary context",
+    "collection_summary_context": "Multi-document summary context",
+    "continuation": "Continued long answer",
+    "unknown": "Unknown retrieval path",
+}
+
+RAG_STRATEGY_DESCRIPTIONS = {
+    "semantic_top_k": "The system used the most similar passages from vector search.",
+    "semantic_top_k+lexical_correction": "Semantic search looked weak, so the system added keyword-based retrieval.",
+    "semantic_top_k+table": "The system combined text passages with structured table evidence.",
+    "document_summary_context": "The system selected representative sections for a broad document summary.",
+    "collection_summary_context": "The system selected representative sections across multiple documents.",
+    "continuation": "The answer continued a previous response and reused its existing citations.",
+}
+
+
+def _rag_status_label(status: str | None) -> str:
+    return RAG_STATUS_LABELS.get(str(status or "unknown").lower(), "Not classified")
+
+
+def _rag_route_label(route: str | None) -> str:
+    return RAG_ROUTE_LABELS.get(str(route or "unknown"), _humanize_code(route) or "Unknown question type")
+
+
+def _rag_strategy_label(strategy: str | None) -> str:
+    return RAG_STRATEGY_LABELS.get(str(strategy or "unknown"), _humanize_code(strategy) or "Unknown retrieval path")
+
+
+def _rag_strategy_description(strategy: str | None) -> str:
+    return RAG_STRATEGY_DESCRIPTIONS.get(str(strategy or ""), "The retrieval path is not classified yet.")
+
+
+def _rag_main_issue(metadata: dict[str, Any]) -> dict[str, str] | None:
+    ranked = sorted(
+        (
+            (int(_metadata_number(metadata, issue["metadata_key"])), issue)
+            for issue in RAG_ISSUE_DEFINITIONS
+        ),
+        key=lambda item: item[0],
+        reverse=True,
+    )
+    count, issue = ranked[0]
+    if count <= 0:
+        return None
+    return {
+        "key": str(issue["key"]),
+        "label": str(issue["label"]),
+        "description": str(issue["description"]),
+    }
 
 
 RAG_QUALITY_SAMPLE_LIMIT = 1000
@@ -1116,25 +1292,96 @@ async def admin_rag_quality(
     invalid_citations = 0
     low_overlap_citations = 0
     numeric_mismatch_citations = 0
+    issue_breakdown = {
+        str(issue["key"]): {
+            "key": str(issue["key"]),
+            "label": str(issue["label"]),
+            "description": str(issue["description"]),
+            "count": 0,
+            "affected_answers": 0,
+        }
+        for issue in RAG_ISSUE_DEFINITIONS
+    }
+    strategy_breakdown: dict[str, dict[str, Any]] = {}
     for event in rows:
         metadata = event.metadata_json or {}
         status = str(metadata.get("status") or event.reason or "unknown").lower()
         if status not in status_counts:
             status = "unknown"
         status_counts[status] += 1
-        score_total += _metadata_number(metadata, "score")
+        score = _metadata_number(metadata, "score")
+        score_total += score
         uncited_claims += int(_metadata_number(metadata, "uncited_claim_count"))
         invalid_citations += int(_metadata_number(metadata, "invalid_citation_count"))
         low_overlap_citations += int(_metadata_number(metadata, "low_overlap_citation_count"))
         numeric_mismatch_citations += int(_metadata_number(metadata, "numeric_mismatch_citation_count"))
 
+        for issue in RAG_ISSUE_DEFINITIONS:
+            issue_count = int(_metadata_number(metadata, str(issue["metadata_key"])))
+            issue_item = issue_breakdown[str(issue["key"])]
+            issue_item["count"] = int(issue_item["count"]) + issue_count
+            if issue_count > 0:
+                issue_item["affected_answers"] = int(issue_item["affected_answers"]) + 1
+
+        strategy = str(metadata.get("retrieval_strategy") or "unknown")
+        strategy_item = strategy_breakdown.setdefault(
+            strategy,
+            {
+                "key": strategy,
+                "label": _rag_strategy_label(strategy),
+                "description": _rag_strategy_description(strategy),
+                "answers": 0,
+                "needs_review": 0,
+                "score_total": 0.0,
+            },
+        )
+        strategy_item["answers"] = int(strategy_item["answers"]) + 1
+        strategy_item["score_total"] = float(strategy_item["score_total"]) + score
+        if status in {"warn", "fail"}:
+            strategy_item["needs_review"] = int(strategy_item["needs_review"]) + 1
+
     total = len(rows)
+    health_label = "No answers evaluated yet"
+    health_explanation = "RAG answer quality tracking has not recorded answers in this window."
+    if total:
+        if status_counts["fail"] > 0 or status_counts["warn"] / total >= 0.25:
+            health_label = "Needs attention"
+            health_explanation = "Many answers had citation or source-support issues. Review the issue breakdown before optimizing conversion."
+        elif status_counts["warn"] > 0:
+            health_label = "Mostly grounded, some answers need review"
+            health_explanation = "Most answers passed, but some had weak citations or unsupported statements."
+        else:
+            health_label = "Grounded"
+            health_explanation = "Recent answers passed citation verification."
+
+    strategy_rows = []
+    for item in strategy_breakdown.values():
+        answers = int(item["answers"])
+        strategy_rows.append({
+            "key": item["key"],
+            "label": item["label"],
+            "description": item["description"],
+            "answers": answers,
+            "needs_review": int(item["needs_review"]),
+            "needs_review_rate": _rate(int(item["needs_review"]), answers),
+            "average_score": round(float(item["score_total"]) / answers, 3) if answers else 0.0,
+        })
+    strategy_rows.sort(key=lambda item: item["answers"], reverse=True)
+
+    issue_rows = sorted(
+        issue_breakdown.values(),
+        key=lambda item: (int(item["count"]), int(item["affected_answers"])),
+        reverse=True,
+    )
+
     return {
         "days": days,
         "since": cutoff.isoformat(),
         "sample_limit": RAG_QUALITY_SAMPLE_LIMIT,
         "is_sampled": total >= RAG_QUALITY_SAMPLE_LIMIT,
         "evaluated_answers": total,
+        "health_label": health_label,
+        "health_explanation": health_explanation,
         "average_score": round(score_total / total, 3) if total else 0.0,
         "pass_rate": round(status_counts["pass"] / total, 3) if total else 0.0,
         "warn_rate": round(status_counts["warn"] / total, 3) if total else 0.0,
@@ -1144,13 +1391,19 @@ async def admin_rag_quality(
         "invalid_citations": invalid_citations,
         "low_overlap_citations": low_overlap_citations,
         "numeric_mismatch_citations": numeric_mismatch_citations,
+        "issue_breakdown": issue_rows,
+        "strategy_breakdown": strategy_rows,
         "recent": [
             {
                 "created_at": event.created_at.isoformat() if event.created_at else None,
                 "status": str((event.metadata_json or {}).get("status") or event.reason or "unknown"),
+                "status_label": _rag_status_label(str((event.metadata_json or {}).get("status") or event.reason or "unknown")),
                 "score": _metadata_number(event.metadata_json or {}, "score"),
                 "route": (event.metadata_json or {}).get("route"),
+                "route_label": _rag_route_label((event.metadata_json or {}).get("route")),
                 "strategy": (event.metadata_json or {}).get("retrieval_strategy"),
+                "strategy_label": _rag_strategy_label((event.metadata_json or {}).get("retrieval_strategy")),
+                "main_issue": _rag_main_issue(event.metadata_json or {}),
                 "claim_count": int(_metadata_number(event.metadata_json or {}, "claim_count")),
                 "citation_count": int(_metadata_number(event.metadata_json or {}, "citation_count")),
                 "uncited_claim_count": int(_metadata_number(event.metadata_json or {}, "uncited_claim_count")),

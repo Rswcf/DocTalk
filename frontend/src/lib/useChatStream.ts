@@ -194,6 +194,16 @@ export function useChatStream({
     }
   }, [flushPendingText, setStreaming, updateSessionActivity, sessionId, selectedMode, updateLastMessageMeta]);
 
+  const handleAnswerRepaired = useCallback((payload: { text: string; citations: Message['citations'] }) => {
+    flushPendingText();
+    updateLastMessageMeta({
+      text: payload.text,
+      citations: payload.citations || [],
+      isTruncated: false,
+      toolStatus: undefined,
+    });
+  }, [flushPendingText, updateLastMessageMeta]);
+
   const streamAssistantResponse = useCallback(async (prompt: string) => {
     const controller = new AbortController();
     abortRef.current = controller;
@@ -213,8 +223,9 @@ export function useChatStream({
       domainMode,
       (artifact) => addArtifactToLastMessage(artifact),
       ({ message }) => setLastMessageToolStatus(message),
+      handleAnswerRepaired,
     );
-  }, [sessionId, updateLastMessage, addCitationToLastMessage, addArtifactToLastMessage, setLastMessageToolStatus, handleStreamError, handleStreamDone, handleTruncated, selectedMode, locale]);
+  }, [sessionId, updateLastMessage, addCitationToLastMessage, addArtifactToLastMessage, setLastMessageToolStatus, handleStreamError, handleStreamDone, handleTruncated, handleAnswerRepaired, selectedMode, locale]);
 
   const sendMessage = useCallback(async (text: string) => {
     if (!text.trim() || isStreaming) return false;
@@ -300,8 +311,9 @@ export function useChatStream({
       controller.signal,
       (artifact) => addArtifactToLastMessage(artifact),
       ({ message }) => setLastMessageToolStatus(message),
+      handleAnswerRepaired,
     );
-  }, [isStreaming, sessionId, markLastMessageTruncated, setStreaming, updateLastMessage, addCitationToLastMessage, addArtifactToLastMessage, setLastMessageToolStatus, handleStreamError, handleStreamDone, handleTruncated, selectedMode, locale]);
+  }, [isStreaming, sessionId, markLastMessageTruncated, setStreaming, updateLastMessage, addCitationToLastMessage, addArtifactToLastMessage, setLastMessageToolStatus, handleStreamError, handleStreamDone, handleTruncated, handleAnswerRepaired, selectedMode, locale]);
 
   const stopStreaming = useCallback(() => {
     abortRef.current?.abort();

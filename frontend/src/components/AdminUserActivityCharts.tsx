@@ -30,6 +30,7 @@ const CHART_COLORS = {
   upload: "#059669",
   chat: "#0284c7",
   feedback: "#d97706",
+  nudge: "#ca8a04",
   paywall: "#7c3aed",
   limit: "#dc2626",
   checkout: "#16a34a",
@@ -226,10 +227,11 @@ function PaidIntentTable({ rows }: { rows: AdminPaidIntentReasonItem[] }) {
         <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800">
           {rows.slice(0, 10).map((row, index) => (
             <tr key={`${row.event_name}-${row.reason}-${row.source}-${row.plan}-${index}`}>
-              <td className="py-2 pr-3 font-medium text-zinc-700 dark:text-zinc-300">{row.event_name}</td>
-              <td className="px-3 py-2 text-zinc-600 dark:text-zinc-400">{row.reason || "-"}</td>
-              <td className="px-3 py-2 text-zinc-600 dark:text-zinc-400">{row.source || "-"}</td>
-              <td className="px-3 py-2 text-zinc-600 dark:text-zinc-400">{row.plan || "-"}</td>
+              <td className="py-2 pr-3">
+                <p className="font-medium text-zinc-800 dark:text-zinc-100">{row.label || "Paid signal"}</p>
+                <p className="mt-0.5 max-w-lg text-zinc-500 dark:text-zinc-400">{row.description || "No context recorded."}</p>
+              </td>
+              <td className="px-3 py-2 text-right text-zinc-600 dark:text-zinc-400">{row.plan ? row.plan.toUpperCase() : "-"}</td>
               <td className="py-2 pl-3 text-right tabular-nums text-zinc-700 dark:text-zinc-300">
                 {row.users} users / {row.events} events
               </td>
@@ -289,7 +291,7 @@ export default function AdminUserActivityCharts({ activity }: AdminUserActivityC
                   <XAxis dataKey="date" tickFormatter={formatDateLabel} tick={{ fontSize: 11 }} className="text-zinc-500" />
                   <YAxis tickFormatter={formatNumber} tick={{ fontSize: 11 }} width={46} className="text-zinc-500" />
                   <Tooltip
-                    formatter={(value, name) => [formatNumber(Number(value ?? 0)), String(name).replaceAll("_", " ")]}
+                    formatter={(value, name) => [formatNumber(Number(value ?? 0)), String(name)]}
                     labelFormatter={(label) => new Date(String(label)).toLocaleDateString()}
                     contentStyle={{
                       background: "var(--background, #fff)",
@@ -333,10 +335,11 @@ export default function AdminUserActivityCharts({ activity }: AdminUserActivityC
                       fontSize: "13px",
                     }}
                   />
-                  <Bar dataKey="paywall_opened" stackId="paid" fill={CHART_COLORS.paywall} radius={[0, 0, 0, 0]} />
-                  <Bar dataKey="limit_hit" stackId="paid" fill={CHART_COLORS.limit} radius={[0, 0, 0, 0]} />
-                  <Bar dataKey="upgrade_click" stackId="paid" fill={CHART_COLORS.neutral} radius={[0, 0, 0, 0]} />
-                  <Bar dataKey="checkout_total" stackId="paid" fill={CHART_COLORS.checkout} radius={[3, 3, 0, 0]} />
+                  <Bar dataKey="upgrade_nudge_shown" name="Upgrade reminder shown" stackId="paid" fill={CHART_COLORS.nudge} radius={[0, 0, 0, 0]} />
+                  <Bar dataKey="paywall_opened" name="Blocking paywall shown" stackId="paid" fill={CHART_COLORS.paywall} radius={[0, 0, 0, 0]} />
+                  <Bar dataKey="limit_hit" name="User hit a plan limit" stackId="paid" fill={CHART_COLORS.limit} radius={[0, 0, 0, 0]} />
+                  <Bar dataKey="upgrade_click" name="Upgrade clicked" stackId="paid" fill={CHART_COLORS.neutral} radius={[0, 0, 0, 0]} />
+                  <Bar dataKey="checkout_total" name="Checkout started or completed" stackId="paid" fill={CHART_COLORS.checkout} radius={[3, 3, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             )}
@@ -349,7 +352,7 @@ export default function AdminUserActivityCharts({ activity }: AdminUserActivityC
       </div>
 
       <div className="grid gap-6 xl:grid-cols-3">
-        <Section title="Conversion Blockers" subtitle="Limit, paywall, and refund reasons ranked by event count.">
+        <Section title="Conversion Blockers" subtitle="Blocking paywalls, plan limits, and refund signals ranked by event count. Non-blocking upgrade reminders are excluded.">
           <PaidIntentTable rows={activity.segments.conversion_blockers} />
         </Section>
 

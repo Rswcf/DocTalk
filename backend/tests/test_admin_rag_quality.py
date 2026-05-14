@@ -97,9 +97,16 @@ async def test_admin_rag_quality_aggregates_recent_events() -> None:
     assert payload["invalid_citations"] == 1
     assert payload["low_overlap_citations"] == 1
     assert payload["numeric_mismatch_citations"] == 1
+    assert payload["health_label"] == "Needs attention"
+    assert payload["issue_breakdown"][0]["label"] == "Answer includes statements without citations"
+    assert payload["issue_breakdown"][0]["count"] == 3
+    assert payload["strategy_breakdown"][0]["label"] == "Fallback keyword search after weak match"
     assert payload["sample_limit"] == 1000
     assert payload["is_sampled"] is False
     assert payload["recent"][0]["strategy"] == "semantic_top_k+lexical_correction"
+    assert payload["recent"][0]["status_label"] == "Grounded"
+    assert payload["recent"][1]["route_label"] == "Comparison question"
+    assert payload["recent"][1]["main_issue"]["label"] == "Answer includes statements without citations"
 
 
 @pytest.mark.asyncio
@@ -112,5 +119,8 @@ async def test_admin_rag_quality_handles_empty_window() -> None:
     assert payload["average_score"] == 0.0
     assert payload["pass_rate"] == 0.0
     assert payload["status_counts"] == {"pass": 0, "warn": 0, "fail": 0, "unknown": 0}
+    assert payload["health_label"] == "No answers evaluated yet"
+    assert payload["issue_breakdown"][0]["count"] == 0
+    assert payload["strategy_breakdown"] == []
     assert payload["is_sampled"] is False
     assert payload["recent"] == []

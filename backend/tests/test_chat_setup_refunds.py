@@ -56,6 +56,17 @@ class _FakeChunk:
         self.usage = usage
 
 
+class _FakeMessageChoice:
+    def __init__(self, content: str):
+        self.message = SimpleNamespace(content=content)
+
+
+class _FakeResponse:
+    def __init__(self, content: str, *, prompt_tokens: int = 0, completion_tokens: int = 0):
+        self.choices = [_FakeMessageChoice(content)]
+        self.usage = SimpleNamespace(prompt_tokens=prompt_tokens, completion_tokens=completion_tokens)
+
+
 class _FakeStream:
     def __init__(self, chunks):
         self._chunks = chunks
@@ -141,6 +152,62 @@ def test_fallback_citations_anchor_uncited_answer_to_retrieved_chunks() -> None:
     assert citations[0]["chunk_id"] == str(chunk_id)
     assert citations[0]["page"] == 8
     assert citations[0]["offset"] > 0
+
+
+@pytest.mark.asyncio
+async def test_rag_repair_rewrites_answer_and_rechecks_citations() -> None:
+    chunk_id = uuid.uuid4()
+    chunk = chat_service_module._ChunkInfo(
+        id=chunk_id,
+        page_start=7,
+        page_end=7,
+        bboxes=[],
+        text="MetaX 2028 revenue is RMB 7.8 billion.",
+        section_title="Valuation",
+        score=0.91,
+    )
+    chunk_map = {1: chunk}
+    draft = "MetaX 2028 revenue is RMB 9.1 billion."
+    draft_citations = [chat_service_module._citation_payload(1, chunk, len(draft))]
+    draft_report = chat_service_module.claim_verifier_service.verify(
+        draft,
+        draft_citations,
+        set(chunk_map.keys()),
+        retrieved_count=len(chunk_map),
+    )
+    fake_client = SimpleNamespace(
+        chat=SimpleNamespace(
+            completions=SimpleNamespace(
+                create=AsyncMock(return_value=_FakeResponse(
+                    "MetaX 2028 revenue is RMB 7.8 billion.[1]",
+                    prompt_tokens=50,
+                    completion_tokens=12,
+                ))
+            )
+        )
+    )
+
+    result = await chat_service_module._try_repair_rag_answer(
+        client=fake_client,
+        model="deepseek-v4-flash",
+        profile=chat_service_module.get_model_profile("deepseek-v4-flash"),
+        user_message="What is MetaX 2028 revenue?",
+        assistant_text=draft,
+        citations=draft_citations,
+        chunk_map=chunk_map,
+        numbered_chunks=["[1] MetaX 2028 revenue is RMB 7.8 billion."],
+        verification=draft_report.to_payload(),
+        locale="en",
+    )
+
+    assert result is not None
+    assert result.applied is True
+    assert result.metadata["repair_applied"] is True
+    assert result.prompt_tokens == 50
+    assert result.output_tokens == 12
+    assert result.text == "MetaX 2028 revenue is RMB 7.8 billion."
+    assert result.verification["status"] == "pass"
+    assert result.citations[0]["ref_index"] == 1
 
 
 @pytest.mark.asyncio

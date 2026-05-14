@@ -17,6 +17,7 @@ ALLOWED_EVENTS = {
     "upgrade_click",
     "checkout_created",
     "checkout_completed",
+    "upgrade_nudge_shown",
     "limit_hit",
     "document_upload_created",
     "url_ingest_created",
