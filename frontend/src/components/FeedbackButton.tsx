@@ -11,80 +11,91 @@ type FeedbackType = FeedbackRequest["type"];
 type FeedbackArea = FeedbackRequest["area"];
 type FeedbackSeverity = FeedbackRequest["severity"];
 
-const TYPE_OPTIONS: { value: FeedbackType; label: string }[] = [
-  { value: "feature_request", label: "Need a feature" },
-  { value: "bug", label: "Found a bug" },
-  { value: "answer_quality", label: "Answer quality" },
-  { value: "citation_problem", label: "Citation problem" },
-  { value: "billing_pricing", label: "Billing or pricing" },
-  { value: "usability", label: "Usability" },
-  { value: "other", label: "Other" },
+type LocalizedOption<T extends string = string> = {
+  value: T;
+  labelKey: string;
+  fallback: string;
+};
+
+const TYPE_OPTIONS: LocalizedOption<FeedbackType>[] = [
+  { value: "feature_request", labelKey: "feedback.type.feature_request", fallback: "Need a feature" },
+  { value: "bug", labelKey: "feedback.type.bug", fallback: "Found a bug" },
+  { value: "answer_quality", labelKey: "feedback.type.answer_quality", fallback: "Answer quality" },
+  { value: "citation_problem", labelKey: "feedback.type.citation_problem", fallback: "Citation problem" },
+  { value: "billing_pricing", labelKey: "feedback.type.billing_pricing", fallback: "Billing or pricing" },
+  { value: "usability", labelKey: "feedback.type.usability", fallback: "Usability" },
+  { value: "other", labelKey: "feedback.type.other", fallback: "Other" },
 ];
 
-const AREA_OPTIONS: { value: FeedbackArea; label: string }[] = [
-  { value: "upload_parse", label: "Upload / parsing" },
-  { value: "chat_answer", label: "Chat answer" },
-  { value: "citation_jump", label: "Citation jump" },
-  { value: "collections", label: "Collections" },
-  { value: "export", label: "Export" },
-  { value: "billing", label: "Billing" },
-  { value: "account", label: "Account" },
-  { value: "performance", label: "Performance" },
-  { value: "mobile", label: "Mobile" },
-  { value: "localization", label: "Language / locale" },
+const AREA_OPTIONS: LocalizedOption<FeedbackArea>[] = [
+  { value: "upload_parse", labelKey: "feedback.area.upload_parse", fallback: "Upload / parsing" },
+  { value: "chat_answer", labelKey: "feedback.area.chat_answer", fallback: "Chat answer" },
+  { value: "citation_jump", labelKey: "feedback.area.citation_jump", fallback: "Citation jump" },
+  { value: "collections", labelKey: "feedback.area.collections", fallback: "Collections" },
+  { value: "export", labelKey: "feedback.area.export", fallback: "Export" },
+  { value: "billing", labelKey: "feedback.area.billing", fallback: "Billing" },
+  { value: "account", labelKey: "feedback.area.account", fallback: "Account" },
+  { value: "performance", labelKey: "feedback.area.performance", fallback: "Performance" },
+  { value: "mobile", labelKey: "feedback.area.mobile", fallback: "Mobile" },
+  { value: "localization", labelKey: "feedback.area.localization", fallback: "Language / locale" },
 ];
 
-const SEVERITY_OPTIONS: { value: FeedbackSeverity; label: string }[] = [
-  { value: "low", label: "Low" },
-  { value: "medium", label: "Medium" },
-  { value: "high", label: "High" },
-  { value: "blocking", label: "Blocking" },
+const SEVERITY_OPTIONS: LocalizedOption<FeedbackSeverity>[] = [
+  { value: "low", labelKey: "feedback.severity.low", fallback: "Low" },
+  { value: "medium", labelKey: "feedback.severity.medium", fallback: "Medium" },
+  { value: "high", labelKey: "feedback.severity.high", fallback: "High" },
+  { value: "blocking", labelKey: "feedback.severity.blocking", fallback: "Blocking" },
 ];
 
-const OPTION_BANK: Record<FeedbackType, string[]> = {
+const OPTION_BANK: Record<FeedbackType, LocalizedOption[]> = {
   feature_request: [
-    "Compare multiple documents",
-    "Reusable prompt templates",
-    "Better table extraction",
-    "Export answers with citations",
-    "Team workspace",
+    { value: "compare_multiple_documents", labelKey: "feedback.option.compare_multiple_documents", fallback: "Compare multiple documents" },
+    { value: "reusable_prompt_templates", labelKey: "feedback.option.reusable_prompt_templates", fallback: "Reusable prompt templates" },
+    { value: "better_table_extraction", labelKey: "feedback.option.better_table_extraction", fallback: "Better table extraction" },
+    { value: "export_answers_with_citations", labelKey: "feedback.option.export_answers_with_citations", fallback: "Export answers with citations" },
+    { value: "team_workspace", labelKey: "feedback.option.team_workspace", fallback: "Team workspace" },
   ],
   bug: [
-    "Upload failed",
-    "Answer did not load",
-    "Citation opened the wrong place",
-    "Billing state looked wrong",
-    "Mobile layout broke",
+    { value: "upload_failed", labelKey: "feedback.option.upload_failed", fallback: "Upload failed" },
+    { value: "answer_did_not_load", labelKey: "feedback.option.answer_did_not_load", fallback: "Answer did not load" },
+    { value: "citation_opened_wrong_place", labelKey: "feedback.option.citation_opened_wrong_place", fallback: "Citation opened the wrong place" },
+    { value: "billing_state_wrong", labelKey: "feedback.option.billing_state_wrong", fallback: "Billing state looked wrong" },
+    { value: "mobile_layout_broke", labelKey: "feedback.option.mobile_layout_broke", fallback: "Mobile layout broke" },
   ],
   answer_quality: [
-    "Missed key facts",
-    "Answer was too shallow",
-    "Used weak evidence",
-    "Needed more structure",
-    "Wrong language",
+    { value: "missed_key_facts", labelKey: "feedback.option.missed_key_facts", fallback: "Missed key facts" },
+    { value: "answer_too_shallow", labelKey: "feedback.option.answer_too_shallow", fallback: "Answer was too shallow" },
+    { value: "used_weak_evidence", labelKey: "feedback.option.used_weak_evidence", fallback: "Used weak evidence" },
+    { value: "needed_more_structure", labelKey: "feedback.option.needed_more_structure", fallback: "Needed more structure" },
+    { value: "wrong_language", labelKey: "feedback.option.wrong_language", fallback: "Wrong language" },
   ],
   citation_problem: [
-    "Wrong page",
-    "Highlight missing",
-    "Source passage too short",
-    "Citation unavailable",
-    "Citation contradicted answer",
+    { value: "wrong_page", labelKey: "feedback.option.wrong_page", fallback: "Wrong page" },
+    { value: "highlight_missing", labelKey: "feedback.option.highlight_missing", fallback: "Highlight missing" },
+    { value: "source_passage_too_short", labelKey: "feedback.option.source_passage_too_short", fallback: "Source passage too short" },
+    { value: "citation_unavailable", labelKey: "feedback.option.citation_unavailable", fallback: "Citation unavailable" },
+    { value: "citation_contradicted_answer", labelKey: "feedback.option.citation_contradicted_answer", fallback: "Citation contradicted answer" },
   ],
   billing_pricing: [
-    "Price is unclear",
-    "Limits are unclear",
-    "Need a different plan",
-    "Checkout issue",
-    "Need invoice support",
+    { value: "price_unclear", labelKey: "feedback.option.price_unclear", fallback: "Price is unclear" },
+    { value: "limits_unclear", labelKey: "feedback.option.limits_unclear", fallback: "Limits are unclear" },
+    { value: "need_different_plan", labelKey: "feedback.option.need_different_plan", fallback: "Need a different plan" },
+    { value: "checkout_issue", labelKey: "feedback.option.checkout_issue", fallback: "Checkout issue" },
+    { value: "need_invoice_support", labelKey: "feedback.option.need_invoice_support", fallback: "Need invoice support" },
   ],
   usability: [
-    "Hard to find feature",
-    "Too many steps",
-    "Confusing copy",
-    "Slow workflow",
-    "Keyboard or accessibility issue",
+    { value: "hard_to_find_feature", labelKey: "feedback.option.hard_to_find_feature", fallback: "Hard to find feature" },
+    { value: "too_many_steps", labelKey: "feedback.option.too_many_steps", fallback: "Too many steps" },
+    { value: "confusing_copy", labelKey: "feedback.option.confusing_copy", fallback: "Confusing copy" },
+    { value: "slow_workflow", labelKey: "feedback.option.slow_workflow", fallback: "Slow workflow" },
+    { value: "keyboard_accessibility_issue", labelKey: "feedback.option.keyboard_accessibility_issue", fallback: "Keyboard or accessibility issue" },
   ],
-  other: ["General feedback", "Question", "Integration request", "Data privacy concern"],
+  other: [
+    { value: "general_feedback", labelKey: "feedback.option.general_feedback", fallback: "General feedback" },
+    { value: "question", labelKey: "feedback.option.question", fallback: "Question" },
+    { value: "integration_request", labelKey: "feedback.option.integration_request", fallback: "Integration request" },
+    { value: "data_privacy_concern", labelKey: "feedback.option.data_privacy_concern", fallback: "Data privacy concern" },
+  ],
 };
 
 function toggleItem(items: string[], item: string): string[] {
@@ -202,7 +213,7 @@ export default function FeedbackButton() {
                     className="rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 outline-none focus:border-zinc-500 focus:ring-2 focus:ring-zinc-200 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100 dark:focus:border-zinc-500"
                   >
                     {TYPE_OPTIONS.map((option) => (
-                      <option key={option.value} value={option.value}>{option.label}</option>
+                      <option key={option.value} value={option.value}>{tOr(option.labelKey, option.fallback)}</option>
                     ))}
                   </select>
                 </label>
@@ -218,7 +229,7 @@ export default function FeedbackButton() {
                       className="rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 outline-none focus:border-zinc-500 focus:ring-2 focus:ring-zinc-200 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100 dark:focus:border-zinc-500"
                     >
                       {AREA_OPTIONS.map((option) => (
-                        <option key={option.value} value={option.value}>{option.label}</option>
+                        <option key={option.value} value={option.value}>{tOr(option.labelKey, option.fallback)}</option>
                       ))}
                     </select>
                   </label>
@@ -233,7 +244,7 @@ export default function FeedbackButton() {
                       className="rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 outline-none focus:border-zinc-500 focus:ring-2 focus:ring-zinc-200 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100 dark:focus:border-zinc-500"
                     >
                       {SEVERITY_OPTIONS.map((option) => (
-                        <option key={option.value} value={option.value}>{option.label}</option>
+                        <option key={option.value} value={option.value}>{tOr(option.labelKey, option.fallback)}</option>
                       ))}
                     </select>
                   </label>
@@ -246,16 +257,16 @@ export default function FeedbackButton() {
                   <div className="grid gap-2 sm:grid-cols-2">
                     {commonOptions.map((option) => (
                       <label
-                        key={option}
+                        key={option.value}
                         className="flex min-h-10 items-center gap-2 rounded-md border border-zinc-200 px-3 py-2 text-sm text-zinc-700 transition-colors hover:bg-zinc-50 dark:border-zinc-800 dark:text-zinc-200 dark:hover:bg-zinc-900"
                       >
                         <input
                           type="checkbox"
-                          checked={selectedOptions.includes(option)}
-                          onChange={() => setSelectedOptions((items) => toggleItem(items, option))}
+                          checked={selectedOptions.includes(option.value)}
+                          onChange={() => setSelectedOptions((items) => toggleItem(items, option.value))}
                           className="h-4 w-4 rounded border-zinc-300 text-zinc-900 focus:ring-zinc-500 dark:border-zinc-700"
                         />
-                        <span>{option}</span>
+                        <span>{tOr(option.labelKey, option.fallback)}</span>
                       </label>
                     ))}
                   </div>

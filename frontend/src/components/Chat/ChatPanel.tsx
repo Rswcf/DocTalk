@@ -353,13 +353,14 @@ export default function ChatPanel({ sessionId, onCitationClick, maxUserMessages,
   const canUseExport = messages.length > 0 && !isStreaming && (userPlan === 'plus' || userPlan === 'pro');
   const showExportInMenu = messages.length > 0 && !isStreaming;
 
-  const displayedSuggestedQuestions = suggestedQuestions && suggestedQuestions.length > 0
+  const localizedSuggestedQuestions = [
+    ...SUGGESTED_KEYS.map((key) => t(key)),
+    tOr('chat.suggestedExtractTables', 'Extract all tables as CSV'),
+    tOr('chat.suggestedCompareVersions', 'Compare this with an older version'),
+  ];
+  const displayedSuggestedQuestions = locale === 'en' && suggestedQuestions && suggestedQuestions.length > 0
     ? suggestedQuestions
-    : [
-        ...SUGGESTED_KEYS.map((key) => t(key)),
-        tOr('chat.suggestedExtractTables', 'Extract all tables as CSV'),
-        tOr('chat.suggestedCompareVersions', 'Compare this with an older version'),
-      ];
+    : localizedSuggestedQuestions;
 
   return (
     <div className="dt-chat-shell flex h-full flex-col">
