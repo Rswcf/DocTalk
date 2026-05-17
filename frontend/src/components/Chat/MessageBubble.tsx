@@ -251,20 +251,20 @@ export default function MessageBubble({
         <div
           className={
             isError
-              ? 'text-sm rounded-xl px-4 py-3 bg-red-600 text-white'
+              ? 'text-sm rounded-2xl px-4 py-3 bg-red-500/92 text-white shadow-2xl shadow-red-950/30'
               : isUser
-              ? 'dt-user-bubble text-sm rounded-xl px-4 py-3'
-              : 'dt-answer-card text-zinc-900 dark:text-zinc-100'
+              ? 'dt-user-bubble text-sm rounded-2xl px-4 py-3'
+              : 'dt-answer-card text-[var(--workbench-ink)]'
           }
         >
           {isUser ? (
             <span className="whitespace-pre-wrap">{message.text}</span>
           ) : isStreaming && !message.text ? (
-            <div className="flex items-center gap-2 text-zinc-400 dark:text-zinc-500 text-sm" aria-live="polite">
+            <div className="flex items-center gap-2 text-[var(--workbench-muted)] text-sm" aria-live="polite">
               <div className="flex gap-1">
-                <span className="w-1.5 h-1.5 bg-zinc-400 rounded-full animate-bounce motion-reduce:animate-none [animation-delay:-0.3s]" aria-hidden="true" />
-                <span className="w-1.5 h-1.5 bg-zinc-400 rounded-full animate-bounce motion-reduce:animate-none [animation-delay:-0.15s]" aria-hidden="true" />
-                <span className="w-1.5 h-1.5 bg-zinc-400 rounded-full animate-bounce motion-reduce:animate-none" aria-hidden="true" />
+                <span className="w-1.5 h-1.5 bg-white/55 rounded-full animate-bounce motion-reduce:animate-none [animation-delay:-0.3s]" aria-hidden="true" />
+                <span className="w-1.5 h-1.5 bg-white/55 rounded-full animate-bounce motion-reduce:animate-none [animation-delay:-0.15s]" aria-hidden="true" />
+                <span className="w-1.5 h-1.5 bg-white/55 rounded-full animate-bounce motion-reduce:animate-none" aria-hidden="true" />
                 <span className="hidden motion-reduce:inline" aria-hidden="true">...</span>
               </div>
               <span>{t('chat.searching')}</span>
@@ -290,11 +290,11 @@ export default function MessageBubble({
                   </ReactMarkdown>
                 </Suspense>
                 {isStreaming && isAssistant && message.text && (
-                  <span aria-hidden="true" className="inline-block w-2 h-4 bg-zinc-400 dark:bg-zinc-500 animate-pulse motion-reduce:animate-none rounded-sm ml-0.5 align-text-bottom" />
+                  <span aria-hidden="true" className="inline-block w-2 h-4 bg-white/45 animate-pulse motion-reduce:animate-none rounded-sm ml-0.5 align-text-bottom" />
                 )}
               </div>
               {isAssistant && !message.text && message.toolStatus ? (
-                <p className="mt-3 text-sm text-[var(--reader-muted)]">{message.toolStatus}</p>
+                <p className="mt-3 text-sm text-[var(--workbench-muted)]">{message.toolStatus}</p>
               ) : null}
               {isAssistant && message.artifacts?.map((artifact, index) => (
                 <ChatArtifactCard
@@ -312,7 +312,7 @@ export default function MessageBubble({
           <div className={`mt-2 flex gap-1.5 transition-opacity ${isLastAssistant ? '' : 'opacity-0 group-hover:opacity-100 group-focus-within:opacity-100'}`}>
             <button
               onClick={handleCopy}
-              className="rounded-lg p-1.5 text-zinc-400 transition-colors hover:bg-white/70 hover:text-zinc-600 focus-visible:ring-2 focus-visible:ring-zinc-400 dark:text-zinc-500 dark:hover:bg-zinc-800 dark:hover:text-zinc-300"
+              className="rounded-full p-1.5 text-[var(--workbench-muted)] transition-colors hover:bg-white/10 hover:text-white focus-visible:ring-2 focus-visible:ring-zinc-400"
               title={copied ? t('copy.copied') : t('copy.button')}
               aria-label={t('copy.button')}
             >
@@ -322,8 +322,8 @@ export default function MessageBubble({
               onClick={() => handleFeedback('up')}
               className={`rounded-lg p-1.5 transition-colors focus-visible:ring-2 focus-visible:ring-zinc-400 ${
                 feedback === 'up'
-                  ? 'text-zinc-600 dark:text-zinc-400'
-                  : 'text-zinc-400 dark:text-zinc-500 hover:bg-white/70 hover:text-zinc-600 dark:hover:bg-zinc-800 dark:hover:text-zinc-300'
+                  ? 'text-white'
+                  : 'text-[var(--workbench-muted)] hover:bg-white/10 hover:text-white'
               }`}
               title={t('feedback.helpful')}
               aria-label={t('feedback.helpful')}
@@ -336,7 +336,7 @@ export default function MessageBubble({
               className={`rounded-lg p-1.5 transition-colors focus-visible:ring-2 focus-visible:ring-zinc-400 ${
                 feedback === 'down'
                   ? 'text-red-500 dark:text-red-400'
-                  : 'text-zinc-400 dark:text-zinc-500 hover:bg-white/70 hover:text-zinc-600 dark:hover:bg-zinc-800 dark:hover:text-zinc-300'
+                  : 'text-[var(--workbench-muted)] hover:bg-white/10 hover:text-white'
               }`}
               title={t('feedback.notHelpful')}
               aria-label={t('feedback.notHelpful')}
@@ -348,7 +348,7 @@ export default function MessageBubble({
               <button
                 onClick={() => onShareAnswer(message)}
                 disabled={isSharingAnswer}
-                className="rounded-lg p-1.5 text-zinc-400 transition-colors hover:bg-white/70 hover:text-zinc-600 focus-visible:ring-2 focus-visible:ring-zinc-400 disabled:opacity-50 dark:text-zinc-500 dark:hover:bg-zinc-800 dark:hover:text-zinc-300"
+                className="rounded-full p-1.5 text-[var(--workbench-muted)] transition-colors hover:bg-white/10 hover:text-white focus-visible:ring-2 focus-visible:ring-zinc-400 disabled:opacity-50"
                 title={t('chat.shareAnswer')}
                 aria-label={t('chat.shareAnswer')}
               >
@@ -358,7 +358,7 @@ export default function MessageBubble({
             {isLastAssistant && onRegenerate && !isStreaming && (
               <button
                 onClick={onRegenerate}
-                className="rounded-lg p-1.5 text-zinc-400 transition-colors hover:bg-white/70 hover:text-zinc-600 focus-visible:ring-2 focus-visible:ring-zinc-400 dark:text-zinc-500 dark:hover:bg-zinc-800 dark:hover:text-zinc-300"
+                className="rounded-full p-1.5 text-[var(--workbench-muted)] transition-colors hover:bg-white/10 hover:text-white focus-visible:ring-2 focus-visible:ring-zinc-400"
                 title={t('chat.regenerate')}
                 aria-label={t('chat.regenerate')}
               >

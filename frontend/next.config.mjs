@@ -11,7 +11,9 @@ const buildSha =
   process.env.GITHUB_SHA ||
   "";
 const isProduction = process.env.NODE_ENV === "production";
-const localDevSources = isProduction
+const apiBase = process.env.NEXT_PUBLIC_API_BASE || "";
+const usesLocalApiBase = /^https?:\/\/(localhost|127\.0\.0\.1|\[::1\])(?::|\/|$)/.test(apiBase);
+const localDevSources = isProduction && !usesLocalApiBase
   ? ""
   : [
       "http://localhost:8000",
@@ -35,7 +37,7 @@ const cspDirectives = [
   "default-src 'self'",
   `script-src 'self' 'unsafe-inline' ${process.env.NODE_ENV === "development" ? "'unsafe-eval'" : ""} https://va.vercel-scripts.com https://*.sentry-cdn.com https://www.googletagmanager.com`.replace(/  +/g, " ").trim(),
   "style-src 'self' 'unsafe-inline'",
-  `img-src 'self' blob: data: https://*.up.railway.app https://*.googleusercontent.com https://www.google-analytics.com${localDevSources}`,
+  `img-src 'self' blob: data: https://*.up.railway.app https://*.googleusercontent.com https://www.google-analytics.com https://www.googletagmanager.com${localDevSources}`,
   "font-src 'self' data:",
   "worker-src 'self' blob:",
   "media-src 'self' data:",
@@ -98,7 +100,7 @@ const cspReportOnlyDirectives = [
   "default-src 'self'",
   "script-src 'self' https://va.vercel-scripts.com https://*.sentry-cdn.com https://www.googletagmanager.com",
   "style-src 'self' 'unsafe-inline'",
-  "img-src 'self' blob: data: https://*.up.railway.app https://*.googleusercontent.com https://www.google-analytics.com",
+  "img-src 'self' blob: data: https://*.up.railway.app https://*.googleusercontent.com https://www.google-analytics.com https://www.googletagmanager.com",
   "font-src 'self' data:",
   "worker-src 'self' blob:",
   "media-src 'self' data:",

@@ -44,7 +44,7 @@ export interface AdminChartsProps {
   onTrendDaysChange: (days: number) => void;
 }
 
-const PIE_COLORS = ["#a1a1aa", "#71717a", "#52525b", "#3f3f46", "#27272a", "#18181b"];
+const PIE_COLORS = ["#38bdf8", "#a78bfa", "#34d399", "#f59e0b", "#60a5fa", "#94a3b8"];
 
 function formatNumber(n: number): string {
   if (n >= 1_000_000) return (n / 1_000_000).toFixed(1) + "M";
@@ -62,7 +62,7 @@ function ChartCard({
   dataKey: string;
 }) {
   return (
-    <div className="border border-zinc-200 dark:border-zinc-700 rounded-lg p-4">
+    <div className="dt-admin-panel border p-4">
       <h3 className="text-sm font-medium text-zinc-500 dark:text-zinc-400 mb-3">
         {title}
       </h3>
@@ -76,8 +76,8 @@ function ChartCard({
             <AreaChart data={data} margin={{ top: 4, right: 4, bottom: 0, left: 0 }}>
               <defs>
                 <linearGradient id={`grad-${dataKey}`} x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#71717a" stopOpacity={0.3} />
-                  <stop offset="95%" stopColor="#71717a" stopOpacity={0} />
+                  <stop offset="5%" stopColor="#38bdf8" stopOpacity={0.3} />
+                  <stop offset="95%" stopColor="#38bdf8" stopOpacity={0} />
                 </linearGradient>
               </defs>
               <CartesianGrid
@@ -113,7 +113,7 @@ function ChartCard({
               <Area
                 type="monotone"
                 dataKey={dataKey}
-                stroke="#52525b"
+                stroke="#38bdf8"
                 fill={`url(#grad-${dataKey})`}
                 strokeWidth={2}
               />
@@ -133,7 +133,7 @@ function PieCard({
   data: { name: string; value: number }[];
 }) {
   return (
-    <div className="border border-zinc-200 dark:border-zinc-700 rounded-lg p-4">
+    <div className="dt-admin-panel border p-4">
       <h3 className="text-sm font-medium text-zinc-500 dark:text-zinc-400 mb-3">
         {title}
       </h3>
@@ -187,7 +187,7 @@ export default function AdminCharts({
       <section className="mb-8">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-semibold dark:text-zinc-100">Trends</h2>
-          <div className="flex gap-1 border border-zinc-200 dark:border-zinc-700 rounded-lg p-0.5">
+          <div className="dt-workbench-pill flex gap-1 rounded-full p-0.5">
             {[7, 30, 90].map((d) => (
               <button
                 key={d}
@@ -238,7 +238,7 @@ export default function AdminCharts({
               value: d.count,
             }))}
           />
-          <div className="border border-zinc-200 dark:border-zinc-700 rounded-lg p-4">
+          <div className="dt-admin-panel border p-4">
             <h3 className="text-sm font-medium text-zinc-500 dark:text-zinc-400 mb-3">
               Model Usage (tokens)
             </h3>
@@ -268,7 +268,7 @@ export default function AdminCharts({
                       fontSize: "13px",
                     }}
                   />
-                  <Bar dataKey="tokens" fill="#71717a" radius={[0, 4, 4, 0]} />
+                  <Bar dataKey="tokens" fill="#38bdf8" radius={[0, 4, 4, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             </div>

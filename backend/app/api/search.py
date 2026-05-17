@@ -9,7 +9,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.deps import get_current_user_optional, get_db_session
 from app.core.rate_limit import anon_read_limiter, get_client_ip
 from app.models.tables import Document, User
-from app.schemas.search import SearchRequest, SearchResponse, SearchResultItem
+from app.schemas.search import (
+    SearchRequest,
+    SearchResponse,
+    SearchResultItem,
+)
 from app.services.doc_service import can_access_document
 from app.services.retrieval_service import retrieval_service
 

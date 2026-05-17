@@ -818,6 +818,11 @@ export async function getTableScanJob(jobId: string): Promise<ExtractionJob> {
   return handle(res);
 }
 
+export async function reconstructDocumentTable(tableId: string): Promise<ExtractionJob> {
+  const res = await fetch(`${PROXY_BASE}/api/document-tables/${tableId}/reconstruct`, { method: 'POST' });
+  return handle(res);
+}
+
 export async function exportDocumentTable(tableId: string): Promise<Blob> {
   const res = await fetch(`${PROXY_BASE}/api/document-tables/${tableId}/export`);
   if (!res.ok) await throwApiError(res);

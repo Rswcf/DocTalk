@@ -1,6 +1,7 @@
 "use client";
 
 import { FormEvent, useEffect, useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 import { MessageSquare, Send, X } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { useLocale } from "../i18n";
@@ -115,8 +116,13 @@ export default function FeedbackButton() {
   const [submitting, setSubmitting] = useState(false);
   const [status, setStatus] = useState<"idle" | "success" | "error">("idle");
   const [error, setError] = useState<string | null>(null);
+  const [mounted, setMounted] = useState(false);
 
   const commonOptions = useMemo(() => OPTION_BANK[type], [type]);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
     setSelectedOptions([]);
@@ -129,6 +135,15 @@ export default function FeedbackButton() {
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
+  }, [open]);
+
+  useEffect(() => {
+    if (!open) return;
+    const previous = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = previous;
+    };
   }, [open]);
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
@@ -174,15 +189,24 @@ export default function FeedbackButton() {
         <MessageSquare aria-hidden="true" size={17} />
       </button>
 
-      {open && (
+      {mounted && open && createPortal(
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-zinc-950/45 px-3 py-6 backdrop-blur-sm"
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="feedback-dialog-title"
+          className="fixed inset-0 z-[12000] isolate flex items-center justify-center overflow-y-auto overscroll-contain px-3 py-5 sm:px-6"
+          aria-live="polite"
         >
-          <div className="max-h-[92vh] w-full max-w-lg overflow-hidden rounded-lg border border-zinc-200 bg-white shadow-2xl dark:border-zinc-800 dark:bg-zinc-950">
-            <div className="flex items-center justify-between border-b border-zinc-200 px-4 py-3 dark:border-zinc-800">
+          <button
+            type="button"
+            className="absolute inset-0 cursor-default bg-zinc-950/75 backdrop-blur-md"
+            onClick={() => setOpen(false)}
+            aria-label={tOr("common.close", "Close")}
+          />
+          <div
+            className="relative z-10 flex max-h-[min(92dvh,760px)] w-full max-w-xl flex-col overflow-hidden rounded-2xl border border-zinc-200 bg-white text-zinc-950 shadow-2xl shadow-black/35 ring-1 ring-black/5 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-50 dark:ring-white/10"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="feedback-dialog-title"
+          >
+            <div className="flex shrink-0 items-center justify-between gap-4 border-b border-zinc-200 bg-white px-4 py-3 dark:border-zinc-800 dark:bg-zinc-950">
               <div>
                 <h2 id="feedback-dialog-title" className="text-sm font-semibold text-zinc-950 dark:text-zinc-50">
                   {tOr("feedback.title", "Send feedback")}
@@ -201,8 +225,8 @@ export default function FeedbackButton() {
               </button>
             </div>
 
-            <form onSubmit={onSubmit} className="max-h-[calc(92vh-57px)] overflow-y-auto p-4">
-              <div className="grid gap-4">
+            <form onSubmit={onSubmit} className="flex min-h-0 flex-1 flex-col">
+              <div className="grid min-h-0 flex-1 gap-4 overflow-y-auto bg-white p-4 dark:bg-zinc-950">
                 <label className="grid gap-1.5">
                   <span className="text-xs font-medium text-zinc-600 dark:text-zinc-300">
                     {tOr("feedback.type", "Type")}
@@ -258,7 +282,7 @@ export default function FeedbackButton() {
                     {commonOptions.map((option) => (
                       <label
                         key={option.value}
-                        className="flex min-h-10 items-center gap-2 rounded-md border border-zinc-200 px-3 py-2 text-sm text-zinc-700 transition-colors hover:bg-zinc-50 dark:border-zinc-800 dark:text-zinc-200 dark:hover:bg-zinc-900"
+                        className="flex min-h-11 items-center gap-2 rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-800 transition-colors hover:bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-200 dark:hover:bg-zinc-900"
                       >
                         <input
                           type="checkbox"
@@ -298,7 +322,7 @@ export default function FeedbackButton() {
                 )}
               </div>
 
-              <div className="mt-5 flex justify-end gap-2 border-t border-zinc-100 pt-4 dark:border-zinc-900">
+              <div className="flex shrink-0 justify-end gap-2 border-t border-zinc-200 bg-white px-4 py-3 dark:border-zinc-800 dark:bg-zinc-950">
                 <button
                   type="button"
                   onClick={() => setOpen(false)}
@@ -317,7 +341,8 @@ export default function FeedbackButton() {
               </div>
             </form>
           </div>
-        </div>
+        </div>,
+        document.body,
       )}
     </>
   );

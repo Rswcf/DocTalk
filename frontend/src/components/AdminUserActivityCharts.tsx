@@ -20,21 +20,22 @@ import type {
   AdminUserActivityFunnelStage,
   AdminUserActivitySegmentItem,
 } from "../lib/api";
+import { useLocale } from "../i18n";
 
 interface AdminUserActivityChartsProps {
   activity: AdminUserActivity;
 }
 
 const CHART_COLORS = {
-  active: "#4f46e5",
-  upload: "#059669",
-  chat: "#0284c7",
-  feedback: "#d97706",
-  nudge: "#ca8a04",
-  paywall: "#7c3aed",
-  limit: "#dc2626",
-  checkout: "#16a34a",
-  neutral: "#71717a",
+  active: "#38bdf8",
+  upload: "#22c55e",
+  chat: "#60a5fa",
+  feedback: "#f59e0b",
+  nudge: "#facc15",
+  paywall: "#a78bfa",
+  limit: "#fb7185",
+  checkout: "#34d399",
+  neutral: "#94a3b8",
 };
 
 function formatNumber(n: number): string {
@@ -77,7 +78,7 @@ function MetricTile({
   delta?: AdminMetricDelta;
 }) {
   return (
-    <div className="rounded-lg border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-950">
+    <div className="dt-kpi-card rounded-2xl p-4">
       <p className="text-xs font-medium text-zinc-500 dark:text-zinc-400">{label}</p>
       <p className="mt-1 text-2xl font-semibold tabular-nums text-zinc-950 dark:text-zinc-50">
         {typeof value === "number" ? formatNumber(value) : value}
@@ -99,7 +100,7 @@ function Section({
   children: ReactNode;
 }) {
   return (
-    <section className="rounded-lg border border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-950">
+    <section className="dt-admin-panel overflow-hidden border">
       <div className="border-b border-zinc-200 px-4 py-3 dark:border-zinc-800">
         <h3 className="text-sm font-semibold text-zinc-950 dark:text-zinc-50">{title}</h3>
         {subtitle && <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">{subtitle}</p>}
@@ -244,6 +245,7 @@ function PaidIntentTable({ rows }: { rows: AdminPaidIntentReasonItem[] }) {
 }
 
 export default function AdminUserActivityCharts({ activity }: AdminUserActivityChartsProps) {
+  const { tOr } = useLocale();
   const summary = activity.summary;
   const series = activity.series;
   const paidIntentSeries = series.map((point) => ({
@@ -253,8 +255,8 @@ export default function AdminUserActivityCharts({ activity }: AdminUserActivityC
 
   return (
     <div className="mb-8 space-y-6">
-      <div className="flex flex-col gap-1">
-        <h2 className="text-lg font-semibold text-zinc-950 dark:text-zinc-50">User Activity Intelligence</h2>
+      <div className="dt-glass-panel flex flex-col gap-1 rounded-2xl px-4 py-3">
+        <h2 className="text-lg font-semibold text-[var(--workbench-ink)]">{tOr('admin.activityIntelligence', 'User Activity Intelligence')}</h2>
         <p className="text-xs text-zinc-500 dark:text-zinc-400">
           Last {activity.days} days · generated {new Date(activity.generated_at).toLocaleString()}
         </p>

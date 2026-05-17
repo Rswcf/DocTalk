@@ -1,15 +1,15 @@
 "use client";
 
 import { useEffect, useState } from 'react';
-import { createSession, getMessages, listSessions } from './api';
+import { ApiError, createSession, getMessages, listSessions } from './api';
 import { useDocTalkStore } from '../store';
 
 interface UseChatSessionResult {
-  sessionError: string | null;
+  sessionError: unknown | null;
 }
 
 export function useChatSession(documentId: string | undefined): UseChatSessionResult {
-  const [sessionError, setSessionError] = useState<string | null>(null);
+  const [sessionError, setSessionError] = useState<unknown | null>(null);
 
   const documentStatus = useDocTalkStore((s) => s.documentStatus);
   const {
@@ -41,7 +41,7 @@ export function useChatSession(documentId: string | undefined): UseChatSessionRe
           sessionReady = true;
         }
       } catch (e) {
-        console.error('Failed to load sessions, falling back to create:', e);
+        console.warn('Failed to load sessions, falling back to create:', e);
       }
 
       if (!sessionReady && !cancelled) {
@@ -75,8 +75,11 @@ export function useChatSession(documentId: string | undefined): UseChatSessionRe
             setMessages([]);
           }
         } catch (e) {
-          console.error('Failed to create session:', e);
-          if (!cancelled) setSessionError('chat.sessionInitError');
+          const expectedRateLimit = e instanceof ApiError && (e.code === 'DEMO_SESSION_RATE_LIMITED' || e.status === 429);
+          if (!expectedRateLimit) {
+            console.error('Failed to create session:', e);
+          }
+          if (!cancelled) setSessionError(e);
         }
       }
     })();

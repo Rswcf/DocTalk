@@ -22,4 +22,3 @@ class SearchResultItem(BaseModel):
 
 class SearchResponse(BaseModel):
     results: List[SearchResultItem]
-

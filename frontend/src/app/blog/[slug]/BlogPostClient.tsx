@@ -282,6 +282,42 @@ export default function BlogPostClient({ post, relatedPosts }: BlogPostClientPro
                         </a>
                       );
                     },
+                    table: ({ children, ...props }) => (
+                      <div className="not-prose my-8 -mx-6 overflow-x-auto px-6">
+                        <table
+                          className="min-w-[42rem] border-collapse text-left text-sm text-zinc-700 dark:text-zinc-300"
+                          {...props}
+                        >
+                          {children}
+                        </table>
+                      </div>
+                    ),
+                    th: ({ children, ...props }) => (
+                      <th
+                        className="border border-zinc-200 bg-zinc-50 px-3 py-2 font-semibold text-zinc-900 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-100"
+                        {...props}
+                      >
+                        {children}
+                      </th>
+                    ),
+                    td: ({ children, ...props }) => (
+                      <td
+                        className="border border-zinc-200 px-3 py-2 align-top dark:border-zinc-800"
+                        {...props}
+                      >
+                        {children}
+                      </td>
+                    ),
+                    pre: ({ children, ...props }) => (
+                      <pre className="overflow-x-auto rounded-lg bg-zinc-100 p-4 text-sm dark:bg-zinc-900" {...props}>
+                        {children}
+                      </pre>
+                    ),
+                    code: ({ className, children, ...props }) => (
+                      <code className={`${className || ''} [overflow-wrap:anywhere]`} {...props}>
+                        {children}
+                      </code>
+                    ),
                   }}
                 >
                   {post.content}

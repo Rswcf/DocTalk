@@ -1,5 +1,5 @@
 import type { Metadata } from 'next'
-import { Inter, Sora, Fraunces } from 'next/font/google'
+import { Inter, Sora } from 'next/font/google'
 import './globals.css'
 import ErrorBoundary from '../components/ErrorBoundary'
 import { ThemeProvider } from './ThemeProvider'
@@ -15,17 +15,6 @@ const sora = Sora({
   subsets: ['latin'],
   variable: '--font-logo',
   weight: ['500', '600', '700'],
-  display: 'swap',
-})
-// Fraunces — editorial display serif for marketing H1s. Applied via
-// `font-serif` (see tailwind.config.ts). Italic enabled so headlines can
-// do a one-word italic accent ("answers with *receipts*") instead of
-// relying on color to do all the heavy lifting.
-const fraunces = Fraunces({
-  subsets: ['latin'],
-  variable: '--font-serif',
-  weight: ['400', '500', '600'],
-  style: ['normal', 'italic'],
   display: 'swap',
 })
 
@@ -71,7 +60,7 @@ export default function RootLayout({
   // was the direct cause of `Cache-Control: private, no-store` on every
   // SEO page and is the single biggest unlock for organic traffic.
   return (
-    <html lang="en" suppressHydrationWarning className={`${inter.variable} ${sora.variable} ${fraunces.variable}`}>
+    <html lang="en" suppressHydrationWarning className={`${inter.variable} ${sora.variable}`}>
       <head>
         <meta name="google-site-verification" content="168G1TYJfQ7MNp4sNdF-7gC2wDWKGeds618LyLdkCUM" />
         <meta name="msvalidate.01" content="50E7D296303C85BC31C1BE98539EA393" />
@@ -90,7 +79,7 @@ export default function RootLayout({
           <Providers>
             <LocaleProvider>
               <ErrorBoundary>
-                <div id="page-content">{children}</div>
+                <div id="page-content" className="dt-stitch-root">{children}</div>
                 <Suspense fallback={null}>
                   <AuthModal />
                 </Suspense>

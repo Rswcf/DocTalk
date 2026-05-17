@@ -56,7 +56,7 @@ export function CookieConsentBanner() {
 
   return (
     <div
-      className={`fixed z-40 rounded-xl border border-zinc-200 bg-white/95 px-4 py-3 shadow-xl backdrop-blur dark:border-zinc-800 dark:bg-zinc-950/95
+      className={`fixed z-40 rounded-2xl border border-[var(--workbench-border)] bg-[var(--workbench-panel-solid)] px-4 py-3 text-[var(--workbench-ink)] shadow-2xl shadow-slate-900/10 backdrop-blur-2xl dark:shadow-black/35
                  animate-[slideUp_0.3s_ease-out] motion-reduce:animate-none
                  ${isWorkspaceRoute
                    ? `${isCollectionWorkspace ? 'top-[calc(env(safe-area-inset-top,0px)+9.5rem)] sm:top-[calc(env(safe-area-inset-top,0px)+4.75rem)]' : 'top-[calc(env(safe-area-inset-top,0px)+4.75rem)]'} left-3 right-3 sm:left-auto sm:right-4 sm:w-[min(26rem,calc(100vw-2rem))]`
@@ -65,11 +65,11 @@ export function CookieConsentBanner() {
       aria-label={t('consent.message')}
     >
       <div className="flex flex-col gap-3">
-        <p className="text-sm leading-6 text-zinc-600 dark:text-zinc-400">
+        <p className="text-sm leading-6 text-[var(--workbench-muted)]">
           {t('consent.message')}{' '}
           <Link
             href="/privacy"
-            className="underline hover:text-zinc-900 dark:hover:text-zinc-200 transition-colors focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:rounded-sm"
+            className="underline transition-colors hover:text-[var(--workbench-ink)] focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:rounded-sm"
           >
             {t('consent.learnMore')}
           </Link>
@@ -77,17 +77,13 @@ export function CookieConsentBanner() {
         <div className="flex justify-end gap-2">
           <button
             onClick={handleDecline}
-            className="px-4 py-1.5 text-sm rounded-lg border border-zinc-300 dark:border-zinc-700
-                       text-zinc-700 dark:text-zinc-300
-                       hover:bg-zinc-50 dark:hover:bg-zinc-900 transition-colors focus-visible:ring-2 focus-visible:ring-zinc-400 dark:focus-visible:ring-zinc-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-900"
+            className="rounded-full border border-[var(--workbench-border)] px-4 py-1.5 text-sm text-[var(--workbench-muted)] transition-colors hover:bg-zinc-100 hover:text-[var(--workbench-ink)] focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-50 dark:hover:bg-white/10 dark:focus-visible:ring-offset-zinc-950"
           >
             {t('consent.decline')}
           </button>
           <button
             onClick={handleAccept}
-            className="px-4 py-1.5 text-sm rounded-lg
-                       bg-zinc-900 dark:bg-zinc-50 text-white dark:text-zinc-900
-                       hover:bg-zinc-800 dark:hover:bg-zinc-200 transition-colors focus-visible:ring-2 focus-visible:ring-zinc-400 dark:focus-visible:ring-zinc-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-900"
+            className="dt-stitch-primary rounded-full px-4 py-1.5 text-sm transition-colors focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950"
           >
             {t('consent.accept')}
           </button>

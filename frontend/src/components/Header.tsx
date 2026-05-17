@@ -10,7 +10,7 @@ interface HeaderProps {
 }
 
 const AppHeaderShell = dynamic(() => import('./AppHeaderShell'), {
-  loading: () => <div className="h-14 shrink-0 border-b border-zinc-200 dark:border-zinc-800 bg-[var(--page-background)]" />,
+  loading: () => <div className="dt-shell-header h-14 shrink-0 border-b" />,
 });
 
 export default function Header({ variant = 'full', isDemo, isLoggedIn }: HeaderProps) {

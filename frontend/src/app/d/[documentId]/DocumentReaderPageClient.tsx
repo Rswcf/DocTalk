@@ -12,10 +12,11 @@ import { useDocTalkStore } from '../../../store';
 import { Panel, Group, Separator } from 'react-resizable-panels';
 import { useLocale } from '../../../i18n';
 import { usePageTitle } from '../../../lib/usePageTitle';
-import { Presentation, FileText, MessageSquare } from 'lucide-react';
+import { FileText, MessageSquare, Presentation } from 'lucide-react';
 import { useDocumentLoader } from '../../../lib/useDocumentLoader';
 import { useChatSession } from '../../../lib/useChatSession';
 import { useUserPlanProfile } from '../../../lib/useUserPlanProfile';
+import { errorCopy } from '../../../lib/errorCopy';
 import type { Citation } from '../../../types';
 import { trackEvent } from '../../../lib/analytics';
 
@@ -41,7 +42,7 @@ export default function DocumentReaderPageClient() {
   const [viewMode, setViewMode] = useState<'slide' | 'text'>('slide');
   const [mobileTab, setMobileTab] = useState<'chat' | 'document'>('chat');
   const isDesktopLayout = useDesktopReaderLayout();
-  const { t } = useLocale();
+  const { t, tOr } = useLocale();
   const { pdfUrl, currentPage, highlights, highlightSnippet, scale, scrollNonce, sessionId, navigateToCitation } = useDocTalkStore();
 
   const documentName = useDocTalkStore((s) => s.documentName);
@@ -59,7 +60,8 @@ export default function DocumentReaderPageClient() {
   } = useDocumentLoader(documentId);
   const { sessionError } = useChatSession(documentId);
   const { isLoggedIn, userPlan, canUseCustomInstructions } = useUserPlanProfile();
-  const error = loaderError || (sessionError ? t(sessionError) : null);
+  const sessionErrorCopy = sessionError ? errorCopy(sessionError, t, tOr) : null;
+  const error = loaderError;
 
   usePageTitle(documentName || undefined);
 
@@ -191,6 +193,32 @@ export default function DocumentReaderPageClient() {
 
   const chatContent = documentStatus === 'ready' && sessionId ? (
     <ChatPanel sessionId={sessionId} onCitationClick={handleCitationClick} maxUserMessages={isDemo && !isLoggedIn ? 5 : undefined} suggestedQuestions={suggestedQuestions.length > 0 ? suggestedQuestions : undefined} initialQuestion={initialQuestion} autoSubmitInitialQuestion={isDemo} onOpenSettings={canUseCustomInstructions ? () => setShowInstructions(true) : undefined} hasCustomInstructions={!!customInstructions} userPlan={userPlan} />
+  ) : sessionErrorCopy ? (
+    <div className="flex h-full w-full items-center justify-center px-5 py-8">
+      <div
+        className={`w-full max-w-md rounded-2xl border px-5 py-4 text-sm shadow-sm ${
+          sessionErrorCopy.severity === 'warning'
+            ? 'border-amber-300/40 bg-amber-50 text-amber-950 dark:border-amber-300/25 dark:bg-amber-300/10 dark:text-amber-100'
+            : sessionErrorCopy.severity === 'info'
+              ? 'border-blue-300/40 bg-blue-50 text-blue-950 dark:border-blue-300/25 dark:bg-blue-300/10 dark:text-blue-100'
+              : 'border-red-300/40 bg-red-50 text-red-950 dark:border-red-300/25 dark:bg-red-300/10 dark:text-red-100'
+        }`}
+        role="status"
+        aria-live="polite"
+      >
+        <p className="font-semibold">{sessionErrorCopy.title}</p>
+        <p className="mt-2 leading-6 opacity-90">{sessionErrorCopy.body}</p>
+        {sessionErrorCopy.cta && (
+          <button
+            type="button"
+            onClick={() => router.push(sessionErrorCopy.cta!.href)}
+            className="mt-4 rounded-full bg-zinc-950 px-4 py-2 text-xs font-semibold text-white transition hover:bg-zinc-800 dark:bg-zinc-50 dark:text-zinc-950 dark:hover:bg-zinc-200"
+          >
+            {sessionErrorCopy.cta.label}
+          </button>
+        )}
+      </div>
+    </div>
   ) : documentStatus !== 'ready' && !error ? (
     <div className="h-full w-full flex flex-col items-center justify-center px-6 py-8 text-zinc-500" role="status" aria-live="polite">
       <div className="w-full max-w-md space-y-3 animate-pulse motion-reduce:animate-none">
@@ -219,7 +247,7 @@ export default function DocumentReaderPageClient() {
   );
 
   return (
-    <div className="dt-reading-workspace flex flex-col h-screen w-full overflow-hidden">
+    <div className="dt-stitch-theme dt-reading-workspace flex flex-col h-screen w-full overflow-hidden">
       <Header isDemo={isDemo} isLoggedIn={isLoggedIn} />
       {error ? (
         <div className="flex-1 flex items-center justify-center">
@@ -242,7 +270,7 @@ export default function DocumentReaderPageClient() {
               </div>
             </div>
           ) : isDesktopLayout ? (
-            <div className="flex flex-1 min-h-0 px-2 pb-2 gap-0">
+            <div className="relative flex flex-1 min-h-0 px-2 pb-2 gap-0">
               <Group orientation="horizontal" className="flex-1 min-h-0">
                 <Panel defaultSize={50} minSize={25}>
                   <div className="dt-reader-pane h-full min-w-0 sm:min-w-[320px] flex flex-col border rounded-l-xl overflow-hidden">

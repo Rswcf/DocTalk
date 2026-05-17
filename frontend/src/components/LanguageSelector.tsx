@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import { Globe, ChevronDown, Check } from 'lucide-react';
 import { LOCALES } from '../i18n';
 import { useLocale } from '../i18n';
@@ -10,7 +11,11 @@ export default function LanguageSelector() {
   const { locale, setLocale, t } = useLocale();
   const [open, setOpen] = useState(false);
   const [focusIndex, setFocusIndex] = useState(-1);
-  const [menuPos, setMenuPos] = useState<{ top: number; right: number }>({ top: 0, right: 0 });
+  const [menuPos, setMenuPos] = useState<{ top: number; right: number; maxHeight: number }>({
+    top: 0,
+    right: 0,
+    maxHeight: 320,
+  });
   const ref = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -19,7 +24,14 @@ export default function LanguageSelector() {
   const updateMenuPos = useCallback(() => {
     if (!triggerRef.current) return;
     const rect = triggerRef.current.getBoundingClientRect();
-    setMenuPos({ top: rect.bottom + 4, right: window.innerWidth - rect.right });
+    const baseTop = rect.bottom + 8;
+    const avoid = document.querySelector('[data-dropdown-avoid-overlap="true"]')?.getBoundingClientRect();
+    const top = avoid && baseTop < avoid.bottom + 8 ? avoid.bottom + 8 : baseTop;
+    setMenuPos({
+      top,
+      right: Math.max(12, window.innerWidth - rect.right),
+      maxHeight: Math.max(160, Math.min(320, window.innerHeight - top - 12)),
+    });
   }, []);
 
   useEffect(() => {
@@ -39,6 +51,16 @@ export default function LanguageSelector() {
       setFocusIndex(idx >= 0 ? idx : 0);
     }
   }, [open, locale, updateMenuPos]);
+
+  useEffect(() => {
+    if (!open) return;
+    window.addEventListener('resize', updateMenuPos);
+    window.addEventListener('scroll', updateMenuPos, true);
+    return () => {
+      window.removeEventListener('resize', updateMenuPos);
+      window.removeEventListener('scroll', updateMenuPos, true);
+    };
+  }, [open, updateMenuPos]);
 
   useEffect(() => {
     if (open && focusIndex >= 0 && itemRefs.current[focusIndex]) {
@@ -67,6 +89,34 @@ export default function LanguageSelector() {
   );
 
   const current = LOCALES.find((l) => l.code === locale);
+  const menu = open ? (
+    <div
+      ref={menuRef}
+      className="fixed z-[10000] w-56 overflow-y-auto rounded-2xl border border-[var(--workbench-border)] bg-[var(--workbench-panel-solid)] p-1.5 text-[var(--workbench-ink)] shadow-2xl shadow-black/15 backdrop-blur-2xl dark:shadow-black/45"
+      style={{ top: menuPos.top, right: menuPos.right, maxHeight: menuPos.maxHeight }}
+      onKeyDown={handleMenuKeyDown}
+      role="listbox"
+    >
+      {LOCALES.map((l, i) => (
+        <button
+          key={l.code}
+          ref={(el) => { itemRefs.current[i] = el; }}
+          className={`flex w-full items-center gap-2 rounded-xl px-2.5 py-2 text-left text-sm text-[var(--workbench-ink)] transition-colors hover:bg-zinc-100 focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:ring-inset dark:hover:bg-white/10 ${
+            locale === l.code ? 'font-medium' : ''
+          }`}
+          onClick={() => choose(l.code)}
+          tabIndex={focusIndex === i ? 0 : -1}
+          role="option"
+          aria-selected={locale === l.code}
+        >
+          <span className="w-4 h-4 flex items-center justify-center">
+            {locale === l.code ? <Check size={14} /> : null}
+          </span>
+          <span className="flex-1">{l.label}</span>
+        </button>
+      ))}
+    </div>
+  ) : null;
 
   return (
     <div ref={ref}>
@@ -74,8 +124,7 @@ export default function LanguageSelector() {
         ref={triggerRef}
         type="button"
         onClick={toggle}
-        className="flex items-center gap-1.5 px-2 py-1 rounded-md text-sm transition-colors focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:ring-offset-2 border border-zinc-200 text-zinc-700 dark:border-zinc-700 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 dark:focus-visible:ring-zinc-500 dark:focus-visible:ring-offset-zinc-900"
-        title={t('header.language')}
+        className="dt-workbench-button inline-flex items-center gap-1.5 rounded-full px-3 py-2 text-sm transition-colors focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:ring-offset-2 dark:focus-visible:ring-zinc-500 dark:focus-visible:ring-offset-zinc-900"
         aria-haspopup="listbox"
         aria-expanded={open}
         aria-label={`${(current?.code || 'en').toUpperCase()} ${t('header.language')}`}
@@ -84,34 +133,7 @@ export default function LanguageSelector() {
         <span className="hidden sm:inline">{(current?.code || 'en').toUpperCase()}</span>
         <ChevronDown aria-hidden="true" size={14} className="opacity-70" />
       </button>
-      {open && (
-        <div
-          ref={menuRef}
-          className="fixed w-48 bg-white border border-zinc-300 rounded-md shadow-lg z-[9999] p-1 max-h-80 overflow-y-auto"
-          style={{ top: menuPos.top, right: menuPos.right }}
-          onKeyDown={handleMenuKeyDown}
-          role="listbox"
-        >
-          {LOCALES.map((l, i) => (
-            <button
-              key={l.code}
-              ref={(el) => { itemRefs.current[i] = el; }}
-              className={`w-full text-left flex items-center gap-2 px-2 py-1.5 rounded hover:bg-zinc-100 text-sm text-zinc-900 transition-colors focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:ring-inset ${
-                locale === l.code ? 'font-medium' : ''
-              }`}
-              onClick={() => choose(l.code)}
-              tabIndex={focusIndex === i ? 0 : -1}
-              role="option"
-              aria-selected={locale === l.code}
-            >
-              <span className="w-4 h-4 flex items-center justify-center">
-                {locale === l.code ? <Check size={14} /> : null}
-              </span>
-              <span className="flex-1">{l.label}</span>
-            </button>
-          ))}
-        </div>
-      )}
+      {menu && typeof document !== 'undefined' ? createPortal(menu, document.body) : menu}
     </div>
   );
 }

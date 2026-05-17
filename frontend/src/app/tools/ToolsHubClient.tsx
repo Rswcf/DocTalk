@@ -41,7 +41,7 @@ const proofPoints = [
 
 export default function ToolsHubClient() {
   return (
-    <div className="flex min-h-screen flex-col bg-[var(--page-background)]">
+    <div className="dt-stitch-theme flex min-h-screen flex-col">
       <Header variant="minimal" />
       <main className="flex-1">
         {/* Breadcrumb */}

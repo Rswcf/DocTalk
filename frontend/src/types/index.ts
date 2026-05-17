@@ -256,10 +256,13 @@ export interface DocumentTable {
   id: string;
   document_id: string;
   page: number;
+  page_end: number | null;
   table_index: number;
   rows: string[][];
   confidence: number;
   method: string;
+  metadata_json: Record<string, unknown>;
+  warnings: string[];
   created_at: string;
   updated_at: string;
 }

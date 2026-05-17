@@ -369,7 +369,7 @@ function BillingContent() {
 
   if (status === "loading") {
     return (
-      <div className="min-h-screen bg-[var(--page-background)]">
+      <div className="dt-stitch-theme min-h-screen">
         <Header />
         <main id="main-content" className="flex min-h-[calc(100vh-4rem)] items-center justify-center p-8">
           <h1 className="sr-only">DocTalk billing</h1>
@@ -381,7 +381,7 @@ function BillingContent() {
 
   if (status === "unauthenticated") {
     return (
-      <div className="min-h-screen bg-[var(--page-background)]">
+      <div className="dt-stitch-theme min-h-screen">
         <Header />
         <main id="main-content" className="flex min-h-[calc(100vh-4rem)] items-center justify-center p-8">
           <h1 className="sr-only">DocTalk billing</h1>
@@ -438,7 +438,7 @@ function BillingContent() {
   const showFitCheck = profile?.plan === 'free' && !profileLoading && !hasReachedAhaMoment;
 
   return (
-    <div className="min-h-screen bg-[var(--page-background)]">
+    <div className="dt-stitch-theme min-h-screen">
       <Header />
       <main className="mx-auto max-w-6xl px-6 py-8 sm:px-8">
         <section className="mb-8 grid gap-5 lg:grid-cols-[1fr_440px] lg:items-end">
@@ -1130,7 +1130,7 @@ function BillingContent() {
 function BillingSuspenseFallback() {
   const { t } = useLocale();
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[var(--page-background)]">
+    <div className="dt-stitch-theme min-h-screen flex items-center justify-center">
       <div className="animate-pulse text-zinc-500">{t('common.loading')}</div>
     </div>
   );

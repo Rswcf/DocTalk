@@ -100,7 +100,7 @@ export default function CollectionsPageClient() {
   };
 
   return (
-    <div className="flex flex-col min-h-screen bg-[var(--page-background)]">
+    <div className="dt-stitch-theme flex flex-col min-h-screen">
       <Header variant="full" />
       <main className="flex-1 px-6 py-8 sm:px-8">
         <div className="mx-auto max-w-6xl">

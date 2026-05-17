@@ -124,9 +124,9 @@ export default function PricingPageClient() {
   ];
 
   return (
-    <div className="min-h-screen flex flex-col bg-white dark:bg-zinc-950">
+    <div className="dt-stitch-theme min-h-screen flex flex-col">
       <Header variant="minimal" />
-      <main id="main-content" className="flex-1 bg-[var(--page-background)] px-6 py-14 sm:py-16">
+      <main id="main-content" className="flex-1 px-6 py-14 sm:py-16">
         <div className="mx-auto max-w-6xl space-y-14">
           <section className="grid gap-8 lg:grid-cols-[1fr_0.88fr] lg:items-center">
             <div>

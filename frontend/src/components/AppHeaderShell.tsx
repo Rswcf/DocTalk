@@ -29,22 +29,22 @@ export default function AppHeaderShell({ isDemo, isLoggedIn }: AppHeaderShellPro
   const isDocumentPage = pathname?.startsWith('/d/');
 
   return (
-    <header className="h-14 flex items-center px-3 sm:px-6 gap-2 sm:gap-3 min-w-0 shrink-0 sticky top-0 z-30 border-b border-zinc-200 dark:border-zinc-800 bg-[var(--page-background)]">
-      <Link href="/" className="font-logo font-semibold text-lg sm:text-xl text-zinc-900 dark:text-zinc-100 hover:text-zinc-600 dark:hover:text-zinc-300 transition-colors shrink-0 focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:rounded-sm inline-flex items-center gap-1.5 sm:gap-2">
+    <header className="dt-shell-header h-14 flex items-center px-3 sm:px-6 gap-2 sm:gap-3 min-w-0 shrink-0 sticky top-0 z-30 border-b">
+      <Link href="/" className="font-logo font-semibold text-lg sm:text-xl text-[var(--workbench-ink)] hover:text-white transition-colors shrink-0 focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:rounded-sm inline-flex items-center gap-1.5 sm:gap-2">
         <DocTalkLogo size={26} />
         {t('app.title')}
-        <span className="hidden sm:inline ml-1 -mt-2 px-1.5 py-0.5 text-[10px] font-medium leading-none rounded-full bg-blue-100 text-blue-600 dark:bg-blue-900/50 dark:text-blue-300 tracking-wide uppercase">Beta</span>
+        <span className="hidden sm:inline ml-1 -mt-2 px-1.5 py-0.5 text-[10px] font-medium leading-none rounded-full border border-white/18 bg-white/8 text-[var(--workbench-muted)] tracking-wide uppercase">Beta</span>
       </Link>
       {documentName && (
         <>
-          <span className="mx-1 sm:mx-3 text-zinc-300 dark:text-zinc-600">/</span>
+          <span className="mx-1 sm:mx-3 text-white/25">/</span>
           <SessionDropdown />
         </>
       )}
       {!isDocumentPage && lastDocumentId && (
         <Link
           href={`/d/${lastDocumentId}`}
-          className="ml-1 sm:ml-3 inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-sm text-zinc-600 dark:text-zinc-300 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-800 hover:bg-zinc-100 dark:hover:bg-zinc-700 transition-colors max-w-[140px] sm:max-w-[240px] focus-visible:ring-2 focus-visible:ring-zinc-400 dark:focus-visible:ring-zinc-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-900"
+          className="dt-workbench-pill ml-1 sm:ml-3 inline-flex max-w-[140px] items-center gap-1.5 rounded-full px-3 py-1 text-sm transition-colors hover:border-[var(--workbench-border-strong)] sm:max-w-[240px] focus-visible:ring-2 focus-visible:ring-zinc-400 dark:focus-visible:ring-zinc-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-900"
           title={lastDocumentName || ''}
           aria-label={t('header.backToDocument')}
         >
@@ -55,7 +55,7 @@ export default function AppHeaderShell({ isDemo, isLoggedIn }: AppHeaderShellPro
       {!isDocumentPage && (
         <Link
           href="/collections"
-          className="ml-1 sm:ml-3 inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-sm text-zinc-600 dark:text-zinc-300 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-800 hover:bg-zinc-100 dark:hover:bg-zinc-700 transition-colors focus-visible:ring-2 focus-visible:ring-zinc-400 dark:focus-visible:ring-zinc-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-900"
+          className="dt-workbench-pill ml-1 sm:ml-3 inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-sm transition-colors hover:border-[var(--workbench-border-strong)] focus-visible:ring-2 focus-visible:ring-zinc-400 dark:focus-visible:ring-zinc-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-900"
         >
           <FolderOpen aria-hidden="true" size={14} className="shrink-0" />
           <span className="hidden sm:inline">{t('collections.title')}</span>

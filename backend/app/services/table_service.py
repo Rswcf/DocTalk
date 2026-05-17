@@ -12,6 +12,7 @@ from typing import Any, Iterable
 
 import fitz
 import sqlalchemy as sa
+from openai import OpenAI
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -33,9 +34,16 @@ from app.services.storage_service import storage_service
 logger = logging.getLogger(__name__)
 
 TABLE_SCAN_JOB_TYPE = "table_scan"
+TABLE_RECONSTRUCT_JOB_TYPE = "table_reconstruct"
+TABLE_JOB_TYPES = {TABLE_SCAN_JOB_TYPE, TABLE_RECONSTRUCT_JOB_TYPE}
 MAX_TABLE_ROWS = 200
 MAX_TABLE_COLS = 30
 MAX_CELL_CHARS = 1000
+MAX_TABLE_CONTEXT_CHARS = 24000
+MAX_TABLE_DRAFT_CHARS = 12000
+TABLE_RECONSTRUCTION_MODE = "balanced"
+TABLE_RECONSTRUCTION_MODEL = settings.MODE_MODELS.get(TABLE_RECONSTRUCTION_MODE, settings.LLM_MODEL)
+TABLE_RECONSTRUCTION_METHOD = "llm_reconstructed"
 
 
 @dataclass
@@ -46,6 +54,18 @@ class TableScanOutcome:
     layout_run_id: uuid.UUID | None = None
     fallback_used: bool = False
     pages_count: int = 0
+
+
+@dataclass
+class TableReconstructionOutcome:
+    rows: list[list[str]]
+    title: str | None
+    confidence: float
+    warnings: list[str]
+    model: str
+    prompt_tokens: int = 0
+    completion_tokens: int = 0
+    missing_numeric_tokens: list[str] | None = None
 
 
 def normalize_table_rows(raw_rows: Iterable[Iterable[Any]]) -> list[list[str]]:
@@ -70,6 +90,43 @@ def render_table_csv(rows: list[list[str]]) -> str:
     writer = csv.writer(buf)
     writer.writerows(rows)
     return buf.getvalue()
+
+
+def _is_deepseek_official_model(model: str) -> bool:
+    return model in settings.DEEPSEEK_OFFICIAL_MODELS
+
+
+def _get_llm_client(model: str) -> OpenAI:
+    if _is_deepseek_official_model(model):
+        if not settings.DEEPSEEK_API_KEY:
+            raise RuntimeError("DEEPSEEK_API_KEY is not configured")
+        return OpenAI(api_key=settings.DEEPSEEK_API_KEY, base_url=settings.DEEPSEEK_BASE_URL)
+    if not settings.OPENROUTER_API_KEY:
+        raise RuntimeError("OPENROUTER_API_KEY is not configured")
+    return OpenAI(api_key=settings.OPENROUTER_API_KEY, base_url=settings.OPENROUTER_BASE_URL)
+
+
+def _apply_table_llm_options(kwargs: dict[str, Any], model: str) -> None:
+    if _is_deepseek_official_model(model):
+        kwargs["extra_body"] = {"thinking": {"type": "disabled"}}
+        kwargs["response_format"] = {"type": "json_object"}
+
+
+def _json_from_text(text: str) -> dict[str, Any]:
+    content = (text or "").strip()
+    if content.startswith("```"):
+        content = re.sub(r"^```(?:json)?\s*", "", content)
+        content = re.sub(r"\s*```$", "", content)
+    try:
+        data = json.loads(content)
+    except json.JSONDecodeError:
+        match = re.search(r"\{.*\}", content, flags=re.DOTALL)
+        if not match:
+            raise
+        data = json.loads(match.group(0))
+    if not isinstance(data, dict):
+        raise ValueError("Table reconstruction response must be a JSON object")
+    return data
 
 
 def parse_markdown_tables(text: str) -> list[list[list[str]]]:
@@ -128,13 +185,23 @@ def extract_pdf_tables(pdf_bytes: bytes) -> list[dict[str, Any]]:
                     continue
                 rows = normalize_table_rows(raw_rows or [])
                 if rows:
+                    metadata: dict[str, Any] = {"provider": "pymupdf"}
+                    try:
+                        rect = fitz.Rect(getattr(table, "bbox", None))
+                        metadata["table_region"] = {
+                            "page": page_num,
+                            "bbox": {"x0": rect.x0, "y0": rect.y0, "x1": rect.x1, "y1": rect.y1},
+                            "bbox_units": "points",
+                        }
+                    except Exception:
+                        pass
                     results.append({
                         "page": page_num,
                         "table_index": table_index,
                         "rows": rows,
                         "confidence": 0.82,
                         "method": "pymupdf",
-                        "metadata": {"provider": "pymupdf"},
+                        "metadata": metadata,
                     })
         return results
     finally:
@@ -351,6 +418,258 @@ def _table_element_text(page: int, table_index: int, rows: list[list[str]], *, m
     return text[:max_chars].rstrip() + "\n...", True
 
 
+def _clip_text(text: str, max_chars: int) -> str:
+    clean = (text or "").replace("\x00", "").strip()
+    if len(clean) <= max_chars:
+        return clean
+    return clean[:max_chars].rstrip() + "\n..."
+
+
+def _table_rows_as_prompt(rows: list[list[str]], *, max_chars: int = MAX_TABLE_DRAFT_CHARS) -> str:
+    if not rows:
+        return "(no parser draft rows)"
+    lines = []
+    for row in rows[:80]:
+        lines.append(" | ".join(str(cell or "").strip() for cell in row[:MAX_TABLE_COLS]))
+    return _clip_text("\n".join(lines), max_chars)
+
+
+def _page_range_from_table(table: DocumentTable) -> tuple[int, int]:
+    cells = table.cells if isinstance(table.cells, dict) else {}
+    page = int(table.page or 1)
+    page_end = page
+    try:
+        page_end = int(cells.get("page_end") or page)
+    except (TypeError, ValueError):
+        page_end = page
+    source_pages = cells.get("source_pages")
+    if isinstance(source_pages, list):
+        parsed_pages = []
+        for item in source_pages:
+            try:
+                parsed_pages.append(int(item))
+            except (TypeError, ValueError):
+                continue
+        if parsed_pages:
+            page = min(page, min(parsed_pages))
+            page_end = max(page_end, max(parsed_pages))
+    return page, max(page, page_end)
+
+
+def _pdf_words_context(document: Document, page_start: int, page_end: int) -> str:
+    if (document.file_type or "").lower() != "pdf" or not document.storage_key:
+        return ""
+    pdf_bytes = storage_service.download_file(document.storage_key)
+    doc = fitz.open(stream=pdf_bytes, filetype="pdf")
+    try:
+        parts: list[str] = []
+        for page_number in range(page_start, page_end + 1):
+            if page_number < 1 or page_number > len(doc):
+                continue
+            page = doc[page_number - 1]
+            words = page.get_text("words") or []
+            lines = [f"Page {page_number} word boxes as x0,y0,x1,y1,text:"]
+            for word in words[:1800]:
+                try:
+                    x0, y0, x1, y1, text = word[:5]
+                except Exception:
+                    continue
+                clean = str(text or "").replace("\x00", "").strip()
+                if clean:
+                    lines.append(f"{float(x0):.1f},{float(y0):.1f},{float(x1):.1f},{float(y1):.1f},{clean}")
+            parts.append("\n".join(lines))
+        return _clip_text("\n\n".join(parts), MAX_TABLE_CONTEXT_CHARS // 2)
+    finally:
+        doc.close()
+
+
+def build_table_reconstruction_context(db: Session, document: Document, table: DocumentTable) -> str:
+    page_start, page_end = _page_range_from_table(table)
+    cells = table.cells if isinstance(table.cells, dict) else {}
+    draft_rows = cells.get("rows") if isinstance(cells.get("rows"), list) else []
+    parts = [
+        f"Document: {document.filename}",
+        f"Target table: page {page_start}" + (f"-{page_end}" if page_end != page_start else ""),
+        f"Parser method: {table.method}",
+        f"Parser confidence: {float(table.confidence or 0):.2f}",
+        "Parser draft rows, may be misaligned:",
+        _table_rows_as_prompt(draft_rows),
+    ]
+    page_rows = db.execute(
+        select(Page)
+        .where(Page.document_id == document.id)
+        .where(Page.page_number >= page_start)
+        .where(Page.page_number <= page_end)
+        .order_by(Page.page_number)
+    ).scalars()
+    page_text_parts: list[str] = []
+    for page in page_rows:
+        page_text_parts.append(f"Page {page.page_number} extracted text:\n{_clip_text(page.content or '', 8000)}")
+    if page_text_parts:
+        parts.extend(["Source page text:", _clip_text("\n\n".join(page_text_parts), MAX_TABLE_CONTEXT_CHARS // 2)])
+    try:
+        words_context = _pdf_words_context(document, page_start, page_end)
+    except Exception as exc:
+        logger.info("Could not build PDF word-box context for table %s: %s", table.id, exc)
+        words_context = ""
+    if words_context:
+        parts.extend(["Source word-box context:", words_context])
+    return _clip_text("\n\n".join(parts), MAX_TABLE_CONTEXT_CHARS)
+
+
+def _table_reconstruction_contract() -> str:
+    return json.dumps(
+        {
+            "tables": [
+                {
+                    "title": "short source table title or empty string",
+                    "rows": [["header 1", "header 2"], ["row label", "source value"]],
+                    "confidence": 0.0,
+                    "warnings": ["brief uncertainty notes"],
+                }
+            ]
+        },
+        ensure_ascii=False,
+        indent=2,
+    )
+
+
+def _call_table_reconstruction_llm(context: str) -> tuple[dict[str, Any], int, int, str]:
+    model = TABLE_RECONSTRUCTION_MODEL
+    client = _get_llm_client(model)
+    contract = _table_reconstruction_contract()
+    messages = [
+        {
+            "role": "system",
+            "content": (
+                "You are DocTalk's source-table reconstruction engine. Rebuild exactly one source table from the provided parser draft and page text. "
+                "This is extraction, not analysis: preserve source numbers, dates, labels, units, and column order. Do not infer missing values. "
+                "Use empty strings for unreadable cells. Return JSON only matching this contract:\n"
+                f"{contract}"
+            ),
+        },
+        {
+            "role": "user",
+            "content": (
+                "Reconstruct the target table as JSON. If the draft is wrong, rely on the source page text and word-box order. "
+                "Do not invent rows, columns, companies, years, percentages, or monetary values.\n\n"
+                f"{context}"
+            ),
+        },
+    ]
+    kwargs: dict[str, Any] = {
+        "model": model,
+        "messages": messages,
+        "temperature": 0,
+        "max_tokens": 6000,
+    }
+    _apply_table_llm_options(kwargs, model)
+    response = client.chat.completions.create(**kwargs)
+    content = response.choices[0].message.content or ""
+    usage = getattr(response, "usage", None)
+    prompt_tokens = int(getattr(usage, "prompt_tokens", 0) or 0)
+    completion_tokens = int(getattr(usage, "completion_tokens", 0) or 0)
+    try:
+        return _json_from_text(content), prompt_tokens, completion_tokens, model
+    except Exception:
+        repair_messages = [
+            {"role": "system", "content": "Repair the following output into valid JSON only. Do not add commentary."},
+            {"role": "user", "content": f"Required JSON contract:\n{contract}\n\nOutput:\n{content}"},
+        ]
+        repair_kwargs: dict[str, Any] = {
+            "model": model,
+            "messages": repair_messages,
+            "temperature": 0,
+            "max_tokens": 6000,
+        }
+        _apply_table_llm_options(repair_kwargs, model)
+        repaired = client.chat.completions.create(**repair_kwargs)
+        repaired_content = repaired.choices[0].message.content or ""
+        repair_usage = getattr(repaired, "usage", None)
+        prompt_tokens += int(getattr(repair_usage, "prompt_tokens", 0) or 0)
+        completion_tokens += int(getattr(repair_usage, "completion_tokens", 0) or 0)
+        return _json_from_text(repaired_content), prompt_tokens, completion_tokens, model
+
+
+def _float_0_1(value: Any, default: float = 0.65) -> float:
+    try:
+        number = float(value)
+    except (TypeError, ValueError):
+        number = default
+    return max(0.0, min(1.0, number))
+
+
+def _normalize_warnings(value: Any) -> list[str]:
+    if not isinstance(value, list):
+        return []
+    warnings: list[str] = []
+    for item in value[:12]:
+        text = str(item or "").strip()
+        if text:
+            warnings.append(text[:240])
+    return warnings
+
+
+_NUMERIC_TOKEN_RE = re.compile(r"[$€£¥₹]?\s*(?:\d{1,3}(?:,\d{3})+|\d+)(?:\.\d+)?%?(?:[A-Za-z])?")
+
+
+def _canonical_numeric_token(token: str) -> str:
+    return re.sub(r"[^0-9A-Za-z.\-]", "", token or "").lower()
+
+
+def _numeric_tokens(rows: list[list[str]]) -> list[str]:
+    tokens: list[str] = []
+    for row in rows:
+        for cell in row:
+            for match in _NUMERIC_TOKEN_RE.finditer(str(cell or "")):
+                token = match.group(0).strip()
+                canonical = _canonical_numeric_token(token)
+                digits = re.sub(r"\D", "", canonical)
+                if len(digits) >= 2 and canonical not in tokens:
+                    tokens.append(canonical)
+    return tokens
+
+
+def _missing_numeric_tokens(rows: list[list[str]], source_text: str) -> list[str]:
+    source_canonical = _canonical_numeric_token(source_text)
+    missing: list[str] = []
+    for token in _numeric_tokens(rows):
+        if token and token not in source_canonical:
+            missing.append(token)
+    return missing
+
+
+def normalize_reconstructed_table_payload(raw: dict[str, Any], source_text: str, *, model: str) -> TableReconstructionOutcome:
+    tables = raw.get("tables")
+    item: Any
+    if isinstance(tables, list) and tables:
+        item = tables[0]
+    else:
+        item = raw.get("table", raw)
+    if not isinstance(item, dict):
+        raise ValueError("TABLE_RECONSTRUCTION_EMPTY")
+    rows = normalize_table_rows(item.get("rows") if isinstance(item.get("rows"), list) else [])
+    if not rows:
+        raise ValueError("TABLE_RECONSTRUCTION_EMPTY")
+    warnings = _normalize_warnings(item.get("warnings"))
+    missing = _missing_numeric_tokens(rows, source_text)
+    confidence = _float_0_1(item.get("confidence"), 0.65)
+    if missing:
+        warnings.append(f"{len(missing)} reconstructed numeric token(s) were not found in the source page text.")
+        confidence = min(confidence, max(0.35, 1.0 - (len(missing) / max(len(_numeric_tokens(rows)), 1))))
+    if len(missing) > max(8, len(_numeric_tokens(rows)) // 4):
+        raise ValueError("TABLE_RECONSTRUCTION_UNGROUNDED")
+    title = str(item.get("title") or "").strip()[:240] or None
+    return TableReconstructionOutcome(
+        rows=rows,
+        title=title,
+        confidence=confidence,
+        warnings=warnings,
+        model=model,
+        missing_numeric_tokens=missing[:20],
+    )
+
+
 def _table_element_bbox(item: dict[str, Any]) -> dict[str, Any]:
     region_bbox = _table_region_bbox(item)
     if not region_bbox:
@@ -359,6 +678,48 @@ def _table_element_bbox(item: dict[str, Any]) -> dict[str, Any]:
         "provider_bbox": region_bbox,
         "bbox_format": "provider_layout_units",
     }
+
+
+def _sync_reconstructed_table_element(db: Session, table: DocumentTable, outcome: TableReconstructionOutcome) -> None:
+    element_text, truncated = _table_element_text(table.page, table.table_index, outcome.rows)
+    metadata = {
+        "table_id": str(table.id),
+        "method": TABLE_RECONSTRUCTION_METHOD,
+        "confidence": outcome.confidence,
+        "model": outcome.model,
+        "ai_reconstructed": True,
+    }
+    if outcome.warnings:
+        metadata["warnings"] = outcome.warnings
+    if truncated:
+        metadata["text_truncated"] = True
+    element = db.execute(
+        select(DocumentElement)
+        .where(DocumentElement.document_id == table.document_id)
+        .where(DocumentElement.element_type == "table")
+        .where(DocumentElement.metadata_json["table_id"].astext == str(table.id))
+    ).scalar_one_or_none()
+    page_end = int((table.cells or {}).get("page_end") or table.page)
+    if element:
+        element.text = element_text
+        element.page_start = table.page
+        element.page_end = page_end
+        element.metadata_json = {**(element.metadata_json or {}), **metadata}
+        element.updated_at = datetime.now(timezone.utc)
+        db.add(element)
+        return
+    db.add(
+        DocumentElement(
+            document_id=table.document_id,
+            element_type="table",
+            page_start=table.page,
+            page_end=page_end,
+            bbox={},
+            text=element_text,
+            reading_order=table.page * 10000 + 8500 + table.table_index,
+            metadata_json=metadata,
+        )
+    )
 
 
 def scan_document_tables_with_outcome(db: Session, document: Document) -> TableScanOutcome:
@@ -432,6 +793,48 @@ def scan_document_tables(db: Session, document: Document) -> int:
     return scan_document_tables_with_outcome(db, document).count
 
 
+def reconstruct_document_table_with_outcome(db: Session, document: Document, table: DocumentTable) -> TableReconstructionOutcome:
+    context = build_table_reconstruction_context(db, document, table)
+    raw, prompt_tokens, completion_tokens, model = _call_table_reconstruction_llm(context)
+    outcome = normalize_reconstructed_table_payload(raw, context, model=model)
+    outcome.prompt_tokens = prompt_tokens
+    outcome.completion_tokens = completion_tokens
+
+    previous_cells = table.cells if isinstance(table.cells, dict) else {}
+    previous_metadata = previous_cells.get("metadata") if isinstance(previous_cells.get("metadata"), dict) else {}
+    metadata = {
+        **previous_metadata,
+        "provider": "llm",
+        "model": model,
+        "ai_reconstructed": True,
+        "reconstructed_at": datetime.now(timezone.utc).isoformat(),
+        "previous_method": table.method,
+        "previous_confidence": float(table.confidence or 0),
+        "prompt_tokens": prompt_tokens,
+        "completion_tokens": completion_tokens,
+    }
+    if outcome.missing_numeric_tokens:
+        metadata["missing_numeric_tokens"] = outcome.missing_numeric_tokens
+    table.cells = {
+        **previous_cells,
+        "rows": outcome.rows,
+        "title": outcome.title,
+        "warnings": outcome.warnings,
+        "reconstructed_from": {
+            "method": table.method,
+            "confidence": float(table.confidence or 0),
+            "rows_preview": previous_cells.get("rows", [])[:20] if isinstance(previous_cells.get("rows"), list) else [],
+        },
+        "metadata": metadata,
+    }
+    table.confidence = outcome.confidence
+    table.method = TABLE_RECONSTRUCTION_METHOD
+    table.updated_at = datetime.now(timezone.utc)
+    db.add(table)
+    _sync_reconstructed_table_element(db, table, outcome)
+    return outcome
+
+
 def run_table_scan_job_sync(job_id: str) -> None:
     from app.models.sync_database import SyncSessionLocal
 
@@ -478,3 +881,60 @@ def run_table_scan_job_sync(job_id: str) -> None:
             db.add(job)
             db.commit()
             logger.exception("Table scan job %s failed: %s", job_id, exc)
+
+
+def run_table_reconstruction_job_sync(job_id: str) -> None:
+    from app.models.sync_database import SyncSessionLocal
+
+    job_uuid = uuid.UUID(job_id)
+    with SyncSessionLocal() as db:
+        job = db.get(DocumentJob, job_uuid)
+        if not job or job.status not in ("queued", "running"):
+            return
+        job.status = "running"
+        job.updated_at = datetime.now(timezone.utc)
+        db.add(job)
+        db.commit()
+        try:
+            doc = db.get(Document, job.document_id) if job.document_id else None
+            if not doc or doc.status != "ready":
+                raise ValueError("DOCUMENT_NOT_READY")
+            table_id = (job.input_scope or {}).get("table_id")
+            if not table_id:
+                raise ValueError("TABLE_NOT_FOUND")
+            table = db.get(DocumentTable, uuid.UUID(str(table_id)))
+            if not table or table.document_id != doc.id:
+                raise ValueError("TABLE_NOT_FOUND")
+            outcome = reconstruct_document_table_with_outcome(db, doc, table)
+            job.status = "succeeded"
+            job.cost_credits = 0
+            job.metadata_json = {
+                **(job.metadata_json or {}),
+                "table_id": str(table.id),
+                "method": TABLE_RECONSTRUCTION_METHOD,
+                "model": outcome.model,
+                "rows": len(outcome.rows),
+                "columns": len(outcome.rows[0]) if outcome.rows else 0,
+                "warnings": outcome.warnings,
+                "missing_numeric_tokens": outcome.missing_numeric_tokens or [],
+                "prompt_tokens": outcome.prompt_tokens,
+                "completion_tokens": outcome.completion_tokens,
+            }
+            job.completed_at = datetime.now(timezone.utc)
+            job.updated_at = job.completed_at
+            db.add(job)
+            db.commit()
+        except Exception as exc:
+            db.rollback()
+            job = db.get(DocumentJob, job_uuid)
+            if not job:
+                return
+            code = str(exc) if str(exc).isupper() else "TABLE_RECONSTRUCTION_FAILED"
+            job.status = "failed"
+            job.error_code = code[:64]
+            job.error_message = "AI table reconstruction failed"
+            job.completed_at = datetime.now(timezone.utc)
+            job.updated_at = job.completed_at
+            db.add(job)
+            db.commit()
+            logger.exception("Table reconstruction job %s failed: %s", job_id, exc)

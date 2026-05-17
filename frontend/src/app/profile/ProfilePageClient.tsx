@@ -82,7 +82,7 @@ function ProfileContent() {
   }
 
   return (
-    <div className="min-h-screen bg-[var(--page-background)]">
+    <div className="dt-stitch-theme min-h-screen">
       <Header />
       <main className="mx-auto max-w-6xl px-6 py-8 sm:px-8">
         <section className="mb-8 overflow-hidden rounded-xl border border-zinc-200 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-900">

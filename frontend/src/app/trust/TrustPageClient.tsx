@@ -162,7 +162,7 @@ export default function TrustPageClient() {
   usePageTitle(t("trust.title", {}) || "Trust & Security");
 
   return (
-    <div className="flex flex-col min-h-screen bg-[var(--page-background)]">
+    <div className="dt-stitch-theme flex flex-col min-h-screen">
       <Header variant="minimal" />
       <main id="main-content" className="flex-1">
         <section className="mx-auto max-w-6xl px-6 pt-16 pb-10">

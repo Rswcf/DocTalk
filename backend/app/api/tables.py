@@ -15,7 +15,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.deps import get_db_session, require_auth
 from app.models.tables import Document, DocumentJob, DocumentTable, ProductEvent, User
 from app.services.doc_service import can_access_document
-from app.services.table_service import TABLE_SCAN_JOB_TYPE, render_table_csv
+from app.services.table_service import (
+    TABLE_JOB_TYPES,
+    TABLE_RECONSTRUCT_JOB_TYPE,
+    TABLE_SCAN_JOB_TYPE,
+    render_table_csv,
+)
 
 router = APIRouter(prefix="/api", tags=["tables"])
 
@@ -40,10 +45,13 @@ class DocumentTableResponse(BaseModel):
     id: str
     document_id: str
     page: int
+    page_end: int | None
     table_index: int
     rows: list[list[str]]
     confidence: float
     method: str
+    metadata_json: dict[str, Any]
+    warnings: list[str]
     created_at: str
     updated_at: str
 
@@ -76,15 +84,25 @@ def _job_response(job: DocumentJob) -> DocumentJobResponse:
 
 
 def _table_response(table: DocumentTable) -> DocumentTableResponse:
-    rows = (table.cells or {}).get("rows")
+    cells = table.cells or {}
+    rows = cells.get("rows")
+    metadata_json = cells.get("metadata")
+    warnings = cells.get("warnings")
+    try:
+        page_end = int(cells.get("page_end")) if cells.get("page_end") is not None else None
+    except (TypeError, ValueError):
+        page_end = None
     return DocumentTableResponse(
         id=str(table.id),
         document_id=str(table.document_id),
         page=table.page,
+        page_end=page_end,
         table_index=table.table_index,
         rows=rows if isinstance(rows, list) else [],
         confidence=float(table.confidence or 0),
         method=table.method,
+        metadata_json=metadata_json if isinstance(metadata_json, dict) else {},
+        warnings=[str(item) for item in warnings] if isinstance(warnings, list) else [],
         created_at=table.created_at.isoformat(),
         updated_at=table.updated_at.isoformat(),
     )
@@ -166,6 +184,90 @@ async def scan_document_tables(
     return _job_response(job)
 
 
+@router.post(
+    "/document-tables/{table_id}/reconstruct",
+    response_model=DocumentJobResponse,
+    status_code=status.HTTP_202_ACCEPTED,
+)
+async def reconstruct_document_table(
+    table_id: uuid.UUID,
+    user: User = Depends(require_auth),
+    db: AsyncSession = Depends(get_db_session),
+):
+    if (user.plan or "free").lower() not in {"plus", "pro"}:
+        raise HTTPException(
+            status_code=403,
+            detail={
+                "error": "PLAN_REQUIRED",
+                "message": "AI table reconstruction requires Plus",
+                "required_plan": "plus",
+            },
+        )
+    table = await db.get(DocumentTable, table_id)
+    if not table:
+        raise HTTPException(
+            status_code=404,
+            detail={"error": "TABLE_NOT_FOUND", "message": "Table not found"},
+        )
+    doc = await _verify_document(table.document_id, user, db)
+    if doc.status != "ready":
+        raise HTTPException(
+            status_code=409,
+            detail={"error": "DOCUMENT_NOT_READY", "message": "Document is not ready"},
+        )
+    existing = await db.scalar(
+        select(DocumentJob)
+        .where(DocumentJob.user_id == user.id)
+        .where(DocumentJob.document_id == doc.id)
+        .where(DocumentJob.job_type == TABLE_RECONSTRUCT_JOB_TYPE)
+        .where(DocumentJob.status.in_(["queued", "running"]))
+        .order_by(DocumentJob.created_at.desc())
+    )
+    if existing:
+        return _job_response(existing)
+
+    job = DocumentJob(
+        user_id=user.id,
+        document_id=doc.id,
+        job_type=TABLE_RECONSTRUCT_JOB_TYPE,
+        status="queued",
+        input_scope={"document_id": str(doc.id), "table_id": str(table.id)},
+        cost_credits=0,
+    )
+    db.add(job)
+    await db.flush()
+    db.add(
+        ProductEvent(
+            user_id=user.id,
+            event_name="table_reconstruct_created",
+            source="document_reader",
+            reason="tables_ai_rebuild",
+            plan=(user.plan or "free").lower(),
+            metadata_json={"document_id": str(doc.id), "table_id": str(table.id), "job_id": str(job.id)},
+        )
+    )
+    await db.commit()
+    await db.refresh(job)
+
+    try:
+        from app.workers.table_worker import run_table_reconstruction_job
+
+        run_table_reconstruction_job.delay(str(job.id))
+    except Exception as exc:
+        job.status = "failed"
+        job.error_code = "TABLE_RECONSTRUCTION_QUEUE_FAILED"
+        job.error_message = "Failed to queue table reconstruction"
+        await db.commit()
+        raise HTTPException(
+            status_code=500,
+            detail={
+                "error": "TABLE_RECONSTRUCTION_QUEUE_FAILED",
+                "message": "Failed to queue table reconstruction",
+            },
+        ) from exc
+    return _job_response(job)
+
+
 @router.get("/documents/{document_id}/tables", response_model=list[DocumentTableResponse])
 async def list_document_tables(
     document_id: uuid.UUID,
@@ -226,7 +328,7 @@ async def get_table_scan_job(
         select(DocumentJob)
         .where(DocumentJob.id == job_id)
         .where(DocumentJob.user_id == user.id)
-        .where(DocumentJob.job_type == TABLE_SCAN_JOB_TYPE)
+        .where(DocumentJob.job_type.in_(TABLE_JOB_TYPES))
     )
     if not job:
         raise HTTPException(

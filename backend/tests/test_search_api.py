@@ -58,3 +58,4 @@ def test_merge_search_results_uses_lexical_when_semantic_empty() -> None:
 
     assert len(merged) == 1
     assert merged[0]["chunk_id"] == chunk_id
+

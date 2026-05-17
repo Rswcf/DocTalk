@@ -86,7 +86,7 @@ function LandingPageContent() {
   ];
 
   return (
-    <div className="flex flex-col min-h-screen bg-[var(--page-background)]">
+    <div className="dt-stitch-theme flex flex-col min-h-screen">
       <Header variant="minimal" />
       <main id="main-content">
         <HeroSection />
@@ -96,32 +96,32 @@ function LandingPageContent() {
             "see it actually run" proof for visitors who want more. */}
         <section className="w-full px-4 sm:px-8 lg:px-16 py-16">
           <div className="max-w-6xl mx-auto">
-            <h2 className="font-serif font-semibold tracking-tight text-3xl text-zinc-900 dark:text-zinc-50 text-center mb-8 text-balance">
+            <h2 className="font-semibold tracking-normal text-3xl text-[var(--workbench-ink)] text-center mb-8 text-balance">
               {t('landing.showcase.title')}
             </h2>
           </div>
           <div className="relative max-w-5xl mx-auto">
             <div className="glow-accent absolute -inset-8 blur-2xl opacity-40 pointer-events-none" aria-hidden="true" />
-            <div className="relative rounded-xl border border-zinc-200 dark:border-zinc-800 shadow-xl overflow-hidden">
-              <div className="flex items-center px-4 py-2.5 bg-zinc-100 dark:bg-zinc-800 border-b border-zinc-200 dark:border-zinc-700">
+            <div className="dt-stitch-card relative rounded-2xl overflow-hidden">
+              <div className="flex items-center px-4 py-2.5 border-b border-[var(--workbench-border)] bg-white/6">
                 <div className="flex items-center gap-1.5">
                   <span aria-hidden="true" className="w-2.5 h-2.5 rounded-full bg-red-400" />
                   <span aria-hidden="true" className="w-2.5 h-2.5 rounded-full bg-yellow-400" />
                   <span aria-hidden="true" className="w-2.5 h-2.5 rounded-full bg-green-400" />
                 </div>
                 <div className="flex-1 flex justify-center">
-                  <div className="bg-zinc-200 dark:bg-zinc-700 rounded-md px-3 py-0.5">
-                    <span className="text-[11px] text-zinc-600 dark:text-zinc-300 select-none">doctalk.site</span>
+                  <div className="rounded-full bg-white/9 px-3 py-0.5">
+                    <span className="text-[11px] text-[var(--workbench-muted)] select-none">doctalk.site</span>
                   </div>
                 </div>
                 <div className="w-[52px]" aria-hidden="true" />
               </div>
-              <div className="aspect-video bg-zinc-50 dark:bg-zinc-900 relative">
+              <div className="aspect-video bg-black/40 relative">
                 <ShowcasePlayerLazy />
               </div>
             </div>
           </div>
-          <p className="mt-4 text-center text-sm text-zinc-500 dark:text-zinc-300">
+          <p className="mt-4 text-center text-sm text-[var(--workbench-muted)]">
             {t('landing.showcase.caption')}
           </p>
         </section>
@@ -133,13 +133,13 @@ function LandingPageContent() {
         <section className="w-full px-6 py-20">
           <div className="max-w-6xl mx-auto">
             <div className="max-w-2xl mb-10">
-              <p className="text-sm font-medium uppercase tracking-[0.18em] text-zinc-500 dark:text-zinc-300 mb-3">
+              <p className="text-sm font-medium uppercase tracking-[0.18em] text-[var(--workbench-muted)] mb-3">
                 {t('home.explore.eyebrow')}
               </p>
-              <h2 className="font-serif font-semibold tracking-tight text-3xl text-zinc-900 dark:text-zinc-50 mb-4">
+              <h2 className="font-semibold tracking-normal text-3xl text-[var(--workbench-ink)] mb-4">
                 {t('home.explore.title')}
               </h2>
-              <p className="text-base text-zinc-600 dark:text-zinc-300 leading-relaxed">
+              <p className="text-base text-[var(--workbench-muted)] leading-relaxed">
                 {t('home.explore.description')}
               </p>
             </div>
@@ -148,36 +148,36 @@ function LandingPageContent() {
                 <Link
                   key={path.href}
                   href={path.href}
-                  className="group rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-6 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-[box-shadow,transform] duration-200"
+                  className="dt-stitch-card group rounded-2xl p-6 transition-transform duration-200 hover:-translate-y-0.5"
                 >
                   <div className="flex items-start justify-between gap-4 mb-3">
-                    <h3 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">
+                    <h3 className="text-lg font-semibold text-[var(--workbench-ink)]">
                       {path.title}
                     </h3>
-                    <span className="text-sm text-zinc-400 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+                    <span className="text-sm text-[var(--workbench-muted)] group-hover:text-white transition-colors">
                       →
                     </span>
                   </div>
-                  <p className="text-sm text-zinc-600 dark:text-zinc-300 leading-relaxed">
+                  <p className="text-sm text-[var(--workbench-muted)] leading-relaxed">
                     {path.description}
                   </p>
                 </Link>
               ))}
             </div>
             <div className="mt-8 flex flex-wrap gap-3 text-sm">
-              <Link href="/features" className="text-zinc-600 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors">
+              <Link href="/features" className="text-[var(--workbench-muted)] hover:text-white transition-colors">
                 {t('home.explore.links.allFeatures')}
               </Link>
-              <span className="text-zinc-300 dark:text-zinc-700">|</span>
-              <Link href="/use-cases" className="text-zinc-600 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors">
+              <span className="text-white/18">|</span>
+              <Link href="/use-cases" className="text-[var(--workbench-muted)] hover:text-white transition-colors">
                 {t('home.explore.links.allUseCases')}
               </Link>
-              <span className="text-zinc-300 dark:text-zinc-700">|</span>
-              <Link href="/compare" className="text-zinc-600 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors">
+              <span className="text-white/18">|</span>
+              <Link href="/compare" className="text-[var(--workbench-muted)] hover:text-white transition-colors">
                 {t('home.explore.links.compareTools')}
               </Link>
-              <span className="text-zinc-300 dark:text-zinc-700">|</span>
-              <Link href="/alternatives" className="text-zinc-600 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors">
+              <span className="text-white/18">|</span>
+              <Link href="/alternatives" className="text-[var(--workbench-muted)] hover:text-white transition-colors">
                 {t('home.explore.links.browseAlternatives')}
               </Link>
             </div>
@@ -187,7 +187,7 @@ function LandingPageContent() {
         <SocialProof />
 
         <div className="text-center py-8">
-          <Link href="/pricing" className="text-sm font-medium text-zinc-500 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors">
+          <Link href="/pricing" className="text-sm font-medium text-[var(--workbench-muted)] hover:text-white transition-colors">
             {t('footer.pricing')} &rarr;
           </Link>
         </div>
@@ -513,7 +513,7 @@ export default function HomePageClient() {
 
   /* --- Logged-in dashboard --- */
   return (
-    <div className="flex flex-col min-h-screen bg-[var(--page-background)]">
+    <div className="dt-stitch-theme flex flex-col min-h-screen">
       <Header variant="full" />
       <main id="main-content" className="flex-1 flex flex-col items-center p-6 sm:p-8 gap-10">
         <div className="max-w-4xl w-full">
@@ -522,17 +522,17 @@ export default function HomePageClient() {
           </div>
 
           {showUpgradeNudge && (
-            <section className="mb-5 rounded-xl border border-zinc-200 bg-white p-4 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+            <section className="dt-stitch-card mb-5 rounded-2xl p-4">
               <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                 <div className="flex gap-3">
-                  <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-zinc-900 text-white dark:bg-zinc-50 dark:text-zinc-900">
+                  <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white/12 text-white">
                     <Sparkles aria-hidden="true" size={18} />
                   </div>
                   <div>
-                    <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
+                    <h2 className="text-sm font-semibold text-[var(--workbench-ink)]">
                       {tOr('dashboard.upgradeNudge.title', 'Ready for heavier document work?')}
                     </h2>
-                    <p className="mt-1 max-w-2xl text-sm leading-6 text-zinc-600 dark:text-zinc-300">
+                    <p className="mt-1 max-w-2xl text-sm leading-6 text-[var(--workbench-muted)]">
                       {tOr(
                         'dashboard.upgradeNudge.body',
                         'Plus gives you 20 documents, 50 MB uploads, all AI modes, and Markdown export before your next limit stops the workflow.'
@@ -549,7 +549,7 @@ export default function HomePageClient() {
 	                      source: 'dashboard_upgrade_reminder',
 	                      reason: 'sustained_free_usage',
 	                    })}
-                    className="inline-flex items-center gap-2 rounded-lg bg-zinc-900 px-3.5 py-2 text-sm font-medium text-white transition-colors hover:bg-zinc-800 dark:bg-zinc-50 dark:text-zinc-900 dark:hover:bg-zinc-200 focus-visible:ring-2 focus-visible:ring-zinc-400 dark:focus-visible:ring-zinc-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-900"
+                    className="dt-stitch-primary inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium transition-colors focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950"
                   >
                     {tOr('dashboard.upgradeNudge.cta', 'Upgrade')}
                     <ArrowRight aria-hidden="true" size={15} />
@@ -557,7 +557,7 @@ export default function HomePageClient() {
                   <button
                     type="button"
                     onClick={dismissUpgradeNudge}
-                    className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-zinc-500 transition-colors hover:bg-zinc-100 hover:text-zinc-900 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-100 focus-visible:ring-2 focus-visible:ring-zinc-400 dark:focus-visible:ring-zinc-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-900"
+                    className="inline-flex h-9 w-9 items-center justify-center rounded-full text-[var(--workbench-muted)] transition-colors hover:bg-white/10 hover:text-white focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950"
                     aria-label={tOr('dashboard.upgradeNudge.dismiss', 'Dismiss upgrade prompt')}
                   >
                     <X aria-hidden="true" size={16} />
@@ -568,23 +568,23 @@ export default function HomePageClient() {
           )}
 
           <div
-            className={`border-2 border-dashed rounded-xl p-8 sm:p-12 text-center transition-colors ${
+            className={`dt-command-bar rounded-[2rem] p-8 text-center transition-colors sm:p-12 ${
               isDragging
-                ? 'border-zinc-500 bg-zinc-50 dark:bg-zinc-900'
-                : 'border-zinc-300 dark:border-zinc-700'
+                ? 'border-white/40 bg-white/10'
+                : 'border-white/18'
             }`}
             onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
             onDragLeave={() => setDragging(false)}
             onDrop={onDrop}
           >
             <input ref={inputRef} type="file" accept="application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.openxmlformats-officedocument.presentationml.presentation,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/plain,text/markdown,.pdf,.docx,.pptx,.xlsx,.txt,.md" className="hidden" onChange={onInputChange} aria-label="Upload document" />
-            <p className="text-zinc-700 dark:text-zinc-300 text-lg">{t('upload.dragDrop')}</p>
-            <p className="text-zinc-400 text-xs mt-1">{t('upload.supportedFormats')}</p>
-            <p className="text-zinc-400 text-sm mt-1">{t('upload.or')}</p>
+            <p className="text-[var(--workbench-ink)] text-lg">{t('upload.dragDrop')}</p>
+            <p className="text-[var(--workbench-muted)] text-xs mt-1">{t('upload.supportedFormats')}</p>
+            <p className="text-[var(--workbench-muted)] text-sm mt-1">{t('upload.or')}</p>
             <button
               type="button"
               onClick={() => inputRef.current?.click()}
-              className="mt-4 px-6 py-2.5 bg-zinc-900 dark:bg-zinc-50 text-white dark:text-zinc-900 rounded-lg font-medium hover:bg-zinc-800 dark:hover:bg-zinc-200 shadow-sm hover:shadow-md transition-[box-shadow,color,background-color] disabled:opacity-60 focus-visible:ring-2 focus-visible:ring-zinc-400 dark:focus-visible:ring-zinc-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-900"
+              className="dt-stitch-primary mt-4 rounded-full px-6 py-2.5 font-medium transition-[box-shadow,color,background-color] disabled:opacity-60 focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950"
               disabled={uploading}
             >
               {t('upload.chooseFile')}
@@ -615,7 +615,7 @@ export default function HomePageClient() {
                 onChange={(e) => { setUrlInput(e.target.value); setUrlError(''); setUrlErrorCopy(null); }}
                 onKeyDown={(e) => { if (e.key === 'Enter') onUrlSubmit(); }}
                 placeholder={t('upload.urlPlaceholder')}
-                className="w-full pl-9 pr-3 py-2.5 rounded-lg border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-sm text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 focus:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400 dark:focus-visible:ring-zinc-500 transition-shadow"
+                className="w-full rounded-full border border-white/14 bg-white/8 py-2.5 pl-9 pr-3 text-sm text-[var(--workbench-ink)] placeholder:text-white/38 transition-shadow focus:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400"
                 disabled={urlLoading}
                 aria-label="Document URL"
               />
@@ -623,7 +623,7 @@ export default function HomePageClient() {
             <button
               onClick={onUrlSubmit}
               disabled={urlLoading || !urlInput.trim()}
-              className="px-4 py-2.5 bg-zinc-900 dark:bg-zinc-50 text-white dark:text-zinc-900 rounded-lg text-sm font-medium hover:bg-zinc-800 dark:hover:bg-zinc-200 shadow-sm transition-colors disabled:opacity-50 focus-visible:ring-2 focus-visible:ring-zinc-400 dark:focus-visible:ring-zinc-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-900"
+              className="dt-stitch-primary rounded-full px-4 py-2.5 text-sm font-medium transition-colors disabled:opacity-50 focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950"
             >
               {urlLoading ? '...' : t('upload.ingestUrl')}
             </button>
@@ -644,7 +644,7 @@ export default function HomePageClient() {
           )}
 
           <div className="mt-3 text-center">
-            <Link href="/demo" className="text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100 text-sm transition-colors focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:rounded-sm">
+            <Link href="/demo" className="text-[var(--workbench-muted)] hover:text-white text-sm transition-colors focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:rounded-sm">
               {t('home.cta.tryDemo')}
             </Link>
           </div>
@@ -652,18 +652,18 @@ export default function HomePageClient() {
 
         <div className="max-w-4xl w-full">
           <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <h2 className="text-xl font-semibold text-zinc-900 dark:text-zinc-100">{t('doc.myDocuments')}</h2>
+            <h2 className="text-3xl font-semibold tracking-normal text-[var(--workbench-ink)]">{t('doc.myDocuments')}</h2>
             <div className="flex flex-wrap items-center gap-2 self-start sm:self-auto">
               <Link
                 href="/document-diff"
-                className="inline-flex items-center gap-2 rounded-lg border border-zinc-200 bg-white px-3.5 py-2 text-sm font-medium text-zinc-700 transition-colors hover:border-zinc-300 hover:text-zinc-900 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:border-zinc-700 dark:hover:text-zinc-100 focus-visible:ring-2 focus-visible:ring-zinc-400 dark:focus-visible:ring-zinc-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-900"
+                className="dt-workbench-button inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium transition-colors focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950"
               >
                 <GitCompare aria-hidden="true" size={16} />
                 {tOr('diff.tab', 'Compare')}
               </Link>
               <Link
                 href="/collections"
-                className="inline-flex items-center gap-2 rounded-lg border border-zinc-200 bg-white px-3.5 py-2 text-sm font-medium text-zinc-700 transition-colors hover:border-zinc-300 hover:text-zinc-900 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:border-zinc-700 dark:hover:text-zinc-100 focus-visible:ring-2 focus-visible:ring-zinc-400 dark:focus-visible:ring-zinc-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-900"
+                className="dt-workbench-button inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium transition-colors focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950"
               >
                 <FolderOpen aria-hidden="true" size={16} />
                 {tOr('dashboard.workspacesLink', 'Workspaces')}
@@ -672,17 +672,17 @@ export default function HomePageClient() {
           </div>
 
           {showWorkspaceNudge && (
-            <section className="mb-4 rounded-xl border border-zinc-200 bg-white p-4 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+            <section className="dt-stitch-card mb-4 rounded-2xl p-4">
               <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                 <div className="flex gap-3">
-                  <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-zinc-200 bg-zinc-50 text-zinc-900 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-100">
+                  <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-white/14 bg-white/8 text-white">
                     <FolderOpen aria-hidden="true" size={18} />
                   </div>
                   <div>
-                    <h3 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
+                    <h3 className="text-sm font-semibold text-[var(--workbench-ink)]">
                       {tOr('dashboard.workspaceNudge.title', 'Turn related documents into a workspace')}
                     </h3>
-                    <p className="mt-1 max-w-2xl text-sm leading-6 text-zinc-600 dark:text-zinc-300">
+                    <p className="mt-1 max-w-2xl text-sm leading-6 text-[var(--workbench-muted)]">
                       {tOr(
                         'dashboard.workspaceNudge.body',
                         'You have ready documents. Group them to ask cross-document questions while keeping citations tied to the exact source file.'
@@ -692,7 +692,7 @@ export default function HomePageClient() {
                 </div>
                 <Link
                   href="/collections?action=create&select=ready"
-                  className="inline-flex shrink-0 items-center justify-center gap-2 rounded-lg bg-zinc-900 px-4 py-2.5 text-sm font-medium text-white shadow-sm transition-colors hover:bg-zinc-800 dark:bg-zinc-50 dark:text-zinc-900 dark:hover:bg-zinc-200 focus-visible:ring-2 focus-visible:ring-zinc-400 dark:focus-visible:ring-zinc-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-900"
+                  className="dt-stitch-primary inline-flex shrink-0 items-center justify-center gap-2 rounded-full px-4 py-2.5 text-sm font-medium transition-colors focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950"
                 >
                   {tOr('dashboard.workspaceNudge.cta', 'Create workspace')}
                   <ArrowRight aria-hidden="true" size={15} />
@@ -702,10 +702,10 @@ export default function HomePageClient() {
           )}
 
           {allDocs.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-16 px-6 text-center rounded-xl border border-dashed border-zinc-200 dark:border-zinc-800">
-              <FileUp aria-hidden="true" size={52} className="text-zinc-400 dark:text-zinc-500" />
-              <h3 className="mt-5 text-xl font-semibold text-zinc-900 dark:text-zinc-100">{t('dashboard.emptyTitle')}</h3>
-              <p className="mt-2 max-w-md text-sm text-zinc-500 dark:text-zinc-300">{t('dashboard.emptySubtitle')}</p>
+            <div className="dt-stitch-card flex flex-col items-center justify-center rounded-2xl border-dashed px-6 py-16 text-center">
+              <FileUp aria-hidden="true" size={52} className="text-[var(--workbench-muted)]" />
+              <h3 className="mt-5 text-xl font-semibold text-[var(--workbench-ink)]">{t('dashboard.emptyTitle')}</h3>
+              <p className="mt-2 max-w-md text-sm text-[var(--workbench-muted)]">{t('dashboard.emptySubtitle')}</p>
               {/* Dual CTA per Codex r1 + 30-agent onboarding research:
                   primary "Start with a sample" bypasses the upload-and-wait
                   cliff that's eating activation; secondary text link
@@ -713,7 +713,7 @@ export default function HomePageClient() {
               <div className="mt-6 flex flex-wrap items-center justify-center gap-x-6 gap-y-3">
                 <Link
                   href="/demo"
-                  className="group inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-accent hover:bg-accent-hover text-accent-foreground text-sm font-semibold shadow-sm hover:shadow-md transition-[box-shadow,color,background-color] motion-reduce:transition-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-950"
+                  className="dt-stitch-primary group inline-flex items-center gap-2 rounded-full px-5 py-2.5 text-sm font-semibold transition-[box-shadow,color,background-color] motion-reduce:transition-none focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950"
                 >
                   {tOr('dashboard.emptyTrySample', 'Start with a sample doc')}
                   <span aria-hidden="true" className="transition-transform motion-reduce:transform-none group-hover:translate-x-0.5">→</span>
@@ -721,7 +721,7 @@ export default function HomePageClient() {
                 <button
                   type="button"
                   onClick={() => inputRef.current?.click()}
-                  className="text-sm font-semibold text-zinc-700 dark:text-zinc-300 hover:text-accent dark:hover:text-accent transition-colors motion-reduce:transition-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:rounded-sm"
+                  className="text-sm font-semibold text-[var(--workbench-muted)] transition-colors hover:text-white motion-reduce:transition-none focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:rounded-sm"
                 >
                   {tOr('dashboard.emptyUploadOwn', 'Or upload your own')}
                 </button>
@@ -734,24 +734,24 @@ export default function HomePageClient() {
                 return (
                   <div
                     key={d.document_id}
-                    className="p-5 rounded-xl border border-zinc-100 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-shadow transition-transform duration-200 flex items-center justify-between"
+                    className="dt-stitch-card flex items-center justify-between rounded-2xl p-5 transition-transform duration-200 hover:-translate-y-0.5"
                   >
                     <Link href={`/d/${d.document_id}`} className="flex-1 min-w-0 focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:rounded-lg">
-                      <div className="font-medium text-zinc-900 dark:text-zinc-100 flex items-center gap-2 min-w-0">
+                      <div className="font-medium text-[var(--workbench-ink)] flex items-center gap-2 min-w-0">
                         <span className="truncate">{d.filename ? sanitizeFilename(d.filename) : d.document_id}</span>
-                        <span className="inline-flex items-center gap-1.5 text-xs text-zinc-500 dark:text-zinc-300 shrink-0">
+                        <span className="inline-flex items-center gap-1.5 text-xs text-[var(--workbench-muted)] shrink-0">
                           <span className={`w-2 h-2 rounded-full ${statusMeta.dotClass}`} />
                           <span>{statusMeta.label}</span>
                         </span>
                       </div>
-                      <div className="text-xs text-zinc-500 mt-0.5">
+                      <div className="text-xs text-[var(--workbench-muted)] mt-0.5">
                         {new Date(d.createdAt).toLocaleString()}
                       </div>
                     </Link>
                     <div className="flex items-center gap-2">
                       <Link
                         href={`/d/${d.document_id}`}
-                        className="px-4 py-2 text-sm bg-zinc-900 dark:bg-zinc-50 text-white dark:text-zinc-900 rounded-lg font-medium hover:bg-zinc-800 dark:hover:bg-zinc-200 shadow-sm transition-colors focus-visible:ring-2 focus-visible:ring-zinc-400 dark:focus-visible:ring-zinc-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-900"
+                        className="dt-stitch-primary rounded-full px-4 py-2 text-sm font-medium transition-colors focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950"
                       >
                         {t('doc.open')}
                       </Link>
@@ -775,7 +775,7 @@ export default function HomePageClient() {
                         </div>
                       ) : (
                         <button
-                          className="p-2 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-500 transition-colors disabled:opacity-50 focus-visible:ring-2 focus-visible:ring-zinc-400 dark:focus-visible:ring-zinc-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-900"
+                          className="rounded-full p-2 text-[var(--workbench-muted)] transition-colors hover:bg-white/10 hover:text-white disabled:opacity-50 focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950"
                           disabled={deletingId === d.document_id}
                           onClick={() => setConfirmDeleteId(d.document_id)}
                           title={t('doc.deleteDoc')}

@@ -34,6 +34,7 @@ import {
   RefreshCw,
 } from "lucide-react";
 import { usePageTitle } from "../../lib/usePageTitle";
+import { useLocale } from "../../i18n";
 
 // Types
 interface Overview {
@@ -123,8 +124,8 @@ function KPICard({
   value: number;
 }) {
   return (
-    <div className="border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 rounded-lg p-5 flex items-start gap-4">
-      <div className="p-2.5 rounded-lg bg-zinc-100 dark:bg-zinc-800">
+    <div className="dt-kpi-card rounded-2xl p-5 flex items-start gap-4">
+      <div className="p-2.5 rounded-xl bg-accent-light">
         <Icon aria-hidden="true" className="w-5 h-5 text-zinc-600 dark:text-zinc-400" />
       </div>
       <div>
@@ -180,7 +181,7 @@ function BillingHealthPanel({
     && !health.has_mode_mismatch;
 
   return (
-    <section className="mb-8 rounded-lg border border-zinc-200 bg-white dark:border-zinc-700 dark:bg-zinc-900">
+    <section className="dt-admin-panel mb-8 overflow-hidden border">
       <div className="flex flex-col gap-3 border-b border-zinc-200 px-4 py-3 dark:border-zinc-700 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-2">
           {liveReady ? (
@@ -265,7 +266,7 @@ function FunnelPanel({ funnel }: { funnel: AdminFunnel | null }) {
     ].includes(stage.key))
     .some((stage) => stage.users > 0);
   return (
-    <section className="mb-8 rounded-lg border border-zinc-200 bg-white dark:border-zinc-700 dark:bg-zinc-900">
+    <section className="dt-admin-panel mb-8 overflow-hidden border">
       <div className="border-b border-zinc-200 px-4 py-3 dark:border-zinc-700">
         <h2 className="text-sm font-medium text-zinc-900 dark:text-zinc-100">Monetization Funnel</h2>
         <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
@@ -324,7 +325,7 @@ function RagQualityPanel({ quality }: { quality: AdminRagQuality | null }) {
   const issueRows = quality.issue_breakdown.filter((item) => (item.count || 0) > 0).slice(0, 4);
   const strategyRows = quality.strategy_breakdown.slice(0, 4);
   return (
-    <section className="mb-8 rounded-lg border border-zinc-200 bg-white dark:border-zinc-700 dark:bg-zinc-900">
+    <section className="dt-admin-panel mb-8 overflow-hidden border">
       <div className="flex flex-col gap-2 border-b border-zinc-200 px-4 py-3 dark:border-zinc-700 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-2">
           {healthy ? (
@@ -452,6 +453,7 @@ function RagQualityPanel({ quality }: { quality: AdminRagQuality | null }) {
 
 export default function AdminPageClient() {
   usePageTitle("Admin");
+  const { tOr } = useLocale();
 
   const { status } = useSession();
   const router = useRouter();
@@ -554,7 +556,7 @@ export default function AdminPageClient() {
 
   if (status === "loading" || (status === "authenticated" && loading && !overview)) {
     return (
-      <div className="min-h-screen bg-[var(--page-background)]">
+      <div className="dt-stitch-theme dt-admin-workbench min-h-screen">
         <Header />
         <main className="max-w-7xl mx-auto p-6 sm:p-8">
           <h1 className="text-2xl font-semibold mb-6 dark:text-zinc-100">
@@ -578,7 +580,7 @@ export default function AdminPageClient() {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-[var(--page-background)]">
+      <div className="dt-stitch-theme dt-admin-workbench min-h-screen">
         <Header />
         <main className="max-w-7xl mx-auto p-6 sm:p-8">
           <div className="p-4 rounded bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300 border border-red-200 dark:border-red-800">
@@ -590,23 +592,26 @@ export default function AdminPageClient() {
   }
 
   return (
-    <div className="min-h-screen bg-[var(--page-background)]">
+    <div className="dt-stitch-theme dt-admin-workbench min-h-screen">
       <Header />
       <main className="max-w-7xl mx-auto p-6 sm:p-8">
-        <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="dt-glass-panel mb-6 flex flex-col gap-4 rounded-[1.75rem] p-5 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h1 className="text-2xl font-semibold dark:text-zinc-100">
-              Admin Dashboard
+            <p className="mb-2 inline-flex rounded-full border border-white/14 bg-white/8 px-2.5 py-1 text-xs font-medium text-[var(--workbench-muted)]">
+              {tOr('admin.workbenchEyebrow', 'Live business intelligence')}
+            </p>
+            <h1 className="text-3xl font-semibold tracking-normal text-[var(--workbench-ink)]">
+              {tOr('admin.workbenchTitle', 'Admin Insight Workbench')}
             </h1>
-            <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
-              {lastRefreshedAt ? `Last refreshed ${new Date(lastRefreshedAt).toLocaleTimeString()}` : "Loading live metrics"}
+            <p className="mt-1 text-xs text-[var(--workbench-muted)]">
+              {lastRefreshedAt ? `Last refreshed ${new Date(lastRefreshedAt).toLocaleTimeString()}` : tOr('admin.loadingLiveMetrics', 'Loading live metrics')}
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <select
               value={trendDays}
               onChange={(event) => setTrendDays(Number(event.target.value))}
-              className="rounded-md border border-zinc-200 bg-white px-2.5 py-2 text-sm text-zinc-700 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-200"
+              className="dt-workbench-button rounded-full px-3 py-2 text-sm"
               aria-label="Activity window"
             >
               <option value={7}>7 days</option>
@@ -617,7 +622,7 @@ export default function AdminPageClient() {
             <select
               value={refreshInterval}
               onChange={(event) => setRefreshInterval(Number(event.target.value))}
-              className="rounded-md border border-zinc-200 bg-white px-2.5 py-2 text-sm text-zinc-700 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-200"
+              className="dt-workbench-button rounded-full px-3 py-2 text-sm"
               aria-label="Auto-refresh interval"
             >
               <option value={0}>Manual refresh</option>
@@ -629,7 +634,7 @@ export default function AdminPageClient() {
               type="button"
               onClick={() => void fetchData(true)}
               disabled={refreshing || loading}
-              className="inline-flex items-center gap-2 rounded-md border border-zinc-200 px-3 py-2 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-50 disabled:opacity-50 dark:border-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-900"
+              className="dt-workbench-button inline-flex items-center gap-2 rounded-full px-3 py-2 text-sm font-medium disabled:opacity-50"
             >
               <RefreshCw aria-hidden="true" className={`h-4 w-4 ${refreshing || loading ? "animate-spin" : ""}`} />
               Refresh
@@ -678,7 +683,7 @@ export default function AdminPageClient() {
         {/* Tables */}
         <section className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
           {/* Recent Users */}
-          <div className="border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 rounded-lg overflow-hidden">
+          <div className="dt-admin-panel overflow-hidden border">
             <div className="px-4 py-3 border-b border-zinc-200 dark:border-zinc-700">
               <h3 className="text-sm font-medium dark:text-zinc-100">
                 Recent Users
@@ -740,7 +745,7 @@ export default function AdminPageClient() {
           </div>
 
           {/* Top Users */}
-          <div className="border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 rounded-lg overflow-hidden">
+          <div className="dt-admin-panel overflow-hidden border">
             <div className="px-4 py-3 border-b border-zinc-200 dark:border-zinc-700 flex items-center justify-between">
               <h3 className="text-sm font-medium dark:text-zinc-100">Top Users</h3>
               <select

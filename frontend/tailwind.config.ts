@@ -11,12 +11,11 @@ const config: Config = {
     extend: {
       fontFamily: {
         sans: ['var(--font-inter)', 'system-ui', 'sans-serif'],
-        display: ['var(--font-logo)', 'system-ui', 'sans-serif'],
-        logo: ['var(--font-logo)', 'system-ui', 'sans-serif'],
-        // Fraunces editorial serif — used on marketing H1/H2 via
-        // `font-serif`. Optical sizing axis makes it scale beautifully
-        // from 18px (kicker accents) up to 80px (hero).
-        serif: ['var(--font-serif)', 'ui-serif', 'Georgia', 'serif'],
+        display: ['var(--font-logo)', 'var(--font-inter)', 'system-ui', 'sans-serif'],
+        logo: ['var(--font-logo)', 'var(--font-inter)', 'system-ui', 'sans-serif'],
+        // Legacy alias: older pages still use `font-serif`, but the
+        // Stitch direction is rounded sans display type, not editorial serif.
+        serif: ['var(--font-logo)', 'var(--font-inter)', 'system-ui', 'sans-serif'],
       },
       colors: {
         accent: {

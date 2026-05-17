@@ -33,11 +33,11 @@ function AuthContent() {
   ];
 
   return (
-    <main className="min-h-screen bg-[var(--page-background)] px-6 py-8 sm:px-8">
+    <main className="dt-stitch-theme min-h-screen px-6 py-8 sm:px-8">
       <div className="mx-auto flex min-h-[calc(100vh-4rem)] max-w-6xl flex-col">
         <Link href="/" className="mb-6 inline-flex w-fit items-center gap-2.5 transition-opacity hover:opacity-80 focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:rounded-sm lg:mb-10">
           <DocTalkLogo size={32} />
-          <span className="font-logo text-2xl font-semibold text-zinc-900 dark:text-zinc-50">DocTalk</span>
+          <span className="font-logo text-2xl font-semibold text-[var(--workbench-ink)]">DocTalk</span>
         </Link>
 
         <div className="grid flex-1 items-center gap-8 lg:grid-cols-[1fr_430px]">
@@ -48,7 +48,7 @@ function AuthContent() {
                   ? tOr("auth.continueEyebrow", "Continue workspace")
                   : tOr("auth.accessEyebrow", "Account access")}
               </p>
-              <h2 className="font-serif text-4xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50 sm:text-5xl">
+              <h2 className="text-4xl font-semibold tracking-normal text-[var(--workbench-ink)] sm:text-5xl">
                 {isDocumentContinuation
                   ? tOr("auth.continueTitle", "Keep reading with your cited answers.")
                   : t("auth.signIn")}
@@ -62,8 +62,8 @@ function AuthContent() {
 
             <div className="mt-8 grid gap-3 sm:grid-cols-3">
               {benefits.map(({ icon: Icon, title, body }) => (
-                <div key={title} className="rounded-lg border border-zinc-200 bg-white p-4 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
-                  <div className="mb-3 flex h-9 w-9 items-center justify-center rounded-md bg-accent-light text-accent">
+                <div key={title} className="dt-stitch-card rounded-2xl p-4">
+                  <div className="mb-3 flex h-9 w-9 items-center justify-center rounded-xl bg-white/10 text-white">
                     <Icon aria-hidden="true" size={18} />
                   </div>
                   <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">{title}</h2>
@@ -72,7 +72,7 @@ function AuthContent() {
               ))}
             </div>
 
-            <div className="mt-8 hidden rounded-xl border border-zinc-200 bg-white p-4 shadow-sm dark:border-zinc-800 dark:bg-zinc-900 lg:block">
+            <div className="dt-stitch-card mt-8 hidden rounded-2xl p-4 lg:block">
               <div className="flex items-center justify-between border-b border-zinc-200 pb-3 dark:border-zinc-800">
                 <span className="font-mono text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-500 dark:text-zinc-400">
                   {tOr("auth.preview.label", "Saved workflow")}
@@ -109,12 +109,12 @@ function AuthContent() {
             </div>
           </section>
 
-          <div className="order-1 rounded-xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-900 sm:p-8 lg:order-2">
+          <div className="dt-stitch-card order-1 rounded-[1.75rem] p-6 sm:p-8 lg:order-2">
             <div className="mb-6 text-center">
-              <h1 className="text-3xl font-semibold text-zinc-900 dark:text-zinc-50">
+              <h1 className="text-3xl font-semibold text-[var(--workbench-ink)]">
                 {t("auth.signIn")}
               </h1>
-              <p className="mt-2 text-zinc-500 dark:text-zinc-300">
+              <p className="mt-2 text-[var(--workbench-muted)]">
                 {t("auth.signInSubtitle")}
               </p>
             </div>

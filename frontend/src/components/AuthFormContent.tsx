@@ -145,7 +145,7 @@ export function AuthFormContent({ callbackUrl, surface = "page" }: AuthFormConte
   };
 
   const oauthButtonClass =
-    "w-full flex items-center justify-center gap-3 px-4 py-3 border border-zinc-200 dark:border-zinc-700 rounded-xl hover:bg-zinc-50 dark:hover:bg-zinc-800 shadow-sm hover:shadow-md transition-colors font-medium focus-visible:ring-2 focus-visible:ring-zinc-400 dark:focus-visible:ring-zinc-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-900";
+    "w-full flex items-center justify-center gap-3 px-4 py-3 border border-white/14 rounded-xl bg-white/7 hover:bg-white/12 transition-colors font-medium focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950";
 
   const providersLoaded = availableProviders !== null;
   const hasGoogle = !!availableProviders?.google;
@@ -263,12 +263,12 @@ export function AuthFormContent({ callbackUrl, surface = "page" }: AuthFormConte
             onChange={(e) => setEmail(e.target.value)}
             placeholder={t("auth.emailPlaceholder")}
             required
-            className="w-full px-4 py-3 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-50 placeholder-zinc-400 dark:placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-zinc-400 dark:focus:ring-zinc-500 focus:ring-offset-2 dark:focus:ring-offset-zinc-900 transition-shadow"
+            className="w-full rounded-xl border border-white/14 bg-white/8 px-4 py-3 text-[var(--workbench-ink)] placeholder:text-white/38 transition-shadow focus:outline-none focus:ring-2 focus:ring-zinc-400 focus:ring-offset-2 focus:ring-offset-zinc-950"
           />
           <button
             type="submit"
             disabled={sending || !email.trim()}
-            className="w-full px-4 py-3 rounded-xl bg-zinc-900 dark:bg-zinc-50 text-white dark:text-zinc-900 font-medium hover:bg-zinc-800 dark:hover:bg-zinc-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed focus-visible:ring-2 focus-visible:ring-zinc-400 dark:focus-visible:ring-zinc-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-900"
+            className="dt-stitch-primary w-full rounded-xl px-4 py-3 font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50 focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950"
           >
             {sending ? t("common.loading") : t("auth.continueWithEmail")}
           </button>

@@ -30,7 +30,7 @@ export default function DocumentDiffPage() {
   }
 
   return (
-    <div className="flex h-screen w-full flex-col bg-[var(--page-background)]">
+    <div className="dt-stitch-theme flex h-screen w-full flex-col">
       <Header variant="full" />
       <main className="min-h-0 flex-1">
         <h1 className="sr-only">{tOr("diff.pageTitle", "Document diff")}</h1>

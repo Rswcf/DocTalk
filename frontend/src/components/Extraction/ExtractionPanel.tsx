@@ -24,6 +24,7 @@ import {
   listDocumentTables,
   listDocumentExtractions,
   listExtractionTemplates,
+  reconstructDocumentTable,
   scanDocumentTables,
 } from "../../lib/api";
 import { billingHref } from "../../lib/billingLinks";
@@ -100,6 +101,7 @@ export default function ExtractionPanel({ documentId, onCitationClick, userPlan 
   const [loading, setLoading] = useState(true);
   const [tableLoading, setTableLoading] = useState(true);
   const [tableScanning, setTableScanning] = useState(false);
+  const [tableRebuildingId, setTableRebuildingId] = useState<string | null>(null);
   const [running, setRunning] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [tableError, setTableError] = useState<string | null>(null);
@@ -273,6 +275,33 @@ export default function ExtractionPanel({ documentId, onCitationClick, userPlan 
     }
   }, [userPlan]);
 
+  const handleTableReconstruct = useCallback(async (table: DocumentTable) => {
+    if (tableRebuildingId) return;
+    setTableRebuildingId(table.id);
+    setTableError(null);
+    setTablePaywallCode(null);
+    try {
+      const job = await reconstructDocumentTable(table.id);
+      setTableJob(job);
+      trackEvent("table_reconstruct_created", {
+        source: "extraction_panel",
+        reason: "tables_ai_rebuild",
+        plan: userPlan,
+      });
+      window.setTimeout(() => {
+        void refreshTables().catch(() => undefined);
+      }, 1500);
+    } catch (err) {
+      if (err instanceof ApiError && err.code === "PLAN_REQUIRED") {
+        setTablePaywallCode(err.code);
+      } else {
+        setTableError(err instanceof Error ? err.message : "AI table reconstruction failed");
+      }
+    } finally {
+      setTableRebuildingId(null);
+    }
+  }, [refreshTables, tableRebuildingId, userPlan]);
+
   const citationMap = useMemo(() => {
     const map = new Map<number, Citation>();
     const raw = activeJob?.result?.citations || [];
@@ -383,7 +412,9 @@ export default function ExtractionPanel({ documentId, onCitationClick, userPlan 
             scanning={tableScanning}
             error={tableError}
             paywallCode={tablePaywallCode}
+            rebuildingTableId={tableRebuildingId}
             onScan={handleScanTables}
+            onReconstruct={handleTableReconstruct}
             onExport={handleTableExport}
             tOr={tOr}
           />
@@ -521,7 +552,9 @@ function TablesView({
   scanning,
   error,
   paywallCode,
+  rebuildingTableId,
   onScan,
+  onReconstruct,
   onExport,
   tOr,
 }: {
@@ -531,11 +564,19 @@ function TablesView({
   scanning: boolean;
   error: string | null;
   paywallCode: string | null;
+  rebuildingTableId: string | null;
   onScan: () => void;
+  onReconstruct: (table: DocumentTable) => void;
   onExport: (table: DocumentTable) => void;
   tOr: (key: string, fallback: string, params?: Record<string, string | number>) => string;
 }) {
   const isWorking = scanning || job?.status === "queued" || job?.status === "running";
+  const methodLabel = (table: DocumentTable) => {
+    if (table.method === "llm_reconstructed") return tOr("tables.methodAiRebuilt", "AI rebuilt");
+    if (table.method === "pymupdf") return tOr("tables.methodBasicParser", "Basic parser");
+    if (table.method === "azure") return tOr("tables.methodLayoutModel", "Layout model");
+    return table.method;
+  };
   return (
     <div className="mx-auto max-w-4xl space-y-4">
       <section className="rounded-lg border border-[var(--reader-border)] bg-white/70 p-4 shadow-sm dark:bg-zinc-900/50">
@@ -563,10 +604,14 @@ function TablesView({
         {job && (
           <p className="mt-3 text-xs text-[var(--reader-muted)]">
             {job.status === "succeeded"
-              ? tOr("tables.scanReady", "Scan complete")
+              ? job.job_type === "table_reconstruct"
+                ? tOr("tables.rebuildReady", "AI table rebuild complete")
+                : tOr("tables.scanReady", "Scan complete")
               : job.status === "failed"
                 ? job.error_message || tOr("tables.scanFailed", "Table scan failed")
-                : tOr("tables.scanRunning", "DocTalk is detecting tables in this document.")}
+                : job.job_type === "table_reconstruct"
+                  ? tOr("tables.rebuildRunning", "DocTalk is rebuilding the selected table with AI.")
+                  : tOr("tables.scanRunning", "DocTalk is detecting tables in this document.")}
           </p>
         )}
         {paywallCode && (
@@ -602,22 +647,53 @@ function TablesView({
                 <div>
                   <h4 className="text-sm font-semibold text-[var(--reader-ink)]">
                     {tOr("tables.tableTitle", "Page {page} · Table {index}", {
-                      page: table.page,
+                      page: table.page_end && table.page_end !== table.page ? `${table.page}-${table.page_end}` : table.page,
                       index: table.table_index + 1,
                     })}
                   </h4>
                   <p className="text-xs text-[var(--reader-muted)]">
-                    {table.method} · {Math.round(table.confidence * 100)}%
+                    {methodLabel(table)} · {Math.round(table.confidence * 100)}%
                   </p>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => onExport(table)}
-                  className="inline-flex items-center justify-center gap-1 rounded-md border border-[var(--reader-border)] px-2.5 py-1.5 text-xs font-medium hover:bg-[var(--reader-panel-muted)]"
-                >
-                  <Download size={13} aria-hidden="true" /> CSV
-                </button>
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={() => onReconstruct(table)}
+                    disabled={isWorking || rebuildingTableId === table.id}
+                    className="inline-flex items-center justify-center gap-1 rounded-md border border-[var(--reader-border)] px-2.5 py-1.5 text-xs font-medium hover:bg-[var(--reader-panel-muted)] disabled:opacity-50"
+                    title={tOr("tables.aiRebuildHint", "Use AI to rebuild this table from source page text. Verify numbers against the document.")}
+                  >
+                    <Sparkles size={13} aria-hidden="true" />
+                    {rebuildingTableId === table.id ? tOr("tables.rebuilding", "Rebuilding...") : tOr("tables.aiRebuild", "AI rebuild")}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => onExport(table)}
+                    className="inline-flex items-center justify-center gap-1 rounded-md border border-[var(--reader-border)] px-2.5 py-1.5 text-xs font-medium hover:bg-[var(--reader-panel-muted)]"
+                  >
+                    <Download size={13} aria-hidden="true" /> CSV
+                  </button>
+                </div>
               </div>
+              {table.method === "pymupdf" && (
+                <p className="mb-3 rounded-md border border-amber-200 bg-amber-50 px-2 py-1.5 text-xs leading-5 text-amber-900 dark:border-amber-900/60 dark:bg-amber-950/30 dark:text-amber-100">
+                  {tOr("tables.basicParserWarning", "Basic extraction can misalign wide or complex tables. Use AI rebuild for a source-grounded reconstruction.")}
+                </p>
+              )}
+              {table.method === "llm_reconstructed" && (
+                <p className="mb-3 rounded-md border border-emerald-200 bg-emerald-50 px-2 py-1.5 text-xs leading-5 text-emerald-900 dark:border-emerald-900/60 dark:bg-emerald-950/30 dark:text-emerald-100">
+                  {tOr("tables.aiRebuiltWarning", "AI rebuilt this table from source page text. Verify critical numbers against the citation view before reuse.")}
+                </p>
+              )}
+              {table.warnings?.length > 0 && (
+                <div className="mb-3 space-y-1">
+                  {table.warnings.slice(0, 3).map((warning, index) => (
+                    <p key={index} className="rounded-md border border-[var(--reader-border)] bg-[var(--reader-panel-muted)] px-2 py-1.5 text-xs leading-5 text-[var(--reader-muted)]">
+                      {warning}
+                    </p>
+                  ))}
+                </div>
+              )}
               <div className="overflow-x-auto">
                 <table className="w-full min-w-[520px] text-left text-xs">
                   <tbody>

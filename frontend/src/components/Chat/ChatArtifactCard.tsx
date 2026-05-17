@@ -1,9 +1,9 @@
 "use client";
 
 import { useEffect, useMemo, useState } from 'react';
-import { AlertTriangle, CheckCircle2, Clock3, Download, FileText, RefreshCw, Table2 } from 'lucide-react';
-import type { ChatArtifact, Citation } from '../../types';
-import { getDocumentJob, PROXY_BASE } from '../../lib/api';
+import { AlertTriangle, CheckCircle2, Clock3, Download, FileText, RefreshCw, Sparkles, Table2 } from 'lucide-react';
+import type { ChatArtifact, Citation, DocumentTable } from '../../types';
+import { getDocumentJob, getTableScanJob, listDocumentTables, PROXY_BASE, reconstructDocumentTable } from '../../lib/api';
 import { useLocale } from '../../i18n';
 
 interface ChatArtifactCardProps {
@@ -31,9 +31,48 @@ function markdownPreview(preview: unknown): string {
   return '';
 }
 
+function documentIdFromArtifact(artifact: ChatArtifact, previewRows: Array<Record<string, unknown>>): string | null {
+  for (const item of previewRows) {
+    if (typeof item.document_id === 'string') return item.document_id;
+  }
+  for (const citation of artifact.citations || []) {
+    if (citation.documentId) return citation.documentId;
+  }
+  for (const item of artifact.downloadUrls || []) {
+    const match = item.url.match(/\/api\/documents\/([^/]+)\/tables/);
+    if (match?.[1]) return match[1];
+  }
+  return null;
+}
+
+function tableToPreview(table: DocumentTable): Record<string, unknown> {
+  return {
+    table_id: table.id,
+    document_id: table.document_id,
+    page: table.page,
+    page_end: table.page_end,
+    table_index: table.table_index,
+    rows: table.rows,
+    confidence: table.confidence,
+    method: table.method,
+    warnings: table.warnings,
+    metadata_json: table.metadata_json,
+  };
+}
+
+function tableMethodLabel(method: unknown, tOr: (key: string, fallback: string, params?: Record<string, string | number>) => string): string {
+  if (method === 'llm_reconstructed') return tOr('tables.methodAiRebuilt', 'AI rebuilt');
+  if (method === 'pymupdf') return tOr('tables.methodBasicParser', 'Basic parser');
+  if (method === 'azure') return tOr('tables.methodLayoutModel', 'Layout model');
+  return typeof method === 'string' && method ? method : '';
+}
+
 export default function ChatArtifactCard({ artifact, onCitationClick }: ChatArtifactCardProps) {
   const { tOr } = useLocale();
   const [current, setCurrent] = useState(artifact);
+  const [tableJob, setTableJob] = useState<{ id: string; status: string; tableId: string } | null>(null);
+  const [rebuildingTableId, setRebuildingTableId] = useState<string | null>(null);
+  const [tableRebuildError, setTableRebuildError] = useState<string | null>(null);
   const isPending = current.status === 'queued' || current.status === 'running';
   const isFailed = current.status === 'failed';
   const isDone = current.status === 'succeeded';
@@ -63,6 +102,81 @@ export default function ChatArtifactCard({ artifact, onCitationClick }: ChatArti
   const previewRows = useMemo(() => rowsFromPreview(current.preview), [current.preview]);
   const previewMarkdown = useMemo(() => markdownPreview(current.preview), [current.preview]);
   const Icon = current.artifactType.includes('table') ? Table2 : FileText;
+  const artifactDocumentId = useMemo(() => documentIdFromArtifact(current, previewRows), [current, previewRows]);
+  const tableJobPending = tableJob?.status === 'queued' || tableJob?.status === 'running';
+
+  useEffect(() => {
+    if (!tableJob || !tableJobPending) return;
+    let cancelled = false;
+    const timer = window.setInterval(() => {
+      void getTableScanJob(tableJob.id)
+        .then(async (job) => {
+          if (cancelled) return;
+          if (job.status === 'succeeded') {
+            let nextPreview: unknown | null = null;
+            if (artifactDocumentId) {
+              try {
+                const tables = await listDocumentTables(artifactDocumentId);
+                nextPreview = tables.map(tableToPreview);
+              } catch {
+                nextPreview = null;
+              }
+            }
+            if (cancelled) return;
+            setCurrent((prev) => {
+              const fallbackPreview = rowsFromPreview(prev.preview).map((item) => (
+                item.table_id === tableJob.tableId
+                  ? {
+                      ...item,
+                      method: 'llm_reconstructed',
+                      confidence: typeof item.confidence === 'number' ? Math.max(item.confidence, 0.9) : 0.9,
+                      warnings: [
+                        ...(
+                          Array.isArray(item.warnings)
+                            ? item.warnings.map((warning) => String(warning))
+                            : []
+                        ),
+                        tOr('tables.aiRebuiltWarning', 'AI rebuilt this table from source page text. Verify critical numbers against the citation view before reuse.'),
+                      ],
+                    }
+                  : item
+              ));
+              return {
+                ...prev,
+                summary: tOr('tables.rebuildReady', 'AI table rebuild complete'),
+                preview: nextPreview || fallbackPreview,
+              };
+            });
+            setTableJob({ id: job.id, status: job.status, tableId: tableJob.tableId });
+          } else {
+            setTableJob({ id: job.id, status: job.status, tableId: tableJob.tableId });
+          }
+        })
+        .catch(() => undefined);
+    }, 2500);
+    return () => {
+      cancelled = true;
+      window.clearInterval(timer);
+    };
+  }, [artifactDocumentId, tableJob, tableJobPending, tOr]);
+
+  const handleAiRebuild = async (tableId: string) => {
+    if (rebuildingTableId || tableJobPending) return;
+    setRebuildingTableId(tableId);
+    setTableRebuildError(null);
+    try {
+      const job = await reconstructDocumentTable(tableId);
+      setTableJob({ id: job.id, status: job.status, tableId });
+      setCurrent((prev) => ({
+        ...prev,
+        summary: tOr('tables.rebuildRunning', 'DocTalk is rebuilding the selected table with AI.'),
+      }));
+    } catch (err) {
+      setTableRebuildError(err instanceof Error ? err.message : 'AI table reconstruction failed');
+    } finally {
+      setRebuildingTableId(null);
+    }
+  };
 
   return (
     <div className="not-prose mt-4 overflow-hidden rounded-lg border border-[var(--reader-border)] bg-[var(--reader-panel-solid)] shadow-sm">
@@ -85,6 +199,9 @@ export default function ChatArtifactCard({ artifact, onCitationClick }: ChatArti
             </span>
           </div>
           <p className="mt-1 text-sm leading-relaxed text-[var(--reader-muted)]">{current.summary}</p>
+          {tableRebuildError ? (
+            <p className="mt-2 text-xs text-red-700 dark:text-red-300">{tableRebuildError}</p>
+          ) : null}
           {current.warning ? (
             <p className="mt-2 text-xs text-amber-700 dark:text-amber-300">{current.warning}</p>
           ) : null}
@@ -96,12 +213,48 @@ export default function ChatArtifactCard({ artifact, onCitationClick }: ChatArti
         <div className="space-y-3 px-4 py-3">
           {previewRows.map((item, index) => {
             const rows = Array.isArray(item.rows) ? item.rows.slice(0, 4) : [];
+            const tableId = typeof item.table_id === 'string' ? item.table_id : null;
+            const warnings = Array.isArray(item.warnings) ? item.warnings.map((warning) => String(warning)) : [];
+            const methodLabel = tableMethodLabel(item.method, tOr);
+            const isAiRebuilt = item.method === 'llm_reconstructed';
             return (
               <div key={`${current.jobId || current.title}-${index}`} className="overflow-hidden rounded-md border border-[var(--reader-border)]">
                 <div className="flex items-center justify-between bg-[var(--reader-panel-muted)] px-3 py-2 text-xs text-[var(--reader-muted)]">
-                  <span>p.{String(item.page || '?')} · table {Number(item.table_index || 0) + 1}</span>
-                  {typeof item.confidence === 'number' ? <span>{Math.round(item.confidence * 100)}%</span> : null}
+                  <span>
+                    p.{String(item.page_end && item.page_end !== item.page ? `${item.page}-${item.page_end}` : item.page || '?')} · table {Number(item.table_index || 0) + 1}
+                    {methodLabel ? ` · ${methodLabel}` : ''}
+                  </span>
+                  <span className="inline-flex items-center gap-2">
+                    {typeof item.confidence === 'number' ? <span>{Math.round(item.confidence * 100)}%</span> : null}
+                    {tableId ? (
+                      <button
+                        type="button"
+                        onClick={() => void handleAiRebuild(tableId)}
+                        disabled={Boolean(rebuildingTableId) || tableJobPending}
+                        className="inline-flex min-h-7 items-center gap-1 rounded border border-[var(--reader-border)] bg-[var(--reader-panel-solid)] px-2 text-[11px] font-medium text-[var(--reader-ink)] transition-colors hover:bg-[var(--reader-panel-muted)] disabled:opacity-50"
+                        title={tOr('tables.aiRebuildHint', 'Use AI to rebuild this table from source page text. Verify numbers against the document.')}
+                      >
+                        <Sparkles size={12} aria-hidden="true" />
+                        {rebuildingTableId === tableId ? tOr('tables.rebuilding', 'Rebuilding...') : tOr('tables.aiRebuild', 'AI rebuild')}
+                      </button>
+                    ) : null}
+                  </span>
                 </div>
+                {item.method === 'pymupdf' ? (
+                  <p className="border-t border-[var(--reader-border)] bg-amber-50 px-3 py-2 text-xs leading-5 text-amber-900 dark:bg-amber-950/30 dark:text-amber-100">
+                    {tOr('tables.basicParserWarning', 'Basic extraction can misalign wide or complex tables. Use AI rebuild for a source-grounded reconstruction.')}
+                  </p>
+                ) : null}
+                {isAiRebuilt ? (
+                  <p className="border-t border-[var(--reader-border)] bg-emerald-50 px-3 py-2 text-xs leading-5 text-emerald-900 dark:bg-emerald-950/30 dark:text-emerald-100">
+                    {tOr('tables.aiRebuiltWarning', 'AI rebuilt this table from source page text. Verify critical numbers against the citation view before reuse.')}
+                  </p>
+                ) : null}
+                {warnings.slice(0, 2).map((warning, warningIndex) => (
+                  <p key={warningIndex} className="border-t border-[var(--reader-border)] bg-[var(--reader-panel-muted)] px-3 py-2 text-xs leading-5 text-[var(--reader-muted)]">
+                    {warning}
+                  </p>
+                ))}
                 <div className="overflow-x-auto">
                   <table className="min-w-full text-left text-xs">
                     <tbody>

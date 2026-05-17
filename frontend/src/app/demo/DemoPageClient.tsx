@@ -24,7 +24,7 @@ const SAMPLE_CONFIG: Record<string, {
     questionKey: 'demo.sample.earnings.question',
     badge: 'Finance',
     pages: 'Q4 report',
-    accentClass: 'from-blue-50 to-sky-50 dark:from-blue-950/50 dark:to-sky-950/30',
+    accentClass: 'from-white/10 to-white/5',
   },
   'attention-paper': {
     icon: BookOpen,
@@ -33,7 +33,7 @@ const SAMPLE_CONFIG: Record<string, {
     questionKey: 'demo.sample.paper.question',
     badge: 'Research',
     pages: 'AI paper',
-    accentClass: 'from-emerald-50 to-teal-50 dark:from-emerald-950/40 dark:to-teal-950/30',
+    accentClass: 'from-white/10 to-white/5',
   },
   'court-filing': {
     icon: FileSignature,
@@ -42,7 +42,7 @@ const SAMPLE_CONFIG: Record<string, {
     questionKey: 'demo.sample.court.question',
     badge: 'Legal',
     pages: 'Court filing',
-    accentClass: 'from-amber-50 to-orange-50 dark:from-amber-950/40 dark:to-orange-950/30',
+    accentClass: 'from-white/10 to-white/5',
   },
 };
 
@@ -69,7 +69,7 @@ export default function DemoPageClient() {
   const docsBySlug = new Map(docs.map((doc) => [doc.slug, doc]));
 
   return (
-    <div className="min-h-screen flex flex-col bg-[var(--page-background)]">
+    <div className="dt-stitch-theme min-h-screen flex flex-col">
       <Header variant="minimal" />
       <main id="main-content" className="flex-1 px-6 py-12 sm:py-16">
         <div className="mx-auto max-w-6xl">
@@ -78,7 +78,7 @@ export default function DemoPageClient() {
               <p className="mb-4 text-sm font-medium uppercase tracking-[0.18em] text-zinc-500 dark:text-zinc-400">
                 {tOr('demo.eyebrow', 'Public demo')}
               </p>
-              <h1 className="font-serif text-4xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50 sm:text-5xl">
+              <h1 className="text-4xl font-semibold tracking-normal text-[var(--workbench-ink)] sm:text-5xl">
                 {t('demo.title')}
               </h1>
               <p className="mt-4 max-w-2xl text-base leading-7 text-zinc-600 dark:text-zinc-300 sm:text-lg">
@@ -96,7 +96,7 @@ export default function DemoPageClient() {
               </div>
             </div>
 
-            <div className="rounded-xl border border-zinc-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+            <div className="dt-stitch-card rounded-2xl p-5">
               <div className="mb-4 flex items-center justify-between">
                 <span className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
                   {tOr('demo.flow.title', 'What you will test')}
@@ -111,8 +111,8 @@ export default function DemoPageClient() {
                   tOr('demo.flow.step2', 'Ask the suggested question'),
                   tOr('demo.flow.step3', 'Jump from answer to source'),
                 ].map((label, index) => (
-                  <div key={label} className="rounded-lg border border-zinc-200 bg-zinc-50 p-3 dark:border-zinc-800 dark:bg-zinc-950">
-                    <div className="mb-2 flex h-6 w-6 items-center justify-center rounded bg-zinc-900 text-xs font-semibold text-white dark:bg-zinc-100 dark:text-zinc-950">
+                  <div key={label} className="rounded-xl border border-white/12 bg-white/7 p-3">
+                    <div className="mb-2 flex h-6 w-6 items-center justify-center rounded bg-white text-xs font-semibold text-zinc-950">
                       {index + 1}
                     </div>
                     <p className="text-xs font-medium leading-5 text-zinc-600 dark:text-zinc-300">
@@ -148,27 +148,27 @@ export default function DemoPageClient() {
               const suggestedQuestion = t(config.questionKey);
               const cardContent = (
                 <>
-                  <div className={`mb-5 rounded-lg border border-zinc-200 bg-gradient-to-br ${config.accentClass} p-4 dark:border-zinc-800`}>
+                  <div className={`mb-5 rounded-2xl border border-white/12 bg-gradient-to-br ${config.accentClass} p-4`}>
                     <div className="mb-8 flex items-center justify-between">
-                      <span className="rounded-md bg-white/80 px-2 py-1 font-mono text-[10px] font-semibold uppercase tracking-wider text-zinc-600 shadow-sm dark:bg-zinc-950/70 dark:text-zinc-300">
+                      <span className="rounded-full bg-white/12 px-2 py-1 font-mono text-[10px] font-semibold uppercase tracking-wider text-white/72 shadow-sm">
                         {tOr(`demo.sample.${slug}.badge`, config.badge)}
                       </span>
-                      <span className="text-xs font-medium text-zinc-500 dark:text-zinc-400">
+                      <span className="text-xs font-medium text-[var(--workbench-muted)]">
                         {tOr(`demo.sample.${slug}.pages`, config.pages)}
                       </span>
                     </div>
                     <div className="flex items-end justify-between gap-4">
-                      <div className="flex h-12 w-12 items-center justify-center rounded-lg border border-zinc-200 bg-white text-zinc-700 shadow-sm dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-200">
+                      <div className="flex h-12 w-12 items-center justify-center rounded-xl border border-white/14 bg-white/10 text-white shadow-sm">
                         <Icon aria-hidden="true" size={24} />
                       </div>
-                      <div className="rounded-md border border-amber-200 bg-white/85 px-2 py-1 font-mono text-[10px] font-semibold text-amber-700 shadow-sm dark:border-amber-400/30 dark:bg-zinc-950/75 dark:text-amber-300">
+                      <div className="rounded-full border border-white/14 bg-white/10 px-2 py-1 font-mono text-[10px] font-semibold text-white/72 shadow-sm">
                         {tOr('demo.pageCitations', 'Page citations')}
                       </div>
                     </div>
                   </div>
 
                   <div className="flex items-start justify-between gap-3">
-                    <h2 className="text-lg font-semibold leading-6 text-zinc-900 transition-colors group-hover:text-accent dark:text-zinc-100">
+                    <h2 className="text-lg font-semibold leading-6 text-[var(--workbench-ink)] transition-colors group-hover:text-white">
                       {t(config.titleKey)}
                     </h2>
                     {isPending && (
@@ -178,22 +178,22 @@ export default function DemoPageClient() {
                       </span>
                     )}
                   </div>
-                  <p className="mt-2 text-sm leading-6 text-zinc-600 dark:text-zinc-300">
+                  <p className="mt-2 text-sm leading-6 text-[var(--workbench-muted)]">
                     {t(config.descKey)}
                   </p>
-                  <div className="mt-5 rounded-lg border border-zinc-200 bg-zinc-50 p-3 dark:border-zinc-800 dark:bg-zinc-950">
+                  <div className="mt-5 rounded-2xl border border-white/12 bg-white/7 p-3">
                     <p className="text-xs font-medium uppercase tracking-[0.16em] text-zinc-400 dark:text-zinc-500">
                       {tOr('demo.suggestedQuestion', 'Suggested question')}
                     </p>
-                    <p className="mt-2 text-sm leading-6 text-zinc-700 dark:text-zinc-200">
+                    <p className="mt-2 text-sm leading-6 text-[var(--workbench-ink)]">
                       &ldquo;{suggestedQuestion}&rdquo;
                     </p>
                   </div>
-                  <div className="mt-5 flex items-center justify-between border-t border-zinc-200 pt-4 text-sm dark:border-zinc-800">
-                    <span className="text-zinc-500 dark:text-zinc-400">
+                  <div className="mt-5 flex items-center justify-between border-t border-white/10 pt-4 text-sm">
+                    <span className="text-[var(--workbench-muted)]">
                       {isReady ? tOr('demo.ready', 'Ready to open') : tOr('demo.preparing', 'Preparing sample')}
                     </span>
-                    <span className="inline-flex items-center gap-1 font-semibold text-accent">
+                    <span className="inline-flex items-center gap-1 font-semibold text-white">
                       {tOr('demo.openSample', 'Open sample')}
                       <ArrowRight aria-hidden="true" size={15} />
                     </span>
@@ -205,14 +205,14 @@ export default function DemoPageClient() {
                 <Link
                   key={slug}
                   href={`/d/${doc.document_id}?question=${encodeURIComponent(suggestedQuestion)}`}
-                  className="group flex min-h-[390px] flex-col rounded-xl border border-zinc-200 bg-white p-5 shadow-sm transition-[box-shadow,transform,border-color] duration-200 hover:-translate-y-0.5 hover:border-zinc-300 hover:shadow-md dark:border-zinc-800 dark:bg-zinc-900 dark:hover:border-zinc-700 focus-visible:ring-2 focus-visible:ring-zinc-400 dark:focus-visible:ring-zinc-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-900"
+                  className="dt-stitch-card group flex min-h-[390px] flex-col rounded-2xl p-5 transition-transform duration-200 hover:-translate-y-0.5 focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950"
                 >
                   {cardContent}
                 </Link>
               ) : (
                 <div
                   key={slug}
-                  className="flex min-h-[390px] flex-col rounded-xl border border-zinc-200 bg-white p-5 opacity-75 shadow-sm dark:border-zinc-800 dark:bg-zinc-900"
+                  className="dt-stitch-card flex min-h-[390px] flex-col rounded-2xl p-5 opacity-75"
                 >
                   {cardContent}
                 </div>
@@ -220,7 +220,7 @@ export default function DemoPageClient() {
             })}
           </section>
 
-          <div className="mt-10 flex flex-col items-center justify-between gap-4 border-t border-zinc-200 pt-6 text-sm text-zinc-500 dark:border-zinc-800 dark:text-zinc-400 sm:flex-row">
+          <div className="mt-10 flex flex-col items-center justify-between gap-4 border-t border-white/12 pt-6 text-sm text-[var(--workbench-muted)] sm:flex-row">
             <p>{t('demo.hint')}</p>
             <Link href="/" className="font-medium text-zinc-600 transition-colors hover:text-zinc-900 dark:text-zinc-300 dark:hover:text-zinc-100 focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:rounded-sm">
               &larr; {t('demo.backToHome')}

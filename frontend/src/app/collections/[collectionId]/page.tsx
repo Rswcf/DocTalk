@@ -220,7 +220,7 @@ export default function CollectionDetailPage() {
   }
 
   return (
-    <div className="flex h-screen w-full flex-col bg-[var(--page-background)]">
+    <div className="dt-stitch-theme flex h-screen w-full flex-col">
       <Header variant="full" />
 
       <div className="border-b border-zinc-200 bg-white px-4 py-3 dark:border-zinc-800 dark:bg-zinc-900 md:px-5">
