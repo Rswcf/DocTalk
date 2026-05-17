@@ -145,7 +145,7 @@ export function AuthFormContent({ callbackUrl, surface = "page" }: AuthFormConte
   };
 
   const oauthButtonClass =
-    "w-full flex items-center justify-center gap-3 px-4 py-3 border border-white/14 rounded-xl bg-white/7 hover:bg-white/12 transition-colors font-medium focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950";
+    "group flex min-h-12 w-full items-center justify-center gap-3 rounded-full border border-zinc-200 bg-white px-4 py-3 font-medium text-zinc-900 transition-[border-color,background-color] hover:border-zinc-300 hover:bg-zinc-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-50 dark:hover:border-zinc-600 dark:hover:bg-zinc-700 dark:focus-visible:ring-offset-zinc-900";
 
   const providersLoaded = availableProviders !== null;
   const hasGoogle = !!availableProviders?.google;
@@ -157,7 +157,7 @@ export function AuthFormContent({ callbackUrl, surface = "page" }: AuthFormConte
   return (
     <div className="space-y-3">
       {providersLoaded && !hasAnyProvider && (
-        <div className="p-3 rounded-xl bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-sm text-red-700 dark:text-red-300">
+        <div className="rounded-2xl border border-red-200 bg-red-50 p-3 text-sm text-red-700 dark:border-red-800 dark:bg-red-900/20 dark:text-red-300">
           {tOr("auth.noProviders", "No sign-in methods are currently available. Please contact support.")}
         </div>
       )}
@@ -173,7 +173,7 @@ export function AuthFormContent({ callbackUrl, surface = "page" }: AuthFormConte
             <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" />
             <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
           </svg>
-          <span className="text-zinc-700 dark:text-zinc-200">{t("auth.continueWithGoogle")}</span>
+          <span>{t("auth.continueWithGoogle")}</span>
         </button>
       )}
 
@@ -188,18 +188,18 @@ export function AuthFormContent({ callbackUrl, surface = "page" }: AuthFormConte
             <rect x="11" y="1" width="9" height="9" fill="#7FBA00" />
             <rect x="11" y="11" width="9" height="9" fill="#FFB900" />
           </svg>
-          <span className="text-zinc-700 dark:text-zinc-200">{t("auth.continueWithMicrosoft")}</span>
+          <span>{t("auth.continueWithMicrosoft")}</span>
         </button>
       )}
 
       {/* Divider */}
       {hasAnyOAuth && hasEmail && (
-        <div className="relative my-4">
+        <div className="relative py-2">
           <div className="absolute inset-0 flex items-center">
-            <div className="w-full border-t border-zinc-200 dark:border-zinc-700" />
+            <div className="w-full border-t border-zinc-200 dark:border-zinc-800" />
           </div>
           <div className="relative flex justify-center text-sm">
-            <span className="bg-white dark:bg-zinc-900 px-3 text-zinc-400 dark:text-zinc-500">
+            <span className="bg-white px-3 text-xs text-zinc-500 dark:bg-zinc-900 dark:text-zinc-400">
               {t("auth.orDivider")}
             </span>
           </div>
@@ -208,16 +208,16 @@ export function AuthFormContent({ callbackUrl, surface = "page" }: AuthFormConte
 
       {/* Error display */}
       {error && (
-        <div className="p-3 rounded-xl bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-sm text-red-700 dark:text-red-300">
+        <div className="rounded-2xl border border-red-200 bg-red-50 p-3 text-sm text-red-700 dark:border-red-800 dark:bg-red-900/20 dark:text-red-300">
           {error}
         </div>
       )}
 
       {/* Email Magic Link */}
       {hasEmail && (emailSent ? (
-        <div className="text-center space-y-3">
-          <div className="w-12 h-12 mx-auto rounded-full bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center">
-            <svg className="w-6 h-6 text-zinc-600 dark:text-zinc-300" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+        <div className="space-y-3 text-center">
+          <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl border border-zinc-200 bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-800">
+            <svg className="h-6 w-6 text-zinc-900 dark:text-zinc-50" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75" />
             </svg>
           </div>
@@ -227,14 +227,14 @@ export function AuthFormContent({ callbackUrl, surface = "page" }: AuthFormConte
           <p className="text-sm text-zinc-500 dark:text-zinc-400">
             {t("auth.emailSent").replace("{email}", sentEmail)}
           </p>
-          <p className="text-xs text-zinc-400 dark:text-zinc-500">
+          <p className="text-xs text-zinc-500 dark:text-zinc-400">
             {t("auth.checkSpamHint")}
           </p>
           <div className="flex items-center justify-center gap-3 text-sm">
             <button
               onClick={handleResend}
               disabled={sending || cooldown > 0 || resendCount >= 3}
-              className="text-zinc-600 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-zinc-50 underline underline-offset-2 transition-colors disabled:opacity-50"
+              className="text-zinc-500 underline underline-offset-2 transition-colors hover:text-zinc-900 disabled:opacity-50 dark:text-zinc-400 dark:hover:text-zinc-50"
             >
               {resendCount >= 3
                 ? t("auth.resendMaxReached")
@@ -242,10 +242,10 @@ export function AuthFormContent({ callbackUrl, surface = "page" }: AuthFormConte
                   ? t("auth.resendCooldown").replace("{seconds}", String(cooldown))
                   : t("auth.resendEmail")}
             </button>
-            <span className="text-zinc-300 dark:text-zinc-600">|</span>
+            <span className="text-zinc-300 dark:text-zinc-700">|</span>
             <button
               onClick={handleUseDifferentEmail}
-              className="text-zinc-600 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-zinc-50 underline underline-offset-2 transition-colors"
+              className="text-zinc-500 underline underline-offset-2 transition-colors hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-50"
             >
               {t("auth.useDifferentEmail")}
             </button>
@@ -263,12 +263,12 @@ export function AuthFormContent({ callbackUrl, surface = "page" }: AuthFormConte
             onChange={(e) => setEmail(e.target.value)}
             placeholder={t("auth.emailPlaceholder")}
             required
-            className="w-full rounded-xl border border-white/14 bg-white/8 px-4 py-3 text-[var(--workbench-ink)] placeholder:text-white/38 transition-shadow focus:outline-none focus:ring-2 focus:ring-zinc-400 focus:ring-offset-2 focus:ring-offset-zinc-950"
+            className="min-h-12 w-full rounded-full border border-zinc-200 bg-white px-4 py-3 text-zinc-900 placeholder:text-zinc-400 transition-[border-color,box-shadow] focus:border-zinc-300 focus:outline-none focus:ring-2 focus:ring-zinc-400 focus:ring-offset-2 focus:ring-offset-white dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-50 dark:placeholder:text-zinc-500 dark:focus:border-zinc-600 dark:focus:ring-offset-zinc-900"
           />
           <button
             type="submit"
             disabled={sending || !email.trim()}
-            className="dt-stitch-primary w-full rounded-xl px-4 py-3 font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50 focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950"
+            className="min-h-12 w-full rounded-full bg-zinc-900 px-4 py-3 font-medium text-white transition-colors hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:bg-zinc-50 dark:text-zinc-900 dark:hover:bg-white dark:focus-visible:ring-offset-zinc-900"
           >
             {sending ? t("common.loading") : t("auth.continueWithEmail")}
           </button>
@@ -276,19 +276,16 @@ export function AuthFormContent({ callbackUrl, surface = "page" }: AuthFormConte
       ))}
 
       {/* Terms + Privacy */}
-      <p className="text-xs text-center text-zinc-400 dark:text-zinc-500 mt-4">
+      <p className="mt-4 text-center text-xs leading-5 text-zinc-500 dark:text-zinc-400">
         {t("auth.termsPrefix")}{" "}
-        <a href="/terms" target="_blank" rel="noopener noreferrer" className="underline hover:text-zinc-600 dark:hover:text-zinc-300">{t("auth.termsOfService")}</a>
+        <a href="/terms" target="_blank" rel="noopener noreferrer" className="underline underline-offset-2 hover:text-zinc-900 dark:hover:text-zinc-50">{t("auth.termsOfService")}</a>
         {" "}{t("auth.and")}{" "}
-        <a href="/privacy" target="_blank" rel="noopener noreferrer" className="underline hover:text-zinc-600 dark:hover:text-zinc-300">{t("auth.privacyPolicy")}</a>.
+        <a href="/privacy" target="_blank" rel="noopener noreferrer" className="underline underline-offset-2 hover:text-zinc-900 dark:hover:text-zinc-50">{t("auth.privacyPolicy")}</a>.
       </p>
 
-      {/* AI disclosure + free credits */}
-      <div className="pt-3 border-t border-zinc-200 dark:border-zinc-800 text-center space-y-2">
-        <p className="text-xs text-zinc-400">
-          {t("auth.aiDisclosure")}
-        </p>
-        <p className="text-xs text-zinc-600 dark:text-zinc-300 font-medium">
+      {/* Free credits hook */}
+      <div className="mt-4 border-t border-zinc-200 pt-4 text-center dark:border-zinc-800">
+        <p className="text-xs font-medium text-zinc-700 dark:text-zinc-300">
           {t("auth.freeCredits")}
         </p>
       </div>
