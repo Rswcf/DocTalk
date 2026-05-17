@@ -145,7 +145,7 @@ export function AuthFormContent({ callbackUrl, surface = "page" }: AuthFormConte
   };
 
   const oauthButtonClass =
-    "group flex min-h-12 w-full items-center justify-center gap-3 rounded-full border border-zinc-200 bg-white px-4 py-3 font-medium text-zinc-900 transition-[border-color,background-color] hover:border-zinc-300 hover:bg-zinc-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-50 dark:hover:border-zinc-600 dark:hover:bg-zinc-700 dark:focus-visible:ring-offset-zinc-900";
+    "group flex min-h-12 w-full items-center justify-center gap-3 rounded-full border border-zinc-200 bg-white px-4 py-3 font-medium text-zinc-900 transition-[border-color,background-color] hover:border-zinc-300 hover:bg-zinc-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-50 dark:hover:border-zinc-600 dark:hover:bg-zinc-700 dark:focus-visible:ring-offset-zinc-900";
 
   const providersLoaded = availableProviders !== null;
   const hasGoogle = !!availableProviders?.google;
@@ -234,7 +234,7 @@ export function AuthFormContent({ callbackUrl, surface = "page" }: AuthFormConte
             <button
               onClick={handleResend}
               disabled={sending || cooldown > 0 || resendCount >= 3}
-              className="text-zinc-500 underline underline-offset-2 transition-colors hover:text-zinc-900 disabled:opacity-50 dark:text-zinc-400 dark:hover:text-zinc-50"
+              className="rounded-sm text-zinc-500 underline underline-offset-2 transition-colors hover:text-zinc-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 disabled:opacity-50 dark:text-zinc-400 dark:hover:text-zinc-50"
             >
               {resendCount >= 3
                 ? t("auth.resendMaxReached")
@@ -245,7 +245,7 @@ export function AuthFormContent({ callbackUrl, surface = "page" }: AuthFormConte
             <span className="text-zinc-300 dark:text-zinc-700">|</span>
             <button
               onClick={handleUseDifferentEmail}
-              className="text-zinc-500 underline underline-offset-2 transition-colors hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-50"
+              className="rounded-sm text-zinc-500 underline underline-offset-2 transition-colors hover:text-zinc-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 dark:text-zinc-400 dark:hover:text-zinc-50"
             >
               {t("auth.useDifferentEmail")}
             </button>
@@ -263,12 +263,12 @@ export function AuthFormContent({ callbackUrl, surface = "page" }: AuthFormConte
             onChange={(e) => setEmail(e.target.value)}
             placeholder={t("auth.emailPlaceholder")}
             required
-            className="min-h-12 w-full rounded-full border border-zinc-200 bg-white px-4 py-3 text-zinc-900 placeholder:text-zinc-400 transition-[border-color,box-shadow] focus:border-zinc-300 focus:outline-none focus:ring-2 focus:ring-zinc-400 focus:ring-offset-2 focus:ring-offset-white dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-50 dark:placeholder:text-zinc-500 dark:focus:border-zinc-600 dark:focus:ring-offset-zinc-900"
+            className="min-h-12 w-full rounded-full border border-zinc-200 bg-zinc-100 px-4 py-3 text-zinc-900 placeholder:text-zinc-400 transition-[border-color,box-shadow] focus:border-zinc-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-50 dark:placeholder:text-zinc-500 dark:focus:border-zinc-600 dark:focus-visible:ring-offset-zinc-900"
           />
           <button
             type="submit"
             disabled={sending || !email.trim()}
-            className="min-h-12 w-full rounded-full bg-zinc-900 px-4 py-3 font-medium text-white transition-colors hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:bg-zinc-50 dark:text-zinc-900 dark:hover:bg-white dark:focus-visible:ring-offset-zinc-900"
+            className="min-h-12 w-full rounded-full bg-zinc-900 px-4 py-3 font-medium text-white transition-colors hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:bg-zinc-50 dark:text-zinc-900 dark:hover:bg-white dark:focus-visible:ring-offset-zinc-900"
           >
             {sending ? t("common.loading") : t("auth.continueWithEmail")}
           </button>

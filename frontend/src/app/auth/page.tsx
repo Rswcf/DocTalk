@@ -22,11 +22,11 @@ function AuthContent() {
 
   return (
     <main className="flex min-h-screen items-center justify-center bg-zinc-50 px-4 py-10 dark:bg-zinc-950">
-      <div className="w-full max-w-[400px] rounded-2xl border border-zinc-100 bg-white p-7 shadow-[0_18px_48px_-14px_rgba(24,24,27,0.20)] sm:p-8 dark:border-zinc-800 dark:bg-zinc-900 dark:shadow-[0_22px_56px_-14px_rgba(0,0,0,0.7)]">
+      <div className="w-full max-w-[400px] rounded-3xl border border-zinc-200 bg-white p-7 shadow-[0_8px_24px_-10px_rgba(24,24,27,0.12)] sm:p-8 dark:border-zinc-800 dark:bg-zinc-900 dark:shadow-[0_8px_24px_-10px_rgba(0,0,0,0.55)]">
         <Link
           href="/"
           aria-label={tOr("auth.backHome", "Back home")}
-          className="mb-6 inline-flex items-center gap-2 rounded-full transition-opacity hover:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400"
+          className="mb-6 inline-flex items-center gap-2 rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-zinc-900"
         >
           <DocTalkLogo size={26} />
           <span className="font-logo text-lg font-semibold text-zinc-900 dark:text-zinc-50">DocTalk</span>
@@ -36,7 +36,7 @@ function AuthContent() {
         </Link>
 
         <h1 className="text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
-          {t("auth.signIn")}
+          {tOr("auth.signIn", "Sign in")}
         </h1>
         <p className="mt-1.5 text-sm leading-relaxed text-zinc-500 dark:text-zinc-400">
           {subtitle}
