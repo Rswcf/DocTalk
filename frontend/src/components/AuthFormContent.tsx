@@ -221,9 +221,9 @@ export function AuthFormContent({ callbackUrl, surface = "page" }: AuthFormConte
               <path strokeLinecap="round" strokeLinejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75" />
             </svg>
           </div>
-          <h3 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50">
+          <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50">
             {t("auth.checkEmail")}
-          </h3>
+          </h2>
           <p className="text-sm text-zinc-500 dark:text-zinc-400">
             {t("auth.emailSent").replace("{email}", sentEmail)}
           </p>
@@ -234,7 +234,7 @@ export function AuthFormContent({ callbackUrl, surface = "page" }: AuthFormConte
             <button
               onClick={handleResend}
               disabled={sending || cooldown > 0 || resendCount >= 3}
-              className="rounded-sm text-zinc-500 underline underline-offset-2 transition-colors hover:text-zinc-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 disabled:opacity-50 dark:text-zinc-400 dark:hover:text-zinc-50"
+              className="rounded-sm text-zinc-500 underline underline-offset-2 transition-colors hover:text-zinc-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 focus-visible:ring-offset-white disabled:opacity-50 dark:text-zinc-400 dark:hover:text-zinc-50 dark:focus-visible:ring-offset-zinc-900"
             >
               {resendCount >= 3
                 ? t("auth.resendMaxReached")
@@ -245,7 +245,7 @@ export function AuthFormContent({ callbackUrl, surface = "page" }: AuthFormConte
             <span className="text-zinc-300 dark:text-zinc-700">|</span>
             <button
               onClick={handleUseDifferentEmail}
-              className="rounded-sm text-zinc-500 underline underline-offset-2 transition-colors hover:text-zinc-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 dark:text-zinc-400 dark:hover:text-zinc-50"
+              className="rounded-sm text-zinc-500 underline underline-offset-2 transition-colors hover:text-zinc-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:text-zinc-400 dark:hover:text-zinc-50 dark:focus-visible:ring-offset-zinc-900"
             >
               {t("auth.useDifferentEmail")}
             </button>
