@@ -4,7 +4,7 @@ import React from 'react';
 import Link from 'next/link';
 import { ArrowRight } from 'lucide-react';
 import { useLocale } from '../../i18n';
-import HeroArtifact from './HeroArtifact';
+import HeroCollage from './HeroCollage';
 import { trackEvent } from '../../lib/analytics';
 
 export default function HeroSection() {
@@ -26,12 +26,14 @@ export default function HeroSection() {
               {' '}—{' '}Document intelligence
             </p>
 
-            {/* Headline */}
+            {/* Headline — heavy grotesque first line, italic-serif second line */}
             <h1 className="ed-display mb-6">
               {headlineLines.map((line: string, i: number) => (
                 <React.Fragment key={i}>
                   {i > 0 && <br />}
-                  {line}
+                  {i === headlineLines.length - 1 && headlineLines.length > 1
+                    ? <em>{line}</em>
+                    : line}
                 </React.Fragment>
               ))}
             </h1>
@@ -82,12 +84,7 @@ export default function HeroSection() {
 
           {/* ── Figure column ── */}
           <div className="md:col-span-5 mt-12 md:mt-0 flex flex-col justify-center">
-            <figure className="ed-figure p-4">
-              <HeroArtifact />
-            </figure>
-            <figcaption className="ed-caption mt-3">
-              Fig. 01 — The reading workspace
-            </figcaption>
+            <HeroCollage />
           </div>
 
         </div>

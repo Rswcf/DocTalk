@@ -136,7 +136,9 @@ export default function EditorialFooter() {
         {/* Bottom fine-print row */}
         <hr className="ed-rule mt-10 mb-6" />
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-          <span className="ed-caption">{t("footer.copyright")}</span>
+          <span className="ed-caption">
+            &copy; MMXXVI DocTalk
+          </span>
           <div className="flex items-center gap-5 flex-wrap">
             {legalLinks.map((item) => (
               <Link

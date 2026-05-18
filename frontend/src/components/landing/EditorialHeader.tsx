@@ -46,14 +46,23 @@ export default function EditorialHeader() {
               style={{
                 display: "inline-block",
                 width: "1px",
-                height: "16px",
+                height: "28px",
                 background: "var(--ed-rule)",
                 marginLeft: "4px",
-                marginRight: "4px",
+                marginRight: "8px",
               }}
             />
-            <span className="ed-label hidden sm:inline">
-              Document Intelligence
+            {/* Editorial dateline block — two mono lines */}
+            <span
+              className="hidden sm:flex"
+              style={{ flexDirection: "column", gap: "2px" }}
+            >
+              <span className="ed-caption" style={{ letterSpacing: "0.10em" }}>
+                STUDIO N&ordm;&thinsp;01
+              </span>
+              <span className="ed-caption" style={{ letterSpacing: "0.08em" }}>
+                DOCUMENT INTELLIGENCE
+              </span>
             </span>
           </Link>
 
