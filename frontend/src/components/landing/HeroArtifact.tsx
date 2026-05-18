@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { ArrowUp, FileText, Globe2, Plus, ShieldCheck, Sparkles } from "lucide-react";
+import { FileText, Globe2, ShieldCheck, Sparkles } from "lucide-react";
 import { useLocale } from "../../i18n";
 
 export default function HeroArtifact() {
@@ -13,51 +13,104 @@ export default function HeroArtifact() {
   ];
 
   return (
-    <div aria-hidden="true" className="relative mx-auto w-full max-w-5xl">
-      <div className="dt-command-bar relative overflow-hidden rounded-[2rem] px-5 pb-5 pt-4 text-left sm:px-7 sm:pb-6 sm:pt-5">
-        <div className="relative min-h-[11rem] sm:min-h-[14rem]">
-          <p className="max-w-3xl text-xl font-medium leading-8 text-white/78 sm:text-2xl">
-            {tOr("workbench.heroArtifact.command", "Ask DocTalk to read a PDF, verify every claim, and show the exact source passage.")}
-          </p>
-        </div>
+    <div aria-hidden="true" className="w-full px-5 py-5 sm:px-7 sm:py-6">
+      {/* Command text */}
+      <p
+        className="ed-body max-w-3xl text-[17px] leading-7 text-[var(--ed-ink)]"
+        style={{ fontFamily: "var(--font-inter), system-ui, sans-serif" }}
+      >
+        {tOr(
+          "workbench.heroArtifact.command",
+          "Ask DocTalk to read a PDF, verify every claim, and show the exact source passage."
+        )}
+      </p>
 
-        <div className="relative flex flex-wrap items-center gap-3">
-          <span className="flex h-9 w-9 items-center justify-center rounded-full text-white/72">
-            <Plus aria-hidden="true" size={22} />
-          </span>
-          <span className="inline-flex items-center gap-2 rounded-full bg-white/12 px-4 py-2 text-sm font-semibold text-white shadow-inner shadow-white/5">
-            <FileText aria-hidden="true" size={16} />
-            PDF
-          </span>
-          <span className="inline-flex items-center gap-2 rounded-full bg-white/7 px-4 py-2 text-sm font-medium text-white/72">
-            <Globe2 aria-hidden="true" size={16} />
-            URL
-          </span>
-          <span className="ml-auto inline-flex items-center gap-2 rounded-full bg-white/10 px-4 py-2 text-sm font-semibold text-white">
-            <Sparkles aria-hidden="true" size={16} />
-            {tOr("modes.quick", "Flash")}
-          </span>
-          <span className="inline-flex h-9 w-9 items-center justify-center rounded-full text-white/65">
-            <ShieldCheck aria-hidden="true" size={18} />
-          </span>
-          <span className="inline-flex h-9 w-9 items-center justify-center rounded-full text-white/45">
-            <ArrowUp aria-hidden="true" size={18} />
-          </span>
-        </div>
+      {/* Input affordance row */}
+      <div className="mt-5 flex flex-wrap items-center gap-2">
+        {/* PDF tag */}
+        <span
+          className="inline-flex items-center gap-1.5 rounded-[3px] border border-[var(--ed-rule)] bg-[var(--ed-paper)] px-2.5 py-1.5 text-[var(--ed-ink-2)]"
+          style={{
+            fontFamily: "var(--font-plex-mono), ui-monospace, monospace",
+            fontSize: "11px",
+            letterSpacing: "0.04em",
+          }}
+        >
+          <FileText
+            aria-hidden="true"
+            size={12}
+            className="text-[var(--ed-ink-3)]"
+          />
+          PDF
+        </span>
+
+        {/* URL tag */}
+        <span
+          className="inline-flex items-center gap-1.5 rounded-[3px] border border-[var(--ed-rule)] bg-[var(--ed-paper)] px-2.5 py-1.5 text-[var(--ed-ink-3)]"
+          style={{
+            fontFamily: "var(--font-plex-mono), ui-monospace, monospace",
+            fontSize: "11px",
+            letterSpacing: "0.04em",
+          }}
+        >
+          <Globe2
+            aria-hidden="true"
+            size={12}
+            className="text-[var(--ed-ink-3)]"
+          />
+          URL
+        </span>
+
+        {/* Flash mode tag — signal accent */}
+        <span
+          className="ml-auto inline-flex items-center gap-1.5 rounded-[3px] border border-[var(--ed-signal)] bg-[var(--ed-paper)] px-2.5 py-1.5 text-[var(--ed-signal)]"
+          style={{
+            fontFamily: "var(--font-plex-mono), ui-monospace, monospace",
+            fontSize: "11px",
+            letterSpacing: "0.04em",
+          }}
+        >
+          <Sparkles
+            aria-hidden="true"
+            size={12}
+            className="text-[var(--ed-signal)]"
+          />
+          {tOr("modes.quick", "Flash")}
+        </span>
+
+        {/* Shield icon */}
+        <ShieldCheck
+          aria-hidden="true"
+          size={16}
+          className="text-[var(--ed-ink-3)]"
+        />
       </div>
 
-      <div className="mt-4 flex flex-wrap justify-center gap-2">
+      {/* Hairline rule */}
+      <div
+        className="mt-5 border-t border-[var(--ed-rule)]"
+        role="separator"
+      />
+
+      {/* Suggested prompts */}
+      <div className="mt-4 flex flex-wrap gap-2">
         {prompts.map((prompt) => (
           <span
             key={prompt}
-            className="max-w-[18rem] truncate rounded-full border border-white/14 bg-white/8 px-4 py-2 text-sm font-medium text-white/72 backdrop-blur-xl"
+            className="max-w-[22rem] truncate rounded-[3px] border border-[var(--ed-rule)] bg-[var(--ed-paper)] px-2.5 py-1.5 text-[var(--ed-ink-3)]"
+            style={{
+              fontFamily: "var(--font-plex-mono), ui-monospace, monospace",
+              fontSize: "11px",
+              letterSpacing: "0.04em",
+            }}
           >
             {prompt}
           </span>
         ))}
       </div>
 
-      <p className="mt-4 text-center text-xs text-white/42">{t("chat.disclaimer")}</p>
+      {/* Disclaimer */}
+      <p className="ed-caption mt-4">{t("chat.disclaimer")}</p>
     </div>
   );
 }
