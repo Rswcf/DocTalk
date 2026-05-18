@@ -2,83 +2,94 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { ArrowRight, FileCheck2, Languages, ShieldCheck, Sparkles } from 'lucide-react';
+import { ArrowRight } from 'lucide-react';
 import { useLocale } from '../../i18n';
 import HeroArtifact from './HeroArtifact';
 import { trackEvent } from '../../lib/analytics';
 
 export default function HeroSection() {
-  const { t, tOr } = useLocale();
+  const { t } = useLocale();
   const headlineLines = t('landing.headline').split('\n');
-  const proofItems = [
-    {
-      icon: FileCheck2,
-      label: tOr('landing.proof.citations', 'Answers cite exact source passages'),
-    },
-    {
-      icon: ShieldCheck,
-      label: tOr('landing.proof.private', 'Documents are private and deletable'),
-    },
-    {
-      icon: Languages,
-      label: tOr('landing.proof.locales', 'Works across 11 interface languages'),
-    },
-  ];
 
   return (
-    <section className="dt-workbench-canvas relative overflow-hidden">
-      <div className="relative mx-auto flex min-h-[calc(100vh-3.5rem)] max-w-7xl flex-col items-center px-5 pb-10 pt-24 text-center sm:px-8 md:pt-28">
-        <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-white/14 bg-white/7 px-3 py-1.5 text-xs font-medium text-[var(--workbench-muted)] shadow-2xl shadow-black/30 backdrop-blur-xl">
-          <Sparkles aria-hidden="true" size={14} />
-          {tOr('workbench.heroPill', 'AI Document Workbench')}
-        </div>
+    <section className="ed-section">
+      <div className="ed-shell">
+        {/* Asymmetric 12-col grid: text 7 cols, figure 5 cols */}
+        <div className="md:grid md:grid-cols-12 md:gap-12">
 
-        <h1 className="max-w-5xl text-5xl font-medium leading-[0.98] tracking-normal text-[var(--workbench-ink)] sm:text-6xl lg:text-7xl xl:text-8xl text-balance">
-            {headlineLines.map((line: string, i: number) => (
-              <React.Fragment key={i}>
-                {i > 0 && <br />}
-                {line}
-              </React.Fragment>
-            ))}
-        </h1>
+          {/* ── Text column ── */}
+          <div className="md:col-span-7 flex flex-col justify-center">
 
-        <p className="mt-6 max-w-3xl text-lg leading-8 text-[var(--workbench-muted)] md:text-xl">
-          {t('landing.description')}
-        </p>
+            {/* Eyebrow label */}
+            <p className="ed-label mb-6">
+              <span className="ed-label-num">01</span>
+              {' '}—{' '}Document intelligence
+            </p>
 
-        <div className="mt-10 w-full">
-          <HeroArtifact />
-        </div>
+            {/* Headline */}
+            <h1 className="ed-display mb-6">
+              {headlineLines.map((line: string, i: number) => (
+                <React.Fragment key={i}>
+                  {i > 0 && <br />}
+                  {line}
+                </React.Fragment>
+              ))}
+            </h1>
 
-        <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
-          <Link
-            href="/demo"
-            onClick={() => trackEvent('landing_cta_clicked', { source: 'hero', reason: 'demo' })}
-            className="dt-stitch-primary inline-flex min-h-11 items-center gap-2 rounded-lg px-5 py-2 text-sm font-semibold transition-colors focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950"
-          >
-            {t('landing.cta.demo')}
-            <ArrowRight aria-hidden="true" size={17} />
-          </Link>
-          <Link
-            href="#auth"
-            scroll={false}
-            onClick={() => trackEvent('landing_cta_clicked', { source: 'hero', reason: 'sign_up' })}
-            className="inline-flex min-h-11 items-center rounded-lg border border-zinc-300 bg-white px-5 py-2 text-sm font-semibold text-zinc-900 transition-colors hover:border-zinc-400 focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:border-zinc-600"
-          >
-            {t('hero.signUpFree')}
-          </Link>
-        </div>
+            {/* Standfirst */}
+            <p className="ed-lede mb-8">
+              {t('landing.description')}
+            </p>
 
-        <div className="mt-9 flex max-w-5xl flex-wrap justify-center gap-2">
-          {proofItems.map(({ icon: Icon, label }) => (
-            <span
-              key={label}
-              className="inline-flex items-center gap-2 rounded-full border border-white/12 bg-white/7 px-3 py-1.5 text-xs font-medium text-[var(--workbench-muted)] backdrop-blur-xl"
-            >
-              <Icon aria-hidden="true" size={14} />
-              {label}
-            </span>
-          ))}
+            {/* CTA row */}
+            <div className="flex flex-wrap items-center gap-4 mb-10">
+              <Link
+                href="/demo"
+                onClick={() => trackEvent('landing_cta_clicked', { source: 'hero', reason: 'demo' })}
+                className="ed-cta"
+              >
+                {t('landing.cta.demo')}
+                <ArrowRight aria-hidden="true" size={16} />
+              </Link>
+              <Link
+                href="#auth"
+                scroll={false}
+                onClick={() => trackEvent('landing_cta_clicked', { source: 'hero', reason: 'sign_up' })}
+                className="ed-link"
+              >
+                {t('hero.signUpFree')}
+                <ArrowRight aria-hidden="true" size={14} />
+              </Link>
+            </div>
+
+            {/* Metrics row */}
+            <hr className="ed-rule mb-8" />
+            <div className="flex gap-8">
+              <div>
+                <p className="ed-num">11</p>
+                <p className="ed-label mt-1">Languages</p>
+              </div>
+              <div>
+                <p className="ed-num">5</p>
+                <p className="ed-label mt-1">File formats</p>
+              </div>
+              <div>
+                <p className="ed-num">01</p>
+                <p className="ed-label mt-1">Cited answers</p>
+              </div>
+            </div>
+          </div>
+
+          {/* ── Figure column ── */}
+          <div className="md:col-span-5 mt-12 md:mt-0 flex flex-col justify-center">
+            <figure className="ed-figure p-4">
+              <HeroArtifact />
+            </figure>
+            <figcaption className="ed-caption mt-3">
+              Fig. 01 — The reading workspace
+            </figcaption>
+          </div>
+
         </div>
       </div>
     </section>
