@@ -101,7 +101,6 @@ function LandingPageContent() {
             </h2>
           </div>
           <div className="relative max-w-5xl mx-auto">
-            <div className="glow-accent absolute -inset-8 blur-2xl opacity-40 pointer-events-none" aria-hidden="true" />
             <div className="dt-stitch-card relative rounded-2xl overflow-hidden">
               <div className="flex items-center px-4 py-2.5 border-b border-[var(--workbench-border)] bg-white/6">
                 <div className="flex items-center gap-1.5">

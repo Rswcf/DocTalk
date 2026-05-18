@@ -13,8 +13,6 @@ export default function FinalCTA() {
   return (
     <ScrollReveal>
       <section className="py-20 px-6 bg-zinc-50 dark:bg-zinc-900/50 relative overflow-hidden">
-        {/* Dot pattern background */}
-        <div className="dot-pattern absolute inset-0 opacity-40 dark:opacity-20" aria-hidden="true" />
         <div className="max-w-2xl mx-auto text-center relative z-10">
           <h2 className="font-serif font-semibold tracking-tight text-3xl md:text-4xl tracking-tight text-zinc-900 dark:text-zinc-50 mb-4 text-balance">
             {t('landing.finalCta.title')}

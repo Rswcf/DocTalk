@@ -15,7 +15,6 @@ export default function HeroArtifact() {
   return (
     <div aria-hidden="true" className="relative mx-auto w-full max-w-5xl">
       <div className="dt-command-bar relative overflow-hidden rounded-[2rem] px-5 pb-5 pt-4 text-left sm:px-7 sm:pb-6 sm:pt-5">
-        <div className="pointer-events-none absolute inset-x-0 bottom-0 h-2/3 bg-[linear-gradient(16deg,rgba(75,95,255,0.18),transparent_42%),linear-gradient(-12deg,transparent_44%,rgba(151,133,255,0.2),transparent_76%)]" />
         <div className="relative min-h-[11rem] sm:min-h-[14rem]">
           <p className="max-w-3xl text-xl font-medium leading-8 text-white/78 sm:text-2xl">
             {tOr("workbench.heroArtifact.command", "Ask DocTalk to read a PDF, verify every claim, and show the exact source passage.")}
