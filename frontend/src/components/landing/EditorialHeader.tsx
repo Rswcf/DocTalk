@@ -2,14 +2,16 @@
 
 import Link from "next/link";
 import DocTalkLogo from "../DocTalkLogo";
-
-const NAV_LINKS = [
-  { href: "/features", label: "Features" },
-  { href: "/pricing", label: "Pricing" },
-  { href: "/trust", label: "Security" },
-];
+import { useLocale } from "../../i18n";
 
 export default function EditorialHeader() {
+  const { t, tOr } = useLocale();
+  const NAV_LINKS = [
+    { href: "/features", label: t("public.nav.features") },
+    { href: "/pricing", label: t("footer.pricing") },
+    { href: "/trust", label: tOr("footer.links.trust", "Security") },
+  ];
+
   return (
     <header
       className="sticky top-0 z-50 h-16 flex items-center"
@@ -85,7 +87,7 @@ export default function EditorialHeader() {
               </Link>
             ))}
             <Link href="/auth" className="ed-cta" style={{ padding: "9px 18px", fontSize: "13px" }}>
-              Sign in
+              {t("auth.signIn")}
             </Link>
           </nav>
         </div>

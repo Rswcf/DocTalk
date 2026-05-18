@@ -16,17 +16,15 @@ import { trackEvent } from '../lib/analytics';
 import { sanitizeFilename } from '../lib/utils';
 import { PrivacyBadge } from '../components/PrivacyBadge';
 import Header from '../components/Header';
+import EditorialHeader from '../components/landing/EditorialHeader';
+import EditorialFooter from '../components/landing/EditorialFooter';
 import HeroSection from '../components/landing/HeroSection';
-import dynamic from 'next/dynamic';
-// ShowcasePlayer lazy-loaded so it does not block hero LCP (Codex r1 flag).
-const ShowcasePlayerLazy = dynamic(() => import('../components/landing/ShowcasePlayer'), { ssr: false });
 import FeatureGrid from '../components/landing/FeatureGrid';
 import HowItWorks from '../components/landing/HowItWorks';
 import SocialProof from '../components/landing/SocialProof';
 import SecuritySection from '../components/landing/SecuritySection';
 import FAQ from '../components/landing/FAQ';
 import FinalCTA from '../components/landing/FinalCTA';
-import Footer from '../components/Footer';
 import { useUserProfile } from '../lib/useUserProfile';
 
 type StoredDoc = { document_id: string; filename?: string; createdAt: number; status?: string };
@@ -46,164 +44,19 @@ const DASHBOARD_NUDGE_SHOW_MS = 7 * 24 * 60 * 60 * 1000;
 const DASHBOARD_NUDGE_MAX_IMPRESSIONS = 3;
 
 function LandingPageContent() {
-  const { t } = useLocale();
-  const explorePaths = [
-    {
-      href: '/features/citations',
-      title: t('home.explore.cards.citations.title'),
-      description: t('home.explore.cards.citations.description'),
-    },
-    {
-      href: '/features/multi-format',
-      title: t('home.explore.cards.multiFormat.title'),
-      description: t('home.explore.cards.multiFormat.description'),
-    },
-    {
-      href: '/features/free-demo',
-      title: t('home.explore.cards.freeDemo.title'),
-      description: t('home.explore.cards.freeDemo.description'),
-    },
-    {
-      href: '/features/performance-modes',
-      title: t('home.explore.cards.performanceModes.title'),
-      description: t('home.explore.cards.performanceModes.description'),
-    },
-    {
-      href: '/use-cases/finance',
-      title: t('home.explore.cards.finance.title'),
-      description: t('home.explore.cards.finance.description'),
-    },
-    {
-      href: '/use-cases/hr-contracts',
-      title: t('home.explore.cards.hrContracts.title'),
-      description: t('home.explore.cards.hrContracts.description'),
-    },
-    {
-      href: '/blog/category/comparisons',
-      title: t('home.explore.cards.comparisonGuides.title'),
-      description: t('home.explore.cards.comparisonGuides.description'),
-    },
-  ];
-
   return (
-    <div className="dt-stitch-theme flex flex-col min-h-screen">
-      <Header variant="minimal" />
-      <main id="main-content">
+    <div className="dt-editorial">
+      <EditorialHeader />
+      <main>
         <HeroSection />
-
-        {/* Live product demo — demoted from hero to a dedicated section below.
-            Hero now shows a static artifact (HeroArtifact); this is the
-            "see it actually run" proof for visitors who want more. */}
-        <section className="w-full px-4 sm:px-8 lg:px-16 py-16">
-          <div className="max-w-6xl mx-auto">
-            <h2 className="font-semibold tracking-normal text-3xl text-[var(--workbench-ink)] text-center mb-8 text-balance">
-              {t('landing.showcase.title')}
-            </h2>
-          </div>
-          <div className="relative max-w-5xl mx-auto">
-            <div className="dt-stitch-card relative rounded-2xl overflow-hidden">
-              <div className="flex items-center px-4 py-2.5 border-b border-[var(--workbench-border)] bg-white/6">
-                <div className="flex items-center gap-1.5">
-                  <span aria-hidden="true" className="w-2.5 h-2.5 rounded-full bg-red-400" />
-                  <span aria-hidden="true" className="w-2.5 h-2.5 rounded-full bg-yellow-400" />
-                  <span aria-hidden="true" className="w-2.5 h-2.5 rounded-full bg-green-400" />
-                </div>
-                <div className="flex-1 flex justify-center">
-                  <div className="rounded-full bg-white/9 px-3 py-0.5">
-                    <span className="text-[11px] text-[var(--workbench-muted)] select-none">doctalk.site</span>
-                  </div>
-                </div>
-                <div className="w-[52px]" aria-hidden="true" />
-              </div>
-              <div className="aspect-video bg-black/40 relative">
-                <ShowcasePlayerLazy />
-              </div>
-            </div>
-          </div>
-          <p className="mt-4 text-center text-sm text-[var(--workbench-muted)]">
-            {t('landing.showcase.caption')}
-          </p>
-        </section>
-
-        <HowItWorks />
-
         <FeatureGrid />
-
-        <section className="w-full px-6 py-20">
-          <div className="max-w-6xl mx-auto">
-            <div className="max-w-2xl mb-10">
-              <p className="text-sm font-medium uppercase tracking-[0.18em] text-[var(--workbench-muted)] mb-3">
-                {t('home.explore.eyebrow')}
-              </p>
-              <h2 className="font-semibold tracking-normal text-3xl text-[var(--workbench-ink)] mb-4">
-                {t('home.explore.title')}
-              </h2>
-              <p className="text-base text-[var(--workbench-muted)] leading-relaxed">
-                {t('home.explore.description')}
-              </p>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
-              {explorePaths.map((path) => (
-                <Link
-                  key={path.href}
-                  href={path.href}
-                  className="dt-stitch-card group rounded-2xl p-6 transition-transform duration-200 hover:-translate-y-0.5"
-                >
-                  <div className="flex items-start justify-between gap-4 mb-3">
-                    <h3 className="text-lg font-semibold text-[var(--workbench-ink)]">
-                      {path.title}
-                    </h3>
-                    <span className="text-sm text-[var(--workbench-muted)] group-hover:text-white transition-colors">
-                      →
-                    </span>
-                  </div>
-                  <p className="text-sm text-[var(--workbench-muted)] leading-relaxed">
-                    {path.description}
-                  </p>
-                </Link>
-              ))}
-            </div>
-            <div className="mt-8 flex flex-wrap gap-3 text-sm">
-              <Link href="/features" className="text-[var(--workbench-muted)] hover:text-white transition-colors">
-                {t('home.explore.links.allFeatures')}
-              </Link>
-              <span className="text-white/18">|</span>
-              <Link href="/use-cases" className="text-[var(--workbench-muted)] hover:text-white transition-colors">
-                {t('home.explore.links.allUseCases')}
-              </Link>
-              <span className="text-white/18">|</span>
-              <Link href="/compare" className="text-[var(--workbench-muted)] hover:text-white transition-colors">
-                {t('home.explore.links.compareTools')}
-              </Link>
-              <span className="text-white/18">|</span>
-              <Link href="/alternatives" className="text-[var(--workbench-muted)] hover:text-white transition-colors">
-                {t('home.explore.links.browseAlternatives')}
-              </Link>
-            </div>
-          </div>
-        </section>
-
+        <HowItWorks />
         <SocialProof />
-
-        <div className="text-center py-8">
-          <Link href="/pricing" className="text-sm font-medium text-[var(--workbench-muted)] hover:text-white transition-colors">
-            {t('footer.pricing')} &rarr;
-          </Link>
-        </div>
-
         <SecuritySection />
-
         <FAQ />
-
         <FinalCTA />
-
-        {/* Privacy Badge */}
-        <section className="py-8 flex justify-center">
-          <PrivacyBadge />
-        </section>
       </main>
-
-      <Footer />
+      <EditorialFooter />
     </div>
   );
 }
