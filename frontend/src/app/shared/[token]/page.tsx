@@ -73,7 +73,7 @@ export default async function SharedPage({ params }: { params: Promise<{ token: 
             <div
               key={msg.id || i}
               id={msg.id}
-              className={`scroll-mt-6 rounded-2xl transition-[background-color,box-shadow] target:bg-indigo-50 target:ring-2 target:ring-indigo-300 target:ring-offset-4 target:ring-offset-white dark:target:bg-indigo-950/30 dark:target:ring-indigo-700 dark:target:ring-offset-zinc-950 ${
+              className={`scroll-mt-6 rounded-2xl transition-[background-color,box-shadow] target:bg-blue-50 target:ring-2 target:ring-blue-300 target:ring-offset-4 target:ring-offset-white dark:target:bg-blue-950/30 dark:target:ring-blue-700 dark:target:ring-offset-zinc-950 ${
                 msg.role === 'user' ? 'flex justify-end' : ''
               }`}
             >

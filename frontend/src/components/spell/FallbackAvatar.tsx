@@ -12,9 +12,9 @@ const gradients = [
   'from-emerald-700 to-emerald-300',
   'from-amber-700 to-yellow-300',
   'from-rose-900 to-rose-300',
-  'from-indigo-800 to-indigo-300',
+  'from-teal-800 to-teal-300',
   'from-sky-900 to-sky-300',
-  'from-fuchsia-900 to-fuchsia-300',
+  'from-orange-900 to-orange-300',
 ];
 
 function hashName(s: string): number {

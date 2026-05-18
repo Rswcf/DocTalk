@@ -130,7 +130,7 @@ function FunnelList({ stages }: { stages: AdminUserActivityFunnelStage[] }) {
           </div>
           <div className="h-7 overflow-hidden rounded bg-zinc-100 dark:bg-zinc-900">
             <div
-              className="flex h-full items-center justify-end rounded bg-indigo-600 px-2 text-[11px] font-medium text-white"
+              className="flex h-full items-center justify-end rounded bg-blue-600 px-2 text-[11px] font-medium text-white"
               style={{ width: `${Math.max((stage.users / maxUsers) * 100, stage.users > 0 ? 4 : 0)}%` }}
             >
               {stage.users > 0 ? formatPercent(stage.rate_from_signup) : ""}
@@ -186,7 +186,7 @@ function RetentionTable({ activity }: { activity: AdminUserActivity }) {
                     <td key={column.key} className="px-3 py-2 text-right">
                       <span
                         className="inline-flex min-w-12 justify-end rounded px-2 py-1 tabular-nums text-zinc-900 dark:text-zinc-50"
-                        style={{ backgroundColor: `rgba(79, 70, 229, ${Math.min(0.12 + value * 0.9, 0.75)})` }}
+                        style={{ backgroundColor: `rgba(29, 78, 216, ${Math.min(0.12 + value * 0.9, 0.75)})` }}
                       >
                         {formatPercent(value)}
                       </span>

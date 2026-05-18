@@ -17,11 +17,11 @@
   --highlight-strong: rgba(245, 158, 11, 0.22);
   --highlight-line: rgba(183, 121, 31, 0.74);
   --highlight-glow: rgba(245, 158, 11, 0.22);
-  /* Accent — indigo. A single flat focus/accent color (not an
-     indigo→violet gradient). Standardized 2026-05-18 with the Stitch redesign. */
-  --accent: #4f46e5;
-  --accent-hover: #4338ca;
-  --accent-light: #e0e7ff;
+  /* Accent — blue. A single flat focus/accent color (not a
+     gradient). Standardized 2026-05-18; blue avoids the AI indigo/violet look. */
+  --accent: #1D4ED8;
+  --accent-hover: #1E40AF;
+  --accent-light: #DBEAFE;
   --accent-foreground: #ffffff;
   --workbench-bg: #f6f8fc;
   --workbench-canvas: #eef3fb;
@@ -34,7 +34,6 @@
   --workbench-ink: #111827;
   --workbench-muted: #64748b;
   --workbench-glow-cyan: rgba(14, 165, 233, 0.16);
-  --workbench-glow-violet: rgba(124, 58, 237, 0.12);
   --workbench-command: rgba(255, 255, 255, 0.88);
   --workbench-command-shadow: 0 22px 70px rgba(31, 55, 88, 0.16);
   --reader-bg: #f4f1ea;
@@ -66,11 +65,11 @@
   --highlight-strong: rgba(241, 184, 75, 0.26);
   --highlight-line: rgba(241, 184, 75, 0.78);
   --highlight-glow: rgba(241, 184, 75, 0.28);
-  /* Accent — indigo (dark). indigo-400 (#818cf8) reads well on the
-     near-black canvas; indigo-300 (#a5b4fc) for hover. */
-  --accent: #818cf8;
-  --accent-hover: #a5b4fc;
-  --accent-light: rgba(129, 140, 248, 0.12);
+  /* Accent — blue (dark). blue-400 (#60A5FA) reads well on the
+     near-black canvas; blue-300 (#93C5FD) for hover. */
+  --accent: #60A5FA;
+  --accent-hover: #93C5FD;
+  --accent-light: rgba(96, 165, 250, 0.12);
   --accent-foreground: #0b1726;
   --workbench-bg: #070707;
   --workbench-canvas: #111214;
@@ -83,7 +82,6 @@
   --workbench-ink: #f7f7f8;
   --workbench-muted: #b8bbc6;
   --workbench-glow-cyan: rgba(73, 186, 255, 0.28);
-  --workbench-glow-violet: rgba(126, 103, 255, 0.38);
   --workbench-command: rgba(23, 24, 27, 0.86);
   --workbench-command-shadow: 0 30px 90px rgba(0, 0, 0, 0.46);
   --reader-bg: #151410;
@@ -504,7 +502,7 @@ h3,
   bottom: 14px;
   width: 3px;
   border-radius: 999px;
-  background: #4f46e5;
+  background: #1D4ED8;
   opacity: 0.82;
 }
 
@@ -542,7 +540,7 @@ h3,
 }
 
 .dt-sources-label {
-  color: #4f46e5;
+  color: #1D4ED8;
   letter-spacing: 0.08em;
 }
 
@@ -559,7 +557,7 @@ h3,
 }
 
 .dt-source-chip:hover {
-  border-color: rgba(79, 70, 229, 0.32);
+  border-color: rgba(29, 78, 216, 0.32);
   background: #ffffff;
   transform: translateY(-1px);
 }
@@ -594,7 +592,7 @@ h3,
 }
 
 .dt-citation-card:hover {
-  border-color: rgba(79, 70, 229, 0.3);
+  border-color: rgba(29, 78, 216, 0.3);
   box-shadow: 0 8px 24px -10px rgba(24, 24, 27, 0.12);
   transform: translateY(-1px);
 }
@@ -630,8 +628,8 @@ h3,
 }
 
 .dt-composer:focus-within {
-  border-color: #4f46e5;
-  box-shadow: 0 0 0 2px rgba(79, 70, 229, 0.4);
+  border-color: #1D4ED8;
+  box-shadow: 0 0 0 2px rgba(29, 78, 216, 0.4);
 }
 
 .dark .dt-composer {
@@ -641,8 +639,8 @@ h3,
 }
 
 .dark .dt-composer:focus-within {
-  border-color: #818cf8;
-  box-shadow: 0 0 0 2px rgba(129, 140, 248, 0.4);
+  border-color: #60A5FA;
+  box-shadow: 0 0 0 2px rgba(96, 165, 250, 0.4);
 }
 
 /* Group C: view toggle → solid bg, no backdrop-filter */

@@ -16,7 +16,7 @@ paths:
 - **Proxy maxDuration**: `route.ts` exports `maxDuration = 60` (Vercel Hobby limit). SSE chat 60s timeout, others 30s
 
 ## UI Design System
-- **Palette**: zinc monochrome + indigo accent (`#4f46e5`/`#818cf8`). Zero `gray-*`/`blue-*` classes (except Google OAuth brand + status colors). Zero `transition-all` (use specific properties)
+- **Palette**: zinc monochrome + blue accent (`#1D4ED8`/`#60A5FA`). Zero `gray-*`/`indigo-*`/`violet-*`/`purple-*` classes (except Google OAuth brand + status colors). Zero `transition-all` (use specific properties)
 - **i18n**: Components using `t()` MUST be inside `<LocaleProvider>`. Outside = raw key fallback. Only `en` is statically loaded; other 10 locales lazy-loaded
 
 ## PDF & Documents
