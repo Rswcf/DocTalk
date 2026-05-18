@@ -756,17 +756,16 @@ graph TD
         UserMenuC["UserMenu"]
     end
 
-    subgraph LandingComp["Landing Components"]
-        Hero["HeroSection<br/>Headline + CTAs"]
-        Showcase["Product Showcase<br/>Remotion Animation<br/>macOS Window Chrome"]
-        HowItWorks["HowItWorks<br/>3-Step Guide"]
-        Features["FeatureGrid<br/>3-Column Cards"]
-        SocialProof["SocialProof<br/>Trust Metrics"]
-        Security["SecuritySection<br/>4 Security Cards"]
-        FAQ["FAQ<br/>6-Item Accordion"]
-        FinalCTA["FinalCTA<br/>Conversion Section"]
-        PrivBadge["PrivacyBadge"]
-        FooterComp["Footer<br/>3-Column Links"]
+    subgraph LandingComp["Landing Components (editorial layer, .dt-editorial)"]
+        EdHeader["EditorialHeader<br/>Masthead + dateline"]
+        Hero["HeroSection<br/>Mixed-voice headline + HeroCollage"]
+        HowItWorks["HowItWorks<br/>3 numbered steps"]
+        Features["FeatureGrid<br/>Numbered editorial entries"]
+        SocialProof["SocialProof<br/>Hairline-framed metrics"]
+        Security["SecuritySection<br/>Editorial privacy points"]
+        FAQ["FAQ<br/>Hairline-ruled accordion"]
+        FinalCTA["FinalCTA<br/>Closing band"]
+        EdFooter["EditorialFooter<br/>Colophon"]
     end
 
     subgraph DocViewComp["Document Viewer"]
@@ -827,12 +826,12 @@ graph TD
 - `variant="minimal"` — Logo + UserMenu only (transparent background) — used on Home, Demo, Auth pages
 - `variant="full"` — All controls (ModeSelector, ThemeSelector, LanguageSelector, SessionDropdown, CreditsDisplay, UserMenu) — used on Document, Billing, Profile pages. ThemeSelector is a dropdown (Light/Dark/Windows 98) replacing the old icon-cycle button. Additional `isDemo`/`isLoggedIn` props hide ModeSelector for anonymous demo users
 
-**Landing page sections** (in order): HeroSection → Product Showcase (Remotion `<Player>` animated demo, 300 frames @ 30fps, lazy-loaded) → HowItWorks → FeatureGrid → SocialProof → SecuritySection → FAQ → FinalCTA → PrivacyBadge → Footer
+**Landing page** (redesigned 2026-05-19 in a "Monocle-crisp" editorial visual language; the whole landing renders inside a `.dt-editorial` scope, light-only — see `editorial.css`). Sections in order: EditorialHeader → HeroSection (mixed sans/italic-serif headline + `HeroCollage` editorial collage) → FeatureGrid → HowItWorks → SocialProof → SecuritySection → FAQ → FinalCTA → EditorialFooter. (The old Remotion product showcase and `PrivacyBadge` were dropped from the landing in the editorial redesign; `HeroArtifact.tsx` remains in the repo but is no longer used by the landing.)
 
 **Chat features:**
 - **ChatGPT-style UI**: AI messages render flat without card/border/background (full width, base `prose` size); user messages keep `rounded-3xl` bubbles (light gray `bg-zinc-100` in light mode, `dark:bg-zinc-700` in dark mode). Messages area + input bar use `max-w-3xl mx-auto` centering for comfortable reading width on wide panels. Action buttons (Copy, ThumbsUp/Down, Regenerate) appear on hover for older messages (`opacity-0 group-hover:opacity-100`), always visible on the latest AI message
 - **Brand logo**: "Talk Flow" mark — two overlapping chat bubbles (back bubble = document source in Indigo 200 `#c7d2fe`, front bubble = AI conversation in Indigo 600 `#4f46e5`). `DocTalkLogo.tsx` component with Tailwind `fill-indigo-*` + `dark:` variants for automatic dark mode adaptation. Favicon via `app/icon.svg` (auto-detected by Next.js), Apple touch icon via `app/apple-icon.svg`. Static exports: `public/logo-icon.svg` (512px), `public/logo-full-light.svg` / `logo-full-dark.svg` (combination marks with Sora wordmark)
-- **Font families**: Three fonts loaded via `next/font/google` — `font-logo` (Sora 600) for the "DocTalk" brand wordmark, `font-display` (Instrument Serif 400) for landing page section headings, `font-sans` (Inter) for all body text and UI. CSS variables: `--font-logo`, `--font-display`, `--font-inter`
+- **Font families**: Five fonts loaded via `next/font/google` — `font-logo` (Sora 600) for the "DocTalk" brand wordmark, `font-display` (Instrument Serif 400), `font-sans` (Inter) for all app body text and UI, plus **Newsreader** (serif) and **IBM Plex Mono** used exclusively by the editorial landing layer (`--font-newsreader`, `--font-plex-mono`). CSS variables: `--font-logo`, `--font-display`, `--font-inter`, `--font-newsreader`, `--font-plex-mono`
 - **Typography polish**: `antialiased` font rendering on body for smoother text on Retina displays. Prose text color overridden from Tailwind Typography default gray-700 (`#374151`) to zinc-950 (`#09090b`, near-black); dark mode uses zinc-50 (`#fafafa`). Paragraph and list spacing tightened for denser, more readable chat output
 - **Code blocks**: `PreBlock` component intercepts `<pre>` elements and renders styled code blocks with dark background (`bg-zinc-900`), language label header bar (`bg-zinc-800`), and Copy code button. Uses `not-prose` to escape Typography styling. Inline `code` renders as a gray background pill (backtick decorations removed via Typography config)
 - **Input bar**: `rounded-3xl` pill-shaped container with resting `shadow-sm` for elevation. Left: "+" button with dropdown menu (Custom Instructions + Export Chat). Right: Send/Stop toggle (Stop button with `Square` icon during streaming, aborts SSE via `AbortController`). Disclaimer text below input bar (11 locales)
