@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useState } from 'react';
-import { ChevronDown } from 'lucide-react';
 import { useLocale } from '../../i18n';
 import ScrollReveal from './ScrollReveal';
 
@@ -23,49 +22,70 @@ export default function FAQ() {
   };
 
   return (
-    <ScrollReveal>
-      <section className="py-20 px-6">
-        <div className="max-w-3xl mx-auto">
-          <h2 className="font-serif font-semibold tracking-tight text-3xl text-zinc-900 dark:text-zinc-50 text-center mb-12 text-balance">
-            {t('landing.faq.title')}
-          </h2>
-          <div className="divide-y divide-zinc-200 dark:divide-zinc-800">
-            {FAQ_ITEMS.map((item, idx) => (
-              <ScrollReveal key={idx} delay={idx * 80}>
+    <section className="ed-section">
+      <div className="ed-shell">
+        <ScrollReveal>
+          <div className="max-w-[760px]">
+            <p className="ed-label mb-3">FAQ</p>
+            <h2 className="ed-h2 mb-10">{t('landing.faq.title')}</h2>
+          </div>
+          <hr className="ed-rule" />
+        </ScrollReveal>
+
+        <div className="max-w-[760px]">
+          {FAQ_ITEMS.map((item, idx) => {
+            const num = String(idx + 1).padStart(2, '0');
+            const isOpen = openIndex === idx;
+            return (
+              <ScrollReveal key={idx} delay={idx * 60}>
                 <div>
                   <button
                     type="button"
                     id={`faq-btn-${idx}`}
                     onClick={() => toggle(idx)}
-                    aria-expanded={openIndex === idx}
+                    aria-expanded={isOpen}
                     aria-controls={`faq-panel-${idx}`}
-                    className="w-full flex items-center justify-between py-5 text-left text-zinc-900 dark:text-zinc-100 hover:text-accent transition-colors focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-900"
+                    className="w-full flex items-start justify-between py-6 text-left focus-visible:outline-none"
+                    style={{ outline: 'none' }}
                   >
-                    <span className="text-base font-medium pr-4">{t(item.q)}</span>
-                    <ChevronDown
+                    <span className="flex items-start gap-4 pr-6">
+                      <span
+                        className="ed-label ed-label-num shrink-0 mt-1"
+                        aria-hidden="true"
+                      >
+                        {num}
+                      </span>
+                      <span className="ed-h3" style={{ color: 'var(--ed-ink)' }}>
+                        {t(item.q)}
+                      </span>
+                    </span>
+                    <span
                       aria-hidden="true"
-                      size={20}
-                      className={`shrink-0 transition-[transform,color] duration-200 motion-reduce:transition-none ${openIndex === idx ? 'rotate-180 text-accent' : 'text-zinc-400'}`}
-                    />
+                      className="ed-label shrink-0 mt-1 w-4 text-center"
+                      style={{ color: 'var(--ed-ink-3)', fontSize: '16px', letterSpacing: 0 }}
+                    >
+                      {isOpen ? '−' : '+'}
+                    </span>
                   </button>
+
                   <div
                     id={`faq-panel-${idx}`}
                     role="region"
                     aria-labelledby={`faq-btn-${idx}`}
                     className={`overflow-hidden transition-[max-height,opacity] duration-300 motion-reduce:transition-none ${
-                      openIndex === idx ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'
+                      isOpen ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'
                     }`}
                   >
-                    <p className="pb-5 text-sm text-zinc-600 dark:text-zinc-300 leading-relaxed">
-                      {t(item.a)}
-                    </p>
+                    <p className="ed-body pb-6 pl-8">{t(item.a)}</p>
                   </div>
+
+                  <hr className="ed-rule" />
                 </div>
               </ScrollReveal>
-            ))}
-          </div>
+            );
+          })}
         </div>
-      </section>
-    </ScrollReveal>
+      </div>
+    </section>
   );
 }

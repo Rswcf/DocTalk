@@ -11,35 +11,36 @@ export default function FinalCTA() {
   const { t } = useLocale();
 
   return (
-    <ScrollReveal>
-      <section className="py-20 px-6 bg-zinc-50 dark:bg-zinc-900/50 relative overflow-hidden">
-        <div className="max-w-2xl mx-auto text-center relative z-10">
-          <h2 className="font-serif font-semibold tracking-tight text-3xl md:text-4xl tracking-tight text-zinc-900 dark:text-zinc-50 mb-4 text-balance">
-            {t('landing.finalCta.title')}
-          </h2>
-          <p className="text-zinc-600 dark:text-zinc-300 mb-8">
-            {t('landing.finalCta.subtitle')}
-          </p>
-          <div className="flex items-center justify-center gap-4 flex-wrap">
-            <Link
-              href="/demo"
-              onClick={() => trackEvent('landing_cta_clicked', { source: 'final_cta', reason: 'demo' })}
-              className="inline-flex items-center gap-2 px-6 py-3 bg-accent hover:bg-accent-hover text-accent-foreground rounded-lg font-medium shadow-sm hover:shadow-md transition-[box-shadow,background-color] duration-150 focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-900"
-            >
-              {t('landing.finalCta.demo')}
-              <ArrowRight aria-hidden="true" size={18} />
-            </Link>
-            <Link
-              href="#auth"
-              scroll={false}
-              onClick={() => trackEvent('landing_cta_clicked', { source: 'final_cta', reason: 'sign_up' })}
-              className="px-6 py-3 border border-zinc-300 dark:border-zinc-700 text-zinc-900 dark:text-zinc-100 rounded-lg font-medium hover:border-accent hover:text-accent transition-colors focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-900"
-            >
-              {t('landing.finalCta.signUp')}
-            </Link>
+    <section className="ed-section" style={{ borderTop: '1px solid var(--ed-rule)' }}>
+      <div className="ed-shell">
+        <ScrollReveal>
+          <div className="max-w-2xl">
+            <p className="ed-label mb-4">Get Started</p>
+            <hr className="ed-rule mb-10" />
+            <h2 className="ed-display mb-6">{t('landing.finalCta.title')}</h2>
+            <p className="ed-lede mb-10">{t('landing.finalCta.subtitle')}</p>
+            <div className="flex items-center gap-6 flex-wrap">
+              <Link
+                href="/demo"
+                onClick={() => trackEvent('landing_cta_clicked', { source: 'final_cta', reason: 'demo' })}
+                className="ed-cta"
+              >
+                {t('landing.finalCta.demo')}
+                <ArrowRight aria-hidden="true" size={16} />
+              </Link>
+              <Link
+                href="#auth"
+                scroll={false}
+                onClick={() => trackEvent('landing_cta_clicked', { source: 'final_cta', reason: 'sign_up' })}
+                className="ed-link"
+              >
+                {t('landing.finalCta.signUp')}
+              </Link>
+            </div>
           </div>
-        </div>
-      </section>
-    </ScrollReveal>
+          <hr className="ed-rule mt-16" />
+        </ScrollReveal>
+      </div>
+    </section>
   );
 }

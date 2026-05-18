@@ -1,46 +1,58 @@
 "use client";
 
 import React from 'react';
-import { Shield, Lock, Trash2, Eye } from 'lucide-react';
 import { useLocale } from '../../i18n';
 import ScrollReveal from './ScrollReveal';
 
 const cards = [
-  { icon: Shield, titleKey: 'landing.security.noTraining.title', descKey: 'landing.security.noTraining.desc' },
-  { icon: Lock, titleKey: 'landing.security.encrypted.title', descKey: 'landing.security.encrypted.desc' },
-  { icon: Trash2, titleKey: 'landing.security.deletion.title', descKey: 'landing.security.deletion.desc' },
-  { icon: Eye, titleKey: 'landing.security.private.title', descKey: 'landing.security.private.desc' },
-];
+  { titleKey: 'landing.security.noTraining.title', descKey: 'landing.security.noTraining.desc' },
+  { titleKey: 'landing.security.encrypted.title', descKey: 'landing.security.encrypted.desc' },
+  { titleKey: 'landing.security.deletion.title', descKey: 'landing.security.deletion.desc' },
+  { titleKey: 'landing.security.private.title', descKey: 'landing.security.private.desc' },
+] as const;
 
 export default function SecuritySection() {
   const { t } = useLocale();
 
   return (
-    <section className="bg-zinc-50 dark:bg-zinc-900/50 border-t border-b border-zinc-200 dark:border-zinc-800 py-24">
-      <div className="max-w-5xl mx-auto px-6">
+    <section className="ed-section" style={{ borderTop: '1px solid var(--ed-rule)', borderBottom: '1px solid var(--ed-rule)', background: 'var(--ed-paper-2)' }}>
+      <div className="ed-shell">
         <ScrollReveal>
-          <h2 className="font-serif font-semibold tracking-tight text-3xl text-zinc-900 dark:text-zinc-50 text-center mb-12 text-balance">
-            {t('landing.security.title')}
-          </h2>
+          <div className="mb-10">
+            <p className="ed-label mb-3">Privacy &amp; Security</p>
+            <h2 className="ed-h2 max-w-xl">{t('landing.security.title')}</h2>
+          </div>
+          <hr className="ed-rule" />
         </ScrollReveal>
-        <div className="grid auto-rows-fr grid-cols-1 sm:grid-cols-2 gap-6">
-          {cards.map(({ icon: Icon, titleKey, descKey }, index) => (
-            <ScrollReveal key={titleKey} delay={index * 100}>
-              <div
-                className="h-full p-6 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-sm"
-              >
-                <div className="w-12 h-12 rounded-lg bg-accent-light dark:bg-accent/10 border border-accent/20 flex items-center justify-center mb-4">
-                  <Icon aria-hidden="true" size={20} className="text-accent" />
+
+        <div className="grid grid-cols-1 md:grid-cols-2">
+          {cards.map(({ titleKey, descKey }, index) => {
+            const num = String(index + 1).padStart(2, '0');
+            const isRight = index % 2 === 1;
+            const isLastRow = index >= cards.length - 2;
+            return (
+              <ScrollReveal key={titleKey} delay={index * 80}>
+                <div
+                  className={[
+                    'py-10',
+                    'pr-8',
+                    isRight ? 'md:pl-10 md:border-l' : '',
+                    !isLastRow ? 'border-b' : '',
+                  ].join(' ')}
+                  style={{
+                    borderColor: 'var(--ed-rule)',
+                  }}
+                >
+                  <p className="ed-label mb-4">
+                    <span className="ed-label-num">{num}</span>
+                    {' '}— Privacy
+                  </p>
+                  <h3 className="ed-h3 mb-3">{t(titleKey)}</h3>
+                  <p className="ed-body">{t(descKey)}</p>
                 </div>
-                <h3 className="font-semibold text-zinc-900 dark:text-zinc-100 mb-2">
-                  {t(titleKey)}
-                </h3>
-                <p className="text-sm text-zinc-600 dark:text-zinc-300 leading-relaxed">
-                  {t(descKey)}
-                </p>
-              </div>
-            </ScrollReveal>
-          ))}
+              </ScrollReveal>
+            );
+          })}
         </div>
       </div>
     </section>
