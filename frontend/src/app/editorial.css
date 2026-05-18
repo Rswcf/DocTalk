@@ -1,0 +1,148 @@
+/* Editorial design layer — "Monocle-crisp". Every rule is scoped under
+   .dt-editorial so it never affects the functional app UI. Light only. */
+.dt-editorial {
+  --ed-paper: #faf9f6;
+  --ed-paper-2: #f1efe8;
+  --ed-ink: #1c1b19;
+  --ed-ink-2: #46443d;
+  --ed-ink-3: #86837a;
+  --ed-signal: #9a3b32;
+  --ed-signal-deep: #7e2f28;
+  --ed-rule: #d8d5cc;
+
+  background: var(--ed-paper);
+  color: var(--ed-ink-2);
+  font-family: var(--font-inter), system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+.dt-editorial .ed-shell {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 40px;
+}
+@media (max-width: 640px) {
+  .dt-editorial .ed-shell { padding: 0 20px; }
+}
+
+.dt-editorial .ed-rule {
+  border: 0;
+  border-top: 1px solid var(--ed-rule);
+  margin: 0;
+}
+
+.dt-editorial .ed-section { padding: 88px 0; }
+@media (max-width: 640px) {
+  .dt-editorial .ed-section { padding: 56px 0; }
+}
+
+.dt-editorial .ed-display {
+  font-family: var(--font-newsreader), Georgia, serif;
+  font-weight: 400;
+  font-size: clamp(40px, 6vw, 68px);
+  line-height: 1.05;
+  letter-spacing: -0.02em;
+  color: var(--ed-ink);
+}
+
+.dt-editorial .ed-h2 {
+  font-family: var(--font-newsreader), Georgia, serif;
+  font-weight: 400;
+  font-size: clamp(28px, 3.5vw, 40px);
+  line-height: 1.1;
+  letter-spacing: -0.015em;
+  color: var(--ed-ink);
+}
+
+.dt-editorial .ed-h3 {
+  font-family: var(--font-newsreader), Georgia, serif;
+  font-weight: 500;
+  font-size: 21px;
+  line-height: 1.25;
+  color: var(--ed-ink);
+}
+
+.dt-editorial .ed-lede {
+  font-size: 18px;
+  line-height: 1.6;
+  color: var(--ed-ink-2);
+}
+
+.dt-editorial .ed-body {
+  font-size: 15.5px;
+  line-height: 1.65;
+  color: var(--ed-ink-2);
+}
+
+.dt-editorial .ed-label {
+  font-family: var(--font-plex-mono), ui-monospace, monospace;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.13em;
+  color: var(--ed-ink-3);
+}
+
+.dt-editorial .ed-label-num { color: var(--ed-signal); }
+
+.dt-editorial .ed-caption {
+  font-family: var(--font-plex-mono), ui-monospace, monospace;
+  font-size: 10.5px;
+  letter-spacing: 0.04em;
+  color: var(--ed-ink-3);
+}
+
+.dt-editorial .ed-num {
+  font-family: var(--font-newsreader), Georgia, serif;
+  font-weight: 400;
+  font-size: clamp(32px, 4vw, 52px);
+  line-height: 1;
+  color: var(--ed-ink);
+}
+
+.dt-editorial .ed-cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--ed-signal);
+  color: #ffffff;
+  font-family: var(--font-inter), sans-serif;
+  font-size: 14px;
+  font-weight: 500;
+  padding: 13px 22px;
+  border-radius: 3px;
+  transition: background-color 150ms ease;
+}
+.dt-editorial .ed-cta:hover { background: var(--ed-signal-deep); }
+
+.dt-editorial .ed-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--ed-ink);
+  font-weight: 500;
+  font-size: 14px;
+  text-decoration: underline;
+  text-underline-offset: 4px;
+  text-decoration-color: var(--ed-rule);
+  transition: text-decoration-color 150ms ease, color 150ms ease;
+}
+.dt-editorial .ed-link:hover {
+  color: var(--ed-signal);
+  text-decoration-color: var(--ed-signal);
+}
+
+.dt-editorial .ed-figure {
+  border: 1px solid var(--ed-rule);
+  background: var(--ed-paper-2);
+}
+
+.dt-editorial a.ed-inline {
+  color: var(--ed-signal);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.dt-editorial *:focus-visible {
+  outline: 2px solid var(--ed-signal);
+  outline-offset: 2px;
+}
