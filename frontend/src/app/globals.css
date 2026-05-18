@@ -723,27 +723,27 @@ h3,
   z-index: 80;
 }
 
-/* Group C: stitch primary button → keep solid fill; only fix box-shadow */
+/* Group C: stitch primary button → blue */
 .dt-stitch-primary {
-  background: #111827;
+  background: #2563eb;
   color: #ffffff;
   box-shadow: 0 1px 2px rgba(24, 24, 27, 0.05);
 }
 
 .dt-stitch-primary:hover {
-  background: #0f172a;
+  background: #1d4ed8;
   color: #ffffff;
 }
 
 .dark .dt-stitch-primary {
-  background: #f7f7f8;
-  color: #141416;
+  background: #3b82f6;
+  color: #ffffff;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
 }
 
 .dark .dt-stitch-primary:hover {
-  background: #ffffff;
-  color: #09090b;
+  background: #2563eb;
+  color: #ffffff;
 }
 
 /* Group A: stitch card → solid surface */

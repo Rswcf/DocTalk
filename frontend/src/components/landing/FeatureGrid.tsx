@@ -199,7 +199,7 @@ export default function FeatureGrid() {
             <ScrollReveal key={titleKey} delay={Math.min(index * 80, 320)}>
               <div
                 role="listitem"
-                className="flex h-full flex-col rounded-xl border border-zinc-200 bg-white p-6 shadow-sm transition-shadow duration-200 hover:shadow-md dark:border-zinc-800 dark:bg-zinc-900"
+                className="flex h-full flex-col rounded-xl border border-zinc-200 bg-white p-6 shadow-sm transition-[box-shadow,border-color] duration-200 hover:border-blue-300 hover:shadow-md dark:border-zinc-800 dark:bg-zinc-900 dark:hover:border-blue-700"
               >
                 <Visual />
                 <h3 className="mb-2 text-base font-semibold text-zinc-900 dark:text-zinc-100">

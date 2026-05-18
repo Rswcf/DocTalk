@@ -54,7 +54,7 @@ export default function HeroSection() {
           <Link
             href="/demo"
             onClick={() => trackEvent('landing_cta_clicked', { source: 'hero', reason: 'demo' })}
-            className="dt-stitch-primary inline-flex min-h-11 items-center gap-2 rounded-full px-5 py-2 text-sm font-semibold transition-colors focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950"
+            className="dt-stitch-primary inline-flex min-h-11 items-center gap-2 rounded-lg px-5 py-2 text-sm font-semibold transition-colors focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950"
           >
             {t('landing.cta.demo')}
             <ArrowRight aria-hidden="true" size={17} />
@@ -63,7 +63,7 @@ export default function HeroSection() {
             href="#auth"
             scroll={false}
             onClick={() => trackEvent('landing_cta_clicked', { source: 'hero', reason: 'sign_up' })}
-            className="inline-flex min-h-11 items-center rounded-full border border-white/14 bg-white/7 px-5 py-2 text-sm font-semibold text-[var(--workbench-ink)] transition-colors hover:bg-white/12 focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950"
+            className="inline-flex min-h-11 items-center rounded-lg border border-zinc-300 bg-white px-5 py-2 text-sm font-semibold text-zinc-900 transition-colors hover:border-zinc-400 focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:border-zinc-600"
           >
             {t('hero.signUpFree')}
           </Link>

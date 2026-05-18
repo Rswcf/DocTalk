@@ -64,25 +64,25 @@ export default function SocialProof() {
 
   return (
     <ScrollReveal>
-      <section className="max-w-5xl mx-auto px-6 py-24">
-        <div className="border-t border-zinc-200 dark:border-zinc-800 pt-16">
-          <h2 className="font-serif font-semibold tracking-tight text-3xl text-zinc-900 dark:text-zinc-50 text-center mb-12 text-balance">
+      <section className="border-y border-blue-800 bg-blue-700 py-20">
+        <div className="mx-auto max-w-5xl px-6">
+          <h2 className="mb-12 text-balance text-center font-serif text-3xl font-semibold tracking-tight text-white">
             {t('landing.social.title')}
           </h2>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+          <div className="grid grid-cols-2 gap-6 md:grid-cols-4">
             {metrics.map((metric) => (
               <div
                 key={metric.labelKey}
-                className="flex flex-col items-center text-center py-6"
+                className="flex flex-col items-center py-6 text-center"
               >
-                <div className="text-4xl md:text-5xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50 mb-2 tabular-nums">
+                <div className="mb-2 text-4xl font-bold tracking-tight tabular-nums text-white md:text-5xl">
                   {'staticValue' in metric ? (
                     metric.staticValue
                   ) : (
                     <AnimatedCounter target={metric.target} suffix={metric.suffix} />
                   )}
                 </div>
-                <div className="text-sm text-zinc-500 dark:text-zinc-300">
+                <div className="text-xs font-medium uppercase tracking-widest text-blue-200">
                   {t(metric.labelKey)}
                 </div>
               </div>
