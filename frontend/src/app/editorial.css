@@ -1,20 +1,35 @@
 /* Editorial design layer — "Monocle-crisp". Every rule is scoped under
    .dt-editorial so it never affects the functional app UI. Light only. */
 .dt-editorial {
-  --ed-paper: #faf9f6;
-  --ed-paper-2: #f1efe8;
+  --ed-paper: #f3eee1;
+  --ed-paper-2: #e9e1cf;
   --ed-ink: #1c1b19;
-  --ed-ink-2: #46443d;
-  --ed-ink-3: #86837a;
-  --ed-signal: #9a3b32;
-  --ed-signal-deep: #7e2f28;
-  --ed-rule: #d8d5cc;
+  --ed-ink-2: #48443b;
+  --ed-ink-3: #8b857a;
+  --ed-signal: #b0472f;
+  --ed-signal-deep: #8f3a26;
+  --ed-ochre: #c08a3e;
+  --ed-rule: #d3c9b3;
 
+  position: relative;
   background: var(--ed-paper);
   color: var(--ed-ink-2);
   font-family: var(--font-inter), system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
 }
+
+/* Print-craft paper grain — faint and intentional (a press texture,
+   not an AI glow). Sits below content. */
+.dt-editorial::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  opacity: 0.5;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200'><filter id='g'><feTurbulence type='fractalNoise' baseFrequency='0.82' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0.1  0 0 0 0 0.09  0 0 0 0 0.07  0 0 0 0.035 0'/></filter><rect width='100%25' height='100%25' filter='url(%23g)'/></svg>");
+}
+.dt-editorial > * { position: relative; z-index: 1; }
 
 .dt-editorial .ed-shell {
   max-width: 1200px;
@@ -36,13 +51,21 @@
   .dt-editorial .ed-section { padding: 56px 0; }
 }
 
+/* Hero display headline — heavy grotesque with italic-serif emphasis
+   words (wrap emphasis in <em>). A mixed-voice editorial headline. */
 .dt-editorial .ed-display {
-  font-family: var(--font-newsreader), Georgia, serif;
-  font-weight: 400;
-  font-size: clamp(40px, 6vw, 68px);
-  line-height: 1.05;
-  letter-spacing: -0.02em;
+  font-family: var(--font-inter), system-ui, sans-serif;
+  font-weight: 800;
+  font-size: clamp(46px, 7.4vw, 88px);
+  line-height: 1.0;
+  letter-spacing: -0.035em;
   color: var(--ed-ink);
+}
+.dt-editorial .ed-display em {
+  font-family: var(--font-newsreader), Georgia, serif;
+  font-weight: 500;
+  font-style: italic;
+  letter-spacing: -0.01em;
 }
 
 .dt-editorial .ed-h2 {
@@ -141,6 +164,28 @@
   text-decoration: underline;
   text-underline-offset: 2px;
 }
+
+/* Halftone dot block — a collage / print-craft element. */
+.dt-editorial .ed-halftone {
+  background-image: radial-gradient(var(--ed-ink-3) 1.1px, transparent 1.2px);
+  background-size: 9px 9px;
+  opacity: 0.5;
+}
+
+/* Registration crosshair — small print-craft mark. */
+.dt-editorial .ed-crosshair {
+  position: relative;
+  width: 14px;
+  height: 14px;
+}
+.dt-editorial .ed-crosshair::before,
+.dt-editorial .ed-crosshair::after {
+  content: "";
+  position: absolute;
+  background: var(--ed-ink-3);
+}
+.dt-editorial .ed-crosshair::before { left: 50%; top: 0; width: 1px; height: 100%; transform: translateX(-50%); }
+.dt-editorial .ed-crosshair::after { top: 50%; left: 0; height: 1px; width: 100%; transform: translateY(-50%); }
 
 .dt-editorial *:focus-visible {
   outline: 2px solid var(--ed-signal);
