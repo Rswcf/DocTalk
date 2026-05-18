@@ -194,7 +194,7 @@ export default function FeatureGrid() {
         </ScrollReveal>
         {/* Uniform 3-column grid (2 rows of 3 on desktop) — every tile is the
             same size so the section reads as a calm, even set. */}
-        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3" role="list">
+        <div className="grid auto-rows-fr grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3" role="list">
           {tiles.map(({ Visual, titleKey, descKey }, index) => (
             <ScrollReveal key={titleKey} delay={Math.min(index * 80, 320)}>
               <div

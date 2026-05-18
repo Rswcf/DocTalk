@@ -23,11 +23,11 @@ export default function SecuritySection() {
             {t('landing.security.title')}
           </h2>
         </ScrollReveal>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+        <div className="grid auto-rows-fr grid-cols-1 sm:grid-cols-2 gap-6">
           {cards.map(({ icon: Icon, titleKey, descKey }, index) => (
             <ScrollReveal key={titleKey} delay={index * 100}>
               <div
-                className="p-6 rounded-xl border border-zinc-100 dark:border-zinc-800 bg-white dark:bg-zinc-950 shadow-sm"
+                className="h-full p-6 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-sm"
               >
                 <div className="w-12 h-12 rounded-lg bg-accent-light dark:bg-accent/10 border border-accent/20 flex items-center justify-center mb-4">
                   <Icon aria-hidden="true" size={20} className="text-accent" />
