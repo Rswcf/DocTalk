@@ -1,54 +1,49 @@
 "use client";
 
 import React from 'react';
-import { Upload, MessageSquare, BookOpen } from 'lucide-react';
 import { useLocale } from '../../i18n';
 import ScrollReveal from './ScrollReveal';
-import { StaggeredReveal } from '../spell';
 
 const steps = [
-  { num: 1, icon: Upload, titleKey: 'landing.howItWorks.step1.title', descKey: 'landing.howItWorks.step1.desc' },
-  { num: 2, icon: MessageSquare, titleKey: 'landing.howItWorks.step2.title', descKey: 'landing.howItWorks.step2.desc' },
-  { num: 3, icon: BookOpen, titleKey: 'landing.howItWorks.step3.title', descKey: 'landing.howItWorks.step3.desc' },
+  { num: '01', titleKey: 'landing.howItWorks.step1.title', descKey: 'landing.howItWorks.step1.desc' },
+  { num: '02', titleKey: 'landing.howItWorks.step2.title', descKey: 'landing.howItWorks.step2.desc' },
+  { num: '03', titleKey: 'landing.howItWorks.step3.title', descKey: 'landing.howItWorks.step3.desc' },
 ];
 
 export default function HowItWorks() {
-  const { t } = useLocale();
+  const { t, tOr } = useLocale();
 
   return (
     <ScrollReveal>
-      <section id="how-it-works" className="max-w-5xl mx-auto px-6 py-24">
-        <h2 className="font-serif font-semibold tracking-tight text-3xl text-zinc-900 dark:text-zinc-50 text-center mb-16 text-balance">
-          {t('landing.howItWorks.title')}
-        </h2>
-        <div className="relative">
-          {/* Connecting dashed line (desktop only) */}
-          <div className="hidden md:block absolute top-10 left-[calc(16.67%+24px)] right-[calc(16.67%+24px)] border-t border-dashed border-accent/30" />
+      <section id="how-it-works" className="ed-section">
+        <div className="ed-shell">
+          {/* Section header */}
+          <div className="mb-12">
+            <p className="ed-label mb-3">{tOr('landing.howItWorks.eyebrow', 'How it works')}</p>
+            <h2 className="ed-h2">{t('landing.howItWorks.title')}</h2>
+          </div>
 
-          <StaggeredReveal
-            stagger={0.18}
-            className="grid grid-cols-1 md:grid-cols-3 gap-12 md:gap-0"
-          >
-            {steps.map(({ num, icon: Icon, titleKey, descKey }) => (
-              <div key={num} className="flex flex-col items-center text-center relative z-10">
-                {/* Number badge */}
-                <div className="w-10 h-10 rounded-full bg-accent text-accent-foreground text-sm font-bold flex items-center justify-center mb-4">
-                  {num}
+          <hr className="ed-rule mb-0" />
+
+          {/* Steps grid */}
+          <div className="grid grid-cols-1 md:grid-cols-3">
+            {steps.map(({ num, titleKey, descKey }, idx) => (
+              <React.Fragment key={num}>
+                <div
+                  className={
+                    'py-10 pr-8' +
+                    (idx > 0 ? ' md:pl-8 md:border-l border-[var(--ed-rule)]' : '')
+                  }
+                >
+                  <div className="ed-num mb-4">{num}</div>
+                  <h3 className="ed-h3 mb-3">{t(titleKey)}</h3>
+                  <p className="ed-body">{t(descKey)}</p>
                 </div>
-                {/* Icon */}
-                <div className="w-14 h-14 rounded-xl bg-zinc-50 dark:bg-zinc-800 border border-accent/20 flex items-center justify-center mb-4">
-                  <Icon aria-hidden="true" size={24} className="text-zinc-600 dark:text-zinc-300" />
-                </div>
-                {/* Text */}
-                <h3 className="font-semibold text-zinc-900 dark:text-zinc-100 mb-2">
-                  {t(titleKey)}
-                </h3>
-                <p className="text-sm text-zinc-600 dark:text-zinc-300 leading-relaxed max-w-xs">
-                  {t(descKey)}
-                </p>
-              </div>
+              </React.Fragment>
             ))}
-          </StaggeredReveal>
+          </div>
+
+          <hr className="ed-rule mt-0" />
         </div>
       </section>
     </ScrollReveal>

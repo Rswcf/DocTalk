@@ -60,34 +60,43 @@ const metrics = [
 ] as const;
 
 export default function SocialProof() {
-  const { t } = useLocale();
+  const { t, tOr } = useLocale();
 
   return (
     <ScrollReveal>
-      <section className="border-y border-blue-800 bg-blue-700 py-20">
-        <div className="mx-auto max-w-5xl px-6">
-          <h2 className="mb-12 text-balance text-center font-serif text-3xl font-semibold tracking-tight text-white">
-            {t('landing.social.title')}
-          </h2>
-          <div className="grid grid-cols-2 gap-6 md:grid-cols-4">
-            {metrics.map((metric) => (
+      <section className="ed-section">
+        <div className="ed-shell">
+          <hr className="ed-rule mb-12" />
+
+          {/* Section header */}
+          <div className="mb-12">
+            <p className="ed-label mb-3">{tOr('landing.social.eyebrow', 'By the numbers')}</p>
+            <h2 className="ed-h2">{t('landing.social.title')}</h2>
+          </div>
+
+          {/* Metrics grid */}
+          <div className="grid grid-cols-2 md:grid-cols-4">
+            {metrics.map((metric, idx) => (
               <div
                 key={metric.labelKey}
-                className="flex flex-col items-center py-6 text-center"
+                className={
+                  'py-8 pr-6' +
+                  (idx > 0 ? ' md:pl-6 md:border-l border-[var(--ed-rule)]' : '')
+                }
               >
-                <div className="mb-2 text-4xl font-bold tracking-tight tabular-nums text-white md:text-5xl">
+                <div className="ed-num mb-2">
                   {'staticValue' in metric ? (
                     metric.staticValue
                   ) : (
                     <AnimatedCounter target={metric.target} suffix={metric.suffix} />
                   )}
                 </div>
-                <div className="text-xs font-medium uppercase tracking-widest text-blue-200">
-                  {t(metric.labelKey)}
-                </div>
+                <p className="ed-label">{t(metric.labelKey)}</p>
               </div>
             ))}
           </div>
+
+          <hr className="ed-rule mt-12" />
         </div>
       </section>
     </ScrollReveal>
