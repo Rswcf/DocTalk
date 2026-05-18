@@ -222,7 +222,7 @@ export default function PricingPageClient() {
                   </span>
                   <span className="pb-1 text-sm text-zinc-500 dark:text-zinc-300">{t(plan.cadenceKey)}</span>
                 </div>
-                <ul className="mt-6 space-y-3 text-sm leading-7 text-zinc-600 dark:text-zinc-300">
+                <ul className="mt-6 flex-1 space-y-3 text-sm leading-7 text-zinc-600 dark:text-zinc-300">
                   {plan.featureKeys.map((featureKey) => (
                     <li key={featureKey} className="flex gap-3">
                       <span className="mt-1.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-accent-light text-accent">
