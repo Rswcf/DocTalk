@@ -110,6 +110,15 @@ git commit -m "docs: record Stitch variant selection for auth redesign"
 > - Card radius: `rounded-2xl` → `rounded-3xl` (Stitch `rounded-xl` token = 1.5rem = 24px).
 > - Email input fill: `bg-white` → `bg-zinc-100 dark:bg-zinc-800` (Stitch input spec = Zinc-100 background).
 > - Focus rings: `ring-zinc-400` → `ring-indigo-500` (Stitch reserves indigo `#4F46E5` for focus states).
+>
+> **Carried-forward a11y fixes from the Task 2 code-quality review (apply in Task 5, same focus-ring lines):**
+> - Email input: `focus:ring-2 focus:ring-* focus:ring-offset-*` → `focus-visible:ring-2 focus-visible:ring-* focus-visible:ring-offset-*` (match codebase `focus-visible` convention; `focus:border-*` / `focus:outline-none` stay).
+> - `emailSent`-state "Resend email" and "Use a different email" text buttons: add `focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:rounded-sm` (currently rely on browser default only).
+>
+> **Carried-forward fixes from the Task 3 code-quality review (apply in Task 5):**
+> - `auth/page.tsx` logo `Link` (Important): focus ring is missing the offset — add `focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-zinc-900` (every other interactive element has it; without it the ring merges into the dark card).
+> - `auth/page.tsx` logo `Link`: `transition-opacity` + `hover:opacity-80` dims the indigo logo dots too — change to `transition-colors` (drop `hover:opacity-80`; rely on a text-color hover or no hover).
+> - `auth/page.tsx` heading: `t("auth.signIn")` → `tOr("auth.signIn", "Sign in")` to avoid flashing the raw key during locale lazy-load.
 
 ---
 

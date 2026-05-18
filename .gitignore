@@ -72,3 +72,6 @@ frontend/tsconfig.tsbuildinfo
 # Personal IDE permission tweaks (keep repo defaults clean)
 .claude/settings.local.json
 
+
+# Brainstorming visual companion
+.superpowers/
