@@ -22,7 +22,7 @@ function AuthContent() {
 
   return (
     <main className="flex min-h-screen items-center justify-center bg-zinc-50 px-4 py-10 dark:bg-zinc-950">
-      <div className="w-full max-w-[400px] rounded-3xl border border-zinc-200 bg-white p-7 shadow-[0_8px_24px_-10px_rgba(24,24,27,0.12)] sm:p-8 dark:border-zinc-800 dark:bg-zinc-900 dark:shadow-[0_8px_24px_-10px_rgba(0,0,0,0.55)]">
+      <div className="w-full max-w-[440px] rounded-lg border border-zinc-200 bg-white p-7 shadow-[0_1px_3px_0_rgba(0,0,0,0.05),0_1px_2px_0_rgba(0,0,0,0.03)] sm:p-8 dark:border-zinc-800 dark:bg-zinc-900 dark:shadow-[0_1px_3px_0_rgba(0,0,0,0.4)]">
         <Link
           href="/"
           aria-label={tOr("auth.backHome", "Back home")}
