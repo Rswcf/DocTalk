@@ -15,7 +15,7 @@ export default function EdSection({
   children,
   id,
 }: EdSectionProps) {
-  const hasHeader = !!(label || title);
+  const hasHeader = !!(label || num || title);
 
   return (
     <section
@@ -25,14 +25,16 @@ export default function EdSection({
     >
       {!alt && <hr className="ed-rule" />}
       <div className="ed-shell">
-        {label && (
+        {(label || num) && (
           <div className="ed-label">
-            {num ? (
+            {num && label ? (
               <>
                 <span className="ed-label-num">{num}</span>
                 {" — "}
                 {label}
               </>
+            ) : num ? (
+              <span className="ed-label-num">{num}</span>
             ) : (
               label
             )}
@@ -41,7 +43,7 @@ export default function EdSection({
         {title && (
           <h2
             className="ed-h2"
-            style={label ? { marginTop: "12px" } : undefined}
+            style={label || num ? { marginTop: "12px" } : undefined}
           >
             {title}
           </h2>
