@@ -11,12 +11,12 @@ import {
   Database,
   Globe2,
   AlertTriangle,
-  Mail,
-  ArrowRight,
   type LucideIcon,
 } from "lucide-react";
-import Header from "../../components/Header";
-import Footer from "../../components/Footer";
+import MarketingShell from "../../components/marketing/MarketingShell";
+import EdPageHero from "../../components/marketing/EdPageHero";
+import EdSection from "../../components/marketing/EdSection";
+import EdCtaBanner from "../../components/marketing/EdCtaBanner";
 import { usePageTitle } from "../../lib/usePageTitle";
 import { useLocale } from "../../i18n";
 
@@ -136,20 +136,23 @@ const trustStats = [
 
 function ControlCard({ icon: Icon, title, detail, evidence }: Control) {
   return (
-    <div className="group flex h-full flex-col rounded-xl border border-zinc-200 bg-white p-5 shadow-sm transition-[border-color,box-shadow,transform] duration-200 hover:-translate-y-0.5 hover:border-zinc-300 hover:shadow-md dark:border-zinc-800 dark:bg-zinc-900 dark:hover:border-zinc-700">
-      <div className="mb-3 flex items-center gap-3">
-        <span className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-zinc-200 bg-zinc-50 text-accent transition-colors group-hover:border-accent/30 group-hover:bg-accent-light dark:border-zinc-800 dark:bg-zinc-950">
-          <Icon aria-hidden size={18} />
-        </span>
-        <h3 className="text-base font-semibold text-zinc-900 dark:text-zinc-100">
-          {title}
-        </h3>
-      </div>
-      <p className="text-sm text-zinc-600 dark:text-zinc-300 leading-relaxed">
+    <div className="ed-card h-full" style={{ display: "flex", flexDirection: "column" }}>
+      <span style={{ color: "var(--ed-ink-3)", display: "flex", marginBottom: "12px" }}>
+        <Icon aria-hidden size={18} />
+      </span>
+      <h3 className="ed-h3">{title}</h3>
+      <p className="ed-body" style={{ marginTop: "8px" }}>
         {detail}
       </p>
       {evidence && (
-        <p className="mt-auto border-t border-zinc-200 pt-3 font-mono text-[11px] leading-5 text-zinc-400 dark:border-zinc-800 dark:text-zinc-500">
+        <p
+          className="ed-caption"
+          style={{
+            marginTop: "auto",
+            paddingTop: "12px",
+            borderTop: "1px solid var(--ed-rule)",
+          }}
+        >
           {evidence}
         </p>
       )}
@@ -162,156 +165,149 @@ export default function TrustPageClient() {
   usePageTitle(t("trust.title", {}) || "Trust & Security");
 
   return (
-    <div className="dt-stitch-theme flex flex-col min-h-screen">
-      <Header variant="minimal" />
-      <main id="main-content" className="flex-1">
-        <section className="mx-auto max-w-6xl px-6 pt-16 pb-10">
-          <div className="grid gap-8 lg:grid-cols-[1fr_420px] lg:items-end">
-            <div>
-              <p className="mb-3 font-mono text-[11px] uppercase tracking-widest text-zinc-500 dark:text-zinc-400">
-                Trust Center
+    <MarketingShell
+      breadcrumb={[
+        { label: t("useCasesHub.breadcrumb.home"), href: "/" },
+        { label: "Trust & Security" },
+      ]}
+    >
+      <EdPageHero
+        eyebrow="Trust Center"
+        title="The real controls protecting your documents."
+        lede="What DocTalk actually does to keep your uploads private, isolated, and unused for model training. And openly, what we haven't certified yet."
+        meta={
+          <div className="flex gap-4 flex-wrap items-center">
+            <Link href="/privacy" className="ed-cta">
+              Privacy policy
+            </Link>
+            <Link href="/contact" className="ed-link">
+              Report security issue <span aria-hidden="true">→</span>
+            </Link>
+          </div>
+        }
+      />
+
+      <EdSection alt label="Control summary">
+        <div
+          className="grid grid-cols-1 sm:grid-cols-3"
+          style={{ gap: "16px" }}
+        >
+          {trustStats.map((stat) => (
+            <div
+              key={stat.label}
+              style={{
+                border: "1px solid var(--ed-rule)",
+                background: "var(--ed-paper-2)",
+                padding: "16px",
+              }}
+            >
+              <div className="ed-h3">{stat.value}</div>
+              <p className="ed-caption" style={{ marginTop: "6px" }}>
+                {stat.label}
               </p>
-              <h1 className="mb-5 max-w-3xl text-balance font-serif text-3xl font-medium tracking-[-0.03em] text-zinc-900 dark:text-zinc-50 md:text-5xl">
-                The real controls protecting your documents.
-              </h1>
-              <p className="max-w-2xl text-lg leading-relaxed text-zinc-600 dark:text-zinc-300">
-                What DocTalk actually does to keep your uploads private, isolated,
-                and unused for model training. And openly, what we haven&apos;t
-                certified yet.
-              </p>
-              <div className="mt-7 flex flex-wrap gap-3">
-                <Link
-                  href="/privacy"
-                  className="inline-flex items-center gap-2 rounded-lg bg-zinc-900 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-zinc-800 dark:bg-zinc-50 dark:text-zinc-900 dark:hover:bg-zinc-200 focus-visible:ring-2 focus-visible:ring-zinc-400"
-                >
-                  Privacy policy
-                  <ArrowRight aria-hidden size={15} />
-                </Link>
-                <Link
-                  href="/contact"
-                  className="inline-flex items-center gap-2 rounded-lg border border-zinc-200 bg-white px-4 py-2.5 text-sm font-semibold text-zinc-700 transition-colors hover:border-zinc-300 hover:text-zinc-900 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:border-zinc-700 dark:hover:text-zinc-100 focus-visible:ring-2 focus-visible:ring-zinc-400"
-                >
-                  Report security issue
-                </Link>
-              </div>
             </div>
+          ))}
+        </div>
+        <p
+          className="ed-caption"
+          style={{
+            marginTop: "20px",
+            padding: "12px 14px",
+            border: "1px solid var(--ed-rule)",
+            color: "var(--ed-ochre)",
+          }}
+        >
+          Compliance badges are not claimed unless they are actually audited.
+        </p>
+      </EdSection>
 
-            <aside className="rounded-xl border border-zinc-200 bg-white p-4 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
-              <div className="mb-4 flex items-center gap-2 text-sm font-semibold text-zinc-900 dark:text-zinc-100">
-                <ShieldCheck aria-hidden size={17} className="text-accent" />
-                Control summary
-              </div>
-              <div className="grid grid-cols-3 gap-3">
-                {trustStats.map((stat) => (
-                  <div key={stat.label} className="rounded-lg border border-zinc-200 bg-zinc-50 p-3 dark:border-zinc-800 dark:bg-zinc-950">
-                    <div className="text-lg font-semibold text-zinc-900 dark:text-zinc-50">
-                      {stat.value}
-                    </div>
-                    <div className="mt-1 text-[11px] font-medium leading-4 text-zinc-500 dark:text-zinc-400">
-                      {stat.label}
-                    </div>
-                  </div>
-                ))}
-              </div>
-              <p className="mt-4 rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs leading-5 text-amber-800 dark:border-amber-900/60 dark:bg-amber-950/30 dark:text-amber-200">
-                Compliance badges are not claimed unless they are actually audited.
-              </p>
-            </aside>
-          </div>
-        </section>
+      <EdSection num="01" title="Encryption & transit">
+        <div
+          className="grid grid-cols-1 md:grid-cols-3"
+          style={{ gap: "16px", gridAutoRows: "1fr" }}
+        >
+          {encryptionControls.map((c) => (
+            <ControlCard key={c.title} {...c} />
+          ))}
+        </div>
+      </EdSection>
 
-        {/* Encryption & transit */}
-        <section className="max-w-5xl mx-auto px-6 py-8">
-          <h2 className="text-[11px] font-mono uppercase tracking-widest text-zinc-500 dark:text-zinc-400 mb-4">
-            01 — Encryption & transit
-          </h2>
-          <div className="grid gap-4 md:grid-cols-3">
-            {encryptionControls.map((c) => (
-              <ControlCard key={c.title} {...c} />
-            ))}
-          </div>
-        </section>
+      <EdSection alt num="02" title="Ingest safety">
+        <div
+          className="grid grid-cols-1 md:grid-cols-3"
+          style={{ gap: "16px", gridAutoRows: "1fr" }}
+        >
+          {ingestControls.map((c) => (
+            <ControlCard key={c.title} {...c} />
+          ))}
+        </div>
+      </EdSection>
 
-        {/* Ingest safety */}
-        <section className="max-w-5xl mx-auto px-6 py-8">
-          <h2 className="text-[11px] font-mono uppercase tracking-widest text-zinc-500 dark:text-zinc-400 mb-4">
-            02 — Ingest safety
-          </h2>
-          <div className="grid gap-4 md:grid-cols-3">
-            {ingestControls.map((c) => (
-              <ControlCard key={c.title} {...c} />
-            ))}
-          </div>
-        </section>
+      <EdSection num="03" title="Your data, your control">
+        <div
+          className="grid grid-cols-1 md:grid-cols-3"
+          style={{ gap: "16px", gridAutoRows: "1fr" }}
+        >
+          {dataRightsControls.map((c) => (
+            <ControlCard key={c.title} {...c} />
+          ))}
+        </div>
+      </EdSection>
 
-        {/* Data rights */}
-        <section className="max-w-5xl mx-auto px-6 py-8">
-          <h2 className="text-[11px] font-mono uppercase tracking-widest text-zinc-500 dark:text-zinc-400 mb-4">
-            03 — Your data, your control
-          </h2>
-          <div className="grid gap-4 md:grid-cols-3">
-            {dataRightsControls.map((c) => (
-              <ControlCard key={c.title} {...c} />
-            ))}
-          </div>
-        </section>
-
-        {/* Honest gaps */}
-        <section className="max-w-5xl mx-auto px-6 py-8">
-          <h2 className="text-[11px] font-mono uppercase tracking-widest text-zinc-500 dark:text-zinc-400 mb-4">
-            04 — What we don&apos;t have yet
-          </h2>
-          <div className="divide-y divide-zinc-200 overflow-hidden rounded-xl border border-zinc-200 bg-white shadow-sm dark:divide-zinc-800 dark:border-zinc-800 dark:bg-zinc-900">
-            {gaps.map((g) => (
-              <div key={g.name} className="flex flex-col gap-2 p-5 md:flex-row md:items-start md:gap-6">
-                <div className="md:w-64 shrink-0">
-                  <div className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
-                    {g.name}
-                  </div>
-                  <div className="mt-1 inline-flex items-center gap-1.5 text-[11px] font-mono uppercase tracking-wide text-amber-700 dark:text-amber-400">
-                    <span className="h-1.5 w-1.5 rounded-full bg-amber-500" aria-hidden />
-                    {g.status}
-                  </div>
+      <EdSection alt num="04" title="What we don't have yet">
+        <div>
+          {gaps.map((g, i) => (
+            <div
+              key={g.name}
+              className="flex flex-col md:flex-row"
+              style={{
+                padding: "18px 0",
+                borderTop: "1px solid var(--ed-rule)",
+                borderBottom:
+                  i === gaps.length - 1 ? "1px solid var(--ed-rule)" : undefined,
+                gap: "12px",
+              }}
+            >
+              <div className="md:w-64 shrink-0">
+                <div className="ed-body" style={{ fontWeight: 600 }}>
+                  {g.name}
                 </div>
-                <p className="text-sm text-zinc-600 dark:text-zinc-300 leading-relaxed">
-                  {g.note}
-                </p>
+                <div
+                  className="ed-caption"
+                  style={{
+                    marginTop: "6px",
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "6px",
+                    textTransform: "uppercase",
+                    color: "var(--ed-ochre)",
+                  }}
+                >
+                  <span
+                    aria-hidden
+                    style={{
+                      width: "5px",
+                      height: "5px",
+                      background: "var(--ed-ochre)",
+                    }}
+                  />
+                  {g.status}
+                </div>
               </div>
-            ))}
-          </div>
-        </section>
-
-        {/* Contact */}
-        <section className="max-w-5xl mx-auto px-6 py-12">
-          <div className="flex flex-col gap-4 rounded-xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-900 md:flex-row md:items-center md:justify-between md:p-8">
-            <div>
-              <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100 mb-1">
-                Report a security issue
-              </h2>
-              <p className="text-sm text-zinc-600 dark:text-zinc-300">
-                Responsible disclosure welcomed. We reply to every vulnerability
-                report within 72 hours.
+              <p className="ed-body" style={{ flex: 1 }}>
+                {g.note}
               </p>
             </div>
-            <div className="flex flex-wrap gap-3">
-              <Link
-                href="/contact"
-                className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-accent text-accent-foreground text-sm font-semibold shadow-sm hover:shadow-md hover:bg-accent-hover transition-[box-shadow,background-color] motion-reduce:transition-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-950"
-              >
-                <Mail aria-hidden size={14} />
-                Contact security
-              </Link>
-              <Link
-                href="/privacy"
-                className="inline-flex items-center px-4 py-2 rounded-lg border border-zinc-200 dark:border-zinc-700 text-sm font-semibold text-zinc-700 dark:text-zinc-200 hover:border-accent hover:text-accent transition-colors motion-reduce:transition-none"
-              >
-                Privacy Policy
-              </Link>
-            </div>
-          </div>
-        </section>
-      </main>
-      <Footer />
-    </div>
+          ))}
+        </div>
+      </EdSection>
+
+      <EdCtaBanner
+        title="Report a security issue"
+        description="Responsible disclosure welcomed. We reply to every vulnerability report within 72 hours."
+        primary={{ label: "Contact security", href: "/contact" }}
+        secondary={{ label: "Privacy Policy", href: "/privacy" }}
+      />
+    </MarketingShell>
   );
 }
