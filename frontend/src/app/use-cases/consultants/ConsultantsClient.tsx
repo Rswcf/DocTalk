@@ -2,11 +2,6 @@
 
 import React from 'react';
 import Link from 'next/link';
-import Header from '../../../components/Header';
-import Footer from '../../../components/Footer';
-import ArticleMeta from '../../../components/seo/ArticleMeta';
-import FAQSection from '../../../components/seo/FAQSection';
-import CTABanner from '../../../components/seo/CTABanner';
 import {
   Briefcase,
   FileText,
@@ -16,13 +11,20 @@ import {
   Upload,
   MessageSquare,
   CheckCircle,
-  ArrowRight,
-  ChevronRight,
   TrendingUp,
   Scale,
   Lock,
   Shield,
 } from 'lucide-react';
+import MarketingShell from '../../../components/marketing/MarketingShell';
+import EdPageHero from '../../../components/marketing/EdPageHero';
+import EdSection from '../../../components/marketing/EdSection';
+import EdProse from '../../../components/marketing/EdProse';
+import EdFeatureList from '../../../components/marketing/EdFeatureList';
+import EdCardGrid from '../../../components/marketing/EdCardGrid';
+import EdStepRow from '../../../components/marketing/EdStepRow';
+import EdFaqList from '../../../components/marketing/EdFaqList';
+import EdCtaBanner from '../../../components/marketing/EdCtaBanner';
 
 const features = [
   {
@@ -80,6 +82,12 @@ const steps = [
   { icon: CheckCircle, step: '3', title: 'Get Cited Answers', description: 'Receive answers with numbered citations. Click any citation to jump to the exact passage in the original document.' },
 ];
 
+const relatedUseCases = [
+  { href: '/use-cases/finance', icon: TrendingUp, title: 'Finance', body: 'Analyze 10-K filings, earnings reports, and financial documents' },
+  { href: '/use-cases/lawyers', icon: Scale, title: 'Legal', body: 'Review contracts, court filings, and legal documents' },
+  { href: '/use-cases/compliance', icon: Shield, title: 'Compliance', body: 'Analyze regulatory and policy documents' },
+];
+
 const faqItems = [
   {
     question: 'Can DocTalk handle confidential client documents?',
@@ -110,256 +118,121 @@ const faqItems = [
 
 export default function ConsultantsClient() {
   return (
-    <div className="min-h-screen flex flex-col bg-white dark:bg-zinc-950">
-      <Header variant="minimal" />
-      <main className="flex-1">
-        {/* Breadcrumb */}
-        <div className="max-w-4xl mx-auto px-6 pt-8">
-          <nav className="flex items-center text-sm text-zinc-500 dark:text-zinc-300 space-x-1">
-            <Link href="/" className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors">Home</Link>
-            <ChevronRight className="w-3 h-3" />
-            <Link href="/use-cases" className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors">Use Cases</Link>
-            <ChevronRight className="w-3 h-3" />
-            <span className="text-zinc-900 dark:text-zinc-100">Consultants &amp; Advisors</span>
-          </nav>
-        </div>
+    <MarketingShell
+      breadcrumb={[
+        { label: 'Home', href: '/' },
+        { label: 'Use Cases', href: '/use-cases' },
+        { label: 'Consultants & Advisors' },
+      ]}
+    >
+      <EdPageHero
+        icon={Briefcase}
+        title="AI Document Analysis for Consultants and Advisors"
+        lede="Analyze RFPs, market research, financial statements, and client documents with AI-powered cited answers. Deliver faster, more thorough analysis."
+        primaryCta={{ label: 'Try Free Demo', href: '/demo' }}
+      />
 
-        {/* Hero */}
-        <section className="max-w-4xl mx-auto px-6 pt-12 pb-16 text-center">
-          <div className="w-14 h-14 rounded-xl bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center mx-auto mb-6">
-            <Briefcase className="w-7 h-7 text-zinc-600 dark:text-zinc-300" />
-          </div>
-          <h1 className="font-serif text-3xl sm:text-4xl font-semibold text-zinc-900 dark:text-zinc-100 tracking-tight mb-4">
-            AI Document Analysis for Consultants and Advisors
-          </h1>
-          <p className="text-lg text-zinc-500 dark:text-zinc-300 max-w-2xl mx-auto mb-8">
-            Analyze RFPs, market research, financial statements, and client documents with AI-powered cited answers. Deliver faster, more thorough analysis.
+      <EdSection title="The Document Challenge for Consultants">
+        <EdProse>
+          <p>
+            Consultants spend a significant portion of their time reading. Whether it is a 200-page RFP, a stack of market research reports, or a client&apos;s financial statements, the sheer volume of documents requires hours of careful review before any analysis can begin.
           </p>
-          <ArticleMeta author="DocTalk Team" published="2026-03-18" centered className="mb-8" />
-          <Link
-            href="/demo"
-            className="inline-flex items-center px-6 py-3 bg-zinc-900 dark:bg-zinc-50 text-white dark:text-zinc-900 rounded-lg font-medium hover:bg-zinc-800 dark:hover:bg-zinc-200 transition-colors"
-          >
-            Try Free Demo <ArrowRight className="ml-2 w-4 h-4" />
-          </Link>
-        </section>
-
-        {/* The Challenge */}
-        <section className="bg-zinc-50 dark:bg-zinc-900/50">
-          <div className="max-w-4xl mx-auto px-6 py-16">
-            <h2 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100 tracking-tight mb-6">
-              The Document Challenge for Consultants
-            </h2>
-            <div className="prose-zinc max-w-none">
-              <p className="text-zinc-600 dark:text-zinc-300 mb-4">
-                Consultants spend a significant portion of their time reading. Whether it is a 200-page RFP, a stack of market research reports, or a client&apos;s financial statements, the sheer volume of documents requires hours of careful review before any analysis can begin.
-              </p>
-              <p className="text-zinc-600 dark:text-zinc-300 mb-4">
-                The pressure to deliver thorough analysis quickly means consultants often need to extract specific data points from dense documents under tight deadlines. Missing a key requirement in an RFP or overlooking a risk factor in a financial report can have serious consequences.
-              </p>
-              <p className="text-zinc-600 dark:text-zinc-300 mb-4">
-                Reports like Thomson Reuters&apos;{' '}
-                <a href="https://www.thomsonreuters.com/content/dam/ewp-m/documents/thomsonreuters/en/pdf/reports/2026-ai-in-professional-services-report.pdf" target="_blank" rel="noopener noreferrer" className="text-blue-600 dark:text-blue-400 hover:underline">AI in Professional Services report</a>
-                {' '}highlight how AI is transforming knowledge work and document analysis in professional services.
-              </p>
-              <p className="text-zinc-600 dark:text-zinc-300">
-                DocTalk accelerates this process by letting you ask questions about any document and receiving answers with exact citations. You can verify every claim against the source in seconds, rather than manually searching through hundreds of pages.
-              </p>
-            </div>
-          </div>
-        </section>
-
-        {/* How DocTalk Helps */}
-        <section className="max-w-4xl mx-auto px-6 py-16">
-          <h2 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100 tracking-tight mb-8">
-            How DocTalk Helps Consultants
-          </h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-            {features.map((item) => {
-              const Icon = item.icon;
-              return (
-                <div
-                  key={item.title}
-                  className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl p-6"
-                >
-                  <div className="w-9 h-9 rounded-lg bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center mb-3">
-                    <Icon className="w-4.5 h-4.5 text-zinc-600 dark:text-zinc-300" />
-                  </div>
-                  <h3 className="text-base font-semibold text-zinc-900 dark:text-zinc-100 mb-2">
-                    {item.title}
-                  </h3>
-                  <p className="text-sm text-zinc-500 dark:text-zinc-300">
-                    {item.description}
-                  </p>
-                </div>
-              );
-            })}
-          </div>
-        </section>
-
-        {/* Supported Document Types */}
-        <section className="bg-zinc-50 dark:bg-zinc-900/50">
-          <div className="max-w-4xl mx-auto px-6 py-16">
-            <h2 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100 tracking-tight mb-6">
-              Supported Document Types
-            </h2>
-            <p className="text-zinc-600 dark:text-zinc-300 mb-6">
-              DocTalk works with the formats consultants use daily. See{' '}
-              <Link href="/features/multi-format" className="text-blue-600 dark:text-blue-400 hover:underline">
-                all supported formats
-              </Link>
-              {' '}for the full list.
-            </p>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {docTypes.map((item) => (
-                <div
-                  key={item.format}
-                  className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl p-5"
-                >
-                  <h3 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100 mb-1">
-                    {item.format}
-                  </h3>
-                  <p className="text-sm text-zinc-500 dark:text-zinc-300">
-                    {item.detail}
-                  </p>
-                </div>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        {/* Example Questions */}
-        <section className="max-w-4xl mx-auto px-6 py-16">
-          <h2 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100 tracking-tight mb-6">
-            Example Questions Consultants Ask
-          </h2>
-          <p className="text-zinc-600 dark:text-zinc-300 mb-6">
-            Upload any client document and try questions like these. Every answer includes citations you can click to jump to the original text.
+          <p>
+            The pressure to deliver thorough analysis quickly means consultants often need to extract specific data points from dense documents under tight deadlines. Missing a key requirement in an RFP or overlooking a risk factor in a financial report can have serious consequences.
           </p>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {exampleQuestions.map((q) => (
-              <div
-                key={q}
-                className="flex items-start gap-3 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl p-4"
-              >
-                <MessageSquare className="w-4 h-4 text-blue-600 dark:text-blue-400 mt-0.5 shrink-0" />
-                <span className="text-sm text-zinc-700 dark:text-zinc-200">{q}</span>
-              </div>
-            ))}
-          </div>
-        </section>
+          <p>
+            Reports like Thomson Reuters&apos;{' '}
+            <a href="https://www.thomsonreuters.com/content/dam/ewp-m/documents/thomsonreuters/en/pdf/reports/2026-ai-in-professional-services-report.pdf" target="_blank" rel="noopener noreferrer">AI in Professional Services report</a>
+            {' '}highlight how AI is transforming knowledge work and document analysis in professional services.
+          </p>
+          <p>
+            DocTalk accelerates this process by letting you ask questions about any document and receiving answers with exact citations. You can verify every claim against the source in seconds, rather than manually searching through hundreds of pages.
+          </p>
+        </EdProse>
+      </EdSection>
 
-        {/* Security & Privacy */}
-        <section className="bg-zinc-50 dark:bg-zinc-900/50">
-          <div className="max-w-4xl mx-auto px-6 py-16">
-            <div className="flex items-start gap-4 mb-6">
-              <div className="w-10 h-10 rounded-lg bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center shrink-0">
-                <Shield className="w-5 h-5 text-zinc-600 dark:text-zinc-300" />
-              </div>
-              <div>
-                <h2 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100 tracking-tight mb-3">
-                  Security for Confidential Documents
-                </h2>
-                <p className="text-zinc-600 dark:text-zinc-300 mb-4">
-                  Client confidentiality is non-negotiable for consultants. DocTalk is built with security as a priority.
-                </p>
-              </div>
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {securityItems.map((item) => {
-                const Icon = item.icon;
-                return (
-                  <div
-                    key={item.title}
-                    className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl p-5"
-                  >
-                    <div className="flex items-center gap-3 mb-2">
-                      <Icon className="w-4 h-4 text-zinc-600 dark:text-zinc-300" />
-                      <h3 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
-                        {item.title}
-                      </h3>
-                    </div>
-                    <p className="text-sm text-zinc-500 dark:text-zinc-300">
-                      {item.detail}
-                    </p>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        </section>
-
-        {/* Getting Started */}
-        <section className="max-w-4xl mx-auto px-6 py-16">
-          <h2 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100 tracking-tight mb-8 text-center">
-            Get Started in 3 Steps
-          </h2>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
-            {steps.map((item) => {
-              const Icon = item.icon;
-              return (
-                <div key={item.step} className="text-center">
-                  <div className="w-12 h-12 rounded-full bg-zinc-900 dark:bg-zinc-50 text-white dark:text-zinc-900 flex items-center justify-center mx-auto mb-4 text-lg font-semibold">
-                    {item.step}
-                  </div>
-                  <div className="w-10 h-10 rounded-lg bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center mx-auto mb-3">
-                    <Icon className="w-5 h-5 text-zinc-600 dark:text-zinc-300" />
-                  </div>
-                  <h3 className="text-base font-semibold text-zinc-900 dark:text-zinc-100 mb-2">
-                    {item.title}
-                  </h3>
-                  <p className="text-sm text-zinc-500 dark:text-zinc-300">
-                    {item.description}
-                  </p>
-                </div>
-              );
-            })}
-          </div>
-        </section>
-
-        {/* Related Use Cases */}
-        <section className="bg-zinc-50 dark:bg-zinc-900/50">
-          <div className="max-w-4xl mx-auto px-6 py-16">
-            <h2 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100 tracking-tight mb-6">
-              Related Use Cases
-            </h2>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <Link href="/use-cases/finance" className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl p-5 hover:border-blue-300 dark:hover:border-blue-700 transition-colors">
-                <TrendingUp className="w-5 h-5 text-zinc-600 dark:text-zinc-300 mb-2" />
-                <h3 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100 mb-1">Finance</h3>
-                <p className="text-xs text-zinc-500 dark:text-zinc-300">Analyze 10-K filings, earnings reports, and financial documents</p>
-              </Link>
-              <Link href="/use-cases/lawyers" className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl p-5 hover:border-blue-300 dark:hover:border-blue-700 transition-colors">
-                <Scale className="w-5 h-5 text-zinc-600 dark:text-zinc-300 mb-2" />
-                <h3 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100 mb-1">Legal</h3>
-                <p className="text-xs text-zinc-500 dark:text-zinc-300">Review contracts, court filings, and legal documents</p>
-              </Link>
-              <Link href="/use-cases/compliance" className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl p-5 hover:border-blue-300 dark:hover:border-blue-700 transition-colors">
-                <Shield className="w-5 h-5 text-zinc-600 dark:text-zinc-300 mb-2" />
-                <h3 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100 mb-1">Compliance</h3>
-                <p className="text-xs text-zinc-500 dark:text-zinc-300">Analyze regulatory and policy documents</p>
-              </Link>
-            </div>
-          </div>
-        </section>
-
-        {/* FAQ */}
-        <section className="max-w-4xl mx-auto px-6 py-16">
-          <h2 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100 tracking-tight mb-8">
-            Frequently Asked Questions
-          </h2>
-          <FAQSection items={faqItems} />
-        </section>
-
-        {/* CTA */}
-        <CTABanner
-          title="Ready to accelerate your document analysis?"
-          description="Upload an RFP, market report, or client document and see how AI-powered cited answers can save hours of review time. No credit card required."
-          buttonText="Try Free Demo"
-          href="/demo"
+      <EdSection alt title="How DocTalk Helps Consultants">
+        <EdFeatureList
+          items={features.map((f) => ({ title: f.title, body: f.description, icon: f.icon }))}
         />
-      </main>
-      <Footer />
-    </div>
+      </EdSection>
+
+      <EdSection title="Supported Document Types">
+        <p className="ed-body" style={{ marginBottom: '24px' }}>
+          DocTalk works with the formats consultants use daily. See{' '}
+          <Link href="/features/multi-format" className="ed-inline">
+            all supported formats
+          </Link>
+          {' '}for the full list.
+        </p>
+        <EdCardGrid
+          columns={2}
+          items={docTypes.map((d) => ({ title: d.format, body: d.detail }))}
+        />
+      </EdSection>
+
+      <EdSection alt title="Example Questions Consultants Ask">
+        <p className="ed-body" style={{ marginBottom: '24px' }}>
+          Upload any client document and try questions like these. Every answer includes citations you can click to jump to the original text.
+        </p>
+        <EdCardGrid
+          columns={2}
+          items={exampleQuestions.map((q) => ({ title: q }))}
+        />
+      </EdSection>
+
+      <EdSection title="Security for Confidential Documents">
+        <p className="ed-body" style={{ marginBottom: '24px' }}>
+          Client confidentiality is non-negotiable for consultants. DocTalk is built with security as a priority.
+        </p>
+        <EdCardGrid
+          columns={2}
+          items={securityItems.map((s) => ({ title: s.title, body: s.detail, icon: s.icon }))}
+        />
+      </EdSection>
+
+      <EdSection alt title="Get Started in 3 Steps">
+        <EdStepRow
+          steps={steps.map((s) => ({ title: s.title, body: s.description, icon: s.icon }))}
+        />
+      </EdSection>
+
+      <EdSection title="Related Use Cases">
+        <div
+          className="grid grid-cols-1 sm:grid-cols-3"
+          style={{ gap: '16px', gridAutoRows: '1fr' }}
+        >
+          {relatedUseCases.map((item) => {
+            const Icon = item.icon;
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                className="ed-card h-full"
+                style={{ display: 'flex', flexDirection: 'column' }}
+              >
+                <div style={{ marginBottom: '10px', color: 'var(--ed-ink-3)' }}>
+                  <Icon className="w-4 h-4" />
+                </div>
+                <h3 className="ed-h3">{item.title}</h3>
+                <p className="ed-body" style={{ marginTop: '8px' }}>
+                  {item.body}
+                </p>
+              </Link>
+            );
+          })}
+        </div>
+      </EdSection>
+
+      <EdSection alt title="Frequently Asked Questions">
+        <EdFaqList items={faqItems} />
+      </EdSection>
+
+      <EdCtaBanner
+        title="Ready to accelerate your document analysis?"
+        description="Upload an RFP, market report, or client document and see how AI-powered cited answers can save hours of review time. No credit card required."
+        primary={{ label: 'Try Free Demo', href: '/demo' }}
+      />
+    </MarketingShell>
   );
 }
