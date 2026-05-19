@@ -20,33 +20,7 @@ import EdCardGrid from '../../../components/marketing/EdCardGrid';
 import EdFaqList from '../../../components/marketing/EdFaqList';
 import EdCtaBanner from '../../../components/marketing/EdCtaBanner';
 import EdRelatedLinks from '../../../components/marketing/EdRelatedLinks';
-
-function CompCell({ value }: { value: boolean | 'partial' }) {
-  const { t } = useLocale();
-  const mono = {
-    fontFamily: 'var(--font-plex-mono), ui-monospace, monospace',
-    fontSize: '18px',
-  };
-  if (value === true) {
-    return (
-      <span role="img" aria-label={t('common.yes')} style={{ ...mono, color: 'var(--ed-signal)' }}>
-        ✓
-      </span>
-    );
-  }
-  if (value === 'partial') {
-    return (
-      <span role="img" aria-label={t('comparison.partial')} style={{ ...mono, fontSize: '15.5px', color: 'var(--ed-ochre)' }}>
-        ~ {t('comparison.partial')}
-      </span>
-    );
-  }
-  return (
-    <span role="img" aria-label={t('common.no')} style={{ ...mono, color: 'var(--ed-ink-3)' }}>
-      –
-    </span>
-  );
-}
+import EdInlineCell from '../../../components/marketing/EdInlineCell';
 
 export default function CitationsClient() {
   const { t } = useLocale();
@@ -251,16 +225,16 @@ export default function CitationsClient() {
                     {row.feature}
                   </th>
                   <td style={{ ...cellStyle, background: 'var(--ed-paper-2)' }}>
-                    <CompCell value={row.doctalk} />
+                    <EdInlineCell value={row.doctalk} />
                   </td>
                   <td style={cellStyle}>
-                    <CompCell value={row.chatpdf} />
+                    <EdInlineCell value={row.chatpdf} />
                   </td>
                   <td style={cellStyle}>
-                    <CompCell value={row.askyourpdf} />
+                    <EdInlineCell value={row.askyourpdf} />
                   </td>
                   <td style={cellStyle}>
-                    <CompCell value={row.humata} />
+                    <EdInlineCell value={row.humata} />
                   </td>
                 </tr>
               ))}

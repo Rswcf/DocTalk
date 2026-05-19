@@ -2,6 +2,7 @@
 
 import React from "react";
 import { useLocale } from "../../i18n";
+import EdInlineCell from "./EdInlineCell";
 
 interface Feature {
   name: string;
@@ -12,61 +13,6 @@ interface Feature {
 interface EdComparisonTableProps {
   features: Feature[];
   competitorName: string;
-}
-
-function CellValue({ value }: { value: string | boolean }) {
-  const { t } = useLocale();
-
-  if (typeof value === "boolean") {
-    if (value) {
-      return (
-        <span
-          role="img"
-          aria-label={t("common.yes")}
-          style={{
-            fontFamily: "var(--font-plex-mono), ui-monospace, monospace",
-            fontSize: "18px",
-            color: "var(--ed-signal)",
-          }}
-        >
-          ✓
-        </span>
-      );
-    }
-    return (
-      <span
-        role="img"
-        aria-label={t("common.no")}
-        style={{
-          fontFamily: "var(--font-plex-mono), ui-monospace, monospace",
-          fontSize: "18px",
-          color: "var(--ed-ink-3)",
-        }}
-      >
-        –
-      </span>
-    );
-  }
-
-  if (value === "Partial") {
-    return (
-      <span
-        style={{
-          fontFamily: "var(--font-plex-mono), ui-monospace, monospace",
-          fontSize: "15.5px",
-          color: "var(--ed-ochre)",
-        }}
-      >
-        ~ {t("comparison.partial")}
-      </span>
-    );
-  }
-
-  return (
-    <span className="ed-body" style={{ color: "var(--ed-ink-2)" }}>
-      {value}
-    </span>
-  );
 }
 
 export default function EdComparisonTable({
@@ -151,7 +97,7 @@ export default function EdComparisonTable({
                   background: "var(--ed-paper-2)",
                 }}
               >
-                <CellValue value={feature.doctalk} />
+                <EdInlineCell value={feature.doctalk} />
               </td>
               <td
                 style={{
@@ -159,7 +105,7 @@ export default function EdComparisonTable({
                   textAlign: "center",
                 }}
               >
-                <CellValue value={feature.competitor} />
+                <EdInlineCell value={feature.competitor} />
               </td>
             </tr>
           ))}
