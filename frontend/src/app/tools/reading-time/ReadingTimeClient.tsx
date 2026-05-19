@@ -2,10 +2,7 @@
 
 import React, { useState, useMemo } from 'react';
 import Link from 'next/link';
-import Header from '../../../components/Header';
-import Footer from '../../../components/Footer';
 import {
-  ArrowRight,
   BookOpen,
   Clock,
   ClipboardPaste,
@@ -17,6 +14,20 @@ import {
   Trash2,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
+import MarketingShell from '../../../components/marketing/MarketingShell';
+import EdPageHero from '../../../components/marketing/EdPageHero';
+import EdSection from '../../../components/marketing/EdSection';
+import EdProse from '../../../components/marketing/EdProse';
+import EdRelatedLinks from '../../../components/marketing/EdRelatedLinks';
+import EdCtaBanner from '../../../components/marketing/EdCtaBanner';
+
+const monoBtnBase: React.CSSProperties = {
+  gap: '5px',
+  fontFamily: 'var(--font-plex-mono), ui-monospace, monospace',
+  fontSize: '11px',
+  textTransform: 'uppercase',
+  letterSpacing: '0.08em',
+};
 
 /* ---------- helpers ---------- */
 
@@ -75,6 +86,15 @@ const referenceTable: ReferenceRow[] = [
   { type: 'Novel', words: 80000, icon: BookOpen },
 ];
 
+/* ---------- editorial style helpers ---------- */
+
+const panelStyle: React.CSSProperties = {
+  border: '1px solid var(--ed-rule)',
+  background: 'var(--ed-paper-2)',
+  borderRadius: '3px',
+  padding: '20px',
+};
+
 /* ---------- component ---------- */
 
 export default function ReadingTimeClient() {
@@ -101,309 +121,286 @@ export default function ReadingTimeClient() {
   );
 
   return (
-    <div className="dt-stitch-theme flex min-h-screen flex-col">
-      <Header variant="minimal" />
-      <main className="flex-1">
-        {/* Breadcrumb */}
-        <div className="max-w-4xl mx-auto px-6 pt-6">
-          <nav className="flex items-center gap-1.5 text-sm text-zinc-500 dark:text-zinc-400">
-            <Link href="/" className="hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors">
-              Home
-            </Link>
-            <span>/</span>
-            <Link href="/tools" className="hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors">
-              Tools
-            </Link>
-            <span>/</span>
-            <span className="text-zinc-900 dark:text-zinc-100 font-medium">Reading Time Calculator</span>
-          </nav>
-        </div>
+    <MarketingShell
+      breadcrumb={[
+        { label: 'Home', href: '/' },
+        { label: 'Tools', href: '/tools' },
+        { label: 'Reading Time Calculator' },
+      ]}
+    >
+      <EdPageHero
+        icon={Clock}
+        title="Reading Time Calculator"
+        lede="Estimate how long it takes to read or present any text. Compare speeds for reading silently and speaking aloud."
+      />
 
-        {/* Hero */}
-        <section className="border-b border-zinc-200 dark:border-zinc-800">
-          <div className="max-w-4xl mx-auto px-6 pt-12 pb-12">
-            <div className="mb-5 inline-flex h-11 w-11 items-center justify-center rounded-lg border border-zinc-200 bg-white text-accent shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
-              <Clock className="h-5 w-5" />
-            </div>
-            <h1 className="font-serif text-3xl sm:text-4xl font-semibold text-zinc-900 dark:text-zinc-100 mb-3 tracking-tight">
-              Reading Time Calculator
-            </h1>
-            <p className="max-w-2xl text-base leading-7 text-zinc-600 dark:text-zinc-300">
-              Estimate how long it takes to read or present any text.
-              Compare speeds for reading silently and speaking aloud.
-            </p>
-          </div>
-        </section>
-
-        {/* Main Tool */}
-        <section className="max-w-4xl mx-auto px-6 py-10">
-          {/* Text Input */}
-          <div className="mb-8">
-            <div className="mb-2 flex items-center justify-between gap-3">
-              <label
-                htmlFor="reading-time-input"
-                className="text-sm font-medium text-zinc-700 dark:text-zinc-200"
-              >
-                Paste your text below
-              </label>
-              <div className="flex items-center gap-2">
-                {text.length > 0 && (
-                  <button
-                    type="button"
-                    onClick={() => setText('')}
-                    className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs text-zinc-500 transition-colors hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-200"
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                    Clear
-                  </button>
-                )}
+      <EdSection>
+        {/* Text Input */}
+        <div style={{ marginBottom: '32px' }}>
+          <div className="flex items-center justify-between" style={{ marginBottom: '8px', gap: '12px' }}>
+            <label htmlFor="reading-time-input" className="ed-label">
+              Paste your text below
+            </label>
+            <div className="flex items-center" style={{ gap: '14px' }}>
+              {text.length > 0 && (
                 <button
                   type="button"
-                  onClick={() => setText(sampleText)}
-                  className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium text-accent transition-colors hover:bg-accent-light"
+                  onClick={() => setText('')}
+                  className="inline-flex items-center"
+                  title="Clear text"
+                  style={{ ...monoBtnBase, color: 'var(--ed-ink-3)' }}
                 >
-                  <ClipboardPaste className="h-3.5 w-3.5" />
-                  Sample
+                  <Trash2 className="w-3.5 h-3.5" />
+                  Clear
                 </button>
-              </div>
-            </div>
-            <textarea
-              id="reading-time-input"
-              className="h-48 w-full resize-y rounded-lg border border-zinc-200 bg-white p-4 text-sm leading-relaxed text-zinc-900 placeholder:text-zinc-400 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-accent dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:placeholder:text-zinc-500 sm:h-56"
-              placeholder="Type or paste your text here to estimate reading and speaking times..."
-              value={text}
-              onChange={(e) => setText(e.target.value)}
-              spellCheck={false}
-            />
-            <div className="mt-2 flex items-center justify-between">
-              <p className="text-xs text-zinc-400 dark:text-zinc-500">
-                Processed in your browser. Nothing is uploaded.
-              </p>
-              <p className="text-sm font-medium text-zinc-700 dark:text-zinc-200 tabular-nums">
-                {wordCount.toLocaleString()} {wordCount === 1 ? 'word' : 'words'}
-              </p>
+              )}
+              <button
+                type="button"
+                onClick={() => setText(sampleText)}
+                className="inline-flex items-center"
+                title="Use sample text"
+                style={{ ...monoBtnBase, color: 'var(--ed-signal)' }}
+              >
+                <ClipboardPaste className="h-3.5 w-3.5" />
+                Sample
+              </button>
             </div>
           </div>
-
-          <div className="mb-8 grid grid-cols-1 gap-3 sm:grid-cols-3">
-            {[
-              { label: 'Words', value: wordCount.toLocaleString() },
-              { label: 'Average reading', value: wordCount > 0 ? formatDuration(wordCount / 250) : '--' },
-              { label: 'Average speaking', value: wordCount > 0 ? formatSeconds(wordCount / 150) : '--' },
-            ].map((item) => (
-              <div key={item.label} className="rounded-lg border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900">
-                <p className="text-xs font-medium uppercase tracking-[0.12em] text-zinc-500 dark:text-zinc-400">{item.label}</p>
-                <p className="mt-2 text-2xl font-semibold tabular-nums text-zinc-900 dark:text-zinc-100">{item.value}</p>
-              </div>
-            ))}
-          </div>
-
-          {/* Results Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-10">
-            {/* Reading Time */}
-            <div className="rounded-lg border border-zinc-200 bg-white p-5 dark:border-zinc-700 dark:bg-zinc-900">
-              <div className="flex items-center gap-2 mb-4">
-                <BookOpen className="w-4 h-4 text-zinc-500 dark:text-zinc-400" />
-                <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
-                  Reading Time (Silent)
-                </h2>
-              </div>
-              <div className="space-y-4">
-                {readingSpeeds.map((row) => (
-                  <div key={row.label}>
-                    <div className="flex items-center justify-between mb-1">
-                      <span className="text-sm text-zinc-500 dark:text-zinc-400">
-                        {row.label}
-                      </span>
-                      <span className="text-xs text-zinc-400 dark:text-zinc-500 tabular-nums">
-                        {row.wpm} WPM
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <div className="flex-1 h-2 bg-zinc-100 dark:bg-zinc-800 rounded-full overflow-hidden">
-                        <div
-                          className="h-full rounded-full bg-accent transition-[width] duration-300"
-                          style={{
-                            width: wordCount > 0
-                              ? `${Math.min(100, (row.wpm / 350) * 100)}%`
-                              : '0%',
-                          }}
-                        />
-                      </div>
-                      <span className="text-sm font-semibold text-zinc-900 dark:text-zinc-100 tabular-nums min-w-[5rem] text-right">
-                        {wordCount > 0 ? formatDuration(row.minutes) : '--'}
-                      </span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Speaking Time */}
-            <div className="rounded-lg border border-zinc-200 bg-white p-5 dark:border-zinc-700 dark:bg-zinc-900">
-              <div className="flex items-center gap-2 mb-4">
-                <Mic className="w-4 h-4 text-zinc-500 dark:text-zinc-400" />
-                <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
-                  Speaking Time (Presentations)
-                </h2>
-              </div>
-              <div className="space-y-4">
-                {speakingSpeeds.map((row) => (
-                  <div key={row.label}>
-                    <div className="flex items-center justify-between mb-1">
-                      <span className="text-sm text-zinc-500 dark:text-zinc-400">
-                        {row.label}
-                      </span>
-                      <span className="text-xs text-zinc-400 dark:text-zinc-500 tabular-nums">
-                        {row.wpm} WPM
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <div className="flex-1 h-2 bg-zinc-100 dark:bg-zinc-800 rounded-full overflow-hidden">
-                        <div
-                          className="h-full bg-emerald-500 dark:bg-emerald-400 rounded-full transition-[width] duration-300"
-                          style={{
-                            width: wordCount > 0
-                              ? `${Math.min(100, (row.wpm / 180) * 100)}%`
-                              : '0%',
-                          }}
-                        />
-                      </div>
-                      <span className="text-sm font-semibold text-zinc-900 dark:text-zinc-100 tabular-nums min-w-[5rem] text-right">
-                        {wordCount > 0 ? formatSeconds(row.minutes) : '--'}
-                      </span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          {/* Comparison Reference Table */}
-          <div className="mb-10 rounded-lg border border-zinc-200 bg-white p-5 dark:border-zinc-700 dark:bg-zinc-900">
-            <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100 mb-4">
-              Reading Time Reference by Document Type
-            </h2>
-            <div className="overflow-x-auto -mx-2">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-zinc-100 dark:border-zinc-800">
-                    <th className="text-left py-2 px-2 font-medium text-zinc-500 dark:text-zinc-400">
-                      Document Type
-                    </th>
-                    <th className="text-right py-2 px-2 font-medium text-zinc-500 dark:text-zinc-400">
-                      Typical Words
-                    </th>
-                    <th className="text-right py-2 px-2 font-medium text-zinc-500 dark:text-zinc-400">
-                      Reading Time
-                    </th>
-                    <th className="text-right py-2 px-2 font-medium text-zinc-500 dark:text-zinc-400">
-                      Speaking Time
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {referenceTable.map((row) => {
-                    const Icon = row.icon;
-                    return (
-                      <tr
-                        key={row.type}
-                        className="border-b border-zinc-50 dark:border-zinc-800/50 last:border-0"
-                      >
-                        <td className="py-2.5 px-2 text-zinc-700 dark:text-zinc-300">
-                          <Icon aria-hidden="true" size={14} className="mr-2 inline-block text-zinc-400" />
-                          {row.type}
-                        </td>
-                        <td className="py-2.5 px-2 text-right text-zinc-600 dark:text-zinc-400 tabular-nums">
-                          ~{row.words.toLocaleString()}
-                        </td>
-                        <td className="py-2.5 px-2 text-right text-zinc-900 dark:text-zinc-100 font-medium tabular-nums">
-                          {formatDuration(row.words / 250)}
-                        </td>
-                        <td className="py-2.5 px-2 text-right text-zinc-900 dark:text-zinc-100 font-medium tabular-nums">
-                          {formatDuration(row.words / 150)}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          </div>
-
-          {/* DocTalk CTA */}
-          <div className="rounded-lg border border-accent/20 bg-accent-light/50 p-6 dark:bg-accent-light">
-            <h2 className="text-base font-semibold text-zinc-900 dark:text-zinc-100 mb-2">
-              Have a PDF or document to analyze?
-            </h2>
-            <p className="text-sm text-zinc-600 dark:text-zinc-300 mb-4">
-              Upload your PDF, DOCX, or PPTX to DocTalk and ask AI any question about it.
-              Get instant summaries, key takeaways, and cited answers &mdash; no copy-pasting needed.
+          <textarea
+            id="reading-time-input"
+            className="h-48 w-full resize-y sm:h-56"
+            style={{
+              border: '1px solid var(--ed-rule)',
+              background: 'var(--ed-paper)',
+              color: 'var(--ed-ink)',
+              borderRadius: '3px',
+              padding: '16px',
+              fontSize: '14px',
+              lineHeight: 1.7,
+              outline: 'none',
+            }}
+            placeholder="Type or paste your text here to estimate reading and speaking times..."
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+            spellCheck={false}
+          />
+          <div className="flex items-center justify-between" style={{ marginTop: '8px', gap: '12px' }}>
+            <p className="ed-caption">Processed in your browser. Nothing is uploaded.</p>
+            <p className="ed-body tabular-nums" style={{ marginTop: 0, fontWeight: 600, color: 'var(--ed-ink)' }}>
+              {wordCount.toLocaleString()} {wordCount === 1 ? 'word' : 'words'}
             </p>
-            <Link
-              href="/demo"
-              className="group inline-flex items-center rounded-lg bg-accent px-5 py-2.5 text-sm font-semibold text-accent-foreground transition-colors hover:bg-accent-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2"
-            >
-              Try DocTalk Free
-              <ArrowRight className="ml-2 w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
-            </Link>
           </div>
+        </div>
 
-          {/* SEO Content */}
-          <div className="mt-16 pt-10 border-t border-zinc-200 dark:border-zinc-800">
-            <h2 className="text-xl font-semibold text-zinc-900 dark:text-zinc-100 mb-4">
-              How This Reading Time Calculator Works
-            </h2>
-            <div className="prose prose-zinc dark:prose-invert prose-sm max-w-none">
-              <p className="text-zinc-600 dark:text-zinc-300 leading-relaxed">
-                This tool counts the words in your text and divides by standard words-per-minute (WPM) rates
-                to estimate reading and speaking times. The average adult reads silently at about
-                <strong> 250 words per minute</strong>, while comfortable speaking speed for
-                presentations is around <strong>150 WPM</strong>.
+        <div className="grid grid-cols-1 sm:grid-cols-3" style={{ marginBottom: '32px', gap: '12px' }}>
+          {[
+            { label: 'Words', value: wordCount.toLocaleString() },
+            { label: 'Average reading', value: wordCount > 0 ? formatDuration(wordCount / 250) : '--' },
+            { label: 'Average speaking', value: wordCount > 0 ? formatSeconds(wordCount / 150) : '--' },
+          ].map((item) => (
+            <div key={item.label} className="ed-card" style={{ padding: '16px' }}>
+              <p className="ed-caption">{item.label}</p>
+              <p
+                className="tabular-nums"
+                style={{
+                  marginTop: '8px',
+                  fontFamily: 'var(--font-newsreader), serif',
+                  fontSize: '26px',
+                  fontWeight: 600,
+                  color: 'var(--ed-ink)',
+                }}
+              >
+                {item.value}
               </p>
-              <p className="text-zinc-600 dark:text-zinc-300 leading-relaxed mt-3">
-                <strong>Reading speeds</strong> vary by individual and content complexity.
-                Technical or academic text may slow readers to 150 WPM, while light fiction
-                can be read at 350+ WPM. The three speed tiers give you a realistic range.
-              </p>
-              <p className="text-zinc-600 dark:text-zinc-300 leading-relaxed mt-3">
-                <strong>Speaking times</strong> are useful for planning presentations, speeches,
-                and podcasts. A deliberate pace (120 WPM) works well for formal talks,
-                while 180 WPM suits energetic, fast-paced delivery.
-              </p>
-              <p className="text-zinc-600 dark:text-zinc-300 leading-relaxed mt-3">
-                Everything runs locally in your browser &mdash; your text is never sent to any server.
-                For full document analysis with AI-powered Q&A,{' '}
-                <Link href="/demo" className="text-accent hover:underline">
-                  try DocTalk&apos;s free demo
-                </Link>.
-              </p>
+            </div>
+          ))}
+        </div>
+
+        {/* Results Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2" style={{ gap: '24px' }}>
+          {/* Reading Time */}
+          <div style={panelStyle}>
+            <div className="flex items-center" style={{ gap: '8px', marginBottom: '16px' }}>
+              <BookOpen aria-hidden="true" className="w-4 h-4" style={{ color: 'var(--ed-ink-3)' }} />
+              <h2 className="ed-h3">Reading Time (Silent)</h2>
+            </div>
+            <div className="flex flex-col" style={{ gap: '16px' }}>
+              {readingSpeeds.map((row) => (
+                <div key={row.label}>
+                  <div className="flex items-center justify-between" style={{ marginBottom: '4px', gap: '12px' }}>
+                    <span className="ed-caption">{row.label}</span>
+                    <span className="ed-caption tabular-nums">{row.wpm} WPM</span>
+                  </div>
+                  <div className="flex items-center" style={{ gap: '12px' }}>
+                    <div
+                      className="flex-1 overflow-hidden"
+                      style={{ height: '6px', background: 'var(--ed-rule)', borderRadius: '3px' }}
+                    >
+                      <div
+                        style={{
+                          height: '100%',
+                          borderRadius: '3px',
+                          background: 'var(--ed-signal)',
+                          transition: 'width 300ms',
+                          width: wordCount > 0
+                            ? `${Math.min(100, (row.wpm / 350) * 100)}%`
+                            : '0%',
+                        }}
+                      />
+                    </div>
+                    <span
+                      className="ed-body tabular-nums text-right"
+                      style={{ marginTop: 0, fontWeight: 600, color: 'var(--ed-ink)', minWidth: '5rem' }}
+                    >
+                      {wordCount > 0 ? formatDuration(row.minutes) : '--'}
+                    </span>
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
 
-          {/* Related Links */}
-          <div className="mt-10 pt-8 border-t border-zinc-200 dark:border-zinc-800">
-            <div className="flex flex-wrap gap-3 text-sm justify-center">
-              <Link href="/tools" className="text-accent hover:underline">
-                All Tools
-              </Link>
-              <span className="text-zinc-300 dark:text-zinc-700">|</span>
-              <Link href="/tools/word-counter" className="text-accent hover:underline">
-                Word Counter
-              </Link>
-              <span className="text-zinc-300 dark:text-zinc-700">|</span>
-              <Link href="/features/multi-format" className="text-accent hover:underline">
-                Multi-Format Support
-              </Link>
-              <span className="text-zinc-300 dark:text-zinc-700">|</span>
-              <Link href="/demo" className="text-accent hover:underline">
-                Free Demo
-              </Link>
+          {/* Speaking Time */}
+          <div style={panelStyle}>
+            <div className="flex items-center" style={{ gap: '8px', marginBottom: '16px' }}>
+              <Mic aria-hidden="true" className="w-4 h-4" style={{ color: 'var(--ed-ink-3)' }} />
+              <h2 className="ed-h3">Speaking Time (Presentations)</h2>
+            </div>
+            <div className="flex flex-col" style={{ gap: '16px' }}>
+              {speakingSpeeds.map((row) => (
+                <div key={row.label}>
+                  <div className="flex items-center justify-between" style={{ marginBottom: '4px', gap: '12px' }}>
+                    <span className="ed-caption">{row.label}</span>
+                    <span className="ed-caption tabular-nums">{row.wpm} WPM</span>
+                  </div>
+                  <div className="flex items-center" style={{ gap: '12px' }}>
+                    <div
+                      className="flex-1 overflow-hidden"
+                      style={{ height: '6px', background: 'var(--ed-rule)', borderRadius: '3px' }}
+                    >
+                      <div
+                        style={{
+                          height: '100%',
+                          borderRadius: '3px',
+                          background: 'var(--ed-ochre)',
+                          transition: 'width 300ms',
+                          width: wordCount > 0
+                            ? `${Math.min(100, (row.wpm / 180) * 100)}%`
+                            : '0%',
+                        }}
+                      />
+                    </div>
+                    <span
+                      className="ed-body tabular-nums text-right"
+                      style={{ marginTop: 0, fontWeight: 600, color: 'var(--ed-ink)', minWidth: '5rem' }}
+                    >
+                      {wordCount > 0 ? formatSeconds(row.minutes) : '--'}
+                    </span>
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
-        </section>
-      </main>
-      <Footer />
-    </div>
+        </div>
+
+        {/* Comparison Reference Table */}
+        <div style={{ ...panelStyle, marginTop: '24px' }}>
+          <h2 className="ed-h3" style={{ marginBottom: '16px' }}>
+            Reading Time Reference by Document Type
+          </h2>
+          <div className="overflow-x-auto">
+            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+              <thead>
+                <tr style={{ borderBottom: '1px solid var(--ed-rule)' }}>
+                  <th className="ed-label" style={{ textAlign: 'left', padding: '8px' }}>
+                    Document Type
+                  </th>
+                  <th className="ed-label" style={{ textAlign: 'right', padding: '8px' }}>
+                    Typical Words
+                  </th>
+                  <th className="ed-label" style={{ textAlign: 'right', padding: '8px' }}>
+                    Reading Time
+                  </th>
+                  <th className="ed-label" style={{ textAlign: 'right', padding: '8px' }}>
+                    Speaking Time
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {referenceTable.map((row) => {
+                  const Icon = row.icon;
+                  return (
+                    <tr key={row.type} style={{ borderBottom: '1px solid var(--ed-rule)' }}>
+                      <td className="ed-body" style={{ marginTop: 0, padding: '10px 8px' }}>
+                        <Icon aria-hidden="true" size={14} className="mr-2 inline-block" style={{ color: 'var(--ed-ink-3)' }} />
+                        {row.type}
+                      </td>
+                      <td className="ed-body tabular-nums" style={{ marginTop: 0, padding: '10px 8px', textAlign: 'right' }}>
+                        ~{row.words.toLocaleString()}
+                      </td>
+                      <td
+                        className="ed-body tabular-nums"
+                        style={{ marginTop: 0, padding: '10px 8px', textAlign: 'right', fontWeight: 600, color: 'var(--ed-ink)' }}
+                      >
+                        {formatDuration(row.words / 250)}
+                      </td>
+                      <td
+                        className="ed-body tabular-nums"
+                        style={{ marginTop: 0, padding: '10px 8px', textAlign: 'right', fontWeight: 600, color: 'var(--ed-ink)' }}
+                      >
+                        {formatDuration(row.words / 150)}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </EdSection>
+
+      <EdCtaBanner
+        title="Have a PDF or document to analyze?"
+        description="Upload your PDF, DOCX, or PPTX to DocTalk and ask AI any question about it. Get instant summaries, key takeaways, and cited answers — no copy-pasting needed."
+        primary={{ label: 'Try DocTalk Free', href: '/demo' }}
+      />
+
+      <EdSection title="How This Reading Time Calculator Works">
+        <EdProse>
+          <p>
+            This tool counts the words in your text and divides by standard words-per-minute (WPM) rates
+            to estimate reading and speaking times. The average adult reads silently at about
+            <strong> 250 words per minute</strong>, while comfortable speaking speed for
+            presentations is around <strong>150 WPM</strong>.
+          </p>
+          <p>
+            <strong>Reading speeds</strong> vary by individual and content complexity.
+            Technical or academic text may slow readers to 150 WPM, while light fiction
+            can be read at 350+ WPM. The three speed tiers give you a realistic range.
+          </p>
+          <p>
+            <strong>Speaking times</strong> are useful for planning presentations, speeches,
+            and podcasts. A deliberate pace (120 WPM) works well for formal talks,
+            while 180 WPM suits energetic, fast-paced delivery.
+          </p>
+          <p>
+            Everything runs locally in your browser — your text is never sent to any server.
+            For full document analysis with AI-powered Q&amp;A,{' '}
+            <Link href="/demo">try DocTalk&apos;s free demo</Link>.
+          </p>
+        </EdProse>
+      </EdSection>
+
+      <EdSection alt>
+        <EdRelatedLinks
+          links={[
+            { href: '/tools', label: 'All Tools' },
+            { href: '/tools/word-counter', label: 'Word Counter' },
+            { href: '/features/multi-format', label: 'Multi-Format Support' },
+            { href: '/demo', label: 'Free Demo' },
+          ]}
+        />
+      </EdSection>
+    </MarketingShell>
   );
 }

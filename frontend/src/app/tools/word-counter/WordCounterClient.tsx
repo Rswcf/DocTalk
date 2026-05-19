@@ -2,9 +2,13 @@
 
 import React, { useState, useMemo } from 'react';
 import Link from 'next/link';
-import Header from '../../../components/Header';
-import Footer from '../../../components/Footer';
-import { LetterText, ArrowRight, ClipboardPaste, Copy, Check, FileText, Timer, Trash2 } from 'lucide-react';
+import { LetterText, ClipboardPaste, Copy, Check, FileText, Timer, Trash2 } from 'lucide-react';
+import MarketingShell from '../../../components/marketing/MarketingShell';
+import EdPageHero from '../../../components/marketing/EdPageHero';
+import EdSection from '../../../components/marketing/EdSection';
+import EdProse from '../../../components/marketing/EdProse';
+import EdRelatedLinks from '../../../components/marketing/EdRelatedLinks';
+import EdCtaBanner from '../../../components/marketing/EdCtaBanner';
 
 /* ---------- helpers ---------- */
 
@@ -66,6 +70,15 @@ function formatTime(minutes: number): string {
 
 const sampleText = `DocTalk helps readers work through long documents without losing the source. Upload the original file, ask a question, and review answers with citations tied back to the exact passage. This makes summaries, comparisons, and follow-up research easier to verify.`;
 
+/* ---------- editorial style helpers ---------- */
+
+const panelStyle: React.CSSProperties = {
+  border: '1px solid var(--ed-rule)',
+  background: 'var(--ed-paper-2)',
+  borderRadius: '3px',
+  padding: '20px',
+};
+
 /* ---------- component ---------- */
 
 export default function WordCounterClient() {
@@ -110,264 +123,242 @@ export default function WordCounterClient() {
   };
 
   return (
-    <div className="dt-stitch-theme flex min-h-screen flex-col">
-      <Header variant="minimal" />
-      <main className="flex-1">
-        {/* Breadcrumb */}
-        <div className="max-w-4xl mx-auto px-6 pt-6">
-          <nav className="flex items-center gap-1.5 text-sm text-zinc-500 dark:text-zinc-400">
-            <Link href="/" className="hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors">
-              Home
-            </Link>
-            <span>/</span>
-            <Link href="/tools" className="hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors">
-              Tools
-            </Link>
-            <span>/</span>
-            <span className="text-zinc-900 dark:text-zinc-100 font-medium">Word Counter</span>
-          </nav>
-        </div>
+    <MarketingShell
+      breadcrumb={[
+        { label: 'Home', href: '/' },
+        { label: 'Tools', href: '/tools' },
+        { label: 'Word Counter' },
+      ]}
+    >
+      <EdPageHero
+        icon={LetterText}
+        title="Free Document Word Counter"
+        lede="Paste any text to instantly count words, characters, sentences, and paragraphs. See reading time estimates and your most frequently used words."
+      />
 
-        {/* Hero */}
-        <section className="border-b border-zinc-200 dark:border-zinc-800">
-          <div className="max-w-4xl mx-auto px-6 pt-12 pb-12">
-            <div className="mb-5 inline-flex h-11 w-11 items-center justify-center rounded-lg border border-zinc-200 bg-white text-accent shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
-              <LetterText className="h-5 w-5" />
+      <EdSection>
+        <div className="grid grid-cols-1 lg:grid-cols-3" style={{ gap: '24px' }}>
+          {/* Text Input */}
+          <div className="lg:col-span-2">
+            <div className="flex items-center justify-between" style={{ marginBottom: '8px' }}>
+              <label htmlFor="word-counter-input" className="ed-label">
+                Paste your text below
+              </label>
+              <div className="flex items-center" style={{ gap: '14px' }}>
+                <button
+                  type="button"
+                  onClick={() => setText(sampleText)}
+                  className="inline-flex items-center"
+                  style={{
+                    gap: '5px',
+                    fontFamily: 'var(--font-plex-mono), ui-monospace, monospace',
+                    fontSize: '11px',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.08em',
+                    color: 'var(--ed-signal)',
+                  }}
+                  title="Use sample text"
+                >
+                  <ClipboardPaste className="h-3.5 w-3.5" />
+                  Sample
+                </button>
+                {text.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => setText('')}
+                    className="inline-flex items-center"
+                    style={{
+                      gap: '5px',
+                      fontFamily: 'var(--font-plex-mono), ui-monospace, monospace',
+                      fontSize: '11px',
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.08em',
+                      color: 'var(--ed-ink-3)',
+                    }}
+                    title="Clear text"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                    Clear
+                  </button>
+                )}
+              </div>
             </div>
-            <h1 className="font-serif text-3xl sm:text-4xl font-semibold text-zinc-900 dark:text-zinc-100 mb-3 tracking-tight">
-              Free Document Word Counter
-            </h1>
-            <p className="max-w-2xl text-base leading-7 text-zinc-600 dark:text-zinc-300">
-              Paste any text to instantly count words, characters, sentences, and paragraphs.
-              See reading time estimates and your most frequently used words.
+            <textarea
+              id="word-counter-input"
+              className="h-64 w-full resize-y sm:h-80"
+              style={{
+                border: '1px solid var(--ed-rule)',
+                background: 'var(--ed-paper)',
+                color: 'var(--ed-ink)',
+                borderRadius: '3px',
+                padding: '16px',
+                fontSize: '14px',
+                lineHeight: 1.7,
+                outline: 'none',
+              }}
+              placeholder="Type or paste your text here to see word count, character count, reading time, and more..."
+              value={text}
+              onChange={(e) => setText(e.target.value)}
+              spellCheck={false}
+            />
+            <p className="ed-caption" style={{ marginTop: '8px' }}>
+              Your text is processed entirely in your browser. Nothing is sent to any server.
             </p>
           </div>
-        </section>
 
-        {/* Main Tool */}
-        <section className="max-w-4xl mx-auto px-6 py-10">
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {/* Text Input */}
-            <div className="lg:col-span-2">
-              <div className="flex items-center justify-between mb-2">
-                <label
-                  htmlFor="word-counter-input"
-                  className="text-sm font-medium text-zinc-700 dark:text-zinc-200"
+          {/* Stats Panel */}
+          <div className="flex flex-col" style={{ gap: '16px' }}>
+            {/* Core Stats */}
+            <div style={panelStyle}>
+              <div className="flex items-center justify-between" style={{ marginBottom: '16px' }}>
+                <h2 className="ed-h3">Statistics</h2>
+                <button
+                  type="button"
+                  onClick={handleCopy}
+                  disabled={stats.wordCount === 0 && stats.charCount === 0}
+                  className="inline-flex items-center disabled:cursor-not-allowed disabled:opacity-40"
+                  style={{
+                    gap: '5px',
+                    fontFamily: 'var(--font-plex-mono), ui-monospace, monospace',
+                    fontSize: '11px',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.08em',
+                    color: copied ? 'var(--ed-signal)' : 'var(--ed-ink-3)',
+                  }}
+                  title="Copy stats"
                 >
-                  Paste your text below
-                </label>
-                <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setText(sampleText)}
-                    className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium text-accent transition-colors hover:bg-accent-light"
-                    title="Use sample text"
-                  >
-                    <ClipboardPaste className="h-3.5 w-3.5" />
-                    Sample
-                  </button>
-                  {text.length > 0 && (
-                    <button
-                      type="button"
-                      onClick={() => setText('')}
-                      className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs text-zinc-500 transition-colors hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-200"
-                      title="Clear text"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                      Clear
-                    </button>
+                  {copied ? (
+                    <Check className="w-3.5 h-3.5" />
+                  ) : (
+                    <Copy className="w-3.5 h-3.5" />
                   )}
-                </div>
+                  {copied ? 'Copied' : 'Copy'}
+                </button>
               </div>
-              <textarea
-                id="word-counter-input"
-                className="h-64 w-full resize-y rounded-lg border border-zinc-200 bg-white p-4 text-sm leading-relaxed text-zinc-900 placeholder:text-zinc-400 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-accent dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:placeholder:text-zinc-500 sm:h-80"
-                placeholder="Type or paste your text here to see word count, character count, reading time, and more..."
-                value={text}
-                onChange={(e) => setText(e.target.value)}
-                spellCheck={false}
-              />
-              <p className="mt-2 text-xs text-zinc-400 dark:text-zinc-500">
-                Your text is processed entirely in your browser. Nothing is sent to any server.
-              </p>
-            </div>
-
-            {/* Stats Panel */}
-            <div className="space-y-4">
-              {/* Core Stats */}
-              <div className="rounded-lg border border-zinc-200 bg-white p-5 dark:border-zinc-700 dark:bg-zinc-900">
-                <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
-                    Statistics
-                  </h2>
-                  <button
-                    type="button"
-                    onClick={handleCopy}
-                    disabled={stats.wordCount === 0 && stats.charCount === 0}
-                    className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs text-zinc-500 transition-colors hover:text-zinc-700 disabled:cursor-not-allowed disabled:opacity-40 dark:text-zinc-400 dark:hover:text-zinc-200"
-                    title="Copy stats"
-                  >
-                    {copied ? (
-                      <Check className="w-3.5 h-3.5 text-emerald-600" />
-                    ) : (
-                      <Copy className="w-3.5 h-3.5" />
-                    )}
-                    {copied ? 'Copied' : 'Copy'}
-                  </button>
-                </div>
-                <dl className="space-y-3">
-                  {[
-                    { label: 'Words', value: stats.wordCount.toLocaleString() },
-                    { label: 'Characters', value: stats.charCount.toLocaleString() },
-                    { label: 'Characters (no spaces)', value: stats.charCountNoSpaces.toLocaleString() },
-                    { label: 'Sentences', value: stats.sentenceCount.toLocaleString() },
-                    { label: 'Paragraphs', value: stats.paragraphCount.toLocaleString() },
-                    { label: 'Avg. word length', value: `${stats.avgWordLength.toFixed(1)} chars` },
-                  ].map(({ label, value }) => (
-                    <div key={label} className="flex items-center justify-between">
-                      <dt className="text-sm text-zinc-500 dark:text-zinc-400">{label}</dt>
-                      <dd className="text-sm font-semibold text-zinc-900 dark:text-zinc-100 tabular-nums">
-                        {value}
-                      </dd>
-                    </div>
-                  ))}
-                </dl>
-              </div>
-
-              {/* Reading Time */}
-              <div className="rounded-lg border border-zinc-200 bg-white p-5 dark:border-zinc-700 dark:bg-zinc-900">
-                <div className="mb-3 flex items-center gap-2">
-                  <Timer aria-hidden="true" size={16} className="text-zinc-500 dark:text-zinc-400" />
-                  <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
-                    Estimated Reading Time
-                  </h2>
-                </div>
-                <dl className="space-y-2.5">
-                  {readingTimes.map(({ label, time }) => (
-                    <div key={label} className="flex items-center justify-between">
-                      <dt className="text-sm text-zinc-500 dark:text-zinc-400">{label}</dt>
-                      <dd className="text-sm font-semibold text-zinc-900 dark:text-zinc-100 tabular-nums">
-                        {time}
-                      </dd>
-                    </div>
-                  ))}
-                </dl>
-              </div>
-            </div>
-          </div>
-
-          {/* Top Words */}
-          {stats.topWords.length > 0 && (
-            <div className="mt-8 rounded-lg border border-zinc-200 bg-white p-5 dark:border-zinc-700 dark:bg-zinc-900">
-              <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100 mb-4">
-                Top 10 Most Frequent Words
-              </h2>
-              <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
-                {stats.topWords.map(({ word, freq }, i) => (
-                  <div
-                    key={word}
-                    className="flex items-center justify-between rounded-lg bg-zinc-50 dark:bg-zinc-800 px-3 py-2"
-                  >
-                    <span className="text-sm text-zinc-700 dark:text-zinc-300 truncate">
-                      <span className="text-zinc-400 dark:text-zinc-500 mr-1.5">{i + 1}.</span>
-                      {word}
-                    </span>
-                    <span className="ml-2 text-xs font-medium text-zinc-500 dark:text-zinc-400 tabular-nums shrink-0">
-                      {freq}x
-                    </span>
+              <dl className="flex flex-col" style={{ gap: '12px' }}>
+                {[
+                  { label: 'Words', value: stats.wordCount.toLocaleString() },
+                  { label: 'Characters', value: stats.charCount.toLocaleString() },
+                  { label: 'Characters (no spaces)', value: stats.charCountNoSpaces.toLocaleString() },
+                  { label: 'Sentences', value: stats.sentenceCount.toLocaleString() },
+                  { label: 'Paragraphs', value: stats.paragraphCount.toLocaleString() },
+                  { label: 'Avg. word length', value: `${stats.avgWordLength.toFixed(1)} chars` },
+                ].map(({ label, value }) => (
+                  <div key={label} className="flex items-center justify-between" style={{ gap: '12px' }}>
+                    <dt className="ed-caption">{label}</dt>
+                    <dd className="ed-body tabular-nums" style={{ fontWeight: 600, color: 'var(--ed-ink)' }}>
+                      {value}
+                    </dd>
                   </div>
                 ))}
+              </dl>
+            </div>
+
+            {/* Reading Time */}
+            <div style={panelStyle}>
+              <div className="flex items-center" style={{ gap: '8px', marginBottom: '12px' }}>
+                <Timer aria-hidden="true" size={16} style={{ color: 'var(--ed-ink-3)' }} />
+                <h2 className="ed-h3">Estimated Reading Time</h2>
               </div>
+              <dl className="flex flex-col" style={{ gap: '10px' }}>
+                {readingTimes.map(({ label, time }) => (
+                  <div key={label} className="flex items-center justify-between" style={{ gap: '12px' }}>
+                    <dt className="ed-caption">{label}</dt>
+                    <dd className="ed-body tabular-nums" style={{ fontWeight: 600, color: 'var(--ed-ink)' }}>
+                      {time}
+                    </dd>
+                  </div>
+                ))}
+              </dl>
             </div>
-          )}
+          </div>
+        </div>
 
-          <div className="mt-8 grid grid-cols-1 gap-3 sm:grid-cols-3">
-            {[
-              { icon: FileText, label: 'Content units', value: `${stats.sentenceCount} sentences` },
-              { icon: LetterText, label: 'Density', value: `${stats.avgWordLength.toFixed(1)} chars / word` },
-              { icon: Timer, label: 'Average read', value: stats.wordCount > 0 ? formatTime(stats.wordCount / 250) : '--' },
-            ].map((item) => {
-              const Icon = item.icon;
-              return (
-                <div key={item.label} className="rounded-lg border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900">
-                  <Icon aria-hidden="true" size={16} className="mb-3 text-accent" />
-                  <p className="text-xs font-medium uppercase tracking-[0.12em] text-zinc-500 dark:text-zinc-400">{item.label}</p>
-                  <p className="mt-1 text-sm font-semibold text-zinc-900 dark:text-zinc-100">{item.value}</p>
+        {/* Top Words */}
+        {stats.topWords.length > 0 && (
+          <div style={{ ...panelStyle, marginTop: '24px' }}>
+            <h2 className="ed-h3" style={{ marginBottom: '16px' }}>
+              Top 10 Most Frequent Words
+            </h2>
+            <div className="grid grid-cols-2 sm:grid-cols-5" style={{ gap: '12px' }}>
+              {stats.topWords.map(({ word, freq }, i) => (
+                <div
+                  key={word}
+                  className="ed-card flex items-center justify-between"
+                  style={{ padding: '10px 12px' }}
+                >
+                  <span className="ed-body truncate" style={{ marginTop: 0 }}>
+                    <span className="ed-caption" style={{ marginRight: '6px' }}>{i + 1}.</span>
+                    {word}
+                  </span>
+                  <span className="ed-caption tabular-nums shrink-0" style={{ marginLeft: '8px' }}>
+                    {freq}x
+                  </span>
                 </div>
-              );
-            })}
-          </div>
-
-          {/* DocTalk CTA */}
-          <div className="mt-10 rounded-lg border border-accent/20 bg-accent-light/50 p-6 dark:bg-accent-light">
-            <h2 className="text-base font-semibold text-zinc-900 dark:text-zinc-100 mb-2">
-              Need to analyze a PDF or DOCX file?
-            </h2>
-            <p className="text-sm text-zinc-600 dark:text-zinc-300 mb-4">
-              DocTalk lets you upload any document and ask AI questions about it.
-              Get word counts, summaries, key insights, and cited answers &mdash; all from your original file.
-            </p>
-            <Link
-              href="/demo"
-              className="group inline-flex items-center rounded-lg bg-accent px-5 py-2.5 text-sm font-semibold text-accent-foreground transition-colors hover:bg-accent-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2"
-            >
-              Try DocTalk Free
-              <ArrowRight className="ml-2 w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
-            </Link>
-          </div>
-
-          {/* SEO Content */}
-          <div className="mt-16 pt-10 border-t border-zinc-200 dark:border-zinc-800">
-            <h2 className="text-xl font-semibold text-zinc-900 dark:text-zinc-100 mb-4">
-              How to Use This Word Counter
-            </h2>
-            <div className="prose prose-zinc dark:prose-invert prose-sm max-w-none">
-              <p className="text-zinc-600 dark:text-zinc-300 leading-relaxed">
-                Simply paste or type your text into the box above. The tool instantly counts
-                <strong> words</strong>, <strong>characters</strong> (with and without spaces),
-                <strong> sentences</strong>, and <strong>paragraphs</strong>. It also calculates
-                the average word length and estimates how long it would take to read the text
-                at different speeds.
-              </p>
-              <p className="text-zinc-600 dark:text-zinc-300 leading-relaxed mt-3">
-                The <strong>top 10 most frequent words</strong> section helps you identify
-                overused terms or key themes in your writing. Common stop words
-                (the, a, is, etc.) are filtered out so you see meaningful content words.
-              </p>
-              <p className="text-zinc-600 dark:text-zinc-300 leading-relaxed mt-3">
-                This tool runs entirely in your browser &mdash; your text never leaves your device.
-                It works great for essays, articles, blog posts, and any pasted text.
-                For analyzing full PDF, DOCX, or PPTX files with AI,{' '}
-                <Link href="/demo" className="text-accent hover:underline">
-                  try DocTalk&apos;s AI document chat
-                </Link>.
-              </p>
+              ))}
             </div>
           </div>
+        )}
 
-          {/* Related Links */}
-          <div className="mt-10 pt-8 border-t border-zinc-200 dark:border-zinc-800">
-            <div className="flex flex-wrap gap-3 text-sm justify-center">
-              <Link href="/tools" className="text-accent hover:underline">
-                All Tools
-              </Link>
-              <span className="text-zinc-300 dark:text-zinc-700">|</span>
-              <Link href="/tools/reading-time" className="text-accent hover:underline">
-                Reading Time Calculator
-              </Link>
-              <span className="text-zinc-300 dark:text-zinc-700">|</span>
-              <Link href="/features/multi-format" className="text-accent hover:underline">
-                Multi-Format Support
-              </Link>
-              <span className="text-zinc-300 dark:text-zinc-700">|</span>
-              <Link href="/demo" className="text-accent hover:underline">
-                Free Demo
-              </Link>
-            </div>
-          </div>
-        </section>
-      </main>
-      <Footer />
-    </div>
+        <div className="grid grid-cols-1 sm:grid-cols-3" style={{ marginTop: '24px', gap: '12px' }}>
+          {[
+            { icon: FileText, label: 'Content units', value: `${stats.sentenceCount} sentences` },
+            { icon: LetterText, label: 'Density', value: `${stats.avgWordLength.toFixed(1)} chars / word` },
+            { icon: Timer, label: 'Average read', value: stats.wordCount > 0 ? formatTime(stats.wordCount / 250) : '--' },
+          ].map((item) => {
+            const Icon = item.icon;
+            return (
+              <div key={item.label} className="ed-card" style={{ padding: '16px' }}>
+                <Icon aria-hidden="true" size={16} style={{ marginBottom: '12px', color: 'var(--ed-ink-3)' }} />
+                <p className="ed-caption">{item.label}</p>
+                <p className="ed-body" style={{ marginTop: '4px', fontWeight: 600, color: 'var(--ed-ink)' }}>
+                  {item.value}
+                </p>
+              </div>
+            );
+          })}
+        </div>
+      </EdSection>
+
+      <EdCtaBanner
+        title="Need to analyze a PDF or DOCX file?"
+        description="DocTalk lets you upload any document and ask AI questions about it. Get word counts, summaries, key insights, and cited answers — all from your original file."
+        primary={{ label: 'Try DocTalk Free', href: '/demo' }}
+      />
+
+      <EdSection title="How to Use This Word Counter">
+        <EdProse>
+          <p>
+            Simply paste or type your text into the box above. The tool instantly counts
+            <strong> words</strong>, <strong>characters</strong> (with and without spaces),
+            <strong> sentences</strong>, and <strong>paragraphs</strong>. It also calculates
+            the average word length and estimates how long it would take to read the text
+            at different speeds.
+          </p>
+          <p>
+            The <strong>top 10 most frequent words</strong> section helps you identify
+            overused terms or key themes in your writing. Common stop words
+            (the, a, is, etc.) are filtered out so you see meaningful content words.
+          </p>
+          <p>
+            This tool runs entirely in your browser — your text never leaves your device.
+            It works great for essays, articles, blog posts, and any pasted text.
+            For analyzing full PDF, DOCX, or PPTX files with AI,{' '}
+            <Link href="/demo">try DocTalk&apos;s AI document chat</Link>.
+          </p>
+        </EdProse>
+      </EdSection>
+
+      <EdSection alt>
+        <EdRelatedLinks
+          links={[
+            { href: '/tools', label: 'All Tools' },
+            { href: '/tools/reading-time', label: 'Reading Time Calculator' },
+            { href: '/features/multi-format', label: 'Multi-Format Support' },
+            { href: '/demo', label: 'Free Demo' },
+          ]}
+        />
+      </EdSection>
+    </MarketingShell>
   );
 }
