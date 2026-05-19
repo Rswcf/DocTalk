@@ -2,18 +2,18 @@
 
 import React from 'react';
 import Link from 'next/link';
-import Header from '../../../components/Header';
-import Footer from '../../../components/Footer';
-import ArticleMeta from '../../../components/seo/ArticleMeta';
-import ComparisonTable from '../../../components/seo/ComparisonTable';
-import FAQSection from '../../../components/seo/FAQSection';
-import CTABanner from '../../../components/seo/CTABanner';
-import { Award, Check } from 'lucide-react';
-import { useLocale } from '../../../i18n';
+import MarketingShell from '../../../components/marketing/MarketingShell';
+import EdPageHero from '../../../components/marketing/EdPageHero';
+import EdSection from '../../../components/marketing/EdSection';
+import EdProse from '../../../components/marketing/EdProse';
+import EdComparisonTable from '../../../components/marketing/EdComparisonTable';
+import EdFaqList from '../../../components/marketing/EdFaqList';
+import EdRelatedLinks from '../../../components/marketing/EdRelatedLinks';
+import EdCtaBanner from '../../../components/marketing/EdCtaBanner';
+import EdCheckList from '../../../components/marketing/EdCheckList';
+import EdChoiceList from '../../../components/marketing/EdChoiceList';
 
 export default function AskyourpdfAltsClient() {
-  const { t } = useLocale();
-
   const quickCompare = [
     { name: 'File Formats', doctalk: '7 formats (PDF, DOCX, PPTX, XLSX, TXT, MD, URL)', competitor: 'PDF only' },
     { name: 'Citation Highlighting', doctalk: true, competitor: false },
@@ -45,348 +45,233 @@ export default function AskyourpdfAltsClient() {
     },
   ];
 
+  const chooseItems = [
+    { need: 'Multi-format support + citation highlighting', pick: { label: 'DocTalk', href: '/demo' } },
+    { need: 'Simple PDF chat with fast responses', pick: { label: 'ChatPDF', href: '/compare/chatpdf' } },
+    { need: 'PDF annotation + AI chat in one tool', pick: { label: 'PDF.ai', href: '/compare/pdf-ai' } },
+    { need: 'Team collaboration with shared workspaces', pick: { label: 'Humata', href: '/compare/humata' } },
+    { need: 'Free multi-source research notebooks', pick: { label: 'NotebookLM', href: '/compare/notebooklm' } },
+    { need: 'Table and structured data extraction', pick: { label: 'ChatDOC', href: '/alternatives' } },
+    { need: 'Academic paper search across literature', pick: { label: 'Consensus', href: '/alternatives' } },
+  ];
+
   return (
-    <div className="min-h-screen flex flex-col bg-white dark:bg-zinc-950">
-      <Header variant="minimal" />
-      <main className="flex-1">
-        {/* Hero */}
-        <section className="max-w-4xl mx-auto px-6 pt-20 pb-12">
-          <nav className="text-sm text-zinc-500 dark:text-zinc-300 mb-8">
-            <Link href="/" className="hover:text-zinc-700 dark:hover:text-zinc-300">Home</Link>
-            <span className="mx-2">/</span>
-            <Link href="/alternatives" className="hover:text-zinc-700 dark:hover:text-zinc-300">Alternatives</Link>
-            <span className="mx-2">/</span>
-            <span className="text-zinc-900 dark:text-zinc-100">AskYourPDF</span>
-          </nav>
+    <MarketingShell
+      breadcrumb={[
+        { label: 'Home', href: '/' },
+        { label: 'Alternatives', href: '/alternatives' },
+        { label: 'AskYourPDF' },
+      ]}
+    >
+      <EdPageHero
+        title="7 Best AskYourPDF Alternatives in 2026"
+        lede="AskYourPDF is a popular AI PDF chat tool, but it has limitations in file format support and citation verification. Whether you need multi-format document analysis, better citation highlighting, or more affordable pricing, these 7 alternatives offer compelling options for every use case."
+        primaryCta={{ label: 'Try Free Demo', href: '/demo' }}
+      />
 
-          <h1 className="font-serif text-3xl sm:text-4xl font-semibold text-zinc-900 dark:text-zinc-100 tracking-tight mb-6">
-            7 Best AskYourPDF Alternatives in 2026
-          </h1>
-          <p className="text-lg text-zinc-600 dark:text-zinc-300 leading-relaxed">
-            AskYourPDF is a popular AI PDF chat tool, but it has limitations in file format support and citation verification.
-            Whether you need multi-format document analysis, better citation highlighting, or more affordable pricing,
-            these 7 alternatives offer compelling options for every use case.
+      <EdSection title="DocTalk vs AskYourPDF at a Glance">
+        <EdComparisonTable features={quickCompare} competitorName="AskYourPDF" />
+      </EdSection>
+
+      <EdSection alt title="Why Look for AskYourPDF Alternatives?">
+        <EdProse>
+          <p>
+            AskYourPDF is a solid tool for basic PDF Q&amp;A, but many users find themselves needing more. The most
+            common reasons people look for alternatives include:
           </p>
-          <ArticleMeta author="DocTalk Team" published="2026-03-18" className="mt-6" />
-        </section>
-
-        {/* Quick Comparison Table */}
-        <section className="bg-zinc-50 dark:bg-zinc-900/50">
-          <div className="max-w-4xl mx-auto px-6 py-16">
-            <h2 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100 tracking-tight mb-8">
-              DocTalk vs AskYourPDF at a Glance
-            </h2>
-            <ComparisonTable features={quickCompare} competitorName="AskYourPDF" />
-          </div>
-        </section>
-
-        {/* Why Look for Alternatives */}
-        <section className="max-w-4xl mx-auto px-6 py-16">
-          <h2 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100 tracking-tight mb-6">
-            Why Look for AskYourPDF Alternatives?
-          </h2>
-          <p className="text-zinc-600 dark:text-zinc-300 leading-relaxed mb-4">
-            AskYourPDF is a solid tool for basic PDF Q&A, but many users find themselves needing more. The most common
-            reasons people look for alternatives include:
-          </p>
-          <ul className="space-y-3 text-zinc-600 dark:text-zinc-300">
-            <li className="flex items-start gap-2">
-              <span className="text-zinc-400 mt-1.5 shrink-0">&#x2022;</span>
-              <span><strong>PDF-only limitation</strong> &mdash; AskYourPDF focuses exclusively on PDFs, leaving users who work with Word documents, spreadsheets, or presentations without support.</span>
-            </li>
-            <li className="flex items-start gap-2">
-              <span className="text-zinc-400 mt-1.5 shrink-0">&#x2022;</span>
-              <span><strong>Basic citation system</strong> &mdash; While AskYourPDF provides page references, it lacks real-time visual highlighting to verify answers against source text.</span>
-            </li>
-            <li className="flex items-start gap-2">
-              <span className="text-zinc-400 mt-1.5 shrink-0">&#x2022;</span>
-              <span><strong>OCR inconsistency</strong> &mdash; Scanned PDFs and image-heavy documents can produce unreliable text extraction, affecting answer quality.</span>
-            </li>
-            <li className="flex items-start gap-2">
-              <span className="text-zinc-400 mt-1.5 shrink-0">&#x2022;</span>
-              <span><strong>Pricing concerns</strong> &mdash; At $14.99/month for the premium plan, some users find better value in alternatives that offer more features at lower price points.</span>
-            </li>
+          <ul>
+            <li>PDF-only limitation — AskYourPDF focuses exclusively on PDFs, leaving users who work with Word documents, spreadsheets, or presentations without support.</li>
+            <li>Basic citation system — While AskYourPDF provides page references, it lacks real-time visual highlighting to verify answers against source text.</li>
+            <li>OCR inconsistency — Scanned PDFs and image-heavy documents can produce unreliable text extraction, affecting answer quality.</li>
+            <li>Pricing concerns — At $14.99/month for the premium plan, some users find better value in alternatives that offer more features at lower price points.</li>
           </ul>
-        </section>
+        </EdProse>
+      </EdSection>
 
-        {/* #1 DocTalk */}
-        <section className="bg-zinc-50 dark:bg-zinc-900/50">
-          <div className="max-w-4xl mx-auto px-6 py-16">
-            <div className="flex items-center gap-3 mb-6">
-              <span className="flex items-center justify-center w-8 h-8 rounded-full bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 text-sm font-bold">1</span>
-              <h2 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100 tracking-tight">
-                DocTalk
-              </h2>
-            </div>
-            <div className="flex items-center gap-2 mb-4">
-              <Award className="w-4 h-4 text-amber-500" />
-              <span className="text-sm font-medium text-amber-600 dark:text-amber-400">Best Overall AskYourPDF Alternative</span>
-            </div>
-            <p className="text-zinc-600 dark:text-zinc-300 leading-relaxed mb-4">
-              DocTalk is the top alternative to AskYourPDF, offering everything AskYourPDF does plus multi-format support
-              for 7 document types (PDF, DOCX, PPTX, XLSX, TXT, Markdown, and URLs). Its standout feature is real-time
-              citation highlighting that visually verifies every AI answer against the source document.
-            </p>
-            <p className="text-zinc-600 dark:text-zinc-300 leading-relaxed mb-4">
-              Unlike AskYourPDF, DocTalk supports 11 languages natively, offers a completely free demo with no signup required,
-              and provides two AI performance modes (Flash and Pro) so you can optimize for speed or accuracy.
-            </p>
-            <p className="text-zinc-600 dark:text-zinc-300 leading-relaxed mb-4">
-              See our{' '}
-              <Link href="/compare/askyourpdf" className="text-blue-600 dark:text-blue-400 hover:underline">
-                detailed DocTalk vs AskYourPDF comparison
-              </Link>{' '}
-              for a feature-by-feature breakdown.
-            </p>
-            <div className="mt-6 space-y-2">
-              <h3 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100 uppercase tracking-wider">Key Advantages</h3>
-              <ul className="space-y-1.5">
-                {[
-                  '7 document formats vs PDF-only',
-                  'Real-time citation highlighting with visual verification',
-                  '11 languages supported natively',
-                  'Free demo with no signup required',
-                  'Two AI modes: Flash and Pro',
-                  'Starting at $9.99/mo (vs $14.99/mo)',
-                ].map((item) => (
-                  <li key={item} className="flex items-center gap-2 text-sm text-zinc-600 dark:text-zinc-300">
-                    <Check className="w-4 h-4 text-emerald-600 shrink-0" />
-                    <span>{item}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          </div>
-        </section>
+      {/* #1 DocTalk */}
+      <EdSection num="01" title="DocTalk">
+        <div className="ed-label" style={{ color: 'var(--ed-signal)' }}>
+          Best Overall AskYourPDF Alternative
+        </div>
+        <EdProse className="mt-3">
+          <p>
+            DocTalk is the top alternative to AskYourPDF, offering everything AskYourPDF does plus multi-format support
+            for 7 document types (PDF, DOCX, PPTX, XLSX, TXT, Markdown, and URLs). Its standout feature is real-time
+            citation highlighting that visually verifies every AI answer against the source document.
+          </p>
+          <p>
+            Unlike AskYourPDF, DocTalk supports 11 languages natively, offers a completely free demo with no signup
+            required, and provides two AI performance modes (Flash and Pro) so you can optimize for speed or accuracy.
+          </p>
+          <p>
+            See our{' '}
+            <Link href="/compare/askyourpdf">detailed DocTalk vs AskYourPDF comparison</Link>{' '}
+            for a feature-by-feature breakdown.
+          </p>
+        </EdProse>
+        <div className="ed-label" style={{ marginTop: '32px' }}>
+          Key Advantages
+        </div>
+        <div className="mt-3">
+          <EdCheckList
+            items={[
+              '7 document formats vs PDF-only',
+              'Real-time citation highlighting with visual verification',
+              '11 languages supported natively',
+              'Free demo with no signup required',
+              'Two AI modes: Flash and Pro',
+              'Starting at $9.99/mo (vs $14.99/mo)',
+            ]}
+          />
+        </div>
+      </EdSection>
 
-        {/* #2 ChatPDF */}
-        <section className="max-w-4xl mx-auto px-6 py-16">
-          <div className="flex items-center gap-3 mb-6">
-            <span className="flex items-center justify-center w-8 h-8 rounded-full bg-zinc-200 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 text-sm font-bold">2</span>
-            <h2 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100 tracking-tight">
-              ChatPDF
-            </h2>
-          </div>
-          <p className="text-zinc-600 dark:text-zinc-300 leading-relaxed mb-4">
+      {/* #2 ChatPDF */}
+      <EdSection alt num="02" title="ChatPDF">
+        <EdProse>
+          <p>
             ChatPDF is one of the most well-known AI PDF chat tools. It offers a clean, simple interface for uploading
             PDFs and asking questions. Like AskYourPDF, it focuses exclusively on PDF files, but it tends to have
             faster response times and a more intuitive user experience.
           </p>
-          <p className="text-zinc-600 dark:text-zinc-300 leading-relaxed mb-4">
-            ChatPDF&apos;s free tier allows limited daily usage, making it a good option for occasional users. However, it
-            lacks multi-format support and real-time citation highlighting. See our{' '}
-            <Link href="/compare/chatpdf" className="text-blue-600 dark:text-blue-400 hover:underline">
-              ChatPDF comparison
-            </Link>.
+          <p>
+            ChatPDF&apos;s free tier allows limited daily usage, making it a good option for occasional users. However,
+            it lacks multi-format support and real-time citation highlighting. See our{' '}
+            <Link href="/compare/chatpdf">ChatPDF comparison</Link>.
           </p>
-          <p className="text-zinc-600 dark:text-zinc-300 text-sm">
-            <strong>Best for:</strong> Users who want a simple, fast PDF chat experience with minimal setup.
+        </EdProse>
+        <p className="ed-body" style={{ marginTop: '16px' }}>
+          <strong>Best for:</strong> Users who want a simple, fast PDF chat experience with minimal setup.
+        </p>
+      </EdSection>
+
+      {/* #3 PDF.ai */}
+      <EdSection num="03" title="PDF.ai">
+        <EdProse>
+          <p>
+            PDF.ai combines AI chat with built-in PDF editing capabilities, letting you both ask questions about and
+            annotate your documents in one place. This dual functionality sets it apart from AskYourPDF, which focuses
+            purely on the Q&amp;A aspect.
           </p>
-        </section>
+          <p>
+            The tool is PDF-only like AskYourPDF, but its editing features make it useful for users who need to mark up
+            documents alongside their AI analysis. See our{' '}
+            <Link href="/compare/pdf-ai">PDF.ai comparison</Link>.
+          </p>
+        </EdProse>
+        <p className="ed-body" style={{ marginTop: '16px' }}>
+          <strong>Best for:</strong> Users who need PDF annotation and editing alongside AI chat features.
+        </p>
+      </EdSection>
 
-        {/* #3 PDF.ai */}
-        <section className="bg-zinc-50 dark:bg-zinc-900/50">
-          <div className="max-w-4xl mx-auto px-6 py-16">
-            <div className="flex items-center gap-3 mb-6">
-              <span className="flex items-center justify-center w-8 h-8 rounded-full bg-zinc-200 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 text-sm font-bold">3</span>
-              <h2 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100 tracking-tight">
-                PDF.ai
-              </h2>
-            </div>
-            <p className="text-zinc-600 dark:text-zinc-300 leading-relaxed mb-4">
-              PDF.ai combines AI chat with built-in PDF editing capabilities, letting you both ask questions about
-              and annotate your documents in one place. This dual functionality sets it apart from AskYourPDF,
-              which focuses purely on the Q&A aspect.
-            </p>
-            <p className="text-zinc-600 dark:text-zinc-300 leading-relaxed mb-4">
-              The tool is PDF-only like AskYourPDF, but its editing features make it useful for users who need to
-              mark up documents alongside their AI analysis. See our{' '}
-              <Link href="/compare/pdf-ai" className="text-blue-600 dark:text-blue-400 hover:underline">
-                PDF.ai comparison
-              </Link>.
-            </p>
-            <p className="text-zinc-600 dark:text-zinc-300 text-sm">
-              <strong>Best for:</strong> Users who need PDF annotation and editing alongside AI chat features.
-            </p>
-          </div>
-        </section>
-
-        {/* #4 Humata */}
-        <section className="max-w-4xl mx-auto px-6 py-16">
-          <div className="flex items-center gap-3 mb-6">
-            <span className="flex items-center justify-center w-8 h-8 rounded-full bg-zinc-200 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 text-sm font-bold">4</span>
-            <h2 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100 tracking-tight">
-              Humata
-            </h2>
-          </div>
-          <p className="text-zinc-600 dark:text-zinc-300 leading-relaxed mb-4">
+      {/* #4 Humata */}
+      <EdSection alt num="04" title="Humata">
+        <EdProse>
+          <p>
             Humata is an enterprise-focused AI document tool that excels at team collaboration. It offers shared
             workspaces, role-based access control, and the ability to analyze large document sets together. For
             organizations outgrowing AskYourPDF, Humata provides the team infrastructure they need.
           </p>
-          <p className="text-zinc-600 dark:text-zinc-300 leading-relaxed mb-4">
+          <p>
             While more expensive than AskYourPDF (Team plan at $49/user/month), Humata justifies its price with
             enterprise features like admin dashboards, usage analytics, and priority support. See our{' '}
-            <Link href="/compare/humata" className="text-blue-600 dark:text-blue-400 hover:underline">
-              Humata comparison
-            </Link>.
+            <Link href="/compare/humata">Humata comparison</Link>.
           </p>
-          <p className="text-zinc-600 dark:text-zinc-300 text-sm">
-            <strong>Best for:</strong> Teams and enterprises that need shared document workspaces with role management.
+        </EdProse>
+        <p className="ed-body" style={{ marginTop: '16px' }}>
+          <strong>Best for:</strong> Teams and enterprises that need shared document workspaces with role management.
+        </p>
+      </EdSection>
+
+      {/* #5 NotebookLM */}
+      <EdSection num="05" title="Google NotebookLM">
+        <EdProse>
+          <p>
+            NotebookLM is Google&apos;s free AI notebook tool that lets you upload multiple sources (PDFs, Google Docs,
+            websites, YouTube videos) and chat across all of them simultaneously. Its unique Audio Overview feature
+            generates podcast-style summaries of your sources.
           </p>
-        </section>
+          <p>
+            The biggest advantage over AskYourPDF is that NotebookLM is completely free. However, it requires a Google
+            account and doesn&apos;t offer the same depth of single-document analysis. See our{' '}
+            <Link href="/compare/notebooklm">NotebookLM comparison</Link>.
+          </p>
+        </EdProse>
+        <p className="ed-body" style={{ marginTop: '16px' }}>
+          <strong>Best for:</strong> Users who want a free multi-source research tool with audio summaries.
+        </p>
+      </EdSection>
 
-        {/* #5 NotebookLM */}
-        <section className="bg-zinc-50 dark:bg-zinc-900/50">
-          <div className="max-w-4xl mx-auto px-6 py-16">
-            <div className="flex items-center gap-3 mb-6">
-              <span className="flex items-center justify-center w-8 h-8 rounded-full bg-zinc-200 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 text-sm font-bold">5</span>
-              <h2 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100 tracking-tight">
-                Google NotebookLM
-              </h2>
-            </div>
-            <p className="text-zinc-600 dark:text-zinc-300 leading-relaxed mb-4">
-              NotebookLM is Google&apos;s free AI notebook tool that lets you upload multiple sources (PDFs, Google Docs,
-              websites, YouTube videos) and chat across all of them simultaneously. Its unique Audio Overview feature
-              generates podcast-style summaries of your sources.
-            </p>
-            <p className="text-zinc-600 dark:text-zinc-300 leading-relaxed mb-4">
-              The biggest advantage over AskYourPDF is that NotebookLM is completely free. However, it requires a
-              Google account and doesn&apos;t offer the same depth of single-document analysis. See our{' '}
-              <Link href="/compare/notebooklm" className="text-blue-600 dark:text-blue-400 hover:underline">
-                NotebookLM comparison
-              </Link>.
-            </p>
-            <p className="text-zinc-600 dark:text-zinc-300 text-sm">
-              <strong>Best for:</strong> Users who want a free multi-source research tool with audio summaries.
-            </p>
-          </div>
-        </section>
-
-        {/* #6 ChatDOC */}
-        <section className="max-w-4xl mx-auto px-6 py-16">
-          <div className="flex items-center gap-3 mb-6">
-            <span className="flex items-center justify-center w-8 h-8 rounded-full bg-zinc-200 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 text-sm font-bold">6</span>
-            <h2 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100 tracking-tight">
-              ChatDOC
-            </h2>
-          </div>
-          <p className="text-zinc-600 dark:text-zinc-300 leading-relaxed mb-4">
+      {/* #6 ChatDOC */}
+      <EdSection alt num="06" title="ChatDOC">
+        <EdProse>
+          <p>
             ChatDOC specializes in structured data extraction from documents, making it particularly effective for
-            tables, charts, and forms. If you work with data-heavy PDFs like financial reports or research papers
-            with complex tables, ChatDOC often extracts this information more accurately than AskYourPDF.
+            tables, charts, and forms. If you work with data-heavy PDFs like financial reports or research papers with
+            complex tables, ChatDOC often extracts this information more accurately than AskYourPDF.
           </p>
-          <p className="text-zinc-600 dark:text-zinc-300 leading-relaxed mb-4">
-            ChatDOC supports PDF, DOCX, and a few other formats, putting it between AskYourPDF (PDF-only) and
-            DocTalk (7 formats) in terms of versatility. Its table extraction is a standout feature.
+          <p>
+            ChatDOC supports PDF, DOCX, and a few other formats, putting it between AskYourPDF (PDF-only) and DocTalk
+            (7 formats) in terms of versatility. Its table extraction is a standout feature.
           </p>
-          <p className="text-zinc-600 dark:text-zinc-300 text-sm">
-            <strong>Best for:</strong> Users who work heavily with tables, charts, and structured data in documents.
+        </EdProse>
+        <p className="ed-body" style={{ marginTop: '16px' }}>
+          <strong>Best for:</strong> Users who work heavily with tables, charts, and structured data in documents.
+        </p>
+      </EdSection>
+
+      {/* #7 Consensus */}
+      <EdSection num="07" title="Consensus">
+        <EdProse>
+          <p>
+            Consensus takes a unique approach by searching across millions of published academic papers rather than
+            analyzing uploaded documents. For researchers who need to find evidence across the scientific literature,
+            Consensus offers something entirely different from AskYourPDF&apos;s single-document analysis.
           </p>
-        </section>
-
-        {/* #7 Consensus */}
-        <section className="bg-zinc-50 dark:bg-zinc-900/50">
-          <div className="max-w-4xl mx-auto px-6 py-16">
-            <div className="flex items-center gap-3 mb-6">
-              <span className="flex items-center justify-center w-8 h-8 rounded-full bg-zinc-200 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 text-sm font-bold">7</span>
-              <h2 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100 tracking-tight">
-                Consensus
-              </h2>
-            </div>
-            <p className="text-zinc-600 dark:text-zinc-300 leading-relaxed mb-4">
-              Consensus takes a unique approach by searching across millions of published academic papers rather than
-              analyzing uploaded documents. For researchers who need to find evidence across the scientific literature,
-              Consensus offers something entirely different from AskYourPDF&apos;s single-document analysis.
-            </p>
-            <p className="text-zinc-600 dark:text-zinc-300 leading-relaxed mb-4">
-              While not a direct replacement for AskYourPDF (you can&apos;t upload your own documents), Consensus is
-              invaluable for academic research, literature reviews, and finding citations across published work. It
-              pairs well with tools like DocTalk for a complete research workflow.
-            </p>
-            <p className="text-zinc-600 dark:text-zinc-300 text-sm">
-              <strong>Best for:</strong> Academic researchers who need AI-powered search across published scientific papers.
-            </p>
-          </div>
-        </section>
-
-        {/* How to Choose */}
-        <section className="max-w-4xl mx-auto px-6 py-16">
-          <h2 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100 tracking-tight mb-6">
-            How to Choose the Right AskYourPDF Alternative
-          </h2>
-          <p className="text-zinc-600 dark:text-zinc-300 leading-relaxed mb-6">
-            The best alternative depends on your specific needs. Here&apos;s a quick guide to help you decide:
+          <p>
+            While not a direct replacement for AskYourPDF (you can&apos;t upload your own documents), Consensus is
+            invaluable for academic research, literature reviews, and finding citations across published work. It pairs
+            well with tools like DocTalk for a complete research workflow.
           </p>
-          <div className="space-y-4">
-            {[
-              { need: 'Multi-format support + citation highlighting', pick: 'DocTalk', href: '/demo' },
-              { need: 'Simple PDF chat with fast responses', pick: 'ChatPDF', href: '/compare/chatpdf' },
-              { need: 'PDF annotation + AI chat in one tool', pick: 'PDF.ai', href: '/compare/pdf-ai' },
-              { need: 'Team collaboration with shared workspaces', pick: 'Humata', href: '/compare/humata' },
-              { need: 'Free multi-source research notebooks', pick: 'NotebookLM', href: '/compare/notebooklm' },
-              { need: 'Table and structured data extraction', pick: 'ChatDOC', href: '/alternatives' },
-              { need: 'Academic paper search across literature', pick: 'Consensus', href: '/alternatives' },
-            ].map((item) => (
-              <div key={item.need} className="flex items-start gap-4 py-3 border-b border-zinc-200 dark:border-zinc-800">
-                <span className="text-zinc-600 dark:text-zinc-300 text-sm flex-1">{item.need}</span>
-                <Link
-                  href={item.href}
-                  className="text-sm font-medium text-blue-600 dark:text-blue-400 hover:underline whitespace-nowrap"
-                >
-                  {item.pick}
-                </Link>
-              </div>
-            ))}
-          </div>
-        </section>
+        </EdProse>
+        <p className="ed-body" style={{ marginTop: '16px' }}>
+          <strong>Best for:</strong> Academic researchers who need AI-powered search across published scientific papers.
+        </p>
+      </EdSection>
 
-        {/* FAQ */}
-        <section className="bg-zinc-50 dark:bg-zinc-900/50">
-          <div className="max-w-4xl mx-auto px-6 py-16">
-            <h2 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100 tracking-tight mb-8">
-              Frequently Asked Questions
-            </h2>
-            <FAQSection items={faqItems} />
-          </div>
-        </section>
+      <EdSection alt title="How to Choose the Right AskYourPDF Alternative">
+        <p className="ed-body">
+          The best alternative depends on your specific needs. Here&apos;s a quick guide to help you decide:
+        </p>
+        <div style={{ marginTop: '24px' }}>
+          <EdChoiceList items={chooseItems} />
+        </div>
+      </EdSection>
 
-        {/* Internal Links */}
-        <section className="max-w-4xl mx-auto px-6 py-12">
-          <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100 mb-4">
-            Related Pages
-          </h2>
-          <div className="flex flex-wrap gap-3">
-            {[
-              { href: '/compare/askyourpdf', label: 'DocTalk vs AskYourPDF' },
-              { href: '/compare/chatpdf', label: 'DocTalk vs ChatPDF' },
-              { href: '/alternatives/chatpdf', label: 'ChatPDF Alternatives' },
-              { href: '/features/citations', label: 'Citation Highlighting' },
-              { href: '/features/multi-format', label: 'Multi-Format Support' },
-              { href: '/demo', label: 'Try Free Demo' },
-              { href: '/pricing', label: 'Pricing' },
-            ].map((link) => (
-              <Link
-                key={link.href}
-                href={link.href}
-                className="px-4 py-2 text-sm bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg text-zinc-600 dark:text-zinc-300 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-[box-shadow,transform] duration-200"
-              >
-                {link.label}
-              </Link>
-            ))}
-          </div>
-        </section>
+      <EdSection title="Frequently Asked Questions">
+        <EdFaqList items={faqItems} />
+      </EdSection>
 
-        {/* CTA */}
-        <CTABanner
-          variant="highlight"
-          title="Ready to Try a Better Document AI?"
-          description="Upload any document and get cited answers in seconds. No signup required."
-          buttonText="Try Free Demo"
-          href="/demo"
+      <EdSection alt>
+        <EdRelatedLinks
+          title="Related Pages"
+          links={[
+            { href: '/compare/askyourpdf', label: 'DocTalk vs AskYourPDF' },
+            { href: '/compare/chatpdf', label: 'DocTalk vs ChatPDF' },
+            { href: '/alternatives/chatpdf', label: 'ChatPDF Alternatives' },
+            { href: '/features/citations', label: 'Citation Highlighting' },
+            { href: '/features/multi-format', label: 'Multi-Format Support' },
+            { href: '/demo', label: 'Try Free Demo' },
+            { href: '/pricing', label: 'Pricing' },
+          ]}
         />
-      </main>
-      <Footer />
-    </div>
+      </EdSection>
+
+      <EdCtaBanner
+        title="Ready to Try a Better Document AI?"
+        description="Upload any document and get cited answers in seconds. No signup required."
+        primary={{ label: 'Try Free Demo', href: '/demo' }}
+      />
+    </MarketingShell>
   );
 }

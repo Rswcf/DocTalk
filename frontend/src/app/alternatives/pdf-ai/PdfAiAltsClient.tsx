@@ -2,18 +2,18 @@
 
 import React from 'react';
 import Link from 'next/link';
-import Header from '../../../components/Header';
-import Footer from '../../../components/Footer';
-import ArticleMeta from '../../../components/seo/ArticleMeta';
-import ComparisonTable from '../../../components/seo/ComparisonTable';
-import FAQSection from '../../../components/seo/FAQSection';
-import CTABanner from '../../../components/seo/CTABanner';
-import { Award, Check } from 'lucide-react';
-import { useLocale } from '../../../i18n';
+import MarketingShell from '../../../components/marketing/MarketingShell';
+import EdPageHero from '../../../components/marketing/EdPageHero';
+import EdSection from '../../../components/marketing/EdSection';
+import EdProse from '../../../components/marketing/EdProse';
+import EdComparisonTable from '../../../components/marketing/EdComparisonTable';
+import EdFaqList from '../../../components/marketing/EdFaqList';
+import EdRelatedLinks from '../../../components/marketing/EdRelatedLinks';
+import EdCtaBanner from '../../../components/marketing/EdCtaBanner';
+import EdCheckList from '../../../components/marketing/EdCheckList';
+import EdChoiceList from '../../../components/marketing/EdChoiceList';
 
 export default function PdfAiAltsClient() {
-  const { t } = useLocale();
-
   const quickCompare = [
     { name: 'File Formats', doctalk: '7 formats (PDF, DOCX, PPTX, XLSX, TXT, MD, URL)', competitor: 'PDF only' },
     { name: 'Citation Highlighting', doctalk: true, competitor: false },
@@ -45,349 +45,234 @@ export default function PdfAiAltsClient() {
     },
   ];
 
+  const chooseItems = [
+    { need: 'Multi-format support + citation highlighting', pick: { label: 'DocTalk', href: '/demo' } },
+    { need: 'Simplest PDF chat experience', pick: { label: 'ChatPDF', href: '/compare/chatpdf' } },
+    { need: 'Zotero integration + API access', pick: { label: 'AskYourPDF', href: '/compare/askyourpdf' } },
+    { need: 'Team collaboration with admin controls', pick: { label: 'Humata', href: '/compare/humata' } },
+    { need: 'Free multi-source research notebooks', pick: { label: 'NotebookLM', href: '/compare/notebooklm' } },
+    { need: 'Table and structured data extraction', pick: { label: 'ChatDOC', href: '/alternatives' } },
+    { need: 'Fast, clean AI document assistant', pick: { label: 'Sharly', href: '/alternatives' } },
+  ];
+
   return (
-    <div className="min-h-screen flex flex-col bg-white dark:bg-zinc-950">
-      <Header variant="minimal" />
-      <main className="flex-1">
-        {/* Hero */}
-        <section className="max-w-4xl mx-auto px-6 pt-20 pb-12">
-          <nav className="text-sm text-zinc-500 dark:text-zinc-300 mb-8">
-            <Link href="/" className="hover:text-zinc-700 dark:hover:text-zinc-300">Home</Link>
-            <span className="mx-2">/</span>
-            <Link href="/alternatives" className="hover:text-zinc-700 dark:hover:text-zinc-300">Alternatives</Link>
-            <span className="mx-2">/</span>
-            <span className="text-zinc-900 dark:text-zinc-100">PDF.ai</span>
-          </nav>
+    <MarketingShell
+      breadcrumb={[
+        { label: 'Home', href: '/' },
+        { label: 'Alternatives', href: '/alternatives' },
+        { label: 'PDF.ai' },
+      ]}
+    >
+      <EdPageHero
+        title="7 Best PDF.ai Alternatives in 2026"
+        lede="PDF.ai combines AI chat with PDF editing, but its single-format limitation and basic citation system leave many users wanting more. Whether you need multi-format support, better citation highlighting, or more affordable pricing, these 7 alternatives deliver where PDF.ai falls short."
+        primaryCta={{ label: 'Try Free Demo', href: '/demo' }}
+      />
 
-          <h1 className="font-serif text-3xl sm:text-4xl font-semibold text-zinc-900 dark:text-zinc-100 tracking-tight mb-6">
-            7 Best PDF.ai Alternatives in 2026
-          </h1>
-          <p className="text-lg text-zinc-600 dark:text-zinc-300 leading-relaxed">
-            PDF.ai combines AI chat with PDF editing, but its single-format limitation and basic citation system
-            leave many users wanting more. Whether you need multi-format support, better citation highlighting,
-            or more affordable pricing, these 7 alternatives deliver where PDF.ai falls short.
+      <EdSection title="DocTalk vs PDF.ai at a Glance">
+        <EdComparisonTable features={quickCompare} competitorName="PDF.ai" />
+      </EdSection>
+
+      <EdSection alt title="Why Look for PDF.ai Alternatives?">
+        <EdProse>
+          <p>
+            PDF.ai has its strengths in combining AI chat with PDF editing, but users frequently run into limitations
+            that drive them to explore alternatives:
           </p>
-          <ArticleMeta author="DocTalk Team" published="2026-03-18" className="mt-6" />
-        </section>
-
-        {/* Quick Comparison Table */}
-        <section className="bg-zinc-50 dark:bg-zinc-900/50">
-          <div className="max-w-4xl mx-auto px-6 py-16">
-            <h2 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100 tracking-tight mb-8">
-              DocTalk vs PDF.ai at a Glance
-            </h2>
-            <ComparisonTable features={quickCompare} competitorName="PDF.ai" />
-          </div>
-        </section>
-
-        {/* Why Look for Alternatives */}
-        <section className="max-w-4xl mx-auto px-6 py-16">
-          <h2 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100 tracking-tight mb-6">
-            Why Look for PDF.ai Alternatives?
-          </h2>
-          <p className="text-zinc-600 dark:text-zinc-300 leading-relaxed mb-4">
-            PDF.ai has its strengths in combining AI chat with PDF editing, but users frequently run into
-            limitations that drive them to explore alternatives:
-          </p>
-          <ul className="space-y-3 text-zinc-600 dark:text-zinc-300">
-            <li className="flex items-start gap-2">
-              <span className="text-zinc-400 mt-1.5 shrink-0">&#x2022;</span>
-              <span><strong>PDF-only format</strong> &mdash; PDF.ai only works with PDFs. If you need to analyze Word documents, spreadsheets, presentations, or web pages, you need a different tool.</span>
-            </li>
-            <li className="flex items-start gap-2">
-              <span className="text-zinc-400 mt-1.5 shrink-0">&#x2022;</span>
-              <span><strong>Basic citation references</strong> &mdash; PDF.ai provides page-level citations but lacks the real-time visual highlighting that tools like DocTalk offer for instant source verification.</span>
-            </li>
-            <li className="flex items-start gap-2">
-              <span className="text-zinc-400 mt-1.5 shrink-0">&#x2022;</span>
-              <span><strong>Limited language support</strong> &mdash; PDF.ai primarily serves English-speaking users, while alternatives like DocTalk support 11 languages natively.</span>
-            </li>
-            <li className="flex items-start gap-2">
-              <span className="text-zinc-400 mt-1.5 shrink-0">&#x2022;</span>
-              <span><strong>Price vs. features</strong> &mdash; At $15/month for the paid plan, some users find better value in alternatives with broader capabilities at similar or lower price points.</span>
-            </li>
+          <ul>
+            <li>PDF-only format — PDF.ai only works with PDFs. If you need to analyze Word documents, spreadsheets, presentations, or web pages, you need a different tool.</li>
+            <li>Basic citation references — PDF.ai provides page-level citations but lacks the real-time visual highlighting that tools like DocTalk offer for instant source verification.</li>
+            <li>Limited language support — PDF.ai primarily serves English-speaking users, while alternatives like DocTalk support 11 languages natively.</li>
+            <li>Price vs. features — At $15/month for the paid plan, some users find better value in alternatives with broader capabilities at similar or lower price points.</li>
           </ul>
-        </section>
+        </EdProse>
+      </EdSection>
 
-        {/* #1 DocTalk */}
-        <section className="bg-zinc-50 dark:bg-zinc-900/50">
-          <div className="max-w-4xl mx-auto px-6 py-16">
-            <div className="flex items-center gap-3 mb-6">
-              <span className="flex items-center justify-center w-8 h-8 rounded-full bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 text-sm font-bold">1</span>
-              <h2 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100 tracking-tight">
-                DocTalk
-              </h2>
-            </div>
-            <div className="flex items-center gap-2 mb-4">
-              <Award className="w-4 h-4 text-amber-500" />
-              <span className="text-sm font-medium text-amber-600 dark:text-amber-400">Best Overall PDF.ai Alternative</span>
-            </div>
-            <p className="text-zinc-600 dark:text-zinc-300 leading-relaxed mb-4">
-              DocTalk is the best PDF.ai alternative for users who need more than just PDF support. While PDF.ai
-              focuses on PDFs with built-in editing, DocTalk handles 7 document formats (PDF, DOCX, PPTX, XLSX,
-              TXT, Markdown, and URLs) with a superior citation system that highlights exact source passages in real time.
-            </p>
-            <p className="text-zinc-600 dark:text-zinc-300 leading-relaxed mb-4">
-              DocTalk&apos;s real-time citation highlighting is its standout feature. Every AI answer includes clickable
-              citations that scroll to and visually highlight the exact text in your document, making it easy to verify
-              accuracy instantly. This goes far beyond PDF.ai&apos;s basic page references.
-            </p>
-            <p className="text-zinc-600 dark:text-zinc-300 leading-relaxed mb-4">
-              See our{' '}
-              <Link href="/compare/pdf-ai" className="text-blue-600 dark:text-blue-400 hover:underline">
-                detailed DocTalk vs PDF.ai comparison
-              </Link>{' '}
-              for a complete feature-by-feature breakdown.
-            </p>
-            <div className="mt-6 space-y-2">
-              <h3 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100 uppercase tracking-wider">Key Advantages</h3>
-              <ul className="space-y-1.5">
-                {[
-                  '7 document formats vs PDF-only',
-                  'Real-time citation highlighting with visual verification',
-                  '11 languages supported natively',
-                  'Free demo with no signup required',
-                  'Two AI modes: Flash and Pro',
-                  'Starting at $9.99/mo (vs $15/mo)',
-                ].map((item) => (
-                  <li key={item} className="flex items-center gap-2 text-sm text-zinc-600 dark:text-zinc-300">
-                    <Check className="w-4 h-4 text-emerald-600 shrink-0" />
-                    <span>{item}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          </div>
-        </section>
-
-        {/* #2 ChatPDF */}
-        <section className="max-w-4xl mx-auto px-6 py-16">
-          <div className="flex items-center gap-3 mb-6">
-            <span className="flex items-center justify-center w-8 h-8 rounded-full bg-zinc-200 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 text-sm font-bold">2</span>
-            <h2 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100 tracking-tight">
-              ChatPDF
-            </h2>
-          </div>
-          <p className="text-zinc-600 dark:text-zinc-300 leading-relaxed mb-4">
-            ChatPDF is one of the original AI PDF chat tools and remains popular for its simplicity. Compared to
-            PDF.ai, ChatPDF has a more streamlined interface focused purely on conversation rather than editing.
-            It&apos;s quick to set up and easy to use, making it a good fit for users who just need fast answers.
+      {/* #1 DocTalk */}
+      <EdSection num="01" title="DocTalk">
+        <div className="ed-label" style={{ color: 'var(--ed-signal)' }}>
+          Best Overall PDF.ai Alternative
+        </div>
+        <EdProse className="mt-3">
+          <p>
+            DocTalk is the best PDF.ai alternative for users who need more than just PDF support. While PDF.ai focuses
+            on PDFs with built-in editing, DocTalk handles 7 document formats (PDF, DOCX, PPTX, XLSX, TXT, Markdown, and
+            URLs) with a superior citation system that highlights exact source passages in real time.
           </p>
-          <p className="text-zinc-600 dark:text-zinc-300 leading-relaxed mb-4">
-            Like PDF.ai, ChatPDF is PDF-only, but it compensates with faster response times and a more generous
-            free tier. See our{' '}
-            <Link href="/compare/chatpdf" className="text-blue-600 dark:text-blue-400 hover:underline">
-              ChatPDF comparison
-            </Link>.
+          <p>
+            DocTalk&apos;s real-time citation highlighting is its standout feature. Every AI answer includes clickable
+            citations that scroll to and visually highlight the exact text in your document, making it easy to verify
+            accuracy instantly. This goes far beyond PDF.ai&apos;s basic page references.
           </p>
-          <p className="text-zinc-600 dark:text-zinc-300 text-sm">
-            <strong>Best for:</strong> Users who want the simplest possible PDF chat experience without extra editing features.
+          <p>
+            See our{' '}
+            <Link href="/compare/pdf-ai">detailed DocTalk vs PDF.ai comparison</Link>{' '}
+            for a complete feature-by-feature breakdown.
           </p>
-        </section>
+        </EdProse>
+        <div className="ed-label" style={{ marginTop: '32px' }}>
+          Key Advantages
+        </div>
+        <div className="mt-3">
+          <EdCheckList
+            items={[
+              '7 document formats vs PDF-only',
+              'Real-time citation highlighting with visual verification',
+              '11 languages supported natively',
+              'Free demo with no signup required',
+              'Two AI modes: Flash and Pro',
+              'Starting at $9.99/mo (vs $15/mo)',
+            ]}
+          />
+        </div>
+      </EdSection>
 
-        {/* #3 AskYourPDF */}
-        <section className="bg-zinc-50 dark:bg-zinc-900/50">
-          <div className="max-w-4xl mx-auto px-6 py-16">
-            <div className="flex items-center gap-3 mb-6">
-              <span className="flex items-center justify-center w-8 h-8 rounded-full bg-zinc-200 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 text-sm font-bold">3</span>
-              <h2 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100 tracking-tight">
-                AskYourPDF
-              </h2>
-            </div>
-            <p className="text-zinc-600 dark:text-zinc-300 leading-relaxed mb-4">
-              AskYourPDF differentiates itself with a Zotero integration for academic workflows and API access
-              for developers. If you&apos;re switching from PDF.ai and need research tool integrations, AskYourPDF
-              fills that gap well.
-            </p>
-            <p className="text-zinc-600 dark:text-zinc-300 leading-relaxed mb-4">
-              AskYourPDF also focuses on PDFs but adds features like batch processing and a ChatGPT plugin that
-              PDF.ai lacks. See our{' '}
-              <Link href="/compare/askyourpdf" className="text-blue-600 dark:text-blue-400 hover:underline">
-                AskYourPDF comparison
-              </Link>.
-            </p>
-            <p className="text-zinc-600 dark:text-zinc-300 text-sm">
-              <strong>Best for:</strong> Researchers who need Zotero integration and API access for automated workflows.
-            </p>
-          </div>
-        </section>
-
-        {/* #4 Humata */}
-        <section className="max-w-4xl mx-auto px-6 py-16">
-          <div className="flex items-center gap-3 mb-6">
-            <span className="flex items-center justify-center w-8 h-8 rounded-full bg-zinc-200 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 text-sm font-bold">4</span>
-            <h2 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100 tracking-tight">
-              Humata
-            </h2>
-          </div>
-          <p className="text-zinc-600 dark:text-zinc-300 leading-relaxed mb-4">
-            Humata is the go-to PDF.ai alternative for teams. While PDF.ai and most other tools focus on individual
-            use, Humata provides shared workspaces, role-based access control, admin dashboards, and usage analytics.
-            If your organization needs collaborative document analysis, Humata is purpose-built for that.
+      {/* #2 ChatPDF */}
+      <EdSection alt num="02" title="ChatPDF">
+        <EdProse>
+          <p>
+            ChatPDF is one of the original AI PDF chat tools and remains popular for its simplicity. Compared to PDF.ai,
+            ChatPDF has a more streamlined interface focused purely on conversation rather than editing. It&apos;s quick
+            to set up and easy to use, making it a good fit for users who just need fast answers.
           </p>
-          <p className="text-zinc-600 dark:text-zinc-300 leading-relaxed mb-4">
-            The Team plan at $49/user/month is pricier than PDF.ai, but includes features no other tool in this
-            category offers. See our{' '}
-            <Link href="/compare/humata" className="text-blue-600 dark:text-blue-400 hover:underline">
-              Humata comparison
-            </Link>.
+          <p>
+            Like PDF.ai, ChatPDF is PDF-only, but it compensates with faster response times and a more generous free
+            tier. See our{' '}
+            <Link href="/compare/chatpdf">ChatPDF comparison</Link>.
           </p>
-          <p className="text-zinc-600 dark:text-zinc-300 text-sm">
-            <strong>Best for:</strong> Teams that need enterprise-grade document collaboration with role management.
+        </EdProse>
+        <p className="ed-body" style={{ marginTop: '16px' }}>
+          <strong>Best for:</strong> Users who want the simplest possible PDF chat experience without extra editing features.
+        </p>
+      </EdSection>
+
+      {/* #3 AskYourPDF */}
+      <EdSection num="03" title="AskYourPDF">
+        <EdProse>
+          <p>
+            AskYourPDF differentiates itself with a Zotero integration for academic workflows and API access for
+            developers. If you&apos;re switching from PDF.ai and need research tool integrations, AskYourPDF fills that
+            gap well.
           </p>
-        </section>
-
-        {/* #5 NotebookLM */}
-        <section className="bg-zinc-50 dark:bg-zinc-900/50">
-          <div className="max-w-4xl mx-auto px-6 py-16">
-            <div className="flex items-center gap-3 mb-6">
-              <span className="flex items-center justify-center w-8 h-8 rounded-full bg-zinc-200 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 text-sm font-bold">5</span>
-              <h2 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100 tracking-tight">
-                Google NotebookLM
-              </h2>
-            </div>
-            <p className="text-zinc-600 dark:text-zinc-300 leading-relaxed mb-4">
-              NotebookLM is the only completely free tool on this list, making it an attractive PDF.ai alternative
-              for budget-conscious users. It supports multiple source types (PDFs, Google Docs, websites, YouTube)
-              and generates unique Audio Overview podcasts from your sources.
-            </p>
-            <p className="text-zinc-600 dark:text-zinc-300 leading-relaxed mb-4">
-              While NotebookLM lacks the PDF editing features that PDF.ai offers, its multi-source notebook approach
-              and free pricing make it ideal for research and learning. See our{' '}
-              <Link href="/compare/notebooklm" className="text-blue-600 dark:text-blue-400 hover:underline">
-                NotebookLM comparison
-              </Link>.
-            </p>
-            <p className="text-zinc-600 dark:text-zinc-300 text-sm">
-              <strong>Best for:</strong> Users who want a free multi-source research tool with audio summary generation.
-            </p>
-          </div>
-        </section>
-
-        {/* #6 ChatDOC */}
-        <section className="max-w-4xl mx-auto px-6 py-16">
-          <div className="flex items-center gap-3 mb-6">
-            <span className="flex items-center justify-center w-8 h-8 rounded-full bg-zinc-200 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 text-sm font-bold">6</span>
-            <h2 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100 tracking-tight">
-              ChatDOC
-            </h2>
-          </div>
-          <p className="text-zinc-600 dark:text-zinc-300 leading-relaxed mb-4">
-            ChatDOC excels at extracting structured data from documents. If you frequently work with tables,
-            charts, and forms within PDFs, ChatDOC&apos;s table extraction is significantly more accurate than
-            what PDF.ai offers. It also supports a few formats beyond PDF, including DOCX.
+          <p>
+            AskYourPDF also focuses on PDFs but adds features like batch processing and a ChatGPT plugin that PDF.ai
+            lacks. See our{' '}
+            <Link href="/compare/askyourpdf">AskYourPDF comparison</Link>.
           </p>
-          <p className="text-zinc-600 dark:text-zinc-300 leading-relaxed mb-4">
-            For users switching from PDF.ai specifically because of poor table handling, ChatDOC is a strong choice.
-            It may lack PDF.ai&apos;s editing tools but makes up for it with superior data extraction capabilities.
+        </EdProse>
+        <p className="ed-body" style={{ marginTop: '16px' }}>
+          <strong>Best for:</strong> Researchers who need Zotero integration and API access for automated workflows.
+        </p>
+      </EdSection>
+
+      {/* #4 Humata */}
+      <EdSection alt num="04" title="Humata">
+        <EdProse>
+          <p>
+            Humata is the go-to PDF.ai alternative for teams. While PDF.ai and most other tools focus on individual use,
+            Humata provides shared workspaces, role-based access control, admin dashboards, and usage analytics. If your
+            organization needs collaborative document analysis, Humata is purpose-built for that.
           </p>
-          <p className="text-zinc-600 dark:text-zinc-300 text-sm">
-            <strong>Best for:</strong> Users who need accurate extraction of tables, charts, and structured data from documents.
+          <p>
+            The Team plan at $49/user/month is pricier than PDF.ai, but includes features no other tool in this category
+            offers. See our{' '}
+            <Link href="/compare/humata">Humata comparison</Link>.
           </p>
-        </section>
+        </EdProse>
+        <p className="ed-body" style={{ marginTop: '16px' }}>
+          <strong>Best for:</strong> Teams that need enterprise-grade document collaboration with role management.
+        </p>
+      </EdSection>
 
-        {/* #7 Sharly */}
-        <section className="bg-zinc-50 dark:bg-zinc-900/50">
-          <div className="max-w-4xl mx-auto px-6 py-16">
-            <div className="flex items-center gap-3 mb-6">
-              <span className="flex items-center justify-center w-8 h-8 rounded-full bg-zinc-200 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 text-sm font-bold">7</span>
-              <h2 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100 tracking-tight">
-                Sharly
-              </h2>
-            </div>
-            <p className="text-zinc-600 dark:text-zinc-300 leading-relaxed mb-4">
-              Sharly focuses on speed and simplicity with an AI assistant that can summarize, explain, and answer
-              questions about your documents quickly. It offers a cleaner interface than PDF.ai and focuses on the
-              core Q&A experience without the added complexity of editing tools.
-            </p>
-            <p className="text-zinc-600 dark:text-zinc-300 leading-relaxed mb-4">
-              Sharly supports multiple file formats and offers competitive pricing. It&apos;s a good middle-ground
-              choice for users who found PDF.ai too feature-heavy but want more than what basic PDF chat tools provide.
-            </p>
-            <p className="text-zinc-600 dark:text-zinc-300 text-sm">
-              <strong>Best for:</strong> Users who want fast, no-frills AI document analysis with a clean interface.
-            </p>
-          </div>
-        </section>
-
-        {/* How to Choose */}
-        <section className="max-w-4xl mx-auto px-6 py-16">
-          <h2 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100 tracking-tight mb-6">
-            How to Choose the Right PDF.ai Alternative
-          </h2>
-          <p className="text-zinc-600 dark:text-zinc-300 leading-relaxed mb-6">
-            The best alternative depends on what you need most. Here&apos;s a quick decision guide:
+      {/* #5 NotebookLM */}
+      <EdSection num="05" title="Google NotebookLM">
+        <EdProse>
+          <p>
+            NotebookLM is the only completely free tool on this list, making it an attractive PDF.ai alternative for
+            budget-conscious users. It supports multiple source types (PDFs, Google Docs, websites, YouTube) and
+            generates unique Audio Overview podcasts from your sources.
           </p>
-          <div className="space-y-4">
-            {[
-              { need: 'Multi-format support + citation highlighting', pick: 'DocTalk', href: '/demo' },
-              { need: 'Simplest PDF chat experience', pick: 'ChatPDF', href: '/compare/chatpdf' },
-              { need: 'Zotero integration + API access', pick: 'AskYourPDF', href: '/compare/askyourpdf' },
-              { need: 'Team collaboration with admin controls', pick: 'Humata', href: '/compare/humata' },
-              { need: 'Free multi-source research notebooks', pick: 'NotebookLM', href: '/compare/notebooklm' },
-              { need: 'Table and structured data extraction', pick: 'ChatDOC', href: '/alternatives' },
-              { need: 'Fast, clean AI document assistant', pick: 'Sharly', href: '/alternatives' },
-            ].map((item) => (
-              <div key={item.need} className="flex items-start gap-4 py-3 border-b border-zinc-200 dark:border-zinc-800">
-                <span className="text-zinc-600 dark:text-zinc-300 text-sm flex-1">{item.need}</span>
-                <Link
-                  href={item.href}
-                  className="text-sm font-medium text-blue-600 dark:text-blue-400 hover:underline whitespace-nowrap"
-                >
-                  {item.pick}
-                </Link>
-              </div>
-            ))}
-          </div>
-        </section>
+          <p>
+            While NotebookLM lacks the PDF editing features that PDF.ai offers, its multi-source notebook approach and
+            free pricing make it ideal for research and learning. See our{' '}
+            <Link href="/compare/notebooklm">NotebookLM comparison</Link>.
+          </p>
+        </EdProse>
+        <p className="ed-body" style={{ marginTop: '16px' }}>
+          <strong>Best for:</strong> Users who want a free multi-source research tool with audio summary generation.
+        </p>
+      </EdSection>
 
-        {/* FAQ */}
-        <section className="bg-zinc-50 dark:bg-zinc-900/50">
-          <div className="max-w-4xl mx-auto px-6 py-16">
-            <h2 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100 tracking-tight mb-8">
-              Frequently Asked Questions
-            </h2>
-            <FAQSection items={faqItems} />
-          </div>
-        </section>
+      {/* #6 ChatDOC */}
+      <EdSection alt num="06" title="ChatDOC">
+        <EdProse>
+          <p>
+            ChatDOC excels at extracting structured data from documents. If you frequently work with tables, charts, and
+            forms within PDFs, ChatDOC&apos;s table extraction is significantly more accurate than what PDF.ai offers.
+            It also supports a few formats beyond PDF, including DOCX.
+          </p>
+          <p>
+            For users switching from PDF.ai specifically because of poor table handling, ChatDOC is a strong choice. It
+            may lack PDF.ai&apos;s editing tools but makes up for it with superior data extraction capabilities.
+          </p>
+        </EdProse>
+        <p className="ed-body" style={{ marginTop: '16px' }}>
+          <strong>Best for:</strong> Users who need accurate extraction of tables, charts, and structured data from documents.
+        </p>
+      </EdSection>
 
-        {/* Internal Links */}
-        <section className="max-w-4xl mx-auto px-6 py-12">
-          <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100 mb-4">
-            Related Pages
-          </h2>
-          <div className="flex flex-wrap gap-3">
-            {[
-              { href: '/compare/pdf-ai', label: 'DocTalk vs PDF.ai' },
-              { href: '/compare/chatpdf', label: 'DocTalk vs ChatPDF' },
-              { href: '/alternatives/chatpdf', label: 'ChatPDF Alternatives' },
-              { href: '/alternatives/askyourpdf', label: 'AskYourPDF Alternatives' },
-              { href: '/features/citations', label: 'Citation Highlighting' },
-              { href: '/features/multi-format', label: 'Multi-Format Support' },
-              { href: '/demo', label: 'Try Free Demo' },
-              { href: '/pricing', label: 'Pricing' },
-            ].map((link) => (
-              <Link
-                key={link.href}
-                href={link.href}
-                className="px-4 py-2 text-sm bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg text-zinc-600 dark:text-zinc-300 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-[box-shadow,transform] duration-200"
-              >
-                {link.label}
-              </Link>
-            ))}
-          </div>
-        </section>
+      {/* #7 Sharly */}
+      <EdSection num="07" title="Sharly">
+        <EdProse>
+          <p>
+            Sharly focuses on speed and simplicity with an AI assistant that can summarize, explain, and answer
+            questions about your documents quickly. It offers a cleaner interface than PDF.ai and focuses on the core
+            Q&amp;A experience without the added complexity of editing tools.
+          </p>
+          <p>
+            Sharly supports multiple file formats and offers competitive pricing. It&apos;s a good middle-ground choice
+            for users who found PDF.ai too feature-heavy but want more than what basic PDF chat tools provide.
+          </p>
+        </EdProse>
+        <p className="ed-body" style={{ marginTop: '16px' }}>
+          <strong>Best for:</strong> Users who want fast, no-frills AI document analysis with a clean interface.
+        </p>
+      </EdSection>
 
-        {/* CTA */}
-        <CTABanner
-          variant="highlight"
-          title="Ready to Try a Better Document AI?"
-          description="Upload any document and get cited answers in seconds. No signup required."
-          buttonText="Try Free Demo"
-          href="/demo"
+      <EdSection alt title="How to Choose the Right PDF.ai Alternative">
+        <p className="ed-body">
+          The best alternative depends on what you need most. Here&apos;s a quick decision guide:
+        </p>
+        <div style={{ marginTop: '24px' }}>
+          <EdChoiceList items={chooseItems} />
+        </div>
+      </EdSection>
+
+      <EdSection title="Frequently Asked Questions">
+        <EdFaqList items={faqItems} />
+      </EdSection>
+
+      <EdSection alt>
+        <EdRelatedLinks
+          title="Related Pages"
+          links={[
+            { href: '/compare/pdf-ai', label: 'DocTalk vs PDF.ai' },
+            { href: '/compare/chatpdf', label: 'DocTalk vs ChatPDF' },
+            { href: '/alternatives/chatpdf', label: 'ChatPDF Alternatives' },
+            { href: '/alternatives/askyourpdf', label: 'AskYourPDF Alternatives' },
+            { href: '/features/citations', label: 'Citation Highlighting' },
+            { href: '/features/multi-format', label: 'Multi-Format Support' },
+            { href: '/demo', label: 'Try Free Demo' },
+            { href: '/pricing', label: 'Pricing' },
+          ]}
         />
-      </main>
-      <Footer />
-    </div>
+      </EdSection>
+
+      <EdCtaBanner
+        title="Ready to Try a Better Document AI?"
+        description="Upload any document and get cited answers in seconds. No signup required."
+        primary={{ label: 'Try Free Demo', href: '/demo' }}
+      />
+    </MarketingShell>
   );
 }
