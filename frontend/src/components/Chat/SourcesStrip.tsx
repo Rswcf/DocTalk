@@ -67,7 +67,13 @@ export default function SourcesStrip({
         aria-label={tOr("chat.sources.retrievingAriaLabel", "Retrieving sources")}
         role="status"
       >
-        <div className="dt-sources-label text-[11px] font-mono uppercase">
+        <div
+          className="dt-sources-label text-[11px] uppercase"
+          style={{
+            fontFamily: 'var(--font-plex-mono), ui-monospace, monospace',
+            letterSpacing: '0.10em',
+          }}
+        >
           {tOr("chat.sources.retrieving", "Retrieving sources…")}
         </div>
         <div className="flex flex-wrap gap-2" aria-hidden="true">
@@ -116,7 +122,10 @@ export default function SourcesStrip({
                 className="shrink-0 text-zinc-400 group-hover:text-[var(--reader-evidence)] dark:text-zinc-500"
               />
               <span className="truncate font-medium">{displayFilename}</span>
-              <span className="shrink-0 font-mono text-[10px] text-[var(--reader-muted)]">
+              <span
+                className="shrink-0 text-[10px] text-[var(--reader-muted)]"
+                style={{ fontFamily: 'var(--font-plex-mono), ui-monospace, monospace' }}
+              >
                 p.{c.page}
               </span>
             </button>

@@ -39,14 +39,29 @@ export default function CitationPopover({ citation, children }: CitationPopoverP
               </span>
             </div>
           )}
-          <div className="text-zinc-500 dark:text-zinc-400 mb-1">
+          <div
+            className="text-zinc-500 dark:text-zinc-400 mb-1"
+            style={{
+              fontFamily: 'var(--font-plex-mono), ui-monospace, monospace',
+              fontSize: '10.5px',
+              letterSpacing: '0.02em',
+            }}
+          >
             {citation.documentFilename && (
               <span className="font-medium text-zinc-700 dark:text-zinc-300">{citation.documentFilename}</span>
             )}
             {citation.page && <span> &mdash; p. {citation.page}</span>}
           </div>
           {citation.contextText && (
-            <p className="text-zinc-600 dark:text-zinc-400 line-clamp-4 mt-1">
+            <p
+              className="text-zinc-600 dark:text-zinc-400 line-clamp-4 mt-1"
+              style={{
+                fontFamily: 'var(--font-newsreader), Georgia, serif',
+                fontStyle: 'italic',
+                fontSize: '13.5px',
+                lineHeight: 1.55,
+              }}
+            >
               &ldquo;{citation.contextText}&rdquo;
             </p>
           )}
