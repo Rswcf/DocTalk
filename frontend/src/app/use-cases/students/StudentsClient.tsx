@@ -184,7 +184,7 @@ export default function StudentsClient() {
           <p>{t('useCasesStudents.multilingual.p1')}</p>
           <p>
             {t('useCasesStudents.multilingual.p2a')}
-            <Link href="/features/multilingual">{t('useCasesStudents.multilingual.link')}</Link>{' '}
+            <Link href="/features/multilingual" className="ed-inline">{t('useCasesStudents.multilingual.link')}</Link>{' '}
             {t('useCasesStudents.multilingual.p2b')}
           </p>
           <p>{t('useCasesStudents.multilingual.p3')}</p>

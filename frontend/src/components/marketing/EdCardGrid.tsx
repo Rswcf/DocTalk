@@ -1,8 +1,11 @@
+import Link from "next/link";
+
 interface CardItem {
   label?: string;
   title: string;
   body?: string;
   icon?: React.ComponentType<{ className?: string }>;
+  href?: string;
 }
 
 interface EdCardGridProps {
@@ -20,13 +23,8 @@ export default function EdCardGrid({ items, columns = 3 }: EdCardGridProps) {
     >
       {items.map((item, index) => {
         const Icon = item.icon;
-
-        return (
-          <div
-            key={`card-${index}`}
-            className="ed-card h-full"
-            style={{ display: "flex", flexDirection: "column" }}
-          >
+        const inner = (
+          <>
             {Icon && (
               <div
                 style={{ marginBottom: "10px", color: "var(--ed-ink-3)" }}
@@ -45,6 +43,25 @@ export default function EdCardGrid({ items, columns = 3 }: EdCardGridProps) {
                 {item.body}
               </p>
             )}
+          </>
+        );
+
+        return item.href ? (
+          <Link
+            key={`card-${index}`}
+            href={item.href}
+            className="ed-card h-full"
+            style={{ display: "flex", flexDirection: "column" }}
+          >
+            {inner}
+          </Link>
+        ) : (
+          <div
+            key={`card-${index}`}
+            className="ed-card h-full"
+            style={{ display: "flex", flexDirection: "column" }}
+          >
+            {inner}
           </div>
         );
       })}
