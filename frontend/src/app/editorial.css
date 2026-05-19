@@ -6,8 +6,13 @@
   --ed-ink: #1c1b19;
   --ed-ink-2: #48443b;
   --ed-ink-3: #8b857a;
-  --ed-signal: #b0472f;
-  --ed-signal-deep: #8f3a26;
+  /* Token-bridge accent: unified with the app UI's blue so CTAs read the
+     same across the whole product. Editorial identity remains in the warm
+     paper, Newsreader serif, Plex Mono labels, and hairline rules — not in
+     the accent hue. --ed-ochre is preserved as a secondary editorial-only
+     accent (Partial cells, status dots). */
+  --ed-signal: #1D4ED8;
+  --ed-signal-deep: #1E40AF;
   --ed-ochre: #c08a3e;
   --ed-rule: #d3c9b3;
 
