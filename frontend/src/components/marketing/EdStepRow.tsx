@@ -47,12 +47,16 @@ export default function EdStepRow({ steps }: EdStepRowProps) {
                 <Icon className="w-[18px] h-[18px]" />
               </div>
             )}
-            <h3 className="ed-h3" style={{ marginTop: "12px" }}>
-              {step.title}
-            </h3>
-            <p className="ed-body" style={{ marginTop: "6px" }}>
-              {step.body}
-            </p>
+            {step.title && (
+              <h3 className="ed-h3" style={{ marginTop: "12px" }}>
+                {step.title}
+              </h3>
+            )}
+            {step.body && (
+              <p className="ed-body" style={{ marginTop: "6px" }}>
+                {step.body}
+              </p>
+            )}
           </div>
         );
       })}
