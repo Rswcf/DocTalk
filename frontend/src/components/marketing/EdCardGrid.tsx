@@ -1,7 +1,7 @@
 interface CardItem {
   label?: string;
   title: string;
-  body: string;
+  body?: string;
   icon?: React.ComponentType<{ className?: string }>;
 }
 
@@ -40,9 +40,11 @@ export default function EdCardGrid({ items, columns = 3 }: EdCardGridProps) {
               </div>
             )}
             <h3 className="ed-h3">{item.title}</h3>
-            <p className="ed-body" style={{ marginTop: "8px" }}>
-              {item.body}
-            </p>
+            {item.body && (
+              <p className="ed-body" style={{ marginTop: "8px" }}>
+                {item.body}
+              </p>
+            )}
           </div>
         );
       })}
