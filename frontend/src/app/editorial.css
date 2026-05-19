@@ -216,6 +216,20 @@
 }
 .dt-editorial a.ed-crumb:hover { color: var(--ed-signal); }
 
+.dt-editorial .ed-prose { max-width: 660px; }
+.dt-editorial .ed-prose p {
+  font-size: 15.5px;
+  line-height: 1.7;
+  color: var(--ed-ink-2);
+  margin: 0 0 18px;
+}
+.dt-editorial .ed-prose p:last-child { margin-bottom: 0; }
+.dt-editorial .ed-prose a {
+  color: var(--ed-signal);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
 .dt-editorial *:focus-visible {
   outline: 2px solid var(--ed-signal);
   outline-offset: 2px;
