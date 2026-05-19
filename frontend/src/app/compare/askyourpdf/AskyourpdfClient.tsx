@@ -2,14 +2,15 @@
 
 import React from 'react';
 import Link from 'next/link';
-import Header from '../../../components/Header';
-import Footer from '../../../components/Footer';
-import ArticleMeta from '../../../components/seo/ArticleMeta';
-import ComparisonTable from '../../../components/seo/ComparisonTable';
-import FAQSection from '../../../components/seo/FAQSection';
-import CTABanner from '../../../components/seo/CTABanner';
-import { FileText, Languages, Zap, Shield, DollarSign, Quote } from 'lucide-react';
 import { useLocale } from '../../../i18n';
+import MarketingShell from '../../../components/marketing/MarketingShell';
+import EdPageHero from '../../../components/marketing/EdPageHero';
+import EdSection from '../../../components/marketing/EdSection';
+import EdProse from '../../../components/marketing/EdProse';
+import EdComparisonTable from '../../../components/marketing/EdComparisonTable';
+import EdFaqList from '../../../components/marketing/EdFaqList';
+import EdRelatedLinks from '../../../components/marketing/EdRelatedLinks';
+import EdCtaBanner from '../../../components/marketing/EdCtaBanner';
 
 export default function AskyourpdfClient() {
   const { t } = useLocale();
@@ -47,303 +48,160 @@ export default function AskyourpdfClient() {
   ];
 
   return (
-    <div className="min-h-screen flex flex-col bg-white dark:bg-zinc-950">
-      <Header variant="minimal" />
-      <main className="flex-1">
-        {/* Hero */}
-        <section className="max-w-4xl mx-auto px-6 pt-20 pb-12">
-          <nav className="text-sm text-zinc-500 dark:text-zinc-300 mb-8">
-            <Link href="/" className="hover:text-zinc-700 dark:hover:text-zinc-300">{t('compareAskyourpdf.breadcrumbHome')}</Link>
-            <span className="mx-2">/</span>
-            <Link href="/compare" className="hover:text-zinc-700 dark:hover:text-zinc-300">{t('compareAskyourpdf.breadcrumbCompare')}</Link>
-            <span className="mx-2">/</span>
-            <span className="text-zinc-900 dark:text-zinc-100">{t('compareAskyourpdf.breadcrumbCurrent')}</span>
-          </nav>
+    <MarketingShell
+      breadcrumb={[
+        { label: t('compareAskyourpdf.breadcrumbHome'), href: '/' },
+        { label: t('compareAskyourpdf.breadcrumbCompare'), href: '/compare' },
+        { label: t('compareAskyourpdf.breadcrumbCurrent') },
+      ]}
+    >
+      <EdPageHero
+        title={t('compareAskyourpdf.heroTitle')}
+        lede={t('compareAskyourpdf.heroDescription')}
+        primaryCta={{ label: t('compareAskyourpdf.linkFreeDemo'), href: '/demo' }}
+      />
 
-          <h1 className="font-serif text-3xl sm:text-4xl font-semibold text-zinc-900 dark:text-zinc-100 mb-6 tracking-tight">
-            {t('compareAskyourpdf.heroTitle')}
-          </h1>
-          <p className="text-lg text-zinc-600 dark:text-zinc-300 leading-relaxed">
-            {t('compareAskyourpdf.heroDescription')}
-          </p>
-          <ArticleMeta author="DocTalk Team" published="2026-02-18" className="mt-6" />
-        </section>
+      <EdSection title={t('compareAskyourpdf.quickComparison')}>
+        <EdComparisonTable features={features} competitorName="AskYourPDF" />
+      </EdSection>
 
-        {/* Quick Comparison Table */}
-        <section className="bg-zinc-50 dark:bg-zinc-900/50">
-          <div className="max-w-4xl mx-auto px-6 py-16">
-            <h2 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100 tracking-tight mb-8">
-              {t('compareAskyourpdf.quickComparison')}
-            </h2>
-            <ComparisonTable features={features} competitorName="AskYourPDF" />
-          </div>
-        </section>
-
-        {/* What Is DocTalk? */}
-        <section className="max-w-4xl mx-auto px-6 py-16">
-          <h2 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100 tracking-tight mb-4">
-            {t('compareAskyourpdf.whatIsDocTalkTitle')}
-          </h2>
-          <p className="text-zinc-600 dark:text-zinc-300 leading-relaxed">
+      <EdSection alt title={t('compareAskyourpdf.whatIsDocTalkTitle')}>
+        <EdProse>
+          <p>
             {t('compareAskyourpdf.whatIsDocTalkDescription')}{' '}
-            It is built on a <a href="https://arxiv.org/abs/2005.11401" target="_blank" rel="noopener noreferrer" className="text-accent hover:underline">RAG architecture</a> for grounded, cited answers.
+            It is built on a <a href="https://arxiv.org/abs/2005.11401" target="_blank" rel="noopener noreferrer">RAG architecture</a> for grounded, cited answers.
           </p>
-        </section>
+        </EdProse>
+      </EdSection>
 
-        {/* What Is AskYourPDF? */}
-        <section className="bg-zinc-50 dark:bg-zinc-900/50">
-          <div className="max-w-4xl mx-auto px-6 py-16">
-            <h2 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100 tracking-tight mb-4">
-              {t('compareAskyourpdf.whatIsAskyourpdfTitle')}
-            </h2>
-            <p className="text-zinc-600 dark:text-zinc-300 leading-relaxed">
-              <a href="https://askyourpdf.com" target="_blank" rel="noopener noreferrer" className="text-accent hover:underline">AskYourPDF</a>{' '}
-              {t('compareAskyourpdf.whatIsAskyourpdfDescription')}
-            </p>
-          </div>
-        </section>
+      <EdSection title={t('compareAskyourpdf.whatIsAskyourpdfTitle')}>
+        <EdProse>
+          <p>
+            <a href="https://askyourpdf.com" target="_blank" rel="noopener noreferrer">AskYourPDF</a>{' '}
+            {t('compareAskyourpdf.whatIsAskyourpdfDescription')}
+          </p>
+        </EdProse>
+      </EdSection>
 
-        {/* Feature-by-Feature Comparison */}
-        <section className="max-w-4xl mx-auto px-6 py-16">
-          <h2 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100 tracking-tight mb-10">
-            {t('compareAskyourpdf.featureByFeatureTitle')}
-          </h2>
+      <EdSection alt title={t('compareAskyourpdf.featureByFeatureTitle')}>
+        <h3 className="ed-h3">{t('compareAskyourpdf.documentFormatTitle')}</h3>
+        <EdProse className="mt-3">
+          <p>{t('compareAskyourpdf.documentFormatCompetitor')}</p>
+          <p>
+            {t('compareAskyourpdf.documentFormatDocTalk')}{' '}
+            <Link href="/features/multi-format">
+              {t('compareAskyourpdf.multiFormatLink')}
+            </Link>{' '}
+            {t('compareAskyourpdf.forDetails')}
+          </p>
+        </EdProse>
 
-          {/* Document Format Support */}
-          <div className="mb-12">
-            <div className="flex items-center gap-3 mb-4">
-              <FileText className="w-5 h-5 text-zinc-700 dark:text-zinc-300" />
-              <h3 className="text-xl font-semibold text-zinc-900 dark:text-zinc-100">
-                {t('compareAskyourpdf.documentFormatTitle')}
-              </h3>
-            </div>
-            <p className="text-zinc-600 dark:text-zinc-300 leading-relaxed mb-4">
-              {t('compareAskyourpdf.documentFormatCompetitor')}
-            </p>
-            <p className="text-zinc-600 dark:text-zinc-300 leading-relaxed">
-              {t('compareAskyourpdf.documentFormatDocTalk')}{' '}
-              <Link href="/features/multi-format" className="text-blue-600 dark:text-blue-400 hover:underline">
-                {t('compareAskyourpdf.multiFormatLink')}
-              </Link>{' '}
-              {t('compareAskyourpdf.forDetails')}
-            </p>
-          </div>
+        <h3 className="ed-h3" style={{ marginTop: '40px' }}>{t('compareAskyourpdf.citationsTitle')}</h3>
+        <EdProse className="mt-3">
+          <p>{t('compareAskyourpdf.citationsCompetitor')}</p>
+          <p>
+            {t('compareAskyourpdf.citationsDocTalk')}{' '}
+            <Link href="/features/citations">
+              {t('compareAskyourpdf.citationHighlightingLink')}
+            </Link>.
+          </p>
+        </EdProse>
 
-          {/* AI Answer Quality & Citations */}
-          <div className="mb-12">
-            <div className="flex items-center gap-3 mb-4">
-              <Quote className="w-5 h-5 text-zinc-700 dark:text-zinc-300" />
-              <h3 className="text-xl font-semibold text-zinc-900 dark:text-zinc-100">
-                {t('compareAskyourpdf.citationsTitle')}
-              </h3>
-            </div>
-            <p className="text-zinc-600 dark:text-zinc-300 leading-relaxed mb-4">
-              {t('compareAskyourpdf.citationsCompetitor')}
-            </p>
-            <p className="text-zinc-600 dark:text-zinc-300 leading-relaxed">
-              {t('compareAskyourpdf.citationsDocTalk')}{' '}
-              <Link href="/features/citations" className="text-blue-600 dark:text-blue-400 hover:underline">
-                {t('compareAskyourpdf.citationHighlightingLink')}
-              </Link>.
-            </p>
-          </div>
+        <h3 className="ed-h3" style={{ marginTop: '40px' }}>{t('compareAskyourpdf.languageSupportTitle')}</h3>
+        <EdProse className="mt-3">
+          <p>{t('compareAskyourpdf.languageSupportCompetitor')}</p>
+          <p>{t('compareAskyourpdf.languageSupportDocTalk')}</p>
+        </EdProse>
 
-          {/* Language Support */}
-          <div className="mb-12">
-            <div className="flex items-center gap-3 mb-4">
-              <Languages className="w-5 h-5 text-zinc-700 dark:text-zinc-300" />
-              <h3 className="text-xl font-semibold text-zinc-900 dark:text-zinc-100">
-                {t('compareAskyourpdf.languageSupportTitle')}
-              </h3>
-            </div>
-            <p className="text-zinc-600 dark:text-zinc-300 leading-relaxed mb-4">
-              {t('compareAskyourpdf.languageSupportCompetitor')}
-            </p>
-            <p className="text-zinc-600 dark:text-zinc-300 leading-relaxed">
-              {t('compareAskyourpdf.languageSupportDocTalk')}
-            </p>
-          </div>
+        <h3 className="ed-h3" style={{ marginTop: '40px' }}>{t('compareAskyourpdf.pricingTitle')}</h3>
+        <EdProse className="mt-3">
+          <p>{t('compareAskyourpdf.pricingCompetitor')}</p>
+          <p>
+            {t('compareAskyourpdf.pricingDocTalkPart1')}{' '}
+            <Link href="/demo">{t('compareAskyourpdf.noSignupDemoLink')}</Link>{' '}
+            {t('compareAskyourpdf.pricingDocTalkPart2')}{' '}
+            <Link href="/pricing">
+              {t('compareAskyourpdf.fullPricingLink')}
+            </Link>.
+          </p>
+        </EdProse>
 
-          {/* Pricing & Free Tier */}
-          <div className="mb-12">
-            <div className="flex items-center gap-3 mb-4">
-              <DollarSign className="w-5 h-5 text-zinc-700 dark:text-zinc-300" />
-              <h3 className="text-xl font-semibold text-zinc-900 dark:text-zinc-100">
-                {t('compareAskyourpdf.pricingTitle')}
-              </h3>
-            </div>
-            <p className="text-zinc-600 dark:text-zinc-300 leading-relaxed mb-4">
-              {t('compareAskyourpdf.pricingCompetitor')}
-            </p>
-            <p className="text-zinc-600 dark:text-zinc-300 leading-relaxed">
-              {t('compareAskyourpdf.pricingDocTalkPart1')}{' '}
-              <Link href="/demo" className="text-blue-600 dark:text-blue-400 hover:underline">{t('compareAskyourpdf.noSignupDemoLink')}</Link>{' '}
-              {t('compareAskyourpdf.pricingDocTalkPart2')}{' '}
-              <Link href="/pricing" className="text-blue-600 dark:text-blue-400 hover:underline">
-                {t('compareAskyourpdf.fullPricingLink')}
-              </Link>.
-            </p>
-          </div>
+        <h3 className="ed-h3" style={{ marginTop: '40px' }}>{t('compareAskyourpdf.performanceTitle')}</h3>
+        <EdProse className="mt-3">
+          <p>{t('compareAskyourpdf.performanceCompetitor')}</p>
+          <p>{t('compareAskyourpdf.performanceDocTalk')}</p>
+        </EdProse>
 
-          {/* Performance & Speed */}
-          <div className="mb-12">
-            <div className="flex items-center gap-3 mb-4">
-              <Zap className="w-5 h-5 text-zinc-700 dark:text-zinc-300" />
-              <h3 className="text-xl font-semibold text-zinc-900 dark:text-zinc-100">
-                {t('compareAskyourpdf.performanceTitle')}
-              </h3>
-            </div>
-            <p className="text-zinc-600 dark:text-zinc-300 leading-relaxed mb-4">
-              {t('compareAskyourpdf.performanceCompetitor')}
-            </p>
-            <p className="text-zinc-600 dark:text-zinc-300 leading-relaxed">
-              {t('compareAskyourpdf.performanceDocTalk')}
-            </p>
-          </div>
+        <h3 className="ed-h3" style={{ marginTop: '40px' }}>{t('compareAskyourpdf.securityTitle')}</h3>
+        <EdProse className="mt-3">
+          <p>{t('compareAskyourpdf.securityCompetitor')}</p>
+          <p>{t('compareAskyourpdf.securityDocTalk')}</p>
+        </EdProse>
+      </EdSection>
 
-          {/* Security & Privacy */}
-          <div className="mb-12">
-            <div className="flex items-center gap-3 mb-4">
-              <Shield className="w-5 h-5 text-zinc-700 dark:text-zinc-300" />
-              <h3 className="text-xl font-semibold text-zinc-900 dark:text-zinc-100">
-                {t('compareAskyourpdf.securityTitle')}
-              </h3>
-            </div>
-            <p className="text-zinc-600 dark:text-zinc-300 leading-relaxed mb-4">
-              {t('compareAskyourpdf.securityCompetitor')}
-            </p>
-            <p className="text-zinc-600 dark:text-zinc-300 leading-relaxed">
-              {t('compareAskyourpdf.securityDocTalk')}
-            </p>
-          </div>
-        </section>
-
-        {/* Who Should Choose DocTalk? */}
-        <section className="bg-zinc-50 dark:bg-zinc-900/50">
-          <div className="max-w-4xl mx-auto px-6 py-16">
-            <h2 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100 tracking-tight mb-6">
-              {t('compareAskyourpdf.whoDocTalkTitle')}
-            </h2>
-            <ul className="space-y-3 text-zinc-600 dark:text-zinc-300">
-              <li className="flex items-start gap-3">
-                <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-zinc-400 shrink-0" />
-                <span>{t('compareAskyourpdf.whoDocTalk1')}</span>
-              </li>
-              <li className="flex items-start gap-3">
-                <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-zinc-400 shrink-0" />
-                <span>{t('compareAskyourpdf.whoDocTalk2')}</span>
-              </li>
-              <li className="flex items-start gap-3">
-                <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-zinc-400 shrink-0" />
-                <span>{t('compareAskyourpdf.whoDocTalk3')}</span>
-              </li>
-              <li className="flex items-start gap-3">
-                <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-zinc-400 shrink-0" />
-                <span>{t('compareAskyourpdf.whoDocTalk4')}</span>
-              </li>
-              <li className="flex items-start gap-3">
-                <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-zinc-400 shrink-0" />
-                <span>{t('compareAskyourpdf.whoDocTalk5')}</span>
-              </li>
-            </ul>
-          </div>
-        </section>
-
-        {/* Who Should Choose AskYourPDF? */}
-        <section className="max-w-4xl mx-auto px-6 py-16">
-          <h2 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100 tracking-tight mb-6">
-            {t('compareAskyourpdf.whoAskyourpdfTitle')}
-          </h2>
-          <ul className="space-y-3 text-zinc-600 dark:text-zinc-300">
-            <li className="flex items-start gap-3">
-              <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-zinc-400 shrink-0" />
-              <span>{t('compareAskyourpdf.whoAskyourpdf1')}</span>
-            </li>
-            <li className="flex items-start gap-3">
-              <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-zinc-400 shrink-0" />
-              <span>{t('compareAskyourpdf.whoAskyourpdf2')}</span>
-            </li>
-            <li className="flex items-start gap-3">
-              <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-zinc-400 shrink-0" />
-              <span>{t('compareAskyourpdf.whoAskyourpdf3')}</span>
-            </li>
-            <li className="flex items-start gap-3">
-              <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-zinc-400 shrink-0" />
-              <span>{t('compareAskyourpdf.whoAskyourpdf4')}</span>
-            </li>
+      <EdSection title={t('compareAskyourpdf.whoDocTalkTitle')}>
+        <EdProse>
+          <ul>
+            <li>{t('compareAskyourpdf.whoDocTalk1')}</li>
+            <li>{t('compareAskyourpdf.whoDocTalk2')}</li>
+            <li>{t('compareAskyourpdf.whoDocTalk3')}</li>
+            <li>{t('compareAskyourpdf.whoDocTalk4')}</li>
+            <li>{t('compareAskyourpdf.whoDocTalk5')}</li>
           </ul>
-        </section>
+        </EdProse>
+      </EdSection>
 
-        {/* Verdict */}
-        <section className="bg-zinc-50 dark:bg-zinc-900/50">
-          <div className="max-w-4xl mx-auto px-6 py-16">
-            <h2 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100 tracking-tight mb-6">
-              {t('compareAskyourpdf.verdictTitle')}
-            </h2>
-            <p className="text-zinc-600 dark:text-zinc-300 leading-relaxed mb-4">
-              {t('compareAskyourpdf.verdictParagraph1')}
-            </p>
-            <p className="text-zinc-600 dark:text-zinc-300 leading-relaxed mb-4">
-              {t('compareAskyourpdf.verdictParagraph2')}
-            </p>
-            <p className="text-zinc-600 dark:text-zinc-300 leading-relaxed font-medium">
-              {t('compareAskyourpdf.verdictParagraph3')}{' '}
-              <Link href="/demo" className="text-blue-600 dark:text-blue-400 hover:underline">
-                {t('compareAskyourpdf.tryDocTalkLink')}
-              </Link>{' '}
-              {t('compareAskyourpdf.verdictParagraph3Mid')}{' '}
-              <Link href="/compare/chatpdf" className="text-blue-600 dark:text-blue-400 hover:underline">
-                {t('compareAskyourpdf.chatpdfComparisonLink')}
-              </Link>{' '}
-              {t('compareAskyourpdf.verdictParagraph3End')}
-            </p>
-          </div>
-        </section>
+      <EdSection alt title={t('compareAskyourpdf.whoAskyourpdfTitle')}>
+        <EdProse>
+          <ul>
+            <li>{t('compareAskyourpdf.whoAskyourpdf1')}</li>
+            <li>{t('compareAskyourpdf.whoAskyourpdf2')}</li>
+            <li>{t('compareAskyourpdf.whoAskyourpdf3')}</li>
+            <li>{t('compareAskyourpdf.whoAskyourpdf4')}</li>
+          </ul>
+        </EdProse>
+      </EdSection>
 
-        {/* FAQ */}
-        <section className="max-w-4xl mx-auto px-6 py-16">
-          <h2 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100 tracking-tight mb-8">
-            {t('compareAskyourpdf.faqTitle')}
-          </h2>
-          <FAQSection items={faqItems} />
-        </section>
+      <EdSection title={t('compareAskyourpdf.verdictTitle')}>
+        <EdProse>
+          <p>{t('compareAskyourpdf.verdictParagraph1')}</p>
+          <p>{t('compareAskyourpdf.verdictParagraph2')}</p>
+          <p>
+            {t('compareAskyourpdf.verdictParagraph3')}{' '}
+            <Link href="/demo">
+              {t('compareAskyourpdf.tryDocTalkLink')}
+            </Link>{' '}
+            {t('compareAskyourpdf.verdictParagraph3Mid')}{' '}
+            <Link href="/compare/chatpdf">
+              {t('compareAskyourpdf.chatpdfComparisonLink')}
+            </Link>{' '}
+            {t('compareAskyourpdf.verdictParagraph3End')}
+          </p>
+        </EdProse>
+      </EdSection>
 
-        {/* Internal Links */}
-        <section className="bg-zinc-50 dark:bg-zinc-900/50">
-          <div className="max-w-4xl mx-auto px-6 py-12">
-            <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100 mb-4">
-              {t('compareAskyourpdf.relatedPages')}
-            </h2>
-            <div className="flex flex-wrap gap-3">
-              {[
-                { href: '/features/citations', label: t('compareAskyourpdf.linkCitationHighlighting') },
-                { href: '/features/multi-format', label: t('compareAskyourpdf.linkMultiFormat') },
-                { href: '/demo', label: t('compareAskyourpdf.linkFreeDemo') },
-                { href: '/pricing', label: t('compareAskyourpdf.linkPricing') },
-                { href: '/compare/chatpdf', label: t('compareAskyourpdf.linkChatpdfComparison') },
-              ].map((link) => (
-                <Link
-                  key={link.href}
-                  href={link.href}
-                  className="px-4 py-2 text-sm bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg text-zinc-600 dark:text-zinc-300 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-[box-shadow,transform] duration-200"
-                >
-                  {link.label}
-                </Link>
-              ))}
-            </div>
-          </div>
-        </section>
+      <EdSection alt title={t('compareAskyourpdf.faqTitle')}>
+        <EdFaqList items={faqItems} />
+      </EdSection>
 
-        {/* CTA */}
-        <CTABanner
-          variant="highlight"
-          title={t('compareAskyourpdf.ctaTitle')}
-          description={t('compareAskyourpdf.ctaDescription')}
-          buttonText={t('compareAskyourpdf.ctaButton')}
-          href="/demo"
+      <EdSection>
+        <EdRelatedLinks
+          title={t('compareAskyourpdf.relatedPages')}
+          links={[
+            { href: '/features/citations', label: t('compareAskyourpdf.linkCitationHighlighting') },
+            { href: '/features/multi-format', label: t('compareAskyourpdf.linkMultiFormat') },
+            { href: '/demo', label: t('compareAskyourpdf.linkFreeDemo') },
+            { href: '/pricing', label: t('compareAskyourpdf.linkPricing') },
+            { href: '/compare/chatpdf', label: t('compareAskyourpdf.linkChatpdfComparison') },
+          ]}
         />
-      </main>
-      <Footer />
-    </div>
+      </EdSection>
+
+      <EdCtaBanner
+        title={t('compareAskyourpdf.ctaTitle')}
+        description={t('compareAskyourpdf.ctaDescription')}
+        primary={{ label: t('compareAskyourpdf.ctaButton'), href: '/demo' }}
+      />
+    </MarketingShell>
   );
 }

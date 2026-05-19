@@ -2,14 +2,15 @@
 
 import React from 'react';
 import Link from 'next/link';
-import Header from '../../../components/Header';
-import Footer from '../../../components/Footer';
-import ArticleMeta from '../../../components/seo/ArticleMeta';
-import ComparisonTable from '../../../components/seo/ComparisonTable';
-import FAQSection from '../../../components/seo/FAQSection';
-import CTABanner from '../../../components/seo/CTABanner';
-import { FileText, Languages, Zap, Shield, DollarSign, Quote } from 'lucide-react';
 import { useLocale } from '../../../i18n';
+import MarketingShell from '../../../components/marketing/MarketingShell';
+import EdPageHero from '../../../components/marketing/EdPageHero';
+import EdSection from '../../../components/marketing/EdSection';
+import EdProse from '../../../components/marketing/EdProse';
+import EdComparisonTable from '../../../components/marketing/EdComparisonTable';
+import EdFaqList from '../../../components/marketing/EdFaqList';
+import EdRelatedLinks from '../../../components/marketing/EdRelatedLinks';
+import EdCtaBanner from '../../../components/marketing/EdCtaBanner';
 
 export default function HumataClient() {
   const { t } = useLocale();
@@ -47,301 +48,158 @@ export default function HumataClient() {
   ];
 
   return (
-    <div className="min-h-screen flex flex-col bg-white dark:bg-zinc-950">
-      <Header variant="minimal" />
-      <main className="flex-1">
-        {/* Hero */}
-        <section className="max-w-4xl mx-auto px-6 pt-20 pb-12">
-          <nav className="text-sm text-zinc-500 dark:text-zinc-300 mb-8">
-            <Link href="/" className="hover:text-zinc-700 dark:hover:text-zinc-300">{t('compareHumata.breadcrumbHome')}</Link>
-            <span className="mx-2">/</span>
-            <Link href="/compare" className="hover:text-zinc-700 dark:hover:text-zinc-300">{t('compareHumata.breadcrumbCompare')}</Link>
-            <span className="mx-2">/</span>
-            <span className="text-zinc-900 dark:text-zinc-100">{t('compareHumata.breadcrumbCurrent')}</span>
-          </nav>
+    <MarketingShell
+      breadcrumb={[
+        { label: t('compareHumata.breadcrumbHome'), href: '/' },
+        { label: t('compareHumata.breadcrumbCompare'), href: '/compare' },
+        { label: t('compareHumata.breadcrumbCurrent') },
+      ]}
+    >
+      <EdPageHero
+        title={t('compareHumata.heroTitle')}
+        lede={t('compareHumata.heroDescription')}
+        primaryCta={{ label: t('compareHumata.linkFreeDemo'), href: '/demo' }}
+      />
 
-          <h1 className="font-serif text-3xl sm:text-4xl font-semibold text-zinc-900 dark:text-zinc-100 mb-6 tracking-tight">
-            {t('compareHumata.heroTitle')}
-          </h1>
-          <p className="text-lg text-zinc-600 dark:text-zinc-300 leading-relaxed">
-            {t('compareHumata.heroDescription')}
+      <EdSection title={t('compareHumata.quickComparison')}>
+        <EdComparisonTable features={features} competitorName="Humata" />
+      </EdSection>
+
+      <EdSection alt title={t('compareHumata.whatIsDocTalkTitle')}>
+        <EdProse>
+          <p>{t('compareHumata.whatIsDocTalkDescription')}</p>
+        </EdProse>
+      </EdSection>
+
+      <EdSection title={t('compareHumata.whatIsHumataTitle')}>
+        <EdProse>
+          <p>
+            <a href="https://www.humata.ai" target="_blank" rel="noopener noreferrer">Humata</a>{' '}
+            {t('compareHumata.whatIsHumataDescription')}{' '}
+            It uses a <a href="https://arxiv.org/abs/2005.11401" target="_blank" rel="noopener noreferrer">RAG-based approach</a> to generate answers from uploaded documents.
           </p>
-          <ArticleMeta author="DocTalk Team" published="2026-02-18" className="mt-6" />
-        </section>
+        </EdProse>
+      </EdSection>
 
-        {/* Quick Comparison Table */}
-        <section className="bg-zinc-50 dark:bg-zinc-900/50">
-          <div className="max-w-4xl mx-auto px-6 py-16">
-            <h2 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100 tracking-tight mb-8">
-              {t('compareHumata.quickComparison')}
-            </h2>
-            <ComparisonTable features={features} competitorName="Humata" />
-          </div>
-        </section>
-
-        {/* What Is DocTalk? */}
-        <section className="max-w-4xl mx-auto px-6 py-16">
-          <h2 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100 tracking-tight mb-4">
-            {t('compareHumata.whatIsDocTalkTitle')}
-          </h2>
-          <p className="text-zinc-600 dark:text-zinc-300 leading-relaxed">
-            {t('compareHumata.whatIsDocTalkDescription')}
+      <EdSection alt title={t('compareHumata.featureByFeatureTitle')}>
+        <h3 className="ed-h3">{t('compareHumata.documentFormatTitle')}</h3>
+        <EdProse className="mt-3">
+          <p>{t('compareHumata.documentFormatCompetitor')}</p>
+          <p>
+            {t('compareHumata.documentFormatDocTalk')}{' '}
+            <Link href="/features/multi-format">
+              {t('compareHumata.multiFormatLink')}
+            </Link>.
           </p>
-        </section>
+        </EdProse>
 
-        {/* What Is Humata? */}
-        <section className="bg-zinc-50 dark:bg-zinc-900/50">
-          <div className="max-w-4xl mx-auto px-6 py-16">
-            <h2 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100 tracking-tight mb-4">
-              {t('compareHumata.whatIsHumataTitle')}
-            </h2>
-            <p className="text-zinc-600 dark:text-zinc-300 leading-relaxed">
-              <a href="https://www.humata.ai" target="_blank" rel="noopener noreferrer" className="text-accent hover:underline">Humata</a>{' '}
-              {t('compareHumata.whatIsHumataDescription')}{' '}
-              It uses a <a href="https://arxiv.org/abs/2005.11401" target="_blank" rel="noopener noreferrer" className="text-accent hover:underline">RAG-based approach</a> to generate answers from uploaded documents.
-            </p>
-          </div>
-        </section>
+        <h3 className="ed-h3" style={{ marginTop: '40px' }}>{t('compareHumata.citationsTitle')}</h3>
+        <EdProse className="mt-3">
+          <p>{t('compareHumata.citationsCompetitor')}</p>
+          <p>
+            {t('compareHumata.citationsDocTalk')}{' '}
+            <Link href="/features/citations">
+              {t('compareHumata.citationHighlightingLink')}
+            </Link>.
+          </p>
+        </EdProse>
 
-        {/* Feature-by-Feature Comparison */}
-        <section className="max-w-4xl mx-auto px-6 py-16">
-          <h2 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100 tracking-tight mb-10">
-            {t('compareHumata.featureByFeatureTitle')}
-          </h2>
+        <h3 className="ed-h3" style={{ marginTop: '40px' }}>{t('compareHumata.languageSupportTitle')}</h3>
+        <EdProse className="mt-3">
+          <p>{t('compareHumata.languageSupportCompetitor')}</p>
+          <p>
+            {t('compareHumata.languageSupportDocTalk')}{' '}
+            <Link href="/features/multilingual">
+              {t('compareHumata.multilingualLink')}
+            </Link>.
+          </p>
+        </EdProse>
 
-          {/* Document Format Support */}
-          <div className="mb-12">
-            <div className="flex items-center gap-3 mb-4">
-              <FileText className="w-5 h-5 text-zinc-700 dark:text-zinc-300" />
-              <h3 className="text-xl font-semibold text-zinc-900 dark:text-zinc-100">
-                {t('compareHumata.documentFormatTitle')}
-              </h3>
-            </div>
-            <p className="text-zinc-600 dark:text-zinc-300 leading-relaxed mb-4">
-              {t('compareHumata.documentFormatCompetitor')}
-            </p>
-            <p className="text-zinc-600 dark:text-zinc-300 leading-relaxed">
-              {t('compareHumata.documentFormatDocTalk')}{' '}
-              <Link href="/features/multi-format" className="text-blue-600 dark:text-blue-400 hover:underline">
-                {t('compareHumata.multiFormatLink')}
-              </Link>.
-            </p>
-          </div>
+        <h3 className="ed-h3" style={{ marginTop: '40px' }}>{t('compareHumata.pricingTitle')}</h3>
+        <EdProse className="mt-3">
+          <p>{t('compareHumata.pricingCompetitor')}</p>
+          <p>
+            {t('compareHumata.pricingDocTalkPart1')}{' '}
+            <Link href="/demo">{t('compareHumata.noSignupDemoLink')}</Link>.
+            {' '}{t('compareHumata.pricingDocTalkPart2')}{' '}
+            <Link href="/pricing">
+              {t('compareHumata.pricingDetailsLink')}
+            </Link>.
+          </p>
+        </EdProse>
 
-          {/* AI Answer Quality & Citations */}
-          <div className="mb-12">
-            <div className="flex items-center gap-3 mb-4">
-              <Quote className="w-5 h-5 text-zinc-700 dark:text-zinc-300" />
-              <h3 className="text-xl font-semibold text-zinc-900 dark:text-zinc-100">
-                {t('compareHumata.citationsTitle')}
-              </h3>
-            </div>
-            <p className="text-zinc-600 dark:text-zinc-300 leading-relaxed mb-4">
-              {t('compareHumata.citationsCompetitor')}
-            </p>
-            <p className="text-zinc-600 dark:text-zinc-300 leading-relaxed">
-              {t('compareHumata.citationsDocTalk')}{' '}
-              <Link href="/features/citations" className="text-blue-600 dark:text-blue-400 hover:underline">
-                {t('compareHumata.citationHighlightingLink')}
-              </Link>.
-            </p>
-          </div>
+        <h3 className="ed-h3" style={{ marginTop: '40px' }}>{t('compareHumata.performanceTitle')}</h3>
+        <EdProse className="mt-3">
+          <p>{t('compareHumata.performanceCompetitor')}</p>
+          <p>{t('compareHumata.performanceDocTalk')}</p>
+        </EdProse>
 
-          {/* Language Support */}
-          <div className="mb-12">
-            <div className="flex items-center gap-3 mb-4">
-              <Languages className="w-5 h-5 text-zinc-700 dark:text-zinc-300" />
-              <h3 className="text-xl font-semibold text-zinc-900 dark:text-zinc-100">
-                {t('compareHumata.languageSupportTitle')}
-              </h3>
-            </div>
-            <p className="text-zinc-600 dark:text-zinc-300 leading-relaxed mb-4">
-              {t('compareHumata.languageSupportCompetitor')}
-            </p>
-            <p className="text-zinc-600 dark:text-zinc-300 leading-relaxed">
-              {t('compareHumata.languageSupportDocTalk')}{' '}
-              <Link href="/features/multilingual" className="text-blue-600 dark:text-blue-400 hover:underline">
-                {t('compareHumata.multilingualLink')}
-              </Link>.
-            </p>
-          </div>
+        <h3 className="ed-h3" style={{ marginTop: '40px' }}>{t('compareHumata.securityTitle')}</h3>
+        <EdProse className="mt-3">
+          <p>{t('compareHumata.securityCompetitor')}</p>
+          <p>{t('compareHumata.securityDocTalk')}</p>
+        </EdProse>
+      </EdSection>
 
-          {/* Pricing & Free Tier */}
-          <div className="mb-12">
-            <div className="flex items-center gap-3 mb-4">
-              <DollarSign className="w-5 h-5 text-zinc-700 dark:text-zinc-300" />
-              <h3 className="text-xl font-semibold text-zinc-900 dark:text-zinc-100">
-                {t('compareHumata.pricingTitle')}
-              </h3>
-            </div>
-            <p className="text-zinc-600 dark:text-zinc-300 leading-relaxed mb-4">
-              {t('compareHumata.pricingCompetitor')}
-            </p>
-            <p className="text-zinc-600 dark:text-zinc-300 leading-relaxed">
-              {t('compareHumata.pricingDocTalkPart1')}{' '}
-              <Link href="/demo" className="text-blue-600 dark:text-blue-400 hover:underline">{t('compareHumata.noSignupDemoLink')}</Link>.
-              {' '}{t('compareHumata.pricingDocTalkPart2')}{' '}
-              <Link href="/pricing" className="text-blue-600 dark:text-blue-400 hover:underline">
-                {t('compareHumata.pricingDetailsLink')}
-              </Link>.
-            </p>
-          </div>
-
-          {/* Performance & Speed */}
-          <div className="mb-12">
-            <div className="flex items-center gap-3 mb-4">
-              <Zap className="w-5 h-5 text-zinc-700 dark:text-zinc-300" />
-              <h3 className="text-xl font-semibold text-zinc-900 dark:text-zinc-100">
-                {t('compareHumata.performanceTitle')}
-              </h3>
-            </div>
-            <p className="text-zinc-600 dark:text-zinc-300 leading-relaxed mb-4">
-              {t('compareHumata.performanceCompetitor')}
-            </p>
-            <p className="text-zinc-600 dark:text-zinc-300 leading-relaxed">
-              {t('compareHumata.performanceDocTalk')}
-            </p>
-          </div>
-
-          {/* Security & Privacy */}
-          <div className="mb-12">
-            <div className="flex items-center gap-3 mb-4">
-              <Shield className="w-5 h-5 text-zinc-700 dark:text-zinc-300" />
-              <h3 className="text-xl font-semibold text-zinc-900 dark:text-zinc-100">
-                {t('compareHumata.securityTitle')}
-              </h3>
-            </div>
-            <p className="text-zinc-600 dark:text-zinc-300 leading-relaxed mb-4">
-              {t('compareHumata.securityCompetitor')}
-            </p>
-            <p className="text-zinc-600 dark:text-zinc-300 leading-relaxed">
-              {t('compareHumata.securityDocTalk')}
-            </p>
-          </div>
-        </section>
-
-        {/* Who Should Choose DocTalk? */}
-        <section className="bg-zinc-50 dark:bg-zinc-900/50">
-          <div className="max-w-4xl mx-auto px-6 py-16">
-            <h2 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100 tracking-tight mb-6">
-              {t('compareHumata.whoDocTalkTitle')}
-            </h2>
-            <ul className="space-y-3 text-zinc-600 dark:text-zinc-300">
-              <li className="flex items-start gap-3">
-                <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-zinc-400 shrink-0" />
-                <span>{t('compareHumata.whoDocTalk1')}</span>
-              </li>
-              <li className="flex items-start gap-3">
-                <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-zinc-400 shrink-0" />
-                <span>{t('compareHumata.whoDocTalk2')}</span>
-              </li>
-              <li className="flex items-start gap-3">
-                <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-zinc-400 shrink-0" />
-                <span>{t('compareHumata.whoDocTalk3')}</span>
-              </li>
-              <li className="flex items-start gap-3">
-                <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-zinc-400 shrink-0" />
-                <span>{t('compareHumata.whoDocTalk4')}</span>
-              </li>
-              <li className="flex items-start gap-3">
-                <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-zinc-400 shrink-0" />
-                <span>{t('compareHumata.whoDocTalk5')}</span>
-              </li>
-            </ul>
-          </div>
-        </section>
-
-        {/* Who Should Choose Humata? */}
-        <section className="max-w-4xl mx-auto px-6 py-16">
-          <h2 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100 tracking-tight mb-6">
-            {t('compareHumata.whoHumataTitle')}
-          </h2>
-          <ul className="space-y-3 text-zinc-600 dark:text-zinc-300">
-            <li className="flex items-start gap-3">
-              <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-zinc-400 shrink-0" />
-              <span>{t('compareHumata.whoHumata1')}</span>
-            </li>
-            <li className="flex items-start gap-3">
-              <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-zinc-400 shrink-0" />
-              <span>{t('compareHumata.whoHumata2')}</span>
-            </li>
-            <li className="flex items-start gap-3">
-              <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-zinc-400 shrink-0" />
-              <span>{t('compareHumata.whoHumata3')}</span>
-            </li>
-            <li className="flex items-start gap-3">
-              <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-zinc-400 shrink-0" />
-              <span>{t('compareHumata.whoHumata4')}</span>
-            </li>
+      <EdSection title={t('compareHumata.whoDocTalkTitle')}>
+        <EdProse>
+          <ul>
+            <li>{t('compareHumata.whoDocTalk1')}</li>
+            <li>{t('compareHumata.whoDocTalk2')}</li>
+            <li>{t('compareHumata.whoDocTalk3')}</li>
+            <li>{t('compareHumata.whoDocTalk4')}</li>
+            <li>{t('compareHumata.whoDocTalk5')}</li>
           </ul>
-        </section>
+        </EdProse>
+      </EdSection>
 
-        {/* Verdict */}
-        <section className="bg-zinc-50 dark:bg-zinc-900/50">
-          <div className="max-w-4xl mx-auto px-6 py-16">
-            <h2 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100 tracking-tight mb-6">
-              {t('compareHumata.verdictTitle')}
-            </h2>
-            <p className="text-zinc-600 dark:text-zinc-300 leading-relaxed mb-4">
-              {t('compareHumata.verdictParagraph1')}
-            </p>
-            <p className="text-zinc-600 dark:text-zinc-300 leading-relaxed mb-4">
-              {t('compareHumata.verdictParagraph2')}
-            </p>
-            <p className="text-zinc-600 dark:text-zinc-300 leading-relaxed font-medium">
-              {t('compareHumata.verdictParagraph3')}{' '}
-              <Link href="/demo" className="text-blue-600 dark:text-blue-400 hover:underline">
-                {t('compareHumata.tryDocTalkLink')}
-              </Link>{' '}
-              {t('compareHumata.verdictParagraph3End')}
-            </p>
-          </div>
-        </section>
+      <EdSection alt title={t('compareHumata.whoHumataTitle')}>
+        <EdProse>
+          <ul>
+            <li>{t('compareHumata.whoHumata1')}</li>
+            <li>{t('compareHumata.whoHumata2')}</li>
+            <li>{t('compareHumata.whoHumata3')}</li>
+            <li>{t('compareHumata.whoHumata4')}</li>
+          </ul>
+        </EdProse>
+      </EdSection>
 
-        {/* FAQ */}
-        <section className="max-w-4xl mx-auto px-6 py-16">
-          <h2 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100 tracking-tight mb-8">
-            {t('compareHumata.faqTitle')}
-          </h2>
-          <FAQSection items={faqItems} />
-        </section>
+      <EdSection title={t('compareHumata.verdictTitle')}>
+        <EdProse>
+          <p>{t('compareHumata.verdictParagraph1')}</p>
+          <p>{t('compareHumata.verdictParagraph2')}</p>
+          <p>
+            {t('compareHumata.verdictParagraph3')}{' '}
+            <Link href="/demo">
+              {t('compareHumata.tryDocTalkLink')}
+            </Link>{' '}
+            {t('compareHumata.verdictParagraph3End')}
+          </p>
+        </EdProse>
+      </EdSection>
 
-        {/* Internal Links */}
-        <section className="bg-zinc-50 dark:bg-zinc-900/50">
-          <div className="max-w-4xl mx-auto px-6 py-12">
-            <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100 mb-4">
-              {t('compareHumata.relatedPages')}
-            </h2>
-            <div className="flex flex-wrap gap-3">
-              {[
-                { href: '/features/citations', label: t('compareHumata.linkCitationHighlighting') },
-                { href: '/features/multilingual', label: t('compareHumata.linkMultilingual') },
-                { href: '/demo', label: t('compareHumata.linkFreeDemo') },
-                { href: '/pricing', label: t('compareHumata.linkPricing') },
-                { href: '/alternatives/humata', label: t('compareHumata.linkHumataAlternatives') },
-              ].map((link) => (
-                <Link
-                  key={link.href}
-                  href={link.href}
-                  className="px-4 py-2 text-sm bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg text-zinc-600 dark:text-zinc-300 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-[box-shadow,transform] duration-200"
-                >
-                  {link.label}
-                </Link>
-              ))}
-            </div>
-          </div>
-        </section>
+      <EdSection alt title={t('compareHumata.faqTitle')}>
+        <EdFaqList items={faqItems} />
+      </EdSection>
 
-        {/* CTA */}
-        <CTABanner
-          variant="highlight"
-          title={t('compareHumata.ctaTitle')}
-          description={t('compareHumata.ctaDescription')}
-          buttonText={t('compareHumata.ctaButton')}
-          href="/demo"
+      <EdSection>
+        <EdRelatedLinks
+          title={t('compareHumata.relatedPages')}
+          links={[
+            { href: '/features/citations', label: t('compareHumata.linkCitationHighlighting') },
+            { href: '/features/multilingual', label: t('compareHumata.linkMultilingual') },
+            { href: '/demo', label: t('compareHumata.linkFreeDemo') },
+            { href: '/pricing', label: t('compareHumata.linkPricing') },
+            { href: '/alternatives/humata', label: t('compareHumata.linkHumataAlternatives') },
+          ]}
         />
-      </main>
-      <Footer />
-    </div>
+      </EdSection>
+
+      <EdCtaBanner
+        title={t('compareHumata.ctaTitle')}
+        description={t('compareHumata.ctaDescription')}
+        primary={{ label: t('compareHumata.ctaButton'), href: '/demo' }}
+      />
+    </MarketingShell>
   );
 }
