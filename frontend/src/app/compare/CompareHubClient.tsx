@@ -1,11 +1,13 @@
 "use client";
 
 import React from 'react';
-import Link from 'next/link';
-import Header from '../../components/Header';
-import Footer from '../../components/Footer';
 import { useLocale } from '../../i18n';
-import { ArrowRight, GitCompareArrows } from 'lucide-react';
+import MarketingShell from '../../components/marketing/MarketingShell';
+import EdPageHero from '../../components/marketing/EdPageHero';
+import EdSection from '../../components/marketing/EdSection';
+import EdCardGrid from '../../components/marketing/EdCardGrid';
+import EdRelatedLinks from '../../components/marketing/EdRelatedLinks';
+import EdCtaBanner from '../../components/marketing/EdCtaBanner';
 
 export default function CompareHubClient() {
   const { t } = useLocale();
@@ -39,90 +41,47 @@ export default function CompareHubClient() {
   ];
 
   return (
-    <div className="min-h-screen flex flex-col bg-white dark:bg-zinc-950">
-      <Header variant="minimal" />
-      <main className="flex-1">
-        {/* Hero */}
-        <section className="border-b border-zinc-200 dark:border-zinc-800">
-          <div className="max-w-4xl mx-auto px-6 pt-24 pb-16 text-center">
-            <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-zinc-100 dark:bg-zinc-800 mb-6">
-              <GitCompareArrows className="w-6 h-6 text-zinc-600 dark:text-zinc-300" />
-            </div>
-            <h1 className="font-serif text-3xl sm:text-4xl font-semibold text-zinc-900 dark:text-zinc-100 mb-4 tracking-tight">
-              {t('compareHub.heroTitle')}
-            </h1>
-            <p className="text-lg text-zinc-600 dark:text-zinc-300 max-w-2xl mx-auto">
-              {t('compareHub.heroDescription')}
-            </p>
-          </div>
-        </section>
+    <MarketingShell
+      breadcrumb={[
+        { label: t('useCasesHub.breadcrumb.home'), href: '/' },
+        { label: t('compareHub.heroTitle') },
+      ]}
+    >
+      <EdPageHero
+        title={t('compareHub.heroTitle')}
+        lede={t('compareHub.heroDescription')}
+      />
 
-        {/* Comparison Grid */}
-        <section className="max-w-4xl mx-auto px-6 py-16">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-            {comparisons.map((c) => (
-              <Link
-                key={c.slug}
-                href={`/compare/${c.slug}`}
-                className="group bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl p-6 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-[box-shadow,transform] duration-200"
-              >
-                <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100 mb-2 flex items-center justify-between">
-                  <span>{t('compareHub.vsLabel', { name: c.name })}</span>
-                  <ArrowRight className="w-4 h-4 text-zinc-400 group-hover:text-blue-600 dark:group-hover:text-blue-400 group-hover:translate-x-0.5 transition-[color,transform] duration-200" />
-                </h2>
-                <p className="text-sm text-zinc-600 dark:text-zinc-300 leading-relaxed">
-                  {t(c.taglineKey)}
-                </p>
-              </Link>
-            ))}
-          </div>
+      <EdSection>
+        <EdCardGrid
+          columns={2}
+          items={comparisons.map((c) => ({
+            title: t('compareHub.vsLabel', { name: c.name }),
+            body: t(c.taglineKey),
+            href: `/compare/${c.slug}`,
+          }))}
+        />
+      </EdSection>
 
-          <div className="mt-12 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900/40 p-6">
-            <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100 mb-2">
-              {t('compareHub.widenTitle')}
-            </h2>
-            <p className="text-sm text-zinc-600 dark:text-zinc-300 mb-4">
-              {t('compareHub.widenDescription')}
-            </p>
-            <div className="flex flex-wrap gap-3 text-sm">
-              <Link href="/alternatives" className="text-blue-600 dark:text-blue-400 hover:underline">
-                {t('compareHub.link.alternativesHub')}
-              </Link>
-              <span className="text-zinc-300 dark:text-zinc-700">|</span>
-              <Link href="/blog/category/comparisons" className="text-blue-600 dark:text-blue-400 hover:underline">
-                {t('compareHub.link.comparisonGuides')}
-              </Link>
-              <span className="text-zinc-300 dark:text-zinc-700">|</span>
-              <Link href="/features/citations" className="text-blue-600 dark:text-blue-400 hover:underline">
-                {t('compareHub.link.citationHighlighting')}
-              </Link>
-              <span className="text-zinc-300 dark:text-zinc-700">|</span>
-              <Link href="/features/multilingual" className="text-blue-600 dark:text-blue-400 hover:underline">
-                {t('compareHub.link.languageSupport')}
-              </Link>
-              <span className="text-zinc-300 dark:text-zinc-700">|</span>
-              <Link href="/pricing" className="text-blue-600 dark:text-blue-400 hover:underline">
-                {t('compareHub.link.pricingOverview')}
-              </Link>
-            </div>
-          </div>
+      <EdSection alt title={t('compareHub.widenTitle')}>
+        <p className="ed-body">{t('compareHub.widenDescription')}</p>
+        <div style={{ marginTop: '24px' }}>
+          <EdRelatedLinks
+            links={[
+              { href: '/alternatives', label: t('compareHub.link.alternativesHub') },
+              { href: '/blog/category/comparisons', label: t('compareHub.link.comparisonGuides') },
+              { href: '/features/citations', label: t('compareHub.link.citationHighlighting') },
+              { href: '/features/multilingual', label: t('compareHub.link.languageSupport') },
+              { href: '/pricing', label: t('compareHub.link.pricingOverview') },
+            ]}
+          />
+        </div>
+      </EdSection>
 
-          {/* Link to alternatives */}
-          <div className="mt-16 pt-12 border-t border-zinc-200 dark:border-zinc-800 text-center">
-            <p className="text-zinc-600 dark:text-zinc-300 mb-5">
-              {t('compareHub.alternativesPrompt')}
-            </p>
-            <Link
-              href="/alternatives"
-              className="group inline-flex items-center px-6 py-3 bg-zinc-900 dark:bg-zinc-50 text-white dark:text-zinc-900 rounded-lg font-medium hover:bg-zinc-800 dark:hover:bg-zinc-200 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400 dark:focus-visible:ring-zinc-500 focus-visible:ring-offset-2"
-            >
-              {t('compareHub.browseAlternatives')}
-              <ArrowRight className="ml-2 w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
-            </Link>
-          </div>
-        </section>
-      </main>
-      <Footer />
-    </div>
+      <EdCtaBanner
+        description={t('compareHub.alternativesPrompt')}
+        primary={{ label: t('compareHub.browseAlternatives'), href: '/alternatives' }}
+      />
+    </MarketingShell>
   );
 }

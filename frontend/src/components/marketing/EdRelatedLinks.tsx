@@ -6,17 +6,17 @@ interface RelatedLink {
 }
 
 interface EdRelatedLinksProps {
-  title: string;
+  title?: string;
   links: RelatedLink[];
 }
 
 export default function EdRelatedLinks({ title, links }: EdRelatedLinksProps) {
   return (
     <div>
-      <div className="ed-label">{title}</div>
+      {title && <div className="ed-label">{title}</div>}
       <div
         className="flex flex-wrap gap-x-6 gap-y-2.5"
-        style={{ marginTop: "16px" }}
+        style={title ? { marginTop: "16px" } : undefined}
       >
         {links.map((link, index) => (
           <Link key={`rl-${index}`} href={link.href} className="ed-link">

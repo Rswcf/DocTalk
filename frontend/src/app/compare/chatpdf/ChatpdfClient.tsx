@@ -2,14 +2,15 @@
 
 import React from 'react';
 import Link from 'next/link';
-import Header from '../../../components/Header';
-import Footer from '../../../components/Footer';
-import ArticleMeta from '../../../components/seo/ArticleMeta';
-import ComparisonTable from '../../../components/seo/ComparisonTable';
-import FAQSection from '../../../components/seo/FAQSection';
-import CTABanner from '../../../components/seo/CTABanner';
 import { useLocale } from '../../../i18n';
-import { FileText, Languages, Zap, Shield, DollarSign, Quote } from 'lucide-react';
+import MarketingShell from '../../../components/marketing/MarketingShell';
+import EdPageHero from '../../../components/marketing/EdPageHero';
+import EdSection from '../../../components/marketing/EdSection';
+import EdProse from '../../../components/marketing/EdProse';
+import EdComparisonTable from '../../../components/marketing/EdComparisonTable';
+import EdFaqList from '../../../components/marketing/EdFaqList';
+import EdRelatedLinks from '../../../components/marketing/EdRelatedLinks';
+import EdCtaBanner from '../../../components/marketing/EdCtaBanner';
 
 export default function ChatpdfClient() {
   const { t } = useLocale();
@@ -51,304 +52,163 @@ export default function ChatpdfClient() {
   ];
 
   return (
-    <div className="min-h-screen flex flex-col bg-white dark:bg-zinc-950">
-      <Header variant="minimal" />
-      <main className="flex-1">
-        {/* Hero */}
-        <section className="max-w-4xl mx-auto px-6 pt-20 pb-12">
-          <nav className="text-sm text-zinc-500 dark:text-zinc-300 mb-8">
-            <Link href="/" className="hover:text-zinc-700 dark:hover:text-zinc-300">{t('compareChatpdf.breadcrumb.home')}</Link>
-            <span className="mx-2">/</span>
-            <Link href="/compare" className="hover:text-zinc-700 dark:hover:text-zinc-300">{t('compareChatpdf.breadcrumb.compare')}</Link>
-            <span className="mx-2">/</span>
-            <span className="text-zinc-900 dark:text-zinc-100">{t('compareChatpdf.breadcrumb.current')}</span>
-          </nav>
+    <MarketingShell
+      breadcrumb={[
+        { label: t('compareChatpdf.breadcrumb.home'), href: '/' },
+        { label: t('compareChatpdf.breadcrumb.compare'), href: '/compare' },
+        { label: t('compareChatpdf.breadcrumb.current') },
+      ]}
+    >
+      <EdPageHero
+        title={t('compareChatpdf.heroTitle')}
+        lede={t('compareChatpdf.heroDescription')}
+        primaryCta={{ label: t('compareChatpdf.related.freeDemo'), href: '/demo' }}
+      />
 
-          <h1 className="font-serif text-3xl sm:text-4xl font-semibold text-zinc-900 dark:text-zinc-100 mb-6 tracking-tight">
-            {t('compareChatpdf.heroTitle')}
-          </h1>
-          <p className="text-lg text-zinc-600 dark:text-zinc-300 leading-relaxed">
-            {t('compareChatpdf.heroDescription')}
-          </p>
-          <ArticleMeta author={t('compareChatpdf.author')} published="2026-02-18" className="mt-6" />
-        </section>
+      <EdSection title={t('compareChatpdf.quickComparison')}>
+        <EdComparisonTable features={features} competitorName="ChatPDF" />
+      </EdSection>
 
-        {/* Quick Comparison Table */}
-        <section className="bg-zinc-50 dark:bg-zinc-900/50">
-          <div className="max-w-4xl mx-auto px-6 py-16">
-            <h2 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100 tracking-tight mb-8">
-              {t('compareChatpdf.quickComparison')}
-            </h2>
-            <ComparisonTable features={features} competitorName="ChatPDF" />
-          </div>
-        </section>
-
-        {/* What Is DocTalk? */}
-        <section className="max-w-4xl mx-auto px-6 py-16">
-          <h2 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100 tracking-tight mb-4">
-            {t('compareChatpdf.whatIsDocTalk')}
-          </h2>
-          <p className="text-zinc-600 dark:text-zinc-300 leading-relaxed">
+      <EdSection alt title={t('compareChatpdf.whatIsDocTalk')}>
+        <EdProse>
+          <p>
             {t('compareChatpdf.whatIsDocTalkDescription')}{' '}
-            DocTalk uses a <a href="https://arxiv.org/abs/2005.11401" target="_blank" rel="noopener noreferrer" className="text-accent hover:underline">Retrieval-Augmented Generation (RAG)</a> architecture to deliver accurate, cited answers.
+            DocTalk uses a <a href="https://arxiv.org/abs/2005.11401" target="_blank" rel="noopener noreferrer">Retrieval-Augmented Generation (RAG)</a> architecture to deliver accurate, cited answers.
           </p>
-        </section>
+        </EdProse>
+      </EdSection>
 
-        {/* What Is ChatPDF? */}
-        <section className="bg-zinc-50 dark:bg-zinc-900/50">
-          <div className="max-w-4xl mx-auto px-6 py-16">
-            <h2 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100 tracking-tight mb-4">
-              {t('compareChatpdf.whatIsChatPDF')}
-            </h2>
-            <p className="text-zinc-600 dark:text-zinc-300 leading-relaxed">
-              <a href="https://chatpdf.com" target="_blank" rel="noopener noreferrer" className="text-accent hover:underline">ChatPDF</a>{' '}
-              {t('compareChatpdf.whatIsChatPDFDescription')}
-            </p>
-          </div>
-        </section>
+      <EdSection title={t('compareChatpdf.whatIsChatPDF')}>
+        <EdProse>
+          <p>
+            <a href="https://chatpdf.com" target="_blank" rel="noopener noreferrer">ChatPDF</a>{' '}
+            {t('compareChatpdf.whatIsChatPDFDescription')}
+          </p>
+        </EdProse>
+      </EdSection>
 
-        {/* Feature-by-Feature Comparison */}
-        <section className="max-w-4xl mx-auto px-6 py-16">
-          <h2 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100 tracking-tight mb-10">
-            {t('compareChatpdf.featureByFeature')}
-          </h2>
+      <EdSection alt title={t('compareChatpdf.featureByFeature')}>
+        <h3 className="ed-h3">{t('compareChatpdf.feature.formatSupport')}</h3>
+        <EdProse className="mt-3">
+          <p>{t('compareChatpdf.feature.formatSupportP1')}</p>
+          <p>
+            {t('compareChatpdf.feature.formatSupportP2Pre')}
+            <Link href="/features/multi-format">
+              {t('compareChatpdf.feature.formatSupportLink')}
+            </Link>
+            {t('compareChatpdf.feature.formatSupportP2Post')}
+          </p>
+        </EdProse>
 
-          {/* Document Format Support */}
-          <div className="mb-12">
-            <div className="flex items-center gap-3 mb-4">
-              <FileText className="w-5 h-5 text-zinc-700 dark:text-zinc-300" />
-              <h3 className="text-xl font-semibold text-zinc-900 dark:text-zinc-100">
-                {t('compareChatpdf.feature.formatSupport')}
-              </h3>
-            </div>
-            <p className="text-zinc-600 dark:text-zinc-300 leading-relaxed mb-4">
-              {t('compareChatpdf.feature.formatSupportP1')}
-            </p>
-            <p className="text-zinc-600 dark:text-zinc-300 leading-relaxed">
-              {t('compareChatpdf.feature.formatSupportP2Pre')}
-              <Link href="/features/multi-format" className="text-blue-600 dark:text-blue-400 hover:underline">
-                {t('compareChatpdf.feature.formatSupportLink')}
-              </Link>
-              {t('compareChatpdf.feature.formatSupportP2Post')}
-            </p>
-          </div>
+        <h3 className="ed-h3" style={{ marginTop: '40px' }}>{t('compareChatpdf.feature.citations')}</h3>
+        <EdProse className="mt-3">
+          <p>{t('compareChatpdf.feature.citationsP1')}</p>
+          <p>
+            {t('compareChatpdf.feature.citationsP2Pre')}
+            <Link href="/features/citations">
+              {t('compareChatpdf.feature.citationsLink')}
+            </Link>.
+          </p>
+        </EdProse>
 
-          {/* AI Answer Quality & Citations */}
-          <div className="mb-12">
-            <div className="flex items-center gap-3 mb-4">
-              <Quote className="w-5 h-5 text-zinc-700 dark:text-zinc-300" />
-              <h3 className="text-xl font-semibold text-zinc-900 dark:text-zinc-100">
-                {t('compareChatpdf.feature.citations')}
-              </h3>
-            </div>
-            <p className="text-zinc-600 dark:text-zinc-300 leading-relaxed mb-4">
-              {t('compareChatpdf.feature.citationsP1')}
-            </p>
-            <p className="text-zinc-600 dark:text-zinc-300 leading-relaxed">
-              {t('compareChatpdf.feature.citationsP2Pre')}
-              <Link href="/features/citations" className="text-blue-600 dark:text-blue-400 hover:underline">
-                {t('compareChatpdf.feature.citationsLink')}
-              </Link>.
-            </p>
-          </div>
+        <h3 className="ed-h3" style={{ marginTop: '40px' }}>{t('compareChatpdf.feature.languages')}</h3>
+        <EdProse className="mt-3">
+          <p>{t('compareChatpdf.feature.languagesP1')}</p>
+          <p>
+            {t('compareChatpdf.feature.languagesP2Pre')}
+            <Link href="/features/multilingual">
+              {t('compareChatpdf.feature.languagesLink')}
+            </Link>
+            {t('compareChatpdf.feature.languagesP2Post')}
+          </p>
+        </EdProse>
 
-          {/* Language Support */}
-          <div className="mb-12">
-            <div className="flex items-center gap-3 mb-4">
-              <Languages className="w-5 h-5 text-zinc-700 dark:text-zinc-300" />
-              <h3 className="text-xl font-semibold text-zinc-900 dark:text-zinc-100">
-                {t('compareChatpdf.feature.languages')}
-              </h3>
-            </div>
-            <p className="text-zinc-600 dark:text-zinc-300 leading-relaxed mb-4">
-              {t('compareChatpdf.feature.languagesP1')}
-            </p>
-            <p className="text-zinc-600 dark:text-zinc-300 leading-relaxed">
-              {t('compareChatpdf.feature.languagesP2Pre')}
-              <Link href="/features/multilingual" className="text-blue-600 dark:text-blue-400 hover:underline">
-                {t('compareChatpdf.feature.languagesLink')}
-              </Link>
-              {t('compareChatpdf.feature.languagesP2Post')}
-            </p>
-          </div>
+        <h3 className="ed-h3" style={{ marginTop: '40px' }}>{t('compareChatpdf.feature.pricing')}</h3>
+        <EdProse className="mt-3">
+          <p>{t('compareChatpdf.feature.pricingP1')}</p>
+          <p>
+            {t('compareChatpdf.feature.pricingP2Pre')}
+            <Link href="/demo">{t('compareChatpdf.feature.pricingDemoLink')}</Link>
+            {t('compareChatpdf.feature.pricingP2Mid')}
+            <Link href="/pricing">
+              {t('compareChatpdf.feature.pricingLink')}
+            </Link>.
+          </p>
+        </EdProse>
 
-          {/* Pricing & Free Tier */}
-          <div className="mb-12">
-            <div className="flex items-center gap-3 mb-4">
-              <DollarSign className="w-5 h-5 text-zinc-700 dark:text-zinc-300" />
-              <h3 className="text-xl font-semibold text-zinc-900 dark:text-zinc-100">
-                {t('compareChatpdf.feature.pricing')}
-              </h3>
-            </div>
-            <p className="text-zinc-600 dark:text-zinc-300 leading-relaxed mb-4">
-              {t('compareChatpdf.feature.pricingP1')}
-            </p>
-            <p className="text-zinc-600 dark:text-zinc-300 leading-relaxed">
-              {t('compareChatpdf.feature.pricingP2Pre')}
-              <Link href="/demo" className="text-blue-600 dark:text-blue-400 hover:underline">{t('compareChatpdf.feature.pricingDemoLink')}</Link>
-              {t('compareChatpdf.feature.pricingP2Mid')}
-              <Link href="/pricing" className="text-blue-600 dark:text-blue-400 hover:underline">
-                {t('compareChatpdf.feature.pricingLink')}
-              </Link>.
-            </p>
-          </div>
+        <h3 className="ed-h3" style={{ marginTop: '40px' }}>{t('compareChatpdf.feature.performance')}</h3>
+        <EdProse className="mt-3">
+          <p>{t('compareChatpdf.feature.performanceP1')}</p>
+          <p>{t('compareChatpdf.feature.performanceP2')}</p>
+        </EdProse>
 
-          {/* Performance & Speed */}
-          <div className="mb-12">
-            <div className="flex items-center gap-3 mb-4">
-              <Zap className="w-5 h-5 text-zinc-700 dark:text-zinc-300" />
-              <h3 className="text-xl font-semibold text-zinc-900 dark:text-zinc-100">
-                {t('compareChatpdf.feature.performance')}
-              </h3>
-            </div>
-            <p className="text-zinc-600 dark:text-zinc-300 leading-relaxed mb-4">
-              {t('compareChatpdf.feature.performanceP1')}
-            </p>
-            <p className="text-zinc-600 dark:text-zinc-300 leading-relaxed">
-              {t('compareChatpdf.feature.performanceP2')}
-            </p>
-          </div>
+        <h3 className="ed-h3" style={{ marginTop: '40px' }}>{t('compareChatpdf.feature.security')}</h3>
+        <EdProse className="mt-3">
+          <p>{t('compareChatpdf.feature.securityP1')}</p>
+          <p>{t('compareChatpdf.feature.securityP2')}</p>
+        </EdProse>
+      </EdSection>
 
-          {/* Security & Privacy */}
-          <div className="mb-12">
-            <div className="flex items-center gap-3 mb-4">
-              <Shield className="w-5 h-5 text-zinc-700 dark:text-zinc-300" />
-              <h3 className="text-xl font-semibold text-zinc-900 dark:text-zinc-100">
-                {t('compareChatpdf.feature.security')}
-              </h3>
-            </div>
-            <p className="text-zinc-600 dark:text-zinc-300 leading-relaxed mb-4">
-              {t('compareChatpdf.feature.securityP1')}
-            </p>
-            <p className="text-zinc-600 dark:text-zinc-300 leading-relaxed">
-              {t('compareChatpdf.feature.securityP2')}
-            </p>
-          </div>
-        </section>
-
-        {/* Who Should Choose DocTalk? */}
-        <section className="bg-zinc-50 dark:bg-zinc-900/50">
-          <div className="max-w-4xl mx-auto px-6 py-16">
-            <h2 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100 tracking-tight mb-6">
-              {t('compareChatpdf.whoDocTalk')}
-            </h2>
-            <ul className="space-y-3 text-zinc-600 dark:text-zinc-300">
-              <li className="flex items-start gap-3">
-                <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-zinc-400 shrink-0" />
-                <span>{t('compareChatpdf.whoDocTalk.item1')}</span>
-              </li>
-              <li className="flex items-start gap-3">
-                <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-zinc-400 shrink-0" />
-                <span>{t('compareChatpdf.whoDocTalk.item2')}</span>
-              </li>
-              <li className="flex items-start gap-3">
-                <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-zinc-400 shrink-0" />
-                <span>{t('compareChatpdf.whoDocTalk.item3')}</span>
-              </li>
-              <li className="flex items-start gap-3">
-                <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-zinc-400 shrink-0" />
-                <span>{t('compareChatpdf.whoDocTalk.item4')}</span>
-              </li>
-              <li className="flex items-start gap-3">
-                <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-zinc-400 shrink-0" />
-                <span>{t('compareChatpdf.whoDocTalk.item5')}</span>
-              </li>
-            </ul>
-          </div>
-        </section>
-
-        {/* Who Should Choose ChatPDF? */}
-        <section className="max-w-4xl mx-auto px-6 py-16">
-          <h2 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100 tracking-tight mb-6">
-            {t('compareChatpdf.whoChatPDF')}
-          </h2>
-          <ul className="space-y-3 text-zinc-600 dark:text-zinc-300">
-            <li className="flex items-start gap-3">
-              <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-zinc-400 shrink-0" />
-              <span>{t('compareChatpdf.whoChatPDF.item1')}</span>
-            </li>
-            <li className="flex items-start gap-3">
-              <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-zinc-400 shrink-0" />
-              <span>{t('compareChatpdf.whoChatPDF.item2')}</span>
-            </li>
-            <li className="flex items-start gap-3">
-              <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-zinc-400 shrink-0" />
-              <span>{t('compareChatpdf.whoChatPDF.item3')}</span>
-            </li>
-            <li className="flex items-start gap-3">
-              <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-zinc-400 shrink-0" />
-              <span>{t('compareChatpdf.whoChatPDF.item4')}</span>
-            </li>
+      <EdSection title={t('compareChatpdf.whoDocTalk')}>
+        <EdProse>
+          <ul>
+            <li>{t('compareChatpdf.whoDocTalk.item1')}</li>
+            <li>{t('compareChatpdf.whoDocTalk.item2')}</li>
+            <li>{t('compareChatpdf.whoDocTalk.item3')}</li>
+            <li>{t('compareChatpdf.whoDocTalk.item4')}</li>
+            <li>{t('compareChatpdf.whoDocTalk.item5')}</li>
           </ul>
-        </section>
+        </EdProse>
+      </EdSection>
 
-        {/* Verdict */}
-        <section className="bg-zinc-50 dark:bg-zinc-900/50">
-          <div className="max-w-4xl mx-auto px-6 py-16">
-            <h2 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100 tracking-tight mb-6">
-              {t('compareChatpdf.verdict')}
-            </h2>
-            <p className="text-zinc-600 dark:text-zinc-300 leading-relaxed mb-4">
-              {t('compareChatpdf.verdictP1')}
-            </p>
-            <p className="text-zinc-600 dark:text-zinc-300 leading-relaxed mb-4">
-              {t('compareChatpdf.verdictP2')}
-            </p>
-            <p className="text-zinc-600 dark:text-zinc-300 leading-relaxed font-medium">
-              {t('compareChatpdf.verdictP3Pre')}
-              <Link href="/demo" className="text-blue-600 dark:text-blue-400 hover:underline">
-                {t('compareChatpdf.verdictDemoLink')}
-              </Link>
-              {t('compareChatpdf.verdictP3Post')}
-            </p>
-          </div>
-        </section>
+      <EdSection alt title={t('compareChatpdf.whoChatPDF')}>
+        <EdProse>
+          <ul>
+            <li>{t('compareChatpdf.whoChatPDF.item1')}</li>
+            <li>{t('compareChatpdf.whoChatPDF.item2')}</li>
+            <li>{t('compareChatpdf.whoChatPDF.item3')}</li>
+            <li>{t('compareChatpdf.whoChatPDF.item4')}</li>
+          </ul>
+        </EdProse>
+      </EdSection>
 
-        {/* FAQ */}
-        <section className="max-w-4xl mx-auto px-6 py-16">
-          <h2 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100 tracking-tight mb-8">
-            {t('compareChatpdf.faqTitle')}
-          </h2>
-          <FAQSection items={faqItems} />
-        </section>
+      <EdSection title={t('compareChatpdf.verdict')}>
+        <EdProse>
+          <p>{t('compareChatpdf.verdictP1')}</p>
+          <p>{t('compareChatpdf.verdictP2')}</p>
+          <p>
+            {t('compareChatpdf.verdictP3Pre')}
+            <Link href="/demo">
+              {t('compareChatpdf.verdictDemoLink')}
+            </Link>
+            {t('compareChatpdf.verdictP3Post')}
+          </p>
+        </EdProse>
+      </EdSection>
 
-        {/* Internal Links */}
-        <section className="bg-zinc-50 dark:bg-zinc-900/50">
-          <div className="max-w-4xl mx-auto px-6 py-12">
-            <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100 mb-4">
-              {t('compareChatpdf.relatedPages')}
-            </h2>
-            <div className="flex flex-wrap gap-3">
-              {[
-                { href: '/features/citations', label: t('compareChatpdf.related.citations') },
-                { href: '/features/multi-format', label: t('compareChatpdf.related.multiFormat') },
-                { href: '/features/multilingual', label: t('compareChatpdf.related.multilingual') },
-                { href: '/demo', label: t('compareChatpdf.related.freeDemo') },
-                { href: '/pricing', label: t('compareChatpdf.related.pricing') },
-                { href: '/alternatives/chatpdf', label: t('compareChatpdf.related.chatpdfAlternatives') },
-              ].map((link) => (
-                <Link
-                  key={link.href}
-                  href={link.href}
-                  className="px-4 py-2 text-sm bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg text-zinc-600 dark:text-zinc-300 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-[box-shadow,transform] duration-200"
-                >
-                  {link.label}
-                </Link>
-              ))}
-            </div>
-          </div>
-        </section>
+      <EdSection alt title={t('compareChatpdf.faqTitle')}>
+        <EdFaqList items={faqItems} />
+      </EdSection>
 
-        {/* CTA */}
-        <CTABanner
-          variant="highlight"
-          title={t('compareChatpdf.ctaTitle')}
-          description={t('compareChatpdf.ctaDescription')}
-          buttonText={t('compareChatpdf.ctaButton')}
-          href="/demo"
+      <EdSection>
+        <EdRelatedLinks
+          title={t('compareChatpdf.relatedPages')}
+          links={[
+            { href: '/features/citations', label: t('compareChatpdf.related.citations') },
+            { href: '/features/multi-format', label: t('compareChatpdf.related.multiFormat') },
+            { href: '/features/multilingual', label: t('compareChatpdf.related.multilingual') },
+            { href: '/demo', label: t('compareChatpdf.related.freeDemo') },
+            { href: '/pricing', label: t('compareChatpdf.related.pricing') },
+            { href: '/alternatives/chatpdf', label: t('compareChatpdf.related.chatpdfAlternatives') },
+          ]}
         />
-      </main>
-      <Footer />
-    </div>
+      </EdSection>
+
+      <EdCtaBanner
+        title={t('compareChatpdf.ctaTitle')}
+        description={t('compareChatpdf.ctaDescription')}
+        primary={{ label: t('compareChatpdf.ctaButton'), href: '/demo' }}
+      />
+    </MarketingShell>
   );
 }
