@@ -240,6 +240,31 @@
   background: var(--ed-paper);
 }
 
+/* Bulleted lists inside editorial prose. */
+.dt-editorial .ed-prose ul {
+  list-style: none;
+  margin: 0 0 18px;
+  padding: 0;
+}
+.dt-editorial .ed-prose ul li {
+  position: relative;
+  padding-left: 20px;
+  font-size: 15.5px;
+  line-height: 1.7;
+  color: var(--ed-ink-2);
+  margin-bottom: 8px;
+}
+.dt-editorial .ed-prose ul li::before {
+  content: "";
+  position: absolute;
+  left: 2px;
+  top: 11px;
+  width: 5px;
+  height: 5px;
+  background: var(--ed-signal);
+}
+.dt-editorial .ed-prose ul li:last-child { margin-bottom: 0; }
+
 .dt-editorial *:focus-visible {
   outline: 2px solid var(--ed-signal);
   outline-offset: 2px;
