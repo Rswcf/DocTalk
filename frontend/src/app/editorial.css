@@ -230,6 +230,16 @@
   text-underline-offset: 2px;
 }
 
+/* Clickable editorial cards (anchor cards) get hover feedback;
+   non-interactive .ed-card divs are unaffected. */
+.dt-editorial a.ed-card {
+  transition: border-color 150ms ease, background-color 150ms ease;
+}
+.dt-editorial a.ed-card:hover {
+  border-color: var(--ed-ink-3);
+  background: var(--ed-paper);
+}
+
 .dt-editorial *:focus-visible {
   outline: 2px solid var(--ed-signal);
   outline-offset: 2px;

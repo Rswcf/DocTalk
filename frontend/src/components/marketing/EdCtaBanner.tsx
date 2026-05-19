@@ -6,7 +6,7 @@ interface CtaLink {
 }
 
 interface EdCtaBannerProps {
-  title: string;
+  title?: string;
   description?: string;
   primary: CtaLink;
   secondary?: CtaLink;
@@ -34,10 +34,13 @@ export default function EdCtaBanner({
             maxWidth: "640px",
           }}
         >
-          <h2 className="ed-h2">{title}</h2>
+          {title && <h2 className="ed-h2">{title}</h2>}
 
           {description && (
-            <p className="ed-lede" style={{ marginTop: "14px" }}>
+            <p
+              className="ed-lede"
+              style={title ? { marginTop: "14px" } : undefined}
+            >
               {description}
             </p>
           )}
