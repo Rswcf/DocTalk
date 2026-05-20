@@ -12,17 +12,19 @@ interface Props {
 }
 
 export default function AccountActionsSection({ email }: Props) {
-  const { t } = useLocale();
+  const { t, tOr } = useLocale();
   const [open, setOpen] = useState(false);
   const [confirmEmail, setConfirmEmail] = useState("");
   const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [exporting, setExporting] = useState(false);
+  const [exportError, setExportError] = useState<string | null>(null);
 
   const canConfirm = confirmEmail.trim() === email.trim();
 
   const onExport = async () => {
     setExporting(true);
+    setExportError(null);
     try {
       const blob = await exportUserData();
       const url = URL.createObjectURL(blob);
@@ -33,8 +35,11 @@ export default function AccountActionsSection({ email }: Props) {
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
-    } catch {
-      // silent — user sees no download
+    } catch (e) {
+      // GDPR-adjacent: export must not silently fail — surface it so users
+      // know to retry rather than assume the download started.
+      console.error("Failed to export user data:", e);
+      setExportError(tOr("profile.export.error", "Export failed. Please try again."));
     } finally {
       setExporting(false);
     }
@@ -72,6 +77,11 @@ export default function AccountActionsSection({ email }: Props) {
           <Download size={16} />
           {exporting ? t("profile.account.exporting") : t("profile.account.exportButton")}
         </button>
+        {exportError && (
+          <div role="alert" className="mt-3 text-sm text-red-600 dark:text-red-400">
+            {exportError}
+          </div>
+        )}
       </div>
 
       {/* Danger Zone */}

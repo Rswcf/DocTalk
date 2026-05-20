@@ -33,7 +33,8 @@ export default class ErrorBoundary extends React.Component<React.PropsWithChildr
   }
 
   componentDidCatch(error: any, errorInfo: any) {
-    // Optionally log error
+    console.error('ErrorBoundary caught:', error, errorInfo);
+    // TODO(Q35/Wave-2): wire to Sentry/telemetry when /metrics endpoint lands.
   }
 
   handleRefresh = () => {

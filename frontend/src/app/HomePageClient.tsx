@@ -75,6 +75,8 @@ export default function HomePageClient() {
   const [serverDocs, setServerDocs] = useState<DocumentBrief[]>([]);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  const [deleteErrorId, setDeleteErrorId] = useState<string | null>(null);
+  const pollTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const [urlInput, setUrlInput] = useState('');
   const [urlLoading, setUrlLoading] = useState(false);
   const [urlError, setUrlError] = useState('');
@@ -106,6 +108,16 @@ export default function HomePageClient() {
       clearAccountStorage();
     }
   }, [status]);
+
+  // Catch unmount-mid-polling: if the user navigates away while an upload is
+  // still being polled, clear the interval so it doesn't run forever and
+  // mutate state on a stale component.
+  useEffect(() => () => {
+    if (pollTimerRef.current) {
+      clearInterval(pollTimerRef.current);
+      pollTimerRef.current = null;
+    }
+  }, []);
 
   const userPlan: PlanTier = useMemo(() => {
     if (!isLoggedIn) return 'free';
@@ -251,7 +263,19 @@ export default function HomePageClient() {
       getMyDocuments().then(setServerDocs).catch(console.error);
 
       setProgressText(t('upload.parsing'));
-      const timer = setInterval(async () => {
+      // Hold the polling timer in a ref so unmount-mid-parse can clear it
+      // (see useEffect cleanup at the top of the component). The local
+      // `const timer` form leaked when the user navigated away mid-upload.
+      if (pollTimerRef.current) {
+        clearInterval(pollTimerRef.current);
+      }
+      const clearPollTimer = () => {
+        if (pollTimerRef.current) {
+          clearInterval(pollTimerRef.current);
+          pollTimerRef.current = null;
+        }
+      };
+      pollTimerRef.current = setInterval(async () => {
         try {
           const info = await getDocument(docId);
           setDocumentStatus(info.status);
@@ -265,16 +289,16 @@ export default function HomePageClient() {
             setProgressText(t('upload.parsingProgress', { pagesParsed: pp, chunksIndexed: ci }));
           }
           if (info.status === 'ready') {
-            clearInterval(timer);
+            clearPollTimer();
             router.push(`/d/${docId}`);
           }
           if (info.status === 'error') {
-            clearInterval(timer);
+            clearPollTimer();
             setProgressText(t('upload.error'));
             setUploading(false);
           }
         } catch (e) {
-          clearInterval(timer);
+          clearPollTimer();
           setProgressText(t('upload.error'));
           setUploading(false);
         }
@@ -336,21 +360,26 @@ export default function HomePageClient() {
 
   const confirmDeleteDocument = useCallback(async (documentId: string) => {
     setDeletingId(documentId);
+    setDeleteErrorId((prev) => (prev === documentId ? null : prev));
     try {
       await deleteDocument(documentId);
+      // Only mutate UI after the backend acknowledges the delete — otherwise
+      // a network or 5xx failure would silently desync UI from server state.
+      if (!isLoggedIn) {
+        const docs: StoredDoc[] = JSON.parse(localStorage.getItem('doctalk_docs') || '[]');
+        const next = docs.filter((x) => x.document_id !== documentId);
+        localStorage.setItem('doctalk_docs', JSON.stringify(next));
+        setMyDocs(next.sort((a, b) => b.createdAt - a.createdAt));
+      }
+      setServerDocs((prev) => prev.filter((s) => s.id !== documentId));
+      setConfirmDeleteId((prev) => (prev === documentId ? null : prev));
     } catch (e) {
       console.error('Failed to delete document:', e);
+      // Surface the failure so users know to retry rather than think it worked.
+      setDeleteErrorId(documentId);
+    } finally {
+      setDeletingId(null);
     }
-
-    if (!isLoggedIn) {
-      const docs: StoredDoc[] = JSON.parse(localStorage.getItem('doctalk_docs') || '[]');
-      const next = docs.filter((x) => x.document_id !== documentId);
-      localStorage.setItem('doctalk_docs', JSON.stringify(next));
-      setMyDocs(next.sort((a, b) => b.createdAt - a.createdAt));
-    }
-    setServerDocs((prev) => prev.filter((s) => s.id !== documentId));
-    setDeletingId(null);
-    setConfirmDeleteId((prev) => (prev === documentId ? null : prev));
   }, [isLoggedIn]);
 
   /* --- Loading guard (prevents flash of wrong content) --- */
@@ -623,6 +652,25 @@ export default function HomePageClient() {
                             onClick={() => setConfirmDeleteId(null)}
                           >
                             {t('common.no')}
+                          </button>
+                        </div>
+                      ) : deleteErrorId === d.document_id ? (
+                        <div className="flex items-center gap-1.5 text-xs">
+                          <span role="alert" className="text-red-600 dark:text-red-400">
+                            {tOr('dashboard.deleteError', 'Delete failed. Try again.')}
+                          </span>
+                          <button
+                            className="px-2 py-1 rounded-md border border-zinc-200 dark:border-zinc-700 text-zinc-600 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors focus-visible:ring-2 focus-visible:ring-zinc-400 dark:focus-visible:ring-zinc-500"
+                            onClick={() => { setDeleteErrorId(null); setConfirmDeleteId(d.document_id); }}
+                          >
+                            {tOr('common.retry', 'Retry')}
+                          </button>
+                          <button
+                            className="px-2 py-1 rounded-md text-zinc-500 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors focus-visible:ring-2 focus-visible:ring-zinc-400 dark:focus-visible:ring-zinc-500"
+                            onClick={() => setDeleteErrorId(null)}
+                            aria-label={tOr('common.dismiss', 'Dismiss')}
+                          >
+                            <X aria-hidden="true" size={14} />
                           </button>
                         </div>
                       ) : (

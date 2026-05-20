@@ -207,10 +207,16 @@ export default function MessageBubble({
   }, [message.id, isAssistant]);
 
   const handleCopy = useCallback(() => {
-    navigator.clipboard.writeText(message.text).then(() => {
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    });
+    navigator.clipboard.writeText(message.text)
+      .then(() => {
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+      })
+      .catch(() => {
+        // iOS Safari / non-HTTPS reject clipboard.writeText. The natural
+        // "didn't work" cue is the absence of the copied state — no toast
+        // needed. Swallowing prevents an unhandled promise rejection.
+      });
   }, [message.text]);
 
   const handleFeedback = useCallback((fb: Feedback) => {
