@@ -1,6 +1,8 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
+import { Menu, X } from "lucide-react";
 import DocTalkLogo from "../DocTalkLogo";
 import { useLocale } from "../../i18n";
 
@@ -17,6 +19,7 @@ export default function EditorialMarketingHeader({
   breadcrumb,
 }: EditorialMarketingHeaderProps) {
   const { t, tOr } = useLocale();
+  const [mobileOpen, setMobileOpen] = useState(false);
   const NAV_LINKS = [
     { href: "/features", label: t("public.nav.features") },
     { href: "/pricing", label: t("footer.pricing") },
@@ -83,6 +86,29 @@ export default function EditorialMarketingHeader({
                   {item.label}
                 </Link>
               ))}
+              {/* Mobile hamburger — sits left of the Sign-In CTA, md:hidden */}
+              <button
+                type="button"
+                onClick={() => setMobileOpen((open) => !open)}
+                className="md:hidden inline-flex items-center justify-center"
+                style={{
+                  width: "36px",
+                  height: "36px",
+                  background: "transparent",
+                  border: "none",
+                  padding: 0,
+                  cursor: "pointer",
+                }}
+                aria-expanded={mobileOpen}
+                aria-controls="ed-mobile-nav"
+                aria-label={mobileOpen ? "Close menu" : "Open menu"}
+              >
+                {mobileOpen ? (
+                  <X aria-hidden="true" size={20} color="var(--ed-ink-2)" />
+                ) : (
+                  <Menu aria-hidden="true" size={20} color="var(--ed-ink-2)" />
+                )}
+              </button>
               <Link
                 href="/auth"
                 className="ed-cta"
@@ -94,6 +120,42 @@ export default function EditorialMarketingHeader({
           </div>
         </div>
       </header>
+
+      {/* Mobile nav panel — sits below the masthead, not sticky */}
+      {mobileOpen && (
+        <nav
+          id="ed-mobile-nav"
+          role="navigation"
+          aria-label="Editorial mobile navigation"
+          className="md:hidden"
+          style={{
+            background: "var(--ed-paper)",
+            borderBottom: "1px solid var(--ed-rule)",
+          }}
+        >
+          {NAV_LINKS.map((item, idx) => (
+            <Link
+              key={item.href}
+              href={item.href}
+              onClick={() => setMobileOpen(false)}
+              className="block"
+              style={{
+                padding: "12px 24px",
+                fontFamily: "var(--font-plex-mono), ui-monospace, monospace",
+                fontSize: "12px",
+                textTransform: "uppercase",
+                letterSpacing: "0.10em",
+                color: "var(--ed-ink-2)",
+                textDecoration: "none",
+                borderTop:
+                  idx === 0 ? "none" : "1px solid var(--ed-rule)",
+              }}
+            >
+              {item.label}
+            </Link>
+          ))}
+        </nav>
+      )}
 
       {/* Breadcrumb row — not sticky, sits below the masthead */}
       {breadcrumb && breadcrumb.length > 0 && (

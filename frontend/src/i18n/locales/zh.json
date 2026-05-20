@@ -56,6 +56,8 @@
   "toolbar.zoomOut": "缩小",
   "toolbar.prevPage": "上一页",
   "toolbar.nextPage": "下一页",
+  "toolbar.prevMatch": "上一处匹配",
+  "toolbar.nextMatch": "下一处匹配",
   "toolbar.grabMode": "抓手工具（拖动平移）",
   "header.darkMode": "暗色",
   "header.lightMode": "亮色",

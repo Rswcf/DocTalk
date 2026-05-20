@@ -56,6 +56,8 @@
   "toolbar.zoomOut": "Verkleinern",
   "toolbar.prevPage": "Vorherige Seite",
   "toolbar.nextPage": "Nächste Seite",
+  "toolbar.prevMatch": "Vorherige Übereinstimmung",
+  "toolbar.nextMatch": "Nächste Übereinstimmung",
   "toolbar.grabMode": "Handwerkzeug (zum Verschieben ziehen)",
   "header.darkMode": "Dunkel",
   "header.lightMode": "Hell",

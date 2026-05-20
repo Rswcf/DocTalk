@@ -1,11 +1,14 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
+import { Menu, X } from "lucide-react";
 import DocTalkLogo from "../DocTalkLogo";
 import { useLocale } from "../../i18n";
 
 export default function EditorialHeader() {
   const { t, tOr } = useLocale();
+  const [mobileOpen, setMobileOpen] = useState(false);
   const NAV_LINKS = [
     { href: "/features", label: t("public.nav.features") },
     { href: "/pricing", label: t("footer.pricing") },
@@ -13,94 +16,155 @@ export default function EditorialHeader() {
   ];
 
   return (
-    <header
-      className="sticky top-0 z-50 h-16 flex items-center"
-      style={{
-        background: "var(--ed-paper)",
-        borderBottom: "1px solid var(--ed-rule)",
-      }}
-    >
-      <div className="ed-shell w-full">
-        <div className="flex items-center justify-between h-16">
-          {/* Left — logo + wordmark + descriptor */}
-          <Link
-            href="/"
-            className="flex items-center gap-3 shrink-0"
-            aria-label="DocTalk home"
-          >
-            <DocTalkLogo size={24} />
-            <span
-              style={{
-                fontFamily: "var(--font-newsreader), Georgia, serif",
-                fontSize: "19px",
-                fontWeight: 500,
-                color: "var(--ed-ink)",
-                lineHeight: 1,
-              }}
+    <>
+      <header
+        className="sticky top-0 z-50 h-16 flex items-center"
+        style={{
+          background: "var(--ed-paper)",
+          borderBottom: "1px solid var(--ed-rule)",
+        }}
+      >
+        <div className="ed-shell w-full">
+          <div className="flex items-center justify-between h-16">
+            {/* Left — logo + wordmark + descriptor */}
+            <Link
+              href="/"
+              className="flex items-center gap-3 shrink-0"
+              aria-label="DocTalk home"
             >
-              DocTalk
-            </span>
-            {/* Thin vertical hairline separator */}
-            <span
-              aria-hidden="true"
-              style={{
-                display: "inline-block",
-                width: "1px",
-                height: "28px",
-                background: "var(--ed-rule)",
-                marginLeft: "4px",
-                marginRight: "8px",
-              }}
-            />
-            {/* Editorial dateline block — two mono lines */}
-            <span
-              className="hidden sm:flex"
-              style={{ flexDirection: "column", gap: "2px" }}
-            >
-              <span className="ed-caption" style={{ letterSpacing: "0.10em" }}>
-                STUDIO N&ordm;&thinsp;01
-              </span>
-              <span className="ed-caption" style={{ letterSpacing: "0.08em" }}>
-                DOCUMENT INTELLIGENCE
-              </span>
-            </span>
-          </Link>
-
-          {/* Right — nav links + CTA */}
-          <nav
-            className="flex items-center gap-6"
-            aria-label="Editorial navigation"
-          >
-            {NAV_LINKS.map((item) => (
-              <Link
-                key={item.href}
-                href={item.href}
-                className="hidden md:inline-block"
+              <DocTalkLogo size={24} />
+              <span
                 style={{
-                  fontFamily: "var(--font-inter), system-ui, sans-serif",
-                  fontSize: "13px",
-                  color: "var(--ed-ink-2)",
-                  textDecoration: "none",
-                  transition: "color 150ms ease",
-                }}
-                onMouseEnter={(e) => {
-                  (e.currentTarget as HTMLAnchorElement).style.color =
-                    "var(--ed-signal)";
-                }}
-                onMouseLeave={(e) => {
-                  (e.currentTarget as HTMLAnchorElement).style.color =
-                    "var(--ed-ink-2)";
+                  fontFamily: "var(--font-newsreader), Georgia, serif",
+                  fontSize: "19px",
+                  fontWeight: 500,
+                  color: "var(--ed-ink)",
+                  lineHeight: 1,
                 }}
               >
-                {item.label}
-              </Link>
-            ))}
-            <Link href="/auth" className="ed-cta" style={{ padding: "9px 18px", fontSize: "13px" }}>
-              {t("auth.signIn")}
+                DocTalk
+              </span>
+              {/* Thin vertical hairline separator */}
+              <span
+                aria-hidden="true"
+                style={{
+                  display: "inline-block",
+                  width: "1px",
+                  height: "28px",
+                  background: "var(--ed-rule)",
+                  marginLeft: "4px",
+                  marginRight: "8px",
+                }}
+              />
+              {/* Editorial dateline block — two mono lines */}
+              <span
+                className="hidden sm:flex"
+                style={{ flexDirection: "column", gap: "2px" }}
+              >
+                <span className="ed-caption" style={{ letterSpacing: "0.10em" }}>
+                  STUDIO N&ordm;&thinsp;01
+                </span>
+                <span className="ed-caption" style={{ letterSpacing: "0.08em" }}>
+                  DOCUMENT INTELLIGENCE
+                </span>
+              </span>
             </Link>
-          </nav>
+
+            {/* Right — nav links + CTA */}
+            <nav
+              className="flex items-center gap-6"
+              aria-label="Editorial navigation"
+            >
+              {NAV_LINKS.map((item) => (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className="hidden md:inline-block"
+                  style={{
+                    fontFamily: "var(--font-inter), system-ui, sans-serif",
+                    fontSize: "13px",
+                    color: "var(--ed-ink-2)",
+                    textDecoration: "none",
+                    transition: "color 150ms ease",
+                  }}
+                  onMouseEnter={(e) => {
+                    (e.currentTarget as HTMLAnchorElement).style.color =
+                      "var(--ed-signal)";
+                  }}
+                  onMouseLeave={(e) => {
+                    (e.currentTarget as HTMLAnchorElement).style.color =
+                      "var(--ed-ink-2)";
+                  }}
+                >
+                  {item.label}
+                </Link>
+              ))}
+              {/* Mobile hamburger — sits left of the Sign-In CTA, md:hidden */}
+              <button
+                type="button"
+                onClick={() => setMobileOpen((open) => !open)}
+                className="md:hidden inline-flex items-center justify-center"
+                style={{
+                  width: "36px",
+                  height: "36px",
+                  background: "transparent",
+                  border: "none",
+                  padding: 0,
+                  cursor: "pointer",
+                }}
+                aria-expanded={mobileOpen}
+                aria-controls="ed-mobile-nav"
+                aria-label={mobileOpen ? "Close menu" : "Open menu"}
+              >
+                {mobileOpen ? (
+                  <X aria-hidden="true" size={20} color="var(--ed-ink-2)" />
+                ) : (
+                  <Menu aria-hidden="true" size={20} color="var(--ed-ink-2)" />
+                )}
+              </button>
+              <Link href="/auth" className="ed-cta" style={{ padding: "9px 18px", fontSize: "13px" }}>
+                {t("auth.signIn")}
+              </Link>
+            </nav>
+          </div>
         </div>
-      </div>
-    </header>
+      </header>
+
+      {/* Mobile nav panel — sits below the masthead, not sticky */}
+      {mobileOpen && (
+        <nav
+          id="ed-mobile-nav"
+          role="navigation"
+          aria-label="Editorial mobile navigation"
+          className="md:hidden"
+          style={{
+            background: "var(--ed-paper)",
+            borderBottom: "1px solid var(--ed-rule)",
+          }}
+        >
+          {NAV_LINKS.map((item, idx) => (
+            <Link
+              key={item.href}
+              href={item.href}
+              onClick={() => setMobileOpen(false)}
+              className="block"
+              style={{
+                padding: "12px 24px",
+                fontFamily: "var(--font-plex-mono), ui-monospace, monospace",
+                fontSize: "12px",
+                textTransform: "uppercase",
+                letterSpacing: "0.10em",
+                color: "var(--ed-ink-2)",
+                textDecoration: "none",
+                borderTop:
+                  idx === 0 ? "none" : "1px solid var(--ed-rule)",
+              }}
+            >
+              {item.label}
+            </Link>
+          ))}
+        </nav>
+      )}
+    </>
   );
 }

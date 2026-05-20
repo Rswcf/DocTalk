@@ -56,6 +56,8 @@
   "toolbar.zoomOut": "Zoom out",
   "toolbar.prevPage": "Previous page",
   "toolbar.nextPage": "Next page",
+  "toolbar.prevMatch": "Previous match",
+  "toolbar.nextMatch": "Next match",
   "toolbar.grabMode": "Hand tool (drag to pan)",
   "header.darkMode": "Dark",
   "header.lightMode": "Light",

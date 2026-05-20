@@ -22,7 +22,7 @@ export default function PublicHeader() {
 
   return (
     <header className="dt-shell-header relative h-14 flex items-center px-4 sm:px-6 gap-3 min-w-0 shrink-0 sticky top-0 z-30 border-b">
-      <Link href="/" className="font-logo font-semibold text-xl text-[var(--workbench-ink)] hover:text-white transition-colors shrink-0 focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:rounded-sm inline-flex items-center gap-2">
+      <Link href="/" className="font-logo font-semibold text-xl text-[var(--workbench-ink)] hover:text-zinc-950 dark:hover:text-white transition-colors shrink-0 focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:rounded-sm inline-flex items-center gap-2">
         <DocTalkLogo size={26} />
         {t('app.title')}
         <span className="ml-1 -mt-2 px-1.5 py-0.5 text-[10px] font-medium leading-none rounded-full border border-white/18 bg-white/8 text-[var(--workbench-muted)] tracking-wide uppercase">Beta</span>
@@ -33,7 +33,7 @@ export default function PublicHeader() {
           <Link
             key={item.href}
             href={item.href}
-            className="rounded-full px-3 py-1.5 text-sm font-medium text-[var(--workbench-muted)] transition-colors hover:bg-white/10 hover:text-white"
+            className="rounded-full px-3 py-1.5 text-sm font-medium text-[var(--workbench-muted)] transition-colors hover:bg-white/10 hover:text-zinc-950 dark:hover:text-white"
           >
             {item.label}
           </Link>
@@ -56,7 +56,7 @@ export default function PublicHeader() {
         <Link
           href="/demo"
           onClick={() => trackEvent('landing_cta_clicked', { source: 'public_header', reason: 'demo' })}
-          className="dt-workbench-pill hidden sm:inline-flex items-center rounded-full px-3 py-1.5 text-sm transition-colors hover:border-[var(--workbench-border-strong)] hover:text-white focus-visible:ring-2 focus-visible:ring-zinc-400"
+          className="dt-workbench-pill hidden sm:inline-flex items-center rounded-full px-3 py-1.5 text-sm transition-colors hover:border-[var(--workbench-border-strong)] hover:text-zinc-950 dark:hover:text-white focus-visible:ring-2 focus-visible:ring-zinc-400"
         >
           {t('footer.demo')}
         </Link>

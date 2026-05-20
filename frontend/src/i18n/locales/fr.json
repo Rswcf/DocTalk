@@ -56,6 +56,8 @@
   "toolbar.zoomOut": "Zoom arrière",
   "toolbar.prevPage": "Page précédente",
   "toolbar.nextPage": "Page suivante",
+  "toolbar.prevMatch": "Correspondance précédente",
+  "toolbar.nextMatch": "Correspondance suivante",
   "toolbar.grabMode": "Outil main (glisser pour déplacer)",
   "header.darkMode": "Sombre",
   "header.lightMode": "Clair",

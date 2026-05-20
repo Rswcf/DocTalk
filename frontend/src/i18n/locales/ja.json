@@ -55,6 +55,8 @@
   "toolbar.zoomOut": "縮小",
   "toolbar.prevPage": "前のページ",
   "toolbar.nextPage": "次のページ",
+  "toolbar.prevMatch": "前の一致",
+  "toolbar.nextMatch": "次の一致",
   "toolbar.grabMode": "ハンドツール（ドラッグしてパン）",
   "header.darkMode": "ダーク",
   "header.lightMode": "ライト",

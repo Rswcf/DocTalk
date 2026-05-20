@@ -32,7 +32,7 @@ export default function ModeSelector() {
       role="radiogroup"
       aria-label={t('modes.ariaLabel')}
       data-tour="mode-selector"
-      className={`inline-flex rounded-full border border-slate-300/90 bg-slate-200/95 p-1 shadow-[inset_0_1px_0_rgba(255,255,255,0.8),0_10px_24px_rgba(15,23,42,0.12)] dark:border-white/18 dark:bg-white/12 dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.1),0_12px_28px_rgba(0,0,0,0.3)] ${isStreaming ? 'opacity-60 pointer-events-none' : ''}`}
+      className={`inline-flex rounded-full border border-zinc-300/90 bg-zinc-200/95 p-1 shadow-[inset_0_1px_0_rgba(255,255,255,0.8),0_10px_24px_rgba(15,23,42,0.12)] dark:border-white/18 dark:bg-white/12 dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.1),0_12px_28px_rgba(0,0,0,0.3)] ${isStreaming ? 'opacity-60 pointer-events-none' : ''}`}
     >
       {AVAILABLE_MODES.map((mode) => {
         const isSelected = selectedMode === mode.id;
@@ -47,7 +47,7 @@ export default function ModeSelector() {
             className={`relative flex min-w-[4rem] items-center justify-center gap-1 rounded-full px-3 py-1 text-sm transition-colors active:scale-[0.97] motion-reduce:transform-none focus-visible:ring-2 focus-visible:ring-zinc-500 dark:focus-visible:ring-zinc-300 focus-visible:ring-offset-1 ${
               isSelected
                 ? 'bg-white font-semibold text-zinc-950 shadow-[0_3px_12px_rgba(15,23,42,0.16)] dark:bg-zinc-50 dark:text-zinc-950'
-                : 'text-slate-600 hover:bg-white/50 hover:text-zinc-950 dark:text-zinc-300 dark:hover:bg-white/10 dark:hover:text-white'
+                : 'text-zinc-600 hover:bg-white/50 hover:text-zinc-950 dark:text-zinc-300 dark:hover:bg-white/10 dark:hover:text-white'
             }`}
           >
             <span>{t(mode.labelKey)}</span>

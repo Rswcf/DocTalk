@@ -130,7 +130,7 @@ function FunnelList({ stages }: { stages: AdminUserActivityFunnelStage[] }) {
           </div>
           <div className="h-7 overflow-hidden rounded bg-zinc-100 dark:bg-zinc-900">
             <div
-              className="flex h-full items-center justify-end rounded bg-blue-600 px-2 text-[11px] font-medium text-white"
+              className="flex h-full items-center justify-end rounded bg-accent px-2 text-[11px] font-medium text-white"
               style={{ width: `${Math.max((stage.users / maxUsers) * 100, stage.users > 0 ? 4 : 0)}%` }}
             >
               {stage.users > 0 ? formatPercent(stage.rate_from_signup) : ""}

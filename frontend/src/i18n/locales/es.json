@@ -350,6 +350,8 @@
   "toolbar.grabMode": "Herramienta mano (arrastrar para desplazar)",
   "toolbar.nextPage": "Página siguiente",
   "toolbar.prevPage": "Página anterior",
+  "toolbar.prevMatch": "Coincidencia anterior",
+  "toolbar.nextMatch": "Coincidencia siguiente",
   "toolbar.zoomIn": "Acercar",
   "toolbar.zoomOut": "Alejar",
   "upload.chooseFile": "Elegir archivo",

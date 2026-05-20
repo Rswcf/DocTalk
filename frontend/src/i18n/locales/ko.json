@@ -55,6 +55,8 @@
   "toolbar.zoomOut": "축소",
   "toolbar.prevPage": "이전 페이지",
   "toolbar.nextPage": "다음 페이지",
+  "toolbar.prevMatch": "이전 일치",
+  "toolbar.nextMatch": "다음 일치",
   "toolbar.grabMode": "손 도구 (드래그하여 이동)",
   "header.darkMode": "다크",
   "header.lightMode": "라이트",
