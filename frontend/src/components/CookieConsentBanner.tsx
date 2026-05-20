@@ -28,9 +28,28 @@ export function CookieConsentBanner() {
     };
     syncDialogState();
 
-    const observer = new MutationObserver(syncDialogState);
+    // Dialogs across the app mount/unmount via conditional rendering (no shared
+    // portal root), so we still need a body-subtree observer to notice them.
+    // But during chat-token streaming the message bubble fires hundreds of
+    // childList/characterData mutations per second, and the previous direct
+    // callback ran the dialog query for every single one. Coalesce all bursts
+    // into one query per animation frame instead. Behavior is unchanged; we
+    // just bound the cost at ~60Hz.
+    let frame: number | null = null;
+    const scheduleSync = () => {
+      if (frame !== null) return;
+      frame = requestAnimationFrame(() => {
+        frame = null;
+        syncDialogState();
+      });
+    };
+
+    const observer = new MutationObserver(scheduleSync);
     observer.observe(document.body, { childList: true, subtree: true });
-    return () => observer.disconnect();
+    return () => {
+      observer.disconnect();
+      if (frame !== null) cancelAnimationFrame(frame);
+    };
   }, [visible]);
 
   if (!visible || dialogOpen) return null;

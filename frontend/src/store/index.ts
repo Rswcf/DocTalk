@@ -90,6 +90,7 @@ export interface DocTalkStore {
   markLastMessageTruncated: (truncated: boolean) => void;
   updateLastMessageMeta: (updates: Partial<Message>) => void;
   flushPendingText: () => void;
+  clearDocumentTransientState: () => void;
   reset: () => void;
 }
 
@@ -285,6 +286,22 @@ export const useDocTalkStore = create<DocTalkStore>((set, get) => ({
     const last = msgs[msgs.length - 1];
     set({ messages: [...msgs.slice(0, -1), { ...last, ...updates }] });
   },
+  // Clears only the per-document UI state that should NOT leak across a
+  // document switch (search query/matches, citation highlights, grab mode,
+  // current page). Call this from `useDocumentLoader` when the route changes
+  // from `/d/A` to `/d/B`, so doc B doesn't inherit doc A's overlays.
+  // Leaves session/messages/mode/sessions/userPlan intact — those are owned by
+  // higher-level effects that load per-document or are user-global.
+  clearDocumentTransientState: () => set({
+    searchQuery: '',
+    searchMatches: [],
+    currentMatchIndex: -1,
+    highlights: [],
+    highlightSnippet: null,
+    grabMode: false,
+    currentPage: 1,
+    scrollNonce: 0,
+  }),
   reset: () => {
     const timer = get()._flushTimer;
     if (timer) clearTimeout(timer);

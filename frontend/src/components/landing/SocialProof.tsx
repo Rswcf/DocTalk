@@ -81,7 +81,7 @@ export default function SocialProof() {
                 key={metric.labelKey}
                 className={
                   'py-8 pr-6' +
-                  (idx > 0 ? ' md:pl-6 md:border-l border-[var(--ed-rule)]' : '')
+                  (idx > 0 ? ' md:pl-6 md:border-l md:border-[var(--ed-rule)]' : '')
                 }
               >
                 <div className="ed-num mb-2">

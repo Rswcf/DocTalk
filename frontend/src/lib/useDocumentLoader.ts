@@ -34,6 +34,7 @@ export function useDocumentLoader(documentId: string | undefined): UseDocumentLo
     setLastDocument,
     setDocumentSummary,
     setSuggestedQuestions,
+    clearDocumentTransientState,
   } = useDocTalkStore();
 
   useEffect(() => {
@@ -45,6 +46,10 @@ export function useDocumentLoader(documentId: string | undefined): UseDocumentLo
     setHasConvertedPdf(false);
     setConvertedPdfUrl(null);
     setCustomInstructions(null);
+    // When switching between documents (e.g. inside a Collection), wipe the
+    // per-document viewer overlays so doc B doesn't inherit doc A's active
+    // citation highlights, search query/matches, or grab-mode toggle.
+    clearDocumentTransientState();
     setDocument(documentId);
     setPdfUrl(null);
 
@@ -122,7 +127,7 @@ export function useDocumentLoader(documentId: string | undefined): UseDocumentLo
       cancelled = true;
       if (intervalId) clearInterval(intervalId);
     };
-  }, [documentId, setDocument, setPdfUrl, setDocumentName, setDocumentStatus, setLastDocument, setDocumentSummary, setSuggestedQuestions, t, tOr]);
+  }, [documentId, setDocument, setPdfUrl, setDocumentName, setDocumentStatus, setLastDocument, setDocumentSummary, setSuggestedQuestions, clearDocumentTransientState, t, tOr]);
 
   return {
     error,

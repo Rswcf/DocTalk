@@ -359,7 +359,12 @@ export default function ChatPanel({ sessionId, onCitationClick, maxUserMessages,
     tOr('chat.suggestedExtractTables', 'Extract all tables as CSV'),
     tOr('chat.suggestedCompareVersions', 'Compare this with an older version'),
   ];
-  const displayedSuggestedQuestions = locale === 'en' && suggestedQuestions && suggestedQuestions.length > 0
+  // Backend generates document-specific suggested questions in the user's locale;
+  // trust them regardless of `locale`. Falling back to the localized canned set
+  // only when the backend hasn't supplied any. Previously this was gated on
+  // `locale === 'en'`, which meant non-English users never saw document-aware
+  // suggestions.
+  const displayedSuggestedQuestions = suggestedQuestions && suggestedQuestions.length > 0
     ? suggestedQuestions
     : localizedSuggestedQuestions;
 
