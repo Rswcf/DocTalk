@@ -365,7 +365,12 @@ export default function ChatPanel({ sessionId, onCitationClick, maxUserMessages,
 
   return (
     <div className="dt-chat-shell flex h-full flex-col">
-      <PaywallModal isOpen={showPaywall} onClose={() => setShowPaywall(false)} reason={paywallReason} />
+      <PaywallModal
+        isOpen={showPaywall}
+        onClose={() => setShowPaywall(false)}
+        reason={paywallReason}
+        currentPlan={userPlan}
+      />
       <div className="relative flex-1 min-h-0">
         <div
           ref={listRef}

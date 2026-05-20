@@ -39,6 +39,18 @@ const CANCEL_REASONS: Array<{ value: CancelSubscriptionReason; label: string; fa
   { value: "other", label: "billing.cancel.reason.other", fallback: "Other" },
 ];
 
+/**
+ * Display price for (plan, billing) combos shown in the plan cards above the fold.
+ * Mirrors the inline prices on the Plus / Pro cards so the confirm dialog shows the
+ * same number the user just clicked (I19). Annual prices are the monthly-equivalent
+ * post-discount — `/perMonth` is the matching unit. If a future plan/billing combo
+ * is added here, update the plan cards' inline literals too.
+ */
+const PLAN_PRICE_USD: Record<string, Record<string, string>> = {
+  plus: { monthly: '$9.99', annual: '$7.99' },
+  pro: { monthly: '$19.99', annual: '$15.99' },
+};
+
 // Local helper: traps Tab/Shift+Tab inside `ref`, focuses the first focusable element
 // on open, and restores focus to the previously-active element on close. Scoped to this
 // file because the 3 confirm dialogs share the exact same shape; not a Wave-2 refactor.
@@ -953,6 +965,17 @@ function BillingContent() {
               <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">
                 {t("billing.confirmUpgrade.description")}
               </p>
+              {/* I19: surface target plan + price + period inline so users see the exact
+                  charge before confirming. Reuses the same hardcoded prices shown on the
+                  Plus / Pro cards above the fold (PLAN_PRICE_USD). */}
+              <p className="mt-3 text-sm font-medium text-zinc-900 dark:text-zinc-100 tabular-nums">
+                {confirmUpgrade.plan === 'pro' ? t('billing.pro.title') : t('billing.plus.title')}
+                {' · '}
+                {PLAN_PRICE_USD[confirmUpgrade.plan]?.[confirmUpgrade.billing] ?? ''}
+                {t('billing.perMonth')}
+                {' · '}
+                {confirmUpgrade.billing === 'annual' ? t('billing.annual') : t('billing.monthly')}
+              </p>
               <ul className="mt-4 space-y-2 text-sm text-zinc-700 dark:text-zinc-300">
                 <li className="flex items-start gap-2">
                   <Check size={16} className="mt-0.5 shrink-0 text-zinc-900 dark:text-zinc-100" />
@@ -1008,6 +1031,18 @@ function BillingContent() {
               </h3>
               <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">
                 {t("billing.confirmDowngrade.description")}
+              </p>
+              {/* I19: surface target plan + price + period inline (mirrors the upgrade
+                  dialog). On downgrade Stripe applies the change at the next billing
+                  period boundary, but showing the future per-month rate still helps the
+                  user reconcile what they're about to pay going forward. */}
+              <p className="mt-3 text-sm font-medium text-zinc-900 dark:text-zinc-100 tabular-nums">
+                {confirmDowngrade.plan === 'pro' ? t('billing.pro.title') : t('billing.plus.title')}
+                {' · '}
+                {PLAN_PRICE_USD[confirmDowngrade.plan]?.[confirmDowngrade.billing] ?? ''}
+                {t('billing.perMonth')}
+                {' · '}
+                {confirmDowngrade.billing === 'annual' ? t('billing.annual') : t('billing.monthly')}
               </p>
               <ul className="mt-4 space-y-2 text-sm text-zinc-700 dark:text-zinc-300">
                 <li className="flex items-start gap-2">

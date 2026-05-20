@@ -350,7 +350,7 @@
   "billing.features.plusDocs": "20 documentos, arquivos de 50MB",
   "billing.features.proCredits": "9.000 créditos/mês",
   "billing.features.proDocs": "Documentos ilimitados, arquivos de 100MB",
-  "billing.free.credits": "500",
+  "billing.free.credits": "300",
   "billing.intervalMismatch": "Não é possível mudar o intervalo de cobrança durante a beta. Entre em contato com o suporte.",
   "billing.manage": "Gerenciar",
   "billing.monthly": "Mensal",

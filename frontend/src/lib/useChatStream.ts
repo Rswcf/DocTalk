@@ -8,6 +8,7 @@ import { triggerCreditsRefresh } from '../components/CreditsDisplay';
 import { errorCopy } from './errorCopy';
 import { trackEvent } from './analytics';
 import { messageShareAnchorFromId } from './shareAnchors';
+import { deriveUpgradePlan } from './billingLinks';
 
 interface UseChatStreamOptions {
   sessionId: string;
@@ -26,31 +27,6 @@ interface UseChatStreamOptions {
   currentPlan?: string;
   onShowPaywall: (reason?: string) => void;
   onRequireAuth: () => void;
-}
-
-/**
- * Derive the upgrade-target plan to report in analytics, given the user's
- * current billing tier and the paywall reason code. Mirrors the disambiguation
- * implicit in PaywallModal's copy:
- *   - Pro-cap reasons (PRO_MODE_LIMIT_REACHED / BALANCED_MODE_LIMIT_REACHED /
- *     MODE_NOT_ALLOWED): Free user upgrades to Plus (Plus = unrestricted Pro),
- *     Plus user upgrades to Pro.
- *   - INSUFFICIENT_CREDITS / generic 402: Free → Plus, Plus → Pro,
- *     Pro → 'pro' (already on top plan; the funnel still rolls up under the
- *     existing plan rather than getting falsely attributed to a Plus upgrade).
- */
-function deriveUpgradePlan(currentPlan: string | undefined, reason: string): 'plus' | 'pro' {
-  const isProCap = reason === 'PRO_MODE_LIMIT_REACHED'
-    || reason === 'BALANCED_MODE_LIMIT_REACHED'
-    || reason === 'MODE_NOT_ALLOWED';
-  if (isProCap) {
-    return currentPlan === 'plus' ? 'pro' : 'plus';
-  }
-  // Credit-exhaustion path.
-  if (currentPlan === 'plus' || currentPlan === 'pro') {
-    return 'pro';
-  }
-  return 'plus';
 }
 
 interface UseChatStreamResult {

@@ -185,7 +185,7 @@
   "billing.pro.priceAnnual": "$15.99/month",
   "billing.pro.pricePerMonth": "${price}/month",
   "billing.pro.credits": "9,000",
-  "billing.free.credits": "500",
+  "billing.free.credits": "300",
   "billing.annual": "Annual",
   "billing.monthly": "Monthly",
   "billing.savePercent": "Save {percent}%",

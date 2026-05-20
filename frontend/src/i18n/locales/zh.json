@@ -185,7 +185,7 @@
   "billing.pro.priceAnnual": "$15.99/月",
   "billing.pro.pricePerMonth": "${price}/月",
   "billing.pro.credits": "9,000",
-  "billing.free.credits": "500",
+  "billing.free.credits": "300",
   "billing.annual": "按年",
   "billing.monthly": "按月",
   "billing.savePercent": "省 {percent}%",

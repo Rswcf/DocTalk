@@ -4,13 +4,21 @@ import { useEffect, useRef } from "react";
 import Link from "next/link";
 import { CheckCircle2 } from "lucide-react";
 import { useLocale } from "../i18n";
-import { billingHref } from "../lib/billingLinks";
+import { billingHref, deriveUpgradePlan } from "../lib/billingLinks";
 import { trackEvent } from "../lib/analytics";
 
 interface PaywallModalProps {
   isOpen: boolean;
   onClose: () => void;
   reason?: string | null;
+  /**
+   * Current user's billing tier ('free' | 'plus' | 'pro' | undefined for
+   * anonymous/demo). Determines whether the CTA targets the Plus or Pro
+   * upgrade page when the paywall fires. A Plus user hitting the Pro-mode cap
+   * needs to be routed to Pro — not bounced back to the Plus they already
+   * have (I18). Mirrors the analytics-side derivation in useChatStream (I27).
+   */
+  currentPlan?: string;
 }
 
 function paywallCopy(reason: string | null | undefined, t: (key: string) => string, tOr: (key: string, fallback: string) => string) {
@@ -31,10 +39,11 @@ function paywallCopy(reason: string | null | undefined, t: (key: string) => stri
   };
 }
 
-export function PaywallModal({ isOpen, onClose, reason }: PaywallModalProps) {
+export function PaywallModal({ isOpen, onClose, reason, currentPlan }: PaywallModalProps) {
   const { t, tOr } = useLocale();
   const modalRef = useRef<HTMLDivElement>(null);
   const copy = paywallCopy(reason, t, tOr);
+  const targetPlan = deriveUpgradePlan(currentPlan, reason ?? null);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -111,8 +120,8 @@ export function PaywallModal({ isOpen, onClose, reason }: PaywallModalProps) {
         </ul>
         <div className="flex flex-col gap-3 sm:flex-row">
           <Link
-            href={billingHref({ plan: 'plus', source: 'paywall_modal', reason: copy.reason })}
-            onClick={() => trackEvent('upgrade_click', { plan: 'plus', period: 'monthly', source: 'paywall_modal', reason: copy.reason })}
+            href={billingHref({ plan: targetPlan, source: 'paywall_modal', reason: copy.reason })}
+            onClick={() => trackEvent('upgrade_click', { plan: targetPlan, period: 'monthly', source: 'paywall_modal', reason: copy.reason })}
             className="flex-1 px-4 py-2 bg-zinc-900 dark:bg-zinc-50 text-white dark:text-zinc-900 rounded-lg hover:bg-zinc-800 dark:hover:bg-zinc-200 shadow-sm hover:shadow-md transition-colors text-center focus-visible:ring-2 focus-visible:ring-zinc-400 dark:focus-visible:ring-zinc-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-900"
           >
             {copy.primaryLabel}
