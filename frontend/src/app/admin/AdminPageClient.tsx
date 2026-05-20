@@ -34,6 +34,7 @@ import {
   RefreshCw,
 } from "lucide-react";
 import { usePageTitle } from "../../lib/usePageTitle";
+import { formatNumber, formatPercent } from "../../lib/formatNumber";
 import { useLocale } from "../../i18n";
 
 // Types
@@ -103,16 +104,6 @@ const AdminCharts = dynamic<{
 const AdminUserActivityCharts = dynamic<{
   activity: AdminUserActivity;
 }>(() => import("../../components/AdminUserActivityCharts"), { ssr: false });
-
-function formatNumber(n: number): string {
-  if (n >= 1_000_000) return (n / 1_000_000).toFixed(1) + "M";
-  if (n >= 1_000) return (n / 1_000).toFixed(1) + "K";
-  return n.toString();
-}
-
-function formatPercent(n: number): string {
-  return `${Math.round(n * 100)}%`;
-}
 
 function KPICard({
   icon: Icon,

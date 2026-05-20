@@ -1,6 +1,13 @@
 "use client";
 
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useLayoutEffect, useRef, useState } from "react";
+
+// SSR-safe layout effect — useLayoutEffect warns under server rendering, so
+// we fall back to useEffect when `window` isn't available. This keeps the
+// first painted frame in sync with the measured scrollHeight on the client
+// (no collapsed→expanded jump) while remaining safe for any SSR boundary.
+const useIsomorphicLayoutEffect =
+  typeof window !== "undefined" ? useLayoutEffect : useEffect;
 
 interface FaqItem {
   question: string;
@@ -63,7 +70,7 @@ function FaqRow({
   const contentRef = useRef<HTMLDivElement>(null);
   const [height, setHeight] = useState(0);
 
-  useEffect(() => {
+  useIsomorphicLayoutEffect(() => {
     const el = contentRef.current;
     if (!el || !isOpen) return;
     setHeight(el.scrollHeight);

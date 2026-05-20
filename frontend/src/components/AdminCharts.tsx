@@ -14,6 +14,7 @@ import {
   BarChart,
   Bar,
 } from "recharts";
+import { formatNumber } from "../lib/formatNumber";
 
 interface TrendPoint {
   date: string;
@@ -45,12 +46,6 @@ export interface AdminChartsProps {
 }
 
 const PIE_COLORS = ["#38bdf8", "#a78bfa", "#34d399", "#f59e0b", "#60a5fa", "#94a3b8"];
-
-function formatNumber(n: number): string {
-  if (n >= 1_000_000) return (n / 1_000_000).toFixed(1) + "M";
-  if (n >= 1_000) return (n / 1_000).toFixed(1) + "K";
-  return n.toString();
-}
 
 function ChartCard({
   title,

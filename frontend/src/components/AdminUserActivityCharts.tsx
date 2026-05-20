@@ -20,6 +20,7 @@ import type {
   AdminUserActivityFunnelStage,
   AdminUserActivitySegmentItem,
 } from "../lib/api";
+import { formatNumber, formatPercent } from "../lib/formatNumber";
 import { useLocale } from "../i18n";
 
 interface AdminUserActivityChartsProps {
@@ -37,17 +38,6 @@ const CHART_COLORS = {
   checkout: "#34d399",
   neutral: "#94a3b8",
 };
-
-function formatNumber(n: number): string {
-  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
-  if (n >= 1_000) return `${(n / 1_000).toFixed(1)}K`;
-  return n.toString();
-}
-
-function formatPercent(n: number | null | undefined): string {
-  if (n == null) return "-";
-  return `${(n * 100).toFixed(n > 0 && n < 0.1 ? 1 : 0)}%`;
-}
 
 function formatDateLabel(value: string): string {
   const date = new Date(value);
