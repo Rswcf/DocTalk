@@ -4,7 +4,7 @@ import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
-import { ClipboardList, FileText, GitCompare, MessageSquare, Plus, X } from 'lucide-react';
+import { ClipboardList, FileText, GitCompare, MessageSquare, Plus, RefreshCw, X } from 'lucide-react';
 import Header from '../../../components/Header';
 import { ChatPanel } from '../../../components/Chat';
 import CollectionSidebar from '../../../components/Collections/CollectionSidebar';
@@ -49,6 +49,12 @@ export default function CollectionDetailPage() {
   const [showAddDocs, setShowAddDocs] = useState(false);
   const [availableDocs, setAvailableDocs] = useState<DocumentBrief[]>([]);
   const [addDocsErrorCopy, setAddDocsErrorCopy] = useState<ErrorCopy | null>(null);
+  // Distinct from addDocsErrorCopy (which surfaces add-document failures inside
+  // the modal). loadDocsError is set when the *initial* getMyDocuments() call
+  // rejects so the user gets feedback instead of a silently-broken "Add docs"
+  // click. Matches the C3 inline-chip pattern in HomePageClient.tsx.
+  const [loadDocsError, setLoadDocsError] = useState<string | null>(null);
+  const [loadingDocs, setLoadingDocs] = useState(false);
   const [addingDocId, setAddingDocId] = useState<string | null>(null);
   const [workspaceMode, setWorkspaceMode] = useState<'chat' | 'templates' | 'diff'>('chat');
   // Mobile sidebar toggle
@@ -147,13 +153,27 @@ export default function CollectionDetailPage() {
     }
   }, [collectionId, setSessionId, addSession, setMessages]);
 
-  const handleAddDocs = async () => {
-    const docs = await getMyDocuments();
-    const existingIds = new Set((collection?.documents || []).map(d => d.id));
-    setAvailableDocs(docs.filter(d => d.status === 'ready' && !existingIds.has(d.id)));
+  const handleAddDocs = useCallback(async () => {
+    // Open the modal first so the user gets immediate feedback (loading or
+    // error). Previously this awaited getMyDocuments() with no try/catch — a
+    // network failure or 5xx silently dropped the click and the modal never
+    // opened, leaving the user wondering if "Add docs" was broken.
     setAddDocsErrorCopy(null);
+    setLoadDocsError(null);
+    setLoadingDocs(true);
     setShowAddDocs(true);
-  };
+    try {
+      const docs = await getMyDocuments();
+      const existingIds = new Set((collection?.documents || []).map(d => d.id));
+      setAvailableDocs(docs.filter(d => d.status === 'ready' && !existingIds.has(d.id)));
+    } catch (e) {
+      console.error('Failed to load documents for add-to-collection:', e);
+      setAvailableDocs([]);
+      setLoadDocsError(tOr('collections.loadDocsError', 'Could not load your documents. Check your connection and retry.'));
+    } finally {
+      setLoadingDocs(false);
+    }
+  }, [collection?.documents, tOr]);
 
   const handleAddDocument = async (docId: string) => {
     setAddingDocId(docId);
@@ -181,6 +201,8 @@ export default function CollectionDetailPage() {
     setShowAddDocs(false);
     setAddDocsErrorCopy(null);
     setAddingDocId(null);
+    setLoadDocsError(null);
+    setLoadingDocs(false);
   };
 
   const handleOpenDoc = (docId: string) => {
@@ -455,7 +477,34 @@ export default function CollectionDetailPage() {
                 <X aria-hidden="true" size={16} />
               </button>
             </div>
-            {availableDocs.length === 0 ? (
+            {loadDocsError ? (
+              <div
+                role="alert"
+                className="flex flex-wrap items-center gap-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-950 dark:border-red-900/60 dark:bg-red-950/30 dark:text-red-100"
+              >
+                <span className="flex-1 min-w-0">{loadDocsError}</span>
+                <button
+                  type="button"
+                  onClick={handleAddDocs}
+                  className="inline-flex items-center gap-1 rounded-md border border-red-300 bg-white px-2 py-1 text-xs font-medium text-red-700 hover:bg-red-100 dark:border-red-900/60 dark:bg-red-950/40 dark:text-red-100 dark:hover:bg-red-950/60 focus-visible:ring-2 focus-visible:ring-red-400"
+                >
+                  <RefreshCw aria-hidden="true" size={12} />
+                  {tOr('common.retry', 'Retry')}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setLoadDocsError(null)}
+                  className="rounded-md p-1 text-red-600 hover:bg-red-100 dark:text-red-300 dark:hover:bg-red-950/60 focus-visible:ring-2 focus-visible:ring-red-400"
+                  aria-label={tOr('common.dismiss', 'Dismiss')}
+                >
+                  <X aria-hidden="true" size={14} />
+                </button>
+              </div>
+            ) : loadingDocs ? (
+              <div className="rounded-lg border border-dashed border-zinc-300 bg-zinc-50 p-6 text-center dark:border-zinc-700 dark:bg-zinc-950">
+                <p className="text-sm text-zinc-500 dark:text-zinc-400">{t('common.loading')}</p>
+              </div>
+            ) : availableDocs.length === 0 ? (
               <div className="rounded-lg border border-dashed border-zinc-300 bg-zinc-50 p-6 text-center dark:border-zinc-700 dark:bg-zinc-950">
                 <FileText aria-hidden="true" size={26} className="mx-auto mb-3 text-zinc-400" />
                 <p className="text-sm text-zinc-500 dark:text-zinc-400">

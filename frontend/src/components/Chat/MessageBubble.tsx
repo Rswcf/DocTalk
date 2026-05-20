@@ -83,6 +83,18 @@ function processCitationLinks(
     }
 
     if (React.isValidElement(child) && child.props?.children) {
+      const elementType = (child as any).type;
+      // Don't recurse into literal code / anchors / keyboard / sample spans.
+      // Otherwise an LLM emitting `[1]` inside a backtick code span would have
+      // the marker rewritten into a <CitationPopover><button>, producing a
+      // button-inside-code-element semantic mess (and breaking copy-paste of
+      // the literal code).
+      if (
+        typeof elementType === 'string'
+        && ['code', 'pre', 'a', 'kbd', 'samp'].includes(elementType)
+      ) {
+        return child;
+      }
       return React.cloneElement(child as React.ReactElement<any>, {
         children: processCitationLinks(child.props.children, citations, onClick, t),
       });

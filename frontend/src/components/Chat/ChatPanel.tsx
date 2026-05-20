@@ -77,6 +77,7 @@ export default function ChatPanel({ sessionId, onCitationClick, maxUserMessages,
     t,
     tOr,
     maxUserMessages,
+    currentPlan: userPlan,
     onShowPaywall: (reason) => {
       setPaywallReason(reason ?? null);
       setShowPaywall(true);

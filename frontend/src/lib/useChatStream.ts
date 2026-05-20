@@ -16,8 +16,41 @@ interface UseChatStreamOptions {
   t: (key: string, params?: Record<string, string | number>) => string;
   tOr: (key: string, fallback: string, params?: Record<string, string | number>) => string;
   maxUserMessages?: number;
+  /**
+   * Current user's billing tier ('free' | 'plus' | 'pro' | undefined for
+   * anonymous/demo). Used by the paywall analytics events so the funnel data
+   * reflects the actual upgrade *target* — e.g. a Plus user hitting the Pro
+   * cap should fire `plan: 'pro'`, not the hardcoded `plan: 'plus'` that was
+   * poisoning every paywall_opened/limit_hit event in the funnel (I27).
+   */
+  currentPlan?: string;
   onShowPaywall: (reason?: string) => void;
   onRequireAuth: () => void;
+}
+
+/**
+ * Derive the upgrade-target plan to report in analytics, given the user's
+ * current billing tier and the paywall reason code. Mirrors the disambiguation
+ * implicit in PaywallModal's copy:
+ *   - Pro-cap reasons (PRO_MODE_LIMIT_REACHED / BALANCED_MODE_LIMIT_REACHED /
+ *     MODE_NOT_ALLOWED): Free user upgrades to Plus (Plus = unrestricted Pro),
+ *     Plus user upgrades to Pro.
+ *   - INSUFFICIENT_CREDITS / generic 402: Free → Plus, Plus → Pro,
+ *     Pro → 'pro' (already on top plan; the funnel still rolls up under the
+ *     existing plan rather than getting falsely attributed to a Plus upgrade).
+ */
+function deriveUpgradePlan(currentPlan: string | undefined, reason: string): 'plus' | 'pro' {
+  const isProCap = reason === 'PRO_MODE_LIMIT_REACHED'
+    || reason === 'BALANCED_MODE_LIMIT_REACHED'
+    || reason === 'MODE_NOT_ALLOWED';
+  if (isProCap) {
+    return currentPlan === 'plus' ? 'pro' : 'plus';
+  }
+  // Credit-exhaustion path.
+  if (currentPlan === 'plus' || currentPlan === 'pro') {
+    return 'pro';
+  }
+  return 'plus';
 }
 
 interface UseChatStreamResult {
@@ -38,6 +71,7 @@ export function useChatStream({
   t,
   tOr,
   maxUserMessages,
+  currentPlan,
   onShowPaywall,
   onRequireAuth,
 }: UseChatStreamOptions): UseChatStreamResult {
@@ -105,8 +139,14 @@ export function useChatStream({
       || code === 'BALANCED_MODE_LIMIT_REACHED'
     ) {
       const reason = code || 'paid_limit';
-      trackEvent('limit_hit', { source: 'chat_stream', reason, plan: 'plus', period: 'monthly' });
-      trackEvent('paywall_opened', { source: 'chat_stream', reason, plan: 'plus', period: 'monthly' });
+      // I27: previously hardcoded `plan: 'plus'`, which falsely attributed
+      // every paywall event in the funnel to plus-upgrade intent regardless
+      // of what triggered it (e.g. a Plus user hitting the Pro cap was logged
+      // as a Plus-upgrade event). Derive the actual upgrade target from
+      // (currentPlan, reason) so the upgrade-funnel analytics aren't poisoned.
+      const upgradePlan = deriveUpgradePlan(currentPlan, reason);
+      trackEvent('limit_hit', { source: 'chat_stream', reason, plan: upgradePlan, period: 'monthly' });
+      trackEvent('paywall_opened', { source: 'chat_stream', reason, plan: upgradePlan, period: 'monthly' });
       onShowPaywall(reason);
       return;
     }
@@ -171,7 +211,7 @@ export function useChatStream({
       isError: true,
       createdAt: Date.now(),
     });
-  }, [addMessage, flushPendingText, getErrorMeta, onShowPaywall, setStreaming, t, tOr]);
+  }, [addMessage, flushPendingText, getErrorMeta, onShowPaywall, setStreaming, t, tOr, currentPlan]);
 
   const handleTruncated = useCallback(() => {
     flushPendingText();
