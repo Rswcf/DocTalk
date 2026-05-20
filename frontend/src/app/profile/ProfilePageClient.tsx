@@ -157,31 +157,61 @@ function ProfileContent() {
             {!loading && !error && profile && (
               <div className="space-y-6">
                 {activeTab === "profile" && (
-                  <section className="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+                  <section
+                    role="tabpanel"
+                    id="profile-panel-profile"
+                    aria-labelledby="profile-tab-profile"
+                    tabIndex={0}
+                    className="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-900"
+                  >
                     <ProfileInfoSection profile={profile} />
                   </section>
                 )}
 
                 {activeTab === "credits" && (
-                  <section className="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+                  <section
+                    role="tabpanel"
+                    id="profile-panel-credits"
+                    aria-labelledby="profile-tab-credits"
+                    tabIndex={0}
+                    className="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-900"
+                  >
                     <CreditsSection profile={profile} />
                   </section>
                 )}
 
                 {activeTab === "usage" && (
-                  <section className="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+                  <section
+                    role="tabpanel"
+                    id="profile-panel-usage"
+                    aria-labelledby="profile-tab-usage"
+                    tabIndex={0}
+                    className="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-900"
+                  >
                     <UsageStatsSection profile={profile} />
                   </section>
                 )}
 
                 {activeTab === "account" && (
-                  <section className="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+                  <section
+                    role="tabpanel"
+                    id="profile-panel-account"
+                    aria-labelledby="profile-tab-account"
+                    tabIndex={0}
+                    className="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-900"
+                  >
                     <AccountActionsSection email={profile.email} />
                   </section>
                 )}
 
                 {activeTab === "notifications" && (
-                  <section className="rounded-xl border border-zinc-200 bg-white p-10 text-center shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+                  <section
+                    role="tabpanel"
+                    id="profile-panel-notifications"
+                    aria-labelledby="profile-tab-notifications"
+                    tabIndex={0}
+                    className="rounded-xl border border-zinc-200 bg-white p-10 text-center shadow-sm dark:border-zinc-800 dark:bg-zinc-900"
+                  >
                     <Bell aria-hidden size={28} className="mx-auto mb-3 text-zinc-400 dark:text-zinc-500" />
                     <h2 className="text-base font-semibold mb-1 text-zinc-900 dark:text-zinc-100">
                       {tOr("profile.notifications.title", "Notifications")}

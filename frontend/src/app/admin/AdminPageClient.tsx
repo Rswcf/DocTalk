@@ -224,17 +224,23 @@ function BillingHealthPanel({
           <table className="w-full text-xs">
             <thead>
               <tr className="border-b border-zinc-100 text-left text-zinc-500 dark:border-zinc-800 dark:text-zinc-400">
-                <th className="py-1.5 pr-3 font-medium">Price</th>
-                <th className="px-3 py-1.5 font-medium">Configured</th>
-                <th className="px-3 py-1.5 font-medium">Mode</th>
-                <th className="px-3 py-1.5 font-medium">Active</th>
-                <th className="py-1.5 pl-3 font-medium">Interval</th>
+                <th scope="col" className="py-1.5 pr-3 font-medium">Price</th>
+                <th scope="col" className="px-3 py-1.5 font-medium">Configured</th>
+                <th scope="col" className="px-3 py-1.5 font-medium">Mode</th>
+                <th scope="col" className="px-3 py-1.5 font-medium">Active</th>
+                <th scope="col" className="py-1.5 pl-3 font-medium">Interval</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800">
               {health.prices.map((price) => (
                 <tr key={price.label}>
-                  <td className="py-1.5 pr-3 text-zinc-700 dark:text-zinc-300">{price.label}</td>
+                  <th
+                    scope="row"
+                    className="py-1.5 pr-3 text-zinc-700 dark:text-zinc-300"
+                    style={{ textAlign: "left", fontWeight: 500 }}
+                  >
+                    {price.label}
+                  </th>
                   <td className="px-3 py-1.5 text-zinc-600 dark:text-zinc-400">{price.configured ? price.id_hint || "yes" : "missing"}</td>
                   <td className="px-3 py-1.5 text-zinc-600 dark:text-zinc-400">{price.livemode == null ? "-" : price.livemode ? "live" : "test"}</td>
                   <td className="px-3 py-1.5 text-zinc-600 dark:text-zinc-400">{price.active == null ? "-" : price.active ? "yes" : "no"}</td>
@@ -693,19 +699,19 @@ export default function AdminPageClient() {
               <table className="w-full text-sm">
                 <thead className="bg-zinc-50 dark:bg-zinc-800/50">
                   <tr>
-                    <th className="text-left px-4 py-2 font-medium text-zinc-500 dark:text-zinc-400">
+                    <th scope="col" className="text-left px-4 py-2 font-medium text-zinc-500 dark:text-zinc-400">
                       Email
                     </th>
-                    <th className="text-left px-4 py-2 font-medium text-zinc-500 dark:text-zinc-400">
+                    <th scope="col" className="text-left px-4 py-2 font-medium text-zinc-500 dark:text-zinc-400">
                       Plan
                     </th>
-                    <th className="text-right px-4 py-2 font-medium text-zinc-500 dark:text-zinc-400">
+                    <th scope="col" className="text-right px-4 py-2 font-medium text-zinc-500 dark:text-zinc-400">
                       Credits
                     </th>
-                    <th className="text-right px-4 py-2 font-medium text-zinc-500 dark:text-zinc-400">
+                    <th scope="col" className="text-right px-4 py-2 font-medium text-zinc-500 dark:text-zinc-400">
                       Docs
                     </th>
-                    <th className="text-left px-4 py-2 font-medium text-zinc-500 dark:text-zinc-400">
+                    <th scope="col" className="text-left px-4 py-2 font-medium text-zinc-500 dark:text-zinc-400">
                       Joined
                     </th>
                   </tr>
@@ -713,9 +719,13 @@ export default function AdminPageClient() {
                 <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800">
                   {recentUsers.map((u) => (
                     <tr key={u.id} className="hover:bg-zinc-50 dark:hover:bg-zinc-800/30">
-                      <td className="px-4 py-2 text-zinc-700 dark:text-zinc-300 truncate max-w-[200px]">
+                      <th
+                        scope="row"
+                        className="px-4 py-2 text-zinc-700 dark:text-zinc-300 truncate max-w-[200px]"
+                        style={{ textAlign: "left", fontWeight: 500 }}
+                      >
                         {u.email}
-                      </td>
+                      </th>
                       <td className="px-4 py-2">
                         <PlanBadge plan={u.plan} />
                       </td>
@@ -765,19 +775,19 @@ export default function AdminPageClient() {
               <table className="w-full text-sm">
                 <thead className="bg-zinc-50 dark:bg-zinc-800/50">
                   <tr>
-                    <th className="text-left px-4 py-2 font-medium text-zinc-500 dark:text-zinc-400">
+                    <th scope="col" className="text-left px-4 py-2 font-medium text-zinc-500 dark:text-zinc-400">
                       Email
                     </th>
-                    <th className="text-left px-4 py-2 font-medium text-zinc-500 dark:text-zinc-400">
+                    <th scope="col" className="text-left px-4 py-2 font-medium text-zinc-500 dark:text-zinc-400">
                       Plan
                     </th>
-                    <th className="text-right px-4 py-2 font-medium text-zinc-500 dark:text-zinc-400">
+                    <th scope="col" className="text-right px-4 py-2 font-medium text-zinc-500 dark:text-zinc-400">
                       Tokens
                     </th>
-                    <th className="text-right px-4 py-2 font-medium text-zinc-500 dark:text-zinc-400">
+                    <th scope="col" className="text-right px-4 py-2 font-medium text-zinc-500 dark:text-zinc-400">
                       Credits
                     </th>
-                    <th className="text-right px-4 py-2 font-medium text-zinc-500 dark:text-zinc-400">
+                    <th scope="col" className="text-right px-4 py-2 font-medium text-zinc-500 dark:text-zinc-400">
                       Docs
                     </th>
                   </tr>
@@ -785,9 +795,13 @@ export default function AdminPageClient() {
                 <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800">
                   {topUsers.map((u) => (
                     <tr key={u.id} className="hover:bg-zinc-50 dark:hover:bg-zinc-800/30">
-                      <td className="px-4 py-2 text-zinc-700 dark:text-zinc-300 truncate max-w-[200px]">
+                      <th
+                        scope="row"
+                        className="px-4 py-2 text-zinc-700 dark:text-zinc-300 truncate max-w-[200px]"
+                        style={{ textAlign: "left", fontWeight: 500 }}
+                      >
                         {u.email}
-                      </td>
+                      </th>
                       <td className="px-4 py-2">
                         <PlanBadge plan={u.plan} />
                       </td>

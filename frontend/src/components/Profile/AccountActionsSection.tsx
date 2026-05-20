@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { Download } from "lucide-react";
 import { useLocale } from "../../i18n";
 import { deleteUserAccount, exportUserData } from "../../lib/api";
@@ -19,8 +19,42 @@ export default function AccountActionsSection({ email }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [exporting, setExporting] = useState(false);
   const [exportError, setExportError] = useState<string | null>(null);
+  const dialogRef = useRef<HTMLDivElement>(null);
 
   const canConfirm = confirmEmail.trim() === email.trim();
+
+  // I13 focus trap + restoration. The dialog already had autoFocus on the Cancel
+  // button — we keep that as the initial focus target, then trap Tab inside the
+  // dialog and restore focus to whoever opened the modal on close.
+  useEffect(() => {
+    if (!open) return;
+    const previouslyFocused = document.activeElement as HTMLElement | null;
+    return () => {
+      previouslyFocused?.focus?.();
+    };
+  }, [open]);
+
+  useEffect(() => {
+    if (!open) return;
+    const focusableSelector =
+      'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key !== 'Tab') return;
+      const focusables = dialogRef.current?.querySelectorAll<HTMLElement>(focusableSelector);
+      if (!focusables || focusables.length === 0) return;
+      const first = focusables[0];
+      const last = focusables[focusables.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    }
+    document.addEventListener('keydown', onKeyDown);
+    return () => document.removeEventListener('keydown', onKeyDown);
+  }, [open]);
 
   const onExport = async () => {
     setExporting(true);
@@ -108,6 +142,7 @@ export default function AccountActionsSection({ email }: Props) {
         >
           <div className="absolute inset-0 bg-black/50 animate-fade-in motion-reduce:animate-none" onClick={() => !deleting && setOpen(false)} />
           <div
+            ref={dialogRef}
             className="relative bg-white dark:bg-zinc-900 border dark:border-zinc-700 rounded-lg p-6 w-full max-w-md shadow-lg animate-slide-up motion-reduce:animate-none"
             role="dialog"
             aria-modal="true"

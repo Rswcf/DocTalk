@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, Suspense } from "react";
+import { useState, useEffect, useCallback, useRef, Suspense, type RefObject } from "react";
 import Link from "next/link";
 import { useSession } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -39,6 +39,39 @@ const CANCEL_REASONS: Array<{ value: CancelSubscriptionReason; label: string; fa
   { value: "other", label: "billing.cancel.reason.other", fallback: "Other" },
 ];
 
+// Local helper: traps Tab/Shift+Tab inside `ref`, focuses the first focusable element
+// on open, and restores focus to the previously-active element on close. Scoped to this
+// file because the 3 confirm dialogs share the exact same shape; not a Wave-2 refactor.
+function useDialogFocusTrap(open: boolean, ref: RefObject<HTMLDivElement | null>) {
+  useEffect(() => {
+    if (!open) return;
+    const previouslyFocused = document.activeElement as HTMLElement | null;
+    const focusableSelector =
+      'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
+    const first = ref.current?.querySelector<HTMLElement>(focusableSelector);
+    first?.focus();
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key !== 'Tab') return;
+      const focusables = ref.current?.querySelectorAll<HTMLElement>(focusableSelector);
+      if (!focusables || focusables.length === 0) return;
+      const firstEl = focusables[0];
+      const lastEl = focusables[focusables.length - 1];
+      if (event.shiftKey && document.activeElement === firstEl) {
+        event.preventDefault();
+        lastEl.focus();
+      } else if (!event.shiftKey && document.activeElement === lastEl) {
+        event.preventDefault();
+        firstEl.focus();
+      }
+    }
+    document.addEventListener('keydown', onKeyDown);
+    return () => {
+      document.removeEventListener('keydown', onKeyDown);
+      previouslyFocused?.focus?.();
+    };
+  }, [open, ref]);
+}
+
 function BillingContent() {
   const { t, tOr, locale } = useLocale();
   usePageTitle(t("footer.pricing"));
@@ -66,6 +99,15 @@ function BillingContent() {
   const [cancelReason, setCancelReason] = useState<CancelSubscriptionReason | null>(null);
   const [cancelFeedback, setCancelFeedback] = useState("");
   const [refundRequested, setRefundRequested] = useState(false);
+
+  // I13 focus-trap refs for the three confirm dialogs. The hook captures the previously
+  // focused element on open and restores it on close.
+  const confirmUpgradeRef = useRef<HTMLDivElement>(null);
+  const confirmDowngradeRef = useRef<HTMLDivElement>(null);
+  const confirmCancelRef = useRef<HTMLDivElement>(null);
+  useDialogFocusTrap(confirmUpgrade !== null, confirmUpgradeRef);
+  useDialogFocusTrap(confirmDowngrade !== null, confirmDowngradeRef);
+  useDialogFocusTrap(confirmCancel, confirmCancelRef);
 
   useEffect(() => {
     const planParam = searchParams.get("plan");
@@ -899,11 +941,13 @@ function BillingContent() {
             className="fixed inset-0 z-50 flex items-center justify-center px-4 bg-zinc-950/40"
           >
             <div
+              ref={confirmUpgradeRef}
               role="dialog"
               aria-modal="true"
+              aria-labelledby="confirm-upgrade-title"
               className="w-full max-w-md rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-6 shadow-xl"
             >
-              <h3 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50">
+              <h3 id="confirm-upgrade-title" className="text-lg font-semibold text-zinc-900 dark:text-zinc-50">
                 {t("billing.confirmUpgrade.title")}
               </h3>
               <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">
@@ -953,11 +997,13 @@ function BillingContent() {
             className="fixed inset-0 z-50 flex items-center justify-center px-4 bg-zinc-950/40"
           >
             <div
+              ref={confirmDowngradeRef}
               role="dialog"
               aria-modal="true"
+              aria-labelledby="confirm-downgrade-title"
               className="w-full max-w-md rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-6 shadow-xl"
             >
-              <h3 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50">
+              <h3 id="confirm-downgrade-title" className="text-lg font-semibold text-zinc-900 dark:text-zinc-50">
                 {t("billing.confirmDowngrade.title")}
               </h3>
               <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">
@@ -1007,12 +1053,13 @@ function BillingContent() {
               if (e.target === e.currentTarget) setConfirmCancel(false);
             }}
             className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="confirm-cancel-title"
           >
             <div
+              ref={confirmCancelRef}
               onClick={(e) => e.stopPropagation()}
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="confirm-cancel-title"
               className="max-w-md w-full rounded-xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 p-6 shadow-xl"
             >
               <h2

@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { MessageSquare, Send, X } from "lucide-react";
 import { usePathname } from "next/navigation";
@@ -117,6 +117,7 @@ export default function FeedbackButton() {
   const [status, setStatus] = useState<"idle" | "success" | "error">("idle");
   const [error, setError] = useState<string | null>(null);
   const [mounted, setMounted] = useState(false);
+  const dialogRef = useRef<HTMLDivElement>(null);
 
   const commonOptions = useMemo(() => OPTION_BANK[type], [type]);
 
@@ -143,6 +144,36 @@ export default function FeedbackButton() {
     document.body.style.overflow = "hidden";
     return () => {
       document.body.style.overflow = previous;
+    };
+  }, [open]);
+
+  // I13 focus trap + restoration. Capture the previously focused element on open,
+  // move focus into the dialog, trap Tab/Shift+Tab cycling, restore focus on close.
+  useEffect(() => {
+    if (!open) return;
+    const previouslyFocused = document.activeElement as HTMLElement | null;
+    const focusableSelector =
+      'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
+    const first = dialogRef.current?.querySelector<HTMLElement>(focusableSelector);
+    first?.focus();
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key !== 'Tab') return;
+      const focusables = dialogRef.current?.querySelectorAll<HTMLElement>(focusableSelector);
+      if (!focusables || focusables.length === 0) return;
+      const firstEl = focusables[0];
+      const lastEl = focusables[focusables.length - 1];
+      if (event.shiftKey && document.activeElement === firstEl) {
+        event.preventDefault();
+        lastEl.focus();
+      } else if (!event.shiftKey && document.activeElement === lastEl) {
+        event.preventDefault();
+        firstEl.focus();
+      }
+    }
+    document.addEventListener('keydown', onKeyDown);
+    return () => {
+      document.removeEventListener('keydown', onKeyDown);
+      previouslyFocused?.focus?.();
     };
   }, [open]);
 
@@ -201,6 +232,7 @@ export default function FeedbackButton() {
             aria-label={tOr("common.close", "Close")}
           />
           <div
+            ref={dialogRef}
             className="relative z-10 flex max-h-[min(92dvh,760px)] w-full max-w-xl flex-col overflow-hidden rounded-2xl border border-zinc-200 bg-white text-zinc-950 shadow-2xl shadow-black/35 ring-1 ring-black/5 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-50 dark:ring-white/10"
             role="dialog"
             aria-modal="true"

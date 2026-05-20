@@ -191,10 +191,10 @@ export default function CreditsSection({ profile }: Props) {
             <table className="w-full text-sm">
               <thead>
                 <tr className="text-left text-zinc-600 dark:text-zinc-400">
-                  <th className="pb-2 font-medium">{t("profile.credits.date")}</th>
-                  <th className="pb-2 font-medium">{t("profile.credits.type")}</th>
-                  <th className="pb-2 font-medium">{t("profile.credits.amount")}</th>
-                  <th className="pb-2 font-medium">{t("profile.credits.balance")}</th>
+                  <th scope="col" className="pb-2 font-medium">{t("profile.credits.date")}</th>
+                  <th scope="col" className="pb-2 font-medium">{t("profile.credits.type")}</th>
+                  <th scope="col" className="pb-2 font-medium">{t("profile.credits.amount")}</th>
+                  <th scope="col" className="pb-2 font-medium">{t("profile.credits.balance")}</th>
                 </tr>
               </thead>
               <tbody>

@@ -31,6 +31,8 @@ export default function ProfileTabs({ activeTab, onChange }: Props) {
               key={tab.key}
               type="button"
               role="tab"
+              id={`profile-tab-${tab.key}`}
+              aria-controls={`profile-panel-${tab.key}`}
               aria-selected={isActive}
               onClick={() => onChange(tab.key)}
               className={
@@ -60,6 +62,8 @@ export default function ProfileTabs({ activeTab, onChange }: Props) {
               key={tab.key}
               type="button"
               role="tab"
+              id={`profile-tab-${tab.key}`}
+              aria-controls={`profile-panel-${tab.key}`}
               aria-selected={isActive}
               onClick={() => onChange(tab.key)}
               className={

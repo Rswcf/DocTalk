@@ -156,11 +156,11 @@ export default function UsageStatsSection({ profile }: Props) {
               <table className="w-full text-sm">
                 <thead className="text-left text-zinc-600 dark:text-zinc-400">
                   <tr>
-                    <th className="pb-2 font-medium">{t("profile.usage.model")}</th>
-                    <th className="pb-2 font-medium text-right">{t("profile.usage.chats")}</th>
-                    <th className="pb-2 font-medium text-right">{t("profile.usage.credits")}</th>
-                    <th className="pb-2 font-medium text-right">{t("profile.usage.avgPerChat")}</th>
-                    <th className="pb-2 font-medium text-right">{t("profile.usage.share")}</th>
+                    <th scope="col" className="pb-2 font-medium">{t("profile.usage.model")}</th>
+                    <th scope="col" className="pb-2 font-medium text-right">{t("profile.usage.chats")}</th>
+                    <th scope="col" className="pb-2 font-medium text-right">{t("profile.usage.credits")}</th>
+                    <th scope="col" className="pb-2 font-medium text-right">{t("profile.usage.avgPerChat")}</th>
+                    <th scope="col" className="pb-2 font-medium text-right">{t("profile.usage.share")}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -177,10 +177,14 @@ export default function UsageStatsSection({ profile }: Props) {
                             : "border-t dark:border-zinc-800"
                         }
                       >
-                        <td className="py-2 flex items-center gap-2">
+                        <th
+                          scope="row"
+                          className="py-2 flex items-center gap-2 font-normal"
+                          style={{ textAlign: "left", fontWeight: 500 }}
+                        >
                           <Icon size={14} className={isOther ? "text-zinc-400" : "text-zinc-600 dark:text-zinc-400"} />
                           <span className={isOther ? "" : "text-zinc-700 dark:text-zinc-300"}>{t(cfg.labelKey)}</span>
-                        </td>
+                        </th>
                         <td className="py-2 text-right tabular-nums text-zinc-700 dark:text-zinc-300">
                           {row.total_calls.toLocaleString()}
                         </td>
@@ -198,7 +202,13 @@ export default function UsageStatsSection({ profile }: Props) {
                   })}
                   {/* Total row */}
                   <tr className="border-t-2 dark:border-zinc-700 font-semibold">
-                    <td className="py-2 dark:text-zinc-100">{t("profile.usage.total")}</td>
+                    <th
+                      scope="row"
+                      className="py-2 dark:text-zinc-100"
+                      style={{ textAlign: "left" }}
+                    >
+                      {t("profile.usage.total")}
+                    </th>
                     <td className="py-2 text-right tabular-nums dark:text-zinc-100">{grandTotalCalls.toLocaleString()}</td>
                     <td className="py-2 text-right tabular-nums dark:text-zinc-100">{grandTotalCredits.toLocaleString()}</td>
                     <td className="py-2 text-right" />
