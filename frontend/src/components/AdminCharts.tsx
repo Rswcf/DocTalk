@@ -15,6 +15,7 @@ import {
   Bar,
 } from "recharts";
 import { formatNumber } from "../lib/formatNumber";
+import { useLocale } from "../i18n";
 
 interface TrendPoint {
   date: string;
@@ -56,6 +57,7 @@ function ChartCard({
   data: TrendPoint[];
   dataKey: string;
 }) {
+  const { tOr } = useLocale();
   return (
     <div className="dt-admin-panel border p-4">
       <h3 className="text-sm font-medium text-zinc-500 dark:text-zinc-400 mb-3">
@@ -64,7 +66,7 @@ function ChartCard({
       <div className="h-48">
         {data.length === 0 ? (
           <div className="h-full flex items-center justify-center text-zinc-400 text-sm">
-            No data
+            {tOr('admin.charts.noData', 'No data')}
           </div>
         ) : (
           <ResponsiveContainer width="100%" height="100%">
@@ -127,6 +129,7 @@ function PieCard({
   title: string;
   data: { name: string; value: number }[];
 }) {
+  const { tOr } = useLocale();
   return (
     <div className="dt-admin-panel border p-4">
       <h3 className="text-sm font-medium text-zinc-500 dark:text-zinc-400 mb-3">
@@ -134,7 +137,7 @@ function PieCard({
       </h3>
       <div className="h-64 flex items-center">
         {data.length === 0 ? (
-          <div className="w-full text-center text-zinc-400 text-sm">No data</div>
+          <div className="w-full text-center text-zinc-400 text-sm">{tOr('admin.charts.noData', 'No data')}</div>
         ) : (
           <ResponsiveContainer width="100%" height="100%">
             <PieChart>
@@ -177,11 +180,12 @@ export default function AdminCharts({
   trendDays,
   onTrendDaysChange,
 }: AdminChartsProps) {
+  const { tOr } = useLocale();
   return (
     <>
       <section className="mb-8">
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-semibold dark:text-zinc-100">Trends</h2>
+          <h2 className="text-lg font-semibold dark:text-zinc-100">{tOr('admin.charts.trendsTitle', 'Trends')}</h2>
           <div className="dt-workbench-pill flex gap-1 rounded-full p-0.5">
             {[7, 30, 90].map((d) => (
               <button
@@ -193,21 +197,21 @@ export default function AdminCharts({
                     : "text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800"
                 }`}
               >
-                {d}d
+                {tOr('admin.charts.daysShort', '{n}d', { n: d })}
               </button>
             ))}
           </div>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <ChartCard title="User Signups" data={trends.signups} dataKey="count" />
-          <ChartCard title="Active Users" data={trends.active_users} dataKey="count" />
+          <ChartCard title={tOr('admin.charts.userSignups', 'User Signups')} data={trends.signups} dataKey="count" />
+          <ChartCard title={tOr('admin.charts.activeUsers', 'Active Users')} data={trends.active_users} dataKey="count" />
           <ChartCard
-            title="Token Consumption"
+            title={tOr('admin.charts.tokenConsumption', 'Token Consumption')}
             data={trends.tokens}
             dataKey="total_tokens"
           />
           <ChartCard
-            title="Credits Spent"
+            title={tOr('admin.charts.creditsSpent', 'Credits Spent')}
             data={trends.credits_spent}
             dataKey="amount"
           />
@@ -216,18 +220,18 @@ export default function AdminCharts({
 
       <section className="mb-8">
         <h2 className="text-lg font-semibold mb-4 dark:text-zinc-100">
-          Distributions
+          {tOr('admin.charts.distributionsTitle', 'Distributions')}
         </h2>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           <PieCard
-            title="Plan Distribution"
+            title={tOr('admin.charts.planDistribution', 'Plan Distribution')}
             data={breakdowns.plan_distribution.map((d) => ({
               name: d.plan.charAt(0).toUpperCase() + d.plan.slice(1),
               value: d.count,
             }))}
           />
           <PieCard
-            title="File Types"
+            title={tOr('admin.charts.fileTypes', 'File Types')}
             data={breakdowns.file_types.map((d) => ({
               name: d.file_type.toUpperCase(),
               value: d.count,
@@ -235,7 +239,7 @@ export default function AdminCharts({
           />
           <div className="dt-admin-panel border p-4">
             <h3 className="text-sm font-medium text-zinc-500 dark:text-zinc-400 mb-3">
-              Model Usage (tokens)
+              {tOr('admin.charts.modelUsage', 'Model Usage (tokens)')}
             </h3>
             <div className="h-64">
               <ResponsiveContainer width="100%" height="100%">

@@ -20,7 +20,7 @@ import EdCardGrid from '../../../components/marketing/EdCardGrid';
 import EdFaqList from '../../../components/marketing/EdFaqList';
 import EdCtaBanner from '../../../components/marketing/EdCtaBanner';
 import EdRelatedLinks from '../../../components/marketing/EdRelatedLinks';
-import EdInlineCell from '../../../components/marketing/EdInlineCell';
+import EdComparisonTable from '../../../components/marketing/EdComparisonTable';
 
 export default function CitationsClient() {
   const { t } = useLocale();
@@ -120,15 +120,6 @@ export default function CitationsClient() {
     },
   ];
 
-  const headStyle: React.CSSProperties = {
-    padding: '14px 18px',
-    textAlign: 'center',
-  };
-  const cellStyle: React.CSSProperties = {
-    padding: '13px 18px',
-    textAlign: 'center',
-  };
-
   return (
     <MarketingShell
       breadcrumb={[
@@ -169,77 +160,20 @@ export default function CitationsClient() {
 
       <EdSection alt title={t('featuresCitations.compTitle')}>
         <p className="ed-lede">{t('featuresCitations.compSubtitle')}</p>
-        <div style={{ overflowX: 'auto', marginTop: '32px' }}>
-          <table
-            style={{
-              width: '100%',
-              borderCollapse: 'collapse',
-              minWidth: '600px',
-              border: '1px solid var(--ed-rule)',
-            }}
-          >
-            <thead>
-              <tr style={{ borderBottom: '1px solid var(--ed-rule)' }}>
-                <th
-                  scope="col"
-                  className="ed-label"
-                  style={{ ...headStyle, textAlign: 'left' }}
-                >
-                  {t('featuresCitations.compHeaderFeature')}
-                </th>
-                <th
-                  scope="col"
-                  className="ed-label"
-                  style={{
-                    ...headStyle,
-                    background: 'var(--ed-paper-2)',
-                    color: 'var(--ed-signal)',
-                  }}
-                >
-                  {t('featuresCitations.compHeaderDocTalk')}
-                </th>
-                <th scope="col" className="ed-label" style={headStyle}>
-                  {t('featuresCitations.compHeaderChatPDF')}
-                </th>
-                <th scope="col" className="ed-label" style={headStyle}>
-                  {t('featuresCitations.compHeaderAskYourPDF')}
-                </th>
-                <th scope="col" className="ed-label" style={headStyle}>
-                  {t('featuresCitations.compHeaderHumata')}
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {comparisonRows.map((row, i) => (
-                <tr key={i} style={{ borderTop: '1px solid var(--ed-rule)' }}>
-                  <th
-                    scope="row"
-                    className="ed-body"
-                    style={{
-                      padding: '13px 18px',
-                      fontWeight: 500,
-                      color: 'var(--ed-ink)',
-                      textAlign: 'left',
-                    }}
-                  >
-                    {row.feature}
-                  </th>
-                  <td style={{ ...cellStyle, background: 'var(--ed-paper-2)' }}>
-                    <EdInlineCell value={row.doctalk} />
-                  </td>
-                  <td style={cellStyle}>
-                    <EdInlineCell value={row.chatpdf} />
-                  </td>
-                  <td style={cellStyle}>
-                    <EdInlineCell value={row.askyourpdf} />
-                  </td>
-                  <td style={cellStyle}>
-                    <EdInlineCell value={row.humata} />
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        <div style={{ marginTop: '32px' }}>
+          <EdComparisonTable
+            featureLabel={t('featuresCitations.compHeaderFeature')}
+            competitors={[
+              t('featuresCitations.compHeaderChatPDF'),
+              t('featuresCitations.compHeaderAskYourPDF'),
+              t('featuresCitations.compHeaderHumata'),
+            ]}
+            features={comparisonRows.map((row) => ({
+              name: row.feature,
+              doctalk: row.doctalk,
+              competitors: [row.chatpdf, row.askyourpdf, row.humata],
+            }))}
+          />
         </div>
         <p className="ed-caption" style={{ marginTop: '16px' }}>
           {t('featuresCitations.compDisclaimer')}
