@@ -10,6 +10,7 @@ R5 (wrong legacy secret) during the consensus loop.
 from __future__ import annotations
 
 import hmac
+import logging
 import time
 from dataclasses import dataclass
 from typing import Any
@@ -186,3 +187,82 @@ def test_both_old_and_new_headers_new_path_preferred() -> None:
         client_host="10.0.0.1",
     )
     assert get_client_ip(req) == "198.51.100.5"
+
+
+# 11 — transition-window guard: misconfigured proxy emits only X-Proxy-IP
+# (e.g. an outdated edge worker that knows the IP header but not the
+# Ts/Sig pair). New-contract verification must fail with `missing_headers`,
+# we must log a warning so the misconfig is observable, and we must still
+# fall through to the legacy path which has valid credentials.
+def test_partial_new_headers_falls_through_to_legacy(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    req = _FakeRequest(
+        headers={
+            # Only the IP header from the new contract — Ts/Sig missing.
+            "X-Proxy-IP": "198.51.100.77",
+            # Valid legacy fallback.
+            "X-Real-Client-IP": "203.0.113.55",
+            "X-Proxy-IP-Secret": TEST_AUTH_SECRET,
+        },
+        client_host="10.0.0.1",
+    )
+    with caplog.at_level(logging.WARNING, logger="app.core.rate_limit"):
+        result = get_client_ip(req)
+
+    assert result == "203.0.113.55"  # legacy IP, NOT the partial-new claim
+    failed_records = [
+        r for r in caplog.records if r.message == "proxy.signed_ip.verification_failed"
+    ]
+    assert failed_records, "expected a verification_failed warning to be logged"
+    # `extra=` attaches kwargs as attributes on the LogRecord.
+    assert getattr(failed_records[0], "reason", None) == "missing_headers"
+
+
+# 12 — transition-window guard: rollout clock-skew scenario. New-contract
+# headers are present but timestamped outside the ±60s window (NTP drift
+# between Vercel and Railway, or a delayed proxy retry). Legacy headers
+# remain valid. We must reject the stale new claim, log a warning, and
+# return the legacy IP — not request.client.host (which would be the
+# Vercel egress and mass-429 legitimate users).
+def test_new_contract_invalid_legacy_valid_falls_through(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    stale_ts = int(time.time()) - 120  # 2 min in the past — outside 60s window
+    req = _FakeRequest(
+        headers={
+            # New contract — signature is valid for stale_ts, but skew check fails.
+            "X-Proxy-IP": "198.51.100.88",
+            "X-Proxy-IP-Ts": str(stale_ts),
+            "X-Proxy-IP-Sig": _sign("198.51.100.88", stale_ts),
+            # Valid legacy fallback.
+            "X-Real-Client-IP": "203.0.113.66",
+            "X-Proxy-IP-Secret": TEST_AUTH_SECRET,
+        },
+        client_host="10.0.0.1",
+    )
+    with caplog.at_level(logging.WARNING, logger="app.core.rate_limit"):
+        result = get_client_ip(req)
+
+    assert result == "203.0.113.66"  # legacy IP, not the stale new claim or egress host
+    failed_records = [
+        r for r in caplog.records if r.message == "proxy.signed_ip.verification_failed"
+    ]
+    assert failed_records, "expected a verification_failed warning to be logged"
+    assert getattr(failed_records[0], "reason", None) == "skew_exceeded"
+
+
+# 13 — misconfig guard: if the backend is deployed without ADAPTER_SECRET
+# set, verify_signed_ip must return (False, "no_adapter_secret") instead of
+# silently passing on a zero-byte HMAC key. Caught at unit level so an
+# accidental env-var omission shows up loudly in monitoring rather than
+# becoming a quiet trust-everything bug.
+def test_missing_adapter_secret_returns_no_adapter_secret_reason(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(rate_limit, "_ADAPTER_SECRET_BYTES", b"")
+    ok, reason = verify_signed_ip(
+        ip="1.2.3.4", ts=str(int(time.time())), sig="deadbeef"
+    )
+    assert ok is False
+    assert reason == "no_adapter_secret"

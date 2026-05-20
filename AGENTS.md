@@ -48,11 +48,19 @@ For UI changes, exercise the golden path in a browser: upload → chat → citat
 
 `main` = dev → Vercel preview. `stable` = prod → `doctalk.site` + Railway.
 
+**Backend-first ordering is MANDATORY post-C1 (2026-05-20)** — see `docs/ARCHITECTURE.md §10` for the HMAC IP trust contract migration that requires backend-first deploys. Pushing `stable` triggers Vercel auto-deploy, so `railway up` must run BEFORE the push.
+
 ```bash
 git push origin main
-git checkout stable && git merge main && git push origin stable
-# Backend changes? From stable:
-railway up --detach
+git checkout stable && git merge main          # merge but do NOT push yet
+railway up --detach                             # 1. backend deploys FIRST (dual-accepts old + new contracts)
+# 2. WAIT for Railway /health to confirm the new build is live:
+curl -fsS https://backend-production-a62e.up.railway.app/health
+# 3. NOW push — Vercel auto-deploys the frontend that emits the new contract:
+git push origin stable
+# 4. Wait for Vercel deployment to show "Ready" in the dashboard.
+# 5. (C1 follow-up) Watch `grep proxy.signed_ip.legacy_path_used` in Railway
+#    logs for 24h before landing the legacy-removal change.
 git checkout main
 ```
 

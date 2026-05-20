@@ -202,10 +202,23 @@ DocTalk/
 
 **Branching:** `main` (development) / `stable` (production).
 
+**Backend-first ordering is MANDATORY post-C1 (2026-05-20)** — see `docs/ARCHITECTURE.md §10` for the HMAC IP trust contract migration that requires backend-first deploys. Because pushing `stable` triggers Vercel auto-deploy, `railway up` must run BEFORE the push.
+
+```bash
+git checkout stable && git merge main          # merge but do NOT push yet
+railway up --detach                             # 1. backend deploys FIRST (dual-accepts old + new contracts)
+curl -fsS https://backend-production-a62e.up.railway.app/health   # 2. wait until new build is healthy
+git push origin stable                          # 3. NOW push — Vercel auto-deploys frontend
+# 4. Wait for Vercel deployment to show "Ready" in the dashboard.
+# 5. (C1 follow-up) Watch `grep proxy.signed_ip.legacy_path_used` in Railway
+#    logs for 24h before landing the legacy-removal change.
+git checkout main
+```
+
 | Target | Method |
 |--------|--------|
-| **Frontend** (Vercel) | Push to `stable` → auto-deploys. Root directory: `frontend/`. |
-| **Backend** (Railway) | `git checkout stable && railway up --detach` |
+| **Backend** (Railway) | `git checkout stable && git merge main && railway up --detach` (deploy FIRST) |
+| **Frontend** (Vercel) | After Railway is healthy, `git push origin stable` → auto-deploys. Root directory: `frontend/`. |
 
 Railway runs 5 services: backend, PostgreSQL, Redis, Qdrant, MinIO.
 
