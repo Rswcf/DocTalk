@@ -16,6 +16,7 @@ import {
 import { triggerCreditsRefresh } from "../../components/CreditsDisplay";
 import PricingTable from "../../components/PricingTable";
 import { PLAN_HIERARCHY, type PlanType } from "../../lib/models";
+import { formatPlanPrice } from "../../lib/planPricing";
 import { authHrefFor, type BillingPeriodIntent, type BillingPlanIntent } from "../../lib/billingLinks";
 import { trackEvent } from "../../lib/analytics";
 import { ArrowRight, CalendarDays, Check, Coins, CreditCard, ShieldCheck } from "lucide-react";
@@ -38,18 +39,6 @@ const CANCEL_REASONS: Array<{ value: CancelSubscriptionReason; label: string; fa
   { value: "found_alternative", label: "billing.cancel.reason.alternative", fallback: "I found another tool" },
   { value: "other", label: "billing.cancel.reason.other", fallback: "Other" },
 ];
-
-/**
- * Display price for (plan, billing) combos shown in the plan cards above the fold.
- * Mirrors the inline prices on the Plus / Pro cards so the confirm dialog shows the
- * same number the user just clicked (I19). Annual prices are the monthly-equivalent
- * post-discount — `/perMonth` is the matching unit. If a future plan/billing combo
- * is added here, update the plan cards' inline literals too.
- */
-const PLAN_PRICE_USD: Record<string, Record<string, string>> = {
-  plus: { monthly: '$9.99', annual: '$7.99' },
-  pro: { monthly: '$19.99', annual: '$15.99' },
-};
 
 // Local helper: traps Tab/Shift+Tab inside `ref`, focuses the first focusable element
 // on open, and restores focus to the previously-active element on close. Scoped to this
@@ -728,7 +717,7 @@ function BillingContent() {
                   <p className="text-zinc-500 dark:text-zinc-400 text-sm mb-4">{t("billing.plus.description")}</p>
                   <div className="mb-4">
                     <span className="text-3xl font-bold text-zinc-900 dark:text-zinc-50 tabular-nums">
-                      {billingPeriod === 'monthly' ? '$9.99' : '$7.99'}
+                      {formatPlanPrice('plus', billingPeriod)}
                     </span>
                     <span className="text-zinc-500 dark:text-zinc-400 text-sm ml-1">
                       {t('billing.perMonth')}
@@ -798,7 +787,7 @@ function BillingContent() {
                   <p className="text-zinc-500 dark:text-zinc-400 text-sm mb-4">{t("billing.pro.description")}</p>
                   <div className="mb-4">
                     <span className="text-3xl font-bold text-zinc-900 dark:text-zinc-50 tabular-nums">
-                      {billingPeriod === 'monthly' ? '$19.99' : '$15.99'}
+                      {formatPlanPrice('pro', billingPeriod)}
                     </span>
                     <span className="text-zinc-500 dark:text-zinc-400 text-sm ml-1">
                       {t('billing.perMonth')}
@@ -966,12 +955,13 @@ function BillingContent() {
                 {t("billing.confirmUpgrade.description")}
               </p>
               {/* I19: surface target plan + price + period inline so users see the exact
-                  charge before confirming. Reuses the same hardcoded prices shown on the
-                  Plus / Pro cards above the fold (PLAN_PRICE_USD). */}
+                  charge before confirming. Reads the canonical price from
+                  `lib/planPricing` so the dialog and the plan-card numerals can never
+                  drift apart. */}
               <p className="mt-3 text-sm font-medium text-zinc-900 dark:text-zinc-100 tabular-nums">
                 {confirmUpgrade.plan === 'pro' ? t('billing.pro.title') : t('billing.plus.title')}
                 {' · '}
-                {PLAN_PRICE_USD[confirmUpgrade.plan]?.[confirmUpgrade.billing] ?? ''}
+                {formatPlanPrice(confirmUpgrade.plan, confirmUpgrade.billing)}
                 {t('billing.perMonth')}
                 {' · '}
                 {confirmUpgrade.billing === 'annual' ? t('billing.annual') : t('billing.monthly')}
@@ -1039,7 +1029,7 @@ function BillingContent() {
               <p className="mt-3 text-sm font-medium text-zinc-900 dark:text-zinc-100 tabular-nums">
                 {confirmDowngrade.plan === 'pro' ? t('billing.pro.title') : t('billing.plus.title')}
                 {' · '}
-                {PLAN_PRICE_USD[confirmDowngrade.plan]?.[confirmDowngrade.billing] ?? ''}
+                {formatPlanPrice(confirmDowngrade.plan, confirmDowngrade.billing)}
                 {t('billing.perMonth')}
                 {' · '}
                 {confirmDowngrade.billing === 'annual' ? t('billing.annual') : t('billing.monthly')}

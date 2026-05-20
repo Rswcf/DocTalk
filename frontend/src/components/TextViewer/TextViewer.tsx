@@ -384,6 +384,7 @@ export default function TextViewer({ documentId, fileType, targetPage, scrollNon
                   <MarkdownContent
                     text={page.text}
                     citationMatch={citationMatch}
+                    citationPage={citationMatch ? page.page_number : null}
                     highlightRef={highlightRef}
                   />
                 ) : (
@@ -564,6 +565,7 @@ function WebArticleView({
                   <MarkdownContent
                     text={body}
                     citationMatch={bodyCitationMatch}
+                    citationPage={bodyCitationMatch ? page.page_number : null}
                     highlightRef={highlightRef}
                     articleMode
                   />
@@ -691,11 +693,13 @@ function PlainTextContent({
 function MarkdownContent({
   text,
   citationMatch,
+  citationPage,
   highlightRef,
   articleMode = false,
 }: {
   text: string;
   citationMatch: { start: number; length: number } | null;
+  citationPage?: number | null;
   highlightRef: React.RefObject<HTMLSpanElement>;
   articleMode?: boolean;
 }) {
@@ -717,26 +721,28 @@ function MarkdownContent({
       prose-headings:text-zinc-900 prose-headings:dark:text-zinc-100
       prose-strong:text-zinc-900 prose-strong:dark:text-zinc-100
     `}>
-      {citationMatch ? (
-        <>
-          {/* For markdown, show the citation highlight inline before the rendered content */}
-          <div className="mb-3 p-2 bg-amber-50 dark:bg-amber-900/20 border-l-3 border-amber-400 rounded-r text-sm">
-            <span
-              ref={highlightRef}
-              className="bg-amber-200 dark:bg-amber-700/60 rounded-sm"
-            >
-              {text.slice(citationMatch.start, citationMatch.start + citationMatch.length)}
-            </span>
-          </div>
-          <Suspense fallback={markdownFallback}>
-            <ReactMarkdown remarkPlugins={[remarkGfm]}>{text}</ReactMarkdown>
-          </Suspense>
-        </>
-      ) : (
-        <Suspense fallback={markdownFallback}>
-          <ReactMarkdown remarkPlugins={[remarkGfm]}>{text}</ReactMarkdown>
-        </Suspense>
+      {/*
+        I25 (Wave-2 Batch I, 2026-05-20): When a citation lands on a markdown
+        page we used to render a duplicated amber-preview box above the full
+        ReactMarkdown render — the user saw the cited passage twice (raw +
+        rendered) and the rendered copy had no visual marker. We replaced
+        the preview box with a small mono caption that just tells the user
+        which page jumped. The `highlightRef` is attached to the caption so
+        scrolling still lands near the cited passage. Trade-off acknowledged:
+        the rendered markdown passage is no longer visually highlighted —
+        full inline highlighting via a remark plugin or AST post-processor
+        is deferred.
+      */}
+      {citationMatch && citationPage != null && (
+        <p className="not-prose mb-3 text-xs font-mono text-zinc-500 dark:text-zinc-400">
+          <span ref={highlightRef}>
+            Citation &middot; page {citationPage}
+          </span>
+        </p>
       )}
+      <Suspense fallback={markdownFallback}>
+        <ReactMarkdown remarkPlugins={[remarkGfm]}>{text}</ReactMarkdown>
+      </Suspense>
     </div>
   );
 }
