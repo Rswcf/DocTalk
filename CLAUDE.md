@@ -58,9 +58,9 @@ Full procedure + guardrails: see `.claude/skills/deploy/SKILL.md` (invoked via `
 ## Key env vars
 
 - **Backend** (`.env` + Railway): `DATABASE_URL`, `OPENROUTER_API_KEY`, `DEEPSEEK_API_KEY`, `AUTH_SECRET`, `ADAPTER_SECRET`, `STRIPE_SECRET_KEY` (`sk_live_*` in production; `sk_test_*` only for local/test), `STRIPE_WEBHOOK_SECRET`
-- **Frontend** (Vercel): `NEXT_PUBLIC_API_BASE` (**never** localhost in prod), `AUTH_SECRET`, `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET`, `MICROSOFT_CLIENT_ID` / `MICROSOFT_CLIENT_SECRET`, `RESEND_API_KEY`
+- **Frontend** (Vercel): `NEXT_PUBLIC_API_BASE` (**never** localhost in prod), `BACKEND_INTERNAL_URL` (preferred for server-side proxy hop), `AUTH_SECRET`, `ADAPTER_SECRET`, `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET`, `MICROSOFT_CLIENT_ID` / `MICROSOFT_CLIENT_SECRET`, `RESEND_API_KEY`
 
-Cross-origin IP trust chain is HMAC-signed with `ADAPTER_SECRET` — frontend and backend values **must match**.
+Cross-origin IP trust chain is HMAC-signed with `ADAPTER_SECRET` — frontend and backend values **must match**. The proxy emits `X-Proxy-IP` / `X-Proxy-IP-Ts` / `X-Proxy-IP-Sig` (HMAC-SHA256 of `"{ip}:{ts}"`); backend verifies with `hmac.compare_digest` and ±60s skew. Never put `AUTH_SECRET` in an outbound header — it's the Auth.js JWE encryption key.
 
 ## Path-scoped rules (imported)
 

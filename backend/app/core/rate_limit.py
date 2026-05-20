@@ -254,20 +254,108 @@ public_event_limiter = RedisRateLimiter(
 )
 
 
-def get_client_ip(request: "Request") -> str:
-    """Extract real client IP from trusted Vercel proxy.
+# Pre-encode signing secrets once at import time. hmac.new() requires bytes,
+# and re-encoding per-request is wasteful. Re-read at call time would re-import
+# settings, which is unnecessary because the process is restarted on env change.
+_ADAPTER_SECRET_BYTES: bytes = (settings.ADAPTER_SECRET or "").encode("utf-8")
+_AUTH_SECRET_BYTES: bytes = (settings.AUTH_SECRET or "").encode("utf-8")
 
-    The proxy sends X-Real-Client-IP along with X-Proxy-IP-Secret (shared
-    AUTH_SECRET) to prove authenticity. Falls back to request.client.host for
-    direct access (dev/testing). Never trust raw X-Forwarded-For.
+# Max clock skew accepted on the new HMAC contract. 60s covers NTP drift between
+# Vercel and Railway while keeping the replay window narrow. The signature is
+# bound to a per-request unix timestamp so deterministic-bucket replay (the bug
+# Codex caught in R3) is impossible.
+_MAX_SIGNED_IP_SKEW_S = 60
+
+
+def verify_signed_ip(
+    *,
+    ip: str | None,
+    ts: str | None,
+    sig: str | None,
+    now: float | None = None,
+    max_skew_s: int = _MAX_SIGNED_IP_SKEW_S,
+) -> tuple[bool, str | None]:
+    """Verify the triple-header HMAC IP claim emitted by the frontend proxy.
+
+    Contract:
+      X-Proxy-IP:     <ip>
+      X-Proxy-IP-Ts:  <unix_seconds>
+      X-Proxy-IP-Sig: hex(HMAC-SHA256(ADAPTER_SECRET, "{ip}:{ts}"))
+
+    Returns (ok, reason). `reason` is a short tag suitable for log fields when
+    `ok` is False; on success it is None.
     """
+    if not ip or not ts or not sig:
+        return False, "missing_headers"
+    if not _ADAPTER_SECRET_BYTES:
+        return False, "no_adapter_secret"
+    try:
+        ts_int = int(ts)
+    except (TypeError, ValueError):
+        return False, "malformed_ts"
+    current = now if now is not None else time.time()
+    skew = abs(current - ts_int)
+    if skew > max_skew_s:
+        return False, "skew_exceeded"
+    expected = hmac.new(
+        _ADAPTER_SECRET_BYTES,
+        f"{ip}:{ts_int}".encode("utf-8"),
+        digestmod="sha256",
+    ).hexdigest()
+    if not hmac.compare_digest(expected, sig):
+        return False, "bad_signature"
+    return True, None
+
+
+def get_client_ip(request: "Request") -> str:
+    """Extract real client IP from the trusted Vercel proxy.
+
+    New contract (preferred): triple-header HMAC.
+      X-Proxy-IP / X-Proxy-IP-Ts / X-Proxy-IP-Sig signed with ADAPTER_SECRET.
+
+    Legacy contract (dual-accept transition window — remove 24h after rollout):
+      X-Real-Client-IP + X-Proxy-IP-Secret compared against AUTH_SECRET.
+
+    Falls back to request.client.host for direct access (dev/testing). Never
+    trust raw X-Forwarded-For.
+    """
+    # New contract — prefer this when present.
+    new_ip = request.headers.get("x-proxy-ip")
+    new_ts = request.headers.get("x-proxy-ip-ts")
+    new_sig = request.headers.get("x-proxy-ip-sig")
+    if new_ip or new_ts or new_sig:
+        ok, reason = verify_signed_ip(ip=new_ip, ts=new_ts, sig=new_sig)
+        if ok:
+            return new_ip.strip()  # type: ignore[union-attr]
+        # Compute skew for logging (best-effort; never raise).
+        skew_s: float | None = None
+        if new_ts:
+            try:
+                skew_s = abs(time.time() - int(new_ts))
+            except (TypeError, ValueError):
+                skew_s = None
+        logger.warning(
+            "proxy.signed_ip.verification_failed",
+            extra={
+                "reason": reason,
+                "claimed_ip": new_ip,
+                "skew_s": skew_s,
+            },
+        )
+        # Do NOT trust the claimed IP on failure. Fall through to legacy/host.
+
+    # Legacy contract — dual-accept during the rollout window. The compare uses
+    # AUTH_SECRET (the OLD signing secret, NOT ADAPTER_SECRET — Codex R5) and
+    # reads X-Real-Client-IP (the OLD trusted IP header, NOT X-Real-IP — R4).
     proxied_ip = request.headers.get("x-real-client-ip")
     proxy_secret = request.headers.get("x-proxy-ip-secret")
     if (
         proxied_ip
         and proxy_secret
-        and settings.AUTH_SECRET
-        and hmac.compare_digest(proxy_secret, settings.AUTH_SECRET)
+        and _AUTH_SECRET_BYTES
+        and hmac.compare_digest(proxy_secret.encode("utf-8"), _AUTH_SECRET_BYTES)
     ):
+        logger.info("proxy.signed_ip.legacy_path_used")
         return proxied_ip.strip()
+
     return request.client.host if request.client else "unknown"

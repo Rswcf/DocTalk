@@ -1,9 +1,12 @@
+import { createHmac } from 'node:crypto';
 import { notFound } from 'next/navigation';
 import { headers } from 'next/headers';
 import type { Metadata } from 'next';
 
 const BACKEND_URL = process.env.BACKEND_INTERNAL_URL || process.env.NEXT_PUBLIC_API_BASE || '';
-const AUTH_SECRET = process.env.AUTH_SECRET;
+// C1: ADAPTER_SECRET signs the X-Proxy-IP claim. Must match the backend's
+// settings.ADAPTER_SECRET. NOT AUTH_SECRET — AUTH_SECRET stays inside Auth.js.
+const ADAPTER_SECRET = process.env.ADAPTER_SECRET;
 
 interface SharedCitation {
   text_snippet: string;
@@ -24,12 +27,18 @@ async function fetchShared(token: string) {
   const clientIp = xff.split(',')[0]?.trim() || headersList.get('x-real-ip') || '';
 
   const backendHeaders: Record<string, string> = {};
-  // Pass the real client IP with HMAC proxy-secret proof so backend rate
-  // limiting on /api/shared/{token} counts per real visitor, not per Vercel
-  // egress IP. Same trust model as /api/proxy.
-  if (clientIp && AUTH_SECRET) {
-    backendHeaders['X-Real-Client-IP'] = clientIp;
-    backendHeaders['X-Proxy-IP-Secret'] = AUTH_SECRET;
+  // C1: triple-header HMAC contract. Backend rate-limits /api/shared/{token}
+  // per real visitor; this proves the IP claim came from our SSR origin and
+  // not a direct attacker who can set arbitrary headers. Same trust model as
+  // /api/proxy. Per-request timestamp + 60s skew window blocks replay.
+  if (clientIp && ADAPTER_SECRET) {
+    const ts = Math.floor(Date.now() / 1000).toString();
+    const sig = createHmac('sha256', ADAPTER_SECRET)
+      .update(`${clientIp}:${ts}`)
+      .digest('hex');
+    backendHeaders['X-Proxy-IP'] = clientIp;
+    backendHeaders['X-Proxy-IP-Ts'] = ts;
+    backendHeaders['X-Proxy-IP-Sig'] = sig;
   }
 
   try {

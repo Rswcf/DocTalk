@@ -858,12 +858,28 @@ Celery Beat 调度定期任务（目前：每日清理过期验证令牌）。**
 匿名限流按真实访问者 IP 计数。信任链如下：
 
 1. **Vercel edge** 剥离客户端自带的 `X-Forwarded-For` / `X-Real-IP` 并重写为真实客户端 IP（见 [Vercel request headers](https://vercel.com/docs/headers/request-headers#x-forwarded-for)）。
-2. **前端代理**（`/api/proxy/*`，以及 `/shared/[token]` 的 SSR fetch）读取重写后的头，转发到后端时附加：
-   - `X-Real-Client-IP`：真实 IP
-   - `X-Proxy-IP-Secret`：与 `AUTH_SECRET` 做 HMAC 比对
-3. **后端** `get_client_ip(request)`（在 `app/core/rate_limit.py`）仅在 HMAC 签名匹配时信任 `X-Real-Client-IP`，否则回退到 `request.client.host`。
+2. **前端代理**（`/api/proxy/*`，以及 `/shared/[token]` 的 SSR fetch）读取重写后的头，转发到后端时附加三个 HMAC 证明头：
+   - `X-Proxy-IP`：真实 IP
+   - `X-Proxy-IP-Ts`：签名时刻的 unix 秒
+   - `X-Proxy-IP-Sig`：hex(HMAC-SHA256(`ADAPTER_SECRET`, `"{ip}:{ts}"`))
+3. **后端** `get_client_ip(request)`（在 `app/core/rate_limit.py`）用 `hmac.compare_digest` 验证签名，并接受 ±60 秒时钟漂移。只有验证通过才信任声明的 IP，否则回退到 `request.client.host`。
+
+签名密钥是 `ADAPTER_SECRET`，**不是** `AUTH_SECRET`。把 `AUTH_SECRET` 当作 wire-level 证明 header 重用，会让 JWE 加密密钥暴露在 Railway 内网及任何 debug header 日志管线里 —— 这正是 2026-05-20 修复的 C1 漏洞。`AUTH_SECRET` 现在只留在 Auth.js 内（session cookie 加密 + 后端 JWT 验证）。
+
+威胁建模实事求是：HMAC 把 IP 声明绑定到时间戳，证明请求来自掌握 `ADAPTER_SECRET` 的源；但它**不**防御具备 TLS 终止能力的主动 wire-level MITM。传输层安全由 Vercel ↔ Railway 之间的 TLS 负责。
 
 因为后端**不**信任原始 `X-Forwarded-For`，`--forwarded-allow-ips=127.0.0.1`（uvicorn 默认值）是安全的，生产无需覆盖该 env。
+
+#### C1 HMAC 契约的部署顺序（Wave-1，2026-05-20）
+
+本次修复采用 dual-accept 过渡窗口 —— 后端同时识别新的三 header 契约和旧的 `X-Real-Client-IP` + `X-Proxy-IP-Secret`（与 `AUTH_SECRET` 比对，旧契约的签名 secret）。安全的发布顺序只有一种：
+
+1. **先发 Railway 后端。** `git checkout stable && git merge main && railway up --detach`，等 `GET /health` 返回 200。此时后端两种契约都接受，生产前端仍在用旧 header，无影响。
+2. **然后推 Vercel 前端。** `git push origin stable`，等 Vercel 部署 "Ready"。前端切换为只发新三 header。
+3. **观察 legacy_path 日志计数**：Railway 日志中 `grep proxy.signed_ip.legacy_path_used`，应在 Vercel rolling deploy 完成后几分钟内降到 ~0。
+4. **24h soak window** 后，follow-up commit 删除 `get_client_ip()` 里的 legacy 分支以及双方代码中的 `X-Proxy-IP-Secret` / `X-Real-Client-IP` env 引用。
+
+反向顺序（前端先发）会让在途流量 401/429 全面坍塌 —— 旧 proxy header 与新后端 verifier 不匹配。
 
 ### Redis 降级行为
 

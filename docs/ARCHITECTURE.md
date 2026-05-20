@@ -962,12 +962,28 @@ Celery Beat schedules periodic tasks (currently: daily cleanup of expired verifi
 Anonymous rate limiting counts per real visitor IP. The trust chain is:
 
 1. **Vercel edge** strips client-supplied `X-Forwarded-For` / `X-Real-IP` and rewrites them with the real client IP (see [Vercel request headers](https://vercel.com/docs/headers/request-headers#x-forwarded-for)).
-2. **Frontend proxy** (`/api/proxy/*`, and the SSR fetch in `/shared/[token]`) reads the rewritten headers, then forwards them to the backend as:
-   - `X-Real-Client-IP`: the IP
-   - `X-Proxy-IP-Secret`: HMAC-compared against `AUTH_SECRET`
-3. **Backend** `get_client_ip(request)` (in `app/core/rate_limit.py`) only trusts `X-Real-Client-IP` when the HMAC secret matches; otherwise falls back to `request.client.host`.
+2. **Frontend proxy** (`/api/proxy/*`, and the SSR fetch in `/shared/[token]`) reads the rewritten headers, then forwards a triple-header HMAC proof to the backend:
+   - `X-Proxy-IP`: the IP
+   - `X-Proxy-IP-Ts`: unix seconds at sign time
+   - `X-Proxy-IP-Sig`: hex(HMAC-SHA256(`ADAPTER_SECRET`, `"{ip}:{ts}"`))
+3. **Backend** `get_client_ip(request)` (in `app/core/rate_limit.py`) verifies the signature with `hmac.compare_digest` and accepts a ±60s clock skew. Only on a successful verify does it trust the claimed IP; otherwise it falls back to `request.client.host`.
+
+The signing key is `ADAPTER_SECRET`, not `AUTH_SECRET`. Reusing `AUTH_SECRET` as a wire-level proof header would expose the JWE encryption key on the Railway internal network and in any debug-header log pipeline — that was the C1 vulnerability fixed 2026-05-20. `AUTH_SECRET` now stays inside Auth.js (session-cookie encryption + backend JWT verification only).
+
+Threat model honesty: HMAC binds the IP claim to the timestamp and proves the request originated from someone with `ADAPTER_SECRET`. It is **not** a defense against an active wire-level MITM with TLS-termination capability. Transport security is the responsibility of TLS between Vercel ↔ Railway.
 
 Because the backend does **not** trust raw `X-Forwarded-For`, `--forwarded-allow-ips=127.0.0.1` (uvicorn default) is safe — no production env override is required.
+
+#### Deploy sequence for C1 HMAC contract (Wave-1, 2026-05-20)
+
+The fix-batch ships a dual-accept transition window — backend simultaneously recognizes BOTH the new triple-header contract AND the legacy `X-Real-Client-IP` + `X-Proxy-IP-Secret` pair (compared against `AUTH_SECRET`, the OLD signing secret). This is the only safe rollout order:
+
+1. **Railway backend first.** `git checkout stable && git merge main && railway up --detach`. Wait for `GET /health` to return 200. At this point the backend accepts both contracts; production frontend is still emitting the legacy headers, which continue to work.
+2. **Then push frontend to Vercel.** `git push origin stable`. Wait for the Vercel deployment to land "Ready". Frontend now emits only the new triple-header contract.
+3. **Watch the legacy-path log counter** in Railway logs: `grep proxy.signed_ip.legacy_path_used`. It should drop to ~0 within minutes of step 2 as Vercel completes its rolling deploy.
+4. **24h soak window**, then a follow-up commit removes the legacy branch from `get_client_ip()` + `X-Proxy-IP-Secret` / `X-Real-Client-IP` env references from both surfaces.
+
+Reverse order (frontend first) would 401/429-collapse all in-flight traffic because the legacy proxy header would not match the new backend verifier.
 
 ### Redis degradation behavior
 

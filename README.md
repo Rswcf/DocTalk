@@ -154,7 +154,9 @@ Open [http://localhost:3000](http://localhost:3000).
 | Variable | Required | Description |
 |----------|----------|-------------|
 | `NEXT_PUBLIC_API_BASE` | Yes | Backend URL (default: `http://localhost:8000`) |
+| `BACKEND_INTERNAL_URL` | No | Server-side proxy target (private network). Preferred over `NEXT_PUBLIC_API_BASE` when set. |
 | `AUTH_SECRET` | Yes | Must match backend `AUTH_SECRET` |
+| `ADAPTER_SECRET` | Yes | Must match backend `ADAPTER_SECRET`. Used to HMAC-sign the `X-Proxy-IP` claim sent to the backend. |
 | `GOOGLE_CLIENT_ID` | Yes | Google OAuth client ID |
 | `GOOGLE_CLIENT_SECRET` | Yes | Google OAuth client secret |
 | `MICROSOFT_CLIENT_ID` | No | Microsoft OAuth client ID |

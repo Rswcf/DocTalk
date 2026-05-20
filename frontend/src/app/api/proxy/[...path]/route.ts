@@ -1,9 +1,19 @@
+import { createHmac } from "node:crypto";
 import { getToken } from "next-auth/jwt";
 import { SignJWT } from "jose";
 import { NextRequest, NextResponse } from "next/server";
 
-const BACKEND_URL = process.env.NEXT_PUBLIC_API_BASE || "http://localhost:8000";
+// C2: prefer BACKEND_INTERNAL_URL (Railway private network) over the public
+// NEXT_PUBLIC_API_BASE so server-side proxy hops stay on the internal mesh.
+const BACKEND_URL =
+  process.env.BACKEND_INTERNAL_URL ||
+  process.env.NEXT_PUBLIC_API_BASE ||
+  "http://localhost:8000";
 const AUTH_SECRET = process.env.AUTH_SECRET;
+// C1: ADAPTER_SECRET is the per-deployment shared secret used to HMAC-sign
+// the X-Proxy-IP claim sent to the backend. Distinct from AUTH_SECRET (which
+// Auth.js v5 uses to encrypt session JWEs) — separation of concerns.
+const ADAPTER_SECRET = process.env.ADAPTER_SECRET;
 
 // Whitelist of safe headers to forward to backend
 const ALLOWED_REQUEST_HEADERS = new Set([
@@ -75,13 +85,19 @@ async function handler(req: NextRequest) {
     (xff ? xff.split(",")[0]?.trim() : undefined) ||
     req.headers.get("x-real-ip") ||
     undefined;
-  if (clientIp) {
-    headers.set("X-Real-Client-IP", clientIp);
-    // Prove this header came from our proxy, not a direct attacker
-    const proxySecret = process.env.AUTH_SECRET;
-    if (proxySecret) {
-      headers.set("X-Proxy-IP-Secret", proxySecret);
-    }
+  if (clientIp && ADAPTER_SECRET) {
+    // C1: triple-header HMAC contract. The signature binds the IP to a
+    // per-request unix timestamp so an attacker who scrapes one header set
+    // from a log cannot replay it indefinitely. Backend accepts ±60s skew.
+    // Signing key is ADAPTER_SECRET (NOT AUTH_SECRET — the latter encrypts
+    // session JWEs and must never traverse the wire as a plaintext header).
+    const ts = Math.floor(Date.now() / 1000).toString();
+    const sig = createHmac("sha256", ADAPTER_SECRET)
+      .update(`${clientIp}:${ts}`)
+      .digest("hex");
+    headers.set("X-Proxy-IP", clientIp);
+    headers.set("X-Proxy-IP-Ts", ts);
+    headers.set("X-Proxy-IP-Sig", sig);
   }
 
   // Add authorization if authenticated - create a backend-compatible JWT

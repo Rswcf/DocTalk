@@ -79,7 +79,7 @@ const ingestControls: Control[] = [
     icon: AlertTriangle,
     title: "Rate limits on anonymous endpoints",
     detail:
-      "Public endpoints (shared views, anonymous reads) have per-IP rate limits with HMAC-signed IP trust chain via the Vercel edge — the real client IP cannot be spoofed. Authenticated users bypass.",
+      "Public endpoints (shared views, anonymous reads) have per-IP rate limits. The real client IP is forwarded from the Vercel edge to our backend with an HMAC-SHA256 signature bound to a per-request timestamp, so the backend can authenticate the proxy origin and reject header-spoofing attempts. This is not a defense against an active wire-level MITM — TLS handles that layer. Authenticated users bypass IP rate limiting.",
     evidence: "backend/app/core/rate_limit.py · shared_view_limiter, anon_read_limiter",
   },
 ];
