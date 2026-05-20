@@ -22,6 +22,92 @@ import { billingHref } from '../../lib/billingLinks';
 import { trackEvent } from '../../lib/analytics';
 import { withShareAnchor } from '../../lib/shareAnchors';
 
+/**
+ * Per-message row rendered inside the chat scroll. Memoized so the SSE
+ * 50ms flush cadence — which mutates only the streaming assistant message
+ * — doesn't force every prior message to re-run ReactMarkdown + Shiki
+ * (the I21 re-render storm). The parent (`ChatPanel`) passes stable
+ * refs: `message` comes from the Zustand store which only allocates a
+ * new object for the message it's mutating, and `onRegenerate` /
+ * `onContinue` / `onShareAnswer` are useCallback-stabilized at the panel
+ * level.
+ *
+ * The renumber + clone for assistant citations lives here (was at the
+ * top of `messages.map` before — that ran on every parent render and
+ * defeated `MessageBubble`'s `React.memo`). Inside this child, the
+ * renumber is `useMemo`'d on `message.citations` ref, so it only
+ * recomputes when the citations actually change.
+ */
+interface ChatMessageRowProps {
+  message: Message;
+  isStreaming: boolean;
+  isLastAssistant: boolean;
+  onCitationClick: (c: Citation) => void;
+  onRegenerate?: () => void;
+  onContinue?: () => void;
+  onShareAnswer?: (message: Message) => void;
+  isSharingAnswer: boolean;
+}
+
+const ChatMessageRow = React.memo(function ChatMessageRow({
+  message,
+  isStreaming,
+  isLastAssistant,
+  onCitationClick,
+  onRegenerate,
+  onContinue,
+  onShareAnswer,
+  isSharingAnswer,
+}: ChatMessageRowProps) {
+  const displayCitations = React.useMemo(() => {
+    if (message.role !== 'assistant') return undefined;
+    if (!message.citations || message.citations.length === 0) return undefined;
+    return renumberCitations(message.citations);
+  }, [message.citations, message.role]);
+
+  const displayMessage = React.useMemo(
+    () => (displayCitations ? { ...message, citations: displayCitations } : message),
+    [displayCitations, message]
+  );
+
+  const uniqueCitations = React.useMemo(() => {
+    if (!displayCitations || displayCitations.length === 0) return undefined;
+    return displayCitations
+      .filter((citation, index, all) => all.findIndex((item) => item.refIndex === citation.refIndex) === index)
+      .sort((a, b) => a.refIndex - b.refIndex);
+  }, [displayCitations]);
+
+  return (
+    <MessageErrorBoundary messageId={message.id}>
+      <div>
+        <MessageBubble
+          message={displayMessage}
+          onCitationClick={onCitationClick}
+          isStreaming={isStreaming}
+          onRegenerate={onRegenerate}
+          isLastAssistant={isLastAssistant}
+          onContinue={onContinue}
+          onShareAnswer={onShareAnswer}
+          isSharingAnswer={isSharingAnswer}
+        />
+        {uniqueCitations && uniqueCitations.length > 0 && (
+          <div className="mt-2 flex flex-wrap gap-1.5 pl-0">
+            {uniqueCitations.map((citation) => (
+              <CitationCard
+                key={`${message.id}-${citation.refIndex}`}
+                refIndex={citation.refIndex}
+                textSnippet={citation.textSnippet}
+                page={citation.page}
+                onClick={() => onCitationClick(citation)}
+              />
+            ))}
+          </div>
+        )}
+      </div>
+    </MessageErrorBoundary>
+  );
+});
+
 interface ChatPanelProps {
   sessionId: string;
   onCitationClick: (c: Citation) => void;
@@ -343,6 +429,29 @@ export default function ChatPanel({ sessionId, onCitationClick, maxUserMessages,
     }
   }, [addMessage, copyShareUrl, sessionId, shareAnswerLoadingId, t, tOr, userPlan]);
 
+  // Stable refs for the per-message row callbacks (I21). Previously the
+  // arrow functions `() => void regenerateLastResponse()` / `() => void
+  // continueGenerating()` / `(msg) => void handleShareAnswer(msg)` were
+  // recreated on every render of `ChatPanel`, and `ChatPanel` re-renders
+  // every ~50ms during SSE streaming (because the store's messages array
+  // mutates on every text flush). Even with `MessageBubble` memoized,
+  // those fresh arrow identities broke shallow-prop comparison and
+  // forced every historical message to re-run ReactMarkdown + Shiki at
+  // streaming cadence — O(n) work per flush. With these stabilized,
+  // only the actively-streaming message (the one whose `.text` ref
+  // changed) re-renders. The underlying mutations are already
+  // useCallback'd in `useChatStream`, so these wrappers stay stable
+  // across streaming flushes.
+  const handleRegenerateLast = useCallback(() => {
+    void regenerateLastResponse();
+  }, [regenerateLastResponse]);
+  const handleContinueLast = useCallback(() => {
+    void continueGenerating();
+  }, [continueGenerating]);
+  const handleShareAnswerVoid = useCallback((msg: Message) => {
+    void handleShareAnswer(msg);
+  }, [handleShareAnswer]);
+
   const canUseCustomInstructions = !!onOpenSettings;
   // Show the entry only on surfaces that support the feature. Among those,
   // show the Pro upgrade hook to Free + Plus (Plus was previously hidden, a
@@ -412,47 +521,26 @@ export default function ChatPanel({ sessionId, onCitationClick, maxUserMessages,
           ) : (
             <div className="mx-auto max-w-4xl pb-2">
               {messages.map((message, idx) => {
-                const displayCitations = (message.role === 'assistant' && message.citations && message.citations.length > 0)
-                  ? renumberCitations(message.citations)
-                  : undefined;
-                const displayMessage = displayCitations ? { ...message, citations: displayCitations } : message;
                 const isLastMessage = idx === messages.length - 1;
                 const showStreaming = isLastMessage && isStreaming && message.role === 'assistant';
-                const isLastAssistantMsg = message.role === 'assistant' && !isStreaming && idx === messages.length - 1;
-
+                const isLastAssistantMsg = message.role === 'assistant' && !isStreaming && isLastMessage;
+                // Pass `message` directly — the store keeps stable refs for
+                // non-streaming messages, so React.memo on ChatMessageRow
+                // can skip re-rendering historical rows during a stream.
+                // Callbacks are gated by message position so only the last
+                // assistant message receives non-undefined refs.
                 return (
-                  <MessageErrorBoundary key={message.id} messageId={message.id}>
-                    <div>
-                      <MessageBubble
-                        message={displayMessage}
-                        onCitationClick={onCitationClick}
-                        isStreaming={showStreaming}
-                        onRegenerate={isLastAssistantMsg ? () => void regenerateLastResponse() : undefined}
-                        isLastAssistant={isLastAssistantMsg}
-                        onContinue={isLastAssistantMsg && displayMessage.isTruncated ? () => void continueGenerating() : undefined}
-                        onShareAnswer={userPlan ? (msg) => void handleShareAnswer(msg) : undefined}
-                        isSharingAnswer={shareAnswerLoadingId === displayMessage.id}
-                      />
-                      {displayCitations && displayCitations.length > 0 && (() => {
-                        const uniqueCitations = displayCitations
-                          .filter((citation, index, all) => all.findIndex((item) => item.refIndex === citation.refIndex) === index)
-                          .sort((a, b) => a.refIndex - b.refIndex);
-                        return (
-                          <div className="mt-2 flex flex-wrap gap-1.5 pl-0">
-                            {uniqueCitations.map((citation) => (
-                              <CitationCard
-                                key={`${message.id}-${citation.refIndex}`}
-                                refIndex={citation.refIndex}
-                                textSnippet={citation.textSnippet}
-                                page={citation.page}
-                                onClick={() => onCitationClick(citation)}
-                              />
-                            ))}
-                          </div>
-                        );
-                      })()}
-                    </div>
-                  </MessageErrorBoundary>
+                  <ChatMessageRow
+                    key={message.id}
+                    message={message}
+                    isStreaming={showStreaming}
+                    isLastAssistant={isLastAssistantMsg}
+                    onCitationClick={onCitationClick}
+                    onRegenerate={isLastAssistantMsg ? handleRegenerateLast : undefined}
+                    onContinue={isLastAssistantMsg && message.isTruncated ? handleContinueLast : undefined}
+                    onShareAnswer={userPlan ? handleShareAnswerVoid : undefined}
+                    isSharingAnswer={shareAnswerLoadingId === message.id}
+                  />
                 );
               })}
             </div>

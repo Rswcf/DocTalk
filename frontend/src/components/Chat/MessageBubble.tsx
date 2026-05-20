@@ -194,7 +194,7 @@ function setFeedbackStorage(messageId: string, fb: Feedback) {
   }
 }
 
-export default function MessageBubble({
+function MessageBubble({
   message,
   onCitationClick,
   isStreaming,
@@ -401,3 +401,15 @@ export default function MessageBubble({
     </div>
   );
 }
+
+/**
+ * Memoized export — prevents the chat re-render storm during SSE streaming
+ * (Wave-2 I21). The store flushes the streaming assistant message every
+ * ~50ms via `updateLastMessage`, which creates a new object only for the
+ * last message; prior messages keep the same reference. Combined with
+ * `useCallback`-stabilized `onRegenerate` / `onContinue` / `onShareAnswer`
+ * in `ChatPanel`, shallow-prop comparison correctly skips re-renders of
+ * historical messages — keeping per-flush ReactMarkdown + Shiki work O(1)
+ * in the streaming message instead of O(n) across the whole thread.
+ */
+export default React.memo(MessageBubble);
