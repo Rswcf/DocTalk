@@ -2656,8 +2656,5 @@
   "pricing.plus.fit": "毎週の文書作業、調査、契約レビュー、エクスポート向け。",
   "pricing.plus.meter": "アクティブなワークフロー",
   "pricing.pro.fit": "大容量ファイル、反復分析、カスタムプロンプト、高頻度利用向け。",
-  "pricing.pro.meter": "高頻度利用",
-  "header": {
-    "language": "言語"
-  }
+  "pricing.pro.meter": "高頻度利用"
 }

@@ -2656,8 +2656,5 @@
   "pricing.plus.fit": "주간 문서 작업, 리서치, 계약 검토, 내보내기에 적합합니다.",
   "pricing.plus.meter": "활발한 워크플로",
   "pricing.pro.fit": "대용량 파일, 반복 분석, 맞춤 프롬프트, 높은 사용량에 적합합니다.",
-  "pricing.pro.meter": "고강도 사용",
-  "header": {
-    "language": "언어"
-  }
+  "pricing.pro.meter": "고강도 사용"
 }
