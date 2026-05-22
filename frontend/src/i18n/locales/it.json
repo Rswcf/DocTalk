@@ -2656,5 +2656,8 @@
   "pricing.plus.fit": "Lavoro settimanale sui documenti, ricerca, revisione contratti ed esportazioni.",
   "pricing.plus.meter": "Flusso di lavoro attivo",
   "pricing.pro.fit": "File grandi, analisi ripetute, prompt personalizzati e alto volume.",
-  "pricing.pro.meter": "Uso intensivo"
+  "pricing.pro.meter": "Uso intensivo",
+  "header": {
+    "language": "Lingua"
+  }
 }

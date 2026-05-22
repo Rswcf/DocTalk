@@ -2656,5 +2656,8 @@
   "pricing.plus.fit": "Wöchentliche Dokumentarbeit, Recherche, Vertragsprüfung und Exporte.",
   "pricing.plus.meter": "Aktiver Workflow",
   "pricing.pro.fit": "Große Dateien, wiederholte Analysen, eigene Prompts und hohes Volumen.",
-  "pricing.pro.meter": "Intensive Nutzung"
+  "pricing.pro.meter": "Intensive Nutzung",
+  "header": {
+    "language": "Sprache"
+  }
 }

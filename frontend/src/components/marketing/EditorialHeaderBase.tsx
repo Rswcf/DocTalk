@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { Menu, X } from "lucide-react";
 import DocTalkLogo from "../DocTalkLogo";
+import EdLanguageSelector from "./EdLanguageSelector";
 import { useLocale } from "../../i18n";
 
 export interface Crumb {
@@ -132,6 +133,9 @@ export default function EditorialHeaderBase({
                   {item.label}
                 </Link>
               ))}
+              {/* Language selector — always visible so locale is switchable on
+                  every editorial page (restores the switcher the redesign dropped). */}
+              <EdLanguageSelector />
               {/* Mobile hamburger — sits left of the Sign-In CTA, md:hidden */}
               <button
                 type="button"

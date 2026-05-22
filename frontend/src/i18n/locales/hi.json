@@ -2656,5 +2656,8 @@
   "pricing.plus.fit": "साप्ताहिक दस्तावेज़ कार्य, शोध, कॉन्ट्रैक्ट समीक्षा और exports.",
   "pricing.plus.meter": "सक्रिय workflow",
   "pricing.pro.fit": "बड़ी फ़ाइलें, बार-बार analysis, custom prompts और अधिक उपयोग.",
-  "pricing.pro.meter": "गहन उपयोग"
+  "pricing.pro.meter": "गहन उपयोग",
+  "header": {
+    "language": "भाषा"
+  }
 }

@@ -2656,5 +2656,8 @@
   "pricing.plus.fit": "Weekly document work, research, contract review, and exports.",
   "pricing.plus.meter": "Active workflow",
   "pricing.pro.fit": "Large files, repeated analysis, custom prompts, and high volume.",
-  "pricing.pro.meter": "Power usage"
+  "pricing.pro.meter": "Power usage",
+  "header": {
+    "language": "Language"
+  }
 }

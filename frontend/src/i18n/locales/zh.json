@@ -2695,5 +2695,8 @@
   "pricing.plus.fit": "每周文档处理、研究、合同审查和导出。",
   "pricing.plus.meter": "活跃工作流",
   "pricing.pro.fit": "大文件、重复分析、自定义提示和高用量。",
-  "pricing.pro.meter": "高强度使用"
+  "pricing.pro.meter": "高强度使用",
+  "header": {
+    "language": "语言"
+  }
 }

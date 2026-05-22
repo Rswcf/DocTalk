@@ -1,0 +1,148 @@
+"use client";
+
+import { useEffect, useRef, useState } from "react";
+import { Globe, Check } from "lucide-react";
+import { LOCALES, useLocale } from "../../i18n";
+
+/**
+ * Editorial-styled language selector for the marketing surface.
+ *
+ * Functionally identical to the app-UI `LanguageSelector` (reads/writes the
+ * locale via `useLocale()`, lists all `LOCALES`), but styled with the editorial
+ * tokens (`--ed-*`, IBM Plex Mono labels, terracotta signal) so it belongs in
+ * the warm-paper `EditorialHeaderBase` instead of the zinc/blue app chrome.
+ *
+ * Restores the locale switcher that the editorial header redesign dropped.
+ */
+export default function EdLanguageSelector() {
+  const { locale, setLocale, tOr } = useLocale();
+  const [open, setOpen] = useState(false);
+  const wrapRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function onDocClick(e: MouseEvent) {
+      if (!wrapRef.current?.contains(e.target as Node)) setOpen(false);
+    }
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") setOpen(false);
+    }
+    document.addEventListener("mousedown", onDocClick);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onDocClick);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, []);
+
+  const current = LOCALES.find((l) => l.code === locale);
+  const label = tOr("header.language", "Language");
+
+  return (
+    <div ref={wrapRef} style={{ position: "relative" }}>
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        aria-label={`${(current?.code || "en").toUpperCase()} — ${label}`}
+        className="inline-flex items-center gap-1.5"
+        style={{
+          fontFamily: "var(--font-plex-mono), ui-monospace, monospace",
+          fontSize: "12px",
+          letterSpacing: "0.06em",
+          color: "var(--ed-ink-2)",
+          background: "transparent",
+          border: "none",
+          padding: "4px 2px",
+          cursor: "pointer",
+          transition: "color 150ms ease",
+        }}
+        onMouseEnter={(e) => {
+          (e.currentTarget as HTMLButtonElement).style.color = "var(--ed-signal)";
+        }}
+        onMouseLeave={(e) => {
+          (e.currentTarget as HTMLButtonElement).style.color = "var(--ed-ink-2)";
+        }}
+      >
+        <Globe aria-hidden="true" size={15} />
+        <span>{(current?.code || "en").toUpperCase()}</span>
+      </button>
+
+      {open && (
+        <ul
+          role="listbox"
+          aria-label={label}
+          style={{
+            position: "absolute",
+            top: "calc(100% + 10px)",
+            right: 0,
+            zIndex: 60,
+            minWidth: "190px",
+            maxHeight: "min(70vh, 420px)",
+            overflowY: "auto",
+            margin: 0,
+            padding: "6px",
+            listStyle: "none",
+            background: "var(--ed-paper)",
+            border: "1px solid var(--ed-rule)",
+            boxShadow: "0 12px 32px rgba(40, 33, 24, 0.14)",
+          }}
+        >
+          {LOCALES.map((l) => {
+            const selected = l.code === locale;
+            return (
+              <li key={l.code} role="none">
+                <button
+                  type="button"
+                  role="option"
+                  aria-selected={selected}
+                  onClick={() => {
+                    setLocale(l.code);
+                    setOpen(false);
+                  }}
+                  className="flex w-full items-center gap-2"
+                  style={{
+                    fontFamily: "var(--font-inter), system-ui, sans-serif",
+                    fontSize: "13px",
+                    textAlign: "left",
+                    color: selected ? "var(--ed-signal)" : "var(--ed-ink)",
+                    background: "transparent",
+                    border: "none",
+                    padding: "8px 10px",
+                    cursor: "pointer",
+                  }}
+                  onMouseEnter={(e) => {
+                    (e.currentTarget as HTMLButtonElement).style.background =
+                      "var(--ed-paper-2)";
+                  }}
+                  onMouseLeave={(e) => {
+                    (e.currentTarget as HTMLButtonElement).style.background =
+                      "transparent";
+                  }}
+                >
+                  <span
+                    aria-hidden="true"
+                    style={{ width: "14px", display: "inline-flex" }}
+                  >
+                    {selected ? <Check size={13} /> : null}
+                  </span>
+                  <span style={{ flex: 1 }}>{l.label}</span>
+                  <span
+                    style={{
+                      fontFamily: "var(--font-plex-mono), ui-monospace, monospace",
+                      fontSize: "10.5px",
+                      letterSpacing: "0.06em",
+                      color: "var(--ed-ink-3)",
+                    }}
+                  >
+                    {l.code.toUpperCase()}
+                  </span>
+                </button>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </div>
+  );
+}
