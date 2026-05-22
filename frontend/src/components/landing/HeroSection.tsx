@@ -53,15 +53,17 @@ export default function HeroSection() {
                 {t('landing.cta.demo')}
                 <ArrowRight aria-hidden="true" size={16} />
               </Link>
-              <Link
+              {/* Plain <a> (not next/link): a native hash anchor fires the
+                  `hashchange` event AuthModal listens for, so the modal opens.
+                  next/link updates the hash via history API without firing it. */}
+              <a
                 href="#auth"
-                scroll={false}
                 onClick={() => trackEvent('landing_cta_clicked', { source: 'hero', reason: 'sign_up' })}
                 className="ed-link"
               >
                 {t('hero.signUpFree')}
                 <ArrowRight aria-hidden="true" size={14} />
-              </Link>
+              </a>
             </div>
 
             {/* Metrics row */}

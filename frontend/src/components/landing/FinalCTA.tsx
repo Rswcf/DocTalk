@@ -28,14 +28,16 @@ export default function FinalCTA() {
                 {t('landing.finalCta.demo')}
                 <ArrowRight aria-hidden="true" size={16} />
               </Link>
-              <Link
+              {/* Plain <a> (not next/link): a native hash anchor fires the
+                  `hashchange` event AuthModal listens for, so the modal opens.
+                  next/link updates the hash via history API without firing it. */}
+              <a
                 href="#auth"
-                scroll={false}
                 onClick={() => trackEvent('landing_cta_clicked', { source: 'final_cta', reason: 'sign_up' })}
                 className="ed-link"
               >
                 {t('landing.finalCta.signUp')}
-              </Link>
+              </a>
             </div>
           </div>
           <hr className="ed-rule mt-16" />
