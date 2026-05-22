@@ -36,7 +36,11 @@ RUN pip install -r /tmp/requirements.txt greenlet psycopg[binary] && rm /tmp/req
 RUN addgroup --system --gid 1001 app && adduser --system --uid 1001 --ingroup app --home /home/app app \
     && mkdir -p /home/app && chown app:app /home/app
 
-# Copy backend code and entrypoint
+# Copy backend code and entrypoint. `COPY backend/ /app/` already brings in
+# entrypoint.sh; a second explicit COPY of it was redundant and tripped a
+# buildkit cache-key checksum ("/backend/entrypoint.sh": not found) on the
+# Railway Metal builder, so it's removed. The chmod below still verifies the
+# file is present — the build fails loudly here if entrypoint.sh is ever missing.
 COPY version.json /app/version.json
 COPY backend/ /app/
 
@@ -47,7 +51,6 @@ EXPOSE 8000
 # - Starts Celery worker with automatic restart on crash
 # - Starts uvicorn API server
 # - Forwards SIGTERM to both processes for graceful shutdown
-COPY backend/entrypoint.sh /app/entrypoint.sh
 RUN chmod +x /app/entrypoint.sh && chown -R app:app /app
 
 USER app

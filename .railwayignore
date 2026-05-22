@@ -1,0 +1,47 @@
+# Railway upload ignore list.
+# `railway up` packages the entire repo from project root regardless of cwd —
+# this file is the equivalent of .dockerignore for the railway CLI upload
+# pipeline. Keep backend deploys lean (~10 MB) so they pass Cloudflare's
+# upload size cap.
+#
+# Backend service is defined by backend/railway.toml + backend/Dockerfile.
+# Everything else in the repo is Vercel-side or local-only.
+
+# Vercel territory — backend service does not need any of this
+frontend/
+
+# Build artifacts (never needed at runtime)
+**/node_modules/
+**/.next/
+**/__pycache__/
+**/*.pyc
+**/.venv/
+**/venv/
+**/dist/
+**/build/
+
+# Collab / docs / scripts — not runtime
+.collab/
+docs/
+scripts/
+
+# Large non-runtime trees at repo root. The backend build context is `backend/`
+# (service Root Directory), so these never enter the image — but `railway up`
+# still uploads the whole archive, and test_inputs/ alone is ~207 MB. Excluding
+# them keeps the upload ~10 MB so it doesn't stall at the snapshot stage.
+test_inputs/
+design-explorations/
+infra/
+
+# Git / IDE / OS
+.git/
+.github/
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Tests are kept (the deployed image runs them as a sanity check post-deploy)
+# but anything else local-only:
+.claude/
+memory/
