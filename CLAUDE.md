@@ -79,6 +79,7 @@ Cross-origin IP trust chain is HMAC-signed with `ADAPTER_SECRET` — frontend an
 
 - **BSD sed has no `\b` word boundary**. Use `s/pattern\([^a-z]\)/replacement\1/g` or GNU `sed`.
 - **Don't `railway up` from `main`**. Always `git checkout stable` first.
+- **Railway build config must match the Dockerfile's context.** `backend/Dockerfile` uses repo-root paths (`COPY backend/...`, `COPY version.json`), so the service needs `rootDirectory=""` + `dockerfilePath="backend/Dockerfile"` (NOT `rootDirectory=backend`). Set via the GraphQL API `serviceInstanceUpdate` (token in `~/.railway/config.json`), not env vars — `RAILWAY_ROOT_DIRECTORY` is only a reflection. A `"COPY backend/ not found"` / `"failed to compute cache key"` build error = this mismatch + a stale incremental base; the API config change resets the base. `railway up` has no `--no-cache`; keep `test_inputs/` in `.railwayignore` so uploads stay ~10 MB.
 - **Don't set cookies in `middleware.ts`**. Next.js auto-applies `Cache-Control: private, no-store` to the entire response tree, killing SEO. Locale detection already runs client-side in `LocaleProvider`.
 - **Don't `await cookies()` in `app/layout.tsx`** for the same reason — it forces every page to `ƒ Dynamic` rendering.
 - **Don't commit uncompressed build artifacts** (`frontend/tsconfig.tsbuildinfo` is `.gitignore`d; personal `.claude/settings.json` permission tweaks stay local).
