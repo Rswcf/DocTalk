@@ -58,9 +58,21 @@ coverage/
 # MinIO data (if bind-mount used)
 minio-data/
 
+# Large local test fixtures (never committed; ~200MB)
+test_inputs/
+
 # Codex output files (ephemeral)
 .collab/cx-output-*.md
 .collab/tasks/*-output.md
+
+# QA data dumps & binaries — bulky machine output, not source history, and
+# may embed captured session tokens. ~330MB total (incl. 289MB live-RAG JSON +
+# 10MB screenshots). The .md bug reports and .py/.js QA scripts ARE committed —
+# just not the raw JSON captures or screenshots.
+.collab/tasks/**/*.json
+.collab/tasks/*.json
+.collab/tasks/screenshots/
+.collab/reviews/ui-audit-artifacts/
 
 # Local agent tool state (not portable)
 .agents/

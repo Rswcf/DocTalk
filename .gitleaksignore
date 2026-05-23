@@ -21,3 +21,5 @@
 # These are locale file identifiers, not credentials.
 80ed730b7765c7dced92896978a98f08cef4deed:frontend/src/app/pricing/PricingPageClient.tsx:generic-api-key:71
 80ed730b7765c7dced92896978a98f08cef4deed:frontend/src/app/pricing/PricingPageClient.tsx:generic-api-key:72
+# IndexNow key is PUBLIC by design (hosted at /{key}.txt for domain verification), not a secret.
+.collab/scripts/qa_production_public_machine_entrypoints.py:generic-api-key:20
