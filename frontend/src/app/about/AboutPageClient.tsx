@@ -1,103 +1,105 @@
 "use client";
 
 import { useLocale } from '../../i18n';
-import Header from '../../components/Header';
-import Footer from '../../components/Footer';
+import MarketingShell from '../../components/marketing/MarketingShell';
+import EdPageHero from '../../components/marketing/EdPageHero';
+import EdSection from '../../components/marketing/EdSection';
+import EdProse from '../../components/marketing/EdProse';
+import EdCheckList from '../../components/marketing/EdCheckList';
+import EdCtaBanner from '../../components/marketing/EdCtaBanner';
 
 export default function AboutPageClient() {
   const { t } = useLocale();
 
   return (
-    <div className="min-h-screen flex flex-col bg-white dark:bg-zinc-950">
-      <Header variant="minimal" />
-      <main id="main-content" className="flex-1 px-6 py-16">
-        <div className="max-w-3xl mx-auto space-y-12">
-          <section className="space-y-4">
-            <p className="text-sm font-medium tracking-[0.18em] uppercase text-zinc-500 dark:text-zinc-300">
-              {t('about.eyebrow')}
-            </p>
-            <h1 className="font-serif text-4xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
-              {t('about.headline')}
-            </h1>
-            <p className="text-lg leading-8 text-zinc-600 dark:text-zinc-300">
-              {t('about.description')}
-            </p>
-          </section>
+    <MarketingShell
+      breadcrumb={[
+        { label: t('useCasesHub.breadcrumb.home'), href: '/' },
+        { label: t('about.eyebrow') },
+      ]}
+    >
+      <EdPageHero
+        eyebrow={t('about.eyebrow')}
+        title={t('about.headline')}
+        lede={t('about.description')}
+      />
 
-          <section className="grid gap-6 md:grid-cols-2">
-            <div className="rounded-xl border border-zinc-200 dark:border-zinc-800 p-6">
-              <h2 className="text-xl font-semibold text-zinc-900 dark:text-zinc-100">{t('about.optimizeFor.title')}</h2>
-              <ul className="mt-4 space-y-3 text-sm leading-7 text-zinc-600 dark:text-zinc-300">
-                <li>{t('about.optimizeFor.item1')}</li>
-                <li>{t('about.optimizeFor.item2')}</li>
-                <li>{t('about.optimizeFor.item3')}</li>
-                <li>{t('about.optimizeFor.item4')}</li>
-              </ul>
-            </div>
-            <div className="rounded-xl border border-zinc-200 dark:border-zinc-800 p-6">
-              <h2 className="text-xl font-semibold text-zinc-900 dark:text-zinc-100">{t('about.whoUses.title')}</h2>
-              <ul className="mt-4 space-y-3 text-sm leading-7 text-zinc-600 dark:text-zinc-300">
-                <li>{t('about.whoUses.item1')}</li>
-                <li>{t('about.whoUses.item2')}</li>
-                <li>{t('about.whoUses.item3')}</li>
-                <li>{t('about.whoUses.item4')}</li>
-              </ul>
-            </div>
-          </section>
-
-          <section className="space-y-4">
-            <h2 className="text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-100">
-              {t('about.trust.title')}
-            </h2>
-            <p className="text-base leading-8 text-zinc-600 dark:text-zinc-300">
-              {t('about.trust.paragraph1')}
-            </p>
-            <p className="text-base leading-8 text-zinc-600 dark:text-zinc-300">
-              {t('about.trust.paragraph2')}
-            </p>
-          </section>
-
-          <section className="grid gap-6 md:grid-cols-2">
-            <div className="rounded-xl border border-zinc-200 dark:border-zinc-800 p-6">
-              <h2 className="text-xl font-semibold text-zinc-900 dark:text-zinc-100">{t('about.howItWorks.title')}</h2>
-              <p className="mt-3 text-sm leading-7 text-zinc-600 dark:text-zinc-300">
-                {t('about.howItWorks.description')}
-              </p>
-            </div>
-            <div className="rounded-xl border border-zinc-200 dark:border-zinc-800 p-6">
-              <h2 className="text-xl font-semibold text-zinc-900 dark:text-zinc-100">{t('about.whatWePublish.title')}</h2>
-              <p className="mt-3 text-sm leading-7 text-zinc-600 dark:text-zinc-300">
-                {t('about.whatWePublish.description')}
-              </p>
-            </div>
-          </section>
-
-          <section className="rounded-xl bg-zinc-50 dark:bg-zinc-900/60 border border-zinc-200 dark:border-zinc-800 p-6">
-            <h2 className="text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-100">{t('about.contact.title')}</h2>
-            <p className="mt-3 text-base leading-8 text-zinc-600 dark:text-zinc-300">
-              {t('about.contact.description1')}{' '}
-              <a
-                href="mailto:support@doctalk.site"
-                className="text-blue-600 dark:text-blue-400 hover:underline"
-              >
-                support@doctalk.site
-              </a>
-              {t('about.contact.description2')}{' '}
-              <a
-                href="https://github.com/Rswcf/DocTalk"
-                className="text-blue-600 dark:text-blue-400 hover:underline"
-              >
-                GitHub
-              </a>
-              .
-            </p>
-            <p className="mt-3 text-sm leading-7 text-zinc-500 dark:text-zinc-300">
-              {t('about.contact.evaluationHint')}
-            </p>
-          </section>
+      <EdSection alt num="01" title={t('about.optimizeFor.title')}>
+        <div className="grid grid-cols-1 md:grid-cols-2" style={{ gap: '40px' }}>
+          <EdCheckList
+            items={[
+              t('about.optimizeFor.item1'),
+              t('about.optimizeFor.item2'),
+              t('about.optimizeFor.item3'),
+              t('about.optimizeFor.item4'),
+            ]}
+          />
+          <div>
+            <h3 className="ed-h3" style={{ marginBottom: '14px' }}>
+              {t('about.whoUses.title')}
+            </h3>
+            <EdCheckList
+              items={[
+                t('about.whoUses.item1'),
+                t('about.whoUses.item2'),
+                t('about.whoUses.item3'),
+                t('about.whoUses.item4'),
+              ]}
+            />
+          </div>
         </div>
-      </main>
-      <Footer />
-    </div>
+      </EdSection>
+
+      <EdSection num="02" title={t('about.trust.title')}>
+        <EdProse>
+          <p>{t('about.trust.paragraph1')}</p>
+          <p>{t('about.trust.paragraph2')}</p>
+        </EdProse>
+      </EdSection>
+
+      <EdSection alt num="03" title={t('about.howItWorks.title')}>
+        <div className="grid grid-cols-1 md:grid-cols-2" style={{ gap: '16px', gridAutoRows: '1fr' }}>
+          <div className="ed-card h-full">
+            <h3 className="ed-h3">{t('about.howItWorks.title')}</h3>
+            <p className="ed-body" style={{ marginTop: '8px' }}>
+              {t('about.howItWorks.description')}
+            </p>
+          </div>
+          <div className="ed-card h-full">
+            <h3 className="ed-h3">{t('about.whatWePublish.title')}</h3>
+            <p className="ed-body" style={{ marginTop: '8px' }}>
+              {t('about.whatWePublish.description')}
+            </p>
+          </div>
+        </div>
+      </EdSection>
+
+      <EdSection num="04" title={t('about.contact.title')}>
+        <EdProse>
+          <p>
+            {t('about.contact.description1')}{' '}
+            <a href="mailto:support@doctalk.site">support@doctalk.site</a>
+            {t('about.contact.description2')}{' '}
+            <a
+              href="https://github.com/Rswcf/DocTalk"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              GitHub
+            </a>
+            .
+          </p>
+          <p style={{ color: 'var(--ed-ink-3)' }}>
+            {t('about.contact.evaluationHint')}
+          </p>
+        </EdProse>
+      </EdSection>
+
+      <EdCtaBanner
+        title={t('about.headline')}
+        primary={{ label: t('useCasesHub.breadcrumb.home'), href: '/' }}
+        secondary={{ label: t('privacy.policyLink'), href: '/privacy' }}
+      />
+    </MarketingShell>
   );
 }

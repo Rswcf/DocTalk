@@ -44,6 +44,14 @@ interface DocumentDiffPanelProps {
   documents?: DiffDocument[];
   onCitationClick?: (citation: Citation) => void;
   userPlan?: string;
+  /**
+   * Visual surface treatment.
+   * - "app" (default): zinc/blue functional palette — used inside the collections reader.
+   * - "editorial": warm-paper terracotta editorial palette — used on the standalone
+   *   `/document-diff` marketing-shell page. Logic is identical across both surfaces;
+   *   only chrome styling differs.
+   */
+  surface?: "app" | "editorial";
 }
 
 function asArray(value: unknown): Array<Record<string, unknown>> {
@@ -105,12 +113,55 @@ function groupChanges(changes: DiffChange[], kind: DiffChange["kind"]): DiffChan
   return changes.filter((change) => change.kind === kind);
 }
 
+/* ---------- editorial surface style helpers ---------- */
+
+const edPanelStyle: React.CSSProperties = {
+  border: "1px solid var(--ed-rule)",
+  background: "var(--ed-paper-2)",
+  borderRadius: "3px",
+  padding: "20px",
+};
+
+const edInputStyle: React.CSSProperties = {
+  border: "1px solid var(--ed-rule)",
+  background: "var(--ed-paper)",
+  color: "var(--ed-ink)",
+  borderRadius: "3px",
+  padding: "0 12px",
+  fontSize: "14px",
+  outline: "none",
+};
+
+const edExportBtnStyle: React.CSSProperties = {
+  border: "1px solid var(--ed-rule)",
+  background: "var(--ed-paper)",
+  color: "var(--ed-ink-2)",
+  borderRadius: "3px",
+  padding: "0 12px",
+  fontFamily: "var(--font-plex-mono), ui-monospace, monospace",
+  fontSize: "11px",
+  textTransform: "uppercase",
+  letterSpacing: "0.08em",
+};
+
+const edRefBtnStyle: React.CSSProperties = {
+  border: "1px solid var(--ed-rule)",
+  background: "var(--ed-paper)",
+  color: "var(--ed-ink-2)",
+  borderRadius: "3px",
+  padding: "4px 8px",
+  fontFamily: "var(--font-plex-mono), ui-monospace, monospace",
+  fontSize: "11px",
+};
+
 export default function DocumentDiffPanel({
   collectionId,
   documents,
   onCitationClick,
   userPlan,
+  surface = "app",
 }: DocumentDiffPanelProps) {
+  const editorial = surface === "editorial";
   const { tOr, locale } = useLocale();
   const [availableDocs, setAvailableDocs] = useState<DiffDocument[]>(documents || []);
   const [runs, setRuns] = useState<ExtractionJob[]>([]);
@@ -272,7 +323,281 @@ export default function DocumentDiffPanel({
   }, [activeRun, collectionId, userPlan]);
 
   if (loading) {
+    if (editorial) {
+      return <p className="ed-caption">{tOr("common.loading", "Loading...")}</p>;
+    }
     return <div className="p-4 text-sm text-zinc-500 dark:text-zinc-400">{tOr("common.loading", "Loading...")}</div>;
+  }
+
+  if (editorial) {
+    return (
+      <div className="flex flex-col" style={{ gap: "24px" }}>
+        {/* Controls */}
+        <section style={edPanelStyle}>
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+            <div className="min-w-0">
+              <p className="ed-label">{tOr("diff.kicker", "Semantic document diff")}</p>
+              <h2 className="ed-h3" style={{ marginTop: "8px" }}>
+                {tOr("diff.title", "Compare two versions with cited changes")}
+              </h2>
+              <p className="ed-body" style={{ marginTop: "8px", maxWidth: "42rem" }}>
+                {tOr("diff.subtitle", "DocTalk identifies added, removed, and modified meaning with old/new citations so reviewers can verify both sides.")}
+              </p>
+            </div>
+            <div className="grid min-w-0 gap-3 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] lg:min-w-[620px]">
+              <label className="min-w-0">
+                <span className="ed-label" style={{ display: "block", marginBottom: "6px" }}>
+                  {tOr("diff.oldDocument", "Old document")}
+                </span>
+                <select
+                  value={oldDocumentId}
+                  onChange={(event) => setOldDocumentId(event.target.value)}
+                  className="h-10 w-full"
+                  style={edInputStyle}
+                >
+                  {readyDocs.map((doc) => (
+                    <option key={doc.id} value={doc.id}>{doc.filename}</option>
+                  ))}
+                </select>
+              </label>
+              <label className="min-w-0">
+                <span className="ed-label" style={{ display: "block", marginBottom: "6px" }}>
+                  {tOr("diff.newDocument", "New document")}
+                </span>
+                <select
+                  value={newDocumentId}
+                  onChange={(event) => setNewDocumentId(event.target.value)}
+                  className="h-10 w-full"
+                  style={edInputStyle}
+                >
+                  {readyDocs.map((doc) => (
+                    <option key={doc.id} value={doc.id}>{doc.filename}</option>
+                  ))}
+                </select>
+              </label>
+              <button
+                type="button"
+                onClick={() => void runCompare()}
+                disabled={isWorking || readyDocs.length < 2 || oldDocumentId === newDocumentId}
+                className="ed-cta self-end disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {isWorking ? <Clock3 size={15} aria-hidden="true" /> : <Play size={15} aria-hidden="true" />}
+                {isWorking ? tOr("diff.running", "Comparing...") : tOr("diff.run", "Compare")}
+              </button>
+            </div>
+          </div>
+          {readyDocs.length < 2 && (
+            <p
+              className="ed-caption"
+              style={{
+                marginTop: "16px",
+                border: "1px dashed var(--ed-rule)",
+                background: "var(--ed-paper)",
+                borderRadius: "3px",
+                padding: "10px 14px",
+              }}
+            >
+              {tOr("diff.needTwoDocs", "Upload or add at least two ready documents to compare.")}
+            </p>
+          )}
+          {paywall && (
+            <div
+              className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
+              style={{
+                marginTop: "16px",
+                border: "1px solid var(--ed-ochre)",
+                background: "var(--ed-paper)",
+                borderRadius: "3px",
+                padding: "12px 14px",
+              }}
+            >
+              <span className="ed-body" style={{ marginTop: 0 }}>
+                {paywall.code === "INSUFFICIENT_CREDITS"
+                  ? tOr("diff.paywallCredits", "You need more credits to compare these documents.")
+                  : tOr("diff.paywallPlan", "Document Diff is a Pro workflow.")}
+              </span>
+              <Link
+                href={billingHref({ plan: "pro", source: collectionId ? "collection_reader" : "compare_page", reason: "document_diff" })}
+                className="ed-cta"
+              >
+                {tOr("credits.upgradeToPro", "Upgrade to Pro")}
+              </Link>
+            </div>
+          )}
+          {error && (
+            <div
+              className="flex gap-2"
+              style={{
+                marginTop: "16px",
+                border: "1px solid var(--ed-signal)",
+                background: "var(--ed-paper)",
+                borderRadius: "3px",
+                padding: "10px 14px",
+              }}
+            >
+              <AlertTriangle size={16} className="mt-0.5 shrink-0" style={{ color: "var(--ed-signal)" }} aria-hidden="true" />
+              <span className="ed-body" style={{ marginTop: 0, color: "var(--ed-signal-deep)" }}>{error}</span>
+            </div>
+          )}
+        </section>
+
+        {activeRun ? (
+          <section style={{ ...edPanelStyle, padding: 0 }}>
+            <div
+              className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
+              style={{ borderBottom: "1px solid var(--ed-rule)", padding: "16px 20px" }}
+            >
+              <div className="min-w-0">
+                <div className="flex items-center gap-2">
+                  {activeRun.status === "succeeded" ? (
+                    <CheckCircle2 size={16} style={{ color: "var(--ed-signal)" }} aria-hidden="true" />
+                  ) : (
+                    <Clock3 size={16} style={{ color: "var(--ed-ochre)" }} aria-hidden="true" />
+                  )}
+                  <h3 className="ed-h3 truncate" style={{ marginTop: 0 }}>
+                    {oldName || tOr("diff.oldDocument", "Old document")} → {newName || tOr("diff.newDocument", "New document")}
+                  </h3>
+                </div>
+                <p className="ed-caption" style={{ marginTop: "6px" }}>
+                  {activeRun.status === "succeeded"
+                    ? tOr("diff.completed", "Completed")
+                    : tOr("diff.status", "Status: {status}", { status: activeRun.status })}
+                </p>
+              </div>
+              {activeRun.result && (
+                <div className="flex gap-2">
+                  <button type="button" onClick={() => void handleExport("md")} className="inline-flex h-9 items-center gap-2" style={edExportBtnStyle}>
+                    <Download size={14} aria-hidden="true" />
+                    MD
+                  </button>
+                  <button type="button" onClick={() => void handleExport("csv")} className="inline-flex h-9 items-center gap-2" style={edExportBtnStyle}>
+                    <Download size={14} aria-hidden="true" />
+                    CSV
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {activeRun.status === "failed" ? (
+              <p className="ed-body" style={{ padding: "16px 20px", marginTop: 0, color: "var(--ed-signal-deep)" }}>
+                {activeRun.error_message || tOr("diff.failed", "Document comparison failed.")}
+              </p>
+            ) : activeRun.result ? (
+              <div className="flex flex-col" style={{ gap: "20px", padding: "20px" }}>
+                <div
+                  style={{
+                    border: "1px solid var(--ed-rule)",
+                    background: "var(--ed-paper)",
+                    borderRadius: "3px",
+                    padding: "16px",
+                  }}
+                >
+                  <p className="ed-label">{tOr("diff.summary", "Summary")}</p>
+                  <p className="ed-body" style={{ marginTop: "10px" }}>{asString(result.summary)}</p>
+                </div>
+                {(["added", "removed", "modified"] as const).map((kind) => {
+                  const items = groupChanges(changes, kind);
+                  if (!items.length) return null;
+                  const label = kind === "added"
+                    ? tOr("diff.added", "Added")
+                    : kind === "removed"
+                      ? tOr("diff.removed", "Removed")
+                      : tOr("diff.modified", "Modified");
+                  return (
+                    <div key={kind}>
+                      <div className="mb-3 flex items-center gap-2">
+                        <GitCompare size={15} style={{ color: "var(--ed-ink-3)" }} aria-hidden="true" />
+                        <h4 className="ed-h3" style={{ marginTop: 0 }}>{label}</h4>
+                        <span
+                          className="ed-caption tabular-nums"
+                          style={{
+                            border: "1px solid var(--ed-rule)",
+                            borderRadius: "999px",
+                            padding: "1px 9px",
+                          }}
+                        >
+                          {items.length}
+                        </span>
+                      </div>
+                      <div className="flex flex-col" style={{ gap: "10px" }}>
+                        {items.map((change, index) => (
+                          <article key={`${kind}-${index}`} className="ed-card" style={{ padding: "14px" }}>
+                            <div className="flex items-start gap-3">
+                              <div
+                                className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center"
+                                style={{
+                                  border: "1px solid var(--ed-rule)",
+                                  background: "var(--ed-paper)",
+                                  borderRadius: "3px",
+                                  fontFamily: "var(--font-plex-mono), ui-monospace, monospace",
+                                  fontSize: "13px",
+                                  fontWeight: 600,
+                                  color: "var(--ed-signal)",
+                                }}
+                              >
+                                {kind === "added" ? "+" : kind === "removed" ? "-" : "~"}
+                              </div>
+                              <div className="min-w-0 flex-1">
+                                <h5 className="ed-body" style={{ marginTop: 0, fontWeight: 600, color: "var(--ed-ink)" }}>{change.title}</h5>
+                                <p className="ed-body" style={{ marginTop: "6px" }}>{change.detail}</p>
+                                <div className="mt-3 flex flex-wrap gap-1.5">
+                                  {change.old_refs.map((ref) => {
+                                    const raw = citationByLabel.get(`O${ref}`);
+                                    if (!raw) return null;
+                                    return (
+                                      <button type="button" key={`old-${ref}`} onClick={() => handleCitation(raw)} className="inline-flex items-center gap-1" style={edRefBtnStyle}>
+                                        <FileText size={12} aria-hidden="true" />
+                                        O{ref}
+                                      </button>
+                                    );
+                                  })}
+                                  {change.new_refs.map((ref) => {
+                                    const raw = citationByLabel.get(`N${ref}`);
+                                    if (!raw) return null;
+                                    return (
+                                      <button type="button" key={`new-${ref}`} onClick={() => handleCitation(raw)} className="inline-flex items-center gap-1" style={edRefBtnStyle}>
+                                        <FileText size={12} aria-hidden="true" />
+                                        N{ref}
+                                      </button>
+                                    );
+                                  })}
+                                </div>
+                              </div>
+                            </div>
+                          </article>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <p className="ed-body" style={{ padding: "16px 20px", marginTop: 0 }}>
+                {tOr("diff.waiting", "The comparison report will appear here when the job finishes.")}
+              </p>
+            )}
+          </section>
+        ) : (
+          <section
+            className="text-center"
+            style={{
+              border: "1px dashed var(--ed-rule)",
+              background: "var(--ed-paper-2)",
+              borderRadius: "3px",
+              padding: "48px 32px",
+            }}
+          >
+            <GitCompare size={32} className="mx-auto" style={{ color: "var(--ed-ink-3)" }} aria-hidden="true" />
+            <h3 className="ed-h3" style={{ marginTop: "12px" }}>
+              {tOr("diff.emptyTitle", "No comparisons yet")}
+            </h3>
+            <p className="ed-body mx-auto" style={{ marginTop: "8px", maxWidth: "28rem" }}>
+              {tOr("diff.emptyBody", "Choose two ready documents to generate a cited semantic change report.")}
+            </p>
+          </section>
+        )}
+      </div>
+    );
   }
 
   return (

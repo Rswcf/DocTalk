@@ -4,13 +4,11 @@ import React, { useMemo, useState, useEffect } from 'react';
 import Link from 'next/link';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import { ArrowLeft, Clock, Tag, ArrowRight } from 'lucide-react';
-import Header from '../../../components/Header';
-import Footer from '../../../components/Footer';
-import ArticleMeta from '../../../components/seo/ArticleMeta';
+import { ArrowLeft, ArrowRight, Calendar, Clock } from 'lucide-react';
 import type { BlogPost } from '../../../lib/blog';
 import { useLocale } from '../../../i18n';
-import { getBlogCategoryLabel } from '../../../lib/publicI18n';
+import { formatDateForLocale, getBlogCategoryLabel } from '../../../lib/publicI18n';
+import MarketingShell from '../../../components/marketing/MarketingShell';
 
 interface TocItem {
   id: string;
@@ -104,26 +102,34 @@ function StickyTOC({ items }: { items: TocItem[] }) {
 
   return (
     <nav className="hidden lg:block sticky top-24 self-start">
-      <h2 className="text-xs font-semibold text-zinc-900 dark:text-zinc-100 mb-3 uppercase tracking-wider">
+      <div className="ed-label" style={{ marginBottom: '14px' }}>
         {t('blog.post.onThisPage')}
-      </h2>
-      <ul className="space-y-1 border-l border-zinc-200 dark:border-zinc-800">
-        {items.map((item) => (
-          <li key={item.id} className={item.level === 3 ? 'ml-0' : ''}>
-            <a
-              href={`#${item.id}`}
-              className={`block text-[13px] leading-snug py-1 transition-colors duration-150 ${
-                item.level === 3 ? 'pl-6' : 'pl-4'
-              } ${
-                activeId === item.id
-                  ? 'text-blue-600 dark:text-blue-400 border-l-2 border-blue-600 dark:border-blue-400 -ml-px font-medium'
-                  : 'text-zinc-500 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-zinc-100'
-              }`}
-            >
-              {item.text}
-            </a>
-          </li>
-        ))}
+      </div>
+      <ul style={{ listStyle: 'none', margin: 0, padding: 0, borderLeft: '1px solid var(--ed-rule)' }}>
+        {items.map((item) => {
+          const isActive = activeId === item.id;
+          return (
+            <li key={item.id}>
+              <a
+                href={`#${item.id}`}
+                style={{
+                  display: 'block',
+                  fontSize: '13px',
+                  lineHeight: 1.4,
+                  padding: '5px 0',
+                  paddingLeft: item.level === 3 ? '24px' : '16px',
+                  marginLeft: isActive ? '-1px' : undefined,
+                  borderLeft: isActive ? '2px solid var(--ed-signal)' : undefined,
+                  color: isActive ? 'var(--ed-signal)' : 'var(--ed-ink-3)',
+                  fontWeight: isActive ? 500 : 400,
+                  transition: 'color 150ms ease',
+                }}
+              >
+                {item.text}
+              </a>
+            </li>
+          );
+        })}
       </ul>
     </nav>
   );
@@ -133,16 +139,17 @@ function InlineTOC({ items }: { items: TocItem[] }) {
   const { t } = useLocale();
   if (items.length === 0) return null;
   return (
-    <nav className="lg:hidden mb-10 p-5 bg-zinc-50 dark:bg-zinc-900/50 border border-zinc-200 dark:border-zinc-800 rounded-xl">
-      <h2 className="text-xs font-semibold text-zinc-900 dark:text-zinc-100 mb-3 uppercase tracking-wider">
+    <nav className="lg:hidden ed-card" style={{ marginBottom: '40px' }}>
+      <div className="ed-label" style={{ marginBottom: '14px' }}>
         {t('blog.post.tableOfContents')}
-      </h2>
-      <ul className="space-y-1.5">
+      </div>
+      <ul style={{ listStyle: 'none', margin: 0, padding: 0 }}>
         {items.map((item) => (
-          <li key={item.id} className={item.level === 3 ? 'ml-4' : ''}>
+          <li key={item.id} style={{ marginBottom: '8px', paddingLeft: item.level === 3 ? '16px' : 0 }}>
             <a
               href={`#${item.id}`}
-              className="text-sm text-zinc-500 dark:text-zinc-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+              className="ed-body"
+              style={{ color: 'var(--ed-ink-2)', textDecoration: 'none' }}
             >
               {item.text}
             </a>
@@ -157,21 +164,23 @@ function RelatedPosts({ posts }: { posts: BlogPost[] }) {
   const { t } = useLocale();
   if (posts.length === 0) return null;
   return (
-    <section className="mt-16 pt-10 border-t border-zinc-200 dark:border-zinc-800">
-      <h2 className="text-xl font-semibold text-zinc-900 dark:text-zinc-100 mb-6">
+    <section style={{ marginTop: '64px', paddingTop: '40px', borderTop: '1px solid var(--ed-rule)' }}>
+      <h2 className="ed-h2" style={{ marginBottom: '24px' }}>
         {t('blog.post.relatedArticles')}
       </h2>
-      <div className="grid gap-5 sm:grid-cols-2">
+      <div
+        className="grid grid-cols-1 sm:grid-cols-2"
+        style={{ gap: '16px', gridAutoRows: '1fr' }}
+      >
         {posts.map((post) => (
           <Link
             key={post.slug}
             href={`/blog/${post.slug}`}
-            className="group block bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl p-5 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-[box-shadow,transform] duration-200"
+            className="ed-card h-full"
+            style={{ display: 'flex', flexDirection: 'column' }}
           >
-            <h3 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors duration-200 mb-2 leading-snug">
-              {post.title}
-            </h3>
-            <p className="text-xs text-zinc-600 dark:text-zinc-300 line-clamp-2">
+            <h3 className="ed-h3">{post.title}</h3>
+            <p className="ed-body" style={{ marginTop: '8px' }}>
               {post.description}
             </p>
           </Link>
@@ -187,7 +196,7 @@ interface BlogPostClientProps {
 }
 
 export default function BlogPostClient({ post, relatedPosts }: BlogPostClientProps) {
-  const { t } = useLocale();
+  const { locale, t } = useLocale();
   const toc = useMemo(() => extractToc(post.content), [post.content]);
   const headingIdsByOffset = useMemo(() => extractHeadingIdsByOffset(post.content), [post.content]);
   const getHeadingId = (children: React.ReactNode, node: unknown) => {
@@ -198,203 +207,271 @@ export default function BlogPostClient({ post, relatedPosts }: BlogPostClientPro
       : slugifyHeading(getNodeText(children));
   };
 
+  const localizedCategory = getBlogCategoryLabel(t, post.category);
+
   return (
-    <div className="min-h-screen flex flex-col bg-white dark:bg-zinc-950">
-      <Header variant="minimal" />
+    <MarketingShell
+      breadcrumb={[
+        { label: t('blog.index.title'), href: '/blog' },
+        { label: localizedCategory, href: `/blog/category/${post.category}` },
+        { label: post.title },
+      ]}
+    >
+      {/* Back link */}
+      <div className="ed-shell" style={{ paddingTop: '32px' }}>
+        <Link href="/blog" className="ed-link">
+          <ArrowLeft size={14} aria-hidden="true" />
+          {t('blog.post.backToBlog')}
+        </Link>
+      </div>
 
-      <main className="flex-1">
-        {/* Back link */}
-        <div className="max-w-5xl mx-auto px-6 pt-8">
-          <Link
-            href="/blog"
-            className="inline-flex items-center gap-1.5 text-sm text-zinc-500 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors"
+      {/* Post header */}
+      <header className="ed-shell" style={{ paddingTop: '24px', paddingBottom: '32px' }}>
+        <div style={{ maxWidth: '760px' }}>
+          <div className="flex items-center flex-wrap gap-x-3 gap-y-1" style={{ marginBottom: '16px' }}>
+            <Link
+              href={`/blog/category/${post.category}`}
+              className="ed-label"
+              style={{ color: 'var(--ed-signal)' }}
+            >
+              {localizedCategory}
+            </Link>
+            <span className="ed-caption flex items-center gap-1">
+              <Clock size={12} aria-hidden="true" />
+              {t('blog.meta.minutesRead', { minutes: post.readingMinutes })}
+            </span>
+          </div>
+          <h1 className="ed-h1">{post.title}</h1>
+          <p className="ed-lede" style={{ marginTop: '18px' }}>
+            {post.description}
+          </p>
+          {/* Article meta — editorial mono treatment */}
+          <div
+            className="flex flex-wrap items-center gap-x-4 gap-y-2"
+            style={{ marginTop: '20px' }}
           >
-            <ArrowLeft size={14} />
-            {t('blog.post.backToBlog')}
-          </Link>
-        </div>
-
-        {/* Post Header */}
-        <header className="max-w-5xl mx-auto px-6 pt-6 pb-8">
-          <div className="max-w-2xl">
-            <div className="flex items-center gap-3 mb-4">
-              <Link
-                href={`/blog/category/${post.category}`}
-                className="inline-block px-2.5 py-0.5 text-xs font-medium rounded-full bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-colors"
-              >
-                {getBlogCategoryLabel(t, post.category)}
-              </Link>
-              <span className="flex items-center gap-1 text-xs text-zinc-500 dark:text-zinc-300">
-                <Clock size={12} />
-                {t('blog.meta.minutesRead', { minutes: post.readingMinutes })}
+            <span className="ed-caption">
+              {t('blog.meta.by')}{' '}
+              <span style={{ color: 'var(--ed-ink-2)' }}>{post.author}</span>
+            </span>
+            <span className="ed-caption flex items-center gap-1.5">
+              <Calendar size={13} aria-hidden="true" />
+              {t('blog.meta.published')}{' '}
+              <time dateTime={post.date}>{formatDateForLocale(locale, post.date)}</time>
+            </span>
+            {post.updated && post.updated !== post.date ? (
+              <span className="ed-caption flex items-center gap-1.5">
+                <Clock size={13} aria-hidden="true" />
+                {t('blog.meta.updated')}{' '}
+                <time dateTime={post.updated}>{formatDateForLocale(locale, post.updated)}</time>
               </span>
-            </div>
-            <h1 className="font-serif text-3xl sm:text-4xl font-semibold text-zinc-900 dark:text-zinc-100 mb-4 leading-tight tracking-tight">
-              {post.title}
-            </h1>
-            <p className="text-lg text-zinc-600 dark:text-zinc-300 mb-6 leading-relaxed">
-              {post.description}
-            </p>
-            <ArticleMeta
-              author={post.author}
-              published={post.date}
-              updated={post.updated}
-            />
+            ) : null}
           </div>
-        </header>
-
-        {/* Separator */}
-        <div className="max-w-5xl mx-auto px-6">
-          <div className="border-t border-zinc-200 dark:border-zinc-800" />
         </div>
+      </header>
 
-        {/* Content with sidebar TOC */}
-        <article className="max-w-5xl mx-auto px-6 pt-10 pb-16">
-          <div className="lg:grid lg:grid-cols-[1fr_220px] lg:gap-12">
-            {/* Main content */}
-            <div className="min-w-0">
-              <InlineTOC items={toc} />
+      {/* Separator */}
+      <div className="ed-shell">
+        <hr className="ed-rule" />
+      </div>
 
-              <div className="prose prose-zinc dark:prose-invert max-w-none prose-headings:scroll-mt-20 prose-headings:tracking-tight prose-a:text-blue-600 dark:prose-a:text-blue-400 prose-a:no-underline hover:prose-a:underline prose-img:rounded-xl prose-table:text-sm prose-p:text-zinc-600 dark:prose-p:text-zinc-400 prose-li:text-zinc-600 dark:prose-li:text-zinc-400">
-                <ReactMarkdown
-                  remarkPlugins={[remarkGfm]}
-                  components={{
-                    h2: ({ children, node, ...props }) => {
-                      const id = getHeadingId(children, node);
-                      return <h2 id={id} {...props}>{children}</h2>;
-                    },
-                    h3: ({ children, node, ...props }) => {
-                      const id = getHeadingId(children, node);
-                      return <h3 id={id} {...props}>{children}</h3>;
-                    },
-                    a: ({ href, children, ...props }) => {
-                      const isInternal = href?.startsWith('/');
-                      if (isInternal) {
-                        return (
-                          <Link href={href!} {...props}>
-                            {children}
-                          </Link>
-                        );
-                      }
+      {/* Content with sidebar TOC */}
+      <article className="ed-shell" style={{ paddingTop: '40px', paddingBottom: '64px' }}>
+        <div className="lg:grid lg:grid-cols-[1fr_220px] lg:gap-12">
+          {/* Main content */}
+          <div className="min-w-0">
+            <InlineTOC items={toc} />
+
+            <div className="ed-prose" style={{ maxWidth: 'none' }}>
+              <ReactMarkdown
+                remarkPlugins={[remarkGfm]}
+                components={{
+                  h2: ({ children, node, ...props }) => {
+                    const id = getHeadingId(children, node);
+                    return (
+                      <h2
+                        id={id}
+                        className="ed-h2"
+                        style={{ scrollMarginTop: '96px', marginTop: '40px', marginBottom: '16px' }}
+                        {...props}
+                      >
+                        {children}
+                      </h2>
+                    );
+                  },
+                  h3: ({ children, node, ...props }) => {
+                    const id = getHeadingId(children, node);
+                    return (
+                      <h3
+                        id={id}
+                        className="ed-h3"
+                        style={{ scrollMarginTop: '96px', marginTop: '28px', marginBottom: '10px' }}
+                        {...props}
+                      >
+                        {children}
+                      </h3>
+                    );
+                  },
+                  a: ({ href, children, ...props }) => {
+                    const isInternal = href?.startsWith('/');
+                    if (isInternal) {
                       return (
-                        <a href={href} target="_blank" rel="noopener noreferrer" {...props}>
+                        <Link href={href!} {...props}>
                           {children}
-                        </a>
+                        </Link>
                       );
-                    },
-                    table: ({ children, ...props }) => (
-                      <div className="not-prose my-8 -mx-6 overflow-x-auto px-6">
-                        <table
-                          className="min-w-[42rem] border-collapse text-left text-sm text-zinc-700 dark:text-zinc-300"
-                          {...props}
-                        >
-                          {children}
-                        </table>
-                      </div>
-                    ),
-                    th: ({ children, ...props }) => (
-                      <th
-                        className="border border-zinc-200 bg-zinc-50 px-3 py-2 font-semibold text-zinc-900 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-100"
-                        {...props}
-                      >
+                    }
+                    return (
+                      <a href={href} target="_blank" rel="noopener noreferrer" {...props}>
                         {children}
-                      </th>
-                    ),
-                    td: ({ children, ...props }) => (
-                      <td
-                        className="border border-zinc-200 px-3 py-2 align-top dark:border-zinc-800"
-                        {...props}
-                      >
-                        {children}
-                      </td>
-                    ),
-                    pre: ({ children, ...props }) => (
-                      <pre className="overflow-x-auto rounded-lg bg-zinc-100 p-4 text-sm dark:bg-zinc-900" {...props}>
-                        {children}
-                      </pre>
-                    ),
-                    code: ({ className, children, ...props }) => (
-                      <code className={`${className || ''} [overflow-wrap:anywhere]`} {...props}>
-                        {children}
-                      </code>
-                    ),
-                  }}
-                >
-                  {post.content}
-                </ReactMarkdown>
-              </div>
-
-              {/* Tags */}
-              {post.tags.length > 0 && (
-                <div className="mt-10 flex items-center gap-2 flex-wrap">
-                  <Tag size={14} className="text-zinc-400 dark:text-zinc-500" />
-                  {post.tags.map((tag) => (
-                    <span
-                      key={tag}
-                      className="px-2.5 py-0.5 text-xs rounded-full bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300"
+                      </a>
+                    );
+                  },
+                  table: ({ children, ...props }) => (
+                    <div
+                      style={{ margin: '32px 0', overflowX: 'auto' }}
                     >
-                      {tag}
-                    </span>
-                  ))}
-                </div>
-              )}
-
-              {/* Author Box */}
-              <div className="mt-12 p-6 bg-zinc-50 dark:bg-zinc-900/50 border border-zinc-200 dark:border-zinc-800 rounded-xl">
-                <h3 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100 mb-2">
-                  {t('blog.post.aboutTitle')}
-                </h3>
-                <p className="text-sm text-zinc-600 dark:text-zinc-300 mb-4 leading-relaxed">
-                  {t('blog.post.aboutDescription')}
-                </p>
-                <div className="flex gap-3">
-                  <Link
-                    href="/demo"
-                    className="group inline-flex items-center px-4 py-2 text-sm font-medium rounded-lg bg-zinc-900 dark:bg-zinc-50 text-white dark:text-zinc-900 hover:bg-zinc-800 dark:hover:bg-zinc-200 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400 dark:focus-visible:ring-zinc-500 focus-visible:ring-offset-2"
-                  >
-                    {t('blog.post.tryFreeDemo')}
-                    <ArrowRight className="ml-1.5 w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
-                  </Link>
-                  <Link
-                    href="/features"
-                    className="inline-flex items-center px-4 py-2 text-sm font-medium rounded-lg border border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-300 hover:border-zinc-400 dark:hover:border-zinc-600 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400 dark:focus-visible:ring-zinc-500 focus-visible:ring-offset-2"
-                  >
-                    {t('blog.post.exploreFeatures')}
-                  </Link>
-                </div>
-              </div>
-
-              {/* CTA Banner */}
-              <div className="mt-10 relative overflow-hidden rounded-xl border border-zinc-200 dark:border-zinc-800">
-                <div className="absolute inset-0 bg-gradient-to-br from-zinc-900 via-zinc-900 to-zinc-800 dark:from-zinc-100 dark:via-zinc-50 dark:to-zinc-100" />
-                <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-blue-500/10 via-transparent to-transparent" />
-                <div className="relative px-8 py-10 text-center">
-                  <h3 className="text-xl font-semibold text-white dark:text-zinc-900 mb-2">
-                    {t('blog.post.cta.title')}
-                  </h3>
-                  <p className="text-sm text-zinc-400 dark:text-zinc-600 mb-5 max-w-md mx-auto">
-                    {t('blog.post.cta.description')}
-                  </p>
-                  <Link
-                    href="/demo"
-                    className="group inline-flex items-center px-6 py-2.5 text-sm font-medium rounded-lg bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-50 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
-                  >
-                    {t('blog.post.cta.launchDemo')}
-                    <ArrowRight className="ml-1.5 w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
-                  </Link>
-                </div>
-              </div>
-
-              <RelatedPosts posts={relatedPosts} />
+                      <table
+                        style={{
+                          minWidth: '42rem',
+                          borderCollapse: 'collapse',
+                          textAlign: 'left',
+                          fontSize: '14px',
+                          color: 'var(--ed-ink-2)',
+                        }}
+                        {...props}
+                      >
+                        {children}
+                      </table>
+                    </div>
+                  ),
+                  th: ({ children, ...props }) => (
+                    <th
+                      style={{
+                        border: '1px solid var(--ed-rule)',
+                        background: 'var(--ed-paper-2)',
+                        padding: '8px 12px',
+                        fontWeight: 600,
+                        color: 'var(--ed-ink)',
+                      }}
+                      {...props}
+                    >
+                      {children}
+                    </th>
+                  ),
+                  td: ({ children, ...props }) => (
+                    <td
+                      style={{
+                        border: '1px solid var(--ed-rule)',
+                        padding: '8px 12px',
+                        verticalAlign: 'top',
+                      }}
+                      {...props}
+                    >
+                      {children}
+                    </td>
+                  ),
+                  pre: ({ children, ...props }) => (
+                    <pre
+                      style={{
+                        overflowX: 'auto',
+                        borderRadius: '4px',
+                        border: '1px solid var(--ed-rule)',
+                        background: 'var(--ed-paper-2)',
+                        padding: '16px',
+                        fontSize: '13.5px',
+                        margin: '20px 0',
+                      }}
+                      {...props}
+                    >
+                      {children}
+                    </pre>
+                  ),
+                  code: ({ className, children, ...props }) => (
+                    <code
+                      className={className || ''}
+                      style={{
+                        fontFamily: 'var(--font-plex-mono), ui-monospace, monospace',
+                        fontSize: '0.92em',
+                        overflowWrap: 'anywhere',
+                      }}
+                      {...props}
+                    >
+                      {children}
+                    </code>
+                  ),
+                }}
+              >
+                {post.content}
+              </ReactMarkdown>
             </div>
 
-            {/* Sidebar TOC (desktop) */}
-            <StickyTOC items={toc} />
-          </div>
-        </article>
-      </main>
+            {/* Tags */}
+            {post.tags.length > 0 && (
+              <div className="flex items-center flex-wrap" style={{ marginTop: '40px', gap: '8px' }}>
+                {post.tags.map((tag) => (
+                  <span
+                    key={tag}
+                    className="ed-label"
+                    style={{
+                      padding: '4px 10px',
+                      border: '1px solid var(--ed-rule)',
+                      background: 'var(--ed-paper-2)',
+                      borderRadius: '3px',
+                    }}
+                  >
+                    {tag}
+                  </span>
+                ))}
+              </div>
+            )}
 
-      <Footer />
-    </div>
+            {/* Author box */}
+            <div className="ed-card" style={{ marginTop: '48px' }}>
+              <h3 className="ed-h3">{t('blog.post.aboutTitle')}</h3>
+              <p className="ed-body" style={{ marginTop: '8px', marginBottom: '18px' }}>
+                {t('blog.post.aboutDescription')}
+              </p>
+              <div className="flex flex-wrap items-center" style={{ gap: '16px' }}>
+                <Link href="/demo" className="ed-cta">
+                  {t('blog.post.tryFreeDemo')}
+                  <ArrowRight className="w-3.5 h-3.5" aria-hidden="true" />
+                </Link>
+                <Link href="/features" className="ed-link">
+                  {t('blog.post.exploreFeatures')} <span aria-hidden="true">→</span>
+                </Link>
+              </div>
+            </div>
+
+            {/* CTA banner */}
+            <div
+              style={{
+                marginTop: '40px',
+                border: '1px solid var(--ed-rule)',
+                background: 'var(--ed-paper-2)',
+                padding: '40px 32px',
+                textAlign: 'center',
+              }}
+            >
+              <h3 className="ed-h2">{t('blog.post.cta.title')}</h3>
+              <p className="ed-body" style={{ marginTop: '12px', maxWidth: '440px', marginInline: 'auto' }}>
+                {t('blog.post.cta.description')}
+              </p>
+              <div style={{ marginTop: '24px' }}>
+                <Link href="/demo" className="ed-cta">
+                  {t('blog.post.cta.launchDemo')}
+                  <ArrowRight className="w-3.5 h-3.5" aria-hidden="true" />
+                </Link>
+              </div>
+            </div>
+
+            <RelatedPosts posts={relatedPosts} />
+          </div>
+
+          {/* Sidebar TOC (desktop) */}
+          <StickyTOC items={toc} />
+        </div>
+      </article>
+    </MarketingShell>
   );
 }

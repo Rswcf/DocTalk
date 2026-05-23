@@ -1,23 +1,13 @@
 "use client";
 
 import Link from 'next/link';
-import Header from '../../components/Header';
-import Footer from '../../components/Footer';
-import { BookOpen, Inbox } from 'lucide-react';
+import { Inbox } from 'lucide-react';
 import type { BlogPost } from '../../lib/blog';
-import { EmptyState } from '../../components/ui/EmptyState';
 import { useLocale } from '../../i18n';
 import { formatDateForLocale, getBlogCategoryLabel } from '../../lib/publicI18n';
-
-function CategoryBadge({ category }: { category: string }) {
-  const { t } = useLocale();
-
-  return (
-    <span className="inline-block px-2.5 py-0.5 text-xs font-medium rounded-full bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300">
-      {getBlogCategoryLabel(t, category)}
-    </span>
-  );
-}
+import MarketingShell from '../../components/marketing/MarketingShell';
+import EdPageHero from '../../components/marketing/EdPageHero';
+import EdSection from '../../components/marketing/EdSection';
 
 function PostCard({ post }: { post: BlogPost }) {
   const { locale, t } = useLocale();
@@ -25,21 +15,22 @@ function PostCard({ post }: { post: BlogPost }) {
   return (
     <Link
       href={`/blog/${post.slug}`}
-      className="group block bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl p-6 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-[box-shadow,transform] duration-200"
+      className="ed-card h-full"
+      style={{ display: 'flex', flexDirection: 'column' }}
     >
-      <div className="flex items-center gap-3 mb-3">
-        <CategoryBadge category={post.category} />
-        <span className="text-xs text-zinc-500 dark:text-zinc-300">
+      <div className="flex items-center flex-wrap gap-x-3 gap-y-1" style={{ marginBottom: '12px' }}>
+        <span className="ed-label" style={{ color: 'var(--ed-signal)' }}>
+          {getBlogCategoryLabel(t, post.category)}
+        </span>
+        <span className="ed-caption">
           {t('blog.meta.minutesRead', { minutes: post.readingMinutes })}
         </span>
       </div>
-      <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors duration-200 mb-2 leading-snug">
-        {post.title}
-      </h2>
-      <p className="text-sm text-zinc-600 dark:text-zinc-300 line-clamp-2 mb-4 leading-relaxed">
+      <h2 className="ed-h3">{post.title}</h2>
+      <p className="ed-body" style={{ marginTop: '8px', flex: 1 }}>
         {post.description}
       </p>
-      <time className="text-xs text-zinc-500 dark:text-zinc-500">
+      <time className="ed-caption" style={{ marginTop: '16px', display: 'block' }}>
         {formatDateForLocale(locale, post.date)}
       </time>
     </Link>
@@ -55,91 +46,92 @@ export default function BlogIndexClient({ posts }: BlogIndexClientProps) {
   const categories = ['all', ...Array.from(new Set(posts.map((p) => p.category)))];
 
   return (
-    <div className="min-h-screen flex flex-col bg-white dark:bg-zinc-950">
-      <Header variant="minimal" />
+    <MarketingShell
+      breadcrumb={[
+        { label: tOr('blog.breadcrumb.home', 'Home'), href: '/' },
+        { label: t('blog.index.title') },
+      ]}
+    >
+      <EdPageHero
+        eyebrow={t('blog.index.title')}
+        title={t('blog.index.title')}
+        lede={t('blog.index.description')}
+      />
 
-      <main className="flex-1">
-        {/* Hero */}
-        <section className="border-b border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900/50">
-          <div className="max-w-4xl mx-auto px-6 pt-24 pb-16">
-            <div className="flex items-center gap-3 mb-6">
-              <div className="inline-flex items-center justify-center w-10 h-10 rounded-full bg-zinc-200 dark:bg-zinc-800">
-                <BookOpen className="w-5 h-5 text-zinc-600 dark:text-zinc-300" />
-              </div>
-              <h1 className="font-serif text-3xl sm:text-4xl font-semibold text-zinc-900 dark:text-zinc-100 tracking-tight">
-                {t('blog.index.title')}
-              </h1>
-            </div>
-            <p className="text-lg text-zinc-600 dark:text-zinc-300 max-w-2xl">
-              {t('blog.index.description')}
-            </p>
+      <EdSection>
+        {/* Category links */}
+        <div className="flex flex-wrap" style={{ gap: '10px', marginBottom: '40px' }}>
+          {categories.map((cat) => (
+            <Link
+              key={cat}
+              href={cat === 'all' ? '/blog' : `/blog/category/${cat}`}
+              className="ed-label"
+              style={{
+                padding: '6px 14px',
+                border: '1px solid var(--ed-rule)',
+                background: 'var(--ed-paper-2)',
+                borderRadius: '3px',
+              }}
+            >
+              {getBlogCategoryLabel(t, cat)}
+            </Link>
+          ))}
+        </div>
+
+        {/* High-intent research panel */}
+        <div className="ed-card" style={{ marginBottom: '40px' }}>
+          <h2 className="ed-h3">{t('blog.index.panel.title')}</h2>
+          <p className="ed-body" style={{ marginTop: '8px', marginBottom: '16px', maxWidth: '620px' }}>
+            {t('blog.index.panel.description')}
+          </p>
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+            <Link href="/blog/category/comparisons" className="ed-link">
+              {t('blog.index.panel.compareGuides')}
+            </Link>
+            <Link href="/compare" className="ed-link">
+              {t('blog.index.panel.toolComparisons')}
+            </Link>
+            <Link href="/alternatives" className="ed-link">
+              {t('blog.index.panel.alternatives')}
+            </Link>
+            <Link href="/use-cases" className="ed-link">
+              {t('blog.index.panel.useCases')}
+            </Link>
           </div>
-        </section>
+        </div>
 
-        {/* Filters + Grid */}
-        <section className="max-w-4xl mx-auto px-6 py-12">
-          {/* Category Links */}
-          <div className="flex flex-wrap gap-2 mb-10">
-            {categories.map((cat) => (
-              <Link
-                key={cat}
-                href={cat === 'all' ? '/blog' : `/blog/category/${cat}`}
-                className="px-4 py-1.5 text-sm font-medium rounded-full border cursor-pointer transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400 dark:focus-visible:ring-zinc-500 focus-visible:ring-offset-2 bg-white dark:bg-zinc-900 text-zinc-600 dark:text-zinc-300 border-zinc-200 dark:border-zinc-800 hover:border-zinc-400 dark:hover:border-zinc-600"
-              >
-                {getBlogCategoryLabel(t, cat)}
-              </Link>
-            ))}
-          </div>
-
-          <div className="rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900/40 p-6 mb-10">
-            <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100 mb-2">
-              {t('blog.index.panel.title')}
-            </h2>
-            <p className="text-sm text-zinc-600 dark:text-zinc-300 mb-4 max-w-2xl">
-              {t('blog.index.panel.description')}
-            </p>
-            <div className="flex flex-wrap gap-3 text-sm">
-              <Link href="/blog/category/comparisons" className="text-blue-600 dark:text-blue-400 hover:underline">
-                {t('blog.index.panel.compareGuides')}
-              </Link>
-              <span className="text-zinc-300 dark:text-zinc-700">|</span>
-              <Link href="/compare" className="text-blue-600 dark:text-blue-400 hover:underline">
-                {t('blog.index.panel.toolComparisons')}
-              </Link>
-              <span className="text-zinc-300 dark:text-zinc-700">|</span>
-              <Link href="/alternatives" className="text-blue-600 dark:text-blue-400 hover:underline">
-                {t('blog.index.panel.alternatives')}
-              </Link>
-              <span className="text-zinc-300 dark:text-zinc-700">|</span>
-              <Link href="/use-cases" className="text-blue-600 dark:text-blue-400 hover:underline">
-                {t('blog.index.panel.useCases')}
-              </Link>
-            </div>
-          </div>
-
-          {/* Post Grid */}
-          {posts.length === 0 ? (
-            <EmptyState
-              icon={Inbox}
-              title={t('blog.index.empty')}
-              description={tOr(
+        {/* Post grid */}
+        {posts.length === 0 ? (
+          <div
+            className="ed-card flex flex-col items-center text-center"
+            style={{ padding: '56px 24px' }}
+            role="status"
+          >
+            <span style={{ color: 'var(--ed-ink-3)', marginBottom: '14px' }}>
+              <Inbox className="w-7 h-7" aria-hidden="true" />
+            </span>
+            <h3 className="ed-h3">{t('blog.index.empty')}</h3>
+            <p className="ed-body" style={{ marginTop: '8px', maxWidth: '420px' }}>
+              {tOr(
                 'blog.index.emptyDescription',
                 'New posts are added regularly. In the meantime, try DocTalk on a real document.'
               )}
-              actionLabel={tOr('blog.index.emptyAction', 'Try the free demo')}
-              actionHref="/demo"
-            />
-          ) : (
-            <div className="grid gap-5 sm:grid-cols-2">
-              {posts.map((post) => (
-                <PostCard key={post.slug} post={post} />
-              ))}
-            </div>
-          )}
-        </section>
-      </main>
-
-      <Footer />
-    </div>
+            </p>
+            <Link href="/demo" className="ed-cta" style={{ marginTop: '20px' }}>
+              {tOr('blog.index.emptyAction', 'Try the free demo')}
+            </Link>
+          </div>
+        ) : (
+          <div
+            className="grid grid-cols-1 sm:grid-cols-2"
+            style={{ gap: '16px', gridAutoRows: '1fr' }}
+          >
+            {posts.map((post) => (
+              <PostCard key={post.slug} post={post} />
+            ))}
+          </div>
+        )}
+      </EdSection>
+    </MarketingShell>
   );
 }

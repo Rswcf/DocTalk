@@ -1,12 +1,13 @@
 "use client";
 
 import Link from 'next/link';
-import { ArrowLeft, Clock } from 'lucide-react';
-import Header from '../../../../components/Header';
-import Footer from '../../../../components/Footer';
+import { ArrowLeft } from 'lucide-react';
 import type { BlogPost } from '../../../../lib/blog';
 import { useLocale } from '../../../../i18n';
 import { formatDateForLocale, getBlogCategoryLabel } from '../../../../lib/publicI18n';
+import MarketingShell from '../../../../components/marketing/MarketingShell';
+import EdPageHero from '../../../../components/marketing/EdPageHero';
+import EdSection from '../../../../components/marketing/EdSection';
 
 interface CategoryClientProps {
   category: string;
@@ -49,127 +50,128 @@ export default function CategoryClient({
   description,
   posts,
 }: CategoryClientProps) {
-  const { locale, t } = useLocale();
+  const { locale, t, tOr } = useLocale();
   const relatedLinks = RELATED_LINK_KEYS[category] ?? RELATED_LINK_KEYS.guides;
   const categoryLinks = [
-    { href: '/blog/category/guides', label: getBlogCategoryLabel(t, 'guides') },
-    { href: '/blog/category/comparisons', label: getBlogCategoryLabel(t, 'comparisons') },
-    { href: '/blog/category/use-cases', label: getBlogCategoryLabel(t, 'use-cases') },
-    { href: '/blog/category/product', label: getBlogCategoryLabel(t, 'product') },
-    { href: '/blog/category/ai-insights', label: getBlogCategoryLabel(t, 'ai-insights') },
+    { href: '/blog/category/guides', label: getBlogCategoryLabel(t, 'guides'), key: 'guides' },
+    { href: '/blog/category/comparisons', label: getBlogCategoryLabel(t, 'comparisons'), key: 'comparisons' },
+    { href: '/blog/category/use-cases', label: getBlogCategoryLabel(t, 'use-cases'), key: 'use-cases' },
+    { href: '/blog/category/product', label: getBlogCategoryLabel(t, 'product'), key: 'product' },
+    { href: '/blog/category/ai-insights', label: getBlogCategoryLabel(t, 'ai-insights'), key: 'ai-insights' },
   ];
   const localizedLabel = getBlogCategoryLabel(t, category);
   const localizedDescription = t(`blog.category.description.${category}`);
+  const resolvedDescription =
+    localizedDescription === `blog.category.description.${category}` ? description : localizedDescription;
 
   return (
-    <div className="min-h-screen flex flex-col bg-white dark:bg-zinc-950">
-      <Header variant="minimal" />
+    <MarketingShell
+      breadcrumb={[
+        { label: tOr('blog.breadcrumb.home', 'Home'), href: '/' },
+        { label: t('blog.index.title'), href: '/blog' },
+        { label: localizedLabel },
+      ]}
+    >
+      <EdPageHero
+        eyebrow={t('blog.index.title')}
+        title={localizedLabel}
+        lede={resolvedDescription}
+        meta={
+          <Link href="/blog" className="ed-link">
+            <ArrowLeft size={14} aria-hidden="true" />
+            {t('blog.category.backAllPosts')}
+          </Link>
+        }
+      />
 
-      <main className="flex-1">
-        {/* Hero */}
-        <section className="bg-zinc-50 dark:bg-zinc-900/50 border-b border-zinc-200 dark:border-zinc-800">
-          <div className="max-w-4xl mx-auto px-6 py-16">
-            <Link
-              href="/blog"
-              className="inline-flex items-center gap-1.5 text-sm text-zinc-500 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors mb-6"
-            >
-              <ArrowLeft size={14} />
-              {t('blog.category.backAllPosts')}
-            </Link>
-            <h1 className="font-serif text-3xl sm:text-4xl font-semibold text-zinc-900 dark:text-zinc-100 mb-4">
-              {localizedLabel}
-            </h1>
-            <p className="text-lg text-zinc-500 dark:text-zinc-300 max-w-2xl">
-              {localizedDescription === `blog.category.description.${category}` ? description : localizedDescription}
-            </p>
-            <div className="flex flex-wrap gap-2 mt-6">
-              {categoryLinks.map((item) => {
-                const isActive = item.href.endsWith(`/${category}`);
-                return (
-                  <Link
-                    key={item.href}
-                    href={item.href}
-                    className={`px-3 py-1.5 text-sm rounded-full border transition-colors ${
-                      isActive
-                        ? 'bg-zinc-900 dark:bg-zinc-50 text-white dark:text-zinc-900 border-zinc-900 dark:border-zinc-50'
-                        : 'bg-white dark:bg-zinc-900 text-zinc-600 dark:text-zinc-300 border-zinc-200 dark:border-zinc-800 hover:border-zinc-400 dark:hover:border-zinc-600'
-                    }`}
-                  >
-                    {item.label}
-                  </Link>
-                );
-              })}
-            </div>
-          </div>
-        </section>
-
-        {/* Grid */}
-        <section className="max-w-4xl mx-auto px-6 py-12">
-          <div className="rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900/40 p-6 mb-10">
-            <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100 mb-2">
-              {t('blog.category.panel.title')}
-            </h2>
-            <p className="text-sm text-zinc-600 dark:text-zinc-300 mb-4">
-              {t('blog.category.panel.description')}
-            </p>
-            <div className="flex flex-wrap gap-3 text-sm">
-              {relatedLinks.map((item, index) => (
-                <span key={item.href} className="contents">
-                  {index > 0 ? <span className="text-zinc-300 dark:text-zinc-700">|</span> : null}
-                  <Link href={item.href} className="text-blue-600 dark:text-blue-400 hover:underline">
-                    {t(item.labelKey)}
-                  </Link>
-                </span>
-              ))}
-            </div>
-          </div>
-
-          {posts.length === 0 ? (
-            <div className="text-center py-16">
-              <p className="text-zinc-500 dark:text-zinc-300 mb-4">
-                {t('blog.category.empty')}
-              </p>
+      <EdSection>
+        {/* Category chips */}
+        <div className="flex flex-wrap" style={{ gap: '10px', marginBottom: '40px' }}>
+          {categoryLinks.map((item) => {
+            const isActive = item.key === category;
+            return (
               <Link
-                href="/blog"
-                className="inline-flex items-center px-4 py-2 text-sm font-medium rounded-lg border border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-300 hover:border-zinc-400 dark:hover:border-zinc-600 transition-colors"
+                key={item.href}
+                href={item.href}
+                className="ed-label"
+                aria-current={isActive ? 'page' : undefined}
+                style={{
+                  padding: '6px 14px',
+                  borderRadius: '3px',
+                  border: '1px solid',
+                  borderColor: isActive ? 'var(--ed-ink)' : 'var(--ed-rule)',
+                  background: isActive ? 'var(--ed-ink)' : 'var(--ed-paper-2)',
+                  color: isActive ? 'var(--ed-paper)' : 'var(--ed-ink-3)',
+                }}
               >
-                {t('blog.category.browseAllPosts')}
+                {item.label}
               </Link>
-            </div>
-          ) : (
-            <div className="grid gap-6 sm:grid-cols-2">
-              {posts.map((post) => (
-                <Link
-                  key={post.slug}
-                  href={`/blog/${post.slug}`}
-                  className="group block bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl p-6 hover:border-zinc-400 dark:hover:border-zinc-600 transition-colors"
-                >
-                  <div className="flex items-center gap-3 mb-3">
-                    <span className="inline-block px-2.5 py-0.5 text-xs font-medium rounded-full bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-700">
-                      {localizedLabel}
-                    </span>
-                    <span className="flex items-center gap-1 text-xs text-zinc-500 dark:text-zinc-300">
-                      <Clock size={12} />
-                      {t('blog.meta.minutesRead', { minutes: post.readingMinutes })}
-                    </span>
-                  </div>
-                  <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors mb-2">
-                    {post.title}
-                  </h2>
-                  <p className="text-sm text-zinc-500 dark:text-zinc-300 line-clamp-2 mb-4">
-                    {post.description}
-                  </p>
-                  <time className="text-xs text-zinc-400 dark:text-zinc-500">
-                    {formatDateForLocale(locale, post.date)}
-                  </time>
-                </Link>
-              ))}
-            </div>
-          )}
-        </section>
-      </main>
+            );
+          })}
+        </div>
 
-      <Footer />
-    </div>
+        {/* Continue-from-topic panel */}
+        <div className="ed-card" style={{ marginBottom: '40px' }}>
+          <h2 className="ed-h3">{t('blog.category.panel.title')}</h2>
+          <p className="ed-body" style={{ marginTop: '8px', marginBottom: '16px' }}>
+            {t('blog.category.panel.description')}
+          </p>
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+            {relatedLinks.map((item) => (
+              <Link key={item.href} href={item.href} className="ed-link">
+                {t(item.labelKey)}
+              </Link>
+            ))}
+          </div>
+        </div>
+
+        {/* Post grid */}
+        {posts.length === 0 ? (
+          <div
+            className="ed-card flex flex-col items-center text-center"
+            style={{ padding: '56px 24px' }}
+            role="status"
+          >
+            <h3 className="ed-h3">{t('blog.category.empty')}</h3>
+            <Link href="/blog" className="ed-cta" style={{ marginTop: '20px' }}>
+              {t('blog.category.browseAllPosts')}
+            </Link>
+          </div>
+        ) : (
+          <div
+            className="grid grid-cols-1 sm:grid-cols-2"
+            style={{ gap: '16px', gridAutoRows: '1fr' }}
+          >
+            {posts.map((post) => (
+              <Link
+                key={post.slug}
+                href={`/blog/${post.slug}`}
+                className="ed-card h-full"
+                style={{ display: 'flex', flexDirection: 'column' }}
+              >
+                <div
+                  className="flex items-center flex-wrap gap-x-3 gap-y-1"
+                  style={{ marginBottom: '12px' }}
+                >
+                  <span className="ed-label" style={{ color: 'var(--ed-signal)' }}>
+                    {localizedLabel}
+                  </span>
+                  <span className="ed-caption">
+                    {t('blog.meta.minutesRead', { minutes: post.readingMinutes })}
+                  </span>
+                </div>
+                <h2 className="ed-h3">{post.title}</h2>
+                <p className="ed-body" style={{ marginTop: '8px', flex: 1 }}>
+                  {post.description}
+                </p>
+                <time className="ed-caption" style={{ marginTop: '16px', display: 'block' }}>
+                  {formatDateForLocale(locale, post.date)}
+                </time>
+              </Link>
+            ))}
+          </div>
+        )}
+      </EdSection>
+    </MarketingShell>
   );
 }

@@ -1,66 +1,60 @@
 "use client";
 
-import Link from 'next/link';
 import { useLocale } from '../../i18n';
 import { usePageTitle } from '../../lib/usePageTitle';
-import Header from '../../components/Header';
-import Footer from '../../components/Footer';
+import MarketingShell from '../../components/marketing/MarketingShell';
+import EdPageHero from '../../components/marketing/EdPageHero';
+import EdSection from '../../components/marketing/EdSection';
+import EdProse from '../../components/marketing/EdProse';
 
 export default function TermsPageClient() {
   const { t, tOr } = useLocale();
   usePageTitle(t('terms.title'));
 
+  const sections = [
+    { num: '01', title: t('terms.section1.title'), content: t('terms.section1.content') },
+    { num: '02', title: t('terms.section2.title'), content: t('terms.section2.content') },
+    { num: '03', title: t('terms.section3.title'), content: t('terms.section3.content') },
+    { num: '04', title: t('terms.section4.title'), content: t('terms.section4.content') },
+    {
+      num: '05',
+      title: tOr('terms.section5.title', 'User-Uploaded Content and Intellectual Property'),
+      content: tOr(
+        'terms.section5.content',
+        'You retain all rights to documents you upload. You confirm that you have the legal right to upload, store, and process each document via DocTalk — whether you own it, authored it, or have a valid licence or permission from the rights holder. Do not upload copyrighted material you do not have permission to use, trade secrets of third parties, or content that violates privacy or confidentiality obligations. DocTalk does not host or publish your documents to third parties; the service is limited to processing your own content to answer your questions. We may remove content that we believe in good faith to infringe intellectual property rights under our notice-and-takedown procedure.'
+      ),
+    },
+  ];
+
   return (
-    <div className="flex min-h-screen flex-col bg-zinc-50 dark:bg-zinc-900">
-      <Header variant="minimal" />
-      <main id="main-content" className="flex-1 py-12 px-4">
-        <div className="max-w-2xl mx-auto bg-white dark:bg-zinc-800 rounded-xl p-8 shadow-sm">
-          <h1 className="text-2xl font-semibold mb-6 dark:text-white">{t('terms.title')}</h1>
+    <MarketingShell
+      breadcrumb={[
+        { label: t('useCasesHub.breadcrumb.home'), href: '/' },
+        { label: t('terms.title') },
+      ]}
+    >
+      <EdPageHero
+        eyebrow={t('terms.title')}
+        title={t('terms.title')}
+        meta={
+          <p className="ed-caption">
+            {t('terms.lastUpdated')}: 2026-02-05
+          </p>
+        }
+      />
 
-          <div className="prose dark:prose-invert max-w-none space-y-6 text-zinc-700 dark:text-zinc-300">
-            <section>
-              <h2 className="text-lg font-semibold mb-2 dark:text-white">{t('terms.section1.title')}</h2>
-              <p>{t('terms.section1.content')}</p>
-            </section>
-
-            <section>
-              <h2 className="text-lg font-semibold mb-2 dark:text-white">{t('terms.section2.title')}</h2>
-              <p>{t('terms.section2.content')}</p>
-            </section>
-
-            <section>
-              <h2 className="text-lg font-semibold mb-2 dark:text-white">{t('terms.section3.title')}</h2>
-              <p>{t('terms.section3.content')}</p>
-            </section>
-
-            <section>
-              <h2 className="text-lg font-semibold mb-2 dark:text-white">{t('terms.section4.title')}</h2>
-              <p>{t('terms.section4.content')}</p>
-            </section>
-
-            <section>
-              <h2 className="text-lg font-semibold mb-2 dark:text-white">
-                {tOr('terms.section5.title', 'User-Uploaded Content and Intellectual Property')}
-              </h2>
-              <p>
-                {tOr(
-                  'terms.section5.content',
-                  'You retain all rights to documents you upload. You confirm that you have the legal right to upload, store, and process each document via DocTalk — whether you own it, authored it, or have a valid licence or permission from the rights holder. Do not upload copyrighted material you do not have permission to use, trade secrets of third parties, or content that violates privacy or confidentiality obligations. DocTalk does not host or publish your documents to third parties; the service is limited to processing your own content to answer your questions. We may remove content that we believe in good faith to infringe intellectual property rights under our notice-and-takedown procedure.'
-                )}
-              </p>
-            </section>
-          </div>
-
-          <div className="mt-8 pt-6 border-t dark:border-zinc-700 text-sm text-zinc-500">
-            <p>{t('terms.lastUpdated')}: 2026-02-05</p>
-          </div>
-
-          <Link href="/" className="inline-block mt-6 text-zinc-600 hover:underline focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:rounded-sm">
-            ← {t('common.backToHome')}
-          </Link>
-        </div>
-      </main>
-      <Footer />
-    </div>
+      {sections.map((section, index) => (
+        <EdSection
+          key={section.num}
+          alt={index % 2 === 0}
+          num={section.num}
+          title={section.title}
+        >
+          <EdProse>
+            <p>{section.content}</p>
+          </EdProse>
+        </EdSection>
+      ))}
+    </MarketingShell>
   );
 }
