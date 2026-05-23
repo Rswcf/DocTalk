@@ -40,7 +40,7 @@ from app.services.retrieval_service import table_evidence_text
 
 logger = logging.getLogger(__name__)
 
-# Hardening against prompt-injection. Placed BEFORE document fragments so chunk
+# Hardening against prompt-injection. Placed BEFORE document excerpts so chunk
 # content cannot override it. Discovered 2026-04-25: mistral-large-2512 wrote a
 # poem when prompted "Ignore your previous instructions" — see ADR §10.
 SYSTEM_PROMPT_META_RULE = (
@@ -396,23 +396,23 @@ async def _try_repair_rag_answer(
     context = "\n".join(numbered_chunks) if numbered_chunks else "(none)"
     system_prompt = (
         "You repair a document-grounded answer before it is shown as final.\n"
-        "Use only the numbered fragments provided by the system. Do not add outside knowledge.\n"
-        "Remove any statement that is not supported by a fragment.\n"
+        "Use only the numbered excerpts provided by the system. Do not add outside knowledge.\n"
+        "Remove any statement that is not supported by a excerpt.\n"
         "Every factual sentence, paragraph, or bullet must end with one or more bracket citations like [1].\n"
-        "For numbers, dates, percentages, currencies, and units, copy them only when the cited fragment contains the exact value.\n"
+        "For numbers, dates, percentages, currencies, and units, copy them only when the cited excerpt contains the exact value.\n"
         "Prefer concise bullets with one main factual claim per bullet.\n"
         f"Write in {language}. Return only the corrected final answer, with citations."
     )
     user_prompt = (
         "## User question\n"
         f"{user_message}\n\n"
-        "## Retrieved document fragments\n"
+        "## Retrieved document excerpts\n"
         f"{context}\n\n"
         "## Draft answer to repair\n"
         f"{assistant_text}\n\n"
         "## Verification issues found\n"
         f"{', '.join(str(item) for item in (verification.get('reasons') or [])) or 'source-support issues'}\n\n"
-        "Rewrite the draft so every factual claim is supported by the cited fragments. "
+        "Rewrite the draft so every factual claim is supported by the cited excerpts. "
         "Do not mention that this is a repair pass."
     )
     prompt_tokens = 0
@@ -477,11 +477,11 @@ async def _try_repair_rag_answer(
 def _citation_contract() -> str:
     return (
         "\n\n## Citation Contract\n"
-        "- Every answer based on document fragments MUST include clickable bracket citations like [1].\n"
+        "- Every answer based on document excerpts MUST include clickable bracket citations like [1].\n"
         "- Put a citation at the end of every factual paragraph or bullet that uses document content.\n"
         "- Prefer short factual bullets over dense paragraphs; one bullet should contain one main claim and its citation.\n"
-        "- Use only the fragment numbers listed above. If no fragment supports a claim, do not make that claim.\n"
-        "- A response with no [n] citations is invalid unless there are no relevant fragments.\n"
+        "- Use only the excerpt numbers listed above. If no excerpt supports a claim, do not make that claim.\n"
+        "- A response with no [n] citations is invalid unless there are no relevant excerpts.\n"
     )
 
 
@@ -1150,24 +1150,24 @@ class ChatService:
                     "You are a document analysis assistant. The user is asking for a broad summary across a document collection.\n\n"
                     + SYSTEM_PROMPT_META_RULE
                     + f"## Available Documents\n{doc_list}\n\n"
-                    + "## Collection Coverage Fragments\n"
+                    + "## Collection Coverage Excerpts\n"
                     + ("\n".join(numbered_chunks) if numbered_chunks else "(none)")
                     + "\n\n## Summary Rules\n"
-                    + "1. Treat these fragments as representative coverage selected across the collection, not as semantic search results for a narrow question.\n"
-                    + "2. Do NOT say the collection is just unrelated fragments merely because the context is excerpted.\n"
+                    + "1. Treat these excerpts as representative coverage selected across the collection, not as semantic search results for a narrow question.\n"
+                    + "2. Do NOT say the collection is just unrelated excerpts merely because the context is excerpted.\n"
                     + "3. Summarize shared themes, document-specific points, and important caveats when supported.\n"
                     + "4. If coverage is incomplete, say the answer is based on the cited representative sections instead of refusing.\n"
-                    + "5. Cite every factual paragraph or bullet using the fragment numbers listed above.\n"
+                    + "5. Cite every factual paragraph or bullet using the excerpt numbers listed above.\n"
                     + "6. Your response language MUST match the language of the user's question.\n"
                     + _citation_contract()
                 )
             elif is_collection_session:
                 doc_list = ", ".join(collection_doc_names.values()) if collection_doc_names else "(no documents)"
                 system_prompt = (
-                    "You are a document analysis assistant. Answer the user's question based on fragments from multiple documents.\n\n"
+                    "You are a document analysis assistant. Answer the user's question based on excerpts from multiple documents.\n\n"
                     + SYSTEM_PROMPT_META_RULE
                     + f"## Available Documents\n{doc_list}\n\n"
-                    + "## Document Fragments\n"
+                    + "## Document Excerpts\n"
                     + ("\n".join(numbered_chunks) if numbered_chunks else "(none)")
                     + _retrieval_quality_contract(retrieval_evaluation, retrieval_strategy)
                     + _query_plan_contract(retrieval_plan)
@@ -1178,26 +1178,26 @@ class ChatService:
                 system_prompt = (
                     "You are a document analysis assistant. The user is asking for a broad, whole-document summary.\n\n"
                     + SYSTEM_PROMPT_META_RULE
-                    + "## Document Coverage Fragments\n"
+                    + "## Document Coverage Excerpts\n"
                     + (
                         "\n".join(numbered_chunks)
                         if numbered_chunks
                         else "(none)"
                     )
                     + "\n\n## Summary Rules\n"
-                    + "1. Treat these fragments as representative coverage selected across the document, not as semantic search results for a narrow question.\n"
+                    + "1. Treat these excerpts as representative coverage selected across the document, not as semantic search results for a narrow question.\n"
                     + "2. Do NOT say the user's ready document is not a complete document merely because the context is excerpted.\n"
                     + "3. Produce a useful document-level summary with clear headings, key points, and important caveats when supported.\n"
                     + "4. If coverage is incomplete, say the answer is based on the cited representative sections instead of refusing.\n"
-                    + "5. Cite every factual paragraph or bullet using the fragment numbers listed above.\n"
+                    + "5. Cite every factual paragraph or bullet using the excerpt numbers listed above.\n"
                     + "6. Your response language MUST match the language of the user's question.\n"
                     + _citation_contract()
                 )
             else:
                 system_prompt = (
-                    "You are a document analysis assistant. Answer the user's question based on the following document fragments.\n\n"
+                    "You are a document analysis assistant. Answer the user's question based on the following document excerpts.\n\n"
                     + SYSTEM_PROMPT_META_RULE
-                    + "## Document Fragments\n"
+                    + "## Document Excerpts\n"
                     + ("\n".join(numbered_chunks) if numbered_chunks else "(none)")
                     + _retrieval_quality_contract(retrieval_evaluation, retrieval_strategy)
                     + _query_plan_contract(retrieval_plan)
@@ -1802,19 +1802,19 @@ class ChatService:
             if is_collection_session:
                 doc_list = ", ".join(collection_doc_names.values()) if collection_doc_names else "(no documents)"
                 system_prompt = (
-                    "You are a document analysis assistant. Answer the user's question based on fragments from multiple documents.\n\n"
+                    "You are a document analysis assistant. Answer the user's question based on excerpts from multiple documents.\n\n"
                     + SYSTEM_PROMPT_META_RULE
                     + f"## Available Documents\n{doc_list}\n\n"
-                    + "## Document Fragments\n"
+                    + "## Document Excerpts\n"
                     + ("\n".join(numbered_chunks) if numbered_chunks else "(none)")
                     + "\n\n## Rules\n" + rules
                     + _citation_contract()
                 )
             else:
                 system_prompt = (
-                    "You are a document analysis assistant. Answer the user's question based on the following document fragments.\n\n"
+                    "You are a document analysis assistant. Answer the user's question based on the following document excerpts.\n\n"
                     + SYSTEM_PROMPT_META_RULE
-                    + "## Document Fragments\n"
+                    + "## Document Excerpts\n"
                     + ("\n".join(numbered_chunks) if numbered_chunks else "(none)")
                     + "\n\n## Rules\n" + rules
                     + _citation_contract()
