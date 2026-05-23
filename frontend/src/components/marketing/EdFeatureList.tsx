@@ -30,7 +30,7 @@ export default function EdFeatureList({ items }: EdFeatureListProps) {
             {/* Mono number column */}
             <div
               style={{
-                fontFamily: "var(--font-plex-mono), ui-monospace, monospace",
+                fontFamily: "var(--dt-mono)",
                 fontSize: "13px",
                 color: "var(--ed-signal)",
                 letterSpacing: "0.04em",

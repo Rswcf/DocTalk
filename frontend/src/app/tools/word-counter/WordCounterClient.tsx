@@ -157,7 +157,7 @@ export default function WordCounterClient() {
                   className="inline-flex items-center"
                   style={{
                     gap: '5px',
-                    fontFamily: 'var(--font-plex-mono), ui-monospace, monospace',
+                    fontFamily: 'var(--dt-mono)',
                     fontSize: '11px',
                     textTransform: 'uppercase',
                     letterSpacing: '0.08em',
@@ -175,7 +175,7 @@ export default function WordCounterClient() {
                     className="inline-flex items-center"
                     style={{
                       gap: '5px',
-                      fontFamily: 'var(--font-plex-mono), ui-monospace, monospace',
+                      fontFamily: 'var(--dt-mono)',
                       fontSize: '11px',
                       textTransform: 'uppercase',
                       letterSpacing: '0.08em',
@@ -225,7 +225,7 @@ export default function WordCounterClient() {
                   className="inline-flex items-center disabled:cursor-not-allowed disabled:opacity-40"
                   style={{
                     gap: '5px',
-                    fontFamily: 'var(--font-plex-mono), ui-monospace, monospace',
+                    fontFamily: 'var(--dt-mono)',
                     fontSize: '11px',
                     textTransform: 'uppercase',
                     letterSpacing: '0.08em',

@@ -75,7 +75,7 @@ export default function HeroCollage() {
             position: "absolute",
             top: "8%",
             right: "6%",
-            fontFamily: "var(--font-newsreader), Georgia, serif",
+            fontFamily: "var(--dt-serif)",
             fontStyle: "italic",
             fontWeight: 400,
             fontSize: "clamp(120px, 18vw, 180px)",
@@ -217,7 +217,7 @@ export default function HeroCollage() {
             >
               <span
                 style={{
-                  fontFamily: "var(--font-plex-mono), monospace",
+                  fontFamily: "var(--dt-mono)",
                   fontSize: "8px",
                   fontWeight: 700,
                   color: "#fff",
@@ -279,7 +279,7 @@ export default function HeroCollage() {
             >
               <span
                 style={{
-                  fontFamily: "var(--font-plex-mono), monospace",
+                  fontFamily: "var(--dt-mono)",
                   fontSize: "7px",
                   fontWeight: 700,
                   color: "#fff",

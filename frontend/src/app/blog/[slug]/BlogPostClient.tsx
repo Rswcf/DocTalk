@@ -391,7 +391,7 @@ export default function BlogPostClient({ post, relatedPosts }: BlogPostClientPro
                     <code
                       className={className || ''}
                       style={{
-                        fontFamily: 'var(--font-plex-mono), ui-monospace, monospace',
+                        fontFamily: 'var(--dt-mono)',
                         fontSize: '0.92em',
                         overflowWrap: 'anywhere',
                       }}

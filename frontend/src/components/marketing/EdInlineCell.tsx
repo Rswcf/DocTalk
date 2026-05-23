@@ -7,7 +7,7 @@ interface EdInlineCellProps {
   value: string | boolean;
 }
 
-const MONO_FONT = "var(--font-plex-mono), ui-monospace, monospace";
+const MONO_FONT = "var(--dt-mono)";
 
 export default function EdInlineCell({ value }: EdInlineCellProps) {
   const { t } = useLocale();

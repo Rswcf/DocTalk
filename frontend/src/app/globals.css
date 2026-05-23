@@ -2,6 +2,48 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ──────────────────────────────────────────────────────────────────────
+   Per-script typography (system fonts, zero download), selected by `lang`.
+   Latin keeps the loaded webfonts (Inter / Newsreader / IBM Plex Mono).
+   CJK / Arabic / Devanagari fall to curated SYSTEM stacks — CJK webfonts
+   are multi-MB and inappropriate for a perf-sensitive marketing surface.
+   Plan B: non-Latin headlines use a high-quality SANS (modern, legible at
+   large sizes) rather than the generic `serif` lottery; non-Latin "mono"
+   labels fall back to a proportional sans (CJK/Arabic monospace reads poorly).
+   Consumed via var(--dt-serif|--dt-mono|--dt-body) in editorial.css, inline
+   styles, and Tailwind's `sans`. :lang() works because LocaleProvider sets
+   <html lang>. ────────────────────────────────────────────────────────── */
+:root {
+  --dt-serif: var(--font-newsreader), Georgia, serif;          /* editorial headlines (Latin serif) */
+  --dt-mono:  var(--font-plex-mono), ui-monospace, monospace;  /* editorial/code labels */
+  --dt-body:  var(--font-inter), system-ui, sans-serif;        /* body / app UI */
+}
+html:lang(zh) {
+  --dt-serif: var(--font-inter), "PingFang SC", "HarmonyOS Sans SC", "Microsoft YaHei", "Noto Sans SC", sans-serif;
+  --dt-mono:  var(--font-plex-mono), "PingFang SC", "Microsoft YaHei", "Noto Sans SC", sans-serif;
+  --dt-body:  var(--font-inter), "PingFang SC", "HarmonyOS Sans SC", "Microsoft YaHei", "Noto Sans SC", system-ui, sans-serif;
+}
+html:lang(ja) {
+  --dt-serif: var(--font-inter), "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Yu Gothic", "Meiryo", "Noto Sans JP", sans-serif;
+  --dt-mono:  var(--font-plex-mono), "Hiragino Sans", "Yu Gothic", "Noto Sans JP", sans-serif;
+  --dt-body:  var(--font-inter), "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Yu Gothic", "Meiryo", "Noto Sans JP", system-ui, sans-serif;
+}
+html:lang(ko) {
+  --dt-serif: var(--font-inter), "Apple SD Gothic Neo", "Malgun Gothic", "Noto Sans KR", sans-serif;
+  --dt-mono:  var(--font-plex-mono), "Apple SD Gothic Neo", "Malgun Gothic", "Noto Sans KR", sans-serif;
+  --dt-body:  var(--font-inter), "Apple SD Gothic Neo", "Malgun Gothic", "Noto Sans KR", system-ui, sans-serif;
+}
+html:lang(ar) {
+  --dt-serif: var(--font-inter), "SF Arabic", "Geeza Pro", "Segoe UI", "Noto Naskh Arabic", "Tahoma", sans-serif;
+  --dt-mono:  var(--font-plex-mono), "SF Arabic", "Geeza Pro", "Noto Naskh Arabic", "Tahoma", sans-serif;
+  --dt-body:  var(--font-inter), "SF Arabic", "Geeza Pro", "Segoe UI", "Noto Naskh Arabic", "Tahoma", system-ui, sans-serif;
+}
+html:lang(hi) {
+  --dt-serif: var(--font-inter), "Kohinoor Devanagari", "Noto Sans Devanagari", "Nirmala UI", "Mangal", sans-serif;
+  --dt-mono:  var(--font-plex-mono), "Kohinoor Devanagari", "Noto Sans Devanagari", "Nirmala UI", "Mangal", sans-serif;
+  --dt-body:  var(--font-inter), "Kohinoor Devanagari", "Noto Sans Devanagari", "Nirmala UI", "Mangal", system-ui, sans-serif;
+}
+
 :root {
   --background: #ffffff;
   --page-background: #f6f8fc;

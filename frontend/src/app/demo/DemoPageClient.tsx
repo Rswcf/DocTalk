@@ -213,7 +213,7 @@ export default function DemoPageClient() {
                     className="ed-body"
                     style={{
                       marginTop: '8px',
-                      fontFamily: 'var(--font-newsreader), Georgia, serif',
+                      fontFamily: 'var(--dt-serif)',
                       fontStyle: 'italic',
                     }}
                   >

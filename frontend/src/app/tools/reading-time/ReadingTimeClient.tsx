@@ -26,7 +26,7 @@ type TFn = (key: string, params?: Record<string, string | number>) => string;
 
 const monoBtnBase: React.CSSProperties = {
   gap: '5px',
-  fontFamily: 'var(--font-plex-mono), ui-monospace, monospace',
+  fontFamily: 'var(--dt-mono)',
   fontSize: '11px',
   textTransform: 'uppercase',
   letterSpacing: '0.08em',
@@ -217,7 +217,7 @@ export default function ReadingTimeClient() {
                 className="tabular-nums"
                 style={{
                   marginTop: '8px',
-                  fontFamily: 'var(--font-newsreader), serif',
+                  fontFamily: 'var(--dt-serif)',
                   fontSize: '26px',
                   fontWeight: 600,
                   color: 'var(--ed-ink)',

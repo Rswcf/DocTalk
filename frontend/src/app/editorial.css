@@ -14,7 +14,7 @@
   position: relative;
   background: var(--ed-paper);
   color: var(--ed-ink-2);
-  font-family: var(--font-inter), system-ui, sans-serif;
+  font-family: var(--dt-body);
   -webkit-font-smoothing: antialiased;
 }
 
@@ -54,7 +54,7 @@
 /* Hero display headline — heavy grotesque with italic-serif emphasis
    words (wrap emphasis in <em>). A mixed-voice editorial headline. */
 .dt-editorial .ed-display {
-  font-family: var(--font-inter), system-ui, sans-serif;
+  font-family: var(--dt-body);
   font-weight: 800;
   font-size: clamp(46px, 7.4vw, 88px);
   line-height: 1.0;
@@ -62,14 +62,14 @@
   color: var(--ed-ink);
 }
 .dt-editorial .ed-display em {
-  font-family: var(--font-newsreader), Georgia, serif;
+  font-family: var(--dt-serif);
   font-weight: 500;
   font-style: italic;
   letter-spacing: -0.01em;
 }
 
 .dt-editorial .ed-h2 {
-  font-family: var(--font-newsreader), Georgia, serif;
+  font-family: var(--dt-serif);
   font-weight: 400;
   font-size: clamp(28px, 3.5vw, 40px);
   line-height: 1.1;
@@ -78,7 +78,7 @@
 }
 
 .dt-editorial .ed-h3 {
-  font-family: var(--font-newsreader), Georgia, serif;
+  font-family: var(--dt-serif);
   font-weight: 500;
   font-size: 21px;
   line-height: 1.25;
@@ -98,7 +98,7 @@
 }
 
 .dt-editorial .ed-label {
-  font-family: var(--font-plex-mono), ui-monospace, monospace;
+  font-family: var(--dt-mono);
   font-size: 11px;
   text-transform: uppercase;
   letter-spacing: 0.13em;
@@ -108,14 +108,14 @@
 .dt-editorial .ed-label-num { color: var(--ed-signal); }
 
 .dt-editorial .ed-caption {
-  font-family: var(--font-plex-mono), ui-monospace, monospace;
+  font-family: var(--dt-mono);
   font-size: 10.5px;
   letter-spacing: 0.04em;
   color: var(--ed-ink-3);
 }
 
 .dt-editorial .ed-num {
-  font-family: var(--font-newsreader), Georgia, serif;
+  font-family: var(--dt-serif);
   font-weight: 400;
   font-size: clamp(32px, 4vw, 52px);
   line-height: 1;
@@ -192,7 +192,7 @@
 
 /* Inner-page hero headline — quieter than the landing .ed-display. */
 .dt-editorial .ed-h1 {
-  font-family: var(--font-newsreader), Georgia, serif;
+  font-family: var(--dt-serif);
   font-weight: 500;
   font-size: clamp(34px, 4.6vw, 56px);
   line-height: 1.08;
@@ -209,7 +209,7 @@
 
 /* Breadcrumb trail link. */
 .dt-editorial .ed-crumb {
-  font-family: var(--font-plex-mono), ui-monospace, monospace;
+  font-family: var(--dt-mono);
   font-size: 10.5px;
   letter-spacing: 0.06em;
   text-transform: uppercase;

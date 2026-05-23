@@ -46,7 +46,7 @@ export default function EditorialFooter() {
   ];
 
   const linkStyle: React.CSSProperties = {
-    fontFamily: "var(--font-inter), system-ui, sans-serif",
+    fontFamily: "var(--dt-body)",
     fontSize: "13px",
     color: "var(--ed-ink-2)",
     textDecoration: "none",
@@ -109,7 +109,7 @@ export default function EditorialFooter() {
               <DocTalkLogo size={22} />
               <span
                 style={{
-                  fontFamily: "var(--font-newsreader), Georgia, serif",
+                  fontFamily: "var(--dt-serif)",
                   fontSize: "18px",
                   fontWeight: 500,
                   color: "var(--ed-ink)",

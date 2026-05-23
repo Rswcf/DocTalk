@@ -102,7 +102,7 @@ export default function EdLanguageSelector() {
                 }}
                 className="flex w-full items-center gap-2"
                 style={{
-                  fontFamily: "var(--font-inter), system-ui, sans-serif",
+                  fontFamily: "var(--dt-body)",
                   fontSize: "13px",
                   textAlign: "left",
                   color: selected ? "var(--ed-signal)" : "var(--ed-ink)",
@@ -124,7 +124,7 @@ export default function EdLanguageSelector() {
                 <span style={{ flex: 1 }}>{l.label}</span>
                 <span
                   style={{
-                    fontFamily: "var(--font-plex-mono), ui-monospace, monospace",
+                    fontFamily: "var(--dt-mono)",
                     fontSize: "10.5px",
                     letterSpacing: "0.06em",
                     color: "var(--ed-ink-3)",
@@ -151,7 +151,7 @@ export default function EdLanguageSelector() {
         aria-label={`${(current?.code || "en").toUpperCase()} — ${label}`}
         className="inline-flex items-center gap-1.5"
         style={{
-          fontFamily: "var(--font-plex-mono), ui-monospace, monospace",
+          fontFamily: "var(--dt-mono)",
           fontSize: "12px",
           letterSpacing: "0.06em",
           color: open ? "var(--ed-signal)" : "var(--ed-ink-2)",

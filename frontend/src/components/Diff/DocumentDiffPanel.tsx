@@ -138,7 +138,7 @@ const edExportBtnStyle: React.CSSProperties = {
   color: "var(--ed-ink-2)",
   borderRadius: "3px",
   padding: "0 12px",
-  fontFamily: "var(--font-plex-mono), ui-monospace, monospace",
+  fontFamily: "var(--dt-mono)",
   fontSize: "11px",
   textTransform: "uppercase",
   letterSpacing: "0.08em",
@@ -150,7 +150,7 @@ const edRefBtnStyle: React.CSSProperties = {
   color: "var(--ed-ink-2)",
   borderRadius: "3px",
   padding: "4px 8px",
-  fontFamily: "var(--font-plex-mono), ui-monospace, monospace",
+  fontFamily: "var(--dt-mono)",
   fontSize: "11px",
 };
 
@@ -529,7 +529,7 @@ export default function DocumentDiffPanel({
                                   border: "1px solid var(--ed-rule)",
                                   background: "var(--ed-paper)",
                                   borderRadius: "3px",
-                                  fontFamily: "var(--font-plex-mono), ui-monospace, monospace",
+                                  fontFamily: "var(--dt-mono)",
                                   fontSize: "13px",
                                   fontWeight: 600,
                                   color: "var(--ed-signal)",

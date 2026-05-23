@@ -42,7 +42,7 @@ export default function CitationPopover({ citation, children }: CitationPopoverP
           <div
             className="text-zinc-500 dark:text-zinc-400 mb-1"
             style={{
-              fontFamily: 'var(--font-plex-mono), ui-monospace, monospace',
+              fontFamily: 'var(--dt-mono)',
               fontSize: '10.5px',
               letterSpacing: '0.02em',
             }}
@@ -56,7 +56,7 @@ export default function CitationPopover({ citation, children }: CitationPopoverP
             <p
               className="text-zinc-600 dark:text-zinc-400 line-clamp-4 mt-1"
               style={{
-                fontFamily: 'var(--font-newsreader), Georgia, serif',
+                fontFamily: 'var(--dt-serif)',
                 fontStyle: 'italic',
                 fontSize: '13.5px',
                 lineHeight: 1.55,

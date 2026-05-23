@@ -26,7 +26,7 @@ const fieldStyle: CSSProperties = {
   padding: '10px 12px',
   fontSize: '14px',
   lineHeight: 1.6,
-  fontFamily: 'var(--font-inter), system-ui, sans-serif',
+  fontFamily: 'var(--dt-body)',
   outline: 'none',
   width: '100%',
 };

@@ -17,7 +17,7 @@ export default function HeroArtifact() {
       {/* Command text */}
       <p
         className="ed-body max-w-3xl text-[17px] leading-7 text-[var(--ed-ink)]"
-        style={{ fontFamily: "var(--font-inter), system-ui, sans-serif" }}
+        style={{ fontFamily: "var(--dt-body)" }}
       >
         {tOr(
           "workbench.heroArtifact.command",
@@ -31,7 +31,7 @@ export default function HeroArtifact() {
         <span
           className="inline-flex items-center gap-1.5 rounded-[3px] border border-[var(--ed-rule)] bg-[var(--ed-paper)] px-2.5 py-1.5 text-[var(--ed-ink-2)]"
           style={{
-            fontFamily: "var(--font-plex-mono), ui-monospace, monospace",
+            fontFamily: "var(--dt-mono)",
             fontSize: "11px",
             letterSpacing: "0.04em",
           }}
@@ -48,7 +48,7 @@ export default function HeroArtifact() {
         <span
           className="inline-flex items-center gap-1.5 rounded-[3px] border border-[var(--ed-rule)] bg-[var(--ed-paper)] px-2.5 py-1.5 text-[var(--ed-ink-3)]"
           style={{
-            fontFamily: "var(--font-plex-mono), ui-monospace, monospace",
+            fontFamily: "var(--dt-mono)",
             fontSize: "11px",
             letterSpacing: "0.04em",
           }}
@@ -65,7 +65,7 @@ export default function HeroArtifact() {
         <span
           className="ml-auto inline-flex items-center gap-1.5 rounded-[3px] border border-[var(--ed-signal)] bg-[var(--ed-paper)] px-2.5 py-1.5 text-[var(--ed-signal)]"
           style={{
-            fontFamily: "var(--font-plex-mono), ui-monospace, monospace",
+            fontFamily: "var(--dt-mono)",
             fontSize: "11px",
             letterSpacing: "0.04em",
           }}
@@ -99,7 +99,7 @@ export default function HeroArtifact() {
             key={prompt}
             className="max-w-[22rem] truncate rounded-[3px] border border-[var(--ed-rule)] bg-[var(--ed-paper)] px-2.5 py-1.5 text-[var(--ed-ink-3)]"
             style={{
-              fontFamily: "var(--font-plex-mono), ui-monospace, monospace",
+              fontFamily: "var(--dt-mono)",
               fontSize: "11px",
               letterSpacing: "0.04em",
             }}

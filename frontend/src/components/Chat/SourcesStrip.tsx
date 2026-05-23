@@ -70,7 +70,7 @@ export default function SourcesStrip({
         <div
           className="dt-sources-label text-[11px] uppercase"
           style={{
-            fontFamily: 'var(--font-plex-mono), ui-monospace, monospace',
+            fontFamily: 'var(--dt-mono)',
             letterSpacing: '0.10em',
           }}
         >
@@ -124,7 +124,7 @@ export default function SourcesStrip({
               <span className="truncate font-medium">{displayFilename}</span>
               <span
                 className="shrink-0 text-[10px] text-[var(--reader-muted)]"
-                style={{ fontFamily: 'var(--font-plex-mono), ui-monospace, monospace' }}
+                style={{ fontFamily: 'var(--dt-mono)' }}
               >
                 p.{c.page}
               </span>

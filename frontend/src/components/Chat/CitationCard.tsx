@@ -41,7 +41,7 @@ export default function CitationCard({ refIndex, textSnippet, page, onClick }: C
       <span className="max-w-[220px] truncate text-[var(--reader-muted)]">{snippet}</span>
       <span
         className="shrink-0 text-[10px] text-[var(--reader-muted)]"
-        style={{ fontFamily: 'var(--font-plex-mono), ui-monospace, monospace' }}
+        style={{ fontFamily: 'var(--dt-mono)' }}
       >{t('citation.page', { page: validPage })}</span>
     </button>
   );

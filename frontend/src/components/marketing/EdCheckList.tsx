@@ -18,7 +18,7 @@ export default function EdCheckList({ items }: EdCheckListProps) {
           <span
             aria-hidden="true"
             style={{
-              fontFamily: "var(--font-plex-mono), ui-monospace, monospace",
+              fontFamily: "var(--dt-mono)",
               fontSize: "12px",
               color: "var(--ed-signal)",
               flexShrink: 0,

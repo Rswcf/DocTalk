@@ -59,7 +59,7 @@ export default function EditorialHeaderBase({
               <DocTalkLogo size={24} />
               <span
                 style={{
-                  fontFamily: "var(--font-newsreader), Georgia, serif",
+                  fontFamily: "var(--dt-serif)",
                   fontSize: "19px",
                   fontWeight: 500,
                   color: "var(--ed-ink)",
@@ -115,7 +115,7 @@ export default function EditorialHeaderBase({
                   href={item.href}
                   className="hidden md:inline-block"
                   style={{
-                    fontFamily: "var(--font-inter), system-ui, sans-serif",
+                    fontFamily: "var(--dt-body)",
                     fontSize: "13px",
                     color: "var(--ed-ink-2)",
                     textDecoration: "none",
@@ -191,7 +191,7 @@ export default function EditorialHeaderBase({
               className="block"
               style={{
                 padding: "12px 24px",
-                fontFamily: "var(--font-plex-mono), ui-monospace, monospace",
+                fontFamily: "var(--dt-mono)",
                 fontSize: "12px",
                 textTransform: "uppercase",
                 letterSpacing: "0.10em",

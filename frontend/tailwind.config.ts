@@ -10,7 +10,9 @@ const config: Config = {
   theme: {
     extend: {
       fontFamily: {
-        sans: ['var(--font-inter)', 'system-ui', 'sans-serif'],
+        // --dt-body = Inter for Latin, + curated system CJK/Arabic/Devanagari
+        // stacks under :lang() (see globals.css). Latin output is unchanged.
+        sans: ['var(--dt-body)'],
         display: ['var(--font-logo)', 'var(--font-inter)', 'system-ui', 'sans-serif'],
         logo: ['var(--font-logo)', 'var(--font-inter)', 'system-ui', 'sans-serif'],
         // Legacy alias: older pages still use `font-serif`, but the
