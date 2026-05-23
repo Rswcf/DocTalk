@@ -87,3 +87,6 @@ frontend/tsconfig.tsbuildinfo
 
 # Brainstorming visual companion
 .superpowers/
+
+# Replay fixtures (large, restored from MinIO; do not commit)
+backend/test_inputs/replay/
