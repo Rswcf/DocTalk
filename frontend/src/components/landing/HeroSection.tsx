@@ -23,7 +23,7 @@ export default function HeroSection() {
             {/* Eyebrow label */}
             <p className="ed-label mb-6">
               <span className="ed-label-num">01</span>
-              {' '}—{' '}Document intelligence
+              {' '}—{' '}{t('landing.heroEyebrow')}
             </p>
 
             {/* Headline — heavy grotesque first line, italic-serif second line */}
@@ -66,20 +66,26 @@ export default function HeroSection() {
               </a>
             </div>
 
-            {/* Metrics row */}
-            <hr className="ed-rule mb-8" />
-            <div className="flex gap-8">
-              <div>
-                <p className="ed-num">11</p>
-                <p className="ed-label mt-1">Languages</p>
-              </div>
-              <div>
-                <p className="ed-num">5</p>
-                <p className="ed-label mt-1">File formats</p>
-              </div>
-              <div>
-                <p className="ed-num">01</p>
-                <p className="ed-label mt-1">Cited answers</p>
+            {/* Metrics — editorial stat band. The hairline rule is constrained
+                to the stat group's width (max-w) so it caps the three figures
+                instead of running across the empty right half; an even 3-col
+                grid gives 11 / 5 / 01 a consistent rhythm regardless of digit
+                count; the rule sits close above so the band reads as one unit. */}
+            <div className="mt-2 max-w-[460px]">
+              <hr className="ed-rule mb-5" />
+              <div className="grid grid-cols-3 gap-4">
+                <div>
+                  <p className="ed-num">11</p>
+                  <p className="ed-label mt-1.5">{t('landing.heroStats.languages')}</p>
+                </div>
+                <div>
+                  <p className="ed-num">5</p>
+                  <p className="ed-label mt-1.5">{t('landing.heroStats.formats')}</p>
+                </div>
+                <div>
+                  <p className="ed-num">01</p>
+                  <p className="ed-label mt-1.5">{t('landing.heroStats.citedAnswers')}</p>
+                </div>
               </div>
             </div>
           </div>

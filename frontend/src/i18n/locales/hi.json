@@ -3616,5 +3616,9 @@
   "landing.social.eyebrow": "आंकड़ों के अनुसार",
   "landing.howItWorks.eyebrow": "यह कैसे काम करता है",
   "dashboard.deleteError": "हटाना विफल। पुनः प्रयास करें।",
-  "profile.export.error": "निर्यात विफल। कृपया पुनः प्रयास करें।"
+  "profile.export.error": "निर्यात विफल। कृपया पुनः प्रयास करें।",
+  "landing.heroEyebrow": "दस्तावेज़ इंटेलिजेंस",
+  "landing.heroStats.languages": "भाषाएँ",
+  "landing.heroStats.formats": "फ़ाइल स्वरूप",
+  "landing.heroStats.citedAnswers": "उद्धृत उत्तर"
 }

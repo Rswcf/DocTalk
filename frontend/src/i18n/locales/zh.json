@@ -3655,5 +3655,9 @@
   "landing.social.eyebrow": "数据概览",
   "landing.howItWorks.eyebrow": "运作方式",
   "dashboard.deleteError": "删除失败，请重试。",
-  "profile.export.error": "导出失败，请重试。"
+  "profile.export.error": "导出失败，请重试。",
+  "landing.heroEyebrow": "文档智能",
+  "landing.heroStats.languages": "语言",
+  "landing.heroStats.formats": "文件格式",
+  "landing.heroStats.citedAnswers": "引用答案"
 }

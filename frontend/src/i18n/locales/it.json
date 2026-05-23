@@ -3616,5 +3616,9 @@
   "landing.social.eyebrow": "In numeri",
   "landing.howItWorks.eyebrow": "Come funziona",
   "dashboard.deleteError": "Eliminazione fallita. Riprova.",
-  "profile.export.error": "Esportazione fallita. Per favore riprova."
+  "profile.export.error": "Esportazione fallita. Per favore riprova.",
+  "landing.heroEyebrow": "Intelligenza documentale",
+  "landing.heroStats.languages": "Lingue",
+  "landing.heroStats.formats": "Formati di file",
+  "landing.heroStats.citedAnswers": "Risposte citate"
 }

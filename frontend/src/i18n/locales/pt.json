@@ -3616,5 +3616,9 @@
   "landing.social.eyebrow": "Em números",
   "landing.howItWorks.eyebrow": "Como funciona",
   "dashboard.deleteError": "Falha ao excluir. Tente novamente.",
-  "profile.export.error": "Falha na exportação. Por favor, tente novamente."
+  "profile.export.error": "Falha na exportação. Por favor, tente novamente.",
+  "landing.heroEyebrow": "Inteligência de documentos",
+  "landing.heroStats.languages": "Idiomas",
+  "landing.heroStats.formats": "Formatos de arquivo",
+  "landing.heroStats.citedAnswers": "Respostas citadas"
 }

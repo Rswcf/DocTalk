@@ -3616,5 +3616,9 @@
   "landing.social.eyebrow": "숫자로 보기",
   "landing.howItWorks.eyebrow": "작동 방식",
   "dashboard.deleteError": "삭제 실패. 다시 시도하세요.",
-  "profile.export.error": "내보내기 실패. 다시 시도하세요."
+  "profile.export.error": "내보내기 실패. 다시 시도하세요.",
+  "landing.heroEyebrow": "문서 인텔리전스",
+  "landing.heroStats.languages": "언어",
+  "landing.heroStats.formats": "파일 형식",
+  "landing.heroStats.citedAnswers": "인용 답변"
 }

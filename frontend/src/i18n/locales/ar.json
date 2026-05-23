@@ -3616,5 +3616,9 @@
   "landing.social.eyebrow": "بالأرقام",
   "landing.howItWorks.eyebrow": "كيف يعمل",
   "dashboard.deleteError": "فشل الحذف. حاول مرة أخرى.",
-  "profile.export.error": "فشل التصدير. يرجى المحاولة مرة أخرى."
+  "profile.export.error": "فشل التصدير. يرجى المحاولة مرة أخرى.",
+  "landing.heroEyebrow": "ذكاء المستندات",
+  "landing.heroStats.languages": "اللغات",
+  "landing.heroStats.formats": "صيغ الملفات",
+  "landing.heroStats.citedAnswers": "إجابات موثقة"
 }

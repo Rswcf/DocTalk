@@ -3616,5 +3616,9 @@
   "landing.social.eyebrow": "数字で見る",
   "landing.howItWorks.eyebrow": "仕組み",
   "dashboard.deleteError": "削除に失敗しました。再試行してください。",
-  "profile.export.error": "エクスポートに失敗しました。再試行してください。"
+  "profile.export.error": "エクスポートに失敗しました。再試行してください。",
+  "landing.heroEyebrow": "ドキュメントインテリジェンス",
+  "landing.heroStats.languages": "言語",
+  "landing.heroStats.formats": "ファイル形式",
+  "landing.heroStats.citedAnswers": "引用付き回答"
 }

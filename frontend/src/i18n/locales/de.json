@@ -3616,5 +3616,9 @@
   "landing.social.eyebrow": "In Zahlen",
   "landing.howItWorks.eyebrow": "So funktioniert's",
   "dashboard.deleteError": "Löschen fehlgeschlagen. Erneut versuchen.",
-  "profile.export.error": "Export fehlgeschlagen. Bitte erneut versuchen."
+  "profile.export.error": "Export fehlgeschlagen. Bitte erneut versuchen.",
+  "landing.heroEyebrow": "Dokumentenintelligenz",
+  "landing.heroStats.languages": "Sprachen",
+  "landing.heroStats.formats": "Dateiformate",
+  "landing.heroStats.citedAnswers": "Zitierte Antworten"
 }

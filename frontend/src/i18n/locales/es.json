@@ -3616,5 +3616,9 @@
   "landing.social.eyebrow": "Por los números",
   "landing.howItWorks.eyebrow": "Cómo funciona",
   "dashboard.deleteError": "Error al eliminar. Inténtalo de nuevo.",
-  "profile.export.error": "Error al exportar. Por favor, inténtalo de nuevo."
+  "profile.export.error": "Error al exportar. Por favor, inténtalo de nuevo.",
+  "landing.heroEyebrow": "Inteligencia documental",
+  "landing.heroStats.languages": "Idiomas",
+  "landing.heroStats.formats": "Formatos de archivo",
+  "landing.heroStats.citedAnswers": "Respuestas citadas"
 }

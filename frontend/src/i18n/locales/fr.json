@@ -3616,5 +3616,9 @@
   "landing.social.eyebrow": "En chiffres",
   "landing.howItWorks.eyebrow": "Comment ça fonctionne",
   "dashboard.deleteError": "Échec de la suppression. Réessayez.",
-  "profile.export.error": "Échec de l'exportation. Veuillez réessayer."
+  "profile.export.error": "Échec de l'exportation. Veuillez réessayer.",
+  "landing.heroEyebrow": "Intelligence documentaire",
+  "landing.heroStats.languages": "Langues",
+  "landing.heroStats.formats": "Formats de fichier",
+  "landing.heroStats.citedAnswers": "Réponses citées"
 }

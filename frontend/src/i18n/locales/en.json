@@ -3616,5 +3616,9 @@
   "landing.social.eyebrow": "By the numbers",
   "landing.howItWorks.eyebrow": "How it works",
   "dashboard.deleteError": "Delete failed. Try again.",
-  "profile.export.error": "Export failed. Please try again."
+  "profile.export.error": "Export failed. Please try again.",
+  "landing.heroEyebrow": "Document intelligence",
+  "landing.heroStats.languages": "Languages",
+  "landing.heroStats.formats": "File formats",
+  "landing.heroStats.citedAnswers": "Cited answers"
 }
