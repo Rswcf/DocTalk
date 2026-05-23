@@ -34,6 +34,7 @@ from app.services.chat_tool_executor import chat_tool_executor
 from app.services.claim_verifier_service import claim_verifier_service
 from app.services.corrective_retrieval_service import corrective_retrieval_service
 from app.services.document_brief_service import document_brief_service
+from app.services.document_element_service import chunk_to_retrieval_item
 from app.services.query_planner_service import QueryPlan
 from app.services.query_router import QueryIntent, query_router
 from app.services.retrieval_service import table_evidence_text
@@ -645,6 +646,31 @@ async def _settle_predebit_on_cancel(
             await _refund_predebit(settle_db, user_id, pre_debited, predebit_ledger_id)
 
 
+async def _fetch_page_chunks(
+    db: AsyncSession,
+    document_id: uuid.UUID,
+    page_ref: int,
+    *,
+    limit: int = 12,
+) -> List[Dict[str, Any]]:
+    """Direct positional retrieval (B4): chunks overlapping a specific page.
+
+    Semantic top-k cannot resolve "what is on page N" — the paying user asked for
+    page 350 of a 492-page PDF and got "the excerpts do not contain page 350".
+    Here we fetch the chunks whose page range covers the requested page.
+    """
+    rows = await db.execute(
+        select(Chunk)
+        .where(Chunk.document_id == document_id)
+        .where(Chunk.page_start <= page_ref)
+        .where(Chunk.page_end >= page_ref)
+        .order_by(Chunk.chunk_index)
+        .limit(limit)
+    )
+    chunks = list(rows.scalars())
+    return [chunk_to_retrieval_item(ch, 1.0, include_document_id=True) for ch in chunks]
+
+
 async def _record_rag_verification_event(
     db: AsyncSession,
     *,
@@ -1092,6 +1118,22 @@ class ChatService:
                 retrieval_strategy = corrective.strategy
                 retrieval_evaluation = corrective.evaluation
                 retrieval_plan = corrective.plan
+            elif (
+                document_id
+                and query_route.primary_intent == QueryIntent.PAGE_LOOKUP
+                and query_route.page_ref is not None
+            ):
+                retrieved = await _fetch_page_chunks(db, document_id, query_route.page_ref)
+                retrieval_strategy = "page_lookup"
+                if not retrieved:
+                    # Page out of range / no chunks there → fall back to semantic.
+                    corrective = await corrective_retrieval_service.retrieve_single(
+                        user_message, query_route, document_id, top_k=8, db=db,
+                    )
+                    retrieved = corrective.retrieved
+                    retrieval_strategy = corrective.strategy
+                    retrieval_evaluation = corrective.evaluation
+                    retrieval_plan = corrective.plan
             elif document_id:
                 corrective = await corrective_retrieval_service.retrieve_single(
                     user_message,

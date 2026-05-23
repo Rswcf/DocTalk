@@ -15,6 +15,7 @@ class QueryIntent(str, Enum):
     CITATION_LOOKUP = "citation_lookup"
     EXISTENCE_CHECK = "existence_check"
     EXHAUSTIVE_SCAN = "exhaustive_scan"
+    PAGE_LOOKUP = "page_lookup"
 
 
 QueryScope = Literal["single_doc", "collection", "unknown"]
@@ -39,6 +40,8 @@ class QueryRoute:
     modality: tuple[str, ...] = ("text",)
     reason: str = ""
     rewritten_queries: tuple[str, ...] = field(default_factory=tuple)
+    # Specific page number for positional ("what is on page N") lookups.
+    page_ref: int | None = None
 
 
 _WHOLE_DOCUMENT_MARKERS = (
@@ -128,6 +131,39 @@ _CITATION_MARKERS = (
 )
 
 
+# Positional "what is on page N" detection across DocTalk locales (+ Czech, the
+# paying user's language). Pure semantic top-k can't resolve a page number, so a
+# specific page reference routes to a direct Page.content lookup (B4).
+_PAGE_REF_PATTERNS = (
+    # Latin scripts: page-word then number — page 350 / página 12 / seite 5 /
+    # straně 350 (cs) / pag. 7 / str. 7
+    re.compile(
+        r"\b(?:pages?|pg|p\.|p[áa]ginas?|p[áa]g\.?|seiten?|stran\w{0,4}|str\.)"
+        r"\s*[:#nº\.]*\s*(\d{1,4})",
+        re.IGNORECASE,
+    ),
+    # Arabic / Hindi page words
+    re.compile(r"(?:صفحة|الصفحة|पृष्ठ|पेज)\s*[:#]?\s*(\d{1,4})"),
+    # CJK: 第N页 / N页 / N頁 / Nページ / N쪽 / N페이지
+    re.compile(r"第\s*(\d{1,4})\s*[页頁]"),
+    re.compile(r"(\d{1,4})\s*(?:页|頁|ページ|쪽|페이지)"),
+)
+
+
+def _detect_page_ref(text: str) -> int | None:
+    for pattern in _PAGE_REF_PATTERNS:
+        match = pattern.search(text)
+        if not match:
+            continue
+        try:
+            page = int(match.group(1))
+        except (TypeError, ValueError, IndexError):
+            continue
+        if 1 <= page <= 9999:
+            return page
+    return None
+
+
 def _matches_any(text: str, patterns: tuple[str, ...]) -> bool:
     return any(re.search(pattern, text, flags=re.IGNORECASE) for pattern in patterns)
 
@@ -170,6 +206,22 @@ class QueryRouter:
         has_existence = _matches_any(normalized, _EXISTENCE_MARKERS)
         has_exhaustive = _matches_any(normalized, _EXHAUSTIVE_MARKERS)
         has_citation = _matches_any(normalized, _CITATION_MARKERS)
+
+        # Positional lookup takes precedence: a specific page number can't be
+        # resolved by semantic top-k, so route straight to a direct page fetch.
+        # (Skip when it's a summary/exhaustive request like "summarize page 5".)
+        page_ref = _detect_page_ref(normalized)
+        if page_ref is not None and not has_summary and not has_exhaustive:
+            return QueryRoute(
+                primary_intent=QueryIntent.PAGE_LOOKUP,
+                intents=(QueryIntent.PAGE_LOOKUP,),
+                scope=_route_scope(is_collection=is_collection),
+                coverage="section",
+                confidence=0.9,
+                reason="specific page reference",
+                rewritten_queries=(normalized,),
+                page_ref=page_ref,
+            )
 
         if has_summary and has_whole_doc and not has_section:
             intents.append(QueryIntent.DOCUMENT_SUMMARY)
