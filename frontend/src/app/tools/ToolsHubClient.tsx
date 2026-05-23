@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { LetterText, Clock } from 'lucide-react';
+import { useLocale } from '../../i18n';
 import MarketingShell from '../../components/marketing/MarketingShell';
 import EdPageHero from '../../components/marketing/EdPageHero';
 import EdSection from '../../components/marketing/EdSection';
@@ -10,52 +11,52 @@ import EdCheckList from '../../components/marketing/EdCheckList';
 import EdRelatedLinks from '../../components/marketing/EdRelatedLinks';
 import EdCtaBanner from '../../components/marketing/EdCtaBanner';
 
-const tools = [
-  {
-    slug: 'word-counter',
-    icon: LetterText,
-    title: 'Word Counter',
-    description:
-      'Count words, characters, sentences, and paragraphs in any text. See reading time estimates and most frequent words.',
-    meta: 'Text metrics',
-  },
-  {
-    slug: 'reading-time',
-    icon: Clock,
-    title: 'Reading Time Calculator',
-    description:
-      'Estimate how long it takes to read or present any text. Compare slow, average, and fast reading and speaking speeds.',
-    meta: 'Planning utility',
-  },
-];
-
-const proofPoints = [
-  'Browser-only text processing',
-  'Built for document workflows',
-  'Ready to hand off to AI chat',
-];
-
 export default function ToolsHubClient() {
+  const { t } = useLocale();
+
+  const tools = [
+    {
+      slug: 'word-counter',
+      icon: LetterText,
+      title: t('toolsHub.wordCounterTitle'),
+      description: t('toolsHub.wordCounterDescription'),
+      meta: t('toolsHub.wordCounterMeta'),
+    },
+    {
+      slug: 'reading-time',
+      icon: Clock,
+      title: t('toolsHub.readingTimeTitle'),
+      description: t('toolsHub.readingTimeDescription'),
+      meta: t('toolsHub.readingTimeMeta'),
+    },
+  ];
+
+  const proofPoints = [
+    t('toolsHub.proofBrowserOnly'),
+    t('toolsHub.proofDocumentWorkflows'),
+    t('toolsHub.proofHandoffAi'),
+  ];
+
   return (
     <MarketingShell
       breadcrumb={[
-        { label: 'Home', href: '/' },
-        { label: 'Tools' },
+        { label: t('toolsHub.breadcrumbHome'), href: '/' },
+        { label: t('toolsHub.breadcrumbTools') },
       ]}
     >
       <EdPageHero
-        eyebrow="Free utilities"
-        title="Document tools for quick checks before deeper AI analysis."
-        lede="Count, estimate, and prepare text locally. When the work needs source-grounded answers, move the same document into DocTalk."
+        eyebrow={t('toolsHub.heroEyebrow')}
+        title={t('toolsHub.heroTitle')}
+        lede={t('toolsHub.heroLede')}
       />
 
       <EdSection>
         <EdCheckList items={proofPoints} />
       </EdSection>
 
-      <EdSection alt title="Available tools">
+      <EdSection alt title={t('toolsHub.availableToolsTitle')}>
         <p className="ed-lede" style={{ marginBottom: '32px' }}>
-          Small utilities for repeated document prep work.
+          {t('toolsHub.availableToolsLede')}
         </p>
         <EdCardGrid
           columns={2}
@@ -72,19 +73,19 @@ export default function ToolsHubClient() {
       <EdSection>
         <EdRelatedLinks
           links={[
-            { href: '/features/multi-format', label: 'Multi-Format Support' },
-            { href: '/features/citations', label: 'Citation Highlighting' },
-            { href: '/use-cases/students', label: 'For Students' },
-            { href: '/pricing', label: 'Pricing' },
+            { href: '/features/multi-format', label: t('toolsHub.relatedMultiFormat') },
+            { href: '/features/citations', label: t('toolsHub.relatedCitations') },
+            { href: '/use-cases/students', label: t('toolsHub.relatedStudents') },
+            { href: '/pricing', label: t('toolsHub.relatedPricing') },
           ]}
         />
       </EdSection>
 
       <EdCtaBanner
-        title="Need cited answers from the original file?"
-        description="Upload a PDF, DOCX, PPTX, or spreadsheet to ask questions and inspect citations in context."
-        primary={{ label: 'Try the Free Demo', href: '/demo' }}
-        secondary={{ label: 'Explore features', href: '/features' }}
+        title={t('toolsHub.ctaTitle')}
+        description={t('toolsHub.ctaDescription')}
+        primary={{ label: t('toolsHub.ctaPrimary'), href: '/demo' }}
+        secondary={{ label: t('toolsHub.ctaSecondary'), href: '/features' }}
       />
     </MarketingShell>
   );

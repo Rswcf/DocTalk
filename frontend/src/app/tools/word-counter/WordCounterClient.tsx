@@ -3,12 +3,15 @@
 import React, { useState, useMemo } from 'react';
 import Link from 'next/link';
 import { LetterText, ClipboardPaste, Copy, Check, FileText, Timer, Trash2 } from 'lucide-react';
+import { useLocale } from '../../../i18n';
 import MarketingShell from '../../../components/marketing/MarketingShell';
 import EdPageHero from '../../../components/marketing/EdPageHero';
 import EdSection from '../../../components/marketing/EdSection';
 import EdProse from '../../../components/marketing/EdProse';
 import EdRelatedLinks from '../../../components/marketing/EdRelatedLinks';
 import EdCtaBanner from '../../../components/marketing/EdCtaBanner';
+
+type TFn = (key: string, params?: Record<string, string | number>) => string;
 
 /* ---------- helpers ---------- */
 
@@ -60,15 +63,15 @@ function getTopWords(words: string[], count: number): { word: string; freq: numb
     .map(([word, f]) => ({ word, freq: f }));
 }
 
-function formatTime(minutes: number): string {
-  if (minutes < 1) return '< 1 min';
-  if (minutes < 60) return `${Math.ceil(minutes)} min`;
+function formatTime(minutes: number, t: TFn): string {
+  if (minutes < 1) return t('toolWordCounter.timeLessThanMin');
+  if (minutes < 60) return t('toolWordCounter.timeMin', { m: Math.ceil(minutes) });
   const h = Math.floor(minutes / 60);
   const m = Math.ceil(minutes % 60);
-  return m > 0 ? `${h} hr ${m} min` : `${h} hr`;
+  return m > 0
+    ? t('toolWordCounter.timeHrMin', { h, m })
+    : t('toolWordCounter.timeHr', { h });
 }
-
-const sampleText = `DocTalk helps readers work through long documents without losing the source. Upload the original file, ask a question, and review answers with citations tied back to the exact passage. This makes summaries, comparisons, and follow-up research easier to verify.`;
 
 /* ---------- editorial style helpers ---------- */
 
@@ -82,8 +85,11 @@ const panelStyle: React.CSSProperties = {
 /* ---------- component ---------- */
 
 export default function WordCounterClient() {
+  const { t } = useLocale();
   const [text, setText] = useState('');
   const [copied, setCopied] = useState(false);
+
+  const sampleText = t('toolWordCounter.sampleText');
 
   const stats = useMemo(() => {
     const words = getWords(text);
@@ -101,21 +107,21 @@ export default function WordCounterClient() {
 
   const readingTimes = useMemo(() => {
     return [
-      { label: 'Slow (150 WPM)', time: formatTime(stats.wordCount / 150) },
-      { label: 'Average (250 WPM)', time: formatTime(stats.wordCount / 250) },
-      { label: 'Fast (350 WPM)', time: formatTime(stats.wordCount / 350) },
+      { label: t('toolWordCounter.speedSlow'), time: formatTime(stats.wordCount / 150, t) },
+      { label: t('toolWordCounter.speedAverage'), time: formatTime(stats.wordCount / 250, t) },
+      { label: t('toolWordCounter.speedFast'), time: formatTime(stats.wordCount / 350, t) },
     ];
-  }, [stats.wordCount]);
+  }, [stats.wordCount, t]);
 
   const handleCopy = async () => {
     const summary = [
-      `Words: ${stats.wordCount}`,
-      `Characters: ${stats.charCount}`,
-      `Characters (no spaces): ${stats.charCountNoSpaces}`,
-      `Sentences: ${stats.sentenceCount}`,
-      `Paragraphs: ${stats.paragraphCount}`,
-      `Avg word length: ${stats.avgWordLength.toFixed(1)} chars`,
-      `Reading time (250 WPM): ${formatTime(stats.wordCount / 250)}`,
+      t('toolWordCounter.copyWords', { value: stats.wordCount }),
+      t('toolWordCounter.copyCharacters', { value: stats.charCount }),
+      t('toolWordCounter.copyCharactersNoSpaces', { value: stats.charCountNoSpaces }),
+      t('toolWordCounter.copySentences', { value: stats.sentenceCount }),
+      t('toolWordCounter.copyParagraphs', { value: stats.paragraphCount }),
+      t('toolWordCounter.copyAvgWordLength', { value: stats.avgWordLength.toFixed(1) }),
+      t('toolWordCounter.copyReadingTime', { value: formatTime(stats.wordCount / 250, t) }),
     ].join('\n');
     await navigator.clipboard.writeText(summary);
     setCopied(true);
@@ -125,15 +131,15 @@ export default function WordCounterClient() {
   return (
     <MarketingShell
       breadcrumb={[
-        { label: 'Home', href: '/' },
-        { label: 'Tools', href: '/tools' },
-        { label: 'Word Counter' },
+        { label: t('toolWordCounter.breadcrumbHome'), href: '/' },
+        { label: t('toolWordCounter.breadcrumbTools'), href: '/tools' },
+        { label: t('toolWordCounter.breadcrumbWordCounter') },
       ]}
     >
       <EdPageHero
         icon={LetterText}
-        title="Free Document Word Counter"
-        lede="Paste any text to instantly count words, characters, sentences, and paragraphs. See reading time estimates and your most frequently used words."
+        title={t('toolWordCounter.heroTitle')}
+        lede={t('toolWordCounter.heroLede')}
       />
 
       <EdSection>
@@ -142,7 +148,7 @@ export default function WordCounterClient() {
           <div className="lg:col-span-2">
             <div className="flex items-center justify-between" style={{ marginBottom: '8px' }}>
               <label htmlFor="word-counter-input" className="ed-label">
-                Paste your text below
+                {t('toolWordCounter.inputLabel')}
               </label>
               <div className="flex items-center" style={{ gap: '14px' }}>
                 <button
@@ -157,10 +163,10 @@ export default function WordCounterClient() {
                     letterSpacing: '0.08em',
                     color: 'var(--ed-signal)',
                   }}
-                  title="Use sample text"
+                  title={t('toolWordCounter.sampleTitle')}
                 >
                   <ClipboardPaste className="h-3.5 w-3.5" />
-                  Sample
+                  {t('toolWordCounter.sampleButton')}
                 </button>
                 {text.length > 0 && (
                   <button
@@ -175,10 +181,10 @@ export default function WordCounterClient() {
                       letterSpacing: '0.08em',
                       color: 'var(--ed-ink-3)',
                     }}
-                    title="Clear text"
+                    title={t('toolWordCounter.clearTitle')}
                   >
                     <Trash2 className="w-3.5 h-3.5" />
-                    Clear
+                    {t('toolWordCounter.clearButton')}
                   </button>
                 )}
               </div>
@@ -196,13 +202,13 @@ export default function WordCounterClient() {
                 lineHeight: 1.7,
                 outline: 'none',
               }}
-              placeholder="Type or paste your text here to see word count, character count, reading time, and more..."
+              placeholder={t('toolWordCounter.inputPlaceholder')}
               value={text}
               onChange={(e) => setText(e.target.value)}
               spellCheck={false}
             />
             <p className="ed-caption" style={{ marginTop: '8px' }}>
-              Your text is processed entirely in your browser. Nothing is sent to any server.
+              {t('toolWordCounter.privacyNote')}
             </p>
           </div>
 
@@ -211,7 +217,7 @@ export default function WordCounterClient() {
             {/* Core Stats */}
             <div style={panelStyle}>
               <div className="flex items-center justify-between" style={{ marginBottom: '16px' }}>
-                <h2 className="ed-h3">Statistics</h2>
+                <h2 className="ed-h3">{t('toolWordCounter.statisticsHeading')}</h2>
                 <button
                   type="button"
                   onClick={handleCopy}
@@ -225,24 +231,24 @@ export default function WordCounterClient() {
                     letterSpacing: '0.08em',
                     color: copied ? 'var(--ed-signal)' : 'var(--ed-ink-3)',
                   }}
-                  title="Copy stats"
+                  title={t('toolWordCounter.copyTitle')}
                 >
                   {copied ? (
                     <Check className="w-3.5 h-3.5" />
                   ) : (
                     <Copy className="w-3.5 h-3.5" />
                   )}
-                  {copied ? 'Copied' : 'Copy'}
+                  {copied ? t('toolWordCounter.copiedButton') : t('toolWordCounter.copyButton')}
                 </button>
               </div>
               <dl className="flex flex-col" style={{ gap: '12px' }}>
                 {[
-                  { label: 'Words', value: stats.wordCount.toLocaleString() },
-                  { label: 'Characters', value: stats.charCount.toLocaleString() },
-                  { label: 'Characters (no spaces)', value: stats.charCountNoSpaces.toLocaleString() },
-                  { label: 'Sentences', value: stats.sentenceCount.toLocaleString() },
-                  { label: 'Paragraphs', value: stats.paragraphCount.toLocaleString() },
-                  { label: 'Avg. word length', value: `${stats.avgWordLength.toFixed(1)} chars` },
+                  { label: t('toolWordCounter.statWords'), value: stats.wordCount.toLocaleString() },
+                  { label: t('toolWordCounter.statCharacters'), value: stats.charCount.toLocaleString() },
+                  { label: t('toolWordCounter.statCharactersNoSpaces'), value: stats.charCountNoSpaces.toLocaleString() },
+                  { label: t('toolWordCounter.statSentences'), value: stats.sentenceCount.toLocaleString() },
+                  { label: t('toolWordCounter.statParagraphs'), value: stats.paragraphCount.toLocaleString() },
+                  { label: t('toolWordCounter.statAvgWordLength'), value: t('toolWordCounter.charsValue', { value: stats.avgWordLength.toFixed(1) }) },
                 ].map(({ label, value }) => (
                   <div key={label} className="flex items-center justify-between" style={{ gap: '12px' }}>
                     <dt className="ed-caption">{label}</dt>
@@ -258,7 +264,7 @@ export default function WordCounterClient() {
             <div style={panelStyle}>
               <div className="flex items-center" style={{ gap: '8px', marginBottom: '12px' }}>
                 <Timer aria-hidden="true" size={16} style={{ color: 'var(--ed-ink-3)' }} />
-                <h2 className="ed-h3">Estimated Reading Time</h2>
+                <h2 className="ed-h3">{t('toolWordCounter.readingTimeHeading')}</h2>
               </div>
               <dl className="flex flex-col" style={{ gap: '10px' }}>
                 {readingTimes.map(({ label, time }) => (
@@ -278,7 +284,7 @@ export default function WordCounterClient() {
         {stats.topWords.length > 0 && (
           <div style={{ ...panelStyle, marginTop: '24px' }}>
             <h2 className="ed-h3" style={{ marginBottom: '16px' }}>
-              Top 10 Most Frequent Words
+              {t('toolWordCounter.topWordsHeading')}
             </h2>
             <div className="grid grid-cols-2 sm:grid-cols-5" style={{ gap: '12px' }}>
               {stats.topWords.map(({ word, freq }, i) => (
@@ -292,7 +298,7 @@ export default function WordCounterClient() {
                     {word}
                   </span>
                   <span className="ed-caption tabular-nums shrink-0" style={{ marginLeft: '8px' }}>
-                    {freq}x
+                    {t('toolWordCounter.frequencyValue', { count: freq })}
                   </span>
                 </div>
               ))}
@@ -302,9 +308,9 @@ export default function WordCounterClient() {
 
         <div className="grid grid-cols-1 sm:grid-cols-3" style={{ marginTop: '24px', gap: '12px' }}>
           {[
-            { icon: FileText, label: 'Content units', value: `${stats.sentenceCount} sentences` },
-            { icon: LetterText, label: 'Density', value: `${stats.avgWordLength.toFixed(1)} chars / word` },
-            { icon: Timer, label: 'Average read', value: stats.wordCount > 0 ? formatTime(stats.wordCount / 250) : '--' },
+            { icon: FileText, label: t('toolWordCounter.summaryContentUnits'), value: t('toolWordCounter.sentencesValue', { count: stats.sentenceCount }) },
+            { icon: LetterText, label: t('toolWordCounter.summaryDensity'), value: t('toolWordCounter.charsPerWordValue', { value: stats.avgWordLength.toFixed(1) }) },
+            { icon: Timer, label: t('toolWordCounter.summaryAverageRead'), value: stats.wordCount > 0 ? formatTime(stats.wordCount / 250, t) : '--' },
           ].map((item) => {
             const Icon = item.icon;
             return (
@@ -321,30 +327,24 @@ export default function WordCounterClient() {
       </EdSection>
 
       <EdCtaBanner
-        title="Need to analyze a PDF or DOCX file?"
-        description="DocTalk lets you upload any document and ask AI questions about it. Get word counts, summaries, key insights, and cited answers — all from your original file."
-        primary={{ label: 'Try DocTalk Free', href: '/demo' }}
+        title={t('toolWordCounter.ctaTitle')}
+        description={t('toolWordCounter.ctaDescription')}
+        primary={{ label: t('toolWordCounter.ctaPrimary'), href: '/demo' }}
       />
 
-      <EdSection title="How to Use This Word Counter">
+      <EdSection title={t('toolWordCounter.howToTitle')}>
         <EdProse>
           <p>
-            Simply paste or type your text into the box above. The tool instantly counts
-            <strong> words</strong>, <strong>characters</strong> (with and without spaces),
-            <strong> sentences</strong>, and <strong>paragraphs</strong>. It also calculates
-            the average word length and estimates how long it would take to read the text
-            at different speeds.
+            {t('toolWordCounter.howToP1Lead')}
+            <strong> {t('toolWordCounter.howToP1Words')}</strong>, <strong>{t('toolWordCounter.howToP1Characters')}</strong> {t('toolWordCounter.howToP1CharactersNote')},
+            <strong> {t('toolWordCounter.howToP1Sentences')}</strong>, {t('toolWordCounter.howToP1And')} <strong>{t('toolWordCounter.howToP1Paragraphs')}</strong>. {t('toolWordCounter.howToP1Tail')}
           </p>
           <p>
-            The <strong>top 10 most frequent words</strong> section helps you identify
-            overused terms or key themes in your writing. Common stop words
-            (the, a, is, etc.) are filtered out so you see meaningful content words.
+            {t('toolWordCounter.howToP2Lead')} <strong>{t('toolWordCounter.howToP2TopWords')}</strong> {t('toolWordCounter.howToP2Tail')}
           </p>
           <p>
-            This tool runs entirely in your browser — your text never leaves your device.
-            It works great for essays, articles, blog posts, and any pasted text.
-            For analyzing full PDF, DOCX, or PPTX files with AI,{' '}
-            <Link href="/demo">try DocTalk&apos;s AI document chat</Link>.
+            {t('toolWordCounter.howToP3Lead')}{' '}
+            <Link href="/demo">{t('toolWordCounter.howToP3Link')}</Link>.
           </p>
         </EdProse>
       </EdSection>
@@ -352,10 +352,10 @@ export default function WordCounterClient() {
       <EdSection alt>
         <EdRelatedLinks
           links={[
-            { href: '/tools', label: 'All Tools' },
-            { href: '/tools/reading-time', label: 'Reading Time Calculator' },
-            { href: '/features/multi-format', label: 'Multi-Format Support' },
-            { href: '/demo', label: 'Free Demo' },
+            { href: '/tools', label: t('toolWordCounter.relatedAllTools') },
+            { href: '/tools/reading-time', label: t('toolWordCounter.relatedReadingTime') },
+            { href: '/features/multi-format', label: t('toolWordCounter.relatedMultiFormat') },
+            { href: '/demo', label: t('toolWordCounter.relatedFreeDemo') },
           ]}
         />
       </EdSection>

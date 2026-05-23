@@ -2,6 +2,7 @@
 
 import React from 'react';
 import Link from 'next/link';
+import { useLocale } from '../../../i18n';
 import MarketingShell from '../../../components/marketing/MarketingShell';
 import EdPageHero from '../../../components/marketing/EdPageHero';
 import EdSection from '../../../components/marketing/EdSection';
@@ -14,263 +15,218 @@ import EdCheckList from '../../../components/marketing/EdCheckList';
 import EdChoiceList from '../../../components/marketing/EdChoiceList';
 
 export default function AskyourpdfAltsClient() {
+  const { t } = useLocale();
+
   const quickCompare = [
-    { name: 'File Formats', doctalk: '7 formats (PDF, DOCX, PPTX, XLSX, TXT, MD, URL)', competitor: 'PDF only' },
-    { name: 'Citation Highlighting', doctalk: true, competitor: false },
-    { name: 'Languages', doctalk: '11', competitor: '1' },
-    { name: 'Free Tier', doctalk: '300 credits/mo + free demo', competitor: 'Limited free plan' },
-    { name: 'Starting Price', doctalk: '$9.99/mo', competitor: '$14.99/mo' },
+    { name: t('altsAskyourpdf.tableFileFormats'), doctalk: t('altsAskyourpdf.table7Formats'), competitor: t('altsAskyourpdf.tablePdfOnly') },
+    { name: t('altsAskyourpdf.tableCitationHighlighting'), doctalk: true, competitor: false },
+    { name: t('altsAskyourpdf.tableLanguages'), doctalk: '11', competitor: '1' },
+    { name: t('altsAskyourpdf.tableFreeTier'), doctalk: t('altsAskyourpdf.tableFreeTierDoctalk'), competitor: t('altsAskyourpdf.tableFreeTierCompetitor') },
+    { name: t('altsAskyourpdf.tableStartingPrice'), doctalk: '$9.99/mo', competitor: '$14.99/mo' },
   ];
 
   const faqItems = [
     {
-      question: 'What is the best free AskYourPDF alternative?',
-      answer: 'Google NotebookLM is completely free with multi-source notebooks and audio summaries. DocTalk also offers a free demo with no signup and a free tier with 300 credits per month, making both strong options for users looking to switch from AskYourPDF without paying.',
+      question: t('altsAskyourpdf.faq1Question'),
+      answer: t('altsAskyourpdf.faq1Answer'),
     },
     {
-      question: 'Why do people switch from AskYourPDF to other tools?',
-      answer: 'Common reasons include limited file format support (AskYourPDF focuses mainly on PDFs), lack of real-time citation highlighting, inconsistent OCR quality on scanned documents, and pricing that can be high relative to features offered.',
+      question: t('altsAskyourpdf.faq2Question'),
+      answer: t('altsAskyourpdf.faq2Answer'),
     },
     {
-      question: 'Which AskYourPDF alternative supports the most document formats?',
-      answer: 'DocTalk supports 7 formats (PDF, DOCX, PPTX, XLSX, TXT, Markdown, and web URLs), far more than AskYourPDF which primarily handles PDFs. This makes DocTalk ideal for users working with diverse document types.',
+      question: t('altsAskyourpdf.faq3Question'),
+      answer: t('altsAskyourpdf.faq3Answer'),
     },
     {
-      question: 'Is there an AskYourPDF alternative with better citation accuracy?',
-      answer: 'DocTalk offers the most advanced citation system with real-time visual highlighting that scrolls to and highlights the exact source passage. AskYourPDF provides page references but lacks the interactive visual verification that DocTalk offers.',
+      question: t('altsAskyourpdf.faq4Question'),
+      answer: t('altsAskyourpdf.faq4Answer'),
     },
     {
-      question: 'Which AskYourPDF alternative is best for academic research?',
-      answer: 'For academic research, Consensus is excellent for searching across published papers. DocTalk is best for analyzing specific documents with verifiable citations. NotebookLM is ideal for free multi-source literature reviews with audio summaries.',
+      question: t('altsAskyourpdf.faq5Question'),
+      answer: t('altsAskyourpdf.faq5Answer'),
     },
   ];
 
   const chooseItems = [
-    { need: 'Multi-format support + citation highlighting', pick: { label: 'DocTalk', href: '/demo' } },
-    { need: 'Simple PDF chat with fast responses', pick: { label: 'ChatPDF', href: '/compare/chatpdf' } },
-    { need: 'PDF annotation + AI chat in one tool', pick: { label: 'PDF.ai', href: '/compare/pdf-ai' } },
-    { need: 'Team collaboration with shared workspaces', pick: { label: 'Humata', href: '/compare/humata' } },
-    { need: 'Free multi-source research notebooks', pick: { label: 'NotebookLM', href: '/compare/notebooklm' } },
-    { need: 'Table and structured data extraction', pick: { label: 'ChatDOC', href: '/alternatives' } },
-    { need: 'Academic paper search across literature', pick: { label: 'Consensus', href: '/alternatives' } },
+    { need: t('altsAskyourpdf.chooseNeed1'), pick: { label: 'DocTalk', href: '/demo' } },
+    { need: t('altsAskyourpdf.chooseNeed2'), pick: { label: 'ChatPDF', href: '/compare/chatpdf' } },
+    { need: t('altsAskyourpdf.chooseNeed3'), pick: { label: 'PDF.ai', href: '/compare/pdf-ai' } },
+    { need: t('altsAskyourpdf.chooseNeed4'), pick: { label: 'Humata', href: '/compare/humata' } },
+    { need: t('altsAskyourpdf.chooseNeed5'), pick: { label: 'NotebookLM', href: '/compare/notebooklm' } },
+    { need: t('altsAskyourpdf.chooseNeed6'), pick: { label: 'ChatDOC', href: '/alternatives' } },
+    { need: t('altsAskyourpdf.chooseNeed7'), pick: { label: 'Consensus', href: '/alternatives' } },
   ];
 
   return (
     <MarketingShell
       breadcrumb={[
-        { label: 'Home', href: '/' },
-        { label: 'Alternatives', href: '/alternatives' },
-        { label: 'AskYourPDF' },
+        { label: t('altsAskyourpdf.breadcrumbHome'), href: '/' },
+        { label: t('altsAskyourpdf.breadcrumbAlternatives'), href: '/alternatives' },
+        { label: t('altsAskyourpdf.breadcrumbAskyourpdf') },
       ]}
     >
       <EdPageHero
-        title="7 Best AskYourPDF Alternatives in 2026"
-        lede="AskYourPDF is a popular AI PDF chat tool, but it has limitations in file format support and citation verification. Whether you need multi-format document analysis, better citation highlighting, or more affordable pricing, these 7 alternatives offer compelling options for every use case."
-        primaryCta={{ label: 'Try Free Demo', href: '/demo' }}
+        title={t('altsAskyourpdf.heroTitle')}
+        lede={t('altsAskyourpdf.heroDescription')}
+        primaryCta={{ label: t('altsAskyourpdf.linkFreeDemo'), href: '/demo' }}
       />
 
-      <EdSection title="DocTalk vs AskYourPDF at a Glance">
+      <EdSection title={t('altsAskyourpdf.compareTitle')}>
         <EdComparisonTable features={quickCompare} competitorName="AskYourPDF" />
       </EdSection>
 
-      <EdSection alt title="Why Look for AskYourPDF Alternatives?">
+      <EdSection alt title={t('altsAskyourpdf.whyTitle')}>
         <EdProse>
-          <p>
-            AskYourPDF is a solid tool for basic PDF Q&amp;A, but many users find themselves needing more. The most
-            common reasons people look for alternatives include:
-          </p>
+          <p>{t('altsAskyourpdf.whyIntro')}</p>
           <ul>
-            <li>PDF-only limitation — AskYourPDF focuses exclusively on PDFs, leaving users who work with Word documents, spreadsheets, or presentations without support.</li>
-            <li>Basic citation system — While AskYourPDF provides page references, it lacks real-time visual highlighting to verify answers against source text.</li>
-            <li>OCR inconsistency — Scanned PDFs and image-heavy documents can produce unreliable text extraction, affecting answer quality.</li>
-            <li>Pricing concerns — At $14.99/month for the premium plan, some users find better value in alternatives that offer more features at lower price points.</li>
+            <li>{t('altsAskyourpdf.whyReason1')}</li>
+            <li>{t('altsAskyourpdf.whyReason2')}</li>
+            <li>{t('altsAskyourpdf.whyReason3')}</li>
+            <li>{t('altsAskyourpdf.whyReason4')}</li>
           </ul>
         </EdProse>
       </EdSection>
 
       {/* #1 DocTalk */}
-      <EdSection num="01" title="DocTalk">
+      <EdSection num="01" title={t('altsAskyourpdf.alt1Title')}>
         <div className="ed-label" style={{ color: 'var(--ed-signal)' }}>
-          Best Overall AskYourPDF Alternative
+          {t('altsAskyourpdf.bestOverall')}
         </div>
         <EdProse className="mt-3">
+          <p>{t('altsAskyourpdf.alt1Desc1')}</p>
+          <p>{t('altsAskyourpdf.alt1Desc2')}</p>
           <p>
-            DocTalk is the top alternative to AskYourPDF, offering everything AskYourPDF does plus multi-format support
-            for 7 document types (PDF, DOCX, PPTX, XLSX, TXT, Markdown, and URLs). Its standout feature is real-time
-            citation highlighting that visually verifies every AI answer against the source document.
-          </p>
-          <p>
-            Unlike AskYourPDF, DocTalk supports 11 languages natively, offers a completely free demo with no signup
-            required, and provides two AI performance modes (Flash and Pro) so you can optimize for speed or accuracy.
-          </p>
-          <p>
-            See our{' '}
-            <Link href="/compare/askyourpdf">detailed DocTalk vs AskYourPDF comparison</Link>{' '}
-            for a feature-by-feature breakdown.
+            {t('altsAskyourpdf.alt1Desc3Pre')}{' '}
+            <Link href="/compare/askyourpdf">{t('altsAskyourpdf.alt1CompareLink')}</Link>{' '}
+            {t('altsAskyourpdf.alt1Desc3Post')}
           </p>
         </EdProse>
         <div className="ed-label" style={{ marginTop: '32px' }}>
-          Key Advantages
+          {t('altsAskyourpdf.keyAdvantages')}
         </div>
         <div className="mt-3">
           <EdCheckList
             items={[
-              '7 document formats vs PDF-only',
-              'Real-time citation highlighting with visual verification',
-              '11 languages supported natively',
-              'Free demo with no signup required',
-              'Two AI modes: Flash and Pro',
-              'Starting at $9.99/mo (vs $14.99/mo)',
+              t('altsAskyourpdf.adv1'),
+              t('altsAskyourpdf.adv2'),
+              t('altsAskyourpdf.adv3'),
+              t('altsAskyourpdf.adv4'),
+              t('altsAskyourpdf.adv5'),
+              t('altsAskyourpdf.adv6'),
             ]}
           />
         </div>
       </EdSection>
 
       {/* #2 ChatPDF */}
-      <EdSection alt num="02" title="ChatPDF">
+      <EdSection alt num="02" title={t('altsAskyourpdf.alt2Title')}>
         <EdProse>
+          <p>{t('altsAskyourpdf.alt2Desc1')}</p>
           <p>
-            ChatPDF is one of the most well-known AI PDF chat tools. It offers a clean, simple interface for uploading
-            PDFs and asking questions. Like AskYourPDF, it focuses exclusively on PDF files, but it tends to have
-            faster response times and a more intuitive user experience.
-          </p>
-          <p>
-            ChatPDF&apos;s free tier allows limited daily usage, making it a good option for occasional users. However,
-            it lacks multi-format support and real-time citation highlighting. See our{' '}
-            <Link href="/compare/chatpdf">ChatPDF comparison</Link>.
+            {t('altsAskyourpdf.alt2Desc2Pre')}{' '}
+            <Link href="/compare/chatpdf">{t('altsAskyourpdf.alt2CompareLink')}</Link>.
           </p>
         </EdProse>
         <p className="ed-body" style={{ marginTop: '16px' }}>
-          <strong>Best for:</strong> Users who want a simple, fast PDF chat experience with minimal setup.
+          <strong>{t('altsAskyourpdf.bestFor')}</strong> {t('altsAskyourpdf.alt2BestFor')}
         </p>
       </EdSection>
 
       {/* #3 PDF.ai */}
-      <EdSection num="03" title="PDF.ai">
+      <EdSection num="03" title={t('altsAskyourpdf.alt3Title')}>
         <EdProse>
+          <p>{t('altsAskyourpdf.alt3Desc1')}</p>
           <p>
-            PDF.ai combines AI chat with built-in PDF editing capabilities, letting you both ask questions about and
-            annotate your documents in one place. This dual functionality sets it apart from AskYourPDF, which focuses
-            purely on the Q&amp;A aspect.
-          </p>
-          <p>
-            The tool is PDF-only like AskYourPDF, but its editing features make it useful for users who need to mark up
-            documents alongside their AI analysis. See our{' '}
-            <Link href="/compare/pdf-ai">PDF.ai comparison</Link>.
+            {t('altsAskyourpdf.alt3Desc2Pre')}{' '}
+            <Link href="/compare/pdf-ai">{t('altsAskyourpdf.alt3CompareLink')}</Link>.
           </p>
         </EdProse>
         <p className="ed-body" style={{ marginTop: '16px' }}>
-          <strong>Best for:</strong> Users who need PDF annotation and editing alongside AI chat features.
+          <strong>{t('altsAskyourpdf.bestFor')}</strong> {t('altsAskyourpdf.alt3BestFor')}
         </p>
       </EdSection>
 
       {/* #4 Humata */}
-      <EdSection alt num="04" title="Humata">
+      <EdSection alt num="04" title={t('altsAskyourpdf.alt4Title')}>
         <EdProse>
+          <p>{t('altsAskyourpdf.alt4Desc1')}</p>
           <p>
-            Humata is an enterprise-focused AI document tool that excels at team collaboration. It offers shared
-            workspaces, role-based access control, and the ability to analyze large document sets together. For
-            organizations outgrowing AskYourPDF, Humata provides the team infrastructure they need.
-          </p>
-          <p>
-            While more expensive than AskYourPDF (Team plan at $49/user/month), Humata justifies its price with
-            enterprise features like admin dashboards, usage analytics, and priority support. See our{' '}
-            <Link href="/compare/humata">Humata comparison</Link>.
+            {t('altsAskyourpdf.alt4Desc2Pre')}{' '}
+            <Link href="/compare/humata">{t('altsAskyourpdf.alt4CompareLink')}</Link>.
           </p>
         </EdProse>
         <p className="ed-body" style={{ marginTop: '16px' }}>
-          <strong>Best for:</strong> Teams and enterprises that need shared document workspaces with role management.
+          <strong>{t('altsAskyourpdf.bestFor')}</strong> {t('altsAskyourpdf.alt4BestFor')}
         </p>
       </EdSection>
 
       {/* #5 NotebookLM */}
-      <EdSection num="05" title="Google NotebookLM">
+      <EdSection num="05" title={t('altsAskyourpdf.alt5Title')}>
         <EdProse>
+          <p>{t('altsAskyourpdf.alt5Desc1')}</p>
           <p>
-            NotebookLM is Google&apos;s free AI notebook tool that lets you upload multiple sources (PDFs, Google Docs,
-            websites, YouTube videos) and chat across all of them simultaneously. Its unique Audio Overview feature
-            generates podcast-style summaries of your sources.
-          </p>
-          <p>
-            The biggest advantage over AskYourPDF is that NotebookLM is completely free. However, it requires a Google
-            account and doesn&apos;t offer the same depth of single-document analysis. See our{' '}
-            <Link href="/compare/notebooklm">NotebookLM comparison</Link>.
+            {t('altsAskyourpdf.alt5Desc2Pre')}{' '}
+            <Link href="/compare/notebooklm">{t('altsAskyourpdf.alt5CompareLink')}</Link>.
           </p>
         </EdProse>
         <p className="ed-body" style={{ marginTop: '16px' }}>
-          <strong>Best for:</strong> Users who want a free multi-source research tool with audio summaries.
+          <strong>{t('altsAskyourpdf.bestFor')}</strong> {t('altsAskyourpdf.alt5BestFor')}
         </p>
       </EdSection>
 
       {/* #6 ChatDOC */}
-      <EdSection alt num="06" title="ChatDOC">
+      <EdSection alt num="06" title={t('altsAskyourpdf.alt6Title')}>
         <EdProse>
-          <p>
-            ChatDOC specializes in structured data extraction from documents, making it particularly effective for
-            tables, charts, and forms. If you work with data-heavy PDFs like financial reports or research papers with
-            complex tables, ChatDOC often extracts this information more accurately than AskYourPDF.
-          </p>
-          <p>
-            ChatDOC supports PDF, DOCX, and a few other formats, putting it between AskYourPDF (PDF-only) and DocTalk
-            (7 formats) in terms of versatility. Its table extraction is a standout feature.
-          </p>
+          <p>{t('altsAskyourpdf.alt6Desc1')}</p>
+          <p>{t('altsAskyourpdf.alt6Desc2')}</p>
         </EdProse>
         <p className="ed-body" style={{ marginTop: '16px' }}>
-          <strong>Best for:</strong> Users who work heavily with tables, charts, and structured data in documents.
+          <strong>{t('altsAskyourpdf.bestFor')}</strong> {t('altsAskyourpdf.alt6BestFor')}
         </p>
       </EdSection>
 
       {/* #7 Consensus */}
-      <EdSection num="07" title="Consensus">
+      <EdSection num="07" title={t('altsAskyourpdf.alt7Title')}>
         <EdProse>
-          <p>
-            Consensus takes a unique approach by searching across millions of published academic papers rather than
-            analyzing uploaded documents. For researchers who need to find evidence across the scientific literature,
-            Consensus offers something entirely different from AskYourPDF&apos;s single-document analysis.
-          </p>
-          <p>
-            While not a direct replacement for AskYourPDF (you can&apos;t upload your own documents), Consensus is
-            invaluable for academic research, literature reviews, and finding citations across published work. It pairs
-            well with tools like DocTalk for a complete research workflow.
-          </p>
+          <p>{t('altsAskyourpdf.alt7Desc1')}</p>
+          <p>{t('altsAskyourpdf.alt7Desc2')}</p>
         </EdProse>
         <p className="ed-body" style={{ marginTop: '16px' }}>
-          <strong>Best for:</strong> Academic researchers who need AI-powered search across published scientific papers.
+          <strong>{t('altsAskyourpdf.bestFor')}</strong> {t('altsAskyourpdf.alt7BestFor')}
         </p>
       </EdSection>
 
-      <EdSection alt title="How to Choose the Right AskYourPDF Alternative">
-        <p className="ed-body">
-          The best alternative depends on your specific needs. Here&apos;s a quick guide to help you decide:
-        </p>
+      <EdSection alt title={t('altsAskyourpdf.chooseTitle')}>
+        <p className="ed-body">{t('altsAskyourpdf.chooseDescription')}</p>
         <div style={{ marginTop: '24px' }}>
           <EdChoiceList items={chooseItems} />
         </div>
       </EdSection>
 
-      <EdSection title="Frequently Asked Questions">
+      <EdSection title={t('altsAskyourpdf.faqTitle')}>
         <EdFaqList items={faqItems} />
       </EdSection>
 
       <EdSection alt>
         <EdRelatedLinks
-          title="Related Pages"
+          title={t('altsAskyourpdf.relatedPages')}
           links={[
-            { href: '/compare/askyourpdf', label: 'DocTalk vs AskYourPDF' },
-            { href: '/compare/chatpdf', label: 'DocTalk vs ChatPDF' },
-            { href: '/alternatives/chatpdf', label: 'ChatPDF Alternatives' },
-            { href: '/features/citations', label: 'Citation Highlighting' },
-            { href: '/features/multi-format', label: 'Multi-Format Support' },
-            { href: '/demo', label: 'Try Free Demo' },
-            { href: '/pricing', label: 'Pricing' },
+            { href: '/compare/askyourpdf', label: t('altsAskyourpdf.linkVsAskyourpdf') },
+            { href: '/compare/chatpdf', label: t('altsAskyourpdf.linkVsChatpdf') },
+            { href: '/alternatives/chatpdf', label: t('altsAskyourpdf.linkChatpdfAlts') },
+            { href: '/features/citations', label: t('altsAskyourpdf.linkCitations') },
+            { href: '/features/multi-format', label: t('altsAskyourpdf.linkMultiFormat') },
+            { href: '/demo', label: t('altsAskyourpdf.linkFreeDemo') },
+            { href: '/pricing', label: t('altsAskyourpdf.linkPricing') },
           ]}
         />
       </EdSection>
 
       <EdCtaBanner
-        title="Ready to Try a Better Document AI?"
-        description="Upload any document and get cited answers in seconds. No signup required."
-        primary={{ label: 'Try Free Demo', href: '/demo' }}
+        title={t('altsAskyourpdf.ctaTitle')}
+        description={t('altsAskyourpdf.ctaDescription')}
+        primary={{ label: t('altsAskyourpdf.ctaButton'), href: '/demo' }}
       />
     </MarketingShell>
   );
