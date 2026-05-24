@@ -12,7 +12,7 @@
  */
 
 // Locales that have crawlable, server-rendered marketing URLs (en is the unprefixed default).
-export const URL_LOCALES = ['ja', 'es', 'ko', 'de', 'fr', 'pt'] as const;
+export const URL_LOCALES = ['ja', 'es', 'ko', 'de', 'fr'] as const;
 export type UrlLocale = (typeof URL_LOCALES)[number];
 
 // All locales that participate in hreflang (the unprefixed default + the prefixed set).
