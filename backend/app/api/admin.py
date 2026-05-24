@@ -3,12 +3,14 @@
 from __future__ import annotations
 
 import asyncio
-from datetime import datetime, timedelta, timezone
+import re
+from collections import Counter, defaultdict
+from datetime import date, datetime, timedelta, timezone
 from typing import Any
 
 import stripe
 from fastapi import APIRouter, Depends, Query
-from sqlalchemy import case, func, select, text, union_all
+from sqlalchemy import String, case, cast, func, or_, select, text, union_all
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.cache import cache_get, cache_set
@@ -19,6 +21,7 @@ from app.models.tables import (
     CreditLedger,
     Document,
     Message,
+    PlanTransition,
     ProductEvent,
     UsageRecord,
     User,
@@ -26,8 +29,10 @@ from app.models.tables import (
 )
 from app.schemas.admin import (
     AdminBreakdownsResponse,
+    AdminChurnResponse,
     AdminOverviewResponse,
     AdminRecentUsersResponse,
+    AdminRetentionResponse,
     AdminTopUsersResponse,
     AdminTrendsResponse,
     AdminUserActivityResponse,
@@ -95,6 +100,49 @@ PAID_SOURCE_LABELS = {
     "pricing": "Pricing page",
     "pricing_hero": "Pricing page hero",
 }
+
+INTERNAL_OWNER_USER_IDS = {"c142f3af-6e6b-488d-ba57-d91aa3e57cc7"}
+RETENTION_WEEKS = 12
+RETENTION_OFFSETS = 12
+RETENTION_DAYS = (1, 7, 30)
+RETENTION_LOOKBACK_DAYS = 395
+CHURN_LOOKBACK_DAYS = 395
+CHURN_SIGNAL_KEYS = (
+    "asst_zero",
+    "rag_miss",
+    "parse_failure",
+    "large_doc",
+    "export_refusal",
+    "paywall_hit",
+)
+CHURN_SIGNAL_LABELS = {
+    "asst_zero": "Assistant zero-response session",
+    "rag_miss": "Retrieval or coverage miss",
+    "parse_failure": "Parse/OCR failure",
+    "large_doc": "Large document uploaded",
+    "export_refusal": "Export requested without artifact",
+    "paywall_hit": "Paywall or plan limit hit",
+}
+REASON_BUCKET_LABELS = {
+    "coverage_fail": "Coverage failed",
+    "page_fail": "Page lookup failed",
+    "export": "Export blocked",
+    "parse": "Parse failure",
+    "capability_refusal": "Capability refusal",
+    "one_off_success": "One-off success",
+    "uncategorized": "Uncategorized",
+}
+EXPORT_REQUEST_RE = re.compile(r"\b(export|download|csv|excel|xlsx)\b|导出|下载|表格文件", re.IGNORECASE)
+PAGE_REQUEST_RE = re.compile(r"\b(page|p\.\s*\d+|page\s+\d+)\b|第\s*\d+\s*页|页面", re.IGNORECASE)
+RAG_MISS_RE = re.compile(
+    r"can't find|cannot find|could not find|not found|no relevant|not in (?:the )?document|"
+    r"无法找到|找不到|未找到|找不到相关|見つ|찾을 수|no encontr|nicht gefunden|introuv",
+    re.IGNORECASE,
+)
+CAPABILITY_REFUSAL_RE = re.compile(
+    r"\b(can't|cannot|unable to|not able to|not supported|do not support)\b|无法|不能|不支持",
+    re.IGNORECASE,
+)
 
 
 def _humanize_code(value: str | None) -> str | None:
@@ -166,6 +214,591 @@ def _date_label(value: Any) -> str:
     if hasattr(value, "date"):
         return str(value.date())
     return str(value)[:10]
+
+
+def _row_value(row: Any, key: str, default: Any = None) -> Any:
+    if isinstance(row, dict):
+        return row.get(key, default)
+    return getattr(row, key, default)
+
+
+def _as_date(value: Any) -> date:
+    if isinstance(value, datetime):
+        return value.date()
+    if hasattr(value, "year") and hasattr(value, "month") and hasattr(value, "day"):
+        return value
+    return datetime.fromisoformat(str(value)[:10]).date()
+
+
+def _week_start(value: Any) -> date:
+    day = _as_date(value)
+    return day - timedelta(days=day.weekday())
+
+
+def _utc_day_trunc(column: Any) -> Any:
+    return func.date_trunc("day", column.op("AT TIME ZONE")("UTC"))
+
+
+def _admin_excluded_emails(admin_emails: set[str] | None = None) -> set[str]:
+    if admin_emails is not None:
+        return {email.strip().lower() for email in admin_emails if email and email.strip()}
+    return {email.strip().lower() for email in settings.ADMIN_EMAILS.split(",") if email.strip()}
+
+
+def _default_excluded_user_ids(excluded_user_ids: set[str] | None = None) -> set[str]:
+    if excluded_user_ids is not None:
+        return {str(user_id) for user_id in excluded_user_ids if user_id}
+    return set(INTERNAL_OWNER_USER_IDS)
+
+
+def _eligible_user_conditions() -> list[Any]:
+    conditions: list[Any] = []
+    excluded_emails = _admin_excluded_emails()
+    if excluded_emails:
+        conditions.append(~func.lower(User.email).in_(excluded_emails))
+    if INTERNAL_OWNER_USER_IDS:
+        conditions.append(~cast(User.id, String).in_(INTERNAL_OWNER_USER_IDS))
+    return conditions
+
+
+def _is_excluded_user(row: Any, excluded_user_ids: set[str], admin_emails: set[str]) -> bool:
+    user_id = _row_value(row, "id", _row_value(row, "user_id"))
+    email = _row_value(row, "email")
+    return str(user_id) in excluded_user_ids or (isinstance(email, str) and email.lower() in admin_emails)
+
+
+def _eligible_user_map(
+    users: list[Any],
+    excluded_user_ids: set[str] | None = None,
+    admin_emails: set[str] | None = None,
+) -> dict[str, Any]:
+    excluded_ids = _default_excluded_user_ids(excluded_user_ids)
+    excluded_emails = _admin_excluded_emails(admin_emails)
+    return {
+        str(_row_value(user, "id")): user
+        for user in users
+        if _row_value(user, "id") is not None
+        and not _is_excluded_user(user, excluded_ids, excluded_emails)
+    }
+
+
+def _doc_size_bucket(page_count: Any) -> str:
+    if page_count is None:
+        return "unknown"
+    pages = int(page_count or 0)
+    if pages >= 150:
+        return "large"
+    if pages >= 40:
+        return "mid"
+    return "small"
+
+
+def _doc_size_label(bucket: str) -> str:
+    return {
+        "small": "Small (<40p)",
+        "mid": "Mid (40-150p)",
+        "large": "Large (>=150p)",
+        "unknown": "Unknown",
+    }.get(bucket, _humanize_code(bucket) or bucket)
+
+
+def _segment_payload(
+    values_by_user: dict[str, str],
+    active_users: set[str],
+    retained_users: set[str],
+    *,
+    labeler: Any = _humanize_code,
+    limit: int | None = None,
+    order: list[str] | None = None,
+) -> list[dict[str, Any]]:
+    buckets: dict[str, set[str]] = defaultdict(set)
+    for user_id in active_users:
+        buckets[values_by_user.get(user_id, "unknown") or "unknown"].add(user_id)
+    keys = list(buckets)
+    if order:
+        order_map = {key: index for index, key in enumerate(order)}
+        keys.sort(key=lambda key: (order_map.get(key, len(order_map)), key))
+    else:
+        keys.sort(key=lambda key: (-len(buckets[key]), key))
+    if limit is not None:
+        keys = keys[:limit]
+    return [
+        {
+            "key": key,
+            "label": labeler(key) or key,
+            "users": len(buckets[key]),
+            "retained_users": len(buckets[key] & retained_users),
+            "pct": _rate(len(buckets[key] & retained_users), len(buckets[key])),
+        }
+        for key in keys
+    ]
+
+
+def _activity_dates_by_user(activity_days: list[Any], eligible_users: set[str]) -> dict[str, set[date]]:
+    active: dict[str, set[date]] = defaultdict(set)
+    for row in activity_days:
+        user_id = str(_row_value(row, "user_id"))
+        if user_id in eligible_users:
+            active[user_id].add(_as_date(_row_value(row, "activity_date")))
+    return active
+
+
+def _build_retention_payload(
+    *,
+    now: datetime,
+    users: list[Any],
+    activity_days: list[Any],
+    document_segments: list[Any],
+    locale_segments: list[Any],
+    excluded_user_ids: set[str] | None = None,
+    admin_emails: set[str] | None = None,
+) -> dict[str, Any]:
+    eligible_users = _eligible_user_map(users, excluded_user_ids, admin_emails)
+    eligible_user_ids = set(eligible_users)
+    active_dates_by_user = _activity_dates_by_user(activity_days, eligible_user_ids)
+    activated_user_ids = {user_id for user_id, dates in active_dates_by_user.items() if dates}
+    retained_user_ids = {user_id for user_id, dates in active_dates_by_user.items() if len(dates) >= 2}
+
+    current_week = _week_start(now)
+    cohort_weeks = [
+        current_week - timedelta(weeks=RETENTION_WEEKS - 1 - index)
+        for index in range(RETENTION_WEEKS)
+    ]
+    cohort_users: dict[date, set[str]] = {week: set() for week in cohort_weeks}
+    for user_id, user in eligible_users.items():
+        cohort_week = _week_start(_row_value(user, "created_at"))
+        if cohort_week in cohort_users:
+            cohort_users[cohort_week].add(user_id)
+
+    active_weeks_by_user = {
+        user_id: {_week_start(active_date) for active_date in active_dates}
+        for user_id, active_dates in active_dates_by_user.items()
+    }
+    today = now.date()
+    cohort_grid = []
+    for cohort_week in cohort_weeks:
+        users_in_cohort = cohort_users[cohort_week]
+        retention = []
+        for week_offset in range(RETENTION_OFFSETS):
+            target_week = cohort_week + timedelta(weeks=week_offset)
+            is_complete = target_week + timedelta(days=6) <= today
+            if not is_complete:
+                retention.append({
+                    "week_offset": week_offset,
+                    "active_users": None,
+                    "pct": None,
+                    "is_complete": False,
+                })
+                continue
+            active_users = {
+                user_id
+                for user_id in users_in_cohort
+                if target_week in active_weeks_by_user.get(user_id, set())
+            }
+            retention.append({
+                "week_offset": week_offset,
+                "active_users": len(active_users),
+                "pct": _rate(len(active_users), len(users_in_cohort)),
+                "is_complete": True,
+            })
+        cohort_grid.append({
+            "cohort_week": cohort_week.isoformat(),
+            "cohort_size": len(users_in_cohort),
+            "retention": retention,
+        })
+
+    curves = []
+    for days in RETENTION_DAYS:
+        returned_users = 0
+        matured_active_dates = []
+        maturity_cutoff = today - timedelta(days=days)
+        for active_dates in active_dates_by_user.values():
+            if not active_dates:
+                continue
+            first_active = min(active_dates)
+            if first_active > maturity_cutoff:
+                continue
+            matured_active_dates.append(active_dates)
+            if any(first_active < active_date <= first_active + timedelta(days=days) for active_date in active_dates):
+                returned_users += 1
+        curves.append({
+            "key": f"d{days}",
+            "label": f"D{days}",
+            "days": days,
+            "activated_users": len(matured_active_dates),
+            "returned_users": returned_users,
+            "pct": _rate(returned_users, len(matured_active_dates)),
+        })
+
+    dau_series = []
+    for offset in range(29, -1, -1):
+        day = today - timedelta(days=offset)
+        dau = sum(1 for dates in active_dates_by_user.values() if day in dates)
+        dau_series.append({"date": day.isoformat(), "dau": dau})
+    wau_start = today - timedelta(days=6)
+    mau_start = today - timedelta(days=29)
+    wau_users = {
+        user_id
+        for user_id, dates in active_dates_by_user.items()
+        if any(wau_start <= active_date <= today for active_date in dates)
+    }
+    mau_users = {
+        user_id
+        for user_id, dates in active_dates_by_user.items()
+        if any(mau_start <= active_date <= today for active_date in dates)
+    }
+    dau_wau_mau = {
+        "series": dau_series,
+        "wau": len(wau_users),
+        "mau": len(mau_users),
+        "stickiness": _rate(dau_series[-1]["dau"] if dau_series else 0, len(mau_users)),
+    }
+
+    plan_by_user = {
+        user_id: str(_row_value(user, "plan") or "free")
+        for user_id, user in eligible_users.items()
+    }
+    doc_by_user = {
+        str(_row_value(row, "user_id")): _doc_size_bucket(_row_value(row, "max_page_count"))
+        for row in document_segments
+        if str(_row_value(row, "user_id")) in eligible_user_ids
+    }
+    locale_by_user = {
+        str(_row_value(row, "user_id")): str(_row_value(row, "locale") or "unknown")
+        for row in locale_segments
+        if str(_row_value(row, "user_id")) in eligible_user_ids
+    }
+    by_segment = {
+        "plan": _segment_payload(
+            plan_by_user,
+            activated_user_ids,
+            retained_user_ids,
+            labeler=lambda key: key.upper() if key in {"pro"} else key.capitalize(),
+            order=["free", "plus", "pro", "unknown"],
+        ),
+        "doc_size": _segment_payload(
+            doc_by_user,
+            activated_user_ids,
+            retained_user_ids,
+            labeler=_doc_size_label,
+            order=["small", "mid", "large", "unknown"],
+        ),
+        "locale": _segment_payload(locale_by_user, activated_user_ids, retained_user_ids, limit=6),
+    }
+
+    first_active_week = {
+        user_id: _week_start(min(active_dates))
+        for user_id, active_dates in active_dates_by_user.items()
+        if active_dates
+    }
+    activity_by_week: dict[date, set[str]] = {week: set() for week in cohort_weeks}
+    for user_id, active_weeks in active_weeks_by_user.items():
+        for active_week in active_weeks:
+            if active_week in activity_by_week:
+                activity_by_week[active_week].add(user_id)
+    weekly_flow = []
+    for week in cohort_weeks:
+        active_this_week = activity_by_week.get(week, set())
+        active_previous_week = activity_by_week.get(week - timedelta(weeks=1), set())
+        new_users = {user_id for user_id in active_this_week if first_active_week.get(user_id) == week}
+        retained = {
+            user_id
+            for user_id in active_this_week & active_previous_week
+            if first_active_week.get(user_id) != week
+        }
+        resurrected = {
+            user_id
+            for user_id in active_this_week - active_previous_week - new_users
+            if first_active_week.get(user_id) != week
+        }
+        weekly_flow.append({
+            "week": week.isoformat(),
+            "new": len(new_users),
+            "retained": len(retained),
+            "resurrected": len(resurrected),
+            "churned": len(active_previous_week - active_this_week),
+        })
+
+    return {
+        "generated_at": now.isoformat(),
+        "cohort_grid": cohort_grid,
+        "curves": curves,
+        "dau_wau_mau": dau_wau_mau,
+        "by_segment": by_segment,
+        "weekly_flow": weekly_flow,
+    }
+
+
+def _normalized_action_label(key: str) -> str:
+    labels = {
+        "asst_zero": "Assistant zero-response",
+        "rag_miss": "RAG miss",
+        "normal_answer": "Normal answer",
+        "normal-answer": "Normal answer",
+        "paywall": "Paywall or plan limit",
+        "upload": "Upload",
+        "user_message": "User message",
+        "unknown": "Unknown",
+    }
+    return labels.get(key, _humanize_code(key) or key)
+
+
+def _coerce_user_set(values: Any, eligible_user_ids: set[str]) -> set[str]:
+    if values is None:
+        return set()
+    return {str(value) for value in values if str(value) in eligible_user_ids}
+
+
+def _serialize_feedback(row: Any) -> dict[str, Any]:
+    created_at = _row_value(row, "created_at")
+    message = _row_value(row, "message")
+    return {
+        "id": str(_row_value(row, "id")),
+        "type": str(_row_value(row, "type") or "unknown"),
+        "area": str(_row_value(row, "area") or "unknown"),
+        "severity": str(_row_value(row, "severity") or "unknown"),
+        "message": str(message) if message else None,
+        "plan": _row_value(row, "plan"),
+        "created_at": created_at.isoformat() if hasattr(created_at, "isoformat") else None,
+    }
+
+
+def _group_count(rows: list[Any], key: str) -> list[dict[str, Any]]:
+    counts = Counter(str(_row_value(row, key) or "unknown") for row in rows)
+    return [
+        {"key": value, "count": count}
+        for value, count in sorted(counts.items(), key=lambda item: (-item[1], item[0]))
+    ]
+
+
+def _serialize_cancel_reason(row: Any) -> dict[str, Any]:
+    created_at = _row_value(row, "created_at")
+    metadata = _row_value(row, "metadata_json") or {}
+    reason = _row_value(row, "reason")
+    feedback = _row_value(row, "feedback")
+    if not reason and isinstance(metadata, dict):
+        reason = metadata.get("cancel_reason") or metadata.get("reason")
+    if not feedback and isinstance(metadata, dict):
+        feedback = metadata.get("cancel_feedback") or metadata.get("feedback")
+    return {
+        "id": str(_row_value(row, "id")),
+        "from_plan": str(_row_value(row, "from_plan") or ""),
+        "to_plan": str(_row_value(row, "to_plan") or ""),
+        "reason": str(reason) if reason else None,
+        "feedback": str(feedback) if feedback else None,
+        "created_at": created_at.isoformat() if hasattr(created_at, "isoformat") else None,
+    }
+
+
+def _message_is_rag_miss(row: Any) -> bool:
+    content = _row_value(row, "content") or ""
+    return _citations_empty(_row_value(row, "citations")) or bool(RAG_MISS_RE.search(content))
+
+
+def _derive_message_diagnostics(
+    message_rows: list[Any],
+    *,
+    asst_zero_session_ids: set[str],
+) -> tuple[dict[str, set[str]], dict[str, tuple[datetime, str]]]:
+    signal_users: dict[str, set[str]] = {
+        "rag_miss": set(),
+        "export_refusal": set(),
+        "page_fail": set(),
+        "capability_refusal": set(),
+    }
+    final_candidates: dict[str, tuple[datetime, str]] = {}
+    pending_export_by_session: dict[str, set[str]] = defaultdict(set)
+    pending_page_by_session: dict[str, set[str]] = defaultdict(set)
+
+    def sort_key(row: Any) -> tuple[str, datetime]:
+        created_at = _row_value(row, "created_at")
+        if not isinstance(created_at, datetime):
+            created_at = datetime.min.replace(tzinfo=timezone.utc)
+        return (str(_row_value(row, "session_id") or ""), created_at)
+
+    for row in sorted(message_rows, key=sort_key):
+        user_id = str(_row_value(row, "user_id"))
+        session_id = str(_row_value(row, "session_id"))
+        role = _row_value(row, "role")
+        created_at = _row_value(row, "created_at")
+        category = "user_message"
+
+        if role == "user":
+            content = _row_value(row, "content") or ""
+            if EXPORT_REQUEST_RE.search(content):
+                pending_export_by_session[session_id].add(user_id)
+            if PAGE_REQUEST_RE.search(content):
+                pending_page_by_session[session_id].add(user_id)
+            if session_id in asst_zero_session_ids:
+                category = "asst_zero"
+        elif role == "assistant":
+            is_rag_miss = _message_is_rag_miss(row)
+            if is_rag_miss:
+                signal_users["rag_miss"].add(user_id)
+                category = "rag_miss"
+            elif CAPABILITY_REFUSAL_RE.search(_row_value(row, "content") or ""):
+                signal_users["capability_refusal"].add(user_id)
+                category = "capability_refusal"
+            else:
+                category = "normal_answer"
+
+            pending_export_user_ids = pending_export_by_session.pop(session_id, set())
+            if pending_export_user_ids and not _message_has_artifact(_row_value(row, "metadata_json")):
+                signal_users["export_refusal"].update(pending_export_user_ids)
+
+            pending_page_user_ids = pending_page_by_session.pop(session_id, set())
+            if pending_page_user_ids and is_rag_miss:
+                signal_users["page_fail"].update(pending_page_user_ids)
+
+        if isinstance(created_at, datetime):
+            current = final_candidates.get(user_id)
+            if current is None or created_at > current[0]:
+                final_candidates[user_id] = (created_at, category)
+
+    for pending_export_user_ids in pending_export_by_session.values():
+        signal_users["export_refusal"].update(pending_export_user_ids)
+
+    return signal_users, final_candidates
+
+
+def _build_churn_payload(
+    *,
+    now: datetime,
+    users: list[Any],
+    activity_days: list[Any],
+    signal_users: dict[str, set[str]],
+    last_actions: list[Any],
+    feedback_rows: list[Any],
+    cancel_rows: list[Any],
+    inactive_days: int = 14,
+    excluded_user_ids: set[str] | None = None,
+    admin_emails: set[str] | None = None,
+) -> dict[str, Any]:
+    eligible_users = _eligible_user_map(users, excluded_user_ids, admin_emails)
+    eligible_user_ids = set(eligible_users)
+    active_dates_by_user = _activity_dates_by_user(activity_days, eligible_user_ids)
+    activated_user_ids = {user_id for user_id, dates in active_dates_by_user.items() if dates}
+    inactive_cutoff = (now - timedelta(days=inactive_days)).date()
+    churned_user_ids = {
+        user_id
+        for user_id, dates in active_dates_by_user.items()
+        if dates and max(dates) < inactive_cutoff
+    }
+    one_and_done_user_ids = {
+        user_id for user_id, dates in active_dates_by_user.items() if len(dates) == 1
+    }
+
+    one_and_done = {
+        "activated_users": len(activated_user_ids),
+        "count": len(one_and_done_user_ids),
+        "pct": _rate(len(one_and_done_user_ids), len(activated_user_ids)),
+    }
+    normalized_signals = {
+        key: _coerce_user_set(value, eligible_user_ids)
+        for key, value in signal_users.items()
+    }
+    churn_signals = []
+    for key in CHURN_SIGNAL_KEYS:
+        users_with_signal = normalized_signals.get(key, set()) & churned_user_ids
+        churn_signals.append({
+            "key": key,
+            "label": CHURN_SIGNAL_LABELS[key],
+            "count": len(users_with_signal),
+            "pct": _rate(len(users_with_signal), len(churned_user_ids)),
+        })
+
+    last_action_counts: Counter[str] = Counter()
+    for row in last_actions:
+        user_id = str(_row_value(row, "user_id"))
+        if user_id not in churned_user_ids:
+            continue
+        category = str(_row_value(row, "category") or "unknown").replace("-", "_")
+        last_action_counts[category] += 1
+    last_action = [
+        {
+            "key": key,
+            "label": _normalized_action_label(key),
+            "count": count,
+            "pct": _rate(count, len(churned_user_ids)),
+        }
+        for key, count in sorted(last_action_counts.items(), key=lambda item: (-item[1], item[0]))
+    ]
+
+    eligible_feedback = [
+        row for row in feedback_rows
+        if str(_row_value(row, "user_id")) in eligible_user_ids
+    ]
+    eligible_feedback.sort(
+        key=lambda row: _row_value(row, "created_at") or datetime.min.replace(tzinfo=timezone.utc),
+        reverse=True,
+    )
+    feedback = {
+        "recent": [_serialize_feedback(row) for row in eligible_feedback[:20]],
+        "by_area": _group_count(eligible_feedback, "area"),
+        "by_severity": _group_count(eligible_feedback, "severity"),
+    }
+
+    eligible_cancel_rows = [
+        row for row in cancel_rows
+        if str(_row_value(row, "user_id")) in eligible_user_ids
+    ]
+    eligible_cancel_rows.sort(
+        key=lambda row: _row_value(row, "created_at") or datetime.min.replace(tzinfo=timezone.utc),
+        reverse=True,
+    )
+
+    bucket_counts: Counter[str] = Counter()
+    for user_id in churned_user_ids:
+        if user_id in normalized_signals.get("parse_failure", set()):
+            bucket_counts["parse"] += 1
+        elif user_id in normalized_signals.get("export_refusal", set()):
+            bucket_counts["export"] += 1
+        elif user_id in normalized_signals.get("page_fail", set()):
+            bucket_counts["page_fail"] += 1
+        elif user_id in normalized_signals.get("rag_miss", set()):
+            bucket_counts["coverage_fail"] += 1
+        elif user_id in normalized_signals.get("capability_refusal", set()):
+            bucket_counts["capability_refusal"] += 1
+        elif user_id in one_and_done_user_ids:
+            bucket_counts["one_off_success"] += 1
+        else:
+            bucket_counts["uncategorized"] += 1
+
+    reason_buckets = [
+        {
+            "key": key,
+            "label": label,
+            "count": bucket_counts.get(key, 0),
+            "pct": _rate(bucket_counts.get(key, 0), len(churned_user_ids)),
+        }
+        for key, label in REASON_BUCKET_LABELS.items()
+    ]
+
+    return {
+        "generated_at": now.isoformat(),
+        "inactive_days": inactive_days,
+        "churned_users": len(churned_user_ids),
+        "one_and_done": one_and_done,
+        "churn_signals": churn_signals,
+        "last_action": last_action,
+        "feedback": feedback,
+        "cancel_reasons": [_serialize_cancel_reason(row) for row in eligible_cancel_rows[:20]],
+        "reason_buckets": reason_buckets,
+    }
+
+
+def _citations_empty(citations: Any) -> bool:
+    return citations in (None, {}, [], "{}", "[]", "null")
+
+
+def _message_has_artifact(metadata: Any) -> bool:
+    if not isinstance(metadata, dict):
+        return False
+    artifact_count = metadata.get("artifact_count")
+    if isinstance(artifact_count, int) and artifact_count > 0:
+        return True
+    artifacts = metadata.get("artifacts")
+    return isinstance(artifacts, list) and len(artifacts) > 0
 
 
 def _activity_subquery(start: datetime, end: datetime | None = None):
@@ -998,6 +1631,328 @@ async def admin_user_activity(
             "recent": feedback_recent,
         },
     }
+
+
+@router.get("/retention", response_model=AdminRetentionResponse)
+async def admin_retention(
+    _admin: User = Depends(require_admin),
+    db: AsyncSession = Depends(get_db_session),
+):
+    """Retention analytics centered on user-role chat message activity."""
+    now = datetime.now(timezone.utc)
+    current_week = _week_start(now)
+    cohort_cutoff = datetime.combine(
+        current_week - timedelta(weeks=RETENTION_WEEKS - 1),
+        datetime.min.time(),
+        tzinfo=timezone.utc,
+    )
+    activity_cutoff = now - timedelta(days=RETENTION_LOOKBACK_DAYS)
+
+    activity_user_ids = (
+        select(ChatSession.user_id.label("user_id"))
+        .select_from(Message)
+        .join(ChatSession, Message.session_id == ChatSession.id)
+        .where(Message.role == "user")
+        .where(Message.created_at >= activity_cutoff)
+        .where(ChatSession.user_id.is_not(None))
+        .subquery()
+    )
+    user_rows = (
+        await db.execute(
+            select(User.id, User.email, User.created_at, User.plan)
+            .where(or_(User.created_at >= cohort_cutoff, User.id.in_(select(activity_user_ids.c.user_id))))
+            .where(*_eligible_user_conditions())
+        )
+    ).all()
+
+    activity_day = _utc_day_trunc(Message.created_at).label("activity_date")
+    activity_rows = (
+        await db.execute(
+            select(ChatSession.user_id.label("user_id"), activity_day)
+            .select_from(Message)
+            .join(ChatSession, Message.session_id == ChatSession.id)
+            .join(User, User.id == ChatSession.user_id)
+            .where(Message.role == "user")
+            .where(Message.created_at >= activity_cutoff)
+            .where(ChatSession.user_id.is_not(None))
+            .where(*_eligible_user_conditions())
+            .group_by(ChatSession.user_id, activity_day)
+        )
+    ).all()
+
+    document_rows = (
+        await db.execute(
+            select(
+                Document.user_id.label("user_id"),
+                func.max(Document.page_count).label("max_page_count"),
+            )
+            .select_from(Document)
+            .join(User, User.id == Document.user_id)
+            .where(Document.created_at >= activity_cutoff)
+            .where(Document.user_id.is_not(None))
+            .where(Document.demo_slug.is_(None))
+            .where(*_eligible_user_conditions())
+            .group_by(Document.user_id)
+        )
+    ).all()
+
+    locale_rows = (
+        await db.execute(
+            select(UserFeedback.user_id.label("user_id"), func.max(UserFeedback.locale).label("locale"))
+            .select_from(UserFeedback)
+            .join(User, User.id == UserFeedback.user_id)
+            .where(UserFeedback.created_at >= activity_cutoff)
+            .where(UserFeedback.user_id.is_not(None))
+            .where(UserFeedback.locale.is_not(None))
+            .where(*_eligible_user_conditions())
+            .group_by(UserFeedback.user_id)
+        )
+    ).all()
+
+    return _build_retention_payload(
+        now=now,
+        users=list(user_rows),
+        activity_days=list(activity_rows),
+        document_segments=list(document_rows),
+        locale_segments=list(locale_rows),
+    )
+
+
+@router.get("/churn", response_model=AdminChurnResponse)
+async def admin_churn(
+    _admin: User = Depends(require_admin),
+    db: AsyncSession = Depends(get_db_session),
+    inactive_days: int = Query(14, ge=1, le=90),
+):
+    """Churn diagnostics for activated users without recent user-message activity."""
+    now = datetime.now(timezone.utc)
+    activity_cutoff = now - timedelta(days=CHURN_LOOKBACK_DAYS)
+
+    activity_user_ids = (
+        select(ChatSession.user_id.label("user_id"))
+        .select_from(Message)
+        .join(ChatSession, Message.session_id == ChatSession.id)
+        .where(Message.role == "user")
+        .where(Message.created_at >= activity_cutoff)
+        .where(ChatSession.user_id.is_not(None))
+        .subquery()
+    )
+    user_rows = (
+        await db.execute(
+            select(User.id, User.email, User.created_at, User.plan)
+            .where(User.id.in_(select(activity_user_ids.c.user_id)))
+            .where(*_eligible_user_conditions())
+        )
+    ).all()
+
+    activity_day = _utc_day_trunc(Message.created_at).label("activity_date")
+    activity_rows = (
+        await db.execute(
+            select(ChatSession.user_id.label("user_id"), activity_day)
+            .select_from(Message)
+            .join(ChatSession, Message.session_id == ChatSession.id)
+            .join(User, User.id == ChatSession.user_id)
+            .where(Message.role == "user")
+            .where(Message.created_at >= activity_cutoff)
+            .where(ChatSession.user_id.is_not(None))
+            .where(*_eligible_user_conditions())
+            .group_by(ChatSession.user_id, activity_day)
+        )
+    ).all()
+
+    session_rows = (
+        await db.execute(
+            select(
+                ChatSession.id.label("session_id"),
+                ChatSession.user_id.label("user_id"),
+                func.coalesce(func.sum(case((Message.role == "user", 1), else_=0)), 0).label("user_messages"),
+                func.coalesce(func.sum(case((Message.role == "assistant", 1), else_=0)), 0).label("assistant_messages"),
+            )
+            .select_from(ChatSession)
+            .join(Message, Message.session_id == ChatSession.id)
+            .join(User, User.id == ChatSession.user_id)
+            .where(Message.created_at >= activity_cutoff)
+            .where(ChatSession.user_id.is_not(None))
+            .where(*_eligible_user_conditions())
+            .group_by(ChatSession.id, ChatSession.user_id)
+        )
+    ).all()
+    asst_zero_session_ids = {
+        str(row.session_id)
+        for row in session_rows
+        if int(row.user_messages or 0) > 0 and int(row.assistant_messages or 0) == 0
+    }
+    signal_users: dict[str, set[str]] = {
+        "asst_zero": {
+            str(row.user_id)
+            for row in session_rows
+            if int(row.user_messages or 0) > 0 and int(row.assistant_messages or 0) == 0
+        },
+        "rag_miss": set(),
+        "parse_failure": set(),
+        "large_doc": set(),
+        "export_refusal": set(),
+        "paywall_hit": set(),
+        "page_fail": set(),
+        "capability_refusal": set(),
+    }
+
+    message_rows = (
+        await db.execute(
+            select(
+                ChatSession.user_id.label("user_id"),
+                Message.session_id.label("session_id"),
+                Message.role.label("role"),
+                Message.content.label("content"),
+                Message.citations.label("citations"),
+                Message.metadata_json.label("metadata_json"),
+                Message.created_at.label("created_at"),
+            )
+            .select_from(Message)
+            .join(ChatSession, Message.session_id == ChatSession.id)
+            .join(User, User.id == ChatSession.user_id)
+            .where(Message.created_at >= activity_cutoff)
+            .where(ChatSession.user_id.is_not(None))
+            .where(*_eligible_user_conditions())
+            .order_by(Message.session_id, Message.created_at)
+        )
+    ).all()
+
+    message_signal_users, final_candidates = _derive_message_diagnostics(
+        list(message_rows),
+        asst_zero_session_ids=asst_zero_session_ids,
+    )
+    for key, user_ids in message_signal_users.items():
+        signal_users[key].update(user_ids)
+
+    document_flag_rows = (
+        await db.execute(
+            select(
+                Document.user_id.label("user_id"),
+                func.max(Document.page_count).label("max_page_count"),
+                func.coalesce(
+                    func.sum(case((Document.status.in_(("error", "ocr")), 1), else_=0)),
+                    0,
+                ).label("parse_failures"),
+            )
+            .select_from(Document)
+            .join(User, User.id == Document.user_id)
+            .where(Document.created_at >= activity_cutoff)
+            .where(Document.user_id.is_not(None))
+            .where(Document.demo_slug.is_(None))
+            .where(*_eligible_user_conditions())
+            .group_by(Document.user_id)
+        )
+    ).all()
+    for row in document_flag_rows:
+        user_id = str(row.user_id)
+        if int(row.parse_failures or 0) > 0:
+            signal_users["parse_failure"].add(user_id)
+        if int(row.max_page_count or 0) >= 150:
+            signal_users["large_doc"].add(user_id)
+
+    product_rows = (
+        await db.execute(
+            select(
+                ProductEvent.user_id.label("user_id"),
+                ProductEvent.event_name.label("event_name"),
+                ProductEvent.created_at.label("created_at"),
+            )
+            .select_from(ProductEvent)
+            .join(User, User.id == ProductEvent.user_id)
+            .where(ProductEvent.created_at >= activity_cutoff)
+            .where(ProductEvent.user_id.is_not(None))
+            .where(*_eligible_user_conditions())
+        )
+    ).all()
+    for row in product_rows:
+        user_id = str(row.user_id)
+        if row.event_name in {"paywall_opened", "limit_hit"}:
+            signal_users["paywall_hit"].add(user_id)
+            category = "paywall"
+        else:
+            category = str(row.event_name or "product_event")
+        current = final_candidates.get(user_id)
+        if row.created_at and (current is None or row.created_at > current[0]):
+            final_candidates[user_id] = (row.created_at, category)
+
+    upload_rows = (
+        await db.execute(
+            select(Document.user_id.label("user_id"), Document.created_at.label("created_at"))
+            .select_from(Document)
+            .join(User, User.id == Document.user_id)
+            .where(Document.created_at >= activity_cutoff)
+            .where(Document.user_id.is_not(None))
+            .where(Document.demo_slug.is_(None))
+            .where(*_eligible_user_conditions())
+        )
+    ).all()
+    for row in upload_rows:
+        current = final_candidates.get(str(row.user_id))
+        if row.created_at and (current is None or row.created_at > current[0]):
+            final_candidates[str(row.user_id)] = (row.created_at, "upload")
+
+    feedback_rows = (
+        await db.execute(
+            select(
+                UserFeedback.id,
+                UserFeedback.user_id,
+                UserFeedback.type,
+                UserFeedback.area,
+                UserFeedback.severity,
+                UserFeedback.message,
+                UserFeedback.plan,
+                UserFeedback.created_at,
+            )
+            .select_from(UserFeedback)
+            .join(User, User.id == UserFeedback.user_id)
+            .where(UserFeedback.created_at >= activity_cutoff)
+            .where(UserFeedback.user_id.is_not(None))
+            .where(*_eligible_user_conditions())
+            .order_by(UserFeedback.created_at.desc())
+            .limit(50)
+        )
+    ).all()
+
+    cancel_rows = (
+        await db.execute(
+            select(
+                PlanTransition.id,
+                PlanTransition.user_id,
+                PlanTransition.from_plan,
+                PlanTransition.to_plan,
+                PlanTransition.metadata_json,
+                PlanTransition.created_at,
+            )
+            .select_from(PlanTransition)
+            .join(User, User.id == PlanTransition.user_id)
+            .where(PlanTransition.created_at >= activity_cutoff)
+            .where(
+                or_(
+                    PlanTransition.to_plan == "free",
+                    (PlanTransition.from_plan == "pro") & (PlanTransition.to_plan == "plus"),
+                )
+            )
+            .where(*_eligible_user_conditions())
+            .order_by(PlanTransition.created_at.desc())
+            .limit(50)
+        )
+    ).all()
+
+    last_actions = [
+        {"user_id": user_id, "category": category}
+        for user_id, (_created_at, category) in final_candidates.items()
+    ]
+    return _build_churn_payload(
+        now=now,
+        users=list(user_rows),
+        activity_days=list(activity_rows),
+        signal_users=signal_users,
+        last_actions=last_actions,
+        feedback_rows=list(feedback_rows),
+        cancel_rows=list(cancel_rows),
+        inactive_days=inactive_days,
+    )
 
 
 @router.get("/billing-health")

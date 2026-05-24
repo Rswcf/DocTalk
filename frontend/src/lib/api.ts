@@ -603,6 +603,118 @@ export async function getAdminRagQuality(days = 30): Promise<AdminRagQuality> {
   return handle(res);
 }
 
+export interface AdminRetentionCell {
+  week_offset: number;
+  active_users: number;
+  pct: number;
+}
+
+export interface AdminRetentionCohort {
+  cohort_week: string;
+  cohort_size: number;
+  retention: AdminRetentionCell[];
+}
+
+export interface AdminRetentionCurvePoint {
+  key: string;
+  label: string;
+  days: number;
+  activated_users: number;
+  returned_users: number;
+  pct: number;
+}
+
+export interface AdminRetentionDauPoint {
+  date: string;
+  dau: number;
+}
+
+export interface AdminRetentionSegmentItem {
+  key: string;
+  label: string;
+  users: number;
+  retained_users: number;
+  pct: number;
+}
+
+export interface AdminRetention {
+  generated_at: string;
+  cohort_grid: AdminRetentionCohort[];
+  curves: AdminRetentionCurvePoint[];
+  dau_wau_mau: {
+    series: AdminRetentionDauPoint[];
+    wau: number;
+    mau: number;
+    stickiness: number;
+  };
+  by_segment: {
+    plan: AdminRetentionSegmentItem[];
+    doc_size: AdminRetentionSegmentItem[];
+    locale: AdminRetentionSegmentItem[];
+  };
+  weekly_flow: {
+    week: string;
+    new: number;
+    retained: number;
+    resurrected: number;
+    churned: number;
+  }[];
+}
+
+export async function getAdminRetention(): Promise<AdminRetention> {
+  const res = await fetch(`${PROXY_BASE}/api/admin/retention`);
+  return handle(res);
+}
+
+export interface AdminChurnCountPct {
+  count: number;
+  pct: number;
+}
+
+export interface AdminChurnSignalItem extends AdminChurnCountPct {
+  key: string;
+  label: string;
+}
+
+export interface AdminChurnFeedbackItem {
+  id: string;
+  type: string;
+  area: string;
+  severity: string;
+  message: string | null;
+  plan: string | null;
+  created_at: string | null;
+}
+
+export interface AdminChurn {
+  generated_at: string;
+  inactive_days: number;
+  churned_users: number;
+  one_and_done: AdminChurnCountPct & { activated_users: number };
+  churn_signals: AdminChurnSignalItem[];
+  last_action: AdminChurnSignalItem[];
+  feedback: {
+    recent: AdminChurnFeedbackItem[];
+    by_area: { key: string; count: number }[];
+    by_severity: { key: string; count: number }[];
+  };
+  cancel_reasons: {
+    id: string;
+    user_id: string;
+    from_plan: string;
+    to_plan: string;
+    reason: string | null;
+    feedback: string | null;
+    created_at: string | null;
+  }[];
+  reason_buckets: AdminChurnSignalItem[];
+}
+
+export async function getAdminChurn(inactiveDays = 14): Promise<AdminChurn> {
+  const res = await fetch(`${PROXY_BASE}/api/admin/churn?inactive_days=${inactiveDays}`);
+  return handle(res);
+}
+
 export interface AdminMetricDelta {
   current: number;
   previous: number;
