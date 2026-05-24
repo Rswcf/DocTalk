@@ -85,7 +85,7 @@ class Settings(BaseSettings):
 
     # OCR
     OCR_ENABLED: bool = Field(default=True)
-    OCR_LANGUAGES: str = Field(default="eng+chi_sim")
+    OCR_LANGUAGES: str = Field(default="eng+chi_sim+jpn+kor+spa+deu+fra+por+ita+ara+hin")
     OCR_DPI: int = Field(default=300)
 
     # Multi-format support

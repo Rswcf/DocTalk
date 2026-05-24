@@ -6,6 +6,39 @@ from typing import Any, List, Optional, Sequence, Tuple
 
 import fitz  # PyMuPDF
 
+# OCR language resolution (Phase 2 C4). Scanned / non-Latin PDFs need the matching
+# Tesseract traineddata; eng+chi_sim alone produced garbage for Urdu/Arabic
+# (U13/U40). The Dockerfile installs the packs for every code below.
+_LOCALE_TESSERACT = {
+    "en": "eng", "zh": "chi_sim", "ja": "jpn", "ko": "kor", "es": "spa",
+    "de": "deu", "fr": "fra", "pt": "por", "it": "ita", "ar": "ara", "hi": "hin",
+}
+
+
+def resolve_ocr_languages(locale: str | None = None) -> str:
+    """Tesseract language string for OCR.
+
+    Uses `settings.OCR_LANGUAGES` as the authoritative configured set.
+    If locale is known and present in the configured set, place it first.
+    """
+    codes: list[str] = []
+    try:
+        from app.core.config import settings
+        configured = (getattr(settings, "OCR_LANGUAGES", "") or "").split("+")
+    except Exception:
+        configured = []
+    for code in configured:
+        code = code.strip()
+        if code and code not in codes:
+            codes.append(code)
+    if not codes:
+        codes = ["eng"]
+    if locale:
+        primary = _LOCALE_TESSERACT.get(locale.split("-")[0].split("_")[0].lower())
+        if primary and primary in codes:
+            codes = [primary] + [c for c in codes if c != primary]
+    return "+".join(codes)
+
 
 @dataclass
 class BlockInfo:

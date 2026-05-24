@@ -15,7 +15,7 @@ from app.models.sync_database import SyncSessionLocal
 from app.models.tables import Chunk, Document, DocumentBrief, DocumentElement, Page
 from app.services.conversion_service import CONVERTIBLE_TYPES, convert_to_pdf
 from app.services.embedding_service import embedding_service
-from app.services.parse_service import ParseService
+from app.services.parse_service import ParseService, resolve_ocr_languages
 
 from .celery_app import celery_app
 
@@ -117,7 +117,7 @@ def _queue_document_brief(document_id: str) -> None:
     retry_kwargs={"max_retries": 2},
     retry_backoff=60,
 )
-def parse_document(self, document_id: str) -> None:
+def parse_document(self, document_id: str, locale: str | None = None) -> None:
     """Parse a document from object storage, chunk it and persist metadata.
 
     Supports PDF (via PyMuPDF) and non-PDF formats (DOCX, PPTX, XLSX, TXT, MD)
@@ -262,7 +262,7 @@ def parse_document(self, document_id: str) -> None:
                     try:
                         pages = service.extract_pages_ocr(
                             file_bytes,
-                            languages=settings.OCR_LANGUAGES,
+                            languages=resolve_ocr_languages(locale),
                             dpi=settings.OCR_DPI,
                         )
                     except SoftTimeLimitExceeded:
