@@ -3627,5 +3627,16 @@
   "landing.security.eyebrow": "Privacy & Security",
   "landing.security.itemEyebrow": "Privacy",
   "landing.heroCollage.caption": "Reading with citations",
-  "landing.masthead.tagline": "Document Intelligence"
+  "landing.masthead.tagline": "Document Intelligence",
+  "landing.plate.cite": "cite",
+  "landing.plate.fast": "fast",
+  "landing.plate.deeper": "deeper",
+  "landing.plate.noSignup": "No signup",
+  "landing.plate.noTraining": "No training",
+  "header.aria.home": "DocTalk home",
+  "header.aria.nav": "Site navigation",
+  "header.aria.mobileNav": "Mobile navigation",
+  "header.aria.breadcrumb": "Breadcrumb",
+  "header.aria.openMenu": "Open menu",
+  "header.aria.closeMenu": "Close menu"
 }

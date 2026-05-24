@@ -3627,5 +3627,16 @@
   "landing.security.eyebrow": "Datenschutz & Sicherheit",
   "landing.security.itemEyebrow": "Datenschutz",
   "landing.heroCollage.caption": "Lesen mit Zitaten",
-  "landing.masthead.tagline": "Dokumentenintelligenz"
+  "landing.masthead.tagline": "Dokumentenintelligenz",
+  "landing.plate.cite": "zitieren",
+  "landing.plate.fast": "schnell",
+  "landing.plate.deeper": "tiefer",
+  "landing.plate.noSignup": "Ohne Anmeldung",
+  "landing.plate.noTraining": "Kein Training",
+  "header.aria.home": "DocTalk Startseite",
+  "header.aria.nav": "Navigation",
+  "header.aria.mobileNav": "Mobile Navigation",
+  "header.aria.breadcrumb": "Brotkrumennavigation",
+  "header.aria.openMenu": "Menü öffnen",
+  "header.aria.closeMenu": "Menü schließen"
 }

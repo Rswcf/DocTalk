@@ -3627,5 +3627,16 @@
   "landing.security.eyebrow": "プライバシーとセキュリティ",
   "landing.security.itemEyebrow": "プライバシー",
   "landing.heroCollage.caption": "引用付きで読む",
-  "landing.masthead.tagline": "ドキュメントインテリジェンス"
+  "landing.masthead.tagline": "ドキュメントインテリジェンス",
+  "landing.plate.cite": "引用",
+  "landing.plate.fast": "高速",
+  "landing.plate.deeper": "より深く",
+  "landing.plate.noSignup": "登録不要",
+  "landing.plate.noTraining": "学習なし",
+  "header.aria.home": "DocTalk ホーム",
+  "header.aria.nav": "サイトナビゲーション",
+  "header.aria.mobileNav": "モバイルナビゲーション",
+  "header.aria.breadcrumb": "パンくずリスト",
+  "header.aria.openMenu": "メニューを開く",
+  "header.aria.closeMenu": "メニューを閉じる"
 }

@@ -3627,5 +3627,16 @@
   "landing.security.eyebrow": "개인정보 보호 및 보안",
   "landing.security.itemEyebrow": "개인정보 보호",
   "landing.heroCollage.caption": "인용과 함께 읽기",
-  "landing.masthead.tagline": "문서 인텔리전스"
+  "landing.masthead.tagline": "문서 인텔리전스",
+  "landing.plate.cite": "인용",
+  "landing.plate.fast": "빠름",
+  "landing.plate.deeper": "더 깊이",
+  "landing.plate.noSignup": "가입 불필요",
+  "landing.plate.noTraining": "학습 미사용",
+  "header.aria.home": "DocTalk 홈",
+  "header.aria.nav": "사이트 탐색",
+  "header.aria.mobileNav": "모바일 탐색",
+  "header.aria.breadcrumb": "이동 경로",
+  "header.aria.openMenu": "메뉴 열기",
+  "header.aria.closeMenu": "메뉴 닫기"
 }

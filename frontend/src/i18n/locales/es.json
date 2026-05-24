@@ -3627,5 +3627,16 @@
   "landing.security.eyebrow": "Privacidad y seguridad",
   "landing.security.itemEyebrow": "Privacidad",
   "landing.heroCollage.caption": "Lectura con citas",
-  "landing.masthead.tagline": "Inteligencia documental"
+  "landing.masthead.tagline": "Inteligencia documental",
+  "landing.plate.cite": "citar",
+  "landing.plate.fast": "rápido",
+  "landing.plate.deeper": "más a fondo",
+  "landing.plate.noSignup": "Sin registro",
+  "landing.plate.noTraining": "Sin entrenamiento",
+  "header.aria.home": "Inicio de DocTalk",
+  "header.aria.nav": "Navegación",
+  "header.aria.mobileNav": "Navegación móvil",
+  "header.aria.breadcrumb": "Ruta de navegación",
+  "header.aria.openMenu": "Abrir menú",
+  "header.aria.closeMenu": "Cerrar menú"
 }

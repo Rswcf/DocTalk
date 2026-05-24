@@ -72,7 +72,7 @@ export default function EditorialHeaderBase({
             <Link
               href={navHref("/")}
               className="flex items-center gap-3 shrink-0"
-              aria-label="DocTalk home"
+              aria-label={t('header.aria.home')}
             >
               <DocTalkLogo size={24} />
               <span
@@ -125,7 +125,7 @@ export default function EditorialHeaderBase({
             {/* Right — nav links + CTA */}
             <nav
               className="flex items-center gap-6"
-              aria-label="Editorial navigation"
+              aria-label={t('header.aria.nav')}
             >
               {NAV_LINKS.map((item) => (
                 <Link
@@ -169,7 +169,7 @@ export default function EditorialHeaderBase({
                 }}
                 aria-expanded={mobileOpen}
                 aria-controls="ed-mobile-nav"
-                aria-label={mobileOpen ? "Close menu" : "Open menu"}
+                aria-label={mobileOpen ? t('header.aria.closeMenu') : t('header.aria.openMenu')}
               >
                 {mobileOpen ? (
                   <X aria-hidden="true" size={20} color="var(--ed-ink-2)" />
@@ -194,7 +194,7 @@ export default function EditorialHeaderBase({
         <nav
           id="ed-mobile-nav"
           role="navigation"
-          aria-label="Editorial mobile navigation"
+          aria-label={t('header.aria.mobileNav')}
           className="md:hidden"
           style={{
             background: "var(--ed-paper)",
@@ -227,7 +227,7 @@ export default function EditorialHeaderBase({
       {/* Breadcrumb row — not sticky, sits below the masthead */}
       {breadcrumb && breadcrumb.length > 0 && (
         <nav
-          aria-label="Breadcrumb"
+          aria-label={t('header.aria.breadcrumb')}
           style={{ borderBottom: "1px solid var(--ed-rule)" }}
         >
           <div className="ed-shell">

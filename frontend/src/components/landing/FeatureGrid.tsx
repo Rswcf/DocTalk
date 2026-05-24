@@ -15,6 +15,7 @@ const canvas =
   'relative h-28 w-full overflow-hidden border border-[var(--ed-rule)] bg-[var(--ed-paper-2)]';
 
 function VisualCitations() {
+  const { t } = useLocale();
   return (
     <div aria-hidden="true" className={canvas}>
       <div className="absolute inset-0 flex items-center justify-center gap-3 px-4">
@@ -39,7 +40,7 @@ function VisualCitations() {
             <span className="mr-1 inline-flex items-center justify-center bg-[var(--ed-signal)] px-1 py-0.5 text-[8px] font-bold leading-none text-white">
               1
             </span>
-            cite
+            {t('landing.plate.cite')}
           </div>
         </div>
       </div>
@@ -85,6 +86,7 @@ function VisualLanguages() {
 }
 
 function VisualModes() {
+  const { t } = useLocale();
   return (
     <div aria-hidden="true" className={canvas}>
       <div className="absolute inset-0 flex items-center justify-center gap-5">
@@ -92,14 +94,14 @@ function VisualModes() {
           <span className="border border-[var(--ed-rule)] bg-[var(--ed-paper)] px-3 py-1 font-mono text-[11px] text-[var(--ed-ink-2)]">
             Flash
           </span>
-          <span className="font-mono text-[9px] text-[var(--ed-ink-3)]">fast</span>
+          <span className="font-mono text-[9px] text-[var(--ed-ink-3)]">{t('landing.plate.fast')}</span>
         </div>
         <div className="h-8 w-px bg-[var(--ed-rule)]" />
         <div className="flex flex-col items-center gap-1.5">
           <span className="border border-[var(--ed-signal)]/50 bg-[var(--ed-paper)] px-3 py-1 font-mono text-[11px] font-semibold text-[var(--ed-signal)]">
             Pro
           </span>
-          <span className="font-mono text-[9px] text-[var(--ed-ink-3)]">deeper</span>
+          <span className="font-mono text-[9px] text-[var(--ed-ink-3)]">{t('landing.plate.deeper')}</span>
         </div>
       </div>
     </div>
@@ -107,6 +109,7 @@ function VisualModes() {
 }
 
 function VisualFreeDemo() {
+  const { t } = useLocale();
   return (
     <div aria-hidden="true" className={canvas}>
       <div className="absolute inset-0 flex items-center justify-center gap-4">
@@ -125,7 +128,7 @@ function VisualFreeDemo() {
         {/* No-signup badge */}
         <div className="flex flex-col items-start gap-1">
           <span className="border border-[var(--ed-signal)]/40 bg-[var(--ed-paper)] px-1.5 py-0.5 font-mono text-[10px] font-semibold text-[var(--ed-signal)]">
-            No signup
+            {t('landing.plate.noSignup')}
           </span>
           <span className="font-mono text-[10px] text-[var(--ed-ink-3)]">3 demos</span>
         </div>
@@ -135,6 +138,7 @@ function VisualFreeDemo() {
 }
 
 function VisualPrivacy() {
+  const { t } = useLocale();
   return (
     <div aria-hidden="true" className={canvas}>
       <div className="absolute inset-0 flex flex-col items-center justify-center gap-3">
@@ -156,7 +160,7 @@ function VisualPrivacy() {
             AES-256
           </span>
           <span className="border border-[var(--ed-rule)] bg-[var(--ed-paper)] px-1.5 py-0.5 font-mono text-[10px] text-[var(--ed-ink-3)]">
-            No training
+            {t('landing.plate.noTraining')}
           </span>
         </div>
       </div>
