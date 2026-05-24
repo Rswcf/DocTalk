@@ -218,3 +218,129 @@ class AdminUserActivityResponse(BaseModel):
     retention_explanation: str | None = None
     segments: AdminUserActivitySegments
     feedback: AdminFeedbackSummary
+
+
+class AdminRetentionCell(BaseModel):
+    week_offset: int
+    active_users: int
+    pct: float
+
+
+class AdminRetentionCohort(BaseModel):
+    cohort_week: str
+    cohort_size: int
+    retention: list[AdminRetentionCell]
+
+
+class AdminRetentionCurvePoint(BaseModel):
+    key: str
+    label: str
+    days: int
+    activated_users: int
+    returned_users: int
+    pct: float
+
+
+class AdminRetentionDauPoint(BaseModel):
+    date: str
+    dau: int
+
+
+class AdminRetentionDauWauMau(BaseModel):
+    series: list[AdminRetentionDauPoint]
+    wau: int
+    mau: int
+    stickiness: float
+
+
+class AdminRetentionSegmentItem(BaseModel):
+    key: str
+    label: str
+    users: int
+    retained_users: int
+    pct: float
+
+
+class AdminRetentionSegments(BaseModel):
+    plan: list[AdminRetentionSegmentItem]
+    doc_size: list[AdminRetentionSegmentItem]
+    locale: list[AdminRetentionSegmentItem]
+
+
+class AdminRetentionWeeklyFlowItem(BaseModel):
+    week: str
+    new: int
+    retained: int
+    resurrected: int
+    churned: int
+
+
+class AdminRetentionResponse(BaseModel):
+    generated_at: str
+    cohort_grid: list[AdminRetentionCohort]
+    curves: list[AdminRetentionCurvePoint]
+    dau_wau_mau: AdminRetentionDauWauMau
+    by_segment: AdminRetentionSegments
+    weekly_flow: list[AdminRetentionWeeklyFlowItem]
+
+
+class AdminChurnCountPct(BaseModel):
+    count: int
+    pct: float
+
+
+class AdminChurnOneAndDone(AdminChurnCountPct):
+    activated_users: int
+
+
+class AdminChurnSignalItem(AdminChurnCountPct):
+    key: str
+    label: str
+
+
+class AdminChurnLastActionItem(AdminChurnCountPct):
+    key: str
+    label: str
+
+
+class AdminChurnFeedbackItem(BaseModel):
+    id: str
+    type: str
+    area: str
+    severity: str
+    message: str | None = None
+    plan: str | None = None
+    created_at: str | None = None
+
+
+class AdminChurnGroupCount(BaseModel):
+    key: str
+    count: int
+
+
+class AdminChurnFeedbackSummary(BaseModel):
+    recent: list[AdminChurnFeedbackItem]
+    by_area: list[AdminChurnGroupCount]
+    by_severity: list[AdminChurnGroupCount]
+
+
+class AdminChurnCancelReasonItem(BaseModel):
+    id: str
+    user_id: str
+    from_plan: str
+    to_plan: str
+    reason: str | None = None
+    feedback: str | None = None
+    created_at: str | None = None
+
+
+class AdminChurnResponse(BaseModel):
+    generated_at: str
+    inactive_days: int
+    churned_users: int
+    one_and_done: AdminChurnOneAndDone
+    churn_signals: list[AdminChurnSignalItem]
+    last_action: list[AdminChurnLastActionItem]
+    feedback: AdminChurnFeedbackSummary
+    cancel_reasons: list[AdminChurnCancelReasonItem]
+    reason_buckets: list[AdminChurnSignalItem]

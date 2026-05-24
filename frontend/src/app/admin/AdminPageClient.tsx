@@ -1,10 +1,12 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import dynamic from "next/dynamic";
+import { RefreshCw } from "lucide-react";
 import Header from "../../components/Header";
+import { usePageTitle } from "../../lib/usePageTitle";
+import { useLocale } from "../../i18n";
 import {
   getAdminOverview,
   getAdminTrends,
@@ -15,452 +17,58 @@ import {
   getAdminUserActivity,
   getAdminRecentUsers,
   getAdminTopUsers,
+  getAdminRetention,
+  getAdminChurn,
   type AdminBillingHealth,
   type AdminFunnel,
   type AdminRagQuality,
   type AdminUserActivity,
+  type AdminRetention,
+  type AdminChurn,
 } from "../../lib/api";
-import {
-  Users,
-  FileText,
-  MessageSquare,
-  Zap,
-  CreditCard,
-  Gift,
-  Crown,
-  Star,
-  AlertTriangle,
-  ShieldCheck,
-  RefreshCw,
-} from "lucide-react";
-import { usePageTitle } from "../../lib/usePageTitle";
-import { formatNumber, formatPercent } from "../../lib/formatNumber";
-import { useLocale } from "../../i18n";
+import type { Overview, Trends, Breakdowns } from "../../components/admin/types";
+import type { RecentUser, TopUser } from "../../components/admin/AdminPanels";
+import OverviewTab from "../../components/admin/OverviewTab";
+import ActivationTab from "../../components/admin/ActivationTab";
+import RetentionTab from "../../components/admin/RetentionTab";
+import ChurnTab from "../../components/admin/ChurnTab";
+import RevenueTab from "../../components/admin/RevenueTab";
+import ProductTab from "../../components/admin/ProductTab";
 
-// Types
-interface Overview {
-  total_users: number;
-  paid_users: number;
-  plus_users: number;
-  pro_users: number;
-  total_documents: number;
-  total_sessions: number;
-  total_messages: number;
-  total_tokens: number;
-  total_credits_spent: number;
-  total_credits_granted: number;
-}
+type TabId = "overview" | "activation" | "retention" | "churn" | "revenue" | "product";
 
-interface TrendPoint {
-  date: string;
-  count?: number;
-  total_tokens?: number;
-  amount?: number;
-}
+const TABS: { id: TabId; key: string; fallback: string }[] = [
+  { id: "overview", key: "admin.tab.overview", fallback: "Overview" },
+  { id: "activation", key: "admin.tab.activation", fallback: "Activation" },
+  { id: "retention", key: "admin.tab.retention", fallback: "Retention" },
+  { id: "churn", key: "admin.tab.churn", fallback: "Why-not-retained" },
+  { id: "revenue", key: "admin.tab.revenue", fallback: "Revenue" },
+  { id: "product", key: "admin.tab.product", fallback: "Product" },
+];
 
-interface Trends {
-  signups: TrendPoint[];
-  documents: TrendPoint[];
-  tokens: TrendPoint[];
-  credits_spent: TrendPoint[];
-  active_users: TrendPoint[];
-}
+// Which backend datasets each tab needs (lazy-loaded on first open).
+const TAB_DEPS: Record<TabId, string[]> = {
+  overview: ["overview", "activity", "trends"],
+  activation: ["activity", "funnel"],
+  retention: ["retention"],
+  churn: ["churn"],
+  revenue: ["funnel", "billing"],
+  product: ["rag", "trends", "breakdowns", "recentUsers", "topUsers"],
+};
+// Datasets that depend on the selected period (refetched when trendDays changes).
+const PERIOD_DEPS = ["trends", "funnel", "rag", "activity"];
 
-interface Breakdowns {
-  plan_distribution: { plan: string; count: number }[];
-  model_usage: { model: string; calls: number; tokens: number; credits: number }[];
-  file_types: { file_type: string; count: number }[];
-  doc_status: { status: string; count: number }[];
-}
-
-interface RecentUser {
-  id: string;
-  email: string;
-  name: string | null;
-  plan: string;
-  credits_balance: number;
-  created_at: string | null;
-  doc_count: number;
-  message_count: number;
-}
-
-interface TopUser {
-  id: string;
-  email: string;
-  name: string | null;
-  plan: string;
-  total_tokens: number;
-  total_credits: number;
-  doc_count: number;
-}
-
-const AdminCharts = dynamic<{
-  trends: Trends;
-  breakdowns: Breakdowns;
-  trendDays: number;
-  onTrendDaysChange: (days: number) => void;
-}>(() => import("../../components/AdminCharts"), { ssr: false });
-
-const AdminUserActivityCharts = dynamic<{
-  activity: AdminUserActivity;
-}>(() => import("../../components/AdminUserActivityCharts"), { ssr: false });
-
-function KPICard({
-  icon: Icon,
-  label,
-  value,
-}: {
-  icon: React.ElementType;
-  label: string;
-  value: number;
-}) {
-  return (
-    <div className="dt-kpi-card rounded-2xl p-5 flex items-start gap-4">
-      <div className="p-2.5 rounded-xl bg-accent-light">
-        <Icon aria-hidden="true" className="w-5 h-5 text-zinc-600 dark:text-zinc-400" />
-      </div>
-      <div>
-        <p className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100">
-          {formatNumber(value)}
-        </p>
-        <p className="text-sm text-zinc-500 dark:text-zinc-400">{label}</p>
-      </div>
-    </div>
-  );
-}
-
-function PlanBadge({ plan }: { plan: string }) {
-  const colors: Record<string, string> = {
-    free: "bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400",
-    plus: "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400",
-    pro: "bg-accent-light text-accent",
-  };
-  return (
-    <span
-      className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${colors[plan] || colors.free}`}
-    >
-      {plan.charAt(0).toUpperCase() + plan.slice(1)}
-    </span>
-  );
-}
-
-function StatusPill({ ok, label }: { ok: boolean; label: string }) {
-  return (
-    <span className={`inline-flex items-center rounded px-2 py-0.5 text-xs font-medium ${
-      ok
-        ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300"
-        : "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300"
-    }`}>
-      {label}
-    </span>
-  );
-}
-
-function BillingHealthPanel({
-  health,
-  loadingRemote,
-  onRemoteCheck,
-}: {
-  health: AdminBillingHealth | null;
-  loadingRemote: boolean;
-  onRemoteCheck: () => void;
-}) {
-  const { tOr } = useLocale();
-  if (!health) return null;
-  const liveReady = health.stripe_secret_mode === "live"
-    && health.stripe_webhook_configured
-    && health.all_subscription_prices_configured
-    && !health.has_mode_mismatch;
-
-  return (
-    <section className="dt-admin-panel mb-8 overflow-hidden border">
-      <div className="flex flex-col gap-3 border-b border-zinc-200 px-4 py-3 dark:border-zinc-700 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex items-center gap-2">
-          {liveReady ? (
-            <ShieldCheck aria-hidden="true" className="h-4 w-4 text-emerald-600 dark:text-emerald-300" />
-          ) : (
-            <AlertTriangle aria-hidden="true" className="h-4 w-4 text-amber-600 dark:text-amber-300" />
-          )}
-          <h2 className="text-sm font-medium text-zinc-900 dark:text-zinc-100">{tOr('admin.billingHealth.title', 'Billing Health')}</h2>
-        </div>
-        <button
-          type="button"
-          onClick={onRemoteCheck}
-          disabled={loadingRemote}
-          className="inline-flex items-center justify-center gap-2 rounded border border-zinc-300 px-3 py-1.5 text-xs font-medium text-zinc-700 transition-colors hover:bg-zinc-50 disabled:opacity-50 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800"
-        >
-          <RefreshCw aria-hidden="true" className={`h-3.5 w-3.5 ${loadingRemote ? "animate-spin" : ""}`} />
-          {tOr('admin.billingHealth.verifyStripe', 'Verify Stripe')}
-        </button>
-      </div>
-      <div className="grid gap-4 p-4 lg:grid-cols-[0.8fr_1.2fr]">
-        <div className="grid grid-cols-2 gap-3 text-sm">
-          <div>
-            <p className="text-xs text-zinc-500 dark:text-zinc-400">{tOr('admin.billingHealth.secretMode', 'Secret Mode')}</p>
-            <StatusPill ok={health.stripe_secret_mode === "live"} label={health.stripe_secret_mode.toUpperCase()} />
-          </div>
-          <div>
-            <p className="text-xs text-zinc-500 dark:text-zinc-400">{tOr('admin.billingHealth.webhook', 'Webhook')}</p>
-            <StatusPill ok={health.stripe_webhook_configured} label={health.stripe_webhook_configured ? tOr('admin.billingHealth.configured', 'Configured') : tOr('admin.billingHealth.missing', 'Missing')} />
-          </div>
-          <div>
-            <p className="text-xs text-zinc-500 dark:text-zinc-400">{tOr('admin.billingHealth.subscriptionPrices', 'Subscription Prices')}</p>
-            <StatusPill ok={health.all_subscription_prices_configured} label={health.all_subscription_prices_configured ? tOr('admin.billingHealth.configured', 'Configured') : tOr('admin.billingHealth.missing', 'Missing')} />
-          </div>
-          <div>
-            <p className="text-xs text-zinc-500 dark:text-zinc-400">{tOr('admin.billingHealth.modeMatch', 'Mode Match')}</p>
-            <StatusPill ok={!health.has_mode_mismatch} label={health.has_mode_mismatch ? tOr('admin.billingHealth.mismatch', 'Mismatch') : tOr('admin.billingHealth.ok', 'OK')} />
-          </div>
-        </div>
-        <div className="overflow-x-auto">
-          <table className="w-full text-xs">
-            <thead>
-              <tr className="border-b border-zinc-100 text-left text-zinc-500 dark:border-zinc-800 dark:text-zinc-400">
-                <th scope="col" className="py-1.5 pr-3 font-medium">{tOr('admin.billingHealth.colPrice', 'Price')}</th>
-                <th scope="col" className="px-3 py-1.5 font-medium">{tOr('admin.billingHealth.colConfigured', 'Configured')}</th>
-                <th scope="col" className="px-3 py-1.5 font-medium">{tOr('admin.billingHealth.colMode', 'Mode')}</th>
-                <th scope="col" className="px-3 py-1.5 font-medium">{tOr('admin.billingHealth.colActive', 'Active')}</th>
-                <th scope="col" className="py-1.5 pl-3 font-medium">{tOr('admin.billingHealth.colInterval', 'Interval')}</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800">
-              {health.prices.map((price) => (
-                <tr key={price.label}>
-                  <th
-                    scope="row"
-                    className="py-1.5 pr-3 text-zinc-700 dark:text-zinc-300"
-                    style={{ textAlign: "left", fontWeight: 500 }}
-                  >
-                    {price.label}
-                  </th>
-                  <td className="px-3 py-1.5 text-zinc-600 dark:text-zinc-400">{price.configured ? price.id_hint || tOr('admin.billingHealth.yes', 'yes') : tOr('admin.billingHealth.missingLower', 'missing')}</td>
-                  <td className="px-3 py-1.5 text-zinc-600 dark:text-zinc-400">{price.livemode == null ? "-" : price.livemode ? tOr('admin.billingHealth.live', 'live') : tOr('admin.billingHealth.test', 'test')}</td>
-                  <td className="px-3 py-1.5 text-zinc-600 dark:text-zinc-400">{price.active == null ? "-" : price.active ? tOr('admin.billingHealth.yes', 'yes') : tOr('admin.billingHealth.no', 'no')}</td>
-                  <td className="py-1.5 pl-3 text-zinc-600 dark:text-zinc-400">{price.interval || price.currency || "-"}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </section>
-  );
-}
-
-function FunnelPanel({ funnel }: { funnel: AdminFunnel | null }) {
-  const { tOr } = useLocale();
-  if (!funnel) return null;
-  const signupUsers = funnel.stages[0]?.users || 0;
-  const hasPaidIntentEvents = funnel.stages
-    .filter((stage) => [
-      "upgrade_nudge_shown",
-      "paywall_opened",
-      "limit_hit",
-      "billing_view",
-      "upgrade_click",
-      "checkout_created",
-      "checkout_completed",
-      "subscription_cancel_requested",
-      "refund_requested",
-    ].includes(stage.key))
-    .some((stage) => stage.users > 0);
-  return (
-    <section className="dt-admin-panel mb-8 overflow-hidden border">
-      <div className="border-b border-zinc-200 px-4 py-3 dark:border-zinc-700">
-        <h2 className="text-sm font-medium text-zinc-900 dark:text-zinc-100">{tOr('admin.funnel.title', 'Monetization Funnel')}</h2>
-        <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
-          {tOr('admin.funnel.subtitle', 'Last {days} days, signup cohort conversion by unique users. Upgrade reminders are separated from blocking paywalls.', { days: funnel.days })}
-          {!funnel.event_tracking_started_at && ` ${tOr('admin.funnel.noEvents', 'Paid-intent event tracking has no recorded events yet.')}`}
-        </p>
-        {funnel.event_tracking_started_at && !hasPaidIntentEvents && (
-          <p className="mt-1 text-xs text-amber-700 dark:text-amber-300">
-            {tOr('admin.funnel.eventsCountedSince', 'Paid-intent events are counted only since {date}; earlier pricing and billing activity is not backfilled.', { date: new Date(funnel.event_tracking_started_at).toLocaleDateString() })}
-          </p>
-        )}
-      </div>
-      <div className="grid gap-3 p-4 sm:grid-cols-2 lg:grid-cols-5">
-        {funnel.stages.map((stage, index) => {
-          const rate = index > 0 && signupUsers > 0 ? Math.round((stage.users / signupUsers) * 100) : null;
-          return (
-            <div key={stage.key} className="rounded border border-zinc-100 p-3 dark:border-zinc-800">
-              <p className="text-xs text-zinc-500 dark:text-zinc-400">{stage.label}</p>
-              <p className="mt-1 text-xl font-semibold tabular-nums text-zinc-900 dark:text-zinc-100">{formatNumber(stage.users)}</p>
-              {rate != null && (
-                <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">{tOr('admin.funnel.pctOfSignups', '{rate}% of signups', { rate })}</p>
-              )}
-            </div>
-          );
-        })}
-      </div>
-      {funnel.reasons.length > 0 && (
-        <div className="border-t border-zinc-100 p-4 dark:border-zinc-800">
-          <h3 className="mb-2 text-xs font-medium uppercase tracking-wide text-zinc-500 dark:text-zinc-400">{tOr('admin.funnel.topBillingReasons', 'Top Billing Reasons')}</h3>
-          <div className="overflow-x-auto">
-            <table className="w-full text-xs">
-              <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800">
-                {funnel.reasons.slice(0, 8).map((row, index) => (
-                  <tr key={`${row.event_name}-${row.reason}-${row.source}-${index}`}>
-                    <td className="py-2 pr-3">
-                      <p className="font-medium text-zinc-800 dark:text-zinc-100">{row.label || tOr('admin.funnel.paidSignal', 'Paid signal')}</p>
-                      <p className="mt-0.5 max-w-xl text-zinc-500 dark:text-zinc-400">{row.description || tOr('admin.funnel.noContext', 'No context recorded.')}</p>
-                    </td>
-                    <td className="py-2 pl-3 text-right tabular-nums text-zinc-700 dark:text-zinc-300">
-                      {tOr('admin.funnel.usersEvents', '{users} users / {events} events', { users: row.users, events: row.events })}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
-    </section>
-  );
-}
-
-function RagQualityPanel({ quality }: { quality: AdminRagQuality | null }) {
-  const { tOr } = useLocale();
-  if (!quality) return null;
-  const healthy = quality.evaluated_answers === 0 || (quality.fail_rate < 0.05 && quality.warn_rate < 0.1);
-  const issueRows = quality.issue_breakdown.filter((item) => (item.count || 0) > 0).slice(0, 4);
-  const strategyRows = quality.strategy_breakdown.slice(0, 4);
-  const sampleSuffix = quality.is_sampled
-    ? tOr('admin.rag.sampleSuffix', ' · latest {n} sample', { n: formatNumber(quality.sample_limit) })
-    : "";
-  return (
-    <section className="dt-admin-panel mb-8 overflow-hidden border">
-      <div className="flex flex-col gap-2 border-b border-zinc-200 px-4 py-3 dark:border-zinc-700 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex items-center gap-2">
-          {healthy ? (
-            <ShieldCheck aria-hidden="true" className="h-4 w-4 text-emerald-600 dark:text-emerald-300" />
-          ) : (
-            <AlertTriangle aria-hidden="true" className="h-4 w-4 text-amber-600 dark:text-amber-300" />
-          )}
-          <div>
-            <h2 className="text-sm font-medium text-zinc-900 dark:text-zinc-100">{tOr('admin.rag.title', 'Answer Citation Quality')}</h2>
-            <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">{quality.health_explanation}</p>
-          </div>
-        </div>
-        <p className="text-xs text-zinc-500 dark:text-zinc-400">
-          {tOr('admin.rag.healthSummary', '{label} · Last {days} days', { label: quality.health_label, days: quality.days })}{sampleSuffix}
-        </p>
-      </div>
-      <div className="grid gap-3 p-4 sm:grid-cols-2 lg:grid-cols-6">
-        <div className="rounded border border-zinc-100 p-3 dark:border-zinc-800">
-          <p className="text-xs text-zinc-500 dark:text-zinc-400">{tOr('admin.rag.kpi.answersChecked', 'Answers checked')}</p>
-          <p className="mt-1 text-xl font-semibold tabular-nums text-zinc-900 dark:text-zinc-100">{formatNumber(quality.evaluated_answers)}</p>
-        </div>
-        <div className="rounded border border-zinc-100 p-3 dark:border-zinc-800">
-          <p className="text-xs text-zinc-500 dark:text-zinc-400">{tOr('admin.rag.kpi.groundingScore', 'Grounding score')}</p>
-          <p className="mt-1 text-xl font-semibold tabular-nums text-zinc-900 dark:text-zinc-100">{formatPercent(quality.average_score)}</p>
-        </div>
-        <div className="rounded border border-zinc-100 p-3 dark:border-zinc-800">
-          <p className="text-xs text-zinc-500 dark:text-zinc-400">{tOr('admin.rag.kpi.groundedReviewFailed', 'Grounded / review / failed')}</p>
-          <p className="mt-1 text-xl font-semibold tabular-nums text-zinc-900 dark:text-zinc-100">
-            {formatPercent(quality.pass_rate)} / {formatPercent(quality.warn_rate)} / {formatPercent(quality.fail_rate)}
-          </p>
-        </div>
-        <div className="rounded border border-zinc-100 p-3 dark:border-zinc-800">
-          <p className="text-xs text-zinc-500 dark:text-zinc-400">{tOr('admin.rag.kpi.statementsMissingCitations', 'Statements missing citations')}</p>
-          <p className="mt-1 text-xl font-semibold tabular-nums text-zinc-900 dark:text-zinc-100">{formatNumber(quality.uncited_claims)}</p>
-        </div>
-        <div className="rounded border border-zinc-100 p-3 dark:border-zinc-800">
-          <p className="text-xs text-zinc-500 dark:text-zinc-400">{tOr('admin.rag.kpi.weakSourceMatches', 'Weak source matches')}</p>
-          <p className="mt-1 text-xl font-semibold tabular-nums text-zinc-900 dark:text-zinc-100">{formatNumber(quality.low_overlap_citations)}</p>
-        </div>
-        <div className="rounded border border-zinc-100 p-3 dark:border-zinc-800">
-          <p className="text-xs text-zinc-500 dark:text-zinc-400">{tOr('admin.rag.kpi.numberMismatches', 'Number mismatches')}</p>
-          <p className="mt-1 text-xl font-semibold tabular-nums text-zinc-900 dark:text-zinc-100">{formatNumber(quality.numeric_mismatch_citations)}</p>
-        </div>
-      </div>
-      {(issueRows.length > 0 || strategyRows.length > 0) && (
-        <div className="grid gap-4 border-t border-zinc-100 p-4 dark:border-zinc-800 lg:grid-cols-2">
-          <div>
-            <h3 className="mb-3 text-xs font-medium uppercase tracking-wide text-zinc-500 dark:text-zinc-400">{tOr('admin.rag.whatNeedsFixing', 'What needs fixing')}</h3>
-            <div className="space-y-3">
-              {issueRows.length === 0 && (
-                <p className="rounded-md border border-zinc-100 p-3 text-xs text-zinc-500 dark:border-zinc-800 dark:text-zinc-400">
-                  {tOr('admin.rag.noIssues', 'No citation issues in this window.')}
-                </p>
-              )}
-              {issueRows.map((item) => (
-                <div key={item.key} className="rounded-md border border-zinc-100 p-3 dark:border-zinc-800">
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <p className="text-sm font-medium text-zinc-800 dark:text-zinc-100">{item.label}</p>
-                      <p className="mt-1 text-xs leading-5 text-zinc-500 dark:text-zinc-400">{item.description}</p>
-                    </div>
-                    <div className="text-right text-xs tabular-nums text-zinc-700 dark:text-zinc-300">
-                      <p className="font-semibold">{formatNumber(item.count || 0)}</p>
-                      <p className="mt-0.5 text-zinc-400">{tOr('admin.rag.answersSuffix', '{n} answers', { n: formatNumber(item.affected_answers || 0) })}</p>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-          <div>
-            <h3 className="mb-3 text-xs font-medium uppercase tracking-wide text-zinc-500 dark:text-zinc-400">{tOr('admin.rag.whereItHappens', 'Where it happens')}</h3>
-            <div className="space-y-3">
-              {strategyRows.length === 0 && (
-                <p className="rounded-md border border-zinc-100 p-3 text-xs text-zinc-500 dark:border-zinc-800 dark:text-zinc-400">
-                  {tOr('admin.rag.noStrategies', 'No retrieval paths recorded yet.')}
-                </p>
-              )}
-              {strategyRows.map((item) => (
-                <div key={item.key} className="rounded-md border border-zinc-100 p-3 dark:border-zinc-800">
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <p className="text-sm font-medium text-zinc-800 dark:text-zinc-100">{item.label}</p>
-                      <p className="mt-1 text-xs leading-5 text-zinc-500 dark:text-zinc-400">{item.description}</p>
-                    </div>
-                    <div className="text-right text-xs tabular-nums text-zinc-700 dark:text-zinc-300">
-                      <p className="font-semibold">{formatPercent(item.needs_review_rate)}</p>
-                      <p className="mt-0.5 text-zinc-400">{tOr('admin.rag.needReview', '{n}/{total} need review', { n: item.needs_review, total: item.answers })}</p>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
-      {quality.recent.length > 0 && (
-        <div className="border-t border-zinc-100 p-4 dark:border-zinc-800">
-          <h3 className="mb-2 text-xs font-medium uppercase tracking-wide text-zinc-500 dark:text-zinc-400">{tOr('admin.rag.recentChecked', 'Recent checked answers')}</h3>
-          <div className="overflow-x-auto">
-            <table className="w-full text-xs">
-              <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800">
-                {quality.recent.slice(0, 8).map((row, index) => (
-                  <tr key={`${row.created_at}-${index}`}>
-                    <td className="py-2 pr-3 text-zinc-700 dark:text-zinc-300">{row.status_label}</td>
-                    <td className="px-3 py-1.5 tabular-nums text-zinc-600 dark:text-zinc-400">{formatPercent(row.score)}</td>
-                    <td className="px-3 py-2 text-zinc-600 dark:text-zinc-400">{row.route_label || tOr('admin.rag.unknownQuestionType', 'Unknown question type')}</td>
-                    <td className="px-3 py-2 text-zinc-600 dark:text-zinc-400">{row.strategy_label || tOr('admin.rag.unknownStrategy', 'Unknown retrieval path')}</td>
-                    <td className="py-2 pl-3 text-right text-zinc-700 dark:text-zinc-300">
-                      <p>{row.main_issue?.label || tOr('admin.rag.noMajorIssue', 'No major issue')}</p>
-                      <p className="mt-0.5 tabular-nums text-zinc-400">
-                        {tOr('admin.rag.statementsCitations', '{claims} statements / {cites} citations', { claims: row.claim_count, cites: row.citation_count })}
-                      </p>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
-    </section>
-  );
+function isTabId(v: string | null): v is TabId {
+  return !!v && TABS.some((t) => t.id === v);
 }
 
 export default function AdminPageClient() {
   const { tOr } = useLocale();
-  usePageTitle(tOr('admin.pageTitle', 'Admin'));
-
+  usePageTitle(tOr("admin.pageTitle", "Admin"));
   const { status } = useSession();
   const router = useRouter();
 
+  const [activeTab, setActiveTab] = useState<TabId>("overview");
   const [overview, setOverview] = useState<Overview | null>(null);
   const [trends, setTrends] = useState<Trends | null>(null);
   const [breakdowns, setBreakdowns] = useState<Breakdowns | null>(null);
@@ -468,363 +76,187 @@ export default function AdminPageClient() {
   const [funnel, setFunnel] = useState<AdminFunnel | null>(null);
   const [ragQuality, setRagQuality] = useState<AdminRagQuality | null>(null);
   const [userActivity, setUserActivity] = useState<AdminUserActivity | null>(null);
+  const [retention, setRetention] = useState<AdminRetention | null>(null);
+  const [churn, setChurn] = useState<AdminChurn | null>(null);
   const [recentUsers, setRecentUsers] = useState<RecentUser[]>([]);
   const [topUsers, setTopUsers] = useState<TopUser[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
+
+  const [trendDays, setTrendDays] = useState(30);
+  const [topBy, setTopBy] = useState<"tokens" | "credits" | "documents">("tokens");
+  const [tabLoading, setTabLoading] = useState(false);
   const [billingRemoteLoading, setBillingRemoteLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [trendDays, setTrendDays] = useState(30);
-  const [refreshInterval, setRefreshInterval] = useState(60);
-  const [lastRefreshedAt, setLastRefreshedAt] = useState<string | null>(null);
-  const [topBy, setTopBy] = useState<"tokens" | "credits" | "documents">("tokens");
+  const [reloadToken, setReloadToken] = useState(0);
+
+  const loadedRef = useRef<Set<string>>(new Set());
 
   // Auth guard
   useEffect(() => {
-    if (status === "unauthenticated") {
-      router.push("/auth?callbackUrl=/admin");
-    }
+    if (status === "unauthenticated") router.push("/auth?callbackUrl=/admin");
   }, [status, router]);
 
-  // Fetch all data
-  const fetchData = useCallback(async (silent = false) => {
-    if (silent) {
-      setRefreshing(true);
-    } else {
-      setLoading(true);
-    }
-    setError(null);
-    try {
-      const [ov, tr, br, ru, tu, bh, fn, rq, ua] = await Promise.all([
-        getAdminOverview(),
-        getAdminTrends("day", trendDays),
-        getAdminBreakdowns(),
-        getAdminRecentUsers(20),
-        getAdminTopUsers(20, topBy),
-        getAdminBillingHealth(false),
-        getAdminFunnel(trendDays),
-        getAdminRagQuality(trendDays),
-        getAdminUserActivity(trendDays, "day"),
-      ]);
-      setOverview(ov as Overview);
-      setTrends(tr as Trends);
-      setBreakdowns(br as Breakdowns);
-      setRecentUsers((ru as { users: RecentUser[] }).users);
-      setTopUsers((tu as { users: TopUser[] }).users);
-      setBillingHealth(bh);
-      setFunnel(fn);
-      setRagQuality(rq);
-      setUserActivity(ua);
-      setLastRefreshedAt(new Date().toISOString());
-    } catch (e: any) {
-      if (e?.message?.includes("403")) {
-        router.push("/");
-        return;
-      }
-      setError(e?.message || tOr('admin.errors.loadFailed', 'Failed to load admin data'));
-    } finally {
-      if (silent) {
-        setRefreshing(false);
-      } else {
-        setLoading(false);
-      }
-    }
-  }, [trendDays, topBy, router, tOr]);
-
+  // Tab <-> URL hash sync (linkable tabs)
   useEffect(() => {
-    if (status === "authenticated") {
-      void fetchData();
-    }
-  }, [status, fetchData]);
+    const fromHash = typeof window !== "undefined" ? window.location.hash.replace("#", "") : "";
+    if (isTabId(fromHash)) setActiveTab(fromHash);
+  }, []);
 
+  const selectTab = useCallback((id: TabId) => {
+    setActiveTab(id);
+    if (typeof window !== "undefined") window.history.replaceState(null, "", `#${id}`);
+  }, []);
+
+  const fetchers: Record<string, () => Promise<void>> = {
+    overview: async () => setOverview((await getAdminOverview()) as Overview),
+    activity: async () => setUserActivity(await getAdminUserActivity(trendDays, "day")),
+    trends: async () => setTrends((await getAdminTrends("day", trendDays)) as Trends),
+    funnel: async () => setFunnel(await getAdminFunnel(trendDays)),
+    billing: async () => setBillingHealth(await getAdminBillingHealth(false)),
+    rag: async () => setRagQuality(await getAdminRagQuality(trendDays)),
+    breakdowns: async () => setBreakdowns((await getAdminBreakdowns()) as Breakdowns),
+    recentUsers: async () =>
+      setRecentUsers(((await getAdminRecentUsers(20)) as { users: RecentUser[] }).users),
+    topUsers: async () =>
+      setTopUsers(((await getAdminTopUsers(20, topBy)) as { users: TopUser[] }).users),
+    retention: async () => setRetention(await getAdminRetention()),
+    churn: async () => setChurn(await getAdminChurn(14)),
+  };
+
+  // Lazy-load the active tab's datasets on open / reload.
   useEffect(() => {
-    if (status !== "authenticated" || refreshInterval <= 0) return;
-    const timer = window.setInterval(() => {
-      void fetchData(true);
-    }, refreshInterval * 1000);
-    return () => window.clearInterval(timer);
-  }, [status, refreshInterval, fetchData]);
+    let cancelled = false;
+    const need = TAB_DEPS[activeTab].filter((k) => !loadedRef.current.has(k));
+    if (need.length === 0) return;
+    (async () => {
+      setTabLoading(true);
+      setError(null);
+      try {
+        await Promise.all(
+          need.map(async (k) => {
+            await fetchers[k]();
+            loadedRef.current.add(k);
+          }),
+        );
+      } catch (e: unknown) {
+        const msg = e instanceof Error ? e.message : String(e);
+        if (!cancelled) setError(msg.includes("403") ? tOr("admin.error.forbidden", "Admin access required.") : tOr("admin.error.load", "Failed to load metrics."));
+      } finally {
+        if (!cancelled) setTabLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab, reloadToken]);
 
-  const verifyBillingRemote = useCallback(async () => {
+  const changeTrendDays = useCallback((days: number) => {
+    setTrendDays(days);
+    PERIOD_DEPS.forEach((k) => loadedRef.current.delete(k));
+    setReloadToken((t) => t + 1);
+  }, []);
+
+  const changeTopBy = useCallback((by: "tokens" | "credits" | "documents") => {
+    setTopBy(by);
+    loadedRef.current.delete("topUsers");
+    setReloadToken((t) => t + 1);
+  }, []);
+
+  const refresh = useCallback(() => {
+    loadedRef.current.clear();
+    setReloadToken((t) => t + 1);
+  }, []);
+
+  const onRemoteCheck = useCallback(async () => {
     setBillingRemoteLoading(true);
     try {
-      const health = await getAdminBillingHealth(true);
-      setBillingHealth(health);
-    } catch (e: any) {
-      setError(e?.message || tOr('admin.errors.verifyBillingFailed', 'Failed to verify billing health'));
+      setBillingHealth(await getAdminBillingHealth(true));
+    } catch {
+      /* surfaced via error banner on next load */
     } finally {
       setBillingRemoteLoading(false);
     }
-  }, [tOr]);
-
-  if (status === "loading" || (status === "authenticated" && loading && !overview)) {
-    return (
-      <div className="dt-stitch-theme dt-admin-workbench min-h-screen">
-        <Header />
-        <main className="max-w-7xl mx-auto p-6 sm:p-8">
-          <h1 className="text-2xl font-semibold mb-6 dark:text-zinc-100">
-            {tOr('admin.dashboardTitle', 'Admin Dashboard')}
-          </h1>
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-8">
-            {Array.from({ length: 6 }).map((_, i) => (
-              <div
-                key={i}
-                className="border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 rounded-lg p-5 animate-pulse"
-              >
-                <div className="h-8 w-20 bg-zinc-200 dark:bg-zinc-700 rounded mb-2" />
-                <div className="h-4 w-28 bg-zinc-100 dark:bg-zinc-800 rounded" />
-              </div>
-            ))}
-          </div>
-        </main>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="dt-stitch-theme dt-admin-workbench min-h-screen">
-        <Header />
-        <main className="max-w-7xl mx-auto p-6 sm:p-8">
-          <div className="p-4 rounded bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300 border border-red-200 dark:border-red-800">
-            {error}
-          </div>
-        </main>
-      </div>
-    );
-  }
+  }, []);
 
   return (
-    <div className="dt-stitch-theme dt-admin-workbench min-h-screen">
+    <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950">
       <Header />
-      <main className="max-w-7xl mx-auto p-6 sm:p-8">
-        <div className="dt-glass-panel mb-6 flex flex-col gap-4 rounded-[1.75rem] p-5 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <p className="mb-2 inline-flex rounded-full border border-white/14 bg-white/8 px-2.5 py-1 text-xs font-medium text-[var(--workbench-muted)]">
-              {tOr('admin.workbenchEyebrow', 'Live business intelligence')}
-            </p>
-            <h1 className="text-3xl font-semibold tracking-normal text-[var(--workbench-ink)]">
-              {tOr('admin.workbenchTitle', 'Admin Insight Workbench')}
-            </h1>
-            <p className="mt-1 text-xs text-[var(--workbench-muted)]">
-              {lastRefreshedAt ? tOr('admin.lastRefreshed', 'Last refreshed {time}', { time: new Date(lastRefreshedAt).toLocaleTimeString() }) : tOr('admin.loadingLiveMetrics', 'Loading live metrics')}
-            </p>
-          </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <select
-              value={trendDays}
-              onChange={(event) => setTrendDays(Number(event.target.value))}
-              className="dt-workbench-button rounded-full px-3 py-2 text-sm"
-              aria-label={tOr('admin.activityWindowAria', 'Activity window')}
-            >
-              <option value={7}>{tOr('admin.window.7d', '7 days')}</option>
-              <option value={30}>{tOr('admin.window.30d', '30 days')}</option>
-              <option value={90}>{tOr('admin.window.90d', '90 days')}</option>
-              <option value={180}>{tOr('admin.window.180d', '180 days')}</option>
-            </select>
-            <select
-              value={refreshInterval}
-              onChange={(event) => setRefreshInterval(Number(event.target.value))}
-              className="dt-workbench-button rounded-full px-3 py-2 text-sm"
-              aria-label={tOr('admin.autoRefreshAria', 'Auto-refresh interval')}
-            >
-              <option value={0}>{tOr('admin.refresh.manual', 'Manual refresh')}</option>
-              <option value={30}>{tOr('admin.refresh.30s', '30s refresh')}</option>
-              <option value={60}>{tOr('admin.refresh.60s', '60s refresh')}</option>
-              <option value={300}>{tOr('admin.refresh.5m', '5m refresh')}</option>
-            </select>
-            <button
-              type="button"
-              onClick={() => void fetchData(true)}
-              disabled={refreshing || loading}
-              className="dt-workbench-button inline-flex items-center gap-2 rounded-full px-3 py-2 text-sm font-medium disabled:opacity-50"
-            >
-              <RefreshCw aria-hidden="true" className={`h-4 w-4 ${refreshing || loading ? "animate-spin" : ""}`} />
-              {tOr('admin.refreshButton', 'Refresh')}
-            </button>
-          </div>
+      <main className="mx-auto max-w-6xl px-4 py-6">
+        <div className="mb-4 flex items-center justify-between">
+          <h1 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">
+            {tOr("admin.title", "Analytics")}
+          </h1>
+          <button
+            onClick={refresh}
+            className="inline-flex items-center gap-1.5 rounded-md border border-zinc-200 bg-white px-2.5 py-1.5 text-xs font-medium text-zinc-700 hover:bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800"
+          >
+            <RefreshCw className={`h-3.5 w-3.5 ${tabLoading ? "animate-spin" : ""}`} />
+            {tOr("admin.refresh", "Refresh")}
+          </button>
         </div>
 
-        {/* KPI Cards */}
-        {overview && (
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 mb-8">
-            <KPICard icon={Users} label={tOr('admin.kpi.totalUsers', 'Total Users')} value={overview.total_users} />
-            <KPICard icon={Crown} label={tOr('admin.kpi.paidUsers', 'Paid Users')} value={overview.paid_users} />
-            <KPICard icon={Star} label={tOr('admin.kpi.plusUsers', 'Plus Users')} value={overview.plus_users} />
-            <KPICard icon={Star} label={tOr('admin.kpi.proUsers', 'Pro Users')} value={overview.pro_users} />
-            <KPICard icon={FileText} label={tOr('admin.kpi.documents', 'Documents')} value={overview.total_documents} />
-            <KPICard icon={MessageSquare} label={tOr('admin.kpi.messages', 'Messages')} value={overview.total_messages} />
-            <KPICard icon={Zap} label={tOr('admin.kpi.totalTokens', 'Total Tokens')} value={overview.total_tokens} />
-            <KPICard icon={CreditCard} label={tOr('admin.kpi.creditsSpent', 'Credits Spent')} value={overview.total_credits_spent} />
-            <KPICard icon={Gift} label={tOr('admin.kpi.creditsGranted', 'Credits Granted')} value={overview.total_credits_granted} />
+        {/* Sticky tab nav */}
+        <nav className="sticky top-0 z-10 -mx-4 mb-6 border-b border-zinc-200 bg-zinc-50/90 px-4 backdrop-blur dark:border-zinc-800 dark:bg-zinc-950/90">
+          <div className="flex gap-1 overflow-x-auto" role="tablist">
+            {TABS.map((t) => {
+              const active = t.id === activeTab;
+              return (
+                <button
+                  key={t.id}
+                  role="tab"
+                  aria-selected={active}
+                  onClick={() => selectTab(t.id)}
+                  className={`whitespace-nowrap border-b-2 px-3 py-2.5 text-sm font-medium transition-colors ${
+                    active
+                      ? "border-blue-700 text-blue-700 dark:border-blue-400 dark:text-blue-400"
+                      : "border-transparent text-zinc-500 hover:text-zinc-800 dark:text-zinc-400 dark:hover:text-zinc-200"
+                  }`}
+                >
+                  {tOr(t.key, t.fallback)}
+                </button>
+              );
+            })}
+          </div>
+        </nav>
+
+        {error && (
+          <div className="mb-4 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700 dark:border-red-900 dark:bg-red-950 dark:text-red-300">
+            {error}
           </div>
         )}
-
-        {userActivity && (
-          <AdminUserActivityCharts activity={userActivity} />
+        {tabLoading && (
+          <div className="mb-4 text-sm text-zinc-500 dark:text-zinc-400">{tOr("admin.loading", "Loading…")}</div>
         )}
 
-        <BillingHealthPanel
-          health={billingHealth}
-          loadingRemote={billingRemoteLoading}
-          onRemoteCheck={verifyBillingRemote}
-        />
-
-        <FunnelPanel funnel={funnel} />
-
-        <RagQualityPanel quality={ragQuality} />
-
-        {trends && breakdowns && (
-          <AdminCharts
-            trends={trends}
-            breakdowns={breakdowns}
-            trendDays={trendDays}
-            onTrendDaysChange={setTrendDays}
-          />
-        )}
-
-        {/* Tables */}
-        <section className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-          {/* Recent Users */}
-          <div className="dt-admin-panel overflow-hidden border">
-            <div className="px-4 py-3 border-b border-zinc-200 dark:border-zinc-700">
-              <h3 className="text-sm font-medium dark:text-zinc-100">
-                {tOr('admin.recentUsers.title', 'Recent Users')}
-              </h3>
-            </div>
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead className="bg-zinc-50 dark:bg-zinc-800/50">
-                  <tr>
-                    <th scope="col" className="text-left px-4 py-2 font-medium text-zinc-500 dark:text-zinc-400">
-                      {tOr('admin.userCol.email', 'Email')}
-                    </th>
-                    <th scope="col" className="text-left px-4 py-2 font-medium text-zinc-500 dark:text-zinc-400">
-                      {tOr('admin.userCol.plan', 'Plan')}
-                    </th>
-                    <th scope="col" className="text-right px-4 py-2 font-medium text-zinc-500 dark:text-zinc-400">
-                      {tOr('admin.userCol.credits', 'Credits')}
-                    </th>
-                    <th scope="col" className="text-right px-4 py-2 font-medium text-zinc-500 dark:text-zinc-400">
-                      {tOr('admin.userCol.docs', 'Docs')}
-                    </th>
-                    <th scope="col" className="text-left px-4 py-2 font-medium text-zinc-500 dark:text-zinc-400">
-                      {tOr('admin.userCol.joined', 'Joined')}
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800">
-                  {recentUsers.map((u) => (
-                    <tr key={u.id} className="hover:bg-zinc-50 dark:hover:bg-zinc-800/30">
-                      <th
-                        scope="row"
-                        className="px-4 py-2 text-zinc-700 dark:text-zinc-300 truncate max-w-[200px]"
-                        style={{ textAlign: "left", fontWeight: 500 }}
-                      >
-                        {u.email}
-                      </th>
-                      <td className="px-4 py-2">
-                        <PlanBadge plan={u.plan} />
-                      </td>
-                      <td className="px-4 py-2 text-right text-zinc-600 dark:text-zinc-400 tabular-nums">
-                        {formatNumber(u.credits_balance)}
-                      </td>
-                      <td className="px-4 py-2 text-right text-zinc-600 dark:text-zinc-400 tabular-nums">
-                        {u.doc_count}
-                      </td>
-                      <td className="px-4 py-2 text-zinc-500 dark:text-zinc-400 whitespace-nowrap">
-                        {u.created_at
-                          ? new Date(u.created_at).toLocaleDateString()
-                          : "-"}
-                      </td>
-                    </tr>
-                  ))}
-                  {recentUsers.length === 0 && (
-                    <tr>
-                      <td colSpan={5} className="px-4 py-8 text-center text-zinc-400">
-                        {tOr('admin.recentUsers.empty', 'No users yet')}
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </div>
-
-          {/* Top Users */}
-          <div className="dt-admin-panel overflow-hidden border">
-            <div className="px-4 py-3 border-b border-zinc-200 dark:border-zinc-700 flex items-center justify-between">
-              <h3 className="text-sm font-medium dark:text-zinc-100">{tOr('admin.topUsers.title', 'Top Users')}</h3>
-              <select
-                value={topBy}
-                onChange={(e) =>
-                  setTopBy(e.target.value as "tokens" | "credits" | "documents")
-                }
-                className="text-xs border border-zinc-200 dark:border-zinc-700 rounded px-2 py-1 bg-transparent dark:text-zinc-300"
-                aria-label={tOr('admin.topUsers.sortByAria', 'Sort by')}
-              >
-                <option value="tokens">{tOr('admin.topUsers.byTokens', 'By Tokens')}</option>
-                <option value="credits">{tOr('admin.topUsers.byCredits', 'By Credits')}</option>
-                <option value="documents">{tOr('admin.topUsers.byDocuments', 'By Documents')}</option>
-              </select>
-            </div>
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead className="bg-zinc-50 dark:bg-zinc-800/50">
-                  <tr>
-                    <th scope="col" className="text-left px-4 py-2 font-medium text-zinc-500 dark:text-zinc-400">
-                      {tOr('admin.userCol.email', 'Email')}
-                    </th>
-                    <th scope="col" className="text-left px-4 py-2 font-medium text-zinc-500 dark:text-zinc-400">
-                      {tOr('admin.userCol.plan', 'Plan')}
-                    </th>
-                    <th scope="col" className="text-right px-4 py-2 font-medium text-zinc-500 dark:text-zinc-400">
-                      {tOr('admin.userCol.tokens', 'Tokens')}
-                    </th>
-                    <th scope="col" className="text-right px-4 py-2 font-medium text-zinc-500 dark:text-zinc-400">
-                      {tOr('admin.userCol.credits', 'Credits')}
-                    </th>
-                    <th scope="col" className="text-right px-4 py-2 font-medium text-zinc-500 dark:text-zinc-400">
-                      {tOr('admin.userCol.docs', 'Docs')}
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800">
-                  {topUsers.map((u) => (
-                    <tr key={u.id} className="hover:bg-zinc-50 dark:hover:bg-zinc-800/30">
-                      <th
-                        scope="row"
-                        className="px-4 py-2 text-zinc-700 dark:text-zinc-300 truncate max-w-[200px]"
-                        style={{ textAlign: "left", fontWeight: 500 }}
-                      >
-                        {u.email}
-                      </th>
-                      <td className="px-4 py-2">
-                        <PlanBadge plan={u.plan} />
-                      </td>
-                      <td className="px-4 py-2 text-right text-zinc-600 dark:text-zinc-400 tabular-nums">
-                        {formatNumber(u.total_tokens)}
-                      </td>
-                      <td className="px-4 py-2 text-right text-zinc-600 dark:text-zinc-400 tabular-nums">
-                        {formatNumber(u.total_credits)}
-                      </td>
-                      <td className="px-4 py-2 text-right text-zinc-600 dark:text-zinc-400 tabular-nums">
-                        {u.doc_count}
-                      </td>
-                    </tr>
-                  ))}
-                  {topUsers.length === 0 && (
-                    <tr>
-                      <td colSpan={5} className="px-4 py-8 text-center text-zinc-400">
-                        {tOr('admin.topUsers.empty', 'No usage data yet')}
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </section>
+        <div role="tabpanel">
+          {activeTab === "overview" && (
+            <OverviewTab overview={overview} activity={userActivity} trends={trends} />
+          )}
+          {activeTab === "activation" && <ActivationTab activity={userActivity} funnel={funnel} />}
+          {activeTab === "retention" && <RetentionTab retention={retention} />}
+          {activeTab === "churn" && <ChurnTab churn={churn} />}
+          {activeTab === "revenue" && (
+            <RevenueTab
+              funnel={funnel}
+              billingHealth={billingHealth}
+              billingRemoteLoading={billingRemoteLoading}
+              onRemoteCheck={onRemoteCheck}
+            />
+          )}
+          {activeTab === "product" && (
+            <ProductTab
+              ragQuality={ragQuality}
+              trends={trends}
+              breakdowns={breakdowns}
+              trendDays={trendDays}
+              onTrendDaysChange={changeTrendDays}
+              recentUsers={recentUsers}
+              topUsers={topUsers}
+              topBy={topBy}
+              onTopByChange={changeTopBy}
+            />
+          )}
+        </div>
       </main>
     </div>
   );
