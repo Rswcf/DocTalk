@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import HomePageClient from './HomePageClient';
+import MarketingLocaleLinks from '../components/marketing/MarketingLocaleLinks';
 import { absoluteUrl, buildMarketingMetadata } from '../lib/seo';
 
 export const metadata: Metadata = buildMarketingMetadata({
@@ -7,6 +8,7 @@ export const metadata: Metadata = buildMarketingMetadata({
   description:
     'Upload any document and chat with AI. Get instant answers with source citations that highlight in your document. Supports PDF, DOCX, PPTX, XLSX, and more.',
   path: '/',
+  localized: true,
   keywords: [
     'ai document chat',
     'chat with pdf',
@@ -170,6 +172,7 @@ export default function HomePage() {
       })}} />
 
       <HomePageClient />
+      <MarketingLocaleLinks path="/" />
     </>
   );
 }

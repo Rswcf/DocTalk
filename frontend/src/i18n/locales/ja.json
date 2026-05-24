@@ -3620,5 +3620,12 @@
   "landing.heroEyebrow": "ドキュメントインテリジェンス",
   "landing.heroStats.languages": "言語",
   "landing.heroStats.formats": "ファイル形式",
-  "landing.heroStats.citedAnswers": "引用付き回答"
+  "landing.heroStats.citedAnswers": "引用付き回答",
+  "landing.features.eyebrow": "機能",
+  "landing.faq.eyebrow": "よくある質問",
+  "landing.finalCta.eyebrow": "はじめる",
+  "landing.security.eyebrow": "プライバシーとセキュリティ",
+  "landing.security.itemEyebrow": "プライバシー",
+  "landing.heroCollage.caption": "引用付きで読む",
+  "landing.masthead.tagline": "ドキュメントインテリジェンス"
 }

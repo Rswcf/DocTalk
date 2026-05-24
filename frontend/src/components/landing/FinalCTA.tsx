@@ -15,7 +15,7 @@ export default function FinalCTA() {
       <div className="ed-shell">
         <ScrollReveal>
           <div className="max-w-2xl">
-            <p className="ed-label mb-4">Get Started</p>
+            <p className="ed-label mb-4">{t('landing.finalCta.eyebrow')}</p>
             <hr className="ed-rule mb-10" />
             <h2 className="ed-display mb-6">{t('landing.finalCta.title')}</h2>
             <p className="ed-lede mb-10">{t('landing.finalCta.subtitle')}</p>

@@ -3620,5 +3620,12 @@
   "landing.heroEyebrow": "Dokumentenintelligenz",
   "landing.heroStats.languages": "Sprachen",
   "landing.heroStats.formats": "Dateiformate",
-  "landing.heroStats.citedAnswers": "Zitierte Antworten"
+  "landing.heroStats.citedAnswers": "Zitierte Antworten",
+  "landing.features.eyebrow": "Funktionen",
+  "landing.faq.eyebrow": "FAQ",
+  "landing.finalCta.eyebrow": "Loslegen",
+  "landing.security.eyebrow": "Datenschutz & Sicherheit",
+  "landing.security.itemEyebrow": "Datenschutz",
+  "landing.heroCollage.caption": "Lesen mit Zitaten",
+  "landing.masthead.tagline": "Dokumentenintelligenz"
 }

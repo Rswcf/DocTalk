@@ -3620,5 +3620,12 @@
   "landing.heroEyebrow": "문서 인텔리전스",
   "landing.heroStats.languages": "언어",
   "landing.heroStats.formats": "파일 형식",
-  "landing.heroStats.citedAnswers": "인용 답변"
+  "landing.heroStats.citedAnswers": "인용 답변",
+  "landing.features.eyebrow": "기능",
+  "landing.faq.eyebrow": "자주 묻는 질문",
+  "landing.finalCta.eyebrow": "시작하기",
+  "landing.security.eyebrow": "개인정보 보호 및 보안",
+  "landing.security.itemEyebrow": "개인정보 보호",
+  "landing.heroCollage.caption": "인용과 함께 읽기",
+  "landing.masthead.tagline": "문서 인텔리전스"
 }

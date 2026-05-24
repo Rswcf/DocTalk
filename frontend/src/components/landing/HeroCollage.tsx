@@ -1,11 +1,14 @@
 "use client";
 
+import { useLocale } from '../../i18n';
+
 /**
  * HeroCollage — Art-directed editorial collage for the DocTalk landing hero.
  * Pure HTML/CSS/SVG, warm editorial palette only. No external images.
  * No glassmorphism, no gradient mesh, no UI mock. Aria-hidden decorative.
  */
 export default function HeroCollage() {
+  const { t } = useLocale();
   return (
     <figure aria-hidden="true" style={{ position: "relative" }}>
       {/* ─── Outer container — roughly 4:5 aspect ─── */}
@@ -336,7 +339,7 @@ export default function HeroCollage() {
         className="ed-caption"
         style={{ marginTop: "12px", display: "block" }}
       >
-        Fig.&thinsp;01 — Reading with citations
+        Fig.&thinsp;01 — {t('landing.heroCollage.caption')}
       </figcaption>
     </figure>
   );

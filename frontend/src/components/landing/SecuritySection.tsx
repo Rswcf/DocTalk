@@ -19,7 +19,7 @@ export default function SecuritySection() {
       <div className="ed-shell">
         <ScrollReveal>
           <div className="mb-10">
-            <p className="ed-label mb-3">Privacy &amp; Security</p>
+            <p className="ed-label mb-3">{t('landing.security.eyebrow')}</p>
             <h2 className="ed-h2 max-w-xl">{t('landing.security.title')}</h2>
           </div>
           <hr className="ed-rule" />
@@ -45,7 +45,7 @@ export default function SecuritySection() {
                 >
                   <p className="ed-label mb-4">
                     <span className="ed-label-num">{num}</span>
-                    {' '}— Privacy
+                    {' '}— {t('landing.security.itemEyebrow')}
                   </p>
                   <h3 className="ed-h3 mb-3">{t(titleKey)}</h3>
                   <p className="ed-body">{t(descKey)}</p>

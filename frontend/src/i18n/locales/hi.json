@@ -3620,5 +3620,12 @@
   "landing.heroEyebrow": "दस्तावेज़ इंटेलिजेंस",
   "landing.heroStats.languages": "भाषाएँ",
   "landing.heroStats.formats": "फ़ाइल स्वरूप",
-  "landing.heroStats.citedAnswers": "उद्धृत उत्तर"
+  "landing.heroStats.citedAnswers": "उद्धृत उत्तर",
+  "landing.features.eyebrow": "Features",
+  "landing.faq.eyebrow": "FAQ",
+  "landing.finalCta.eyebrow": "Get Started",
+  "landing.security.eyebrow": "Privacy & Security",
+  "landing.security.itemEyebrow": "Privacy",
+  "landing.heroCollage.caption": "Reading with citations",
+  "landing.masthead.tagline": "Document Intelligence"
 }

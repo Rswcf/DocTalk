@@ -113,9 +113,9 @@ export default function EditorialHeaderBase({
                     </span>
                     <span
                       className="ed-caption"
-                      style={{ letterSpacing: "0.08em" }}
+                      style={{ letterSpacing: "0.08em", textTransform: "uppercase" }}
                     >
-                      DOCUMENT INTELLIGENCE
+                      {t('landing.masthead.tagline')}
                     </span>
                   </span>
                 </>

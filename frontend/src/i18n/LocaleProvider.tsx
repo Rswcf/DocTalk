@@ -74,7 +74,11 @@ export default function LocaleProvider({
 }) {
   const [locale, setLocaleState] = useState<Locale>(initialLocale ?? 'en');
   const [loadedTranslations, setLoadedTranslations] = useState<Record<string, Record<string, string>>>(
-    initialLocale && initialMessages ? { en, [initialLocale]: initialMessages } : { en },
+    // Never let a scoped seed clobber the full bundled English (resolve() relies
+    // on it as the fallback); only seed a non-en locale.
+    initialLocale && initialLocale !== 'en' && initialMessages
+      ? { en, [initialLocale]: initialMessages }
+      : { en },
   );
 
   useEffect(() => {

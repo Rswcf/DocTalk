@@ -26,7 +26,7 @@ export default function FAQ() {
       <div className="ed-shell">
         <ScrollReveal>
           <div className="max-w-[760px]">
-            <p className="ed-label mb-3">FAQ</p>
+            <p className="ed-label mb-3">{t('landing.faq.eyebrow')}</p>
             <h2 className="ed-h2 mb-10">{t('landing.faq.title')}</h2>
           </div>
           <hr className="ed-rule" />

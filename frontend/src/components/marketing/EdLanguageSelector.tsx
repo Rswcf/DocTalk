@@ -32,9 +32,10 @@ export default function EdLanguageSelector({ languageLabel }: { languageLabel?: 
   const pathname = usePathname() || "/";
   const { locale: urlLocale, path: agnosticPath } = splitLocaleFromPath(pathname);
   const localized = isLocalizedPath(agnosticPath);
-  // On a localized URL the active language is the one in the URL; otherwise the
-  // client-detected/selected locale.
-  const activeLocale = localized ? urlLocale : locale;
+  // On a prefixed URL (/de) the active language is the URL locale; on the
+  // unprefixed root/non-localized paths it's the client provider locale (which
+  // reflects detection or a client-side switch).
+  const activeLocale = urlLocale !== 'en' ? urlLocale : locale;
 
   const [open, setOpen] = useState(false);
   const [pos, setPos] = useState({ top: 0, right: 0, maxHeight: 420 });

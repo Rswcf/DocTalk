@@ -3620,5 +3620,12 @@
   "landing.heroEyebrow": "Inteligencia documental",
   "landing.heroStats.languages": "Idiomas",
   "landing.heroStats.formats": "Formatos de archivo",
-  "landing.heroStats.citedAnswers": "Respuestas citadas"
+  "landing.heroStats.citedAnswers": "Respuestas citadas",
+  "landing.features.eyebrow": "Características",
+  "landing.faq.eyebrow": "Preguntas frecuentes",
+  "landing.finalCta.eyebrow": "Comenzar",
+  "landing.security.eyebrow": "Privacidad y seguridad",
+  "landing.security.itemEyebrow": "Privacidad",
+  "landing.heroCollage.caption": "Lectura con citas",
+  "landing.masthead.tagline": "Inteligencia documental"
 }

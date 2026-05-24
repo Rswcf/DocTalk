@@ -195,7 +195,7 @@ export default function FeatureGrid() {
         {/* Section header */}
         <ScrollReveal>
           <div className="mb-10">
-            <p className="ed-label mb-3">Features</p>
+            <p className="ed-label mb-3">{t('landing.features.eyebrow')}</p>
             <h2 className="ed-h2 max-w-xl">
               {t('landing.features.title')}
             </h2>
