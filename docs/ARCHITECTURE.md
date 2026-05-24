@@ -976,7 +976,14 @@ Because the backend does **not** trust raw `X-Forwarded-For`, `--forwarded-allow
 
 #### Deploy sequence for C1 HMAC contract (Wave-1, 2026-05-20)
 
-The fix-batch ships a dual-accept transition window — backend simultaneously recognizes BOTH the new triple-header contract AND the legacy `X-Real-Client-IP` + `X-Proxy-IP-Secret` pair (compared against `AUTH_SECRET`, the OLD signing secret). This is the only safe rollout order:
+> **RESOLVED 2026-05-24** — the dual-accept transition window below is now
+> historical. After 24h at zero `proxy.signed_ip.legacy_path_used`, the legacy
+> branch was removed from `get_client_ip()` (and `_AUTH_SECRET_BYTES`); the IP
+> trust contract is **HMAC-only** on both surfaces. Stale/partial/legacy
+> requests now fall through to the connection host. The sequence below is kept
+> as the reference for how the migration was rolled out.
+
+The fix-batch shipped a dual-accept transition window — backend simultaneously recognizes BOTH the new triple-header contract AND the legacy `X-Real-Client-IP` + `X-Proxy-IP-Secret` pair (compared against `AUTH_SECRET`, the OLD signing secret). This is the only safe rollout order:
 
 1. **Railway backend first.** `git checkout stable && git merge main && railway up --detach`. Wait for `GET /health` to return 200. At this point the backend accepts both contracts; production frontend is still emitting the legacy headers, which continue to work.
 2. **Then push frontend to Vercel.** `git push origin stable`. Wait for the Vercel deployment to land "Ready". Frontend now emits only the new triple-header contract.

@@ -50,15 +50,16 @@ For UI changes, also open the dev server in a browser and exercise the golden pa
 ```bash
 git push origin main
 git checkout stable && git merge main          # merge but do NOT push yet
-railway up --detach                             # 1. backend deploys FIRST (dual-accepts old + new contracts)
+railway up --detach                             # 1. backend deploys FIRST
 # 2. WAIT for Railway /health to confirm the new build is live:
 curl -fsS https://backend-production-a62e.up.railway.app/health
-# 3. NOW push — Vercel auto-deploys the frontend that emits the new contract:
+# 3. NOW push — Vercel auto-deploys the frontend:
 git push origin stable
 # 4. Wait for Vercel deployment to show "Ready" in the dashboard.
-# 5. (C1 follow-up) Watch `grep proxy.signed_ip.legacy_path_used` in Railway
-#    logs for 24h before landing the legacy-removal change.
 git checkout main
+# (C1 migration COMPLETE 2026-05-24: the legacy X-Proxy-IP-Secret/AUTH_SECRET
+#  dual-accept path was removed after 24h at zero legacy_path_used. The IP
+#  trust contract is now HMAC-only on both surfaces.)
 ```
 
 Full procedure + guardrails: see `.claude/skills/deploy/SKILL.md` (invoked via `/deploy`).

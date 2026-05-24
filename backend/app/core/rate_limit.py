@@ -258,7 +258,6 @@ public_event_limiter = RedisRateLimiter(
 # and re-encoding per-request is wasteful. Re-read at call time would re-import
 # settings, which is unnecessary because the process is restarted on env change.
 _ADAPTER_SECRET_BYTES: bytes = (settings.ADAPTER_SECRET or "").encode("utf-8")
-_AUTH_SECRET_BYTES: bytes = (settings.AUTH_SECRET or "").encode("utf-8")
 
 # Max clock skew accepted on the new HMAC contract. 60s covers NTP drift between
 # Vercel and Railway while keeping the replay window narrow. The signature is
@@ -310,14 +309,13 @@ def verify_signed_ip(
 def get_client_ip(request: "Request") -> str:
     """Extract real client IP from the trusted Vercel proxy.
 
-    New contract (preferred): triple-header HMAC.
+    Contract: triple-header HMAC.
       X-Proxy-IP / X-Proxy-IP-Ts / X-Proxy-IP-Sig signed with ADAPTER_SECRET.
 
-    Legacy contract (dual-accept transition window — remove 24h after rollout):
-      X-Real-Client-IP + X-Proxy-IP-Secret compared against AUTH_SECRET.
-
     Falls back to request.client.host for direct access (dev/testing). Never
-    trust raw X-Forwarded-For.
+    trust raw X-Forwarded-For. (The legacy X-Proxy-IP-Secret/AUTH_SECRET
+    dual-accept path was removed 2026-05-24, 24h after the HMAC rollout with
+    zero proxy.signed_ip.legacy_path_used — C1 follow-up.)
     """
     # New contract — prefer this when present.
     new_ip = request.headers.get("x-proxy-ip")
@@ -342,20 +340,6 @@ def get_client_ip(request: "Request") -> str:
                 "skew_s": skew_s,
             },
         )
-        # Do NOT trust the claimed IP on failure. Fall through to legacy/host.
-
-    # Legacy contract — dual-accept during the rollout window. The compare uses
-    # AUTH_SECRET (the OLD signing secret, NOT ADAPTER_SECRET — Codex R5) and
-    # reads X-Real-Client-IP (the OLD trusted IP header, NOT X-Real-IP — R4).
-    proxied_ip = request.headers.get("x-real-client-ip")
-    proxy_secret = request.headers.get("x-proxy-ip-secret")
-    if (
-        proxied_ip
-        and proxy_secret
-        and _AUTH_SECRET_BYTES
-        and hmac.compare_digest(proxy_secret.encode("utf-8"), _AUTH_SECRET_BYTES)
-    ):
-        logger.info("proxy.signed_ip.legacy_path_used")
-        return proxied_ip.strip()
+        # Do NOT trust the claimed IP on failure; fall back to the connection host.
 
     return request.client.host if request.client else "unknown"
