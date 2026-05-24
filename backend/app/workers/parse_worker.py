@@ -15,7 +15,14 @@ from app.models.sync_database import SyncSessionLocal
 from app.models.tables import Chunk, Document, DocumentBrief, DocumentElement, Page
 from app.services.conversion_service import CONVERTIBLE_TYPES, convert_to_pdf
 from app.services.embedding_service import embedding_service
-from app.services.parse_service import ParseService, resolve_ocr_languages
+from app.services.parse_service import (
+    PARSE_PIPELINE_VERSION,
+    ParseService,
+    detect_low_quality_text,
+    detect_script_osd,
+    resolve_ocr_languages,
+    text_quality_score,
+)
 
 from .celery_app import celery_app
 
@@ -135,17 +142,12 @@ def parse_document(self, document_id: str, locale: str | None = None) -> None:
                 logger.error("Document %s not found", document_id)
                 return
 
-            # Clean up partial data from previous attempts (idempotent re-parse)
-            from sqlalchemy import delete as sa_delete
-
-            db.execute(sa_delete(DocumentBrief).where(DocumentBrief.document_id == doc.id))
-            db.execute(sa_delete(DocumentElement).where(DocumentElement.document_id == doc.id))
-            db.execute(sa_delete(Chunk).where(Chunk.document_id == doc.id))
-            db.execute(sa_delete(Page).where(Page.document_id == doc.id))
-
-            # Delete stale Qdrant vectors BEFORE re-indexing (R2a hazard fix). The worker
-            # rebuilds Pages/Chunks but old vectors would otherwise survive and pollute
-            # retrieval top-k (especially after an OCR re-parse). HARD, AWAITED precondition.
+            # Delete stale Qdrant vectors BEFORE deleting any DB rows (R2b ordering fix).
+            # Doing Qdrant first means a Qdrant outage leaves the document's existing
+            # Pages/Chunks intact (we only set an error + return) instead of committing the
+            # row deletes alongside the error — which would have been silent data loss when
+            # vectors also survived. The delete is by document_id filter, so it needs no
+            # chunk rows. HARD, AWAITED precondition before re-indexing.
             try:
                 # ensure_collection() first so a first parse on a fresh collection doesn't
                 # fail the delete with "collection not found".
@@ -163,8 +165,8 @@ def parse_document(self, document_id: str, locale: str | None = None) -> None:
             except SoftTimeLimitExceeded:
                 raise
             except Exception as e:
-                # Do NOT re-index with stale vectors. Mark a structured error (never leave the
-                # doc stuck in 'parsing') and stop; the user can retry.
+                # Do NOT delete DB rows or re-index with stale vectors. Mark a structured
+                # error (never leave the doc stuck in 'parsing') and stop; the user can retry.
                 logger.error("Qdrant pre-delete failed for %s: %s", document_id, e)
                 _set_doc_error(
                     doc, "QDRANT_CLEANUP_FAILED",
@@ -172,6 +174,15 @@ def parse_document(self, document_id: str, locale: str | None = None) -> None:
                 )
                 db.commit()
                 return
+
+            # Clean up partial data from previous attempts (idempotent re-parse). Only after
+            # Qdrant vectors are confirmed gone (above) so the two stores can't diverge.
+            from sqlalchemy import delete as sa_delete
+
+            db.execute(sa_delete(DocumentBrief).where(DocumentBrief.document_id == doc.id))
+            db.execute(sa_delete(DocumentElement).where(DocumentElement.document_id == doc.id))
+            db.execute(sa_delete(Chunk).where(Chunk.document_id == doc.id))
+            db.execute(sa_delete(Page).where(Page.document_id == doc.id))
 
             doc.pages_parsed = 0
             doc.chunks_total = 0
@@ -196,6 +207,10 @@ def parse_document(self, document_id: str, locale: str | None = None) -> None:
                 return
 
             file_type = getattr(doc, "file_type", "pdf") or "pdf"
+
+            # Parse-pipeline metadata (R2b), persisted at finalization.
+            parse_method = "text"
+            ocr_languages_used: Optional[str] = None
 
             # Map page_number → original extracted text for non-PDF (used when persisting Page.content)
             extracted_content_map: dict[int, str] = {}
@@ -272,9 +287,19 @@ def parse_document(self, document_id: str, locale: str | None = None) -> None:
                 db.add(doc)
                 db.commit()
 
-                # Detect scanned PDFs — attempt OCR fallback
-                if service.detect_scanned(pages):
-                    if not settings.OCR_ENABLED:
+                # Decide whether OCR is needed. Two triggers:
+                #  (a) scanned: no text layer at all (detect_scanned).
+                #  (b) low-quality: a text layer is present but garbled (broken-font cmap)
+                #      — detect_low_quality_text, the R2b fix for docs like U13 that
+                #      detect_scanned() misses because garbage text *is* present.
+                scanned = service.detect_scanned(pages)
+                low_q, qscore = (False, None)
+                if not scanned:
+                    low_q, qscore = detect_low_quality_text(pages, file_type="pdf")
+                need_ocr = scanned or low_q
+
+                if need_ocr and not settings.OCR_ENABLED:
+                    if scanned:
                         _set_doc_error(
                             doc,
                             "OCR_DISABLED",
@@ -284,37 +309,77 @@ def parse_document(self, document_id: str, locale: str | None = None) -> None:
                         db.commit()
                         logger.info("Document %s marked as scanned / error (OCR disabled)", document_id)
                         return
-
-                    logger.info("Document %s appears scanned, attempting OCR", document_id)
+                    # low-quality but OCR off: the poor text layer is all we have — keep it
+                    # (don't hard-error a doc that has *some* extractable text).
+                    logger.warning(
+                        "Document %s has low-quality text (q=%.2f) but OCR disabled; keeping text layer",
+                        document_id, qscore or 0.0,
+                    )
+                elif need_ocr:
+                    reason = "appears scanned" if scanned else f"has garbled text (q={qscore:.2f})"
+                    logger.info("Document %s %s, attempting OCR", document_id, reason)
                     doc.status = "ocr"
                     db.add(doc)
                     db.commit()
 
+                    # Content-based OCR language selection (R2b): detect the script via OSD
+                    # (locale-independent — handles en-locale users with non-Latin docs and
+                    # retries/backfills that carry no locale), then narrow to that script's
+                    # languages, with `locale` only disambiguating within the family.
                     try:
-                        pages = service.extract_pages_ocr(
+                        script = detect_script_osd(file_bytes)
+                    except SoftTimeLimitExceeded:
+                        raise
+                    except Exception as e:
+                        logger.warning("OSD script detection failed for %s: %s", document_id, e)
+                        script = None
+                    ocr_languages_used = resolve_ocr_languages(locale, script=script)
+                    logger.info(
+                        "Document %s OCR: script=%s locale=%s -> languages=%s",
+                        document_id, script, locale, ocr_languages_used,
+                    )
+
+                    try:
+                        ocr_pages = service.extract_pages_ocr(
                             file_bytes,
-                            languages=resolve_ocr_languages(locale),
+                            languages=ocr_languages_used,
                             dpi=settings.OCR_DPI,
                         )
                     except SoftTimeLimitExceeded:
                         raise
                     except Exception as e:
                         logger.exception("OCR extraction failed for %s: %s", document_id, e)
-                        _set_doc_error(doc, "OCR_FAILED", "OCR text recognition failed")
-                        db.add(doc)
-                        db.commit()
-                        return
+                        if scanned:
+                            _set_doc_error(doc, "OCR_FAILED", "OCR text recognition failed")
+                            db.add(doc)
+                            db.commit()
+                            return
+                        ocr_pages = None  # low-quality fallback: keep the text layer below
 
-                    # Verify OCR produced enough text
-                    total_chars = sum(sum(len(b.text) for b in p.blocks) for p in pages)
-                    if total_chars < 50:
-                        _set_doc_error(doc, "OCR_INSUFFICIENT_TEXT", "OCR could not extract sufficient text")
-                        db.add(doc)
-                        db.commit()
-                        logger.info("Document %s: OCR produced only %d chars", document_id, total_chars)
-                        return
+                    if ocr_pages is not None:
+                        total_chars = sum(sum(len(b.text) for b in p.blocks) for p in ocr_pages)
+                        ocr_q = text_quality_score(ocr_pages)
+                        if scanned and total_chars < 50:
+                            _set_doc_error(doc, "OCR_INSUFFICIENT_TEXT", "OCR could not extract sufficient text")
+                            db.add(doc)
+                            db.commit()
+                            logger.info("Document %s: OCR produced only %d chars", document_id, total_chars)
+                            return
+                        # For a low-quality re-OCR, only ADOPT the OCR result if it actually
+                        # improved quality — otherwise keep the original text layer. Prevents
+                        # making things worse and avoids a re-enqueue loop on un-OCR-able docs.
+                        if scanned or (total_chars >= 50 and (qscore is None or ocr_q >= qscore)):
+                            pages = ocr_pages
+                            parse_method = "ocr"
+                            logger.info(
+                                "OCR adopted for %s: %d chars, q=%.2f", document_id, total_chars, ocr_q
+                            )
+                        else:
+                            logger.warning(
+                                "Document %s: OCR q=%.2f did not beat text-layer q=%.2f; keeping text layer",
+                                document_id, ocr_q, qscore or 0.0,
+                            )
 
-                    logger.info("OCR succeeded for %s: %d chars extracted", document_id, total_chars)
                     doc.status = "parsing"
                     db.add(doc)
                     db.commit()
@@ -511,11 +576,21 @@ def parse_document(self, document_id: str, locale: str | None = None) -> None:
                     if elapsed < 0.2:
                         time.sleep(0.2 - elapsed)
 
-                # All done
+                # All done — record parse-pipeline metadata (R2b) for observability + backfill.
                 doc.status = "ready"
+                doc.parse_version = PARSE_PIPELINE_VERSION
+                doc.parse_method = parse_method
+                try:
+                    doc.text_quality = round(text_quality_score(pages), 4)
+                except Exception:
+                    doc.text_quality = None
+                doc.ocr_languages = ocr_languages_used
                 db.add(doc)
                 db.commit()
-                logger.info("Embedding completed for %s: %d indexed", document_id, total_indexed)
+                logger.info(
+                    "Embedding completed for %s: %d indexed (parse_method=%s, text_quality=%s)",
+                    document_id, total_indexed, parse_method, doc.text_quality,
+                )
 
                 # Best-effort: generate persisted brief + legacy summary fields in a separate task.
                 _queue_document_brief(document_id)

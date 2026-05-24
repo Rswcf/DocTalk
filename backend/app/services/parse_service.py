@@ -1,44 +1,198 @@
 from __future__ import annotations
 
+import logging
+import os
+import re
+import subprocess
+import tempfile
+import unicodedata
+from collections import Counter
 from dataclasses import dataclass
 from statistics import median
 from typing import Any, List, Optional, Sequence, Tuple
 
 import fitz  # PyMuPDF
 
-# OCR language resolution (Phase 2 C4). Scanned / non-Latin PDFs need the matching
-# Tesseract traineddata; eng+chi_sim alone produced garbage for Urdu/Arabic
-# (U13/U40). The Dockerfile installs the packs for every code below.
+logger = logging.getLogger(__name__)
+
+# Parse pipeline version — bump when parse/OCR logic changes materially so the backfill
+# finder can tell which documents predate a fix (R2b). v2 = Unicode-aware quality OCR
+# trigger + OSD-narrowed OCR language set.
+PARSE_PIPELINE_VERSION = 2
+
+# OCR language resolution (Phase 2 C4 + R2b). Scanned / non-Latin PDFs need the matching
+# Tesseract traineddata; eng+chi_sim alone produced garbage for Urdu/Arabic (U13/U40).
+# The Dockerfile installs the packs for every code below.
 _LOCALE_TESSERACT = {
     "en": "eng", "zh": "chi_sim", "ja": "jpn", "ko": "kor", "es": "spa",
     "de": "deu", "fr": "fra", "pt": "por", "it": "ita", "ar": "ara", "hi": "hin",
     "ur": "urd",
 }
 
+# Tesseract OSD script name -> ordered candidate traineddata for that script family.
+# Kept TIGHT: extra languages make Tesseract hallucinate cross-script glyphs and run
+# ~13× slower (validated on U13: urd=0.99/9s vs the 13-lang set=mixed-script/120s).
+_SCRIPT_FAMILY_ORDERED = {
+    "Arabic": ["ara", "urd", "fas"],
+    "Han": ["chi_sim", "chi_tra"],
+    "Japanese": ["jpn"],
+    "Hangul": ["kor"],
+    "Devanagari": ["hin"],
+    "Cyrillic": ["rus"],
+    "Latin": ["eng", "spa", "deu", "fra", "por", "ita"],
+    "Greek": ["ell"],
+    "Hebrew": ["heb"],
+}
 
-def resolve_ocr_languages(locale: str | None = None) -> str:
-    """Tesseract language string for OCR.
 
-    Uses `settings.OCR_LANGUAGES` as the authoritative configured set.
-    If locale is known and present in the configured set, place it first.
-    """
-    codes: list[str] = []
+def _installed_ocr_langs() -> list[str]:
+    """Installed Tesseract traineddata codes, from settings.OCR_LANGUAGES (the allowlist)."""
     try:
         from app.core.config import settings
-        configured = (getattr(settings, "OCR_LANGUAGES", "") or "").split("+")
+        codes = [c.strip() for c in (getattr(settings, "OCR_LANGUAGES", "") or "").split("+") if c.strip()]
     except Exception:
-        configured = []
-    for code in configured:
-        code = code.strip()
-        if code and code not in codes:
-            codes.append(code)
-    if not codes:
-        codes = ["eng"]
-    if locale:
-        primary = _LOCALE_TESSERACT.get(locale.split("-")[0].split("_")[0].lower())
-        if primary and primary in codes:
-            codes = [primary] + [c for c in codes if c != primary]
-    return "+".join(codes)
+        codes = []
+    return codes or ["eng"]
+
+
+def resolve_ocr_languages(locale: str | None = None, script: str | None = None) -> str:
+    """Narrow Tesseract language string for OCR.
+
+    `script` (from content-based OSD, see detect_script_osd) is PRIMARY; `locale`
+    disambiguates within a script family (Arabic→ar/ur/fa, Han→zh-simp/trad) or selects the
+    Latin language. Falls back to locale-only, then the full installed set. Always filtered
+    to installed traineddata and capped to ≤3 languages to avoid cross-script hallucination.
+    """
+    installed = _installed_ocr_langs()
+    loc = (locale or "").split("-")[0].split("_")[0].lower()
+    locale_lang = _LOCALE_TESSERACT.get(loc) if loc else None
+    chosen: list[str] = []
+
+    if script == "Latin":
+        # Latin-script languages are mutually intelligible enough to Tesseract that adding
+        # siblings only adds noise — use just the locale's language (or eng).
+        chosen = [locale_lang if (locale_lang and locale_lang in installed) else "eng"]
+    elif script and script in _SCRIPT_FAMILY_ORDERED:
+        fam = [c for c in _SCRIPT_FAMILY_ORDERED[script] if c in installed]
+        if locale_lang and locale_lang in fam:
+            fam = [locale_lang] + [c for c in fam if c != locale_lang]
+        chosen = fam[:2]
+        if chosen and "eng" in installed and "eng" not in chosen:
+            chosen.append("eng")  # digits / embedded Latin
+    elif locale_lang and locale_lang in installed:
+        chosen = [locale_lang]
+        if locale_lang != "eng" and "eng" in installed:
+            chosen.append("eng")
+
+    chosen = [c for c in chosen if c in installed]
+    if not chosen:
+        return "+".join(installed)  # last resort: no script/locale signal
+    return "+".join(chosen[:3])
+
+
+def detect_script_osd(pdf_bytes: bytes, *, sample_pages: int = 2, dpi: int = 150) -> str | None:
+    """Detect a PDF's dominant script via Tesseract OSD (`--psm 0`) — content-based and
+    locale-independent. Renders up to `sample_pages` pages to PNG and votes on the detected
+    script. Returns a Tesseract script name ('Arabic', 'Han', 'Latin', ...) or None.
+    """
+    try:
+        doc = fitz.open(stream=pdf_bytes, filetype="pdf")
+    except Exception:
+        return None
+    try:
+        votes: Counter = Counter()
+        for pi in range(min(sample_pages, doc.page_count)):
+            png = None
+            try:
+                pix = doc[pi].get_pixmap(dpi=dpi)
+                with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as tf:
+                    png = tf.name
+                pix.save(png)
+                out = subprocess.run(
+                    ["tesseract", png, "-", "--psm", "0"],
+                    capture_output=True, text=True, timeout=30,
+                )
+                m = re.search(r"^Script:\s*(\S+)", out.stdout, re.M)
+                conf = re.search(r"^Script confidence:\s*([\d.]+)", out.stdout, re.M)
+                if m and (not conf or float(conf.group(1)) >= 0.5):
+                    votes[m.group(1)] += 1
+            except Exception as e:
+                logger.debug("OSD failed on page %d: %s", pi, e)
+            finally:
+                if png:
+                    try:
+                        os.unlink(png)
+                    except OSError:
+                        pass
+        return votes.most_common(1)[0][0] if votes else None
+    finally:
+        doc.close()
+
+
+def text_quality_score(pages: Sequence["PageInfo"]) -> float:
+    """Fraction of non-whitespace chars in Unicode Letter/Number/Mark categories.
+
+    Script-agnostic — CJK, Arabic, Devanagari, and Latin diacritics all count as good, so
+    diacritic-heavy languages (Czech č/ř/ž) are NOT penalised. Low for broken-font mojibake
+    (symbol/control soup). Returns 1.0 for empty text (emptiness is detect_scanned's job).
+    """
+    good = total = 0
+    for p in pages:
+        for b in p.blocks:
+            for c in b.text:
+                if c.isspace():
+                    continue
+                total += 1
+                if c == "�":
+                    continue
+                if unicodedata.category(c)[0] in ("L", "N", "M"):
+                    good += 1
+    return good / total if total else 1.0
+
+
+def _avg_token_len(pages: Sequence["PageInfo"]) -> float:
+    n = chars = 0
+    for p in pages:
+        for b in p.blocks:
+            for t in b.text.split():
+                n += 1
+                chars += len(t)
+    return chars / n if n else 0.0
+
+
+def _bad_char_ratio(pages: Sequence["PageInfo"]) -> float:
+    """Fraction of non-whitespace chars that are replacement/control/PUA/symbol — high in
+    mojibake. Latin-Extended *letters* (diacritics) are NOT counted, so diacritic languages
+    are not penalised."""
+    bad = total = 0
+    for p in pages:
+        for b in p.blocks:
+            for c in b.text:
+                if c.isspace():
+                    continue
+                total += 1
+                cp = ord(c)
+                if c == "�" or unicodedata.category(c)[0] in ("C", "S") or 0xE000 <= cp <= 0xF8FF:
+                    bad += 1
+    return bad / total if total else 0.0
+
+
+def detect_low_quality_text(
+    pages: Sequence["PageInfo"], *, file_type: str = "pdf"
+) -> tuple[bool, float]:
+    """Two-tier, PDF-scoped detector for a present-but-garbled (broken-font) text layer that
+    detect_scanned() misses (it only checks for *absence* of text). Returns
+    (needs_ocr, quality_score). Calibrated in-prod: U13 garbage lnm=0.56 vs good docs ≥0.94.
+    """
+    q = text_quality_score(pages)
+    if file_type != "pdf":
+        return False, q  # only PDFs have broken-font layers and are OCR-able via fitz
+    if q >= 0.75:
+        return False, q  # clearly good (good docs ≥0.94 — wide margin)
+    if q < 0.50:
+        return True, q   # clear garbage incl. no-space U+FFFD/PUA runs (CJK-safe: good CJK ≥0.9)
+    # ambiguous 0.50–0.75: require a second, script-robust garbage signal
+    return (_bad_char_ratio(pages) > 0.30 or _avg_token_len(pages) < 4.0), q
 
 
 @dataclass

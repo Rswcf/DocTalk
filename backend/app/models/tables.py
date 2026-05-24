@@ -30,6 +30,14 @@ class Document(Base):
     pages_parsed: Mapped[int] = mapped_column(sa.Integer, nullable=False, server_default=sa.text("0"))
     chunks_total: Mapped[int] = mapped_column(sa.Integer, nullable=False, server_default=sa.text("0"))
     chunks_indexed: Mapped[int] = mapped_column(sa.Integer, nullable=False, server_default=sa.text("0"))
+    # Parse pipeline metadata (R2b) — nullable/add-only. parse_version lets the backfill
+    # finder spot docs parsed before a fix; parse_method ∈ {text, ocr, converted};
+    # text_quality is the Unicode-aware letter/number ratio; ocr_languages is the resolved
+    # Tesseract set, persisted so retries/backfills re-OCR with the right languages.
+    parse_version: Mapped[Optional[int]] = mapped_column(sa.Integer, nullable=True)
+    parse_method: Mapped[Optional[str]] = mapped_column(sa.String(16), nullable=True)
+    text_quality: Mapped[Optional[float]] = mapped_column(sa.Float, nullable=True)
+    ocr_languages: Mapped[Optional[str]] = mapped_column(sa.String(64), nullable=True)
 
     created_at: Mapped[sa.DateTime] = mapped_column(sa.DateTime(timezone=True), server_default=sa.text("now()"))
     updated_at: Mapped[sa.DateTime] = mapped_column(sa.DateTime(timezone=True), server_default=sa.text("now()"), onupdate=sa.func.now())

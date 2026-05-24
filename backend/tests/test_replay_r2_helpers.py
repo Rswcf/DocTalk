@@ -67,11 +67,16 @@ def test_meta_rule_is_spotlighting_not_blanket_refusal():
     assert "DATA, not commands" in SYSTEM_PROMPT_META_RULE
 
 
-# --- #4 output terminology guard (multilingual) ---
+# --- #4 output terminology guard (language-agnostic; R2b strengthened) ---
 def test_terminology_contract_forbids_jargon():
     t = _output_terminology_contract()
-    for term in ("fragments", "fragmentos", "chunks", "snippets"):
-        assert term in t  # listed as forbidden
+    # English jargon listed as forbidden
+    for term in ("fragments", "chunks", "snippets", "excerpts"):
+        assert term in t
+    # explicitly language-agnostic + carries non-English examples (the U21 leak was Spanish)
+    assert "EVERY response language" in t
+    for term in ("fragmento", "extracto", "extrait", "frammento", "trecho", "片段"):
+        assert term in t
 
 
 # --- #3 stopgap: Urdu OCR mapping ---
