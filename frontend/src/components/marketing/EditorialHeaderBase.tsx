@@ -8,6 +8,7 @@ import DocTalkLogo from "../DocTalkLogo";
 import EdLanguageSelector from "./EdLanguageSelector";
 import { useLocale } from "../../i18n";
 import { localizedHrefIfAvailable, splitLocaleFromPath } from "../../i18n/routing";
+import type { ChromeStrings } from "../../i18n/chrome";
 
 export interface Crumb {
   label: string;
@@ -19,6 +20,8 @@ export interface EditorialHeaderBaseProps {
   showDateline?: boolean;
   /** Breadcrumb row rendered below the masthead (inner-page variant). */
   breadcrumb?: Crumb[];
+  /** Server-resolved strings for localized pages; falls back to `useLocale()`. */
+  chrome?: ChromeStrings;
 }
 
 /**
@@ -32,6 +35,7 @@ export interface EditorialHeaderBaseProps {
 export default function EditorialHeaderBase({
   showDateline = false,
   breadcrumb,
+  chrome,
 }: EditorialHeaderBaseProps) {
   const { t, tOr } = useLocale();
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -39,10 +43,18 @@ export default function EditorialHeaderBase({
   // localized pages (`/de/...`). Targets not yet localized fall back to English.
   const { locale: urlLocale } = splitLocaleFromPath(usePathname() || "/");
   const navHref = (path: string) => localizedHrefIfAvailable(urlLocale, path);
+  // Prefer server-resolved chrome strings (correct language in initial HTML on
+  // localized pages); otherwise the client-locale text.
+  const labels = {
+    features: chrome?.navFeatures ?? t("public.nav.features"),
+    pricing: chrome?.navPricing ?? t("footer.pricing"),
+    trust: chrome?.navTrust ?? tOr("footer.links.trust", "Security"),
+    signIn: chrome?.signIn ?? t("auth.signIn"),
+  };
   const NAV_LINKS = [
-    { href: navHref("/features"), label: t("public.nav.features") },
-    { href: navHref("/pricing"), label: t("footer.pricing") },
-    { href: navHref("/trust"), label: tOr("footer.links.trust", "Security") },
+    { href: navHref("/features"), label: labels.features },
+    { href: navHref("/pricing"), label: labels.pricing },
+    { href: navHref("/trust"), label: labels.trust },
   ];
 
   return (
@@ -141,7 +153,7 @@ export default function EditorialHeaderBase({
               ))}
               {/* Language selector — always visible so locale is switchable on
                   every editorial page (restores the switcher the redesign dropped). */}
-              <EdLanguageSelector />
+              <EdLanguageSelector languageLabel={chrome?.language} />
               {/* Mobile hamburger — sits left of the Sign-In CTA, md:hidden */}
               <button
                 type="button"
@@ -170,7 +182,7 @@ export default function EditorialHeaderBase({
                 className="ed-cta"
                 style={{ padding: "9px 18px", fontSize: "13px" }}
               >
-                {t("auth.signIn")}
+                {labels.signIn}
               </Link>
             </nav>
           </div>

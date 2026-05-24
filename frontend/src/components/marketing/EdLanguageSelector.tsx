@@ -27,7 +27,7 @@ import {
  * The menu is rendered through a portal to `document.body` with `position:
  * fixed` so it escapes the sticky header's stacking context.
  */
-export default function EdLanguageSelector() {
+export default function EdLanguageSelector({ languageLabel }: { languageLabel?: string }) {
   const { locale, setLocale, tOr } = useLocale();
   const pathname = usePathname() || "/";
   const { locale: urlLocale, path: agnosticPath } = splitLocaleFromPath(pathname);
@@ -82,7 +82,7 @@ export default function EdLanguageSelector() {
   }, [open, updatePos]);
 
   const current = LOCALES.find((l) => l.code === activeLocale);
-  const label = tOr("header.language", "Language");
+  const label = languageLabel ?? tOr("header.language", "Language");
 
   // On localized pages, only offer the locales that actually have a URL for this
   // page (en + URL_LOCALES). Elsewhere, the full client-toggle list.

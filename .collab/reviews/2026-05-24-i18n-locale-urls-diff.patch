@@ -1,0 +1,961 @@
+diff --git a/frontend/src/app/[locale]/layout.tsx b/frontend/src/app/[locale]/layout.tsx
+new file mode 100644
+index 0000000..d5c5c91
+--- /dev/null
++++ b/frontend/src/app/[locale]/layout.tsx
+@@ -0,0 +1,29 @@
++import { notFound } from 'next/navigation';
++import { URL_LOCALES, isUrlLocale } from '../../i18n/routing';
++
++/**
++ * Locale subdirectory for the server-rendered, internationalized marketing
++ * surface (`/de/...`, `/ja/...`). English stays unprefixed at the root, so this
++ * segment only ever serves the high-value URL locales. `dynamicParams = false`
++ * means any non-listed segment (e.g. `/random`) 404s at build instead of being
++ * dynamically rendered.
++ *
++ * Only the marketing pages are mirrored here; the authenticated app (root `/`,
++ * `/d/`, `/collections`, …) is intentionally NOT localized by URL.
++ */
++export const dynamicParams = false;
++
++export function generateStaticParams() {
++  return URL_LOCALES.map((locale) => ({ locale }));
++}
++
++export default function LocaleLayout({
++  children,
++  params,
++}: {
++  children: React.ReactNode;
++  params: { locale: string };
++}) {
++  if (!isUrlLocale(params.locale)) notFound();
++  return <>{children}</>;
++}
+diff --git a/frontend/src/app/[locale]/use-cases/lawyers/page.tsx b/frontend/src/app/[locale]/use-cases/lawyers/page.tsx
+new file mode 100644
+index 0000000..3dab7aa
+--- /dev/null
++++ b/frontend/src/app/[locale]/use-cases/lawyers/page.tsx
+@@ -0,0 +1,37 @@
++import type { Metadata } from 'next';
++import { notFound } from 'next/navigation';
++import LawyersContent from '../../../use-cases/lawyers/LawyersContent';
++import LawyersJsonLd from '../../../use-cases/lawyers/LawyersJsonLd';
++import { buildMarketingMetadata } from '../../../../lib/seo';
++import { isUrlLocale } from '../../../../i18n/routing';
++import { getServerT } from '../../../../i18n/server';
++
++export async function generateMetadata({
++  params,
++}: {
++  params: { locale: string };
++}): Promise<Metadata> {
++  const { t } = await getServerT(params.locale);
++  return buildMarketingMetadata({
++    title: t('useCasesLawyers.heroTitle'),
++    description: t('useCasesLawyers.heroDescription'),
++    path: '/use-cases/lawyers',
++    locale: params.locale,
++    localized: true,
++    keywords: ['ai for lawyers', 'legal document ai', 'contract analysis ai', 'legal pdf reader'],
++    openGraph: {
++      title: `${t('useCasesLawyers.heroTitle')} | DocTalk`,
++      description: t('useCasesLawyers.heroDescription'),
++    },
++  });
++}
++
++export default function LawyersLocalePage({ params }: { params: { locale: string } }) {
++  if (!isUrlLocale(params.locale)) notFound();
++  return (
++    <>
++      <LawyersJsonLd locale={params.locale} />
++      <LawyersContent locale={params.locale} />
++    </>
++  );
++}
+diff --git a/frontend/src/app/sitemap.ts b/frontend/src/app/sitemap.ts
+index a08b505..ff303f9 100644
+--- a/frontend/src/app/sitemap.ts
++++ b/frontend/src/app/sitemap.ts
+@@ -1,13 +1,24 @@
+ import type { MetadataRoute } from "next";
+ import { getAllPosts, KNOWN_BLOG_CATEGORIES } from "../lib/blog";
++import { LOCALIZED_PATHS, URL_LOCALES, localizedHref } from "../i18n/routing";
+ 
+ const BASE_URL = "https://www.doctalk.site";
+ 
++/** Reciprocal hreflang map for a localized path (unprefixed en + each URL locale + x-default). */
++function languagesFor(path: string): Record<string, string> {
++  const languages: Record<string, string> = { en: `${BASE_URL}${path}` };
++  for (const loc of URL_LOCALES) {
++    languages[loc] = `${BASE_URL}${localizedHref(loc, path)}`;
++  }
++  languages["x-default"] = `${BASE_URL}${path}`;
++  return languages;
++}
++
+ export default function sitemap(): MetadataRoute.Sitemap {
+   const generatedAt = new Date();
+   const posts = getAllPosts();
+ 
+-  return [
++  const staticEntries: MetadataRoute.Sitemap = [
+     // Static pages
+     { url: BASE_URL, lastModified: generatedAt, changeFrequency: "monthly", priority: 1.0 },
+     { url: `${BASE_URL}/demo`, lastModified: generatedAt, changeFrequency: "monthly", priority: 0.8 },
+@@ -67,4 +78,29 @@ export default function sitemap(): MetadataRoute.Sitemap {
+       priority: 0.7,
+     })),
+   ];
++
++  // International SEO: attach hreflang to the en entry of each localized path,
++  // and append one entry per URL locale (each carrying the reciprocal map).
++  const withAlternates = staticEntries.map((entry) => {
++    const path = entry.url.replace(BASE_URL, "") || "/";
++    return LOCALIZED_PATHS.has(path)
++      ? { ...entry, alternates: { languages: languagesFor(path) } }
++      : entry;
++  });
++
++  const localeEntries: MetadataRoute.Sitemap = [];
++  for (const path of LOCALIZED_PATHS) {
++    const languages = languagesFor(path);
++    for (const loc of URL_LOCALES) {
++      localeEntries.push({
++        url: `${BASE_URL}${localizedHref(loc, path)}`,
++        lastModified: generatedAt,
++        changeFrequency: "monthly",
++        priority: 0.7,
++        alternates: { languages },
++      });
++    }
++  }
++
++  return [...withAlternates, ...localeEntries];
+ }
+diff --git a/frontend/src/app/use-cases/lawyers/LawyersClient.tsx b/frontend/src/app/use-cases/lawyers/LawyersContent.tsx
+similarity index 84%
+rename from frontend/src/app/use-cases/lawyers/LawyersClient.tsx
+rename to frontend/src/app/use-cases/lawyers/LawyersContent.tsx
+index 4073e93..74bfc6d 100644
+--- a/frontend/src/app/use-cases/lawyers/LawyersClient.tsx
++++ b/frontend/src/app/use-cases/lawyers/LawyersContent.tsx
+@@ -1,8 +1,5 @@
+-"use client";
+-
+ import React from 'react';
+ import Link from 'next/link';
+-import { useLocale } from '../../../i18n';
+ import {
+   Scale,
+   Search,
+@@ -25,6 +22,8 @@ import EdCardGrid from '../../../components/marketing/EdCardGrid';
+ import EdStepRow from '../../../components/marketing/EdStepRow';
+ import EdFaqList from '../../../components/marketing/EdFaqList';
+ import EdCtaBanner from '../../../components/marketing/EdCtaBanner';
++import { getServerT } from '../../../i18n/server';
++import { localizedHrefIfAvailable } from '../../../i18n/routing';
+ 
+ const featureIcons = [Search, Clock, FileText, AlertTriangle, Quote];
+ const featureKeys = ['clauseExtraction', 'dueDiligence', 'filingSummarization', 'riskAssessment', 'keyTerms'];
+@@ -35,8 +34,18 @@ const securityKeys = ['encryption', 'noTraining', 'gdpr', 'dataExport'];
+ const stepIcons = [Upload, MessageSquare, CheckCircle];
+ const stepKeys = ['upload', 'ask', 'verify'];
+ 
+-export default function LawyersClient() {
+-  const { t } = useLocale();
++/**
++ * Server-rendered use-case page. Translations are resolved on the server via
++ * `getServerT(locale)` so the initial HTML at `/{locale}/use-cases/lawyers` is
++ * in the target language (indexable without JS). Internal links are prefixed
++ * with the locale so in-language navigation is preserved. The icon-bearing kit
++ * components (EdFeatureList/EdCardGrid/EdStepRow/EdPageHero) are server
++ * components, so the icon refs never cross a client boundary; only string props
++ * pass into the client islands (EdFaqList, MarketingShell).
++ */
++export default async function LawyersContent({ locale }: { locale: string }) {
++  const { t } = await getServerT(locale);
++  const href = (path: string) => localizedHrefIfAvailable(locale, path);
+ 
+   const faqItems = [
+     { question: t('useCasesLawyers.faq.q1.question'), answer: t('useCasesLawyers.faq.q1.answer') },
+@@ -73,8 +82,8 @@ export default function LawyersClient() {
+   return (
+     <MarketingShell
+       breadcrumb={[
+-        { label: t('useCasesLawyers.breadcrumb.home'), href: '/' },
+-        { label: t('useCasesLawyers.breadcrumb.useCases'), href: '/use-cases' },
++        { label: t('useCasesLawyers.breadcrumb.home'), href: href('/') },
++        { label: t('useCasesLawyers.breadcrumb.useCases'), href: href('/use-cases') },
+         { label: t('useCasesLawyers.breadcrumb.current') },
+       ]}
+     >
+@@ -82,7 +91,7 @@ export default function LawyersClient() {
+         icon={Scale}
+         title={t('useCasesLawyers.heroTitle')}
+         lede={t('useCasesLawyers.heroDescription')}
+-        primaryCta={{ label: t('useCasesLawyers.heroCta'), href: '/demo' }}
++        primaryCta={{ label: t('useCasesLawyers.heroCta'), href: href('/demo') }}
+       />
+ 
+       <EdSection title={t('useCasesLawyers.challenge.title')}>
+@@ -109,7 +118,7 @@ export default function LawyersClient() {
+       <EdSection title={t('useCasesLawyers.docTypes.title')}>
+         <p className="ed-body" style={{ marginBottom: '24px' }}>
+           {t('useCasesLawyers.docTypes.description')}{' '}
+-          <Link href="/features/multi-format" className="ed-inline">
++          <Link href={href('/features/multi-format')} className="ed-inline">
+             {t('useCasesLawyers.docTypes.formatsLink')}
+           </Link>
+           {t('useCasesLawyers.docTypes.descriptionSuffix')}
+@@ -141,7 +150,7 @@ export default function LawyersClient() {
+           <p>{t('useCasesLawyers.whyCitations.p2')}</p>
+           <p>
+             {t('useCasesLawyers.whyCitations.p3pre')}
+-            <Link href="/features/citations" className="ed-inline">{t('useCasesLawyers.whyCitations.p3link')}</Link>
++            <Link href={href('/features/citations')} className="ed-inline">{t('useCasesLawyers.whyCitations.p3link')}</Link>
+             {t('useCasesLawyers.whyCitations.p3post')}
+           </p>
+           <p>{t('useCasesLawyers.whyCitations.p4')}</p>
+@@ -171,8 +180,8 @@ export default function LawyersClient() {
+       <EdCtaBanner
+         title={t('useCasesLawyers.cta.title')}
+         description={t('useCasesLawyers.cta.description')}
+-        primary={{ label: t('useCasesLawyers.cta.tryFreeDemo'), href: '/demo' }}
+-        secondary={{ label: t('useCasesLawyers.cta.viewPricing'), href: '/pricing' }}
++        primary={{ label: t('useCasesLawyers.cta.tryFreeDemo'), href: href('/demo') }}
++        secondary={{ label: t('useCasesLawyers.cta.viewPricing'), href: href('/pricing') }}
+       />
+     </MarketingShell>
+   );
+diff --git a/frontend/src/app/use-cases/lawyers/LawyersJsonLd.tsx b/frontend/src/app/use-cases/lawyers/LawyersJsonLd.tsx
+new file mode 100644
+index 0000000..07de99e
+--- /dev/null
++++ b/frontend/src/app/use-cases/lawyers/LawyersJsonLd.tsx
+@@ -0,0 +1,68 @@
++import { getServerT } from '../../../i18n/server';
++import { absoluteUrl } from '../../../lib/seo';
++import { localizedHrefIfAvailable } from '../../../i18n/routing';
++
++/**
++ * Locale-aware structured data for the lawyers use-case page. FAQ entries are
++ * resolved from the same translation keys the visible FAQ uses, and every URL
++ * points at the current locale's page, so the JSON-LD matches what the user
++ * sees in their language (Google flags content/markup mismatches).
++ */
++export default async function LawyersJsonLd({ locale }: { locale: string }) {
++  const { t } = await getServerT(locale);
++  const url = (path: string) => absoluteUrl(localizedHrefIfAvailable(locale, path));
++  const pageUrl = url('/use-cases/lawyers');
++
++  const faqItems = [1, 2, 3, 4, 5].map((n) => ({
++    question: t(`useCasesLawyers.faq.q${n}.question`),
++    answer: t(`useCasesLawyers.faq.q${n}.answer`),
++  }));
++
++  const articleJsonLd = {
++    '@context': 'https://schema.org',
++    '@type': 'Article',
++    headline: t('useCasesLawyers.heroTitle'),
++    description: t('useCasesLawyers.heroDescription'),
++    image: absoluteUrl('/opengraph-image'),
++    datePublished: '2026-02-18',
++    dateModified: '2026-02-18',
++    inLanguage: locale,
++    author: { '@type': 'Organization', name: 'DocTalk', url: absoluteUrl('/') },
++    publisher: {
++      '@type': 'Organization',
++      name: 'DocTalk',
++      url: absoluteUrl('/'),
++      logo: absoluteUrl('/logo-icon.png'),
++    },
++    mainEntityOfPage: { '@type': 'WebPage', '@id': pageUrl },
++  };
++
++  const faqJsonLd = {
++    '@context': 'https://schema.org',
++    '@type': 'FAQPage',
++    inLanguage: locale,
++    mainEntity: faqItems.map((item) => ({
++      '@type': 'Question',
++      name: item.question,
++      acceptedAnswer: { '@type': 'Answer', text: item.answer },
++    })),
++  };
++
++  const breadcrumbJsonLd = {
++    '@context': 'https://schema.org',
++    '@type': 'BreadcrumbList',
++    itemListElement: [
++      { '@type': 'ListItem', position: 1, name: t('useCasesLawyers.breadcrumb.home'), item: url('/') },
++      { '@type': 'ListItem', position: 2, name: t('useCasesLawyers.breadcrumb.useCases'), item: url('/use-cases') },
++      { '@type': 'ListItem', position: 3, name: t('useCasesLawyers.breadcrumb.current') },
++    ],
++  };
++
++  return (
++    <>
++      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(articleJsonLd) }} />
++      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }} />
++      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }} />
++    </>
++  );
++}
+diff --git a/frontend/src/app/use-cases/lawyers/page.tsx b/frontend/src/app/use-cases/lawyers/page.tsx
+index ab1671b..91fd513 100644
+--- a/frontend/src/app/use-cases/lawyers/page.tsx
++++ b/frontend/src/app/use-cases/lawyers/page.tsx
+@@ -1,12 +1,14 @@
+ import type { Metadata } from 'next';
+-import LawyersClient from './LawyersClient';
+-import { buildArticleJsonLd, buildMarketingMetadata } from '../../../lib/seo';
++import LawyersContent from './LawyersContent';
++import LawyersJsonLd from './LawyersJsonLd';
++import { buildMarketingMetadata } from '../../../lib/seo';
+ 
+ export const metadata: Metadata = buildMarketingMetadata({
+   title: 'AI Legal Document Analysis',
+   description:
+     'Review contracts, court filings, and legal documents with AI. Get cited answers with exact clause references and verify every result.',
+   path: '/use-cases/lawyers',
++  localized: true,
+   keywords: ['ai for lawyers', 'legal document ai', 'contract analysis ai', 'legal pdf reader'],
+   openGraph: {
+     title: 'AI Legal Document Analysis | DocTalk',
+@@ -15,83 +17,11 @@ export const metadata: Metadata = buildMarketingMetadata({
+   },
+ });
+ 
+-const faqItems = [
+-  {
+-    question: 'Is DocTalk secure for confidential legal documents?',
+-    answer:
+-      'Yes. DocTalk encrypts all uploaded documents with AES-256 encryption (SSE-S3) at rest. Your documents are never used for AI model training. DocTalk is GDPR-compliant and provides data export functionality for compliance requirements. All data processing happens through secured API connections.',
+-  },
+-  {
+-    question: 'Can it analyze contracts?',
+-    answer:
+-      'Yes. DocTalk can analyze contracts in PDF, DOCX, and other formats. You can ask questions like "Find all indemnification clauses," "What are the termination conditions?", or "Summarize the liability provisions." Each answer includes numbered citations that link to the exact clause in the document.',
+-  },
+-  {
+-    question: 'How accurate is AI for legal analysis?',
+-    answer:
+-      'DocTalk uses Retrieval-Augmented Generation (RAG) to base every answer on the actual text of your document. It does not rely on general legal knowledge or training data. Every answer includes numbered citations so you can verify each claim against the source text. DocTalk is a research acceleration tool, not a substitute for legal judgment.',
+-  },
+-  {
+-    question: 'Does it work with scanned PDFs?',
+-    answer:
+-      'DocTalk works best with text-based PDFs where the text layer is preserved. Most modern legal documents, including contracts, filings, and memos generated from Word processors, produce text-based PDFs. Scanned image-only PDFs without OCR may have limited text extraction capability.',
+-  },
+-  {
+-    question: 'Is there a team plan?',
+-    answer:
+-      'DocTalk currently offers individual plans: Free (300 credits/month), Plus ($9.99/month for 3,000 credits), and Pro ($19.99/month for 9,000 credits). Paid plans include advanced features like unrestricted Pro mode and custom instructions. Team and enterprise plans are on the roadmap.',
+-  },
+-];
+-
+ export default function LawyersPage() {
+   return (
+     <>
+-      <script
+-        type="application/ld+json"
+-        dangerouslySetInnerHTML={{
+-          __html: JSON.stringify(
+-            buildArticleJsonLd({
+-              title: 'AI-Powered Legal Document Analysis with Verifiable Citations',
+-              description:
+-                'How legal professionals use DocTalk to review contracts, court filings, and regulatory documents with AI-powered cited answers.',
+-              path: '/use-cases/lawyers',
+-              datePublished: '2026-02-18',
+-            })
+-          ),
+-        }}
+-      />
+-      <script
+-        type="application/ld+json"
+-        dangerouslySetInnerHTML={{
+-          __html: JSON.stringify({
+-            '@context': 'https://schema.org',
+-            '@type': 'FAQPage',
+-            mainEntity: faqItems.map((item) => ({
+-              '@type': 'Question',
+-              name: item.question,
+-              acceptedAnswer: {
+-                '@type': 'Answer',
+-                text: item.answer,
+-              },
+-            })),
+-          }),
+-        }}
+-      />
+-      <script
+-        type="application/ld+json"
+-        dangerouslySetInnerHTML={{
+-          __html: JSON.stringify({
+-            '@context': 'https://schema.org',
+-            '@type': 'BreadcrumbList',
+-            itemListElement: [
+-              { '@type': 'ListItem', position: 1, name: 'Home', item: 'https://www.doctalk.site' },
+-              { '@type': 'ListItem', position: 2, name: 'Use Cases', item: 'https://www.doctalk.site/use-cases' },
+-              { '@type': 'ListItem', position: 3, name: 'Legal Document Analysis' },
+-            ],
+-          }),
+-        }}
+-      />
+-      <LawyersClient />
++      <LawyersJsonLd locale="en" />
++      <LawyersContent locale="en" />
+     </>
+   );
+ }
+diff --git a/frontend/src/components/landing/EditorialFooter.tsx b/frontend/src/components/landing/EditorialFooter.tsx
+index a5b226b..656fd77 100644
+--- a/frontend/src/components/landing/EditorialFooter.tsx
++++ b/frontend/src/components/landing/EditorialFooter.tsx
+@@ -1,48 +1,54 @@
+ "use client";
+ 
+ import Link from "next/link";
++import { usePathname } from "next/navigation";
+ import DocTalkLogo from "../DocTalkLogo";
+ import { useLocale } from "../../i18n";
++import { localizedHrefIfAvailable, splitLocaleFromPath } from "../../i18n/routing";
+ 
+ export default function EditorialFooter() {
+   const { t, tOr } = useLocale();
++  // Keep footer links in-language on localized pages; targets not yet localized
++  // resolve to their English URL (no 404s).
++  const { locale: urlLocale } = splitLocaleFromPath(usePathname() || "/");
++  const lh = (path: string) => localizedHrefIfAvailable(urlLocale, path);
+ 
+   const productLinks = [
+-    { href: "/demo", label: t("footer.demo") },
+-    { href: "/pricing", label: t("footer.pricing") },
+-    { href: "/features", label: t("footer.links.features") },
+-    { href: "/features/free-demo", label: t("footer.links.noSignupDemo") },
+-    { href: "/features/citations", label: t("footer.links.citationHighlighting") },
+-    { href: "/features/performance-modes", label: t("footer.links.performanceModes") },
++    { href: lh("/demo"), label: t("footer.demo") },
++    { href: lh("/pricing"), label: t("footer.pricing") },
++    { href: lh("/features"), label: t("footer.links.features") },
++    { href: lh("/features/free-demo"), label: t("footer.links.noSignupDemo") },
++    { href: lh("/features/citations"), label: t("footer.links.citationHighlighting") },
++    { href: lh("/features/performance-modes"), label: t("footer.links.performanceModes") },
+   ];
+ 
+   const useCaseLinks = [
+-    { href: "/use-cases", label: t("footer.links.useCases") },
+-    { href: "/use-cases/students", label: t("footer.links.students") },
+-    { href: "/use-cases/lawyers", label: t("footer.links.lawyers") },
+-    { href: "/use-cases/finance", label: t("footer.links.finance") },
+-    { href: "/use-cases/hr-contracts", label: t("footer.links.hrContracts") },
++    { href: lh("/use-cases"), label: t("footer.links.useCases") },
++    { href: lh("/use-cases/students"), label: t("footer.links.students") },
++    { href: lh("/use-cases/lawyers"), label: t("footer.links.lawyers") },
++    { href: lh("/use-cases/finance"), label: t("footer.links.finance") },
++    { href: lh("/use-cases/hr-contracts"), label: t("footer.links.hrContracts") },
+   ];
+ 
+   const resourceLinks = [
+-    { href: "/compare", label: t("footer.links.compareTools") },
+-    { href: "/alternatives", label: t("footer.links.alternatives") },
+-    { href: "/blog", label: t("footer.links.blog") },
+-    { href: "/blog/category/comparisons", label: t("footer.links.comparisonGuides") },
+-    { href: "/features/multi-format", label: t("footer.links.multiFormatSupport") },
++    { href: lh("/compare"), label: t("footer.links.compareTools") },
++    { href: lh("/alternatives"), label: t("footer.links.alternatives") },
++    { href: lh("/blog"), label: t("footer.links.blog") },
++    { href: lh("/blog/category/comparisons"), label: t("footer.links.comparisonGuides") },
++    { href: lh("/features/multi-format"), label: t("footer.links.multiFormatSupport") },
+   ];
+ 
+   const companyLinks = [
+-    { href: "/about", label: t("footer.links.about") },
+-    { href: "/contact", label: t("footer.contact") },
+-    { href: "/trust", label: t("footer.links.trust") },
+-    { href: "/imprint", label: tOr("footer.imprint", "Imprint") },
++    { href: lh("/about"), label: t("footer.links.about") },
++    { href: lh("/contact"), label: t("footer.contact") },
++    { href: lh("/trust"), label: t("footer.links.trust") },
++    { href: lh("/imprint"), label: tOr("footer.imprint", "Imprint") },
+   ];
+ 
+   const legalLinks = [
+-    { href: "/privacy", label: t("privacy.policyLink") },
+-    { href: "/terms", label: t("terms.title") },
+-    { href: "/privacy#ccpa", label: t("footer.doNotSell") },
++    { href: lh("/privacy"), label: t("privacy.policyLink") },
++    { href: lh("/terms"), label: t("terms.title") },
++    { href: lh("/privacy#ccpa"), label: t("footer.doNotSell") },
+   ];
+ 
+   const linkStyle: React.CSSProperties = {
+@@ -101,7 +107,7 @@ export default function EditorialFooter() {
+           {/* Brand column */}
+           <div className="md:col-span-1">
+             <Link
+-              href="/"
++              href={lh("/")}
+               className="inline-flex items-center gap-2.5 mb-4"
+               style={{ textDecoration: "none" }}
+               aria-label="DocTalk home"
+diff --git a/frontend/src/components/marketing/EdLanguageSelector.tsx b/frontend/src/components/marketing/EdLanguageSelector.tsx
+index c1588cc..e23436f 100644
+--- a/frontend/src/components/marketing/EdLanguageSelector.tsx
++++ b/frontend/src/components/marketing/EdLanguageSelector.tsx
+@@ -2,26 +2,40 @@
+ 
+ import { useCallback, useEffect, useRef, useState } from "react";
+ import { createPortal } from "react-dom";
++import { usePathname } from "next/navigation";
+ import { Globe, Check } from "lucide-react";
+ import { LOCALES, useLocale } from "../../i18n";
++import {
++  MARKETING_LOCALES,
++  localizedHref,
++  splitLocaleFromPath,
++  isLocalizedPath,
++} from "../../i18n/routing";
+ 
+ /**
+  * Editorial-styled language selector for the marketing surface.
+  *
+- * Functionally identical to the app-UI `LanguageSelector` (reads/writes the
+- * locale via `useLocale()`, lists all `LOCALES`), but styled with the editorial
+- * tokens (`--ed-*`, IBM Plex Mono labels, terracotta signal) so it belongs in
+- * the warm-paper `EditorialHeaderBase` instead of the zinc/blue app chrome.
++ * Two modes, decided per page:
++ * - **Localized page** (the path has server-rendered locale variants): the menu
++ *   renders real `<a href="/de/...">` anchors for every marketing locale. This is
++ *   what makes the alternate-language URLs *crawlable* — search engines follow
++ *   the links and discover each language version.
++ * - **English-only page** (not yet localized): falls back to the original
++ *   client-side `setLocale()` toggle across all `LOCALES`, so the in-app locale
++ *   switch still works everywhere.
+  *
+  * The menu is rendered through a portal to `document.body` with `position:
+- * fixed` and a high z-index, so it escapes the sticky header's stacking
+- * context — otherwise the hero collage (whose rotated cards create their own
+- * stacking contexts) paints over the dropdown and swallows its clicks. The
+- * portaled menu is wrapped in `.dt-editorial` so the `--ed-*` tokens still
+- * resolve outside the page's editorial root.
++ * fixed` so it escapes the sticky header's stacking context.
+  */
+ export default function EdLanguageSelector() {
+   const { locale, setLocale, tOr } = useLocale();
++  const pathname = usePathname() || "/";
++  const { locale: urlLocale, path: agnosticPath } = splitLocaleFromPath(pathname);
++  const localized = isLocalizedPath(agnosticPath);
++  // On a localized URL the active language is the one in the URL; otherwise the
++  // client-detected/selected locale.
++  const activeLocale = localized ? urlLocale : locale;
++
+   const [open, setOpen] = useState(false);
+   const [pos, setPos] = useState({ top: 0, right: 0, maxHeight: 420 });
+   const wrapRef = useRef<HTMLDivElement>(null);
+@@ -67,9 +81,47 @@ export default function EdLanguageSelector() {
+     };
+   }, [open, updatePos]);
+ 
+-  const current = LOCALES.find((l) => l.code === locale);
++  const current = LOCALES.find((l) => l.code === activeLocale);
+   const label = tOr("header.language", "Language");
+ 
++  // On localized pages, only offer the locales that actually have a URL for this
++  // page (en + URL_LOCALES). Elsewhere, the full client-toggle list.
++  const options = localized
++    ? LOCALES.filter((l) => (MARKETING_LOCALES as readonly string[]).includes(l.code))
++    : LOCALES;
++
++  const optionStyle = (selected: boolean): React.CSSProperties => ({
++    fontFamily: "var(--dt-body)",
++    fontSize: "13px",
++    textAlign: "left",
++    color: selected ? "var(--ed-signal)" : "var(--ed-ink)",
++    background: "transparent",
++    border: "none",
++    padding: "8px 10px",
++    cursor: "pointer",
++    textDecoration: "none",
++    width: "100%",
++  });
++  const onEnter = (e: React.MouseEvent<HTMLElement>) => {
++    e.currentTarget.style.background = "var(--ed-paper-2)";
++  };
++  const onLeave = (e: React.MouseEvent<HTMLElement>) => {
++    e.currentTarget.style.background = "transparent";
++  };
++
++  const codeBadge = (code: string) => (
++    <span
++      style={{
++        fontFamily: "var(--dt-mono)",
++        fontSize: "10.5px",
++        letterSpacing: "0.06em",
++        color: "var(--ed-ink-3)",
++      }}
++    >
++      {code.toUpperCase()}
++    </span>
++  );
++
+   const menu = (
+     <div
+       ref={menuRef}
+@@ -88,51 +140,53 @@ export default function EdLanguageSelector() {
+       }}
+     >
+       <ul role="listbox" aria-label={label} style={{ margin: 0, padding: "6px", listStyle: "none" }}>
+-        {LOCALES.map((l) => {
+-          const selected = l.code === locale;
++        {options.map((l) => {
++          const selected = l.code === activeLocale;
++          const inner = (
++            <>
++              <span aria-hidden="true" style={{ width: "14px", display: "inline-flex" }}>
++                {selected ? <Check size={13} /> : null}
++              </span>
++              <span style={{ flex: 1 }}>{l.label}</span>
++              {codeBadge(l.code)}
++            </>
++          );
+           return (
+             <li key={l.code} role="none">
+-              <button
+-                type="button"
+-                role="option"
+-                aria-selected={selected}
+-                onClick={() => {
+-                  setLocale(l.code);
+-                  setOpen(false);
+-                }}
+-                className="flex w-full items-center gap-2"
+-                style={{
+-                  fontFamily: "var(--dt-body)",
+-                  fontSize: "13px",
+-                  textAlign: "left",
+-                  color: selected ? "var(--ed-signal)" : "var(--ed-ink)",
+-                  background: "transparent",
+-                  border: "none",
+-                  padding: "8px 10px",
+-                  cursor: "pointer",
+-                }}
+-                onMouseEnter={(e) => {
+-                  (e.currentTarget as HTMLButtonElement).style.background = "var(--ed-paper-2)";
+-                }}
+-                onMouseLeave={(e) => {
+-                  (e.currentTarget as HTMLButtonElement).style.background = "transparent";
+-                }}
+-              >
+-                <span aria-hidden="true" style={{ width: "14px", display: "inline-flex" }}>
+-                  {selected ? <Check size={13} /> : null}
+-                </span>
+-                <span style={{ flex: 1 }}>{l.label}</span>
+-                <span
+-                  style={{
+-                    fontFamily: "var(--dt-mono)",
+-                    fontSize: "10.5px",
+-                    letterSpacing: "0.06em",
+-                    color: "var(--ed-ink-3)",
++              {localized ? (
++                <a
++                  role="option"
++                  aria-selected={selected}
++                  href={localizedHref(l.code, agnosticPath)}
++                  hrefLang={l.code}
++                  onClick={() => {
++                    setLocale(l.code);
++                    setOpen(false);
++                  }}
++                  className="flex items-center gap-2"
++                  style={optionStyle(selected)}
++                  onMouseEnter={onEnter}
++                  onMouseLeave={onLeave}
++                >
++                  {inner}
++                </a>
++              ) : (
++                <button
++                  type="button"
++                  role="option"
++                  aria-selected={selected}
++                  onClick={() => {
++                    setLocale(l.code);
++                    setOpen(false);
+                   }}
++                  className="flex items-center gap-2"
++                  style={optionStyle(selected)}
++                  onMouseEnter={onEnter}
++                  onMouseLeave={onLeave}
+                 >
+-                  {l.code.toUpperCase()}
+-                </span>
+-              </button>
++                  {inner}
++                </button>
++              )}
+             </li>
+           );
+         })}
+diff --git a/frontend/src/components/marketing/EditorialHeaderBase.tsx b/frontend/src/components/marketing/EditorialHeaderBase.tsx
+index 99acdf0..e084b74 100644
+--- a/frontend/src/components/marketing/EditorialHeaderBase.tsx
++++ b/frontend/src/components/marketing/EditorialHeaderBase.tsx
+@@ -2,10 +2,12 @@
+ 
+ import { useState } from "react";
+ import Link from "next/link";
++import { usePathname } from "next/navigation";
+ import { Menu, X } from "lucide-react";
+ import DocTalkLogo from "../DocTalkLogo";
+ import EdLanguageSelector from "./EdLanguageSelector";
+ import { useLocale } from "../../i18n";
++import { localizedHrefIfAvailable, splitLocaleFromPath } from "../../i18n/routing";
+ 
+ export interface Crumb {
+   label: string;
+@@ -33,10 +35,14 @@ export default function EditorialHeaderBase({
+ }: EditorialHeaderBaseProps) {
+   const { t, tOr } = useLocale();
+   const [mobileOpen, setMobileOpen] = useState(false);
++  // Derive the URL locale from the path so nav links stay in-language on
++  // localized pages (`/de/...`). Targets not yet localized fall back to English.
++  const { locale: urlLocale } = splitLocaleFromPath(usePathname() || "/");
++  const navHref = (path: string) => localizedHrefIfAvailable(urlLocale, path);
+   const NAV_LINKS = [
+-    { href: "/features", label: t("public.nav.features") },
+-    { href: "/pricing", label: t("footer.pricing") },
+-    { href: "/trust", label: tOr("footer.links.trust", "Security") },
++    { href: navHref("/features"), label: t("public.nav.features") },
++    { href: navHref("/pricing"), label: t("footer.pricing") },
++    { href: navHref("/trust"), label: tOr("footer.links.trust", "Security") },
+   ];
+ 
+   return (
+@@ -52,7 +58,7 @@ export default function EditorialHeaderBase({
+           <div className="flex items-center justify-between h-16">
+             {/* Left — logo + wordmark (+ optional dateline) */}
+             <Link
+-              href="/"
++              href={navHref("/")}
+               className="flex items-center gap-3 shrink-0"
+               aria-label="DocTalk home"
+             >
+diff --git a/frontend/src/i18n/routing.ts b/frontend/src/i18n/routing.ts
+new file mode 100644
+index 0000000..72d981e
+--- /dev/null
++++ b/frontend/src/i18n/routing.ts
+@@ -0,0 +1,76 @@
++/**
++ * Locale URL routing helpers — framework-neutral (safe in both server and
++ * client components; no "use client", no server-only imports).
++ *
++ * International-SEO model (see .collab/plans/2026-05-24-international-seo-locale-urls-spec.md):
++ *   - English is the DEFAULT and lives at the root with NO prefix (`/use-cases/lawyers`).
++ *     Keeping English unprefixed means existing URLs/rankings need no 301s.
++ *   - The high-value locales below get a subdirectory prefix (`/de/use-cases/lawyers`)
++ *     with server-rendered translated HTML, so search engines can index each language.
++ *   - `zh/it/ar/hi` content exists but has no localized URLs yet (deferred); they remain
++ *     available via the client-side locale toggle on the app surface.
++ */
++
++// Locales that have crawlable, server-rendered marketing URLs (en is the unprefixed default).
++export const URL_LOCALES = ['ja', 'es', 'ko', 'de', 'fr', 'pt'] as const;
++export type UrlLocale = (typeof URL_LOCALES)[number];
++
++// All locales that participate in hreflang (the unprefixed default + the prefixed set).
++export const MARKETING_LOCALES = ['en', ...URL_LOCALES] as const;
++
++export function isUrlLocale(value: string | undefined | null): value is UrlLocale {
++  return !!value && (URL_LOCALES as readonly string[]).includes(value);
++}
++
++/**
++ * Locale-agnostic marketing paths that actually have server-rendered locale
++ * variants under `app/[locale]/...`. This is the single source of truth that
++ * keeps links/hreflang/sitemap honest — a path is only ever prefixed once its
++ * localized page exists, so we never emit a `/de/...` link that 404s.
++ * Grows as pages are localized (Phase A: lawyers only).
++ */
++export const LOCALIZED_PATHS: ReadonlySet<string> = new Set<string>([
++  '/use-cases/lawyers',
++]);
++
++export function isLocalizedPath(path: string): boolean {
++  return LOCALIZED_PATHS.has(path);
++}
++
++/**
++ * Prefix a locale-agnostic path for a given locale.
++ * `en` (or any non-URL locale) returns the path unchanged, so English output is byte-stable.
++ *   localizedHref('de', '/use-cases/lawyers') -> '/de/use-cases/lawyers'
++ *   localizedHref('de', '/')                  -> '/de'
++ *   localizedHref('en', '/pricing')           -> '/pricing'
++ */
++export function localizedHref(locale: string, path: string): string {
++  const clean = path.startsWith('/') ? path : `/${path}`;
++  if (!isUrlLocale(locale)) return clean;
++  if (clean === '/') return `/${locale}`;
++  return `/${locale}${clean}`;
++}
++
++/**
++ * Like `localizedHref`, but only prefixes paths that actually have a localized
++ * page (`LOCALIZED_PATHS`). Use this for links/CTAs that may point at pages not
++ * yet localized — they stay on the English URL instead of 404ing.
++ */
++export function localizedHrefIfAvailable(locale: string, path: string): string {
++  const clean = path.startsWith('/') ? path : `/${path}`;
++  return isLocalizedPath(clean) ? localizedHref(locale, clean) : clean;
++}
++
++/**
++ * Split a known locale prefix off a pathname.
++ *   '/de/use-cases/lawyers' -> { locale: 'de', path: '/use-cases/lawyers' }
++ *   '/use-cases/lawyers'    -> { locale: 'en', path: '/use-cases/lawyers' }
++ *   '/de'                   -> { locale: 'de', path: '/' }
++ */
++export function splitLocaleFromPath(pathname: string): { locale: string; path: string } {
++  const m = pathname.match(/^\/([a-z]{2})(\/.*)?$/);
++  if (m && isUrlLocale(m[1])) {
++    return { locale: m[1], path: m[2] && m[2].length > 0 ? m[2] : '/' };
++  }
++  return { locale: 'en', path: pathname && pathname.length > 0 ? pathname : '/' };
++}
+diff --git a/frontend/src/i18n/server.ts b/frontend/src/i18n/server.ts
+new file mode 100644
+index 0000000..75e9bd4
+--- /dev/null
++++ b/frontend/src/i18n/server.ts
+@@ -0,0 +1,60 @@
++/**
++ * Server-side translation resolver — the SEO counterpart to the client
++ * `LocaleProvider`. Server components call `getServerT(locale)` so the INITIAL
++ * server-rendered HTML for a locale URL (`/de/...`) already contains the
++ * translated text, making it indexable by crawlers that don't run JS.
++ *
++ * Only imported by server components. Mirrors the client API: same
++ * `applyParams` placeholder substitution and the same en-fallback for any
++ * missing key. Under SSG the locale JSON is loaded at build time, so the
++ * payload is static HTML and the 400KB+ JSON never ships to the client.
++ */
++import en from './locales/en.json';
++
++type Messages = Record<string, string>;
++
++// Loaders for the locales that have server-rendered URLs (URL_LOCALES).
++const loaders: Record<string, () => Promise<{ default: Messages }>> = {
++  ja: () => import('./locales/ja.json'),
++  es: () => import('./locales/es.json'),
++  ko: () => import('./locales/ko.json'),
++  de: () => import('./locales/de.json'),
++  fr: () => import('./locales/fr.json'),
++  pt: () => import('./locales/pt.json'),
++};
++
++function applyParams(str: string, params?: Record<string, string | number>): string {
++  if (!params) return str;
++  let out = str;
++  Object.entries(params).forEach(([k, v]) => {
++    out = out.replace(`{${k}}`, String(v));
++  });
++  return out;
++}
++
++export interface ServerTranslator {
++  locale: string;
++  t: (key: string, params?: Record<string, string | number>) => string;
++  tOr: (key: string, fallback: string, params?: Record<string, string | number>) => string;
++}
++
++export async function getServerT(locale: string): Promise<ServerTranslator> {
++  const enMessages = en as Messages;
++  let messages: Messages = enMessages;
++
++  if (locale !== 'en' && loaders[locale]) {
++    try {
++      messages = (await loaders[locale]()).default;
++    } catch {
++      messages = enMessages;
++    }
++  }
++
++  const resolve = (key: string): string | undefined => messages[key] ?? enMessages[key];
++
++  return {
++    locale,
++    t: (key, params) => applyParams(resolve(key) ?? key, params),
++    tOr: (key, fallback, params) => applyParams(resolve(key) ?? fallback, params),
++  };
++}
+diff --git a/frontend/src/lib/seo.ts b/frontend/src/lib/seo.ts
+index 62c3172..9d194d7 100644
+--- a/frontend/src/lib/seo.ts
++++ b/frontend/src/lib/seo.ts
+@@ -1,4 +1,5 @@
+ import type { Metadata } from 'next';
++import { URL_LOCALES, localizedHref } from '../i18n/routing';
+ 
+ export const SITE_URL = 'https://www.doctalk.site';
+ export const DEFAULT_SHARE_ALT = 'DocTalk — AI Document Chat with Cited Answers';
+@@ -18,6 +19,24 @@ interface MarketingMetadataOptions {
+   openGraph?: Partial<OpenGraphInput>;
+   twitter?: Partial<TwitterInput>;
+   locale?: string;
++  /**
++   * When true, emit hreflang `alternates.languages` for every marketing locale
++   * and set the canonical to this locale's URL. `path` is the locale-agnostic
++   * path (e.g. `/use-cases/lawyers`); `locale` is the page's locale (default `en`).
++   */
++  localized?: boolean;
++}
++
++/** hreflang map: unprefixed `en` default + each URL locale + `x-default` → en. */
++function buildLanguageAlternates(path: string): Record<string, string> {
++  const languages: Record<string, string> = {
++    en: absoluteUrl(localizedHref('en', path)),
++  };
++  for (const loc of URL_LOCALES) {
++    languages[loc] = absoluteUrl(localizedHref(loc, path));
++  }
++  languages['x-default'] = absoluteUrl(localizedHref('en', path));
++  return languages;
+ }
+ 
+ const OG_LOCALE_MAP: Record<string, string> = {
+@@ -88,23 +107,27 @@ export function buildMarketingMetadata({
+   openGraph,
+   twitter,
+   locale,
++  localized,
+ }: MarketingMetadataOptions): Metadata {
+   const titleText = resolveTitleText(title);
++  const pageLocale = locale ?? 'en';
++  const canonicalPath = localized ? localizedHref(pageLocale, path) : path;
+ 
+   return {
+     title,
+     description,
+     ...(keywords ? { keywords } : {}),
+     alternates: {
+-      canonical: path,
++      canonical: canonicalPath,
++      ...(localized ? { languages: buildLanguageAlternates(path) } : {}),
+     },
+     ...(robots ? { robots } : {}),
+     openGraph: {
+       title: titleText,
+       description,
+-      url: absoluteUrl(path),
++      url: absoluteUrl(canonicalPath),
+       siteName: 'DocTalk',
+-      locale: locale ? (OG_LOCALE_MAP[locale] ?? 'en_US') : 'en_US',
++      locale: OG_LOCALE_MAP[pageLocale] ?? 'en_US',
+       images: [
+         {
+           url: absoluteUrl(DEFAULT_OG_IMAGE_PATH),

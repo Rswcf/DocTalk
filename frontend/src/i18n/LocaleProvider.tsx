@@ -1,6 +1,7 @@
 "use client";
 import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import { LocaleContext, Locale, LOCALES } from './index';
+import { splitLocaleFromPath } from './routing';
 
 import en from './locales/en.json';
 
@@ -35,6 +36,14 @@ const localeLoaders: Record<string, () => Promise<{ default: Record<string, stri
 };
 
 function detectLocale(): Locale {
+  // A locale URL prefix (`/de/...`) is explicit intent — it wins over stored
+  // preference and browser language, and keeps <html lang>/chrome in sync with
+  // the server-rendered locale page.
+  if (typeof window !== 'undefined') {
+    const { locale } = splitLocaleFromPath(window.location.pathname);
+    if (locale !== 'en' && LOCALES.some((l) => l.code === locale)) return locale as Locale;
+  }
+
   const stored = typeof window !== 'undefined' ? localStorage.getItem('doctalk_locale') : null;
   if (stored && LOCALES.some((l) => l.code === stored)) return stored as Locale;
 

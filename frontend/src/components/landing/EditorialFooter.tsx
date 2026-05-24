@@ -5,50 +5,83 @@ import { usePathname } from "next/navigation";
 import DocTalkLogo from "../DocTalkLogo";
 import { useLocale } from "../../i18n";
 import { localizedHrefIfAvailable, splitLocaleFromPath } from "../../i18n/routing";
+import type { ChromeStrings } from "../../i18n/chrome";
 
-export default function EditorialFooter() {
+export default function EditorialFooter({ chrome }: { chrome?: ChromeStrings }) {
   const { t, tOr } = useLocale();
   // Keep footer links in-language on localized pages; targets not yet localized
   // resolve to their English URL (no 404s).
   const { locale: urlLocale } = splitLocaleFromPath(usePathname() || "/");
   const lh = (path: string) => localizedHrefIfAvailable(urlLocale, path);
+  // Prefer server-resolved strings (correct language in initial HTML on
+  // localized pages); otherwise client-locale text.
+  const f = chrome?.footer;
+  const L = {
+    product: f?.product ?? t("footer.product"),
+    useCases: f?.useCases ?? t("footer.useCases"),
+    resources: f?.resources ?? t("footer.resources"),
+    company: f?.company ?? t("footer.company"),
+    demo: f?.demo ?? t("footer.demo"),
+    pricing: f?.pricing ?? t("footer.pricing"),
+    features: f?.features ?? t("footer.links.features"),
+    noSignupDemo: f?.noSignupDemo ?? t("footer.links.noSignupDemo"),
+    citationHighlighting: f?.citationHighlighting ?? t("footer.links.citationHighlighting"),
+    performanceModes: f?.performanceModes ?? t("footer.links.performanceModes"),
+    useCasesLink: f?.useCasesLink ?? t("footer.links.useCases"),
+    students: f?.students ?? t("footer.links.students"),
+    lawyers: f?.lawyers ?? t("footer.links.lawyers"),
+    finance: f?.finance ?? t("footer.links.finance"),
+    hrContracts: f?.hrContracts ?? t("footer.links.hrContracts"),
+    compareTools: f?.compareTools ?? t("footer.links.compareTools"),
+    alternatives: f?.alternatives ?? t("footer.links.alternatives"),
+    blog: f?.blog ?? t("footer.links.blog"),
+    comparisonGuides: f?.comparisonGuides ?? t("footer.links.comparisonGuides"),
+    multiFormatSupport: f?.multiFormatSupport ?? t("footer.links.multiFormatSupport"),
+    about: f?.about ?? t("footer.links.about"),
+    contact: f?.contact ?? t("footer.contact"),
+    trust: f?.trust ?? t("footer.links.trust"),
+    imprint: f?.imprint ?? tOr("footer.imprint", "Imprint"),
+    privacy: f?.privacy ?? t("privacy.policyLink"),
+    terms: f?.terms ?? t("terms.title"),
+    doNotSell: f?.doNotSell ?? t("footer.doNotSell"),
+  };
 
   const productLinks = [
-    { href: lh("/demo"), label: t("footer.demo") },
-    { href: lh("/pricing"), label: t("footer.pricing") },
-    { href: lh("/features"), label: t("footer.links.features") },
-    { href: lh("/features/free-demo"), label: t("footer.links.noSignupDemo") },
-    { href: lh("/features/citations"), label: t("footer.links.citationHighlighting") },
-    { href: lh("/features/performance-modes"), label: t("footer.links.performanceModes") },
+    { href: lh("/demo"), label: L.demo },
+    { href: lh("/pricing"), label: L.pricing },
+    { href: lh("/features"), label: L.features },
+    { href: lh("/features/free-demo"), label: L.noSignupDemo },
+    { href: lh("/features/citations"), label: L.citationHighlighting },
+    { href: lh("/features/performance-modes"), label: L.performanceModes },
   ];
 
   const useCaseLinks = [
-    { href: lh("/use-cases"), label: t("footer.links.useCases") },
-    { href: lh("/use-cases/students"), label: t("footer.links.students") },
-    { href: lh("/use-cases/lawyers"), label: t("footer.links.lawyers") },
-    { href: lh("/use-cases/finance"), label: t("footer.links.finance") },
-    { href: lh("/use-cases/hr-contracts"), label: t("footer.links.hrContracts") },
+    { href: lh("/use-cases"), label: L.useCasesLink },
+    { href: lh("/use-cases/students"), label: L.students },
+    { href: lh("/use-cases/lawyers"), label: L.lawyers },
+    { href: lh("/use-cases/finance"), label: L.finance },
+    { href: lh("/use-cases/hr-contracts"), label: L.hrContracts },
   ];
 
   const resourceLinks = [
-    { href: lh("/compare"), label: t("footer.links.compareTools") },
-    { href: lh("/alternatives"), label: t("footer.links.alternatives") },
-    { href: lh("/blog"), label: t("footer.links.blog") },
-    { href: lh("/blog/category/comparisons"), label: t("footer.links.comparisonGuides") },
-    { href: lh("/features/multi-format"), label: t("footer.links.multiFormatSupport") },
+    { href: lh("/compare"), label: L.compareTools },
+    { href: lh("/alternatives"), label: L.alternatives },
+    { href: lh("/blog"), label: L.blog },
+    { href: lh("/blog/category/comparisons"), label: L.comparisonGuides },
+    { href: lh("/features/multi-format"), label: L.multiFormatSupport },
   ];
 
   const companyLinks = [
-    { href: lh("/about"), label: t("footer.links.about") },
-    { href: lh("/contact"), label: t("footer.contact") },
-    { href: lh("/trust"), label: t("footer.links.trust") },
-    { href: lh("/imprint"), label: tOr("footer.imprint", "Imprint") },
+    { href: lh("/about"), label: L.about },
+    { href: lh("/contact"), label: L.contact },
+    { href: lh("/trust"), label: L.trust },
+    { href: lh("/imprint"), label: L.imprint },
   ];
 
   const legalLinks = [
-    { href: lh("/privacy"), label: t("privacy.policyLink") },
-    { href: lh("/terms"), label: t("terms.title") },
-    { href: lh("/privacy#ccpa"), label: t("footer.doNotSell") },
+    { href: lh("/privacy"), label: L.privacy },
+    { href: lh("/terms"), label: L.terms },
+    { href: lh("/privacy#ccpa"), label: L.doNotSell },
   ];
 
   const linkStyle: React.CSSProperties = {
@@ -132,10 +165,10 @@ export default function EditorialFooter() {
 
           {/* Link columns */}
           <div className="md:col-span-4 grid grid-cols-2 sm:grid-cols-4 gap-8">
-            <FooterLinkGroup heading={t("footer.product")} links={productLinks} />
-            <FooterLinkGroup heading={t("footer.useCases")} links={useCaseLinks} />
-            <FooterLinkGroup heading={t("footer.resources")} links={resourceLinks} />
-            <FooterLinkGroup heading={t("footer.company")} links={companyLinks} />
+            <FooterLinkGroup heading={L.product} links={productLinks} />
+            <FooterLinkGroup heading={L.useCases} links={useCaseLinks} />
+            <FooterLinkGroup heading={L.resources} links={resourceLinks} />
+            <FooterLinkGroup heading={L.company} links={companyLinks} />
           </div>
         </div>
 

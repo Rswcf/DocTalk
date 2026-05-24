@@ -88,9 +88,27 @@ In App Router only the **root** layout renders `<html>`. Setting `lang="de"` at 
 
 ## Phasing
 
-- **Phase A — prove the pipeline (one route family, all 6 locales):**
-  landing (`/`) + `use-cases/lawyers`. Build the server util, route tree, locale-aware shell, hreflang, sitemap entries, switcher links. **Gate:** `next build` green; view-source of `/de` and `/de/use-cases/lawyers` shows German in initial HTML + correct hreflang/canonical; sitemap lists locale URLs; switcher links resolve; Lighthouse SEO/perf not regressed; English URLs byte-stable. Deploy, confirm indexing over following days.
-- **Phase B — roll out** remaining marketing routes (use-cases ×8, compare ×5, alternatives ×5, features ×5, tools ×2, pricing, trust, demo).
+- **Phase A — prove the pipeline (`use-cases/lawyers`, all 6 locales):**
+  *Scope refined during implementation:* lawyers-only. The landing (`/`) was moved
+  to Phase B because it uses a different header (`landing/EditorialHeader`) + 8
+  interactive section components, whereas `use-cases/lawyers` exercises the shared
+  kit+shell+routing+metadata+sitemap+switcher path that ~28 marketing pages reuse —
+  the higher-value pipeline proof. Build the server util, route tree, locale-aware
+  shell, server-resolved chrome strings, crawlable locale links, hreflang, sitemap
+  entries. **Gate:** `next build` green; view-source of `/de/use-cases/lawyers` shows
+  German in initial HTML (content + chrome) + correct hreflang/canonical;
+  server-rendered crawlable locale `<a>` links in initial HTML; sitemap lists locale
+  URLs; English URL content byte-stable except added hreflang. Deploy, confirm indexing.
+- **Phase B — roll out** remaining marketing routes: landing (`/`) first, then
+  use-cases ×8, compare ×5, alternatives ×5, features ×5, tools ×2, pricing, trust,
+  demo. Plus the deferred 6-locale translation of the lawyers external-citation
+  sentences (shipped as `tOr` English-fallback keys in Phase A).
+
+**Accepted output change (Codex review #5):** the English `/use-cases/lawyers`
+JSON-LD now derives Article headline/FAQ from the same translation keys the visible
+content uses (was hard-coded English that differed from the visible FAQ). This is a
+deliberate improvement — Google requires structured-data to match visible content —
+so it overrides the strict "English diff = no change" gate for this page.
 - **Phase C — manual (founder):** submit per-locale sitemaps in GSC + Bing; later Baidu/Naver per the deep plan.
 
 ## Testing / verification
@@ -113,4 +131,4 @@ In App Router only the **root** layout renders `<html>`. Setting `lang="de"` at 
 
 ## Definition of done (Phase A)
 
-Translated HTML served at `/{ja,es,ko,de,fr,pt}/` and `/{…}/use-cases/lawyers`, with reciprocal hreflang, locale sitemap entries, crawlable switcher, green build, unchanged English — reviewed by Codex and deployed to `stable`.
+Translated HTML (content **and** chrome) served at `/{ja,es,ko,de,fr,pt}/use-cases/lawyers`, with reciprocal hreflang, locale sitemap entries, server-rendered crawlable locale links, green build, English content unchanged (except added hreflang + the accepted JSON-LD improvement) — reviewed by Codex (consensus) and deployed to `stable`.

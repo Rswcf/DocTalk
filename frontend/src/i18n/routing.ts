@@ -33,8 +33,14 @@ export const LOCALIZED_PATHS: ReadonlySet<string> = new Set<string>([
   '/use-cases/lawyers',
 ]);
 
+/** Normalize a path for matching: drop query/hash and a single trailing slash (except root). */
+function normalizePath(path: string): string {
+  const clean = (path.startsWith('/') ? path : `/${path}`).split(/[?#]/)[0];
+  return clean.length > 1 && clean.endsWith('/') ? clean.slice(0, -1) : clean;
+}
+
 export function isLocalizedPath(path: string): boolean {
-  return LOCALIZED_PATHS.has(path);
+  return LOCALIZED_PATHS.has(normalizePath(path));
 }
 
 /**
@@ -58,7 +64,7 @@ export function localizedHref(locale: string, path: string): string {
  */
 export function localizedHrefIfAvailable(locale: string, path: string): string {
   const clean = path.startsWith('/') ? path : `/${path}`;
-  return isLocalizedPath(clean) ? localizedHref(locale, clean) : clean;
+  return isLocalizedPath(clean) ? localizedHref(locale, normalizePath(clean)) : clean;
 }
 
 /**
@@ -68,9 +74,10 @@ export function localizedHrefIfAvailable(locale: string, path: string): string {
  *   '/de'                   -> { locale: 'de', path: '/' }
  */
 export function splitLocaleFromPath(pathname: string): { locale: string; path: string } {
-  const m = pathname.match(/^\/([a-z]{2})(\/.*)?$/);
+  const clean = normalizePath(pathname || '/');
+  const m = clean.match(/^\/([a-z]{2})(\/.*)?$/);
   if (m && isUrlLocale(m[1])) {
     return { locale: m[1], path: m[2] && m[2].length > 0 ? m[2] : '/' };
   }
-  return { locale: 'en', path: pathname && pathname.length > 0 ? pathname : '/' };
+  return { locale: 'en', path: clean };
 }

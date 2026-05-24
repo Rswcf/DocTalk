@@ -22,7 +22,9 @@ import EdCardGrid from '../../../components/marketing/EdCardGrid';
 import EdStepRow from '../../../components/marketing/EdStepRow';
 import EdFaqList from '../../../components/marketing/EdFaqList';
 import EdCtaBanner from '../../../components/marketing/EdCtaBanner';
+import MarketingLocaleLinks from '../../../components/marketing/MarketingLocaleLinks';
 import { getServerT } from '../../../i18n/server';
+import { getChromeStrings } from '../../../i18n/chrome';
 import { localizedHrefIfAvailable } from '../../../i18n/routing';
 
 const featureIcons = [Search, Clock, FileText, AlertTriangle, Quote];
@@ -44,7 +46,8 @@ const stepKeys = ['upload', 'ask', 'verify'];
  * pass into the client islands (EdFaqList, MarketingShell).
  */
 export default async function LawyersContent({ locale }: { locale: string }) {
-  const { t } = await getServerT(locale);
+  const { t, tOr } = await getServerT(locale);
+  const chrome = await getChromeStrings(locale);
   const href = (path: string) => localizedHrefIfAvailable(locale, path);
 
   const faqItems = [
@@ -81,6 +84,7 @@ export default async function LawyersContent({ locale }: { locale: string }) {
 
   return (
     <MarketingShell
+      chrome={chrome}
       breadcrumb={[
         { label: t('useCasesLawyers.breadcrumb.home'), href: href('/') },
         { label: t('useCasesLawyers.breadcrumb.useCases'), href: href('/use-cases') },
@@ -99,11 +103,15 @@ export default async function LawyersContent({ locale }: { locale: string }) {
           <p>{t('useCasesLawyers.challenge.p1')}</p>
           <p>
             {t('useCasesLawyers.challenge.p2')}{' '}
-            Resources like <a href="https://www.americanbar.org/groups/law_practice/resources/tech-tools/" target="_blank" rel="noopener noreferrer">ABA Legal Technology</a> highlight the growing role of AI in law practice.
+            {tOr('useCasesLawyers.challenge.p2ResourcePre', 'Resources like ')}
+            <a href="https://www.americanbar.org/groups/law_practice/resources/tech-tools/" target="_blank" rel="noopener noreferrer">ABA Legal Technology</a>
+            {tOr('useCasesLawyers.challenge.p2ResourcePost', ' highlight the growing role of AI in law practice.')}
           </p>
           <p>
             {t('useCasesLawyers.challenge.p3')}{' '}
-            Platforms like <a href="https://www.thomsonreuters.com/en/artificial-intelligence.html" target="_blank" rel="noopener noreferrer">Thomson Reuters AI</a> are advancing legal document analysis.
+            {tOr('useCasesLawyers.challenge.p3PlatformPre', 'Platforms like ')}
+            <a href="https://www.thomsonreuters.com/en/artificial-intelligence.html" target="_blank" rel="noopener noreferrer">Thomson Reuters AI</a>
+            {tOr('useCasesLawyers.challenge.p3PlatformPost', ' are advancing legal document analysis.')}
           </p>
           <p>{t('useCasesLawyers.challenge.p4')}</p>
         </EdProse>
@@ -183,6 +191,8 @@ export default async function LawyersContent({ locale }: { locale: string }) {
         primary={{ label: t('useCasesLawyers.cta.tryFreeDemo'), href: href('/demo') }}
         secondary={{ label: t('useCasesLawyers.cta.viewPricing'), href: href('/pricing') }}
       />
+
+      <MarketingLocaleLinks path="/use-cases/lawyers" />
     </MarketingShell>
   );
 }
