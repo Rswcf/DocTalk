@@ -145,19 +145,33 @@ def parse_document(self, document_id: str, locale: str | None = None) -> None:
 
             # Delete stale Qdrant vectors BEFORE re-indexing (R2a hazard fix). The worker
             # rebuilds Pages/Chunks but old vectors would otherwise survive and pollute
-            # retrieval top-k (especially after an OCR re-parse). HARD, AWAITED precondition:
-            # if the delete fails we must NOT proceed — raise so the task retries rather than
-            # leaving duplicate/stale vectors. (deletion_worker uses the same filter.)
-            from qdrant_client.models import FieldCondition, Filter, MatchValue
+            # retrieval top-k (especially after an OCR re-parse). HARD, AWAITED precondition.
+            try:
+                # ensure_collection() first so a first parse on a fresh collection doesn't
+                # fail the delete with "collection not found".
+                embedding_service.ensure_collection()
+                from qdrant_client.models import FieldCondition, Filter, MatchValue
 
-            _qclient = embedding_service.get_qdrant_client()
-            _qclient.delete(
-                collection_name=settings.QDRANT_COLLECTION,
-                points_selector=Filter(
-                    must=[FieldCondition(key="document_id", match=MatchValue(value=str(doc.id)))]
-                ),
-                wait=True,
-            )
+                _qclient = embedding_service.get_qdrant_client()
+                _qclient.delete(
+                    collection_name=settings.QDRANT_COLLECTION,
+                    points_selector=Filter(
+                        must=[FieldCondition(key="document_id", match=MatchValue(value=str(doc.id)))]
+                    ),
+                    wait=True,
+                )
+            except SoftTimeLimitExceeded:
+                raise
+            except Exception as e:
+                # Do NOT re-index with stale vectors. Mark a structured error (never leave the
+                # doc stuck in 'parsing') and stop; the user can retry.
+                logger.error("Qdrant pre-delete failed for %s: %s", document_id, e)
+                _set_doc_error(
+                    doc, "QDRANT_CLEANUP_FAILED",
+                    "Could not clear old vectors before re-processing; please retry.",
+                )
+                db.commit()
+                return
 
             doc.pages_parsed = 0
             doc.chunks_total = 0
