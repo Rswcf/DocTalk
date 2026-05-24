@@ -38,6 +38,34 @@ export interface ServerTranslator {
   tOr: (key: string, fallback: string, params?: Record<string, string | number>) => string;
 }
 
+/**
+ * Resolve a locale's messages limited to the given key prefixes. Used to seed a
+ * client LocaleProvider for a localized server page (e.g. the landing) with just
+ * the namespaces that page's tree uses — translated SSR without shipping the full
+ * 400KB locale JSON. Falls back to English for the locale's missing keys.
+ */
+export async function getScopedMessages(
+  locale: string,
+  prefixes: readonly string[],
+): Promise<Record<string, string>> {
+  const enMessages = en as Messages;
+  let messages: Messages = enMessages;
+  if (locale !== 'en' && loaders[locale]) {
+    try {
+      messages = (await loaders[locale]()).default;
+    } catch {
+      messages = enMessages;
+    }
+  }
+  const out: Record<string, string> = {};
+  for (const key of Object.keys(enMessages)) {
+    if (prefixes.some((p) => key.startsWith(p))) {
+      out[key] = messages[key] ?? enMessages[key];
+    }
+  }
+  return out;
+}
+
 export async function getServerT(locale: string): Promise<ServerTranslator> {
   const enMessages = en as Messages;
   let messages: Messages = enMessages;

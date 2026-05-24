@@ -55,13 +55,34 @@ function detectLocale(): Locale {
   return 'en';
 }
 
-export default function LocaleProvider({ children }: { children: React.ReactNode }) {
-  const [locale, setLocaleState] = useState<Locale>('en');
-  const [loadedTranslations, setLoadedTranslations] = useState<Record<string, Record<string, string>>>({ en });
+export default function LocaleProvider({
+  children,
+  initialLocale,
+  initialMessages,
+}: {
+  children: React.ReactNode;
+  /**
+   * Server-seeded locale + messages for localized server pages (e.g. the `/de`
+   * landing). When provided, the provider starts in that locale with those
+   * messages so the initial SSR HTML is translated — without client detection
+   * and without shipping the full locale JSON. Missing keys still fall back to
+   * the statically-bundled English. Omit both for the default app behavior
+   * (start `en`, detect client-side).
+   */
+  initialLocale?: Locale;
+  initialMessages?: Record<string, string>;
+}) {
+  const [locale, setLocaleState] = useState<Locale>(initialLocale ?? 'en');
+  const [loadedTranslations, setLoadedTranslations] = useState<Record<string, Record<string, string>>>(
+    initialLocale && initialMessages ? { en, [initialLocale]: initialMessages } : { en },
+  );
 
   useEffect(() => {
+    // Seeded providers (localized server pages) keep their server locale; only
+    // the default (unseeded) provider detects from storage/navigator/URL.
+    if (initialLocale) return;
     setLocaleState(detectLocale());
-  }, []);
+  }, [initialLocale]);
 
   const setLocale = useCallback((l: Locale) => {
     setLocaleState(l);

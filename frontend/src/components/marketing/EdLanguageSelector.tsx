@@ -84,11 +84,12 @@ export default function EdLanguageSelector({ languageLabel }: { languageLabel?: 
   const current = LOCALES.find((l) => l.code === activeLocale);
   const label = languageLabel ?? tOr("header.language", "Language");
 
-  // On localized pages, only offer the locales that actually have a URL for this
-  // page (en + URL_LOCALES). Elsewhere, the full client-toggle list.
-  const options = localized
-    ? LOCALES.filter((l) => (MARKETING_LOCALES as readonly string[]).includes(l.code))
-    : LOCALES;
+  // Always offer all locales. On a localized path, the served locales
+  // (en + URL_LOCALES) render as crawlable <a> links; the rest (and everything
+  // on non-localized paths) stay client-side setLocale() toggles.
+  const options = LOCALES;
+  const isServed = (code: string) =>
+    localized && (MARKETING_LOCALES as readonly string[]).includes(code);
 
   const optionStyle = (selected: boolean): React.CSSProperties => ({
     fontFamily: "var(--dt-body)",
@@ -153,7 +154,7 @@ export default function EdLanguageSelector({ languageLabel }: { languageLabel?: 
           );
           return (
             <li key={l.code} role="none">
-              {localized ? (
+              {isServed(l.code) ? (
                 <a
                   role="option"
                   aria-selected={selected}
