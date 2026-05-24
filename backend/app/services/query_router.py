@@ -164,26 +164,37 @@ def _detect_page_ref(text: str) -> int | None:
     return None
 
 
+# Generic words that don't make a page query "about a topic": question lead-ins,
+# articles/prepositions, "show me", "content", and document words — multilingual.
 _PAGE_LOOKUP_FILLER = re.compile(
-    r"\b(what|whats|what's|is|are|on|in|at|the|a|show|me|my|give|see|go|to|open|tell|us|of|"
-    r"please|display|read|view|whats|content|contents|text|que|hay|en|la|el|muestra|"
-    r"内容|有什么|是什么|的|看|显示|打开|页|頁|ページ|쪽|page|pages|pg)\b",
+    r"\b(what|whats|what's|which|is|are|was|on|in|at|the|a|an|this|that|here|show|me|my|"
+    r"give|get|see|go|to|from|open|tell|us|of|for|please|display|read|view|whole|entire|"
+    r"content|contents|text|say|says|there|"
+    r"document|documents|doc|docs|pdf|file|files|"
+    r"que|qu[ée]|hay|en|la|el|los|las|del|de|muestra|dame|documento|archivo|p[áa]gina|"
+    r"co|je|na|ve?|str[aá]n\w*|dokument\w*|"
+    r"seite|der|die|das|im|dokument|datei|"
+    r"内容|有什么|是什么|什么|这|那|在|里|上|的|看|显示|打开|文档|文件|页|頁|ページ|쪽|페이지|"
+    r"page|pages|pg)\b",
     re.IGNORECASE,
 )
 
 
 def _is_pure_page_query(text: str, page_ref: int) -> bool:
-    """True when the query is essentially JUST a page reference ("what is on page N"),
-    with no semantic topic. A page+topic query ("requirements on page 12") is NOT pure
-    and must keep its semantic-retrieval fallback if the page chunk is missing.
+    """True when the query is essentially JUST a page reference ("what is on page N",
+    "page N of the document"), with NO semantic topic. A page+topic query — even a short
+    one like "AI on page 12" or "Q3 on page 5" — is NOT pure and must keep its
+    semantic-retrieval fallback if the exact page chunk is missing. We bias toward
+    "mixed" (any leftover content token → not pure) because a false "pure" wrongly
+    suppresses the fallback, whereas a false "mixed" only adds a harmless fallback.
     """
     residue = text
     for pat in _PAGE_REF_PATTERNS:
         residue = pat.sub(" ", residue)
     residue = re.sub(rf"\b0*{page_ref}\b", " ", residue)
     residue = _PAGE_LOOKUP_FILLER.sub(" ", residue)
-    residue = re.sub(r"[^0-9A-Za-zÀ-￿]+", " ", residue).strip()
-    return len(residue) <= 2
+    # Any remaining alphanumeric / CJK token is a topic → not a pure page lookup.
+    return not re.findall(r"[0-9A-Za-zÀ-￿]+", residue)
 
 
 def _matches_any(text: str, patterns: tuple[str, ...]) -> bool:
