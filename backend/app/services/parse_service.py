@@ -116,7 +116,9 @@ def detect_script_osd(pdf_bytes: bytes, *, sample_pages: int = 2, dpi: int = 150
                 conf = re.search(r"^Script confidence:\s*([\d.]+)", out.stdout, re.M)
                 if m and (not conf or float(conf.group(1)) >= 0.5):
                     votes[m.group(1)] += 1
-            except Exception as e:
+            except (subprocess.SubprocessError, OSError, RuntimeError, ValueError, MemoryError) as e:
+                # Narrow catch (not bare Exception) so a Celery SoftTimeLimitExceeded — which
+                # subclasses Exception — propagates to the worker instead of being swallowed.
                 logger.debug("OSD failed on page %d: %s", pi, e)
             finally:
                 if png:
