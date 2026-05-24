@@ -1,12 +1,13 @@
 import type { Metadata } from 'next';
 import { absoluteUrl, buildMarketingMetadata } from '../../lib/seo';
-import PricingPageClient from './PricingPageClient';
+import PricingPageContent from './PricingPageContent';
 
 export const metadata: Metadata = buildMarketingMetadata({
   title: 'DocTalk Pricing for Free, Plus, and Pro',
   description:
     'See DocTalk pricing for Free, Plus, and Pro plans. Compare monthly credits, document limits, export features, OCR support, and AI modes.',
   path: '/pricing',
+  localized: true,
   keywords: [
     'doctalk pricing',
     'ai pdf chat pricing',
@@ -112,7 +113,7 @@ export default function PricingPage() {
           }),
         }}
       />
-      <PricingPageClient />
+      <PricingPageContent locale="en" />
     </>
   );
 }

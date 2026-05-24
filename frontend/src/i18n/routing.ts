@@ -60,6 +60,7 @@ export const LOCALIZED_PATHS: ReadonlySet<string> = new Set<string>([
   '/features',
   '/tools',
   '/trust',
+  '/pricing',
 ]);
 
 /** Normalize a path for matching: drop query/hash and a single trailing slash (except root). */

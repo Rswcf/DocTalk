@@ -1,8 +1,10 @@
-"use client";
 import React from 'react';
 import Link from 'next/link';
 import { FileText, MessageSquare, ShieldCheck } from 'lucide-react';
-import { useLocale } from '../../i18n';
+import { getServerT } from '../../i18n/server';
+import { getChromeStrings } from '../../i18n/chrome';
+import { localizedHrefIfAvailable } from '../../i18n/routing';
+import MarketingLocaleLinks from '../../components/marketing/MarketingLocaleLinks';
 import MarketingShell from '../../components/marketing/MarketingShell';
 import EdPageHero from '../../components/marketing/EdPageHero';
 import EdSection from '../../components/marketing/EdSection';
@@ -10,7 +12,7 @@ import EdProse from '../../components/marketing/EdProse';
 import EdCardGrid from '../../components/marketing/EdCardGrid';
 import EdCheckList from '../../components/marketing/EdCheckList';
 import { billingHref } from '../../lib/billingLinks';
-import { trackEvent } from '../../lib/analytics';
+import TrackedCtaLink from '../../components/marketing/TrackedCtaLink';
 
 const plans = [
   {
@@ -108,8 +110,10 @@ const comparisonRows = [
   },
 ];
 
-export default function PricingPageClient() {
-  const { t, tOr } = useLocale();
+export default async function PricingPageContent({ locale }: { locale: string }) {
+  const { t, tOr } = await getServerT(locale);
+  const chrome = await getChromeStrings(locale);
+  const href = (p: string) => localizedHrefIfAvailable(locale, p);
   const creditGuide = [
     {
       icon: MessageSquare,
@@ -140,14 +144,14 @@ export default function PricingPageClient() {
   const heroMeta = (
     <div>
       <div className="flex gap-4 flex-wrap items-center">
-        <Link
+        <TrackedCtaLink
           href={billingHref({ plan: 'plus', source: 'pricing_hero' })}
-          onClick={() => trackEvent('upgrade_click', { plan: 'plus', period: 'monthly', source: 'pricing_hero' })}
+          event={{ name: 'upgrade_click', params: { plan: 'plus', period: 'monthly', source: 'pricing_hero' } }}
           className="ed-cta"
         >
           {t('pricing.plus.cta')}
-        </Link>
-        <Link href="/demo" className="ed-link">
+        </TrackedCtaLink>
+        <Link href={href("/demo")} className="ed-link">
           {t('pricing.tryDemo')} <span aria-hidden="true">→</span>
         </Link>
       </div>
@@ -169,8 +173,9 @@ export default function PricingPageClient() {
 
   return (
     <MarketingShell
+      chrome={chrome}
       breadcrumb={[
-        { label: t('useCasesHub.breadcrumb.home'), href: '/' },
+        { label: t('useCasesHub.breadcrumb.home'), href: href('/') },
         { label: t('pricing.eyebrow') },
       ]}
     >
@@ -247,18 +252,14 @@ export default function PricingPageClient() {
               <div style={{ flex: 1, marginTop: '18px' }}>
                 <EdCheckList items={plan.featureKeys.map((k) => t(k))} />
               </div>
-              <Link
+              <TrackedCtaLink
                 href={plan.ctaHref}
-                onClick={() => {
-                  if (plan.intentPlan) {
-                    trackEvent('upgrade_click', { plan: plan.intentPlan, period: 'monthly', source: 'pricing' });
-                  }
-                }}
+                event={plan.intentPlan ? { name: 'upgrade_click', params: { plan: plan.intentPlan, period: 'monthly', source: 'pricing' } } : undefined}
                 className="ed-cta"
                 style={{ display: 'flex', width: '100%', justifyContent: 'center', marginTop: '24px' }}
               >
                 {t(plan.ctaKey)}
-              </Link>
+              </TrackedCtaLink>
             </div>
           ))}
         </div>
@@ -344,21 +345,23 @@ export default function PricingPageClient() {
           </ul>
           <p>
             {t('pricing.bestFit.contextNote')}{' '}
-            <Link href="/demo" className="ed-inline">
+            <Link href={href("/demo")} className="ed-inline">
               {t('pricing.bestFit.publicDemo')}
             </Link>
             {t('pricing.bestFit.readThe')}{' '}
-            <Link href="/features" className="ed-inline">
+            <Link href={href("/features")} className="ed-inline">
               {t('pricing.bestFit.featureOverview')}
             </Link>
             {t('pricing.bestFit.orCompare')}{' '}
-            <Link href="/compare" className="ed-inline">
+            <Link href={href("/compare")} className="ed-inline">
               {t('pricing.bestFit.comparisonHub')}
             </Link>
             .
           </p>
         </EdProse>
       </EdSection>
+    
+      <MarketingLocaleLinks path="/pricing" label={chrome.language} />
     </MarketingShell>
   );
 }
