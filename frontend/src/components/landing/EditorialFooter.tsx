@@ -144,7 +144,7 @@ export default function EditorialFooter({ chrome }: { chrome?: ChromeStrings }) 
               href={lh("/")}
               className="inline-flex items-center gap-2.5 mb-4"
               style={{ textDecoration: "none" }}
-              aria-label="DocTalk home"
+              aria-label={t('header.aria.home')}
             >
               <DocTalkLogo size={22} />
               <span
