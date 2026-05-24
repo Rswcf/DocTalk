@@ -144,13 +144,20 @@ def test_plain_lookup_remains_local_qa() -> None:
 def test_pure_vs_mixed_page_lookup_r2a():
     """R2a: pure page lookup → (PAGE_LOOKUP,) [no fallback]; page+topic → carries
     LOCAL_QA [keeps semantic fallback on a page-chunk miss]. (Codex r2a r2 blocker)"""
-    from app.services.query_router import query_router, QueryIntent
+    from app.services.query_router import QueryIntent, query_router
 
-    for pure_q in ("what is on page 350", "page 350", "第350页有什么"):
+    for pure_q in ("what is on page 350", "page 350", "第350页有什么",
+                   "what is on page 350 of the document", "show me page 7",
+                   "What is on page 5", "co je na straně 350 v dokumentu"):
         assert query_router.route(pure_q).intents == (QueryIntent.PAGE_LOOKUP,), pure_q
 
+    # Short topics — incl. all-caps acronyms that collide with lowercase filler
+    # words (US/IN/DE/LA/CO ~ us/in/de/la/co) — must stay mixed (Codex r2a r3+r4).
     for mixed_q in ("requirements on page 12", "does page 12 mention requirements",
-                    "concepto de cohesión en la página 14"):
+                    "concepto de cohesión en la página 14",
+                    "AI on page 12", "Q3 on page 5", "IP on page 9", "税 第12页",
+                    "US on page 12", "IN on page 12", "DE on page 12",
+                    "LA on page 12", "CO on page 12"):
         r = query_router.route(mixed_q)
         assert r.primary_intent == QueryIntent.PAGE_LOOKUP, mixed_q
         assert r.intents != (QueryIntent.PAGE_LOOKUP,), mixed_q

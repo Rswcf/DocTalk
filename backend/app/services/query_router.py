@@ -180,6 +180,20 @@ _PAGE_LOOKUP_FILLER = re.compile(
 )
 
 
+def _strip_filler_keep_acronyms(match: re.Match) -> str:
+    """Strip a filler word — UNLESS it's written as an all-caps Latin acronym
+    (≥2 letters, e.g. US / IN / DE / LA / CO). Those collide with lowercase filler
+    words ("us", "in", "de", "la", "co") under IGNORECASE, but as acronyms they are
+    real topics; erasing them would falsely mark "US on page 12" as a pure page lookup
+    and suppress its semantic fallback. Title-case ("What") and lowercase stay filler;
+    CJK filler (never ASCII) is always stripped, as before.
+    """
+    token = match.group(0)
+    if token.isascii() and token.isalpha() and token.isupper() and len(token) >= 2:
+        return token
+    return " "
+
+
 def _is_pure_page_query(text: str, page_ref: int) -> bool:
     """True when the query is essentially JUST a page reference ("what is on page N",
     "page N of the document"), with NO semantic topic. A page+topic query — even a short
@@ -192,7 +206,7 @@ def _is_pure_page_query(text: str, page_ref: int) -> bool:
     for pat in _PAGE_REF_PATTERNS:
         residue = pat.sub(" ", residue)
     residue = re.sub(rf"\b0*{page_ref}\b", " ", residue)
-    residue = _PAGE_LOOKUP_FILLER.sub(" ", residue)
+    residue = _PAGE_LOOKUP_FILLER.sub(_strip_filler_keep_acronyms, residue)
     # Any remaining alphanumeric / CJK token is a topic → not a pure page lookup.
     return not re.findall(r"[0-9A-Za-zÀ-￿]+", residue)
 
