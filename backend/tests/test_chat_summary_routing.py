@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import uuid
 from types import SimpleNamespace
-from unittest.mock import AsyncMock
+from unittest.mock import ANY, AsyncMock
 
 import pytest
 
@@ -193,10 +193,123 @@ async def test_whole_document_summary_uses_brief_context_not_semantic_retrieval(
         )
     ]
 
-    summary_context.assert_awaited_once_with(db, document_id, max_chunks=18)
+    summary_context.assert_awaited_once_with(db, document_id, max_chunks=18, usage_collector=ANY)
     corrective_retrieval.assert_not_awaited()
+    assert {
+        "event": "tool_status",
+        "data": {"message": "Summarizing the document section by section…"},
+    } in events
     assert any(event["event"] == "citation" for event in events)
     assert events[-1]["event"] == "done"
+
+
+@pytest.mark.asyncio
+async def test_document_summary_map_reduce_usage_is_included_in_chat_accounting(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    session_id = uuid.uuid4()
+    document_id = uuid.uuid4()
+    user_id = uuid.uuid4()
+    chunk_id = uuid.uuid4()
+    ledger_id = uuid.uuid4()
+    session_obj = SimpleNamespace(
+        id=session_id,
+        document_id=document_id,
+        collection_id=None,
+        title=None,
+        domain_mode=None,
+    )
+    doc_obj = SimpleNamespace(demo_slug=None, custom_instructions=None)
+    user = SimpleNamespace(id=user_id, plan="free")
+    db = _make_db(session_obj, doc_obj)
+
+    async def fake_summary_context(_db, _document_id, *, max_chunks, usage_collector):
+        usage_collector.add(
+            model="deepseek-v4-flash",
+            prompt_tokens=1000,
+            completion_tokens=200,
+            phase="map",
+        )
+        usage_collector.add(
+            model="deepseek-v4-flash",
+            prompt_tokens=300,
+            completion_tokens=100,
+            phase="reduce",
+        )
+        return [
+            {
+                "chunk_id": chunk_id,
+                "text": "Section group summary",
+                "page": 1,
+                "page_end": 8,
+                "bboxes": [],
+                "score": 1.0,
+                "section_title": "Map-reduce section summary",
+                "document_id": document_id,
+                "retrieval_modality": "summary",
+                "map_reduce_fallback_sections": [],
+                "map_reduce_missing_sections": [],
+            }
+        ]
+
+    create = AsyncMock(
+        return_value=_FakeStream(
+            [
+                _FakeChunk("This document covers the requested topics.[1]"),
+                _FakeChunk(
+                    None,
+                    finish_reason="stop",
+                    usage=SimpleNamespace(prompt_tokens=10, completion_tokens=12),
+                ),
+            ]
+        )
+    )
+    fake_client = SimpleNamespace(
+        chat=SimpleNamespace(completions=SimpleNamespace(create=create))
+    )
+    reconciled: list[int] = []
+    usage_records: list[tuple[str, int, int, int]] = []
+
+    monkeypatch.setattr(
+        chat_service_module.document_brief_service,
+        "get_summary_context",
+        AsyncMock(side_effect=fake_summary_context),
+    )
+    monkeypatch.setattr(chat_service_module, "_get_llm_client", lambda _model: fake_client)
+    monkeypatch.setattr(chat_service_module.credit_service, "debit_credits", AsyncMock(return_value=ledger_id))
+    monkeypatch.setattr(chat_service_module.credit_service, "get_estimated_cost", lambda _mode: 5)
+    monkeypatch.setattr(
+        chat_service_module.credit_service,
+        "calculate_cost",
+        lambda prompt_tokens, completion_tokens, model, mode=None: (
+            7 if prompt_tokens == 10 and completion_tokens == 12 else 3
+        ),
+    )
+
+    async def fake_reconcile(_db, _user_id, _ledger_id, _pre_debited, actual_cost):
+        reconciled.append(actual_cost)
+
+    async def fake_record_usage(_db, *, user_id, message_id, model, prompt_tokens, completion_tokens, cost_credits):
+        usage_records.append((model, prompt_tokens, completion_tokens, cost_credits))
+
+    monkeypatch.setattr(chat_service_module.credit_service, "reconcile_credits", fake_reconcile)
+    monkeypatch.setattr(chat_service_module.credit_service, "record_usage", fake_record_usage)
+
+    events = [
+        event
+        async for event in chat_service_module.chat_service.chat_stream(
+            session_id=session_id,
+            user_message="Summarize this document",
+            db=db,
+            user=user,
+            mode="balanced",
+        )
+    ]
+
+    assert events[-1]["event"] == "done"
+    assert reconciled == [10]
+    assert ("deepseek-v4-pro", 10, 12, 7) in usage_records
+    assert ("deepseek-v4-flash", 1300, 300, 3) in usage_records
 
 
 @pytest.mark.asyncio

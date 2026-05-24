@@ -33,7 +33,10 @@ from app.services.action_planner import action_planner
 from app.services.chat_tool_executor import chat_tool_executor
 from app.services.claim_verifier_service import claim_verifier_service
 from app.services.corrective_retrieval_service import corrective_retrieval_service
-from app.services.document_brief_service import document_brief_service
+from app.services.document_brief_service import (
+    MapReduceUsageCollector,
+    document_brief_service,
+)
 from app.services.document_element_service import chunk_to_retrieval_item
 from app.services.query_planner_service import QueryPlan
 from app.services.query_router import QueryIntent, query_router
@@ -196,7 +199,8 @@ def _is_valid_bbox(bb: dict) -> bool:
 
 
 def _citation_payload(ref_num: int, chunk: "_ChunkInfo", offset: int) -> Dict[str, Any]:
-    all_bbs = [
+    is_summary = chunk.retrieval_modality == "summary"
+    all_bbs = [] if is_summary else [
         bb
         for bb in (chunk.bboxes or [])
         if isinstance(bb, dict) and _is_valid_bbox(bb)
@@ -239,6 +243,14 @@ def _citation_payload(ref_num: int, chunk: "_ChunkInfo", offset: int) -> Dict[st
         citation_data["document_id"] = str(chunk.document_id)
     if chunk.document_filename:
         citation_data["document_filename"] = chunk.document_filename
+    if chunk.retrieval_modality and chunk.retrieval_modality != "text":
+        citation_data["retrieval_modality"] = chunk.retrieval_modality
+    if is_summary:
+        citation_data["bboxes"] = []
+        citation_data["summary_target_sections"] = list(chunk.summary_target_sections)
+        citation_data["summary_model_covered_sections"] = list(chunk.summary_model_covered_sections)
+        citation_data["summary_fallback_sections"] = list(chunk.summary_fallback_sections)
+        citation_data["summary_missing_sections"] = list(chunk.summary_missing_sections)
     if chunk.table_id:
         citation_data["table_id"] = chunk.table_id
         citation_data["retrieval_modality"] = chunk.retrieval_modality or "table"
@@ -483,6 +495,49 @@ def _citation_contract() -> str:
         "- Prefer short factual bullets over dense paragraphs; one bullet should contain one main claim and its citation.\n"
         "- Use only the excerpt numbers listed above. If no excerpt supports a claim, do not make that claim.\n"
         "- A response with no [n] citations is invalid unless there are no relevant excerpts.\n"
+    )
+
+
+def _compact_section_list(values: list[str], *, limit: int = 36) -> str:
+    unique: list[str] = []
+    seen: set[str] = set()
+    for value in values:
+        section = str(value or "").strip()
+        if not section or section in seen:
+            continue
+        seen.add(section)
+        unique.append(section)
+    if not unique:
+        return "(none)"
+    shown = unique[:limit]
+    suffix = f"; +{len(unique) - limit} more" if len(unique) > limit else ""
+    return ", ".join(shown) + suffix
+
+
+def _summary_coverage_contract(retrieved: list[dict[str, Any]]) -> str:
+    target: list[str] = []
+    model_covered: list[str] = []
+    fallback: list[str] = []
+    missing: list[str] = []
+    for item in retrieved:
+        if item.get("retrieval_modality") != "summary":
+            continue
+        target.extend(str(section) for section in item.get("map_reduce_target_sections") or [])
+        model_covered.extend(
+            str(section) for section in item.get("map_reduce_model_covered_sections") or []
+        )
+        fallback.extend(str(section) for section in item.get("map_reduce_fallback_sections") or [])
+        missing.extend(str(section) for section in item.get("map_reduce_missing_sections") or [])
+    if not target and not fallback and not missing:
+        return ""
+    return (
+        "\n\n## Summary Coverage Status\n"
+        f"- Target sections: {_compact_section_list(target)}\n"
+        f"- Model-covered sections: {_compact_section_list(model_covered)}\n"
+        f"- Deterministic fallback sections: {_compact_section_list(fallback)}\n"
+        f"- Missing sections: {_compact_section_list(missing)}\n"
+        "- Treat deterministic fallback sections as lower-confidence source-text coverage. "
+        "If fallback or missing sections matter to the answer, say that coverage was limited there.\n"
     )
 
 
@@ -734,6 +789,10 @@ class _ChunkInfo:
     score: float = 0.0
     table_id: Optional[str] = None
     retrieval_modality: str = "text"
+    summary_target_sections: tuple[str, ...] = ()
+    summary_model_covered_sections: tuple[str, ...] = ()
+    summary_fallback_sections: tuple[str, ...] = ()
+    summary_missing_sections: tuple[str, ...] = ()
 
 
 @dataclass
@@ -752,6 +811,23 @@ def _chunk_info_from_persisted_citation(
     citation: dict,
     collection_doc_names: dict[uuid.UUID, str],
 ) -> _ChunkInfo:
+    if citation.get("retrieval_modality") == "summary":
+        return _ChunkInfo(
+            id=chunk.id,
+            page_start=int(citation.get("page") or chunk.page_start),
+            page_end=int(citation.get("page_end") or citation.get("page") or chunk.page_end),
+            bboxes=[],
+            text=str(citation.get("context_text") or citation.get("text_snippet") or chunk.text or ""),
+            section_title="Map-reduce section summary",
+            document_id=chunk.document_id,
+            document_filename=collection_doc_names.get(chunk.document_id, ""),
+            score=float(citation.get("confidence_score") or 0.0),
+            retrieval_modality="summary",
+            summary_target_sections=tuple(citation.get("summary_target_sections") or ()),
+            summary_model_covered_sections=tuple(citation.get("summary_model_covered_sections") or ()),
+            summary_fallback_sections=tuple(citation.get("summary_fallback_sections") or ()),
+            summary_missing_sections=tuple(citation.get("summary_missing_sections") or ()),
+        )
     table_id = str(citation.get("table_id") or "") or None
     table_context = citation.get("table_context")
     is_table = table_id is not None and isinstance(table_context, str) and table_context.strip()
@@ -1083,15 +1159,18 @@ class ChatService:
             retrieval_strategy = "semantic_top_k"
             retrieval_evaluation = None
             retrieval_plan: QueryPlan | None = None
+            summary_usage = MapReduceUsageCollector()
             if (
                 query_route.primary_intent == QueryIntent.DOCUMENT_SUMMARY
                 and document_id
                 and not is_collection_session
             ):
+                yield sse("tool_status", {"message": "Summarizing the document section by section…"})
                 retrieved = await document_brief_service.get_summary_context(
                     db,
                     document_id,
                     max_chunks=18,
+                    usage_collector=summary_usage,
                 )
                 retrieval_strategy = "document_summary_context"
             elif (
@@ -1155,6 +1234,11 @@ class ChatService:
             setup_error_code = "CHAT_SETUP_ERROR"
             numbered_chunks: List[str] = []
             chunk_map: dict[int, _ChunkInfo] = {}
+            has_map_reduce_summary_context = any(
+                item.get("retrieval_modality") == "summary"
+                or item.get("map_reduce_strategy") == "map_reduce"
+                for item in retrieved
+            )
             for idx, item in enumerate(retrieved, start=1):
                 # Heuristic truncation to ~350 tokens (roughly 1200-1400 chars)
                 text = item["text"] or ""
@@ -1182,6 +1266,12 @@ class ChatService:
                     score=item.get("score", 0.0),
                     table_id=str(item.get("table_id")) if item.get("table_id") else None,
                     retrieval_modality=str(item.get("retrieval_modality") or "text"),
+                    summary_target_sections=tuple(item.get("map_reduce_target_sections") or ()),
+                    summary_model_covered_sections=tuple(
+                        item.get("map_reduce_model_covered_sections") or ()
+                    ),
+                    summary_fallback_sections=tuple(item.get("map_reduce_fallback_sections") or ()),
+                    summary_missing_sections=tuple(item.get("map_reduce_missing_sections") or ()),
                 )
 
             rules = get_rules_for_model(
@@ -1219,6 +1309,12 @@ class ChatService:
                     + _citation_contract()
                 )
             elif retrieval_strategy == "document_summary_context":
+                map_reduce_rule = (
+                    "7. The excerpts may be map-reduce section summaries generated from source chunks; "
+                    "use the coverage status to distinguish model-covered, fallback, and missing sections.\n"
+                    if has_map_reduce_summary_context
+                    else ""
+                )
                 system_prompt = (
                     "You are a document analysis assistant. The user is asking for a broad, whole-document summary.\n\n"
                     + SYSTEM_PROMPT_META_RULE
@@ -1235,6 +1331,8 @@ class ChatService:
                     + "4. If coverage is incomplete, say the answer is based on the cited representative sections instead of refusing.\n"
                     + "5. Cite every factual paragraph or bullet using the excerpt numbers listed above.\n"
                     + "6. Your response language MUST match the language of the user's question.\n"
+                    + map_reduce_rule
+                    + _summary_coverage_contract(retrieved)
                     + _citation_contract()
                 )
             else:
@@ -1583,7 +1681,20 @@ class ChatService:
                 pt = int(prompt_tokens or 0)
                 ct = int(output_tokens or 0)
                 try:
-                    actual_cost = credit_service.calculate_cost(pt, ct, effective_model, mode=effective_mode)
+                    answer_cost = credit_service.calculate_cost(pt, ct, effective_model, mode=effective_mode)
+                    summary_usage_costs: list[tuple[str, int, int, int]] = []
+                    for usage_model, (summary_prompt, summary_completion) in summary_usage.totals_by_model().items():
+                        summary_mode = "quick" if usage_model == settings.MODE_MODELS.get("quick") else None
+                        summary_cost = credit_service.calculate_cost(
+                            summary_prompt,
+                            summary_completion,
+                            usage_model,
+                            mode=summary_mode,
+                        )
+                        summary_usage_costs.append(
+                            (usage_model, summary_prompt, summary_completion, summary_cost)
+                        )
+                    actual_cost = answer_cost + sum(item[3] for item in summary_usage_costs)
                     await credit_service.reconcile_credits(
                         db, user.id, predebit_ledger_id, pre_debited, actual_cost,
                     )
@@ -1594,8 +1705,18 @@ class ChatService:
                         model=effective_model,
                         prompt_tokens=pt,
                         completion_tokens=ct,
-                        cost_credits=actual_cost,
+                        cost_credits=answer_cost,
                     )
+                    for usage_model, summary_prompt, summary_completion, summary_cost in summary_usage_costs:
+                        await credit_service.record_usage(
+                            db,
+                            user_id=user.id,
+                            message_id=asst_msg.id,
+                            model=usage_model,
+                            prompt_tokens=summary_prompt,
+                            completion_tokens=summary_completion,
+                            cost_credits=summary_cost,
+                        )
                     await db.commit()
                     settled = True
                 except Exception as e:
