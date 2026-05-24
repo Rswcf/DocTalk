@@ -1,0 +1,85 @@
+diff --git a/backend/app/services/query_router.py b/backend/app/services/query_router.py
+index 923ca76..b316d72 100644
+--- a/backend/app/services/query_router.py
++++ b/backend/app/services/query_router.py
+@@ -164,6 +164,53 @@ def _detect_page_ref(text: str) -> int | None:
+     return None
+ 
+ 
++# Generic words that don't make a page query "about a topic": question lead-ins,
++# articles/prepositions, "show me", "content", and document words — multilingual.
++_PAGE_LOOKUP_FILLER = re.compile(
++    r"\b(what|whats|what's|which|is|are|was|on|in|at|the|a|an|this|that|here|show|me|my|"
++    r"give|get|see|go|to|from|open|tell|us|of|for|please|display|read|view|whole|entire|"
++    r"content|contents|text|say|says|there|"
++    r"document|documents|doc|docs|pdf|file|files|"
++    r"que|qu[ée]|hay|en|la|el|los|las|del|de|muestra|dame|documento|archivo|p[áa]gina|"
++    r"co|je|na|ve?|str[aá]n\w*|dokument\w*|"
++    r"seite|der|die|das|im|dokument|datei|"
++    r"内容|有什么|是什么|什么|这|那|在|里|上|的|看|显示|打开|文档|文件|页|頁|ページ|쪽|페이지|"
++    r"page|pages|pg)\b",
++    re.IGNORECASE,
++)
++
++
++def _strip_filler_keep_acronyms(match: re.Match) -> str:
++    """Strip a filler word — UNLESS it's written as an all-caps Latin acronym
++    (≥2 letters, e.g. US / IN / DE / LA / CO). Those collide with lowercase filler
++    words ("us", "in", "de", "la", "co") under IGNORECASE, but as acronyms they are
++    real topics; erasing them would falsely mark "US on page 12" as a pure page lookup
++    and suppress its semantic fallback. Title-case ("What") and lowercase stay filler;
++    CJK filler (never ASCII) is always stripped, as before.
++    """
++    token = match.group(0)
++    if token.isascii() and token.isalpha() and token.isupper() and len(token) >= 2:
++        return token
++    return " "
++
++
++def _is_pure_page_query(text: str, page_ref: int) -> bool:
++    """True when the query is essentially JUST a page reference ("what is on page N",
++    "page N of the document"), with NO semantic topic. A page+topic query — even a short
++    one like "AI on page 12" or "Q3 on page 5" — is NOT pure and must keep its
++    semantic-retrieval fallback if the exact page chunk is missing. We bias toward
++    "mixed" (any leftover content token → not pure) because a false "pure" wrongly
++    suppresses the fallback, whereas a false "mixed" only adds a harmless fallback.
++    """
++    residue = text
++    for pat in _PAGE_REF_PATTERNS:
++        residue = pat.sub(" ", residue)
++    residue = re.sub(rf"\b0*{page_ref}\b", " ", residue)
++    residue = _PAGE_LOOKUP_FILLER.sub(_strip_filler_keep_acronyms, residue)
++    # Any remaining alphanumeric / CJK token is a topic → not a pure page lookup.
++    return not re.findall(r"[0-9A-Za-zÀ-￿]+", residue)
++
++
+ def _matches_any(text: str, patterns: tuple[str, ...]) -> bool:
+     return any(re.search(pattern, text, flags=re.IGNORECASE) for pattern in patterns)
+ 
+@@ -209,9 +256,13 @@ class QueryRouter:
+ 
+         page_ref = _detect_page_ref(normalized)
+         has_page_lookup = page_ref is not None and not has_summary and not has_exhaustive
++        # A "pure" page lookup is just a page reference with no semantic topic
++        # ("what is on page N"). Page+topic ("requirements on page 12") is NOT pure —
++        # it must keep its semantic-retrieval fallback on a page-chunk miss.
++        pure_page = has_page_lookup and _is_pure_page_query(normalized, page_ref)
+ 
+-        # Pure page lookup: short-circuit only when no table/comparison intent is present.
+-        if has_page_lookup and not has_table and not has_compare:
++        # Short-circuit only for a PURE page lookup with no table/comparison intent.
++        if pure_page and not has_table and not has_compare:
+             return QueryRoute(
+                 primary_intent=QueryIntent.PAGE_LOOKUP,
+                 intents=(QueryIntent.PAGE_LOOKUP,),
+@@ -273,6 +324,10 @@ class QueryRouter:
+             coverage = "section"
+             confidence = max(confidence, 0.9)
+             reason = "specific page reference" if reason == "default local question" else reason
++            # Page+topic (not pure) must carry LOCAL_QA so the chat layer knows it has a
++            # semantic target and keeps the fallback when the exact page chunk is missing.
++            if not pure_page and QueryIntent.LOCAL_QA not in intents:
++                intents.append(QueryIntent.LOCAL_QA)
+ 
+         if not intents:
+             intents.append(QueryIntent.LOCAL_QA)

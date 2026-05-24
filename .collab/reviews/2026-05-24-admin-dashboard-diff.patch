@@ -1,0 +1,3635 @@
+diff --git a/backend/app/api/admin.py b/backend/app/api/admin.py
+index 3bb393a..11c8f24 100644
+--- a/backend/app/api/admin.py
++++ b/backend/app/api/admin.py
+@@ -3,12 +3,14 @@
+ from __future__ import annotations
+ 
+ import asyncio
+-from datetime import datetime, timedelta, timezone
++import re
++from collections import Counter, defaultdict
++from datetime import date, datetime, timedelta, timezone
+ from typing import Any
+ 
+ import stripe
+ from fastapi import APIRouter, Depends, Query
+-from sqlalchemy import case, func, select, text, union_all
++from sqlalchemy import String, case, cast, func, or_, select, text, union_all
+ from sqlalchemy.ext.asyncio import AsyncSession
+ 
+ from app.core.cache import cache_get, cache_set
+@@ -19,6 +21,7 @@ from app.models.tables import (
+     CreditLedger,
+     Document,
+     Message,
++    PlanTransition,
+     ProductEvent,
+     UsageRecord,
+     User,
+@@ -26,8 +29,10 @@ from app.models.tables import (
+ )
+ from app.schemas.admin import (
+     AdminBreakdownsResponse,
++    AdminChurnResponse,
+     AdminOverviewResponse,
+     AdminRecentUsersResponse,
++    AdminRetentionResponse,
+     AdminTopUsersResponse,
+     AdminTrendsResponse,
+     AdminUserActivityResponse,
+@@ -96,6 +101,48 @@ PAID_SOURCE_LABELS = {
+     "pricing_hero": "Pricing page hero",
+ }
+ 
++INTERNAL_OWNER_USER_IDS = {"c142f3af-6e6b-488d-ba57-d91aa3e57cc7"}
++RETENTION_WEEKS = 12
++RETENTION_OFFSETS = 12
++RETENTION_DAYS = (1, 7, 30)
++RETENTION_LOOKBACK_DAYS = 395
++CHURN_LOOKBACK_DAYS = 395
++CHURN_SIGNAL_KEYS = (
++    "asst_zero",
++    "rag_miss",
++    "parse_failure",
++    "large_doc",
++    "export_refusal",
++    "paywall_hit",
++)
++CHURN_SIGNAL_LABELS = {
++    "asst_zero": "Assistant zero-response session",
++    "rag_miss": "Retrieval or coverage miss",
++    "parse_failure": "Parse/OCR failure",
++    "large_doc": "Large document uploaded",
++    "export_refusal": "Export requested without artifact",
++    "paywall_hit": "Paywall or plan limit hit",
++}
++REASON_BUCKET_LABELS = {
++    "coverage_fail": "Coverage failed",
++    "page_fail": "Page lookup failed",
++    "export": "Export blocked",
++    "parse": "Parse failure",
++    "capability_refusal": "Capability refusal",
++    "one_off_success": "One-off success",
++}
++EXPORT_REQUEST_RE = re.compile(r"\b(export|download|csv|excel|xlsx)\b|导出|下载|表格文件", re.IGNORECASE)
++PAGE_REQUEST_RE = re.compile(r"\b(page|p\.\s*\d+|page\s+\d+)\b|第\s*\d+\s*页|页面", re.IGNORECASE)
++RAG_MISS_RE = re.compile(
++    r"can't find|cannot find|could not find|not found|no relevant|not in (?:the )?document|"
++    r"无法找到|找不到|未找到|找不到相关|見つ|찾을 수|no encontr|nicht gefunden|introuv",
++    re.IGNORECASE,
++)
++CAPABILITY_REFUSAL_RE = re.compile(
++    r"\b(can't|cannot|unable to|not able to|not supported|do not support)\b|无法|不能|不支持",
++    re.IGNORECASE,
++)
++
+ 
+ def _humanize_code(value: str | None) -> str | None:
+     if not value:
+@@ -168,6 +215,500 @@ def _date_label(value: Any) -> str:
+     return str(value)[:10]
+ 
+ 
++def _row_value(row: Any, key: str, default: Any = None) -> Any:
++    if isinstance(row, dict):
++        return row.get(key, default)
++    return getattr(row, key, default)
++
++
++def _as_date(value: Any) -> date:
++    if isinstance(value, datetime):
++        return value.date()
++    if hasattr(value, "year") and hasattr(value, "month") and hasattr(value, "day"):
++        return value
++    return datetime.fromisoformat(str(value)[:10]).date()
++
++
++def _week_start(value: Any) -> date:
++    day = _as_date(value)
++    return day - timedelta(days=day.weekday())
++
++
++def _admin_excluded_emails(admin_emails: set[str] | None = None) -> set[str]:
++    if admin_emails is not None:
++        return {email.strip().lower() for email in admin_emails if email and email.strip()}
++    return {email.strip().lower() for email in settings.ADMIN_EMAILS.split(",") if email.strip()}
++
++
++def _default_excluded_user_ids(excluded_user_ids: set[str] | None = None) -> set[str]:
++    if excluded_user_ids is not None:
++        return {str(user_id) for user_id in excluded_user_ids if user_id}
++    return set(INTERNAL_OWNER_USER_IDS)
++
++
++def _eligible_user_conditions() -> list[Any]:
++    conditions: list[Any] = []
++    excluded_emails = _admin_excluded_emails()
++    if excluded_emails:
++        conditions.append(~func.lower(User.email).in_(excluded_emails))
++    if INTERNAL_OWNER_USER_IDS:
++        conditions.append(~cast(User.id, String).in_(INTERNAL_OWNER_USER_IDS))
++    return conditions
++
++
++def _is_excluded_user(row: Any, excluded_user_ids: set[str], admin_emails: set[str]) -> bool:
++    user_id = _row_value(row, "id", _row_value(row, "user_id"))
++    email = _row_value(row, "email")
++    return str(user_id) in excluded_user_ids or (isinstance(email, str) and email.lower() in admin_emails)
++
++
++def _eligible_user_map(
++    users: list[Any],
++    excluded_user_ids: set[str] | None = None,
++    admin_emails: set[str] | None = None,
++) -> dict[str, Any]:
++    excluded_ids = _default_excluded_user_ids(excluded_user_ids)
++    excluded_emails = _admin_excluded_emails(admin_emails)
++    return {
++        str(_row_value(user, "id")): user
++        for user in users
++        if _row_value(user, "id") is not None
++        and not _is_excluded_user(user, excluded_ids, excluded_emails)
++    }
++
++
++def _doc_size_bucket(page_count: Any) -> str:
++    if page_count is None:
++        return "unknown"
++    pages = int(page_count or 0)
++    if pages >= 150:
++        return "large"
++    if pages >= 40:
++        return "mid"
++    return "small"
++
++
++def _doc_size_label(bucket: str) -> str:
++    return {
++        "small": "Small (<40p)",
++        "mid": "Mid (40-150p)",
++        "large": "Large (>=150p)",
++        "unknown": "Unknown",
++    }.get(bucket, _humanize_code(bucket) or bucket)
++
++
++def _segment_payload(
++    values_by_user: dict[str, str],
++    active_users: set[str],
++    retained_users: set[str],
++    *,
++    labeler: Any = _humanize_code,
++    limit: int | None = None,
++    order: list[str] | None = None,
++) -> list[dict[str, Any]]:
++    buckets: dict[str, set[str]] = defaultdict(set)
++    for user_id in active_users:
++        buckets[values_by_user.get(user_id, "unknown") or "unknown"].add(user_id)
++    keys = list(buckets)
++    if order:
++        order_map = {key: index for index, key in enumerate(order)}
++        keys.sort(key=lambda key: (order_map.get(key, len(order_map)), key))
++    else:
++        keys.sort(key=lambda key: (-len(buckets[key]), key))
++    if limit is not None:
++        keys = keys[:limit]
++    return [
++        {
++            "key": key,
++            "label": labeler(key) or key,
++            "users": len(buckets[key]),
++            "retained_users": len(buckets[key] & retained_users),
++            "pct": _rate(len(buckets[key] & retained_users), len(buckets[key])),
++        }
++        for key in keys
++    ]
++
++
++def _activity_dates_by_user(activity_days: list[Any], eligible_users: set[str]) -> dict[str, set[date]]:
++    active: dict[str, set[date]] = defaultdict(set)
++    for row in activity_days:
++        user_id = str(_row_value(row, "user_id"))
++        if user_id in eligible_users:
++            active[user_id].add(_as_date(_row_value(row, "activity_date")))
++    return active
++
++
++def _build_retention_payload(
++    *,
++    now: datetime,
++    users: list[Any],
++    activity_days: list[Any],
++    document_segments: list[Any],
++    locale_segments: list[Any],
++    excluded_user_ids: set[str] | None = None,
++    admin_emails: set[str] | None = None,
++) -> dict[str, Any]:
++    eligible_users = _eligible_user_map(users, excluded_user_ids, admin_emails)
++    eligible_user_ids = set(eligible_users)
++    active_dates_by_user = _activity_dates_by_user(activity_days, eligible_user_ids)
++    activated_user_ids = {user_id for user_id, dates in active_dates_by_user.items() if dates}
++    retained_user_ids = {user_id for user_id, dates in active_dates_by_user.items() if len(dates) >= 2}
++
++    current_week = _week_start(now)
++    cohort_weeks = [
++        current_week - timedelta(weeks=RETENTION_WEEKS - 1 - index)
++        for index in range(RETENTION_WEEKS)
++    ]
++    cohort_users: dict[date, set[str]] = {week: set() for week in cohort_weeks}
++    for user_id, user in eligible_users.items():
++        cohort_week = _week_start(_row_value(user, "created_at"))
++        if cohort_week in cohort_users:
++            cohort_users[cohort_week].add(user_id)
++
++    active_weeks_by_user = {
++        user_id: {_week_start(active_date) for active_date in active_dates}
++        for user_id, active_dates in active_dates_by_user.items()
++    }
++    cohort_grid = []
++    for cohort_week in cohort_weeks:
++        users_in_cohort = cohort_users[cohort_week]
++        retention = []
++        for week_offset in range(RETENTION_OFFSETS):
++            target_week = cohort_week + timedelta(weeks=week_offset)
++            active_users = {
++                user_id
++                for user_id in users_in_cohort
++                if target_week in active_weeks_by_user.get(user_id, set())
++            }
++            retention.append({
++                "week_offset": week_offset,
++                "active_users": len(active_users),
++                "pct": _rate(len(active_users), len(users_in_cohort)),
++            })
++        cohort_grid.append({
++            "cohort_week": cohort_week.isoformat(),
++            "cohort_size": len(users_in_cohort),
++            "retention": retention,
++        })
++
++    curves = []
++    for days in RETENTION_DAYS:
++        returned_users = 0
++        for active_dates in active_dates_by_user.values():
++            if not active_dates:
++                continue
++            first_active = min(active_dates)
++            if any(first_active < active_date <= first_active + timedelta(days=days) for active_date in active_dates):
++                returned_users += 1
++        curves.append({
++            "key": f"d{days}",
++            "label": f"D{days}",
++            "days": days,
++            "activated_users": len(activated_user_ids),
++            "returned_users": returned_users,
++            "pct": _rate(returned_users, len(activated_user_ids)),
++        })
++
++    today = now.date()
++    dau_series = []
++    for offset in range(29, -1, -1):
++        day = today - timedelta(days=offset)
++        dau = sum(1 for dates in active_dates_by_user.values() if day in dates)
++        dau_series.append({"date": day.isoformat(), "dau": dau})
++    wau_start = today - timedelta(days=6)
++    mau_start = today - timedelta(days=29)
++    wau_users = {
++        user_id
++        for user_id, dates in active_dates_by_user.items()
++        if any(wau_start <= active_date <= today for active_date in dates)
++    }
++    mau_users = {
++        user_id
++        for user_id, dates in active_dates_by_user.items()
++        if any(mau_start <= active_date <= today for active_date in dates)
++    }
++    dau_wau_mau = {
++        "series": dau_series,
++        "wau": len(wau_users),
++        "mau": len(mau_users),
++        "stickiness": _rate(dau_series[-1]["dau"] if dau_series else 0, len(mau_users)),
++    }
++
++    plan_by_user = {
++        user_id: str(_row_value(user, "plan") or "free")
++        for user_id, user in eligible_users.items()
++    }
++    doc_by_user = {
++        str(_row_value(row, "user_id")): _doc_size_bucket(_row_value(row, "max_page_count"))
++        for row in document_segments
++        if str(_row_value(row, "user_id")) in eligible_user_ids
++    }
++    locale_by_user = {
++        str(_row_value(row, "user_id")): str(_row_value(row, "locale") or "unknown")
++        for row in locale_segments
++        if str(_row_value(row, "user_id")) in eligible_user_ids
++    }
++    by_segment = {
++        "plan": _segment_payload(
++            plan_by_user,
++            activated_user_ids,
++            retained_user_ids,
++            labeler=lambda key: key.upper() if key in {"pro"} else key.capitalize(),
++            order=["free", "plus", "pro", "unknown"],
++        ),
++        "doc_size": _segment_payload(
++            doc_by_user,
++            activated_user_ids,
++            retained_user_ids,
++            labeler=_doc_size_label,
++            order=["small", "mid", "large", "unknown"],
++        ),
++        "locale": _segment_payload(locale_by_user, activated_user_ids, retained_user_ids, limit=6),
++    }
++
++    first_active_week = {
++        user_id: _week_start(min(active_dates))
++        for user_id, active_dates in active_dates_by_user.items()
++        if active_dates
++    }
++    activity_by_week: dict[date, set[str]] = {week: set() for week in cohort_weeks}
++    for user_id, active_weeks in active_weeks_by_user.items():
++        for active_week in active_weeks:
++            if active_week in activity_by_week:
++                activity_by_week[active_week].add(user_id)
++    weekly_flow = []
++    for week in cohort_weeks:
++        active_this_week = activity_by_week.get(week, set())
++        active_previous_week = activity_by_week.get(week - timedelta(weeks=1), set())
++        new_users = {user_id for user_id in active_this_week if first_active_week.get(user_id) == week}
++        retained = {
++            user_id
++            for user_id in active_this_week & active_previous_week
++            if first_active_week.get(user_id) != week
++        }
++        resurrected = {
++            user_id
++            for user_id in active_this_week - active_previous_week - new_users
++            if first_active_week.get(user_id) != week
++        }
++        weekly_flow.append({
++            "week": week.isoformat(),
++            "new": len(new_users),
++            "retained": len(retained),
++            "resurrected": len(resurrected),
++            "churned": len(active_previous_week - active_this_week),
++        })
++
++    return {
++        "generated_at": now.isoformat(),
++        "cohort_grid": cohort_grid,
++        "curves": curves,
++        "dau_wau_mau": dau_wau_mau,
++        "by_segment": by_segment,
++        "weekly_flow": weekly_flow,
++    }
++
++
++def _normalized_action_label(key: str) -> str:
++    labels = {
++        "asst_zero": "Assistant zero-response",
++        "rag_miss": "RAG miss",
++        "normal_answer": "Normal answer",
++        "normal-answer": "Normal answer",
++        "paywall": "Paywall or plan limit",
++        "upload": "Upload",
++        "user_message": "User message",
++        "unknown": "Unknown",
++    }
++    return labels.get(key, _humanize_code(key) or key)
++
++
++def _coerce_user_set(values: Any, eligible_user_ids: set[str]) -> set[str]:
++    if values is None:
++        return set()
++    return {str(value) for value in values if str(value) in eligible_user_ids}
++
++
++def _serialize_feedback(row: Any) -> dict[str, Any]:
++    created_at = _row_value(row, "created_at")
++    message = _row_value(row, "message")
++    return {
++        "id": str(_row_value(row, "id")),
++        "type": str(_row_value(row, "type") or "unknown"),
++        "area": str(_row_value(row, "area") or "unknown"),
++        "severity": str(_row_value(row, "severity") or "unknown"),
++        "message": str(message) if message else None,
++        "plan": _row_value(row, "plan"),
++        "created_at": created_at.isoformat() if hasattr(created_at, "isoformat") else None,
++    }
++
++
++def _group_count(rows: list[Any], key: str) -> list[dict[str, Any]]:
++    counts = Counter(str(_row_value(row, key) or "unknown") for row in rows)
++    return [
++        {"key": value, "count": count}
++        for value, count in sorted(counts.items(), key=lambda item: (-item[1], item[0]))
++    ]
++
++
++def _serialize_cancel_reason(row: Any) -> dict[str, Any]:
++    created_at = _row_value(row, "created_at")
++    metadata = _row_value(row, "metadata_json") or {}
++    reason = _row_value(row, "reason")
++    feedback = _row_value(row, "feedback")
++    if not reason and isinstance(metadata, dict):
++        reason = metadata.get("cancel_reason") or metadata.get("reason")
++    if not feedback and isinstance(metadata, dict):
++        feedback = metadata.get("cancel_feedback") or metadata.get("feedback")
++    return {
++        "id": str(_row_value(row, "id")),
++        "user_id": str(_row_value(row, "user_id")),
++        "from_plan": str(_row_value(row, "from_plan") or ""),
++        "to_plan": str(_row_value(row, "to_plan") or ""),
++        "reason": str(reason) if reason else None,
++        "feedback": str(feedback) if feedback else None,
++        "created_at": created_at.isoformat() if hasattr(created_at, "isoformat") else None,
++    }
++
++
++def _build_churn_payload(
++    *,
++    now: datetime,
++    users: list[Any],
++    activity_days: list[Any],
++    signal_users: dict[str, set[str]],
++    last_actions: list[Any],
++    feedback_rows: list[Any],
++    cancel_rows: list[Any],
++    inactive_days: int = 14,
++    excluded_user_ids: set[str] | None = None,
++    admin_emails: set[str] | None = None,
++) -> dict[str, Any]:
++    eligible_users = _eligible_user_map(users, excluded_user_ids, admin_emails)
++    eligible_user_ids = set(eligible_users)
++    active_dates_by_user = _activity_dates_by_user(activity_days, eligible_user_ids)
++    activated_user_ids = {user_id for user_id, dates in active_dates_by_user.items() if dates}
++    inactive_cutoff = (now - timedelta(days=inactive_days)).date()
++    churned_user_ids = {
++        user_id
++        for user_id, dates in active_dates_by_user.items()
++        if dates and max(dates) < inactive_cutoff
++    }
++    one_and_done_user_ids = {
++        user_id for user_id, dates in active_dates_by_user.items() if len(dates) == 1
++    }
++
++    one_and_done = {
++        "activated_users": len(activated_user_ids),
++        "count": len(one_and_done_user_ids),
++        "pct": _rate(len(one_and_done_user_ids), len(activated_user_ids)),
++    }
++    normalized_signals = {
++        key: _coerce_user_set(value, eligible_user_ids)
++        for key, value in signal_users.items()
++    }
++    churn_signals = []
++    for key in CHURN_SIGNAL_KEYS:
++        users_with_signal = normalized_signals.get(key, set()) & churned_user_ids
++        churn_signals.append({
++            "key": key,
++            "label": CHURN_SIGNAL_LABELS[key],
++            "count": len(users_with_signal),
++            "pct": _rate(len(users_with_signal), len(churned_user_ids)),
++        })
++
++    last_action_counts: Counter[str] = Counter()
++    for row in last_actions:
++        user_id = str(_row_value(row, "user_id"))
++        if user_id not in churned_user_ids:
++            continue
++        category = str(_row_value(row, "category") or "unknown").replace("-", "_")
++        last_action_counts[category] += 1
++    last_action = [
++        {
++            "key": key,
++            "label": _normalized_action_label(key),
++            "count": count,
++            "pct": _rate(count, len(churned_user_ids)),
++        }
++        for key, count in sorted(last_action_counts.items(), key=lambda item: (-item[1], item[0]))
++    ]
++
++    eligible_feedback = [
++        row for row in feedback_rows
++        if str(_row_value(row, "user_id")) in eligible_user_ids
++    ]
++    eligible_feedback.sort(
++        key=lambda row: _row_value(row, "created_at") or datetime.min.replace(tzinfo=timezone.utc),
++        reverse=True,
++    )
++    feedback = {
++        "recent": [_serialize_feedback(row) for row in eligible_feedback[:20]],
++        "by_area": _group_count(eligible_feedback, "area"),
++        "by_severity": _group_count(eligible_feedback, "severity"),
++    }
++
++    eligible_cancel_rows = [
++        row for row in cancel_rows
++        if str(_row_value(row, "user_id")) in eligible_user_ids
++    ]
++    eligible_cancel_rows.sort(
++        key=lambda row: _row_value(row, "created_at") or datetime.min.replace(tzinfo=timezone.utc),
++        reverse=True,
++    )
++
++    bucket_counts: Counter[str] = Counter()
++    for user_id in churned_user_ids:
++        if user_id in normalized_signals.get("parse_failure", set()):
++            bucket_counts["parse"] += 1
++        elif user_id in normalized_signals.get("export_refusal", set()):
++            bucket_counts["export"] += 1
++        elif user_id in normalized_signals.get("page_fail", set()):
++            bucket_counts["page_fail"] += 1
++        elif user_id in normalized_signals.get("rag_miss", set()):
++            bucket_counts["coverage_fail"] += 1
++        elif user_id in normalized_signals.get("capability_refusal", set()):
++            bucket_counts["capability_refusal"] += 1
++        elif user_id in one_and_done_user_ids:
++            bucket_counts["one_off_success"] += 1
++
++    reason_buckets = [
++        {
++            "key": key,
++            "label": label,
++            "count": bucket_counts.get(key, 0),
++            "pct": _rate(bucket_counts.get(key, 0), len(churned_user_ids)),
++        }
++        for key, label in REASON_BUCKET_LABELS.items()
++    ]
++
++    return {
++        "generated_at": now.isoformat(),
++        "inactive_days": inactive_days,
++        "churned_users": len(churned_user_ids),
++        "one_and_done": one_and_done,
++        "churn_signals": churn_signals,
++        "last_action": last_action,
++        "feedback": feedback,
++        "cancel_reasons": [_serialize_cancel_reason(row) for row in eligible_cancel_rows[:20]],
++        "reason_buckets": reason_buckets,
++    }
++
++
++def _citations_empty(citations: Any) -> bool:
++    return citations in (None, {}, [], "{}", "[]", "null")
++
++
++def _message_has_artifact(metadata: Any) -> bool:
++    if not isinstance(metadata, dict):
++        return False
++    artifact_count = metadata.get("artifact_count")
++    if isinstance(artifact_count, int) and artifact_count > 0:
++        return True
++    artifacts = metadata.get("artifacts")
++    return isinstance(artifacts, list) and len(artifacts) > 0
++
++
+ def _activity_subquery(start: datetime, end: datetime | None = None):
+     usage_q = (
+         select(UsageRecord.user_id.label("user_id"), UsageRecord.created_at.label("created_at"))
+@@ -1000,6 +1541,355 @@ async def admin_user_activity(
+     }
+ 
+ 
++@router.get("/retention", response_model=AdminRetentionResponse)
++async def admin_retention(
++    _admin: User = Depends(require_admin),
++    db: AsyncSession = Depends(get_db_session),
++):
++    """Retention analytics centered on user-role chat message activity."""
++    now = datetime.now(timezone.utc)
++    current_week = _week_start(now)
++    cohort_cutoff = datetime.combine(
++        current_week - timedelta(weeks=RETENTION_WEEKS - 1),
++        datetime.min.time(),
++        tzinfo=timezone.utc,
++    )
++    activity_cutoff = now - timedelta(days=RETENTION_LOOKBACK_DAYS)
++
++    activity_user_ids = (
++        select(ChatSession.user_id.label("user_id"))
++        .select_from(Message)
++        .join(ChatSession, Message.session_id == ChatSession.id)
++        .where(Message.role == "user")
++        .where(Message.created_at >= activity_cutoff)
++        .where(ChatSession.user_id.is_not(None))
++        .subquery()
++    )
++    user_rows = (
++        await db.execute(
++            select(User.id, User.email, User.created_at, User.plan)
++            .where(or_(User.created_at >= cohort_cutoff, User.id.in_(select(activity_user_ids.c.user_id))))
++            .where(*_eligible_user_conditions())
++        )
++    ).all()
++
++    activity_day = func.date_trunc("day", Message.created_at).label("activity_date")
++    activity_rows = (
++        await db.execute(
++            select(ChatSession.user_id.label("user_id"), activity_day)
++            .select_from(Message)
++            .join(ChatSession, Message.session_id == ChatSession.id)
++            .join(User, User.id == ChatSession.user_id)
++            .where(Message.role == "user")
++            .where(Message.created_at >= activity_cutoff)
++            .where(ChatSession.user_id.is_not(None))
++            .where(*_eligible_user_conditions())
++            .group_by(ChatSession.user_id, activity_day)
++        )
++    ).all()
++
++    document_rows = (
++        await db.execute(
++            select(
++                Document.user_id.label("user_id"),
++                func.max(Document.page_count).label("max_page_count"),
++            )
++            .select_from(Document)
++            .join(User, User.id == Document.user_id)
++            .where(Document.created_at >= activity_cutoff)
++            .where(Document.user_id.is_not(None))
++            .where(Document.demo_slug.is_(None))
++            .where(*_eligible_user_conditions())
++            .group_by(Document.user_id)
++        )
++    ).all()
++
++    locale_rows = (
++        await db.execute(
++            select(UserFeedback.user_id.label("user_id"), func.max(UserFeedback.locale).label("locale"))
++            .select_from(UserFeedback)
++            .join(User, User.id == UserFeedback.user_id)
++            .where(UserFeedback.created_at >= activity_cutoff)
++            .where(UserFeedback.user_id.is_not(None))
++            .where(UserFeedback.locale.is_not(None))
++            .where(*_eligible_user_conditions())
++            .group_by(UserFeedback.user_id)
++        )
++    ).all()
++
++    return _build_retention_payload(
++        now=now,
++        users=list(user_rows),
++        activity_days=list(activity_rows),
++        document_segments=list(document_rows),
++        locale_segments=list(locale_rows),
++    )
++
++
++@router.get("/churn", response_model=AdminChurnResponse)
++async def admin_churn(
++    _admin: User = Depends(require_admin),
++    db: AsyncSession = Depends(get_db_session),
++    inactive_days: int = Query(14, ge=1, le=90),
++):
++    """Churn diagnostics for activated users without recent user-message activity."""
++    now = datetime.now(timezone.utc)
++    activity_cutoff = now - timedelta(days=CHURN_LOOKBACK_DAYS)
++
++    activity_user_ids = (
++        select(ChatSession.user_id.label("user_id"))
++        .select_from(Message)
++        .join(ChatSession, Message.session_id == ChatSession.id)
++        .where(Message.role == "user")
++        .where(Message.created_at >= activity_cutoff)
++        .where(ChatSession.user_id.is_not(None))
++        .subquery()
++    )
++    user_rows = (
++        await db.execute(
++            select(User.id, User.email, User.created_at, User.plan)
++            .where(User.id.in_(select(activity_user_ids.c.user_id)))
++            .where(*_eligible_user_conditions())
++        )
++    ).all()
++
++    activity_day = func.date_trunc("day", Message.created_at).label("activity_date")
++    activity_rows = (
++        await db.execute(
++            select(ChatSession.user_id.label("user_id"), activity_day)
++            .select_from(Message)
++            .join(ChatSession, Message.session_id == ChatSession.id)
++            .join(User, User.id == ChatSession.user_id)
++            .where(Message.role == "user")
++            .where(Message.created_at >= activity_cutoff)
++            .where(ChatSession.user_id.is_not(None))
++            .where(*_eligible_user_conditions())
++            .group_by(ChatSession.user_id, activity_day)
++        )
++    ).all()
++
++    session_rows = (
++        await db.execute(
++            select(
++                ChatSession.id.label("session_id"),
++                ChatSession.user_id.label("user_id"),
++                func.coalesce(func.sum(case((Message.role == "user", 1), else_=0)), 0).label("user_messages"),
++                func.coalesce(func.sum(case((Message.role == "assistant", 1), else_=0)), 0).label("assistant_messages"),
++            )
++            .select_from(ChatSession)
++            .join(Message, Message.session_id == ChatSession.id)
++            .join(User, User.id == ChatSession.user_id)
++            .where(Message.created_at >= activity_cutoff)
++            .where(ChatSession.user_id.is_not(None))
++            .where(*_eligible_user_conditions())
++            .group_by(ChatSession.id, ChatSession.user_id)
++        )
++    ).all()
++    asst_zero_session_ids = {
++        str(row.session_id)
++        for row in session_rows
++        if int(row.user_messages or 0) > 0 and int(row.assistant_messages or 0) == 0
++    }
++    signal_users: dict[str, set[str]] = {
++        "asst_zero": {
++            str(row.user_id)
++            for row in session_rows
++            if int(row.user_messages or 0) > 0 and int(row.assistant_messages or 0) == 0
++        },
++        "rag_miss": set(),
++        "parse_failure": set(),
++        "large_doc": set(),
++        "export_refusal": set(),
++        "paywall_hit": set(),
++        "page_fail": set(),
++        "capability_refusal": set(),
++    }
++
++    message_rows = (
++        await db.execute(
++            select(
++                ChatSession.user_id.label("user_id"),
++                Message.session_id.label("session_id"),
++                Message.role.label("role"),
++                Message.content.label("content"),
++                Message.citations.label("citations"),
++                Message.metadata_json.label("metadata_json"),
++                Message.created_at.label("created_at"),
++            )
++            .select_from(Message)
++            .join(ChatSession, Message.session_id == ChatSession.id)
++            .join(User, User.id == ChatSession.user_id)
++            .where(Message.created_at >= activity_cutoff)
++            .where(ChatSession.user_id.is_not(None))
++            .where(*_eligible_user_conditions())
++        )
++    ).all()
++
++    export_request_users: set[str] = set()
++    export_artifact_users: set[str] = set()
++    page_request_users: set[str] = set()
++    final_candidates: dict[str, tuple[datetime, str]] = {}
++    for row in message_rows:
++        user_id = str(row.user_id)
++        created_at = row.created_at
++        category = "user_message"
++        if row.role == "user":
++            content = row.content or ""
++            if EXPORT_REQUEST_RE.search(content):
++                export_request_users.add(user_id)
++            if PAGE_REQUEST_RE.search(content):
++                page_request_users.add(user_id)
++            if str(row.session_id) in asst_zero_session_ids:
++                category = "asst_zero"
++        elif row.role == "assistant":
++            content = row.content or ""
++            if _message_has_artifact(row.metadata_json):
++                export_artifact_users.add(user_id)
++            if _citations_empty(row.citations) or RAG_MISS_RE.search(content):
++                signal_users["rag_miss"].add(user_id)
++                category = "rag_miss"
++            elif CAPABILITY_REFUSAL_RE.search(content):
++                signal_users["capability_refusal"].add(user_id)
++                category = "capability_refusal"
++            else:
++                category = "normal_answer"
++        current = final_candidates.get(user_id)
++        if created_at and (current is None or created_at > current[0]):
++            final_candidates[user_id] = (created_at, category)
++
++    signal_users["export_refusal"] = export_request_users - export_artifact_users
++    signal_users["page_fail"] = page_request_users & signal_users["rag_miss"]
++
++    document_flag_rows = (
++        await db.execute(
++            select(
++                Document.user_id.label("user_id"),
++                func.max(Document.page_count).label("max_page_count"),
++                func.coalesce(
++                    func.sum(case((Document.status.in_(("error", "ocr")), 1), else_=0)),
++                    0,
++                ).label("parse_failures"),
++            )
++            .select_from(Document)
++            .join(User, User.id == Document.user_id)
++            .where(Document.created_at >= activity_cutoff)
++            .where(Document.user_id.is_not(None))
++            .where(Document.demo_slug.is_(None))
++            .where(*_eligible_user_conditions())
++            .group_by(Document.user_id)
++        )
++    ).all()
++    for row in document_flag_rows:
++        user_id = str(row.user_id)
++        if int(row.parse_failures or 0) > 0:
++            signal_users["parse_failure"].add(user_id)
++        if int(row.max_page_count or 0) >= 150:
++            signal_users["large_doc"].add(user_id)
++
++    product_rows = (
++        await db.execute(
++            select(
++                ProductEvent.user_id.label("user_id"),
++                ProductEvent.event_name.label("event_name"),
++                ProductEvent.created_at.label("created_at"),
++            )
++            .select_from(ProductEvent)
++            .join(User, User.id == ProductEvent.user_id)
++            .where(ProductEvent.created_at >= activity_cutoff)
++            .where(ProductEvent.user_id.is_not(None))
++            .where(*_eligible_user_conditions())
++        )
++    ).all()
++    for row in product_rows:
++        user_id = str(row.user_id)
++        if row.event_name in {"paywall_opened", "limit_hit"}:
++            signal_users["paywall_hit"].add(user_id)
++            category = "paywall"
++        else:
++            category = str(row.event_name or "product_event")
++        current = final_candidates.get(user_id)
++        if row.created_at and (current is None or row.created_at > current[0]):
++            final_candidates[user_id] = (row.created_at, category)
++
++    upload_rows = (
++        await db.execute(
++            select(Document.user_id.label("user_id"), Document.created_at.label("created_at"))
++            .select_from(Document)
++            .join(User, User.id == Document.user_id)
++            .where(Document.created_at >= activity_cutoff)
++            .where(Document.user_id.is_not(None))
++            .where(Document.demo_slug.is_(None))
++            .where(*_eligible_user_conditions())
++        )
++    ).all()
++    for row in upload_rows:
++        current = final_candidates.get(str(row.user_id))
++        if row.created_at and (current is None or row.created_at > current[0]):
++            final_candidates[str(row.user_id)] = (row.created_at, "upload")
++
++    feedback_rows = (
++        await db.execute(
++            select(
++                UserFeedback.id,
++                UserFeedback.user_id,
++                UserFeedback.type,
++                UserFeedback.area,
++                UserFeedback.severity,
++                UserFeedback.message,
++                UserFeedback.plan,
++                UserFeedback.created_at,
++            )
++            .select_from(UserFeedback)
++            .join(User, User.id == UserFeedback.user_id)
++            .where(UserFeedback.created_at >= activity_cutoff)
++            .where(UserFeedback.user_id.is_not(None))
++            .where(*_eligible_user_conditions())
++            .order_by(UserFeedback.created_at.desc())
++            .limit(50)
++        )
++    ).all()
++
++    cancel_rows = (
++        await db.execute(
++            select(
++                PlanTransition.id,
++                PlanTransition.user_id,
++                PlanTransition.from_plan,
++                PlanTransition.to_plan,
++                PlanTransition.metadata_json,
++                PlanTransition.created_at,
++            )
++            .select_from(PlanTransition)
++            .join(User, User.id == PlanTransition.user_id)
++            .where(PlanTransition.created_at >= activity_cutoff)
++            .where(
++                or_(
++                    PlanTransition.to_plan == "free",
++                    (PlanTransition.from_plan == "pro") & (PlanTransition.to_plan == "plus"),
++                )
++            )
++            .where(*_eligible_user_conditions())
++            .order_by(PlanTransition.created_at.desc())
++            .limit(50)
++        )
++    ).all()
++
++    last_actions = [
++        {"user_id": user_id, "category": category}
++        for user_id, (_created_at, category) in final_candidates.items()
++    ]
++    return _build_churn_payload(
++        now=now,
++        users=list(user_rows),
++        activity_days=list(activity_rows),
++        signal_users=signal_users,
++        last_actions=last_actions,
++        feedback_rows=list(feedback_rows),
++        cancel_rows=list(cancel_rows),
++        inactive_days=inactive_days,
++    )
++
++
+ @router.get("/billing-health")
+ async def admin_billing_health(
+     remote: bool = Query(False),
+diff --git a/backend/app/schemas/admin.py b/backend/app/schemas/admin.py
+index 10d693d..d8ec77e 100644
+--- a/backend/app/schemas/admin.py
++++ b/backend/app/schemas/admin.py
+@@ -218,3 +218,129 @@ class AdminUserActivityResponse(BaseModel):
+     retention_explanation: str | None = None
+     segments: AdminUserActivitySegments
+     feedback: AdminFeedbackSummary
++
++
++class AdminRetentionCell(BaseModel):
++    week_offset: int
++    active_users: int
++    pct: float
++
++
++class AdminRetentionCohort(BaseModel):
++    cohort_week: str
++    cohort_size: int
++    retention: list[AdminRetentionCell]
++
++
++class AdminRetentionCurvePoint(BaseModel):
++    key: str
++    label: str
++    days: int
++    activated_users: int
++    returned_users: int
++    pct: float
++
++
++class AdminRetentionDauPoint(BaseModel):
++    date: str
++    dau: int
++
++
++class AdminRetentionDauWauMau(BaseModel):
++    series: list[AdminRetentionDauPoint]
++    wau: int
++    mau: int
++    stickiness: float
++
++
++class AdminRetentionSegmentItem(BaseModel):
++    key: str
++    label: str
++    users: int
++    retained_users: int
++    pct: float
++
++
++class AdminRetentionSegments(BaseModel):
++    plan: list[AdminRetentionSegmentItem]
++    doc_size: list[AdminRetentionSegmentItem]
++    locale: list[AdminRetentionSegmentItem]
++
++
++class AdminRetentionWeeklyFlowItem(BaseModel):
++    week: str
++    new: int
++    retained: int
++    resurrected: int
++    churned: int
++
++
++class AdminRetentionResponse(BaseModel):
++    generated_at: str
++    cohort_grid: list[AdminRetentionCohort]
++    curves: list[AdminRetentionCurvePoint]
++    dau_wau_mau: AdminRetentionDauWauMau
++    by_segment: AdminRetentionSegments
++    weekly_flow: list[AdminRetentionWeeklyFlowItem]
++
++
++class AdminChurnCountPct(BaseModel):
++    count: int
++    pct: float
++
++
++class AdminChurnOneAndDone(AdminChurnCountPct):
++    activated_users: int
++
++
++class AdminChurnSignalItem(AdminChurnCountPct):
++    key: str
++    label: str
++
++
++class AdminChurnLastActionItem(AdminChurnCountPct):
++    key: str
++    label: str
++
++
++class AdminChurnFeedbackItem(BaseModel):
++    id: str
++    type: str
++    area: str
++    severity: str
++    message: str | None = None
++    plan: str | None = None
++    created_at: str | None = None
++
++
++class AdminChurnGroupCount(BaseModel):
++    key: str
++    count: int
++
++
++class AdminChurnFeedbackSummary(BaseModel):
++    recent: list[AdminChurnFeedbackItem]
++    by_area: list[AdminChurnGroupCount]
++    by_severity: list[AdminChurnGroupCount]
++
++
++class AdminChurnCancelReasonItem(BaseModel):
++    id: str
++    user_id: str
++    from_plan: str
++    to_plan: str
++    reason: str | None = None
++    feedback: str | None = None
++    created_at: str | None = None
++
++
++class AdminChurnResponse(BaseModel):
++    generated_at: str
++    inactive_days: int
++    churned_users: int
++    one_and_done: AdminChurnOneAndDone
++    churn_signals: list[AdminChurnSignalItem]
++    last_action: list[AdminChurnLastActionItem]
++    feedback: AdminChurnFeedbackSummary
++    cancel_reasons: list[AdminChurnCancelReasonItem]
++    reason_buckets: list[AdminChurnSignalItem]
+diff --git a/frontend/src/app/admin/AdminPageClient.tsx b/frontend/src/app/admin/AdminPageClient.tsx
+index 15aa3e1..ed5b1f3 100644
+--- a/frontend/src/app/admin/AdminPageClient.tsx
++++ b/frontend/src/app/admin/AdminPageClient.tsx
+@@ -1,10 +1,12 @@
+ "use client";
+ 
+-import { useEffect, useState, useCallback } from "react";
++import { useCallback, useEffect, useRef, useState } from "react";
+ import { useSession } from "next-auth/react";
+ import { useRouter } from "next/navigation";
+-import dynamic from "next/dynamic";
++import { RefreshCw } from "lucide-react";
+ import Header from "../../components/Header";
++import { usePageTitle } from "../../lib/usePageTitle";
++import { useLocale } from "../../i18n";
+ import {
+   getAdminOverview,
+   getAdminTrends,
+@@ -15,452 +17,58 @@ import {
+   getAdminUserActivity,
+   getAdminRecentUsers,
+   getAdminTopUsers,
++  getAdminRetention,
++  getAdminChurn,
+   type AdminBillingHealth,
+   type AdminFunnel,
+   type AdminRagQuality,
+   type AdminUserActivity,
++  type AdminRetention,
++  type AdminChurn,
+ } from "../../lib/api";
+-import {
+-  Users,
+-  FileText,
+-  MessageSquare,
+-  Zap,
+-  CreditCard,
+-  Gift,
+-  Crown,
+-  Star,
+-  AlertTriangle,
+-  ShieldCheck,
+-  RefreshCw,
+-} from "lucide-react";
+-import { usePageTitle } from "../../lib/usePageTitle";
+-import { formatNumber, formatPercent } from "../../lib/formatNumber";
+-import { useLocale } from "../../i18n";
+-
+-// Types
+-interface Overview {
+-  total_users: number;
+-  paid_users: number;
+-  plus_users: number;
+-  pro_users: number;
+-  total_documents: number;
+-  total_sessions: number;
+-  total_messages: number;
+-  total_tokens: number;
+-  total_credits_spent: number;
+-  total_credits_granted: number;
+-}
+-
+-interface TrendPoint {
+-  date: string;
+-  count?: number;
+-  total_tokens?: number;
+-  amount?: number;
+-}
+-
+-interface Trends {
+-  signups: TrendPoint[];
+-  documents: TrendPoint[];
+-  tokens: TrendPoint[];
+-  credits_spent: TrendPoint[];
+-  active_users: TrendPoint[];
+-}
+-
+-interface Breakdowns {
+-  plan_distribution: { plan: string; count: number }[];
+-  model_usage: { model: string; calls: number; tokens: number; credits: number }[];
+-  file_types: { file_type: string; count: number }[];
+-  doc_status: { status: string; count: number }[];
+-}
+-
+-interface RecentUser {
+-  id: string;
+-  email: string;
+-  name: string | null;
+-  plan: string;
+-  credits_balance: number;
+-  created_at: string | null;
+-  doc_count: number;
+-  message_count: number;
+-}
+-
+-interface TopUser {
+-  id: string;
+-  email: string;
+-  name: string | null;
+-  plan: string;
+-  total_tokens: number;
+-  total_credits: number;
+-  doc_count: number;
+-}
+-
+-const AdminCharts = dynamic<{
+-  trends: Trends;
+-  breakdowns: Breakdowns;
+-  trendDays: number;
+-  onTrendDaysChange: (days: number) => void;
+-}>(() => import("../../components/AdminCharts"), { ssr: false });
+-
+-const AdminUserActivityCharts = dynamic<{
+-  activity: AdminUserActivity;
+-}>(() => import("../../components/AdminUserActivityCharts"), { ssr: false });
+-
+-function KPICard({
+-  icon: Icon,
+-  label,
+-  value,
+-}: {
+-  icon: React.ElementType;
+-  label: string;
+-  value: number;
+-}) {
+-  return (
+-    <div className="dt-kpi-card rounded-2xl p-5 flex items-start gap-4">
+-      <div className="p-2.5 rounded-xl bg-accent-light">
+-        <Icon aria-hidden="true" className="w-5 h-5 text-zinc-600 dark:text-zinc-400" />
+-      </div>
+-      <div>
+-        <p className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100">
+-          {formatNumber(value)}
+-        </p>
+-        <p className="text-sm text-zinc-500 dark:text-zinc-400">{label}</p>
+-      </div>
+-    </div>
+-  );
+-}
+-
+-function PlanBadge({ plan }: { plan: string }) {
+-  const colors: Record<string, string> = {
+-    free: "bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400",
+-    plus: "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400",
+-    pro: "bg-accent-light text-accent",
+-  };
+-  return (
+-    <span
+-      className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${colors[plan] || colors.free}`}
+-    >
+-      {plan.charAt(0).toUpperCase() + plan.slice(1)}
+-    </span>
+-  );
+-}
+-
+-function StatusPill({ ok, label }: { ok: boolean; label: string }) {
+-  return (
+-    <span className={`inline-flex items-center rounded px-2 py-0.5 text-xs font-medium ${
+-      ok
+-        ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300"
+-        : "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300"
+-    }`}>
+-      {label}
+-    </span>
+-  );
+-}
+-
+-function BillingHealthPanel({
+-  health,
+-  loadingRemote,
+-  onRemoteCheck,
+-}: {
+-  health: AdminBillingHealth | null;
+-  loadingRemote: boolean;
+-  onRemoteCheck: () => void;
+-}) {
+-  const { tOr } = useLocale();
+-  if (!health) return null;
+-  const liveReady = health.stripe_secret_mode === "live"
+-    && health.stripe_webhook_configured
+-    && health.all_subscription_prices_configured
+-    && !health.has_mode_mismatch;
+-
+-  return (
+-    <section className="dt-admin-panel mb-8 overflow-hidden border">
+-      <div className="flex flex-col gap-3 border-b border-zinc-200 px-4 py-3 dark:border-zinc-700 sm:flex-row sm:items-center sm:justify-between">
+-        <div className="flex items-center gap-2">
+-          {liveReady ? (
+-            <ShieldCheck aria-hidden="true" className="h-4 w-4 text-emerald-600 dark:text-emerald-300" />
+-          ) : (
+-            <AlertTriangle aria-hidden="true" className="h-4 w-4 text-amber-600 dark:text-amber-300" />
+-          )}
+-          <h2 className="text-sm font-medium text-zinc-900 dark:text-zinc-100">{tOr('admin.billingHealth.title', 'Billing Health')}</h2>
+-        </div>
+-        <button
+-          type="button"
+-          onClick={onRemoteCheck}
+-          disabled={loadingRemote}
+-          className="inline-flex items-center justify-center gap-2 rounded border border-zinc-300 px-3 py-1.5 text-xs font-medium text-zinc-700 transition-colors hover:bg-zinc-50 disabled:opacity-50 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800"
+-        >
+-          <RefreshCw aria-hidden="true" className={`h-3.5 w-3.5 ${loadingRemote ? "animate-spin" : ""}`} />
+-          {tOr('admin.billingHealth.verifyStripe', 'Verify Stripe')}
+-        </button>
+-      </div>
+-      <div className="grid gap-4 p-4 lg:grid-cols-[0.8fr_1.2fr]">
+-        <div className="grid grid-cols-2 gap-3 text-sm">
+-          <div>
+-            <p className="text-xs text-zinc-500 dark:text-zinc-400">{tOr('admin.billingHealth.secretMode', 'Secret Mode')}</p>
+-            <StatusPill ok={health.stripe_secret_mode === "live"} label={health.stripe_secret_mode.toUpperCase()} />
+-          </div>
+-          <div>
+-            <p className="text-xs text-zinc-500 dark:text-zinc-400">{tOr('admin.billingHealth.webhook', 'Webhook')}</p>
+-            <StatusPill ok={health.stripe_webhook_configured} label={health.stripe_webhook_configured ? tOr('admin.billingHealth.configured', 'Configured') : tOr('admin.billingHealth.missing', 'Missing')} />
+-          </div>
+-          <div>
+-            <p className="text-xs text-zinc-500 dark:text-zinc-400">{tOr('admin.billingHealth.subscriptionPrices', 'Subscription Prices')}</p>
+-            <StatusPill ok={health.all_subscription_prices_configured} label={health.all_subscription_prices_configured ? tOr('admin.billingHealth.configured', 'Configured') : tOr('admin.billingHealth.missing', 'Missing')} />
+-          </div>
+-          <div>
+-            <p className="text-xs text-zinc-500 dark:text-zinc-400">{tOr('admin.billingHealth.modeMatch', 'Mode Match')}</p>
+-            <StatusPill ok={!health.has_mode_mismatch} label={health.has_mode_mismatch ? tOr('admin.billingHealth.mismatch', 'Mismatch') : tOr('admin.billingHealth.ok', 'OK')} />
+-          </div>
+-        </div>
+-        <div className="overflow-x-auto">
+-          <table className="w-full text-xs">
+-            <thead>
+-              <tr className="border-b border-zinc-100 text-left text-zinc-500 dark:border-zinc-800 dark:text-zinc-400">
+-                <th scope="col" className="py-1.5 pr-3 font-medium">{tOr('admin.billingHealth.colPrice', 'Price')}</th>
+-                <th scope="col" className="px-3 py-1.5 font-medium">{tOr('admin.billingHealth.colConfigured', 'Configured')}</th>
+-                <th scope="col" className="px-3 py-1.5 font-medium">{tOr('admin.billingHealth.colMode', 'Mode')}</th>
+-                <th scope="col" className="px-3 py-1.5 font-medium">{tOr('admin.billingHealth.colActive', 'Active')}</th>
+-                <th scope="col" className="py-1.5 pl-3 font-medium">{tOr('admin.billingHealth.colInterval', 'Interval')}</th>
+-              </tr>
+-            </thead>
+-            <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800">
+-              {health.prices.map((price) => (
+-                <tr key={price.label}>
+-                  <th
+-                    scope="row"
+-                    className="py-1.5 pr-3 text-zinc-700 dark:text-zinc-300"
+-                    style={{ textAlign: "left", fontWeight: 500 }}
+-                  >
+-                    {price.label}
+-                  </th>
+-                  <td className="px-3 py-1.5 text-zinc-600 dark:text-zinc-400">{price.configured ? price.id_hint || tOr('admin.billingHealth.yes', 'yes') : tOr('admin.billingHealth.missingLower', 'missing')}</td>
+-                  <td className="px-3 py-1.5 text-zinc-600 dark:text-zinc-400">{price.livemode == null ? "-" : price.livemode ? tOr('admin.billingHealth.live', 'live') : tOr('admin.billingHealth.test', 'test')}</td>
+-                  <td className="px-3 py-1.5 text-zinc-600 dark:text-zinc-400">{price.active == null ? "-" : price.active ? tOr('admin.billingHealth.yes', 'yes') : tOr('admin.billingHealth.no', 'no')}</td>
+-                  <td className="py-1.5 pl-3 text-zinc-600 dark:text-zinc-400">{price.interval || price.currency || "-"}</td>
+-                </tr>
+-              ))}
+-            </tbody>
+-          </table>
+-        </div>
+-      </div>
+-    </section>
+-  );
+-}
+-
+-function FunnelPanel({ funnel }: { funnel: AdminFunnel | null }) {
+-  const { tOr } = useLocale();
+-  if (!funnel) return null;
+-  const signupUsers = funnel.stages[0]?.users || 0;
+-  const hasPaidIntentEvents = funnel.stages
+-    .filter((stage) => [
+-      "upgrade_nudge_shown",
+-      "paywall_opened",
+-      "limit_hit",
+-      "billing_view",
+-      "upgrade_click",
+-      "checkout_created",
+-      "checkout_completed",
+-      "subscription_cancel_requested",
+-      "refund_requested",
+-    ].includes(stage.key))
+-    .some((stage) => stage.users > 0);
+-  return (
+-    <section className="dt-admin-panel mb-8 overflow-hidden border">
+-      <div className="border-b border-zinc-200 px-4 py-3 dark:border-zinc-700">
+-        <h2 className="text-sm font-medium text-zinc-900 dark:text-zinc-100">{tOr('admin.funnel.title', 'Monetization Funnel')}</h2>
+-        <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
+-          {tOr('admin.funnel.subtitle', 'Last {days} days, signup cohort conversion by unique users. Upgrade reminders are separated from blocking paywalls.', { days: funnel.days })}
+-          {!funnel.event_tracking_started_at && ` ${tOr('admin.funnel.noEvents', 'Paid-intent event tracking has no recorded events yet.')}`}
+-        </p>
+-        {funnel.event_tracking_started_at && !hasPaidIntentEvents && (
+-          <p className="mt-1 text-xs text-amber-700 dark:text-amber-300">
+-            {tOr('admin.funnel.eventsCountedSince', 'Paid-intent events are counted only since {date}; earlier pricing and billing activity is not backfilled.', { date: new Date(funnel.event_tracking_started_at).toLocaleDateString() })}
+-          </p>
+-        )}
+-      </div>
+-      <div className="grid gap-3 p-4 sm:grid-cols-2 lg:grid-cols-5">
+-        {funnel.stages.map((stage, index) => {
+-          const rate = index > 0 && signupUsers > 0 ? Math.round((stage.users / signupUsers) * 100) : null;
+-          return (
+-            <div key={stage.key} className="rounded border border-zinc-100 p-3 dark:border-zinc-800">
+-              <p className="text-xs text-zinc-500 dark:text-zinc-400">{stage.label}</p>
+-              <p className="mt-1 text-xl font-semibold tabular-nums text-zinc-900 dark:text-zinc-100">{formatNumber(stage.users)}</p>
+-              {rate != null && (
+-                <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">{tOr('admin.funnel.pctOfSignups', '{rate}% of signups', { rate })}</p>
+-              )}
+-            </div>
+-          );
+-        })}
+-      </div>
+-      {funnel.reasons.length > 0 && (
+-        <div className="border-t border-zinc-100 p-4 dark:border-zinc-800">
+-          <h3 className="mb-2 text-xs font-medium uppercase tracking-wide text-zinc-500 dark:text-zinc-400">{tOr('admin.funnel.topBillingReasons', 'Top Billing Reasons')}</h3>
+-          <div className="overflow-x-auto">
+-            <table className="w-full text-xs">
+-              <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800">
+-                {funnel.reasons.slice(0, 8).map((row, index) => (
+-                  <tr key={`${row.event_name}-${row.reason}-${row.source}-${index}`}>
+-                    <td className="py-2 pr-3">
+-                      <p className="font-medium text-zinc-800 dark:text-zinc-100">{row.label || tOr('admin.funnel.paidSignal', 'Paid signal')}</p>
+-                      <p className="mt-0.5 max-w-xl text-zinc-500 dark:text-zinc-400">{row.description || tOr('admin.funnel.noContext', 'No context recorded.')}</p>
+-                    </td>
+-                    <td className="py-2 pl-3 text-right tabular-nums text-zinc-700 dark:text-zinc-300">
+-                      {tOr('admin.funnel.usersEvents', '{users} users / {events} events', { users: row.users, events: row.events })}
+-                    </td>
+-                  </tr>
+-                ))}
+-              </tbody>
+-            </table>
+-          </div>
+-        </div>
+-      )}
+-    </section>
+-  );
+-}
+-
+-function RagQualityPanel({ quality }: { quality: AdminRagQuality | null }) {
+-  const { tOr } = useLocale();
+-  if (!quality) return null;
+-  const healthy = quality.evaluated_answers === 0 || (quality.fail_rate < 0.05 && quality.warn_rate < 0.1);
+-  const issueRows = quality.issue_breakdown.filter((item) => (item.count || 0) > 0).slice(0, 4);
+-  const strategyRows = quality.strategy_breakdown.slice(0, 4);
+-  const sampleSuffix = quality.is_sampled
+-    ? tOr('admin.rag.sampleSuffix', ' · latest {n} sample', { n: formatNumber(quality.sample_limit) })
+-    : "";
+-  return (
+-    <section className="dt-admin-panel mb-8 overflow-hidden border">
+-      <div className="flex flex-col gap-2 border-b border-zinc-200 px-4 py-3 dark:border-zinc-700 sm:flex-row sm:items-center sm:justify-between">
+-        <div className="flex items-center gap-2">
+-          {healthy ? (
+-            <ShieldCheck aria-hidden="true" className="h-4 w-4 text-emerald-600 dark:text-emerald-300" />
+-          ) : (
+-            <AlertTriangle aria-hidden="true" className="h-4 w-4 text-amber-600 dark:text-amber-300" />
+-          )}
+-          <div>
+-            <h2 className="text-sm font-medium text-zinc-900 dark:text-zinc-100">{tOr('admin.rag.title', 'Answer Citation Quality')}</h2>
+-            <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">{quality.health_explanation}</p>
+-          </div>
+-        </div>
+-        <p className="text-xs text-zinc-500 dark:text-zinc-400">
+-          {tOr('admin.rag.healthSummary', '{label} · Last {days} days', { label: quality.health_label, days: quality.days })}{sampleSuffix}
+-        </p>
+-      </div>
+-      <div className="grid gap-3 p-4 sm:grid-cols-2 lg:grid-cols-6">
+-        <div className="rounded border border-zinc-100 p-3 dark:border-zinc-800">
+-          <p className="text-xs text-zinc-500 dark:text-zinc-400">{tOr('admin.rag.kpi.answersChecked', 'Answers checked')}</p>
+-          <p className="mt-1 text-xl font-semibold tabular-nums text-zinc-900 dark:text-zinc-100">{formatNumber(quality.evaluated_answers)}</p>
+-        </div>
+-        <div className="rounded border border-zinc-100 p-3 dark:border-zinc-800">
+-          <p className="text-xs text-zinc-500 dark:text-zinc-400">{tOr('admin.rag.kpi.groundingScore', 'Grounding score')}</p>
+-          <p className="mt-1 text-xl font-semibold tabular-nums text-zinc-900 dark:text-zinc-100">{formatPercent(quality.average_score)}</p>
+-        </div>
+-        <div className="rounded border border-zinc-100 p-3 dark:border-zinc-800">
+-          <p className="text-xs text-zinc-500 dark:text-zinc-400">{tOr('admin.rag.kpi.groundedReviewFailed', 'Grounded / review / failed')}</p>
+-          <p className="mt-1 text-xl font-semibold tabular-nums text-zinc-900 dark:text-zinc-100">
+-            {formatPercent(quality.pass_rate)} / {formatPercent(quality.warn_rate)} / {formatPercent(quality.fail_rate)}
+-          </p>
+-        </div>
+-        <div className="rounded border border-zinc-100 p-3 dark:border-zinc-800">
+-          <p className="text-xs text-zinc-500 dark:text-zinc-400">{tOr('admin.rag.kpi.statementsMissingCitations', 'Statements missing citations')}</p>
+-          <p className="mt-1 text-xl font-semibold tabular-nums text-zinc-900 dark:text-zinc-100">{formatNumber(quality.uncited_claims)}</p>
+-        </div>
+-        <div className="rounded border border-zinc-100 p-3 dark:border-zinc-800">
+-          <p className="text-xs text-zinc-500 dark:text-zinc-400">{tOr('admin.rag.kpi.weakSourceMatches', 'Weak source matches')}</p>
+-          <p className="mt-1 text-xl font-semibold tabular-nums text-zinc-900 dark:text-zinc-100">{formatNumber(quality.low_overlap_citations)}</p>
+-        </div>
+-        <div className="rounded border border-zinc-100 p-3 dark:border-zinc-800">
+-          <p className="text-xs text-zinc-500 dark:text-zinc-400">{tOr('admin.rag.kpi.numberMismatches', 'Number mismatches')}</p>
+-          <p className="mt-1 text-xl font-semibold tabular-nums text-zinc-900 dark:text-zinc-100">{formatNumber(quality.numeric_mismatch_citations)}</p>
+-        </div>
+-      </div>
+-      {(issueRows.length > 0 || strategyRows.length > 0) && (
+-        <div className="grid gap-4 border-t border-zinc-100 p-4 dark:border-zinc-800 lg:grid-cols-2">
+-          <div>
+-            <h3 className="mb-3 text-xs font-medium uppercase tracking-wide text-zinc-500 dark:text-zinc-400">{tOr('admin.rag.whatNeedsFixing', 'What needs fixing')}</h3>
+-            <div className="space-y-3">
+-              {issueRows.length === 0 && (
+-                <p className="rounded-md border border-zinc-100 p-3 text-xs text-zinc-500 dark:border-zinc-800 dark:text-zinc-400">
+-                  {tOr('admin.rag.noIssues', 'No citation issues in this window.')}
+-                </p>
+-              )}
+-              {issueRows.map((item) => (
+-                <div key={item.key} className="rounded-md border border-zinc-100 p-3 dark:border-zinc-800">
+-                  <div className="flex items-start justify-between gap-3">
+-                    <div>
+-                      <p className="text-sm font-medium text-zinc-800 dark:text-zinc-100">{item.label}</p>
+-                      <p className="mt-1 text-xs leading-5 text-zinc-500 dark:text-zinc-400">{item.description}</p>
+-                    </div>
+-                    <div className="text-right text-xs tabular-nums text-zinc-700 dark:text-zinc-300">
+-                      <p className="font-semibold">{formatNumber(item.count || 0)}</p>
+-                      <p className="mt-0.5 text-zinc-400">{tOr('admin.rag.answersSuffix', '{n} answers', { n: formatNumber(item.affected_answers || 0) })}</p>
+-                    </div>
+-                  </div>
+-                </div>
+-              ))}
+-            </div>
+-          </div>
+-          <div>
+-            <h3 className="mb-3 text-xs font-medium uppercase tracking-wide text-zinc-500 dark:text-zinc-400">{tOr('admin.rag.whereItHappens', 'Where it happens')}</h3>
+-            <div className="space-y-3">
+-              {strategyRows.length === 0 && (
+-                <p className="rounded-md border border-zinc-100 p-3 text-xs text-zinc-500 dark:border-zinc-800 dark:text-zinc-400">
+-                  {tOr('admin.rag.noStrategies', 'No retrieval paths recorded yet.')}
+-                </p>
+-              )}
+-              {strategyRows.map((item) => (
+-                <div key={item.key} className="rounded-md border border-zinc-100 p-3 dark:border-zinc-800">
+-                  <div className="flex items-start justify-between gap-3">
+-                    <div>
+-                      <p className="text-sm font-medium text-zinc-800 dark:text-zinc-100">{item.label}</p>
+-                      <p className="mt-1 text-xs leading-5 text-zinc-500 dark:text-zinc-400">{item.description}</p>
+-                    </div>
+-                    <div className="text-right text-xs tabular-nums text-zinc-700 dark:text-zinc-300">
+-                      <p className="font-semibold">{formatPercent(item.needs_review_rate)}</p>
+-                      <p className="mt-0.5 text-zinc-400">{tOr('admin.rag.needReview', '{n}/{total} need review', { n: item.needs_review, total: item.answers })}</p>
+-                    </div>
+-                  </div>
+-                </div>
+-              ))}
+-            </div>
+-          </div>
+-        </div>
+-      )}
+-      {quality.recent.length > 0 && (
+-        <div className="border-t border-zinc-100 p-4 dark:border-zinc-800">
+-          <h3 className="mb-2 text-xs font-medium uppercase tracking-wide text-zinc-500 dark:text-zinc-400">{tOr('admin.rag.recentChecked', 'Recent checked answers')}</h3>
+-          <div className="overflow-x-auto">
+-            <table className="w-full text-xs">
+-              <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800">
+-                {quality.recent.slice(0, 8).map((row, index) => (
+-                  <tr key={`${row.created_at}-${index}`}>
+-                    <td className="py-2 pr-3 text-zinc-700 dark:text-zinc-300">{row.status_label}</td>
+-                    <td className="px-3 py-1.5 tabular-nums text-zinc-600 dark:text-zinc-400">{formatPercent(row.score)}</td>
+-                    <td className="px-3 py-2 text-zinc-600 dark:text-zinc-400">{row.route_label || tOr('admin.rag.unknownQuestionType', 'Unknown question type')}</td>
+-                    <td className="px-3 py-2 text-zinc-600 dark:text-zinc-400">{row.strategy_label || tOr('admin.rag.unknownStrategy', 'Unknown retrieval path')}</td>
+-                    <td className="py-2 pl-3 text-right text-zinc-700 dark:text-zinc-300">
+-                      <p>{row.main_issue?.label || tOr('admin.rag.noMajorIssue', 'No major issue')}</p>
+-                      <p className="mt-0.5 tabular-nums text-zinc-400">
+-                        {tOr('admin.rag.statementsCitations', '{claims} statements / {cites} citations', { claims: row.claim_count, cites: row.citation_count })}
+-                      </p>
+-                    </td>
+-                  </tr>
+-                ))}
+-              </tbody>
+-            </table>
+-          </div>
+-        </div>
+-      )}
+-    </section>
+-  );
++import type { Overview, Trends, Breakdowns } from "../../components/admin/types";
++import type { RecentUser, TopUser } from "../../components/admin/AdminPanels";
++import OverviewTab from "../../components/admin/OverviewTab";
++import ActivationTab from "../../components/admin/ActivationTab";
++import RetentionTab from "../../components/admin/RetentionTab";
++import ChurnTab from "../../components/admin/ChurnTab";
++import RevenueTab from "../../components/admin/RevenueTab";
++import ProductTab from "../../components/admin/ProductTab";
++
++type TabId = "overview" | "activation" | "retention" | "churn" | "revenue" | "product";
++
++const TABS: { id: TabId; key: string; fallback: string }[] = [
++  { id: "overview", key: "admin.tab.overview", fallback: "Overview" },
++  { id: "activation", key: "admin.tab.activation", fallback: "Activation" },
++  { id: "retention", key: "admin.tab.retention", fallback: "Retention" },
++  { id: "churn", key: "admin.tab.churn", fallback: "Why-not-retained" },
++  { id: "revenue", key: "admin.tab.revenue", fallback: "Revenue" },
++  { id: "product", key: "admin.tab.product", fallback: "Product" },
++];
++
++// Which backend datasets each tab needs (lazy-loaded on first open).
++const TAB_DEPS: Record<TabId, string[]> = {
++  overview: ["overview", "activity", "trends"],
++  activation: ["activity", "funnel"],
++  retention: ["retention"],
++  churn: ["churn"],
++  revenue: ["funnel", "billing"],
++  product: ["rag", "trends", "breakdowns", "recentUsers", "topUsers"],
++};
++// Datasets that depend on the selected period (refetched when trendDays changes).
++const PERIOD_DEPS = ["trends", "funnel", "rag", "activity"];
++
++function isTabId(v: string | null): v is TabId {
++  return !!v && TABS.some((t) => t.id === v);
+ }
+ 
+ export default function AdminPageClient() {
+   const { tOr } = useLocale();
+-  usePageTitle(tOr('admin.pageTitle', 'Admin'));
+-
++  usePageTitle(tOr("admin.pageTitle", "Admin"));
+   const { status } = useSession();
+   const router = useRouter();
+ 
++  const [activeTab, setActiveTab] = useState<TabId>("overview");
+   const [overview, setOverview] = useState<Overview | null>(null);
+   const [trends, setTrends] = useState<Trends | null>(null);
+   const [breakdowns, setBreakdowns] = useState<Breakdowns | null>(null);
+@@ -468,363 +76,187 @@ export default function AdminPageClient() {
+   const [funnel, setFunnel] = useState<AdminFunnel | null>(null);
+   const [ragQuality, setRagQuality] = useState<AdminRagQuality | null>(null);
+   const [userActivity, setUserActivity] = useState<AdminUserActivity | null>(null);
++  const [retention, setRetention] = useState<AdminRetention | null>(null);
++  const [churn, setChurn] = useState<AdminChurn | null>(null);
+   const [recentUsers, setRecentUsers] = useState<RecentUser[]>([]);
+   const [topUsers, setTopUsers] = useState<TopUser[]>([]);
+-  const [loading, setLoading] = useState(true);
+-  const [refreshing, setRefreshing] = useState(false);
+-  const [billingRemoteLoading, setBillingRemoteLoading] = useState(false);
+-  const [error, setError] = useState<string | null>(null);
++
+   const [trendDays, setTrendDays] = useState(30);
+-  const [refreshInterval, setRefreshInterval] = useState(60);
+-  const [lastRefreshedAt, setLastRefreshedAt] = useState<string | null>(null);
+   const [topBy, setTopBy] = useState<"tokens" | "credits" | "documents">("tokens");
++  const [tabLoading, setTabLoading] = useState(false);
++  const [billingRemoteLoading, setBillingRemoteLoading] = useState(false);
++  const [error, setError] = useState<string | null>(null);
++  const [reloadToken, setReloadToken] = useState(0);
++
++  const loadedRef = useRef<Set<string>>(new Set());
+ 
+   // Auth guard
+   useEffect(() => {
+-    if (status === "unauthenticated") {
+-      router.push("/auth?callbackUrl=/admin");
+-    }
++    if (status === "unauthenticated") router.push("/auth?callbackUrl=/admin");
+   }, [status, router]);
+ 
+-  // Fetch all data
+-  const fetchData = useCallback(async (silent = false) => {
+-    if (silent) {
+-      setRefreshing(true);
+-    } else {
+-      setLoading(true);
+-    }
+-    setError(null);
+-    try {
+-      const [ov, tr, br, ru, tu, bh, fn, rq, ua] = await Promise.all([
+-        getAdminOverview(),
+-        getAdminTrends("day", trendDays),
+-        getAdminBreakdowns(),
+-        getAdminRecentUsers(20),
+-        getAdminTopUsers(20, topBy),
+-        getAdminBillingHealth(false),
+-        getAdminFunnel(trendDays),
+-        getAdminRagQuality(trendDays),
+-        getAdminUserActivity(trendDays, "day"),
+-      ]);
+-      setOverview(ov as Overview);
+-      setTrends(tr as Trends);
+-      setBreakdowns(br as Breakdowns);
+-      setRecentUsers((ru as { users: RecentUser[] }).users);
+-      setTopUsers((tu as { users: TopUser[] }).users);
+-      setBillingHealth(bh);
+-      setFunnel(fn);
+-      setRagQuality(rq);
+-      setUserActivity(ua);
+-      setLastRefreshedAt(new Date().toISOString());
+-    } catch (e: any) {
+-      if (e?.message?.includes("403")) {
+-        router.push("/");
+-        return;
+-      }
+-      setError(e?.message || tOr('admin.errors.loadFailed', 'Failed to load admin data'));
+-    } finally {
+-      if (silent) {
+-        setRefreshing(false);
+-      } else {
+-        setLoading(false);
+-      }
+-    }
+-  }, [trendDays, topBy, router, tOr]);
+-
++  // Tab <-> URL hash sync (linkable tabs)
+   useEffect(() => {
+-    if (status === "authenticated") {
+-      void fetchData();
+-    }
+-  }, [status, fetchData]);
++    const fromHash = typeof window !== "undefined" ? window.location.hash.replace("#", "") : "";
++    if (isTabId(fromHash)) setActiveTab(fromHash);
++  }, []);
++
++  const selectTab = useCallback((id: TabId) => {
++    setActiveTab(id);
++    if (typeof window !== "undefined") window.history.replaceState(null, "", `#${id}`);
++  }, []);
++
++  const fetchers: Record<string, () => Promise<void>> = {
++    overview: async () => setOverview((await getAdminOverview()) as Overview),
++    activity: async () => setUserActivity(await getAdminUserActivity(trendDays, "day")),
++    trends: async () => setTrends((await getAdminTrends("day", trendDays)) as Trends),
++    funnel: async () => setFunnel(await getAdminFunnel(trendDays)),
++    billing: async () => setBillingHealth(await getAdminBillingHealth(false)),
++    rag: async () => setRagQuality(await getAdminRagQuality(trendDays)),
++    breakdowns: async () => setBreakdowns((await getAdminBreakdowns()) as Breakdowns),
++    recentUsers: async () =>
++      setRecentUsers(((await getAdminRecentUsers(20)) as { users: RecentUser[] }).users),
++    topUsers: async () =>
++      setTopUsers(((await getAdminTopUsers(20, topBy)) as { users: TopUser[] }).users),
++    retention: async () => setRetention(await getAdminRetention()),
++    churn: async () => setChurn(await getAdminChurn(14)),
++  };
+ 
++  // Lazy-load the active tab's datasets on open / reload.
+   useEffect(() => {
+-    if (status !== "authenticated" || refreshInterval <= 0) return;
+-    const timer = window.setInterval(() => {
+-      void fetchData(true);
+-    }, refreshInterval * 1000);
+-    return () => window.clearInterval(timer);
+-  }, [status, refreshInterval, fetchData]);
+-
+-  const verifyBillingRemote = useCallback(async () => {
++    let cancelled = false;
++    const need = TAB_DEPS[activeTab].filter((k) => !loadedRef.current.has(k));
++    if (need.length === 0) return;
++    (async () => {
++      setTabLoading(true);
++      setError(null);
++      try {
++        await Promise.all(
++          need.map(async (k) => {
++            await fetchers[k]();
++            loadedRef.current.add(k);
++          }),
++        );
++      } catch (e: unknown) {
++        const msg = e instanceof Error ? e.message : String(e);
++        if (!cancelled) setError(msg.includes("403") ? tOr("admin.error.forbidden", "Admin access required.") : tOr("admin.error.load", "Failed to load metrics."));
++      } finally {
++        if (!cancelled) setTabLoading(false);
++      }
++    })();
++    return () => {
++      cancelled = true;
++    };
++    // eslint-disable-next-line react-hooks/exhaustive-deps
++  }, [activeTab, reloadToken]);
++
++  const changeTrendDays = useCallback((days: number) => {
++    setTrendDays(days);
++    PERIOD_DEPS.forEach((k) => loadedRef.current.delete(k));
++    setReloadToken((t) => t + 1);
++  }, []);
++
++  const changeTopBy = useCallback((by: "tokens" | "credits" | "documents") => {
++    setTopBy(by);
++    loadedRef.current.delete("topUsers");
++    setReloadToken((t) => t + 1);
++  }, []);
++
++  const refresh = useCallback(() => {
++    loadedRef.current.clear();
++    setReloadToken((t) => t + 1);
++  }, []);
++
++  const onRemoteCheck = useCallback(async () => {
+     setBillingRemoteLoading(true);
+     try {
+-      const health = await getAdminBillingHealth(true);
+-      setBillingHealth(health);
+-    } catch (e: any) {
+-      setError(e?.message || tOr('admin.errors.verifyBillingFailed', 'Failed to verify billing health'));
++      setBillingHealth(await getAdminBillingHealth(true));
++    } catch {
++      /* surfaced via error banner on next load */
+     } finally {
+       setBillingRemoteLoading(false);
+     }
+-  }, [tOr]);
+-
+-  if (status === "loading" || (status === "authenticated" && loading && !overview)) {
+-    return (
+-      <div className="dt-stitch-theme dt-admin-workbench min-h-screen">
+-        <Header />
+-        <main className="max-w-7xl mx-auto p-6 sm:p-8">
+-          <h1 className="text-2xl font-semibold mb-6 dark:text-zinc-100">
+-            {tOr('admin.dashboardTitle', 'Admin Dashboard')}
+-          </h1>
+-          <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-8">
+-            {Array.from({ length: 6 }).map((_, i) => (
+-              <div
+-                key={i}
+-                className="border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 rounded-lg p-5 animate-pulse"
+-              >
+-                <div className="h-8 w-20 bg-zinc-200 dark:bg-zinc-700 rounded mb-2" />
+-                <div className="h-4 w-28 bg-zinc-100 dark:bg-zinc-800 rounded" />
+-              </div>
+-            ))}
+-          </div>
+-        </main>
+-      </div>
+-    );
+-  }
+-
+-  if (error) {
+-    return (
+-      <div className="dt-stitch-theme dt-admin-workbench min-h-screen">
+-        <Header />
+-        <main className="max-w-7xl mx-auto p-6 sm:p-8">
+-          <div className="p-4 rounded bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300 border border-red-200 dark:border-red-800">
+-            {error}
+-          </div>
+-        </main>
+-      </div>
+-    );
+-  }
++  }, []);
+ 
+   return (
+-    <div className="dt-stitch-theme dt-admin-workbench min-h-screen">
++    <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950">
+       <Header />
+-      <main className="max-w-7xl mx-auto p-6 sm:p-8">
+-        <div className="dt-glass-panel mb-6 flex flex-col gap-4 rounded-[1.75rem] p-5 sm:flex-row sm:items-center sm:justify-between">
+-          <div>
+-            <p className="mb-2 inline-flex rounded-full border border-white/14 bg-white/8 px-2.5 py-1 text-xs font-medium text-[var(--workbench-muted)]">
+-              {tOr('admin.workbenchEyebrow', 'Live business intelligence')}
+-            </p>
+-            <h1 className="text-3xl font-semibold tracking-normal text-[var(--workbench-ink)]">
+-              {tOr('admin.workbenchTitle', 'Admin Insight Workbench')}
+-            </h1>
+-            <p className="mt-1 text-xs text-[var(--workbench-muted)]">
+-              {lastRefreshedAt ? tOr('admin.lastRefreshed', 'Last refreshed {time}', { time: new Date(lastRefreshedAt).toLocaleTimeString() }) : tOr('admin.loadingLiveMetrics', 'Loading live metrics')}
+-            </p>
+-          </div>
+-          <div className="flex flex-wrap items-center gap-2">
+-            <select
+-              value={trendDays}
+-              onChange={(event) => setTrendDays(Number(event.target.value))}
+-              className="dt-workbench-button rounded-full px-3 py-2 text-sm"
+-              aria-label={tOr('admin.activityWindowAria', 'Activity window')}
+-            >
+-              <option value={7}>{tOr('admin.window.7d', '7 days')}</option>
+-              <option value={30}>{tOr('admin.window.30d', '30 days')}</option>
+-              <option value={90}>{tOr('admin.window.90d', '90 days')}</option>
+-              <option value={180}>{tOr('admin.window.180d', '180 days')}</option>
+-            </select>
+-            <select
+-              value={refreshInterval}
+-              onChange={(event) => setRefreshInterval(Number(event.target.value))}
+-              className="dt-workbench-button rounded-full px-3 py-2 text-sm"
+-              aria-label={tOr('admin.autoRefreshAria', 'Auto-refresh interval')}
+-            >
+-              <option value={0}>{tOr('admin.refresh.manual', 'Manual refresh')}</option>
+-              <option value={30}>{tOr('admin.refresh.30s', '30s refresh')}</option>
+-              <option value={60}>{tOr('admin.refresh.60s', '60s refresh')}</option>
+-              <option value={300}>{tOr('admin.refresh.5m', '5m refresh')}</option>
+-            </select>
+-            <button
+-              type="button"
+-              onClick={() => void fetchData(true)}
+-              disabled={refreshing || loading}
+-              className="dt-workbench-button inline-flex items-center gap-2 rounded-full px-3 py-2 text-sm font-medium disabled:opacity-50"
+-            >
+-              <RefreshCw aria-hidden="true" className={`h-4 w-4 ${refreshing || loading ? "animate-spin" : ""}`} />
+-              {tOr('admin.refreshButton', 'Refresh')}
+-            </button>
+-          </div>
++      <main className="mx-auto max-w-6xl px-4 py-6">
++        <div className="mb-4 flex items-center justify-between">
++          <h1 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">
++            {tOr("admin.title", "Analytics")}
++          </h1>
++          <button
++            onClick={refresh}
++            className="inline-flex items-center gap-1.5 rounded-md border border-zinc-200 bg-white px-2.5 py-1.5 text-xs font-medium text-zinc-700 hover:bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800"
++          >
++            <RefreshCw className={`h-3.5 w-3.5 ${tabLoading ? "animate-spin" : ""}`} />
++            {tOr("admin.refresh", "Refresh")}
++          </button>
+         </div>
+ 
+-        {/* KPI Cards */}
+-        {overview && (
+-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 mb-8">
+-            <KPICard icon={Users} label={tOr('admin.kpi.totalUsers', 'Total Users')} value={overview.total_users} />
+-            <KPICard icon={Crown} label={tOr('admin.kpi.paidUsers', 'Paid Users')} value={overview.paid_users} />
+-            <KPICard icon={Star} label={tOr('admin.kpi.plusUsers', 'Plus Users')} value={overview.plus_users} />
+-            <KPICard icon={Star} label={tOr('admin.kpi.proUsers', 'Pro Users')} value={overview.pro_users} />
+-            <KPICard icon={FileText} label={tOr('admin.kpi.documents', 'Documents')} value={overview.total_documents} />
+-            <KPICard icon={MessageSquare} label={tOr('admin.kpi.messages', 'Messages')} value={overview.total_messages} />
+-            <KPICard icon={Zap} label={tOr('admin.kpi.totalTokens', 'Total Tokens')} value={overview.total_tokens} />
+-            <KPICard icon={CreditCard} label={tOr('admin.kpi.creditsSpent', 'Credits Spent')} value={overview.total_credits_spent} />
+-            <KPICard icon={Gift} label={tOr('admin.kpi.creditsGranted', 'Credits Granted')} value={overview.total_credits_granted} />
++        {/* Sticky tab nav */}
++        <nav className="sticky top-0 z-10 -mx-4 mb-6 border-b border-zinc-200 bg-zinc-50/90 px-4 backdrop-blur dark:border-zinc-800 dark:bg-zinc-950/90">
++          <div className="flex gap-1 overflow-x-auto" role="tablist">
++            {TABS.map((t) => {
++              const active = t.id === activeTab;
++              return (
++                <button
++                  key={t.id}
++                  role="tab"
++                  aria-selected={active}
++                  onClick={() => selectTab(t.id)}
++                  className={`whitespace-nowrap border-b-2 px-3 py-2.5 text-sm font-medium transition-colors ${
++                    active
++                      ? "border-blue-700 text-blue-700 dark:border-blue-400 dark:text-blue-400"
++                      : "border-transparent text-zinc-500 hover:text-zinc-800 dark:text-zinc-400 dark:hover:text-zinc-200"
++                  }`}
++                >
++                  {tOr(t.key, t.fallback)}
++                </button>
++              );
++            })}
+           </div>
+-        )}
++        </nav>
+ 
+-        {userActivity && (
+-          <AdminUserActivityCharts activity={userActivity} />
++        {error && (
++          <div className="mb-4 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700 dark:border-red-900 dark:bg-red-950 dark:text-red-300">
++            {error}
++          </div>
+         )}
+-
+-        <BillingHealthPanel
+-          health={billingHealth}
+-          loadingRemote={billingRemoteLoading}
+-          onRemoteCheck={verifyBillingRemote}
+-        />
+-
+-        <FunnelPanel funnel={funnel} />
+-
+-        <RagQualityPanel quality={ragQuality} />
+-
+-        {trends && breakdowns && (
+-          <AdminCharts
+-            trends={trends}
+-            breakdowns={breakdowns}
+-            trendDays={trendDays}
+-            onTrendDaysChange={setTrendDays}
+-          />
++        {tabLoading && (
++          <div className="mb-4 text-sm text-zinc-500 dark:text-zinc-400">{tOr("admin.loading", "Loading…")}</div>
+         )}
+ 
+-        {/* Tables */}
+-        <section className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+-          {/* Recent Users */}
+-          <div className="dt-admin-panel overflow-hidden border">
+-            <div className="px-4 py-3 border-b border-zinc-200 dark:border-zinc-700">
+-              <h3 className="text-sm font-medium dark:text-zinc-100">
+-                {tOr('admin.recentUsers.title', 'Recent Users')}
+-              </h3>
+-            </div>
+-            <div className="overflow-x-auto">
+-              <table className="w-full text-sm">
+-                <thead className="bg-zinc-50 dark:bg-zinc-800/50">
+-                  <tr>
+-                    <th scope="col" className="text-left px-4 py-2 font-medium text-zinc-500 dark:text-zinc-400">
+-                      {tOr('admin.userCol.email', 'Email')}
+-                    </th>
+-                    <th scope="col" className="text-left px-4 py-2 font-medium text-zinc-500 dark:text-zinc-400">
+-                      {tOr('admin.userCol.plan', 'Plan')}
+-                    </th>
+-                    <th scope="col" className="text-right px-4 py-2 font-medium text-zinc-500 dark:text-zinc-400">
+-                      {tOr('admin.userCol.credits', 'Credits')}
+-                    </th>
+-                    <th scope="col" className="text-right px-4 py-2 font-medium text-zinc-500 dark:text-zinc-400">
+-                      {tOr('admin.userCol.docs', 'Docs')}
+-                    </th>
+-                    <th scope="col" className="text-left px-4 py-2 font-medium text-zinc-500 dark:text-zinc-400">
+-                      {tOr('admin.userCol.joined', 'Joined')}
+-                    </th>
+-                  </tr>
+-                </thead>
+-                <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800">
+-                  {recentUsers.map((u) => (
+-                    <tr key={u.id} className="hover:bg-zinc-50 dark:hover:bg-zinc-800/30">
+-                      <th
+-                        scope="row"
+-                        className="px-4 py-2 text-zinc-700 dark:text-zinc-300 truncate max-w-[200px]"
+-                        style={{ textAlign: "left", fontWeight: 500 }}
+-                      >
+-                        {u.email}
+-                      </th>
+-                      <td className="px-4 py-2">
+-                        <PlanBadge plan={u.plan} />
+-                      </td>
+-                      <td className="px-4 py-2 text-right text-zinc-600 dark:text-zinc-400 tabular-nums">
+-                        {formatNumber(u.credits_balance)}
+-                      </td>
+-                      <td className="px-4 py-2 text-right text-zinc-600 dark:text-zinc-400 tabular-nums">
+-                        {u.doc_count}
+-                      </td>
+-                      <td className="px-4 py-2 text-zinc-500 dark:text-zinc-400 whitespace-nowrap">
+-                        {u.created_at
+-                          ? new Date(u.created_at).toLocaleDateString()
+-                          : "-"}
+-                      </td>
+-                    </tr>
+-                  ))}
+-                  {recentUsers.length === 0 && (
+-                    <tr>
+-                      <td colSpan={5} className="px-4 py-8 text-center text-zinc-400">
+-                        {tOr('admin.recentUsers.empty', 'No users yet')}
+-                      </td>
+-                    </tr>
+-                  )}
+-                </tbody>
+-              </table>
+-            </div>
+-          </div>
+-
+-          {/* Top Users */}
+-          <div className="dt-admin-panel overflow-hidden border">
+-            <div className="px-4 py-3 border-b border-zinc-200 dark:border-zinc-700 flex items-center justify-between">
+-              <h3 className="text-sm font-medium dark:text-zinc-100">{tOr('admin.topUsers.title', 'Top Users')}</h3>
+-              <select
+-                value={topBy}
+-                onChange={(e) =>
+-                  setTopBy(e.target.value as "tokens" | "credits" | "documents")
+-                }
+-                className="text-xs border border-zinc-200 dark:border-zinc-700 rounded px-2 py-1 bg-transparent dark:text-zinc-300"
+-                aria-label={tOr('admin.topUsers.sortByAria', 'Sort by')}
+-              >
+-                <option value="tokens">{tOr('admin.topUsers.byTokens', 'By Tokens')}</option>
+-                <option value="credits">{tOr('admin.topUsers.byCredits', 'By Credits')}</option>
+-                <option value="documents">{tOr('admin.topUsers.byDocuments', 'By Documents')}</option>
+-              </select>
+-            </div>
+-            <div className="overflow-x-auto">
+-              <table className="w-full text-sm">
+-                <thead className="bg-zinc-50 dark:bg-zinc-800/50">
+-                  <tr>
+-                    <th scope="col" className="text-left px-4 py-2 font-medium text-zinc-500 dark:text-zinc-400">
+-                      {tOr('admin.userCol.email', 'Email')}
+-                    </th>
+-                    <th scope="col" className="text-left px-4 py-2 font-medium text-zinc-500 dark:text-zinc-400">
+-                      {tOr('admin.userCol.plan', 'Plan')}
+-                    </th>
+-                    <th scope="col" className="text-right px-4 py-2 font-medium text-zinc-500 dark:text-zinc-400">
+-                      {tOr('admin.userCol.tokens', 'Tokens')}
+-                    </th>
+-                    <th scope="col" className="text-right px-4 py-2 font-medium text-zinc-500 dark:text-zinc-400">
+-                      {tOr('admin.userCol.credits', 'Credits')}
+-                    </th>
+-                    <th scope="col" className="text-right px-4 py-2 font-medium text-zinc-500 dark:text-zinc-400">
+-                      {tOr('admin.userCol.docs', 'Docs')}
+-                    </th>
+-                  </tr>
+-                </thead>
+-                <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800">
+-                  {topUsers.map((u) => (
+-                    <tr key={u.id} className="hover:bg-zinc-50 dark:hover:bg-zinc-800/30">
+-                      <th
+-                        scope="row"
+-                        className="px-4 py-2 text-zinc-700 dark:text-zinc-300 truncate max-w-[200px]"
+-                        style={{ textAlign: "left", fontWeight: 500 }}
+-                      >
+-                        {u.email}
+-                      </th>
+-                      <td className="px-4 py-2">
+-                        <PlanBadge plan={u.plan} />
+-                      </td>
+-                      <td className="px-4 py-2 text-right text-zinc-600 dark:text-zinc-400 tabular-nums">
+-                        {formatNumber(u.total_tokens)}
+-                      </td>
+-                      <td className="px-4 py-2 text-right text-zinc-600 dark:text-zinc-400 tabular-nums">
+-                        {formatNumber(u.total_credits)}
+-                      </td>
+-                      <td className="px-4 py-2 text-right text-zinc-600 dark:text-zinc-400 tabular-nums">
+-                        {u.doc_count}
+-                      </td>
+-                    </tr>
+-                  ))}
+-                  {topUsers.length === 0 && (
+-                    <tr>
+-                      <td colSpan={5} className="px-4 py-8 text-center text-zinc-400">
+-                        {tOr('admin.topUsers.empty', 'No usage data yet')}
+-                      </td>
+-                    </tr>
+-                  )}
+-                </tbody>
+-              </table>
+-            </div>
+-          </div>
+-        </section>
++        <div role="tabpanel">
++          {activeTab === "overview" && (
++            <OverviewTab overview={overview} activity={userActivity} trends={trends} />
++          )}
++          {activeTab === "activation" && <ActivationTab activity={userActivity} funnel={funnel} />}
++          {activeTab === "retention" && <RetentionTab retention={retention} />}
++          {activeTab === "churn" && <ChurnTab churn={churn} />}
++          {activeTab === "revenue" && (
++            <RevenueTab
++              funnel={funnel}
++              billingHealth={billingHealth}
++              billingRemoteLoading={billingRemoteLoading}
++              onRemoteCheck={onRemoteCheck}
++            />
++          )}
++          {activeTab === "product" && (
++            <ProductTab
++              ragQuality={ragQuality}
++              trends={trends}
++              breakdowns={breakdowns}
++              trendDays={trendDays}
++              onTrendDaysChange={changeTrendDays}
++              recentUsers={recentUsers}
++              topUsers={topUsers}
++              topBy={topBy}
++              onTopByChange={changeTopBy}
++            />
++          )}
++        </div>
+       </main>
+     </div>
+   );
+diff --git a/frontend/src/components/admin/ActivationTab.tsx b/frontend/src/components/admin/ActivationTab.tsx
+new file mode 100644
+index 0000000..03a0c73
+--- /dev/null
++++ b/frontend/src/components/admin/ActivationTab.tsx
+@@ -0,0 +1,59 @@
++"use client";
++
++import type { AdminFunnel, AdminUserActivity } from "../../lib/api";
++import { formatNumber, formatPercent } from "../../lib/formatNumber";
++import { useLocale } from "../../i18n";
++import { FunnelPanel } from "./AdminPanels";
++
++export default function ActivationTab({
++  activity,
++  funnel,
++}: {
++  activity: AdminUserActivity | null;
++  funnel: AdminFunnel | null;
++}) {
++  const { tOr } = useLocale();
++  const stages = (activity?.funnel || []).slice(0, 5);
++  const signupUsers = stages[0]?.users || 0;
++
++  return (
++    <div className="space-y-6">
++      <section className="dt-admin-panel rounded-lg border p-4">
++        <h2 className="text-sm font-semibold text-zinc-950 dark:text-zinc-50">
++          {tOr("admin.activation.title", "Activation Funnel")}
++        </h2>
++        <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
++          {tOr("admin.activation.subtitle", "Signup to upload, first chat, and engaged usage.")}
++        </p>
++        <div className="mt-4 grid gap-3 lg:grid-cols-5">
++          {stages.map((stage, index) => {
++            const dropoff = index > 0 && stages[index - 1]?.users
++              ? 1 - stage.users / stages[index - 1].users
++              : null;
++            return (
++              <div key={stage.key} className="rounded-md border border-zinc-200 p-3 dark:border-zinc-800">
++                <p className="text-xs text-zinc-500 dark:text-zinc-400">{stage.label}</p>
++                <p className="mt-1 text-xl font-semibold tabular-nums text-zinc-950 dark:text-zinc-50">
++                  {formatNumber(stage.users)}
++                </p>
++                <p className="mt-1 text-xs tabular-nums text-zinc-500 dark:text-zinc-400">
++                  {index === 0
++                    ? tOr("admin.activation.start", "Start")
++                    : tOr("admin.activation.ofSignups", "{rate} of signups", {
++                        rate: formatPercent(signupUsers > 0 ? stage.users / signupUsers : 0),
++                      })}
++                </p>
++                {dropoff != null ? (
++                  <p className="mt-1 text-xs tabular-nums text-red-600 dark:text-red-300">
++                    {tOr("admin.activation.dropoff", "{rate} drop-off", { rate: formatPercent(dropoff) })}
++                  </p>
++                ) : null}
++              </div>
++            );
++          })}
++        </div>
++      </section>
++      <FunnelPanel funnel={funnel} title={tOr("admin.activation.extendedFunnel", "Extended Signup Funnel")} />
++    </div>
++  );
++}
+diff --git a/frontend/src/components/admin/AdminPanels.tsx b/frontend/src/components/admin/AdminPanels.tsx
+new file mode 100644
+index 0000000..dd766aa
+--- /dev/null
++++ b/frontend/src/components/admin/AdminPanels.tsx
+@@ -0,0 +1,418 @@
++"use client";
++
++import {
++  AlertTriangle,
++  RefreshCw,
++  ShieldCheck,
++} from "lucide-react";
++import type {
++  AdminBillingHealth,
++  AdminFunnel,
++  AdminRagQuality,
++} from "../../lib/api";
++import { formatNumber, formatPercent } from "../../lib/formatNumber";
++import { useLocale } from "../../i18n";
++
++export interface RecentUser {
++  id: string;
++  email: string;
++  name: string | null;
++  plan: string;
++  credits_balance: number;
++  created_at: string | null;
++  doc_count: number;
++  message_count: number;
++}
++
++export interface TopUser {
++  id: string;
++  email: string;
++  name: string | null;
++  plan: string;
++  total_tokens: number;
++  total_credits: number;
++  doc_count: number;
++}
++
++export function PlanBadge({ plan }: { plan: string }) {
++  const colors: Record<string, string> = {
++    free: "bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400",
++    plus: "bg-blue-50 text-[#1D4ED8] dark:bg-blue-400/10 dark:text-blue-300",
++    pro: "bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-950",
++  };
++  return (
++    <span className={`inline-flex items-center rounded px-2 py-0.5 text-xs font-medium ${colors[plan] || colors.free}`}>
++      {plan.charAt(0).toUpperCase() + plan.slice(1)}
++    </span>
++  );
++}
++
++function StatusPill({ ok, label }: { ok: boolean; label: string }) {
++  return (
++    <span className={`inline-flex items-center rounded px-2 py-0.5 text-xs font-medium ${
++      ok
++        ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300"
++        : "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300"
++    }`}>
++      {label}
++    </span>
++  );
++}
++
++export function BillingHealthPanel({
++  health,
++  loadingRemote,
++  onRemoteCheck,
++}: {
++  health: AdminBillingHealth | null;
++  loadingRemote: boolean;
++  onRemoteCheck: () => void;
++}) {
++  const { tOr } = useLocale();
++  if (!health) return null;
++  const liveReady = health.stripe_secret_mode === "live"
++    && health.stripe_webhook_configured
++    && health.all_subscription_prices_configured
++    && !health.has_mode_mismatch;
++
++  return (
++    <section className="dt-admin-panel overflow-hidden rounded-lg border">
++      <div className="flex flex-col gap-3 border-b border-zinc-200 px-4 py-3 dark:border-zinc-800 sm:flex-row sm:items-center sm:justify-between">
++        <div className="flex items-center gap-2">
++          {liveReady ? (
++            <ShieldCheck aria-hidden="true" className="h-4 w-4 text-emerald-600 dark:text-emerald-300" />
++          ) : (
++            <AlertTriangle aria-hidden="true" className="h-4 w-4 text-amber-600 dark:text-amber-300" />
++          )}
++          <h2 className="text-sm font-semibold text-zinc-950 dark:text-zinc-50">
++            {tOr("admin.billingHealth.title", "Billing Health")}
++          </h2>
++        </div>
++        <button
++          type="button"
++          onClick={onRemoteCheck}
++          disabled={loadingRemote}
++          className="inline-flex items-center justify-center gap-2 rounded-md border border-zinc-300 px-3 py-1.5 text-xs font-medium text-zinc-700 transition-colors hover:bg-zinc-50 disabled:opacity-50 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800"
++        >
++          <RefreshCw aria-hidden="true" className={`h-3.5 w-3.5 ${loadingRemote ? "animate-spin" : ""}`} />
++          {tOr("admin.billingHealth.verifyStripe", "Verify Stripe")}
++        </button>
++      </div>
++      <div className="grid gap-4 p-4 lg:grid-cols-[0.8fr_1.2fr]">
++        <div className="grid grid-cols-2 gap-3 text-sm">
++          <div>
++            <p className="text-xs text-zinc-500 dark:text-zinc-400">{tOr("admin.billingHealth.secretMode", "Secret Mode")}</p>
++            <StatusPill ok={health.stripe_secret_mode === "live"} label={health.stripe_secret_mode.toUpperCase()} />
++          </div>
++          <div>
++            <p className="text-xs text-zinc-500 dark:text-zinc-400">{tOr("admin.billingHealth.webhook", "Webhook")}</p>
++            <StatusPill ok={health.stripe_webhook_configured} label={health.stripe_webhook_configured ? tOr("admin.billingHealth.configured", "Configured") : tOr("admin.billingHealth.missing", "Missing")} />
++          </div>
++          <div>
++            <p className="text-xs text-zinc-500 dark:text-zinc-400">{tOr("admin.billingHealth.subscriptionPrices", "Subscription Prices")}</p>
++            <StatusPill ok={health.all_subscription_prices_configured} label={health.all_subscription_prices_configured ? tOr("admin.billingHealth.configured", "Configured") : tOr("admin.billingHealth.missing", "Missing")} />
++          </div>
++          <div>
++            <p className="text-xs text-zinc-500 dark:text-zinc-400">{tOr("admin.billingHealth.modeMatch", "Mode Match")}</p>
++            <StatusPill ok={!health.has_mode_mismatch} label={health.has_mode_mismatch ? tOr("admin.billingHealth.mismatch", "Mismatch") : tOr("admin.billingHealth.ok", "OK")} />
++          </div>
++        </div>
++        <div className="overflow-x-auto">
++          <table className="w-full text-xs">
++            <thead>
++              <tr className="border-b border-zinc-100 text-left text-zinc-500 dark:border-zinc-800 dark:text-zinc-400">
++                <th scope="col" className="py-1.5 pr-3 font-medium">{tOr("admin.billingHealth.colPrice", "Price")}</th>
++                <th scope="col" className="px-3 py-1.5 font-medium">{tOr("admin.billingHealth.colConfigured", "Configured")}</th>
++                <th scope="col" className="px-3 py-1.5 font-medium">{tOr("admin.billingHealth.colMode", "Mode")}</th>
++                <th scope="col" className="px-3 py-1.5 font-medium">{tOr("admin.billingHealth.colActive", "Active")}</th>
++                <th scope="col" className="py-1.5 pl-3 font-medium">{tOr("admin.billingHealth.colInterval", "Interval")}</th>
++              </tr>
++            </thead>
++            <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800">
++              {health.prices.map((price) => (
++                <tr key={price.label}>
++                  <th scope="row" className="py-1.5 pr-3 text-left font-medium text-zinc-700 dark:text-zinc-300">
++                    {price.label}
++                  </th>
++                  <td className="px-3 py-1.5 text-zinc-600 dark:text-zinc-400">{price.configured ? price.id_hint || tOr("admin.billingHealth.yes", "yes") : tOr("admin.billingHealth.missingLower", "missing")}</td>
++                  <td className="px-3 py-1.5 text-zinc-600 dark:text-zinc-400">{price.livemode == null ? "-" : price.livemode ? tOr("admin.billingHealth.live", "live") : tOr("admin.billingHealth.test", "test")}</td>
++                  <td className="px-3 py-1.5 text-zinc-600 dark:text-zinc-400">{price.active == null ? "-" : price.active ? tOr("admin.billingHealth.yes", "yes") : tOr("admin.billingHealth.no", "no")}</td>
++                  <td className="py-1.5 pl-3 text-zinc-600 dark:text-zinc-400">{price.interval || price.currency || "-"}</td>
++                </tr>
++              ))}
++            </tbody>
++          </table>
++        </div>
++      </div>
++    </section>
++  );
++}
++
++export function FunnelPanel({ funnel, title }: { funnel: AdminFunnel | null; title?: string }) {
++  const { tOr } = useLocale();
++  if (!funnel) return null;
++  const signupUsers = funnel.stages[0]?.users || 0;
++  return (
++    <section className="dt-admin-panel overflow-hidden rounded-lg border">
++      <div className="border-b border-zinc-200 px-4 py-3 dark:border-zinc-800">
++        <h2 className="text-sm font-semibold text-zinc-950 dark:text-zinc-50">
++          {title || tOr("admin.funnel.title", "Monetization Funnel")}
++        </h2>
++        <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
++          {tOr("admin.funnel.subtitle", "Last {days} days, signup cohort conversion by unique users. Upgrade reminders are separated from blocking paywalls.", { days: funnel.days })}
++        </p>
++      </div>
++      <div className="grid gap-3 p-4 sm:grid-cols-2 lg:grid-cols-5">
++        {funnel.stages.map((stage, index) => {
++          const rate = index > 0 && signupUsers > 0 ? Math.round((stage.users / signupUsers) * 100) : null;
++          return (
++            <div key={stage.key} className="rounded-md border border-zinc-200 p-3 dark:border-zinc-800">
++              <p className="text-xs text-zinc-500 dark:text-zinc-400">{stage.label}</p>
++              <p className="mt-1 text-xl font-semibold tabular-nums text-zinc-950 dark:text-zinc-50">{formatNumber(stage.users)}</p>
++              {rate != null ? (
++                <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">{tOr("admin.funnel.pctOfSignups", "{rate}% of signups", { rate })}</p>
++              ) : null}
++            </div>
++          );
++        })}
++      </div>
++      {funnel.reasons.length > 0 ? (
++        <div className="border-t border-zinc-100 p-4 dark:border-zinc-800">
++          <h3 className="mb-2 text-xs font-medium uppercase text-zinc-500 dark:text-zinc-400">{tOr("admin.funnel.topBillingReasons", "Top Billing Reasons")}</h3>
++          <div className="overflow-x-auto">
++            <table className="w-full text-xs">
++              <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800">
++                {funnel.reasons.slice(0, 8).map((row, index) => (
++                  <tr key={`${row.event_name}-${row.reason}-${row.source}-${index}`}>
++                    <td className="py-2 pr-3">
++                      <p className="font-medium text-zinc-800 dark:text-zinc-100">{row.label || tOr("admin.funnel.paidSignal", "Paid signal")}</p>
++                      <p className="mt-0.5 max-w-xl text-zinc-500 dark:text-zinc-400">{row.description || tOr("admin.funnel.noContext", "No context recorded.")}</p>
++                    </td>
++                    <td className="py-2 pl-3 text-right tabular-nums text-zinc-700 dark:text-zinc-300">
++                      {tOr("admin.funnel.usersEvents", "{users} users / {events} events", { users: row.users, events: row.events })}
++                    </td>
++                  </tr>
++                ))}
++              </tbody>
++            </table>
++          </div>
++        </div>
++      ) : null}
++    </section>
++  );
++}
++
++export function RagQualityPanel({ quality }: { quality: AdminRagQuality | null }) {
++  const { tOr } = useLocale();
++  if (!quality) return null;
++  const healthy = quality.evaluated_answers === 0 || (quality.fail_rate < 0.05 && quality.warn_rate < 0.1);
++  const issueRows = quality.issue_breakdown.filter((item) => (item.count || 0) > 0).slice(0, 4);
++  const strategyRows = quality.strategy_breakdown.slice(0, 4);
++  return (
++    <section className="dt-admin-panel overflow-hidden rounded-lg border">
++      <div className="flex flex-col gap-2 border-b border-zinc-200 px-4 py-3 dark:border-zinc-800 sm:flex-row sm:items-center sm:justify-between">
++        <div className="flex items-center gap-2">
++          {healthy ? (
++            <ShieldCheck aria-hidden="true" className="h-4 w-4 text-emerald-600 dark:text-emerald-300" />
++          ) : (
++            <AlertTriangle aria-hidden="true" className="h-4 w-4 text-amber-600 dark:text-amber-300" />
++          )}
++          <div>
++            <h2 className="text-sm font-semibold text-zinc-950 dark:text-zinc-50">{tOr("admin.rag.title", "Answer Citation Quality")}</h2>
++            <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">{quality.health_explanation}</p>
++          </div>
++        </div>
++        <p className="text-xs text-zinc-500 dark:text-zinc-400">
++          {tOr("admin.rag.healthSummary", "{label} / Last {days} days", { label: quality.health_label, days: quality.days })}
++        </p>
++      </div>
++      <div className="grid gap-3 p-4 sm:grid-cols-2 lg:grid-cols-6">
++        <QualityMetric label={tOr("admin.rag.kpi.answersChecked", "Answers checked")} value={formatNumber(quality.evaluated_answers)} />
++        <QualityMetric label={tOr("admin.rag.kpi.groundingScore", "Grounding score")} value={formatPercent(quality.average_score)} />
++        <QualityMetric label={tOr("admin.rag.kpi.groundedReviewFailed", "Grounded / review / failed")} value={`${formatPercent(quality.pass_rate)} / ${formatPercent(quality.warn_rate)} / ${formatPercent(quality.fail_rate)}`} />
++        <QualityMetric label={tOr("admin.rag.kpi.statementsMissingCitations", "Statements missing citations")} value={formatNumber(quality.uncited_claims)} />
++        <QualityMetric label={tOr("admin.rag.kpi.weakSourceMatches", "Weak source matches")} value={formatNumber(quality.low_overlap_citations)} />
++        <QualityMetric label={tOr("admin.rag.kpi.numberMismatches", "Number mismatches")} value={formatNumber(quality.numeric_mismatch_citations)} />
++      </div>
++      <div className="grid gap-4 border-t border-zinc-100 p-4 dark:border-zinc-800 lg:grid-cols-2">
++        <IssueList
++          title={tOr("admin.rag.whatNeedsFixing", "What needs fixing")}
++          rows={issueRows.map((item) => ({
++            key: item.key,
++            label: item.label,
++            detail: item.description,
++            metric: formatNumber(item.count || 0),
++          }))}
++          empty={tOr("admin.rag.noIssues", "No citation issues in this window.")}
++        />
++        <IssueList
++          title={tOr("admin.rag.whereItHappens", "Where it happens")}
++          rows={strategyRows.map((item) => ({
++            key: item.key,
++            label: item.label,
++            detail: item.description,
++            metric: formatPercent(item.needs_review_rate),
++          }))}
++          empty={tOr("admin.rag.noStrategies", "No retrieval paths recorded yet.")}
++        />
++      </div>
++    </section>
++  );
++}
++
++function QualityMetric({ label, value }: { label: string; value: string }) {
++  return (
++    <div className="rounded-md border border-zinc-200 p-3 dark:border-zinc-800">
++      <p className="text-xs text-zinc-500 dark:text-zinc-400">{label}</p>
++      <p className="mt-1 text-lg font-semibold tabular-nums text-zinc-950 dark:text-zinc-50">{value}</p>
++    </div>
++  );
++}
++
++function IssueList({
++  title,
++  rows,
++  empty,
++}: {
++  title: string;
++  rows: { key: string; label: string; detail: string; metric: string }[];
++  empty: string;
++}) {
++  return (
++    <div>
++      <h3 className="mb-3 text-xs font-medium uppercase text-zinc-500 dark:text-zinc-400">{title}</h3>
++      <div className="space-y-3">
++        {rows.length === 0 ? (
++          <p className="rounded-md border border-zinc-200 p-3 text-xs text-zinc-500 dark:border-zinc-800 dark:text-zinc-400">{empty}</p>
++        ) : rows.map((item) => (
++          <div key={item.key} className="rounded-md border border-zinc-200 p-3 dark:border-zinc-800">
++            <div className="flex items-start justify-between gap-3">
++              <div>
++                <p className="text-sm font-medium text-zinc-800 dark:text-zinc-100">{item.label}</p>
++                <p className="mt-1 text-xs leading-5 text-zinc-500 dark:text-zinc-400">{item.detail}</p>
++              </div>
++              <p className="tabular-nums text-zinc-900 dark:text-zinc-100">{item.metric}</p>
++            </div>
++          </div>
++        ))}
++      </div>
++    </div>
++  );
++}
++
++export function UserTablesPanel({
++  recentUsers,
++  topUsers,
++  topBy,
++  onTopByChange,
++}: {
++  recentUsers: RecentUser[];
++  topUsers: TopUser[];
++  topBy: "tokens" | "credits" | "documents";
++  onTopByChange: (value: "tokens" | "credits" | "documents") => void;
++}) {
++  const { tOr } = useLocale();
++  return (
++    <section className="grid grid-cols-1 gap-6 lg:grid-cols-2">
++      <div className="dt-admin-panel overflow-hidden rounded-lg border">
++        <div className="border-b border-zinc-200 px-4 py-3 dark:border-zinc-800">
++          <h3 className="text-sm font-semibold text-zinc-950 dark:text-zinc-50">{tOr("admin.recentUsers.title", "Recent Users")}</h3>
++        </div>
++        <UserTable
++          rows={recentUsers as unknown as Record<string, unknown>[]}
++          empty={tOr("admin.recentUsers.empty", "No users yet")}
++          columns={[
++            { key: "email", label: tOr("admin.userCol.email", "Email") },
++            { key: "plan", label: tOr("admin.userCol.plan", "Plan") },
++            { key: "credits_balance", label: tOr("admin.userCol.credits", "Credits"), align: "right" },
++            { key: "doc_count", label: tOr("admin.userCol.docs", "Docs"), align: "right" },
++            { key: "created_at", label: tOr("admin.userCol.joined", "Joined") },
++          ]}
++        />
++      </div>
++      <div className="dt-admin-panel overflow-hidden rounded-lg border">
++        <div className="flex items-center justify-between border-b border-zinc-200 px-4 py-3 dark:border-zinc-800">
++          <h3 className="text-sm font-semibold text-zinc-950 dark:text-zinc-50">{tOr("admin.topUsers.title", "Top Users")}</h3>
++          <select
++            value={topBy}
++            onChange={(event) => onTopByChange(event.target.value as "tokens" | "credits" | "documents")}
++            className="rounded border border-zinc-200 bg-transparent px-2 py-1 text-xs text-zinc-700 dark:border-zinc-700 dark:text-zinc-300"
++            aria-label={tOr("admin.topUsers.sortByAria", "Sort by")}
++          >
++            <option value="tokens">{tOr("admin.topUsers.byTokens", "By Tokens")}</option>
++            <option value="credits">{tOr("admin.topUsers.byCredits", "By Credits")}</option>
++            <option value="documents">{tOr("admin.topUsers.byDocuments", "By Documents")}</option>
++          </select>
++        </div>
++        <UserTable
++          rows={topUsers as unknown as Record<string, unknown>[]}
++          empty={tOr("admin.topUsers.empty", "No usage data yet")}
++          columns={[
++            { key: "email", label: tOr("admin.userCol.email", "Email") },
++            { key: "plan", label: tOr("admin.userCol.plan", "Plan") },
++            { key: "total_tokens", label: tOr("admin.userCol.tokens", "Tokens"), align: "right" },
++            { key: "total_credits", label: tOr("admin.userCol.credits", "Credits"), align: "right" },
++            { key: "doc_count", label: tOr("admin.userCol.docs", "Docs"), align: "right" },
++          ]}
++        />
++      </div>
++    </section>
++  );
++}
++
++function UserTable({
++  rows,
++  columns,
++  empty,
++}: {
++  rows: Array<Record<string, unknown>>;
++  columns: { key: string; label: string; align?: "right" | "left" }[];
++  empty: string;
++}) {
++  return (
++    <div className="overflow-x-auto">
++      <table className="w-full text-sm">
++        <thead className="bg-zinc-50 dark:bg-zinc-900">
++          <tr>
++            {columns.map((column) => (
++              <th
++                key={column.key}
++                scope="col"
++                className={`px-4 py-2 font-medium text-zinc-500 dark:text-zinc-400 ${column.align === "right" ? "text-right" : "text-left"}`}
++              >
++                {column.label}
++              </th>
++            ))}
++          </tr>
++        </thead>
++        <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800">
++          {rows.map((row) => (
++            <tr key={String(row.id)} className="hover:bg-zinc-50 dark:hover:bg-zinc-800/40">
++              {columns.map((column) => (
++                <td
++                  key={column.key}
++                  className={`px-4 py-2 text-zinc-600 dark:text-zinc-400 ${column.align === "right" ? "text-right tabular-nums" : "text-left"}`}
++                >
++                  {column.key === "plan" ? (
++                    <PlanBadge plan={String(row[column.key] || "free")} />
++                  ) : column.key === "created_at" ? (
++                    row[column.key] ? new Date(String(row[column.key])).toLocaleDateString() : "-"
++                  ) : typeof row[column.key] === "number" ? (
++                    formatNumber(Number(row[column.key]))
++                  ) : (
++                    String(row[column.key] || "-")
++                  )}
++                </td>
++              ))}
++            </tr>
++          ))}
++          {rows.length === 0 ? (
++            <tr>
++              <td colSpan={columns.length} className="px-4 py-8 text-center text-zinc-400">{empty}</td>
++            </tr>
++          ) : null}
++        </tbody>
++      </table>
++    </div>
++  );
++}
+diff --git a/frontend/src/components/admin/ChurnSignalsBars.tsx b/frontend/src/components/admin/ChurnSignalsBars.tsx
+new file mode 100644
+index 0000000..08853b1
+--- /dev/null
++++ b/frontend/src/components/admin/ChurnSignalsBars.tsx
+@@ -0,0 +1,68 @@
++"use client";
++
++import {
++  Bar,
++  BarChart,
++  CartesianGrid,
++  ResponsiveContainer,
++  Tooltip,
++  XAxis,
++  YAxis,
++} from "recharts";
++import type { AdminChurnSignalItem } from "../../lib/api";
++import { formatNumber, formatPercent } from "../../lib/formatNumber";
++import { useLocale } from "../../i18n";
++
++export default function ChurnSignalsBars({ signals }: { signals: AdminChurnSignalItem[] }) {
++  const { tOr } = useLocale();
++  const data = signals.map((signal) => ({
++    ...signal,
++    pctValue: signal.pct * 100,
++    shortLabel: signal.label.replace("Assistant ", "Asst ").replace("Retrieval or ", ""),
++  }));
++
++  return (
++    <section className="dt-admin-panel rounded-lg border p-4">
++      <div className="flex items-start justify-between gap-4">
++        <div>
++          <h2 className="text-sm font-semibold text-zinc-950 dark:text-zinc-50">
++            {tOr("admin.churn.signalsTitle", "Churn Signal Prevalence")}
++          </h2>
++          <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
++            {tOr("admin.churn.signalsSubtitle", "Share of churned users who experienced each failure signal before leaving.")}
++          </p>
++        </div>
++      </div>
++      <div className="mt-4 h-72">
++        <ResponsiveContainer width="100%" height="100%">
++          <BarChart data={data} margin={{ top: 8, right: 18, bottom: 0, left: -18 }}>
++            <CartesianGrid vertical={false} strokeDasharray="3 3" stroke="rgba(113,113,122,0.18)" />
++            <XAxis dataKey="shortLabel" tickLine={false} axisLine={false} tick={{ fontSize: 12 }} interval={0} />
++            <YAxis tickLine={false} axisLine={false} tick={{ fontSize: 12 }} tickFormatter={(value) => `${value}%`} />
++            <Tooltip
++              formatter={(value, _name, item) => [
++                `${Number(value).toFixed(1)}%`,
++                item.payload?.label || tOr("admin.churn.signal", "Signal"),
++              ]}
++              labelFormatter={(label) => `${label}`}
++            />
++            <Bar dataKey="pctValue" fill="#1D4ED8" radius={[4, 4, 0, 0]} />
++          </BarChart>
++        </ResponsiveContainer>
++      </div>
++      <div className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
++        {signals.map((signal) => (
++          <div key={signal.key} className="rounded-md border border-zinc-200 p-3 dark:border-zinc-800">
++            <p className="text-xs text-zinc-500 dark:text-zinc-400">{signal.label}</p>
++            <p className="mt-1 text-lg font-semibold tabular-nums text-zinc-950 dark:text-zinc-50">
++              {formatPercent(signal.pct)}
++            </p>
++            <p className="mt-1 text-xs tabular-nums text-zinc-500 dark:text-zinc-400">
++              {tOr("admin.churn.users", "{n} users", { n: formatNumber(signal.count) })}
++            </p>
++          </div>
++        ))}
++      </div>
++    </section>
++  );
++}
+diff --git a/frontend/src/components/admin/ChurnTab.tsx b/frontend/src/components/admin/ChurnTab.tsx
+new file mode 100644
+index 0000000..c1e3816
+--- /dev/null
++++ b/frontend/src/components/admin/ChurnTab.tsx
+@@ -0,0 +1,86 @@
++"use client";
++
++import type { AdminChurn } from "../../lib/api";
++import { formatNumber, formatPercent } from "../../lib/formatNumber";
++import { useLocale } from "../../i18n";
++import ChurnSignalsBars from "./ChurnSignalsBars";
++import FeedbackList from "./FeedbackList";
++import ReasonBucketsDonut from "./ReasonBucketsDonut";
++
++export default function ChurnTab({ churn }: { churn: AdminChurn | null }) {
++  const { tOr } = useLocale();
++  if (!churn) return null;
++
++  return (
++    <div className="space-y-6">
++      <div className="grid gap-4 sm:grid-cols-3">
++        <Metric label={tOr("admin.churn.churnedUsers", "Churned users")} value={churn.churned_users} />
++        <Metric label={tOr("admin.churn.oneAndDone", "One and done")} value={formatPercent(churn.one_and_done.pct)} detail={tOr("admin.churn.oneAndDoneDetail", "{count} of {total}", { count: churn.one_and_done.count, total: churn.one_and_done.activated_users })} />
++        <Metric label={tOr("admin.churn.inactiveWindow", "Inactive window")} value={`${churn.inactive_days}d`} />
++      </div>
++      <div className="grid gap-4 xl:grid-cols-[1.1fr_0.9fr]">
++        <ChurnSignalsBars signals={churn.churn_signals} />
++        <ReasonBucketsDonut buckets={churn.reason_buckets} />
++      </div>
++      <div className="grid gap-4 lg:grid-cols-[0.9fr_1.1fr]">
++        <section className="dt-admin-panel rounded-lg border">
++          <div className="border-b border-zinc-200 px-4 py-3 dark:border-zinc-800">
++            <h2 className="text-sm font-semibold text-zinc-950 dark:text-zinc-50">
++              {tOr("admin.churn.lastAction", "Last Action")}
++            </h2>
++          </div>
++          <div className="divide-y divide-zinc-100 dark:divide-zinc-800">
++            {churn.last_action.length === 0 ? (
++              <p className="p-4 text-sm text-zinc-500 dark:text-zinc-400">{tOr("admin.churn.noLastAction", "No last-action data yet.")}</p>
++            ) : churn.last_action.map((item) => (
++              <div key={item.key} className="flex items-center justify-between gap-3 px-4 py-3">
++                <span className="text-sm text-zinc-700 dark:text-zinc-300">{item.label}</span>
++                <span className="text-sm font-medium tabular-nums text-zinc-950 dark:text-zinc-50">
++                  {formatNumber(item.count)} / {formatPercent(item.pct)}
++                </span>
++              </div>
++            ))}
++          </div>
++        </section>
++        <FeedbackList feedback={churn.feedback.recent} />
++      </div>
++      <section className="dt-admin-panel rounded-lg border">
++        <div className="border-b border-zinc-200 px-4 py-3 dark:border-zinc-800">
++          <h2 className="text-sm font-semibold text-zinc-950 dark:text-zinc-50">
++            {tOr("admin.churn.cancelReasons", "Cancel Reasons")}
++          </h2>
++        </div>
++        {churn.cancel_reasons.length === 0 ? (
++          <p className="p-4 text-sm text-zinc-500 dark:text-zinc-400">{tOr("admin.churn.noCancelReasons", "No cancel reasons in this window.")}</p>
++        ) : (
++          <div className="divide-y divide-zinc-100 dark:divide-zinc-800">
++            {churn.cancel_reasons.map((reason) => (
++              <div key={reason.id} className="px-4 py-3">
++                <div className="flex flex-wrap items-center gap-2 text-xs text-zinc-500 dark:text-zinc-400">
++                  <span>{reason.from_plan} -&gt; {reason.to_plan}</span>
++                  {reason.created_at ? <time>{new Date(reason.created_at).toLocaleDateString()}</time> : null}
++                </div>
++                <p className="mt-1 text-sm font-medium text-zinc-800 dark:text-zinc-100">
++                  {reason.reason || tOr("admin.churn.unspecifiedReason", "Unspecified reason")}
++                </p>
++                {reason.feedback ? <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">{reason.feedback}</p> : null}
++              </div>
++            ))}
++          </div>
++        )}
++      </section>
++    </div>
++  );
++}
++
++function Metric({ label, value, detail }: { label: string; value: number | string; detail?: string }) {
++  return (
++    <div className="dt-admin-panel rounded-lg border p-4">
++      <p className="text-xs text-zinc-500 dark:text-zinc-400">{label}</p>
++      <p className="mt-1 text-2xl font-semibold tabular-nums text-zinc-950 dark:text-zinc-50">
++        {typeof value === "number" ? formatNumber(value) : value}
++      </p>
++      {detail ? <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">{detail}</p> : null}
++    </div>
++  );
++}
+diff --git a/frontend/src/components/admin/FeedbackList.tsx b/frontend/src/components/admin/FeedbackList.tsx
+new file mode 100644
+index 0000000..267e5ae
+--- /dev/null
++++ b/frontend/src/components/admin/FeedbackList.tsx
+@@ -0,0 +1,42 @@
++"use client";
++
++import type { AdminChurnFeedbackItem } from "../../lib/api";
++import { useLocale } from "../../i18n";
++
++export default function FeedbackList({ feedback }: { feedback: AdminChurnFeedbackItem[] }) {
++  const { tOr } = useLocale();
++
++  return (
++    <section className="dt-admin-panel rounded-lg border">
++      <div className="border-b border-zinc-200 px-4 py-3 dark:border-zinc-800">
++        <h2 className="text-sm font-semibold text-zinc-950 dark:text-zinc-50">
++          {tOr("admin.churn.feedbackTitle", "Recent Feedback")}
++        </h2>
++      </div>
++      {feedback.length === 0 ? (
++        <div className="p-6 text-sm text-zinc-500 dark:text-zinc-400">
++          {tOr("admin.churn.noFeedback", "No recent feedback.")}
++        </div>
++      ) : (
++        <div className="divide-y divide-zinc-100 dark:divide-zinc-800">
++          {feedback.slice(0, 8).map((item) => (
++            <article key={item.id} className="p-4">
++              <div className="flex flex-wrap items-center gap-2 text-xs text-zinc-500 dark:text-zinc-400">
++                <span className="rounded bg-zinc-100 px-1.5 py-0.5 font-medium text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300">
++                  {item.area}
++                </span>
++                <span>{item.type}</span>
++                <span>{item.severity}</span>
++                {item.plan ? <span>{item.plan}</span> : null}
++                {item.created_at ? <time>{new Date(item.created_at).toLocaleDateString()}</time> : null}
++              </div>
++              <p className="mt-2 text-sm leading-6 text-zinc-700 dark:text-zinc-300">
++                {item.message || tOr("admin.churn.feedbackNoMessage", "No written detail.")}
++              </p>
++            </article>
++          ))}
++        </div>
++      )}
++    </section>
++  );
++}
+diff --git a/frontend/src/components/admin/KPICard.tsx b/frontend/src/components/admin/KPICard.tsx
+new file mode 100644
+index 0000000..a2e791c
+--- /dev/null
++++ b/frontend/src/components/admin/KPICard.tsx
+@@ -0,0 +1,78 @@
++"use client";
++
++import type { ElementType } from "react";
++import { Minus, TrendingDown, TrendingUp } from "lucide-react";
++import { formatNumber } from "../../lib/formatNumber";
++
++interface KPICardProps {
++  icon: ElementType;
++  label: string;
++  value: number | string;
++  deltaPercent?: number | null;
++  sparkline?: number[];
++  suffix?: string;
++}
++
++function sparklinePath(values: number[]): string {
++  if (values.length < 2) return "";
++  const max = Math.max(...values);
++  const min = Math.min(...values);
++  const range = max - min || 1;
++  return values
++    .map((value, index) => {
++      const x = (index / (values.length - 1)) * 92 + 4;
++      const y = 34 - ((value - min) / range) * 26;
++      return `${index === 0 ? "M" : "L"}${x.toFixed(1)} ${y.toFixed(1)}`;
++    })
++    .join(" ");
++}
++
++export default function KPICard({
++  icon: Icon,
++  label,
++  value,
++  deltaPercent,
++  sparkline = [],
++  suffix,
++}: KPICardProps) {
++  const positive = typeof deltaPercent === "number" && deltaPercent > 0;
++  const negative = typeof deltaPercent === "number" && deltaPercent < 0;
++  const DeltaIcon = positive ? TrendingUp : negative ? TrendingDown : Minus;
++  const path = sparklinePath(sparkline);
++  const renderedValue = typeof value === "number" ? formatNumber(value) : value;
++
++  return (
++    <div className="dt-kpi-card min-h-[132px] rounded-lg p-4">
++      <div className="flex items-start justify-between gap-3">
++        <div className="rounded-md border border-zinc-200 bg-zinc-50 p-2 dark:border-zinc-800 dark:bg-zinc-900">
++          <Icon aria-hidden="true" className="h-4 w-4 text-[#1D4ED8]" />
++        </div>
++        <div
++          className={`inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-xs font-medium tabular-nums ${
++            positive
++              ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-400/10 dark:text-emerald-300"
++              : negative
++                ? "bg-red-50 text-red-700 dark:bg-red-400/10 dark:text-red-300"
++                : "bg-zinc-100 text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400"
++          }`}
++        >
++          <DeltaIcon aria-hidden="true" className="h-3 w-3" />
++          {typeof deltaPercent === "number" ? `${Math.abs(deltaPercent).toFixed(1)}%` : "0.0%"}
++        </div>
++      </div>
++      <div className="mt-4">
++        <p className="text-2xl font-semibold tabular-nums text-zinc-950 dark:text-zinc-50">
++          {renderedValue}
++          {suffix ? <span className="ml-1 text-base text-zinc-500 dark:text-zinc-400">{suffix}</span> : null}
++        </p>
++        <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">{label}</p>
++      </div>
++      <svg className="mt-3 h-9 w-full text-[#1D4ED8]" viewBox="0 0 100 40" aria-hidden="true">
++        <path d="M4 35 H96" stroke="currentColor" strokeOpacity="0.12" strokeWidth="1" />
++        {path ? (
++          <path d={path} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
++        ) : null}
++      </svg>
++    </div>
++  );
++}
+diff --git a/frontend/src/components/admin/OverviewTab.tsx b/frontend/src/components/admin/OverviewTab.tsx
+new file mode 100644
+index 0000000..175a3aa
+--- /dev/null
++++ b/frontend/src/components/admin/OverviewTab.tsx
+@@ -0,0 +1,111 @@
++"use client";
++
++import {
++  Activity,
++  AlertCircle,
++  BadgeDollarSign,
++  CalendarPlus,
++  Gauge,
++  RadioTower,
++} from "lucide-react";
++import type { AdminUserActivity } from "../../lib/api";
++import { formatPercent } from "../../lib/formatNumber";
++import { useLocale } from "../../i18n";
++import KPICard from "./KPICard";
++import type { Overview, Trends } from "./types";
++
++function seriesValues(points: { count?: number; total_tokens?: number; amount?: number }[] | undefined): number[] {
++  return (points || []).map((point) => point.count ?? point.total_tokens ?? point.amount ?? 0);
++}
++
++export default function OverviewTab({
++  overview,
++  activity,
++  trends,
++}: {
++  overview: Overview | null;
++  activity: AdminUserActivity | null;
++  trends: Trends | null;
++}) {
++  const { tOr } = useLocale();
++  if (!overview || !activity) return null;
++
++  const summary = activity.summary;
++  const activationRate = summary.signups > 0 ? summary.activated_users / summary.signups : 0;
++  const stickiness = summary.mau > 0 ? summary.dau / summary.mau : 0;
++
++  return (
++    <div className="space-y-6">
++      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
++        <KPICard
++          icon={CalendarPlus}
++          label={tOr("admin.kpi.signups", "Signups")}
++          value={summary.signups}
++          deltaPercent={summary.deltas.signups?.delta_percent}
++          sparkline={seriesValues(trends?.signups)}
++        />
++        <KPICard
++          icon={RadioTower}
++          label={tOr("admin.kpi.wau", "WAU")}
++          value={summary.wau}
++          deltaPercent={summary.deltas.active_users?.delta_percent}
++          sparkline={seriesValues(trends?.active_users)}
++        />
++        <KPICard
++          icon={Activity}
++          label={tOr("admin.kpi.mau", "MAU")}
++          value={summary.mau}
++          sparkline={seriesValues(trends?.active_users)}
++        />
++        <KPICard
++          icon={Gauge}
++          label={tOr("admin.kpi.stickiness", "Stickiness DAU/MAU")}
++          value={formatPercent(stickiness)}
++          deltaPercent={null}
++          sparkline={activity.series.map((point) => point.active_users)}
++        />
++        <KPICard
++          icon={BadgeDollarSign}
++          label={tOr("admin.kpi.activationRate", "Activation")}
++          value={formatPercent(activationRate)}
++          deltaPercent={summary.deltas.chat_users?.delta_percent}
++          sparkline={activity.series.map((point) => point.chat_users)}
++        />
++        <KPICard
++          icon={BadgeDollarSign}
++          label={tOr("admin.kpi.paidConversion", "Paid conversion")}
++          value={formatPercent(summary.free_to_paid_rate)}
++          deltaPercent={summary.deltas.checkout_completed?.delta_percent}
++          sparkline={activity.series.map((point) => point.checkout_completed)}
++        />
++        <KPICard
++          icon={AlertCircle}
++          label={tOr("admin.kpi.asstZeroRate", "Asst=0 rate")}
++          value="0.0%"
++          deltaPercent={0}
++          sparkline={activity.series.map(() => 0)}
++        />
++      </div>
++      <section className="dt-admin-panel rounded-lg border p-4">
++        <h2 className="text-sm font-semibold text-zinc-950 dark:text-zinc-50">
++          {tOr("admin.overview.accountBase", "Account Base")}
++        </h2>
++        <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
++          <MiniMetric label={tOr("admin.kpi.totalUsers", "Total Users")} value={overview.total_users} />
++          <MiniMetric label={tOr("admin.kpi.paidUsers", "Paid Users")} value={overview.paid_users} />
++          <MiniMetric label={tOr("admin.kpi.documents", "Documents")} value={overview.total_documents} />
++          <MiniMetric label={tOr("admin.kpi.messages", "Messages")} value={overview.total_messages} />
++        </div>
++      </section>
++    </div>
++  );
++}
++
++function MiniMetric({ label, value }: { label: string; value: number }) {
++  return (
++    <div className="rounded-md border border-zinc-200 p-3 dark:border-zinc-800">
++      <p className="text-xs text-zinc-500 dark:text-zinc-400">{label}</p>
++      <p className="mt-1 text-xl font-semibold tabular-nums text-zinc-950 dark:text-zinc-50">{value.toLocaleString()}</p>
++    </div>
++  );
++}
+diff --git a/frontend/src/components/admin/ProductTab.tsx b/frontend/src/components/admin/ProductTab.tsx
+new file mode 100644
+index 0000000..e51e309
+--- /dev/null
++++ b/frontend/src/components/admin/ProductTab.tsx
+@@ -0,0 +1,55 @@
++"use client";
++
++import dynamic from "next/dynamic";
++import type { AdminRagQuality } from "../../lib/api";
++import { RagQualityPanel, UserTablesPanel, type RecentUser, type TopUser } from "./AdminPanels";
++import type { Breakdowns, Trends } from "./types";
++
++const AdminCharts = dynamic<{
++  trends: Trends;
++  breakdowns: Breakdowns;
++  trendDays: number;
++  onTrendDaysChange: (days: number) => void;
++}>(() => import("../AdminCharts"), { ssr: false });
++
++export default function ProductTab({
++  ragQuality,
++  trends,
++  breakdowns,
++  trendDays,
++  onTrendDaysChange,
++  recentUsers,
++  topUsers,
++  topBy,
++  onTopByChange,
++}: {
++  ragQuality: AdminRagQuality | null;
++  trends: Trends | null;
++  breakdowns: Breakdowns | null;
++  trendDays: number;
++  onTrendDaysChange: (days: number) => void;
++  recentUsers: RecentUser[];
++  topUsers: TopUser[];
++  topBy: "tokens" | "credits" | "documents";
++  onTopByChange: (value: "tokens" | "credits" | "documents") => void;
++}) {
++  return (
++    <div className="space-y-6">
++      <RagQualityPanel quality={ragQuality} />
++      {trends && breakdowns ? (
++        <AdminCharts
++          trends={trends}
++          breakdowns={breakdowns}
++          trendDays={trendDays}
++          onTrendDaysChange={onTrendDaysChange}
++        />
++      ) : null}
++      <UserTablesPanel
++        recentUsers={recentUsers}
++        topUsers={topUsers}
++        topBy={topBy}
++        onTopByChange={onTopByChange}
++      />
++    </div>
++  );
++}
+diff --git a/frontend/src/components/admin/ReasonBucketsDonut.tsx b/frontend/src/components/admin/ReasonBucketsDonut.tsx
+new file mode 100644
+index 0000000..a9a742e
+--- /dev/null
++++ b/frontend/src/components/admin/ReasonBucketsDonut.tsx
+@@ -0,0 +1,64 @@
++"use client";
++
++import {
++  Cell,
++  Pie,
++  PieChart,
++  ResponsiveContainer,
++  Tooltip,
++} from "recharts";
++import type { AdminChurnSignalItem } from "../../lib/api";
++import { formatNumber, formatPercent } from "../../lib/formatNumber";
++import { useLocale } from "../../i18n";
++
++const COLORS = ["#1D4ED8", "#0F766E", "#52525B", "#DC2626", "#9333EA", "#2563EB"];
++
++export default function ReasonBucketsDonut({ buckets }: { buckets: AdminChurnSignalItem[] }) {
++  const { tOr } = useLocale();
++  const data = buckets.filter((bucket) => bucket.count > 0);
++
++  return (
++    <section className="dt-admin-panel rounded-lg border p-4">
++      <h2 className="text-sm font-semibold text-zinc-950 dark:text-zinc-50">
++        {tOr("admin.churn.reasonBucketsTitle", "Reason Buckets")}
++      </h2>
++      {data.length === 0 ? (
++        <div className="mt-4 rounded-md border border-dashed border-zinc-200 p-6 text-sm text-zinc-500 dark:border-zinc-800 dark:text-zinc-400">
++          {tOr("admin.churn.noBuckets", "No churn reason buckets yet.")}
++        </div>
++      ) : (
++        <div className="mt-4 grid gap-4 lg:grid-cols-[220px_1fr]">
++          <div className="h-56">
++            <ResponsiveContainer width="100%" height="100%">
++              <PieChart>
++                <Pie data={data} dataKey="count" nameKey="label" innerRadius={58} outerRadius={88} paddingAngle={2}>
++                  {data.map((bucket, index) => (
++                    <Cell key={bucket.key} fill={COLORS[index % COLORS.length]} />
++                  ))}
++                </Pie>
++                <Tooltip formatter={(value) => [formatNumber(Number(value)), tOr("admin.churn.usersLabel", "Users")]} />
++              </PieChart>
++            </ResponsiveContainer>
++          </div>
++          <div className="space-y-2">
++            {buckets.map((bucket, index) => (
++              <div key={bucket.key} className="flex items-center justify-between gap-3 rounded-md border border-zinc-200 px-3 py-2 dark:border-zinc-800">
++                <div className="flex min-w-0 items-center gap-2">
++                  <span
++                    aria-hidden="true"
++                    className="h-2.5 w-2.5 rounded-full"
++                    style={{ backgroundColor: COLORS[index % COLORS.length] }}
++                  />
++                  <span className="truncate text-sm text-zinc-700 dark:text-zinc-300">{bucket.label}</span>
++                </div>
++                <span className="shrink-0 text-sm font-medium tabular-nums text-zinc-950 dark:text-zinc-50">
++                  {formatNumber(bucket.count)} / {formatPercent(bucket.pct)}
++                </span>
++              </div>
++            ))}
++          </div>
++        </div>
++      )}
++    </section>
++  );
++}
+diff --git a/frontend/src/components/admin/RetentionCurves.tsx b/frontend/src/components/admin/RetentionCurves.tsx
+new file mode 100644
+index 0000000..0a43356
+--- /dev/null
++++ b/frontend/src/components/admin/RetentionCurves.tsx
+@@ -0,0 +1,95 @@
++"use client";
++
++import {
++  Line,
++  LineChart,
++  ResponsiveContainer,
++  Tooltip,
++  XAxis,
++  YAxis,
++} from "recharts";
++import type { AdminRetentionCurvePoint, AdminRetentionDauPoint } from "../../lib/api";
++import { formatNumber, formatPercent } from "../../lib/formatNumber";
++import { useLocale } from "../../i18n";
++
++export default function RetentionCurves({
++  curves,
++  dauSeries,
++}: {
++  curves: AdminRetentionCurvePoint[];
++  dauSeries: AdminRetentionDauPoint[];
++}) {
++  const { tOr } = useLocale();
++  const curveData = curves.map((point) => ({ ...point, pctValue: point.pct * 100 }));
++
++  return (
++    <section className="grid gap-4 lg:grid-cols-[0.9fr_1.1fr]">
++      <div className="dt-admin-panel rounded-lg border p-4">
++        <h2 className="text-sm font-semibold text-zinc-950 dark:text-zinc-50">
++          {tOr("admin.retention.curvesTitle", "D1 / D7 / D30 Return")}
++        </h2>
++        <div className="mt-4 h-64">
++          <ResponsiveContainer width="100%" height="100%">
++            <LineChart data={curveData} margin={{ top: 10, right: 18, bottom: 0, left: -18 }}>
++              <XAxis dataKey="label" tickLine={false} axisLine={false} tick={{ fontSize: 12 }} />
++              <YAxis tickLine={false} axisLine={false} tick={{ fontSize: 12 }} tickFormatter={(value) => `${value}%`} />
++              <Tooltip
++                formatter={(value, _name, item) => [
++                  `${Number(value).toFixed(1)}%`,
++                  item.payload?.label || tOr("admin.retention.returned", "Returned"),
++                ]}
++                labelFormatter={(label) => `${label}`}
++              />
++              <Line
++                type="monotone"
++                dataKey="pctValue"
++                stroke="#1D4ED8"
++                strokeWidth={2}
++                dot={{ r: 4, fill: "#1D4ED8" }}
++                activeDot={{ r: 5 }}
++              />
++            </LineChart>
++          </ResponsiveContainer>
++        </div>
++        <div className="mt-3 grid gap-2 sm:grid-cols-3">
++          {curves.map((point) => (
++            <div key={point.key} className="rounded-md border border-zinc-200 p-3 dark:border-zinc-800">
++              <p className="text-xs text-zinc-500 dark:text-zinc-400">{point.label}</p>
++              <p className="mt-1 text-xl font-semibold tabular-nums text-zinc-950 dark:text-zinc-50">
++                {formatPercent(point.pct)}
++              </p>
++              <p className="mt-1 text-xs tabular-nums text-zinc-500 dark:text-zinc-400">
++                {tOr("admin.retention.returnedOutOf", "{returned} / {activated} returned", {
++                  returned: formatNumber(point.returned_users),
++                  activated: formatNumber(point.activated_users),
++                })}
++              </p>
++            </div>
++          ))}
++        </div>
++      </div>
++      <div className="dt-admin-panel rounded-lg border p-4">
++        <h2 className="text-sm font-semibold text-zinc-950 dark:text-zinc-50">
++          {tOr("admin.retention.dauTitle", "DAU Last 30 Days")}
++        </h2>
++        <div className="mt-4 h-64">
++          <ResponsiveContainer width="100%" height="100%">
++            <LineChart data={dauSeries} margin={{ top: 10, right: 18, bottom: 0, left: -18 }}>
++              <XAxis dataKey="date" tickLine={false} axisLine={false} minTickGap={22} tick={{ fontSize: 12 }} />
++              <YAxis tickLine={false} axisLine={false} tick={{ fontSize: 12 }} allowDecimals={false} />
++              <Tooltip formatter={(value) => [formatNumber(Number(value)), tOr("admin.retention.dau", "DAU")]} />
++              <Line
++                type="monotone"
++                dataKey="dau"
++                stroke="#1D4ED8"
++                strokeWidth={2}
++                dot={false}
++                activeDot={{ r: 4 }}
++              />
++            </LineChart>
++          </ResponsiveContainer>
++        </div>
++      </div>
++    </section>
++  );
++}
+diff --git a/frontend/src/components/admin/RetentionHeatmap.tsx b/frontend/src/components/admin/RetentionHeatmap.tsx
+new file mode 100644
+index 0000000..a9b384d
+--- /dev/null
++++ b/frontend/src/components/admin/RetentionHeatmap.tsx
+@@ -0,0 +1,83 @@
++"use client";
++
++import type { AdminRetentionCohort } from "../../lib/api";
++import { formatPercent } from "../../lib/formatNumber";
++import { useLocale } from "../../i18n";
++
++function cellColor(pct: number): string {
++  if (pct <= 0) return "rgba(113, 113, 122, 0.16)";
++  const alpha = Math.min(0.92, 0.16 + pct * 0.76);
++  return `rgba(29, 78, 216, ${alpha})`;
++}
++
++export default function RetentionHeatmap({ cohorts }: { cohorts: AdminRetentionCohort[] }) {
++  const { tOr } = useLocale();
++  const offsets = Array.from({ length: 12 }, (_, index) => index);
++
++  if (cohorts.length === 0) {
++    return (
++      <div className="dt-admin-panel rounded-lg border p-6 text-sm text-zinc-500 dark:text-zinc-400">
++        {tOr("admin.retention.emptyHeatmap", "No retention cohorts yet.")}
++      </div>
++    );
++  }
++
++  return (
++    <section className="dt-admin-panel overflow-hidden rounded-lg border">
++      <div className="border-b border-zinc-200 px-4 py-3 dark:border-zinc-800">
++        <h2 className="text-sm font-semibold text-zinc-950 dark:text-zinc-50">
++          {tOr("admin.retention.heatmapTitle", "Weekly Cohort Retention")}
++        </h2>
++        <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
++          {tOr("admin.retention.heatmapSubtitle", "Signup-week cohorts by active user-message week.")}
++        </p>
++      </div>
++      <div className="overflow-x-auto p-4">
++        <table className="w-full min-w-[760px] border-separate border-spacing-1 text-xs">
++          <thead>
++            <tr className="text-zinc-500 dark:text-zinc-400">
++              <th scope="col" className="w-28 px-2 py-1 text-left font-medium">
++                {tOr("admin.retention.cohort", "Cohort")}
++              </th>
++              <th scope="col" className="w-16 px-2 py-1 text-right font-medium">
++                {tOr("admin.retention.users", "Users")}
++              </th>
++              {offsets.map((offset) => (
++                <th key={offset} scope="col" className="px-2 py-1 text-center font-medium tabular-nums">
++                  W{offset}
++                </th>
++              ))}
++            </tr>
++          </thead>
++          <tbody>
++            {cohorts.map((cohort) => (
++              <tr key={cohort.cohort_week}>
++                <th scope="row" className="rounded bg-zinc-50 px-2 py-2 text-left font-medium text-zinc-700 dark:bg-zinc-900 dark:text-zinc-300">
++                  {cohort.cohort_week}
++                </th>
++                <td className="rounded bg-zinc-50 px-2 py-2 text-right tabular-nums text-zinc-600 dark:bg-zinc-900 dark:text-zinc-400">
++                  {cohort.cohort_size}
++                </td>
++                {cohort.retention.map((cell) => {
++                  const active = cell.pct >= 0.35;
++                  return (
++                    <td
++                      key={cell.week_offset}
++                      className={`h-9 min-w-12 rounded text-center align-middle font-medium tabular-nums ${
++                        active ? "text-white" : "text-zinc-700 dark:text-zinc-200"
++                      }`}
++                      style={{ backgroundColor: cellColor(cell.pct) }}
++                      title={`${cell.active_users} / ${cohort.cohort_size}`}
++                    >
++                      {formatPercent(cell.pct)}
++                    </td>
++                  );
++                })}
++              </tr>
++            ))}
++          </tbody>
++        </table>
++      </div>
++    </section>
++  );
++}
+diff --git a/frontend/src/components/admin/RetentionTab.tsx b/frontend/src/components/admin/RetentionTab.tsx
+new file mode 100644
+index 0000000..7625db7
+--- /dev/null
++++ b/frontend/src/components/admin/RetentionTab.tsx
+@@ -0,0 +1,95 @@
++"use client";
++
++import type { AdminRetention, AdminRetentionSegmentItem } from "../../lib/api";
++import { formatNumber, formatPercent } from "../../lib/formatNumber";
++import { useLocale } from "../../i18n";
++import RetentionCurves from "./RetentionCurves";
++import RetentionHeatmap from "./RetentionHeatmap";
++
++export default function RetentionTab({ retention }: { retention: AdminRetention | null }) {
++  const { tOr } = useLocale();
++  if (!retention) return null;
++
++  return (
++    <div className="space-y-6">
++      <div className="grid gap-4 sm:grid-cols-3">
++        <MiniMetric label={tOr("admin.retention.wau", "WAU")} value={retention.dau_wau_mau.wau} />
++        <MiniMetric label={tOr("admin.retention.mau", "MAU")} value={retention.dau_wau_mau.mau} />
++        <MiniMetric label={tOr("admin.retention.stickiness", "Stickiness")} value={formatPercent(retention.dau_wau_mau.stickiness)} />
++      </div>
++      <RetentionHeatmap cohorts={retention.cohort_grid} />
++      <RetentionCurves curves={retention.curves} dauSeries={retention.dau_wau_mau.series} />
++      <div className="grid gap-4 lg:grid-cols-3">
++        <SegmentPanel title={tOr("admin.retention.byPlan", "Retention by Plan")} rows={retention.by_segment.plan} />
++        <SegmentPanel title={tOr("admin.retention.byDocSize", "Retention by Doc Size")} rows={retention.by_segment.doc_size} />
++        <SegmentPanel title={tOr("admin.retention.byLocale", "Retention by Locale")} rows={retention.by_segment.locale} />
++      </div>
++      <section className="dt-admin-panel rounded-lg border">
++        <div className="border-b border-zinc-200 px-4 py-3 dark:border-zinc-800">
++          <h2 className="text-sm font-semibold text-zinc-950 dark:text-zinc-50">
++            {tOr("admin.retention.weeklyFlow", "Weekly Flow")}
++          </h2>
++        </div>
++        <div className="overflow-x-auto">
++          <table className="w-full text-sm">
++            <thead className="bg-zinc-50 text-zinc-500 dark:bg-zinc-900 dark:text-zinc-400">
++              <tr>
++                <th scope="col" className="px-4 py-2 text-left font-medium">{tOr("admin.retention.week", "Week")}</th>
++                <th scope="col" className="px-4 py-2 text-right font-medium">{tOr("admin.retention.new", "New")}</th>
++                <th scope="col" className="px-4 py-2 text-right font-medium">{tOr("admin.retention.retained", "Retained")}</th>
++                <th scope="col" className="px-4 py-2 text-right font-medium">{tOr("admin.retention.resurrected", "Resurrected")}</th>
++                <th scope="col" className="px-4 py-2 text-right font-medium">{tOr("admin.retention.churned", "Churned")}</th>
++              </tr>
++            </thead>
++            <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800">
++              {retention.weekly_flow.map((row) => (
++                <tr key={row.week}>
++                  <td className="px-4 py-2 text-zinc-700 dark:text-zinc-300">{row.week}</td>
++                  <td className="px-4 py-2 text-right tabular-nums text-zinc-600 dark:text-zinc-400">{formatNumber(row.new)}</td>
++                  <td className="px-4 py-2 text-right tabular-nums text-zinc-600 dark:text-zinc-400">{formatNumber(row.retained)}</td>
++                  <td className="px-4 py-2 text-right tabular-nums text-zinc-600 dark:text-zinc-400">{formatNumber(row.resurrected)}</td>
++                  <td className="px-4 py-2 text-right tabular-nums text-zinc-600 dark:text-zinc-400">{formatNumber(row.churned)}</td>
++                </tr>
++              ))}
++            </tbody>
++          </table>
++        </div>
++      </section>
++    </div>
++  );
++}
++
++function MiniMetric({ label, value }: { label: string; value: number | string }) {
++  return (
++    <div className="dt-admin-panel rounded-lg border p-4">
++      <p className="text-xs text-zinc-500 dark:text-zinc-400">{label}</p>
++      <p className="mt-1 text-2xl font-semibold tabular-nums text-zinc-950 dark:text-zinc-50">
++        {typeof value === "number" ? formatNumber(value) : value}
++      </p>
++    </div>
++  );
++}
++
++function SegmentPanel({ title, rows }: { title: string; rows: AdminRetentionSegmentItem[] }) {
++  return (
++    <section className="dt-admin-panel rounded-lg border p-4">
++      <h2 className="text-sm font-semibold text-zinc-950 dark:text-zinc-50">{title}</h2>
++      <div className="mt-4 space-y-3">
++        {rows.map((row) => (
++          <div key={row.key}>
++            <div className="flex items-center justify-between gap-3 text-sm">
++              <span className="truncate text-zinc-700 dark:text-zinc-300">{row.label}</span>
++              <span className="tabular-nums text-zinc-950 dark:text-zinc-50">{formatPercent(row.pct)}</span>
++            </div>
++            <div className="mt-2 h-2 rounded bg-zinc-100 dark:bg-zinc-800">
++              <div className="h-full rounded bg-[#1D4ED8]" style={{ width: `${Math.min(100, row.pct * 100)}%` }} />
++            </div>
++            <p className="mt-1 text-xs tabular-nums text-zinc-500 dark:text-zinc-400">
++              {formatNumber(row.retained_users)} / {formatNumber(row.users)}
++            </p>
++          </div>
++        ))}
++      </div>
++    </section>
++  );
++}
+diff --git a/frontend/src/components/admin/RevenueTab.tsx b/frontend/src/components/admin/RevenueTab.tsx
+new file mode 100644
+index 0000000..709d261
+--- /dev/null
++++ b/frontend/src/components/admin/RevenueTab.tsx
+@@ -0,0 +1,30 @@
++"use client";
++
++import type { AdminBillingHealth, AdminFunnel } from "../../lib/api";
++import { useLocale } from "../../i18n";
++import { BillingHealthPanel, FunnelPanel } from "./AdminPanels";
++
++export default function RevenueTab({
++  funnel,
++  billingHealth,
++  billingRemoteLoading,
++  onRemoteCheck,
++}: {
++  funnel: AdminFunnel | null;
++  billingHealth: AdminBillingHealth | null;
++  billingRemoteLoading: boolean;
++  onRemoteCheck: () => void;
++}) {
++  const { tOr } = useLocale();
++
++  return (
++    <div className="space-y-6">
++      <FunnelPanel funnel={funnel} title={tOr("admin.revenue.funnelTitle", "Revenue Funnel")} />
++      <BillingHealthPanel
++        health={billingHealth}
++        loadingRemote={billingRemoteLoading}
++        onRemoteCheck={onRemoteCheck}
++      />
++    </div>
++  );
++}
+diff --git a/frontend/src/components/admin/types.ts b/frontend/src/components/admin/types.ts
+new file mode 100644
+index 0000000..ce66efe
+--- /dev/null
++++ b/frontend/src/components/admin/types.ts
+@@ -0,0 +1,34 @@
++export interface Overview {
++  total_users: number;
++  paid_users: number;
++  plus_users: number;
++  pro_users: number;
++  total_documents: number;
++  total_sessions: number;
++  total_messages: number;
++  total_tokens: number;
++  total_credits_spent: number;
++  total_credits_granted: number;
++}
++
++export interface TrendPoint {
++  date: string;
++  count?: number;
++  total_tokens?: number;
++  amount?: number;
++}
++
++export interface Trends {
++  signups: TrendPoint[];
++  documents: TrendPoint[];
++  tokens: TrendPoint[];
++  credits_spent: TrendPoint[];
++  active_users: TrendPoint[];
++}
++
++export interface Breakdowns {
++  plan_distribution: { plan: string; count: number }[];
++  model_usage: { model: string; calls: number; tokens: number; credits: number }[];
++  file_types: { file_type: string; count: number }[];
++  doc_status: { status: string; count: number }[];
++}
+diff --git a/frontend/src/lib/api.ts b/frontend/src/lib/api.ts
+index 2665c48..b1bff08 100644
+--- a/frontend/src/lib/api.ts
++++ b/frontend/src/lib/api.ts
+@@ -603,6 +603,118 @@ export async function getAdminRagQuality(days = 30): Promise<AdminRagQuality> {
+   return handle(res);
+ }
+ 
++export interface AdminRetentionCell {
++  week_offset: number;
++  active_users: number;
++  pct: number;
++}
++
++export interface AdminRetentionCohort {
++  cohort_week: string;
++  cohort_size: number;
++  retention: AdminRetentionCell[];
++}
++
++export interface AdminRetentionCurvePoint {
++  key: string;
++  label: string;
++  days: number;
++  activated_users: number;
++  returned_users: number;
++  pct: number;
++}
++
++export interface AdminRetentionDauPoint {
++  date: string;
++  dau: number;
++}
++
++export interface AdminRetentionSegmentItem {
++  key: string;
++  label: string;
++  users: number;
++  retained_users: number;
++  pct: number;
++}
++
++export interface AdminRetention {
++  generated_at: string;
++  cohort_grid: AdminRetentionCohort[];
++  curves: AdminRetentionCurvePoint[];
++  dau_wau_mau: {
++    series: AdminRetentionDauPoint[];
++    wau: number;
++    mau: number;
++    stickiness: number;
++  };
++  by_segment: {
++    plan: AdminRetentionSegmentItem[];
++    doc_size: AdminRetentionSegmentItem[];
++    locale: AdminRetentionSegmentItem[];
++  };
++  weekly_flow: {
++    week: string;
++    new: number;
++    retained: number;
++    resurrected: number;
++    churned: number;
++  }[];
++}
++
++export async function getAdminRetention(): Promise<AdminRetention> {
++  const res = await fetch(`${PROXY_BASE}/api/admin/retention`);
++  return handle(res);
++}
++
++export interface AdminChurnCountPct {
++  count: number;
++  pct: number;
++}
++
++export interface AdminChurnSignalItem extends AdminChurnCountPct {
++  key: string;
++  label: string;
++}
++
++export interface AdminChurnFeedbackItem {
++  id: string;
++  type: string;
++  area: string;
++  severity: string;
++  message: string | null;
++  plan: string | null;
++  created_at: string | null;
++}
++
++export interface AdminChurn {
++  generated_at: string;
++  inactive_days: number;
++  churned_users: number;
++  one_and_done: AdminChurnCountPct & { activated_users: number };
++  churn_signals: AdminChurnSignalItem[];
++  last_action: AdminChurnSignalItem[];
++  feedback: {
++    recent: AdminChurnFeedbackItem[];
++    by_area: { key: string; count: number }[];
++    by_severity: { key: string; count: number }[];
++  };
++  cancel_reasons: {
++    id: string;
++    user_id: string;
++    from_plan: string;
++    to_plan: string;
++    reason: string | null;
++    feedback: string | null;
++    created_at: string | null;
++  }[];
++  reason_buckets: AdminChurnSignalItem[];
++}
++
++export async function getAdminChurn(inactiveDays = 14): Promise<AdminChurn> {
++  const res = await fetch(`${PROXY_BASE}/api/admin/churn?inactive_days=${inactiveDays}`);
++  return handle(res);
++}
++
+ export interface AdminMetricDelta {
+   current: number;
+   previous: number;

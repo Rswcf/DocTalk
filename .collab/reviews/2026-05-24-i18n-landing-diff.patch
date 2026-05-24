@@ -1,0 +1,551 @@
+diff --git a/frontend/src/app/[locale]/page.tsx b/frontend/src/app/[locale]/page.tsx
+new file mode 100644
+index 0000000..3ee9fa5
+--- /dev/null
++++ b/frontend/src/app/[locale]/page.tsx
+@@ -0,0 +1,72 @@
++import type { Metadata } from 'next';
++import { notFound } from 'next/navigation';
++import LandingPageContent from '../../components/landing/LandingPageContent';
++import LocaleProvider from '../../i18n/LocaleProvider';
++import MarketingLocaleLinks from '../../components/marketing/MarketingLocaleLinks';
++import { getServerT, getScopedMessages } from '../../i18n/server';
++import { buildMarketingMetadata, absoluteUrl } from '../../lib/seo';
++import { isUrlLocale, localizedHref } from '../../i18n/routing';
++
++// Namespaces the landing tree (header + sections + footer + HeroArtifact) reads.
++// Seeding only these keeps the hydration payload ~17KB instead of the full 400KB.
++const LANDING_PREFIXES = [
++  'landing.', 'hero.', 'chat.', 'footer.', 'privacy.', 'terms.', 'public.', 'auth.', 'header.', 'common.',
++] as const;
++
++export async function generateMetadata({
++  params,
++}: {
++  params: { locale: string };
++}): Promise<Metadata> {
++  const { t } = await getServerT(params.locale);
++  const title = t('landing.headline').replace(/\s*\n\s*/g, ' ').trim();
++  const description = t('landing.description');
++  return buildMarketingMetadata({
++    title: { absolute: `${title} | DocTalk` },
++    description,
++    path: '/',
++    locale: params.locale,
++    localized: true,
++    openGraph: { title: `${title} | DocTalk`, description, type: 'website' },
++  });
++}
++
++export default async function LocaleLandingPage({ params }: { params: { locale: string } }) {
++  if (!isUrlLocale(params.locale)) notFound();
++  const { locale } = params;
++  const { t } = await getServerT(locale);
++  const messages = await getScopedMessages(locale, LANDING_PREFIXES);
++
++  const websiteJsonLd = {
++    '@context': 'https://schema.org',
++    '@graph': [
++      {
++        '@type': 'WebSite',
++        name: 'DocTalk',
++        url: absoluteUrl(localizedHref(locale, '/')),
++        inLanguage: locale,
++        description: t('landing.description'),
++      },
++      {
++        '@type': 'Organization',
++        name: 'DocTalk',
++        url: absoluteUrl('/'),
++        logo: absoluteUrl('/logo-icon.png'),
++        sameAs: ['https://github.com/Rswcf/DocTalk'],
++      },
++    ],
++  };
++
++  return (
++    <>
++      <script
++        type="application/ld+json"
++        dangerouslySetInnerHTML={{ __html: JSON.stringify(websiteJsonLd) }}
++      />
++      <LocaleProvider initialLocale={locale} initialMessages={messages}>
++        <LandingPageContent />
++      </LocaleProvider>
++      <MarketingLocaleLinks path="/" label={t('header.language')} />
++    </>
++  );
++}
+diff --git a/frontend/src/app/page.tsx b/frontend/src/app/page.tsx
+index e88e02c..9836c46 100644
+--- a/frontend/src/app/page.tsx
++++ b/frontend/src/app/page.tsx
+@@ -1,5 +1,6 @@
+ import type { Metadata } from 'next';
+ import HomePageClient from './HomePageClient';
++import MarketingLocaleLinks from '../components/marketing/MarketingLocaleLinks';
+ import { absoluteUrl, buildMarketingMetadata } from '../lib/seo';
+ 
+ export const metadata: Metadata = buildMarketingMetadata({
+@@ -7,6 +8,7 @@ export const metadata: Metadata = buildMarketingMetadata({
+   description:
+     'Upload any document and chat with AI. Get instant answers with source citations that highlight in your document. Supports PDF, DOCX, PPTX, XLSX, and more.',
+   path: '/',
++  localized: true,
+   keywords: [
+     'ai document chat',
+     'chat with pdf',
+@@ -170,6 +172,7 @@ export default function HomePage() {
+       })}} />
+ 
+       <HomePageClient />
++      <MarketingLocaleLinks path="/" />
+     </>
+   );
+ }
+diff --git a/frontend/src/components/landing/FAQ.tsx b/frontend/src/components/landing/FAQ.tsx
+index 5de7b3b..2f4c6f3 100644
+--- a/frontend/src/components/landing/FAQ.tsx
++++ b/frontend/src/components/landing/FAQ.tsx
+@@ -26,7 +26,7 @@ export default function FAQ() {
+       <div className="ed-shell">
+         <ScrollReveal>
+           <div className="max-w-[760px]">
+-            <p className="ed-label mb-3">FAQ</p>
++            <p className="ed-label mb-3">{t('landing.faq.eyebrow')}</p>
+             <h2 className="ed-h2 mb-10">{t('landing.faq.title')}</h2>
+           </div>
+           <hr className="ed-rule" />
+diff --git a/frontend/src/components/landing/FeatureGrid.tsx b/frontend/src/components/landing/FeatureGrid.tsx
+index ea753b0..c6f29be 100644
+--- a/frontend/src/components/landing/FeatureGrid.tsx
++++ b/frontend/src/components/landing/FeatureGrid.tsx
+@@ -195,7 +195,7 @@ export default function FeatureGrid() {
+         {/* Section header */}
+         <ScrollReveal>
+           <div className="mb-10">
+-            <p className="ed-label mb-3">Features</p>
++            <p className="ed-label mb-3">{t('landing.features.eyebrow')}</p>
+             <h2 className="ed-h2 max-w-xl">
+               {t('landing.features.title')}
+             </h2>
+diff --git a/frontend/src/components/landing/FinalCTA.tsx b/frontend/src/components/landing/FinalCTA.tsx
+index 61c09b7..965c797 100644
+--- a/frontend/src/components/landing/FinalCTA.tsx
++++ b/frontend/src/components/landing/FinalCTA.tsx
+@@ -15,7 +15,7 @@ export default function FinalCTA() {
+       <div className="ed-shell">
+         <ScrollReveal>
+           <div className="max-w-2xl">
+-            <p className="ed-label mb-4">Get Started</p>
++            <p className="ed-label mb-4">{t('landing.finalCta.eyebrow')}</p>
+             <hr className="ed-rule mb-10" />
+             <h2 className="ed-display mb-6">{t('landing.finalCta.title')}</h2>
+             <p className="ed-lede mb-10">{t('landing.finalCta.subtitle')}</p>
+diff --git a/frontend/src/components/landing/HeroCollage.tsx b/frontend/src/components/landing/HeroCollage.tsx
+index 581242f..43a250b 100644
+--- a/frontend/src/components/landing/HeroCollage.tsx
++++ b/frontend/src/components/landing/HeroCollage.tsx
+@@ -1,11 +1,14 @@
+ "use client";
+ 
++import { useLocale } from '../../i18n';
++
+ /**
+  * HeroCollage — Art-directed editorial collage for the DocTalk landing hero.
+  * Pure HTML/CSS/SVG, warm editorial palette only. No external images.
+  * No glassmorphism, no gradient mesh, no UI mock. Aria-hidden decorative.
+  */
+ export default function HeroCollage() {
++  const { t } = useLocale();
+   return (
+     <figure aria-hidden="true" style={{ position: "relative" }}>
+       {/* ─── Outer container — roughly 4:5 aspect ─── */}
+@@ -336,7 +339,7 @@ export default function HeroCollage() {
+         className="ed-caption"
+         style={{ marginTop: "12px", display: "block" }}
+       >
+-        Fig.&thinsp;01 — Reading with citations
++        Fig.&thinsp;01 — {t('landing.heroCollage.caption')}
+       </figcaption>
+     </figure>
+   );
+diff --git a/frontend/src/components/landing/SecuritySection.tsx b/frontend/src/components/landing/SecuritySection.tsx
+index d50c477..ba1e9f3 100644
+--- a/frontend/src/components/landing/SecuritySection.tsx
++++ b/frontend/src/components/landing/SecuritySection.tsx
+@@ -19,7 +19,7 @@ export default function SecuritySection() {
+       <div className="ed-shell">
+         <ScrollReveal>
+           <div className="mb-10">
+-            <p className="ed-label mb-3">Privacy &amp; Security</p>
++            <p className="ed-label mb-3">{t('landing.security.eyebrow')}</p>
+             <h2 className="ed-h2 max-w-xl">{t('landing.security.title')}</h2>
+           </div>
+           <hr className="ed-rule" />
+@@ -45,7 +45,7 @@ export default function SecuritySection() {
+                 >
+                   <p className="ed-label mb-4">
+                     <span className="ed-label-num">{num}</span>
+-                    {' '}— Privacy
++                    {' '}— {t('landing.security.itemEyebrow')}
+                   </p>
+                   <h3 className="ed-h3 mb-3">{t(titleKey)}</h3>
+                   <p className="ed-body">{t(descKey)}</p>
+diff --git a/frontend/src/components/marketing/EdLanguageSelector.tsx b/frontend/src/components/marketing/EdLanguageSelector.tsx
+index 184bbb6..bc7ba5f 100644
+--- a/frontend/src/components/marketing/EdLanguageSelector.tsx
++++ b/frontend/src/components/marketing/EdLanguageSelector.tsx
+@@ -32,9 +32,10 @@ export default function EdLanguageSelector({ languageLabel }: { languageLabel?:
+   const pathname = usePathname() || "/";
+   const { locale: urlLocale, path: agnosticPath } = splitLocaleFromPath(pathname);
+   const localized = isLocalizedPath(agnosticPath);
+-  // On a localized URL the active language is the one in the URL; otherwise the
+-  // client-detected/selected locale.
+-  const activeLocale = localized ? urlLocale : locale;
++  // On a prefixed URL (/de) the active language is the URL locale; on the
++  // unprefixed root/non-localized paths it's the client provider locale (which
++  // reflects detection or a client-side switch).
++  const activeLocale = urlLocale !== 'en' ? urlLocale : locale;
+ 
+   const [open, setOpen] = useState(false);
+   const [pos, setPos] = useState({ top: 0, right: 0, maxHeight: 420 });
+@@ -84,11 +85,12 @@ export default function EdLanguageSelector({ languageLabel }: { languageLabel?:
+   const current = LOCALES.find((l) => l.code === activeLocale);
+   const label = languageLabel ?? tOr("header.language", "Language");
+ 
+-  // On localized pages, only offer the locales that actually have a URL for this
+-  // page (en + URL_LOCALES). Elsewhere, the full client-toggle list.
+-  const options = localized
+-    ? LOCALES.filter((l) => (MARKETING_LOCALES as readonly string[]).includes(l.code))
+-    : LOCALES;
++  // Always offer all locales. On a localized path, the served locales
++  // (en + URL_LOCALES) render as crawlable <a> links; the rest (and everything
++  // on non-localized paths) stay client-side setLocale() toggles.
++  const options = LOCALES;
++  const isServed = (code: string) =>
++    localized && (MARKETING_LOCALES as readonly string[]).includes(code);
+ 
+   const optionStyle = (selected: boolean): React.CSSProperties => ({
+     fontFamily: "var(--dt-body)",
+@@ -153,7 +155,7 @@ export default function EdLanguageSelector({ languageLabel }: { languageLabel?:
+           );
+           return (
+             <li key={l.code} role="none">
+-              {localized ? (
++              {isServed(l.code) ? (
+                 <a
+                   role="option"
+                   aria-selected={selected}
+diff --git a/frontend/src/components/marketing/EditorialHeaderBase.tsx b/frontend/src/components/marketing/EditorialHeaderBase.tsx
+index 05613d8..db6e643 100644
+--- a/frontend/src/components/marketing/EditorialHeaderBase.tsx
++++ b/frontend/src/components/marketing/EditorialHeaderBase.tsx
+@@ -113,9 +113,9 @@ export default function EditorialHeaderBase({
+                     </span>
+                     <span
+                       className="ed-caption"
+-                      style={{ letterSpacing: "0.08em" }}
++                      style={{ letterSpacing: "0.08em", textTransform: "uppercase" }}
+                     >
+-                      DOCUMENT INTELLIGENCE
++                      {t('landing.masthead.tagline')}
+                     </span>
+                   </span>
+                 </>
+diff --git a/frontend/src/i18n/LocaleProvider.tsx b/frontend/src/i18n/LocaleProvider.tsx
+index 75aabf5..30003f9 100644
+--- a/frontend/src/i18n/LocaleProvider.tsx
++++ b/frontend/src/i18n/LocaleProvider.tsx
+@@ -55,13 +55,38 @@ function detectLocale(): Locale {
+   return 'en';
+ }
+ 
+-export default function LocaleProvider({ children }: { children: React.ReactNode }) {
+-  const [locale, setLocaleState] = useState<Locale>('en');
+-  const [loadedTranslations, setLoadedTranslations] = useState<Record<string, Record<string, string>>>({ en });
++export default function LocaleProvider({
++  children,
++  initialLocale,
++  initialMessages,
++}: {
++  children: React.ReactNode;
++  /**
++   * Server-seeded locale + messages for localized server pages (e.g. the `/de`
++   * landing). When provided, the provider starts in that locale with those
++   * messages so the initial SSR HTML is translated — without client detection
++   * and without shipping the full locale JSON. Missing keys still fall back to
++   * the statically-bundled English. Omit both for the default app behavior
++   * (start `en`, detect client-side).
++   */
++  initialLocale?: Locale;
++  initialMessages?: Record<string, string>;
++}) {
++  const [locale, setLocaleState] = useState<Locale>(initialLocale ?? 'en');
++  const [loadedTranslations, setLoadedTranslations] = useState<Record<string, Record<string, string>>>(
++    // Never let a scoped seed clobber the full bundled English (resolve() relies
++    // on it as the fallback); only seed a non-en locale.
++    initialLocale && initialLocale !== 'en' && initialMessages
++      ? { en, [initialLocale]: initialMessages }
++      : { en },
++  );
+ 
+   useEffect(() => {
++    // Seeded providers (localized server pages) keep their server locale; only
++    // the default (unseeded) provider detects from storage/navigator/URL.
++    if (initialLocale) return;
+     setLocaleState(detectLocale());
+-  }, []);
++  }, [initialLocale]);
+ 
+   const setLocale = useCallback((l: Locale) => {
+     setLocaleState(l);
+diff --git a/frontend/src/i18n/locales/ar.json b/frontend/src/i18n/locales/ar.json
+index 4b08b00..171c124 100644
+--- a/frontend/src/i18n/locales/ar.json
++++ b/frontend/src/i18n/locales/ar.json
+@@ -3620,5 +3620,12 @@
+   "landing.heroEyebrow": "ذكاء المستندات",
+   "landing.heroStats.languages": "اللغات",
+   "landing.heroStats.formats": "صيغ الملفات",
+-  "landing.heroStats.citedAnswers": "إجابات موثقة"
++  "landing.heroStats.citedAnswers": "إجابات موثقة",
++  "landing.features.eyebrow": "Features",
++  "landing.faq.eyebrow": "FAQ",
++  "landing.finalCta.eyebrow": "Get Started",
++  "landing.security.eyebrow": "Privacy & Security",
++  "landing.security.itemEyebrow": "Privacy",
++  "landing.heroCollage.caption": "Reading with citations",
++  "landing.masthead.tagline": "Document Intelligence"
+ }
+diff --git a/frontend/src/i18n/locales/de.json b/frontend/src/i18n/locales/de.json
+index e6590bb..1ad5d16 100644
+--- a/frontend/src/i18n/locales/de.json
++++ b/frontend/src/i18n/locales/de.json
+@@ -3620,5 +3620,12 @@
+   "landing.heroEyebrow": "Dokumentenintelligenz",
+   "landing.heroStats.languages": "Sprachen",
+   "landing.heroStats.formats": "Dateiformate",
+-  "landing.heroStats.citedAnswers": "Zitierte Antworten"
++  "landing.heroStats.citedAnswers": "Zitierte Antworten",
++  "landing.features.eyebrow": "Funktionen",
++  "landing.faq.eyebrow": "FAQ",
++  "landing.finalCta.eyebrow": "Loslegen",
++  "landing.security.eyebrow": "Datenschutz & Sicherheit",
++  "landing.security.itemEyebrow": "Datenschutz",
++  "landing.heroCollage.caption": "Lesen mit Zitaten",
++  "landing.masthead.tagline": "Dokumentenintelligenz"
+ }
+diff --git a/frontend/src/i18n/locales/en.json b/frontend/src/i18n/locales/en.json
+index 9383a6f..e33853f 100644
+--- a/frontend/src/i18n/locales/en.json
++++ b/frontend/src/i18n/locales/en.json
+@@ -3620,5 +3620,12 @@
+   "landing.heroEyebrow": "Document intelligence",
+   "landing.heroStats.languages": "Languages",
+   "landing.heroStats.formats": "File formats",
+-  "landing.heroStats.citedAnswers": "Cited answers"
++  "landing.heroStats.citedAnswers": "Cited answers",
++  "landing.features.eyebrow": "Features",
++  "landing.faq.eyebrow": "FAQ",
++  "landing.finalCta.eyebrow": "Get Started",
++  "landing.security.eyebrow": "Privacy & Security",
++  "landing.security.itemEyebrow": "Privacy",
++  "landing.heroCollage.caption": "Reading with citations",
++  "landing.masthead.tagline": "Document Intelligence"
+ }
+diff --git a/frontend/src/i18n/locales/es.json b/frontend/src/i18n/locales/es.json
+index 4ccfa10..2c3593d 100644
+--- a/frontend/src/i18n/locales/es.json
++++ b/frontend/src/i18n/locales/es.json
+@@ -3620,5 +3620,12 @@
+   "landing.heroEyebrow": "Inteligencia documental",
+   "landing.heroStats.languages": "Idiomas",
+   "landing.heroStats.formats": "Formatos de archivo",
+-  "landing.heroStats.citedAnswers": "Respuestas citadas"
++  "landing.heroStats.citedAnswers": "Respuestas citadas",
++  "landing.features.eyebrow": "Características",
++  "landing.faq.eyebrow": "Preguntas frecuentes",
++  "landing.finalCta.eyebrow": "Comenzar",
++  "landing.security.eyebrow": "Privacidad y seguridad",
++  "landing.security.itemEyebrow": "Privacidad",
++  "landing.heroCollage.caption": "Lectura con citas",
++  "landing.masthead.tagline": "Inteligencia documental"
+ }
+diff --git a/frontend/src/i18n/locales/fr.json b/frontend/src/i18n/locales/fr.json
+index 3d7585e..4d4ab7a 100644
+--- a/frontend/src/i18n/locales/fr.json
++++ b/frontend/src/i18n/locales/fr.json
+@@ -3620,5 +3620,12 @@
+   "landing.heroEyebrow": "Intelligence documentaire",
+   "landing.heroStats.languages": "Langues",
+   "landing.heroStats.formats": "Formats de fichier",
+-  "landing.heroStats.citedAnswers": "Réponses citées"
++  "landing.heroStats.citedAnswers": "Réponses citées",
++  "landing.features.eyebrow": "Fonctionnalités",
++  "landing.faq.eyebrow": "FAQ",
++  "landing.finalCta.eyebrow": "Commencer",
++  "landing.security.eyebrow": "Confidentialité et sécurité",
++  "landing.security.itemEyebrow": "Confidentialité",
++  "landing.heroCollage.caption": "Lecture avec citations",
++  "landing.masthead.tagline": "Intelligence documentaire"
+ }
+diff --git a/frontend/src/i18n/locales/hi.json b/frontend/src/i18n/locales/hi.json
+index 4a406ef..26b74e6 100644
+--- a/frontend/src/i18n/locales/hi.json
++++ b/frontend/src/i18n/locales/hi.json
+@@ -3620,5 +3620,12 @@
+   "landing.heroEyebrow": "दस्तावेज़ इंटेलिजेंस",
+   "landing.heroStats.languages": "भाषाएँ",
+   "landing.heroStats.formats": "फ़ाइल स्वरूप",
+-  "landing.heroStats.citedAnswers": "उद्धृत उत्तर"
++  "landing.heroStats.citedAnswers": "उद्धृत उत्तर",
++  "landing.features.eyebrow": "Features",
++  "landing.faq.eyebrow": "FAQ",
++  "landing.finalCta.eyebrow": "Get Started",
++  "landing.security.eyebrow": "Privacy & Security",
++  "landing.security.itemEyebrow": "Privacy",
++  "landing.heroCollage.caption": "Reading with citations",
++  "landing.masthead.tagline": "Document Intelligence"
+ }
+diff --git a/frontend/src/i18n/locales/it.json b/frontend/src/i18n/locales/it.json
+index 74bcf8b..cc332e8 100644
+--- a/frontend/src/i18n/locales/it.json
++++ b/frontend/src/i18n/locales/it.json
+@@ -3620,5 +3620,12 @@
+   "landing.heroEyebrow": "Intelligenza documentale",
+   "landing.heroStats.languages": "Lingue",
+   "landing.heroStats.formats": "Formati di file",
+-  "landing.heroStats.citedAnswers": "Risposte citate"
++  "landing.heroStats.citedAnswers": "Risposte citate",
++  "landing.features.eyebrow": "Features",
++  "landing.faq.eyebrow": "FAQ",
++  "landing.finalCta.eyebrow": "Get Started",
++  "landing.security.eyebrow": "Privacy & Security",
++  "landing.security.itemEyebrow": "Privacy",
++  "landing.heroCollage.caption": "Reading with citations",
++  "landing.masthead.tagline": "Document Intelligence"
+ }
+diff --git a/frontend/src/i18n/locales/ja.json b/frontend/src/i18n/locales/ja.json
+index 748f763..3717790 100644
+--- a/frontend/src/i18n/locales/ja.json
++++ b/frontend/src/i18n/locales/ja.json
+@@ -3620,5 +3620,12 @@
+   "landing.heroEyebrow": "ドキュメントインテリジェンス",
+   "landing.heroStats.languages": "言語",
+   "landing.heroStats.formats": "ファイル形式",
+-  "landing.heroStats.citedAnswers": "引用付き回答"
++  "landing.heroStats.citedAnswers": "引用付き回答",
++  "landing.features.eyebrow": "機能",
++  "landing.faq.eyebrow": "よくある質問",
++  "landing.finalCta.eyebrow": "はじめる",
++  "landing.security.eyebrow": "プライバシーとセキュリティ",
++  "landing.security.itemEyebrow": "プライバシー",
++  "landing.heroCollage.caption": "引用付きで読む",
++  "landing.masthead.tagline": "ドキュメントインテリジェンス"
+ }
+diff --git a/frontend/src/i18n/locales/ko.json b/frontend/src/i18n/locales/ko.json
+index 6bc5d00..1b6a18c 100644
+--- a/frontend/src/i18n/locales/ko.json
++++ b/frontend/src/i18n/locales/ko.json
+@@ -3620,5 +3620,12 @@
+   "landing.heroEyebrow": "문서 인텔리전스",
+   "landing.heroStats.languages": "언어",
+   "landing.heroStats.formats": "파일 형식",
+-  "landing.heroStats.citedAnswers": "인용 답변"
++  "landing.heroStats.citedAnswers": "인용 답변",
++  "landing.features.eyebrow": "기능",
++  "landing.faq.eyebrow": "자주 묻는 질문",
++  "landing.finalCta.eyebrow": "시작하기",
++  "landing.security.eyebrow": "개인정보 보호 및 보안",
++  "landing.security.itemEyebrow": "개인정보 보호",
++  "landing.heroCollage.caption": "인용과 함께 읽기",
++  "landing.masthead.tagline": "문서 인텔리전스"
+ }
+diff --git a/frontend/src/i18n/locales/pt.json b/frontend/src/i18n/locales/pt.json
+index 82422b0..1e33f82 100644
+--- a/frontend/src/i18n/locales/pt.json
++++ b/frontend/src/i18n/locales/pt.json
+@@ -3620,5 +3620,12 @@
+   "landing.heroEyebrow": "Inteligência de documentos",
+   "landing.heroStats.languages": "Idiomas",
+   "landing.heroStats.formats": "Formatos de arquivo",
+-  "landing.heroStats.citedAnswers": "Respostas citadas"
++  "landing.heroStats.citedAnswers": "Respostas citadas",
++  "landing.features.eyebrow": "Recursos",
++  "landing.faq.eyebrow": "Perguntas frequentes",
++  "landing.finalCta.eyebrow": "Comece agora",
++  "landing.security.eyebrow": "Privacidade e segurança",
++  "landing.security.itemEyebrow": "Privacidade",
++  "landing.heroCollage.caption": "Leitura com citações",
++  "landing.masthead.tagline": "Inteligência de documentos"
+ }
+diff --git a/frontend/src/i18n/locales/zh.json b/frontend/src/i18n/locales/zh.json
+index bb95368..bb91867 100644
+--- a/frontend/src/i18n/locales/zh.json
++++ b/frontend/src/i18n/locales/zh.json
+@@ -3659,5 +3659,12 @@
+   "landing.heroEyebrow": "文档智能",
+   "landing.heroStats.languages": "语言",
+   "landing.heroStats.formats": "文件格式",
+-  "landing.heroStats.citedAnswers": "引用答案"
++  "landing.heroStats.citedAnswers": "引用答案",
++  "landing.features.eyebrow": "Features",
++  "landing.faq.eyebrow": "FAQ",
++  "landing.finalCta.eyebrow": "Get Started",
++  "landing.security.eyebrow": "Privacy & Security",
++  "landing.security.itemEyebrow": "Privacy",
++  "landing.heroCollage.caption": "Reading with citations",
++  "landing.masthead.tagline": "Document Intelligence"
+ }
+diff --git a/frontend/src/i18n/routing.ts b/frontend/src/i18n/routing.ts
+index 3543bd8..82a1f11 100644
+--- a/frontend/src/i18n/routing.ts
++++ b/frontend/src/i18n/routing.ts
+@@ -30,6 +30,7 @@ export function isUrlLocale(value: string | undefined | null): value is UrlLocal
+  * Grows as pages are localized (Phase A: lawyers only).
+  */
+ export const LOCALIZED_PATHS: ReadonlySet<string> = new Set<string>([
++  '/',
+   '/use-cases/lawyers',
+   '/use-cases/finance',
+   '/use-cases/students',
+diff --git a/frontend/src/i18n/server.ts b/frontend/src/i18n/server.ts
+index 75e9bd4..9864dbf 100644
+--- a/frontend/src/i18n/server.ts
++++ b/frontend/src/i18n/server.ts
+@@ -38,6 +38,34 @@ export interface ServerTranslator {
+   tOr: (key: string, fallback: string, params?: Record<string, string | number>) => string;
+ }
+ 
++/**
++ * Resolve a locale's messages limited to the given key prefixes. Used to seed a
++ * client LocaleProvider for a localized server page (e.g. the landing) with just
++ * the namespaces that page's tree uses — translated SSR without shipping the full
++ * 400KB locale JSON. Falls back to English for the locale's missing keys.
++ */
++export async function getScopedMessages(
++  locale: string,
++  prefixes: readonly string[],
++): Promise<Record<string, string>> {
++  const enMessages = en as Messages;
++  let messages: Messages = enMessages;
++  if (locale !== 'en' && loaders[locale]) {
++    try {
++      messages = (await loaders[locale]()).default;
++    } catch {
++      messages = enMessages;
++    }
++  }
++  const out: Record<string, string> = {};
++  for (const key of Object.keys(enMessages)) {
++    if (prefixes.some((p) => key.startsWith(p))) {
++      out[key] = messages[key] ?? enMessages[key];
++    }
++  }
++  return out;
++}
++
+ export async function getServerT(locale: string): Promise<ServerTranslator> {
+   const enMessages = en as Messages;
+   let messages: Messages = enMessages;
