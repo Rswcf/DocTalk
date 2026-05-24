@@ -59,7 +59,6 @@ export const LOCALIZED_PATHS: ReadonlySet<string> = new Set<string>([
   '/alternatives',
   '/features',
   '/tools',
-  '/pricing',
   '/trust',
 ]);
 

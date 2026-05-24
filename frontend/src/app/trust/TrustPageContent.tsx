@@ -16,7 +16,6 @@ import MarketingShell from "../../components/marketing/MarketingShell";
 import EdPageHero from "../../components/marketing/EdPageHero";
 import EdSection from "../../components/marketing/EdSection";
 import EdCtaBanner from "../../components/marketing/EdCtaBanner";
-import { usePageTitle } from "../../lib/usePageTitle";
 import { getServerT } from "../../i18n/server";
 import { getChromeStrings } from "../../i18n/chrome";
 import { localizedHrefIfAvailable } from "../../i18n/routing";
@@ -70,7 +69,6 @@ export default async function TrustPageContent({ locale }: { locale: string }) {
   const { t } = await getServerT(locale);
   const chrome = await getChromeStrings(locale);
   const href = (p: string) => localizedHrefIfAvailable(locale, p);
-  usePageTitle(t("trust.title", {}) || "Trust & Security");
 
   const encryptionControls: Control[] = [
     {
