@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import CitationsClient from './CitationsClient';
+import CitationsContent from './CitationsContent';
 import { buildMarketingMetadata } from '../../../lib/seo';
 
 export const metadata: Metadata = buildMarketingMetadata({
@@ -7,6 +7,7 @@ export const metadata: Metadata = buildMarketingMetadata({
   description:
     'Every AI answer includes numbered citations. Click any citation to jump to the exact source text and verify every answer in your document.',
   path: '/features/citations',
+  localized: true,
   keywords: ['citation highlighting', 'ai citation', 'document citation', 'source verification ai'],
   openGraph: {
     title: 'AI Answers with Source Citations | DocTalk',
@@ -151,7 +152,7 @@ export default function CitationsPage() {
         }}
       />
 
-      <CitationsClient />
+      <CitationsContent locale="en" />
     </>
   );
 }

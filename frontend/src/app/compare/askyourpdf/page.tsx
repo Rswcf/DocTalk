@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import AskyourpdfClient from './AskyourpdfClient';
+import AskyourpdfContent from './AskyourpdfContent';
 import { buildArticleJsonLd, buildMarketingMetadata } from '../../../lib/seo';
 
 export const metadata: Metadata = buildMarketingMetadata({
@@ -7,6 +7,7 @@ export const metadata: Metadata = buildMarketingMetadata({
   description:
     'Compare DocTalk and AskYourPDF for AI document analysis, citation quality, format support, integrations, pricing, and everyday usability.',
   path: '/compare/askyourpdf',
+  localized: true,
   keywords: ['doctalk vs askyourpdf', 'askyourpdf alternative', 'askyourpdf comparison'],
   openGraph: {
     title: 'DocTalk vs AskYourPDF Comparison | DocTalk',
@@ -82,7 +83,7 @@ export default function CompareAskyourpdfPage() {
           }),
         }}
       />
-      <AskyourpdfClient />
+      <AskyourpdfContent locale="en" />
     </>
   );
 }

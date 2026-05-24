@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import FeaturesHubClient from './FeaturesHubClient';
+import FeaturesHubContent from './FeaturesHubContent';
 import { buildMarketingMetadata } from '../../lib/seo';
 
 export const metadata: Metadata = buildMarketingMetadata({
@@ -7,6 +7,7 @@ export const metadata: Metadata = buildMarketingMetadata({
   description:
     'Explore DocTalk features for AI document analysis, including citation highlighting, multi-format uploads, OCR, multilingual support, and AI performance modes.',
   path: '/features',
+  localized: true,
   keywords: ['ai document features', 'pdf chat features', 'document ai capabilities'],
   openGraph: {
     title: 'AI Document Analysis Features | DocTalk',
@@ -29,7 +30,7 @@ export default function FeaturesPage() {
           }),
         }}
       />
-      <FeaturesHubClient />
+      <FeaturesHubContent locale="en" />
     </>
   );
 }

@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import HumataClient from './HumataClient';
+import HumataContent from './HumataContent';
 import { buildArticleJsonLd, buildMarketingMetadata } from '../../../lib/seo';
 
 export const metadata: Metadata = buildMarketingMetadata({
@@ -7,6 +7,7 @@ export const metadata: Metadata = buildMarketingMetadata({
   description:
     'Compare DocTalk and Humata for AI document analysis, including citation quality, team features, language support, pricing, and video support.',
   path: '/compare/humata',
+  localized: true,
   keywords: ['doctalk vs humata', 'humata alternative', 'humata ai comparison'],
   openGraph: {
     title: 'DocTalk vs Humata: AI Document Tool Comparison | DocTalk',
@@ -82,7 +83,7 @@ export default function CompareHumataPage() {
           }),
         }}
       />
-      <HumataClient />
+      <HumataContent locale="en" />
     </>
   );
 }

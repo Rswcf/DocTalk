@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import NotebooklmAltsClient from './NotebooklmAltsClient';
+import NotebooklmAltsContent from './NotebooklmAltsContent';
 import { buildArticleJsonLd, buildMarketingMetadata } from '../../../lib/seo';
 
 export const metadata: Metadata = buildMarketingMetadata({
@@ -7,6 +7,7 @@ export const metadata: Metadata = buildMarketingMetadata({
   description:
     'Compare NotebookLM alternatives including DocTalk, ChatPDF, AskYourPDF, Humata, Consensus, and Elicit for document analysis without Google lock-in.',
   path: '/alternatives/notebooklm',
+  localized: true,
   keywords: ['notebooklm alternatives', 'best notebooklm alternative', 'google notebooklm replacement'],
   openGraph: {
     title: 'Best NotebookLM Alternatives for Documents | DocTalk',
@@ -110,7 +111,7 @@ export default function NotebooklmAltsPage() {
           }),
         }}
       />
-      <NotebooklmAltsClient />
+      <NotebooklmAltsContent locale="en" />
     </>
   );
 }

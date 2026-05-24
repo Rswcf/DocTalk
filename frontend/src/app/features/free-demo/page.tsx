@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import FreeDemoClient from './FreeDemoClient';
+import FreeDemoContent from './FreeDemoContent';
 import { buildMarketingMetadata } from '../../../lib/seo';
 
 export const metadata: Metadata = buildMarketingMetadata({
@@ -7,6 +7,7 @@ export const metadata: Metadata = buildMarketingMetadata({
   description:
     'Try AI document chat instantly with 3 sample files. No signup, no credit card, and citation highlighting included from the first question.',
   path: '/features/free-demo',
+  localized: true,
   keywords: ['free ai pdf demo', 'try document ai free', 'no signup pdf chat'],
   openGraph: {
     title: 'Free AI Document Chat Demo | DocTalk',
@@ -111,7 +112,7 @@ export default function FreeDemoPage() {
         }}
       />
 
-      <FreeDemoClient />
+      <FreeDemoContent locale="en" />
     </>
   );
 }

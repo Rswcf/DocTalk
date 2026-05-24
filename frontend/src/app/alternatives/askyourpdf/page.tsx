@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import AskyourpdfAltsClient from './AskyourpdfAltsClient';
+import AskyourpdfAltsContent from './AskyourpdfAltsContent';
 import { buildArticleJsonLd, buildMarketingMetadata } from '../../../lib/seo';
 
 export const metadata: Metadata = buildMarketingMetadata({
@@ -7,6 +7,7 @@ export const metadata: Metadata = buildMarketingMetadata({
   description:
     'Looking for AskYourPDF alternatives? Compare DocTalk, ChatPDF, PDF.ai, Humata, NotebookLM, ChatDOC, and Consensus. Find the best AI document tool for your needs.',
   path: '/alternatives/askyourpdf',
+  localized: true,
   keywords: ['askyourpdf alternative', 'askyourpdf alternatives 2026', 'tools like askyourpdf'],
   openGraph: {
     title: '7 Best AskYourPDF Alternatives in 2026 (Free & Paid) | DocTalk',
@@ -111,7 +112,7 @@ export default function AskyourpdfAltsPage() {
           }),
         }}
       />
-      <AskyourpdfAltsClient />
+      <AskyourpdfAltsContent locale="en" />
     </>
   );
 }
