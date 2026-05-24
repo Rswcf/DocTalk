@@ -89,8 +89,64 @@ def _annotate_doc(items: list[dict], document_id: uuid.UUID, *, label: str, purp
     return annotated
 
 
-def _plan_limit(top_k: int, *, is_collection: bool = False) -> int:
-    return max(int(top_k or 8), 14 if is_collection else 12)
+def _dynamic_k(
+    base_top_k: int,
+    *,
+    page_count: int | None = None,
+    chunks_total: int | None = None,
+    is_collection: bool = False,
+) -> int:
+    """Scale retrieval/merge breadth with document size (B2).
+
+    Production review (2026-05-23): a 492-page PDF was answered from ~8-12 chunks
+    regardless of size. The floor preserves prior behaviour (12 single / 14
+    collection) when size is unknown; large documents get a higher ceiling.
+    """
+    floor = 14 if is_collection else 12
+    ceil = 28 if is_collection else 24
+    k = max(int(base_top_k or 8), floor)
+    pages = int(page_count or 0)
+    if pages > 0:
+        k = max(k, min(ceil, floor + pages // 40))
+    chunks = int(chunks_total or 0)
+    if chunks > 0:
+        k = max(k, min(ceil, floor + chunks // 60))
+    return min(k, ceil)
+
+
+def _rrf_fuse(result_lists: list[list[dict]], *, top_k: int, k: int = 60) -> list[dict]:
+    """Reciprocal Rank Fusion of several ranked lists (B1 hybrid fusion).
+
+    Items ranked highly across multiple retrievers (dense, lexical, planned) rise
+    to the top. Dedupe by table_id/chunk_id; keep the first-seen payload.
+    """
+    scores: dict[str, float] = {}
+    best: dict[str, dict] = {}
+    for items in result_lists:
+        for rank, item in enumerate(items):
+            key = str(item.get("table_id") or item.get("chunk_id") or "")
+            if not key:
+                continue
+            scores[key] = scores.get(key, 0.0) + 1.0 / (k + rank + 1)
+            best.setdefault(key, item)
+
+    def _key(it: dict) -> str:
+        return str(it.get("table_id") or it.get("chunk_id") or "")
+
+    ranked = sorted(best.values(), key=lambda it: scores[_key(it)], reverse=True)
+    return ranked[: int(top_k or 8)]
+
+
+def _plan_limit(
+    top_k: int,
+    *,
+    is_collection: bool = False,
+    page_count: int | None = None,
+    chunks_total: int | None = None,
+) -> int:
+    return _dynamic_k(
+        top_k, page_count=page_count, chunks_total=chunks_total, is_collection=is_collection
+    )
 
 
 class CorrectiveRetrievalService:
@@ -185,18 +241,25 @@ class CorrectiveRetrievalService:
         *,
         top_k: int,
         db: AsyncSession,
+        doc_pages: int | None = None,
     ) -> CorrectiveRetrievalResult:
         plan = query_planner_service.plan(query, route, document_count=1)
-        initial = await retrieval_service.search(query, document_id, top_k=top_k, db=db)
+        wide_k = _dynamic_k(top_k, page_count=doc_pages)
+        initial = await retrieval_service.search(query, document_id, top_k=wide_k, db=db)
         initial_eval = rag_evaluator_service.evaluate(query, initial, route)
         is_table_query = QueryIntent.TABLE_QUERY in route.intents
+        is_plain_qa_route = (
+            route.primary_intent == QueryIntent.LOCAL_QA
+            and route.coverage == "top_hits"
+            and not is_table_query
+        )
         table_evidence = (
             await retrieval_service.table_search(query, document_id, top_k=6, db=db)
             if is_table_query
             else []
         )
         planned = await self._planned_single(plan, route, document_id, db=db)
-        if not initial_eval.should_correct and not table_evidence and not planned:
+        if not initial_eval.should_correct and not table_evidence and not planned and not is_plain_qa_route:
             return CorrectiveRetrievalResult(
                 retrieved=initial,
                 evaluation=initial_eval,
@@ -204,8 +267,12 @@ class CorrectiveRetrievalService:
                 plan=plan,
             )
 
-        lexical_top_k = max(top_k, 12 if route.coverage == "exhaustive_scan" else top_k)
-        should_run_lexical = initial_eval.should_correct or is_table_query
+        should_run_lexical = initial_eval.should_correct or is_table_query or is_plain_qa_route
+        lexical_top_k = wide_k
+        if is_plain_qa_route and not initial_eval.should_correct and not is_table_query:
+            lexical_top_k = min(6, max(3, int(top_k or 8)))
+        elif route.coverage == "exhaustive_scan":
+            lexical_top_k = max(lexical_top_k, 12)
         lexical = (
             await retrieval_service.lexical_search(
                 query,
@@ -217,17 +284,23 @@ class CorrectiveRetrievalService:
             if should_run_lexical
             else []
         )
-        result_limit = _plan_limit(max(top_k, lexical_top_k))
+        result_limit = _plan_limit(max(wide_k, lexical_top_k), page_count=doc_pages)
         merged = _merge_results(table_evidence, initial, top_k=result_limit) if table_evidence else initial[:result_limit]
         merged = _merge_results(merged, planned, top_k=result_limit)
         merged = _merge_results(merged, lexical, top_k=result_limit)
+        # Plain QA (no table/exhaustive/comparison priority): re-rank by RRF so
+        # chunks ranked highly across dense+lexical+planned rise to the top.
+        if is_plain_qa_route:
+            fused = _rrf_fuse([initial, planned, lexical], top_k=result_limit)
+            if fused:
+                merged = fused
         strategy = _strategy_name(
             initial=initial,
             table_evidence=table_evidence,
             balanced=[],
             planned=planned,
             lexical=lexical,
-            lexical_attempted=should_run_lexical,
+            lexical_attempted=initial_eval.should_correct or is_table_query,
         )
         final_eval = rag_evaluator_service.evaluate(query, merged, route, corrected=True)
         return CorrectiveRetrievalResult(retrieved=merged, evaluation=final_eval, strategy=strategy, plan=plan)
@@ -240,6 +313,7 @@ class CorrectiveRetrievalService:
         *,
         top_k: int,
         db: AsyncSession,
+        doc_pages: int | None = None,
     ) -> CorrectiveRetrievalResult:
         plan = query_planner_service.plan(query, route, document_count=len(document_ids))
         initial = await retrieval_service.search_multi(query, document_ids, top_k=top_k, db=db)
@@ -273,7 +347,7 @@ class CorrectiveRetrievalService:
             if should_run_lexical
             else []
         )
-        result_limit = _plan_limit(max(top_k, lexical_top_k), is_collection=True)
+        result_limit = _plan_limit(max(top_k, lexical_top_k), is_collection=True, page_count=doc_pages)
         merged = (
             _merge_results(balanced_required, table_evidence, top_k=result_limit)
             if balanced_required

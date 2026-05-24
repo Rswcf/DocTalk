@@ -53,7 +53,9 @@ async def test_empty_vector_results_fall_back_to_lexical(monkeypatch: pytest.Mon
 
 
 @pytest.mark.asyncio
-async def test_sufficient_vector_results_skip_lexical(monkeypatch: pytest.MonkeyPatch) -> None:
+async def test_sufficient_vector_results_plain_qa_runs_low_cost_lexical_for_rrf(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     document_id = uuid.uuid4()
     vector_chunk = {
         "chunk_id": uuid.uuid4(),
@@ -79,7 +81,9 @@ async def test_sufficient_vector_results_skip_lexical(monkeypatch: pytest.Monkey
 
     assert result.strategy == "semantic_top_k"
     assert result.retrieved == [vector_chunk]
-    lexical_search.assert_not_awaited()
+    lexical_search.assert_awaited_once()
+    assert lexical_search.await_args.kwargs["top_k"] <= 6
+    assert lexical_search.await_args.kwargs["min_text_len"] == 200
 
 
 @pytest.mark.asyncio

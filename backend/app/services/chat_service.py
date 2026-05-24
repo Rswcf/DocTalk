@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import logging
 import re
 import time
@@ -7,6 +8,7 @@ import uuid
 from dataclasses import dataclass
 from typing import Any, AsyncGenerator, Dict, List, Optional
 
+import anyio
 import sqlalchemy as sa
 from openai import AsyncOpenAI
 from sqlalchemy import select
@@ -14,6 +16,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
 from app.core.model_profiles import get_model_profile, get_rules_for_model
+from app.models.database import AsyncSessionLocal
 from app.models.tables import (
     ChatSession,
     Chunk,
@@ -31,13 +34,14 @@ from app.services.chat_tool_executor import chat_tool_executor
 from app.services.claim_verifier_service import claim_verifier_service
 from app.services.corrective_retrieval_service import corrective_retrieval_service
 from app.services.document_brief_service import document_brief_service
+from app.services.document_element_service import chunk_to_retrieval_item
 from app.services.query_planner_service import QueryPlan
 from app.services.query_router import QueryIntent, query_router
 from app.services.retrieval_service import table_evidence_text
 
 logger = logging.getLogger(__name__)
 
-# Hardening against prompt-injection. Placed BEFORE document fragments so chunk
+# Hardening against prompt-injection. Placed BEFORE document excerpts so chunk
 # content cannot override it. Discovered 2026-04-25: mistral-large-2512 wrote a
 # poem when prompted "Ignore your previous instructions" — see ADR §10.
 SYSTEM_PROMPT_META_RULE = (
@@ -393,23 +397,23 @@ async def _try_repair_rag_answer(
     context = "\n".join(numbered_chunks) if numbered_chunks else "(none)"
     system_prompt = (
         "You repair a document-grounded answer before it is shown as final.\n"
-        "Use only the numbered fragments provided by the system. Do not add outside knowledge.\n"
-        "Remove any statement that is not supported by a fragment.\n"
+        "Use only the numbered excerpts provided by the system. Do not add outside knowledge.\n"
+        "Remove any statement that is not supported by a excerpt.\n"
         "Every factual sentence, paragraph, or bullet must end with one or more bracket citations like [1].\n"
-        "For numbers, dates, percentages, currencies, and units, copy them only when the cited fragment contains the exact value.\n"
+        "For numbers, dates, percentages, currencies, and units, copy them only when the cited excerpt contains the exact value.\n"
         "Prefer concise bullets with one main factual claim per bullet.\n"
         f"Write in {language}. Return only the corrected final answer, with citations."
     )
     user_prompt = (
         "## User question\n"
         f"{user_message}\n\n"
-        "## Retrieved document fragments\n"
+        "## Retrieved document excerpts\n"
         f"{context}\n\n"
         "## Draft answer to repair\n"
         f"{assistant_text}\n\n"
         "## Verification issues found\n"
         f"{', '.join(str(item) for item in (verification.get('reasons') or [])) or 'source-support issues'}\n\n"
-        "Rewrite the draft so every factual claim is supported by the cited fragments. "
+        "Rewrite the draft so every factual claim is supported by the cited excerpts. "
         "Do not mention that this is a repair pass."
     )
     prompt_tokens = 0
@@ -474,11 +478,11 @@ async def _try_repair_rag_answer(
 def _citation_contract() -> str:
     return (
         "\n\n## Citation Contract\n"
-        "- Every answer based on document fragments MUST include clickable bracket citations like [1].\n"
+        "- Every answer based on document excerpts MUST include clickable bracket citations like [1].\n"
         "- Put a citation at the end of every factual paragraph or bullet that uses document content.\n"
         "- Prefer short factual bullets over dense paragraphs; one bullet should contain one main claim and its citation.\n"
-        "- Use only the fragment numbers listed above. If no fragment supports a claim, do not make that claim.\n"
-        "- A response with no [n] citations is invalid unless there are no relevant fragments.\n"
+        "- Use only the excerpt numbers listed above. If no excerpt supports a claim, do not make that claim.\n"
+        "- A response with no [n] citations is invalid unless there are no relevant excerpts.\n"
     )
 
 
@@ -552,6 +556,119 @@ async def _refund_predebit(
             .values(credits_balance=User.credits_balance + pre_debited)
         )
     await db.commit()
+
+
+# Bound the shielded cancel-path DB I/O. The persist/settle below run inside an
+# anyio CancelScope(shield=True) so they survive the request cancellation — but
+# that also makes them uncancellable, so without a timeout a DB blip during a
+# client disconnect could pin a task on asyncpg's 60s default connect timeout.
+_CANCEL_IO_TIMEOUT_S = 5.0
+
+
+async def _persist_partial_on_cancel(
+    *,
+    session_id: uuid.UUID,
+    assistant_text: str,
+    citations: Optional[List[dict]] = None,
+    prompt_tokens: Optional[int] = None,
+    output_tokens: Optional[int] = None,
+) -> Optional[uuid.UUID]:
+    text = assistant_text.strip()
+    if not text:
+        return None
+
+    async with AsyncSessionLocal() as persist_db:
+        asst_msg = Message(
+            session_id=session_id,
+            role="assistant",
+            content=text,
+            citations=citations or None,
+            prompt_tokens=int(prompt_tokens) if prompt_tokens is not None else None,
+            output_tokens=int(output_tokens) if output_tokens is not None else None,
+        )
+        persist_db.add(asst_msg)
+        await persist_db.commit()
+        return asst_msg.id
+
+
+async def _persist_continuation_on_cancel(
+    *,
+    message_id: uuid.UUID,
+    continuation_text: str,
+    new_citations: List[dict],
+    output_tokens: Optional[int],
+) -> bool:
+    if not continuation_text.strip():
+        return False
+
+    async with AsyncSessionLocal() as persist_db:
+        asst_msg = await persist_db.get(Message, message_id)
+        if not asst_msg or asst_msg.role != "assistant":
+            return False
+
+        merged_citations = list(asst_msg.citations or []) + list(new_citations or [])
+        asst_msg.content = (asst_msg.content or "") + continuation_text
+        asst_msg.citations = merged_citations if merged_citations else None
+        asst_msg.continuation_count = (asst_msg.continuation_count or 0) + 1
+        asst_msg.output_tokens = (asst_msg.output_tokens or 0) + int(output_tokens or 0)
+        await persist_db.commit()
+        return True
+
+
+async def _settle_predebit_on_cancel(
+    *,
+    user_id: uuid.UUID,
+    pre_debited: int,
+    predebit_ledger_id: uuid.UUID,
+    has_answer: bool,
+    prompt_tokens: Optional[int],
+    output_tokens: Optional[int],
+    model: str,
+    mode: str,
+) -> None:
+    async with AsyncSessionLocal() as settle_db:
+        if has_answer:
+            actual_cost = credit_service.calculate_cost(
+                int(prompt_tokens or 0),
+                int(output_tokens or 0),
+                model,
+                mode=mode,
+            )
+            await credit_service.reconcile_credits(
+                settle_db,
+                user_id,
+                predebit_ledger_id,
+                pre_debited,
+                actual_cost,
+            )
+            await settle_db.commit()
+        else:
+            await _refund_predebit(settle_db, user_id, pre_debited, predebit_ledger_id)
+
+
+async def _fetch_page_chunks(
+    db: AsyncSession,
+    document_id: uuid.UUID,
+    page_ref: int,
+    *,
+    limit: int = 12,
+) -> List[Dict[str, Any]]:
+    """Direct positional retrieval (B4): chunks overlapping a specific page.
+
+    Semantic top-k cannot resolve "what is on page N" — the paying user asked for
+    page 350 of a 492-page PDF and got "the excerpts do not contain page 350".
+    Here we fetch the chunks whose page range covers the requested page.
+    """
+    rows = await db.execute(
+        select(Chunk)
+        .where(Chunk.document_id == document_id)
+        .where(Chunk.page_start <= page_ref)
+        .where(Chunk.page_end >= page_ref)
+        .order_by(Chunk.chunk_index)
+        .limit(limit)
+    )
+    chunks = list(rows.scalars())
+    return [chunk_to_retrieval_item(ch, 1.0, include_document_id=True) for ch in chunks]
 
 
 async def _record_rag_verification_event(
@@ -930,6 +1047,7 @@ class ChatService:
                 )
                 return
 
+        settled = False
         setup_error_code = "CHAT_SETUP_ERROR"
         try:
             # 2) Save user message
@@ -1000,6 +1118,23 @@ class ChatService:
                 retrieval_strategy = corrective.strategy
                 retrieval_evaluation = corrective.evaluation
                 retrieval_plan = corrective.plan
+            elif (
+                document_id
+                and query_route.primary_intent == QueryIntent.PAGE_LOOKUP
+                and query_route.page_ref is not None
+            ):
+                retrieved = await _fetch_page_chunks(db, document_id, query_route.page_ref)
+                retrieval_strategy = "page_lookup"
+                if not retrieved:
+                    # Page out of range / no chunks there → fall back to semantic.
+                    corrective = await corrective_retrieval_service.retrieve_single(
+                        user_message, query_route, document_id, top_k=8, db=db,
+                        doc_pages=getattr(doc, "page_count", None),
+                    )
+                    retrieved = corrective.retrieved
+                    retrieval_strategy = corrective.strategy
+                    retrieval_evaluation = corrective.evaluation
+                    retrieval_plan = corrective.plan
             elif document_id:
                 corrective = await corrective_retrieval_service.retrieve_single(
                     user_message,
@@ -1007,6 +1142,7 @@ class ChatService:
                     document_id,
                     top_k=8,
                     db=db,
+                    doc_pages=getattr(doc, "page_count", None),
                 )
                 retrieved = corrective.retrieved
                 retrieval_strategy = corrective.strategy
@@ -1058,24 +1194,24 @@ class ChatService:
                     "You are a document analysis assistant. The user is asking for a broad summary across a document collection.\n\n"
                     + SYSTEM_PROMPT_META_RULE
                     + f"## Available Documents\n{doc_list}\n\n"
-                    + "## Collection Coverage Fragments\n"
+                    + "## Collection Coverage Excerpts\n"
                     + ("\n".join(numbered_chunks) if numbered_chunks else "(none)")
                     + "\n\n## Summary Rules\n"
-                    + "1. Treat these fragments as representative coverage selected across the collection, not as semantic search results for a narrow question.\n"
-                    + "2. Do NOT say the collection is just unrelated fragments merely because the context is excerpted.\n"
+                    + "1. Treat these excerpts as representative coverage selected across the collection, not as semantic search results for a narrow question.\n"
+                    + "2. Do NOT say the collection is just unrelated excerpts merely because the context is excerpted.\n"
                     + "3. Summarize shared themes, document-specific points, and important caveats when supported.\n"
                     + "4. If coverage is incomplete, say the answer is based on the cited representative sections instead of refusing.\n"
-                    + "5. Cite every factual paragraph or bullet using the fragment numbers listed above.\n"
+                    + "5. Cite every factual paragraph or bullet using the excerpt numbers listed above.\n"
                     + "6. Your response language MUST match the language of the user's question.\n"
                     + _citation_contract()
                 )
             elif is_collection_session:
                 doc_list = ", ".join(collection_doc_names.values()) if collection_doc_names else "(no documents)"
                 system_prompt = (
-                    "You are a document analysis assistant. Answer the user's question based on fragments from multiple documents.\n\n"
+                    "You are a document analysis assistant. Answer the user's question based on excerpts from multiple documents.\n\n"
                     + SYSTEM_PROMPT_META_RULE
                     + f"## Available Documents\n{doc_list}\n\n"
-                    + "## Document Fragments\n"
+                    + "## Document Excerpts\n"
                     + ("\n".join(numbered_chunks) if numbered_chunks else "(none)")
                     + _retrieval_quality_contract(retrieval_evaluation, retrieval_strategy)
                     + _query_plan_contract(retrieval_plan)
@@ -1086,26 +1222,26 @@ class ChatService:
                 system_prompt = (
                     "You are a document analysis assistant. The user is asking for a broad, whole-document summary.\n\n"
                     + SYSTEM_PROMPT_META_RULE
-                    + "## Document Coverage Fragments\n"
+                    + "## Document Coverage Excerpts\n"
                     + (
                         "\n".join(numbered_chunks)
                         if numbered_chunks
                         else "(none)"
                     )
                     + "\n\n## Summary Rules\n"
-                    + "1. Treat these fragments as representative coverage selected across the document, not as semantic search results for a narrow question.\n"
+                    + "1. Treat these excerpts as representative coverage selected across the document, not as semantic search results for a narrow question.\n"
                     + "2. Do NOT say the user's ready document is not a complete document merely because the context is excerpted.\n"
                     + "3. Produce a useful document-level summary with clear headings, key points, and important caveats when supported.\n"
                     + "4. If coverage is incomplete, say the answer is based on the cited representative sections instead of refusing.\n"
-                    + "5. Cite every factual paragraph or bullet using the fragment numbers listed above.\n"
+                    + "5. Cite every factual paragraph or bullet using the excerpt numbers listed above.\n"
                     + "6. Your response language MUST match the language of the user's question.\n"
                     + _citation_contract()
                 )
             else:
                 system_prompt = (
-                    "You are a document analysis assistant. Answer the user's question based on the following document fragments.\n\n"
+                    "You are a document analysis assistant. Answer the user's question based on the following document excerpts.\n\n"
                     + SYSTEM_PROMPT_META_RULE
-                    + "## Document Fragments\n"
+                    + "## Document Excerpts\n"
                     + ("\n".join(numbered_chunks) if numbered_chunks else "(none)")
                     + _retrieval_quality_contract(retrieval_evaluation, retrieval_strategy)
                     + _query_plan_contract(retrieval_plan)
@@ -1139,10 +1275,35 @@ class ChatService:
                 session_obj.domain_mode = domain_mode
                 await db.commit()
 
+        except asyncio.CancelledError:
+            if user is not None and pre_debited > 0 and predebit_ledger_id is not None and not settled:
+                try:
+                    with anyio.CancelScope(shield=True):
+                        await asyncio.wait_for(
+                            _settle_predebit_on_cancel(
+                                user_id=user.id,
+                                pre_debited=pre_debited,
+                                predebit_ledger_id=predebit_ledger_id,
+                                has_answer=False,
+                                prompt_tokens=None,
+                                output_tokens=None,
+                                model=effective_model,
+                                mode=effective_mode,
+                            ),
+                            timeout=_CANCEL_IO_TIMEOUT_S,
+                        )
+                    settled = True
+                except Exception:
+                    logger.exception(
+                        "Failed to settle pre-debit during chat setup cancellation for user %s",
+                        user.id,
+                    )
+            raise
         except Exception as e:
             if user is not None and pre_debited > 0 and predebit_ledger_id is not None:
                 try:
                     await _refund_predebit(db, user.id, pre_debited, predebit_ledger_id)
+                    settled = True
                 except Exception:
                     logger.exception(
                         "Failed to refund pre-debited credits during chat setup failure for user %s",
@@ -1158,6 +1319,7 @@ class ChatService:
             if user is not None and pre_debited > 0 and predebit_ledger_id is not None:
                 try:
                     await _refund_predebit(db, user.id, pre_debited, predebit_ledger_id)
+                    settled = True
                 except Exception:
                     logger.exception(
                         "Failed to refund pre-debited credits before LLM client setup for user %s",
@@ -1195,227 +1357,313 @@ class ChatService:
         first_token_logged = False
         token_count = 0
         finish_reason: Optional[str] = None
-
-        try:
-            create_kwargs: dict[str, Any] = {
-                "model": effective_model,
-                "max_tokens": profile.max_tokens,
-                "temperature": profile.temperature,
-                "messages": openai_messages,
-                "stream": True,
-            }
-            if profile.supports_stream_options:
-                create_kwargs["stream_options"] = {"include_usage": True}
-            _apply_provider_options(create_kwargs, effective_model)
-            stream = await client.chat.completions.create(**create_kwargs)
-
-            async for chunk in stream:
-                # Extract text delta
-                if chunk.choices and chunk.choices[0].delta.content:
-                    text = chunk.choices[0].delta.content
-                    token_count += 1
-                    if not first_token_logged:
-                        first_token_logged = True
-                        latency = time.time() - llm_start
-                        logger.info("LLM first_token_latency=%.2fs model=%s", latency, effective_model)
-                    # 7) Feed FSM and emit events
-                    for ev in fsm.feed(text):
-                        if ev["event"] == "token":
-                            assistant_text_parts.append(ev["data"]["text"])
-                        elif ev["event"] == "citation":
-                            citations.append(ev["data"])
-                        yield ev
-
-                # Track finish_reason from choices
-                if chunk.choices and chunk.choices[0].finish_reason:
-                    finish_reason = chunk.choices[0].finish_reason
-
-                # Extract usage if present (last chunk)
-                if hasattr(chunk, "usage") and chunk.usage:
-                    prompt_tokens = getattr(chunk.usage, "prompt_tokens", None)
-                    output_tokens = getattr(chunk.usage, "completion_tokens", None)
-
-                # Ping every 15 seconds
-                now = time.monotonic()
-                if now - last_ping >= 15.0:
-                    yield sse("ping", {})
-                    last_ping = now
-
-            # Flush at stream end
-            for ev in fsm.flush():
-                if ev["event"] == "token":
-                    assistant_text_parts.append(ev["data"]["text"])
-                yield ev
-
-            if not citations:
-                assistant_snapshot = "".join(assistant_text_parts)
-                fallback_citations = _fallback_citations(assistant_snapshot, chunk_map)
-                if fallback_citations:
-                    logger.warning(
-                        "LLM emitted no citation markers; generated %d fallback citations model=%s",
-                        len(fallback_citations),
-                        effective_model,
-                    )
-                    for citation in fallback_citations:
-                        citations.append(citation)
-                        yield sse("citation", citation)
-
-            # Warn if response was truncated due to token limit
-            if finish_reason == "length":
-                logger.warning(
-                    "LLM response truncated (finish_reason=length) model=%s max_tokens=%d output_tokens=%s",
-                    effective_model, profile.max_tokens, output_tokens,
-                )
-                yield sse("truncated", {"reason": "max_tokens"})
-
-            total_time = time.time() - llm_start
-            final_token_count = int(output_tokens) if output_tokens is not None else token_count
-            logger.info(
-                "LLM total_latency=%.2fs tokens=%d model=%s",
-                total_time,
-                final_token_count,
-                effective_model,
-            )
-
-        except Exception as e:
-            # Refund pre-debited credits on LLM failure: restore balance and remove ledger entry
-            if user is not None and pre_debited > 0 and predebit_ledger_id is not None:
-                try:
-                    await _refund_predebit(db, user.id, pre_debited, predebit_ledger_id)
-                except Exception:
-                    logger.exception(
-                        "Failed to refund pre-debited credits after LLM error for user %s",
-                        user.id,
-                    )
-            yield _safe_sse("error", "LLM_ERROR", e, session_id=str(session_id))
-            return
-
-        # 9) Save assistant message + citations
-        assistant_text = "".join(assistant_text_parts)
-        verification_report = claim_verifier_service.verify(
-            assistant_text,
-            citations,
-            set(chunk_map.keys()),
-            retrieved_count=len(chunk_map),
-        )
-        verification_payload = verification_report.to_payload()
+        asst_msg: Optional[Message] = None
         repair_metadata: dict[str, Any] | None = None
-        if verification_report.status != "pass" and finish_reason != "length":
-            yield sse("tool_status", {"message": "Checking citation support..."})
-            repair = await _try_repair_rag_answer(
-                client=client,
-                model=effective_model,
-                profile=profile,
-                user_message=user_message,
-                assistant_text=assistant_text,
-                citations=citations,
-                chunk_map=chunk_map,
-                numbered_chunks=numbered_chunks,
-                verification=verification_payload,
-                locale=locale,
-            )
-            if repair is not None:
-                repair_metadata = repair.metadata
-                if repair.prompt_tokens:
-                    prompt_tokens = int(prompt_tokens or 0) + repair.prompt_tokens
-                if repair.output_tokens:
-                    output_tokens = int(output_tokens or 0) + repair.output_tokens
-                if repair.applied:
-                    assistant_text = repair.text
-                    citations = repair.citations
-                    verification_payload = repair.verification
-                    verification_report = claim_verifier_service.verify(
-                        assistant_text,
-                        citations,
-                        set(chunk_map.keys()),
-                        retrieved_count=len(chunk_map),
-                    )
-                    verification_payload = verification_report.to_payload()
-                    yield sse(
-                        "answer_repaired",
-                        {
-                            "text": assistant_text,
-                            "citations": citations,
-                            "verification": verification_payload,
-                        },
-                    )
-        if verification_report.status != "pass":
-            logger.warning(
-                "RAG verification status=%s score=%.3f claims=%d citations=%d reasons=%s",
-                verification_report.status,
-                verification_report.score,
-                verification_report.claim_count,
-                verification_report.citation_count,
-                ",".join(verification_report.reasons),
-            )
+        persisted = False
+        done_emitted = False
+
         try:
-            asst_msg = Message(
-                session_id=session_id,
-                role="assistant",
-                content=assistant_text,
-                citations=citations or None,
-                prompt_tokens=int(prompt_tokens) if prompt_tokens is not None else None,
-                output_tokens=int(output_tokens) if output_tokens is not None else None,
+            try:
+                create_kwargs: dict[str, Any] = {
+                    "model": effective_model,
+                    "max_tokens": profile.max_tokens,
+                    "temperature": profile.temperature,
+                    "messages": openai_messages,
+                    "stream": True,
+                }
+                if profile.supports_stream_options:
+                    create_kwargs["stream_options"] = {"include_usage": True}
+                _apply_provider_options(create_kwargs, effective_model)
+                stream = await client.chat.completions.create(**create_kwargs)
+
+                async for chunk in stream:
+                    # Extract text delta
+                    if chunk.choices and chunk.choices[0].delta.content:
+                        text = chunk.choices[0].delta.content
+                        token_count += 1
+                        if not first_token_logged:
+                            first_token_logged = True
+                            latency = time.time() - llm_start
+                            logger.info("LLM first_token_latency=%.2fs model=%s", latency, effective_model)
+                        # 7) Feed FSM and emit events
+                        for ev in fsm.feed(text):
+                            if ev["event"] == "token":
+                                assistant_text_parts.append(ev["data"]["text"])
+                            elif ev["event"] == "citation":
+                                citations.append(ev["data"])
+                            yield ev
+
+                    # Track finish_reason from choices
+                    if chunk.choices and chunk.choices[0].finish_reason:
+                        finish_reason = chunk.choices[0].finish_reason
+
+                    # Extract usage if present (last chunk)
+                    if hasattr(chunk, "usage") and chunk.usage:
+                        prompt_tokens = getattr(chunk.usage, "prompt_tokens", None)
+                        output_tokens = getattr(chunk.usage, "completion_tokens", None)
+
+                    # Ping every 15 seconds
+                    now = time.monotonic()
+                    if now - last_ping >= 15.0:
+                        yield sse("ping", {})
+                        last_ping = now
+
+                # Flush at stream end
+                for ev in fsm.flush():
+                    if ev["event"] == "token":
+                        assistant_text_parts.append(ev["data"]["text"])
+                    yield ev
+
+                if not citations:
+                    assistant_snapshot = "".join(assistant_text_parts)
+                    fallback_citations = _fallback_citations(assistant_snapshot, chunk_map)
+                    if fallback_citations:
+                        logger.warning(
+                            "LLM emitted no citation markers; generated %d fallback citations model=%s",
+                            len(fallback_citations),
+                            effective_model,
+                        )
+                        for citation in fallback_citations:
+                            citations.append(citation)
+                            yield sse("citation", citation)
+
+                # Warn if response was truncated due to token limit
+                if finish_reason == "length":
+                    logger.warning(
+                        "LLM response truncated (finish_reason=length) model=%s max_tokens=%d output_tokens=%s",
+                        effective_model, profile.max_tokens, output_tokens,
+                    )
+                    yield sse("truncated", {"reason": "max_tokens"})
+
+                total_time = time.time() - llm_start
+                final_token_count = int(output_tokens) if output_tokens is not None else token_count
+                logger.info(
+                    "LLM total_latency=%.2fs tokens=%d model=%s",
+                    total_time,
+                    final_token_count,
+                    effective_model,
+                )
+
+            except Exception as e:
+                assistant_snapshot = "".join(assistant_text_parts)
+                has_partial_answer = bool(assistant_snapshot.strip())
+                if (
+                    user is not None
+                    and pre_debited > 0
+                    and predebit_ledger_id is not None
+                    and not has_partial_answer
+                ):
+                    try:
+                        await _refund_predebit(db, user.id, pre_debited, predebit_ledger_id)
+                        settled = True
+                    except Exception:
+                        logger.exception(
+                            "Failed to refund pre-debited credits after LLM error for user %s",
+                            user.id,
+                        )
+                yield _safe_sse("error", "LLM_ERROR", e, session_id=str(session_id))
+                return
+
+            # 9) Save assistant draft before verification/repair (A2)
+            assistant_text = "".join(assistant_text_parts)
+            try:
+                asst_msg = Message(
+                    session_id=session_id,
+                    role="assistant",
+                    content=assistant_text,
+                    citations=citations or None,
+                    prompt_tokens=int(prompt_tokens) if prompt_tokens is not None else None,
+                    output_tokens=int(output_tokens) if output_tokens is not None else None,
+                )
+                db.add(asst_msg)
+                await db.commit()
+                persisted = True
+            except Exception:
+                await db.rollback()
+                has_partial_answer = bool(assistant_text.strip())
+                if (
+                    user is not None
+                    and pre_debited > 0
+                    and predebit_ledger_id is not None
+                    and not has_partial_answer
+                ):
+                    try:
+                        await _refund_predebit(db, user.id, pre_debited, predebit_ledger_id)
+                        settled = True
+                    except Exception:
+                        logger.exception(
+                            "Failed to refund pre-debited credits after PERSIST_FAILED for user %s",
+                            user.id,
+                        )
+                yield sse("error", {"code": "PERSIST_FAILED", "message": "Failed to save response"})
+                return
+
+            verification_report = claim_verifier_service.verify(
+                assistant_text,
+                citations,
+                set(chunk_map.keys()),
+                retrieved_count=len(chunk_map),
             )
-            db.add(asst_msg)
-            await db.commit()
-        except Exception:
-            await db.rollback()
+            verification_payload = verification_report.to_payload()
+            if verification_report.status != "pass" and finish_reason != "length":
+                yield sse("tool_status", {"message": "Checking citation support..."})
+                repair = await _try_repair_rag_answer(
+                    client=client,
+                    model=effective_model,
+                    profile=profile,
+                    user_message=user_message,
+                    assistant_text=assistant_text,
+                    citations=citations,
+                    chunk_map=chunk_map,
+                    numbered_chunks=numbered_chunks,
+                    verification=verification_payload,
+                    locale=locale,
+                )
+                if repair is not None:
+                    repair_metadata = repair.metadata
+                    if repair.prompt_tokens:
+                        prompt_tokens = int(prompt_tokens or 0) + repair.prompt_tokens
+                    if repair.output_tokens:
+                        output_tokens = int(output_tokens or 0) + repair.output_tokens
+                    if repair.applied:
+                        assistant_text = repair.text
+                        citations = repair.citations
+                        verification_payload = repair.verification
+                        verification_report = claim_verifier_service.verify(
+                            assistant_text,
+                            citations,
+                            set(chunk_map.keys()),
+                            retrieved_count=len(chunk_map),
+                        )
+                        verification_payload = verification_report.to_payload()
+                        yield sse(
+                            "answer_repaired",
+                            {
+                                "text": assistant_text,
+                                "citations": citations,
+                                "verification": verification_payload,
+                            },
+                        )
+            if verification_report.status != "pass":
+                logger.warning(
+                    "RAG verification status=%s score=%.3f claims=%d citations=%d reasons=%s",
+                    verification_report.status,
+                    verification_report.score,
+                    verification_report.claim_count,
+                    verification_report.citation_count,
+                    ",".join(verification_report.reasons),
+                )
+
+            try:
+                if asst_msg is None:
+                    raise RuntimeError("assistant message missing before verification update")
+                asst_msg.content = assistant_text
+                asst_msg.citations = citations or None
+                asst_msg.prompt_tokens = int(prompt_tokens) if prompt_tokens is not None else None
+                asst_msg.output_tokens = int(output_tokens) if output_tokens is not None else None
+                await db.commit()
+            except Exception:
+                await db.rollback()
+                yield sse("error", {"code": "PERSIST_FAILED", "message": "Failed to save response"})
+                return
+
+            await _record_rag_verification_event(
+                db,
+                user=user,
+                message_id=getattr(asst_msg, "id", None),
+                verification=verification_payload,
+                retrieval_strategy=retrieval_strategy,
+                query_route=query_route,
+                retrieved_count=len(chunk_map),
+                repair_metadata=repair_metadata,
+            )
+
+            # Credits: reconcile pre-debited estimate against actual cost
             if user is not None and pre_debited > 0 and predebit_ledger_id is not None:
+                pt = int(prompt_tokens or 0)
+                ct = int(output_tokens or 0)
                 try:
-                    await _refund_predebit(db, user.id, pre_debited, predebit_ledger_id)
+                    actual_cost = credit_service.calculate_cost(pt, ct, effective_model, mode=effective_mode)
+                    await credit_service.reconcile_credits(
+                        db, user.id, predebit_ledger_id, pre_debited, actual_cost,
+                    )
+                    await credit_service.record_usage(
+                        db,
+                        user_id=user.id,
+                        message_id=asst_msg.id,
+                        model=effective_model,
+                        prompt_tokens=pt,
+                        completion_tokens=ct,
+                        cost_credits=actual_cost,
+                    )
+                    await db.commit()
+                    settled = True
+                except Exception as e:
+                    # Non-fatal accounting error
+                    yield _safe_sse("warn", "ACCOUNTING_ERROR", e, session_id=str(session_id))
+
+            # 10) done
+            can_continue = asst_msg.continuation_count < settings.MAX_CONTINUATIONS_PER_MESSAGE
+            done_emitted = True
+            yield sse("done", {
+                "message_id": str(asst_msg.id),
+                "citations_count": len(citations),
+                "verification": verification_payload,
+                "repair": repair_metadata,
+                "can_continue": can_continue and finish_reason == "length",
+                "continuation_count": asst_msg.continuation_count,
+            })
+        except asyncio.CancelledError:
+            raise
+        finally:
+            assistant_snapshot = "".join(assistant_text_parts)
+            has_partial_answer = bool(assistant_snapshot.strip())
+            if not done_emitted and has_partial_answer and not persisted:
+                try:
+                    with anyio.CancelScope(shield=True):
+                        await asyncio.wait_for(
+                            _persist_partial_on_cancel(
+                                session_id=session_id,
+                                assistant_text=assistant_snapshot,
+                                citations=citations,
+                                prompt_tokens=prompt_tokens,
+                                output_tokens=output_tokens,
+                            ),
+                            timeout=_CANCEL_IO_TIMEOUT_S,
+                        )
+                    persisted = True
                 except Exception:
                     logger.exception(
-                        "Failed to refund pre-debited credits after PERSIST_FAILED for user %s",
+                        "Failed to persist partial assistant response on cancel/error for session %s",
+                        session_id,
+                    )
+            if (
+                user is not None
+                and pre_debited > 0
+                and predebit_ledger_id is not None
+                and not settled
+            ):
+                try:
+                    with anyio.CancelScope(shield=True):
+                        await asyncio.wait_for(
+                            _settle_predebit_on_cancel(
+                                user_id=user.id,
+                                pre_debited=pre_debited,
+                                predebit_ledger_id=predebit_ledger_id,
+                                has_answer=has_partial_answer,
+                                prompt_tokens=prompt_tokens,
+                                output_tokens=output_tokens,
+                                model=effective_model,
+                                mode=effective_mode,
+                            ),
+                            timeout=_CANCEL_IO_TIMEOUT_S,
+                        )
+                    settled = True
+                except Exception:
+                    logger.exception(
+                        "Failed to settle pre-debit on cancel/error for user %s",
                         user.id,
                     )
-            yield sse("error", {"code": "PERSIST_FAILED", "message": "Failed to save response"})
-            return
-
-        await _record_rag_verification_event(
-            db,
-            user=user,
-            message_id=getattr(asst_msg, "id", None),
-            verification=verification_payload,
-            retrieval_strategy=retrieval_strategy,
-            query_route=query_route,
-            retrieved_count=len(chunk_map),
-            repair_metadata=repair_metadata,
-        )
-
-        # Credits: reconcile pre-debited estimate against actual cost
-        if user is not None and pre_debited > 0 and predebit_ledger_id is not None:
-            pt = int(prompt_tokens or 0)
-            ct = int(output_tokens or 0)
-            try:
-                actual_cost = credit_service.calculate_cost(pt, ct, effective_model, mode=effective_mode)
-                await credit_service.reconcile_credits(
-                    db, user.id, predebit_ledger_id, pre_debited, actual_cost,
-                )
-                await credit_service.record_usage(
-                    db,
-                    user_id=user.id,
-                    message_id=asst_msg.id,
-                    model=effective_model,
-                    prompt_tokens=pt,
-                    completion_tokens=ct,
-                    cost_credits=actual_cost,
-                )
-                await db.commit()
-            except Exception as e:
-                # Non-fatal accounting error
-                yield _safe_sse("warn", "ACCOUNTING_ERROR", e, session_id=str(session_id))
-
-        # 10) done
-        can_continue = asst_msg.continuation_count < settings.MAX_CONTINUATIONS_PER_MESSAGE
-        yield sse("done", {
-            "message_id": str(asst_msg.id),
-            "citations_count": len(citations),
-            "verification": verification_payload,
-            "repair": repair_metadata,
-            "can_continue": can_continue and finish_reason == "length",
-            "continuation_count": asst_msg.continuation_count,
-        })
 
     async def continue_stream(
         self,
@@ -1525,6 +1773,7 @@ class ChatService:
                 })
                 return
 
+        settled = False
         try:
             # 6) Reconstruct chunk_map from original citations
             chunk_map: dict[int, _ChunkInfo] = {}
@@ -1631,19 +1880,19 @@ class ChatService:
             if is_collection_session:
                 doc_list = ", ".join(collection_doc_names.values()) if collection_doc_names else "(no documents)"
                 system_prompt = (
-                    "You are a document analysis assistant. Answer the user's question based on fragments from multiple documents.\n\n"
+                    "You are a document analysis assistant. Answer the user's question based on excerpts from multiple documents.\n\n"
                     + SYSTEM_PROMPT_META_RULE
                     + f"## Available Documents\n{doc_list}\n\n"
-                    + "## Document Fragments\n"
+                    + "## Document Excerpts\n"
                     + ("\n".join(numbered_chunks) if numbered_chunks else "(none)")
                     + "\n\n## Rules\n" + rules
                     + _citation_contract()
                 )
             else:
                 system_prompt = (
-                    "You are a document analysis assistant. Answer the user's question based on the following document fragments.\n\n"
+                    "You are a document analysis assistant. Answer the user's question based on the following document excerpts.\n\n"
                     + SYSTEM_PROMPT_META_RULE
-                    + "## Document Fragments\n"
+                    + "## Document Excerpts\n"
                     + ("\n".join(numbered_chunks) if numbered_chunks else "(none)")
                     + "\n\n## Rules\n" + rules
                     + _citation_contract()
@@ -1657,10 +1906,35 @@ class ChatService:
                 )
 
             system_prompt += "\n" + _continuation_system_rule(locale, asst_msg.content)
+        except asyncio.CancelledError:
+            if user is not None and pre_debited > 0 and predebit_ledger_id is not None and not settled:
+                try:
+                    with anyio.CancelScope(shield=True):
+                        await asyncio.wait_for(
+                            _settle_predebit_on_cancel(
+                                user_id=user.id,
+                                pre_debited=pre_debited,
+                                predebit_ledger_id=predebit_ledger_id,
+                                has_answer=False,
+                                prompt_tokens=None,
+                                output_tokens=None,
+                                model=effective_model,
+                                mode=effective_mode,
+                            ),
+                            timeout=_CANCEL_IO_TIMEOUT_S,
+                        )
+                    settled = True
+                except Exception:
+                    logger.exception(
+                        "Failed to settle continuation pre-debit during setup cancellation for user %s",
+                        user.id,
+                    )
+            raise
         except Exception as e:
             if user is not None and pre_debited > 0 and predebit_ledger_id is not None:
                 try:
                     await _refund_predebit(db, user.id, pre_debited, predebit_ledger_id)
+                    settled = True
                 except Exception:
                     logger.exception(
                         "Failed to refund pre-debited credits during continuation setup failure for user %s",
@@ -1676,6 +1950,7 @@ class ChatService:
             if user is not None and pre_debited > 0 and predebit_ledger_id is not None:
                 try:
                     await _refund_predebit(db, user.id, pre_debited, predebit_ledger_id)
+                    settled = True
                 except Exception:
                     logger.exception(
                         "Failed to refund pre-debited credits before continuation LLM client setup for user %s",
@@ -1703,200 +1978,284 @@ class ChatService:
         prompt_tokens: Optional[int] = None
         output_tokens: Optional[int] = None
         finish_reason: Optional[str] = None
-
-        try:
-            create_kwargs: dict[str, Any] = {
-                "model": effective_model,
-                "max_tokens": profile.max_tokens,
-                "temperature": profile.temperature,
-                "messages": openai_messages,
-                "stream": True,
-            }
-            if profile.supports_stream_options:
-                create_kwargs["stream_options"] = {"include_usage": True}
-            _apply_provider_options(create_kwargs, effective_model)
-            stream = await client.chat.completions.create(**create_kwargs)
-
-            async for chunk in stream:
-                if chunk.choices and chunk.choices[0].delta.content:
-                    text = chunk.choices[0].delta.content
-                    for ev in fsm.feed(text):
-                        if ev["event"] == "token":
-                            continuation_text_parts.append(ev["data"]["text"])
-                        elif ev["event"] == "citation":
-                            new_citations.append(ev["data"])
-                        yield ev
-
-                if chunk.choices and chunk.choices[0].finish_reason:
-                    finish_reason = chunk.choices[0].finish_reason
-
-                if hasattr(chunk, "usage") and chunk.usage:
-                    prompt_tokens = getattr(chunk.usage, "prompt_tokens", None)
-                    output_tokens = getattr(chunk.usage, "completion_tokens", None)
-
-                now = time.monotonic()
-                if now - last_ping >= 15.0:
-                    yield sse("ping", {})
-                    last_ping = now
-
-            for ev in fsm.flush():
-                if ev["event"] == "token":
-                    continuation_text_parts.append(ev["data"]["text"])
-                yield ev
-
-            if not new_citations:
-                continuation_snapshot = "".join(continuation_text_parts)
-                fallback_citations = _fallback_citations(
-                    continuation_snapshot,
-                    chunk_map,
-                    base_offset=len(asst_msg.content or ""),
-                )
-                if fallback_citations:
-                    logger.warning(
-                        "LLM emitted no continuation citation markers; generated %d fallback citations model=%s",
-                        len(fallback_citations),
-                        effective_model,
-                    )
-                    for citation in fallback_citations:
-                        new_citations.append(citation)
-                        yield sse("citation", citation)
-
-            if finish_reason == "length":
-                yield sse("truncated", {"reason": "max_tokens"})
-
-        except Exception as e:
-            if user is not None and pre_debited > 0 and predebit_ledger_id is not None:
-                try:
-                    await _refund_predebit(db, user.id, pre_debited, predebit_ledger_id)
-                except Exception:
-                    logger.exception(
-                        "Failed to refund pre-debited credits after continuation LLM error for user %s",
-                        user.id,
-                    )
-            yield _safe_sse("error", "LLM_ERROR", e, session_id=str(session_id))
-            return
-
-        # 10) Update existing message (append text, merge citations, bump count)
-        continuation_text = "".join(continuation_text_parts)
-        full_assistant_text = (asst_msg.content or "") + continuation_text
-        merged_citations = list(asst_msg.citations or []) + new_citations
-        verification_report = claim_verifier_service.verify(
-            full_assistant_text,
-            merged_citations,
-            set(chunk_map.keys()),
-            retrieved_count=len(chunk_map),
-        )
-        verification_payload = verification_report.to_payload()
         repair_metadata: dict[str, Any] | None = None
-        if verification_report.status != "pass" and finish_reason != "length":
-            yield sse("tool_status", {"message": "Checking citation support..."})
-            repair = await _try_repair_rag_answer(
-                client=client,
-                model=effective_model,
-                profile=profile,
-                user_message=_continuation_prompt(locale, asst_msg.content),
-                assistant_text=full_assistant_text,
-                citations=merged_citations,
-                chunk_map=chunk_map,
-                numbered_chunks=numbered_chunks,
-                verification=verification_payload,
-                locale=locale,
-            )
-            if repair is not None:
-                repair_metadata = repair.metadata
-                if repair.prompt_tokens:
-                    prompt_tokens = int(prompt_tokens or 0) + repair.prompt_tokens
-                if repair.output_tokens:
-                    output_tokens = int(output_tokens or 0) + repair.output_tokens
-                if repair.applied:
-                    full_assistant_text = repair.text
-                    merged_citations = repair.citations
-                    verification_report = claim_verifier_service.verify(
-                        full_assistant_text,
-                        merged_citations,
-                        set(chunk_map.keys()),
-                        retrieved_count=len(chunk_map),
-                    )
-                    verification_payload = verification_report.to_payload()
-                    yield sse(
-                        "answer_repaired",
-                        {
-                            "text": full_assistant_text,
-                            "citations": merged_citations,
-                            "verification": verification_payload,
-                        },
-                    )
-        if verification_report.status != "pass":
-            logger.warning(
-                "RAG continuation verification status=%s score=%.3f claims=%d citations=%d reasons=%s",
-                verification_report.status,
-                verification_report.score,
-                verification_report.claim_count,
-                verification_report.citation_count,
-                ",".join(verification_report.reasons),
-            )
+        persisted = False
+        done_emitted = False
+        base_assistant_text = asst_msg.content or ""
+        base_output_tokens = int(asst_msg.output_tokens or 0)
+
         try:
-            asst_msg.content = full_assistant_text
-            asst_msg.citations = merged_citations if merged_citations else None
-            asst_msg.continuation_count = (asst_msg.continuation_count or 0) + 1
-            asst_msg.output_tokens = (asst_msg.output_tokens or 0) + (int(output_tokens) if output_tokens else 0)
-            await db.commit()
-        except Exception:
-            await db.rollback()
+            try:
+                create_kwargs: dict[str, Any] = {
+                    "model": effective_model,
+                    "max_tokens": profile.max_tokens,
+                    "temperature": profile.temperature,
+                    "messages": openai_messages,
+                    "stream": True,
+                }
+                if profile.supports_stream_options:
+                    create_kwargs["stream_options"] = {"include_usage": True}
+                _apply_provider_options(create_kwargs, effective_model)
+                stream = await client.chat.completions.create(**create_kwargs)
+
+                async for chunk in stream:
+                    if chunk.choices and chunk.choices[0].delta.content:
+                        text = chunk.choices[0].delta.content
+                        for ev in fsm.feed(text):
+                            if ev["event"] == "token":
+                                continuation_text_parts.append(ev["data"]["text"])
+                            elif ev["event"] == "citation":
+                                new_citations.append(ev["data"])
+                            yield ev
+
+                    if chunk.choices and chunk.choices[0].finish_reason:
+                        finish_reason = chunk.choices[0].finish_reason
+
+                    if hasattr(chunk, "usage") and chunk.usage:
+                        prompt_tokens = getattr(chunk.usage, "prompt_tokens", None)
+                        output_tokens = getattr(chunk.usage, "completion_tokens", None)
+
+                    now = time.monotonic()
+                    if now - last_ping >= 15.0:
+                        yield sse("ping", {})
+                        last_ping = now
+
+                for ev in fsm.flush():
+                    if ev["event"] == "token":
+                        continuation_text_parts.append(ev["data"]["text"])
+                    yield ev
+
+                if not new_citations:
+                    continuation_snapshot = "".join(continuation_text_parts)
+                    fallback_citations = _fallback_citations(
+                        continuation_snapshot,
+                        chunk_map,
+                        base_offset=len(base_assistant_text),
+                    )
+                    if fallback_citations:
+                        logger.warning(
+                            "LLM emitted no continuation citation markers; generated %d fallback citations model=%s",
+                            len(fallback_citations),
+                            effective_model,
+                        )
+                        for citation in fallback_citations:
+                            new_citations.append(citation)
+                            yield sse("citation", citation)
+
+                if finish_reason == "length":
+                    yield sse("truncated", {"reason": "max_tokens"})
+
+            except Exception as e:
+                continuation_snapshot = "".join(continuation_text_parts)
+                has_partial_answer = bool(continuation_snapshot.strip())
+                if (
+                    user is not None
+                    and pre_debited > 0
+                    and predebit_ledger_id is not None
+                    and not has_partial_answer
+                ):
+                    try:
+                        await _refund_predebit(db, user.id, pre_debited, predebit_ledger_id)
+                        settled = True
+                    except Exception:
+                        logger.exception(
+                            "Failed to refund pre-debited credits after continuation LLM error for user %s",
+                            user.id,
+                        )
+                yield _safe_sse("error", "LLM_ERROR", e, session_id=str(session_id))
+                return
+
+            # 10) Persist continuation draft before verification/repair (A2)
+            continuation_text = "".join(continuation_text_parts)
+            full_assistant_text = base_assistant_text + continuation_text
+            merged_citations = list(asst_msg.citations or []) + new_citations
+            try:
+                asst_msg.content = full_assistant_text
+                asst_msg.citations = merged_citations if merged_citations else None
+                asst_msg.continuation_count = (asst_msg.continuation_count or 0) + 1
+                asst_msg.output_tokens = base_output_tokens + int(output_tokens or 0)
+                await db.commit()
+                persisted = True
+            except Exception:
+                await db.rollback()
+                has_partial_answer = bool(continuation_text.strip())
+                if (
+                    user is not None
+                    and pre_debited > 0
+                    and predebit_ledger_id is not None
+                    and not has_partial_answer
+                ):
+                    try:
+                        await _refund_predebit(db, user.id, pre_debited, predebit_ledger_id)
+                        settled = True
+                    except Exception:
+                        logger.exception(
+                            "Failed to refund pre-debited credits after continuation PERSIST_FAILED for user %s",
+                            user.id,
+                        )
+                yield sse("error", {"code": "PERSIST_FAILED", "message": "Failed to save continuation"})
+                return
+
+            verification_report = claim_verifier_service.verify(
+                full_assistant_text,
+                merged_citations,
+                set(chunk_map.keys()),
+                retrieved_count=len(chunk_map),
+            )
+            verification_payload = verification_report.to_payload()
+            if verification_report.status != "pass" and finish_reason != "length":
+                yield sse("tool_status", {"message": "Checking citation support..."})
+                repair = await _try_repair_rag_answer(
+                    client=client,
+                    model=effective_model,
+                    profile=profile,
+                    user_message=_continuation_prompt(locale, base_assistant_text),
+                    assistant_text=full_assistant_text,
+                    citations=merged_citations,
+                    chunk_map=chunk_map,
+                    numbered_chunks=numbered_chunks,
+                    verification=verification_payload,
+                    locale=locale,
+                )
+                if repair is not None:
+                    repair_metadata = repair.metadata
+                    if repair.prompt_tokens:
+                        prompt_tokens = int(prompt_tokens or 0) + repair.prompt_tokens
+                    if repair.output_tokens:
+                        output_tokens = int(output_tokens or 0) + repair.output_tokens
+                    if repair.applied:
+                        full_assistant_text = repair.text
+                        merged_citations = repair.citations
+                        verification_report = claim_verifier_service.verify(
+                            full_assistant_text,
+                            merged_citations,
+                            set(chunk_map.keys()),
+                            retrieved_count=len(chunk_map),
+                        )
+                        verification_payload = verification_report.to_payload()
+                        yield sse(
+                            "answer_repaired",
+                            {
+                                "text": full_assistant_text,
+                                "citations": merged_citations,
+                                "verification": verification_payload,
+                            },
+                        )
+            if verification_report.status != "pass":
+                logger.warning(
+                    "RAG continuation verification status=%s score=%.3f claims=%d citations=%d reasons=%s",
+                    verification_report.status,
+                    verification_report.score,
+                    verification_report.claim_count,
+                    verification_report.citation_count,
+                    ",".join(verification_report.reasons),
+                )
+
+            try:
+                asst_msg.content = full_assistant_text
+                asst_msg.citations = merged_citations if merged_citations else None
+                asst_msg.output_tokens = base_output_tokens + int(output_tokens or 0)
+                await db.commit()
+            except Exception:
+                await db.rollback()
+                yield sse("error", {"code": "PERSIST_FAILED", "message": "Failed to save continuation"})
+                return
+
+            await _record_rag_verification_event(
+                db,
+                user=user,
+                message_id=getattr(asst_msg, "id", None),
+                verification=verification_payload,
+                retrieval_strategy="continuation",
+                query_route=None,
+                retrieved_count=len(chunk_map),
+                repair_metadata=repair_metadata,
+            )
+
+            # Credits: reconcile
             if user is not None and pre_debited > 0 and predebit_ledger_id is not None:
+                pt = int(prompt_tokens or 0)
+                ct = int(output_tokens or 0)
                 try:
-                    await _refund_predebit(db, user.id, pre_debited, predebit_ledger_id)
+                    actual_cost = credit_service.calculate_cost(pt, ct, effective_model, mode=effective_mode)
+                    await credit_service.reconcile_credits(
+                        db, user.id, predebit_ledger_id, pre_debited, actual_cost,
+                    )
+                    await credit_service.record_usage(
+                        db,
+                        user_id=user.id,
+                        message_id=asst_msg.id,
+                        model=effective_model,
+                        prompt_tokens=pt,
+                        completion_tokens=ct,
+                        cost_credits=actual_cost,
+                    )
+                    await db.commit()
+                    settled = True
+                except Exception as e:
+                    yield _safe_sse("warn", "ACCOUNTING_ERROR", e, session_id=str(session_id))
+
+            # 11) done
+            can_continue = asst_msg.continuation_count < settings.MAX_CONTINUATIONS_PER_MESSAGE
+            done_emitted = True
+            yield sse("done", {
+                "message_id": str(asst_msg.id),
+                "citations_count": len(merged_citations) if merged_citations else 0,
+                "verification": verification_payload,
+                "repair": repair_metadata,
+                "can_continue": can_continue and finish_reason == "length",
+                "continuation_count": asst_msg.continuation_count,
+            })
+        except asyncio.CancelledError:
+            raise
+        finally:
+            continuation_snapshot = "".join(continuation_text_parts)
+            has_partial_answer = bool(continuation_snapshot.strip())
+            if not done_emitted and has_partial_answer and getattr(asst_msg, "id", None) is not None and not persisted:
+                try:
+                    with anyio.CancelScope(shield=True):
+                        await asyncio.wait_for(
+                            _persist_continuation_on_cancel(
+                                message_id=asst_msg.id,
+                                continuation_text=continuation_snapshot,
+                                new_citations=new_citations,
+                                output_tokens=output_tokens,
+                            ),
+                            timeout=_CANCEL_IO_TIMEOUT_S,
+                        )
+                    persisted = True
                 except Exception:
                     logger.exception(
-                        "Failed to refund pre-debited credits after continuation PERSIST_FAILED for user %s",
+                        "Failed to persist continuation partial response on cancel/error for message %s",
+                        getattr(asst_msg, "id", None),
+                    )
+            if (
+                user is not None
+                and pre_debited > 0
+                and predebit_ledger_id is not None
+                and not settled
+            ):
+                try:
+                    with anyio.CancelScope(shield=True):
+                        await asyncio.wait_for(
+                            _settle_predebit_on_cancel(
+                                user_id=user.id,
+                                pre_debited=pre_debited,
+                                predebit_ledger_id=predebit_ledger_id,
+                                has_answer=has_partial_answer,
+                                prompt_tokens=prompt_tokens,
+                                output_tokens=output_tokens,
+                                model=effective_model,
+                                mode=effective_mode,
+                            ),
+                            timeout=_CANCEL_IO_TIMEOUT_S,
+                        )
+                    settled = True
+                except Exception:
+                    logger.exception(
+                        "Failed to settle continuation pre-debit on cancel/error for user %s",
                         user.id,
                     )
-            yield sse("error", {"code": "PERSIST_FAILED", "message": "Failed to save continuation"})
-            return
-
-        await _record_rag_verification_event(
-            db,
-            user=user,
-            message_id=getattr(asst_msg, "id", None),
-            verification=verification_payload,
-            retrieval_strategy="continuation",
-            query_route=None,
-            retrieved_count=len(chunk_map),
-            repair_metadata=repair_metadata,
-        )
-
-        # Credits: reconcile
-        if user is not None and pre_debited > 0 and predebit_ledger_id is not None:
-            pt = int(prompt_tokens or 0)
-            ct = int(output_tokens or 0)
-            try:
-                actual_cost = credit_service.calculate_cost(pt, ct, effective_model, mode=effective_mode)
-                await credit_service.reconcile_credits(
-                    db, user.id, predebit_ledger_id, pre_debited, actual_cost,
-                )
-                await credit_service.record_usage(
-                    db,
-                    user_id=user.id,
-                    message_id=asst_msg.id,
-                    model=effective_model,
-                    prompt_tokens=pt,
-                    completion_tokens=ct,
-                    cost_credits=actual_cost,
-                )
-                await db.commit()
-            except Exception as e:
-                yield _safe_sse("warn", "ACCOUNTING_ERROR", e, session_id=str(session_id))
-
-        # 11) done
-        can_continue = asst_msg.continuation_count < settings.MAX_CONTINUATIONS_PER_MESSAGE
-        yield sse("done", {
-            "message_id": str(asst_msg.id),
-            "citations_count": len(merged_citations) if merged_citations else 0,
-            "verification": verification_payload,
-            "repair": repair_metadata,
-            "can_continue": can_continue and finish_reason == "length",
-            "continuation_count": asst_msg.continuation_count,
-        })
 
 
 # Singleton service

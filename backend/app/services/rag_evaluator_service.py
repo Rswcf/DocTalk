@@ -176,23 +176,23 @@ def _prompt_note(status: RetrievalStatus, reason: str, *, corrected: bool, route
     coverage_note = ""
     if route.coverage == "exhaustive_scan":
         coverage_note = (
-            "The user asked for broad or existence-style coverage. Treat the fragments as the searched evidence set, "
+            "The user asked for broad or existence-style coverage. Treat the excerpts as the searched evidence set, "
             "state limits clearly, and do not infer beyond cited text."
         )
     elif QueryIntent.TABLE_QUERY in route.intents:
         coverage_note = (
             "The user is asking about tables, figures, or metrics; prioritize structured table evidence, preserve row labels, "
-            "units, periods, and currencies exactly, and cite the supporting fragment for each numeric claim."
+            "units, periods, and currencies exactly, and cite the supporting excerpt for each numeric claim."
         )
     elif QueryIntent.CITATION_LOOKUP in route.intents:
         coverage_note = "The user is asking for source location or quotation; prioritize exact cited evidence over broad explanation."
 
     if status == "empty":
-        base = "No relevant document fragments were found for this query. Say that the document evidence was not found instead of guessing."
+        base = "No relevant document excerpts were found for this query. Say that the document evidence was not found instead of guessing."
     elif status == "weak":
-        base = "Retrieved evidence may be incomplete or weak. Answer only what the cited fragments support and call out missing evidence."
+        base = "Retrieved evidence may be incomplete or weak. Answer only what the cited excerpts support and call out missing evidence."
     else:
-        base = "Retrieved evidence appears adequate. Keep every factual claim tied to the cited fragments."
+        base = "Retrieved evidence appears adequate. Keep every factual claim tied to the cited excerpts."
 
     correction_note = " Corrective lexical retrieval was applied." if corrected else ""
     return " ".join(part for part in (base, coverage_note, correction_note) if part).strip()
@@ -217,7 +217,7 @@ class RAGEvaluatorService:
 
         if not results:
             status: RetrievalStatus = "empty"
-            reason = "no_retrieved_fragments"
+            reason = "no_retrieved_excerpts"
         elif exact_terms and len(matched_exact) < len(exact_terms):
             status = "weak"
             reason = "exact_terms_missing"

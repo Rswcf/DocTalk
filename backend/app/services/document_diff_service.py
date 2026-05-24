@@ -129,9 +129,9 @@ def _context_text(label: str, chunks: Sequence[tuple[Chunk, float]]) -> str:
 
 def _system_prompt() -> str:
     return (
-        "You are DocTalk's semantic document comparison engine. Compare the OLD and NEW document fragments. "
-        "Find only material semantic differences supported by the fragments. Do not invent changes. "
-        "Use old_refs with OLD fragment numbers and new_refs with NEW fragment numbers. "
+        "You are DocTalk's semantic document comparison engine. Compare the OLD and NEW document excerpts. "
+        "Find only material semantic differences supported by the excerpts. Do not invent changes. "
+        "Use old_refs with OLD excerpt numbers and new_refs with NEW excerpt numbers. "
         "For added items, old_refs can be empty. For removed items, new_refs can be empty. "
         "Respond only with valid JSON matching this contract:\n"
         '{"summary": string, "changes": [{"kind": "added"|"removed"|"modified", '
@@ -151,9 +151,9 @@ def _user_prompt(
         f"{language_rule}\n\n"
         f"OLD document: {old_doc.filename}\n"
         f"NEW document: {new_doc.filename}\n\n"
-        "OLD fragments:\n"
+        "OLD excerpts:\n"
         f"{_context_text('O', old_chunks)}\n\n"
-        "NEW fragments:\n"
+        "NEW excerpts:\n"
         f"{_context_text('N', new_chunks)}"
     )
 
@@ -250,7 +250,7 @@ def normalize_diff_result(
     return {
         "old_document": {"id": str(old_doc.id), "filename": old_doc.filename},
         "new_document": {"id": str(new_doc.id), "filename": new_doc.filename},
-        "summary": _str(raw.get("summary"), "No material differences were found in the retrieved fragments."),
+        "summary": _str(raw.get("summary"), "No material differences were found in the retrieved excerpts."),
         "changes": normalized_changes,
     }
 

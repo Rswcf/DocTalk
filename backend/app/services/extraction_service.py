@@ -268,8 +268,8 @@ def _context_text(chunks: Sequence[tuple[Chunk, float]]) -> str:
 def _system_prompt(template: ExtractionTemplate, domain_mode: str | None) -> str:
     domain = f"\nDomain mode: {domain_mode}." if domain_mode else ""
     return (
-        "You are DocTalk's structured extraction engine. Extract only facts supported by the provided document fragments. "
-        "Every extracted item must include source_refs using the bracket numbers of the fragments that support it. "
+        "You are DocTalk's structured extraction engine. Extract only facts supported by the provided document excerpts. "
+        "Every extracted item must include source_refs using the bracket numbers of the excerpts that support it. "
         "Do not invent facts. Respond only with valid JSON matching this contract:\n"
         f"{template.json_contract}\n"
         f"{domain}"
@@ -282,7 +282,7 @@ def _user_prompt(template: ExtractionTemplate, chunks: Sequence[tuple[Chunk, flo
         f"Template: {template.title}\n"
         f"Goal: {template.description}\n"
         f"{language_rule}\n\n"
-        "Document fragments:\n"
+        "Document excerpts:\n"
         f"{_context_text(chunks)}"
     )
 
