@@ -297,6 +297,74 @@ async def test_large_document_summary_context_uses_section_map_reduce() -> None:
 
 
 @pytest.mark.asyncio
+async def test_large_document_bypasses_persisted_coverage_when_map_reduce_needed(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    document_id = uuid.uuid4()
+    chunks = [_chunk(i, section=f"Chapter {i}", text=("Long narrative " * 25)) for i in range(50)]
+    for chunk in chunks:
+        chunk.document_id = document_id
+
+    persisted = [
+        {
+            "chunk_id": chunk.id,
+            "text": chunk.text,
+            "page": chunk.page_start,
+            "page_end": chunk.page_end,
+            "bboxes": chunk.bboxes,
+            "score": 1.0,
+            "section_title": chunk.section_title,
+            "document_id": chunk.document_id,
+        }
+        for chunk in chunks[:18]
+    ]
+
+    map_reduce_selected = chunks[:30]
+    planner = SectionMapReducePlanner()
+    planner.select_chunks_for_summary = AsyncMock(return_value=map_reduce_selected)
+    service = DocumentBriefService(
+        section_map_reduce=planner,
+        map_reduce_min_chunks=36,
+    )
+    monkeypatch.setattr(
+        service,
+        "_get_persisted_summary_context",
+        AsyncMock(return_value=persisted),
+    )
+    monkeypatch.setattr(
+        service,
+        "_should_use_map_reduce",
+        lambda *_args, **_kwargs: True,
+    )
+    monkeypatch.setattr(
+        "app.services.document_brief_service.get_element_aware_chunks_async",
+        AsyncMock(return_value=[]),
+    )
+    db = SimpleNamespace(execute=AsyncMock(return_value=_ScalarsResult(chunks)))
+
+    contexts = await service.get_summary_context(db, document_id, max_chunks=18)
+
+    planner.select_chunks_for_summary.assert_awaited_once_with(chunks, max_chunks=18)
+    assert len(contexts) > 18
+    assert len({item.get("section_title") for item in contexts}) > 18
+
+
+def test_truncate_group_chunks_hard_caps_multi_section_group() -> None:
+    planner = SectionMapReducePlanner(max_group_chunks=4)
+    chunks = tuple(_chunk(i, section=f"Section {i}", text=("Long narrative " * 20)) for i in range(9))
+    group = SectionMapGroup(
+        group_index=0,
+        chunks=chunks,
+        section_titles=tuple(f"Section {i}" for i in range(9)),
+    )
+
+    truncated = planner._truncate_group_chunks(group)
+
+    assert len(truncated.chunks) == 4
+    assert [chunk.chunk_index for chunk in truncated.chunks] == [0, 2, 5, 8]
+
+
+@pytest.mark.asyncio
 async def test_small_per_doc_budget_skips_map_reduce_for_collection_path() -> None:
     document_id = uuid.uuid4()
     chunks = [_chunk(i, section=f"Chapter {i}", text=("Long narrative " * 25)) for i in range(50)]

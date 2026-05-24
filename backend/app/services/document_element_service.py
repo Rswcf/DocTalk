@@ -199,7 +199,8 @@ def get_element_aware_chunks(
     document_id: uuid.UUID,
     *,
     max_chunks: int,
-) -> list[tuple[Chunk, float]]:
+    return_prefetched_chunks: bool = False,
+) -> list[tuple[Chunk, float]] | tuple[list[tuple[Chunk, float]], list[Chunk]]:
     element_rows = db.execute(
         select(DocumentElement)
         .where(DocumentElement.document_id == document_id)
@@ -207,6 +208,8 @@ def get_element_aware_chunks(
     )
     elements = list(element_rows.scalars())
     if not _usable_elements(elements):
+        if return_prefetched_chunks:
+            return [], []
         return []
 
     chunk_rows = db.execute(
@@ -215,7 +218,10 @@ def get_element_aware_chunks(
         .order_by(Chunk.chunk_index)
     )
     chunks = list(chunk_rows.scalars())
-    return select_chunks_for_elements(chunks, elements, max_chunks=max_chunks)
+    selected = select_chunks_for_elements(chunks, elements, max_chunks=max_chunks)
+    if return_prefetched_chunks:
+        return selected, chunks
+    return selected
 
 
 async def get_element_aware_chunks_async(
@@ -223,7 +229,8 @@ async def get_element_aware_chunks_async(
     document_id: uuid.UUID,
     *,
     max_chunks: int,
-) -> list[tuple[Chunk, float]]:
+    return_prefetched_chunks: bool = False,
+) -> list[tuple[Chunk, float]] | tuple[list[tuple[Chunk, float]], list[Chunk]]:
     element_rows = await db.execute(
         select(DocumentElement)
         .where(DocumentElement.document_id == document_id)
@@ -231,6 +238,8 @@ async def get_element_aware_chunks_async(
     )
     elements = list(element_rows.scalars())
     if not _usable_elements(elements):
+        if return_prefetched_chunks:
+            return [], []
         return []
 
     chunk_rows = await db.execute(
@@ -239,4 +248,7 @@ async def get_element_aware_chunks_async(
         .order_by(Chunk.chunk_index)
     )
     chunks = list(chunk_rows.scalars())
-    return select_chunks_for_elements(chunks, elements, max_chunks=max_chunks)
+    selected = select_chunks_for_elements(chunks, elements, max_chunks=max_chunks)
+    if return_prefetched_chunks:
+        return selected, chunks
+    return selected

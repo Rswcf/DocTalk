@@ -13,15 +13,13 @@ _LOCALE_TESSERACT = {
     "en": "eng", "zh": "chi_sim", "ja": "jpn", "ko": "kor", "es": "spa",
     "de": "deu", "fr": "fra", "pt": "por", "it": "ita", "ar": "ara", "hi": "hin",
 }
-_DEFAULT_OCR_LANGUAGES = "eng+chi_sim+jpn+kor+spa+deu+fra+por+ita+ara+hin"
 
 
 def resolve_ocr_languages(locale: str | None = None) -> str:
-    """Tesseract language string for OCR, covering all product locales.
+    """Tesseract language string for OCR.
 
-    Unions the configured OCR_LANGUAGES with the full locale set so a scanned
-    non-Latin document is never rejected for lack of a pack. When the document's
-    locale is known it is placed first for OCR accuracy.
+    Uses `settings.OCR_LANGUAGES` as the authoritative configured set.
+    If locale is known and present in the configured set, place it first.
     """
     codes: list[str] = []
     try:
@@ -29,13 +27,15 @@ def resolve_ocr_languages(locale: str | None = None) -> str:
         configured = (getattr(settings, "OCR_LANGUAGES", "") or "").split("+")
     except Exception:
         configured = []
-    for code in [*configured, *_DEFAULT_OCR_LANGUAGES.split("+")]:
+    for code in configured:
         code = code.strip()
         if code and code not in codes:
             codes.append(code)
+    if not codes:
+        codes = ["eng"]
     if locale:
         primary = _LOCALE_TESSERACT.get(locale.split("-")[0].split("_")[0].lower())
-        if primary:
+        if primary and primary in codes:
             codes = [primary] + [c for c in codes if c != primary]
     return "+".join(codes)
 

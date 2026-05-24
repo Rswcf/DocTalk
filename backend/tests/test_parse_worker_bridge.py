@@ -28,6 +28,14 @@ class _StubSyncSession:
         self.commits += 1
 
 
+class _StubParseSession(_StubSyncSession):
+    def execute(self, _stmt):
+        return None
+
+    def rollback(self) -> None:
+        return None
+
+
 def test_set_doc_error_happy_path() -> None:
     doc = SimpleNamespace(status="parsing", error_msg=None)
 
@@ -104,3 +112,60 @@ def test_queue_document_brief_dispatches_task(monkeypatch) -> None:
     parse_worker._queue_document_brief("doc-123")
 
     assert queued == ["doc-123"]
+
+
+def test_parse_document_uses_forwarded_locale_for_ocr(monkeypatch) -> None:
+    doc_id = uuid.uuid4()
+    doc = SimpleNamespace(
+        id=doc_id,
+        storage_key="documents/example.pdf",
+        file_type="pdf",
+        converted_storage_key=None,
+        status="parsing",
+        page_count=None,
+        pages_parsed=0,
+        chunks_total=0,
+        chunks_indexed=0,
+        summary=None,
+        suggested_questions=None,
+        error_msg=None,
+    )
+    stub_session = _StubParseSession(doc)
+    monkeypatch.setattr(parse_worker, "SyncSessionLocal", lambda: stub_session)
+    monkeypatch.setattr(parse_worker, "_download_file_bytes", lambda *_args, **_kwargs: b"%PDF-1.4\nfake")
+    monkeypatch.setattr(parse_worker.settings, "OCR_ENABLED", True)
+    monkeypatch.setattr(parse_worker.settings, "OCR_DPI", 300)
+
+    resolver_calls: list[str | None] = []
+    ocr_calls: list[tuple[str, int]] = []
+
+    def fake_resolve_ocr_languages(locale: str | None = None) -> str:
+        resolver_calls.append(locale)
+        return "jpn"
+
+    class _FakeParseService:
+        def extract_pages(self, _pdf_bytes: bytes):
+            return [SimpleNamespace(page_number=1, width_pt=612.0, height_pt=792.0, rotation=0, blocks=[])]
+
+        def detect_scanned(self, _pages) -> bool:
+            return True
+
+        def extract_pages_ocr(self, _pdf_bytes: bytes, *, languages: str, dpi: int):
+            ocr_calls.append((languages, dpi))
+            return [
+                SimpleNamespace(
+                    page_number=1,
+                    width_pt=612.0,
+                    height_pt=792.0,
+                    rotation=0,
+                    blocks=[SimpleNamespace(text="x")],
+                )
+            ]
+
+    monkeypatch.setattr(parse_worker, "resolve_ocr_languages", fake_resolve_ocr_languages)
+    monkeypatch.setattr(parse_worker, "ParseService", _FakeParseService)
+
+    parse_worker.parse_document.run(str(doc_id), locale="ja")
+
+    assert resolver_calls == ["ja"]
+    assert ocr_calls == [("jpn", 300)]

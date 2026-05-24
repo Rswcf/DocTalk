@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import pytest
 
+from app.core.config import settings
 from app.services import parse_service as ps
 
 # The 11 product locales -> expected Tesseract traineddata codes.
@@ -36,3 +37,15 @@ def test_resolve_ocr_languages_prioritises_document_locale(locale, code):
     assert result.split("+")[0] == code, (
         f"locale {locale} should put {code} first for OCR accuracy, got {result!r}"
     )
+
+
+def test_resolve_ocr_languages_respects_config_without_forced_union(
+    monkeypatch: pytest.MonkeyPatch,
+):
+    resolve = getattr(ps, "resolve_ocr_languages", None)
+    assert resolve is not None, "parse_service.resolve_ocr_languages not implemented (C4)"
+
+    monkeypatch.setattr(settings, "OCR_LANGUAGES", "eng")
+
+    assert resolve() == "eng"
+    assert resolve("ja") == "eng"

@@ -207,6 +207,15 @@ class SectionMapReducePlanner:
 
         # Keep map payload ordered by chunk index.
         selected.sort(key=lambda chunk: int(getattr(chunk, "chunk_index", 0) or 0))
+        if len(selected) > self._max_group_chunks:
+            if self._max_group_chunks == 1:
+                selected = [selected[len(selected) // 2]]
+            else:
+                last_index = len(selected) - 1
+                selected = [
+                    selected[(slot * last_index) // (self._max_group_chunks - 1)]
+                    for slot in range(self._max_group_chunks)
+                ]
         return SectionMapGroup(
             group_index=group.group_index,
             chunks=tuple(selected),
@@ -424,18 +433,23 @@ class DocumentBriefService:
         *,
         max_chunks: int,
         element_chunks_count: int,
+        section_total: int = 0,
     ) -> bool:
         if max_chunks < DEFAULT_MAX_SUMMARY_CHUNKS:
             # Collection summary allocates a narrow per-document budget.
             return False
-        if len(chunks) < self._map_reduce_min_chunks:
+        chunks_total = len(chunks)
+        scale_units = max(chunks_total, max(0, int(section_total or 0)))
+        if scale_units < self._map_reduce_min_chunks:
             return False
-        if len(chunks) <= max_chunks:
+        if chunks_total <= max_chunks and section_total <= max_chunks:
             return False
+        if section_total > max_chunks:
+            return True
         if element_chunks_count >= max_chunks:
             return True
         # No reliable element coverage: still promote large docs to section map-reduce.
-        return len(chunks) >= max(max_chunks * 2, self._map_reduce_min_chunks)
+        return scale_units >= max(max_chunks * 2, self._map_reduce_min_chunks)
 
     async def get_summary_context(
         self,
@@ -449,30 +463,45 @@ class DocumentBriefService:
             document_id,
             max_chunks=max_chunks,
         )
-        if persisted:
+        if persisted and max_chunks < DEFAULT_MAX_SUMMARY_CHUNKS:
+            # Collection / narrow-budget paths should keep using persisted brief context.
             return persisted
 
-        element_chunks = await get_element_aware_chunks_async(
+        element_result = await get_element_aware_chunks_async(
             db,
             document_id,
             max_chunks=max_chunks,
+            return_prefetched_chunks=True,
         )
-        if element_chunks and len(element_chunks) < max_chunks:
-            return [
-                chunk_to_retrieval_item(chunk, score, include_document_id=True)
-                for chunk, score in element_chunks
-            ]
+        element_chunks: list[tuple[Chunk, float]]
+        prefetched_chunks: list[Chunk]
+        if (
+            isinstance(element_result, tuple)
+            and len(element_result) == 2
+            and isinstance(element_result[0], list)
+            and isinstance(element_result[1], list)
+        ):
+            element_chunks = element_result[0]
+            prefetched_chunks = element_result[1]
+        else:
+            element_chunks = list(element_result or [])
+            prefetched_chunks = []
+        if prefetched_chunks:
+            chunks = prefetched_chunks
+        else:
+            rows = await db.execute(
+                select(Chunk)
+                .where(Chunk.document_id == document_id)
+                .order_by(Chunk.chunk_index)
+            )
+            chunks = list(rows.scalars())
 
-        rows = await db.execute(
-            select(Chunk)
-            .where(Chunk.document_id == document_id)
-            .order_by(Chunk.chunk_index)
-        )
-        chunks = list(rows.scalars())
+        section_total = len({_chunk_section_title(chunk) for chunk in chunks})
         if self._should_use_map_reduce(
             chunks,
             max_chunks=max_chunks,
             element_chunks_count=len(element_chunks),
+            section_total=section_total,
         ):
             selected_map_reduce = await self._section_map_reduce.select_chunks_for_summary(
                 chunks,
@@ -487,6 +516,9 @@ class DocumentBriefService:
                     )
                     for idx, chunk in enumerate(selected_map_reduce)
                 ]
+
+        if persisted:
+            return persisted
 
         if element_chunks:
             return [

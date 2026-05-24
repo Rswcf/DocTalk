@@ -53,6 +53,7 @@ class DocService:
     async def create_document(
         self, upload, db: AsyncSession, user_id: Optional[uuid.UUID] = None,
         file_type: str = "pdf",
+        locale: Optional[str] = None,
     ) -> uuid.UUID:
         """Save uploaded document to object storage, create DB record, dispatch parse.
 
@@ -100,7 +101,7 @@ class DocService:
         try:
             from app.workers.parse_worker import parse_document
 
-            parse_document.delay(str(doc.id))
+            parse_document.delay(str(doc.id), locale=locale)
         except Exception:
             pass
 

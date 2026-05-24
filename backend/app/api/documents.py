@@ -7,7 +7,16 @@ import zipfile
 from typing import Optional
 from urllib.parse import urlparse
 
-from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile, status
+from fastapi import (
+    APIRouter,
+    Depends,
+    File,
+    Form,
+    HTTPException,
+    Query,
+    UploadFile,
+    status,
+)
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -172,6 +181,7 @@ async def get_demo_documents(
 )
 async def upload_document(
     file: UploadFile = File(...),
+    locale: Optional[str] = Form(default=None),
     user: User = Depends(require_auth),
     db: AsyncSession = Depends(get_db_session),
 ):
@@ -266,7 +276,13 @@ async def upload_document(
             return data
 
     try:
-        document_id = await doc_service.create_document(_MemUpload(), db, user_id=user.id, file_type=file_type)
+        document_id = await doc_service.create_document(
+            _MemUpload(),
+            db,
+            user_id=user.id,
+            file_type=file_type,
+            locale=locale,
+        )
     except StorageUnavailableError:
         raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=STORAGE_UNAVAILABLE_DETAIL)
     except ValueError as ve:
@@ -285,6 +301,7 @@ async def upload_document(
 
 class IngestUrlRequest(BaseModel):
     url: str = Field(..., max_length=2000)
+    locale: str | None = Field(default=None, max_length=16)
 
 
 @documents_router.post(
@@ -432,7 +449,7 @@ async def ingest_url(
         await db.commit()
 
         from app.workers.parse_worker import parse_document
-        parse_document.delay(str(doc.id))
+        parse_document.delay(str(doc.id), locale=body.locale)
 
         return JSONResponse(
             status_code=status.HTTP_202_ACCEPTED,
@@ -478,7 +495,7 @@ async def ingest_url(
         await db.commit()
 
         from app.workers.parse_worker import parse_document
-        parse_document.delay(str(doc.id))
+        parse_document.delay(str(doc.id), locale=body.locale)
 
         return JSONResponse(
             status_code=status.HTTP_202_ACCEPTED,
