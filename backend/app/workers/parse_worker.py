@@ -15,7 +15,7 @@ from app.models.sync_database import SyncSessionLocal
 from app.models.tables import Chunk, Document, DocumentBrief, DocumentElement, Page
 from app.services.conversion_service import CONVERTIBLE_TYPES, convert_to_pdf
 from app.services.embedding_service import embedding_service
-from app.services.parse_service import ParseService
+from app.services.parse_service import ParseService, resolve_ocr_languages
 
 from .celery_app import celery_app
 
@@ -262,7 +262,7 @@ def parse_document(self, document_id: str) -> None:
                     try:
                         pages = service.extract_pages_ocr(
                             file_bytes,
-                            languages=settings.OCR_LANGUAGES,
+                            languages=resolve_ocr_languages(),
                             dpi=settings.OCR_DPI,
                         )
                     except SoftTimeLimitExceeded:

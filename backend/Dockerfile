@@ -18,6 +18,15 @@ RUN apt-get update \
        tesseract-ocr \
        tesseract-ocr-eng \
        tesseract-ocr-chi-sim \
+       tesseract-ocr-jpn \
+       tesseract-ocr-kor \
+       tesseract-ocr-spa \
+       tesseract-ocr-deu \
+       tesseract-ocr-fra \
+       tesseract-ocr-por \
+       tesseract-ocr-ita \
+       tesseract-ocr-ara \
+       tesseract-ocr-hin \
        libreoffice-core \
        libreoffice-impress \
        libreoffice-writer \
