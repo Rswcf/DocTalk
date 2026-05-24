@@ -1088,6 +1088,7 @@ class ChatService:
                 and document_id
                 and not is_collection_session
             ):
+                yield sse("tool_status", {"message": "Summarizing the document section by section…"})
                 retrieved = await document_brief_service.get_summary_context(
                     db,
                     document_id,
@@ -1155,6 +1156,11 @@ class ChatService:
             setup_error_code = "CHAT_SETUP_ERROR"
             numbered_chunks: List[str] = []
             chunk_map: dict[int, _ChunkInfo] = {}
+            has_map_reduce_summary_context = any(
+                item.get("retrieval_modality") == "summary"
+                or item.get("map_reduce_strategy") == "map_reduce"
+                for item in retrieved
+            )
             for idx, item in enumerate(retrieved, start=1):
                 # Heuristic truncation to ~350 tokens (roughly 1200-1400 chars)
                 text = item["text"] or ""
@@ -1219,6 +1225,12 @@ class ChatService:
                     + _citation_contract()
                 )
             elif retrieval_strategy == "document_summary_context":
+                map_reduce_rule = (
+                    "7. The excerpts may be map-reduce section summaries generated from source chunks; "
+                    "when they are present, treat their listed section coverage as the full-document structure and cover all listed sections.\n"
+                    if has_map_reduce_summary_context
+                    else ""
+                )
                 system_prompt = (
                     "You are a document analysis assistant. The user is asking for a broad, whole-document summary.\n\n"
                     + SYSTEM_PROMPT_META_RULE
@@ -1235,6 +1247,7 @@ class ChatService:
                     + "4. If coverage is incomplete, say the answer is based on the cited representative sections instead of refusing.\n"
                     + "5. Cite every factual paragraph or bullet using the excerpt numbers listed above.\n"
                     + "6. Your response language MUST match the language of the user's question.\n"
+                    + map_reduce_rule
                     + _citation_contract()
                 )
             else:

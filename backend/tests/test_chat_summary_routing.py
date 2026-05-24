@@ -195,6 +195,10 @@ async def test_whole_document_summary_uses_brief_context_not_semantic_retrieval(
 
     summary_context.assert_awaited_once_with(db, document_id, max_chunks=18)
     corrective_retrieval.assert_not_awaited()
+    assert {
+        "event": "tool_status",
+        "data": {"message": "Summarizing the document section by section…"},
+    } in events
     assert any(event["event"] == "citation" for event in events)
     assert events[-1]["event"] == "done"
 
