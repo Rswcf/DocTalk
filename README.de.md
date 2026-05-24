@@ -130,7 +130,7 @@ npm install && npm run dev
 | `STRIPE_WEBHOOK_SECRET` | Nein | Stripe Webhook-Signaturgeheimnis |
 | `SENTRY_DSN` | Nein | Sentry DSN für Fehlererfassung |
 | `OCR_ENABLED` | Nein | OCR für gescannte PDFs aktivieren (Standard: `true`) |
-| `OCR_LANGUAGES` | Nein | Tesseract-Sprachcodes (Standard: `eng+chi_sim`) |
+| `OCR_LANGUAGES` | Nein | Installierte Tesseract-Sprachen; der Parser wählt pro Dokument anhand der erkannten Schrift automatisch eine schmale Teilmenge (Standard: `eng+chi_sim+jpn+kor+spa+deu+fra+por+ita+ara+hin+urd`) |
 
 ### Frontend (`.env.local`)
 

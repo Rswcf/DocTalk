@@ -8,6 +8,32 @@ releases use `0.minor.patch` semantics such as `0.2.0` and `0.2.1`.
 
 ## [Unreleased]
 
+## [0.18.4] - 2026-05-24
+
+RAG retrieval, OCR, and answer-quality remediation (shipped across 0.18.2–0.18.4),
+driven by replaying real user conversations that had failed.
+
+### Fixed
+- Answers now cite exact page/slide/sheet numbers in the response text, not just in
+  the citation chips, so "quote it with the page" and "what's on page N" work.
+- The assistant no longer refuses short keyword-only questions (e.g. a place name or
+  term); it now searches the document and answers or honestly reports "not found".
+- The assistant no longer exposes internal jargon ("fragments", "excerpts", "chunks")
+  or its translations (e.g. Spanish "fragmento") — it refers to "the document",
+  "the text", or a specific page.
+- Scanned and garbled non-Latin PDFs (Urdu, Arabic, and similar) are now read
+  correctly: a document whose embedded font extracted as gibberish is detected and
+  re-read with OCR, so it becomes answerable instead of returning "the text is coded".
+
+### Added
+- Retroactive, quality-aware OCR with automatic script detection: the parser flags
+  a present-but-garbled text layer and re-reads it with the right language(s),
+  selected from the document's actual script rather than the UI language.
+
+### Changed
+- OCR now uses a narrow, content-detected language set, producing markedly cleaner
+  text for non-Latin documents (and much faster processing).
+
 ## [0.17.1] - 2026-05-09
 
 ### Changed

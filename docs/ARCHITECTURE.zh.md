@@ -132,6 +132,8 @@ sequenceDiagram
 
 2. **文本提取**：Celery Worker 下载 PDF，使用 **PyMuPDF (fitz)** 按页提取文本及边界框坐标。坐标归一化到 `[0, 1]` 范围（左上角原点）。
 
+2a. **OCR 回退**（仅 PDF，状态 → `ocr`）：在两种情况下触发 OCR——文档是**扫描件**（`detect_scanned`，没有文本层），或**低质量**（`detect_low_quality_text`：文本层存在但乱码，例如字体 cmap 损坏导致提取出 mojibake；用 Unicode 感知的字母/数字占比打分，两级阈值，保证正常中日韩文本不会被误判）。OCR 的**语言基于内容判定**：`detect_script_osd` 在样本页上运行 Tesseract OSD（`--psm 0`）检测字符脚本，再由 `resolve_ocr_languages(locale, script)` 选出**窄**的 Tesseract 语言集（同一脚本族，≤3 种，**非拉丁脚本不追加 `eng`**——多余语言会让 Tesseract 产生跨脚本幻觉并大幅变慢）。UI `locale` 仅用于在脚本族内消歧。低质量重跑 OCR 只有在质量优于原文本层时才会被采纳。Worker 在文档上记录 `parse_version`、`parse_method`（`text`/`ocr`）、`text_quality` 和 `ocr_languages`（供 `scripts/find_low_quality_docs.py` 回填修复前解析的旧文档）。
+
 3. **分块**：文本被分割为 150–300 token 的窗口，具有以下特性：
    - 标题检测用于识别章节标题
    - 页眉/页脚过滤以移除重复的页面元素
@@ -147,6 +149,8 @@ sequenceDiagram
 6. **完成**：文档状态从 `parsing` 转换为 `ready`。前端轮询状态并切换到文档阅读器。
 
 7. **自动摘要**（尽力而为）：状态变为 `ready` 后，Worker 加载前 20 个文本块，调用预算 LLM（DeepSeek）生成 2–3 段摘要和 5 个推荐问题。结果存储在 `summary` 和 `suggested_questions` 列中。失败仅记录日志，不影响文档状态。
+
+**幂等重新解析**：重新解析（手动重处理、卡住文档重试或回填）会先**按 `document_id` 删除该文档的 Qdrant 向量，再删除其数据库 pages/chunks**。该顺序至关重要：若 Qdrant 删除失败，Worker 会写入结构化错误并返回、保留现有行，从而保证向量库与关系库不会发生分歧，瞬时故障也不会悄悄丢掉一份原本可用的解析结果。
 
 ---
 
@@ -480,6 +484,10 @@ erDiagram
         int pages_parsed
         int chunks_total
         int chunks_indexed
+        int parse_version "可空 (R2b 回填标记)"
+        string parse_method "可空 (text | ocr)"
+        float text_quality "可空 (Unicode 字母/数字占比)"
+        string ocr_languages "可空 (实际解析出的 Tesseract 语言集)"
         uuid user_id FK "可空 (demo 文档)"
         string demo_slug UK "可空"
         text summary "AI 生成的摘要"

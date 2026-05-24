@@ -130,7 +130,7 @@ npm install && npm run dev
 | `STRIPE_WEBHOOK_SECRET` | いいえ | Stripe Webhook署名シークレット |
 | `SENTRY_DSN` | いいえ | エラートラッキング用Sentry DSN |
 | `OCR_ENABLED` | いいえ | スキャンPDFのOCRを有効化（デフォルト: `true`） |
-| `OCR_LANGUAGES` | いいえ | Tesseract言語コード（デフォルト: `eng+chi_sim`） |
+| `OCR_LANGUAGES` | いいえ | インストール済みの Tesseract 言語。パーサーは検出した文字種に基づき文書ごとに狭い部分集合を自動選択（デフォルト: `eng+chi_sim+jpn+kor+spa+deu+fra+por+ita+ara+hin+urd`） |
 
 ### フロントエンド (`.env.local`)
 

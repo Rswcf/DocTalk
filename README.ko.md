@@ -130,7 +130,7 @@ npm install && npm run dev
 | `STRIPE_WEBHOOK_SECRET` | No | Stripe 웹훅 서명 시크릿 |
 | `SENTRY_DSN` | No | 오류 추적을 위한 Sentry DSN |
 | `OCR_ENABLED` | No | 스캔된 PDF에 대해 OCR 활성화 (기본값: `true`) |
-| `OCR_LANGUAGES` | No | Tesseract 언어 코드 (기본값: `eng+chi_sim`) |
+| `OCR_LANGUAGES` | No | 설치된 Tesseract 언어. 파서가 감지된 문자 체계에 따라 문서별로 좁은 하위 집합을 자동 선택 (기본값: `eng+chi_sim+jpn+kor+spa+deu+fra+por+ita+ara+hin+urd`) |
 
 ### Frontend (`.env.local`)
 

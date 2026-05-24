@@ -147,7 +147,7 @@ Open [http://localhost:3000](http://localhost:3000).
 | `STRIPE_WEBHOOK_SECRET` | No | Stripe webhook signing secret |
 | `SENTRY_DSN` | No | Sentry DSN for error tracking |
 | `OCR_ENABLED` | No | Enable OCR for scanned PDFs (default: `true`) |
-| `OCR_LANGUAGES` | No | Tesseract language codes (default: `eng+chi_sim`) |
+| `OCR_LANGUAGES` | No | Installed Tesseract languages; the parser auto-selects a narrow subset per document by detected script (default: `eng+chi_sim+jpn+kor+spa+deu+fra+por+ita+ara+hin+urd`) |
 
 ### Frontend (`.env.local`)
 

@@ -130,7 +130,7 @@ npm install && npm run dev
 | `STRIPE_WEBHOOK_SECRET` | 否 | Stripe Webhook 签名密钥 |
 | `SENTRY_DSN` | 否 | Sentry DSN，用于错误追踪 |
 | `OCR_ENABLED` | 否 | 启用扫描 PDF 的 OCR（默认: `true`） |
-| `OCR_LANGUAGES` | 否 | Tesseract 语言代码（默认: `eng+chi_sim`） |
+| `OCR_LANGUAGES` | 否 | 已安装的 Tesseract 语言；解析器按检测到的脚本为每个文档自动选用一个窄子集（默认: `eng+chi_sim+jpn+kor+spa+deu+fra+por+ita+ara+hin+urd`） |
 
 ### 前端 (`.env.local`)
 

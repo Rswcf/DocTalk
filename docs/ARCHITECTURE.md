@@ -132,6 +132,8 @@ sequenceDiagram
 
 2. **Text Extraction**: Celery worker downloads the PDF and uses **PyMuPDF (fitz)** to extract text with bounding-box coordinates per page. Coordinates are normalized to `[0, 1]` range (top-left origin).
 
+2a. **OCR fallback** (PDFs only; status → `ocr`): OCR runs when the PDF is **scanned** (`detect_scanned` — no text layer) **or low-quality** (`detect_low_quality_text` — a text layer exists but is garbled, e.g. a broken-font cmap that extracts as mojibake; scored with a Unicode-aware letter/number ratio, two-tier so good CJK is never false-flagged). The OCR **language is content-based**: `detect_script_osd` runs Tesseract OSD (`--psm 0`) on sample pages to detect the script, then `resolve_ocr_languages(locale, script)` selects a **narrow** Tesseract set (the script family, ≤3 languages, no `eng` appended to non-Latin scripts — extra languages make Tesseract hallucinate cross-script glyphs and run far slower). The UI `locale` only disambiguates within a script family. A low-quality re-OCR is adopted only if it improves on the existing text-layer quality. The worker records `parse_version`, `parse_method` (`text`/`ocr`), `text_quality`, and `ocr_languages` on the document (used by `scripts/find_low_quality_docs.py` to backfill docs parsed before a fix).
+
 3. **Chunking**: Text is split into 150–300 token windows with:
    - Heading detection for section titles
    - Header/footer filtering to remove repeated page elements
@@ -149,6 +151,8 @@ sequenceDiagram
 6. **Completion**: Document status transitions from `parsing` → `ready`. The frontend polls status and transitions to the document viewer.
 
 7. **Auto-Summary** (best-effort): After status becomes `ready`, the worker loads the first 20 chunks and calls a budget LLM (DeepSeek) to generate a 2–3 paragraph summary and 5 suggested questions. Results are stored in the `summary` and `suggested_questions` columns. Failures are logged but do not affect document status.
+
+**Idempotent re-parse**: re-running the parse (manual reprocess, stuck-doc retry, or backfill) first **deletes the document's Qdrant vectors (by `document_id` filter) BEFORE deleting its DB pages/chunks**. This ordering is load-bearing: if the Qdrant delete fails, the worker sets a structured error and returns with the existing rows intact, so the vector store and relational store never diverge and a transient outage can't silently drop a previously-good parse.
 
 ---
 
@@ -506,6 +510,10 @@ erDiagram
         int pages_parsed
         int chunks_total
         int chunks_indexed
+        int parse_version "nullable (R2b backfill marker)"
+        string parse_method "nullable (text | ocr)"
+        float text_quality "nullable (Unicode letter/number ratio)"
+        string ocr_languages "nullable (resolved Tesseract set)"
         uuid user_id FK "nullable (demo docs)"
         string demo_slug UK "nullable"
         text summary "AI-generated summary"
