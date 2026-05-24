@@ -63,6 +63,23 @@ class _FakeChunk:
         self.usage = usage
 
 
+class _ScalarsResult:
+    def __init__(self, values):
+        self._values = values
+
+    def scalars(self):
+        values = self._values
+
+        class _Scalars:
+            def __iter__(self):
+                return iter(values)
+
+            def all(self):
+                return values
+
+        return _Scalars()
+
+
 class _SlowStream:
     """Async stream that yields tokens forever until cancelled (lets us suspend mid-stream)."""
 
@@ -75,6 +92,49 @@ class _SlowStream:
             i += 1
             await asyncio.sleep(0)  # cooperative suspension point
             yield _FakeChunk(f"token{i} ")
+
+
+class _FiniteStream:
+    def __init__(self, chunks):
+        self._chunks = chunks
+
+    def __aiter__(self):
+        return self._iterate()
+
+    async def _iterate(self):
+        for chunk in self._chunks:
+            await asyncio.sleep(0)
+            yield chunk
+
+
+class _PartialThenErrorStream:
+    def __init__(self, exc: Exception):
+        self._exc = exc
+
+    def __aiter__(self):
+        return self._iterate()
+
+    async def _iterate(self):
+        await asyncio.sleep(0)
+        yield _FakeChunk("partial ")
+        raise self._exc
+
+
+class _PassVerificationReport:
+    status = "pass"
+    score = 1.0
+    claim_count = 1
+    citation_count = 1
+    reasons = ()
+
+    def to_payload(self):
+        return {
+            "status": "pass",
+            "score": 1.0,
+            "claim_count": 1,
+            "citation_count": 1,
+            "reasons": [],
+        }
 
 
 class _FakePersistSession:
@@ -290,3 +350,602 @@ async def test_continue_stream_midstream_cancel_settles_credits(monkeypatch):
     assert settled >= 1, (
         "asst=0 CREDIT LEAK (continue_stream): pre-debit not settled after mid-stream cancel."
     )
+
+
+@pytest.mark.asyncio
+async def test_chat_stream_setup_cancel_settles_via_cancel_path(monkeypatch):
+    """CancelledError during setup must still settle pre-debit via cancel-path helper."""
+    session_id, document_id, user_id, ledger_id = (uuid.uuid4() for _ in range(4))
+    session_obj = SimpleNamespace(
+        id=session_id,
+        document_id=document_id,
+        collection_id=None,
+        title=None,
+        domain_mode=None,
+    )
+    doc_obj = SimpleNamespace(id=document_id, demo_slug=None, custom_instructions=None)
+    db = _make_db(
+        session_obj,
+        doc_obj,
+        execute_side_effect=[
+            _ScalarOneResult(session_obj),
+            _MessagesResult([SimpleNamespace(role="user", content="What is MetaX?")]),
+        ],
+    )
+    refund, reconcile, record_usage = (AsyncMock() for _ in range(3))
+    persist_store: list = []
+    _patch_common(
+        monkeypatch,
+        ledger_id,
+        document_id,
+        refund=refund,
+        reconcile=reconcile,
+        record_usage=record_usage,
+        persist_store=persist_store,
+    )
+    monkeypatch.setattr(
+        chat_service_module.chat_service,
+        "_persist_user_message_and_title",
+        AsyncMock(return_value=None),
+    )
+    monkeypatch.setattr(
+        chat_service_module.corrective_retrieval_service,
+        "retrieve_single",
+        AsyncMock(side_effect=asyncio.CancelledError()),
+    )
+    settle_on_cancel = AsyncMock()
+    monkeypatch.setattr(chat_service_module, "_settle_predebit_on_cancel", settle_on_cancel)
+
+    agen = chat_service_module.chat_service.chat_stream(
+        session_id=session_id,
+        user_message="What is MetaX?",
+        db=db,
+        user=SimpleNamespace(id=user_id, plan="pro"),
+        mode="quick",
+    ).__aiter__()
+    with pytest.raises(asyncio.CancelledError):
+        await agen.__anext__()
+
+    assert settle_on_cancel.await_count == 1
+    assert settle_on_cancel.await_args.kwargs["has_answer"] is False
+    assert refund.await_count == 0
+
+
+@pytest.mark.asyncio
+async def test_continue_stream_setup_cancel_settles_via_cancel_path(monkeypatch):
+    """CancelledError in continuation setup must settle pre-debit in finally."""
+    session_id, document_id, user_id, ledger_id, message_id = (uuid.uuid4() for _ in range(5))
+    session_obj = SimpleNamespace(id=session_id, document_id=document_id, collection_id=None)
+    doc_obj = SimpleNamespace(id=document_id, demo_slug=None, custom_instructions=None)
+    assistant_message = SimpleNamespace(
+        id=message_id,
+        role="assistant",
+        session_id=session_id,
+        citations=[],
+        content="base answer",
+        continuation_count=0,
+        output_tokens=5,
+    )
+    db = _make_db(
+        session_obj,
+        doc_obj,
+        assistant_message=assistant_message,
+        execute_side_effect=[
+            _ScalarOneResult(session_obj),
+            asyncio.CancelledError(),
+        ],
+    )
+    refund = AsyncMock()
+    monkeypatch.setattr(chat_service_module.credit_service, "get_estimated_cost", lambda _m: 15)
+    monkeypatch.setattr(
+        chat_service_module.credit_service,
+        "debit_credits",
+        AsyncMock(return_value=ledger_id),
+    )
+    monkeypatch.setattr(chat_service_module, "_refund_predebit", refund)
+    monkeypatch.setattr(
+        chat_service_module,
+        "_get_llm_client",
+        lambda _m: SimpleNamespace(
+            chat=SimpleNamespace(completions=SimpleNamespace(create=AsyncMock(return_value=_SlowStream())))
+        ),
+    )
+    settle_on_cancel = AsyncMock()
+    monkeypatch.setattr(chat_service_module, "_settle_predebit_on_cancel", settle_on_cancel)
+
+    agen = chat_service_module.chat_service.continue_stream(
+        session_id=session_id,
+        message_id=message_id,
+        db=db,
+        user=SimpleNamespace(id=user_id, plan="pro"),
+        mode="quick",
+    ).__aiter__()
+    with pytest.raises(asyncio.CancelledError):
+        await agen.__anext__()
+
+    assert settle_on_cancel.await_count == 1
+    assert settle_on_cancel.await_args.kwargs["has_answer"] is False
+    assert refund.await_count == 0
+
+
+@pytest.mark.asyncio
+async def test_chat_stream_llm_error_after_partial_answer_does_not_full_refund(monkeypatch):
+    """Partial answer + LLM_ERROR must reconcile in finally, not full-refund early."""
+    session_id, document_id, user_id, ledger_id = (uuid.uuid4() for _ in range(4))
+    session_obj = SimpleNamespace(
+        id=session_id,
+        document_id=document_id,
+        collection_id=None,
+        title=None,
+        domain_mode=None,
+    )
+    doc_obj = SimpleNamespace(id=document_id, demo_slug=None, custom_instructions=None)
+    db = _make_db(
+        session_obj,
+        doc_obj,
+        execute_side_effect=[
+            _ScalarOneResult(session_obj),
+            _MessagesResult([SimpleNamespace(role="user", content="What is MetaX?")]),
+        ],
+    )
+    refund, reconcile, record_usage = (AsyncMock() for _ in range(3))
+    persist_store: list = []
+    _patch_common(
+        monkeypatch,
+        ledger_id,
+        document_id,
+        refund=refund,
+        reconcile=reconcile,
+        record_usage=record_usage,
+        persist_store=persist_store,
+    )
+    monkeypatch.setattr(
+        chat_service_module,
+        "_get_llm_client",
+        lambda _m: SimpleNamespace(
+            chat=SimpleNamespace(
+                completions=SimpleNamespace(
+                    create=AsyncMock(return_value=_PartialThenErrorStream(RuntimeError("llm failed")))
+                )
+            )
+        ),
+    )
+    settle_on_cancel = AsyncMock()
+    monkeypatch.setattr(chat_service_module, "_settle_predebit_on_cancel", settle_on_cancel)
+
+    events = [
+        event
+        async for event in chat_service_module.chat_service.chat_stream(
+            session_id=session_id,
+            user_message="What is MetaX?",
+            db=db,
+            user=SimpleNamespace(id=user_id, plan="pro"),
+            mode="quick",
+        )
+    ]
+
+    assert events[-1]["event"] == "error"
+    assert events[-1]["data"]["code"] == "LLM_ERROR"
+    assert refund.await_count == 0
+    assert settle_on_cancel.await_count == 1
+    assert settle_on_cancel.await_args.kwargs["has_answer"] is True
+
+
+@pytest.mark.asyncio
+async def test_continue_stream_llm_error_after_partial_answer_does_not_full_refund(monkeypatch):
+    session_id, document_id, user_id, ledger_id, message_id = (uuid.uuid4() for _ in range(5))
+    session_obj = SimpleNamespace(id=session_id, document_id=document_id, collection_id=None)
+    doc_obj = SimpleNamespace(id=document_id, demo_slug=None, custom_instructions=None)
+    chunk_id = uuid.uuid4()
+    assistant_message = SimpleNamespace(
+        id=message_id,
+        role="assistant",
+        session_id=session_id,
+        citations=[{"chunk_id": str(chunk_id), "ref_index": 1}],
+        content="base answer",
+        continuation_count=0,
+        output_tokens=5,
+    )
+    fake_chunk = SimpleNamespace(
+        id=chunk_id,
+        document_id=document_id,
+        chunk_index=1,
+        page_start=3,
+        page_end=3,
+        bboxes=[],
+        text="MetaX revenue on page 3.",
+        section_title="Section A",
+    )
+    db = _make_db(
+        session_obj,
+        doc_obj,
+        assistant_message=assistant_message,
+        execute_side_effect=[
+            _ScalarOneResult(session_obj),
+            _ScalarsResult([fake_chunk]),
+            _MessagesResult([assistant_message]),
+        ],
+    )
+    refund = AsyncMock()
+    monkeypatch.setattr(chat_service_module.credit_service, "get_estimated_cost", lambda _m: 15)
+    monkeypatch.setattr(
+        chat_service_module.credit_service,
+        "debit_credits",
+        AsyncMock(return_value=ledger_id),
+    )
+    monkeypatch.setattr(chat_service_module, "_refund_predebit", refund)
+    monkeypatch.setattr(
+        chat_service_module,
+        "_get_llm_client",
+        lambda _m: SimpleNamespace(
+            chat=SimpleNamespace(
+                completions=SimpleNamespace(
+                    create=AsyncMock(return_value=_PartialThenErrorStream(RuntimeError("llm failed")))
+                )
+            )
+        ),
+    )
+    monkeypatch.setattr(
+        chat_service_module.claim_verifier_service,
+        "verify",
+        lambda *args, **kwargs: _PassVerificationReport(),
+    )
+    monkeypatch.setattr(
+        chat_service_module, "AsyncSessionLocal", lambda: _FakePersistSession([])
+    )
+    settle_on_cancel = AsyncMock()
+    monkeypatch.setattr(chat_service_module, "_settle_predebit_on_cancel", settle_on_cancel)
+
+    events = [
+        event
+        async for event in chat_service_module.chat_service.continue_stream(
+            session_id=session_id,
+            message_id=message_id,
+            db=db,
+            user=SimpleNamespace(id=user_id, plan="pro"),
+            mode="quick",
+        )
+    ]
+
+    assert events[-1]["event"] == "error"
+    assert events[-1]["data"]["code"] == "LLM_ERROR"
+    assert refund.await_count == 0
+    assert settle_on_cancel.await_count == 1
+    assert settle_on_cancel.await_args.kwargs["has_answer"] is True
+
+
+@pytest.mark.asyncio
+async def test_chat_stream_persist_failed_with_partial_answer_does_not_full_refund(monkeypatch):
+    session_id, document_id, user_id, ledger_id = (uuid.uuid4() for _ in range(4))
+    session_obj = SimpleNamespace(
+        id=session_id,
+        document_id=document_id,
+        collection_id=None,
+        title=None,
+        domain_mode=None,
+    )
+    doc_obj = SimpleNamespace(id=document_id, demo_slug=None, custom_instructions=None)
+    db = _make_db(
+        session_obj,
+        doc_obj,
+        execute_side_effect=[
+            _ScalarOneResult(session_obj),
+            _MessagesResult([SimpleNamespace(role="user", content="What is MetaX?")]),
+        ],
+    )
+    original_add = db.add
+
+    def fail_on_assistant_add(obj):
+        if isinstance(obj, Message) and getattr(obj, "role", "") == "assistant":
+            raise RuntimeError("persist failed")
+        original_add(obj)
+
+    db.add = fail_on_assistant_add
+    refund, reconcile, record_usage = (AsyncMock() for _ in range(3))
+    persist_store: list = []
+    _patch_common(
+        monkeypatch,
+        ledger_id,
+        document_id,
+        refund=refund,
+        reconcile=reconcile,
+        record_usage=record_usage,
+        persist_store=persist_store,
+    )
+    monkeypatch.setattr(
+        chat_service_module,
+        "_get_llm_client",
+        lambda _m: SimpleNamespace(
+            chat=SimpleNamespace(
+                completions=SimpleNamespace(
+                    create=AsyncMock(
+                        return_value=_FiniteStream(
+                            [
+                                _FakeChunk("partial "),
+                                _FakeChunk(
+                                    None,
+                                    finish_reason="stop",
+                                    usage=SimpleNamespace(prompt_tokens=9, completion_tokens=3),
+                                ),
+                            ]
+                        )
+                    )
+                )
+            )
+        ),
+    )
+    settle_on_cancel = AsyncMock()
+    monkeypatch.setattr(chat_service_module, "_settle_predebit_on_cancel", settle_on_cancel)
+
+    events = [
+        event
+        async for event in chat_service_module.chat_service.chat_stream(
+            session_id=session_id,
+            user_message="What is MetaX?",
+            db=db,
+            user=SimpleNamespace(id=user_id, plan="pro"),
+            mode="quick",
+        )
+    ]
+
+    assert events[-1]["event"] == "error"
+    assert events[-1]["data"]["code"] == "PERSIST_FAILED"
+    assert refund.await_count == 0
+    assert settle_on_cancel.await_count == 1
+    assert settle_on_cancel.await_args.kwargs["has_answer"] is True
+
+
+@pytest.mark.asyncio
+async def test_continue_stream_persist_failed_with_partial_answer_does_not_full_refund(monkeypatch):
+    session_id, document_id, user_id, ledger_id, message_id = (uuid.uuid4() for _ in range(5))
+    session_obj = SimpleNamespace(id=session_id, document_id=document_id, collection_id=None)
+    doc_obj = SimpleNamespace(id=document_id, demo_slug=None, custom_instructions=None)
+    assistant_message = SimpleNamespace(
+        id=message_id,
+        role="assistant",
+        session_id=session_id,
+        citations=[],
+        content="base answer",
+        continuation_count=0,
+        output_tokens=5,
+    )
+    db = _make_db(
+        session_obj,
+        doc_obj,
+        assistant_message=assistant_message,
+        execute_side_effect=[
+            _ScalarOneResult(session_obj),
+            _MessagesResult([assistant_message]),
+        ],
+    )
+    db.commit = AsyncMock(side_effect=[None, RuntimeError("persist failed")])
+
+    refund = AsyncMock()
+    monkeypatch.setattr(chat_service_module.credit_service, "get_estimated_cost", lambda _m: 15)
+    monkeypatch.setattr(
+        chat_service_module.credit_service,
+        "debit_credits",
+        AsyncMock(return_value=ledger_id),
+    )
+    monkeypatch.setattr(chat_service_module, "_refund_predebit", refund)
+    monkeypatch.setattr(
+        chat_service_module,
+        "_get_llm_client",
+        lambda _m: SimpleNamespace(
+            chat=SimpleNamespace(
+                completions=SimpleNamespace(
+                    create=AsyncMock(
+                        return_value=_FiniteStream(
+                            [
+                                _FakeChunk("continued "),
+                                _FakeChunk(
+                                    None,
+                                    finish_reason="length",
+                                    usage=SimpleNamespace(prompt_tokens=7, completion_tokens=2),
+                                ),
+                            ]
+                        )
+                    )
+                )
+            )
+        ),
+    )
+    monkeypatch.setattr(
+        chat_service_module.claim_verifier_service,
+        "verify",
+        lambda *args, **kwargs: _PassVerificationReport(),
+    )
+    monkeypatch.setattr(
+        chat_service_module, "AsyncSessionLocal", lambda: _FakePersistSession([])
+    )
+    settle_on_cancel = AsyncMock()
+    monkeypatch.setattr(chat_service_module, "_settle_predebit_on_cancel", settle_on_cancel)
+
+    events = [
+        event
+        async for event in chat_service_module.chat_service.continue_stream(
+            session_id=session_id,
+            message_id=message_id,
+            db=db,
+            user=SimpleNamespace(id=user_id, plan="pro"),
+            mode="quick",
+        )
+    ]
+
+    assert events[-1]["event"] == "error"
+    assert events[-1]["data"]["code"] == "PERSIST_FAILED"
+    assert refund.await_count == 0
+    assert settle_on_cancel.await_count == 1
+    assert settle_on_cancel.await_args.kwargs["has_answer"] is True
+
+
+@pytest.mark.asyncio
+async def test_chat_stream_accounting_error_still_runs_fallback_settlement(monkeypatch):
+    session_id, document_id, user_id, ledger_id = (uuid.uuid4() for _ in range(4))
+    session_obj = SimpleNamespace(
+        id=session_id,
+        document_id=document_id,
+        collection_id=None,
+        title=None,
+        domain_mode=None,
+    )
+    doc_obj = SimpleNamespace(id=document_id, demo_slug=None, custom_instructions=None)
+    db = _make_db(
+        session_obj,
+        doc_obj,
+        execute_side_effect=[
+            _ScalarOneResult(session_obj),
+            _MessagesResult([SimpleNamespace(role="user", content="What is MetaX?")]),
+        ],
+    )
+    refund, reconcile, record_usage = (AsyncMock() for _ in range(3))
+    reconcile.side_effect = RuntimeError("acct fail")
+    persist_store: list = []
+    _patch_common(
+        monkeypatch,
+        ledger_id,
+        document_id,
+        refund=refund,
+        reconcile=reconcile,
+        record_usage=record_usage,
+        persist_store=persist_store,
+    )
+    monkeypatch.setattr(
+        chat_service_module.claim_verifier_service,
+        "verify",
+        lambda *args, **kwargs: _PassVerificationReport(),
+    )
+    monkeypatch.setattr(
+        chat_service_module,
+        "_get_llm_client",
+        lambda _m: SimpleNamespace(
+            chat=SimpleNamespace(
+                completions=SimpleNamespace(
+                    create=AsyncMock(
+                        return_value=_FiniteStream(
+                            [
+                                _FakeChunk("answer "),
+                                _FakeChunk(
+                                    None,
+                                    finish_reason="length",
+                                    usage=SimpleNamespace(prompt_tokens=10, completion_tokens=4),
+                                ),
+                            ]
+                        )
+                    )
+                )
+            )
+        ),
+    )
+    settle_on_cancel = AsyncMock()
+    monkeypatch.setattr(chat_service_module, "_settle_predebit_on_cancel", settle_on_cancel)
+
+    events = [
+        event
+        async for event in chat_service_module.chat_service.chat_stream(
+            session_id=session_id,
+            user_message="What is MetaX?",
+            db=db,
+            user=SimpleNamespace(id=user_id, plan="pro"),
+            mode="quick",
+        )
+    ]
+
+    assert any(e["event"] == "warn" and e["data"]["code"] == "ACCOUNTING_ERROR" for e in events)
+    assert events[-1]["event"] == "done"
+    assert settle_on_cancel.await_count == 1
+    assert settle_on_cancel.await_args.kwargs["has_answer"] is True
+
+
+@pytest.mark.asyncio
+async def test_continue_stream_accounting_error_still_runs_fallback_settlement(monkeypatch):
+    session_id, document_id, user_id, ledger_id, message_id = (uuid.uuid4() for _ in range(5))
+    session_obj = SimpleNamespace(id=session_id, document_id=document_id, collection_id=None)
+    doc_obj = SimpleNamespace(id=document_id, demo_slug=None, custom_instructions=None)
+    chunk_id = uuid.uuid4()
+    assistant_message = SimpleNamespace(
+        id=message_id,
+        role="assistant",
+        session_id=session_id,
+        citations=[{"chunk_id": str(chunk_id), "ref_index": 1}],
+        content="base answer",
+        continuation_count=0,
+        output_tokens=5,
+    )
+    fake_chunk = SimpleNamespace(
+        id=chunk_id,
+        document_id=document_id,
+        chunk_index=1,
+        page_start=3,
+        page_end=3,
+        bboxes=[],
+        text="MetaX revenue on page 3.",
+        section_title="Section A",
+    )
+    db = _make_db(
+        session_obj,
+        doc_obj,
+        assistant_message=assistant_message,
+        execute_side_effect=[
+            _ScalarOneResult(session_obj),
+            _ScalarsResult([fake_chunk]),
+            _MessagesResult([assistant_message]),
+        ],
+    )
+    refund = AsyncMock()
+    reconcile = AsyncMock(side_effect=RuntimeError("acct fail"))
+    monkeypatch.setattr(chat_service_module.credit_service, "get_estimated_cost", lambda _m: 15)
+    monkeypatch.setattr(
+        chat_service_module.credit_service,
+        "debit_credits",
+        AsyncMock(return_value=ledger_id),
+    )
+    monkeypatch.setattr(chat_service_module.credit_service, "calculate_cost", lambda *a, **k: 3)
+    monkeypatch.setattr(chat_service_module.credit_service, "reconcile_credits", reconcile)
+    monkeypatch.setattr(chat_service_module.credit_service, "record_usage", AsyncMock())
+    monkeypatch.setattr(chat_service_module, "_refund_predebit", refund)
+    monkeypatch.setattr(
+        chat_service_module.claim_verifier_service,
+        "verify",
+        lambda *args, **kwargs: _PassVerificationReport(),
+    )
+    monkeypatch.setattr(
+        chat_service_module,
+        "_get_llm_client",
+        lambda _m: SimpleNamespace(
+            chat=SimpleNamespace(
+                completions=SimpleNamespace(
+                    create=AsyncMock(
+                        return_value=_FiniteStream(
+                            [
+                                _FakeChunk("continued "),
+                                _FakeChunk(
+                                    None,
+                                    finish_reason="length",
+                                    usage=SimpleNamespace(prompt_tokens=8, completion_tokens=3),
+                                ),
+                            ]
+                        )
+                    )
+                )
+            )
+        ),
+    )
+    settle_on_cancel = AsyncMock()
+    monkeypatch.setattr(chat_service_module, "_settle_predebit_on_cancel", settle_on_cancel)
+
+    events = [
+        event
+        async for event in chat_service_module.chat_service.continue_stream(
+            session_id=session_id,
+            message_id=message_id,
+            db=db,
+            user=SimpleNamespace(id=user_id, plan="pro"),
+            mode="quick",
+        )
+    ]
+
+    assert any(e["event"] == "warn" and e["data"]["code"] == "ACCOUNTING_ERROR" for e in events)
+    assert events[-1]["event"] == "done"
+    assert settle_on_cancel.await_count == 1
+    assert settle_on_cancel.await_args.kwargs["has_answer"] is True

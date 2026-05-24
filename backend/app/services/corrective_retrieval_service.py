@@ -248,13 +248,18 @@ class CorrectiveRetrievalService:
         initial = await retrieval_service.search(query, document_id, top_k=wide_k, db=db)
         initial_eval = rag_evaluator_service.evaluate(query, initial, route)
         is_table_query = QueryIntent.TABLE_QUERY in route.intents
+        is_plain_qa_route = (
+            route.primary_intent == QueryIntent.LOCAL_QA
+            and route.coverage == "top_hits"
+            and not is_table_query
+        )
         table_evidence = (
             await retrieval_service.table_search(query, document_id, top_k=6, db=db)
             if is_table_query
             else []
         )
         planned = await self._planned_single(plan, route, document_id, db=db)
-        if not initial_eval.should_correct and not table_evidence and not planned:
+        if not initial_eval.should_correct and not table_evidence and not planned and not is_plain_qa_route:
             return CorrectiveRetrievalResult(
                 retrieved=initial,
                 evaluation=initial_eval,
@@ -262,8 +267,12 @@ class CorrectiveRetrievalService:
                 plan=plan,
             )
 
-        lexical_top_k = max(wide_k, 12 if route.coverage == "exhaustive_scan" else wide_k)
-        should_run_lexical = initial_eval.should_correct or is_table_query
+        should_run_lexical = initial_eval.should_correct or is_table_query or is_plain_qa_route
+        lexical_top_k = wide_k
+        if is_plain_qa_route and not initial_eval.should_correct and not is_table_query:
+            lexical_top_k = min(6, max(3, int(top_k or 8)))
+        elif route.coverage == "exhaustive_scan":
+            lexical_top_k = max(lexical_top_k, 12)
         lexical = (
             await retrieval_service.lexical_search(
                 query,
@@ -281,11 +290,7 @@ class CorrectiveRetrievalService:
         merged = _merge_results(merged, lexical, top_k=result_limit)
         # Plain QA (no table/exhaustive/comparison priority): re-rank by RRF so
         # chunks ranked highly across dense+lexical+planned rise to the top.
-        if (
-            route.primary_intent == QueryIntent.LOCAL_QA
-            and route.coverage == "top_hits"
-            and not is_table_query
-        ):
+        if is_plain_qa_route:
             fused = _rrf_fuse([initial, planned, lexical], top_k=result_limit)
             if fused:
                 merged = fused
@@ -295,7 +300,7 @@ class CorrectiveRetrievalService:
             balanced=[],
             planned=planned,
             lexical=lexical,
-            lexical_attempted=should_run_lexical,
+            lexical_attempted=initial_eval.should_correct or is_table_query,
         )
         final_eval = rag_evaluator_service.evaluate(query, merged, route, corrected=True)
         return CorrectiveRetrievalResult(retrieved=merged, evaluation=final_eval, strategy=strategy, plan=plan)

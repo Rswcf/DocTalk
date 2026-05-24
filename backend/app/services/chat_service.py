@@ -1275,6 +1275,30 @@ class ChatService:
                 session_obj.domain_mode = domain_mode
                 await db.commit()
 
+        except asyncio.CancelledError:
+            if user is not None and pre_debited > 0 and predebit_ledger_id is not None and not settled:
+                try:
+                    with anyio.CancelScope(shield=True):
+                        await asyncio.wait_for(
+                            _settle_predebit_on_cancel(
+                                user_id=user.id,
+                                pre_debited=pre_debited,
+                                predebit_ledger_id=predebit_ledger_id,
+                                has_answer=False,
+                                prompt_tokens=None,
+                                output_tokens=None,
+                                model=effective_model,
+                                mode=effective_mode,
+                            ),
+                            timeout=_CANCEL_IO_TIMEOUT_S,
+                        )
+                    settled = True
+                except Exception:
+                    logger.exception(
+                        "Failed to settle pre-debit during chat setup cancellation for user %s",
+                        user.id,
+                    )
+            raise
         except Exception as e:
             if user is not None and pre_debited > 0 and predebit_ledger_id is not None:
                 try:
@@ -1336,7 +1360,6 @@ class ChatService:
         asst_msg: Optional[Message] = None
         repair_metadata: dict[str, Any] | None = None
         persisted = False
-        settled = False
         done_emitted = False
 
         try:
@@ -1422,8 +1445,14 @@ class ChatService:
                 )
 
             except Exception as e:
-                # Refund pre-debited credits on LLM failure: restore balance and remove ledger entry
-                if user is not None and pre_debited > 0 and predebit_ledger_id is not None:
+                assistant_snapshot = "".join(assistant_text_parts)
+                has_partial_answer = bool(assistant_snapshot.strip())
+                if (
+                    user is not None
+                    and pre_debited > 0
+                    and predebit_ledger_id is not None
+                    and not has_partial_answer
+                ):
                     try:
                         await _refund_predebit(db, user.id, pre_debited, predebit_ledger_id)
                         settled = True
@@ -1451,7 +1480,13 @@ class ChatService:
                 persisted = True
             except Exception:
                 await db.rollback()
-                if user is not None and pre_debited > 0 and predebit_ledger_id is not None:
+                has_partial_answer = bool(assistant_text.strip())
+                if (
+                    user is not None
+                    and pre_debited > 0
+                    and predebit_ledger_id is not None
+                    and not has_partial_answer
+                ):
                     try:
                         await _refund_predebit(db, user.id, pre_debited, predebit_ledger_id)
                         settled = True
@@ -1581,55 +1616,54 @@ class ChatService:
         except asyncio.CancelledError:
             raise
         finally:
-            if not done_emitted:
-                assistant_snapshot = "".join(assistant_text_parts)
-                has_partial_answer = bool(assistant_snapshot.strip())
-                if has_partial_answer and not persisted:
-                    try:
-                        with anyio.CancelScope(shield=True):
-                            await asyncio.wait_for(
-                                _persist_partial_on_cancel(
-                                    session_id=session_id,
-                                    assistant_text=assistant_snapshot,
-                                    citations=citations,
-                                    prompt_tokens=prompt_tokens,
-                                    output_tokens=output_tokens,
-                                ),
-                                timeout=_CANCEL_IO_TIMEOUT_S,
-                            )
-                        persisted = True
-                    except Exception:
-                        logger.exception(
-                            "Failed to persist partial assistant response on cancel/error for session %s",
-                            session_id,
+            assistant_snapshot = "".join(assistant_text_parts)
+            has_partial_answer = bool(assistant_snapshot.strip())
+            if not done_emitted and has_partial_answer and not persisted:
+                try:
+                    with anyio.CancelScope(shield=True):
+                        await asyncio.wait_for(
+                            _persist_partial_on_cancel(
+                                session_id=session_id,
+                                assistant_text=assistant_snapshot,
+                                citations=citations,
+                                prompt_tokens=prompt_tokens,
+                                output_tokens=output_tokens,
+                            ),
+                            timeout=_CANCEL_IO_TIMEOUT_S,
                         )
-                if (
-                    user is not None
-                    and pre_debited > 0
-                    and predebit_ledger_id is not None
-                    and not settled
-                ):
-                    try:
-                        with anyio.CancelScope(shield=True):
-                            await asyncio.wait_for(
-                                _settle_predebit_on_cancel(
-                                    user_id=user.id,
-                                    pre_debited=pre_debited,
-                                    predebit_ledger_id=predebit_ledger_id,
-                                    has_answer=has_partial_answer,
-                                    prompt_tokens=prompt_tokens,
-                                    output_tokens=output_tokens,
-                                    model=effective_model,
-                                    mode=effective_mode,
-                                ),
-                                timeout=_CANCEL_IO_TIMEOUT_S,
-                            )
-                        settled = True
-                    except Exception:
-                        logger.exception(
-                            "Failed to settle pre-debit on cancel/error for user %s",
-                            user.id,
+                    persisted = True
+                except Exception:
+                    logger.exception(
+                        "Failed to persist partial assistant response on cancel/error for session %s",
+                        session_id,
+                    )
+            if (
+                user is not None
+                and pre_debited > 0
+                and predebit_ledger_id is not None
+                and not settled
+            ):
+                try:
+                    with anyio.CancelScope(shield=True):
+                        await asyncio.wait_for(
+                            _settle_predebit_on_cancel(
+                                user_id=user.id,
+                                pre_debited=pre_debited,
+                                predebit_ledger_id=predebit_ledger_id,
+                                has_answer=has_partial_answer,
+                                prompt_tokens=prompt_tokens,
+                                output_tokens=output_tokens,
+                                model=effective_model,
+                                mode=effective_mode,
+                            ),
+                            timeout=_CANCEL_IO_TIMEOUT_S,
                         )
+                    settled = True
+                except Exception:
+                    logger.exception(
+                        "Failed to settle pre-debit on cancel/error for user %s",
+                        user.id,
+                    )
 
     async def continue_stream(
         self,
@@ -1872,6 +1906,30 @@ class ChatService:
                 )
 
             system_prompt += "\n" + _continuation_system_rule(locale, asst_msg.content)
+        except asyncio.CancelledError:
+            if user is not None and pre_debited > 0 and predebit_ledger_id is not None and not settled:
+                try:
+                    with anyio.CancelScope(shield=True):
+                        await asyncio.wait_for(
+                            _settle_predebit_on_cancel(
+                                user_id=user.id,
+                                pre_debited=pre_debited,
+                                predebit_ledger_id=predebit_ledger_id,
+                                has_answer=False,
+                                prompt_tokens=None,
+                                output_tokens=None,
+                                model=effective_model,
+                                mode=effective_mode,
+                            ),
+                            timeout=_CANCEL_IO_TIMEOUT_S,
+                        )
+                    settled = True
+                except Exception:
+                    logger.exception(
+                        "Failed to settle continuation pre-debit during setup cancellation for user %s",
+                        user.id,
+                    )
+            raise
         except Exception as e:
             if user is not None and pre_debited > 0 and predebit_ledger_id is not None:
                 try:
@@ -1988,7 +2046,14 @@ class ChatService:
                     yield sse("truncated", {"reason": "max_tokens"})
 
             except Exception as e:
-                if user is not None and pre_debited > 0 and predebit_ledger_id is not None:
+                continuation_snapshot = "".join(continuation_text_parts)
+                has_partial_answer = bool(continuation_snapshot.strip())
+                if (
+                    user is not None
+                    and pre_debited > 0
+                    and predebit_ledger_id is not None
+                    and not has_partial_answer
+                ):
                     try:
                         await _refund_predebit(db, user.id, pre_debited, predebit_ledger_id)
                         settled = True
@@ -2013,7 +2078,13 @@ class ChatService:
                 persisted = True
             except Exception:
                 await db.rollback()
-                if user is not None and pre_debited > 0 and predebit_ledger_id is not None:
+                has_partial_answer = bool(continuation_text.strip())
+                if (
+                    user is not None
+                    and pre_debited > 0
+                    and predebit_ledger_id is not None
+                    and not has_partial_answer
+                ):
                     try:
                         await _refund_predebit(db, user.id, pre_debited, predebit_ledger_id)
                         settled = True
@@ -2138,54 +2209,53 @@ class ChatService:
         except asyncio.CancelledError:
             raise
         finally:
-            if not done_emitted:
-                continuation_snapshot = "".join(continuation_text_parts)
-                has_partial_answer = bool(continuation_snapshot.strip())
-                if has_partial_answer and not persisted and getattr(asst_msg, "id", None) is not None:
-                    try:
-                        with anyio.CancelScope(shield=True):
-                            await asyncio.wait_for(
-                                _persist_continuation_on_cancel(
-                                    message_id=asst_msg.id,
-                                    continuation_text=continuation_snapshot,
-                                    new_citations=new_citations,
-                                    output_tokens=output_tokens,
-                                ),
-                                timeout=_CANCEL_IO_TIMEOUT_S,
-                            )
-                        persisted = True
-                    except Exception:
-                        logger.exception(
-                            "Failed to persist continuation partial response on cancel/error for message %s",
-                            getattr(asst_msg, "id", None),
+            continuation_snapshot = "".join(continuation_text_parts)
+            has_partial_answer = bool(continuation_snapshot.strip())
+            if not done_emitted and has_partial_answer and getattr(asst_msg, "id", None) is not None and not persisted:
+                try:
+                    with anyio.CancelScope(shield=True):
+                        await asyncio.wait_for(
+                            _persist_continuation_on_cancel(
+                                message_id=asst_msg.id,
+                                continuation_text=continuation_snapshot,
+                                new_citations=new_citations,
+                                output_tokens=output_tokens,
+                            ),
+                            timeout=_CANCEL_IO_TIMEOUT_S,
                         )
-                if (
-                    user is not None
-                    and pre_debited > 0
-                    and predebit_ledger_id is not None
-                    and not settled
-                ):
-                    try:
-                        with anyio.CancelScope(shield=True):
-                            await asyncio.wait_for(
-                                _settle_predebit_on_cancel(
-                                    user_id=user.id,
-                                    pre_debited=pre_debited,
-                                    predebit_ledger_id=predebit_ledger_id,
-                                    has_answer=has_partial_answer,
-                                    prompt_tokens=prompt_tokens,
-                                    output_tokens=output_tokens,
-                                    model=effective_model,
-                                    mode=effective_mode,
-                                ),
-                                timeout=_CANCEL_IO_TIMEOUT_S,
-                            )
-                        settled = True
-                    except Exception:
-                        logger.exception(
-                            "Failed to settle continuation pre-debit on cancel/error for user %s",
-                            user.id,
+                    persisted = True
+                except Exception:
+                    logger.exception(
+                        "Failed to persist continuation partial response on cancel/error for message %s",
+                        getattr(asst_msg, "id", None),
+                    )
+            if (
+                user is not None
+                and pre_debited > 0
+                and predebit_ledger_id is not None
+                and not settled
+            ):
+                try:
+                    with anyio.CancelScope(shield=True):
+                        await asyncio.wait_for(
+                            _settle_predebit_on_cancel(
+                                user_id=user.id,
+                                pre_debited=pre_debited,
+                                predebit_ledger_id=predebit_ledger_id,
+                                has_answer=has_partial_answer,
+                                prompt_tokens=prompt_tokens,
+                                output_tokens=output_tokens,
+                                model=effective_model,
+                                mode=effective_mode,
+                            ),
+                            timeout=_CANCEL_IO_TIMEOUT_S,
                         )
+                    settled = True
+                except Exception:
+                    logger.exception(
+                        "Failed to settle continuation pre-debit on cancel/error for user %s",
+                        user.id,
+                    )
 
 
 # Singleton service

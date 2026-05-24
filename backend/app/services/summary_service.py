@@ -32,7 +32,7 @@ BRIEF_MAX_CHARS_PER_CHUNK = 1000
 
 BRIEF_PROMPT = """You are building a structured document brief for a professional document workspace.
 
-Use only the numbered document fragments. Every outline item, key point, and fact must cite one or more fragment numbers from the provided context.
+Use only the numbered document excerpts. Every outline item, key point, and fact must cite one or more excerpt numbers from the provided context.
 
 Return valid JSON only:
 {{
@@ -58,7 +58,7 @@ Caps:
 - facts: up to 12 items.
 - questions: exactly 5 concise questions.
 
-Document fragments:
+Document excerpts:
 ---
 {chunks_text}
 ---

@@ -207,11 +207,11 @@ class QueryRouter:
         has_exhaustive = _matches_any(normalized, _EXHAUSTIVE_MARKERS)
         has_citation = _matches_any(normalized, _CITATION_MARKERS)
 
-        # Positional lookup takes precedence: a specific page number can't be
-        # resolved by semantic top-k, so route straight to a direct page fetch.
-        # (Skip when it's a summary/exhaustive request like "summarize page 5".)
         page_ref = _detect_page_ref(normalized)
-        if page_ref is not None and not has_summary and not has_exhaustive:
+        has_page_lookup = page_ref is not None and not has_summary and not has_exhaustive
+
+        # Pure page lookup: short-circuit only when no table/comparison intent is present.
+        if has_page_lookup and not has_table and not has_compare:
             return QueryRoute(
                 primary_intent=QueryIntent.PAGE_LOOKUP,
                 intents=(QueryIntent.PAGE_LOOKUP,),
@@ -268,11 +268,19 @@ class QueryRouter:
             confidence = max(confidence, 0.74)
             reason = "citation lookup markers" if not intents else reason
 
+        if has_page_lookup:
+            intents.insert(0, QueryIntent.PAGE_LOOKUP)
+            coverage = "section"
+            confidence = max(confidence, 0.9)
+            reason = "specific page reference" if reason == "default local question" else reason
+
         if not intents:
             intents.append(QueryIntent.LOCAL_QA)
 
         primary = intents[0]
-        if QueryIntent.DOCUMENT_SUMMARY in intents:
+        if has_page_lookup:
+            primary = QueryIntent.PAGE_LOOKUP
+        elif QueryIntent.DOCUMENT_SUMMARY in intents:
             primary = QueryIntent.DOCUMENT_SUMMARY
         elif QueryIntent.SECTION_SUMMARY in intents:
             primary = QueryIntent.SECTION_SUMMARY
@@ -296,6 +304,7 @@ class QueryRouter:
             modality=tuple(sorted(modality)),
             reason=reason,
             rewritten_queries=(normalized,),
+            page_ref=page_ref if has_page_lookup else None,
         )
 
 

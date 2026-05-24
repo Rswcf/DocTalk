@@ -103,6 +103,22 @@ def test_plain_page_number_lookup_does_not_become_table_query() -> None:
     assert QueryIntent.TABLE_QUERY not in route.intents
 
 
+def test_page_lookup_keeps_table_intent_when_query_mentions_table() -> None:
+    route = query_router.route("show table on page 8")
+
+    assert route.primary_intent == QueryIntent.PAGE_LOOKUP
+    assert route.page_ref == 8
+    assert QueryIntent.TABLE_QUERY in route.intents
+
+
+def test_page_lookup_keeps_comparison_intent_when_query_mentions_comparison() -> None:
+    route = query_router.route("compare revenue on page 5 and page 6")
+
+    assert route.primary_intent == QueryIntent.PAGE_LOOKUP
+    assert route.page_ref == 5
+    assert QueryIntent.COMPARISON in route.intents
+
+
 def test_routes_existence_query_as_exhaustive_scan_candidate() -> None:
     route = query_router.route("Does this contract contain a non-compete clause?", domain_mode="legal")
 
