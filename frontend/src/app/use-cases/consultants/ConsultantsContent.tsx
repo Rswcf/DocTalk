@@ -1,8 +1,10 @@
-"use client";
 
 import React from 'react';
 import Link from 'next/link';
-import { useLocale } from '../../../i18n';
+import { getServerT } from '../../../i18n/server';
+import { getChromeStrings } from '../../../i18n/chrome';
+import { localizedHrefIfAvailable } from '../../../i18n/routing';
+import MarketingLocaleLinks from '../../../components/marketing/MarketingLocaleLinks';
 import {
   Briefcase,
   FileText,
@@ -27,8 +29,10 @@ import EdStepRow from '../../../components/marketing/EdStepRow';
 import EdFaqList from '../../../components/marketing/EdFaqList';
 import EdCtaBanner from '../../../components/marketing/EdCtaBanner';
 
-export default function ConsultantsClient() {
-  const { t } = useLocale();
+export default async function ConsultantsContent({ locale }: { locale: string }) {
+  const { t } = await getServerT(locale);
+  const chrome = await getChromeStrings(locale);
+  const href = (p: string) => localizedHrefIfAvailable(locale, p);
 
   const features = [
     {
@@ -83,9 +87,9 @@ export default function ConsultantsClient() {
   ];
 
   const relatedUseCases = [
-    { href: '/use-cases/finance', icon: TrendingUp, title: t('useCasesConsultants.related.finance.title'), body: t('useCasesConsultants.related.finance.body') },
-    { href: '/use-cases/lawyers', icon: Scale, title: t('useCasesConsultants.related.legal.title'), body: t('useCasesConsultants.related.legal.body') },
-    { href: '/use-cases/compliance', icon: Shield, title: t('useCasesConsultants.related.compliance.title'), body: t('useCasesConsultants.related.compliance.body') },
+    { href: href('/use-cases/finance'), icon: TrendingUp, title: t('useCasesConsultants.related.finance.title'), body: t('useCasesConsultants.related.finance.body') },
+    { href: href('/use-cases/lawyers'), icon: Scale, title: t('useCasesConsultants.related.legal.title'), body: t('useCasesConsultants.related.legal.body') },
+    { href: href('/use-cases/compliance'), icon: Shield, title: t('useCasesConsultants.related.compliance.title'), body: t('useCasesConsultants.related.compliance.body') },
   ];
 
   const faqItems = [
@@ -113,9 +117,10 @@ export default function ConsultantsClient() {
 
   return (
     <MarketingShell
+      chrome={chrome}
       breadcrumb={[
-        { label: t('useCasesConsultants.breadcrumb.home'), href: '/' },
-        { label: t('useCasesConsultants.breadcrumb.useCases'), href: '/use-cases' },
+        { label: t('useCasesConsultants.breadcrumb.home'), href: href('/') },
+        { label: t('useCasesConsultants.breadcrumb.useCases'), href: href('/use-cases') },
         { label: t('useCasesConsultants.breadcrumb.current') },
       ]}
     >
@@ -123,7 +128,7 @@ export default function ConsultantsClient() {
         icon={Briefcase}
         title={t('useCasesConsultants.heroTitle')}
         lede={t('useCasesConsultants.heroDescription')}
-        primaryCta={{ label: t('useCasesConsultants.heroCta'), href: '/demo' }}
+        primaryCta={{ label: t('useCasesConsultants.heroCta'), href: href('/demo') }}
       />
 
       <EdSection title={t('useCasesConsultants.challenge.title')}>
@@ -148,7 +153,7 @@ export default function ConsultantsClient() {
       <EdSection title={t('useCasesConsultants.docTypes.title')}>
         <p className="ed-body" style={{ marginBottom: '24px' }}>
           {t('useCasesConsultants.docTypes.descriptionPre')}{' '}
-          <Link href="/features/multi-format" className="ed-inline">
+          <Link href={href("/features/multi-format")} className="ed-inline">
             {t('useCasesConsultants.docTypes.formatsLink')}
           </Link>
           {' '}{t('useCasesConsultants.docTypes.descriptionPost')}
@@ -219,8 +224,10 @@ export default function ConsultantsClient() {
       <EdCtaBanner
         title={t('useCasesConsultants.cta.title')}
         description={t('useCasesConsultants.cta.description')}
-        primary={{ label: t('useCasesConsultants.cta.tryFreeDemo'), href: '/demo' }}
+        primary={{ label: t('useCasesConsultants.cta.tryFreeDemo'), href: href('/demo') }}
       />
+    
+      <MarketingLocaleLinks path="/use-cases/consultants" label={chrome.language} />
     </MarketingShell>
   );
 }

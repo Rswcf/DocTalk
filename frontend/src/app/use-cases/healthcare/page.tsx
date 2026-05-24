@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import HealthcareClient from './HealthcareClient';
+import HealthcareContent from './HealthcareContent';
 import { buildArticleJsonLd, buildMarketingMetadata } from '../../../lib/seo';
 
 export const metadata: Metadata = buildMarketingMetadata({
@@ -7,6 +7,7 @@ export const metadata: Metadata = buildMarketingMetadata({
   description:
     'Review clinical studies, compliance documents, protocols, and insurance policies with AI. Get cited answers from complex healthcare documents.',
   path: '/use-cases/healthcare',
+  localized: true,
   keywords: ['ai for healthcare documents', 'medical document analysis ai', 'ai clinical document review', 'healthcare ai tool'],
   openGraph: {
     title: 'AI Document Analysis for Healthcare Professionals | DocTalk',
@@ -91,7 +92,7 @@ export default function HealthcarePage() {
           }),
         }}
       />
-      <HealthcareClient />
+      <HealthcareContent locale="en" />
     </>
   );
 }

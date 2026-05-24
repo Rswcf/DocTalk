@@ -1,8 +1,10 @@
-"use client";
 
 import React from 'react';
 import Link from 'next/link';
-import { useLocale } from '../../../i18n';
+import { getServerT } from '../../../i18n/server';
+import { getChromeStrings } from '../../../i18n/chrome';
+import { localizedHrefIfAvailable } from '../../../i18n/routing';
+import MarketingLocaleLinks from '../../../components/marketing/MarketingLocaleLinks';
 import {
   TrendingUp,
   Search,
@@ -23,8 +25,10 @@ const featureKeys = ['extractMetrics', 'comparePeriods', 'summarizeRisks', 'find
 const docTypeKeys = ['pdf10K', 'xlsxModels', 'docxReports', 'pptxPresentations'];
 const useCaseKeys = ['annualReport', 'earningsCall', 'quarterlyComparison', 'dueDiligence'];
 
-export default function FinanceClient() {
-  const { t } = useLocale();
+export default async function FinanceContent({ locale }: { locale: string }) {
+  const { t } = await getServerT(locale);
+  const chrome = await getChromeStrings(locale);
+  const href = (p: string) => localizedHrefIfAvailable(locale, p);
 
   const faqItems = [
     { question: t('useCasesFinance.faq.q1.question'), answer: t('useCasesFinance.faq.q1.answer') },
@@ -47,9 +51,10 @@ export default function FinanceClient() {
 
   return (
     <MarketingShell
+      chrome={chrome}
       breadcrumb={[
-        { label: t('useCasesFinance.breadcrumb.home'), href: '/' },
-        { label: t('useCasesFinance.breadcrumb.useCases'), href: '/use-cases' },
+        { label: t('useCasesFinance.breadcrumb.home'), href: href('/') },
+        { label: t('useCasesFinance.breadcrumb.useCases'), href: href('/use-cases') },
         { label: t('useCasesFinance.breadcrumb.current') },
       ]}
     >
@@ -57,7 +62,7 @@ export default function FinanceClient() {
         icon={TrendingUp}
         title={t('useCasesFinance.heroTitle')}
         lede={t('useCasesFinance.heroDescription')}
-        primaryCta={{ label: t('useCasesFinance.heroCta'), href: '/demo' }}
+        primaryCta={{ label: t('useCasesFinance.heroCta'), href: href('/demo') }}
       />
 
       <EdSection title={t('useCasesFinance.challenge.title')}>
@@ -84,7 +89,7 @@ export default function FinanceClient() {
       <EdSection title={t('useCasesFinance.docTypes.title')}>
         <p className="ed-body" style={{ marginBottom: '24px' }}>
           {t('useCasesFinance.docTypes.description')}{' '}
-          <Link href="/features/multi-format" className="ed-inline">
+          <Link href={href("/features/multi-format")} className="ed-inline">
             {t('useCasesFinance.docTypes.formatsLink')}
           </Link>
           {t('useCasesFinance.docTypes.descriptionSuffix')}
@@ -115,7 +120,7 @@ export default function FinanceClient() {
           <p>{t('useCasesFinance.whyCitations.p1')}</p>
           <p>
             {t('useCasesFinance.whyCitations.p2pre')}
-            <Link href="/features/citations" className="ed-inline">{t('useCasesFinance.whyCitations.p2link')}</Link>
+            <Link href={href("/features/citations")} className="ed-inline">{t('useCasesFinance.whyCitations.p2link')}</Link>
             {t('useCasesFinance.whyCitations.p2post')}
           </p>
           <p>{t('useCasesFinance.whyCitations.p3')}</p>
@@ -137,9 +142,11 @@ export default function FinanceClient() {
       <EdCtaBanner
         title={t('useCasesFinance.cta.title')}
         description={t('useCasesFinance.cta.description')}
-        primary={{ label: t('useCasesFinance.cta.tryFreeDemo'), href: '/demo' }}
-        secondary={{ label: t('useCasesFinance.cta.viewPricing'), href: '/pricing' }}
+        primary={{ label: t('useCasesFinance.cta.tryFreeDemo'), href: href('/demo') }}
+        secondary={{ label: t('useCasesFinance.cta.viewPricing'), href: href('/pricing') }}
       />
+    
+      <MarketingLocaleLinks path="/use-cases/finance" label={chrome.language} />
     </MarketingShell>
   );
 }

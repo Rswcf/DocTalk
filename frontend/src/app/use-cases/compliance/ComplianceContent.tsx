@@ -1,8 +1,10 @@
-"use client";
 
 import React from 'react';
 import Link from 'next/link';
-import { useLocale } from '../../../i18n';
+import { getServerT } from '../../../i18n/server';
+import { getChromeStrings } from '../../../i18n/chrome';
+import { localizedHrefIfAvailable } from '../../../i18n/routing';
+import MarketingLocaleLinks from '../../../components/marketing/MarketingLocaleLinks';
 import {
   Shield,
   FileText,
@@ -28,8 +30,10 @@ import EdStepRow from '../../../components/marketing/EdStepRow';
 import EdFaqList from '../../../components/marketing/EdFaqList';
 import EdCtaBanner from '../../../components/marketing/EdCtaBanner';
 
-export default function ComplianceClient() {
-  const { t } = useLocale();
+export default async function ComplianceContent({ locale }: { locale: string }) {
+  const { t } = await getServerT(locale);
+  const chrome = await getChromeStrings(locale);
+  const href = (p: string) => localizedHrefIfAvailable(locale, p);
 
   const features = [
     {
@@ -99,9 +103,9 @@ export default function ComplianceClient() {
   ];
 
   const relatedUseCases = [
-    { href: '/use-cases/lawyers', icon: Scale, title: t('useCasesCompliance.related1Title'), body: t('useCasesCompliance.related1Body') },
-    { href: '/use-cases/finance', icon: TrendingUp, title: t('useCasesCompliance.related2Title'), body: t('useCasesCompliance.related2Body') },
-    { href: '/use-cases/healthcare', icon: Heart, title: t('useCasesCompliance.related3Title'), body: t('useCasesCompliance.related3Body') },
+    { href: href('/use-cases/lawyers'), icon: Scale, title: t('useCasesCompliance.related1Title'), body: t('useCasesCompliance.related1Body') },
+    { href: href('/use-cases/finance'), icon: TrendingUp, title: t('useCasesCompliance.related2Title'), body: t('useCasesCompliance.related2Body') },
+    { href: href('/use-cases/healthcare'), icon: Heart, title: t('useCasesCompliance.related3Title'), body: t('useCasesCompliance.related3Body') },
   ];
 
   const faqItems = [
@@ -129,9 +133,10 @@ export default function ComplianceClient() {
 
   return (
     <MarketingShell
+      chrome={chrome}
       breadcrumb={[
-        { label: t('useCasesCompliance.breadcrumbHome'), href: '/' },
-        { label: t('useCasesCompliance.breadcrumbUseCases'), href: '/use-cases' },
+        { label: t('useCasesCompliance.breadcrumbHome'), href: href('/') },
+        { label: t('useCasesCompliance.breadcrumbUseCases'), href: href('/use-cases') },
         { label: t('useCasesCompliance.breadcrumbCurrent') },
       ]}
     >
@@ -139,7 +144,7 @@ export default function ComplianceClient() {
         icon={Shield}
         title={t('useCasesCompliance.heroTitle')}
         lede={t('useCasesCompliance.heroLede')}
-        primaryCta={{ label: t('useCasesCompliance.heroCta'), href: '/demo' }}
+        primaryCta={{ label: t('useCasesCompliance.heroCta'), href: href('/demo') }}
       />
 
       <EdSection title={t('useCasesCompliance.challengeTitle')}>
@@ -170,7 +175,7 @@ export default function ComplianceClient() {
       <EdSection title={t('useCasesCompliance.docTypesTitle')}>
         <p className="ed-body" style={{ marginBottom: '24px' }}>
           {t('useCasesCompliance.docTypesDescription')}{' '}
-          <Link href="/features/multi-format" className="ed-inline">
+          <Link href={href("/features/multi-format")} className="ed-inline">
             {t('useCasesCompliance.docTypesFormatsLink')}
           </Link>
           {' '}{t('useCasesCompliance.docTypesDescriptionSuffix')}
@@ -252,8 +257,10 @@ export default function ComplianceClient() {
       <EdCtaBanner
         title={t('useCasesCompliance.ctaTitle')}
         description={t('useCasesCompliance.ctaDescription')}
-        primary={{ label: t('useCasesCompliance.ctaPrimary'), href: '/demo' }}
+        primary={{ label: t('useCasesCompliance.ctaPrimary'), href: href('/demo') }}
       />
+    
+      <MarketingLocaleLinks path="/use-cases/compliance" label={chrome.language} />
     </MarketingShell>
   );
 }

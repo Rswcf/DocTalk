@@ -1,8 +1,10 @@
-"use client";
 
 import React from 'react';
 import Link from 'next/link';
-import { useLocale } from '../../../i18n';
+import { getServerT } from '../../../i18n/server';
+import { getChromeStrings } from '../../../i18n/chrome';
+import { localizedHrefIfAvailable } from '../../../i18n/routing';
+import MarketingLocaleLinks from '../../../components/marketing/MarketingLocaleLinks';
 import {
   GraduationCap,
   BookOpen,
@@ -25,8 +27,10 @@ import EdCtaBanner from '../../../components/marketing/EdCtaBanner';
 
 const realWorldKeys = ['thesis', 'litReview', 'methodology', 'examPrep'];
 
-export default function StudentsClient() {
-  const { t } = useLocale();
+export default async function StudentsContent({ locale }: { locale: string }) {
+  const { t } = await getServerT(locale);
+  const chrome = await getChromeStrings(locale);
+  const href = (p: string) => localizedHrefIfAvailable(locale, p);
 
   const faqItems = [
     {
@@ -106,9 +110,10 @@ export default function StudentsClient() {
 
   return (
     <MarketingShell
+      chrome={chrome}
       breadcrumb={[
-        { label: t('useCasesStudents.breadcrumb.home'), href: '/' },
-        { label: t('useCasesStudents.breadcrumb.useCases'), href: '/use-cases' },
+        { label: t('useCasesStudents.breadcrumb.home'), href: href('/') },
+        { label: t('useCasesStudents.breadcrumb.useCases'), href: href('/use-cases') },
         { label: t('useCasesStudents.breadcrumb.current') },
       ]}
     >
@@ -116,7 +121,7 @@ export default function StudentsClient() {
         icon={GraduationCap}
         title={t('useCasesStudents.hero.title')}
         lede={t('useCasesStudents.hero.subtitle')}
-        primaryCta={{ label: t('useCasesStudents.hero.cta'), href: '/demo' }}
+        primaryCta={{ label: t('useCasesStudents.hero.cta'), href: href('/demo') }}
       />
 
       <EdSection title={t('useCasesStudents.challenge.title')}>
@@ -140,7 +145,7 @@ export default function StudentsClient() {
       <EdSection title={t('useCasesStudents.docTypes.title')}>
         <p className="ed-body" style={{ marginBottom: '24px' }}>
           {t('useCasesStudents.docTypes.intro')}{' '}
-          <Link href="/features/multi-format" className="ed-inline">
+          <Link href={href("/features/multi-format")} className="ed-inline">
             {t('useCasesStudents.docTypes.formatLink')}
           </Link>
           {t('useCasesStudents.docTypes.introSuffix')}
@@ -171,7 +176,7 @@ export default function StudentsClient() {
           <p>{t('useCasesStudents.citations.p1')}</p>
           <p>
             {t('useCasesStudents.citations.p2a')}
-            <Link href="/features/citations" className="ed-inline">{t('useCasesStudents.citations.link')}</Link>{' '}
+            <Link href={href("/features/citations")} className="ed-inline">{t('useCasesStudents.citations.link')}</Link>{' '}
             {t('useCasesStudents.citations.p2b')}
           </p>
           <p>{t('useCasesStudents.citations.p3')}</p>
@@ -184,7 +189,7 @@ export default function StudentsClient() {
           <p>{t('useCasesStudents.multilingual.p1')}</p>
           <p>
             {t('useCasesStudents.multilingual.p2a')}
-            <Link href="/features/multilingual" className="ed-inline">{t('useCasesStudents.multilingual.link')}</Link>{' '}
+            <Link href={href("/features/multilingual")} className="ed-inline">{t('useCasesStudents.multilingual.link')}</Link>{' '}
             {t('useCasesStudents.multilingual.p2b')}
           </p>
           <p>{t('useCasesStudents.multilingual.p3')}</p>
@@ -204,9 +209,11 @@ export default function StudentsClient() {
       <EdCtaBanner
         title={t('useCasesStudents.cta.title')}
         description={t('useCasesStudents.cta.description')}
-        primary={{ label: t('useCasesStudents.cta.tryDemo'), href: '/demo' }}
-        secondary={{ label: t('useCasesStudents.cta.viewPricing'), href: '/pricing' }}
+        primary={{ label: t('useCasesStudents.cta.tryDemo'), href: href('/demo') }}
+        secondary={{ label: t('useCasesStudents.cta.viewPricing'), href: href('/pricing') }}
       />
+    
+      <MarketingLocaleLinks path="/use-cases/students" label={chrome.language} />
     </MarketingShell>
   );
 }

@@ -31,6 +31,14 @@ export function isUrlLocale(value: string | undefined | null): value is UrlLocal
  */
 export const LOCALIZED_PATHS: ReadonlySet<string> = new Set<string>([
   '/use-cases/lawyers',
+  '/use-cases/finance',
+  '/use-cases/students',
+  '/use-cases/teachers',
+  '/use-cases/consultants',
+  '/use-cases/healthcare',
+  '/use-cases/hr-contracts',
+  '/use-cases/real-estate',
+  '/use-cases/compliance',
 ]);
 
 /** Normalize a path for matching: drop query/hash and a single trailing slash (except root). */

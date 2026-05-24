@@ -1,8 +1,10 @@
-"use client";
 
 import React from 'react';
 import Link from 'next/link';
-import { useLocale } from '../../../i18n';
+import { getServerT } from '../../../i18n/server';
+import { getChromeStrings } from '../../../i18n/chrome';
+import { localizedHrefIfAvailable } from '../../../i18n/routing';
+import MarketingLocaleLinks from '../../../components/marketing/MarketingLocaleLinks';
 import {
   Heart,
   FileText,
@@ -26,8 +28,10 @@ import EdStepRow from '../../../components/marketing/EdStepRow';
 import EdFaqList from '../../../components/marketing/EdFaqList';
 import EdCtaBanner from '../../../components/marketing/EdCtaBanner';
 
-export default function HealthcareClient() {
-  const { t } = useLocale();
+export default async function HealthcareContent({ locale }: { locale: string }) {
+  const { t } = await getServerT(locale);
+  const chrome = await getChromeStrings(locale);
+  const href = (p: string) => localizedHrefIfAvailable(locale, p);
 
   const features = [
     {
@@ -75,9 +79,9 @@ export default function HealthcareClient() {
   ];
 
   const relatedUseCases = [
-    { href: '/use-cases/compliance', icon: Shield, title: t('useCasesHealthcare.related.compliance.title'), body: t('useCasesHealthcare.related.compliance.body') },
-    { href: '/use-cases/teachers', icon: BookOpen, title: t('useCasesHealthcare.related.teachers.title'), body: t('useCasesHealthcare.related.teachers.body') },
-    { href: '/use-cases/lawyers', icon: Scale, title: t('useCasesHealthcare.related.legal.title'), body: t('useCasesHealthcare.related.legal.body') },
+    { href: href('/use-cases/compliance'), icon: Shield, title: t('useCasesHealthcare.related.compliance.title'), body: t('useCasesHealthcare.related.compliance.body') },
+    { href: href('/use-cases/teachers'), icon: BookOpen, title: t('useCasesHealthcare.related.teachers.title'), body: t('useCasesHealthcare.related.teachers.body') },
+    { href: href('/use-cases/lawyers'), icon: Scale, title: t('useCasesHealthcare.related.legal.title'), body: t('useCasesHealthcare.related.legal.body') },
   ];
 
   const faqItems = [
@@ -105,9 +109,10 @@ export default function HealthcareClient() {
 
   return (
     <MarketingShell
+      chrome={chrome}
       breadcrumb={[
-        { label: t('useCasesHealthcare.breadcrumb.home'), href: '/' },
-        { label: t('useCasesHealthcare.breadcrumb.useCases'), href: '/use-cases' },
+        { label: t('useCasesHealthcare.breadcrumb.home'), href: href('/') },
+        { label: t('useCasesHealthcare.breadcrumb.useCases'), href: href('/use-cases') },
         { label: t('useCasesHealthcare.breadcrumb.current') },
       ]}
     >
@@ -115,7 +120,7 @@ export default function HealthcareClient() {
         icon={Heart}
         title={t('useCasesHealthcare.heroTitle')}
         lede={t('useCasesHealthcare.heroDescription')}
-        primaryCta={{ label: t('useCasesHealthcare.heroCta'), href: '/demo' }}
+        primaryCta={{ label: t('useCasesHealthcare.heroCta'), href: href('/demo') }}
       />
 
       <EdSection title={t('useCasesHealthcare.notHipaa.title')}>
@@ -146,7 +151,7 @@ export default function HealthcareClient() {
       <EdSection alt title={t('useCasesHealthcare.docTypes.title')}>
         <p className="ed-body" style={{ marginBottom: '24px' }}>
           {t('useCasesHealthcare.docTypes.descriptionPre')}{' '}
-          <Link href="/features/multi-format" className="ed-inline">
+          <Link href={href("/features/multi-format")} className="ed-inline">
             {t('useCasesHealthcare.docTypes.formatsLink')}
           </Link>
           {' '}{t('useCasesHealthcare.docTypes.descriptionPost')}
@@ -174,11 +179,11 @@ export default function HealthcareClient() {
           <p>{t('useCasesHealthcare.whyCitations.p3')}</p>
           <p>
             {t('useCasesHealthcare.whyCitations.p4pre')}{' '}
-            <Link href="/features/citations" className="ed-inline">
+            <Link href={href("/features/citations")} className="ed-inline">
               {t('useCasesHealthcare.whyCitations.p4link1')}
             </Link>
             {' '}{t('useCasesHealthcare.whyCitations.p4mid')}{' '}
-            <Link href="/features/performance-modes" className="ed-inline">
+            <Link href={href("/features/performance-modes")} className="ed-inline">
               {t('useCasesHealthcare.whyCitations.p4link2')}
             </Link>
             {' '}{t('useCasesHealthcare.whyCitations.p4post')}
@@ -233,8 +238,10 @@ export default function HealthcareClient() {
       <EdCtaBanner
         title={t('useCasesHealthcare.cta.title')}
         description={t('useCasesHealthcare.cta.description')}
-        primary={{ label: t('useCasesHealthcare.cta.tryFreeDemo'), href: '/demo' }}
+        primary={{ label: t('useCasesHealthcare.cta.tryFreeDemo'), href: href('/demo') }}
       />
+    
+      <MarketingLocaleLinks path="/use-cases/healthcare" label={chrome.language} />
     </MarketingShell>
   );
 }

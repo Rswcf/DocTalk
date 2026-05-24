@@ -1,8 +1,10 @@
-"use client";
 
 import React from 'react';
 import Link from 'next/link';
-import { useLocale } from '../../../i18n';
+import { getServerT } from '../../../i18n/server';
+import { getChromeStrings } from '../../../i18n/chrome';
+import { localizedHrefIfAvailable } from '../../../i18n/routing';
+import MarketingLocaleLinks from '../../../components/marketing/MarketingLocaleLinks';
 import {
   FileText,
   Users,
@@ -22,8 +24,10 @@ import EdCardGrid from '../../../components/marketing/EdCardGrid';
 import EdFaqList from '../../../components/marketing/EdFaqList';
 import EdCtaBanner from '../../../components/marketing/EdCtaBanner';
 
-export default function HrContractsClient() {
-  const { t } = useLocale();
+export default async function HrContractsContent({ locale }: { locale: string }) {
+  const { t } = await getServerT(locale);
+  const chrome = await getChromeStrings(locale);
+  const href = (p: string) => localizedHrefIfAvailable(locale, p);
 
   const faqItems = [
     {
@@ -83,9 +87,10 @@ export default function HrContractsClient() {
 
   return (
     <MarketingShell
+      chrome={chrome}
       breadcrumb={[
-        { label: t('useCasesHr.breadcrumb.home'), href: '/' },
-        { label: t('useCasesHr.breadcrumb.useCases'), href: '/use-cases' },
+        { label: t('useCasesHr.breadcrumb.home'), href: href('/') },
+        { label: t('useCasesHr.breadcrumb.useCases'), href: href('/use-cases') },
         { label: t('useCasesHr.breadcrumb.current') },
       ]}
     >
@@ -93,7 +98,7 @@ export default function HrContractsClient() {
         icon={FileText}
         title={t('useCasesHr.hero.title')}
         lede={t('useCasesHr.hero.subtitle')}
-        primaryCta={{ label: t('useCasesHr.hero.cta'), href: '/demo' }}
+        primaryCta={{ label: t('useCasesHr.hero.cta'), href: href('/demo') }}
       />
 
       <EdSection title={t('useCasesHr.challenge.title')}>
@@ -118,7 +123,7 @@ export default function HrContractsClient() {
       <EdSection title={t('useCasesHr.docTypes.title')}>
         <p className="ed-body" style={{ marginBottom: '24px' }}>
           {t('useCasesHr.docTypes.intro')}{' '}
-          <Link href="/features/multi-format" className="ed-inline">
+          <Link href={href("/features/multi-format")} className="ed-inline">
             {t('useCasesHr.docTypes.formatLink')}
           </Link>
           {t('useCasesHr.docTypes.introSuffix')}
@@ -139,7 +144,7 @@ export default function HrContractsClient() {
           <EdProse className="mt-3">
             <p>
               {t('useCasesHr.realWorld.nonCompete.p1')}
-              <Link href="/use-cases/lawyers" className="ed-inline">
+              <Link href={href("/use-cases/lawyers")} className="ed-inline">
                 {t('useCasesHr.realWorld.nonCompete.link')}
               </Link>{' '}
               {t('useCasesHr.realWorld.nonCompete.p2')}
@@ -176,9 +181,11 @@ export default function HrContractsClient() {
       <EdCtaBanner
         title={t('useCasesHr.cta.title')}
         description={t('useCasesHr.cta.description')}
-        primary={{ label: t('useCasesHr.cta.tryDemo'), href: '/demo' }}
-        secondary={{ label: t('useCasesHr.cta.viewPricing'), href: '/pricing' }}
+        primary={{ label: t('useCasesHr.cta.tryDemo'), href: href('/demo') }}
+        secondary={{ label: t('useCasesHr.cta.viewPricing'), href: href('/pricing') }}
       />
+    
+      <MarketingLocaleLinks path="/use-cases/hr-contracts" label={chrome.language} />
     </MarketingShell>
   );
 }

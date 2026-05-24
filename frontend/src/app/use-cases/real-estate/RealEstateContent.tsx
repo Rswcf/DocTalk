@@ -1,8 +1,10 @@
-"use client";
 
 import React from 'react';
 import Link from 'next/link';
-import { useLocale } from '../../../i18n';
+import { getServerT } from '../../../i18n/server';
+import { getChromeStrings } from '../../../i18n/chrome';
+import { localizedHrefIfAvailable } from '../../../i18n/routing';
+import MarketingLocaleLinks from '../../../components/marketing/MarketingLocaleLinks';
 import {
   Home,
   FileText,
@@ -27,8 +29,10 @@ import EdStepRow from '../../../components/marketing/EdStepRow';
 import EdFaqList from '../../../components/marketing/EdFaqList';
 import EdCtaBanner from '../../../components/marketing/EdCtaBanner';
 
-export default function RealEstateClient() {
-  const { t } = useLocale();
+export default async function RealEstateContent({ locale }: { locale: string }) {
+  const { t } = await getServerT(locale);
+  const chrome = await getChromeStrings(locale);
+  const href = (p: string) => localizedHrefIfAvailable(locale, p);
 
   const features = [
     {
@@ -107,19 +111,19 @@ export default function RealEstateClient() {
 
   const relatedUseCases = [
     {
-      href: '/use-cases/lawyers',
+      href: href('/use-cases/lawyers'),
       icon: Scale,
       title: t('useCasesRealEstate.related1Title'),
       description: t('useCasesRealEstate.related1Description'),
     },
     {
-      href: '/use-cases/finance',
+      href: href('/use-cases/finance'),
       icon: DollarSign,
       title: t('useCasesRealEstate.related2Title'),
       description: t('useCasesRealEstate.related2Description'),
     },
     {
-      href: '/use-cases/consultants',
+      href: href('/use-cases/consultants'),
       icon: Briefcase,
       title: t('useCasesRealEstate.related3Title'),
       description: t('useCasesRealEstate.related3Description'),
@@ -128,9 +132,10 @@ export default function RealEstateClient() {
 
   return (
     <MarketingShell
+      chrome={chrome}
       breadcrumb={[
-        { label: t('useCasesRealEstate.breadcrumbHome'), href: '/' },
-        { label: t('useCasesRealEstate.breadcrumbUseCases'), href: '/use-cases' },
+        { label: t('useCasesRealEstate.breadcrumbHome'), href: href('/') },
+        { label: t('useCasesRealEstate.breadcrumbUseCases'), href: href('/use-cases') },
         { label: t('useCasesRealEstate.breadcrumbCurrent') },
       ]}
     >
@@ -138,7 +143,7 @@ export default function RealEstateClient() {
         icon={Home}
         title={t('useCasesRealEstate.heroTitle')}
         lede={t('useCasesRealEstate.heroLede')}
-        primaryCta={{ label: t('useCasesRealEstate.heroCta'), href: '/demo' }}
+        primaryCta={{ label: t('useCasesRealEstate.heroCta'), href: href('/demo') }}
       />
 
       <EdSection title={t('useCasesRealEstate.challengeTitle')}>
@@ -169,7 +174,7 @@ export default function RealEstateClient() {
       <EdSection title={t('useCasesRealEstate.docTypesTitle')}>
         <p className="ed-body" style={{ marginBottom: '24px' }}>
           {t('useCasesRealEstate.docTypesDescription')}{' '}
-          <Link href="/features/multi-format" className="ed-inline">
+          <Link href={href("/features/multi-format")} className="ed-inline">
             {t('useCasesRealEstate.docTypesFormatsLink')}
           </Link>
           {' '}{t('useCasesRealEstate.docTypesDescriptionSuffix')}
@@ -240,8 +245,10 @@ export default function RealEstateClient() {
       <EdCtaBanner
         title={t('useCasesRealEstate.ctaTitle')}
         description={t('useCasesRealEstate.ctaDescription')}
-        primary={{ label: t('useCasesRealEstate.ctaPrimary'), href: '/demo' }}
+        primary={{ label: t('useCasesRealEstate.ctaPrimary'), href: href('/demo') }}
       />
+    
+      <MarketingLocaleLinks path="/use-cases/real-estate" label={chrome.language} />
     </MarketingShell>
   );
 }

@@ -1,8 +1,10 @@
-"use client";
 
 import React from 'react';
 import Link from 'next/link';
-import { useLocale } from '../../../i18n';
+import { getServerT } from '../../../i18n/server';
+import { getChromeStrings } from '../../../i18n/chrome';
+import { localizedHrefIfAvailable } from '../../../i18n/routing';
+import MarketingLocaleLinks from '../../../components/marketing/MarketingLocaleLinks';
 import {
   Apple,
   BookOpen,
@@ -25,8 +27,10 @@ import EdStepRow from '../../../components/marketing/EdStepRow';
 import EdFaqList from '../../../components/marketing/EdFaqList';
 import EdCtaBanner from '../../../components/marketing/EdCtaBanner';
 
-export default function TeachersClient() {
-  const { t } = useLocale();
+export default async function TeachersContent({ locale }: { locale: string }) {
+  const { t } = await getServerT(locale);
+  const chrome = await getChromeStrings(locale);
+  const href = (p: string) => localizedHrefIfAvailable(locale, p);
 
   const features = [
     {
@@ -98,19 +102,19 @@ export default function TeachersClient() {
 
   const relatedUseCases = [
     {
-      href: '/use-cases/students',
+      href: href('/use-cases/students'),
       icon: GraduationCap,
       title: t('useCasesTeachers.related.students.title'),
       description: t('useCasesTeachers.related.students.description'),
     },
     {
-      href: '/use-cases/healthcare',
+      href: href('/use-cases/healthcare'),
       icon: FileText,
       title: t('useCasesTeachers.related.healthcare.title'),
       description: t('useCasesTeachers.related.healthcare.description'),
     },
     {
-      href: '/use-cases/compliance',
+      href: href('/use-cases/compliance'),
       icon: ClipboardCheck,
       title: t('useCasesTeachers.related.compliance.title'),
       description: t('useCasesTeachers.related.compliance.description'),
@@ -119,9 +123,10 @@ export default function TeachersClient() {
 
   return (
     <MarketingShell
+      chrome={chrome}
       breadcrumb={[
-        { label: t('useCasesTeachers.breadcrumb.home'), href: '/' },
-        { label: t('useCasesTeachers.breadcrumb.useCases'), href: '/use-cases' },
+        { label: t('useCasesTeachers.breadcrumb.home'), href: href('/') },
+        { label: t('useCasesTeachers.breadcrumb.useCases'), href: href('/use-cases') },
         { label: t('useCasesTeachers.breadcrumb.current') },
       ]}
     >
@@ -129,7 +134,7 @@ export default function TeachersClient() {
         icon={Apple}
         title={t('useCasesTeachers.heroTitle')}
         lede={t('useCasesTeachers.heroDescription')}
-        primaryCta={{ label: t('useCasesTeachers.heroCta'), href: '/demo' }}
+        primaryCta={{ label: t('useCasesTeachers.heroCta'), href: href('/demo') }}
       />
 
       <EdSection title={t('useCasesTeachers.challenge.title')}>
@@ -154,7 +159,7 @@ export default function TeachersClient() {
       <EdSection title={t('useCasesTeachers.docTypes.title')}>
         <p className="ed-body" style={{ marginBottom: '24px' }}>
           {t('useCasesTeachers.docTypes.descriptionPre')}{' '}
-          <Link href="/features/multi-format" className="ed-inline">
+          <Link href={href("/features/multi-format")} className="ed-inline">
             {t('useCasesTeachers.docTypes.formatsLink')}
           </Link>
           {' '}{t('useCasesTeachers.docTypes.descriptionPost')}
@@ -181,7 +186,7 @@ export default function TeachersClient() {
           <p>{t('useCasesTeachers.whyCitations.p2')}</p>
           <p>
             {t('useCasesTeachers.whyCitations.p3pre')}{' '}
-            <Link href="/features/citations" className="ed-inline">{t('useCasesTeachers.whyCitations.p3link')}</Link>
+            <Link href={href("/features/citations")} className="ed-inline">{t('useCasesTeachers.whyCitations.p3link')}</Link>
             {' '}{t('useCasesTeachers.whyCitations.p3post')}
           </p>
         </EdProse>
@@ -227,8 +232,10 @@ export default function TeachersClient() {
       <EdCtaBanner
         title={t('useCasesTeachers.cta.title')}
         description={t('useCasesTeachers.cta.description')}
-        primary={{ label: t('useCasesTeachers.cta.tryFreeDemo'), href: '/demo' }}
+        primary={{ label: t('useCasesTeachers.cta.tryFreeDemo'), href: href('/demo') }}
       />
+    
+      <MarketingLocaleLinks path="/use-cases/teachers" label={chrome.language} />
     </MarketingShell>
   );
 }

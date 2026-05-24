@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import RealEstateClient from './RealEstateClient';
+import RealEstateContent from './RealEstateContent';
 import { buildArticleJsonLd, buildMarketingMetadata } from '../../../lib/seo';
 
 export const metadata: Metadata = buildMarketingMetadata({
@@ -7,6 +7,7 @@ export const metadata: Metadata = buildMarketingMetadata({
   description:
     'Review leases, purchase agreements, inspection reports, and property appraisals with AI. Get cited answers from complex real estate documents.',
   path: '/use-cases/real-estate',
+  localized: true,
   keywords: ['ai for real estate', 'real estate document analysis', 'ai lease review', 'property document ai'],
   openGraph: {
     title: 'AI Document Analysis for Real Estate Professionals | DocTalk',
@@ -91,7 +92,7 @@ export default function RealEstatePage() {
           }),
         }}
       />
-      <RealEstateClient />
+      <RealEstateContent locale="en" />
     </>
   );
 }
