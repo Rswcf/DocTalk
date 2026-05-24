@@ -142,6 +142,23 @@ def parse_document(self, document_id: str, locale: str | None = None) -> None:
             db.execute(sa_delete(DocumentElement).where(DocumentElement.document_id == doc.id))
             db.execute(sa_delete(Chunk).where(Chunk.document_id == doc.id))
             db.execute(sa_delete(Page).where(Page.document_id == doc.id))
+
+            # Delete stale Qdrant vectors BEFORE re-indexing (R2a hazard fix). The worker
+            # rebuilds Pages/Chunks but old vectors would otherwise survive and pollute
+            # retrieval top-k (especially after an OCR re-parse). HARD, AWAITED precondition:
+            # if the delete fails we must NOT proceed — raise so the task retries rather than
+            # leaving duplicate/stale vectors. (deletion_worker uses the same filter.)
+            from qdrant_client.models import FieldCondition, Filter, MatchValue
+
+            _qclient = embedding_service.get_qdrant_client()
+            _qclient.delete(
+                collection_name=settings.QDRANT_COLLECTION,
+                points_selector=Filter(
+                    must=[FieldCondition(key="document_id", match=MatchValue(value=str(doc.id)))]
+                ),
+                wait=True,
+            )
+
             doc.pages_parsed = 0
             doc.chunks_total = 0
             doc.chunks_indexed = 0

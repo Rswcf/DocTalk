@@ -783,6 +783,10 @@ async def get_document_text_content(
     }
 
 
+class ReparseRequest(BaseModel):
+    locale: str | None = Field(default=None, max_length=16)
+
+
 @documents_router.post(
     "/{document_id}/reparse",
     status_code=status.HTTP_202_ACCEPTED,
@@ -790,10 +794,14 @@ async def get_document_text_content(
 )
 async def reparse_document(
     document_id: uuid.UUID,
+    body: Optional[ReparseRequest] = None,
     user: User = Depends(require_auth),
     db: AsyncSession = Depends(get_db_session),
 ):
-    """Re-parse an existing document (e.g., after chunk config changes)."""
+    """Re-parse an existing document (e.g. after a parser/OCR upgrade or chunk
+    config change). Re-parsing clears stale Qdrant vectors first (handled in the
+    worker). An optional `locale` selects the OCR language set (e.g. 'ur' for an
+    Urdu scan) — without it OCR uses the configured default set."""
     from app.models.tables import Document
 
     doc = await db.get(Document, document_id)
@@ -812,7 +820,7 @@ async def reparse_document(
     db.add(doc)
     await db.commit()
     from app.workers.parse_worker import parse_document
-    parse_document.delay(str(doc.id))
+    parse_document.delay(str(doc.id), locale=(body.locale if body else None))
     return {"status": "reparsing"}
 
 

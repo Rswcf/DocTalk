@@ -27,6 +27,7 @@ RUN apt-get update \
        tesseract-ocr-ita \
        tesseract-ocr-ara \
        tesseract-ocr-hin \
+       tesseract-ocr-urd \
        libreoffice-core \
        libreoffice-impress \
        libreoffice-writer \

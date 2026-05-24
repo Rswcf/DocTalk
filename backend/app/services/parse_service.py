@@ -12,6 +12,7 @@ import fitz  # PyMuPDF
 _LOCALE_TESSERACT = {
     "en": "eng", "zh": "chi_sim", "ja": "jpn", "ko": "kor", "es": "spa",
     "de": "deu", "fr": "fra", "pt": "por", "it": "ita", "ar": "ara", "hi": "hin",
+    "ur": "urd",
 }
 
 
