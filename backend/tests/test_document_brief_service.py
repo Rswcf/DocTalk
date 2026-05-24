@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import uuid
 from types import SimpleNamespace
 from unittest.mock import AsyncMock
@@ -33,6 +34,33 @@ class _ScalarsResult:
 
     def scalars(self):
         return self._values
+
+
+class _FakeSummaryDb:
+    def __init__(self, chunks):
+        self.chunks = list(chunks)
+        self.brief = None
+        self.commits = 0
+
+    async def execute(self, stmt):
+        statement = str(stmt)
+        if "document_briefs.coverage" in statement:
+            return _ScalarOneOrNoneResult(self.brief.coverage if self.brief is not None else None)
+        if "FROM document_briefs" in statement:
+            return _ScalarOneOrNoneResult(self.brief)
+        if "FROM chunks" in statement:
+            return _ScalarsResult(self.chunks)
+        return _ScalarsResult([])
+
+    def add(self, obj):
+        if obj.__class__.__name__ == "DocumentBrief":
+            self.brief = obj
+
+    async def commit(self):
+        self.commits += 1
+
+    async def rollback(self):
+        pass
 
 
 def _chunk(index: int, *, section: str | None = None, text: str | None = None):
@@ -103,8 +131,9 @@ async def test_collection_summary_context_caps_docs_and_chunks(
     doc_ids = [uuid.uuid4() for _ in range(10)]
     calls: list[tuple[uuid.UUID, int]] = []
 
-    async def fake_context(_db, document_id, *, max_chunks):
+    async def fake_context(_db, document_id, *, max_chunks, allow_map_reduce=True):
         calls.append((document_id, max_chunks))
+        assert allow_map_reduce is False
         return [
             {"chunk_id": uuid.uuid4(), "document_id": document_id, "text": f"{document_id}:{idx}"}
             for idx in range(max_chunks)
@@ -362,7 +391,20 @@ def test_section_segments_filters_noisy_section_titles() -> None:
 
     segments = _section_segments(chunks)
 
-    assert [title for title, _items in segments] == ["Valid Section", "Next Section"]
+    assert [title for title, _items in segments] == ["Front matter", "Valid Section", "Next Section"]
+    assert [item.chunk_index for _title, items in segments[:1] for item in items] == [0, 1, 2, 3]
+
+
+def test_section_segments_keeps_leading_roman_numeral_front_matter() -> None:
+    chunks = [
+        _chunk(0, section="IV"),
+        _chunk(1, section="Executive Summary"),
+    ]
+
+    segments = _section_segments(chunks)
+
+    assert [title for title, _items in segments] == ["Front matter", "Executive Summary"]
+    assert [item.chunk_index for _title, items in segments[:1] for item in items] == [0]
 
 
 @pytest.mark.asyncio
@@ -379,10 +421,175 @@ async def test_map_reduce_summary_context_falls_back_to_chunk_selection_when_map
 
     result = await planner.build_summary_context(chunks, max_chunks=18)
 
-    assert result.strategy == "chunk_selection_fallback"
+    assert result.strategy == "map_reduce"
     assert result.context_items
     assert result.selected_chunk_ids
     assert len(result.selected_chunk_ids) <= 64
+    assert result.fallback_sections
+
+
+@pytest.mark.asyncio
+async def test_map_reduce_partial_failures_keep_successes_cancel_pending_and_fallback_missing_groups() -> None:
+    chunks = [
+        _chunk(index, section=f"Section {index}", text=(f"Section {index} narrative " * 20))
+        for index in range(36)
+    ]
+    cancelled_groups: list[int] = []
+
+    async def flaky_map(group: SectionMapGroup) -> MapStepResult:
+        await asyncio.sleep(0)
+        if group.group_index == 0:
+            return MapStepResult(
+                group_index=group.group_index,
+                summary="model success",
+                selected_chunk_ids=(group.chunks[0].id,),
+                covered_sections=(group.section_titles[0],),
+                target_sections=group.section_titles,
+                model_covered_sections=(group.section_titles[0],),
+                fallback_sections=(),
+                missing_sections=tuple(group.section_titles[1:]),
+            )
+        if group.group_index == 1:
+            raise TimeoutError("map group failed")
+        try:
+            await asyncio.sleep(10)
+        except asyncio.CancelledError:
+            cancelled_groups.append(group.group_index)
+            raise
+        raise AssertionError("slow map task was not cancelled")
+
+    planner = SectionMapReducePlanner(
+        map_step=flaky_map,
+        max_groups=3,
+        min_groups=3,
+        max_concurrency=3,
+        map_phase_timeout_seconds=0.2,
+    )
+
+    result = await planner.build_summary_context(chunks, max_chunks=18)
+
+    assert result.strategy == "map_reduce"
+    assert "Section 0" in result.model_covered_sections
+    assert "Section 12" in result.fallback_sections
+    assert "Section 24" in result.fallback_sections
+    assert cancelled_groups == [2]
+    assert set(result.covered_sections) == {chunk.section_title for chunk in chunks}
+
+
+@pytest.mark.asyncio
+async def test_llm_map_empty_sections_are_reported_as_fallback_not_model_coverage() -> None:
+    chunks = [
+        _chunk(index, section=f"Section {index}", text=(f"Section {index} narrative " * 20))
+        for index in range(12)
+    ]
+    reduce_prompts: list[str] = []
+
+    class EmptyMapPlanner(SectionMapReducePlanner):
+        async def _llm_json_completion(
+            self,
+            *,
+            model,
+            messages,
+            max_tokens,
+            timeout_seconds,
+            usage_collector=None,
+            phase="unknown",
+        ):
+            prompt = messages[0]["content"]
+            if "map step" in prompt:
+                return {"group_summary": "", "sections": []}
+            reduce_prompts.append(prompt)
+            return {"summary": "reduced", "covered_sections": []}
+
+    planner = EmptyMapPlanner(max_groups=2, min_groups=2, max_group_chunks=6)
+
+    result = await planner.build_summary_context(chunks, max_chunks=18)
+
+    assert result.model_covered_sections == ()
+    assert set(result.fallback_sections) == {chunk.section_title for chunk in chunks}
+    assert result.missing_sections == ()
+    assert set(result.covered_sections) == {chunk.section_title for chunk in chunks}
+    assert reduce_prompts and "fallback_sections" in reduce_prompts[0]
+
+
+@pytest.mark.asyncio
+async def test_large_map_reduce_summary_context_is_cached_and_invalidated_by_chunk_fingerprint(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    document_id = uuid.uuid4()
+    chunks = [_chunk(i, section=f"Chapter {i}", text=("Long narrative " * 25)) for i in range(50)]
+    for chunk in chunks:
+        chunk.document_id = document_id
+    refreshed_chunks = list(chunks)
+    refreshed_chunks[0] = _chunk(0, section="Chapter 0", text=("Changed narrative " * 25))
+    refreshed_chunks[0].document_id = document_id
+
+    first_result = MapReduceSummaryResult(
+        summary="cached summary",
+        context_items=(
+            MapReduceContextItem(
+                group_index=0,
+                text="cached section summary",
+                anchor_chunk_id=chunks[0].id,
+                source_chunk_ids=tuple(chunk.id for chunk in chunks[:30]),
+                covered_sections=tuple(chunk.section_title for chunk in chunks[:30]),
+                target_sections=tuple(chunk.section_title for chunk in chunks[:30]),
+                model_covered_sections=tuple(chunk.section_title for chunk in chunks[:30]),
+                fallback_sections=(),
+                missing_sections=(),
+            ),
+        ),
+        selected_chunk_ids=tuple(chunk.id for chunk in chunks[:30]),
+        covered_sections=tuple(chunk.section_title for chunk in chunks[:30]),
+        target_sections=tuple(chunk.section_title for chunk in chunks[:30]),
+        model_covered_sections=tuple(chunk.section_title for chunk in chunks[:30]),
+        fallback_sections=(),
+        missing_sections=(),
+    )
+    refreshed_result = MapReduceSummaryResult(
+        summary="new summary",
+        context_items=(
+            MapReduceContextItem(
+                group_index=0,
+                text="new section summary",
+                anchor_chunk_id=refreshed_chunks[0].id,
+                source_chunk_ids=tuple(chunk.id for chunk in refreshed_chunks[:30]),
+                covered_sections=tuple(chunk.section_title for chunk in refreshed_chunks[:30]),
+                target_sections=tuple(chunk.section_title for chunk in refreshed_chunks[:30]),
+                model_covered_sections=tuple(chunk.section_title for chunk in refreshed_chunks[:30]),
+                fallback_sections=(),
+                missing_sections=(),
+            ),
+        ),
+        selected_chunk_ids=tuple(chunk.id for chunk in refreshed_chunks[:30]),
+        covered_sections=tuple(chunk.section_title for chunk in refreshed_chunks[:30]),
+        target_sections=tuple(chunk.section_title for chunk in refreshed_chunks[:30]),
+        model_covered_sections=tuple(chunk.section_title for chunk in refreshed_chunks[:30]),
+        fallback_sections=(),
+        missing_sections=(),
+    )
+    planner = SectionMapReducePlanner()
+    planner.build_summary_context = AsyncMock(side_effect=[first_result, refreshed_result])
+    service = DocumentBriefService(section_map_reduce=planner, map_reduce_min_chunks=36)
+    db = _FakeSummaryDb(chunks)
+
+    prefetched = AsyncMock(side_effect=[([], chunks), ([], chunks), ([], refreshed_chunks)])
+    monkeypatch.setattr(
+        "app.services.document_brief_service.get_element_aware_chunks_async",
+        prefetched,
+    )
+
+    first = await service.get_summary_context(db, document_id, max_chunks=18)
+    second = await service.get_summary_context(db, document_id, max_chunks=18)
+    db.chunks = refreshed_chunks
+    third = await service.get_summary_context(db, document_id, max_chunks=18)
+
+    assert first[0]["text"] == "cached section summary"
+    assert second[0]["text"] == "cached section summary"
+    assert third[0]["text"] == "new section summary"
+    assert planner.build_summary_context.await_count == 2
+    assert db.brief is not None
+    assert "map_reduce_summary_context" in db.brief.coverage
 
 
 def test_dynamic_section_group_count_scales_with_document_size() -> None:
@@ -435,7 +642,11 @@ async def test_large_document_summary_context_uses_section_map_reduce() -> None:
 
     contexts = await service.get_summary_context(db, document_id, max_chunks=18)
 
-    planner.build_summary_context.assert_awaited_once_with(chunks, max_chunks=18)
+    planner.build_summary_context.assert_awaited_once_with(
+        chunks,
+        max_chunks=18,
+        usage_collector=None,
+    )
     assert len(contexts) == 1
     assert contexts[0]["retrieval_modality"] == "summary"
     assert len(contexts[0]["map_reduce_source_chunk_ids"]) == 30
@@ -503,7 +714,11 @@ async def test_large_document_bypasses_persisted_coverage_when_map_reduce_needed
 
     contexts = await service.get_summary_context(db, document_id, max_chunks=18)
 
-    planner.build_summary_context.assert_awaited_once_with(chunks, max_chunks=18)
+    planner.build_summary_context.assert_awaited_once_with(
+        chunks,
+        max_chunks=18,
+        usage_collector=None,
+    )
     assert len(contexts) == 1
     assert len(contexts[0]["map_reduce_covered_sections"]) > 18
 
@@ -552,3 +767,32 @@ async def test_small_per_doc_budget_skips_map_reduce_for_collection_path() -> No
     planner.build_summary_context.assert_not_awaited()
     planner.select_chunks_for_summary.assert_not_awaited()
     assert len(contexts) == 3
+
+
+@pytest.mark.asyncio
+async def test_collection_summary_context_disables_map_reduce_for_single_large_document(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    document_id = uuid.uuid4()
+    chunks = [_chunk(i, section=f"Chapter {i}", text=("Long narrative " * 25)) for i in range(50)]
+    for chunk in chunks:
+        chunk.document_id = document_id
+
+    planner = SectionMapReducePlanner()
+    planner.build_summary_context = AsyncMock()
+    service = DocumentBriefService(section_map_reduce=planner, map_reduce_min_chunks=36)
+    monkeypatch.setattr(
+        "app.services.document_brief_service.get_element_aware_chunks_async",
+        AsyncMock(return_value=([], chunks)),
+    )
+    db = _FakeSummaryDb(chunks)
+
+    contexts = await service.get_collection_summary_context(
+        db,
+        [document_id],
+        max_chunks=24,
+        max_docs=8,
+    )
+
+    planner.build_summary_context.assert_not_awaited()
+    assert len(contexts) == 24

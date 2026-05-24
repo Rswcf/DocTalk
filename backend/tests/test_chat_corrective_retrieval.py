@@ -154,6 +154,35 @@ def test_table_citation_payload_persists_context_for_continuation() -> None:
     assert "MetaX" in payload["table_context"]
 
 
+def test_summary_citation_payload_uses_page_range_without_precise_bboxes() -> None:
+    chunk_id = uuid.uuid4()
+    chunk = chat_service_module._ChunkInfo(
+        id=chunk_id,
+        page_start=3,
+        page_end=9,
+        bboxes=[{"x": 0.1, "y": 0.1, "w": 0.2, "h": 0.1, "page": 3}],
+        text="Section group 1 map summary covering: Intro, Results\n- Intro: summary\n- Results: summary",
+        section_title="Map-reduce section summary",
+        score=0.96,
+        retrieval_modality="summary",
+        summary_target_sections=("Intro", "Results"),
+        summary_model_covered_sections=("Intro",),
+        summary_fallback_sections=("Results",),
+        summary_missing_sections=(),
+    )
+
+    payload = chat_service_module._citation_payload(1, chunk, 12)
+
+    assert payload["chunk_id"] == str(chunk_id)
+    assert payload["retrieval_modality"] == "summary"
+    assert payload["page"] == 3
+    assert payload["page_end"] == 9
+    assert payload["bboxes"] == []
+    assert payload["summary_target_sections"] == ["Intro", "Results"]
+    assert payload["summary_fallback_sections"] == ["Results"]
+    assert "Section group" in payload["context_text"]
+
+
 def test_persisted_table_citation_rehydrates_table_context_for_continuation() -> None:
     document_id = uuid.uuid4()
     chunk = SimpleNamespace(

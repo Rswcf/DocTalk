@@ -18,6 +18,10 @@ function confidenceColor(score: number): string {
 
 export default function CitationPopover({ citation, children }: CitationPopoverProps) {
   const hasExtra = citation.confidenceScore != null || citation.contextText || citation.documentId;
+  const shouldHighlight = citation.retrievalModality !== 'summary' && Boolean(citation.bboxes?.length);
+  const originalHref = citation.documentId
+    ? `/d/${citation.documentId}?page=${citation.page}${shouldHighlight ? `&highlight=${citation.chunkId}` : ''}`
+    : '';
   if (!hasExtra) return <>{children}</>;
 
   return (
@@ -67,7 +71,7 @@ export default function CitationPopover({ citation, children }: CitationPopoverP
           )}
           {citation.documentId && (
             <a
-              href={`/d/${citation.documentId}?page=${citation.page}&highlight=${citation.chunkId}`}
+              href={originalHref}
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex items-center gap-1 mt-2 text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300 transition-colors"

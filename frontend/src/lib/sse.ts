@@ -16,6 +16,7 @@ type CitationEventPayload = CitationPayload & {
   document_filename?: string;
   confidence_score?: number;
   context_text?: string;
+  retrieval_modality?: string;
 };
 type ErrorPayload = { code: string; message: string; status?: number };
 type DonePayload = { message_id: string; can_continue?: boolean; continuation_count?: number };
@@ -82,6 +83,7 @@ async function _processSSEStream(
                 documentFilename: typeof p.document_filename === 'string' ? p.document_filename : undefined,
                 confidenceScore: typeof p.confidence_score === 'number' ? p.confidence_score : undefined,
                 contextText: typeof p.context_text === 'string' ? p.context_text : undefined,
+                retrievalModality: typeof p.retrieval_modality === 'string' ? p.retrieval_modality : undefined,
               };
               onCitation(c);
               break; }

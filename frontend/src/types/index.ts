@@ -21,6 +21,7 @@ export interface Citation {
   documentFilename?: string; // source document name
   confidenceScore?: number; // Qdrant similarity score 0.0-1.0
   contextText?: string; // extended context (~300 chars) for hover preview
+  retrievalModality?: string; // text/table/summary
 }
 
 export interface ChatArtifactDownload {
