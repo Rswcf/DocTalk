@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import PdfAiAltsClient from './PdfAiAltsClient';
+import PdfAiAltsContent from './PdfAiAltsContent';
 import { buildArticleJsonLd, buildMarketingMetadata } from '../../../lib/seo';
 
 export const metadata: Metadata = buildMarketingMetadata({
@@ -7,6 +7,7 @@ export const metadata: Metadata = buildMarketingMetadata({
   description:
     'Looking for PDF.ai alternatives? Compare DocTalk, ChatPDF, AskYourPDF, Humata, NotebookLM, ChatDOC, and Sharly. Find the best AI document tool for your needs.',
   path: '/alternatives/pdf-ai',
+  localized: true,
   keywords: ['pdf.ai alternative', 'pdf ai alternatives 2026', 'tools like pdf.ai'],
   openGraph: {
     title: '7 Best PDF.ai Alternatives in 2026 (Free & Paid) | DocTalk',
@@ -111,7 +112,7 @@ export default function PdfAiAltsPage() {
           }),
         }}
       />
-      <PdfAiAltsClient />
+      <PdfAiAltsContent locale="en" />
     </>
   );
 }

@@ -20,7 +20,6 @@ const loaders: Record<string, () => Promise<{ default: Messages }>> = {
   ko: () => import('./locales/ko.json'),
   de: () => import('./locales/de.json'),
   fr: () => import('./locales/fr.json'),
-  pt: () => import('./locales/pt.json'),
 };
 
 function applyParams(str: string, params?: Record<string, string | number>): string {

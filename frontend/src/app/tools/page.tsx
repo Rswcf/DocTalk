@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import ToolsHubClient from './ToolsHubClient';
+import ToolsHubContent from './ToolsHubContent';
 import { buildMarketingMetadata } from '../../lib/seo';
 
 export const metadata: Metadata = buildMarketingMetadata({
@@ -7,6 +7,7 @@ export const metadata: Metadata = buildMarketingMetadata({
   description:
     'Free online document tools: word counter, reading time calculator, and more. No sign-up required. Powered by DocTalk.',
   path: '/tools',
+  localized: true,
   keywords: [
     'free document tools',
     'free pdf tools online',
@@ -53,7 +54,7 @@ export default function ToolsHubPage() {
           }),
         }}
       />
-      <ToolsHubClient />
+      <ToolsHubContent locale="en" />
     </>
   );
 }

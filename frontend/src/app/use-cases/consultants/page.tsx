@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import ConsultantsClient from './ConsultantsClient';
+import ConsultantsContent from './ConsultantsContent';
 import { buildArticleJsonLd, buildMarketingMetadata } from '../../../lib/seo';
 
 export const metadata: Metadata = buildMarketingMetadata({
@@ -7,6 +7,7 @@ export const metadata: Metadata = buildMarketingMetadata({
   description:
     'Analyze RFPs, market research reports, financial statements, and client documents with AI. Get cited answers to accelerate consulting workflows.',
   path: '/use-cases/consultants',
+  localized: true,
   keywords: ['ai for consultants', 'consulting document analysis', 'ai report analysis', 'business document ai'],
   openGraph: {
     title: 'AI Document Analysis for Consultants and Advisors | DocTalk',
@@ -91,7 +92,7 @@ export default function ConsultantsPage() {
           }),
         }}
       />
-      <ConsultantsClient />
+      <ConsultantsContent locale="en" />
     </>
   );
 }

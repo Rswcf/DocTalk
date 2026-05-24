@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import HrContractsClient from './HrContractsClient';
+import HrContractsContent from './HrContractsContent';
 import { buildArticleJsonLd, buildMarketingMetadata } from '../../../lib/seo';
 
 export const metadata: Metadata = buildMarketingMetadata({
@@ -7,6 +7,7 @@ export const metadata: Metadata = buildMarketingMetadata({
   description:
     'Review employment contracts, HR policies, and company handbooks with AI. Get instant answers about specific clauses with source citations.',
   path: '/use-cases/hr-contracts',
+  localized: true,
   keywords: ['hr contract ai', 'employment document analysis', 'hr document review ai'],
   openGraph: {
     title: 'AI Contract & HR Document Review Tool | DocTalk',
@@ -86,7 +87,7 @@ export default function HrContractsPage() {
           }),
         }}
       />
-      <HrContractsClient />
+      <HrContractsContent locale="en" />
     </>
   );
 }

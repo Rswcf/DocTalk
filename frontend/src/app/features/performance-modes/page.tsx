@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import PerformanceModesClient from './PerformanceModesClient';
+import PerformanceModesContent from './PerformanceModesContent';
 import { buildMarketingMetadata } from '../../../lib/seo';
 
 export const metadata: Metadata = buildMarketingMetadata({
@@ -7,6 +7,7 @@ export const metadata: Metadata = buildMarketingMetadata({
   description:
     'Choose Flash or Pro mode for AI document chat. Match response speed, depth, and cost to the task at hand.',
   path: '/features/performance-modes',
+  localized: true,
   keywords: ['ai performance modes', 'flash pro ai modes', 'ai model selection'],
   openGraph: {
     title: 'Flash and Pro AI Modes | DocTalk',
@@ -101,7 +102,7 @@ export default function PerformanceModesPage() {
         }}
       />
 
-      <PerformanceModesClient />
+      <PerformanceModesContent locale="en" />
     </>
   );
 }

@@ -1,0 +1,47 @@
+# Codex Review - International SEO Phase B
+
+1. **[Must-fix]** `frontend/src/app/[locale]/features/citations/page.tsx:8`, `frontend/src/app/[locale]/features/multi-format/page.tsx:8`, `frontend/src/app/[locale]/features/page.tsx:8`, `frontend/src/app/[locale]/tools/page.tsx:8`, `frontend/src/app/[locale]/use-cases/compliance/page.tsx:8`, and `frontend/src/app/[locale]/use-cases/real-estate/page.tsx:8` point `descKey` at keys that do not exist in `en/ja/es/ko/de/fr/pt`. Because `createMarketingLocalePage()` feeds `t(descKey)` straight into metadata (`frontend/src/lib/marketingLocalePage.tsx:41`) and generic JSON-LD uses the same key (`frontend/src/components/marketing/MarketingArticleJsonLd.tsx:30`), these locale pages emit raw strings like `featuresCitations.heroDescription` as meta description, OpenGraph description, and Article JSON-LD description. Use the visible-content keys instead: `featuresCitations.heroSubtitle`, `featuresMultiFormat.heroSubtitle`, `featuresHub.heroSubtitle`, `toolsHub.heroLede`, `useCasesCompliance.heroLede`, and `useCasesRealEstate.heroLede`.
+
+2. **[Must-fix]** Multiple newly localized server pages still contain hard-coded English citation/source prose in the visible body, outside translation keys: `frontend/src/app/use-cases/students/StudentsContent.tsx:132`, `frontend/src/app/use-cases/finance/FinanceContent.tsx:73`, `frontend/src/app/use-cases/finance/FinanceContent.tsx:77`, `frontend/src/app/use-cases/hr-contracts/HrContractsContent.tsx:109`, `frontend/src/app/use-cases/hr-contracts/HrContractsContent.tsx:113`, `frontend/src/app/compare/chatpdf/ChatpdfContent.tsx:81`, `frontend/src/app/compare/askyourpdf/AskyourpdfContent.tsx:77`, `frontend/src/app/compare/humata/HumataContent.tsx:84`, `frontend/src/app/compare/notebooklm/NotebooklmContent.tsx:88`, and `frontend/src/app/compare/pdf-ai/PdfaiContent.tsx:84`. This is not the known Phase A lawyers/footer carryover; it is new Phase B English body copy on locale URLs. Split these sentences into translated pre/link/post keys, or equivalent localized rich-text fragments, for all six URL locales.
+
+3. **[Must-fix]** Localized hub pages still link their primary cards to unprefixed English detail URLs: `frontend/src/app/use-cases/UseCasesHubContent.tsx:64`, `frontend/src/app/compare/CompareHubContent.tsx:66`, `frontend/src/app/alternatives/AlternativesHubContent.tsx:69`, and `frontend/src/app/features/FeaturesHubContent.tsx:79`. For example, `/de/use-cases` links to `/use-cases/students` instead of `/de/use-cases/students`, and `/de/compare` links to `/compare/chatpdf` instead of `/de/compare/chatpdf`. That breaks the in-locale crawl path the spec requires. Wrap these generated detail links with the existing `href(...)` helper. I am not flagging `ToolsHubContent.tsx:73` because the two tool detail pages are explicitly deferred and are not in `LOCALIZED_PATHS`.
+
+4. **[Should-fix]** `frontend/src/components/marketing/EdComparisonTable.tsx:71` and `frontend/src/components/marketing/EdInlineCell.tsx:13` still call `useLocale()` inside client islands used by localized server pages, while `LocaleProvider` SSRs with `locale = 'en'` and only switches after mount (`frontend/src/i18n/LocaleProvider.tsx:59`, `frontend/src/i18n/LocaleProvider.tsx:62`). As a result, initial HTML for locale pages using these islands can still contain English table chrome such as the default `Feature` header (`frontend/src/components/marketing/EdComparisonTable.tsx:72`) and visible `~ Partial` cells (`frontend/src/components/marketing/EdInlineCell.tsx:58`). Example callers include `frontend/src/app/compare/chatpdf/ChatpdfContent.tsx:74` and `frontend/src/app/features/multilingual/MultilingualContent.tsx:201`. Pass these labels from the server translator, or make the table/cell components accept localized label props.
+
+5. **[Question]** `frontend/src/components/marketing/MarketingArticleJsonLd.tsx:28` emits `Article` JSON-LD for every factory page, including hubs, `/tools`, and `/trust`, and `frontend/src/lib/marketingLocalePage.tsx:25-36` has no per-page schema type/date override beyond `datePublished`. If this is intentionally a lean generic schema for locale pages, it is acceptable. If the goal is structured data matching page type as tightly as the English roots, add a page-type override for `CollectionPage`/`WebPage` cases later. This is not blocking the rollout.
+
+Checks that did not produce findings:
+
+- All 30 `LOCALIZED_PATHS` entries match the 30 `app/[locale]/.../page.tsx` routes exactly.
+- Every converted `*Content.tsx` I checked has `chrome={chrome}` on `MarketingShell` and includes `MarketingLocaleLinks`.
+- I did not find direct `usePageTitle`, `useRouter`, `useSearchParams`, `useState`, `useEffect`, `onClick`, or `onSubmit` usage left inside the converted server `*Content.tsx` files.
+- Root English pages for the localized path set all have `localized: true`; sitemap and metadata alternates use the same locale set and appear reciprocal.
+- The deferred set still makes sense: landing, pricing, demo, and the interactive tool detail pages need a client-island pass rather than a mechanical server conversion.
+- The known Phase A `tOr` English fallbacks for lawyers citation fragments and `footer.tagline` remain non-blocking carryover, but the hard-coded prose in finding 2 is a separate Phase B regression.
+
+Final verdict: **SHIP-AFTER-MUSTFIX**.
+
+## Round 2
+
+Per-finding status:
+
+1. **CONFIRMED.** The six bad `descKey` values now point at existing content keys: `toolsHub.heroLede`, `featuresHub.heroSubtitle`, `featuresMultiFormat.heroSubtitle`, `featuresCitations.heroSubtitle`, `useCasesRealEstate.heroLede`, and `useCasesCompliance.heroLede`. I also validated all 30 localized page files mechanically against `frontend/src/i18n/locales/en.json`; every factory `titleKey`/`descKey` resolves to a flat string, and the special lawyers page resolves its metadata keys through `generateMetadata`. A second check against `en/ja/es/ko/de/fr/pt` found all metadata keys present; `/de/features/citations` uses a real German `featuresCitations.heroSubtitle`, not a raw key.
+
+2. **CONFIRMED for the hard-coded JSX prose originally flagged.** The "Resources like ..." and "RAG-based approach ..." English clauses are gone from the inspected content files, including compare/humata, compare/notebooklm, compare/pdf-ai, use-cases/finance, use-cases/hr-contracts, and lawyers. I did not find malformed JSX, empty `<p>` nodes, broken `<EdProse>`, or dropped internal `<Link>` elements in those files. The remaining literal anchors are product names such as `ChatPDF`, `Humata`, `NotebookLM`, `PDF.ai`, and `AskYourPDF`, followed by translated `t(...)` text, which is acceptable.
+
+3. **CONFIRMED.** The four originally flagged hub detail links now wrap generated paths with `href(...)`: `UseCasesHubContent`, `CompareHubContent`, `AlternativesHubContent`, and `FeaturesHubContent`. The JSX-attr and object-property forms are both fixed. A search for remaining template-literal marketing hrefs only found `frontend/src/app/tools/ToolsHubContent.tsx:73` (`/tools/${tool.slug}`), which remains acceptable because those tool detail pages are explicitly outside `LOCALIZED_PATHS`.
+
+4. **ACCEPTED DEFERRED.** The `EdComparisonTable` / `EdInlineCell` initial-SSR English chrome remains as described. I still classify this as should-fix follow-up rather than a release blocker because it is small table chrome and self-corrects after hydration.
+
+5. **ACCEPTED DEFERRED.** The generic `Article` JSON-LD remains lean. This is not blocking.
+
+New issues:
+
+1. **[Must-fix] Portuguese locale pages still SSR large mixed-English body prose from translation values.** This is not the hard-coded JSX problem from finding 2, but it still violates the "no English-at-SSR body prose" bar for localized pages. Examples include `frontend/src/i18n/locales/pt.json:502`, `:607`, `:705`, `:811`, `:890`, and `:891`, which are rendered by `frontend/src/app/compare/askyourpdf/AskyourpdfContent.tsx:105`, `frontend/src/app/compare/chatpdf/ChatpdfContent.tsx:109`, `frontend/src/app/compare/humata/HumataContent.tsx:104`, `frontend/src/app/compare/notebooklm/NotebooklmContent.tsx:108`, and `frontend/src/app/compare/pdf-ai/PdfaiContent.tsx:102` / `:104`. Additional visible Portuguese leaks are in alternative and lawyers pages, for example `frontend/src/i18n/locales/pt.json:136`, `:199`, `:243`, and `:2102`, rendered by `frontend/src/app/alternatives/humata/HumataAltsContent.tsx:75`, `frontend/src/app/alternatives/notebooklm/NotebooklmAltsContent.tsx:34` / `:76`, and `frontend/src/app/use-cases/lawyers/LawyersContent.tsx:152`. These strings contain full English sentences such as citation instructions and source-verification prose, so Portuguese URLs are still not clean localized SSR pages.
+
+Checks:
+
+- `npm run build` from `frontend/` did not complete in this sandbox because `next/font` could not resolve `fonts.googleapis.com` for Inter, Sora, Newsreader, and IBM Plex Mono (`getaddrinfo ENOTFOUND`). I cannot confirm the 263-page build here; this looks like the network-restricted environment rather than a TypeScript/app compile failure.
+- Searches for the removed JSX phrases (`Resources like`, `RAG-based approach`, `SEC EDGAR`) did not find those phrases in the changed TSX body files.
+
+Final verdict: **SHIP-AFTER-MUSTFIX**. The original must-fixes are addressed, but the Portuguese mixed-English SSR body copy must be cleaned before shipping Phase B as an international SEO rollout.

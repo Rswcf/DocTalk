@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import ChatpdfAltsClient from './ChatpdfAltsClient';
+import ChatpdfAltsContent from './ChatpdfAltsContent';
 import { buildArticleJsonLd, buildMarketingMetadata } from '../../../lib/seo';
 
 export const metadata: Metadata = buildMarketingMetadata({
@@ -7,6 +7,7 @@ export const metadata: Metadata = buildMarketingMetadata({
   description:
     'Looking for ChatPDF alternatives? Compare DocTalk, AskYourPDF, Humata, NotebookLM, PDF.ai, ChatDOC, and Sharly. Find the best AI document tool for your needs.',
   path: '/alternatives/chatpdf',
+  localized: true,
   keywords: ['chatpdf alternatives', 'best chatpdf alternative', 'chatpdf replacement'],
   openGraph: {
     title: '7 Best ChatPDF Alternatives in 2026 (Free & Paid) | DocTalk',
@@ -111,7 +112,7 @@ export default function ChatpdfAltsPage() {
           }),
         }}
       />
-      <ChatpdfAltsClient />
+      <ChatpdfAltsContent locale="en" />
     </>
   );
 }

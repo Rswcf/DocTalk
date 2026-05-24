@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import TrustPageClient from './TrustPageClient';
+import TrustPageContent from './TrustPageContent';
 import { buildMarketingMetadata } from '../../lib/seo';
 
 export const metadata: Metadata = buildMarketingMetadata({
@@ -7,6 +7,7 @@ export const metadata: Metadata = buildMarketingMetadata({
   description:
     'How DocTalk secures your documents: AES-256 encryption at rest, SSRF protection, magic-byte validation, zero-retention LLM calls, GDPR data rights, and what we have not yet certified.',
   path: '/trust',
+  localized: true,
   openGraph: {
     title: 'Trust & Security | DocTalk',
     description: 'The real security and privacy controls in place for DocTalk.',
@@ -29,7 +30,7 @@ export default function TrustPage() {
           }),
         }}
       />
-      <TrustPageClient />
+      <TrustPageContent locale="en" />
     </>
   );
 }

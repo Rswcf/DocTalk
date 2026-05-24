@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import FinanceClient from './FinanceClient';
+import FinanceContent from './FinanceContent';
 import { buildArticleJsonLd, buildMarketingMetadata } from '../../../lib/seo';
 
 export const metadata: Metadata = buildMarketingMetadata({
@@ -7,6 +7,7 @@ export const metadata: Metadata = buildMarketingMetadata({
   description:
     'Analyze 10-K filings, earnings reports, and financial documents with AI. Ask questions and get cited answers tied to specific figures and sections.',
   path: '/use-cases/finance',
+  localized: true,
   keywords: ['ai for finance', 'financial document ai', 'annual report ai analysis'],
   openGraph: {
     title: 'AI Financial Report Analysis | DocTalk',
@@ -91,7 +92,7 @@ export default function FinancePage() {
           }),
         }}
       />
-      <FinanceClient />
+      <FinanceContent locale="en" />
     </>
   );
 }

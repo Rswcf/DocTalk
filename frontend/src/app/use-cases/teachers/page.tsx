@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import TeachersClient from './TeachersClient';
+import TeachersContent from './TeachersContent';
 import { buildArticleJsonLd, buildMarketingMetadata } from '../../../lib/seo';
 
 export const metadata: Metadata = buildMarketingMetadata({
@@ -7,6 +7,7 @@ export const metadata: Metadata = buildMarketingMetadata({
   description:
     'Help teachers review lesson plans, research papers, curriculum guides, and student submissions with AI. Get cited answers from any uploaded document.',
   path: '/use-cases/teachers',
+  localized: true,
   keywords: ['ai for teachers', 'teacher document analysis', 'ai grading tool', 'education ai tool'],
   openGraph: {
     title: 'AI Document Analysis for Teachers and Educators | DocTalk',
@@ -91,7 +92,7 @@ export default function TeachersPage() {
           }),
         }}
       />
-      <TeachersClient />
+      <TeachersContent locale="en" />
     </>
   );
 }

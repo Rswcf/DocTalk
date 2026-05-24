@@ -12,7 +12,7 @@
  */
 
 // Locales that have crawlable, server-rendered marketing URLs (en is the unprefixed default).
-export const URL_LOCALES = ['ja', 'es', 'ko', 'de', 'fr', 'pt'] as const;
+export const URL_LOCALES = ['ja', 'es', 'ko', 'de', 'fr'] as const;
 export type UrlLocale = (typeof URL_LOCALES)[number];
 
 // All locales that participate in hreflang (the unprefixed default + the prefixed set).
@@ -31,6 +31,35 @@ export function isUrlLocale(value: string | undefined | null): value is UrlLocal
  */
 export const LOCALIZED_PATHS: ReadonlySet<string> = new Set<string>([
   '/use-cases/lawyers',
+  '/use-cases/finance',
+  '/use-cases/students',
+  '/use-cases/teachers',
+  '/use-cases/consultants',
+  '/use-cases/healthcare',
+  '/use-cases/hr-contracts',
+  '/use-cases/real-estate',
+  '/use-cases/compliance',
+  '/features/citations',
+  '/features/free-demo',
+  '/features/multi-format',
+  '/features/multilingual',
+  '/features/performance-modes',
+  '/compare/askyourpdf',
+  '/compare/chatpdf',
+  '/compare/humata',
+  '/compare/notebooklm',
+  '/compare/pdf-ai',
+  '/alternatives/askyourpdf',
+  '/alternatives/chatpdf',
+  '/alternatives/humata',
+  '/alternatives/notebooklm',
+  '/alternatives/pdf-ai',
+  '/use-cases',
+  '/compare',
+  '/alternatives',
+  '/features',
+  '/tools',
+  '/trust',
 ]);
 
 /** Normalize a path for matching: drop query/hash and a single trailing slash (except root). */

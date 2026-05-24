@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import ComplianceClient from './ComplianceClient';
+import ComplianceContent from './ComplianceContent';
 import { buildArticleJsonLd, buildMarketingMetadata } from '../../../lib/seo';
 
 export const metadata: Metadata = buildMarketingMetadata({
@@ -7,6 +7,7 @@ export const metadata: Metadata = buildMarketingMetadata({
   description:
     'Analyze regulations, internal policies, audit reports, and compliance frameworks with AI. Cross-reference documents and get cited answers.',
   path: '/use-cases/compliance',
+  localized: true,
   keywords: ['ai compliance document review', 'regulatory document analysis ai', 'compliance ai tool', 'risk document analysis'],
   openGraph: {
     title: 'AI Document Analysis for Compliance and Risk Teams | DocTalk',
@@ -91,7 +92,7 @@ export default function CompliancePage() {
           }),
         }}
       />
-      <ComplianceClient />
+      <ComplianceContent locale="en" />
     </>
   );
 }

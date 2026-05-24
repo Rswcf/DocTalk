@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import AlternativesHubClient from './AlternativesHubClient';
+import AlternativesHubContent from './AlternativesHubContent';
 import { buildMarketingMetadata } from '../../lib/seo';
 
 export const metadata: Metadata = buildMarketingMetadata({
@@ -7,6 +7,7 @@ export const metadata: Metadata = buildMarketingMetadata({
   description:
     'Find the best alternatives to ChatPDF, NotebookLM, Humata, AskYourPDF, PDF.ai, and other AI document tools with comparisons on features, pricing, and best-fit use cases.',
   path: '/alternatives',
+  localized: true,
   keywords: ['ai pdf alternatives', 'chatpdf alternatives', 'document ai tools'],
   openGraph: {
     title: 'AI Document Tool Alternatives | DocTalk',
@@ -29,7 +30,7 @@ export default function AlternativesHubPage() {
           }),
         }}
       />
-      <AlternativesHubClient />
+      <AlternativesHubContent locale="en" />
     </>
   );
 }

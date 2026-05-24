@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import ChatpdfClient from './ChatpdfClient';
+import ChatpdfContent from './ChatpdfContent';
 import { buildArticleJsonLd, buildMarketingMetadata } from '../../../lib/seo';
 
 export const metadata: Metadata = buildMarketingMetadata({
@@ -7,6 +7,7 @@ export const metadata: Metadata = buildMarketingMetadata({
   description:
     'Compare DocTalk and ChatPDF for AI document analysis. See citation quality, format support, pricing, and which tool fits your workflow.',
   path: '/compare/chatpdf',
+  localized: true,
   keywords: ['doctalk vs chatpdf', 'chatpdf alternative', 'chatpdf comparison'],
   openGraph: {
     title: 'DocTalk vs ChatPDF: Full Comparison (2026) | DocTalk',
@@ -86,7 +87,7 @@ export default function CompareChatpdfPage() {
           }),
         }}
       />
-      <ChatpdfClient />
+      <ChatpdfContent locale="en" />
     </>
   );
 }
