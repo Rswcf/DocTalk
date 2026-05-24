@@ -3,6 +3,8 @@ from __future__ import annotations
 from datetime import date, datetime, timezone
 from types import SimpleNamespace
 
+from sqlalchemy.dialects import postgresql
+
 from app.api import admin as admin_api
 
 
@@ -65,8 +67,32 @@ def test_admin_retention_builds_cohorts_curves_segments_and_excludes_owner() -> 
 
     may_4_cohort = next(row for row in payload["cohort_grid"] if row["cohort_week"] == "2026-05-04")
     assert may_4_cohort["cohort_size"] == 2
-    assert may_4_cohort["retention"][0] == {"week_offset": 0, "active_users": 2, "pct": 1.0}
-    assert may_4_cohort["retention"][1] == {"week_offset": 1, "active_users": 1, "pct": 0.5}
+    assert may_4_cohort["retention"][0] == {
+        "week_offset": 0,
+        "active_users": 2,
+        "pct": 1.0,
+        "is_complete": True,
+    }
+    assert may_4_cohort["retention"][1] == {
+        "week_offset": 1,
+        "active_users": 1,
+        "pct": 0.5,
+        "is_complete": True,
+    }
+
+    current_cohort = next(row for row in payload["cohort_grid"] if row["cohort_week"] == "2026-06-15")
+    assert current_cohort["retention"][0] == {
+        "week_offset": 0,
+        "active_users": None,
+        "pct": None,
+        "is_complete": False,
+    }
+    assert current_cohort["retention"][1] == {
+        "week_offset": 1,
+        "active_users": None,
+        "pct": None,
+        "is_complete": False,
+    }
 
     curves = {row["key"]: row for row in payload["curves"]}
     assert curves["d1"]["activated_users"] == 3
@@ -86,3 +112,55 @@ def test_admin_retention_builds_cohorts_curves_segments_and_excludes_owner() -> 
     assert doc_segments["large"]["users"] == 1
 
     assert payload["dau_wau_mau"]["mau"] == 2
+
+
+def test_admin_retention_curves_only_count_matured_users_in_denominator() -> None:
+    now = datetime(2026, 6, 15, 12, tzinfo=timezone.utc)
+    users = [
+        _row(id="u_old", email="old@example.com", created_at=datetime(2026, 5, 1, tzinfo=timezone.utc), plan="free"),
+        _row(id="u_recent", email="recent@example.com", created_at=datetime(2026, 6, 10, tzinfo=timezone.utc), plan="free"),
+        _row(id="u_today", email="today@example.com", created_at=datetime(2026, 6, 15, tzinfo=timezone.utc), plan="free"),
+    ]
+    activity_days = [
+        _row(user_id="u_old", activity_date=date(2026, 5, 1)),
+        _row(user_id="u_old", activity_date=date(2026, 5, 2)),
+        _row(user_id="u_old", activity_date=date(2026, 5, 8)),
+        _row(user_id="u_old", activity_date=date(2026, 5, 31)),
+        _row(user_id="u_recent", activity_date=date(2026, 6, 10)),
+        _row(user_id="u_recent", activity_date=date(2026, 6, 11)),
+        _row(user_id="u_today", activity_date=date(2026, 6, 15)),
+    ]
+
+    payload = admin_api._build_retention_payload(
+        now=now,
+        users=users,
+        activity_days=activity_days,
+        document_segments=[],
+        locale_segments=[],
+        excluded_user_ids=set(),
+        admin_emails=set(),
+    )
+
+    curves = {row["key"]: row for row in payload["curves"]}
+    assert curves["d1"]["activated_users"] == 2
+    assert curves["d1"]["returned_users"] == 2
+    assert curves["d1"]["pct"] == 1.0
+    assert curves["d7"]["activated_users"] == 1
+    assert curves["d7"]["returned_users"] == 1
+    assert curves["d7"]["pct"] == 1.0
+    assert curves["d30"]["activated_users"] == 1
+    assert curves["d30"]["returned_users"] == 1
+    assert curves["d30"]["pct"] == 1.0
+
+
+def test_admin_activity_day_expression_truncates_in_utc() -> None:
+    expression = admin_api._utc_day_trunc(admin_api.Message.created_at)
+
+    compiled = str(
+        expression.compile(
+            dialect=postgresql.dialect(),
+            compile_kwargs={"literal_binds": True},
+        )
+    )
+
+    assert "date_trunc('day', messages.created_at AT TIME ZONE 'UTC')" in compiled

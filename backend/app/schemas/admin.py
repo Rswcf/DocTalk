@@ -222,8 +222,9 @@ class AdminUserActivityResponse(BaseModel):
 
 class AdminRetentionCell(BaseModel):
     week_offset: int
-    active_users: int
-    pct: float
+    active_users: int | None = None
+    pct: float | None = None
+    is_complete: bool = True
 
 
 class AdminRetentionCohort(BaseModel):
@@ -326,7 +327,6 @@ class AdminChurnFeedbackSummary(BaseModel):
 
 class AdminChurnCancelReasonItem(BaseModel):
     id: str
-    user_id: str
     from_plan: str
     to_plan: str
     reason: str | None = None

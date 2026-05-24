@@ -11,7 +11,8 @@ import type { AdminChurnSignalItem } from "../../lib/api";
 import { formatNumber, formatPercent } from "../../lib/formatNumber";
 import { useLocale } from "../../i18n";
 
-const COLORS = ["#1D4ED8", "#0F766E", "#52525B", "#DC2626", "#9333EA", "#2563EB"];
+// App palette only: blue intensities + zinc variants (no teal/red/purple).
+const COLORS = ["#1D4ED8", "#3B82F6", "#52525B", "#60A5FA", "#A1A1AA", "#2563EB"];
 
 export default function ReasonBucketsDonut({ buckets }: { buckets: AdminChurnSignalItem[] }) {
   const { tOr } = useLocale();

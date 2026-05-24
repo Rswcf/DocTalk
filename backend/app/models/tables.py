@@ -244,6 +244,7 @@ class Message(Base):
 
     __table_args__ = (
         sa.Index("idx_messages_session", "session_id", "created_at"),
+        sa.Index("idx_messages_role_created_session", "role", "created_at", "session_id"),
     )
 
 

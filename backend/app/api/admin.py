@@ -130,6 +130,7 @@ REASON_BUCKET_LABELS = {
     "parse": "Parse failure",
     "capability_refusal": "Capability refusal",
     "one_off_success": "One-off success",
+    "uncategorized": "Uncategorized",
 }
 EXPORT_REQUEST_RE = re.compile(r"\b(export|download|csv|excel|xlsx)\b|导出|下载|表格文件", re.IGNORECASE)
 PAGE_REQUEST_RE = re.compile(r"\b(page|p\.\s*\d+|page\s+\d+)\b|第\s*\d+\s*页|页面", re.IGNORECASE)
@@ -232,6 +233,10 @@ def _as_date(value: Any) -> date:
 def _week_start(value: Any) -> date:
     day = _as_date(value)
     return day - timedelta(days=day.weekday())
+
+
+def _utc_day_trunc(column: Any) -> Any:
+    return func.date_trunc("day", column.op("AT TIME ZONE")("UTC"))
 
 
 def _admin_excluded_emails(admin_emails: set[str] | None = None) -> set[str]:
@@ -369,12 +374,22 @@ def _build_retention_payload(
         user_id: {_week_start(active_date) for active_date in active_dates}
         for user_id, active_dates in active_dates_by_user.items()
     }
+    today = now.date()
     cohort_grid = []
     for cohort_week in cohort_weeks:
         users_in_cohort = cohort_users[cohort_week]
         retention = []
         for week_offset in range(RETENTION_OFFSETS):
             target_week = cohort_week + timedelta(weeks=week_offset)
+            is_complete = target_week + timedelta(days=6) <= today
+            if not is_complete:
+                retention.append({
+                    "week_offset": week_offset,
+                    "active_users": None,
+                    "pct": None,
+                    "is_complete": False,
+                })
+                continue
             active_users = {
                 user_id
                 for user_id in users_in_cohort
@@ -384,6 +399,7 @@ def _build_retention_payload(
                 "week_offset": week_offset,
                 "active_users": len(active_users),
                 "pct": _rate(len(active_users), len(users_in_cohort)),
+                "is_complete": True,
             })
         cohort_grid.append({
             "cohort_week": cohort_week.isoformat(),
@@ -394,22 +410,26 @@ def _build_retention_payload(
     curves = []
     for days in RETENTION_DAYS:
         returned_users = 0
+        matured_active_dates = []
+        maturity_cutoff = today - timedelta(days=days)
         for active_dates in active_dates_by_user.values():
             if not active_dates:
                 continue
             first_active = min(active_dates)
+            if first_active > maturity_cutoff:
+                continue
+            matured_active_dates.append(active_dates)
             if any(first_active < active_date <= first_active + timedelta(days=days) for active_date in active_dates):
                 returned_users += 1
         curves.append({
             "key": f"d{days}",
             "label": f"D{days}",
             "days": days,
-            "activated_users": len(activated_user_ids),
+            "activated_users": len(matured_active_dates),
             "returned_users": returned_users,
-            "pct": _rate(returned_users, len(activated_user_ids)),
+            "pct": _rate(returned_users, len(matured_active_dates)),
         })
 
-    today = now.date()
     dau_series = []
     for offset in range(29, -1, -1):
         day = today - timedelta(days=offset)
@@ -562,13 +582,83 @@ def _serialize_cancel_reason(row: Any) -> dict[str, Any]:
         feedback = metadata.get("cancel_feedback") or metadata.get("feedback")
     return {
         "id": str(_row_value(row, "id")),
-        "user_id": str(_row_value(row, "user_id")),
         "from_plan": str(_row_value(row, "from_plan") or ""),
         "to_plan": str(_row_value(row, "to_plan") or ""),
         "reason": str(reason) if reason else None,
         "feedback": str(feedback) if feedback else None,
         "created_at": created_at.isoformat() if hasattr(created_at, "isoformat") else None,
     }
+
+
+def _message_is_rag_miss(row: Any) -> bool:
+    content = _row_value(row, "content") or ""
+    return _citations_empty(_row_value(row, "citations")) or bool(RAG_MISS_RE.search(content))
+
+
+def _derive_message_diagnostics(
+    message_rows: list[Any],
+    *,
+    asst_zero_session_ids: set[str],
+) -> tuple[dict[str, set[str]], dict[str, tuple[datetime, str]]]:
+    signal_users: dict[str, set[str]] = {
+        "rag_miss": set(),
+        "export_refusal": set(),
+        "page_fail": set(),
+        "capability_refusal": set(),
+    }
+    final_candidates: dict[str, tuple[datetime, str]] = {}
+    pending_export_by_session: dict[str, set[str]] = defaultdict(set)
+    pending_page_by_session: dict[str, set[str]] = defaultdict(set)
+
+    def sort_key(row: Any) -> tuple[str, datetime]:
+        created_at = _row_value(row, "created_at")
+        if not isinstance(created_at, datetime):
+            created_at = datetime.min.replace(tzinfo=timezone.utc)
+        return (str(_row_value(row, "session_id") or ""), created_at)
+
+    for row in sorted(message_rows, key=sort_key):
+        user_id = str(_row_value(row, "user_id"))
+        session_id = str(_row_value(row, "session_id"))
+        role = _row_value(row, "role")
+        created_at = _row_value(row, "created_at")
+        category = "user_message"
+
+        if role == "user":
+            content = _row_value(row, "content") or ""
+            if EXPORT_REQUEST_RE.search(content):
+                pending_export_by_session[session_id].add(user_id)
+            if PAGE_REQUEST_RE.search(content):
+                pending_page_by_session[session_id].add(user_id)
+            if session_id in asst_zero_session_ids:
+                category = "asst_zero"
+        elif role == "assistant":
+            is_rag_miss = _message_is_rag_miss(row)
+            if is_rag_miss:
+                signal_users["rag_miss"].add(user_id)
+                category = "rag_miss"
+            elif CAPABILITY_REFUSAL_RE.search(_row_value(row, "content") or ""):
+                signal_users["capability_refusal"].add(user_id)
+                category = "capability_refusal"
+            else:
+                category = "normal_answer"
+
+            pending_export_user_ids = pending_export_by_session.pop(session_id, set())
+            if pending_export_user_ids and not _message_has_artifact(_row_value(row, "metadata_json")):
+                signal_users["export_refusal"].update(pending_export_user_ids)
+
+            pending_page_user_ids = pending_page_by_session.pop(session_id, set())
+            if pending_page_user_ids and is_rag_miss:
+                signal_users["page_fail"].update(pending_page_user_ids)
+
+        if isinstance(created_at, datetime):
+            current = final_candidates.get(user_id)
+            if current is None or created_at > current[0]:
+                final_candidates[user_id] = (created_at, category)
+
+    for pending_export_user_ids in pending_export_by_session.values():
+        signal_users["export_refusal"].update(pending_export_user_ids)
+
+    return signal_users, final_candidates
 
 
 def _build_churn_payload(
@@ -671,6 +761,8 @@ def _build_churn_payload(
             bucket_counts["capability_refusal"] += 1
         elif user_id in one_and_done_user_ids:
             bucket_counts["one_off_success"] += 1
+        else:
+            bucket_counts["uncategorized"] += 1
 
     reason_buckets = [
         {
@@ -1573,7 +1665,7 @@ async def admin_retention(
         )
     ).all()
 
-    activity_day = func.date_trunc("day", Message.created_at).label("activity_date")
+    activity_day = _utc_day_trunc(Message.created_at).label("activity_date")
     activity_rows = (
         await db.execute(
             select(ChatSession.user_id.label("user_id"), activity_day)
@@ -1653,7 +1745,7 @@ async def admin_churn(
         )
     ).all()
 
-    activity_day = func.date_trunc("day", Message.created_at).label("activity_date")
+    activity_day = _utc_day_trunc(Message.created_at).label("activity_date")
     activity_rows = (
         await db.execute(
             select(ChatSession.user_id.label("user_id"), activity_day)
@@ -1722,43 +1814,16 @@ async def admin_churn(
             .where(Message.created_at >= activity_cutoff)
             .where(ChatSession.user_id.is_not(None))
             .where(*_eligible_user_conditions())
+            .order_by(Message.session_id, Message.created_at)
         )
     ).all()
 
-    export_request_users: set[str] = set()
-    export_artifact_users: set[str] = set()
-    page_request_users: set[str] = set()
-    final_candidates: dict[str, tuple[datetime, str]] = {}
-    for row in message_rows:
-        user_id = str(row.user_id)
-        created_at = row.created_at
-        category = "user_message"
-        if row.role == "user":
-            content = row.content or ""
-            if EXPORT_REQUEST_RE.search(content):
-                export_request_users.add(user_id)
-            if PAGE_REQUEST_RE.search(content):
-                page_request_users.add(user_id)
-            if str(row.session_id) in asst_zero_session_ids:
-                category = "asst_zero"
-        elif row.role == "assistant":
-            content = row.content or ""
-            if _message_has_artifact(row.metadata_json):
-                export_artifact_users.add(user_id)
-            if _citations_empty(row.citations) or RAG_MISS_RE.search(content):
-                signal_users["rag_miss"].add(user_id)
-                category = "rag_miss"
-            elif CAPABILITY_REFUSAL_RE.search(content):
-                signal_users["capability_refusal"].add(user_id)
-                category = "capability_refusal"
-            else:
-                category = "normal_answer"
-        current = final_candidates.get(user_id)
-        if created_at and (current is None or created_at > current[0]):
-            final_candidates[user_id] = (created_at, category)
-
-    signal_users["export_refusal"] = export_request_users - export_artifact_users
-    signal_users["page_fail"] = page_request_users & signal_users["rag_miss"]
+    message_signal_users, final_candidates = _derive_message_diagnostics(
+        list(message_rows),
+        asst_zero_session_ids=asst_zero_session_ids,
+    )
+    for key, user_ids in message_signal_users.items():
+        signal_users[key].update(user_ids)
 
     document_flag_rows = (
         await db.execute(

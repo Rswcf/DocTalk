@@ -68,7 +68,10 @@ export default function AdminPageClient() {
   const { status } = useSession();
   const router = useRouter();
 
-  const [activeTab, setActiveTab] = useState<TabId>("overview");
+  const [activeTab, setActiveTab] = useState<TabId>(() => {
+    const fromHash = typeof window !== "undefined" ? window.location.hash.replace("#", "") : "";
+    return isTabId(fromHash) ? fromHash : "overview";
+  });
   const [overview, setOverview] = useState<Overview | null>(null);
   const [trends, setTrends] = useState<Trends | null>(null);
   const [breakdowns, setBreakdowns] = useState<Breakdowns | null>(null);
@@ -95,12 +98,7 @@ export default function AdminPageClient() {
     if (status === "unauthenticated") router.push("/auth?callbackUrl=/admin");
   }, [status, router]);
 
-  // Tab <-> URL hash sync (linkable tabs)
-  useEffect(() => {
-    const fromHash = typeof window !== "undefined" ? window.location.hash.replace("#", "") : "";
-    if (isTabId(fromHash)) setActiveTab(fromHash);
-  }, []);
-
+  // activeTab is initialized from the URL hash above (deep links don't fetch overview first).
   const selectTab = useCallback((id: TabId) => {
     setActiveTab(id);
     if (typeof window !== "undefined") window.history.replaceState(null, "", `#${id}`);
