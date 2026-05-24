@@ -1,13 +1,24 @@
 import type { MetadataRoute } from "next";
 import { getAllPosts, KNOWN_BLOG_CATEGORIES } from "../lib/blog";
+import { LOCALIZED_PATHS, URL_LOCALES, localizedHref } from "../i18n/routing";
 
 const BASE_URL = "https://www.doctalk.site";
+
+/** Reciprocal hreflang map for a localized path (unprefixed en + each URL locale + x-default). */
+function languagesFor(path: string): Record<string, string> {
+  const languages: Record<string, string> = { en: `${BASE_URL}${path}` };
+  for (const loc of URL_LOCALES) {
+    languages[loc] = `${BASE_URL}${localizedHref(loc, path)}`;
+  }
+  languages["x-default"] = `${BASE_URL}${path}`;
+  return languages;
+}
 
 export default function sitemap(): MetadataRoute.Sitemap {
   const generatedAt = new Date();
   const posts = getAllPosts();
 
-  return [
+  const staticEntries: MetadataRoute.Sitemap = [
     // Static pages
     { url: BASE_URL, lastModified: generatedAt, changeFrequency: "monthly", priority: 1.0 },
     { url: `${BASE_URL}/demo`, lastModified: generatedAt, changeFrequency: "monthly", priority: 0.8 },
@@ -67,4 +78,29 @@ export default function sitemap(): MetadataRoute.Sitemap {
       priority: 0.7,
     })),
   ];
+
+  // International SEO: attach hreflang to the en entry of each localized path,
+  // and append one entry per URL locale (each carrying the reciprocal map).
+  const withAlternates = staticEntries.map((entry) => {
+    const path = entry.url.replace(BASE_URL, "") || "/";
+    return LOCALIZED_PATHS.has(path)
+      ? { ...entry, alternates: { languages: languagesFor(path) } }
+      : entry;
+  });
+
+  const localeEntries: MetadataRoute.Sitemap = [];
+  for (const path of LOCALIZED_PATHS) {
+    const languages = languagesFor(path);
+    for (const loc of URL_LOCALES) {
+      localeEntries.push({
+        url: `${BASE_URL}${localizedHref(loc, path)}`,
+        lastModified: generatedAt,
+        changeFrequency: "monthly",
+        priority: 0.7,
+        alternates: { languages },
+      });
+    }
+  }
+
+  return [...withAlternates, ...localeEntries];
 }
