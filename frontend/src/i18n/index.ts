@@ -1,27 +1,11 @@
 "use client";
 import { createContext, useContext } from 'react';
+import type { Locale } from './locales-meta';
 
-export type Locale = 'en' | 'zh' | 'es' | 'ja' | 'de' | 'fr' | 'ko' | 'pt' | 'it' | 'ar' | 'hi';
-
-export interface LocaleInfo {
-  code: Locale;
-  label: string;
-  dir?: 'rtl' | 'ltr';
-}
-
-export const LOCALES: LocaleInfo[] = [
-  { code: 'en', label: 'English' },
-  { code: 'zh', label: '中文' },
-  { code: 'es', label: 'Español' },
-  { code: 'ja', label: '日本語' },
-  { code: 'de', label: 'Deutsch' },
-  { code: 'fr', label: 'Français' },
-  { code: 'ko', label: '한국어' },
-  { code: 'pt', label: 'Português' },
-  { code: 'it', label: 'Italiano' },
-  { code: 'ar', label: 'العربية', dir: 'rtl' },
-  { code: 'hi', label: 'हिन्दी' },
-];
+// Re-export the framework-neutral metadata so existing imports
+// (`import { LOCALES, Locale } from './index'`) keep working unchanged.
+export { LOCALES } from './locales-meta';
+export type { Locale, LocaleInfo } from './locales-meta';
 
 export interface LocaleContextValue {
   locale: Locale;

@@ -1,5 +1,5 @@
 import { MARKETING_LOCALES, localizedHref } from '../../i18n/routing';
-import { LOCALES } from '../../i18n';
+import { LOCALES } from '../../i18n/locales-meta';
 
 /**
  * Server-rendered, crawlable alternate-language links for a localized marketing
