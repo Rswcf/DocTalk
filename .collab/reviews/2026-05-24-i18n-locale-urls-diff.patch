@@ -137,10 +137,10 @@ index a08b505..ff303f9 100644
 +  return [...withAlternates, ...localeEntries];
  }
 diff --git a/frontend/src/app/use-cases/lawyers/LawyersClient.tsx b/frontend/src/app/use-cases/lawyers/LawyersContent.tsx
-similarity index 84%
+similarity index 74%
 rename from frontend/src/app/use-cases/lawyers/LawyersClient.tsx
 rename to frontend/src/app/use-cases/lawyers/LawyersContent.tsx
-index 4073e93..74bfc6d 100644
+index 4073e93..ef46f98 100644
 --- a/frontend/src/app/use-cases/lawyers/LawyersClient.tsx
 +++ b/frontend/src/app/use-cases/lawyers/LawyersContent.tsx
 @@ -1,8 +1,5 @@
@@ -152,16 +152,18 @@ index 4073e93..74bfc6d 100644
  import {
    Scale,
    Search,
-@@ -25,6 +22,8 @@ import EdCardGrid from '../../../components/marketing/EdCardGrid';
+@@ -25,6 +22,10 @@ import EdCardGrid from '../../../components/marketing/EdCardGrid';
  import EdStepRow from '../../../components/marketing/EdStepRow';
  import EdFaqList from '../../../components/marketing/EdFaqList';
  import EdCtaBanner from '../../../components/marketing/EdCtaBanner';
++import MarketingLocaleLinks from '../../../components/marketing/MarketingLocaleLinks';
 +import { getServerT } from '../../../i18n/server';
++import { getChromeStrings } from '../../../i18n/chrome';
 +import { localizedHrefIfAvailable } from '../../../i18n/routing';
  
  const featureIcons = [Search, Clock, FileText, AlertTriangle, Quote];
  const featureKeys = ['clauseExtraction', 'dueDiligence', 'filingSummarization', 'riskAssessment', 'keyTerms'];
-@@ -35,8 +34,18 @@ const securityKeys = ['encryption', 'noTraining', 'gdpr', 'dataExport'];
+@@ -35,8 +36,19 @@ const securityKeys = ['encryption', 'noTraining', 'gdpr', 'dataExport'];
  const stepIcons = [Upload, MessageSquare, CheckCircle];
  const stepKeys = ['upload', 'ask', 'verify'];
  
@@ -177,14 +179,17 @@ index 4073e93..74bfc6d 100644
 + * pass into the client islands (EdFaqList, MarketingShell).
 + */
 +export default async function LawyersContent({ locale }: { locale: string }) {
-+  const { t } = await getServerT(locale);
++  const { t, tOr } = await getServerT(locale);
++  const chrome = await getChromeStrings(locale);
 +  const href = (path: string) => localizedHrefIfAvailable(locale, path);
  
    const faqItems = [
      { question: t('useCasesLawyers.faq.q1.question'), answer: t('useCasesLawyers.faq.q1.answer') },
-@@ -73,8 +82,8 @@ export default function LawyersClient() {
+@@ -72,9 +84,10 @@ export default function LawyersClient() {
+ 
    return (
      <MarketingShell
++      chrome={chrome}
        breadcrumb={[
 -        { label: t('useCasesLawyers.breadcrumb.home'), href: '/' },
 -        { label: t('useCasesLawyers.breadcrumb.useCases'), href: '/use-cases' },
@@ -193,7 +198,7 @@ index 4073e93..74bfc6d 100644
          { label: t('useCasesLawyers.breadcrumb.current') },
        ]}
      >
-@@ -82,7 +91,7 @@ export default function LawyersClient() {
+@@ -82,7 +95,7 @@ export default function LawyersClient() {
          icon={Scale}
          title={t('useCasesLawyers.heroTitle')}
          lede={t('useCasesLawyers.heroDescription')}
@@ -202,7 +207,25 @@ index 4073e93..74bfc6d 100644
        />
  
        <EdSection title={t('useCasesLawyers.challenge.title')}>
-@@ -109,7 +118,7 @@ export default function LawyersClient() {
+@@ -90,11 +103,15 @@ export default function LawyersClient() {
+           <p>{t('useCasesLawyers.challenge.p1')}</p>
+           <p>
+             {t('useCasesLawyers.challenge.p2')}{' '}
+-            Resources like <a href="https://www.americanbar.org/groups/law_practice/resources/tech-tools/" target="_blank" rel="noopener noreferrer">ABA Legal Technology</a> highlight the growing role of AI in law practice.
++            {tOr('useCasesLawyers.challenge.p2ResourcePre', 'Resources like ')}
++            <a href="https://www.americanbar.org/groups/law_practice/resources/tech-tools/" target="_blank" rel="noopener noreferrer">ABA Legal Technology</a>
++            {tOr('useCasesLawyers.challenge.p2ResourcePost', ' highlight the growing role of AI in law practice.')}
+           </p>
+           <p>
+             {t('useCasesLawyers.challenge.p3')}{' '}
+-            Platforms like <a href="https://www.thomsonreuters.com/en/artificial-intelligence.html" target="_blank" rel="noopener noreferrer">Thomson Reuters AI</a> are advancing legal document analysis.
++            {tOr('useCasesLawyers.challenge.p3PlatformPre', 'Platforms like ')}
++            <a href="https://www.thomsonreuters.com/en/artificial-intelligence.html" target="_blank" rel="noopener noreferrer">Thomson Reuters AI</a>
++            {tOr('useCasesLawyers.challenge.p3PlatformPost', ' are advancing legal document analysis.')}
+           </p>
+           <p>{t('useCasesLawyers.challenge.p4')}</p>
+         </EdProse>
+@@ -109,7 +126,7 @@ export default function LawyersClient() {
        <EdSection title={t('useCasesLawyers.docTypes.title')}>
          <p className="ed-body" style={{ marginBottom: '24px' }}>
            {t('useCasesLawyers.docTypes.description')}{' '}
@@ -211,7 +234,7 @@ index 4073e93..74bfc6d 100644
              {t('useCasesLawyers.docTypes.formatsLink')}
            </Link>
            {t('useCasesLawyers.docTypes.descriptionSuffix')}
-@@ -141,7 +150,7 @@ export default function LawyersClient() {
+@@ -141,7 +158,7 @@ export default function LawyersClient() {
            <p>{t('useCasesLawyers.whyCitations.p2')}</p>
            <p>
              {t('useCasesLawyers.whyCitations.p3pre')}
@@ -220,7 +243,7 @@ index 4073e93..74bfc6d 100644
              {t('useCasesLawyers.whyCitations.p3post')}
            </p>
            <p>{t('useCasesLawyers.whyCitations.p4')}</p>
-@@ -171,8 +180,8 @@ export default function LawyersClient() {
+@@ -171,9 +188,11 @@ export default function LawyersClient() {
        <EdCtaBanner
          title={t('useCasesLawyers.cta.title')}
          description={t('useCasesLawyers.cta.description')}
@@ -229,8 +252,11 @@ index 4073e93..74bfc6d 100644
 +        primary={{ label: t('useCasesLawyers.cta.tryFreeDemo'), href: href('/demo') }}
 +        secondary={{ label: t('useCasesLawyers.cta.viewPricing'), href: href('/pricing') }}
        />
++
++      <MarketingLocaleLinks path="/use-cases/lawyers" />
      </MarketingShell>
    );
+ }
 diff --git a/frontend/src/app/use-cases/lawyers/LawyersJsonLd.tsx b/frontend/src/app/use-cases/lawyers/LawyersJsonLd.tsx
 new file mode 100644
 index 0000000..07de99e
@@ -413,10 +439,10 @@ index ab1671b..91fd513 100644
    );
  }
 diff --git a/frontend/src/components/landing/EditorialFooter.tsx b/frontend/src/components/landing/EditorialFooter.tsx
-index a5b226b..656fd77 100644
+index a5b226b..48fcb62 100644
 --- a/frontend/src/components/landing/EditorialFooter.tsx
 +++ b/frontend/src/components/landing/EditorialFooter.tsx
-@@ -1,48 +1,54 @@
+@@ -1,48 +1,87 @@
  "use client";
  
  import Link from "next/link";
@@ -424,13 +450,47 @@ index a5b226b..656fd77 100644
  import DocTalkLogo from "../DocTalkLogo";
  import { useLocale } from "../../i18n";
 +import { localizedHrefIfAvailable, splitLocaleFromPath } from "../../i18n/routing";
++import type { ChromeStrings } from "../../i18n/chrome";
  
- export default function EditorialFooter() {
+-export default function EditorialFooter() {
++export default function EditorialFooter({ chrome }: { chrome?: ChromeStrings }) {
    const { t, tOr } = useLocale();
 +  // Keep footer links in-language on localized pages; targets not yet localized
 +  // resolve to their English URL (no 404s).
 +  const { locale: urlLocale } = splitLocaleFromPath(usePathname() || "/");
 +  const lh = (path: string) => localizedHrefIfAvailable(urlLocale, path);
++  // Prefer server-resolved strings (correct language in initial HTML on
++  // localized pages); otherwise client-locale text.
++  const f = chrome?.footer;
++  const L = {
++    product: f?.product ?? t("footer.product"),
++    useCases: f?.useCases ?? t("footer.useCases"),
++    resources: f?.resources ?? t("footer.resources"),
++    company: f?.company ?? t("footer.company"),
++    demo: f?.demo ?? t("footer.demo"),
++    pricing: f?.pricing ?? t("footer.pricing"),
++    features: f?.features ?? t("footer.links.features"),
++    noSignupDemo: f?.noSignupDemo ?? t("footer.links.noSignupDemo"),
++    citationHighlighting: f?.citationHighlighting ?? t("footer.links.citationHighlighting"),
++    performanceModes: f?.performanceModes ?? t("footer.links.performanceModes"),
++    useCasesLink: f?.useCasesLink ?? t("footer.links.useCases"),
++    students: f?.students ?? t("footer.links.students"),
++    lawyers: f?.lawyers ?? t("footer.links.lawyers"),
++    finance: f?.finance ?? t("footer.links.finance"),
++    hrContracts: f?.hrContracts ?? t("footer.links.hrContracts"),
++    compareTools: f?.compareTools ?? t("footer.links.compareTools"),
++    alternatives: f?.alternatives ?? t("footer.links.alternatives"),
++    blog: f?.blog ?? t("footer.links.blog"),
++    comparisonGuides: f?.comparisonGuides ?? t("footer.links.comparisonGuides"),
++    multiFormatSupport: f?.multiFormatSupport ?? t("footer.links.multiFormatSupport"),
++    about: f?.about ?? t("footer.links.about"),
++    contact: f?.contact ?? t("footer.contact"),
++    trust: f?.trust ?? t("footer.links.trust"),
++    imprint: f?.imprint ?? tOr("footer.imprint", "Imprint"),
++    privacy: f?.privacy ?? t("privacy.policyLink"),
++    terms: f?.terms ?? t("terms.title"),
++    doNotSell: f?.doNotSell ?? t("footer.doNotSell"),
++  };
  
    const productLinks = [
 -    { href: "/demo", label: t("footer.demo") },
@@ -439,12 +499,12 @@ index a5b226b..656fd77 100644
 -    { href: "/features/free-demo", label: t("footer.links.noSignupDemo") },
 -    { href: "/features/citations", label: t("footer.links.citationHighlighting") },
 -    { href: "/features/performance-modes", label: t("footer.links.performanceModes") },
-+    { href: lh("/demo"), label: t("footer.demo") },
-+    { href: lh("/pricing"), label: t("footer.pricing") },
-+    { href: lh("/features"), label: t("footer.links.features") },
-+    { href: lh("/features/free-demo"), label: t("footer.links.noSignupDemo") },
-+    { href: lh("/features/citations"), label: t("footer.links.citationHighlighting") },
-+    { href: lh("/features/performance-modes"), label: t("footer.links.performanceModes") },
++    { href: lh("/demo"), label: L.demo },
++    { href: lh("/pricing"), label: L.pricing },
++    { href: lh("/features"), label: L.features },
++    { href: lh("/features/free-demo"), label: L.noSignupDemo },
++    { href: lh("/features/citations"), label: L.citationHighlighting },
++    { href: lh("/features/performance-modes"), label: L.performanceModes },
    ];
  
    const useCaseLinks = [
@@ -453,11 +513,11 @@ index a5b226b..656fd77 100644
 -    { href: "/use-cases/lawyers", label: t("footer.links.lawyers") },
 -    { href: "/use-cases/finance", label: t("footer.links.finance") },
 -    { href: "/use-cases/hr-contracts", label: t("footer.links.hrContracts") },
-+    { href: lh("/use-cases"), label: t("footer.links.useCases") },
-+    { href: lh("/use-cases/students"), label: t("footer.links.students") },
-+    { href: lh("/use-cases/lawyers"), label: t("footer.links.lawyers") },
-+    { href: lh("/use-cases/finance"), label: t("footer.links.finance") },
-+    { href: lh("/use-cases/hr-contracts"), label: t("footer.links.hrContracts") },
++    { href: lh("/use-cases"), label: L.useCasesLink },
++    { href: lh("/use-cases/students"), label: L.students },
++    { href: lh("/use-cases/lawyers"), label: L.lawyers },
++    { href: lh("/use-cases/finance"), label: L.finance },
++    { href: lh("/use-cases/hr-contracts"), label: L.hrContracts },
    ];
  
    const resourceLinks = [
@@ -466,11 +526,11 @@ index a5b226b..656fd77 100644
 -    { href: "/blog", label: t("footer.links.blog") },
 -    { href: "/blog/category/comparisons", label: t("footer.links.comparisonGuides") },
 -    { href: "/features/multi-format", label: t("footer.links.multiFormatSupport") },
-+    { href: lh("/compare"), label: t("footer.links.compareTools") },
-+    { href: lh("/alternatives"), label: t("footer.links.alternatives") },
-+    { href: lh("/blog"), label: t("footer.links.blog") },
-+    { href: lh("/blog/category/comparisons"), label: t("footer.links.comparisonGuides") },
-+    { href: lh("/features/multi-format"), label: t("footer.links.multiFormatSupport") },
++    { href: lh("/compare"), label: L.compareTools },
++    { href: lh("/alternatives"), label: L.alternatives },
++    { href: lh("/blog"), label: L.blog },
++    { href: lh("/blog/category/comparisons"), label: L.comparisonGuides },
++    { href: lh("/features/multi-format"), label: L.multiFormatSupport },
    ];
  
    const companyLinks = [
@@ -478,23 +538,23 @@ index a5b226b..656fd77 100644
 -    { href: "/contact", label: t("footer.contact") },
 -    { href: "/trust", label: t("footer.links.trust") },
 -    { href: "/imprint", label: tOr("footer.imprint", "Imprint") },
-+    { href: lh("/about"), label: t("footer.links.about") },
-+    { href: lh("/contact"), label: t("footer.contact") },
-+    { href: lh("/trust"), label: t("footer.links.trust") },
-+    { href: lh("/imprint"), label: tOr("footer.imprint", "Imprint") },
++    { href: lh("/about"), label: L.about },
++    { href: lh("/contact"), label: L.contact },
++    { href: lh("/trust"), label: L.trust },
++    { href: lh("/imprint"), label: L.imprint },
    ];
  
    const legalLinks = [
 -    { href: "/privacy", label: t("privacy.policyLink") },
 -    { href: "/terms", label: t("terms.title") },
 -    { href: "/privacy#ccpa", label: t("footer.doNotSell") },
-+    { href: lh("/privacy"), label: t("privacy.policyLink") },
-+    { href: lh("/terms"), label: t("terms.title") },
-+    { href: lh("/privacy#ccpa"), label: t("footer.doNotSell") },
++    { href: lh("/privacy"), label: L.privacy },
++    { href: lh("/terms"), label: L.terms },
++    { href: lh("/privacy#ccpa"), label: L.doNotSell },
    ];
  
    const linkStyle: React.CSSProperties = {
-@@ -101,7 +107,7 @@ export default function EditorialFooter() {
+@@ -101,7 +140,7 @@ export default function EditorialFooter() {
            {/* Brand column */}
            <div className="md:col-span-1">
              <Link
@@ -503,8 +563,23 @@ index a5b226b..656fd77 100644
                className="inline-flex items-center gap-2.5 mb-4"
                style={{ textDecoration: "none" }}
                aria-label="DocTalk home"
+@@ -126,10 +165,10 @@ export default function EditorialFooter() {
+ 
+           {/* Link columns */}
+           <div className="md:col-span-4 grid grid-cols-2 sm:grid-cols-4 gap-8">
+-            <FooterLinkGroup heading={t("footer.product")} links={productLinks} />
+-            <FooterLinkGroup heading={t("footer.useCases")} links={useCaseLinks} />
+-            <FooterLinkGroup heading={t("footer.resources")} links={resourceLinks} />
+-            <FooterLinkGroup heading={t("footer.company")} links={companyLinks} />
++            <FooterLinkGroup heading={L.product} links={productLinks} />
++            <FooterLinkGroup heading={L.useCases} links={useCaseLinks} />
++            <FooterLinkGroup heading={L.resources} links={resourceLinks} />
++            <FooterLinkGroup heading={L.company} links={companyLinks} />
+           </div>
+         </div>
+ 
 diff --git a/frontend/src/components/marketing/EdLanguageSelector.tsx b/frontend/src/components/marketing/EdLanguageSelector.tsx
-index c1588cc..e23436f 100644
+index c1588cc..184bbb6 100644
 --- a/frontend/src/components/marketing/EdLanguageSelector.tsx
 +++ b/frontend/src/components/marketing/EdLanguageSelector.tsx
 @@ -2,26 +2,40 @@
@@ -545,7 +620,8 @@ index c1588cc..e23436f 100644
 - * resolve outside the page's editorial root.
 + * fixed` so it escapes the sticky header's stacking context.
   */
- export default function EdLanguageSelector() {
+-export default function EdLanguageSelector() {
++export default function EdLanguageSelector({ languageLabel }: { languageLabel?: string }) {
    const { locale, setLocale, tOr } = useLocale();
 +  const pathname = usePathname() || "/";
 +  const { locale: urlLocale, path: agnosticPath } = splitLocaleFromPath(pathname);
@@ -557,14 +633,15 @@ index c1588cc..e23436f 100644
    const [open, setOpen] = useState(false);
    const [pos, setPos] = useState({ top: 0, right: 0, maxHeight: 420 });
    const wrapRef = useRef<HTMLDivElement>(null);
-@@ -67,9 +81,47 @@ export default function EdLanguageSelector() {
+@@ -67,8 +81,46 @@ export default function EdLanguageSelector() {
      };
    }, [open, updatePos]);
  
 -  const current = LOCALES.find((l) => l.code === locale);
+-  const label = tOr("header.language", "Language");
 +  const current = LOCALES.find((l) => l.code === activeLocale);
-   const label = tOr("header.language", "Language");
- 
++  const label = languageLabel ?? tOr("header.language", "Language");
++
 +  // On localized pages, only offer the locales that actually have a URL for this
 +  // page (en + URL_LOCALES). Elsewhere, the full client-toggle list.
 +  const options = localized
@@ -602,10 +679,9 @@ index c1588cc..e23436f 100644
 +      {code.toUpperCase()}
 +    </span>
 +  );
-+
+ 
    const menu = (
      <div
-       ref={menuRef}
 @@ -88,51 +140,53 @@ export default function EdLanguageSelector() {
        }}
      >
@@ -702,10 +778,10 @@ index c1588cc..e23436f 100644
            );
          })}
 diff --git a/frontend/src/components/marketing/EditorialHeaderBase.tsx b/frontend/src/components/marketing/EditorialHeaderBase.tsx
-index 99acdf0..e084b74 100644
+index 99acdf0..05613d8 100644
 --- a/frontend/src/components/marketing/EditorialHeaderBase.tsx
 +++ b/frontend/src/components/marketing/EditorialHeaderBase.tsx
-@@ -2,10 +2,12 @@
+@@ -2,10 +2,13 @@
  
  import { useState } from "react";
  import Link from "next/link";
@@ -715,10 +791,24 @@ index 99acdf0..e084b74 100644
  import EdLanguageSelector from "./EdLanguageSelector";
  import { useLocale } from "../../i18n";
 +import { localizedHrefIfAvailable, splitLocaleFromPath } from "../../i18n/routing";
++import type { ChromeStrings } from "../../i18n/chrome";
  
  export interface Crumb {
    label: string;
-@@ -33,10 +35,14 @@ export default function EditorialHeaderBase({
+@@ -17,6 +20,8 @@ export interface EditorialHeaderBaseProps {
+   showDateline?: boolean;
+   /** Breadcrumb row rendered below the masthead (inner-page variant). */
+   breadcrumb?: Crumb[];
++  /** Server-resolved strings for localized pages; falls back to `useLocale()`. */
++  chrome?: ChromeStrings;
+ }
+ 
+ /**
+@@ -30,13 +35,26 @@ export interface EditorialHeaderBaseProps {
+ export default function EditorialHeaderBase({
+   showDateline = false,
+   breadcrumb,
++  chrome,
  }: EditorialHeaderBaseProps) {
    const { t, tOr } = useLocale();
    const [mobileOpen, setMobileOpen] = useState(false);
@@ -726,17 +816,25 @@ index 99acdf0..e084b74 100644
 +  // localized pages (`/de/...`). Targets not yet localized fall back to English.
 +  const { locale: urlLocale } = splitLocaleFromPath(usePathname() || "/");
 +  const navHref = (path: string) => localizedHrefIfAvailable(urlLocale, path);
++  // Prefer server-resolved chrome strings (correct language in initial HTML on
++  // localized pages); otherwise the client-locale text.
++  const labels = {
++    features: chrome?.navFeatures ?? t("public.nav.features"),
++    pricing: chrome?.navPricing ?? t("footer.pricing"),
++    trust: chrome?.navTrust ?? tOr("footer.links.trust", "Security"),
++    signIn: chrome?.signIn ?? t("auth.signIn"),
++  };
    const NAV_LINKS = [
 -    { href: "/features", label: t("public.nav.features") },
 -    { href: "/pricing", label: t("footer.pricing") },
 -    { href: "/trust", label: tOr("footer.links.trust", "Security") },
-+    { href: navHref("/features"), label: t("public.nav.features") },
-+    { href: navHref("/pricing"), label: t("footer.pricing") },
-+    { href: navHref("/trust"), label: tOr("footer.links.trust", "Security") },
++    { href: navHref("/features"), label: labels.features },
++    { href: navHref("/pricing"), label: labels.pricing },
++    { href: navHref("/trust"), label: labels.trust },
    ];
  
    return (
-@@ -52,7 +58,7 @@ export default function EditorialHeaderBase({
+@@ -52,7 +70,7 @@ export default function EditorialHeaderBase({
            <div className="flex items-center justify-between h-16">
              {/* Left — logo + wordmark (+ optional dateline) */}
              <Link
@@ -745,12 +843,321 @@ index 99acdf0..e084b74 100644
                className="flex items-center gap-3 shrink-0"
                aria-label="DocTalk home"
              >
+@@ -135,7 +153,7 @@ export default function EditorialHeaderBase({
+               ))}
+               {/* Language selector — always visible so locale is switchable on
+                   every editorial page (restores the switcher the redesign dropped). */}
+-              <EdLanguageSelector />
++              <EdLanguageSelector languageLabel={chrome?.language} />
+               {/* Mobile hamburger — sits left of the Sign-In CTA, md:hidden */}
+               <button
+                 type="button"
+@@ -164,7 +182,7 @@ export default function EditorialHeaderBase({
+                 className="ed-cta"
+                 style={{ padding: "9px 18px", fontSize: "13px" }}
+               >
+-                {t("auth.signIn")}
++                {labels.signIn}
+               </Link>
+             </nav>
+           </div>
+diff --git a/frontend/src/components/marketing/EditorialMarketingHeader.tsx b/frontend/src/components/marketing/EditorialMarketingHeader.tsx
+index b89b3ed..ed923e3 100644
+--- a/frontend/src/components/marketing/EditorialMarketingHeader.tsx
++++ b/frontend/src/components/marketing/EditorialMarketingHeader.tsx
+@@ -2,12 +2,14 @@
+ 
+ import EditorialHeaderBase from "./EditorialHeaderBase";
+ import type { Crumb } from "./EditorialHeaderBase";
++import type { ChromeStrings } from "../../i18n/chrome";
+ 
+ // Re-export Crumb so existing consumers (`MarketingShell`) keep working.
+ export type { Crumb };
+ 
+ interface EditorialMarketingHeaderProps {
+   breadcrumb?: Crumb[];
++  chrome?: ChromeStrings;
+ }
+ 
+ /**
+@@ -17,6 +19,7 @@ interface EditorialMarketingHeaderProps {
+  */
+ export default function EditorialMarketingHeader({
+   breadcrumb,
++  chrome,
+ }: EditorialMarketingHeaderProps) {
+-  return <EditorialHeaderBase breadcrumb={breadcrumb} />;
++  return <EditorialHeaderBase breadcrumb={breadcrumb} chrome={chrome} />;
+ }
+diff --git a/frontend/src/components/marketing/MarketingLocaleLinks.tsx b/frontend/src/components/marketing/MarketingLocaleLinks.tsx
+new file mode 100644
+index 0000000..e4df636
+--- /dev/null
++++ b/frontend/src/components/marketing/MarketingLocaleLinks.tsx
+@@ -0,0 +1,30 @@
++import { MARKETING_LOCALES, localizedHref } from '../../i18n/routing';
++import { LOCALES } from '../../i18n/locales-meta';
++
++/**
++ * Server-rendered, crawlable alternate-language links for a localized marketing
++ * page. The interactive header dropdown (`EdLanguageSelector`) is mounted in a
++ * click-triggered portal, so its anchors are NOT in the initial HTML — crawlers
++ * never click. This component puts the real `<a href="/de/...">` anchors in the
++ * static markup (visually hidden) so search engines can follow them to every
++ * language version. Belt-and-suspenders alongside hreflang + sitemap (and the
++ * primary discovery path for engines that handle hreflang poorly, e.g. Baidu).
++ *
++ * `path` is the locale-agnostic path (e.g. `/use-cases/lawyers`).
++ */
++export default function MarketingLocaleLinks({ path }: { path: string }) {
++  const localeInfo = (code: string) => LOCALES.find((l) => l.code === code);
++  return (
++    <nav className="sr-only" aria-label="Languages">
++      <ul>
++        {MARKETING_LOCALES.map((code) => (
++          <li key={code}>
++            <a href={localizedHref(code, path)} hrefLang={code}>
++              {localeInfo(code)?.label ?? code.toUpperCase()}
++            </a>
++          </li>
++        ))}
++      </ul>
++    </nav>
++  );
++}
+diff --git a/frontend/src/components/marketing/MarketingShell.tsx b/frontend/src/components/marketing/MarketingShell.tsx
+index ab6be30..f33d93d 100644
+--- a/frontend/src/components/marketing/MarketingShell.tsx
++++ b/frontend/src/components/marketing/MarketingShell.tsx
+@@ -3,19 +3,27 @@
+ import EditorialMarketingHeader from "./EditorialMarketingHeader";
+ import type { Crumb } from "./EditorialMarketingHeader";
+ import EditorialFooter from "../landing/EditorialFooter";
++import type { ChromeStrings } from "../../i18n/chrome";
+ 
+ export default function MarketingShell({
+   breadcrumb,
++  chrome,
+   children,
+ }: {
+   breadcrumb?: Crumb[];
++  /**
++   * Server-resolved chrome strings for localized pages. When provided, the
++   * header/footer render translated nav/footer text in the initial HTML. When
++   * omitted (not-yet-migrated pages), the chrome falls back to client `useLocale()`.
++   */
++  chrome?: ChromeStrings;
+   children: React.ReactNode;
+ }) {
+   return (
+     <div className="dt-editorial min-h-screen flex flex-col">
+-      <EditorialMarketingHeader breadcrumb={breadcrumb} />
++      <EditorialMarketingHeader breadcrumb={breadcrumb} chrome={chrome} />
+       <main className="flex-1">{children}</main>
+-      <EditorialFooter />
++      <EditorialFooter chrome={chrome} />
+     </div>
+   );
+ }
+diff --git a/frontend/src/i18n/LocaleProvider.tsx b/frontend/src/i18n/LocaleProvider.tsx
+index b0677f8..75aabf5 100644
+--- a/frontend/src/i18n/LocaleProvider.tsx
++++ b/frontend/src/i18n/LocaleProvider.tsx
+@@ -1,6 +1,7 @@
+ "use client";
+ import React, { useState, useCallback, useMemo, useEffect } from 'react';
+ import { LocaleContext, Locale, LOCALES } from './index';
++import { splitLocaleFromPath } from './routing';
+ 
+ import en from './locales/en.json';
+ 
+@@ -35,6 +36,14 @@ const localeLoaders: Record<string, () => Promise<{ default: Record<string, stri
+ };
+ 
+ function detectLocale(): Locale {
++  // A locale URL prefix (`/de/...`) is explicit intent — it wins over stored
++  // preference and browser language, and keeps <html lang>/chrome in sync with
++  // the server-rendered locale page.
++  if (typeof window !== 'undefined') {
++    const { locale } = splitLocaleFromPath(window.location.pathname);
++    if (locale !== 'en' && LOCALES.some((l) => l.code === locale)) return locale as Locale;
++  }
++
+   const stored = typeof window !== 'undefined' ? localStorage.getItem('doctalk_locale') : null;
+   if (stored && LOCALES.some((l) => l.code === stored)) return stored as Locale;
+ 
+diff --git a/frontend/src/i18n/chrome.ts b/frontend/src/i18n/chrome.ts
+new file mode 100644
+index 0000000..018af2f
+--- /dev/null
++++ b/frontend/src/i18n/chrome.ts
+@@ -0,0 +1,88 @@
++/**
++ * Server-resolved strings for the shared marketing chrome (header + footer +
++ * language label). Lets server-rendered locale pages (`/de/...`) put TRANSLATED
++ * nav/footer text in the initial HTML instead of the client `useLocale()`
++ * default (English at SSR). Only ~30 short strings — passed as props, so no
++ * locale JSON ships to the client.
++ *
++ * All keys already exist and are translated in every locale JSON (the client
++ * chrome uses them), so this is plumbing, not new translation work.
++ */
++import { getServerT } from './server';
++
++export interface ChromeStrings {
++  navFeatures: string;
++  navPricing: string;
++  navTrust: string;
++  signIn: string;
++  language: string;
++  footer: {
++    product: string;
++    useCases: string;
++    resources: string;
++    company: string;
++    demo: string;
++    pricing: string;
++    features: string;
++    noSignupDemo: string;
++    citationHighlighting: string;
++    performanceModes: string;
++    useCasesLink: string;
++    students: string;
++    lawyers: string;
++    finance: string;
++    hrContracts: string;
++    compareTools: string;
++    alternatives: string;
++    blog: string;
++    comparisonGuides: string;
++    multiFormatSupport: string;
++    about: string;
++    contact: string;
++    trust: string;
++    imprint: string;
++    privacy: string;
++    terms: string;
++    doNotSell: string;
++  };
++}
++
++export async function getChromeStrings(locale: string): Promise<ChromeStrings> {
++  const { t, tOr } = await getServerT(locale);
++  return {
++    navFeatures: t('public.nav.features'),
++    navPricing: t('footer.pricing'),
++    navTrust: tOr('footer.links.trust', 'Security'),
++    signIn: t('auth.signIn'),
++    language: tOr('header.language', 'Language'),
++    footer: {
++      product: t('footer.product'),
++      useCases: t('footer.useCases'),
++      resources: t('footer.resources'),
++      company: t('footer.company'),
++      demo: t('footer.demo'),
++      pricing: t('footer.pricing'),
++      features: t('footer.links.features'),
++      noSignupDemo: t('footer.links.noSignupDemo'),
++      citationHighlighting: t('footer.links.citationHighlighting'),
++      performanceModes: t('footer.links.performanceModes'),
++      useCasesLink: t('footer.links.useCases'),
++      students: t('footer.links.students'),
++      lawyers: t('footer.links.lawyers'),
++      finance: t('footer.links.finance'),
++      hrContracts: t('footer.links.hrContracts'),
++      compareTools: t('footer.links.compareTools'),
++      alternatives: t('footer.links.alternatives'),
++      blog: t('footer.links.blog'),
++      comparisonGuides: t('footer.links.comparisonGuides'),
++      multiFormatSupport: t('footer.links.multiFormatSupport'),
++      about: t('footer.links.about'),
++      contact: t('footer.contact'),
++      trust: t('footer.links.trust'),
++      imprint: tOr('footer.imprint', 'Imprint'),
++      privacy: t('privacy.policyLink'),
++      terms: t('terms.title'),
++      doNotSell: t('footer.doNotSell'),
++    },
++  };
++}
+diff --git a/frontend/src/i18n/index.ts b/frontend/src/i18n/index.ts
+index 7db2948..e396208 100644
+--- a/frontend/src/i18n/index.ts
++++ b/frontend/src/i18n/index.ts
+@@ -1,27 +1,11 @@
+ "use client";
+ import { createContext, useContext } from 'react';
++import type { Locale } from './locales-meta';
+ 
+-export type Locale = 'en' | 'zh' | 'es' | 'ja' | 'de' | 'fr' | 'ko' | 'pt' | 'it' | 'ar' | 'hi';
+-
+-export interface LocaleInfo {
+-  code: Locale;
+-  label: string;
+-  dir?: 'rtl' | 'ltr';
+-}
+-
+-export const LOCALES: LocaleInfo[] = [
+-  { code: 'en', label: 'English' },
+-  { code: 'zh', label: '中文' },
+-  { code: 'es', label: 'Español' },
+-  { code: 'ja', label: '日本語' },
+-  { code: 'de', label: 'Deutsch' },
+-  { code: 'fr', label: 'Français' },
+-  { code: 'ko', label: '한국어' },
+-  { code: 'pt', label: 'Português' },
+-  { code: 'it', label: 'Italiano' },
+-  { code: 'ar', label: 'العربية', dir: 'rtl' },
+-  { code: 'hi', label: 'हिन्दी' },
+-];
++// Re-export the framework-neutral metadata so existing imports
++// (`import { LOCALES, Locale } from './index'`) keep working unchanged.
++export { LOCALES } from './locales-meta';
++export type { Locale, LocaleInfo } from './locales-meta';
+ 
+ export interface LocaleContextValue {
+   locale: Locale;
+diff --git a/frontend/src/i18n/locales-meta.ts b/frontend/src/i18n/locales-meta.ts
+new file mode 100644
+index 0000000..b1c89c9
+--- /dev/null
++++ b/frontend/src/i18n/locales-meta.ts
+@@ -0,0 +1,29 @@
++/**
++ * Framework-neutral locale metadata — NO "use client", so it can be imported by
++ * both server and client components. The client context + `useLocale` hook live
++ * in `./index` (which re-exports these for backward compatibility). Server
++ * components (e.g. MarketingLocaleLinks) must import LOCALES from HERE, not from
++ * `./index` — importing a runtime value out of a "use client" module into a
++ * server component turns it into a client reference and crashes at prerender.
++ */
++export type Locale = 'en' | 'zh' | 'es' | 'ja' | 'de' | 'fr' | 'ko' | 'pt' | 'it' | 'ar' | 'hi';
++
++export interface LocaleInfo {
++  code: Locale;
++  label: string;
++  dir?: 'rtl' | 'ltr';
++}
++
++export const LOCALES: LocaleInfo[] = [
++  { code: 'en', label: 'English' },
++  { code: 'zh', label: '中文' },
++  { code: 'es', label: 'Español' },
++  { code: 'ja', label: '日本語' },
++  { code: 'de', label: 'Deutsch' },
++  { code: 'fr', label: 'Français' },
++  { code: 'ko', label: '한국어' },
++  { code: 'pt', label: 'Português' },
++  { code: 'it', label: 'Italiano' },
++  { code: 'ar', label: 'العربية', dir: 'rtl' },
++  { code: 'hi', label: 'हिन्दी' },
++];
 diff --git a/frontend/src/i18n/routing.ts b/frontend/src/i18n/routing.ts
 new file mode 100644
-index 0000000..72d981e
+index 0000000..0cfb3e0
 --- /dev/null
 +++ b/frontend/src/i18n/routing.ts
-@@ -0,0 +1,76 @@
+@@ -0,0 +1,83 @@
 +/**
 + * Locale URL routing helpers — framework-neutral (safe in both server and
 + * client components; no "use client", no server-only imports).
@@ -786,8 +1193,14 @@ index 0000000..72d981e
 +  '/use-cases/lawyers',
 +]);
 +
++/** Normalize a path for matching: drop query/hash and a single trailing slash (except root). */
++function normalizePath(path: string): string {
++  const clean = (path.startsWith('/') ? path : `/${path}`).split(/[?#]/)[0];
++  return clean.length > 1 && clean.endsWith('/') ? clean.slice(0, -1) : clean;
++}
++
 +export function isLocalizedPath(path: string): boolean {
-+  return LOCALIZED_PATHS.has(path);
++  return LOCALIZED_PATHS.has(normalizePath(path));
 +}
 +
 +/**
@@ -811,7 +1224,7 @@ index 0000000..72d981e
 + */
 +export function localizedHrefIfAvailable(locale: string, path: string): string {
 +  const clean = path.startsWith('/') ? path : `/${path}`;
-+  return isLocalizedPath(clean) ? localizedHref(locale, clean) : clean;
++  return isLocalizedPath(clean) ? localizedHref(locale, normalizePath(clean)) : clean;
 +}
 +
 +/**
@@ -821,11 +1234,12 @@ index 0000000..72d981e
 + *   '/de'                   -> { locale: 'de', path: '/' }
 + */
 +export function splitLocaleFromPath(pathname: string): { locale: string; path: string } {
-+  const m = pathname.match(/^\/([a-z]{2})(\/.*)?$/);
++  const clean = normalizePath(pathname || '/');
++  const m = clean.match(/^\/([a-z]{2})(\/.*)?$/);
 +  if (m && isUrlLocale(m[1])) {
 +    return { locale: m[1], path: m[2] && m[2].length > 0 ? m[2] : '/' };
 +  }
-+  return { locale: 'en', path: pathname && pathname.length > 0 ? pathname : '/' };
++  return { locale: 'en', path: clean };
 +}
 diff --git a/frontend/src/i18n/server.ts b/frontend/src/i18n/server.ts
 new file mode 100644

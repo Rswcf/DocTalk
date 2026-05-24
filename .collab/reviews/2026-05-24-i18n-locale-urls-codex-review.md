@@ -13,3 +13,35 @@
 7. **[Question]** `frontend/src/i18n/routing.ts:32` and `frontend/src/app/[locale]/layout.tsx:20` — `LOCALIZED_PATHS` only includes `/use-cases/lawyers`, and there is no `frontend/src/app/[locale]/page.tsx`, so bare `/de` 404s and the landing page gets no locale URL/hreflang. If the implementation scope was deliberately narrowed to lawyers-only, that is acceptable. If the checked-in spec remains authoritative, Phase A still misses the landing-page gate and definition of done (`.collab/plans/2026-05-24-international-seo-locale-urls-spec.md:91` and `.collab/plans/2026-05-24-international-seo-locale-urls-spec.md:116`).
 
 Overall verdict: **SHIP-AFTER-MUSTFIX**. The hreflang/canonical maps themselves look reciprocal, `x-default` to English is the right default, Next's metadata/sitemap shape supports these language alternates, and I do not see `[locale]` shadowing an existing concrete root route. The blockers are that the crawlable switcher is not actually present in initial HTML and the shared chrome is still client-locale English on locale URLs.
+
+## Round 2
+
+Per-finding verification:
+
+1. **[Must #1] CONFIRMED.** `frontend/src/components/marketing/MarketingLocaleLinks.tsx:15` is a server component, imports `LOCALES` from framework-neutral `locales-meta`, and renders initial-DOM `<a href ... hrefLang>` links for `MARKETING_LOCALES` (`en` + `ja/es/ko/de/fr/pt`). `frontend/src/app/use-cases/lawyers/LawyersContent.tsx:195` includes it in the server-rendered lawyers page. The English href is the unprefixed `/use-cases/lawyers`, as required.
+
+2. **[Must #2] CONFIRMED.** `LawyersContent` resolves `getChromeStrings(locale)` server-side and passes `chrome` into `MarketingShell` (`frontend/src/app/use-cases/lawyers/LawyersContent.tsx:48-87`). `EditorialHeaderBase` and `EditorialFooter` prefer `chrome` and only fall back to `useLocale()` when absent (`frontend/src/components/marketing/EditorialHeaderBase.tsx:48-53`, `frontend/src/components/landing/EditorialFooter.tsx:18-47`). Existing unmigrated pages keep working because `chrome` is optional.
+
+3. **[Should #3] CONFIRMED for the documented Phase A scope.** The external-citation sentence pieces are no longer literal inline prose; they are `tOr` keys with English fallbacks (`frontend/src/app/use-cases/lawyers/LawyersContent.tsx:105-114`). The keys are not in locale JSON yet, so localized pages still show those English fragments until Phase B, but that deferral is now explicit in the spec.
+
+4. **[Should #4] CONFIRMED.** `detectLocale()` now checks the URL prefix before stored/browser locale (`frontend/src/i18n/LocaleProvider.tsx:38-45`), while root/authenticated app routes still fall through to the existing localStorage/navigator behavior (`frontend/src/i18n/LocaleProvider.tsx:47-55`). I do not see a new root-app regression here.
+
+5. **[Should #5] CONFIRMED.** The English JSON-LD output change is now explicitly accepted in the spec. `LawyersJsonLd` uses visible-content translation keys for Article/FAQ, so the structured data/content mismatch concern is resolved by policy rather than by reverting.
+
+6. **[Nit #6] CONFIRMED.** `normalizePath()` strips query/hash and one trailing slash before matching/splitting (`frontend/src/i18n/routing.ts:36-43`, `frontend/src/i18n/routing.ts:76-82`). `localizedHrefIfAvailable()` uses the normalized path for localized matches (`frontend/src/i18n/routing.ts:65-68`).
+
+7. **[Q #7] CONFIRMED.** The spec now defines Phase A as the lawyers slice and moves landing/remaining routes to Phase B. `LOCALIZED_PATHS` containing only `/use-cases/lawyers` is therefore consistent with the current scope (`frontend/src/i18n/routing.ts:25-34`).
+
+Additional checks:
+
+- `locales-meta` extraction looks correct. `frontend/src/i18n/locales-meta.ts:1-29` is framework-neutral, `frontend/src/i18n/index.ts:1-8` re-exports `LOCALES`/types for existing client imports, and the new server component imports `LOCALES` from `locales-meta`, not the `"use client"` index.
+- I checked every `getChromeStrings()` key against `en/de/es/ja/ko/fr/pt`; none are missing. A few values are intentionally identical strings such as `Demo`, `Blog`, or `Contact`, but those are present keys, not silent English fallback.
+- I do not see a fresh client/server boundary leak from the new `ChromeStrings` types; client components use `import type` for `frontend/src/i18n/chrome.ts`.
+
+New issues:
+
+1. **[Should-fix]** `frontend/src/components/landing/EditorialFooter.tsx:161-163` still hardcodes the visible footer tagline `AI document intelligence. Cite exactly.`. The main chrome blocker is fixed because nav/footer link labels are now server-localized, but this is still visible English footer copy on `/de/use-cases/lawyers`. I would move it into `ChromeStrings`/locale JSON during Phase B, or sooner if the Phase A gate is interpreted as literally no visible English chrome except the accepted citation fallbacks.
+
+2. **[Nit]** `frontend/src/components/marketing/MarketingLocaleLinks.tsx:18` uses the English aria label `Languages` on localized pages. The crawlable link markup is otherwise correct; this is just a small a11y/localization polish item.
+
+Final verdict: **SHIP**. The two prior blockers are addressed, the `locales-meta` refactor is sound, and I do not see a new must-fix issue in the updated code. The remaining items are non-blocking polish or explicitly deferred Phase B translation work.
