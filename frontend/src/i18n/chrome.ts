@@ -44,6 +44,7 @@ export interface ChromeStrings {
     privacy: string;
     terms: string;
     doNotSell: string;
+    tagline: string;
   };
 }
 
@@ -83,6 +84,7 @@ export async function getChromeStrings(locale: string): Promise<ChromeStrings> {
       privacy: t('privacy.policyLink'),
       terms: t('terms.title'),
       doNotSell: t('footer.doNotSell'),
+      tagline: tOr('footer.tagline', 'AI document intelligence. Cite exactly.'),
     },
   };
 }

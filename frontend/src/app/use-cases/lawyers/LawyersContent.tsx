@@ -192,7 +192,7 @@ export default async function LawyersContent({ locale }: { locale: string }) {
         secondary={{ label: t('useCasesLawyers.cta.viewPricing'), href: href('/pricing') }}
       />
 
-      <MarketingLocaleLinks path="/use-cases/lawyers" />
+      <MarketingLocaleLinks path="/use-cases/lawyers" label={chrome.language} />
     </MarketingShell>
   );
 }

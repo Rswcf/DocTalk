@@ -12,10 +12,10 @@ import { LOCALES } from '../../i18n/locales-meta';
  *
  * `path` is the locale-agnostic path (e.g. `/use-cases/lawyers`).
  */
-export default function MarketingLocaleLinks({ path }: { path: string }) {
+export default function MarketingLocaleLinks({ path, label }: { path: string; label?: string }) {
   const localeInfo = (code: string) => LOCALES.find((l) => l.code === code);
   return (
-    <nav className="sr-only" aria-label="Languages">
+    <nav className="sr-only" aria-label={label ?? 'Languages'}>
       <ul>
         {MARKETING_LOCALES.map((code) => (
           <li key={code}>

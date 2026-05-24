@@ -44,6 +44,7 @@ export default function EditorialFooter({ chrome }: { chrome?: ChromeStrings }) 
     privacy: f?.privacy ?? t("privacy.policyLink"),
     terms: f?.terms ?? t("terms.title"),
     doNotSell: f?.doNotSell ?? t("footer.doNotSell"),
+    tagline: f?.tagline ?? tOr("footer.tagline", "AI document intelligence. Cite exactly."),
   };
 
   const productLinks = [
@@ -159,7 +160,7 @@ export default function EditorialFooter({ chrome }: { chrome?: ChromeStrings }) 
               </span>
             </Link>
             <p className="ed-caption" style={{ maxWidth: "180px", lineHeight: 1.6 }}>
-              AI document intelligence. Cite exactly.
+              {L.tagline}
             </p>
           </div>
 
