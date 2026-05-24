@@ -164,6 +164,28 @@ def _detect_page_ref(text: str) -> int | None:
     return None
 
 
+_PAGE_LOOKUP_FILLER = re.compile(
+    r"\b(what|whats|what's|is|are|on|in|at|the|a|show|me|my|give|see|go|to|open|tell|us|of|"
+    r"please|display|read|view|whats|content|contents|text|que|hay|en|la|el|muestra|"
+    r"内容|有什么|是什么|的|看|显示|打开|页|頁|ページ|쪽|page|pages|pg)\b",
+    re.IGNORECASE,
+)
+
+
+def _is_pure_page_query(text: str, page_ref: int) -> bool:
+    """True when the query is essentially JUST a page reference ("what is on page N"),
+    with no semantic topic. A page+topic query ("requirements on page 12") is NOT pure
+    and must keep its semantic-retrieval fallback if the page chunk is missing.
+    """
+    residue = text
+    for pat in _PAGE_REF_PATTERNS:
+        residue = pat.sub(" ", residue)
+    residue = re.sub(rf"\b0*{page_ref}\b", " ", residue)
+    residue = _PAGE_LOOKUP_FILLER.sub(" ", residue)
+    residue = re.sub(r"[^0-9A-Za-zÀ-￿]+", " ", residue).strip()
+    return len(residue) <= 2
+
+
 def _matches_any(text: str, patterns: tuple[str, ...]) -> bool:
     return any(re.search(pattern, text, flags=re.IGNORECASE) for pattern in patterns)
 
@@ -209,9 +231,13 @@ class QueryRouter:
 
         page_ref = _detect_page_ref(normalized)
         has_page_lookup = page_ref is not None and not has_summary and not has_exhaustive
+        # A "pure" page lookup is just a page reference with no semantic topic
+        # ("what is on page N"). Page+topic ("requirements on page 12") is NOT pure —
+        # it must keep its semantic-retrieval fallback on a page-chunk miss.
+        pure_page = has_page_lookup and _is_pure_page_query(normalized, page_ref)
 
-        # Pure page lookup: short-circuit only when no table/comparison intent is present.
-        if has_page_lookup and not has_table and not has_compare:
+        # Short-circuit only for a PURE page lookup with no table/comparison intent.
+        if pure_page and not has_table and not has_compare:
             return QueryRoute(
                 primary_intent=QueryIntent.PAGE_LOOKUP,
                 intents=(QueryIntent.PAGE_LOOKUP,),
@@ -273,6 +299,10 @@ class QueryRouter:
             coverage = "section"
             confidence = max(confidence, 0.9)
             reason = "specific page reference" if reason == "default local question" else reason
+            # Page+topic (not pure) must carry LOCAL_QA so the chat layer knows it has a
+            # semantic target and keeps the fallback when the exact page chunk is missing.
+            if not pure_page and QueryIntent.LOCAL_QA not in intents:
+                intents.append(QueryIntent.LOCAL_QA)
 
         if not intents:
             intents.append(QueryIntent.LOCAL_QA)

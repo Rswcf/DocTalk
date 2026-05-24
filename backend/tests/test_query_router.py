@@ -139,3 +139,19 @@ def test_plain_lookup_remains_local_qa() -> None:
 
     assert route.primary_intent == QueryIntent.LOCAL_QA
     assert route.coverage == "top_hits"
+
+
+def test_pure_vs_mixed_page_lookup_r2a():
+    """R2a: pure page lookup → (PAGE_LOOKUP,) [no fallback]; page+topic → carries
+    LOCAL_QA [keeps semantic fallback on a page-chunk miss]. (Codex r2a r2 blocker)"""
+    from app.services.query_router import query_router, QueryIntent
+
+    for pure_q in ("what is on page 350", "page 350", "第350页有什么"):
+        assert query_router.route(pure_q).intents == (QueryIntent.PAGE_LOOKUP,), pure_q
+
+    for mixed_q in ("requirements on page 12", "does page 12 mention requirements",
+                    "concepto de cohesión en la página 14"):
+        r = query_router.route(mixed_q)
+        assert r.primary_intent == QueryIntent.PAGE_LOOKUP, mixed_q
+        assert r.intents != (QueryIntent.PAGE_LOOKUP,), mixed_q
+        assert QueryIntent.LOCAL_QA in r.intents, mixed_q
