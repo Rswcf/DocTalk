@@ -50,12 +50,13 @@ def test_low_quality_gate_cjk_safe():
 
 
 def test_resolve_ocr_languages_script_primary_locale_refines():
-    # U13: Arabic script + ur locale → urd first, eng appended for digits
+    # U13: Arabic script + ur locale → urd first; NO eng (it injects Latin noise into
+    # non-Latin OCR — validated), so the set is the script family only.
     langs = resolve_ocr_languages("ur", script="Arabic").split("+")
-    assert langs[0] == "urd" and "eng" in langs and len(langs) <= 3
-    # en-locale user, Arabic-script doc → OSD wins: Arabic langs, NOT eng-primary
+    assert langs[0] == "urd" and "eng" not in langs and len(langs) <= 2
+    # en-locale user, Arabic-script doc → OSD wins: Arabic langs, never eng
     langs2 = resolve_ocr_languages("en", script="Arabic").split("+")
-    assert langs2[0] in ("ara", "urd") and langs2[0] != "eng"
+    assert langs2[0] in ("ara", "urd") and "eng" not in langs2
 
 
 def test_resolve_ocr_languages_latin_is_narrow():

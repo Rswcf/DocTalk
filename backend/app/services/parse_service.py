@@ -76,13 +76,13 @@ def resolve_ocr_languages(locale: str | None = None, script: str | None = None) 
         fam = [c for c in _SCRIPT_FAMILY_ORDERED[script] if c in installed]
         if locale_lang and locale_lang in fam:
             fam = [locale_lang] + [c for c in fam if c != locale_lang]
+        # NO eng for non-Latin scripts: adding eng makes Tesseract interleave spurious Latin
+        # glyphs into Arabic/CJK/Devanagari output (validated on U13: urd=0.99 clean vs
+        # ara+urd+eng=0.60–0.77 with 16–39% Latin noise). Western digits are handled by the
+        # script's own model. Keep the set to the script family alone.
         chosen = fam[:2]
-        if chosen and "eng" in installed and "eng" not in chosen:
-            chosen.append("eng")  # digits / embedded Latin
     elif locale_lang and locale_lang in installed:
         chosen = [locale_lang]
-        if locale_lang != "eng" and "eng" in installed:
-            chosen.append("eng")
 
     chosen = [c for c in chosen if c in installed]
     if not chosen:
