@@ -5,7 +5,7 @@ const page = createMarketingLocalePage({
   Content: ToolsHubContent,
   path: '/tools',
   titleKey: 'toolsHub.heroTitle',
-  descKey: 'toolsHub.heroDescription',
+  descKey: 'toolsHub.heroLede',
 });
 
 export const generateMetadata = page.generateMetadata;

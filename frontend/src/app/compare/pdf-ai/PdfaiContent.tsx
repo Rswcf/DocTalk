@@ -80,8 +80,7 @@ export default async function PdfaiContent({ locale }: { locale: string }) {
         <EdProse>
           <p>
             <a href="https://pdf.ai" target="_blank" rel="noopener noreferrer">PDF.ai</a>{' '}
-            {t('comparePdfai.whatIsPdfaiDescription')}{' '}
-            It leverages <a href="https://arxiv.org/abs/2005.11401" target="_blank" rel="noopener noreferrer">retrieval-augmented generation</a> to provide cited answers from your documents.
+            {t('comparePdfai.whatIsPdfaiDescription')}
           </p>
         </EdProse>
       </EdSection>

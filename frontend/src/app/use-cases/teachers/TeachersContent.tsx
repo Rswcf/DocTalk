@@ -141,11 +141,7 @@ export default async function TeachersContent({ locale }: { locale: string }) {
         <EdProse>
           <p>{t('useCasesTeachers.challenge.p1')}</p>
           <p>{t('useCasesTeachers.challenge.p2')}</p>
-          <p>
-            {t('useCasesTeachers.challenge.p3pre')}{' '}
-            <a href="https://www.edweek.org/technology" target="_blank" rel="noopener noreferrer">{t('useCasesTeachers.challenge.p3link')}</a>
-            {' '}{t('useCasesTeachers.challenge.p3post')}
-          </p>
+          <p>{t('useCasesTeachers.challenge.p3pre')}</p>
           <p>{t('useCasesTeachers.challenge.p4')}</p>
         </EdProse>
       </EdSection>

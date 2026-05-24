@@ -84,8 +84,7 @@ export default async function NotebooklmContent({ locale }: { locale: string }) 
         <EdProse>
           <p>
             <a href="https://notebooklm.google.com" target="_blank" rel="noopener noreferrer">NotebookLM</a>{' '}
-            {t('compareNotebooklm.whatIsNotebookLMDescription')}{' '}
-            Learn more about <a href="https://blog.google/technology/ai/notebooklm-google-ai/" target="_blank" rel="noopener noreferrer">{"Google's AI notebook"}</a>.
+            {t('compareNotebooklm.whatIsNotebookLMDescription')}
           </p>
         </EdProse>
       </EdSection>

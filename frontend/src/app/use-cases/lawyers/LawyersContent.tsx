@@ -101,18 +101,8 @@ export default async function LawyersContent({ locale }: { locale: string }) {
       <EdSection title={t('useCasesLawyers.challenge.title')}>
         <EdProse>
           <p>{t('useCasesLawyers.challenge.p1')}</p>
-          <p>
-            {t('useCasesLawyers.challenge.p2')}{' '}
-            {tOr('useCasesLawyers.challenge.p2ResourcePre', 'Resources like ')}
-            <a href="https://www.americanbar.org/groups/law_practice/resources/tech-tools/" target="_blank" rel="noopener noreferrer">ABA Legal Technology</a>
-            {tOr('useCasesLawyers.challenge.p2ResourcePost', ' highlight the growing role of AI in law practice.')}
-          </p>
-          <p>
-            {t('useCasesLawyers.challenge.p3')}{' '}
-            {tOr('useCasesLawyers.challenge.p3PlatformPre', 'Platforms like ')}
-            <a href="https://www.thomsonreuters.com/en/artificial-intelligence.html" target="_blank" rel="noopener noreferrer">Thomson Reuters AI</a>
-            {tOr('useCasesLawyers.challenge.p3PlatformPost', ' are advancing legal document analysis.')}
-          </p>
+          <p>{t('useCasesLawyers.challenge.p2')}</p>
+          <p>{t('useCasesLawyers.challenge.p3')}</p>
           <p>{t('useCasesLawyers.challenge.p4')}</p>
         </EdProse>
       </EdSection>

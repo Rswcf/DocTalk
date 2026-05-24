@@ -66,7 +66,7 @@ export default async function AlternativesHubContent({ locale }: { locale: strin
             label: t('altsHub.alternativesCompared', { count: a.count }),
             title: t('altsHub.alternativesFor', { name: a.name }),
             body: a.tagline,
-            href: `/alternatives/${a.slug}`,
+            href: href(`/alternatives/${a.slug}`),
           }))}
         />
       </EdSection>

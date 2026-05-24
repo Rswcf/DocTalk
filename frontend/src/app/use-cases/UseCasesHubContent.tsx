@@ -61,7 +61,7 @@ export default async function UseCasesHubContent({ locale }: { locale: string })
             return (
               <Link
                 key={uc.slug}
-                href={`/use-cases/${uc.slug}`}
+                href={href(`/use-cases/${uc.slug}`)}
                 className="ed-card h-full"
                 style={{ display: 'flex', flexDirection: 'column' }}
               >

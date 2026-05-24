@@ -68,14 +68,8 @@ export default async function FinanceContent({ locale }: { locale: string }) {
       <EdSection title={t('useCasesFinance.challenge.title')}>
         <EdProse>
           <p>{t('useCasesFinance.challenge.p1')}</p>
-          <p>
-            {t('useCasesFinance.challenge.p2')}{' '}
-            Public filings on <a href="https://www.sec.gov/edgar/searchedgar/companysearch" target="_blank" rel="noopener noreferrer">SEC EDGAR</a> can run hundreds of pages.
-          </p>
-          <p>
-            {t('useCasesFinance.challenge.p3')}{' '}
-            Understanding <a href="https://www.sec.gov/answers/reada10k.htm" target="_blank" rel="noopener noreferrer">annual reports and 10-K filings</a> is critical for investment decisions.
-          </p>
+          <p>{t('useCasesFinance.challenge.p2')}</p>
+          <p>{t('useCasesFinance.challenge.p3')}</p>
           <p>{t('useCasesFinance.challenge.p4')}</p>
         </EdProse>
       </EdSection>

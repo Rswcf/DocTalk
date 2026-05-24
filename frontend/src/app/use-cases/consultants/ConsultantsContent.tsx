@@ -135,11 +135,7 @@ export default async function ConsultantsContent({ locale }: { locale: string })
         <EdProse>
           <p>{t('useCasesConsultants.challenge.p1')}</p>
           <p>{t('useCasesConsultants.challenge.p2')}</p>
-          <p>
-            {t('useCasesConsultants.challenge.p3pre')}{' '}
-            <a href="https://www.thomsonreuters.com/content/dam/ewp-m/documents/thomsonreuters/en/pdf/reports/2026-ai-in-professional-services-report.pdf" target="_blank" rel="noopener noreferrer">{t('useCasesConsultants.challenge.p3link')}</a>
-            {' '}{t('useCasesConsultants.challenge.p3post')}
-          </p>
+          <p>{t('useCasesConsultants.challenge.p3pre')}</p>
           <p>{t('useCasesConsultants.challenge.p4')}</p>
         </EdProse>
       </EdSection>

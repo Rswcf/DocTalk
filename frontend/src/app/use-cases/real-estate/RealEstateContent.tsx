@@ -154,11 +154,7 @@ export default async function RealEstateContent({ locale }: { locale: string }) 
           <p>
             {t('useCasesRealEstate.challengeP2')}
           </p>
-          <p>
-            {t('useCasesRealEstate.challengeP3Pre')}{' '}
-            <a href="https://www.nar.realtor/technology" target="_blank" rel="noopener noreferrer">{t('useCasesRealEstate.challengeP3Link')}</a>
-            {' '}{t('useCasesRealEstate.challengeP3Post')}
-          </p>
+          <p>{t('useCasesRealEstate.challengeP3Pre')}</p>
           <p>
             {t('useCasesRealEstate.challengeP4')}
           </p>

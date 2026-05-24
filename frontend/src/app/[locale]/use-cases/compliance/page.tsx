@@ -5,7 +5,7 @@ const page = createMarketingLocalePage({
   Content: ComplianceContent,
   path: '/use-cases/compliance',
   titleKey: 'useCasesCompliance.heroTitle',
-  descKey: 'useCasesCompliance.heroDescription',
+  descKey: 'useCasesCompliance.heroLede',
 });
 
 export const generateMetadata = page.generateMetadata;

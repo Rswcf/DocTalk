@@ -104,14 +104,8 @@ export default async function HrContractsContent({ locale }: { locale: string })
       <EdSection title={t('useCasesHr.challenge.title')}>
         <EdProse>
           <p>{t('useCasesHr.challenge.p1')}</p>
-          <p>
-            {t('useCasesHr.challenge.p2')}{' '}
-            Organizations like <a href="https://www.shrm.org" target="_blank" rel="noopener noreferrer">SHRM</a> provide guidance on best practices for policy management.
-          </p>
-          <p>
-            {t('useCasesHr.challenge.p3')}{' '}
-            Compliance with regulations from the <a href="https://www.dol.gov" target="_blank" rel="noopener noreferrer">U.S. Department of Labor</a> adds additional complexity.
-          </p>
+          <p>{t('useCasesHr.challenge.p2')}</p>
+          <p>{t('useCasesHr.challenge.p3')}</p>
           <p>{t('useCasesHr.challenge.p4')}</p>
         </EdProse>
       </EdSection>

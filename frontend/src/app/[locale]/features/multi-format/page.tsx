@@ -5,7 +5,7 @@ const page = createMarketingLocalePage({
   Content: MultiFormatContent,
   path: '/features/multi-format',
   titleKey: 'featuresMultiFormat.heroTitle',
-  descKey: 'featuresMultiFormat.heroDescription',
+  descKey: 'featuresMultiFormat.heroSubtitle',
 });
 
 export const generateMetadata = page.generateMetadata;

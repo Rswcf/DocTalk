@@ -76,7 +76,7 @@ export default async function FeaturesHubContent({ locale }: { locale: string })
             title: f.title,
             body: f.description,
             icon: f.icon,
-            href: `/features/${f.slug}`,
+            href: href(`/features/${f.slug}`),
           }))}
         />
       </EdSection>

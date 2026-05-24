@@ -72,10 +72,7 @@ export default async function AskyourpdfContent({ locale }: { locale: string }) 
 
       <EdSection alt title={t('compareAskyourpdf.whatIsDocTalkTitle')}>
         <EdProse>
-          <p>
-            {t('compareAskyourpdf.whatIsDocTalkDescription')}{' '}
-            It is built on a <a href="https://arxiv.org/abs/2005.11401" target="_blank" rel="noopener noreferrer">RAG architecture</a> for grounded, cited answers.
-          </p>
+          <p>{t('compareAskyourpdf.whatIsDocTalkDescription')}</p>
         </EdProse>
       </EdSection>
 

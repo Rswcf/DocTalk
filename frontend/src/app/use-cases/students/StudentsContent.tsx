@@ -127,10 +127,7 @@ export default async function StudentsContent({ locale }: { locale: string }) {
       <EdSection title={t('useCasesStudents.challenge.title')}>
         <EdProse>
           <p>{t('useCasesStudents.challenge.p1')}</p>
-          <p>
-            {t('useCasesStudents.challenge.p2')}{' '}
-            Tools like <a href="https://scholar.google.com" target="_blank" rel="noopener noreferrer">Google Scholar</a> and reference managers like <a href="https://www.zotero.org" target="_blank" rel="noopener noreferrer">Zotero</a> help find papers, but understanding them still takes time.
-          </p>
+          <p>{t('useCasesStudents.challenge.p2')}</p>
           <p>{t('useCasesStudents.challenge.p3')}</p>
           <p>{t('useCasesStudents.challenge.p4')}</p>
         </EdProse>

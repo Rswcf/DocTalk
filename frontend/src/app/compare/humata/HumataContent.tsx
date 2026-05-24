@@ -80,8 +80,7 @@ export default async function HumataContent({ locale }: { locale: string }) {
         <EdProse>
           <p>
             <a href="https://www.humata.ai" target="_blank" rel="noopener noreferrer">Humata</a>{' '}
-            {t('compareHumata.whatIsHumataDescription')}{' '}
-            It uses a <a href="https://arxiv.org/abs/2005.11401" target="_blank" rel="noopener noreferrer">RAG-based approach</a> to generate answers from uploaded documents.
+            {t('compareHumata.whatIsHumataDescription')}
           </p>
         </EdProse>
       </EdSection>

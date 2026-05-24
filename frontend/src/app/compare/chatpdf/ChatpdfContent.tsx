@@ -76,10 +76,7 @@ export default async function ChatpdfContent({ locale }: { locale: string }) {
 
       <EdSection alt title={t('compareChatpdf.whatIsDocTalk')}>
         <EdProse>
-          <p>
-            {t('compareChatpdf.whatIsDocTalkDescription')}{' '}
-            DocTalk uses a <a href="https://arxiv.org/abs/2005.11401" target="_blank" rel="noopener noreferrer">Retrieval-Augmented Generation (RAG)</a> architecture to deliver accurate, cited answers.
-          </p>
+          <p>{t('compareChatpdf.whatIsDocTalkDescription')}</p>
         </EdProse>
       </EdSection>
 

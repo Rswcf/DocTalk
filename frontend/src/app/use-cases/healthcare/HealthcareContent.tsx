@@ -133,11 +133,7 @@ export default async function HealthcareContent({ locale }: { locale: string }) 
         <EdProse>
           <p>{t('useCasesHealthcare.challenge.p1')}</p>
           <p>{t('useCasesHealthcare.challenge.p2')}</p>
-          <p>
-            {t('useCasesHealthcare.challenge.p3pre')}{' '}
-            <a href="https://pubmed.ncbi.nlm.nih.gov/" target="_blank" rel="noopener noreferrer">{t('useCasesHealthcare.challenge.p3link')}</a>
-            {' '}{t('useCasesHealthcare.challenge.p3post')}
-          </p>
+          <p>{t('useCasesHealthcare.challenge.p3pre')}</p>
           <p>{t('useCasesHealthcare.challenge.p4')}</p>
         </EdProse>
       </EdSection>

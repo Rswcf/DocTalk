@@ -63,7 +63,7 @@ export default async function CompareHubContent({ locale }: { locale: string }) 
           items={comparisons.map((c) => ({
             title: t('compareHub.vsLabel', { name: c.name }),
             body: t(c.taglineKey),
-            href: `/compare/${c.slug}`,
+            href: href(`/compare/${c.slug}`),
           }))}
         />
       </EdSection>

@@ -155,11 +155,7 @@ export default async function ComplianceContent({ locale }: { locale: string }) 
           <p>
             {t('useCasesCompliance.challengeP2')}
           </p>
-          <p>
-            {t('useCasesCompliance.challengeP3Pre')}{' '}
-            <a href="https://www.complianceweek.com/" target="_blank" rel="noopener noreferrer">{t('useCasesCompliance.challengeP3Link')}</a>
-            {' '}{t('useCasesCompliance.challengeP3Post')}
-          </p>
+          <p>{t('useCasesCompliance.challengeP3Pre')}</p>
           <p>
             {t('useCasesCompliance.challengeP4')}
           </p>
