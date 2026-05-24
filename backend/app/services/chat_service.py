@@ -1129,6 +1129,7 @@ class ChatService:
                     # Page out of range / no chunks there → fall back to semantic.
                     corrective = await corrective_retrieval_service.retrieve_single(
                         user_message, query_route, document_id, top_k=8, db=db,
+                        doc_pages=getattr(doc, "page_count", None),
                     )
                     retrieved = corrective.retrieved
                     retrieval_strategy = corrective.strategy
@@ -1141,6 +1142,7 @@ class ChatService:
                     document_id,
                     top_k=8,
                     db=db,
+                    doc_pages=getattr(doc, "page_count", None),
                 )
                 retrieved = corrective.retrieved
                 retrieval_strategy = corrective.strategy
