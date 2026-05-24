@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { URL_LOCALES, localizedHref } from '../i18n/routing';
 
 export const SITE_URL = 'https://www.doctalk.site';
 export const DEFAULT_SHARE_ALT = 'DocTalk — AI Document Chat with Cited Answers';
@@ -18,6 +19,24 @@ interface MarketingMetadataOptions {
   openGraph?: Partial<OpenGraphInput>;
   twitter?: Partial<TwitterInput>;
   locale?: string;
+  /**
+   * When true, emit hreflang `alternates.languages` for every marketing locale
+   * and set the canonical to this locale's URL. `path` is the locale-agnostic
+   * path (e.g. `/use-cases/lawyers`); `locale` is the page's locale (default `en`).
+   */
+  localized?: boolean;
+}
+
+/** hreflang map: unprefixed `en` default + each URL locale + `x-default` → en. */
+function buildLanguageAlternates(path: string): Record<string, string> {
+  const languages: Record<string, string> = {
+    en: absoluteUrl(localizedHref('en', path)),
+  };
+  for (const loc of URL_LOCALES) {
+    languages[loc] = absoluteUrl(localizedHref(loc, path));
+  }
+  languages['x-default'] = absoluteUrl(localizedHref('en', path));
+  return languages;
 }
 
 const OG_LOCALE_MAP: Record<string, string> = {
@@ -88,23 +107,27 @@ export function buildMarketingMetadata({
   openGraph,
   twitter,
   locale,
+  localized,
 }: MarketingMetadataOptions): Metadata {
   const titleText = resolveTitleText(title);
+  const pageLocale = locale ?? 'en';
+  const canonicalPath = localized ? localizedHref(pageLocale, path) : path;
 
   return {
     title,
     description,
     ...(keywords ? { keywords } : {}),
     alternates: {
-      canonical: path,
+      canonical: canonicalPath,
+      ...(localized ? { languages: buildLanguageAlternates(path) } : {}),
     },
     ...(robots ? { robots } : {}),
     openGraph: {
       title: titleText,
       description,
-      url: absoluteUrl(path),
+      url: absoluteUrl(canonicalPath),
       siteName: 'DocTalk',
-      locale: locale ? (OG_LOCALE_MAP[locale] ?? 'en_US') : 'en_US',
+      locale: OG_LOCALE_MAP[pageLocale] ?? 'en_US',
       images: [
         {
           url: absoluteUrl(DEFAULT_OG_IMAGE_PATH),

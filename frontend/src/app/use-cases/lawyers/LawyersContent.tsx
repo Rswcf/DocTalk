@@ -1,8 +1,5 @@
-"use client";
-
 import React from 'react';
 import Link from 'next/link';
-import { useLocale } from '../../../i18n';
 import {
   Scale,
   Search,
@@ -25,6 +22,8 @@ import EdCardGrid from '../../../components/marketing/EdCardGrid';
 import EdStepRow from '../../../components/marketing/EdStepRow';
 import EdFaqList from '../../../components/marketing/EdFaqList';
 import EdCtaBanner from '../../../components/marketing/EdCtaBanner';
+import { getServerT } from '../../../i18n/server';
+import { localizedHrefIfAvailable } from '../../../i18n/routing';
 
 const featureIcons = [Search, Clock, FileText, AlertTriangle, Quote];
 const featureKeys = ['clauseExtraction', 'dueDiligence', 'filingSummarization', 'riskAssessment', 'keyTerms'];
@@ -35,8 +34,18 @@ const securityKeys = ['encryption', 'noTraining', 'gdpr', 'dataExport'];
 const stepIcons = [Upload, MessageSquare, CheckCircle];
 const stepKeys = ['upload', 'ask', 'verify'];
 
-export default function LawyersClient() {
-  const { t } = useLocale();
+/**
+ * Server-rendered use-case page. Translations are resolved on the server via
+ * `getServerT(locale)` so the initial HTML at `/{locale}/use-cases/lawyers` is
+ * in the target language (indexable without JS). Internal links are prefixed
+ * with the locale so in-language navigation is preserved. The icon-bearing kit
+ * components (EdFeatureList/EdCardGrid/EdStepRow/EdPageHero) are server
+ * components, so the icon refs never cross a client boundary; only string props
+ * pass into the client islands (EdFaqList, MarketingShell).
+ */
+export default async function LawyersContent({ locale }: { locale: string }) {
+  const { t } = await getServerT(locale);
+  const href = (path: string) => localizedHrefIfAvailable(locale, path);
 
   const faqItems = [
     { question: t('useCasesLawyers.faq.q1.question'), answer: t('useCasesLawyers.faq.q1.answer') },
@@ -73,8 +82,8 @@ export default function LawyersClient() {
   return (
     <MarketingShell
       breadcrumb={[
-        { label: t('useCasesLawyers.breadcrumb.home'), href: '/' },
-        { label: t('useCasesLawyers.breadcrumb.useCases'), href: '/use-cases' },
+        { label: t('useCasesLawyers.breadcrumb.home'), href: href('/') },
+        { label: t('useCasesLawyers.breadcrumb.useCases'), href: href('/use-cases') },
         { label: t('useCasesLawyers.breadcrumb.current') },
       ]}
     >
@@ -82,7 +91,7 @@ export default function LawyersClient() {
         icon={Scale}
         title={t('useCasesLawyers.heroTitle')}
         lede={t('useCasesLawyers.heroDescription')}
-        primaryCta={{ label: t('useCasesLawyers.heroCta'), href: '/demo' }}
+        primaryCta={{ label: t('useCasesLawyers.heroCta'), href: href('/demo') }}
       />
 
       <EdSection title={t('useCasesLawyers.challenge.title')}>
@@ -109,7 +118,7 @@ export default function LawyersClient() {
       <EdSection title={t('useCasesLawyers.docTypes.title')}>
         <p className="ed-body" style={{ marginBottom: '24px' }}>
           {t('useCasesLawyers.docTypes.description')}{' '}
-          <Link href="/features/multi-format" className="ed-inline">
+          <Link href={href('/features/multi-format')} className="ed-inline">
             {t('useCasesLawyers.docTypes.formatsLink')}
           </Link>
           {t('useCasesLawyers.docTypes.descriptionSuffix')}
@@ -141,7 +150,7 @@ export default function LawyersClient() {
           <p>{t('useCasesLawyers.whyCitations.p2')}</p>
           <p>
             {t('useCasesLawyers.whyCitations.p3pre')}
-            <Link href="/features/citations" className="ed-inline">{t('useCasesLawyers.whyCitations.p3link')}</Link>
+            <Link href={href('/features/citations')} className="ed-inline">{t('useCasesLawyers.whyCitations.p3link')}</Link>
             {t('useCasesLawyers.whyCitations.p3post')}
           </p>
           <p>{t('useCasesLawyers.whyCitations.p4')}</p>
@@ -171,8 +180,8 @@ export default function LawyersClient() {
       <EdCtaBanner
         title={t('useCasesLawyers.cta.title')}
         description={t('useCasesLawyers.cta.description')}
-        primary={{ label: t('useCasesLawyers.cta.tryFreeDemo'), href: '/demo' }}
-        secondary={{ label: t('useCasesLawyers.cta.viewPricing'), href: '/pricing' }}
+        primary={{ label: t('useCasesLawyers.cta.tryFreeDemo'), href: href('/demo') }}
+        secondary={{ label: t('useCasesLawyers.cta.viewPricing'), href: href('/pricing') }}
       />
     </MarketingShell>
   );

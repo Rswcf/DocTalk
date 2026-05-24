@@ -2,10 +2,12 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { Menu, X } from "lucide-react";
 import DocTalkLogo from "../DocTalkLogo";
 import EdLanguageSelector from "./EdLanguageSelector";
 import { useLocale } from "../../i18n";
+import { localizedHrefIfAvailable, splitLocaleFromPath } from "../../i18n/routing";
 
 export interface Crumb {
   label: string;
@@ -33,10 +35,14 @@ export default function EditorialHeaderBase({
 }: EditorialHeaderBaseProps) {
   const { t, tOr } = useLocale();
   const [mobileOpen, setMobileOpen] = useState(false);
+  // Derive the URL locale from the path so nav links stay in-language on
+  // localized pages (`/de/...`). Targets not yet localized fall back to English.
+  const { locale: urlLocale } = splitLocaleFromPath(usePathname() || "/");
+  const navHref = (path: string) => localizedHrefIfAvailable(urlLocale, path);
   const NAV_LINKS = [
-    { href: "/features", label: t("public.nav.features") },
-    { href: "/pricing", label: t("footer.pricing") },
-    { href: "/trust", label: tOr("footer.links.trust", "Security") },
+    { href: navHref("/features"), label: t("public.nav.features") },
+    { href: navHref("/pricing"), label: t("footer.pricing") },
+    { href: navHref("/trust"), label: tOr("footer.links.trust", "Security") },
   ];
 
   return (
@@ -52,7 +58,7 @@ export default function EditorialHeaderBase({
           <div className="flex items-center justify-between h-16">
             {/* Left — logo + wordmark (+ optional dateline) */}
             <Link
-              href="/"
+              href={navHref("/")}
               className="flex items-center gap-3 shrink-0"
               aria-label="DocTalk home"
             >
