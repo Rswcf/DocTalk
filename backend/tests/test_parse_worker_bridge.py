@@ -136,11 +136,22 @@ def test_parse_document_uses_forwarded_locale_for_ocr(monkeypatch) -> None:
     monkeypatch.setattr(parse_worker.settings, "OCR_ENABLED", True)
     monkeypatch.setattr(parse_worker.settings, "OCR_DPI", 300)
 
-    resolver_calls: list[str | None] = []
+    # The Qdrant pre-delete (R2b) runs before extraction — stub embedding_service so it
+    # succeeds instead of timing out against a real Qdrant.
+    class _StubQdrant:
+        def delete(self, *_a, **_k) -> None:
+            return None
+
+    monkeypatch.setattr(parse_worker.embedding_service, "ensure_collection", lambda *_a, **_k: None)
+    monkeypatch.setattr(parse_worker.embedding_service, "get_qdrant_client", lambda *_a, **_k: _StubQdrant())
+    # OSD self-detection (R2b): keep rendering/subprocess out of the unit test.
+    monkeypatch.setattr(parse_worker, "detect_script_osd", lambda *_a, **_k: "Japanese")
+
+    resolver_calls: list[tuple] = []
     ocr_calls: list[tuple[str, int]] = []
 
-    def fake_resolve_ocr_languages(locale: str | None = None) -> str:
-        resolver_calls.append(locale)
+    def fake_resolve_ocr_languages(locale: str | None = None, script: str | None = None) -> str:
+        resolver_calls.append((locale, script))
         return "jpn"
 
     class _FakeParseService:
@@ -167,5 +178,6 @@ def test_parse_document_uses_forwarded_locale_for_ocr(monkeypatch) -> None:
 
     parse_worker.parse_document.run(str(doc_id), locale="ja")
 
-    assert resolver_calls == ["ja"]
+    # locale forwarded + OSD script passed to the resolver; resolved languages used for OCR
+    assert resolver_calls == [("ja", "Japanese")]
     assert ocr_calls == [("jpn", 300)]

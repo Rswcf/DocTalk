@@ -15,10 +15,15 @@ from __future__ import annotations
 import argparse
 import asyncio
 import os
+import sys
 
-import asyncpg
+# Make the backend root importable when run as `python3 scripts/find_low_quality_docs.py`
+# (sys.path[0] would otherwise be backend/scripts and `app` would not resolve).
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from app.services.parse_service import PARSE_PIPELINE_VERSION
+import asyncpg  # noqa: E402
+
+from app.services.parse_service import PARSE_PIPELINE_VERSION  # noqa: E402
 
 
 def _dsn() -> str:
@@ -57,9 +62,14 @@ async def main() -> None:
         enqueue: list[str] = []
         for r in rows:
             m = dict(r)
-            already_ocr = (m["parse_method"] == "ocr" and (m["parse_version"] or 0) >= PARSE_PIPELINE_VERSION)
-            skip = already_ocr and not args.force
-            flag = " SKIP(ocr@current)" if skip else ""
+            # A doc already processed at the current pipeline version won't improve by
+            # re-running the same pipeline — skip ALL such rows (not just OCR'd ones) to avoid
+            # a re-enqueue loop on low-quality text/non-PDF docs the worker can't OCR better.
+            # Only OLD-version or never-versioned docs auto-enqueue; current-version low-quality
+            # docs are listed for manual review and need --force.
+            at_current = (m["parse_version"] or 0) >= PARSE_PIPELINE_VERSION
+            skip = at_current and not args.force
+            flag = " SKIP(processed@current; --force to override)" if skip else ""
             print(f"  {m['id']} v={m['parse_version']} m={m['parse_method']} "
                   f"q={m['text_quality']} {m['file_type']:4} {m['fn']}{flag}")
             if not skip:

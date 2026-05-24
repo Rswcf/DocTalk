@@ -86,25 +86,43 @@ def resolve_ocr_languages(locale: str | None = None, script: str | None = None) 
 
     chosen = [c for c in chosen if c in installed]
     if not chosen:
-        return "+".join(installed)  # last resort: no script/locale signal
+        # No script (OSD failed) and no usable locale. Do NOT return the full installed set —
+        # the kitchen-sink set makes Tesseract hallucinate cross-script glyphs (the exact U13
+        # failure). Fall back to eng alone: correct for Latin docs, and for a non-Latin doc it
+        # yields low-quality output that the worker's adopt-only-if-better guard rejects
+        # (keeping the existing text layer) rather than committing mixed-script garbage.
+        return "eng" if "eng" in installed else (installed[0] if installed else "eng")
     return "+".join(chosen[:3])
 
 
-def detect_script_osd(pdf_bytes: bytes, *, sample_pages: int = 2, dpi: int = 150) -> str | None:
+_OSD_MAX_PIXELS = 20_000_000  # cap rendered image (same as extract_pages_ocr) to avoid OOM
+_OSD_MIN_CONFIDENCE = 1.0      # Tesseract OSD confidence floor; below this the guess is noise
+
+
+def detect_script_osd(pdf_bytes: bytes, *, sample_pages: int = 3, dpi: int = 150) -> str | None:
     """Detect a PDF's dominant script via Tesseract OSD (`--psm 0`) — content-based and
-    locale-independent. Renders up to `sample_pages` pages to PNG and votes on the detected
-    script. Returns a Tesseract script name ('Arabic', 'Han', 'Latin', ...) or None.
+    locale-independent. Renders up to `sample_pages` pages to PNG (pixel-capped) and votes on
+    the detected script, requiring a minimum confidence. Returns a Tesseract script name
+    ('Arabic', 'Han', 'Latin', ...) or None when no page yields a confident detection.
     """
     try:
         doc = fitz.open(stream=pdf_bytes, filetype="pdf")
-    except Exception:
+    except (RuntimeError, ValueError, OSError) as e:
+        logger.debug("OSD could not open PDF: %s", e)
         return None
     try:
         votes: Counter = Counter()
         for pi in range(min(sample_pages, doc.page_count)):
             png = None
             try:
-                pix = doc[pi].get_pixmap(dpi=dpi)
+                page = doc[pi]
+                # Cap rendered pixels (huge pages can OOM the worker before the timeout helps).
+                eff_dpi = dpi
+                w_px = page.rect.width * dpi / 72
+                h_px = page.rect.height * dpi / 72
+                if w_px * h_px > _OSD_MAX_PIXELS:
+                    eff_dpi = max(36, int(dpi * (_OSD_MAX_PIXELS / (w_px * h_px)) ** 0.5))
+                pix = page.get_pixmap(dpi=eff_dpi)
                 with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as tf:
                     png = tf.name
                 pix.save(png)
@@ -114,7 +132,7 @@ def detect_script_osd(pdf_bytes: bytes, *, sample_pages: int = 2, dpi: int = 150
                 )
                 m = re.search(r"^Script:\s*(\S+)", out.stdout, re.M)
                 conf = re.search(r"^Script confidence:\s*([\d.]+)", out.stdout, re.M)
-                if m and (not conf or float(conf.group(1)) >= 0.5):
+                if m and conf and float(conf.group(1)) >= _OSD_MIN_CONFIDENCE:
                     votes[m.group(1)] += 1
             except (subprocess.SubprocessError, OSError, RuntimeError, ValueError, MemoryError) as e:
                 # Narrow catch (not bare Exception) so a Celery SoftTimeLimitExceeded — which
@@ -358,7 +376,10 @@ class ParseService:
                             blocks=blocks,
                         )
                     )
-                except Exception as e:
+                except (RuntimeError, ValueError, OSError, MemoryError) as e:
+                    # Narrow catch (not bare Exception) so a Celery SoftTimeLimitExceeded —
+                    # an Exception subclass — propagates to the worker and the task honours its
+                    # soft time limit instead of silently skipping pages and running on.
                     logger.warning("OCR failed on page %d: %s", pi, e)
                     # Skip this page but continue with the rest
                     continue

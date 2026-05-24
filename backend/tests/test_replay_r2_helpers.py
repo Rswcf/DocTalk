@@ -7,7 +7,7 @@ from app.services.chat_service import (
     _source_location_contract,
     _source_locator,
 )
-from app.services.parse_service import resolve_ocr_languages
+from app.services.parse_service import _installed_ocr_langs, resolve_ocr_languages
 
 
 # --- #1 file-type-aware, reliability-gated location labels ---
@@ -81,6 +81,9 @@ def test_terminology_contract_forbids_jargon():
 
 # --- #3 stopgap: Urdu OCR mapping ---
 def test_urdu_ocr_language():
-    langs = resolve_ocr_languages("ur")
-    assert langs.split("+")[0] == "urd"
-    assert "urd" in resolve_ocr_languages(None)  # urd in the default set
+    # ur locale resolves urd as the primary OCR language (with/without OSD script)
+    assert resolve_ocr_languages("ur").split("+")[0] == "urd"
+    assert resolve_ocr_languages("ur", script="Arabic").split("+")[0] == "urd"
+    assert "urd" in _installed_ocr_langs()  # urd is in the configured Tesseract set
+    # R2b: no script + no locale falls back to eng (NOT the full set — avoids mixed-script OCR)
+    assert resolve_ocr_languages(None) == "eng"
