@@ -12,6 +12,7 @@ from sqlalchemy.orm import selectinload
 
 from app.core.deps import get_db_session, require_auth
 from app.models.tables import DocumentJob, DocumentTable, User
+from app.services.layout_translation_service import LAYOUT_TRANSLATION_JOB_TYPE
 
 router = APIRouter(prefix="/api", tags=["document-jobs"])
 
@@ -68,6 +69,60 @@ def _table_preview(tables: list[DocumentTable]) -> list[dict[str, Any]]:
 
 
 async def _artifact_for_job(job: DocumentJob, db: AsyncSession, user: User) -> DocumentJobArtifactResponse:
+    if job.job_type == LAYOUT_TRANSLATION_JOB_TYPE:
+        metadata = job.metadata_json or {}
+        artifacts = metadata.get("artifacts") if isinstance(metadata, dict) else {}
+        target = str(metadata.get("target_language_label") or "Simplified Chinese")
+        preview = {
+            "target_language": metadata.get("target_language"),
+            "target_language_label": target,
+            "retainpdf": metadata.get("retainpdf"),
+            "free_limit": metadata.get("free_limit"),
+            "free_remaining_after": metadata.get("free_remaining_after"),
+        }
+        download_urls: list[dict[str, str]] = []
+        if job.status == "succeeded" and isinstance(artifacts, dict):
+            if "pdf" in artifacts:
+                download_urls.append(
+                    {
+                        "label": "Translated PDF",
+                        "format": "pdf",
+                        "url": f"/api/layout-translations/{job.id}/download?artifact=pdf",
+                    }
+                )
+            if "markdown" in artifacts:
+                download_urls.append(
+                    {
+                        "label": "Markdown",
+                        "format": "md",
+                        "url": f"/api/layout-translations/{job.id}/download?artifact=markdown",
+                    }
+                )
+            if "bundle" in artifacts:
+                download_urls.append(
+                    {
+                        "label": "Bundle",
+                        "format": "zip",
+                        "url": f"/api/layout-translations/{job.id}/download?artifact=bundle",
+                    }
+                )
+        if job.status == "succeeded":
+            summary = f"Layout-preserved PDF translation to {target} is ready."
+        elif job.status == "failed":
+            summary = job.error_message or "Layout-preserving translation failed."
+        else:
+            summary = f"Translating this PDF to {target} while preserving layout."
+        return DocumentJobArtifactResponse(
+            artifact_type="layout_translation",
+            status=job.status,
+            job_id=str(job.id),
+            title="Layout-preserved PDF translation",
+            summary=summary,
+            preview=preview,
+            download_urls=download_urls,
+            warning=job.error_message if job.status == "failed" else None,
+        )
+
     if job.job_type == "table_scan":
         tables: list[DocumentTable] = []
         if job.document_id:

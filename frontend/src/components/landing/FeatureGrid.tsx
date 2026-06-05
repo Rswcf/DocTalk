@@ -108,6 +108,45 @@ function VisualModes() {
   );
 }
 
+function VisualLayoutTranslation() {
+  return (
+    <div aria-hidden="true" className={canvas}>
+      <div className="absolute inset-0 flex items-center justify-center gap-3 px-4">
+        <div className="h-20 w-14 border border-[var(--ed-rule)] bg-[var(--ed-paper)] px-1.5 py-2">
+          <div className="mb-1 h-1 w-9 bg-[var(--ed-rule)]" />
+          <div className="mb-1 h-1 w-7 bg-[var(--ed-rule)]" />
+          <div className="grid grid-cols-2 gap-1">
+            <div className="h-8 border border-[var(--ed-rule)]" />
+            <div className="space-y-1 pt-0.5">
+              <div className="h-1 w-full bg-[var(--ed-rule)]" />
+              <div className="h-1 w-4/5 bg-[var(--ed-rule)]" />
+              <div className="h-1 w-full bg-[var(--ed-rule)]" />
+            </div>
+          </div>
+          <div className="mt-2 h-1 w-full bg-[var(--ed-rule)]" />
+          <div className="mt-1 h-1 w-4/5 bg-[var(--ed-rule)]" />
+        </div>
+        <div className="font-mono text-[12px] font-semibold text-[var(--ed-signal)]">PDF</div>
+        <div className="h-px w-8 bg-[var(--ed-signal)]" />
+        <div className="h-20 w-14 border border-[var(--ed-signal)]/50 bg-[var(--ed-paper)] px-1.5 py-2">
+          <div className="mb-1 h-1 w-9 bg-[var(--ed-signal)]/30" />
+          <div className="mb-1 h-1 w-7 bg-[var(--ed-signal)]/30" />
+          <div className="grid grid-cols-2 gap-1">
+            <div className="h-8 border border-[var(--ed-signal)]/35" />
+            <div className="space-y-1 pt-0.5">
+              <div className="h-1 w-full bg-[var(--ed-signal)]/30" />
+              <div className="h-1 w-4/5 bg-[var(--ed-signal)]/30" />
+              <div className="h-1 w-full bg-[var(--ed-signal)]/30" />
+            </div>
+          </div>
+          <div className="mt-2 h-1 w-full bg-[var(--ed-signal)]/30" />
+          <div className="mt-1 h-1 w-4/5 bg-[var(--ed-signal)]/30" />
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function VisualFreeDemo() {
   const { t } = useLocale();
   return (
@@ -174,19 +213,27 @@ interface Tile {
   Visual: React.ComponentType;
   titleKey: string;
   descKey: string;
+  titleFallback?: string;
+  descFallback?: string;
 }
 
 const tiles: Tile[] = [
   { Visual: VisualCitations, titleKey: 'landing.feature.citations.title', descKey: 'landing.feature.citations.desc' },
   { Visual: VisualFormats,   titleKey: 'landing.feature.formats.title',   descKey: 'landing.feature.formats.desc' },
   { Visual: VisualLanguages, titleKey: 'landing.feature.languages.title', descKey: 'landing.feature.languages.desc' },
+  {
+    Visual: VisualLayoutTranslation,
+    titleKey: 'landing.feature.layoutTranslation.title',
+    descKey: 'landing.feature.layoutTranslation.desc',
+    titleFallback: 'Translate PDFs without breaking layout',
+    descFallback: 'Plus keeps complex papers, tables, formulas, and page structure intact while producing a translated PDF.',
+  },
   { Visual: VisualModes,     titleKey: 'landing.feature.modes.title',     descKey: 'landing.feature.modes.desc' },
   { Visual: VisualFreeDemo,  titleKey: 'landing.feature.freeDemo.title',  descKey: 'landing.feature.freeDemo.desc' },
   { Visual: VisualPrivacy,   titleKey: 'landing.feature.privacy.title',   descKey: 'landing.feature.privacy.desc' },
 ];
 
-/* Running numbers for the six entries */
-const nums = ['01', '02', '03', '04', '05', '06'];
+const nums = tiles.map((_, index) => String(index + 1).padStart(2, '0'));
 
 /* ---------- Editorial feature set ---------- */
 
@@ -211,8 +258,9 @@ export default function FeatureGrid() {
         {/* 2-column grid — 3 rows of 2 on desktop, single column on mobile.
             ed-rule hairlines separate rows; vertical rule separates columns. */}
         <div className="grid grid-cols-1 md:grid-cols-2" role="list">
-          {tiles.map(({ Visual, titleKey, descKey }, index) => {
-            const isLastRow = index >= 4;
+          {tiles.map(({ Visual, titleKey, descKey, titleFallback, descFallback }, index) => {
+            const lastRowStart = tiles.length % 2 === 0 ? tiles.length - 2 : tiles.length - 1;
+            const isLastRow = index >= lastRowStart;
             const isRightCol = index % 2 === 1;
 
             return (
@@ -243,8 +291,8 @@ export default function FeatureGrid() {
 
                       {/* Text */}
                       <div className="flex flex-col gap-2">
-                        <h3 className="ed-h3">{t(titleKey)}</h3>
-                        <p className="ed-body">{tOr(descKey, '')}</p>
+                        <h3 className="ed-h3">{tOr(titleKey, titleFallback || t(titleKey))}</h3>
+                        <p className="ed-body">{tOr(descKey, descFallback || '')}</p>
                       </div>
                     </div>
                   </div>

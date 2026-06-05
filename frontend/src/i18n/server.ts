@@ -15,12 +15,16 @@ type Messages = Record<string, string>;
 
 // Loaders for the locales that have server-rendered URLs (URL_LOCALES).
 const loaders: Record<string, () => Promise<{ default: Messages }>> = {
+  zh: () => import('./locales/zh.json'),
   ja: () => import('./locales/ja.json'),
   es: () => import('./locales/es.json'),
   ko: () => import('./locales/ko.json'),
   de: () => import('./locales/de.json'),
   fr: () => import('./locales/fr.json'),
   pt: () => import('./locales/pt.json'),
+  it: () => import('./locales/it.json'),
+  ar: () => import('./locales/ar.json'),
+  hi: () => import('./locales/hi.json'),
 };
 
 function applyParams(str: string, params?: Record<string, string | number>): string {

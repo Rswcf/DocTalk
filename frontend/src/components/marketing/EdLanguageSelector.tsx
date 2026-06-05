@@ -32,10 +32,12 @@ export default function EdLanguageSelector({ languageLabel }: { languageLabel?: 
   const pathname = usePathname() || "/";
   const { locale: urlLocale, path: agnosticPath } = splitLocaleFromPath(pathname);
   const localized = isLocalizedPath(agnosticPath);
-  // On a prefixed URL (/de) the active language is the URL locale; on the
-  // unprefixed root/non-localized paths it's the client provider locale (which
-  // reflects detection or a client-side switch).
-  const activeLocale = urlLocale !== 'en' ? urlLocale : locale;
+  // On server-localized marketing pages, the URL is the source of truth. The
+  // unprefixed variants are canonical English pages, so they should not display
+  // a stored client preference such as ZH while their body is English. The root
+  // landing page is still client-localized on `/`, so it keeps using provider
+  // locale until the user chooses a prefixed URL.
+  const activeLocale = localized && agnosticPath !== '/' ? urlLocale : locale;
 
   const [open, setOpen] = useState(false);
   const [pos, setPos] = useState({ top: 0, right: 0, maxHeight: 420 });
@@ -85,9 +87,9 @@ export default function EdLanguageSelector({ languageLabel }: { languageLabel?: 
   const current = LOCALES.find((l) => l.code === activeLocale);
   const label = languageLabel ?? tOr("header.language", "Language");
 
-  // Always offer all locales. On a localized path, the served locales
-  // (en + URL_LOCALES) render as crawlable <a> links; the rest (and everything
-  // on non-localized paths) stay client-side setLocale() toggles.
+  // Always offer all locales. On a localized path, every marketing locale
+  // renders as a real <a> link; on non-localized paths, the selector falls back
+  // to the client-side app locale toggle.
   const options = LOCALES;
   const isServed = (code: string) =>
     localized && (MARKETING_LOCALES as readonly string[]).includes(code);

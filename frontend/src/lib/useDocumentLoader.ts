@@ -6,6 +6,12 @@ import { errorCopy, parseWorkerErrorMsg } from './errorCopy';
 import { sanitizeFilename } from './utils';
 import { useLocale } from '../i18n';
 import { useDocTalkStore } from '../store';
+import type { DocumentResponse } from '../types';
+
+function shouldRetryLoaderError(error: unknown): boolean {
+  if (!(error instanceof ApiError)) return true;
+  return error.status === 408 || error.status === 429 || error.status >= 500;
+}
 
 interface UseDocumentLoaderResult {
   error: string | null;
@@ -57,10 +63,25 @@ export function useDocumentLoader(documentId: string | undefined): UseDocumentLo
     let cancelled = false;
 
     const fetchStatus = async () => {
+      let info: DocumentResponse;
       try {
-        const info = await getDocument(documentId);
+        info = await getDocument(documentId);
+      } catch (e: unknown) {
         if (cancelled) return;
+        const copy = errorCopy(e, t, tOr);
+        if (e instanceof ApiError && e.status === 404) {
+          setError(t('doc.notFound'));
+        } else {
+          console.error('Failed to load document metadata:', e);
+          setError(copy.body || t('doc.loadError'));
+        }
+        if (!shouldRetryLoaderError(e) && intervalId) clearInterval(intervalId);
+        return;
+      }
 
+      try {
+        if (cancelled) return;
+        setError(null);
         setDocumentStatus(info.status);
         if (info.is_demo) setIsDemo(true);
         if (info.file_type) setFileType(info.file_type);
@@ -90,32 +111,42 @@ export function useDocumentLoader(documentId: string | undefined): UseDocumentLo
           const readyFileType = info.file_type || 'pdf';
 
           if (readyFileType === 'pdf') {
-            getDocumentFileUrl(documentId)
-              .then((file) => {
-                if (!cancelled) setPdfUrl(file.url);
-              })
-              .catch((e) => console.error('Failed to load PDF:', e));
+            try {
+              const file = await getDocumentFileUrl(documentId);
+              if (cancelled) return;
+              setPdfUrl(file.url);
+            } catch (e: unknown) {
+              if (cancelled) return;
+              const copy = errorCopy(e, t, tOr);
+              console.error('Failed to load PDF:', e);
+              setError(copy.body || t('doc.loadError'));
+              if (!shouldRetryLoaderError(e) && intervalId) clearInterval(intervalId);
+              return;
+            }
           }
 
           if (info.has_converted_pdf) {
             setHasConvertedPdf(true);
-            getConvertedFileUrl(documentId)
-              .then((file) => {
-                if (!cancelled) setConvertedPdfUrl(file.url);
-              })
-              .catch((e) => console.error('Failed to load converted PDF:', e));
+            try {
+              const file = await getConvertedFileUrl(documentId);
+              if (cancelled) return;
+              setConvertedPdfUrl(file.url);
+            } catch (e: unknown) {
+              if (cancelled) return;
+              const copy = errorCopy(e, t, tOr);
+              console.error('Failed to load converted PDF:', e);
+              setError(copy.body || t('doc.loadError'));
+              if (!shouldRetryLoaderError(e) && intervalId) clearInterval(intervalId);
+              return;
+            }
           }
 
           if (intervalId) clearInterval(intervalId);
         }
       } catch (e: unknown) {
         if (cancelled) return;
-        const copy = errorCopy(e, t, tOr);
-        if (e instanceof ApiError && e.status === 404) {
-          setError(t('doc.notFound'));
-        } else {
-          setError(copy.body || t('doc.loadError'));
-        }
+        console.error('Failed to process document metadata:', e);
+        setError(t('doc.loadError'));
         if (intervalId) clearInterval(intervalId);
       }
     };

@@ -5,14 +5,13 @@
  * International-SEO model (see .collab/plans/2026-05-24-international-seo-locale-urls-spec.md):
  *   - English is the DEFAULT and lives at the root with NO prefix (`/use-cases/lawyers`).
  *     Keeping English unprefixed means existing URLs/rankings need no 301s.
- *   - The high-value locales below get a subdirectory prefix (`/de/use-cases/lawyers`)
- *     with server-rendered translated HTML, so search engines can index each language.
- *   - `zh/it/ar/hi` content exists but has no localized URLs yet (deferred); they remain
- *     available via the client-side locale toggle on the app surface.
+ *   - Every translated marketing locale below gets a subdirectory prefix
+ *     (`/de/use-cases/lawyers`) with server-rendered translated HTML, so search
+ *     engines and users see one coherent language per URL.
  */
 
 // Locales that have crawlable, server-rendered marketing URLs (en is the unprefixed default).
-export const URL_LOCALES = ['ja', 'es', 'ko', 'de', 'fr', 'pt'] as const;
+export const URL_LOCALES = ['zh', 'ja', 'es', 'ko', 'de', 'fr', 'pt', 'it', 'ar', 'hi'] as const;
 export type UrlLocale = (typeof URL_LOCALES)[number];
 
 // All locales that participate in hreflang (the unprefixed default + the prefixed set).
@@ -42,6 +41,7 @@ export const LOCALIZED_PATHS: ReadonlySet<string> = new Set<string>([
   '/use-cases/compliance',
   '/features/citations',
   '/features/free-demo',
+  '/features/layout-translation',
   '/features/multi-format',
   '/features/multilingual',
   '/features/performance-modes',

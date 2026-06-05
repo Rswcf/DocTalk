@@ -1,22 +1,24 @@
 "use client";
 
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { PdfViewer } from '../../../components/PdfViewer';
 import TextViewer from '../../../components/TextViewer/TextViewer';
 import { ChatPanel } from '../../../components/Chat';
 import Header from '../../../components/Header';
 import CustomInstructionsModal from '../../../components/CustomInstructionsModal';
-import { getChunkDetail, updateDocumentInstructions } from '../../../lib/api';
+import { ApiError, createLayoutTranslation, getChunkDetail, updateDocumentInstructions } from '../../../lib/api';
+import { PaywallModal } from '../../../components/PaywallModal';
 import { useDocTalkStore } from '../../../store';
 import { Panel, Group, Separator } from 'react-resizable-panels';
 import { useLocale } from '../../../i18n';
 import { usePageTitle } from '../../../lib/usePageTitle';
-import { FileText, MessageSquare, Presentation } from 'lucide-react';
+import { AlertTriangle, FileText, MessageSquare, Presentation, X } from 'lucide-react';
 import { useDocumentLoader } from '../../../lib/useDocumentLoader';
 import { useChatSession } from '../../../lib/useChatSession';
 import { useUserPlanProfile } from '../../../lib/useUserPlanProfile';
 import { errorCopy } from '../../../lib/errorCopy';
+import { openAuthModal } from '../../../lib/auth-modal';
 import type { Citation } from '../../../types';
 import { trackEvent } from '../../../lib/analytics';
 
@@ -42,13 +44,19 @@ export default function DocumentReaderPageClient() {
   const [viewMode, setViewMode] = useState<'slide' | 'text'>('slide');
   const [mobileTab, setMobileTab] = useState<'chat' | 'document'>('chat');
   const isDesktopLayout = useDesktopReaderLayout();
-  const { t, tOr } = useLocale();
+  const { t, tOr, locale } = useLocale();
   const { pdfUrl, currentPage, highlights, highlightSnippet, scale, scrollNonce, sessionId, navigateToCitation } = useDocTalkStore();
+  const addMessage = useDocTalkStore((s) => s.addMessage);
 
   const documentName = useDocTalkStore((s) => s.documentName);
   const suggestedQuestions = useDocTalkStore((s) => s.suggestedQuestions);
   const documentStatus = useDocTalkStore((s) => s.documentStatus);
   const [showInstructions, setShowInstructions] = useState(false);
+  const [layoutTranslationBusy, setLayoutTranslationBusy] = useState(false);
+  const [layoutTranslationError, setLayoutTranslationError] = useState<string | null>(null);
+  const [layoutPaywallOpen, setLayoutPaywallOpen] = useState(false);
+  const [layoutPaywallReason, setLayoutPaywallReason] = useState<string | null>(null);
+  const layoutTranslationJobIdsRef = useRef<Set<string>>(new Set());
   const {
     error: loaderError,
     isDemo,
@@ -118,6 +126,58 @@ export default function DocumentReaderPageClient() {
   const useConvertedPdf = hasConvertedPdf && viewMode === 'slide' && convertedPdfUrl;
   const showViewToggle = hasConvertedPdf && fileType !== 'pdf';
 
+  const handleLayoutTranslation = useCallback(async () => {
+    if (layoutTranslationBusy) return;
+    if (!isLoggedIn) {
+      openAuthModal();
+      return;
+    }
+    setLayoutTranslationBusy(true);
+    setLayoutTranslationError(null);
+    try {
+      const job = await createLayoutTranslation({
+        documentId,
+        targetLanguage: 'zh-CN',
+        locale,
+      });
+      if (!layoutTranslationJobIdsRef.current.has(job.id)) {
+        layoutTranslationJobIdsRef.current.add(job.id);
+        addMessage({
+          id: `layout_translation_${job.id}`,
+          role: 'assistant',
+          text: tOr(
+            'layoutTranslation.chatMessage',
+            'I started a layout-preserving translation for this PDF. You can keep working while it runs.',
+          ),
+          artifacts: [job.artifact],
+          createdAt: Date.now(),
+        });
+      }
+      trackEvent('layout_translation_created', {
+        source: 'document_toolbar',
+        plan: userPlan || 'unknown',
+        target_language: 'zh-CN',
+      });
+      setMobileTab('chat');
+    } catch (err) {
+      if (err instanceof ApiError && err.code === 'LAYOUT_TRANSLATION_LIMIT_REACHED') {
+        setLayoutPaywallReason(err.code);
+        setLayoutPaywallOpen(true);
+        trackEvent('limit_hit', {
+          source: 'layout_translation_toolbar',
+          reason: err.code,
+          plan: 'plus',
+          period: 'monthly',
+        });
+      } else {
+        const copy = errorCopy(err, t, tOr);
+        setLayoutTranslationError(`${copy.title}: ${copy.body}`);
+      }
+    } finally {
+      setLayoutTranslationBusy(false);
+    }
+  }, [addMessage, documentId, isLoggedIn, layoutTranslationBusy, locale, t, tOr, userPlan]);
+
   const viewToggle = showViewToggle ? (
     <div className="dt-view-toggle flex items-center gap-1 px-2 py-1">
       <button
@@ -142,10 +202,34 @@ export default function DocumentReaderPageClient() {
   const viewerContent = (
     <div className="h-full flex flex-col dt-reader-pane-document">
       {viewToggle}
+      {layoutTranslationError ? (
+        <div className="flex items-start gap-2 border-b border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-950 dark:border-amber-900/50 dark:bg-amber-950/30 dark:text-amber-100" role="alert">
+          <AlertTriangle size={16} className="mt-0.5 shrink-0" aria-hidden="true" />
+          <span className="min-w-0 flex-1">{layoutTranslationError}</span>
+          <button
+            type="button"
+            onClick={() => setLayoutTranslationError(null)}
+            className="rounded p-0.5 text-amber-800 hover:bg-amber-100 dark:text-amber-100 dark:hover:bg-amber-900/40"
+            aria-label={tOr('common.dismiss', 'Dismiss')}
+          >
+            <X size={14} aria-hidden="true" />
+          </button>
+        </div>
+      ) : null}
       <div className="flex-1 min-h-0">
         {fileType === 'pdf' ? (
           pdfUrl ? (
-            <PdfViewer pdfUrl={pdfUrl} currentPage={currentPage} highlights={highlights} scale={scale} scrollNonce={scrollNonce} highlightSnippet={highlightSnippet} />
+            <PdfViewer
+              pdfUrl={pdfUrl}
+              currentPage={currentPage}
+              highlights={highlights}
+              scale={scale}
+              scrollNonce={scrollNonce}
+              highlightSnippet={highlightSnippet}
+              onLayoutTranslate={handleLayoutTranslation}
+              layoutTranslateBusy={layoutTranslationBusy}
+              layoutTranslateDisabled={documentStatus !== 'ready'}
+            />
           ) : (
             <div className="h-full w-full flex items-center justify-center text-zinc-500">{t('doc.loading')}</div>
           )
@@ -344,6 +428,12 @@ export default function DocumentReaderPageClient() {
           await updateDocumentInstructions(documentId, instructions);
           setCustomInstructions(instructions);
         }}
+      />
+      <PaywallModal
+        isOpen={layoutPaywallOpen}
+        onClose={() => setLayoutPaywallOpen(false)}
+        reason={layoutPaywallReason}
+        currentPlan={userPlan}
       />
     </div>
   );

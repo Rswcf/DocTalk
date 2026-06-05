@@ -43,6 +43,9 @@ export function deriveUpgradePlan(
   currentPlan: string | undefined,
   reason: string | null | undefined,
 ): BillingPlanIntent {
+  if (reason === 'LAYOUT_TRANSLATION_LIMIT_REACHED') {
+    return 'plus';
+  }
   const isProCap = reason === 'PRO_MODE_LIMIT_REACHED'
     || reason === 'BALANCED_MODE_LIMIT_REACHED'
     || reason === 'MODE_NOT_ALLOWED';

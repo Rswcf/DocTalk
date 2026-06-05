@@ -26,6 +26,7 @@ const plans = [
       'pricing.free.feature3',
       'pricing.free.feature4',
       'pricing.free.feature5',
+      'pricing.free.featureLayoutTranslation',
     ],
     ctaHref: '/auth',
     ctaKey: 'pricing.free.cta',
@@ -45,6 +46,7 @@ const plans = [
       'pricing.plus.feature3',
       'pricing.plus.feature4',
       'pricing.plus.feature5',
+      'pricing.plus.featureLayoutTranslation',
     ],
     ctaHref: billingHref({ plan: 'plus', source: 'pricing' }),
     ctaKey: 'pricing.plus.cta',
@@ -66,6 +68,7 @@ const plans = [
       'pricing.pro.feature3',
       'pricing.pro.feature4',
       'pricing.pro.feature5',
+      'pricing.pro.featureLayoutTranslation',
     ],
     ctaHref: billingHref({ plan: 'pro', source: 'pricing' }),
     ctaKey: 'pricing.pro.cta',
@@ -107,6 +110,12 @@ const comparisonRows = [
     freeKey: 'pricing.comparison.exportNo',
     plusKey: 'pricing.comparison.exportMarkdown',
     proKey: 'pricing.comparison.exportCustom',
+  },
+  {
+    labelKey: 'pricing.comparison.layoutTranslation',
+    freeKey: 'pricing.comparison.layoutTranslationFree',
+    plusKey: 'pricing.comparison.layoutTranslationPaid',
+    proKey: 'pricing.comparison.layoutTranslationPaid',
   },
 ];
 

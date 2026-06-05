@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from 'react';
-import { AlertTriangle, CheckCircle2, Clock3, Download, FileText, RefreshCw, Sparkles, Table2 } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, Clock3, Download, FileText, Languages, RefreshCw, Sparkles, Table2 } from 'lucide-react';
 import type { ChatArtifact, Citation, DocumentTable } from '../../types';
 import { getDocumentJob, getTableScanJob, listDocumentTables, PROXY_BASE, reconstructDocumentTable } from '../../lib/api';
 import { useLocale } from '../../i18n';
@@ -76,6 +76,7 @@ export default function ChatArtifactCard({ artifact, onCitationClick }: ChatArti
   const isPending = current.status === 'queued' || current.status === 'running';
   const isFailed = current.status === 'failed';
   const isDone = current.status === 'succeeded';
+  const isLayoutTranslation = current.artifactType === 'layout_translation';
 
   useEffect(() => {
     setCurrent(artifact);
@@ -101,7 +102,36 @@ export default function ChatArtifactCard({ artifact, onCitationClick }: ChatArti
 
   const previewRows = useMemo(() => rowsFromPreview(current.preview), [current.preview]);
   const previewMarkdown = useMemo(() => markdownPreview(current.preview), [current.preview]);
-  const Icon = current.artifactType.includes('table') ? Table2 : FileText;
+  const Icon = isLayoutTranslation
+    ? Languages
+    : current.artifactType.includes('table')
+      ? Table2
+      : FileText;
+  const displayTitle = isLayoutTranslation
+    ? tOr('layoutTranslation.artifactTitle', 'Layout-preserved PDF translation')
+    : current.title;
+  const displaySummary = isLayoutTranslation
+    ? isDone
+      ? tOr('layoutTranslation.summarySucceeded', 'Layout-preserved PDF translation is ready.')
+      : isFailed
+        ? tOr('layoutTranslation.summaryFailed', 'Layout-preserving PDF translation failed.')
+        : tOr('layoutTranslation.summaryQueued', 'Translating this PDF while preserving layout.')
+    : current.summary;
+  const downloadUrls = useMemo(() => {
+    if (!isLayoutTranslation) return current.downloadUrls || [];
+    return (current.downloadUrls || []).map((item) => {
+      if (item.format === 'pdf') {
+        return { ...item, label: tOr('layoutTranslation.downloadPdf', 'Translated PDF') };
+      }
+      if (item.format === 'md') {
+        return { ...item, label: tOr('layoutTranslation.downloadMarkdown', 'Markdown') };
+      }
+      if (item.format === 'zip') {
+        return { ...item, label: tOr('layoutTranslation.downloadBundle', 'Bundle') };
+      }
+      return item;
+    });
+  }, [current.downloadUrls, isLayoutTranslation, tOr]);
   const artifactDocumentId = useMemo(() => documentIdFromArtifact(current, previewRows), [current, previewRows]);
   const tableJobPending = tableJob?.status === 'queued' || tableJob?.status === 'running';
 
@@ -186,7 +216,7 @@ export default function ChatArtifactCard({ artifact, onCitationClick }: ChatArti
         </div>
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
-            <p className="text-sm font-semibold text-[var(--reader-ink)]">{current.title}</p>
+            <p className="text-sm font-semibold text-[var(--reader-ink)]">{displayTitle}</p>
             <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium ${
               isFailed
                 ? 'bg-red-50 text-red-700 dark:bg-red-950/40 dark:text-red-300'
@@ -198,7 +228,7 @@ export default function ChatArtifactCard({ artifact, onCitationClick }: ChatArti
               {current.status}
             </span>
           </div>
-          <p className="mt-1 text-sm leading-relaxed text-[var(--reader-muted)]">{current.summary}</p>
+          <p className="mt-1 text-sm leading-relaxed text-[var(--reader-muted)]">{displaySummary}</p>
           {tableRebuildError ? (
             <p className="mt-2 text-xs text-red-700 dark:text-red-300">{tableRebuildError}</p>
           ) : null}
@@ -280,9 +310,9 @@ export default function ChatArtifactCard({ artifact, onCitationClick }: ChatArti
         </div>
       ) : null}
 
-      {(current.downloadUrls?.length || current.requiredPlan || current.citations?.length) ? (
+      {(downloadUrls.length || current.requiredPlan || current.citations?.length) ? (
         <div className="flex flex-wrap items-center gap-2 border-t border-[var(--reader-border)] px-4 py-3">
-          {current.downloadUrls?.map((item) => (
+          {downloadUrls.map((item) => (
             <a
               key={`${item.format}-${item.url}`}
               href={proxiedUrl(item.url)}

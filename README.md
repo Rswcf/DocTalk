@@ -148,6 +148,20 @@ Open [http://localhost:3000](http://localhost:3000).
 | `SENTRY_DSN` | No | Sentry DSN for error tracking |
 | `OCR_ENABLED` | No | Enable OCR for scanned PDFs (default: `true`) |
 | `OCR_LANGUAGES` | No | Installed Tesseract languages; the parser auto-selects a narrow subset per document by detected script (default: `eng+chi_sim+jpn+kor+spa+deu+fra+por+ita+ara+hin+urd`) |
+| `FREE_LAYOUT_TRANSLATIONS_LIMIT` | No | Free-plan lifetime trial count for layout-preserving PDF translation (default: `2`) |
+| `LAYOUT_TRANSLATION_ENGINE` | No | PDF translation engine: `datalab` by default, or `retainpdf` for sidecar fallback |
+| `DATALAB_API_KEY` | If engine is Datalab | Datalab API key for PDF layout/OCR conversion |
+| `DATALAB_API_BASE_URL` | No | Datalab API base URL, default `https://www.datalab.to/api/v1` |
+| `DATALAB_CONVERT_MODE` | No | Datalab conversion mode: `fast`, `balanced`, or `accurate` (default: `balanced`) |
+| `DATALAB_OUTPUT_FORMAT` | No | Datalab output formats for conversion, default `json,markdown` |
+| `RETAINPDF_API_BASE_URL` | If engine is RetainPDF | RetainPDF sidecar full API URL, usually `http://...:41000` |
+| `RETAINPDF_API_KEY` | No | Optional RetainPDF sidecar API key |
+| `RETAINPDF_OCR_PROVIDER` | If engine is RetainPDF | OCR provider for RetainPDF sidecar, default `paddle` |
+| `RETAINPDF_PADDLE_TOKEN` | If provider is Paddle | Paddle OCR token used by RetainPDF |
+| `RETAINPDF_MINERU_TOKEN` | If provider is MinerU | MinerU OCR token used by RetainPDF |
+| `RETAINPDF_TRANSLATION_API_KEY` | No | Optional override; when empty, PDF translation reuses `DEEPSEEK_API_KEY` |
+| `RETAINPDF_TRANSLATION_BASE_URL` | No | Translation API base URL, default `https://api.deepseek.com/v1` |
+| `RETAINPDF_TRANSLATION_MODEL` | No | Translation model, default `deepseek-v4-flash` |
 
 ### Frontend (`.env.local`)
 

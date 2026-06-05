@@ -165,6 +165,31 @@ class Settings(BaseSettings):
     PLUS_MAX_DOCS_PER_COLLECTION: int = 10
     PRO_MAX_DOCS_PER_COLLECTION: int = 999
 
+    # Layout-preserving PDF translation. Free users get a small lifetime trial;
+    # Plus/Pro users can run the workflow without this feature cap.
+    FREE_LAYOUT_TRANSLATIONS_LIMIT: int = Field(default=2)
+    LAYOUT_TRANSLATION_ENGINE: str = Field(default="datalab")
+    DATALAB_API_BASE_URL: str = Field(default="https://www.datalab.to/api/v1")
+    DATALAB_API_KEY: Optional[str] = None
+    DATALAB_CONVERT_MODE: str = Field(default="balanced")
+    DATALAB_OUTPUT_FORMAT: str = Field(default="json,markdown")
+    DATALAB_EXTRAS: str = Field(default="")
+    DATALAB_WORD_BBOXES: bool = Field(default=False)
+    RETAINPDF_API_BASE_URL: Optional[str] = None
+    RETAINPDF_API_KEY: Optional[str] = None
+    RETAINPDF_OCR_PROVIDER: str = Field(default="paddle")
+    RETAINPDF_MINERU_TOKEN: Optional[str] = None
+    RETAINPDF_PADDLE_TOKEN: Optional[str] = None
+    RETAINPDF_TRANSLATION_API_KEY: Optional[str] = None
+    RETAINPDF_TRANSLATION_BASE_URL: str = Field(default="https://api.deepseek.com/v1")
+    RETAINPDF_TRANSLATION_MODEL: str = Field(default="deepseek-v4-flash")
+    RETAINPDF_POLL_INTERVAL_SECONDS: int = Field(default=5)
+    RETAINPDF_TIMEOUT_SECONDS: int = Field(default=1800)
+    RETAINPDF_WORKERS: int = Field(default=0)
+    RETAINPDF_BATCH_SIZE: int = Field(default=1)
+    RETAINPDF_CLASSIFY_BATCH_SIZE: int = Field(default=12)
+    RETAINPDF_COMPILE_WORKERS: int = Field(default=0)
+
     # Admin access — comma-separated email list
     ADMIN_EMAILS: str = ""
 

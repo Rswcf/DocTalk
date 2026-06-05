@@ -31,6 +31,15 @@ function paywallCopy(reason: string | null | undefined, t: (key: string) => stri
     };
   }
 
+  if (reason === 'LAYOUT_TRANSLATION_LIMIT_REACHED') {
+    return {
+      title: tOr('paywall.layoutTranslation.title', 'Keep translating full PDFs'),
+      body: tOr('paywall.layoutTranslation.body', 'Free includes 2 layout-preserving PDF translations. Plus unlocks this workflow for active document work.'),
+      primaryLabel: tOr('paywall.layoutTranslation.cta', 'Upgrade for PDF translation'),
+      reason: 'layout_translation_limit',
+    };
+  }
+
   return {
     title: t("credits.insufficientCredits"),
     body: t("credits.purchasePrompt"),
@@ -110,6 +119,7 @@ export function PaywallModal({ isOpen, onClose, reason, currentPlan }: PaywallMo
           {[
             tOr('paywall.benefit.credits', 'More monthly credits for active document work'),
             tOr('paywall.benefit.modes', 'Flash and Pro modes without the free-plan cap'),
+            tOr('paywall.benefit.layoutTranslation', 'Layout-preserving PDF translation for complex papers and reports'),
             tOr('paywall.benefit.exports', 'PDF and DOCX exports for cited deliverables'),
           ].map((benefit) => (
             <li key={benefit} className="flex gap-2">

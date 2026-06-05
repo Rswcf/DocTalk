@@ -20,6 +20,7 @@ const ROWS: RowDef[] = [
   { labelKey: 'billing.comparison.models', free: 'billing.comparison.modelsFree', plus: 'billing.comparison.modelsAll', pro: 'billing.comparison.modelsAll' },
   { labelKey: 'billing.comparison.sessions', free: 'billing.comparison.sessionsFree', plus: 'billing.comparison.sessionsUnlimited', pro: 'billing.comparison.sessionsUnlimited' },
   { labelKey: 'billing.comparison.ocr', free: true, plus: true, pro: true },
+  { labelKey: 'billing.comparison.layoutTranslation', free: 'billing.comparison.layoutTranslationFree', plus: true, pro: true },
   { labelKey: 'billing.comparison.export', free: false, plus: true, pro: true },
   { labelKey: 'billing.comparison.customPrompts', free: false, plus: false, pro: true },
   { labelKey: 'billing.comparison.citations', free: true, plus: true, pro: true },

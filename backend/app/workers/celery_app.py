@@ -25,6 +25,7 @@ celery_app = Celery(
         "app.workers.table_worker",
         "app.workers.question_template_worker",
         "app.workers.document_diff_worker",
+        "app.workers.layout_translation_worker",
         "app.workers.deletion_worker",
         "app.workers.cleanup_tasks",
     ],
@@ -35,11 +36,10 @@ celery_app.conf.update(
     task_default_queue="default",
     task_acks_late=True,
     worker_prefetch_multiplier=1,
-    # Requeue unacked tasks after 10 minutes (must exceed task time_limit=600).
-    # Default is 3600s — too long; during zero-downtime deploys the old worker
-    # may reserve tasks and get killed, leaving them stuck in Redis "unacked"
-    # until visibility_timeout expires.
-    broker_transport_options={"visibility_timeout": 660},
+    # Requeue unacked tasks after 40 minutes. This must exceed the longest
+    # task time_limit (layout translation is 35 minutes), otherwise Redis can
+    # redeliver a still-running PDF translation during normal execution.
+    broker_transport_options={"visibility_timeout": 2400},
 )
 
 # Route parsing-related tasks to a dedicated queue

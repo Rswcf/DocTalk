@@ -7,6 +7,7 @@ import MarketingLocaleLinks from '../../components/marketing/MarketingLocaleLink
 import {
   Quote,
   FileStack,
+  FileText,
   Languages,
   PlayCircle,
   Gauge,
@@ -19,7 +20,7 @@ import EdRelatedLinks from '../../components/marketing/EdRelatedLinks';
 import EdCtaBanner from '../../components/marketing/EdCtaBanner';
 
 export default async function FeaturesHubContent({ locale }: { locale: string }) {
-  const { t } = await getServerT(locale);
+  const { t, tOr } = await getServerT(locale);
   const chrome = await getChromeStrings(locale);
   const href = (p: string) => localizedHrefIfAvailable(locale, p);
 
@@ -41,6 +42,12 @@ export default async function FeaturesHubContent({ locale }: { locale: string })
       icon: Languages,
       title: t('featuresHub.multilingualTitle'),
       description: t('featuresHub.multilingualDesc'),
+    },
+    {
+      slug: 'layout-translation',
+      icon: FileText,
+      title: tOr('featuresHub.layoutTranslationTitle', 'Layout-preserving PDF translation'),
+      description: tOr('featuresHub.layoutTranslationDesc', 'Translate complex PDFs into a new PDF while keeping tables, formulas, figures, and page structure intact. Free includes 2 trials; Plus unlocks ongoing use.'),
     },
     {
       slug: 'free-demo',

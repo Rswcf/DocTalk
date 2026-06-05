@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { ZoomIn, ZoomOut, ChevronLeft, ChevronRight, Hand, Search, X } from 'lucide-react';
+import { ZoomIn, ZoomOut, ChevronLeft, ChevronRight, Hand, Languages, Loader2, Search, X } from 'lucide-react';
 import { useLocale } from '../../i18n';
 
 interface PdfToolbarProps {
@@ -19,10 +19,13 @@ interface PdfToolbarProps {
   onSearchNext: () => void;
   onSearchPrev: () => void;
   onSearchClose: () => void;
+  onLayoutTranslate?: () => void;
+  layoutTranslateBusy?: boolean;
+  layoutTranslateDisabled?: boolean;
 }
 
-export default function PdfToolbar({ currentPage, totalPages, scale, onPageChange, onScaleChange, grabMode, onGrabModeToggle, searchQuery, searchMatchCount, currentMatchIndex, onSearchQueryChange, onSearchNext, onSearchPrev, onSearchClose }: PdfToolbarProps) {
-  const { t } = useLocale();
+export default function PdfToolbar({ currentPage, totalPages, scale, onPageChange, onScaleChange, grabMode, onGrabModeToggle, searchQuery, searchMatchCount, currentMatchIndex, onSearchQueryChange, onSearchNext, onSearchPrev, onSearchClose, onLayoutTranslate, layoutTranslateBusy = false, layoutTranslateDisabled = false }: PdfToolbarProps) {
+  const { t, tOr } = useLocale();
   const [pageInput, setPageInput] = useState(String(currentPage));
   const [searchOpen, setSearchOpen] = useState(false);
 
@@ -84,6 +87,25 @@ export default function PdfToolbar({ currentPage, totalPages, scale, onPageChang
         >
           <Search aria-hidden="true" size={16} />
         </button>
+
+        {onLayoutTranslate && (
+          <>
+            <div className={separatorClass} />
+            <button
+              onClick={onLayoutTranslate}
+              disabled={layoutTranslateBusy || layoutTranslateDisabled}
+              className={`${btnClass} disabled:opacity-40 disabled:cursor-not-allowed`}
+              title={tOr('layoutTranslation.toolbar', 'Translate PDF layout')}
+              aria-label={tOr('layoutTranslation.toolbar', 'Translate PDF layout')}
+            >
+              {layoutTranslateBusy ? (
+                <Loader2 size={16} className="animate-spin motion-reduce:animate-none" aria-hidden="true" />
+              ) : (
+                <Languages size={16} aria-hidden="true" />
+              )}
+            </button>
+          </>
+        )}
 
         <div className={separatorClass} />
 

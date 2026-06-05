@@ -20,7 +20,6 @@ const ALLOWED_REQUEST_HEADERS = new Set([
   "content-type",
   "accept",
   "accept-language",
-  "accept-encoding",
   "user-agent",
   "cache-control",
   "if-none-match",
@@ -32,6 +31,10 @@ const EXCLUDED_RESPONSE_HEADERS = new Set([
   "set-cookie",
   "transfer-encoding",
   "connection",
+  // Node fetch may transparently decode upstream responses. Forwarding stale
+  // encoding/length metadata can make browsers reject an otherwise 200 body.
+  "content-encoding",
+  "content-length",
 ]);
 
 /**

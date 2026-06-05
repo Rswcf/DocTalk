@@ -13,8 +13,8 @@ python -m celery -A app.workers.celery_app worker \
     --loglevel=info \
     -Q default,parse \
     --concurrency=2 \
-    --soft-time-limit=600 \
-    --time-limit=660 &
+    --soft-time-limit=1980 \
+    --time-limit=2100 &
 CELERY_PID=$!
 
 # --- 3. Start Celery beat (scheduler, background) ---

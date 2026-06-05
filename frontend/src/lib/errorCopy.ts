@@ -310,6 +310,21 @@ const CODE_TABLE: Record<string, Handler> = {
     body: tOr('errors.EXPORT_RENDERER_FAILED.body', 'The export couldn\'t be generated. Please try again.'),
     severity: 'error',
   }),
+  LAYOUT_TRANSLATION_LIMIT_REACHED: (d, tOr) => ({
+    title: tOr('errors.LAYOUT_TRANSLATION_LIMIT_REACHED.title', 'PDF translation limit reached'),
+    body: tOr(
+      'errors.LAYOUT_TRANSLATION_LIMIT_REACHED.body',
+      'Free includes {limit} layout-preserving PDF translations. Upgrade to Plus to keep using it.',
+      { limit: String(d.limit ?? 2) },
+    ),
+    cta: upgradeCta(tOr, 'layout_translation_limit', 'plus'),
+    severity: 'warning',
+  }),
+  LAYOUT_TRANSLATION_NOT_CONFIGURED: (_d, tOr) => ({
+    title: tOr('errors.LAYOUT_TRANSLATION_NOT_CONFIGURED.title', 'PDF translation is being set up'),
+    body: tOr('errors.LAYOUT_TRANSLATION_NOT_CONFIGURED.body', 'Layout-preserving PDF translation is temporarily unavailable while the service is being configured.'),
+    severity: 'info',
+  }),
 
   // ─── Sharing ───
   SHARE_LIMIT_REACHED: (d, tOr) => ({

@@ -208,6 +208,26 @@ export async function getDocumentJob(jobId: string): Promise<DocumentJobDetail> 
   };
 }
 
+export async function createLayoutTranslation(params: {
+  documentId: string;
+  targetLanguage?: string;
+  locale?: string;
+}): Promise<DocumentJobDetail> {
+  const res = await fetch(`${PROXY_BASE}/api/documents/${params.documentId}/layout-translation`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      target_language: params.targetLanguage || 'zh-CN',
+      locale: params.locale || null,
+    }),
+  });
+  const data: any = await handle(res);
+  return {
+    ...data,
+    artifact: mapArtifactPayload(data.artifact),
+  };
+}
+
 export async function searchDocument(docId: string, query: string, topK?: number): Promise<SearchResponse> {
   const res = await fetch(`${PROXY_BASE}/api/documents/${docId}/search`, {
     method: 'POST',

@@ -3,10 +3,10 @@ import { URL_LOCALES, isUrlLocale } from '../../i18n/routing';
 
 /**
  * Locale subdirectory for the server-rendered, internationalized marketing
- * surface (`/de/...`, `/ja/...`). English stays unprefixed at the root, so this
- * segment only ever serves the high-value URL locales. `dynamicParams = false`
- * means any non-listed segment (e.g. `/random`) 404s at build instead of being
- * dynamically rendered.
+ * surface (`/de/...`, `/zh/...`). English stays unprefixed at the root, so this
+ * segment only serves translated URL locales. `dynamicParams = false` means any
+ * non-listed segment (e.g. `/random`) 404s at build instead of being dynamically
+ * rendered.
  *
  * Only the marketing pages are mirrored here; the authenticated app (root `/`,
  * `/d/`, `/collections`, …) is intentionally NOT localized by URL.

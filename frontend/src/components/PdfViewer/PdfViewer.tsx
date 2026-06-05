@@ -63,12 +63,15 @@ export interface PdfViewerProps {
   scale: number;
   scrollNonce: number;
   highlightSnippet?: string | null;
+  onLayoutTranslate?: () => void;
+  layoutTranslateBusy?: boolean;
+  layoutTranslateDisabled?: boolean;
 }
 
 const scrollBehavior = () =>
   window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' as const : 'smooth' as const;
 
-export default function PdfViewer({ pdfUrl, currentPage, highlights, scale, scrollNonce, highlightSnippet }: PdfViewerProps) {
+export default function PdfViewer({ pdfUrl, currentPage, highlights, scale, scrollNonce, highlightSnippet, onLayoutTranslate, layoutTranslateBusy, layoutTranslateDisabled }: PdfViewerProps) {
   const [numPages, setNumPages] = useState<number>(0);
   const [isDragging, setIsDragging] = useState(false);
   const [debouncedSearch, setDebouncedSearch] = useState('');
@@ -416,6 +419,9 @@ export default function PdfViewer({ pdfUrl, currentPage, highlights, scale, scro
           onSearchNext={handleSearchNext}
           onSearchPrev={handleSearchPrev}
           onSearchClose={handleSearchClose}
+          onLayoutTranslate={onLayoutTranslate}
+          layoutTranslateBusy={layoutTranslateBusy}
+          layoutTranslateDisabled={layoutTranslateDisabled}
         />
       )}
       <div
