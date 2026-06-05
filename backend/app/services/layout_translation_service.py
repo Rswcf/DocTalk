@@ -18,7 +18,7 @@ import httpx
 from openai import OpenAI
 
 from app.core.config import settings
-from app.models.tables import Document, DocumentJob
+from app.models.tables import Document, DocumentJob, User
 from app.services.doc_service import sanitize_filename
 from app.services.storage_service import storage_service
 
@@ -49,6 +49,12 @@ class LayoutTranslationConfigError(RuntimeError):
 
 class RetainPdfError(RuntimeError):
     """Raised for RetainPDF transport or job failures."""
+
+
+class LayoutTranslationLimitError(RetainPdfError):
+    def __init__(self, *, code: str, message: str) -> None:
+        super().__init__(message)
+        self.code = code
 
 
 @dataclass(frozen=True)
@@ -100,6 +106,59 @@ def plan_allows_unlimited_layout_translation(plan: str | None) -> bool:
 
 def layout_translation_trial_limit() -> int:
     return max(0, int(settings.FREE_LAYOUT_TRANSLATIONS_LIMIT or 0))
+
+
+def layout_translation_max_pages_for_plan(plan: str | None) -> int:
+    normalized = (plan or "free").lower()
+    if normalized == "pro":
+        return max(0, int(settings.PRO_LAYOUT_TRANSLATION_MAX_PAGES or 0))
+    if normalized == "plus":
+        return max(0, int(settings.PLUS_LAYOUT_TRANSLATION_MAX_PAGES or 0))
+    return max(0, int(settings.FREE_LAYOUT_TRANSLATION_MAX_PAGES or 0))
+
+
+def layout_translation_next_plan_for_page_limit(plan: str | None) -> str | None:
+    normalized = (plan or "free").lower()
+    if normalized == "free":
+        return "plus"
+    if normalized == "plus":
+        return "pro"
+    return None
+
+
+def layout_translation_file_size_limit_mb() -> int:
+    return max(0, int(settings.LAYOUT_TRANSLATION_MAX_FILE_SIZE_MB or 0))
+
+
+def layout_translation_file_size_limit_bytes() -> int:
+    limit_mb = layout_translation_file_size_limit_mb()
+    return limit_mb * 1024 * 1024 if limit_mb > 0 else 0
+
+
+def validate_layout_translation_size_limits(
+    *,
+    plan: str | None,
+    file_size: int | None,
+    page_count: int | None,
+) -> None:
+    max_bytes = layout_translation_file_size_limit_bytes()
+    if max_bytes > 0 and file_size and int(file_size) > max_bytes:
+        max_mb = layout_translation_file_size_limit_mb()
+        raise LayoutTranslationLimitError(
+            code="LAYOUT_TRANSLATION_FILE_TOO_LARGE",
+            message=f"Layout-preserving PDF translation supports files up to {max_mb} MB.",
+        )
+
+    max_pages = layout_translation_max_pages_for_plan(plan)
+    if max_pages > 0 and page_count and int(page_count) > max_pages:
+        raise LayoutTranslationLimitError(
+            code="LAYOUT_TRANSLATION_PAGE_LIMIT_EXCEEDED",
+            message=(
+                "This PDF has "
+                f"{int(page_count)} pages, above the {max_pages}-page layout translation limit "
+                f"for the {(plan or 'free').lower()} plan."
+            ),
+        )
 
 
 def _translation_api_key() -> str | None:
@@ -734,12 +793,65 @@ def _extract_pymupdf_text_blocks(source_bytes: bytes) -> list[LayoutTextBlock]:
     return blocks
 
 
+def _pdf_page_count(source_bytes: bytes) -> int | None:
+    try:
+        with fitz.open(stream=source_bytes, filetype="pdf") as pdf:
+            return int(len(pdf))
+    except Exception:
+        logger.warning("Unable to read PDF page count before layout translation", exc_info=True)
+        return None
+
+
 def _json_from_model_text(text: str) -> dict[str, Any]:
     raw = text.strip()
     if raw.startswith("```"):
         raw = re.sub(r"^```(?:json)?\s*", "", raw)
         raw = re.sub(r"\s*```$", "", raw)
-    return json.loads(raw)
+    try:
+        return json.loads(raw)
+    except json.JSONDecodeError:
+        repaired = _escape_invalid_json_backslashes(raw)
+        if repaired != raw:
+            return json.loads(repaired)
+        raise
+
+
+def _escape_invalid_json_backslashes(raw: str) -> str:
+    """Repair common model JSON mistakes like LaTeX `\\epsilon` in strings."""
+    valid = {'"', "\\", "/", "b", "f", "n", "r", "t"}
+    out: list[str] = []
+    i = 0
+    while i < len(raw):
+        char = raw[i]
+        if char != "\\":
+            out.append(char)
+            i += 1
+            continue
+
+        if i + 1 >= len(raw):
+            out.append("\\\\")
+            i += 1
+            continue
+
+        nxt = raw[i + 1]
+        if nxt == "u":
+            hex_part = raw[i + 2 : i + 6]
+            if len(hex_part) == 4 and all(c in "0123456789abcdefABCDEF" for c in hex_part):
+                out.append(raw[i : i + 6])
+                i += 6
+            else:
+                out.append("\\\\")
+                i += 1
+            continue
+
+        if nxt in valid:
+            out.append(raw[i : i + 2])
+            i += 2
+            continue
+
+        out.append("\\\\")
+        i += 1
+    return "".join(out)
 
 
 def _translate_blocks(blocks: list[LayoutTextBlock], *, target_language: str) -> dict[str, str]:
@@ -756,9 +868,9 @@ def _translate_blocks(blocks: list[LayoutTextBlock], *, target_language: str) ->
         if not batch:
             return
         items = [{"id": block.id, "text": block.text} for block in batch]
-        response = client.chat.completions.create(
-            model=settings.RETAINPDF_TRANSLATION_MODEL,
-            messages=[
+        request: dict[str, Any] = {
+            "model": settings.RETAINPDF_TRANSLATION_MODEL,
+            "messages": [
                 {
                     "role": "system",
                     "content": (
@@ -769,9 +881,17 @@ def _translate_blocks(blocks: list[LayoutTextBlock], *, target_language: str) ->
                 },
                 {"role": "user", "content": json.dumps({"target_language": target_language, "items": items}, ensure_ascii=False)},
             ],
-            temperature=0,
-            extra_body={"thinking": {"type": "disabled"}},
-        )
+            "temperature": 0,
+            "extra_body": {"thinking": {"type": "disabled"}},
+        }
+        try:
+            response = client.chat.completions.create(**request, response_format={"type": "json_object"})
+        except Exception as exc:
+            message = str(exc).lower()
+            if "response_format" not in message and "json" not in message:
+                raise
+            logger.warning("Translation provider rejected JSON mode; retrying without response_format: %s", exc)
+            response = client.chat.completions.create(**request)
         content = response.choices[0].message.content or ""
         parsed = _json_from_model_text(content)
         for item in parsed.get("items", []):
@@ -1100,6 +1220,7 @@ def run_layout_translation_job_sync(job_id: str) -> None:
         if not job or job.job_type != LAYOUT_TRANSLATION_JOB_TYPE:
             return
         doc = db.get(Document, job.document_id) if job.document_id else None
+        user = db.get(User, job.user_id) if getattr(job, "user_id", None) else None
         if not doc:
             _mark_failed(job, code="LAYOUT_TRANSLATION_DOCUMENT_NOT_FOUND", message="Document not found")
             db.commit()
@@ -1116,6 +1237,13 @@ def run_layout_translation_job_sync(job_id: str) -> None:
                 raise RetainPdfError("Layout-preserving translation currently supports PDF files only")
 
             source_bytes = storage_service.download_file(doc.storage_key)
+            plan = (getattr(user, "plan", None) or "free").lower()
+            page_count = getattr(doc, "page_count", None) or _pdf_page_count(source_bytes)
+            validate_layout_translation_size_limits(
+                plan=plan,
+                file_size=getattr(doc, "file_size", None),
+                page_count=page_count,
+            )
             filename = sanitize_filename(doc.filename or "document.pdf")
             input_scope = getattr(job, "input_scope", None) or {}
             target_language = str(input_scope.get("target_language") or DEFAULT_LAYOUT_TRANSLATION_TARGET)
@@ -1147,6 +1275,10 @@ def run_layout_translation_job_sync(job_id: str) -> None:
                 message="Layout-preserving translation is temporarily unavailable.",
             )
             _set_metadata(job, service_status="not_configured")
+            db.commit()
+        except LayoutTranslationLimitError as exc:
+            _mark_failed(job, code=exc.code, message=str(exc))
+            _set_metadata(job, service_status="limit_rejected")
             db.commit()
         except Exception as exc:
             _mark_failed(job, code="LAYOUT_TRANSLATION_FAILED", message=str(exc))

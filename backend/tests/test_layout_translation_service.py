@@ -111,6 +111,14 @@ def _sample_pdf_bytes() -> bytes:
     return doc.tobytes()
 
 
+def test_json_from_model_text_repairs_invalid_latex_backslashes() -> None:
+    parsed = service._json_from_model_text(
+        r'{"items":[{"id":"block-1","text":"令 \epsilon 表示外部性，见 \cite{paper}。"}]}'
+    )
+
+    assert parsed["items"][0]["text"] == r"令 \epsilon 表示外部性，见 \cite{paper}。"
+
+
 def test_layout_translation_worker_uses_datalab_direct_renderer(monkeypatch) -> None:
     monkeypatch.setattr(service, "layout_translation_engine", lambda: "datalab")
     job_id = uuid.uuid4()

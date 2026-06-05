@@ -168,6 +168,10 @@ class Settings(BaseSettings):
     # Layout-preserving PDF translation. Free users get a small lifetime trial;
     # Plus/Pro users can run the workflow without this feature cap.
     FREE_LAYOUT_TRANSLATIONS_LIMIT: int = Field(default=2)
+    FREE_LAYOUT_TRANSLATION_MAX_PAGES: int = Field(default=25)
+    PLUS_LAYOUT_TRANSLATION_MAX_PAGES: int = Field(default=150)
+    PRO_LAYOUT_TRANSLATION_MAX_PAGES: int = Field(default=300)
+    LAYOUT_TRANSLATION_MAX_FILE_SIZE_MB: int = Field(default=50)
     LAYOUT_TRANSLATION_ENGINE: str = Field(default="datalab")
     DATALAB_API_BASE_URL: str = Field(default="https://www.datalab.to/api/v1")
     DATALAB_API_KEY: Optional[str] = None

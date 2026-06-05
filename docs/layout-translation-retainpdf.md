@@ -20,6 +20,10 @@ translated PDF with PyMuPDF. RetainPDF remains available as a sidecar fallback.
 
 ```bash
 FREE_LAYOUT_TRANSLATIONS_LIMIT=2
+FREE_LAYOUT_TRANSLATION_MAX_PAGES=25
+PLUS_LAYOUT_TRANSLATION_MAX_PAGES=150
+PRO_LAYOUT_TRANSLATION_MAX_PAGES=300
+LAYOUT_TRANSLATION_MAX_FILE_SIZE_MB=50
 LAYOUT_TRANSLATION_ENGINE=datalab
 
 # Datalab conversion API. Put the production key in Railway backend variables;

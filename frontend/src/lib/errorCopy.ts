@@ -91,6 +91,14 @@ function upgradeCta(tOr: TOrFn, reason: string, plan: BillingPlanIntent = 'plus'
   };
 }
 
+function requiredPlanCta(detail: Record<string, unknown>, tOr: TOrFn, reason: string) {
+  const requiredPlan = detail.required_plan;
+  if (requiredPlan === 'plus' || requiredPlan === 'pro') {
+    return upgradeCta(tOr, reason, requiredPlan);
+  }
+  return undefined;
+}
+
 const CODE_TABLE: Record<string, Handler> = {
   // ─── Upload ───
   DOCUMENT_LIMIT_REACHED: (d, tOr) => ({
@@ -318,6 +326,28 @@ const CODE_TABLE: Record<string, Handler> = {
       { limit: String(d.limit ?? 2) },
     ),
     cta: upgradeCta(tOr, 'layout_translation_limit', 'plus'),
+    severity: 'warning',
+  }),
+  LAYOUT_TRANSLATION_PAGE_LIMIT_EXCEEDED: (d, tOr) => ({
+    title: tOr('errors.LAYOUT_TRANSLATION_PAGE_LIMIT_EXCEEDED.title', 'PDF too long for layout translation'),
+    body: tOr(
+      'errors.LAYOUT_TRANSLATION_PAGE_LIMIT_EXCEEDED.body',
+      'This PDF has {pageCount} pages. Your current plan supports layout-preserving PDF translation up to {maxPages} pages.',
+      {
+        pageCount: String(d.page_count ?? ''),
+        maxPages: String(d.max_pages ?? ''),
+      },
+    ),
+    cta: requiredPlanCta(d, tOr, 'layout_translation_page_limit'),
+    severity: 'warning',
+  }),
+  LAYOUT_TRANSLATION_FILE_TOO_LARGE: (d, tOr) => ({
+    title: tOr('errors.LAYOUT_TRANSLATION_FILE_TOO_LARGE.title', 'PDF too large for layout translation'),
+    body: tOr(
+      'errors.LAYOUT_TRANSLATION_FILE_TOO_LARGE.body',
+      'Layout-preserving PDF translation supports files up to {maxMb} MB.',
+      { maxMb: String(d.max_mb ?? '') },
+    ),
     severity: 'warning',
   }),
   LAYOUT_TRANSLATION_NOT_CONFIGURED: (_d, tOr) => ({

@@ -149,6 +149,10 @@ Open [http://localhost:3000](http://localhost:3000).
 | `OCR_ENABLED` | No | Enable OCR for scanned PDFs (default: `true`) |
 | `OCR_LANGUAGES` | No | Installed Tesseract languages; the parser auto-selects a narrow subset per document by detected script (default: `eng+chi_sim+jpn+kor+spa+deu+fra+por+ita+ara+hin+urd`) |
 | `FREE_LAYOUT_TRANSLATIONS_LIMIT` | No | Free-plan lifetime trial count for layout-preserving PDF translation (default: `2`) |
+| `FREE_LAYOUT_TRANSLATION_MAX_PAGES` | No | Free-plan page cap per layout-preserving PDF translation (default: `25`) |
+| `PLUS_LAYOUT_TRANSLATION_MAX_PAGES` | No | Plus-plan page cap per layout-preserving PDF translation (default: `150`) |
+| `PRO_LAYOUT_TRANSLATION_MAX_PAGES` | No | Pro-plan page cap per layout-preserving PDF translation (default: `300`) |
+| `LAYOUT_TRANSLATION_MAX_FILE_SIZE_MB` | No | Hard file-size cap for layout-preserving PDF translation (default: `50`) |
 | `LAYOUT_TRANSLATION_ENGINE` | No | PDF translation engine: `datalab` by default, or `retainpdf` for sidecar fallback |
 | `DATALAB_API_KEY` | If engine is Datalab | Datalab API key for PDF layout/OCR conversion |
 | `DATALAB_API_BASE_URL` | No | Datalab API base URL, default `https://www.datalab.to/api/v1` |

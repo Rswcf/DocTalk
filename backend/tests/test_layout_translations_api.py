@@ -33,13 +33,15 @@ def _make_user(plan: str = "free") -> SimpleNamespace:
     return SimpleNamespace(id=uuid.uuid4(), plan=plan, email="user@example.com")
 
 
-def _make_doc(user_id: uuid.UUID) -> SimpleNamespace:
+def _make_doc(user_id: uuid.UUID, *, page_count: int = 10, file_size: int = 1024) -> SimpleNamespace:
     return SimpleNamespace(
         id=uuid.uuid4(),
         user_id=user_id,
         status="ready",
         file_type="pdf",
         filename="paper.pdf",
+        file_size=file_size,
+        page_count=page_count,
         storage_key="documents/paper.pdf",
         demo_slug=None,
     )
@@ -123,6 +125,57 @@ async def test_free_user_hits_layout_translation_limit(client: AsyncClient) -> N
     assert detail["error"] == "LAYOUT_TRANSLATION_LIMIT_REACHED"
     assert detail["limit"] == 2
     assert detail["required_plan"] == "plus"
+    db.add.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_free_user_hits_layout_translation_page_limit_before_trial_is_consumed(client: AsyncClient) -> None:
+    user = _make_user("free")
+    doc = _make_doc(user.id, page_count=26)
+    db = _fake_db(doc, used=0)
+    _override_dependencies(db, user)
+
+    response = await client.post(f"/api/documents/{doc.id}/layout-translation", json={"target_language": "zh-CN"})
+
+    assert response.status_code == 413
+    detail = response.json()["detail"]
+    assert detail["error"] == "LAYOUT_TRANSLATION_PAGE_LIMIT_EXCEEDED"
+    assert detail["page_count"] == 26
+    assert detail["max_pages"] == 25
+    assert detail["required_plan"] == "plus"
+    db.scalar.assert_not_called()
+    db.add.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_plus_user_can_start_layout_translation_for_mid_sized_pdf(client: AsyncClient) -> None:
+    user = _make_user("plus")
+    doc = _make_doc(user.id, page_count=53)
+    db = _fake_db(doc, used=0)
+    _override_dependencies(db, user)
+
+    response = await client.post(f"/api/documents/{doc.id}/layout-translation", json={"target_language": "zh-CN"})
+
+    assert response.status_code == 202
+    payload = response.json()
+    assert payload["metadata_json"]["max_pages"] == 150
+    db.scalar.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_layout_translation_rejects_large_files_before_trial_is_consumed(client: AsyncClient) -> None:
+    user = _make_user("free")
+    doc = _make_doc(user.id, file_size=51 * 1024 * 1024)
+    db = _fake_db(doc, used=0)
+    _override_dependencies(db, user)
+
+    response = await client.post(f"/api/documents/{doc.id}/layout-translation", json={"target_language": "zh-CN"})
+
+    assert response.status_code == 413
+    detail = response.json()["detail"]
+    assert detail["error"] == "LAYOUT_TRANSLATION_FILE_TOO_LARGE"
+    assert detail["max_mb"] == 50
+    db.scalar.assert_not_called()
     db.add.assert_not_called()
 
 

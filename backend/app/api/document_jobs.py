@@ -79,6 +79,9 @@ async def _artifact_for_job(job: DocumentJob, db: AsyncSession, user: User) -> D
             "retainpdf": metadata.get("retainpdf"),
             "free_limit": metadata.get("free_limit"),
             "free_remaining_after": metadata.get("free_remaining_after"),
+            "page_count": metadata.get("page_count"),
+            "max_pages": metadata.get("max_pages"),
+            "max_file_size_mb": metadata.get("max_file_size_mb"),
         }
         download_urls: list[dict[str, str]] = []
         if job.status == "succeeded" and isinstance(artifacts, dict):

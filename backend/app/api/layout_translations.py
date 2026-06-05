@@ -23,11 +23,16 @@ from app.services.layout_translation_service import (
     LAYOUT_TRANSLATION_ACTIVE_STATUSES,
     LAYOUT_TRANSLATION_JOB_TYPE,
     LAYOUT_TRANSLATION_REQUIRED_PLAN,
+    LayoutTranslationLimitError,
     layout_translation_config_status,
+    layout_translation_file_size_limit_mb,
+    layout_translation_max_pages_for_plan,
+    layout_translation_next_plan_for_page_limit,
     layout_translation_trial_limit,
     normalize_target_language,
     plan_allows_unlimited_layout_translation,
     target_language_label,
+    validate_layout_translation_size_limits,
 )
 from app.services.storage_service import storage_service
 
@@ -136,6 +141,44 @@ def _enqueue_layout_translation_job(job_id: str) -> None:
     run_layout_translation_job.delay(job_id)
 
 
+def _raise_layout_translation_limit_error(doc: Document, plan: str) -> None:
+    try:
+        validate_layout_translation_size_limits(
+            plan=plan,
+            file_size=doc.file_size,
+            page_count=doc.page_count,
+        )
+    except LayoutTranslationLimitError as exc:
+        if exc.code == "LAYOUT_TRANSLATION_FILE_TOO_LARGE":
+            max_mb = layout_translation_file_size_limit_mb()
+            raise HTTPException(
+                status_code=status.HTTP_413_CONTENT_TOO_LARGE,
+                detail={
+                    "error": "LAYOUT_TRANSLATION_FILE_TOO_LARGE",
+                    "message": str(exc),
+                    "max_mb": max_mb,
+                    "file_size": int(doc.file_size or 0),
+                },
+            ) from exc
+        if exc.code == "LAYOUT_TRANSLATION_PAGE_LIMIT_EXCEEDED":
+            max_pages = layout_translation_max_pages_for_plan(plan)
+            required_plan = layout_translation_next_plan_for_page_limit(plan)
+            detail = {
+                "error": "LAYOUT_TRANSLATION_PAGE_LIMIT_EXCEEDED",
+                "message": str(exc),
+                "page_count": int(doc.page_count or 0),
+                "max_pages": max_pages,
+                "plan": plan,
+            }
+            if required_plan:
+                detail["required_plan"] = required_plan
+            raise HTTPException(
+                status_code=status.HTTP_413_CONTENT_TOO_LARGE,
+                detail=detail,
+            ) from exc
+        raise
+
+
 @router.post(
     "/documents/{document_id}/layout-translation",
     response_model=DocumentJobDetailResponse,
@@ -169,6 +212,9 @@ async def create_layout_translation(
     if existing:
         return await _job_response(existing, db, user)
 
+    plan = (user.plan or "free").lower()
+    _raise_layout_translation_limit_error(doc, plan)
+
     config_status = layout_translation_config_status()
     if not config_status.ready:
         raise HTTPException(
@@ -180,7 +226,6 @@ async def create_layout_translation(
             },
         )
 
-    plan = (user.plan or "free").lower()
     free_used = 0
     free_limit = layout_translation_trial_limit()
     if not plan_allows_unlimited_layout_translation(plan):
@@ -218,6 +263,10 @@ async def create_layout_translation(
             "engine": engine,
             "target_language": target_language,
             "target_language_label": target_language_label(target_language),
+            "plan": plan,
+            "page_count": doc.page_count,
+            "max_pages": layout_translation_max_pages_for_plan(plan),
+            "max_file_size_mb": layout_translation_file_size_limit_mb(),
             "free_limit": free_limit,
             "free_used_before": free_used,
             "free_remaining_after": None if plan_allows_unlimited_layout_translation(plan) else max(0, free_limit - free_used - 1),
@@ -238,6 +287,8 @@ async def create_layout_translation(
                 "target_language": target_language,
                 "engine": engine,
                 "provider": provider,
+                "page_count": doc.page_count,
+                "max_pages": layout_translation_max_pages_for_plan(plan),
                 "free_used_before": free_used,
             },
         )
