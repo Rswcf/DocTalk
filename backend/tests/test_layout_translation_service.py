@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-import uuid
 import sys
+import uuid
 from types import SimpleNamespace
 
 import fitz
