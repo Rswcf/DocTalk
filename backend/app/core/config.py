@@ -172,13 +172,7 @@ class Settings(BaseSettings):
     PLUS_LAYOUT_TRANSLATION_MAX_PAGES: int = Field(default=150)
     PRO_LAYOUT_TRANSLATION_MAX_PAGES: int = Field(default=300)
     LAYOUT_TRANSLATION_MAX_FILE_SIZE_MB: int = Field(default=50)
-    LAYOUT_TRANSLATION_ENGINE: str = Field(default="datalab")
-    DATALAB_API_BASE_URL: str = Field(default="https://www.datalab.to/api/v1")
-    DATALAB_API_KEY: Optional[str] = None
-    DATALAB_CONVERT_MODE: str = Field(default="balanced")
-    DATALAB_OUTPUT_FORMAT: str = Field(default="json,markdown")
-    DATALAB_EXTRAS: str = Field(default="")
-    DATALAB_WORD_BBOXES: bool = Field(default=False)
+    LAYOUT_TRANSLATION_ENGINE: str = Field(default="retainpdf")
     RETAINPDF_API_BASE_URL: Optional[str] = None
     RETAINPDF_API_KEY: Optional[str] = None
     RETAINPDF_OCR_PROVIDER: str = Field(default="paddle")
@@ -197,7 +191,7 @@ class Settings(BaseSettings):
     # Admin access — comma-separated email list
     ADMIN_EMAILS: str = ""
 
-    model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", case_sensitive=False)
+    model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", case_sensitive=False, extra="ignore")
 
 
 # Try to load .env from backend/ or repo root for local dev

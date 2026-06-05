@@ -4,8 +4,6 @@ import sys
 import uuid
 from types import SimpleNamespace
 
-import fitz
-
 from app.models.tables import Document, DocumentJob
 from app.services import layout_translation_service as service
 
@@ -104,22 +102,7 @@ def test_layout_translation_worker_downloads_pdf_without_ready_flags(monkeypatch
     assert uploaded[pdf["storage_key"]] == (b"%PDF-translated", "application/pdf")
 
 
-def _sample_pdf_bytes() -> bytes:
-    doc = fitz.open()
-    page = doc.new_page(width=240, height=160)
-    page.insert_text((24, 48), "Hello world", fontsize=12)
-    return doc.tobytes()
-
-
-def test_json_from_model_text_repairs_invalid_latex_backslashes() -> None:
-    parsed = service._json_from_model_text(
-        r'{"items":[{"id":"block-1","text":"令 \epsilon 表示外部性，见 \cite{paper}。"}]}'
-    )
-
-    assert parsed["items"][0]["text"] == r"令 \epsilon 表示外部性，见 \cite{paper}。"
-
-
-def test_layout_translation_worker_uses_datalab_direct_renderer(monkeypatch) -> None:
+def test_layout_translation_worker_retires_datalab_renderer(monkeypatch) -> None:
     monkeypatch.setattr(service, "layout_translation_engine", lambda: "datalab")
     job_id = uuid.uuid4()
     doc_id = uuid.uuid4()
@@ -131,60 +114,24 @@ def test_layout_translation_worker_uses_datalab_direct_renderer(monkeypatch) -> 
         error_code=None,
         error_message=None,
         completed_at=None,
-        input_scope={"target_language": "zh-CN"},
         metadata_json={},
     )
     doc = SimpleNamespace(
         id=doc_id,
         file_type="pdf",
-        filename="Datalab Paper.pdf",
-        storage_key="documents/datalab-paper.pdf",
+        filename="Paper.pdf",
+        storage_key="documents/paper.pdf",
+        file_size=1024,
+        page_count=1,
     )
     fake_session = _FakeSession(job, doc)
-    uploaded: dict[str, tuple[bytes, str]] = {}
-    source_pdf = _sample_pdf_bytes()
 
-    class FakeDatalabClient:
-        def submit_convert(self, *, filename: str, content: bytes) -> dict:
-            assert filename == "Datalab Paper.pdf"
-            assert content == source_pdf
-            return {"request_id": "dl_1", "request_check_url": "https://datalab.test/convert/dl_1"}
+    class UnexpectedRetainPdfClient:
+        def __init__(self) -> None:
+            raise AssertionError("RetainPDF sidecar should not be called for unsupported engines")
 
-        def get_result(self, request_check_url: str) -> dict:
-            assert request_check_url.endswith("/dl_1")
-            return {
-                "status": "complete",
-                "success": True,
-                "json": {
-                    "pages": [
-                        {
-                            "width": 240,
-                            "height": 160,
-                            "blocks": [
-                                {
-                                    "id": "block-1",
-                                    "bbox": [20, 34, 120, 58],
-                                    "text": "Hello world",
-                                    "type": "text",
-                                }
-                            ],
-                        }
-                    ]
-                },
-                "markdown": "Hello world",
-                "page_count": 1,
-                "parse_quality_score": 4.8,
-                "cost_breakdown": {"final_cost_cents": 1},
-            }
-
-    monkeypatch.setattr(service, "DatalabClient", FakeDatalabClient)
-    monkeypatch.setattr(service, "_translate_blocks", lambda blocks, target_language: {blocks[0].id: "你好，世界"})
-    monkeypatch.setattr(service.storage_service, "download_file", lambda key: source_pdf)
-    monkeypatch.setattr(
-        service.storage_service,
-        "upload_file",
-        lambda content, key, content_type: uploaded.setdefault(key, (content, content_type)),
-    )
+    monkeypatch.setattr(service, "RetainPdfClient", UnexpectedRetainPdfClient)
+    monkeypatch.setattr(service.storage_service, "download_file", lambda key: b"%PDF-source")
     monkeypatch.setitem(
         sys.modules,
         "app.models.sync_database",
@@ -193,12 +140,61 @@ def test_layout_translation_worker_uses_datalab_direct_renderer(monkeypatch) -> 
 
     service.run_layout_translation_job_sync(str(job_id))
 
-    assert job.status == "succeeded"
-    assert job.error_code is None
-    assert job.metadata_json["engine"] == "datalab"
-    assert job.metadata_json["datalab"]["request_id"] == "dl_1"
-    assert job.metadata_json["translated_block_count"] == 1
-    artifacts = job.metadata_json["artifacts"]
-    assert set(artifacts) == {"pdf", "markdown", "bundle"}
-    assert uploaded[artifacts["pdf"]["storage_key"]][0].startswith(b"%PDF")
-    assert uploaded[artifacts["pdf"]["storage_key"]][1] == "application/pdf"
+    assert job.status == "failed"
+    assert job.error_code == "LAYOUT_TRANSLATION_NOT_CONFIGURED"
+    assert job.metadata_json["service_status"] == "not_configured"
+
+
+def test_retainpdf_create_job_payload_matches_grouped_api(monkeypatch) -> None:
+    captured: dict[str, object] = {}
+
+    class FakeResponse:
+        status_code = 200
+
+        def json(self):
+            return {"code": 0, "data": {"job_id": "retain_job_1"}}
+
+    class FakeHttpClient:
+        def __init__(self, *args, **kwargs) -> None:
+            pass
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, exc_type, exc, tb) -> bool:
+            return False
+
+        def post(self, url: str, json: dict):
+            captured["url"] = url
+            captured["json"] = json
+            return FakeResponse()
+
+    monkeypatch.setattr(service.httpx, "Client", FakeHttpClient)
+    monkeypatch.setattr(service.settings, "RETAINPDF_API_BASE_URL", "http://retainpdf.test")
+    monkeypatch.setattr(service.settings, "RETAINPDF_API_KEY", "sidecar-key")
+    monkeypatch.setattr(service.settings, "RETAINPDF_OCR_PROVIDER", "paddle")
+    monkeypatch.setattr(service.settings, "RETAINPDF_PADDLE_TOKEN", "paddle-token")
+    monkeypatch.setattr(service.settings, "RETAINPDF_MINERU_TOKEN", None)
+    monkeypatch.setattr(service.settings, "RETAINPDF_TRANSLATION_API_KEY", "model-key")
+    monkeypatch.setattr(service.settings, "RETAINPDF_TRANSLATION_BASE_URL", "https://api.deepseek.com/v1")
+    monkeypatch.setattr(service.settings, "RETAINPDF_TRANSLATION_MODEL", "deepseek-v4-flash")
+    monkeypatch.setattr(service.settings, "RETAINPDF_WORKERS", 2)
+    monkeypatch.setattr(service.settings, "RETAINPDF_BATCH_SIZE", 1)
+    monkeypatch.setattr(service.settings, "RETAINPDF_CLASSIFY_BATCH_SIZE", 12)
+    monkeypatch.setattr(service.settings, "RETAINPDF_COMPILE_WORKERS", 1)
+    monkeypatch.setattr(service.settings, "RETAINPDF_TIMEOUT_SECONDS", 1800)
+
+    job_id = service.RetainPdfClient().create_book_job(upload_id="upload_1", source_filename="Paper.pdf")
+
+    assert job_id == "retain_job_1"
+    assert captured["url"] == "http://retainpdf.test/api/v1/jobs"
+    payload = captured["json"]
+    assert payload["workflow"] == "book"
+    assert payload["source"] == {"upload_id": "upload_1", "source_url": "", "artifact_job_id": ""}
+    assert payload["ocr"]["provider"] == "paddle"
+    assert payload["ocr"]["paddle_token"] == "paddle-token"
+    assert payload["translation"]["workers"] == 2
+    assert payload["translation"]["batch_size"] == 1
+    assert payload["translation"]["classify_batch_size"] == 12
+    assert payload["render"]["compile_workers"] == 1
+    assert payload["runtime"] == {"job_id": "", "timeout_seconds": 1800}

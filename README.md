@@ -153,14 +153,10 @@ Open [http://localhost:3000](http://localhost:3000).
 | `PLUS_LAYOUT_TRANSLATION_MAX_PAGES` | No | Plus-plan page cap per layout-preserving PDF translation (default: `150`) |
 | `PRO_LAYOUT_TRANSLATION_MAX_PAGES` | No | Pro-plan page cap per layout-preserving PDF translation (default: `300`) |
 | `LAYOUT_TRANSLATION_MAX_FILE_SIZE_MB` | No | Hard file-size cap for layout-preserving PDF translation (default: `50`) |
-| `LAYOUT_TRANSLATION_ENGINE` | No | PDF translation engine: `datalab` by default, or `retainpdf` for sidecar fallback |
-| `DATALAB_API_KEY` | If engine is Datalab | Datalab API key for PDF layout/OCR conversion |
-| `DATALAB_API_BASE_URL` | No | Datalab API base URL, default `https://www.datalab.to/api/v1` |
-| `DATALAB_CONVERT_MODE` | No | Datalab conversion mode: `fast`, `balanced`, or `accurate` (default: `balanced`) |
-| `DATALAB_OUTPUT_FORMAT` | No | Datalab output formats for conversion, default `json,markdown` |
-| `RETAINPDF_API_BASE_URL` | If engine is RetainPDF | RetainPDF sidecar full API URL, usually `http://...:41000` |
+| `LAYOUT_TRANSLATION_ENGINE` | No | Layout-preserving PDF translation engine. The supported production value is `retainpdf` |
+| `RETAINPDF_API_BASE_URL` | Yes | RetainPDF sidecar full API URL, usually `http://...:41000` |
 | `RETAINPDF_API_KEY` | No | Optional RetainPDF sidecar API key |
-| `RETAINPDF_OCR_PROVIDER` | If engine is RetainPDF | OCR provider for RetainPDF sidecar, default `paddle` |
+| `RETAINPDF_OCR_PROVIDER` | Yes | OCR provider for RetainPDF sidecar, `paddle` or `mineru` |
 | `RETAINPDF_PADDLE_TOKEN` | If provider is Paddle | Paddle OCR token used by RetainPDF |
 | `RETAINPDF_MINERU_TOKEN` | If provider is MinerU | MinerU OCR token used by RetainPDF |
 | `RETAINPDF_TRANSLATION_API_KEY` | No | Optional override; when empty, PDF translation reuses `DEEPSEEK_API_KEY` |

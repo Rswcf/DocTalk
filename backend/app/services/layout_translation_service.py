@@ -1,21 +1,16 @@
 """Layout-preserving PDF translation orchestration."""
 from __future__ import annotations
 
-import io
-import json
 import logging
 import os
-import re
 import time
 import uuid
-import zipfile
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from typing import Any
 
 import fitz
 import httpx
-from openai import OpenAI
 
 from app.core.config import settings
 from app.models.tables import Document, DocumentJob, User
@@ -63,17 +58,6 @@ class RetainPdfArtifact:
     filename: str
     content_type: str
     size_bytes: int
-
-
-@dataclass(frozen=True)
-class LayoutTextBlock:
-    id: str
-    page_index: int
-    bbox: tuple[float, float, float, float]
-    text: str
-    page_width: float | None = None
-    page_height: float | None = None
-    kind: str = "text"
 
 
 @dataclass(frozen=True)
@@ -169,8 +153,7 @@ def layout_translation_engine() -> str:
     engine = (settings.LAYOUT_TRANSLATION_ENGINE or "").strip().lower()
     if engine:
         return engine
-    provider = (settings.RETAINPDF_OCR_PROVIDER or "").strip().lower()
-    return "datalab" if provider == "datalab" else "retainpdf"
+    return "retainpdf"
 
 
 def layout_translation_config_status() -> LayoutTranslationConfigStatus:
@@ -180,11 +163,7 @@ def layout_translation_config_status() -> LayoutTranslationConfigStatus:
 
     engine = layout_translation_engine()
     provider = (settings.RETAINPDF_OCR_PROVIDER or "paddle").strip().lower()
-    if engine == "datalab":
-        provider = "datalab"
-        if not settings.DATALAB_API_KEY:
-            missing.append("DATALAB_API_KEY")
-    elif engine == "retainpdf":
+    if engine == "retainpdf":
         if not settings.RETAINPDF_API_BASE_URL:
             missing.append("RETAINPDF_API_BASE_URL")
         if provider == "mineru":
@@ -258,7 +237,7 @@ class RetainPdfClient:
         return upload_id
 
     def create_book_job(self, *, upload_id: str, source_filename: str) -> str:
-        provider = (settings.RETAINPDF_OCR_PROVIDER or "mineru").strip().lower()
+        provider = (settings.RETAINPDF_OCR_PROVIDER or "paddle").strip().lower()
         translation_api_key = _translation_api_key()
         if not translation_api_key:
             raise LayoutTranslationConfigError("RetainPDF translation API key is not configured")
@@ -305,9 +284,13 @@ class RetainPdfClient:
                 "api_key": translation_api_key,
                 "start_page": 0,
                 "end_page": -1,
+                "workers": max(0, settings.RETAINPDF_WORKERS),
+                "batch_size": max(1, settings.RETAINPDF_BATCH_SIZE),
+                "classify_batch_size": max(1, settings.RETAINPDF_CLASSIFY_BATCH_SIZE),
             },
             "render": {
                 "render_mode": "auto",
+                "compile_workers": max(0, settings.RETAINPDF_COMPILE_WORKERS),
                 "typst_font_family": "Source Han Serif SC",
                 "pdf_compress_dpi": 0,
                 "translated_pdf_name": f"{os.path.splitext(source_filename)[0]}-translated.pdf",
@@ -322,10 +305,6 @@ class RetainPdfClient:
             },
             "runtime": {
                 "job_id": "",
-                "workers": max(0, settings.RETAINPDF_WORKERS),
-                "batch_size": max(1, settings.RETAINPDF_BATCH_SIZE),
-                "classify_batch_size": max(1, settings.RETAINPDF_CLASSIFY_BATCH_SIZE),
-                "compile_workers": max(0, settings.RETAINPDF_COMPILE_WORKERS),
                 "timeout_seconds": max(60, settings.RETAINPDF_TIMEOUT_SECONDS),
             },
         }
@@ -348,74 +327,6 @@ class RetainPdfClient:
         if response.status_code >= 400:
             raise RetainPdfError(f"RetainPDF artifact download failed ({response.status_code})")
         return response.content
-
-
-class DatalabClient:
-    def __init__(self) -> None:
-        if not settings.DATALAB_API_KEY:
-            raise LayoutTranslationConfigError("Datalab API key is not configured")
-        base_url = (settings.DATALAB_API_BASE_URL or "https://www.datalab.to/api/v1").rstrip("/")
-        self.base_url = base_url
-        self.headers = {"X-API-Key": settings.DATALAB_API_KEY}
-        self.timeout = httpx.Timeout(
-            connect=20.0,
-            read=float(max(30, settings.RETAINPDF_TIMEOUT_SECONDS)),
-            write=300.0,
-            pool=20.0,
-        )
-
-    def _url(self, path: str) -> str:
-        return f"{self.base_url}{path if path.startswith('/') else f'/{path}'}"
-
-    @staticmethod
-    def _data(response: httpx.Response) -> dict[str, Any]:
-        try:
-            payload = response.json()
-        except ValueError as exc:
-            raise RetainPdfError(f"Datalab returned non-JSON response ({response.status_code})") from exc
-        if response.status_code >= 400:
-            message = payload.get("error") or payload.get("message") if isinstance(payload, dict) else None
-            raise RetainPdfError(message or f"Datalab request failed ({response.status_code})")
-        if not isinstance(payload, dict):
-            raise RetainPdfError("Datalab returned an unexpected response")
-        if payload.get("success") is False:
-            raise RetainPdfError(str(payload.get("error") or "Datalab request failed"))
-        return payload
-
-    def submit_convert(self, *, filename: str, content: bytes) -> dict[str, Any]:
-        data: dict[str, str] = {
-            "output_format": settings.DATALAB_OUTPUT_FORMAT or "json,markdown",
-            "mode": settings.DATALAB_CONVERT_MODE or "balanced",
-            "paginate": "false",
-            "include_markdown_in_chunks": "true",
-            "disable_image_extraction": "false",
-            "disable_image_captions": "true",
-            "word_bboxes": str(bool(settings.DATALAB_WORD_BBOXES)).lower(),
-        }
-        extras = (settings.DATALAB_EXTRAS or "").strip()
-        if extras:
-            data["extras"] = extras
-        with httpx.Client(timeout=self.timeout, headers=self.headers) as client:
-            response = client.post(
-                self._url("/convert"),
-                data=data,
-                files={"file": (filename, content, "application/pdf")},
-            )
-        payload = self._data(response)
-        if not payload.get("request_id") or not payload.get("request_check_url"):
-            raise RetainPdfError("Datalab convert response did not include request_id/request_check_url")
-        return payload
-
-    def get_result(self, request_check_url: str) -> dict[str, Any]:
-        url = request_check_url if request_check_url.startswith("http") else self._url(request_check_url)
-        with httpx.Client(timeout=self.timeout, headers=self.headers) as client:
-            response = client.get(url)
-        return self._data(response)
-
-    def download_result_url(self, result_url: str) -> dict[str, Any]:
-        with httpx.Client(timeout=self.timeout, headers=self.headers, follow_redirects=True) as client:
-            response = client.get(result_url)
-        return self._data(response)
 
 
 def _now() -> datetime:
@@ -509,290 +420,6 @@ def _poll_to_terminal(client: RetainPdfClient, external_job_id: str, job: Docume
     raise RetainPdfError("RetainPDF job timed out")
 
 
-def _poll_datalab_to_terminal(client: DatalabClient, initial: dict[str, Any], job: DocumentJob, db) -> dict[str, Any]:
-    deadline = time.monotonic() + max(60, settings.RETAINPDF_TIMEOUT_SECONDS)
-    interval = max(1, settings.RETAINPDF_POLL_INTERVAL_SECONDS)
-    request_id = str(initial.get("request_id") or "")
-    check_url = str(initial.get("request_check_url") or "")
-    latest: dict[str, Any] = {}
-    while time.monotonic() < deadline:
-        latest = client.get_result(check_url)
-        status = str(latest.get("status") or "").lower()
-        _set_metadata(
-            job,
-            datalab={
-                "request_id": request_id,
-                "status": status,
-                "page_count": latest.get("page_count"),
-                "parse_quality_score": latest.get("parse_quality_score"),
-                "cost_breakdown": latest.get("cost_breakdown"),
-            },
-        )
-        db.commit()
-        if status == "complete":
-            if latest.get("success") is False:
-                raise RetainPdfError(str(latest.get("error") or "Datalab conversion failed"))
-            if latest.get("result_url") and not latest.get("json") and not latest.get("markdown"):
-                downloaded = client.download_result_url(str(latest["result_url"]))
-                latest.update(downloaded)
-            return latest
-        if status in {"failed", "error", "canceled", "cancelled"}:
-            raise RetainPdfError(str(latest.get("error") or f"Datalab conversion {status}"))
-        time.sleep(interval)
-    raise RetainPdfError("Datalab conversion timed out")
-
-
-def _coerce_json_payload(value: Any) -> dict[str, Any]:
-    if isinstance(value, dict):
-        return value
-    if isinstance(value, str) and value.strip():
-        try:
-            parsed = json.loads(value)
-        except ValueError:
-            return {}
-        return parsed if isinstance(parsed, dict) else {}
-    return {}
-
-
-_TAG_RE = re.compile(r"<[^>]+>")
-
-
-def _clean_text(value: Any) -> str:
-    if value is None:
-        return ""
-    if isinstance(value, (dict, list)):
-        return ""
-    text = str(value)
-    text = _TAG_RE.sub(" ", text)
-    text = re.sub(r"\s+", " ", text).strip()
-    return text
-
-
-def _bbox_from_any(value: Any) -> tuple[float, float, float, float] | None:
-    if isinstance(value, dict):
-        if all(k in value for k in ("x", "y", "w", "h")):
-            x = float(value["x"])
-            y = float(value["y"])
-            return (x, y, x + float(value["w"]), y + float(value["h"]))
-        keys = ("left", "top", "right", "bottom")
-        if all(k in value for k in keys):
-            return tuple(float(value[k]) for k in keys)  # type: ignore[return-value]
-        keys = ("x0", "y0", "x1", "y1")
-        if all(k in value for k in keys):
-            return tuple(float(value[k]) for k in keys)  # type: ignore[return-value]
-    if isinstance(value, (list, tuple)):
-        if len(value) == 4 and all(isinstance(v, (int, float)) for v in value):
-            return tuple(float(v) for v in value)  # type: ignore[return-value]
-        points: list[tuple[float, float]] = []
-        if len(value) == 8 and all(isinstance(v, (int, float)) for v in value):
-            points = [(float(value[i]), float(value[i + 1])) for i in range(0, 8, 2)]
-        else:
-            for point in value:
-                if isinstance(point, dict) and "x" in point and "y" in point:
-                    points.append((float(point["x"]), float(point["y"])))
-                elif (
-                    isinstance(point, (list, tuple))
-                    and len(point) >= 2
-                    and isinstance(point[0], (int, float))
-                    and isinstance(point[1], (int, float))
-                ):
-                    points.append((float(point[0]), float(point[1])))
-        if points:
-            xs = [p[0] for p in points]
-            ys = [p[1] for p in points]
-            return (min(xs), min(ys), max(xs), max(ys))
-    return None
-
-
-def _extract_bbox(obj: dict[str, Any]) -> tuple[float, float, float, float] | None:
-    for key in ("bbox", "bounding_box", "box", "polygon", "poly", "rect"):
-        bbox = _bbox_from_any(obj.get(key))
-        if bbox:
-            x0, y0, x1, y1 = bbox
-            if x1 > x0 and y1 > y0:
-                return bbox
-    return None
-
-
-def _page_index_from_obj(obj: dict[str, Any], fallback: int = 0) -> int:
-    for key in ("page_index", "page_idx"):
-        value = obj.get(key)
-        if isinstance(value, int):
-            return max(0, value)
-    for key in ("page_number", "page_num", "page"):
-        value = obj.get(key)
-        if isinstance(value, int):
-            return max(0, value - 1 if key != "page_index" and value > 0 else value)
-    raw_id = str(obj.get("id") or obj.get("block_id") or "")
-    match = re.search(r"(?:^|/)page[/_-]?(\d+)", raw_id, flags=re.IGNORECASE)
-    if match:
-        return max(0, int(match.group(1)))
-    return max(0, fallback)
-
-
-def _page_dimensions_from_payload(payload: dict[str, Any], page_index: int) -> tuple[float | None, float | None]:
-    candidates: list[Any] = []
-    metadata = payload.get("metadata")
-    if isinstance(metadata, dict):
-        candidates.extend([metadata.get("page_stats"), metadata.get("page_info"), metadata.get("pages")])
-    candidates.extend([payload.get("page_info"), payload.get("pages")])
-    for candidate in candidates:
-        if isinstance(candidate, dict):
-            value = candidate.get(str(page_index)) or candidate.get(str(page_index + 1)) or candidate.get(page_index)
-            if isinstance(value, dict):
-                width = value.get("width") or value.get("page_width")
-                height = value.get("height") or value.get("page_height")
-                if width and height:
-                    return float(width), float(height)
-        if isinstance(candidate, list) and 0 <= page_index < len(candidate):
-            value = candidate[page_index]
-            if isinstance(value, dict):
-                bbox = _extract_bbox(value)
-                if bbox:
-                    return bbox[2] - bbox[0], bbox[3] - bbox[1]
-                width = value.get("width") or value.get("page_width")
-                height = value.get("height") or value.get("page_height")
-                if width and height:
-                    return float(width), float(height)
-
-    def walk_page_blocks(items: Any) -> tuple[float | None, float | None]:
-        if not isinstance(items, list):
-            return None, None
-        for item in items:
-            if not isinstance(item, dict):
-                continue
-            kind = _block_kind(item)
-            item_page = _page_index_from_obj(item, page_index)
-            bbox = _extract_bbox(item)
-            if item_page == page_index and kind == "page" and bbox:
-                return bbox[2] - bbox[0], bbox[3] - bbox[1]
-            width, height = walk_page_blocks(item.get("children"))
-            if width and height:
-                return width, height
-        return None, None
-
-    width, height = walk_page_blocks(payload.get("children"))
-    if width and height:
-        return width, height
-    return None, None
-
-
-def _block_text(obj: dict[str, Any]) -> str:
-    for key in ("text", "markdown", "content", "value", "html"):
-        text = _clean_text(obj.get(key))
-        if text:
-            return text
-    return ""
-
-
-def _block_kind(obj: dict[str, Any]) -> str:
-    for key in ("block_type", "type", "category", "kind", "label"):
-        value = str(obj.get(key) or "").strip().lower()
-        if value:
-            return value
-    return "text"
-
-
-def _should_translate_block(kind: str, text: str, bbox: tuple[float, float, float, float]) -> bool:
-    if len(text) < 2 or len(text) > 1800:
-        return False
-    if any(token in kind for token in ("page", "image", "figure", "picture", "equation", "formula")):
-        return False
-    x0, y0, x1, y1 = bbox
-    return (x1 - x0) >= 8 and (y1 - y0) >= 6
-
-
-def _iter_datalab_candidate_blocks(payload: dict[str, Any]) -> list[tuple[int, dict[str, Any]]]:
-    pages = payload.get("pages")
-    if isinstance(pages, list):
-        output: list[tuple[int, dict[str, Any]]] = []
-        for page_index, page in enumerate(pages):
-            if not isinstance(page, dict):
-                continue
-            blocks = page.get("blocks") or page.get("children") or page.get("items")
-            if isinstance(blocks, list):
-                for block in blocks:
-                    if isinstance(block, dict):
-                        output.append((page_index, block))
-        if output:
-            return output
-    blocks = payload.get("blocks")
-    if isinstance(blocks, list):
-        return [(0, block) for block in blocks if isinstance(block, dict)]
-    children = payload.get("children")
-    if isinstance(children, list):
-        flattened: list[tuple[int, dict[str, Any]]] = []
-
-        def walk(items: list[Any], inherited_page: int) -> None:
-            for item in items:
-                if not isinstance(item, dict):
-                    continue
-                page_index = _page_index_from_obj(item, inherited_page)
-                if _extract_bbox(item) and _block_text(item):
-                    flattened.append((page_index, item))
-                nested = item.get("children")
-                if isinstance(nested, list):
-                    walk(nested, page_index)
-
-        walk(children, 0)
-        return flattened
-    return []
-
-
-def _extract_datalab_text_blocks(payload: dict[str, Any]) -> list[LayoutTextBlock]:
-    blocks: list[LayoutTextBlock] = []
-    for order, (fallback_page_index, item) in enumerate(_iter_datalab_candidate_blocks(payload)):
-        bbox = _extract_bbox(item)
-        if not bbox:
-            continue
-        text = _block_text(item)
-        kind = _block_kind(item)
-        if not _should_translate_block(kind, text, bbox):
-            continue
-        page_index = _page_index_from_obj(item, fallback_page_index)
-        page_width = item.get("page_width") or item.get("width")
-        page_height = item.get("page_height") or item.get("height")
-        if not (page_width and page_height):
-            page_width, page_height = _page_dimensions_from_payload(payload, page_index)
-        blocks.append(
-            LayoutTextBlock(
-                id=str(item.get("id") or item.get("block_id") or f"b{order}"),
-                page_index=page_index,
-                bbox=bbox,
-                text=text,
-                page_width=float(page_width) if page_width else None,
-                page_height=float(page_height) if page_height else None,
-                kind=kind,
-            )
-        )
-    return blocks
-
-
-def _extract_pymupdf_text_blocks(source_bytes: bytes) -> list[LayoutTextBlock]:
-    blocks: list[LayoutTextBlock] = []
-    with fitz.open(stream=source_bytes, filetype="pdf") as pdf:
-        for page_index, page in enumerate(pdf):
-            for order, raw in enumerate(page.get_text("blocks")):
-                if len(raw) < 5:
-                    continue
-                x0, y0, x1, y1, text = raw[:5]
-                bbox = (float(x0), float(y0), float(x1), float(y1))
-                clean = _clean_text(text)
-                if not _should_translate_block("text", clean, bbox):
-                    continue
-                blocks.append(
-                    LayoutTextBlock(
-                        id=f"fitz-p{page_index}-b{order}",
-                        page_index=page_index,
-                        bbox=bbox,
-                        text=clean,
-                        page_width=float(page.rect.width),
-                        page_height=float(page.rect.height),
-                    )
-                )
-    return blocks
-
-
 def _pdf_page_count(source_bytes: bytes) -> int | None:
     try:
         with fitz.open(stream=source_bytes, filetype="pdf") as pdf:
@@ -800,317 +427,6 @@ def _pdf_page_count(source_bytes: bytes) -> int | None:
     except Exception:
         logger.warning("Unable to read PDF page count before layout translation", exc_info=True)
         return None
-
-
-def _json_from_model_text(text: str) -> dict[str, Any]:
-    raw = text.strip()
-    if raw.startswith("```"):
-        raw = re.sub(r"^```(?:json)?\s*", "", raw)
-        raw = re.sub(r"\s*```$", "", raw)
-    try:
-        return json.loads(raw)
-    except json.JSONDecodeError:
-        repaired = _escape_invalid_json_backslashes(raw)
-        if repaired != raw:
-            return json.loads(repaired)
-        raise
-
-
-def _escape_invalid_json_backslashes(raw: str) -> str:
-    """Repair common model JSON mistakes like LaTeX `\\epsilon` in strings."""
-    valid = {'"', "\\", "/", "b", "f", "n", "r", "t"}
-    out: list[str] = []
-    i = 0
-    while i < len(raw):
-        char = raw[i]
-        if char != "\\":
-            out.append(char)
-            i += 1
-            continue
-
-        if i + 1 >= len(raw):
-            out.append("\\\\")
-            i += 1
-            continue
-
-        nxt = raw[i + 1]
-        if nxt == "u":
-            hex_part = raw[i + 2 : i + 6]
-            if len(hex_part) == 4 and all(c in "0123456789abcdefABCDEF" for c in hex_part):
-                out.append(raw[i : i + 6])
-                i += 6
-            else:
-                out.append("\\\\")
-                i += 1
-            continue
-
-        if nxt in valid:
-            out.append(raw[i : i + 2])
-            i += 2
-            continue
-
-        out.append("\\\\")
-        i += 1
-    return "".join(out)
-
-
-def _translate_blocks(blocks: list[LayoutTextBlock], *, target_language: str) -> dict[str, str]:
-    translation_api_key = _translation_api_key()
-    if not translation_api_key:
-        raise LayoutTranslationConfigError("Translation API key is not configured")
-    client = OpenAI(api_key=translation_api_key, base_url=settings.RETAINPDF_TRANSLATION_BASE_URL)
-    translations: dict[str, str] = {}
-    batch: list[LayoutTextBlock] = []
-    batch_chars = 0
-
-    def flush() -> None:
-        nonlocal batch, batch_chars
-        if not batch:
-            return
-        items = [{"id": block.id, "text": block.text} for block in batch]
-        request: dict[str, Any] = {
-            "model": settings.RETAINPDF_TRANSLATION_MODEL,
-            "messages": [
-                {
-                    "role": "system",
-                    "content": (
-                        "Translate each item into Simplified Chinese. Preserve numbers, equations, citations, "
-                        "units, URLs, code-like text, and inline symbols. Return only valid JSON with this shape: "
-                        "{\"items\":[{\"id\":\"...\",\"text\":\"...\"}]}."
-                    ),
-                },
-                {"role": "user", "content": json.dumps({"target_language": target_language, "items": items}, ensure_ascii=False)},
-            ],
-            "temperature": 0,
-            "extra_body": {"thinking": {"type": "disabled"}},
-        }
-        try:
-            response = client.chat.completions.create(**request, response_format={"type": "json_object"})
-        except Exception as exc:
-            message = str(exc).lower()
-            if "response_format" not in message and "json" not in message:
-                raise
-            logger.warning("Translation provider rejected JSON mode; retrying without response_format: %s", exc)
-            response = client.chat.completions.create(**request)
-        content = response.choices[0].message.content or ""
-        parsed = _json_from_model_text(content)
-        for item in parsed.get("items", []):
-            if isinstance(item, dict) and item.get("id") and isinstance(item.get("text"), str):
-                translations[str(item["id"])] = item["text"].strip()
-        batch = []
-        batch_chars = 0
-
-    for block in blocks:
-        text_len = len(block.text)
-        if batch and (len(batch) >= 20 or batch_chars + text_len > 4500):
-            flush()
-        batch.append(block)
-        batch_chars += text_len
-    flush()
-    return translations
-
-
-def _map_bbox_to_page(block: LayoutTextBlock, page: fitz.Page) -> fitz.Rect:
-    x0, y0, x1, y1 = block.bbox
-    page_width = block.page_width or page.rect.width
-    page_height = block.page_height or page.rect.height
-    if max(abs(x0), abs(y0), abs(x1), abs(y1)) <= 1.5:
-        x0 *= page.rect.width
-        x1 *= page.rect.width
-        y0 *= page.rect.height
-        y1 *= page.rect.height
-    elif page_width and page_height:
-        x_scale = page.rect.width / page_width
-        y_scale = page.rect.height / page_height
-        x0 *= x_scale
-        x1 *= x_scale
-        y0 *= y_scale
-        y1 *= y_scale
-    rect = fitz.Rect(x0, y0, x1, y1).normalize()
-    return rect & page.rect
-
-
-def _font_size_for_rect(rect: fitz.Rect, text: str) -> float:
-    line_count = max(1, min(5, len(text) // 22 + 1))
-    return max(5.0, min(11.0, rect.height / (line_count * 1.35)))
-
-
-def _render_translated_pdf(source_bytes: bytes, blocks: list[LayoutTextBlock], translations: dict[str, str]) -> bytes:
-    with fitz.open(stream=source_bytes, filetype="pdf") as pdf:
-        by_page: dict[int, list[LayoutTextBlock]] = {}
-        for block in blocks:
-            if block.id in translations:
-                by_page.setdefault(block.page_index, []).append(block)
-
-        for page_index, page_blocks in by_page.items():
-            if page_index < 0 or page_index >= len(pdf):
-                continue
-            page = pdf[page_index]
-            for block in page_blocks:
-                translated = translations.get(block.id, "").strip()
-                if not translated:
-                    continue
-                rect = _map_bbox_to_page(block, page)
-                if rect.is_empty or rect.width < 8 or rect.height < 6:
-                    continue
-                if (rect.width * rect.height) > (page.rect.width * page.rect.height) * 0.35:
-                    continue
-                padded = fitz.Rect(rect.x0, rect.y0, rect.x1, rect.y1)
-                padded.x0 = max(page.rect.x0, padded.x0 - 0.5)
-                padded.y0 = max(page.rect.y0, padded.y0 - 0.5)
-                padded.x1 = min(page.rect.x1, padded.x1 + 0.5)
-                padded.y1 = min(page.rect.y1, padded.y1 + 0.5)
-                page.draw_rect(padded, color=(1, 1, 1), fill=(1, 1, 1), overlay=True)
-                font_size = _font_size_for_rect(padded, translated)
-                for _ in range(6):
-                    try:
-                        remaining = page.insert_textbox(
-                            padded,
-                            translated,
-                            fontname="china-s",
-                            fontsize=font_size,
-                            color=(0.05, 0.05, 0.05),
-                            align=fitz.TEXT_ALIGN_LEFT,
-                        )
-                    except Exception:
-                        remaining = page.insert_textbox(
-                            padded,
-                            translated,
-                            fontname="helv",
-                            fontsize=font_size,
-                            color=(0.05, 0.05, 0.05),
-                            align=fitz.TEXT_ALIGN_LEFT,
-                        )
-                    if remaining >= 0 or font_size <= 5.0:
-                        break
-                    font_size -= 1.0
-        return pdf.tobytes(garbage=4, deflate=True)
-
-
-def _translated_markdown(blocks: list[LayoutTextBlock], translations: dict[str, str]) -> bytes:
-    lines: list[str] = ["# Layout-preserving PDF translation", ""]
-    current_page = -1
-    for block in blocks:
-        translated = translations.get(block.id, "").strip()
-        if not translated:
-            continue
-        if block.page_index != current_page:
-            current_page = block.page_index
-            lines.extend(["", f"## Page {current_page + 1}", ""])
-        lines.append(translated)
-        lines.append("")
-    return "\n".join(lines).encode("utf-8")
-
-
-def _bundle_bytes(*, datalab_result: dict[str, Any], blocks: list[LayoutTextBlock], translations: dict[str, str]) -> bytes:
-    buffer = io.BytesIO()
-    with zipfile.ZipFile(buffer, "w", compression=zipfile.ZIP_DEFLATED) as zf:
-        zf.writestr("datalab-result.json", json.dumps(datalab_result, ensure_ascii=False, indent=2))
-        zf.writestr(
-            "translated-blocks.json",
-            json.dumps(
-                [
-                    {
-                        "id": block.id,
-                        "page_index": block.page_index,
-                        "bbox": block.bbox,
-                        "kind": block.kind,
-                        "source_text": block.text,
-                        "translated_text": translations.get(block.id, ""),
-                    }
-                    for block in blocks
-                ],
-                ensure_ascii=False,
-                indent=2,
-            ),
-        )
-    return buffer.getvalue()
-
-
-def _run_datalab_layout_translation(
-    *,
-    job: DocumentJob,
-    doc: Document,
-    source_bytes: bytes,
-    filename: str,
-    target_language: str,
-    db,
-) -> None:
-    client = DatalabClient()
-    _set_metadata(job, service_status="submitting_to_datalab", engine="datalab")
-    db.commit()
-    initial = client.submit_convert(filename=filename, content=source_bytes)
-
-    _set_metadata(
-        job,
-        service_status="running_in_datalab",
-        engine="datalab",
-        datalab={"request_id": initial.get("request_id"), "status": "submitted"},
-    )
-    db.commit()
-    result = _poll_datalab_to_terminal(client, initial, job, db)
-    datalab_json = _coerce_json_payload(result.get("json"))
-    blocks = _extract_datalab_text_blocks(datalab_json) if datalab_json else []
-    if not blocks:
-        logger.warning("Datalab result did not contain usable layout blocks for job %s; falling back to PyMuPDF blocks", job.id)
-        blocks = _extract_pymupdf_text_blocks(source_bytes)
-    if not blocks:
-        raise RetainPdfError("No translatable text blocks found in PDF")
-
-    _set_metadata(job, service_status="translating_blocks", engine="datalab", block_count=len(blocks))
-    db.commit()
-    translations = _translate_blocks(blocks, target_language=target_language)
-    if not translations:
-        raise RetainPdfError("Translation provider returned no translated blocks")
-
-    _set_metadata(job, service_status="rendering_pdf", engine="datalab", translated_block_count=len(translations))
-    db.commit()
-    translated_pdf = _render_translated_pdf(source_bytes, blocks, translations)
-    stem = os.path.splitext(filename)[0] or "document"
-    artifacts: dict[str, dict[str, Any]] = {}
-    pdf_artifact = _upload_artifact(
-        job,
-        content=translated_pdf,
-        filename=sanitize_filename(f"{stem}-translated.pdf"),
-        content_type="application/pdf",
-    )
-    artifacts["pdf"] = pdf_artifact.__dict__
-    markdown_artifact = _upload_artifact(
-        job,
-        content=_translated_markdown(blocks, translations),
-        filename=sanitize_filename(f"{stem}-translated.md"),
-        content_type="text/markdown; charset=utf-8",
-    )
-    artifacts["markdown"] = markdown_artifact.__dict__
-    bundle_artifact = _upload_artifact(
-        job,
-        content=_bundle_bytes(datalab_result=result, blocks=blocks, translations=translations),
-        filename=sanitize_filename(f"{stem}-translation-data.zip"),
-        content_type="application/zip",
-    )
-    artifacts["bundle"] = bundle_artifact.__dict__
-
-    job.status = "succeeded"
-    job.error_code = None
-    job.error_message = None
-    job.completed_at = _now()
-    _set_metadata(
-        job,
-        service_status="succeeded",
-        engine="datalab",
-        artifacts=artifacts,
-        datalab={
-            "request_id": initial.get("request_id"),
-            "status": "complete",
-            "page_count": result.get("page_count"),
-            "parse_quality_score": result.get("parse_quality_score"),
-            "cost_breakdown": result.get("cost_breakdown"),
-            "runtime": result.get("runtime"),
-        },
-        block_count=len(blocks),
-        translated_block_count=len(translations),
-    )
-    db.commit()
 
 
 def _run_retainpdf_layout_translation(
@@ -1245,19 +561,8 @@ def run_layout_translation_job_sync(job_id: str) -> None:
                 page_count=page_count,
             )
             filename = sanitize_filename(doc.filename or "document.pdf")
-            input_scope = getattr(job, "input_scope", None) or {}
-            target_language = str(input_scope.get("target_language") or DEFAULT_LAYOUT_TRANSLATION_TARGET)
             engine = layout_translation_engine()
-            if engine == "datalab":
-                _run_datalab_layout_translation(
-                    job=job,
-                    doc=doc,
-                    source_bytes=source_bytes,
-                    filename=filename,
-                    target_language=target_language,
-                    db=db,
-                )
-            elif engine == "retainpdf":
+            if engine == "retainpdf":
                 _run_retainpdf_layout_translation(
                     job=job,
                     doc=doc,
@@ -1266,7 +571,9 @@ def run_layout_translation_job_sync(job_id: str) -> None:
                     db=db,
                 )
             else:
-                raise LayoutTranslationConfigError(f"Unsupported layout translation engine: {engine}")
+                raise LayoutTranslationConfigError(
+                    f"Unsupported layout translation engine: {engine}. The Datalab overlay renderer has been retired."
+                )
         except LayoutTranslationConfigError as exc:
             logger.error("Layout translation job %s is not configured: %s", job.id, exc)
             _mark_failed(
