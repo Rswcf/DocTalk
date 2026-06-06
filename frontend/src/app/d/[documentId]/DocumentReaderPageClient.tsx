@@ -49,7 +49,6 @@ export default function DocumentReaderPageClient() {
   const addMessage = useDocTalkStore((s) => s.addMessage);
 
   const documentName = useDocTalkStore((s) => s.documentName);
-  const suggestedQuestions = useDocTalkStore((s) => s.suggestedQuestions);
   const documentStatus = useDocTalkStore((s) => s.documentStatus);
   const [showInstructions, setShowInstructions] = useState(false);
   const [layoutTranslationBusy, setLayoutTranslationBusy] = useState(false);
@@ -276,7 +275,7 @@ export default function DocumentReaderPageClient() {
   }, [isDesktopLayout, mobileTab, currentPage, highlights, highlightSnippet]);
 
   const chatContent = documentStatus === 'ready' && sessionId ? (
-    <ChatPanel sessionId={sessionId} onCitationClick={handleCitationClick} maxUserMessages={isDemo && !isLoggedIn ? 5 : undefined} suggestedQuestions={suggestedQuestions.length > 0 ? suggestedQuestions : undefined} initialQuestion={initialQuestion} autoSubmitInitialQuestion={isDemo} onOpenSettings={canUseCustomInstructions ? () => setShowInstructions(true) : undefined} hasCustomInstructions={!!customInstructions} userPlan={userPlan} />
+    <ChatPanel sessionId={sessionId} onCitationClick={handleCitationClick} maxUserMessages={isDemo && !isLoggedIn ? 5 : undefined} initialQuestion={initialQuestion} autoSubmitInitialQuestion={isDemo} onOpenSettings={canUseCustomInstructions ? () => setShowInstructions(true) : undefined} hasCustomInstructions={!!customInstructions} userPlan={userPlan} />
   ) : sessionErrorCopy ? (
     <div className="flex h-full w-full items-center justify-center px-5 py-8">
       <div

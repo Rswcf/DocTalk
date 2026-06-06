@@ -14,7 +14,6 @@ import PlusMenu from './PlusMenu';
 import DomainModeSelector from './DomainModeSelector';
 import MessageErrorBoundary from './MessageErrorBoundary';
 import { renumberCitations } from '../../lib/citations';
-import { SUGGESTED_KEYS } from '../../lib/constants';
 import { useChatStream } from '../../lib/useChatStream';
 import { openAuthModal } from '../../lib/auth-modal';
 import { errorCopy } from '../../lib/errorCopy';
@@ -112,7 +111,6 @@ interface ChatPanelProps {
   sessionId: string;
   onCitationClick: (c: Citation) => void;
   maxUserMessages?: number;
-  suggestedQuestions?: string[];
   initialQuestion?: string;
   onOpenSettings?: () => void;
   hasCustomInstructions?: boolean;
@@ -126,7 +124,7 @@ interface ChatPanelProps {
 
 const autoSubmittedInitialQuestions = new Set<string>();
 
-export default function ChatPanel({ sessionId, onCitationClick, maxUserMessages, suggestedQuestions, initialQuestion, onOpenSettings, hasCustomInstructions, userPlan, autoSubmitInitialQuestion = false, supportsCustomInstructions = true }: ChatPanelProps) {
+export default function ChatPanel({ sessionId, onCitationClick, maxUserMessages, initialQuestion, onOpenSettings, hasCustomInstructions, userPlan, autoSubmitInitialQuestion = false, supportsCustomInstructions = true }: ChatPanelProps) {
   const messages = useDocTalkStore((s) => s.messages);
   const isStreaming = useDocTalkStore((s) => s.isStreaming);
   const selectedMode = useDocTalkStore((s) => s.selectedMode);
@@ -311,13 +309,6 @@ export default function ChatPanel({ sessionId, onCitationClick, maxUserMessages,
     openAuthModal();
   }, []);
 
-  const handleSuggestedClick = (question: string) => {
-    setInput(question);
-    void sendMessage(question).then((sent) => {
-      if (sent) setInput('');
-    });
-  };
-
   const handleExport = useCallback(() => {
     trackEvent('export_clicked', { source: 'chat_plus_menu', format: 'markdown' });
     const docName = useDocTalkStore.getState().documentName || 'document';
@@ -463,20 +454,6 @@ export default function ChatPanel({ sessionId, onCitationClick, maxUserMessages,
   const canUseExport = messages.length > 0 && !isStreaming && (userPlan === 'plus' || userPlan === 'pro');
   const showExportInMenu = messages.length > 0 && !isStreaming;
 
-  const localizedSuggestedQuestions = [
-    ...SUGGESTED_KEYS.map((key) => t(key)),
-    tOr('chat.suggestedExtractTables', 'Extract all tables as CSV'),
-    tOr('chat.suggestedCompareVersions', 'Compare this with an older version'),
-  ];
-  // Backend generates document-specific suggested questions in the user's locale;
-  // trust them regardless of `locale`. Falling back to the localized canned set
-  // only when the backend hasn't supplied any. Previously this was gated on
-  // `locale === 'en'`, which meant non-English users never saw document-aware
-  // suggestions.
-  const displayedSuggestedQuestions = suggestedQuestions && suggestedQuestions.length > 0
-    ? suggestedQuestions
-    : localizedSuggestedQuestions;
-
   return (
     <div className="dt-chat-shell flex h-full flex-col">
       <PaywallModal
@@ -492,33 +469,7 @@ export default function ChatPanel({ sessionId, onCitationClick, maxUserMessages,
           data-tour="chat-area"
           className="dt-chat-scroll h-full overflow-y-auto overflow-x-hidden px-4 pb-10 pt-4 sm:px-6 sm:pb-12 lg:px-7"
         >
-          {messages.length === 0 ? (
-            <div className="flex min-h-full flex-col items-center justify-center px-2 py-8">
-              <div className="dt-empty-workbench rounded-[1.75rem] px-5 py-6 sm:px-7 sm:py-7">
-                <div className="mb-5 flex items-center justify-between gap-4 border-b border-white/10 pb-4">
-                  <div>
-                    <p className="text-[11px] font-mono uppercase tracking-[0.08em] text-[var(--workbench-muted)]">DocTalk</p>
-                    <p className="mt-1 text-sm font-medium text-[var(--workbench-ink)]">{t('chat.trySuggested')}</p>
-                  </div>
-                  <div className="hidden sm:flex h-9 w-9 items-center justify-center rounded-xl border border-white/14 bg-white/8 text-xs font-mono font-semibold text-white/72">
-                    01
-                  </div>
-                </div>
-                <div className="grid gap-2 sm:grid-cols-2">
-                {displayedSuggestedQuestions.map((question, index) => (
-                  <button
-                    key={`sq-${index}`}
-                    type="button"
-                    onClick={() => handleSuggestedClick(question)}
-                    className="dt-suggested-question min-h-12 rounded-lg px-3 py-2 text-left text-sm leading-snug focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-900"
-                  >
-                    {question}
-                  </button>
-                ))}
-                </div>
-              </div>
-            </div>
-          ) : (
+          {messages.length > 0 && (
             <div className="mx-auto max-w-4xl pb-2">
               {messages.map((message, idx) => {
                 const isLastMessage = idx === messages.length - 1;
