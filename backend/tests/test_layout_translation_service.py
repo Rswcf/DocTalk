@@ -145,6 +145,64 @@ def test_layout_translation_worker_retires_datalab_renderer(monkeypatch) -> None
     assert job.metadata_json["service_status"] == "not_configured"
 
 
+def test_layout_translation_worker_sanitizes_sidecar_traceback_failure(monkeypatch) -> None:
+    monkeypatch.setattr(service, "layout_translation_engine", lambda: "retainpdf")
+    job_id = uuid.uuid4()
+    doc_id = uuid.uuid4()
+    job = SimpleNamespace(
+        id=job_id,
+        document_id=doc_id,
+        job_type=service.LAYOUT_TRANSLATION_JOB_TYPE,
+        status="queued",
+        error_code=None,
+        error_message=None,
+        completed_at=None,
+        metadata_json={},
+    )
+    doc = SimpleNamespace(
+        id=doc_id,
+        file_type="pdf",
+        filename="Court Filing.pdf",
+        storage_key="documents/court-filing.pdf",
+        file_size=1024,
+        page_count=6,
+    )
+    fake_session = _FakeSession(job, doc)
+
+    raw_error = (
+        'Traceback (most recent call last): File "/app/backend/scripts/services/document_schema/validator.py", '
+        'line 222, in _validate_block DocumentSchemaValidationError: '
+        "$.pages[4].blocks[10].semantic_role: unexpected semantic role 'footnote'"
+    )
+
+    class FakeRetainPdfClient:
+        def upload_pdf(self, *, filename: str, content: bytes) -> str:
+            return "upload_1"
+
+        def create_book_job(self, *, upload_id: str, source_filename: str) -> str:
+            return "retain_job_1"
+
+        def get_job(self, job_id: str):
+            return {"status": "failed", "error": raw_error, "stage": "normalization"}
+
+    monkeypatch.setattr(service, "RetainPdfClient", FakeRetainPdfClient)
+    monkeypatch.setattr(service.storage_service, "download_file", lambda key: b"%PDF-source")
+    monkeypatch.setitem(
+        sys.modules,
+        "app.models.sync_database",
+        SimpleNamespace(SyncSessionLocal=lambda: fake_session),
+    )
+
+    service.run_layout_translation_job_sync(str(job_id))
+
+    assert job.status == "failed"
+    assert job.error_code == "LAYOUT_TRANSLATION_FAILED"
+    assert job.error_message == service.STRUCTURE_LAYOUT_TRANSLATION_FAILURE_MESSAGE
+    assert "Traceback" not in job.error_message
+    assert "/app/backend" not in job.error_message
+    assert job.metadata_json["service_status"] == "failed"
+
+
 def test_retainpdf_create_job_payload_matches_grouped_api(monkeypatch) -> None:
     captured: dict[str, object] = {}
 

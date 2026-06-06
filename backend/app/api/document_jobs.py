@@ -12,7 +12,7 @@ from sqlalchemy.orm import selectinload
 
 from app.core.deps import get_db_session, require_auth
 from app.models.tables import DocumentJob, DocumentTable, User
-from app.services.layout_translation_service import LAYOUT_TRANSLATION_JOB_TYPE
+from app.services.layout_translation_service import LAYOUT_TRANSLATION_JOB_TYPE, layout_translation_public_error_message
 
 router = APIRouter(prefix="/api", tags=["document-jobs"])
 
@@ -73,6 +73,7 @@ async def _artifact_for_job(job: DocumentJob, db: AsyncSession, user: User) -> D
         metadata = job.metadata_json or {}
         artifacts = metadata.get("artifacts") if isinstance(metadata, dict) else {}
         target = str(metadata.get("target_language_label") or "Simplified Chinese")
+        error_message = layout_translation_public_error_message(job.error_message)
         preview = {
             "target_language": metadata.get("target_language"),
             "target_language_label": target,
@@ -112,7 +113,7 @@ async def _artifact_for_job(job: DocumentJob, db: AsyncSession, user: User) -> D
         if job.status == "succeeded":
             summary = f"Layout-preserved PDF translation to {target} is ready."
         elif job.status == "failed":
-            summary = job.error_message or "Layout-preserving translation failed."
+            summary = error_message or "Layout-preserving translation failed."
         else:
             summary = f"Translating this PDF to {target} while preserving layout."
         return DocumentJobArtifactResponse(
@@ -123,7 +124,7 @@ async def _artifact_for_job(job: DocumentJob, db: AsyncSession, user: User) -> D
             summary=summary,
             preview=preview,
             download_urls=download_urls,
-            warning=job.error_message if job.status == "failed" else None,
+            warning=error_message if job.status == "failed" else None,
         )
 
     if job.job_type == "table_scan":
@@ -233,7 +234,9 @@ async def get_document_job(
         input_scope=job.input_scope or {},
         cost_credits=int(job.cost_credits or 0),
         error_code=job.error_code,
-        error_message=job.error_message,
+        error_message=layout_translation_public_error_message(job.error_message)
+        if job.job_type == LAYOUT_TRANSLATION_JOB_TYPE
+        else job.error_message,
         metadata_json=job.metadata_json or {},
         created_at=job.created_at.isoformat(),
         updated_at=job.updated_at.isoformat(),

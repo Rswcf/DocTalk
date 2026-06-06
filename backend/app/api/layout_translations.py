@@ -28,6 +28,7 @@ from app.services.layout_translation_service import (
     layout_translation_file_size_limit_mb,
     layout_translation_max_pages_for_plan,
     layout_translation_next_plan_for_page_limit,
+    layout_translation_public_error_message,
     layout_translation_trial_limit,
     normalize_target_language,
     plan_allows_unlimited_layout_translation,
@@ -60,6 +61,7 @@ def _iso(value: Any) -> str:
 
 
 async def _job_response(job: DocumentJob, db: AsyncSession, user: User) -> DocumentJobDetailResponse:
+    error_message = layout_translation_public_error_message(job.error_message)
     return DocumentJobDetailResponse(
         id=str(job.id),
         document_id=str(job.document_id) if job.document_id else None,
@@ -69,7 +71,7 @@ async def _job_response(job: DocumentJob, db: AsyncSession, user: User) -> Docum
         input_scope=job.input_scope or {},
         cost_credits=int(job.cost_credits or 0),
         error_code=job.error_code,
-        error_message=job.error_message,
+        error_message=error_message,
         metadata_json=job.metadata_json or {},
         created_at=_iso(job.created_at),
         updated_at=_iso(job.updated_at),

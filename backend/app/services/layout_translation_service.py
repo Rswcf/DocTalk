@@ -23,6 +23,16 @@ LAYOUT_TRANSLATION_ACTIVE_STATUSES = ("queued", "running", "succeeded")
 DEFAULT_LAYOUT_TRANSLATION_TARGET = "zh-CN"
 logger = logging.getLogger(__name__)
 
+GENERIC_LAYOUT_TRANSLATION_FAILURE_MESSAGE = (
+    "Layout-preserving translation failed. Please try again, or contact support if it keeps failing."
+)
+STRUCTURE_LAYOUT_TRANSLATION_FAILURE_MESSAGE = (
+    "Layout-preserving translation failed while preparing the document structure. Please try again."
+)
+TIMEOUT_LAYOUT_TRANSLATION_FAILURE_MESSAGE = (
+    "Layout-preserving translation timed out. Try a smaller PDF or try again later."
+)
+
 SUPPORTED_LAYOUT_TRANSLATION_TARGETS: dict[str, str] = {
     "zh-CN": "Simplified Chinese",
 }
@@ -69,6 +79,35 @@ class LayoutTranslationConfigStatus:
     translation_model: str
     translation_base_url: str
     uses_deepseek_fallback_key: bool
+
+
+def layout_translation_public_error_message(message: str | None) -> str | None:
+    if not message:
+        return None
+    raw = str(message)
+    lowered = raw.lower()
+    if (
+        "traceback" in lowered
+        or "/app/backend/" in raw
+        or "documentschemavalidationerror" in raw
+        or "document_schema_validation_failed" in lowered
+        or "normalized document schema validation failed" in lowered
+    ):
+        return STRUCTURE_LAYOUT_TRANSLATION_FAILURE_MESSAGE
+    return raw
+
+
+def _safe_layout_translation_failure_message(exc: BaseException) -> str:
+    raw = str(exc)
+    lowered = raw.lower()
+    public = layout_translation_public_error_message(raw)
+    if public and public != raw:
+        return public
+    if "timed out" in lowered or "timeout" in lowered:
+        return TIMEOUT_LAYOUT_TRANSLATION_FAILURE_MESSAGE
+    if isinstance(exc, RetainPdfError):
+        return GENERIC_LAYOUT_TRANSLATION_FAILURE_MESSAGE
+    return GENERIC_LAYOUT_TRANSLATION_FAILURE_MESSAGE
 
 
 def normalize_target_language(value: str | None) -> str:
@@ -603,6 +642,11 @@ def run_layout_translation_job_sync(job_id: str) -> None:
             _set_metadata(job, service_status="limit_rejected")
             db.commit()
         except Exception as exc:
-            _mark_failed(job, code="LAYOUT_TRANSLATION_FAILED", message=str(exc))
+            logger.exception("Layout translation job %s failed", job.id)
+            _mark_failed(
+                job,
+                code="LAYOUT_TRANSLATION_FAILED",
+                message=_safe_layout_translation_failure_message(exc),
+            )
             _set_metadata(job, service_status="failed")
             db.commit()
