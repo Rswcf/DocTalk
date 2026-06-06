@@ -12,7 +12,10 @@ from sqlalchemy.orm import selectinload
 
 from app.core.deps import get_db_session, require_auth
 from app.models.tables import DocumentJob, DocumentTable, User
-from app.services.layout_translation_service import LAYOUT_TRANSLATION_JOB_TYPE, layout_translation_public_error_message
+from app.services.layout_translation_service import (
+    LAYOUT_TRANSLATION_JOB_TYPE,
+    layout_translation_public_error_message,
+)
 
 router = APIRouter(prefix="/api", tags=["document-jobs"])
 
