@@ -63,17 +63,7 @@ export function useChatSession(documentId: string | undefined): UseChatSessionRe
             last_activity_at: now,
           });
 
-          const summary = useDocTalkStore.getState().documentSummary;
-          if (summary) {
-            setMessages([{
-              id: 'summary_synthetic',
-              role: 'assistant',
-              text: summary,
-              createdAt: Date.now(),
-            }]);
-          } else {
-            setMessages([]);
-          }
+          setMessages([]);
         } catch (e) {
           const expectedRateLimit = e instanceof ApiError && (e.code === 'DEMO_SESSION_RATE_LIMITED' || e.status === 429);
           if (!expectedRateLimit) {

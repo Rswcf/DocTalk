@@ -1,20 +1,16 @@
 "use client";
 
-import { useEffect, useMemo, useState } from 'react';
-import { AlertTriangle, CheckCircle2, Clock3, Download, FileText, Languages, RefreshCw, Sparkles, Table2 } from 'lucide-react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { AlertTriangle, CheckCircle2, Clock3, Download, ExternalLink, Eye, FilePlus2, FileText, Languages, Loader2, RefreshCw, Sparkles, Table2 } from 'lucide-react';
 import type { ChatArtifact, Citation, DocumentTable } from '../../types';
-import { getDocumentJob, getTableScanJob, listDocumentTables, PROXY_BASE, reconstructDocumentTable } from '../../lib/api';
+import { getDocumentJob, getTableScanJob, importLayoutTranslationDocument, listDocumentTables, reconstructDocumentTable } from '../../lib/api';
+import { absoluteProxiedArtifactUrl, proxiedArtifactUrl } from '../../lib/layoutTranslation';
 import { useLocale } from '../../i18n';
 
 interface ChatArtifactCardProps {
   artifact: ChatArtifact;
   onCitationClick?: (citation: Citation) => void;
-}
-
-function proxiedUrl(url: string): string {
-  if (!url) return '#';
-  if (/^https?:\/\//.test(url)) return url;
-  return `${PROXY_BASE}${url.startsWith('/') ? url : `/${url}`}`;
+  onPreviewLayoutTranslation?: (url: string, artifact: ChatArtifact) => void;
 }
 
 function rowsFromPreview(preview: unknown): Array<Record<string, unknown>> {
@@ -67,12 +63,15 @@ function tableMethodLabel(method: unknown, tOr: (key: string, fallback: string, 
   return typeof method === 'string' && method ? method : '';
 }
 
-export default function ChatArtifactCard({ artifact, onCitationClick }: ChatArtifactCardProps) {
-  const { tOr } = useLocale();
+export default function ChatArtifactCard({ artifact, onCitationClick, onPreviewLayoutTranslation }: ChatArtifactCardProps) {
+  const { tOr, locale } = useLocale();
   const [current, setCurrent] = useState(artifact);
   const [tableJob, setTableJob] = useState<{ id: string; status: string; tableId: string } | null>(null);
   const [rebuildingTableId, setRebuildingTableId] = useState<string | null>(null);
   const [tableRebuildError, setTableRebuildError] = useState<string | null>(null);
+  const [layoutImporting, setLayoutImporting] = useState(false);
+  const [layoutImportError, setLayoutImportError] = useState<string | null>(null);
+  const autoImportAttemptedRef = useRef(false);
   const isPending = current.status === 'queued' || current.status === 'running';
   const isFailed = current.status === 'failed';
   const isDone = current.status === 'succeeded';
@@ -102,6 +101,10 @@ export default function ChatArtifactCard({ artifact, onCitationClick }: ChatArti
 
   const previewRows = useMemo(() => rowsFromPreview(current.preview), [current.preview]);
   const previewMarkdown = useMemo(() => markdownPreview(current.preview), [current.preview]);
+  const layoutPreview = useMemo(
+    () => (current.preview && typeof current.preview === 'object' ? current.preview as Record<string, unknown> : {}),
+    [current.preview],
+  );
   const Icon = isLayoutTranslation
     ? Languages
     : current.artifactType.includes('table')
@@ -134,6 +137,10 @@ export default function ChatArtifactCard({ artifact, onCitationClick }: ChatArti
   }, [current.downloadUrls, isLayoutTranslation, tOr]);
   const artifactDocumentId = useMemo(() => documentIdFromArtifact(current, previewRows), [current, previewRows]);
   const tableJobPending = tableJob?.status === 'queued' || tableJob?.status === 'running';
+  const pdfDownload = isLayoutTranslation ? downloadUrls.find((item) => item.format === 'pdf') : undefined;
+  const importedDocumentId = typeof layoutPreview.imported_document_id === 'string' ? layoutPreview.imported_document_id : null;
+  const importedDocumentFilename = typeof layoutPreview.imported_document_filename === 'string' ? layoutPreview.imported_document_filename : null;
+  const importRequested = Boolean(layoutPreview.add_to_library_requested);
 
   useEffect(() => {
     if (!tableJob || !tableJobPending) return;
@@ -208,6 +215,41 @@ export default function ChatArtifactCard({ artifact, onCitationClick }: ChatArti
     }
   };
 
+  const handlePreviewLayoutTranslation = () => {
+    if (!pdfDownload?.url) return;
+    onPreviewLayoutTranslation?.(absoluteProxiedArtifactUrl(pdfDownload.url), current);
+  };
+
+  const handleImportLayoutTranslation = async () => {
+    if (!current.jobId || layoutImporting || importedDocumentId) return;
+    setLayoutImporting(true);
+    setLayoutImportError(null);
+    try {
+      const result = await importLayoutTranslationDocument(current.jobId, locale);
+      setCurrent((prev) => ({
+        ...prev,
+        preview: {
+          ...(prev.preview && typeof prev.preview === 'object' ? prev.preview as Record<string, unknown> : {}),
+          imported_document_id: result.document_id,
+          imported_document_filename: result.filename,
+          imported_document_status: result.status,
+          import_error: null,
+        },
+      }));
+    } catch (err) {
+      setLayoutImportError(err instanceof Error ? err.message : 'Document import failed');
+    } finally {
+      setLayoutImporting(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!isLayoutTranslation || !isDone || !importRequested || importedDocumentId || autoImportAttemptedRef.current) return;
+    autoImportAttemptedRef.current = true;
+    void handleImportLayoutTranslation();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [importRequested, importedDocumentId, isDone, isLayoutTranslation]);
+
   return (
     <div className="not-prose mt-4 overflow-hidden rounded-lg border border-[var(--reader-border)] bg-[var(--reader-panel-solid)] shadow-sm">
       <div className="flex items-start gap-3 border-b border-[var(--reader-border)] px-4 py-3">
@@ -231,6 +273,12 @@ export default function ChatArtifactCard({ artifact, onCitationClick }: ChatArti
           <p className="mt-1 text-sm leading-relaxed text-[var(--reader-muted)]">{displaySummary}</p>
           {tableRebuildError ? (
             <p className="mt-2 text-xs text-red-700 dark:text-red-300">{tableRebuildError}</p>
+          ) : null}
+          {layoutImportError ? (
+            <p className="mt-2 text-xs text-red-700 dark:text-red-300">{layoutImportError}</p>
+          ) : null}
+          {isLayoutTranslation && typeof layoutPreview.import_error === 'string' && layoutPreview.import_error ? (
+            <p className="mt-2 text-xs text-amber-700 dark:text-amber-300">{layoutPreview.import_error}</p>
           ) : null}
           {current.warning ? (
             <p className="mt-2 text-xs text-amber-700 dark:text-amber-300">{current.warning}</p>
@@ -312,16 +360,50 @@ export default function ChatArtifactCard({ artifact, onCitationClick }: ChatArti
 
       {(downloadUrls.length || current.requiredPlan || current.citations?.length) ? (
         <div className="flex flex-wrap items-center gap-2 border-t border-[var(--reader-border)] px-4 py-3">
+          {isLayoutTranslation && isDone && pdfDownload && onPreviewLayoutTranslation ? (
+            <button
+              type="button"
+              onClick={handlePreviewLayoutTranslation}
+              className="inline-flex min-h-9 items-center gap-2 rounded-md bg-zinc-900 px-3 text-sm font-medium text-white transition-colors hover:bg-zinc-800 focus-visible:ring-2 focus-visible:ring-zinc-400 dark:bg-zinc-50 dark:text-zinc-900 dark:hover:bg-zinc-200"
+            >
+              <Eye size={14} aria-hidden="true" />
+              {tOr('layoutTranslation.previewPdf', 'Preview PDF')}
+            </button>
+          ) : null}
           {downloadUrls.map((item) => (
             <a
               key={`${item.format}-${item.url}`}
-              href={proxiedUrl(item.url)}
+              href={proxiedArtifactUrl(item.url)}
               className="inline-flex min-h-9 items-center gap-2 rounded-md bg-zinc-900 px-3 text-sm font-medium text-white transition-colors hover:bg-zinc-800 focus-visible:ring-2 focus-visible:ring-zinc-400 dark:bg-zinc-50 dark:text-zinc-900 dark:hover:bg-zinc-200"
             >
               <Download size={14} aria-hidden="true" />
               {item.label}
             </a>
           ))}
+          {isLayoutTranslation && isDone ? (
+            importedDocumentId ? (
+              <a
+                href={`/d/${importedDocumentId}`}
+                className="inline-flex min-h-9 items-center gap-2 rounded-md border border-[var(--reader-border)] bg-[var(--reader-panel-solid)] px-3 text-sm font-medium text-[var(--reader-ink)] transition-colors hover:bg-[var(--reader-panel-muted)] focus-visible:ring-2 focus-visible:ring-zinc-400"
+                title={importedDocumentFilename || undefined}
+              >
+                <ExternalLink size={14} aria-hidden="true" />
+                {tOr('layoutTranslation.openImportedDocument', 'Open DocTalk document')}
+              </a>
+            ) : (
+              <button
+                type="button"
+                onClick={() => void handleImportLayoutTranslation()}
+                disabled={layoutImporting}
+                className="inline-flex min-h-9 items-center gap-2 rounded-md border border-[var(--reader-border)] bg-[var(--reader-panel-solid)] px-3 text-sm font-medium text-[var(--reader-ink)] transition-colors hover:bg-[var(--reader-panel-muted)] focus-visible:ring-2 focus-visible:ring-zinc-400 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {layoutImporting ? <Loader2 size={14} className="animate-spin motion-reduce:animate-none" aria-hidden="true" /> : <FilePlus2 size={14} aria-hidden="true" />}
+                {layoutImporting
+                  ? tOr('layoutTranslation.importingDocument', 'Adding...')
+                  : tOr('layoutTranslation.addDocument', 'Add to DocTalk')}
+              </button>
+            )
+          ) : null}
           {current.requiredPlan ? (
             <span className="text-xs font-medium text-[var(--reader-muted)]">
               {tOr('chat.artifact.planRequired', 'Export requires Plus')}

@@ -7,20 +7,22 @@ import TextViewer from '../../../components/TextViewer/TextViewer';
 import { ChatPanel } from '../../../components/Chat';
 import Header from '../../../components/Header';
 import CustomInstructionsModal from '../../../components/CustomInstructionsModal';
+import LayoutTranslationDrawer from '../../../components/LayoutTranslation/LayoutTranslationDrawer';
 import { ApiError, createLayoutTranslation, getChunkDetail, updateDocumentInstructions } from '../../../lib/api';
 import { PaywallModal } from '../../../components/PaywallModal';
 import { useDocTalkStore } from '../../../store';
 import { Panel, Group, Separator } from 'react-resizable-panels';
 import { useLocale } from '../../../i18n';
 import { usePageTitle } from '../../../lib/usePageTitle';
-import { AlertTriangle, FileText, MessageSquare, Presentation, X } from 'lucide-react';
+import { AlertTriangle, Download, FileText, MessageSquare, Presentation, X } from 'lucide-react';
 import { useDocumentLoader } from '../../../lib/useDocumentLoader';
 import { useChatSession } from '../../../lib/useChatSession';
 import { useUserPlanProfile } from '../../../lib/useUserPlanProfile';
 import { errorCopy } from '../../../lib/errorCopy';
 import { openAuthModal } from '../../../lib/auth-modal';
-import type { Citation } from '../../../types';
+import type { ChatArtifact, Citation } from '../../../types';
 import { trackEvent } from '../../../lib/analytics';
+import { layoutTranslationTargetLabel, proxiedArtifactUrl } from '../../../lib/layoutTranslation';
 
 function useDesktopReaderLayout() {
   const [isDesktopLayout, setIsDesktopLayout] = useState<boolean | null>(null);
@@ -45,16 +47,24 @@ export default function DocumentReaderPageClient() {
   const [mobileTab, setMobileTab] = useState<'chat' | 'document'>('chat');
   const isDesktopLayout = useDesktopReaderLayout();
   const { t, tOr, locale } = useLocale();
-  const { pdfUrl, currentPage, highlights, highlightSnippet, scale, scrollNonce, sessionId, navigateToCitation } = useDocTalkStore();
+  const { pdfUrl, currentPage, highlights, highlightSnippet, scale, scrollNonce, sessionId, navigateToCitation, totalPages } = useDocTalkStore();
   const addMessage = useDocTalkStore((s) => s.addMessage);
 
   const documentName = useDocTalkStore((s) => s.documentName);
   const documentStatus = useDocTalkStore((s) => s.documentStatus);
   const [showInstructions, setShowInstructions] = useState(false);
   const [layoutTranslationBusy, setLayoutTranslationBusy] = useState(false);
+  const [layoutTranslationDrawerOpen, setLayoutTranslationDrawerOpen] = useState(false);
   const [layoutTranslationError, setLayoutTranslationError] = useState<string | null>(null);
   const [layoutPaywallOpen, setLayoutPaywallOpen] = useState(false);
   const [layoutPaywallReason, setLayoutPaywallReason] = useState<string | null>(null);
+  const [translatedPreview, setTranslatedPreview] = useState<{
+    url: string;
+    downloadUrl: string | null;
+    targetLanguageLabel: string;
+    jobId: string | null;
+  } | null>(null);
+  const [pdfPreviewMode, setPdfPreviewMode] = useState<'original' | 'translated'>('original');
   const layoutTranslationJobIdsRef = useRef<Set<string>>(new Set());
   const {
     error: loaderError,
@@ -125,7 +135,22 @@ export default function DocumentReaderPageClient() {
   const useConvertedPdf = hasConvertedPdf && viewMode === 'slide' && convertedPdfUrl;
   const showViewToggle = hasConvertedPdf && fileType !== 'pdf';
 
-  const handleLayoutTranslation = useCallback(async () => {
+  useEffect(() => {
+    setTranslatedPreview(null);
+    setPdfPreviewMode('original');
+    setLayoutTranslationDrawerOpen(false);
+  }, [documentId]);
+
+  const handleOpenLayoutTranslation = useCallback(() => {
+    if (!isLoggedIn) {
+      openAuthModal();
+      return;
+    }
+    setLayoutTranslationError(null);
+    setLayoutTranslationDrawerOpen(true);
+  }, [isLoggedIn]);
+
+  const handleLayoutTranslationSubmit = useCallback(async ({ targetLanguage, addToLibrary }: { targetLanguage: string; addToLibrary: boolean }) => {
     if (layoutTranslationBusy) return;
     if (!isLoggedIn) {
       openAuthModal();
@@ -136,8 +161,9 @@ export default function DocumentReaderPageClient() {
     try {
       const job = await createLayoutTranslation({
         documentId,
-        targetLanguage: 'zh-CN',
+        targetLanguage,
         locale,
+        addToLibrary,
       });
       if (!layoutTranslationJobIdsRef.current.has(job.id)) {
         layoutTranslationJobIdsRef.current.add(job.id);
@@ -147,6 +173,7 @@ export default function DocumentReaderPageClient() {
           text: tOr(
             'layoutTranslation.chatMessage',
             'I started a layout-preserving translation for this PDF. You can keep working while it runs.',
+            { language: layoutTranslationTargetLabel(targetLanguage) },
           ),
           artifacts: [job.artifact],
           createdAt: Date.now(),
@@ -155,8 +182,10 @@ export default function DocumentReaderPageClient() {
       trackEvent('layout_translation_created', {
         source: 'document_toolbar',
         plan: userPlan || 'unknown',
-        target_language: 'zh-CN',
+        target_language: targetLanguage,
+        add_to_library: addToLibrary,
       });
+      setLayoutTranslationDrawerOpen(false);
       setMobileTab('chat');
     } catch (err) {
       if (err instanceof ApiError && err.code === 'LAYOUT_TRANSLATION_LIMIT_REACHED') {
@@ -171,11 +200,33 @@ export default function DocumentReaderPageClient() {
       } else {
         const copy = errorCopy(err, t, tOr);
         setLayoutTranslationError(`${copy.title}: ${copy.body}`);
+        setLayoutTranslationDrawerOpen(false);
       }
     } finally {
       setLayoutTranslationBusy(false);
     }
   }, [addMessage, documentId, isLoggedIn, layoutTranslationBusy, locale, t, tOr, userPlan]);
+
+  const handlePreviewLayoutTranslation = useCallback((url: string, artifact: ChatArtifact) => {
+    const preview = artifact.preview && typeof artifact.preview === 'object'
+      ? artifact.preview as Record<string, unknown>
+      : {};
+    const pdfDownload = artifact.downloadUrls?.find((item) => item.format === 'pdf');
+    setTranslatedPreview({
+      url,
+      downloadUrl: pdfDownload?.url ? proxiedArtifactUrl(pdfDownload.url) : null,
+      targetLanguageLabel: typeof preview.target_language_label === 'string'
+        ? preview.target_language_label
+        : layoutTranslationTargetLabel(typeof preview.target_language === 'string' ? preview.target_language : null),
+      jobId: artifact.jobId || null,
+    });
+    setPdfPreviewMode('translated');
+    revealMobileDocumentPane();
+    trackEvent('layout_translation_preview_opened', {
+      source: 'artifact_card',
+      job_id: artifact.jobId || undefined,
+    });
+  }, [revealMobileDocumentPane]);
 
   const viewToggle = showViewToggle ? (
     <div className="dt-view-toggle flex items-center gap-1 px-2 py-1">
@@ -218,17 +269,53 @@ export default function DocumentReaderPageClient() {
       <div className="flex-1 min-h-0">
         {fileType === 'pdf' ? (
           pdfUrl ? (
-            <PdfViewer
-              pdfUrl={pdfUrl}
-              currentPage={currentPage}
-              highlights={highlights}
-              scale={scale}
-              scrollNonce={scrollNonce}
-              highlightSnippet={highlightSnippet}
-              onLayoutTranslate={handleLayoutTranslation}
-              layoutTranslateBusy={layoutTranslationBusy}
-              layoutTranslateDisabled={documentStatus !== 'ready'}
-            />
+            <div className="h-full min-h-0 flex flex-col">
+              {translatedPreview ? (
+                <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--reader-border)] bg-[var(--reader-panel-solid)] px-3 py-2">
+                  <div className="inline-flex rounded-lg border border-[var(--reader-border)] bg-[var(--reader-panel-muted)] p-0.5 text-xs font-medium">
+                    <button
+                      type="button"
+                      onClick={() => setPdfPreviewMode('original')}
+                      className={`min-h-8 rounded-md px-3 transition-colors ${pdfPreviewMode === 'original' ? 'bg-[var(--reader-panel-solid)] text-[var(--reader-ink)] shadow-sm' : 'text-[var(--reader-muted)] hover:text-[var(--reader-ink)]'}`}
+                    >
+                      {tOr('layoutTranslation.originalPdf', 'Original')}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setPdfPreviewMode('translated')}
+                      className={`min-h-8 rounded-md px-3 transition-colors ${pdfPreviewMode === 'translated' ? 'bg-[var(--reader-panel-solid)] text-[var(--reader-ink)] shadow-sm' : 'text-[var(--reader-muted)] hover:text-[var(--reader-ink)]'}`}
+                    >
+                      {tOr('layoutTranslation.translatedPdf', 'Translated')}
+                    </button>
+                  </div>
+                  <div className="flex min-w-0 items-center gap-2 text-xs text-[var(--reader-muted)]">
+                    <span className="truncate">{translatedPreview.targetLanguageLabel}</span>
+                    {translatedPreview.downloadUrl ? (
+                      <a
+                        href={translatedPreview.downloadUrl}
+                        className="inline-flex min-h-8 items-center gap-1 rounded-md border border-[var(--reader-border)] px-2 font-medium text-[var(--reader-ink)] transition-colors hover:bg-[var(--reader-panel-muted)]"
+                      >
+                        <Download size={13} aria-hidden="true" />
+                        {tOr('layoutTranslation.downloadPdf', 'Translated PDF')}
+                      </a>
+                    ) : null}
+                  </div>
+                </div>
+              ) : null}
+              <div className="flex-1 min-h-0">
+                <PdfViewer
+                  pdfUrl={pdfPreviewMode === 'translated' && translatedPreview ? translatedPreview.url : pdfUrl}
+                  currentPage={currentPage}
+                  highlights={pdfPreviewMode === 'translated' ? [] : highlights}
+                  scale={scale}
+                  scrollNonce={scrollNonce}
+                  highlightSnippet={pdfPreviewMode === 'translated' ? null : highlightSnippet}
+                  onLayoutTranslate={handleOpenLayoutTranslation}
+                  layoutTranslateBusy={layoutTranslationBusy}
+                  layoutTranslateDisabled={documentStatus !== 'ready'}
+                />
+              </div>
+            </div>
           ) : (
             <div className="h-full w-full flex items-center justify-center text-zinc-500">{t('doc.loading')}</div>
           )
@@ -275,7 +362,7 @@ export default function DocumentReaderPageClient() {
   }, [isDesktopLayout, mobileTab, currentPage, highlights, highlightSnippet]);
 
   const chatContent = documentStatus === 'ready' && sessionId ? (
-    <ChatPanel sessionId={sessionId} onCitationClick={handleCitationClick} maxUserMessages={isDemo && !isLoggedIn ? 5 : undefined} initialQuestion={initialQuestion} autoSubmitInitialQuestion={isDemo} onOpenSettings={canUseCustomInstructions ? () => setShowInstructions(true) : undefined} hasCustomInstructions={!!customInstructions} userPlan={userPlan} />
+    <ChatPanel sessionId={sessionId} onCitationClick={handleCitationClick} onPreviewLayoutTranslation={handlePreviewLayoutTranslation} maxUserMessages={isDemo && !isLoggedIn ? 5 : undefined} initialQuestion={initialQuestion} autoSubmitInitialQuestion={isDemo} onOpenSettings={canUseCustomInstructions ? () => setShowInstructions(true) : undefined} hasCustomInstructions={!!customInstructions} userPlan={userPlan} />
   ) : sessionErrorCopy ? (
     <div className="flex h-full w-full items-center justify-center px-5 py-8">
       <div
@@ -433,6 +520,15 @@ export default function DocumentReaderPageClient() {
         onClose={() => setLayoutPaywallOpen(false)}
         reason={layoutPaywallReason}
         currentPlan={userPlan}
+      />
+      <LayoutTranslationDrawer
+        isOpen={layoutTranslationDrawerOpen}
+        busy={layoutTranslationBusy}
+        documentName={documentName}
+        pageCount={totalPages || undefined}
+        userPlan={userPlan}
+        onClose={() => setLayoutTranslationDrawerOpen(false)}
+        onSubmit={handleLayoutTranslationSubmit}
       />
     </div>
   );

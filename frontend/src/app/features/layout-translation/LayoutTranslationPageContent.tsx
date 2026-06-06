@@ -43,7 +43,7 @@ export default function LayoutTranslationPageContent({
         title={tOr('featuresLayoutTranslation.heroTitle', 'Layout-preserving PDF translation')}
         lede={tOr(
           'featuresLayoutTranslation.heroSubtitle',
-          'Turn dense PDFs into translated PDFs without flattening tables, formulas, figures, citations, or page structure.',
+          'Turn text-heavy PDFs into translated PDFs while keeping page structure, equations, citations, and visual context.',
         )}
       />
 
@@ -59,12 +59,12 @@ export default function LayoutTranslationPageContent({
             {
               icon: Languages,
               title: tOr('featuresLayoutTranslation.card2Title', 'Translates with layout context'),
-              body: tOr('featuresLayoutTranslation.card2Body', 'Text, equations, code-like blocks, and tables are handled with document structure instead of a plain text dump.'),
+              body: tOr('featuresLayoutTranslation.card2Body', 'Body text, equations, code-like blocks, and citations are translated with layout context instead of a plain text dump.'),
             },
             {
               icon: Download,
-              title: tOr('featuresLayoutTranslation.card3Title', 'Exports a translated PDF'),
-              body: tOr('featuresLayoutTranslation.card3Body', 'Download a translated PDF, with Markdown and bundle artifacts available when the pipeline produces them.'),
+              title: tOr('featuresLayoutTranslation.card3Title', 'Previews and exports a translated PDF'),
+              body: tOr('featuresLayoutTranslation.card3Body', 'Preview the translated PDF in DocTalk, download it, or add it as a new DocTalk document when you want to chat with the translated version.'),
             },
           ]}
         />
@@ -81,7 +81,7 @@ export default function LayoutTranslationPageContent({
           <p>
             {tOr(
               'featuresLayoutTranslation.scopeBody',
-              'This first version focuses on PDF-to-Chinese translation, matching the RetainPDF pipeline we reviewed. We can expand target-language coverage after we validate quality and cost in production.',
+              'The workflow now supports multiple target languages. It is strongest on text-heavy papers, contracts, manuals, and reports; table-heavy forms and invoices still need human review.',
             )}
           </p>
         </EdProse>

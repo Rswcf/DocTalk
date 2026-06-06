@@ -13,7 +13,7 @@ import fitz
 import httpx
 
 from app.core.config import settings
-from app.models.tables import Document, DocumentJob, User
+from app.models.tables import Document, DocumentJob, ProductEvent, User
 from app.services.doc_service import sanitize_filename
 from app.services.storage_service import storage_service
 
@@ -35,6 +35,16 @@ TIMEOUT_LAYOUT_TRANSLATION_FAILURE_MESSAGE = (
 
 SUPPORTED_LAYOUT_TRANSLATION_TARGETS: dict[str, str] = {
     "zh-CN": "Simplified Chinese",
+    "en": "English",
+    "ja": "Japanese",
+    "ko": "Korean",
+    "es": "Spanish",
+    "de": "German",
+    "fr": "French",
+    "pt": "Portuguese",
+    "it": "Italian",
+    "ar": "Arabic",
+    "hi": "Hindi",
 }
 
 _TARGET_ALIASES = {
@@ -45,6 +55,29 @@ _TARGET_ALIASES = {
     "simplified chinese": "zh-CN",
     "简体中文": "zh-CN",
     "中文": "zh-CN",
+    "english": "en",
+    "en-us": "en",
+    "en-gb": "en",
+    "japanese": "ja",
+    "jp": "ja",
+    "日本語": "ja",
+    "korean": "ko",
+    "kr": "ko",
+    "한국어": "ko",
+    "spanish": "es",
+    "español": "es",
+    "german": "de",
+    "deutsch": "de",
+    "french": "fr",
+    "français": "fr",
+    "portuguese": "pt",
+    "português": "pt",
+    "italian": "it",
+    "italiano": "it",
+    "arabic": "ar",
+    "العربية": "ar",
+    "hindi": "hi",
+    "हिन्दी": "hi",
 }
 
 
@@ -282,7 +315,7 @@ class RetainPdfClient:
             raise RetainPdfError("RetainPDF upload response did not include upload_id")
         return upload_id
 
-    def create_book_job(self, *, upload_id: str, source_filename: str) -> str:
+    def create_book_job(self, *, upload_id: str, source_filename: str, target_language_label: str) -> str:
         provider = (settings.RETAINPDF_OCR_PROVIDER or "paddle").strip().lower()
         translation_api_key = _translation_api_key()
         if not translation_api_key:
@@ -330,7 +363,12 @@ class RetainPdfClient:
                 "math_mode": "direct_typst",
                 "skip_title_translation": False,
                 "rule_profile_name": "general_sci",
-                "custom_rules_text": "Translate all translatable prose into Simplified Chinese while preserving equations, symbols, citations, and code.",
+                "custom_rules_text": (
+                    f"Translate all translatable prose into {target_language_label} while preserving "
+                    "equations, symbols, citations, code, references, numbers, and document structure. "
+                    "Do not translate legal case numbers, docket identifiers, URLs, email addresses, "
+                    "or source citation labels."
+                ),
                 "glossary_id": "",
                 "glossary_entries": [],
                 "model": settings.RETAINPDF_TRANSLATION_MODEL,
@@ -448,6 +486,83 @@ def _download_and_store_artifact(
     return _upload_artifact(job, content=content, filename=filename, content_type=content_type)
 
 
+def _translated_document_filename(source_filename: str, target_language: str) -> str:
+    stem = os.path.splitext(source_filename)[0] or "document"
+    return sanitize_filename(f"{stem}-{target_language}-translated.pdf")
+
+
+def _import_translated_pdf_to_document_sync(
+    *,
+    job: DocumentJob,
+    source_doc: Document,
+    pdf_artifact: RetainPdfArtifact,
+    db,
+) -> None:
+    metadata = _metadata(job)
+    if metadata.get("imported_document_id"):
+        return
+
+    target_language = str(metadata.get("target_language") or DEFAULT_LAYOUT_TRANSLATION_TARGET)
+    filename = _translated_document_filename(source_doc.filename or pdf_artifact.filename, target_language)
+    try:
+        content = storage_service.download_file(pdf_artifact.storage_key)
+        if not content.startswith(b"%PDF"):
+            raise RetainPdfError("Translated artifact is not a valid PDF")
+
+        doc_id = uuid.uuid4()
+        storage_key = f"documents/{doc_id}/{os.path.basename(filename)}"
+        storage_service.upload_file(content, storage_key, "application/pdf")
+        translated_doc = Document(
+            id=doc_id,
+            filename=filename,
+            file_size=len(content),
+            storage_key=storage_key,
+            status="parsing",
+            user_id=job.user_id,
+            file_type="pdf",
+        )
+        db.add(translated_doc)
+        db.add(
+            ProductEvent(
+                user_id=job.user_id,
+                event_name="layout_translation_imported_document",
+                source="layout_translation_worker",
+                reason=target_language,
+                plan=str(metadata.get("plan") or "unknown"),
+                metadata_json={
+                    "job_id": str(job.id),
+                    "source_document_id": str(source_doc.id),
+                    "imported_document_id": str(doc_id),
+                    "target_language": target_language,
+                },
+            )
+        )
+        _set_metadata(
+            job,
+            imported_document_id=str(doc_id),
+            imported_document_filename=filename,
+            imported_document_status="parsing",
+            import_error=None,
+        )
+        db.commit()
+        try:
+            from app.workers.parse_worker import parse_document
+
+            parse_document.delay(str(doc_id), locale=target_language)
+        except Exception:
+            logger.warning("Failed to queue parse for imported layout translation document %s", doc_id, exc_info=True)
+    except Exception:
+        logger.exception("Failed to import translated PDF for layout translation job %s", job.id)
+        _set_metadata(
+            job,
+            imported_document_id=None,
+            imported_document_filename=None,
+            imported_document_status="failed",
+            import_error="Translated PDF was created, but DocTalk document import failed.",
+        )
+        db.commit()
+
+
 def _poll_to_terminal(client: RetainPdfClient, external_job_id: str, job: DocumentJob, db) -> dict[str, Any]:
     deadline = time.monotonic() + max(60, settings.RETAINPDF_TIMEOUT_SECONDS)
     interval = max(1, settings.RETAINPDF_POLL_INTERVAL_SECONDS)
@@ -499,7 +614,12 @@ def _run_retainpdf_layout_translation(
 
     _set_metadata(job, service_status="queued_in_retainpdf", engine="retainpdf", retainpdf={"upload_id": upload_id})
     db.commit()
-    external_job_id = client.create_book_job(upload_id=upload_id, source_filename=filename)
+    target_label = str((job.input_scope or {}).get("target_language_label") or target_language_label(None))
+    external_job_id = client.create_book_job(
+        upload_id=upload_id,
+        source_filename=filename,
+        target_language_label=target_label,
+    )
 
     _set_metadata(job, service_status="running_in_retainpdf", engine="retainpdf", retainpdf={"upload_id": upload_id, "job_id": external_job_id})
     db.commit()
@@ -558,6 +678,14 @@ def _run_retainpdf_layout_translation(
 
     if "pdf" not in artifacts:
         raise RetainPdfError("RetainPDF completed without a translated PDF artifact")
+
+    if bool((job.metadata_json or {}).get("add_to_library_requested")) and pdf:
+        _import_translated_pdf_to_document_sync(
+            job=job,
+            source_doc=doc,
+            pdf_artifact=pdf,
+            db=db,
+        )
 
     job.status = "succeeded"
     job.error_code = None

@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import asyncio
+import os
 import re
 import uuid
 from datetime import datetime, timezone
@@ -15,14 +16,16 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.document_jobs import DocumentJobDetailResponse, _artifact_for_job
+from app.core.config import settings
 from app.core.deps import get_db_session, require_auth
 from app.models.tables import Document, DocumentJob, ProductEvent, User
-from app.services.doc_service import can_access_document
+from app.services.doc_service import can_access_document, doc_service, sanitize_filename
 from app.services.layout_translation_service import (
     DEFAULT_LAYOUT_TRANSLATION_TARGET,
     LAYOUT_TRANSLATION_ACTIVE_STATUSES,
     LAYOUT_TRANSLATION_JOB_TYPE,
     LAYOUT_TRANSLATION_REQUIRED_PLAN,
+    SUPPORTED_LAYOUT_TRANSLATION_TARGETS,
     LayoutTranslationLimitError,
     layout_translation_config_status,
     layout_translation_file_size_limit_mb,
@@ -43,6 +46,18 @@ router = APIRouter(prefix="/api", tags=["layout-translations"])
 class CreateLayoutTranslationRequest(BaseModel):
     target_language: str = Field(DEFAULT_LAYOUT_TRANSLATION_TARGET, min_length=2, max_length=32)
     locale: str | None = Field(None, max_length=16)
+    add_to_library: bool = False
+
+
+class ImportLayoutTranslationRequest(BaseModel):
+    locale: str | None = Field(None, max_length=16)
+
+
+class ImportLayoutTranslationResponse(BaseModel):
+    document_id: str
+    status: str
+    filename: str
+    existing: bool = False
 
 
 def _content_disposition(filename: str) -> str:
@@ -137,6 +152,36 @@ async def _free_layout_translation_used(user: User, db: AsyncSession) -> int:
     return int(used or 0)
 
 
+def _max_documents_for_plan(plan: str) -> int:
+    return {
+        "free": settings.FREE_MAX_DOCUMENTS,
+        "plus": settings.PLUS_MAX_DOCUMENTS,
+        "pro": settings.PRO_MAX_DOCUMENTS,
+    }.get(plan, settings.FREE_MAX_DOCUMENTS)
+
+
+async def _assert_document_capacity(user: User, db: AsyncSession) -> None:
+    plan = (user.plan or "free").lower()
+    current = await db.scalar(
+        select(func.count())
+        .select_from(Document)
+        .where(Document.user_id == user.id)
+        .where(Document.status != "deleting")
+    )
+    max_docs = _max_documents_for_plan(plan)
+    if int(current or 0) >= max_docs:
+        raise HTTPException(
+            status_code=403,
+            detail={
+                "error": "DOCUMENT_LIMIT_REACHED",
+                "message": "Document limit reached for current plan",
+                "limit": max_docs,
+                "current": int(current or 0),
+                "plan": plan,
+            },
+        )
+
+
 def _enqueue_layout_translation_job(job_id: str) -> None:
     from app.workers.layout_translation_worker import run_layout_translation_job
 
@@ -201,7 +246,7 @@ async def create_layout_translation(
             detail={
                 "error": "UNSUPPORTED_LAYOUT_TRANSLATION_TARGET",
                 "message": "This translation target is not supported yet",
-                "supported": [DEFAULT_LAYOUT_TRANSLATION_TARGET],
+                "supported": list(SUPPORTED_LAYOUT_TRANSLATION_TARGETS.keys()),
             },
         )
 
@@ -212,10 +257,24 @@ async def create_layout_translation(
         db=db,
     )
     if existing:
+        if body.add_to_library:
+            await _assert_document_capacity(user, db)
+            existing.input_scope = {
+                **(existing.input_scope or {}),
+                "add_to_library": True,
+            }
+            existing.metadata_json = {
+                **(existing.metadata_json or {}),
+                "add_to_library_requested": True,
+            }
+            await db.commit()
+            await db.refresh(existing)
         return await _job_response(existing, db, user)
 
     plan = (user.plan or "free").lower()
     _raise_layout_translation_limit_error(doc, plan)
+    if body.add_to_library:
+        await _assert_document_capacity(user, db)
 
     config_status = layout_translation_config_status()
     if not config_status.ready:
@@ -258,6 +317,7 @@ async def create_layout_translation(
             "locale": body.locale,
             "source": "document_reader",
             "source_filename": doc.filename,
+            "add_to_library": body.add_to_library,
         },
         cost_credits=0,
         metadata_json={
@@ -273,6 +333,7 @@ async def create_layout_translation(
             "free_used_before": free_used,
             "free_remaining_after": None if plan_allows_unlimited_layout_translation(plan) else max(0, free_limit - free_used - 1),
             "required_plan": LAYOUT_TRANSLATION_REQUIRED_PLAN,
+            "add_to_library_requested": body.add_to_library,
         },
     )
     db.add(job)
@@ -292,6 +353,7 @@ async def create_layout_translation(
                 "page_count": doc.page_count,
                 "max_pages": layout_translation_max_pages_for_plan(plan),
                 "free_used_before": free_used,
+                "add_to_library": body.add_to_library,
             },
         )
     )
@@ -314,6 +376,143 @@ async def create_layout_translation(
         ) from exc
 
     return await _job_response(job, db, user)
+
+
+def _translated_import_filename(job: DocumentJob, item: dict[str, Any]) -> str:
+    metadata = job.metadata_json or {}
+    target_language = str(metadata.get("target_language") or DEFAULT_LAYOUT_TRANSLATION_TARGET)
+    artifact_filename = str(item.get("filename") or "document-translated.pdf")
+    stem = os.path.splitext(artifact_filename)[0] or "document-translated"
+    if target_language not in stem:
+        stem = f"{stem}-{target_language}"
+    return sanitize_filename(f"{stem}.pdf")
+
+
+async def _existing_import_response(job: DocumentJob, db: AsyncSession) -> ImportLayoutTranslationResponse | None:
+    metadata = job.metadata_json or {}
+    imported_id = metadata.get("imported_document_id")
+    if not imported_id:
+        return None
+    try:
+        parsed_id = uuid.UUID(str(imported_id))
+    except ValueError:
+        return None
+    doc = await db.get(Document, parsed_id)
+    if not doc:
+        return None
+    return ImportLayoutTranslationResponse(
+        document_id=str(doc.id),
+        status=doc.status,
+        filename=doc.filename,
+        existing=True,
+    )
+
+
+@router.post(
+    "/layout-translations/{job_id}/import-document",
+    response_model=ImportLayoutTranslationResponse,
+    status_code=status.HTTP_202_ACCEPTED,
+)
+async def import_layout_translation_document(
+    job_id: uuid.UUID,
+    body: ImportLayoutTranslationRequest | None = None,
+    user: User = Depends(require_auth),
+    db: AsyncSession = Depends(get_db_session),
+):
+    row = await db.execute(
+        select(DocumentJob)
+        .where(DocumentJob.id == job_id)
+        .where(DocumentJob.user_id == user.id)
+        .where(DocumentJob.job_type == LAYOUT_TRANSLATION_JOB_TYPE)
+    )
+    job = row.scalar_one_or_none()
+    if not job:
+        raise HTTPException(
+            status_code=404,
+            detail={"error": "DOCUMENT_JOB_NOT_FOUND", "message": "Document job not found"},
+        )
+    if job.status != "succeeded":
+        raise HTTPException(
+            status_code=409,
+            detail={"error": "LAYOUT_TRANSLATION_NOT_READY", "message": "Translated PDF is not ready yet"},
+        )
+
+    existing = await _existing_import_response(job, db)
+    if existing:
+        return existing
+
+    metadata = job.metadata_json or {}
+    artifacts = metadata.get("artifacts") if isinstance(metadata, dict) else None
+    item = artifacts.get("pdf") if isinstance(artifacts, dict) else None
+    if not isinstance(item, dict):
+        raise HTTPException(
+            status_code=404,
+            detail={"error": "LAYOUT_TRANSLATION_ARTIFACT_NOT_FOUND", "message": "Translated PDF not found"},
+        )
+    storage_key = item.get("storage_key")
+    if not isinstance(storage_key, str) or not storage_key:
+        raise HTTPException(
+            status_code=404,
+            detail={"error": "LAYOUT_TRANSLATION_ARTIFACT_NOT_FOUND", "message": "Translated PDF not found"},
+        )
+
+    await _assert_document_capacity(user, db)
+    content = await asyncio.to_thread(storage_service.download_file, storage_key)
+    if not content.startswith(b"%PDF"):
+        raise HTTPException(
+            status_code=502,
+            detail={"error": "LAYOUT_TRANSLATION_INVALID_ARTIFACT", "message": "Translated PDF is invalid"},
+        )
+
+    filename = _translated_import_filename(job, item)
+
+    class _MemUpload:
+        content_type = "application/pdf"
+
+        def __init__(self, name: str, data: bytes) -> None:
+            self.filename = name
+            self._data = data
+
+        async def read(self):
+            return self._data
+
+    document_id = await doc_service.create_document(
+        _MemUpload(filename, content),
+        db,
+        user_id=user.id,
+        file_type="pdf",
+        locale=(body.locale if body else None) or str(metadata.get("target_language") or DEFAULT_LAYOUT_TRANSLATION_TARGET),
+    )
+    job.metadata_json = {
+        **(job.metadata_json or {}),
+        "imported_document_id": str(document_id),
+        "imported_document_filename": filename,
+        "imported_document_status": "parsing",
+        "import_error": None,
+    }
+    db.add(
+        ProductEvent(
+            user_id=user.id,
+            event_name="layout_translation_imported_document",
+            source="document_reader",
+            reason=str(metadata.get("target_language") or DEFAULT_LAYOUT_TRANSLATION_TARGET),
+            plan=(user.plan or "free").lower(),
+            metadata_json={
+                "job_id": str(job.id),
+                "source_document_id": str(job.document_id) if job.document_id else None,
+                "imported_document_id": str(document_id),
+                "target_language": metadata.get("target_language"),
+            },
+        )
+    )
+    await db.commit()
+
+    return ImportLayoutTranslationResponse(
+        document_id=str(document_id),
+        status="parsing",
+        filename=filename,
+        existing=False,
+    )
 
 
 @router.get("/layout-translations/{job_id}/download")

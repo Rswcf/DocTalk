@@ -86,6 +86,11 @@ async def _artifact_for_job(job: DocumentJob, db: AsyncSession, user: User) -> D
             "page_count": metadata.get("page_count"),
             "max_pages": metadata.get("max_pages"),
             "max_file_size_mb": metadata.get("max_file_size_mb"),
+            "add_to_library_requested": metadata.get("add_to_library_requested"),
+            "imported_document_id": metadata.get("imported_document_id"),
+            "imported_document_filename": metadata.get("imported_document_filename"),
+            "imported_document_status": metadata.get("imported_document_status"),
+            "import_error": metadata.get("import_error"),
         }
         download_urls: list[dict[str, str]] = []
         if job.status == "succeeded" and isinstance(artifacts, dict):

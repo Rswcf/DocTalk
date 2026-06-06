@@ -3,7 +3,7 @@
 import React, { Suspense, useMemo, useState, useCallback, useEffect } from 'react';
 import remarkGfm from 'remark-gfm';
 import { Copy, Check, ThumbsUp, ThumbsDown, RotateCcw, ChevronsDown, Share2 } from 'lucide-react';
-import type { Citation, Message } from '../../types';
+import type { ChatArtifact, Citation, Message } from '../../types';
 import { useLocale } from '../../i18n';
 import CitationPopover from './CitationPopover';
 import SourcesStrip from './SourcesStrip';
@@ -17,6 +17,7 @@ const ReactMarkdown = React.lazy(() => import('react-markdown'));
 interface MessageBubbleProps {
   message: Message;
   onCitationClick?: (c: Citation) => void;
+  onPreviewLayoutTranslation?: (url: string, artifact: ChatArtifact) => void;
   isStreaming?: boolean;
   onRegenerate?: () => void;
   isLastAssistant?: boolean;
@@ -197,6 +198,7 @@ function setFeedbackStorage(messageId: string, fb: Feedback) {
 function MessageBubble({
   message,
   onCitationClick,
+  onPreviewLayoutTranslation,
   isStreaming,
   onRegenerate,
   isLastAssistant,
@@ -319,6 +321,7 @@ function MessageBubble({
                   key={`${artifact.jobId || artifact.title}-${index}`}
                   artifact={artifact}
                   onCitationClick={onCitationClick}
+                  onPreviewLayoutTranslation={onPreviewLayoutTranslation}
                 />
               ))}
             </>

@@ -226,7 +226,7 @@ const tiles: Tile[] = [
     titleKey: 'landing.feature.layoutTranslation.title',
     descKey: 'landing.feature.layoutTranslation.desc',
     titleFallback: 'Translate PDFs without breaking layout',
-    descFallback: 'Plus keeps complex papers, tables, formulas, and page structure intact while producing a translated PDF.',
+    descFallback: 'Plus creates translated PDFs for papers, contracts, manuals, and reports while preserving page structure and visual context.',
   },
   { Visual: VisualModes,     titleKey: 'landing.feature.modes.title',     descKey: 'landing.feature.modes.desc' },
   { Visual: VisualFreeDemo,  titleKey: 'landing.feature.freeDemo.title',  descKey: 'landing.feature.freeDemo.desc' },

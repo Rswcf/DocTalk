@@ -212,6 +212,7 @@ export async function createLayoutTranslation(params: {
   documentId: string;
   targetLanguage?: string;
   locale?: string;
+  addToLibrary?: boolean;
 }): Promise<DocumentJobDetail> {
   const res = await fetch(`${PROXY_BASE}/api/documents/${params.documentId}/layout-translation`, {
     method: 'POST',
@@ -219,6 +220,7 @@ export async function createLayoutTranslation(params: {
     body: JSON.stringify({
       target_language: params.targetLanguage || 'zh-CN',
       locale: params.locale || null,
+      add_to_library: Boolean(params.addToLibrary),
     }),
   });
   const data: any = await handle(res);
@@ -226,6 +228,22 @@ export async function createLayoutTranslation(params: {
     ...data,
     artifact: mapArtifactPayload(data.artifact),
   };
+}
+
+export interface LayoutTranslationImportResponse {
+  document_id: string;
+  status: string;
+  filename: string;
+  existing: boolean;
+}
+
+export async function importLayoutTranslationDocument(jobId: string, locale?: string | null): Promise<LayoutTranslationImportResponse> {
+  const res = await fetch(`${PROXY_BASE}/api/layout-translations/${jobId}/import-document`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ locale: locale || null }),
+  });
+  return handle(res);
 }
 
 export async function searchDocument(docId: string, query: string, topK?: number): Promise<SearchResponse> {

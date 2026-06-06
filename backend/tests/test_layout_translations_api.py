@@ -77,7 +77,7 @@ async def client():
         yield ac
 
 
-def _fake_db(doc: object, *, used: int = 0):
+def _fake_db(doc: object, *, used: int = 0, active_jobs: list[object] | None = None):
     now = datetime.now(timezone.utc)
 
     async def refresh(job):
@@ -86,7 +86,7 @@ def _fake_db(doc: object, *, used: int = 0):
 
     return SimpleNamespace(
         get=AsyncMock(return_value=doc),
-        execute=AsyncMock(return_value=_Result(scalars_all=[])),
+        execute=AsyncMock(return_value=_Result(scalars_all=active_jobs or [])),
         scalar=AsyncMock(return_value=used),
         add=Mock(),
         commit=AsyncMock(),
@@ -160,6 +160,74 @@ async def test_plus_user_can_start_layout_translation_for_mid_sized_pdf(client: 
     payload = response.json()
     assert payload["metadata_json"]["max_pages"] == 150
     db.scalar.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_layout_translation_accepts_non_chinese_target_language(client: AsyncClient) -> None:
+    user = _make_user("plus")
+    doc = _make_doc(user.id, page_count=12)
+    db = _fake_db(doc, used=0)
+    _override_dependencies(db, user)
+
+    response = await client.post(f"/api/documents/{doc.id}/layout-translation", json={"target_language": "en"})
+
+    assert response.status_code == 202
+    payload = response.json()
+    assert payload["input_scope"]["target_language"] == "en"
+    assert payload["input_scope"]["target_language_label"] == "English"
+
+
+@pytest.mark.asyncio
+async def test_import_requested_layout_translation_respects_document_limit(client: AsyncClient) -> None:
+    user = _make_user("plus")
+    doc = _make_doc(user.id, page_count=12)
+    db = _fake_db(doc, used=20)
+    _override_dependencies(db, user)
+
+    response = await client.post(
+        f"/api/documents/{doc.id}/layout-translation",
+        json={"target_language": "zh-CN", "add_to_library": True},
+    )
+
+    assert response.status_code == 403
+    detail = response.json()["detail"]
+    assert detail["error"] == "DOCUMENT_LIMIT_REACHED"
+    assert detail["limit"] == 20
+    db.add.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_import_request_on_existing_layout_translation_respects_document_limit(client: AsyncClient) -> None:
+    user = _make_user("plus")
+    doc = _make_doc(user.id, page_count=12)
+    existing = SimpleNamespace(
+        id=uuid.uuid4(),
+        user_id=user.id,
+        document_id=doc.id,
+        collection_id=None,
+        job_type="layout_translation",
+        status="queued",
+        input_scope={"target_language": "zh-CN"},
+        cost_credits=0,
+        error_code=None,
+        error_message=None,
+        metadata_json={},
+        created_at=datetime.now(timezone.utc),
+        updated_at=datetime.now(timezone.utc),
+        completed_at=None,
+    )
+    db = _fake_db(doc, used=20, active_jobs=[existing])
+    _override_dependencies(db, user)
+
+    response = await client.post(
+        f"/api/documents/{doc.id}/layout-translation",
+        json={"target_language": "zh-CN", "add_to_library": True},
+    )
+
+    assert response.status_code == 403
+    detail = response.json()["detail"]
+    assert detail["error"] == "DOCUMENT_LIMIT_REACHED"
+    assert existing.metadata_json == {}
 
 
 @pytest.mark.asyncio

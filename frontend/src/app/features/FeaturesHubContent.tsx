@@ -47,7 +47,7 @@ export default async function FeaturesHubContent({ locale }: { locale: string })
       slug: 'layout-translation',
       icon: FileText,
       title: tOr('featuresHub.layoutTranslationTitle', 'Layout-preserving PDF translation'),
-      description: tOr('featuresHub.layoutTranslationDesc', 'Translate complex PDFs into a new PDF while keeping tables, formulas, figures, and page structure intact. Free includes 2 trials; Plus unlocks ongoing use.'),
+      description: tOr('featuresHub.layoutTranslationDesc', 'Translate text-heavy PDFs into a new PDF while preserving page structure, citations, equations, and visual context. Free includes 2 trials; Plus unlocks ongoing use.'),
     },
     {
       slug: 'free-demo',

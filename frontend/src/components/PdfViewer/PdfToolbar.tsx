@@ -94,7 +94,7 @@ export default function PdfToolbar({ currentPage, totalPages, scale, onPageChang
             <button
               onClick={onLayoutTranslate}
               disabled={layoutTranslateBusy || layoutTranslateDisabled}
-              className={`${btnClass} disabled:opacity-40 disabled:cursor-not-allowed`}
+              className="inline-flex min-h-8 items-center gap-1.5 rounded-md px-2 py-1 text-xs font-medium hover:bg-[var(--reader-panel-muted)] focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:ring-offset-1 disabled:cursor-not-allowed disabled:opacity-40"
               title={tOr('layoutTranslation.toolbar', 'Translate PDF layout')}
               aria-label={tOr('layoutTranslation.toolbar', 'Translate PDF layout')}
             >
@@ -103,6 +103,7 @@ export default function PdfToolbar({ currentPage, totalPages, scale, onPageChang
               ) : (
                 <Languages size={16} aria-hidden="true" />
               )}
+              <span className="hidden whitespace-nowrap xl:inline">{tOr('layoutTranslation.toolbarShort', 'Translate')}</span>
             </button>
           </>
         )}

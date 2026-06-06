@@ -4,7 +4,7 @@ import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { SendHorizontal, ArrowDown, Square, Share2 } from 'lucide-react';
 import { exportConversationAsMarkdown } from '../../lib/export';
-import type { Citation, Message } from '../../types';
+import type { ChatArtifact, Citation, Message } from '../../types';
 import { useDocTalkStore } from '../../store';
 import MessageBubble from './MessageBubble';
 import CitationCard from './CitationCard';
@@ -42,6 +42,7 @@ interface ChatMessageRowProps {
   isStreaming: boolean;
   isLastAssistant: boolean;
   onCitationClick: (c: Citation) => void;
+  onPreviewLayoutTranslation?: (url: string, artifact: ChatArtifact) => void;
   onRegenerate?: () => void;
   onContinue?: () => void;
   onShareAnswer?: (message: Message) => void;
@@ -53,6 +54,7 @@ const ChatMessageRow = React.memo(function ChatMessageRow({
   isStreaming,
   isLastAssistant,
   onCitationClick,
+  onPreviewLayoutTranslation,
   onRegenerate,
   onContinue,
   onShareAnswer,
@@ -82,6 +84,7 @@ const ChatMessageRow = React.memo(function ChatMessageRow({
         <MessageBubble
           message={displayMessage}
           onCitationClick={onCitationClick}
+          onPreviewLayoutTranslation={onPreviewLayoutTranslation}
           isStreaming={isStreaming}
           onRegenerate={onRegenerate}
           isLastAssistant={isLastAssistant}
@@ -110,6 +113,7 @@ const ChatMessageRow = React.memo(function ChatMessageRow({
 interface ChatPanelProps {
   sessionId: string;
   onCitationClick: (c: Citation) => void;
+  onPreviewLayoutTranslation?: (url: string, artifact: ChatArtifact) => void;
   maxUserMessages?: number;
   initialQuestion?: string;
   onOpenSettings?: () => void;
@@ -124,7 +128,7 @@ interface ChatPanelProps {
 
 const autoSubmittedInitialQuestions = new Set<string>();
 
-export default function ChatPanel({ sessionId, onCitationClick, maxUserMessages, initialQuestion, onOpenSettings, hasCustomInstructions, userPlan, autoSubmitInitialQuestion = false, supportsCustomInstructions = true }: ChatPanelProps) {
+export default function ChatPanel({ sessionId, onCitationClick, onPreviewLayoutTranslation, maxUserMessages, initialQuestion, onOpenSettings, hasCustomInstructions, userPlan, autoSubmitInitialQuestion = false, supportsCustomInstructions = true }: ChatPanelProps) {
   const messages = useDocTalkStore((s) => s.messages);
   const isStreaming = useDocTalkStore((s) => s.isStreaming);
   const selectedMode = useDocTalkStore((s) => s.selectedMode);
@@ -487,6 +491,7 @@ export default function ChatPanel({ sessionId, onCitationClick, maxUserMessages,
                     isStreaming={showStreaming}
                     isLastAssistant={isLastAssistantMsg}
                     onCitationClick={onCitationClick}
+                    onPreviewLayoutTranslation={onPreviewLayoutTranslation}
                     onRegenerate={isLastAssistantMsg ? handleRegenerateLast : undefined}
                     onContinue={isLastAssistantMsg && message.isTruncated ? handleContinueLast : undefined}
                     onShareAnswer={userPlan ? handleShareAnswerVoid : undefined}
