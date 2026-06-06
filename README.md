@@ -156,9 +156,13 @@ Open [http://localhost:3000](http://localhost:3000).
 | `LAYOUT_TRANSLATION_ENGINE` | No | Layout-preserving PDF translation engine. The supported production value is `retainpdf` |
 | `RETAINPDF_API_BASE_URL` | Yes | RetainPDF sidecar full API URL, usually `http://...:41000` |
 | `RETAINPDF_API_KEY` | No | Optional RetainPDF sidecar API key |
-| `RETAINPDF_OCR_PROVIDER` | Yes | OCR provider for RetainPDF sidecar, `paddle` or `mineru` |
+| `RETAINPDF_OCR_PROVIDER` | Yes | OCR provider for RetainPDF sidecar, `datalab`, `paddle`, or `mineru` |
 | `RETAINPDF_PADDLE_TOKEN` | If provider is Paddle | Paddle OCR token used by RetainPDF |
 | `RETAINPDF_MINERU_TOKEN` | If provider is MinerU | MinerU OCR token used by RetainPDF |
+| `RETAINPDF_DATALAB_TOKEN` | If provider is Datalab | Optional Datalab token override; when empty, PDF translation reuses `DATALAB_API_KEY` |
+| `RETAINPDF_DATALAB_API_URL` | No | Datalab API origin, default `https://www.datalab.to` |
+| `RETAINPDF_DATALAB_MODE` | No | Datalab conversion mode, default `balanced` |
+| `RETAINPDF_DATALAB_OUTPUT_FORMAT` | No | Datalab output formats, default `json,markdown` |
 | `RETAINPDF_TRANSLATION_API_KEY` | No | Optional override; when empty, PDF translation reuses `DEEPSEEK_API_KEY` |
 | `RETAINPDF_TRANSLATION_BASE_URL` | No | Translation API base URL, default `https://api.deepseek.com/v1` |
 | `RETAINPDF_TRANSLATION_MODEL` | No | Translation model, default `deepseek-v4-flash` |

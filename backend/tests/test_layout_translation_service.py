@@ -198,3 +198,72 @@ def test_retainpdf_create_job_payload_matches_grouped_api(monkeypatch) -> None:
     assert payload["translation"]["classify_batch_size"] == 12
     assert payload["render"]["compile_workers"] == 1
     assert payload["runtime"] == {"job_id": "", "timeout_seconds": 1800}
+
+
+def test_retainpdf_create_job_payload_supports_datalab_provider(monkeypatch) -> None:
+    captured: dict[str, object] = {}
+
+    class FakeResponse:
+        status_code = 200
+
+        def json(self):
+            return {"code": 0, "data": {"job_id": "retain_job_datalab"}}
+
+    class FakeHttpClient:
+        def __init__(self, *args, **kwargs) -> None:
+            pass
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, exc_type, exc, tb) -> bool:
+            return False
+
+        def post(self, url: str, json: dict):
+            captured["url"] = url
+            captured["json"] = json
+            return FakeResponse()
+
+    monkeypatch.setattr(service.httpx, "Client", FakeHttpClient)
+    monkeypatch.setattr(service.settings, "RETAINPDF_API_BASE_URL", "http://retainpdf.test")
+    monkeypatch.setattr(service.settings, "RETAINPDF_API_KEY", "sidecar-key")
+    monkeypatch.setattr(service.settings, "RETAINPDF_OCR_PROVIDER", "datalab")
+    monkeypatch.setattr(service.settings, "RETAINPDF_DATALAB_TOKEN", None)
+    monkeypatch.setattr(service.settings, "DATALAB_API_KEY", "datalab-token")
+    monkeypatch.setattr(service.settings, "RETAINPDF_DATALAB_API_URL", "https://www.datalab.to")
+    monkeypatch.setattr(service.settings, "RETAINPDF_DATALAB_MODE", "balanced")
+    monkeypatch.setattr(service.settings, "RETAINPDF_DATALAB_OUTPUT_FORMAT", "json,markdown")
+    monkeypatch.setattr(service.settings, "RETAINPDF_TRANSLATION_API_KEY", "model-key")
+    monkeypatch.setattr(service.settings, "RETAINPDF_TRANSLATION_BASE_URL", "https://api.deepseek.com/v1")
+    monkeypatch.setattr(service.settings, "RETAINPDF_TRANSLATION_MODEL", "deepseek-v4-flash")
+    monkeypatch.setattr(service.settings, "RETAINPDF_WORKERS", 0)
+    monkeypatch.setattr(service.settings, "RETAINPDF_BATCH_SIZE", 1)
+    monkeypatch.setattr(service.settings, "RETAINPDF_CLASSIFY_BATCH_SIZE", 12)
+    monkeypatch.setattr(service.settings, "RETAINPDF_COMPILE_WORKERS", 0)
+    monkeypatch.setattr(service.settings, "RETAINPDF_TIMEOUT_SECONDS", 1800)
+
+    job_id = service.RetainPdfClient().create_book_job(upload_id="upload_1", source_filename="Paper.pdf")
+
+    assert job_id == "retain_job_datalab"
+    payload = captured["json"]
+    assert payload["ocr"]["provider"] == "datalab"
+    assert payload["ocr"]["datalab_token"] == "datalab-token"
+    assert payload["ocr"]["datalab_api_url"] == "https://www.datalab.to"
+    assert payload["ocr"]["datalab_mode"] == "balanced"
+    assert payload["ocr"]["datalab_output_format"] == "json,markdown"
+
+
+def test_layout_translation_config_status_accepts_datalab_fallback_key(monkeypatch) -> None:
+    monkeypatch.setattr(service.settings, "LAYOUT_TRANSLATION_ENGINE", "retainpdf")
+    monkeypatch.setattr(service.settings, "RETAINPDF_API_BASE_URL", "http://retainpdf.test")
+    monkeypatch.setattr(service.settings, "RETAINPDF_OCR_PROVIDER", "datalab")
+    monkeypatch.setattr(service.settings, "RETAINPDF_DATALAB_TOKEN", None)
+    monkeypatch.setattr(service.settings, "DATALAB_API_KEY", "datalab-token")
+    monkeypatch.setattr(service.settings, "DEEPSEEK_API_KEY", "model-key")
+    monkeypatch.setattr(service.settings, "RETAINPDF_TRANSLATION_API_KEY", None)
+
+    status = service.layout_translation_config_status()
+
+    assert status.ready is True
+    assert status.missing == ()
+    assert status.ocr_provider == "datalab"

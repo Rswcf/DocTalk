@@ -178,6 +178,11 @@ class Settings(BaseSettings):
     RETAINPDF_OCR_PROVIDER: str = Field(default="paddle")
     RETAINPDF_MINERU_TOKEN: Optional[str] = None
     RETAINPDF_PADDLE_TOKEN: Optional[str] = None
+    RETAINPDF_DATALAB_TOKEN: Optional[str] = None
+    RETAINPDF_DATALAB_API_URL: str = Field(default="https://www.datalab.to")
+    RETAINPDF_DATALAB_MODE: str = Field(default="balanced")
+    RETAINPDF_DATALAB_OUTPUT_FORMAT: str = Field(default="json,markdown")
+    DATALAB_API_KEY: Optional[str] = None
     RETAINPDF_TRANSLATION_API_KEY: Optional[str] = None
     RETAINPDF_TRANSLATION_BASE_URL: str = Field(default="https://api.deepseek.com/v1")
     RETAINPDF_TRANSLATION_MODEL: str = Field(default="deepseek-v4-flash")

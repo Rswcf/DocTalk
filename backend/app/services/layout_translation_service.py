@@ -149,6 +149,10 @@ def _translation_api_key() -> str | None:
     return settings.RETAINPDF_TRANSLATION_API_KEY or settings.DEEPSEEK_API_KEY
 
 
+def _datalab_token() -> str | None:
+    return settings.RETAINPDF_DATALAB_TOKEN or settings.DATALAB_API_KEY
+
+
 def layout_translation_engine() -> str:
     engine = (settings.LAYOUT_TRANSLATION_ENGINE or "").strip().lower()
     if engine:
@@ -172,6 +176,9 @@ def layout_translation_config_status() -> LayoutTranslationConfigStatus:
         elif provider == "paddle":
             if not settings.RETAINPDF_PADDLE_TOKEN:
                 missing.append("RETAINPDF_PADDLE_TOKEN")
+        elif provider == "datalab":
+            if not _datalab_token():
+                missing.append("RETAINPDF_DATALAB_TOKEN or DATALAB_API_KEY")
         else:
             missing.append("RETAINPDF_OCR_PROVIDER")
     else:
@@ -264,6 +271,14 @@ class RetainPdfClient:
             if not settings.RETAINPDF_PADDLE_TOKEN:
                 raise LayoutTranslationConfigError("RetainPDF Paddle token is not configured")
             ocr["paddle_token"] = settings.RETAINPDF_PADDLE_TOKEN
+        elif provider == "datalab":
+            datalab_token = _datalab_token()
+            if not datalab_token:
+                raise LayoutTranslationConfigError("RetainPDF Datalab token is not configured")
+            ocr["datalab_token"] = datalab_token
+            ocr["datalab_api_url"] = settings.RETAINPDF_DATALAB_API_URL
+            ocr["datalab_mode"] = settings.RETAINPDF_DATALAB_MODE
+            ocr["datalab_output_format"] = settings.RETAINPDF_DATALAB_OUTPUT_FORMAT
         else:
             raise LayoutTranslationConfigError(f"Unsupported RetainPDF OCR provider: {provider}")
 

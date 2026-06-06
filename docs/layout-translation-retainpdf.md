@@ -35,9 +35,13 @@ RETAINPDF_API_BASE_URL=http://localhost:41000
 RETAINPDF_API_KEY=
 
 # Choose exactly one configured OCR provider.
-RETAINPDF_OCR_PROVIDER=paddle
+RETAINPDF_OCR_PROVIDER=datalab
 RETAINPDF_PADDLE_TOKEN=
 RETAINPDF_MINERU_TOKEN=
+RETAINPDF_DATALAB_TOKEN=
+RETAINPDF_DATALAB_API_URL=https://www.datalab.to
+RETAINPDF_DATALAB_MODE=balanced
+RETAINPDF_DATALAB_OUTPUT_FORMAT=json,markdown
 
 # DeepSeek remains the default translation backend.
 DEEPSEEK_API_KEY=
@@ -96,7 +100,9 @@ The feature must reject expensive jobs before sidecar submission:
 2. Set backend `LAYOUT_TRANSLATION_ENGINE=retainpdf`.
 3. Set backend `RETAINPDF_API_BASE_URL` to the Railway private sidecar URL.
 4. Set backend `RETAINPDF_API_KEY` if sidecar auth is enabled.
-5. Add either `RETAINPDF_PADDLE_TOKEN` or `RETAINPDF_MINERU_TOKEN`.
+5. Add `RETAINPDF_DATALAB_TOKEN`, `RETAINPDF_PADDLE_TOKEN`, or `RETAINPDF_MINERU_TOKEN`
+   for the selected `RETAINPDF_OCR_PROVIDER`. Datalab can also reuse
+   `DATALAB_API_KEY` when `RETAINPDF_DATALAB_TOKEN` is empty.
 6. Reuse DocTalk `DEEPSEEK_API_KEY` or set `RETAINPDF_TRANSLATION_API_KEY`.
 7. Run one internal PDF through the toolbar flow and confirm PDF, Markdown, and
    ZIP artifacts appear on the DocTalk artifact card.
