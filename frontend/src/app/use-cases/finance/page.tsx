@@ -3,16 +3,23 @@ import FinanceContent from './FinanceContent';
 import { buildArticleJsonLd, buildMarketingMetadata } from '../../../lib/seo';
 
 export const metadata: Metadata = buildMarketingMetadata({
-  title: 'AI Financial Report Analysis',
+  title: 'AI 10-K & Financial Report Analysis',
   description:
-    'Analyze 10-K filings, earnings reports, and financial documents with AI. Ask questions and get cited answers tied to specific figures and sections.',
+    'Analyze 10-K filings, financial statement footnotes, earnings reports, and SEC documents with AI. Get cited answers tied to exact figures and sections.',
   path: '/use-cases/finance',
   localized: true,
-  keywords: ['ai for finance', 'financial document ai', 'annual report ai analysis'],
+  keywords: [
+    'ai for finance',
+    'financial document ai',
+    'annual report ai analysis',
+    'ai 10-k analysis',
+    'summarize financial statement footnotes',
+    'sec filing ai analysis',
+  ],
   openGraph: {
-    title: 'AI Financial Report Analysis | DocTalk',
+    title: 'AI 10-K & Financial Report Analysis | DocTalk',
     description:
-      'Analyze 10-K filings, earnings reports, and financial documents with AI. Ask questions and get cited answers referencing specific figures. Try free.',
+      'Analyze 10-K filings, financial statement footnotes, earnings reports, and SEC documents with AI. Ask questions and get cited answers referencing exact source text.',
   },
 });
 
@@ -21,6 +28,11 @@ const faqItems = [
     question: 'Can DocTalk extract financial data from 10-K filings?',
     answer:
       'Yes. Upload a 10-K filing as a PDF and ask questions like "What was the revenue for fiscal year 2025?" or "What are the main risk factors?" DocTalk extracts the relevant information with numbered citations pointing to the exact section of the filing where the data appears.',
+  },
+  {
+    question: 'Can AI summarize financial statement footnotes from 10-K filings?',
+    answer:
+      'Yes. Upload the 10-K filing and ask DocTalk to summarize the financial statement footnotes by topic, such as revenue recognition, leases, debt, contingent liabilities, related-party transactions, and accounting policy changes. Each answer includes citations back to the exact footnote passage so analysts can verify the source before using the summary.',
   },
   {
     question: 'Does it support Excel spreadsheets?',
@@ -52,11 +64,17 @@ export default function FinancePage() {
         dangerouslySetInnerHTML={{
           __html: JSON.stringify(
             buildArticleJsonLd({
-              title: 'AI-Powered Financial Report Analysis with Cited Sources',
+              title: 'AI 10-K and Financial Report Analysis with Cited Sources',
               description:
-                'How financial analysts use DocTalk to analyze 10-K filings, earnings reports, and SEC documents with AI-powered cited answers.',
+                'How financial analysts use DocTalk to analyze 10-K filings, financial statement footnotes, earnings reports, and SEC documents with AI-powered cited answers.',
               path: '/use-cases/finance',
               datePublished: '2026-02-18',
+              keywords: [
+                '10-K analysis',
+                'financial statement footnotes',
+                'SEC filing analysis',
+                'AI financial report analysis',
+              ],
             })
           ),
         }}
