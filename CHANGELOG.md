@@ -8,6 +8,13 @@ releases use `0.minor.patch` semantics such as `0.2.0` and `0.2.1`.
 
 ## [Unreleased]
 
+### Documentation
+- Documented layout-preserving PDF translation across README, localized
+  READMEs, architecture docs, RetainPDF operations, and agent handoff guides.
+- Added the current RetainPDF product flow, target language list, preview and
+  optional import behavior, plan/page/file limits, deployment checklist, and
+  quality caveats for invoices, bills, forms, and table-heavy PDFs.
+
 ## [0.18.4] - 2026-05-24
 
 RAG retrieval, OCR, and answer-quality remediation (shipped across 0.18.2–0.18.4),

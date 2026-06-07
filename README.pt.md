@@ -38,6 +38,7 @@ Faça upload de PDFs, documentos do Word, apresentações do PowerPoint, planilh
 - **Suporte a múltiplos formatos** — PDF, DOCX, PPTX, XLSX, TXT, Markdown e importação de URLs. Tabelas, slides e planilhas são totalmente suportados.
 - **2 modos de desempenho de IA** — Flash para respostas citadas rápidas e Pro para análise mais profunda, com DeepSeek V4.
 - **11 idiomas** — Interface completa e respostas de IA em Inglês, Chinês, Espanhol, Japonês, Alemão, Francês, Coreano, Português, Italiano, Árabe e Hindi.
+- **Tradução de PDF preservando o layout** — Traduza PDFs com muito texto para um novo PDF, visualize-o ao lado do original e opcionalmente adicione-o como novo documento DocTalk. O gratuito inclui 2 testes; Plus/Pro liberam uso contínuo.
 - **Visualização dividida** — Painel de chat redimensionável ao lado de um visualizador de PDF com zoom, busca e arrastar para navegar.
 - **Coleções de documentos** — Agrupe documentos e faça perguntas cruzadas entre documentos com atribuição de fonte.
 - **Resumo automático** — A IA gera um resumo do documento e perguntas sugeridas após o upload.
@@ -58,7 +59,8 @@ Faça upload de PDFs, documentos do Word, apresentações do PowerPoint, planilh
 | **Autenticação** | Auth.js v5 — Google OAuth, Microsoft OAuth, Email Magic Link |
 | **Pagamentos** | Stripe Checkout + Subscriptions |
 | **IA** | DeepSeek V4 Flash/Pro para chat; OpenRouter para embeddings e modelos de fallback |
-| **Parsing** | PyMuPDF, Tesseract OCR, python-docx, python-pptx, openpyxl, LibreOffice |
+| **Parsing** | Azure AI Document Intelligence, PyMuPDF, Tesseract OCR, python-docx, python-pptx, openpyxl, LibreOffice |
+| **Tradução PDF** | Sidecar RetainPDF, tradução DeepSeek, provedores OCR Paddle/MinerU/Datalab |
 | **Monitoramento** | Sentry, Vercel Analytics |
 
 ## Arquitetura
@@ -131,13 +133,33 @@ Abra [http://localhost:3000](http://localhost:3000).
 | `SENTRY_DSN` | Não | DSN do Sentry para rastreamento de erros |
 | `OCR_ENABLED` | Não | Habilitar OCR para PDFs digitalizados (padrão: `true`) |
 | `OCR_LANGUAGES` | Não | Idiomas do Tesseract instalados; o parser seleciona automaticamente um subconjunto reduzido por documento conforme o script detectado (padrão: `eng+chi_sim+jpn+kor+spa+deu+fra+por+ita+ara+hin+urd`) |
+| `FREE_LAYOUT_TRANSLATIONS_LIMIT` | Não | Número de testes gratuitos vitalícios para tradução de PDF preservando layout (padrão: `2`) |
+| `FREE_LAYOUT_TRANSLATION_MAX_PAGES` | Não | Limite de páginas por tradução PDF no plano gratuito (padrão: `25`) |
+| `PLUS_LAYOUT_TRANSLATION_MAX_PAGES` | Não | Limite de páginas por tradução PDF no Plus (padrão: `150`) |
+| `PRO_LAYOUT_TRANSLATION_MAX_PAGES` | Não | Limite de páginas por tradução PDF no Pro (padrão: `300`) |
+| `LAYOUT_TRANSLATION_MAX_FILE_SIZE_MB` | Não | Limite rígido de tamanho de arquivo para tradução PDF (padrão: `50`) |
+| `LAYOUT_TRANSLATION_ENGINE` | Não | Motor de tradução PDF preservando layout. Use `retainpdf` para ativar o fluxo sidecar de produção |
+| `RETAINPDF_API_BASE_URL` | Se a tradução estiver ativada | URL completa da API do sidecar RetainPDF, geralmente `http://...:41000` |
+| `RETAINPDF_API_KEY` | Não | API key opcional do sidecar RetainPDF |
+| `RETAINPDF_OCR_PROVIDER` | Se a tradução estiver ativada | Provedor OCR para RetainPDF: `datalab`, `paddle` ou `mineru` |
+| `RETAINPDF_PADDLE_TOKEN` | Se o provedor for Paddle | Token Paddle OCR usado pelo RetainPDF |
+| `RETAINPDF_MINERU_TOKEN` | Se o provedor for MinerU | Token MinerU OCR usado pelo RetainPDF |
+| `RETAINPDF_DATALAB_TOKEN` | Se o provedor for Datalab | Token Datalab opcional; vazio, a tradução PDF reutiliza `DATALAB_API_KEY` |
+| `RETAINPDF_DATALAB_API_URL` | Não | Origem da API Datalab, padrão `https://www.datalab.to` |
+| `RETAINPDF_DATALAB_MODE` | Não | Modo de conversão Datalab, padrão `balanced` |
+| `RETAINPDF_DATALAB_OUTPUT_FORMAT` | Não | Formatos de saída Datalab, padrão `json,markdown` |
+| `RETAINPDF_TRANSLATION_API_KEY` | Não | Override opcional; vazio, a tradução PDF reutiliza `DEEPSEEK_API_KEY` |
+| `RETAINPDF_TRANSLATION_BASE_URL` | Não | URL base da API de tradução, padrão `https://api.deepseek.com/v1` |
+| `RETAINPDF_TRANSLATION_MODEL` | Não | Modelo de tradução, padrão `deepseek-v4-flash` |
 
 ### Frontend (`.env.local`)
 
 | Variável | Obrigatória | Descrição |
 |----------|-------------|-----------|
 | `NEXT_PUBLIC_API_BASE` | Sim | URL do backend (padrão: `http://localhost:8000`) |
+| `BACKEND_INTERNAL_URL` | Não | Destino do proxy do lado do servidor (rede privada). Tem prioridade sobre `NEXT_PUBLIC_API_BASE` quando definido |
 | `AUTH_SECRET` | Sim | Deve ser igual ao `AUTH_SECRET` do backend |
+| `ADAPTER_SECRET` | Sim | Deve ser igual ao `ADAPTER_SECRET` do backend. Usado para assinar com HMAC o claim `X-Proxy-IP` |
 | `GOOGLE_CLIENT_ID` | Sim | Client ID do Google OAuth |
 | `GOOGLE_CLIENT_SECRET` | Sim | Client Secret do Google OAuth |
 | `MICROSOFT_CLIENT_ID` | Não | Client ID do Microsoft OAuth |
@@ -173,6 +195,7 @@ DocTalk/
 │   └── public/
 ├── docs/
 │   ├── ARCHITECTURE.md
+│   ├── layout-translation-retainpdf.md
 │   └── PRODUCT_STRATEGY.md
 └── docker-compose.yml
 ```
@@ -188,7 +211,7 @@ DocTalk/
 | **Frontend** (Vercel) | Push para `stable` → deploy automático. Diretório raiz: `frontend/`. |
 | **Backend** (Railway) | `git checkout stable && railway up --detach` |
 
-O Railway executa 5 serviços: backend, PostgreSQL, Redis, Qdrant, MinIO.
+O Railway executa os serviços principais: backend, PostgreSQL, Redis, Qdrant e MinIO; a tradução de PDF preservando layout adiciona o sidecar RetainPDF.
 
 ## Testes
 

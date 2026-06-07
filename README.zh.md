@@ -38,6 +38,7 @@
 - **多格式支持** — PDF、DOCX、PPTX、XLSX、TXT、Markdown 以及 URL 导入。表格、幻灯片和电子表格全面支持。
 - **2 种 AI 性能模式** — Flash 用于快速引用回答，Pro 用于更深入分析，均由 DeepSeek V4 驱动。
 - **11 种语言** — 完整的 UI 和 AI 回答支持英语、中文、西班牙语、日语、德语、法语、韩语、葡萄牙语、意大利语、阿拉伯语和印地语。
+- **保留排版的 PDF 翻译** — 将文本密集型 PDF 翻译成新的 PDF，在原文旁预览译文，并可选择把译文 PDF 加入为新的 DocTalk 文档。免费版含 2 次试用，Plus/Pro 解锁持续使用。
 - **分屏阅读器** — 可调节大小的聊天面板搭配 PDF 查看器，支持缩放、搜索和拖拽平移。
 - **文档集合** — 将多个文档分组，支持跨文档提问并标注来源。
 - **自动摘要** — 上传后 AI 自动生成文档摘要和推荐问题。
@@ -58,7 +59,8 @@
 | **认证** | Auth.js v5 — Google OAuth、Microsoft OAuth、Email Magic Link |
 | **支付** | Stripe Checkout + Subscriptions |
 | **AI** | DeepSeek V4 Flash/Pro 用于聊天；OpenRouter 用于 embeddings 和 fallback 模型 |
-| **解析** | PyMuPDF、Tesseract OCR、python-docx、python-pptx、openpyxl、LibreOffice |
+| **解析** | Azure AI Document Intelligence、PyMuPDF、Tesseract OCR、python-docx、python-pptx、openpyxl、LibreOffice |
+| **PDF 翻译** | RetainPDF sidecar、DeepSeek 翻译、Paddle/MinerU/Datalab OCR provider |
 | **监控** | Sentry、Vercel Analytics |
 
 ## 架构
@@ -131,13 +133,33 @@ npm install && npm run dev
 | `SENTRY_DSN` | 否 | Sentry DSN，用于错误追踪 |
 | `OCR_ENABLED` | 否 | 启用扫描 PDF 的 OCR（默认: `true`） |
 | `OCR_LANGUAGES` | 否 | 已安装的 Tesseract 语言；解析器按检测到的脚本为每个文档自动选用一个窄子集（默认: `eng+chi_sim+jpn+kor+spa+deu+fra+por+ita+ara+hin+urd`） |
+| `FREE_LAYOUT_TRANSLATIONS_LIMIT` | 否 | 免费版保留排版 PDF 翻译的终身试用次数（默认: `2`） |
+| `FREE_LAYOUT_TRANSLATION_MAX_PAGES` | 否 | 免费版每次保留排版 PDF 翻译的页数上限（默认: `25`） |
+| `PLUS_LAYOUT_TRANSLATION_MAX_PAGES` | 否 | Plus 每次保留排版 PDF 翻译的页数上限（默认: `150`） |
+| `PRO_LAYOUT_TRANSLATION_MAX_PAGES` | 否 | Pro 每次保留排版 PDF 翻译的页数上限（默认: `300`） |
+| `LAYOUT_TRANSLATION_MAX_FILE_SIZE_MB` | 否 | 保留排版 PDF 翻译的硬性文件大小上限（默认: `50`） |
+| `LAYOUT_TRANSLATION_ENGINE` | 否 | 保留排版 PDF 翻译引擎；设为 `retainpdf` 后启用生产 sidecar 流程 |
+| `RETAINPDF_API_BASE_URL` | 启用翻译时必需 | RetainPDF sidecar 完整 API URL，通常为 `http://...:41000` |
+| `RETAINPDF_API_KEY` | 否 | 可选的 RetainPDF sidecar API key |
+| `RETAINPDF_OCR_PROVIDER` | 启用翻译时必需 | RetainPDF sidecar OCR provider：`datalab`、`paddle` 或 `mineru` |
+| `RETAINPDF_PADDLE_TOKEN` | provider 为 Paddle 时 | RetainPDF 使用的 Paddle OCR token |
+| `RETAINPDF_MINERU_TOKEN` | provider 为 MinerU 时 | RetainPDF 使用的 MinerU OCR token |
+| `RETAINPDF_DATALAB_TOKEN` | provider 为 Datalab 时 | 可选 Datalab token 覆盖；为空时 PDF 翻译复用 `DATALAB_API_KEY` |
+| `RETAINPDF_DATALAB_API_URL` | 否 | Datalab API origin，默认 `https://www.datalab.to` |
+| `RETAINPDF_DATALAB_MODE` | 否 | Datalab 转换模式，默认 `balanced` |
+| `RETAINPDF_DATALAB_OUTPUT_FORMAT` | 否 | Datalab 输出格式，默认 `json,markdown` |
+| `RETAINPDF_TRANSLATION_API_KEY` | 否 | 可选覆盖；为空时 PDF 翻译复用 `DEEPSEEK_API_KEY` |
+| `RETAINPDF_TRANSLATION_BASE_URL` | 否 | 翻译 API base URL，默认 `https://api.deepseek.com/v1` |
+| `RETAINPDF_TRANSLATION_MODEL` | 否 | 翻译模型，默认 `deepseek-v4-flash` |
 
 ### 前端 (`.env.local`)
 
 | 变量 | 必需 | 说明 |
 |------|------|------|
 | `NEXT_PUBLIC_API_BASE` | 是 | 后端 URL（默认: `http://localhost:8000`） |
+| `BACKEND_INTERNAL_URL` | 否 | 服务端代理目标（私有网络）。设置后优先于 `NEXT_PUBLIC_API_BASE` |
 | `AUTH_SECRET` | 是 | 必须与后端 `AUTH_SECRET` 一致 |
+| `ADAPTER_SECRET` | 是 | 必须与后端 `ADAPTER_SECRET` 一致，用于 HMAC 签名 `X-Proxy-IP` |
 | `GOOGLE_CLIENT_ID` | 是 | Google OAuth 客户端 ID |
 | `GOOGLE_CLIENT_SECRET` | 是 | Google OAuth 客户端密钥 |
 | `MICROSOFT_CLIENT_ID` | 否 | Microsoft OAuth 客户端 ID |
@@ -173,6 +195,7 @@ DocTalk/
 │   └── public/
 ├── docs/
 │   ├── ARCHITECTURE.md
+│   ├── layout-translation-retainpdf.md
 │   └── PRODUCT_STRATEGY.md
 └── docker-compose.yml
 ```
@@ -188,7 +211,7 @@ DocTalk/
 | **前端** (Vercel) | 推送 `stable` → 自动部署。Root Directory: `frontend/`。 |
 | **后端** (Railway) | `git checkout stable && railway up --detach` |
 
-Railway 运行 5 个服务：backend、PostgreSQL、Redis、Qdrant、MinIO。
+Railway 运行核心服务：backend、PostgreSQL、Redis、Qdrant、MinIO；启用保留排版 PDF 翻译时还需要 RetainPDF sidecar。
 
 ## 版本号规范
 

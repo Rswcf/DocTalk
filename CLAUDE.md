@@ -2,16 +2,16 @@
 
 ## Project
 
-DocTalk — AI document Q&A web app. Upload PDF / DOCX / PPTX / XLSX / TXT / MD / URL; chat with AI that cites the exact source passage. 11 locales.
+DocTalk — AI document Q&A web app. Upload PDF / DOCX / PPTX / XLSX / TXT / MD / URL; chat with AI that cites the exact source passage. 11 locales. Paid plans also expose layout-preserving PDF translation through the RetainPDF sidecar.
 
 | Component | Stack | URL |
 |---|---|---|
 | Frontend | Next.js 14 (App Router), Vercel | https://www.doctalk.site |
 | Backend | FastAPI + Celery, Railway | https://backend-production-a62e.up.railway.app |
-| Infra | Postgres 16, Qdrant, MinIO, Redis | Railway (5 services) |
+| Infra | Postgres 16, Qdrant, MinIO, Redis; RetainPDF sidecar for layout translation | Railway |
 | Repo | GitHub (public) | https://github.com/Rswcf/DocTalk |
 
-LLM chat modes use DeepSeek V4 — internal `quick` = Flash, internal `balanced` = Pro. OpenRouter remains the embedding/fallback gateway. Auth.js v5 (Google / Microsoft / email magic link). Stripe billing is live in production; local/test environments may still use `sk_test_*`.
+LLM chat modes use DeepSeek V4 — internal `quick` = Flash, internal `balanced` = Pro. OpenRouter remains the embedding/fallback gateway. Layout PDF translation uses RetainPDF + DeepSeek translation + one OCR provider (`datalab`, `paddle`, or `mineru`). Auth.js v5 (Google / Microsoft / email magic link). Stripe billing is live in production; local/test environments may still use `sk_test_*`.
 
 ## Dev commands (Claude can't guess these)
 
@@ -67,6 +67,7 @@ Full procedure + guardrails: see `.claude/skills/deploy/SKILL.md` (invoked via `
 ## Key env vars
 
 - **Backend** (`.env` + Railway): `DATABASE_URL`, `OPENROUTER_API_KEY`, `DEEPSEEK_API_KEY`, `AUTH_SECRET`, `ADAPTER_SECRET`, `STRIPE_SECRET_KEY` (`sk_live_*` in production; `sk_test_*` only for local/test), `STRIPE_WEBHOOK_SECRET`
+- **Layout translation** (`.env` + Railway backend): `LAYOUT_TRANSLATION_ENGINE=retainpdf`, `RETAINPDF_API_BASE_URL`, `RETAINPDF_OCR_PROVIDER`, one provider token (`RETAINPDF_DATALAB_TOKEN` or `DATALAB_API_KEY`, `RETAINPDF_PADDLE_TOKEN`, or `RETAINPDF_MINERU_TOKEN`), optional `RETAINPDF_API_KEY`, optional `RETAINPDF_TRANSLATION_API_KEY`; caps are controlled by `FREE_LAYOUT_TRANSLATIONS_LIMIT`, `FREE_LAYOUT_TRANSLATION_MAX_PAGES`, `PLUS_LAYOUT_TRANSLATION_MAX_PAGES`, `PRO_LAYOUT_TRANSLATION_MAX_PAGES`, and `LAYOUT_TRANSLATION_MAX_FILE_SIZE_MB`
 - **Frontend** (Vercel): `NEXT_PUBLIC_API_BASE` (**never** localhost in prod), `BACKEND_INTERNAL_URL` (preferred for server-side proxy hop), `AUTH_SECRET`, `ADAPTER_SECRET`, `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET`, `MICROSOFT_CLIENT_ID` / `MICROSOFT_CLIENT_SECRET`, `RESEND_API_KEY`
 
 Cross-origin IP trust chain is HMAC-signed with `ADAPTER_SECRET` — frontend and backend values **must match**. The proxy emits `X-Proxy-IP` / `X-Proxy-IP-Ts` / `X-Proxy-IP-Sig` (HMAC-SHA256 of `"{ip}:{ts}"`); backend verifies with `hmac.compare_digest` and ±60s skew. Never put `AUTH_SECRET` in an outbound header — it's the Auth.js JWE encryption key.
@@ -85,6 +86,7 @@ Cross-origin IP trust chain is HMAC-signed with `ADAPTER_SECRET` — frontend an
 - **Don't `await cookies()` in `app/layout.tsx`** for the same reason — it forces every page to `ƒ Dynamic` rendering.
 - **Don't commit uncompressed build artifacts** (`frontend/tsconfig.tsbuildinfo` is `.gitignore`d; personal `.claude/settings.json` permission tweaks stay local).
 - **i18n updates must hit all 11 locales** (en / zh / ja / ko / es / de / fr / pt / it / ar / hi). Use `tOr(key, fallback)` when shipping a new key ahead of translation.
+- **Layout translation is cost-sensitive**. Never bypass backend page/file/trial limits; preview/import/download must remain user-triggered, and marketing must not promise perfect output for invoices, bills, dense forms, or table-heavy PDFs.
 - **Don't skip Codex adversarial review** for commits > 30 lines of logic or any security-adjacent change. See "Codex collaboration" below.
 - **Universal rules**: don't start a second dev server without checking, and `"更新文档"` means update every affected `.md` — grep before assuming.
 

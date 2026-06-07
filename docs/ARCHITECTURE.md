@@ -20,7 +20,8 @@ graph TB
 
     subgraph Railway["Railway (Backend)"]
         FastAPI["FastAPI<br/>REST + SSE"]
-        Celery["Celery Worker<br/>PDF Parse + Embed"]
+        Celery["Celery Worker<br/>PDF Parse + Embed<br/>+ Async Artifacts"]
+        RetainPDF["RetainPDF Sidecar<br/>Layout PDF Translation"]
     end
 
     subgraph DataStores["Data Stores (Railway)"]
@@ -31,7 +32,9 @@ graph TB
     end
 
     subgraph External["External Services"]
-        OpenRouter["OpenRouter<br/>LLM + Embedding API"]
+        DeepSeek["DeepSeek<br/>Chat + PDF Translation"]
+        OpenRouter["OpenRouter<br/>Embedding + Fallback API"]
+        OCRProviders["Paddle / MinerU / Datalab<br/>OCR Providers"]
         Stripe["Stripe<br/>Payments"]
         Google["Google OAuth"]
         Microsoft["Microsoft OAuth"]
@@ -47,12 +50,17 @@ graph TB
     FastAPI --> Qdrant
     FastAPI --> Redis
     FastAPI --> MinIO
+    FastAPI --> DeepSeek
     FastAPI --> OpenRouter
     FastAPI --> Stripe
     Celery --> PG
     Celery --> Qdrant
     Celery --> MinIO
+    Celery --> RetainPDF
+    Celery --> DeepSeek
     Celery --> OpenRouter
+    RetainPDF --> OCRProviders
+    RetainPDF --> DeepSeek
     Redis -.->|Task Queue| Celery
     AuthJS --> Google
     AuthJS --> Microsoft
@@ -69,13 +77,16 @@ graph TB
 | **Next.js** | Client-side rendered SPA (`"use client"`), handles routing, i18n, and UI state (Zustand) |
 | **Auth.js v5** | Authentication via 3 providers: Google OAuth, Microsoft OAuth, and Email Magic Link (via Resend). Encrypted JWE session tokens |
 | **API Proxy** | Translates JWE tokens to HS256 JWT, injects `Authorization` header for all backend requests |
-| **FastAPI** | REST API + SSE streaming for chat, document management, billing, user accounts |
-| **Celery** | Async document parsing: text extraction (PDF/DOCX/PPTX/XLSX/TXT/MD/URL) → chunking → embedding → vector indexing. PPTX/DOCX files are also converted to PDF via LibreOffice headless for visual rendering |
+| **FastAPI** | REST API + SSE streaming for chat, document management, billing, user accounts, and layout-translation job creation |
+| **Celery** | Async document parsing and artifact work: text extraction (PDF/DOCX/PPTX/XLSX/TXT/MD/URL) → chunking → embedding → vector indexing; layout-translation polling and artifact persistence. PPTX/DOCX files are also converted to PDF via LibreOffice headless for visual rendering |
+| **RetainPDF sidecar** | Railway service used only for layout-preserving PDF translation: OCR orchestration, translation batching, translated PDF rendering |
 | **PostgreSQL** | Primary data store for users, documents, pages, chunks, sessions, messages, credits |
 | **Qdrant** | Vector database for semantic search (COSINE similarity, 1536 dimensions) |
 | **Redis** | Celery task broker and result backend |
 | **MinIO** | S3-compatible object storage for uploaded files with SSE-S3 encryption at rest |
-| **OpenRouter** | Unified gateway for LLM inference and text embedding |
+| **DeepSeek** | Primary chat and PDF translation model provider |
+| **OpenRouter** | Embedding and fallback model gateway |
+| **OCR providers** | Paddle, MinerU, or Datalab credentials used by RetainPDF during layout translation |
 | **Stripe** | Payment processing for credit purchases and Plus/Pro subscriptions (monthly + annual) |
 | **Sentry** | Error tracking and performance monitoring for both backend (FastAPI + Celery) and frontend (Next.js) |
 
@@ -153,6 +164,85 @@ sequenceDiagram
 7. **Auto-Summary** (best-effort): After status becomes `ready`, the worker loads the first 20 chunks and calls a budget LLM (DeepSeek) to generate a 2–3 paragraph summary and 5 suggested questions. Results are stored in the `summary` and `suggested_questions` columns. Failures are logged but do not affect document status.
 
 **Idempotent re-parse**: re-running the parse (manual reprocess, stuck-doc retry, or backfill) first **deletes the document's Qdrant vectors (by `document_id` filter) BEFORE deleting its DB pages/chunks**. This ordering is load-bearing: if the Qdrant delete fails, the worker sets a structured error and returns with the existing rows intact, so the vector store and relational store never diverge and a transient outage can't silently drop a previously-good parse.
+
+### Layout-Preserving PDF Translation Flow
+
+Layout translation is a user-triggered artifact workflow for PDFs that already
+exist in DocTalk. It is intentionally parallel to normal chat: users can ignore
+it, keep chatting with the source PDF, or create a translated PDF when needed.
+
+```mermaid
+sequenceDiagram
+    participant B as Browser
+    participant P as API Proxy
+    participant API as FastAPI
+    participant DB as PostgreSQL
+    participant S3 as MinIO
+    participant R as Redis
+    participant W as Celery Worker
+    participant RP as RetainPDF Sidecar
+    participant OCR as Paddle/MinerU/Datalab
+    participant DS as DeepSeek
+
+    B->>B: Open translation drawer<br/>choose target_language + add_to_library
+    B->>P: POST /api/proxy/documents/{id}/layout-translation
+    P->>API: Forward with JWT
+    API->>DB: Check ownership, plan, trials, page cap, file cap
+    API->>DB: INSERT document_jobs<br/>job_type=layout_translation
+    API->>R: Dispatch layout_translation task
+    API-->>B: 202 {job_id, status}
+
+    W->>S3: Download source PDF
+    W->>RP: POST /api/v1/uploads
+    RP-->>W: upload_id
+    W->>RP: POST /api/v1/jobs<br/>target_language, OCR provider, DeepSeek config
+    RP->>OCR: OCR/layout extraction
+    RP->>DS: Translate retained layout blocks
+
+    loop Poll until terminal
+        W->>RP: GET /api/v1/jobs/{retainpdf_job_id}
+        RP-->>W: status/progress
+    end
+
+    W->>RP: GET translated PDF / Markdown / bundle
+    W->>S3: Store artifacts
+    W->>DB: UPDATE document_jobs status=succeeded<br/>artifact metadata
+
+    B->>P: GET /api/proxy/layout-translations/{job_id}/download?artifact=pdf
+    P->>API: Ownership check
+    API-->>B: Stream translated PDF or preview URL
+
+    opt Add translated PDF as new DocTalk document
+        B->>P: POST /api/proxy/layout-translations/{job_id}/import-document
+        P->>API: Forward with JWT
+        API->>DB: Check document count limit
+        API->>DB: INSERT translated document
+        API->>R: Dispatch normal parse_document task
+    end
+```
+
+User-facing endpoints:
+
+- `POST /api/documents/{document_id}/layout-translation` with
+  `target_language`, `locale`, and `add_to_library`.
+- `GET /api/layout-translations/{job_id}/download?artifact=pdf|markdown|bundle`.
+- `POST /api/layout-translations/{job_id}/import-document`.
+
+Supported targets are Chinese (`zh-CN`), English (`en`), Japanese (`ja`),
+Korean (`ko`), Spanish (`es`), German (`de`), French (`fr`), Portuguese (`pt`),
+Italian (`it`), Arabic (`ar`), and Hindi (`hi`).
+
+Cost controls run before RetainPDF receives the file: free users get 2 lifetime
+successful or active trials and a 25-page PDF cap; Plus is capped at 150 pages;
+Pro is capped at 300 pages; every plan has a 50 MB layout-translation file cap.
+Optional import as a new DocTalk document also respects the user's document
+count limit.
+
+Quality scope is deliberately narrower than generic "all PDF translation":
+text-heavy papers, contracts, manuals, filings, reports, and articles are the
+best fit. Table-heavy bills, invoices, forms, dense financial statements,
+handwritten scans, stamps, and unusual embedded fonts still require human
+review after preview.
 
 ---
 

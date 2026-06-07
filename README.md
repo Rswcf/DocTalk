@@ -38,6 +38,7 @@ Upload PDFs, Word docs, PowerPoints, spreadsheets, or any webpage — then ask q
 - **Multi-format support** — PDF, DOCX, PPTX, XLSX, TXT, Markdown, and URL import. Tables, slides, and spreadsheets are all fully supported.
 - **2 AI performance modes** — Flash for fast cited answers and Pro for deeper analysis, powered by DeepSeek V4.
 - **11 languages** — Full UI and AI responses in English, Chinese, Spanish, Japanese, German, French, Korean, Portuguese, Italian, Arabic, and Hindi.
+- **Layout-preserving PDF translation** — Translate text-heavy PDFs into a new PDF, preview it beside the original, and optionally add the translated PDF as a new DocTalk document. Free includes 2 trials; Plus/Pro unlock ongoing use.
 - **Split-view reader** — Resizable chat panel alongside a PDF viewer with zoom, search, and drag-to-pan.
 - **Document collections** — Group documents together and ask cross-document questions with source attribution.
 - **Auto-summary** — AI generates a document summary and suggested questions after upload.
@@ -59,6 +60,7 @@ Upload PDFs, Word docs, PowerPoints, spreadsheets, or any webpage — then ask q
 | **Payments** | Stripe Checkout + Subscriptions |
 | **AI** | DeepSeek V4 Flash/Pro for chat; OpenRouter for embeddings and fallback models |
 | **Parsing** | Azure AI Document Intelligence, PyMuPDF, Tesseract OCR, python-docx, python-pptx, openpyxl, LibreOffice |
+| **PDF translation** | RetainPDF sidecar, DeepSeek translation, Paddle/MinerU/Datalab OCR providers |
 | **Monitoring** | Sentry, Vercel Analytics |
 
 ## Architecture
@@ -153,10 +155,10 @@ Open [http://localhost:3000](http://localhost:3000).
 | `PLUS_LAYOUT_TRANSLATION_MAX_PAGES` | No | Plus-plan page cap per layout-preserving PDF translation (default: `150`) |
 | `PRO_LAYOUT_TRANSLATION_MAX_PAGES` | No | Pro-plan page cap per layout-preserving PDF translation (default: `300`) |
 | `LAYOUT_TRANSLATION_MAX_FILE_SIZE_MB` | No | Hard file-size cap for layout-preserving PDF translation (default: `50`) |
-| `LAYOUT_TRANSLATION_ENGINE` | No | Layout-preserving PDF translation engine. The supported production value is `retainpdf` |
-| `RETAINPDF_API_BASE_URL` | Yes | RetainPDF sidecar full API URL, usually `http://...:41000` |
+| `LAYOUT_TRANSLATION_ENGINE` | No | Layout-preserving PDF translation engine. Set to `retainpdf` to enable the production sidecar flow |
+| `RETAINPDF_API_BASE_URL` | If layout translation is enabled | RetainPDF sidecar full API URL, usually `http://...:41000` |
 | `RETAINPDF_API_KEY` | No | Optional RetainPDF sidecar API key |
-| `RETAINPDF_OCR_PROVIDER` | Yes | OCR provider for RetainPDF sidecar, `datalab`, `paddle`, or `mineru` |
+| `RETAINPDF_OCR_PROVIDER` | If layout translation is enabled | OCR provider for RetainPDF sidecar: `datalab`, `paddle`, or `mineru` |
 | `RETAINPDF_PADDLE_TOKEN` | If provider is Paddle | Paddle OCR token used by RetainPDF |
 | `RETAINPDF_MINERU_TOKEN` | If provider is MinerU | MinerU OCR token used by RetainPDF |
 | `RETAINPDF_DATALAB_TOKEN` | If provider is Datalab | Optional Datalab token override; when empty, PDF translation reuses `DATALAB_API_KEY` |
@@ -210,6 +212,7 @@ DocTalk/
 │   └── public/
 ├── docs/
 │   ├── ARCHITECTURE.md
+│   ├── layout-translation-retainpdf.md
 │   └── PRODUCT_STRATEGY.md
 └── docker-compose.yml
 ```
@@ -238,7 +241,8 @@ git checkout main
 | **Backend** (Railway) | `git checkout stable && git merge main && railway up --detach` (deploy FIRST) |
 | **Frontend** (Vercel) | After Railway is healthy, `git push origin stable` → auto-deploys. Root directory: `frontend/`. |
 
-Railway runs 5 services: backend, PostgreSQL, Redis, Qdrant, MinIO.
+Railway runs the core services: backend, PostgreSQL, Redis, Qdrant, and MinIO.
+Layout-preserving PDF translation additionally requires the RetainPDF sidecar.
 
 ## Versioning
 

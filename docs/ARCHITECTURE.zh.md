@@ -20,7 +20,8 @@ graph TB
 
     subgraph Railway["Railway (后端)"]
         FastAPI["FastAPI<br/>REST + SSE"]
-        Celery["Celery Worker<br/>PDF 解析 + 向量化"]
+        Celery["Celery Worker<br/>PDF 解析 + 向量化<br/>+ 异步产物"]
+        RetainPDF["RetainPDF Sidecar<br/>保留排版 PDF 翻译"]
     end
 
     subgraph DataStores["数据存储 (Railway)"]
@@ -31,7 +32,9 @@ graph TB
     end
 
     subgraph External["外部服务"]
-        OpenRouter["OpenRouter<br/>LLM + Embedding API"]
+        DeepSeek["DeepSeek<br/>对话 + PDF 翻译"]
+        OpenRouter["OpenRouter<br/>Embedding + Fallback API"]
+        OCRProviders["Paddle / MinerU / Datalab<br/>OCR Providers"]
         Stripe["Stripe<br/>支付"]
         Google["Google OAuth"]
         Microsoft["Microsoft OAuth"]
@@ -47,12 +50,17 @@ graph TB
     FastAPI --> Qdrant
     FastAPI --> Redis
     FastAPI --> MinIO
+    FastAPI --> DeepSeek
     FastAPI --> OpenRouter
     FastAPI --> Stripe
     Celery --> PG
     Celery --> Qdrant
     Celery --> MinIO
+    Celery --> RetainPDF
+    Celery --> DeepSeek
     Celery --> OpenRouter
+    RetainPDF --> OCRProviders
+    RetainPDF --> DeepSeek
     Redis -.->|任务队列| Celery
     AuthJS --> Google
     AuthJS --> Microsoft
@@ -69,13 +77,16 @@ graph TB
 | **Next.js** | 客户端渲染 SPA（`"use client"`），负责路由、国际化和 UI 状态管理（Zustand） |
 | **Auth.js v5** | 通过 3 种方式认证：Google OAuth、Microsoft OAuth 和邮箱 Magic Link（via Resend）。加密 JWE 会话令牌 |
 | **API 代理** | 将 JWE 令牌转换为 HS256 JWT，为所有后端请求注入 `Authorization` 头 |
-| **FastAPI** | REST API + SSE 流式传输，处理对话、文档管理、计费、用户账户 |
-| **Celery** | 异步文档解析：文本提取 (PDF/DOCX/PPTX/XLSX/TXT/MD/URL) → 分块 → 向量化 → 索引。PPTX/DOCX 文件还通过 LibreOffice headless 转换为 PDF 进行可视化渲染 |
+| **FastAPI** | REST API + SSE 流式传输，处理对话、文档管理、计费、用户账户，以及保留排版翻译任务创建 |
+| **Celery** | 异步文档解析和产物任务：文本提取 (PDF/DOCX/PPTX/XLSX/TXT/MD/URL) → 分块 → 向量化 → 索引；保留排版翻译轮询和产物持久化。PPTX/DOCX 文件还通过 LibreOffice headless 转换为 PDF 进行可视化渲染 |
+| **RetainPDF sidecar** | 仅用于保留排版 PDF 翻译的 Railway 服务：OCR 编排、翻译批处理、译文 PDF 渲染 |
 | **PostgreSQL** | 主数据存储：用户、文档、页面、文本块、会话、消息、积分 |
 | **Qdrant** | 向量数据库，语义搜索（COSINE 相似度，1536 维） |
 | **Redis** | Celery 任务代理和结果后端 |
 | **MinIO** | S3 兼容对象存储，用于上传的文件，SSE-S3 静态加密 |
-| **OpenRouter** | LLM 推理和文本向量化的统一网关 |
+| **DeepSeek** | 主要对话与 PDF 翻译模型 provider |
+| **OpenRouter** | Embedding 与 fallback 模型网关 |
+| **OCR providers** | RetainPDF 在保留排版翻译中使用的 Paddle、MinerU 或 Datalab 凭证 |
 | **Stripe** | 积分购买和 Plus/Pro 订阅（月付 + 年付）的支付处理 |
 | **Sentry** | 后端（FastAPI + Celery）和前端（Next.js）的错误追踪与性能监控 |
 
@@ -151,6 +162,81 @@ sequenceDiagram
 7. **自动摘要**（尽力而为）：状态变为 `ready` 后，Worker 加载前 20 个文本块，调用预算 LLM（DeepSeek）生成 2–3 段摘要和 5 个推荐问题。结果存储在 `summary` 和 `suggested_questions` 列中。失败仅记录日志，不影响文档状态。
 
 **幂等重新解析**：重新解析（手动重处理、卡住文档重试或回填）会先**按 `document_id` 删除该文档的 Qdrant 向量，再删除其数据库 pages/chunks**。该顺序至关重要：若 Qdrant 删除失败，Worker 会写入结构化错误并返回、保留现有行，从而保证向量库与关系库不会发生分歧，瞬时故障也不会悄悄丢掉一份原本可用的解析结果。
+
+### 保留排版 PDF 翻译流程
+
+保留排版翻译是用户主动触发的 PDF 产物工作流，只作用于已经在 DocTalk
+中的 PDF。它与普通对话并行存在：用户可以完全不使用翻译，也可以继续围绕原文
+对话，只有在需要时再生成一份译文 PDF。
+
+```mermaid
+sequenceDiagram
+    participant B as 浏览器
+    participant P as API 代理
+    participant API as FastAPI
+    participant DB as PostgreSQL
+    participant S3 as MinIO
+    participant R as Redis
+    participant W as Celery Worker
+    participant RP as RetainPDF Sidecar
+    participant OCR as Paddle/MinerU/Datalab
+    participant DS as DeepSeek
+
+    B->>B: 打开翻译抽屉<br/>选择 target_language + add_to_library
+    B->>P: POST /api/proxy/documents/{id}/layout-translation
+    P->>API: 携带 JWT 转发
+    API->>DB: 校验 ownership、套餐、试用、页数、文件大小
+    API->>DB: INSERT document_jobs<br/>job_type=layout_translation
+    API->>R: 分发 layout_translation 任务
+    API-->>B: 202 {job_id, status}
+
+    W->>S3: 下载原始 PDF
+    W->>RP: POST /api/v1/uploads
+    RP-->>W: upload_id
+    W->>RP: POST /api/v1/jobs<br/>target_language、OCR provider、DeepSeek config
+    RP->>OCR: OCR/layout extraction
+    RP->>DS: 翻译保留版式的 blocks
+
+    loop 轮询直到终态
+        W->>RP: GET /api/v1/jobs/{retainpdf_job_id}
+        RP-->>W: status/progress
+    end
+
+    W->>RP: 获取译文 PDF / Markdown / bundle
+    W->>S3: 存储产物
+    W->>DB: UPDATE document_jobs status=succeeded<br/>artifact metadata
+
+    B->>P: GET /api/proxy/layout-translations/{job_id}/download?artifact=pdf
+    P->>API: Ownership check
+    API-->>B: Stream translated PDF or preview URL
+
+    opt 将译文 PDF 加入为新的 DocTalk 文档
+        B->>P: POST /api/proxy/layout-translations/{job_id}/import-document
+        P->>API: 携带 JWT 转发
+        API->>DB: 校验文档数量上限
+        API->>DB: INSERT translated document
+        API->>R: 分发普通 parse_document 任务
+    end
+```
+
+用户侧 endpoints：
+
+- `POST /api/documents/{document_id}/layout-translation`，body 包含
+  `target_language`、`locale` 和 `add_to_library`。
+- `GET /api/layout-translations/{job_id}/download?artifact=pdf|markdown|bundle`。
+- `POST /api/layout-translations/{job_id}/import-document`。
+
+支持目标语言：中文 (`zh-CN`)、英语 (`en`)、日语 (`ja`)、韩语 (`ko`)、西班牙语
+(`es`)、德语 (`de`)、法语 (`fr`)、葡萄牙语 (`pt`)、意大利语 (`it`)、阿拉伯语
+(`ar`) 和印地语 (`hi`)。
+
+成本控制在文件提交 RetainPDF 之前执行：免费用户有 2 次终身成功或活跃试用，
+每份 PDF 25 页上限；Plus 上限 150 页；Pro 上限 300 页；所有套餐都有 50 MB
+保留排版翻译文件大小上限。可选“加入为新 DocTalk 文档”还必须通过用户的文档数量上限。
+
+质量边界不应被包装成“所有 PDF 翻译”：文本密集型论文、合同、手册、法庭文件、
+报告和文章最适合；账单、发票、表格密集型表单、密集财务报表、手写扫描件、印章和
+异常嵌入字体仍需要用户预览后人工复核。
 
 ---
 
