@@ -92,10 +92,10 @@ Cross-origin IP trust chain is HMAC-signed with `ADAPTER_SECRET` — frontend an
 
 ## Codex collaboration
 
-Model name is **`gpt-5.3-codex`**. Codex sandbox **cannot run git** — commit from Claude.
+Do NOT pass `-m gpt-5.3-codex` — rejected by the ChatGPT account since 2026-06; omit `-m` (default resolves to gpt-5.5). `--full-auto` is deprecated → use `--sandbox workspace-write`. Codex sandbox **cannot run git** — commit from Claude.
 
 ```bash
-cat prompt.md | codex exec --full-auto -m gpt-5.3-codex \
+cat prompt.md | codex exec --sandbox workspace-write \
   -C /Users/mayijie/Projects/Code/010_DocTalk
 ```
 

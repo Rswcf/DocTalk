@@ -762,6 +762,18 @@ class ParseService:
                 return True
         return False
 
+    @staticmethod
+    def _is_cjk_context(ch: str) -> bool:
+        """CJK ideograph, kana, or CJK/fullwidth punctuation. CJK text has no
+        inter-word/sentence spaces, so the rejoin must never synthesize a space
+        on either side of such a character (incl. after 。！？；)."""
+        return (
+            "一" <= ch <= "鿿"   # CJK unified ideographs
+            or "぀" <= ch <= "ヿ"  # hiragana + katakana
+            or "　" <= ch <= "〿"  # CJK symbols & punctuation (。、「」)
+            or "＀" <= ch <= "￯"  # fullwidth / halfwidth forms (！？；：)
+        )
+
     def _join_text_units(self, units: Sequence[str]) -> str:
         text = ""
         for raw in units:
@@ -776,7 +788,8 @@ class ParseService:
             needs_space = (
                 prev not in " \n([{"
                 and first not in " \n,.;:!?)]}。！？；，、"
-                and not ("\u4e00" <= prev <= "\u9fff" and "\u4e00" <= first <= "\u9fff")
+                and not self._is_cjk_context(prev)
+                and not self._is_cjk_context(first)
             )
             text += (" " if needs_space else "") + part
         return text
@@ -891,16 +904,32 @@ class ParseService:
         return t.strip()
 
     def _split_into_sentences(self, text: str) -> List[str]:
-        """Split text by common sentence boundaries while keeping delimiters."""
+        """Split text by common sentence boundaries while keeping delimiters.
+
+        An ASCII ``.``/``?``/``!`` is a boundary ONLY when followed by
+        whitespace or end of string. Mid-token / no-space cases (U.S., e.g.,
+        3.14, config.txt, "Why?Because") are not boundaries — otherwise the
+        split→`_join_text_units` rejoin re-inserts a space and corrupts the
+        wording the verifier later displays as a quote. CJK delimiters
+        (。！？；) keep the always-split behaviour because CJK has no
+        inter-sentence spaces; the rejoin path is responsible for not adding a
+        space after them (see `_join_text_units`).
+        """
         if not text:
             return []
         sentences: List[str] = []
         buff: List[str] = []
-        for ch in text:
+        n = len(text)
+        for i, ch in enumerate(text):
             buff.append(ch)
-            if ch in self.SENTENCE_DELIMS:
-                sentences.append("".join(buff))
-                buff = []
+            if ch not in self.SENTENCE_DELIMS:
+                continue
+            if ch in ".?!":  # ASCII sentence punctuation
+                nxt = text[i + 1] if i + 1 < n else ""
+                if nxt and not nxt.isspace():
+                    continue
+            sentences.append("".join(buff))
+            buff = []
         if buff:
             sentences.append("".join(buff))
         return sentences
