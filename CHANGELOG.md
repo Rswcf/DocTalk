@@ -8,6 +8,16 @@ releases use `0.minor.patch` semantics such as `0.2.0` and `0.2.1`.
 
 ## [Unreleased]
 
+## [0.20.0] - 2026-06-13
+
+### Added
+- Sentence-level precise citation highlighting: when a chat answer's claim maps
+  clearly to one sentence of the cited passage, that sentence is emphasized
+  within the source instead of lighting up the whole block. Conservative — it
+  only narrows when one sentence clearly dominates (with a numeric/date
+  consistency guard), otherwise the full passage stays highlighted. Applies to
+  every chat answer.
+
 ## [0.19.0] - 2026-06-13
 
 ### Added
