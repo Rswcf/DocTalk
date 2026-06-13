@@ -8,6 +8,16 @@ releases use `0.minor.patch` semantics such as `0.2.0` and `0.2.1`.
 
 ## [Unreleased]
 
+## [0.21.0] - 2026-06-13
+
+### Added
+- Cross-lingual precise citations: when you ask in one language about a
+  document in another (e.g. Chinese question, English source) — or the answer
+  paraphrases — the citation now highlights the exact supporting sentence in
+  the source, not the whole passage. After the answer, a lightweight model
+  names the verbatim supporting sentence per source and it is verified before
+  display; if nothing verifies, the full-passage highlight is kept.
+
 ## [0.20.0] - 2026-06-13
 
 ### Added
