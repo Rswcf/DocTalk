@@ -11,6 +11,7 @@ interface PageWithHighlightsProps {
   highlights: NormalizedBBox[]; // 已过滤为本页的 bbox
   searchQuery?: string;
   highlightSnippet?: string | null; // text snippet fallback for converted PDFs with dummy bboxes
+  highlightFocus?: string | null; // verbatim supporting sentence — highlighted precisely on normal PDFs
 }
 
 // Detect dummy bboxes (0,0,1,1) used by non-PDF extractors
@@ -53,7 +54,7 @@ function escapeHtml(str: string): string {
     .replace(/\//g, '&#x2F;');
 }
 
-const PageWithHighlights = React.memo(function PageWithHighlights({ pageNumber, scale, highlights, searchQuery, highlightSnippet }: PageWithHighlightsProps) {
+const PageWithHighlights = React.memo(function PageWithHighlights({ pageNumber, scale, highlights, searchQuery, highlightSnippet, highlightFocus }: PageWithHighlightsProps) {
   const { t } = useLocale();
   const [pageDims, setPageDims] = useState<{ w: number; h: number } | null>(null);
 
@@ -73,12 +74,17 @@ const PageWithHighlights = React.memo(function PageWithHighlights({ pageNumber, 
     [highlights, allDummy]
   );
 
-  // Effective snippet for text-layer highlighting (only when bboxes are dummy)
+  // Effective snippet for text-layer highlighting (only when bboxes are dummy):
+  // unchanged, reliable fallback for converted PPTX/DOCX.
   const snippetForHighlight = allDummy && highlightSnippet ? highlightSnippet : null;
+  // The precise supporting sentence is layered ON TOP as stronger emphasis,
+  // WITHOUT suppressing or dimming the chunk highlight — so if the sentence
+  // can't be matched on the text layer the chunk highlight is still there.
+  const focusLower = highlightFocus ? highlightFocus.toLowerCase() : null;
 
   // customTextRenderer: 仅当有 highlights/searchQuery/snippetForHighlight 且有 pageDims 时启用
   const customTextRenderer = useMemo(() => {
-    if ((validHighlights.length === 0 && !searchQuery?.trim() && !snippetForHighlight) || !pageDims) return undefined;
+    if ((validHighlights.length === 0 && !searchQuery?.trim() && !snippetForHighlight && !focusLower) || !pageDims) return undefined;
 
     // Pre-compute snippet matching words for text-snippet fallback
     const snippetLower = snippetForHighlight?.toLowerCase() || null;
@@ -111,13 +117,18 @@ const PageWithHighlights = React.memo(function PageWithHighlights({ pageNumber, 
         h: Math.max(0, Math.min(1, effectiveHeight / pageDims.h)),
       };
 
-      // Check bbox-based highlighting
+      // Check bbox-based highlighting (the reliable chunk highlight / fallback).
       const isHighlighted = validHighlights.length > 0 && validHighlights.some((hl) => bboxOverlap(textRect, hl));
 
       // Check text-snippet highlighting (for converted PDFs with dummy bboxes)
       const isSnippetMatch = snippetLower && str.length > 1 && snippetLower.includes(str.toLowerCase());
 
-      let result = (isHighlighted || isSnippetMatch)
+      // Precise supporting sentence → stronger emphasis on top of the chunk.
+      const isFocus = focusLower && str.length > 1 && focusLower.includes(str.toLowerCase());
+
+      let result = isFocus
+        ? `<mark class="pdf-highlight pdf-highlight-focus">${escapeHtml(str)}</mark>`
+        : (isHighlighted || isSnippetMatch)
         ? `<mark class="pdf-highlight">${escapeHtml(str)}</mark>`
         : str;
 
@@ -135,7 +146,7 @@ const PageWithHighlights = React.memo(function PageWithHighlights({ pageNumber, 
 
       return result;
     };
-  }, [validHighlights, pageDims, searchQuery, snippetForHighlight]);
+  }, [validHighlights, pageDims, searchQuery, snippetForHighlight, focusLower]);
 
   // Compute rendered dimensions for overlay positioning
   const renderedW = pageDims ? pageDims.w * scale : 0;

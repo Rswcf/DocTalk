@@ -204,6 +204,16 @@ h3,
   animation: citationTextFocus 1.45s ease-out;
 }
 
+/* Precise supporting sentence: stronger solid emphasis layered on top of the
+   chunk highlight so the exact evidence stands out from its surrounding
+   context. Overrides the gradient-underline of .pdf-highlight. */
+.textLayer mark.pdf-highlight-focus {
+  background-image: none;
+  background-color: var(--highlight-strong);
+  box-shadow: 0 0 0 1px var(--highlight-base);
+  border-radius: 3px;
+}
+
 @keyframes citationTextFocus {
   0% {
     background-color: var(--highlight-strong);

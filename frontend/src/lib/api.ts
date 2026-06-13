@@ -75,6 +75,7 @@ export function mapCitationPayload(c: any): Citation {
     pageEnd: typeof c.page_end === 'number' ? c.page_end : (typeof c.pageEnd === 'number' ? c.pageEnd : undefined),
     bboxes: c.bboxes || [],
     textSnippet: c.text_snippet ?? c.textSnippet ?? '',
+    focusSnippet: typeof c.focus_snippet === 'string' ? c.focus_snippet : (typeof c.focusSnippet === 'string' ? c.focusSnippet : undefined),
     offset: c.offset ?? 0,
     documentId: typeof c.document_id === 'string' ? c.document_id : (typeof c.documentId === 'string' ? c.documentId : undefined),
     documentFilename: typeof c.document_filename === 'string' ? c.document_filename : (typeof c.documentFilename === 'string' ? c.documentFilename : undefined),

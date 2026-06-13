@@ -63,6 +63,7 @@ export interface PdfViewerProps {
   scale: number;
   scrollNonce: number;
   highlightSnippet?: string | null;
+  highlightFocus?: string | null;
   onLayoutTranslate?: () => void;
   layoutTranslateBusy?: boolean;
   layoutTranslateDisabled?: boolean;
@@ -71,7 +72,7 @@ export interface PdfViewerProps {
 const scrollBehavior = () =>
   window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' as const : 'smooth' as const;
 
-export default function PdfViewer({ pdfUrl, currentPage, highlights, scale, scrollNonce, highlightSnippet, onLayoutTranslate, layoutTranslateBusy, layoutTranslateDisabled }: PdfViewerProps) {
+export default function PdfViewer({ pdfUrl, currentPage, highlights, scale, scrollNonce, highlightSnippet, highlightFocus, onLayoutTranslate, layoutTranslateBusy, layoutTranslateDisabled }: PdfViewerProps) {
   const [numPages, setNumPages] = useState<number>(0);
   const [isDragging, setIsDragging] = useState(false);
   const [debouncedSearch, setDebouncedSearch] = useState('');
@@ -473,7 +474,7 @@ export default function PdfViewer({ pdfUrl, currentPage, highlights, scale, scro
                   className="relative"
                   data-page-number={pageNumber}
                 >
-                  <PageWithHighlights pageNumber={pageNumber} scale={scale} highlights={pageHighlights} searchQuery={searchQuery} highlightSnippet={highlightSnippet} />
+                  <PageWithHighlights pageNumber={pageNumber} scale={scale} highlights={pageHighlights} searchQuery={searchQuery} highlightSnippet={highlightSnippet} highlightFocus={highlightFocus} />
                 </div>
               );
             })}

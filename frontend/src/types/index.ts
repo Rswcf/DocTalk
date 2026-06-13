@@ -16,6 +16,7 @@ export interface Citation {
   pageEnd?: number;
   bboxes: NormalizedBBox[];
   textSnippet: string;
+  focusSnippet?: string; // verbatim supporting sentence for precise highlight
   offset: number; // character offset in assistant message text
   documentId?: string; // for cross-document citations
   documentFilename?: string; // source document name

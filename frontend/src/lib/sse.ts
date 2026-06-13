@@ -9,6 +9,7 @@ type CitationPayload = {
   page_end?: number;
   bboxes: { x: number; y: number; w: number; h: number; page?: number }[];
   text_snippet: string;
+  focus_snippet?: string;
   offset: number;
 };
 type CitationEventPayload = CitationPayload & {
@@ -78,6 +79,7 @@ async function _processSSEStream(
                 pageEnd: typeof p.page_end === 'number' ? p.page_end : undefined,
                 bboxes: p.bboxes || [],
                 textSnippet: p.text_snippet || '',
+                focusSnippet: typeof p.focus_snippet === 'string' ? p.focus_snippet : undefined,
                 offset: p.offset ?? 0,
                 documentId: typeof p.document_id === 'string' ? p.document_id : undefined,
                 documentFilename: typeof p.document_filename === 'string' ? p.document_filename : undefined,

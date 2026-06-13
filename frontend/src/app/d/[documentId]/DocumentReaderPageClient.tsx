@@ -47,7 +47,7 @@ export default function DocumentReaderPageClient() {
   const [mobileTab, setMobileTab] = useState<'chat' | 'document'>('chat');
   const isDesktopLayout = useDesktopReaderLayout();
   const { t, tOr, locale } = useLocale();
-  const { pdfUrl, currentPage, highlights, highlightSnippet, scale, scrollNonce, sessionId, navigateToCitation, totalPages } = useDocTalkStore();
+  const { pdfUrl, currentPage, highlights, highlightSnippet, highlightFocus, scale, scrollNonce, sessionId, navigateToCitation, totalPages } = useDocTalkStore();
   const addMessage = useDocTalkStore((s) => s.addMessage);
 
   const documentName = useDocTalkStore((s) => s.documentName);
@@ -311,6 +311,7 @@ export default function DocumentReaderPageClient() {
                   scale={scale}
                   scrollNonce={scrollNonce}
                   highlightSnippet={pdfPreviewMode === 'translated' ? null : highlightSnippet}
+                  highlightFocus={pdfPreviewMode === 'translated' ? null : highlightFocus}
                   onLayoutTranslate={handleOpenLayoutTranslation}
                   layoutTranslateBusy={layoutTranslationBusy}
                   layoutTranslateDisabled={documentStatus !== 'ready'}
@@ -321,7 +322,7 @@ export default function DocumentReaderPageClient() {
             <div className="h-full w-full flex items-center justify-center text-zinc-500">{t('doc.loading')}</div>
           )
         ) : useConvertedPdf ? (
-          <PdfViewer pdfUrl={convertedPdfUrl} currentPage={currentPage} highlights={highlights} scale={scale} scrollNonce={scrollNonce} highlightSnippet={highlightSnippet} />
+          <PdfViewer pdfUrl={convertedPdfUrl} currentPage={currentPage} highlights={highlights} scale={scale} scrollNonce={scrollNonce} highlightSnippet={highlightSnippet} highlightFocus={highlightFocus} />
         ) : (
           <TextViewer documentId={documentId} fileType={fileType} targetPage={currentPage} scrollNonce={scrollNonce} highlightSnippet={highlightSnippet} />
         )}

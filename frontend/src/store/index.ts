@@ -44,6 +44,9 @@ export interface DocTalkStore {
 
   // Text highlight (for non-PDF documents)
   highlightSnippet: string | null;
+  // Verbatim supporting sentence for precise (sentence-level) PDF highlighting;
+  // null when the citation has no confident focus → fall back to chunk bboxes.
+  highlightFocus: string | null;
 
   // Demo message tracking (cross-session, cross-document)
   demoMessagesUsed: number;
@@ -123,6 +126,7 @@ const initialState = {
   suggestedQuestions: [] as string[],
   userPlan: 'free' as PlanType,
   highlightSnippet: null as string | null,
+  highlightFocus: null as string | null,
   demoMessagesUsed: 0,
   searchQuery: '',
   searchMatches: [] as Array<{ page: number; index: number }>,
@@ -159,7 +163,10 @@ export const useDocTalkStore = create<DocTalkStore>((set, get) => ({
     set((state) => ({
       currentPage: citation.page,
       highlights: bboxes,
+      // Chunk snippet stays the reliable fallback (converted-PDF/TextViewer
+      // paths depend on it). The focus sentence is layered ON TOP as emphasis.
       highlightSnippet: citation.textSnippet || null,
+      highlightFocus: citation.focusSnippet || null,
       scrollNonce: state.scrollNonce + 1,
     }));
   },
@@ -298,6 +305,7 @@ export const useDocTalkStore = create<DocTalkStore>((set, get) => ({
     currentMatchIndex: -1,
     highlights: [],
     highlightSnippet: null,
+    highlightFocus: null,
     grabMode: false,
     currentPage: 1,
     scrollNonce: 0,

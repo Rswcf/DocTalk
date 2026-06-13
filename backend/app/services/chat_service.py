@@ -31,6 +31,7 @@ from app.models.tables import (
 from app.services import credit_service
 from app.services.action_planner import action_planner
 from app.services.chat_tool_executor import chat_tool_executor
+from app.services.citation_focus_service import current_claim, focus_sentence
 from app.services.claim_verifier_service import claim_verifier_service
 from app.services.corrective_retrieval_service import corrective_retrieval_service
 from app.services.document_brief_service import (
@@ -204,7 +205,9 @@ def _is_valid_bbox(bb: dict) -> bool:
     return all(isinstance(bb.get(k), (int, float)) for k in ("x", "y", "w", "h"))
 
 
-def _citation_payload(ref_num: int, chunk: "_ChunkInfo", offset: int) -> Dict[str, Any]:
+def _citation_payload(
+    ref_num: int, chunk: "_ChunkInfo", offset: int, claim_text: str = ""
+) -> Dict[str, Any]:
     is_summary = chunk.retrieval_modality == "summary"
     all_bbs = [] if is_summary else [
         bb
@@ -243,6 +246,13 @@ def _citation_payload(ref_num: int, chunk: "_ChunkInfo", offset: int) -> Dict[st
         "text_snippet": ((f"{chunk.section_title}: " if chunk.section_title else "") + (chunk.text or ""))[:100],
         "offset": offset,
     }
+    # Sentence-level focus: when the answer claim near this citation clearly maps
+    # to one sentence of the chunk, attach it (verbatim) so the UI can highlight
+    # just that sentence instead of the whole chunk. None → keep whole-chunk.
+    if not is_summary and claim_text and chunk.text:
+        focus = focus_sentence(chunk.text, claim_text)
+        if focus:
+            citation_data["focus_snippet"] = focus
     citation_data["confidence_score"] = round(chunk.score, 3)
     # Prepend the source page(s) to the verified context so a correct location number
     # (e.g. "on page 350") isn't flagged as a numeric_claim_source_mismatch — the page
@@ -342,7 +352,7 @@ def _fallback_citations(
         if offset in used_offsets:
             continue
         used_offsets.add(offset)
-        fallback.append(_citation_payload(best_ref, chunk_map[best_ref], base_offset + offset))
+        fallback.append(_citation_payload(best_ref, chunk_map[best_ref], base_offset + offset, anchor_text))
 
     return fallback
 
@@ -967,11 +977,16 @@ class RefParserFSM:
     - char_offset: 已输出字符计数
     """
 
+    # Rolling window of recently emitted answer text, used as the "claim" that a
+    # following [n] cites — to focus the citation on one chunk sentence.
+    _CLAIM_WINDOW = 200
+
     def __init__(self, chunk_map: dict[int, _ChunkInfo]):
         self.chunk_map = chunk_map
         self.buffer: str = ""
         self.char_offset: int = 0
         self.state: str = "TEXT"  # TEXT | MAYBE_REF
+        self.recent_claim: str = ""
 
     def feed(self, token: str) -> List[Dict[str, Any]]:
         events: List[Dict[str, Any]] = []
@@ -983,6 +998,7 @@ class RefParserFSM:
                 else:
                     events.append(sse("token", {"text": ch}))
                     self.char_offset += 1
+                    self.recent_claim = (self.recent_claim + ch)[-self._CLAIM_WINDOW:]
 
             elif self.state == "MAYBE_REF":
                 self.buffer += ch
@@ -991,7 +1007,7 @@ class RefParserFSM:
                     if inner.isdigit() and (int(inner) in self.chunk_map):
                         ref_num = int(inner)
                         chunk = self.chunk_map[ref_num]
-                        events.append(sse("citation", _citation_payload(ref_num, chunk, self.char_offset)))
+                        events.append(sse("citation", _citation_payload(ref_num, chunk, self.char_offset, current_claim(self.recent_claim))))
                     else:
                         # 非有效引用，回退为普通文本
                         events.append(sse("token", {"text": self.buffer}))
