@@ -153,7 +153,11 @@ class Settings(BaseSettings):
     PLUS_MAX_DOCUMENTS: int = 20
     PRO_MAX_DOCUMENTS: int = 999
     FREE_MAX_SESSIONS_PER_DOC: int = 3
-    FREE_MAX_FILE_SIZE_MB: int = 25
+    # 25→50 (2026-06-12): the upload gate charged before any value was
+    # experienced — the only payer converted at this wall and churned same-day.
+    # Free matches Plus on size; differentiation stays on doc count/sessions/
+    # credits/exports/layout translation.
+    FREE_MAX_FILE_SIZE_MB: int = 50
     PLUS_MAX_FILE_SIZE_MB: int = 50
     PRO_MAX_FILE_SIZE_MB: int = 100
 

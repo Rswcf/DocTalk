@@ -89,7 +89,7 @@ const comparisonRows = [
   },
   {
     labelKey: 'pricing.comparison.uploadLimit',
-    freeKey: 'pricing.comparison.upload25',
+    freeKey: 'pricing.comparison.upload50',
     plusKey: 'pricing.comparison.upload50',
     proKey: 'pricing.comparison.upload100',
   },

@@ -15,7 +15,7 @@ interface RowDef {
 
 const ROWS: RowDef[] = [
   { labelKey: 'billing.comparison.monthlyCredits', free: 'pricing.free.feature1', plus: '3,000', pro: '9,000' },
-  { labelKey: 'billing.comparison.uploads', free: '25 MB', plus: '50 MB', pro: '100 MB' },
+  { labelKey: 'billing.comparison.uploads', free: '50 MB', plus: '50 MB', pro: '100 MB' },
   { labelKey: 'billing.comparison.documents', free: '3', plus: '20', pro: 'billing.comparison.documentsUnlimited' },
   { labelKey: 'billing.comparison.models', free: 'billing.comparison.modelsFree', plus: 'billing.comparison.modelsAll', pro: 'billing.comparison.modelsAll' },
   { labelKey: 'billing.comparison.sessions', free: 'billing.comparison.sessionsFree', plus: 'billing.comparison.sessionsUnlimited', pro: 'billing.comparison.sessionsUnlimited' },

@@ -27,8 +27,9 @@ import { useUserProfile } from '../../lib/useUserProfile';
 type StoredDoc = { document_id: string; filename?: string; createdAt: number; status?: string };
 type PlanTier = 'free' | 'plus' | 'pro';
 
+// Must mirror backend FREE/PLUS/PRO_MAX_FILE_SIZE_MB (app/core/config.py).
 const MAX_UPLOAD_MB_BY_PLAN: Record<PlanTier, number> = {
-  free: 25,
+  free: 50,
   plus: 50,
   pro: 100,
 };
