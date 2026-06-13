@@ -294,7 +294,12 @@ async def test_chat_prompt_includes_corrective_retrieval_quality(
     ]
 
     retrieve_single.assert_awaited_once()
-    system_prompt = create.await_args.kwargs["messages"][0]["content"]
+    # The answer-generation call is the streaming one; a later non-streaming
+    # call may exist for post-generation citation-focus extraction.
+    gen_call = next(
+        c for c in create.await_args_list if c.kwargs.get("stream") is True
+    )
+    system_prompt = gen_call.kwargs["messages"][0]["content"]
     assert "## Retrieval Quality" in system_prompt
     assert "semantic_top_k+lexical_correction" in system_prompt
     assert "evidence_sufficient" in system_prompt

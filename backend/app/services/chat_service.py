@@ -32,6 +32,7 @@ from app.services import credit_service
 from app.services.action_planner import action_planner
 from app.services.chat_tool_executor import chat_tool_executor
 from app.services.citation_focus_service import current_claim, focus_sentence
+from app.services.citation_quote_service import apply_focus_quotes, extract_focus_quotes
 from app.services.claim_verifier_service import claim_verifier_service
 from app.services.corrective_retrieval_service import corrective_retrieval_service
 from app.services.document_brief_service import (
@@ -969,6 +970,45 @@ def _chunk_info_from_persisted_citation(
     )
 
 
+async def _refine_citation_focus(
+    *,
+    answer: str,
+    citations: List[dict],
+    chunk_map: dict[int, "_ChunkInfo"],
+    fallback_model: str,
+) -> bool:
+    """Cross-lingual / paraphrase citation focus: lexical focus may not have
+    fired (different language or heavy paraphrase from the source). Ask the
+    cheap Flash model for the verbatim supporting sentence per still-unfocused
+    citation, verify it, and set focus_snippet in place. Returns True if any
+    citation was updated. Gated + non-raising — a no-op when nothing needs it."""
+    try:
+        focus_model = settings.MODE_MODELS.get("quick", fallback_model)
+        # Match the chat/repair calls' provider options (e.g. DeepSeek V4
+        # thinking-disabled) so this stays the intended cheap, fast call.
+        _opts: dict[str, Any] = {}
+        _apply_provider_options(_opts, focus_model)
+        # Hard timeout: a stuck nicety must never hold back done/persist/billing.
+        focus_map = await asyncio.wait_for(
+            extract_focus_quotes(
+                answer=answer,
+                citations=citations,
+                chunk_texts={ref: (c.text or "") for ref, c in chunk_map.items()},
+                client=_get_llm_client(focus_model),
+                model=focus_model,
+                extra_body=_opts.get("extra_body"),
+            ),
+            timeout=8.0,
+        )
+        return apply_focus_quotes(citations, focus_map)
+    except asyncio.TimeoutError:
+        logger.info("citation focus refinement timed out; keeping chunk highlight")
+        return False
+    except Exception as e:  # noqa: BLE001 — focus is a nicety, never break the answer
+        logger.warning("citation focus refinement skipped: %s", e)
+        return False
+
+
 class RefParserFSM:
     """解析 LLM 流式输出中的 [n] 引用标记
 
@@ -1812,6 +1852,14 @@ class ChatService:
                     ",".join(verification_report.reasons),
                 )
 
+            if await _refine_citation_focus(
+                answer=assistant_text,
+                citations=citations,
+                chunk_map=chunk_map,
+                fallback_model=effective_model,
+            ):
+                yield sse("citations_refined", {"citations": citations})
+
             try:
                 if asst_msg is None:
                     raise RuntimeError("assistant message missing before verification update")
@@ -2457,6 +2505,14 @@ class ChatService:
                     verification_report.citation_count,
                     ",".join(verification_report.reasons),
                 )
+
+            if await _refine_citation_focus(
+                answer=full_assistant_text,
+                citations=merged_citations,
+                chunk_map=chunk_map,
+                fallback_model=effective_model,
+            ):
+                yield sse("citations_refined", {"citations": merged_citations})
 
             try:
                 asst_msg.content = full_assistant_text

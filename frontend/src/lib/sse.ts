@@ -34,6 +34,7 @@ async function _processSSEStream(
   onArtifact?: (artifact: ChatArtifact) => void,
   onToolStatus?: (status: ToolStatusPayload) => void,
   onAnswerRepaired?: (payload: AnswerRepairedPayload) => void,
+  onCitationsRefined?: (citations: Citation[]) => void,
   signal?: AbortSignal,
 ) {
   const decoder = new TextDecoder('utf-8');
@@ -113,6 +114,13 @@ async function _processSSEStream(
                 verification: data.verification,
               });
               break;
+            case 'citations_refined':
+              // Text-preserving citation update (sentence-level focus added
+              // post-generation for cross-lingual / paraphrase answers).
+              onCitationsRefined?.(
+                Array.isArray(data.citations) ? data.citations.map(mapCitationPayload) : [],
+              );
+              break;
             case 'done':
               receivedDone = true;
               onDone({
@@ -161,6 +169,7 @@ export async function chatStream(
   onArtifact?: (artifact: ChatArtifact) => void,
   onToolStatus?: (status: ToolStatusPayload) => void,
   onAnswerRepaired?: (payload: AnswerRepairedPayload) => void,
+  onCitationsRefined?: (citations: Citation[]) => void,
 ) {
   const res = await fetch(`${PROXY_BASE}/api/sessions/${sessionId}/chat`, {
     method: 'POST',
@@ -197,7 +206,7 @@ export async function chatStream(
   }
 
   const reader = res.body.getReader();
-  await _processSSEStream(reader, onToken, onCitation, onError, onDone, onTruncated, onArtifact, onToolStatus, onAnswerRepaired, signal);
+  await _processSSEStream(reader, onToken, onCitation, onError, onDone, onTruncated, onArtifact, onToolStatus, onAnswerRepaired, onCitationsRefined, signal);
 }
 
 export async function continueStream(
@@ -214,6 +223,7 @@ export async function continueStream(
   onArtifact?: (artifact: ChatArtifact) => void,
   onToolStatus?: (status: ToolStatusPayload) => void,
   onAnswerRepaired?: (payload: AnswerRepairedPayload) => void,
+  onCitationsRefined?: (citations: Citation[]) => void,
 ) {
   const res = await fetch(`${PROXY_BASE}/api/sessions/${sessionId}/chat/continue`, {
     method: 'POST',
@@ -249,5 +259,5 @@ export async function continueStream(
   }
 
   const reader = res.body.getReader();
-  await _processSSEStream(reader, onToken, onCitation, onError, onDone, onTruncated, onArtifact, onToolStatus, onAnswerRepaired, signal);
+  await _processSSEStream(reader, onToken, onCitation, onError, onDone, onTruncated, onArtifact, onToolStatus, onAnswerRepaired, onCitationsRefined, signal);
 }
