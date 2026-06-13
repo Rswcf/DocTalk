@@ -8,6 +8,26 @@ releases use `0.minor.patch` semantics such as `0.2.0` and `0.2.1`.
 
 ## [Unreleased]
 
+## [0.19.0] - 2026-06-13
+
+### Added
+- Quote Finder verification substrate (backend, not yet wired to UI): an
+  offset-preserving text normalizer and a three-tier verbatim-quote verifier
+  ("LLM proposes, verifier disposes, source displays") that guarantees a
+  displayed quote is verbatim source. Codex-reviewed to consensus.
+
+### Changed
+- Chat empty state again shows document-specific suggested questions
+  (backend-generated; no generic fallback).
+- Free plan upload limit raised from 25 MB to 50 MB so new users can try the
+  product before hitting any paywall.
+- Sharper finance / 10-K analysis SEO on the finance use-case page.
+
+### Fixed
+- Chunk-text fidelity: sentence splitting no longer corrupts `U.S.`, `e.g.`,
+  decimals, or `Why?Because`, and rejoining no longer inserts spurious spaces
+  after CJK sentence punctuation.
+
 ### Documentation
 - Documented layout-preserving PDF translation across README, localized
   READMEs, architecture docs, RetainPDF operations, and agent handoff guides.
