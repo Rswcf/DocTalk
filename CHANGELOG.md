@@ -8,6 +8,28 @@ releases use `0.minor.patch` semantics such as `0.2.0` and `0.2.1`.
 
 ## [Unreleased]
 
+## [0.22.0] - 2026-07-04
+
+### Fixed
+- Email sign-in links now open a confirmation page and complete sign-in only
+  when you click the button. Corporate email security scanners were silently
+  consuming one-time sign-in links before the recipient could use them —
+  leaving dead links and phantom accounts. If your work-email sign-in ever
+  failed with a "Configuration" error, this is fixed.
+- Precise-citation refinement no longer runs for anonymous demo chats, is
+  bounded so it can never delay long answers past the proxy limit, shows a
+  brief "Refining citations…" status, and its model usage is now properly
+  accounted.
+- Opening a document without generated suggested questions no longer shows the
+  previous document's suggestions.
+- Corrected outdated Free-plan copy (300 credits, 50 MB uploads) on feature
+  pages, one blog post, and internal docs.
+
+### Internal
+- Deploy runbook corrected to the mandatory backend-first order.
+- Repaired all 6 chronically failing tests; the backend suite is fully green
+  (533 passed) for the first time since May.
+
 ## [0.21.0] - 2026-06-13
 
 ### Added
