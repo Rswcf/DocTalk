@@ -964,7 +964,7 @@ graph TD
 | **SSRF Protection** | `url_validator.py` — DNS resolution + private IP blocking (RFC 1918, link-local, cloud metadata `169.254.169.254`), internal port blocking (5432/6379/6333/9000), manual redirect following (max 3 hops) with per-hop validation |
 | **File Validation** | Magic-byte checks: PDF `%PDF` header, Office ZIP structure + `[Content_Types].xml` presence, 500MB zip bomb protection. Double-extension blocking (`.pdf.exe` becomes `_pdf.exe`) |
 | **Encryption at Rest** | MinIO SSE-S3 on all `put_object()` calls + bucket-level default encryption policy |
-| **Per-Plan Limits** | FREE: 3 docs / 25MB, PLUS: 20 docs / 50MB, PRO: 999 docs / 100MB — enforced at upload endpoint |
+| **Per-Plan Limits** | FREE: 3 docs / 50MB, PLUS: 20 docs / 50MB, PRO: 999 docs / 100MB — enforced at upload endpoint |
 | **Filename Sanitization** | Unicode NFC normalization, control character stripping, double-extension blocking, 200 character truncation — applied in both frontend (`utils.ts`) and backend |
 | **Rate Limiting** | In-memory token-bucket for anonymous chat (10 req/min/IP), automatic cleanup when bucket dict exceeds 10K entries |
 | **OAuth Token Cleanup** | `link_account()` strips access_token, refresh_token, and id_token — DocTalk stores only identity binding (provider + provider_account_id) |

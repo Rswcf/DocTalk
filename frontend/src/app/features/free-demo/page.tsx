@@ -96,7 +96,7 @@ export default function FreeDemoPage() {
                 name: 'Can I upload my own documents for free?',
                 acceptedAnswer: {
                   '@type': 'Answer',
-                  text: 'Yes. Free accounts can upload up to 3 documents (25MB each) and get 300 credits per month. Sign up with Google, Microsoft, or email — no credit card required.',
+                  text: 'Yes. Free accounts can upload up to 3 documents (50MB each) and get 300 credits per month. Sign up with Google, Microsoft, or email — no credit card required.',
                 },
               },
               {

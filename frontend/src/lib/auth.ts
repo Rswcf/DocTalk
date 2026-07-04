@@ -51,7 +51,16 @@ if (process.env.RESEND_API_KEY) {
       apiKey: resendApiKey,
       from: fromAddress,
       async sendVerificationRequest({ identifier: email, url, provider }) {
-        const { host } = new URL(url);
+        const callbackUrl = new URL(url);
+        const { host } = callbackUrl;
+
+        // Anti-prefetch interstitial: email a /auth/confirm wrapper instead of
+        // the raw one-time callback URL. Corporate mail scanners prefetch
+        // links — a GET on the raw URL consumes the token (dead link for the
+        // human) and creates a ghost account. The confirm page redeems the
+        // token only on an explicit user click.
+        const confirmUrl = new URL("/auth/confirm", callbackUrl.origin);
+        confirmUrl.searchParams.set("cb", url);
 
         // Detect locale from NEXT_LOCALE cookie
         let locale = "en";
@@ -82,7 +91,7 @@ if (process.env.RESEND_API_KEY) {
         }
 
         const { html, text, subject } = buildSignInEmail({
-          url,
+          url: confirmUrl.toString(),
           host,
           locale,
           isNewUser,

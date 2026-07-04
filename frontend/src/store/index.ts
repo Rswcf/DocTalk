@@ -309,6 +309,10 @@ export const useDocTalkStore = create<DocTalkStore>((set, get) => ({
     grabMode: false,
     currentPage: 1,
     scrollNonce: 0,
+    // Per-document content — doc B must never show doc A's summary or
+    // suggested questions (the loader re-sets them when B is ready).
+    documentSummary: null,
+    suggestedQuestions: [],
   }),
   reset: () => {
     const timer = get()._flushTimer;

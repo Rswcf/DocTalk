@@ -3741,5 +3741,12 @@
   "layoutTranslation.importingDocument": "正在加入...",
   "layoutTranslation.addDocument": "加入 DocTalk",
   "layoutTranslation.originalPdf": "原文",
-  "layoutTranslation.translatedPdf": "译文"
+  "layoutTranslation.translatedPdf": "译文",
+  "authConfirm.title": "确认登录",
+  "authConfirm.body": "点击下方按钮完成 DocTalk 登录。这一步可防止邮件安全扫描程序使用你的登录链接。",
+  "authConfirm.cta": "登录 DocTalk",
+  "authConfirm.continuing": "正在登录…",
+  "authConfirm.invalidTitle": "此登录链接无效",
+  "authConfirm.invalidBody": "链接可能不完整或已过期。请重新请求登录邮件以继续。",
+  "authConfirm.requestNew": "重新获取链接"
 }

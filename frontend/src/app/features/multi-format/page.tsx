@@ -110,7 +110,7 @@ export default function MultiFormatPage() {
                 name: 'What is the maximum file size?',
                 acceptedAnswer: {
                   '@type': 'Answer',
-                  text: 'File size limits depend on your plan: Free accounts can upload files up to 25MB, Plus up to 50MB, and Pro up to 100MB. Documents can be up to 500 pages.',
+                  text: 'File size limits depend on your plan: Free accounts can upload files up to 50MB, Plus up to 50MB, and Pro up to 100MB. Documents can be up to 500 pages.',
                 },
               },
             ],

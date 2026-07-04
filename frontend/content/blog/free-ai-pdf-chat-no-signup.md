@@ -62,9 +62,9 @@ If you like the demo and want to upload your own documents, creating a free DocT
 
 | Feature | Free Plan |
 |---|---|
-| Credits per month | 500 |
+| Credits per month | 300 |
 | Document uploads | 3 documents |
-| Max file size | 25 MB |
+| Max file size | 50 MB |
 | AI modes | Flash + limited Pro |
 | Sessions per document | 3 |
 | Citation highlighting | Yes |
@@ -107,7 +107,7 @@ How does DocTalk's free offering compare to the competition?
 | Feature | DocTalk Free | ChatPDF Free | NotebookLM | PDF.ai Free |
 |---|---|---|---|---|
 | **No-signup trial** | Yes (demo) | No | No | No |
-| **Monthly allowance** | 500 credits (~50+ questions) | 2 PDFs/day | Unlimited | Limited queries |
+| **Monthly allowance** | 300 credits (dozens of questions) | 2 PDFs/day | Unlimited | Limited queries |
 | **Document formats** | 7 formats | PDF only | PDF, Docs, URLs, YouTube | PDF only |
 | **Citation highlighting** | Click-to-highlight | Page reference | Inline reference | In-doc highlight |
 | **Languages** | 11 | ~5 | ~10 | English focus |

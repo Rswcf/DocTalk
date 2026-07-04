@@ -3702,5 +3702,12 @@
   "layoutTranslation.importingDocument": "जोड़ा जा रहा है...",
   "layoutTranslation.addDocument": "DocTalk में जोड़ें",
   "layoutTranslation.originalPdf": "Original",
-  "layoutTranslation.translatedPdf": "Translated"
+  "layoutTranslation.translatedPdf": "Translated",
+  "authConfirm.title": "अपने साइन-इन की पुष्टि करें",
+  "authConfirm.body": "DocTalk में साइन इन पूरा करने के लिए नीचे दिए गए बटन पर क्लिक करें। यह कदम स्वचालित ईमेल स्कैनर को आपके साइन-इन लिंक का उपयोग करने से रोकता है।",
+  "authConfirm.cta": "DocTalk में साइन इन करें",
+  "authConfirm.continuing": "साइन इन हो रहा है…",
+  "authConfirm.invalidTitle": "यह साइन-इन लिंक मान्य नहीं है",
+  "authConfirm.invalidBody": "लिंक अधूरा या समाप्त हो सकता है। जारी रखने के लिए नया साइन-इन ईमेल अनुरोध करें।",
+  "authConfirm.requestNew": "नया लिंक अनुरोध करें"
 }

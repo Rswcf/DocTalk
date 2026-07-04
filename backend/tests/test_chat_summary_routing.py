@@ -111,7 +111,9 @@ def _make_collection_db(session_obj, document_ids):
             side_effect=[
                 _ScalarOneResult(session_obj),
                 _RowsResult([(doc_id,) for doc_id in document_ids]),
-                _RowsResult([(doc_id, f"Document {idx}.pdf") for idx, doc_id in enumerate(document_ids)]),
+                # (id, filename, file_type, page_count) — must match the
+                # Document.id/filename/file_type/page_count select in chat_service.
+                _RowsResult([(doc_id, f"Document {idx}.pdf", "pdf", 10) for idx, doc_id in enumerate(document_ids)]),
                 _MessagesResult([SimpleNamespace(role="user", content="Summarize these documents")]),
             ]
         ),

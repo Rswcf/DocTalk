@@ -105,8 +105,10 @@ export function useDocumentLoader(documentId: string | undefined): UseDocumentLo
         }
 
         if (info.status === 'ready') {
-          if (info.summary) setDocumentSummary(info.summary);
-          if (info.suggested_questions) setSuggestedQuestions(info.suggested_questions);
+          // Unconditional set: a doc WITHOUT summary/questions must clear the
+          // previous doc's values, not inherit them (cross-doc leak fix).
+          setDocumentSummary(info.summary || null);
+          setSuggestedQuestions(info.suggested_questions ?? []);
           if (info.custom_instructions !== undefined) setCustomInstructions(info.custom_instructions ?? null);
           const readyFileType = info.file_type || 'pdf';
 

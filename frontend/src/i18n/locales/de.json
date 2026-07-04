@@ -3702,5 +3702,12 @@
   "layoutTranslation.importingDocument": "Wird hinzugefügt...",
   "layoutTranslation.addDocument": "Zu DocTalk hinzufügen",
   "layoutTranslation.originalPdf": "Original",
-  "layoutTranslation.translatedPdf": "Übersetzt"
+  "layoutTranslation.translatedPdf": "Übersetzt",
+  "authConfirm.title": "Anmeldung bestätigen",
+  "authConfirm.body": "Klicken Sie auf die Schaltfläche, um die Anmeldung bei DocTalk abzuschließen. Dieser Schritt verhindert, dass automatische E-Mail-Scanner Ihren Anmeldelink verbrauchen.",
+  "authConfirm.cta": "Bei DocTalk anmelden",
+  "authConfirm.continuing": "Anmeldung läuft…",
+  "authConfirm.invalidTitle": "Dieser Anmeldelink ist ungültig",
+  "authConfirm.invalidBody": "Der Link ist möglicherweise unvollständig oder abgelaufen. Fordern Sie eine neue Anmelde-E-Mail an.",
+  "authConfirm.requestNew": "Neuen Link anfordern"
 }

@@ -53,7 +53,7 @@ A Pro user (9,000 credits/month) gets approximately:
 2. **Credits are abstract** -- users don't intuitively know what "300 credits" means in terms of real usage; need clear mapping to "X conversations"
 3. ~~**No annual discount**~~ **FIXED** — 20-25% annual discount now available
 4. ~~**No per-document or per-page limits**~~ **FIXED** — per-plan document count limits enforced: FREE=3, PLUS=20, PRO=999
-5. ~~**Upload is free**~~ — upload still doesn't consume credits, but per-plan file size limits now enforced (FREE=25MB, PLUS=50MB, PRO=100MB) with magic-byte file validation
+5. ~~**Upload is free**~~ — upload still doesn't consume credits, but per-plan file size limits now enforced (FREE=50MB, PLUS=50MB, PRO=100MB) with magic-byte file validation
 6. ~~**No differentiation in document limits**~~ **FIXED** — per-plan document count and file size limits now enforced at upload endpoint
 7. **No team features** -- no shared workspaces, no admin controls, no seat-based pricing
 8. **No usage-based overages** -- when credits run out, the user is blocked rather than offered pay-as-you-go
@@ -75,7 +75,7 @@ A Pro user (9,000 credits/month) gets approximately:
 | **Model Selection** | 2 modes (Flash/Pro) | Not specified | GPT-5 family + Claude + Gemini (credits for premium) | GPT-5 | Not specified |
 | **OCR** | Included (all tiers) | Not specified | Premium+ only | Team+ only ($49/user) | Not specified |
 | **Page Limits** | None (credit-gated) | 120 free / 2000 paid | 100 free / 6000 pro | 60 free / 5000 team | Not specified |
-| **File Size** | 25 MB (Free) / 50 MB (Plus) / 100 MB (Pro) | 32 MB (paid) | 877 MB (pro) | Not specified | Not specified |
+| **File Size** | 50 MB (Free) / 50 MB (Plus) / 100 MB (Pro) | 32 MB (paid) | 877 MB (pro) | Not specified | Not specified |
 | **Key Differentiator** | Cited answers with bbox highlights, multi-model, encryption at rest, GDPR export, per-plan limits | Simplicity, brand recognition | API access, ChatGPT plugin | Team features, SOC-2 | Developer API, embeddable chatbot |
 
 ### Key Pricing Observations
@@ -138,7 +138,7 @@ A Pro user (9,000 credits/month) gets approximately:
 #### Free (Acquisition)
 - **Price**: $0
 - **Credits**: 300/month
-- **Limits**: 3 documents stored, 25 MB max file size, Flash + limited Pro modes
+- **Limits**: 3 documents stored, 50 MB max file size, Flash + limited Pro modes
 - **Features**: Single user, basic citations, community support
 - **Goal**: Demonstrate value, create habit, hit credit wall quickly with active use
 
@@ -198,7 +198,7 @@ This prevents hard stops that push users to competitors while capturing incremen
 |---------|------|------|-----|------|------------|
 | Monthly credits | 300 | 3K | 9K | 20K/seat | Custom |
 | Documents stored | 3 | 20 | Unlimited | Unlimited | Unlimited |
-| File size limit | 25 MB | 50 MB | 100 MB | 200 MB | Custom |
+| File size limit | 50 MB | 50 MB | 100 MB | 200 MB | Custom |
 | Models available | Flash + limited Pro | Flash + Pro | Flash + Pro | Flash + Pro | Flash + Pro + custom |
 | Sessions per doc | 1 | Unlimited | Unlimited | Unlimited | Unlimited |
 | OCR | No | Yes | Yes | Yes | Yes |

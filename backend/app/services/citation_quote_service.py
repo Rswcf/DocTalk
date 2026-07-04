@@ -18,7 +18,7 @@ from __future__ import annotations
 import json
 import logging
 import re
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 from app.services.quote_verification_service import verify_quote
 
@@ -80,10 +80,13 @@ async def extract_focus_quotes(
     model: str,
     max_tokens: int = 512,
     extra_body: Optional[dict] = None,
-) -> Dict[int, str]:
-    """Return ``{ref_index: focus_snippet}`` for text citations that still lack
+) -> Tuple[Dict[int, str], Tuple[int, int]]:
+    """Return ``({ref_index: focus_snippet}, (prompt_tokens, completion_tokens))``
+    for text citations that still lack
     a focus snippet, by asking the LLM for the verbatim supporting sentence and
-    verifying it against the cited chunk. Gated: makes NO LLM call when nothing
+    verifying it against the cited chunk. The usage tuple lets the caller
+    reconcile this call's cost into the answer's actual cost (summary_usage
+    precedent). Gated: makes NO LLM call when nothing
     needs it (no-citation, already-focused, or non-text modality). Never raises."""
     # Which citations still need focus, are text-modality, and have source text?
     need: List[int] = []
@@ -101,7 +104,7 @@ async def extract_focus_quotes(
         seen.add(ref)
         need.append(ref)
     if not need:
-        return {}
+        return {}, (0, 0)
 
     # Truncate once; verify against EXACTLY the text the model was shown.
     prompt_texts = {ref: chunk_texts[ref][:_MAX_SOURCE_CHARS] for ref in need}
@@ -126,8 +129,13 @@ async def extract_focus_quotes(
         resp = await client.chat.completions.create(**create_kwargs)
     except Exception as e:  # noqa: BLE001 — focus is a nicety, never break the answer
         logger.warning("citation focus extraction call failed: %s", e)
-        return {}
+        return {}, (0, 0)
 
+    resp_usage = getattr(resp, "usage", None)
+    usage = (
+        int(getattr(resp_usage, "prompt_tokens", 0) or 0),
+        int(getattr(resp_usage, "completion_tokens", 0) or 0),
+    )
     choice = resp.choices[0] if getattr(resp, "choices", None) else None
     raw = str(getattr(getattr(choice, "message", None), "content", "") or "")
     proposed = _parse_quotes(raw)
@@ -141,7 +149,7 @@ async def extract_focus_quotes(
         v = verify_quote(quote, prompt_texts[ref])
         if v.verified and v.display_text:
             out[ref] = v.display_text
-    return out
+    return out, usage
 
 
 def apply_focus_quotes(citations: List[dict], focus: Dict[int, str]) -> bool:

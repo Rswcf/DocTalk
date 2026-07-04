@@ -3702,5 +3702,12 @@
   "layoutTranslation.importingDocument": "جارٍ الإضافة...",
   "layoutTranslation.addDocument": "إضافة إلى DocTalk",
   "layoutTranslation.originalPdf": "الأصل",
-  "layoutTranslation.translatedPdf": "مترجم"
+  "layoutTranslation.translatedPdf": "مترجم",
+  "authConfirm.title": "تأكيد تسجيل الدخول",
+  "authConfirm.body": "انقر على الزر أدناه لإكمال تسجيل الدخول إلى DocTalk. تمنع هذه الخطوة برامج فحص البريد الإلكتروني الآلية من استهلاك رابط تسجيل الدخول الخاص بك.",
+  "authConfirm.cta": "تسجيل الدخول إلى DocTalk",
+  "authConfirm.continuing": "جارٍ تسجيل الدخول…",
+  "authConfirm.invalidTitle": "رابط تسجيل الدخول هذا غير صالح",
+  "authConfirm.invalidBody": "قد يكون الرابط غير مكتمل أو منتهي الصلاحية. اطلب بريدًا إلكترونيًا جديدًا للمتابعة.",
+  "authConfirm.requestNew": "طلب رابط جديد"
 }

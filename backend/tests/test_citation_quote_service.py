@@ -44,7 +44,7 @@ async def test_cross_lingual_quote_verified():
     client = _client(json.dumps({
         "1": "Goldman Sachs is piloting its first autonomous coder in a major AI milestone for Wall Street."
     }))
-    out = await extract_focus_quotes(
+    out, usage = await extract_focus_quotes(
         answer="高盛正在试点其首个自主编码器[1]。",
         citations=[{"ref_index": 1, "chunk_id": "c1"}],
         chunk_texts={1: CHUNK_EN},
@@ -59,7 +59,7 @@ async def test_cross_lingual_quote_verified():
 @pytest.mark.asyncio
 async def test_hallucinated_quote_dropped():
     client = _client(json.dumps({"1": "The CEO announced a merger with a rival firm."}))
-    out = await extract_focus_quotes(
+    out, usage = await extract_focus_quotes(
         answer="某声明[1]。",
         citations=[{"ref_index": 1, "chunk_id": "c1"}],
         chunk_texts={1: CHUNK_EN},
@@ -72,7 +72,7 @@ async def test_hallucinated_quote_dropped():
 @pytest.mark.asyncio
 async def test_gating_skips_llm_when_all_have_focus():
     client = _client("{}")
-    out = await extract_focus_quotes(
+    out, usage = await extract_focus_quotes(
         answer="x[1]",
         citations=[{"ref_index": 1, "chunk_id": "c1", "focus_snippet": "already precise"}],
         chunk_texts={1: CHUNK_EN},
@@ -86,7 +86,7 @@ async def test_gating_skips_llm_when_all_have_focus():
 @pytest.mark.asyncio
 async def test_no_text_citations_skips_llm():
     client = _client("{}")
-    out = await extract_focus_quotes(
+    out, usage = await extract_focus_quotes(
         answer="x",
         citations=[],
         chunk_texts={},
@@ -100,7 +100,7 @@ async def test_no_text_citations_skips_llm():
 @pytest.mark.asyncio
 async def test_tolerates_markdown_fenced_json():
     client = _client("```json\n{\"1\": \"Cash reserves declined.\"}\n```")
-    out = await extract_focus_quotes(
+    out, usage = await extract_focus_quotes(
         answer="储备下降[1]。",
         citations=[{"ref_index": 1, "chunk_id": "c1"}],
         chunk_texts={1: CHUNK_EN},
@@ -114,7 +114,7 @@ async def test_tolerates_markdown_fenced_json():
 async def test_table_modality_skipped():
     # H8: table/summary citations have no clean sentence → never extract.
     client = _client("{}")
-    out = await extract_focus_quotes(
+    out, usage = await extract_focus_quotes(
         answer="see table[1]",
         citations=[{"ref_index": 1, "chunk_id": "c1", "retrieval_modality": "table"}],
         chunk_texts={1: CHUNK_EN},
@@ -128,7 +128,7 @@ async def test_table_modality_skipped():
 @pytest.mark.asyncio
 async def test_summary_modality_skipped():
     client = _client("{}")
-    out = await extract_focus_quotes(
+    out, usage = await extract_focus_quotes(
         answer="overview[1]",
         citations=[{"ref_index": 1, "chunk_id": "c1", "retrieval_modality": "summary"}],
         chunk_texts={1: CHUNK_EN},
@@ -143,7 +143,7 @@ async def test_summary_modality_skipped():
 async def test_extra_body_forwarded_to_llm():
     # DeepSeek thinking-disabled (cheap) options must reach the extraction call.
     client = _client(json.dumps({"1": "Cash reserves declined."}))
-    await extract_focus_quotes(
+    _, _ = await extract_focus_quotes(
         answer="x[1]",
         citations=[{"ref_index": 1, "chunk_id": "c1"}],
         chunk_texts={1: CHUNK_EN},
@@ -160,7 +160,7 @@ async def test_llm_error_returns_empty_not_raises():
     client = types.SimpleNamespace()
     client.chat = types.SimpleNamespace()
     client.chat.completions = types.SimpleNamespace(create=AsyncMock(side_effect=RuntimeError("boom")))
-    out = await extract_focus_quotes(
+    out, usage = await extract_focus_quotes(
         answer="x[1]",
         citations=[{"ref_index": 1, "chunk_id": "c1"}],
         chunk_texts={1: CHUNK_EN},
@@ -168,3 +168,33 @@ async def test_llm_error_returns_empty_not_raises():
         model="deepseek-v4-flash",
     )
     assert out == {}  # graceful: never breaks the answer over a focus nicety
+
+
+@pytest.mark.asyncio
+async def test_usage_tokens_returned_for_accounting():
+    # The focus call's tokens must be surfaced so the caller can reconcile
+    # them into the answer's actual cost (summary_usage precedent).
+    client = _client(json.dumps({"1": "Cash reserves declined."}))
+    out, usage = await extract_focus_quotes(
+        answer="储备下降[1]。",
+        citations=[{"ref_index": 1, "chunk_id": "c1"}],
+        chunk_texts={1: CHUNK_EN},
+        client=client,
+        model="deepseek-v4-flash",
+    )
+    assert out[1] == "Cash reserves declined."
+    assert usage == (10, 5)  # from the mocked response usage
+
+
+@pytest.mark.asyncio
+async def test_usage_zero_when_gated():
+    client = _client("{}")
+    out, usage = await extract_focus_quotes(
+        answer="x",
+        citations=[],
+        chunk_texts={},
+        client=client,
+        model="deepseek-v4-flash",
+    )
+    assert out == {}
+    assert usage == (0, 0)

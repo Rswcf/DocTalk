@@ -3702,5 +3702,12 @@
   "layoutTranslation.importingDocument": "Añadiendo...",
   "layoutTranslation.addDocument": "Añadir a DocTalk",
   "layoutTranslation.originalPdf": "Original",
-  "layoutTranslation.translatedPdf": "Traducido"
+  "layoutTranslation.translatedPdf": "Traducido",
+  "authConfirm.title": "Confirma tu inicio de sesión",
+  "authConfirm.body": "Haz clic en el botón para terminar de iniciar sesión en DocTalk. Este paso evita que los escáneres de correo automatizados consuman tu enlace.",
+  "authConfirm.cta": "Iniciar sesión en DocTalk",
+  "authConfirm.continuing": "Iniciando sesión…",
+  "authConfirm.invalidTitle": "Este enlace de inicio de sesión no es válido",
+  "authConfirm.invalidBody": "El enlace puede estar incompleto o caducado. Solicita un nuevo correo para continuar.",
+  "authConfirm.requestNew": "Solicitar un nuevo enlace"
 }

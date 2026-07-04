@@ -3704,5 +3704,12 @@
   "layoutTranslation.importingDocument": "Adding...",
   "layoutTranslation.addDocument": "Add to DocTalk",
   "layoutTranslation.originalPdf": "Original",
-  "layoutTranslation.translatedPdf": "Translated"
+  "layoutTranslation.translatedPdf": "Translated",
+  "authConfirm.title": "Confirm your sign-in",
+  "authConfirm.body": "Click the button below to finish signing in to DocTalk. This extra step keeps automated email scanners from using your sign-in link.",
+  "authConfirm.cta": "Sign in to DocTalk",
+  "authConfirm.continuing": "Signing you in…",
+  "authConfirm.invalidTitle": "This sign-in link is not valid",
+  "authConfirm.invalidBody": "The link may be incomplete or expired. Request a new sign-in email to continue.",
+  "authConfirm.requestNew": "Request a new link"
 }

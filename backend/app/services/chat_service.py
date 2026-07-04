@@ -970,26 +970,47 @@ def _chunk_info_from_persisted_citation(
     )
 
 
+# Skip focus refinement when the stream has already consumed this much of the
+# 60s Vercel proxy budget — a highlighting nicety must never cause a 504.
+_FOCUS_ELAPSED_BUDGET_S = 45.0
+_FOCUS_TIMEOUT_S = 4.0
+
+
 async def _refine_citation_focus(
     *,
     answer: str,
     citations: List[dict],
     chunk_map: dict[int, "_ChunkInfo"],
     fallback_model: str,
-) -> bool:
+    user: Optional[User],
+    elapsed_seconds: Optional[float] = None,
+) -> tuple[bool, str, int, int]:
     """Cross-lingual / paraphrase citation focus: lexical focus may not have
     fired (different language or heavy paraphrase from the source). Ask the
     cheap Flash model for the verbatim supporting sentence per still-unfocused
-    citation, verify it, and set focus_snippet in place. Returns True if any
-    citation was updated. Gated + non-raising — a no-op when nothing needs it."""
+    citation, verify it, and set focus_snippet in place.
+
+    Returns ``(changed, model, prompt_tokens, completion_tokens)`` so the
+    caller reconciles this call's cost like summary usage. Gated + non-raising:
+    - anonymous/demo traffic never triggers the extra (unbilled) LLM call;
+    - skipped when the stream is close to the 60s proxy budget;
+    - hard timeout — a stuck nicety must never hold back done/persist/billing.
+    """
+    _skip = (False, "", 0, 0)
+    if user is None:
+        return _skip
+    if elapsed_seconds is not None and elapsed_seconds > _FOCUS_ELAPSED_BUDGET_S:
+        logger.info(
+            "citation focus skipped: %.1fs elapsed, near proxy budget", elapsed_seconds
+        )
+        return _skip
     try:
         focus_model = settings.MODE_MODELS.get("quick", fallback_model)
         # Match the chat/repair calls' provider options (e.g. DeepSeek V4
         # thinking-disabled) so this stays the intended cheap, fast call.
         _opts: dict[str, Any] = {}
         _apply_provider_options(_opts, focus_model)
-        # Hard timeout: a stuck nicety must never hold back done/persist/billing.
-        focus_map = await asyncio.wait_for(
+        focus_map, (focus_pt, focus_ct) = await asyncio.wait_for(
             extract_focus_quotes(
                 answer=answer,
                 citations=citations,
@@ -998,15 +1019,16 @@ async def _refine_citation_focus(
                 model=focus_model,
                 extra_body=_opts.get("extra_body"),
             ),
-            timeout=8.0,
+            timeout=_FOCUS_TIMEOUT_S,
         )
-        return apply_focus_quotes(citations, focus_map)
+        changed = apply_focus_quotes(citations, focus_map)
+        return (changed, focus_model, focus_pt, focus_ct)
     except asyncio.TimeoutError:
         logger.info("citation focus refinement timed out; keeping chunk highlight")
-        return False
+        return _skip
     except Exception as e:  # noqa: BLE001 — focus is a nicety, never break the answer
         logger.warning("citation focus refinement skipped: %s", e)
-        return False
+        return _skip
 
 
 class RefParserFSM:
@@ -1852,12 +1874,20 @@ class ChatService:
                     ",".join(verification_report.reasons),
                 )
 
-            if await _refine_citation_focus(
+            focus_pt = focus_ct = 0
+            focus_model_used = ""
+            focus_elapsed = time.time() - llm_start
+            if user is not None and citations and focus_elapsed <= _FOCUS_ELAPSED_BUDGET_S:
+                yield sse("tool_status", {"message": "Refining citations..."})
+            focus_changed, focus_model_used, focus_pt, focus_ct = await _refine_citation_focus(
                 answer=assistant_text,
                 citations=citations,
                 chunk_map=chunk_map,
                 fallback_model=effective_model,
-            ):
+                user=user,
+                elapsed_seconds=focus_elapsed,
+            )
+            if focus_changed:
                 yield sse("citations_refined", {"citations": citations})
 
             try:
@@ -1902,7 +1932,18 @@ class ChatService:
                         summary_usage_costs.append(
                             (usage_model, summary_prompt, summary_completion, summary_cost)
                         )
-                    actual_cost = answer_cost + sum(item[3] for item in summary_usage_costs)
+                    # Citation-focus Flash call: part of producing this answer,
+                    # reconciled + recorded like summary usage.
+                    focus_cost = 0
+                    if (focus_pt or focus_ct) and focus_model_used:
+                        focus_cost = credit_service.calculate_cost(
+                            focus_pt, focus_ct, focus_model_used, mode="quick"
+                        )
+                    actual_cost = (
+                        answer_cost
+                        + sum(item[3] for item in summary_usage_costs)
+                        + focus_cost
+                    )
                     await credit_service.reconcile_credits(
                         db, user.id, predebit_ledger_id, pre_debited, actual_cost,
                     )
@@ -1924,6 +1965,16 @@ class ChatService:
                             prompt_tokens=summary_prompt,
                             completion_tokens=summary_completion,
                             cost_credits=summary_cost,
+                        )
+                    if focus_cost:
+                        await credit_service.record_usage(
+                            db,
+                            user_id=user.id,
+                            message_id=asst_msg.id,
+                            model=focus_model_used,
+                            prompt_tokens=focus_pt,
+                            completion_tokens=focus_ct,
+                            cost_credits=focus_cost,
                         )
                     await db.commit()
                     settled = True
@@ -2330,6 +2381,7 @@ class ChatService:
         fsm.char_offset = len(asst_msg.content)  # Offset citations relative to full text
 
         last_ping = time.monotonic()
+        llm_start = time.time()  # for the focus-refinement proxy-budget guard
         prompt_tokens: Optional[int] = None
         output_tokens: Optional[int] = None
         finish_reason: Optional[str] = None
@@ -2506,12 +2558,20 @@ class ChatService:
                     ",".join(verification_report.reasons),
                 )
 
-            if await _refine_citation_focus(
+            focus_pt = focus_ct = 0
+            focus_model_used = ""
+            focus_elapsed = time.time() - llm_start
+            if user is not None and merged_citations and focus_elapsed <= _FOCUS_ELAPSED_BUDGET_S:
+                yield sse("tool_status", {"message": "Refining citations..."})
+            focus_changed, focus_model_used, focus_pt, focus_ct = await _refine_citation_focus(
                 answer=full_assistant_text,
                 citations=merged_citations,
                 chunk_map=chunk_map,
                 fallback_model=effective_model,
-            ):
+                user=user,
+                elapsed_seconds=focus_elapsed,
+            )
+            if focus_changed:
                 yield sse("citations_refined", {"citations": merged_citations})
 
             try:
@@ -2540,7 +2600,13 @@ class ChatService:
                 pt = int(prompt_tokens or 0)
                 ct = int(output_tokens or 0)
                 try:
-                    actual_cost = credit_service.calculate_cost(pt, ct, effective_model, mode=effective_mode)
+                    generation_cost = credit_service.calculate_cost(pt, ct, effective_model, mode=effective_mode)
+                    focus_cost = 0
+                    if (focus_pt or focus_ct) and focus_model_used:
+                        focus_cost = credit_service.calculate_cost(
+                            focus_pt, focus_ct, focus_model_used, mode="quick"
+                        )
+                    actual_cost = generation_cost + focus_cost
                     await credit_service.reconcile_credits(
                         db, user.id, predebit_ledger_id, pre_debited, actual_cost,
                     )
@@ -2551,8 +2617,18 @@ class ChatService:
                         model=effective_model,
                         prompt_tokens=pt,
                         completion_tokens=ct,
-                        cost_credits=actual_cost,
+                        cost_credits=generation_cost,
                     )
+                    if focus_cost:
+                        await credit_service.record_usage(
+                            db,
+                            user_id=user.id,
+                            message_id=asst_msg.id,
+                            model=focus_model_used,
+                            prompt_tokens=focus_pt,
+                            completion_tokens=focus_ct,
+                            cost_credits=focus_cost,
+                        )
                     await db.commit()
                     settled = True
                 except Exception as e:

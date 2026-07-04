@@ -3702,5 +3702,12 @@
   "layoutTranslation.importingDocument": "Aggiunta...",
   "layoutTranslation.addDocument": "Aggiungi a DocTalk",
   "layoutTranslation.originalPdf": "Originale",
-  "layoutTranslation.translatedPdf": "Tradotto"
+  "layoutTranslation.translatedPdf": "Tradotto",
+  "authConfirm.title": "Conferma il tuo accesso",
+  "authConfirm.body": "Fai clic sul pulsante qui sotto per completare l'accesso a DocTalk. Questo passaggio impedisce agli scanner automatici delle e-mail di consumare il tuo link.",
+  "authConfirm.cta": "Accedi a DocTalk",
+  "authConfirm.continuing": "Accesso in corso…",
+  "authConfirm.invalidTitle": "Questo link di accesso non è valido",
+  "authConfirm.invalidBody": "Il link potrebbe essere incompleto o scaduto. Richiedi una nuova e-mail di accesso per continuare.",
+  "authConfirm.requestNew": "Richiedi un nuovo link"
 }

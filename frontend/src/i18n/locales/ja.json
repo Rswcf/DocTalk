@@ -3702,5 +3702,12 @@
   "layoutTranslation.importingDocument": "追加中...",
   "layoutTranslation.addDocument": "DocTalkに追加",
   "layoutTranslation.originalPdf": "原文",
-  "layoutTranslation.translatedPdf": "翻訳"
+  "layoutTranslation.translatedPdf": "翻訳",
+  "authConfirm.title": "サインインの確認",
+  "authConfirm.body": "下のボタンをクリックして DocTalk へのサインインを完了してください。この手順により、メールのセキュリティスキャナーがサインインリンクを消費するのを防ぎます。",
+  "authConfirm.cta": "DocTalk にサインイン",
+  "authConfirm.continuing": "サインイン中…",
+  "authConfirm.invalidTitle": "このサインインリンクは無効です",
+  "authConfirm.invalidBody": "リンクが不完全か期限切れの可能性があります。新しいサインインメールをリクエストしてください。",
+  "authConfirm.requestNew": "新しいリンクをリクエスト"
 }

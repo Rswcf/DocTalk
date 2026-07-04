@@ -44,6 +44,7 @@ def test_layout_translation_worker_downloads_pdf_without_ready_flags(monkeypatch
         error_message=None,
         completed_at=None,
         metadata_json={},
+        input_scope={},
     )
     doc = SimpleNamespace(
         id=doc_id,
@@ -61,7 +62,7 @@ def test_layout_translation_worker_downloads_pdf_without_ready_flags(monkeypatch
             assert content == b"%PDF-source"
             return "upload_1"
 
-        def create_book_job(self, *, upload_id: str, source_filename: str) -> str:
+        def create_book_job(self, *, upload_id: str, source_filename: str, target_language_label: str = "English") -> str:
             assert upload_id == "upload_1"
             assert source_filename == "Complex Paper.pdf"
             return "retain_job_1"
@@ -115,6 +116,7 @@ def test_layout_translation_worker_retires_datalab_renderer(monkeypatch) -> None
         error_message=None,
         completed_at=None,
         metadata_json={},
+        input_scope={},
     )
     doc = SimpleNamespace(
         id=doc_id,
@@ -158,6 +160,7 @@ def test_layout_translation_worker_sanitizes_sidecar_traceback_failure(monkeypat
         error_message=None,
         completed_at=None,
         metadata_json={},
+        input_scope={},
     )
     doc = SimpleNamespace(
         id=doc_id,
@@ -179,7 +182,7 @@ def test_layout_translation_worker_sanitizes_sidecar_traceback_failure(monkeypat
         def upload_pdf(self, *, filename: str, content: bytes) -> str:
             return "upload_1"
 
-        def create_book_job(self, *, upload_id: str, source_filename: str) -> str:
+        def create_book_job(self, *, upload_id: str, source_filename: str, target_language_label: str = "English") -> str:
             return "retain_job_1"
 
         def get_job(self, job_id: str):
@@ -242,7 +245,7 @@ def test_retainpdf_create_job_payload_matches_grouped_api(monkeypatch) -> None:
     monkeypatch.setattr(service.settings, "RETAINPDF_COMPILE_WORKERS", 1)
     monkeypatch.setattr(service.settings, "RETAINPDF_TIMEOUT_SECONDS", 1800)
 
-    job_id = service.RetainPdfClient().create_book_job(upload_id="upload_1", source_filename="Paper.pdf")
+    job_id = service.RetainPdfClient().create_book_job(upload_id="upload_1", source_filename="Paper.pdf", target_language_label="English")
 
     assert job_id == "retain_job_1"
     assert captured["url"] == "http://retainpdf.test/api/v1/jobs"
@@ -300,7 +303,7 @@ def test_retainpdf_create_job_payload_supports_datalab_provider(monkeypatch) -> 
     monkeypatch.setattr(service.settings, "RETAINPDF_COMPILE_WORKERS", 0)
     monkeypatch.setattr(service.settings, "RETAINPDF_TIMEOUT_SECONDS", 1800)
 
-    job_id = service.RetainPdfClient().create_book_job(upload_id="upload_1", source_filename="Paper.pdf")
+    job_id = service.RetainPdfClient().create_book_job(upload_id="upload_1", source_filename="Paper.pdf", target_language_label="English")
 
     assert job_id == "retain_job_datalab"
     payload = captured["json"]
