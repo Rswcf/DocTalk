@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import datetime as dt
 import json
 import uuid
 from datetime import datetime, timedelta, timezone
@@ -55,6 +56,17 @@ def _demo_message_key(client_ip: str, document_id) -> str:
     be shared across the 3 sample docs. TTL (24h) is handled by the tracker.
     """
     return f"{client_ip}:{document_id}"
+
+
+def _recent_demo_session_filter(document_id):
+    """Anonymous demo session cap counts a rolling 24h window, not lifetime.
+
+    Lifetime counting killed each demo doc permanently at 500 sessions.
+    """
+    return [
+        ChatSession.document_id == document_id,
+        ChatSession.created_at > func.now() - dt.timedelta(hours=24),
+    ]
 
 
 chat_router = APIRouter(prefix="/api", tags=["chat"])
@@ -226,8 +238,7 @@ async def create_session(
                 headers={"Retry-After": "300"},
             )
         session_count = await db.execute(
-            select(func.count(ChatSession.id))
-            .where(ChatSession.document_id == document_id)
+            select(func.count(ChatSession.id)).where(*_recent_demo_session_filter(document_id))
         )
         if session_count.scalar() >= DEMO_MAX_SESSIONS_PER_DOC:
             raise HTTPException(
