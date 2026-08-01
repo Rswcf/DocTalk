@@ -525,6 +525,51 @@ async def test_create_session_free_plan_demo_cap_reached(
 
 
 @pytest.mark.asyncio
+async def test_get_session_messages_includes_null_demo_field_for_authed_session(
+    client: AsyncClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Regression guard for FIX-8: the endpoint must return the typed
+    `SessionMessagesResponse` (declared `demo_messages_used` field) rather
+    than a manually-merged JSONResponse dict, so non-demo/authenticated
+    responses go through response_model validation like every other field.
+    """
+    user = _make_user(plan="plus")
+    session = SimpleNamespace(user_id=user.id, document=SimpleNamespace(demo_slug=None))
+    db = _make_db(execute=AsyncMock(return_value=_Result(scalars_all=[])))
+    _override_dependencies(db, optional_user=user)
+    monkeypatch.setattr(chat_api, "verify_session_access", AsyncMock(return_value=session))
+
+    response = await client.get(f"/api/sessions/{uuid.uuid4()}/messages")
+
+    assert response.status_code == 200
+    body = response.json()
+    assert "demo_messages_used" in body
+    assert body["demo_messages_used"] is None
+
+
+@pytest.mark.asyncio
+async def test_get_session_messages_returns_demo_count_for_anon_demo_session(
+    client: AsyncClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    session = SimpleNamespace(
+        user_id=None,
+        document_id=uuid.uuid4(),
+        document=SimpleNamespace(demo_slug="demo"),
+    )
+    db = _make_db(execute=AsyncMock(return_value=_Result(scalars_all=[])))
+    _override_dependencies(db, optional_user=None)
+    monkeypatch.setattr(chat_api, "verify_session_access", AsyncMock(return_value=session))
+    monkeypatch.setattr(chat_api.demo_message_tracker, "get_count", AsyncMock(return_value=3))
+
+    response = await client.get(f"/api/sessions/{uuid.uuid4()}/messages")
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["demo_messages_used"] == 3
+    assert body["messages"] == []
+
+
+@pytest.mark.asyncio
 async def test_create_demo_session_rate_limited(
     client: AsyncClient,
     monkeypatch: pytest.MonkeyPatch,

@@ -332,19 +332,16 @@ async def get_session_messages(
                 created_at=m.created_at,
             )
         )
-    response = SessionMessagesResponse(messages=items)
-
     # Anonymous demo sessions: surface the used count so the frontend can
     # restore the counter when it reuses a stored session (see create-session).
+    demo_messages_used = None
     if session.user_id is None and session.document and session.document.demo_slug:
         client_ip = get_client_ip(request)
-        used = await demo_message_tracker.get_count(_demo_message_key(client_ip, session.document_id))
-        return JSONResponse(
-            status_code=200,
-            content={**response.model_dump(mode="json"), "demo_messages_used": used},
+        demo_messages_used = await demo_message_tracker.get_count(
+            _demo_message_key(client_ip, session.document_id)
         )
 
-    return response
+    return SessionMessagesResponse(messages=items, demo_messages_used=demo_messages_used)
 
 
 @chat_router.post("/sessions/{session_id}/chat")

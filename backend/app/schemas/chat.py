@@ -46,6 +46,7 @@ class SessionCreateResponse(SessionResponse):
 
 class SessionMessagesResponse(BaseModel):
     messages: List[ChatMessageResponse]
+    demo_messages_used: Optional[int] = None
 
 
 class SessionListItem(BaseModel):
