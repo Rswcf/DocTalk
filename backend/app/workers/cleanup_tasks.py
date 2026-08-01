@@ -45,11 +45,15 @@ def cleanup_expired_verification_tokens():
 
 @celery_app.task(name="cleanup_empty_demo_sessions")
 def cleanup_empty_demo_sessions() -> int:
-    """Delete anonymous demo sessions older than 7 days with no messages.
+    """Delete demo-document sessions older than 7 days with no messages.
 
-    Anonymous demo browsing creates session rows that never get pruned;
-    the sessions table only ever grows. Uses synchronous DB connection
-    since Celery tasks run in separate worker processes.
+    Demo browsing (anonymous OR authenticated) creates session rows that
+    never get pruned; the sessions table only ever grows. Authenticated
+    empty demo sessions are included too — they're just as unused, and
+    excluding them would let a free account accumulate rows indefinitely
+    on a demo doc even though its own per-user session cap is enforced at
+    creation time. Uses synchronous DB connection since Celery tasks run in
+    separate worker processes.
     """
     cutoff = datetime.now(timezone.utc) - timedelta(days=7)
 
@@ -66,8 +70,7 @@ def cleanup_empty_demo_sessions() -> int:
                 sa.text(
                     """
                     DELETE FROM sessions
-                    WHERE user_id IS NULL
-                      AND created_at < :cutoff
+                    WHERE created_at < :cutoff
                       AND document_id IN (SELECT id FROM documents WHERE demo_slug IS NOT NULL)
                       AND NOT EXISTS (
                           SELECT 1 FROM messages WHERE messages.session_id = sessions.id
@@ -78,9 +81,9 @@ def cleanup_empty_demo_sessions() -> int:
             )
             deleted = result.rowcount or 0
         if deleted:
-            logger.info("Cleaned up %d empty anonymous demo sessions", deleted)
+            logger.info("Cleaned up %d empty demo sessions", deleted)
         else:
-            logger.debug("No empty anonymous demo sessions to clean up")
+            logger.debug("No empty demo sessions to clean up")
         return deleted
     finally:
         engine.dispose()

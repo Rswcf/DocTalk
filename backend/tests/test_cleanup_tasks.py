@@ -87,8 +87,16 @@ def test_cleanup_empty_demo_sessions_deletes_only_stale_empty_anonymous_demo_ses
         # (c) anonymous, demo doc, 1 day old, 0 messages -> kept
         recent_empty = _make_session(db, document_id=demo_doc.id, user_id=None, created_at=recent)
 
-        # (d) authed session, 8 days old, 0 messages -> kept
-        authed_empty = _make_session(db, document_id=demo_doc.id, user_id=user.id, created_at=old)
+        # (d) authed, demo doc, 8 days old, 0 messages -> deleted (closes the
+        # row-accumulation half of the authed demo-cap DoS: authed sessions
+        # are no longer exempt from pruning)
+        authed_stale_empty = _make_session(db, document_id=demo_doc.id, user_id=user.id, created_at=old)
+
+        # (e) authed, demo doc, 8 days old, 1 message -> kept
+        authed_stale_with_message = _make_session(
+            db, document_id=demo_doc.id, user_id=user.id, created_at=old
+        )
+        db.add(Message(session_id=authed_stale_with_message.id, role="user", content="hi"))
 
         db.commit()
 
@@ -96,14 +104,15 @@ def test_cleanup_empty_demo_sessions_deletes_only_stale_empty_anonymous_demo_ses
             "stale_empty": stale_empty.id,
             "stale_with_message": stale_with_message.id,
             "recent_empty": recent_empty.id,
-            "authed_empty": authed_empty.id,
+            "authed_stale_empty": authed_stale_empty.id,
+            "authed_stale_with_message": authed_stale_with_message.id,
         }
         document_id = demo_doc.id
         user_id = user.id
 
     try:
         deleted = cleanup_tasks.cleanup_empty_demo_sessions()
-        assert deleted == 1
+        assert deleted == 2
 
         with SyncSessionLocal() as db:
             remaining_ids = {
@@ -115,7 +124,8 @@ def test_cleanup_empty_demo_sessions_deletes_only_stale_empty_anonymous_demo_ses
         assert session_ids["stale_empty"] not in remaining_ids
         assert session_ids["stale_with_message"] in remaining_ids
         assert session_ids["recent_empty"] in remaining_ids
-        assert session_ids["authed_empty"] in remaining_ids
+        assert session_ids["authed_stale_empty"] not in remaining_ids
+        assert session_ids["authed_stale_with_message"] in remaining_ids
     finally:
         with SyncSessionLocal() as db:
             db.execute(sa.delete(Message).where(Message.session_id.in_(session_ids.values())))

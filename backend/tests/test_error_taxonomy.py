@@ -497,6 +497,34 @@ async def test_create_session_limit_reached(client: AsyncClient, monkeypatch: py
 
 
 @pytest.mark.asyncio
+async def test_create_session_free_plan_demo_cap_reached(
+    client: AsyncClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Authed free-plan users must have their own per-user cap on demo docs.
+
+    Regression guard for the DoS where authed demo-session creation bypassed
+    both the free-plan cap (gated on `not doc.demo_slug`) and the anon cap
+    (gated on `user is None`), so a single free account could exhaust a demo
+    doc's session budget for everyone.
+    """
+    user = _make_user(plan="free")
+    db = _make_db(
+        execute=AsyncMock(return_value=_Result(scalar=settings.FREE_MAX_SESSIONS_PER_DOC)),
+    )
+    _override_dependencies(db, optional_user=user)
+    monkeypatch.setattr(
+        chat_api,
+        "verify_document_access",
+        AsyncMock(return_value=SimpleNamespace(demo_slug="demo")),
+    )
+
+    response = await client.post(f"/api/documents/{uuid.uuid4()}/sessions")
+    detail = _assert_error(response, 403, "SESSION_LIMIT_REACHED")
+    assert isinstance(detail["limit"], int)
+    assert isinstance(detail["plan"], str)
+
+
+@pytest.mark.asyncio
 async def test_create_demo_session_rate_limited(
     client: AsyncClient,
     monkeypatch: pytest.MonkeyPatch,

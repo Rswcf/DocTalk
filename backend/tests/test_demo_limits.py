@@ -24,3 +24,9 @@ def test_demo_session_window_filters_by_24h():
     clauses = _recent_demo_session_filter(uuid.uuid4())
     sql = " ".join(str(c) for c in clauses)
     assert "created_at" in sql  # lifetime count regression guard
+
+
+def test_demo_session_window_excludes_authenticated_sessions():
+    clauses = _recent_demo_session_filter(uuid.uuid4())
+    sql = " ".join(str(c) for c in clauses)
+    assert "user_id" in sql  # authed sessions must not count against the anon cap

@@ -62,9 +62,14 @@ def _recent_demo_session_filter(document_id):
     """Anonymous demo session cap counts a rolling 24h window, not lifetime.
 
     Lifetime counting killed each demo doc permanently at 500 sessions.
+    Restricted to `user_id IS NULL`: this cap only guards anonymous abuse.
+    Authenticated users on demo docs are capped separately, per-user, by the
+    free-plan session guard below — otherwise this global count would let a
+    single free account exhaust it for every anonymous visitor.
     """
     return [
         ChatSession.document_id == document_id,
+        ChatSession.user_id.is_(None),
         ChatSession.created_at > func.now() - dt.timedelta(hours=24),
     ]
 
@@ -213,6 +218,29 @@ async def create_session(
             .where(ChatSession.document_id == document_id)
         )
         if session_count_result.scalar() >= settings.FREE_MAX_SESSIONS_PER_DOC:
+            raise HTTPException(
+                status_code=403,
+                detail={
+                    "error": "SESSION_LIMIT_REACHED",
+                    "message": "Free plan session limit reached. Upgrade for unlimited sessions.",
+                    "limit": settings.FREE_MAX_SESSIONS_PER_DOC,
+                    "plan": "free",
+                },
+            )
+
+    # Limit authenticated free-plan users' OWN session count on demo documents.
+    # Separate from the anon cap above (which now only counts user_id IS NULL
+    # rows) and from the non-demo free-plan cap above (which excludes demo
+    # docs via `not doc.demo_slug`): without this, an authed free account
+    # could create unlimited demo sessions, exempt from every guard.
+    if user is not None and (user.plan or "free").lower() == "free" and doc.demo_slug:
+        own_session_count = await db.execute(
+            select(func.count(ChatSession.id)).where(
+                ChatSession.document_id == document_id,
+                ChatSession.user_id == user.id,
+            )
+        )
+        if own_session_count.scalar() >= settings.FREE_MAX_SESSIONS_PER_DOC:
             raise HTTPException(
                 status_code=403,
                 detail={
