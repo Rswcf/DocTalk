@@ -68,6 +68,37 @@ async def test_public_auth_funnel_event_is_recorded_without_user(monkeypatch):
 
 
 @pytest.mark.asyncio
+@pytest.mark.parametrize("event_name", ["auth_confirm_viewed", "auth_confirm_clicked"])
+async def test_public_auth_confirm_events_are_recorded_without_user(monkeypatch, event_name):
+    from fastapi import FastAPI
+    from httpx import ASGITransport, AsyncClient
+
+    from app.api import events as events_api
+    from app.core import deps as deps_module
+
+    api_app = FastAPI()
+    api_app.include_router(events_api.router)
+    fake_db = _FakeDB()
+
+    async def _get_db():
+        yield fake_db
+
+    api_app.dependency_overrides[deps_module.get_db_session] = _get_db
+    api_app.dependency_overrides[deps_module.get_current_user_optional] = _none_user
+    monkeypatch.setattr(events_api.public_event_limiter, "is_allowed", AsyncMock(return_value=True))
+
+    async with AsyncClient(transport=ASGITransport(app=api_app), base_url="http://test") as client:
+        response = await client.post(
+            "/api/events",
+            json={"event_name": event_name, "properties": {"valid": 1}},
+        )
+
+    assert response.status_code == 204
+    assert fake_db.committed is True
+    assert fake_db.added[0].event_name == event_name
+
+
+@pytest.mark.asyncio
 async def test_public_event_rejects_private_event_without_user(monkeypatch):
     from fastapi import FastAPI
     from httpx import ASGITransport, AsyncClient

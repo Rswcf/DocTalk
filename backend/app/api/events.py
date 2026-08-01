@@ -46,6 +46,8 @@ ALLOWED_EVENTS = {
     "auth_email_link_requested",
     "auth_email_link_sent",
     "auth_email_link_failed",
+    "auth_confirm_viewed",
+    "auth_confirm_clicked",
 }
 
 PUBLIC_EVENTS = {
@@ -55,6 +57,8 @@ PUBLIC_EVENTS = {
     "auth_email_link_requested",
     "auth_email_link_sent",
     "auth_email_link_failed",
+    "auth_confirm_viewed",
+    "auth_confirm_clicked",
     "upgrade_click",
     "paywall_opened",
     "limit_hit",
