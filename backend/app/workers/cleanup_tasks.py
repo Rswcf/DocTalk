@@ -41,3 +41,46 @@ def cleanup_expired_verification_tokens():
             logger.debug("No expired verification tokens to clean up")
     finally:
         engine.dispose()
+
+
+@celery_app.task(name="cleanup_empty_demo_sessions")
+def cleanup_empty_demo_sessions() -> int:
+    """Delete anonymous demo sessions older than 7 days with no messages.
+
+    Anonymous demo browsing creates session rows that never get pruned;
+    the sessions table only ever grows. Uses synchronous DB connection
+    since Celery tasks run in separate worker processes.
+    """
+    cutoff = datetime.now(timezone.utc) - timedelta(days=7)
+
+    db_url = settings.DATABASE_URL
+    if not db_url:
+        logger.error("DATABASE_URL not configured, skipping demo session cleanup")
+        return 0
+    sync_url = db_url.replace("postgresql+asyncpg://", "postgresql+psycopg://")
+
+    engine = sa.create_engine(sync_url)
+    try:
+        with engine.begin() as conn:
+            result = conn.execute(
+                sa.text(
+                    """
+                    DELETE FROM sessions
+                    WHERE user_id IS NULL
+                      AND created_at < :cutoff
+                      AND document_id IN (SELECT id FROM documents WHERE demo_slug IS NOT NULL)
+                      AND NOT EXISTS (
+                          SELECT 1 FROM messages WHERE messages.session_id = sessions.id
+                      )
+                    """
+                ),
+                {"cutoff": cutoff},
+            )
+            deleted = result.rowcount or 0
+        if deleted:
+            logger.info("Cleaned up %d empty anonymous demo sessions", deleted)
+        else:
+            logger.debug("No empty anonymous demo sessions to clean up")
+        return deleted
+    finally:
+        engine.dispose()
