@@ -60,10 +60,18 @@ export function useChatSession(documentId: string | undefined): UseChatSessionRe
             last_activity_at: lastActivityAt,
           }]);
           setMessages(msgsData.messages);
+          // Contract (useChatStream.ts): totalUsed = demoMessagesUsed + local
+          // user-message count. demoMessagesUsed must hold only server-known
+          // usage NOT already represented in the restored local transcript,
+          // or the two get summed and double-count. Since we just restored
+          // the full transcript into `messages`, subtract the user messages
+          // it already carries from the server's count (clamped at 0 for
+          // safety, though in the steady state the two should match exactly).
+          const restoredUserMsgCount = msgsData.messages.filter((m) => m.role === 'user').length;
           if (msgsData.demo_messages_used != null) {
-            setDemoMessagesUsed(msgsData.demo_messages_used);
+            setDemoMessagesUsed(Math.max(0, msgsData.demo_messages_used - restoredUserMsgCount));
           } else {
-            setDemoMessagesUsed(msgsData.messages.filter((m) => m.role === 'user').length);
+            setDemoMessagesUsed(0);
           }
           return; // adopted — skip listSessions/createSession entirely
         } catch {
