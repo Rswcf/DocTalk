@@ -343,7 +343,7 @@ function MessageBubble({
               onClick={() => handleFeedback('up')}
               className={`rounded-lg p-1.5 transition-colors focus-visible:ring-2 focus-visible:ring-zinc-400 ${
                 feedback === 'up'
-                  ? 'text-white'
+                  ? 'text-accent dark:text-white'
                   : 'text-[var(--workbench-muted)] hover:bg-zinc-100 hover:text-zinc-900 dark:hover:bg-white/10 dark:hover:text-white'
               }`}
               title={t('feedback.helpful')}
