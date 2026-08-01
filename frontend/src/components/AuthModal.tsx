@@ -5,7 +5,7 @@ import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { X } from 'lucide-react';
 import { useLocale } from '../i18n';
 import { AuthFormContent } from './AuthFormContent';
-import { AUTH_MODAL_HASH, getUrlWithoutAuthHash, isAuthModalHash } from '../lib/auth-modal';
+import { AUTH_MODAL_HASH, clearAuthCallbackOverride, getUrlWithoutAuthHash, isAuthModalHash, peekAuthCallbackOverride } from '../lib/auth-modal';
 import { trackEvent } from '../lib/analytics';
 
 export function AuthModal() {
@@ -37,6 +37,7 @@ export function AuthModal() {
     url.hash = '';
     router.replace(getUrlWithoutAuthHash(url), { scroll: false });
     setIsOpen(false);
+    clearAuthCallbackOverride();
   };
 
   useEffect(() => {
@@ -80,6 +81,8 @@ export function AuthModal() {
   if (!isOpen) return null;
 
   const callbackUrl = (() => {
+    const override = peekAuthCallbackOverride();
+    if (override) return `${window.location.origin}${override}`;
     const currentSearch = searchParams.toString();
     return `${window.location.origin}${pathname}${currentSearch ? `?${currentSearch}` : ''}`;
   })();
