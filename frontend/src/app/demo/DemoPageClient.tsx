@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { ArrowRight, BookOpen, FileCheck2, FileSignature, FileText, Loader2, Quote } from 'lucide-react';
 import { useLocale } from '../../i18n';
+import { localizedHrefIfAvailable } from '../../i18n/routing';
 import { getDemoDocuments, type DemoDocument } from '../../lib/api';
 import { usePageTitle } from '../../lib/usePageTitle';
 import MarketingShell from '../../components/marketing/MarketingShell';
@@ -46,7 +47,7 @@ const SAMPLE_CONFIG: Record<string, {
 };
 
 export default function DemoPageClient() {
-  const { t, tOr } = useLocale();
+  const { t, tOr, locale } = useLocale();
   usePageTitle(t('footer.demo'));
   const [docs, setDocs] = useState<DemoDocument[]>([]);
   const [loading, setLoading] = useState(true);
@@ -70,7 +71,7 @@ export default function DemoPageClient() {
   return (
     <MarketingShell
       breadcrumb={[
-        { label: t('useCasesHub.breadcrumb.home'), href: '/' },
+        { label: t('useCasesHub.breadcrumb.home'), href: localizedHrefIfAvailable(locale, '/') },
         { label: t('footer.demo') },
       ]}
     >
