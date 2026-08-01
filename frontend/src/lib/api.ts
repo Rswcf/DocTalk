@@ -164,9 +164,9 @@ export async function createSession(docId: string): Promise<{ session_id: string
   return handle(res);
 }
 
-export async function getMessages(sessionId: string): Promise<{ messages: Message[] }> {
+export async function getMessages(sessionId: string): Promise<{ messages: Message[]; demo_messages_used?: number | null }> {
   const res = await fetch(`${PROXY_BASE}/api/sessions/${sessionId}/messages`);
-  const data: { messages: Array<{ id?: string; share_anchor?: string; role: Message['role']; content: string; citations?: any[]; metadata_json?: any; created_at: string }> } = await handle(res);
+  const data: { messages: Array<{ id?: string; share_anchor?: string; role: Message['role']; content: string; citations?: any[]; metadata_json?: any; created_at: string }>; demo_messages_used?: number | null } = await handle(res);
 
   const mapped = (data.messages || []).map((m, idx) => {
     const citations: Citation[] | undefined = m.citations
@@ -188,7 +188,7 @@ export async function getMessages(sessionId: string): Promise<{ messages: Messag
     } as Message;
   });
 
-  return { messages: mapped };
+  return { messages: mapped, demo_messages_used: data.demo_messages_used };
 }
 
 export interface DocumentJobDetail {
