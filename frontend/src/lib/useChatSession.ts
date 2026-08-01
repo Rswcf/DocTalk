@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { ApiError, createSession, getMessages, listSessions } from './api';
 import { useDocTalkStore } from '../store';
+import { clearDemoSession, readDemoSession, writeDemoSession } from './demoSessionStorage';
 
 interface UseChatSessionResult {
   sessionError: unknown | null;
@@ -37,8 +38,7 @@ export function useChatSession(documentId: string | undefined): UseChatSessionRe
       // session is anon-owned; `verify_session_access` in chat.py:157-163
       // only returns it to `user is None` callers), so the catch below
       // clears the key and falls through to the normal listSessions flow.
-      const demoKey = `dt-demo-session:${documentId}`;
-      const storedDemoSession = typeof window !== 'undefined' ? sessionStorage.getItem(demoKey) : null;
+      const storedDemoSession = readDemoSession(documentId);
       if (storedDemoSession) {
         try {
           const msgsData = await getMessages(storedDemoSession);
@@ -75,8 +75,19 @@ export function useChatSession(documentId: string | undefined): UseChatSessionRe
           setDemoRestoredUserMsgCount(restoredUserMsgCount);
           setDemoMessagesUsed(msgsData.demo_messages_used ?? 0);
           return; // adopted — skip listSessions/createSession entirely
-        } catch {
-          sessionStorage.removeItem(demoKey); // stale/pruned session — fall through
+        } catch (e) {
+          // Clear the pointer ONLY when the session is confirmed gone or
+          // inaccessible (404/403) — e.g. pruned by the nightly cleanup, or
+          // an authed caller inheriting an anon-owned key. A transient
+          // failure (network blip, 5xx) must NOT clear it: the pointer is
+          // still valid, and either a later retry or the createSession
+          // fallback below will overwrite it on success anyway. Clearing on
+          // every failure would needlessly burn a fresh create on a session
+          // that's actually still fine.
+          const status = e instanceof ApiError ? e.status : null;
+          if (status === 404 || status === 403) {
+            clearDemoSession(documentId);
+          }
         }
       }
 
@@ -107,9 +118,7 @@ export function useChatSession(documentId: string | undefined): UseChatSessionRe
             // baseline is 0 and every subsequent local user message counts.
             setDemoRestoredUserMsgCount(0);
             setDemoMessagesUsed(s.demo_messages_used);
-            if (typeof window !== 'undefined') {
-              sessionStorage.setItem(`dt-demo-session:${documentId}`, s.session_id);
-            }
+            writeDemoSession(documentId, s.session_id);
           }
 
           const now = s.created_at || new Date().toISOString();

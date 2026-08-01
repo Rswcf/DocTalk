@@ -10,6 +10,7 @@ import { createSession, getMessages, deleteSession } from '../lib/api';
 import { errorCopy, type ErrorCopy } from '../lib/errorCopy';
 import { trackEvent } from '../lib/analytics';
 import { useDropdownKeyboard } from '../lib/useDropdownKeyboard';
+import { writeDemoSession } from '../lib/demoSessionStorage';
 
 export default function SessionDropdown() {
   const documentName = useDocTalkStore((s) => s.documentName);
@@ -73,6 +74,10 @@ export default function SessionDropdown() {
         // createSession path: baseline 0, every message sent from here counts.
         setDemoRestoredUserMsgCount(0);
         setDemoMessagesUsed(s.demo_messages_used);
+        // "New Chat" for an anon demo user starts a NEW session — the stored
+        // pointer must move to it, or the next page view re-adopts the old
+        // (now-abandoned) session instead of this one.
+        writeDemoSession(documentId, s.session_id);
       }
       setMessages([]);
       setConfirmDeleteId(null);
@@ -102,6 +107,10 @@ export default function SessionDropdown() {
       const restoredUserMsgCount = msgs.messages.filter((m) => m.role === 'user').length;
       setDemoRestoredUserMsgCount(restoredUserMsgCount);
       setDemoMessagesUsed(msgs.demo_messages_used);
+      // Switching to a different anon-demo session moves the "active"
+      // session — move the pointer too, so the next page view re-adopts
+      // the one the user actually switched to, not the one they left.
+      if (documentId) writeDemoSession(documentId, id);
     }
     setConfirmDeleteId(null);
     setOpen(false);
