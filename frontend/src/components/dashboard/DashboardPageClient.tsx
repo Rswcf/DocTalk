@@ -389,7 +389,7 @@ export default function DashboardPageClient() {
             <section className="dt-stitch-card mb-5 rounded-2xl p-4">
               <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                 <div className="flex gap-3">
-                  <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white/12 text-white">
+                  <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-zinc-900/5 text-zinc-700 dark:bg-white/12 dark:text-white">
                     <Sparkles aria-hidden="true" size={18} />
                   </div>
                   <div>
@@ -421,7 +421,7 @@ export default function DashboardPageClient() {
                   <button
                     type="button"
                     onClick={dismissUpgradeNudge}
-                    className="inline-flex h-9 w-9 items-center justify-center rounded-full text-[var(--workbench-muted)] transition-colors hover:bg-white/10 hover:text-white focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950"
+                    className="inline-flex h-9 w-9 items-center justify-center rounded-full text-[var(--workbench-muted)] transition-colors hover:bg-zinc-100 hover:text-zinc-900 dark:hover:bg-white/10 dark:hover:text-white focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950"
                     aria-label={tOr('dashboard.upgradeNudge.dismiss', 'Dismiss upgrade prompt')}
                   >
                     <X aria-hidden="true" size={16} />
@@ -434,8 +434,8 @@ export default function DashboardPageClient() {
           <div
             className={`dt-command-bar rounded-[2rem] p-8 text-center transition-colors sm:p-12 ${
               isDragging
-                ? 'border-white/40 bg-white/10'
-                : 'border-white/18'
+                ? 'border-accent bg-accent/5 dark:border-white/40 dark:bg-white/10'
+                : 'border-zinc-300 dark:border-white/18'
             }`}
             onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
             onDragLeave={() => setDragging(false)}
@@ -479,7 +479,7 @@ export default function DashboardPageClient() {
                 onChange={(e) => { setUrlInput(e.target.value); setUrlError(''); setUrlErrorCopy(null); }}
                 onKeyDown={(e) => { if (e.key === 'Enter') onUrlSubmit(); }}
                 placeholder={t('upload.urlPlaceholder')}
-                className="w-full rounded-full border border-white/14 bg-white/8 py-2.5 pl-9 pr-3 text-sm text-[var(--workbench-ink)] placeholder:text-white/38 transition-shadow focus:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400"
+                className="w-full rounded-full border border-zinc-300 bg-white py-2.5 pl-9 pr-3 text-sm text-[var(--workbench-ink)] placeholder:text-zinc-400 dark:border-white/14 dark:bg-white/8 dark:placeholder:text-white/38 transition-shadow focus:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400"
                 disabled={urlLoading}
                 aria-label="Document URL"
               />
@@ -508,7 +508,7 @@ export default function DashboardPageClient() {
           )}
 
           <div className="mt-3 text-center">
-            <Link href="/demo" className="text-[var(--workbench-muted)] hover:text-white text-sm transition-colors focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:rounded-sm">
+            <Link href="/demo" className="text-[var(--workbench-muted)] hover:text-zinc-900 dark:hover:text-white text-sm transition-colors focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:rounded-sm">
               {t('home.cta.tryDemo')}
             </Link>
           </div>
@@ -539,7 +539,7 @@ export default function DashboardPageClient() {
             <section className="dt-stitch-card mb-4 rounded-2xl p-4">
               <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                 <div className="flex gap-3">
-                  <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-white/14 bg-white/8 text-white">
+                  <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-zinc-200 bg-zinc-50 text-zinc-700 dark:border-white/14 dark:bg-white/8 dark:text-white">
                     <FolderOpen aria-hidden="true" size={18} />
                   </div>
                   <div>
@@ -585,7 +585,7 @@ export default function DashboardPageClient() {
                 <button
                   type="button"
                   onClick={() => inputRef.current?.click()}
-                  className="text-sm font-semibold text-[var(--workbench-muted)] transition-colors hover:text-white motion-reduce:transition-none focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:rounded-sm"
+                  className="text-sm font-semibold text-[var(--workbench-muted)] transition-colors hover:text-zinc-900 dark:hover:text-white motion-reduce:transition-none focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:rounded-sm"
                 >
                   {tOr('dashboard.emptyUploadOwn', 'Or upload your own')}
                 </button>
@@ -658,7 +658,7 @@ export default function DashboardPageClient() {
                         </div>
                       ) : (
                         <button
-                          className="rounded-full p-2 text-[var(--workbench-muted)] transition-colors hover:bg-white/10 hover:text-white disabled:opacity-50 focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950"
+                          className="rounded-full p-2 text-[var(--workbench-muted)] transition-colors hover:bg-zinc-100 hover:text-zinc-900 dark:hover:bg-white/10 dark:hover:text-white disabled:opacity-50 focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950"
                           disabled={deletingId === d.document_id}
                           onClick={() => setConfirmDeleteId(d.document_id)}
                           title={t('doc.deleteDoc')}

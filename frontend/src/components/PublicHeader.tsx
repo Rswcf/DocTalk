@@ -25,7 +25,7 @@ export default function PublicHeader() {
       <Link href="/" className="font-logo font-semibold text-xl text-[var(--workbench-ink)] hover:text-zinc-950 dark:hover:text-white transition-colors shrink-0 focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:rounded-sm inline-flex items-center gap-2">
         <DocTalkLogo size={26} />
         {t('app.title')}
-        <span className="ml-1 -mt-2 px-1.5 py-0.5 text-[10px] font-medium leading-none rounded-full border border-white/18 bg-white/8 text-[var(--workbench-muted)] tracking-wide uppercase">Beta</span>
+        <span className="ml-1 -mt-2 px-1.5 py-0.5 text-[10px] font-medium leading-none rounded-full border border-zinc-300 bg-zinc-100 dark:border-white/18 dark:bg-white/8 text-[var(--workbench-muted)] tracking-wide uppercase">Beta</span>
       </Link>
 
       <nav className="hidden lg:flex items-center gap-4 ml-4" aria-label="Public navigation">
@@ -33,7 +33,7 @@ export default function PublicHeader() {
           <Link
             key={item.href}
             href={item.href}
-            className="rounded-full px-3 py-1.5 text-sm font-medium text-[var(--workbench-muted)] transition-colors hover:bg-white/10 hover:text-zinc-950 dark:hover:text-white"
+            className="rounded-full px-3 py-1.5 text-sm font-medium text-[var(--workbench-muted)] transition-colors hover:bg-zinc-100 hover:text-zinc-950 dark:hover:bg-white/10 dark:hover:text-white"
           >
             {item.label}
           </Link>

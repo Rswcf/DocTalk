@@ -33,11 +33,11 @@ export default function AppHeaderShell({ isDemo, isLoggedIn }: AppHeaderShellPro
       <Link href="/" className="font-logo font-semibold text-lg sm:text-xl text-[var(--workbench-ink)] hover:text-zinc-950 dark:hover:text-white transition-colors shrink-0 focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:rounded-sm inline-flex items-center gap-1.5 sm:gap-2">
         <DocTalkLogo size={26} />
         {t('app.title')}
-        <span className="hidden sm:inline ml-1 -mt-2 px-1.5 py-0.5 text-[10px] font-medium leading-none rounded-full border border-white/18 bg-white/8 text-[var(--workbench-muted)] tracking-wide uppercase">Beta</span>
+        <span className="hidden sm:inline ml-1 -mt-2 px-1.5 py-0.5 text-[10px] font-medium leading-none rounded-full border border-zinc-300 bg-zinc-100 dark:border-white/18 dark:bg-white/8 text-[var(--workbench-muted)] tracking-wide uppercase">Beta</span>
       </Link>
       {documentName && (
         <>
-          <span className="mx-1 sm:mx-3 text-white/25">/</span>
+          <span className="mx-1 sm:mx-3 text-zinc-300 dark:text-white/25">/</span>
           <SessionDropdown />
         </>
       )}
