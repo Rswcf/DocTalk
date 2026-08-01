@@ -96,7 +96,21 @@ export function AuthModal() {
 
   const callbackUrl = (() => {
     const override = peekAuthCallbackOverride();
-    if (override) return `${window.location.origin}${override}`;
+    if (override) {
+      // Resolve against the current origin instead of blindly concatenating
+      // — an absolute or protocol-relative override (`https://evil.com/x`,
+      // `//evil.com/x`) would resolve to a different origin; reject it and
+      // fall back to the current page rather than trust an arbitrary string
+      // passed to `openAuthModal({ callbackUrl })`.
+      try {
+        const resolved = new URL(override, window.location.origin);
+        if (resolved.origin === window.location.origin) {
+          return resolved.toString();
+        }
+      } catch {
+        // malformed override — fall through to the current-page default
+      }
+    }
     const currentSearch = searchParams.toString();
     return `${window.location.origin}${pathname}${currentSearch ? `?${currentSearch}` : ''}`;
   })();
