@@ -43,7 +43,22 @@ export function useChatSession(documentId: string | undefined): UseChatSessionRe
           const msgsData = await getMessages(storedDemoSession);
           if (cancelled) return;
           setSessionId(storedDemoSession);
-          setSessions([]);
+          // Populate the sessions list (not []) so SessionDropdown shows the
+          // adopted session instead of an empty "New Chat"-only placeholder.
+          // getMessages doesn't return session metadata, so derive
+          // created_at/last_activity_at from the fetched messages' own
+          // timestamps (falling back to now if there are none yet).
+          const firstMsgAt = msgsData.messages[0]?.createdAt;
+          const lastMsgAt = msgsData.messages[msgsData.messages.length - 1]?.createdAt;
+          const createdAt = firstMsgAt != null ? new Date(firstMsgAt).toISOString() : new Date().toISOString();
+          const lastActivityAt = lastMsgAt != null ? new Date(lastMsgAt).toISOString() : createdAt;
+          setSessions([{
+            session_id: storedDemoSession,
+            title: null,
+            message_count: msgsData.messages.length,
+            created_at: createdAt,
+            last_activity_at: lastActivityAt,
+          }]);
           setMessages(msgsData.messages);
           if (msgsData.demo_messages_used != null) {
             setDemoMessagesUsed(msgsData.demo_messages_used);

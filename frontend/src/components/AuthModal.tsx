@@ -37,8 +37,22 @@ export function AuthModal() {
     url.hash = '';
     router.replace(getUrlWithoutAuthHash(url), { scroll: false });
     setIsOpen(false);
-    clearAuthCallbackOverride();
   };
+
+  // Clear the override on every open→closed transition, not just `handleClose`
+  // — `isOpen` can also flip to false via the `hashchange`/`syncFromHash` path
+  // (e.g. a mobile back-gesture navigating off `#auth`), which bypasses
+  // `handleClose` entirely. Without this, a stale override could reapply on a
+  // later hash-only reopen. `wasOpenRef` skips the initial (never-opened)
+  // mount so a legitimate override set just before the modal opens isn't
+  // wiped before `isOpen` catches up.
+  const wasOpenRef = useRef(false);
+  useEffect(() => {
+    if (wasOpenRef.current && !isOpen) {
+      clearAuthCallbackOverride();
+    }
+    wasOpenRef.current = isOpen;
+  }, [isOpen]);
 
   useEffect(() => {
     if (!isOpen) return;
