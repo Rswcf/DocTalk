@@ -1117,7 +1117,7 @@
   "featuresDemo.docs.doc3.title": "サンプル文書",
   "featuresDemo.docs.doc3.description": "異なる質問スタイルを試し、AIがフォーマットを超えて情報を抽出する様子を確認できる3つ目のデモファイルです。",
   "featuresDemo.whatYouGet.title": "デモで得られるもの",
-  "featuresDemo.whatYouGet.item1.label": "セッションあたり5メッセージ",
+  "featuresDemo.whatYouGet.item1.label": "サンプル文書あたり5メッセージ",
   "featuresDemo.whatYouGet.item1.description": "文書を探索し、引用ハイライトをテストするのに十分な回数です。",
   "featuresDemo.whatYouGet.item2.label": "引用ハイライト",
   "featuresDemo.whatYouGet.item2.description": "番号付きの引用をクリックすると、元のテキストにジャンプします。",

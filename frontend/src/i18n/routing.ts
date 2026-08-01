@@ -30,6 +30,7 @@ export function isUrlLocale(value: string | undefined | null): value is UrlLocal
  */
 export const LOCALIZED_PATHS: ReadonlySet<string> = new Set<string>([
   '/',
+  '/demo',
   '/use-cases/lawyers',
   '/use-cases/finance',
   '/use-cases/students',

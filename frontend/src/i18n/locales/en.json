@@ -1124,7 +1124,7 @@
   "featuresDemo.docs.doc3.title": "Sample Document",
   "featuresDemo.docs.doc3.description": "A third demo file to try different question styles and see how the AI extracts information across formats.",
   "featuresDemo.whatYouGet.title": "What You Get in the Demo",
-  "featuresDemo.whatYouGet.item1.label": "5 messages per session",
+  "featuresDemo.whatYouGet.item1.label": "5 messages per sample document",
   "featuresDemo.whatYouGet.item1.description": "Enough to explore a document and test citation highlighting.",
   "featuresDemo.whatYouGet.item2.label": "Citation highlighting",
   "featuresDemo.whatYouGet.item2.description": "Click any numbered citation to jump to the source text.",

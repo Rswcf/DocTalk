@@ -53,7 +53,7 @@ export default function FreeDemoPage() {
               price: '0',
               priceCurrency: 'USD',
               name: 'Free Demo',
-              description: 'No signup required. 5 messages per session. 3 sample documents.',
+              description: 'No signup required. 5 messages per sample document. 3 sample documents.',
             },
           }),
         }}
@@ -72,7 +72,7 @@ export default function FreeDemoPage() {
                 name: 'Is it really free?',
                 acceptedAnswer: {
                   '@type': 'Answer',
-                  text: 'Yes. The demo is completely free with no hidden costs. You get 5 messages per session with 3 sample documents. No credit card, no account, no email required.',
+                  text: 'Yes. The demo is completely free with no hidden costs. You get 5 messages per sample document with 3 sample documents to explore. No credit card, no account, no email required.',
                 },
               },
               {

@@ -1117,7 +1117,7 @@
   "featuresDemo.docs.doc3.title": "Exemple de document",
   "featuresDemo.docs.doc3.description": "Un troisième fichier de démo pour essayer différents styles de questions et voir comment l'IA extrait l'information de différents formats.",
   "featuresDemo.whatYouGet.title": "Ce que vous obtenez dans la démo",
-  "featuresDemo.whatYouGet.item1.label": "5 messages par session",
+  "featuresDemo.whatYouGet.item1.label": "5 messages par exemple de document",
   "featuresDemo.whatYouGet.item1.description": "Suffisant pour explorer un document et tester le surlignage des citations.",
   "featuresDemo.whatYouGet.item2.label": "Surlignage des citations",
   "featuresDemo.whatYouGet.item2.description": "Cliquez sur n'importe quelle citation numérotée pour accéder au texte source.",

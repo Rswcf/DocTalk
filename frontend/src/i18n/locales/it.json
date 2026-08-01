@@ -1117,7 +1117,7 @@
   "featuresDemo.docs.doc3.title": "Documento di esempio",
   "featuresDemo.docs.doc3.description": "Un terzo file demo per provare diversi stili di domande e vedere come l'IA estrae informazioni tra i formati.",
   "featuresDemo.whatYouGet.title": "Cosa ottieni nella demo",
-  "featuresDemo.whatYouGet.item1.label": "5 messaggi per sessione",
+  "featuresDemo.whatYouGet.item1.label": "5 messaggi per documento di esempio",
   "featuresDemo.whatYouGet.item1.description": "Abbastanza per esplorare un documento e testare l'evidenziazione delle citazioni.",
   "featuresDemo.whatYouGet.item2.label": "Evidenziazione delle citazioni",
   "featuresDemo.whatYouGet.item2.description": "Clicca su qualsiasi citazione numerata per passare al testo sorgente.",

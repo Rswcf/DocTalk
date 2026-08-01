@@ -1117,7 +1117,7 @@
   "featuresDemo.docs.doc3.title": "샘플 문서",
   "featuresDemo.docs.doc3.description": "다양한 질문 스타일을 시도하고 AI가 형식 전반에 걸쳐 정보를 추출하는 방식을 확인할 수 있는 세 번째 데모 파일입니다.",
   "featuresDemo.whatYouGet.title": "데모에서 제공되는 기능",
-  "featuresDemo.whatYouGet.item1.label": "세션당 5개의 메시지",
+  "featuresDemo.whatYouGet.item1.label": "샘플 문서당 5개의 메시지",
   "featuresDemo.whatYouGet.item1.description": "문서를 탐색하고 인용 강조 표시를 테스트하기에 충분합니다.",
   "featuresDemo.whatYouGet.item2.label": "인용 강조 표시",
   "featuresDemo.whatYouGet.item2.description": "번호가 매겨진 인용을 클릭하면 원본 텍스트로 이동합니다.",

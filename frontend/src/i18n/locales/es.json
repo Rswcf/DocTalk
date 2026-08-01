@@ -1117,7 +1117,7 @@
   "featuresDemo.docs.doc3.title": "Documento de muestra",
   "featuresDemo.docs.doc3.description": "Un tercer archivo de demostración para probar diferentes estilos de preguntas y ver cómo la IA extrae información en distintos formatos.",
   "featuresDemo.whatYouGet.title": "Lo que obtienes en la demostración",
-  "featuresDemo.whatYouGet.item1.label": "5 mensajes por sesión",
+  "featuresDemo.whatYouGet.item1.label": "5 mensajes por documento de muestra",
   "featuresDemo.whatYouGet.item1.description": "Suficiente para explorar un documento y probar el resaltado de citas.",
   "featuresDemo.whatYouGet.item2.label": "Resaltado de citas",
   "featuresDemo.whatYouGet.item2.description": "Haz clic en cualquier cita numerada para saltar al texto fuente.",

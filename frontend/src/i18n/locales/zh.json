@@ -1122,7 +1122,7 @@
   "featuresDemo.docs.doc3.title": "示例文档",
   "featuresDemo.docs.doc3.description": "第三个演示文件，可尝试不同的提问风格，看 AI 如何跨格式提取信息。",
   "featuresDemo.whatYouGet.title": "演示包含什么",
-  "featuresDemo.whatYouGet.item1.label": "每次会话 5 条消息",
+  "featuresDemo.whatYouGet.item1.label": "每篇示例文档 5 条消息",
   "featuresDemo.whatYouGet.item1.description": "足够探索文档和测试引用高亮。",
   "featuresDemo.whatYouGet.item2.label": "引用高亮",
   "featuresDemo.whatYouGet.item2.description": "点击任意编号引用跳转到源文本。",

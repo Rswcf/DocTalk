@@ -1117,7 +1117,7 @@
   "featuresDemo.docs.doc3.title": "Beispieldokument",
   "featuresDemo.docs.doc3.description": "Eine dritte Demo-Datei zum Ausprobieren verschiedener Fragestile und um zu sehen, wie die KI Informationen über Formate hinweg extrahiert.",
   "featuresDemo.whatYouGet.title": "Was Sie in der Demo erhalten",
-  "featuresDemo.whatYouGet.item1.label": "5 Nachrichten pro Sitzung",
+  "featuresDemo.whatYouGet.item1.label": "5 Nachrichten pro Beispieldokument",
   "featuresDemo.whatYouGet.item1.description": "Genug, um ein Dokument zu erkunden und die Zitathervorhebung zu testen.",
   "featuresDemo.whatYouGet.item2.label": "Zitathervorhebung",
   "featuresDemo.whatYouGet.item2.description": "Klicken Sie auf ein nummeriertes Zitat, um zum Quelltext zu springen.",
