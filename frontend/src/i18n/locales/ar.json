@@ -99,6 +99,7 @@
   "demo.freeMessages": "5 رسائل مجانية لكل مستند · سجّل الدخول لرفع مستنداتك",
   "demo.rateLimitMessage": "طلبات كثيرة جدًا. يرجى الانتظار لحظة والمحاولة مرة أخرى.",
   "demo.questionsRemaining": "{remaining}/{total} أسئلة متبقية",
+  "demo.questionsRemainingLabel": "الأسئلة المتبقية",
   "demo.remaining": "{count}/{total} رسائل متبقية",
   "demo.sample.earnings.desc": "نتائج الربع الرابع 2025",
   "demo.sample.earnings.question": "ما هي إيرادات Alphabet هذا الربع؟",

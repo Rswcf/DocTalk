@@ -262,6 +262,7 @@
   "demo.loginForMore": "Für kostenlose Credits anmelden",
   "demo.limitReached": "Anmelden, um fortzufahren",
   "demo.questionsRemaining": "{remaining}/{total} Fragen übrig",
+  "demo.questionsRemainingLabel": "Verbleibende Fragen",
   "demo.signInForUnlimited": "Für kostenlose Credits anmelden",
   "demo.signInToContinue": "Anmelden, um weiter zu chatten",
   "demo.limitReachedMessage": "Sie haben alle 5 Demo-Fragen aufgebraucht. Melden Sie sich an, um eigene Dokumente mit kostenlosen Credits hochzuladen.",

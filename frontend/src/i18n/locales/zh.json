@@ -263,6 +263,7 @@
   "demo.loginForMore": "登录领取免费额度",
   "demo.limitReached": "登录以继续",
   "demo.questionsRemaining": "剩余 {remaining}/{total} 个问题",
+  "demo.questionsRemainingLabel": "剩余问题数",
   "demo.signInForUnlimited": "登录领取免费额度",
   "demo.signInToContinue": "登录以继续对话",
   "demo.limitReachedMessage": "5 个演示问题已用完。登录后可使用免费额度上传自己的文档。",

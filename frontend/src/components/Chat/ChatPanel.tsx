@@ -574,7 +574,7 @@ export default function ChatPanel({ sessionId, onCitationClick, onPreviewLayoutT
               aria-valuenow={Math.max(0, demoRemaining)}
               aria-valuemin={0}
               aria-valuemax={maxMessages}
-              aria-label={t('chat.messagesUsed')}
+              aria-label={t('demo.questionsRemainingLabel')}
               aria-valuetext={t('demo.questionsRemaining', { remaining: Math.max(0, demoRemaining), total: maxUserMessages })}
               className={`h-full transition-[width] duration-300 ${
                 demoRemaining <= 2 ? 'bg-amber-500' : 'bg-zinc-400 dark:bg-zinc-500'

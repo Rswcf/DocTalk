@@ -262,6 +262,7 @@
   "demo.loginForMore": "Connectez-vous pour des crédits gratuits",
   "demo.limitReached": "Connectez-vous pour continuer",
   "demo.questionsRemaining": "{remaining}/{total} questions restantes",
+  "demo.questionsRemainingLabel": "Questions restantes",
   "demo.signInForUnlimited": "Connectez-vous pour des crédits gratuits",
   "demo.signInToContinue": "Connectez-vous pour continuer à discuter",
   "demo.limitReachedMessage": "Vous avez utilisé vos 5 questions de démonstration. Connectez-vous pour importer vos propres documents avec des crédits gratuits.",

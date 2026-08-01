@@ -256,6 +256,7 @@
   "demo.loginForMore": "Accedi per crediti gratuiti",
   "demo.limitReached": "Accedi per continuare",
   "demo.questionsRemaining": "{remaining}/{total} domande rimanenti",
+  "demo.questionsRemainingLabel": "Domande rimanenti",
   "demo.signInForUnlimited": "Accedi per crediti gratuiti",
   "demo.signInToContinue": "Accedi per continuare a chattare",
   "demo.limitReachedMessage": "Hai usato tutte le 5 domande demo. Accedi per caricare i tuoi documenti con crediti gratuiti.",

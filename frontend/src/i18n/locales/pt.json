@@ -1032,6 +1032,7 @@
   "demo.notFound": "Documento de demonstração não encontrado",
   "demo.processing": "Processando...",
   "demo.questionsRemaining": "{remaining}/{total} perguntas restantes",
+  "demo.questionsRemainingLabel": "Perguntas restantes",
   "demo.rateLimitMessage": "Muitas solicitações. Aguarde um momento e tente novamente.",
   "demo.remaining": "{count}/{total} mensagens restantes",
   "demo.sample.court.desc": "Documento de processo civil federal",

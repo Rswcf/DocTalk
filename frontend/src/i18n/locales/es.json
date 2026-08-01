@@ -99,6 +99,7 @@
   "demo.freeMessages": "5 mensajes gratis por documento · Inicia sesión para subir tus documentos",
   "demo.rateLimitMessage": "Demasiadas solicitudes. Espera un momento e inténtalo de nuevo.",
   "demo.questionsRemaining": "{remaining}/{total} preguntas restantes",
+  "demo.questionsRemainingLabel": "Preguntas restantes",
   "demo.remaining": "{count}/{total} mensajes restantes",
   "demo.sample.earnings.desc": "Resultados trimestrales Q4 2025",
   "demo.sample.earnings.question": "¿Cuáles fueron los ingresos de Alphabet este trimestre?",

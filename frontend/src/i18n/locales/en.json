@@ -263,6 +263,7 @@
   "demo.loginForMore": "Sign in for free credits",
   "demo.limitReached": "Sign in to continue",
   "demo.questionsRemaining": "{remaining}/{total} questions remaining",
+  "demo.questionsRemainingLabel": "Questions remaining",
   "demo.signInForUnlimited": "Sign in for free credits",
   "demo.signInToContinue": "Sign in to continue chatting",
   "demo.limitReachedMessage": "You've used all 5 demo questions. Sign in to upload your own documents with free credits.",

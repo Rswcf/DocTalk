@@ -99,6 +99,7 @@
   "demo.freeMessages": "प्रति दस्तावेज़ 5 मुफ़्त संदेश · अपने दस्तावेज़ अपलोड करने के लिए साइन इन करें",
   "demo.rateLimitMessage": "बहुत अधिक अनुरोध। कृपया एक क्षण प्रतीक्षा करें और पुनः प्रयास करें।",
   "demo.questionsRemaining": "{remaining}/{total} प्रश्न शेष",
+  "demo.questionsRemainingLabel": "शेष प्रश्न",
   "demo.remaining": "{count}/{total} संदेश शेष",
   "demo.sample.earnings.desc": "Q4 2025 तिमाही परिणाम",
   "demo.sample.earnings.question": "इस तिमाही में Alphabet का राजस्व कितना था?",

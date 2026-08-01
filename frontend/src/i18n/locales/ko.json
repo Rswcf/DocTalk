@@ -256,6 +256,7 @@
   "demo.loginForMore": "무료 크레딧으로 로그인",
   "demo.limitReached": "계속하려면 로그인",
   "demo.questionsRemaining": "{remaining}/{total} 질문 남음",
+  "demo.questionsRemainingLabel": "남은 질문 수",
   "demo.signInForUnlimited": "무료 크레딧으로 로그인",
   "demo.signInToContinue": "채팅을 계속하려면 로그인",
   "demo.limitReachedMessage": "데모 질문 5개를 모두 사용했습니다. 로그인하면 무료 크레딧으로 내 문서를 업로드할 수 있습니다.",

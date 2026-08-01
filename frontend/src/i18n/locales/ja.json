@@ -256,6 +256,7 @@
   "demo.loginForMore": "無料クレジットでサインイン",
   "demo.limitReached": "続行するにはサインイン",
   "demo.questionsRemaining": "残り{remaining}/{total}質問",
+  "demo.questionsRemainingLabel": "残りの質問数",
   "demo.signInForUnlimited": "無料クレジットでサインイン",
   "demo.signInToContinue": "チャットを続けるにはサインイン",
   "demo.limitReachedMessage": "デモの5つの質問をすべて使用しました。サインインすると無料クレジットで自分の文書をアップロードできます。",
