@@ -159,7 +159,6 @@ export default function ChatPanel({ sessionId, onCitationClick, onPreviewLayoutT
     stopStreaming,
     demoRemaining,
     demoLimitReached,
-    messagesUsed,
     maxMessages,
   } = useChatStream({
     sessionId,
@@ -486,12 +485,12 @@ export default function ChatPanel({ sessionId, onCitationClick, onPreviewLayoutT
           {messages.length === 0 && suggestedQuestions && suggestedQuestions.length > 0 && (
             <div className="flex min-h-full flex-col items-center justify-center px-2 py-8">
               <div className="dt-empty-workbench rounded-[1.75rem] px-5 py-6 sm:px-7 sm:py-7">
-                <div className="mb-5 flex items-center justify-between gap-4 border-b border-white/10 pb-4">
+                <div className="mb-5 flex items-center justify-between gap-4 border-b border-zinc-200 dark:border-white/10 pb-4">
                   <div>
                     <p className="text-[11px] font-mono uppercase tracking-[0.08em] text-[var(--workbench-muted)]">DocTalk</p>
                     <p className="mt-1 text-sm font-medium text-[var(--workbench-ink)]">{t('chat.trySuggested')}</p>
                   </div>
-                  <div className="hidden sm:flex h-9 w-9 items-center justify-center rounded-xl border border-white/14 bg-white/8 text-xs font-mono font-semibold text-white/72">
+                  <div className="hidden sm:flex h-9 w-9 items-center justify-center rounded-xl border border-zinc-200 bg-zinc-50 text-zinc-500 dark:border-white/14 dark:bg-white/8 dark:text-white/72 text-xs font-mono font-semibold">
                     01
                   </div>
                 </div>
@@ -543,7 +542,7 @@ export default function ChatPanel({ sessionId, onCitationClick, onPreviewLayoutT
           <div className="absolute bottom-2 left-0 right-0 flex justify-center pointer-events-none z-10">
             <button
               onClick={() => listRef.current?.scrollTo({ top: listRef.current.scrollHeight, behavior: 'smooth' })}
-              className="pointer-events-auto rounded-full border border-white/14 bg-white/10 p-2 text-[var(--workbench-muted)] shadow-md transition-shadow hover:text-white hover:shadow-lg focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950"
+              className="pointer-events-auto rounded-full border border-zinc-200 bg-white hover:text-zinc-900 dark:border-white/14 dark:bg-white/10 p-2 text-[var(--workbench-muted)] shadow-md transition-shadow dark:hover:text-white hover:shadow-lg focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950"
               aria-label={t('chat.scrollToBottom')}
             >
               <ArrowDown size={16} />
@@ -554,13 +553,14 @@ export default function ChatPanel({ sessionId, onCitationClick, onPreviewLayoutT
 
       {maxUserMessages != null && (
         <div className="border-t border-[var(--workbench-border)]">
-          <div className="h-1 bg-white/10">
+          <div className="h-1 bg-zinc-200 dark:bg-white/10">
             <div
               role="progressbar"
-              aria-valuenow={messagesUsed}
+              aria-valuenow={Math.max(0, demoRemaining)}
               aria-valuemin={0}
               aria-valuemax={maxMessages}
               aria-label={t('chat.messagesUsed')}
+              aria-valuetext={t('demo.questionsRemaining', { remaining: Math.max(0, demoRemaining), total: maxUserMessages })}
               className={`h-full transition-[width] duration-300 ${
                 demoRemaining <= 2 ? 'bg-amber-500' : 'bg-zinc-400 dark:bg-zinc-500'
               }`}
@@ -592,7 +592,7 @@ export default function ChatPanel({ sessionId, onCitationClick, onPreviewLayoutT
               <span className={demoRemaining <= 2 ? 'text-amber-600 dark:text-amber-400 font-medium' : ''}>
                 {t('demo.questionsRemaining', { remaining: Math.max(0, demoRemaining), total: maxUserMessages })}
               </span>
-              <button type="button" onClick={() => openAuthModal()} className="text-sm text-[var(--workbench-muted)] hover:text-white hover:underline focus-visible:rounded-sm focus-visible:ring-2 focus-visible:ring-zinc-400">
+              <button type="button" onClick={() => openAuthModal()} className="text-sm text-[var(--workbench-muted)] hover:text-zinc-900 dark:hover:text-white hover:underline focus-visible:rounded-sm focus-visible:ring-2 focus-visible:ring-zinc-400">
                 {t('demo.signInForUnlimited')}
               </button>
             </div>
@@ -641,7 +641,7 @@ export default function ChatPanel({ sessionId, onCitationClick, onPreviewLayoutT
                 type="button"
                 onClick={handleShare}
                 disabled={shareLoading}
-                className="rounded-full p-1.5 text-[var(--workbench-muted)] transition-colors hover:bg-white/10 hover:text-white focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950 disabled:opacity-50"
+                className="rounded-full p-1.5 text-[var(--workbench-muted)] transition-colors hover:bg-zinc-100 hover:text-zinc-900 dark:hover:bg-white/10 dark:hover:text-white focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950 disabled:opacity-50"
                 title={tOr('chat.share', 'Share conversation')}
                 aria-label={tOr('chat.share', 'Share conversation')}
               >
@@ -650,7 +650,7 @@ export default function ChatPanel({ sessionId, onCitationClick, onPreviewLayoutT
             )}
             <textarea
               ref={textareaRef}
-              className="flex-1 resize-none overflow-y-auto bg-transparent px-1 py-1 text-sm text-[var(--workbench-ink)] placeholder:text-white/38 focus:outline-none"
+              className="flex-1 resize-none overflow-y-auto bg-transparent px-1 py-1 text-sm text-[var(--workbench-ink)] placeholder:text-zinc-400 dark:placeholder:text-white/38 focus:outline-none"
               style={{ minHeight: '36px' }}
               placeholder={demoLimitReached ? t('demo.signInToContinue') : t('chat.placeholder')}
               value={input}
@@ -688,7 +688,7 @@ export default function ChatPanel({ sessionId, onCitationClick, onPreviewLayoutT
       </form>
 
       <div className="bg-transparent pb-2 text-center">
-        <p className="mx-auto max-w-4xl text-xs text-white/36">
+        <p className="mx-auto max-w-4xl text-xs text-zinc-400 dark:text-zinc-500">
           {t('chat.disclaimer')}
         </p>
       </div>
