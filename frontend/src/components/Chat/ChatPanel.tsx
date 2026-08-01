@@ -319,7 +319,7 @@ export default function ChatPanel({ sessionId, onCitationClick, onPreviewLayoutT
       plan: 'plus',
       period: 'monthly',
     });
-    openAuthModal();
+    openAuthModal({ callbackUrl: '/' });
   }, []);
 
   const handleExport = useCallback(() => {
@@ -456,6 +456,13 @@ export default function ChatPanel({ sessionId, onCitationClick, onPreviewLayoutT
     void handleShareAnswer(msg);
   }, [handleShareAnswer]);
 
+  const handleAnonShareClick = useCallback(() => {
+    trackEvent('upgrade_click', { source: 'demo_share_attempt' });
+    // Anonymous transcripts are not preserved through signup (no session
+    // adoption yet) — this is a conversion affordance, not a working share.
+    openAuthModal();
+  }, []);
+
   const canUseCustomInstructions = !!onOpenSettings;
   // Show the entry only on surfaces that support the feature. Among those,
   // show the Pro upgrade hook to Free + Plus (Plus was previously hidden, a
@@ -530,7 +537,7 @@ export default function ChatPanel({ sessionId, onCitationClick, onPreviewLayoutT
                     onPreviewLayoutTranslation={onPreviewLayoutTranslation}
                     onRegenerate={isLastAssistantMsg ? handleRegenerateLast : undefined}
                     onContinue={isLastAssistantMsg && message.isTruncated ? handleContinueLast : undefined}
-                    onShareAnswer={userPlan ? handleShareAnswerVoid : undefined}
+                    onShareAnswer={userPlan ? handleShareAnswerVoid : handleAnonShareClick}
                     isSharingAnswer={shareAnswerLoadingId === message.id}
                   />
                 );
@@ -636,10 +643,10 @@ export default function ChatPanel({ sessionId, onCitationClick, onPreviewLayoutT
               t={t}
               tOr={tOr}
             />
-            {messages.length > 0 && !isStreaming && userPlan && (
+            {messages.length > 0 && !isStreaming && (
               <button
                 type="button"
-                onClick={handleShare}
+                onClick={userPlan ? handleShare : handleAnonShareClick}
                 disabled={shareLoading}
                 className="rounded-full p-1.5 text-[var(--workbench-muted)] transition-colors hover:bg-zinc-100 hover:text-zinc-900 dark:hover:bg-white/10 dark:hover:text-white focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950 disabled:opacity-50"
                 title={tOr('chat.share', 'Share conversation')}
