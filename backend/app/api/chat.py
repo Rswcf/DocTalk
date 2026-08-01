@@ -47,6 +47,16 @@ from app.services.share_anchor_service import message_share_anchor
 DEMO_MESSAGE_LIMIT = 5
 DEMO_MAX_SESSIONS_PER_DOC = 500
 
+
+def _demo_message_key(client_ip: str, document_id) -> str:
+    """Demo message counter key, scoped per (IP, document).
+
+    Marketing promises "5 free messages per document" — the counter must not
+    be shared across the 3 sample docs. TTL (24h) is handled by the tracker.
+    """
+    return f"{client_ip}:{document_id}"
+
+
 chat_router = APIRouter(prefix="/api", tags=["chat"])
 
 DOCUMENT_NOT_FOUND_DETAIL = {
@@ -242,11 +252,11 @@ async def create_session(
     )
 
     # For anonymous demo sessions, include used message count so frontend
-    # can display the correct remaining count across page refreshes and
-    # across different demo documents (limit is global per IP).
+    # can display the correct remaining count across page refreshes
+    # (limit is per IP per document).
     if user is None and doc.demo_slug:
         client_ip = get_client_ip(request)
-        used = await demo_message_tracker.get_count(client_ip)
+        used = await demo_message_tracker.get_count(_demo_message_key(client_ip, doc.id))
         return JSONResponse(
             status_code=201,
             content={**response.model_dump(mode="json"), "demo_messages_used": used},
@@ -258,6 +268,7 @@ async def create_session(
 @chat_router.get("/sessions/{session_id}/messages", response_model=SessionMessagesResponse)
 async def get_session_messages(
     session_id: uuid.UUID,
+    request: Request,
     user: Optional[User] = Depends(get_current_user_optional),
     db: AsyncSession = Depends(get_db_session),
 ):
@@ -282,7 +293,19 @@ async def get_session_messages(
                 created_at=m.created_at,
             )
         )
-    return SessionMessagesResponse(messages=items)
+    response = SessionMessagesResponse(messages=items)
+
+    # Anonymous demo sessions: surface the used count so the frontend can
+    # restore the counter when it reuses a stored session (see create-session).
+    if session.user_id is None and session.document and session.document.demo_slug:
+        client_ip = get_client_ip(request)
+        used = await demo_message_tracker.get_count(_demo_message_key(client_ip, session.document_id))
+        return JSONResponse(
+            status_code=200,
+            content={**response.model_dump(mode="json"), "demo_messages_used": used},
+        )
+
+    return response
 
 
 @chat_router.post("/sessions/{session_id}/chat")
@@ -337,9 +360,11 @@ async def chat_stream(
             )
 
     # Enforce message limit for anonymous users on demo documents.
-    # Tracker key is global per IP across demo docs and survives session recreation.
+    # Tracker key is scoped per (IP, document) and survives session recreation.
     if user is None and session.document and session.document.demo_slug:
-        allowed, _count = await demo_message_tracker.check_and_increment(client_ip, DEMO_MESSAGE_LIMIT)
+        allowed, _count = await demo_message_tracker.check_and_increment(
+            _demo_message_key(client_ip, session.document_id), DEMO_MESSAGE_LIMIT
+        )
         if not allowed:
             log_security_event("demo_message_limit", ip=client_ip, document_id=session.document_id)
             raise HTTPException(
@@ -447,7 +472,9 @@ async def chat_continue(
     # Demo message limit (continuations count against it)
     if user is None and session.document and session.document.demo_slug:
         client_ip = get_client_ip(request)
-        allowed, _count = await demo_message_tracker.check_and_increment(client_ip, DEMO_MESSAGE_LIMIT)
+        allowed, _count = await demo_message_tracker.check_and_increment(
+            _demo_message_key(client_ip, session.document_id), DEMO_MESSAGE_LIMIT
+        )
         if not allowed:
             log_security_event("demo_message_limit", ip=client_ip, document_id=session.document_id)
             raise HTTPException(
