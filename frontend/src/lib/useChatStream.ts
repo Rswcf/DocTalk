@@ -55,6 +55,7 @@ export function useChatStream({
     messages,
     isStreaming,
     demoMessagesUsed,
+    demoRestoredUserMsgCount,
     addMessage,
     updateLastMessage,
     addCitationToLastMessage,
@@ -69,8 +70,20 @@ export function useChatStream({
 
   const abortRef = useRef<AbortController | null>(null);
 
-  const localUserMsgCount = maxUserMessages != null
+  // Contract: totalUsed = demoMessagesUsed (server-known count as of the last
+  // restore/create) + messages sent locally since then. demoRestoredUserMsgCount
+  // is the baseline set at that restore/create point — how many of the
+  // transcript's user messages were already reflected in demoMessagesUsed —
+  // so only messages appended AFTER it count as "new". This converges to
+  // server truth on every restore, including Redis TTL expiry / IP changes
+  // (server reports 0 even though the transcript has old messages), instead
+  // of a fixed subtraction that could outlive the server's own window and
+  // hard-lock a user the backend would actually allow.
+  const userMsgsInTranscript = maxUserMessages != null
     ? messages.filter((m) => m.role === 'user').length
+    : 0;
+  const localUserMsgCount = maxUserMessages != null
+    ? Math.max(0, userMsgsInTranscript - demoRestoredUserMsgCount)
     : 0;
   const totalUsed = demoMessagesUsed + localUserMsgCount;
   const demoRemaining = maxUserMessages != null ? maxUserMessages - totalUsed : Infinity;
@@ -283,6 +296,21 @@ export function useChatStream({
     return true;
   }, [isStreaming, demoLimitReached, onRequireAuth, addMessage, setStreaming, streamAssistantResponse, selectedMode]);
 
+  // Regenerate/continue add no new user message locally (they resend/extend
+  // an existing turn), but the backend increments demo quota on both — so
+  // without this the UI would undercount relative to the server. Bumps
+  // demoMessagesUsed directly (not the baseline, which only moves at
+  // restore/create) and optimistically, before the stream starts — same
+  // pattern as `sendMessage`, which counts a turn as soon as it's sent
+  // rather than waiting for/rolling back on stream completion. No-op
+  // outside demo (maxUserMessages == null), so authenticated/non-demo
+  // sessions are untouched.
+  const bumpDemoUsageForRegenOrContinue = useCallback(() => {
+    if (maxUserMessages == null) return;
+    const state = useDocTalkStore.getState();
+    state.setDemoMessagesUsed(state.demoMessagesUsed + 1);
+  }, [maxUserMessages]);
+
   const regenerateLastResponse = useCallback(async () => {
     if (isStreaming) return;
 
@@ -303,10 +331,11 @@ export function useChatStream({
 
     useDocTalkStore.getState().setMessages(trimmed);
     addMessage({ id: `m_${Date.now()}_a`, role: 'assistant', text: '', citations: [], createdAt: Date.now() });
+    bumpDemoUsageForRegenOrContinue();
     setStreaming(true);
 
     await streamAssistantResponse(lastUserText);
-  }, [isStreaming, addMessage, setStreaming, streamAssistantResponse]);
+  }, [isStreaming, addMessage, setStreaming, streamAssistantResponse, bumpDemoUsageForRegenOrContinue]);
 
   const continueGenerating = useCallback(async () => {
     if (isStreaming) return;
@@ -317,6 +346,7 @@ export function useChatStream({
 
     // Clear truncated flag and start streaming
     markLastMessageTruncated(false);
+    bumpDemoUsageForRegenOrContinue();
     setStreaming(true);
 
     const controller = new AbortController();
@@ -338,7 +368,7 @@ export function useChatStream({
       handleAnswerRepaired,
       handleCitationsRefined,
     );
-  }, [isStreaming, sessionId, markLastMessageTruncated, setStreaming, updateLastMessage, addCitationToLastMessage, addArtifactToLastMessage, setLastMessageToolStatus, handleStreamError, handleStreamDone, handleTruncated, handleAnswerRepaired, handleCitationsRefined, selectedMode, locale]);
+  }, [isStreaming, sessionId, markLastMessageTruncated, setStreaming, updateLastMessage, addCitationToLastMessage, addArtifactToLastMessage, setLastMessageToolStatus, handleStreamError, handleStreamDone, handleTruncated, handleAnswerRepaired, handleCitationsRefined, selectedMode, locale, bumpDemoUsageForRegenOrContinue]);
 
   const stopStreaming = useCallback(() => {
     abortRef.current?.abort();

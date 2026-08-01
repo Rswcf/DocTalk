@@ -18,7 +18,7 @@ export default function SessionDropdown() {
   const sessions = useDocTalkStore((s) => s.sessions);
   const isStreaming = useDocTalkStore((s) => s.isStreaming);
 
-  const { addSession, setSessionId, setMessages, removeSession, reset, setDemoMessagesUsed } = useDocTalkStore();
+  const { addSession, setSessionId, setMessages, removeSession, reset, setDemoMessagesUsed, setDemoRestoredUserMsgCount } = useDocTalkStore();
   const { t, tOr } = useLocale();
   const router = useRouter();
 
@@ -68,7 +68,12 @@ export default function SessionDropdown() {
         last_activity_at: s.created_at,
       });
       setSessionId(s.session_id);
-      if (s.demo_messages_used != null) setDemoMessagesUsed(s.demo_messages_used);
+      if (s.demo_messages_used != null) {
+        // Fresh session, empty transcript — same contract as useChatSession's
+        // createSession path: baseline 0, every message sent from here counts.
+        setDemoRestoredUserMsgCount(0);
+        setDemoMessagesUsed(s.demo_messages_used);
+      }
       setMessages([]);
       setConfirmDeleteId(null);
       setOpen(false);
@@ -88,6 +93,16 @@ export default function SessionDropdown() {
     setSessionId(id);
     const msgs = await getMessages(id);
     setMessages(msgs.messages);
+    // Same restore contract as useChatSession's reuse branch: switching to a
+    // session with a real transcript must reset the baseline to what THIS
+    // transcript carries, or the demo counter stays misaligned against the
+    // newly-loaded messages (only relevant when `id` is an anon demo session
+    // — demo_messages_used is absent for authed/non-demo sessions).
+    if (msgs.demo_messages_used != null) {
+      const restoredUserMsgCount = msgs.messages.filter((m) => m.role === 'user').length;
+      setDemoRestoredUserMsgCount(restoredUserMsgCount);
+      setDemoMessagesUsed(msgs.demo_messages_used);
+    }
     setConfirmDeleteId(null);
     setOpen(false);
   };

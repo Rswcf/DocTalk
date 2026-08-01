@@ -17,6 +17,7 @@ export function useChatSession(documentId: string | undefined): UseChatSessionRe
     setSessionId,
     setMessages,
     setDemoMessagesUsed,
+    setDemoRestoredUserMsgCount,
     addSession,
   } = useDocTalkStore();
 
@@ -60,19 +61,19 @@ export function useChatSession(documentId: string | undefined): UseChatSessionRe
             last_activity_at: lastActivityAt,
           }]);
           setMessages(msgsData.messages);
-          // Contract (useChatStream.ts): totalUsed = demoMessagesUsed + local
-          // user-message count. demoMessagesUsed must hold only server-known
-          // usage NOT already represented in the restored local transcript,
-          // or the two get summed and double-count. Since we just restored
-          // the full transcript into `messages`, subtract the user messages
-          // it already carries from the server's count (clamped at 0 for
-          // safety, though in the steady state the two should match exactly).
+          // Baseline model (useChatStream.ts): totalUsed = demoMessagesUsed
+          // (server-known usage AS OF THIS RESTORE) + messages sent locally
+          // since then. demoRestoredUserMsgCount records how many of the
+          // transcript's user messages are already covered by
+          // demoMessagesUsed, so useChatStream only counts NEW ones on top.
+          // demoMessagesUsed is the raw server value — NOT subtracted — so a
+          // restore always converges to server truth, including when the
+          // 24h Redis window has expired or the IP changed (server reports
+          // 0 even though the transcript has old messages): that previously
+          // made the UI hard-lock a user the backend would actually allow.
           const restoredUserMsgCount = msgsData.messages.filter((m) => m.role === 'user').length;
-          if (msgsData.demo_messages_used != null) {
-            setDemoMessagesUsed(Math.max(0, msgsData.demo_messages_used - restoredUserMsgCount));
-          } else {
-            setDemoMessagesUsed(0);
-          }
+          setDemoRestoredUserMsgCount(restoredUserMsgCount);
+          setDemoMessagesUsed(msgsData.demo_messages_used ?? 0);
           return; // adopted — skip listSessions/createSession entirely
         } catch {
           sessionStorage.removeItem(demoKey); // stale/pruned session — fall through
@@ -102,6 +103,9 @@ export function useChatSession(documentId: string | undefined): UseChatSessionRe
 
           setSessionId(s.session_id);
           if (s.demo_messages_used != null) {
+            // Fresh session, empty transcript — nothing restored yet, so the
+            // baseline is 0 and every subsequent local user message counts.
+            setDemoRestoredUserMsgCount(0);
             setDemoMessagesUsed(s.demo_messages_used);
             if (typeof window !== 'undefined') {
               sessionStorage.setItem(`dt-demo-session:${documentId}`, s.session_id);
@@ -131,7 +135,7 @@ export function useChatSession(documentId: string | undefined): UseChatSessionRe
     return () => {
       cancelled = true;
     };
-  }, [documentId, documentStatus, setSessions, setSessionId, setMessages, setDemoMessagesUsed, addSession]);
+  }, [documentId, documentStatus, setSessions, setSessionId, setMessages, setDemoMessagesUsed, setDemoRestoredUserMsgCount, addSession]);
 
   return { sessionError };
 }

@@ -48,8 +48,15 @@ export interface DocTalkStore {
   // null when the citation has no confident focus → fall back to chunk bboxes.
   highlightFocus: string | null;
 
-  // Demo message tracking (cross-session, cross-document)
+  // Demo message tracking (cross-session, cross-document). Contract:
+  // totalUsed = demoMessagesUsed (server-known usage as of the last
+  // restore/create) + messages sent locally since then. demoRestoredUserMsgCount
+  // is the baseline: how many of the CURRENT transcript's user messages were
+  // already reflected in demoMessagesUsed at that restore/create point, so
+  // useChatStream can subtract it back out of the live transcript's count
+  // instead of double-counting. See useChatStream.ts / useChatSession.ts.
   demoMessagesUsed: number;
+  demoRestoredUserMsgCount: number;
 
   // PDF Search
   searchQuery: string;
@@ -87,6 +94,7 @@ export interface DocTalkStore {
   setSuggestedQuestions: (questions: string[]) => void;
   setUserPlan: (plan: PlanType) => void;
   setDemoMessagesUsed: (count: number) => void;
+  setDemoRestoredUserMsgCount: (count: number) => void;
   setSearchQuery: (query: string) => void;
   setSearchMatches: (matches: Array<{ page: number; index: number }>) => void;
   setCurrentMatchIndex: (index: number) => void;
@@ -128,6 +136,7 @@ const initialState = {
   highlightSnippet: null as string | null,
   highlightFocus: null as string | null,
   demoMessagesUsed: 0,
+  demoRestoredUserMsgCount: 0,
   searchQuery: '',
   searchMatches: [] as Array<{ page: number; index: number }>,
   currentMatchIndex: -1,
@@ -278,6 +287,7 @@ export const useDocTalkStore = create<DocTalkStore>((set, get) => ({
   setSuggestedQuestions: (questions: string[]) => set({ suggestedQuestions: questions }),
   setUserPlan: (plan: PlanType) => set({ userPlan: plan }),
   setDemoMessagesUsed: (count: number) => set({ demoMessagesUsed: count }),
+  setDemoRestoredUserMsgCount: (count: number) => set({ demoRestoredUserMsgCount: count }),
   setSearchQuery: (query: string) => set({ searchQuery: query }),
   setSearchMatches: (matches) => set({ searchMatches: matches }),
   setCurrentMatchIndex: (index: number) => set({ currentMatchIndex: index }),
@@ -313,6 +323,12 @@ export const useDocTalkStore = create<DocTalkStore>((set, get) => ({
     // suggested questions (the loader re-sets them when B is ready).
     documentSummary: null,
     suggestedQuestions: [],
+    // Doc A's demo counter must not flash on doc B while useChatSession's
+    // effect is still loading B's real value — `useChatSession`/
+    // `SessionDropdown` always set a fresh authoritative value once B's
+    // session resolves, this just closes the stale-state window in between.
+    demoMessagesUsed: 0,
+    demoRestoredUserMsgCount: 0,
   }),
   reset: () => {
     const timer = get()._flushTimer;
