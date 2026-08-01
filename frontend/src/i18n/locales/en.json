@@ -45,6 +45,7 @@
   "chat.exportDocx": "Export DOCX",
   "chat.share": "Share conversation",
   "chat.shareAnswer": "Share this answer",
+  "chat.shareSignIn": "Sign in to share this conversation",
   "share.answerCopied": "Answer link copied to clipboard.",
   "chat.moreOptions": "More options",
   "chat.stop": "Stop generating",

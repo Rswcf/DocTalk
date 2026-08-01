@@ -44,6 +44,7 @@
   "chat.exportDocx": "DOCX로 내보내기",
   "chat.share": "대화 공유",
   "chat.shareAnswer": "이 답변 공유",
+  "chat.shareSignIn": "이 대화를 공유하려면 로그인",
   "share.answerCopied": "답변 링크가 클립보드에 복사되었습니다.",
   "chat.moreOptions": "더 많은 옵션",
   "chat.stop": "생성 중지",

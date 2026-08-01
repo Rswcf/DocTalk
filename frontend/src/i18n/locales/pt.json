@@ -448,6 +448,7 @@
   "chat.exportDocx": "Exportar DOCX",
   "chat.share": "Compartilhar conversa",
   "chat.shareAnswer": "Compartilhar esta resposta",
+  "chat.shareSignIn": "Entre para compartilhar esta conversa",
   "share.answerCopied": "Link da resposta copiado para a área de transferência.",
   "chat.moreOptions": "Mais opções",
   "chat.messagesUsed": "Mensagens usadas",

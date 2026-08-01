@@ -47,6 +47,11 @@ interface ChatMessageRowProps {
   onContinue?: () => void;
   onShareAnswer?: (message: Message) => void;
   isSharingAnswer: boolean;
+  /** True when `onShareAnswer` is the anonymous conversion-affordance handler
+   *  (not a working share) — the per-answer share button needs to say "Sign
+   *  in to share" instead of "Share this answer" so it doesn't misrepresent
+   *  itself to anonymous demo users. */
+  isAnonShareAnswer: boolean;
 }
 
 const ChatMessageRow = React.memo(function ChatMessageRow({
@@ -59,6 +64,7 @@ const ChatMessageRow = React.memo(function ChatMessageRow({
   onContinue,
   onShareAnswer,
   isSharingAnswer,
+  isAnonShareAnswer,
 }: ChatMessageRowProps) {
   const displayCitations = React.useMemo(() => {
     if (message.role !== 'assistant') return undefined;
@@ -91,6 +97,7 @@ const ChatMessageRow = React.memo(function ChatMessageRow({
           onContinue={onContinue}
           onShareAnswer={onShareAnswer}
           isSharingAnswer={isSharingAnswer}
+          isAnonShareAnswer={isAnonShareAnswer}
         />
         {uniqueCitations && uniqueCitations.length > 0 && (
           <div className="mt-2 flex flex-wrap gap-1.5 pl-0">
@@ -539,6 +546,7 @@ export default function ChatPanel({ sessionId, onCitationClick, onPreviewLayoutT
                     onContinue={isLastAssistantMsg && message.isTruncated ? handleContinueLast : undefined}
                     onShareAnswer={userPlan ? handleShareAnswerVoid : handleAnonShareClick}
                     isSharingAnswer={shareAnswerLoadingId === message.id}
+                    isAnonShareAnswer={!userPlan}
                   />
                 );
               })}
@@ -649,8 +657,8 @@ export default function ChatPanel({ sessionId, onCitationClick, onPreviewLayoutT
                 onClick={userPlan ? handleShare : handleAnonShareClick}
                 disabled={shareLoading}
                 className="rounded-full p-1.5 text-[var(--workbench-muted)] transition-colors hover:bg-zinc-100 hover:text-zinc-900 dark:hover:bg-white/10 dark:hover:text-white focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950 disabled:opacity-50"
-                title={tOr('chat.share', 'Share conversation')}
-                aria-label={tOr('chat.share', 'Share conversation')}
+                title={userPlan ? tOr('chat.share', 'Share conversation') : tOr('chat.shareSignIn', 'Sign in to share this conversation')}
+                aria-label={userPlan ? tOr('chat.share', 'Share conversation') : tOr('chat.shareSignIn', 'Sign in to share this conversation')}
               >
                 <Share2 size={16} />
               </button>

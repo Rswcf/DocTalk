@@ -44,6 +44,7 @@
   "chat.exportDocx": "Esporta DOCX",
   "chat.share": "Condividi conversazione",
   "chat.shareAnswer": "Condividi questa risposta",
+  "chat.shareSignIn": "Accedi per condividere questa conversazione",
   "share.answerCopied": "Link della risposta copiato negli appunti.",
   "chat.moreOptions": "Altre opzioni",
   "chat.stop": "Interrompi generazione",

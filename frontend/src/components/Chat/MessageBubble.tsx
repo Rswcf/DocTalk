@@ -24,6 +24,9 @@ interface MessageBubbleProps {
   onContinue?: () => void;
   onShareAnswer?: (message: Message) => void;
   isSharingAnswer?: boolean;
+  /** True when `onShareAnswer` is the anonymous conversion-affordance handler
+   *  (not a working share) — swaps the button's copy to "Sign in to share". */
+  isAnonShareAnswer?: boolean;
 }
 
 function insertCitationMarkers(text: string, citations: Citation[]): string {
@@ -205,6 +208,7 @@ function MessageBubble({
   onContinue,
   onShareAnswer,
   isSharingAnswer,
+  isAnonShareAnswer,
 }: MessageBubbleProps) {
   const isUser = message.role === 'user';
   const isError = !!message.isError;
@@ -370,8 +374,8 @@ function MessageBubble({
                 onClick={() => onShareAnswer(message)}
                 disabled={isSharingAnswer}
                 className="rounded-full p-1.5 text-[var(--workbench-muted)] transition-colors hover:bg-zinc-100 hover:text-zinc-900 dark:hover:bg-white/10 dark:hover:text-white focus-visible:ring-2 focus-visible:ring-zinc-400 disabled:opacity-50"
-                title={t('chat.shareAnswer')}
-                aria-label={t('chat.shareAnswer')}
+                title={isAnonShareAnswer ? t('chat.shareSignIn') : t('chat.shareAnswer')}
+                aria-label={isAnonShareAnswer ? t('chat.shareSignIn') : t('chat.shareAnswer')}
               >
                 <Share2 size={14} />
               </button>

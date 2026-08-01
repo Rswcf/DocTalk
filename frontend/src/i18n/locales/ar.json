@@ -55,6 +55,7 @@
   "chat.exportDocx": "تصدير DOCX",
   "chat.share": "مشاركة المحادثة",
   "chat.shareAnswer": "مشاركة هذه الإجابة",
+  "chat.shareSignIn": "سجّل الدخول لمشاركة هذه المحادثة",
   "share.answerCopied": "تم نسخ رابط الإجابة إلى الحافظة.",
   "chat.moreOptions": "المزيد من الخيارات",
   "chat.stop": "إيقاف التوليد",
