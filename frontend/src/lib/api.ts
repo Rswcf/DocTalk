@@ -269,6 +269,90 @@ export async function getChunkDetail(chunkId: string): Promise<ChunkDetail> {
   return handle(res);
 }
 
+// --- Quote Finder API (M2, plan §8.4.1 / §8.4.4) ---
+
+export interface QuoteCard {
+  refIndex?: number;
+  displayText: string;
+  page: number;
+  pageEnd: number;
+  bboxes: NormalizedBBox[];
+  tier: 'exact' | 'normalized' | 'aligned' | string;
+  sourceKind: 'page_text' | 'extracted_text' | string;
+  chunkId: string;
+  score: number;
+}
+
+export interface QuoteSearchResult {
+  cards: QuoteCard[];
+  proposed: number;
+  verified: number;
+  discardedCount: number;
+  scannedChunks: number;
+  remainingCredits: number;
+}
+
+export async function searchDocumentQuotes(documentId: string, topic: string, locale?: string | null): Promise<QuoteSearchResult> {
+  const res = await fetch(`${PROXY_BASE}/api/documents/${documentId}/quote-search`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ topic, locale: locale || null }),
+  });
+  const data: any = await handle(res);
+  return {
+    cards: (Array.isArray(data.cards) ? data.cards : []).map((c: any) => ({
+      displayText: c.display_text,
+      page: c.page,
+      pageEnd: c.page_end,
+      bboxes: c.bboxes || [],
+      tier: c.tier,
+      sourceKind: c.source_kind,
+      chunkId: c.chunk_id,
+      score: c.score,
+    })),
+    proposed: data.proposed,
+    verified: data.verified,
+    discardedCount: data.discarded_count,
+    scannedChunks: data.scanned_chunks,
+    remainingCredits: data.remaining_credits,
+  };
+}
+
+// --- Document biblio API (M2, plan §8.4.4 — minimal per-user citation metadata) ---
+
+export interface CslAuthor {
+  family?: string;
+  given?: string;
+}
+
+export interface DocumentBiblioCsl {
+  title?: string;
+  author?: CslAuthor[];
+  issued?: { year?: number };
+  [key: string]: unknown;
+}
+
+export interface DocumentBiblio {
+  cslJson: DocumentBiblioCsl;
+  source: 'system' | 'user' | string;
+}
+
+export async function getDocumentBiblio(documentId: string): Promise<DocumentBiblio> {
+  const res = await fetch(`${PROXY_BASE}/api/documents/${documentId}/biblio`);
+  const data: any = await handle(res);
+  return { cslJson: data.csl_json || {}, source: data.source };
+}
+
+export async function updateDocumentBiblio(documentId: string, cslJson: DocumentBiblioCsl): Promise<DocumentBiblio> {
+  const res = await fetch(`${PROXY_BASE}/api/documents/${documentId}/biblio`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ csl_json: cslJson }),
+  });
+  const data: any = await handle(res);
+  return { cslJson: data.csl_json || {}, source: data.source };
+}
+
 export async function listSessions(docId: string): Promise<SessionListResponse> {
   const res = await fetch(`${PROXY_BASE}/api/documents/${docId}/sessions`);
   return handle(res);

@@ -14,7 +14,8 @@ import { useDocTalkStore } from '../../../store';
 import { Panel, Group, Separator } from 'react-resizable-panels';
 import { useLocale } from '../../../i18n';
 import { usePageTitle } from '../../../lib/usePageTitle';
-import { AlertTriangle, Download, FileText, MessageSquare, Presentation, X } from 'lucide-react';
+import { AlertTriangle, Download, FileText, LogIn, MessageSquare, Presentation, Quote, X } from 'lucide-react';
+import QuoteFinderPanel from '../../../components/Quotes/QuoteFinderPanel';
 import { useDocumentLoader } from '../../../lib/useDocumentLoader';
 import { useChatSession } from '../../../lib/useChatSession';
 import { useUserPlanProfile } from '../../../lib/useUserPlanProfile';
@@ -59,6 +60,7 @@ export default function DocumentReaderPageClient() {
   const [layoutTranslationError, setLayoutTranslationError] = useState<string | null>(null);
   const [layoutPaywallOpen, setLayoutPaywallOpen] = useState(false);
   const [layoutPaywallReason, setLayoutPaywallReason] = useState<string | null>(null);
+  const [quoteFinderOpen, setQuoteFinderOpen] = useState(false);
   const [translatedPreview, setTranslatedPreview] = useState<{
     url: string;
     downloadUrl: string | null;
@@ -230,7 +232,7 @@ export default function DocumentReaderPageClient() {
   }, [revealMobileDocumentPane]);
 
   const viewToggle = showViewToggle ? (
-    <div className="dt-view-toggle flex items-center gap-1 px-2 py-1">
+    <div className="flex items-center gap-1">
       <button
         onClick={() => setViewMode('slide')}
         className={`flex items-center gap-1 px-2 py-1 rounded-md text-xs transition-colors ${viewMode === 'slide' ? 'bg-zinc-900 text-white dark:bg-zinc-50 dark:text-zinc-900 shadow-sm' : 'text-zinc-600 dark:text-zinc-400 hover:bg-white/70 dark:hover:bg-zinc-800'}`}
@@ -250,9 +252,42 @@ export default function DocumentReaderPageClient() {
     </div>
   ) : null;
 
+  // "Quotes" entry point (F1, plan §8.4): always visible next to the view
+  // toggle. Anonymous users get a sign-in CTA in the same slot instead of a
+  // working panel — the quote-search endpoint requires auth (it's billed).
+  const quoteFinderEntry = isLoggedIn ? (
+    <button
+      type="button"
+      onClick={() => setQuoteFinderOpen(true)}
+      disabled={documentStatus !== 'ready'}
+      className="flex min-h-8 items-center gap-1.5 rounded-md px-2 py-1 text-xs font-medium text-zinc-600 transition-colors hover:bg-white/70 disabled:cursor-not-allowed disabled:opacity-50 dark:text-zinc-400 dark:hover:bg-zinc-800 focus-visible:ring-2 focus-visible:ring-blue-500"
+      title={tOr('quoteFinder.toolbarLabel', 'Quote Finder')}
+    >
+      <Quote size={14} aria-hidden="true" />
+      <span>{tOr('quoteFinder.toolbarLabel', 'Quote Finder')}</span>
+    </button>
+  ) : (
+    <button
+      type="button"
+      onClick={() => openAuthModal()}
+      className="flex min-h-8 items-center gap-1.5 rounded-md px-2 py-1 text-xs font-medium text-zinc-600 transition-colors hover:bg-white/70 dark:text-zinc-400 dark:hover:bg-zinc-800 focus-visible:ring-2 focus-visible:ring-blue-500"
+      title={tOr('quoteFinder.signInCta', 'Sign in to use Quote Finder')}
+    >
+      <LogIn size={14} aria-hidden="true" />
+      <span>{tOr('quoteFinder.signInCta', 'Sign in for Quote Finder')}</span>
+    </button>
+  );
+
+  const readerToolbar = (
+    <div className="dt-view-toggle flex items-center justify-between gap-2 px-2 py-1">
+      {viewToggle || <span />}
+      {quoteFinderEntry}
+    </div>
+  );
+
   const viewerContent = (
     <div className="h-full flex flex-col dt-reader-pane-document">
-      {viewToggle}
+      {readerToolbar}
       {layoutTranslationError ? (
         <div className="flex items-start gap-2 border-b border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-950 dark:border-amber-900/50 dark:bg-amber-950/30 dark:text-amber-100" role="alert">
           <AlertTriangle size={16} className="mt-0.5 shrink-0" aria-hidden="true" />
@@ -531,6 +566,13 @@ export default function DocumentReaderPageClient() {
         userPlan={userPlan}
         onClose={() => setLayoutTranslationDrawerOpen(false)}
         onSubmit={handleLayoutTranslationSubmit}
+      />
+      <QuoteFinderPanel
+        isOpen={quoteFinderOpen}
+        documentId={documentId}
+        userPlan={userPlan}
+        onClose={() => setQuoteFinderOpen(false)}
+        onCitationClick={handleCitationClick}
       />
     </div>
   );
