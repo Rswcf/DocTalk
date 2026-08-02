@@ -384,6 +384,15 @@ def parse_document(self, document_id: str, locale: str | None = None) -> None:
                     db.add(doc)
                     db.commit()
 
+                # Forward-only PDF page-text persistence (M2, plan §8.1/§9):
+                # mirror the non-PDF branch's extracted_content_map so the
+                # shared persist-pages loop below sets Page.content for PDFs
+                # too. `pages` here is whichever won above — the text layer,
+                # or the adopted OCR result — so raw_text always matches what
+                # the doc was actually indexed from.
+                for p in pages:
+                    extracted_content_map[p.page_number] = getattr(p, "raw_text", "") or ""
+
             # ---- Best-effort: convert PPTX/DOCX to PDF for visual rendering ----
             if file_type in CONVERTIBLE_TYPES and not doc.converted_storage_key:
                 try:

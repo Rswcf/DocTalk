@@ -96,7 +96,12 @@ class TestExtractPagesOcr:
         pages = self.svc.extract_pages_ocr(b"fake-pdf", languages="eng", dpi=150)
 
         mock_page.get_textpage_ocr.assert_called_once_with(language="eng", dpi=150, full=True)
-        mock_page.get_text.assert_called_once_with("dict", textpage=mock_textpage)
+        # get_text is called twice on the SAME textpage: once for the block
+        # dict (chunking geometry), once for raw linear text (B1 — feeds
+        # Page.content). No second document/page open.
+        mock_page.get_text.assert_any_call("dict", textpage=mock_textpage)
+        mock_page.get_text.assert_any_call("text", textpage=mock_textpage)
+        assert mock_page.get_text.call_count == 2
         assert len(pages) == 1
         assert pages[0].page_number == 1
 

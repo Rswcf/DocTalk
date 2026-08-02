@@ -230,6 +230,13 @@ class PageInfo:
     height_pt: float
     rotation: int
     blocks: List[BlockInfo]
+    # Raw linear text (PyMuPDF page.get_text("text")), captured on the SAME
+    # open page as the block extraction below — no second document open.
+    # Forward-only PDF page-text persistence (M2, plan §8.1/§9): this is what
+    # the parse worker feeds into Page.content for the verification substrate.
+    # Non-PDF callers (parse_worker's extractor branch) leave this at "" and
+    # populate Page.content from their own extracted text instead.
+    raw_text: str = ""
 
 
 @dataclass
@@ -308,6 +315,10 @@ class ParseService:
                     for line_info in self._extract_line_blocks(pi, lines):
                         blocks.append(line_info)
 
+                # Raw linear text on the SAME open page (no second document
+                # open) — feeds Page.content forward-only (plan §8.1/§9).
+                raw_text = page.get_text("text")
+
                 pages.append(
                     PageInfo(
                         page_number=pi,
@@ -315,6 +326,7 @@ class ParseService:
                         height_pt=height_pt,
                         rotation=rotation,
                         blocks=blocks,
+                        raw_text=raw_text,
                     )
                 )
 
@@ -367,6 +379,10 @@ class ParseService:
                         for line_info in self._extract_line_blocks(pi, lines):
                             blocks.append(line_info)
 
+                    # Raw OCR'd linear text on the SAME textpage used for the
+                    # block dict above — feeds Page.content when OCR is adopted.
+                    raw_text = page.get_text("text", textpage=tp)
+
                     pages.append(
                         PageInfo(
                             page_number=pi,
@@ -374,6 +390,7 @@ class ParseService:
                             height_pt=height_pt,
                             rotation=rotation,
                             blocks=blocks,
+                            raw_text=raw_text,
                         )
                     )
                 except (RuntimeError, ValueError, OSError, MemoryError) as e:
