@@ -384,6 +384,20 @@ def _majority_bbox_page(bboxes_list: list[dict], fallback_page: int) -> tuple[in
     return best_page, page_bboxes
 
 
+def _is_ambiguous_multipage_extracted_segment(matched_segment: QuoteSourceSegment) -> bool:
+    """FIX2-A(a) (Codex r2 #2, NOT ADDRESSED): an extracted_text segment is
+    exactly one CHUNK, and a chunk can itself span multiple pages
+    (page_start != page_end). Verification ran against that chunk's WHOLE
+    text as one blob, so there is no way to know which of its pages the
+    matched slice actually sits on — majority-vote bbox counting over the
+    segment's entire bbox pool doesn't answer that (Codex's exact probe: a
+    p1-2 segment, quote physically in the page-1 portion, bboxes 1xp1+2xp2 —
+    majority vote picks p2, which is wrong). Single-page segments
+    (page_start == page_end) have no such ambiguity and are unaffected.
+    """
+    return matched_segment.chunk_id is not None and matched_segment.page_start != matched_segment.page_end
+
+
 def _attribute_match(
     chunk: Chunk, matched_segment: QuoteSourceSegment
 ) -> tuple[int, int, list[dict], str]:
@@ -397,11 +411,13 @@ def _attribute_match(
     bbox metadata), filtered to that exact verified page.
 
     extracted_text segments are exactly one chunk each (the cited chunk, or
-    one neighbor) — page/bboxes are THAT chunk's own majority-vote bbox page
-    (its floor of granularity), page_end is that chunk's own natural range
-    ("ambiguous multi-page attribution keeps the range" — a single matching
-    chunk CAN itself span >1 page), and chunk_id follows the match, not the
-    LLM's cited ref, since that's genuinely where the text lives.
+    one neighbor). Callers MUST have already rejected ambiguous multi-page
+    segments via `_is_ambiguous_multipage_extracted_segment` before calling
+    this — by the time we get here, `matched_segment.page_start ==
+    matched_segment.page_end`, so majority-vote bbox filtering is just
+    "this segment's own bboxes on its own single page," not a genuine guess.
+    chunk_id follows the match, not the LLM's cited ref, since that's
+    genuinely where the text lives.
     """
     if matched_segment.chunk_id is None:
         # page_text: the segment IS the exact page — no ambiguity.
@@ -413,7 +429,9 @@ def _attribute_match(
         ]
         return page, page_end, bboxes, str(chunk.id)
 
-    # extracted_text: attribute to the MATCHING chunk (cited or neighbor).
+    # extracted_text, single-page segment: attribute to the MATCHING chunk
+    # (cited or neighbor). page_end == page_start here (guarded by the
+    # caller), so this is never "ambiguous multi-page attribution."
     page, bboxes = _majority_bbox_page(matched_segment.bboxes, matched_segment.page_start)
     return page, matched_segment.page_end, bboxes, str(matched_segment.chunk_id)
 
@@ -443,14 +461,32 @@ def _dedup_signature(source_kind: str, verification: Any) -> str:
 
 def _verify_against_segments(
     quote_text: str, source: QuoteSource, document: Document,
-) -> tuple[Any, Optional[QuoteSourceSegment]]:
+) -> tuple[list[tuple[Any, QuoteSourceSegment]], Any]:
     """FIX-2 (Codex r1 BLOCKER #2): verify against EACH segment separately —
-    never a concatenated multi-page/multi-chunk blob. The first segment that
-    verifies wins (segments are already ordered: page order for page_text,
-    cited-chunk-then-neighbors for extracted_text — so the cited chunk is
-    always tried before a neighbor). If nothing verifies, return the
-    highest-scoring failure across all segments as the most informative
-    discard reason, never just the last one tried."""
+    never a concatenated multi-page/multi-chunk blob.
+
+    Returns (matches, best_failure).
+
+    FIX2-A(b) (Codex r2 #2, NOT ADDRESSED): `matches` holds EVERY verifying
+    segment for kind="page_text" — the prior "first segment wins" behavior
+    silently dropped genuine duplicate occurrences of the SAME exact wording
+    appearing on more than one page within the cited chunk's own page range
+    (e.g. a boilerplate clause repeated verbatim). Each is independently
+    verified and gets its own card (§8.1 dedup already distinguishes them by
+    page, so real duplicates never collapse into one and never over-count).
+
+    For kind="extracted_text", `matches` holds AT MOST ONE entry — the FIRST
+    segment that verifies (segments are ordered cited-chunk-then-neighbors,
+    so the cited chunk is always tried before a neighbor). This preserves
+    the existing, deliberate simplification that chunk overlap meaning the
+    SAME occurrence located via two different chunks collapses to one card
+    (see `_dedup_signature`'s docstring) — extracted_text does NOT get the
+    multi-match treatment page_text does.
+
+    `best_failure` is the highest-scoring verify_quote() failure across ALL
+    segments tried, for a discard reason when `matches` is empty.
+    """
+    matches: list[tuple[Any, QuoteSourceSegment]] = []
     best_failure: Any = None
     for segment in source.segments:
         v = verify_quote(
@@ -458,10 +494,13 @@ def _verify_against_segments(
             text_quality=document.text_quality, parse_method=document.parse_method,
         )
         if v.verified:
-            return v, segment
+            matches.append((v, segment))
+            if source.kind != "page_text":
+                break
+            continue
         if best_failure is None or v.score > best_failure.score:
             best_failure = v
-    return best_failure, None
+    return matches, best_failure
 
 
 async def quote_search(
@@ -505,36 +544,44 @@ async def quote_search(
         chunk = candidates[ref_n - 1]
         neighbors = await _neighbor_chunks(db, chunk)
         source: QuoteSource = await build_quote_source(db, document.id, chunk, neighbors)
-        verification, matched_segment = _verify_against_segments(quote_text, source, document)
+        matches, best_failure = _verify_against_segments(quote_text, source, document)
 
-        if verification is None or not verification.verified or matched_segment is None:
-            if verification is None:
+        if not matches:
+            if best_failure is None:
                 discarded.append(("empty", "dropped", 0.0))
             else:
-                reason = verification.reason or "not_located"
-                discarded.append((reason, verification.status, verification.score))
+                reason = best_failure.reason or "not_located"
+                discarded.append((reason, best_failure.status, best_failure.score))
             continue
 
-        page, page_end, bboxes, attributed_chunk_id = _attribute_match(chunk, matched_segment)
-        normalized_quote, _ = normalize(verification.display_text or "")
-        signature = _dedup_signature(source.kind, verification)
-        key = (str(document.id), normalized_quote, page, page_end, signature)
-        if key in seen_keys:
-            continue
-        seen_keys.add(key)
+        for verification, matched_segment in matches:
+            # FIX2-A(a) (Codex r2 #2, NOT ADDRESSED): an extracted_text
+            # segment spanning multiple pages has no reliable single-page
+            # attribution — discard rather than guess via majority bboxes.
+            if _is_ambiguous_multipage_extracted_segment(matched_segment):
+                discarded.append(("ambiguous_page_range", verification.status, verification.score))
+                continue
 
-        cards.append(
-            QuoteCard(
-                display_text=verification.display_text or "",
-                page=page,
-                page_end=page_end,
-                bboxes=bboxes,
-                tier=verification.status,
-                source_kind=source.kind,
-                chunk_id=attributed_chunk_id,
-                score=verification.score,
+            page, page_end, bboxes, attributed_chunk_id = _attribute_match(chunk, matched_segment)
+            normalized_quote, _ = normalize(verification.display_text or "")
+            signature = _dedup_signature(source.kind, verification)
+            key = (str(document.id), normalized_quote, page, page_end, signature)
+            if key in seen_keys:
+                continue
+            seen_keys.add(key)
+
+            cards.append(
+                QuoteCard(
+                    display_text=verification.display_text or "",
+                    page=page,
+                    page_end=page_end,
+                    bboxes=bboxes,
+                    tier=verification.status,
+                    source_kind=source.kind,
+                    chunk_id=attributed_chunk_id,
+                    score=verification.score,
+                )
             )
-        )
 
     return QuoteSearchResult(
         cards=cards,

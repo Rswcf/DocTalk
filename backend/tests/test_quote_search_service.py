@@ -322,6 +322,140 @@ class TestSearchTelemetryFields:
         assert result.no_result is True
 
 
+class TestAmbiguousMultiPageExtractedSegmentDiscarded:
+    """FIX2-A(a) (Codex r2 #2, NOT ADDRESSED): an extracted_text segment
+    spanning multiple pages (its own page_start != page_end) has no
+    reliable way to attribute a match to a single page — majority-bbox
+    voting over the segment's whole bbox pool doesn't reflect which page
+    the matched TEXT actually sits on. Codex's exact adversarial probe:
+    segment range p1-2, quote physically in the page-1 portion, bboxes
+    1xp1 + 2xp2 (majority vote would pick p2) — must discard, never report
+    page=2/page_end=2 with page-2 bboxes."""
+
+    @pytest.mark.asyncio
+    async def test_codex_r2_probe_quote_in_p1_portion_of_p1_2_segment_is_discarded(self, monkeypatch):
+        p1_bbox = {"x": 0.1, "y": 0.1, "w": 0.2, "h": 0.05, "page": 1}
+        p2_bbox_a = {"x": 0.1, "y": 0.1, "w": 0.2, "h": 0.05, "page": 2}
+        p2_bbox_b = {"x": 0.1, "y": 0.2, "w": 0.2, "h": 0.05, "page": 2}
+        chunk = _chunk(
+            "unused chunk text", page_start=1, page_end=2, chunk_index=0,
+            bboxes=[p1_bbox, p2_bbox_a, p2_bbox_b],
+        )
+        source = QuoteSource(
+            text="unused", kind="extracted_text", page_start=1, page_end=2,
+            segments=[
+                QuoteSourceSegment(
+                    text="The quote lives in the page-1 portion of this chunk. Filler continues onto page two.",
+                    page_start=1, page_end=2, chunk_id=chunk.id,
+                    bboxes=[p1_bbox, p2_bbox_a, p2_bbox_b],
+                ),
+            ],
+        )
+        _patch_common(
+            monkeypatch,
+            candidates=[chunk],
+            scanned_chunks=1,
+            quotes_payload={"quotes": [
+                {"quote_text": "The quote lives in the page-1 portion of this chunk.", "source_ref_n": 1, "page": 1}
+            ]},
+            source_by_chunk_id={chunk.id: source},
+        )
+
+        result = await quote_search(_fake_db(), document=_document(), user=None, topic="quote", locale="en")
+
+        assert result.cards == []
+        assert result.verified == 0
+        assert len(result.discarded) == 1
+        reason, _tier, _score = result.discarded[0]
+        assert reason == "ambiguous_page_range"
+
+    @pytest.mark.asyncio
+    async def test_single_page_extracted_segment_is_unaffected(self, monkeypatch):
+        """A single-page (page_start == page_end) extracted_text segment
+        must NOT be discarded — only multi-page segments are ambiguous."""
+        bbox = {"x": 0.1, "y": 0.1, "w": 0.2, "h": 0.05, "page": 3}
+        chunk = _chunk("The exact quoted sentence here.", page_start=3, page_end=3, chunk_index=0, bboxes=[bbox])
+        _patch_common(
+            monkeypatch,
+            candidates=[chunk],
+            scanned_chunks=1,
+            quotes_payload={"quotes": [
+                {"quote_text": "The exact quoted sentence here.", "source_ref_n": 1, "page": 3}
+            ]},
+            source_by_chunk_id={chunk.id: _chunk_source(chunk)},
+        )
+
+        result = await quote_search(_fake_db(), document=_document(), user=None, topic="quoted", locale="en")
+
+        assert result.verified == 1
+        assert result.cards[0].page == 3
+        assert result.cards[0].page_end == 3
+
+
+class TestPageTextDuplicateWordingAcrossPagesEmitsOneCardPerPage:
+    """FIX2-A(b) (Codex r2 #2, NOT ADDRESSED): "first segment wins" silently
+    dropped genuine duplicate occurrences of the SAME exact wording on
+    different pages within the cited chunk's own page_text range. Must
+    emit ONE card per matching page instead."""
+
+    @pytest.mark.asyncio
+    async def test_identical_wording_on_two_pages_yields_two_cards(self, monkeypatch):
+        chunk = _chunk("unused", page_start=1, page_end=2, chunk_index=0)
+        shared = "The exact boilerplate clause repeated verbatim."
+        source = QuoteSource(
+            text=f"{shared}\n{shared}",
+            kind="page_text", page_start=1, page_end=2,
+            segments=[
+                QuoteSourceSegment(text=shared, page_start=1, page_end=1),
+                QuoteSourceSegment(text=shared, page_start=2, page_end=2),
+            ],
+        )
+        _patch_common(
+            monkeypatch,
+            candidates=[chunk],
+            scanned_chunks=1,
+            quotes_payload={"quotes": [{"quote_text": shared, "source_ref_n": 1, "page": 1}]},
+            source_by_chunk_id={chunk.id: source},
+        )
+
+        result = await quote_search(_fake_db(), document=_document(), user=None, topic="boilerplate", locale="en")
+
+        assert result.verified == 2
+        assert sorted(c.page for c in result.cards) == [1, 2]
+        assert sorted(c.page_end for c in result.cards) == [1, 2]
+
+    @pytest.mark.asyncio
+    async def test_extracted_text_kind_still_collapses_to_one_card_not_multi(self, monkeypatch):
+        """The multi-match behavior is page_text-ONLY — extracted_text keeps
+        the existing "cited chunk wins, stop at first match" behavior
+        (test_extracted_text_tries_cited_chunk_before_neighbor's contract),
+        never emitting one card per candidate segment."""
+        shared_text = "the shared overlapping sentence"
+        cited_bbox = {"x": 0.1, "y": 0.1, "w": 0.2, "h": 0.05, "page": 2}
+        neighbor_bbox = {"x": 0.1, "y": 0.3, "w": 0.2, "h": 0.05, "page": 2}
+        cited = _chunk(f"Prefix. {shared_text}.", page_start=2, page_end=2, chunk_index=0, bboxes=[cited_bbox])
+        neighbor = _chunk(f"{shared_text}. Suffix.", page_start=2, page_end=2, chunk_index=1, bboxes=[neighbor_bbox])
+        source = QuoteSource(
+            text=cited.text + "\n\n" + neighbor.text, kind="extracted_text", page_start=2, page_end=2,
+            segments=[
+                QuoteSourceSegment(text=cited.text, page_start=2, page_end=2, chunk_id=cited.id, bboxes=[cited_bbox]),
+                QuoteSourceSegment(text=neighbor.text, page_start=2, page_end=2, chunk_id=neighbor.id, bboxes=[neighbor_bbox]),
+            ],
+        )
+        _patch_common(
+            monkeypatch,
+            candidates=[cited],
+            scanned_chunks=1,
+            quotes_payload={"quotes": [{"quote_text": shared_text, "source_ref_n": 1, "page": 2}]},
+            source_by_chunk_id={cited.id: source},
+        )
+
+        result = await quote_search(_fake_db(), document=_document(), user=None, topic="shared", locale="en")
+
+        assert result.verified == 1
+        assert result.cards[0].chunk_id == str(cited.id)
+
+
 class TestTopicHardCap:
     """FIX-7 (Codex r1 IMPORTANT #7): REST's QuoteSearchRequest.topic is
     Pydantic-capped at 300 chars before quote_search() is ever called, but
