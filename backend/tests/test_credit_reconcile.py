@@ -17,13 +17,20 @@ class _ScalarResult:
         return self._value
 
 
+def _locked_ledger_row():
+    """Stand-in for the SELECT ... FOR UPDATE result — reconcile_credits
+    only checks it's not None; the row's own field values aren't read."""
+    return _ScalarResult(SimpleNamespace(id=uuid.uuid4()))
+
+
 @pytest.mark.asyncio
 async def test_reconcile_updates_balance_and_ledger_for_undercharge() -> None:
     db = SimpleNamespace(
         execute=AsyncMock(
             side_effect=[
+                _locked_ledger_row(),  # FIX3-A(b): SELECT ... FOR UPDATE locks the ledger row first
                 _ScalarResult(85),  # new user balance after charging extra credits
-                _ScalarResult(uuid.uuid4()),  # updated ledger row exists
+                _ScalarResult(None),  # ledger UPDATE (delta/balance_after/reconciled_at) — return value unused
             ]
         ),
         flush=AsyncMock(),
@@ -37,7 +44,7 @@ async def test_reconcile_updates_balance_and_ledger_for_undercharge() -> None:
         actual_cost=25,
     )
 
-    assert db.execute.await_count == 2
+    assert db.execute.await_count == 3
     db.flush.assert_awaited_once()
     # FIX2-B(b) (Codex r2 #4): callers must be able to use the returned
     # balance directly instead of a separate get_user_credits() round-trip.
@@ -45,15 +52,51 @@ async def test_reconcile_updates_balance_and_ledger_for_undercharge() -> None:
 
 
 @pytest.mark.asyncio
-async def test_reconcile_noop_still_returns_current_balance() -> None:
-    """FIX2-B(b): pre_debited == actual_cost is a no-op for the UPDATE
-    statements, but callers still need SOME balance value back — must not
-    silently return None, forcing a caller to re-query."""
+async def test_reconcile_locks_the_ledger_row_before_any_update() -> None:
+    """FIX3-A(b) (Codex r3 #4, NOT ADDRESSED): the row lock (SELECT ... FOR
+    UPDATE) must be the FIRST statement issued — it's what SERIALIZES this
+    reconciliation against a concurrent _refund_predebit's conditional
+    DELETE (FIX3-A(c)), closing the "resolver reads uncommitted marker as
+    absent while the atomic transaction is still landing" race Codex r3
+    demonstrated."""
+    calls: list[str] = []
+
+    async def execute(stmt):
+        calls.append(str(stmt))
+        if len(calls) == 1:
+            return _locked_ledger_row()
+        if len(calls) == 2:
+            return _ScalarResult(85)
+        return _ScalarResult(None)
+
+    db = SimpleNamespace(execute=AsyncMock(side_effect=execute), flush=AsyncMock())
+
+    await reconcile_credits(
+        db=db,
+        user_id=uuid.uuid4(),
+        predebit_ledger_id=uuid.uuid4(),
+        pre_debited=10,
+        actual_cost=25,
+    )
+
+    assert len(calls) == 3
+    assert "FOR UPDATE" in calls[0].upper()
+
+
+@pytest.mark.asyncio
+async def test_reconcile_noop_still_locks_and_stamps_reconciled_at() -> None:
+    """FIX3-A(b): pre_debited == actual_cost is no longer a true no-op for
+    the ledger row — the row is STILL locked and reconciled_at is STILL
+    stamped (even though delta/balance_after don't change), because that
+    stamp is the durable settlement marker the conditional refund path
+    depends on. The prior version left the row completely untouched here,
+    which is exactly the "equal-cost path has no lock, nothing serializes
+    the transactions" gap Codex r3 found."""
     user_id = uuid.uuid4()
     fake_user = SimpleNamespace(id=user_id, credits_balance=470)
     db = SimpleNamespace(
         get=AsyncMock(return_value=fake_user),
-        execute=AsyncMock(),
+        execute=AsyncMock(side_effect=[_locked_ledger_row(), _ScalarResult(None)]),
         flush=AsyncMock(),
     )
 
@@ -66,13 +109,17 @@ async def test_reconcile_noop_still_returns_current_balance() -> None:
     )
 
     assert result == 470
-    db.execute.assert_not_awaited()  # true no-op: no UPDATE statements at all
-    db.flush.assert_not_awaited()
+    assert db.execute.await_count == 2  # lock + reconciled_at stamp — NOT zero anymore
+    db.flush.assert_awaited_once()
 
 
 @pytest.mark.asyncio
 async def test_reconcile_noop_raises_when_user_missing() -> None:
-    db = SimpleNamespace(get=AsyncMock(return_value=None), execute=AsyncMock(), flush=AsyncMock())
+    db = SimpleNamespace(
+        get=AsyncMock(return_value=None),
+        execute=AsyncMock(side_effect=[_locked_ledger_row(), _ScalarResult(None)]),
+        flush=AsyncMock(),
+    )
 
     with pytest.raises(RuntimeError, match="not found during credit reconciliation"):
         await reconcile_credits(
@@ -85,37 +132,36 @@ async def test_reconcile_noop_raises_when_user_missing() -> None:
 
 
 @pytest.mark.asyncio
-async def test_reconcile_raises_when_balance_update_misses_user() -> None:
+async def test_reconcile_raises_when_ledger_row_missing_at_lock_time() -> None:
+    """The "ledger not found" check now happens entirely at the lock step
+    — SELECT ... FOR UPDATE finding no row is the ONLY way this can fire
+    (the later UPDATE statements no longer carry their own separate
+    existence check, since the lock already proved the row exists)."""
     db = SimpleNamespace(
         execute=AsyncMock(side_effect=[_ScalarResult(None)]),
         flush=AsyncMock(),
     )
 
-    with pytest.raises(RuntimeError, match="not found during credit reconciliation"):
+    with pytest.raises(RuntimeError, match="Predebit ledger .* not found"):
         await reconcile_credits(
             db=db,
             user_id=uuid.uuid4(),
             predebit_ledger_id=uuid.uuid4(),
-            pre_debited=10,
-            actual_cost=25,
+            pre_debited=15,
+            actual_cost=15,
         )
 
     db.flush.assert_not_awaited()
 
 
 @pytest.mark.asyncio
-async def test_reconcile_raises_when_ledger_update_misses_row() -> None:
+async def test_reconcile_raises_when_balance_update_misses_user() -> None:
     db = SimpleNamespace(
-        execute=AsyncMock(
-            side_effect=[
-                _ScalarResult(85),
-                _ScalarResult(None),
-            ]
-        ),
+        execute=AsyncMock(side_effect=[_locked_ledger_row(), _ScalarResult(None)]),
         flush=AsyncMock(),
     )
 
-    with pytest.raises(RuntimeError, match="Predebit ledger .* not found"):
+    with pytest.raises(RuntimeError, match="not found during credit reconciliation"):
         await reconcile_credits(
             db=db,
             user_id=uuid.uuid4(),

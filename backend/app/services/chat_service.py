@@ -778,12 +778,26 @@ async def _refund_predebit(
     user_id: uuid.UUID,
     pre_debited: int,
     predebit_ledger_id: uuid.UUID,
-) -> None:
-    """Idempotent refund for chat failures before final accounting.
+) -> bool:
+    """Idempotent, RACE-FREE refund for chat failures before final
+    accounting.
 
-    Uses ledger delete as the single source of truth: only restore balance
-    if the pre-debit ledger row still exists (i.e., not already refunded or
-    reconciled away). Safe against double invocation.
+    FIX3-A(c) (Codex r3 #4, NOT ADDRESSED): the delete is conditional on
+    reconciled_at IS NULL — a SINGLE atomic statement that both checks and
+    acts, closing the "read as absent, then a landing commit reconciles,
+    then this deletes the now-reconciled row anyway" race a one-shot
+    existence read (or a plain unconditional delete) cannot close. If a
+    concurrent reconcile_credits() call holds the row's lock (its own
+    SELECT ... FOR UPDATE, FIX3-A(b)), this DELETE blocks until that
+    transaction resolves, then evaluates the predicate against the
+    POST-resolution row state — so it never refunds a row that just got
+    reconciled, and never leaves a genuinely unreconciled row un-refunded.
+    No read-then-act anywhere.
+
+    Returns True if a refund was actually issued (the row was still
+    unreconciled), False if it was already reconciled or already removed
+    by a prior settlement — callers use this to distinguish "nothing was
+    delivered" from "this had already landed" without a separate read.
     """
     try:
         await db.rollback()
@@ -791,14 +805,24 @@ async def _refund_predebit(
         pass
 
     result = await db.execute(
-        sa.delete(CreditLedger).where(CreditLedger.id == predebit_ledger_id)
+        sa.delete(CreditLedger)
+        .where(CreditLedger.id == predebit_ledger_id)
+        .where(CreditLedger.reconciled_at.is_(None))
+        .returning(CreditLedger.id)
     )
-    if result.rowcount and result.rowcount > 0:
+    refunded = result.scalar_one_or_none() is not None
+    if refunded:
         await db.execute(
             sa.update(User).where(User.id == user_id)
             .values(credits_balance=User.credits_balance + pre_debited)
         )
+    else:
+        logger.info(
+            "quote_billing.already_settled: ledger %s not refunded (already "
+            "reconciled or previously removed)", predebit_ledger_id,
+        )
     await db.commit()
+    return refunded
 
 
 # Bound the shielded cancel-path DB I/O. The persist/settle below run inside an
@@ -889,55 +913,44 @@ async def _settle_predebit_on_cancel(
             await _refund_predebit(settle_db, user_id, pre_debited, predebit_ledger_id)
 
 
-async def _settle_verified_quote_predebit_on_cancel(
+async def _settle_verified_quote_predebit_after_failure(
     *,
     user_id: uuid.UUID,
     pre_debited: int,
     predebit_ledger_id: uuid.UUID,
-    candidate_message_id: Optional[uuid.UUID],
-) -> None:
-    """FIX2-B(c) (Codex r2 #4, NOT ADDRESSED): settlement specific to
-    _run_verified_quote_search's cancellation path — NOT a use of the
-    generic _settle_predebit_on_cancel above, because that path's atomic
-    commit (message + reconcile + usage, one transaction — FIX2-B(a))
-    already reconciled the ledger row IF it landed; calling reconcile again
-    here would be wrong regardless of the outcome.
+    use_independent_session: bool,
+    db: Optional[AsyncSession] = None,
+) -> bool:
+    """FIX3-A (Codex r3 #4, NOT ADDRESSED): the SOLE settlement resolver for
+    _run_verified_quote_search's failure paths — CancelledError OR an
+    ordinary exception, replacing FIX2-B(c)'s Message-marker existence
+    check (which could only resolve the CancelledError case, and still
+    required a caller-generated id and an independent read).
 
-    A CancelledError landing WHILE that single commit's await is in flight
-    is genuinely ambiguous from this task's point of view: the commit may
-    have already landed on the DB even though `await db.commit()` never
-    returned, so `progress.message_id` (only set AFTER that await returns)
-    is unreliable exactly in this window. Two unreliable signals were
-    considered and rejected:
-      - Trusting message_id alone (None) would free-ride a durably
-        persisted, delivered, billed answer whose commit simply hadn't
-        returned control to us yet.
-      - Inspecting the ledger row's delta would ALSO be unreliable:
-        credit_service.reconcile_credits() no-ops when
-        actual_cost == pre_debited, so a successfully landed commit can
-        leave delta UNCHANGED from the raw predebit value — indistinguishable
-        from "never reconciled" by delta inspection alone.
+    That marker check is superseded entirely by FIX3-A(b)/(c)'s durable
+    ledger state: reconcile_credits() now ALWAYS stamps reconciled_at
+    (including the equal-cost no-op path) under a row lock, and
+    _refund_predebit's DELETE is now conditional on reconciled_at IS NULL —
+    a single atomic statement that both checks and acts, with no race
+    window regardless of whether the atomic commit has landed, is still
+    landing, or never will. There is nothing left for THIS function to
+    "decide" — it just calls _refund_predebit with the right session and
+    surfaces whether a refund actually happened, so the caller can log/
+    respond accordingly.
 
-    Resolved directly instead: candidate_message_id is a client-generated
-    id (not a DB server default), so it is known BEFORE the transaction is
-    even attempted, regardless of whether it lands. Querying, via an
-    INDEPENDENT session, whether a Message row with that exact id now
-    exists answers "did the atomic commit land" unambiguously — the
-    message row is unconditionally part of that same transaction, never a
-    no-op the way reconcile can be. If it landed: the answer was delivered
-    and billed together; leave the ledger alone (whatever its current
-    delta is — reconciled-to-the-same-value or reconciled-to-a-different-
-    value are both correct outcomes we must not disturb). If not: refund
-    the full predebit, since nothing was delivered.
+    use_independent_session=True (CancelledError): the request's own `db`
+    session may not be usable mid-cancellation — settle via a fresh
+    AsyncSessionLocal(), matching every other cancel-path settler in this
+    file.
+    use_independent_session=False (ordinary exception): reuses the
+    request's own `db` (rolled back first, inside _refund_predebit) —
+    matches the existing pattern for non-cancellation failures elsewhere.
     """
-    async with AsyncSessionLocal() as settle_db:
-        landed = False
-        if candidate_message_id is not None:
-            existing = await settle_db.get(Message, candidate_message_id)
-            landed = existing is not None
-        if landed:
-            return
-        await _refund_predebit(settle_db, user_id, pre_debited, predebit_ledger_id)
+    if use_independent_session:
+        async with AsyncSessionLocal() as settle_db:
+            return await _refund_predebit(settle_db, user_id, pre_debited, predebit_ledger_id)
+    assert db is not None
+    return await _refund_predebit(db, user_id, pre_debited, predebit_ledger_id)
 
 
 async def _fetch_page_chunks(
@@ -1061,31 +1074,23 @@ class _VerifiedQuoteProgress:
     """Mutable out-param for _run_verified_quote_search (B5 cancellation-
     safety fix, review round 1 SHOULD-FIX-2).
 
-    A CancelledError can land ANYWHERE inside _run_verified_quote_search.
-    The caller's cancellation handler must know whether the answer was
-    ALREADY durably delivered at that point — not assume "no answer" the
-    way the setup-phase handler does for every other setup failure — mirrors
-    the main RAG path's has_partial_answer discriminator (chat_service.py's
-    streaming-phase finally: block), just derived from persistence instead
-    of accumulated stream text. prompt_tokens/completion_tokens/model are
-    captured right after quote_search() returns (before any commit) so
-    accurate billing is available regardless of where cancellation strikes.
+    prompt_tokens/completion_tokens/model are captured right after
+    quote_search() returns (before any commit) so accurate billing is
+    available regardless of where cancellation strikes. message_id is set
+    ONLY after the atomic commit's await ACTUALLY returns — kept for
+    logging/observability, but no longer load-bearing for billing
+    correctness.
 
-    FIX2-B (Codex r2 #4, NOT ADDRESSED): message-persist + reconcile +
-    usage-record are now ONE atomic commit (see _run_verified_quote_search),
-    so message_id is set ONLY after that single commit's await ACTUALLY
-    returns — reliable for the ORDINARY-exception handler (FIX-4), but a
-    CancelledError landing WHILE that commit is in flight is still
-    genuinely ambiguous (the commit may have landed on the DB even though
-    the await never returned, leaving message_id=None despite a delivered
-    answer). candidate_message_id is set BEFORE the commit is attempted (a
-    client-generated id, not a DB server default) precisely so the
-    cancellation handler can resolve that specific ambiguity later by
-    querying for this exact id independently — see
-    _settle_verified_quote_predebit_on_cancel.
+    FIX3-A (Codex r3 #4, NOT ADDRESSED): billing correctness no longer
+    depends on ANY in-memory flag or existence check here — a durable
+    marker on the ledger row itself (credit_ledger.reconciled_at, stamped
+    under a row lock by every reconcile_credits() call including the
+    equal-cost path) plus an atomic conditional refund
+    (_refund_predebit's DELETE ... WHERE reconciled_at IS NULL) resolve
+    "did the atomic commit land" with no race window, superseding the
+    prior candidate_message_id existence-check design entirely.
     """
     message_id: Optional[uuid.UUID] = None
-    candidate_message_id: Optional[uuid.UUID] = None
     prompt_tokens: int = 0
     completion_tokens: int = 0
     model: str = ""
@@ -1432,11 +1437,6 @@ class ChatService:
             # Verified-empty: the honest message, never an unverified fallback answer.
             assistant_text = _quote_search_copy(_QUOTE_SEARCH_EMPTY_COPY, locale, n=result.scanned_chunks)
 
-        # FIX2-B(a) (Codex r2 #4, NOT ADDRESSED): the id is generated
-        # CLIENT-SIDE (not via the table's gen_random_uuid() server default)
-        # so it is known BEFORE any DB work is attempted — this is what lets
-        # the cancellation handler below resolve an ambiguous commit later
-        # (see _settle_verified_quote_predebit_on_cancel's docstring).
         message_id = uuid.uuid4()
         asst_msg = Message(
             id=message_id,
@@ -1460,16 +1460,12 @@ class ChatService:
         # between the message add and the billing settlement. This removes
         # the "message persisted but billing never reconciled" class of
         # ordinary-exception free-ride entirely: either the whole
-        # transaction lands together, or none of it does (correctly caught
-        # by the caller's generic setup-phase handler as a total failure —
-        # nothing was delivered).
-        #
-        # progress.candidate_message_id is recorded BEFORE the commit is
-        # attempted — used only by the CancelledError path below to resolve
-        # a commit that lands on the DB while our own await is interrupted
-        # (a genuine ambiguity no in-memory flag can resolve on its own).
-        progress.candidate_message_id = message_id
-
+        # transaction lands together, or none of it does. FIX3-A (Codex r3
+        # #4): reconcile_credits() below durably stamps
+        # credit_ledger.reconciled_at under a row lock — the caller's
+        # exception handlers resolve any failure here (CancelledError or
+        # ordinary) via that marker + an atomic conditional refund, never
+        # an in-memory flag or existence check.
         actual_cost = credit_service.calculate_cost(
             progress.prompt_tokens, progress.completion_tokens, progress.model, mode="balanced",
         )
@@ -1686,60 +1682,94 @@ class ChatService:
                         progress=quote_progress,
                     )
                 except asyncio.CancelledError:
-                    # SHOULD-FIX-2 (review round 1) / FIX2-B(c) (Codex r2 #4,
-                    # NOT ADDRESSED): a CancelledError landing anywhere in
-                    # _run_verified_quote_search — including WHILE its single
-                    # atomic commit's await is in flight, a window where
-                    # in-memory progress.message_id is genuinely unreliable —
-                    # must NOT be treated as "no answer" via a blind flag
-                    # check. _settle_verified_quote_predebit_on_cancel
-                    # resolves this independently: it queries the DB for
-                    # progress.candidate_message_id (known BEFORE the commit
-                    # was attempted) to determine whether the atomic commit
-                    # actually landed, and only refunds if it didn't — never
-                    # re-reconciles (the atomic commit already did that, if
-                    # it landed).
+                    # FIX3-A(d) (Codex r3 #4, NOT ADDRESSED): `settled` is
+                    # marked BEFORE the resolver even runs — regardless of
+                    # whether it succeeds — so the outer generic handler
+                    # (which now also checks `not settled`, see below) can
+                    # NEVER also attempt its own blind settlement. That was
+                    # the exact "special resolver errors out, outer handler
+                    # falls back to blind settlement" gap Codex r3 found.
+                    # The resolver itself is the durable, race-free
+                    # reconciled_at + conditional-delete design (FIX3-A(b)/
+                    # (c)) — correct regardless of whether the atomic commit
+                    # already landed, is still landing, or never will.
                     if user is not None and pre_debited > 0 and predebit_ledger_id is not None and not settled:
+                        settled = True
                         try:
                             with anyio.CancelScope(shield=True):
-                                await asyncio.wait_for(
-                                    _settle_verified_quote_predebit_on_cancel(
+                                refunded = await asyncio.wait_for(
+                                    _settle_verified_quote_predebit_after_failure(
                                         user_id=user.id,
                                         pre_debited=pre_debited,
                                         predebit_ledger_id=predebit_ledger_id,
-                                        candidate_message_id=quote_progress.candidate_message_id,
+                                        use_independent_session=True,
                                     ),
                                     timeout=_CANCEL_IO_TIMEOUT_S,
                                 )
-                            settled = True
+                            if not refunded:
+                                logger.info(
+                                    "quote_billing.settled_no_refund user=%s ledger=%s: cancellation "
+                                    "after the atomic commit had already reconciled — predebit stands.",
+                                    user.id, predebit_ledger_id,
+                                )
                         except Exception:
-                            logger.exception(
-                                "Failed to settle pre-debit during quote-search cancellation for user %s",
-                                user.id,
+                            # FIX3-A(d): resolver failure must NEVER fall
+                            # through to ANY further settlement attempt —
+                            # leave the predebit standing and surface it to
+                            # ops for manual review.
+                            logger.error(
+                                "quote_billing.unresolved user=%s ledger=%s pre_debited=%s "
+                                "session=%s: settlement resolver failed during cancellation — "
+                                "predebit left standing, requires manual review.",
+                                user.id, predebit_ledger_id, pre_debited, session_id, exc_info=True,
                             )
                     raise
                 except Exception as exc:
-                    # FIX-4 (Codex r1 IMPORTANT #4): an ORDINARY (non-cancel)
-                    # reconcile/record_usage/commit failure AFTER the answer
-                    # was already persisted must NOT reach the generic
-                    # setup-phase except block below, which assumes "no
-                    # answer" and does a full refund — that would free-ride a
-                    # real, delivered, persisted quote-search answer (the
-                    # message survives in the user's history after reload).
-                    # Same has_answer evidence as the CancelledError branch
-                    # above. Per the triage ruling: "predebit stands as the
-                    # charge" — no reconcile retry (reconcile/commit is
-                    # exactly what may have just failed), just don't refund.
-                    if quote_progress.message_id is not None:
+                    # FIX3-A(d) (Codex r3 #4, NOT ADDRESSED): ALL final-
+                    # commit exceptions — not just CancelledError — now
+                    # route through the SAME resolver as the branch above,
+                    # closing the "ordinary 'server committed but COMMIT
+                    # response was lost' exception leaves progress.message_id
+                    # unset and reaches the generic (blind) refund path"
+                    # gap Codex r3 found. `settled` is marked BEFORE the
+                    # resolver runs, same reasoning as the CancelledError
+                    # branch.
+                    if user is not None and pre_debited > 0 and predebit_ledger_id is not None and not settled:
                         settled = True
-                        logger.exception(
-                            "Quote-search billing failed after the answer was already "
-                            "persisted (message_id=%s) for user %s — predebit stands, no refund.",
-                            quote_progress.message_id, user.id if user else None,
-                        )
-                        yield _safe_sse(
-                            "error", "QUOTE_SEARCH_BILLING_INCOMPLETE", exc, session_id=str(session_id),
-                        )
+                        try:
+                            refunded = await _settle_verified_quote_predebit_after_failure(
+                                user_id=user.id,
+                                pre_debited=pre_debited,
+                                predebit_ledger_id=predebit_ledger_id,
+                                use_independent_session=False,
+                                db=db,
+                            )
+                        except Exception:
+                            logger.error(
+                                "quote_billing.unresolved user=%s ledger=%s pre_debited=%s "
+                                "session=%s: settlement resolver failed after an ordinary billing "
+                                "exception — predebit left standing, requires manual review.",
+                                user.id, predebit_ledger_id, pre_debited, session_id, exc_info=True,
+                            )
+                            yield _safe_sse("error", "QUOTE_SEARCH_ERROR", exc, session_id=str(session_id))
+                            return
+                        if not refunded:
+                            # The atomic commit had already reconciled — a
+                            # real, delivered, persisted answer — this
+                            # exception struck AFTER that. Predebit stands
+                            # as the charge; never a full refund for a
+                            # delivered answer.
+                            logger.exception(
+                                "Quote-search billing failed after the atomic commit had already "
+                                "reconciled (ledger %s) for user %s — predebit stands, no refund.",
+                                predebit_ledger_id, user.id,
+                            )
+                            yield _safe_sse(
+                                "error", "QUOTE_SEARCH_BILLING_INCOMPLETE", exc, session_id=str(session_id),
+                            )
+                            return
+                        # Refunded — nothing was delivered.
+                        yield _safe_sse("error", "QUOTE_SEARCH_ERROR", exc, session_id=str(session_id))
                         return
                     raise
                 # Reconcile already committed inside _run_verified_quote_search —
@@ -2053,7 +2083,18 @@ class ChatService:
                     )
             raise
         except Exception as e:
-            if user is not None and pre_debited > 0 and predebit_ledger_id is not None:
+            # FIX3-A(d) (Codex r3 #4, NOT ADDRESSED): this handler now also
+            # checks `not settled` — previously it was the ONE generic
+            # exception handler in this function that did NOT, so an
+            # ordinary exception escaping the strict quote route's own
+            # (already-settled) failure handling above would reach here and
+            # attempt a SECOND, blind settlement. _refund_predebit's
+            # conditional delete (FIX3-A(c)) makes a second attempt safe on
+            # its own, but per Codex's prescription a resolver's decision
+            # must never be second-guessed by an unconditional fallback —
+            # the guard belongs here structurally, not just as a side
+            # effect of the delete being idempotent.
+            if user is not None and pre_debited > 0 and predebit_ledger_id is not None and not settled:
                 try:
                     await _refund_predebit(db, user.id, pre_debited, predebit_ledger_id)
                     settled = True

@@ -187,12 +187,43 @@ async def reconcile_credits(
     refund attempted (correctly, since nothing was actually wrong with the
     charge) but also zero result delivered. Existing callers that don't use
     the return value are unaffected (Python allows ignoring it).
+
+    FIX3-A(b) (Codex r3 #4, NOT ADDRESSED): ALWAYS touches the ledger row —
+    including the equal-cost/no-op path, which previously left it
+    completely untouched — locking it first via SELECT ... FOR UPDATE and
+    stamping reconciled_at=now() unconditionally. This is what SERIALIZES
+    reconciliation against a concurrent settlement resolver's conditional
+    refund (_refund_predebit's DELETE ... WHERE reconciled_at IS NULL,
+    FIX3-A(c)): whichever of the two transactions gets here first blocks
+    the other until it commits or rolls back, so there is no window where
+    a resolver can read "not yet reconciled" and a landed commit
+    simultaneously. A one-shot existence check (e.g. "does the Message row
+    exist yet") could never provide this guarantee — reconciled_at is a
+    durable, lockable column, not a read that can race a landing commit.
     """
+    # Lock the ledger row FIRST, before deciding whether diff == 0 — this
+    # lock is what a concurrent _refund_predebit blocks on, regardless of
+    # which branch below actually runs.
+    locked = await db.execute(
+        sa.select(CreditLedger).where(CreditLedger.id == predebit_ledger_id).with_for_update()
+    )
+    ledger_row = locked.scalar_one_or_none()
+    if ledger_row is None:
+        raise RuntimeError(
+            f"Predebit ledger {predebit_ledger_id} not found during credit reconciliation"
+        )
+
     diff = pre_debited - actual_cost
     if diff == 0:
+        await db.execute(
+            sa.update(CreditLedger)
+            .where(CreditLedger.id == predebit_ledger_id)
+            .values(reconciled_at=sa.func.now())
+        )
         user = await db.get(User, user_id)
         if user is None:
             raise RuntimeError(f"User {user_id} not found during credit reconciliation")
+        await db.flush()
         return user.credits_balance
 
     balance_result = await db.execute(
@@ -205,20 +236,18 @@ async def reconcile_credits(
     if new_balance is None:
         raise RuntimeError(f"User {user_id} not found during credit reconciliation")
 
-    # Update the original ledger entry to reflect actual cost
-    ledger_result = await db.execute(
+    # Update the original ledger entry to reflect actual cost — reconciled_at
+    # is now durably stamped in the SAME statement as the delta/balance_after
+    # update, never a separate step that could itself be skipped.
+    await db.execute(
         sa.update(CreditLedger)
         .where(CreditLedger.id == predebit_ledger_id)
         .values(
             delta=-actual_cost,
             balance_after=CreditLedger.balance_after + diff,
+            reconciled_at=sa.func.now(),
         )
-        .returning(CreditLedger.id)
     )
-    if ledger_result.scalar_one_or_none() is None:
-        raise RuntimeError(
-            f"Predebit ledger {predebit_ledger_id} not found during credit reconciliation"
-        )
     await db.flush()
     return new_balance
 

@@ -19,7 +19,6 @@ from httpx import ASGITransport, AsyncClient
 
 from app.api import quotes as quotes_api
 from app.core import deps as deps_module
-from app.models.tables import UsageRecord
 from app.services import credit_service, quote_search_service
 from app.services.quote_search_service import QuoteCard, QuoteSearchResult
 
@@ -310,9 +309,12 @@ async def test_quote_search_failure_refunds_predebit(
 ) -> None:
     user = _make_user()
     doc = _make_doc(user)
+    # FIX3-A(c): _refund_predebit's conditional DELETE checks
+    # scalar_one_or_none() (not rowcount) — a truthy value signals the row
+    # was unreconciled and got deleted (the refund path this test asserts).
     db = _make_db(
         get=AsyncMock(return_value=doc),
-        execute=AsyncMock(return_value=_Result(rowcount=1)),
+        execute=AsyncMock(return_value=_Result(scalar_one_or_none=uuid.uuid4(), rowcount=1)),
     )
     _override_dependencies(db, user)
 
@@ -344,9 +346,12 @@ async def test_quote_search_reconcile_failure_after_success_still_refunds(
     now be inside the SAME guarded region."""
     user = _make_user()
     doc = _make_doc(user)
+    # FIX3-A(c): _refund_predebit's conditional DELETE checks
+    # scalar_one_or_none() (not rowcount) — a truthy value signals the row
+    # was unreconciled and got deleted (the refund path this test asserts).
     db = _make_db(
         get=AsyncMock(return_value=doc),
-        execute=AsyncMock(return_value=_Result(rowcount=1)),
+        execute=AsyncMock(return_value=_Result(scalar_one_or_none=uuid.uuid4(), rowcount=1)),
     )
     _override_dependencies(db, user)
 
@@ -392,8 +397,8 @@ async def test_quote_search_cancellation_refunds_via_independent_session(
         quote_search_service, "quote_search", AsyncMock(side_effect=asyncio.CancelledError())
     )
 
-    refund_mock = AsyncMock()
-    monkeypatch.setattr(quotes_api, "_settle_quote_search_predebit_on_cancel", refund_mock)
+    settle_mock = AsyncMock()
+    monkeypatch.setattr(quotes_api, "_settle_quote_search_predebit_after_failure", settle_mock)
 
     with pytest.raises(asyncio.CancelledError):
         await quotes_api.create_quote_search(
@@ -403,76 +408,61 @@ async def test_quote_search_cancellation_refunds_via_independent_session(
             db=db,
         )
 
-    refund_mock.assert_awaited_once()
-    args = refund_mock.await_args.args
-    assert args[0] == user.id
-    assert args[1] == quotes_api.QUOTE_SEARCH_PREDEBIT_CREDITS
-    assert args[2] == ledger_id
-    # FIX2-B(c) (Codex r2 #4): a 4th arg — the candidate UsageRecord id,
-    # generated before any await, so it's always known regardless of where
-    # the CancelledError struck — lets the settlement resolve the ambiguity
-    # of whether the final atomic commit actually landed.
-    assert isinstance(args[3], uuid.UUID)
+    settle_mock.assert_awaited_once()
+    assert settle_mock.await_args.kwargs["user_id"] == user.id
+    assert settle_mock.await_args.kwargs["pre_debited"] == quotes_api.QUOTE_SEARCH_PREDEBIT_CREDITS
+    assert settle_mock.await_args.kwargs["ledger_id"] == ledger_id
+    assert settle_mock.await_args.kwargs["use_independent_session"] is True
 
 
-class _FakeSettleSession:
-    """Stand-in for the INDEPENDENT AsyncSessionLocal
-    _settle_quote_search_predebit_on_cancel opens — controls whether the
-    candidate UsageRecord id "landed" (simulating the real-DB outcome of an
-    ambiguous atomic commit)."""
-
-    def __init__(self, *, usage_record_found: bool):
-        self._usage_record_found = usage_record_found
-
-    async def __aenter__(self):
-        return self
-
-    async def __aexit__(self, *exc):
-        return False
-
-    async def get(self, model, obj_id):
-        if model is UsageRecord and self._usage_record_found:
-            return SimpleNamespace(id=obj_id)
-        return None
-
-
-class TestSettleQuoteSearchPredebitOnCancel:
-    """FIX2-B(c) (Codex r2 #4, NOT ADDRESSED): direct unit coverage for the
-    REST ambiguous-commit resolver — mirrors
-    chat_service._settle_verified_quote_predebit_on_cancel's own tests. A
-    CancelledError landing WHILE the final atomic commit (reconcile + usage
-    + telemetry) is in flight cannot be resolved by refunding unconditionally
-    (the prior behavior) since the commit may have already landed."""
+class TestSettleQuoteSearchPredebitAfterFailure:
+    """FIX3-A (Codex r3 #4, NOT ADDRESSED): direct unit coverage for the
+    resolver — it is now a thin dispatch to the atomic-conditional
+    _refund_predebit (FIX3-A(c)), which is itself the durable, race-free
+    settlement mechanism. Real-Postgres coverage of that mechanism,
+    including Codex's deterministic interleaving probes, lives in
+    test_quote_billing_failure_windows_integration.py."""
 
     @pytest.mark.asyncio
-    async def test_usage_record_found_means_commit_landed_no_refund(self, monkeypatch) -> None:
-        monkeypatch.setattr(quotes_api, "AsyncSessionLocal", lambda: _FakeSettleSession(usage_record_found=True))
-        refund_mock = AsyncMock()
+    async def test_independent_session_true_opens_a_fresh_session(self, monkeypatch) -> None:
+        opened: list[object] = []
+
+        class _FakeSession:
+            async def __aenter__(self_inner):
+                opened.append(self_inner)
+                return self_inner
+
+            async def __aexit__(self_inner, *exc):
+                return False
+
+        monkeypatch.setattr(quotes_api, "AsyncSessionLocal", lambda: _FakeSession())
+        refund_mock = AsyncMock(return_value=True)
         monkeypatch.setattr(quotes_api, "_refund_predebit", refund_mock)
 
-        await quotes_api._settle_quote_search_predebit_on_cancel(
-            uuid.uuid4(), 15, uuid.uuid4(), uuid.uuid4(),
+        result = await quotes_api._settle_quote_search_predebit_after_failure(
+            user_id=uuid.uuid4(), pre_debited=15, ledger_id=uuid.uuid4(),
+            use_independent_session=True,
         )
 
-        refund_mock.assert_not_awaited()
-
-    @pytest.mark.asyncio
-    async def test_usage_record_not_found_means_commit_never_landed_refunds(self, monkeypatch) -> None:
-        monkeypatch.setattr(quotes_api, "AsyncSessionLocal", lambda: _FakeSettleSession(usage_record_found=False))
-        refund_mock = AsyncMock()
-        monkeypatch.setattr(quotes_api, "_refund_predebit", refund_mock)
-        user_id = uuid.uuid4()
-        ledger_id = uuid.uuid4()
-
-        await quotes_api._settle_quote_search_predebit_on_cancel(
-            user_id, 15, ledger_id, uuid.uuid4(),
-        )
-
+        assert result is True
+        assert len(opened) == 1
         refund_mock.assert_awaited_once()
-        args = refund_mock.await_args.args
-        assert args[1] == user_id
-        assert args[2] == 15
-        assert args[3] == ledger_id
+        assert refund_mock.await_args.args[0] is opened[0]
+
+    @pytest.mark.asyncio
+    async def test_independent_session_false_reuses_the_given_db(self, monkeypatch) -> None:
+        refund_mock = AsyncMock(return_value=False)
+        monkeypatch.setattr(quotes_api, "_refund_predebit", refund_mock)
+        request_db = SimpleNamespace()
+
+        result = await quotes_api._settle_quote_search_predebit_after_failure(
+            user_id=uuid.uuid4(), pre_debited=15, ledger_id=uuid.uuid4(),
+            use_independent_session=False, db=request_db,
+        )
+
+        assert result is False
+        refund_mock.assert_awaited_once()
+        assert refund_mock.await_args.args[0] is request_db
 
 
 @pytest.mark.asyncio

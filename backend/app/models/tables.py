@@ -332,6 +332,11 @@ class CreditLedger(Base):
     ref_type: Mapped[Optional[str]] = mapped_column(sa.String(50))
     ref_id: Mapped[Optional[str]] = mapped_column(sa.String(255))
     created_at: Mapped[datetime] = mapped_column(sa.DateTime(timezone=True), server_default=sa.text("now()"))
+    # FIX3-A (Codex r3 #4): durable settlement marker — reconcile_credits
+    # ALWAYS stamps this (under a row lock), including the equal-cost no-op
+    # path. The conditional refund path (DELETE ... WHERE reconciled_at IS
+    # NULL) uses it as the sole race-free "already settled" signal.
+    reconciled_at: Mapped[Optional[datetime]] = mapped_column(sa.DateTime(timezone=True), nullable=True)
 
     __table_args__ = (
         sa.Index("idx_credit_ledger_user_created", "user_id", "created_at"),
