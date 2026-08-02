@@ -69,14 +69,15 @@ export default function QuoteFinderPanel({ isOpen, documentId, userPlan, onClose
     if (!trimmed || loading) return;
     setLoading(true);
     setErrorMsg(null);
+    // Fires on SUBMIT, before the request — not after success (Codex M2 r1
+    // finding #6: firing only on success made every failed/paywalled search
+    // invisible to the funnel). No result-dependent properties here since
+    // none exist yet; the backend's own quote_search_completed event
+    // (unchanged) carries the verified/discarded counts server-side.
+    trackEvent('quote_search_submitted', { source: 'quote_finder_panel' });
     try {
       const res = await searchDocumentQuotes(documentId, trimmed, locale);
       setResult(res);
-      trackEvent('quote_search_submitted', {
-        source: 'quote_finder_panel',
-        verified: res.verified,
-        discarded: res.discardedCount,
-      });
     } catch (err) {
       if (err instanceof ApiError && err.status === 402) {
         setPaywallReason(err.code || 'credits');
