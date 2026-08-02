@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import asyncio
-import dataclasses
 import json
 import logging
 import re
@@ -197,19 +196,31 @@ def deterministic_plan(message: str, *, is_collection: bool = False) -> ActionPl
             reason="strict verbatim-quote markers",
         )
 
-    plan = _fallthrough_plan(text, is_collection=is_collection)
     if quote_finder_hint:
-        # Attached to WHATEVER the fallthrough resolves to (almost always
-        # citation_lookup or the ordinary_document_question default, since
-        # a quote trigger rarely also matches table/compare/template
-        # vocabulary) rather than threading the hint through every
-        # individual branch above.
-        return dataclasses.replace(
-            plan,
+        # FIX3-B r4 (Codex r4 residual #5, their own prescription): a
+        # guarded trigger (strict trigger + a suppressing token) FORCES the
+        # plain RAG/citation path — it must NEVER fall into
+        # _fallthrough_plan's tool-selection branches. A tool action's SSE
+        # "done" event carries no quote_finder_hint/quote_finder_topic keys
+        # at all (see chat_service.py's _tool_action_stream done payload),
+        # and several tool actions execute without waiting on a user
+        # confirmation click — so e.g. "Do not compare versions; quote the
+        # clause verbatim." would otherwise silently run compare_documents
+        # with the hint (and thus the chip) never surfacing. Forcing the
+        # RAG path guarantees the hint always rides the done event that
+        # was designated for it.
+        has_citation = bool(_CITATION_RE.search(text))
+        return ActionPlan(
+            action=ChatAction.CITATION_LOOKUP if has_citation else ChatAction.ANSWER_WITH_RAG,
+            confidence=0.78 if has_citation else 0.62,
+            requires_confirmation=False,
+            user_visible_status="",
+            reason="guarded quote trigger forces RAG path",
             quote_finder_hint=True,
             quote_finder_hint_topic=text[:_QUOTE_FINDER_HINT_TOPIC_MAX_CHARS],
         )
-    return plan
+
+    return _fallthrough_plan(text, is_collection=is_collection)
 
 
 def _fallthrough_plan(text: str, *, is_collection: bool) -> ActionPlan:

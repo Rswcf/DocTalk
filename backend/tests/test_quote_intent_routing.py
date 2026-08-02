@@ -201,6 +201,63 @@ def test_verified_quote_search_uses_rag_answer_path() -> None:
     assert plan.uses_rag_answer_path is True
 
 
+class TestGuardedTriggerForcesRagPathNeverTool:
+    """Codex r4 residual (#5, their own prescription — the ONE item left
+    after #4 and the rest of #5 were fully ADDRESSED). FIX3-B computed
+    quote_finder_hint but attached it to WHATEVER _fallthrough_plan
+    resolved to — including a TOOL action. A tool action's SSE "done"
+    event has no quote_finder_hint/quote_finder_topic keys at all (see
+    chat_service.py's _tool_action_stream done payload), and several tool
+    actions execute without waiting on a user confirmation click. So
+    "Do not compare versions; quote the clause verbatim." silently ran
+    compare_documents with the hint — and thus the chip — never surfacing.
+    Fix: a guarded trigger (strict trigger + a suppressing token) now
+    FORCES the plain RAG/citation path, guaranteeing the hint always rides
+    the done event Codex's r3 prescription designated for it."""
+
+    @pytest.mark.parametrize(
+        "message",
+        [
+            "Do not compare versions; quote the clause verbatim.",
+            "Do not create a checklist; quote the clause verbatim.",
+            "Do not export the table; quote the clause verbatim.",
+        ],
+    )
+    def test_guarded_trigger_never_selects_a_tool_action(self, message: str) -> None:
+        plan = deterministic_plan(message)
+        assert plan.action in {ChatAction.ANSWER_WITH_RAG, ChatAction.CITATION_LOOKUP}
+        assert plan.uses_rag_answer_path is True
+        assert plan.quote_finder_hint is True
+        assert plan.quote_finder_hint_topic == message
+
+    @pytest.mark.parametrize(
+        "message, expected_action",
+        [
+            ("请提取所有表格并导出 CSV", ChatAction.EXPORT_TABLES),
+            ("找出所有公司目标价和评级，整理成表格", ChatAction.EXTRACT_DELIVERABLE),
+            ("Generate an executive summary", ChatAction.EXTRACT_DELIVERABLE),
+            ("Generate an academic evidence table with cited claims", ChatAction.EXTRACT_DELIVERABLE),
+        ],
+    )
+    def test_tool_action_routing_without_a_quote_trigger_is_untouched(
+        self, message: str, expected_action: "ChatAction",
+    ) -> None:
+        """Regression guard: forcing the RAG path must fire ONLY when
+        quote_finder_hint is True. None of these probes (mirrored from
+        test_action_planner.py) contain a strict quote trigger, so they
+        must keep reaching _fallthrough_plan's ordinary tool-selection
+        branches exactly as before this fix."""
+        plan = deterministic_plan(message)
+        assert plan.action == expected_action
+        assert plan.quote_finder_hint is False
+
+    def test_compare_tool_routing_without_a_quote_trigger_is_untouched(self) -> None:
+        plan = deterministic_plan("和上一版做对比", is_collection=True)
+        assert plan.action == ChatAction.COMPARE_DOCUMENTS
+        assert plan.requires_confirmation is True
+        assert plan.quote_finder_hint is False
+
+
 # ---------------------------------------------------------------------------
 # Layer 2: chat_stream routing (mirrors tests/test_chat_setup_refunds.py's
 # fake-DB scaffolding — no docker/infra required)
