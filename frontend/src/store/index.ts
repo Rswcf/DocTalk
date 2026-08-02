@@ -68,6 +68,14 @@ export interface DocTalkStore {
   // prevent, since nothing re-synced them afterward.
   demoMessagesUsed: number;
   demoRestoredUserMsgCount: number;
+  // Monotonic counter bumped by every operation that mutates the two demo
+  // fields above (adopt/create, sendMessage start, regen/continue bump) —
+  // NOT by reanchorDemoCounter itself. Lets a fire-and-forget reanchor GET
+  // detect whether some other accounting event happened while it was in
+  // flight, even when it targets the same session (a plain sessionId check
+  // can't tell the difference — Codex r4). See reanchorDemoCounter in
+  // useChatStream.ts for the read side.
+  demoAccountingEpoch: number;
 
   // PDF Search
   searchQuery: string;
@@ -106,6 +114,7 @@ export interface DocTalkStore {
   setUserPlan: (plan: PlanType) => void;
   setDemoMessagesUsed: (count: number) => void;
   setDemoRestoredUserMsgCount: (count: number) => void;
+  bumpDemoAccountingEpoch: () => void;
   setSearchQuery: (query: string) => void;
   setSearchMatches: (matches: Array<{ page: number; index: number }>) => void;
   setCurrentMatchIndex: (index: number) => void;
@@ -148,6 +157,7 @@ const initialState = {
   highlightFocus: null as string | null,
   demoMessagesUsed: 0,
   demoRestoredUserMsgCount: 0,
+  demoAccountingEpoch: 0,
   searchQuery: '',
   searchMatches: [] as Array<{ page: number; index: number }>,
   currentMatchIndex: -1,
@@ -299,6 +309,7 @@ export const useDocTalkStore = create<DocTalkStore>((set, get) => ({
   setUserPlan: (plan: PlanType) => set({ userPlan: plan }),
   setDemoMessagesUsed: (count: number) => set({ demoMessagesUsed: count }),
   setDemoRestoredUserMsgCount: (count: number) => set({ demoRestoredUserMsgCount: count }),
+  bumpDemoAccountingEpoch: () => set((state) => ({ demoAccountingEpoch: state.demoAccountingEpoch + 1 })),
   setSearchQuery: (query: string) => set({ searchQuery: query }),
   setSearchMatches: (matches) => set({ searchMatches: matches }),
   setCurrentMatchIndex: (index: number) => set({ currentMatchIndex: index }),

@@ -19,6 +19,7 @@ export function useChatSession(documentId: string | undefined): UseChatSessionRe
     setMessages,
     setDemoMessagesUsed,
     setDemoRestoredUserMsgCount,
+    bumpDemoAccountingEpoch,
     addSession,
   } = useDocTalkStore();
 
@@ -37,6 +38,13 @@ export function useChatSession(documentId: string | undefined): UseChatSessionRe
     // same run, so the momentary reset here is safe.
     setDemoMessagesUsed(0);
     setDemoRestoredUserMsgCount(0);
+    // Bump the accounting epoch on every reset — see the field's doc comment
+    // in store/index.ts. A reanchorDemoCounter GET issued before this reset
+    // (e.g. for the PREVIOUS document's session) must never be allowed to
+    // write over whatever this run establishes, even in the (currently
+    // impossible, but not worth relying on) case its own sessionId happened
+    // to collide.
+    bumpDemoAccountingEpoch();
     // Clear the PREVIOUS document's session/messages/sessions synchronously
     // too (Codex r3 breakage 3), not just the counter. Without this, a
     // transient adoption failure for document B left document A's still-
@@ -101,6 +109,7 @@ export function useChatSession(documentId: string | undefined): UseChatSessionRe
           const restoredUserMsgCount = msgsData.messages.filter((m) => m.role === 'user').length;
           setDemoRestoredUserMsgCount(restoredUserMsgCount);
           setDemoMessagesUsed(msgsData.demo_messages_used ?? 0);
+          bumpDemoAccountingEpoch();
           return; // adopted — skip listSessions/createSession entirely
         } catch (e) {
           const status = e instanceof ApiError ? e.status : null;
@@ -152,6 +161,7 @@ export function useChatSession(documentId: string | undefined): UseChatSessionRe
             // baseline is 0 and every subsequent local user message counts.
             setDemoRestoredUserMsgCount(0);
             setDemoMessagesUsed(s.demo_messages_used);
+            bumpDemoAccountingEpoch();
             writeDemoSession(documentId, s.session_id);
           }
 
@@ -178,7 +188,7 @@ export function useChatSession(documentId: string | undefined): UseChatSessionRe
     return () => {
       cancelled = true;
     };
-  }, [documentId, documentStatus, setSessions, setSessionId, setMessages, setDemoMessagesUsed, setDemoRestoredUserMsgCount, addSession]);
+  }, [documentId, documentStatus, setSessions, setSessionId, setMessages, setDemoMessagesUsed, setDemoRestoredUserMsgCount, bumpDemoAccountingEpoch, addSession]);
 
   return { sessionError };
 }

@@ -132,6 +132,9 @@ export function useChatStream({
   // best-effort correction, not something that should surface to the user.
   const reanchorDemoCounter = useCallback((forSessionId: string) => {
     if (maxUserMessages == null) return;
+    // Captured synchronously at call time (not read again after the GET
+    // resolves) — see the epoch check below for why.
+    const epochAtCall = useDocTalkStore.getState().demoAccountingEpoch;
     getMessages(forSessionId)
       .then((msgsData) => {
         if (msgsData.demo_messages_used == null) return;
@@ -142,9 +145,21 @@ export function useChatStream({
         // sessionId from the store (not a closure) and only write if it
         // still matches the session this reanchor was called for; otherwise
         // the fetched-for-A truth would clobber whatever B's own
-        // adopt/create already established. Drop it silently — B's own
-        // adoption path is the authoritative source for B's counter.
+        // adopt/create already established.
         if (state.sessionId !== forSessionId) return;
+        // Same-session guard alone isn't enough (Codex r4): a failed
+        // regenerate can issue this GET, and the user can send a NEW
+        // message on the SAME session before it resolves — the sessionId
+        // check can't see that, since sendMessage never changes sessionId.
+        // demoAccountingEpoch is bumped by every operation that mutates
+        // these two fields (adopt/create, sendMessage start, regen/continue
+        // bump); if it moved since this reanchor was issued, some other
+        // accounting event happened in between and its own state is
+        // authoritative — writing this stale snapshot over it would erase
+        // that newer event's delta. Drop it silently either way; a later
+        // failure (if any) issues its own fresh reanchor against current
+        // state.
+        if (state.demoAccountingEpoch !== epochAtCall) return;
         state.setDemoMessagesUsed(msgsData.demo_messages_used);
         state.setDemoRestoredUserMsgCount(
           state.messages.filter((m) => m.role === 'user').length,
@@ -338,12 +353,19 @@ export function useChatStream({
 
     addMessage(userMsg);
     addMessage(asstMsg);
+    // A new user message on this session is itself an accounting-relevant
+    // event (it changes what localUserMsgCount will count) — bump so any
+    // in-flight reanchorDemoCounter GET for this same session (e.g. from an
+    // earlier failed regenerate/continue) recognizes its snapshot is now
+    // stale and drops instead of overwriting this message's delta (Codex
+    // r4). No-op for authenticated/non-demo sessions.
+    if (maxUserMessages != null) useDocTalkStore.getState().bumpDemoAccountingEpoch();
     setStreaming(true);
     trackEvent('chat_message_sent', { source: 'chat_panel', mode: selectedMode });
 
     await streamAssistantResponse(text);
     return true;
-  }, [isStreaming, demoLimitReached, onRequireAuth, addMessage, setStreaming, streamAssistantResponse, selectedMode]);
+  }, [isStreaming, demoLimitReached, onRequireAuth, addMessage, setStreaming, streamAssistantResponse, selectedMode, maxUserMessages]);
 
   // Regenerate/continue add no new user message locally (they resend/extend
   // an existing turn), but the backend increments demo quota on both — so
@@ -364,6 +386,9 @@ export function useChatStream({
     if (maxUserMessages == null) return;
     const state = useDocTalkStore.getState();
     state.setDemoMessagesUsed(state.demoMessagesUsed + 1);
+    // This bump is itself an accounting-relevant event — see the epoch
+    // check in reanchorDemoCounter above.
+    state.bumpDemoAccountingEpoch();
   }, [maxUserMessages]);
 
   const regenerateLastResponse = useCallback(async () => {
