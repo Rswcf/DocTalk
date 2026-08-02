@@ -143,7 +143,12 @@ export default function ChatArtifactCard({ artifact, onCitationClick, onPreviewL
       : undefined;
     const verified = typeof preview?.verified === 'number' ? preview.verified : quoteCards.length;
     const proposed = typeof preview?.proposed === 'number' ? preview.proposed : verified;
-    const discarded = Math.max(0, proposed - verified);
+    // Prefer the backend's own post-dedup count (matches the REST endpoint's
+    // discarded_count exactly); only re-derive for older persisted messages
+    // whose artifact preview predates this field (see the type's docstring).
+    const discarded = typeof preview?.discarded_count === 'number'
+      ? preview.discarded_count
+      : Math.max(0, proposed - verified);
     return tOr('quoteFinder.resultsSummary', '{verified} verified · {discarded} discarded', { verified, discarded });
   }, [isQuoteSearch, current.preview, quoteCards.length, tOr]);
   const previewRows = useMemo(() => rowsFromPreview(current.preview), [current.preview]);

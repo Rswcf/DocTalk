@@ -62,6 +62,15 @@ export interface QuoteCardsArtifactPreview {
   }>;
   proposed: number;
   verified: number;
+  /** Added backend-side 2026-08-02 (commit 6552758) — mirrors the REST
+   * quote-search endpoint's `discarded_count` exactly (post-dedup discard
+   * count, not `proposed - verified`, which overcounts because verified
+   * duplicates collapsed by the §8.1 dedup key aren't in `discarded` at
+   * all). Optional: artifact previews are persisted verbatim in
+   * `Message.metadata_json` at send time, so messages sent before this
+   * field existed will lack it on history restore — callers must fall
+   * back to the proposed-minus-verified approximation only when absent. */
+  discarded_count?: number;
   scanned_chunks: number;
 }
 
