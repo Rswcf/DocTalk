@@ -2,6 +2,7 @@
 
 import { useCallback, useMemo, useRef } from 'react';
 import { chatStream, continueStream } from './sse';
+import { getMessages } from './api';
 import { useDocTalkStore } from '../store';
 import type { Message } from '../types';
 import { triggerCreditsRefresh } from '../components/CreditsDisplay';
@@ -69,11 +70,6 @@ export function useChatStream({
   } = useDocTalkStore();
 
   const abortRef = useRef<AbortController | null>(null);
-  // Pending rollback value for an optimistic regenerate/continue quota bump
-  // (see bumpDemoUsageForRegenOrContinue below) — null when no bump is
-  // awaiting resolution. Set right before the bump, consumed (cleared) by
-  // whichever of handleStreamDone/handleStreamError fires next.
-  const preBumpDemoUsedRef = useRef<number | null>(null);
 
   // Contract: totalUsed = demoMessagesUsed (server-known count as of the last
   // restore/create) + messages sent locally since then. demoRestoredUserMsgCount
@@ -111,33 +107,53 @@ export function useChatStream({
     [],
   );
 
+  // Shared by handleStreamError and the regenerate/continue catch blocks
+  // below — both need to recognize a user-initiated abort the same way.
+  const isAbortLikeError = useCallback((err: unknown): boolean => {
+    const name = typeof err === 'object' && err && 'name' in err
+      ? String((err as { name?: unknown }).name || '')
+      : '';
+    const message = typeof err === 'object' && err && 'message' in err
+      ? String((err as { message?: unknown }).message || '')
+      : '';
+    return name === 'AbortError' || message.includes('AbortError');
+  }, []);
+
+  // Fire-and-forget re-sync to server truth after a regenerate/continue
+  // failure — replaces the r2 ref-based rollback (Codex r3: a rollback token
+  // could go stale across an aborted call and then incorrectly undo a later,
+  // unrelated send's usage). GETs the current session's messages and, if the
+  // response carries demo_messages_used (anon demo only), re-anchors BOTH
+  // fields to "right now": the raw server count, and a baseline equal to the
+  // LIVE transcript's current user-message count (not the fetched
+  // transcript's) — so useChatStream's formula converges immediately without
+  // needing a full page reload, regardless of whether the failed request
+  // actually consumed server quota or not. Errors are swallowed: this is a
+  // best-effort correction, not something that should surface to the user.
+  const reanchorDemoCounter = useCallback((forSessionId: string) => {
+    if (maxUserMessages == null) return;
+    getMessages(forSessionId)
+      .then((msgsData) => {
+        if (msgsData.demo_messages_used == null) return;
+        const state = useDocTalkStore.getState();
+        state.setDemoMessagesUsed(msgsData.demo_messages_used);
+        state.setDemoRestoredUserMsgCount(
+          state.messages.filter((m) => m.role === 'user').length,
+        );
+      })
+      .catch(() => {
+        // best-effort — a later restore/regenerate/continue will try again
+      });
+  }, [maxUserMessages]);
+
   const handleStreamError = useCallback((err: unknown) => {
     flushPendingText();
     setStreaming(false);
     abortRef.current = null;
 
     const { message, code, status } = getErrorMeta(err);
-    const name = typeof err === 'object' && err && 'name' in err
-      ? String((err as { name?: unknown }).name || '')
-      : '';
-    const isAbort = name === 'AbortError' || message.includes('AbortError');
 
-    // Roll back a pending optimistic regenerate/continue quota bump (see
-    // bumpDemoUsageForRegenOrContinue) on any non-abort failure. We can't
-    // know for certain whether the backend's quota check ran before or
-    // after whatever rejected this request, so this is a heuristic, not a
-    // guarantee — any residual drift self-corrects on the next session
-    // restore, which always re-syncs to the server's raw count. On an
-    // explicit user abort we leave the bump in place: streaming can only be
-    // aborted once the backend has already started responding, at which
-    // point it plausibly already charged.
-    const pendingDemoBumpRestore = preBumpDemoUsedRef.current;
-    preBumpDemoUsedRef.current = null;
-    if (!isAbort && pendingDemoBumpRestore != null) {
-      useDocTalkStore.getState().setDemoMessagesUsed(pendingDemoBumpRestore);
-    }
-
-    if (isAbort) {
+    if (isAbortLikeError(err)) {
       return;
     }
 
@@ -221,7 +237,7 @@ export function useChatStream({
       isError: true,
       createdAt: Date.now(),
     });
-  }, [addMessage, flushPendingText, getErrorMeta, onShowPaywall, setStreaming, t, tOr, currentPlan]);
+  }, [addMessage, flushPendingText, getErrorMeta, isAbortLikeError, onShowPaywall, setStreaming, t, tOr, currentPlan]);
 
   const handleTruncated = useCallback(() => {
     flushPendingText();
@@ -232,9 +248,6 @@ export function useChatStream({
     flushPendingText();
     setStreaming(false);
     abortRef.current = null;
-    // Stream completed successfully — any pending regenerate/continue quota
-    // bump stands (no rollback needed).
-    preBumpDemoUsedRef.current = null;
     updateSessionActivity(sessionId);
     triggerCreditsRefresh();
     trackEvent('chat_message_completed', { source: 'chat_stream', mode: selectedMode });
@@ -264,7 +277,10 @@ export function useChatStream({
     updateLastMessageMeta({ citations: citations || [] });
   }, [flushPendingText, updateLastMessageMeta]);
 
-  const streamAssistantResponse = useCallback(async (prompt: string) => {
+  // `onErrorOverride` lets a caller observe an error before it reaches the
+  // shared `handleStreamError` (used by regenerateLastResponse to trigger a
+  // demo-counter re-anchor without changing sendMessage's behavior at all).
+  const streamAssistantResponse = useCallback(async (prompt: string, onErrorOverride?: (err: unknown) => void) => {
     const controller = new AbortController();
     abortRef.current = controller;
 
@@ -274,7 +290,7 @@ export function useChatStream({
       prompt,
       ({ text }) => updateLastMessage(text || ''),
       (citation) => addCitationToLastMessage(citation),
-      handleStreamError,
+      onErrorOverride ?? handleStreamError,
       handleStreamDone,
       handleTruncated,
       selectedMode,
@@ -324,17 +340,20 @@ export function useChatStream({
   // an existing turn), but the backend increments demo quota on both — so
   // without this the UI would undercount relative to the server. Bumps
   // demoMessagesUsed directly (not the baseline, which only moves at
-  // restore/create) and optimistically, before the stream starts — same
-  // timing as `sendMessage`'s optimistic user-message add. Unlike
-  // sendMessage's bump (which is inherent to the persisted transcript and
-  // was already accepted as unconditional), this one records the pre-bump
-  // value so handleStreamError can roll it back on failure — see there for
-  // why. No-op outside demo (maxUserMessages == null), so authenticated/
-  // non-demo sessions are untouched.
+  // restore/create) and optimistically, before the stream starts — correct
+  // whenever the server actually charges, which is the dominant case,
+  // including an abort (streaming can only be aborted once the backend has
+  // already started responding, so it plausibly already charged). No
+  // rollback here on failure — see reanchorDemoCounter above: instead of
+  // guessing whether a given failure means the server charged or not (r3:
+  // that guess is unsafe — e.g. the continuation endpoint charges quota
+  // BEFORE validating the message is still continuable, so a 404/400 there
+  // is still a real charge), a failed regenerate/continue re-syncs to
+  // server truth directly. No-op outside demo (maxUserMessages == null), so
+  // authenticated/non-demo sessions are untouched.
   const bumpDemoUsageForRegenOrContinue = useCallback(() => {
     if (maxUserMessages == null) return;
     const state = useDocTalkStore.getState();
-    preBumpDemoUsedRef.current = state.demoMessagesUsed;
     state.setDemoMessagesUsed(state.demoMessagesUsed + 1);
   }, [maxUserMessages]);
 
@@ -361,8 +380,23 @@ export function useChatStream({
     bumpDemoUsageForRegenOrContinue();
     setStreaming(true);
 
-    await streamAssistantResponse(lastUserText);
-  }, [isStreaming, addMessage, setStreaming, streamAssistantResponse, bumpDemoUsageForRegenOrContinue]);
+    try {
+      // Covers errors reported via the SSE error event/mid-stream failures
+      // (which resolve normally, so a try/catch alone wouldn't see them) —
+      // re-anchor before delegating to the shared error handler.
+      await streamAssistantResponse(lastUserText, (err) => {
+        reanchorDemoCounter(sessionId);
+        handleStreamError(err);
+      });
+    } catch (e) {
+      // Covers a thrown fetch() rejection (network failure before/instead
+      // of any SSE response) — the one case the onError override above
+      // can't see, since it never fires. Re-throws unchanged (nothing here
+      // catches it today either) — this only adds the re-anchor.
+      if (!isAbortLikeError(e)) reanchorDemoCounter(sessionId);
+      throw e;
+    }
+  }, [isStreaming, addMessage, setStreaming, streamAssistantResponse, bumpDemoUsageForRegenOrContinue, reanchorDemoCounter, sessionId, handleStreamError, isAbortLikeError]);
 
   const continueGenerating = useCallback(async () => {
     if (isStreaming) return;
@@ -379,23 +413,36 @@ export function useChatStream({
     const controller = new AbortController();
     abortRef.current = controller;
 
-    await continueStream(
-      sessionId,
-      lastMsg.backendId || '',
-      ({ text }) => updateLastMessage(text || ''),
-      (citation) => addCitationToLastMessage(citation),
-      handleStreamError,
-      handleStreamDone,
-      handleTruncated,
-      selectedMode,
-      locale,
-      controller.signal,
-      (artifact) => addArtifactToLastMessage(artifact),
-      ({ message }) => setLastMessageToolStatus(message),
-      handleAnswerRepaired,
-      handleCitationsRefined,
-    );
-  }, [isStreaming, sessionId, markLastMessageTruncated, setStreaming, updateLastMessage, addCitationToLastMessage, addArtifactToLastMessage, setLastMessageToolStatus, handleStreamError, handleStreamDone, handleTruncated, handleAnswerRepaired, handleCitationsRefined, selectedMode, locale, bumpDemoUsageForRegenOrContinue]);
+    try {
+      await continueStream(
+        sessionId,
+        lastMsg.backendId || '',
+        ({ text }) => updateLastMessage(text || ''),
+        (citation) => addCitationToLastMessage(citation),
+        // Re-anchor before delegating — covers SSE error-event/mid-stream
+        // failures, which resolve normally (see the try/catch below for the
+        // thrown-fetch-rejection case a callback can't see).
+        (err) => {
+          reanchorDemoCounter(sessionId);
+          handleStreamError(err);
+        },
+        handleStreamDone,
+        handleTruncated,
+        selectedMode,
+        locale,
+        controller.signal,
+        (artifact) => addArtifactToLastMessage(artifact),
+        ({ message }) => setLastMessageToolStatus(message),
+        handleAnswerRepaired,
+        handleCitationsRefined,
+      );
+    } catch (e) {
+      // Thrown fetch() rejection — re-throws unchanged (nothing here catches
+      // it today either), this only adds the re-anchor.
+      if (!isAbortLikeError(e)) reanchorDemoCounter(sessionId);
+      throw e;
+    }
+  }, [isStreaming, sessionId, markLastMessageTruncated, setStreaming, updateLastMessage, addCitationToLastMessage, addArtifactToLastMessage, setLastMessageToolStatus, handleStreamError, handleStreamDone, handleTruncated, handleAnswerRepaired, handleCitationsRefined, selectedMode, locale, bumpDemoUsageForRegenOrContinue, reanchorDemoCounter, isAbortLikeError]);
 
   const stopStreaming = useCallback(() => {
     abortRef.current?.abort();
