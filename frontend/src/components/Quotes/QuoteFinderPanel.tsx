@@ -64,10 +64,15 @@ export default function QuoteFinderPanel({ isOpen, documentId, userPlan, onClose
     // Reset on EVERY open (and every retarget while already open): a
     // previous open's topic/result/error must never bleed into this one —
     // e.g. opening via a "Try Quote Finder" chip for topic B must not show
-    // topic A's cards under B's prefilled input.
+    // topic A's cards under B's prefilled input. `loading` must reset too
+    // (Codex r5): bumping the generation above makes a still-running
+    // previous search's generation-guarded `finally` correctly refuse to
+    // clear it, so without this the panel is left permanently wedged in
+    // "Searching..." with the submit button disabled.
     setTopic(initialTopic ?? '');
     setResult(null);
     setErrorMsg(null);
+    setLoading(false);
     const id = window.setTimeout(() => {
       inputRef.current?.focus();
       inputRef.current?.select();
