@@ -1,8 +1,11 @@
 "use client";
 
 import { useEffect, useState } from 'react';
+import { Pencil } from 'lucide-react';
+import { useLocale } from '../../i18n';
 import type { DocumentBiblioCsl, QuoteCard } from '../../lib/api';
 import { getDocumentBiblio } from '../../lib/api';
+import BiblioForm from './BiblioForm';
 import QuoteResultCard from './QuoteResultCard';
 
 interface QuoteCardListProps {
@@ -11,6 +14,10 @@ interface QuoteCardListProps {
   onJump: (card: QuoteCard, index: number) => void;
   /** Localized "n verified, m discarded" style summary line, rendered above the cards. */
   summaryLine?: string;
+  /** Shows the "Edit citation info" affordance (F2) that opens BiblioForm.
+   * Off by default so the chat quote-card artifact (F3) stays "jump + copy
+   * identical" to the panel without also picking up the edit surface. */
+  allowEditBiblio?: boolean;
 }
 
 /**
@@ -21,8 +28,10 @@ interface QuoteCardListProps {
  * system default) so every card's Copy action can append an APA in-text
  * citation without a per-card round trip.
  */
-export default function QuoteCardList({ documentId, cards, onJump, summaryLine }: QuoteCardListProps) {
+export default function QuoteCardList({ documentId, cards, onJump, summaryLine, allowEditBiblio = false }: QuoteCardListProps) {
+  const { tOr } = useLocale();
   const [biblio, setBiblio] = useState<DocumentBiblioCsl | null>(null);
+  const [editingBiblio, setEditingBiblio] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -43,9 +52,21 @@ export default function QuoteCardList({ documentId, cards, onJump, summaryLine }
 
   return (
     <div>
-      {summaryLine ? (
-        <p className="mb-2 px-1 text-xs text-[var(--reader-muted)]">{summaryLine}</p>
-      ) : null}
+      <div className="mb-2 flex items-center justify-between gap-2 px-1">
+        {summaryLine ? (
+          <p className="text-xs text-[var(--reader-muted)]">{summaryLine}</p>
+        ) : <span />}
+        {allowEditBiblio ? (
+          <button
+            type="button"
+            onClick={() => setEditingBiblio(true)}
+            className="inline-flex min-h-6 items-center gap-1 rounded px-1.5 text-xs font-medium text-[var(--reader-muted)] transition-colors hover:bg-[var(--reader-panel-muted)] hover:text-[var(--reader-ink)] focus-visible:ring-2 focus-visible:ring-blue-500"
+          >
+            <Pencil size={12} aria-hidden="true" />
+            {tOr('quoteFinder.editCitationInfo', 'Edit citation info')}
+          </button>
+        ) : null}
+      </div>
       <div className="space-y-3">
         {cards.map((card, index) => (
           <QuoteResultCard
@@ -57,6 +78,17 @@ export default function QuoteCardList({ documentId, cards, onJump, summaryLine }
           />
         ))}
       </div>
+      {allowEditBiblio && editingBiblio ? (
+        <BiblioForm
+          documentId={documentId}
+          initialBiblio={biblio}
+          onClose={() => setEditingBiblio(false)}
+          onSaved={(next) => {
+            setBiblio(next);
+            setEditingBiblio(false);
+          }}
+        />
+      ) : null}
     </div>
   );
 }

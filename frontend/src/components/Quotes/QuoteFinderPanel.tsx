@@ -168,6 +168,7 @@ export default function QuoteFinderPanel({ isOpen, documentId, userPlan, onClose
               documentId={documentId}
               cards={result.cards}
               onJump={handleJump}
+              allowEditBiblio
               summaryLine={tOr(
                 'quoteFinder.resultsSummary',
                 '{verified} verified · {discarded} discarded',

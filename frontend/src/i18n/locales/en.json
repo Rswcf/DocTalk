@@ -3735,5 +3735,16 @@
   "quoteFinder.pageRange": "p. {start}–{end}",
   "quoteFinder.jump": "Jump to page",
   "quoteFinder.copy": "Copy quote + citation",
-  "quoteFinder.copied": "Copied"
+  "quoteFinder.copied": "Copied",
+  "quoteFinder.editCitationInfo": "Edit citation info",
+  "quoteFinder.biblioTitle": "Citation info for this document",
+  "quoteFinder.biblioHint": "Used to build the \"(Author, Year, p. X)\" citation the Copy button attaches to each quote. Only your own edits are saved — other readers of this document keep their own.",
+  "quoteFinder.biblioAuthors": "Author(s)",
+  "quoteFinder.biblioAuthorsPlaceholder": "Family, Given\nOne per line",
+  "quoteFinder.biblioYear": "Year",
+  "quoteFinder.biblioYearPlaceholder": "e.g. 2021",
+  "quoteFinder.biblioTitleField": "Title",
+  "quoteFinder.biblioSave": "Save",
+  "quoteFinder.biblioSaving": "Saving...",
+  "quoteFinder.biblioSaveError": "Failed to save citation info"
 }
