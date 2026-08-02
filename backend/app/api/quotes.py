@@ -67,8 +67,12 @@ async def _verify_document(document_id: uuid.UUID, user: User, db: AsyncSession)
 
 
 async def _refund_predebit(db: AsyncSession, user_id: uuid.UUID, pre_debited: int, ledger_id: uuid.UUID) -> None:
-    """Mirrors chat_service._refund_predebit exactly: ledger delete is the
-    single source of truth for "was this already settled"."""
+    """Same ledger-delete-is-the-source-of-truth idea as
+    chat_service._refund_predebit, NOT a byte-for-byte mirror: that version
+    does its own `try: await db.rollback() except: pass` internally before
+    the delete. This one does not — the ONLY caller (create_quote_search's
+    except block) already rolls back the session itself immediately before
+    calling this (MINOR-4, review round 1 correction)."""
     result = await db.execute(sa.delete(CreditLedger).where(CreditLedger.id == ledger_id))
     if result.rowcount and result.rowcount > 0:
         await db.execute(

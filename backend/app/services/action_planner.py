@@ -86,7 +86,7 @@ _STRICT_QUOTE_RE = re.compile(
     r"|\bverbatim\b"
     r"|\bword[\s-]for[\s-]word\b"
     r"|\u9010\u5b57\u5f15\u7528|\u539f\u6587\u5f15\u7528|\u4e00\u5b57\u4e0d\u5dee"
-    r"|cita\s+textual|copia\s+tal\s+cual|textualmente",
+    r"|\bcita\s+textual\b|\bcopia\s+tal\s+cual\b|\btextualmente\b",
     re.IGNORECASE,
 )
 # "quote ... with page" / "page ... quote" \u2014 a bounded window so it doesn't

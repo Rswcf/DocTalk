@@ -74,6 +74,14 @@ class TestStrictQuoteMatcherNegatives:
             "这个信息的出处是什么？",
             "Quote me a price for this service.",  # bare "quote", not a verbatim-text request
             "What is the citation format used here?",
+            # ES: review round 1 SHOULD-FIX-1 — the un-anchored alternation
+            # false-matched these ordinary interpretive questions before the
+            # \b word-boundary fix ("textualmente" inside "Contextualmente",
+            # "cita textual" inside "cita textualidad").
+            "Contextualmente, ¿qué significa esto?",
+            "Según cita textualidad del informe",
+            "cita esta fuente, por favor",
+            "¿Cuál es la fuente de esta cita?",
         ],
     )
     def test_broad_citation_language_does_not_trigger_strict_routing(self, message: str) -> None:
@@ -353,6 +361,67 @@ class TestAuthedRoutingEmitsArtifact:
             await agen.athrow(asyncio.CancelledError())
 
         settle_mock.assert_not_awaited()
+
+    @pytest.mark.asyncio
+    async def test_cancellation_between_persist_and_reconcile_settles_as_delivered(
+        self, monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """SHOULD-FIX-2 (review round 1): a CancelledError landing AFTER the
+        message-persist commit but BEFORE the final credits commit must
+        settle as has_answer=True (reconcile to the real token cost), never
+        a full refund — the quote-search answer was already durably
+        persisted and delivered, so refunding the WHOLE predebit on top of
+        that would be a free ride at DocTalk's expense. Simulated by making
+        reconcile_credits itself raise CancelledError — exactly the point
+        between the two commits inside _run_verified_quote_search."""
+        session_id = uuid.uuid4()
+        document_id = uuid.uuid4()
+        user_id = uuid.uuid4()
+        ledger_id = uuid.uuid4()
+        session_obj, doc_obj = _base_session_and_doc(document_id, session_id)
+        db = _make_db(session_obj, doc_obj, execute_side_effect=[_ScalarOneResult(session_obj)])
+
+        monkeypatch.setattr(chat_service_module.action_planner, "plan", AsyncMock(return_value=_quote_action_plan()))
+        monkeypatch.setattr(chat_service_module.credit_service, "get_estimated_cost", lambda _mode: 15)
+        monkeypatch.setattr(chat_service_module.credit_service, "debit_credits", AsyncMock(return_value=ledger_id))
+        reconcile_mock = AsyncMock(side_effect=asyncio.CancelledError())
+        monkeypatch.setattr(chat_service_module.credit_service, "reconcile_credits", reconcile_mock)
+        monkeypatch.setattr(chat_service_module.credit_service, "record_usage", AsyncMock())
+        monkeypatch.setattr(chat_service_module.credit_service, "calculate_cost", lambda *_a, **_k: 6)
+        monkeypatch.setattr(chat_service_module, "_get_llm_client", _never_called)
+
+        card = QuoteCard(
+            display_text="the exact clause text", page=3, page_end=3, bboxes=[],
+            tier="exact", source_kind="page_text", chunk_id=str(uuid.uuid4()), score=100.0,
+        )
+        result = QuoteSearchResult(
+            cards=[card], proposed=1, verified=1, discarded=[],
+            scanned_chunks=9, usage=(300, 80), model="deepseek-v4-pro",
+        )
+        monkeypatch.setattr(chat_service_module.quote_search_service, "quote_search", AsyncMock(return_value=result))
+
+        settle_mock = AsyncMock()
+        monkeypatch.setattr(chat_service_module, "_settle_predebit_on_cancel", settle_mock)
+
+        agen = chat_service_module.chat_service.chat_stream(
+            session_id=session_id,
+            user_message="Give me a direct quote about the termination clause.",
+            db=db,
+            user=SimpleNamespace(id=user_id, plan="pro"),
+            mode="balanced",
+        )
+        with pytest.raises(asyncio.CancelledError):
+            await agen.__anext__()
+
+        # The message WAS added to the session before the cancellation struck.
+        persisted_messages = [m for m in db.added if isinstance(m, Message) and m.role == "assistant"]
+        assert len(persisted_messages) == 1
+
+        settle_mock.assert_awaited_once()
+        assert settle_mock.await_args.kwargs["has_answer"] is True
+        assert settle_mock.await_args.kwargs["prompt_tokens"] == 300
+        assert settle_mock.await_args.kwargs["output_tokens"] == 80
+        assert settle_mock.await_args.kwargs["model"] == "deepseek-v4-pro"
 
 
 class TestUngatedContextsFallThroughToNormalChat:

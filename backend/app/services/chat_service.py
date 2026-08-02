@@ -30,7 +30,7 @@ from app.models.tables import (
 )
 from app.services import credit_service, quote_search_service
 from app.services.action_planner import ChatAction, action_planner
-from app.services.chat_tool_executor import chat_tool_executor
+from app.services.chat_tool_executor import ChatArtifact, chat_tool_executor
 from app.services.citation_focus_service import current_claim, focus_sentence
 from app.services.citation_quote_service import apply_focus_quotes, extract_focus_quotes
 from app.services.claim_verifier_service import claim_verifier_service
@@ -981,6 +981,30 @@ class _VerifiedQuoteOutcome:
     artifact_payload: Optional[dict]
 
 
+@dataclass
+class _VerifiedQuoteProgress:
+    """Mutable out-param for _run_verified_quote_search (B5 cancellation-
+    safety fix, review round 1 SHOULD-FIX-2).
+
+    A CancelledError can land ANYWHERE inside _run_verified_quote_search,
+    including between the message-persist commit and the final credits
+    commit. The caller's cancellation handler must know whether the answer
+    was ALREADY durably persisted at that point — not assume "no answer" the
+    way the setup-phase handler does for every other setup failure — mirrors
+    the main RAG path's has_partial_answer discriminator (chat_service.py's
+    streaming-phase finally: block), just derived from persistence instead
+    of accumulated stream text. message_id is set ONLY after the message
+    commit succeeds; prompt_tokens/completion_tokens/model are captured
+    right after quote_search() returns (before any commit) so accurate
+    billing is available even if cancellation strikes between persist and
+    reconcile.
+    """
+    message_id: Optional[uuid.UUID] = None
+    prompt_tokens: int = 0
+    completion_tokens: int = 0
+    model: str = ""
+
+
 def _chunk_info_from_persisted_citation(
     chunk: Chunk,
     citation: dict,
@@ -1245,29 +1269,31 @@ class ChatService:
         locale: Optional[str],
         pre_debited: int,
         predebit_ledger_id: uuid.UUID,
+        progress: "_VerifiedQuoteProgress",
     ) -> "_VerifiedQuoteOutcome":
         """Strict verbatim-quote chat routing (B5, plan §8.4.3).
 
         Runs B3's verified quote_search in place of the normal LLM answer,
         persists the assistant message, and reconciles + records usage — ALL
-        of it awaited here, nothing yielded. The caller (chat_stream) must
-        set `settled = True` immediately after this returns and BEFORE
-        yielding any SSE events, mirroring the main RAG path's exact
-        cancellation-safety pattern: once reconcile_credits has committed,
-        a later CancelledError must not ALSO trigger the setup handler's
-        full refund (which would double the user's money back on top of an
-        already-correct reconcile). Billing is the CALLER's chat predebit
-        (pre_debited/predebit_ledger_id come from the SAME debit_credits()
-        call every RAG-path message already goes through) — there is no
-        separate quote-search debit, so this can never double-bill. Any
-        exception raised HERE (before this function returns) propagates to
-        chat_stream's existing setup exception handler, which refunds the
-        predebit and yields the error event — no separate refund logic
-        needed for that case.
+        of it awaited here, nothing yielded. `progress` is mutated as this
+        proceeds (model/tokens as soon as quote_search() returns,
+        `message_id` only once the message commit succeeds) so the CALLER's
+        cancellation handler can settle correctly no matter where a
+        CancelledError lands — see _VerifiedQuoteProgress's docstring.
+
+        Billing is the CALLER's chat predebit (pre_debited/predebit_ledger_id
+        come from the SAME debit_credits() call every RAG-path message
+        already goes through) — there is no separate quote-search debit, so
+        this can never double-bill. An exception raised before ANY commit
+        here propagates to chat_stream's existing setup exception handler
+        unchanged, which fully refunds — correct, since nothing was
+        delivered.
         """
         result = await quote_search_service.quote_search(
             db, document=document, user=user, topic=topic, locale=locale or "",
         )
+        progress.prompt_tokens, progress.completion_tokens = result.usage
+        progress.model = result.model
 
         citations: List[dict] = []
         artifact_payload: Optional[dict] = None
@@ -1288,13 +1314,14 @@ class ChatService:
                     "source_kind": card.source_kind,
                 })
             assistant_text = _quote_search_copy(_QUOTE_SEARCH_FOUND_COPY, locale, n=len(result.cards))
-            artifact_payload = {
-                "artifact_type": "quote_search",
-                "status": "completed",
-                "job_id": None,
-                "title": "Verified Quotes",
-                "summary": assistant_text,
-                "preview": {
+            # Reuse the extraction-artifact SSE mechanism exactly (MINOR-3,
+            # review round 1) rather than hand-building the payload shape.
+            artifact = ChatArtifact(
+                artifact_type="quote_search",
+                status="completed",
+                title="Verified Quotes",
+                summary=assistant_text,
+                preview={
                     "cards": [
                         {
                             "ref_index": idx,
@@ -1311,9 +1338,9 @@ class ChatService:
                     "verified": result.verified,
                     "scanned_chunks": result.scanned_chunks,
                 },
-                "download_urls": [],
-                "citations": citations,
-            }
+                citations=citations,
+            )
+            artifact_payload = artifact.to_payload()
         else:
             # Verified-empty: the honest message, never an unverified fallback answer.
             assistant_text = _quote_search_copy(_QUOTE_SEARCH_EMPTY_COPY, locale, n=result.scanned_chunks)
@@ -1334,15 +1361,17 @@ class ChatService:
         )
         db.add(asst_msg)
         await db.commit()
+        # The answer is now durably persisted — a CancelledError from this
+        # point on must settle as "delivered", never a full refund.
+        progress.message_id = asst_msg.id
 
         # Reconcile the CALLER's chat predebit to the quote call's actual
         # tokens (same ledger row — no separate quote-search debit) and
         # record usage against the message just persisted (summary_usage /
         # record_usage(message_id=...) precedent, chat_service.py's own
         # main-flow reconcile block).
-        prompt_tokens, completion_tokens = result.usage
         actual_cost = credit_service.calculate_cost(
-            prompt_tokens, completion_tokens, result.model, mode="balanced",
+            progress.prompt_tokens, progress.completion_tokens, progress.model, mode="balanced",
         )
         await credit_service.reconcile_credits(
             db, user.id, predebit_ledger_id, pre_debited, actual_cost,
@@ -1351,9 +1380,9 @@ class ChatService:
             db,
             user_id=user.id,
             message_id=asst_msg.id,
-            model=result.model,
-            prompt_tokens=prompt_tokens,
-            completion_tokens=completion_tokens,
+            model=progress.model,
+            prompt_tokens=progress.prompt_tokens,
+            completion_tokens=progress.completion_tokens,
             cost_credits=actual_cost,
         )
         await db.commit()
@@ -1529,16 +1558,54 @@ class ChatService:
                 and not doc.demo_slug
             ):
                 setup_error_code = "QUOTE_SEARCH_ERROR"
-                outcome = await self._run_verified_quote_search(
-                    session_id=session_id,
-                    db=db,
-                    document=doc,
-                    user=user,
-                    topic=user_message,
-                    locale=locale,
-                    pre_debited=pre_debited,
-                    predebit_ledger_id=predebit_ledger_id,
-                )
+                quote_progress = _VerifiedQuoteProgress()
+                try:
+                    outcome = await self._run_verified_quote_search(
+                        session_id=session_id,
+                        db=db,
+                        document=doc,
+                        user=user,
+                        topic=user_message,
+                        locale=locale,
+                        pre_debited=pre_debited,
+                        predebit_ledger_id=predebit_ledger_id,
+                        progress=quote_progress,
+                    )
+                except asyncio.CancelledError:
+                    # SHOULD-FIX-2 (review round 1): a CancelledError landing
+                    # between the message-persist commit and the final
+                    # credits commit must NOT be treated as "no answer" — the
+                    # generic setup-phase handler below assumes that for
+                    # every OTHER setup failure, which would free-ride a
+                    # durably persisted, delivered quote-search answer.
+                    # has_answer is derived from ACTUAL evidence
+                    # (quote_progress.message_id is only set after the
+                    # message commit succeeds) — mirrors the main RAG path's
+                    # has_partial_answer discriminator (chat_service.py's
+                    # streaming-phase finally: block), not an assumption.
+                    if user is not None and pre_debited > 0 and predebit_ledger_id is not None and not settled:
+                        try:
+                            with anyio.CancelScope(shield=True):
+                                await asyncio.wait_for(
+                                    _settle_predebit_on_cancel(
+                                        user_id=user.id,
+                                        pre_debited=pre_debited,
+                                        predebit_ledger_id=predebit_ledger_id,
+                                        has_answer=quote_progress.message_id is not None,
+                                        prompt_tokens=quote_progress.prompt_tokens,
+                                        output_tokens=quote_progress.completion_tokens,
+                                        model=quote_progress.model,
+                                        mode="balanced",
+                                    ),
+                                    timeout=_CANCEL_IO_TIMEOUT_S,
+                                )
+                            settled = True
+                        except Exception:
+                            logger.exception(
+                                "Failed to settle pre-debit during quote-search cancellation for user %s",
+                                user.id,
+                            )
+                    raise
                 # Reconcile already committed inside _run_verified_quote_search —
                 # mark settled BEFORE yielding so a cancellation during these
                 # yields can't ALSO trigger the setup handler's full refund
