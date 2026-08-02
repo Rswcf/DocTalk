@@ -27,6 +27,7 @@ from .api.extractions import router as extractions_router
 from .api.feedback import router as feedback_router
 from .api.layout_translations import router as layout_translations_router
 from .api.question_templates import router as question_templates_router
+from .api.quotes import router as quotes_router
 from .api.search import search_router
 from .api.sharing import router as sharing_router
 from .api.tables import router as tables_router
@@ -196,6 +197,7 @@ app.include_router(events_router)
 app.include_router(feedback_router)
 app.include_router(extractions_router)
 app.include_router(question_templates_router)
+app.include_router(quotes_router)
 app.include_router(document_diffs_router)
 app.include_router(layout_translations_router)
 app.include_router(document_jobs_router)
