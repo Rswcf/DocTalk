@@ -19,7 +19,7 @@ export default function SessionDropdown() {
   const sessions = useDocTalkStore((s) => s.sessions);
   const isStreaming = useDocTalkStore((s) => s.isStreaming);
 
-  const { addSession, setSessionId, setMessages, removeSession, reset, setDemoMessagesUsed, setDemoRestoredUserMsgCount } = useDocTalkStore();
+  const { addSession, setSessionId, setMessages, removeSession, reset, setDemoMessagesUsed, setDemoRestoredUserMsgCount, bumpDemoAccountingEpoch } = useDocTalkStore();
   const { t, tOr } = useLocale();
   const router = useRouter();
 
@@ -74,6 +74,12 @@ export default function SessionDropdown() {
         // createSession path: baseline 0, every message sent from here counts.
         setDemoRestoredUserMsgCount(0);
         setDemoMessagesUsed(s.demo_messages_used);
+        // This install is itself an accounting-relevant event — bump so a
+        // pending reanchorDemoCounter GET from before this "New Chat" (e.g.
+        // a failed regenerate on whatever session was active) can't clobber
+        // it (Codex r5: relying on the sessionId change alone was judged
+        // fragile enough to bump unconditionally here too).
+        bumpDemoAccountingEpoch();
         // "New Chat" for an anon demo user starts a NEW session — the stored
         // pointer must move to it, or the next page view re-adopts the old
         // (now-abandoned) session instead of this one.
@@ -107,6 +113,13 @@ export default function SessionDropdown() {
       const restoredUserMsgCount = msgs.messages.filter((m) => m.role === 'user').length;
       setDemoRestoredUserMsgCount(restoredUserMsgCount);
       setDemoMessagesUsed(msgs.demo_messages_used);
+      // This install is itself an accounting-relevant event — bump so a
+      // pending reanchorDemoCounter GET can't clobber it. Required (not
+      // just defensive) here specifically: the current session row stays
+      // clickable, so an A→A "switch" — or A→B→A — can install fresh
+      // accounting without ever changing sessionId, which the existing
+      // sessionId guard alone cannot detect (Codex r5).
+      bumpDemoAccountingEpoch();
       // Switching to a different anon-demo session moves the "active"
       // session — move the pointer too, so the next page view re-adopts
       // the one the user actually switched to, not the one they left.

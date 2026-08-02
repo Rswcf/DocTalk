@@ -69,12 +69,16 @@ export interface DocTalkStore {
   demoMessagesUsed: number;
   demoRestoredUserMsgCount: number;
   // Monotonic counter bumped by every operation that mutates the two demo
-  // fields above (adopt/create, sendMessage start, regen/continue bump) —
-  // NOT by reanchorDemoCounter itself. Lets a fire-and-forget reanchor GET
-  // detect whether some other accounting event happened while it was in
-  // flight, even when it targets the same session (a plain sessionId check
-  // can't tell the difference — Codex r4). See reanchorDemoCounter in
-  // useChatStream.ts for the read side.
+  // fields above (adopt/create, sendMessage start, regen/continue bump,
+  // SessionDropdown's session switch/new-chat installs) — NOT by
+  // reanchorDemoCounter itself. Lets a fire-and-forget reanchor GET detect
+  // whether some other accounting event happened while it was in flight,
+  // even when it targets the same session (a plain sessionId check can't
+  // tell the difference — Codex r4). See reanchorDemoCounter in
+  // useChatStream.ts for the read side. Monotonic ACROSS `reset()` too, not
+  // just within one document's lifetime (Codex r5) — `reset()` increments
+  // rather than restoring 0, so no pre-reset epoch value can ever recur and
+  // collide with a stale pending reanchor from before the reset.
   demoAccountingEpoch: number;
 
   // PDF Search
@@ -349,6 +353,21 @@ export const useDocTalkStore = create<DocTalkStore>((set, get) => ({
   reset: () => {
     const timer = get()._flushTimer;
     if (timer) clearTimeout(timer);
-    set((state) => ({ ...initialState, selectedMode: state.selectedMode, lastDocumentId: state.lastDocumentId, lastDocumentName: state.lastDocumentName }));
+    set((state) => ({
+      ...initialState,
+      selectedMode: state.selectedMode,
+      lastDocumentId: state.lastDocumentId,
+      lastDocumentName: state.lastDocumentName,
+      // demoAccountingEpoch must be monotonic ACROSS resets too, not just
+      // within one document's lifetime (Codex r5): restoring it to
+      // initialState's 0 let a pending reanchorDemoCounter GET from before
+      // a Back-Home reset() survive it, then match again after the epoch
+      // climbed back up from 0 during a later re-adopt — an ABA collision
+      // that let stale pre-reset accounting overwrite a newer session's
+      // truth. Incrementing (never resetting) guarantees every epoch value
+      // is used at most once, ever, so no pre-reset snapshot can ever
+      // collide with a post-reset value again.
+      demoAccountingEpoch: state.demoAccountingEpoch + 1,
+    }));
   },
 }));
