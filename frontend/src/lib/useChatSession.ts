@@ -37,6 +37,22 @@ export function useChatSession(documentId: string | undefined): UseChatSessionRe
     // same run, so the momentary reset here is safe.
     setDemoMessagesUsed(0);
     setDemoRestoredUserMsgCount(0);
+    // Clear the PREVIOUS document's session/messages/sessions synchronously
+    // too (Codex r3 breakage 3), not just the counter. Without this, a
+    // transient adoption failure for document B left document A's still-
+    // truthy sessionId/messages sitting in the store; DocumentReaderPageClient
+    // renders `documentStatus === 'ready' && sessionId ? <ChatPanel/> :
+    // sessionErrorCopy ? <error/> : ...` — checking sessionId BEFORE the
+    // error — so it kept showing A's stale chat instead of B's retryable
+    // error. This also closes a pre-existing (unrelated) stale-chat flash on
+    // any in-app document transition, since A's session/messages previously
+    // lingered in the store until B's adopt/create resolved. The brief
+    // sessionId===null window this creates renders a benign "initializing
+    // chat" placeholder (DocumentReaderPageClient's final else branch), not
+    // a blank/broken state.
+    setSessionId(null);
+    setMessages([]);
+    setSessions([]);
     let cancelled = false;
 
     (async () => {

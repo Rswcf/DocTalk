@@ -93,7 +93,7 @@ export interface DocTalkStore {
   addArtifactToLastMessage: (artifact: ChatArtifact) => void;
   setLastMessageToolStatus: (message: string) => void;
   setStreaming: (v: boolean) => void;
-  setSessionId: (id: string) => void;
+  setSessionId: (id: string | null) => void;
   setSelectedMode: (id: string) => void;
   setDomainMode: (mode: string | null) => void;
   setMessages: (msgs: Message[]) => void;
@@ -266,7 +266,7 @@ export const useDocTalkStore = create<DocTalkStore>((set, get) => ({
     set({ messages: [...msgs.slice(0, -1), { ...last, toolStatus: message }] });
   },
   setStreaming: (v: boolean) => set({ isStreaming: v }),
-  setSessionId: (id: string) => set({ sessionId: id }),
+  setSessionId: (id: string | null) => set({ sessionId: id }),
   setSelectedMode: (id: string) => {
     set({ selectedMode: id });
     try {
