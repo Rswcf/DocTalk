@@ -731,8 +731,14 @@ async def get_document_text_content(
         for page_num in range(chunk.page_start, chunk.page_end + 1):
             section_titles.setdefault(page_num, title)
 
-    # Check if any page has content stored
-    has_content = any(p.content for p in db_pages)
+    # FIX-8 (Codex r1 MINOR #8): require ALL pages to have real content, not
+    # "any" — the prior any()-gated branch then silently filtered out every
+    # page without content, so a partial/mixed persistence state (some pages
+    # parsed with Page.content, some without) served an incomplete document
+    # instead of falling back. Mirrors B2's build_quote_source() page_text
+    # trust bar (quote_source_service.py): the WHOLE range must have real
+    # (non-blank) content, never a majority/any check.
+    has_content = bool(db_pages) and all((p.content or "").strip() for p in db_pages)
 
     if has_content:
         pages_list = [
@@ -742,10 +748,11 @@ async def get_document_text_content(
                 "section_title": section_titles.get(p.page_number),
             }
             for p in db_pages
-            if p.content
         ]
     else:
-        # Fallback: reconstruct from chunks (for legacy documents parsed before this change)
+        # Fallback: reconstruct from chunks (for legacy documents parsed
+        # before this change, or documents with partial/mixed Page.content
+        # persistence)
         result = await db.execute(
             sa_select(Chunk)
             .where(Chunk.document_id == document_id)

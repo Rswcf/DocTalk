@@ -248,3 +248,55 @@ class TestGetDocumentTextContentInteraction:
         assert result["pages"] == [
             {"page_number": 1, "text": "Chunk-reconstructed page one.", "section_title": None},
         ]
+
+    @pytest.mark.asyncio
+    async def test_mixed_content_pdf_falls_back_to_chunks_not_partial_page_text(self, monkeypatch):
+        """FIX-8 (Codex r1 MINOR #8): a document where SOME pages have
+        Page.content and others don't (partial/mixed persistence) must fall
+        back to full chunk reconstruction for the WHOLE document — never
+        silently drop the pages without content while serving page-text for
+        the rest (the prior any()-gated branch did exactly that)."""
+        import app.api.documents as documents_module
+
+        doc = SimpleNamespace(id=uuid.uuid4(), file_type="pdf", filename="mixed.pdf", source_url=None)
+        monkeypatch.setattr(documents_module.doc_service, "get_document", AsyncMock(return_value=doc))
+        monkeypatch.setattr(documents_module, "can_access_document", lambda *_a, **_k: True)
+
+        # page 1 has content, page 2 does NOT (mixed persistence).
+        page_rows = [self._page(1, "Raw page-one text."), self._page(2, None)]
+        fallback_chunks = [
+            self._chunk("Chunk-reconstructed page one.", 1, 1),
+            self._chunk("Chunk-reconstructed page two.", 2, 2),
+        ]
+        db = self._fake_db(page_rows=page_rows, section_chunks=[], fallback_chunks=fallback_chunks)
+
+        result = await documents_module.get_document_text_content(doc.id, user=None, db=db)
+
+        # Falls back to chunk reconstruction for BOTH pages — page 2 is not
+        # silently dropped, and page 1 isn't served partial page-text either.
+        assert result["pages"] == [
+            {"page_number": 1, "text": "Chunk-reconstructed page one.", "section_title": None},
+            {"page_number": 2, "text": "Chunk-reconstructed page two.", "section_title": None},
+        ]
+
+    @pytest.mark.asyncio
+    async def test_whitespace_only_page_content_also_triggers_fallback(self, monkeypatch):
+        """A page with content == "" or whitespace-only counts as NOT having
+        real content — same non-blank bar B2's build_quote_source() uses."""
+        import app.api.documents as documents_module
+
+        doc = SimpleNamespace(id=uuid.uuid4(), file_type="pdf", filename="blank.pdf", source_url=None)
+        monkeypatch.setattr(documents_module.doc_service, "get_document", AsyncMock(return_value=doc))
+        monkeypatch.setattr(documents_module, "can_access_document", lambda *_a, **_k: True)
+
+        page_rows = [self._page(1, "Raw page-one text."), self._page(2, "   ")]
+        fallback_chunks = [self._chunk("Chunk-reconstructed.", 1, 2)]
+        db = self._fake_db(page_rows=page_rows, section_chunks=[], fallback_chunks=fallback_chunks)
+
+        result = await documents_module.get_document_text_content(doc.id, user=None, db=db)
+
+        # The chunk spans pages 1-2, so fallback reconstruction yields BOTH.
+        assert result["pages"] == [
+            {"page_number": 1, "text": "Chunk-reconstructed.", "section_title": None},
+            {"page_number": 2, "text": "Chunk-reconstructed.", "section_title": None},
+        ]
