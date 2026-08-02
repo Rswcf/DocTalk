@@ -32,7 +32,7 @@ export interface ChatArtifactDownload {
 }
 
 export interface ChatArtifact {
-  artifactType: 'table_scan' | 'table_export' | 'extraction' | 'template_run' | 'document_diff' | string;
+  artifactType: 'table_scan' | 'table_export' | 'extraction' | 'template_run' | 'document_diff' | 'quote_search' | string;
   status: 'queued' | 'running' | 'succeeded' | 'failed' | string;
   jobId?: string | null;
   title: string;
@@ -42,6 +42,27 @@ export interface ChatArtifact {
   citations?: Citation[];
   warning?: string | null;
   requiredPlan?: string | null;
+}
+
+/** Raw (untransformed, snake_case) shape of a `quote_search` artifact's
+ * `preview` — chat_service.py's `_run_verified_quote_search` builds this
+ * directly; `mapArtifactPayload` passes `preview` through unchanged like
+ * every other artifact type, so callers read the wire shape as-is. Card
+ * bboxes/chunk_id are NOT duplicated here — they live in the artifact's
+ * (already camelCased) `citations` array, matched by `ref_index`. */
+export interface QuoteCardsArtifactPreview {
+  cards: Array<{
+    ref_index: number;
+    display_text: string;
+    page: number;
+    page_end: number;
+    tier: string;
+    source_kind: string;
+    score: number;
+  }>;
+  proposed: number;
+  verified: number;
+  scanned_chunks: number;
 }
 
 export interface Message {

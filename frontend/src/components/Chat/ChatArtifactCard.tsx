@@ -1,16 +1,50 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { AlertTriangle, CheckCircle2, Clock3, Download, ExternalLink, Eye, FilePlus2, FileText, Languages, Loader2, RefreshCw, Sparkles, Table2 } from 'lucide-react';
-import type { ChatArtifact, Citation, DocumentTable } from '../../types';
+import { AlertTriangle, CheckCircle2, Clock3, Download, ExternalLink, Eye, FilePlus2, FileText, Languages, Loader2, Quote, RefreshCw, Sparkles, Table2 } from 'lucide-react';
+import type { ChatArtifact, Citation, DocumentTable, QuoteCardsArtifactPreview } from '../../types';
 import { getDocumentJob, getTableScanJob, importLayoutTranslationDocument, listDocumentTables, reconstructDocumentTable } from '../../lib/api';
+import type { QuoteCard } from '../../lib/api';
 import { absoluteProxiedArtifactUrl, proxiedArtifactUrl } from '../../lib/layoutTranslation';
 import { useLocale } from '../../i18n';
+import { useDocTalkStore } from '../../store';
+import QuoteCardList from '../Quotes/QuoteCardList';
+import { citationFromQuoteCard } from '../Quotes/utils';
 
 interface ChatArtifactCardProps {
   artifact: ChatArtifact;
   onCitationClick?: (citation: Citation) => void;
   onPreviewLayoutTranslation?: (url: string, artifact: ChatArtifact) => void;
+}
+
+/**
+ * Merges the raw `quote_search` artifact preview (snake_case cards: ref_index,
+ * display_text, page, page_end, tier, source_kind, score) with the artifact's
+ * already-mapped `citations` array (camelCase, matched by ref_index) to
+ * recover each card's chunkId/bboxes for Jump — mirroring exactly what the
+ * Quote Finder panel (F1) gets straight from the quote-search endpoint, so
+ * QuoteCardList renders identically in both places.
+ */
+function quoteCardsFromArtifact(artifact: ChatArtifact): QuoteCard[] {
+  const preview = artifact.preview && typeof artifact.preview === 'object'
+    ? artifact.preview as Partial<QuoteCardsArtifactPreview>
+    : undefined;
+  const rawCards = Array.isArray(preview?.cards) ? preview!.cards : [];
+  const citations = artifact.citations || [];
+  return rawCards.map((raw) => {
+    const citation = citations.find((c) => c.refIndex === raw.ref_index);
+    return {
+      refIndex: raw.ref_index,
+      displayText: raw.display_text,
+      page: raw.page,
+      pageEnd: raw.page_end,
+      tier: raw.tier,
+      sourceKind: raw.source_kind,
+      score: raw.score,
+      chunkId: citation?.chunkId || '',
+      bboxes: citation?.bboxes || [],
+    };
+  });
 }
 
 function rowsFromPreview(preview: unknown): Array<Record<string, unknown>> {
@@ -76,6 +110,8 @@ export default function ChatArtifactCard({ artifact, onCitationClick, onPreviewL
   const isFailed = current.status === 'failed';
   const isDone = current.status === 'succeeded';
   const isLayoutTranslation = current.artifactType === 'layout_translation';
+  const isQuoteSearch = current.artifactType === 'quote_search';
+  const documentId = useDocTalkStore((s) => s.documentId);
 
   useEffect(() => {
     setCurrent(artifact);
@@ -99,6 +135,17 @@ export default function ChatArtifactCard({ artifact, onCitationClick, onPreviewL
     };
   }, [current.jobId, isPending]);
 
+  const quoteCards = useMemo(() => (isQuoteSearch ? quoteCardsFromArtifact(current) : []), [isQuoteSearch, current]);
+  const quoteSummaryLine = useMemo(() => {
+    if (!isQuoteSearch) return '';
+    const preview = current.preview && typeof current.preview === 'object'
+      ? current.preview as Partial<QuoteCardsArtifactPreview>
+      : undefined;
+    const verified = typeof preview?.verified === 'number' ? preview.verified : quoteCards.length;
+    const proposed = typeof preview?.proposed === 'number' ? preview.proposed : verified;
+    const discarded = Math.max(0, proposed - verified);
+    return tOr('quoteFinder.resultsSummary', '{verified} verified · {discarded} discarded', { verified, discarded });
+  }, [isQuoteSearch, current.preview, quoteCards.length, tOr]);
   const previewRows = useMemo(() => rowsFromPreview(current.preview), [current.preview]);
   const previewMarkdown = useMemo(() => markdownPreview(current.preview), [current.preview]);
   const layoutPreview = useMemo(
@@ -107,9 +154,11 @@ export default function ChatArtifactCard({ artifact, onCitationClick, onPreviewL
   );
   const Icon = isLayoutTranslation
     ? Languages
-    : current.artifactType.includes('table')
-      ? Table2
-      : FileText;
+    : isQuoteSearch
+      ? Quote
+      : current.artifactType.includes('table')
+        ? Table2
+        : FileText;
   const displayTitle = isLayoutTranslation
     ? tOr('layoutTranslation.artifactTitle', 'Layout-preserved PDF translation')
     : current.title;
@@ -287,7 +336,16 @@ export default function ChatArtifactCard({ artifact, onCitationClick, onPreviewL
         {isPending ? <RefreshCw size={16} className="mt-2 shrink-0 animate-spin text-[var(--reader-muted)] motion-reduce:animate-none" /> : null}
       </div>
 
-      {previewRows.length > 0 ? (
+      {isQuoteSearch && quoteCards.length > 0 && documentId ? (
+        <div className="px-4 py-3">
+          <QuoteCardList
+            documentId={documentId}
+            cards={quoteCards}
+            onJump={(card, index) => onCitationClick?.(citationFromQuoteCard(card, documentId, index))}
+            summaryLine={quoteSummaryLine}
+          />
+        </div>
+      ) : previewRows.length > 0 ? (
         <div className="space-y-3 px-4 py-3">
           {previewRows.map((item, index) => {
             const rows = Array.isArray(item.rows) ? item.rows.slice(0, 4) : [];
@@ -358,7 +416,7 @@ export default function ChatArtifactCard({ artifact, onCitationClick, onPreviewL
         </div>
       ) : null}
 
-      {(downloadUrls.length || current.requiredPlan || current.citations?.length) ? (
+      {!isQuoteSearch && (downloadUrls.length || current.requiredPlan || current.citations?.length) ? (
         <div className="flex flex-wrap items-center gap-2 border-t border-[var(--reader-border)] px-4 py-3">
           {isLayoutTranslation && isDone && pdfDownload && onPreviewLayoutTranslation ? (
             <button
