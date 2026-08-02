@@ -49,9 +49,22 @@ TEST_ADAPTER_SECRET = "test-adapter-secret"
 # NEVER the real `doctalk` database — no matter what any human or agent
 # exports or configures. Do not weaken this to `setdefault` or any
 # conditional form; that is exactly the bug that caused both incidents.
+#
+# FIX2-E (Codex r2 "new breakage" #2): the derivation above preserves the
+# source URL's HOST — deriving from a Railway/production DATABASE_URL still
+# points `doctalk_test` at that REMOTE cluster (only the database NAME
+# changes, not where it lives). Since exporting the wrong DATABASE_URL is
+# EXACTLY how the two incidents above happened, `_provision_scratch_test_
+# database` (below) hard-refuses to provision against any non-loopback host
+# unless the operator explicitly opts in via a SEPARATE env var,
+# DOCTALK_TEST_DATABASE_URL — deliberately not reusing DATABASE_URL's name,
+# so it can never be set "by accident" the same way. When set, it is used
+# AS-IS (no derivation, no host restriction) since the operator is
+# knowingly declaring "this is my dedicated test database."
 # ==============================================================================
 
 _TEST_DB_NAME = "doctalk_test"
+_LOOPBACK_HOSTS = {"localhost", "127.0.0.1", "::1"}
 
 
 def _read_env_file_database_url() -> Optional[str]:
@@ -78,15 +91,46 @@ def _derive_scratch_test_database_url(url: str) -> str:
     return urlunsplit((parts.scheme, parts.netloc, f"/{_TEST_DB_NAME}", parts.query, parts.fragment))
 
 
-_base_database_url = (
-    os.environ.get("DATABASE_URL")
-    or _read_env_file_database_url()
-    or "postgresql+asyncpg://doctalk:doctalk@localhost:5432/doctalk"
-)
-os.environ["DATABASE_URL"] = _derive_scratch_test_database_url(_base_database_url)
+_explicit_test_database_url = os.environ.get("DOCTALK_TEST_DATABASE_URL")
+if _explicit_test_database_url:
+    # Operator opt-in: used exactly as given, bypassing derivation and the
+    # loopback-host check entirely — see the loud comment above.
+    os.environ["DATABASE_URL"] = _explicit_test_database_url
+else:
+    _base_database_url = (
+        os.environ.get("DATABASE_URL")
+        or _read_env_file_database_url()
+        or "postgresql+asyncpg://doctalk:doctalk@localhost:5432/doctalk"
+    )
+    os.environ["DATABASE_URL"] = _derive_scratch_test_database_url(_base_database_url)
 os.environ.setdefault("TESTING", "1")
 os.environ.setdefault("AUTH_SECRET", TEST_AUTH_SECRET)
 os.environ.setdefault("ADAPTER_SECRET", TEST_ADAPTER_SECRET)
+
+
+def _assert_safe_to_provision(database_url: str) -> None:
+    """FIX2-E (Codex r2 "new breakage" #2): refuse to provision/migrate the
+    scratch database against any non-loopback host, unless
+    DOCTALK_TEST_DATABASE_URL was explicitly set (in which case the
+    operator already declared it safe — see the loud comment above).
+    Called from _provision_scratch_test_database, itself gated by
+    SKIP_INTEGRATION, so this never runs (and never needs to) for a plain
+    unit-only `pytest -q` session."""
+    if os.environ.get("DOCTALK_TEST_DATABASE_URL"):
+        return
+    host = (urlsplit(database_url).hostname or "").lower()
+    if host in _LOOPBACK_HOSTS:
+        return
+    raise RuntimeError(
+        f"Refusing to provision the integration-test scratch database against "
+        f"non-loopback host {host!r}. DATABASE_URL (or the repo-root .env file) "
+        f"appears to point at a shared/remote database (e.g. Railway) — "
+        f"proceeding would CREATE and DESTRUCTIVELY MIGRATE a database THERE, "
+        f"exactly how this project's shared dev database was wiped twice already. "
+        f"Either point DATABASE_URL at a local Postgres (localhost/127.0.0.1/::1), "
+        f"or set DOCTALK_TEST_DATABASE_URL explicitly to a dedicated test database "
+        f"URL you have verified is safe to create and wipe."
+    )
 
 
 async def _ensure_scratch_database_exists(database_url: str) -> None:
@@ -142,6 +186,7 @@ async def _provision_scratch_test_database():
     skip_env = os.getenv("SKIP_INTEGRATION", "1").lower()
     if skip_env in {"1", "true", "yes", "on"}:
         return
+    _assert_safe_to_provision(os.environ["DATABASE_URL"])
     await _ensure_scratch_database_exists(os.environ["DATABASE_URL"])
     _alembic_upgrade_head()
 
