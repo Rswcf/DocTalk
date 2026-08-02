@@ -106,23 +106,82 @@ _STRICT_QUOTE_WITH_PAGE_RE = re.compile(
 # routing. The window (not a whole-message scan) limits false suppression of
 # a genuine request that happens to contain an unrelated "never"/"no"
 # elsewhere in a longer message.
-_NEGATION_METALINGUISTIC_RE = re.compile(
+#
+# FIX2-C (Codex r2 #5, NOT ADDRESSED): FIX-5's proximity-only check
+# suppressed on ANY nearby negation regardless of what it actually negates.
+# "Give me a direct quote, without paraphrasing." has "without" near
+# "direct quote", but "without" negates "paraphrasing" \u2014 the message is an
+# AFFIRMATIVE strict-quote request that also rules out paraphrasing.
+# Negation must be SCOPED: split negation from metalinguistic markers
+# (metalinguistic direction was never found broken \u2014 kept as simple
+# proximity) and, for each negation match, compare its distance to the
+# quote trigger against its distance to the nearest paraphrase/summary-class
+# token. If a paraphrase/summary token is CLOSER to the negation than the
+# trigger is, the negation governs that token (routing stands); otherwise
+# the negation governs the trigger directly (suppress), matching every one
+# of the original 5 negatives (the negation always directly precedes/
+# governs the trigger there, with no closer paraphrase token).
+_NEGATION_RE = re.compile(
     r"\b(don'?t|do\s+not|does\s?n'?t|should\s?n'?t|should\s+not|never|without)\b"
-    r"|\btranslat\w*\b"
-    r"|\bmean(?:s|ing)?\b"  # NOT a bare "what does" \u2014 "what does it SAY" is a genuine request
     r"|\u4e0d\u8981|\u65e0\u9700|\u522b|\u4e0d\u7528|\u4e0d\u9700\u8981"
-    r"|\u7ffb\u8bd1|\u662f\u4ec0\u4e48\u610f\u601d|\u4ec0\u4e48\u610f\u601d"
-    r"|qu[\u00e9e]\s+significa|significad\w*"
     r"|\bno\b",
+    re.IGNORECASE,
+)
+_METALINGUISTIC_RE = re.compile(
+    r"\btranslat\w*\b"
+    r"|\bmean(?:s|ing)?\b"  # NOT a bare "what does" \u2014 "what does it SAY" is a genuine request
+    r"|\u7ffb\u8bd1|\u662f\u4ec0\u4e48\u610f\u601d|\u4ec0\u4e48\u610f\u601d"
+    r"|qu[\u00e9e]\s+significa|significad\w*",
+    re.IGNORECASE,
+)
+_PARAPHRASE_SUMMARY_RE = re.compile(
+    r"\bparaphras\w*\b|\bsummar\w*\b|\bexplain\w*\b"
+    r"|\u603b\u7ed3|\u6982\u62ec"
+    r"|parafrase\w*|resum\w*",
     re.IGNORECASE,
 )
 _GUARD_WINDOW = 45
 
 
+def _gap(a_start: int, a_end: int, b_start: int, b_end: int) -> int:
+    """Character distance between two match spans, regardless of which
+    comes first in the text."""
+    return min(abs(a_start - b_end), abs(b_start - a_end))
+
+
+def _negation_governs_paraphrase_not_trigger(
+    text: str, negation_match: "re.Match[str]", trigger_match: "re.Match[str]"
+) -> bool:
+    """FIX2-C: True when a paraphrase/summary-class token sits CLOSER to
+    this negation than the quote trigger does \u2014 the negation is
+    grammatically attached to that token ("don't paraphrase", "without
+    paraphrasing", "\u4e0d\u8981\u603b\u7ed3"), not to the quote request, so this negation
+    must NOT suppress strict routing."""
+    window_start = max(0, negation_match.start() - _GUARD_WINDOW)
+    window_end = min(len(text), negation_match.end() + _GUARD_WINDOW)
+    dist_to_trigger = _gap(negation_match.start(), negation_match.end(), trigger_match.start(), trigger_match.end())
+
+    nearest_paraphrase_dist: int | None = None
+    for pm in _PARAPHRASE_SUMMARY_RE.finditer(text, window_start, window_end):
+        d = _gap(negation_match.start(), negation_match.end(), pm.start(), pm.end())
+        if nearest_paraphrase_dist is None or d < nearest_paraphrase_dist:
+            nearest_paraphrase_dist = d
+
+    return nearest_paraphrase_dist is not None and nearest_paraphrase_dist < dist_to_trigger
+
+
 def _is_negated_or_metalinguistic(text: str, match: "re.Match[str]") -> bool:
     window_start = max(0, match.start() - _GUARD_WINDOW)
     window_end = min(len(text), match.end() + _GUARD_WINDOW)
-    return bool(_NEGATION_METALINGUISTIC_RE.search(text[window_start:window_end]))
+    window = text[window_start:window_end]
+
+    if _METALINGUISTIC_RE.search(window):
+        return True
+
+    for negation_match in _NEGATION_RE.finditer(text, window_start, window_end):
+        if not _negation_governs_paraphrase_not_trigger(text, negation_match, match):
+            return True
+    return False
 
 
 def _has_strict_quote_intent(text: str) -> bool:

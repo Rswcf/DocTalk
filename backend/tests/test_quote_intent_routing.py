@@ -126,6 +126,49 @@ class TestStrictQuoteMatcherNegationAndMetalinguisticGuards:
         assert plan.action == ChatAction.VERIFIED_QUOTE_SEARCH
 
 
+class TestStrictQuoteMatcherNegationScopedToTrigger:
+    """FIX2-C (Codex r2 #5, NOT ADDRESSED): the FIX-5 window-proximity guard
+    suppressed on ANY nearby negation regardless of what it actually
+    negates. "Give me a direct quote, without paraphrasing." has "without"
+    near "direct quote", but "without" negates "paraphrasing", not the
+    quote request — the message is an AFFIRMATIVE strict-quote request
+    that also rules out paraphrasing. Negation must be scoped: when a
+    paraphrase/summary-class token sits CLOSER to the negation than the
+    quote trigger does, the negation governs that token, not the trigger,
+    so strict routing STANDS."""
+
+    @pytest.mark.parametrize(
+        "message",
+        [
+            "Give me a direct quote, without paraphrasing.",
+            "Never paraphrase; quote the clause verbatim.",
+            "不要总结，请逐字引用责任条款。",
+            "No la parafrasees; necesito una cita textual.",
+        ],
+    )
+    def test_codex_r2_probes_still_route_to_quote_search(self, message: str) -> None:
+        plan = deterministic_plan(message)
+        assert plan.action == ChatAction.VERIFIED_QUOTE_SEARCH
+
+    @pytest.mark.parametrize(
+        "message",
+        [
+            "Don't quote this verbatim—explain it.",
+            "The answer should not be a direct quote; summarize it.",
+            "Translate the phrase exact quotation into Spanish.",
+            "¿Qué significa la palabra textualmente?",
+            "不要原文引用，请总结。",
+        ],
+    )
+    def test_original_five_negatives_still_do_not_route(self, message: str) -> None:
+        """The original FIX-5 negatives must remain negative — in every one
+        of these, the negation directly precedes/governs the quote trigger
+        itself (no closer paraphrase/summary token), so suppression is
+        still correct."""
+        plan = deterministic_plan(message)
+        assert plan.action != ChatAction.VERIFIED_QUOTE_SEARCH
+
+
 def test_verified_quote_search_uses_rag_answer_path() -> None:
     """Must fall through the setup/predebit code path in chat_stream (shared
     with ANSWER_WITH_RAG/CITATION_LOOKUP), not the tool-action early return —
