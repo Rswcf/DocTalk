@@ -5,6 +5,14 @@ when the ENTIRE cited page range has real Page.content (B1). If even one page
 in range is missing content (legacy doc, or a page row that never persisted),
 the selector falls back to the cited chunk's text ± neighbours and is labelled
 "verified against extracted text" instead — never silently upgraded.
+
+FIX-2 (Codex r1 BLOCKER #2, page attribution): `.text` stays a concatenated
+view for backward compatibility/debugging, but verification now runs against
+`.segments` — one entry PER PAGE for page_text kind, one entry per chunk
+(cited chunk, then each neighbor) for extracted_text kind — NEVER
+concatenated together. That is what lets the caller (quote_search_service)
+attribute a verified match to the page/chunk it ACTUALLY came from instead of
+a majority-vote guess over the whole multi-page range.
 """
 from __future__ import annotations
 
@@ -22,6 +30,7 @@ if str(BACKEND_DIR) not in sys.path:
 
 from app.services.quote_source_service import (  # noqa: E402
     QuoteSource,
+    QuoteSourceSegment,
     build_quote_source,
 )
 
@@ -32,7 +41,7 @@ def _page(page_number: int, content: str | None):
     return SimpleNamespace(page_number=page_number, content=content)
 
 
-def _chunk(text: str, page_start: int, page_end: int, chunk_index: int, chunk_id=None):
+def _chunk(text: str, page_start: int, page_end: int, chunk_index: int, chunk_id=None, bboxes=None):
     return SimpleNamespace(
         id=chunk_id or uuid.uuid4(),
         document_id=DOCUMENT_ID,
@@ -40,6 +49,7 @@ def _chunk(text: str, page_start: int, page_end: int, chunk_index: int, chunk_id
         page_start=page_start,
         page_end=page_end,
         chunk_index=chunk_index,
+        bboxes=bboxes if bboxes is not None else [],
     )
 
 
@@ -66,6 +76,11 @@ class TestPageTextWhenComplete:
             kind="page_text",
             page_start=3,
             page_end=3,
+            segments=[
+                QuoteSourceSegment(
+                    text="Full raw page three content.", page_start=3, page_end=3,
+                ),
+            ],
         )
 
     @pytest.mark.asyncio
@@ -84,6 +99,20 @@ class TestPageTextWhenComplete:
         assert source.page_start == 2
         assert source.page_end == 4
         assert source.text == "Page two.\nPage three.\nPage four."
+
+    @pytest.mark.asyncio
+    async def test_page_text_segments_are_one_per_page_never_concatenated(self):
+        """FIX-2: this is what lets the caller verify page-by-page instead of
+        against one multi-page blob whose match location is ambiguous."""
+        chunk = _chunk("cited chunk text", page_start=1, page_end=2, chunk_index=0)
+        db = _fake_db([_page(1, "Page one content."), _page(2, "Page two content.")])
+
+        source = await build_quote_source(db, DOCUMENT_ID, chunk, [])
+
+        assert source.segments == [
+            QuoteSourceSegment(text="Page one content.", page_start=1, page_end=1),
+            QuoteSourceSegment(text="Page two content.", page_start=2, page_end=2),
+        ]
 
 
 class TestExtractedTextFallback:
@@ -115,20 +144,25 @@ class TestExtractedTextFallback:
         assert source.text == "only source available"
 
     @pytest.mark.asyncio
-    async def test_neighbors_joined_in_document_order_regardless_of_argument_order(self):
+    async def test_cited_chunk_is_first_segment_neighbors_follow_in_document_order(self):
+        """FIX-2: the cited chunk is ALWAYS segments[0] — verify against it
+        first, per the triage ruling — regardless of its own page position
+        relative to its neighbors. Neighbors among themselves still sort by
+        document order regardless of argument order."""
         chunk = _chunk("middle chunk", page_start=5, page_end=5, chunk_index=10)
         before = _chunk("before chunk", page_start=4, page_end=4, chunk_index=9)
         after = _chunk("after chunk", page_start=6, page_end=6, chunk_index=11)
         db = _fake_db([_page(5, None)])  # forces extracted_text fallback
 
-        # Pass neighbors in reverse/scrambled order — output must still be sorted.
+        # Pass neighbors in reverse/scrambled order — neighbor order must still be sorted.
         source = await build_quote_source(db, DOCUMENT_ID, chunk, [after, before])
 
         assert source.kind == "extracted_text"
-        idx_before = source.text.index("before chunk")
+        assert [s.chunk_id for s in source.segments] == [chunk.id, before.id, after.id]
         idx_middle = source.text.index("middle chunk")
+        idx_before = source.text.index("before chunk")
         idx_after = source.text.index("after chunk")
-        assert idx_before < idx_middle < idx_after
+        assert idx_middle < idx_before < idx_after
 
     @pytest.mark.asyncio
     async def test_duplicate_chunk_in_neighbors_is_not_repeated(self):
@@ -139,3 +173,33 @@ class TestExtractedTextFallback:
         source = await build_quote_source(db, DOCUMENT_ID, chunk, [chunk])
 
         assert source.text.count("solo chunk") == 1
+        assert len(source.segments) == 1
+
+    @pytest.mark.asyncio
+    async def test_extracted_text_segments_are_cited_chunk_then_neighbors_never_concatenated(self):
+        """FIX-2: each chunk/neighbor is its OWN independently-verifiable
+        segment (with its own bboxes) — the cited chunk is segments[0]."""
+        cited_id = uuid.uuid4()
+        neighbor_id = uuid.uuid4()
+        chunk = _chunk(
+            "cited chunk text", page_start=2, page_end=2, chunk_index=5, chunk_id=cited_id,
+            bboxes=[{"x": 0.1, "y": 0.1, "w": 0.2, "h": 0.05, "page": 2}],
+        )
+        neighbor = _chunk(
+            "neighbor chunk text", page_start=3, page_end=3, chunk_index=6, chunk_id=neighbor_id,
+            bboxes=[{"x": 0.1, "y": 0.2, "w": 0.2, "h": 0.05, "page": 3}],
+        )
+        db = _fake_db([_page(2, "Page two."), _page(3, None)])
+
+        source = await build_quote_source(db, DOCUMENT_ID, chunk, [neighbor])
+
+        assert source.segments == [
+            QuoteSourceSegment(
+                text="cited chunk text", page_start=2, page_end=2, chunk_id=cited_id,
+                bboxes=[{"x": 0.1, "y": 0.1, "w": 0.2, "h": 0.05, "page": 2}],
+            ),
+            QuoteSourceSegment(
+                text="neighbor chunk text", page_start=3, page_end=3, chunk_id=neighbor_id,
+                bboxes=[{"x": 0.1, "y": 0.2, "w": 0.2, "h": 0.05, "page": 3}],
+            ),
+        ]

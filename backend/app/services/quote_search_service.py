@@ -32,7 +32,11 @@ from app.core.config import settings
 from app.models.tables import Chunk, Document, User
 from app.services.corrective_retrieval_service import corrective_retrieval_service
 from app.services.query_router import QueryRouter
-from app.services.quote_source_service import QuoteSource, build_quote_source
+from app.services.quote_source_service import (
+    QuoteSource,
+    QuoteSourceSegment,
+    build_quote_source,
+)
 from app.services.quote_verification_service import verify_quote
 from app.services.text_normalizer import normalize
 
@@ -299,25 +303,57 @@ def _valid_bbox(bb: Any) -> bool:
     return isinstance(bb, dict) and all(isinstance(bb.get(k), (int, float)) for k in ("x", "y", "w", "h"))
 
 
-def _page_and_bboxes(chunk: Chunk) -> tuple[int, list[dict]]:
-    """Mirror extraction_service._citation_from_chunk's best_page derivation:
-    the chunk's cited page is whichever page most of its bboxes actually sit
-    on (a chunk can span pages; bboxes are ground truth, page_start is not
-    necessarily where the matched text is). QuoteCard.page/.bboxes both key
-    off this page — "cited chunk's [bboxes], for the verified page" (plan
-    §8.2: bbox precision is v1-approximate; span-to-bbox mapping is
-    fast-follow, not v1)."""
-    bboxes = [bb for bb in (chunk.bboxes or []) if _valid_bbox(bb)]
+def _majority_bbox_page(bboxes_list: list[dict], fallback_page: int) -> tuple[int, list[dict]]:
+    """Mirror extraction_service._citation_from_chunk's best_page derivation,
+    scoped to a SINGLE chunk's own bboxes (never a multi-chunk/multi-page
+    pool): whichever page most of THIS chunk's bboxes actually sit on (a
+    chunk can span pages; bboxes are ground truth, page_start is not
+    necessarily where the matched text is)."""
+    bboxes = [bb for bb in (bboxes_list or []) if _valid_bbox(bb)]
     if not bboxes:
-        return chunk.page_start, []
+        return fallback_page, []
     page_counts: dict[int, int] = {}
     for bb in bboxes:
-        raw_page = bb.get("page", chunk.page_start)
-        page = int(raw_page) if isinstance(raw_page, (int, float)) else chunk.page_start
+        raw_page = bb.get("page", fallback_page)
+        page = int(raw_page) if isinstance(raw_page, (int, float)) else fallback_page
         page_counts[page] = page_counts.get(page, 0) + 1
     best_page = min(page_counts, key=lambda p: (-page_counts[p], p))
-    page_bboxes = [bb for bb in bboxes if int(bb.get("page", chunk.page_start)) == best_page]
+    page_bboxes = [bb for bb in bboxes if int(bb.get("page", fallback_page)) == best_page]
     return best_page, page_bboxes
+
+
+def _attribute_match(
+    chunk: Chunk, matched_segment: QuoteSourceSegment
+) -> tuple[int, int, list[dict], str]:
+    """FIX-2 (Codex r1 BLOCKER #2 — page attribution from the verified
+    slice): page/page_end/bboxes/chunk_id ALWAYS come from the segment that
+    actually verified, never a majority-vote guess spanning the whole
+    candidate chunk's (or its whole multi-page range's) bbox distribution.
+
+    page_text segments are exactly one page each (no ambiguity at all) —
+    bboxes are the ORIGINALLY CITED chunk's own bboxes (pages don't carry
+    bbox metadata), filtered to that exact verified page.
+
+    extracted_text segments are exactly one chunk each (the cited chunk, or
+    one neighbor) — page/bboxes are THAT chunk's own majority-vote bbox page
+    (its floor of granularity), page_end is that chunk's own natural range
+    ("ambiguous multi-page attribution keeps the range" — a single matching
+    chunk CAN itself span >1 page), and chunk_id follows the match, not the
+    LLM's cited ref, since that's genuinely where the text lives.
+    """
+    if matched_segment.chunk_id is None:
+        # page_text: the segment IS the exact page — no ambiguity.
+        page = matched_segment.page_start
+        page_end = matched_segment.page_start
+        bboxes = [
+            bb for bb in (chunk.bboxes or [])
+            if _valid_bbox(bb) and int(bb.get("page", chunk.page_start)) == page
+        ]
+        return page, page_end, bboxes, str(chunk.id)
+
+    # extracted_text: attribute to the MATCHING chunk (cited or neighbor).
+    page, bboxes = _majority_bbox_page(matched_segment.bboxes, matched_segment.page_start)
+    return page, matched_segment.page_end, bboxes, str(matched_segment.chunk_id)
 
 
 def _dedup_signature(source_kind: str, verification: Any) -> str:
@@ -341,6 +377,29 @@ def _dedup_signature(source_kind: str, verification: Any) -> str:
     if source_kind == "page_text":
         return f"{verification.raw_start}-{verification.raw_end}"
     return ""
+
+
+def _verify_against_segments(
+    quote_text: str, source: QuoteSource, document: Document,
+) -> tuple[Any, Optional[QuoteSourceSegment]]:
+    """FIX-2 (Codex r1 BLOCKER #2): verify against EACH segment separately —
+    never a concatenated multi-page/multi-chunk blob. The first segment that
+    verifies wins (segments are already ordered: page order for page_text,
+    cited-chunk-then-neighbors for extracted_text — so the cited chunk is
+    always tried before a neighbor). If nothing verifies, return the
+    highest-scoring failure across all segments as the most informative
+    discard reason, never just the last one tried."""
+    best_failure: Any = None
+    for segment in source.segments:
+        v = verify_quote(
+            quote_text, segment.text,
+            text_quality=document.text_quality, parse_method=document.parse_method,
+        )
+        if v.verified:
+            return v, segment
+        if best_failure is None or v.score > best_failure.score:
+            best_failure = v
+    return best_failure, None
 
 
 async def quote_search(
@@ -382,21 +441,20 @@ async def quote_search(
         chunk = candidates[ref_n - 1]
         neighbors = await _neighbor_chunks(db, chunk)
         source: QuoteSource = await build_quote_source(db, document.id, chunk, neighbors)
-        verification = verify_quote(
-            quote_text,
-            source.text,
-            text_quality=document.text_quality,
-            parse_method=document.parse_method,
-        )
-        if not verification.verified:
-            reason = verification.reason or "not_located"
-            discarded.append((reason, verification.status, verification.score))
+        verification, matched_segment = _verify_against_segments(quote_text, source, document)
+
+        if verification is None or not verification.verified or matched_segment is None:
+            if verification is None:
+                discarded.append(("empty", "dropped", 0.0))
+            else:
+                reason = verification.reason or "not_located"
+                discarded.append((reason, verification.status, verification.score))
             continue
 
-        page, bboxes = _page_and_bboxes(chunk)
+        page, page_end, bboxes, attributed_chunk_id = _attribute_match(chunk, matched_segment)
         normalized_quote, _ = normalize(verification.display_text or "")
         signature = _dedup_signature(source.kind, verification)
-        key = (str(document.id), normalized_quote, page, chunk.page_end, signature)
+        key = (str(document.id), normalized_quote, page, page_end, signature)
         if key in seen_keys:
             continue
         seen_keys.add(key)
@@ -405,11 +463,11 @@ async def quote_search(
             QuoteCard(
                 display_text=verification.display_text or "",
                 page=page,
-                page_end=chunk.page_end,
+                page_end=page_end,
                 bboxes=bboxes,
                 tier=verification.status,
                 source_kind=source.kind,
-                chunk_id=str(chunk.id),
+                chunk_id=attributed_chunk_id,
                 score=verification.score,
             )
         )

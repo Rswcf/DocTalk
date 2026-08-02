@@ -7,6 +7,7 @@ import type { DocumentBiblioCsl, QuoteCard } from '../../lib/api';
 import { getDocumentBiblio } from '../../lib/api';
 import BiblioForm from './BiblioForm';
 import QuoteResultCard from './QuoteResultCard';
+import { resultKindHeadline } from './utils';
 
 interface QuoteCardListProps {
   documentId: string;
@@ -50,8 +51,26 @@ export default function QuoteCardList({ documentId, cards, onJump, summaryLine, 
     };
   }, [documentId]);
 
+  // Headline claim (Codex M2 r1 BLOCKER #1 fix): the strong "word-for-word"
+  // claim only renders when EVERY card is page_text-kind — a single
+  // extracted_text-kind card in the set downgrades the WHOLE headline to
+  // the caveat, even though each card still carries its own honest
+  // per-card label via QuoteResultCard/trustLabel.
+  const headline = cards.length > 0 ? resultKindHeadline(cards, tOr) : '';
+  const headlineIsCaveat = cards.length > 0 && !cards.every((c) => c.sourceKind === 'page_text');
+
   return (
     <div>
+      {headline ? (
+        <p
+          className={`mb-2 px-1 text-xs leading-5 ${
+            headlineIsCaveat ? 'text-amber-800 dark:text-amber-200' : 'text-[var(--reader-muted)]'
+          }`}
+          role={headlineIsCaveat ? 'status' : undefined}
+        >
+          {headline}
+        </p>
+      ) : null}
       <div className="mb-2 flex items-center justify-between gap-2 px-1">
         {summaryLine ? (
           <p className="text-xs text-[var(--reader-muted)]">{summaryLine}</p>

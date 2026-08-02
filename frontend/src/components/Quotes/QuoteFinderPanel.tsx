@@ -25,10 +25,16 @@ interface QuoteFinderPanelProps {
 /**
  * "Quote Finder" — a deliberate, billed action on the current document
  * (plan §8.4.1: predebit 15 credits, reconciled to actual tokens, charged
- * even on a verified-empty result). Distinct from ordinary chat: results
- * are machine-verified word-for-word against the source text before ever
- * reaching the UI (backend `quote_search_service`), never an LLM
- * paraphrase — see the honest empty-state copy below.
+ * even on a verified-empty result). Distinct from ordinary chat: every
+ * card is machine-verified against the source text before ever reaching
+ * the UI (backend `quote_search_service`), never an LLM paraphrase — see
+ * the honest empty-state copy below. The strong "word-for-word" claim is
+ * NOT unconditional, though (Codex M2 r1 BLOCKER #1): only page_text-kind
+ * results can promise byte-identical wording — extracted_text-kind
+ * (chunk-fallback) results carry an explicit hyphenation caveat instead.
+ * See `resultKindHeadline`/`trustLabel` in `Quotes/utils.ts`, both
+ * rendered inside `QuoteCardList` so this panel and the chat artifact
+ * (F3) stay consistent.
  */
 export default function QuoteFinderPanel({ isOpen, documentId, userPlan, onClose, onCitationClick }: QuoteFinderPanelProps) {
   const { t, tOr, locale } = useLocale();
@@ -149,7 +155,7 @@ export default function QuoteFinderPanel({ isOpen, documentId, userPlan, onClose
 
           {!result && !loading ? (
             <p className="text-sm leading-6 text-[var(--reader-muted)]">
-              {tOr('quoteFinder.intro', "Enter a topic and DocTalk finds word-for-word quotes from this document — each one machine-verified against the source text before it's shown.")}
+              {tOr('quoteFinder.intro', "Enter a topic and DocTalk searches this document for quotes, each one machine-verified against the source text before it's shown.")}
             </p>
           ) : null}
 
@@ -157,7 +163,7 @@ export default function QuoteFinderPanel({ isOpen, documentId, userPlan, onClose
             <p className="rounded-lg border border-[var(--reader-border)] bg-[var(--reader-panel-muted)] px-3 py-3 text-sm leading-6 text-[var(--reader-muted)]" role="status">
               {tOr(
                 'quoteFinder.emptyState',
-                "No verified quotes found for this topic (scanned {n} passages). DocTalk only shows quotes it can match word-for-word in the source — try a more specific topic.",
+                "No verified quotes found for this topic (scanned {n} passages). DocTalk only shows quotes it can verify against the source text — try a more specific topic.",
                 { n: result.scannedChunks },
               )}
             </p>

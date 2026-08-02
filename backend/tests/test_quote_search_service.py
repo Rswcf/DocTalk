@@ -5,6 +5,13 @@ and the source selector (B2) are stubbed so these tests isolate the part that
 actually carries verbatim-guarantee risk — ref validation, verify_quote
 disposition, and §8.1 dedup — against a REAL verify_quote + text_normalizer.
 Only the LLM call is mocked (same style as test_citation_quote_service.py).
+
+FIX-2 (Codex r1 BLOCKER #2, page attribution): verification runs per
+QuoteSource segment (never against a concatenated multi-page/multi-chunk
+blob), and QuoteCard.page/page_end/bboxes/chunk_id are derived from the
+SEGMENT that actually verified — never a majority-vote guess over the whole
+candidate chunk's bbox distribution. `TestPageAttributionFromVerifiedSlice`
+reproduces Codex's exact repro case as a regression test.
 """
 from __future__ import annotations
 
@@ -23,7 +30,11 @@ if str(BACKEND_DIR) not in sys.path:
     sys.path.insert(0, str(BACKEND_DIR))
 
 import app.services.quote_search_service as qss  # noqa: E402
-from app.services.quote_search_service import QuoteSource, quote_search  # noqa: E402
+from app.services.quote_search_service import (  # noqa: E402
+    QuoteSource,
+    QuoteSourceSegment,
+    quote_search,
+)
 
 DOCUMENT_ID = uuid.uuid4()
 
@@ -82,6 +93,20 @@ def _patch_common(monkeypatch, *, candidates, scanned_chunks, quotes_payload, so
     monkeypatch.setattr(qss, "build_quote_source", fake_build_quote_source)
 
 
+def _chunk_source(chunk, *, text=None, kind="extracted_text") -> QuoteSource:
+    """A single-segment extracted_text QuoteSource matching one chunk — the
+    common case for tests that don't care about multi-segment attribution."""
+    segment_text = text if text is not None else chunk.text
+    segment = QuoteSourceSegment(
+        text=segment_text, page_start=chunk.page_start, page_end=chunk.page_end,
+        chunk_id=chunk.id, bboxes=list(chunk.bboxes or []),
+    )
+    return QuoteSource(
+        text=segment_text, kind=kind, page_start=chunk.page_start, page_end=chunk.page_end,
+        segments=[segment],
+    )
+
+
 SOURCE = (
     "Fluency is the most prized quality in translation today, and it renders "
     "the translator's labour invisible to the reader."
@@ -99,7 +124,7 @@ class TestVerifiedExactQuote:
             quotes_payload={"quotes": [
                 {"quote_text": "the most prized quality in translation today", "source_ref_n": 1, "page": 4}
             ]},
-            source_by_chunk_id={chunk.id: QuoteSource(text=SOURCE, kind="extracted_text", page_start=4, page_end=4)},
+            source_by_chunk_id={chunk.id: _chunk_source(chunk, text=SOURCE)},
         )
 
         result = await quote_search(_fake_db(), document=_document(), user=None, topic="fluency", locale="en")
@@ -132,7 +157,7 @@ class TestParaphraseDiscarded:
             quotes_payload={"quotes": [
                 {"quote_text": "The committee approved the merger next fiscal quarter.", "source_ref_n": 1, "page": 1}
             ]},
-            source_by_chunk_id={chunk.id: QuoteSource(text=SOURCE, kind="extracted_text", page_start=1, page_end=1)},
+            source_by_chunk_id={chunk.id: _chunk_source(chunk, text=SOURCE)},
         )
 
         result = await quote_search(_fake_db(), document=_document(), user=None, topic="mergers", locale="en")
@@ -157,7 +182,7 @@ class TestHallucinatedRefDiscarded:
             quotes_payload={"quotes": [
                 {"quote_text": "the most prized quality in translation today", "source_ref_n": 5, "page": 1}
             ]},
-            source_by_chunk_id={chunk.id: QuoteSource(text=SOURCE, kind="extracted_text", page_start=1, page_end=1)},
+            source_by_chunk_id={chunk.id: _chunk_source(chunk, text=SOURCE)},
         )
 
         result = await quote_search(_fake_db(), document=_document(), user=None, topic="fluency", locale="en")
@@ -175,7 +200,6 @@ class TestDuplicateQuoteInOverlappingChunksCollapses:
         # occurrence can be located via either chunk's source text.
         chunk_a = _chunk("chunk A text", page_start=2, page_end=2, chunk_index=0)
         chunk_b = _chunk("chunk B text", page_start=2, page_end=2, chunk_index=1)
-        shared_source = QuoteSource(text=SOURCE, kind="extracted_text", page_start=2, page_end=2)
         _patch_common(
             monkeypatch,
             candidates=[chunk_a, chunk_b],
@@ -184,7 +208,10 @@ class TestDuplicateQuoteInOverlappingChunksCollapses:
                 {"quote_text": "the most prized quality in translation today", "source_ref_n": 1, "page": 2},
                 {"quote_text": "the most prized quality in translation today", "source_ref_n": 2, "page": 2},
             ]},
-            source_by_chunk_id={chunk_a.id: shared_source, chunk_b.id: shared_source},
+            source_by_chunk_id={
+                chunk_a.id: _chunk_source(chunk_a, text=SOURCE),
+                chunk_b.id: _chunk_source(chunk_b, text=SOURCE),
+            },
         )
 
         result = await quote_search(_fake_db(), document=_document(), user=None, topic="fluency", locale="en")
@@ -204,7 +231,7 @@ class TestEmptyProposals:
             candidates=[chunk],
             scanned_chunks=9,
             quotes_payload={"quotes": []},
-            source_by_chunk_id={chunk.id: QuoteSource(text=SOURCE, kind="extracted_text", page_start=1, page_end=1)},
+            source_by_chunk_id={chunk.id: _chunk_source(chunk, text=SOURCE)},
         )
 
         result = await quote_search(_fake_db(), document=_document(), user=None, topic="nothing relevant", locale="en")
@@ -233,6 +260,182 @@ class TestEmptyProposals:
         assert result.verified == 0
         assert result.usage == (0, 0)
         assert llm_called == []  # no candidates -> no LLM call
+
+
+class TestPageAttributionFromVerifiedSlice:
+    """FIX-2 (Codex r1 BLOCKER #2). Page/bboxes/chunk_id must come from the
+    segment that ACTUALLY verified, never a majority-vote guess over the
+    whole candidate chunk's bbox distribution."""
+
+    @pytest.mark.asyncio
+    async def test_codex_repro_page_text_quote_only_on_page_two_attributes_to_page_two(self, monkeypatch):
+        """Exact Codex r1 repro: a page-1..2 chunk whose bboxes are MOSTLY on
+        page 1 (majority vote would pick page 1) must attribute a quote that
+        only exists on page 2 to page=2/page_end=2 with ONLY page-2 bboxes —
+        never page=1 with page-1 bboxes."""
+        page1_bbox = {"x": 0.1, "y": 0.1, "w": 0.3, "h": 0.05, "page": 1}
+        page1_bbox_2 = {"x": 0.1, "y": 0.2, "w": 0.3, "h": 0.05, "page": 1}
+        page2_bbox = {"x": 0.1, "y": 0.1, "w": 0.3, "h": 0.05, "page": 2}
+        chunk = _chunk(
+            "chunk-level text is not used for page_text verification",
+            page_start=1, page_end=2, chunk_index=0,
+            bboxes=[page1_bbox, page1_bbox_2, page2_bbox],  # 2 bboxes on page 1, 1 on page 2
+        )
+        source = QuoteSource(
+            text="Introductory unrelated text on page one.\nThe pivotal insight lives here on page two.",
+            kind="page_text", page_start=1, page_end=2,
+            segments=[
+                QuoteSourceSegment(text="Introductory unrelated text on page one.", page_start=1, page_end=1),
+                QuoteSourceSegment(text="The pivotal insight lives here on page two.", page_start=2, page_end=2),
+            ],
+        )
+        _patch_common(
+            monkeypatch,
+            candidates=[chunk],
+            scanned_chunks=4,
+            quotes_payload={"quotes": [
+                {"quote_text": "The pivotal insight lives here on page two.", "source_ref_n": 1, "page": 2}
+            ]},
+            source_by_chunk_id={chunk.id: source},
+        )
+
+        result = await quote_search(_fake_db(), document=_document(), user=None, topic="pivotal insight", locale="en")
+
+        assert result.verified == 1
+        card = result.cards[0]
+        assert card.page == 2
+        assert card.page_end == 2
+        assert card.bboxes == [page2_bbox]
+        assert card.source_kind == "page_text"
+
+    @pytest.mark.asyncio
+    async def test_page_text_quote_on_page_one_attributes_to_page_one(self, monkeypatch):
+        """Symmetric case — proves this isn't just "always pick the last page"."""
+        page1_bbox = {"x": 0.1, "y": 0.1, "w": 0.3, "h": 0.05, "page": 1}
+        page2_bbox = {"x": 0.1, "y": 0.1, "w": 0.3, "h": 0.05, "page": 2}
+        chunk = _chunk("unused", page_start=1, page_end=2, chunk_index=0, bboxes=[page1_bbox, page2_bbox])
+        source = QuoteSource(
+            text="The pivotal insight lives here on page one.\nUnrelated text on page two.",
+            kind="page_text", page_start=1, page_end=2,
+            segments=[
+                QuoteSourceSegment(text="The pivotal insight lives here on page one.", page_start=1, page_end=1),
+                QuoteSourceSegment(text="Unrelated text on page two.", page_start=2, page_end=2),
+            ],
+        )
+        _patch_common(
+            monkeypatch,
+            candidates=[chunk],
+            scanned_chunks=4,
+            quotes_payload={"quotes": [
+                {"quote_text": "The pivotal insight lives here on page one.", "source_ref_n": 1, "page": 1}
+            ]},
+            source_by_chunk_id={chunk.id: source},
+        )
+
+        result = await quote_search(_fake_db(), document=_document(), user=None, topic="pivotal insight", locale="en")
+
+        assert result.verified == 1
+        card = result.cards[0]
+        assert card.page == 1
+        assert card.page_end == 1
+        assert card.bboxes == [page1_bbox]
+
+    @pytest.mark.asyncio
+    async def test_extracted_text_quote_only_in_neighbor_attributes_to_neighbor_not_cited_chunk(self, monkeypatch):
+        """extracted_text kind: when the proposal only verifies against a
+        NEIGHBOR segment (not the cited chunk itself), the card's page,
+        bboxes, and chunk_id must follow the neighbor — never the originally
+        cited chunk's page/bboxes."""
+        cited_bbox = {"x": 0.1, "y": 0.1, "w": 0.2, "h": 0.05, "page": 2}
+        neighbor_bbox = {"x": 0.1, "y": 0.3, "w": 0.2, "h": 0.05, "page": 3}
+        cited = _chunk("Cited chunk text without the quotation.", page_start=2, page_end=2, chunk_index=0, bboxes=[cited_bbox])
+        neighbor = _chunk("The neighbor chunk carries the actual quotation here.", page_start=3, page_end=3, chunk_index=1, bboxes=[neighbor_bbox])
+        source = QuoteSource(
+            text=cited.text + "\n\n" + neighbor.text, kind="extracted_text", page_start=2, page_end=2,
+            segments=[
+                QuoteSourceSegment(text=cited.text, page_start=2, page_end=2, chunk_id=cited.id, bboxes=[cited_bbox]),
+                QuoteSourceSegment(text=neighbor.text, page_start=3, page_end=3, chunk_id=neighbor.id, bboxes=[neighbor_bbox]),
+            ],
+        )
+        _patch_common(
+            monkeypatch,
+            candidates=[cited],
+            scanned_chunks=4,
+            quotes_payload={"quotes": [
+                {"quote_text": "the actual quotation here", "source_ref_n": 1, "page": 2}
+            ]},
+            source_by_chunk_id={cited.id: source},
+        )
+
+        result = await quote_search(_fake_db(), document=_document(), user=None, topic="quotation", locale="en")
+
+        assert result.verified == 1
+        card = result.cards[0]
+        assert card.page == 3
+        assert card.page_end == 3
+        assert card.chunk_id == str(neighbor.id)
+        assert card.bboxes == [neighbor_bbox]
+
+    @pytest.mark.asyncio
+    async def test_extracted_text_tries_cited_chunk_before_neighbor(self, monkeypatch):
+        """When the quote exists in BOTH the cited chunk and a neighbor
+        (chunking overlap), the cited chunk wins — it's checked first."""
+        shared_text = "the shared overlapping sentence"
+        cited_bbox = {"x": 0.1, "y": 0.1, "w": 0.2, "h": 0.05, "page": 2}
+        neighbor_bbox = {"x": 0.1, "y": 0.3, "w": 0.2, "h": 0.05, "page": 2}
+        cited = _chunk(f"Prefix. {shared_text}.", page_start=2, page_end=2, chunk_index=0, bboxes=[cited_bbox])
+        neighbor = _chunk(f"{shared_text}. Suffix.", page_start=2, page_end=2, chunk_index=1, bboxes=[neighbor_bbox])
+        source = QuoteSource(
+            text=cited.text + "\n\n" + neighbor.text, kind="extracted_text", page_start=2, page_end=2,
+            segments=[
+                QuoteSourceSegment(text=cited.text, page_start=2, page_end=2, chunk_id=cited.id, bboxes=[cited_bbox]),
+                QuoteSourceSegment(text=neighbor.text, page_start=2, page_end=2, chunk_id=neighbor.id, bboxes=[neighbor_bbox]),
+            ],
+        )
+        _patch_common(
+            monkeypatch,
+            candidates=[cited],
+            scanned_chunks=4,
+            quotes_payload={"quotes": [{"quote_text": shared_text, "source_ref_n": 1, "page": 2}]},
+            source_by_chunk_id={cited.id: source},
+        )
+
+        result = await quote_search(_fake_db(), document=_document(), user=None, topic="shared", locale="en")
+
+        assert result.verified == 1
+        assert result.cards[0].chunk_id == str(cited.id)
+
+    @pytest.mark.asyncio
+    async def test_quote_verified_nowhere_is_discarded_with_a_score(self, monkeypatch):
+        """No segment verifies -> discarded, and the reported score is the
+        BEST (highest-scoring) failure across segments, not just the last
+        one tried — useful diagnostic signal, never a crash."""
+        chunk = _chunk("unused", page_start=1, page_end=2, chunk_index=0)
+        source = QuoteSource(
+            text="Nothing relevant here.\nNor here either.",
+            kind="page_text", page_start=1, page_end=2,
+            segments=[
+                QuoteSourceSegment(text="Nothing relevant here.", page_start=1, page_end=1),
+                QuoteSourceSegment(text="Nor here either.", page_start=2, page_end=2),
+            ],
+        )
+        _patch_common(
+            monkeypatch,
+            candidates=[chunk],
+            scanned_chunks=2,
+            quotes_payload={"quotes": [
+                {"quote_text": "A completely unrelated hallucinated sentence.", "source_ref_n": 1, "page": 1}
+            ]},
+            source_by_chunk_id={chunk.id: source},
+        )
+
+        result = await quote_search(_fake_db(), document=_document(), user=None, topic="x", locale="en")
+
+        assert result.cards == []
+        assert result.verified == 0
+        assert len(result.discarded) == 1
+        _reason, tier, _score = result.discarded[0]
+        assert tier == "dropped"
 
 
 class TestTermScanCandidates:

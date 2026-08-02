@@ -42,7 +42,15 @@ export default function QuoteResultCard({ card, index, biblio, onJump }: QuoteRe
         <span className="rounded-full bg-zinc-100 px-2 py-0.5 text-[11px] font-medium text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300">
           {tierLabel(card.tier, tOr)}
         </span>
-        <span className="text-[11px] text-[var(--reader-muted)]">{trustLabel(card.sourceKind, tOr)}</span>
+        <span
+          className={
+            card.sourceKind === 'page_text'
+              ? 'text-[11px] text-[var(--reader-muted)]'
+              : 'inline-flex items-center gap-1 rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-medium text-amber-800 dark:bg-amber-950/30 dark:text-amber-200'
+          }
+        >
+          {trustLabel(card.sourceKind, tOr)}
+        </span>
       </div>
 
       <blockquote className="mt-2 border-l-2 border-blue-600 pl-3 text-sm italic leading-relaxed text-[var(--reader-ink)] dark:border-blue-400">
