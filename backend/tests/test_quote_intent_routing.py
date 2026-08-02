@@ -126,47 +126,71 @@ class TestStrictQuoteMatcherNegationAndMetalinguisticGuards:
         assert plan.action == ChatAction.VERIFIED_QUOTE_SEARCH
 
 
-class TestStrictQuoteMatcherNegationScopedToTrigger:
-    """FIX2-C (Codex r2 #5, NOT ADDRESSED): the FIX-5 window-proximity guard
-    suppressed on ANY nearby negation regardless of what it actually
-    negates. "Give me a direct quote, without paraphrasing." has "without"
-    near "direct quote", but "without" negates "paraphrasing", not the
-    quote request — the message is an AFFIRMATIVE strict-quote request
-    that also rules out paraphrasing. Negation must be scoped: when a
-    paraphrase/summary-class token sits CLOSER to the negation than the
-    quote trigger does, the negation governs that token, not the trigger,
-    so strict routing STANDS."""
+class TestQuoteFinderDeterministicSafeRoutingPolicy:
+    """FIX3-B (Codex r3 #5 + New Breakage #1, NOT ADDRESSED): FIX2-C's
+    distance heuristic (negation governs whichever of the trigger/paraphrase-
+    token is closer) still misrouted on coordinated predicates, clause
+    boundaries, and a negated metalinguistic action followed by an
+    affirmative quote request — and introduced NEW coordinated-negation
+    false positives of its own (r3's "New Breakage #1"). Replaced entirely
+    with a DETERMINISTIC-SAFE policy: route to the billed verified
+    quote-search pipeline ONLY when the strict trigger matches AND the
+    message contains ZERO negation/metalinguistic tokens ANYWHERE
+    (whole-message presence, never proximity, never "which target"). Any
+    negation/metalinguistic token present alongside a trigger match means
+    NO auto-route — the ordinary RAG/citation path runs instead, carrying
+    quote_finder_hint=True (+ the message as quote_finder_hint_topic) so
+    the frontend can offer a manual "Try Quote Finder" chip. Asymmetric
+    loss: a false positive costs money + a wrong/unverified answer; a
+    false negative costs one click on a chip — so even r2's genuinely
+    affirmative "without paraphrasing"-style probes now deliberately do
+    NOT auto-route; they get the chip, never silence, never a blind bill."""
 
     @pytest.mark.parametrize(
         "message",
         [
-            "Give me a direct quote, without paraphrasing.",
-            "Never paraphrase; quote the clause verbatim.",
-            "不要总结，请逐字引用责任条款。",
-            "No la parafrasees; necesito una cita textual.",
+            "Give me a direct quote about the termination clause.",
+            "Quote the clause verbatim.",
+            "逐字引用一下关于责任的条款",
+            "Necesito una cita textual sobre el riesgo climático.",
         ],
     )
-    def test_codex_r2_probes_still_route_to_quote_search(self, message: str) -> None:
+    def test_affirmative_no_negation_routes_and_carries_no_hint(self, message: str) -> None:
         plan = deterministic_plan(message)
         assert plan.action == ChatAction.VERIFIED_QUOTE_SEARCH
+        assert plan.quote_finder_hint is False
+        assert plan.quote_finder_hint_topic is None
 
     @pytest.mark.parametrize(
         "message",
         [
+            # r1's original 5 negatives.
             "Don't quote this verbatim—explain it.",
             "The answer should not be a direct quote; summarize it.",
             "Translate the phrase exact quotation into Spanish.",
             "¿Qué significa la palabra textualmente?",
             "不要原文引用，请总结。",
+            # r2's 4 probes — genuinely affirmative requests that FIX2-C
+            # used to correctly route; FIX3-B deliberately no longer
+            # auto-routes them (asymmetric-loss trade-off).
+            "Give me a direct quote, without paraphrasing.",
+            "Never paraphrase; quote the clause verbatim.",
+            "不要总结，请逐字引用责任条款。",
+            "No la parafrasees; necesito una cita textual.",
+            # r3's 6 adversarial probes.
+            "Do not summarize or give me a direct quote; explain instead.",
+            "Do not paraphrase or quote the clause verbatim; just discuss it.",
+            "不要总结或逐字引用，只需解释。",
+            "No la resumas ni uses una cita textual; solo explícala.",
+            "Do not translate it; quote the clause verbatim.",
+            "Do not hedge; give me a direct quote without paraphrasing.",
         ],
     )
-    def test_original_five_negatives_still_do_not_route(self, message: str) -> None:
-        """The original FIX-5 negatives must remain negative — in every one
-        of these, the negation directly precedes/governs the quote trigger
-        itself (no closer paraphrase/summary token), so suppression is
-        still correct."""
+    def test_anything_with_negation_never_routes_and_always_hints(self, message: str) -> None:
         plan = deterministic_plan(message)
         assert plan.action != ChatAction.VERIFIED_QUOTE_SEARCH
+        assert plan.quote_finder_hint is True
+        assert plan.quote_finder_hint_topic == message
 
 
 def test_verified_quote_search_uses_rag_answer_path() -> None:
@@ -257,6 +281,8 @@ def _quote_action_plan():
         confidence=0.9,
         reason="strict quote intent",
         user_visible_status="",
+        quote_finder_hint=False,
+        quote_finder_hint_topic=None,
     )
 
 
@@ -821,3 +847,157 @@ class TestUngatedContextsFallThroughToNormalChat:
         assert events[-1]["event"] == "done"
         quote_search_mock.assert_not_awaited()
         create.assert_awaited()
+
+
+class TestQuoteFinderHintPropagatesToChatStreamDoneEvent:
+    """FIX3-B backend half (Codex r3 #5, NOT ADDRESSED): the hint computed
+    by action_planner.deterministic_plan (quote_finder_hint +
+    quote_finder_hint_topic) must reach the client on the normal (non-
+    strict-routed) RAG path — added to the SSE done event, the cheapest
+    existing channel per the team lead's explicit instruction — so the
+    frontend can offer a manual "Try Quote Finder" chip. Never used to
+    auto-route or bill (quote_search_mock proves that below)."""
+
+    @pytest.mark.asyncio
+    async def test_negation_suppressed_strict_message_carries_hint_in_done_event(
+        self, monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        session_id = uuid.uuid4()
+        document_id = uuid.uuid4()
+        user_id = uuid.uuid4()
+        ledger_id = uuid.uuid4()
+        chunk_id = uuid.uuid4()
+        message = "Don't quote this verbatim—explain it."
+        session_obj = SimpleNamespace(
+            id=session_id, document_id=document_id, collection_id=None, title=None, domain_mode=None,
+        )
+        doc_obj = SimpleNamespace(id=document_id, demo_slug=None, custom_instructions=None)
+        db = _make_db(
+            session_obj, doc_obj,
+            execute_side_effect=[
+                _ScalarOneResult(session_obj),
+                _MessagesResult([SimpleNamespace(role="user", content=message)]),
+            ],
+        )
+        fake_retrieval = SimpleNamespace(
+            retrieved=[{
+                "chunk_id": chunk_id, "document_id": document_id,
+                "text": "The clause reads as follows.", "page": 3, "page_end": 3,
+                "bboxes": [], "section_title": "Termination", "score": 0.9,
+            }],
+            strategy="semantic_top_k", evaluation=None, plan=None,
+        )
+        create = AsyncMock(
+            return_value=_FakeStream([
+                _FakeChunk("Here is an explanation.[1]"),
+                _FakeChunk(None, finish_reason="stop", usage=SimpleNamespace(prompt_tokens=100, completion_tokens=20)),
+            ])
+        )
+        fake_client = SimpleNamespace(chat=SimpleNamespace(completions=SimpleNamespace(create=create)))
+        quote_search_mock = AsyncMock()
+
+        # action_planner.plan is left UNMOCKED — the real deterministic_plan()
+        # runs on this message, matching the strict trigger AND a negation
+        # token, producing quote_finder_hint=True WITHOUT auto-routing to
+        # VERIFIED_QUOTE_SEARCH (falls through to the normal RAG path below).
+        monkeypatch.setattr(
+            chat_service_module.query_router, "route",
+            lambda *_a, **_k: SimpleNamespace(primary_intent=QueryIntent.LOCAL_QA),
+        )
+        monkeypatch.setattr(chat_service_module.credit_service, "get_estimated_cost", lambda _mode: 15)
+        monkeypatch.setattr(chat_service_module.credit_service, "debit_credits", AsyncMock(return_value=ledger_id))
+        monkeypatch.setattr(
+            chat_service_module.corrective_retrieval_service, "retrieve_single",
+            AsyncMock(return_value=fake_retrieval),
+        )
+        monkeypatch.setattr(chat_service_module, "_get_llm_client", lambda _model: fake_client)
+        monkeypatch.setattr(chat_service_module.credit_service, "calculate_cost", lambda *_a, **_k: 4)
+        monkeypatch.setattr(chat_service_module.credit_service, "reconcile_credits", AsyncMock())
+        monkeypatch.setattr(chat_service_module.credit_service, "record_usage", AsyncMock())
+        monkeypatch.setattr(chat_service_module.quote_search_service, "quote_search", quote_search_mock)
+
+        events = [
+            event
+            async for event in chat_service_module.chat_service.chat_stream(
+                session_id=session_id,
+                user_message=message,
+                db=db,
+                user=SimpleNamespace(id=user_id, plan="pro"),
+                mode="balanced",
+            )
+        ]
+
+        quote_search_mock.assert_not_awaited()  # never auto-routed/billed
+        assert events[-1]["event"] == "done"
+        assert events[-1]["data"]["quote_finder_hint"] is True
+        assert events[-1]["data"]["quote_finder_topic"] == message
+
+    @pytest.mark.asyncio
+    async def test_ordinary_message_carries_no_hint_in_done_event(
+        self, monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """The hint fields are always PRESENT (stable shape for the
+        frontend) but False/None for a message that never matched the
+        strict trigger at all."""
+        session_id = uuid.uuid4()
+        document_id = uuid.uuid4()
+        user_id = uuid.uuid4()
+        ledger_id = uuid.uuid4()
+        chunk_id = uuid.uuid4()
+        message = "What are the key terms of this agreement?"
+        session_obj = SimpleNamespace(
+            id=session_id, document_id=document_id, collection_id=None, title=None, domain_mode=None,
+        )
+        doc_obj = SimpleNamespace(id=document_id, demo_slug=None, custom_instructions=None)
+        db = _make_db(
+            session_obj, doc_obj,
+            execute_side_effect=[
+                _ScalarOneResult(session_obj),
+                _MessagesResult([SimpleNamespace(role="user", content=message)]),
+            ],
+        )
+        fake_retrieval = SimpleNamespace(
+            retrieved=[{
+                "chunk_id": chunk_id, "document_id": document_id,
+                "text": "The agreement's key terms are listed below.", "page": 1, "page_end": 1,
+                "bboxes": [], "section_title": "Terms", "score": 0.9,
+            }],
+            strategy="semantic_top_k", evaluation=None, plan=None,
+        )
+        create = AsyncMock(
+            return_value=_FakeStream([
+                _FakeChunk("The key terms are as follows.[1]"),
+                _FakeChunk(None, finish_reason="stop", usage=SimpleNamespace(prompt_tokens=100, completion_tokens=20)),
+            ])
+        )
+        fake_client = SimpleNamespace(chat=SimpleNamespace(completions=SimpleNamespace(create=create)))
+
+        monkeypatch.setattr(
+            chat_service_module.query_router, "route",
+            lambda *_a, **_k: SimpleNamespace(primary_intent=QueryIntent.LOCAL_QA),
+        )
+        monkeypatch.setattr(chat_service_module.credit_service, "get_estimated_cost", lambda _mode: 5)
+        monkeypatch.setattr(chat_service_module.credit_service, "debit_credits", AsyncMock(return_value=ledger_id))
+        monkeypatch.setattr(
+            chat_service_module.corrective_retrieval_service, "retrieve_single",
+            AsyncMock(return_value=fake_retrieval),
+        )
+        monkeypatch.setattr(chat_service_module, "_get_llm_client", lambda _model: fake_client)
+        monkeypatch.setattr(chat_service_module.credit_service, "calculate_cost", lambda *_a, **_k: 4)
+        monkeypatch.setattr(chat_service_module.credit_service, "reconcile_credits", AsyncMock())
+        monkeypatch.setattr(chat_service_module.credit_service, "record_usage", AsyncMock())
+
+        events = [
+            event
+            async for event in chat_service_module.chat_service.chat_stream(
+                session_id=session_id,
+                user_message=message,
+                db=db,
+                user=SimpleNamespace(id=user_id, plan="pro"),
+                mode="balanced",
+            )
+        ]
+
+        assert events[-1]["event"] == "done"
+        assert events[-1]["data"]["quote_finder_hint"] is False
+        assert events[-1]["data"]["quote_finder_topic"] is None

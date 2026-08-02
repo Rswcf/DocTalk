@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import dataclasses
 import json
 import logging
 import re
@@ -41,6 +42,14 @@ class ActionPlan:
     template_key: str | None = None
     user_visible_status: str = ""
     reason: str = ""
+    # FIX3-B (Codex r3 #5, NOT ADDRESSED): set when the strict quote trigger
+    # matched but a negation/metalinguistic token was ALSO present anywhere
+    # in the message, so auto-routing to VERIFIED_QUOTE_SEARCH was
+    # deliberately suppressed (see deterministic_plan). The frontend uses
+    # this to offer a manual "Try Quote Finder" chip — never to
+    # auto-route or bill on this signal alone.
+    quote_finder_hint: bool = False
+    quote_finder_hint_topic: str | None = None
 
     @property
     def uses_rag_answer_path(self) -> bool:
@@ -96,31 +105,32 @@ _STRICT_QUOTE_WITH_PAGE_RE = re.compile(
     re.IGNORECASE,
 )
 
-# FIX-5 (Codex r1 IMPORTANT #5): the matcher above detects VOCABULARY, not
-# AFFIRMATIVE INTENT \u2014 "Don't quote this verbatim", "Translate the phrase
-# exact quotation", "\u00bfQu\u00e9 significa ... textualmente?" all contain a strict
-# trigger word but are not requests to retrieve a verbatim quote. A negation
-# (don't/do not/should not/never/\u4e0d\u8981/\u65e0\u9700/\u522b/bare Spanish "no") or
-# metalinguistic use (talking ABOUT the phrase \u2014 translate/mean/\u4ec0\u4e48\u610f\u601d/qu\u00e9
-# significa) found WITHIN a bounded window of the trigger match suppresses
-# routing. The window (not a whole-message scan) limits false suppression of
-# a genuine request that happens to contain an unrelated "never"/"no"
-# elsewhere in a longer message.
+# FIX-5 (Codex r1 #5) -> FIX2-C (Codex r2 #5) -> FIX3-B (Codex r3 #5 +
+# New Breakage #1, NOT ADDRESSED): three rounds tried to make the matcher
+# SMART about which target a negation/metalinguistic marker attaches to \u2014
+# a bounded proximity window (FIX-5), then nearest-distance-to-a-
+# paraphrase-token (FIX2-C). r3 found the distance heuristic STILL
+# misroutes on coordinated predicates, clause boundaries, and a negated
+# metalinguistic action followed by an affirmative quote request ("Do not
+# translate it; quote the clause verbatim.") \u2014 no local heuristic reliably
+# resolves every such case, and FIX2-C's own heuristic introduced NEW
+# coordinated-negation false positives across en/zh/es (r3's "New Breakage
+# #1").
 #
-# FIX2-C (Codex r2 #5, NOT ADDRESSED): FIX-5's proximity-only check
-# suppressed on ANY nearby negation regardless of what it actually negates.
-# "Give me a direct quote, without paraphrasing." has "without" near
-# "direct quote", but "without" negates "paraphrasing" \u2014 the message is an
-# AFFIRMATIVE strict-quote request that also rules out paraphrasing.
-# Negation must be SCOPED: split negation from metalinguistic markers
-# (metalinguistic direction was never found broken \u2014 kept as simple
-# proximity) and, for each negation match, compare its distance to the
-# quote trigger against its distance to the nearest paraphrase/summary-class
-# token. If a paraphrase/summary token is CLOSER to the negation than the
-# trigger is, the negation governs that token (routing stands); otherwise
-# the negation governs the trigger directly (suppress), matching every one
-# of the original 5 negatives (the negation always directly precedes/
-# governs the trigger there, with no closer paraphrase token).
+# FIX3-B replaces the heuristic entirely with a DETERMINISTIC-SAFE POLICY:
+# route to the BILLED verified quote-search pipeline ONLY when the strict
+# trigger matches AND the message contains ZERO negation/metalinguistic
+# tokens ANYWHERE \u2014 whole-message presence, never proximity, never "which
+# target". Any negation/metalinguistic token present alongside a trigger
+# match means: do NOT auto-route \u2014 instead the ordinary RAG/citation path
+# runs, and the returned ActionPlan carries quote_finder_hint=True (+ the
+# message as quote_finder_hint_topic) so the frontend can offer a manual
+# "Try Quote Finder" chip. This is a deliberate ASYMMETRIC-LOSS trade: a
+# false POSITIVE here costs real money and an unverified/wrong answer; a
+# false NEGATIVE costs the user exactly one click on a chip. Even r2's
+# genuinely-affirmative "Give me a direct quote, without paraphrasing."-
+# style probes now deliberately do NOT auto-route \u2014 they get the chip, not
+# silence, and never a blind bill.
 _NEGATION_RE = re.compile(
     r"\b(don'?t|do\s+not|does\s?n'?t|should\s?n'?t|should\s+not|never|without)\b"
     r"|\u4e0d\u8981|\u65e0\u9700|\u522b|\u4e0d\u7528|\u4e0d\u9700\u8981"
@@ -134,62 +144,22 @@ _METALINGUISTIC_RE = re.compile(
     r"|qu[\u00e9e]\s+significa|significad\w*",
     re.IGNORECASE,
 )
-_PARAPHRASE_SUMMARY_RE = re.compile(
-    r"\bparaphras\w*\b|\bsummar\w*\b|\bexplain\w*\b"
-    r"|\u603b\u7ed3|\u6982\u62ec"
-    r"|parafrase\w*|resum\w*",
-    re.IGNORECASE,
-)
-_GUARD_WINDOW = 45
+
+# Mirrors quote_search_service.MAX_TOPIC_CHARS (FIX-7) \u2014 same defensive
+# reasoning: never carry an unbounded user message into a downstream field.
+_QUOTE_FINDER_HINT_TOPIC_MAX_CHARS = 300
 
 
-def _gap(a_start: int, a_end: int, b_start: int, b_end: int) -> int:
-    """Character distance between two match spans, regardless of which
-    comes first in the text."""
-    return min(abs(a_start - b_end), abs(b_start - a_end))
+def _has_strict_trigger(text: str) -> bool:
+    return bool(_STRICT_QUOTE_RE.search(text)) or bool(_STRICT_QUOTE_WITH_PAGE_RE.search(text))
 
 
-def _negation_governs_paraphrase_not_trigger(
-    text: str, negation_match: "re.Match[str]", trigger_match: "re.Match[str]"
-) -> bool:
-    """FIX2-C: True when a paraphrase/summary-class token sits CLOSER to
-    this negation than the quote trigger does \u2014 the negation is
-    grammatically attached to that token ("don't paraphrase", "without
-    paraphrasing", "\u4e0d\u8981\u603b\u7ed3"), not to the quote request, so this negation
-    must NOT suppress strict routing."""
-    window_start = max(0, negation_match.start() - _GUARD_WINDOW)
-    window_end = min(len(text), negation_match.end() + _GUARD_WINDOW)
-    dist_to_trigger = _gap(negation_match.start(), negation_match.end(), trigger_match.start(), trigger_match.end())
-
-    nearest_paraphrase_dist: int | None = None
-    for pm in _PARAPHRASE_SUMMARY_RE.finditer(text, window_start, window_end):
-        d = _gap(negation_match.start(), negation_match.end(), pm.start(), pm.end())
-        if nearest_paraphrase_dist is None or d < nearest_paraphrase_dist:
-            nearest_paraphrase_dist = d
-
-    return nearest_paraphrase_dist is not None and nearest_paraphrase_dist < dist_to_trigger
-
-
-def _is_negated_or_metalinguistic(text: str, match: "re.Match[str]") -> bool:
-    window_start = max(0, match.start() - _GUARD_WINDOW)
-    window_end = min(len(text), match.end() + _GUARD_WINDOW)
-    window = text[window_start:window_end]
-
-    if _METALINGUISTIC_RE.search(window):
-        return True
-
-    for negation_match in _NEGATION_RE.finditer(text, window_start, window_end):
-        if not _negation_governs_paraphrase_not_trigger(text, negation_match, match):
-            return True
-    return False
-
-
-def _has_strict_quote_intent(text: str) -> bool:
-    for pattern in (_STRICT_QUOTE_RE, _STRICT_QUOTE_WITH_PAGE_RE):
-        for match in pattern.finditer(text):
-            if not _is_negated_or_metalinguistic(text, match):
-                return True
-    return False
+def _has_suppressing_token(text: str) -> bool:
+    """Whole-message presence check \u2014 ANY negation OR metalinguistic token
+    anywhere, regardless of what it grammatically attaches to. See the
+    FIX3-B block comment above for why this replaces the prior windowed/
+    distance-based approach entirely."""
+    return bool(_NEGATION_RE.search(text)) or bool(_METALINGUISTIC_RE.search(text))
 
 
 def _status(query: str, english: str, chinese: str) -> str:
@@ -207,6 +177,46 @@ def deterministic_plan(message: str, *, is_collection: bool = False) -> ActionPl
             reason="empty message",
         )
 
+    strict_trigger_matched = _has_strict_trigger(text)
+    # FIX3-B (Codex r3 #5, NOT ADDRESSED): suppress auto-routing (but
+    # signal a hint) when ANY negation/metalinguistic token is present
+    # anywhere alongside a trigger match — deliberately not "which token
+    # it targets." See the block comment above _NEGATION_RE for the full
+    # rationale.
+    quote_finder_hint = strict_trigger_matched and _has_suppressing_token(text)
+
+    # Strict verbatim-quote intent (§8.4.3) — checked first: narrow and
+    # unambiguous, so it takes priority over the broader table/compare/
+    # template markers below rather than risking being shadowed by them.
+    if strict_trigger_matched and not quote_finder_hint:
+        return ActionPlan(
+            action=ChatAction.VERIFIED_QUOTE_SEARCH,
+            confidence=0.88,
+            requires_confirmation=False,
+            user_visible_status="",
+            reason="strict verbatim-quote markers",
+        )
+
+    plan = _fallthrough_plan(text, is_collection=is_collection)
+    if quote_finder_hint:
+        # Attached to WHATEVER the fallthrough resolves to (almost always
+        # citation_lookup or the ordinary_document_question default, since
+        # a quote trigger rarely also matches table/compare/template
+        # vocabulary) rather than threading the hint through every
+        # individual branch above.
+        return dataclasses.replace(
+            plan,
+            quote_finder_hint=True,
+            quote_finder_hint_topic=text[:_QUOTE_FINDER_HINT_TOPIC_MAX_CHARS],
+        )
+    return plan
+
+
+def _fallthrough_plan(text: str, *, is_collection: bool) -> ActionPlan:
+    """Every NON-strict-quote branch of deterministic_plan — extracted so
+    FIX3-B's quote_finder_hint (see deterministic_plan) can be attached
+    uniformly to whatever this resolves to, without threading it through
+    each individual return statement below."""
     has_table = bool(_TABLE_RE.search(text))
     has_export = bool(_EXPORT_RE.search(text))
     has_summary = bool(_SUMMARY_RE.search(text))
@@ -226,18 +236,6 @@ def deterministic_plan(message: str, *, is_collection: bool = False) -> ActionPl
     wants_deliverable = bool(
         re.search(r"\b(all|extract|list|find all|make|create|generate|table)\b|所有|全部|提取|列出|找出|整理|生成|做成", text, re.IGNORECASE)
     )
-
-    # Strict verbatim-quote intent (§8.4.3) — checked first: narrow and
-    # unambiguous, so it takes priority over the broader table/compare/
-    # template markers below rather than risking being shadowed by them.
-    if _has_strict_quote_intent(text):
-        return ActionPlan(
-            action=ChatAction.VERIFIED_QUOTE_SEARCH,
-            confidence=0.88,
-            requires_confirmation=False,
-            user_visible_status="",
-            reason="strict verbatim-quote markers",
-        )
 
     if has_compare:
         return ActionPlan(

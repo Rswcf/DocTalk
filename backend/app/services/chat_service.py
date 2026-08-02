@@ -2466,6 +2466,16 @@ class ChatService:
                 "repair": repair_metadata,
                 "can_continue": can_continue and finish_reason == "length",
                 "continuation_count": asst_msg.continuation_count,
+                # FIX3-B (Codex r3 #5, NOT ADDRESSED): set when the strict
+                # quote trigger matched this message but a negation/
+                # metalinguistic token was ALSO present, so verified quote
+                # search was deliberately NOT auto-routed/billed (see
+                # action_planner.deterministic_plan). Always present
+                # (never conditionally omitted) so the frontend has a
+                # stable field to check for offering a manual "Try Quote
+                # Finder" chip — never used to auto-route or bill.
+"quote_finder_hint": action_plan.quote_finder_hint,
+                "quote_finder_topic": action_plan.quote_finder_hint_topic,
             })
         except asyncio.CancelledError:
             raise

@@ -475,7 +475,9 @@ async def test_chat_stream_reconciles_predebit_and_records_usage(
     monkeypatch.setattr(
         chat_service_module.action_planner,
         "plan",
-        AsyncMock(return_value=SimpleNamespace(uses_rag_answer_path=True)),
+        AsyncMock(return_value=SimpleNamespace(
+            uses_rag_answer_path=True, quote_finder_hint=False, quote_finder_hint_topic=None,
+        )),
     )
     monkeypatch.setattr(
         chat_service_module.query_router,

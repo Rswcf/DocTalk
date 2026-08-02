@@ -211,7 +211,9 @@ def _patch_common(monkeypatch, ledger_id, document_id, *, refund, reconcile, rec
         chat=SimpleNamespace(completions=SimpleNamespace(create=AsyncMock(return_value=_SlowStream())))
     )
     monkeypatch.setattr(chat_service_module.action_planner, "plan",
-                        AsyncMock(return_value=SimpleNamespace(uses_rag_answer_path=True)))
+                        AsyncMock(return_value=SimpleNamespace(
+                            uses_rag_answer_path=True, quote_finder_hint=False, quote_finder_hint_topic=None,
+                        )))
     monkeypatch.setattr(chat_service_module.query_router, "route",
                         lambda *a, **k: SimpleNamespace(primary_intent=QueryIntent.LOCAL_QA))
     monkeypatch.setattr(chat_service_module.credit_service, "get_estimated_cost", lambda _m: 15)
