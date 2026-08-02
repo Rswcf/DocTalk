@@ -322,6 +322,67 @@ class TestSearchTelemetryFields:
         assert result.no_result is True
 
 
+class TestTopicHardCap:
+    """FIX-7 (Codex r1 IMPORTANT #7): REST's QuoteSearchRequest.topic is
+    Pydantic-capped at 300 chars before quote_search() is ever called, but
+    ChatRequest.message has no such limit and strict chat routing passes the
+    complete message straight through as `topic`. quote_search() must cap it
+    itself, before both the term-scan split and the LLM prompt embedding."""
+
+    @pytest.mark.asyncio
+    async def test_over_cap_topic_is_truncated_before_build_candidates(self, monkeypatch):
+        long_topic = "x" * 500
+        seen: list[str] = []
+
+        async def fake_build_candidates(_db, _document, topic):
+            seen.append(topic)
+            return [], 0
+
+        monkeypatch.setattr(qss, "_build_candidates", fake_build_candidates)
+
+        await quote_search(_fake_db(), document=_document(), user=None, topic=long_topic, locale="en")
+
+        assert len(seen) == 1
+        assert seen[0] == "x" * qss.MAX_TOPIC_CHARS
+        assert len(seen[0]) == 300
+
+    @pytest.mark.asyncio
+    async def test_over_cap_topic_is_truncated_before_call_llm(self, monkeypatch):
+        long_topic = "y" * 500
+        chunk = _chunk(SOURCE, page_start=1, page_end=1, chunk_index=0)
+
+        async def fake_build_candidates(_db, _document, _topic):
+            return [chunk], 1
+
+        captured: dict[str, str] = {}
+
+        async def fake_call_llm(_candidates, topic, _locale):
+            captured["topic"] = topic
+            return [], 0, 0
+
+        monkeypatch.setattr(qss, "_build_candidates", fake_build_candidates)
+        monkeypatch.setattr(qss, "_call_llm", fake_call_llm)
+
+        await quote_search(_fake_db(), document=_document(), user=None, topic=long_topic, locale="en")
+
+        assert captured["topic"] == "y" * qss.MAX_TOPIC_CHARS
+
+    @pytest.mark.asyncio
+    async def test_topic_at_or_under_cap_is_left_unchanged(self, monkeypatch):
+        short_topic = "well within the limit"
+        seen: list[str] = []
+
+        async def fake_build_candidates(_db, _document, topic):
+            seen.append(topic)
+            return [], 0
+
+        monkeypatch.setattr(qss, "_build_candidates", fake_build_candidates)
+
+        await quote_search(_fake_db(), document=_document(), user=None, topic=short_topic, locale="en")
+
+        assert seen == [short_topic]
+
+
 class TestPageAttributionFromVerifiedSlice:
     """FIX-2 (Codex r1 BLOCKER #2). Page/bboxes/chunk_id must come from the
     segment that ACTUALLY verified, never a majority-vote guess over the

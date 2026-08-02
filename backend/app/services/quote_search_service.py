@@ -51,6 +51,14 @@ RETRIEVAL_TOP_K = CHAT_TOP_K * 2  # §8.3: retrieve at ~2x chat top_k
 MAX_CANDIDATE_CHUNKS = 24  # matches corrective_retrieval_service._dynamic_k's non-collection ceiling
 MAX_CONTEXT_CHARS_PER_CANDIDATE = 1200
 MIN_TERM_LEN = 3  # normalized-term scan floor — shorter terms over-match
+# FIX-7 (Codex r1 IMPORTANT #7): mirrors QuoteSearchRequest.topic's Pydantic
+# max_length=300 (quotes.py) — REST enforces that cap before this function is
+# ever reached, but the chat-routed path (ChatRequest.message has no length
+# limit) passes the raw user message straight through as `topic`. Truncating
+# HERE, the single choke point before both the term-scan split and the LLM
+# prompt embedding, closes that gap for every caller at once rather than
+# duplicating the cap per call site.
+MAX_TOPIC_CHARS = 300
 
 _query_router = QueryRouter()
 
@@ -464,6 +472,7 @@ async def quote_search(
     topic: str,
     locale: str,
 ) -> QuoteSearchResult:
+    topic = (topic or "")[:MAX_TOPIC_CHARS]
     candidates, scanned_chunks = await _build_candidates(db, document, topic)
     if not candidates:
         return QuoteSearchResult(
