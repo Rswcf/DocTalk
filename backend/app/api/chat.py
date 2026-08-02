@@ -41,6 +41,7 @@ from app.schemas.chat import (
     SessionResponse,
 )
 from app.services import credit_service
+from app.services.action_planner import ChatAction, deterministic_plan
 from app.services.chat_service import chat_service
 from app.services.doc_service import can_access_document
 from app.services.share_anchor_service import message_share_anchor
@@ -96,6 +97,25 @@ def _as_utc(dt):
     if dt.tzinfo is None:
         return dt.replace(tzinfo=timezone.utc)
     return dt.astimezone(timezone.utc)
+
+
+def _chat_strict_quote_routed(session: ChatSession, message: str) -> bool:
+    """FIX-3 (Codex r1 BLOCKER #3): true iff this message will actually run
+    chat_service's balanced-model verified quote-search pipeline — the SAME
+    predicate as chat_service._is_strict_quote_routed (auth is guaranteed
+    True here, this is only ever called inside `if user is not None:`),
+    used to pick the correct predebit estimate BEFORE the decision instead
+    of the user-selected chat mode's (e.g. quick=5). The deterministic
+    matcher alone is sufficient: strict-intent's 0.88 confidence always
+    bypasses ActionPlanner.plan()'s LLM fallback, so this cheap, sync check
+    matches exactly what chat_service will compute downstream."""
+    is_collection_session = session.collection_id is not None and session.document_id is None
+    return (
+        not is_collection_session
+        and session.document is not None
+        and not session.document.demo_slug
+        and deterministic_plan(message).action == ChatAction.VERIFIED_QUOTE_SEARCH
+    )
 
 
 async def enforce_free_mode_limits(db: AsyncSession, user: User, mode: Optional[str]) -> None:
@@ -420,7 +440,16 @@ async def chat_stream(
         # Use mode-specific estimated cost for pre-check (actual pre-debit happens in chat_service)
         effective_mode = body.mode or "balanced"
         await enforce_free_mode_limits(db, user, effective_mode)
-        estimated_cost = credit_service.get_estimated_cost(effective_mode)
+        # FIX-3 (Codex r1 BLOCKER #3): strict-intent detection happens BEFORE
+        # this predebit decision — a strict-routed message always runs the
+        # balanced-model quote engine regardless of the selected chat mode,
+        # so this pre-check (and chat_service's own predebit, which mirrors
+        # this exact predicate) must reflect the balanced estimate, not
+        # effective_mode's (e.g. quick=5).
+        strict_quote_routed = _chat_strict_quote_routed(session, body.message)
+        estimated_cost = credit_service.get_estimated_cost(
+            "balanced" if strict_quote_routed else effective_mode
+        )
         balance = await credit_service.get_user_credits(db, user.id)
         if balance < estimated_cost:
             raise HTTPException(

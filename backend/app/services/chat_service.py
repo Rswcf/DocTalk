@@ -152,6 +152,30 @@ def _quote_search_copy(copy_map: Dict[str, str], locale: Optional[str], **fmt: A
     return template.format(**fmt)
 
 
+def _is_strict_quote_routed(
+    action_plan: Any,
+    *,
+    user: Optional[User],
+    document_id: Optional[uuid.UUID],
+    is_collection_session: bool,
+    doc: Optional[Document],
+) -> bool:
+    """The single source of truth for "will this message actually run the
+    balanced-model verified quote-search pipeline" — AUTHED, non-demo,
+    single-document sessions only (FIX-3, Codex r1 BLOCKER #3: this same
+    predicate MUST gate the predebit amount, not just the later routing
+    decision, or a quick-mode strict message reserves only 5 credits for
+    work that always costs the balanced rate)."""
+    return (
+        getattr(action_plan, "action", None) == ChatAction.VERIFIED_QUOTE_SEARCH
+        and user is not None
+        and document_id is not None
+        and not is_collection_session
+        and doc is not None
+        and not doc.demo_slug
+    )
+
+
 def _continuation_language_label(locale: Optional[str], existing_response: Optional[str]) -> Optional[str]:
     normalized = _normalize_locale(locale)
     if normalized in _LOCALE_LANGUAGE_LABELS:
@@ -1508,13 +1532,27 @@ class ChatService:
         # Pre-debit estimated credits BEFORE streaming (prevents TOCTOU + free rides)
         pre_debited = 0
         predebit_ledger_id = None
+        strict_quote_routed = _is_strict_quote_routed(
+            action_plan, user=user, document_id=document_id,
+            is_collection_session=is_collection_session, doc=doc,
+        )
         if user is not None:
-            estimated = credit_service.get_estimated_cost(effective_mode)
+            # FIX-3 (Codex r1 BLOCKER #3): a strict-routed message ALWAYS
+            # runs the balanced-model quote engine regardless of the
+            # user-selected chat mode — predebit must reflect that real
+            # cost, not `effective_mode`'s (e.g. quick=5), or a low-balance
+            # user could reserve too little and reconciliation would push
+            # their account negative to cover the overrun.
+            estimated = (
+                credit_service.get_estimated_cost("balanced")
+                if strict_quote_routed
+                else credit_service.get_estimated_cost(effective_mode)
+            )
             if query_route.primary_intent == QueryIntent.DOCUMENT_SUMMARY:
                 estimated = max(estimated, estimated * 2)
             predebit_ledger_id = await credit_service.debit_credits(
                 db, user_id=user.id, cost=estimated,
-                reason="chat", ref_type="mode", ref_id=effective_mode,
+                reason="chat", ref_type="mode", ref_id="balanced" if strict_quote_routed else effective_mode,
             )
             if predebit_ledger_id:
                 pre_debited = estimated
@@ -1549,15 +1587,11 @@ class ChatService:
             # path below UNCHANGED — the strict intent still matched, but
             # without a real document + billing user the verified pipeline
             # can't run, so this degrades to an ordinary cited answer rather
-            # than erroring.
-            if (
-                getattr(action_plan, "action", None) == ChatAction.VERIFIED_QUOTE_SEARCH
-                and user is not None
-                and document_id is not None
-                and not is_collection_session
-                and doc is not None
-                and not doc.demo_slug
-            ):
+            # than erroring. SAME predicate (`strict_quote_routed`, computed
+            # above) already decided the predebit amount — never re-derive
+            # this condition separately (FIX-3: that's exactly how a
+            # quick-mode predebit could drift from what actually runs).
+            if strict_quote_routed:
                 setup_error_code = "QUOTE_SEARCH_ERROR"
                 quote_progress = _VerifiedQuoteProgress()
                 try:

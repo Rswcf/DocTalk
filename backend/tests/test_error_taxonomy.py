@@ -669,7 +669,9 @@ async def test_chat_insufficient_credits_precheck(
     user = _make_user(plan="plus")
     db = _make_db(commit=AsyncMock())
     _override_dependencies(db, optional_user=user)
-    session = SimpleNamespace(document=SimpleNamespace(status="ready", demo_slug=None), document_id=uuid.uuid4())
+    session = SimpleNamespace(
+        document=SimpleNamespace(status="ready", demo_slug=None), document_id=uuid.uuid4(), collection_id=None,
+    )
     monkeypatch.setattr(chat_api, "verify_session_access", AsyncMock(return_value=session))
     monkeypatch.setattr(chat_api.auth_chat_limiter, "is_allowed", AsyncMock(return_value=True))
     monkeypatch.setattr(chat_api.credit_service, "get_estimated_cost", lambda _mode: 7)
