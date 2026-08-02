@@ -87,17 +87,24 @@ export function useChatSession(documentId: string | undefined): UseChatSessionRe
           setDemoMessagesUsed(msgsData.demo_messages_used ?? 0);
           return; // adopted — skip listSessions/createSession entirely
         } catch (e) {
-          // Clear the pointer ONLY when the session is confirmed gone or
-          // inaccessible (404/403) — e.g. pruned by the nightly cleanup, or
-          // an authed caller inheriting an anon-owned key. A transient
-          // failure (network blip, 5xx) must NOT clear it: the pointer is
-          // still valid, and either a later retry or the createSession
-          // fallback below will overwrite it on success anyway. Clearing on
-          // every failure would needlessly burn a fresh create on a session
-          // that's actually still fine.
           const status = e instanceof ApiError ? e.status : null;
           if (status === 404 || status === 403) {
+            // Confirmed gone or inaccessible (pruned by nightly cleanup, or
+            // an authed caller inheriting an anon-owned key) — clear the
+            // pointer and fall through to the normal listSessions/
+            // createSession flow below.
             clearDemoSession(documentId);
+          } else {
+            // Transient failure (network blip, 5xx) — the pointer is still
+            // valid and the session most likely still exists. Falling
+            // through to createSession here would silently orphan it:
+            // listSessions always returns [] for anon demo, so createSession
+            // would succeed and overwrite the still-good pointer (Codex r2
+            // #3 repro). Surface a retryable error and stop instead — the
+            // reader already renders an error state for sessionError, and a
+            // reload re-runs this same effect from the top.
+            if (!cancelled) setSessionError(e);
+            return;
           }
         }
       }

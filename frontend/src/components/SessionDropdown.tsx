@@ -10,7 +10,7 @@ import { createSession, getMessages, deleteSession } from '../lib/api';
 import { errorCopy, type ErrorCopy } from '../lib/errorCopy';
 import { trackEvent } from '../lib/analytics';
 import { useDropdownKeyboard } from '../lib/useDropdownKeyboard';
-import { writeDemoSession } from '../lib/demoSessionStorage';
+import { clearDemoSession, readDemoSession, writeDemoSession } from '../lib/demoSessionStorage';
 
 export default function SessionDropdown() {
   const documentName = useDocTalkStore((s) => s.documentName);
@@ -122,6 +122,16 @@ export default function SessionDropdown() {
     setConfirmDeleteId(null);
     await deleteSession(targetId);
     removeSession(targetId);
+    // Clear the stored anon-demo pointer IMMEDIATELY on confirmed delete, if
+    // it named this session — before any replacement GET below. Otherwise a
+    // transient failure in onSwitchSession/onNewChat would leave the
+    // pointer naming a session that no longer exists (Codex r2 #3): the
+    // next page load would 404 on adopt, which is a safe fallback, but only
+    // clearing it here proactively avoids that extra failed round-trip. A
+    // successful switch/create afterward writes the new pointer over this.
+    if (documentId && readDemoSession(documentId) === targetId) {
+      clearDemoSession(documentId);
+    }
     const remaining = useDocTalkStore.getState().sessions;
     if (targetId === sessionId) {
       if (remaining.length > 0) {
