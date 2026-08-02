@@ -10,6 +10,7 @@ import logging
 import os
 import uuid
 
+from minio.error import S3Error
 from sqlalchemy import select
 
 from app.core.config import settings
@@ -61,10 +62,79 @@ def _get_minio_client():
     return Minio(host, access_key=access_key, secret_key=secret_key, secure=secure)
 
 
+def _ensure_demo_files(docs: list) -> int:
+    """Stat each demo doc's storage object; re-upload from seed_data/ (id- and
+    key-preserving — the DB row is never touched) when the object is missing.
+
+    2026-08-02 incident hardening: a MinIO v2 migration lost ~106/108 stored
+    files and the old self-heal (Qdrant-vector-count only) never noticed,
+    because a doc can have healthy vectors while its underlying PDF bytes are
+    gone. Returns the count re-uploaded. Wrapped per-doc so one bad doc (S3
+    outage, unknown slug, missing local seed file) never blocks startup.
+    """
+    base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    slug_to_spec = {spec["slug"]: spec for spec in DEMO_DOCS}
+    restored = 0
+    client = None
+
+    for doc in docs:
+        slug = doc.demo_slug
+        spec = slug_to_spec.get(slug)
+        if not spec:
+            logger.warning(
+                "demo_seed.file_restore_skipped: unknown slug '%s' for doc %s", slug, doc.id
+            )
+            continue
+        try:
+            if client is None:
+                client = _get_minio_client()
+            bucket = settings.MINIO_BUCKET
+            try:
+                client.stat_object(bucket, doc.storage_key)
+                continue  # object present — nothing to do
+            except S3Error as e:
+                if e.code != "NoSuchKey":
+                    raise
+
+            pdf_path = os.path.join(base_dir, spec["local_path"])
+            if not os.path.exists(pdf_path):
+                logger.warning(
+                    "demo_seed.file_restore_skipped: local seed file missing %s", pdf_path
+                )
+                continue
+
+            with open(pdf_path, "rb") as f:
+                data = f.read()
+
+            from io import BytesIO
+
+            client.put_object(
+                bucket,
+                doc.storage_key,
+                BytesIO(data),
+                length=len(data),
+                content_type="application/pdf",
+            )
+            logger.warning(
+                "demo_seed.file_restored: re-uploaded '%s' (doc=%s, key=%s)",
+                slug, doc.id, doc.storage_key,
+            )
+            restored += 1
+        except Exception as e:
+            logger.warning(
+                "demo_seed.file_restore_failed for '%s' (doc=%s): %s", slug, doc.id, e
+            )
+            continue
+
+    return restored
+
+
 def seed_demo_documents() -> None:
     """Seed demo documents if they don't exist. Idempotent."""
     # Resolve base path (backend/ directory)
     base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+    healthy_docs: list[Document] = []
 
     with SyncSessionLocal() as db:
         for spec in DEMO_DOCS:
@@ -108,6 +178,7 @@ def seed_demo_documents() -> None:
                             # Fall through to re-create below
                         else:
                             logger.info("Demo doc '%s' already ready, skipping", slug)
+                            healthy_docs.append(existing)
                             continue
                     if existing.status in ("parsing", "embedding"):
                         logger.info("Demo doc '%s' stuck in %s, re-dispatching", slug, existing.status)
@@ -167,3 +238,16 @@ def seed_demo_documents() -> None:
             except Exception as e:
                 logger.warning("Failed to seed demo doc '%s': %s", slug, e)
                 db.rollback()
+
+        # B0 (2026-08-02 incident hardening): the Qdrant vector check above
+        # only catches missing embeddings — a doc can have healthy vectors
+        # while its underlying MinIO PDF bytes are gone (the incident this
+        # closes). Runs regardless of whether vectors were healthy: docs that
+        # got re-created above already got a fresh upload; this covers the
+        # ones that skipped re-seeding because they looked fine.
+        try:
+            restored = _ensure_demo_files(healthy_docs)
+            if restored:
+                logger.warning("demo_seed.storage_self_heal restored %d file(s)", restored)
+        except Exception as e:
+            logger.warning("demo_seed storage self-heal failed: %s", e)
