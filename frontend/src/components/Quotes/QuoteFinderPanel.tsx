@@ -50,10 +50,24 @@ export default function QuoteFinderPanel({ isOpen, documentId, userPlan, onClose
   const [paywallOpen, setPaywallOpen] = useState(false);
   const [paywallReason, setPaywallReason] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  // Bumped every time the panel (re)opens or is retargeted to a new
+  // initialTopic while already open (Codex r4 new-breakage). handleSearch
+  // captures the generation it started under; if it changes before the
+  // request resolves, the response is stale and must not populate the new
+  // view — same compare-on-resolve pattern as useChatStream's
+  // demoAccountingEpoch reanchor guard.
+  const openGenerationRef = useRef(0);
 
   useEffect(() => {
     if (!isOpen) return;
-    if (initialTopic) setTopic(initialTopic);
+    openGenerationRef.current += 1;
+    // Reset on EVERY open (and every retarget while already open): a
+    // previous open's topic/result/error must never bleed into this one —
+    // e.g. opening via a "Try Quote Finder" chip for topic B must not show
+    // topic A's cards under B's prefilled input.
+    setTopic(initialTopic ?? '');
+    setResult(null);
+    setErrorMsg(null);
     const id = window.setTimeout(() => {
       inputRef.current?.focus();
       inputRef.current?.select();
@@ -76,6 +90,9 @@ export default function QuoteFinderPanel({ isOpen, documentId, userPlan, onClose
     e.preventDefault();
     const trimmed = topic.trim();
     if (!trimmed || loading) return;
+    // Captured now so a LATER open/retarget (which bumps the ref) can be
+    // detected when this request resolves — see openGenerationRef above.
+    const generation = openGenerationRef.current;
     setLoading(true);
     setErrorMsg(null);
     // Fires on SUBMIT, before the request — not after success (Codex M2 r1
@@ -86,8 +103,10 @@ export default function QuoteFinderPanel({ isOpen, documentId, userPlan, onClose
     trackEvent('quote_search_submitted', { source: 'quote_finder_panel' });
     try {
       const res = await searchDocumentQuotes(documentId, trimmed, locale);
+      if (openGenerationRef.current !== generation) return; // stale — panel reopened/retargeted since this search started
       setResult(res);
     } catch (err) {
+      if (openGenerationRef.current !== generation) return; // stale — don't paywall/auth-redirect/error a view the user has since left
       if (err instanceof ApiError && err.status === 402) {
         setPaywallReason(err.code || 'credits');
         setPaywallOpen(true);
@@ -105,7 +124,9 @@ export default function QuoteFinderPanel({ isOpen, documentId, userPlan, onClose
         setErrorMsg(copy.body || copy.title);
       }
     } finally {
-      setLoading(false);
+      if (openGenerationRef.current === generation) {
+        setLoading(false);
+      }
     }
   };
 
