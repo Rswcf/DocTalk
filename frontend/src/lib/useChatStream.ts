@@ -136,6 +136,15 @@ export function useChatStream({
       .then((msgsData) => {
         if (msgsData.demo_messages_used == null) return;
         const state = useDocTalkStore.getState();
+        // The GET can resolve after the user has already navigated away —
+        // e.g. useChatSession's effect ran its synchronous reset for a NEW
+        // document/session while this was in flight. Re-read the CURRENT
+        // sessionId from the store (not a closure) and only write if it
+        // still matches the session this reanchor was called for; otherwise
+        // the fetched-for-A truth would clobber whatever B's own
+        // adopt/create already established. Drop it silently — B's own
+        // adoption path is the authoritative source for B's counter.
+        if (state.sessionId !== forSessionId) return;
         state.setDemoMessagesUsed(msgsData.demo_messages_used);
         state.setDemoRestoredUserMsgCount(
           state.messages.filter((m) => m.role === 'user').length,
