@@ -465,3 +465,68 @@ async def test_delete_happy_path_returns_204(
     assert response.status_code == 204
     delete_mock.assert_awaited_once()
     assert delete_mock.await_args.kwargs["row"] is row
+
+
+# -------------------------- M3-B3: no re-verification on read --------------------------
+
+class TestSnapshotAtSaveTimeNoReverificationOnRead:
+    """M3-B3 (plan §8.1/§8.5): a saved quote's trust fields are snapshotted
+    ONCE, at save time — display must read the STORED columns, never call
+    verify_quote/verify_saved_quote/quote_search again. Both verification
+    entry points are patched to raise if called at all, so any future
+    change that accidentally re-verifies on a read path fails loudly here
+    rather than silently degrading (extra LLM calls, extra cost, or a
+    result that drifts from what the user actually saved) — this is a
+    regression LOCK on an already-correct design, not a TDD-driven
+    implementation change; B1's schema (source_chunk_id nullable, ON
+    DELETE SET NULL) and B2's save-time-only construction of SavedQuote
+    rows already make re-verification impossible by construction. The
+    complementary "survives a real reparse" proof against real Postgres
+    lives in test_saved_quotes_integration.py."""
+
+    @pytest.mark.asyncio
+    async def test_list_document_quotes_never_calls_verification(
+        self, client: AsyncClient, monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        user = _make_user()
+        doc = _make_doc(user)
+        db = _make_db(get=AsyncMock(return_value=doc))
+        _override_dependencies(db, user)
+
+        def _must_not_be_called(*_a, **_k):
+            raise AssertionError("GET must not re-verify saved quotes")
+
+        monkeypatch.setattr(quotes_api.quote_search_service, "verify_saved_quote", _must_not_be_called)
+        monkeypatch.setattr(quotes_api.quote_search_service, "quote_search", _must_not_be_called)
+        rows = [_saved_row(document_id=doc.id, verification_tier="exact")]
+        monkeypatch.setattr(
+            saved_quotes_service, "list_saved_quotes_for_document", AsyncMock(return_value=rows)
+        )
+
+        response = await client.get(f"/api/documents/{doc.id}/quotes")
+
+        assert response.status_code == 200
+        assert response.json()["quotes"][0]["tier"] == "exact"  # the STORED value, verbatim
+
+    @pytest.mark.asyncio
+    async def test_list_all_quotes_never_calls_verification(
+        self, client: AsyncClient, monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        user = _make_user()
+        db = _make_db()
+        _override_dependencies(db, user)
+
+        def _must_not_be_called(*_a, **_k):
+            raise AssertionError("the Evidence Board feed must not re-verify saved quotes")
+
+        monkeypatch.setattr(quotes_api.quote_search_service, "verify_saved_quote", _must_not_be_called)
+        monkeypatch.setattr(quotes_api.quote_search_service, "quote_search", _must_not_be_called)
+        rows = [_saved_row(verification_tier="normalized", verification_score=97.5)]
+        monkeypatch.setattr(saved_quotes_service, "list_all_saved_quotes", AsyncMock(return_value=rows))
+
+        response = await client.get("/api/quotes")
+
+        assert response.status_code == 200
+        quote = response.json()["quotes"][0]
+        assert quote["tier"] == "normalized"
+        assert quote["score"] == 97.5

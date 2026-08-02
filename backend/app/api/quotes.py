@@ -584,6 +584,15 @@ async def list_document_saved_quotes(
     user: User = Depends(require_auth),
     db: AsyncSession = Depends(get_db_session),
 ):
+    """M3-B3 (plan §8.1/§8.5): returns each row's STORED trust snapshot
+    (verification_tier/verification_score/verifier_version/source_kind,
+    taken at save time) as-is — this path never calls verify_quote,
+    verify_saved_quote, or quote_search again. That is what lets a saved
+    quote survive a reparse: the row's display fields are independent of
+    whatever chunks/pages happen to exist right now (source_chunk_id may
+    even be NULL, per SavedQuote's ON DELETE SET NULL — see
+    test_saved_quotes_integration.py's
+    test_reparse_style_chunk_deletion_leaves_the_saved_row_intact)."""
     doc = await _verify_document(document_id, user, db)
     rows = await saved_quotes_service.list_saved_quotes_for_document(
         db, user_id=user.id, document_id=doc.id,
@@ -597,7 +606,8 @@ async def list_saved_quotes(
     db: AsyncSession = Depends(get_db_session),
 ):
     """The Evidence Board feed — every saved quote for this user, across
-    every document, newest first."""
+    every document, newest first. M3-B3: same stored-snapshot contract as
+    list_document_saved_quotes above — never re-verifies."""
     rows = await saved_quotes_service.list_all_saved_quotes(db, user_id=user.id)
     return SavedQuoteListResponse(quotes=[_saved_quote_response(r) for r in rows])
 
