@@ -55,6 +55,17 @@ export interface DocTalkStore {
   // already reflected in demoMessagesUsed at that restore/create point, so
   // useChatStream can subtract it back out of the live transcript's count
   // instead of double-counting. See useChatStream.ts / useChatSession.ts.
+  //
+  // Both fields are reset ONLY inside useChatSession's documentId-keyed
+  // effect (never in clearDocumentTransientState below) — that effect fires
+  // exclusively on a real document-ID transition and always re-establishes
+  // server truth right after via adopt-or-create in the same run. Resetting
+  // them from clearDocumentTransientState was tried (6149931) and reverted
+  // (Codex r2 #2): that function is also invoked by useDocumentLoader's
+  // effect, whose deps include the locale-sensitive `t`/`tOr`, so a
+  // same-document LANGUAGE change zeroed both fields while the transcript
+  // stayed — reintroducing the exact TTL-hard-lock bug this model exists to
+  // prevent, since nothing re-synced them afterward.
   demoMessagesUsed: number;
   demoRestoredUserMsgCount: number;
 
@@ -323,12 +334,6 @@ export const useDocTalkStore = create<DocTalkStore>((set, get) => ({
     // suggested questions (the loader re-sets them when B is ready).
     documentSummary: null,
     suggestedQuestions: [],
-    // Doc A's demo counter must not flash on doc B while useChatSession's
-    // effect is still loading B's real value — `useChatSession`/
-    // `SessionDropdown` always set a fresh authoritative value once B's
-    // session resolves, this just closes the stale-state window in between.
-    demoMessagesUsed: 0,
-    demoRestoredUserMsgCount: 0,
   }),
   reset: () => {
     const timer = get()._flushTimer;

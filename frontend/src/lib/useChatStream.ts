@@ -69,6 +69,11 @@ export function useChatStream({
   } = useDocTalkStore();
 
   const abortRef = useRef<AbortController | null>(null);
+  // Pending rollback value for an optimistic regenerate/continue quota bump
+  // (see bumpDemoUsageForRegenOrContinue below) — null when no bump is
+  // awaiting resolution. Set right before the bump, consumed (cleared) by
+  // whichever of handleStreamDone/handleStreamError fires next.
+  const preBumpDemoUsedRef = useRef<number | null>(null);
 
   // Contract: totalUsed = demoMessagesUsed (server-known count as of the last
   // restore/create) + messages sent locally since then. demoRestoredUserMsgCount
@@ -115,8 +120,24 @@ export function useChatStream({
     const name = typeof err === 'object' && err && 'name' in err
       ? String((err as { name?: unknown }).name || '')
       : '';
+    const isAbort = name === 'AbortError' || message.includes('AbortError');
 
-    if (name === 'AbortError' || message.includes('AbortError')) {
+    // Roll back a pending optimistic regenerate/continue quota bump (see
+    // bumpDemoUsageForRegenOrContinue) on any non-abort failure. We can't
+    // know for certain whether the backend's quota check ran before or
+    // after whatever rejected this request, so this is a heuristic, not a
+    // guarantee — any residual drift self-corrects on the next session
+    // restore, which always re-syncs to the server's raw count. On an
+    // explicit user abort we leave the bump in place: streaming can only be
+    // aborted once the backend has already started responding, at which
+    // point it plausibly already charged.
+    const pendingDemoBumpRestore = preBumpDemoUsedRef.current;
+    preBumpDemoUsedRef.current = null;
+    if (!isAbort && pendingDemoBumpRestore != null) {
+      useDocTalkStore.getState().setDemoMessagesUsed(pendingDemoBumpRestore);
+    }
+
+    if (isAbort) {
       return;
     }
 
@@ -211,6 +232,9 @@ export function useChatStream({
     flushPendingText();
     setStreaming(false);
     abortRef.current = null;
+    // Stream completed successfully — any pending regenerate/continue quota
+    // bump stands (no rollback needed).
+    preBumpDemoUsedRef.current = null;
     updateSessionActivity(sessionId);
     triggerCreditsRefresh();
     trackEvent('chat_message_completed', { source: 'chat_stream', mode: selectedMode });
@@ -301,13 +325,16 @@ export function useChatStream({
   // without this the UI would undercount relative to the server. Bumps
   // demoMessagesUsed directly (not the baseline, which only moves at
   // restore/create) and optimistically, before the stream starts — same
-  // pattern as `sendMessage`, which counts a turn as soon as it's sent
-  // rather than waiting for/rolling back on stream completion. No-op
-  // outside demo (maxUserMessages == null), so authenticated/non-demo
-  // sessions are untouched.
+  // timing as `sendMessage`'s optimistic user-message add. Unlike
+  // sendMessage's bump (which is inherent to the persisted transcript and
+  // was already accepted as unconditional), this one records the pre-bump
+  // value so handleStreamError can roll it back on failure — see there for
+  // why. No-op outside demo (maxUserMessages == null), so authenticated/
+  // non-demo sessions are untouched.
   const bumpDemoUsageForRegenOrContinue = useCallback(() => {
     if (maxUserMessages == null) return;
     const state = useDocTalkStore.getState();
+    preBumpDemoUsedRef.current = state.demoMessagesUsed;
     state.setDemoMessagesUsed(state.demoMessagesUsed + 1);
   }, [maxUserMessages]);
 

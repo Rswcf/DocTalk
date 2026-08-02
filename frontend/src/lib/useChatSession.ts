@@ -26,6 +26,17 @@ export function useChatSession(documentId: string | undefined): UseChatSessionRe
     if (!documentId || documentStatus !== 'ready') return;
 
     setSessionError(null);
+    // Reset the demo counter baseline synchronously here — NOT in
+    // clearDocumentTransientState (Codex r2 #2 finding: that function is
+    // ALSO invoked by useDocumentLoader's effect, whose deps include the
+    // locale-sensitive `t`/`tOr`, so a same-document language change would
+    // zero the counter while the transcript stayed, reintroducing the
+    // TTL-hard-lock bug). This effect's own deps (below) exclude locale —
+    // it only reruns on a real documentId transition — and always
+    // re-establishes server truth right after via adopt-or-create in the
+    // same run, so the momentary reset here is safe.
+    setDemoMessagesUsed(0);
+    setDemoRestoredUserMsgCount(0);
     let cancelled = false;
 
     (async () => {
