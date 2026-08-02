@@ -775,3 +775,67 @@ class DocumentBiblio(Base):
     )
 
     document: Mapped["Document"] = relationship("Document")
+
+
+class SavedQuote(Base):
+    """User-saved verified quote cards (M3-B1, plan D8 as amended by §8.5 M3
+    + §8.1's verification-persistence requirement).
+
+    Rows snapshot a card's full trust state AT SAVE TIME
+    (tier/score/verifier_version/source_kind, plus bboxes/page/page_end) —
+    saved quotes must survive/revalidate after reparses (§8.1), so the
+    display path reads these stored columns and NEVER re-runs verify_quote.
+    `source_chunk_id` is therefore ON DELETE SET NULL, not CASCADE: the
+    parse worker hard-deletes and recreates a document's chunks on every
+    reparse (parse_worker.py's `sa_delete(Chunk).where(...)`), and a saved
+    quote must outlive that — losing only the (informational) live chunk
+    link, never the row itself or its snapshotted display fields.
+
+    Cap enforcement (§8.4 point 2) counts ACTIVE rows per user ACROSS
+    documents — there is no soft-delete flag; DELETE is a real row removal,
+    which is what "delete frees a slot" means in the plan.
+
+    `quote_hash` is SERVER-derived (normalized quote_text + verified page
+    range, see saved_quotes_service.compute_quote_hash) — never trust a
+    client-supplied hash, or dedup/idempotency becomes forgeable.
+    """
+    __tablename__ = "saved_quotes"
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, server_default=sa.text("gen_random_uuid()")
+    )
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), sa.ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+    )
+    document_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), sa.ForeignKey("documents.id", ondelete="CASCADE"), nullable=False
+    )
+    page: Mapped[int] = mapped_column(sa.Integer, nullable=False)
+    page_end: Mapped[int] = mapped_column(sa.Integer, nullable=False)
+    quote_text: Mapped[str] = mapped_column(sa.Text, nullable=False)
+    bboxes: Mapped[Optional[list]] = mapped_column(JSONB, nullable=True)
+    verification_tier: Mapped[str] = mapped_column(sa.String(16), nullable=False)
+    verification_score: Mapped[float] = mapped_column(sa.Float, nullable=False)
+    verifier_version: Mapped[str] = mapped_column(sa.String(16), nullable=False)
+    source_chunk_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        UUID(as_uuid=True), sa.ForeignKey("chunks.id", ondelete="SET NULL"), nullable=True
+    )
+    source_kind: Mapped[str] = mapped_column(sa.String(16), nullable=False)
+    quote_hash: Mapped[str] = mapped_column(sa.String(64), nullable=False)
+    note: Mapped[Optional[str]] = mapped_column(sa.Text, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        sa.DateTime(timezone=True), nullable=False, server_default=sa.text("now()")
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        sa.DateTime(timezone=True), nullable=False, server_default=sa.text("now()"), onupdate=sa.func.now()
+    )
+
+    __table_args__ = (
+        sa.Index("idx_saved_quotes_user_created", "user_id", "created_at"),
+        sa.Index("idx_saved_quotes_user_document", "user_id", "document_id"),
+        sa.UniqueConstraint(
+            "user_id", "document_id", "quote_hash", name="uq_saved_quotes_user_document_hash"
+        ),
+    )
+
+    document: Mapped["Document"] = relationship("Document")
