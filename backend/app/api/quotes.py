@@ -98,24 +98,53 @@ async def _refund_predebit(db: AsyncSession, user_id: uuid.UUID, pre_debited: in
     await db.commit()
 
 
-async def _refund_predebit_on_cancel(user_id: uuid.UUID, pre_debited: int, ledger_id: uuid.UUID) -> None:
-    """FIX-4 (Codex r1 IMPORTANT #4): CancelledError refund uses an
-    INDEPENDENT session, shielded from the very cancellation being handled —
-    the request's own `db` session may not be usable in a cancelled task
-    (same reasoning as chat_service._settle_predebit_on_cancel). Unlike
-    chat, REST has no "answer already delivered" case to preserve: nothing
-    is sent to the client until the handler returns, so any failure or
-    cancellation after predebit always refunds in full."""
+async def _settle_quote_search_predebit_on_cancel(
+    user_id: uuid.UUID,
+    pre_debited: int,
+    ledger_id: uuid.UUID,
+    candidate_usage_record_id: uuid.UUID,
+) -> None:
+    """FIX2-B(c) (Codex r2 #4, NOT ADDRESSED — supersedes the old, blanket
+    "always refund" _refund_predebit_on_cancel). Uses an INDEPENDENT
+    session, shielded from the very cancellation being handled — the
+    request's own `db` session may not be usable in a cancelled task (same
+    reasoning as chat_service._settle_predebit_on_cancel).
+
+    A CancelledError landing WHILE the final atomic commit (reconcile +
+    usage + telemetry) is in flight is genuinely ambiguous: the commit may
+    have already landed on the DB even though our own await never returned.
+    Blindly refunding the full predebit in that case — the prior
+    unconditional behavior — is an accounting bug: if the commit landed,
+    the ledger row was already reconciled to `actual_cost` (which can
+    differ from `pre_debited`), and deleting that row while crediting back
+    the flat `pre_debited` amount over/under-refunds whenever
+    actual_cost != pre_debited. Inspecting the ledger row's delta alone
+    can't resolve this either — reconcile_credits() no-ops when
+    actual_cost == pre_debited, leaving delta UNCHANGED from the raw
+    predebit, indistinguishable from "never reconciled."
+
+    Resolved the same way chat's equivalent ambiguity is resolved
+    (chat_service._settle_verified_quote_predebit_on_cancel):
+    `candidate_usage_record_id` is a client-generated id, known BEFORE the
+    transaction is even attempted, so querying for that exact UsageRecord
+    row answers "did the atomic commit land" unambiguously — that row is
+    unconditionally part of the same transaction, never a no-op. If it
+    landed, the search completed and billed correctly; leave the ledger
+    alone. If not, refund the full predebit — nothing was delivered.
+    """
     try:
         with anyio.CancelScope(shield=True):
-            async def _do_refund() -> None:
+            async def _resolve_and_maybe_refund() -> None:
                 async with AsyncSessionLocal() as refund_db:
+                    existing = await refund_db.get(UsageRecord, candidate_usage_record_id)
+                    if existing is not None:
+                        return  # the atomic commit landed — leave the ledger alone
                     await _refund_predebit(refund_db, user_id, pre_debited, ledger_id)
 
-            await asyncio.wait_for(_do_refund(), timeout=_CANCEL_REFUND_TIMEOUT_S)
+            await asyncio.wait_for(_resolve_and_maybe_refund(), timeout=_CANCEL_REFUND_TIMEOUT_S)
     except Exception:
         logger.exception(
-            "Failed to refund quote-search predebit on cancel for user %s (ledger %s)",
+            "Failed to settle quote-search predebit on cancel for user %s (ledger %s)",
             user_id, ledger_id,
         )
 
@@ -185,6 +214,12 @@ async def create_quote_search(
     # below) must refund it. The prior version's try/except wrapped only the
     # quote_search() call, leaving a real 15-credit predebit permanently
     # committed if reconcile/commit itself failed.
+    # FIX2-B(c) (Codex r2 #4, NOT ADDRESSED): generated BEFORE any await in
+    # this block (uuid4() has no suspension point, so a CancelledError can
+    # never land before this line runs) — always known regardless of where
+    # a later CancelledError strikes, so the cancellation handler below can
+    # independently verify whether the final atomic commit actually landed.
+    usage_record_id = uuid.uuid4()
     try:
         result = await quote_search_service.quote_search(
             db, document=doc, user=user, topic=body.topic, locale=body.locale or ""
@@ -196,10 +231,21 @@ async def create_quote_search(
         # actual tokens; charge the actual cost even when verified-empty —
         # the LLM call still ran, so a free retry would be a billing hole,
         # not generosity.
-        await credit_service.reconcile_credits(db, user.id, ledger_id, QUOTE_SEARCH_PREDEBIT_CREDITS, actual_cost)
+        # FIX2-B(b) (Codex r2 #4, NOT ADDRESSED): capture the resulting
+        # balance HERE, inside the guarded try — never a separate
+        # get_user_credits() call after this block. That extra query was a
+        # second failure point AFTER money had already correctly moved and
+        # the work was committed: a reconcile-and-commit success followed by
+        # a balance-read failure produced a raw 500 with zero refund
+        # (correctly — nothing was wrong with the charge) but also zero
+        # result delivered to the client.
+        remaining_credits = await credit_service.reconcile_credits(
+            db, user.id, ledger_id, QUOTE_SEARCH_PREDEBIT_CREDITS, actual_cost
+        )
 
         db.add(
             UsageRecord(
+                id=usage_record_id,
                 user_id=user.id,
                 message_id=None,
                 model=result.model,
@@ -242,9 +288,14 @@ async def create_quote_search(
         )
         await db.commit()
     except asyncio.CancelledError:
-        # The request's own `db` session may not be usable mid-cancellation —
-        # refund via an independent, shielded session (never reuse `db` here).
-        await _refund_predebit_on_cancel(user.id, QUOTE_SEARCH_PREDEBIT_CREDITS, ledger_id)
+        # FIX2-B(c) (Codex r2 #4, NOT ADDRESSED): the request's own `db`
+        # session may not be usable mid-cancellation — settle via an
+        # independent, shielded session (never reuse `db` here) that
+        # verifies whether the final atomic commit actually landed before
+        # deciding whether (and how much) to refund.
+        await _settle_quote_search_predebit_on_cancel(
+            user.id, QUOTE_SEARCH_PREDEBIT_CREDITS, ledger_id, usage_record_id,
+        )
         raise
     except Exception as exc:
         try:
@@ -256,8 +307,6 @@ async def create_quote_search(
             status_code=500,
             detail={"error": "QUOTE_SEARCH_FAILED", "message": "Quote search failed"},
         ) from exc
-
-    remaining_credits = await credit_service.get_user_credits(db, user.id)
 
     return QuoteSearchResponse(
         cards=[

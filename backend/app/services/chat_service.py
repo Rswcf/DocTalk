@@ -889,6 +889,57 @@ async def _settle_predebit_on_cancel(
             await _refund_predebit(settle_db, user_id, pre_debited, predebit_ledger_id)
 
 
+async def _settle_verified_quote_predebit_on_cancel(
+    *,
+    user_id: uuid.UUID,
+    pre_debited: int,
+    predebit_ledger_id: uuid.UUID,
+    candidate_message_id: Optional[uuid.UUID],
+) -> None:
+    """FIX2-B(c) (Codex r2 #4, NOT ADDRESSED): settlement specific to
+    _run_verified_quote_search's cancellation path — NOT a use of the
+    generic _settle_predebit_on_cancel above, because that path's atomic
+    commit (message + reconcile + usage, one transaction — FIX2-B(a))
+    already reconciled the ledger row IF it landed; calling reconcile again
+    here would be wrong regardless of the outcome.
+
+    A CancelledError landing WHILE that single commit's await is in flight
+    is genuinely ambiguous from this task's point of view: the commit may
+    have already landed on the DB even though `await db.commit()` never
+    returned, so `progress.message_id` (only set AFTER that await returns)
+    is unreliable exactly in this window. Two unreliable signals were
+    considered and rejected:
+      - Trusting message_id alone (None) would free-ride a durably
+        persisted, delivered, billed answer whose commit simply hadn't
+        returned control to us yet.
+      - Inspecting the ledger row's delta would ALSO be unreliable:
+        credit_service.reconcile_credits() no-ops when
+        actual_cost == pre_debited, so a successfully landed commit can
+        leave delta UNCHANGED from the raw predebit value — indistinguishable
+        from "never reconciled" by delta inspection alone.
+
+    Resolved directly instead: candidate_message_id is a client-generated
+    id (not a DB server default), so it is known BEFORE the transaction is
+    even attempted, regardless of whether it lands. Querying, via an
+    INDEPENDENT session, whether a Message row with that exact id now
+    exists answers "did the atomic commit land" unambiguously — the
+    message row is unconditionally part of that same transaction, never a
+    no-op the way reconcile can be. If it landed: the answer was delivered
+    and billed together; leave the ledger alone (whatever its current
+    delta is — reconciled-to-the-same-value or reconciled-to-a-different-
+    value are both correct outcomes we must not disturb). If not: refund
+    the full predebit, since nothing was delivered.
+    """
+    async with AsyncSessionLocal() as settle_db:
+        landed = False
+        if candidate_message_id is not None:
+            existing = await settle_db.get(Message, candidate_message_id)
+            landed = existing is not None
+        if landed:
+            return
+        await _refund_predebit(settle_db, user_id, pre_debited, predebit_ledger_id)
+
+
 async def _fetch_page_chunks(
     db: AsyncSession,
     document_id: uuid.UUID,
@@ -1010,20 +1061,31 @@ class _VerifiedQuoteProgress:
     """Mutable out-param for _run_verified_quote_search (B5 cancellation-
     safety fix, review round 1 SHOULD-FIX-2).
 
-    A CancelledError can land ANYWHERE inside _run_verified_quote_search,
-    including between the message-persist commit and the final credits
-    commit. The caller's cancellation handler must know whether the answer
-    was ALREADY durably persisted at that point — not assume "no answer" the
+    A CancelledError can land ANYWHERE inside _run_verified_quote_search.
+    The caller's cancellation handler must know whether the answer was
+    ALREADY durably delivered at that point — not assume "no answer" the
     way the setup-phase handler does for every other setup failure — mirrors
     the main RAG path's has_partial_answer discriminator (chat_service.py's
     streaming-phase finally: block), just derived from persistence instead
-    of accumulated stream text. message_id is set ONLY after the message
-    commit succeeds; prompt_tokens/completion_tokens/model are captured
-    right after quote_search() returns (before any commit) so accurate
-    billing is available even if cancellation strikes between persist and
-    reconcile.
+    of accumulated stream text. prompt_tokens/completion_tokens/model are
+    captured right after quote_search() returns (before any commit) so
+    accurate billing is available regardless of where cancellation strikes.
+
+    FIX2-B (Codex r2 #4, NOT ADDRESSED): message-persist + reconcile +
+    usage-record are now ONE atomic commit (see _run_verified_quote_search),
+    so message_id is set ONLY after that single commit's await ACTUALLY
+    returns — reliable for the ORDINARY-exception handler (FIX-4), but a
+    CancelledError landing WHILE that commit is in flight is still
+    genuinely ambiguous (the commit may have landed on the DB even though
+    the await never returned, leaving message_id=None despite a delivered
+    answer). candidate_message_id is set BEFORE the commit is attempted (a
+    client-generated id, not a DB server default) precisely so the
+    cancellation handler can resolve that specific ambiguity later by
+    querying for this exact id independently — see
+    _settle_verified_quote_predebit_on_cancel.
     """
     message_id: Optional[uuid.UUID] = None
+    candidate_message_id: Optional[uuid.UUID] = None
     prompt_tokens: int = 0
     completion_tokens: int = 0
     model: str = ""
@@ -1370,7 +1432,14 @@ class ChatService:
             # Verified-empty: the honest message, never an unverified fallback answer.
             assistant_text = _quote_search_copy(_QUOTE_SEARCH_EMPTY_COPY, locale, n=result.scanned_chunks)
 
+        # FIX2-B(a) (Codex r2 #4, NOT ADDRESSED): the id is generated
+        # CLIENT-SIDE (not via the table's gen_random_uuid() server default)
+        # so it is known BEFORE any DB work is attempted — this is what lets
+        # the cancellation handler below resolve an ambiguous commit later
+        # (see _settle_verified_quote_predebit_on_cancel's docstring).
+        message_id = uuid.uuid4()
         asst_msg = Message(
+            id=message_id,
             session_id=session_id,
             role="assistant",
             content=assistant_text,
@@ -1385,16 +1454,22 @@ class ChatService:
             },
         )
         db.add(asst_msg)
-        await db.commit()
-        # The answer is now durably persisted — a CancelledError from this
-        # point on must settle as "delivered", never a full refund.
-        progress.message_id = asst_msg.id
 
-        # Reconcile the CALLER's chat predebit to the quote call's actual
-        # tokens (same ledger row — no separate quote-search debit) and
-        # record usage against the message just persisted (summary_usage /
-        # record_usage(message_id=...) precedent, chat_service.py's own
-        # main-flow reconcile block).
+        # FIX2-B(a) (Codex r2 #4, NOT ADDRESSED): message-persist + reconcile
+        # + usage-record are now ONE ATOMIC commit — no intermediate commit
+        # between the message add and the billing settlement. This removes
+        # the "message persisted but billing never reconciled" class of
+        # ordinary-exception free-ride entirely: either the whole
+        # transaction lands together, or none of it does (correctly caught
+        # by the caller's generic setup-phase handler as a total failure —
+        # nothing was delivered).
+        #
+        # progress.candidate_message_id is recorded BEFORE the commit is
+        # attempted — used only by the CancelledError path below to resolve
+        # a commit that lands on the DB while our own await is interrupted
+        # (a genuine ambiguity no in-memory flag can resolve on its own).
+        progress.candidate_message_id = message_id
+
         actual_cost = credit_service.calculate_cost(
             progress.prompt_tokens, progress.completion_tokens, progress.model, mode="balanced",
         )
@@ -1404,16 +1479,20 @@ class ChatService:
         await credit_service.record_usage(
             db,
             user_id=user.id,
-            message_id=asst_msg.id,
+            message_id=message_id,
             model=progress.model,
             prompt_tokens=progress.prompt_tokens,
             completion_tokens=progress.completion_tokens,
             cost_credits=actual_cost,
         )
         await db.commit()
+        # Only trustworthy once the atomic commit's await has ACTUALLY
+        # returned — the ordinary-exception handler (FIX-4) uses this to
+        # know whether a real answer was delivered.
+        progress.message_id = message_id
 
         return _VerifiedQuoteOutcome(
-            message_id=asst_msg.id,
+            message_id=message_id,
             assistant_text=assistant_text,
             citations=citations,
             artifact_payload=artifact_payload,
@@ -1607,30 +1686,28 @@ class ChatService:
                         progress=quote_progress,
                     )
                 except asyncio.CancelledError:
-                    # SHOULD-FIX-2 (review round 1): a CancelledError landing
-                    # between the message-persist commit and the final
-                    # credits commit must NOT be treated as "no answer" — the
-                    # generic setup-phase handler below assumes that for
-                    # every OTHER setup failure, which would free-ride a
-                    # durably persisted, delivered quote-search answer.
-                    # has_answer is derived from ACTUAL evidence
-                    # (quote_progress.message_id is only set after the
-                    # message commit succeeds) — mirrors the main RAG path's
-                    # has_partial_answer discriminator (chat_service.py's
-                    # streaming-phase finally: block), not an assumption.
+                    # SHOULD-FIX-2 (review round 1) / FIX2-B(c) (Codex r2 #4,
+                    # NOT ADDRESSED): a CancelledError landing anywhere in
+                    # _run_verified_quote_search — including WHILE its single
+                    # atomic commit's await is in flight, a window where
+                    # in-memory progress.message_id is genuinely unreliable —
+                    # must NOT be treated as "no answer" via a blind flag
+                    # check. _settle_verified_quote_predebit_on_cancel
+                    # resolves this independently: it queries the DB for
+                    # progress.candidate_message_id (known BEFORE the commit
+                    # was attempted) to determine whether the atomic commit
+                    # actually landed, and only refunds if it didn't — never
+                    # re-reconciles (the atomic commit already did that, if
+                    # it landed).
                     if user is not None and pre_debited > 0 and predebit_ledger_id is not None and not settled:
                         try:
                             with anyio.CancelScope(shield=True):
                                 await asyncio.wait_for(
-                                    _settle_predebit_on_cancel(
+                                    _settle_verified_quote_predebit_on_cancel(
                                         user_id=user.id,
                                         pre_debited=pre_debited,
                                         predebit_ledger_id=predebit_ledger_id,
-                                        has_answer=quote_progress.message_id is not None,
-                                        prompt_tokens=quote_progress.prompt_tokens,
-                                        output_tokens=quote_progress.completion_tokens,
-                                        model=quote_progress.model,
-                                        mode="balanced",
+                                        candidate_message_id=quote_progress.candidate_message_id,
                                     ),
                                     timeout=_CANCEL_IO_TIMEOUT_S,
                                 )

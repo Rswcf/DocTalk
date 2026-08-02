@@ -170,18 +170,30 @@ async def reconcile_credits(
     predebit_ledger_id: UUID,
     pre_debited: int,
     actual_cost: int,
-) -> None:
+) -> int:
     """Reconcile pre-debited credits against actual cost after streaming.
 
     Updates the ORIGINAL ledger entry in-place so each chat produces exactly
     one ledger row (reason="chat") instead of two (predebit + reconcile).
 
-    - If pre_debited == actual_cost → no-op
+    - If pre_debited == actual_cost → no-op (still returns the current balance)
     - If diff != 0 → adjust user balance and update the original ledger entry
+
+    FIX2-B(b) (Codex r2 #4, NOT ADDRESSED): returns the resulting balance so
+    callers (quotes.py's REST endpoint in particular) never need a SEPARATE
+    get_user_credits() query after this returns. That extra round-trip was a
+    second failure point AFTER money had already correctly moved and the
+    work was committed — a probe showed it could 500 the client with zero
+    refund attempted (correctly, since nothing was actually wrong with the
+    charge) but also zero result delivered. Existing callers that don't use
+    the return value are unaffected (Python allows ignoring it).
     """
     diff = pre_debited - actual_cost
     if diff == 0:
-        return
+        user = await db.get(User, user_id)
+        if user is None:
+            raise RuntimeError(f"User {user_id} not found during credit reconciliation")
+        return user.credits_balance
 
     balance_result = await db.execute(
         sa.update(User)
@@ -189,7 +201,8 @@ async def reconcile_credits(
         .values(credits_balance=User.credits_balance + diff)
         .returning(User.credits_balance)
     )
-    if balance_result.scalar_one_or_none() is None:
+    new_balance = balance_result.scalar_one_or_none()
+    if new_balance is None:
         raise RuntimeError(f"User {user_id} not found during credit reconciliation")
 
     # Update the original ledger entry to reflect actual cost
@@ -207,6 +220,7 @@ async def reconcile_credits(
             f"Predebit ledger {predebit_ledger_id} not found during credit reconciliation"
         )
     await db.flush()
+    return new_balance
 
 
 async def ensure_monthly_credits(db: AsyncSession, user: User) -> None:

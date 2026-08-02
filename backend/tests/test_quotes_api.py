@@ -19,6 +19,7 @@ from httpx import ASGITransport, AsyncClient
 
 from app.api import quotes as quotes_api
 from app.core import deps as deps_module
+from app.models.tables import UsageRecord
 from app.services import credit_service, quote_search_service
 from app.services.quote_search_service import QuoteCard, QuoteSearchResult
 
@@ -177,10 +178,14 @@ async def test_quote_search_happy_path_bills_predebit_then_reconciles_single_led
 
     ledger_id = uuid.uuid4()
     debit_mock = AsyncMock(return_value=ledger_id)
-    reconcile_mock = AsyncMock(return_value=None)
+    # FIX2-B(b) (Codex r2 #4): reconcile_credits now RETURNS the resulting
+    # balance — quotes.py uses that directly instead of a separate
+    # get_user_credits() call, so this mock's return value is what
+    # remaining_credits reflects.
+    reconcile_mock = AsyncMock(return_value=485)
     monkeypatch.setattr(credit_service, "debit_credits", debit_mock)
     monkeypatch.setattr(credit_service, "reconcile_credits", reconcile_mock)
-    monkeypatch.setattr(credit_service, "get_user_credits", AsyncMock(return_value=485))
+    monkeypatch.setattr(credit_service, "get_user_credits", AsyncMock(return_value=500))
 
     result = _sample_result()
     quote_search_mock = AsyncMock(return_value=result)
@@ -229,7 +234,8 @@ async def test_quote_search_charges_actual_cost_even_when_verified_empty(
 
     ledger_id = uuid.uuid4()
     monkeypatch.setattr(credit_service, "debit_credits", AsyncMock(return_value=ledger_id))
-    reconcile_mock = AsyncMock(return_value=None)
+    # FIX2-B(b): reconcile_credits now returns the resulting balance.
+    reconcile_mock = AsyncMock(return_value=470)
     monkeypatch.setattr(credit_service, "reconcile_credits", reconcile_mock)
     monkeypatch.setattr(credit_service, "get_user_credits", AsyncMock(return_value=485))
 
@@ -266,7 +272,8 @@ async def test_quote_search_completed_event_carries_bounded_telemetry(
     _override_dependencies(db, user)
 
     monkeypatch.setattr(credit_service, "debit_credits", AsyncMock(return_value=uuid.uuid4()))
-    monkeypatch.setattr(credit_service, "reconcile_credits", AsyncMock(return_value=None))
+    # FIX2-B(b): reconcile_credits now returns the resulting balance.
+    monkeypatch.setattr(credit_service, "reconcile_credits", AsyncMock(return_value=485))
     monkeypatch.setattr(credit_service, "get_user_credits", AsyncMock(return_value=485))
 
     # More discarded entries than the telemetry cap, to prove truncation.
@@ -386,7 +393,7 @@ async def test_quote_search_cancellation_refunds_via_independent_session(
     )
 
     refund_mock = AsyncMock()
-    monkeypatch.setattr(quotes_api, "_refund_predebit_on_cancel", refund_mock)
+    monkeypatch.setattr(quotes_api, "_settle_quote_search_predebit_on_cancel", refund_mock)
 
     with pytest.raises(asyncio.CancelledError):
         await quotes_api.create_quote_search(
@@ -396,7 +403,76 @@ async def test_quote_search_cancellation_refunds_via_independent_session(
             db=db,
         )
 
-    refund_mock.assert_awaited_once_with(user.id, quotes_api.QUOTE_SEARCH_PREDEBIT_CREDITS, ledger_id)
+    refund_mock.assert_awaited_once()
+    args = refund_mock.await_args.args
+    assert args[0] == user.id
+    assert args[1] == quotes_api.QUOTE_SEARCH_PREDEBIT_CREDITS
+    assert args[2] == ledger_id
+    # FIX2-B(c) (Codex r2 #4): a 4th arg — the candidate UsageRecord id,
+    # generated before any await, so it's always known regardless of where
+    # the CancelledError struck — lets the settlement resolve the ambiguity
+    # of whether the final atomic commit actually landed.
+    assert isinstance(args[3], uuid.UUID)
+
+
+class _FakeSettleSession:
+    """Stand-in for the INDEPENDENT AsyncSessionLocal
+    _settle_quote_search_predebit_on_cancel opens — controls whether the
+    candidate UsageRecord id "landed" (simulating the real-DB outcome of an
+    ambiguous atomic commit)."""
+
+    def __init__(self, *, usage_record_found: bool):
+        self._usage_record_found = usage_record_found
+
+    async def __aenter__(self):
+        return self
+
+    async def __aexit__(self, *exc):
+        return False
+
+    async def get(self, model, obj_id):
+        if model is UsageRecord and self._usage_record_found:
+            return SimpleNamespace(id=obj_id)
+        return None
+
+
+class TestSettleQuoteSearchPredebitOnCancel:
+    """FIX2-B(c) (Codex r2 #4, NOT ADDRESSED): direct unit coverage for the
+    REST ambiguous-commit resolver — mirrors
+    chat_service._settle_verified_quote_predebit_on_cancel's own tests. A
+    CancelledError landing WHILE the final atomic commit (reconcile + usage
+    + telemetry) is in flight cannot be resolved by refunding unconditionally
+    (the prior behavior) since the commit may have already landed."""
+
+    @pytest.mark.asyncio
+    async def test_usage_record_found_means_commit_landed_no_refund(self, monkeypatch) -> None:
+        monkeypatch.setattr(quotes_api, "AsyncSessionLocal", lambda: _FakeSettleSession(usage_record_found=True))
+        refund_mock = AsyncMock()
+        monkeypatch.setattr(quotes_api, "_refund_predebit", refund_mock)
+
+        await quotes_api._settle_quote_search_predebit_on_cancel(
+            uuid.uuid4(), 15, uuid.uuid4(), uuid.uuid4(),
+        )
+
+        refund_mock.assert_not_awaited()
+
+    @pytest.mark.asyncio
+    async def test_usage_record_not_found_means_commit_never_landed_refunds(self, monkeypatch) -> None:
+        monkeypatch.setattr(quotes_api, "AsyncSessionLocal", lambda: _FakeSettleSession(usage_record_found=False))
+        refund_mock = AsyncMock()
+        monkeypatch.setattr(quotes_api, "_refund_predebit", refund_mock)
+        user_id = uuid.uuid4()
+        ledger_id = uuid.uuid4()
+
+        await quotes_api._settle_quote_search_predebit_on_cancel(
+            user_id, 15, ledger_id, uuid.uuid4(),
+        )
+
+        refund_mock.assert_awaited_once()
+        args = refund_mock.await_args.args
+        assert args[1] == user_id
+        assert args[2] == 15
+        assert args[3] == ledger_id
 
 
 @pytest.mark.asyncio
@@ -444,7 +520,10 @@ async def test_quote_search_endpoint_owns_access_control_itself(
 
     ledger_id = uuid.uuid4()
     monkeypatch.setattr(credit_service, "debit_credits", AsyncMock(return_value=ledger_id))
-    monkeypatch.setattr(credit_service, "reconcile_credits", AsyncMock())
+    # FIX2-B(b): reconcile_credits now returns the resulting balance —
+    # explicit int (not a bare AsyncMock(), whose default MagicMock return
+    # would only pass response validation by coincidence via __index__).
+    monkeypatch.setattr(credit_service, "reconcile_credits", AsyncMock(return_value=485))
     monkeypatch.setattr(credit_service, "get_user_credits", AsyncMock(return_value=485))
     monkeypatch.setattr(quote_search_service, "quote_search", AsyncMock(return_value=_sample_result()))
 
@@ -487,7 +566,8 @@ async def test_quote_search_billing_flow_is_independent_of_quote_search_internal
 
     ledger_id = uuid.uuid4()
     debit_mock = AsyncMock(return_value=ledger_id)
-    reconcile_mock = AsyncMock()
+    # FIX2-B(b): reconcile_credits now returns the resulting balance.
+    reconcile_mock = AsyncMock(return_value=485)
     monkeypatch.setattr(credit_service, "debit_credits", debit_mock)
     monkeypatch.setattr(credit_service, "reconcile_credits", reconcile_mock)
     monkeypatch.setattr(credit_service, "get_user_credits", AsyncMock(return_value=485))

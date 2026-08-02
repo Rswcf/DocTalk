@@ -1,11 +1,25 @@
-"""Real-Postgres integration tests for FIX-4 (Codex r1 IMPORTANT #4): both
-billing paths' post-debit failure windows.
+"""Real-Postgres integration tests for FIX-4 (Codex r1 IMPORTANT #4) and
+FIX2-B (Codex r2 #4, NOT ADDRESSED): both billing paths' post-debit failure
+AND ambiguous-cancellation-during-commit windows.
 
 Mocked-db unit tests (test_quotes_api.py, test_quote_intent_routing.py)
 already cover the LOGIC; these tests prove the SAME behavior against a real
 database — real predebit rows, real reconcile failures, real refund
 queries — per the reviewer's explicit request that mocks alone aren't
 sufficient evidence for billing-critical cancellation/failure paths.
+
+FIX2-B note on "cancellation during commit": genuinely interrupting an
+in-flight asyncpg COMMIT so that it lands on the server while the Python
+await still raises CancelledError is a real network race that cannot be
+reproduced deterministically in a test (it would require literally racing
+connection-level timing). What CAN and must be proven against real
+Postgres is the RESOLUTION LOGIC itself — that the settlement helpers
+correctly distinguish "the row exists" from "the row doesn't exist" when
+given real committed rows and real absent rows. The
+TestChat/RestAmbiguousCommitResolution classes below do exactly that: one
+case runs the real atomic commit to completion (proving `landed` resolves
+correctly against genuine committed state) and one case never lets it
+land (proving `not landed` resolves correctly and refunds exactly).
 
 Requires docker (Postgres) — SKIP_INTEGRATION=1 (the default) skips this
 whole file.
@@ -116,13 +130,18 @@ class TestRestReconcileFailureRefund:
 
 
 class TestChatReconcileFailureAfterPersist:
-    async def test_ordinary_reconcile_failure_after_persist_charges_predebit(
+    async def test_ordinary_reconcile_failure_never_persists_and_fully_refunds(
         self, auth_user, monkeypatch,
     ) -> None:
-        """Chat's inverse case: the answer commits BEFORE billing, so an
-        ordinary reconcile failure after that persist must NOT refund —
-        the predebit (15) stands as the final charge for a real, delivered,
-        persisted answer."""
+        """FIX2-B(a) (Codex r2 #4, NOT ADDRESSED — supersedes the old
+        "predebit stands" test): message-persist + reconcile + usage-record
+        are now ONE ATOMIC commit, so an ORDINARY reconcile failure means
+        db.commit() is NEVER REACHED — nothing lands, real Postgres included.
+        This must now fully refund via the generic setup-phase handler; the
+        OLD "predebit stands, answer already persisted" outcome required a
+        separate, already-committed message-persist step that no longer
+        exists (that separate-commit window was exactly the Codex r2 free-
+        ride finding)."""
         import app.services.chat_service as chat_service_module
         from app.models.database import AsyncSessionLocal
         from app.models.tables import ChatSession, Message
@@ -176,21 +195,195 @@ class TestChatReconcileFailureAfterPersist:
             ]
 
         assert events[-1]["event"] == "error"
-        assert events[-1]["data"]["code"] == "QUOTE_SEARCH_BILLING_INCOMPLETE"
+        assert events[-1]["data"]["code"] == "QUOTE_SEARCH_ERROR"
 
-        # The message WAS persisted (real row, real Postgres).
+        # The message was NEVER persisted — real Postgres, real transaction
+        # rollback (db.add() alone, without a landed commit, leaves no row).
         async with AsyncSessionLocal() as verify_db:
             result = await verify_db.execute(
                 select(Message).where(Message.session_id == session_id, Message.role == "assistant")
             )
             persisted = result.scalars().all()
-        assert len(persisted) == 1
+        assert persisted == []
 
-        # Predebit stands as the charge — balance dropped by exactly 15, no refund.
+        # Fully refunded — balance and ledger rows exactly restored.
         balance_after = await _current_balance(auth_user.id)
-        assert balance_after == balance_before - 15
+        assert balance_after == balance_before
+
+        ledger_ids_after = {row.id for row in await _ledger_rows_for_user(auth_user.id)}
+        assert ledger_ids_after == ledger_ids_before  # predebit row deleted, no new row remains
+
+
+class TestChatAmbiguousCommitResolution:
+    """FIX2-B(a)/(c) (Codex r2 #4, NOT ADDRESSED): chat's cancellation
+    resolver for a CancelledError landing WHILE _run_verified_quote_search's
+    single atomic commit is in flight — proven against REAL Postgres rows,
+    not mocks. See the module docstring for why "landed" and "not landed"
+    are tested as two real end-states rather than a literally-interrupted
+    commit (not deterministically reproducible)."""
+
+    async def test_landed_commit_resolves_to_no_refund_exact_ledger_state(self, auth_user) -> None:
+        """The atomic commit (message + reconcile + usage) actually ran to
+        completion for real — the resolver, given that message's REAL id,
+        must recognize it landed and must NOT refund; the ledger row must
+        remain at its RECONCILED delta, never restored to the raw predebit."""
+        import app.services.chat_service as chat_service_module
+        from app.models.database import AsyncSessionLocal
+        from app.models.tables import ChatSession, Message
+        from app.services import credit_service
+
+        await _grant_credits(auth_user.id, 500)
+        document_id = await _create_ready_document(auth_user.id)
+
+        async with AsyncSessionLocal() as db:
+            session = ChatSession(document_id=document_id, user_id=auth_user.id)
+            db.add(session)
+            await db.commit()
+            await db.refresh(session)
+            session_id = session.id
+
+        balance_before = await _current_balance(auth_user.id)
+
+        async with AsyncSessionLocal() as db:
+            ledger_id = await credit_service.debit_credits(
+                db, user_id=auth_user.id, cost=15, reason="chat", ref_type="mode", ref_id="balanced",
+            )
+            await db.commit()
+
+        # Reproduce _run_verified_quote_search's atomic block for real:
+        # message + reconcile + record_usage, ONE commit that genuinely lands.
+        message_id = uuid.uuid4()
+        async with AsyncSessionLocal() as db:
+            asst_msg = Message(
+                id=message_id, session_id=session_id, role="assistant",
+                content="the exact clause text", metadata_json={},
+            )
+            db.add(asst_msg)
+            await credit_service.reconcile_credits(db, auth_user.id, ledger_id, 15, 9)
+            await credit_service.record_usage(
+                db, user_id=auth_user.id, message_id=message_id, model="deepseek-v4-pro",
+                prompt_tokens=300, completion_tokens=80, cost_credits=9,
+            )
+            await db.commit()
+
+        # Simulate the cancellation handler running AFTER the fact — exactly
+        # as if the caller's own `await db.commit()` had raised
+        # CancelledError despite this commit having genuinely succeeded.
+        await chat_service_module._settle_verified_quote_predebit_on_cancel(
+            user_id=auth_user.id, pre_debited=15, predebit_ledger_id=ledger_id,
+            candidate_message_id=message_id,
+        )
+
+        # No refund — balance reflects the RECONCILED cost (9), not restored
+        # to pre-search, and definitely not double-refunded on top of it.
+        balance_after = await _current_balance(auth_user.id)
+        assert balance_after == balance_before - 9
 
         ledger_rows_after = await _ledger_rows_for_user(auth_user.id)
-        new_rows = [row for row in ledger_rows_after if row.id not in ledger_ids_before]
-        assert len(new_rows) == 1  # exactly one new row — the predebit, never refunded
-        assert new_rows[0].delta == -15
+        reconciled_row = next(r for r in ledger_rows_after if r.id == ledger_id)
+        assert reconciled_row.delta == -9  # untouched — still the reconciled amount
+
+    async def test_never_landed_commit_resolves_to_full_refund_exact_ledger_state(self, auth_user) -> None:
+        """candidate_message_id was generated but the atomic commit never
+        ran (simulating a CancelledError that struck before it) — the
+        resolver, finding no such Message row, must refund the full
+        predebit and leave no trace of the ledger row."""
+        import app.services.chat_service as chat_service_module
+        from app.models.database import AsyncSessionLocal
+        from app.services import credit_service
+
+        await _grant_credits(auth_user.id, 500)
+        balance_before = await _current_balance(auth_user.id)
+        ledger_ids_before = {row.id for row in await _ledger_rows_for_user(auth_user.id)}
+
+        async with AsyncSessionLocal() as db:
+            ledger_id = await credit_service.debit_credits(
+                db, user_id=auth_user.id, cost=15, reason="chat", ref_type="mode", ref_id="balanced",
+            )
+            await db.commit()
+
+        # A candidate id was generated but NOTHING was ever committed for it.
+        never_landed_message_id = uuid.uuid4()
+
+        await chat_service_module._settle_verified_quote_predebit_on_cancel(
+            user_id=auth_user.id, pre_debited=15, predebit_ledger_id=ledger_id,
+            candidate_message_id=never_landed_message_id,
+        )
+
+        balance_after = await _current_balance(auth_user.id)
+        assert balance_after == balance_before  # fully restored
+
+        ledger_ids_after = {row.id for row in await _ledger_rows_for_user(auth_user.id)}
+        assert ledger_ids_after == ledger_ids_before  # predebit row deleted, nothing new
+
+
+class TestRestAmbiguousCommitResolution:
+    """FIX2-B(b)/(c) (Codex r2 #4, NOT ADDRESSED): REST's equivalent
+    cancellation resolver — proven against REAL Postgres rows, mirroring
+    TestChatAmbiguousCommitResolution above."""
+
+    async def test_landed_commit_resolves_to_no_refund_exact_ledger_state(self, auth_user) -> None:
+        import app.api.quotes as quotes_api
+        from app.models.database import AsyncSessionLocal
+        from app.models.tables import UsageRecord
+        from app.services import credit_service
+
+        await _grant_credits(auth_user.id, 500)
+        balance_before = await _current_balance(auth_user.id)
+
+        async with AsyncSessionLocal() as db:
+            ledger_id = await credit_service.debit_credits(
+                db, user_id=auth_user.id, cost=15, reason="quote_search",
+                ref_type="document", ref_id=str(uuid.uuid4()),
+            )
+            await db.commit()
+
+        # Reproduce the endpoint's atomic block for real: reconcile + usage
+        # record, ONE commit that genuinely lands.
+        usage_record_id = uuid.uuid4()
+        async with AsyncSessionLocal() as db:
+            await credit_service.reconcile_credits(db, auth_user.id, ledger_id, 15, 11)
+            db.add(UsageRecord(
+                id=usage_record_id, user_id=auth_user.id, message_id=None, model="deepseek-v4-pro",
+                prompt_tokens=200, completion_tokens=60, total_tokens=260, cost_credits=11,
+            ))
+            await db.commit()
+
+        await quotes_api._settle_quote_search_predebit_on_cancel(
+            auth_user.id, 15, ledger_id, usage_record_id,
+        )
+
+        balance_after = await _current_balance(auth_user.id)
+        assert balance_after == balance_before - 11
+
+        ledger_rows_after = await _ledger_rows_for_user(auth_user.id)
+        reconciled_row = next(r for r in ledger_rows_after if r.id == ledger_id)
+        assert reconciled_row.delta == -11  # untouched — still the reconciled amount
+
+    async def test_never_landed_commit_resolves_to_full_refund_exact_ledger_state(self, auth_user) -> None:
+        import app.api.quotes as quotes_api
+        from app.models.database import AsyncSessionLocal
+        from app.services import credit_service
+
+        await _grant_credits(auth_user.id, 500)
+        balance_before = await _current_balance(auth_user.id)
+        ledger_ids_before = {row.id for row in await _ledger_rows_for_user(auth_user.id)}
+
+        async with AsyncSessionLocal() as db:
+            ledger_id = await credit_service.debit_credits(
+                db, user_id=auth_user.id, cost=15, reason="quote_search",
+                ref_type="document", ref_id=str(uuid.uuid4()),
+            )
+            await db.commit()
+
+        never_landed_usage_record_id = uuid.uuid4()
+
+        await quotes_api._settle_quote_search_predebit_on_cancel(
+            auth_user.id, 15, ledger_id, never_landed_usage_record_id,
+        )
+
+        balance_after = await _current_balance(auth_user.id)
+        assert balance_after == balance_before  # fully restored
+
+        ledger_ids_after = {row.id for row in await _ledger_rows_for_user(auth_user.id)}
+        assert ledger_ids_after == ledger_ids_before  # predebit row deleted, nothing new

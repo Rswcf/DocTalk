@@ -413,17 +413,21 @@ class TestAuthedRoutingEmitsArtifact:
         settle_mock.assert_not_awaited()
 
     @pytest.mark.asyncio
-    async def test_cancellation_between_persist_and_reconcile_settles_as_delivered(
+    async def test_chat_stream_cancellation_during_atomic_commit_calls_new_settlement_with_candidate_id(
         self, monkeypatch: pytest.MonkeyPatch,
     ) -> None:
-        """SHOULD-FIX-2 (review round 1): a CancelledError landing AFTER the
-        message-persist commit but BEFORE the final credits commit must
-        settle as has_answer=True (reconcile to the real token cost), never
-        a full refund — the quote-search answer was already durably
-        persisted and delivered, so refunding the WHOLE predebit on top of
-        that would be a free ride at DocTalk's expense. Simulated by making
-        reconcile_credits itself raise CancelledError — exactly the point
-        between the two commits inside _run_verified_quote_search."""
+        """FIX2-B(a)/(c) (Codex r2 #4, NOT ADDRESSED): message-persist +
+        reconcile + usage-record are now ONE atomic commit — a CancelledError
+        landing WHILE that commit's own await is in flight (simulated here
+        by making db.commit() itself raise) is the genuinely ambiguous
+        window the fix targets. Wiring test: chat_stream's CancelledError
+        handler must call the NEW _settle_verified_quote_predebit_on_cancel
+        (which resolves the ambiguity by checking the DB directly) with a
+        non-None candidate_message_id — NOT the generic
+        _settle_predebit_on_cancel, which would blindly re-reconcile.
+        _settle_verified_quote_predebit_on_cancel's own DB-resolution logic
+        is unit-tested directly in TestSettleVerifiedQuotePredebitOnCancel
+        below."""
         session_id = uuid.uuid4()
         document_id = uuid.uuid4()
         user_id = uuid.uuid4()
@@ -434,11 +438,23 @@ class TestAuthedRoutingEmitsArtifact:
         monkeypatch.setattr(chat_service_module.action_planner, "plan", AsyncMock(return_value=_quote_action_plan()))
         monkeypatch.setattr(chat_service_module.credit_service, "get_estimated_cost", lambda _mode: 15)
         monkeypatch.setattr(chat_service_module.credit_service, "debit_credits", AsyncMock(return_value=ledger_id))
-        reconcile_mock = AsyncMock(side_effect=asyncio.CancelledError())
-        monkeypatch.setattr(chat_service_module.credit_service, "reconcile_credits", reconcile_mock)
+        monkeypatch.setattr(chat_service_module.credit_service, "reconcile_credits", AsyncMock(return_value=9))
         monkeypatch.setattr(chat_service_module.credit_service, "record_usage", AsyncMock())
         monkeypatch.setattr(chat_service_module.credit_service, "calculate_cost", lambda *_a, **_k: 6)
         monkeypatch.setattr(chat_service_module, "_get_llm_client", _never_called)
+        # db.commit() is called 3 times in setup BEFORE the strict route
+        # even starts (user-message/title persist, then predebit) and once
+        # more for _run_verified_quote_search's own atomic commit — only
+        # THAT 4th call is the ambiguous window this fix targets, so the
+        # earlier 3 succeed normally and only the 4th raises.
+        commit_calls = {"n": 0}
+
+        async def _commit_side_effect():
+            commit_calls["n"] += 1
+            if commit_calls["n"] >= 4:
+                raise asyncio.CancelledError()
+
+        db.commit = AsyncMock(side_effect=_commit_side_effect)
 
         card = QuoteCard(
             display_text="the exact clause text", page=3, page_end=3, bboxes=[],
@@ -451,7 +467,9 @@ class TestAuthedRoutingEmitsArtifact:
         monkeypatch.setattr(chat_service_module.quote_search_service, "quote_search", AsyncMock(return_value=result))
 
         settle_mock = AsyncMock()
-        monkeypatch.setattr(chat_service_module, "_settle_predebit_on_cancel", settle_mock)
+        monkeypatch.setattr(chat_service_module, "_settle_verified_quote_predebit_on_cancel", settle_mock)
+        old_generic_settle_mock = AsyncMock()
+        monkeypatch.setattr(chat_service_module, "_settle_predebit_on_cancel", old_generic_settle_mock)
 
         agen = chat_service_module.chat_service.chat_stream(
             session_id=session_id,
@@ -463,25 +481,29 @@ class TestAuthedRoutingEmitsArtifact:
         with pytest.raises(asyncio.CancelledError):
             await agen.__anext__()
 
-        # The message WAS added to the session before the cancellation struck.
-        persisted_messages = [m for m in db.added if isinstance(m, Message) and m.role == "assistant"]
-        assert len(persisted_messages) == 1
-
         settle_mock.assert_awaited_once()
-        assert settle_mock.await_args.kwargs["has_answer"] is True
-        assert settle_mock.await_args.kwargs["prompt_tokens"] == 300
-        assert settle_mock.await_args.kwargs["output_tokens"] == 80
-        assert settle_mock.await_args.kwargs["model"] == "deepseek-v4-pro"
+        assert settle_mock.await_args.kwargs["user_id"] == user_id
+        assert settle_mock.await_args.kwargs["pre_debited"] == 15
+        assert settle_mock.await_args.kwargs["predebit_ledger_id"] == ledger_id
+        # candidate_message_id was recorded BEFORE the commit was attempted —
+        # always known regardless of whether the commit itself landed.
+        assert settle_mock.await_args.kwargs["candidate_message_id"] is not None
+        # NOT the generic helper — that would blindly re-reconcile a
+        # transaction that may (or may not) have already landed.
+        old_generic_settle_mock.assert_not_awaited()
 
     @pytest.mark.asyncio
-    async def test_ordinary_reconcile_failure_after_persist_charges_predebit_not_full_refund(
+    async def test_ordinary_reconcile_failure_never_persists_and_fully_refunds(
         self, monkeypatch: pytest.MonkeyPatch,
     ) -> None:
-        """FIX-4 (Codex r1 IMPORTANT #4): an ORDINARY (non-cancellation)
-        reconcile_credits failure AFTER the message-persist commit must NOT
-        reach the generic setup-phase full-refund — the answer is already
-        durably persisted and delivered ("predebit stands as the charge",
-        per the triage ruling). _refund_predebit must never be called."""
+        """FIX2-B(a) (Codex r2 #4, NOT ADDRESSED): message-persist + reconcile
+        + usage-record are now ONE ATOMIC commit — an ORDINARY
+        (non-cancellation) reconcile_credits failure means db.commit() is
+        NEVER REACHED, so nothing landed. This must now reach the generic
+        setup-phase handler and issue a FULL REFUND — the OLD "predebit
+        stands, the answer was already persisted" outcome required a
+        separate, already-committed message-persist step that no longer
+        exists (that was precisely the free-ride window Codex r2 found)."""
         session_id = uuid.uuid4()
         document_id = uuid.uuid4()
         user_id = uuid.uuid4()
@@ -497,7 +519,8 @@ class TestAuthedRoutingEmitsArtifact:
             chat_service_module.credit_service, "reconcile_credits",
             AsyncMock(side_effect=RuntimeError("db blip")),
         )
-        monkeypatch.setattr(chat_service_module.credit_service, "record_usage", AsyncMock())
+        record_usage_mock = AsyncMock()
+        monkeypatch.setattr(chat_service_module.credit_service, "record_usage", record_usage_mock)
         monkeypatch.setattr(chat_service_module.credit_service, "calculate_cost", lambda *_a, **_k: 6)
         monkeypatch.setattr(chat_service_module, "_get_llm_client", _never_called)
         refund_mock = AsyncMock()
@@ -525,12 +548,98 @@ class TestAuthedRoutingEmitsArtifact:
         ]
 
         assert events[-1]["event"] == "error"
-        assert events[-1]["data"]["code"] == "QUOTE_SEARCH_BILLING_INCOMPLETE"
-        # The message WAS persisted before reconcile failed.
-        persisted_messages = [m for m in db.added if isinstance(m, Message) and m.role == "assistant"]
-        assert len(persisted_messages) == 1
-        # Predebit stands as the charge — never refunded for a delivered answer.
+        assert events[-1]["data"]["code"] == "QUOTE_SEARCH_ERROR"
+        # reconcile_credits raised BEFORE record_usage or the atomic commit
+        # were ever reached — proves the atomic block never landed (the
+        # message add() before it was therefore never actually persisted).
+        record_usage_mock.assert_not_awaited()
+        # Full refund via the generic setup-phase handler.
+        refund_mock.assert_awaited_once()
+        assert refund_mock.await_args.args[1] == user_id
+        assert refund_mock.await_args.args[3] == ledger_id
+
+
+class _FakeSettleSession:
+    """Stand-in for the INDEPENDENT AsyncSessionLocal
+    _settle_verified_quote_predebit_on_cancel opens — controls whether the
+    candidate message id "landed" (simulating the real-DB outcome of an
+    ambiguous atomic commit)."""
+
+    def __init__(self, *, message_found: bool):
+        self._message_found = message_found
+
+    async def __aenter__(self):
+        return self
+
+    async def __aexit__(self, *exc):
+        return False
+
+    async def get(self, model, obj_id):
+        if model is Message and self._message_found:
+            return SimpleNamespace(id=obj_id)
+        return None
+
+
+class TestSettleVerifiedQuotePredebitOnCancel:
+    """FIX2-B(c) (Codex r2 #4, NOT ADDRESSED): direct unit coverage for the
+    ambiguous-commit resolver. A CancelledError landing WHILE
+    _run_verified_quote_search's single atomic commit is in flight cannot
+    be resolved by trusting progress.message_id alone — that IS the
+    ambiguity (the commit may have landed on the DB even though our await
+    never returned). This function resolves it by querying, via an
+    independent session, whether the candidate message id (known BEFORE the
+    commit was even attempted) now exists as a real row."""
+
+    @pytest.mark.asyncio
+    async def test_candidate_message_found_means_commit_landed_no_refund(self, monkeypatch):
+        monkeypatch.setattr(
+            chat_service_module, "AsyncSessionLocal", lambda: _FakeSettleSession(message_found=True),
+        )
+        refund_mock = AsyncMock()
+        monkeypatch.setattr(chat_service_module, "_refund_predebit", refund_mock)
+
+        await chat_service_module._settle_verified_quote_predebit_on_cancel(
+            user_id=uuid.uuid4(), pre_debited=15, predebit_ledger_id=uuid.uuid4(),
+            candidate_message_id=uuid.uuid4(),
+        )
+
         refund_mock.assert_not_awaited()
+
+    @pytest.mark.asyncio
+    async def test_candidate_message_not_found_means_commit_never_landed_refunds(self, monkeypatch):
+        monkeypatch.setattr(
+            chat_service_module, "AsyncSessionLocal", lambda: _FakeSettleSession(message_found=False),
+        )
+        refund_mock = AsyncMock()
+        monkeypatch.setattr(chat_service_module, "_refund_predebit", refund_mock)
+        user_id = uuid.uuid4()
+        ledger_id = uuid.uuid4()
+
+        await chat_service_module._settle_verified_quote_predebit_on_cancel(
+            user_id=user_id, pre_debited=15, predebit_ledger_id=ledger_id,
+            candidate_message_id=uuid.uuid4(),
+        )
+
+        refund_mock.assert_awaited_once()
+        assert refund_mock.await_args.args[1] == user_id
+        assert refund_mock.await_args.args[3] == ledger_id
+
+    @pytest.mark.asyncio
+    async def test_no_candidate_message_id_at_all_refunds(self, monkeypatch):
+        """CancelledError struck before even the candidate id was generated
+        (e.g. inside quote_search() itself) — nothing to check, must refund."""
+        monkeypatch.setattr(
+            chat_service_module, "AsyncSessionLocal", lambda: _FakeSettleSession(message_found=True),
+        )
+        refund_mock = AsyncMock()
+        monkeypatch.setattr(chat_service_module, "_refund_predebit", refund_mock)
+
+        await chat_service_module._settle_verified_quote_predebit_on_cancel(
+            user_id=uuid.uuid4(), pre_debited=15, predebit_ledger_id=uuid.uuid4(),
+            candidate_message_id=None,
+        )
+
+        refund_mock.assert_awaited_once()
 
 
 class TestUngatedContextsFallThroughToNormalChat:
