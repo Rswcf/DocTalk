@@ -96,9 +96,41 @@ _STRICT_QUOTE_WITH_PAGE_RE = re.compile(
     re.IGNORECASE,
 )
 
+# FIX-5 (Codex r1 IMPORTANT #5): the matcher above detects VOCABULARY, not
+# AFFIRMATIVE INTENT \u2014 "Don't quote this verbatim", "Translate the phrase
+# exact quotation", "\u00bfQu\u00e9 significa ... textualmente?" all contain a strict
+# trigger word but are not requests to retrieve a verbatim quote. A negation
+# (don't/do not/should not/never/\u4e0d\u8981/\u65e0\u9700/\u522b/bare Spanish "no") or
+# metalinguistic use (talking ABOUT the phrase \u2014 translate/mean/\u4ec0\u4e48\u610f\u601d/qu\u00e9
+# significa) found WITHIN a bounded window of the trigger match suppresses
+# routing. The window (not a whole-message scan) limits false suppression of
+# a genuine request that happens to contain an unrelated "never"/"no"
+# elsewhere in a longer message.
+_NEGATION_METALINGUISTIC_RE = re.compile(
+    r"\b(don'?t|do\s+not|does\s?n'?t|should\s?n'?t|should\s+not|never|without)\b"
+    r"|\btranslat\w*\b"
+    r"|\bmean(?:s|ing)?\b"  # NOT a bare "what does" \u2014 "what does it SAY" is a genuine request
+    r"|\u4e0d\u8981|\u65e0\u9700|\u522b|\u4e0d\u7528|\u4e0d\u9700\u8981"
+    r"|\u7ffb\u8bd1|\u662f\u4ec0\u4e48\u610f\u601d|\u4ec0\u4e48\u610f\u601d"
+    r"|qu[\u00e9e]\s+significa|significad\w*"
+    r"|\bno\b",
+    re.IGNORECASE,
+)
+_GUARD_WINDOW = 45
+
+
+def _is_negated_or_metalinguistic(text: str, match: "re.Match[str]") -> bool:
+    window_start = max(0, match.start() - _GUARD_WINDOW)
+    window_end = min(len(text), match.end() + _GUARD_WINDOW)
+    return bool(_NEGATION_METALINGUISTIC_RE.search(text[window_start:window_end]))
+
 
 def _has_strict_quote_intent(text: str) -> bool:
-    return bool(_STRICT_QUOTE_RE.search(text)) or bool(_STRICT_QUOTE_WITH_PAGE_RE.search(text))
+    for pattern in (_STRICT_QUOTE_RE, _STRICT_QUOTE_WITH_PAGE_RE):
+        for match in pattern.finditer(text):
+            if not _is_negated_or_metalinguistic(text, match):
+                return True
+    return False
 
 
 def _status(query: str, english: str, chinese: str) -> str:

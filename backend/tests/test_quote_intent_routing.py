@@ -89,6 +89,43 @@ class TestStrictQuoteMatcherNegatives:
         assert plan.action != ChatAction.VERIFIED_QUOTE_SEARCH
 
 
+class TestStrictQuoteMatcherNegationAndMetalinguisticGuards:
+    """FIX-5 (Codex r1 IMPORTANT #5): the matcher detected vocabulary, not
+    affirmative intent — these five Codex r1 probes all incorrectly routed
+    to the billed Quote Finder before this fix. A negation ("don't", "should
+    not", "不要") or metalinguistic use ("translate the phrase X", "what does
+    X mean", "qué significa") near the trigger word must suppress routing."""
+
+    @pytest.mark.parametrize(
+        "message",
+        [
+            "Don't quote this verbatim—explain it.",
+            "The answer should not be a direct quote; summarize it.",
+            "Translate the phrase exact quotation into Spanish.",
+            "¿Qué significa la palabra textualmente?",
+            "不要原文引用，请总结。",
+        ],
+    )
+    def test_codex_r1_probes_do_not_route_to_quote_search(self, message: str) -> None:
+        plan = deterministic_plan(message)
+        assert plan.action != ChatAction.VERIFIED_QUOTE_SEARCH
+
+    @pytest.mark.parametrize(
+        "message",
+        [
+            "Give me a direct quote about the termination clause.",
+            "Quote the clause verbatim.",
+            "逐字引用一下关于责任的条款",
+            "Necesito una cita textual sobre el riesgo climático.",
+        ],
+    )
+    def test_affirmative_forms_still_route(self, message: str) -> None:
+        """The guards must not be so broad they suppress genuine requests —
+        none of these contain a negation or metalinguistic marker."""
+        plan = deterministic_plan(message)
+        assert plan.action == ChatAction.VERIFIED_QUOTE_SEARCH
+
+
 def test_verified_quote_search_uses_rag_answer_path() -> None:
     """Must fall through the setup/predebit code path in chat_stream (shared
     with ANSWER_WITH_RAG/CITATION_LOOKUP), not the tool-action early return —
