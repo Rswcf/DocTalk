@@ -71,7 +71,19 @@ def test_planner_compare_requires_document_slots() -> None:
 
 
 def test_planner_citation_lookup_stays_rag_path() -> None:
-    plan = deterministic_plan("这句话在哪页，有没有原文引用？")
+    plan = deterministic_plan("这句话在哪页？")
 
     assert plan.action == ChatAction.CITATION_LOOKUP
+    assert plan.uses_rag_answer_path
+
+
+def test_planner_strict_original_text_quote_routes_to_verified_quote_search() -> None:
+    """B5 (plan §8.4.3): "原文引用" is one of the REQUIRED strict ZH triggers
+    for the verified quote-search pipeline, so a message combining a page
+    lookup with an original-text-citation request now reclassifies from the
+    old bare CITATION_LOOKUP into VERIFIED_QUOTE_SEARCH — both sit in
+    uses_rag_answer_path, so this is a routing refinement, not a path change."""
+    plan = deterministic_plan("这句话在哪页，有没有原文引用？")
+
+    assert plan.action == ChatAction.VERIFIED_QUOTE_SEARCH
     assert plan.uses_rag_answer_path

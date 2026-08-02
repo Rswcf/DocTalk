@@ -25,6 +25,7 @@ class ChatAction(str, Enum):
     RUN_QUESTION_TEMPLATE = "run_question_template"
     COMPARE_DOCUMENTS = "compare_documents"
     CITATION_LOOKUP = "citation_lookup"
+    VERIFIED_QUOTE_SEARCH = "verified_quote_search"
     CLARIFY = "clarify"
 
 
@@ -47,6 +48,7 @@ class ActionPlan:
             ChatAction.ANSWER_WITH_RAG,
             ChatAction.SUMMARIZE_DOCUMENT,
             ChatAction.CITATION_LOOKUP,
+            ChatAction.VERIFIED_QUOTE_SEARCH,
         }
 
 
@@ -67,6 +69,36 @@ _COMPARE_RE = re.compile(r"\b(compare|contrast|diff|difference|version|old versi
 _TEMPLATE_RE = re.compile(r"\b(template|checklist|question list|run the same questions)\b|模板|清单|检查清单|同样的问题", re.IGNORECASE)
 _CITATION_RE = re.compile(r"\b(where|which page|citation|source|quote|verbatim)\b|在哪页|引用|出处|来源|原文|定位", re.IGNORECASE)
 _CJK_RE = re.compile(r"[\u3400-\u9fff]")
+
+# Strict verbatim-quote intent (plan \u00a78.4.3) \u2014 DELIBERATELY SEPARATE from
+# _CITATION_RE above. _CITATION_RE is broad ("where/source/quote/verbatim")
+# and routes to the ordinary RAG answer path (CITATION_LOOKUP already sits in
+# uses_rag_answer_path); it must keep matching ordinary citation-quality
+# questions ("where is this discussed?", "what page is this on?") unchanged.
+# This matcher is narrow on purpose: only unambiguous direct-quote requests
+# ("direct quote", "verbatim", "exact quotation", "word for word", "quote ...
+# with page") should route to the verified quote-search pipeline. Bare
+# "quote"/"citation"/"source" must NOT match here \u2014 those stay on the normal
+# RAG path per the strict-intent-only routing decision (plan \u00a78.4 point 3).
+_STRICT_QUOTE_RE = re.compile(
+    r"\bdirect\s+quotes?\b"
+    r"|\bexact\s+quotations?\b"
+    r"|\bverbatim\b"
+    r"|\bword[\s-]for[\s-]word\b"
+    r"|\u9010\u5b57\u5f15\u7528|\u539f\u6587\u5f15\u7528|\u4e00\u5b57\u4e0d\u5dee"
+    r"|cita\s+textual|copia\s+tal\s+cual|textualmente",
+    re.IGNORECASE,
+)
+# "quote ... with page" / "page ... quote" \u2014 a bounded window so it doesn't
+# also fire on unrelated quote-mention-somewhere-near-a-page-mention text.
+_STRICT_QUOTE_WITH_PAGE_RE = re.compile(
+    r"\bquote\b[^.?!\n]{0,60}\bpage\b|\bpage\b[^.?!\n]{0,60}\bquote\b",
+    re.IGNORECASE,
+)
+
+
+def _has_strict_quote_intent(text: str) -> bool:
+    return bool(_STRICT_QUOTE_RE.search(text)) or bool(_STRICT_QUOTE_WITH_PAGE_RE.search(text))
 
 
 def _status(query: str, english: str, chinese: str) -> str:
@@ -103,6 +135,18 @@ def deterministic_plan(message: str, *, is_collection: bool = False) -> ActionPl
     wants_deliverable = bool(
         re.search(r"\b(all|extract|list|find all|make|create|generate|table)\b|所有|全部|提取|列出|找出|整理|生成|做成", text, re.IGNORECASE)
     )
+
+    # Strict verbatim-quote intent (§8.4.3) — checked first: narrow and
+    # unambiguous, so it takes priority over the broader table/compare/
+    # template markers below rather than risking being shadowed by them.
+    if _has_strict_quote_intent(text):
+        return ActionPlan(
+            action=ChatAction.VERIFIED_QUOTE_SEARCH,
+            confidence=0.88,
+            requires_confirmation=False,
+            user_visible_status="",
+            reason="strict verbatim-quote markers",
+        )
 
     if has_compare:
         return ActionPlan(

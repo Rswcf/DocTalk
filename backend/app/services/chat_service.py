@@ -28,8 +28,8 @@ from app.models.tables import (
     User,
     collection_documents,
 )
-from app.services import credit_service
-from app.services.action_planner import action_planner
+from app.services import credit_service, quote_search_service
+from app.services.action_planner import ChatAction, action_planner
 from app.services.chat_tool_executor import chat_tool_executor
 from app.services.citation_focus_service import current_claim, focus_sentence
 from app.services.citation_quote_service import apply_focus_quotes, extract_focus_quotes
@@ -110,6 +110,46 @@ _LOCALE_LANGUAGE_LABELS = {
 
 def _normalize_locale(locale: Optional[str]) -> str:
     return (locale or "").strip().lower().replace("_", "-").split("-")[0]
+
+
+# Strict verbatim-quote chat routing (B5, plan §8.4.3): the assistant "answer"
+# for this action IS the intro/empty line — the quote cards themselves render
+# from the artifact, not the streamed text. All 11 product locales per
+# CLAUDE.md; kept intentionally simple (no plural-form grammar) since these
+# are short status lines, matching the codebase's existing bilingual _status()/
+# _copy() precedent extended to the full locale set.
+_QUOTE_SEARCH_FOUND_COPY: Dict[str, str] = {
+    "en": "Found {n} verified quote(s) from the document:",
+    "zh": "已在文档中找到 {n} 条经核实的原文引用：",
+    "ja": "文書内で検証済みの引用を {n} 件見つけました：",
+    "ko": "문서에서 검증된 인용문 {n}개를 찾았습니다:",
+    "es": "Se encontraron {n} cita(s) verificada(s) en el documento:",
+    "de": "{n} verifizierte(s) Zitat(e) im Dokument gefunden:",
+    "fr": "{n} citation(s) vérifiée(s) trouvée(s) dans le document :",
+    "pt": "Encontrada(s) {n} citação(ões) verificada(s) no documento:",
+    "it": "Trovate {n} citazione/i verificata/e nel documento:",
+    "ar": "تم العثور على {n} اقتباس (اقتباسات) موثّق في المستند:",
+    "hi": "दस्तावेज़ में {n} सत्यापित उद्धरण मिले:",
+}
+_QUOTE_SEARCH_EMPTY_COPY: Dict[str, str] = {
+    "en": "No verified quotes found for this request (scanned {n} passages). Try a more specific topic.",
+    "zh": "未找到与该请求匹配的经核实原文引用（已扫描 {n} 段）。请尝试更具体的主题。",
+    "ja": "このリクエストに一致する検証済み引用は見つかりませんでした（{n} 件の文章をスキャン）。より具体的なトピックをお試しください。",
+    "ko": "이 요청과 일치하는 검증된 인용문을 찾지 못했습니다({n}개 구절 검색). 더 구체적인 주제를 시도해 보세요.",
+    "es": "No se encontraron citas verificadas para esta solicitud (se analizaron {n} pasajes). Prueba con un tema más específico.",
+    "de": "Für diese Anfrage wurden keine verifizierten Zitate gefunden ({n} Textstellen durchsucht). Versuche ein spezifischeres Thema.",
+    "fr": "Aucune citation vérifiée trouvée pour cette demande ({n} passages analysés). Essayez un sujet plus précis.",
+    "pt": "Nenhuma citação verificada encontrada para esta solicitação ({n} trechos analisados). Tente um tema mais específico.",
+    "it": "Nessuna citazione verificata trovata per questa richiesta ({n} passaggi analizzati). Prova un argomento più specifico.",
+    "ar": "لم يتم العثور على اقتباسات موثّقة لهذا الطلب (تم فحص {n} مقطعًا). جرّب موضوعًا أكثر تحديدًا.",
+    "hi": "इस अनुरोध के लिए कोई सत्यापित उद्धरण नहीं मिला ({n} अंश स्कैन किए गए)। कृपया अधिक विशिष्ट विषय आज़माएँ।",
+}
+
+
+def _quote_search_copy(copy_map: Dict[str, str], locale: Optional[str], **fmt: Any) -> str:
+    key = _normalize_locale(locale)
+    template = copy_map.get(key) or copy_map["en"]
+    return template.format(**fmt)
 
 
 def _continuation_language_label(locale: Optional[str], existing_response: Optional[str]) -> Optional[str]:
@@ -930,6 +970,17 @@ class _CitationRepairResult:
     applied: bool = False
 
 
+@dataclass
+class _VerifiedQuoteOutcome:
+    """Result of _run_verified_quote_search (B5) — everything already
+    persisted/reconciled; the caller only needs to translate this into SSE
+    events."""
+    message_id: uuid.UUID
+    assistant_text: str
+    citations: List[dict]
+    artifact_payload: Optional[dict]
+
+
 def _chunk_info_from_persisted_citation(
     chunk: Chunk,
     citation: dict,
@@ -1183,6 +1234,137 @@ class ChatService:
             await db.rollback()
             yield _safe_sse("error", "CHAT_SETUP_ERROR", exc, session_id=str(session_id))
 
+    async def _run_verified_quote_search(
+        self,
+        *,
+        session_id: uuid.UUID,
+        db: AsyncSession,
+        document: Document,
+        user: User,
+        topic: str,
+        locale: Optional[str],
+        pre_debited: int,
+        predebit_ledger_id: uuid.UUID,
+    ) -> "_VerifiedQuoteOutcome":
+        """Strict verbatim-quote chat routing (B5, plan §8.4.3).
+
+        Runs B3's verified quote_search in place of the normal LLM answer,
+        persists the assistant message, and reconciles + records usage — ALL
+        of it awaited here, nothing yielded. The caller (chat_stream) must
+        set `settled = True` immediately after this returns and BEFORE
+        yielding any SSE events, mirroring the main RAG path's exact
+        cancellation-safety pattern: once reconcile_credits has committed,
+        a later CancelledError must not ALSO trigger the setup handler's
+        full refund (which would double the user's money back on top of an
+        already-correct reconcile). Billing is the CALLER's chat predebit
+        (pre_debited/predebit_ledger_id come from the SAME debit_credits()
+        call every RAG-path message already goes through) — there is no
+        separate quote-search debit, so this can never double-bill. Any
+        exception raised HERE (before this function returns) propagates to
+        chat_stream's existing setup exception handler, which refunds the
+        predebit and yields the error event — no separate refund logic
+        needed for that case.
+        """
+        result = await quote_search_service.quote_search(
+            db, document=document, user=user, topic=topic, locale=locale or "",
+        )
+
+        citations: List[dict] = []
+        artifact_payload: Optional[dict] = None
+        if result.cards:
+            for idx, card in enumerate(result.cards, start=1):
+                citations.append({
+                    "ref_index": idx,
+                    "chunk_id": card.chunk_id,
+                    "page": card.page,
+                    "page_end": card.page_end,
+                    "bboxes": card.bboxes,
+                    "text_snippet": card.display_text[:100],
+                    "offset": 0,
+                    "focus_snippet": card.display_text,
+                    "confidence_score": round(card.score / 100.0, 3),
+                    "context_text": card.display_text[:900],
+                    "document_id": str(document.id),
+                    "source_kind": card.source_kind,
+                })
+            assistant_text = _quote_search_copy(_QUOTE_SEARCH_FOUND_COPY, locale, n=len(result.cards))
+            artifact_payload = {
+                "artifact_type": "quote_search",
+                "status": "completed",
+                "job_id": None,
+                "title": "Verified Quotes",
+                "summary": assistant_text,
+                "preview": {
+                    "cards": [
+                        {
+                            "ref_index": idx,
+                            "display_text": card.display_text,
+                            "page": card.page,
+                            "page_end": card.page_end,
+                            "tier": card.tier,
+                            "source_kind": card.source_kind,
+                            "score": card.score,
+                        }
+                        for idx, card in enumerate(result.cards, start=1)
+                    ],
+                    "proposed": result.proposed,
+                    "verified": result.verified,
+                    "scanned_chunks": result.scanned_chunks,
+                },
+                "download_urls": [],
+                "citations": citations,
+            }
+        else:
+            # Verified-empty: the honest message, never an unverified fallback answer.
+            assistant_text = _quote_search_copy(_QUOTE_SEARCH_EMPTY_COPY, locale, n=result.scanned_chunks)
+
+        asst_msg = Message(
+            session_id=session_id,
+            role="assistant",
+            content=assistant_text,
+            citations=citations or None,
+            metadata_json={
+                "action_plan": {
+                    "action": ChatAction.VERIFIED_QUOTE_SEARCH.value,
+                    "confidence": 1.0,
+                    "reason": "strict verbatim-quote markers",
+                },
+                "artifacts": [artifact_payload] if artifact_payload else [],
+            },
+        )
+        db.add(asst_msg)
+        await db.commit()
+
+        # Reconcile the CALLER's chat predebit to the quote call's actual
+        # tokens (same ledger row — no separate quote-search debit) and
+        # record usage against the message just persisted (summary_usage /
+        # record_usage(message_id=...) precedent, chat_service.py's own
+        # main-flow reconcile block).
+        prompt_tokens, completion_tokens = result.usage
+        actual_cost = credit_service.calculate_cost(
+            prompt_tokens, completion_tokens, result.model, mode="balanced",
+        )
+        await credit_service.reconcile_credits(
+            db, user.id, predebit_ledger_id, pre_debited, actual_cost,
+        )
+        await credit_service.record_usage(
+            db,
+            user_id=user.id,
+            message_id=asst_msg.id,
+            model=result.model,
+            prompt_tokens=prompt_tokens,
+            completion_tokens=completion_tokens,
+            cost_credits=actual_cost,
+        )
+        await db.commit()
+
+        return _VerifiedQuoteOutcome(
+            message_id=asst_msg.id,
+            assistant_text=assistant_text,
+            citations=citations,
+            artifact_payload=artifact_payload,
+        )
+
     async def chat_stream(
         self,
         session_id: uuid.UUID,
@@ -1329,6 +1511,54 @@ class ChatService:
                 session_id=session_id,
                 user_message=user_message,
             )
+
+            # Strict verbatim-quote chat routing (B5, plan §8.4.3). Gated
+            # here (not in the planner, which has no auth/doc context):
+            # AUTHED, non-demo, single-document sessions only. Anonymous,
+            # demo, and collection sessions fall through to the normal RAG
+            # path below UNCHANGED — the strict intent still matched, but
+            # without a real document + billing user the verified pipeline
+            # can't run, so this degrades to an ordinary cited answer rather
+            # than erroring.
+            if (
+                getattr(action_plan, "action", None) == ChatAction.VERIFIED_QUOTE_SEARCH
+                and user is not None
+                and document_id is not None
+                and not is_collection_session
+                and doc is not None
+                and not doc.demo_slug
+            ):
+                setup_error_code = "QUOTE_SEARCH_ERROR"
+                outcome = await self._run_verified_quote_search(
+                    session_id=session_id,
+                    db=db,
+                    document=doc,
+                    user=user,
+                    topic=user_message,
+                    locale=locale,
+                    pre_debited=pre_debited,
+                    predebit_ledger_id=predebit_ledger_id,
+                )
+                # Reconcile already committed inside _run_verified_quote_search —
+                # mark settled BEFORE yielding so a cancellation during these
+                # yields can't ALSO trigger the setup handler's full refund
+                # (double-refund guard, same pattern as the main RAG path).
+                settled = True
+                if outcome.artifact_payload:
+                    yield sse("artifact", outcome.artifact_payload)
+                yield sse("token", {"text": outcome.assistant_text})
+                yield sse(
+                    "done",
+                    {
+                        "message_id": str(outcome.message_id),
+                        "citations_count": len(outcome.citations),
+                        "verification": None,
+                        "can_continue": False,
+                        "continuation_count": 0,
+                        "artifact_count": 1 if outcome.artifact_payload else 0,
+                    },
+                )
+                return
 
             # 3) Load history (last N*2 messages before current user msg)
             max_turns = int(settings.MAX_CHAT_HISTORY_TURNS or 6)
