@@ -595,3 +595,70 @@ async def quote_search(
         candidate_pages=_candidate_pages_count(candidates),
         no_result=len(cards) == 0,
     )
+
+
+# -------------------------- M3-B2: save-time re-verification --------------------------
+
+async def verify_saved_quote(
+    db: AsyncSession,
+    *,
+    document: Document,
+    chunk_id: uuid.UUID,
+    quote_text: str,
+    page_hint: Optional[int] = None,
+) -> Optional[QuoteCard]:
+    """M3-B2 (plan §8.1's fabrication-safety corollary): saving a quote must
+    NOT trust client-supplied tier/score/page/bboxes — a raw HTTP client
+    could otherwise persist arbitrary self-typed text as a "verified: exact"
+    card attributed to a real document, undermining the "no unverified text
+    reaches a rendered card" guarantee this system enforces everywhere else
+    (M1's verify_quote gate, M2's per-segment attribution). The save
+    endpoint therefore supplies ONLY what identifies WHAT to save (chunk_id,
+    quote_text); every trust field below is re-derived here through the
+    SAME verify_quote gate quote_search() uses, never taken from the caller.
+
+    `page_hint` disambiguates the rare case where the SAME exact wording
+    verifies on more than one page within a page_text chunk's range (a
+    repeated boilerplate clause — see _verify_against_segments's
+    docstring) — it only picks WHICH already-independently-verified
+    occurrence to persist, never fabricates one; an absent or non-matching
+    hint just falls back to the first verified occurrence.
+
+    Returns None when quote_text cannot be independently re-verified
+    against the chunk (chunk missing/reparsed since the original search,
+    belongs to a different document, or genuinely not a verbatim/
+    normalized/aligned match) — callers must reject the save.
+    """
+    chunk = await db.get(Chunk, chunk_id)
+    if chunk is None or chunk.document_id != document.id:
+        return None
+
+    neighbors = await _neighbor_chunks(db, chunk)
+    source = await build_quote_source(db, document.id, chunk, neighbors)
+    matches, _best_failure = _verify_against_segments(quote_text, source, document)
+
+    attributed = [
+        (verification, *_attribute_match(chunk, segment))
+        for verification, segment in matches
+        if not _is_ambiguous_multipage_extracted_segment(segment)
+    ]
+    if not attributed:
+        return None
+
+    verification, page, page_end, bboxes, attributed_chunk_id = attributed[0]
+    if page_hint is not None:
+        for candidate in attributed:
+            if candidate[1] == page_hint:
+                verification, page, page_end, bboxes, attributed_chunk_id = candidate
+                break
+
+    return QuoteCard(
+        display_text=verification.display_text or "",
+        page=page,
+        page_end=page_end,
+        bboxes=bboxes,
+        tier=verification.status,
+        source_kind=source.kind,
+        chunk_id=attributed_chunk_id,
+        score=verification.score,
+    )

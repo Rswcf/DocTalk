@@ -831,3 +831,175 @@ class TestCallLlmRepairRetry:
         # Usage from both attempts still accumulates (both cost real tokens).
         assert prompt_tokens == 10
         assert completion_tokens == 10
+
+
+def _fake_db_with_chunk(chunk, *, neighbors=None):
+    """Like _fake_db(), plus db.get(Chunk, id) resolving to `chunk` (or None)
+    — verify_saved_quote's entry point, unlike quote_search()'s candidate
+    list, starts from a single chunk_id lookup."""
+    class _Scalars:
+        def __init__(self_inner, rows):
+            self_inner._rows = rows
+
+        def all(self_inner):
+            return self_inner._rows
+
+    async def _get(_model, chunk_id):
+        return chunk if chunk is not None and chunk_id == chunk.id else None
+
+    result = SimpleNamespace(scalars=lambda: _Scalars(neighbors or []))
+    return SimpleNamespace(get=_get, execute=AsyncMock(return_value=result))
+
+
+class TestVerifySavedQuote:
+    """M3-B2 (plan §8.1's fabrication-safety corollary, team-lead directive):
+    saving a quote must NOT trust client-supplied tier/score/page/bboxes —
+    verify_saved_quote re-derives every trust field through the SAME
+    verify_quote gate quote_search() uses, from ONLY (chunk_id, quote_text).
+    A client that supplies a chunk_id + text that never verify gets None,
+    never a fabricated card."""
+
+    @pytest.mark.asyncio
+    async def test_exact_match_reproduces_the_same_card_fields_as_search(self, monkeypatch):
+        chunk = _chunk(SOURCE, page_start=4, page_end=4, chunk_index=0)
+        monkeypatch.setattr(
+            qss, "build_quote_source",
+            AsyncMock(return_value=_chunk_source(chunk, text=SOURCE)),
+        )
+
+        card = await qss.verify_saved_quote(
+            _fake_db_with_chunk(chunk),
+            document=_document(),
+            chunk_id=chunk.id,
+            quote_text="the most prized quality in translation today",
+        )
+
+        assert card is not None
+        assert card.display_text == "the most prized quality in translation today"
+        assert card.tier == "exact"
+        assert card.source_kind == "extracted_text"
+        assert card.page == 4
+        assert card.page_end == 4
+        assert card.chunk_id == str(chunk.id)
+        assert card.score == 100.0
+
+    @pytest.mark.asyncio
+    async def test_unknown_chunk_id_returns_none(self, monkeypatch):
+        card = await qss.verify_saved_quote(
+            _fake_db_with_chunk(None),
+            document=_document(),
+            chunk_id=uuid.uuid4(),
+            quote_text="anything",
+        )
+        assert card is None
+
+    @pytest.mark.asyncio
+    async def test_chunk_belonging_to_a_different_document_returns_none(self, monkeypatch):
+        """A client cannot point chunk_id at a chunk from a document it
+        doesn't even have open — cross-document forgery must fail closed."""
+        chunk = _chunk(SOURCE, page_start=4, page_end=4, chunk_index=0)
+        other_document = _document(id=uuid.uuid4())
+
+        card = await qss.verify_saved_quote(
+            _fake_db_with_chunk(chunk),
+            document=other_document,
+            chunk_id=chunk.id,
+            quote_text="the most prized quality in translation today",
+        )
+
+        assert card is None
+
+    @pytest.mark.asyncio
+    async def test_fabricated_text_that_never_appears_in_the_source_returns_none(self, monkeypatch):
+        """The core anti-fabrication guarantee: a client cannot save
+        self-typed text as a "verified" card just by pointing chunk_id at a
+        real chunk — the text must ACTUALLY be located there."""
+        chunk = _chunk(SOURCE, page_start=4, page_end=4, chunk_index=0)
+        monkeypatch.setattr(
+            qss, "build_quote_source",
+            AsyncMock(return_value=_chunk_source(chunk, text=SOURCE)),
+        )
+
+        card = await qss.verify_saved_quote(
+            _fake_db_with_chunk(chunk),
+            document=_document(),
+            chunk_id=chunk.id,
+            quote_text="I confess to fraud on page four",
+        )
+
+        assert card is None
+
+    @pytest.mark.asyncio
+    async def test_ambiguous_multipage_extracted_segment_is_excluded_like_search(self, monkeypatch):
+        chunk = _chunk(SOURCE, page_start=1, page_end=2, chunk_index=0)
+        ambiguous_source = QuoteSource(
+            text=SOURCE, kind="extracted_text", page_start=1, page_end=2,
+            segments=[
+                QuoteSourceSegment(
+                    text=SOURCE, page_start=1, page_end=2, chunk_id=chunk.id, bboxes=[],
+                )
+            ],
+        )
+        monkeypatch.setattr(qss, "build_quote_source", AsyncMock(return_value=ambiguous_source))
+
+        card = await qss.verify_saved_quote(
+            _fake_db_with_chunk(chunk),
+            document=_document(),
+            chunk_id=chunk.id,
+            quote_text="the most prized quality in translation today",
+        )
+
+        assert card is None
+
+    @pytest.mark.asyncio
+    async def test_page_hint_disambiguates_a_repeated_page_text_occurrence(self, monkeypatch):
+        """page_text kind can genuinely verify the SAME wording on more than
+        one page (repeated boilerplate) — _verify_against_segments returns
+        every match. page_hint picks which already-independently-verified
+        occurrence the client actually saw and meant to save; it can never
+        conjure an unverified one."""
+        chunk = _chunk(SOURCE, page_start=3, page_end=3, chunk_index=0, bboxes=[
+            {"x": 0.1, "y": 0.2, "w": 0.3, "h": 0.05, "page": 3},
+        ])
+        two_page_source = QuoteSource(
+            text=SOURCE, kind="page_text", page_start=3, page_end=7,
+            segments=[
+                QuoteSourceSegment(text=SOURCE, page_start=3, page_end=3, chunk_id=None, bboxes=[]),
+                QuoteSourceSegment(text=SOURCE, page_start=7, page_end=7, chunk_id=None, bboxes=[]),
+            ],
+        )
+        monkeypatch.setattr(qss, "build_quote_source", AsyncMock(return_value=two_page_source))
+
+        card = await qss.verify_saved_quote(
+            _fake_db_with_chunk(chunk),
+            document=_document(),
+            chunk_id=chunk.id,
+            quote_text="the most prized quality in translation today",
+            page_hint=7,
+        )
+
+        assert card is not None
+        assert card.page == 7
+        assert card.source_kind == "page_text"
+
+    @pytest.mark.asyncio
+    async def test_missing_page_hint_falls_back_to_the_first_verified_occurrence(self, monkeypatch):
+        chunk = _chunk(SOURCE, page_start=3, page_end=3, chunk_index=0)
+        two_page_source = QuoteSource(
+            text=SOURCE, kind="page_text", page_start=3, page_end=7,
+            segments=[
+                QuoteSourceSegment(text=SOURCE, page_start=3, page_end=3, chunk_id=None, bboxes=[]),
+                QuoteSourceSegment(text=SOURCE, page_start=7, page_end=7, chunk_id=None, bboxes=[]),
+            ],
+        )
+        monkeypatch.setattr(qss, "build_quote_source", AsyncMock(return_value=two_page_source))
+
+        card = await qss.verify_saved_quote(
+            _fake_db_with_chunk(chunk),
+            document=_document(),
+            chunk_id=chunk.id,
+            quote_text="the most prized quality in translation today",
+        )
+
+        assert card is not None
+        assert card.page == 3

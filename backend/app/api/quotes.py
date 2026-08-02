@@ -16,8 +16,20 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.deps import get_db_session, require_auth
 from app.core.rate_limit import auth_chat_limiter
 from app.models.database import AsyncSessionLocal
-from app.models.tables import CreditLedger, Document, ProductEvent, UsageRecord, User
-from app.services import biblio_service, credit_service, quote_search_service
+from app.models.tables import (
+    CreditLedger,
+    Document,
+    ProductEvent,
+    SavedQuote,
+    UsageRecord,
+    User,
+)
+from app.services import (
+    biblio_service,
+    credit_service,
+    quote_search_service,
+    saved_quotes_service,
+)
 from app.services.doc_service import can_access_document
 
 logger = logging.getLogger(__name__)
@@ -413,3 +425,216 @@ async def update_document_biblio(
     # another user's row (see biblio_service.upsert_user_biblio docstring).
     row = await biblio_service.upsert_user_biblio(db, doc, user, body.csl_json)
     return BiblioResponse(csl_json=row.csl_json, source=row.source)
+
+
+# -------------------------- M3-B2: saved quotes --------------------------
+
+_MAX_SAVED_QUOTE_TEXT_CHARS = 2000  # generous cap; real cards are display-length excerpts
+_MAX_SAVED_QUOTE_NOTE_CHARS = 2000
+
+
+class SaveQuoteRequest(BaseModel):
+    chunk_id: str = Field(..., description="chunk_id from a QuoteCardResponse — identifies WHERE to look")
+    quote_text: str = Field(..., min_length=1, max_length=_MAX_SAVED_QUOTE_TEXT_CHARS)
+    # Disambiguation hint ONLY — picks which already-independently-verified
+    # occurrence to persist when the SAME wording verifies on more than one
+    # page (see quote_search_service.verify_saved_quote's docstring). Never
+    # trusted for storage or verification on its own.
+    page_hint: Optional[int] = None
+
+
+class SavedQuoteResponse(BaseModel):
+    id: str
+    document_id: str
+    page: int
+    page_end: int
+    quote_text: str
+    bboxes: list[dict]
+    tier: str
+    score: float
+    verifier_version: str
+    source_kind: str
+    note: Optional[str]
+    created_at: str
+    updated_at: str
+
+
+class SavedQuoteListResponse(BaseModel):
+    quotes: list[SavedQuoteResponse]
+
+
+class UpdateSavedQuoteNoteRequest(BaseModel):
+    note: Optional[str] = Field(None, max_length=_MAX_SAVED_QUOTE_NOTE_CHARS)
+
+
+def _saved_quote_response(row: SavedQuote) -> SavedQuoteResponse:
+    return SavedQuoteResponse(
+        id=str(row.id),
+        document_id=str(row.document_id),
+        page=row.page,
+        page_end=row.page_end,
+        quote_text=row.quote_text,
+        bboxes=row.bboxes or [],
+        tier=row.verification_tier,
+        score=row.verification_score,
+        verifier_version=row.verifier_version,
+        source_kind=row.source_kind,
+        note=row.note,
+        created_at=row.created_at.isoformat(),
+        updated_at=row.updated_at.isoformat(),
+    )
+
+
+@router.post("/documents/{document_id}/quotes", response_model=SavedQuoteResponse, status_code=201)
+async def create_saved_quote(
+    document_id: uuid.UUID,
+    body: SaveQuoteRequest,
+    user: User = Depends(require_auth),
+    db: AsyncSession = Depends(get_db_session),
+):
+    """Save a quote card. `chunk_id`/`quote_text` (+ optional `page_hint`)
+    identify WHAT to save — every trust field actually persisted (tier,
+    score, page, page_end, bboxes, source_kind) is RE-DERIVED server-side
+    via quote_search_service.verify_saved_quote(), never taken from the
+    request body. A client cannot forge a "verified" card by supplying
+    arbitrary tier/score/page values directly; see that function's
+    docstring for the full rationale."""
+    doc = await _verify_document(document_id, user, db)
+
+    try:
+        chunk_id = uuid.UUID(body.chunk_id)
+    except ValueError:
+        raise HTTPException(
+            status_code=422,
+            detail={"error": "INVALID_CHUNK_ID", "message": "chunk_id must be a UUID"},
+        )
+
+    card = await quote_search_service.verify_saved_quote(
+        db, document=doc, chunk_id=chunk_id, quote_text=body.quote_text, page_hint=body.page_hint,
+    )
+    if card is None:
+        raise HTTPException(
+            status_code=422,
+            detail={
+                "error": "QUOTE_NOT_VERIFIABLE",
+                "message": "This quote could not be independently verified against the document",
+            },
+        )
+
+    # Cap (§8.4 point 2) gates NEW rows only — re-saving something already
+    # saved must always succeed regardless of the cap. Computing quote_hash
+    # here (mirroring save_quote()'s own internal computation) is a small,
+    # deliberate duplication: it lets the cap decision and the actual
+    # idempotent insert share one obvious "is this new?" definition without
+    # threading a pre-fetched row through save_quote()'s signature.
+    quote_hash = saved_quotes_service.compute_quote_hash(card.display_text, card.page, card.page_end)
+    existing = await saved_quotes_service.get_existing_saved_quote(
+        db, user_id=user.id, document_id=doc.id, quote_hash=quote_hash,
+    )
+    if existing is None:
+        active_count = await saved_quotes_service.count_active_saved_quotes(db, user.id)
+        limit = saved_quotes_service.saved_quotes_limit_for_plan(user.plan)
+        if active_count >= limit:
+            db.add(
+                ProductEvent(
+                    user_id=user.id,
+                    event_name="quote_save_limit_hit",
+                    source="quote_finder",
+                    reason="saved_quotes_limit",
+                    plan=(user.plan or "free").lower(),
+                    metadata_json={"limit": limit, "current": active_count, "document_id": str(doc.id)},
+                )
+            )
+            await db.commit()
+            raise HTTPException(
+                status_code=403,
+                detail={
+                    "error": "SAVED_QUOTES_LIMIT_REACHED",
+                    "message": "Saved quote limit reached for current plan",
+                    "limit": limit,
+                    "plan": (user.plan or "free").lower(),
+                },
+            )
+
+    row, created = await saved_quotes_service.save_quote(db, user=user, document=doc, card=card)
+
+    if created:
+        db.add(
+            ProductEvent(
+                user_id=user.id,
+                event_name="quote_saved",
+                source="quote_finder",
+                reason="quote_saved",
+                plan=(user.plan or "free").lower(),
+                metadata_json={
+                    "document_id": str(doc.id),
+                    "tier": row.verification_tier,
+                    "source_kind": row.source_kind,
+                },
+            )
+        )
+        await db.commit()
+
+    return _saved_quote_response(row)
+
+
+@router.get("/documents/{document_id}/quotes", response_model=SavedQuoteListResponse)
+async def list_document_saved_quotes(
+    document_id: uuid.UUID,
+    user: User = Depends(require_auth),
+    db: AsyncSession = Depends(get_db_session),
+):
+    doc = await _verify_document(document_id, user, db)
+    rows = await saved_quotes_service.list_saved_quotes_for_document(
+        db, user_id=user.id, document_id=doc.id,
+    )
+    return SavedQuoteListResponse(quotes=[_saved_quote_response(r) for r in rows])
+
+
+@router.get("/quotes", response_model=SavedQuoteListResponse)
+async def list_saved_quotes(
+    user: User = Depends(require_auth),
+    db: AsyncSession = Depends(get_db_session),
+):
+    """The Evidence Board feed — every saved quote for this user, across
+    every document, newest first."""
+    rows = await saved_quotes_service.list_all_saved_quotes(db, user_id=user.id)
+    return SavedQuoteListResponse(quotes=[_saved_quote_response(r) for r in rows])
+
+
+@router.patch("/quotes/{saved_quote_id}", response_model=SavedQuoteResponse)
+async def update_saved_quote(
+    saved_quote_id: uuid.UUID,
+    body: UpdateSavedQuoteNoteRequest,
+    user: User = Depends(require_auth),
+    db: AsyncSession = Depends(get_db_session),
+):
+    """Note only — every other field is a verification snapshot and is
+    never editable via this endpoint."""
+    row = await saved_quotes_service.get_owned_saved_quote(
+        db, user_id=user.id, saved_quote_id=saved_quote_id,
+    )
+    if row is None:
+        raise HTTPException(
+            status_code=404,
+            detail={"error": "SAVED_QUOTE_NOT_FOUND", "message": "Saved quote not found"},
+        )
+    row = await saved_quotes_service.update_note(db, row=row, note=body.note)
+    return _saved_quote_response(row)
+
+
+@router.delete("/quotes/{saved_quote_id}", status_code=204)
+async def delete_saved_quote(
+    saved_quote_id: uuid.UUID,
+    user: User = Depends(require_auth),
+    db: AsyncSession = Depends(get_db_session),
+):
+    row = await saved_quotes_service.get_owned_saved_quote(
+        db, user_id=user.id, saved_quote_id=saved_quote_id,
+    )
+    if row is None:
+        raise HTTPException(
+            status_code=404,
+            detail={"error": "SAVED_QUOTE_NOT_FOUND", "message": "Saved quote not found"},
+        )
+    await saved_quotes_service.delete_saved_quote(db, row=row)

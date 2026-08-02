@@ -39,6 +39,14 @@ LEN_RATIO_HI = 1.67
 MIN_COVERAGE = 0.95  # fraction of the PROPOSED quote that must align (anti-trim)
 LOW_QUALITY_THRESHOLD = 0.75
 
+# M3-B3 (plan §8.1/§8.5): saved_quotes snapshots this alongside a card's
+# tier/score at save time. Bump whenever this module's tiering/threshold/
+# guard logic changes materially — a future "revalidate saved quotes"
+# fast-follow can then tell an old snapshot apart from one produced by the
+# current algorithm. Purely informational in v1: nothing re-verifies a
+# saved quote against this value yet.
+QUOTE_VERIFIER_VERSION = "v1"
+
 _VERIFIED_STATUSES = ("exact", "normalized", "aligned")
 
 

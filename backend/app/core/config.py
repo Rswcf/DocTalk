@@ -197,6 +197,14 @@ class Settings(BaseSettings):
     RETAINPDF_CLASSIFY_BATCH_SIZE: int = Field(default=12)
     RETAINPDF_COMPILE_WORKERS: int = Field(default=0)
 
+    # Saved quotes (M3-B2, plan §8.4 point 2): counts ACTIVE rows per user
+    # ACROSS documents. 999 sentinel = "unlimited" (matches the
+    # FREE/PLUS/PRO_MAX_DOCUMENTS convention above), not the boolean-gate
+    # convention layout translation uses.
+    FREE_SAVED_QUOTES_LIMIT: int = 30
+    PLUS_SAVED_QUOTES_LIMIT: int = 999
+    PRO_SAVED_QUOTES_LIMIT: int = 999
+
     # Admin access — comma-separated email list
     ADMIN_EMAILS: str = ""
 

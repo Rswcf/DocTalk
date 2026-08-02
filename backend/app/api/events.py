@@ -40,6 +40,8 @@ ALLOWED_EVENTS = {
     "document_diff_export_clicked",
     "quote_search_submitted",
     "quote_search_completed",
+    "quote_saved",
+    "quote_save_limit_hit",
     "subscription_cancel_requested",
     "refund_requested",
     "landing_cta_clicked",

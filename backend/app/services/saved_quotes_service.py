@@ -1,0 +1,204 @@
+"""Saved-quote CRUD + caps (M3-B2, plan D8 as amended by §8.5 M3 / §8.4
+point 2, and §8.1's snapshot-at-save-time requirement — see M3-B3).
+
+Trust boundary: this module NEVER constructs a SavedQuote from
+client-supplied tier/score/bboxes. The API layer must always pass a
+QuoteCard produced by quote_search_service.verify_saved_quote() (or by
+quote_search() itself), so every persisted trust field traces back through
+the SAME verify_quote gate the rest of the system uses. `quote_hash` is
+likewise always SERVER-computed here (compute_quote_hash), never accepted
+from a caller — see SavedQuote's model docstring for why.
+"""
+from __future__ import annotations
+
+import hashlib
+import uuid
+from typing import Optional
+
+import sqlalchemy as sa
+from sqlalchemy.exc import IntegrityError
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.core.config import settings
+from app.models.database import AsyncSessionLocal
+from app.models.tables import Document, SavedQuote, User
+from app.services.quote_search_service import QuoteCard
+from app.services.quote_verification_service import QUOTE_VERIFIER_VERSION
+from app.services.text_normalizer import normalize
+
+_LIMIT_BY_PLAN = {
+    "free": lambda: settings.FREE_SAVED_QUOTES_LIMIT,
+    "plus": lambda: settings.PLUS_SAVED_QUOTES_LIMIT,
+    "pro": lambda: settings.PRO_SAVED_QUOTES_LIMIT,
+}
+
+
+def saved_quotes_limit_for_plan(plan: Optional[str]) -> int:
+    """Same dict-lookup convention as documents.py's FREE/PLUS/PRO_MAX_DOCUMENTS
+    enforcement (numeric sentinel for "unlimited", not the boolean-gate
+    convention layout translation uses)."""
+    normalized = (plan or "free").lower()
+    getter = _LIMIT_BY_PLAN.get(normalized, _LIMIT_BY_PLAN["free"])
+    return int(getter())
+
+
+def compute_quote_hash(quote_text: str, page: int, page_end: int) -> str:
+    """SERVER-side dedup/idempotency key (§8.1's dedup-key philosophy,
+    scoped to one (user, document) pair via the table's UNIQUE constraint
+    rather than needing document_id baked into the hash itself):
+    normalized quote text + the VERIFIED page range — never the caller's
+    raw text or an unverified page guess. Callers must pass the page/
+    page_end that came back from verify_saved_quote()/quote_search(), not
+    anything client-supplied, or dedup becomes forgeable (two different
+    users' honest saves of the same passage should collide; a client
+    claiming a fake page range to dodge the unique constraint must not)."""
+    normalized_text, _ = normalize(quote_text or "", fuzzy=True)
+    payload = f"{normalized_text}|{page}|{page_end}"
+    return hashlib.sha256(payload.encode("utf-8")).hexdigest()
+
+
+async def count_active_saved_quotes(db: AsyncSession, user_id: uuid.UUID) -> int:
+    """§8.4 point 2: ACTIVE = currently-existing rows, counted ACROSS all of
+    the user's documents. There is no soft-delete flag — a DELETE is what
+    "frees a slot" means, so a plain COUNT(*) is always the current truth."""
+    result = await db.execute(
+        sa.select(sa.func.count()).select_from(SavedQuote).where(SavedQuote.user_id == user_id)
+    )
+    return int(result.scalar() or 0)
+
+
+async def get_existing_saved_quote(
+    db: AsyncSession, *, user_id: uuid.UUID, document_id: uuid.UUID, quote_hash: str,
+) -> Optional[SavedQuote]:
+    result = await db.execute(
+        sa.select(SavedQuote)
+        .where(SavedQuote.user_id == user_id)
+        .where(SavedQuote.document_id == document_id)
+        .where(SavedQuote.quote_hash == quote_hash)
+    )
+    return result.scalar_one_or_none()
+
+
+async def save_quote(
+    db: AsyncSession, *, user: User, document: Document, card: QuoteCard,
+) -> tuple[SavedQuote, bool]:
+    """Idempotent insert — returns (row, created=False on an idempotent hit).
+
+    `card` MUST already be the output of a server-side re-verification
+    (quote_search_service.verify_saved_quote() or quote_search()'s own
+    cards) — every persisted trust column is copied from it as-is, never
+    recomputed here and never sourced from raw request data.
+
+    SELECT-then-INSERT + IntegrityError-retry, same race biblio_service's
+    FIX-9 precedent handles: two concurrent identical saves (double-click,
+    two tabs) can both SELECT None then both attempt to INSERT — UNIQUE
+    (user_id, document_id, quote_hash) stops the loser's commit, and the
+    loser recovers by re-fetching the winner's row instead of surfacing a
+    raw 500/409.
+
+    UNLIKE biblio_service's byte-for-byte pattern, the retry re-fetch below
+    runs on a FRESH AsyncSessionLocal() session, not the just-rolled-back
+    `db` — discovered via real-Postgres asyncio.gather concurrency testing
+    (test_saved_quotes_integration.py) that reusing a NullPool-backed
+    session for a new query immediately after a rollback races with
+    SQLAlchemy's async/greenlet connection-checkout machinery under true
+    concurrent load (reproduced standalone outside pytest too; a
+    production QueuePool-backed engine did not exhibit this — NullPool is
+    what TESTING=1 forces, per app/models/database.py). A fresh session
+    sidesteps it unconditionally and matches the independent-session-for-
+    post-failure-resolution pattern already used by the billing resolvers
+    in chat_service.py / quotes.py.
+
+    The cap check (count_active_saved_quotes vs saved_quotes_limit_for_plan)
+    is the CALLER's responsibility, performed BEFORE this function runs —
+    a documented, accepted narrow TOCTOU window exists between that check
+    and this insert (two concurrent NEW saves could both pass a
+    same-instant cap check), same class of minor race as the existing
+    MAX_DOCUMENTS/share-link caps elsewhere in this codebase; low value,
+    self-correcting on the next delete, and not given the money-grade
+    locking billing races get.
+    """
+    quote_hash = compute_quote_hash(card.display_text, card.page, card.page_end)
+    existing = await get_existing_saved_quote(
+        db, user_id=user.id, document_id=document.id, quote_hash=quote_hash
+    )
+    if existing is not None:
+        return existing, False
+
+    row = SavedQuote(
+        user_id=user.id,
+        document_id=document.id,
+        page=card.page,
+        page_end=card.page_end,
+        quote_text=card.display_text,
+        bboxes=card.bboxes,
+        verification_tier=card.tier,
+        verification_score=card.score,
+        verifier_version=QUOTE_VERIFIER_VERSION,
+        source_chunk_id=uuid.UUID(card.chunk_id),
+        source_kind=card.source_kind,
+        quote_hash=quote_hash,
+        note=None,
+    )
+    db.add(row)
+    try:
+        await db.commit()
+    except IntegrityError:
+        await db.rollback()
+        async with AsyncSessionLocal() as retry_db:
+            winner = await get_existing_saved_quote(
+                retry_db, user_id=user.id, document_id=document.id, quote_hash=quote_hash
+            )
+        if winner is None:
+            raise  # not the race we anticipated — a genuine failure
+        return winner, False
+    return row, True
+
+
+async def list_saved_quotes_for_document(
+    db: AsyncSession, *, user_id: uuid.UUID, document_id: uuid.UUID,
+) -> list[SavedQuote]:
+    result = await db.execute(
+        sa.select(SavedQuote)
+        .where(SavedQuote.user_id == user_id)
+        .where(SavedQuote.document_id == document_id)
+        .order_by(SavedQuote.created_at.desc())
+    )
+    return list(result.scalars().all())
+
+
+async def list_all_saved_quotes(db: AsyncSession, *, user_id: uuid.UUID) -> list[SavedQuote]:
+    """The Evidence Board feed — every saved quote for this user, across
+    every document, newest first. Uses idx_saved_quotes_user_created."""
+    result = await db.execute(
+        sa.select(SavedQuote)
+        .where(SavedQuote.user_id == user_id)
+        .order_by(SavedQuote.created_at.desc())
+    )
+    return list(result.scalars().all())
+
+
+async def get_owned_saved_quote(
+    db: AsyncSession, *, user_id: uuid.UUID, saved_quote_id: uuid.UUID,
+) -> Optional[SavedQuote]:
+    """Ownership is baked directly into the WHERE clause (sharing.py's
+    revoke_share precedent) — a saved quote belonging to another user
+    simply doesn't match, so callers get a uniform 404 for both
+    "doesn't exist" and "exists but isn't yours," never leaking which."""
+    result = await db.execute(
+        sa.select(SavedQuote)
+        .where(SavedQuote.id == saved_quote_id)
+        .where(SavedQuote.user_id == user_id)
+    )
+    return result.scalar_one_or_none()
+
+
+async def update_note(db: AsyncSession, *, row: SavedQuote, note: Optional[str]) -> SavedQuote:
+    row.note = note
+    await db.commit()
+    return row
+
+
+async def delete_saved_quote(db: AsyncSession, *, row: SavedQuote) -> None:
+    await db.delete(row)
+    await db.commit()
