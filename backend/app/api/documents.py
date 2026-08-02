@@ -738,7 +738,23 @@ async def get_document_text_content(
     # instead of falling back. Mirrors B2's build_quote_source() page_text
     # trust bar (quote_source_service.py): the WHOLE range must have real
     # (non-blank) content, never a majority/any check.
-    has_content = bool(db_pages) and all((p.content or "").strip() for p in db_pages)
+    #
+    # FIX2-D (Codex r2 #8, NOT ADDRESSED): all(content) alone only checks
+    # the ROWS THAT EXIST — it never verifies every expected page ROW
+    # exists at all. Codex's exact probe: a 3-page document with Page rows
+    # only for pages 1 and 3 (page 2's row is entirely MISSING, not merely
+    # blank) passes all(content) trivially over those 2 rows and silently
+    # drops page 2. Require COMPLETE, CONSECUTIVE coverage — the returned
+    # page numbers must be exactly 1..doc.page_count, no gaps — before even
+    # checking content. When doc.page_count is unknown (None), we cannot
+    # verify completeness at all, so fail closed to chunk reconstruction.
+    expected_page_count = getattr(doc, "page_count", None)
+    page_numbers = sorted(p.page_number for p in db_pages)
+    complete_consecutive_coverage = (
+        expected_page_count is not None
+        and page_numbers == list(range(1, expected_page_count + 1))
+    )
+    has_content = complete_consecutive_coverage and all((p.content or "").strip() for p in db_pages)
 
     if has_content:
         pages_list = [

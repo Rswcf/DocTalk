@@ -213,7 +213,7 @@ class TestGetDocumentTextContentInteraction:
     async def test_pdf_with_page_content_uses_page_text_not_chunks(self, monkeypatch):
         import app.api.documents as documents_module
 
-        doc = SimpleNamespace(id=uuid.uuid4(), file_type="pdf", filename="report.pdf", source_url=None)
+        doc = SimpleNamespace(id=uuid.uuid4(), file_type="pdf", filename="report.pdf", source_url=None, page_count=2)
         monkeypatch.setattr(documents_module.doc_service, "get_document", AsyncMock(return_value=doc))
         monkeypatch.setattr(documents_module, "can_access_document", lambda *_a, **_k: True)
 
@@ -234,7 +234,7 @@ class TestGetDocumentTextContentInteraction:
     async def test_legacy_pdf_without_page_content_falls_back_to_chunks(self, monkeypatch):
         import app.api.documents as documents_module
 
-        doc = SimpleNamespace(id=uuid.uuid4(), file_type="pdf", filename="legacy.pdf", source_url=None)
+        doc = SimpleNamespace(id=uuid.uuid4(), file_type="pdf", filename="legacy.pdf", source_url=None, page_count=2)
         monkeypatch.setattr(documents_module.doc_service, "get_document", AsyncMock(return_value=doc))
         monkeypatch.setattr(documents_module, "can_access_document", lambda *_a, **_k: True)
 
@@ -258,7 +258,7 @@ class TestGetDocumentTextContentInteraction:
         the rest (the prior any()-gated branch did exactly that)."""
         import app.api.documents as documents_module
 
-        doc = SimpleNamespace(id=uuid.uuid4(), file_type="pdf", filename="mixed.pdf", source_url=None)
+        doc = SimpleNamespace(id=uuid.uuid4(), file_type="pdf", filename="mixed.pdf", source_url=None, page_count=2)
         monkeypatch.setattr(documents_module.doc_service, "get_document", AsyncMock(return_value=doc))
         monkeypatch.setattr(documents_module, "can_access_document", lambda *_a, **_k: True)
 
@@ -285,7 +285,7 @@ class TestGetDocumentTextContentInteraction:
         real content — same non-blank bar B2's build_quote_source() uses."""
         import app.api.documents as documents_module
 
-        doc = SimpleNamespace(id=uuid.uuid4(), file_type="pdf", filename="blank.pdf", source_url=None)
+        doc = SimpleNamespace(id=uuid.uuid4(), file_type="pdf", filename="blank.pdf", source_url=None, page_count=2)
         monkeypatch.setattr(documents_module.doc_service, "get_document", AsyncMock(return_value=doc))
         monkeypatch.setattr(documents_module, "can_access_document", lambda *_a, **_k: True)
 
@@ -296,6 +296,68 @@ class TestGetDocumentTextContentInteraction:
         result = await documents_module.get_document_text_content(doc.id, user=None, db=db)
 
         # The chunk spans pages 1-2, so fallback reconstruction yields BOTH.
+        assert result["pages"] == [
+            {"page_number": 1, "text": "Chunk-reconstructed.", "section_title": None},
+            {"page_number": 2, "text": "Chunk-reconstructed.", "section_title": None},
+        ]
+
+    @pytest.mark.asyncio
+    async def test_codex_r2_probe_missing_page_row_in_the_middle_falls_back_to_chunks(self, monkeypatch):
+        """FIX2-D (Codex r2 #8, NOT ADDRESSED): Codex's exact probe — a
+        3-page document (doc.page_count=3) with Page ROWS only for pages 1
+        and 3 (page 2's row is entirely MISSING, not merely blank). Both
+        existing rows have real content, so the prior all(content)-only
+        check trivially passed over just those 2 rows and silently dropped
+        page 2 entirely. Must require complete, consecutive 1..page_count
+        coverage and fall back to chunks when it's missing."""
+        import app.api.documents as documents_module
+
+        doc = SimpleNamespace(
+            id=uuid.uuid4(), file_type="pdf", filename="gap.pdf", source_url=None, page_count=3,
+        )
+        monkeypatch.setattr(documents_module.doc_service, "get_document", AsyncMock(return_value=doc))
+        monkeypatch.setattr(documents_module, "can_access_document", lambda *_a, **_k: True)
+
+        # doc.page_count=3, but only rows for pages 1 and 3 exist — page 2's
+        # row is entirely missing (not present at all, not merely blank).
+        page_rows = [self._page(1, "Raw page-one text."), self._page(3, "Raw page-three text.")]
+        fallback_chunks = [
+            self._chunk("Chunk-reconstructed page one.", 1, 1),
+            self._chunk("Chunk-reconstructed page two.", 2, 2),
+            self._chunk("Chunk-reconstructed page three.", 3, 3),
+        ]
+        db = self._fake_db(page_rows=page_rows, section_chunks=[], fallback_chunks=fallback_chunks)
+
+        result = await documents_module.get_document_text_content(doc.id, user=None, db=db)
+
+        # Falls back to chunk reconstruction for ALL THREE pages — page 2
+        # is never silently omitted from the response.
+        assert result["pages"] == [
+            {"page_number": 1, "text": "Chunk-reconstructed page one.", "section_title": None},
+            {"page_number": 2, "text": "Chunk-reconstructed page two.", "section_title": None},
+            {"page_number": 3, "text": "Chunk-reconstructed page three.", "section_title": None},
+        ]
+
+    @pytest.mark.asyncio
+    async def test_unknown_page_count_fails_closed_to_chunk_fallback(self, monkeypatch):
+        """doc.page_count is None (unparsed/unknown) — completeness cannot
+        be verified against an unknown total, so this fails closed to
+        chunk reconstruction rather than trusting whatever rows happen to
+        exist."""
+        import app.api.documents as documents_module
+
+        doc = SimpleNamespace(
+            id=uuid.uuid4(), file_type="pdf", filename="unknown-count.pdf", source_url=None, page_count=None,
+        )
+        monkeypatch.setattr(documents_module.doc_service, "get_document", AsyncMock(return_value=doc))
+        monkeypatch.setattr(documents_module, "can_access_document", lambda *_a, **_k: True)
+
+        page_rows = [self._page(1, "Raw page-one text."), self._page(2, "Raw page-two text.")]
+        fallback_chunks = [self._chunk("Chunk-reconstructed.", 1, 2)]
+        db = self._fake_db(page_rows=page_rows, section_chunks=[], fallback_chunks=fallback_chunks)
+
+        result = await documents_module.get_document_text_content(doc.id, user=None, db=db)
+
         assert result["pages"] == [
             {"page_number": 1, "text": "Chunk-reconstructed.", "section_title": None},
             {"page_number": 2, "text": "Chunk-reconstructed.", "section_title": None},
