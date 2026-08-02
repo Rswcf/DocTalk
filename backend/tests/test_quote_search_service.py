@@ -250,3 +250,84 @@ class TestTermScanCandidates:
     def test_empty_topic_yields_no_hits(self):
         chunk = _chunk("Some content.", 1, 1, 0)
         assert qss._term_scan_candidates([chunk], "   ") == []
+
+
+class TestJsonFromText:
+    """Direct unit coverage for _json_from_text (extraction_service's
+    test_json_from_text_accepts_fenced_json precedent) — the repair-retry
+    branch in _call_llm had zero direct coverage before this (B1 review
+    follow-up)."""
+
+    def test_accepts_fenced_json(self):
+        assert qss._json_from_text('```json\n{"quotes": []}\n```') == {"quotes": []}
+
+    def test_accepts_bare_json(self):
+        assert qss._json_from_text('{"quotes": [{"quote_text": "x"}]}') == {
+            "quotes": [{"quote_text": "x"}]
+        }
+
+    def test_extracts_embedded_json_from_surrounding_prose(self):
+        text = 'Sure, here is the JSON: {"quotes": []} — let me know if you need more.'
+        assert qss._json_from_text(text) == {"quotes": []}
+
+    def test_non_dict_json_raises(self):
+        with pytest.raises(ValueError):
+            qss._json_from_text("[1, 2, 3]")
+
+    def test_unparseable_text_raises(self):
+        with pytest.raises(Exception):
+            qss._json_from_text("not json at all")
+
+
+def _llm_response(content: str, *, prompt_tokens: int = 5, completion_tokens: int = 5):
+    return types.SimpleNamespace(
+        choices=[types.SimpleNamespace(message=types.SimpleNamespace(content=content))],
+        usage=types.SimpleNamespace(prompt_tokens=prompt_tokens, completion_tokens=completion_tokens),
+    )
+
+
+class TestCallLlmRepairRetry:
+    """Direct coverage for _call_llm's fence-strip/repair-retry path — the
+    quote_search() end-to-end tests never exercise this because the mocked
+    LLM always returns clean JSON on the first try."""
+
+    @pytest.mark.asyncio
+    async def test_malformed_first_response_recovers_via_repair_retry(self, monkeypatch):
+        create_mock = AsyncMock(
+            side_effect=[
+                _llm_response("Sure! Here are some quotes I found for you.", prompt_tokens=100, completion_tokens=20),
+                _llm_response('{"quotes": [{"quote_text": "x", "source_ref_n": 1, "page": 1}]}', prompt_tokens=40, completion_tokens=10),
+            ]
+        )
+        client = types.SimpleNamespace(chat=types.SimpleNamespace(completions=types.SimpleNamespace(create=create_mock)))
+        monkeypatch.setattr(qss, "_get_llm_client", lambda _model: client)
+        chunk = _chunk(SOURCE, page_start=1, page_end=1, chunk_index=0)
+
+        quotes, prompt_tokens, completion_tokens = await qss._call_llm([chunk], "fluency", "en")
+
+        assert quotes == [{"quote_text": "x", "source_ref_n": 1, "page": 1}]
+        # Token usage accumulates ACROSS both calls — the repair call's tokens
+        # are real cost too, and must be reflected in what gets billed.
+        assert prompt_tokens == 140
+        assert completion_tokens == 30
+        assert create_mock.await_count == 2
+
+    @pytest.mark.asyncio
+    async def test_unrecoverable_output_degrades_to_empty_quotes_never_raises(self, monkeypatch):
+        create_mock = AsyncMock(
+            side_effect=[
+                _llm_response("garbage, not json"),
+                _llm_response("still not json after repair"),
+            ]
+        )
+        client = types.SimpleNamespace(chat=types.SimpleNamespace(completions=types.SimpleNamespace(create=create_mock)))
+        monkeypatch.setattr(qss, "_get_llm_client", lambda _model: client)
+        chunk = _chunk(SOURCE, page_start=1, page_end=1, chunk_index=0)
+
+        quotes, prompt_tokens, completion_tokens = await qss._call_llm([chunk], "fluency", "en")
+
+        assert quotes == []
+        assert create_mock.await_count == 2
+        # Usage from both attempts still accumulates (both cost real tokens).
+        assert prompt_tokens == 10
+        assert completion_tokens == 10

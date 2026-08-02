@@ -49,6 +49,14 @@ class QuoteSearchResponse(BaseModel):
 
 
 async def _verify_document(document_id: uuid.UUID, user: User, db: AsyncSession) -> Document:
+    """Access control lives HERE, not in quote_search_service.quote_search().
+
+    B3's quote_search() takes a `user` param it never reads for access
+    control — it trusts the caller already resolved and authorized
+    `document`. This endpoint is that caller: it MUST call
+    can_access_document() itself before ever invoking quote_search(), same
+    as every other document-scoped endpoint (extractions.py, documents.py).
+    """
     doc = await db.get(Document, document_id)
     if not doc or not can_access_document(doc, user):
         raise HTTPException(
@@ -91,6 +99,10 @@ async def create_quote_search(
             detail={"error": "DOCUMENT_NOT_READY", "message": "Document is not ready"},
         )
 
+    # Billing (predebit through reconcile/refund below) is entirely OWNED by
+    # this endpoint too — quote_search_service.quote_search() does no
+    # credit_service calls of its own. It returns .usage/.model precisely so
+    # a caller can bill; it never bills itself.
     balance = await credit_service.get_user_credits(db, user.id)
     if balance < QUOTE_SEARCH_PREDEBIT_CREDITS:
         raise HTTPException(

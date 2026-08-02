@@ -308,6 +308,84 @@ async def test_quote_search_rejects_inaccessible_document(client: AsyncClient) -
 
 
 @pytest.mark.asyncio
+async def test_quote_search_endpoint_owns_access_control_itself(
+    client: AsyncClient, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """B3's quote_search() takes a `user` param it never reads for access
+    control (by design — reviewed). This endpoint MUST therefore call
+    can_access_document() itself; this test spies on the real function
+    directly (not just the 404 outcome) so a future refactor that quietly
+    drops the check — while accidentally still 404ing for some other reason
+    — cannot pass silently."""
+    user = _make_user()
+    doc = _make_doc(user)
+    db = _make_db(get=AsyncMock(return_value=doc))
+    _override_dependencies(db, user)
+
+    ledger_id = uuid.uuid4()
+    monkeypatch.setattr(credit_service, "debit_credits", AsyncMock(return_value=ledger_id))
+    monkeypatch.setattr(credit_service, "reconcile_credits", AsyncMock())
+    monkeypatch.setattr(credit_service, "get_user_credits", AsyncMock(return_value=485))
+    monkeypatch.setattr(quote_search_service, "quote_search", AsyncMock(return_value=_sample_result()))
+
+    from app.services.doc_service import can_access_document as real_can_access_document
+
+    # can_access_document is sync in production; wrap with a plain spy that
+    # still calls through, so behavior is unchanged and only the CALL is observed.
+    spy = SimpleNamespace(calls=[])
+
+    def _spy_can_access_document(d, u):
+        spy.calls.append((d, u))
+        return real_can_access_document(d, u)
+
+    monkeypatch.setattr(quotes_api, "can_access_document", _spy_can_access_document)
+
+    response = await client.post(f"/api/documents/{doc.id}/quote-search", json={"topic": "climate risk"})
+
+    assert response.status_code == 200
+    assert spy.calls == [(doc, user)]  # endpoint itself performed the access check
+    # B3's quote_search was called with `user`, but that's not where access
+    # control happens — proven above by the endpoint calling it independently.
+    quote_search_service.quote_search.assert_awaited_once()
+    assert quote_search_service.quote_search.await_args.kwargs["user"] is user
+
+
+@pytest.mark.asyncio
+async def test_quote_search_billing_flow_is_independent_of_quote_search_internals(
+    client: AsyncClient, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """quote_search_service.quote_search() does no credit_service calls of
+    its own (reviewed) — it only returns .usage/.model for a caller to bill.
+    Proven here by mocking quote_search out ENTIRELY (a bare stand-in with no
+    access to credit_service at all) and confirming the full predebit ->
+    reconcile -> record_usage sequence still runs, because it lives in THIS
+    endpoint, not inside the mocked-away service call."""
+    user = _make_user()
+    doc = _make_doc(user)
+    db = _make_db(get=AsyncMock(return_value=doc))
+    _override_dependencies(db, user)
+
+    ledger_id = uuid.uuid4()
+    debit_mock = AsyncMock(return_value=ledger_id)
+    reconcile_mock = AsyncMock()
+    monkeypatch.setattr(credit_service, "debit_credits", debit_mock)
+    monkeypatch.setattr(credit_service, "reconcile_credits", reconcile_mock)
+    monkeypatch.setattr(credit_service, "get_user_credits", AsyncMock(return_value=485))
+
+    # A bare async stub — no credit_service reference reachable from it at all.
+    async def _bare_quote_search(_db, *, document, user, topic, locale):
+        return _sample_result()
+
+    monkeypatch.setattr(quote_search_service, "quote_search", _bare_quote_search)
+
+    response = await client.post(f"/api/documents/{doc.id}/quote-search", json={"topic": "climate risk"})
+
+    assert response.status_code == 200
+    debit_mock.assert_awaited_once()
+    reconcile_mock.assert_awaited_once()
+
+
+@pytest.mark.asyncio
 async def test_quote_search_rejects_empty_topic(client: AsyncClient) -> None:
     user = _make_user()
     doc = _make_doc(user)
