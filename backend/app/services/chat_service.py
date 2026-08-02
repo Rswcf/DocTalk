@@ -1318,7 +1318,7 @@ class ChatService:
             # review round 1) rather than hand-building the payload shape.
             artifact = ChatArtifact(
                 artifact_type="quote_search",
-                status="completed",
+                status="succeeded",
                 title="Verified Quotes",
                 summary=assistant_text,
                 preview={
@@ -1336,6 +1336,7 @@ class ChatService:
                     ],
                     "proposed": result.proposed,
                     "verified": result.verified,
+                    "discarded_count": len(result.discarded),
                     "scanned_chunks": result.scanned_chunks,
                 },
                 citations=citations,

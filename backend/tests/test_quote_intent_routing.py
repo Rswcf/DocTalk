@@ -220,8 +220,14 @@ class TestAuthedRoutingEmitsArtifact:
             page=3, page_end=3, bboxes=[], tier="exact",
             source_kind="page_text", chunk_id=str(chunk_id), score=100.0,
         )
+        # proposed=3, verified=1 (one card survives dedup of 2 verified
+        # duplicates from overlapping chunks), discarded=1 (one truly
+        # rejected proposal). proposed - verified = 2 != len(discarded) = 1 —
+        # deliberately chosen so a frontend re-deriving "discarded" as
+        # proposed-verified would overcount; discarded_count must come from
+        # the real discarded list (Wave F review MEDIUM-3).
         result = QuoteSearchResult(
-            cards=[card], proposed=1, verified=1, discarded=[],
+            cards=[card], proposed=3, verified=1, discarded=[("not_located", "dropped", 0.0)],
             scanned_chunks=9, usage=(300, 80), model="deepseek-v4-pro",
         )
         quote_search_mock = AsyncMock(return_value=result)
@@ -243,8 +249,15 @@ class TestAuthedRoutingEmitsArtifact:
         assert event_types[-1] == "done"
         artifact = next(e for e in events if e["event"] == "artifact")
         assert artifact["data"]["artifact_type"] == "quote_search"
+        # MEDIUM-2 (Wave F review): every other artifact producer uses
+        # "succeeded"; ChatArtifactCard's isDone check relies on it.
+        assert artifact["data"]["status"] == "succeeded"
         assert len(artifact["data"]["citations"]) == 1
         assert artifact["data"]["citations"][0]["chunk_id"] == str(chunk_id)
+        # MEDIUM-3 (Wave F review): mirrors the REST response's
+        # discarded_count = len(result.discarded), NOT proposed - verified
+        # (which overcounts — see the result construction above).
+        assert artifact["data"]["preview"]["discarded_count"] == 1
 
         quote_search_mock.assert_awaited_once()
         assert quote_search_mock.await_args.kwargs["topic"] == "Give me a direct quote about the termination clause."

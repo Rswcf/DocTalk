@@ -187,3 +187,71 @@ async def test_authenticated_user_can_record_private_event(monkeypatch):
     event = fake_db.added[0]
     assert event.user_id == user_id
     assert event.event_name == "checkout_completed"
+
+
+@pytest.mark.asyncio
+async def test_authenticated_user_can_submit_quote_search_submitted_event(monkeypatch):
+    """Wave F review MEDIUM-1: the Quote Finder panel fires quote_search_submitted
+    on submit — must be allowlisted (authed only, NOT public) so it doesn't 400."""
+    from fastapi import FastAPI
+    from httpx import ASGITransport, AsyncClient
+
+    from app.api import events as events_api
+    from app.core import deps as deps_module
+
+    api_app = FastAPI()
+    api_app.include_router(events_api.router)
+    fake_db = _FakeDB()
+    user_id = uuid.uuid4()
+
+    async def _get_db():
+        yield fake_db
+
+    async def _get_user():
+        return SimpleNamespace(id=user_id)
+
+    api_app.dependency_overrides[deps_module.get_db_session] = _get_db
+    api_app.dependency_overrides[deps_module.get_current_user_optional] = _get_user
+    monkeypatch.setattr(events_api.public_event_limiter, "is_allowed", AsyncMock(return_value=False))
+
+    async with AsyncClient(transport=ASGITransport(app=api_app), base_url="http://test") as client:
+        response = await client.post(
+            "/api/events",
+            json={"event_name": "quote_search_submitted", "properties": {"source": "quote_finder"}},
+        )
+
+    assert response.status_code == 204
+    event = fake_db.added[0]
+    assert event.user_id == user_id
+    assert event.event_name == "quote_search_submitted"
+
+
+@pytest.mark.asyncio
+async def test_quote_search_submitted_rejects_anonymous_user(monkeypatch):
+    """quote_search_submitted is authed-only — NOT in PUBLIC_EVENTS — so an
+    anonymous submitter must get 401, not a silently-recorded event."""
+    from fastapi import FastAPI
+    from httpx import ASGITransport, AsyncClient
+
+    from app.api import events as events_api
+    from app.core import deps as deps_module
+
+    api_app = FastAPI()
+    api_app.include_router(events_api.router)
+    fake_db = _FakeDB()
+
+    async def _get_db():
+        yield fake_db
+
+    api_app.dependency_overrides[deps_module.get_db_session] = _get_db
+    api_app.dependency_overrides[deps_module.get_current_user_optional] = _none_user
+    monkeypatch.setattr(events_api.public_event_limiter, "is_allowed", AsyncMock(return_value=True))
+
+    async with AsyncClient(transport=ASGITransport(app=api_app), base_url="http://test") as client:
+        response = await client.post(
+            "/api/events",
+            json={"event_name": "quote_search_submitted", "properties": {"source": "quote_finder"}},
+        )
+
+    assert response.status_code == 401
+    assert fake_db.added == []

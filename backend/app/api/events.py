@@ -38,6 +38,7 @@ ALLOWED_EVENTS = {
     "question_template_export_clicked",
     "document_diff_created",
     "document_diff_export_clicked",
+    "quote_search_submitted",
     "quote_search_completed",
     "subscription_cancel_requested",
     "refund_requested",
