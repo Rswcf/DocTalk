@@ -21,6 +21,7 @@ import uuid
 from typing import Any, Optional
 
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.tables import Document, DocumentBiblio, User
@@ -159,7 +160,18 @@ async def _fetch_user_row(
 
 async def get_or_seed_system_biblio(db: AsyncSession, document: Document) -> DocumentBiblio:
     """Return the document's system (auto-detected default) row, seeding it
-    from filename heuristics + best-effort PyMuPDF metadata on first access."""
+    from filename heuristics + best-effort PyMuPDF metadata on first access.
+
+    FIX-9 (Codex r1 MINOR #9): the SELECT-then-INSERT above races on first
+    access — two concurrent requests for the same never-seeded document can
+    both SELECT None, then both attempt to INSERT. The partial unique index
+    `uq_document_biblio_system` (document_id WHERE user_id IS NULL) correctly
+    stops the second INSERT from committing, but that would otherwise
+    surface as an unhandled IntegrityError -> 500 for the loser. Recover by
+    rolling back and re-fetching: the loser's job here is only to return
+    SOME valid system row, and the winner's row (seeded moments earlier) is
+    exactly that — never re-seed a duplicate, never error a benign race.
+    """
     existing = await _fetch_system_row(db, document.id)
     if existing:
         return existing
@@ -168,7 +180,14 @@ async def get_or_seed_system_biblio(db: AsyncSession, document: Document) -> Doc
     csl = await _enrich_from_pdf_metadata(document, csl)
     row = DocumentBiblio(document_id=document.id, user_id=None, csl_json=csl, source=SYSTEM_SOURCE)
     db.add(row)
-    await db.commit()
+    try:
+        await db.commit()
+    except IntegrityError:
+        await db.rollback()
+        winner = await _fetch_system_row(db, document.id)
+        if winner is None:
+            raise  # not the race we anticipated — a genuine failure
+        return winner
     return row
 
 
@@ -187,7 +206,18 @@ async def upsert_user_biblio(
 ) -> DocumentBiblio:
     """PUT: always writes to the CALLING user's own row (source='user'),
     creating it if needed. Never reads or mutates the system row or any
-    other user's row — that's the whole point of the per-user key."""
+    other user's row — that's the whole point of the per-user key.
+
+    FIX-9 (Codex r1 MINOR #9): SELECT-then-INSERT races the same way
+    get_or_seed_system_biblio does — two concurrent first PUTs from the SAME
+    user for the SAME document (double-click, two tabs) can both SELECT
+    None, then both attempt to INSERT, and `uq_document_biblio_user`
+    (document_id, user_id WHERE user_id IS NOT NULL) stops the loser's
+    commit. Unlike the system-row race, the loser's intent here matters —
+    it's an EDIT, not a passive seed — so recovery retries as an UPDATE
+    against the row the winner just created, landing the caller's actual
+    csl_json rather than silently keeping the winner's.
+    """
     existing = await _fetch_user_row(db, document.id, user.id)
     if existing:
         existing.csl_json = csl_json
@@ -197,7 +227,17 @@ async def upsert_user_biblio(
 
     row = DocumentBiblio(document_id=document.id, user_id=user.id, csl_json=csl_json, source=USER_SOURCE)
     db.add(row)
-    await db.commit()
+    try:
+        await db.commit()
+    except IntegrityError:
+        await db.rollback()
+        winner = await _fetch_user_row(db, document.id, user.id)
+        if winner is None:
+            raise  # not the race we anticipated — a genuine failure
+        winner.csl_json = csl_json
+        winner.source = USER_SOURCE
+        await db.commit()
+        return winner
     return row
 
 

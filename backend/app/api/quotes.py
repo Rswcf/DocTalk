@@ -292,7 +292,11 @@ class BiblioResponse(BaseModel):
 
 
 class BiblioUpdateRequest(BaseModel):
-    csl_json: dict[str, Any] = Field(default_factory=dict)
+    # FIX-9 (Codex r1 MINOR #9): was `Field(default_factory=dict)` — a
+    # missing csl_json silently became {} and overwrote the caller's row
+    # with an empty biblio. Required (422 when absent) so a client bug/typo
+    # can never wipe a user's saved metadata.
+    csl_json: dict[str, Any] = Field(...)
 
 
 @router.get("/documents/{document_id}/biblio", response_model=BiblioResponse)

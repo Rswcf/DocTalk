@@ -16,6 +16,7 @@ from types import SimpleNamespace
 from unittest.mock import AsyncMock
 
 import pytest
+from sqlalchemy.exc import IntegrityError
 
 BACKEND_DIR = Path(__file__).resolve().parents[1]
 if str(BACKEND_DIR) not in sys.path:
@@ -30,6 +31,10 @@ from app.services.biblio_service import (  # noqa: E402
     get_or_seed_system_biblio,
     upsert_user_biblio,
 )
+
+
+def _dup_key_error() -> IntegrityError:
+    return IntegrityError(statement=None, params=None, orig=Exception("duplicate key value"))
 
 # ---------------------------------------------------------------------------
 # format_apa_intext — pure function
@@ -93,9 +98,10 @@ def _user(**overrides):
     return SimpleNamespace(**base)
 
 
-def _fake_db(execute_results):
+def _fake_db(execute_results, **overrides):
     """execute_results: list of scalar_one_or_none() return values, consumed
-    in call order."""
+    in call order. `overrides` lets race tests replace commit/rollback with
+    AsyncMocks that raise (FIX-9)."""
     results = list(execute_results)
 
     async def execute(_stmt):
@@ -107,7 +113,12 @@ def _fake_db(execute_results):
     def add(obj):
         added.append(obj)
 
-    return SimpleNamespace(execute=AsyncMock(side_effect=execute), add=add, added=added, commit=AsyncMock())
+    payload: dict[str, object] = dict(
+        execute=AsyncMock(side_effect=execute), add=add, added=added,
+        commit=AsyncMock(), rollback=AsyncMock(),
+    )
+    payload.update(overrides)
+    return SimpleNamespace(**payload)
 
 
 class TestGetOrSeedSystemBiblio:
@@ -140,6 +151,46 @@ class TestGetOrSeedSystemBiblio:
         assert row is existing
         db.commit.assert_not_awaited()
         enrich_mock.assert_not_awaited()
+
+
+class TestGetOrSeedSystemBiblioConcurrentFirstAccess:
+    """FIX-9 (Codex r1 MINOR #9): two concurrent first-accesses to a
+    never-seeded document both SELECT None, then both attempt to INSERT —
+    the partial unique index stops the loser's commit. Must recover, not
+    surface a raw 500."""
+
+    @pytest.mark.asyncio
+    async def test_integrity_error_on_commit_returns_the_winners_row(self, monkeypatch):
+        monkeypatch.setattr(biblio_service, "_enrich_from_pdf_metadata", AsyncMock(side_effect=lambda _doc, csl: csl))
+        document = _document()
+        winner_row = SimpleNamespace(
+            document_id=document.id, user_id=None, csl_json={"title": "Winner seeded first"}, source=SYSTEM_SOURCE,
+        )
+        db = _fake_db(
+            [None, winner_row],  # 1st SELECT: no row yet. 2nd SELECT (post-rollback): winner's row.
+            commit=AsyncMock(side_effect=_dup_key_error()),
+        )
+
+        row = await get_or_seed_system_biblio(db, document)
+
+        assert row is winner_row
+        db.rollback.assert_awaited_once()
+
+    @pytest.mark.asyncio
+    async def test_integrity_error_with_no_winner_row_reraises(self, monkeypatch):
+        """Not the anticipated race (e.g. a genuine constraint/DB failure) —
+        must propagate, never swallow silently."""
+        monkeypatch.setattr(biblio_service, "_enrich_from_pdf_metadata", AsyncMock(side_effect=lambda _doc, csl: csl))
+        document = _document()
+        db = _fake_db(
+            [None, None],  # 1st SELECT: no row. 2nd SELECT (post-rollback): still none — unexplained.
+            commit=AsyncMock(side_effect=_dup_key_error()),
+        )
+
+        with pytest.raises(IntegrityError):
+            await get_or_seed_system_biblio(db, document)
+
+        db.rollback.assert_awaited_once()
 
 
 class TestGetBiblioForUser:
@@ -204,6 +255,58 @@ class TestUpsertUserBiblio:
         assert row.source == USER_SOURCE
         assert db.added == []  # no new row created
         db.commit.assert_awaited_once()
+
+
+class TestUpsertUserBiblioConcurrentFirstWrite:
+    """FIX-9 (Codex r1 MINOR #9): two concurrent first PUTs from the SAME
+    user for the SAME document (double-click, two tabs) both SELECT None,
+    then both attempt to INSERT — the partial unique index stops the
+    loser's commit. Must retry as an UPDATE against the winner's row, so
+    the caller's intended edit still lands rather than silently vanishing."""
+
+    @pytest.mark.asyncio
+    async def test_integrity_error_on_insert_retries_as_update_on_winners_row(self, monkeypatch):
+        document = _document()
+        user = _user()
+        winner_row = SimpleNamespace(
+            document_id=document.id, user_id=user.id, csl_json={"title": "Winner's first write"}, source=USER_SOURCE,
+        )
+        commit_calls = {"n": 0}
+
+        async def commit():
+            commit_calls["n"] += 1
+            if commit_calls["n"] == 1:
+                raise _dup_key_error()
+
+        db = _fake_db(
+            [None, winner_row],  # 1st SELECT: no user row yet. 2nd SELECT (post-rollback): winner's row.
+            commit=AsyncMock(side_effect=commit),
+        )
+
+        my_csl = {"title": "My intended edit"}
+        row = await upsert_user_biblio(db, document, user, my_csl)
+
+        assert row is winner_row
+        # The retry updates the winner's row to MY caller's intended content
+        # — never silently keeps the winner's write instead.
+        assert row.csl_json == my_csl
+        assert row.source == USER_SOURCE
+        db.rollback.assert_awaited_once()
+        assert commit_calls["n"] == 2  # failed insert attempt + successful update retry
+
+    @pytest.mark.asyncio
+    async def test_integrity_error_with_no_winner_row_reraises(self):
+        document = _document()
+        user = _user()
+        db = _fake_db(
+            [None, None],  # 1st SELECT: no row. 2nd SELECT (post-rollback): still none — unexplained.
+            commit=AsyncMock(side_effect=_dup_key_error()),
+        )
+
+        with pytest.raises(IntegrityError):
+            await upsert_user_biblio(db, document, user, {"title": "x"})
+
+        db.rollback.assert_awaited_once()
 
 
 # ---------------------------------------------------------------------------
@@ -325,6 +428,23 @@ class TestBiblioEndpoints:
         upsert_mock.assert_awaited_once()
         assert upsert_mock.await_args.args[2] is user
         assert upsert_mock.await_args.args[3] == {"title": "My custom title", "author": [{"family": "Doe"}]}
+
+    @pytest.mark.asyncio
+    async def test_put_rejects_missing_csl_json(self, api_client: AsyncClient, monkeypatch) -> None:
+        """FIX-9 (Codex r1 MINOR #9): csl_json is now a REQUIRED field — a
+        missing/omitted body must 422, never silently upsert {} and wipe the
+        caller's saved biblio."""
+        user = _make_user()
+        doc = _make_doc(user)
+        db = _make_api_db(get=AsyncMock(return_value=doc))
+        _override_dependencies(db, user)
+        upsert_mock = AsyncMock()
+        monkeypatch.setattr(quotes_api.biblio_service, "upsert_user_biblio", upsert_mock)
+
+        response = await api_client.put(f"/api/documents/{doc.id}/biblio", json={})
+
+        assert response.status_code == 422
+        upsert_mock.assert_not_awaited()
 
     @pytest.mark.asyncio
     async def test_put_rejects_oversized_payload(self, api_client: AsyncClient) -> None:
