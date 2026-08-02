@@ -108,6 +108,18 @@ def _ensure_demo_files(docs: list) -> int:
 
             from io import BytesIO
 
+            # FIX-10 (Codex r1 MINOR #10, PARKED with ruling — see
+            # .collab/dialogue/2026-08-02-m2-codex-r1-triage.md #10): there IS
+            # a stat->put TOCTOU window here — two rolling-deploy containers
+            # (or another restoration process) could both stat a missing
+            # object and both reach this put_object. That's accepted, not
+            # fixed, because the overwrite is idempotent by construction: the
+            # ONLY source of truth for a demo object's bytes is the seed_data/
+            # file keyed by `slug` (read fresh, above, on every call), so any
+            # two concurrent overwrites always write the SAME bytes. This
+            # assumption breaks only if demo seed assets ever become mutable
+            # (e.g. per-user demo customization) — revisit locking/versioning
+            # then, not before.
             client.put_object(
                 bucket,
                 doc.storage_key,
