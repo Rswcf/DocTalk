@@ -52,6 +52,7 @@ interface ChatMessageRowProps {
    *  in to share" instead of "Share this answer" so it doesn't misrepresent
    *  itself to anonymous demo users. */
   isAnonShareAnswer: boolean;
+  onTryQuoteFinder?: (topic: string) => void;
 }
 
 const ChatMessageRow = React.memo(function ChatMessageRow({
@@ -65,6 +66,7 @@ const ChatMessageRow = React.memo(function ChatMessageRow({
   onShareAnswer,
   isSharingAnswer,
   isAnonShareAnswer,
+  onTryQuoteFinder,
 }: ChatMessageRowProps) {
   const displayCitations = React.useMemo(() => {
     if (message.role !== 'assistant') return undefined;
@@ -98,6 +100,7 @@ const ChatMessageRow = React.memo(function ChatMessageRow({
           onShareAnswer={onShareAnswer}
           isSharingAnswer={isSharingAnswer}
           isAnonShareAnswer={isAnonShareAnswer}
+          onTryQuoteFinder={onTryQuoteFinder}
         />
         {uniqueCitations && uniqueCitations.length > 0 && (
           <div className="mt-2 flex flex-wrap gap-1.5 pl-0">
@@ -134,11 +137,15 @@ interface ChatPanelProps {
   // uses it (true); collection chat doesn't (scope across multiple docs is
   // undefined). Default true to preserve existing single-doc behavior.
   supportsCustomInstructions?: boolean;
+  /** Opens the Quote Finder panel prefilled with a topic (FIX3-B chip).
+   * Only the document reader wires this — Quote Finder is single-document
+   * only, so collection chat leaves it undefined and the chip never renders. */
+  onTryQuoteFinder?: (topic: string) => void;
 }
 
 const autoSubmittedInitialQuestions = new Set<string>();
 
-export default function ChatPanel({ sessionId, onCitationClick, onPreviewLayoutTranslation, maxUserMessages, suggestedQuestions, initialQuestion, onOpenSettings, hasCustomInstructions, userPlan, autoSubmitInitialQuestion = false, supportsCustomInstructions = true }: ChatPanelProps) {
+export default function ChatPanel({ sessionId, onCitationClick, onPreviewLayoutTranslation, maxUserMessages, suggestedQuestions, initialQuestion, onOpenSettings, hasCustomInstructions, userPlan, autoSubmitInitialQuestion = false, supportsCustomInstructions = true, onTryQuoteFinder }: ChatPanelProps) {
   const messages = useDocTalkStore((s) => s.messages);
   const isStreaming = useDocTalkStore((s) => s.isStreaming);
   const selectedMode = useDocTalkStore((s) => s.selectedMode);
@@ -547,6 +554,7 @@ export default function ChatPanel({ sessionId, onCitationClick, onPreviewLayoutT
                     onShareAnswer={userPlan ? handleShareAnswerVoid : handleAnonShareClick}
                     isSharingAnswer={shareAnswerLoadingId === message.id}
                     isAnonShareAnswer={!userPlan}
+                    onTryQuoteFinder={onTryQuoteFinder}
                   />
                 );
               })}

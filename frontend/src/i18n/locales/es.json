@@ -3746,5 +3746,6 @@
   "quoteFinder.biblioTitleField": "Título",
   "quoteFinder.biblioSave": "Guardar",
   "quoteFinder.biblioSaving": "Guardando...",
-  "quoteFinder.biblioSaveError": "No se pudo guardar la información de la cita"
+  "quoteFinder.biblioSaveError": "No se pudo guardar la información de la cita",
+  "quoteFinder.chip.tryIt": "Prueba el Buscador de citas para obtener una cita textual verificada"
 }

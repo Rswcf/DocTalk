@@ -3746,5 +3746,6 @@
   "quoteFinder.biblioTitleField": "Titre",
   "quoteFinder.biblioSave": "Enregistrer",
   "quoteFinder.biblioSaving": "Enregistrement en cours...",
-  "quoteFinder.biblioSaveError": "Échec de l'enregistrement des informations de citation"
+  "quoteFinder.biblioSaveError": "Échec de l'enregistrement des informations de citation",
+  "quoteFinder.chip.tryIt": "Essayer la recherche de citations pour une citation textuelle vérifiée"
 }

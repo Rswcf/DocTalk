@@ -3746,5 +3746,6 @@
   "quoteFinder.biblioTitleField": "タイトル",
   "quoteFinder.biblioSave": "保存",
   "quoteFinder.biblioSaving": "保存中...",
-  "quoteFinder.biblioSaveError": "引用情報の保存に失敗しました"
+  "quoteFinder.biblioSaveError": "引用情報の保存に失敗しました",
+  "quoteFinder.chip.tryIt": "引用ファインダーを試して、検証済みの逐語引用を見つける"
 }

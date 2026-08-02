@@ -61,6 +61,7 @@ export default function DocumentReaderPageClient() {
   const [layoutPaywallOpen, setLayoutPaywallOpen] = useState(false);
   const [layoutPaywallReason, setLayoutPaywallReason] = useState<string | null>(null);
   const [quoteFinderOpen, setQuoteFinderOpen] = useState(false);
+  const [quoteFinderPrefillTopic, setQuoteFinderPrefillTopic] = useState<string | undefined>(undefined);
   const [translatedPreview, setTranslatedPreview] = useState<{
     url: string;
     downloadUrl: string | null;
@@ -258,7 +259,12 @@ export default function DocumentReaderPageClient() {
   const quoteFinderEntry = isLoggedIn ? (
     <button
       type="button"
-      onClick={() => setQuoteFinderOpen(true)}
+      onClick={() => {
+        // A prior "Try Quote Finder" chip click may have left a stale
+        // prefill in state — the plain toolbar entry always opens empty.
+        setQuoteFinderPrefillTopic(undefined);
+        setQuoteFinderOpen(true);
+      }}
       disabled={documentStatus !== 'ready'}
       className="flex min-h-8 items-center gap-1.5 rounded-md px-2 py-1 text-xs font-medium text-zinc-600 transition-colors hover:bg-white/70 disabled:cursor-not-allowed disabled:opacity-50 dark:text-zinc-400 dark:hover:bg-zinc-800 focus-visible:ring-2 focus-visible:ring-blue-500"
       title={tOr('quoteFinder.toolbarLabel', 'Quote Finder')}
@@ -383,6 +389,16 @@ export default function DocumentReaderPageClient() {
     revealMobileDocumentPane();
   }, [isDemo, navigateToCitation, revealMobileDocumentPane]);
 
+  // "Try Quote Finder" chip (FIX3-B, Codex r3 #5): reuses the same panel-open
+  // mechanism as the toolbar entry, just with a prefilled topic. Never
+  // auto-submits — the search itself is billed, so the user still has to
+  // hit Find quotes (or edit the topic first).
+  const handleTryQuoteFinder = useCallback((topic: string) => {
+    trackEvent('quote_finder_chip_clicked', { source: 'chat_message' });
+    setQuoteFinderPrefillTopic(topic);
+    setQuoteFinderOpen(true);
+  }, []);
+
   useEffect(() => {
     if (isDesktopLayout !== false || mobileTab !== 'document') return;
     if (highlights.length === 0 && !highlightSnippet) return;
@@ -399,7 +415,7 @@ export default function DocumentReaderPageClient() {
   }, [isDesktopLayout, mobileTab, currentPage, highlights, highlightSnippet]);
 
   const chatContent = documentStatus === 'ready' && sessionId ? (
-    <ChatPanel sessionId={sessionId} onCitationClick={handleCitationClick} onPreviewLayoutTranslation={handlePreviewLayoutTranslation} maxUserMessages={isDemo && !isLoggedIn ? 5 : undefined} suggestedQuestions={suggestedQuestions.length > 0 ? suggestedQuestions : undefined} initialQuestion={initialQuestion} autoSubmitInitialQuestion={isDemo} onOpenSettings={canUseCustomInstructions ? () => setShowInstructions(true) : undefined} hasCustomInstructions={!!customInstructions} userPlan={userPlan} />
+    <ChatPanel sessionId={sessionId} onCitationClick={handleCitationClick} onPreviewLayoutTranslation={handlePreviewLayoutTranslation} maxUserMessages={isDemo && !isLoggedIn ? 5 : undefined} suggestedQuestions={suggestedQuestions.length > 0 ? suggestedQuestions : undefined} initialQuestion={initialQuestion} autoSubmitInitialQuestion={isDemo} onOpenSettings={canUseCustomInstructions ? () => setShowInstructions(true) : undefined} hasCustomInstructions={!!customInstructions} userPlan={userPlan} onTryQuoteFinder={handleTryQuoteFinder} />
   ) : sessionErrorCopy ? (
     <div className="flex h-full w-full items-center justify-center px-5 py-8">
       <div
@@ -573,6 +589,7 @@ export default function DocumentReaderPageClient() {
         userPlan={userPlan}
         onClose={() => setQuoteFinderOpen(false)}
         onCitationClick={handleCitationClick}
+        initialTopic={quoteFinderPrefillTopic}
       />
     </div>
   );

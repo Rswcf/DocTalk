@@ -3746,5 +3746,6 @@
   "quoteFinder.biblioTitleField": "Título",
   "quoteFinder.biblioSave": "Salvar",
   "quoteFinder.biblioSaving": "Salvando...",
-  "quoteFinder.biblioSaveError": "Falha ao salvar as informações da citação"
+  "quoteFinder.biblioSaveError": "Falha ao salvar as informações da citação",
+  "quoteFinder.chip.tryIt": "Experimente o Localizador de citações para uma citação literal verificada"
 }

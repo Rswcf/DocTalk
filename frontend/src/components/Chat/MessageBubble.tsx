@@ -2,7 +2,7 @@
 
 import React, { Suspense, useMemo, useState, useCallback, useEffect } from 'react';
 import remarkGfm from 'remark-gfm';
-import { Copy, Check, ThumbsUp, ThumbsDown, RotateCcw, ChevronsDown, Share2 } from 'lucide-react';
+import { Copy, Check, ThumbsUp, ThumbsDown, RotateCcw, ChevronsDown, Share2, Quote } from 'lucide-react';
 import type { ChatArtifact, Citation, Message } from '../../types';
 import { useLocale } from '../../i18n';
 import CitationPopover from './CitationPopover';
@@ -27,6 +27,10 @@ interface MessageBubbleProps {
   /** True when `onShareAnswer` is the anonymous conversion-affordance handler
    *  (not a working share) — swaps the button's copy to "Sign in to share". */
   isAnonShareAnswer?: boolean;
+  /** Opens the Quote Finder panel prefilled with a topic (FIX3-B chip).
+   * Undefined on surfaces that don't wire a panel (e.g. collection chat),
+   * in which case the chip simply never renders. */
+  onTryQuoteFinder?: (topic: string) => void;
 }
 
 function insertCitationMarkers(text: string, citations: Citation[]): string {
@@ -209,6 +213,7 @@ function MessageBubble({
   onShareAnswer,
   isSharingAnswer,
   isAnonShareAnswer,
+  onTryQuoteFinder,
 }: MessageBubbleProps) {
   const isUser = message.role === 'user';
   const isError = !!message.isError;
@@ -328,6 +333,20 @@ function MessageBubble({
                   onPreviewLayoutTranslation={onPreviewLayoutTranslation}
                 />
               ))}
+              {/* FIX3-B (Codex r3 #5): non-blocking nudge for a strict quote
+                  request that deliberately did NOT auto-route to billed
+                  Quote Finder (negation/metalinguistic token present) — a
+                  false negative here only costs one click, never money. */}
+              {isAssistant && !isStreaming && message.quoteFinderHint && message.quoteFinderTopic && onTryQuoteFinder && (
+                <button
+                  type="button"
+                  onClick={() => onTryQuoteFinder(message.quoteFinderTopic || '')}
+                  className="not-prose mt-3 inline-flex min-h-9 items-center gap-1.5 rounded-lg border border-[var(--reader-evidence-border)] bg-[var(--reader-evidence-soft)] px-3 py-1.5 text-sm font-medium text-[var(--reader-evidence)] transition-colors hover:brightness-95 focus-visible:ring-2 focus-visible:ring-[var(--reader-evidence)]"
+                >
+                  <Quote size={14} aria-hidden="true" />
+                  {t('quoteFinder.chip.tryIt')}
+                </button>
+              )}
             </>
           )}
         </div>

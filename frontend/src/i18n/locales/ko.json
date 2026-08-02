@@ -3746,5 +3746,6 @@
   "quoteFinder.biblioTitleField": "제목",
   "quoteFinder.biblioSave": "저장",
   "quoteFinder.biblioSaving": "저장 중...",
-  "quoteFinder.biblioSaveError": "인용 정보를 저장하지 못했습니다"
+  "quoteFinder.biblioSaveError": "인용 정보를 저장하지 못했습니다",
+  "quoteFinder.chip.tryIt": "인용문 파인더로 검증된 원문 그대로의 인용문 찾기"
 }

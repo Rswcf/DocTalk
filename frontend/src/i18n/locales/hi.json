@@ -3746,5 +3746,6 @@
   "quoteFinder.biblioTitleField": "शीर्षक",
   "quoteFinder.biblioSave": "सहेजें",
   "quoteFinder.biblioSaving": "सहेजा जा रहा है...",
-  "quoteFinder.biblioSaveError": "उद्धरण जानकारी सहेजने में विफल"
+  "quoteFinder.biblioSaveError": "उद्धरण जानकारी सहेजने में विफल",
+  "quoteFinder.chip.tryIt": "सत्यापित शब्दशः उद्धरण के लिए उद्धरण खोजक आज़माएँ"
 }

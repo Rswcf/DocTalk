@@ -87,6 +87,15 @@ export interface Message {
   continuationCount?: number;
   backendId?: string;
   shareAnchor?: string;
+  /** FIX3-B (Codex r3 #5, plan §8.4.3): set on the `done` event when the
+   * strict quote trigger matched this turn but a negation/metalinguistic
+   * token was ALSO present, so the message deliberately did NOT auto-route
+   * to billed Quote Finder. Live-only — the backend does not persist this
+   * onto the Message row, so it's absent again after a session reload. Used
+   * to offer a non-blocking "Try Quote Finder" chip; never used to auto-open
+   * or auto-bill anything. */
+  quoteFinderHint?: boolean;
+  quoteFinderTopic?: string | null;
 }
 
 export interface DocumentResponse {

@@ -3748,5 +3748,6 @@
   "quoteFinder.biblioTitleField": "Title",
   "quoteFinder.biblioSave": "Save",
   "quoteFinder.biblioSaving": "Saving...",
-  "quoteFinder.biblioSaveError": "Failed to save citation info"
+  "quoteFinder.biblioSaveError": "Failed to save citation info",
+  "quoteFinder.chip.tryIt": "Try Quote Finder for a verified verbatim quote"
 }

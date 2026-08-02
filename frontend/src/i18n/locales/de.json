@@ -3746,5 +3746,6 @@
   "quoteFinder.biblioTitleField": "Titel",
   "quoteFinder.biblioSave": "Speichern",
   "quoteFinder.biblioSaving": "Wird gespeichert...",
-  "quoteFinder.biblioSaveError": "Zitatangaben konnten nicht gespeichert werden"
+  "quoteFinder.biblioSaveError": "Zitatangaben konnten nicht gespeichert werden",
+  "quoteFinder.chip.tryIt": "Zitatsuche für ein verifiziertes wörtliches Zitat ausprobieren"
 }

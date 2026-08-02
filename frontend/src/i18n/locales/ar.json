@@ -3746,5 +3746,6 @@
   "quoteFinder.biblioTitleField": "العنوان",
   "quoteFinder.biblioSave": "حفظ",
   "quoteFinder.biblioSaving": "جارٍ الحفظ...",
-  "quoteFinder.biblioSaveError": "فشل حفظ معلومات الاقتباس"
+  "quoteFinder.biblioSaveError": "فشل حفظ معلومات الاقتباس",
+  "quoteFinder.chip.tryIt": "جرّب الباحث عن الاقتباسات للحصول على اقتباس حرفي موثّق"
 }

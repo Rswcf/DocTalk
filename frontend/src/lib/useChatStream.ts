@@ -268,7 +268,13 @@ export function useChatStream({
     markLastMessageTruncated(true);
   }, [flushPendingText, markLastMessageTruncated]);
 
-  const handleStreamDone = useCallback((d: { message_id: string; can_continue?: boolean; continuation_count?: number }) => {
+  const handleStreamDone = useCallback((d: {
+    message_id: string;
+    can_continue?: boolean;
+    continuation_count?: number;
+    quote_finder_hint?: boolean;
+    quote_finder_topic?: string | null;
+  }) => {
     flushPendingText();
     setStreaming(false);
     abortRef.current = null;
@@ -280,6 +286,8 @@ export function useChatStream({
         backendId: d.message_id,
         shareAnchor: messageShareAnchorFromId(d.message_id),
         ...(d.continuation_count !== undefined ? { continuationCount: d.continuation_count } : {}),
+        quoteFinderHint: d.quote_finder_hint === true,
+        quoteFinderTopic: d.quote_finder_topic ?? null,
       });
     }
   }, [flushPendingText, setStreaming, updateSessionActivity, sessionId, selectedMode, updateLastMessageMeta]);

@@ -3785,5 +3785,6 @@
   "quoteFinder.biblioTitleField": "标题",
   "quoteFinder.biblioSave": "保存",
   "quoteFinder.biblioSaving": "正在保存...",
-  "quoteFinder.biblioSaveError": "保存引用信息失败"
+  "quoteFinder.biblioSaveError": "保存引用信息失败",
+  "quoteFinder.chip.tryIt": "试试引用查找器，获取一条经核实的逐字引用"
 }

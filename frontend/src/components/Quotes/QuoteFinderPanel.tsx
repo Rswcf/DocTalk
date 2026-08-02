@@ -20,6 +20,11 @@ interface QuoteFinderPanelProps {
   userPlan?: string;
   onClose: () => void;
   onCitationClick: (citation: Citation) => void;
+  /** Prefills the topic input on open (FIX3-B "Try Quote Finder" chip) — the
+   * search itself is never auto-triggered from this; the user must still
+   * submit (or edit first), since this action is billed. Undefined for the
+   * plain toolbar entry point, which always opens with an empty topic. */
+  initialTopic?: string;
 }
 
 /**
@@ -36,7 +41,7 @@ interface QuoteFinderPanelProps {
  * rendered inside `QuoteCardList` so this panel and the chat artifact
  * (F3) stay consistent.
  */
-export default function QuoteFinderPanel({ isOpen, documentId, userPlan, onClose, onCitationClick }: QuoteFinderPanelProps) {
+export default function QuoteFinderPanel({ isOpen, documentId, userPlan, onClose, onCitationClick, initialTopic }: QuoteFinderPanelProps) {
   const { t, tOr, locale } = useLocale();
   const [topic, setTopic] = useState('');
   const [loading, setLoading] = useState(false);
@@ -48,9 +53,13 @@ export default function QuoteFinderPanel({ isOpen, documentId, userPlan, onClose
 
   useEffect(() => {
     if (!isOpen) return;
-    const id = window.setTimeout(() => inputRef.current?.focus(), 50);
+    if (initialTopic) setTopic(initialTopic);
+    const id = window.setTimeout(() => {
+      inputRef.current?.focus();
+      inputRef.current?.select();
+    }, 50);
     return () => window.clearTimeout(id);
-  }, [isOpen]);
+  }, [isOpen, initialTopic]);
 
   useEffect(() => {
     if (!isOpen) return;

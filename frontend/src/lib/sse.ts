@@ -20,7 +20,20 @@ type CitationEventPayload = CitationPayload & {
   retrieval_modality?: string;
 };
 type ErrorPayload = { code: string; message: string; status?: number };
-type DonePayload = { message_id: string; can_continue?: boolean; continuation_count?: number };
+type DonePayload = {
+  message_id: string;
+  can_continue?: boolean;
+  continuation_count?: number;
+  /** FIX3-B (Codex r3 #5): set when the strict quote trigger matched but a
+   * negation/metalinguistic token was ALSO present, so verified quote search
+   * was deliberately NOT auto-routed/billed. Only ever present on the main
+   * RAG-path `done` event (chat_service.py's action_planner.deterministic_plan
+   * gate) — continuation/tool-action/quote-search `done` events don't carry
+   * it, so these default to false/null there, which is the correct "no
+   * chip" outcome for those paths too. */
+  quote_finder_hint?: boolean;
+  quote_finder_topic?: string | null;
+};
 type ToolStatusPayload = { message: string };
 type AnswerRepairedPayload = { text: string; citations: Citation[]; verification?: unknown };
 
@@ -127,6 +140,8 @@ async function _processSSEStream(
                 message_id: typeof data.message_id === 'string' ? data.message_id : '',
                 can_continue: data.can_continue === true,
                 continuation_count: typeof data.continuation_count === 'number' ? data.continuation_count : undefined,
+                quote_finder_hint: data.quote_finder_hint === true,
+                quote_finder_topic: typeof data.quote_finder_topic === 'string' ? data.quote_finder_topic : null,
               });
               break;
             default:
