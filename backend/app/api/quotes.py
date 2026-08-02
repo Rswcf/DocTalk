@@ -33,6 +33,12 @@ router = APIRouter(prefix="/api", tags=["quotes"])
 # precedent) — one LLM call over retrieved context, same cost class as a chat turn.
 QUOTE_SEARCH_PREDEBIT_CREDITS = 15
 
+# FIX-6 (Codex r1 IMPORTANT #6): the discarded list is unbounded (one entry
+# per LLM proposal that failed verification) — cap what lands in telemetry
+# metadata so a pathological/adversarial LLM response can't bloat a
+# ProductEvent row; discarded_count above always reflects the true total.
+_MAX_TELEMETRY_DISCARDED = 20
+
 
 class QuoteSearchRequest(BaseModel):
     topic: str = Field(..., min_length=1, max_length=300)
@@ -203,6 +209,10 @@ async def create_quote_search(
                 cost_credits=actual_cost,
             )
         )
+        discarded_sample = [
+            {"reason": reason, "tier": tier, "score": score}
+            for reason, tier, score in result.discarded[:_MAX_TELEMETRY_DISCARDED]
+        ]
         db.add(
             ProductEvent(
                 user_id=user.id,
@@ -215,7 +225,17 @@ async def create_quote_search(
                     "proposed": result.proposed,
                     "verified": result.verified,
                     "discarded_count": len(result.discarded),
+                    # FIX-6 (Codex r1 IMPORTANT #6): §8.3's locked telemetry
+                    # contract — retrieved_count/candidate_pages/no_result,
+                    # plus a capped discarded(reason,tier,score) sample
+                    # (discarded_truncated notes when the cap was hit; the
+                    # true total is always discarded_count above).
+                    "discarded": discarded_sample,
+                    "discarded_truncated": len(result.discarded) > _MAX_TELEMETRY_DISCARDED,
                     "scanned_chunks": result.scanned_chunks,
+                    "retrieved_count": result.retrieved_count,
+                    "candidate_pages": result.candidate_pages,
+                    "no_result": result.no_result,
                     "cards_count": len(result.cards),
                 },
             )

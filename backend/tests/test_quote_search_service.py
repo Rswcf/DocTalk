@@ -262,6 +262,66 @@ class TestEmptyProposals:
         assert llm_called == []  # no candidates -> no LLM call
 
 
+class TestSearchTelemetryFields:
+    """FIX-6 (Codex r1 IMPORTANT #6): QuoteSearchResult must carry
+    retrieved_count, candidate_pages, and no_result per the locked §8.3
+    telemetry contract (2026-06-12-quote-finder-evidence-board.md)."""
+
+    @pytest.mark.asyncio
+    async def test_verified_result_reports_retrieved_count_and_candidate_pages(self, monkeypatch):
+        chunk_a = _chunk(SOURCE, page_start=4, page_end=4, chunk_index=0)
+        chunk_b = _chunk("A second, unrelated candidate.", page_start=6, page_end=7, chunk_index=1)
+        _patch_common(
+            monkeypatch,
+            candidates=[chunk_a, chunk_b],
+            scanned_chunks=12,
+            quotes_payload={"quotes": [
+                {"quote_text": "the most prized quality in translation today", "source_ref_n": 1, "page": 4}
+            ]},
+            source_by_chunk_id={
+                chunk_a.id: _chunk_source(chunk_a, text=SOURCE),
+                chunk_b.id: _chunk_source(chunk_b),
+            },
+        )
+
+        result = await quote_search(_fake_db(), document=_document(), user=None, topic="fluency", locale="en")
+
+        assert result.retrieved_count == 2  # both candidates handed to the LLM
+        assert result.candidate_pages == 3  # page 4 (chunk_a) + pages 6,7 (chunk_b)
+        assert result.no_result is False  # one card verified
+
+    @pytest.mark.asyncio
+    async def test_no_verified_cards_sets_no_result_true_despite_candidates(self, monkeypatch):
+        chunk = _chunk(SOURCE, page_start=1, page_end=1, chunk_index=0)
+        _patch_common(
+            monkeypatch,
+            candidates=[chunk],
+            scanned_chunks=5,
+            quotes_payload={"quotes": [
+                {"quote_text": "The committee approved the merger next fiscal quarter.", "source_ref_n": 1, "page": 1}
+            ]},
+            source_by_chunk_id={chunk.id: _chunk_source(chunk, text=SOURCE)},
+        )
+
+        result = await quote_search(_fake_db(), document=_document(), user=None, topic="mergers", locale="en")
+
+        assert result.retrieved_count == 1  # a candidate WAS retrieved...
+        assert result.no_result is True  # ...but nothing verified
+
+    @pytest.mark.asyncio
+    async def test_no_candidates_reports_zero_retrieved_and_no_result(self, monkeypatch):
+        async def fake_build_candidates(_db, _document, _topic):
+            return [], 0
+
+        monkeypatch.setattr(qss, "_build_candidates", fake_build_candidates)
+
+        result = await quote_search(_fake_db(), document=_document(), user=None, topic="anything", locale="en")
+
+        assert result.retrieved_count == 0
+        assert result.candidate_pages == 0
+        assert result.no_result is True
+
+
 class TestPageAttributionFromVerifiedSlice:
     """FIX-2 (Codex r1 BLOCKER #2). Page/bboxes/chunk_id must come from the
     segment that ACTUALLY verified, never a majority-vote guess over the
@@ -438,21 +498,63 @@ class TestPageAttributionFromVerifiedSlice:
         assert tier == "dropped"
 
 
+def _page(page_number: int, content: str | None):
+    return SimpleNamespace(page_number=page_number, content=content)
+
+
 class TestTermScanCandidates:
     """Pure unit coverage for the deterministic normalized term/phrase scan
-    (§8.3 candidate expansion) — no DB/LLM involved."""
+    (§8.3 candidate expansion) — no DB/LLM involved.
+
+    FIX-6 (Codex r1 IMPORTANT #6): two corrections — casefold (fuzzy)
+    normalization, and Page.content scanning in addition to Chunk.text."""
 
     def test_phrase_match_and_no_match(self):
         hit = _chunk("The full phrase authorial voice appears here.", 1, 1, 0)
         miss = _chunk("Completely unrelated content about weather.", 2, 2, 1)
 
-        hits = qss._term_scan_candidates([hit, miss], "authorial voice")
+        hits = qss._term_scan_candidates([hit, miss], [], "authorial voice")
 
         assert hits == [hit]
 
     def test_empty_topic_yields_no_hits(self):
         chunk = _chunk("Some content.", 1, 1, 0)
-        assert qss._term_scan_candidates([chunk], "   ") == []
+        assert qss._term_scan_candidates([chunk], [], "   ") == []
+
+    def test_casefold_matches_regardless_of_topic_or_text_case(self):
+        """Codex r1 repro: title-case topic 'Climate Risk' must match a
+        chunk containing only lowercase 'climate risk' (and vice versa) —
+        the prior case-preserving normalize() missed this."""
+        lower_hit = _chunk("The report discusses climate risk at length.", 1, 1, 0)
+        upper_hit = _chunk("CLIMATE RISK dominates the executive summary.", 2, 2, 1)
+        miss = _chunk("Nothing relevant in this passage.", 3, 3, 2)
+
+        hits = qss._term_scan_candidates([lower_hit, upper_hit, miss], [], "Climate Risk")
+
+        assert hits == [lower_hit, upper_hit]
+
+    def test_page_content_match_surfaces_owning_chunks_not_matched_via_chunk_text(self):
+        """A term present only in Page.content (chunking split it oddly
+        across chunk.text boundaries) still surfaces via every chunk
+        overlapping that page — never the raw page text itself."""
+        untouched = _chunk("Unrelated chunk text.", page_start=1, page_end=1, chunk_index=0)
+        spans_page_two = _chunk("Half of the elu-", page_start=2, page_end=2, chunk_index=1)
+        also_page_two = _chunk("-sive phrase, split across chunks.", page_start=2, page_end=2, chunk_index=2)
+        page_two = _page(2, "Half of the elusive phrase lives whole on page two.")
+
+        hits = qss._term_scan_candidates(
+            [untouched, spans_page_two, also_page_two], [page_two], "elusive phrase",
+        )
+
+        assert untouched not in hits
+        assert spans_page_two in hits
+        assert also_page_two in hits
+
+    def test_page_with_no_content_is_skipped_without_error(self):
+        chunk = _chunk("Some content.", 1, 1, 0)
+        page_without_content = _page(1, None)
+
+        assert qss._term_scan_candidates([chunk], [page_without_content], "nomatch") == []
 
 
 class TestJsonFromText:

@@ -29,7 +29,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
-from app.models.tables import Chunk, Document, User
+from app.models.tables import Chunk, Document, Page, User
 from app.services.corrective_retrieval_service import corrective_retrieval_service
 from app.services.query_router import QueryRouter
 from app.services.quote_source_service import (
@@ -93,6 +93,14 @@ class QuoteSearchResult:
     scanned_chunks: int
     usage: tuple[int, int]  # (prompt_tokens, completion_tokens)
     model: str
+    # FIX-6 (Codex r1 IMPORTANT #6): locked §8.3 telemetry contract
+    # ("Telemetry per search: retrieved_count, candidate_pages, proposed,
+    # verified, discarded(reason,tier,score), no_result" —
+    # 2026-06-12-quote-finder-evidence-board.md). Added with defaults so
+    # existing positional/keyword construction elsewhere stays valid.
+    retrieved_count: int = 0
+    candidate_pages: int = 0
+    no_result: bool = False
 
 
 # -------------------------- LLM client plumbing --------------------------
@@ -146,14 +154,32 @@ async def _all_document_chunks(db: AsyncSession, document_id: uuid.UUID) -> list
     return list(result.scalars().all())
 
 
-def _term_scan_candidates(chunks: list[Chunk], topic: str) -> list[Chunk]:
+async def _all_document_pages(db: AsyncSession, document_id: uuid.UUID) -> list[Page]:
+    result = await db.execute(
+        select(Page).where(Page.document_id == document_id).order_by(Page.page_number)
+    )
+    return list(result.scalars().all())
+
+
+def _term_scan_candidates(chunks: list[Chunk], pages: list[Page], topic: str) -> list[Chunk]:
     """Deterministic candidate expansion (§8.3/§8.1): normalized phrase/term
-    scan over the document's chunks, merged into retrieval candidates before
-    generation. Over-retrieve alone is insufficient recall for verbatim quote
-    finding (24-chunk cap, lexical=ILIKE only) — a short exact phrase can miss
-    embedding-similarity retrieval entirely while still being locatable by a
-    literal (normalized) scan."""
-    norm_topic, _ = normalize(topic)
+    scan over the document's chunks (and page text where present), merged
+    into retrieval candidates before generation. Over-retrieve alone is
+    insufficient recall for verbatim quote finding (24-chunk cap,
+    lexical=ILIKE only) — a short exact phrase can miss embedding-similarity
+    retrieval entirely while still being locatable by a literal (normalized)
+    scan.
+
+    FIX-6 (Codex r1 IMPORTANT #6): two corrections found in review —
+    (1) fuzzy=True (casefold) so a differently-cased topic still matches
+    ("Climate Risk" vs. a chunk containing "climate risk"); tier selection at
+    verify time is unaffected — this only widens which chunks reach the LLM
+    proposal step. (2) scans Page.content, not just Chunk.text — B1's
+    page-text corpus can hold a phrase whole where chunking split it
+    differently across chunk boundaries; a page-content match surfaces via
+    every chunk that overlaps that page (so the LLM still gets numbered
+    chunk excerpts, never raw page text)."""
+    norm_topic, _ = normalize(topic, fuzzy=True)
     norm_topic = norm_topic.strip()
     if not norm_topic:
         return []
@@ -161,13 +187,29 @@ def _term_scan_candidates(chunks: list[Chunk], topic: str) -> list[Chunk]:
     if not terms:
         return []
 
-    hits: list[Chunk] = []
-    for ch in chunks:
-        norm_text, _ = normalize(ch.text or "")
+    def _matches(text: str) -> bool:
+        norm_text, _ = normalize(text or "", fuzzy=True)
         if not norm_text:
-            continue
-        if norm_topic in norm_text or any(t in norm_text for t in terms):
+            return False
+        return norm_topic in norm_text or any(t in norm_text for t in terms)
+
+    hits: list[Chunk] = []
+    seen: set[uuid.UUID] = set()
+    for ch in chunks:
+        if _matches(ch.text):
             hits.append(ch)
+            seen.add(ch.id)
+
+    if pages:
+        matched_pages = {p.page_number for p in pages if p.content and _matches(p.content)}
+        if matched_pages:
+            for ch in chunks:
+                if ch.id in seen:
+                    continue
+                if any(ch.page_start <= pn <= ch.page_end for pn in matched_pages):
+                    hits.append(ch)
+                    seen.add(ch.id)
+
     return hits
 
 
@@ -188,6 +230,7 @@ async def _build_candidates(
     scanned_chunks is the document's total chunk count examined by the term
     scan (§8.3 telemetry / empty-result UX: "show count + what was scanned")."""
     all_chunks = await _all_document_chunks(db, document.id)
+    all_pages = await _all_document_pages(db, document.id)
 
     route = _query_router.route(topic, is_collection=False)
     retrieval = await corrective_retrieval_service.retrieve_single(
@@ -196,7 +239,7 @@ async def _build_candidates(
     retrieved_ids = [item["chunk_id"] for item in retrieval.retrieved if item.get("chunk_id")]
     retrieved_map = await _fetch_chunks_by_id(db, retrieved_ids)
 
-    term_hits = _term_scan_candidates(all_chunks, topic)
+    term_hits = _term_scan_candidates(all_chunks, all_pages, topic)
 
     ordered: list[Chunk] = []
     seen: set[uuid.UUID] = set()
@@ -213,6 +256,17 @@ async def _build_candidates(
         ordered.append(ch)
 
     return ordered[:MAX_CANDIDATE_CHUNKS], len(all_chunks)
+
+
+def _candidate_pages_count(candidates: list[Chunk]) -> int:
+    """FIX-6 telemetry: distinct pages spanned by the final candidate set
+    (union of each candidate chunk's own page_start..page_end range) —
+    "how much of the document did the search actually look at," independent
+    of scanned_chunks (total corpus size) and retrieved_count (chunk count)."""
+    pages: set[int] = set()
+    for ch in candidates:
+        pages.update(range(ch.page_start, ch.page_end + 1))
+    return len(pages)
 
 
 async def _neighbor_chunks(db: AsyncSession, chunk: Chunk) -> list[Chunk]:
@@ -415,6 +469,7 @@ async def quote_search(
         return QuoteSearchResult(
             cards=[], proposed=0, verified=0, discarded=[],
             scanned_chunks=scanned_chunks, usage=(0, 0), model=MODEL,
+            retrieved_count=0, candidate_pages=0, no_result=True,
         )
 
     raw_quotes, prompt_tokens, completion_tokens = await _call_llm(candidates, topic, locale)
@@ -480,4 +535,7 @@ async def quote_search(
         scanned_chunks=scanned_chunks,
         usage=(prompt_tokens, completion_tokens),
         model=MODEL,
+        retrieved_count=len(candidates),
+        candidate_pages=_candidate_pages_count(candidates),
+        no_result=len(cards) == 0,
     )

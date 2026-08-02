@@ -252,6 +252,52 @@ async def test_quote_search_charges_actual_cost_even_when_verified_empty(
 
 
 @pytest.mark.asyncio
+async def test_quote_search_completed_event_carries_bounded_telemetry(
+    client: AsyncClient, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """FIX-6 (Codex r1 IMPORTANT #6): the quote_search_completed ProductEvent
+    must carry retrieved_count/candidate_pages/no_result plus a CAPPED
+    discarded(reason,tier,score) sample (never the unbounded full list) —
+    discarded_count always reflects the true total regardless of the cap."""
+    user = _make_user()
+    doc = _make_doc(user)
+    added: list[object] = []
+    db = _make_db(get=AsyncMock(return_value=doc), add=lambda obj: added.append(obj))
+    _override_dependencies(db, user)
+
+    monkeypatch.setattr(credit_service, "debit_credits", AsyncMock(return_value=uuid.uuid4()))
+    monkeypatch.setattr(credit_service, "reconcile_credits", AsyncMock(return_value=None))
+    monkeypatch.setattr(credit_service, "get_user_credits", AsyncMock(return_value=485))
+
+    # More discarded entries than the telemetry cap, to prove truncation.
+    over_cap_discarded = [(f"reason_{i}", "dropped", 0.0) for i in range(quotes_api._MAX_TELEMETRY_DISCARDED + 5)]
+    result = _sample_result(
+        discarded=over_cap_discarded,
+        retrieved_count=7,
+        candidate_pages=4,
+        no_result=False,
+    )
+    monkeypatch.setattr(quote_search_service, "quote_search", AsyncMock(return_value=result))
+
+    response = await client.post(
+        f"/api/documents/{doc.id}/quote-search", json={"topic": "climate risk"}
+    )
+
+    assert response.status_code == 200
+
+    events = [obj for obj in added if getattr(obj, "event_name", None) == "quote_search_completed"]
+    assert len(events) == 1
+    metadata = events[0].metadata_json
+    assert metadata["retrieved_count"] == 7
+    assert metadata["candidate_pages"] == 4
+    assert metadata["no_result"] is False
+    assert metadata["discarded_count"] == len(over_cap_discarded)
+    assert len(metadata["discarded"]) == quotes_api._MAX_TELEMETRY_DISCARDED
+    assert metadata["discarded_truncated"] is True
+    assert metadata["discarded"][0] == {"reason": "reason_0", "tier": "dropped", "score": 0.0}
+
+
+@pytest.mark.asyncio
 async def test_quote_search_failure_refunds_predebit(
     client: AsyncClient, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
