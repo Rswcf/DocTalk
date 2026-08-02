@@ -8,6 +8,41 @@ releases use `0.minor.patch` semantics such as `0.2.0` and `0.2.1`.
 
 ## [Unreleased]
 
+## [0.23.0] - 2026-08-02
+
+### Fixed
+- The demo now honors its advertised limit: 5 free messages per sample
+  document (previously one shared counter across all three samples), and the
+  counter stays accurate across page reloads, language switches, and network
+  hiccups by re-syncing to the server's count.
+- Browsing between demo documents no longer silently consumes session quota —
+  returning to a sample document resumes your previous conversation instead of
+  starting over, and no longer risks a "please wait" rate-limit block from
+  normal navigation.
+- Demo documents can no longer become permanently unavailable: the session cap
+  is now a rolling 24-hour window (was a lifetime count), a nightly cleanup
+  prunes abandoned empty demo sessions, and signed-in accounts can no longer
+  exhaust the anonymous demo's capacity.
+- Restored light-mode visibility for roughly 40 UI elements that had become
+  invisible after an earlier theme change: the typing indicator, streaming
+  cursor, message-box placeholder, Beta badge, thumbs-up state, various hover
+  states, and more. Dark mode is unchanged.
+- The demo page is now served in all 11 languages at localized URLs
+  (e.g. /de/demo), with fully translated first paint for search engines.
+- After hitting the demo limit, "Upload your own document" now takes you to
+  the upload dashboard after sign-in instead of back to the demo.
+- Share buttons are now visible in the demo and honestly labeled "Sign in to
+  share this conversation" for visitors who haven't signed up yet.
+
+### Internal
+- Anonymous demo message metering is keyed per (IP, document); the demo
+  session cap counts only anonymous sessions in a 24h window with a matching
+  partial index; sign-in confirmation telemetry (auth_confirm_*) is accepted
+  from pre-auth clients.
+- Batch developed with a three-wave subagent team and hardened through six
+  adversarial Codex review rounds (r1 BLOCK → r6 CONSENSUS-SHIP); review
+  trail in `.collab/reviews/2026-08-02-p0-*`.
+
 ## [0.22.0] - 2026-07-04
 
 ### Fixed
