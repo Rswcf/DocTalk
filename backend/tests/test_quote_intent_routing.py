@@ -436,6 +436,65 @@ class TestAuthedRoutingEmitsArtifact:
         assert settle_mock.await_args.kwargs["output_tokens"] == 80
         assert settle_mock.await_args.kwargs["model"] == "deepseek-v4-pro"
 
+    @pytest.mark.asyncio
+    async def test_ordinary_reconcile_failure_after_persist_charges_predebit_not_full_refund(
+        self, monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """FIX-4 (Codex r1 IMPORTANT #4): an ORDINARY (non-cancellation)
+        reconcile_credits failure AFTER the message-persist commit must NOT
+        reach the generic setup-phase full-refund — the answer is already
+        durably persisted and delivered ("predebit stands as the charge",
+        per the triage ruling). _refund_predebit must never be called."""
+        session_id = uuid.uuid4()
+        document_id = uuid.uuid4()
+        user_id = uuid.uuid4()
+        ledger_id = uuid.uuid4()
+        session_obj, doc_obj = _base_session_and_doc(document_id, session_id)
+        db = _make_db(session_obj, doc_obj, execute_side_effect=[_ScalarOneResult(session_obj)])
+
+        monkeypatch.setattr(chat_service_module.action_planner, "plan", AsyncMock(return_value=_quote_action_plan()))
+        monkeypatch.setattr(chat_service_module.credit_service, "get_estimated_cost", lambda _mode: 15)
+        monkeypatch.setattr(chat_service_module.credit_service, "debit_credits", AsyncMock(return_value=ledger_id))
+        # reconcile_credits fails with an ORDINARY exception (not CancelledError).
+        monkeypatch.setattr(
+            chat_service_module.credit_service, "reconcile_credits",
+            AsyncMock(side_effect=RuntimeError("db blip")),
+        )
+        monkeypatch.setattr(chat_service_module.credit_service, "record_usage", AsyncMock())
+        monkeypatch.setattr(chat_service_module.credit_service, "calculate_cost", lambda *_a, **_k: 6)
+        monkeypatch.setattr(chat_service_module, "_get_llm_client", _never_called)
+        refund_mock = AsyncMock()
+        monkeypatch.setattr(chat_service_module, "_refund_predebit", refund_mock)
+
+        card = QuoteCard(
+            display_text="the exact clause text", page=3, page_end=3, bboxes=[],
+            tier="exact", source_kind="page_text", chunk_id=str(uuid.uuid4()), score=100.0,
+        )
+        result = QuoteSearchResult(
+            cards=[card], proposed=1, verified=1, discarded=[],
+            scanned_chunks=9, usage=(300, 80), model="deepseek-v4-pro",
+        )
+        monkeypatch.setattr(chat_service_module.quote_search_service, "quote_search", AsyncMock(return_value=result))
+
+        events = [
+            event
+            async for event in chat_service_module.chat_service.chat_stream(
+                session_id=session_id,
+                user_message="Give me a direct quote about the termination clause.",
+                db=db,
+                user=SimpleNamespace(id=user_id, plan="pro"),
+                mode="balanced",
+            )
+        ]
+
+        assert events[-1]["event"] == "error"
+        assert events[-1]["data"]["code"] == "QUOTE_SEARCH_BILLING_INCOMPLETE"
+        # The message WAS persisted before reconcile failed.
+        persisted_messages = [m for m in db.added if isinstance(m, Message) and m.role == "assistant"]
+        assert len(persisted_messages) == 1
+        # Predebit stands as the charge — never refunded for a delivered answer.
+        refund_mock.assert_not_awaited()
+
 
 class TestUngatedContextsFallThroughToNormalChat:
     @pytest.mark.asyncio

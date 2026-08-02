@@ -1641,6 +1641,30 @@ class ChatService:
                                 user.id,
                             )
                     raise
+                except Exception as exc:
+                    # FIX-4 (Codex r1 IMPORTANT #4): an ORDINARY (non-cancel)
+                    # reconcile/record_usage/commit failure AFTER the answer
+                    # was already persisted must NOT reach the generic
+                    # setup-phase except block below, which assumes "no
+                    # answer" and does a full refund — that would free-ride a
+                    # real, delivered, persisted quote-search answer (the
+                    # message survives in the user's history after reload).
+                    # Same has_answer evidence as the CancelledError branch
+                    # above. Per the triage ruling: "predebit stands as the
+                    # charge" — no reconcile retry (reconcile/commit is
+                    # exactly what may have just failed), just don't refund.
+                    if quote_progress.message_id is not None:
+                        settled = True
+                        logger.exception(
+                            "Quote-search billing failed after the answer was already "
+                            "persisted (message_id=%s) for user %s — predebit stands, no refund.",
+                            quote_progress.message_id, user.id if user else None,
+                        )
+                        yield _safe_sse(
+                            "error", "QUOTE_SEARCH_BILLING_INCOMPLETE", exc, session_id=str(session_id),
+                        )
+                        return
+                    raise
                 # Reconcile already committed inside _run_verified_quote_search —
                 # mark settled BEFORE yielding so a cancellation during these
                 # yields can't ALSO trigger the setup handler's full refund

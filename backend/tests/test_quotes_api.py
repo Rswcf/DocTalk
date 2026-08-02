@@ -7,6 +7,7 @@ mocked-db pattern this file follows.
 """
 from __future__ import annotations
 
+import asyncio
 import uuid
 from types import SimpleNamespace
 from unittest.mock import AsyncMock
@@ -277,6 +278,79 @@ async def test_quote_search_failure_refunds_predebit(
     # Refund path: ledger row deleted + balance restored (mirrors _refund_predebit).
     db.execute.assert_awaited()
     db.commit.assert_awaited()
+
+
+@pytest.mark.asyncio
+async def test_quote_search_reconcile_failure_after_success_still_refunds(
+    client: AsyncClient, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """FIX-4 (Codex r1 IMPORTANT #4): the old try/except only wrapped the
+    quote_search() call — a reconcile_credits failure AFTER quote_search()
+    succeeded fell OUTSIDE the guarded region and left the 15-credit
+    predebit permanently committed. reconcile/usage/telemetry/commit must
+    now be inside the SAME guarded region."""
+    user = _make_user()
+    doc = _make_doc(user)
+    db = _make_db(
+        get=AsyncMock(return_value=doc),
+        execute=AsyncMock(return_value=_Result(rowcount=1)),
+    )
+    _override_dependencies(db, user)
+
+    ledger_id = uuid.uuid4()
+    monkeypatch.setattr(credit_service, "get_user_credits", AsyncMock(return_value=500))
+    monkeypatch.setattr(credit_service, "debit_credits", AsyncMock(return_value=ledger_id))
+    monkeypatch.setattr(quote_search_service, "quote_search", AsyncMock(return_value=_sample_result()))
+    # quote_search() succeeds; reconcile_credits (INSIDE the guarded region
+    # after this fix) is what fails.
+    monkeypatch.setattr(
+        credit_service, "reconcile_credits", AsyncMock(side_effect=RuntimeError("db blip"))
+    )
+
+    response = await client.post(
+        f"/api/documents/{doc.id}/quote-search", json={"topic": "climate risk"}
+    )
+
+    assert response.status_code == 500
+    assert response.json()["detail"]["error"] == "QUOTE_SEARCH_FAILED"
+    # Refund path still ran despite the failure happening AFTER quote_search().
+    db.execute.assert_awaited()
+    db.commit.assert_awaited()
+
+
+@pytest.mark.asyncio
+async def test_quote_search_cancellation_refunds_via_independent_session(
+    client: AsyncClient, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """FIX-4: CancelledError is NOT a subclass of Exception, so the old bare
+    `except Exception` silently missed it — the predebit would never be
+    refunded on a client disconnect. Must be handled explicitly, and via an
+    INDEPENDENT session (the request's own `db` may not be usable
+    mid-cancellation)."""
+    user = _make_user()
+    doc = _make_doc(user)
+    db = _make_db(get=AsyncMock(return_value=doc))
+    _override_dependencies(db, user)
+
+    ledger_id = uuid.uuid4()
+    monkeypatch.setattr(credit_service, "get_user_credits", AsyncMock(return_value=500))
+    monkeypatch.setattr(credit_service, "debit_credits", AsyncMock(return_value=ledger_id))
+    monkeypatch.setattr(
+        quote_search_service, "quote_search", AsyncMock(side_effect=asyncio.CancelledError())
+    )
+
+    refund_mock = AsyncMock()
+    monkeypatch.setattr(quotes_api, "_refund_predebit_on_cancel", refund_mock)
+
+    with pytest.raises(asyncio.CancelledError):
+        await quotes_api.create_quote_search(
+            document_id=doc.id,
+            body=quotes_api.QuoteSearchRequest(topic="climate risk"),
+            user=user,
+            db=db,
+        )
+
+    refund_mock.assert_awaited_once_with(user.id, quotes_api.QUOTE_SEARCH_PREDEBIT_CREDITS, ledger_id)
 
 
 @pytest.mark.asyncio
