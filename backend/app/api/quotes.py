@@ -1,7 +1,9 @@
 """Quote Finder APIs: billed quote-search (B4) and per-user biblio (B6)."""
 from __future__ import annotations
 
+import json
 import uuid
+from typing import Any
 
 import sqlalchemy as sa
 from fastapi import APIRouter, Depends, HTTPException
@@ -11,7 +13,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.deps import get_db_session, require_auth
 from app.core.rate_limit import auth_chat_limiter
 from app.models.tables import CreditLedger, Document, ProductEvent, UsageRecord, User
-from app.services import credit_service, quote_search_service
+from app.services import biblio_service, credit_service, quote_search_service
 from app.services.doc_service import can_access_document
 
 router = APIRouter(prefix="/api", tags=["quotes"])
@@ -197,3 +199,47 @@ async def create_quote_search(
         scanned_chunks=result.scanned_chunks,
         remaining_credits=remaining_credits,
     )
+
+
+# -------------------------- B6: per-user biblio --------------------------
+
+_MAX_CSL_JSON_CHARS = 20_000  # generous cap against pathological/abusive payloads
+
+
+class BiblioResponse(BaseModel):
+    csl_json: dict[str, Any]
+    source: str  # "system" | "user"
+
+
+class BiblioUpdateRequest(BaseModel):
+    csl_json: dict[str, Any] = Field(default_factory=dict)
+
+
+@router.get("/documents/{document_id}/biblio", response_model=BiblioResponse)
+async def get_document_biblio(
+    document_id: uuid.UUID,
+    user: User = Depends(require_auth),
+    db: AsyncSession = Depends(get_db_session),
+):
+    doc = await _verify_document(document_id, user, db)
+    row = await biblio_service.get_biblio_for_user(db, doc, user)
+    return BiblioResponse(csl_json=row.csl_json, source=row.source)
+
+
+@router.put("/documents/{document_id}/biblio", response_model=BiblioResponse)
+async def update_document_biblio(
+    document_id: uuid.UUID,
+    body: BiblioUpdateRequest,
+    user: User = Depends(require_auth),
+    db: AsyncSession = Depends(get_db_session),
+):
+    if len(json.dumps(body.csl_json)) > _MAX_CSL_JSON_CHARS:
+        raise HTTPException(
+            status_code=400,
+            detail={"error": "BIBLIO_TOO_LARGE", "message": "Biblio payload is too large"},
+        )
+    doc = await _verify_document(document_id, user, db)
+    # Always writes to the CALLER's own row — never the system row or
+    # another user's row (see biblio_service.upsert_user_biblio docstring).
+    row = await biblio_service.upsert_user_biblio(db, doc, user, body.csl_json)
+    return BiblioResponse(csl_json=row.csl_json, source=row.source)

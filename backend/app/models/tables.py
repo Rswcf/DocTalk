@@ -731,3 +731,42 @@ class DocumentLayoutRun(Base):
     __table_args__ = (
         sa.Index("idx_document_layout_runs_document_provider", "document_id", "provider", "created_at"),
     )
+
+
+class DocumentBiblio(Base):
+    """Minimal per-user bibliographic metadata (B6, plan §8.4 point 4 / D6).
+
+    Keyed by (document_id, user_id) in spirit: one SYSTEM row per document
+    (user_id IS NULL) holds the auto-detected default; each user who edits it
+    gets their OWN row (user_id = that user), never mutating the system row —
+    required because Document.user_id is nullable and demo docs are shared
+    across users (a user's edit must never leak into another user's view of
+    a shared/demo document's metadata).
+
+    user_id can't be part of a literal PRIMARY KEY (Postgres requires PK
+    columns NOT NULL, and the system row's user_id is NULL by design), so
+    uniqueness is enforced with two partial unique indexes instead — see the
+    migration. This is a deliberate, documented deviation from a literal
+    reading of "PK (document_id, user_id)"; functionally equivalent.
+    """
+    __tablename__ = "document_biblio"
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, server_default=sa.text("gen_random_uuid()")
+    )
+    document_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), sa.ForeignKey("documents.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    user_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        UUID(as_uuid=True), sa.ForeignKey("users.id", ondelete="CASCADE"), nullable=True
+    )
+    csl_json: Mapped[dict] = mapped_column(JSONB, nullable=False, server_default=sa.text("'{}'::jsonb"))
+    source: Mapped[str] = mapped_column(sa.String(16), nullable=False, server_default=sa.text("'system'"))
+    created_at: Mapped[datetime] = mapped_column(
+        sa.DateTime(timezone=True), nullable=False, server_default=sa.text("now()")
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        sa.DateTime(timezone=True), nullable=False, server_default=sa.text("now()"), onupdate=sa.func.now()
+    )
+
+    document: Mapped["Document"] = relationship("Document")
