@@ -8,6 +8,38 @@ releases use `0.minor.patch` semantics such as `0.2.0` and `0.2.1`.
 
 ## [Unreleased]
 
+## [0.24.0] - 2026-08-02
+
+### Added
+- **Quote Finder** (signed-in users): enter a topic on any document and get
+  machine-verified verbatim quote cards — the exact source text, its page
+  number, a one-click jump to the highlighted passage, and copy-with-citation
+  ("Author, Year, p. X"). A quote card is never shown unless the server
+  verified the text against the stored document — results state plainly
+  whether they were verified against original page text or extracted text.
+- Editable citation metadata (author/year/title) per document, auto-seeded
+  from the file and always correctable by you.
+- Asking the chat for a "direct quote" or "verbatim quotation" routes to the
+  verified quote pipeline; ambiguous phrasings show a non-intrusive "Try
+  Quote Finder" chip instead of guessing. Quote searches cost credits like a
+  Pro chat message; searches that verify nothing charge only actual work.
+- New PDFs now store per-page original text, enabling page-precise
+  verification and page-accurate attribution for everything above.
+
+### Fixed
+- Demo sample documents self-heal their stored PDF files on startup — a
+  storage migration had silently lost the demo PDFs (chat kept working, the
+  PDF pane didn't); restored and now impossible to recur silently.
+- Credit reconciliation is now settlement-marked and race-safe: a charge can
+  no longer be double-refunded, refunded-after-settlement, or left dangling
+  by a cancelled request on either the chat or quote-search path.
+
+### Internal
+- 68 commits developed via a three-wave subagent team, internal wave reviews,
+  and six adversarial Codex rounds (r1 BLOCK → r6 CONSENSUS-SHIP); trail in
+  `.collab/reviews/2026-08-02-quote-finder-m2-*`. Integration tests now run
+  against an isolated scratch database with loopback-only provisioning.
+
 ## [0.23.0] - 2026-08-02
 
 ### Fixed
