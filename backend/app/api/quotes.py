@@ -466,11 +466,12 @@ class SavedQuoteBoardResponse(SavedQuoteResponse):
     document list to resolve a display name — that list is capped (50
     docs) and excludes demo docs, so a saved quote from doc #51 or a demo
     document would otherwise have no way to resolve a filename
-    client-side. Populated via a query-time join
-    (list_all_saved_quotes' selectinload(SavedQuote.document)), never a
-    second round trip. Document-scoped reads (POST/PATCH and the
-    per-document GET) don't need this — the frontend already knows which
-    document it's looking at."""
+    client-side. Populated via list_all_saved_quotes'
+    selectinload(SavedQuote.document) — NOT a SQL join: SQLAlchemy issues
+    one bounded second SELECT (`WHERE document_id IN (...)`) within the
+    same request, not N+1 queries and not a client-side round trip.
+    Document-scoped reads (POST/PATCH and the per-document GET) don't need
+    this — the frontend already knows which document it's looking at."""
     document_filename: str
 
 
@@ -655,9 +656,10 @@ async def list_saved_quotes(
     """The Evidence Board feed — every saved quote for this user, across
     every document, newest first. M3-B3: same stored-snapshot contract as
     list_document_saved_quotes above — never re-verifies. FIX-7-backend
-    (Codex M3 r1 LOW): response rows carry document_filename (joined at
-    query time in list_all_saved_quotes) — see SavedQuoteBoardResponse's
-    docstring for why the board feed specifically needs this."""
+    (Codex M3 r1 LOW): response rows carry document_filename, populated by
+    list_all_saved_quotes' eager-loaded query (one bounded second SELECT,
+    not a SQL join) — see SavedQuoteBoardResponse's docstring for why the
+    board feed specifically needs this."""
     rows = await saved_quotes_service.list_all_saved_quotes(db, user_id=user.id)
     return SavedQuoteBoardListResponse(quotes=[_saved_quote_board_response(r) for r in rows])
 

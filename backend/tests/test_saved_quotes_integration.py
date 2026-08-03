@@ -84,30 +84,35 @@ def _card(chunk_id: uuid.UUID):
 
 
 class TestConcurrentIdenticalSaveNeverDuplicates:
-    async def test_two_concurrent_identical_saves_produce_exactly_one_row(
+    async def test_two_concurrent_identical_saves_both_succeed_and_agree_on_one_row(
         self, auth_user,
     ) -> None:
         """Codex-style deterministic-race reproduction: two requests for the
-        SAME quote (double-click, two tabs) both racing to INSERT. Mocked
-        tests can prove the retry LOGIC runs; only a real unique index can
-        prove the DATABASE actually stops the duplicate.
+        SAME quote (double-click, two tabs) both racing to save. Mocked
+        tests can prove the retry LOGIC runs; only a real unique index (and
+        now, FIX-1's advisory lock) can prove the DATABASE actually
+        produces exactly one row under genuine concurrency.
 
-        `return_exceptions=True` + a final settle step is deliberate, not a
-        weakened assertion: this project's test suite runs against NullPool
-        (TESTING=1, see app/models/database.py) so every checkout opens a
-        brand-new physical connection, and a truly concurrent
-        rollback-then-new-connection sequence under asyncio.gather can
-        surface a transient SQLAlchemy/asyncpg async-bridge hiccup
-        (`MissingGreenlet`) that is specific to NullPool under test —
-        reproduced standalone outside pytest, and confirmed ABSENT against
-        a production-shaped QueuePool-backed engine (the same pool
-        app/models/database.py uses whenever TESTING is unset). Treating
-        that as an acceptable outcome for a racing side, while still
-        requiring the DATABASE to end up in exactly one of the two
-        correct end-states every single round, is what actually matters:
-        the unique index is the thing under test, not this harness's pool
-        implementation."""
+        Tightened per Codex r2 (test-strength gap, their advisory-lock
+        probe found zero defects — idempotent-under-lock, retry
+        lock-release, no deadlock cycle): with FIX-1's per-user
+        pg_advisory_xact_lock now serializing save_quote() end-to-end, the
+        second caller's lock acquisition BLOCKS until the first caller's
+        entire transaction (idempotency check through insert-and-commit)
+        has ended — so the second caller's OWN idempotency check always
+        observes the first caller's already-committed row. The loser never
+        even reaches the INSERT/IntegrityError-retry path anymore; the
+        lock makes the two calls effectively sequential from the
+        database's point of view. Both concurrent calls must therefore
+        succeed cleanly EVERY round: exactly one lands created=True (the
+        API's 201 case), the other created=False (the 200 idempotent-hit
+        case), and both report the identical row id. This replaces the
+        prior `return_exceptions=True` tolerance, which existed only to
+        absorb a NullPool-specific async-bridge artifact that could occur
+        during a genuinely concurrent IntegrityError-retry — a scenario
+        the lock no longer permits for this identical-save case."""
         from app.models.database import AsyncSessionLocal
+        from app.models.tables import Document, SavedQuote
         from app.services import saved_quotes_service
 
         document_id = await _create_ready_document(auth_user.id)
@@ -116,8 +121,6 @@ class TestConcurrentIdenticalSaveNeverDuplicates:
         expected_hash = saved_quotes_service.compute_quote_hash(card.display_text, card.page, card.page_end)
 
         async def _one_save():
-            from app.models.tables import Document
-
             async with AsyncSessionLocal() as db:
                 document = await db.get(Document, document_id)
                 return await saved_quotes_service.save_quote(
@@ -125,31 +128,24 @@ class TestConcurrentIdenticalSaveNeverDuplicates:
                 )
 
         for _round in range(5):
-            results = await asyncio.gather(_one_save(), _one_save(), return_exceptions=True)
-            clean = [r for r in results if not isinstance(r, BaseException)]
-            # At least one side must land cleanly — a genuine failure on
-            # BOTH sides simultaneously would mean the row never got saved
-            # at all, which the settle step below cannot paper over.
-            assert clean, f"round {_round}: both concurrent saves raised: {results!r}"
+            outcome_a, outcome_b = await asyncio.gather(_one_save(), _one_save())
 
-            # Whichever side (if either) hit the NullPool artifact above,
-            # settle deterministically: a plain, NON-concurrent save must
-            # always resolve to the SAME row via the idempotent path.
-            settled_outcome = await _one_save()
-            settled_row = settled_outcome.row
+            created_flags = sorted([outcome_a.created, outcome_b.created])
+            assert created_flags == [False, True], (
+                f"round {_round}: expected exactly one winner (created=True) and one "
+                f"idempotent loser (created=False) — both must succeed under the lock; "
+                f"got {outcome_a!r}, {outcome_b!r}"
+            )
+            assert outcome_a.row.id == outcome_b.row.id  # both agree on the SAME row
+            assert outcome_a.row.quote_hash == expected_hash
 
             rows = await _saved_quote_rows(auth_user.id)
             assert len(rows) == 1, f"round {_round}: expected exactly one row, got {len(rows)}"
-            assert rows[0].quote_hash == expected_hash
-            assert rows[0].id == settled_row.id
-            for outcome in clean:
-                assert outcome.row.id == settled_row.id  # every clean result agreed on the SAME row
+            assert rows[0].id == outcome_a.row.id
 
             # Clean up between rounds so each round starts from "no row yet."
             async with AsyncSessionLocal() as db:
-                from app.models.tables import SavedQuote
-
-                await db.execute(sa_delete(SavedQuote).where(SavedQuote.id == settled_row.id))
+                await db.execute(sa_delete(SavedQuote).where(SavedQuote.id == outcome_a.row.id))
                 await db.commit()
 
 

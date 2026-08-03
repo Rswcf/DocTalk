@@ -215,9 +215,11 @@ async def list_all_saved_quotes(db: AsyncSession, *, user_id: uuid.UUID) -> list
     every document, newest first. Uses idx_saved_quotes_user_created.
 
     FIX-7-backend (Codex M3 r1 LOW): selectinload(SavedQuote.document) so
-    the API layer can read row.document.filename directly — a query-time
-    join, not a second round trip — for SavedQuoteBoardResponse's
-    document_filename field. The frontend's own document list is capped
+    the API layer can read row.document.filename directly, for
+    SavedQuoteBoardResponse's document_filename field. NOT a SQL join —
+    SQLAlchemy issues one bounded second SELECT (`WHERE document_id IN
+    (...)`) within this same request, not N+1 queries and not a
+    client-side round trip. The frontend's own document list is capped
     (50 docs) and excludes demo docs, so it can't reliably resolve a
     filename for every saved quote client-side."""
     result = await db.execute(
