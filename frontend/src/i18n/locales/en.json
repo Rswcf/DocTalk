@@ -3749,7 +3749,7 @@
   "quoteFinder.trust.pageTextHeadline": "Word-for-word quotes, verified against this document's page text.",
   "quoteFinder.approxHighlight": "Highlight location is approximate",
   "quoteFinder.page": "p. {page}",
-  "quoteFinder.pageRange": "p. {start}–{end}",
+  "quoteFinder.pageRange": "pp. {start}–{end}",
   "quoteFinder.jump": "Jump to page",
   "quoteFinder.copy": "Copy quote + citation",
   "quoteFinder.copied": "Copied",

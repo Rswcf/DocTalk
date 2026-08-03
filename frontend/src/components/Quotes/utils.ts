@@ -96,7 +96,7 @@ export function approxHighlightLabel(tOr: TOrFn): string {
  * type needing to know about the other. */
 export function pageRangeLabel(card: { page: number; pageEnd: number }, tOr: TOrFn): string {
   if (card.pageEnd && card.pageEnd !== card.page) {
-    return tOr('quoteFinder.pageRange', 'p. {start}–{end}', { start: card.page, end: card.pageEnd });
+    return tOr('quoteFinder.pageRange', 'pp. {start}–{end}', { start: card.page, end: card.pageEnd });
   }
   return tOr('quoteFinder.page', 'p. {page}', { page: card.page });
 }

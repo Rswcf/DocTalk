@@ -98,7 +98,7 @@ export default function SavedQuoteCard({ quote, index, biblio, onJump, onDeleted
   };
 
   const handleCopy = async () => {
-    const apaInText = formatApaInText(biblio, quote.page);
+    const apaInText = formatApaInText(biblio, quote.page, quote.pageEnd);
     const text = `"${quote.quoteText}" ${apaInText}`;
     try {
       await navigator.clipboard.writeText(text);

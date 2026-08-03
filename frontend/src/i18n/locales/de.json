@@ -3747,7 +3747,7 @@
   "quoteFinder.trust.pageTextHeadline": "Wörtliche Zitate, verifiziert gegen den Seitentext dieses Dokuments.",
   "quoteFinder.approxHighlight": "Die Markierungsposition ist ungefähr",
   "quoteFinder.page": "Seite {page}",
-  "quoteFinder.pageRange": "Seite {start}–{end}",
+  "quoteFinder.pageRange": "Seiten {start}–{end}",
   "quoteFinder.jump": "Zur Seite springen",
   "quoteFinder.copy": "Zitat + Quellenangabe kopieren",
   "quoteFinder.copied": "Kopiert",

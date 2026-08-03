@@ -54,7 +54,7 @@ export default function QuoteResultCard({ card, index, documentId, biblio, onJum
   latestIdentityRef.current = latestIdentity;
 
   const handleCopy = async () => {
-    const apaInText = formatApaInText(biblio, card.page);
+    const apaInText = formatApaInText(biblio, card.page, card.pageEnd);
     const text = `"${card.displayText}" ${apaInText}`;
     try {
       await navigator.clipboard.writeText(text);
