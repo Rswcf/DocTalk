@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Check, Copy, Loader2, MapPin, Trash2 } from 'lucide-react';
 import { useLocale } from '../../i18n';
 import { ApiError, deleteSavedQuote, updateSavedQuoteNote } from '../../lib/api';
@@ -14,6 +14,10 @@ interface SavedQuoteCardProps {
   biblio: DocumentBiblioCsl | null;
   onJump: (quote: SavedQuote, index: number) => void;
   onDeleted: (quoteId: string) => void;
+  /** Fired with the server-confirmed row after a successful note PATCH, so
+   * the parent list's own `quotes` array stays the source of truth (Codex
+   * M3 r1 finding #3). */
+  onNoteUpdated: (quote: SavedQuote) => void;
 }
 
 /**
@@ -24,18 +28,34 @@ interface SavedQuoteCardProps {
  * trust labels can go visually stale relative to a since-reparsed
  * document, which is intentional v1 scope, not a bug.
  */
-export default function SavedQuoteCard({ quote, index, biblio, onJump, onDeleted }: SavedQuoteCardProps) {
+export default function SavedQuoteCard({ quote, index, biblio, onJump, onDeleted, onNoteUpdated }: SavedQuoteCardProps) {
   const { tOr } = useLocale();
   const [copied, setCopied] = useState(false);
   const [note, setNote] = useState(quote.note || '');
+  // The last note value CONFIRMED by a successful PATCH (or the initial
+  // load) — compared against on blur instead of the `quote` prop (Codex M3
+  // r1 finding #3). The prop only updates once the parent re-renders with
+  // the bubbled-up `onNoteUpdated` result, so comparing against it directly
+  // caused a redundant PATCH on every blur even when nothing had changed
+  // since the last successful save, and reverted a failed save to the
+  // pre-first-save value instead of the last confirmed one.
+  const [confirmedNote, setConfirmedNote] = useState(quote.note || '');
   const [savingNote, setSavingNote] = useState(false);
   const [noteError, setNoteError] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  // Bumped on every blur-triggered save; a resolving request checks its
+  // captured generation against the current one before applying ANY state,
+  // so an older overlapping save (e.g. blur, quick re-edit, blur again
+  // before the first PATCH lands) can never stomp a newer save's result —
+  // same compare-on-resolve pattern already used in QuoteFinderPanel /
+  // useChatStream for the identical class of race.
+  const noteSaveGenerationRef = useRef(0);
 
   // The quote object is the parent's source of truth; re-sync the local
   // draft if it changes out from under us (e.g. a PATCH from elsewhere).
   useEffect(() => {
     setNote(quote.note || '');
+    setConfirmedNote(quote.note || '');
   }, [quote.id, quote.note]);
 
   const handleCopy = async () => {
@@ -52,19 +72,26 @@ export default function SavedQuoteCard({ quote, index, biblio, onJump, onDeleted
 
   const handleNoteBlur = async () => {
     const trimmed = note.trim();
-    const original = quote.note || '';
-    if (trimmed === original) return; // no-op PATCH avoidance
+    if (trimmed === confirmedNote) return; // no-op PATCH avoidance, against the last CONFIRMED value
+    const generation = ++noteSaveGenerationRef.current;
     setSavingNote(true);
     setNoteError(false);
     try {
-      await updateSavedQuoteNote(quote.id, trimmed || null);
+      const updated = await updateSavedQuoteNote(quote.id, trimmed || null);
+      if (noteSaveGenerationRef.current !== generation) return; // superseded by a newer save — its own resolution owns the final state
+      setConfirmedNote(updated.note || '');
+      setNote(updated.note || '');
+      onNoteUpdated(updated);
     } catch {
-      // Revert to last-known-good so the textarea doesn't silently claim a
-      // save that didn't happen.
-      setNote(original);
+      if (noteSaveGenerationRef.current !== generation) return; // superseded — don't clobber a newer in-flight save's optimistic text
+      // Revert to the last CONFIRMED value (not the stale prop) so the
+      // textarea doesn't silently claim a save that didn't happen.
+      setNote(confirmedNote);
       setNoteError(true);
     } finally {
-      setSavingNote(false);
+      if (noteSaveGenerationRef.current === generation) {
+        setSavingNote(false);
+      }
     }
   };
 

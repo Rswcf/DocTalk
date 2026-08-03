@@ -10,6 +10,7 @@ interface SavedQuoteListProps {
   quotes: SavedQuote[];
   onJump: (quote: SavedQuote, index: number) => void;
   onDeleted: (quoteId: string) => void;
+  onNoteUpdated: (quote: SavedQuote) => void;
   /** Localized "n of 30 saved" cap indicator (M3-F3), rendered above the
    * list. Undefined on paid plans, which don't get the indicator. */
   capLine?: string;
@@ -21,7 +22,7 @@ interface SavedQuoteListProps {
  * same pattern as QuoteCardList, so every card's Copy action can append
  * an APA in-text citation without a per-card round trip.
  */
-export default function SavedQuoteList({ documentId, quotes, onJump, onDeleted, capLine }: SavedQuoteListProps) {
+export default function SavedQuoteList({ documentId, quotes, onJump, onDeleted, onNoteUpdated, capLine }: SavedQuoteListProps) {
   const [biblio, setBiblio] = useState<DocumentBiblioCsl | null>(null);
 
   useEffect(() => {
@@ -53,6 +54,7 @@ export default function SavedQuoteList({ documentId, quotes, onJump, onDeleted, 
             biblio={biblio}
             onJump={onJump}
             onDeleted={onDeleted}
+            onNoteUpdated={onNoteUpdated}
           />
         ))}
       </div>

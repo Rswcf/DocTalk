@@ -159,6 +159,14 @@ export default function QuoteFinderPanel({ isOpen, documentId, userPlan, onClose
     setSavedGlobalCount((prev) => (prev !== null ? Math.max(0, prev - 1) : prev));
   }, []);
 
+  // Keeps this panel's `savedQuotes` array — the source of truth
+  // SavedQuoteCard's own confirmed-note baseline is compared against on
+  // its NEXT mount/prop-sync — up to date after a successful note PATCH
+  // (Codex M3 r1 finding #3).
+  const handleSavedNoteUpdated = useCallback((updated: SavedQuote) => {
+    setSavedQuotes((prev) => (prev ? prev.map((q) => (q.id === updated.id ? updated : q)) : prev));
+  }, []);
+
   if (!isOpen) return null;
 
   const handleSearch = async (e: FormEvent) => {
@@ -360,6 +368,7 @@ export default function QuoteFinderPanel({ isOpen, documentId, userPlan, onClose
                   quotes={savedQuotes}
                   onJump={handleSavedJump}
                   onDeleted={handleSavedDeleted}
+                  onNoteUpdated={handleSavedNoteUpdated}
                   capLine={savedGlobalCount !== null
                     ? tOr('quoteFinder.capIndicator', '{count} of {limit} saved', { count: savedGlobalCount, limit: FREE_SAVED_QUOTES_LIMIT })
                     : undefined}
