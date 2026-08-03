@@ -128,6 +128,74 @@ async def test_create_extraction_requires_ready_document(client: AsyncClient) ->
     _assert_error(response, 409, "DOCUMENT_NOT_READY")
 
 
+# -------------------------- domain_mode plan gate (P1 hygiene follow-up) --------------------------
+# Same vulnerability as chat.py's chat_stream (see test_error_taxonomy.py's
+# domain_mode tests): domain_mode ("legal"/"academic") is a Plus+ feature,
+# but this SECOND entry point (extraction jobs) accepted it unconditionally
+# too. Same gate, same error shape, placed right after the 409
+# doc-not-ready check.
+
+@pytest.mark.asyncio
+async def test_create_extraction_domain_mode_requires_plus_for_free_plan(client: AsyncClient) -> None:
+    user = _make_user(plan="free")
+    doc = _make_doc(user)
+    db = _make_db(get=AsyncMock(return_value=doc))
+    _override_dependencies(db, user)
+
+    response = await client.post(
+        f"/api/documents/{doc.id}/extractions",
+        json={"template_key": "executive_summary", "domain_mode": "legal"},
+    )
+
+    detail = _assert_error(response, 403, "DOMAIN_MODE_REQUIRES_PLUS")
+    assert detail["required_plan"] == "plus"
+
+
+@pytest.mark.asyncio
+async def test_create_extraction_domain_mode_omitted_does_not_gate_free_plan(client: AsyncClient) -> None:
+    """Regression guard: domain_mode omitted must reach the NEXT check
+    (the free monthly extraction limit here), never the domain_mode 403 —
+    the gate is domain_mode-conditional, not a blanket block."""
+    user = _make_user(plan="free")
+    doc = _make_doc(user)
+    db = _make_db(
+        get=AsyncMock(return_value=doc),
+        scalar=AsyncMock(return_value=FREE_MONTHLY_EXTRACTION_LIMIT),
+    )
+    _override_dependencies(db, user)
+
+    response = await client.post(
+        f"/api/documents/{doc.id}/extractions",
+        json={"template_key": "executive_summary"},
+    )
+
+    _assert_error(response, 403, "EXTRACTION_LIMIT_REACHED")  # NOT the domain_mode gate
+
+
+@pytest.mark.asyncio
+async def test_create_extraction_domain_mode_allowed_for_plus_plan(
+    client: AsyncClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Positive proof the gate doesn't block paid users: a Plus-plan user
+    with domain_mode set passes through to the NEXT check (credits here,
+    mirroring test_create_extraction_insufficient_credits_rolls_back's
+    shape) instead of the domain_mode 403."""
+    user = _make_user(plan="plus")
+    doc = _make_doc(user)
+    db = _make_db(get=AsyncMock(return_value=doc))
+    _override_dependencies(db, user)
+    monkeypatch.setattr(credit_service, "debit_credits", AsyncMock(return_value=None))
+    monkeypatch.setattr(credit_service, "get_user_credits", AsyncMock(return_value=12))
+
+    response = await client.post(
+        f"/api/documents/{doc.id}/extractions",
+        json={"template_key": "executive_summary", "domain_mode": "legal"},
+    )
+
+    _assert_error(response, 402, "INSUFFICIENT_CREDITS")  # NOT the domain_mode gate
+
+
 @pytest.mark.asyncio
 async def test_create_extraction_enforces_free_monthly_limit(client: AsyncClient) -> None:
     user = _make_user(plan="free")
