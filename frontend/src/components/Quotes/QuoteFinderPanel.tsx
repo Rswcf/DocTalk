@@ -125,6 +125,14 @@ export default function QuoteFinderPanel({ isOpen, documentId, userPlan, onClose
     let cancelled = false;
     setSavedLoading(true);
     setSavedErrorMsg(null);
+    // Clear stale rows/count BEFORE the fetch, not just on success (Codex
+    // M3 r1 finding #6): without this, a failed refetch left the PRIOR
+    // fetch's rows in place, so the error message rendered ABOVE rows that
+    // could belong to a different document (or a different plan's global
+    // count) than the one currently being viewed. Now an error always
+    // renders alone.
+    setSavedQuotes(null);
+    setSavedGlobalCount(null);
     const isFreePlan = (userPlan || 'free') === 'free';
     const fetchPromise = isFreePlan ? listAllSavedQuotes() : listDocumentSavedQuotes(documentId);
     fetchPromise
