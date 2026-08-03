@@ -8,6 +8,28 @@ releases use `0.minor.patch` semantics such as `0.2.0` and `0.2.1`.
 
 ## [Unreleased]
 
+## [0.25.0] - 2026-08-03
+
+### Added
+- **Evidence Board**: save any verified quote card with one click, then find it
+  again in a "Saved" tab inside Quote Finder — with your notes (inline
+  editable), page numbers, trust labels, jump-to-highlight, and
+  copy-with-citation. A "Saved Quotes" tab on your profile lists every saved
+  quote across all your documents. Free plan includes 30 active saved quotes
+  (deleting frees a slot); deleting is instant and saving the same quote twice
+  never double-counts.
+- Saved quotes are re-verified server-side at save time — a saved card can
+  only ever contain text the server verified against your document, and each
+  one records exactly what it was verified against for future re-validation.
+- Your saved quotes and notes are included in the account data export.
+
+### Internal
+- Save-time verification anchors (source hash + offsets); per-user advisory
+  lock closes a concurrent cap-bypass; partial FK index for reparse-time
+  referential actions; real-ASGI + real-Postgres integration coverage for the
+  full saved-quotes lifecycle. Four adversarial Codex rounds (REVISE → r4
+  CONSENSUS-SHIP); trail in `.collab/reviews/2026-08-03-m3-*`.
+
 ## [0.24.0] - 2026-08-02
 
 ### Added
