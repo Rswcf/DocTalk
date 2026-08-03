@@ -240,8 +240,10 @@ export default function QuoteFinderPanel({ isOpen, documentId, userPlan, onClose
         <div className="flex items-center gap-1 border-b border-[var(--reader-border)] px-5 pt-3" role="tablist">
           <button
             type="button"
+            id="quote-finder-tab-search"
             role="tab"
             aria-selected={activeTab === 'search'}
+            aria-controls="quote-finder-panel-search"
             onClick={() => setActiveTab('search')}
             className={`inline-flex min-h-9 items-center gap-1.5 rounded-t-lg border-b-2 px-3 text-sm font-medium transition-colors focus-visible:ring-2 focus-visible:ring-blue-500 ${
               activeTab === 'search'
@@ -254,8 +256,10 @@ export default function QuoteFinderPanel({ isOpen, documentId, userPlan, onClose
           </button>
           <button
             type="button"
+            id="quote-finder-tab-saved"
             role="tab"
             aria-selected={activeTab === 'saved'}
+            aria-controls="quote-finder-panel-saved"
             onClick={() => setActiveTab('saved')}
             className={`inline-flex min-h-9 items-center gap-1.5 rounded-t-lg border-b-2 px-3 text-sm font-medium transition-colors focus-visible:ring-2 focus-visible:ring-blue-500 ${
               activeTab === 'saved'
@@ -290,7 +294,13 @@ export default function QuoteFinderPanel({ isOpen, documentId, userPlan, onClose
           </form>
         ) : null}
 
-        <div className="min-h-0 flex-1 overflow-y-auto px-5 py-4">
+        <div
+          className="min-h-0 flex-1 overflow-y-auto px-5 py-4"
+          role="tabpanel"
+          id={activeTab === 'search' ? 'quote-finder-panel-search' : 'quote-finder-panel-saved'}
+          aria-labelledby={activeTab === 'search' ? 'quote-finder-tab-search' : 'quote-finder-tab-saved'}
+          tabIndex={0}
+        >
           {activeTab === 'search' ? (
             <>
               {errorMsg ? (

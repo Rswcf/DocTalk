@@ -115,6 +115,7 @@ export default function SavedQuoteCard({ quote, index, biblio, onJump, onDeleted
           maxLength={2000}
           rows={2}
           placeholder={tOr('quoteFinder.notePlaceholder', 'Add a note...')}
+          aria-label={tOr('quoteFinder.notePlaceholder', 'Add a note...')}
           className="w-full resize-y rounded-md border border-[var(--reader-border)] bg-[var(--reader-panel-solid)] px-2.5 py-1.5 text-xs text-[var(--reader-ink)] outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
         />
         {savingNote ? (
