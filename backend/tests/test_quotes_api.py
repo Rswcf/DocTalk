@@ -282,6 +282,11 @@ async def test_quote_search_completed_event_carries_bounded_telemetry(
         retrieved_count=7,
         candidate_pages=4,
         no_result=False,
+        # M3 acceptance-gate fix (2026-08-04): page_range_count is the new
+        # telemetry counter for cards emitted via the 2-page honest-range
+        # fallback — assert it passes through the ProductEvent untouched,
+        # same as the other FIX-6 counters.
+        page_range_count=2,
     )
     monkeypatch.setattr(quote_search_service, "quote_search", AsyncMock(return_value=result))
 
@@ -301,6 +306,7 @@ async def test_quote_search_completed_event_carries_bounded_telemetry(
     assert len(metadata["discarded"]) == quotes_api._MAX_TELEMETRY_DISCARDED
     assert metadata["discarded_truncated"] is True
     assert metadata["discarded"][0] == {"reason": "reason_0", "tier": "dropped", "score": 0.0}
+    assert metadata["page_range_count"] == 2
 
 
 @pytest.mark.asyncio

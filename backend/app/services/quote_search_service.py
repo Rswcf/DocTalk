@@ -118,6 +118,11 @@ class QuoteSearchResult:
     retrieved_count: int = 0
     candidate_pages: int = 0
     no_result: bool = False
+    # M3 acceptance-gate fix (2026-08-04): count of cards emitted via the
+    # 2-page "honest range" fallback (see _attribute_match) rather than a
+    # single unambiguous page, so the policy reversal's real-world
+    # frequency is measurable in telemetry rather than only inferable.
+    page_range_count: int = 0
 
 
 # -------------------------- LLM client plumbing --------------------------
@@ -393,18 +398,48 @@ def _majority_bbox_page(bboxes_list: list[dict], fallback_page: int) -> tuple[in
     return best_page, page_bboxes
 
 
-def _is_ambiguous_multipage_extracted_segment(matched_segment: QuoteSourceSegment) -> bool:
-    """FIX2-A(a) (Codex r2 #2, NOT ADDRESSED): an extracted_text segment is
-    exactly one CHUNK, and a chunk can itself span multiple pages
-    (page_start != page_end). Verification ran against that chunk's WHOLE
-    text as one blob, so there is no way to know which of its pages the
-    matched slice actually sits on — majority-vote bbox counting over the
-    segment's entire bbox pool doesn't answer that (Codex's exact probe: a
-    p1-2 segment, quote physically in the page-1 portion, bboxes 1xp1+2xp2 —
-    majority vote picks p2, which is wrong). Single-page segments
-    (page_start == page_end) have no such ambiguity and are unaffected.
-    """
-    return matched_segment.chunk_id is not None and matched_segment.page_start != matched_segment.page_end
+# FIX2-A(a) origin (Codex r1/r2): an extracted_text segment is exactly one
+# CHUNK, and a chunk can itself span multiple pages (page_start != page_end).
+# Verification ran against that chunk's WHOLE text as one blob, so there is
+# no way to know which of its pages the matched slice actually sits on —
+# majority-vote bbox counting over the segment's entire bbox pool doesn't
+# answer that (Codex's exact r2 probe: a p1-2 segment, quote physically in
+# the page-1 portion, bboxes 1xp1+2xp2 — majority vote picks p2, which is
+# wrong). r2 concluded from that probe that ALL such segments must be
+# discarded.
+#
+# POLICY REVERSAL (M3 acceptance-gate, 2026-08-04 — see
+# .collab/reviews/2026-08-04-m3-acceptance-gate.md): replaying the real
+# production corpus found the blanket discard far too aggressive. 56% of all
+# production PDF chunks span page boundaries, and 89% of those span exactly
+# ONE (page N to N+1) — and because page_text (unambiguous per-page
+# verification) covers only 11/108 documents and cannot be backfilled for
+# ~103 of them (their source files were lost in the MinIO v2 migration),
+# extracted_text is the PERMANENT path for nearly the whole existing corpus.
+# The gate replay lost 4/10 real queries' cards this way, including perfect
+# verbatim (tier=exact, score=100.0) matches. Plan §8.1 already sanctions
+# the fix: "ambiguous multi-page attributions are labeled as a range."
+#
+# This is NOT a walk-back of the r2 finding — majority-vote guessing a
+# SINGLE page is still wrong and still never happens (see _attribute_match).
+# What changes is the response to "we can't pin one page": report the full
+# range honestly (page_start..page_end) instead of discarding, but ONLY for
+# a 2-page span. A 3+ page span (page_end - page_start >= 2) is not a useful
+# citation regardless of honesty, and still gets discarded.
+_MAX_HONEST_EXTRACTED_TEXT_SPAN = 1  # page_end - page_start; 1 == a 2-page range
+
+
+def _extracted_text_span_too_wide_to_report(matched_segment: QuoteSourceSegment) -> bool:
+    """True only for extracted_text segments whose OWN page span exceeds the
+    honest-range threshold (3+ pages) — these still discard as
+    ambiguous_page_range. A 2-page span (page_end - page_start == 1) is
+    within the threshold and is handled by _attribute_match's honest-range
+    branch instead. Single-page segments (page_start == page_end) were never
+    ambiguous and always return False. page_text segments (chunk_id is None)
+    are never extracted_text and always return False."""
+    if matched_segment.chunk_id is None:
+        return False
+    return (matched_segment.page_end - matched_segment.page_start) > _MAX_HONEST_EXTRACTED_TEXT_SPAN
 
 
 def _attribute_match(
@@ -420,11 +455,20 @@ def _attribute_match(
     bbox metadata), filtered to that exact verified page.
 
     extracted_text segments are exactly one chunk each (the cited chunk, or
-    one neighbor). Callers MUST have already rejected ambiguous multi-page
-    segments via `_is_ambiguous_multipage_extracted_segment` before calling
-    this — by the time we get here, `matched_segment.page_start ==
-    matched_segment.page_end`, so majority-vote bbox filtering is just
-    "this segment's own bboxes on its own single page," not a genuine guess.
+    one neighbor). Callers MUST have already rejected segments whose span
+    exceeds the honest-range threshold via
+    `_extracted_text_span_too_wide_to_report` before calling this — by the
+    time we get here, `matched_segment.page_end - matched_segment.page_start`
+    is 0 (single page) or 1 (2-page span), never wider.
+
+    - Single-page: majority-vote bbox filtering is just "this segment's own
+      bboxes on its own single page," not a genuine guess.
+    - 2-page span (M3 acceptance-gate policy reversal, 2026-08-04): NOT a
+      majority-vote guess at one page — that's exactly the wrong behavior
+      Codex's r2 probe caught. Instead report the HONEST RANGE
+      (page_start..page_end) and keep every bbox belonging to EITHER page in
+      that range, never collapsed to one.
+
     chunk_id follows the match, not the LLM's cited ref, since that's
     genuinely where the text lives.
     """
@@ -438,11 +482,20 @@ def _attribute_match(
         ]
         return page, page_end, bboxes, str(chunk.id)
 
-    # extracted_text, single-page segment: attribute to the MATCHING chunk
-    # (cited or neighbor). page_end == page_start here (guarded by the
-    # caller), so this is never "ambiguous multi-page attribution."
-    page, bboxes = _majority_bbox_page(matched_segment.bboxes, matched_segment.page_start)
-    return page, matched_segment.page_end, bboxes, str(matched_segment.chunk_id)
+    if matched_segment.page_start == matched_segment.page_end:
+        # extracted_text, single-page segment: attribute to the MATCHING
+        # chunk (cited or neighbor). Never ambiguous.
+        page, bboxes = _majority_bbox_page(matched_segment.bboxes, matched_segment.page_start)
+        return page, matched_segment.page_end, bboxes, str(matched_segment.chunk_id)
+
+    # extracted_text, 2-page span: honest range, not a majority-vote guess.
+    page = matched_segment.page_start
+    page_end = matched_segment.page_end
+    bboxes = [
+        bb for bb in (matched_segment.bboxes or [])
+        if _valid_bbox(bb) and page <= int(bb.get("page", page)) <= page_end
+    ]
+    return page, page_end, bboxes, str(matched_segment.chunk_id)
 
 
 def _dedup_signature(source_kind: str, verification: Any) -> str:
@@ -534,6 +587,7 @@ async def quote_search(
     cards: list[QuoteCard] = []
     discarded: list[tuple[str, str, float]] = []
     seen_keys: set[tuple[str, str, int, int, str]] = set()
+    page_range_count = 0
 
     for item in raw_quotes:
         if not isinstance(item, dict):
@@ -564,10 +618,12 @@ async def quote_search(
             continue
 
         for verification, matched_segment in matches:
-            # FIX2-A(a) (Codex r2 #2, NOT ADDRESSED): an extracted_text
-            # segment spanning multiple pages has no reliable single-page
-            # attribution — discard rather than guess via majority bboxes.
-            if _is_ambiguous_multipage_extracted_segment(matched_segment):
+            # A 3+ page extracted_text span has no useful single-page or
+            # honest-range attribution — discard. (2-page spans are handled
+            # below via _attribute_match's honest-range branch; see
+            # _extracted_text_span_too_wide_to_report's docstring for the
+            # 2026-08-04 policy reversal.)
+            if _extracted_text_span_too_wide_to_report(matched_segment):
                 discarded.append(("ambiguous_page_range", verification.status, verification.score))
                 continue
 
@@ -578,6 +634,9 @@ async def quote_search(
             if key in seen_keys:
                 continue
             seen_keys.add(key)
+
+            if page_end != page:
+                page_range_count += 1
 
             cards.append(
                 QuoteCard(
@@ -603,6 +662,7 @@ async def quote_search(
         retrieved_count=len(candidates),
         candidate_pages=_candidate_pages_count(candidates),
         no_result=len(cards) == 0,
+        page_range_count=page_range_count,
     )
 
 
@@ -654,7 +714,7 @@ async def verify_saved_quote(
     attributed = [
         (verification, segment, *_attribute_match(chunk, segment))
         for verification, segment in matches
-        if not _is_ambiguous_multipage_extracted_segment(segment)
+        if not _extracted_text_span_too_wide_to_report(segment)
     ]
     if not attributed:
         return None

@@ -324,17 +324,45 @@ class TestSearchTelemetryFields:
 
 
 class TestAmbiguousMultiPageExtractedSegmentDiscarded:
-    """FIX2-A(a) (Codex r2 #2, NOT ADDRESSED): an extracted_text segment
+    """FIX2-A(a) (Codex r2 #2) originally: an extracted_text segment
     spanning multiple pages (its own page_start != page_end) has no
     reliable way to attribute a match to a single page — majority-bbox
     voting over the segment's whole bbox pool doesn't reflect which page
     the matched TEXT actually sits on. Codex's exact adversarial probe:
     segment range p1-2, quote physically in the page-1 portion, bboxes
-    1xp1 + 2xp2 (majority vote would pick p2) — must discard, never report
-    page=2/page_end=2 with page-2 bboxes."""
+    1xp1 + 2xp2 (majority vote would pick p2) — the r2 fix discarded
+    EVERY such segment outright to avoid ever reporting a wrong single
+    page.
+
+    DELIBERATE POLICY REVERSAL (M3 acceptance-gate replay, 2026-08-04—
+    see .collab/reviews/2026-08-04-m3-acceptance-gate.md): replaying the
+    REAL production corpus found this was far too aggressive. Only 11/108
+    production docs have page_text (B1 is forward-only, and MinIO file
+    loss permanently blocks the backfill for ~103 of them), so almost
+    every real search takes the extracted_text path — and 89% of ITS
+    multi-page chunks span exactly ONE page boundary. The gate lost 4/10
+    real queries' cards this way, including perfect verbatim (tier=exact,
+    score=100.0) matches. Plan §8.1 explicitly sanctions the fix:
+    "ambiguous multi-page attributions are labeled as a range" — a 2-page
+    span (page_end - page_start == 1) is no longer discarded outright; it
+    is emitted as an HONEST RANGE card (page=page_start, page_end=
+    page_start+1) instead of majority-voting to a single, possibly-wrong
+    page. This is NOT a regression of the Codex r2 finding: the underlying
+    problem (majority-vote bbox counting can't tell which page the text is
+    ON) is still true and still why we never claim a single page for these
+    — we now report the full range honestly instead. Only a 2-page span is
+    reversed; 3+ page spans (page_end - page_start >= 2) still discard as
+    ambiguous_page_range, since a 3-page-wide citation isn't useful to a
+    reader regardless of honesty."""
 
     @pytest.mark.asyncio
-    async def test_codex_r2_probe_quote_in_p1_portion_of_p1_2_segment_is_discarded(self, monkeypatch):
+    async def test_codex_r2_probe_2page_span_now_emits_an_honest_range_card(self, monkeypatch):
+        """Same fixture Codex's r2 probe used (segment range p1-2, quote
+        physically in the page-1 portion, bboxes 1xp1 + 2xp2 — majority
+        vote would still wrongly pick p2 if we ever used it). The policy
+        reversal does NOT resurrect majority-vote guessing: it reports the
+        HONEST RANGE (page=1, page_end=2) with EVERY bbox in that range
+        (both pages), never a majority-voted single page."""
         p1_bbox = {"x": 0.1, "y": 0.1, "w": 0.2, "h": 0.05, "page": 1}
         p2_bbox_a = {"x": 0.1, "y": 0.1, "w": 0.2, "h": 0.05, "page": 2}
         p2_bbox_b = {"x": 0.1, "y": 0.2, "w": 0.2, "h": 0.05, "page": 2}
@@ -364,8 +392,48 @@ class TestAmbiguousMultiPageExtractedSegmentDiscarded:
 
         result = await quote_search(_fake_db(), document=_document(), user=None, topic="quote", locale="en")
 
+        assert result.discarded == []
+        assert result.verified == 1
+        card = result.cards[0]
+        assert card.page == 1
+        assert card.page_end == 2
+        # Honest range: bboxes from BOTH pages, never majority-voted to one.
+        assert card.bboxes == [p1_bbox, p2_bbox_a, p2_bbox_b]
+        assert result.page_range_count == 1
+
+    @pytest.mark.asyncio
+    async def test_3page_span_still_discards_as_ambiguous_page_range(self, monkeypatch):
+        """A 3-page-wide range (page_end - page_start == 2) is still not a
+        useful citation — the policy reversal only reaches 2-page spans."""
+        bboxes = [{"x": 0.1, "y": 0.1, "w": 0.2, "h": 0.05, "page": p} for p in (1, 2, 3)]
+        chunk = _chunk(
+            "unused chunk text", page_start=1, page_end=3, chunk_index=0, bboxes=bboxes,
+        )
+        source = QuoteSource(
+            text="unused", kind="extracted_text", page_start=1, page_end=3,
+            segments=[
+                QuoteSourceSegment(
+                    text="A quote that happens to sit inside a chunk spanning three full pages of text.",
+                    page_start=1, page_end=3, chunk_id=chunk.id, bboxes=bboxes,
+                ),
+            ],
+        )
+        _patch_common(
+            monkeypatch,
+            candidates=[chunk],
+            scanned_chunks=1,
+            quotes_payload={"quotes": [
+                {"quote_text": "A quote that happens to sit inside a chunk spanning three full pages of text.",
+                 "source_ref_n": 1, "page": 1}
+            ]},
+            source_by_chunk_id={chunk.id: source},
+        )
+
+        result = await quote_search(_fake_db(), document=_document(), user=None, topic="quote", locale="en")
+
         assert result.cards == []
         assert result.verified == 0
+        assert result.page_range_count == 0
         assert len(result.discarded) == 1
         reason, _tier, _score = result.discarded[0]
         assert reason == "ambiguous_page_range"
@@ -938,9 +1006,14 @@ class TestVerifySavedQuote:
         assert card is None
 
     @pytest.mark.asyncio
-    async def test_ambiguous_multipage_extracted_segment_is_excluded_like_search(self, monkeypatch):
+    async def test_2page_extracted_segment_now_saveable_like_search(self, monkeypatch):
+        """Policy reversal (see TestAmbiguousMultiPageExtractedSegmentDiscarded
+        docstring): verify_saved_quote shares _attribute_match and the
+        span-based ambiguity check with quote_search(), so a 2-page-span
+        card that is now emitted in search results must also be saveable —
+        a user can only ever try to save a card they were shown."""
         chunk = _chunk(SOURCE, page_start=1, page_end=2, chunk_index=0)
-        ambiguous_source = QuoteSource(
+        two_page_source = QuoteSource(
             text=SOURCE, kind="extracted_text", page_start=1, page_end=2,
             segments=[
                 QuoteSourceSegment(
@@ -948,7 +1021,33 @@ class TestVerifySavedQuote:
                 )
             ],
         )
-        monkeypatch.setattr(qss, "build_quote_source", AsyncMock(return_value=ambiguous_source))
+        monkeypatch.setattr(qss, "build_quote_source", AsyncMock(return_value=two_page_source))
+
+        card = await qss.verify_saved_quote(
+            _fake_db_with_chunk(chunk),
+            document=_document(),
+            chunk_id=chunk.id,
+            quote_text="the most prized quality in translation today",
+        )
+
+        assert card is not None
+        assert card.page == 1
+        assert card.page_end == 2
+
+    @pytest.mark.asyncio
+    async def test_3page_extracted_segment_still_excluded(self, monkeypatch):
+        """A 3-page span (page_end - page_start == 2) is still not a useful
+        citation and stays excluded, same threshold as quote_search()."""
+        chunk = _chunk(SOURCE, page_start=1, page_end=3, chunk_index=0)
+        three_page_source = QuoteSource(
+            text=SOURCE, kind="extracted_text", page_start=1, page_end=3,
+            segments=[
+                QuoteSourceSegment(
+                    text=SOURCE, page_start=1, page_end=3, chunk_id=chunk.id, bboxes=[],
+                )
+            ],
+        )
+        monkeypatch.setattr(qss, "build_quote_source", AsyncMock(return_value=three_page_source))
 
         card = await qss.verify_saved_quote(
             _fake_db_with_chunk(chunk),

@@ -299,6 +299,11 @@ async def create_quote_search(
                     "candidate_pages": result.candidate_pages,
                     "no_result": result.no_result,
                     "cards_count": len(result.cards),
+                    # M3 acceptance-gate fix (2026-08-04): how often a card
+                    # was emitted via the 2-page "honest range" fallback
+                    # instead of a single unambiguous page — measures the
+                    # policy reversal's real-world frequency.
+                    "page_range_count": result.page_range_count,
                 },
             )
         )
