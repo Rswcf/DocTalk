@@ -1,11 +1,13 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from 'react';
+import Link from 'next/link';
 import { AlertTriangle, CheckCircle2, Clock3, Download, ExternalLink, Eye, FilePlus2, FileText, Languages, Loader2, Quote, RefreshCw, Sparkles, Table2 } from 'lucide-react';
 import type { ChatArtifact, Citation, DocumentTable, QuoteCardsArtifactPreview } from '../../types';
 import { getDocumentJob, getTableScanJob, importLayoutTranslationDocument, listDocumentTables, reconstructDocumentTable } from '../../lib/api';
 import type { QuoteCard } from '../../lib/api';
 import { absoluteProxiedArtifactUrl, proxiedArtifactUrl } from '../../lib/layoutTranslation';
+import { errorCopy, type ErrorCopy } from '../../lib/errorCopy';
 import { useLocale } from '../../i18n';
 import { useDocTalkStore } from '../../store';
 import QuoteCardList from '../Quotes/QuoteCardList';
@@ -98,13 +100,13 @@ function tableMethodLabel(method: unknown, tOr: (key: string, fallback: string, 
 }
 
 export default function ChatArtifactCard({ artifact, onCitationClick, onPreviewLayoutTranslation }: ChatArtifactCardProps) {
-  const { tOr, locale } = useLocale();
+  const { t, tOr, locale } = useLocale();
   const [current, setCurrent] = useState(artifact);
   const [tableJob, setTableJob] = useState<{ id: string; status: string; tableId: string } | null>(null);
   const [rebuildingTableId, setRebuildingTableId] = useState<string | null>(null);
   const [tableRebuildError, setTableRebuildError] = useState<string | null>(null);
   const [layoutImporting, setLayoutImporting] = useState(false);
-  const [layoutImportError, setLayoutImportError] = useState<string | null>(null);
+  const [layoutImportError, setLayoutImportError] = useState<ErrorCopy | null>(null);
   const autoImportAttemptedRef = useRef(false);
   const isPending = current.status === 'queued' || current.status === 'running';
   const isFailed = current.status === 'failed';
@@ -292,7 +294,7 @@ export default function ChatArtifactCard({ artifact, onCitationClick, onPreviewL
         },
       }));
     } catch (err) {
-      setLayoutImportError(err instanceof Error ? err.message : 'Document import failed');
+      setLayoutImportError(errorCopy(err, t, tOr));
     } finally {
       setLayoutImporting(false);
     }
@@ -330,7 +332,17 @@ export default function ChatArtifactCard({ artifact, onCitationClick, onPreviewL
             <p className="mt-2 text-xs text-red-700 dark:text-red-300">{tableRebuildError}</p>
           ) : null}
           {layoutImportError ? (
-            <p className="mt-2 text-xs text-red-700 dark:text-red-300">{layoutImportError}</p>
+            <p className="mt-2 text-xs text-red-700 dark:text-red-300">
+              {layoutImportError.title}: {layoutImportError.body}
+              {layoutImportError.cta && (
+                <Link
+                  href={layoutImportError.cta.href}
+                  className="ml-1 font-medium underline decoration-red-400 underline-offset-2 hover:text-red-800 dark:hover:text-red-100"
+                >
+                  {layoutImportError.cta.label}
+                </Link>
+              )}
+            </p>
           ) : null}
           {isLayoutTranslation && typeof layoutPreview.import_error === 'string' && layoutPreview.import_error ? (
             <p className="mt-2 text-xs text-amber-700 dark:text-amber-300">{layoutPreview.import_error}</p>
