@@ -1361,8 +1361,16 @@ never shown. Verification source is per-page `pages.content` when coverage is
 complete (kind `page_text`), else cited chunk ± neighbors (kind
 `extracted_text`) with honest per-kind trust labels — the "word-for-word"
 claim renders only for `page_text` results. Page attribution derives from the
-verified slice; multi-page extracted segments are discarded as
-`ambiguous_page_range` rather than attributed by bbox voting. Saves re-verify
+verified slice. An `extracted_text` segment spanning exactly one page boundary
+emits an honest range (`pp. N–N+1`, bboxes from both pages); a segment spanning
+two or more boundaries is discarded as `ambiguous_page_range`. Attribution by
+bbox voting remains forbidden — reporting a range is not guessing a page inside
+it. (Amended 2026-08-04: the original policy discarded every multi-page
+extracted match. The M3 acceptance gate measured that cost in production — 56%
+of PDF chunks span pages, 89% of those by one boundary, `pages.content` present
+on 11 of 108 documents — and the replay went from 1 to 8 verified quotes across
+ten real user queries once one-boundary ranges were emitted. See
+`.collab/reviews/2026-08-04-m3-acceptance-gate.md`.) Saves re-verify
 server-side (`verify_saved_quote`): clients submit only `chunk_id +
 quote_text`, so trust fields cannot be forged.
 

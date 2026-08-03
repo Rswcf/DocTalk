@@ -1040,7 +1040,7 @@ Table-aware retrieval 会使用这些 canonical table 位置做覆盖选择；�
 
 ### 验证式引文保证与路由政策(v0.24.0)
 
-Quote Finder 产品契约:引文卡绝不渲染 LLM 生成文本——`verify_quote()` 门控所有提案,展示文本恒为原始源切片,fuzzy 90–95(flagged)只计数不展示。验证源:页文本覆盖完整时按页验证(kind `page_text`),否则被引 chunk±邻居(kind `extracted_text`),信任标签按 kind 诚实分级("逐字"声明仅限 page_text)。页码归因来自被验证切片;跨页 extracted 片段按 `ambiguous_page_range` 丢弃,绝不用 bbox 多数投票。保存端点服务端重验证(`verify_saved_quote`),客户端只可提交 `chunk_id + quote_text`,信任字段不可伪造。聊天路由为裁决后的确定性安全政策(Codex M2 r4):严格触发词命中且全文零否定/元语言词才自动路由;受保护消息强制走普通 RAG 路径(绝不进工具动作)并在 SSE `done` 事件携带 `quote_finder_hint`/`quote_finder_topic`,前端渲染非阻断式 chip。依据为不对称损失(误路由=计费的错误答案;漏路由=一次点击)。
+Quote Finder 产品契约:引文卡绝不渲染 LLM 生成文本——`verify_quote()` 门控所有提案,展示文本恒为原始源切片,fuzzy 90–95(flagged)只计数不展示。验证源:页文本覆盖完整时按页验证(kind `page_text`),否则被引 chunk±邻居(kind `extracted_text`),信任标签按 kind 诚实分级("逐字"声明仅限 page_text)。页码归因来自被验证切片。`extracted_text` 片段若恰好跨一个页边界,发出诚实的页码区间(`pp. N–N+1`,bbox 取两页);跨两个及以上边界仍按 `ambiguous_page_range` 丢弃。**绝不用 bbox 多数投票**——报告区间不等于在区间内猜一页。(2026-08-04 修正:原策略丢弃所有跨页 extracted 匹配;M3 验收门在生产上量出了代价——56% 的生产 PDF chunk 跨页、其中 89% 只跨一个边界、108 个文档只有 11 个有 `pages.content`,十个真实用户查询的验证引文数在启用单边界区间后由 1 升到 8。见 `.collab/reviews/2026-08-04-m3-acceptance-gate.md`。)保存端点服务端重验证(`verify_saved_quote`),客户端只可提交 `chunk_id + quote_text`,信任字段不可伪造。聊天路由为裁决后的确定性安全政策(Codex M2 r4):严格触发词命中且全文零否定/元语言词才自动路由;受保护消息强制走普通 RAG 路径(绝不进工具动作)并在 SSE `done` 事件携带 `quote_finder_hint`/`quote_finder_topic`,前端渲染非阻断式 chip。依据为不对称损失(误路由=计费的错误答案;漏路由=一次点击)。
 
 ### Demo 存储自愈(2026-08 MinIO 事故)
 

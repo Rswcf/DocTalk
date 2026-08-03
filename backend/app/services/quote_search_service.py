@@ -417,8 +417,11 @@ def _majority_bbox_page(bboxes_list: list[dict], fallback_page: int) -> tuple[in
 # ~103 of them (their source files were lost in the MinIO v2 migration),
 # extracted_text is the PERMANENT path for nearly the whole existing corpus.
 # The gate replay lost 4/10 real queries' cards this way, including perfect
-# verbatim (tier=exact, score=100.0) matches. Plan §8.1 already sanctions
-# the fix: "ambiguous multi-page attributions are labeled as a range."
+# verbatim (tier=exact, score=100.0) matches. Plan §8.1 said chunk-fallback
+# "must reject or split" these; emitting a one-boundary range is a deliberate
+# AMENDMENT to that consensus (recorded 2026-08-04 in the plan itself, in
+# .claude/rules/backend.md and in both ARCHITECTURE docs), justified by the
+# production measurement above — not a permission that already existed.
 #
 # This is NOT a walk-back of the r2 finding — majority-vote guessing a
 # SINGLE page is still wrong and still never happens (see _attribute_match).
