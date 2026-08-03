@@ -36,6 +36,7 @@ import asyncio
 import sys
 import uuid
 from pathlib import Path
+from types import SimpleNamespace
 from unittest.mock import AsyncMock
 
 import pytest
@@ -214,6 +215,207 @@ class TestChatReconcileFailureAfterPersist:
         assert persisted == []
 
         # Fully refunded — balance and ledger rows exactly restored.
+        balance_after = await _current_balance(auth_user.id)
+        assert balance_after == balance_before
+
+        ledger_ids_after = {row.id for row in await _ledger_rows_for_user(auth_user.id)}
+        assert ledger_ids_after == ledger_ids_before  # predebit row deleted, no new row remains
+
+
+class TestDomainModeSyncNeverHalfCommits:
+    """P1 hygiene r2 (Codex, 2026-08-03): the domain_mode session-sync
+    assignment (_sync_session_domain_mode) must ride each branch's OWN
+    existing atomic commit, never a standalone one — a failure at that
+    commit must leave NO half-committed domain_mode, and (for the billed
+    Quote Finder path) no unrefunded charge either. Mirrors this file's
+    established real-Postgres injected-failure pattern: mock a call the
+    atomic commit depends on to raise, letting the REAL rollback run on a
+    REAL connection, then verify the end state via a totally separate,
+    fresh session/connection."""
+
+    async def test_tool_action_commit_failure_leaves_domain_mode_uncommitted(
+        self, auth_user, monkeypatch,
+    ) -> None:
+        """Codex r2's exact tool-action finding: the r1 fix committed the
+        sync BEFORE the tool ran, so a subsequent tool failure left the
+        domain_mode change committed anyway. This reproduces the
+        CORRECTED shape instead — the assignment now happens right before
+        the branch's OWN final commit, inside its exception boundary — by
+        failing THAT commit and proving nothing landed, stale value
+        included."""
+        import app.services.chat_service as chat_service_module
+        from app.models.database import AsyncSessionLocal
+        from app.models.tables import ChatSession, Message
+        from app.services.action_planner import ChatAction
+
+        document_id = await _create_ready_document(auth_user.id)
+
+        async with AsyncSessionLocal() as db:
+            session = ChatSession(
+                document_id=document_id, user_id=auth_user.id,
+                domain_mode="legal", title="Existing title",  # pre-set: skips
+                # _persist_user_message_and_title's conditional 2nd commit,
+                # so exactly ONE commit (the user-message persist) happens
+                # before the tool-action branch's OWN final commit below.
+            )
+            db.add(session)
+            await db.commit()
+            await db.refresh(session)
+            session_id = session.id
+
+        tool_action_plan = SimpleNamespace(
+            action=ChatAction.EXPORT_TABLES, uses_rag_answer_path=False, confidence=0.9,
+            reason="table export markers", user_visible_status="",
+            quote_finder_hint=False, quote_finder_hint_topic=None,
+        )
+        monkeypatch.setattr(chat_service_module.action_planner, "plan", AsyncMock(return_value=tool_action_plan))
+        execution = SimpleNamespace(message="Here are the exported tables.", artifact=None)
+        monkeypatch.setattr(chat_service_module.chat_tool_executor, "execute", AsyncMock(return_value=execution))
+
+        async with AsyncSessionLocal() as db:
+            real_commit = db.commit
+            calls = {"n": 0}
+
+            async def _flaky_commit():
+                calls["n"] += 1
+                if calls["n"] == 1:
+                    return await real_commit()  # the user-message persist commit lands for real
+                raise RuntimeError("simulated tool-action final commit failure")
+
+            monkeypatch.setattr(db, "commit", _flaky_commit)
+
+            events = [
+                event
+                async for event in chat_service_module.chat_service.chat_stream(
+                    session_id=session_id,
+                    user_message="Export all tables to CSV.",
+                    db=db,
+                    user=auth_user,
+                    mode="balanced",
+                    domain_mode=None,  # omitted — should clear the stale "legal" value
+                )
+            ]
+
+        assert events[-1]["event"] == "error"
+        assert events[-1]["data"]["code"] == "CHAT_SETUP_ERROR"
+
+        # Real Postgres, real rollback (via a totally separate connection):
+        # the domain_mode assignment never landed (still the stale
+        # "legal" value), and neither did the assistant message it was
+        # bundled with in the SAME failed commit.
+        async with AsyncSessionLocal() as verify_db:
+            survivor = await verify_db.get(ChatSession, session_id)
+            assert survivor.domain_mode == "legal"  # NOT half-committed to None
+            msg_result = await verify_db.execute(
+                select(Message).where(Message.session_id == session_id, Message.role == "assistant")
+            )
+            assert msg_result.scalars().all() == []
+
+    async def test_quote_finder_commit_failure_leaves_domain_mode_uncommitted_and_fully_refunds(
+        self, auth_user, monkeypatch,
+    ) -> None:
+        """Codex r2's exact Quote Finder finding: the r1 fix committed the
+        sync AFTER the real answer+billing+usage atomic commit succeeded —
+        a failure in that EXTRA, separate commit meant the client got
+        QUOTE_SEARCH_ERROR while the real answer stayed persisted and
+        charged with no way back. This test targets that exact window: a
+        failure AFTER the domain_mode assignment has happened in memory,
+        at the point where a commit was needed to make it durable — unlike
+        TestChatReconcileFailureAfterPersist above (which fails
+        reconcile_credits BEFORE the atomic commit is ever attempted,
+        never reaching the assignment at all), this fails the atomic
+        commit ITSELF, with the assignment already dirtying the session
+        object, proving the corrected fold-in shape rolls BOTH back
+        together rather than leaving one committed and the other not."""
+        import app.services.chat_service as chat_service_module
+        from app.models.database import AsyncSessionLocal
+        from app.models.tables import ChatSession, Message
+        from app.services.quote_search_service import QuoteCard, QuoteSearchResult
+
+        await _grant_credits(auth_user.id, 500)
+        document_id = await _create_ready_document(auth_user.id)
+
+        async with AsyncSessionLocal() as db:
+            session = ChatSession(
+                document_id=document_id, user_id=auth_user.id,
+                domain_mode="legal", title="Existing title",  # pre-set: skips
+                # _persist_user_message_and_title's conditional 2nd commit,
+                # so exactly TWO commits (predebit, user-message persist)
+                # happen before _run_verified_quote_search's OWN atomic
+                # commit — the one this test fails.
+            )
+            db.add(session)
+            await db.commit()
+            await db.refresh(session)
+            session_id = session.id
+
+        monkeypatch.setattr(
+            chat_service_module, "_get_llm_client",
+            lambda *_a, **_k: (_ for _ in ()).throw(AssertionError("normal LLM path must not run")),
+        )
+        card = QuoteCard(
+            display_text="the exact clause text", page=1, page_end=1, bboxes=[],
+            tier="exact", source_kind="page_text", chunk_id=str(uuid.uuid4()), score=100.0,
+        )
+        result = QuoteSearchResult(
+            cards=[card], proposed=1, verified=1, discarded=[],
+            scanned_chunks=2, usage=(300, 80), model="deepseek-v4-pro",
+        )
+        monkeypatch.setattr(chat_service_module.quote_search_service, "quote_search", AsyncMock(return_value=result))
+
+        balance_before = await _current_balance(auth_user.id)
+        ledger_ids_before = {row.id for row in await _ledger_rows_for_user(auth_user.id)}
+
+        async with AsyncSessionLocal() as db:
+            real_commit = db.commit
+            calls = {"n": 0}
+
+            async def _flaky_commit():
+                calls["n"] += 1
+                # Fail ONLY the 3rd call (the atomic quote-finder commit).
+                # Calls 1-2 (predebit, user-message persist) land for real;
+                # call 4+ must ALSO land for real — that's the refund
+                # resolver's OWN commit (_refund_predebit reuses this same
+                # `db` session for ordinary exceptions), which must succeed
+                # normally or the refund itself would be broken by this mock.
+                if calls["n"] == 3:
+                    raise RuntimeError("simulated quote-finder atomic-commit failure")
+                return await real_commit()
+
+            monkeypatch.setattr(db, "commit", _flaky_commit)
+
+            events = [
+                event
+                async for event in chat_service_module.chat_service.chat_stream(
+                    session_id=session_id,
+                    user_message="Give me a direct quote about the termination clause.",
+                    db=db,
+                    user=auth_user,
+                    mode="balanced",
+                    domain_mode=None,  # omitted — should clear the stale "legal" value
+                )
+            ]
+
+        # 4 commits total: predebit, user-message persist, the (failed) atomic
+        # quote-finder commit, and the refund resolver's own commit — confirms
+        # the injected failure landed exactly where intended and the resolver
+        # still ran to completion afterward.
+        assert calls["n"] == 4
+        assert events[-1]["event"] == "error"
+        assert events[-1]["data"]["code"] == "QUOTE_SEARCH_ERROR"
+
+        # Real Postgres, real rollback: the domain_mode assignment and the
+        # assistant message it was bundled into the SAME atomic commit
+        # with never landed together.
+        async with AsyncSessionLocal() as verify_db:
+            survivor = await verify_db.get(ChatSession, session_id)
+            assert survivor.domain_mode == "legal"  # NOT half-committed to None
+            msg_result = await verify_db.execute(
+                select(Message).where(Message.session_id == session_id, Message.role == "assistant")
+            )
+            assert msg_result.scalars().all() == []
+
+        # Fully refunded — no unrefunded charge left behind by the failure.
         balance_after = await _current_balance(auth_user.id)
         assert balance_after == balance_before
 

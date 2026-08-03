@@ -953,29 +953,42 @@ async def _settle_verified_quote_predebit_after_failure(
     return await _refund_predebit(db, user_id, pre_debited, predebit_ledger_id)
 
 
-async def _sync_session_domain_mode(
-    db: AsyncSession, session_obj: ChatSession, domain_mode: Optional[str],
-) -> None:
-    """P1 hygiene follow-up (Codex M3 P1 review, 2026-08-03): the persisted
+def _sync_session_domain_mode(session_obj: ChatSession, domain_mode: Optional[str]) -> None:
+    """P1 hygiene (Codex M3 P1 review r1+r2, 2026-08-03): the persisted
     ChatSession.domain_mode must reflect the CURRENT request's domain_mode
     (null when omitted) on EVERY successful terminal path of chat_stream,
     not just the main RAG path this logic originally lived in inline.
-    Codex found two successful early-return paths that skipped it — tool
-    actions and strict Quote Finder routing — both returning before the
-    main RAG path's system-prompt-building section ever ran. A session
-    that once had domain_mode="legal" persisted could keep that stale
-    value after a later omitted-mode message that happened to route to
-    one of those branches, making the documented "omitted clears it"
-    invariant false for those paths.
 
-    Downstream-harmless today (chat_stream always uses the per-request
-    `domain_mode` argument directly, never re-reads session_obj.domain_mode
-    to decide behavior; continuation doesn't reload it either) — this is
-    metadata correctness / honoring the invariant, not a security fix.
+    r1: Codex found two successful early-return paths that skipped this
+    entirely — tool actions and strict Quote Finder routing — both
+    returning before the main RAG path's system-prompt-building section
+    ever ran. A session that once had domain_mode="legal" persisted could
+    keep that stale value after a later omitted-mode message that
+    happened to route to one of those branches.
+
+    r2: the first fix (commit 2d4e01a) gave this function its OWN
+    `await db.commit()`, called separately in each branch — Codex found
+    THAT was itself a new hazard: a standalone commit outside each
+    branch's existing transaction boundary creates a new, independent
+    failure window. Worse, in the tool-action branch the extra commit ran
+    BEFORE the tool executed, so a subsequent tool failure left the
+    domain_mode change committed anyway — silently defeating the "sync
+    only rides successful paths" intent. In the strict Quote Finder
+    branch, the extra commit ran AFTER the real answer+billing+usage
+    atomic commit — if IT failed, the client got QUOTE_SEARCH_ERROR while
+    the real answer stayed persisted and charged with no way back.
+
+    Fixed by making this function a PURE, IN-MEMORY ASSIGNMENT with NO I/O
+    of its own — zero new commit points. Every call site sets the
+    attribute (dirtying the already-session-tracked ORM object) BEFORE
+    that branch's own existing terminal commit, so SQLAlchemy's next
+    flush picks it up as part of THAT single transaction: it lands
+    together with the real work on success, and a rollback on failure
+    discards it right along with everything else — never separately
+    committed, never separately lost.
     """
     if domain_mode != session_obj.domain_mode:
         session_obj.domain_mode = domain_mode
-        await db.commit()
 
 
 async def _fetch_page_chunks(
@@ -1315,6 +1328,7 @@ class ChatService:
         user: Optional[User],
         locale: Optional[str],
         domain_mode: Optional[str],
+        session_obj: ChatSession,
         document_id: uuid.UUID | None,
         collection_doc_ids: list[uuid.UUID],
         action_plan: Any,
@@ -1358,6 +1372,14 @@ class ChatService:
                 },
             )
             db.add(asst_msg)
+            # P1 hygiene r2 (Codex, 2026-08-03): a PURE assignment, set
+            # INSIDE this try block right before the branch's own terminal
+            # commit — never a standalone commit. If the tool execution
+            # above already raised, this line never runs and nothing is
+            # dirtied; if THIS commit fails, the except block below rolls
+            # everything back together, domain_mode included — never a
+            # half-committed sync. See _sync_session_domain_mode's docstring.
+            _sync_session_domain_mode(session_obj, domain_mode)
             await db.commit()
             yield sse(
                 "done",
@@ -1383,6 +1405,8 @@ class ChatService:
         user: User,
         topic: str,
         locale: Optional[str],
+        domain_mode: Optional[str],
+        session_obj: ChatSession,
         pre_debited: int,
         predebit_ledger_id: uuid.UUID,
         progress: "_VerifiedQuoteProgress",
@@ -1506,6 +1530,14 @@ class ChatService:
             completion_tokens=progress.completion_tokens,
             cost_credits=actual_cost,
         )
+        # P1 hygiene r2 (Codex, 2026-08-03): a PURE assignment, folded
+        # INTO this same atomic commit — never a standalone one. The old
+        # (r1) fix committed this separately AFTER this block, so a
+        # failure in that extra commit meant the client got
+        # QUOTE_SEARCH_ERROR while the real answer stayed persisted and
+        # charged with no way back. See _sync_session_domain_mode's
+        # docstring.
+        _sync_session_domain_mode(session_obj, domain_mode)
         await db.commit()
         # Only trustworthy once the atomic commit's await has ACTUALLY
         # returned — the ordinary-exception handler (FIX-4) uses this to
@@ -1609,11 +1641,11 @@ class ChatService:
             locale=locale,
         )
         if not action_plan.uses_rag_answer_path:
-            # P1 hygiene follow-up (Codex, 2026-08-03): this successful
-            # early-return path skipped the domain_mode session sync that
-            # only ran inline in the main RAG path below — see
-            # _sync_session_domain_mode's docstring.
-            await _sync_session_domain_mode(db, session_obj, domain_mode)
+            # P1 hygiene r1+r2 (Codex, 2026-08-03): this successful
+            # early-return path needs the domain_mode session sync too —
+            # the ASSIGNMENT now happens INSIDE _tool_action_stream, right
+            # before its own terminal commit (see _sync_session_domain_mode's
+            # docstring for why it's not done here as a standalone commit).
             async for ev in self._tool_action_stream(
                 session_id=session_id,
                 user_message=user_message,
@@ -1621,6 +1653,7 @@ class ChatService:
                 user=user,
                 locale=locale,
                 domain_mode=domain_mode,
+                session_obj=session_obj,
                 document_id=document_id,
                 collection_doc_ids=collection_doc_ids,
                 action_plan=action_plan,
@@ -1707,6 +1740,8 @@ class ChatService:
                         user=user,
                         topic=user_message,
                         locale=locale,
+                        domain_mode=domain_mode,
+                        session_obj=session_obj,
                         pre_debited=pre_debited,
                         predebit_ledger_id=predebit_ledger_id,
                         progress=quote_progress,
@@ -1806,11 +1841,10 @@ class ChatService:
                 # mark settled BEFORE yielding so a cancellation during these
                 # yields can't ALSO trigger the setup handler's full refund
                 # (double-refund guard, same pattern as the main RAG path).
+                # domain_mode was already synced INSIDE that same atomic
+                # commit (P1 hygiene r2, Codex 2026-08-03) — nothing left
+                # to do here.
                 settled = True
-                # P1 hygiene follow-up (Codex, 2026-08-03): this successful
-                # early-return path also skipped the domain_mode session
-                # sync — see _sync_session_domain_mode's docstring.
-                await _sync_session_domain_mode(db, session_obj, domain_mode)
                 if outcome.artifact_payload:
                     yield sse("artifact", outcome.artifact_payload)
                 yield sse("token", {"text": outcome.assistant_text})
@@ -2088,10 +2122,16 @@ class ChatService:
             system_prompt += _source_location_contract() + _output_terminology_contract()
 
             # Persist domain_mode to session (null clears, string sets) —
-            # see _sync_session_domain_mode's docstring; this is the main
-            # RAG path's call site, mirrored at the tool-action and strict
-            # Quote Finder early returns above (P1 hygiene, Codex 2026-08-03).
-            await _sync_session_domain_mode(db, session_obj, domain_mode)
+            # a PURE assignment, no commit of its own (see
+            # _sync_session_domain_mode's docstring, r2). session_obj is
+            # already tracked by this `db` session (loaded at the top of
+            # chat_stream), so this dirties it in place and rides along
+            # with WHATEVER this path's next commit turns out to be (the
+            # assistant-message draft save below) — never a standalone
+            # commit, so a failure before that point discards it via
+            # rollback just like everything else, and a failure after it
+            # commits it together with the real answer, never separately.
+            _sync_session_domain_mode(session_obj, domain_mode)
 
         except asyncio.CancelledError:
             if user is not None and pre_debited > 0 and predebit_ledger_id is not None and not settled:
