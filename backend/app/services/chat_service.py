@@ -953,6 +953,31 @@ async def _settle_verified_quote_predebit_after_failure(
     return await _refund_predebit(db, user_id, pre_debited, predebit_ledger_id)
 
 
+async def _sync_session_domain_mode(
+    db: AsyncSession, session_obj: ChatSession, domain_mode: Optional[str],
+) -> None:
+    """P1 hygiene follow-up (Codex M3 P1 review, 2026-08-03): the persisted
+    ChatSession.domain_mode must reflect the CURRENT request's domain_mode
+    (null when omitted) on EVERY successful terminal path of chat_stream,
+    not just the main RAG path this logic originally lived in inline.
+    Codex found two successful early-return paths that skipped it — tool
+    actions and strict Quote Finder routing — both returning before the
+    main RAG path's system-prompt-building section ever ran. A session
+    that once had domain_mode="legal" persisted could keep that stale
+    value after a later omitted-mode message that happened to route to
+    one of those branches, making the documented "omitted clears it"
+    invariant false for those paths.
+
+    Downstream-harmless today (chat_stream always uses the per-request
+    `domain_mode` argument directly, never re-reads session_obj.domain_mode
+    to decide behavior; continuation doesn't reload it either) — this is
+    metadata correctness / honoring the invariant, not a security fix.
+    """
+    if domain_mode != session_obj.domain_mode:
+        session_obj.domain_mode = domain_mode
+        await db.commit()
+
+
 async def _fetch_page_chunks(
     db: AsyncSession,
     document_id: uuid.UUID,
@@ -1584,6 +1609,11 @@ class ChatService:
             locale=locale,
         )
         if not action_plan.uses_rag_answer_path:
+            # P1 hygiene follow-up (Codex, 2026-08-03): this successful
+            # early-return path skipped the domain_mode session sync that
+            # only ran inline in the main RAG path below — see
+            # _sync_session_domain_mode's docstring.
+            await _sync_session_domain_mode(db, session_obj, domain_mode)
             async for ev in self._tool_action_stream(
                 session_id=session_id,
                 user_message=user_message,
@@ -1777,6 +1807,10 @@ class ChatService:
                 # yields can't ALSO trigger the setup handler's full refund
                 # (double-refund guard, same pattern as the main RAG path).
                 settled = True
+                # P1 hygiene follow-up (Codex, 2026-08-03): this successful
+                # early-return path also skipped the domain_mode session
+                # sync — see _sync_session_domain_mode's docstring.
+                await _sync_session_domain_mode(db, session_obj, domain_mode)
                 if outcome.artifact_payload:
                     yield sse("artifact", outcome.artifact_payload)
                 yield sse("token", {"text": outcome.assistant_text})
@@ -2053,10 +2087,11 @@ class ChatService:
             # + user-facing terminology guard (#4). (Consensus R2a.)
             system_prompt += _source_location_contract() + _output_terminology_contract()
 
-            # Persist domain_mode to session (null clears, string sets)
-            if domain_mode != session_obj.domain_mode:
-                session_obj.domain_mode = domain_mode
-                await db.commit()
+            # Persist domain_mode to session (null clears, string sets) —
+            # see _sync_session_domain_mode's docstring; this is the main
+            # RAG path's call site, mirrored at the tool-action and strict
+            # Quote Finder early returns above (P1 hygiene, Codex 2026-08-03).
+            await _sync_session_domain_mode(db, session_obj, domain_mode)
 
         except asyncio.CancelledError:
             if user is not None and pre_debited > 0 and predebit_ledger_id is not None and not settled:

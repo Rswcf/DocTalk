@@ -747,6 +747,108 @@ class TestAuthedRoutingEmitsArtifact:
         assert refund_mock.await_args.args[3] == ledger_id
 
 
+class TestDomainModeSyncOnEarlyReturnPaths:
+    """P1 hygiene follow-up (Codex, 2026-08-03): _sync_session_domain_mode
+    (the "persisted ChatSession.domain_mode reflects the CURRENT request's
+    domain_mode, null when omitted" logic) originally only ran inline in
+    the main RAG path — Codex found it was SKIPPED on two successful
+    early-return paths: tool actions and strict Quote Finder routing. A
+    session that once had domain_mode="legal" persisted could keep that
+    stale value after a later omitted-mode message that happened to route
+    to one of those branches. Both tests below seed session_obj.domain_mode
+    = "legal" (simulating that stale prior state), send a message with NO
+    domain_mode, and assert the session row ends up domain_mode=None."""
+
+    @pytest.mark.asyncio
+    async def test_strict_quote_finder_route_clears_stale_domain_mode(
+        self, monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        session_id = uuid.uuid4()
+        document_id = uuid.uuid4()
+        user_id = uuid.uuid4()
+        ledger_id = uuid.uuid4()
+        chunk_id = uuid.uuid4()
+        session_obj, doc_obj = _base_session_and_doc(document_id, session_id)
+        session_obj.domain_mode = "legal"  # stale prior value
+        db = _make_db(session_obj, doc_obj, execute_side_effect=[_ScalarOneResult(session_obj)])
+
+        monkeypatch.setattr(chat_service_module.action_planner, "plan", AsyncMock(return_value=_quote_action_plan()))
+        monkeypatch.setattr(chat_service_module.credit_service, "get_estimated_cost", lambda _mode: 15)
+        monkeypatch.setattr(chat_service_module.credit_service, "debit_credits", AsyncMock(return_value=ledger_id))
+        monkeypatch.setattr(chat_service_module.credit_service, "reconcile_credits", AsyncMock())
+        monkeypatch.setattr(chat_service_module.credit_service, "record_usage", AsyncMock())
+        monkeypatch.setattr(chat_service_module.credit_service, "calculate_cost", lambda *_a, **_k: 6)
+        monkeypatch.setattr(chat_service_module, "_get_llm_client", _never_called)
+
+        card = QuoteCard(
+            display_text="the exact clause text", page=3, page_end=3, bboxes=[],
+            tier="exact", source_kind="page_text", chunk_id=str(chunk_id), score=100.0,
+        )
+        result = QuoteSearchResult(
+            cards=[card], proposed=1, verified=1, discarded=[],
+            scanned_chunks=9, usage=(300, 80), model="deepseek-v4-pro",
+        )
+        monkeypatch.setattr(chat_service_module.quote_search_service, "quote_search", AsyncMock(return_value=result))
+
+        events = [
+            event
+            async for event in chat_service_module.chat_service.chat_stream(
+                session_id=session_id,
+                user_message="Give me a direct quote about the termination clause.",
+                db=db,
+                user=SimpleNamespace(id=user_id, plan="pro"),
+                mode="balanced",
+                domain_mode=None,  # omitted on THIS request
+            )
+        ]
+
+        assert events[-1]["event"] == "done"  # sanity: the route actually succeeded
+        assert session_obj.domain_mode is None  # the stale "legal" value was cleared
+
+    @pytest.mark.asyncio
+    async def test_tool_action_route_clears_stale_domain_mode(
+        self, monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        session_id = uuid.uuid4()
+        document_id = uuid.uuid4()
+        user_id = uuid.uuid4()
+        session_obj, doc_obj = _base_session_and_doc(document_id, session_id)
+        session_obj.domain_mode = "legal"  # stale prior value
+        session_obj.title = "Existing title"  # skip the title-set second commit branch
+        db = _make_db(session_obj, doc_obj, execute_side_effect=[_ScalarOneResult(session_obj)])
+
+        tool_action_plan = SimpleNamespace(
+            action=ChatAction.EXPORT_TABLES,
+            uses_rag_answer_path=False,
+            confidence=0.9,
+            reason="table export markers",
+            user_visible_status="",
+            quote_finder_hint=False,
+            quote_finder_hint_topic=None,
+        )
+        monkeypatch.setattr(chat_service_module.action_planner, "plan", AsyncMock(return_value=tool_action_plan))
+
+        execution = SimpleNamespace(message="Here are the exported tables.", artifact=None)
+        monkeypatch.setattr(
+            chat_service_module.chat_tool_executor, "execute", AsyncMock(return_value=execution),
+        )
+
+        events = [
+            event
+            async for event in chat_service_module.chat_service.chat_stream(
+                session_id=session_id,
+                user_message="Export all tables to CSV.",
+                db=db,
+                user=SimpleNamespace(id=user_id, plan="pro"),
+                mode="balanced",
+                domain_mode=None,  # omitted on THIS request
+            )
+        ]
+
+        assert events[-1]["event"] == "done"  # sanity: the tool action actually succeeded
+        assert session_obj.domain_mode is None  # the stale "legal" value was cleared
+
+
 class TestSettleVerifiedQuotePredebitAfterFailure:
     """FIX3-A (Codex r3 #4, NOT ADDRESSED): direct unit coverage for the
     resolver — it is now a thin dispatch to the atomic-conditional
