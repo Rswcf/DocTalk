@@ -848,6 +848,18 @@ class SavedQuote(Base):
     __table_args__ = (
         sa.Index("idx_saved_quotes_user_created", "user_id", "created_at"),
         sa.Index("idx_saved_quotes_user_document", "user_id", "document_id"),
+        # FIX-5 (Codex M3 r1 MED, migration 20260803_0038): the parse
+        # worker's bulk chunk delete triggers a referential-action lookup
+        # against this FK for every deleted chunk (ON DELETE SET NULL) —
+        # without an index, that's a sequential scan per reparse. Partial:
+        # most rows eventually have source_chunk_id NULL once their
+        # document has been reparsed at least once, and NULLs are never
+        # useful to this index's only query shape ("which rows reference
+        # chunk X").
+        sa.Index(
+            "idx_saved_quotes_source_chunk_id", "source_chunk_id",
+            postgresql_where=sa.text("source_chunk_id IS NOT NULL"),
+        ),
         sa.UniqueConstraint(
             "user_id", "document_id", "quote_hash", name="uq_saved_quotes_user_document_hash"
         ),
