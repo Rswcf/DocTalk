@@ -111,11 +111,23 @@ export default function SavedQuoteCard({ quote, index, biblio, onJump, onDeleted
 
   const handleNoteBlur = () => {
     const trimmed = note.trim();
-    if (trimmed === confirmedNoteRef.current) return; // no-op PATCH avoidance, against the last CONFIRMED value
+    // Check in-flight FIRST (Codex M3 r3 #3 — order of checks matters).
+    // Failure trace with the old order (no-op check before in-flight
+    // check): confirmed A -> PATCH B dispatched (in flight) -> user edits
+    // back to A and blurs -> `trimmed === confirmedNoteRef.current` was
+    // still true (confirmed hadn't moved past A yet) -> early return, A
+    // never queued -> B lands and wrongly becomes final, silently
+    // discarding the user's real "back to A" edit. ALWAYS queue while a
+    // save is in flight, even when `trimmed` equals the CURRENT
+    // (soon-to-be-stale) confirmed value — runNoteSave's drain step
+    // re-evaluates "differs from confirmed" against whatever confirmed
+    // becomes once the in-flight request resolves, which is the only
+    // point where that comparison is actually meaningful.
     if (inFlightRef.current) {
       pendingValueRef.current = trimmed; // queue the latest — overwrites any earlier queued value
       return;
     }
+    if (trimmed === confirmedNoteRef.current) return; // no-op PATCH avoidance — nothing in flight, so this IS the current confirmed value
     void runNoteSave(trimmed);
   };
 

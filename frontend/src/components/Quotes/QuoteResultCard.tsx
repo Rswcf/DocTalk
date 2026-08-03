@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Bookmark, BookmarkCheck, Check, Copy, Loader2, MapPin, ShieldCheck } from 'lucide-react';
 import { useLocale } from '../../i18n';
 import { ApiError, saveQuote } from '../../lib/api';
@@ -27,8 +27,8 @@ export default function QuoteResultCard({ card, index, documentId, biblio, onJum
   const [saving, setSaving] = useState(false);
 
   // Belt-and-braces (Codex M3 r2 finding #4): the full-identity key on the
-  // list side (quoteResultCardKey — chunkId/page/pageEnd/whole-text hash)
-  // should already force a remount whenever the underlying quote actually
+  // list side (quoteResultCardKey — chunkId/page/pageEnd/full text) should
+  // already force a remount whenever the underlying quote actually
   // changes, but resetting saved/saving directly off the identity-defining
   // props too means a residual key collision (or a future refactor that
   // drops the key discipline) still can't leave a stale saved=true state
@@ -37,6 +37,21 @@ export default function QuoteResultCard({ card, index, documentId, biblio, onJum
     setSaved(false);
     setSaving(false);
   }, [card.chunkId, card.page, card.pageEnd, card.displayText]);
+
+  // A SECOND belt-and-braces layer (Codex M3 r3 #4): the effect above
+  // resets state on an identity change, but handleSave's own `await` can
+  // still be in flight when that happens, and its OWN closure still holds
+  // the OLD `card` — so the effect resetting `saved` to false doesn't stop
+  // that stale call from setting it right back to `true` once its promise
+  // resolves. `latestIdentity` is recomputed on every render and mirrored
+  // into a ref DURING render (not via an effect, which would lag one
+  // render behind) so a save started under an OLD identity can compare
+  // against whatever the LATEST render's identity actually is, at the
+  // moment its await resolves — not just what its own stale closure
+  // remembers.
+  const latestIdentity = `${card.chunkId}|${card.page}|${card.pageEnd}|${card.displayText}`;
+  const latestIdentityRef = useRef(latestIdentity);
+  latestIdentityRef.current = latestIdentity;
 
   const handleCopy = async () => {
     const apaInText = formatApaInText(biblio, card.page);
@@ -58,11 +73,20 @@ export default function QuoteResultCard({ card, index, documentId, biblio, onJum
     // (the backend is itself idempotent — re-POSTing returns the existing
     // row — this just avoids the redundant call).
     if (saved || saving) return;
+    // Captured now — Codex M3 r3 #4 belt-and-braces: compared against
+    // `latestIdentityRef.current` AFTER the await, before setSaved(true),
+    // so a save that started for one quote can never mark a DIFFERENT
+    // quote "saved" if this component instance ends up showing different
+    // data (e.g. a residual key collision, or a future refactor that
+    // loosens key discipline) by the time the request resolves.
+    const identityAtStart = latestIdentity;
     setSaving(true);
     try {
       await saveQuote(documentId, { chunkId: card.chunkId, quoteText: card.displayText, pageHint: card.page });
+      if (latestIdentityRef.current !== identityAtStart) return; // this instance now shows different card data — the save it just ran no longer describes it
       setSaved(true);
     } catch (err) {
+      if (latestIdentityRef.current !== identityAtStart) return; // stale — don't surface a paywall (or any other state) for a card the user isn't looking at anymore
       if (err instanceof ApiError && err.status === 403 && err.code === 'SAVED_QUOTES_LIMIT_REACHED') {
         const limit = typeof err.detail.limit === 'number' ? err.detail.limit : 30;
         const plan = typeof err.detail.plan === 'string' ? err.detail.plan : 'free';

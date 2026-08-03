@@ -374,8 +374,9 @@ export interface SavedQuote {
    * (SavedQuoteBoardResponse vs SavedQuoteResponse) precisely because the
    * document-scoped endpoints already know which document they're
    * looking at and don't carry it. Codex M3 r1 FIX-7: resolves a saved
-   * quote's document name server-side (query-time join) instead of the
-   * frontend cross-referencing its own, capped-at-50/demo-excluding
+   * quote's document name server-side (a bounded second SELECT via
+   * selectinload, not a SQL join) instead of the frontend
+   * cross-referencing its own, capped-at-50/demo-excluding
    * getMyDocuments() list. */
   documentFilename?: string;
 }
@@ -432,12 +433,13 @@ export async function listDocumentSavedQuotes(documentId: string): Promise<Saved
 
 /** The Evidence Board feed — every saved quote for the authed user across
  * ALL their documents, newest first. Rows carry `documentId` AND a
- * server-resolved `documentFilename` (Codex M3 r1 FIX-7, via a query-time
- * join on the backend) — this is a distinct response shape from the
- * document-scoped endpoints, which don't need the filename and don't send
- * it. No client-side join against `getMyDocuments()` needed or done here:
- * that endpoint is capped at 50 documents and excludes demo documents, so
- * it could never resolve every row anyway. */
+ * server-resolved `documentFilename` (Codex M3 r1 FIX-7, populated via a
+ * bounded second SELECT — `selectinload` — on the backend, not a SQL
+ * join) — this is a distinct response shape from the document-scoped
+ * endpoints, which don't need the filename and don't send it. No
+ * client-side join against `getMyDocuments()` needed or done here: that
+ * endpoint is capped at 50 documents and excludes demo documents, so it
+ * could never resolve every row anyway. */
 export async function listAllSavedQuotes(): Promise<SavedQuote[]> {
   const res = await fetch(`${PROXY_BASE}/api/quotes`);
   const data: any = await handle(res);

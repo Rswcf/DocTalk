@@ -107,15 +107,15 @@ export default function QuoteCardList({ documentId, cards, onJump, summaryLine, 
       <div className="space-y-3">
         {cards.map((card, index) => (
           <QuoteResultCard
-            // Full-identity key (chunkId + page + pageEnd + a whole-text
-            // hash — see quoteResultCardKey), not just chunkId-index (Codex
-            // M3 r1 finding #4, then r2's follow-up: a 40-char text-prefix
-            // slice could still collide between two DIFFERENT quotes). A
-            // later search returning different text from the same chunk at
-            // the same list position must get a new key so React remounts
-            // the card fresh (saved/saving reset) instead of reusing a
-            // stale instance carrying over saved=true onto text that was
-            // never actually saved.
+            // Full-identity key (chunkId + page + pageEnd + the FULL quote
+            // text — see quoteResultCardKey), not just chunkId-index (Codex
+            // M3 r1 finding #4, then r2's 40-char-slice follow-up, then
+            // r3's: a 32-bit hash of the text still collided in practice).
+            // A later search returning different text from the same chunk
+            // at the same list position must get a new key so React
+            // remounts the card fresh (saved/saving reset) instead of
+            // reusing a stale instance carrying over saved=true onto text
+            // that was never actually saved.
             key={quoteResultCardKey(card, index)}
             card={card}
             index={index}
