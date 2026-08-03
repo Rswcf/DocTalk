@@ -8,6 +8,29 @@ releases use `0.minor.patch` semantics such as `0.2.0` and `0.2.1`.
 
 ## [Unreleased]
 
+## [0.26.0] - 2026-08-04
+
+### Fixed
+- Legal and Academic domain modes are now properly limited to Plus and Pro
+  plans. They were shown as paid features but the server accepted them from
+  anyone, so a free account could get the paid behavior by asking for it
+  directly. Both places that accept them — chat and structured extraction —
+  now check your plan.
+- Hitting a plan limit no longer leaves you at a dead end. Running out of
+  share links, document slots during a layout translation, or asking for a
+  domain mode you don't have now shows a clear next step instead of a bare
+  error.
+- If you're already on Pro and hit the document limit, DocTalk now tells you
+  to free up space instead of offering you a "downgrade to Plus" link.
+
+### Internal
+- domain_mode gated at both request entry points with a 403
+  DOMAIN_MODE_REQUIRES_PLUS; the persisted session value is synchronised to
+  the current request on every successful path, inside that path's own
+  transaction (no standalone commits, no half-committed metadata, no
+  unrefunded charge windows). Two adversarial Codex rounds plus real-Postgres
+  failure-injection coverage; trail in `.collab/reviews/2026-08-0{3,4}-p1-*`.
+
 ## [0.25.0] - 2026-08-03
 
 ### Added
