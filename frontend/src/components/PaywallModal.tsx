@@ -40,6 +40,15 @@ function paywallCopy(reason: string | null | undefined, t: (key: string) => stri
     };
   }
 
+  if (reason === 'SAVED_QUOTES_LIMIT_REACHED') {
+    return {
+      title: tOr('paywall.savedQuotes.title', 'Keep saving quotes'),
+      body: tOr('paywall.savedQuotes.body', 'Free includes 30 saved quotes. Plus unlocks up to 999 for building out a full research library.'),
+      primaryLabel: tOr('paywall.savedQuotes.cta', 'Upgrade to save more quotes'),
+      reason: 'saved_quotes_limit',
+    };
+  }
+
   return {
     title: t("credits.insufficientCredits"),
     body: t("credits.purchasePrompt"),

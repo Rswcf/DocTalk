@@ -353,6 +353,66 @@ export async function updateDocumentBiblio(documentId: string, cslJson: Document
   return { cslJson: data.csl_json || {}, source: data.source };
 }
 
+// --- Saved Quotes API (M3, plan §8.5 / §8.4 point 2 — Evidence Board) ---
+
+export interface SavedQuote {
+  id: string;
+  documentId: string;
+  page: number;
+  pageEnd: number;
+  quoteText: string;
+  bboxes: NormalizedBBox[];
+  tier: 'exact' | 'normalized' | 'aligned' | string;
+  score: number;
+  verifierVersion: string;
+  sourceKind: 'page_text' | 'extracted_text' | string;
+  note: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+function mapSavedQuote(data: any): SavedQuote {
+  return {
+    id: data.id,
+    documentId: data.document_id,
+    page: data.page,
+    pageEnd: data.page_end,
+    quoteText: data.quote_text,
+    bboxes: data.bboxes || [],
+    tier: data.tier,
+    score: data.score,
+    verifierVersion: data.verifier_version,
+    sourceKind: data.source_kind,
+    note: data.note ?? null,
+    createdAt: data.created_at,
+    updatedAt: data.updated_at,
+  };
+}
+
+/**
+ * Saves a verified quote card. The server does NOT trust chunkId/quoteText
+ * for tier/score/page/bboxes — it re-derives every trust field itself
+ * (`quote_search_service.verify_saved_quote`), so only send back what a
+ * `QuoteCard` already gave you: `chunkId`, `displayText` -> quoteText, and
+ * optionally `page` as a disambiguation hint (never trusted to fabricate a
+ * page on its own). Idempotent — re-saving an already-saved quote returns
+ * 201 with the EXISTING row, never a duplicate and never a 409, so the
+ * caller doesn't need to track save-state itself before calling this.
+ */
+export async function saveQuote(documentId: string, params: { chunkId: string; quoteText: string; pageHint?: number }): Promise<SavedQuote> {
+  const res = await fetch(`${PROXY_BASE}/api/documents/${documentId}/quotes`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      chunk_id: params.chunkId,
+      quote_text: params.quoteText,
+      page_hint: params.pageHint ?? null,
+    }),
+  });
+  const data: any = await handle(res);
+  return mapSavedQuote(data);
+}
+
 export async function listSessions(docId: string): Promise<SessionListResponse> {
   const res = await fetch(`${PROXY_BASE}/api/documents/${docId}/sessions`);
   return handle(res);

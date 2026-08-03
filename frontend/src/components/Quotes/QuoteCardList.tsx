@@ -1,10 +1,12 @@
 "use client";
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Pencil } from 'lucide-react';
 import { useLocale } from '../../i18n';
 import type { DocumentBiblioCsl, QuoteCard } from '../../lib/api';
 import { getDocumentBiblio } from '../../lib/api';
+import { PaywallModal } from '../PaywallModal';
+import { trackEvent } from '../../lib/analytics';
 import BiblioForm from './BiblioForm';
 import QuoteResultCard from './QuoteResultCard';
 import { resultKindHeadline } from './utils';
@@ -19,6 +21,11 @@ interface QuoteCardListProps {
    * Off by default so the chat quote-card artifact (F3) stays "jump + copy
    * identical" to the panel without also picking up the edit surface. */
   allowEditBiblio?: boolean;
+  /** Needed only for the save-limit PaywallModal's upgrade-target derivation
+   * (M3-F1). Anonymous users never see this list at all (cards are
+   * authed-only on both the panel and the chat artifact), so this is
+   * always a real plan in practice. */
+  userPlan?: string;
 }
 
 /**
@@ -29,10 +36,21 @@ interface QuoteCardListProps {
  * system default) so every card's Copy action can append an APA in-text
  * citation without a per-card round trip.
  */
-export default function QuoteCardList({ documentId, cards, onJump, summaryLine, allowEditBiblio = false }: QuoteCardListProps) {
+export default function QuoteCardList({ documentId, cards, onJump, summaryLine, allowEditBiblio = false, userPlan }: QuoteCardListProps) {
   const { tOr } = useLocale();
   const [biblio, setBiblio] = useState<DocumentBiblioCsl | null>(null);
   const [editingBiblio, setEditingBiblio] = useState(false);
+  const [saveLimitOpen, setSaveLimitOpen] = useState(false);
+
+  const handleSaveLimitReached = useCallback(() => {
+    setSaveLimitOpen(true);
+    trackEvent('paywall_opened', {
+      source: 'quote_save',
+      reason: 'SAVED_QUOTES_LIMIT_REACHED',
+      plan: userPlan || 'free',
+      period: 'monthly',
+    });
+  }, [userPlan]);
 
   useEffect(() => {
     let cancelled = false;
@@ -92,8 +110,10 @@ export default function QuoteCardList({ documentId, cards, onJump, summaryLine, 
             key={`${card.chunkId || 'card'}-${index}`}
             card={card}
             index={index}
+            documentId={documentId}
             biblio={biblio}
             onJump={onJump}
+            onSaveLimitReached={handleSaveLimitReached}
           />
         ))}
       </div>
@@ -108,6 +128,12 @@ export default function QuoteCardList({ documentId, cards, onJump, summaryLine, 
           }}
         />
       ) : null}
+      <PaywallModal
+        isOpen={saveLimitOpen}
+        onClose={() => setSaveLimitOpen(false)}
+        reason="SAVED_QUOTES_LIMIT_REACHED"
+        currentPlan={userPlan}
+      />
     </div>
   );
 }

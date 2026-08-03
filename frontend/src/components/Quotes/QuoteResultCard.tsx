@@ -1,8 +1,9 @@
 "use client";
 
 import { useState } from 'react';
-import { Check, Copy, MapPin, ShieldCheck } from 'lucide-react';
+import { Bookmark, BookmarkCheck, Check, Copy, Loader2, MapPin, ShieldCheck } from 'lucide-react';
 import { useLocale } from '../../i18n';
+import { ApiError, saveQuote } from '../../lib/api';
 import type { DocumentBiblioCsl, QuoteCard } from '../../lib/api';
 import { formatApaInText } from '../../lib/apaFormat';
 import { approxHighlightLabel, pageRangeLabel, tierLabel, trustLabel } from './utils';
@@ -10,13 +11,20 @@ import { approxHighlightLabel, pageRangeLabel, tierLabel, trustLabel } from './u
 interface QuoteResultCardProps {
   card: QuoteCard;
   index: number;
+  documentId: string;
   biblio: DocumentBiblioCsl | null;
   onJump: (card: QuoteCard, index: number) => void;
+  /** Fired on a 403 SAVED_QUOTES_LIMIT_REACHED — the card itself never owns
+   * a PaywallModal (there can be many cards in a list); the shared list
+   * container (QuoteCardList) owns exactly one instance. */
+  onSaveLimitReached?: (detail: { limit: number; plan: string }) => void;
 }
 
-export default function QuoteResultCard({ card, index, biblio, onJump }: QuoteResultCardProps) {
+export default function QuoteResultCard({ card, index, documentId, biblio, onJump, onSaveLimitReached }: QuoteResultCardProps) {
   const { tOr } = useLocale();
   const [copied, setCopied] = useState(false);
+  const [saved, setSaved] = useState(false);
+  const [saving, setSaving] = useState(false);
 
   const handleCopy = async () => {
     const apaInText = formatApaInText(biblio, card.page);
@@ -29,6 +37,31 @@ export default function QuoteResultCard({ card, index, biblio, onJump }: QuoteRe
       // Clipboard can be blocked in non-secure contexts / permission
       // denial — best-effort, no toast (the missing "Copied" state is
       // itself the "didn't work" cue, matching MessageBubble's copy button).
+    }
+  };
+
+  const handleSave = async () => {
+    // Idempotent at the UI level too: once this card instance is marked
+    // saved locally, further clicks no-op without a network round trip
+    // (the backend is itself idempotent — re-POSTing returns the existing
+    // row — this just avoids the redundant call).
+    if (saved || saving) return;
+    setSaving(true);
+    try {
+      await saveQuote(documentId, { chunkId: card.chunkId, quoteText: card.displayText, pageHint: card.page });
+      setSaved(true);
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 403 && err.code === 'SAVED_QUOTES_LIMIT_REACHED') {
+        const limit = typeof err.detail.limit === 'number' ? err.detail.limit : 30;
+        const plan = typeof err.detail.plan === 'string' ? err.detail.plan : 'free';
+        onSaveLimitReached?.({ limit, plan });
+      }
+      // Other failures (network, a 422 the search result shouldn't normally
+      // trigger since it was just verified) — best-effort, no dedicated
+      // inline error UI for v1; the button simply stays in its unsaved
+      // state so the user can retry.
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -80,6 +113,26 @@ export default function QuoteResultCard({ card, index, biblio, onJump }: QuoteRe
           >
             {copied ? <Check size={12} className="text-emerald-600 dark:text-emerald-400" aria-hidden="true" /> : <Copy size={12} aria-hidden="true" />}
             {copied ? tOr('quoteFinder.copied', 'Copied') : tOr('quoteFinder.copy', 'Copy quote + citation')}
+          </button>
+          <button
+            type="button"
+            onClick={() => void handleSave()}
+            disabled={saving}
+            aria-pressed={saved}
+            className={`inline-flex min-h-8 items-center gap-1.5 rounded-md border px-2.5 text-xs font-medium transition-colors focus-visible:ring-2 focus-visible:ring-blue-500 disabled:cursor-not-allowed ${
+              saved
+                ? 'border-blue-200 bg-blue-50 text-blue-700 dark:border-blue-900/50 dark:bg-blue-950/40 dark:text-blue-300'
+                : 'border-[var(--reader-border)] bg-[var(--reader-panel-solid)] text-[var(--reader-ink)] hover:bg-[var(--reader-panel-muted)]'
+            }`}
+          >
+            {saving ? (
+              <Loader2 size={12} className="animate-spin motion-reduce:animate-none" aria-hidden="true" />
+            ) : saved ? (
+              <BookmarkCheck size={12} aria-hidden="true" />
+            ) : (
+              <Bookmark size={12} aria-hidden="true" />
+            )}
+            {saved ? tOr('quoteFinder.saved', 'Saved') : tOr('quoteFinder.save', 'Save')}
           </button>
         </div>
       </div>

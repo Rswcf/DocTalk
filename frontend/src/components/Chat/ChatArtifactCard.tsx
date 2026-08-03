@@ -112,6 +112,7 @@ export default function ChatArtifactCard({ artifact, onCitationClick, onPreviewL
   const isLayoutTranslation = current.artifactType === 'layout_translation';
   const isQuoteSearch = current.artifactType === 'quote_search';
   const documentId = useDocTalkStore((s) => s.documentId);
+  const userPlan = useDocTalkStore((s) => s.userPlan);
 
   useEffect(() => {
     setCurrent(artifact);
@@ -348,6 +349,7 @@ export default function ChatArtifactCard({ artifact, onCitationClick, onPreviewL
             cards={quoteCards}
             onJump={(card, index) => onCitationClick?.(citationFromQuoteCard(card, documentId, index))}
             summaryLine={quoteSummaryLine}
+            userPlan={userPlan}
           />
         </div>
       ) : previewRows.length > 0 ? (
