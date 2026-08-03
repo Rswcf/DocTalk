@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Bookmark, BookmarkCheck, Check, Copy, Loader2, MapPin, ShieldCheck } from 'lucide-react';
 import { useLocale } from '../../i18n';
 import { ApiError, saveQuote } from '../../lib/api';
@@ -25,6 +25,18 @@ export default function QuoteResultCard({ card, index, documentId, biblio, onJum
   const [copied, setCopied] = useState(false);
   const [saved, setSaved] = useState(false);
   const [saving, setSaving] = useState(false);
+
+  // Belt-and-braces (Codex M3 r2 finding #4): the full-identity key on the
+  // list side (quoteResultCardKey — chunkId/page/pageEnd/whole-text hash)
+  // should already force a remount whenever the underlying quote actually
+  // changes, but resetting saved/saving directly off the identity-defining
+  // props too means a residual key collision (or a future refactor that
+  // drops the key discipline) still can't leave a stale saved=true state
+  // attached to different text.
+  useEffect(() => {
+    setSaved(false);
+    setSaving(false);
+  }, [card.chunkId, card.page, card.pageEnd, card.displayText]);
 
   const handleCopy = async () => {
     const apaInText = formatApaInText(biblio, card.page);

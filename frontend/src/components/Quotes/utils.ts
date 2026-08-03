@@ -100,3 +100,36 @@ export function pageRangeLabel(card: { page: number; pageEnd: number }, tOr: TOr
   }
   return tOr('quoteFinder.page', 'p. {page}', { page: card.page });
 }
+
+/**
+ * Cheap 32-bit FNV-1a hash over the FULL string (not a slice), returned as
+ * a short base-36 token — Codex M3 r2 finding #4: a React key built from
+ * only the first 40 chars of a quote's text let two DIFFERENT quotes
+ * sharing that prefix (same chunk, same page, same list position) collide
+ * and reuse the same QuoteResultCard instance, carrying over its local
+ * `saved=true` state onto text that was never actually saved. Hashing the
+ * whole string is cheap (one pass, no allocation beyond the accumulator)
+ * and — combined with chunkId/page/pageEnd in the key — collision odds are
+ * astronomically lower than a 40-char prefix match. Not cryptographic;
+ * doesn't need to be — a key only needs to reliably distinguish React
+ * elements, not resist a deliberate adversary.
+ */
+export function hashText32(text: string): string {
+  let hash = 0x811c9dc5; // FNV-1a 32-bit offset basis
+  for (let i = 0; i < text.length; i++) {
+    hash ^= text.charCodeAt(i);
+    hash = Math.imul(hash, 0x01000193); // FNV-1a 32-bit prime
+  }
+  return (hash >>> 0).toString(36);
+}
+
+/** Full-identity React key for a live search-result card (Codex M3 r2
+ * finding #4) — chunkId + page + pageEnd + a whole-text hash, not just a
+ * chunkId-index-prefix combination. `index` is still included so that two
+ * genuinely identical quotes (same chunk/page/pageEnd/text — e.g. an exact
+ * repeated boilerplate clause returned twice in one result set) still get
+ * distinct keys, which React requires even when they're substantively "the
+ * same" quote appearing twice. */
+export function quoteResultCardKey(card: QuoteCard, index: number): string {
+  return `${card.chunkId || 'card'}-${index}-${card.page}-${card.pageEnd}-${hashText32(card.displayText)}`;
+}
