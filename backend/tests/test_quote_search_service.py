@@ -323,7 +323,7 @@ class TestSearchTelemetryFields:
         assert result.no_result is True
 
 
-class TestAmbiguousMultiPageExtractedSegmentDiscarded:
+class TestMultiPageExtractedSegmentAttribution:
     """FIX2-A(a) (Codex r2 #2) originally: an extracted_text segment
     spanning multiple pages (its own page_start != page_end) has no
     reliable way to attribute a match to a single page — majority-bbox
@@ -362,13 +362,23 @@ class TestAmbiguousMultiPageExtractedSegmentDiscarded:
         vote would still wrongly pick p2 if we ever used it). The policy
         reversal does NOT resurrect majority-vote guessing: it reports the
         HONEST RANGE (page=1, page_end=2) with EVERY bbox in that range
-        (both pages), never a majority-voted single page."""
+        (both pages), never a majority-voted single page.
+
+        Codex M3-r1 REVISE (LOW): the fixture also carries bboxes on page 3
+        and page 99 — both OUTSIDE the reported 1-2 range — to prove the
+        range filter actually excludes out-of-range bboxes, not just that
+        it fails to collapse in-range ones to a single page. Without these,
+        deleting the `page_start <= bbox.page <= page_end` predicate and
+        keeping every bbox verbatim would still pass."""
         p1_bbox = {"x": 0.1, "y": 0.1, "w": 0.2, "h": 0.05, "page": 1}
         p2_bbox_a = {"x": 0.1, "y": 0.1, "w": 0.2, "h": 0.05, "page": 2}
         p2_bbox_b = {"x": 0.1, "y": 0.2, "w": 0.2, "h": 0.05, "page": 2}
+        p3_bbox_outside_range = {"x": 0.1, "y": 0.1, "w": 0.2, "h": 0.05, "page": 3}
+        p99_bbox_far_outside_range = {"x": 0.1, "y": 0.1, "w": 0.2, "h": 0.05, "page": 99}
+        segment_bboxes = [p1_bbox, p2_bbox_a, p2_bbox_b, p3_bbox_outside_range, p99_bbox_far_outside_range]
         chunk = _chunk(
             "unused chunk text", page_start=1, page_end=2, chunk_index=0,
-            bboxes=[p1_bbox, p2_bbox_a, p2_bbox_b],
+            bboxes=segment_bboxes,
         )
         source = QuoteSource(
             text="unused", kind="extracted_text", page_start=1, page_end=2,
@@ -376,7 +386,7 @@ class TestAmbiguousMultiPageExtractedSegmentDiscarded:
                 QuoteSourceSegment(
                     text="The quote lives in the page-1 portion of this chunk. Filler continues onto page two.",
                     page_start=1, page_end=2, chunk_id=chunk.id,
-                    bboxes=[p1_bbox, p2_bbox_a, p2_bbox_b],
+                    bboxes=segment_bboxes,
                 ),
             ],
         )
@@ -397,8 +407,12 @@ class TestAmbiguousMultiPageExtractedSegmentDiscarded:
         card = result.cards[0]
         assert card.page == 1
         assert card.page_end == 2
-        # Honest range: bboxes from BOTH pages, never majority-voted to one.
+        # Honest range: every bbox from BOTH in-range pages, never
+        # majority-voted to one — but the page-3/page-99 bboxes outside the
+        # reported range must be excluded, not leaked through.
         assert card.bboxes == [p1_bbox, p2_bbox_a, p2_bbox_b]
+        assert p3_bbox_outside_range not in card.bboxes
+        assert p99_bbox_far_outside_range not in card.bboxes
         assert result.page_range_count == 1
 
     @pytest.mark.asyncio
