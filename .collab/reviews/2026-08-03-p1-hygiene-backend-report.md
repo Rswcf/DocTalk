@@ -67,4 +67,4 @@ SKIP_INTEGRATION=0 python3 -m pytest -m integration -q     -> 23 passed / 789 de
 
 **Commits (chronological):**
 - `b6da842` — chat.py gate (`chat_stream`), plus the `.claude/rules/frontend.md` doc fix
-- (this commit) — extractions.py gate (`create_extraction`), same shape, same test matrix
+- `ef7e798` — extractions.py gate (`create_extraction`), same shape, same test matrix
