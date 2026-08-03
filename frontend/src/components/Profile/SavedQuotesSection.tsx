@@ -129,7 +129,9 @@ function SavedQuoteRow({
  * a live store, which only exists on the document reader route). Delete
  * is still included since it's useful from anywhere and cheap either way.
  */
-export default function SavedQuotesSection() {
+const FREE_SAVED_QUOTES_LIMIT = 30;
+
+export default function SavedQuotesSection({ userPlan }: { userPlan?: string }) {
   const { t, tOr } = useLocale();
   const [quotes, setQuotes] = useState<SavedQuote[] | null>(null);
   const [documentNames, setDocumentNames] = useState<Record<string, string>>({});
@@ -193,6 +195,15 @@ export default function SavedQuotesSection() {
         <p className="text-sm text-zinc-500 dark:text-zinc-400">
           {tOr("profile.savedQuotes.count", "{count} saved quotes", { count: quotes.length })}
         </p>
+        {(userPlan || "free") === "free" ? (
+          // M3-F3: this board's own fetch already returns the TRUE global
+          // count (it's the same GET /api/quotes the cap itself is
+          // enforced against), so unlike the per-document panel tab, no
+          // extra request is needed here to show it honestly.
+          <p className="text-xs text-zinc-500 dark:text-zinc-400">
+            {tOr("quoteFinder.capIndicator", "{count} of {limit} saved", { count: quotes.length, limit: FREE_SAVED_QUOTES_LIMIT })}
+          </p>
+        ) : null}
       </div>
       <div className="space-y-3">
         {quotes.map((quote) => (

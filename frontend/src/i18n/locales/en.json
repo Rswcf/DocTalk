@@ -3757,6 +3757,7 @@
   "quoteFinder.noteSaveError": "Failed to save note",
   "quoteFinder.delete": "Delete",
   "quoteFinder.copyText": "Copy quote",
+  "quoteFinder.capIndicator": "{count} of {limit} saved",
   "quoteFinder.editCitationInfo": "Edit citation info",
   "quoteFinder.biblioTitle": "Citation info for this document",
   "quoteFinder.biblioHint": "Used to build the \"(Author, Year, p. X)\" citation the Copy button attaches to each quote. Only your own edits are saved — other readers of this document keep their own.",

@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import type { FormEvent } from 'react';
 import { Bookmark, Loader2, Search, X } from 'lucide-react';
 import { useLocale } from '../../i18n';
-import { ApiError, listDocumentSavedQuotes, searchDocumentQuotes } from '../../lib/api';
+import { ApiError, listAllSavedQuotes, listDocumentSavedQuotes, searchDocumentQuotes } from '../../lib/api';
 import type { QuoteCard, QuoteSearchResult, SavedQuote } from '../../lib/api';
 import type { Citation } from '../../types';
 import { PaywallModal } from '../PaywallModal';
@@ -14,6 +14,12 @@ import { trackEvent } from '../../lib/analytics';
 import { citationFromQuoteCard, citationFromSavedQuote } from './utils';
 import QuoteCardList from './QuoteCardList';
 import SavedQuoteList from './SavedQuoteList';
+
+// Mirrors backend/app/core/config.py's FREE_SAVED_QUOTES_LIMIT — no API
+// field exposes this directly outside of the 403 error body, so the
+// display-only indicator (M3-F3) hardcodes it, same pattern as
+// LayoutTranslationDrawer's maxPagesForPlan.
+const FREE_SAVED_QUOTES_LIMIT = 30;
 
 interface QuoteFinderPanelProps {
   isOpen: boolean;
@@ -59,6 +65,10 @@ export default function QuoteFinderPanel({ isOpen, documentId, userPlan, onClose
   const [savedQuotes, setSavedQuotes] = useState<SavedQuote[] | null>(null);
   const [savedLoading, setSavedLoading] = useState(false);
   const [savedErrorMsg, setSavedErrorMsg] = useState<string | null>(null);
+  // M3-F3 caps UX: the save cap is enforced PER USER ACROSS ALL DOCUMENTS,
+  // not per document, so an honest "n of 30" here needs the GLOBAL count —
+  // null on paid plans, which don't get the indicator at all.
+  const [savedGlobalCount, setSavedGlobalCount] = useState<number | null>(null);
   // Bumped every time the panel (re)opens or is retargeted to a new
   // initialTopic while already open (Codex r4 new-breakage). handleSearch
   // captures the generation it started under; if it changes before the
@@ -102,14 +112,31 @@ export default function QuoteFinderPanel({ isOpen, documentId, userPlan, onClose
   // Refetches every time the Saved tab becomes active — simple and
   // correct (a Save made in the Search tab must be visible on switching
   // over) over caching, which would need its own invalidation story.
+  //
+  // Free-plan users fetch the GLOBAL list (GET /api/quotes) and filter it
+  // client-side to this document, rather than the per-document endpoint —
+  // that's the only way to get an honest cap-relative count for M3-F3
+  // (the cap is user-wide), and it's cheap: a free user's realistic total
+  // is capped at 30 rows. Paid plans (999-row ceiling, no indicator shown)
+  // use the per-document endpoint directly instead, to avoid pulling a
+  // potentially large global list just to filter most of it away.
   useEffect(() => {
     if (!isOpen || activeTab !== 'saved') return;
     let cancelled = false;
     setSavedLoading(true);
     setSavedErrorMsg(null);
-    listDocumentSavedQuotes(documentId)
+    const isFreePlan = (userPlan || 'free') === 'free';
+    const fetchPromise = isFreePlan ? listAllSavedQuotes() : listDocumentSavedQuotes(documentId);
+    fetchPromise
       .then((quotes) => {
-        if (!cancelled) setSavedQuotes(quotes);
+        if (cancelled) return;
+        if (isFreePlan) {
+          setSavedGlobalCount(quotes.length);
+          setSavedQuotes(quotes.filter((q) => q.documentId === documentId));
+        } else {
+          setSavedGlobalCount(null);
+          setSavedQuotes(quotes);
+        }
       })
       .catch((err) => {
         if (cancelled) return;
@@ -122,10 +149,14 @@ export default function QuoteFinderPanel({ isOpen, documentId, userPlan, onClose
     return () => {
       cancelled = true;
     };
-  }, [isOpen, activeTab, documentId, t, tOr]);
+  }, [isOpen, activeTab, documentId, userPlan, t, tOr]);
 
   const handleSavedDeleted = useCallback((quoteId: string) => {
     setSavedQuotes((prev) => (prev ? prev.filter((q) => q.id !== quoteId) : prev));
+    // A hard delete always frees a cap slot immediately (no soft-delete on
+    // the backend) — decrement the indicator in place rather than
+    // reissuing the global fetch just to learn the same thing.
+    setSavedGlobalCount((prev) => (prev !== null ? Math.max(0, prev - 1) : prev));
   }, []);
 
   if (!isOpen) return null;
@@ -319,6 +350,9 @@ export default function QuoteFinderPanel({ isOpen, documentId, userPlan, onClose
                   quotes={savedQuotes}
                   onJump={handleSavedJump}
                   onDeleted={handleSavedDeleted}
+                  capLine={savedGlobalCount !== null
+                    ? tOr('quoteFinder.capIndicator', '{count} of {limit} saved', { count: savedGlobalCount, limit: FREE_SAVED_QUOTES_LIMIT })
+                    : undefined}
                 />
               ) : null}
             </>
