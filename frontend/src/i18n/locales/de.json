@@ -2615,6 +2615,7 @@
   "errors.NETWORK.body": "Etwas ist schiefgelaufen. Bitte überprüfen Sie Ihre Verbindung und versuchen Sie es erneut.",
   "errors.DOCUMENT_LIMIT_REACHED.title": "Dokumentenlimit erreicht",
   "errors.DOCUMENT_LIMIT_REACHED.body": "Sie haben das Dokumentenlimit Ihres Tarifs erreicht ({limit}). Löschen Sie ein altes Dokument oder führen Sie ein Upgrade durch.",
+  "errors.DOCUMENT_LIMIT_REACHED.bodyTopTier": "Sie haben das Dokumentenlimit Ihres Tarifs erreicht ({limit}). Löschen Sie ein Dokument, um Platz freizugeben.",
   "errors.FILE_TOO_LARGE.title": "Datei zu groß",
   "errors.FILE_TOO_LARGE.body": "Die maximale Dateigröße in Ihrem Tarif beträgt {maxMb} MB. Führen Sie ein Upgrade für größere Uploads durch.",
   "errors.UNSUPPORTED_FORMAT.title": "Nicht unterstütztes Dateiformat",

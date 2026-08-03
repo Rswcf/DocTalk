@@ -2615,6 +2615,7 @@
   "errors.NETWORK.body": "Une erreur s'est produite. Vérifiez votre connexion et réessayez.",
   "errors.DOCUMENT_LIMIT_REACHED.title": "Limite de documents atteinte",
   "errors.DOCUMENT_LIMIT_REACHED.body": "Vous avez atteint la limite de documents de votre forfait ({limit}). Supprimez un ancien document ou passez à un forfait supérieur.",
+  "errors.DOCUMENT_LIMIT_REACHED.bodyTopTier": "Vous avez atteint la limite de documents de votre forfait ({limit}). Supprimez un document pour libérer de l'espace.",
   "errors.FILE_TOO_LARGE.title": "Fichier trop volumineux",
   "errors.FILE_TOO_LARGE.body": "La taille maximale de fichier pour votre forfait est de {maxMb} Mo. Passez à un forfait supérieur pour des téléchargements plus volumineux.",
   "errors.UNSUPPORTED_FORMAT.title": "Format de fichier non pris en charge",

@@ -2654,6 +2654,7 @@
   "errors.NETWORK.body": "出了点问题。请检查您的连接后重试。",
   "errors.DOCUMENT_LIMIT_REACHED.title": "文档数量已达上限",
   "errors.DOCUMENT_LIMIT_REACHED.body": "您已达到套餐的文档数量上限（{limit}）。删除旧文档或升级以获取更多。",
+  "errors.DOCUMENT_LIMIT_REACHED.bodyTopTier": "您已达到套餐的文档数量上限（{limit}）。删除一个文档以释放空间。",
   "errors.FILE_TOO_LARGE.title": "文件过大",
   "errors.FILE_TOO_LARGE.body": "您套餐的最大文件大小为{maxMb} MB。升级以上传更大文件。",
   "errors.UNSUPPORTED_FORMAT.title": "不支持的文件格式",

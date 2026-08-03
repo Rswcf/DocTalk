@@ -2615,6 +2615,7 @@
   "errors.NETWORK.body": "문제가 발생했습니다. 연결을 확인하고 다시 시도해주세요.",
   "errors.DOCUMENT_LIMIT_REACHED.title": "문서 한도 도달",
   "errors.DOCUMENT_LIMIT_REACHED.body": "요금제의 문서 한도({limit})에 도달했습니다. 이전 문서를 삭제하거나 업그레이드하세요.",
+  "errors.DOCUMENT_LIMIT_REACHED.bodyTopTier": "요금제의 문서 한도({limit})에 도달했습니다. 문서를 삭제해 공간을 확보하세요.",
   "errors.FILE_TOO_LARGE.title": "파일이 너무 큼",
   "errors.FILE_TOO_LARGE.body": "요금제의 최대 파일 크기는 {maxMb} MB입니다. 더 큰 파일을 업로드하려면 업그레이드하세요.",
   "errors.UNSUPPORTED_FORMAT.title": "지원되지 않는 파일 형식",

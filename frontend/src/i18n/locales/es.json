@@ -2615,6 +2615,7 @@
   "errors.NETWORK.body": "Algo salió mal. Verifica tu conexión e inténtalo de nuevo.",
   "errors.DOCUMENT_LIMIT_REACHED.title": "Límite de documentos alcanzado",
   "errors.DOCUMENT_LIMIT_REACHED.body": "Has alcanzado el límite de documentos de tu plan ({limit}). Elimina un documento antiguo o mejora tu plan para obtener más.",
+  "errors.DOCUMENT_LIMIT_REACHED.bodyTopTier": "Has alcanzado el límite de documentos de tu plan ({limit}). Elimina un documento para liberar espacio.",
   "errors.FILE_TOO_LARGE.title": "Archivo demasiado grande",
   "errors.FILE_TOO_LARGE.body": "El tamaño máximo de archivo en tu plan es {maxMb} MB. Mejora tu plan para subir archivos más grandes.",
   "errors.UNSUPPORTED_FORMAT.title": "Formato de archivo no compatible",

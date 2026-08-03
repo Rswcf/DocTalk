@@ -2615,6 +2615,7 @@
   "errors.NETWORK.body": "कुछ गलत हो गया। कृपया अपना कनेक्शन जांचें और पुनः प्रयास करें।",
   "errors.DOCUMENT_LIMIT_REACHED.title": "दस्तावेज़ सीमा समाप्त",
   "errors.DOCUMENT_LIMIT_REACHED.body": "आप अपनी योजना की दस्तावेज़ सीमा ({limit}) तक पहुंच गए हैं। अधिक के लिए कोई पुराना दस्तावेज़ हटाएं या अपग्रेड करें।",
+  "errors.DOCUMENT_LIMIT_REACHED.bodyTopTier": "आप अपनी योजना की दस्तावेज़ सीमा ({limit}) तक पहुंच गए हैं। जगह खाली करने के लिए एक दस्तावेज़ हटाएं।",
   "errors.FILE_TOO_LARGE.title": "फ़ाइल बहुत बड़ी है",
   "errors.FILE_TOO_LARGE.body": "आपकी योजना पर अधिकतम फ़ाइल आकार {maxMb} MB है। बड़े अपलोड के लिए अपग्रेड करें।",
   "errors.UNSUPPORTED_FORMAT.title": "असमर्थित फ़ाइल प्रारूप",

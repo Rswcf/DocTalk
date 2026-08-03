@@ -2615,6 +2615,7 @@
   "errors.NETWORK.body": "エラーが発生しました。接続を確認して再試行してください。",
   "errors.DOCUMENT_LIMIT_REACHED.title": "ドキュメント数の上限に達しました",
   "errors.DOCUMENT_LIMIT_REACHED.body": "プランのドキュメント上限（{limit}）に達しました。古いドキュメントを削除するか、アップグレードしてください。",
+  "errors.DOCUMENT_LIMIT_REACHED.bodyTopTier": "プランのドキュメント上限（{limit}）に達しました。ドキュメントを削除して空き容量を確保してください。",
   "errors.FILE_TOO_LARGE.title": "ファイルが大きすぎます",
   "errors.FILE_TOO_LARGE.body": "プランの最大ファイルサイズは{maxMb}MBです。より大きなファイルをアップロードするにはアップグレードしてください。",
   "errors.UNSUPPORTED_FORMAT.title": "サポートされていないファイル形式",

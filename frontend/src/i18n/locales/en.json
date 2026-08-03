@@ -2298,6 +2298,7 @@
   "errors.NETWORK.body": "Something went wrong. Please check your connection and try again.",
   "errors.DOCUMENT_LIMIT_REACHED.title": "Document limit reached",
   "errors.DOCUMENT_LIMIT_REACHED.body": "You've reached your plan's document limit ({limit}). Delete an old document or upgrade for more.",
+  "errors.DOCUMENT_LIMIT_REACHED.bodyTopTier": "You've reached your plan's document limit ({limit}). Delete a document to free up space.",
   "errors.FILE_TOO_LARGE.title": "File too large",
   "errors.FILE_TOO_LARGE.body": "Maximum file size on your plan is {maxMb} MB. Upgrade for larger uploads.",
   "errors.UNSUPPORTED_FORMAT.title": "Unsupported file format",

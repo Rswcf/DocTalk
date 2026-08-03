@@ -13,6 +13,18 @@ export interface ErrorCopy {
    * Whether the consumer should auto-open the paywall modal.
    * Only true for 402 credit/mode paywalls and SSE MODE_NOT_ALLOWED
    * (Codex r1 Q2: all other plan-limit 403s use inline CTA, never auto-modal).
+   *
+   * Exception: DOMAIN_MODE_REQUIRES_PLUS (403) auto-opens the modal on the
+   * chat SSE path too, but NOT via this flag — this CODE_TABLE entry
+   * deliberately leaves it unset (P1 Codex review: a stray `true` here was
+   * a latent trap for any future generic errorCopy() consumer that trusts
+   * this doc comment, since every other plan-limit 403 renders inline).
+   * useChatStream.ts's handleStreamError hardcodes the code into its own
+   * paywall-trigger list instead, because the chat SSE error renderer only
+   * ever shows `copy.body` as chat-bubble text — it has no inline-CTA
+   * rendering path the way the REST surfaces (dashboard, collections,
+   * sharing, extraction panel) do, so a 403 here needs the modal or the
+   * user gets no way forward at all.
    */
   openPaywall?: boolean;
 }
@@ -84,6 +96,20 @@ function targetPlan(detail: Record<string, unknown>, fallback: BillingPlanIntent
   return detail.plan === 'plus' ? 'pro' : fallback;
 }
 
+/**
+ * Like targetPlan(), but for document-cap codes where a Pro user (already
+ * on the top tier) can legitimately hit the limit — e.g. layout_translations.py's
+ * _assert_document_capacity emits `plan: "pro"` — and there is nowhere higher
+ * to send them. Returns undefined in that case so the caller can fall back to
+ * manage/delete copy instead of a bogus "upgrade" CTA that would point a Pro
+ * user at a downgrade (Codex P1 FIX-1: targetPlan()'s ternary only special-cased
+ * "plus", so "pro" silently fell through to the 'plus' fallback).
+ */
+function targetPlanOrNone(detail: Record<string, unknown>): BillingPlanIntent | undefined {
+  if (detail.plan === 'pro') return undefined;
+  return targetPlan(detail);
+}
+
 function upgradeCta(tOr: TOrFn, reason: string, plan: BillingPlanIntent = 'plus') {
   return {
     label: tOr('errors.cta.upgrade', 'Upgrade'),
@@ -101,14 +127,21 @@ function requiredPlanCta(detail: Record<string, unknown>, tOr: TOrFn, reason: st
 
 const CODE_TABLE: Record<string, Handler> = {
   // ─── Upload ───
-  DOCUMENT_LIMIT_REACHED: (d, tOr) => ({
-    title: tOr('errors.DOCUMENT_LIMIT_REACHED.title', 'Document limit reached'),
-    body: tOr('errors.DOCUMENT_LIMIT_REACHED.body', 'You\'ve reached your plan\'s document limit ({limit}). Delete an old document or upgrade for more.', {
-      limit: String(d.limit ?? ''),
-    }),
-    cta: upgradeCta(tOr, 'document_limit', targetPlan(d)),
-    severity: 'warning',
-  }),
+  DOCUMENT_LIMIT_REACHED: (d, tOr) => {
+    const plan = targetPlanOrNone(d);
+    return {
+      title: tOr('errors.DOCUMENT_LIMIT_REACHED.title', 'Document limit reached'),
+      body: plan
+        ? tOr('errors.DOCUMENT_LIMIT_REACHED.body', 'You\'ve reached your plan\'s document limit ({limit}). Delete an old document or upgrade for more.', {
+            limit: String(d.limit ?? ''),
+          })
+        : tOr('errors.DOCUMENT_LIMIT_REACHED.bodyTopTier', 'You\'ve reached your plan\'s document limit ({limit}). Delete a document to free up space.', {
+            limit: String(d.limit ?? ''),
+          }),
+      cta: plan ? upgradeCta(tOr, 'document_limit', plan) : undefined,
+      severity: 'warning',
+    };
+  },
   FILE_TOO_LARGE: (d, tOr) => ({
     title: tOr('errors.FILE_TOO_LARGE.title', 'File too large'),
     body: tOr('errors.FILE_TOO_LARGE.body', 'Maximum file size on your plan is {maxMb} MB. Upgrade for larger uploads.', {

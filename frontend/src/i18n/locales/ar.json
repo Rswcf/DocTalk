@@ -2615,6 +2615,7 @@
   "errors.NETWORK.body": "حدث خطأ ما. يرجى التحقق من اتصالك والمحاولة مرة أخرى.",
   "errors.DOCUMENT_LIMIT_REACHED.title": "تم الوصول إلى حد المستندات",
   "errors.DOCUMENT_LIMIT_REACHED.body": "لقد وصلت إلى حد المستندات في خطتك ({limit}). احذف مستندًا قديمًا أو قم بالترقية للحصول على المزيد.",
+  "errors.DOCUMENT_LIMIT_REACHED.bodyTopTier": "لقد وصلت إلى حد المستندات في خطتك ({limit}). احذف مستندًا لتحرير مساحة.",
   "errors.FILE_TOO_LARGE.title": "الملف كبير جدًا",
   "errors.FILE_TOO_LARGE.body": "الحد الأقصى لحجم الملف في خطتك هو {maxMb} ميغابايت. قم بالترقية للرفع الأكبر.",
   "errors.UNSUPPORTED_FORMAT.title": "تنسيق ملف غير مدعوم",
