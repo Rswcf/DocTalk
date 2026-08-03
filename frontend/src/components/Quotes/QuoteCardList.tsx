@@ -107,7 +107,16 @@ export default function QuoteCardList({ documentId, cards, onJump, summaryLine, 
       <div className="space-y-3">
         {cards.map((card, index) => (
           <QuoteResultCard
-            key={`${card.chunkId || 'card'}-${index}`}
+            // Includes page + a slice of the quote text, not just
+            // chunkId-index (Codex M3 r1 finding #4): a later search can
+            // return DIFFERENT text from the same chunk at the same list
+            // position, and keying by chunkId-index alone let React reuse
+            // the QuoteResultCard instance — carrying over its local
+            // saved=true state onto a quote that was never actually saved,
+            // which then blocked saving the real one. Changing the text
+            // now changes the key, forcing a remount (fresh saved/saving
+            // state) instead of reusing a stale instance.
+            key={`${card.chunkId || 'card'}-${index}-${card.page}-${card.displayText.slice(0, 40)}`}
             card={card}
             index={index}
             documentId={documentId}
