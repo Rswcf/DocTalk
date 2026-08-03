@@ -342,8 +342,10 @@ class TestMultiPageExtractedSegmentAttribution:
     every real search takes the extracted_text path — and 89% of ITS
     multi-page chunks span exactly ONE page boundary. The gate lost 4/10
     real queries' cards this way, including perfect verbatim (tier=exact,
-    score=100.0) matches. Plan §8.1 explicitly sanctions the fix:
-    "ambiguous multi-page attributions are labeled as a range" — a 2-page
+    score=100.0) matches. Plan §8.1 said chunk-fallback "must reject or
+    split" these; emitting a one-boundary range is a deliberate AMENDMENT
+    to that consensus (recorded 2026-08-04 in the plan, backend.md and both
+    ARCHITECTURE docs), justified by the production data above — a 2-page
     span (page_end - page_start == 1) is no longer discarded outright; it
     is emitted as an HONEST RANGE card (page=page_start, page_end=
     page_start+1) instead of majority-voting to a single, possibly-wrong
@@ -1021,7 +1023,7 @@ class TestVerifySavedQuote:
 
     @pytest.mark.asyncio
     async def test_2page_extracted_segment_now_saveable_like_search(self, monkeypatch):
-        """Policy reversal (see TestAmbiguousMultiPageExtractedSegmentDiscarded
+        """Policy reversal (see TestMultiPageExtractedSegmentAttribution
         docstring): verify_saved_quote shares _attribute_match and the
         span-based ambiguity check with quote_search(), so a 2-page-span
         card that is now emitted in search results must also be saveable —
