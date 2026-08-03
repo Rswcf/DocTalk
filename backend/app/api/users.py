@@ -24,6 +24,7 @@ from app.models.tables import (
     CreditLedger,
     Document,
     Message,
+    SavedQuote,
     UsageRecord,
     User,
 )
@@ -330,12 +331,39 @@ async def export_my_data(
         for entry in ledger_rows.scalars()
     ]
 
+    # 5. Saved quotes (FIX-2, Codex M3 r1 MED — GDPR export omitted this
+    # entirely, including user-authored `note` text, which is personal
+    # data in its own right, not just a research artifact).
+    # selectinload(SavedQuote.document) avoids a manual per-row filename
+    # lookup against the `docs`/`documents` list already built above.
+    saved_quotes_result = await db.execute(
+        select(SavedQuote)
+        .where(SavedQuote.user_id == user.id)
+        .options(selectinload(SavedQuote.document))
+        .order_by(SavedQuote.created_at)
+    )
+    saved_quotes = [
+        {
+            "id": str(q.id),
+            "document_id": str(q.document_id),
+            "document_filename": q.document.filename if q.document else None,
+            "page": q.page,
+            "page_end": q.page_end,
+            "quote_text": q.quote_text,
+            "tier": q.verification_tier,
+            "note": q.note,
+            "created_at": q.created_at.isoformat() if q.created_at else None,
+        }
+        for q in saved_quotes_result.scalars()
+    ]
+
     export_data = {
         "exported_at": datetime.now(timezone.utc).isoformat(),
         "user": profile,
         "documents": documents,
         "conversations": conversations,
         "credit_history": credit_history,
+        "saved_quotes": saved_quotes,
     }
 
     _export_rate_limit[uid] = now
