@@ -73,3 +73,34 @@ Root cause (A) — `ambiguous_page_range` discarding every `extracted_text` matc
 **This is a deliberate, production-data-justified policy reversal of one specific outcome inside the M2 Codex-r2 finding — not a regression.** The underlying r2 concern (majority-vote bbox guessing at a single page is unreliable) is still fully honored: the new code path never guesses a page, it reports a range. What changed is the response to irreducible ambiguity — discard vs. honest-range disclosure — and only for spans of exactly one page boundary, which the plan (§8.1: "ambiguous multi-page attributions are labeled as a range") already anticipated as an acceptable outcome. `test_quote_search_service.py::TestAmbiguousMultiPageExtractedSegmentDiscarded` was rewritten with this framing explicit in its class/test docstrings (renamed from `..._Discarded`, one test now asserts the span-1 emit case using the EXACT Codex r2 probe fixture, a new test asserts the span-2 discard case still holds); `TestVerifySavedQuote`'s equivalent test was updated the same way. Mutation-tested both the span threshold (`>` vs `>=`) and the bbox-range-filter (reverting it to majority-vote reproduces the wrong page from Codex's own probe) — both caught by the updated tests, then restored.
 
 Files: `backend/app/services/quote_search_service.py`, `backend/app/api/quotes.py`, `backend/tests/test_quote_search_service.py`, `backend/tests/test_quotes_api.py`. Full suite: 790 passed, 28 skipped (docker-gated integration). `ruff check app/ tests/`: clean.
+
+---
+
+## 7. Gate RE-RUN after fix (A) — **PASSES**
+
+Same ten queries, same production data, same method; the patched service was loaded into the replay process from `/tmp` via importlib, so production code and data were **not** modified.
+
+| | before | after |
+|---|---|---|
+| proposed | 10 | 10 |
+| **verified** | **1** | **8** |
+
+Recovered — and these are exactly what the users originally asked for:
+
+| user | quote (verbatim, server slice) | page | tier |
+|---|---|---|---|
+| ric\*\*\* (Eco, pt) | "Colabora para fazer a obra." | pp. 50–51 | exact 100.0 |
+| mca\*\*\* (Anijovich, es) | "consideramos que una evaluación valiosa es la que constituye una instancia más de enseñanza…" | pp. 11–12 | exact 100.0 |
+| mca\*\*\* | "entendemos que la evaluación es una oportunidad para contribuir a estos procesos formativos." | pp. 86–87 | exact 100.0 |
+| mca\*\*\* | "En este libro abordaremos la evaluación, entendida como una oportunidad para que los alumnos…" | pp. 7–8 | exact 100.0 |
+| mca\*\*\* | "Consideramos que entender la evaluación como oportunidad implica pensar en la mejora…" | pp. 7–8 | exact 100.0 |
+| mel\*\*\* (gramática, es) | "Progresión lineal o encadenada: el rema se convierte en tema de la oración…" (OCR-damaged) | pp. 30–31 | aligned 99.0 |
+
+Per document, excluding the OCR-destroyed one: **Eco 1/1 topics served, Anijovich 1/2** (the miss, "retroalimentación formativa", appears simply not to be a topic of that book). On mel\*\*\*'s document — whose text layer extracts as noise — the system still abstains on 5 of 7 topics, which remains the correct behavior for unreadable source text.
+
+**Verdict: the gate now PASSES.** Quote Finder delivers verbatim, page-cited quotes to the cohort it was built for, on that cohort's own real documents, in Spanish and Portuguese, through the degraded `extracted_text` path. The two failure classes that remain are (i) documents with destroyed text layers, and (ii) topics genuinely absent from the source — both honest.
+
+### Conditions on the pass
+1. Fix (A) must be **deployed** before this result describes production. Until then production still runs the discard policy measured in §2.
+2. Plus gating: the free/paid split (`FREE_SAVED_QUOTES_LIMIT=30`, paid unlimited) is already live and enforced since v0.25.0. What this gate unblocks is the **decision to push Quote Finder as the paid wedge** — an owner call, now backed by evidence rather than hope.
+3. Root causes (B) and (C) are storage-loss consequences and remain open; they cap what legacy documents can ever deliver.
