@@ -1033,3 +1033,19 @@ Table-aware retrieval 会使用这些 canonical table 位置做覆盖选择；�
 前端 `/billing` 的取消入口保持自助可达，确认弹窗可收集可选取消原因、可选反馈和退款审核勾选，但取消动作不依赖这些字段。Pricing 和 Billing 页面展示 7-day fair-use refund review 文案，用于降低付费焦虑但不承诺自动退款。
 
 取消意图会记录 `subscription_cancel_requested` 事件；勾选退款审核会额外记录 `refund_requested`。Admin funnel 已纳入这两个事件，便于跟踪付费后取消和退款压力。
+
+### 积分账本持久结算(v0.24.0)
+
+`credit_ledger.reconciled_at`(迁移 `20260802_0035`)是让预扣/对账/退款三角并发安全的结算标记:`reconcile_credits()` 先取 `SELECT ... FOR UPDATE` 再必定盖章 `reconciled_at`(含等额无操作路径);所有退款均为单条原子条件删除 `DELETE ... WHERE reconciled_at IS NULL RETURNING id`——行数为 0 即已结算、静默不退;两条计费路径上的全部终提交异常(不止 `CancelledError`)都走标记解析器,解析器失败绝不回落为盲退(预扣保留 + `*.unresolved` 日志);聊天严格引文路由的答案落库+对账+用量记录合并为单一原子提交。对抗调度(对账先胜/退款先胜/对账回滚/等额)已在真实双连接 Postgres 竞态测试下闭合(Codex M2 r2–r4)。
+
+### 验证式引文保证与路由政策(v0.24.0)
+
+Quote Finder 产品契约:引文卡绝不渲染 LLM 生成文本——`verify_quote()` 门控所有提案,展示文本恒为原始源切片,fuzzy 90–95(flagged)只计数不展示。验证源:页文本覆盖完整时按页验证(kind `page_text`),否则被引 chunk±邻居(kind `extracted_text`),信任标签按 kind 诚实分级("逐字"声明仅限 page_text)。页码归因来自被验证切片;跨页 extracted 片段按 `ambiguous_page_range` 丢弃,绝不用 bbox 多数投票。保存端点服务端重验证(`verify_saved_quote`),客户端只可提交 `chunk_id + quote_text`,信任字段不可伪造。聊天路由为裁决后的确定性安全政策(Codex M2 r4):严格触发词命中且全文零否定/元语言词才自动路由;受保护消息强制走普通 RAG 路径(绝不进工具动作)并在 SSE `done` 事件携带 `quote_finder_hint`/`quote_finder_topic`,前端渲染非阻断式 chip。依据为不对称损失(误路由=计费的错误答案;漏路由=一次点击)。
+
+### Demo 存储自愈(2026-08 MinIO 事故)
+
+MinIO→minio-v2 迁移悄悄丢失约 106/108 个存储对象:聊天正常(Postgres/Qdrant 完好)但受影响文档的 PDF 面板全部失败,而 demo 自愈只检查 Qdrant 向量所以从未察觉。启动播种现在校验两个存储:`_ensure_demo_files` 对每个 demo 文档的 `storage_key` 执行 stat,缺失则按原 id/key 从 seed_data 重传。种子资产按 slug 不可变;stat→put 的 TOCTOU 基于该书面不变量被接受。事故前的用户文档文件不可恢复(当时无存储备份——运维风险仍开放)。
+
+### 集成测试隔离(2026-08)
+
+`backend/tests/conftest.py` 在任何 app 模块导入前强制所有集成测试使用临时库 `doctalk_test`(自动建库+迁移,仅限回环地址),同时拦截 shell 导出的 `DATABASE_URL` 与 pydantic-settings 静默读取的 `.env`。除非显式设置 `DOCTALK_TEST_DATABASE_URL`,非回环主机一律硬拒——导出生产 URL 必须快速失败,绝不远程建库。此规则源于同日两次共享开发库数据丢失事故(`alembic downgrade base` 往返与集成夹具)。永远不要对 `doctalk` 运行破坏性迁移测试。

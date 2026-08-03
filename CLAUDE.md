@@ -2,7 +2,7 @@
 
 ## Project
 
-DocTalk — AI document Q&A web app. Upload PDF / DOCX / PPTX / XLSX / TXT / MD / URL; chat with AI that cites the exact source passage. 11 locales. Paid plans also expose layout-preserving PDF translation through the RetainPDF sidecar.
+DocTalk — AI document Q&A web app. Upload PDF / DOCX / PPTX / XLSX / TXT / MD / URL; chat with AI that cites the exact source passage. **Quote Finder** (v0.24.0): topic → machine-verified verbatim quote cards (server-verified slice, page-accurate attribution, jump-to-highlight, copy with APA in-text citation) + per-document saved-quote Evidence Board (M3). 11 locales. Paid plans also expose layout-preserving PDF translation through the RetainPDF sidecar.
 
 | Component | Stack | URL |
 |---|---|---|
@@ -74,8 +74,8 @@ Cross-origin IP trust chain is HMAC-signed with `ADAPTER_SECRET` — frontend an
 
 ## Path-scoped rules (imported)
 
-@.claude/rules/backend.md — async safety, credits, parse worker, auth, demo system
-@.claude/rules/frontend.md — API proxy, UI palette, i18n, react-pdf, subscriptions
+@.claude/rules/backend.md — async safety, credits/settlement, parse worker, verified-quote pipeline, demo system, test isolation
+@.claude/rules/frontend.md — API proxy, UI palette, i18n, demo counter contract, Quote Finder UI, react-pdf, subscriptions
 
 ## Avoid (learned the hard way)
 

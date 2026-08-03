@@ -7,7 +7,7 @@
 
 ## Project
 
-DocTalk — AI document Q&A web app. Upload PDF / DOCX / PPTX / XLSX / TXT / MD / URL; chat with AI that cites the exact source passage. 11 locales. Paid plans also expose layout-preserving PDF translation through the RetainPDF sidecar.
+DocTalk — AI document Q&A web app. Upload PDF / DOCX / PPTX / XLSX / TXT / MD / URL; chat with AI that cites the exact source passage. **Quote Finder** (v0.24.0): topic → machine-verified verbatim quote cards (server-verified slice, page-accurate attribution, jump-to-highlight, copy with APA in-text citation) + per-document saved-quote Evidence Board (M3). 11 locales. Paid plans also expose layout-preserving PDF translation through the RetainPDF sidecar.
 
 | Component | Stack | URL |
 |---|---|---|

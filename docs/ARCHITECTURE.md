@@ -1327,3 +1327,75 @@ double-prefix idempotency, and `_set_timeout_error` integration).
 Frontend back-compat was paper-audited (billing regex, paywall trigger,
 429 phrase match) rather than unit-tested — adding a frontend unit
 runner is a follow-up.
+
+### Credit-ledger durable settlement (v0.24.0)
+
+`credit_ledger.reconciled_at` (migration `20260802_0035`) is the settlement
+marker that makes the pre-debit/reconcile/refund triangle race-safe:
+
+- `reconcile_credits()` acquires `SELECT ... FOR UPDATE` on the ledger row and
+  ALWAYS stamps `reconciled_at = now()` — including the equal-cost no-op path,
+  which previously left the row untouched and therefore unserialized.
+- Every refund is a single atomic conditional
+  `DELETE FROM credit_ledger WHERE id = :id AND reconciled_at IS NULL
+  RETURNING id`; a zero rowcount means the charge already settled and the
+  refund silently no-ops. There is no read-then-act refund logic anywhere.
+- ALL final-commit exceptions — not just `CancelledError` — route through the
+  marker resolver on both the chat and quote-search billing paths. Resolver
+  failure never falls through to a blind refund: the predebit stands and a
+  `*.unresolved` log line carries the ids for ops.
+- The chat strict-quote route persists answer + reconcile + usage in ONE
+  atomic commit, so a cancelled/ambiguous COMMIT can no longer produce a
+  persisted answer with a refunded charge (or vice versa).
+
+Adversarial schedules (reconcile-wins / refund-wins / reconcile-rolls-back /
+equal-cost) were closed under real two-connection Postgres races in
+`backend/tests/` (Codex M2 rounds r2–r4).
+
+### Verified-quote guarantee & routing policy (v0.24.0)
+
+The Quote Finder product contract: a quote card is NEVER rendered from
+LLM-emitted text. `verify_quote()` gates every proposal; the display text is
+always the raw source slice; fuzzy 90–95 ("flagged") results are counted but
+never shown. Verification source is per-page `pages.content` when coverage is
+complete (kind `page_text`), else cited chunk ± neighbors (kind
+`extracted_text`) with honest per-kind trust labels — the "word-for-word"
+claim renders only for `page_text` results. Page attribution derives from the
+verified slice; multi-page extracted segments are discarded as
+`ambiguous_page_range` rather than attributed by bbox voting. Saves re-verify
+server-side (`verify_saved_quote`): clients submit only `chunk_id +
+quote_text`, so trust fields cannot be forged.
+
+Chat routing is deterministic-safe by adjudicated policy (Codex M2 r4): a
+message auto-routes to the billed pipeline only when the strict quote trigger
+matches AND zero negation/metalinguistic tokens appear anywhere; any guarded
+message runs the ordinary RAG path (never a tool action) and carries
+`quote_finder_hint`/`quote_finder_topic` on the SSE `done` event, which the
+frontend renders as a non-blocking "Try Quote Finder" chip. The asymmetric
+loss (false positive = billed wrong answer; false negative = one click) is
+the accepted basis — lexical intent-scope resolution was demonstrated
+unwinnable across three review rounds.
+
+### Demo storage self-heal (2026-08 MinIO incident)
+
+The MinIO→minio-v2 migration silently lost ~106/108 stored objects; chat kept
+working (Postgres/Qdrant intact) while every affected document's PDF pane
+failed, and the demo self-heal never noticed because it only checked Qdrant
+vectors. Startup seeding now verifies BOTH stores: `_ensure_demo_files` stats
+each demo doc's `storage_key` and re-uploads the seed asset (id- and
+key-preserving) when missing. Seed assets are immutable per slug; the
+stat→put TOCTOU is accepted on that documented invariant. Pre-incident user
+document files were unrecoverable (no storage backup existed — open ops
+risk).
+
+### Integration-test isolation (2026-08)
+
+`backend/tests/conftest.py` forces all integration tests onto a scratch
+`doctalk_test` database (auto-provisioned, migrated, loopback-only) BEFORE
+any app module import, intercepting both a shell-exported `DATABASE_URL` and
+pydantic-settings silently reading `.env`. Non-loopback hosts are hard-refused
+unless `DOCTALK_TEST_DATABASE_URL` is explicitly set — a production URL export
+must fail fast, never provision remotely. This followed two same-day shared
+dev-DB data-loss incidents (an `alembic downgrade base` round-trip and
+integration fixtures). Never run destructive migration tests against
+`doctalk`.
