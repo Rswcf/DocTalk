@@ -822,6 +822,21 @@ class SavedQuote(Base):
     )
     source_kind: Mapped[str] = mapped_column(sa.String(16), nullable=False)
     quote_hash: Mapped[str] = mapped_column(sa.String(64), nullable=False)
+    # M3 review addition (2026-08-03, plan §8.1's verification-anchor
+    # fields, added while the table was still empty in prod — migration
+    # 20260803_0037). source_text_hash: hash of the verification corpus
+    # (page text for page_text-kind cards, chunk text for extracted_text-
+    # kind cards) the quote was verified against. quote_start/quote_end:
+    # raw character offsets of the verified slice within that corpus
+    # (QuoteVerification.raw_start/raw_end). Purpose: future revalidation
+    # after reparses — comparing a freshly-fetched corpus's hash against
+    # this stored one tells a later pass whether the text changed since
+    # save time. Nullable: v1 populates them at save time via
+    # quote_search_service.verify_saved_quote(), but never re-verifies on
+    # read (M3-B3, unchanged) — nothing reads these columns yet.
+    source_text_hash: Mapped[Optional[str]] = mapped_column(sa.Text, nullable=True)
+    quote_start: Mapped[Optional[int]] = mapped_column(sa.Integer, nullable=True)
+    quote_end: Mapped[Optional[int]] = mapped_column(sa.Integer, nullable=True)
     note: Mapped[Optional[str]] = mapped_column(sa.Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         sa.DateTime(timezone=True), nullable=False, server_default=sa.text("now()")

@@ -15,6 +15,7 @@ reproduces Codex's exact repro case as a regression test.
 """
 from __future__ import annotations
 
+import hashlib
 import json
 import sys
 import types
@@ -882,6 +883,13 @@ class TestVerifySavedQuote:
         assert card.page_end == 4
         assert card.chunk_id == str(chunk.id)
         assert card.score == 100.0
+        # M3 review addition (plan §8.1 anchor fields): raw offsets of the
+        # verified slice within the corpus, and a hash of that corpus.
+        expected_start = SOURCE.index("the most prized quality in translation today")
+        expected_end = expected_start + len("the most prized quality in translation today")
+        assert card.quote_start == expected_start
+        assert card.quote_end == expected_end
+        assert card.source_text_hash == hashlib.sha256(SOURCE.encode("utf-8")).hexdigest()
 
     @pytest.mark.asyncio
     async def test_unknown_chunk_id_returns_none(self, monkeypatch):

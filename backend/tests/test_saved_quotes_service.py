@@ -29,6 +29,10 @@ def _card(**overrides) -> QuoteCard:
         display_text="the exact quoted sentence",
         page=4, page_end=4, bboxes=[{"x": 0.1, "y": 0.2, "w": 0.3, "h": 0.05, "page": 4}],
         tier="exact", source_kind="extracted_text", chunk_id=str(uuid.uuid4()), score=100.0,
+        # M3 review addition (plan §8.1 anchor fields) — realistic values so
+        # save_quote()'s persistence of them is exercised by every test
+        # using this helper, not just a dedicated one.
+        source_text_hash="a" * 64, quote_start=11, quote_end=57,
     )
     base.update(overrides)
     return QuoteCard(**base)
@@ -117,6 +121,13 @@ class TestSaveQuoteIdempotency:
         assert row.verification_score == 100.0
         assert row.verifier_version == sqs.QUOTE_VERIFIER_VERSION
         assert row.source_kind == "extracted_text"
+        # M3 review addition (plan §8.1 anchor fields): copied from the
+        # card as-is, same as every other trust field — save_quote() never
+        # recomputes them, only quote_search_service.verify_saved_quote()
+        # (or quote_search()'s own cards, which leave them None) does.
+        assert row.source_text_hash == "a" * 64
+        assert row.quote_start == 11
+        assert row.quote_end == 57
         db.commit.assert_awaited_once()
 
     @pytest.mark.asyncio

@@ -137,6 +137,13 @@ async def save_quote(
         verifier_version=QUOTE_VERIFIER_VERSION,
         source_chunk_id=uuid.UUID(card.chunk_id),
         source_kind=card.source_kind,
+        # M3 review addition (plan §8.1 anchor fields, 2026-08-03): copied
+        # from the card as-is, same as every other trust field — None
+        # whenever the caller's card didn't come from verify_saved_quote()
+        # (the column is nullable for exactly that reason).
+        source_text_hash=card.source_text_hash,
+        quote_start=card.quote_start,
+        quote_end=card.quote_end,
         quote_hash=quote_hash,
         note=None,
     )

@@ -282,3 +282,35 @@ class TestSavedQuotesEndpointsRealAsgiRealDb:
             f"/api/documents/{document_id}/quotes", headers=auth_headers,
         )
         assert list_after_delete.json()["quotes"] == []
+
+    async def test_save_populates_verification_anchor_columns_end_to_end(
+        self, client, auth_user, auth_headers,
+    ) -> None:
+        """M3 review addition (plan §8.1 anchor fields, 2026-08-03): a real
+        POST through the full stack (endpoint -> verify_saved_quote ->
+        save_quote) must land non-NULL source_text_hash/quote_start/
+        quote_end in the actual row — not just in mocked-unit-test
+        plumbing. Not yet exposed via the API response (backend-only,
+        v1 never reads them back), so this reads the DB directly."""
+        import hashlib
+
+        from app.models.database import AsyncSessionLocal
+        from app.models.tables import SavedQuote
+
+        document_id = await _create_ready_document(auth_user.id)
+        chunk_id = await _create_chunk(document_id)
+        chunk_text = "Fluency is the most prized quality in translation today."
+        quote_text = "the most prized quality in translation today"
+
+        response = await client.post(
+            f"/api/documents/{document_id}/quotes",
+            json={"chunk_id": str(chunk_id), "quote_text": quote_text, "page_hint": 4},
+            headers=auth_headers,
+        )
+        assert response.status_code == 201
+
+        async with AsyncSessionLocal() as db:
+            row = await db.get(SavedQuote, uuid.UUID(response.json()["id"]))
+            assert row.source_text_hash == hashlib.sha256(chunk_text.encode("utf-8")).hexdigest()
+            assert row.quote_start == chunk_text.index(quote_text)
+            assert row.quote_end == chunk_text.index(quote_text) + len(quote_text)

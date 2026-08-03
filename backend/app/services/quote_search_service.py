@@ -17,6 +17,7 @@ Flow (§8.3 + §9 scout):
 """
 from __future__ import annotations
 
+import hashlib
 import json
 import logging
 import re
@@ -90,6 +91,14 @@ class QuoteCard:
     source_kind: str  # "page_text" | "extracted_text"
     chunk_id: str
     score: float
+    # M3 review addition (plan §8.1 verification-anchor fields): populated
+    # ONLY by verify_saved_quote() (the save path) — quote_search()'s own
+    # cards leave these None, and the search REST response
+    # (QuoteCardResponse in quotes.py) does not expose them. See
+    # SavedQuote's model docstring for what they're for.
+    source_text_hash: Optional[str] = None
+    quote_start: Optional[int] = None
+    quote_end: Optional[int] = None
 
 
 @dataclass(frozen=True)
@@ -637,19 +646,24 @@ async def verify_saved_quote(
     source = await build_quote_source(db, document.id, chunk, neighbors)
     matches, _best_failure = _verify_against_segments(quote_text, source, document)
 
+    # `segment` is carried through alongside the attribution tuple so its
+    # own corpus text (the exact string verify_quote checked `quote_text`
+    # against) can be hashed below — the "verification corpus" §8.1 wants
+    # source_text_hash to represent (page text for page_text segments,
+    # chunk text for extracted_text segments).
     attributed = [
-        (verification, *_attribute_match(chunk, segment))
+        (verification, segment, *_attribute_match(chunk, segment))
         for verification, segment in matches
         if not _is_ambiguous_multipage_extracted_segment(segment)
     ]
     if not attributed:
         return None
 
-    verification, page, page_end, bboxes, attributed_chunk_id = attributed[0]
+    verification, segment, page, page_end, bboxes, attributed_chunk_id = attributed[0]
     if page_hint is not None:
         for candidate in attributed:
-            if candidate[1] == page_hint:
-                verification, page, page_end, bboxes, attributed_chunk_id = candidate
+            if candidate[2] == page_hint:  # candidate = (verification, segment, page, ...)
+                verification, segment, page, page_end, bboxes, attributed_chunk_id = candidate
                 break
 
     return QuoteCard(
@@ -661,4 +675,12 @@ async def verify_saved_quote(
         source_kind=source.kind,
         chunk_id=attributed_chunk_id,
         score=verification.score,
+        # M3 review addition (plan §8.1 anchor fields): raw_start/raw_end
+        # are the verified slice's exact offsets WITHIN segment.text (see
+        # quote_verification_service.verify_quote — every verified tier
+        # returns them); source_text_hash lets a future revalidation pass
+        # detect whether that corpus has since changed.
+        source_text_hash=hashlib.sha256((segment.text or "").encode("utf-8")).hexdigest(),
+        quote_start=verification.raw_start,
+        quote_end=verification.raw_end,
     )
