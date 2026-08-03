@@ -380,3 +380,45 @@ class TestConcurrentDistinctSavesRespectTheCap:
                 select(func.count()).select_from(SavedQuote).where(SavedQuote.user_id == auth_user.id)
             )
         assert final_count == limit  # never 31+, the cap held under real concurrency
+
+
+class TestBoardFeedIncludesDocumentFilename:
+    """FIX-7-backend (Codex M3 r1 LOW): GET /api/quotes (the Evidence
+    Board feed) gains document_filename per row, joined at query time —
+    real end-to-end proof (mocked-db can't convincingly fake
+    selectinload eager-loading), not exposed on the document-scoped
+    endpoints (POST/PATCH/per-document GET)."""
+
+    async def test_board_feed_rows_carry_the_real_document_filename(
+        self, client, auth_user, auth_headers,
+    ) -> None:
+        document_id = await _create_ready_document(auth_user.id)
+        chunk_id = await _create_chunk(document_id)
+        card = _card(chunk_id)
+
+        from app.models.database import AsyncSessionLocal
+        from app.models.tables import Document
+        from app.services import saved_quotes_service
+
+        async with AsyncSessionLocal() as db:
+            document = await db.get(Document, document_id)
+            outcome = await saved_quotes_service.save_quote(
+                db, user=auth_user, document=document, card=card,
+            )
+            assert outcome.created is True
+            real_filename = document.filename
+
+        response = await client.get("/api/quotes", headers=auth_headers)
+
+        assert response.status_code == 200
+        quotes = response.json()["quotes"]
+        assert len(quotes) == 1
+        assert quotes[0]["document_filename"] == real_filename
+
+        # The document-scoped list endpoint does NOT carry this field —
+        # confirms the field is genuinely board-specific, not accidentally
+        # shared onto the other response shape.
+        doc_scoped = await client.get(
+            f"/api/documents/{document_id}/quotes", headers=auth_headers,
+        )
+        assert "document_filename" not in doc_scoped.json()["quotes"][0]

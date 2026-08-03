@@ -19,6 +19,7 @@ from typing import Optional
 import sqlalchemy as sa
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from app.core.config import settings
 from app.models.database import AsyncSessionLocal
@@ -211,10 +212,18 @@ async def list_saved_quotes_for_document(
 
 async def list_all_saved_quotes(db: AsyncSession, *, user_id: uuid.UUID) -> list[SavedQuote]:
     """The Evidence Board feed — every saved quote for this user, across
-    every document, newest first. Uses idx_saved_quotes_user_created."""
+    every document, newest first. Uses idx_saved_quotes_user_created.
+
+    FIX-7-backend (Codex M3 r1 LOW): selectinload(SavedQuote.document) so
+    the API layer can read row.document.filename directly — a query-time
+    join, not a second round trip — for SavedQuoteBoardResponse's
+    document_filename field. The frontend's own document list is capped
+    (50 docs) and excludes demo docs, so it can't reliably resolve a
+    filename for every saved quote client-side."""
     result = await db.execute(
         sa.select(SavedQuote)
         .where(SavedQuote.user_id == user_id)
+        .options(selectinload(SavedQuote.document))
         .order_by(SavedQuote.created_at.desc())
     )
     return list(result.scalars().all())

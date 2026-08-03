@@ -72,6 +72,11 @@ def _saved_row(**overrides) -> SimpleNamespace:
         bboxes=[{"x": 0.1, "y": 0.2, "w": 0.3, "h": 0.05, "page": 4}],
         verification_tier="exact", verification_score=100.0, verifier_version="v1",
         source_kind="extracted_text", note=None, created_at=now, updated_at=now,
+        # FIX-7-backend (Codex M3 r1 LOW): _saved_quote_board_response
+        # reads row.document.filename (list_all_saved_quotes'
+        # selectinload) — a plain default here so every test using this
+        # helper works with the board endpoint without needing to opt in.
+        document=SimpleNamespace(filename="test-document.pdf"),
     )
     base.update(overrides)
     return SimpleNamespace(**base)
@@ -356,14 +361,23 @@ async def test_list_all_quotes_happy_path(
     db = _make_db()
     _override_dependencies(db, user)
 
-    rows = [_saved_row(), _saved_row(), _saved_row()]
+    rows = [
+        _saved_row(document=SimpleNamespace(filename="paper-one.pdf")),
+        _saved_row(document=SimpleNamespace(filename="paper-two.pdf")),
+        _saved_row(),
+    ]
     list_mock = AsyncMock(return_value=rows)
     monkeypatch.setattr(saved_quotes_service, "list_all_saved_quotes", list_mock)
 
     response = await client.get("/api/quotes")
 
     assert response.status_code == 200
-    assert len(response.json()["quotes"]) == 3
+    quotes = response.json()["quotes"]
+    assert len(quotes) == 3
+    # FIX-7-backend (Codex M3 r1 LOW): the board feed's response rows
+    # carry document_filename, unlike the document-scoped endpoints.
+    assert quotes[0]["document_filename"] == "paper-one.pdf"
+    assert quotes[1]["document_filename"] == "paper-two.pdf"
     assert list_mock.await_args.kwargs["user_id"] == user.id
 
 

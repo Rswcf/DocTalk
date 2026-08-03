@@ -459,8 +459,27 @@ class SavedQuoteResponse(BaseModel):
     updated_at: str
 
 
+class SavedQuoteBoardResponse(SavedQuoteResponse):
+    """FIX-7-backend (Codex M3 r1 LOW): the Evidence Board feed (GET
+    /api/quotes, ALL of a user's saved quotes across documents) gains
+    document_filename so the frontend stops joining against its own
+    document list to resolve a display name — that list is capped (50
+    docs) and excludes demo docs, so a saved quote from doc #51 or a demo
+    document would otherwise have no way to resolve a filename
+    client-side. Populated via a query-time join
+    (list_all_saved_quotes' selectinload(SavedQuote.document)), never a
+    second round trip. Document-scoped reads (POST/PATCH and the
+    per-document GET) don't need this — the frontend already knows which
+    document it's looking at."""
+    document_filename: str
+
+
 class SavedQuoteListResponse(BaseModel):
     quotes: list[SavedQuoteResponse]
+
+
+class SavedQuoteBoardListResponse(BaseModel):
+    quotes: list[SavedQuoteBoardResponse]
 
 
 class UpdateSavedQuoteNoteRequest(BaseModel):
@@ -471,6 +490,25 @@ def _saved_quote_response(row: SavedQuote) -> SavedQuoteResponse:
     return SavedQuoteResponse(
         id=str(row.id),
         document_id=str(row.document_id),
+        page=row.page,
+        page_end=row.page_end,
+        quote_text=row.quote_text,
+        bboxes=row.bboxes or [],
+        tier=row.verification_tier,
+        score=row.verification_score,
+        verifier_version=row.verifier_version,
+        source_kind=row.source_kind,
+        note=row.note,
+        created_at=row.created_at.isoformat(),
+        updated_at=row.updated_at.isoformat(),
+    )
+
+
+def _saved_quote_board_response(row: SavedQuote) -> SavedQuoteBoardResponse:
+    return SavedQuoteBoardResponse(
+        id=str(row.id),
+        document_id=str(row.document_id),
+        document_filename=row.document.filename if row.document else "",
         page=row.page,
         page_end=row.page_end,
         quote_text=row.quote_text,
@@ -609,16 +647,19 @@ async def list_document_saved_quotes(
     return SavedQuoteListResponse(quotes=[_saved_quote_response(r) for r in rows])
 
 
-@router.get("/quotes", response_model=SavedQuoteListResponse)
+@router.get("/quotes", response_model=SavedQuoteBoardListResponse)
 async def list_saved_quotes(
     user: User = Depends(require_auth),
     db: AsyncSession = Depends(get_db_session),
 ):
     """The Evidence Board feed — every saved quote for this user, across
     every document, newest first. M3-B3: same stored-snapshot contract as
-    list_document_saved_quotes above — never re-verifies."""
+    list_document_saved_quotes above — never re-verifies. FIX-7-backend
+    (Codex M3 r1 LOW): response rows carry document_filename (joined at
+    query time in list_all_saved_quotes) — see SavedQuoteBoardResponse's
+    docstring for why the board feed specifically needs this."""
     rows = await saved_quotes_service.list_all_saved_quotes(db, user_id=user.id)
-    return SavedQuoteListResponse(quotes=[_saved_quote_response(r) for r in rows])
+    return SavedQuoteBoardListResponse(quotes=[_saved_quote_board_response(r) for r in rows])
 
 
 @router.patch("/quotes/{saved_quote_id}", response_model=SavedQuoteResponse)
