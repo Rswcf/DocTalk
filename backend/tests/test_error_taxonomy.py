@@ -720,6 +720,107 @@ async def test_chat_free_pro_monthly_limit_reached(
     assert detail["required_plan"] == "plus"
 
 
+# -------------------------- domain_mode plan gate (P1 hygiene) --------------------------
+# domain_mode ("legal"/"academic") is marketed as a Plus+ feature
+# (frontend/src/components/Chat/DomainModeSelector.tsx: canUse = plan in
+# {plus,pro}) but the backend accepted it unconditionally — schemas/chat.py's
+# ChatRequest.domain_mode -> chat.py:468's chat_service.chat_stream() call,
+# with zero plan check in between. Any free (or anonymous) user could POST
+# {"domain_mode": "legal"} directly and get the paid prompt behavior.
+
+@pytest.mark.asyncio
+async def test_chat_domain_mode_requires_plus_for_free_plan(
+    client: AsyncClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    user = _make_user(plan="free")
+    db = _make_db()
+    _override_dependencies(db, optional_user=user)
+    session = SimpleNamespace(document=SimpleNamespace(status="ready", demo_slug=None), document_id=uuid.uuid4())
+    monkeypatch.setattr(chat_api, "verify_session_access", AsyncMock(return_value=session))
+
+    response = await client.post(
+        f"/api/sessions/{uuid.uuid4()}/chat",
+        json={"message": "Hello", "domain_mode": "legal"},
+    )
+    detail = _assert_error(response, 403, "DOMAIN_MODE_REQUIRES_PLUS")
+    assert detail["required_plan"] == "plus"
+
+
+@pytest.mark.asyncio
+async def test_chat_domain_mode_requires_plus_for_anonymous(
+    client: AsyncClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    db = _make_db()
+    _override_dependencies(db, optional_user=None)
+    session = SimpleNamespace(document=SimpleNamespace(status="ready", demo_slug=None), document_id=uuid.uuid4())
+    monkeypatch.setattr(chat_api, "verify_session_access", AsyncMock(return_value=session))
+
+    response = await client.post(
+        f"/api/sessions/{uuid.uuid4()}/chat",
+        json={"message": "Hello", "domain_mode": "academic"},
+    )
+    detail = _assert_error(response, 403, "DOMAIN_MODE_REQUIRES_PLUS")
+    assert detail["required_plan"] == "plus"
+
+
+@pytest.mark.asyncio
+async def test_chat_domain_mode_omitted_does_not_gate_free_plan(
+    client: AsyncClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Regression guard: the new gate must be domain_mode-conditional, not a
+    blanket block on free-plan chat — a free user with NO domain_mode set
+    must reach the NEXT check in the pipeline (rate limiting here), never
+    the domain_mode 403."""
+    user = _make_user(plan="free")
+    db = _make_db()
+    _override_dependencies(db, optional_user=user)
+    session = SimpleNamespace(document=SimpleNamespace(status="ready", demo_slug=None), document_id=uuid.uuid4())
+    monkeypatch.setattr(chat_api, "verify_session_access", AsyncMock(return_value=session))
+    monkeypatch.setattr(chat_api.auth_chat_limiter, "is_allowed", AsyncMock(return_value=False))
+
+    response = await client.post(f"/api/sessions/{uuid.uuid4()}/chat", json={"message": "Hello"})
+    _assert_error(response, 429, "RATE_LIMITED")  # NOT the domain_mode gate
+
+
+@pytest.mark.asyncio
+async def test_chat_domain_mode_allowed_for_plus_plan(
+    client: AsyncClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Positive proof the gate doesn't block paid users: a Plus-plan user
+    sending domain_mode reaches chat_service.chat_stream (mocked to a
+    trivial stream) and gets a normal 200, not the domain_mode 403."""
+    user = _make_user(plan="plus")
+    db = _make_db(commit=AsyncMock())
+    _override_dependencies(db, optional_user=user)
+    session = SimpleNamespace(
+        document=SimpleNamespace(status="ready", demo_slug=None), document_id=uuid.uuid4(), collection_id=None,
+    )
+    monkeypatch.setattr(chat_api, "verify_session_access", AsyncMock(return_value=session))
+    monkeypatch.setattr(chat_api.auth_chat_limiter, "is_allowed", AsyncMock(return_value=True))
+    monkeypatch.setattr(chat_api.credit_service, "get_estimated_cost", lambda _mode: 7)
+    monkeypatch.setattr(chat_api.credit_service, "get_user_credits", AsyncMock(return_value=1000))
+
+    async def _noop(*_args, **_kwargs):
+        return None
+
+    monkeypatch.setattr("app.services.credit_service.ensure_monthly_credits", _noop)
+
+    async def _fake_chat_stream(*_args, **_kwargs):
+        yield {"event": "done", "data": {}}
+
+    monkeypatch.setattr(chat_api.chat_service, "chat_stream", _fake_chat_stream)
+
+    response = await client.post(
+        f"/api/sessions/{uuid.uuid4()}/chat",
+        json={"message": "Hello", "domain_mode": "legal"},
+    )
+    assert response.status_code == 200
+
+
 @pytest.mark.asyncio
 async def test_chat_continue_continuation_limit(
     client: AsyncClient,

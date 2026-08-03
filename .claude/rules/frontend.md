@@ -39,6 +39,6 @@ paths:
 ## Subscriptions & Feature Gating
 - Free (300/mo) + Plus (3K/mo, $9.99) + Pro (9K/mo, $19.99). Annual = 20% discount
 - Visible modes are Flash and Pro. Internal IDs remain `quick` and `balanced`; retired modes such as `thorough` must migrate to Flash.
-- Free includes Flash plus a capped number of Pro answers/month. Export: Plus+ (frontend gated). Custom Instructions: Pro (backend gated). Sessions: Free=3/doc (backend gated). Saved quotes: Free=30 active across documents (backend gated; delete frees a slot). Quote searches cost credits like a Pro (balanced) chat message.
+- Free includes Flash plus a capped number of Pro answers/month. Export: Plus+ (frontend gated). Custom Instructions: Pro (backend gated). Sessions: Free=3/doc (backend gated). Saved quotes: Free=30 active across documents (backend gated; delete frees a slot). Quote searches cost credits like a Pro (balanced) chat message. Domain Mode (legal/academic chat overlay): Plus+ (backend gated, `chat.py`'s `chat_stream` — 403 `DOMAIN_MODE_REQUIRES_PLUS`).
 - Credit packs: Boost(500/$3.99), Power(2K/$9.99), Ultra(5K/$19.99)
 - Cancellation UI must remain self-serve. The cancel form may collect an optional reason, optional feedback, and a refund-review checkbox, but it must not block cancellation on those fields.
