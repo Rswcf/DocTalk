@@ -19,7 +19,7 @@ import QuoteFinderPanel from '../../../components/Quotes/QuoteFinderPanel';
 import { useDocumentLoader } from '../../../lib/useDocumentLoader';
 import { useChatSession } from '../../../lib/useChatSession';
 import { useUserPlanProfile } from '../../../lib/useUserPlanProfile';
-import { errorCopy } from '../../../lib/errorCopy';
+import { errorCopy, type ErrorCopy } from '../../../lib/errorCopy';
 import { openAuthModal } from '../../../lib/auth-modal';
 import type { ChatArtifact, Citation } from '../../../types';
 import { trackEvent } from '../../../lib/analytics';
@@ -57,7 +57,7 @@ export default function DocumentReaderPageClient() {
   const [showInstructions, setShowInstructions] = useState(false);
   const [layoutTranslationBusy, setLayoutTranslationBusy] = useState(false);
   const [layoutTranslationDrawerOpen, setLayoutTranslationDrawerOpen] = useState(false);
-  const [layoutTranslationError, setLayoutTranslationError] = useState<string | null>(null);
+  const [layoutTranslationError, setLayoutTranslationError] = useState<ErrorCopy | null>(null);
   const [layoutPaywallOpen, setLayoutPaywallOpen] = useState(false);
   const [layoutPaywallReason, setLayoutPaywallReason] = useState<string | null>(null);
   const [quoteFinderOpen, setQuoteFinderOpen] = useState(false);
@@ -202,8 +202,7 @@ export default function DocumentReaderPageClient() {
           period: 'monthly',
         });
       } else {
-        const copy = errorCopy(err, t, tOr);
-        setLayoutTranslationError(`${copy.title}: ${copy.body}`);
+        setLayoutTranslationError(errorCopy(err, t, tOr));
         setLayoutTranslationDrawerOpen(false);
       }
     } finally {
@@ -297,7 +296,19 @@ export default function DocumentReaderPageClient() {
       {layoutTranslationError ? (
         <div className="flex items-start gap-2 border-b border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-950 dark:border-amber-900/50 dark:bg-amber-950/30 dark:text-amber-100" role="alert">
           <AlertTriangle size={16} className="mt-0.5 shrink-0" aria-hidden="true" />
-          <span className="min-w-0 flex-1">{layoutTranslationError}</span>
+          <span className="min-w-0 flex-1">
+            <span className="font-medium">{layoutTranslationError.title}: </span>
+            {layoutTranslationError.body}
+            {layoutTranslationError.cta && (
+              <button
+                type="button"
+                onClick={() => router.push(layoutTranslationError.cta!.href)}
+                className="ml-2 font-medium underline decoration-amber-500 underline-offset-2 hover:text-amber-700 dark:hover:text-amber-50"
+              >
+                {layoutTranslationError.cta.label}
+              </button>
+            )}
+          </span>
           <button
             type="button"
             onClick={() => setLayoutTranslationError(null)}
