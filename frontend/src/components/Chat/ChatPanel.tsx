@@ -408,7 +408,7 @@ export default function ChatPanel({ sessionId, onCitationClick, onPreviewLayoutT
       addMessage({
         id: `m_${Date.now()}_share_err`,
         role: 'assistant',
-        text: copy.body,
+        text: copy.cta ? `${copy.body}\n\n[${copy.cta.label}](${copy.cta.href})` : copy.body,
         isError: true,
         createdAt: Date.now(),
       });
@@ -438,7 +438,7 @@ export default function ChatPanel({ sessionId, onCitationClick, onPreviewLayoutT
       addMessage({
         id: `m_${Date.now()}_share_answer_err`,
         role: 'assistant',
-        text: copy.body,
+        text: copy.cta ? `${copy.body}\n\n[${copy.cta.label}](${copy.cta.href})` : copy.body,
         isError: true,
         createdAt: Date.now(),
       });
