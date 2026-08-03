@@ -4,20 +4,19 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Bookmark, Check, Copy, ExternalLink, Loader2, Trash2 } from "lucide-react";
 import { useLocale } from "../../i18n";
-import { ApiError, deleteSavedQuote, getMyDocuments, listAllSavedQuotes } from "../../lib/api";
+import { ApiError, deleteSavedQuote, listAllSavedQuotes } from "../../lib/api";
 import type { SavedQuote } from "../../lib/api";
 import { pageRangeLabel, tierLabel, trustLabel } from "../Quotes/utils";
 
 function SavedQuoteRow({
   quote,
-  documentName,
   onDeleted,
 }: {
   quote: SavedQuote;
-  documentName: string;
   onDeleted: (id: string) => void;
 }) {
   const { tOr } = useLocale();
+  const documentName = quote.documentFilename || tOr("profile.savedQuotes.unknownDocument", "Untitled document");
   const [copied, setCopied] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
@@ -134,7 +133,6 @@ const FREE_SAVED_QUOTES_LIMIT = 30;
 export default function SavedQuotesSection({ userPlan }: { userPlan?: string }) {
   const { t, tOr } = useLocale();
   const [quotes, setQuotes] = useState<SavedQuote[] | null>(null);
-  const [documentNames, setDocumentNames] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
 
@@ -142,11 +140,15 @@ export default function SavedQuotesSection({ userPlan }: { userPlan?: string }) 
     let cancelled = false;
     setLoading(true);
     setError(false);
-    Promise.all([listAllSavedQuotes(), getMyDocuments()])
-      .then(([savedQuotes, documents]) => {
-        if (cancelled) return;
-        setQuotes(savedQuotes);
-        setDocumentNames(Object.fromEntries(documents.map((d) => [d.id, d.filename])));
+    // Codex M3 r1 FIX-7: the board feed now resolves each row's document
+    // name server-side (document_filename, query-time join) instead of
+    // this component cross-referencing its own getMyDocuments() list —
+    // that list was capped at 50 documents and excluded demo docs, so a
+    // saved quote from doc #51 or a demo document always rendered
+    // "Untitled document" regardless of its real name.
+    listAllSavedQuotes()
+      .then((savedQuotes) => {
+        if (!cancelled) setQuotes(savedQuotes);
       })
       .catch(() => {
         if (!cancelled) setError(true);
@@ -210,7 +212,6 @@ export default function SavedQuotesSection({ userPlan }: { userPlan?: string }) 
           <SavedQuoteRow
             key={quote.id}
             quote={quote}
-            documentName={documentNames[quote.documentId] || tOr("profile.savedQuotes.unknownDocument", "Untitled document")}
             onDeleted={handleDeleted}
           />
         ))}

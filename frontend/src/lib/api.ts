@@ -369,6 +369,15 @@ export interface SavedQuote {
   note: string | null;
   createdAt: string;
   updatedAt: string;
+  /** Only present on GET /api/quotes (the all-documents Evidence Board
+   * feed) — the backend calls this a distinct response shape
+   * (SavedQuoteBoardResponse vs SavedQuoteResponse) precisely because the
+   * document-scoped endpoints already know which document they're
+   * looking at and don't carry it. Codex M3 r1 FIX-7: resolves a saved
+   * quote's document name server-side (query-time join) instead of the
+   * frontend cross-referencing its own, capped-at-50/demo-excluding
+   * getMyDocuments() list. */
+  documentFilename?: string;
 }
 
 function mapSavedQuote(data: any): SavedQuote {
@@ -386,6 +395,7 @@ function mapSavedQuote(data: any): SavedQuote {
     note: data.note ?? null,
     createdAt: data.created_at,
     updatedAt: data.updated_at,
+    documentFilename: typeof data.document_filename === 'string' ? data.document_filename : undefined,
   };
 }
 
