@@ -9,7 +9,7 @@ from typing import Any, Optional
 
 import anyio
 import sqlalchemy as sa
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Response
 from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -489,6 +489,7 @@ def _saved_quote_response(row: SavedQuote) -> SavedQuoteResponse:
 async def create_saved_quote(
     document_id: uuid.UUID,
     body: SaveQuoteRequest,
+    response: Response,
     user: User = Depends(require_auth),
     db: AsyncSession = Depends(get_db_session),
 ):
@@ -574,6 +575,14 @@ async def create_saved_quote(
             )
         )
         await db.commit()
+    else:
+        # Contract fix (live E2E finding, 2026-08-03): the plan says
+        # "Idempotent save returns the existing row (200 not 409)" — the
+        # decorator's status_code=201 default is for a genuinely NEW row
+        # only; overriding here via the injected Response is the FastAPI
+        # idiom for a per-request status code that still keeps a typed
+        # response_model (no JSONResponse needed).
+        response.status_code = 200
 
     return _saved_quote_response(row)
 

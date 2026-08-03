@@ -215,7 +215,14 @@ async def test_create_idempotent_repeat_save_returns_200_shape_without_cap_check
 ) -> None:
     """Idempotent hit: no cap check should even run (re-saving something
     already saved must always succeed, cap or no cap), and no quote_saved
-    telemetry event fires a second time."""
+    telemetry event fires a second time.
+
+    Contract fix (live E2E finding, 2026-08-03): this test's own NAME always
+    said "returns_200_shape" but the assertion below wrongly asserted 201 —
+    the plan's actual contract ("Idempotent save returns the existing row
+    (200 not 409)") was never enforced. Fixed both the implementation
+    (quotes.py now overrides the response status to 200 via the injected
+    Response when created=False) and this assertion."""
     user = _make_user()
     doc = _make_doc(user)
     added: list[object] = []
@@ -239,7 +246,7 @@ async def test_create_idempotent_repeat_save_returns_200_shape_without_cap_check
         json={"chunk_id": card.chunk_id, "quote_text": card.display_text},
     )
 
-    assert response.status_code == 201
+    assert response.status_code == 200
     assert response.json()["id"] == str(existing_row.id)
     count_mock.assert_not_awaited()  # idempotent hit never reaches the cap check
     events = [obj for obj in added if getattr(obj, "event_name", None) == "quote_saved"]

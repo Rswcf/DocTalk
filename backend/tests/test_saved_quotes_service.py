@@ -243,10 +243,31 @@ class TestUpdateNoteAndDelete:
     @pytest.mark.asyncio
     async def test_update_note_sets_note_and_commits(self) -> None:
         row = SimpleNamespace(note=None)
-        db = SimpleNamespace(commit=AsyncMock())
+        db = SimpleNamespace(commit=AsyncMock(), refresh=AsyncMock())
         result = await sqs.update_note(db, row=row, note="cite this in intro")
         assert result.note == "cite this in intro"
         db.commit.assert_awaited_once()
+
+    @pytest.mark.asyncio
+    async def test_update_note_refreshes_after_commit(self) -> None:
+        """Live E2E bug (2026-08-03): PATCH 500'd with MissingGreenlet
+        because `updated_at` (onupdate=sa.func.now()) gets marked EXPIRED
+        after the UPDATE flush and was read synchronously afterward
+        (quotes.py's _saved_quote_response) outside an awaited context.
+        db.refresh(row) must run, and must run AFTER commit (refreshing
+        before the UPDATE has landed would be pointless) and on the SAME
+        row instance, so every attribute is safely in-memory before any
+        caller touches it."""
+        row = SimpleNamespace(note=None)
+        calls: list[str] = []
+        db = SimpleNamespace(
+            commit=AsyncMock(side_effect=lambda: calls.append("commit")),
+            refresh=AsyncMock(side_effect=lambda _row: calls.append("refresh")),
+        )
+        result = await sqs.update_note(db, row=row, note="x")
+        assert calls == ["commit", "refresh"]
+        db.refresh.assert_awaited_once_with(row)
+        assert result is row
 
     @pytest.mark.asyncio
     async def test_delete_removes_row_and_commits(self) -> None:

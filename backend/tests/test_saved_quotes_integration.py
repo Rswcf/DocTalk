@@ -197,3 +197,88 @@ class TestSavedQuoteSurvivesChunkDeletion:
             assert survivor.verification_tier == card.tier
             assert survivor.verification_score == card.score
             assert survivor.source_kind == card.source_kind
+
+
+class TestSavedQuotesEndpointsRealAsgiRealDb:
+    """Real-server bug found by live E2E (team lead, 2026-08-03): PATCH
+    /api/quotes/{id} -> 500 MissingGreenlet. Root cause: SavedQuote.updated_at
+    (server-side `onupdate=sa.func.now()`) gets marked EXPIRED by SQLAlchemy
+    after the UPDATE flush inside saved_quotes_service.update_note() —
+    UNLIKE a fresh INSERT (save_quote's POST path), where INSERT...RETURNING
+    auto-populates server_default columns synchronously as part of the
+    flush, an UPDATE's onupdate-computed value is NOT auto-refreshed the
+    same way. The endpoint's later SYNCHRONOUS read of that expired
+    attribute (`row.updated_at.isoformat()` inside _saved_quote_response)
+    triggers an implicit lazy DB reload from OUTSIDE an active
+    greenlet/await context — exactly `MissingGreenlet`.
+
+    Every mocked unit test in test_saved_quotes_api.py used a bare
+    SimpleNamespace for `row`, which has no SQLAlchemy attribute-expiration
+    machinery at all — structurally incapable of catching this class of
+    bug. These tests hit the REAL app (app.main.app) via a REAL httpx
+    client and a REAL scratch-DB session per request (conftest.py's
+    `client`/`auth_user`/`auth_headers` fixtures), reproducing the exact
+    conditions of the live bug report."""
+
+    async def test_full_lifecycle_via_real_http_never_hits_missing_greenlet(
+        self, client, auth_user, auth_headers,
+    ) -> None:
+        document_id = await _create_ready_document(auth_user.id)
+        chunk_id = await _create_chunk(document_id)
+        card = _card(chunk_id)
+
+        # POST: genuinely new save -> 201.
+        create_response = await client.post(
+            f"/api/documents/{document_id}/quotes",
+            json={"chunk_id": str(chunk_id), "quote_text": card.display_text, "page_hint": card.page},
+            headers=auth_headers,
+        )
+        assert create_response.status_code == 201
+        body = create_response.json()
+        saved_quote_id = body["id"]
+        assert body["tier"] == "exact"
+        assert body["note"] is None
+
+        # POST again, identical: idempotent hit -> 200, NOT 201 (team lead's
+        # contract-alignment finding: the plan says "returns the existing
+        # row (200 not 409)" — 201 for every response was a deviation).
+        repeat_response = await client.post(
+            f"/api/documents/{document_id}/quotes",
+            json={"chunk_id": str(chunk_id), "quote_text": card.display_text, "page_hint": card.page},
+            headers=auth_headers,
+        )
+        assert repeat_response.status_code == 200
+        assert repeat_response.json()["id"] == saved_quote_id
+
+        # GET (document-scoped) -> 200, one row.
+        list_doc_response = await client.get(
+            f"/api/documents/{document_id}/quotes", headers=auth_headers,
+        )
+        assert list_doc_response.status_code == 200
+        assert len(list_doc_response.json()["quotes"]) == 1
+
+        # GET (Evidence Board, all documents) -> 200, includes this row.
+        list_all_response = await client.get("/api/quotes", headers=auth_headers)
+        assert list_all_response.status_code == 200
+        assert any(q["id"] == saved_quote_id for q in list_all_response.json()["quotes"])
+
+        # PATCH: THE bug repro. Must be 200, never 500.
+        patch_response = await client.patch(
+            f"/api/quotes/{saved_quote_id}", json={"note": "cite this in the intro"},
+            headers=auth_headers,
+        )
+        assert patch_response.status_code == 200
+        assert patch_response.json()["note"] == "cite this in the intro"
+        assert patch_response.json()["id"] == saved_quote_id
+
+        # DELETE -> 204.
+        delete_response = await client.delete(
+            f"/api/quotes/{saved_quote_id}", headers=auth_headers,
+        )
+        assert delete_response.status_code == 204
+
+        # Confirm it's actually gone.
+        list_after_delete = await client.get(
+            f"/api/documents/{document_id}/quotes", headers=auth_headers,
+        )
+        assert list_after_delete.json()["quotes"] == []

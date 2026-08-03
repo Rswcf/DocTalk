@@ -194,8 +194,28 @@ async def get_owned_saved_quote(
 
 
 async def update_note(db: AsyncSession, *, row: SavedQuote, note: Optional[str]) -> SavedQuote:
+    """Live E2E bug (team lead, 2026-08-03): PATCH .../quotes/{id} 500'd
+    with `sqlalchemy.exc.MissingGreenlet`. Root cause: `updated_at`
+    (server-side `onupdate=sa.func.now()`) gets marked EXPIRED by
+    SQLAlchemy after this UPDATE's flush — UNLIKE a fresh INSERT (see
+    save_quote() above), where INSERT...RETURNING auto-populates
+    server_default columns synchronously as part of the flush, an UPDATE's
+    onupdate-computed value is NOT auto-refreshed the same way. The
+    caller's later SYNCHRONOUS read of that expired attribute
+    (`row.updated_at.isoformat()` inside quotes.py's _saved_quote_response,
+    which runs as plain Pydantic-model construction, never inside an
+    `await`) triggered an implicit lazy DB reload from OUTSIDE an active
+    greenlet/await context — exactly MissingGreenlet. `db.refresh(row)`
+    here, INSIDE this awaited function, forces that reload to happen
+    safely now, so every attribute is a normal in-memory value by the time
+    any caller touches it synchronously. Mocked unit tests (row as a bare
+    SimpleNamespace) cannot exercise this at all — only a REAL SQLAlchemy
+    ORM object has attribute-expiration machinery to trigger it; see
+    test_saved_quotes_integration.py's TestSavedQuotesEndpointsRealAsgiRealDb
+    for the real-app/real-DB regression coverage."""
     row.note = note
     await db.commit()
+    await db.refresh(row)
     return row
 
 
