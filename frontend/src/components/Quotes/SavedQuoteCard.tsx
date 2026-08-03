@@ -32,31 +32,70 @@ export default function SavedQuoteCard({ quote, index, biblio, onJump, onDeleted
   const { tOr } = useLocale();
   const [copied, setCopied] = useState(false);
   const [note, setNote] = useState(quote.note || '');
-  // The last note value CONFIRMED by a successful PATCH (or the initial
-  // load) — compared against on blur instead of the `quote` prop (Codex M3
-  // r1 finding #3). The prop only updates once the parent re-renders with
-  // the bubbled-up `onNoteUpdated` result, so comparing against it directly
-  // caused a redundant PATCH on every blur even when nothing had changed
-  // since the last successful save, and reverted a failed save to the
-  // pre-first-save value instead of the last confirmed one.
-  const [confirmedNote, setConfirmedNote] = useState(quote.note || '');
   const [savingNote, setSavingNote] = useState(false);
   const [noteError, setNoteError] = useState(false);
   const [deleting, setDeleting] = useState(false);
-  // Bumped on every blur-triggered save; a resolving request checks its
-  // captured generation against the current one before applying ANY state,
-  // so an older overlapping save (e.g. blur, quick re-edit, blur again
-  // before the first PATCH lands) can never stomp a newer save's result —
-  // same compare-on-resolve pattern already used in QuoteFinderPanel /
-  // useChatStream for the identical class of race.
-  const noteSaveGenerationRef = useRef(0);
+  // The last note value CONFIRMED by a successful PATCH (or the initial
+  // load) — compared against on blur instead of the `quote` prop (Codex M3
+  // r1 finding #3): the prop only updates once the parent re-renders with
+  // the bubbled-up `onNoteUpdated` result, so comparing against it directly
+  // caused a redundant PATCH on every blur even when nothing had changed
+  // since the last successful save. A ref, not state: read/written inside
+  // an async chain (runNoteSave below) where a stale render's closure over
+  // state would be wrong.
+  const confirmedNoteRef = useRef(quote.note || '');
+  // Serializes note PATCHes to a single in-flight request per card (Codex
+  // M3 r2 finding #3, r1's generation-guard only ignored a stale RESPONSE
+  // client-side — it never stopped two requests from being in flight
+  // together, so the backend's unconditional last-COMMIT-wins could still
+  // let an older PATCH persist over a newer one if it happened to reach
+  // Postgres second). While `inFlightRef` is true, a blur only records its
+  // value in `pendingValueRef` (overwriting any earlier queued value —
+  // only the latest ever matters) instead of dispatching; the in-flight
+  // request's `finally` drains exactly one queued value, so out-of-order
+  // commits are now structurally impossible from this client. Cross-tab or
+  // cross-device simultaneous edits are NOT covered by this — the backend
+  // stays plain last-write-wins across independent clients, which is the
+  // accepted v1 semantic (single-user note field, low real-world contest
+  // rate outside this exact race).
+  const inFlightRef = useRef(false);
+  const pendingValueRef = useRef<string | null>(null);
 
   // The quote object is the parent's source of truth; re-sync the local
   // draft if it changes out from under us (e.g. a PATCH from elsewhere).
   useEffect(() => {
     setNote(quote.note || '');
-    setConfirmedNote(quote.note || '');
+    confirmedNoteRef.current = quote.note || '';
   }, [quote.id, quote.note]);
+
+  const runNoteSave = async (value: string) => {
+    inFlightRef.current = true;
+    setSavingNote(true);
+    setNoteError(false);
+    try {
+      const updated = await updateSavedQuoteNote(quote.id, value || null);
+      confirmedNoteRef.current = updated.note || '';
+      setNote(updated.note || '');
+      onNoteUpdated(updated);
+    } catch {
+      // Revert to the last CONFIRMED value so the textarea doesn't
+      // silently claim a save that didn't happen.
+      setNote(confirmedNoteRef.current);
+      setNoteError(true);
+    } finally {
+      setSavingNote(false);
+      inFlightRef.current = false;
+      const queued = pendingValueRef.current;
+      pendingValueRef.current = null;
+      // Drain exactly one queued value — if it still differs from what's
+      // now confirmed, this recursive call becomes the new (and only)
+      // in-flight request; any further blurs during ITS flight queue
+      // behind it the same way.
+      if (queued !== null && queued !== confirmedNoteRef.current) {
+        void runNoteSave(queued);
+      }
+    }
+  };
 
   const handleCopy = async () => {
     const apaInText = formatApaInText(biblio, quote.page);
@@ -70,29 +109,14 @@ export default function SavedQuoteCard({ quote, index, biblio, onJump, onDeleted
     }
   };
 
-  const handleNoteBlur = async () => {
+  const handleNoteBlur = () => {
     const trimmed = note.trim();
-    if (trimmed === confirmedNote) return; // no-op PATCH avoidance, against the last CONFIRMED value
-    const generation = ++noteSaveGenerationRef.current;
-    setSavingNote(true);
-    setNoteError(false);
-    try {
-      const updated = await updateSavedQuoteNote(quote.id, trimmed || null);
-      if (noteSaveGenerationRef.current !== generation) return; // superseded by a newer save — its own resolution owns the final state
-      setConfirmedNote(updated.note || '');
-      setNote(updated.note || '');
-      onNoteUpdated(updated);
-    } catch {
-      if (noteSaveGenerationRef.current !== generation) return; // superseded — don't clobber a newer in-flight save's optimistic text
-      // Revert to the last CONFIRMED value (not the stale prop) so the
-      // textarea doesn't silently claim a save that didn't happen.
-      setNote(confirmedNote);
-      setNoteError(true);
-    } finally {
-      if (noteSaveGenerationRef.current === generation) {
-        setSavingNote(false);
-      }
+    if (trimmed === confirmedNoteRef.current) return; // no-op PATCH avoidance, against the last CONFIRMED value
+    if (inFlightRef.current) {
+      pendingValueRef.current = trimmed; // queue the latest — overwrites any earlier queued value
+      return;
     }
+    void runNoteSave(trimmed);
   };
 
   const handleDelete = async () => {
@@ -138,7 +162,7 @@ export default function SavedQuoteCard({ quote, index, biblio, onJump, onDeleted
         <textarea
           value={note}
           onChange={(e) => setNote(e.target.value)}
-          onBlur={() => void handleNoteBlur()}
+          onBlur={handleNoteBlur}
           maxLength={2000}
           rows={2}
           placeholder={tOr('quoteFinder.notePlaceholder', 'Add a note...')}
