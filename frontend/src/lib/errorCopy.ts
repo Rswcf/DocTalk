@@ -280,7 +280,6 @@ const CODE_TABLE: Record<string, Handler> = {
     body: tOr('errors.DOMAIN_MODE_REQUIRES_PLUS.body', 'Legal and Academic domain mode is available on the Plus plan.'),
     cta: requiredPlanCta(d, tOr, 'domain_mode'),
     severity: 'warning',
-    openPaywall: true,
   }),
 
   // ─── Collections ───
