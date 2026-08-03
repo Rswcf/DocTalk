@@ -34,6 +34,9 @@ export function authHrefFor(path: string): string {
  *   - INSUFFICIENT_CREDITS / generic 402: Free → Plus, Plus → Pro,
  *     Pro → 'pro' (already on top plan; the funnel still rolls up under the
  *     existing plan rather than getting falsely attributed to a Plus upgrade).
+ *   - LAYOUT_TRANSLATION_LIMIT_REACHED / DOMAIN_MODE_REQUIRES_PLUS: always
+ *     'plus' — both gates are plan checks that already pass for Plus/Pro, so
+ *     they only ever fire for a free-plan user.
  *
  * Shared by `useChatStream.ts` (analytics + paywall trigger) and
  * `PaywallModal.tsx` (CTA href + click analytics) so the route the user is
@@ -43,7 +46,7 @@ export function deriveUpgradePlan(
   currentPlan: string | undefined,
   reason: string | null | undefined,
 ): BillingPlanIntent {
-  if (reason === 'LAYOUT_TRANSLATION_LIMIT_REACHED') {
+  if (reason === 'LAYOUT_TRANSLATION_LIMIT_REACHED' || reason === 'DOMAIN_MODE_REQUIRES_PLUS') {
     return 'plus';
   }
   const isProCap = reason === 'PRO_MODE_LIMIT_REACHED'

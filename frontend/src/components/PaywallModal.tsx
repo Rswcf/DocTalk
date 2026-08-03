@@ -31,6 +31,15 @@ function paywallCopy(reason: string | null | undefined, t: (key: string) => stri
     };
   }
 
+  if (reason === 'DOMAIN_MODE_REQUIRES_PLUS') {
+    return {
+      title: tOr('paywall.domainMode.title', 'Unlock Legal & Academic mode'),
+      body: tOr('paywall.domainMode.body', 'Legal and Academic domain mode is available on the Plus plan, tuning citations and prompts for domain-specific reading.'),
+      primaryLabel: tOr('paywall.domainMode.cta', 'Upgrade for domain mode'),
+      reason: 'domain_mode',
+    };
+  }
+
   if (reason === 'LAYOUT_TRANSLATION_LIMIT_REACHED') {
     return {
       title: tOr('paywall.layoutTranslation.title', 'Keep translating full PDFs'),

@@ -275,6 +275,13 @@ const CODE_TABLE: Record<string, Handler> = {
     severity: 'warning',
     openPaywall: true,
   }),
+  DOMAIN_MODE_REQUIRES_PLUS: (d, tOr) => ({
+    title: tOr('errors.DOMAIN_MODE_REQUIRES_PLUS.title', 'Plus plan required'),
+    body: tOr('errors.DOMAIN_MODE_REQUIRES_PLUS.body', 'Legal and Academic domain mode is available on the Plus plan.'),
+    cta: requiredPlanCta(d, tOr, 'domain_mode'),
+    severity: 'warning',
+    openPaywall: true,
+  }),
 
   // ─── Collections ───
   COLLECTION_LIMIT_REACHED: (d, tOr) => ({

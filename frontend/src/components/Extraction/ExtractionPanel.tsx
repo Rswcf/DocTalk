@@ -210,7 +210,7 @@ export default function ExtractionPanel({ documentId, onCitationClick, userPlan 
         void refreshJobs().catch(() => undefined);
       }, 1200);
     } catch (err) {
-      if (err instanceof ApiError && (err.code === "INSUFFICIENT_CREDITS" || err.code === "EXTRACTION_LIMIT_REACHED")) {
+      if (err instanceof ApiError && (err.code === "INSUFFICIENT_CREDITS" || err.code === "EXTRACTION_LIMIT_REACHED" || err.code === "DOMAIN_MODE_REQUIRES_PLUS")) {
         setPaywallCode(err.code);
       } else {
         setError(err instanceof Error ? err.message : "Extraction failed");
@@ -466,6 +466,8 @@ export default function ExtractionPanel({ documentId, onCitationClick, userPlan 
                   <p className="font-medium">
                     {paywallCode === "EXTRACTION_LIMIT_REACHED"
                       ? tOr("extract.limitReached", "Free extraction limit reached.")
+                      : paywallCode === "DOMAIN_MODE_REQUIRES_PLUS"
+                      ? tOr("extract.domainModeRequiresPlus", "Legal/Academic domain mode requires the Plus plan.")
                       : tOr("credits.insufficientCredits", "Insufficient Credits")}
                   </p>
                   <Link

@@ -187,6 +187,7 @@ export function useChatStream({
       || code === 'MODE_NOT_ALLOWED'
       || code === 'PRO_MODE_LIMIT_REACHED'
       || code === 'BALANCED_MODE_LIMIT_REACHED'
+      || code === 'DOMAIN_MODE_REQUIRES_PLUS'
     ) {
       const reason = code || 'paid_limit';
       // I27: previously hardcoded `plan: 'plus'`, which falsely attributed
