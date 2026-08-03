@@ -413,6 +413,42 @@ export async function saveQuote(documentId: string, params: { chunkId: string; q
   return mapSavedQuote(data);
 }
 
+/** One document's saved quotes, newest first. */
+export async function listDocumentSavedQuotes(documentId: string): Promise<SavedQuote[]> {
+  const res = await fetch(`${PROXY_BASE}/api/documents/${documentId}/quotes`);
+  const data: any = await handle(res);
+  return (Array.isArray(data.quotes) ? data.quotes : []).map(mapSavedQuote);
+}
+
+/** The Evidence Board feed — every saved quote for the authed user across
+ * ALL their documents, newest first. Rows carry `documentId` but not a
+ * filename/title — join against `getMyDocuments()`, per the backend's own
+ * documented contract, rather than adding a second round trip here. */
+export async function listAllSavedQuotes(): Promise<SavedQuote[]> {
+  const res = await fetch(`${PROXY_BASE}/api/quotes`);
+  const data: any = await handle(res);
+  return (Array.isArray(data.quotes) ? data.quotes : []).map(mapSavedQuote);
+}
+
+/** Only `note` is editable — every other field is a verification snapshot
+ * server-side and this endpoint doesn't accept them at all. `note: null`
+ * clears it. */
+export async function updateSavedQuoteNote(savedQuoteId: string, note: string | null): Promise<SavedQuote> {
+  const res = await fetch(`${PROXY_BASE}/api/quotes/${savedQuoteId}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ note }),
+  });
+  const data: any = await handle(res);
+  return mapSavedQuote(data);
+}
+
+/** Hard delete — frees a cap slot immediately, no undo. */
+export async function deleteSavedQuote(savedQuoteId: string): Promise<void> {
+  const res = await fetch(`${PROXY_BASE}/api/quotes/${savedQuoteId}`, { method: 'DELETE' });
+  if (!res.ok) await throwApiError(res);
+}
+
 export async function listSessions(docId: string): Promise<SessionListResponse> {
   const res = await fetch(`${PROXY_BASE}/api/documents/${docId}/sessions`);
   return handle(res);

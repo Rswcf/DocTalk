@@ -1,18 +1,19 @@
 "use client";
 
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import type { FormEvent } from 'react';
-import { Loader2, Search, X } from 'lucide-react';
+import { Bookmark, Loader2, Search, X } from 'lucide-react';
 import { useLocale } from '../../i18n';
-import { ApiError, searchDocumentQuotes } from '../../lib/api';
-import type { QuoteCard, QuoteSearchResult } from '../../lib/api';
+import { ApiError, listDocumentSavedQuotes, searchDocumentQuotes } from '../../lib/api';
+import type { QuoteCard, QuoteSearchResult, SavedQuote } from '../../lib/api';
 import type { Citation } from '../../types';
 import { PaywallModal } from '../PaywallModal';
 import { openAuthModal } from '../../lib/auth-modal';
 import { errorCopy } from '../../lib/errorCopy';
 import { trackEvent } from '../../lib/analytics';
-import { citationFromQuoteCard } from './utils';
+import { citationFromQuoteCard, citationFromSavedQuote } from './utils';
 import QuoteCardList from './QuoteCardList';
+import SavedQuoteList from './SavedQuoteList';
 
 interface QuoteFinderPanelProps {
   isOpen: boolean;
@@ -50,6 +51,14 @@ export default function QuoteFinderPanel({ isOpen, documentId, userPlan, onClose
   const [paywallOpen, setPaywallOpen] = useState(false);
   const [paywallReason, setPaywallReason] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  // Search | Saved tabs (M3-F2, Evidence Board). Saved-tab state is
+  // independent of the search state above — switching tabs never clears a
+  // search result, and vice versa.
+  const [activeTab, setActiveTab] = useState<'search' | 'saved'>('search');
+  const [savedQuotes, setSavedQuotes] = useState<SavedQuote[] | null>(null);
+  const [savedLoading, setSavedLoading] = useState(false);
+  const [savedErrorMsg, setSavedErrorMsg] = useState<string | null>(null);
   // Bumped every time the panel (re)opens or is retargeted to a new
   // initialTopic while already open (Codex r4 new-breakage). handleSearch
   // captures the generation it started under; if it changes before the
@@ -73,6 +82,7 @@ export default function QuoteFinderPanel({ isOpen, documentId, userPlan, onClose
     setResult(null);
     setErrorMsg(null);
     setLoading(false);
+    setActiveTab('search');
     const id = window.setTimeout(() => {
       inputRef.current?.focus();
       inputRef.current?.select();
@@ -88,6 +98,35 @@ export default function QuoteFinderPanel({ isOpen, documentId, userPlan, onClose
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
   }, [isOpen, onClose]);
+
+  // Refetches every time the Saved tab becomes active — simple and
+  // correct (a Save made in the Search tab must be visible on switching
+  // over) over caching, which would need its own invalidation story.
+  useEffect(() => {
+    if (!isOpen || activeTab !== 'saved') return;
+    let cancelled = false;
+    setSavedLoading(true);
+    setSavedErrorMsg(null);
+    listDocumentSavedQuotes(documentId)
+      .then((quotes) => {
+        if (!cancelled) setSavedQuotes(quotes);
+      })
+      .catch((err) => {
+        if (cancelled) return;
+        const copy = errorCopy(err, t, tOr);
+        setSavedErrorMsg(copy.body || copy.title);
+      })
+      .finally(() => {
+        if (!cancelled) setSavedLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [isOpen, activeTab, documentId, t, tOr]);
+
+  const handleSavedDeleted = useCallback((quoteId: string) => {
+    setSavedQuotes((prev) => (prev ? prev.filter((q) => q.id !== quoteId) : prev));
+  }, []);
 
   if (!isOpen) return null;
 
@@ -140,6 +179,11 @@ export default function QuoteFinderPanel({ isOpen, documentId, userPlan, onClose
     onClose();
   };
 
+  const handleSavedJump = (quote: SavedQuote, index: number) => {
+    onCitationClick(citationFromSavedQuote(quote, index));
+    onClose();
+  };
+
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/34 px-3 py-3 backdrop-blur-sm sm:items-center" role="dialog" aria-modal="true" aria-labelledby="quote-finder-title">
       <div className="flex w-full max-w-xl flex-col overflow-hidden rounded-2xl border border-[var(--reader-border)] bg-[var(--reader-panel-solid)] text-[var(--reader-ink)] shadow-2xl max-h-[85vh]">
@@ -162,63 +206,123 @@ export default function QuoteFinderPanel({ isOpen, documentId, userPlan, onClose
           </button>
         </div>
 
-        <form onSubmit={(e) => void handleSearch(e)} className="flex items-center gap-2 border-b border-[var(--reader-border)] px-5 py-3">
-          <input
-            ref={inputRef}
-            type="text"
-            value={topic}
-            onChange={(e) => setTopic(e.target.value)}
-            maxLength={300}
-            placeholder={tOr('quoteFinder.topicPlaceholder', 'What should the quote be about?')}
-            className="min-h-10 flex-1 rounded-lg border border-[var(--reader-border)] bg-[var(--reader-panel-solid)] px-3 text-sm text-[var(--reader-ink)] outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
-          />
+        <div className="flex items-center gap-1 border-b border-[var(--reader-border)] px-5 pt-3" role="tablist">
           <button
-            type="submit"
-            disabled={loading || !topic.trim()}
-            className="inline-flex min-h-10 items-center gap-2 rounded-lg bg-zinc-950 px-4 text-sm font-semibold text-white transition-colors hover:bg-zinc-800 focus-visible:ring-2 focus-visible:ring-blue-500 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-zinc-50 dark:text-zinc-950 dark:hover:bg-zinc-200"
+            type="button"
+            role="tab"
+            aria-selected={activeTab === 'search'}
+            onClick={() => setActiveTab('search')}
+            className={`inline-flex min-h-9 items-center gap-1.5 rounded-t-lg border-b-2 px-3 text-sm font-medium transition-colors focus-visible:ring-2 focus-visible:ring-blue-500 ${
+              activeTab === 'search'
+                ? 'border-blue-600 text-[var(--reader-ink)] dark:border-blue-400'
+                : 'border-transparent text-[var(--reader-muted)] hover:text-[var(--reader-ink)]'
+            }`}
           >
-            {loading ? <Loader2 size={16} className="animate-spin motion-reduce:animate-none" aria-hidden="true" /> : <Search size={16} aria-hidden="true" />}
-            {loading ? tOr('quoteFinder.searching', 'Searching...') : tOr('quoteFinder.searchButton', 'Find quotes')}
+            <Search size={14} aria-hidden="true" />
+            {tOr('quoteFinder.tabSearch', 'Search')}
           </button>
-        </form>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={activeTab === 'saved'}
+            onClick={() => setActiveTab('saved')}
+            className={`inline-flex min-h-9 items-center gap-1.5 rounded-t-lg border-b-2 px-3 text-sm font-medium transition-colors focus-visible:ring-2 focus-visible:ring-blue-500 ${
+              activeTab === 'saved'
+                ? 'border-blue-600 text-[var(--reader-ink)] dark:border-blue-400'
+                : 'border-transparent text-[var(--reader-muted)] hover:text-[var(--reader-ink)]'
+            }`}
+          >
+            <Bookmark size={14} aria-hidden="true" />
+            {tOr('quoteFinder.tabSaved', 'Saved')}
+          </button>
+        </div>
+
+        {activeTab === 'search' ? (
+          <form onSubmit={(e) => void handleSearch(e)} className="flex items-center gap-2 border-b border-[var(--reader-border)] px-5 py-3">
+            <input
+              ref={inputRef}
+              type="text"
+              value={topic}
+              onChange={(e) => setTopic(e.target.value)}
+              maxLength={300}
+              placeholder={tOr('quoteFinder.topicPlaceholder', 'What should the quote be about?')}
+              className="min-h-10 flex-1 rounded-lg border border-[var(--reader-border)] bg-[var(--reader-panel-solid)] px-3 text-sm text-[var(--reader-ink)] outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+            />
+            <button
+              type="submit"
+              disabled={loading || !topic.trim()}
+              className="inline-flex min-h-10 items-center gap-2 rounded-lg bg-zinc-950 px-4 text-sm font-semibold text-white transition-colors hover:bg-zinc-800 focus-visible:ring-2 focus-visible:ring-blue-500 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-zinc-50 dark:text-zinc-950 dark:hover:bg-zinc-200"
+            >
+              {loading ? <Loader2 size={16} className="animate-spin motion-reduce:animate-none" aria-hidden="true" /> : <Search size={16} aria-hidden="true" />}
+              {loading ? tOr('quoteFinder.searching', 'Searching...') : tOr('quoteFinder.searchButton', 'Find quotes')}
+            </button>
+          </form>
+        ) : null}
 
         <div className="min-h-0 flex-1 overflow-y-auto px-5 py-4">
-          {errorMsg ? (
-            <p className="mb-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800 dark:border-red-900/50 dark:bg-red-950/30 dark:text-red-200" role="alert">
-              {errorMsg}
-            </p>
-          ) : null}
+          {activeTab === 'search' ? (
+            <>
+              {errorMsg ? (
+                <p className="mb-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800 dark:border-red-900/50 dark:bg-red-950/30 dark:text-red-200" role="alert">
+                  {errorMsg}
+                </p>
+              ) : null}
 
-          {!result && !loading ? (
-            <p className="text-sm leading-6 text-[var(--reader-muted)]">
-              {tOr('quoteFinder.intro', "Enter a topic and DocTalk searches this document for quotes, each one machine-verified against the source text before it's shown.")}
-            </p>
-          ) : null}
+              {!result && !loading ? (
+                <p className="text-sm leading-6 text-[var(--reader-muted)]">
+                  {tOr('quoteFinder.intro', "Enter a topic and DocTalk searches this document for quotes, each one machine-verified against the source text before it's shown.")}
+                </p>
+              ) : null}
 
-          {result && result.cards.length === 0 ? (
-            <p className="rounded-lg border border-[var(--reader-border)] bg-[var(--reader-panel-muted)] px-3 py-3 text-sm leading-6 text-[var(--reader-muted)]" role="status">
-              {tOr(
-                'quoteFinder.emptyState',
-                "No verified quotes found for this topic (scanned {n} passages). DocTalk only shows quotes it can verify against the source text — try a more specific topic.",
-                { n: result.scannedChunks },
-              )}
-            </p>
-          ) : null}
+              {result && result.cards.length === 0 ? (
+                <p className="rounded-lg border border-[var(--reader-border)] bg-[var(--reader-panel-muted)] px-3 py-3 text-sm leading-6 text-[var(--reader-muted)]" role="status">
+                  {tOr(
+                    'quoteFinder.emptyState',
+                    "No verified quotes found for this topic (scanned {n} passages). DocTalk only shows quotes it can verify against the source text — try a more specific topic.",
+                    { n: result.scannedChunks },
+                  )}
+                </p>
+              ) : null}
 
-          {result && result.cards.length > 0 ? (
-            <QuoteCardList
-              documentId={documentId}
-              cards={result.cards}
-              onJump={handleJump}
-              allowEditBiblio
-              userPlan={userPlan}
-              summaryLine={tOr(
-                'quoteFinder.resultsSummary',
-                '{verified} verified · {discarded} discarded',
-                { verified: result.verified, discarded: result.discardedCount },
-              )}
-            />
-          ) : null}
+              {result && result.cards.length > 0 ? (
+                <QuoteCardList
+                  documentId={documentId}
+                  cards={result.cards}
+                  onJump={handleJump}
+                  allowEditBiblio
+                  userPlan={userPlan}
+                  summaryLine={tOr(
+                    'quoteFinder.resultsSummary',
+                    '{verified} verified · {discarded} discarded',
+                    { verified: result.verified, discarded: result.discardedCount },
+                  )}
+                />
+              ) : null}
+            </>
+          ) : (
+            <>
+              {savedErrorMsg ? (
+                <p className="mb-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800 dark:border-red-900/50 dark:bg-red-950/30 dark:text-red-200" role="alert">
+                  {savedErrorMsg}
+                </p>
+              ) : null}
+
+              {savedLoading ? (
+                <p className="text-sm text-[var(--reader-muted)]">{tOr('quoteFinder.savedLoading', 'Loading saved quotes...')}</p>
+              ) : savedQuotes && savedQuotes.length === 0 ? (
+                <p className="rounded-lg border border-[var(--reader-border)] bg-[var(--reader-panel-muted)] px-3 py-3 text-sm leading-6 text-[var(--reader-muted)]">
+                  {tOr('quoteFinder.savedEmpty', 'No saved quotes for this document yet. Save a verified quote from the Search tab to build your evidence board.')}
+                </p>
+              ) : savedQuotes && savedQuotes.length > 0 ? (
+                <SavedQuoteList
+                  documentId={documentId}
+                  quotes={savedQuotes}
+                  onJump={handleSavedJump}
+                  onDeleted={handleSavedDeleted}
+                />
+              ) : null}
+            </>
+          )}
         </div>
       </div>
 

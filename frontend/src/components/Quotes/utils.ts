@@ -1,4 +1,4 @@
-import type { QuoteCard } from '../../lib/api';
+import type { QuoteCard, SavedQuote } from '../../lib/api';
 import type { Citation } from '../../types';
 
 type TOrFn = (key: string, fallback: string, params?: Record<string, string | number>) => string;
@@ -23,6 +23,30 @@ export function citationFromQuoteCard(card: QuoteCard, documentId: string, index
     focusSnippet: card.displayText,
     offset: 0,
     documentId,
+  };
+}
+
+/**
+ * Same `Citation` shape as `citationFromQuoteCard`, built from a SAVED
+ * quote instead (M3-F2, Evidence Board). `SavedQuoteResponse` never
+ * exposes `source_chunk_id` — by design, it's nullable server-side (a
+ * reparse SET NULLs it rather than cascading the delete, precisely so the
+ * saved row survives) — so there's no real chunk id to carry here.
+ * `navigateToCitation` never reads `chunkId` for anything functional (only
+ * page/bboxes/textSnippet/focusSnippet), so the saved quote's own id is a
+ * harmless, unique stand-in rather than an empty string.
+ */
+export function citationFromSavedQuote(quote: SavedQuote, index: number): Citation {
+  return {
+    refIndex: index + 1,
+    chunkId: quote.id,
+    page: quote.page,
+    pageEnd: quote.pageEnd,
+    bboxes: quote.bboxes || [],
+    textSnippet: quote.quoteText,
+    focusSnippet: quote.quoteText,
+    offset: 0,
+    documentId: quote.documentId,
   };
 }
 
@@ -67,7 +91,10 @@ export function approxHighlightLabel(tOr: TOrFn): string {
   return tOr('quoteFinder.approxHighlight', 'Highlight location is approximate');
 }
 
-export function pageRangeLabel(card: QuoteCard, tOr: TOrFn): string {
+/** Structurally typed to `{page, pageEnd}` (not the full `QuoteCard`) so it
+ * works for both a live search result and a saved quote without either
+ * type needing to know about the other. */
+export function pageRangeLabel(card: { page: number; pageEnd: number }, tOr: TOrFn): string {
   if (card.pageEnd && card.pageEnd !== card.page) {
     return tOr('quoteFinder.pageRange', 'p. {start}–{end}', { start: card.page, end: card.pageEnd });
   }

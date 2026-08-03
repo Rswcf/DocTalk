@@ -1,0 +1,163 @@
+"use client";
+
+import { useEffect, useState } from 'react';
+import { Check, Copy, Loader2, MapPin, Trash2 } from 'lucide-react';
+import { useLocale } from '../../i18n';
+import { ApiError, deleteSavedQuote, updateSavedQuoteNote } from '../../lib/api';
+import type { DocumentBiblioCsl, SavedQuote } from '../../lib/api';
+import { formatApaInText } from '../../lib/apaFormat';
+import { pageRangeLabel, tierLabel, trustLabel } from './utils';
+
+interface SavedQuoteCardProps {
+  quote: SavedQuote;
+  index: number;
+  biblio: DocumentBiblioCsl | null;
+  onJump: (quote: SavedQuote, index: number) => void;
+  onDeleted: (quoteId: string) => void;
+}
+
+/**
+ * A single saved quote in the Evidence Board (M3-F2). Renders the STORED
+ * snapshot fields (tier/score/source_kind taken at save time) — never
+ * re-verifies, matching the backend's own no-reverification-on-read
+ * guarantee (wave-m3-backend-report.md's B3 section): a saved quote's
+ * trust labels can go visually stale relative to a since-reparsed
+ * document, which is intentional v1 scope, not a bug.
+ */
+export default function SavedQuoteCard({ quote, index, biblio, onJump, onDeleted }: SavedQuoteCardProps) {
+  const { tOr } = useLocale();
+  const [copied, setCopied] = useState(false);
+  const [note, setNote] = useState(quote.note || '');
+  const [savingNote, setSavingNote] = useState(false);
+  const [noteError, setNoteError] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+
+  // The quote object is the parent's source of truth; re-sync the local
+  // draft if it changes out from under us (e.g. a PATCH from elsewhere).
+  useEffect(() => {
+    setNote(quote.note || '');
+  }, [quote.id, quote.note]);
+
+  const handleCopy = async () => {
+    const apaInText = formatApaInText(biblio, quote.page);
+    const text = `"${quote.quoteText}" ${apaInText}`;
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 2000);
+    } catch {
+      // Best-effort, no toast — matches QuoteResultCard's copy handling.
+    }
+  };
+
+  const handleNoteBlur = async () => {
+    const trimmed = note.trim();
+    const original = quote.note || '';
+    if (trimmed === original) return; // no-op PATCH avoidance
+    setSavingNote(true);
+    setNoteError(false);
+    try {
+      await updateSavedQuoteNote(quote.id, trimmed || null);
+    } catch {
+      // Revert to last-known-good so the textarea doesn't silently claim a
+      // save that didn't happen.
+      setNote(original);
+      setNoteError(true);
+    } finally {
+      setSavingNote(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (deleting) return;
+    setDeleting(true);
+    try {
+      await deleteSavedQuote(quote.id);
+      onDeleted(quote.id);
+    } catch (err) {
+      // 404 SAVED_QUOTE_NOT_FOUND means it's already gone (e.g. deleted
+      // from another tab) — treat that as success rather than leaving a
+      // ghost row the user can't get rid of.
+      if (err instanceof ApiError && err.status === 404) {
+        onDeleted(quote.id);
+        return;
+      }
+      setDeleting(false);
+    }
+  };
+
+  return (
+    <div className="rounded-lg border border-[var(--reader-border)] bg-[var(--reader-panel-solid)] px-4 py-3">
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="rounded-full bg-zinc-100 px-2 py-0.5 text-[11px] font-medium text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300">
+          {tierLabel(quote.tier, tOr)}
+        </span>
+        <span
+          className={
+            quote.sourceKind === 'page_text'
+              ? 'text-[11px] text-[var(--reader-muted)]'
+              : 'inline-flex items-center gap-1 rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-medium text-amber-800 dark:bg-amber-950/30 dark:text-amber-200'
+          }
+        >
+          {trustLabel(quote.sourceKind, tOr)}
+        </span>
+      </div>
+
+      <blockquote className="mt-2 border-l-2 border-blue-600 pl-3 text-sm italic leading-relaxed text-[var(--reader-ink)] dark:border-blue-400">
+        &ldquo;{quote.quoteText}&rdquo;
+      </blockquote>
+
+      <div className="mt-2">
+        <textarea
+          value={note}
+          onChange={(e) => setNote(e.target.value)}
+          onBlur={() => void handleNoteBlur()}
+          maxLength={2000}
+          rows={2}
+          placeholder={tOr('quoteFinder.notePlaceholder', 'Add a note...')}
+          className="w-full resize-y rounded-md border border-[var(--reader-border)] bg-[var(--reader-panel-solid)] px-2.5 py-1.5 text-xs text-[var(--reader-ink)] outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+        />
+        {savingNote ? (
+          <p className="mt-1 text-[11px] text-[var(--reader-muted)]">{tOr('quoteFinder.noteSaving', 'Saving note...')}</p>
+        ) : noteError ? (
+          <p className="mt-1 text-[11px] text-red-700 dark:text-red-300">{tOr('quoteFinder.noteSaveError', 'Failed to save note')}</p>
+        ) : null}
+      </div>
+
+      <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
+        <div className="flex items-center gap-1.5 text-xs text-[var(--reader-muted)]">
+          <MapPin size={12} aria-hidden="true" />
+          <span>{pageRangeLabel(quote, tOr)}</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => onJump(quote, index)}
+            className="inline-flex min-h-8 items-center gap-1.5 rounded-md border border-[var(--reader-evidence-border)] bg-[var(--reader-evidence-soft)] px-2.5 text-xs font-medium text-[var(--reader-evidence)] transition-colors hover:brightness-95 focus-visible:ring-2 focus-visible:ring-blue-500"
+          >
+            <MapPin size={12} aria-hidden="true" />
+            {tOr('quoteFinder.jump', 'Jump to page')}
+          </button>
+          <button
+            type="button"
+            onClick={() => void handleCopy()}
+            className="inline-flex min-h-8 items-center gap-1.5 rounded-md border border-[var(--reader-border)] bg-[var(--reader-panel-solid)] px-2.5 text-xs font-medium text-[var(--reader-ink)] transition-colors hover:bg-[var(--reader-panel-muted)] focus-visible:ring-2 focus-visible:ring-blue-500"
+          >
+            {copied ? <Check size={12} className="text-emerald-600 dark:text-emerald-400" aria-hidden="true" /> : <Copy size={12} aria-hidden="true" />}
+            {copied ? tOr('quoteFinder.copied', 'Copied') : tOr('quoteFinder.copy', 'Copy quote + citation')}
+          </button>
+          <button
+            type="button"
+            onClick={() => void handleDelete()}
+            disabled={deleting}
+            aria-label={tOr('quoteFinder.delete', 'Delete')}
+            title={tOr('quoteFinder.delete', 'Delete')}
+            className="inline-flex min-h-8 min-w-8 items-center justify-center rounded-md border border-[var(--reader-border)] bg-[var(--reader-panel-solid)] text-[var(--reader-muted)] transition-colors hover:border-red-200 hover:bg-red-50 hover:text-red-700 focus-visible:ring-2 focus-visible:ring-blue-500 disabled:cursor-not-allowed disabled:opacity-50 dark:hover:border-red-900/50 dark:hover:bg-red-950/30 dark:hover:text-red-300"
+          >
+            {deleting ? <Loader2 size={14} className="animate-spin motion-reduce:animate-none" aria-hidden="true" /> : <Trash2 size={14} aria-hidden="true" />}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}

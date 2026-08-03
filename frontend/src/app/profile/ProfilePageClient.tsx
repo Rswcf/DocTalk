@@ -9,6 +9,7 @@ import ProfileTabs from "../../components/Profile/ProfileTabs";
 import ProfileInfoSection from "../../components/Profile/ProfileInfoSection";
 import CreditsSection from "../../components/Profile/CreditsSection";
 import UsageStatsSection from "../../components/Profile/UsageStatsSection";
+import SavedQuotesSection from "../../components/Profile/SavedQuotesSection";
 import AccountActionsSection from "../../components/Profile/AccountActionsSection";
 import { usePageTitle } from "../../lib/usePageTitle";
 import { useUserProfile } from "../../lib/useUserProfile";
@@ -189,6 +190,18 @@ function ProfileContent() {
                     className="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-900"
                   >
                     <UsageStatsSection profile={profile} />
+                  </section>
+                )}
+
+                {activeTab === "savedQuotes" && (
+                  <section
+                    role="tabpanel"
+                    id="profile-panel-savedQuotes"
+                    aria-labelledby="profile-tab-savedQuotes"
+                    tabIndex={0}
+                    className="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-900"
+                  >
+                    <SavedQuotesSection />
                   </section>
                 )}
 

@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { User, CreditCard, BarChart3, Settings, Bell, type LucideIcon } from "lucide-react";
+import { User, CreditCard, BarChart3, Settings, Bell, Bookmark, type LucideIcon } from "lucide-react";
 import { useLocale } from "../../i18n";
 
 interface Props {
@@ -13,6 +13,7 @@ const TABS: Array<{ key: string; labelKey: string; fallback: string; icon: Lucid
   { key: "profile", labelKey: "profile.tabs.profile", fallback: "Profile", icon: User },
   { key: "credits", labelKey: "profile.tabs.credits", fallback: "Credits", icon: CreditCard },
   { key: "usage", labelKey: "profile.tabs.usage", fallback: "Usage", icon: BarChart3 },
+  { key: "savedQuotes", labelKey: "profile.tabs.savedQuotes", fallback: "Saved Quotes", icon: Bookmark },
   { key: "account", labelKey: "profile.tabs.account", fallback: "Account", icon: Settings },
   { key: "notifications", labelKey: "profile.tabs.notifications", fallback: "Notifications", icon: Bell },
 ];
