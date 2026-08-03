@@ -21,7 +21,7 @@ from pathlib import Path
 
 import pytest
 from sqlalchemy import delete as sa_delete
-from sqlalchemy import select
+from sqlalchemy import func, select
 
 BACKEND_DIR = Path(__file__).resolve().parents[1]
 if str(BACKEND_DIR) not in sys.path:
@@ -135,14 +135,15 @@ class TestConcurrentIdenticalSaveNeverDuplicates:
             # Whichever side (if either) hit the NullPool artifact above,
             # settle deterministically: a plain, NON-concurrent save must
             # always resolve to the SAME row via the idempotent path.
-            settled_row, _settled_created = await _one_save()
+            settled_outcome = await _one_save()
+            settled_row = settled_outcome.row
 
             rows = await _saved_quote_rows(auth_user.id)
             assert len(rows) == 1, f"round {_round}: expected exactly one row, got {len(rows)}"
             assert rows[0].quote_hash == expected_hash
             assert rows[0].id == settled_row.id
-            for row, _created in clean:
-                assert row.id == settled_row.id  # every clean result agreed on the SAME row
+            for outcome in clean:
+                assert outcome.row.id == settled_row.id  # every clean result agreed on the SAME row
 
             # Clean up between rounds so each round starts from "no row yet."
             async with AsyncSessionLocal() as db:
@@ -150,9 +151,6 @@ class TestConcurrentIdenticalSaveNeverDuplicates:
 
                 await db.execute(sa_delete(SavedQuote).where(SavedQuote.id == settled_row.id))
                 await db.commit()
-        assert rows[0].quote_hash == saved_quotes_service.compute_quote_hash(
-            card.display_text, card.page, card.page_end
-        )
 
 
 class TestSavedQuoteSurvivesChunkDeletion:
@@ -175,11 +173,11 @@ class TestSavedQuoteSurvivesChunkDeletion:
 
         async with AsyncSessionLocal() as db:
             document = await db.get(Document, document_id)
-            row, created = await saved_quotes_service.save_quote(
+            outcome = await saved_quotes_service.save_quote(
                 db, user=auth_user, document=document, card=card,
             )
-            assert created is True
-            saved_quote_id = row.id
+            assert outcome.created is True
+            saved_quote_id = outcome.row.id
 
         # Reproduce the parse worker's reparse-time chunk deletion exactly.
         async with AsyncSessionLocal() as db:
@@ -314,3 +312,71 @@ class TestSavedQuotesEndpointsRealAsgiRealDb:
             assert row.source_text_hash == hashlib.sha256(chunk_text.encode("utf-8")).hexdigest()
             assert row.quote_start == chunk_text.index(quote_text)
             assert row.quote_end == chunk_text.index(quote_text) + len(quote_text)
+
+
+class TestConcurrentDistinctSavesRespectTheCap:
+    """FIX-1 (Codex M3 r1 HIGH — cap race). Codex's exact finding: the old
+    count check ran in the API layer, OUTSIDE any lock and outside
+    save_quote() entirely — at limit-1 rows, concurrent DISTINCT saves
+    (different quote_hash, unlike TestConcurrentIdenticalSaveNeverDuplicates
+    above, which is about the SAME quote) all read "count < limit" and all
+    committed. Reproduced directly before this fix: 3 concurrent saves at
+    29/30 all succeeded, final count 32. Real HTTP, real scratch DB, real
+    concurrency — the team lead's exact scenario: 29 pre-existing rows,
+    concurrent distinct saves for the one remaining slot, exactly one
+    succeeds, final count 30, every loser gets the 403 shape."""
+
+    async def test_29_preexisting_rows_plus_concurrent_distinct_saves_yields_exactly_30(
+        self, client, auth_user, auth_headers,
+    ) -> None:
+        from app.core.config import settings
+        from app.models.database import AsyncSessionLocal
+        from app.models.tables import SavedQuote
+
+        document_id = await _create_ready_document(auth_user.id)
+        chunk_id = await _create_chunk(document_id)
+        chunk_text = "Fluency is the most prized quality in translation today."
+        limit = settings.FREE_SAVED_QUOTES_LIMIT
+
+        # Seed limit-1 pre-existing rows directly (bypassing verification —
+        # their CONTENT doesn't matter, only that they count toward the
+        # cap). One slot remains open.
+        async with AsyncSessionLocal() as db:
+            for i in range(limit - 1):
+                db.add(SavedQuote(
+                    user_id=auth_user.id, document_id=document_id, page=1, page_end=1,
+                    quote_text=f"seed {i}", bboxes=None, verification_tier="exact",
+                    verification_score=100.0, verifier_version="v1", source_chunk_id=chunk_id,
+                    source_kind="extracted_text", quote_hash=f"seed-hash-{i}", note=None,
+                ))
+            await db.commit()
+
+        # Three DISTINCT (genuinely different, all independently verifiable)
+        # substrings of the SAME real chunk text — racing for the one open slot.
+        distinct_quotes = ["Fluency is", "the most prized quality", "in translation today"]
+        assert all(q in chunk_text for q in distinct_quotes)  # sanity: all real substrings
+
+        async def _one_post(quote_text: str):
+            return await client.post(
+                f"/api/documents/{document_id}/quotes",
+                json={"chunk_id": str(chunk_id), "quote_text": quote_text},
+                headers=auth_headers,
+            )
+
+        responses = await asyncio.gather(*[_one_post(q) for q in distinct_quotes])
+
+        succeeded = [r for r in responses if r.status_code == 201]
+        rejected = [r for r in responses if r.status_code == 403]
+        assert len(succeeded) == 1
+        assert len(rejected) == 2
+        for r in rejected:
+            body = r.json()
+            assert body["detail"]["error"] == "SAVED_QUOTES_LIMIT_REACHED"
+            assert body["detail"]["limit"] == limit
+            assert body["detail"]["plan"] == "free"
+
+        async with AsyncSessionLocal() as db:
+            final_count = await db.scalar(
+                select(func.count()).select_from(SavedQuote).where(SavedQuote.user_id == auth_user.id)
+            )
+        assert final_count == limit  # never 31+, the cap held under real concurrency

@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import hashlib
 import uuid
+from dataclasses import dataclass
 from typing import Optional
 
 import sqlalchemy as sa
@@ -79,51 +80,85 @@ async def get_existing_saved_quote(
     return result.scalar_one_or_none()
 
 
+@dataclass(frozen=True)
+class SaveQuoteOutcome:
+    row: Optional[SavedQuote]  # None only when limit_reached
+    created: bool
+    limit_reached: bool
+    active_count: int  # meaningful on the limit_reached path; 0 on an idempotent hit
+
+
 async def save_quote(
     db: AsyncSession, *, user: User, document: Document, card: QuoteCard,
-) -> tuple[SavedQuote, bool]:
-    """Idempotent insert — returns (row, created=False on an idempotent hit).
+) -> SaveQuoteOutcome:
+    """Idempotent, cap-aware insert.
 
     `card` MUST already be the output of a server-side re-verification
     (quote_search_service.verify_saved_quote() or quote_search()'s own
     cards) — every persisted trust column is copied from it as-is, never
     recomputed here and never sourced from raw request data.
 
-    SELECT-then-INSERT + IntegrityError-retry, same race biblio_service's
-    FIX-9 precedent handles: two concurrent identical saves (double-click,
-    two tabs) can both SELECT None then both attempt to INSERT — UNIQUE
-    (user_id, document_id, quote_hash) stops the loser's commit, and the
-    loser recovers by re-fetching the winner's row instead of surfacing a
-    raw 500/409.
+    FIX-1 (Codex M3 r1 HIGH — cap race): the idempotency check AND the cap
+    check (count_active_saved_quotes vs saved_quotes_limit_for_plan) now
+    run INSIDE the same serialized critical section as the insert — Codex's
+    exact finding was that the old code ran the count check in the API
+    layer, OUTSIDE any lock and outside this function entirely: at
+    limit-1 rows, two concurrent DISTINCT saves (different quote_hash) both
+    read "count < limit" and both commit, overshooting the cap (reproduced
+    directly: 3 concurrent saves at 29/30 all succeeded, final count 32).
 
-    UNLIKE biblio_service's byte-for-byte pattern, the retry re-fetch below
-    runs on a FRESH AsyncSessionLocal() session, not the just-rolled-back
-    `db` — discovered via real-Postgres asyncio.gather concurrency testing
-    (test_saved_quotes_integration.py) that reusing a NullPool-backed
-    session for a new query immediately after a rollback races with
-    SQLAlchemy's async/greenlet connection-checkout machinery under true
-    concurrent load (reproduced standalone outside pytest too; a
-    production QueuePool-backed engine did not exhibit this — NullPool is
-    what TESTING=1 forces, per app/models/database.py). A fresh session
-    sidesteps it unconditionally and matches the independent-session-for-
-    post-failure-resolution pattern already used by the billing resolvers
-    in chat_service.py / quotes.py.
+    Serialized via a Postgres TRANSACTION-SCOPED advisory lock keyed by the
+    user's id (`pg_advisory_xact_lock(hashtext(user_id))`) — acquired
+    FIRST, before either check. A second concurrent call for the SAME user
+    blocks on this statement until the first call's transaction ends
+    (commit or rollback, which releases the lock automatically), at which
+    point its own count query sees a fresh READ COMMITTED snapshot
+    including whatever the first call just committed. Chosen over
+    SELECT...FOR UPDATE on the `users` row (this codebase's existing
+    reconcile_credits() precedent) specifically to AVOID taking a real row
+    lock on `users`: that would also serialize against unrelated
+    concurrent work touching the same row (credit-balance debits from
+    chat/quote-search billing), coupling this feature's cap enforcement to
+    billing latency for no reason. The advisory lock only ever contends
+    with other save_quote() calls for the same user.
 
-    The cap check (count_active_saved_quotes vs saved_quotes_limit_for_plan)
-    is the CALLER's responsibility, performed BEFORE this function runs —
-    a documented, accepted narrow TOCTOU window exists between that check
-    and this insert (two concurrent NEW saves could both pass a
-    same-instant cap check), same class of minor race as the existing
-    MAX_DOCUMENTS/share-link caps elsewhere in this codebase; low value,
-    self-correcting on the next delete, and not given the money-grade
-    locking billing races get.
+    CRITICAL: every return path below explicitly commits (the lock is
+    released when ITS transaction ends, so leaving one open would hold the
+    lock — and block every other concurrent save for this user — for the
+    rest of the request). Deliberately commits rather than rolls back even
+    on a no-write decision (idempotent hit, cap reached): `expire_on_commit
+    =False` (app/models/database.py) means a commit does NOT expire
+    `document` or any row already loaded in this session, so the caller's
+    later SYNCHRONOUS reads (response serialization) stay safe — a
+    rollback here would expire those objects and reintroduce the exact
+    MissingGreenlet class already fixed for the PATCH endpoint.
+
+    SELECT-then-INSERT + IntegrityError-retry (same race biblio_service's
+    FIX-9 precedent handles, for a genuinely simultaneous identical save)
+    retries on a FRESH AsyncSessionLocal() session, not the just-rolled-
+    back `db` — see the prior real-concurrency finding in this function's
+    git history for why (NullPool-specific async/greenlet interaction
+    under true concurrent load; a production QueuePool-backed engine does
+    not exhibit it).
     """
+    await db.execute(
+        sa.text("SELECT pg_advisory_xact_lock(hashtext(:user_id))"),
+        {"user_id": str(user.id)},
+    )
+
     quote_hash = compute_quote_hash(card.display_text, card.page, card.page_end)
     existing = await get_existing_saved_quote(
         db, user_id=user.id, document_id=document.id, quote_hash=quote_hash
     )
     if existing is not None:
-        return existing, False
+        await db.commit()  # release the lock; nothing written, see docstring
+        return SaveQuoteOutcome(row=existing, created=False, limit_reached=False, active_count=0)
+
+    active_count = await count_active_saved_quotes(db, user.id)
+    limit = saved_quotes_limit_for_plan(user.plan)
+    if active_count >= limit:
+        await db.commit()  # release the lock; nothing written, see docstring
+        return SaveQuoteOutcome(row=None, created=False, limit_reached=True, active_count=active_count)
 
     row = SavedQuote(
         user_id=user.id,
@@ -158,8 +193,8 @@ async def save_quote(
             )
         if winner is None:
             raise  # not the race we anticipated — a genuine failure
-        return winner, False
-    return row, True
+        return SaveQuoteOutcome(row=winner, created=False, limit_reached=False, active_count=active_count)
+    return SaveQuoteOutcome(row=row, created=True, limit_reached=False, active_count=active_count + 1)
 
 
 async def list_saved_quotes_for_document(

@@ -180,12 +180,18 @@ async def test_create_happy_path_reverifies_then_saves(
     chunk_id = uuid.UUID(card.chunk_id)
     verify_mock = AsyncMock(return_value=card)
     monkeypatch.setattr(quotes_api.quote_search_service, "verify_saved_quote", verify_mock)
-    monkeypatch.setattr(
-        saved_quotes_service, "get_existing_saved_quote", AsyncMock(return_value=None)
-    )
-    monkeypatch.setattr(saved_quotes_service, "count_active_saved_quotes", AsyncMock(return_value=1))
     row = _saved_row(document_id=doc.id)
-    monkeypatch.setattr(saved_quotes_service, "save_quote", AsyncMock(return_value=(row, True)))
+    # FIX-1 (Codex M3 r1 HIGH — cap race): the idempotency AND cap checks
+    # now live INSIDE save_quote()'s own locked critical section, so this
+    # endpoint no longer calls get_existing_saved_quote/
+    # count_active_saved_quotes itself — mocking save_quote's outcome
+    # directly is the only thing left to control here.
+    monkeypatch.setattr(
+        saved_quotes_service, "save_quote",
+        AsyncMock(return_value=saved_quotes_service.SaveQuoteOutcome(
+            row=row, created=True, limit_reached=False, active_count=2,
+        )),
+    )
 
     response = await client.post(
         f"/api/documents/{doc.id}/quotes",
@@ -213,9 +219,11 @@ async def test_create_happy_path_reverifies_then_saves(
 async def test_create_idempotent_repeat_save_returns_200_shape_without_cap_check(
     client: AsyncClient, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Idempotent hit: no cap check should even run (re-saving something
-    already saved must always succeed, cap or no cap), and no quote_saved
-    telemetry event fires a second time.
+    """Idempotent hit: no quote_saved telemetry event fires a second time,
+    and the API layer trusts save_quote()'s own limit_reached=False as-is
+    (the cap check itself, and "does an idempotent hit skip it," are unit-
+    tested directly against save_quote() in test_saved_quotes_service.py —
+    this test only proves the API layer wires the outcome correctly).
 
     Contract fix (live E2E finding, 2026-08-03): this test's own NAME always
     said "returns_200_shape" but the assertion below wrongly asserted 201 —
@@ -233,12 +241,10 @@ async def test_create_idempotent_repeat_save_returns_200_shape_without_cap_check
     monkeypatch.setattr(quotes_api.quote_search_service, "verify_saved_quote", AsyncMock(return_value=card))
     existing_row = _saved_row(document_id=doc.id)
     monkeypatch.setattr(
-        saved_quotes_service, "get_existing_saved_quote", AsyncMock(return_value=existing_row)
-    )
-    count_mock = AsyncMock(return_value=999)
-    monkeypatch.setattr(saved_quotes_service, "count_active_saved_quotes", count_mock)
-    monkeypatch.setattr(
-        saved_quotes_service, "save_quote", AsyncMock(return_value=(existing_row, False))
+        saved_quotes_service, "save_quote",
+        AsyncMock(return_value=saved_quotes_service.SaveQuoteOutcome(
+            row=existing_row, created=False, limit_reached=False, active_count=0,
+        )),
     )
 
     response = await client.post(
@@ -248,7 +254,6 @@ async def test_create_idempotent_repeat_save_returns_200_shape_without_cap_check
 
     assert response.status_code == 200
     assert response.json()["id"] == str(existing_row.id)
-    count_mock.assert_not_awaited()  # idempotent hit never reaches the cap check
     events = [obj for obj in added if getattr(obj, "event_name", None) == "quote_saved"]
     assert events == []
 
@@ -265,14 +270,11 @@ async def test_create_rejects_new_save_at_the_free_plan_cap(
 
     card = _sample_card()
     monkeypatch.setattr(quotes_api.quote_search_service, "verify_saved_quote", AsyncMock(return_value=card))
-    monkeypatch.setattr(
-        saved_quotes_service, "get_existing_saved_quote", AsyncMock(return_value=None)
-    )
-    monkeypatch.setattr(
-        saved_quotes_service, "count_active_saved_quotes",
-        AsyncMock(return_value=settings.FREE_SAVED_QUOTES_LIMIT),
-    )
-    save_mock = AsyncMock()
+    # FIX-1: save_quote() itself now decides limit_reached (inside its
+    # locked critical section) — the API layer just reacts to the outcome.
+    save_mock = AsyncMock(return_value=saved_quotes_service.SaveQuoteOutcome(
+        row=None, created=False, limit_reached=True, active_count=settings.FREE_SAVED_QUOTES_LIMIT,
+    ))
     monkeypatch.setattr(saved_quotes_service, "save_quote", save_mock)
 
     response = await client.post(
@@ -283,39 +285,19 @@ async def test_create_rejects_new_save_at_the_free_plan_cap(
     detail = _assert_error(response, 403, "SAVED_QUOTES_LIMIT_REACHED")
     assert detail["limit"] == settings.FREE_SAVED_QUOTES_LIMIT
     assert detail["plan"] == "free"
-    save_mock.assert_not_awaited()
+    save_mock.assert_awaited_once()
     events = [obj for obj in added if getattr(obj, "event_name", None) == "quote_save_limit_hit"]
     assert len(events) == 1
+    assert events[0].metadata_json["current"] == settings.FREE_SAVED_QUOTES_LIMIT
 
 
-@pytest.mark.asyncio
-async def test_create_pro_plan_unaffected_by_free_limit(
-    client: AsyncClient, monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    user = _make_user(plan="pro")
-    doc = _make_doc(user)
-    db = _make_db(get=AsyncMock(return_value=doc))
-    _override_dependencies(db, user)
-
-    card = _sample_card()
-    monkeypatch.setattr(quotes_api.quote_search_service, "verify_saved_quote", AsyncMock(return_value=card))
-    monkeypatch.setattr(
-        saved_quotes_service, "get_existing_saved_quote", AsyncMock(return_value=None)
-    )
-    # Well past the FREE limit, but this user is pro.
-    monkeypatch.setattr(
-        saved_quotes_service, "count_active_saved_quotes",
-        AsyncMock(return_value=settings.FREE_SAVED_QUOTES_LIMIT + 500),
-    )
-    row = _saved_row(document_id=doc.id)
-    monkeypatch.setattr(saved_quotes_service, "save_quote", AsyncMock(return_value=(row, True)))
-
-    response = await client.post(
-        f"/api/documents/{doc.id}/quotes",
-        json={"chunk_id": card.chunk_id, "quote_text": card.display_text},
-    )
-
-    assert response.status_code == 201
+# FIX-1 (Codex M3 r1 HIGH — cap race): the "pro plan isn't capped by the
+# free limit" behavior moved OUT of this layer entirely — save_quote()
+# decides limit_reached now, inside its own locked critical section (see
+# test_saved_quotes_service.py's TestSaveQuoteIdempotency). What used to
+# live here as test_create_pro_plan_unaffected_by_free_limit would only be
+# re-asserting mock wiring at this point; the real behavior is covered
+# where the decision actually happens.
 
 
 # -------------------------- GET list --------------------------

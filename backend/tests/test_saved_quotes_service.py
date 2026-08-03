@@ -101,20 +101,34 @@ class TestComputeQuoteHash:
 
 
 class TestSaveQuoteIdempotency:
+    """FIX-1 (Codex M3 r1 HIGH — cap race): save_quote() now takes a
+    Postgres advisory lock FIRST (db.execute's first call, return value
+    unused), then the idempotency check, then (only on a genuinely new
+    save) the cap check — all before the insert, all in one serialized
+    critical section. Every mocked db here has a THREE-call execute
+    side_effect: [lock (unused), idempotency SELECT, cap-count SELECT] —
+    except the idempotent-hit test, which never reaches the third call."""
+
     @pytest.mark.asyncio
     async def test_first_save_inserts_a_new_row(self) -> None:
-        user = SimpleNamespace(id=uuid.uuid4())
+        user = SimpleNamespace(id=uuid.uuid4(), plan="free")
         document = SimpleNamespace(id=uuid.uuid4())
         db = SimpleNamespace(
-            execute=AsyncMock(return_value=_ScalarResult(None)),
+            execute=AsyncMock(side_effect=[
+                _ScalarResult(None),  # pg_advisory_xact_lock
+                _ScalarResult(None),  # get_existing_saved_quote -> no idempotent hit
+                _ScalarResult(5),     # count_active_saved_quotes -> well under FREE limit
+            ]),
             add=lambda _obj: None,
             commit=AsyncMock(),
             rollback=AsyncMock(),
         )
 
-        row, created = await sqs.save_quote(db, user=user, document=document, card=_card())
+        outcome = await sqs.save_quote(db, user=user, document=document, card=_card())
 
-        assert created is True
+        assert outcome.created is True
+        assert outcome.limit_reached is False
+        row = outcome.row
         assert row.user_id == user.id
         assert row.document_id == document.id
         assert row.verification_tier == "exact"
@@ -132,24 +146,84 @@ class TestSaveQuoteIdempotency:
 
     @pytest.mark.asyncio
     async def test_repeat_save_of_the_identical_quote_returns_existing_row_not_a_new_one(self) -> None:
-        """The idempotent-hit path must short-circuit BEFORE ever touching
-        db.add/commit — this is the "returns 200 not 409" contract from the
-        API layer's perspective."""
-        user = SimpleNamespace(id=uuid.uuid4())
+        """The idempotent-hit path must short-circuit BEFORE the cap check
+        AND before ever touching db.add — this is the "returns 200 not
+        409, cap or no cap" contract from the API layer's perspective. It
+        DOES still commit (releasing the advisory lock; see save_quote's
+        docstring for why that's a commit, not a rollback)."""
+        user = SimpleNamespace(id=uuid.uuid4(), plan="free")
         document = SimpleNamespace(id=uuid.uuid4())
         existing_row = SimpleNamespace(id=uuid.uuid4())
         db = SimpleNamespace(
-            execute=AsyncMock(return_value=_ScalarResult(existing_row)),
+            execute=AsyncMock(side_effect=[
+                _ScalarResult(None),           # pg_advisory_xact_lock
+                _ScalarResult(existing_row),   # get_existing_saved_quote -> idempotent hit
+            ]),
             add=AsyncMock(side_effect=AssertionError("must not insert on an idempotent hit")),
             commit=AsyncMock(),
             rollback=AsyncMock(),
         )
 
-        row, created = await sqs.save_quote(db, user=user, document=document, card=_card())
+        outcome = await sqs.save_quote(db, user=user, document=document, card=_card())
 
-        assert created is False
-        assert row is existing_row
-        db.commit.assert_not_awaited()
+        assert outcome.created is False
+        assert outcome.limit_reached is False
+        assert outcome.row is existing_row
+        db.commit.assert_awaited_once()  # releases the lock; never a rollback (see docstring)
+        db.rollback.assert_not_awaited()
+
+    @pytest.mark.asyncio
+    async def test_cap_reached_returns_no_row_and_never_inserts(self) -> None:
+        """The cap check runs AFTER the idempotency check but BEFORE the
+        insert, inside the SAME locked critical section — that ordering
+        (not a separate pre-check outside the lock) is exactly what FIX-1
+        closes. Still commits (releases the lock; nothing was written)."""
+        user = SimpleNamespace(id=uuid.uuid4(), plan="free")
+        document = SimpleNamespace(id=uuid.uuid4())
+        db = SimpleNamespace(
+            execute=AsyncMock(side_effect=[
+                _ScalarResult(None),                          # pg_advisory_xact_lock
+                _ScalarResult(None),                           # no idempotent hit
+                _ScalarResult(settings.FREE_SAVED_QUOTES_LIMIT),  # already AT the cap
+            ]),
+            add=AsyncMock(side_effect=AssertionError("must not insert when the cap is reached")),
+            commit=AsyncMock(),
+            rollback=AsyncMock(),
+        )
+
+        outcome = await sqs.save_quote(db, user=user, document=document, card=_card())
+
+        assert outcome.limit_reached is True
+        assert outcome.created is False
+        assert outcome.row is None
+        assert outcome.active_count == settings.FREE_SAVED_QUOTES_LIMIT
+        db.commit.assert_awaited_once()
+        db.rollback.assert_not_awaited()
+
+    @pytest.mark.asyncio
+    async def test_pro_plan_not_capped_at_the_free_limit(self) -> None:
+        """Was test_create_pro_plan_unaffected_by_free_limit at the API
+        layer before FIX-1 moved the cap decision into save_quote() itself
+        — the real behavior belongs here now."""
+        user = SimpleNamespace(id=uuid.uuid4(), plan="pro")
+        document = SimpleNamespace(id=uuid.uuid4())
+        db = SimpleNamespace(
+            execute=AsyncMock(side_effect=[
+                _ScalarResult(None),  # pg_advisory_xact_lock
+                _ScalarResult(None),  # no idempotent hit
+                # Well past the FREE limit — this user is pro.
+                _ScalarResult(settings.FREE_SAVED_QUOTES_LIMIT + 500),
+            ]),
+            add=lambda _obj: None,
+            commit=AsyncMock(),
+            rollback=AsyncMock(),
+        )
+
+        outcome = await sqs.save_quote(db, user=user, document=document, card=_card())
+
+        assert outcome.limit_reached is False
+        assert outcome.created is True
+        assert outcome.row is not None
 
     @pytest.mark.asyncio
     async def test_concurrent_identical_save_recovers_via_integrity_error_retry(
@@ -171,11 +245,15 @@ class TestSaveQuoteIdempotency:
         this). A fresh session sidesteps it unconditionally and matches the
         independent-session-for-post-failure-resolution pattern already
         used by the billing resolvers in chat_service.py / quotes.py."""
-        user = SimpleNamespace(id=uuid.uuid4())
+        user = SimpleNamespace(id=uuid.uuid4(), plan="free")
         document = SimpleNamespace(id=uuid.uuid4())
         winner_row = SimpleNamespace(id=uuid.uuid4())
         db = SimpleNamespace(
-            execute=AsyncMock(return_value=_ScalarResult(None)),
+            execute=AsyncMock(side_effect=[
+                _ScalarResult(None),  # pg_advisory_xact_lock
+                _ScalarResult(None),  # no idempotent hit (this caller lost the race)
+                _ScalarResult(5),     # well under the cap
+            ]),
             add=lambda _obj: None,
             commit=AsyncMock(side_effect=IntegrityError("stmt", {}, Exception("unique violation"))),
             rollback=AsyncMock(),
@@ -190,10 +268,11 @@ class TestSaveQuoteIdempotency:
 
         monkeypatch.setattr(sqs, "AsyncSessionLocal", lambda: _FakeRetrySession())
 
-        row, created = await sqs.save_quote(db, user=user, document=document, card=_card())
+        outcome = await sqs.save_quote(db, user=user, document=document, card=_card())
 
-        assert created is False
-        assert row is winner_row
+        assert outcome.created is False
+        assert outcome.limit_reached is False
+        assert outcome.row is winner_row
         db.rollback.assert_awaited_once()
 
     @pytest.mark.asyncio
@@ -202,10 +281,14 @@ class TestSaveQuoteIdempotency:
     ) -> None:
         """Not the race we anticipated (a genuine constraint violation
         elsewhere) — must surface, never swallow silently."""
-        user = SimpleNamespace(id=uuid.uuid4())
+        user = SimpleNamespace(id=uuid.uuid4(), plan="free")
         document = SimpleNamespace(id=uuid.uuid4())
         db = SimpleNamespace(
-            execute=AsyncMock(return_value=_ScalarResult(None)),
+            execute=AsyncMock(side_effect=[
+                _ScalarResult(None),  # pg_advisory_xact_lock
+                _ScalarResult(None),  # no idempotent hit
+                _ScalarResult(5),     # well under the cap
+            ]),
             add=lambda _obj: None,
             commit=AsyncMock(side_effect=IntegrityError("stmt", {}, Exception("boom"))),
             rollback=AsyncMock(),

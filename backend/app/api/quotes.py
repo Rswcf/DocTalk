@@ -522,44 +522,44 @@ async def create_saved_quote(
             },
         )
 
-    # Cap (§8.4 point 2) gates NEW rows only — re-saving something already
-    # saved must always succeed regardless of the cap. Computing quote_hash
-    # here (mirroring save_quote()'s own internal computation) is a small,
-    # deliberate duplication: it lets the cap decision and the actual
-    # idempotent insert share one obvious "is this new?" definition without
-    # threading a pre-fetched row through save_quote()'s signature.
-    quote_hash = saved_quotes_service.compute_quote_hash(card.display_text, card.page, card.page_end)
-    existing = await saved_quotes_service.get_existing_saved_quote(
-        db, user_id=user.id, document_id=doc.id, quote_hash=quote_hash,
-    )
-    if existing is None:
-        active_count = await saved_quotes_service.count_active_saved_quotes(db, user.id)
+    # FIX-1 (Codex M3 r1 HIGH — cap race): the idempotency check AND the
+    # cap check now run INSIDE save_quote()'s own serialized critical
+    # section (a Postgres advisory lock keyed by user_id) — see its
+    # docstring. This endpoint used to run both checks itself, OUTSIDE any
+    # lock, before ever calling save_quote(): at limit-1 rows, two
+    # concurrent DISTINCT saves both read "count < limit" and both
+    # committed, overshooting the cap (reproduced directly: 3 concurrent
+    # saves at 29/30 all succeeded, final count 32). Nothing left to check
+    # here — one call now does the check-and-insert atomically.
+    outcome = await saved_quotes_service.save_quote(db, user=user, document=doc, card=card)
+
+    if outcome.limit_reached:
         limit = saved_quotes_service.saved_quotes_limit_for_plan(user.plan)
-        if active_count >= limit:
-            db.add(
-                ProductEvent(
-                    user_id=user.id,
-                    event_name="quote_save_limit_hit",
-                    source="quote_finder",
-                    reason="saved_quotes_limit",
-                    plan=(user.plan or "free").lower(),
-                    metadata_json={"limit": limit, "current": active_count, "document_id": str(doc.id)},
-                )
-            )
-            await db.commit()
-            raise HTTPException(
-                status_code=403,
-                detail={
-                    "error": "SAVED_QUOTES_LIMIT_REACHED",
-                    "message": "Saved quote limit reached for current plan",
-                    "limit": limit,
-                    "plan": (user.plan or "free").lower(),
+        db.add(
+            ProductEvent(
+                user_id=user.id,
+                event_name="quote_save_limit_hit",
+                source="quote_finder",
+                reason="saved_quotes_limit",
+                plan=(user.plan or "free").lower(),
+                metadata_json={
+                    "limit": limit, "current": outcome.active_count, "document_id": str(doc.id),
                 },
             )
+        )
+        await db.commit()
+        raise HTTPException(
+            status_code=403,
+            detail={
+                "error": "SAVED_QUOTES_LIMIT_REACHED",
+                "message": "Saved quote limit reached for current plan",
+                "limit": limit,
+                "plan": (user.plan or "free").lower(),
+            },
+        )
 
-    row, created = await saved_quotes_service.save_quote(db, user=user, document=doc, card=card)
-
-    if created:
+    row = outcome.row
+    if outcome.created:
         db.add(
             ProductEvent(
                 user_id=user.id,
