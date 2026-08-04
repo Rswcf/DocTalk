@@ -36,6 +36,23 @@
   -webkit-font-smoothing: antialiased;
 }
 
+/* Counter the app-surface reset at globals.css:819-826:
+     `.dt-stitch-root > .min-h-screen { background: transparent !important }`
+   MarketingShell's root is `.dt-editorial min-h-screen flex flex-col` and a
+   direct child of `.dt-stitch-root`, so that (0,2,0) !important rule beat the
+   paper background above and every MarketingShell page — i.e. the whole
+   marketing surface except the landing page, whose root has no `min-h-screen`
+   — rendered on the app's near-white body instead of --ed-paper. The glass
+   material is tuned to sit on paper, so without this it reads washed out.
+   (0,3,0) + !important wins outright regardless of file order; the second
+   selector keeps it working if MarketingShell ever drops `min-h-screen`.
+   Do NOT "clean this up" as a redundant duplicate of line 33 — it is not.
+   Remove it only together with the globals.css rule it counters. */
+.dt-stitch-root > .dt-editorial.min-h-screen,
+.dt-stitch-root > .dt-editorial {
+  background: var(--ed-paper) !important;
+}
+
 /* Print-craft paper grain — faint and intentional (a press texture,
    not an AI glow). Sits below content. */
 .dt-editorial::before {
@@ -384,6 +401,13 @@
     background: var(--ed-paper-2);
     border-color: var(--ed-rule);
     box-shadow: none;
+  }
+  /* A sticky masthead prints at its stuck offset, so a page printed while
+     scrolled paints the header across the middle of the content (it landed
+     inside the comparison table during Task 10's print check). Static in
+     print puts it back at the top of the first page. */
+  .dt-editorial > header.ed-glass--header {
+    position: static;
   }
 }
 

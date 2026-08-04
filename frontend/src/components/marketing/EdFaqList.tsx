@@ -39,7 +39,6 @@ export default function EdFaqList({ items }: EdFaqListProps) {
             question={item.question}
             answer={item.answer}
             isOpen={isOpen}
-            isLast={index === items.length - 1}
             onToggle={() => toggle(index)}
           />
         );
@@ -54,7 +53,6 @@ interface FaqRowProps {
   question: string;
   answer: string;
   isOpen: boolean;
-  isLast: boolean;
   onToggle: () => void;
 }
 
@@ -64,7 +62,6 @@ function FaqRow({
   question,
   answer,
   isOpen,
-  isLast,
   onToggle,
 }: FaqRowProps) {
   const contentRef = useRef<HTMLDivElement>(null);
@@ -91,8 +88,11 @@ function FaqRow({
   return (
     <div
       style={{
-        borderTop: "1px solid var(--ed-rule)",
-        borderBottom: isLast ? "1px solid var(--ed-rule)" : undefined,
+        // Rows divide each other, but the glass panel's own border already
+        // closes the list — drawing an edge rule here too puts a second,
+        // shorter hairline 6px inside the panel edge (the wrapper's vertical
+        // padding), which reads as a stray line rather than a divider.
+        borderTop: index === 0 ? undefined : "1px solid var(--ed-rule)",
       }}
     >
       <button
