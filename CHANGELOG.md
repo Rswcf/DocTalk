@@ -8,6 +8,26 @@ releases use `0.minor.patch` semantics such as `0.2.0` and `0.2.1`.
 
 ## [Unreleased]
 
+## [0.27.0] - 2026-08-04
+
+### Fixed
+- Quote Finder now returns the quotes it was finding but throwing away. When a
+  passage sits across a page break, DocTalk shows it with an honest two-page
+  citation ("pp. 30–31") instead of discarding it. Replaying real searches from
+  our own users' documents, verified quotes went from 1 to 8 out of 10 —
+  including exact, word-for-word matches that were previously lost.
+- Copying a quote whose text crosses a page break now produces "pp. 30–31" in
+  the citation instead of silently naming only the first page.
+
+### Internal
+- `extracted_text` segments spanning exactly one page boundary emit an honest
+  range with both pages' bboxes; spans of two or more boundaries still discard
+  as `ambiguous_page_range`; majority-bbox page guessing remains forbidden.
+  This is a documented amendment to the M2 attribution policy, driven by an
+  in-production replay of the retained-academic corpus
+  (`.collab/reviews/2026-08-04-m3-acceptance-gate.md`) and cleared through
+  three adversarial Codex rounds.
+
 ## [0.26.0] - 2026-08-04
 
 ### Fixed
