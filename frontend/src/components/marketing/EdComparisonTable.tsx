@@ -104,78 +104,79 @@ export default function EdComparisonTable(props: EdComparisonTableProps) {
   };
 
   return (
-    <div style={{ overflowX: "auto" }}>
-      <table
-        style={{
-          width: "100%",
-          borderCollapse: "collapse",
-          minWidth: competitorCount > 1 ? "600px" : "480px",
-          border: "1px solid var(--ed-rule)",
-        }}
-      >
-        <thead>
-          <tr style={{ borderBottom: "1px solid var(--ed-rule)" }}>
-            <th
-              scope="col"
-              className="ed-label"
-              style={{
-                width: featureColWidth,
-                padding: "14px 18px",
-                textAlign: "left",
-              }}
-            >
-              {featureHeader}
-            </th>
-            <th
-              scope="col"
-              className="ed-label"
-              style={{
-                ...headStyle,
-                background: "var(--ed-paper-2)",
-                color: "var(--ed-signal)",
-              }}
-            >
-              DocTalk
-            </th>
-            {competitorHeaders.map((name, i) => (
-              <th key={`${name}-${i}`} scope="col" className="ed-label" style={headStyle}>
-                {name}
-              </th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((feature, i) => (
-            <tr key={i} style={{ borderTop: "1px solid var(--ed-rule)" }}>
+    <div className="ed-glass" style={{ padding: "4px", overflow: "hidden" }}>
+      <div style={{ overflowX: "auto" }}>
+        <table
+          style={{
+            width: "100%",
+            borderCollapse: "collapse",
+            minWidth: competitorCount > 1 ? "600px" : "480px",
+          }}
+        >
+          <thead>
+            <tr style={{ borderBottom: "1px solid var(--ed-rule)" }}>
               <th
-                scope="row"
-                className="ed-body"
+                scope="col"
+                className="ed-label"
                 style={{
-                  padding: "13px 18px",
-                  fontWeight: 500,
-                  color: "var(--ed-ink)",
+                  width: featureColWidth,
+                  padding: "14px 18px",
                   textAlign: "left",
                 }}
               >
-                {feature.name}
+                {featureHeader}
               </th>
-              <td
+              <th
+                scope="col"
+                className="ed-label"
                 style={{
-                  ...cellStyle,
+                  ...headStyle,
                   background: "var(--ed-paper-2)",
+                  color: "var(--ed-signal)",
                 }}
               >
-                <EdInlineCell value={feature.doctalk} />
-              </td>
-              {feature.competitors.map((value, j) => (
-                <td key={j} style={cellStyle}>
-                  <EdInlineCell value={value} />
-                </td>
+                DocTalk
+              </th>
+              {competitorHeaders.map((name, i) => (
+                <th key={`${name}-${i}`} scope="col" className="ed-label" style={headStyle}>
+                  {name}
+                </th>
               ))}
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {rows.map((feature, i) => (
+              <tr key={i} style={{ borderTop: "1px solid var(--ed-rule)" }}>
+                <th
+                  scope="row"
+                  className="ed-body"
+                  style={{
+                    padding: "13px 18px",
+                    fontWeight: 500,
+                    color: "var(--ed-ink)",
+                    textAlign: "left",
+                  }}
+                >
+                  {feature.name}
+                </th>
+                <td
+                  style={{
+                    ...cellStyle,
+                    background: "var(--ed-paper-2)",
+                  }}
+                >
+                  <EdInlineCell value={feature.doctalk} />
+                </td>
+                {feature.competitors.map((value, j) => (
+                  <td key={j} style={cellStyle}>
+                    <EdInlineCell value={value} />
+                  </td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }

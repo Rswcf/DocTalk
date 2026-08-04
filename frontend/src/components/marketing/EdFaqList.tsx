@@ -26,7 +26,7 @@ export default function EdFaqList({ items }: EdFaqListProps) {
   };
 
   return (
-    <div>
+    <div className="ed-glass" style={{ padding: "6px 28px" }}>
       {items.map((item, index) => {
         const isOpen = openIndex === index;
         const questionNum = `Q${index + 1}`;
