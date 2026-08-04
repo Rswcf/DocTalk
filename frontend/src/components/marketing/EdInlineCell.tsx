@@ -52,7 +52,7 @@ export default function EdInlineCell({ value }: EdInlineCellProps) {
         style={{
           fontFamily: MONO_FONT,
           fontSize: "15.5px",
-          color: "var(--ed-ochre)",
+          color: "var(--ed-slate)",
         }}
       >
         ~ {t("comparison.partial")}

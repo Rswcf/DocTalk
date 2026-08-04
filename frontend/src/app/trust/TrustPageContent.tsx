@@ -208,7 +208,7 @@ export default async function TrustPageContent({ locale }: { locale: string }) {
             marginTop: "20px",
             padding: "12px 14px",
             border: "1px solid var(--ed-rule)",
-            color: "var(--ed-ochre)",
+            color: "var(--ed-signal-deep)",
           }}
         >
           {t("trust.summary.disclaimer")}
@@ -274,7 +274,7 @@ export default async function TrustPageContent({ locale }: { locale: string }) {
                     alignItems: "center",
                     gap: "6px",
                     textTransform: "uppercase",
-                    color: "var(--ed-ochre)",
+                    color: "var(--ed-slate)",
                   }}
                 >
                   <span
@@ -282,7 +282,7 @@ export default async function TrustPageContent({ locale }: { locale: string }) {
                     style={{
                       width: "5px",
                       height: "5px",
-                      background: "var(--ed-ochre)",
+                      background: "var(--ed-slate)",
                     }}
                   />
                   {g.status}

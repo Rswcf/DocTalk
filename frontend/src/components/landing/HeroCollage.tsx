@@ -29,7 +29,7 @@ export default function HeroCollage() {
             right: "0",
             width: "58%",
             height: "82%",
-            background: "var(--ed-ochre)",
+            background: "var(--ed-slate)",
             opacity: 0.18,
           }}
         />
@@ -83,7 +83,7 @@ export default function HeroCollage() {
             fontWeight: 400,
             fontSize: "clamp(120px, 18vw, 180px)",
             lineHeight: 1,
-            color: "var(--ed-ochre)",
+            color: "var(--ed-slate)",
             opacity: 0.12,
             userSelect: "none",
             pointerEvents: "none",
@@ -187,7 +187,7 @@ export default function HeroCollage() {
               style={{
                 position: "absolute",
                 inset: "-2px -4px",
-                background: "var(--ed-ochre)",
+                background: "var(--ed-signal)",
                 opacity: 0.18,
                 borderRadius: "1px",
               }}

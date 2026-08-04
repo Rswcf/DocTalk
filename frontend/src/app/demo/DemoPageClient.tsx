@@ -123,7 +123,7 @@ export default function DemoPageClient() {
             }}
           >
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <span className="ed-body" style={{ color: 'var(--ed-ochre)' }}>
+              <span className="ed-body" style={{ color: 'var(--ed-signal-deep)' }}>
                 {tOr('demo.loadError', 'Demo documents could not be loaded.')}
               </span>
               <button

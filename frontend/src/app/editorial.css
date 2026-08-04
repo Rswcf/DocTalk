@@ -1,15 +1,33 @@
 /* Editorial design layer — "Monocle-crisp". Every rule is scoped under
    .dt-editorial so it never affects the functional app UI. Light only. */
 .dt-editorial {
-  --ed-paper: #f3eee1;
-  --ed-paper-2: #e9e1cf;
-  --ed-ink: #1c1b19;
-  --ed-ink-2: #48443b;
-  --ed-ink-3: #6e6860;
-  --ed-signal: #b0472f;
-  --ed-signal-deep: #8f3a26;
-  --ed-ochre: #c08a3e;
-  --ed-rule: #d3c9b3;
+  /* Counterpoint palette (2026-08-04 redesign). Two accents, not one:
+     rust = action (primary CTA, brand mark, feature eyebrows), slate =
+     structure (links, secondary CTA, quote borders, nav hover, decorative
+     set-dressing), olive = verified/positive state ONLY. */
+  --ed-paper: #eae8e3;
+  --ed-paper-2: #e4e2db;
+  --ed-ink: #20211e;
+  --ed-ink-2: #5b5a52;
+  --ed-ink-3: #8a897f;
+  --ed-signal: #a04b34;
+  --ed-signal-deep: #843c28;
+  --ed-slate: #1f3a4d;
+  --ed-slate-2: #2f556b;
+  --ed-olive: #3f6a34;
+  --ed-rule: rgba(32, 33, 30, 0.12);
+
+  /* Glass material tokens (warm, Ocean v5 recipe — spec §2.3). Consumed by
+     the .ed-glass utility classes below; never reference these directly
+     from a component's inline style (fallbacks require @media, which
+     inline styles cannot express). */
+  --ed-glass: rgba(250, 249, 246, 0.55);
+  --ed-glass-strong: rgba(251, 250, 247, 0.85);
+  --ed-glass-blur: blur(22px) saturate(150%);
+  --ed-glass-line: rgba(32, 33, 30, 0.12);
+  --ed-glass-hi: inset 0 1px 0 rgba(255, 255, 255, 0.82);
+  --ed-glass-shadow: 0 18px 44px -18px rgba(30, 25, 20, 0.32);
+  --ed-radius: 22px;
 
   position: relative;
   background: var(--ed-paper);

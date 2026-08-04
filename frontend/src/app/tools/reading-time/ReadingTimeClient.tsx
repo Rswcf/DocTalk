@@ -295,7 +295,7 @@ export default function ReadingTimeClient() {
                         style={{
                           height: '100%',
                           borderRadius: '3px',
-                          background: 'var(--ed-ochre)',
+                          background: 'var(--ed-slate-2)',
                           transition: 'width 300ms',
                           width: wordCount > 0
                             ? `${Math.min(100, (row.wpm / 180) * 100)}%`

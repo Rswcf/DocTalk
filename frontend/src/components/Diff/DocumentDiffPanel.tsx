@@ -405,7 +405,7 @@ export default function DocumentDiffPanel({
               className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
               style={{
                 marginTop: "16px",
-                border: "1px solid var(--ed-ochre)",
+                border: "1px solid var(--ed-slate)",
                 background: "var(--ed-paper)",
                 borderRadius: "3px",
                 padding: "12px 14px",
@@ -452,7 +452,7 @@ export default function DocumentDiffPanel({
                   {activeRun.status === "succeeded" ? (
                     <CheckCircle2 size={16} style={{ color: "var(--ed-signal)" }} aria-hidden="true" />
                   ) : (
-                    <Clock3 size={16} style={{ color: "var(--ed-ochre)" }} aria-hidden="true" />
+                    <Clock3 size={16} style={{ color: "var(--ed-slate)" }} aria-hidden="true" />
                   )}
                   <h3 className="ed-h3 truncate" style={{ marginTop: 0 }}>
                     {oldName || tOr("diff.oldDocument", "Old document")} → {newName || tOr("diff.newDocument", "New document")}
