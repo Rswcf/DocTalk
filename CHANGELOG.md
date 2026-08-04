@@ -8,6 +8,31 @@ releases use `0.minor.patch` semantics such as `0.2.0` and `0.2.1`.
 
 ## [Unreleased]
 
+## [0.28.0] - 2026-08-04
+
+### Changed
+- The marketing site has a new look: Apple-style frosted-glass chrome over a
+  warm paper ground, with a refreshed palette (deep rust for actions, prussian
+  slate for structure, olive reserved for verified states) and new typography
+  (Fraunces display serif + IBM Plex Sans). Reading text stays on solid
+  surfaces — glass is reserved for navigation, cards, and controls. Every
+  glass surface falls back to solid under "reduce transparency" and in print.
+- The public shared-conversation page now matches the marketing design and
+  meets AA contrast on citation text.
+
+### Fixed
+- The marketing header is sticky again (broken since May) — it now pins to the
+  top with a frosted blur while content scrolls beneath it.
+- The warm page background now actually renders on every marketing page; it
+  was silently suppressed everywhere except the landing page.
+- Shared conversations keep their paragraph breaks again.
+
+### Internal
+- Batch 1 of the Liquid Glass program (marketing/editorial layer). 16 commits,
+  per-task adversarial review; 7 defects found and fixed pre-ship incl. two
+  latent production bugs. Trail in `.superpowers/sdd/2026-08-04-liquid-glass-*`
+  and `.collab/reviews/2026-08-04-glass-b1-*`. App surface is Batch 2.
+
 ## [0.27.0] - 2026-08-04
 
 ### Fixed
