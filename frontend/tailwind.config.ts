@@ -66,6 +66,19 @@ const config: Config = {
               fontWeight: '500',
               fontSize: '0.875em',
             },
+            // The app font is IBM Plex Sans loaded at weights 400-700 only
+            // (layout.tsx) — 700 is its true ceiling. The typography
+            // plugin's own defaults request h1:800, 'h1 strong':900, and
+            // 'h2 strong':800 (checked every fontWeight declaration in
+            // @tailwindcss/typography/src/styles.js; nothing else in the
+            // DEFAULT size variant exceeds 700), which the browser
+            // synthesizes/flattens against the closest loaded face since no
+            // 800/900 weight was ever fetched. Cap those three at 700 so
+            // prose headings render the real font instead of a
+            // browser-synthesized (or silently flattened) bold.
+            h1: { fontWeight: '700' },
+            'h1 strong': { fontWeight: '700' },
+            'h2 strong': { fontWeight: '700' },
           },
         },
         invert: {

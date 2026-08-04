@@ -97,7 +97,7 @@ export default async function SharedPage({ params }: { params: Promise<{ token: 
                     : {}),
                 }}
               >
-                <p className="ed-body" style={msg.role === 'user' ? { color: '#ffffff' } : undefined}>
+                <p className="ed-body" style={{ whiteSpace: 'pre-wrap', ...(msg.role === 'user' ? { color: '#ffffff' } : {}) }}>
                   {msg.content}
                 </p>
                 {msg.citations && msg.citations.length > 0 && (
