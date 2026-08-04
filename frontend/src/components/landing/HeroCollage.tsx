@@ -4,8 +4,10 @@ import { useLocale } from '../../i18n';
 
 /**
  * HeroCollage — Art-directed editorial collage for the DocTalk landing hero.
- * Pure HTML/CSS/SVG, warm editorial palette only. No external images.
- * No glassmorphism, no gradient mesh, no UI mock. Aria-hidden decorative.
+ * Pure HTML/CSS/SVG, warm editorial palette only. No external images, no
+ * gradient mesh, no UI mock. Aria-hidden decorative. The two stacked
+ * document plates use .ed-glass (spec §4.1 "hero cards") — this is the
+ * one deliberate glassmorphism use in this file.
  */
 export default function HeroCollage() {
   const { t } = useLocale();
@@ -108,18 +110,14 @@ export default function HeroCollage() {
         {/* ── PRIMARY DOCUMENT PLATE ── */}
         {/* Rotated ~-3deg, offset slightly left-of-centre */}
         <div
+          className="ed-glass"
           style={{
             position: "absolute",
             top: "14%",
             left: "8%",
             right: "6%",
-            background: "var(--ed-paper)",
-            border: "1px solid var(--ed-rule)",
-            borderRadius: "2px",
             padding: "22px 20px 18px",
             transform: "rotate(-2.8deg)",
-            boxShadow:
-              "0 4px 18px 0 rgba(28,27,25,0.10), 0 1px 3px 0 rgba(28,27,25,0.07)",
           }}
         >
           {/* Document header row */}
@@ -319,15 +317,13 @@ export default function HeroCollage() {
 
         {/* ── Second document plate — stacked behind, peeking ── */}
         <div
+          className="ed-glass"
           style={{
             position: "absolute",
             top: "12%",
             left: "14%",
             right: "2%",
             height: "60%",
-            background: "var(--ed-paper-2)",
-            border: "1px solid var(--ed-rule)",
-            borderRadius: "2px",
             transform: "rotate(2.2deg)",
             zIndex: -1,
           }}
