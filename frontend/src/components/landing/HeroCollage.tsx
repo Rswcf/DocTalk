@@ -21,7 +21,7 @@ export default function HeroCollage() {
           overflow: "visible",
         }}
       >
-        {/* ── Background ochre rectangle — large vertical stripe ── */}
+        {/* ── Background slate rectangle — large vertical stripe ── */}
         <div
           style={{
             position: "absolute",
@@ -182,7 +182,7 @@ export default function HeroCollage() {
               marginBottom: "8px",
             }}
           >
-            {/* Amber/signal highlight band */}
+            {/* Rust signal highlight band */}
             <div
               style={{
                 position: "absolute",
