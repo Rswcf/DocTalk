@@ -108,3 +108,19 @@ Per document, excluding the OCR-destroyed one: **Eco 1/1 topics served, Anijovic
 1. Fix (A) must be **deployed** before this result describes production. Until then production still runs the discard policy measured in §2.
 2. Plus gating: the free/paid split (`FREE_SAVED_QUOTES_LIMIT=30`, paid unlimited) is already live and enforced since v0.25.0. What this gate unblocks is the **decision to push Quote Finder as the paid wedge** — an owner call, now backed by evidence rather than hope.
 3. Root causes (B) and (C) are storage-loss consequences and remain open; they cap what legacy documents can ever deliver.
+
+---
+
+## 8. Final run against DEPLOYED production (v0.27.0, no patch injection)
+
+Re-ran the identical ten queries against the shipped code — no `/tmp` module, no patching; this is what users actually get.
+
+| | discard policy (§2) | patched preview (§7) | **deployed v0.27.0** |
+|---|---|---|---|
+| proposed | 10 | 10 | 10 |
+| **verified** | **1** | 8 | **9** |
+| cards with honest ranges | — | 7 | **8** |
+
+Per topic in production: `clasificación de conectores` 1/1 (its `aligned 95.4` match now lands too), `progresión temática` 3 of 4, `co-autoria e obras participativas` 1/1, `la evaluación como oportunidad` 4/4. The only remaining zero-result topics are the five on mel\*\*\*'s OCR-destroyed document plus one topic genuinely absent from the Anijovich book.
+
+**Gate CLOSED — PASSED in production.** Quote Finder delivers verbatim, page-cited quotes to the retained-academic cohort on that cohort's own real documents. Conditions 1 (deploy) is now satisfied; conditions 2 (owner's decision to push it as the paid wedge) and 3 (storage-loss consequences for legacy documents) remain with the owner.
