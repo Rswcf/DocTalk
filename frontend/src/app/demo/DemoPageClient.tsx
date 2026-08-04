@@ -235,7 +235,7 @@ export default function DemoPageClient() {
                   <span
                     className="inline-flex items-center gap-1.5"
                     style={{
-                      fontFamily: 'var(--font-inter), sans-serif',
+                      fontFamily: 'var(--font-plex-sans), sans-serif',
                       fontSize: '14px',
                       fontWeight: 500,
                       color: 'var(--ed-ink)',

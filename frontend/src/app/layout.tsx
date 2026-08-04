@@ -1,5 +1,5 @@
 import type { Metadata } from 'next'
-import { Inter, Sora, Newsreader, IBM_Plex_Mono } from 'next/font/google'
+import { IBM_Plex_Sans, Sora, Fraunces, IBM_Plex_Mono } from 'next/font/google'
 import './globals.css'
 import './editorial.css'
 import ErrorBoundary from '../components/ErrorBoundary'
@@ -11,7 +11,12 @@ import { AuthModal } from '../components/AuthModal'
 import { AnalyticsWrapper } from '../components/AnalyticsWrapper'
 import { CookieConsentBanner } from '../components/CookieConsentBanner'
 
-const inter = Inter({ subsets: ['latin'], variable: '--font-inter', display: 'swap' })
+const plexSans = IBM_Plex_Sans({
+  subsets: ['latin'],
+  weight: ['400', '500', '600', '700'],
+  variable: '--font-plex-sans',
+  display: 'swap',
+})
 const sora = Sora({
   subsets: ['latin'],
   variable: '--font-logo',
@@ -19,10 +24,11 @@ const sora = Sora({
   display: 'swap',
 })
 
-const newsreader = Newsreader({
+const fraunces = Fraunces({
   subsets: ['latin'],
-  weight: ['400', '500', '600'],
-  variable: '--font-newsreader',
+  style: ['normal', 'italic'],
+  axes: ['opsz', 'SOFT'],
+  variable: '--font-fraunces',
   display: 'swap',
 })
 
@@ -75,7 +81,7 @@ export default function RootLayout({
   // was the direct cause of `Cache-Control: private, no-store` on every
   // SEO page and is the single biggest unlock for organic traffic.
   return (
-    <html lang="en" suppressHydrationWarning className={`${inter.variable} ${sora.variable} ${newsreader.variable} ${plexMono.variable}`}>
+    <html lang="en" suppressHydrationWarning className={`${plexSans.variable} ${sora.variable} ${fraunces.variable} ${plexMono.variable}`}>
       <head>
         <meta name="google-site-verification" content="168G1TYJfQ7MNp4sNdF-7gC2wDWKGeds618LyLdkCUM" />
         <meta name="msvalidate.01" content="50E7D296303C85BC31C1BE98539EA393" />

@@ -55,7 +55,7 @@
    words (wrap emphasis in <em>). A mixed-voice editorial headline. */
 .dt-editorial .ed-display {
   font-family: var(--dt-body);
-  font-weight: 800;
+  font-weight: 700;
   font-size: clamp(46px, 7.4vw, 88px);
   line-height: 1.0;
   letter-spacing: -0.035em;
@@ -128,7 +128,7 @@
   gap: 8px;
   background: var(--ed-signal);
   color: #ffffff;
-  font-family: var(--font-inter), sans-serif;
+  font-family: var(--font-plex-sans), sans-serif;
   font-size: 14px;
   font-weight: 500;
   padding: 13px 22px;
