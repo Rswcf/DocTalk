@@ -49,6 +49,27 @@
 }
 .dt-editorial > * { position: relative; z-index: 1; }
 
+/* Ambient canvas — restrained, asymmetric static gradients so glass has
+   something to blur. Static gradients only (not filter:blur) for zero
+   scroll repaint (spec §3). Sits above the paper-grain ::before, below
+   real content (z-index 1, set above). */
+.dt-editorial::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(680px 480px at 14% 0%, rgba(160, 75, 52, 0.10), transparent 60%),
+    radial-gradient(560px 420px at 92% 38%, rgba(31, 58, 77, 0.07), transparent 65%);
+}
+@media (prefers-reduced-transparency: reduce) {
+  .dt-editorial::after { display: none; }
+}
+@media print {
+  .dt-editorial::after { display: none; }
+}
+
 .dt-editorial .ed-shell {
   max-width: 1200px;
   margin: 0 auto;
@@ -285,6 +306,54 @@
   background: var(--ed-signal);
 }
 .dt-editorial .ed-prose ul li:last-child { margin-bottom: 0; }
+
+/* ─── Liquid Glass utility classes (spec §2.3, §4.1) ───────────────────
+   Glass is chrome, not content: apply only to nav, cards, popovers, CTA
+   panels, FAQ/comparison containers, hero art. NEVER to EdProse/article
+   body/EdSection text or anything rendering real document/quote text.
+   backdrop-filter appears exactly once below (the .ed-glass base) with
+   its two required fallbacks directly underneath — do not add
+   backdrop-filter anywhere else in this file without both. Source order
+   matters: this block is appended AFTER .ed-card so `.ed-card.ed-glass`
+   (Task 5) resolves background/border to the glass values. */
+.dt-editorial .ed-glass {
+  background: var(--ed-glass);
+  backdrop-filter: var(--ed-glass-blur);
+  -webkit-backdrop-filter: var(--ed-glass-blur);
+  border: 1px solid var(--ed-glass-line);
+  border-radius: var(--ed-radius);
+  box-shadow: var(--ed-glass-hi), var(--ed-glass-shadow);
+}
+.dt-editorial .ed-glass--strong {
+  background: var(--ed-glass-strong);
+}
+.dt-editorial .ed-glass--header {
+  border-radius: 0;
+  border-width: 0 0 1px 0;
+}
+.dt-editorial .ed-glass--cta {
+  border-radius: 0;
+  border-width: 1px 0 0 0;
+}
+.dt-editorial .ed-glass--popover {
+  box-shadow: var(--ed-glass-hi), 0 14px 36px rgba(40, 33, 24, 0.24);
+}
+@media (prefers-reduced-transparency: reduce) {
+  .dt-editorial .ed-glass {
+    background: var(--ed-paper-2);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+}
+@media print {
+  .dt-editorial .ed-glass {
+    background: var(--ed-paper-2);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    box-shadow: none;
+    border-color: var(--ed-rule);
+  }
+}
 
 .dt-editorial *:focus-visible {
   outline: 2px solid var(--ed-signal);
