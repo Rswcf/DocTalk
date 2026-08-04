@@ -281,6 +281,10 @@
   border-color: var(--ed-ink-3);
   background: var(--ed-paper);
 }
+.dt-editorial a.ed-card.ed-glass:hover {
+  background: var(--ed-glass-strong);
+  border-color: rgba(31, 58, 77, 0.28);
+}
 
 /* Bulleted lists inside editorial prose. */
 .dt-editorial .ed-prose ul {
