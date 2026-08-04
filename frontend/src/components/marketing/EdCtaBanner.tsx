@@ -19,13 +19,7 @@ export default function EdCtaBanner({
   secondary,
 }: EdCtaBannerProps) {
   return (
-    <section
-      className="ed-section"
-      style={{
-        background: "var(--ed-paper-2)",
-        borderTop: "1px solid var(--ed-rule)",
-      }}
-    >
+    <section className="ed-section ed-glass ed-glass--cta">
       <div className="ed-shell">
         <div
           style={{

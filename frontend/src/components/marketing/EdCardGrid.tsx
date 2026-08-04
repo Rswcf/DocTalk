@@ -50,7 +50,7 @@ export default function EdCardGrid({ items, columns = 3 }: EdCardGridProps) {
           <Link
             key={`card-${index}`}
             href={item.href}
-            className="ed-card h-full"
+            className="ed-card ed-glass h-full"
             style={{ display: "flex", flexDirection: "column" }}
           >
             {inner}
@@ -58,7 +58,7 @@ export default function EdCardGrid({ items, columns = 3 }: EdCardGridProps) {
         ) : (
           <div
             key={`card-${index}`}
-            className="ed-card h-full"
+            className="ed-card ed-glass h-full"
             style={{ display: "flex", flexDirection: "column" }}
           >
             {inner}
