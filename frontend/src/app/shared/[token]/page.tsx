@@ -111,6 +111,7 @@ export default async function SharedPage({ params }: { params: Promise<{ token: 
                           background: 'var(--ed-paper-2)',
                           padding: '4px 8px',
                           borderRadius: '3px',
+                          color: 'var(--ed-ink-2)',
                         }}
                       >
                         p. {c.page}{c.document_filename ? ` — ${c.document_filename}` : ''}: &ldquo;{c.text_snippet}&rdquo;
