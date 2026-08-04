@@ -316,7 +316,8 @@
    backdrop-filter anywhere else in this file without both. Source order
    matters: this block is appended AFTER .ed-card so `.ed-card.ed-glass`
    (Task 5) resolves background/border to the glass values. */
-.dt-editorial .ed-glass {
+.dt-editorial .ed-glass,
+.dt-editorial.ed-glass {
   background: var(--ed-glass);
   backdrop-filter: var(--ed-glass-blur);
   -webkit-backdrop-filter: var(--ed-glass-blur);
@@ -324,29 +325,35 @@
   border-radius: var(--ed-radius);
   box-shadow: var(--ed-glass-hi), var(--ed-glass-shadow);
 }
-.dt-editorial .ed-glass--strong {
+.dt-editorial .ed-glass--strong,
+.dt-editorial.ed-glass--strong {
   background: var(--ed-glass-strong);
 }
-.dt-editorial .ed-glass--header {
+.dt-editorial .ed-glass--header,
+.dt-editorial.ed-glass--header {
   border-radius: 0;
   border-width: 0 0 1px 0;
 }
-.dt-editorial .ed-glass--cta {
+.dt-editorial .ed-glass--cta,
+.dt-editorial.ed-glass--cta {
   border-radius: 0;
   border-width: 1px 0 0 0;
 }
-.dt-editorial .ed-glass--popover {
+.dt-editorial .ed-glass--popover,
+.dt-editorial.ed-glass--popover {
   box-shadow: var(--ed-glass-hi), 0 14px 36px rgba(40, 33, 24, 0.24);
 }
 @media (prefers-reduced-transparency: reduce) {
-  .dt-editorial .ed-glass {
+  .dt-editorial .ed-glass,
+  .dt-editorial.ed-glass {
     background: var(--ed-paper-2);
     backdrop-filter: none;
     -webkit-backdrop-filter: none;
   }
 }
 @media print {
-  .dt-editorial .ed-glass {
+  .dt-editorial .ed-glass,
+  .dt-editorial.ed-glass {
     background: var(--ed-paper-2);
     backdrop-filter: none;
     -webkit-backdrop-filter: none;

@@ -129,7 +129,7 @@ export default function EdLanguageSelector({ languageLabel }: { languageLabel?: 
   const menu = (
     <div
       ref={menuRef}
-      className="dt-editorial"
+      className="dt-editorial ed-glass ed-glass--strong ed-glass--popover"
       style={{
         position: "fixed",
         top: pos.top,
@@ -138,9 +138,6 @@ export default function EdLanguageSelector({ languageLabel }: { languageLabel?: 
         minWidth: "200px",
         maxHeight: pos.maxHeight,
         overflowY: "auto",
-        background: "var(--ed-paper)",
-        border: "1px solid var(--ed-rule)",
-        boxShadow: "0 14px 36px rgba(40, 33, 24, 0.20)",
       }}
     >
       <ul role="listbox" aria-label={label} style={{ margin: 0, padding: "6px", listStyle: "none" }}>

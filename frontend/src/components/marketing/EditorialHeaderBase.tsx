@@ -60,11 +60,7 @@ export default function EditorialHeaderBase({
   return (
     <>
       <header
-        className="sticky top-0 z-50 h-16 flex items-center"
-        style={{
-          background: "var(--ed-paper)",
-          borderBottom: "1px solid var(--ed-rule)",
-        }}
+        className="sticky top-0 z-50 h-16 flex items-center ed-glass ed-glass--strong ed-glass--header"
       >
         <div className="ed-shell w-full">
           <div className="flex items-center justify-between h-16">
