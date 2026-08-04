@@ -334,6 +334,18 @@
   border-radius: 0;
   border-width: 0 0 1px 0;
 }
+/* The May-19 `.dt-editorial > *` rule (line 50) is (0,1,0) specificity —
+   identical to Tailwind's `.sticky`/`.z-50` utilities — so it silently wins
+   the position/z-index tie and flattens the masthead to `position: relative`.
+   This selector is (0,2,1), so it wins outright regardless of source order,
+   without touching the May-19 rule (still needed for every other direct
+   child's stacking against the ambient ::before/::after layers). z-index 50
+   matches the header's own `z-50` Tailwind class. */
+.dt-editorial > header.ed-glass--header {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+}
 .dt-editorial .ed-glass--cta,
 .dt-editorial.ed-glass--cta {
   border-radius: 0;
