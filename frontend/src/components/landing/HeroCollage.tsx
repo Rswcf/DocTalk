@@ -180,12 +180,12 @@ export default function HeroCollage() {
               marginBottom: "8px",
             }}
           >
-            {/* Rust signal highlight band */}
+            {/* Slate highlight band — quote-highlight rule (structure) */}
             <div
               style={{
                 position: "absolute",
                 inset: "-2px -4px",
-                background: "var(--ed-signal)",
+                background: "var(--ed-slate)",
                 opacity: 0.18,
                 borderRadius: "1px",
               }}
@@ -200,7 +200,7 @@ export default function HeroCollage() {
                 position: "relative",
               }}
             />
-            {/* Terracotta margin citation marker */}
+            {/* Olive margin citation marker — verified badge */}
             <div
               style={{
                 position: "absolute",
@@ -209,7 +209,7 @@ export default function HeroCollage() {
                 transform: "translateY(-50%)",
                 width: "18px",
                 height: "18px",
-                background: "var(--ed-signal)",
+                background: "var(--ed-olive)",
                 borderRadius: "50%",
                 display: "flex",
                 alignItems: "center",
@@ -264,7 +264,7 @@ export default function HeroCollage() {
 
           {/* Citation annotation row */}
           <div style={{ display: "flex", alignItems: "flex-start", gap: "8px" }}>
-            {/* Badge */}
+            {/* Badge — verified citation, olive */}
             <span
               style={{
                 display: "inline-flex",
@@ -272,7 +272,7 @@ export default function HeroCollage() {
                 justifyContent: "center",
                 width: "16px",
                 height: "16px",
-                background: "var(--ed-signal)",
+                background: "var(--ed-olive)",
                 borderRadius: "50%",
                 flexShrink: 0,
                 marginTop: "1px",
