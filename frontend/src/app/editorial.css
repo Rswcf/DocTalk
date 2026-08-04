@@ -380,6 +380,11 @@
     box-shadow: none;
     border-color: var(--ed-rule);
   }
+  .dt-editorial a.ed-card.ed-glass:hover {
+    background: var(--ed-paper-2);
+    border-color: var(--ed-rule);
+    box-shadow: none;
+  }
 }
 
 .dt-editorial *:focus-visible {
