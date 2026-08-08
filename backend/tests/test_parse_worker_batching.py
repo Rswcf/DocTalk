@@ -32,6 +32,100 @@ from app.models.tables import DocumentElement, Page
 from app.workers import parse_worker
 
 
+class TestWatchdogNoCandidates:
+    def test_no_candidates_dispatches_nothing(self, monkeypatch):
+        class _EmptyResult:
+            def scalars(self):
+                return self
+
+            def all(self):
+                return []
+
+        class _EmptySession(_RecordingSession):
+            def execute(self, stmt, params=None):
+                return _EmptyResult()
+
+        monkeypatch.setattr(parse_worker, "SyncSessionLocal", lambda: _EmptySession(None))
+        dispatched: list[object] = []
+        monkeypatch.setattr(parse_worker.parse_document, "delay", lambda *_a: dispatched.append(1))
+
+        assert parse_worker.requeue_stale_processing_documents() == 0
+        assert not dispatched
+
+
+@pytest.mark.integration
+class TestStaleProcessingWatchdog:
+    """Real-Postgres proof of the claim semantics (Codex r2): only documents
+    stale beyond the cutoff are dispatched, the conditional-UPDATE claim makes
+    each dispatch exactly-once, and a second sweep is a no-op because the
+    claim itself refreshed updated_at."""
+
+    def test_claims_only_stale_processing_docs_and_only_once(self, monkeypatch):
+        from sqlalchemy import func as sa_func
+        from sqlalchemy import select as sa_select
+        from sqlalchemy import text as sa_text
+        from sqlalchemy import update as sa_update
+
+        from app.models.sync_database import SyncSessionLocal
+        from app.models.tables import Document
+
+        dispatched: list[str] = []
+        monkeypatch.setattr(
+            parse_worker.parse_document, "delay", lambda doc_id: dispatched.append(doc_id)
+        )
+
+        def _doc(name: str, status: str) -> Document:
+            return Document(
+                filename=name,
+                file_size=1,
+                storage_key=f"documents/{uuid.uuid4()}/{name}",
+                status=status,
+            )
+
+        with SyncSessionLocal() as db:
+            stale = _doc("stale.pdf", "parsing")
+            fresh = _doc("fresh.pdf", "parsing")
+            done = _doc("done.pdf", "ready")
+            db.add_all([stale, fresh, done])
+            db.commit()
+            db.refresh(stale), db.refresh(fresh), db.refresh(done)
+            stale_id, fresh_id, done_id = stale.id, fresh.id, done.id
+            # Age 'stale' AND 'done' past the cutoff — 'done' proves the status
+            # filter, 'fresh' (recent updated_at) proves the age filter.
+            db.execute(
+                sa_update(Document)
+                .where(Document.id.in_([stale_id, done_id]))
+                .values(updated_at=sa_func.now() - sa_text("interval '2 hours'"))
+            )
+            db.commit()
+
+        try:
+            assert parse_worker.requeue_stale_processing_documents() == 1
+            assert dispatched == [str(stale_id)]
+
+            # Second sweep: the claim bumped updated_at, so nothing is stale.
+            assert parse_worker.requeue_stale_processing_documents() == 0
+            assert dispatched == [str(stale_id)]
+
+            with SyncSessionLocal() as db:
+                statuses = dict(
+                    db.execute(
+                        sa_select(Document.id, Document.status).where(
+                            Document.id.in_([stale_id, fresh_id, done_id])
+                        )
+                    ).all()
+                )
+                # The watchdog only claims/dispatches; it never rewrites status.
+                assert statuses == {stale_id: "parsing", fresh_id: "parsing", done_id: "ready"}
+        finally:
+            with SyncSessionLocal() as db:
+                for did in (stale_id, fresh_id, done_id):
+                    row = db.get(Document, did)
+                    if row:
+                        db.delete(row)
+                db.commit()
+
+
 @pytest.mark.integration
 class TestBatchedInsertsAgainstRealPostgres:
     """The stub tests prove call shape; this proves the semantics psycopg
@@ -485,6 +579,59 @@ class TestPersistFailurePaths:
         # Non-final attempt (retries=0): status stays non-terminal for the retry
         assert doc.status == "parsing"
         assert doc.error_msg is None
+
+    def test_gating_matches_worker_retry_semantics(self, monkeypatch):
+        """r2 MINOR: model the worker path (called_directly=False) — autoretry
+        hands the soft limit to task.retry with the decorator's max_retries,
+        and the terminal write happens only at the exhausting count."""
+        from celery.exceptions import Retry
+
+        for retries, expect_terminal in ((0, False), (1, False), (2, True)):
+            doc_id = uuid.uuid4()
+            doc = _make_doc(doc_id)
+
+            class _SoftLimitSession(_RecordingSession):
+                def execute(self, stmt, params=None):
+                    if params is not None:
+                        try:
+                            raise SoftTimeLimitExceeded()
+                        except SoftTimeLimitExceeded:
+                            raise RuntimeError("sending query failed")
+                    return super().execute(stmt, params)
+
+            task_session = _SoftLimitSession(doc)
+            calls = {"n": 0}
+
+            def _factory(task_session=task_session):
+                calls["n"] += 1
+                return task_session if calls["n"] == 1 else _RecordingSession(doc)
+
+            _wire_minimal_pdf_parse(monkeypatch, _factory)
+
+            captured: list[tuple[BaseException, object]] = []
+
+            def _fake_retry(*_a, exc=None, max_retries=None, **_kw):
+                captured.append((exc, max_retries))
+                raise Retry("scheduled")  # what worker-context retry raises
+
+            monkeypatch.setattr(parse_worker.parse_document, "retry", _fake_retry)
+            parse_worker.parse_document.push_request(retries=retries, called_directly=False)
+            try:
+                with pytest.raises(Retry):
+                    parse_worker.parse_document.run(str(doc_id))
+            finally:
+                parse_worker.parse_document.pop_request()
+                monkeypatch.undo()
+
+            exc, max_retries = captured[-1]
+            assert isinstance(exc, SoftTimeLimitExceeded)
+            assert max_retries == parse_worker._PARSE_MAX_RETRIES  # decorator/constant pairing
+            if expect_terminal:
+                assert doc.status == "error"
+                assert doc.error_msg.startswith("ERR_CODE:PARSE_TIMEOUT:")
+            else:
+                assert doc.status == "parsing"
+                assert doc.error_msg is None
 
     def test_plain_embedding_failure_marks_vectorize_failed_via_fresh_session(self, monkeypatch):
         doc_id = uuid.uuid4()

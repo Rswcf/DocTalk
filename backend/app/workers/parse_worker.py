@@ -8,7 +8,7 @@ from celery.exceptions import SoftTimeLimitExceeded
 from celery.utils.log import get_task_logger
 from minio import Minio
 from qdrant_client.models import PointStruct
-from sqlalchemy import String, cast, insert, select, update
+from sqlalchemy import String, cast, func, insert, select, text, update
 
 from app.core.config import settings
 from app.models.sync_database import SyncSessionLocal
@@ -184,6 +184,67 @@ def _queue_document_brief(document_id: str) -> None:
 # know whether another attempt is coming to decide between leaving the doc
 # non-terminal ('parsing', retry pending) and writing the terminal timeout.
 _PARSE_MAX_RETRIES = 2
+
+# --- Stale-processing watchdog (Codex r2) -----------------------------------
+# A document sitting in a processing status with no row writes for this long
+# has lost its task: the threshold must exceed BOTH the longest legitimate
+# write silence of a live parse chain (540s soft limit + 120s max retry
+# backoff ≈ 11 min) AND the broker visibility_timeout (2400s) — a worker-lost
+# task is redelivered within 40 min and must win against the watchdog, or the
+# redelivered run and the watchdog's run would parse (and destructively clean
+# up) concurrently.
+_PROCESSING_STATUSES = ("parsing", "ocr", "embedding")
+_STALE_PROCESSING_MINUTES = 45
+
+
+@celery_app.task(name="requeue_stale_processing_documents")
+def requeue_stale_processing_documents() -> int:
+    """Re-dispatch parse for documents whose processing run died silently.
+
+    Covers task loss the retry chain cannot see: broker flush, dispatch
+    failure, worker SIGKILL past redelivery. Each candidate is claimed with an
+    atomic conditional UPDATE that bumps updated_at — a concurrent claimer
+    (second replica startup, overlapping beat run) or a document whose task
+    wrote progress in the meantime fails the WHERE clause and is skipped, so
+    no document ever gets two dispatches. If the dispatch itself fails after a
+    claim, the bumped timestamp simply re-ages and the next watchdog run
+    retries it.
+    """
+    stale_cutoff = func.now() - text(f"interval '{_STALE_PROCESSING_MINUTES} minutes'")
+    requeued = 0
+    with SyncSessionLocal() as db:
+        candidate_ids = (
+            db.execute(
+                select(Document.id).where(
+                    Document.status.in_(_PROCESSING_STATUSES),
+                    Document.updated_at < stale_cutoff,
+                )
+            )
+            .scalars()
+            .all()
+        )
+        for doc_id in candidate_ids:
+            claimed = db.execute(
+                update(Document)
+                .where(
+                    Document.id == doc_id,
+                    Document.status.in_(_PROCESSING_STATUSES),
+                    Document.updated_at < stale_cutoff,
+                )
+                .values(updated_at=func.now())
+            )
+            db.commit()
+            if claimed.rowcount != 1:
+                continue
+            try:
+                parse_document.delay(str(doc_id))
+                requeued += 1
+                logger.info("Watchdog requeued stale processing document %s", doc_id)
+            except Exception:
+                logger.exception("Watchdog failed to requeue %s", doc_id)
+    if requeued:
+        logger.info("Watchdog requeued %d stale processing documents", requeued)
+    return requeued
 
 
 @celery_app.task(

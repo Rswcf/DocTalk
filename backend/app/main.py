@@ -117,28 +117,18 @@ async def lifespan(app: FastAPI):
             _alert(e, "Qdrant collection ensure failed")
 
     def _retry_stuck_documents() -> None:
-        """Re-dispatch parse tasks for documents stuck in 'parsing' status."""
+        """Recover documents whose processing run died (worker lost, broker
+        flushed). Delegates to the same age-gated atomic claim the beat
+        watchdog uses — the previous blind re-dispatch of EVERY in-flight
+        document raced pending autoretries (60/120s backoff) and unacked
+        broker redeliveries after a deploy restart: two parse tasks for the
+        same doc delete each other's rows/vectors (Codex r2)."""
         try:
-            from sqlalchemy import select
+            from app.workers.parse_worker import requeue_stale_processing_documents
 
-            from app.models.sync_database import SyncSessionLocal
-            from app.models.tables import Document
-
-            with SyncSessionLocal() as db:
-                rows = db.execute(
-                    select(Document).where(Document.status.in_(["parsing", "ocr", "embedding"]))
-                )
-                stuck = list(rows.scalars())
-                if not stuck:
-                    return
-                logger.info("Found %d stuck documents, re-dispatching parse tasks", len(stuck))
-                from app.workers.parse_worker import parse_document
-                for doc in stuck:
-                    try:
-                        parse_document.delay(str(doc.id))
-                        logger.info("Re-dispatched parse for %s (%s)", doc.id, doc.filename)
-                    except Exception as e:
-                        logger.warning("Failed to re-dispatch parse for %s: %s", doc.id, e)
+            requeued = requeue_stale_processing_documents()
+            if requeued:
+                logger.info("Startup recovery requeued %d stale documents", requeued)
         except Exception as e:
             logger.warning("Stuck document retry failed: %s", e)
 

@@ -57,4 +57,12 @@ celery_app.conf.beat_schedule = {
         "task": "cleanup_empty_demo_sessions",
         "schedule": 86400,
     },
+    # Watchdog for processing runs whose task was lost (broker flush, worker
+    # SIGKILL past redelivery). The task itself only touches documents stale
+    # for >45 min (see parse_worker._STALE_PROCESSING_MINUTES), so the 30-min
+    # cadence bounds stuck time at ~75 min without risking double dispatch.
+    "requeue-stale-processing-documents": {
+        "task": "requeue_stale_processing_documents",
+        "schedule": 1800,
+    },
 }
