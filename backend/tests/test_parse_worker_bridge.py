@@ -29,7 +29,7 @@ class _StubSyncSession:
 
 
 class _StubParseSession(_StubSyncSession):
-    def execute(self, _stmt):
+    def execute(self, _stmt, _params=None):
         return None
 
     def rollback(self) -> None:

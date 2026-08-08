@@ -8,7 +8,7 @@ from celery.exceptions import SoftTimeLimitExceeded
 from celery.utils.log import get_task_logger
 from minio import Minio
 from qdrant_client.models import PointStruct
-from sqlalchemy import select
+from sqlalchemy import String, cast, insert, select, update
 
 from app.core.config import settings
 from app.models.sync_database import SyncSessionLocal
@@ -87,6 +87,54 @@ def _download_file_bytes(bucket: str, object_key: str) -> bytes:
         response.close()
         response.release_conn()
     return data
+
+
+# One executemany round trip per batch instead of one INSERT round trip per
+# ORM row. A dense 10-page PDF yields >1k element rows; per-row flushes made
+# DB latency multiplicative (fatal at cross-region RTT, still wasteful at 1ms).
+_PERSIST_BATCH_SIZE = 500
+
+
+def _insert_rows_batched(db, model, rows: List[dict]) -> None:
+    for i in range(0, len(rows), _PERSIST_BATCH_SIZE):
+        db.execute(insert(model), rows[i : i + _PERSIST_BATCH_SIZE])
+
+
+def _chain_has_soft_limit(exc: BaseException) -> bool:
+    """True if SoftTimeLimitExceeded hides anywhere in the exception chain.
+
+    The soft-limit signal is delivered asynchronously; when it lands inside a
+    DB driver call it surfaces as an OperationalError whose __context__ is the
+    SoftTimeLimitExceeded. Without unwrapping, the persist handlers would
+    mislabel the timeout as PERSIST_*_FAILED and swallow it — Celery then
+    records the task as succeeded and autoretry never fires.
+    """
+    seen: set[int] = set()
+    cur: Optional[BaseException] = exc
+    while cur is not None and id(cur) not in seen:
+        if isinstance(cur, SoftTimeLimitExceeded):
+            return True
+        seen.add(id(cur))
+        cur = cur.__cause__ or cur.__context__
+    return False
+
+
+def _fail_doc_fresh_session(document_id: str, code: str) -> None:
+    """Write the error status on a NEW session/connection.
+
+    The task session may hold a connection corrupted by an interrupt that
+    landed mid-query ("another command is already in progress"); reusing it
+    for the status write can fail and leave the document stuck in 'parsing'.
+    """
+    try:
+        with SyncSessionLocal() as edb:
+            doc = edb.get(Document, uuid.UUID(document_id))
+            if doc:
+                _set_doc_error(doc, code)
+                edb.add(doc)
+                edb.commit()
+    except Exception:
+        logger.exception("Failed to write error status %s for %s", code, document_id)
 
 
 def _set_timeout_error(document_id: str, message: str) -> None:
@@ -412,63 +460,59 @@ def parse_document(self, document_id: str, locale: str | None = None) -> None:
 
             # ---- Shared path: persist pages, chunk, and embed ----
 
-            # Persist pages and update progress every 10 pages
+            # Persist pages (batched executemany, single commit)
             try:
-                for i, p in enumerate(pages, start=1):
+                page_rows: List[dict] = []
+                for p in pages:
                     raw_content = extracted_content_map.get(p.page_number)
-                    db.add(
-                        Page(
-                            document_id=doc.id,
-                            page_number=p.page_number,
-                            width_pt=p.width_pt,
-                            height_pt=p.height_pt,
-                            rotation=p.rotation,
-                            content=raw_content.replace("\x00", "") if raw_content else raw_content,
-                        )
+                    page_rows.append(
+                        {
+                            "document_id": doc.id,
+                            "page_number": p.page_number,
+                            "width_pt": p.width_pt,
+                            "height_pt": p.height_pt,
+                            "rotation": p.rotation,
+                            "content": raw_content.replace("\x00", "") if raw_content else raw_content,
+                        }
                     )
-                    if (i % 10) == 0 or i == len(pages):
-                        doc.pages_parsed = i
-                        db.add(doc)
-                        db.commit()
+                _insert_rows_batched(db, Page, page_rows)
+                doc.pages_parsed = len(pages)
+                db.add(doc)
+                db.commit()
             except SoftTimeLimitExceeded:
                 raise
             except Exception as e:
+                if _chain_has_soft_limit(e):
+                    raise SoftTimeLimitExceeded() from e
                 logger.exception("Failed to persist pages for %s: %s", document_id, e)
-                db.rollback()
-                doc = db.get(Document, uuid.UUID(document_id))
-                if doc:
-                    _set_doc_error(doc, "PERSIST_PAGES_FAILED", "Failed to save document pages to database")
-                    db.add(doc)
-                    db.commit()
+                _fail_doc_fresh_session(document_id, "PERSIST_PAGES_FAILED")
                 return
 
             # Persist canonical document elements (heading/paragraph stream).
             try:
                 element_infos = service.extract_elements(pages)
-                for el in element_infos:
-                    db.add(
-                        DocumentElement(
-                            document_id=doc.id,
-                            element_type=el.element_type,
-                            page_start=el.page_start,
-                            page_end=el.page_end,
-                            bbox=el.bbox,
-                            text=el.text,
-                            reading_order=el.reading_order,
-                            metadata_json=el.metadata_json,
-                        )
-                    )
+                element_rows: List[dict] = [
+                    {
+                        "document_id": doc.id,
+                        "element_type": el.element_type,
+                        "page_start": el.page_start,
+                        "page_end": el.page_end,
+                        "bbox": el.bbox,
+                        "text": el.text,
+                        "reading_order": el.reading_order,
+                        "metadata_json": el.metadata_json,
+                    }
+                    for el in element_infos
+                ]
+                _insert_rows_batched(db, DocumentElement, element_rows)
                 db.commit()
             except SoftTimeLimitExceeded:
                 raise
             except Exception as e:
+                if _chain_has_soft_limit(e):
+                    raise SoftTimeLimitExceeded() from e
                 logger.exception("Failed to persist document elements for %s: %s", document_id, e)
-                db.rollback()
-                doc = db.get(Document, uuid.UUID(document_id))
-                if doc:
-                    _set_doc_error(doc, "PERSIST_ELEMENTS_FAILED", "Failed to save document structure to database")
-                    db.add(doc)
-                    db.commit()
+                _fail_doc_fresh_session(document_id, "PERSIST_ELEMENTS_FAILED")
                 return
 
             # Chunk document (includes cleaning + bbox normalization)
@@ -486,20 +530,21 @@ def parse_document(self, document_id: str, locale: str | None = None) -> None:
             # Persist chunks (sanitize text to remove NUL bytes for PostgreSQL)
             chunks_total = 0
             try:
-                for ch in chunk_infos:
-                    db.add(
-                        Chunk(
-                            document_id=doc.id,
-                            chunk_index=ch.chunk_index,
-                            text=ch.text.replace("\x00", "") if ch.text else ch.text,
-                            token_count=ch.token_count,
-                            page_start=ch.page_start,
-                            page_end=ch.page_end,
-                            bboxes=ch.bboxes,
-                            section_title=ch.section_title,
-                        )
-                    )
-                    chunks_total += 1
+                chunk_rows: List[dict] = [
+                    {
+                        "document_id": doc.id,
+                        "chunk_index": ch.chunk_index,
+                        "text": ch.text.replace("\x00", "") if ch.text else ch.text,
+                        "token_count": ch.token_count,
+                        "page_start": ch.page_start,
+                        "page_end": ch.page_end,
+                        "bboxes": ch.bboxes,
+                        "section_title": ch.section_title,
+                    }
+                    for ch in chunk_infos
+                ]
+                _insert_rows_batched(db, Chunk, chunk_rows)
+                chunks_total = len(chunk_rows)
 
                 doc.chunks_total = chunks_total
                 db.add(doc)
@@ -507,13 +552,10 @@ def parse_document(self, document_id: str, locale: str | None = None) -> None:
             except SoftTimeLimitExceeded:
                 raise
             except Exception as e:
+                if _chain_has_soft_limit(e):
+                    raise SoftTimeLimitExceeded() from e
                 logger.exception("Failed to persist chunks for %s: %s", document_id, e)
-                db.rollback()
-                doc = db.get(Document, uuid.UUID(document_id))
-                if doc:
-                    _set_doc_error(doc, "PERSIST_CHUNKS_FAILED", "Failed to save document chunks to database")
-                    db.add(doc)
-                    db.commit()
+                _fail_doc_fresh_session(document_id, "PERSIST_CHUNKS_FAILED")
                 return
 
             logger.info("Completed parse stage for %s: %d chunks", document_id, chunks_total)
@@ -528,9 +570,14 @@ def parse_document(self, document_id: str, locale: str | None = None) -> None:
                 except Exception as e:
                     logger.warning("ensure_collection failed or skipped: %s", e)
 
-                # Load all chunks for this document
-                rows = db.execute(select(Chunk).where(Chunk.document_id == doc.id).order_by(Chunk.chunk_index))
-                chunks: List[Chunk] = list(rows.scalars())
+                # Load chunk columns as plain tuples: ORM instances expire on
+                # every per-batch commit below, and re-reading their attributes
+                # would trigger one refresh SELECT per chunk.
+                chunks = db.execute(
+                    select(Chunk.id, Chunk.text, Chunk.chunk_index, Chunk.page_start)
+                    .where(Chunk.document_id == doc.id)
+                    .order_by(Chunk.chunk_index)
+                ).all()
                 if not chunks:
                     _set_doc_error(doc, "NO_CHUNKS", "No text content could be extracted from the document")
                     db.add(doc)
@@ -570,10 +617,13 @@ def parse_document(self, document_id: str, locale: str | None = None) -> None:
                     # Upsert to Qdrant
                     qclient.upsert(collection_name=settings.QDRANT_COLLECTION, points=points, wait=True)
 
-                    # Update vector_id for chunks in DB
-                    for c in batch:
-                        c.vector_id = str(c.id)
-                        db.add(c)
+                    # Update vector_id for the whole batch in one statement
+                    # (vector_id is defined as the chunk's own id in text form).
+                    db.execute(
+                        update(Chunk)
+                        .where(Chunk.id.in_([c.id for c in batch]))
+                        .values(vector_id=cast(Chunk.id, String))
+                    )
 
                     total_indexed += len(batch)
                     doc.chunks_indexed = total_indexed

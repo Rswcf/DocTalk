@@ -97,6 +97,7 @@ class TestParseWorkerPersistsPdfPageContent:
             def __init__(self, doc):
                 self._doc = doc
                 self.added: list[object] = []
+                self.executed: list[tuple[object, object]] = []
                 self.commits = 0
 
             def __enter__(self):
@@ -114,7 +115,8 @@ class TestParseWorkerPersistsPdfPageContent:
             def commit(self):
                 self.commits += 1
 
-            def execute(self, _stmt):
+            def execute(self, stmt, params=None):
+                self.executed.append((stmt, params))
                 return None
 
             def rollback(self):
@@ -165,11 +167,16 @@ class TestParseWorkerPersistsPdfPageContent:
         page_texts = {1: "Hello page one.\nSecond line here.\n", 2: "Hello page two content.\n"}
         stub_session = self._run_pdf_parse(monkeypatch, page_texts=page_texts)
 
-        from app.models.tables import Page
-
-        persisted_pages = [obj for obj in stub_session.added if isinstance(obj, Page)]
-        assert len(persisted_pages) == 2
-        by_number = {p.page_number: p.content for p in persisted_pages}
+        # Pages now persist through batched executemany INSERTs, not per-row
+        # ORM adds — assert on the insert parameter rows for the pages table.
+        persisted_rows = [
+            row
+            for stmt, params in stub_session.executed
+            if params is not None and getattr(getattr(stmt, "table", None), "name", None) == "pages"
+            for row in params
+        ]
+        assert len(persisted_rows) == 2
+        by_number = {r["page_number"]: r["content"] for r in persisted_rows}
         assert by_number == page_texts
 
 
