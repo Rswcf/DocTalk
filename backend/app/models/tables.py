@@ -38,6 +38,11 @@ class Document(Base):
     parse_method: Mapped[Optional[str]] = mapped_column(sa.String(16), nullable=True)
     text_quality: Mapped[Optional[float]] = mapped_column(sa.Float, nullable=True)
     ocr_languages: Mapped[Optional[str]] = mapped_column(sa.String(64), nullable=True)
+    # Locale the ORIGINAL dispatch requested (Codex r3): recovery re-dispatches
+    # (watchdog/startup) carry no locale argument, so the parse task persists
+    # the requested one here on first run and falls back to it when re-run —
+    # otherwise a recovered scanned doc silently OCRs with default languages.
+    parse_requested_locale: Mapped[Optional[str]] = mapped_column(sa.String(16), nullable=True)
 
     created_at: Mapped[sa.DateTime] = mapped_column(sa.DateTime(timezone=True), server_default=sa.text("now()"))
     updated_at: Mapped[sa.DateTime] = mapped_column(sa.DateTime(timezone=True), server_default=sa.text("now()"), onupdate=sa.func.now())

@@ -11,7 +11,7 @@ from qdrant_client.models import PointStruct
 from sqlalchemy import String, cast, func, insert, select, text, update
 
 from app.core.config import settings
-from app.models.sync_database import SyncSessionLocal
+from app.models.sync_database import SyncSessionLocal, sync_engine
 from app.models.tables import Chunk, Document, DocumentBrief, DocumentElement, Page
 from app.services.conversion_service import CONVERTIBLE_TYPES, convert_to_pdf
 from app.services.embedding_service import embedding_service
@@ -43,6 +43,7 @@ _WORKER_ERROR_CODES: dict[str, str] = {
     "PERSIST_CHUNKS_FAILED": "Failed to save document chunks to database",
     "NO_CHUNKS": "No text content could be extracted from the document",
     "VECTORIZE_FAILED": "Vectorization or indexing failed",
+    "PARSE_FAILED": "Document processing failed",
 }
 
 
@@ -196,6 +197,10 @@ _PARSE_MAX_RETRIES = 2
 _PROCESSING_STATUSES = ("parsing", "ocr", "embedding")
 _STALE_PROCESSING_MINUTES = 45
 
+# Advisory-lock namespace for per-document parse serialization (int4 class id
+# paired with hashtext(document_id)). Chosen once; never reuse for other locks.
+_PARSE_LOCK_NAMESPACE = 947
+
 
 @celery_app.task(name="requeue_stale_processing_documents")
 def requeue_stale_processing_documents() -> int:
@@ -267,12 +272,52 @@ def parse_document(self, document_id: str, locale: str | None = None) -> None:
     timeout_message = "Document parsing timed out after 9 minutes"
     service = ParseService()
 
+    # Per-document serialization (Codex r3): a session-scoped advisory lock on
+    # a DEDICATED autocommit connection held for the whole task. Duplicate
+    # messages for one document (queued original + watchdog recovery, broker
+    # redelivery) can never interleave their destructive cleanup/persist
+    # phases: the loser either no-ops here (lock busy — a live task owns the
+    # doc; if that task dies the watchdog recovers later) or serializes behind
+    # the winner and then no-ops on the terminal-status check below. Worker
+    # death releases the lock automatically with its connection.
+    lock_conn = sync_engine.connect().execution_options(isolation_level="AUTOCOMMIT")
+    got_lock = False
     try:
+        got_lock = bool(
+            lock_conn.execute(
+                text("SELECT pg_try_advisory_lock(:ns, hashtext(:key))"),
+                {"ns": _PARSE_LOCK_NAMESPACE, "key": document_id},
+            ).scalar()
+        )
+        if not got_lock:
+            logger.info("Parse skipped for %s: another parse task holds the document lock", document_id)
+            return
         with SyncSessionLocal() as db:
             doc: Optional[Document] = db.get(Document, uuid.UUID(document_id))
             if not doc:
                 logger.error("Document %s not found", document_id)
                 return
+
+            # Stale-message rejection (Codex r3): a duplicate that serialized
+            # behind the run that finished this document finds a terminal
+            # status — it must not destructively re-parse a ready doc. Every
+            # legitimate dispatcher sets status='parsing' before delaying.
+            if doc.status not in _PROCESSING_STATUSES:
+                logger.info(
+                    "Parse skipped for %s: status=%s is terminal (stale/duplicate dispatch)",
+                    document_id, doc.status,
+                )
+                return
+
+            # Requested-locale durability (Codex r3): recovery dispatches
+            # carry no locale; persist the requested one on first run and fall
+            # back to it on re-runs so recovered scanned docs keep the user's
+            # OCR language instead of degrading to the default set.
+            if locale:
+                if doc.parse_requested_locale != locale:
+                    doc.parse_requested_locale = locale  # persisted by the cleanup commit below
+            else:
+                locale = doc.parse_requested_locale
 
             # Delete stale Qdrant vectors BEFORE deleting any DB rows (R2b ordering fix).
             # Doing Qdrant first means a Qdrant outage leaves the document's existing
@@ -322,6 +367,11 @@ def parse_document(self, document_id: str, locale: str | None = None) -> None:
             doc.summary = None
             doc.suggested_questions = None
             doc.status = "parsing"
+            # Explicit liveness bump: on a re-run all the assignments above can
+            # be ORM no-ops (values already 0/None/'parsing'), skipping the
+            # UPDATE entirely — the watchdog would then read a stale
+            # updated_at and claim a doc whose task is alive (Codex r3).
+            doc.updated_at = func.now()
             db.add(doc)
             db.commit()
             logger.info("Cleaned up partial data for %s, starting fresh parse", document_id)
@@ -657,9 +707,10 @@ def parse_document(self, document_id: str, locale: str | None = None) -> None:
                 except Exception as e:
                     logger.warning("ensure_collection failed or skipped: %s", e)
 
-                # Load chunk columns as plain tuples: ORM instances expire on
-                # every per-batch commit below, and re-reading their attributes
-                # would trigger one refresh SELECT per chunk.
+                # Load chunk columns as plain tuples: the loop below only needs
+                # (id, text, chunk_index, page_start), and keeping ORM
+                # instances here previously led to one UPDATE flush per chunk
+                # for the vector_id backfill (now a single per-batch UPDATE).
                 chunks = db.execute(
                     select(Chunk.id, Chunk.text, Chunk.chunk_index, Chunk.page_start)
                     .where(Chunk.document_id == doc.id)
@@ -770,3 +821,40 @@ def parse_document(self, document_id: str, locale: str | None = None) -> None:
                 document_id, retries + 1, _PARSE_MAX_RETRIES + 1,
             )
         raise
+    except Exception:
+        # Unhandled non-soft-limit failure (e.g. the cleanup deletes — every
+        # persist stage has its own handler). Mirror the soft-limit gating:
+        # only the FINAL attempt writes a terminal error; earlier attempts
+        # re-raise for autoretry with the doc left non-terminal. Without this,
+        # a persistent failure exhausted all retries with the doc stuck in
+        # 'parsing' — and the watchdog would then spawn fresh three-attempt
+        # chains forever (Codex r3).
+        retries = getattr(getattr(self, "request", None), "retries", 0) or 0
+        if retries >= _PARSE_MAX_RETRIES:
+            logger.exception(
+                "parse_document failed terminally for %s (final attempt %d)",
+                document_id, retries + 1,
+            )
+            _fail_doc_fresh_session(document_id, "PARSE_FAILED")
+        else:
+            logger.warning(
+                "parse_document attempt %d/%d failed for %s; autoretry pending",
+                retries + 1, _PARSE_MAX_RETRIES + 1, document_id,
+            )
+        raise
+    finally:
+        try:
+            if got_lock:
+                lock_conn.execute(
+                    text("SELECT pg_advisory_unlock(:ns, hashtext(:key))"),
+                    {"ns": _PARSE_LOCK_NAMESPACE, "key": document_id},
+                )
+        except Exception:
+            # Connection death releases the lock server-side; closing below is
+            # then best-effort.
+            logger.warning("Advisory unlock failed for %s (lock dies with the connection)", document_id)
+        finally:
+            try:
+                lock_conn.close()
+            except Exception:
+                pass

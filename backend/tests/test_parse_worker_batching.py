@@ -32,6 +32,145 @@ from app.models.tables import DocumentElement, Page
 from app.workers import parse_worker
 
 
+class TestSerializationGuards:
+    """Codex r3: per-document serialization + stale-message rejection +
+    requested-locale durability + generic terminal failures."""
+
+    def test_terminal_status_dispatch_is_a_noop(self, monkeypatch):
+        doc = _make_doc(uuid.uuid4())
+        doc.status = "ready"
+        session = _RecordingSession(doc)
+        _wire_minimal_pdf_parse(monkeypatch, lambda: session)
+
+        parse_worker.parse_document.run(str(doc.id))
+
+        assert session.executed == []  # no cleanup deletes, no inserts
+        assert session.commits == 0
+        assert doc.status == "ready"
+
+    def test_lock_busy_is_a_noop(self, monkeypatch):
+        doc = _make_doc(uuid.uuid4())
+        session = _RecordingSession(doc)
+        _wire_minimal_pdf_parse(monkeypatch, lambda: session, lock_granted=False)
+
+        parse_worker.parse_document.run(str(doc.id))
+
+        assert session.executed == []
+        assert session.commits == 0
+        assert doc.status == "parsing"
+
+    def test_requested_locale_is_persisted_on_first_run(self, monkeypatch):
+        doc = _make_doc(uuid.uuid4())
+        session = _RecordingSession(doc)
+        calls = {"n": 0}
+
+        def _factory():
+            calls["n"] += 1
+            return session if calls["n"] == 1 else _RecordingSession(doc)
+
+        _wire_minimal_pdf_parse(monkeypatch, _factory)
+
+        # The stubbed session returns None for the embedding SELECT, so the run
+        # ends in VECTORIZE_FAILED — irrelevant here; the locale write happens
+        # with the cleanup commit long before that.
+        parse_worker.parse_document.run(str(doc.id), locale="de")
+
+        assert doc.parse_requested_locale == "de"
+
+    def test_recovery_dispatch_falls_back_to_persisted_locale_for_ocr(self, monkeypatch):
+        """A watchdog/startup dispatch carries no locale: the task must reuse
+        the persisted requested locale when resolving OCR languages."""
+        doc = _make_doc(uuid.uuid4())
+        doc.parse_requested_locale = "ja"
+        session = _RecordingSession(doc)
+        _wire_minimal_pdf_parse(monkeypatch, lambda: session)
+        monkeypatch.setattr(parse_worker.settings, "OCR_ENABLED", True)
+        monkeypatch.setattr(parse_worker.settings, "OCR_DPI", 150)
+        monkeypatch.setattr(parse_worker, "detect_script_osd", lambda *_a, **_k: "Japanese")
+
+        resolver_calls: list[tuple] = []
+
+        def _fake_resolve(locale=None, script=None):
+            resolver_calls.append((locale, script))
+            return "jpn"
+
+        monkeypatch.setattr(parse_worker, "resolve_ocr_languages", _fake_resolve)
+
+        class _ScannedParseService:
+            def extract_pages(self, _b):
+                return [SimpleNamespace(page_number=1, width_pt=612.0, height_pt=792.0, rotation=0, blocks=[], raw_text="")]
+
+            def detect_scanned(self, _p) -> bool:
+                return True
+
+            def extract_pages_ocr(self, _b, *, languages, dpi):
+                return [
+                    SimpleNamespace(
+                        page_number=1,
+                        width_pt=612.0,
+                        height_pt=792.0,
+                        rotation=0,
+                        blocks=[SimpleNamespace(text="x" * 60, bbox=(0, 0, 1, 1), font_size=12.0, page=1)],
+                        raw_text="x" * 60,
+                    )
+                ]
+
+        monkeypatch.setattr(parse_worker, "ParseService", _ScannedParseService)
+
+        parse_worker.parse_document.run(str(doc.id))  # no locale argument
+
+        assert resolver_calls == [("ja", "Japanese")]
+
+    def test_generic_failure_final_attempt_marks_parse_failed(self, monkeypatch):
+        """Codex r3: a persistent NON-soft failure (here: the unguarded
+        cleanup deletes) must terminalize on the final attempt — otherwise the
+        doc stays 'parsing' and the watchdog spawns fresh chains forever."""
+        doc = _make_doc(uuid.uuid4())
+
+        class _CleanupFailSession(_RecordingSession):
+            def execute(self, stmt, params=None):
+                raise RuntimeError("relation is corrupted")
+
+        fresh_sessions: list[_RecordingSession] = []
+        calls = {"n": 0}
+
+        def _factory():
+            calls["n"] += 1
+            if calls["n"] == 1:
+                return _CleanupFailSession(doc)
+            fresh = _RecordingSession(doc)
+            fresh_sessions.append(fresh)
+            return fresh
+
+        _wire_minimal_pdf_parse(monkeypatch, _factory)
+
+        parse_worker.parse_document.push_request(retries=parse_worker._PARSE_MAX_RETRIES)
+        try:
+            with pytest.raises(RuntimeError, match="corrupted"):
+                parse_worker.parse_document.run(str(doc.id))
+        finally:
+            parse_worker.parse_document.pop_request()
+
+        assert doc.status == "error"
+        assert doc.error_msg.startswith("ERR_CODE:PARSE_FAILED:")
+        assert fresh_sessions, "terminal status must be written on a fresh session"
+
+    def test_generic_failure_with_retries_remaining_stays_non_terminal(self, monkeypatch):
+        doc = _make_doc(uuid.uuid4())
+
+        class _CleanupFailSession(_RecordingSession):
+            def execute(self, stmt, params=None):
+                raise RuntimeError("transient")
+
+        _wire_minimal_pdf_parse(monkeypatch, lambda: _CleanupFailSession(doc))
+
+        with pytest.raises(RuntimeError, match="transient"):
+            parse_worker.parse_document.run(str(doc.id))  # retries=0
+
+        assert doc.status == "parsing"
+        assert doc.error_msg is None
+
+
 class TestWatchdogNoCandidates:
     def test_no_candidates_dispatches_nothing(self, monkeypatch):
         class _EmptyResult:
@@ -124,6 +263,42 @@ class TestStaleProcessingWatchdog:
                     if row:
                         db.delete(row)
                 db.commit()
+
+
+@pytest.mark.integration
+class TestAdvisoryLockSemantics:
+    """Real-Postgres smoke for the serialization primitive: a held lock denies
+    a second connection and frees on release/disconnect."""
+
+    def test_lock_denies_second_connection_until_released(self):
+        from sqlalchemy import text as sa_text
+
+        from app.models.sync_database import sync_engine as real_engine
+
+        key = str(uuid.uuid4())
+        ns = parse_worker._PARSE_LOCK_NAMESPACE
+        c1 = real_engine.connect().execution_options(isolation_level="AUTOCOMMIT")
+        c2 = real_engine.connect().execution_options(isolation_level="AUTOCOMMIT")
+        try:
+            got1 = c1.execute(
+                sa_text("SELECT pg_try_advisory_lock(:ns, hashtext(:k))"), {"ns": ns, "k": key}
+            ).scalar()
+            assert got1 is True
+
+            got2 = c2.execute(
+                sa_text("SELECT pg_try_advisory_lock(:ns, hashtext(:k))"), {"ns": ns, "k": key}
+            ).scalar()
+            assert got2 is False
+
+            c1.execute(sa_text("SELECT pg_advisory_unlock(:ns, hashtext(:k))"), {"ns": ns, "k": key})
+            got2b = c2.execute(
+                sa_text("SELECT pg_try_advisory_lock(:ns, hashtext(:k))"), {"ns": ns, "k": key}
+            ).scalar()
+            assert got2b is True
+            c2.execute(sa_text("SELECT pg_advisory_unlock(:ns, hashtext(:k))"), {"ns": ns, "k": key})
+        finally:
+            c1.close()
+            c2.close()
 
 
 @pytest.mark.integration
@@ -375,12 +550,44 @@ def _make_doc(doc_id: uuid.UUID) -> SimpleNamespace:
         summary=None,
         suggested_questions=None,
         error_msg=None,
+        parse_requested_locale=None,
+        updated_at=None,
     )
 
 
-def _wire_minimal_pdf_parse(monkeypatch, session_factory):
-    """Common stubs: download, no OCR, stub Qdrant, one fake extracted page."""
+class _StubLockResult:
+    def __init__(self, value):
+        self._value = value
+
+    def scalar(self):
+        return self._value
+
+
+class _StubLockConn:
+    """Stands in for the dedicated advisory-lock connection so unit tests
+    never touch a real database."""
+
+    def __init__(self, granted: bool = True):
+        self.granted = granted
+
+    def execution_options(self, **_kw):
+        return self
+
+    def execute(self, _stmt, _params=None):
+        return _StubLockResult(self.granted)
+
+    def close(self):
+        return None
+
+
+def _wire_minimal_pdf_parse(monkeypatch, session_factory, *, lock_granted: bool = True):
+    """Common stubs: download, no OCR, stub Qdrant + advisory lock, one fake page."""
     monkeypatch.setattr(parse_worker, "SyncSessionLocal", session_factory)
+    monkeypatch.setattr(
+        parse_worker,
+        "sync_engine",
+        SimpleNamespace(connect=lambda: _StubLockConn(granted=lock_granted)),
+    )
     monkeypatch.setattr(parse_worker, "_download_file_bytes", lambda *_a, **_k: b"%PDF-1.4\nfake")
     monkeypatch.setattr(parse_worker.settings, "OCR_ENABLED", False)
     monkeypatch.setattr(parse_worker.embedding_service, "ensure_collection", lambda *_a, **_k: None)
@@ -611,13 +818,20 @@ class TestPersistFailurePaths:
             captured: list[tuple[BaseException, object]] = []
 
             def _fake_retry(*_a, exc=None, max_retries=None, **_kw):
+                # Model real Celery semantics (r3 MINOR): retry() bumps the
+                # count and, once it would exceed max_retries, re-raises the
+                # supplied exception instead of scheduling (raising Retry).
                 captured.append((exc, max_retries))
-                raise Retry("scheduled")  # what worker-context retry raises
+                current = parse_worker.parse_document.request.retries
+                if max_retries is not None and current + 1 > max_retries:
+                    raise exc
+                raise Retry("scheduled")
 
             monkeypatch.setattr(parse_worker.parse_document, "retry", _fake_retry)
             parse_worker.parse_document.push_request(retries=retries, called_directly=False)
+            expected_raise = SoftTimeLimitExceeded if expect_terminal else Retry
             try:
-                with pytest.raises(Retry):
+                with pytest.raises(expected_raise):
                     parse_worker.parse_document.run(str(doc_id))
             finally:
                 parse_worker.parse_document.pop_request()

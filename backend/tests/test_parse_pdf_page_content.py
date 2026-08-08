@@ -91,6 +91,8 @@ class TestParseWorkerPersistsPdfPageContent:
             summary=None,
             suggested_questions=None,
             error_msg=None,
+            parse_requested_locale=None,
+            updated_at=None,
         )
 
         class _StubParseSession:
@@ -124,6 +126,20 @@ class TestParseWorkerPersistsPdfPageContent:
 
         stub_session = _StubParseSession(doc)
         monkeypatch.setattr(parse_worker, "SyncSessionLocal", lambda: stub_session)
+
+        # Advisory-lock connection stub (the worker serializes per-document on
+        # a dedicated connection since Codex r3) — never touch a real DB here.
+        class _LockConn:
+            def execution_options(self, **_kw):
+                return self
+
+            def execute(self, _stmt, _params=None):
+                return SimpleNamespace(scalar=lambda: True)
+
+            def close(self):
+                return None
+
+        monkeypatch.setattr(parse_worker, "sync_engine", SimpleNamespace(connect=lambda: _LockConn()))
         monkeypatch.setattr(parse_worker, "_download_file_bytes", lambda *_a, **_k: b"%PDF-1.4\nfake")
         monkeypatch.setattr(parse_worker.settings, "OCR_ENABLED", False)
 

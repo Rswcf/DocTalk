@@ -129,9 +129,24 @@ def test_parse_document_uses_forwarded_locale_for_ocr(monkeypatch) -> None:
         summary=None,
         suggested_questions=None,
         error_msg=None,
+        parse_requested_locale=None,
+        updated_at=None,
     )
     stub_session = _StubParseSession(doc)
     monkeypatch.setattr(parse_worker, "SyncSessionLocal", lambda: stub_session)
+
+    # Advisory-lock connection stub (per-document serialization, Codex r3)
+    class _LockConn:
+        def execution_options(self, **_kw):
+            return self
+
+        def execute(self, _stmt, _params=None):
+            return SimpleNamespace(scalar=lambda: True)
+
+        def close(self):
+            return None
+
+    monkeypatch.setattr(parse_worker, "sync_engine", SimpleNamespace(connect=lambda: _LockConn()))
     monkeypatch.setattr(parse_worker, "_download_file_bytes", lambda *_args, **_kwargs: b"%PDF-1.4\nfake")
     monkeypatch.setattr(parse_worker.settings, "OCR_ENABLED", True)
     monkeypatch.setattr(parse_worker.settings, "OCR_DPI", 300)
