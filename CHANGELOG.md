@@ -8,6 +8,19 @@ releases use `0.minor.patch` semantics such as `0.2.0` and `0.2.1`.
 
 ## [Unreleased]
 
+## [0.28.1] - 2026-08-08
+
+### Fixed
+- Document processing is fast again. Uploads had slowed to minutes (and very
+  large documents failed outright) because the backend had been running on a
+  different continent from its database since late May — every database
+  round trip paid transatlantic latency, and parsing wrote thousands of rows
+  one round trip at a time. The backend is back next to its data stores, and
+  the parser now writes pages, structure elements, and chunks in batches.
+- Documents that hit the parsing time limit are now reported as a timeout
+  (and retried automatically) instead of being mislabeled as a database
+  failure and abandoned.
+
 ## [0.28.0] - 2026-08-04
 
 ### Changed
