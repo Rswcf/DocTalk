@@ -59,7 +59,10 @@ class TestSerializationGuards:
         assert session.commits == 0
         assert doc.status == "parsing"
 
-    def test_requested_locale_is_persisted_on_first_run(self, monkeypatch):
+    def test_worker_never_writes_the_stored_locale(self, monkeypatch):
+        """r4 #2: dispatchers own parse_requested_locale (written atomically
+        with status='parsing' before publish); the worker must not write it —
+        a stale message's argument could otherwise overwrite a newer request."""
         doc = _make_doc(uuid.uuid4())
         session = _RecordingSession(doc)
         calls = {"n": 0}
@@ -70,12 +73,9 @@ class TestSerializationGuards:
 
         _wire_minimal_pdf_parse(monkeypatch, _factory)
 
-        # The stubbed session returns None for the embedding SELECT, so the run
-        # ends in VECTORIZE_FAILED — irrelevant here; the locale write happens
-        # with the cleanup commit long before that.
         parse_worker.parse_document.run(str(doc.id), locale="de")
 
-        assert doc.parse_requested_locale == "de"
+        assert doc.parse_requested_locale is None
 
     def test_recovery_dispatch_falls_back_to_persisted_locale_for_ocr(self, monkeypatch):
         """A watchdog/startup dispatch carries no locale: the task must reuse
@@ -120,6 +120,51 @@ class TestSerializationGuards:
         parse_worker.parse_document.run(str(doc.id))  # no locale argument
 
         assert resolver_calls == [("ja", "Japanese")]
+
+    def test_message_locale_argument_is_ignored(self, monkeypatch):
+        """A stale redelivered message carrying an old locale must not win
+        over the stored (NULL = defaults) request (r4 #2)."""
+        doc = _make_doc(uuid.uuid4())
+        doc.parse_requested_locale = None
+        session = _RecordingSession(doc)
+        _wire_minimal_pdf_parse(monkeypatch, lambda: session)
+        monkeypatch.setattr(parse_worker.settings, "OCR_ENABLED", True)
+        monkeypatch.setattr(parse_worker.settings, "OCR_DPI", 150)
+        monkeypatch.setattr(parse_worker, "detect_script_osd", lambda *_a, **_k: "Latin")
+
+        resolver_calls: list[tuple] = []
+
+        def _fake_resolve(locale=None, script=None):
+            resolver_calls.append((locale, script))
+            return "eng"
+
+        monkeypatch.setattr(parse_worker, "resolve_ocr_languages", _fake_resolve)
+
+        class _ScannedParseService:
+            def extract_pages(self, _b):
+                return [SimpleNamespace(page_number=1, width_pt=612.0, height_pt=792.0, rotation=0, blocks=[], raw_text="")]
+
+            def detect_scanned(self, _p) -> bool:
+                return True
+
+            def extract_pages_ocr(self, _b, *, languages, dpi):
+                return [
+                    SimpleNamespace(
+                        page_number=1,
+                        width_pt=612.0,
+                        height_pt=792.0,
+                        rotation=0,
+                        blocks=[SimpleNamespace(text="y" * 60, bbox=(0, 0, 1, 1), font_size=12.0, page=1)],
+                        raw_text="y" * 60,
+                    )
+                ]
+
+        monkeypatch.setattr(parse_worker, "ParseService", _ScannedParseService)
+
+        parse_worker.parse_document.run(str(doc.id), locale="ja")  # stale argument
+
+        assert resolver_calls == [(None, "Latin")]
+        assert doc.parse_requested_locale is None
 
     def test_generic_failure_final_attempt_marks_parse_failed(self, monkeypatch):
         """Codex r3: a persistent NON-soft failure (here: the unguarded
@@ -169,6 +214,78 @@ class TestSerializationGuards:
 
         assert doc.status == "parsing"
         assert doc.error_msg is None
+
+    def test_chained_soft_limit_in_unguarded_cleanup_keeps_timeout_taxonomy(self, monkeypatch):
+        """r4 MINOR: a soft limit surfacing as a chained driver error in the
+        UNGUARDED cleanup deletes must terminalize as PARSE_TIMEOUT, not
+        PARSE_FAILED."""
+        doc = _make_doc(uuid.uuid4())
+
+        class _CleanupSoftLimitSession(_RecordingSession):
+            def execute(self, stmt, params=None):
+                try:
+                    raise SoftTimeLimitExceeded()
+                except SoftTimeLimitExceeded:
+                    raise RuntimeError("sending query failed mid-cleanup")
+
+        fresh_sessions: list[_RecordingSession] = []
+        calls = {"n": 0}
+
+        def _factory():
+            calls["n"] += 1
+            if calls["n"] == 1:
+                return _CleanupSoftLimitSession(doc)
+            fresh = _RecordingSession(doc)
+            fresh_sessions.append(fresh)
+            return fresh
+
+        _wire_minimal_pdf_parse(monkeypatch, _factory)
+
+        parse_worker.parse_document.push_request(retries=parse_worker._PARSE_MAX_RETRIES)
+        try:
+            with pytest.raises(RuntimeError, match="mid-cleanup"):
+                parse_worker.parse_document.run(str(doc.id))
+        finally:
+            parse_worker.parse_document.pop_request()
+
+        assert doc.status == "error"
+        assert doc.error_msg.startswith("ERR_CODE:PARSE_TIMEOUT:")
+
+    def test_unlock_failure_invalidates_the_lock_connection(self, monkeypatch):
+        """r4 #1: close() would return a pooled connection with the advisory
+        lock still held — the doc would then be lock-busy for every later
+        parse until the pool recycles it. On unlock failure the connection
+        must be physically invalidated."""
+        doc = _make_doc(uuid.uuid4())
+        doc.status = "ready"  # cheapest path: lock -> status no-op -> finally
+
+        class _FailingUnlockConn(_StubLockConn):
+            def __init__(self):
+                super().__init__(granted=True)
+                self.executes = 0
+                self.invalidated = False
+                self.closed = False
+
+            def execute(self, _stmt, _params=None):
+                self.executes += 1
+                if self.executes > 1:  # first = lock, second = unlock
+                    raise RuntimeError("connection interrupted")
+                return _StubLockResult(True)
+
+            def invalidate(self):
+                self.invalidated = True
+
+            def close(self):
+                self.closed = True
+
+        conn = _FailingUnlockConn()
+        monkeypatch.setattr(parse_worker, "SyncSessionLocal", lambda: _RecordingSession(doc))
+        monkeypatch.setattr(parse_worker, "sync_engine", SimpleNamespace(connect=lambda: conn))
+
+        parse_worker.parse_document.run(str(doc.id))
+
+        assert conn.invalidated, "unlock failure must physically discard the connection"
+        assert conn.closed
 
 
 class TestWatchdogNoCandidates:

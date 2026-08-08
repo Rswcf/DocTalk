@@ -77,9 +77,28 @@ async def main() -> None:
 
         if args.enqueue and enqueue:
             from app.workers.parse_worker import parse_document
+            claimed = 0
             for did in enqueue:
-                parse_document.delay(did, locale=args.locale)
-            print(f"\nENQUEUED {len(enqueue)} re-parse tasks (locale={args.locale}).")
+                # Atomic claim (Codex r4): the worker's terminal-status guard
+                # no-ops any dispatch for a doc that isn't in a processing
+                # status, so the claim must flip status to 'parsing' (and
+                # persist the authoritative locale — the worker reads only the
+                # column) BEFORE publishing. rowcount 0 = doc changed state
+                # under us; skip rather than double-dispatch.
+                res = await con.execute(
+                    """
+                    UPDATE documents
+                    SET status = 'parsing', parse_requested_locale = $2, updated_at = now()
+                    WHERE id = $1::uuid AND status = 'ready'
+                    """,
+                    did, args.locale,
+                )
+                if res != "UPDATE 1":
+                    print(f"  SKIP {did}: no longer 'ready' (claim failed: {res})")
+                    continue
+                parse_document.delay(did)
+                claimed += 1
+            print(f"\nENQUEUED {claimed} re-parse tasks (locale={args.locale}).")
         elif args.enqueue:
             print("\nNothing to enqueue.")
     finally:

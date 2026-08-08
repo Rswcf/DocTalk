@@ -114,7 +114,10 @@ def test_queue_document_brief_dispatches_task(monkeypatch) -> None:
     assert queued == ["doc-123"]
 
 
-def test_parse_document_uses_forwarded_locale_for_ocr(monkeypatch) -> None:
+def test_parse_document_uses_stored_locale_for_ocr(monkeypatch) -> None:
+    """Since Codex r4 the worker derives the OCR locale ONLY from the stored
+    documents.parse_requested_locale (dispatchers persist it atomically with
+    status='parsing' before publishing); the message argument is ignored."""
     doc_id = uuid.uuid4()
     doc = SimpleNamespace(
         id=doc_id,
@@ -129,7 +132,7 @@ def test_parse_document_uses_forwarded_locale_for_ocr(monkeypatch) -> None:
         summary=None,
         suggested_questions=None,
         error_msg=None,
-        parse_requested_locale=None,
+        parse_requested_locale="ja",
         updated_at=None,
     )
     stub_session = _StubParseSession(doc)
@@ -191,8 +194,9 @@ def test_parse_document_uses_forwarded_locale_for_ocr(monkeypatch) -> None:
     monkeypatch.setattr(parse_worker, "resolve_ocr_languages", fake_resolve_ocr_languages)
     monkeypatch.setattr(parse_worker, "ParseService", _FakeParseService)
 
-    parse_worker.parse_document.run(str(doc_id), locale="ja")
+    # No locale argument — the stored column is the only source of truth.
+    parse_worker.parse_document.run(str(doc_id))
 
-    # locale forwarded + OSD script passed to the resolver; resolved languages used for OCR
+    # stored locale + OSD script passed to the resolver; resolved languages used for OCR
     assert resolver_calls == [("ja", "Japanese")]
     assert ocr_calls == [("jpn", 300)]

@@ -155,6 +155,24 @@ def _fail_doc_fresh_session(document_id: str, code: str) -> bool:
         return False
 
 
+def _log_and_maybe_terminalize_timeout(task, document_id: str, message: str) -> None:
+    """Soft-limit exit path shared by the direct handler and the chained-error
+    unwrap (r4 MINOR): only the FINAL attempt writes terminal PARSE_TIMEOUT;
+    earlier attempts leave the doc non-terminal for the pending autoretry."""
+    retries = getattr(getattr(task, "request", None), "retries", 0) or 0
+    if retries >= _PARSE_MAX_RETRIES:
+        logger.warning(
+            "parse_document soft time limit exceeded for %s (final attempt %d)",
+            document_id, retries + 1,
+        )
+        _set_timeout_error(document_id, message)
+    else:
+        logger.warning(
+            "parse_document soft time limit exceeded for %s (attempt %d/%d; retry pending, status stays non-terminal)",
+            document_id, retries + 1, _PARSE_MAX_RETRIES + 1,
+        )
+
+
 def _set_timeout_error(document_id: str, message: str) -> None:
     try:
         doc_uuid = uuid.UUID(document_id)
@@ -309,15 +327,19 @@ def parse_document(self, document_id: str, locale: str | None = None) -> None:
                 )
                 return
 
-            # Requested-locale durability (Codex r3): recovery dispatches
-            # carry no locale; persist the requested one on first run and fall
-            # back to it on re-runs so recovered scanned docs keep the user's
-            # OCR language instead of degrading to the default set.
-            if locale:
-                if doc.parse_requested_locale != locale:
-                    doc.parse_requested_locale = locale  # persisted by the cleanup commit below
-            else:
-                locale = doc.parse_requested_locale
+            # Requested-locale durability (Codex r3/r4): every dispatcher that
+            # transitions a doc to 'parsing' persists the authoritative locale
+            # (including an intentional NULL = platform defaults) in the SAME
+            # commit, BEFORE publishing. The worker only READS the stored
+            # value; the message's locale argument is deliberately ignored so
+            # a stale redelivered message can never resurrect an older
+            # request (r4 #2).
+            if locale and locale != doc.parse_requested_locale:
+                logger.info(
+                    "Parse %s: message locale %r superseded by stored %r",
+                    document_id, locale, doc.parse_requested_locale,
+                )
+            locale = doc.parse_requested_locale
 
             # Delete stale Qdrant vectors BEFORE deleting any DB rows (R2b ordering fix).
             # Doing Qdrant first means a Qdrant outage leaves the document's existing
@@ -808,20 +830,15 @@ def parse_document(self, document_id: str, locale: str | None = None) -> None:
         # lets a user-triggered parse race the retry — both would delete each
         # other's rows/vectors (Codex r1 #2). While retries remain, the doc
         # stays 'parsing', which the reparse endpoint rejects with 409.
-        retries = getattr(getattr(self, "request", None), "retries", 0) or 0
-        if retries >= _PARSE_MAX_RETRIES:
-            logger.warning(
-                "parse_document soft time limit exceeded for %s (final attempt %d)",
-                document_id, retries + 1,
-            )
-            _set_timeout_error(document_id, timeout_message)
-        else:
-            logger.warning(
-                "parse_document soft time limit exceeded for %s (attempt %d/%d; retry pending, status stays non-terminal)",
-                document_id, retries + 1, _PARSE_MAX_RETRIES + 1,
-            )
+        _log_and_maybe_terminalize_timeout(self, document_id, timeout_message)
         raise
-    except Exception:
+    except Exception as e:
+        # A soft limit that landed inside an UNGUARDED DB call (e.g. the
+        # cleanup deletes) surfaces here as a chained driver error — keep the
+        # timeout taxonomy instead of mislabeling it PARSE_FAILED (r4 MINOR).
+        if _chain_has_soft_limit(e):
+            _log_and_maybe_terminalize_timeout(self, document_id, timeout_message)
+            raise
         # Unhandled non-soft-limit failure (e.g. the cleanup deletes — every
         # persist stage has its own handler). Mirror the soft-limit gating:
         # only the FINAL attempt writes a terminal error; earlier attempts
@@ -850,9 +867,17 @@ def parse_document(self, document_id: str, locale: str | None = None) -> None:
                     {"ns": _PARSE_LOCK_NAMESPACE, "key": document_id},
                 )
         except Exception:
-            # Connection death releases the lock server-side; closing below is
-            # then best-effort.
-            logger.warning("Advisory unlock failed for %s (lock dies with the connection)", document_id)
+            # close() would RETURN the pooled connection with the session-level
+            # lock still held — every later parse of this doc would then no-op
+            # on lock-busy until the pool recycles it (r4 #1). Invalidate to
+            # physically terminate the PG session; the lock dies with it.
+            logger.warning(
+                "Advisory unlock failed for %s; invalidating the lock connection", document_id
+            )
+            try:
+                lock_conn.invalidate()
+            except Exception:
+                pass
         finally:
             try:
                 lock_conn.close()

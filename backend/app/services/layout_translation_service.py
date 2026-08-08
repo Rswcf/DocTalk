@@ -520,6 +520,7 @@ def _import_translated_pdf_to_document_sync(
             status="parsing",
             user_id=job.user_id,
             file_type="pdf",
+            parse_requested_locale=target_language,  # authoritative; worker reads only the column (Codex r4)
         )
         db.add(translated_doc)
         db.add(

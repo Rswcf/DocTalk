@@ -93,6 +93,10 @@ class DocService:
             status="parsing",
             user_id=user_id,  # Associate with user if authenticated
             file_type=file_type,
+            # Persisted with the same commit that opens 'parsing', BEFORE the
+            # task is published: recovery dispatches (watchdog/startup) carry
+            # no locale and the worker reads only this stored value (Codex r4).
+            parse_requested_locale=locale,
         )
         db.add(doc)
         await db.commit()

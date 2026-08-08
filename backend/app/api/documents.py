@@ -444,6 +444,7 @@ async def ingest_url(
             user_id=user.id,
             file_type="pdf",
             source_url=url,
+            parse_requested_locale=body.locale,  # authoritative; worker reads only the column (Codex r4)
         )
         db.add(doc)
         await db.commit()
@@ -490,6 +491,7 @@ async def ingest_url(
             user_id=user.id,
             file_type="url",
             source_url=url,
+            parse_requested_locale=body.locale,  # authoritative; worker reads only the column (Codex r4)
         )
         db.add(doc)
         await db.commit()
@@ -840,6 +842,11 @@ async def reparse_document(
             },
         )
     doc.status = "parsing"
+    # Overwrite (or intentionally RESET to NULL = platform defaults) the stored
+    # request in the same commit that opens 'parsing' — the worker reads only
+    # this column, so a stale queued message with an older locale can never
+    # override the newest request (Codex r4).
+    doc.parse_requested_locale = body.locale if body else None
     db.add(doc)
     await db.commit()
     from app.workers.parse_worker import parse_document
