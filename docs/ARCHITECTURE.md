@@ -1396,6 +1396,60 @@ stat→put TOCTOU is accepted on that documented invariant. Pre-incident user
 document files were unrecoverable (no storage backup existed — open ops
 risk).
 
+### Cross-region topology + parse recovery lifecycle (2026-08-08, v0.28.1)
+
+**Incident**: from 2026-05-23 the backend service was auto-placed in
+`europe-west4` while Postgres/Redis/Qdrant/MinIO stayed in `us-west2` — every
+DB round trip cost ~150ms, and the parse worker's one-INSERT-per-ORM-row
+persistence made that multiplicative: a 10-page PDF took 190s, 220+-page
+documents died at the 540s soft limit inside element persistence, and the
+timeout was mislabeled `PERSIST_ELEMENTS_FAILED` with Celery recording success
+(no retry). Throughput telemetry: ~400 rows/s before 2026-05-21, 4–6 rows/s
+after 2026-05-24.
+
+**Region invariant**: backend + retainpdf-sidecar are explicitly pinned to
+`us-west2` via `serviceInstanceUpdate(input: {multiRegionConfig: {"us-west2":
+{"numReplicas": 1}}})` (the `region` input field is silently ignored, and the
+instance's `region` READBACK is always null — verify with the container's
+`RAILWAY_REPLICA_REGION` env var after deploying). Data services carry the same
+pinned config. Do NOT migrate the stateful services between regions.
+
+**Parse write path** (Codex 6-round CONSENSUS, `.collab/reviews/`
+`2026-08-08-parse-batching-CONSENSUS.md` — do not regress):
+
+- Pages/elements/chunks persist via batched executemany (`_insert_rows_batched`,
+  500/batch, one commit per stage); embedding loads chunk column tuples and
+  backfills `vector_id` with one `UPDATE ... WHERE id IN (batch)`.
+- **Per-document serialization**: the task holds
+  `pg_try_advisory_lock(947, hashtext(document_id))` on a dedicated autocommit
+  connection for its whole run; lock-busy dispatches no-op; unlock failure
+  `invalidate()`s the connection (close() alone would return a pooled PG
+  session with the lock still held). A duplicate that serializes behind a
+  finished run no-ops on the **terminal-status check** — every dispatcher must
+  set `status='parsing'` (atomically, via conditional UPDATE where racing is
+  possible) BEFORE `.delay()`.
+- **Terminal-state gating**: only the FINAL autoretry attempt writes terminal
+  status (`PARSE_TIMEOUT` for soft limits — including chained ones unwrapped
+  from driver errors via the full `__cause__`/`__context__` graph — and
+  `PARSE_FAILED` for generic failures), always through a fresh session; a
+  failed status write re-raises so autoretry re-runs. Non-final attempts leave
+  `status='parsing'`, which the reparse endpoint 409s — this closes the
+  user-reparse-vs-pending-autoretry race.
+- **Stale-processing watchdog**: beat task
+  `requeue_stale_processing_documents` (every 30 min) claims docs with no row
+  writes for >45 min via conditional UPDATE (bump `updated_at`, rowcount==1 →
+  dispatch). 45 min deliberately exceeds both the longest legitimate write
+  silence (~11 min) and the broker `visibility_timeout` (40 min) so redelivered
+  tasks always win; the cleanup commit bumps `updated_at` unconditionally so a
+  live run is never ORM-no-op-invisible. Startup recovery calls the same
+  function — never reintroduce blind re-dispatch of all in-flight docs.
+- **`documents.parse_requested_locale` is dispatcher-owned**: written (value or
+  intentional NULL = defaults) in the same commit that opens `parsing`, before
+  publishing. The worker only reads it and ignores the message's locale
+  argument, so recovery dispatches keep the user's OCR language and stale
+  messages can't resurrect an older request. `find_low_quality_docs.py
+  --enqueue` claims via `UPDATE ... WHERE status='ready'` for the same reason.
+
 ### Integration-test isolation (2026-08)
 
 `backend/tests/conftest.py` forces all integration tests onto a scratch
