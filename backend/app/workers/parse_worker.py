@@ -101,30 +101,45 @@ def _insert_rows_batched(db, model, rows: List[dict]) -> None:
 
 
 def _chain_has_soft_limit(exc: BaseException) -> bool:
-    """True if SoftTimeLimitExceeded hides anywhere in the exception chain.
+    """True if SoftTimeLimitExceeded hides anywhere in the exception graph.
 
     The soft-limit signal is delivered asynchronously; when it lands inside a
-    DB driver call it surfaces as an OperationalError whose __context__ is the
+    DB driver call it surfaces as an OperationalError whose __context__ (or,
+    behind layered wrappers, a nested __cause__/__context__) is the
     SoftTimeLimitExceeded. Without unwrapping, the persist handlers would
     mislabel the timeout as PERSIST_*_FAILED and swallow it — Celery then
-    records the task as succeeded and autoretry never fires.
+    records the task as succeeded and autoretry never fires. Both edges must
+    be walked: a node with an explicit __cause__ can still hide the soft
+    limit in its __context__ (Codex r1 #4).
     """
     seen: set[int] = set()
-    cur: Optional[BaseException] = exc
-    while cur is not None and id(cur) not in seen:
+    stack: list[BaseException] = [exc]
+    while stack:
+        cur = stack.pop()
+        if id(cur) in seen:
+            continue
+        seen.add(id(cur))
         if isinstance(cur, SoftTimeLimitExceeded):
             return True
-        seen.add(id(cur))
-        cur = cur.__cause__ or cur.__context__
+        if cur.__cause__ is not None:
+            stack.append(cur.__cause__)
+        if cur.__context__ is not None:
+            stack.append(cur.__context__)
     return False
 
 
-def _fail_doc_fresh_session(document_id: str, code: str) -> None:
+def _fail_doc_fresh_session(document_id: str, code: str) -> bool:
     """Write the error status on a NEW session/connection.
 
     The task session may hold a connection corrupted by an interrupt that
     landed mid-query ("another command is already in progress"); reusing it
     for the status write can fail and leave the document stuck in 'parsing'.
+
+    Returns True when the status is durably recorded (or the document row no
+    longer exists, so there is nothing to record). Returns False when the
+    write itself failed — the caller must NOT swallow the original error in
+    that case, or the document stays 'parsing' forever with the task recorded
+    as succeeded (Codex r1 #3).
     """
     try:
         with SyncSessionLocal() as edb:
@@ -133,8 +148,10 @@ def _fail_doc_fresh_session(document_id: str, code: str) -> None:
                 _set_doc_error(doc, code)
                 edb.add(doc)
                 edb.commit()
+            return True
     except Exception:
         logger.exception("Failed to write error status %s for %s", code, document_id)
+        return False
 
 
 def _set_timeout_error(document_id: str, message: str) -> None:
@@ -163,13 +180,19 @@ def _queue_document_brief(document_id: str) -> None:
         logger.warning("Failed to queue document brief generation for %s: %s", document_id, exc)
 
 
+# Shared by the task decorator and the soft-limit handler: the handler must
+# know whether another attempt is coming to decide between leaving the doc
+# non-terminal ('parsing', retry pending) and writing the terminal timeout.
+_PARSE_MAX_RETRIES = 2
+
+
 @celery_app.task(
     name="app.workers.parse_worker.parse_document",
     bind=True,
     time_limit=600,
     soft_time_limit=540,
     autoretry_for=(Exception,),
-    retry_kwargs={"max_retries": 2},
+    retry_kwargs={"max_retries": _PARSE_MAX_RETRIES},
     retry_backoff=60,
 )
 def parse_document(self, document_id: str, locale: str | None = None) -> None:
@@ -485,7 +508,8 @@ def parse_document(self, document_id: str, locale: str | None = None) -> None:
                 if _chain_has_soft_limit(e):
                     raise SoftTimeLimitExceeded() from e
                 logger.exception("Failed to persist pages for %s: %s", document_id, e)
-                _fail_doc_fresh_session(document_id, "PERSIST_PAGES_FAILED")
+                if not _fail_doc_fresh_session(document_id, "PERSIST_PAGES_FAILED"):
+                    raise  # status not durably recorded — let autoretry re-run the parse
                 return
 
             # Persist canonical document elements (heading/paragraph stream).
@@ -512,7 +536,8 @@ def parse_document(self, document_id: str, locale: str | None = None) -> None:
                 if _chain_has_soft_limit(e):
                     raise SoftTimeLimitExceeded() from e
                 logger.exception("Failed to persist document elements for %s: %s", document_id, e)
-                _fail_doc_fresh_session(document_id, "PERSIST_ELEMENTS_FAILED")
+                if not _fail_doc_fresh_session(document_id, "PERSIST_ELEMENTS_FAILED"):
+                    raise  # status not durably recorded — let autoretry re-run the parse
                 return
 
             # Chunk document (includes cleaning + bbox normalization)
@@ -555,7 +580,8 @@ def parse_document(self, document_id: str, locale: str | None = None) -> None:
                 if _chain_has_soft_limit(e):
                     raise SoftTimeLimitExceeded() from e
                 logger.exception("Failed to persist chunks for %s: %s", document_id, e)
-                _fail_doc_fresh_session(document_id, "PERSIST_CHUNKS_FAILED")
+                if not _fail_doc_fresh_session(document_id, "PERSIST_CHUNKS_FAILED"):
+                    raise  # status not durably recorded — let autoretry re-run the parse
                 return
 
             logger.info("Completed parse stage for %s: %d chunks", document_id, chunks_total)
@@ -657,12 +683,29 @@ def parse_document(self, document_id: str, locale: str | None = None) -> None:
             except SoftTimeLimitExceeded:
                 raise
             except Exception as e:
+                if _chain_has_soft_limit(e):
+                    raise SoftTimeLimitExceeded() from e
                 logger.exception("Embedding/indexing failed for %s: %s", document_id, e)
-                _set_doc_error(doc, "VECTORIZE_FAILED", "Vectorization or indexing failed")
-                db.add(doc)
-                db.commit()
+                if not _fail_doc_fresh_session(document_id, "VECTORIZE_FAILED"):
+                    raise  # status not durably recorded — let autoretry re-run the parse
                 return
     except SoftTimeLimitExceeded:
-        logger.warning("parse_document soft time limit exceeded for %s", document_id)
-        _set_timeout_error(document_id, timeout_message)
+        # Only the FINAL attempt writes the terminal error: 'error' stops the
+        # frontend pollers and re-opens the reparse endpoint (it accepts
+        # ready/error), so publishing it while an autoretry is still pending
+        # lets a user-triggered parse race the retry — both would delete each
+        # other's rows/vectors (Codex r1 #2). While retries remain, the doc
+        # stays 'parsing', which the reparse endpoint rejects with 409.
+        retries = getattr(getattr(self, "request", None), "retries", 0) or 0
+        if retries >= _PARSE_MAX_RETRIES:
+            logger.warning(
+                "parse_document soft time limit exceeded for %s (final attempt %d)",
+                document_id, retries + 1,
+            )
+            _set_timeout_error(document_id, timeout_message)
+        else:
+            logger.warning(
+                "parse_document soft time limit exceeded for %s (attempt %d/%d; retry pending, status stays non-terminal)",
+                document_id, retries + 1, _PARSE_MAX_RETRIES + 1,
+            )
         raise

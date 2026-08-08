@@ -204,6 +204,14 @@ class TestChainHasSoftLimit:
         err.__cause__ = SoftTimeLimitExceeded()
         assert parse_worker._chain_has_soft_limit(err)
 
+    def test_found_via_context_hidden_behind_explicit_cause(self):
+        """Codex r1 #4: a node carrying BOTH edges must have both walked —
+        `__cause__ or __context__` would miss the soft limit here."""
+        err = ValueError("wrapped")
+        err.__cause__ = KeyError("explicit cause, no soft limit")
+        err.__context__ = SoftTimeLimitExceeded()
+        assert parse_worker._chain_has_soft_limit(err)
+
     def test_absent(self):
         try:
             try:
@@ -222,7 +230,7 @@ class TestChainHasSoftLimit:
 
 
 class TestFailDocFreshSession:
-    def test_writes_error_on_new_session(self, monkeypatch):
+    def test_writes_error_on_new_session_and_reports_success(self, monkeypatch):
         doc = SimpleNamespace(status="parsing", error_msg=None)
         fresh = _RecordingSession(doc)
         made: list[object] = []
@@ -233,21 +241,30 @@ class TestFailDocFreshSession:
 
         monkeypatch.setattr(parse_worker, "SyncSessionLocal", _factory)
 
-        parse_worker._fail_doc_fresh_session(str(uuid.uuid4()), "PERSIST_ELEMENTS_FAILED")
+        assert parse_worker._fail_doc_fresh_session(str(uuid.uuid4()), "PERSIST_ELEMENTS_FAILED") is True
 
         assert made, "must open a fresh session"
         assert doc.status == "error"
         assert doc.error_msg.startswith("ERR_CODE:PERSIST_ELEMENTS_FAILED:")
         assert fresh.commits == 1
 
-    def test_swallows_write_failure(self, monkeypatch):
+    def test_missing_document_counts_as_recorded(self, monkeypatch):
+        """Doc row already deleted -> nothing to record; retrying the parse
+        would be pointless, so this must NOT read as a failed write."""
+        monkeypatch.setattr(parse_worker, "SyncSessionLocal", lambda: _RecordingSession(None))
+        assert parse_worker._fail_doc_fresh_session(str(uuid.uuid4()), "PERSIST_PAGES_FAILED") is True
+
+    def test_returns_false_when_write_fails(self, monkeypatch):
+        """Codex r1 #3: the caller must learn the status write failed so it can
+        re-raise the original error instead of returning task success with the
+        document stuck in 'parsing'."""
+
         class _BrokenSession(_RecordingSession):
             def get(self, _model, _doc_id):
                 raise RuntimeError("db down")
 
         monkeypatch.setattr(parse_worker, "SyncSessionLocal", lambda: _BrokenSession(None))
-        # Must not raise — worst case is a log line, never a crash loop.
-        parse_worker._fail_doc_fresh_session(str(uuid.uuid4()), "PERSIST_PAGES_FAILED")
+        assert parse_worker._fail_doc_fresh_session(str(uuid.uuid4()), "PERSIST_PAGES_FAILED") is False
 
 
 def _make_doc(doc_id: uuid.UUID) -> SimpleNamespace:
@@ -297,6 +314,22 @@ def _wire_minimal_pdf_parse(monkeypatch, session_factory):
         def detect_scanned(self, _pages) -> bool:
             return False
 
+        def extract_elements(self, _pages):
+            return []
+
+        def chunk_document(self, _pages):
+            return [
+                SimpleNamespace(
+                    chunk_index=0,
+                    text="chunk text",
+                    token_count=2,
+                    page_start=1,
+                    page_end=1,
+                    bboxes=[],
+                    section_title=None,
+                )
+            ]
+
     monkeypatch.setattr(parse_worker, "ParseService", _FakeParseService)
 
 
@@ -335,10 +368,39 @@ class TestPersistFailurePaths:
         assert fresh_sessions, "error status must be written on a fresh session"
         assert fresh_sessions[-1].commits == 1
 
-    def test_soft_limit_inside_db_error_becomes_parse_timeout(self, monkeypatch):
-        """SoftTimeLimitExceeded surfacing as a chained DB error during element
-        persist must NOT be mislabeled PERSIST_ELEMENTS_FAILED: the doc gets
-        PARSE_TIMEOUT and the task re-raises so Celery records the failure."""
+    def test_persist_failure_with_broken_fresh_session_reraises(self, monkeypatch):
+        """Codex r1 #3: if the fresh-session status write ALSO fails (DB outage),
+        the task must re-raise the original error — returning would record
+        success with the document stuck in 'parsing' forever."""
+        doc_id = uuid.uuid4()
+        doc = _make_doc(doc_id)
+
+        class _FailingParseSession(_RecordingSession):
+            def execute(self, stmt, params=None):
+                if params is not None:  # the batched page INSERT
+                    raise RuntimeError("constraint violation")
+                return super().execute(stmt, params)
+
+        class _BrokenFreshSession(_RecordingSession):
+            def get(self, _model, _doc_id):
+                raise RuntimeError("db down")
+
+        calls = {"n": 0}
+
+        def _factory():
+            calls["n"] += 1
+            return _FailingParseSession(doc) if calls["n"] == 1 else _BrokenFreshSession(None)
+
+        _wire_minimal_pdf_parse(monkeypatch, _factory)
+
+        with pytest.raises(RuntimeError, match="constraint violation"):
+            parse_worker.parse_document.run(str(doc_id))
+
+        assert doc.status == "parsing"  # non-terminal: autoretry will re-run
+
+    def _run_with_soft_limit_in_db_call(self, monkeypatch, *, retries: int):
+        """Drive parse_document into a chained soft-limit DB failure during the
+        pages INSERT, at a given Celery retry count."""
         doc_id = uuid.uuid4()
         doc = _make_doc(doc_id)
 
@@ -365,9 +427,93 @@ class TestPersistFailurePaths:
 
         _wire_minimal_pdf_parse(monkeypatch, _factory)
 
-        with pytest.raises(SoftTimeLimitExceeded):
-            parse_worker.parse_document.run(str(doc_id))
+        parse_worker.parse_document.push_request(retries=retries)
+        try:
+            with pytest.raises(SoftTimeLimitExceeded):
+                parse_worker.parse_document.run(str(doc_id))
+        finally:
+            parse_worker.parse_document.pop_request()
+        return doc, fresh_sessions
+
+    def test_soft_limit_inside_db_error_final_attempt_becomes_parse_timeout(self, monkeypatch):
+        """SoftTimeLimitExceeded surfacing as a chained DB error during persist
+        must NOT be mislabeled PERSIST_*_FAILED: on the FINAL attempt the doc
+        gets PARSE_TIMEOUT (fresh session) and the task re-raises so Celery
+        records the failure."""
+        doc, fresh_sessions = self._run_with_soft_limit_in_db_call(
+            monkeypatch, retries=parse_worker._PARSE_MAX_RETRIES
+        )
 
         assert doc.status == "error"
         assert doc.error_msg.startswith("ERR_CODE:PARSE_TIMEOUT:")
         assert fresh_sessions, "timeout status must be written on a fresh session"
+
+    def test_soft_limit_with_retries_remaining_stays_non_terminal(self, monkeypatch):
+        """Codex r1 #2: while an autoretry is still pending, the doc must NOT
+        be flipped to terminal 'error' — that stops the frontend pollers and
+        re-opens the reparse endpoint mid-backoff, letting a user-triggered
+        parse race the retry. Non-final attempts leave status='parsing'
+        (reparse endpoint 409s) and still re-raise for Celery."""
+        doc, _fresh = self._run_with_soft_limit_in_db_call(monkeypatch, retries=0)
+
+        assert doc.status == "parsing"
+        assert doc.error_msg is None
+
+    def test_soft_limit_inside_embedding_db_error_is_not_vectorize_failed(self, monkeypatch):
+        """Codex r1 #1 (BLOCKER): the embedding handler must unwrap chained
+        soft limits too — otherwise the production failure mode recurs there:
+        VECTORIZE_FAILED written through a corrupted session + task success."""
+        doc_id = uuid.uuid4()
+        doc = _make_doc(doc_id)
+
+        from sqlalchemy.sql import Select
+
+        class _EmbedSoftLimitSession(_RecordingSession):
+            def execute(self, stmt, params=None):
+                if isinstance(stmt, Select):  # the chunk reload before embedding
+                    try:
+                        raise SoftTimeLimitExceeded()
+                    except SoftTimeLimitExceeded:
+                        raise RuntimeError("sending query failed: another command is already in progress")
+                return super().execute(stmt, params)
+
+        _wire_minimal_pdf_parse(monkeypatch, lambda: _EmbedSoftLimitSession(doc))
+
+        with pytest.raises(SoftTimeLimitExceeded):
+            parse_worker.parse_document.run(str(doc_id))
+
+        # Non-final attempt (retries=0): status stays non-terminal for the retry
+        assert doc.status == "parsing"
+        assert doc.error_msg is None
+
+    def test_plain_embedding_failure_marks_vectorize_failed_via_fresh_session(self, monkeypatch):
+        doc_id = uuid.uuid4()
+        doc = _make_doc(doc_id)
+
+        from sqlalchemy.sql import Select
+
+        class _EmbedFailSession(_RecordingSession):
+            def execute(self, stmt, params=None):
+                if isinstance(stmt, Select):
+                    raise RuntimeError("relation vanished")
+                return super().execute(stmt, params)
+
+        task_session = _EmbedFailSession(doc)
+        fresh_sessions: list[_RecordingSession] = []
+        calls = {"n": 0}
+
+        def _factory():
+            calls["n"] += 1
+            if calls["n"] == 1:
+                return task_session
+            fresh = _RecordingSession(doc)
+            fresh_sessions.append(fresh)
+            return fresh
+
+        _wire_minimal_pdf_parse(monkeypatch, _factory)
+
+        parse_worker.parse_document.run(str(doc_id))
+
+        assert doc.status == "error"
+        assert doc.error_msg.startswith("ERR_CODE:VECTORIZE_FAILED:")
+        assert fresh_sessions, "error status must be written on a fresh session"
