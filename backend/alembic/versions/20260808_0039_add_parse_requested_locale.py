@@ -3,9 +3,10 @@
 Recovery re-dispatches (the stale-processing watchdog and startup recovery)
 carry no `locale` argument, so a recovered scanned document would OCR with
 the default language set instead of the one the user's original dispatch
-requested — silently persisting lower-quality text as ready. The parse task
-now persists the requested locale on first run and falls back to this column
-whenever it is invoked without one.
+requested — silently persisting lower-quality text as ready. Dispatchers now
+write this column atomically with every transition to status='parsing'
+(NULL = platform defaults, including an intentional reset) BEFORE publishing;
+the worker only reads it and ignores the message's locale argument.
 
 Add-only, nullable — backward-compatible during beta.
 

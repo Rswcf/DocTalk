@@ -841,16 +841,34 @@ async def reparse_document(
                 "status": doc.status,
             },
         )
-    doc.status = "parsing"
-    # Overwrite (or intentionally RESET to NULL = platform defaults) the stored
-    # request in the same commit that opens 'parsing' — the worker reads only
-    # this column, so a stale queued message with an older locale can never
-    # override the newest request (Codex r4).
-    doc.parse_requested_locale = body.locale if body else None
-    db.add(doc)
+    # Atomic claim (Codex r5): a plain read-then-write lets two concurrent
+    # reparse requests both observe 'ready', both write their locale and both
+    # publish — the advisory lock makes the loser's task a no-op, so the run
+    # that executes can use a locale the row no longer records. The
+    # conditional UPDATE picks exactly one winner; it also overwrites (or
+    # intentionally RESETS to NULL = platform defaults) the stored request in
+    # the same statement that opens 'parsing', BEFORE publishing — the worker
+    # reads only this column (Codex r4).
+    from sqlalchemy import update as sa_update
+
+    requested_locale = body.locale if body else None
+    claimed = await db.execute(
+        sa_update(Document)
+        .where(Document.id == doc.id, Document.status.in_(("ready", "error")))
+        .values(status="parsing", parse_requested_locale=requested_locale)
+    )
     await db.commit()
+    if claimed.rowcount != 1:
+        raise HTTPException(
+            status_code=409,
+            detail={
+                "error": "DOCUMENT_PROCESSING",
+                "message": "Document is still processing",
+                "status": "parsing",
+            },
+        )
     from app.workers.parse_worker import parse_document
-    parse_document.delay(str(doc.id), locale=(body.locale if body else None))
+    parse_document.delay(str(doc.id), locale=requested_locale)
     return {"status": "reparsing"}
 
 
