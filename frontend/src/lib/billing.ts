@@ -1,12 +1,43 @@
 import { createSubscription } from './api';
 import { trackEvent } from './analytics';
-import type { BillingPeriodIntent, BillingPlanIntent } from './billingLinks';
+import { billingHref, type BillingPeriodIntent, type BillingPlanIntent } from './billingLinks';
 
 export interface StartCheckoutOptions {
   plan: BillingPlanIntent;
   billing?: BillingPeriodIntent;
   source: string;
   reason?: string | null;
+}
+
+export interface StartPlanAwareBillingActionOptions extends StartCheckoutOptions {
+  /** The profile API's current plan. Undefined means it is not authoritative yet. */
+  currentPlan: string | undefined;
+}
+
+export type PlanAwareBillingDecision =
+  | { kind: 'checkout' }
+  | { kind: 'billing'; href: string };
+
+/**
+ * Keep subscription creation exclusive to known Free users. Existing paid
+ * subscribers must use the billing page's confirmed change-plan flow, and a
+ * Pro user who needs more credits should land on one-time credit packs.
+ */
+export function decidePlanAwareBillingAction({
+  plan,
+  billing = 'monthly',
+  source,
+  reason = null,
+  currentPlan,
+}: StartPlanAwareBillingActionOptions): PlanAwareBillingDecision {
+  if (currentPlan === 'free') {
+    return { kind: 'checkout' };
+  }
+
+  const href = billingHref({ plan, period: billing, source, reason: reason || undefined });
+  const needsCreditPack = currentPlan === 'pro'
+    && (reason === 'credits' || reason === 'insufficient_credits');
+  return { kind: 'billing', href: needsCreditPack ? `${href}#credit-packs` : href };
 }
 
 /**
@@ -32,6 +63,25 @@ export async function startCheckout({
     trackEvent('checkout_failed', eventProperties);
     throw error;
   }
+}
+
+/** Execute the shared plan-aware decision for authenticated direct CTAs. */
+export async function startPlanAwareBillingAction(
+  options: StartPlanAwareBillingActionOptions,
+): Promise<void> {
+  const decision = decidePlanAwareBillingAction(options);
+  if (decision.kind === 'checkout') {
+    await startCheckout(options);
+    return;
+  }
+
+  trackEvent('upgrade_click', {
+    plan: options.plan,
+    period: options.billing || 'monthly',
+    source: options.source,
+    reason: options.reason || null,
+  });
+  window.location.href = decision.href;
 }
 
 /** Extract the backend's actionable billing detail, with a localized fallback. */

@@ -2,6 +2,7 @@ from .base import Base
 from .tables import (
     Account,
     ChatSession,
+    CheckoutAttempt,
     Chunk,
     CreditLedger,
     Document,
@@ -27,6 +28,7 @@ __all__ = [
     "Page",
     "Chunk",
     "ChatSession",
+    "CheckoutAttempt",
     "Message",
     "User",
     "Account",

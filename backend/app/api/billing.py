@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import uuid
+from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from typing import Literal, Optional
 
@@ -16,7 +17,13 @@ from app.core.cache import cache_delete, cache_get, cache_set
 from app.core.config import settings
 from app.core.deps import get_db_session, require_auth
 from app.core.security_log import log_security_event
-from app.models.tables import CreditLedger, PlanTransition, ProductEvent, User
+from app.models.tables import (
+    CheckoutAttempt,
+    CreditLedger,
+    PlanTransition,
+    ProductEvent,
+    User,
+)
 from app.schemas.billing import (
     BillingProductsResponse,
     CancelSubscriptionRequest,
@@ -115,6 +122,15 @@ _CANCELLABLE_SUBSCRIPTION_STATUSES = {"active", "trialing", "past_due"}
 # is in flight (see /subscribe). Not a real Stripe ID.
 _PENDING_SENTINEL = "pending"
 _STRIPE_SUB_ID_PREFIX = "sub_"
+_ACTIVE_CHECKOUT_ATTEMPT_STATUSES = {"creating", "open"}
+
+
+@dataclass(frozen=True)
+class CheckoutResolution:
+    checkout_url: str
+    stripe_session_id: str | None
+    newly_opened: bool = False
+    completed: bool = False
 
 
 def _interval_from_price_id(price_id: str) -> Optional[str]:
@@ -135,11 +151,11 @@ def _as_utc(dt: Optional[datetime]) -> Optional[datetime]:
     return dt.astimezone(timezone.utc)
 
 
-def _pending_subscription_is_stale(user: User) -> bool:
-    updated_at = _as_utc(getattr(user, "updated_at", None))
-    if updated_at is None:
+def _checkout_attempt_is_stale(attempt: CheckoutAttempt) -> bool:
+    started_at = _as_utc(getattr(attempt, "started_at", None))
+    if started_at is None:
         return True
-    return datetime.now(timezone.utc) - updated_at >= PENDING_SUBSCRIPTION_TTL
+    return datetime.now(timezone.utc) - started_at >= PENDING_SUBSCRIPTION_TTL
 
 
 async def _list_customer_subscriptions(customer_id: str) -> list[dict]:
@@ -161,44 +177,259 @@ async def _get_customer_active_subscription(customer_id: Optional[str]) -> Optio
     return None
 
 
-async def _recover_pending_subscription(user: User, db: AsyncSession) -> bool:
-    """Recover or clear a stale pending subscription state.
+async def _lock_user(db: AsyncSession, user_id: uuid.UUID) -> User:
+    return (
+        await db.execute(select(User).where(User.id == user_id).with_for_update(of=User))
+    ).scalar_one()
 
-    Returns True when an actual active subscription was recovered and persisted.
-    Returns False when pending was cleared and checkout can continue.
-    Raises 409 when a recent pending checkout should still be treated as in-flight.
+
+async def _latest_checkout_attempt(
+    db: AsyncSession,
+    user_id: uuid.UUID,
+    *,
+    for_update: bool = False,
+) -> CheckoutAttempt | None:
+    statement = (
+        select(CheckoutAttempt)
+        .where(CheckoutAttempt.user_id == user_id)
+        .order_by(CheckoutAttempt.started_at.desc(), CheckoutAttempt.id.desc())
+        .limit(1)
+    )
+    if for_update:
+        statement = statement.with_for_update(of=CheckoutAttempt)
+    return await db.scalar(statement)
+
+
+async def _lock_checkout_state(
+    db: AsyncSession,
+    user_id: uuid.UUID,
+    attempt_id: uuid.UUID,
+) -> tuple[User, CheckoutAttempt]:
+    locked_user = await _lock_user(db, user_id)
+    locked_attempt = await db.scalar(
+        select(CheckoutAttempt)
+        .where(CheckoutAttempt.id == attempt_id)
+        .with_for_update(of=CheckoutAttempt)
+    )
+    if locked_attempt is None:
+        raise HTTPException(409, "The subscription checkout attempt no longer exists.")
+    return locked_user, locked_attempt
+
+
+def _stripe_value(obj, key: str, default=None):
+    if hasattr(obj, "get"):
+        return obj.get(key, default)
+    return getattr(obj, key, default)
+
+
+def _stripe_id(value) -> str | None:
+    if isinstance(value, str):
+        return value
+    nested_id = _stripe_value(value, "id") if value is not None else None
+    return nested_id if isinstance(nested_id, str) else None
+
+
+async def _apply_remote_checkout_session(
+    *,
+    user_id: uuid.UUID,
+    attempt_id: uuid.UUID,
+    remote_session,
+    db: AsyncSession,
+) -> CheckoutResolution | None:
+    """Persist and act on one Stripe Checkout Session state.
+
+    Returning None means the attempt is terminal and a replacement may be
+    created. A URL means the caller must reuse/adopt this exact attempt.
     """
-    active_sub = await _get_customer_active_subscription(user.stripe_customer_id)
-    if active_sub:
-        user.stripe_subscription_id = active_sub["id"]
-        price_id = (
-            active_sub.get("items", {})
-            .get("data", [{}])[0]
-            .get("price", {})
-            .get("id", "")
-        )
-        detected_plan = _plan_from_price_id(price_id)
-        if detected_plan:
-            user.plan = detected_plan
+    locked_user, attempt = await _lock_checkout_state(db, user_id, attempt_id)
+    session = remote_session
+
+    for _ in range(3):
+        session_id = _stripe_id(_stripe_value(session, "id"))
+        if not session_id:
+            raise HTTPException(502, "Stripe returned a Checkout Session without an id.")
+        if attempt.stripe_session_id and attempt.stripe_session_id != session_id:
+            raise HTTPException(409, "Checkout attempt is linked to a different Stripe Session.")
+        attempt.stripe_session_id = session_id
+
+        remote_url = _stripe_value(session, "url")
+        if isinstance(remote_url, str) and remote_url:
+            attempt.checkout_url = remote_url
+        session_status = _stripe_value(session, "status") or "open"
+
+        if session_status == "complete":
+            subscription_id = _stripe_id(_stripe_value(session, "subscription"))
+            if not subscription_id:
+                # A completed subscription Checkout should expose its
+                # subscription id. Keep this attempt active and fail closed
+                # instead of allowing a second Session to be created.
+                attempt.status = "open"
+                await db.commit()
+                raise HTTPException(
+                    409,
+                    "Stripe is still finalizing this subscription checkout. Please try again shortly.",
+                )
+            locked_user.stripe_subscription_id = subscription_id
+            customer_id = _stripe_id(_stripe_value(session, "customer"))
+            if customer_id:
+                locked_user.stripe_customer_id = customer_id
+            locked_user.plan = attempt.plan
+            attempt.status = "complete"
+            await db.commit()
+            await _invalidate_user_caches(user_id)
+            return CheckoutResolution(
+                checkout_url=f"{settings.FRONTEND_URL}/billing?success=1",
+                stripe_session_id=session_id,
+                completed=True,
+            )
+
+        if session_status == "expired":
+            attempt.status = "expired"
+            if locked_user.stripe_subscription_id == _PENDING_SENTINEL:
+                locked_user.stripe_subscription_id = None
+            await db.commit()
+            await _invalidate_user_caches(user_id)
+            return None
+
+        if session_status != "open":
+            raise HTTPException(502, f"Unexpected Stripe Checkout Session status: {session_status}")
+
+        if _checkout_attempt_is_stale(attempt):
+            try:
+                session = await asyncio.to_thread(
+                    stripe.checkout.Session.expire,
+                    session_id,
+                )
+            except stripe.StripeError as exc:
+                # The other tab may have completed between retrieve and
+                # expire. Re-read before deciding whether replacement is safe.
+                logger.info(
+                    "Checkout expiration raced for attempt %s; retrieving again: %s",
+                    attempt.id,
+                    exc,
+                )
+                session = await asyncio.to_thread(
+                    stripe.checkout.Session.retrieve,
+                    session_id,
+                )
+                if _stripe_value(session, "status") == "open":
+                    raise HTTPException(502, "Could not expire the stale Checkout Session.")
+            continue
+
+        was_creating = attempt.status == "creating"
+        if (
+            locked_user.stripe_subscription_id
+            and locked_user.stripe_subscription_id != _PENDING_SENTINEL
+        ):
+            attempt.status = "complete"
+            await db.commit()
+            await _invalidate_user_caches(user_id)
+            return CheckoutResolution(
+                checkout_url=f"{settings.FRONTEND_URL}/billing?success=1",
+                stripe_session_id=session_id,
+                completed=True,
+            )
+        locked_user.stripe_subscription_id = _PENDING_SENTINEL
+        attempt.status = "open"
         await db.commit()
-        await _invalidate_user_caches(user.id)
-        logger.info(
-            "Recovered active subscription for user %s from pending state: %s",
-            user.id,
-            user.stripe_subscription_id,
+        if not attempt.checkout_url:
+            raise HTTPException(502, "Stripe Checkout Session has no redirect URL.")
+        return CheckoutResolution(
+            checkout_url=attempt.checkout_url,
+            stripe_session_id=session_id,
+            newly_opened=was_creating,
         )
-        return True
 
-    if not _pending_subscription_is_stale(user):
+    raise HTTPException(502, "Could not resolve the Checkout Session state.")
+
+
+async def _create_or_recover_checkout_session(
+    user: User,
+    attempt: CheckoutAttempt,
+    db: AsyncSession,
+) -> CheckoutResolution | None:
+    """Create (or replay) Stripe POSTs with this attempt's stable keys."""
+    price_id = _get_subscription_price_id(attempt.plan, attempt.billing_period)
+    if not price_id:
         raise HTTPException(
-            409,
-            "A subscription checkout is already in progress. Please try again in a few minutes.",
+            400,
+            f"Stripe price not configured for {attempt.plan}/{attempt.billing_period}",
         )
 
-    user.stripe_subscription_id = None
-    await db.commit()
-    logger.info("Cleared stale pending subscription state for user %s", user.id)
-    return False
+    customer_id = user.stripe_customer_id
+    if not customer_id:
+        customer = await asyncio.to_thread(
+            stripe.Customer.create,
+            email=user.email,
+            name=user.name or None,
+            idempotency_key=f"{attempt.idempotency_key}:customer",
+        )
+        customer_id = _stripe_id(customer)
+        if not customer_id:
+            raise HTTPException(502, "Stripe returned a Customer without an id.")
+        locked_user = await _lock_user(db, user.id)
+        if not locked_user.stripe_customer_id:
+            locked_user.stripe_customer_id = customer_id
+        else:
+            customer_id = locked_user.stripe_customer_id
+        await db.commit()
+
+    event_source = (attempt.source or "")[:64]
+    event_reason = (attempt.reason or "")[:64]
+    session = await asyncio.to_thread(
+        stripe.checkout.Session.create,
+        mode="subscription",
+        line_items=[{"price": price_id, "quantity": 1}],
+        success_url=f"{settings.FRONTEND_URL}/billing?success=1",
+        cancel_url=f"{settings.FRONTEND_URL}/billing",
+        customer=customer_id,
+        client_reference_id=str(user.id),
+        metadata={
+            "checkout_attempt_id": str(attempt.id),
+            "plan": attempt.plan,
+            "billing": attempt.billing_period,
+            "source": event_source,
+            "reason": event_reason,
+        },
+        subscription_data={
+            "metadata": {
+                "checkout_attempt_id": str(attempt.id),
+                "plan": attempt.plan,
+                "billing": attempt.billing_period,
+                "source": event_source,
+                "reason": event_reason,
+            }
+        },
+        idempotency_key=attempt.idempotency_key,
+    )
+    return await _apply_remote_checkout_session(
+        user_id=user.id,
+        attempt_id=attempt.id,
+        remote_session=session,
+        db=db,
+    )
+
+
+async def _recover_checkout_attempt(
+    user: User,
+    attempt: CheckoutAttempt,
+    db: AsyncSession,
+) -> CheckoutResolution | None:
+    if not attempt.stripe_session_id:
+        # Stripe may have accepted the original POST even though its response
+        # was ambiguous. Replaying with the same key returns that Session.
+        return await _create_or_recover_checkout_session(user, attempt, db)
+
+    session = await asyncio.to_thread(
+        stripe.checkout.Session.retrieve,
+        attempt.stripe_session_id,
+    )
+    return await _apply_remote_checkout_session(
+        user_id=user.id,
+        attempt_id=attempt.id,
+        remote_session=session,
+        db=db,
+    )
 
 
 @router.get("/products", response_model=BillingProductsResponse)
@@ -258,111 +489,142 @@ async def subscribe(
     if not settings.STRIPE_SECRET_KEY:
         raise HTTPException(503, "Stripe not configured")
 
-    # Lock the user row to prevent concurrent subscribe requests (M3)
-    locked_user = (
-        await db.execute(
-            select(User).where(User.id == user.id).with_for_update(of=User)
-        )
-    ).scalar_one()
+    price_id = _get_subscription_price_id(body.plan, body.billing)
+    if not price_id:
+        raise HTTPException(400, f"Stripe price not configured for {body.plan}/{body.billing}")
 
-    if locked_user.stripe_subscription_id == "pending":
-        recovered = await _recover_pending_subscription(locked_user, db)
-        if recovered:
-            raise HTTPException(
-                400,
-                "You already have an active subscription. Use /change-plan to switch plans.",
-            )
-        # Recovery may have committed (releasing lock). Re-lock to close gap.
-        locked_user = (
-            await db.execute(
-                select(User).where(User.id == user.id).with_for_update(of=User)
-            )
-        ).scalar_one()
-    if locked_user.stripe_subscription_id:
+    # User-row serialization plus the partial unique attempt index protects
+    # normal double-clicks/two-tab requests. The attempt is committed before
+    # Stripe is called so every retry reuses one durable idempotency key.
+    locked_user = await _lock_user(db, user.id)
+    if (
+        locked_user.stripe_subscription_id
+        and locked_user.stripe_subscription_id != _PENDING_SENTINEL
+    ):
         raise HTTPException(
             400,
             "You already have an active subscription. Use /change-plan to switch plans.",
         )
 
-    price_id = _get_subscription_price_id(body.plan, body.billing)
-    if not price_id:
-        raise HTTPException(400, f"Stripe price not configured for {body.plan}/{body.billing}")
+    latest_attempt = await _latest_checkout_attempt(db, user.id, for_update=True)
+    if latest_attempt and latest_attempt.status in _ACTIVE_CHECKOUT_ATTEMPT_STATUSES:
+        try:
+            recovered = await _recover_checkout_attempt(locked_user, latest_attempt, db)
+        except stripe.StripeError as exc:
+            await db.rollback()
+            logger.error(
+                "Failed to recover subscription Checkout attempt %s: %s",
+                latest_attempt.id,
+                exc,
+            )
+            raise HTTPException(502, "Failed to recover subscription checkout") from exc
+        if recovered is not None:
+            return {"checkout_url": recovered.checkout_url}
+        # Recovery expired the old Session and committed. Re-lock before
+        # creating the replacement attempt.
+        locked_user = await _lock_user(db, user.id)
+    elif locked_user.stripe_subscription_id == _PENDING_SENTINEL:
+        if latest_attempt is not None:
+            # A terminal attempt is sufficient attempt-scoped evidence that
+            # this sentinel is no longer protecting a live Session.
+            locked_user.stripe_subscription_id = None
+            await db.commit()
+            locked_user = await _lock_user(db, user.id)
+        else:
+            # Deployment compatibility for a pre-migration sentinel: adopt an
+            # active subscription if one exists, but never use User.updated_at
+            # to guess that a possibly-live legacy Checkout is stale.
+            active_sub = await _get_customer_active_subscription(
+                locked_user.stripe_customer_id
+            )
+            if active_sub:
+                locked_user.stripe_subscription_id = active_sub["id"]
+                price_id = (
+                    active_sub.get("items", {})
+                    .get("data", [{}])[0]
+                    .get("price", {})
+                    .get("id", "")
+                )
+                detected_plan = _plan_from_price_id(price_id)
+                if detected_plan:
+                    locked_user.plan = detected_plan
+                await db.commit()
+                await _invalidate_user_caches(user.id)
+                raise HTTPException(
+                    400,
+                    "You already have an active subscription. Use /change-plan to switch plans.",
+                )
+            raise HTTPException(
+                409,
+                "A legacy subscription checkout is still in progress. Please contact support before retrying.",
+            )
 
-    # Atomic guard: prevent concurrent subscribe requests from creating
-    # multiple checkout sessions before webhook reconciliation.
-    locked_user.stripe_subscription_id = "pending"
+    if (
+        locked_user.stripe_subscription_id
+        and locked_user.stripe_subscription_id != _PENDING_SENTINEL
+    ):
+        raise HTTPException(
+            400,
+            "You already have an active subscription. Use /change-plan to switch plans.",
+        )
+
+    attempt_id = uuid.uuid4()
+    attempt = CheckoutAttempt(
+        id=attempt_id,
+        idempotency_key=f"subscription_checkout_{attempt_id}",
+        user_id=user.id,
+        plan=body.plan,
+        billing_period=body.billing,
+        source=(body.source or "")[:64] or None,
+        reason=(body.reason or "")[:64] or None,
+        started_at=datetime.now(timezone.utc),
+        status="creating",
+    )
+    db.add(attempt)
+    locked_user.stripe_subscription_id = _PENDING_SENTINEL
     await db.commit()
-    user = locked_user  # Use locked instance for rest of endpoint
 
     try:
-        # Ensure customer exists
-        if not user.stripe_customer_id:
-            cust = await asyncio.to_thread(
-                stripe.Customer.create, email=user.email, name=user.name or None
-            )
-            user.stripe_customer_id = cust.id
-            await db.commit()
-
-        event_source = (body.source or "")[:64]
-        event_reason = (body.reason or "")[:64]
-
-        # Create Checkout Session for subscription
-        session = await asyncio.to_thread(
-            stripe.checkout.Session.create,
-            mode="subscription",
-            line_items=[{"price": price_id, "quantity": 1}],
-            success_url=f"{settings.FRONTEND_URL}/billing?success=1",
-            cancel_url=f"{settings.FRONTEND_URL}/billing",
-            customer=user.stripe_customer_id,
-            client_reference_id=str(user.id),
-            metadata={
-                "plan": body.plan,
-                "billing": body.billing,
-                "source": event_source,
-                "reason": event_reason,
-            },
-            subscription_data={
-                "metadata": {
-                    "plan": body.plan,
-                    "billing": body.billing,
-                    "source": event_source,
-                    "reason": event_reason,
-                }
-            },
+        resolution = await _create_or_recover_checkout_session(
+            locked_user,
+            attempt,
+            db,
         )
+        if resolution is None:
+            raise HTTPException(502, "Subscription Checkout Session expired before redirect.")
         log_security_event(
             "subscription_checkout_created",
-            user_id=user.id,
+            user_id=locked_user.id,
             plan=body.plan,
             billing=body.billing,
-            checkout_session_id=session.id,
+            checkout_session_id=resolution.stripe_session_id,
         )
-        await _record_product_event(
-            db,
-            user_id=user.id,
-            event_name="checkout_created",
-            source=event_source or "server",
-            plan=body.plan,
-            billing=body.billing,
-            reason=event_reason or None,
-            metadata={
-                "checkout_session_id": session.id,
-                "source": event_source,
-                "reason": event_reason,
-            },
-        )
+        if resolution.newly_opened:
+            await _record_product_event(
+                db,
+                user_id=locked_user.id,
+                event_name="checkout_created",
+                source=attempt.source or "server",
+                plan=body.plan,
+                billing=body.billing,
+                reason=attempt.reason,
+                metadata={
+                    "checkout_attempt_id": str(attempt.id),
+                    "checkout_session_id": resolution.stripe_session_id,
+                    "source": attempt.source or "",
+                    "reason": attempt.reason or "",
+                },
+            )
     except stripe.StripeError as e:
         logger.error("Failed to create subscription checkout: %s", e)
         await db.rollback()
-        user.stripe_subscription_id = None
-        await db.commit()
-        raise HTTPException(502, "Failed to create subscription checkout")
+        # Deliberately keep the attempt in `creating` and the sentinel in
+        # place. A retry must replay the same Stripe POST idempotently.
+        raise HTTPException(502, "Failed to create subscription checkout") from e
     except Exception:
         await db.rollback()
-        user.stripe_subscription_id = None
-        await db.commit()
         raise
-    return {"checkout_url": session.url}
+    return {"checkout_url": resolution.checkout_url}
 
 
 @router.post("/portal", response_model=PortalUrlResponse)
@@ -948,6 +1210,33 @@ async def cancel_subscription(
     }
 
 
+async def _checkout_attempt_for_session(
+    session: dict,
+    db: AsyncSession,
+    *,
+    for_update: bool = False,
+) -> CheckoutAttempt | None:
+    metadata = session.get("metadata", {}) or {}
+    attempt_id_raw = metadata.get("checkout_attempt_id")
+    statement = None
+    if attempt_id_raw:
+        try:
+            statement = select(CheckoutAttempt).where(
+                CheckoutAttempt.id == uuid.UUID(str(attempt_id_raw))
+            )
+        except (ValueError, TypeError):
+            logger.warning("Invalid checkout_attempt_id metadata: %r", attempt_id_raw)
+    if statement is None and session.get("id"):
+        statement = select(CheckoutAttempt).where(
+            CheckoutAttempt.stripe_session_id == session["id"]
+        )
+    if statement is None:
+        return None
+    if for_update:
+        statement = statement.with_for_update(of=CheckoutAttempt)
+    return await db.scalar(statement)
+
+
 async def _handle_checkout_session_subscription_completed(
     session: dict,
     db: AsyncSession,
@@ -962,10 +1251,22 @@ async def _handle_checkout_session_subscription_completed(
         logger.error("Invalid client_reference_id: %s", e)
         return {"received": True}
 
-    user = await db.get(User, user_id)
+    user = (
+        await db.execute(
+            select(User).where(User.id == user_id).with_for_update(of=User)
+        )
+    ).scalar_one_or_none()
     if not user:
         logger.warning("Subscription completed for non-existent user %s", user_id)
         return {"received": True}
+
+    attempt = await _checkout_attempt_for_session(session, db, for_update=True)
+    if attempt:
+        if session.get("id"):
+            attempt.stripe_session_id = session["id"]
+        if session.get("url"):
+            attempt.checkout_url = session["url"]
+        attempt.status = "complete"
 
     subscription_id = session.get("subscription")
     customer_id = session.get("customer")
@@ -991,6 +1292,7 @@ async def _handle_checkout_session_subscription_completed(
                     user.id,
                     e,
                 )
+        await db.commit()
         return {"received": True}
 
     # Determine plan from subscription price_id
@@ -1289,6 +1591,11 @@ async def _handle_checkout_session_expired(
     session: dict,
     db: AsyncSession,
 ):
+    if session.get("mode") not in {None, "subscription"}:
+        # Credit-pack Checkout Sessions share this webhook event type but do
+        # not own the subscription sentinel. Never let an unrelated expired
+        # payment Session clear a live subscription attempt.
+        return {"received": True}
     try:
         client_ref = session.get("client_reference_id")
         if not client_ref:
@@ -1297,9 +1604,19 @@ async def _handle_checkout_session_expired(
     except (ValueError, TypeError):
         return {"received": True}
 
-    user = await db.get(User, user_id)
-    if not user or user.stripe_subscription_id != "pending":
+    user = (
+        await db.execute(
+            select(User).where(User.id == user_id).with_for_update(of=User)
+        )
+    ).scalar_one_or_none()
+    if not user:
         return {"received": True}
+
+    attempt = await _checkout_attempt_for_session(session, db, for_update=True)
+    if attempt:
+        if session.get("id"):
+            attempt.stripe_session_id = session["id"]
+        attempt.status = "expired"
 
     active_sub = await _get_customer_active_subscription(user.stripe_customer_id)
     if active_sub:
@@ -1308,7 +1625,19 @@ async def _handle_checkout_session_expired(
         await _invalidate_user_caches(user.id)
         return {"received": True}
 
-    user.stripe_subscription_id = None
+    other_active_attempt = None
+    if attempt:
+        other_active_attempt = await db.scalar(
+            select(CheckoutAttempt.id)
+            .where(
+                CheckoutAttempt.user_id == user.id,
+                CheckoutAttempt.id != attempt.id,
+                CheckoutAttempt.status.in_(_ACTIVE_CHECKOUT_ATTEMPT_STATUSES),
+            )
+            .limit(1)
+        )
+    if user.stripe_subscription_id == _PENDING_SENTINEL and not other_active_attempt:
+        user.stripe_subscription_id = None
     await db.commit()
     await _invalidate_user_caches(user.id)
     logger.info("Cleared pending subscription after checkout.session.expired for user %s", user.id)

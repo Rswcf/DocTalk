@@ -6,7 +6,7 @@ import { useSession } from "next-auth/react";
 import { CheckCircle2 } from "lucide-react";
 import { useLocale } from "../i18n";
 import { billingHref, deriveUpgradePlan } from "../lib/billingLinks";
-import { getBillingErrorMessage, startCheckout } from "../lib/billing";
+import { getBillingErrorMessage, startPlanAwareBillingAction } from "../lib/billing";
 
 interface PaywallModalProps {
   isOpen: boolean;
@@ -81,11 +81,12 @@ export function PaywallModal({ isOpen, onClose, reason, currentPlan }: PaywallMo
     setCheckoutLoading(true);
     setCheckoutError(null);
     try {
-      await startCheckout({
+      await startPlanAwareBillingAction({
         plan: targetPlan,
         billing: 'monthly',
         source: 'paywall_modal',
         reason: copy.reason,
+        currentPlan,
       });
     } catch (error) {
       setCheckoutError(getBillingErrorMessage(error, t('billing.error')));

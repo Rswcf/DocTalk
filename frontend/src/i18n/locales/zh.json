@@ -394,7 +394,7 @@
   "landing.faq.q1": "AI 回答的准确度如何？",
   "landing.faq.a1": "DocTalk 使用最先进的 AI 模型配合检索增强生成技术。每个回答都包含编号引用，链接到确切的原文，您可以一键验证准确性。",
   "landing.faq.q2": "支持哪些类型的 PDF？",
-  "landing.faq.a2": "DocTalk 支持文本 PDF、扫描文档（通过 OCR）、研究论文、财务报告、合同、手册等。支持最大 50MB、500 页的文件。",
+  "landing.faq.a2": "DocTalk 支持文本 PDF、扫描文档（通过 OCR）、研究论文、财务报告、合同、手册等。文件上限为 Free 50MB、Plus 100MB、Pro 200MB；所有方案均支持最多 500 页。",
   "landing.faq.q3": "我的数据安全吗？",
   "landing.faq.a3": "当然。您的文档传输时 TLS 加密，存储时 AES-256 加密，绝不用于 AI 训练，您可以随时删除。我们遵循隐私优先原则。",
   "landing.faq.q4": "可以使用哪些 AI 模型？",

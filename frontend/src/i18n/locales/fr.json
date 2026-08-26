@@ -389,7 +389,7 @@
   "landing.faq.q1": "Quelle est la précision des réponses IA ?",
   "landing.faq.a1": "DocTalk utilise des modèles d'IA de pointe avec la génération augmentée par récupération. Chaque réponse inclut des citations numérotées liées au texte source exact.",
   "landing.faq.q2": "Quels types de PDF sont pris en charge ?",
-  "landing.faq.a2": "DocTalk prend en charge les PDF texte, les documents numérisés (via OCR), les articles de recherche, les rapports financiers, les contrats et plus encore. Fichiers jusqu'à 50 Mo et 500 pages.",
+  "landing.faq.a2": "DocTalk prend en charge les PDF texte, les documents numérisés (via OCR), les articles de recherche, les rapports financiers, les contrats et plus encore. La limite est de 50 Mo avec Free, 100 Mo avec Plus et 200 Mo avec Pro ; tous les forfaits acceptent jusqu'à 500 pages.",
   "landing.faq.q3": "Mes données sont-elles sécurisées ?",
   "landing.faq.a3": "Absolument. Vos documents sont chiffrés TLS en transit et AES-256 au repos, jamais utilisés pour l'entraînement IA, et vous pouvez les supprimer à tout moment.",
   "landing.faq.q4": "Quels modèles d'IA puis-je utiliser ?",

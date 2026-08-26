@@ -4,9 +4,11 @@ import React, { useState } from 'react';
 import { useLocale } from '../../i18n';
 import ScrollReveal from './ScrollReveal';
 
+const FILE_SUPPORT_FALLBACK = 'DocTalk supports PDF, DOCX, PPTX, XLSX, TXT, and Markdown files, plus web URLs. PDFs include scanned documents via built-in OCR. File limits are Free 50MB, Plus 100MB, and Pro 200MB; all plans support up to 500 pages.';
+
 const FAQ_ITEMS = [
   { q: 'landing.faq.q1', a: 'landing.faq.a1' },
-  { q: 'landing.faq.q2', a: 'landing.faq.a2' },
+  { q: 'landing.faq.q2', a: 'landing.faq.a2', fallback: FILE_SUPPORT_FALLBACK },
   { q: 'landing.faq.q3', a: 'landing.faq.a3' },
   { q: 'landing.faq.q4', a: 'landing.faq.a4' },
   { q: 'landing.faq.q5', a: 'landing.faq.a5' },
@@ -14,7 +16,7 @@ const FAQ_ITEMS = [
 ] as const;
 
 export default function FAQ() {
-  const { t } = useLocale();
+  const { t, tOr } = useLocale();
   const [openIndex, setOpenIndex] = useState<number | null>(null);
 
   const toggle = (idx: number) => {
@@ -76,7 +78,9 @@ export default function FAQ() {
                       isOpen ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'
                     }`}
                   >
-                    <p className="ed-body pb-6 pl-8">{t(item.a)}</p>
+                    <p className="ed-body pb-6 pl-8">
+                      {'fallback' in item ? tOr(item.a, item.fallback) : t(item.a)}
+                    </p>
                   </div>
 
                   <hr className="ed-rule" />

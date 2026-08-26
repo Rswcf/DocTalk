@@ -7,7 +7,8 @@ import { useDocTalkStore } from '../store';
 import { useLocale } from '../i18n';
 import { useRouter } from 'next/navigation';
 import { billingHref } from '../lib/billingLinks';
-import { getBillingErrorMessage, startCheckout } from '../lib/billing';
+import { getBillingErrorMessage, startPlanAwareBillingAction } from '../lib/billing';
+import { useUserProfile } from '../lib/useUserProfile';
 
 export default function ModeSelector() {
   const selectedMode = useDocTalkStore((s) => s.selectedMode);
@@ -16,6 +17,7 @@ export default function ModeSelector() {
   const userPlan = useDocTalkStore((s) => s.userPlan);
   const { t } = useLocale();
   const router = useRouter();
+  const { profile } = useUserProfile();
   const [checkoutLoading, setCheckoutLoading] = React.useState(false);
   const [checkoutError, setCheckoutError] = React.useState<string | null>(null);
 
@@ -30,7 +32,13 @@ export default function ModeSelector() {
       if (checkoutLoading) return;
       setCheckoutLoading(true);
       setCheckoutError(null);
-      void startCheckout({ plan: 'plus', billing: 'monthly', source: 'mode_selector', reason })
+      void startPlanAwareBillingAction({
+        plan: 'plus',
+        billing: 'monthly',
+        source: 'mode_selector',
+        reason,
+        currentPlan: profile?.plan,
+      })
         .catch((error) => {
           setCheckoutError(getBillingErrorMessage(error, t('billing.error')));
           setCheckoutLoading(false);

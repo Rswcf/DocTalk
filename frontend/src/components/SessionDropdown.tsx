@@ -10,9 +10,10 @@ import { useLocale } from '../i18n';
 import { createSession, getMessages, deleteSession } from '../lib/api';
 import { errorCopy, type ErrorCopy } from '../lib/errorCopy';
 import { trackEvent } from '../lib/analytics';
-import { getBillingErrorMessage, startCheckout } from '../lib/billing';
+import { getBillingErrorMessage, startPlanAwareBillingAction } from '../lib/billing';
 import { useDropdownKeyboard } from '../lib/useDropdownKeyboard';
 import { clearDemoSession, readDemoSession, writeDemoSession } from '../lib/demoSessionStorage';
+import { useUserProfile } from '../lib/useUserProfile';
 
 export default function SessionDropdown() {
   const documentName = useDocTalkStore((s) => s.documentName);
@@ -25,6 +26,7 @@ export default function SessionDropdown() {
   const { t, tOr } = useLocale();
   const router = useRouter();
   const { status } = useSession();
+  const { profile } = useUserProfile();
 
   const [open, setOpen] = useState(false);
   const [focusIndex, setFocusIndex] = useState(-1);
@@ -181,11 +183,12 @@ export default function SessionDropdown() {
     if (checkoutLoading) return;
     setCheckoutLoading(true);
     try {
-      await startCheckout({
+      await startPlanAwareBillingAction({
         plan: 'plus',
         billing: 'monthly',
         source: 'session_dropdown',
         reason: 'session_limit',
+        currentPlan: profile?.plan,
       });
     } catch (error) {
       const message = getBillingErrorMessage(error, t('billing.error'));

@@ -289,6 +289,49 @@ class User(Base):
     accounts: Mapped[List["Account"]] = relationship("Account", back_populates="user", cascade="all, delete-orphan")
 
 
+class CheckoutAttempt(Base):
+    """Durable, attempt-scoped state for subscription Checkout creation."""
+
+    __tablename__ = "checkout_attempts"
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, server_default=sa.text("gen_random_uuid()")
+    )
+    idempotency_key: Mapped[str] = mapped_column(sa.String(255), nullable=False, unique=True)
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), sa.ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+    )
+    plan: Mapped[str] = mapped_column(sa.String(16), nullable=False)
+    billing_period: Mapped[str] = mapped_column(sa.String(16), nullable=False)
+    source: Mapped[Optional[str]] = mapped_column(sa.String(64), nullable=True)
+    reason: Mapped[Optional[str]] = mapped_column(sa.String(64), nullable=True)
+    started_at: Mapped[datetime] = mapped_column(
+        sa.DateTime(timezone=True), nullable=False, server_default=sa.text("now()")
+    )
+    stripe_session_id: Mapped[Optional[str]] = mapped_column(
+        sa.String(255), nullable=True, unique=True
+    )
+    checkout_url: Mapped[Optional[str]] = mapped_column(sa.Text, nullable=True)
+    status: Mapped[str] = mapped_column(
+        sa.String(20), nullable=False, server_default=sa.text("'creating'")
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        sa.DateTime(timezone=True), nullable=False, server_default=sa.text("now()"), onupdate=sa.func.now()
+    )
+
+    user: Mapped[User] = relationship("User")
+
+    __table_args__ = (
+        sa.Index("idx_checkout_attempts_user_started", "user_id", sa.text("started_at DESC")),
+        sa.Index(
+            "uq_checkout_attempts_user_active",
+            "user_id",
+            unique=True,
+            postgresql_where=sa.text("status IN ('creating', 'open')"),
+        ),
+    )
+
+
 class Account(Base):
     __tablename__ = "accounts"
 

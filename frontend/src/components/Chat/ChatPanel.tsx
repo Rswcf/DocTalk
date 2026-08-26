@@ -18,7 +18,7 @@ import { useChatStream } from '../../lib/useChatStream';
 import { openAuthModal } from '../../lib/auth-modal';
 import { errorCopy } from '../../lib/errorCopy';
 import { billingHref } from '../../lib/billingLinks';
-import { getBillingErrorMessage, startCheckout } from '../../lib/billing';
+import { getBillingErrorMessage, startPlanAwareBillingAction } from '../../lib/billing';
 import { trackEvent } from '../../lib/analytics';
 import { withShareAnchor } from '../../lib/shareAnchors';
 
@@ -343,11 +343,12 @@ export default function ChatPanel({ sessionId, onCitationClick, onPreviewLayoutT
       router.push(billingHref({ plan: intent.plan, source: 'chat_plus_menu', reason: intent.reason }));
       return;
     }
-    void startCheckout({
+    void startPlanAwareBillingAction({
       plan: intent.plan,
       billing: 'monthly',
       source: 'chat_plus_menu',
       reason: intent.reason,
+      currentPlan: userPlan,
     }).catch((error) => {
       addMessage({
         id: `m_${Date.now()}_checkout`,

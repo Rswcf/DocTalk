@@ -24,7 +24,7 @@ import { useDocTalkStore } from '../../../store';
 import { useLocale } from '../../../i18n';
 import { useUserPlanProfile } from '../../../lib/useUserPlanProfile';
 import { errorCopy, type ErrorCopy } from '../../../lib/errorCopy';
-import { getBillingErrorMessage, startCheckout } from '../../../lib/billing';
+import { getBillingErrorMessage, startPlanAwareBillingAction } from '../../../lib/billing';
 import type { Citation, CollectionDetail, SessionItem } from '../../../types';
 import { LoadingScreen } from '../../../components/ui/LoadingScreen';
 import { trackEvent } from '../../../lib/analytics';
@@ -35,7 +35,7 @@ export default function CollectionDetailPage() {
   const router = useRouter();
   const { status } = useSession();
   const { t, tOr } = useLocale();
-  const { userPlan } = useUserPlanProfile();
+  const { profile, userPlan } = useUserPlanProfile();
   const {
     sessionId,
     setSessionId,
@@ -66,11 +66,12 @@ export default function CollectionDetailPage() {
     if (checkoutLoading) return;
     setCheckoutLoading(true);
     try {
-      await startCheckout({
+      await startPlanAwareBillingAction({
         plan: userPlan === 'plus' ? 'pro' : 'plus',
         billing: 'monthly',
         source: 'collection_add_documents_modal',
         reason: 'collection_doc_limit',
+        currentPlan: profile?.plan,
       });
     } catch (error) {
       const message = getBillingErrorMessage(error, t('billing.error'));

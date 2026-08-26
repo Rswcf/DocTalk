@@ -244,7 +244,8 @@ function BillingContent() {
   const handlePlanAction = async (plan: PlanType) => {
     if (submitting) return;
     if (plan === 'free') return;
-    const currentPlan = (profile?.plan || 'free') as PlanType;
+    if (!profile) return;
+    const currentPlan = profile.plan as PlanType;
 
     if (currentPlan === 'free') {
       await handleSubscribe(plan);
@@ -252,6 +253,13 @@ function BillingContent() {
     }
 
     if (currentPlan === plan) {
+      const reason = searchParams.get("reason");
+      if (
+        plan === 'pro'
+        && (reason === 'credits' || reason === 'insufficient_credits')
+      ) {
+        document.getElementById('credit-packs')?.scrollIntoView({ behavior: 'smooth' });
+      }
       return;
     }
 
@@ -465,11 +473,17 @@ function BillingContent() {
               </div>
               <button
                 type="button"
-                onClick={() => handleSubscribe(offerPlan)}
-                disabled={submitting !== null}
+                onClick={() => void handlePlanAction(offerPlan)}
+                disabled={submitting !== null || profileLoading}
                 className="inline-flex shrink-0 items-center gap-2 rounded-lg bg-zinc-900 px-4 py-2 text-sm font-medium text-white shadow-sm transition-colors hover:bg-zinc-800 disabled:opacity-50 dark:bg-zinc-50 dark:text-zinc-900 dark:hover:bg-zinc-200 focus-visible:ring-2 focus-visible:ring-blue-400 focus-visible:ring-offset-2 focus-visible:ring-offset-blue-50 dark:focus-visible:ring-offset-blue-950"
               >
-                {submitting === offerPlan ? t('common.loading') : t('billing.upgrade')}
+                {submitting === offerPlan || profileLoading
+                  ? t('common.loading')
+                  : profile?.plan === 'pro'
+                    && offerPlan === 'pro'
+                    && (searchParams.get('reason') === 'credits' || searchParams.get('reason') === 'insufficient_credits')
+                    ? tOr('billing.viewCreditPacks', 'View credit packs')
+                    : t('billing.upgrade')}
                 {submitting !== offerPlan && <ArrowRight aria-hidden="true" size={15} />}
               </button>
             </div>
@@ -867,7 +881,7 @@ function BillingContent() {
           </>
         )}
 
-        <h2 className="text-sm font-medium text-zinc-500 dark:text-zinc-400 mb-4 uppercase tracking-wide">
+        <h2 id="credit-packs" className="scroll-mt-24 text-sm font-medium text-zinc-500 dark:text-zinc-400 mb-4 uppercase tracking-wide">
           {t("billing.extraTopups")}
         </h2>
 

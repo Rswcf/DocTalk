@@ -31,7 +31,10 @@ export function useUserPlanProfile(): UseUserPlanProfileResult {
   return {
     profile,
     isLoggedIn,
-    userPlan: profile?.plan || (isLoggedIn ? 'free' : undefined),
+    // Do not guess Free while an authenticated profile is still loading:
+    // billing actions need the server-authoritative plan to avoid offering a
+    // second subscription to an existing Plus/Pro customer.
+    userPlan: profile?.plan,
     canUseCustomInstructions: profile?.plan === 'pro',
   };
 }

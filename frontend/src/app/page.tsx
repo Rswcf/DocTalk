@@ -82,7 +82,7 @@ export default function HomePage() {
             name: 'What file types are supported?',
             acceptedAnswer: {
               '@type': 'Answer',
-              text: 'DocTalk supports PDF, DOCX, PPTX, XLSX, TXT, and Markdown files, plus web URLs. PDFs include scanned documents via built-in OCR. Files up to 50MB and 500 pages are supported.',
+              text: 'DocTalk supports PDF, DOCX, PPTX, XLSX, TXT, and Markdown files, plus web URLs. PDFs include scanned documents via built-in OCR. File limits are Free 50MB, Plus 100MB, and Pro 200MB; all plans support up to 500 pages.',
             },
           },
           {

@@ -389,7 +389,7 @@
   "landing.faq.q1": "Wie genau sind die KI-Antworten?",
   "landing.faq.a1": "Jede Antwort enthält nummerierte Zitate, die auf die genaue Passage in Ihrem Dokument verlinken. Klicken Sie auf ein Zitat, um zur Quelle zu springen und sie hervorgehoben zu sehen. Sie überprüfen die Arbeit der KI immer selbst.",
   "landing.faq.q2": "Welche Dateitypen werden unterstützt?",
-  "landing.faq.a2": "DocTalk unterstützt PDF, DOCX, PPTX, XLSX, TXT und Markdown-Dateien sowie Web-URLs. PDFs umfassen gescannte Dokumente über integriertes OCR. Dateien bis 50MB und 500 Seiten werden unterstützt.",
+  "landing.faq.a2": "DocTalk unterstützt PDF, DOCX, PPTX, XLSX, TXT und Markdown-Dateien sowie Web-URLs. PDFs umfassen gescannte Dokumente über integriertes OCR. Das Dateilimit beträgt 50MB bei Free, 100MB bei Plus und 200MB bei Pro; alle Tarife unterstützen bis zu 500 Seiten.",
   "landing.faq.q3": "Sind meine Daten sicher?",
   "landing.faq.a3": "Absolut. Ihre Dokumente sind bei der Übertragung TLS-verschlüsselt und im Ruhezustand AES-256-verschlüsselt, werden nie für KI-Training verwendet, und Sie können sie jederzeit löschen. Wir folgen Datenschutz-zuerst-Prinzipien.",
   "landing.faq.q4": "Welche KI-Modelle kann ich nutzen?",

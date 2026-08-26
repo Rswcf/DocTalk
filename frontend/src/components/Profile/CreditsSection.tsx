@@ -9,7 +9,7 @@ import {
   getCreditHistory,
 } from "../../lib/api";
 import { useRouter } from "next/navigation";
-import { getBillingErrorMessage, startCheckout } from "../../lib/billing";
+import { getBillingErrorMessage, startPlanAwareBillingAction } from "../../lib/billing";
 
 interface Props {
   profile: UserProfile;
@@ -73,7 +73,12 @@ export default function CreditsSection({ profile }: Props) {
     setSubmitting(true);
     setActionError(null);
     try {
-      await startCheckout({ plan: 'plus', billing: 'monthly', source: 'profile_credits' });
+      await startPlanAwareBillingAction({
+        plan: 'plus',
+        billing: 'monthly',
+        source: 'profile_credits',
+        currentPlan: profile.plan,
+      });
     } catch (error) {
       setActionError(getBillingErrorMessage(error, t('billing.error')));
       setSubmitting(false);

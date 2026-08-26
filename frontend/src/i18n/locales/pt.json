@@ -1589,7 +1589,7 @@
   "landing.proof.private": "Documentos são privados e podem ser excluídos",
   "landing.proof.locales": "Funciona em 11 idiomas de interface",
   "landing.faq.a1": "Cada resposta inclui citações numeradas que vinculam ao trecho exato do seu documento. Clique em qualquer citação para ir à fonte e vê-la destacada. Você sempre verifica o trabalho da IA pessoalmente.",
-  "landing.faq.a2": "O DocTalk suporta PDF, DOCX, PPTX, XLSX, TXT e arquivos Markdown, além de URLs. PDFs incluem documentos digitalizados via OCR integrado. Arquivos de até 50MB e 500 páginas são suportados.",
+  "landing.faq.a2": "O DocTalk suporta PDF, DOCX, PPTX, XLSX, TXT e arquivos Markdown, além de URLs. PDFs incluem documentos digitalizados via OCR integrado. O limite é de 50MB no Free, 100MB no Plus e 200MB no Pro; todos os planos aceitam até 500 páginas.",
   "landing.faq.a3": "Com certeza. Seus documentos são criptografados com TLS em trânsito e AES-256 em repouso, nunca usados para treinar IA, e você pode excluí-los a qualquer momento. Seguimos princípios de privacidade em primeiro lugar.",
   "landing.faq.a4": "O DocTalk oferece 2 modos de desempenho: Flash para respostas rápidas com citações e Pro para análises mais profundas de documentos. Usuários gratuitos podem usar o Flash e o Pro limitado. O Plus remove o limite mensal do Pro.",
   "landing.faq.a5": "Sim! Contas gratuitas incluem 300 créditos mensais, suficientes para dezenas de perguntas. Não é necessário cartão de crédito para começar.",

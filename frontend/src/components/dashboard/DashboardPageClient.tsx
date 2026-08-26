@@ -18,7 +18,7 @@ import { useLocale } from '../../i18n';
 import { clearAccountStorage } from '../../lib/clearAccountStorage';
 import { errorCopy, type ErrorCopy } from '../../lib/errorCopy';
 import { billingHref } from '../../lib/billingLinks';
-import { getBillingErrorMessage, startCheckout } from '../../lib/billing';
+import { getBillingErrorMessage, startPlanAwareBillingAction } from '../../lib/billing';
 import { trackEvent } from '../../lib/analytics';
 import { sanitizeFilename } from '../../lib/utils';
 import { PrivacyBadge } from '../PrivacyBadge';
@@ -207,7 +207,13 @@ export default function DashboardPageClient() {
     setCheckoutLoading(true);
     setCheckoutError(null);
     try {
-      await startCheckout({ plan, billing: 'monthly', source, reason });
+      await startPlanAwareBillingAction({
+        plan,
+        billing: 'monthly',
+        source,
+        reason,
+        currentPlan: isLoggedIn ? profile?.plan : 'free',
+      });
     } catch (error) {
       const message = getBillingErrorMessage(error, t('billing.error'));
       setCheckoutError(message);
