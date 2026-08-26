@@ -9,7 +9,7 @@ import {
   getCreditHistory,
 } from "../../lib/api";
 import { useRouter } from "next/navigation";
-import { trackEvent } from "../../lib/analytics";
+import { getBillingErrorMessage, startCheckout } from "../../lib/billing";
 
 interface Props {
   profile: UserProfile;
@@ -69,8 +69,15 @@ export default function CreditsSection({ profile }: Props) {
   }, [limit, offset, retryCount]);
 
   const onUpgrade = async () => {
-    trackEvent("upgrade_click", { plan: "plus", period: "monthly", source: "profile_credits" });
-    router.push("/billing?plan=plus&period=monthly&source=profile_credits");
+    if (submitting) return;
+    setSubmitting(true);
+    setActionError(null);
+    try {
+      await startCheckout({ plan: 'plus', billing: 'monthly', source: 'profile_credits' });
+    } catch (error) {
+      setActionError(getBillingErrorMessage(error, t('billing.error')));
+      setSubmitting(false);
+    }
   };
 
   const onManage = async () => {

@@ -1,11 +1,12 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import { useSession } from "next-auth/react";
 import { CheckCircle2 } from "lucide-react";
 import { useLocale } from "../i18n";
 import { billingHref, deriveUpgradePlan } from "../lib/billingLinks";
-import { trackEvent } from "../lib/analytics";
+import { getBillingErrorMessage, startCheckout } from "../lib/billing";
 
 interface PaywallModalProps {
   isOpen: boolean;
@@ -68,9 +69,29 @@ function paywallCopy(reason: string | null | undefined, t: (key: string) => stri
 
 export function PaywallModal({ isOpen, onClose, reason, currentPlan }: PaywallModalProps) {
   const { t, tOr } = useLocale();
+  const { status } = useSession();
   const modalRef = useRef<HTMLDivElement>(null);
+  const [checkoutLoading, setCheckoutLoading] = useState(false);
+  const [checkoutError, setCheckoutError] = useState<string | null>(null);
   const copy = paywallCopy(reason, t, tOr);
   const targetPlan = deriveUpgradePlan(currentPlan, reason ?? null);
+
+  const handleCheckout = async () => {
+    if (checkoutLoading) return;
+    setCheckoutLoading(true);
+    setCheckoutError(null);
+    try {
+      await startCheckout({
+        plan: targetPlan,
+        billing: 'monthly',
+        source: 'paywall_modal',
+        reason: copy.reason,
+      });
+    } catch (error) {
+      setCheckoutError(getBillingErrorMessage(error, t('billing.error')));
+      setCheckoutLoading(false);
+    }
+  };
 
   useEffect(() => {
     if (!isOpen) return;
@@ -147,13 +168,23 @@ export function PaywallModal({ isOpen, onClose, reason, currentPlan }: PaywallMo
           ))}
         </ul>
         <div className="flex flex-col gap-3 sm:flex-row">
-          <Link
-            href={billingHref({ plan: targetPlan, source: 'paywall_modal', reason: copy.reason })}
-            onClick={() => trackEvent('upgrade_click', { plan: targetPlan, period: 'monthly', source: 'paywall_modal', reason: copy.reason })}
-            className="flex-1 px-4 py-2 bg-zinc-900 dark:bg-zinc-50 text-white dark:text-zinc-900 rounded-lg hover:bg-zinc-800 dark:hover:bg-zinc-200 shadow-sm hover:shadow-md transition-colors text-center focus-visible:ring-2 focus-visible:ring-zinc-400 dark:focus-visible:ring-zinc-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-900"
-          >
-            {copy.primaryLabel}
-          </Link>
+          {status === 'authenticated' ? (
+            <button
+              type="button"
+              onClick={handleCheckout}
+              disabled={checkoutLoading}
+              className="flex-1 px-4 py-2 bg-zinc-900 dark:bg-zinc-50 text-white dark:text-zinc-900 rounded-lg hover:bg-zinc-800 dark:hover:bg-zinc-200 shadow-sm hover:shadow-md transition-colors text-center disabled:opacity-50 focus-visible:ring-2 focus-visible:ring-zinc-400 dark:focus-visible:ring-zinc-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-900"
+            >
+              {checkoutLoading ? t('common.loading') : copy.primaryLabel}
+            </button>
+          ) : (
+            <Link
+              href={billingHref({ plan: targetPlan, source: 'paywall_modal', reason: copy.reason })}
+              className="flex-1 px-4 py-2 bg-zinc-900 dark:bg-zinc-50 text-white dark:text-zinc-900 rounded-lg hover:bg-zinc-800 dark:hover:bg-zinc-200 shadow-sm hover:shadow-md transition-colors text-center focus-visible:ring-2 focus-visible:ring-zinc-400 dark:focus-visible:ring-zinc-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-900"
+            >
+              {copy.primaryLabel}
+            </Link>
+          )}
           <button
             onClick={onClose}
             className="px-4 py-2 border border-zinc-300 dark:border-zinc-600 text-zinc-700 dark:text-zinc-300 rounded-lg hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors focus-visible:ring-2 focus-visible:ring-zinc-400 dark:focus-visible:ring-zinc-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-900"
@@ -161,6 +192,11 @@ export function PaywallModal({ isOpen, onClose, reason, currentPlan }: PaywallMo
             {t("common.cancel")}
           </button>
         </div>
+        {checkoutError && (
+          <p role="alert" className="mt-3 text-sm text-red-600 dark:text-red-400">
+            {checkoutError}
+          </p>
+        )}
       </div>
     </div>
   );

@@ -153,13 +153,12 @@ class Settings(BaseSettings):
     PLUS_MAX_DOCUMENTS: int = 20
     PRO_MAX_DOCUMENTS: int = 999
     FREE_MAX_SESSIONS_PER_DOC: int = 3
-    # 25→50 (2026-06-12): the upload gate charged before any value was
-    # experienced — the only payer converted at this wall and churned same-day.
-    # Free matches Plus on size; differentiation stays on doc count/sessions/
-    # credits/exports/layout translation.
+    FREE_DOMAIN_MODE_TRIALS: int = 1
+    # Free remains a useful 50 MB trial; paid tiers must resolve the file-size
+    # wall they upsell from rather than advertising an identical cap.
     FREE_MAX_FILE_SIZE_MB: int = 50
-    PLUS_MAX_FILE_SIZE_MB: int = 50
-    PRO_MAX_FILE_SIZE_MB: int = 100
+    PLUS_MAX_FILE_SIZE_MB: int = 100
+    PRO_MAX_FILE_SIZE_MB: int = 200
 
     # Collection limits per plan
     FREE_MAX_COLLECTIONS: int = 1

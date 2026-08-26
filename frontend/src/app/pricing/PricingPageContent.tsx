@@ -90,8 +90,8 @@ const comparisonRows = [
   {
     labelKey: 'pricing.comparison.uploadLimit',
     freeKey: 'pricing.comparison.upload50',
-    plusKey: 'pricing.comparison.upload50',
-    proKey: 'pricing.comparison.upload100',
+    plusKey: 'pricing.comparison.upload100',
+    proKey: 'pricing.comparison.upload200',
   },
   {
     labelKey: 'pricing.comparison.documentLimit',

@@ -25,6 +25,7 @@ from app.models.tables import (
 )
 from app.services import credit_service
 from app.services.doc_service import can_access_document
+from app.services.domain_mode_access import enforce_domain_mode_access
 from app.services.extraction_service import (
     EXTRACTION_JOB_TYPE,
     EXTRACTION_PREDEBIT_CREDITS,
@@ -184,24 +185,7 @@ async def create_extraction(
             detail={"error": "DOCUMENT_NOT_READY", "message": "Document is not ready"},
         )
 
-    # P1 hygiene follow-up (2026-08-03): domain_mode ("legal"/"academic")
-    # is a Plus+ feature (see app/api/chat.py's chat_stream for the
-    # primary gate + rationale — the frontend disables the selector for
-    # free users, but the backend accepted it unconditionally). This is
-    # the SECOND entry point that accepted it with zero plan check — a
-    # free/anon user could POST it directly on an extraction job and get
-    # the paid domain-rules prompt behavior. Same gate, same error shape.
-    if body.domain_mode is not None:
-        plan = (user.plan or "free").lower() if user is not None else "free"
-        if plan not in {"plus", "pro"}:
-            raise HTTPException(
-                status_code=403,
-                detail={
-                    "error": "DOMAIN_MODE_REQUIRES_PLUS",
-                    "message": "Legal/Academic domain mode requires a Plus or Pro plan",
-                    "required_plan": "plus",
-                },
-            )
+    await enforce_domain_mode_access(db, user, body.domain_mode)
 
     try:
         template = get_template(body.template_key)

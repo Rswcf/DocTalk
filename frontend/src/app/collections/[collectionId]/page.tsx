@@ -24,6 +24,7 @@ import { useDocTalkStore } from '../../../store';
 import { useLocale } from '../../../i18n';
 import { useUserPlanProfile } from '../../../lib/useUserPlanProfile';
 import { errorCopy, type ErrorCopy } from '../../../lib/errorCopy';
+import { getBillingErrorMessage, startCheckout } from '../../../lib/billing';
 import type { Citation, CollectionDetail, SessionItem } from '../../../types';
 import { LoadingScreen } from '../../../components/ui/LoadingScreen';
 import { trackEvent } from '../../../lib/analytics';
@@ -56,9 +57,27 @@ export default function CollectionDetailPage() {
   const [loadDocsError, setLoadDocsError] = useState<string | null>(null);
   const [loadingDocs, setLoadingDocs] = useState(false);
   const [addingDocId, setAddingDocId] = useState<string | null>(null);
+  const [checkoutLoading, setCheckoutLoading] = useState(false);
   const [workspaceMode, setWorkspaceMode] = useState<'chat' | 'templates' | 'diff'>('chat');
   // Mobile sidebar toggle
   const [showMobileSidebar, setShowMobileSidebar] = useState<'docs' | 'sessions' | null>(null);
+
+  const handleCollectionUpgrade = async () => {
+    if (checkoutLoading) return;
+    setCheckoutLoading(true);
+    try {
+      await startCheckout({
+        plan: userPlan === 'plus' ? 'pro' : 'plus',
+        billing: 'monthly',
+        source: 'collection_add_documents_modal',
+        reason: 'collection_doc_limit',
+      });
+    } catch (error) {
+      const message = getBillingErrorMessage(error, t('billing.error'));
+      setAddDocsErrorCopy({ title: t('billing.error'), body: message, severity: 'error' });
+      setCheckoutLoading(false);
+    }
+  };
 
   // Load collection detail
   useEffect(() => {
@@ -540,13 +559,14 @@ export default function CollectionDetailPage() {
                 <p className="font-medium">{addDocsErrorCopy.title}</p>
                 <p className="mt-1 leading-5 opacity-90">{addDocsErrorCopy.body}</p>
                 {addDocsErrorCopy.cta && (
-                  <Link
-                    href={addDocsErrorCopy.cta.href}
-                    onClick={() => trackEvent('upgrade_click', { source: 'collection_add_documents_modal', reason: 'collection_doc_limit' })}
+                  <button
+                    type="button"
+                    onClick={handleCollectionUpgrade}
+                    disabled={checkoutLoading}
                     className="mt-2 inline-flex items-center justify-center rounded-md bg-zinc-900 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-zinc-800 dark:bg-zinc-50 dark:text-zinc-900 dark:hover:bg-zinc-200 focus-visible:ring-2 focus-visible:ring-zinc-400 dark:focus-visible:ring-zinc-500"
                   >
                     {addDocsErrorCopy.cta.label}
-                  </Link>
+                  </button>
                 )}
               </div>
             )}

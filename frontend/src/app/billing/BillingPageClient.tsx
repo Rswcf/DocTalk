@@ -9,7 +9,6 @@ import Header from "../../components/Header";
 import {
   cancelSubscription,
   changePlan,
-  createSubscription,
   createPortalSession,
   type CancelSubscriptionReason,
 } from "../../lib/api";
@@ -18,6 +17,7 @@ import PricingTable from "../../components/PricingTable";
 import { PLAN_HIERARCHY, type PlanType } from "../../lib/models";
 import { formatPlanPrice } from "../../lib/planPricing";
 import { authHrefFor, type BillingPeriodIntent, type BillingPlanIntent } from "../../lib/billingLinks";
+import { getBillingErrorMessage as billingErrorMessage, startCheckout } from "../../lib/billing";
 import { trackEvent } from "../../lib/analytics";
 import { ArrowRight, CalendarDays, Check, Coins, CreditCard, ShieldCheck } from "lucide-react";
 import { usePageTitle } from "../../lib/usePageTitle";
@@ -230,51 +230,15 @@ function BillingContent() {
     const source = searchParams.get("source") || "billing";
     const reason = searchParams.get("reason");
     try {
-      trackEvent("upgrade_click", {
-        plan,
-        period: billingPeriod,
-        source,
-        reason,
-      });
-      const res = await createSubscription({ plan, billing: billingPeriod, source, reason });
-      window.location.href = res.checkout_url;
-      return;
-    } catch {
-      setMessage(t("billing.error"));
+      await startCheckout({ plan, billing: billingPeriod, source, reason });
+    } catch (error) {
+      setMessage(getBillingErrorMessage(error));
       setSubmitting(null);
     }
   };
 
   const getBillingErrorMessage = (error: unknown) => {
-    // Prefer structured ApiError.detail (new error-taxonomy shape) — the
-    // legacy regex below only matches bare-string detail payloads, so any
-    // future migration of billing.py to { error, message } detail would
-    // silently fall through without this check.
-    if (error && typeof error === "object") {
-      const maybeApi = error as { detail?: unknown };
-      if (maybeApi.detail && typeof maybeApi.detail === "object") {
-        const d = maybeApi.detail as Record<string, unknown>;
-        if (typeof d.message === "string" && d.message.length > 0) {
-          if (d.message.includes("Cannot switch billing interval during beta")) {
-            return t("billing.intervalMismatch");
-          }
-          return d.message;
-        }
-        if (typeof d.error === "string") return d.error;
-      }
-    }
-
-    const raw = error instanceof Error ? error.message : String(error || "");
-    if (raw.includes("Cannot switch billing interval during beta")) {
-      return t("billing.intervalMismatch");
-    }
-    // Legacy: extract backend string detail for any billing.py endpoint
-    // that still returns `{ detail: "..." }` (scope-out in Phase 1).
-    const detailMatch = raw.match(/"detail"\s*:\s*"([^"]+)"/);
-    if (detailMatch) {
-      return detailMatch[1];
-    }
-    return t("billing.error");
+    return billingErrorMessage(error, t("billing.error"), t("billing.intervalMismatch"));
   };
 
   const handlePlanAction = async (plan: PlanType) => {
@@ -479,11 +443,38 @@ function BillingContent() {
     profile && profile.stats.total_documents > 0 && profile.stats.total_messages > 0
   );
   const showFitCheck = profile?.plan === 'free' && !profileLoading && !hasReachedAhaMoment;
+  const offerPlanParam = searchParams.get('plan');
+  const offerPlan = searchParams.get('source') && (offerPlanParam === 'plus' || offerPlanParam === 'pro')
+    ? offerPlanParam
+    : null;
 
   return (
     <div className="dt-stitch-theme min-h-screen">
       <Header />
       <main className="mx-auto max-w-6xl px-6 py-8 sm:px-8">
+        {offerPlan && (
+          <section className="sticky top-3 z-30 mb-6 rounded-xl border border-blue-200 bg-blue-50 p-3 shadow-md dark:border-blue-900/60 dark:bg-blue-950">
+            <div className="flex items-center justify-between gap-4">
+              <div className="min-w-0">
+                <p className="truncate text-sm font-semibold text-blue-950 dark:text-blue-100">
+                  {offerPlan === 'plus' ? t('billing.plus.title') : t('billing.pro.title')}
+                </p>
+                <p className="text-sm text-blue-800 dark:text-blue-200">
+                  {formatPlanPrice(offerPlan, billingPeriod)} {t('billing.perMonth')}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => handleSubscribe(offerPlan)}
+                disabled={submitting !== null}
+                className="inline-flex shrink-0 items-center gap-2 rounded-lg bg-zinc-900 px-4 py-2 text-sm font-medium text-white shadow-sm transition-colors hover:bg-zinc-800 disabled:opacity-50 dark:bg-zinc-50 dark:text-zinc-900 dark:hover:bg-zinc-200 focus-visible:ring-2 focus-visible:ring-blue-400 focus-visible:ring-offset-2 focus-visible:ring-offset-blue-50 dark:focus-visible:ring-offset-blue-950"
+              >
+                {submitting === offerPlan ? t('common.loading') : t('billing.upgrade')}
+                {submitting !== offerPlan && <ArrowRight aria-hidden="true" size={15} />}
+              </button>
+            </div>
+          </section>
+        )}
         <section className="mb-8 grid gap-5 lg:grid-cols-[1fr_440px] lg:items-end">
           <div>
             <p className="mb-3 text-sm font-medium uppercase tracking-[0.18em] text-zinc-500 dark:text-zinc-400">

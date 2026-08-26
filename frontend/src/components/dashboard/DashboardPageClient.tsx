@@ -18,6 +18,7 @@ import { useLocale } from '../../i18n';
 import { clearAccountStorage } from '../../lib/clearAccountStorage';
 import { errorCopy, type ErrorCopy } from '../../lib/errorCopy';
 import { billingHref } from '../../lib/billingLinks';
+import { getBillingErrorMessage, startCheckout } from '../../lib/billing';
 import { trackEvent } from '../../lib/analytics';
 import { sanitizeFilename } from '../../lib/utils';
 import { PrivacyBadge } from '../PrivacyBadge';
@@ -30,8 +31,8 @@ type PlanTier = 'free' | 'plus' | 'pro';
 // Must mirror backend FREE/PLUS/PRO_MAX_FILE_SIZE_MB (app/core/config.py).
 const MAX_UPLOAD_MB_BY_PLAN: Record<PlanTier, number> = {
   free: 50,
-  plus: 50,
-  pro: 100,
+  plus: 100,
+  pro: 200,
 };
 
 const DASHBOARD_NUDGE_DISMISS_KEY = 'doctalk_dashboard_upgrade_nudge_dismissed_at';
@@ -76,6 +77,8 @@ export default function DashboardPageClient() {
   const [urlError, setUrlError] = useState('');
   const [urlErrorCopy, setUrlErrorCopy] = useState<ErrorCopy | null>(null);
   const [upgradeNudgeDismissed, setUpgradeNudgeDismissed] = useState(true);
+  const [checkoutLoading, setCheckoutLoading] = useState(false);
+  const [checkoutError, setCheckoutError] = useState<string | null>(null);
   const upgradeNudgeTrackedRef = useRef(false);
   const isLoggedIn = status === 'authenticated';
   const { profile } = useUserProfile();
@@ -191,6 +194,25 @@ export default function DashboardPageClient() {
       localStorage.setItem(DASHBOARD_NUDGE_DISMISS_KEY, String(Date.now()));
     } catch {
       // localStorage may be unavailable in restricted browsers.
+    }
+  };
+
+  const beginCheckout = async (
+    plan: 'plus' | 'pro',
+    source: string,
+    reason: string,
+    onFailure?: (message: string) => void,
+  ) => {
+    if (checkoutLoading) return;
+    setCheckoutLoading(true);
+    setCheckoutError(null);
+    try {
+      await startCheckout({ plan, billing: 'monthly', source, reason });
+    } catch (error) {
+      const message = getBillingErrorMessage(error, t('billing.error'));
+      setCheckoutError(message);
+      onFailure?.(message);
+      setCheckoutLoading(false);
     }
   };
 
@@ -399,25 +421,21 @@ export default function DashboardPageClient() {
                     <p className="mt-1 max-w-2xl text-sm leading-6 text-[var(--workbench-muted)]">
                       {tOr(
                         'dashboard.upgradeNudge.body',
-                        'Plus gives you 20 documents, 50 MB uploads, all AI modes, and Markdown export before your next limit stops the workflow.'
+                        'Plus gives you 20 documents, 100 MB uploads, all AI modes, and Markdown export before your next limit stops the workflow.'
                       )}
                     </p>
                   </div>
                 </div>
                 <div className="flex shrink-0 items-center gap-2 sm:self-start">
-	                  <Link
-	                    href={billingHref({ plan: 'plus', source: 'dashboard_upgrade_reminder', reason: 'sustained_free_usage' })}
-	                    onClick={() => trackEvent('upgrade_click', {
-	                      plan: 'plus',
-	                      period: 'monthly',
-	                      source: 'dashboard_upgrade_reminder',
-	                      reason: 'sustained_free_usage',
-	                    })}
+                  <button
+                    type="button"
+                    onClick={() => beginCheckout('plus', 'dashboard_upgrade_reminder', 'sustained_free_usage')}
+                    disabled={checkoutLoading}
                     className="dt-stitch-primary inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium transition-colors focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950"
                   >
                     {tOr('dashboard.upgradeNudge.cta', 'Upgrade')}
                     <ArrowRight aria-hidden="true" size={15} />
-                  </Link>
+                  </button>
                   <button
                     type="button"
                     onClick={dismissUpgradeNudge}
@@ -429,6 +447,11 @@ export default function DashboardPageClient() {
                 </div>
               </div>
             </section>
+          )}
+          {checkoutError && (
+            <p role="alert" className="mb-5 text-sm text-red-600 dark:text-red-400">
+              {checkoutError}
+            </p>
           )}
 
           <div
@@ -459,7 +482,12 @@ export default function DashboardPageClient() {
                 {uploadErrorCopy?.cta && (
                   <Link
                     href={uploadErrorCopy.cta.href}
-                    onClick={() => trackEvent('upgrade_click', { source: 'upload_error', reason: 'upload_limit' })}
+                    onClick={(event) => {
+                      if (!isLoggedIn) return;
+                      event.preventDefault();
+                      const reason = uploadErrorCopy.cta?.href.includes('file_size') ? 'file_size' : 'upload_limit';
+                      void beginCheckout(uploadUpgradePlan, 'upload_error', reason, (message) => setProgressText(message));
+                    }}
                     className="mt-3 inline-flex items-center justify-center rounded-lg bg-zinc-900 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-zinc-800 dark:bg-zinc-50 dark:text-zinc-900 dark:hover:bg-zinc-200 focus-visible:ring-2 focus-visible:ring-zinc-400 dark:focus-visible:ring-zinc-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-900"
                   >
                     {uploadErrorCopy.cta.label}
@@ -498,7 +526,12 @@ export default function DashboardPageClient() {
               {urlErrorCopy?.cta && (
                 <Link
                   href={urlErrorCopy.cta.href}
-                  onClick={() => trackEvent('upgrade_click', { source: 'url_error', reason: 'url_limit' })}
+                  onClick={(event) => {
+                    if (!isLoggedIn) return;
+                    event.preventDefault();
+                    const reason = urlErrorCopy.cta?.href.includes('file_size') ? 'file_size' : 'url_limit';
+                    void beginCheckout(uploadUpgradePlan, 'url_error', reason, (message) => setUrlError(message));
+                  }}
                   className="mt-3 inline-flex items-center justify-center rounded-lg bg-zinc-900 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-zinc-800 dark:bg-zinc-50 dark:text-zinc-900 dark:hover:bg-zinc-200 focus-visible:ring-2 focus-visible:ring-zinc-400 dark:focus-visible:ring-zinc-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-900"
                 >
                   {urlErrorCopy.cta.label}

@@ -12,6 +12,7 @@ from httpx import ASGITransport, AsyncClient
 
 from app.api import extractions as extractions_api
 from app.core import deps as deps_module
+from app.core.config import settings
 from app.services import credit_service
 from app.services.extraction_service import FREE_MONTHLY_EXTRACTION_LIMIT
 
@@ -136,10 +137,13 @@ async def test_create_extraction_requires_ready_document(client: AsyncClient) ->
 # doc-not-ready check.
 
 @pytest.mark.asyncio
-async def test_create_extraction_domain_mode_requires_plus_for_free_plan(client: AsyncClient) -> None:
+async def test_create_extraction_domain_mode_requires_plus_after_free_trial(client: AsyncClient) -> None:
     user = _make_user(plan="free")
     doc = _make_doc(user)
-    db = _make_db(get=AsyncMock(return_value=doc))
+    db = _make_db(
+        get=AsyncMock(return_value=doc),
+        scalar=AsyncMock(return_value=settings.FREE_DOMAIN_MODE_TRIALS),
+    )
     _override_dependencies(db, user)
 
     response = await client.post(
@@ -149,6 +153,45 @@ async def test_create_extraction_domain_mode_requires_plus_for_free_plan(client:
 
     detail = _assert_error(response, 403, "DOMAIN_MODE_REQUIRES_PLUS")
     assert detail["required_plan"] == "plus"
+
+
+@pytest.mark.asyncio
+async def test_create_extraction_domain_mode_counts_prior_extraction_trial(client: AsyncClient) -> None:
+    user = _make_user(plan="free")
+    doc = _make_doc(user)
+    db = _make_db(
+        get=AsyncMock(return_value=doc),
+        scalar=AsyncMock(side_effect=[0, settings.FREE_DOMAIN_MODE_TRIALS]),
+    )
+    _override_dependencies(db, user)
+
+    response = await client.post(
+        f"/api/documents/{doc.id}/extractions",
+        json={"template_key": "executive_summary", "domain_mode": "academic"},
+    )
+
+    _assert_error(response, 403, "DOMAIN_MODE_REQUIRES_PLUS")
+
+
+@pytest.mark.asyncio
+async def test_create_extraction_domain_mode_allows_free_trial(
+    client: AsyncClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    user = _make_user(plan="free")
+    doc = _make_doc(user)
+    db = _make_db(get=AsyncMock(return_value=doc), scalar=AsyncMock(return_value=0))
+    _override_dependencies(db, user)
+    monkeypatch.setattr(extractions_api, "_enforce_free_extraction_limit", AsyncMock())
+    monkeypatch.setattr(credit_service, "debit_credits", AsyncMock(return_value=None))
+    monkeypatch.setattr(credit_service, "get_user_credits", AsyncMock(return_value=12))
+
+    response = await client.post(
+        f"/api/documents/{doc.id}/extractions",
+        json={"template_key": "executive_summary", "domain_mode": "legal"},
+    )
+
+    _assert_error(response, 402, "INSUFFICIENT_CREDITS")
 
 
 @pytest.mark.asyncio

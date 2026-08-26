@@ -18,6 +18,7 @@ import { useChatStream } from '../../lib/useChatStream';
 import { openAuthModal } from '../../lib/auth-modal';
 import { errorCopy } from '../../lib/errorCopy';
 import { billingHref } from '../../lib/billingLinks';
+import { getBillingErrorMessage, startCheckout } from '../../lib/billing';
 import { trackEvent } from '../../lib/analytics';
 import { withShareAnchor } from '../../lib/shareAnchors';
 
@@ -336,6 +337,28 @@ export default function ChatPanel({ sessionId, onCitationClick, onPreviewLayoutT
     openAuthModal({ callbackUrl: '/' });
   }, []);
 
+  const handleBillingRedirect = useCallback((intent: { plan: 'plus' | 'pro'; reason: string }) => {
+    setPlusMenuOpen(false);
+    if (!userPlan) {
+      router.push(billingHref({ plan: intent.plan, source: 'chat_plus_menu', reason: intent.reason }));
+      return;
+    }
+    void startCheckout({
+      plan: intent.plan,
+      billing: 'monthly',
+      source: 'chat_plus_menu',
+      reason: intent.reason,
+    }).catch((error) => {
+      addMessage({
+        id: `m_${Date.now()}_checkout`,
+        role: 'assistant',
+        text: getBillingErrorMessage(error, t('billing.error')),
+        isError: true,
+        createdAt: Date.now(),
+      });
+    });
+  }, [addMessage, router, t, userPlan]);
+
   const handleExport = useCallback(() => {
     trackEvent('export_clicked', { source: 'chat_plus_menu', format: 'markdown' });
     const docName = useDocTalkStore.getState().documentName || 'document';
@@ -627,7 +650,7 @@ export default function ChatPanel({ sessionId, onCitationClick, onPreviewLayoutT
         <div className="mx-auto max-w-4xl">
           {userPlan && (
             <div className="mb-2 flex justify-end">
-              <DomainModeSelector userPlan={userPlan} />
+              <DomainModeSelector />
             </div>
           )}
           <div className="dt-composer flex items-center gap-2 rounded-[1.75rem] px-3 py-2 transition-[border-color,box-shadow]">
@@ -646,16 +669,7 @@ export default function ChatPanel({ sessionId, onCitationClick, onPreviewLayoutT
               onExport={handleExport}
               onExportPdf={() => handleExportFormat('pdf')}
               onExportDocx={() => handleExportFormat('docx')}
-              onBillingRedirect={(intent) => {
-                setPlusMenuOpen(false);
-                trackEvent('upgrade_click', {
-                  plan: intent.plan,
-                  period: 'monthly',
-                  source: 'chat_plus_menu',
-                  reason: intent.reason,
-                });
-                router.push(billingHref({ plan: intent.plan, source: 'chat_plus_menu', reason: intent.reason }));
-              }}
+              onBillingRedirect={handleBillingRedirect}
               t={t}
               tOr={tOr}
             />

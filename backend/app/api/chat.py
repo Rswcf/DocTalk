@@ -44,6 +44,7 @@ from app.services import credit_service
 from app.services.action_planner import ChatAction, deterministic_plan
 from app.services.chat_service import chat_service
 from app.services.doc_service import can_access_document
+from app.services.domain_mode_access import enforce_domain_mode_access
 from app.services.share_anchor_service import message_share_anchor
 
 DEMO_MESSAGE_LIMIT = 5
@@ -388,25 +389,10 @@ async def chat_stream(
             },
         )
 
-    # P1 hygiene (top-down review, 2026-08-01): domain_mode ("legal"/
-    # "academic") is marketed as a Plus+ feature — the frontend disables
-    # the selector for free users (DomainModeSelector.tsx: canUse = plan in
-    # {plus,pro}) — but the backend accepted it unconditionally, so any
-    # free (or anonymous) user could bypass the UI gate entirely with a raw
-    # POST {"domain_mode": "legal"} and get the paid prompt behavior.
-    # Checked here, before the rate-limit/credit work below, since it's a
-    # cheap deterministic authorization check independent of both.
-    if body.domain_mode is not None:
-        plan = (user.plan or "free").lower() if user is not None else "free"
-        if plan not in {"plus", "pro"}:
-            raise HTTPException(
-                status_code=403,
-                detail={
-                    "error": "DOMAIN_MODE_REQUIRES_PLUS",
-                    "message": "Legal/Academic domain mode requires a Plus or Pro plan",
-                    "required_plan": "plus",
-                },
-            )
+    # Server-side at every Domain Mode entry point: paid plans are unlimited,
+    # authenticated free users receive the configured durable-session trial,
+    # and anonymous requests remain ineligible.
+    await enforce_domain_mode_access(db, user, body.domain_mode)
 
     # Rate limit anonymous users
     if user is None:

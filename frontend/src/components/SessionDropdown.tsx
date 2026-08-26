@@ -4,11 +4,13 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { ChevronDown, Plus, Trash2, Home, X } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { useSession } from 'next-auth/react';
 import { useDocTalkStore } from '../store';
 import { useLocale } from '../i18n';
 import { createSession, getMessages, deleteSession } from '../lib/api';
 import { errorCopy, type ErrorCopy } from '../lib/errorCopy';
 import { trackEvent } from '../lib/analytics';
+import { getBillingErrorMessage, startCheckout } from '../lib/billing';
 import { useDropdownKeyboard } from '../lib/useDropdownKeyboard';
 import { clearDemoSession, readDemoSession, writeDemoSession } from '../lib/demoSessionStorage';
 
@@ -22,11 +24,13 @@ export default function SessionDropdown() {
   const { addSession, setSessionId, setMessages, removeSession, reset, setDemoMessagesUsed, setDemoRestoredUserMsgCount, bumpDemoAccountingEpoch } = useDocTalkStore();
   const { t, tOr } = useLocale();
   const router = useRouter();
+  const { status } = useSession();
 
   const [open, setOpen] = useState(false);
   const [focusIndex, setFocusIndex] = useState(-1);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [sessionErrorCopy, setSessionErrorCopy] = useState<ErrorCopy | null>(null);
+  const [checkoutLoading, setCheckoutLoading] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const itemRefs = useRef<(HTMLButtonElement | null)[]>([]);
@@ -173,6 +177,23 @@ export default function SessionDropdown() {
     reset();
   };
 
+  const onUpgrade = async () => {
+    if (checkoutLoading) return;
+    setCheckoutLoading(true);
+    try {
+      await startCheckout({
+        plan: 'plus',
+        billing: 'monthly',
+        source: 'session_dropdown',
+        reason: 'session_limit',
+      });
+    } catch (error) {
+      const message = getBillingErrorMessage(error, t('billing.error'));
+      setSessionErrorCopy({ title: t('billing.error'), body: message, severity: 'error' });
+      setCheckoutLoading(false);
+    }
+  };
+
   const disabledClass = isStreaming ? 'opacity-60 cursor-not-allowed' : '';
 
   const titleText = documentName || '';
@@ -252,13 +273,23 @@ export default function SessionDropdown() {
                 <p className="font-medium">{sessionErrorCopy.title}</p>
                 <p className="mt-1 leading-5 opacity-90">{sessionErrorCopy.body}</p>
                 {sessionErrorCopy.cta && (
-                  <Link
-                    href={sessionErrorCopy.cta.href}
-                    onClick={() => trackEvent('upgrade_click', { source: 'session_dropdown', reason: 'session_limit' })}
-                    className="mt-2 inline-flex items-center justify-center rounded-md bg-zinc-900 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-zinc-800 dark:bg-zinc-50 dark:text-zinc-900 dark:hover:bg-zinc-200 focus-visible:ring-2 focus-visible:ring-zinc-400 dark:focus-visible:ring-zinc-500"
-                  >
-                    {sessionErrorCopy.cta.label}
-                  </Link>
+                  status === 'authenticated' ? (
+                    <button
+                      type="button"
+                      onClick={onUpgrade}
+                      disabled={checkoutLoading}
+                      className="mt-2 inline-flex items-center justify-center rounded-md bg-zinc-900 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-zinc-800 disabled:opacity-50 dark:bg-zinc-50 dark:text-zinc-900 dark:hover:bg-zinc-200 focus-visible:ring-2 focus-visible:ring-zinc-400 dark:focus-visible:ring-zinc-500"
+                    >
+                      {sessionErrorCopy.cta.label}
+                    </button>
+                  ) : (
+                    <Link
+                      href={sessionErrorCopy.cta.href}
+                      className="mt-2 inline-flex items-center justify-center rounded-md bg-zinc-900 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-zinc-800 dark:bg-zinc-50 dark:text-zinc-900 dark:hover:bg-zinc-200 focus-visible:ring-2 focus-visible:ring-zinc-400 dark:focus-visible:ring-zinc-500"
+                    >
+                      {sessionErrorCopy.cta.label}
+                    </Link>
+                  )
                 )}
               </div>
             )}

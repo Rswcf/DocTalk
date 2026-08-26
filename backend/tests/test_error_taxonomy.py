@@ -729,12 +729,12 @@ async def test_chat_free_pro_monthly_limit_reached(
 # {"domain_mode": "legal"} directly and get the paid prompt behavior.
 
 @pytest.mark.asyncio
-async def test_chat_domain_mode_requires_plus_for_free_plan(
+async def test_chat_domain_mode_requires_plus_after_free_trial(
     client: AsyncClient,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     user = _make_user(plan="free")
-    db = _make_db()
+    db = _make_db(scalar=AsyncMock(return_value=settings.FREE_DOMAIN_MODE_TRIALS))
     _override_dependencies(db, optional_user=user)
     session = SimpleNamespace(document=SimpleNamespace(status="ready", demo_slug=None), document_id=uuid.uuid4())
     monkeypatch.setattr(chat_api, "verify_session_access", AsyncMock(return_value=session))
@@ -745,6 +745,39 @@ async def test_chat_domain_mode_requires_plus_for_free_plan(
     )
     detail = _assert_error(response, 403, "DOMAIN_MODE_REQUIRES_PLUS")
     assert detail["required_plan"] == "plus"
+
+
+@pytest.mark.asyncio
+async def test_chat_domain_mode_allows_free_trial(
+    client: AsyncClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    user = _make_user(plan="free")
+    db = _make_db(scalar=AsyncMock(return_value=0), commit=AsyncMock())
+    _override_dependencies(db, optional_user=user)
+    session = SimpleNamespace(
+        document=SimpleNamespace(status="ready", demo_slug=None),
+        document_id=uuid.uuid4(),
+        collection_id=None,
+    )
+    monkeypatch.setattr(chat_api, "verify_session_access", AsyncMock(return_value=session))
+    monkeypatch.setattr(chat_api.auth_chat_limiter, "is_allowed", AsyncMock(return_value=True))
+    monkeypatch.setattr(chat_api, "enforce_free_mode_limits", AsyncMock())
+    monkeypatch.setattr(chat_api.credit_service, "get_estimated_cost", lambda _mode: 7)
+    monkeypatch.setattr(chat_api.credit_service, "get_user_credits", AsyncMock(return_value=1000))
+    monkeypatch.setattr("app.services.credit_service.ensure_monthly_credits", AsyncMock())
+
+    async def _fake_chat_stream(*_args, **_kwargs):
+        yield {"event": "done", "data": {}}
+
+    monkeypatch.setattr(chat_api.chat_service, "chat_stream", _fake_chat_stream)
+
+    response = await client.post(
+        f"/api/sessions/{uuid.uuid4()}/chat",
+        json={"message": "Hello", "mode": "quick", "domain_mode": "legal"},
+    )
+
+    assert response.status_code == 200
 
 
 @pytest.mark.asyncio
