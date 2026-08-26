@@ -46,6 +46,7 @@ graph TB
     NextJS --> AuthJS
     NextJS --> Proxy
     Proxy -->|HS256 JWT| FastAPI
+    Browser -->|Direct multipart upload + HS256 JWT| FastAPI
     FastAPI --> PG
     FastAPI --> Qdrant
     FastAPI --> Redis
@@ -76,7 +77,7 @@ graph TB
 |-----------|------|
 | **Next.js** | Client-side rendered SPA (`"use client"`), handles routing, i18n, and UI state (Zustand) |
 | **Auth.js v5** | Authentication via 3 providers: Google OAuth, Microsoft OAuth, and Email Magic Link (via Resend). Encrypted JWE session tokens |
-| **API Proxy** | Translates JWE tokens to HS256 JWT, injects `Authorization` header for all backend requests |
+| **API Proxy** | Translates JWE tokens to HS256 JWT and injects `Authorization` for proxied backend requests. Multipart upload instead gets the same backend-compatible JWT from `/api/upload-token` and posts directly to FastAPI to avoid Vercel's body limit |
 | **FastAPI** | REST API + SSE streaming for chat, document management, billing, user accounts, and layout-translation job creation |
 | **Celery** | Async document parsing and artifact work: text extraction (PDF/DOCX/PPTX/XLSX/TXT/MD/URL) → chunking → embedding → vector indexing; layout-translation polling and artifact persistence. PPTX/DOCX files are also converted to PDF via LibreOffice headless for visual rendering |
 | **RetainPDF sidecar** | Railway service used only for layout-preserving PDF translation: OCR orchestration, translation batching, translated PDF rendering |
@@ -97,7 +98,7 @@ graph TB
 ```mermaid
 sequenceDiagram
     participant B as Browser
-    participant P as API Proxy
+    participant T as Upload Token Route
     participant API as FastAPI
     participant S3 as MinIO
     participant R as Redis
@@ -106,13 +107,14 @@ sequenceDiagram
     participant Q as Qdrant
     participant OR as OpenRouter
 
-    B->>P: POST /api/proxy/documents/upload<br/>(multipart/form-data)
-    P->>API: Forward with JWT
+    B->>T: GET /api/upload-token<br/>(Auth.js JWE cookie)
+    T-->>B: 200 {token: 5-minute HS256 JWT}
+    B->>API: POST /api/documents/upload<br/>multipart + Authorization: Bearer JWT
     API->>S3: Upload PDF binary
     S3-->>API: storage_key
-    API->>DB: INSERT document (status=uploading)
+    API->>DB: INSERT document (status=parsing)
     API->>R: Dispatch parse_document task
-    API-->>B: 201 {document_id, status: "parsing"}
+    API-->>B: 202 {document_id, status: "parsing", filename}
 
     Note over W: Celery picks up task
     W->>S3: Download PDF
@@ -139,7 +141,7 @@ sequenceDiagram
 
 **Step-by-step:**
 
-1. **Upload**: Browser sends PDF via multipart form through the API proxy. Backend validates per-plan document count, file size, and logical page-count limits before object storage or document-row creation, performs magic-byte file validation (PDF `%PDF` header, Office ZIP structure + `[Content_Types].xml`, 500MB zip bomb protection), sanitizes the filename (Unicode normalization, control char stripping, double-extension blocking), stores the file in MinIO with SSE-S3 encryption, and creates a document record. Direct uploads use the 50/100/200 MB plan caps. Every URL response, including PDFs, is capped at 10 MB regardless of plan; the fetcher bounds raw chunks and decoded output independently so compressed expansion cannot bypass the cap.
+1. **Upload**: Browser first obtains a five-minute backend-compatible HS256 JWT from the lightweight `/api/upload-token` Next.js route, then sends the multipart body directly to `${NEXT_PUBLIC_API_BASE}/api/documents/upload` with that bearer token. This deliberate proxy bypass avoids Vercel's 4.5 MB serverless body limit; every request that does use `/api/proxy/*` still receives JWT injection there. Backend validates per-plan document count, file size, and logical page-count limits before object storage or document-row creation, performs magic-byte file validation (PDF `%PDF` header, Office ZIP structure + `[Content_Types].xml`, 500MB zip bomb protection), sanitizes the filename (Unicode normalization, control char stripping, double-extension blocking), stores the file in MinIO with SSE-S3 encryption, creates the document directly in `status=parsing`, dispatches parsing, and returns HTTP 202. Direct uploads use the 50/100/200 MB plan caps. Every URL response, including PDFs, is capped at 10 MB regardless of plan; the fetcher bounds raw chunks and decoded output independently so compressed expansion cannot bypass the cap.
 
 2. **Text Extraction**: Celery worker downloads the PDF and uses **PyMuPDF (fitz)** to extract text with bounding-box coordinates per page. Coordinates are normalized to `[0, 1]` range (top-left origin).
 
@@ -463,8 +465,8 @@ sequenceDiagram
 
 Auth.js v5 encrypts session tokens as JWE (JSON Web Encryption), which the Python backend cannot decrypt without sharing the encryption key and matching the exact encryption algorithm. Instead of coupling the two systems:
 
-1. The **API proxy** (`/api/proxy/[...path]/route.ts`) decrypts the JWE using Auth.js's built-in `getToken()` function
-2. It creates a new **HS256-signed JWT** with just `sub` (user ID), `iat`, and `exp` claims
+1. The **API proxy** (`/api/proxy/[...path]/route.ts`) and the upload-token route (`/api/upload-token`) decrypt the JWE using Auth.js's built-in `getToken()` function
+2. They create a new **HS256-signed JWT** with just `sub` (user ID), `iat`, and `exp` claims; proxied calls receive it server-side, while direct multipart upload receives a five-minute token in the browser first
 3. The backend validates this simple JWT using the shared `AUTH_SECRET`
 
 This cleanly separates the frontend auth system from the backend API authentication.
@@ -710,6 +712,9 @@ erDiagram
         string error_code
         text error_message
         jsonb metadata_json
+        uuid worker_claim_token "nullable; extraction lease owner"
+        int worker_claim_attempts "bounded extraction deliveries"
+        datetime worker_lease_expires_at "nullable"
         datetime created_at
         datetime updated_at
         datetime completed_at
@@ -1349,6 +1354,13 @@ marker that makes the pre-debit/reconcile/refund triangle race-safe:
   conditional refund atomically marks the undelivered job failed and, for a
   job-owned Free Domain Mode trial, releases the trial row; a zero-row delete
   leaves a committed succeeded job and result untouched.
+- Extraction delivery uses migration `20260826_0042`'s durable per-job claim
+  token, attempt count, and 45-minute lease plus advisory-lock namespace 948.
+  The lease exceeds Redis's 40-minute visibility timeout. A lost claim-commit
+  acknowledgement is resolved in a fresh session by matching the token; a
+  different delivery can reclaim only after expiry. Beat/startup recovery may
+  spend one stale reclaim, while a second expired claim atomically performs
+  the conditional refund, failed-job write, and eligible trial release.
 - The chat strict-quote route persists answer + reconcile + usage in ONE
   atomic commit, so a cancelled/ambiguous COMMIT can no longer produce a
   persisted answer with a refunded charge (or vice versa).

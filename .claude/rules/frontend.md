@@ -10,7 +10,7 @@ paths:
 - Pages that fetch API data must render meaningful content in loading AND error states (prevents Google Soft 404)
 
 ## API Proxy
-- **ALL** frontend→backend calls go through `/api/proxy/*` route, which injects JWT. Including SSE chat stream (`sse.ts`). Missing this = 401 errors
+- **Authenticated API flow**: every proxied frontend→backend call uses `/api/proxy/*`, including the SSE chat stream (`sse.ts`); the proxy MUST inject the backend-compatible JWT or the request gets a 401. The deliberate exception is multipart document upload: `uploadDocument()` first GETs `/api/upload-token` for a 5-minute HS256 JWT, then POSTs the multipart body directly to `${NEXT_PUBLIC_API_BASE}/api/documents/upload` with `Authorization: Bearer ...` to avoid Vercel's 4.5 MB body limit. Do not route large multipart uploads through the proxy, and do not weaken JWT injection on any path that is proxied.
 - **JWT double-layer**: Auth.js uses encrypted JWE (unreadable by backend). Proxy creates plain HS256 JWT via `jose`. Backend `deps.py` validates exp/iat/sub
 - `allowDangerousEmailAccountLinking: true` enables cross-provider auto-linking by email
 - **Proxy maxDuration**: `route.ts` exports `maxDuration = 60` (Vercel Hobby limit). SSE chat 60s timeout, others 30s

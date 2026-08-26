@@ -31,6 +31,7 @@ from app.services.domain_mode_access import (
 )
 from app.services.extraction_service import (
     EXTRACTION_JOB_TYPE,
+    EXTRACTION_LEASE_SECONDS,
     EXTRACTION_PREDEBIT_CREDITS,
     FREE_MONTHLY_EXTRACTION_LIMIT,
     get_template,
@@ -209,6 +210,8 @@ async def create_extraction(
             "locale": body.locale,
             "domain_mode": body.domain_mode,
         },
+        worker_lease_expires_at=datetime.now(timezone.utc)
+        + timedelta(seconds=EXTRACTION_LEASE_SECONDS),
     )
     db.add(job)
     await db.flush()
@@ -288,6 +291,8 @@ async def create_extraction(
                     error_message="Failed to queue extraction",
                     completed_at=datetime.now(timezone.utc),
                     updated_at=datetime.now(timezone.utc),
+                    worker_claim_token=None,
+                    worker_lease_expires_at=None,
                 )
                 .returning(DocumentJob.id)
                 .execution_options(synchronize_session=False)

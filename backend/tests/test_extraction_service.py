@@ -3,12 +3,15 @@ from __future__ import annotations
 import csv
 import io
 import uuid
+from contextlib import contextmanager
 from unittest.mock import MagicMock
 
+import pytest
 from sqlalchemy.dialects import postgresql
 
 from app.models.tables import Chunk
 from app.services.extraction_service import (
+    EXTRACTION_LEASE_SECONDS,
     TEMPLATES,
     _citation_from_chunk,
     _json_from_text,
@@ -18,6 +21,46 @@ from app.services.extraction_service import (
     render_csv,
     render_markdown,
 )
+
+
+def test_extraction_lease_and_watchdog_cadence_exceed_broker_visibility() -> None:
+    from app.workers.celery_app import celery_app
+
+    visibility_timeout = celery_app.conf.broker_transport_options["visibility_timeout"]
+    watchdog_schedule = celery_app.conf.beat_schedule[
+        "requeue-stale-running-extractions"
+    ]["schedule"]
+
+    assert EXTRACTION_LEASE_SECONDS > visibility_timeout
+    assert watchdog_schedule > visibility_timeout
+
+
+def test_lock_busy_tokenized_recovery_raises_for_celery_retry(monkeypatch) -> None:
+    from app.services import extraction_service
+
+    @contextmanager
+    def busy_lock(_job_id: str):
+        yield False
+
+    monkeypatch.setattr(extraction_service, "extraction_job_advisory_lock", busy_lock)
+
+    with pytest.raises(RuntimeError, match="EXTRACTION_JOB_LOCK_BUSY"):
+        extraction_service.run_extraction_job_sync(
+            str(uuid.uuid4()),
+            expected_claim_token=str(uuid.uuid4()),
+        )
+
+
+def test_lock_busy_untokenized_duplicate_is_a_noop(monkeypatch) -> None:
+    from app.services import extraction_service
+
+    @contextmanager
+    def busy_lock(_job_id: str):
+        yield False
+
+    monkeypatch.setattr(extraction_service, "extraction_job_advisory_lock", busy_lock)
+
+    extraction_service.run_extraction_job_sync(str(uuid.uuid4()))
 
 
 def test_reconcile_sync_equal_cost_still_locks_and_stamps_marker() -> None:

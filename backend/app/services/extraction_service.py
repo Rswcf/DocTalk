@@ -6,9 +6,10 @@ import json
 import logging
 import re
 import uuid
+from contextlib import contextmanager
 from dataclasses import dataclass
-from datetime import datetime, timezone
-from typing import Any, Iterable, Sequence
+from datetime import datetime, timedelta, timezone
+from typing import Any, Iterable, Iterator, Sequence
 
 import sqlalchemy as sa
 from openai import OpenAI
@@ -40,6 +41,15 @@ EXTRACTION_PREDEBIT_CREDITS = 25
 FREE_MONTHLY_EXTRACTION_LIMIT = 2
 MAX_CONTEXT_CHUNKS = 10
 MAX_CONTEXT_CHARS_PER_CHUNK = 1400
+
+# The worker's hard time limit is seven minutes and Redis redelivers an
+# unacknowledged task after 40 minutes. A claim must remain exclusive beyond
+# that broker window, otherwise the original and redelivered tasks could both
+# deliver/settle. One expired claim may be recovered; a second expiration is
+# terminally refunded instead of leaving the predebit standing forever.
+EXTRACTION_LEASE_SECONDS = 45 * 60
+EXTRACTION_MAX_CLAIM_ATTEMPTS = 2
+EXTRACTION_LOCK_NAMESPACE = 948
 
 
 @dataclass(frozen=True)
@@ -548,9 +558,9 @@ def _reconcile_sync(
 def _settle_extraction_predebit_after_failure_sync(
     *,
     job_id: uuid.UUID,
-    user_id: uuid.UUID,
-    pre_debited: int,
-    ledger_id: uuid.UUID,
+    user_id: uuid.UUID | None = None,
+    pre_debited: int | None = None,
+    ledger_id: uuid.UUID | None = None,
     error_code: str,
     error_message: str,
     release_trial: bool,
@@ -566,11 +576,33 @@ def _settle_extraction_predebit_after_failure_sync(
     from app.models.sync_database import SyncSessionLocal
 
     with SyncSessionLocal() as settle_db:
+        job_snapshot = settle_db.get(DocumentJob, job_id)
+        if job_snapshot is None:
+            raise RuntimeError(
+                f"Extraction job {job_id} not found during failure settlement"
+            )
+        metadata = job_snapshot.metadata_json or {}
+        metadata_pre_debited = int(metadata.get("pre_debited") or 0)
+        ledger_raw = metadata.get("predebit_ledger_id")
+        resolved_pre_debited = (
+            int(pre_debited) if pre_debited is not None else metadata_pre_debited
+        )
+        resolved_ledger_id = (
+            ledger_id
+            if ledger_id is not None
+            else (uuid.UUID(str(ledger_raw)) if ledger_raw else None)
+        )
+        resolved_user_id = user_id or job_snapshot.user_id
+        if resolved_pre_debited <= 0 or resolved_ledger_id is None:
+            raise RuntimeError(
+                f"Extraction job {job_id} has no recoverable predebit metadata"
+            )
+
         refunded = _refund_predebit_sync(
             settle_db,
-            user_id,
-            pre_debited,
-            ledger_id,
+            resolved_user_id,
+            resolved_pre_debited,
+            resolved_ledger_id,
         )
         if not refunded:
             settle_db.rollback()
@@ -592,13 +624,15 @@ def _settle_extraction_predebit_after_failure_sync(
         failed_job.error_message = error_message
         failed_job.completed_at = completed_at
         failed_job.updated_at = completed_at
+        failed_job.worker_claim_token = None
+        failed_job.worker_lease_expires_at = None
         settle_db.add(failed_job)
         settle_db.flush()
 
         if release_trial:
             release_failed_extraction_trial_sync(
                 settle_db,
-                user_id=user_id,
+                user_id=resolved_user_id,
                 owning_job_id=job_id,
             )
 
@@ -606,45 +640,283 @@ def _settle_extraction_predebit_after_failure_sync(
         return True
 
 
-def run_extraction_job_sync(job_id: str) -> None:
+@contextmanager
+def extraction_job_advisory_lock(job_id: str) -> Iterator[bool]:
+    """Hold the house-pattern session advisory lock for one extraction run."""
+    from app.models import sync_database
+
+    lock_conn = sync_database.sync_engine.connect().execution_options(
+        isolation_level="AUTOCOMMIT"
+    )
+    got_lock = False
+    try:
+        got_lock = bool(
+            lock_conn.execute(
+                sa.text("SELECT pg_try_advisory_lock(:ns, hashtext(:key))"),
+                {"ns": EXTRACTION_LOCK_NAMESPACE, "key": job_id},
+            ).scalar()
+        )
+        yield got_lock
+    finally:
+        try:
+            if got_lock:
+                lock_conn.execute(
+                    sa.text("SELECT pg_advisory_unlock(:ns, hashtext(:key))"),
+                    {"ns": EXTRACTION_LOCK_NAMESPACE, "key": job_id},
+                )
+        except Exception:
+            # A failed unlock must not return a session-level lock to the
+            # connection pool. Terminating the connection releases the lock.
+            logger.warning(
+                "Extraction advisory unlock failed for %s; invalidating connection",
+                job_id,
+            )
+            try:
+                lock_conn.invalidate()
+            except Exception:
+                pass
+        finally:
+            try:
+                lock_conn.close()
+            except Exception:
+                pass
+
+
+def _claim_extraction_job_sync(
+    job_id: uuid.UUID,
+    *,
+    expected_claim_token: uuid.UUID | None = None,
+) -> uuid.UUID | None:
+    """Claim one queued/stale extraction and resolve ambiguous commits fresh.
+
+    ``expected_claim_token`` authorizes a watchdog-staged queued delivery. The
+    worker atomically exchanges it for a private live token, so a duplicate of
+    that recovery message cannot take over a hard-dead ``running`` worker
+    before the new lease expires. The caller must hold the per-job advisory
+    lock while invoking this function.
+    """
     from app.models.sync_database import SyncSessionLocal
 
-    job_uuid = uuid.UUID(job_id)
-    with SyncSessionLocal() as db:
-        job = db.get(DocumentJob, job_uuid)
-        if not job:
-            logger.warning("Extraction job %s not found", job_id)
-            return
-        if job.status != "queued":
-            return
+    claim_token = uuid.uuid4()
+    commit_error: Exception | None = None
 
-        claimed_job_id = db.scalar(
-            sa.update(DocumentJob)
-            .where(
-                DocumentJob.id == job_uuid,
-                DocumentJob.status == "queued",
+    # The second session is both the commit-ack resolver and, when the first
+    # transaction did not land, a fresh retry of the same tokenized claim.
+    for _resolution_attempt in range(2):
+        terminalize = False
+        with SyncSessionLocal() as claim_db:
+            job = claim_db.scalar(
+                sa.select(DocumentJob)
+                .where(DocumentJob.id == job_id)
+                .with_for_update()
             )
-            .values(
-                status="running",
-                updated_at=datetime.now(timezone.utc),
+            if job is None:
+                logger.warning("Extraction job %s not found", job_id)
+                return None
+            if job.job_type != EXTRACTION_JOB_TYPE:
+                logger.warning(
+                    "Extraction claim skipped for %s: job_type=%s",
+                    job_id,
+                    job.job_type,
+                )
+                return None
+            if job.status not in {"queued", "running"}:
+                return None
+
+            now = datetime.now(timezone.utc)
+            lease_expires_at = job.worker_lease_expires_at
+            if lease_expires_at is None and job.updated_at is not None:
+                lease_expires_at = job.updated_at + timedelta(
+                    seconds=EXTRACTION_LEASE_SECONDS
+                )
+            lease_expired = lease_expires_at is not None and lease_expires_at <= now
+
+            # Only this invocation's private live token may resolve its own
+            # ambiguous commit. A watchdog token is stored while QUEUED and is
+            # deliberately replaced below before execution begins.
+            if (
+                job.status == "running"
+                and job.worker_claim_token == claim_token
+            ):
+                if lease_expired:
+                    job.worker_lease_expires_at = now + timedelta(
+                        seconds=EXTRACTION_LEASE_SECONDS
+                    )
+                    job.updated_at = now
+                    claim_db.add(job)
+                    try:
+                        claim_db.commit()
+                        return claim_token
+                    except Exception as exc:
+                        commit_error = exc
+                        try:
+                            claim_db.rollback()
+                        except Exception:
+                            pass
+                        continue
+                return claim_token
+
+            attempts = int(job.worker_claim_attempts or 0)
+            if expected_claim_token is not None:
+                if (
+                    job.status != "queued"
+                    or job.worker_claim_token != expected_claim_token
+                    or attempts <= 0
+                ):
+                    return None
+                # The watchdog already spent this attempt when it staged the
+                # delivery. Exchange its public dispatch token for a private
+                # live token without incrementing the bounded counter again.
+            else:
+                if job.status == "queued" and job.worker_claim_token is not None:
+                    return None
+                if job.status == "running" and not lease_expired:
+                    return None
+                if attempts >= EXTRACTION_MAX_CLAIM_ATTEMPTS:
+                    terminalize = True
+
+            if not terminalize:
+                job.status = "running"
+                job.worker_claim_token = claim_token
+                if expected_claim_token is None:
+                    job.worker_claim_attempts = attempts + 1
+                job.worker_lease_expires_at = now + timedelta(
+                    seconds=EXTRACTION_LEASE_SECONDS
+                )
+                job.updated_at = now
+                claim_db.add(job)
+                try:
+                    claim_db.commit()
+                    return claim_token
+                except Exception as exc:
+                    commit_error = exc
+                    try:
+                        claim_db.rollback()
+                    except Exception:
+                        pass
+                    continue
+
+        if terminalize:
+            _settle_extraction_predebit_after_failure_sync(
+                job_id=job_id,
+                error_code="EXTRACTION_RECOVERY_EXHAUSTED",
+                error_message="Structured extraction could not be recovered",
+                release_trial=True,
             )
-            .returning(DocumentJob.id)
-            .execution_options(synchronize_session=False)
-        )
-        if claimed_job_id is None:
-            db.rollback()
-            return
-        db.commit()
-        job = db.get(DocumentJob, job_uuid)
-        if not job:
-            return
+            return None
 
-        pre_debited = int((job.metadata_json or {}).get("pre_debited") or 0)
-        ledger_raw = (job.metadata_json or {}).get("predebit_ledger_id")
-        ledger_id = uuid.UUID(str(ledger_raw)) if ledger_raw else None
-        user_id = job.user_id
+    if commit_error is not None:
+        raise commit_error
+    return None
 
-        try:
+
+def stage_stale_extraction_recovery_sync(job_id: uuid.UUID) -> uuid.UUID | None:
+    """Spend one expired attempt and stage a tokenized queued delivery.
+
+    The caller must hold the per-job advisory lock. The staged token is not a
+    live-worker token: ``_claim_extraction_job_sync`` exchanges it atomically
+    when the published message starts. Commit acknowledgement ambiguity is
+    resolved in a fresh session by matching the queued token.
+    """
+    from app.models.sync_database import SyncSessionLocal
+
+    dispatch_token = uuid.uuid4()
+    commit_error: Exception | None = None
+    for _resolution_attempt in range(2):
+        terminalize = False
+        with SyncSessionLocal() as recovery_db:
+            job = recovery_db.scalar(
+                sa.select(DocumentJob)
+                .where(DocumentJob.id == job_id)
+                .with_for_update()
+            )
+            if job is None or job.job_type != EXTRACTION_JOB_TYPE:
+                return None
+            if job.status not in {"queued", "running"}:
+                return None
+
+            # Fresh-session resolution of a staged claim whose COMMIT landed
+            # but whose acknowledgement was lost.
+            if (
+                job.status == "queued"
+                and job.worker_claim_token == dispatch_token
+            ):
+                return dispatch_token
+
+            now = datetime.now(timezone.utc)
+            lease_expires_at = job.worker_lease_expires_at
+            if lease_expires_at is None and job.updated_at is not None:
+                lease_expires_at = job.updated_at + timedelta(
+                    seconds=EXTRACTION_LEASE_SECONDS
+                )
+            if lease_expires_at is None or lease_expires_at > now:
+                return None
+
+            attempts = int(job.worker_claim_attempts or 0)
+            if attempts >= EXTRACTION_MAX_CLAIM_ATTEMPTS:
+                terminalize = True
+            else:
+                job.status = "queued"
+                job.worker_claim_token = dispatch_token
+                job.worker_claim_attempts = attempts + 1
+                job.worker_lease_expires_at = now + timedelta(
+                    seconds=EXTRACTION_LEASE_SECONDS
+                )
+                job.updated_at = now
+                recovery_db.add(job)
+                try:
+                    recovery_db.commit()
+                    return dispatch_token
+                except Exception as exc:
+                    commit_error = exc
+                    try:
+                        recovery_db.rollback()
+                    except Exception:
+                        pass
+                    continue
+
+        if terminalize:
+            _settle_extraction_predebit_after_failure_sync(
+                job_id=job_id,
+                error_code="EXTRACTION_RECOVERY_EXHAUSTED",
+                error_message="Structured extraction could not be recovered",
+                release_trial=True,
+            )
+            return None
+
+    if commit_error is not None:
+        raise commit_error
+    return None
+
+
+def _run_claimed_extraction_job_sync(
+    job_id: uuid.UUID,
+    claim_token: uuid.UUID,
+) -> None:
+    from app.models.sync_database import SyncSessionLocal
+
+    try:
+        with SyncSessionLocal() as db:
+            job = db.get(DocumentJob, job_id)
+            if not job:
+                logger.warning("Extraction job %s disappeared after claim", job_id)
+                return
+            if (
+                job.status != "running"
+                or job.worker_claim_token != claim_token
+            ):
+                logger.info(
+                    "Extraction execution skipped for %s: claim is no longer current",
+                    job_id,
+                )
+                return
+
+            pre_debited = int((job.metadata_json or {}).get("pre_debited") or 0)
+            ledger_raw = (job.metadata_json or {}).get("predebit_ledger_id")
+            if pre_debited <= 0 or not ledger_raw:
+                raise RuntimeError("EXTRACTION_PREDEBIT_METADATA_MISSING")
+            ledger_id = uuid.UUID(str(ledger_raw))
+
             doc = db.get(Document, job.document_id) if job.document_id else None
             if not doc or doc.status != "ready":
                 raise ValueError("DOCUMENT_NOT_READY")
@@ -665,8 +937,7 @@ def run_extraction_job_sync(job_id: str) -> None:
                 for ref in refs
             ]
             actual_cost = calculate_cost(prompt_tokens, completion_tokens, EXTRACTION_MODEL, mode=EXTRACTION_MODE)
-            if ledger_id and pre_debited > 0:
-                _reconcile_sync(db, job.user_id, ledger_id, pre_debited, actual_cost)
+            _reconcile_sync(db, job.user_id, ledger_id, pre_debited, actual_cost)
             db.add(
                 UsageRecord(
                     user_id=job.user_id,
@@ -684,6 +955,8 @@ def run_extraction_job_sync(job_id: str) -> None:
             job.error_message = None
             job.completed_at = datetime.now(timezone.utc)
             job.updated_at = job.completed_at
+            job.worker_claim_token = None
+            job.worker_lease_expires_at = None
             db.add(job)
             db.add(
                 ExtractionResult(
@@ -695,39 +968,60 @@ def run_extraction_job_sync(job_id: str) -> None:
                 )
             )
             db.commit()
-        except Exception as exc:
-            try:
-                db.rollback()
-            except Exception:
-                pass
-            code = str(exc) if str(exc).isupper() else "EXTRACTION_FAILED"
-            if ledger_id and pre_debited > 0:
-                try:
-                    _settle_extraction_predebit_after_failure_sync(
-                        job_id=job_uuid,
-                        user_id=user_id,
-                        pre_debited=pre_debited,
-                        ledger_id=ledger_id,
-                        error_code=code,
-                        error_message="Structured extraction failed",
-                        release_trial=True,
-                    )
-                except Exception:
-                    logger.error(
-                        "extraction_billing.unresolved user=%s ledger=%s "
-                        "pre_debited=%s job=%s: settlement resolver failed; "
-                        "predebit left standing for manual review",
-                        user_id,
-                        ledger_id,
-                        pre_debited,
-                        job_uuid,
-                        exc_info=True,
-                    )
-            else:
-                logger.error(
-                    "extraction_billing.unresolved user=%s job=%s: missing "
-                    "predebit metadata; job left unchanged for manual review",
-                    user_id,
-                    job_uuid,
-                )
-            logger.exception("Extraction job %s failed: %s", job_id, exc)
+    except Exception as exc:
+        code = str(exc) if str(exc).isupper() else "EXTRACTION_FAILED"
+        try:
+            _settle_extraction_predebit_after_failure_sync(
+                job_id=job_id,
+                error_code=code,
+                error_message="Structured extraction failed",
+                release_trial=True,
+            )
+        except Exception:
+            logger.error(
+                "extraction_billing.unresolved job=%s: settlement resolver "
+                "failed; predebit left standing for manual review",
+                job_id,
+                exc_info=True,
+            )
+        logger.exception("Extraction job %s failed: %s", job_id, exc)
+
+
+def run_extraction_job_sync(
+    job_id: str,
+    expected_claim_token: str | None = None,
+) -> None:
+    """Serialize, lease, and execute one structured extraction delivery."""
+    job_uuid = uuid.UUID(job_id)
+    expected_token_uuid: uuid.UUID | None = None
+    if expected_claim_token is not None:
+        try:
+            expected_token_uuid = uuid.UUID(expected_claim_token)
+        except ValueError:
+            logger.warning(
+                "Extraction job %s received an invalid recovery claim token",
+                job_id,
+            )
+            return
+
+    with extraction_job_advisory_lock(job_id) as got_lock:
+        if not got_lock:
+            logger.info(
+                "Extraction skipped for %s: another task holds the job lock",
+                job_id,
+            )
+            # A watchdog has already spent a bounded claim before publishing
+            # this tokenized delivery. If a stale original message briefly
+            # holds the lock and no-ops, ACKing this delivery as well would
+            # leave the newly claimed lease with no worker. Raise so Celery's
+            # configured autoretry gives the tokenized recovery another turn.
+            if expected_token_uuid is not None:
+                raise RuntimeError("EXTRACTION_JOB_LOCK_BUSY")
+            return
+        claim_token = _claim_extraction_job_sync(
+            job_uuid,
+            expected_claim_token=expected_token_uuid,
+        )
+        if claim_token is None:
+            return
+        _run_claimed_extraction_job_sync(job_uuid, claim_token)

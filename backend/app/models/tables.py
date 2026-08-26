@@ -670,6 +670,15 @@ class DocumentJob(Base):
     error_code: Mapped[Optional[str]] = mapped_column(sa.String(64), nullable=True)
     error_message: Mapped[Optional[str]] = mapped_column(sa.Text, nullable=True)
     metadata_json: Mapped[dict] = mapped_column(JSONB, nullable=False, server_default=sa.text("'{}'::jsonb"))
+    worker_claim_token: Mapped[Optional[uuid.UUID]] = mapped_column(
+        UUID(as_uuid=True), nullable=True
+    )
+    worker_claim_attempts: Mapped[int] = mapped_column(
+        sa.Integer, nullable=False, server_default=sa.text("0")
+    )
+    worker_lease_expires_at: Mapped[Optional[datetime]] = mapped_column(
+        sa.DateTime(timezone=True), nullable=True
+    )
     created_at: Mapped[datetime] = mapped_column(
         sa.DateTime(timezone=True), nullable=False, server_default=sa.text("now()")
     )
@@ -688,6 +697,13 @@ class DocumentJob(Base):
     __table_args__ = (
         sa.Index("idx_document_jobs_user_created", "user_id", sa.text("created_at DESC")),
         sa.Index("idx_document_jobs_type_status", "job_type", "status"),
+        sa.Index(
+            "idx_document_jobs_extraction_lease",
+            "worker_lease_expires_at",
+            postgresql_where=sa.text(
+                "job_type = 'extraction' AND status IN ('queued', 'running')"
+            ),
+        ),
     )
 
 

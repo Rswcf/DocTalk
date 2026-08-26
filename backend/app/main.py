@@ -117,12 +117,7 @@ async def lifespan(app: FastAPI):
             _alert(e, "Qdrant collection ensure failed")
 
     def _retry_stuck_documents() -> None:
-        """Recover documents whose processing run died (worker lost, broker
-        flushed). Delegates to the same age-gated atomic claim the beat
-        watchdog uses — the previous blind re-dispatch of EVERY in-flight
-        document raced pending autoretries (60/120s backoff) and unacked
-        broker redeliveries after a deploy restart: two parse tasks for the
-        same doc delete each other's rows/vectors (Codex r2)."""
+        """Run the same age-gated recovery claims used by Celery beat."""
         try:
             from app.workers.parse_worker import requeue_stale_processing_documents
 
@@ -131,6 +126,14 @@ async def lifespan(app: FastAPI):
                 logger.info("Startup recovery requeued %d stale documents", requeued)
         except Exception as e:
             logger.warning("Stuck document retry failed: %s", e)
+        try:
+            from app.workers.extraction_worker import requeue_stale_running_extractions
+
+            requeued = requeue_stale_running_extractions()
+            if requeued:
+                logger.info("Startup recovery requeued %d stale extractions", requeued)
+        except Exception as e:
+            logger.warning("Stuck extraction retry failed: %s", e)
 
     def _seed_demo_documents() -> None:
         try:

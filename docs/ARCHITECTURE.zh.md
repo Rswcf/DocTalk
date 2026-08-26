@@ -46,6 +46,7 @@ graph TB
     NextJS --> AuthJS
     NextJS --> Proxy
     Proxy -->|HS256 JWT| FastAPI
+    Browser -->|直传 multipart + HS256 JWT| FastAPI
     FastAPI --> PG
     FastAPI --> Qdrant
     FastAPI --> Redis
@@ -76,7 +77,7 @@ graph TB
 |------|------|
 | **Next.js** | 客户端渲染 SPA（`"use client"`），负责路由、国际化和 UI 状态管理（Zustand） |
 | **Auth.js v5** | 通过 3 种方式认证：Google OAuth、Microsoft OAuth 和邮箱 Magic Link（via Resend）。加密 JWE 会话令牌 |
-| **API 代理** | 将 JWE 令牌转换为 HS256 JWT，为所有后端请求注入 `Authorization` 头 |
+| **API 代理** | 将 JWE 令牌转换为 HS256 JWT，并为经代理的后端请求注入 `Authorization`。multipart 上传则从 `/api/upload-token` 获取同类后端 JWT 后直传 FastAPI，以避开 Vercel 请求体上限 |
 | **FastAPI** | REST API + SSE 流式传输，处理对话、文档管理、计费、用户账户，以及保留排版翻译任务创建 |
 | **Celery** | 异步文档解析和产物任务：文本提取 (PDF/DOCX/PPTX/XLSX/TXT/MD/URL) → 分块 → 向量化 → 索引；保留排版翻译轮询和产物持久化。PPTX/DOCX 文件还通过 LibreOffice headless 转换为 PDF 进行可视化渲染 |
 | **RetainPDF sidecar** | 仅用于保留排版 PDF 翻译的 Railway 服务：OCR 编排、翻译批处理、译文 PDF 渲染 |
@@ -97,7 +98,7 @@ graph TB
 ```mermaid
 sequenceDiagram
     participant B as 浏览器
-    participant P as API 代理
+    participant T as 上传令牌路由
     participant API as FastAPI
     participant S3 as MinIO
     participant R as Redis
@@ -106,13 +107,14 @@ sequenceDiagram
     participant Q as Qdrant
     participant OR as OpenRouter
 
-    B->>P: POST /api/proxy/documents/upload<br/>(multipart/form-data)
-    P->>API: 携带 JWT 转发
+    B->>T: GET /api/upload-token<br/>(Auth.js JWE Cookie)
+    T-->>B: 200 {token: 5 分钟 HS256 JWT}
+    B->>API: POST /api/documents/upload<br/>multipart + Authorization: Bearer JWT
     API->>S3: 上传 PDF 二进制文件
     S3-->>API: storage_key
-    API->>DB: INSERT document (status=uploading)
+    API->>DB: INSERT document (status=parsing)
     API->>R: 分发 parse_document 任务
-    API-->>B: 201 {document_id, status: "parsing"}
+    API-->>B: 202 {document_id, status: "parsing", filename}
 
     Note over W: Celery 接收任务
     W->>S3: 下载 PDF
@@ -139,7 +141,7 @@ sequenceDiagram
 
 **逐步说明：**
 
-1. **上传**：浏览器通过 API 代理以 multipart 表单发送 PDF。后端在写入对象存储和创建文档记录之前，校验按套餐的文档数量、文件大小和逻辑页数限制，执行 magic-byte 文件验证（PDF `%PDF` 头、Office ZIP 结构 + `[Content_Types].xml`、500MB zip bomb 防护），清洗文件名（Unicode 规范化、控制字符剥离、双扩展名阻断），将文件以 SSE-S3 加密存储到 MinIO，并创建文档记录。直接上传使用 50/100/200MB 套餐上限；所有 URL 响应（包括 PDF）无论套餐均限制为 10MB。抓取器分别限制原始传输字节和安全解码后的输出，压缩膨胀不能绕过上限。
+1. **上传**：浏览器先从轻量的 Next.js `/api/upload-token` 路由获取一个五分钟有效、后端兼容的 HS256 JWT，再携带该 Bearer Token 将 multipart 请求体直接 POST 到 `${NEXT_PUBLIC_API_BASE}/api/documents/upload`。这是为避开 Vercel 4.5MB serverless 请求体上限而有意绕过代理；所有实际经过 `/api/proxy/*` 的请求仍由代理注入 JWT。后端在写入对象存储和创建文档记录之前，校验按套餐的文档数量、文件大小和逻辑页数限制，执行 magic-byte 文件验证（PDF `%PDF` 头、Office ZIP 结构 + `[Content_Types].xml`、500MB zip bomb 防护），清洗文件名（Unicode 规范化、控制字符剥离、双扩展名阻断），将文件以 SSE-S3 加密存储到 MinIO，直接以 `status=parsing` 创建文档、分发解析任务并返回 HTTP 202。直接上传使用 50/100/200MB 套餐上限；所有 URL 响应（包括 PDF）无论套餐均限制为 10MB。抓取器分别限制原始传输字节和安全解码后的输出，压缩膨胀不能绕过上限。
 
 2. **文本提取**：Celery Worker 下载 PDF，使用 **PyMuPDF (fitz)** 按页提取文本及边界框坐标。坐标归一化到 `[0, 1]` 范围（左上角原点）。
 
@@ -438,8 +440,8 @@ sequenceDiagram
 
 Auth.js v5 将会话令牌加密为 JWE（JSON Web Encryption），Python 后端无法在不共享加密密钥和匹配加密算法的情况下解密。我们没有耦合两个系统，而是采用了以下方案：
 
-1. **API 代理**（`/api/proxy/[...path]/route.ts`）使用 Auth.js 内置的 `getToken()` 函数解密 JWE
-2. 创建新的 **HS256 签名 JWT**，仅包含 `sub`（用户 ID）、`iat` 和 `exp` 声明
+1. **API 代理**（`/api/proxy/[...path]/route.ts`）和上传令牌路由（`/api/upload-token`）都使用 Auth.js 内置的 `getToken()` 函数解密 JWE
+2. 两者创建新的 **HS256 签名 JWT**，仅包含 `sub`（用户 ID）、`iat` 和 `exp` 声明；代理请求在服务端获得该令牌，multipart 直传则先在浏览器取得五分钟令牌
 3. 后端使用共享的 `AUTH_SECRET` 验证这个简单的 JWT
 
 这样可以干净地将前端认证系统与后端 API 认证分离。
@@ -1038,6 +1040,8 @@ Table-aware retrieval 会使用这些 canonical table 位置做覆盖选择；�
 ### 积分账本持久结算(v0.24.0)
 
 `credit_ledger.reconciled_at`(迁移 `20260802_0035`)是让预扣/对账/退款三角并发安全的结算标记:异步聊天/Quote Finder 与同步提取类 Worker 的每次对账都先取 `SELECT ... FOR UPDATE`，再必定盖章 `reconciled_at`(含等额无操作路径);所有退款均为单条原子条件删除 `DELETE ... WHERE reconciled_at IS NULL RETURNING id`——行数为 0 即已结算、静默不退且不得覆盖成功 Job;所有终提交异常(不止 `CancelledError`)都走标记解析器，提取类 Worker 必须使用新 Session。解析器失败绝不回落为盲退(预扣保留 + `*.unresolved` 日志);若提取退款胜出，未交付 Job 的失败状态与符合条件的 Domain Mode 试用行释放在同一事务提交;聊天严格引文路由的答案落库+对账+用量记录合并为单一原子提交。对抗调度(对账先胜/退款先胜/对账回滚/等额)已在真实 Postgres 竞态测试下闭合。
+
+提取任务还通过迁移 `20260826_0042` 获得持久的 Job claim token、尝试次数和 45 分钟租约，并在整个执行期间持有 advisory-lock namespace 948。租约长于 Redis 40 分钟的 `visibility_timeout`；claim commit 的回执丢失时，新 Session 通过 token 判定提交是否已落地，其他 delivery 只有在租约过期后才能接管。Beat 与启动恢复最多使用一次过期重试；第二次 claim 再过期时，以同一事务执行条件退款、写入失败 Job 状态，并释放符合条件的 Domain Mode 试用行。
 
 ### 验证式引文保证与路由政策(v0.24.0)
 
