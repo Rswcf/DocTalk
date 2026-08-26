@@ -314,16 +314,43 @@ async def _create_run(
     try:
         _enqueue_batch_template_job(str(job.id))
     except Exception as exc:
-        job.status = "failed"
-        job.error_code = "QUESTION_TEMPLATE_QUEUE_FAILED"
-        job.error_message = "Failed to queue question template run"
-        result = await db.execute(sa.delete(CreditLedger).where(CreditLedger.id == ledger_id))
-        if result.rowcount and result.rowcount > 0:
+        failed_job_id = (
             await db.execute(
-                sa.update(User)
-                .where(User.id == user.id)
-                .values(credits_balance=User.credits_balance + predebit)
+                sa.update(DocumentJob)
+                .where(
+                    DocumentJob.id == job.id,
+                    DocumentJob.status == "queued",
+                )
+                .values(
+                    status="failed",
+                    error_code="QUESTION_TEMPLATE_QUEUE_FAILED",
+                    error_message="Failed to queue question template run",
+                )
+                .returning(DocumentJob.id)
+                .execution_options(synchronize_session=False)
             )
+        ).scalar_one_or_none()
+        if failed_job_id is None:
+            await db.rollback()
+            await db.refresh(job)
+            return job
+
+        result = await db.execute(
+            sa.delete(CreditLedger)
+            .where(CreditLedger.id == ledger_id)
+            .where(CreditLedger.reconciled_at.is_(None))
+            .returning(CreditLedger.id)
+        )
+        if result.scalar_one_or_none() is None:
+            await db.rollback()
+            await db.refresh(job)
+            return job
+
+        await db.execute(
+            sa.update(User)
+            .where(User.id == user.id)
+            .values(credits_balance=User.credits_balance + predebit)
+        )
         await db.commit()
         raise HTTPException(
             status_code=500,

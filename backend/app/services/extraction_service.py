@@ -481,13 +481,26 @@ def render_csv(template_key: str, data: dict[str, Any]) -> str:
 
 
 def _refund_predebit_sync(db: Session, user_id: uuid.UUID, pre_debited: int, ledger_id: uuid.UUID) -> bool:
-    result = db.execute(sa.delete(CreditLedger).where(CreditLedger.id == ledger_id))
-    refunded = bool(result.rowcount and result.rowcount > 0)
+    """Atomically refund an extraction predebit only while it is unsettled."""
+    result = db.execute(
+        sa.delete(CreditLedger)
+        .where(CreditLedger.id == ledger_id)
+        .where(CreditLedger.reconciled_at.is_(None))
+        .returning(CreditLedger.id)
+    )
+    refunded = result.scalar_one_or_none() is not None
     if refunded:
         db.execute(
             sa.update(User)
             .where(User.id == user_id)
             .values(credits_balance=User.credits_balance + pre_debited)
+        )
+    else:
+        logger.info(
+            "extraction_billing.already_settled user=%s ledger=%s: "
+            "refund skipped because the ledger was reconciled or already removed",
+            user_id,
+            ledger_id,
         )
     return refunded
 
@@ -499,18 +512,98 @@ def _reconcile_sync(
     pre_debited: int,
     actual_cost: int,
 ) -> None:
+    locked_ledger = db.scalar(
+        sa.select(CreditLedger)
+        .where(CreditLedger.id == ledger_id)
+        .with_for_update()
+    )
+    if locked_ledger is None:
+        raise RuntimeError(
+            f"Predebit ledger {ledger_id} not found during extraction credit reconciliation"
+        )
+
     diff = pre_debited - actual_cost
     if diff:
-        db.execute(
+        updated_user_id = db.scalar(
             sa.update(User)
             .where(User.id == user_id)
             .values(credits_balance=User.credits_balance + diff)
+            .returning(User.id)
         )
+        if updated_user_id is None:
+            raise RuntimeError(
+                f"User {user_id} not found during extraction credit reconciliation"
+            )
     db.execute(
         sa.update(CreditLedger)
         .where(CreditLedger.id == ledger_id)
-        .values(delta=-actual_cost, balance_after=CreditLedger.balance_after + diff)
+        .values(
+            delta=-actual_cost,
+            balance_after=CreditLedger.balance_after + diff,
+            reconciled_at=sa.func.now(),
+        )
     )
+
+
+def _settle_extraction_predebit_after_failure_sync(
+    *,
+    job_id: uuid.UUID,
+    user_id: uuid.UUID,
+    pre_debited: int,
+    ledger_id: uuid.UUID,
+    error_code: str,
+    error_message: str,
+    release_trial: bool,
+) -> bool:
+    """Resolve an extraction-style worker failure in a fresh transaction.
+
+    The conditional ledger delete is the only settlement decision. If the
+    success transaction already reconciled the row, this resolver is a no-op
+    and deliberately leaves the succeeded job untouched. If the delete wins,
+    the balance refund, failed job state, and optional Domain Mode trial
+    release commit atomically.
+    """
+    from app.models.sync_database import SyncSessionLocal
+
+    with SyncSessionLocal() as settle_db:
+        refunded = _refund_predebit_sync(
+            settle_db,
+            user_id,
+            pre_debited,
+            ledger_id,
+        )
+        if not refunded:
+            settle_db.rollback()
+            return False
+
+        failed_job = settle_db.scalar(
+            sa.select(DocumentJob)
+            .where(DocumentJob.id == job_id)
+            .with_for_update()
+        )
+        if failed_job is None:
+            raise RuntimeError(
+                f"Extraction job {job_id} not found during failure settlement"
+            )
+
+        completed_at = datetime.now(timezone.utc)
+        failed_job.status = "failed"
+        failed_job.error_code = error_code[:64]
+        failed_job.error_message = error_message
+        failed_job.completed_at = completed_at
+        failed_job.updated_at = completed_at
+        settle_db.add(failed_job)
+        settle_db.flush()
+
+        if release_trial:
+            release_failed_extraction_trial_sync(
+                settle_db,
+                user_id=user_id,
+                owning_job_id=job_id,
+            )
+
+        settle_db.commit()
+        return True
 
 
 def run_extraction_job_sync(job_id: str) -> None:
@@ -549,6 +642,7 @@ def run_extraction_job_sync(job_id: str) -> None:
         pre_debited = int((job.metadata_json or {}).get("pre_debited") or 0)
         ledger_raw = (job.metadata_json or {}).get("predebit_ledger_id")
         ledger_id = uuid.UUID(str(ledger_raw)) if ledger_raw else None
+        user_id = job.user_id
 
         try:
             doc = db.get(Document, job.document_id) if job.document_id else None
@@ -602,28 +696,38 @@ def run_extraction_job_sync(job_id: str) -> None:
             )
             db.commit()
         except Exception as exc:
-            db.rollback()
-            job = db.get(DocumentJob, job_uuid)
-            if not job:
-                return
-            refunded = False
+            try:
+                db.rollback()
+            except Exception:
+                pass
+            code = str(exc) if str(exc).isupper() else "EXTRACTION_FAILED"
             if ledger_id and pre_debited > 0:
                 try:
-                    refunded = _refund_predebit_sync(db, job.user_id, pre_debited, ledger_id)
+                    _settle_extraction_predebit_after_failure_sync(
+                        job_id=job_uuid,
+                        user_id=user_id,
+                        pre_debited=pre_debited,
+                        ledger_id=ledger_id,
+                        error_code=code,
+                        error_message="Structured extraction failed",
+                        release_trial=True,
+                    )
                 except Exception:
-                    logger.exception("Failed to refund extraction job %s", job_id)
-            code = str(exc) if str(exc).isupper() else "EXTRACTION_FAILED"
-            job.status = "failed"
-            job.error_code = code[:64]
-            job.error_message = "Structured extraction failed"
-            job.completed_at = datetime.now(timezone.utc)
-            job.updated_at = job.completed_at
-            db.add(job)
-            if refunded:
-                release_failed_extraction_trial_sync(
-                    db,
-                    user_id=job.user_id,
-                    owning_job_id=job.id,
+                    logger.error(
+                        "extraction_billing.unresolved user=%s ledger=%s "
+                        "pre_debited=%s job=%s: settlement resolver failed; "
+                        "predebit left standing for manual review",
+                        user_id,
+                        ledger_id,
+                        pre_debited,
+                        job_uuid,
+                        exc_info=True,
+                    )
+            else:
+                logger.error(
+                    "extraction_billing.unresolved user=%s job=%s: missing "
+                    "predebit metadata; job left unchanged for manual review",
+                    user_id,
+                    job_uuid,
                 )
-            db.commit()
             logger.exception("Extraction job %s failed: %s", job_id, exc)

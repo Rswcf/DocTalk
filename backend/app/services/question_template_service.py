@@ -7,6 +7,8 @@ import uuid
 from datetime import datetime, timezone
 from typing import Any, Sequence
 
+import sqlalchemy as sa
+
 from app.models.tables import (
     Document,
     DocumentJob,
@@ -23,7 +25,7 @@ from app.services.extraction_service import (
     _citation_from_chunk,
     _reconcile_sync,
     _refs,
-    _refund_predebit_sync,
+    _settle_extraction_predebit_after_failure_sync,
     _str,
     retrieve_extraction_chunks,
 )
@@ -126,16 +128,34 @@ def run_batch_template_job_sync(job_id: str) -> None:
         if job.status not in ("queued", "running"):
             return
 
-        job.status = "running"
-        job.updated_at = datetime.now(timezone.utc)
-        db.add(job)
-        db.commit()
+        if job.status == "queued":
+            claimed_job_id = db.scalar(
+                sa.update(DocumentJob)
+                .where(
+                    DocumentJob.id == job_uuid,
+                    DocumentJob.status == "queued",
+                )
+                .values(
+                    status="running",
+                    updated_at=datetime.now(timezone.utc),
+                )
+                .returning(DocumentJob.id)
+                .execution_options(synchronize_session=False)
+            )
+            if claimed_job_id is None:
+                db.rollback()
+                return
+            db.commit()
+            job = db.get(DocumentJob, job_uuid)
+            if not job:
+                return
 
         scope = job.input_scope or {}
         metadata = job.metadata_json or {}
         pre_debited = int(metadata.get("pre_debited") or 0)
         ledger_raw = metadata.get("predebit_ledger_id")
         ledger_id = uuid.UUID(str(ledger_raw)) if ledger_raw else None
+        user_id = job.user_id
 
         try:
             questions = normalize_questions(scope.get("questions") or [])
@@ -250,21 +270,38 @@ def run_batch_template_job_sync(job_id: str) -> None:
             )
             db.commit()
         except Exception as exc:
-            db.rollback()
-            job = db.get(DocumentJob, job_uuid)
-            if not job:
-                return
+            try:
+                db.rollback()
+            except Exception:
+                pass
+            code = str(exc) if str(exc).isupper() else "BATCH_TEMPLATE_FAILED"
             if ledger_id and pre_debited > 0:
                 try:
-                    _refund_predebit_sync(db, job.user_id, pre_debited, ledger_id)
+                    _settle_extraction_predebit_after_failure_sync(
+                        job_id=job_uuid,
+                        user_id=user_id,
+                        pre_debited=pre_debited,
+                        ledger_id=ledger_id,
+                        error_code=code,
+                        error_message="Question template run failed",
+                        release_trial=False,
+                    )
                 except Exception:
-                    logger.exception("Failed to refund question template job %s", job_id)
-            code = str(exc) if str(exc).isupper() else "BATCH_TEMPLATE_FAILED"
-            job.status = "failed"
-            job.error_code = code[:64]
-            job.error_message = "Question template run failed"
-            job.completed_at = datetime.now(timezone.utc)
-            job.updated_at = job.completed_at
-            db.add(job)
-            db.commit()
+                    logger.error(
+                        "question_template_billing.unresolved user=%s ledger=%s "
+                        "pre_debited=%s job=%s: settlement resolver failed; "
+                        "predebit left standing for manual review",
+                        user_id,
+                        ledger_id,
+                        pre_debited,
+                        job_uuid,
+                        exc_info=True,
+                    )
+            else:
+                logger.error(
+                    "question_template_billing.unresolved user=%s job=%s: "
+                    "missing predebit metadata; job left unchanged for manual review",
+                    user_id,
+                    job_uuid,
+                )
             logger.exception("Question template job %s failed: %s", job_id, exc)

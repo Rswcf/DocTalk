@@ -236,16 +236,43 @@ async def _create_diff_job(
     try:
         _enqueue_document_diff_job(str(job.id))
     except Exception as exc:
-        job.status = "failed"
-        job.error_code = "DOCUMENT_DIFF_QUEUE_FAILED"
-        job.error_message = "Failed to queue document comparison"
-        result = await db.execute(sa.delete(CreditLedger).where(CreditLedger.id == ledger_id))
-        if result.rowcount and result.rowcount > 0:
+        failed_job_id = (
             await db.execute(
-                sa.update(User)
-                .where(User.id == user.id)
-                .values(credits_balance=User.credits_balance + DOCUMENT_DIFF_PREDEBIT_CREDITS)
+                sa.update(DocumentJob)
+                .where(
+                    DocumentJob.id == job.id,
+                    DocumentJob.status == "queued",
+                )
+                .values(
+                    status="failed",
+                    error_code="DOCUMENT_DIFF_QUEUE_FAILED",
+                    error_message="Failed to queue document comparison",
+                )
+                .returning(DocumentJob.id)
+                .execution_options(synchronize_session=False)
             )
+        ).scalar_one_or_none()
+        if failed_job_id is None:
+            await db.rollback()
+            await db.refresh(job)
+            return job
+
+        result = await db.execute(
+            sa.delete(CreditLedger)
+            .where(CreditLedger.id == ledger_id)
+            .where(CreditLedger.reconciled_at.is_(None))
+            .returning(CreditLedger.id)
+        )
+        if result.scalar_one_or_none() is None:
+            await db.rollback()
+            await db.refresh(job)
+            return job
+
+        await db.execute(
+            sa.update(User)
+            .where(User.id == user.id)
+            .values(credits_balance=User.credits_balance + DOCUMENT_DIFF_PREDEBIT_CREDITS)
+        )
         await db.commit()
         raise HTTPException(
             status_code=500,

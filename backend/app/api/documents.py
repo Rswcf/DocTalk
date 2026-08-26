@@ -42,6 +42,7 @@ from app.services.document_limits import (
     max_pages_for_plan,
     normalized_plan,
 )
+from app.services.extractors.url_extractor import MAX_URL_CONTENT_SIZE
 from app.services.file_validation import validate_file_content
 from app.services.storage_service import StorageUnavailableError, storage_service
 
@@ -391,15 +392,11 @@ async def ingest_url(
             },
         )
 
-    max_size_mb = max_file_size_mb_for_plan(plan)
-    max_pdf_bytes = max_size_mb * 1024 * 1024
-
     try:
         from app.services.extractors.url_extractor import fetch_and_extract_url
         title, pages, pdf_bytes = await asyncio.to_thread(
             fetch_and_extract_url,
             url,
-            max_pdf_bytes=max_pdf_bytes,
         )
     except ValueError as e:
         code = str(e)
@@ -415,16 +412,6 @@ async def ingest_url(
                 detail={
                     "error": "URL_CONTENT_TOO_LARGE",
                     "message": "URL content is too large",
-                },
-            )
-        if code == "URL_PDF_TOO_LARGE":
-            raise HTTPException(
-                status_code=400,
-                detail={
-                    "error": "FILE_TOO_LARGE",
-                    "message": "File is too large",
-                    "max_mb": max_size_mb,
-                    "plan": plan,
                 },
             )
         if code == "NO_TEXT_CONTENT":
@@ -449,15 +436,19 @@ async def ingest_url(
         )
 
     if pdf_bytes:
-        if len(pdf_bytes) > max_pdf_bytes:
-            log_security_event("upload_rejected", user_id=user.id, reason="file_too_large", size=len(pdf_bytes), max_mb=max_size_mb)
+        if len(pdf_bytes) > MAX_URL_CONTENT_SIZE:
+            log_security_event(
+                "upload_rejected",
+                user_id=user.id,
+                reason="url_content_too_large",
+                size=len(pdf_bytes),
+                max_mb=MAX_URL_CONTENT_SIZE // (1024 * 1024),
+            )
             raise HTTPException(
                 status_code=400,
                 detail={
-                    "error": "FILE_TOO_LARGE",
-                    "message": "File is too large",
-                    "max_mb": max_size_mb,
-                    "plan": plan,
+                    "error": "URL_CONTENT_TOO_LARGE",
+                    "message": "URL content exceeds the 10 MB import limit",
                 },
             )
 
@@ -519,15 +510,19 @@ async def ingest_url(
         # final documents.page_count split.
         page_count = await asyncio.to_thread(count_document_pages, text_bytes, "url")
         _enforce_page_limit(page_count=page_count, plan=plan)
-        if len(text_bytes) > max_size_mb * 1024 * 1024:
-            log_security_event("upload_rejected", user_id=user.id, reason="file_too_large", size=len(text_bytes), max_mb=max_size_mb)
+        if len(text_bytes) > MAX_URL_CONTENT_SIZE:
+            log_security_event(
+                "upload_rejected",
+                user_id=user.id,
+                reason="url_content_too_large",
+                size=len(text_bytes),
+                max_mb=MAX_URL_CONTENT_SIZE // (1024 * 1024),
+            )
             raise HTTPException(
                 status_code=400,
                 detail={
-                    "error": "FILE_TOO_LARGE",
-                    "message": "File is too large",
-                    "max_mb": max_size_mb,
-                    "plan": plan,
+                    "error": "URL_CONTENT_TOO_LARGE",
+                    "message": "URL content exceeds the 10 MB import limit",
                 },
             )
 

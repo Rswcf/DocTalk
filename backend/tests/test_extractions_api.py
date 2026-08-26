@@ -239,11 +239,11 @@ async def test_queue_failure_refunds_and_releases_trial_in_failure_transaction(
     db = _make_db(
         get=AsyncMock(return_value=doc),
         execute=AsyncMock(
-            side_effect=[
-                _Result(scalar_one_or_none=uuid.uuid4(), rowcount=1),
-                _Result(rowcount=1),
-                _Result(),
-            ]
+                side_effect=[
+                    _Result(scalar_one_or_none=uuid.uuid4(), rowcount=1),
+                    _Result(scalar_one_or_none=uuid.uuid4(), rowcount=1),
+                    _Result(),
+                ]
         ),
     )
     _override_dependencies(db, user)

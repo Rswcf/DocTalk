@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import { useLocale } from '../../i18n';
 import ScrollReveal from './ScrollReveal';
 
-const FILE_SUPPORT_FALLBACK = 'DocTalk supports PDF, DOCX, PPTX, XLSX, TXT, and Markdown files, plus web URLs. PDFs include scanned documents via built-in OCR. Per-document limits are Free 50 MB / 750 pages, Plus 100 MB / 1,500 pages, and Pro 200 MB / 3,000 pages.';
+const FILE_SUPPORT_FALLBACK = 'DocTalk supports PDF, DOCX, PPTX, XLSX, TXT, and Markdown files, plus web URLs. PDFs include scanned documents via built-in OCR. Direct uploads use plan limits of Free 50 MB / 750 pages, Plus 100 MB / 1,500 pages, and Pro 200 MB / 3,000 pages. URL imports are capped at 10 MB on every plan.';
 
 const FAQ_ITEMS = [
   { q: 'landing.faq.q1', a: 'landing.faq.a1' },

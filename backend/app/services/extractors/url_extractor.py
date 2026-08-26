@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import ipaddress
 import re
+import zlib
 from typing import List, Optional, Tuple
 from urllib.parse import urljoin, urlparse
 
@@ -11,15 +12,15 @@ from bs4 import BeautifulSoup
 from httpx import URL
 
 from app.core.url_validator import validate_and_resolve_url
-from app.services.file_validation import file_magic_length, validate_file_content
+from app.services.file_validation import validate_file_content
 
 from .base import ExtractedPage
 
-# HTML is converted and stored as a compact Markdown snapshot. Keep a separate
-# defensive 10 MB response-body ceiling for markup so a huge/hostile page
-# cannot consume arbitrary memory. URL PDFs instead receive the authenticated
-# caller's plan-derived file-size cap.
-MAX_HTML_CONTENT_SIZE = 10 * 1024 * 1024
+# URL import is deliberately flat-capped for every response and every plan.
+# Direct uploads retain their separate 50/100/200 MB plan limits.
+MAX_URL_CONTENT_SIZE = 10 * 1024 * 1024
+_RAW_READ_CHUNK_SIZE = 64 * 1024
+_DECODE_CHUNK_SIZE = 64 * 1024
 FETCH_TIMEOUT = 30  # seconds
 MAX_REDIRECTS = 3
 
@@ -68,90 +69,96 @@ WHITESPACE_RE = re.compile(r"[ \t\r\f\v]+")
 def _read_response_bytes_limited(
     response: httpx.Response,
     *,
-    max_content_size: int = MAX_HTML_CONTENT_SIZE,
+    max_content_size: int = MAX_URL_CONTENT_SIZE,
 ) -> bytes:
+    """Read one response with strict raw and decoded byte ceilings.
+
+    HTTPX's ``iter_bytes()`` decodes an entire raw transport chunk before it
+    yields, so a small compressed body can materialize an arbitrarily large
+    decoded chunk before a caller can reject it. Read the raw stream instead
+    and use zlib's ``max_length`` support for bounded gzip/deflate output.
+
+    Brotli and Zstandard are not advertised and are rejected before reading:
+    their optional Python decoders do not expose the bounded-output primitive
+    required by this in-memory path. This keeps those encodings fail-closed
+    instead of delegating them to HTTPX's eager decoder.
+    """
     content_length = response.headers.get("content-length")
     if content_length:
         try:
-            if int(content_length) > max_content_size:
+            parsed_content_length = int(content_length)
+            if parsed_content_length >= 0 and parsed_content_length > max_content_size:
                 raise ValueError("URL_CONTENT_TOO_LARGE")
         except ValueError as exc:
             if str(exc) == "URL_CONTENT_TOO_LARGE":
                 raise
 
-    chunks: list[bytes] = []
-    total = 0
-    for chunk in response.iter_bytes():
-        total += len(chunk)
-        if total > max_content_size:
+    encodings = [
+        item.strip().lower()
+        for item in response.headers.get("content-encoding", "").split(",")
+        if item.strip() and item.strip().lower() != "identity"
+    ]
+    if len(encodings) > 1 or (encodings and encodings[0] not in {"gzip", "deflate"}):
+        raise httpx.DecodingError("Unsupported or stacked URL Content-Encoding")
+
+    decoder: zlib.Decompress | None = None
+    if encodings:
+        wbits = zlib.MAX_WBITS | 16 if encodings[0] == "gzip" else zlib.MAX_WBITS
+        decoder = zlib.decompressobj(wbits)
+
+    decoded_chunks: list[bytes] = []
+    raw_total = 0
+    decoded_total = 0
+    raw_chunk_size = max(1, min(_RAW_READ_CHUNK_SIZE, max_content_size + 1))
+
+    def append_decoded(chunk: bytes) -> None:
+        nonlocal decoded_total
+        if not chunk:
+            return
+        if len(chunk) > max_content_size - decoded_total:
             raise ValueError("URL_CONTENT_TOO_LARGE")
-        chunks.append(chunk)
-    return b"".join(chunks)
+        decoded_total += len(chunk)
+        decoded_chunks.append(chunk)
 
+    def decode_bounded(raw_chunk: bytes) -> None:
+        if decoder is None:
+            append_decoded(raw_chunk)
+            return
 
-def _read_response_bytes_by_magic(
-    response: httpx.Response,
-    *,
-    max_pdf_bytes: int,
-    max_html_bytes: int,
-) -> tuple[bytes, bool]:
-    """Read a streamed response under a byte-sniffed PDF or HTML cap.
+        pending = raw_chunk
+        while pending:
+            pending_length = len(pending)
+            max_output = min(
+                _DECODE_CHUNK_SIZE,
+                max_content_size - decoded_total + 1,
+            )
+            try:
+                output = decoder.decompress(pending, max_output)
+            except zlib.error as exc:
+                raise httpx.DecodingError("Invalid compressed URL response") from exc
+            pending = decoder.unconsumed_tail
+            append_decoded(output)
+            if pending and len(pending) == pending_length and not output:
+                raise httpx.DecodingError("Compressed URL decoder made no progress")
 
-    The response's ``Content-Type`` never participates in classification.
-    Bytes are initially bounded by the larger authenticated-plan PDF cap;
-    once the shared upload magic-byte validator can decide the prefix, every
-    non-PDF response is immediately held to the independent HTML cap.
-    """
-    if max_pdf_bytes < max_html_bytes:
-        raise ValueError("URL_PDF_CAP_BELOW_HTML_CAP")
+    try:
+        for raw_chunk in response.iter_raw(chunk_size=raw_chunk_size):
+            raw_total += len(raw_chunk)
+            downloaded = getattr(response, "num_bytes_downloaded", raw_total)
+            if raw_total > max_content_size or downloaded > max_content_size:
+                raise ValueError("URL_CONTENT_TOO_LARGE")
+            decode_bounded(raw_chunk)
 
-    content_length: int | None = None
-    raw_content_length = response.headers.get("content-length")
-    if raw_content_length:
-        try:
-            parsed_content_length = int(raw_content_length)
-            if parsed_content_length >= 0:
-                content_length = parsed_content_length
-        except ValueError:
-            pass
+        if decoder is not None and (not decoder.eof or decoder.unused_data):
+            # Do not call ``flush(length)`` here: zlib treats ``length`` as an
+            # initial buffer size, not a hard output limit. Complete gzip/zlib
+            # streams have already yielded all output through the bounded
+            # ``decompress(..., max_length)`` loop above.
+            raise httpx.DecodingError("Incomplete or concatenated compressed URL response")
+    except zlib.error as exc:
+        raise httpx.DecodingError("Invalid compressed URL response") from exc
 
-    magic_length = file_magic_length("pdf")
-    chunks: list[bytes] = []
-    prefix = bytearray()
-    total = 0
-    is_pdf: bool | None = None
-
-    for chunk in response.iter_bytes():
-        total += len(chunk)
-        chunks.append(chunk)
-
-        if is_pdf is None:
-            needed = magic_length - len(prefix)
-            if needed > 0:
-                prefix.extend(chunk[:needed])
-            if len(prefix) >= magic_length:
-                is_pdf = validate_file_content(bytes(prefix), "pdf")
-
-        received_cap = max_html_bytes if is_pdf is False else max_pdf_bytes
-        if total > received_cap:
-            code = "URL_CONTENT_TOO_LARGE" if is_pdf is False else "URL_PDF_TOO_LARGE"
-            raise ValueError(code)
-
-        if is_pdf is not None and content_length is not None:
-            cap = max_pdf_bytes if is_pdf else max_html_bytes
-            if content_length > cap:
-                code = "URL_PDF_TOO_LARGE" if is_pdf else "URL_CONTENT_TOO_LARGE"
-                raise ValueError(code)
-
-    if is_pdf is None:
-        is_pdf = validate_file_content(bytes(prefix), "pdf")
-
-    cap = max_pdf_bytes if is_pdf else max_html_bytes
-    if total > cap or (content_length is not None and content_length > cap):
-        code = "URL_PDF_TOO_LARGE" if is_pdf else "URL_CONTENT_TOO_LARGE"
-        raise ValueError(code)
-
-    return b"".join(chunks), is_pdf
+    return b"".join(decoded_chunks)
 
 
 def _build_host_header(parsed: urlparse, resolved_ip: str) -> str:
@@ -178,8 +185,7 @@ def _build_host_header(parsed: urlparse, resolved_ip: str) -> str:
 def _fetch_with_safe_redirects(
     url: str,
     *,
-    max_pdf_bytes: int,
-    max_html_bytes: int = MAX_HTML_CONTENT_SIZE,
+    max_content_size: int = MAX_URL_CONTENT_SIZE,
 ) -> tuple[str, str, str, bytes]:
     """Fetch a URL, manually following redirects and validating each hop.
 
@@ -205,6 +211,8 @@ def _fetch_with_safe_redirects(
                 headers={
                     "Host": host_header,
                     "User-Agent": "Mozilla/5.0 (compatible; DocTalk/1.0)",
+                    # Only encodings with a bounded-output decoder are accepted.
+                    "Accept-Encoding": "gzip, deflate",
                 },
                 extensions=(
                     {"sni_hostname": parsed.hostname}
@@ -230,10 +238,9 @@ def _fetch_with_safe_redirects(
                 response.raise_for_status()
                 content_type = response.headers.get("content-type", "").lower()
                 encoding = response.encoding or "utf-8"
-                body, _is_pdf = _read_response_bytes_by_magic(
+                body = _read_response_bytes_limited(
                     response,
-                    max_pdf_bytes=max_pdf_bytes,
-                    max_html_bytes=max_html_bytes,
+                    max_content_size=max_content_size,
                 )
                 return current_url, content_type, encoding, body
 
@@ -415,8 +422,7 @@ def _has_meaningful_content(blocks: list[str], title: str) -> bool:
 def fetch_and_extract_url(
     url: str,
     *,
-    max_pdf_bytes: int,
-    max_html_bytes: int = MAX_HTML_CONTENT_SIZE,
+    max_content_size: int = MAX_URL_CONTENT_SIZE,
 ) -> Tuple[str, List[ExtractedPage], Optional[bytes]]:
     """Fetch URL and extract text content.
 
@@ -427,8 +433,7 @@ def fetch_and_extract_url(
     """
     final_url, content_type, encoding, response_body = _fetch_with_safe_redirects(
         url,
-        max_pdf_bytes=max_pdf_bytes,
-        max_html_bytes=max_html_bytes,
+        max_content_size=max_content_size,
     )
 
     # If URL returns a PDF, signal caller to use PDF pipeline

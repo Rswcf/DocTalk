@@ -201,16 +201,71 @@ async def _queue_extraction(
 
         run_extraction_job.delay(str(job.id))
     except Exception as exc:
-        job.status = "failed"
-        job.error_code = "EXTRACTION_QUEUE_FAILED"
-        job.error_message = "Failed to queue extraction"
-        result = await db.execute(sa.delete(CreditLedger).where(CreditLedger.id == ledger_id))
-        if result.rowcount and result.rowcount > 0:
+        failed_job_id = (
             await db.execute(
-                sa.update(User)
-                .where(User.id == user.id)
-                .values(credits_balance=User.credits_balance + EXTRACTION_PREDEBIT_CREDITS)
+                sa.update(DocumentJob)
+                .where(
+                    DocumentJob.id == job.id,
+                    DocumentJob.status == "queued",
+                )
+                .values(
+                    status="failed",
+                    error_code="EXTRACTION_QUEUE_FAILED",
+                    error_message="Failed to queue extraction",
+                    completed_at=datetime.now(timezone.utc),
+                    updated_at=datetime.now(timezone.utc),
+                )
+                .returning(DocumentJob.id)
+                .execution_options(synchronize_session=False)
             )
+        ).scalar_one_or_none()
+        if failed_job_id is None:
+            await db.rollback()
+            await db.refresh(job)
+            return ToolExecution(
+                message=_copy(
+                    plan,
+                    en="I started that extraction. I will show the cited result when it is ready.",
+                    zh="我已经开始这次提取，完成后会展示带引用的结果。",
+                ),
+                artifact=ChatArtifact(
+                    artifact_type="extraction",
+                    status=job.status,
+                    job_id=str(job.id),
+                    title=template.title,
+                    summary="Structured extraction is in progress.",
+                ),
+            )
+
+        result = await db.execute(
+            sa.delete(CreditLedger)
+            .where(CreditLedger.id == ledger_id)
+            .where(CreditLedger.reconciled_at.is_(None))
+            .returning(CreditLedger.id)
+        )
+        if result.scalar_one_or_none() is None:
+            await db.rollback()
+            await db.refresh(job)
+            return ToolExecution(
+                message=_copy(
+                    plan,
+                    en="I started that extraction. I will show the cited result when it is ready.",
+                    zh="我已经开始这次提取，完成后会展示带引用的结果。",
+                ),
+                artifact=ChatArtifact(
+                    artifact_type="extraction",
+                    status=job.status,
+                    job_id=str(job.id),
+                    title=template.title,
+                    summary="Structured extraction is in progress.",
+                ),
+            )
+
+        await db.execute(
+            sa.update(User)
+            .where(User.id == user.id)
+            .values(credits_balance=User.credits_balance + EXTRACTION_PREDEBIT_CREDITS)
+        )
         await db.commit()
         return ToolExecution(
             message=_copy(

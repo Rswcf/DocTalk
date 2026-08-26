@@ -139,7 +139,7 @@ sequenceDiagram
 
 **逐步说明：**
 
-1. **上传**：浏览器通过 API 代理以 multipart 表单发送 PDF。后端在写入对象存储和创建文档记录之前，校验按套餐的文档数量、文件大小和逻辑页数限制，执行 magic-byte 文件验证（PDF `%PDF` 头、Office ZIP 结构 + `[Content_Types].xml`、500MB zip bomb 防护），清洗文件名（Unicode 规范化、控制字符剥离、双扩展名阻断），将文件以 SSE-S3 加密存储到 MinIO，并创建文档记录。直接上传和 URL PDF 共用 50/100/200MB 套餐上限；HTML URL 响应另有独立的 10MB 防御性下载上限。
+1. **上传**：浏览器通过 API 代理以 multipart 表单发送 PDF。后端在写入对象存储和创建文档记录之前，校验按套餐的文档数量、文件大小和逻辑页数限制，执行 magic-byte 文件验证（PDF `%PDF` 头、Office ZIP 结构 + `[Content_Types].xml`、500MB zip bomb 防护），清洗文件名（Unicode 规范化、控制字符剥离、双扩展名阻断），将文件以 SSE-S3 加密存储到 MinIO，并创建文档记录。直接上传使用 50/100/200MB 套餐上限；所有 URL 响应（包括 PDF）无论套餐均限制为 10MB。抓取器分别限制原始传输字节和安全解码后的输出，压缩膨胀不能绕过上限。
 
 2. **文本提取**：Celery Worker 下载 PDF，使用 **PyMuPDF (fitz)** 按页提取文本及边界框坐标。坐标归一化到 `[0, 1]` 范围（左上角原点）。
 
@@ -857,7 +857,7 @@ graph TD
 | **SSRF 防护** | `url_validator.py` — DNS 解析 + 私有 IP 阻断（RFC 1918、链路本地、云元数据 `169.254.169.254`），内部端口封锁（5432/6379/6333/9000），手动重定向跟踪（最多 3 跳）并逐跳验证 |
 | **文件验证** | Magic-byte 检查：PDF `%PDF` 头、Office ZIP 结构 + `[Content_Types].xml`、500MB zip bomb 防护。双扩展名阻断（`.pdf.exe` → `_pdf.exe`） |
 | **静态加密** | MinIO SSE-S3 应用于所有 `put_object()` 调用 + bucket 级默认加密策略 |
-| **按套餐限制** | FREE: 3 文档 / 50MB / 750 页，PLUS: 20 文档 / 100MB / 1,500 页，PRO: 999 文档 / 200MB / 3,000 页 — 在直接上传和 URL 导入持久化之前强制执行 |
+| **限制** | FREE: 3 文档 / 直接上传 50MB / 750 页，PLUS: 20 文档 / 直接上传 100MB / 1,500 页，PRO: 999 文档 / 直接上传 200MB / 3,000 页。所有套餐的 URL 导入均限制为 10MB；全部上限都在持久化之前强制执行。 |
 | **文件名清洗** | Unicode NFC 规范化、控制字符剥离、双扩展名阻断、200 字符截断 — 前端（`utils.ts`）和后端同时执行 |
 | **速率限制** | 内存级 token-bucket 限制匿名 chat（10 req/min/IP），bucket 字典超 10K 条目时自动清理 |
 | **OAuth 令牌清理** | `link_account()` 剥离 access_token、refresh_token 和 id_token — DocTalk 仅存储身份绑定信息（provider + provider_account_id） |
@@ -1037,7 +1037,7 @@ Table-aware retrieval 会使用这些 canonical table 位置做覆盖选择；�
 
 ### 积分账本持久结算(v0.24.0)
 
-`credit_ledger.reconciled_at`(迁移 `20260802_0035`)是让预扣/对账/退款三角并发安全的结算标记:`reconcile_credits()` 先取 `SELECT ... FOR UPDATE` 再必定盖章 `reconciled_at`(含等额无操作路径);所有退款均为单条原子条件删除 `DELETE ... WHERE reconciled_at IS NULL RETURNING id`——行数为 0 即已结算、静默不退;两条计费路径上的全部终提交异常(不止 `CancelledError`)都走标记解析器,解析器失败绝不回落为盲退(预扣保留 + `*.unresolved` 日志);聊天严格引文路由的答案落库+对账+用量记录合并为单一原子提交。对抗调度(对账先胜/退款先胜/对账回滚/等额)已在真实双连接 Postgres 竞态测试下闭合(Codex M2 r2–r4)。
+`credit_ledger.reconciled_at`(迁移 `20260802_0035`)是让预扣/对账/退款三角并发安全的结算标记:异步聊天/Quote Finder 与同步提取类 Worker 的每次对账都先取 `SELECT ... FOR UPDATE`，再必定盖章 `reconciled_at`(含等额无操作路径);所有退款均为单条原子条件删除 `DELETE ... WHERE reconciled_at IS NULL RETURNING id`——行数为 0 即已结算、静默不退且不得覆盖成功 Job;所有终提交异常(不止 `CancelledError`)都走标记解析器，提取类 Worker 必须使用新 Session。解析器失败绝不回落为盲退(预扣保留 + `*.unresolved` 日志);若提取退款胜出，未交付 Job 的失败状态与符合条件的 Domain Mode 试用行释放在同一事务提交;聊天严格引文路由的答案落库+对账+用量记录合并为单一原子提交。对抗调度(对账先胜/退款先胜/对账回滚/等额)已在真实 Postgres 竞态测试下闭合。
 
 ### 验证式引文保证与路由政策(v0.24.0)
 

@@ -209,7 +209,7 @@ async def test_upload_file_too_large(client: AsyncClient, monkeypatch: pytest.Mo
 
 
 @pytest.mark.asyncio
-async def test_ingest_url_pdf_file_too_large(
+async def test_ingest_url_pdf_ignores_direct_upload_plan_byte_cap(
     client: AsyncClient,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -221,16 +221,18 @@ async def test_ingest_url_pdf_file_too_large(
     monkeypatch.setattr(
         url_extractor,
         "fetch_and_extract_url",
-        lambda _url, **_kwargs: ("downloaded.pdf", [], b"x"),
+        lambda _url, **_kwargs: ("downloaded.pdf", [], b"%PDF-1.4\nok"),
     )
+    monkeypatch.setattr(documents_api, "count_document_pages", lambda *_args: 1)
+    monkeypatch.setattr(documents_api.storage_service, "upload_file", lambda *_args: None)
+    monkeypatch.setattr("app.workers.parse_worker.parse_document.delay", lambda *_args, **_kwargs: None)
 
     response = await client.post("/api/documents/ingest-url", json={"url": "https://example.com"})
-    detail = _assert_error(response, 400, "FILE_TOO_LARGE")
-    assert isinstance(detail["max_mb"], int)
+    assert response.status_code == 202
 
 
 @pytest.mark.asyncio
-async def test_ingest_url_text_file_too_large(
+async def test_ingest_url_text_ignores_direct_upload_plan_byte_cap(
     client: AsyncClient,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -244,10 +246,11 @@ async def test_ingest_url_text_file_too_large(
         "fetch_and_extract_url",
         lambda _url, **_kwargs: ("Example", [SimpleNamespace(text="hello")], None),
     )
+    monkeypatch.setattr(documents_api.storage_service, "upload_file", lambda *_args: None)
+    monkeypatch.setattr("app.workers.parse_worker.parse_document.delay", lambda *_args, **_kwargs: None)
 
     response = await client.post("/api/documents/ingest-url", json={"url": "https://example.com"})
-    detail = _assert_error(response, 400, "FILE_TOO_LARGE")
-    assert isinstance(detail["max_mb"], int)
+    assert response.status_code == 202
 
 
 @pytest.mark.asyncio
@@ -455,22 +458,21 @@ async def test_ingest_url_html_page_limit_rejects_before_storage_or_document_row
     assert added == []
 
 
-@pytest.mark.parametrize(("plan", "expected_mb"), [("plus", 100), ("pro", 200)])
+@pytest.mark.parametrize("plan", ["free", "plus", "pro"])
 @pytest.mark.asyncio
-async def test_ingest_url_passes_plan_pdf_byte_cap_to_fetcher(
+async def test_ingest_url_never_passes_a_plan_derived_byte_cap_to_fetcher(
     client: AsyncClient,
     monkeypatch: pytest.MonkeyPatch,
     plan: str,
-    expected_mb: int,
 ) -> None:
     user = _make_user(plan=plan)
     db = _make_db(scalar=AsyncMock(return_value=0))
     _override_dependencies(db, auth_user=user)
     monkeypatch.setattr(url_validator, "validate_url", lambda url: url)
-    captured: dict[str, int] = {}
+    captured: dict[str, object] = {}
 
-    def _capture_cap(_url: str, *, max_pdf_bytes: int, **_kwargs):
-        captured["max_pdf_bytes"] = max_pdf_bytes
+    def _capture_cap(_url: str, **kwargs):
+        captured.update(kwargs)
         raise ValueError("URL_CONTENT_TOO_LARGE")
 
     monkeypatch.setattr(url_extractor, "fetch_and_extract_url", _capture_cap)
@@ -481,7 +483,7 @@ async def test_ingest_url_passes_plan_pdf_byte_cap_to_fetcher(
     )
 
     _assert_error(response, 400, "URL_CONTENT_TOO_LARGE")
-    assert captured["max_pdf_bytes"] == expected_mb * 1024 * 1024
+    assert captured == {}
 
 
 @pytest.mark.asyncio
@@ -583,7 +585,7 @@ async def test_ingest_url_content_too_large(
 
 
 @pytest.mark.asyncio
-async def test_ingest_url_pdf_too_large_uses_plan_file_size_taxonomy(
+async def test_ingest_url_pdf_too_large_uses_flat_url_taxonomy(
     client: AsyncClient,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -593,7 +595,7 @@ async def test_ingest_url_pdf_too_large_uses_plan_file_size_taxonomy(
     monkeypatch.setattr(url_validator, "validate_url", lambda url: url)
 
     def _raise_pdf_limit(_url: str, **_kwargs):
-        raise ValueError("URL_PDF_TOO_LARGE")
+        raise ValueError("URL_CONTENT_TOO_LARGE")
 
     monkeypatch.setattr(url_extractor, "fetch_and_extract_url", _raise_pdf_limit)
 
@@ -602,9 +604,9 @@ async def test_ingest_url_pdf_too_large_uses_plan_file_size_taxonomy(
         json={"url": "https://example.com/too-large.pdf"},
     )
 
-    detail = _assert_error(response, 400, "FILE_TOO_LARGE")
-    assert detail["max_mb"] == settings.PLUS_MAX_FILE_SIZE_MB
-    assert detail["plan"] == "plus"
+    detail = _assert_error(response, 400, "URL_CONTENT_TOO_LARGE")
+    assert "max_mb" not in detail
+    assert "plan" not in detail
 
 
 @pytest.mark.asyncio

@@ -298,19 +298,28 @@ async def create_extraction(
             await db.refresh(job)
             return _job_response(job)
 
-        result = await db.execute(sa.delete(CreditLedger).where(CreditLedger.id == ledger_id))
-        refunded = bool(result.rowcount and result.rowcount > 0)
-        if refunded:
-            await db.execute(
-                sa.update(User)
-                .where(User.id == user.id)
-                .values(credits_balance=User.credits_balance + EXTRACTION_PREDEBIT_CREDITS)
-            )
-            await release_failed_extraction_trial(
-                db,
-                user_id=user.id,
-                owning_job_id=job.id,
-            )
+        result = await db.execute(
+            sa.delete(CreditLedger)
+            .where(CreditLedger.id == ledger_id)
+            .where(CreditLedger.reconciled_at.is_(None))
+            .returning(CreditLedger.id)
+        )
+        refunded = result.scalar_one_or_none() is not None
+        if not refunded:
+            await db.rollback()
+            await db.refresh(job)
+            return _job_response(job)
+
+        await db.execute(
+            sa.update(User)
+            .where(User.id == user.id)
+            .values(credits_balance=User.credits_balance + EXTRACTION_PREDEBIT_CREDITS)
+        )
+        await release_failed_extraction_trial(
+            db,
+            user_id=user.id,
+            owning_job_id=job.id,
+        )
         await db.commit()
         raise HTTPException(
             status_code=500,

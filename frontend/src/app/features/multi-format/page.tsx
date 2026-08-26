@@ -110,7 +110,7 @@ export default function MultiFormatPage() {
                 name: 'What is the maximum file size?',
                 acceptedAnswer: {
                   '@type': 'Answer',
-                  text: 'Per-document limits depend on your plan: Free supports 50 MB and 750 pages, Plus supports 100 MB and 1,500 pages, and Pro supports 200 MB and 3,000 pages.',
+                  text: 'Direct uploads use plan limits: Free supports 50 MB and 750 pages, Plus supports 100 MB and 1,500 pages, and Pro supports 200 MB and 3,000 pages. URL imports are capped at 10 MB on every plan.',
                 },
               },
             ],

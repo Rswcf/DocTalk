@@ -3,16 +3,62 @@ from __future__ import annotations
 import csv
 import io
 import uuid
+from unittest.mock import MagicMock
+
+from sqlalchemy.dialects import postgresql
 
 from app.models.tables import Chunk
 from app.services.extraction_service import (
     TEMPLATES,
     _citation_from_chunk,
     _json_from_text,
+    _reconcile_sync,
+    _refund_predebit_sync,
     normalize_result,
     render_csv,
     render_markdown,
 )
+
+
+def test_reconcile_sync_equal_cost_still_locks_and_stamps_marker() -> None:
+    db = MagicMock()
+    db.scalar.return_value = object()
+
+    _reconcile_sync(
+        db,
+        user_id=uuid.uuid4(),
+        ledger_id=uuid.uuid4(),
+        pre_debited=25,
+        actual_cost=25,
+    )
+
+    lock_statement = db.scalar.call_args.args[0]
+    assert lock_statement._for_update_arg is not None
+    assert db.execute.call_count == 1
+    update_sql = str(
+        db.execute.call_args.args[0].compile(dialect=postgresql.dialect())
+    )
+    assert "reconciled_at" in update_sql
+
+
+def test_refund_predebit_sync_is_one_conditional_delete_when_already_settled() -> None:
+    db = MagicMock()
+    db.execute.return_value.scalar_one_or_none.return_value = None
+
+    refunded = _refund_predebit_sync(
+        db,
+        user_id=uuid.uuid4(),
+        pre_debited=25,
+        ledger_id=uuid.uuid4(),
+    )
+
+    assert refunded is False
+    assert db.execute.call_count == 1
+    delete_sql = str(
+        db.execute.call_args.args[0].compile(dialect=postgresql.dialect())
+    )
+    assert "reconciled_at IS NULL" in delete_sql
+    assert "RETURNING credit_ledger.id" in delete_sql
 
 
 def test_json_from_text_accepts_fenced_json() -> None:

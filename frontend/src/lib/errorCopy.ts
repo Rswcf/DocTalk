@@ -209,8 +209,8 @@ const CODE_TABLE: Record<string, Handler> = {
     severity: 'error',
   }),
   URL_CONTENT_TOO_LARGE: (_d, tOr) => ({
-    title: tOr('errors.URL_CONTENT_TOO_LARGE.title', 'Page too large'),
-    body: tOr('errors.URL_CONTENT_TOO_LARGE.body', 'The page is too large to import.'),
+    title: tOr('errors.URL_CONTENT_TOO_LARGE.title', 'URL import too large'),
+    body: tOr('errors.URL_CONTENT_TOO_LARGE.body', 'URL imports are limited to 10 MB on every plan.'),
     severity: 'error',
   }),
   NO_TEXT_CONTENT: (_d, tOr) => ({

@@ -14,12 +14,10 @@ from sqlalchemy.orm import Session
 from app.core.config import settings
 from app.models.tables import (
     Chunk,
-    CreditLedger,
     Document,
     DocumentJob,
     ExtractionResult,
     UsageRecord,
-    User,
 )
 from app.services.credit_service import calculate_cost
 from app.services.document_element_service import get_element_aware_chunks
@@ -28,7 +26,9 @@ from app.services.extraction_service import (
     _citation_from_chunk,
     _get_llm_client,
     _json_from_text,
+    _reconcile_sync,
     _retrieve_by_query,
+    _settle_extraction_predebit_after_failure_sync,
 )
 
 logger = logging.getLogger(__name__)
@@ -323,37 +323,6 @@ def _diff_citation(side: str, ref: int, chunk: Chunk, score: float, filename: st
     return citation
 
 
-def _refund_predebit_sync(db: Session, user_id: uuid.UUID, pre_debited: int, ledger_id: uuid.UUID) -> None:
-    result = db.execute(sa.delete(CreditLedger).where(CreditLedger.id == ledger_id))
-    if result.rowcount and result.rowcount > 0:
-        db.execute(
-            sa.update(User)
-            .where(User.id == user_id)
-            .values(credits_balance=User.credits_balance + pre_debited)
-        )
-
-
-def _reconcile_sync(
-    db: Session,
-    user_id: uuid.UUID,
-    ledger_id: uuid.UUID,
-    pre_debited: int,
-    actual_cost: int,
-) -> None:
-    diff = pre_debited - actual_cost
-    if diff:
-        db.execute(
-            sa.update(User)
-            .where(User.id == user_id)
-            .values(credits_balance=User.credits_balance + diff)
-        )
-    db.execute(
-        sa.update(CreditLedger)
-        .where(CreditLedger.id == ledger_id)
-        .values(delta=-actual_cost, balance_after=CreditLedger.balance_after + diff)
-    )
-
-
 def run_document_diff_job_sync(job_id: str) -> None:
     from app.models.sync_database import SyncSessionLocal
 
@@ -366,14 +335,32 @@ def run_document_diff_job_sync(job_id: str) -> None:
         if job.status not in ("queued", "running"):
             return
 
-        job.status = "running"
-        job.updated_at = datetime.now(timezone.utc)
-        db.add(job)
-        db.commit()
+        if job.status == "queued":
+            claimed_job_id = db.scalar(
+                sa.update(DocumentJob)
+                .where(
+                    DocumentJob.id == job_uuid,
+                    DocumentJob.status == "queued",
+                )
+                .values(
+                    status="running",
+                    updated_at=datetime.now(timezone.utc),
+                )
+                .returning(DocumentJob.id)
+                .execution_options(synchronize_session=False)
+            )
+            if claimed_job_id is None:
+                db.rollback()
+                return
+            db.commit()
+            job = db.get(DocumentJob, job_uuid)
+            if not job:
+                return
 
         pre_debited = int((job.metadata_json or {}).get("pre_debited") or 0)
         ledger_raw = (job.metadata_json or {}).get("predebit_ledger_id")
         ledger_id = uuid.UUID(str(ledger_raw)) if ledger_raw else None
+        user_id = job.user_id
 
         try:
             scope = job.input_scope or {}
@@ -453,21 +440,38 @@ def run_document_diff_job_sync(job_id: str) -> None:
             )
             db.commit()
         except Exception as exc:
-            db.rollback()
-            job = db.get(DocumentJob, job_uuid)
-            if not job:
-                return
+            try:
+                db.rollback()
+            except Exception:
+                pass
+            code = str(exc) if str(exc).isupper() else "DOCUMENT_DIFF_FAILED"
             if ledger_id and pre_debited > 0:
                 try:
-                    _refund_predebit_sync(db, job.user_id, pre_debited, ledger_id)
+                    _settle_extraction_predebit_after_failure_sync(
+                        job_id=job_uuid,
+                        user_id=user_id,
+                        pre_debited=pre_debited,
+                        ledger_id=ledger_id,
+                        error_code=code,
+                        error_message="Document comparison failed",
+                        release_trial=False,
+                    )
                 except Exception:
-                    logger.exception("Failed to refund document diff job %s", job_id)
-            code = str(exc) if str(exc).isupper() else "DOCUMENT_DIFF_FAILED"
-            job.status = "failed"
-            job.error_code = code[:64]
-            job.error_message = "Document comparison failed"
-            job.completed_at = datetime.now(timezone.utc)
-            job.updated_at = job.completed_at
-            db.add(job)
-            db.commit()
+                    logger.error(
+                        "document_diff_billing.unresolved user=%s ledger=%s "
+                        "pre_debited=%s job=%s: settlement resolver failed; "
+                        "predebit left standing for manual review",
+                        user_id,
+                        ledger_id,
+                        pre_debited,
+                        job_uuid,
+                        exc_info=True,
+                    )
+            else:
+                logger.error(
+                    "document_diff_billing.unresolved user=%s job=%s: missing "
+                    "predebit metadata; job left unchanged for manual review",
+                    user_id,
+                    job_uuid,
+                )
             logger.exception("Document diff job %s failed: %s", job_id, exc)

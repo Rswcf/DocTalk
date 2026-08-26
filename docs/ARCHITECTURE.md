@@ -139,7 +139,7 @@ sequenceDiagram
 
 **Step-by-step:**
 
-1. **Upload**: Browser sends PDF via multipart form through the API proxy. Backend validates per-plan document count, file size, and logical page-count limits before object storage or document-row creation, performs magic-byte file validation (PDF `%PDF` header, Office ZIP structure + `[Content_Types].xml`, 500MB zip bomb protection), sanitizes the filename (Unicode normalization, control char stripping, double-extension blocking), stores the file in MinIO with SSE-S3 encryption, and creates a document record. Direct uploads and URL PDFs share the same 50/100/200 MB plan caps; HTML URL responses have a separate defensive 10 MB download cap.
+1. **Upload**: Browser sends PDF via multipart form through the API proxy. Backend validates per-plan document count, file size, and logical page-count limits before object storage or document-row creation, performs magic-byte file validation (PDF `%PDF` header, Office ZIP structure + `[Content_Types].xml`, 500MB zip bomb protection), sanitizes the filename (Unicode normalization, control char stripping, double-extension blocking), stores the file in MinIO with SSE-S3 encryption, and creates a document record. Direct uploads use the 50/100/200 MB plan caps. Every URL response, including PDFs, is capped at 10 MB regardless of plan; the fetcher bounds raw chunks and decoded output independently so compressed expansion cannot bypass the cap.
 
 2. **Text Extraction**: Celery worker downloads the PDF and uses **PyMuPDF (fitz)** to extract text with bounding-box coordinates per page. Coordinates are normalized to `[0, 1]` range (top-left origin).
 
@@ -965,7 +965,7 @@ graph TD
 | **SSRF Protection** | `url_validator.py` — DNS resolution + private IP blocking (RFC 1918, link-local, cloud metadata `169.254.169.254`), internal port blocking (5432/6379/6333/9000), manual redirect following (max 3 hops) with per-hop validation |
 | **File Validation** | Magic-byte checks: PDF `%PDF` header, Office ZIP structure + `[Content_Types].xml` presence, 500MB zip bomb protection. Double-extension blocking (`.pdf.exe` becomes `_pdf.exe`) |
 | **Encryption at Rest** | MinIO SSE-S3 on all `put_object()` calls + bucket-level default encryption policy |
-| **Per-Plan Limits** | FREE: 3 docs / 50MB / 750 pages, PLUS: 20 docs / 100MB / 1,500 pages, PRO: 999 docs / 200MB / 3,000 pages — enforced before persistence for direct uploads and URL imports |
+| **Limits** | FREE: 3 docs / 50MB direct upload / 750 pages, PLUS: 20 docs / 100MB direct upload / 1,500 pages, PRO: 999 docs / 200MB direct upload / 3,000 pages. Every URL import is capped at 10MB regardless of plan. All limits are enforced before persistence. |
 | **Filename Sanitization** | Unicode NFC normalization, control character stripping, double-extension blocking, 200 character truncation — applied in both frontend (`utils.ts`) and backend |
 | **Rate Limiting** | In-memory token-bucket for anonymous chat (10 req/min/IP), automatic cleanup when bucket dict exceeds 10K entries |
 | **OAuth Token Cleanup** | `link_account()` strips access_token, refresh_token, and id_token — DocTalk stores only identity binding (provider + provider_account_id) |
@@ -1342,9 +1342,13 @@ marker that makes the pre-debit/reconcile/refund triangle race-safe:
   RETURNING id`; a zero rowcount means the charge already settled and the
   refund silently no-ops. There is no read-then-act refund logic anywhere.
 - ALL final-commit exceptions — not just `CancelledError` — route through the
-  marker resolver on both the chat and quote-search billing paths. Resolver
+  marker resolver on the chat, quote-search, and extraction-style worker billing paths. Resolver
   failure never falls through to a blind refund: the predebit stands and a
   `*.unresolved` log line carries the ids for ops.
+- Extraction-style worker resolvers always use a fresh session. A winning
+  conditional refund atomically marks the undelivered job failed and, for a
+  job-owned Free Domain Mode trial, releases the trial row; a zero-row delete
+  leaves a committed succeeded job and result untouched.
 - The chat strict-quote route persists answer + reconcile + usage in ONE
   atomic commit, so a cancelled/ambiguous COMMIT can no longer produce a
   persisted answer with a refunded charge (or vice versa).
