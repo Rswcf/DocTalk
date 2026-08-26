@@ -28,6 +28,7 @@ from app.models.tables import (
 )
 from app.services.credit_service import calculate_cost
 from app.services.document_element_service import get_element_aware_chunks
+from app.services.domain_mode_access import release_failed_extraction_trial_sync
 from app.services.embedding_service import embedding_service
 
 logger = logging.getLogger(__name__)
@@ -479,14 +480,16 @@ def render_csv(template_key: str, data: dict[str, Any]) -> str:
     return buf.getvalue()
 
 
-def _refund_predebit_sync(db: Session, user_id: uuid.UUID, pre_debited: int, ledger_id: uuid.UUID) -> None:
+def _refund_predebit_sync(db: Session, user_id: uuid.UUID, pre_debited: int, ledger_id: uuid.UUID) -> bool:
     result = db.execute(sa.delete(CreditLedger).where(CreditLedger.id == ledger_id))
-    if result.rowcount and result.rowcount > 0:
+    refunded = bool(result.rowcount and result.rowcount > 0)
+    if refunded:
         db.execute(
             sa.update(User)
             .where(User.id == user_id)
             .values(credits_balance=User.credits_balance + pre_debited)
         )
+    return refunded
 
 
 def _reconcile_sync(
@@ -519,13 +522,29 @@ def run_extraction_job_sync(job_id: str) -> None:
         if not job:
             logger.warning("Extraction job %s not found", job_id)
             return
-        if job.status not in ("queued", "running"):
+        if job.status != "queued":
             return
 
-        job.status = "running"
-        job.updated_at = datetime.now(timezone.utc)
-        db.add(job)
+        claimed_job_id = db.scalar(
+            sa.update(DocumentJob)
+            .where(
+                DocumentJob.id == job_uuid,
+                DocumentJob.status == "queued",
+            )
+            .values(
+                status="running",
+                updated_at=datetime.now(timezone.utc),
+            )
+            .returning(DocumentJob.id)
+            .execution_options(synchronize_session=False)
+        )
+        if claimed_job_id is None:
+            db.rollback()
+            return
         db.commit()
+        job = db.get(DocumentJob, job_uuid)
+        if not job:
+            return
 
         pre_debited = int((job.metadata_json or {}).get("pre_debited") or 0)
         ledger_raw = (job.metadata_json or {}).get("predebit_ledger_id")
@@ -587,9 +606,10 @@ def run_extraction_job_sync(job_id: str) -> None:
             job = db.get(DocumentJob, job_uuid)
             if not job:
                 return
+            refunded = False
             if ledger_id and pre_debited > 0:
                 try:
-                    _refund_predebit_sync(db, job.user_id, pre_debited, ledger_id)
+                    refunded = _refund_predebit_sync(db, job.user_id, pre_debited, ledger_id)
                 except Exception:
                     logger.exception("Failed to refund extraction job %s", job_id)
             code = str(exc) if str(exc).isupper() else "EXTRACTION_FAILED"
@@ -599,5 +619,11 @@ def run_extraction_job_sync(job_id: str) -> None:
             job.completed_at = datetime.now(timezone.utc)
             job.updated_at = job.completed_at
             db.add(job)
+            if refunded:
+                release_failed_extraction_trial_sync(
+                    db,
+                    user_id=job.user_id,
+                    owning_job_id=job.id,
+                )
             db.commit()
             logger.exception("Extraction job %s failed: %s", job_id, exc)

@@ -5,6 +5,7 @@ from datetime import datetime, timedelta, timezone
 from types import SimpleNamespace
 from unittest.mock import AsyncMock
 
+import fitz
 import pytest
 import pytest_asyncio
 from fastapi import FastAPI, HTTPException
@@ -22,6 +23,9 @@ from app.core import deps as deps_module
 from app.core import url_validator
 from app.core.config import settings
 from app.services import chat_service as chat_service_module
+from app.services.document_limits import (
+    count_document_pages as real_count_document_pages,
+)
 from app.services.extractors import url_extractor
 
 _UNSET = object()
@@ -296,6 +300,92 @@ async def test_upload_page_limit_rejects_before_document_creation(
     detail = _assert_error(response, 400, "DOCUMENT_PAGE_LIMIT_EXCEEDED")
     assert detail["page_count"] == settings.FREE_MAX_PAGES + 1
     assert detail["max_pages"] == settings.FREE_MAX_PAGES
+    create_document.assert_not_awaited()
+
+
+def _encrypted_pdf_bytes() -> bytes:
+    pdf = fitz.open()
+    try:
+        pdf.new_page()
+        return pdf.tobytes(
+            encryption=fitz.PDF_ENCRYPT_AES_256,
+            owner_pw="owner-secret",
+            user_pw="user-secret",
+        )
+    finally:
+        pdf.close()
+
+
+@pytest.mark.asyncio
+async def test_upload_password_protected_pdf_rejects_before_storage_or_document_row(
+    client: AsyncClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    user = _make_user(plan="free")
+    added: list[object] = []
+    db = _make_db(scalar=AsyncMock(return_value=0), add=added.append)
+    _override_dependencies(db, auth_user=user)
+    monkeypatch.setattr(documents_api, "count_document_pages", real_count_document_pages)
+    create_document = AsyncMock()
+    monkeypatch.setattr(documents_api.doc_service, "create_document", create_document)
+
+    response = await client.post(
+        "/api/documents/upload",
+        files={"file": ("locked.pdf", _encrypted_pdf_bytes(), "application/pdf")},
+    )
+
+    _assert_error(response, 400, "PDF_PASSWORD_PROTECTED")
+    create_document.assert_not_awaited()
+    assert added == []
+
+
+@pytest.mark.asyncio
+async def test_ingest_url_password_protected_pdf_rejects_before_storage_or_document_row(
+    client: AsyncClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    user = _make_user(plan="free")
+    added: list[object] = []
+    db = _make_db(scalar=AsyncMock(return_value=0), add=added.append)
+    _override_dependencies(db, auth_user=user)
+    monkeypatch.setattr(url_validator, "validate_url", lambda url: url)
+    monkeypatch.setattr(
+        url_extractor,
+        "fetch_and_extract_url",
+        lambda _url, **_kwargs: ("locked.pdf", [], _encrypted_pdf_bytes()),
+    )
+    monkeypatch.setattr(documents_api, "count_document_pages", real_count_document_pages)
+    upload_file = AsyncMock()
+    monkeypatch.setattr(documents_api.storage_service, "upload_file", upload_file)
+
+    response = await client.post(
+        "/api/documents/ingest-url",
+        json={"url": "https://example.com/locked.pdf"},
+    )
+
+    _assert_error(response, 400, "PDF_PASSWORD_PROTECTED")
+    upload_file.assert_not_awaited()
+    assert added == []
+
+
+@pytest.mark.asyncio
+async def test_upload_malformed_pdf_page_count_fails_closed_before_persistence(
+    client: AsyncClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    user = _make_user(plan="free")
+    db = _make_db(scalar=AsyncMock(return_value=0))
+    _override_dependencies(db, auth_user=user)
+    monkeypatch.setattr(documents_api, "count_document_pages", real_count_document_pages)
+    create_document = AsyncMock()
+    monkeypatch.setattr(documents_api.doc_service, "create_document", create_document)
+
+    response = await client.post(
+        "/api/documents/upload",
+        files={"file": ("broken.pdf", b"%PDF-1.7\nmalformed", "application/pdf")},
+    )
+
+    _assert_error(response, 400, "INVALID_FILE_CONTENT")
     create_document.assert_not_awaited()
 
 

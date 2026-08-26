@@ -228,6 +228,101 @@ async def test_create_extraction_domain_mode_allows_free_trial(
 
 
 @pytest.mark.asyncio
+async def test_queue_failure_refunds_and_releases_trial_in_failure_transaction(
+    client: AsyncClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from app.workers.extraction_worker import run_extraction_job
+
+    user = _make_user(plan="free")
+    doc = _make_doc(user)
+    db = _make_db(
+        get=AsyncMock(return_value=doc),
+        execute=AsyncMock(
+            side_effect=[
+                _Result(scalar_one_or_none=uuid.uuid4(), rowcount=1),
+                _Result(rowcount=1),
+                _Result(),
+            ]
+        ),
+    )
+    _override_dependencies(db, user)
+    monkeypatch.setattr(extractions_api, "_enforce_free_extraction_limit", AsyncMock())
+    monkeypatch.setattr(extractions_api, "enforce_domain_mode_access", AsyncMock())
+    release = AsyncMock(return_value=True)
+    monkeypatch.setattr(extractions_api, "release_failed_extraction_trial", release)
+    ledger_id = uuid.uuid4()
+    monkeypatch.setattr(credit_service, "debit_credits", AsyncMock(return_value=ledger_id))
+    monkeypatch.setattr(
+        run_extraction_job,
+        "delay",
+        lambda _job_id: (_ for _ in ()).throw(RuntimeError("broker unavailable")),
+    )
+
+    response = await client.post(
+        f"/api/documents/{doc.id}/extractions",
+        json={"template_key": "executive_summary", "domain_mode": "legal"},
+    )
+
+    _assert_error(response, 500, "EXTRACTION_QUEUE_FAILED")
+    release.assert_awaited_once()
+    assert release.await_args.kwargs["user_id"] == user.id
+    assert release.await_args.kwargs["owning_job_id"] is not None
+    assert db.commit.await_count == 2
+
+
+@pytest.mark.asyncio
+async def test_ambiguous_queue_failure_preserves_worker_claim_and_never_releases(
+    client: AsyncClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from app.workers.extraction_worker import run_extraction_job
+
+    user = _make_user(plan="free")
+    doc = _make_doc(user)
+
+    refresh_count = 0
+
+    async def _refresh(row: object) -> None:
+        nonlocal refresh_count
+        if hasattr(row, "job_type"):
+            refresh_count += 1
+            now = datetime.now(timezone.utc)
+            row.created_at = now
+            row.updated_at = now
+            if refresh_count > 1:
+                row.status = "running"
+
+    db = _make_db(
+        get=AsyncMock(return_value=doc),
+        execute=AsyncMock(return_value=_Result(scalar_one_or_none=None)),
+        refresh=AsyncMock(side_effect=_refresh),
+    )
+    _override_dependencies(db, user)
+    monkeypatch.setattr(extractions_api, "_enforce_free_extraction_limit", AsyncMock())
+    monkeypatch.setattr(extractions_api, "enforce_domain_mode_access", AsyncMock())
+    release = AsyncMock(return_value=True)
+    monkeypatch.setattr(extractions_api, "release_failed_extraction_trial", release)
+    monkeypatch.setattr(credit_service, "debit_credits", AsyncMock(return_value=uuid.uuid4()))
+    monkeypatch.setattr(
+        run_extraction_job,
+        "delay",
+        lambda _job_id: (_ for _ in ()).throw(RuntimeError("publish acknowledgement lost")),
+    )
+
+    response = await client.post(
+        f"/api/documents/{doc.id}/extractions",
+        json={"template_key": "executive_summary", "domain_mode": "legal"},
+    )
+
+    assert response.status_code == 202
+    assert response.json()["status"] == "running"
+    release.assert_not_awaited()
+    assert db.commit.await_count == 1
+    db.rollback.assert_awaited_once()
+
+
+@pytest.mark.asyncio
 async def test_create_extraction_domain_mode_omitted_does_not_gate_free_plan(client: AsyncClient) -> None:
     """Regression guard: domain_mode omitted must reach the NEXT check
     (the free monthly extraction limit here), never the domain_mode 403 —

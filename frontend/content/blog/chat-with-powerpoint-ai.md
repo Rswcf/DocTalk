@@ -63,7 +63,7 @@ Tables embedded in slides (common in data-heavy presentations) are extracted and
 
 ### 1. Upload Your Presentation
 
-Go to [DocTalk](/) and sign in, or [try the demo](/demo) to see the experience first. Click the upload area or drag and drop your .pptx file. Files up to 50 MB are supported.
+Go to [DocTalk](/) and sign in, or [try the demo](/demo) to see the experience first. Click the upload area or drag and drop your .pptx file. Per-document limits are 50 MB / 750 slides on Free, 100 MB / 1,500 slides on Plus, and 200 MB / 3,000 slides on Pro.
 
 **Important**: DocTalk supports .pptx files (PowerPoint 2007 and later). Older .ppt files need to be re-saved as .pptx. You can do this by opening the file in PowerPoint and using File > Save As > PowerPoint Presentation (.pptx).
 
@@ -185,7 +185,7 @@ No. DocTalk extracts the text content of each slide regardless of animations. An
 
 ### How many slides can DocTalk handle?
 
-DocTalk supports documents up to 500 pages, which translates to 500 slides for PowerPoint files. In practice, most presentations are well under this limit. Very large slide decks (200+ slides) work fine but may take slightly longer to process.
+For PowerPoint files, the per-document page limits translate to 750 slides on Free, 1,500 on Plus, and 3,000 on Pro. In practice, most presentations are well under these limits. Very large slide decks (200+ slides) work fine but may take slightly longer to process.
 
 ### Can I compare the same deck in two languages?
 

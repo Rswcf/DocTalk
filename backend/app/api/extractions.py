@@ -25,7 +25,10 @@ from app.models.tables import (
 )
 from app.services import credit_service
 from app.services.doc_service import can_access_document
-from app.services.domain_mode_access import enforce_domain_mode_access
+from app.services.domain_mode_access import (
+    enforce_domain_mode_access,
+    release_failed_extraction_trial,
+)
 from app.services.extraction_service import (
     EXTRACTION_JOB_TYPE,
     EXTRACTION_PREDEBIT_CREDITS,
@@ -212,7 +215,8 @@ async def create_extraction(
 
     # The extraction job is the durable owner. It is still provisional here:
     # a denial or pre-commit credit failure rolls the job and claim back
-    # together; once accepted, later worker/queue failures do not restore it.
+    # together. A terminal, undelivered extraction later releases the claim in
+    # the same transaction as its refund; a delivered result never does.
     try:
         await enforce_domain_mode_access(
             db,
@@ -267,15 +271,45 @@ async def create_extraction(
 
         run_extraction_job.delay(str(job.id))
     except Exception as exc:
-        job.status = "failed"
-        job.error_code = "EXTRACTION_QUEUE_FAILED"
-        job.error_message = "Failed to queue extraction"
+        # Publication failures can be ambiguous: the broker may have accepted
+        # the message before the client observed an error. Race the worker's
+        # queued->running CAS. Only the winner may terminalize/refund/release;
+        # if the worker already claimed the job, preserve its result path.
+        failed_job_id = (
+            await db.execute(
+                sa.update(DocumentJob)
+                .where(
+                    DocumentJob.id == job.id,
+                    DocumentJob.status == "queued",
+                )
+                .values(
+                    status="failed",
+                    error_code="EXTRACTION_QUEUE_FAILED",
+                    error_message="Failed to queue extraction",
+                    completed_at=datetime.now(timezone.utc),
+                    updated_at=datetime.now(timezone.utc),
+                )
+                .returning(DocumentJob.id)
+                .execution_options(synchronize_session=False)
+            )
+        ).scalar_one_or_none()
+        if failed_job_id is None:
+            await db.rollback()
+            await db.refresh(job)
+            return _job_response(job)
+
         result = await db.execute(sa.delete(CreditLedger).where(CreditLedger.id == ledger_id))
-        if result.rowcount and result.rowcount > 0:
+        refunded = bool(result.rowcount and result.rowcount > 0)
+        if refunded:
             await db.execute(
                 sa.update(User)
                 .where(User.id == user.id)
                 .values(credits_balance=User.credits_balance + EXTRACTION_PREDEBIT_CREDITS)
+            )
+            await release_failed_extraction_trial(
+                db,
+                user_id=user.id,
+                owning_job_id=job.id,
             )
         await db.commit()
         raise HTTPException(

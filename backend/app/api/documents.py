@@ -1,10 +1,8 @@
 from __future__ import annotations
 
 import asyncio
-import io
 import logging
 import uuid
-import zipfile
 from typing import Optional
 from urllib.parse import urlparse
 
@@ -44,22 +42,12 @@ from app.services.document_limits import (
     max_pages_for_plan,
     normalized_plan,
 )
+from app.services.file_validation import validate_file_content
 from app.services.storage_service import StorageUnavailableError, storage_service
 
 logger = logging.getLogger(__name__)
 
 documents_router = APIRouter(prefix="/api/documents", tags=["documents"])
-
-_MAGIC_SIGNATURES: dict[str, list[bytes]] = {
-    'pdf': [b'%PDF'],
-    'docx': [b'PK\x03\x04'],
-    'pptx': [b'PK\x03\x04'],
-    'xlsx': [b'PK\x03\x04'],
-    'txt': [],
-    'md': [],
-}
-
-_MAX_UNCOMPRESSED_SIZE = 500 * 1024 * 1024  # 500MB zip bomb protection
 
 DOCUMENT_NOT_FOUND_DETAIL = {
     "error": "DOCUMENT_NOT_FOUND",
@@ -91,6 +79,10 @@ _UPLOAD_VALUE_ERROR_MAP: dict[str, dict[str, object]] = {
         "error": "INVALID_FILE_CONTENT",
         "message": "Invalid file content",
     },
+    "PDF_PASSWORD_PROTECTED": {
+        "error": "PDF_PASSWORD_PROTECTED",
+        "message": "Password-protected PDFs are not supported. Remove the password and try again.",
+    },
 }
 
 
@@ -119,25 +111,6 @@ def _enforce_page_limit(*, page_count: int, plan: str) -> None:
         status_code=400,
         detail=_page_limit_detail(page_count=page_count, max_pages=max_pages, plan=plan),
     )
-
-
-def _validate_file_content(data: bytes, file_type: str) -> bool:
-    """Validate file content against expected magic bytes and structure."""
-    sigs = _MAGIC_SIGNATURES.get(file_type, [])
-    if sigs and not any(data[:len(sig)] == sig for sig in sigs):
-        return False
-    # For Office Open XML formats, verify ZIP structure
-    if file_type in ('docx', 'pptx', 'xlsx'):
-        try:
-            with zipfile.ZipFile(io.BytesIO(data)) as zf:
-                if '[Content_Types].xml' not in zf.namelist():
-                    return False
-                total_uncompressed = sum(info.file_size for info in zf.infolist())
-                if total_uncompressed > _MAX_UNCOMPRESSED_SIZE:
-                    return False
-        except zipfile.BadZipFile:
-            return False
-    return True
 
 
 @documents_router.get("", response_model=list[DocumentBrief])
@@ -289,7 +262,7 @@ async def upload_document(
     data = bytes(buf)
 
     # Validate file content matches declared type (magic bytes + structure)
-    if not _validate_file_content(data, file_type):
+    if not validate_file_content(data, file_type):
         log_security_event("upload_rejected", user_id=user.id, reason="invalid_magic_bytes", filename=file.filename, file_type=file_type)
         raise HTTPException(
             status_code=400,
@@ -301,6 +274,15 @@ async def upload_document(
     # a Free-plan document slot.
     try:
         page_count = await asyncio.to_thread(count_document_pages, data, file_type)
+    except ValueError as exc:
+        code = str(exc)
+        if code in _UPLOAD_VALUE_ERROR_MAP:
+            raise HTTPException(status_code=400, detail=_UPLOAD_VALUE_ERROR_MAP[code])
+        logger.exception("Failed to count pages for uploaded %s", file_type)
+        raise HTTPException(
+            status_code=400,
+            detail=_UPLOAD_VALUE_ERROR_MAP["INVALID_FILE_CONTENT"],
+        )
     except Exception:
         logger.exception("Failed to count pages for uploaded %s", file_type)
         raise HTTPException(
@@ -481,6 +463,15 @@ async def ingest_url(
 
         try:
             page_count = await asyncio.to_thread(count_document_pages, pdf_bytes, "pdf")
+        except ValueError as exc:
+            code = str(exc)
+            if code in _UPLOAD_VALUE_ERROR_MAP:
+                raise HTTPException(status_code=400, detail=_UPLOAD_VALUE_ERROR_MAP[code])
+            logger.exception("Failed to count pages for URL-imported PDF")
+            raise HTTPException(
+                status_code=400,
+                detail=_UPLOAD_VALUE_ERROR_MAP["INVALID_FILE_CONTENT"],
+            )
         except Exception:
             logger.exception("Failed to count pages for URL-imported PDF")
             raise HTTPException(

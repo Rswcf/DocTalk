@@ -54,7 +54,7 @@ When the AI cites a passage from your DOCX file, clicking the citation number sc
 
 ### 1. Upload Your Word Document
 
-Go to [DocTalk](/) and sign in, or try the [free demo](/demo) first. Click the upload area or drag and drop your .docx file. Files up to 50 MB are supported.
+Go to [DocTalk](/) and sign in, or try the [free demo](/demo) first. Click the upload area or drag and drop your .docx file. Per-document limits are 50 MB / 750 pages on Free, 100 MB / 1,500 pages on Plus, and 200 MB / 3,000 pages on Pro.
 
 **Note**: DocTalk supports .docx files (the modern Word format). Older .doc files need to be saved as .docx first — you can do this by opening the file in Word and using "Save As."
 

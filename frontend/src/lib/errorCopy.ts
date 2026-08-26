@@ -7,7 +7,7 @@ export interface ErrorCopy {
   /** Optional longer body with remediation detail + interpolated context. */
   body: string;
   /** Optional CTA button (e.g., upgrade or delete-docs link). */
-  cta?: { label: string; href: string };
+  cta?: { label: string; href: string; plan?: BillingPlanIntent };
   severity: 'error' | 'warning' | 'info';
   /**
    * Whether the consumer should auto-open the paywall modal.
@@ -92,28 +92,17 @@ export function errorCopy(err: ErrorInput, t: TFn, tOr: TOrFn): ErrorCopy {
 
 type Handler = (detail: Record<string, unknown>, tOr: TOrFn) => ErrorCopy;
 
-function targetPlan(detail: Record<string, unknown>, fallback: BillingPlanIntent = 'plus'): BillingPlanIntent {
-  return detail.plan === 'plus' ? 'pro' : fallback;
-}
-
-/**
- * Like targetPlan(), but for document-cap codes where a Pro user (already
- * on the top tier) can legitimately hit the limit — e.g. layout_translations.py's
- * _assert_document_capacity emits `plan: "pro"` — and there is nowhere higher
- * to send them. Returns undefined in that case so the caller can fall back to
- * manage/delete copy instead of a bogus "upgrade" CTA that would point a Pro
- * user at a downgrade (Codex P1 FIX-1: targetPlan()'s ternary only special-cased
- * "plus", so "pro" silently fell through to the 'plus' fallback).
- */
-function targetPlanOrNone(detail: Record<string, unknown>): BillingPlanIntent | undefined {
-  if (detail.plan === 'pro') return undefined;
-  return targetPlan(detail);
+/** Return the next paid tier for a limit, or no target at the Pro ceiling. */
+export function limitUpgradePlan(plan: unknown): BillingPlanIntent | undefined {
+  if (plan === 'pro') return undefined;
+  return plan === 'plus' ? 'pro' : 'plus';
 }
 
 function upgradeCta(tOr: TOrFn, reason: string, plan: BillingPlanIntent = 'plus') {
   return {
     label: tOr('errors.cta.upgrade', 'Upgrade'),
     href: billingHref({ plan, source: 'limit', reason }),
+    plan,
   };
 }
 
@@ -125,10 +114,34 @@ function requiredPlanCta(detail: Record<string, unknown>, tOr: TOrFn, reason: st
   return undefined;
 }
 
+/** Shared by the local upload precheck and backend FILE_TOO_LARGE errors. */
+export function fileTooLargeCopy(
+  detail: Record<string, unknown>,
+  tOr: TOrFn,
+): ErrorCopy {
+  const plan = limitUpgradePlan(detail.plan);
+  return {
+    title: tOr('errors.FILE_TOO_LARGE.title', 'File too large'),
+    body: plan
+      ? tOr(
+          'errors.FILE_TOO_LARGE.body',
+          'Maximum file size on your plan is {maxMb} MB. Upgrade for larger uploads.',
+          { maxMb: String(detail.max_mb ?? '') },
+        )
+      : tOr(
+          'errors.FILE_TOO_LARGE.bodyTopTier',
+          'This file exceeds the Pro limit of {maxMb} MB. Compress or split it and try again.',
+          { maxMb: String(detail.max_mb ?? '') },
+        ),
+    cta: plan ? upgradeCta(tOr, 'file_size', plan) : undefined,
+    severity: 'warning',
+  };
+}
+
 const CODE_TABLE: Record<string, Handler> = {
   // ─── Upload ───
   DOCUMENT_LIMIT_REACHED: (d, tOr) => {
-    const plan = targetPlanOrNone(d);
+    const plan = limitUpgradePlan(d.plan);
     return {
       title: tOr('errors.DOCUMENT_LIMIT_REACHED.title', 'Document limit reached'),
       body: plan
@@ -142,16 +155,9 @@ const CODE_TABLE: Record<string, Handler> = {
       severity: 'warning',
     };
   },
-  FILE_TOO_LARGE: (d, tOr) => ({
-    title: tOr('errors.FILE_TOO_LARGE.title', 'File too large'),
-    body: tOr('errors.FILE_TOO_LARGE.body', 'Maximum file size on your plan is {maxMb} MB. Upgrade for larger uploads.', {
-      maxMb: String(d.max_mb ?? ''),
-    }),
-    cta: upgradeCta(tOr, 'file_size', targetPlan(d)),
-    severity: 'warning',
-  }),
+  FILE_TOO_LARGE: fileTooLargeCopy,
   DOCUMENT_PAGE_LIMIT_EXCEEDED: (d, tOr) => {
-    const plan = targetPlanOrNone(d);
+    const plan = limitUpgradePlan(d.plan);
     return {
       title: tOr('errors.DOCUMENT_PAGE_LIMIT_EXCEEDED.title', 'Document has too many pages'),
       body: plan
@@ -183,6 +189,11 @@ const CODE_TABLE: Record<string, Handler> = {
   INVALID_FILE_CONTENT: (_d, tOr) => ({
     title: tOr('errors.INVALID_FILE_CONTENT.title', 'File content invalid'),
     body: tOr('errors.INVALID_FILE_CONTENT.body', 'The file doesn\'t match its declared format, or appears corrupted.'),
+    severity: 'error',
+  }),
+  PDF_PASSWORD_PROTECTED: (_d, tOr) => ({
+    title: tOr('errors.PDF_PASSWORD_PROTECTED.title', 'Password-protected PDF'),
+    body: tOr('errors.PDF_PASSWORD_PROTECTED.body', 'Remove the PDF password and upload it again.'),
     severity: 'error',
   }),
 
@@ -341,22 +352,36 @@ const CODE_TABLE: Record<string, Handler> = {
   }),
 
   // ─── Collections ───
-  COLLECTION_LIMIT_REACHED: (d, tOr) => ({
-    title: tOr('errors.COLLECTION_LIMIT_REACHED.title', 'Collection limit reached'),
-    body: tOr('errors.COLLECTION_LIMIT_REACHED.body', 'Your plan allows up to {limit} collections. Upgrade for more.', {
-      limit: String(d.limit ?? ''),
-    }),
-    cta: upgradeCta(tOr, 'collection_limit', targetPlan(d)),
-    severity: 'warning',
-  }),
-  COLLECTION_DOC_LIMIT_REACHED: (d, tOr) => ({
-    title: tOr('errors.COLLECTION_DOC_LIMIT_REACHED.title', 'Too many documents'),
-    body: tOr('errors.COLLECTION_DOC_LIMIT_REACHED.body', 'Your plan allows up to {limit} documents per collection. Upgrade for more.', {
-      limit: String(d.limit ?? ''),
-    }),
-    cta: upgradeCta(tOr, 'collection_doc_limit', targetPlan(d)),
-    severity: 'warning',
-  }),
+  COLLECTION_LIMIT_REACHED: (d, tOr) => {
+    const plan = limitUpgradePlan(d.plan);
+    return {
+      title: tOr('errors.COLLECTION_LIMIT_REACHED.title', 'Collection limit reached'),
+      body: plan
+        ? tOr('errors.COLLECTION_LIMIT_REACHED.body', 'Your plan allows up to {limit} collections. Upgrade for more.', {
+            limit: String(d.limit ?? ''),
+          })
+        : tOr('errors.COLLECTION_LIMIT_REACHED.bodyTopTier', 'Your plan allows up to {limit} collections. Delete a collection to make room.', {
+            limit: String(d.limit ?? ''),
+          }),
+      cta: plan ? upgradeCta(tOr, 'collection_limit', plan) : undefined,
+      severity: 'warning',
+    };
+  },
+  COLLECTION_DOC_LIMIT_REACHED: (d, tOr) => {
+    const plan = limitUpgradePlan(d.plan);
+    return {
+      title: tOr('errors.COLLECTION_DOC_LIMIT_REACHED.title', 'Too many documents'),
+      body: plan
+        ? tOr('errors.COLLECTION_DOC_LIMIT_REACHED.body', 'Your plan allows up to {limit} documents per collection. Upgrade for more.', {
+            limit: String(d.limit ?? ''),
+          })
+        : tOr('errors.COLLECTION_DOC_LIMIT_REACHED.bodyTopTier', 'Your plan allows up to {limit} documents per collection. Remove a document before adding another.', {
+            limit: String(d.limit ?? ''),
+          }),
+      cta: plan ? upgradeCta(tOr, 'collection_doc_limit', plan) : undefined,
+      severity: 'warning',
+    };
+  },
   COLLECTION_NOT_FOUND: (_d, tOr) => ({
     title: tOr('errors.COLLECTION_NOT_FOUND.title', 'Collection not found'),
     body: tOr('errors.COLLECTION_NOT_FOUND.body', 'This collection doesn\'t exist or isn\'t yours.'),

@@ -11,6 +11,7 @@ from bs4 import BeautifulSoup
 from httpx import URL
 
 from app.core.url_validator import validate_and_resolve_url
+from app.services.file_validation import file_magic_length, validate_file_content
 
 from .base import ExtractedPage
 
@@ -86,6 +87,71 @@ def _read_response_bytes_limited(
             raise ValueError("URL_CONTENT_TOO_LARGE")
         chunks.append(chunk)
     return b"".join(chunks)
+
+
+def _read_response_bytes_by_magic(
+    response: httpx.Response,
+    *,
+    max_pdf_bytes: int,
+    max_html_bytes: int,
+) -> tuple[bytes, bool]:
+    """Read a streamed response under a byte-sniffed PDF or HTML cap.
+
+    The response's ``Content-Type`` never participates in classification.
+    Bytes are initially bounded by the larger authenticated-plan PDF cap;
+    once the shared upload magic-byte validator can decide the prefix, every
+    non-PDF response is immediately held to the independent HTML cap.
+    """
+    if max_pdf_bytes < max_html_bytes:
+        raise ValueError("URL_PDF_CAP_BELOW_HTML_CAP")
+
+    content_length: int | None = None
+    raw_content_length = response.headers.get("content-length")
+    if raw_content_length:
+        try:
+            parsed_content_length = int(raw_content_length)
+            if parsed_content_length >= 0:
+                content_length = parsed_content_length
+        except ValueError:
+            pass
+
+    magic_length = file_magic_length("pdf")
+    chunks: list[bytes] = []
+    prefix = bytearray()
+    total = 0
+    is_pdf: bool | None = None
+
+    for chunk in response.iter_bytes():
+        total += len(chunk)
+        chunks.append(chunk)
+
+        if is_pdf is None:
+            needed = magic_length - len(prefix)
+            if needed > 0:
+                prefix.extend(chunk[:needed])
+            if len(prefix) >= magic_length:
+                is_pdf = validate_file_content(bytes(prefix), "pdf")
+
+        received_cap = max_html_bytes if is_pdf is False else max_pdf_bytes
+        if total > received_cap:
+            code = "URL_CONTENT_TOO_LARGE" if is_pdf is False else "URL_PDF_TOO_LARGE"
+            raise ValueError(code)
+
+        if is_pdf is not None and content_length is not None:
+            cap = max_pdf_bytes if is_pdf else max_html_bytes
+            if content_length > cap:
+                code = "URL_PDF_TOO_LARGE" if is_pdf else "URL_CONTENT_TOO_LARGE"
+                raise ValueError(code)
+
+    if is_pdf is None:
+        is_pdf = validate_file_content(bytes(prefix), "pdf")
+
+    cap = max_pdf_bytes if is_pdf else max_html_bytes
+    if total > cap or (content_length is not None and content_length > cap):
+        code = "URL_PDF_TOO_LARGE" if is_pdf else "URL_CONTENT_TOO_LARGE"
+        raise ValueError(code)
+
+    return b"".join(chunks), is_pdf
 
 
 def _build_host_header(parsed: urlparse, resolved_ip: str) -> str:
@@ -164,17 +230,11 @@ def _fetch_with_safe_redirects(
                 response.raise_for_status()
                 content_type = response.headers.get("content-type", "").lower()
                 encoding = response.encoding or "utf-8"
-                is_pdf = "application/pdf" in content_type
-                max_content_size = max_pdf_bytes if is_pdf else max_html_bytes
-                try:
-                    body = _read_response_bytes_limited(
-                        response,
-                        max_content_size=max_content_size,
-                    )
-                except ValueError as exc:
-                    if is_pdf and str(exc) == "URL_CONTENT_TOO_LARGE":
-                        raise ValueError("URL_PDF_TOO_LARGE") from exc
-                    raise
+                body, _is_pdf = _read_response_bytes_by_magic(
+                    response,
+                    max_pdf_bytes=max_pdf_bytes,
+                    max_html_bytes=max_html_bytes,
+                )
                 return current_url, content_type, encoding, body
 
     raise ValueError("TOO_MANY_REDIRECTS")
@@ -372,7 +432,7 @@ def fetch_and_extract_url(
     )
 
     # If URL returns a PDF, signal caller to use PDF pipeline
-    if 'application/pdf' in content_type:
+    if validate_file_content(response_body, "pdf"):
         # Extract filename from URL or Content-Disposition
         filename = urlparse(final_url).path.rstrip('/').split('/')[-1]
         if not filename.lower().endswith('.pdf'):

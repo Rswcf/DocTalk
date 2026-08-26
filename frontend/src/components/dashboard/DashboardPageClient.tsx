@@ -16,8 +16,7 @@ import type { DocumentBrief } from '../../lib/api';
 import { useDocTalkStore } from '../../store';
 import { useLocale } from '../../i18n';
 import { clearAccountStorage } from '../../lib/clearAccountStorage';
-import { errorCopy, type ErrorCopy } from '../../lib/errorCopy';
-import { billingHref } from '../../lib/billingLinks';
+import { errorCopy, fileTooLargeCopy, type ErrorCopy } from '../../lib/errorCopy';
 import { getBillingErrorMessage, startPlanAwareBillingAction } from '../../lib/billing';
 import { trackEvent } from '../../lib/analytics';
 import { sanitizeFilename } from '../../lib/utils';
@@ -137,7 +136,6 @@ export default function DashboardPageClient() {
 
   const maxUploadMb = useMemo(() => MAX_UPLOAD_MB_BY_PLAN[userPlan] ?? MAX_UPLOAD_MB_BY_PLAN.free, [userPlan]);
   const maxUploadBytes = maxUploadMb * 1024 * 1024;
-  const uploadUpgradePlan = userPlan === 'plus' ? 'pro' : 'plus';
   const readyDocumentCount = useMemo(
     () => allDocs.filter((doc) => (doc.status || '').toLowerCase() === 'ready').length,
     [allDocs]
@@ -253,17 +251,9 @@ export default function DashboardPageClient() {
       return;
     }
     if (file.size > maxUploadBytes) {
-      const body = t('dashboard.fileSizeLimit', { size: maxUploadMb });
-      setProgressText(body);
-      setUploadErrorCopy({
-        title: tOr('errors.FILE_TOO_LARGE.title', 'File too large'),
-        body,
-        cta: {
-          label: tOr('errors.cta.upgrade', 'Upgrade'),
-          href: billingHref({ plan: uploadUpgradePlan, source: 'limit', reason: 'file_size' }),
-        },
-        severity: 'warning',
-      });
+      const copy = fileTooLargeCopy({ plan: userPlan, max_mb: maxUploadMb }, tOr);
+      setProgressText(copy.body);
+      setUploadErrorCopy(copy.cta ? copy : null);
       trackEvent('limit_hit', { source: 'dashboard_upload_precheck', reason: 'file_size', plan: userPlan });
       return;
     }
@@ -334,7 +324,7 @@ export default function DashboardPageClient() {
       }
       setUploading(false);
     }
-  }, [isLoggedIn, maxUploadBytes, maxUploadMb, router, setDocument, setDocumentStatus, t, tOr, uploadUpgradePlan, userPlan]);
+  }, [isLoggedIn, maxUploadBytes, maxUploadMb, router, setDocument, setDocumentStatus, t, tOr, userPlan]);
 
   const onDrop = (e: React.DragEvent) => {
     e.preventDefault();
@@ -491,8 +481,10 @@ export default function DashboardPageClient() {
                     onClick={(event) => {
                       if (!isLoggedIn) return;
                       event.preventDefault();
+                      const plan = uploadErrorCopy.cta?.plan;
+                      if (!plan) return;
                       const reason = uploadErrorCopy.cta?.href.includes('file_size') ? 'file_size' : 'upload_limit';
-                      void beginCheckout(uploadUpgradePlan, 'upload_error', reason, (message) => setProgressText(message));
+                      void beginCheckout(plan, 'upload_error', reason, (message) => setProgressText(message));
                     }}
                     className="mt-3 inline-flex items-center justify-center rounded-lg bg-zinc-900 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-zinc-800 dark:bg-zinc-50 dark:text-zinc-900 dark:hover:bg-zinc-200 focus-visible:ring-2 focus-visible:ring-zinc-400 dark:focus-visible:ring-zinc-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-900"
                   >
@@ -535,8 +527,10 @@ export default function DashboardPageClient() {
                   onClick={(event) => {
                     if (!isLoggedIn) return;
                     event.preventDefault();
+                    const plan = urlErrorCopy.cta?.plan;
+                    if (!plan) return;
                     const reason = urlErrorCopy.cta?.href.includes('file_size') ? 'file_size' : 'url_limit';
-                    void beginCheckout(uploadUpgradePlan, 'url_error', reason, (message) => setUrlError(message));
+                    void beginCheckout(plan, 'url_error', reason, (message) => setUrlError(message));
                   }}
                   className="mt-3 inline-flex items-center justify-center rounded-lg bg-zinc-900 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-zinc-800 dark:bg-zinc-50 dark:text-zinc-900 dark:hover:bg-zinc-200 focus-visible:ring-2 focus-visible:ring-zinc-400 dark:focus-visible:ring-zinc-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-900"
                 >

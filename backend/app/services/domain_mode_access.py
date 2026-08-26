@@ -3,12 +3,14 @@ from __future__ import annotations
 
 import uuid
 
+import sqlalchemy as sa
 from fastapi import HTTPException
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import Session
 
 from app.core.config import settings
-from app.models.tables import FeatureTrialUsage, User
+from app.models.tables import DocumentJob, ExtractionResult, FeatureTrialUsage, User
 
 DOMAIN_MODE_FEATURE = "domain_mode"
 DOMAIN_MODE_REQUIRES_PLUS_DETAIL = {
@@ -44,12 +46,12 @@ async def enforce_domain_mode_access(
     begins. Extraction creates its job first and commits the job, trial claim,
     credit debit, and event together.
 
-    Reservations are permanent once committed, including when downstream chat
-    generation, extraction execution, or queue dispatch fails. Retrying the
-    same surviving chat session is still allowed; deleting the owner only
-    nulls the pointer and never restores the consumed slot. Failures before
-    the extraction transaction commits (for example insufficient credits)
-    roll back both the unaccepted job and its provisional claim.
+    Chat reservations remain durable across downstream generation failures,
+    so retrying the same surviving session is allowed. Extraction reservations
+    are released only when the owning job is terminally failed/cancelled, has
+    no delivered result, and its credit predebit is refunded in the same
+    transaction. Successful extraction reservations are never released.
+    Deleting an owner only nulls its pointer and does not itself restore a slot.
     """
     if domain_mode is None:
         return
@@ -117,3 +119,79 @@ async def enforce_domain_mode_access(
     await db.flush()
     if commit_claim:
         await db.commit()
+
+
+def _failed_extraction_release_statement(
+    *,
+    user_id: uuid.UUID,
+    owning_job_id: uuid.UUID,
+):
+    no_delivered_result = ~sa.exists(
+        select(ExtractionResult.job_id).where(ExtractionResult.job_id == owning_job_id)
+    )
+    terminal_undelivered_job = sa.exists(
+        select(DocumentJob.id).where(
+            DocumentJob.id == owning_job_id,
+            DocumentJob.user_id == user_id,
+            DocumentJob.job_type == "extraction",
+            DocumentJob.status.in_(("failed", "cancelled", "canceled")),
+            no_delivered_result,
+        )
+    )
+    return (
+        sa.delete(FeatureTrialUsage)
+        .where(
+            FeatureTrialUsage.user_id == user_id,
+            FeatureTrialUsage.feature == DOMAIN_MODE_FEATURE,
+            FeatureTrialUsage.owning_job_id == owning_job_id,
+            terminal_undelivered_job,
+        )
+        .returning(FeatureTrialUsage.id)
+    )
+
+
+async def release_failed_extraction_trial(
+    db: AsyncSession,
+    *,
+    user_id: uuid.UUID,
+    owning_job_id: uuid.UUID,
+) -> bool:
+    """Idempotently release one terminal, undelivered extraction claim.
+
+    The caller owns commit/rollback and must invoke this only in the same
+    transaction that performs the credit refund. Locking the user row uses the
+    same serialization point as claiming, closing release+claim races.
+    """
+    locked_user_id = await db.scalar(
+        select(User.id).where(User.id == user_id).with_for_update()
+    )
+    if locked_user_id is None:
+        return False
+    result = await db.execute(
+        _failed_extraction_release_statement(
+            user_id=user_id,
+            owning_job_id=owning_job_id,
+        )
+    )
+    return result.scalar_one_or_none() is not None
+
+
+def release_failed_extraction_trial_sync(
+    db: Session,
+    *,
+    user_id: uuid.UUID,
+    owning_job_id: uuid.UUID,
+) -> bool:
+    """Synchronous worker counterpart of ``release_failed_extraction_trial``."""
+    locked_user_id = db.scalar(
+        select(User.id).where(User.id == user_id).with_for_update()
+    )
+    if locked_user_id is None:
+        return False
+    result = db.execute(
+        _failed_extraction_release_statement(
+            user_id=user_id,
+            owning_job_id=owning_job_id,
+        )
+    )
+    return result.scalar_one_or_none() is not None

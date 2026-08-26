@@ -63,14 +63,18 @@ export default function CollectionDetailPage() {
   const [showMobileSidebar, setShowMobileSidebar] = useState<'docs' | 'sessions' | null>(null);
 
   const handleCollectionUpgrade = async () => {
+    const plan = addDocsErrorCopy?.cta?.plan;
+    if (!plan) return;
     if (checkoutLoading) return;
     setCheckoutLoading(true);
     try {
       await startPlanAwareBillingAction({
-        plan: userPlan === 'plus' ? 'pro' : 'plus',
+        plan,
         billing: 'monthly',
         source: 'collection_add_documents_modal',
-        reason: 'collection_doc_limit',
+        reason: addDocsErrorCopy?.cta?.href.includes('collection_doc_limit')
+          ? 'collection_doc_limit'
+          : 'collection_limit',
         currentPlan: profile?.plan,
       });
     } catch (error) {

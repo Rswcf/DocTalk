@@ -101,7 +101,7 @@ State the cause if we know it. Never blame the user. Never apologize theatricall
 | Scenario | ✅ Good | ❌ Bad |
 |---|---|---|
 | Upload failed (network) | "Upload failed. Check your connection and try again." | "Oops! Something went wrong 😬" |
-| File too large | "File exceeds 50 MB. Try splitting or compressing it." | "Error: FILE_TOO_LARGE" |
+| File too large | "This file exceeds your plan limit (Free 50 MB, Plus 100 MB, Pro 200 MB). Try splitting or compressing it." | "Error: FILE_TOO_LARGE" |
 | OCR failed on scanned PDF | "OCR couldn't read this document. The scan quality may be too low." | "OCR text recognition failed" (current `upload.ocrFailed` — too terse, no next step) |
 | Out of credits | "You've used all 300 credits for this month. Upgrade for more." | "Insufficient Credits" + "You've run out of credits. Purchase more to continue chatting." (current — wordy, and "chatting" is too casual for paying users) |
 | Backend 500 | "Something went wrong on our end. Try again in a moment." | "Internal Server Error (500)" |

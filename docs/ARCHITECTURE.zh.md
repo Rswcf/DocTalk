@@ -825,7 +825,7 @@ graph TD
 **Landing 页面各区块**（按顺序）：HeroSection → 产品展示（Remotion `<Player>` 动画演示，300帧@30fps，lazy-loaded）→ HowItWorks → FeatureGrid → SocialProof → SecuritySection → FAQ → FinalCTA → PrivacyBadge → Footer
 
 **Chat 功能：**
-- **Domain Mode 试用归属**：Plus/Pro 不受限制。Free 账户拥有 `FREE_DOMAIN_MODE_TRIALS` 个持久槽位，由聊天会话和 Domain Mode 提取任务共享。拥有槽位的会话可无限追问。`feature_trial_usages` 是权益唯一事实源；owner 外键使用 `ON DELETE SET NULL`，因此清除当前模式或删除会话、文档、任务都不会恢复已消耗槽位。已提交的预约在下游失败后仍保留；仅提交前的校验或积分失败会回滚临时提取预约。
+- **Domain Mode 试用归属**：Plus/Pro 不受限制。Free 账户拥有 `FREE_DOMAIN_MODE_TRIALS` 个持久槽位，由聊天会话和 Domain Mode 提取任务共享。拥有槽位的会话可无限追问。`feature_trial_usages` 是权益唯一事实源；owner 外键使用 `ON DELETE SET NULL`，因此清除当前模式或删除会话、文档、任务本身不会恢复槽位。聊天失败后保留槽位，因为同一会话仍可重试。提取任务仅在终态失败/取消、未交付结果且预扣积分于同一事务退款时释放槽位；用户行锁串行化释放与申领，条件删除保证幂等，成功任务永不释放。
 - **ChatGPT 风格 UI**：AI 消息无卡片/边框/背景，基础 `prose` 级别全宽渲染；用户消息 `rounded-3xl` 圆角气泡（浅色模式 `bg-zinc-100`，深色模式 `dark:bg-zinc-700`）。消息区域 + 输入栏使用 `max-w-3xl mx-auto` 居中，宽面板时保持舒适阅读宽度。操作按钮（复制/点赞/点踩/重新生成）在旧消息上 hover 显示（`opacity-0 group-hover:opacity-100`），最新 AI 消息始终可见
 - **单一入口**：文档阅读页只保留 Chat + 文档查看器，不再显示 Brief/Extract 主标签。结构化提取、表格导出、模板和对比都通过自然语言聊天触发，并以 artifact card 回到同一条 assistant 消息中。
 - **品牌 Logo**："Talk Flow" 标识 — 两个重叠聊天气泡（后方气泡=文档来源，Indigo 200 `#c7d2fe`；前方气泡=AI 对话，Indigo 600 `#4f46e5`）。`DocTalkLogo.tsx` 组件通过 Tailwind `fill-indigo-*` + `dark:` 变体自动适配 dark mode。Favicon 通过 `app/icon.svg`（Next.js 自动检测），Apple Touch Icon 通过 `app/apple-icon.svg`。静态导出：`public/logo-icon.svg`（512px）、`public/logo-full-light.svg` / `logo-full-dark.svg`（组合标识 + Sora wordmark）

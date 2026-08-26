@@ -106,6 +106,24 @@ async def _usage_count(user_id: uuid.UUID) -> int:
         return int(count or 0)
 
 
+async def _mark_failed_and_release(user_id: uuid.UUID, job_id: uuid.UUID) -> bool:
+    from app.models.database import AsyncSessionLocal
+    from app.models.tables import DocumentJob
+    from app.services.domain_mode_access import release_failed_extraction_trial
+
+    async with AsyncSessionLocal() as db:
+        job = await db.get(DocumentJob, job_id)
+        job.status = "failed"
+        job.error_code = "EXTRACTION_FAILED"
+        released = await release_failed_extraction_trial(
+            db,
+            user_id=user_id,
+            owning_job_id=job_id,
+        )
+        await db.commit()
+        return released
+
+
 async def test_concurrent_fresh_sessions_can_claim_only_one_slot() -> None:
     user_id, _doc_id, session_ids, _job_ids = await _seed_user_document(sessions=2)
     try:
@@ -222,26 +240,122 @@ async def test_chat_and_extraction_share_the_same_allowance() -> None:
         await _cleanup_user(user_id)
 
 
-async def test_failed_committed_extraction_does_not_release_reservation() -> None:
+async def test_failed_extraction_releases_slot_and_allows_one_retry() -> None:
     from app.models.database import AsyncSessionLocal
-    from app.models.tables import ChatSession, DocumentJob
+    from app.models.tables import ChatSession, FeatureTrialUsage
 
-    user_id, doc_id, [session_id], [job_id] = await _seed_user_document(sessions=1, jobs=1)
+    user_id, doc_id, [_session_id], [job_id] = await _seed_user_document(sessions=1, jobs=1)
     try:
         await _claim_job(user_id, job_id)
+        assert await _mark_failed_and_release(user_id, job_id) is True
+
         async with AsyncSessionLocal() as db:
-            job = await db.get(DocumentJob, job_id)
-            job.status = "failed"
-            job.error_code = "EXTRACTION_FAILED"
             replacement = ChatSession(document_id=doc_id, user_id=user_id)
             db.add(replacement)
             await db.commit()
             replacement_id = replacement.id
 
+        await _claim_session(user_id, replacement_id)
+        assert await _usage_count(user_id) == 1
+        async with AsyncSessionLocal() as db:
+            usage = await db.scalar(
+                select(FeatureTrialUsage).where(FeatureTrialUsage.user_id == user_id)
+            )
+            assert usage.owning_session_id == replacement_id
+            assert usage.owning_job_id is None
+    finally:
+        await _cleanup_user(user_id)
+
+
+async def test_succeeded_extraction_never_releases_slot() -> None:
+    from app.models.database import AsyncSessionLocal
+    from app.models.tables import DocumentJob
+    from app.services.domain_mode_access import release_failed_extraction_trial
+
+    user_id, _doc_id, [session_id], [job_id] = await _seed_user_document(sessions=1, jobs=1)
+    try:
+        await _claim_job(user_id, job_id)
+        async with AsyncSessionLocal() as db:
+            job = await db.get(DocumentJob, job_id)
+            job.status = "succeeded"
+            released = await release_failed_extraction_trial(
+                db,
+                user_id=user_id,
+                owning_job_id=job_id,
+            )
+            await db.commit()
+        assert released is False
+
         with pytest.raises(HTTPException):
-            await _claim_session(user_id, replacement_id)
+            await _claim_session(user_id, session_id)
         assert await _usage_count(user_id) == 1
     finally:
+        await _cleanup_user(user_id)
+
+
+async def test_failed_extraction_release_is_idempotent() -> None:
+    from app.models.database import AsyncSessionLocal
+    from app.models.tables import DocumentJob
+    from app.services.domain_mode_access import release_failed_extraction_trial
+
+    user_id, _doc_id, _session_ids, [job_id] = await _seed_user_document(jobs=1)
+    try:
+        await _claim_job(user_id, job_id)
+        async with AsyncSessionLocal() as db:
+            job = await db.get(DocumentJob, job_id)
+            job.status = "failed"
+            first = await release_failed_extraction_trial(
+                db,
+                user_id=user_id,
+                owning_job_id=job_id,
+            )
+            second = await release_failed_extraction_trial(
+                db,
+                user_id=user_id,
+                owning_job_id=job_id,
+            )
+            await db.commit()
+        assert first is True
+        assert second is False
+        assert await _usage_count(user_id) == 0
+    finally:
+        await _cleanup_user(user_id)
+
+
+async def test_concurrent_release_then_claim_serializes_without_double_claim() -> None:
+    from app.models.database import AsyncSessionLocal
+    from app.models.tables import DocumentJob, User
+    from app.services.domain_mode_access import release_failed_extraction_trial
+
+    user_id, _doc_id, [session_id], [job_id] = await _seed_user_document(sessions=1, jobs=1)
+    claim_task: asyncio.Task[None] | None = None
+    try:
+        await _claim_job(user_id, job_id)
+        async with AsyncSessionLocal() as release_db:
+            await release_db.scalar(
+                select(User.id).where(User.id == user_id).with_for_update()
+            )
+            job = await release_db.get(DocumentJob, job_id)
+            job.status = "failed"
+            await release_db.flush()
+
+            claim_task = asyncio.create_task(_claim_session(user_id, session_id))
+            with pytest.raises(asyncio.TimeoutError):
+                await asyncio.wait_for(asyncio.shield(claim_task), timeout=0.1)
+
+            released = await release_failed_extraction_trial(
+                release_db,
+                user_id=user_id,
+                owning_job_id=job_id,
+            )
+            await release_db.commit()
+
+        assert released is True
+        await claim_task
+        assert await _usage_count(user_id) == 1
+    finally:
+        if claim_task is not None and not claim_task.done():
+            claim_task.cancel()
         await _cleanup_user(user_id)
 
 

@@ -337,7 +337,9 @@ class FeatureTrialUsage(Base):
 
     Owner foreign keys intentionally use ``SET NULL``. Deleting a chat
     session, extraction job, or their document removes the owner pointer but
-    never removes the consumed slot.
+    never removes the consumed slot. An explicit terminal extraction failure
+    may delete its undelivered job-owned row atomically with a credit refund;
+    successful results and chat-owned rows remain durable.
     """
 
     __tablename__ = "feature_trial_usages"

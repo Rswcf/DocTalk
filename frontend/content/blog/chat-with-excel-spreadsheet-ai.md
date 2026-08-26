@@ -71,7 +71,7 @@ All sheets are indexed and searchable. You can ask cross-sheet questions like "H
 
 ### 1. Upload Your Spreadsheet
 
-Go to [DocTalk](/) and sign in, or start with the [free demo](/demo). Drag and drop your .xlsx file or click the upload area. Files up to 50 MB are supported.
+Go to [DocTalk](/) and sign in, or start with the [free demo](/demo). Drag and drop your .xlsx file or click the upload area. Per-document limits are 50 MB / 750 logical pages on Free, 100 MB / 1,500 on Plus, and 200 MB / 3,000 on Pro.
 
 **Supported format**: DocTalk supports .xlsx files (Excel 2007 and later). For older .xls files, open in Excel and save as .xlsx first. CSV files can be opened in Excel and saved as .xlsx, or you may find it easier to simply paste the data into a text file.
 

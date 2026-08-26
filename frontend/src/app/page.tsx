@@ -82,7 +82,7 @@ export default function HomePage() {
             name: 'What file types are supported?',
             acceptedAnswer: {
               '@type': 'Answer',
-              text: 'DocTalk supports PDF, DOCX, PPTX, XLSX, TXT, and Markdown files, plus web URLs. PDFs include scanned documents via built-in OCR. File limits are Free 50MB, Plus 100MB, and Pro 200MB; all plans support up to 500 pages.',
+              text: 'DocTalk supports PDF, DOCX, PPTX, XLSX, TXT, and Markdown files, plus web URLs. PDFs include scanned documents via built-in OCR. Per-document limits are Free 50 MB / 750 pages, Plus 100 MB / 1,500 pages, and Pro 200 MB / 3,000 pages.',
             },
           },
           {
@@ -114,7 +114,7 @@ export default function HomePage() {
             name: 'Can it handle long documents?',
             acceptedAnswer: {
               '@type': 'Answer',
-              text: 'Yes. DocTalk handles documents up to 500 pages with smart chunking and semantic search, ensuring accurate answers even from very long documents.',
+              text: 'Yes. Per-document page limits are 750 on Free, 1,500 on Plus, and 3,000 on Pro. Smart chunking and semantic search keep answers accurate across long documents.',
             },
           },
         ],

@@ -38,7 +38,12 @@ def count_document_pages(file_bytes: bytes, file_type: str) -> int:
     """
     if file_type == "pdf":
         with fitz.open(stream=file_bytes, filetype="pdf") as pdf:
-            return int(pdf.page_count)
+            if pdf.needs_pass:
+                raise ValueError("PDF_PASSWORD_PROTECTED")
+            page_count = int(pdf.page_count)
+            if page_count < 1:
+                raise ValueError("INVALID_FILE_CONTENT")
+            return page_count
 
     from app.services.extractors import extract_document
 
