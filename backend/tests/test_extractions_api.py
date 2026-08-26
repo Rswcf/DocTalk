@@ -7,12 +7,11 @@ from unittest.mock import AsyncMock
 
 import pytest
 import pytest_asyncio
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from httpx import ASGITransport, AsyncClient
 
 from app.api import extractions as extractions_api
 from app.core import deps as deps_module
-from app.core.config import settings
 from app.services import credit_service
 from app.services.extraction_service import FREE_MONTHLY_EXTRACTION_LIMIT
 
@@ -137,12 +136,27 @@ async def test_create_extraction_requires_ready_document(client: AsyncClient) ->
 # doc-not-ready check.
 
 @pytest.mark.asyncio
-async def test_create_extraction_domain_mode_requires_plus_after_free_trial(client: AsyncClient) -> None:
+async def test_create_extraction_domain_mode_requires_plus_after_free_trial(
+    client: AsyncClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     user = _make_user(plan="free")
     doc = _make_doc(user)
-    db = _make_db(
-        get=AsyncMock(return_value=doc),
-        scalar=AsyncMock(return_value=settings.FREE_DOMAIN_MODE_TRIALS),
+    db = _make_db(get=AsyncMock(return_value=doc))
+    monkeypatch.setattr(extractions_api, "_enforce_free_extraction_limit", AsyncMock())
+    monkeypatch.setattr(
+        extractions_api,
+        "enforce_domain_mode_access",
+        AsyncMock(
+            side_effect=HTTPException(
+                status_code=403,
+                detail={
+                    "error": "DOMAIN_MODE_REQUIRES_PLUS",
+                    "message": "Legal/Academic domain mode requires a Plus or Pro plan",
+                    "required_plan": "plus",
+                },
+            )
+        ),
     )
     _override_dependencies(db, user)
 
@@ -156,12 +170,27 @@ async def test_create_extraction_domain_mode_requires_plus_after_free_trial(clie
 
 
 @pytest.mark.asyncio
-async def test_create_extraction_domain_mode_counts_prior_extraction_trial(client: AsyncClient) -> None:
+async def test_create_extraction_domain_mode_shares_prior_chat_allowance(
+    client: AsyncClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     user = _make_user(plan="free")
     doc = _make_doc(user)
-    db = _make_db(
-        get=AsyncMock(return_value=doc),
-        scalar=AsyncMock(side_effect=[0, settings.FREE_DOMAIN_MODE_TRIALS]),
+    db = _make_db(get=AsyncMock(return_value=doc))
+    monkeypatch.setattr(extractions_api, "_enforce_free_extraction_limit", AsyncMock())
+    monkeypatch.setattr(
+        extractions_api,
+        "enforce_domain_mode_access",
+        AsyncMock(
+            side_effect=HTTPException(
+                status_code=403,
+                detail={
+                    "error": "DOMAIN_MODE_REQUIRES_PLUS",
+                    "message": "Legal/Academic domain mode requires a Plus or Pro plan",
+                    "required_plan": "plus",
+                },
+            )
+        ),
     )
     _override_dependencies(db, user)
 
@@ -183,6 +212,8 @@ async def test_create_extraction_domain_mode_allows_free_trial(
     db = _make_db(get=AsyncMock(return_value=doc), scalar=AsyncMock(return_value=0))
     _override_dependencies(db, user)
     monkeypatch.setattr(extractions_api, "_enforce_free_extraction_limit", AsyncMock())
+    access = AsyncMock()
+    monkeypatch.setattr(extractions_api, "enforce_domain_mode_access", access)
     monkeypatch.setattr(credit_service, "debit_credits", AsyncMock(return_value=None))
     monkeypatch.setattr(credit_service, "get_user_credits", AsyncMock(return_value=12))
 
@@ -192,6 +223,8 @@ async def test_create_extraction_domain_mode_allows_free_trial(
     )
 
     _assert_error(response, 402, "INSUFFICIENT_CREDITS")
+    assert access.await_args.kwargs["owning_job_id"] is not None
+    db.rollback.assert_awaited_once()
 
 
 @pytest.mark.asyncio

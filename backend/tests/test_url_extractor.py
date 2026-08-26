@@ -28,6 +28,28 @@ def test_read_response_bytes_limited_rejects_large_content_length_header() -> No
         url_extractor._read_response_bytes_limited(response, max_content_size=10)
 
 
+@pytest.mark.parametrize(
+    ("advertised_mb", "plan_cap_mb"),
+    [(50, 100), (150, 200)],
+)
+def test_read_response_bytes_limited_allows_plus_and_pro_pdf_headroom(
+    advertised_mb: int,
+    plan_cap_mb: int,
+) -> None:
+    """10–100 MB (Plus) and 100–200 MB (Pro) PDF responses pass the
+    header guard. A tiny body avoids allocating 200 MB in a unit test; the
+    streaming branch separately proves actual received bytes are bounded."""
+    response = _FakeResponse(
+        [b"%PDF-1.7\n"],
+        headers={"content-length": str(advertised_mb * 1024 * 1024)},
+    )
+
+    assert url_extractor._read_response_bytes_limited(
+        response,
+        max_content_size=plan_cap_mb * 1024 * 1024,
+    ).startswith(b"%PDF")
+
+
 def test_fetch_and_extract_url_preserves_article_structure(monkeypatch: pytest.MonkeyPatch) -> None:
     html = b"""
     <html>
@@ -54,12 +76,15 @@ def test_fetch_and_extract_url_preserves_article_structure(monkeypatch: pytest.M
     </html>
     """
 
-    def _fake_fetch(url: str):
+    def _fake_fetch(url: str, **_kwargs):
         return url, "text/html; charset=utf-8", "utf-8", html
 
     monkeypatch.setattr(url_extractor, "_fetch_with_safe_redirects", _fake_fetch)
 
-    title, pages, pdf_bytes = url_extractor.fetch_and_extract_url("https://example.com/article")
+    title, pages, pdf_bytes = url_extractor.fetch_and_extract_url(
+        "https://example.com/article",
+        max_pdf_bytes=100 * 1024 * 1024,
+    )
     content = "\n\n".join(page.text for page in pages)
 
     assert pdf_bytes is None
@@ -85,10 +110,13 @@ def test_fetch_and_extract_url_rejects_image_only_title_page(monkeypatch: pytest
     </html>
     """
 
-    def _fake_fetch(url: str):
+    def _fake_fetch(url: str, **_kwargs):
         return url, "text/html; charset=utf-8", "utf-8", html
 
     monkeypatch.setattr(url_extractor, "_fetch_with_safe_redirects", _fake_fetch)
 
     with pytest.raises(ValueError, match="NO_TEXT_CONTENT"):
-        url_extractor.fetch_and_extract_url("https://example.com/image-only")
+        url_extractor.fetch_and_extract_url(
+            "https://example.com/image-only",
+            max_pdf_bytes=100 * 1024 * 1024,
+        )

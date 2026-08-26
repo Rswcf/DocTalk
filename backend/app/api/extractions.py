@@ -185,8 +185,6 @@ async def create_extraction(
             detail={"error": "DOCUMENT_NOT_READY", "message": "Document is not ready"},
         )
 
-    await enforce_domain_mode_access(db, user, body.domain_mode)
-
     try:
         template = get_template(body.template_key)
     except ValueError:
@@ -198,6 +196,7 @@ async def create_extraction(
     await _enforce_free_extraction_limit(user, db)
 
     job = DocumentJob(
+        id=uuid.uuid4(),
         user_id=user.id,
         document_id=doc.id,
         job_type=EXTRACTION_JOB_TYPE,
@@ -210,6 +209,20 @@ async def create_extraction(
     )
     db.add(job)
     await db.flush()
+
+    # The extraction job is the durable owner. It is still provisional here:
+    # a denial or pre-commit credit failure rolls the job and claim back
+    # together; once accepted, later worker/queue failures do not restore it.
+    try:
+        await enforce_domain_mode_access(
+            db,
+            user,
+            body.domain_mode,
+            owning_job_id=job.id,
+        )
+    except HTTPException:
+        await db.rollback()
+        raise
 
     ledger_id = await credit_service.debit_credits(
         db,

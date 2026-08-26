@@ -332,6 +332,59 @@ class CheckoutAttempt(Base):
     )
 
 
+class FeatureTrialUsage(Base):
+    """Durable ownership of a user's finite feature-trial slot.
+
+    Owner foreign keys intentionally use ``SET NULL``. Deleting a chat
+    session, extraction job, or their document removes the owner pointer but
+    never removes the consumed slot.
+    """
+
+    __tablename__ = "feature_trial_usages"
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, server_default=sa.text("gen_random_uuid()")
+    )
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), sa.ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+    )
+    feature: Mapped[str] = mapped_column(sa.String(64), nullable=False)
+    slot_index: Mapped[int] = mapped_column(sa.Integer, nullable=False)
+    owning_session_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        UUID(as_uuid=True), sa.ForeignKey("sessions.id", ondelete="SET NULL"), nullable=True
+    )
+    owning_job_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        UUID(as_uuid=True), sa.ForeignKey("document_jobs.id", ondelete="SET NULL"), nullable=True
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        sa.DateTime(timezone=True), nullable=False, server_default=sa.text("now()")
+    )
+
+    __table_args__ = (
+        sa.CheckConstraint("slot_index >= 0", name="ck_feature_trial_usages_slot_nonnegative"),
+        sa.CheckConstraint(
+            "owning_session_id IS NULL OR owning_job_id IS NULL",
+            name="ck_feature_trial_usages_at_most_one_owner",
+        ),
+        sa.UniqueConstraint(
+            "user_id", "feature", "slot_index",
+            name="uq_feature_trial_usages_user_feature_slot",
+        ),
+        sa.Index(
+            "uq_feature_trial_usages_session_owner",
+            "owning_session_id",
+            unique=True,
+            postgresql_where=sa.text("owning_session_id IS NOT NULL"),
+        ),
+        sa.Index(
+            "uq_feature_trial_usages_job_owner",
+            "owning_job_id",
+            unique=True,
+            postgresql_where=sa.text("owning_job_id IS NOT NULL"),
+        ),
+    )
+
+
 class Account(Base):
     __tablename__ = "accounts"
 

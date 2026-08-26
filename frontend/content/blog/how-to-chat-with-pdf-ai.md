@@ -57,7 +57,7 @@ Here is how to do it in practice using [DocTalk](/demo).
 
 ### 1. Upload Your Document
 
-Go to [DocTalk](/) and sign in (or try the [free demo](/demo) without an account). Click the upload area or drag and drop your PDF. DocTalk supports files up to 50 MB and 500 pages. The document will be parsed in a few seconds — you will see a progress indicator.
+Go to [DocTalk](/) and sign in (or try the [free demo](/demo) without an account). Click the upload area or drag and drop your PDF. Per-document limits are 750 pages / 50 MB on Free, 1,500 pages / 100 MB on Plus, and 3,000 pages / 200 MB on Pro. The document will be parsed in a few seconds — you will see a progress indicator.
 
 ### 2. Wait for Processing
 
@@ -182,7 +182,7 @@ Yes. DocTalk includes OCR (Optical Character Recognition) that converts scanned 
 
 ### Is there a page limit?
 
-DocTalk supports documents up to 500 pages. For very large documents, the AI may need more follow-up questions to cover all sections, since each query retrieves a limited number of relevant chunks.
+DocTalk supports up to 750 pages on Free, 1,500 on Plus, and 3,000 on Pro. For very large documents, the AI may need more follow-up questions to cover all sections, since each query retrieves a limited number of relevant chunks.
 
 ### Can I try it for free?
 

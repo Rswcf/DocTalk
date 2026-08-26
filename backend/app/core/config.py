@@ -61,8 +61,6 @@ class Settings(BaseSettings):
     EMBED_MAX_CONCURRENCY: int = Field(default=4)
 
     # Limits
-    MAX_PDF_SIZE_MB: int = Field(default=50)
-    MAX_PDF_PAGES: int = Field(default=500)
     MAX_CHAT_HISTORY_TURNS: int = Field(default=6)
     MAX_RETRIEVAL_TOKENS: int = Field(default=1750)
     LLM_MAX_CONTEXT_TOKENS: int = Field(default=180000)
@@ -159,6 +157,12 @@ class Settings(BaseSettings):
     FREE_MAX_FILE_SIZE_MB: int = 50
     PLUS_MAX_FILE_SIZE_MB: int = 100
     PRO_MAX_FILE_SIZE_MB: int = 200
+    # Page count, rather than compressed byte size, is the primary bound on
+    # extraction, embedding, and paid-OCR work. These are enforced before a
+    # document row is created for both direct uploads and URL imports.
+    FREE_MAX_PAGES: int = 750
+    PLUS_MAX_PAGES: int = 1500
+    PRO_MAX_PAGES: int = 3000
 
     # Collection limits per plan
     FREE_MAX_COLLECTIONS: int = 1

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import io
 import logging
 import uuid
@@ -37,6 +38,12 @@ from app.schemas.document import (
     DocumentTextContentResponse,
 )
 from app.services.doc_service import can_access_document, doc_service, sanitize_filename
+from app.services.document_limits import (
+    count_document_pages,
+    max_file_size_mb_for_plan,
+    max_pages_for_plan,
+    normalized_plan,
+)
 from app.services.storage_service import StorageUnavailableError, storage_service
 
 logger = logging.getLogger(__name__)
@@ -85,6 +92,33 @@ _UPLOAD_VALUE_ERROR_MAP: dict[str, dict[str, object]] = {
         "message": "Invalid file content",
     },
 }
+
+
+def _page_limit_detail(*, page_count: int, max_pages: int, plan: str) -> dict[str, object]:
+    return {
+        "error": "DOCUMENT_PAGE_LIMIT_EXCEEDED",
+        "message": f"This document has {page_count} pages; the {plan} plan supports up to {max_pages}",
+        "page_count": page_count,
+        "max_pages": max_pages,
+        "plan": plan,
+    }
+
+
+def _enforce_page_limit(*, page_count: int, plan: str) -> None:
+    max_pages = max_pages_for_plan(plan)
+    if page_count <= max_pages:
+        return
+    log_security_event(
+        "upload_rejected",
+        reason="page_limit",
+        page_count=page_count,
+        max_pages=max_pages,
+        plan=plan,
+    )
+    raise HTTPException(
+        status_code=400,
+        detail=_page_limit_detail(page_count=page_count, max_pages=max_pages, plan=plan),
+    )
 
 
 def _validate_file_content(data: bytes, file_type: str) -> bool:
@@ -213,7 +247,7 @@ async def upload_document(
         .where(Document.user_id == user.id)
         .where(Document.status != "deleting")
     )
-    plan = getattr(user, 'plan', None) or "free"
+    plan = normalized_plan(getattr(user, "plan", None))
     max_docs = {
         "free": settings.FREE_MAX_DOCUMENTS,
         "plus": settings.PLUS_MAX_DOCUMENTS,
@@ -233,11 +267,7 @@ async def upload_document(
         )
 
     # Validate size by streaming bytes with early abort to prevent memory DoS
-    max_size_mb = {
-        "free": settings.FREE_MAX_FILE_SIZE_MB,
-        "plus": settings.PLUS_MAX_FILE_SIZE_MB,
-        "pro": settings.PRO_MAX_FILE_SIZE_MB,
-    }.get(plan, settings.FREE_MAX_FILE_SIZE_MB)
+    max_size_mb = max_file_size_mb_for_plan(plan)
     max_bytes = max_size_mb * 1024 * 1024
     buf = bytearray()
     while True:
@@ -265,6 +295,19 @@ async def upload_document(
             status_code=400,
             detail={"error": "INVALID_FILE_CONTENT", "message": "Invalid file content"},
         )
+
+    # Reject before object storage or a Document row exists. This makes page
+    # limits real cost controls and guarantees a rejected upload cannot occupy
+    # a Free-plan document slot.
+    try:
+        page_count = await asyncio.to_thread(count_document_pages, data, file_type)
+    except Exception:
+        logger.exception("Failed to count pages for uploaded %s", file_type)
+        raise HTTPException(
+            status_code=400,
+            detail=_UPLOAD_VALUE_ERROR_MAP["INVALID_FILE_CONTENT"],
+        )
+    _enforce_page_limit(page_count=page_count, plan=plan)
 
     # FastAPI resets file after read? We already have bytes; reconstruct UploadFile-like
     # to pass filename/content_type to service: create an in-memory UploadFile proxy
@@ -347,7 +390,7 @@ async def ingest_url(
         .where(Document.user_id == user.id)
         .where(Document.status != "deleting")
     )
-    plan = getattr(user, 'plan', None) or "free"
+    plan = normalized_plan(getattr(user, "plan", None))
     max_docs = {
         "free": settings.FREE_MAX_DOCUMENTS,
         "plus": settings.PLUS_MAX_DOCUMENTS,
@@ -366,11 +409,16 @@ async def ingest_url(
             },
         )
 
-    try:
-        import asyncio
+    max_size_mb = max_file_size_mb_for_plan(plan)
+    max_pdf_bytes = max_size_mb * 1024 * 1024
 
+    try:
         from app.services.extractors.url_extractor import fetch_and_extract_url
-        title, pages, pdf_bytes = await asyncio.to_thread(fetch_and_extract_url, url)
+        title, pages, pdf_bytes = await asyncio.to_thread(
+            fetch_and_extract_url,
+            url,
+            max_pdf_bytes=max_pdf_bytes,
+        )
     except ValueError as e:
         code = str(e)
         if code in URL_BLOCKED_REASONS:
@@ -385,6 +433,16 @@ async def ingest_url(
                 detail={
                     "error": "URL_CONTENT_TOO_LARGE",
                     "message": "URL content is too large",
+                },
+            )
+        if code == "URL_PDF_TOO_LARGE":
+            raise HTTPException(
+                status_code=400,
+                detail={
+                    "error": "FILE_TOO_LARGE",
+                    "message": "File is too large",
+                    "max_mb": max_size_mb,
+                    "plan": plan,
                 },
             )
         if code == "NO_TEXT_CONTENT":
@@ -408,14 +466,8 @@ async def ingest_url(
             detail={"error": "URL_FETCH_FAILED", "message": "Failed to fetch URL"},
         )
 
-    max_size_mb = {
-        "free": settings.FREE_MAX_FILE_SIZE_MB,
-        "plus": settings.PLUS_MAX_FILE_SIZE_MB,
-        "pro": settings.PRO_MAX_FILE_SIZE_MB,
-    }.get(plan, settings.FREE_MAX_FILE_SIZE_MB)
-
     if pdf_bytes:
-        if len(pdf_bytes) > max_size_mb * 1024 * 1024:
+        if len(pdf_bytes) > max_pdf_bytes:
             log_security_event("upload_rejected", user_id=user.id, reason="file_too_large", size=len(pdf_bytes), max_mb=max_size_mb)
             raise HTTPException(
                 status_code=400,
@@ -426,6 +478,16 @@ async def ingest_url(
                     "plan": plan,
                 },
             )
+
+        try:
+            page_count = await asyncio.to_thread(count_document_pages, pdf_bytes, "pdf")
+        except Exception:
+            logger.exception("Failed to count pages for URL-imported PDF")
+            raise HTTPException(
+                status_code=400,
+                detail=_UPLOAD_VALUE_ERROR_MAP["INVALID_FILE_CONTENT"],
+            )
+        _enforce_page_limit(page_count=page_count, plan=plan)
 
         # URL returned a PDF — process through normal PDF pipeline
         doc_id = uuid.uuid4()
@@ -461,6 +523,11 @@ async def ingest_url(
         # it through the URL text pipeline.
         text_content = '\n\n'.join(p.text for p in pages)
         text_bytes = text_content.encode('utf-8')
+        # Count the stored Markdown through the same extractor the worker will
+        # use; the fetcher's article-section pages are not necessarily the
+        # final documents.page_count split.
+        page_count = await asyncio.to_thread(count_document_pages, text_bytes, "url")
+        _enforce_page_limit(page_count=page_count, plan=plan)
         if len(text_bytes) > max_size_mb * 1024 * 1024:
             log_security_event("upload_rejected", user_id=user.id, reason="file_too_large", size=len(text_bytes), max_mb=max_size_mb)
             raise HTTPException(

@@ -389,11 +389,6 @@ async def chat_stream(
             },
         )
 
-    # Server-side at every Domain Mode entry point: paid plans are unlimited,
-    # authenticated free users receive the configured durable-session trial,
-    # and anonymous requests remain ineligible.
-    await enforce_domain_mode_access(db, user, body.domain_mode)
-
     # Rate limit anonymous users
     if user is None:
         client_ip = get_client_ip(request)
@@ -420,6 +415,17 @@ async def chat_stream(
                 },
                 headers={"Retry-After": "60"},
             )
+
+    # Server-side at every Domain Mode entry point: paid plans are unlimited;
+    # a Free-plan reservation belongs to this session, not to the session's
+    # mutable current-mode display field. Commit the claim before streaming.
+    await enforce_domain_mode_access(
+        db,
+        user,
+        body.domain_mode,
+        owning_session_id=session_id,
+        commit_claim=True,
+    )
 
     # Enforce message limit for anonymous users on demo documents.
     # Tracker key is scoped per (IP, document) and survives session recreation.

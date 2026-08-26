@@ -12,6 +12,7 @@ from .tables import (
     DocumentLayoutRun,
     DocumentTable,
     ExtractionResult,
+    FeatureTrialUsage,
     Message,
     Page,
     QuestionTemplate,
@@ -39,5 +40,6 @@ __all__ = [
     "DocumentLayoutRun",
     "DocumentTable",
     "ExtractionResult",
+    "FeatureTrialUsage",
     "QuestionTemplate",
 ]

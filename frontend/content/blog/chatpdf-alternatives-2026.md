@@ -43,7 +43,7 @@ None of these are dealbreakers for everyone. If you only work with English PDFs 
 - [11 languages](/features/multilingual) with native support (not just translation)
 - 2 AI modes: Flash (DeepSeek V4 Flash) and Pro (DeepSeek V4 Pro)
 - [Free demo](/demo) with no signup required
-- Documents up to 500 pages / 50 MB
+- Per-document limits: Free 750 pages / 50 MB, Plus 1,500 pages / 100 MB, Pro 3,000 pages / 200 MB
 
 **Cons:**
 - No browser extension

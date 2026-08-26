@@ -7,7 +7,7 @@ from unittest.mock import AsyncMock
 
 import pytest
 import pytest_asyncio
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from httpx import ASGITransport, AsyncClient
 
 from app.api import chat as chat_api
@@ -142,8 +142,12 @@ def _assert_error(response, status_code: int, error_code: str) -> dict:
 
 
 @pytest.fixture(autouse=True)
-def _clear_dependency_overrides() -> None:
+def _clear_dependency_overrides(monkeypatch: pytest.MonkeyPatch) -> None:
     api_app.dependency_overrides.clear()
+    # These endpoint-taxonomy tests use minimal magic-byte fixtures rather
+    # than full documents. Page-count mechanics have dedicated unit and
+    # integration coverage; default endpoint preflight to one logical page.
+    monkeypatch.setattr(documents_api, "count_document_pages", lambda _data, _file_type: 1)
     yield
     api_app.dependency_overrides.clear()
 
@@ -213,7 +217,7 @@ async def test_ingest_url_pdf_file_too_large(
     monkeypatch.setattr(
         url_extractor,
         "fetch_and_extract_url",
-        lambda _url: ("downloaded.pdf", [], b"x"),
+        lambda _url, **_kwargs: ("downloaded.pdf", [], b"x"),
     )
 
     response = await client.post("/api/documents/ingest-url", json={"url": "https://example.com"})
@@ -234,7 +238,7 @@ async def test_ingest_url_text_file_too_large(
     monkeypatch.setattr(
         url_extractor,
         "fetch_and_extract_url",
-        lambda _url: ("Example", [SimpleNamespace(text="hello")], None),
+        lambda _url, **_kwargs: ("Example", [SimpleNamespace(text="hello")], None),
     )
 
     response = await client.post("/api/documents/ingest-url", json={"url": "https://example.com"})
@@ -266,6 +270,128 @@ async def test_upload_invalid_file_content(client: AsyncClient) -> None:
         files={"file": ("report.pdf", b"not-a-pdf", "application/pdf")},
     )
     _assert_error(response, 400, "INVALID_FILE_CONTENT")
+
+
+@pytest.mark.asyncio
+async def test_upload_page_limit_rejects_before_document_creation(
+    client: AsyncClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    user = _make_user(plan="free")
+    db = _make_db(scalar=AsyncMock(return_value=0))
+    _override_dependencies(db, auth_user=user)
+    monkeypatch.setattr(
+        documents_api,
+        "count_document_pages",
+        lambda _data, _file_type: settings.FREE_MAX_PAGES + 1,
+    )
+    create_document = AsyncMock()
+    monkeypatch.setattr(documents_api.doc_service, "create_document", create_document)
+
+    response = await client.post(
+        "/api/documents/upload",
+        files={"file": ("report.pdf", b"%PDF-1.4\nvalid-enough-for-preflight", "application/pdf")},
+    )
+
+    detail = _assert_error(response, 400, "DOCUMENT_PAGE_LIMIT_EXCEEDED")
+    assert detail["page_count"] == settings.FREE_MAX_PAGES + 1
+    assert detail["max_pages"] == settings.FREE_MAX_PAGES
+    create_document.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+async def test_ingest_url_pdf_page_limit_rejects_before_storage_or_document_row(
+    client: AsyncClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    user = _make_user(plan="free")
+    added: list[object] = []
+    db = _make_db(scalar=AsyncMock(return_value=0), add=added.append)
+    _override_dependencies(db, auth_user=user)
+    monkeypatch.setattr(url_validator, "validate_url", lambda url: url)
+    monkeypatch.setattr(
+        url_extractor,
+        "fetch_and_extract_url",
+        lambda _url, **_kwargs: ("downloaded.pdf", [], b"%PDF-1.4\n"),
+    )
+    monkeypatch.setattr(
+        documents_api,
+        "count_document_pages",
+        lambda _data, _file_type: settings.FREE_MAX_PAGES + 1,
+    )
+    upload_file = AsyncMock()
+    monkeypatch.setattr(documents_api.storage_service, "upload_file", upload_file)
+
+    response = await client.post(
+        "/api/documents/ingest-url",
+        json={"url": "https://example.com/large.pdf"},
+    )
+
+    _assert_error(response, 400, "DOCUMENT_PAGE_LIMIT_EXCEEDED")
+    upload_file.assert_not_awaited()
+    assert added == []
+
+
+@pytest.mark.asyncio
+async def test_ingest_url_html_page_limit_rejects_before_storage_or_document_row(
+    client: AsyncClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    user = _make_user(plan="free")
+    added: list[object] = []
+    db = _make_db(scalar=AsyncMock(return_value=0), add=added.append)
+    _override_dependencies(db, auth_user=user)
+    monkeypatch.setattr(url_validator, "validate_url", lambda url: url)
+    monkeypatch.setattr(
+        url_extractor,
+        "fetch_and_extract_url",
+        lambda _url, **_kwargs: ("Article", [SimpleNamespace(text="content")], None),
+    )
+    monkeypatch.setattr(
+        documents_api,
+        "count_document_pages",
+        lambda _data, file_type: settings.FREE_MAX_PAGES + 1 if file_type == "url" else 1,
+    )
+    upload_file = AsyncMock()
+    monkeypatch.setattr(documents_api.storage_service, "upload_file", upload_file)
+
+    response = await client.post(
+        "/api/documents/ingest-url",
+        json={"url": "https://example.com/article"},
+    )
+
+    _assert_error(response, 400, "DOCUMENT_PAGE_LIMIT_EXCEEDED")
+    upload_file.assert_not_awaited()
+    assert added == []
+
+
+@pytest.mark.parametrize(("plan", "expected_mb"), [("plus", 100), ("pro", 200)])
+@pytest.mark.asyncio
+async def test_ingest_url_passes_plan_pdf_byte_cap_to_fetcher(
+    client: AsyncClient,
+    monkeypatch: pytest.MonkeyPatch,
+    plan: str,
+    expected_mb: int,
+) -> None:
+    user = _make_user(plan=plan)
+    db = _make_db(scalar=AsyncMock(return_value=0))
+    _override_dependencies(db, auth_user=user)
+    monkeypatch.setattr(url_validator, "validate_url", lambda url: url)
+    captured: dict[str, int] = {}
+
+    def _capture_cap(_url: str, *, max_pdf_bytes: int, **_kwargs):
+        captured["max_pdf_bytes"] = max_pdf_bytes
+        raise ValueError("URL_CONTENT_TOO_LARGE")
+
+    monkeypatch.setattr(url_extractor, "fetch_and_extract_url", _capture_cap)
+
+    response = await client.post(
+        "/api/documents/ingest-url",
+        json={"url": "https://example.com/large.pdf"},
+    )
+
+    _assert_error(response, 400, "URL_CONTENT_TOO_LARGE")
+    assert captured["max_pdf_bytes"] == expected_mb * 1024 * 1024
 
 
 @pytest.mark.asyncio
@@ -310,7 +436,7 @@ async def test_ingest_url_fetch_blocked_hides_reason(
     _override_dependencies(db, auth_user=user)
     monkeypatch.setattr(url_validator, "validate_url", lambda url: url)
 
-    def _raise_blocked(_url: str):
+    def _raise_blocked(_url: str, **_kwargs):
         raise ValueError("BLOCKED_HOST")
 
     monkeypatch.setattr(url_extractor, "fetch_and_extract_url", _raise_blocked)
@@ -336,7 +462,7 @@ async def test_ingest_url_blocked_fetch_reasons_share_safe_error_copy(
     _override_dependencies(db, auth_user=user)
     monkeypatch.setattr(url_validator, "validate_url", lambda url: url)
 
-    def _raise_blocked(_url: str):
+    def _raise_blocked(_url: str, **_kwargs):
         raise ValueError(blocked_reason)
 
     monkeypatch.setattr(url_extractor, "fetch_and_extract_url", _raise_blocked)
@@ -357,13 +483,38 @@ async def test_ingest_url_content_too_large(
     _override_dependencies(db, auth_user=user)
     monkeypatch.setattr(url_validator, "validate_url", lambda url: url)
 
-    def _raise_limit(_url: str):
+    def _raise_limit(_url: str, **_kwargs):
         raise ValueError("URL_CONTENT_TOO_LARGE")
 
     monkeypatch.setattr(url_extractor, "fetch_and_extract_url", _raise_limit)
 
     response = await client.post("/api/documents/ingest-url", json={"url": "https://example.com"})
     _assert_error(response, 400, "URL_CONTENT_TOO_LARGE")
+
+
+@pytest.mark.asyncio
+async def test_ingest_url_pdf_too_large_uses_plan_file_size_taxonomy(
+    client: AsyncClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    user = _make_user(plan="plus")
+    db = _make_db(scalar=AsyncMock(return_value=0))
+    _override_dependencies(db, auth_user=user)
+    monkeypatch.setattr(url_validator, "validate_url", lambda url: url)
+
+    def _raise_pdf_limit(_url: str, **_kwargs):
+        raise ValueError("URL_PDF_TOO_LARGE")
+
+    monkeypatch.setattr(url_extractor, "fetch_and_extract_url", _raise_pdf_limit)
+
+    response = await client.post(
+        "/api/documents/ingest-url",
+        json={"url": "https://example.com/too-large.pdf"},
+    )
+
+    detail = _assert_error(response, 400, "FILE_TOO_LARGE")
+    assert detail["max_mb"] == settings.PLUS_MAX_FILE_SIZE_MB
+    assert detail["plan"] == "plus"
 
 
 @pytest.mark.asyncio
@@ -376,7 +527,7 @@ async def test_ingest_url_no_text_content(
     _override_dependencies(db, auth_user=user)
     monkeypatch.setattr(url_validator, "validate_url", lambda url: url)
 
-    def _raise_empty(_url: str):
+    def _raise_empty(_url: str, **_kwargs):
         raise ValueError("NO_TEXT_CONTENT")
 
     monkeypatch.setattr(url_extractor, "fetch_and_extract_url", _raise_empty)
@@ -395,7 +546,7 @@ async def test_ingest_url_fetch_failed(
     _override_dependencies(db, auth_user=user)
     monkeypatch.setattr(url_validator, "validate_url", lambda url: url)
 
-    def _raise_runtime(_url: str):
+    def _raise_runtime(_url: str, **_kwargs):
         raise RuntimeError("gateway timeout")
 
     monkeypatch.setattr(url_extractor, "fetch_and_extract_url", _raise_runtime)
@@ -734,10 +885,25 @@ async def test_chat_domain_mode_requires_plus_after_free_trial(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     user = _make_user(plan="free")
-    db = _make_db(scalar=AsyncMock(return_value=settings.FREE_DOMAIN_MODE_TRIALS))
+    db = _make_db()
     _override_dependencies(db, optional_user=user)
     session = SimpleNamespace(document=SimpleNamespace(status="ready", demo_slug=None), document_id=uuid.uuid4())
     monkeypatch.setattr(chat_api, "verify_session_access", AsyncMock(return_value=session))
+    monkeypatch.setattr(chat_api.auth_chat_limiter, "is_allowed", AsyncMock(return_value=True))
+    monkeypatch.setattr(
+        chat_api,
+        "enforce_domain_mode_access",
+        AsyncMock(
+            side_effect=HTTPException(
+                status_code=403,
+                detail={
+                    "error": "DOMAIN_MODE_REQUIRES_PLUS",
+                    "message": "Legal/Academic domain mode requires a Plus or Pro plan",
+                    "required_plan": "plus",
+                },
+            )
+        ),
+    )
 
     response = await client.post(
         f"/api/sessions/{uuid.uuid4()}/chat",
@@ -762,6 +928,8 @@ async def test_chat_domain_mode_allows_free_trial(
     )
     monkeypatch.setattr(chat_api, "verify_session_access", AsyncMock(return_value=session))
     monkeypatch.setattr(chat_api.auth_chat_limiter, "is_allowed", AsyncMock(return_value=True))
+    access = AsyncMock()
+    monkeypatch.setattr(chat_api, "enforce_domain_mode_access", access)
     monkeypatch.setattr(chat_api, "enforce_free_mode_limits", AsyncMock())
     monkeypatch.setattr(chat_api.credit_service, "get_estimated_cost", lambda _mode: 7)
     monkeypatch.setattr(chat_api.credit_service, "get_user_credits", AsyncMock(return_value=1000))
@@ -778,6 +946,8 @@ async def test_chat_domain_mode_allows_free_trial(
     )
 
     assert response.status_code == 200
+    assert access.await_args.kwargs["owning_session_id"] is not None
+    assert access.await_args.kwargs["commit_claim"] is True
 
 
 @pytest.mark.asyncio

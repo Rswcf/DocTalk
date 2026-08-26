@@ -43,7 +43,7 @@ We uploaded the same set of test documents to each tool: a 40-page financial ear
 - Free demo with no signup required
 - Multiple chat sessions per document
 - OCR for scanned PDFs
-- Documents up to 500 pages / 50 MB
+- Per-document limits: Free 750 pages / 50 MB, Plus 1,500 pages / 100 MB, Pro 3,000 pages / 200 MB
 
 **Pricing**: Free tier (300 credits/month), Plus ($9.99/month for 3,000 credits), Pro ($19.99/month for 9,000 credits). Credit packs available for one-time purchases.
 

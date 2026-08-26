@@ -150,6 +150,31 @@ const CODE_TABLE: Record<string, Handler> = {
     cta: upgradeCta(tOr, 'file_size', targetPlan(d)),
     severity: 'warning',
   }),
+  DOCUMENT_PAGE_LIMIT_EXCEEDED: (d, tOr) => {
+    const plan = targetPlanOrNone(d);
+    return {
+      title: tOr('errors.DOCUMENT_PAGE_LIMIT_EXCEEDED.title', 'Document has too many pages'),
+      body: plan
+        ? tOr(
+            'errors.DOCUMENT_PAGE_LIMIT_EXCEEDED.body',
+            'This document has {pageCount} pages. Your plan supports up to {maxPages}. Upgrade for a higher page limit.',
+            {
+              pageCount: String(d.page_count ?? ''),
+              maxPages: String(d.max_pages ?? ''),
+            },
+          )
+        : tOr(
+            'errors.DOCUMENT_PAGE_LIMIT_EXCEEDED.bodyTopTier',
+            'This document has {pageCount} pages, above the Pro limit of {maxPages}. Split it into smaller documents and try again.',
+            {
+              pageCount: String(d.page_count ?? ''),
+              maxPages: String(d.max_pages ?? ''),
+            },
+          ),
+      cta: plan ? upgradeCta(tOr, 'page_limit', plan) : undefined,
+      severity: 'warning',
+    };
+  },
   UNSUPPORTED_FORMAT: (_d, tOr) => ({
     title: tOr('errors.UNSUPPORTED_FORMAT.title', 'Unsupported file format'),
     body: tOr('errors.UNSUPPORTED_FORMAT.body', 'Please upload a PDF, DOCX, PPTX, XLSX, TXT, or MD file.'),

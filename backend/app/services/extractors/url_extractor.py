@@ -14,7 +14,11 @@ from app.core.url_validator import validate_and_resolve_url
 
 from .base import ExtractedPage
 
-MAX_CONTENT_SIZE = 10 * 1024 * 1024  # 10MB
+# HTML is converted and stored as a compact Markdown snapshot. Keep a separate
+# defensive 10 MB response-body ceiling for markup so a huge/hostile page
+# cannot consume arbitrary memory. URL PDFs instead receive the authenticated
+# caller's plan-derived file-size cap.
+MAX_HTML_CONTENT_SIZE = 10 * 1024 * 1024
 FETCH_TIMEOUT = 30  # seconds
 MAX_REDIRECTS = 3
 
@@ -63,7 +67,7 @@ WHITESPACE_RE = re.compile(r"[ \t\r\f\v]+")
 def _read_response_bytes_limited(
     response: httpx.Response,
     *,
-    max_content_size: int = MAX_CONTENT_SIZE,
+    max_content_size: int = MAX_HTML_CONTENT_SIZE,
 ) -> bytes:
     content_length = response.headers.get("content-length")
     if content_length:
@@ -105,7 +109,12 @@ def _build_host_header(parsed: urlparse, resolved_ip: str) -> str:
     return hostname
 
 
-def _fetch_with_safe_redirects(url: str) -> tuple[str, str, str, bytes]:
+def _fetch_with_safe_redirects(
+    url: str,
+    *,
+    max_pdf_bytes: int,
+    max_html_bytes: int = MAX_HTML_CONTENT_SIZE,
+) -> tuple[str, str, str, bytes]:
     """Fetch a URL, manually following redirects and validating each hop.
 
     Uses DNS-pinned connections: validate_and_resolve_url returns a resolved IP
@@ -155,7 +164,17 @@ def _fetch_with_safe_redirects(url: str) -> tuple[str, str, str, bytes]:
                 response.raise_for_status()
                 content_type = response.headers.get("content-type", "").lower()
                 encoding = response.encoding or "utf-8"
-                body = _read_response_bytes_limited(response)
+                is_pdf = "application/pdf" in content_type
+                max_content_size = max_pdf_bytes if is_pdf else max_html_bytes
+                try:
+                    body = _read_response_bytes_limited(
+                        response,
+                        max_content_size=max_content_size,
+                    )
+                except ValueError as exc:
+                    if is_pdf and str(exc) == "URL_CONTENT_TOO_LARGE":
+                        raise ValueError("URL_PDF_TOO_LARGE") from exc
+                    raise
                 return current_url, content_type, encoding, body
 
     raise ValueError("TOO_MANY_REDIRECTS")
@@ -333,7 +352,12 @@ def _has_meaningful_content(blocks: list[str], title: str) -> bool:
     return False
 
 
-def fetch_and_extract_url(url: str) -> Tuple[str, List[ExtractedPage], Optional[bytes]]:
+def fetch_and_extract_url(
+    url: str,
+    *,
+    max_pdf_bytes: int,
+    max_html_bytes: int = MAX_HTML_CONTENT_SIZE,
+) -> Tuple[str, List[ExtractedPage], Optional[bytes]]:
     """Fetch URL and extract text content.
 
     Returns:
@@ -341,7 +365,11 @@ def fetch_and_extract_url(url: str) -> Tuple[str, List[ExtractedPage], Optional[
         - If the URL points to a PDF, returns (filename, [], pdf_bytes)
         - Otherwise returns (title, extracted_pages, None)
     """
-    final_url, content_type, encoding, response_body = _fetch_with_safe_redirects(url)
+    final_url, content_type, encoding, response_body = _fetch_with_safe_redirects(
+        url,
+        max_pdf_bytes=max_pdf_bytes,
+        max_html_bytes=max_html_bytes,
+    )
 
     # If URL returns a PDF, signal caller to use PDF pipeline
     if 'application/pdf' in content_type:
