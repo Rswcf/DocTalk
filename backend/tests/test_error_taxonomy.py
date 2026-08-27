@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import asyncio
 import uuid
 from datetime import datetime, timedelta, timezone
 from types import SimpleNamespace
@@ -897,140 +896,12 @@ async def test_chat_demo_message_limit_reached(
     monkeypatch.setattr(
         chat_api.demo_message_tracker,
         "check_and_increment",
-        AsyncMock(return_value=(False, chat_api.DEMO_MESSAGE_LIMIT, None)),
+        AsyncMock(return_value=(False, chat_api.DEMO_MESSAGE_LIMIT)),
     )
 
     response = await client.post(f"/api/sessions/{uuid.uuid4()}/chat", json={"message": "Hello"})
     detail = _assert_error(response, 429, "DEMO_MESSAGE_LIMIT_REACHED")
     assert isinstance(detail["limit"], int)
-
-
-@pytest.mark.asyncio
-async def test_chat_failed_demo_answer_releases_reserved_question(
-    client: AsyncClient,
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    db = _make_db()
-    _override_dependencies(db, optional_user=None)
-    session = SimpleNamespace(
-        document=SimpleNamespace(status="ready", demo_slug="demo"),
-        document_id=uuid.uuid4(),
-    )
-    monkeypatch.setattr(chat_api, "verify_session_access", AsyncMock(return_value=session))
-    monkeypatch.setattr(chat_api.demo_chat_limiter, "is_allowed", AsyncMock(return_value=True))
-    monkeypatch.setattr(
-        chat_api.demo_message_tracker,
-        "check_and_increment",
-        AsyncMock(return_value=(
-            True,
-            1,
-            chat_api.DemoMessageReservation(key="demo-key", token="failed-token"),
-        )),
-    )
-    release = AsyncMock(return_value=0)
-    monkeypatch.setattr(chat_api.demo_message_tracker, "release", release)
-
-    async def _failed_stream(*_args, **_kwargs):
-        yield {"event": "error", "data": {"code": "LLM_ERROR", "message": "Provider failed"}}
-
-    monkeypatch.setattr(chat_api.chat_service, "chat_stream", _failed_stream)
-
-    response = await client.post(f"/api/sessions/{uuid.uuid4()}/chat", json={"message": "Hello"})
-
-    assert response.status_code == 200
-    assert "event: error" in response.text
-    assert '"demo_messages_used": 0' in response.text
-    release.assert_awaited_once()
-
-
-@pytest.mark.asyncio
-async def test_demo_release_is_effectively_once_when_cancelled_after_redis_applies(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    """Reproduce EVAL-applied/reply-cancelled before wrapper state advances."""
-    reservation = chat_api.DemoMessageReservation(
-        key="shared-five-request-counter",
-        token="cancelled-request-token",
-    )
-    state = {
-        "count": 5,
-        "active_tokens": {reservation.token},
-        "calls": 0,
-        "effective_releases": 0,
-    }
-    first_eval_applied = asyncio.Event()
-
-    async def release_once(candidate: chat_api.DemoMessageReservation) -> int:
-        state["calls"] += 1
-        if candidate.token in state["active_tokens"]:
-            state["active_tokens"].remove(candidate.token)
-            state["count"] -= 1
-            state["effective_releases"] += 1
-
-        if state["calls"] == 1:
-            # Redis has applied SREM + DECR, but the caller never receives
-            # that EVAL reply. Cancellation drives the wrapper into finally,
-            # where it retries the same request-owned token.
-            first_eval_applied.set()
-            await asyncio.Future()
-        return state["count"]
-
-    monkeypatch.setattr(chat_api.demo_message_tracker, "release", release_once)
-
-    async def failed_stream():
-        yield {"event": "error", "data": {"code": "LLM_ERROR"}}
-
-    wrapped = chat_api._release_failed_demo_reservation(failed_stream(), reservation)
-    consume = asyncio.create_task(wrapped.__anext__())
-    await first_eval_applied.wait()
-    consume.cancel()
-
-    with pytest.raises(asyncio.CancelledError):
-        await consume
-
-    assert state == {
-        "count": 4,
-        "active_tokens": set(),
-        "calls": 2,
-        "effective_releases": 1,
-    }
-
-
-@pytest.mark.asyncio
-async def test_chat_successful_demo_answer_keeps_reserved_question(
-    client: AsyncClient,
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    db = _make_db()
-    _override_dependencies(db, optional_user=None)
-    session = SimpleNamespace(
-        document=SimpleNamespace(status="ready", demo_slug="demo"),
-        document_id=uuid.uuid4(),
-    )
-    monkeypatch.setattr(chat_api, "verify_session_access", AsyncMock(return_value=session))
-    monkeypatch.setattr(chat_api.demo_chat_limiter, "is_allowed", AsyncMock(return_value=True))
-    monkeypatch.setattr(
-        chat_api.demo_message_tracker,
-        "check_and_increment",
-        AsyncMock(return_value=(
-            True,
-            1,
-            chat_api.DemoMessageReservation(key="demo-key", token="success-token"),
-        )),
-    )
-    release = AsyncMock(return_value=0)
-    monkeypatch.setattr(chat_api.demo_message_tracker, "release", release)
-
-    async def _successful_stream(*_args, **_kwargs):
-        yield {"event": "done", "data": {"message_id": str(uuid.uuid4())}}
-
-    monkeypatch.setattr(chat_api.chat_service, "chat_stream", _successful_stream)
-
-    response = await client.post(f"/api/sessions/{uuid.uuid4()}/chat", json={"message": "Hello"})
-
-    assert response.status_code == 200
-    assert "event: done" in response.text
-    release.assert_not_awaited()
 
 
 @pytest.mark.asyncio

@@ -19,12 +19,7 @@ type CitationEventPayload = CitationPayload & {
   context_text?: string;
   retrieval_modality?: string;
 };
-type ErrorPayload = {
-  code: string;
-  message: string;
-  status?: number;
-  demo_messages_used?: number;
-};
+type ErrorPayload = { code: string; message: string; status?: number };
 type DonePayload = {
   message_id: string;
   can_continue?: boolean;
@@ -109,9 +104,6 @@ async function _processSSEStream(
               onError({
                 code: typeof data.code === 'string' ? data.code : 'unknown',
                 message: typeof data.message === 'string' ? data.message : 'Unknown error',
-                demo_messages_used: typeof data.demo_messages_used === 'number'
-                  ? data.demo_messages_used
-                  : undefined,
               });
               await reader.cancel().catch(() => {});
               return;
@@ -207,7 +199,6 @@ export async function chatStream(
     const raw = await res.text().catch(() => '');
     let code = 'http_error';
     let message = `HTTP ${res.status}: ${raw}`;
-    let demoMessagesUsed: number | undefined;
     try {
       const parsed = JSON.parse(raw);
       const d = parsed && typeof parsed === 'object' && 'detail' in parsed
@@ -217,14 +208,11 @@ export async function chatStream(
         const detail = d as Record<string, unknown>;
         if (typeof detail.error === 'string') code = detail.error;
         if (typeof detail.message === 'string') message = detail.message;
-        if (typeof detail.demo_messages_used === 'number') {
-          demoMessagesUsed = detail.demo_messages_used;
-        }
       }
     } catch {
       // leave http_error + raw message as fallback
     }
-    onError({ code, message, status: res.status, demo_messages_used: demoMessagesUsed });
+    onError({ code, message, status: res.status });
     return;
   }
 

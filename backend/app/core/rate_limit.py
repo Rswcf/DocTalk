@@ -5,9 +5,7 @@ from __future__ import annotations
 import hmac
 import logging
 import time
-import uuid
 from collections import defaultdict
-from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
 import redis.asyncio as redis
@@ -29,14 +27,6 @@ _SENTRY_ALERT_INTERVAL_SECONDS = 600  # 10 min between Sentry events per namespa
 # outage doesn't burn through Sentry's monthly quota (4 namespaces × 30s
 # reconnect cadence would otherwise = ~11k events/day).
 _last_sentry_alert_at: dict[str, float] = {}
-
-
-@dataclass(frozen=True)
-class DemoMessageReservation:
-    """One request-owned claim against an anonymous demo counter."""
-
-    key: str
-    token: str
 
 
 def _alert_redis_fallback(namespace: str, exc: Exception) -> None:
@@ -98,48 +88,14 @@ class InMemoryDemoMessageTracker:
 
     def __init__(self) -> None:
         self._counts: dict[str, int] = {}
-        self._reservations: dict[str, set[str]] = defaultdict(set)
 
     def get_count(self, key: str) -> int:
         return self._counts.get(key, 0)
 
-    def increment(self, key: str) -> DemoMessageReservation:
+    def increment(self, key: str) -> None:
         if len(self._counts) > 10_000:
             self._counts.clear()
-            self._reservations.clear()
-        reservation = DemoMessageReservation(key=key, token=uuid.uuid4().hex)
         self._counts[key] = self._counts.get(key, 0) + 1
-        self._reservations[key].add(reservation.token)
-        return reservation
-
-    def check_and_increment(
-        self,
-        key: str,
-        limit: int,
-    ) -> tuple[bool, int, DemoMessageReservation | None]:
-        current = self.get_count(key)
-        if current >= limit:
-            return False, current, None
-        reservation = self.increment(key)
-        return True, current + 1, reservation
-
-    def release(self, reservation: DemoMessageReservation) -> int:
-        """Idempotently release one request-owned demo reservation."""
-        key = reservation.key
-        tokens = self._reservations.get(key)
-        if tokens is None or reservation.token not in tokens:
-            return self.get_count(key)
-
-        tokens.remove(reservation.token)
-        if not tokens:
-            self._reservations.pop(key, None)
-
-        remaining = max(0, self._counts.get(key, 0) - 1)
-        if remaining:
-            self._counts[key] = remaining
-        else:
-            self._counts.pop(key, None)
-        return remaining
 
 
 class _RedisClientMixin:
@@ -245,108 +201,35 @@ class RedisDemoTracker(_RedisClientMixin):
             await self._reset_client(e)
             self._fallback.increment(key)
 
-    async def check_and_increment(
-        self,
-        key: str,
-        limit: int,
-    ) -> tuple[bool, int, DemoMessageReservation | None]:
-        """Atomically reserve one request-owned slot and check the limit.
+    async def check_and_increment(self, key: str, limit: int) -> tuple[bool, int]:
+        """Atomically increment counter and check against limit.
 
-        Returns ``(allowed, current_count, reservation)``. The token is stored
-        in the same Redis script as the increment, so a later release can
-        decrement only this request's still-active claim.
+        Returns (allowed, current_count). If over limit, decrements back.
         """
         client = await self._get_client()
         if client is None:
-            return self._fallback.check_and_increment(key, limit)
+            current = self._fallback.get_count(key)
+            if current >= limit:
+                return False, current
+            self._fallback.increment(key)
+            return True, current + 1
 
         redis_key = f"{self._namespace}:{key}"
-        reservations_key = f"{redis_key}:reservations"
-        reservation = DemoMessageReservation(key=key, token=uuid.uuid4().hex)
-        script = """
-        local current = tonumber(redis.call('GET', KEYS[1]) or '0')
-        if current >= tonumber(ARGV[2]) then
-          return {0, current}
-        end
-
-        if redis.call('SADD', KEYS[2], ARGV[1]) ~= 1 then
-          return {0, current}
-        end
-
-        current = redis.call('INCR', KEYS[1])
-        if current == 1 then
-          redis.call('EXPIRE', KEYS[1], ARGV[3])
-          redis.call('EXPIRE', KEYS[2], ARGV[3])
-        else
-          local counter_ttl_ms = redis.call('PTTL', KEYS[1])
-          if counter_ttl_ms >= 0 then
-            redis.call('PEXPIRE', KEYS[2], counter_ttl_ms)
-          else
-            redis.call('EXPIRE', KEYS[1], ARGV[3])
-            redis.call('EXPIRE', KEYS[2], ARGV[3])
-          end
-        end
-        return {1, current}
-        """
         try:
-            allowed, count = await client.eval(
-                script,
-                2,
-                redis_key,
-                reservations_key,
-                reservation.token,
-                limit,
-                self.ttl_seconds,
-            )
-            if int(allowed) != 1:
-                return False, int(count), None
-            return True, int(count), reservation
+            count = await client.incr(redis_key)
+            if count == 1:
+                await client.expire(redis_key, self.ttl_seconds)
+            if count > limit:
+                await client.decr(redis_key)
+                return False, limit
+            return True, int(count)
         except Exception as e:
             await self._reset_client(e)
-            return self._fallback.check_and_increment(key, limit)
-
-    async def release(self, reservation: DemoMessageReservation) -> int:
-        """Idempotently release one token without creating negative keys.
-
-        A demo stream can fail just as its 24-hour key expires. A bare DECR
-        would recreate that missing key at -1 with no TTL, so the Lua script
-        checks existence and deletes the key at the final reservation. SREM
-        owns the decrement: duplicate/retried releases of the same request
-        return the current count without touching another request's slot.
-        """
-        client = await self._get_client()
-        if client is None:
-            return self._fallback.release(reservation)
-
-        redis_key = f"{self._namespace}:{reservation.key}"
-        reservations_key = f"{redis_key}:reservations"
-        script = """
-        if redis.call('SREM', KEYS[2], ARGV[1]) ~= 1 then
-          return tonumber(redis.call('GET', KEYS[1]) or '0')
-        end
-        local current = redis.call('GET', KEYS[1])
-        if not current then
-          return 0
-        end
-        current = tonumber(current)
-        if not current or current <= 1 then
-          redis.call('DEL', KEYS[1])
-          redis.call('DEL', KEYS[2])
-          return 0
-        end
-        return redis.call('DECR', KEYS[1])
-        """
-        try:
-            return int(await client.eval(
-                script,
-                2,
-                redis_key,
-                reservations_key,
-                reservation.token,
-            ))
-        except Exception as e:
-            await self._reset_client(e)
-            return self._fallback.release(reservation)
+            current = self._fallback.get_count(key)
+            if current >= limit:
+                return False, current
+            self._fallback.increment(key)
+            return True, current + 1
 
 
 demo_chat_limiter = RedisRateLimiter(namespace="rate_limit:demo_chat", max_requests=10, window_seconds=60)

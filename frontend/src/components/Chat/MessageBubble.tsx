@@ -22,7 +22,6 @@ interface MessageBubbleProps {
   onRegenerate?: () => void;
   isLastAssistant?: boolean;
   onContinue?: () => void;
-  onRetry?: (prompt: string) => void;
   onShareAnswer?: (message: Message) => void;
   isSharingAnswer?: boolean;
   /** True when `onShareAnswer` is the anonymous conversion-affordance handler
@@ -211,7 +210,6 @@ function MessageBubble({
   onRegenerate,
   isLastAssistant,
   onContinue,
-  onRetry,
   onShareAnswer,
   isSharingAnswer,
   isAnonShareAnswer,
@@ -350,16 +348,6 @@ function MessageBubble({
               )}
             </>
           )}
-          {isError && message.retryPrompt && onRetry ? (
-            <button
-              type="button"
-              onClick={() => onRetry(message.retryPrompt || '')}
-              className="mt-3 inline-flex min-h-9 items-center gap-1.5 rounded-lg border border-white/50 bg-white/10 px-3 py-1.5 text-sm font-semibold text-white transition-colors hover:bg-white/20 focus-visible:ring-2 focus-visible:ring-white"
-            >
-              <RotateCcw size={14} aria-hidden="true" />
-              {t('common.retry')}
-            </button>
-          ) : null}
         </div>
 
         {/* Copy + feedback buttons (assistant only) */}

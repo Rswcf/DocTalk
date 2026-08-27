@@ -83,8 +83,6 @@ export interface Message {
   toolStatus?: string;
   createdAt?: number;
   isError?: boolean;
-  /** Original user prompt for an assistant error bubble's Retry control. */
-  retryPrompt?: string;
   isTruncated?: boolean;
   continuationCount?: number;
   backendId?: string;

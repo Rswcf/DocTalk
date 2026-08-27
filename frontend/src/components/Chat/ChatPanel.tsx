@@ -46,7 +46,6 @@ interface ChatMessageRowProps {
   onPreviewLayoutTranslation?: (url: string, artifact: ChatArtifact) => void;
   onRegenerate?: () => void;
   onContinue?: () => void;
-  onRetry?: (prompt: string) => void;
   onShareAnswer?: (message: Message) => void;
   isSharingAnswer: boolean;
   /** True when `onShareAnswer` is the anonymous conversion-affordance handler
@@ -65,7 +64,6 @@ const ChatMessageRow = React.memo(function ChatMessageRow({
   onPreviewLayoutTranslation,
   onRegenerate,
   onContinue,
-  onRetry,
   onShareAnswer,
   isSharingAnswer,
   isAnonShareAnswer,
@@ -100,7 +98,6 @@ const ChatMessageRow = React.memo(function ChatMessageRow({
           onRegenerate={onRegenerate}
           isLastAssistant={isLastAssistant}
           onContinue={onContinue}
-          onRetry={onRetry}
           onShareAnswer={onShareAnswer}
           isSharingAnswer={isSharingAnswer}
           isAnonShareAnswer={isAnonShareAnswer}
@@ -493,9 +490,6 @@ export default function ChatPanel({ sessionId, onCitationClick, onPreviewLayoutT
   const handleContinueLast = useCallback(() => {
     void continueGenerating();
   }, [continueGenerating]);
-  const handleRetryFailed = useCallback((prompt: string) => {
-    void sendMessage(prompt);
-  }, [sendMessage]);
   const handleShareAnswerVoid = useCallback((msg: Message) => {
     void handleShareAnswer(msg);
   }, [handleShareAnswer]);
@@ -581,7 +575,6 @@ export default function ChatPanel({ sessionId, onCitationClick, onPreviewLayoutT
                     onPreviewLayoutTranslation={onPreviewLayoutTranslation}
                     onRegenerate={isLastAssistantMsg ? handleRegenerateLast : undefined}
                     onContinue={isLastAssistantMsg && message.isTruncated ? handleContinueLast : undefined}
-                    onRetry={handleRetryFailed}
                     onShareAnswer={userPlan ? handleShareAnswerVoid : handleAnonShareClick}
                     isSharingAnswer={shareAnswerLoadingId === message.id}
                     isAnonShareAnswer={!userPlan}
