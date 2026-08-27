@@ -1530,6 +1530,47 @@ class ChatService:
             completion_tokens=progress.completion_tokens,
             cost_credits=actual_cost,
         )
+        # C2: strict chat routing bypasses the frontend Quote Finder panel,
+        # so its searches never emit the panel's quote_search_submitted event.
+        # Record both funnel stages in this branch's existing atomic terminal
+        # commit. ``source=chat_auto_route`` keeps them distinguishable from
+        # deliberate panel submissions without adding another commit/failure
+        # window to the billed path.
+        db.add(
+            ProductEvent(
+                user_id=user.id,
+                event_name="quote_search_submitted",
+                source="chat_auto_route",
+                reason="strict_quote_route",
+                plan=(user.plan or "free").lower(),
+                metadata_json={
+                    "document_id": str(document.id),
+                    "session_id": str(session_id),
+                },
+            )
+        )
+        db.add(
+            ProductEvent(
+                user_id=user.id,
+                event_name="quote_search_completed",
+                source="chat_auto_route",
+                reason="strict_quote_route",
+                plan=(user.plan or "free").lower(),
+                metadata_json={
+                    "document_id": str(document.id),
+                    "session_id": str(session_id),
+                    "proposed": result.proposed,
+                    "verified": result.verified,
+                    "discarded_count": len(result.discarded),
+                    "scanned_chunks": result.scanned_chunks,
+                    "retrieved_count": result.retrieved_count,
+                    "candidate_pages": result.candidate_pages,
+                    "no_result": result.no_result,
+                    "cards_count": len(result.cards),
+                    "page_range_count": result.page_range_count,
+                },
+            )
+        )
         # P1 hygiene r2 (Codex, 2026-08-03): a PURE assignment, folded
         # INTO this same atomic commit — never a standalone one. The old
         # (r1) fix committed this separately AFTER this block, so a
@@ -2541,15 +2582,10 @@ class ChatService:
                 "repair": repair_metadata,
                 "can_continue": can_continue and finish_reason == "length",
                 "continuation_count": asst_msg.continuation_count,
-                # FIX3-B (Codex r3 #5, NOT ADDRESSED): set when the strict
-                # quote trigger matched this message but a negation/
-                # metalinguistic token was ALSO present, so verified quote
-                # search was deliberately NOT auto-routed/billed (see
-                # action_planner.deterministic_plan). Always present
-                # (never conditionally omitted) so the frontend has a
-                # stable field to check for offering a manual "Try Quote
-                # Finder" chip — never used to auto-route or bill.
-"quote_finder_hint": action_plan.quote_finder_hint,
+                # Hint-only signal from the deterministic planner. It covers
+                # guarded strict intent and ordinary citation-language
+                # lookups; it is never used to auto-route or bill.
+                "quote_finder_hint": action_plan.quote_finder_hint,
                 "quote_finder_topic": action_plan.quote_finder_hint_topic,
             })
         except asyncio.CancelledError:

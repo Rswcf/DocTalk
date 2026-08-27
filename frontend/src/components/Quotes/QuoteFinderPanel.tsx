@@ -80,6 +80,10 @@ export default function QuoteFinderPanel({ isOpen, documentId, userPlan, onClose
   useEffect(() => {
     if (!isOpen) return;
     openGenerationRef.current += 1;
+    trackEvent('quote_finder_panel_opened', {
+      source: initialTopic?.trim() ? 'chat_hint' : 'document_toolbar',
+      has_prefill: Boolean(initialTopic?.trim()),
+    });
     // Reset on EVERY open (and every retarget while already open): a
     // previous open's topic/result/error must never bleed into this one —
     // e.g. opening via a "Try Quote Finder" chip for topic B must not show

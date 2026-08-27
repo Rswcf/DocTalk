@@ -20,6 +20,19 @@ def test_demo_counters_independent_per_document():
     assert tracker.get_count(_demo_message_key("1.2.3.4", doc_b)) == 0
 
 
+def test_demo_failed_answer_releases_only_its_reservation():
+    tracker = InMemoryDemoMessageTracker()
+    key = _demo_message_key("1.2.3.4", uuid.uuid4())
+    tracker.increment(key)
+    tracker.increment(key)
+
+    assert tracker.release(key) == 1
+    assert tracker.get_count(key) == 1
+    assert tracker.release(key) == 0
+    assert tracker.release(key) == 0
+    assert tracker.get_count(key) == 0
+
+
 def test_demo_session_window_filters_by_24h():
     clauses = _recent_demo_session_filter(uuid.uuid4())
     sql = " ".join(str(c) for c in clauses)

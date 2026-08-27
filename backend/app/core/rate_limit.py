@@ -97,6 +97,15 @@ class InMemoryDemoMessageTracker:
             self._counts.clear()
         self._counts[key] = self._counts.get(key, 0) + 1
 
+    def release(self, key: str) -> int:
+        """Release one reserved demo message and return the remaining count."""
+        remaining = max(0, self._counts.get(key, 0) - 1)
+        if remaining:
+            self._counts[key] = remaining
+        else:
+            self._counts.pop(key, None)
+        return remaining
+
 
 class _RedisClientMixin:
     def __init__(self, *, namespace: str):
@@ -230,6 +239,36 @@ class RedisDemoTracker(_RedisClientMixin):
                 return False, current
             self._fallback.increment(key)
             return True, current + 1
+
+    async def release(self, key: str) -> int:
+        """Atomically release one reservation without creating negative keys.
+
+        A demo stream can fail just as its 24-hour key expires. A bare DECR
+        would recreate that missing key at -1 with no TTL, so the Lua script
+        checks existence and deletes the key at the final reservation.
+        """
+        client = await self._get_client()
+        if client is None:
+            return self._fallback.release(key)
+
+        redis_key = f"{self._namespace}:{key}"
+        script = """
+        local current = redis.call('GET', KEYS[1])
+        if not current then
+          return 0
+        end
+        current = tonumber(current)
+        if not current or current <= 1 then
+          redis.call('DEL', KEYS[1])
+          return 0
+        end
+        return redis.call('DECR', KEYS[1])
+        """
+        try:
+            return int(await client.eval(script, 1, redis_key))
+        except Exception as e:
+            await self._reset_client(e)
+            return self._fallback.release(key)
 
 
 demo_chat_limiter = RedisRateLimiter(namespace="rate_limit:demo_chat", max_requests=10, window_seconds=60)

@@ -19,18 +19,19 @@ type CitationEventPayload = CitationPayload & {
   context_text?: string;
   retrieval_modality?: string;
 };
-type ErrorPayload = { code: string; message: string; status?: number };
+type ErrorPayload = {
+  code: string;
+  message: string;
+  status?: number;
+  demo_messages_used?: number;
+};
 type DonePayload = {
   message_id: string;
   can_continue?: boolean;
   continuation_count?: number;
-  /** FIX3-B (Codex r3 #5): set when the strict quote trigger matched but a
-   * negation/metalinguistic token was ALSO present, so verified quote search
-   * was deliberately NOT auto-routed/billed. Only ever present on the main
-   * RAG-path `done` event (chat_service.py's action_planner.deterministic_plan
-   * gate) — continuation/tool-action/quote-search `done` events don't carry
-   * it, so these default to false/null there, which is the correct "no
-   * chip" outcome for those paths too. */
+  /** Hint-only signal for safe RAG/citation paths where Quote Finder may help.
+   * It never auto-opens or submits the billed search. Continuation/tool-action/
+   * quote-search `done` events omit it and therefore default to false/null. */
   quote_finder_hint?: boolean;
   quote_finder_topic?: string | null;
 };
@@ -108,6 +109,9 @@ async function _processSSEStream(
               onError({
                 code: typeof data.code === 'string' ? data.code : 'unknown',
                 message: typeof data.message === 'string' ? data.message : 'Unknown error',
+                demo_messages_used: typeof data.demo_messages_used === 'number'
+                  ? data.demo_messages_used
+                  : undefined,
               });
               await reader.cancel().catch(() => {});
               return;
@@ -203,6 +207,7 @@ export async function chatStream(
     const raw = await res.text().catch(() => '');
     let code = 'http_error';
     let message = `HTTP ${res.status}: ${raw}`;
+    let demoMessagesUsed: number | undefined;
     try {
       const parsed = JSON.parse(raw);
       const d = parsed && typeof parsed === 'object' && 'detail' in parsed
@@ -212,11 +217,14 @@ export async function chatStream(
         const detail = d as Record<string, unknown>;
         if (typeof detail.error === 'string') code = detail.error;
         if (typeof detail.message === 'string') message = detail.message;
+        if (typeof detail.demo_messages_used === 'number') {
+          demoMessagesUsed = detail.demo_messages_used;
+        }
       }
     } catch {
       // leave http_error + raw message as fallback
     }
-    onError({ code, message, status: res.status });
+    onError({ code, message, status: res.status, demo_messages_used: demoMessagesUsed });
     return;
   }
 

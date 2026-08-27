@@ -39,6 +39,8 @@ ALLOWED_EVENTS = {
     "question_template_export_clicked",
     "document_diff_created",
     "document_diff_export_clicked",
+    "quote_finder_chip_clicked",
+    "quote_finder_panel_opened",
     "quote_search_submitted",
     "quote_search_completed",
     "quote_saved",

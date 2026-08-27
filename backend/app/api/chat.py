@@ -60,6 +60,40 @@ def _demo_message_key(client_ip: str, document_id) -> str:
     return f"{client_ip}:{document_id}"
 
 
+async def _release_failed_demo_reservation(
+    events: AsyncGenerator[dict, None],
+    reservation_key: str,
+) -> AsyncGenerator[dict, None]:
+    """Keep the demo count only when a stream reaches its successful ``done``.
+
+    The limit check remains an atomic reservation before work starts, so
+    concurrent requests cannot all slip past the five-message cap. An error,
+    raised generator, or disconnect releases exactly that request's slot. For
+    an explicit SSE error, release before yielding it so the client can safely
+    retry and include the resulting server count for an immediate UI re-anchor.
+    """
+    active_key: str | None = reservation_key
+    try:
+        async for event in events:
+            event_name = event.get("event")
+            if event_name == "done":
+                active_key = None
+            elif event_name == "error" and active_key is not None:
+                remaining = await demo_message_tracker.release(active_key)
+                active_key = None
+                event = {
+                    **event,
+                    "data": {
+                        **(event.get("data") or {}),
+                        "demo_messages_used": remaining,
+                    },
+                }
+            yield event
+    finally:
+        if active_key is not None:
+            await demo_message_tracker.release(active_key)
+
+
 def _recent_demo_session_filter(document_id):
     """Anonymous demo session cap counts a rolling 24h window, not lifetime.
 
@@ -429,9 +463,11 @@ async def chat_stream(
 
     # Enforce message limit for anonymous users on demo documents.
     # Tracker key is scoped per (IP, document) and survives session recreation.
+    demo_reservation_key: str | None = None
     if user is None and session.document and session.document.demo_slug:
+        demo_reservation_key = _demo_message_key(client_ip, session.document_id)
         allowed, _count = await demo_message_tracker.check_and_increment(
-            _demo_message_key(client_ip, session.document_id), DEMO_MESSAGE_LIMIT
+            demo_reservation_key, DEMO_MESSAGE_LIMIT
         )
         if not allowed:
             log_security_event("demo_message_limit", ip=client_ip, document_id=session.document_id)
@@ -475,10 +511,13 @@ async def chat_stream(
             )
 
     async def event_generator() -> AsyncGenerator[str, None]:
-        async for ev in chat_service.chat_stream(
+        events = chat_service.chat_stream(
             session_id, body.message, db, user=user, locale=body.locale, mode=body.mode,
             domain_mode=body.domain_mode
-        ):
+        )
+        if demo_reservation_key is not None:
+            events = _release_failed_demo_reservation(events, demo_reservation_key)
+        async for ev in events:
             # Format per SSE: event: <type>\ndata: {json}\n\n
             line = f"event: {ev['event']}\n"
             payload = json.dumps(ev.get("data", {}), ensure_ascii=False)
@@ -546,23 +585,6 @@ async def chat_continue(
                 headers={"Retry-After": "60"},
             )
 
-    # Demo message limit (continuations count against it)
-    if user is None and session.document and session.document.demo_slug:
-        client_ip = get_client_ip(request)
-        allowed, _count = await demo_message_tracker.check_and_increment(
-            _demo_message_key(client_ip, session.document_id), DEMO_MESSAGE_LIMIT
-        )
-        if not allowed:
-            log_security_event("demo_message_limit", ip=client_ip, document_id=session.document_id)
-            raise HTTPException(
-                status_code=429,
-                detail={
-                    "error": "DEMO_MESSAGE_LIMIT_REACHED",
-                    "message": "Demo message limit reached",
-                    "limit": DEMO_MESSAGE_LIMIT,
-                },
-            )
-
     # Check continuation limit
     msg_id = uuid.UUID(body.message_id) if body.message_id else None
     if msg_id:
@@ -611,10 +633,33 @@ async def chat_continue(
                 },
             )
 
+    # Reserve demo allowance only after request validation. This remains
+    # atomic for concurrency, but invalid/failed continuations no longer burn
+    # a question before any answer can be produced.
+    demo_reservation_key: str | None = None
+    if user is None and session.document and session.document.demo_slug:
+        demo_reservation_key = _demo_message_key(client_ip, session.document_id)
+        allowed, _count = await demo_message_tracker.check_and_increment(
+            demo_reservation_key, DEMO_MESSAGE_LIMIT
+        )
+        if not allowed:
+            log_security_event("demo_message_limit", ip=client_ip, document_id=session.document_id)
+            raise HTTPException(
+                status_code=429,
+                detail={
+                    "error": "DEMO_MESSAGE_LIMIT_REACHED",
+                    "message": "Demo message limit reached",
+                    "limit": DEMO_MESSAGE_LIMIT,
+                },
+            )
+
     async def event_generator() -> AsyncGenerator[str, None]:
-        async for ev in chat_service.continue_stream(
+        events = chat_service.continue_stream(
             session_id, msg_id, db, user=user, locale=body.locale, mode=body.mode
-        ):
+        )
+        if demo_reservation_key is not None:
+            events = _release_failed_demo_reservation(events, demo_reservation_key)
+        async for ev in events:
             line = f"event: {ev['event']}\n"
             payload = json.dumps(ev.get("data", {}), ensure_ascii=False)
             data_line = f"data: {payload}\n\n"

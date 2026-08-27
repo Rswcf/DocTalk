@@ -22,6 +22,7 @@ interface MessageBubbleProps {
   onRegenerate?: () => void;
   isLastAssistant?: boolean;
   onContinue?: () => void;
+  onRetry?: (prompt: string) => void;
   onShareAnswer?: (message: Message) => void;
   isSharingAnswer?: boolean;
   /** True when `onShareAnswer` is the anonymous conversion-affordance handler
@@ -210,6 +211,7 @@ function MessageBubble({
   onRegenerate,
   isLastAssistant,
   onContinue,
+  onRetry,
   onShareAnswer,
   isSharingAnswer,
   isAnonShareAnswer,
@@ -333,10 +335,9 @@ function MessageBubble({
                   onPreviewLayoutTranslation={onPreviewLayoutTranslation}
                 />
               ))}
-              {/* FIX3-B (Codex r3 #5): non-blocking nudge for a strict quote
-                  request that deliberately did NOT auto-route to billed
-                  Quote Finder (negation/metalinguistic token present) — a
-                  false negative here only costs one click, never money. */}
+              {/* Non-blocking hint on safe RAG/citation paths. The click only
+                  opens a prefilled panel; the billed search still requires an
+                  explicit submit. */}
               {isAssistant && !isStreaming && message.quoteFinderHint && message.quoteFinderTopic && onTryQuoteFinder && (
                 <button
                   type="button"
@@ -349,6 +350,16 @@ function MessageBubble({
               )}
             </>
           )}
+          {isError && message.retryPrompt && onRetry ? (
+            <button
+              type="button"
+              onClick={() => onRetry(message.retryPrompt || '')}
+              className="mt-3 inline-flex min-h-9 items-center gap-1.5 rounded-lg border border-white/50 bg-white/10 px-3 py-1.5 text-sm font-semibold text-white transition-colors hover:bg-white/20 focus-visible:ring-2 focus-visible:ring-white"
+            >
+              <RotateCcw size={14} aria-hidden="true" />
+              {t('common.retry')}
+            </button>
+          ) : null}
         </div>
 
         {/* Copy + feedback buttons (assistant only) */}

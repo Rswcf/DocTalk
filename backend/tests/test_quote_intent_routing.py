@@ -30,7 +30,7 @@ if str(BACKEND_DIR) not in sys.path:
     sys.path.insert(0, str(BACKEND_DIR))
 
 import app.services.chat_service as chat_service_module  # noqa: E402
-from app.models.tables import ChatSession, Document, Message  # noqa: E402
+from app.models.tables import ChatSession, Document, Message, ProductEvent  # noqa: E402
 from app.services.action_planner import ChatAction, deterministic_plan  # noqa: E402
 from app.services.query_router import QueryIntent  # noqa: E402
 from app.services.quote_search_service import QuoteCard, QuoteSearchResult  # noqa: E402
@@ -424,6 +424,13 @@ class TestAuthedRoutingEmitsArtifact:
 
         quote_search_mock.assert_awaited_once()
         assert quote_search_mock.await_args.kwargs["topic"] == "Give me a direct quote about the termination clause."
+
+        product_events = [obj for obj in db.added if isinstance(obj, ProductEvent)]
+        assert [(event.event_name, event.source) for event in product_events] == [
+            ("quote_search_submitted", "chat_auto_route"),
+            ("quote_search_completed", "chat_auto_route"),
+        ]
+        assert product_events[1].metadata_json["cards_count"] == 1
 
         # Billing: the CHAT message's own predebit/reconcile — no separate quote-search debit.
         reconcile_mock.assert_awaited_once_with(db, user_id, ledger_id, 15, 6)
@@ -1018,15 +1025,21 @@ class TestQuoteFinderHintPropagatesToChatStreamDoneEvent:
     auto-route or bill (quote_search_mock proves that below)."""
 
     @pytest.mark.asyncio
+    @pytest.mark.parametrize(
+        "message",
+        [
+            "Don't quote this verbatim—explain it.",
+            "Where does the paper discuss climate risk?",
+        ],
+    )
     async def test_negation_suppressed_strict_message_carries_hint_in_done_event(
-        self, monkeypatch: pytest.MonkeyPatch,
+        self, monkeypatch: pytest.MonkeyPatch, message: str,
     ) -> None:
         session_id = uuid.uuid4()
         document_id = uuid.uuid4()
         user_id = uuid.uuid4()
         ledger_id = uuid.uuid4()
         chunk_id = uuid.uuid4()
-        message = "Don't quote this verbatim—explain it."
         session_obj = SimpleNamespace(
             id=session_id, document_id=document_id, collection_id=None, title=None, domain_mode=None,
         )

@@ -103,16 +103,6 @@ export default function DemoPageClient() {
         }
       />
 
-      <EdSection title={tOr('demo.flow.title', 'What you will test')}>
-        <EdStepRow
-          steps={[
-            { title: tOr('demo.flow.step1', 'Open a prepared document'), body: '' },
-            { title: tOr('demo.flow.step2', 'Ask the suggested question'), body: '' },
-            { title: tOr('demo.flow.step3', 'Jump from answer to source'), body: '' },
-          ]}
-        />
-      </EdSection>
-
       <EdSection alt label={tOr('demo.samplesLabel', 'Sample documents')}>
         {error && (
           <div
@@ -272,6 +262,16 @@ export default function DemoPageClient() {
         <p className="ed-caption" style={{ marginTop: '32px' }}>
           {t('demo.hint')}
         </p>
+      </EdSection>
+
+      <EdSection title={tOr('demo.flow.title', 'What you will test')}>
+        <EdStepRow
+          steps={[
+            { title: tOr('demo.flow.step1', 'Open a prepared document'), body: '' },
+            { title: tOr('demo.flow.step2', 'Ask the suggested question'), body: '' },
+            { title: tOr('demo.flow.step3', 'Jump from answer to source'), body: '' },
+          ]}
+        />
       </EdSection>
     </MarketingShell>
   );

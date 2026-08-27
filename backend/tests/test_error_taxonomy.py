@@ -905,6 +905,73 @@ async def test_chat_demo_message_limit_reached(
 
 
 @pytest.mark.asyncio
+async def test_chat_failed_demo_answer_releases_reserved_question(
+    client: AsyncClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    db = _make_db()
+    _override_dependencies(db, optional_user=None)
+    session = SimpleNamespace(
+        document=SimpleNamespace(status="ready", demo_slug="demo"),
+        document_id=uuid.uuid4(),
+    )
+    monkeypatch.setattr(chat_api, "verify_session_access", AsyncMock(return_value=session))
+    monkeypatch.setattr(chat_api.demo_chat_limiter, "is_allowed", AsyncMock(return_value=True))
+    monkeypatch.setattr(
+        chat_api.demo_message_tracker,
+        "check_and_increment",
+        AsyncMock(return_value=(True, 1)),
+    )
+    release = AsyncMock(return_value=0)
+    monkeypatch.setattr(chat_api.demo_message_tracker, "release", release)
+
+    async def _failed_stream(*_args, **_kwargs):
+        yield {"event": "error", "data": {"code": "LLM_ERROR", "message": "Provider failed"}}
+
+    monkeypatch.setattr(chat_api.chat_service, "chat_stream", _failed_stream)
+
+    response = await client.post(f"/api/sessions/{uuid.uuid4()}/chat", json={"message": "Hello"})
+
+    assert response.status_code == 200
+    assert "event: error" in response.text
+    assert '"demo_messages_used": 0' in response.text
+    release.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_chat_successful_demo_answer_keeps_reserved_question(
+    client: AsyncClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    db = _make_db()
+    _override_dependencies(db, optional_user=None)
+    session = SimpleNamespace(
+        document=SimpleNamespace(status="ready", demo_slug="demo"),
+        document_id=uuid.uuid4(),
+    )
+    monkeypatch.setattr(chat_api, "verify_session_access", AsyncMock(return_value=session))
+    monkeypatch.setattr(chat_api.demo_chat_limiter, "is_allowed", AsyncMock(return_value=True))
+    monkeypatch.setattr(
+        chat_api.demo_message_tracker,
+        "check_and_increment",
+        AsyncMock(return_value=(True, 1)),
+    )
+    release = AsyncMock(return_value=0)
+    monkeypatch.setattr(chat_api.demo_message_tracker, "release", release)
+
+    async def _successful_stream(*_args, **_kwargs):
+        yield {"event": "done", "data": {"message_id": str(uuid.uuid4())}}
+
+    monkeypatch.setattr(chat_api.chat_service, "chat_stream", _successful_stream)
+
+    response = await client.post(f"/api/sessions/{uuid.uuid4()}/chat", json={"message": "Hello"})
+
+    assert response.status_code == 200
+    assert "event: done" in response.text
+    release.assert_not_awaited()
+
+
+@pytest.mark.asyncio
 async def test_chat_insufficient_credits_precheck(
     client: AsyncClient,
     monkeypatch: pytest.MonkeyPatch,

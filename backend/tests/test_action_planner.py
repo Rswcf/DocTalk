@@ -75,6 +75,24 @@ def test_planner_citation_lookup_stays_rag_path() -> None:
 
     assert plan.action == ChatAction.CITATION_LOOKUP
     assert plan.uses_rag_answer_path
+    assert plan.quote_finder_hint is True
+    assert plan.quote_finder_hint_topic == "这句话在哪页？"
+
+
+@pytest.mark.parametrize(
+    "message",
+    [
+        "Where does the paper discuss climate risk?",
+        "Find me a quote about the study limitations.",
+    ],
+)
+def test_planner_offers_quote_finder_hint_for_real_citation_phrasing(message: str) -> None:
+    plan = deterministic_plan(message)
+
+    assert plan.action == ChatAction.CITATION_LOOKUP
+    assert plan.uses_rag_answer_path
+    assert plan.quote_finder_hint is True
+    assert plan.quote_finder_hint_topic == message
 
 
 def test_planner_strict_original_text_quote_routes_to_verified_quote_search() -> None:

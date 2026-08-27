@@ -41,12 +41,11 @@ class ActionPlan:
     template_key: str | None = None
     user_visible_status: str = ""
     reason: str = ""
-    # FIX3-B (Codex r3 #5, NOT ADDRESSED): set when the strict quote trigger
-    # matched but a negation/metalinguistic token was ALSO present anywhere
-    # in the message, so auto-routing to VERIFIED_QUOTE_SEARCH was
-    # deliberately suppressed (see deterministic_plan). The frontend uses
-    # this to offer a manual "Try Quote Finder" chip — never to
-    # auto-route or bill on this signal alone.
+    # Set on safe RAG/CITATION_LOOKUP paths where a manual Quote Finder nudge
+    # is useful: either strict quote intent was suppressed by the guarded
+    # routing policy, or the broad citation matcher caught ordinary wording
+    # such as "where does it discuss ...". The frontend uses this only to
+    # offer a manual chip — never to auto-route or bill.
     quote_finder_hint: bool = False
     quote_finder_hint_topic: str | None = None
 
@@ -366,6 +365,8 @@ def _fallthrough_plan(text: str, *, is_collection: bool) -> ActionPlan:
             requires_confirmation=False,
             user_visible_status="",
             reason="citation lookup markers",
+            quote_finder_hint=True,
+            quote_finder_hint_topic=text[:_QUOTE_FINDER_HINT_TOPIC_MAX_CHARS],
         )
 
     if has_summary:
