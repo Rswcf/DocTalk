@@ -9,7 +9,7 @@ import uuid
 from contextlib import contextmanager
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
-from typing import Any, Iterable, Iterator, Sequence
+from typing import Any, Callable, Iterable, Iterator, Sequence
 
 import sqlalchemy as sa
 from openai import OpenAI
@@ -31,6 +31,12 @@ from app.services.credit_service import calculate_cost
 from app.services.document_element_service import get_element_aware_chunks
 from app.services.domain_mode_access import release_failed_extraction_trial_sync
 from app.services.embedding_service import embedding_service
+from app.services.predebited_job_service import (
+    PREDEBITED_JOB_LEASE_SECONDS,
+    PREDEBITED_JOB_LOCK_NAMESPACE,
+    PREDEBITED_JOB_MAX_CLAIM_ATTEMPTS,
+    RECOVERY_POLICIES,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -47,9 +53,9 @@ MAX_CONTEXT_CHARS_PER_CHUNK = 1400
 # that broker window, otherwise the original and redelivered tasks could both
 # deliver/settle. One expired claim may be recovered; a second expiration is
 # terminally refunded instead of leaving the predebit standing forever.
-EXTRACTION_LEASE_SECONDS = 45 * 60
-EXTRACTION_MAX_CLAIM_ATTEMPTS = 2
-EXTRACTION_LOCK_NAMESPACE = 948
+EXTRACTION_LEASE_SECONDS = PREDEBITED_JOB_LEASE_SECONDS
+EXTRACTION_MAX_CLAIM_ATTEMPTS = PREDEBITED_JOB_MAX_CLAIM_ATTEMPTS
+EXTRACTION_LOCK_NAMESPACE = PREDEBITED_JOB_LOCK_NAMESPACE
 
 
 @dataclass(frozen=True)
@@ -130,10 +136,14 @@ def _get_llm_client(model: str) -> OpenAI:
     if _is_deepseek_official_model(model):
         if not settings.DEEPSEEK_API_KEY:
             raise RuntimeError("DEEPSEEK_API_KEY is not configured")
-        return OpenAI(api_key=settings.DEEPSEEK_API_KEY, base_url=settings.DEEPSEEK_BASE_URL)
+        return OpenAI(
+            api_key=settings.DEEPSEEK_API_KEY, base_url=settings.DEEPSEEK_BASE_URL
+        )
     if not settings.OPENROUTER_API_KEY:
         raise RuntimeError("OPENROUTER_API_KEY is not configured")
-    return OpenAI(api_key=settings.OPENROUTER_API_KEY, base_url=settings.OPENROUTER_BASE_URL)
+    return OpenAI(
+        api_key=settings.OPENROUTER_API_KEY, base_url=settings.OPENROUTER_BASE_URL
+    )
 
 
 def _apply_provider_options(kwargs: dict[str, Any], model: str) -> None:
@@ -162,14 +172,17 @@ def _valid_bbox(bb: dict[str, Any]) -> bool:
     return all(isinstance(bb.get(k), (int, float)) for k in ("x", "y", "w", "h"))
 
 
-def _citation_from_chunk(ref_num: int, chunk: Chunk, score: float = 0.0) -> dict[str, Any]:
+def _citation_from_chunk(
+    ref_num: int, chunk: Chunk, score: float = 0.0
+) -> dict[str, Any]:
     bboxes = [
-        bb for bb in (chunk.bboxes or [])
-        if isinstance(bb, dict) and _valid_bbox(bb)
+        bb for bb in (chunk.bboxes or []) if isinstance(bb, dict) and _valid_bbox(bb)
     ]
     bboxes.sort(
         key=lambda bb: (
-            int(bb.get("page", chunk.page_start)) if isinstance(bb.get("page", chunk.page_start), (int, float)) else chunk.page_start,
+            int(bb.get("page", chunk.page_start))
+            if isinstance(bb.get("page", chunk.page_start), (int, float))
+            else chunk.page_start,
             bb.get("y", 0),
             bb.get("x", 0),
         )
@@ -179,8 +192,14 @@ def _citation_from_chunk(ref_num: int, chunk: Chunk, score: float = 0.0) -> dict
         raw_page = bb.get("page", chunk.page_start)
         page = int(raw_page) if isinstance(raw_page, (int, float)) else chunk.page_start
         page_counts[page] = page_counts.get(page, 0) + 1
-    best_page = min(page_counts, key=lambda p: (-page_counts[p], p)) if page_counts else chunk.page_start
-    snippet = ((f"{chunk.section_title}: " if chunk.section_title else "") + (chunk.text or ""))[:140]
+    best_page = (
+        min(page_counts, key=lambda p: (-page_counts[p], p))
+        if page_counts
+        else chunk.page_start
+    )
+    snippet = (
+        (f"{chunk.section_title}: " if chunk.section_title else "") + (chunk.text or "")
+    )[:140]
     return {
         "ref_index": ref_num,
         "chunk_id": str(chunk.id),
@@ -195,7 +214,9 @@ def _citation_from_chunk(ref_num: int, chunk: Chunk, score: float = 0.0) -> dict
     }
 
 
-def _retrieve_by_query(db: Session, document_id: uuid.UUID, query: str, top_k: int) -> list[tuple[Chunk, float]]:
+def _retrieve_by_query(
+    db: Session, document_id: uuid.UUID, query: str, top_k: int
+) -> list[tuple[Chunk, float]]:
     try:
         qvec = embedding_service.embed_texts([query])[0]
         client = embedding_service.get_qdrant_client()
@@ -203,7 +224,13 @@ def _retrieve_by_query(db: Session, document_id: uuid.UUID, query: str, top_k: i
             collection_name=settings.QDRANT_COLLECTION,
             query=qvec,
             limit=max(top_k * 3, top_k),
-            query_filter=Filter(must=[FieldCondition(key="document_id", match=MatchValue(value=str(document_id)))]),
+            query_filter=Filter(
+                must=[
+                    FieldCondition(
+                        key="document_id", match=MatchValue(value=str(document_id))
+                    )
+                ]
+            ),
         )
         scores: dict[uuid.UUID, float] = {}
         ids: list[uuid.UUID] = []
@@ -219,9 +246,15 @@ def _retrieve_by_query(db: Session, document_id: uuid.UUID, query: str, top_k: i
         rows = db.execute(select(Chunk).where(Chunk.id.in_(ids)))
         chunks = list(rows.scalars())
         chunks.sort(key=lambda ch: scores.get(ch.id, 0.0), reverse=True)
-        return [(ch, scores.get(ch.id, 0.0)) for ch in chunks if len((ch.text or "").strip()) >= 80][:top_k]
+        return [
+            (ch, scores.get(ch.id, 0.0))
+            for ch in chunks
+            if len((ch.text or "").strip()) >= 80
+        ][:top_k]
     except Exception as exc:
-        logger.warning("Extraction vector retrieval failed, falling back to first chunks: %s", exc)
+        logger.warning(
+            "Extraction vector retrieval failed, falling back to first chunks: %s", exc
+        )
         return []
 
 
@@ -235,7 +268,9 @@ def retrieve_extraction_chunks(
     seen: set[uuid.UUID] = set()
     selected: list[tuple[Chunk, float]] = []
     element_budget = max(2, max_chunks // 2)
-    for chunk, score in get_element_aware_chunks(db, document_id, max_chunks=element_budget):
+    for chunk, score in get_element_aware_chunks(
+        db, document_id, max_chunks=element_budget
+    ):
         if chunk.id in seen:
             continue
         seen.add(chunk.id)
@@ -287,8 +322,16 @@ def _system_prompt(template: ExtractionTemplate, domain_mode: str | None) -> str
     )
 
 
-def _user_prompt(template: ExtractionTemplate, chunks: Sequence[tuple[Chunk, float]], locale: str | None) -> str:
-    language_rule = f"Use the user's interface language if clear from this locale: {locale}." if locale else "Use the document language."
+def _user_prompt(
+    template: ExtractionTemplate,
+    chunks: Sequence[tuple[Chunk, float]],
+    locale: str | None,
+) -> str:
+    language_rule = (
+        f"Use the user's interface language if clear from this locale: {locale}."
+        if locale
+        else "Use the document language."
+    )
     return (
         f"Template: {template.title}\n"
         f"Goal: {template.description}\n"
@@ -298,7 +341,12 @@ def _user_prompt(template: ExtractionTemplate, chunks: Sequence[tuple[Chunk, flo
     )
 
 
-def _call_llm(template: ExtractionTemplate, chunks: Sequence[tuple[Chunk, float]], locale: str | None, domain_mode: str | None) -> tuple[dict[str, Any], int, int]:
+def _call_llm(
+    template: ExtractionTemplate,
+    chunks: Sequence[tuple[Chunk, float]],
+    locale: str | None,
+    domain_mode: str | None,
+) -> tuple[dict[str, Any], int, int]:
     client = _get_llm_client(EXTRACTION_MODEL)
     messages = [
         {"role": "system", "content": _system_prompt(template, domain_mode)},
@@ -363,19 +411,39 @@ def _str(value: Any, fallback: str = "") -> str:
     return text[:4000]
 
 
-def normalize_result(template_key: str, raw: dict[str, Any], max_ref: int) -> dict[str, Any]:
+def normalize_result(
+    template_key: str, raw: dict[str, Any], max_ref: int
+) -> dict[str, Any]:
     if template_key == "executive_summary":
-        key_points = raw.get("key_points") if isinstance(raw.get("key_points"), list) else []
-        risks = raw.get("risks_or_open_questions") if isinstance(raw.get("risks_or_open_questions"), list) else []
+        key_points = (
+            raw.get("key_points") if isinstance(raw.get("key_points"), list) else []
+        )
+        risks = (
+            raw.get("risks_or_open_questions")
+            if isinstance(raw.get("risks_or_open_questions"), list)
+            else []
+        )
         return {
             "title": _str(raw.get("title"), "Executive Summary")[:200],
             "summary": _str(raw.get("summary")),
             "key_points": [
-                {"text": _str(item.get("text") if isinstance(item, dict) else item), "source_refs": _refs(item.get("source_refs") if isinstance(item, dict) else [], max_ref)}
+                {
+                    "text": _str(item.get("text") if isinstance(item, dict) else item),
+                    "source_refs": _refs(
+                        item.get("source_refs") if isinstance(item, dict) else [],
+                        max_ref,
+                    ),
+                }
                 for item in key_points[:8]
             ],
             "risks_or_open_questions": [
-                {"text": _str(item.get("text") if isinstance(item, dict) else item), "source_refs": _refs(item.get("source_refs") if isinstance(item, dict) else [], max_ref)}
+                {
+                    "text": _str(item.get("text") if isinstance(item, dict) else item),
+                    "source_refs": _refs(
+                        item.get("source_refs") if isinstance(item, dict) else [],
+                        max_ref,
+                    ),
+                }
                 for item in risks[:5]
             ],
         }
@@ -384,10 +452,19 @@ def normalize_result(template_key: str, raw: dict[str, Any], max_ref: int) -> di
         return {
             "facts": [
                 {
-                    "label": _str(item.get("label") if isinstance(item, dict) else "Fact")[:160],
-                    "value": _str(item.get("value") if isinstance(item, dict) else item)[:240],
-                    "context": _str(item.get("context") if isinstance(item, dict) else ""),
-                    "source_refs": _refs(item.get("source_refs") if isinstance(item, dict) else [], max_ref),
+                    "label": _str(
+                        item.get("label") if isinstance(item, dict) else "Fact"
+                    )[:160],
+                    "value": _str(
+                        item.get("value") if isinstance(item, dict) else item
+                    )[:240],
+                    "context": _str(
+                        item.get("context") if isinstance(item, dict) else ""
+                    ),
+                    "source_refs": _refs(
+                        item.get("source_refs") if isinstance(item, dict) else [],
+                        max_ref,
+                    ),
                 }
                 for item in facts[:30]
             ]
@@ -397,10 +474,19 @@ def normalize_result(template_key: str, raw: dict[str, Any], max_ref: int) -> di
         return {
             "items": [
                 {
-                    "topic": _str(item.get("topic") if isinstance(item, dict) else "Evidence")[:160],
-                    "finding": _str(item.get("finding") if isinstance(item, dict) else item),
-                    "evidence": _str(item.get("evidence") if isinstance(item, dict) else ""),
-                    "source_refs": _refs(item.get("source_refs") if isinstance(item, dict) else [], max_ref),
+                    "topic": _str(
+                        item.get("topic") if isinstance(item, dict) else "Evidence"
+                    )[:160],
+                    "finding": _str(
+                        item.get("finding") if isinstance(item, dict) else item
+                    ),
+                    "evidence": _str(
+                        item.get("evidence") if isinstance(item, dict) else ""
+                    ),
+                    "source_refs": _refs(
+                        item.get("source_refs") if isinstance(item, dict) else [],
+                        max_ref,
+                    ),
                 }
                 for item in items[:24]
             ]
@@ -435,12 +521,16 @@ def render_markdown(template: ExtractionTemplate, data: dict[str, Any]) -> str:
         summary = data.get("summary") or ""
         lines = [f"# {title}", "", summary, "", "## Key Points"]
         for item in data.get("key_points", []):
-            lines.append(f"- {item.get('text', '')} {_cite(item.get('source_refs', []))}".rstrip())
+            lines.append(
+                f"- {item.get('text', '')} {_cite(item.get('source_refs', []))}".rstrip()
+            )
         risks = data.get("risks_or_open_questions", [])
         if risks:
             lines.extend(["", "## Risks / Open Questions"])
             for item in risks:
-                lines.append(f"- {item.get('text', '')} {_cite(item.get('source_refs', []))}".rstrip())
+                lines.append(
+                    f"- {item.get('text', '')} {_cite(item.get('source_refs', []))}".rstrip()
+                )
     elif template.key == "key_facts":
         lines.extend(["| Fact | Value | Context | Sources |", "|---|---|---|---|"])
         for item in data.get("facts", []):
@@ -476,21 +566,49 @@ def render_csv(template_key: str, data: dict[str, Any]) -> str:
         if data.get("summary"):
             writer.writerow(["summary", data.get("summary"), ""])
         for item in data.get("key_points", []):
-            writer.writerow(["key_point", item.get("text", ""), " ".join(map(str, item.get("source_refs", [])))])
+            writer.writerow(
+                [
+                    "key_point",
+                    item.get("text", ""),
+                    " ".join(map(str, item.get("source_refs", []))),
+                ]
+            )
         for item in data.get("risks_or_open_questions", []):
-            writer.writerow(["risk_or_open_question", item.get("text", ""), " ".join(map(str, item.get("source_refs", [])))])
+            writer.writerow(
+                [
+                    "risk_or_open_question",
+                    item.get("text", ""),
+                    " ".join(map(str, item.get("source_refs", []))),
+                ]
+            )
     elif template_key == "key_facts":
         writer.writerow(["label", "value", "context", "sources"])
         for item in data.get("facts", []):
-            writer.writerow([item.get("label", ""), item.get("value", ""), item.get("context", ""), " ".join(map(str, item.get("source_refs", [])))])
+            writer.writerow(
+                [
+                    item.get("label", ""),
+                    item.get("value", ""),
+                    item.get("context", ""),
+                    " ".join(map(str, item.get("source_refs", []))),
+                ]
+            )
     else:
         writer.writerow(["topic", "finding", "evidence", "sources"])
         for item in data.get("items", []):
-            writer.writerow([item.get("topic", ""), item.get("finding", ""), item.get("evidence", ""), " ".join(map(str, item.get("source_refs", [])))])
+            writer.writerow(
+                [
+                    item.get("topic", ""),
+                    item.get("finding", ""),
+                    item.get("evidence", ""),
+                    " ".join(map(str, item.get("source_refs", []))),
+                ]
+            )
     return buf.getvalue()
 
 
-def _refund_predebit_sync(db: Session, user_id: uuid.UUID, pre_debited: int, ledger_id: uuid.UUID) -> bool:
+def _refund_predebit_sync(
+    db: Session, user_id: uuid.UUID, pre_debited: int, ledger_id: uuid.UUID
+) -> bool:
     """Atomically refund an extraction predebit only while it is unsettled."""
     result = db.execute(
         sa.delete(CreditLedger)
@@ -523,9 +641,7 @@ def _reconcile_sync(
     actual_cost: int,
 ) -> None:
     locked_ledger = db.scalar(
-        sa.select(CreditLedger)
-        .where(CreditLedger.id == ledger_id)
-        .with_for_update()
+        sa.select(CreditLedger).where(CreditLedger.id == ledger_id).with_for_update()
     )
     if locked_ledger is None:
         raise RuntimeError(
@@ -593,6 +709,21 @@ def _settle_extraction_predebit_after_failure_sync(
             else (uuid.UUID(str(ledger_raw)) if ledger_raw else None)
         )
         resolved_user_id = user_id or job_snapshot.user_id
+        if resolved_ledger_id is None or resolved_pre_debited <= 0:
+            fallback_ledger = settle_db.scalar(
+                sa.select(CreditLedger)
+                .where(
+                    CreditLedger.user_id == resolved_user_id,
+                    CreditLedger.ref_type == "document_job",
+                    CreditLedger.ref_id == str(job_id),
+                    CreditLedger.reconciled_at.is_(None),
+                )
+                .order_by(CreditLedger.created_at.desc())
+                .limit(1)
+            )
+            if fallback_ledger is not None:
+                resolved_ledger_id = fallback_ledger.id
+                resolved_pre_debited = max(0, -int(fallback_ledger.delta))
         if resolved_pre_debited <= 0 or resolved_ledger_id is None:
             raise RuntimeError(
                 f"Extraction job {job_id} has no recoverable predebit metadata"
@@ -609,9 +740,7 @@ def _settle_extraction_predebit_after_failure_sync(
             return False
 
         failed_job = settle_db.scalar(
-            sa.select(DocumentJob)
-            .where(DocumentJob.id == job_id)
-            .with_for_update()
+            sa.select(DocumentJob).where(DocumentJob.id == job_id).with_for_update()
         )
         if failed_job is None:
             raise RuntimeError(
@@ -686,8 +815,9 @@ def _claim_extraction_job_sync(
     job_id: uuid.UUID,
     *,
     expected_claim_token: uuid.UUID | None = None,
+    expected_job_type: str = EXTRACTION_JOB_TYPE,
 ) -> uuid.UUID | None:
-    """Claim one queued/stale extraction and resolve ambiguous commits fresh.
+    """Claim one queued/stale predebited job and resolve ambiguous commits.
 
     ``expected_claim_token`` authorizes a watchdog-staged queued delivery. The
     worker atomically exchanges it for a private live token, so a duplicate of
@@ -706,18 +836,20 @@ def _claim_extraction_job_sync(
         terminalize = False
         with SyncSessionLocal() as claim_db:
             job = claim_db.scalar(
-                sa.select(DocumentJob)
-                .where(DocumentJob.id == job_id)
-                .with_for_update()
+                sa.select(DocumentJob).where(DocumentJob.id == job_id).with_for_update()
             )
             if job is None:
                 logger.warning("Extraction job %s not found", job_id)
                 return None
-            if job.job_type != EXTRACTION_JOB_TYPE:
+            if (
+                job.job_type != expected_job_type
+                or job.job_type not in RECOVERY_POLICIES
+            ):
                 logger.warning(
-                    "Extraction claim skipped for %s: job_type=%s",
+                    "Predebited job claim skipped for %s: job_type=%s expected=%s",
                     job_id,
                     job.job_type,
+                    expected_job_type,
                 )
                 return None
             if job.status not in {"queued", "running"}:
@@ -725,8 +857,11 @@ def _claim_extraction_job_sync(
 
             now = datetime.now(timezone.utc)
             lease_expires_at = job.worker_lease_expires_at
-            if lease_expires_at is None and job.updated_at is not None:
-                lease_expires_at = job.updated_at + timedelta(
+            fallback_anchor = (
+                job.created_at if job.status == "queued" else job.updated_at
+            )
+            if lease_expires_at is None and fallback_anchor is not None:
+                lease_expires_at = fallback_anchor + timedelta(
                     seconds=EXTRACTION_LEASE_SECONDS
                 )
             lease_expired = lease_expires_at is not None and lease_expires_at <= now
@@ -734,10 +869,7 @@ def _claim_extraction_job_sync(
             # Only this invocation's private live token may resolve its own
             # ambiguous commit. A watchdog token is stored while QUEUED and is
             # deliberately replaced below before execution begins.
-            if (
-                job.status == "running"
-                and job.worker_claim_token == claim_token
-            ):
+            if job.status == "running" and job.worker_claim_token == claim_token:
                 if lease_expired:
                     job.worker_lease_expires_at = now + timedelta(
                         seconds=EXTRACTION_LEASE_SECONDS
@@ -797,11 +929,12 @@ def _claim_extraction_job_sync(
                     continue
 
         if terminalize:
+            policy = RECOVERY_POLICIES[expected_job_type]
             _settle_extraction_predebit_after_failure_sync(
                 job_id=job_id,
-                error_code="EXTRACTION_RECOVERY_EXHAUSTED",
-                error_message="Structured extraction could not be recovered",
-                release_trial=True,
+                error_code=policy.error_code,
+                error_message=policy.error_message,
+                release_trial=policy.release_trial,
             )
             return None
 
@@ -811,7 +944,7 @@ def _claim_extraction_job_sync(
 
 
 def stage_stale_extraction_recovery_sync(job_id: uuid.UUID) -> uuid.UUID | None:
-    """Spend one expired attempt and stage a tokenized queued delivery.
+    """Spend one expired attempt and stage a tokenized predebited delivery.
 
     The caller must hold the per-job advisory lock. The staged token is not a
     live-worker token: ``_claim_extraction_job_sync`` exchanges it atomically
@@ -822,31 +955,62 @@ def stage_stale_extraction_recovery_sync(job_id: uuid.UUID) -> uuid.UUID | None:
 
     dispatch_token = uuid.uuid4()
     commit_error: Exception | None = None
+    with SyncSessionLocal() as policy_db:
+        policy_snapshot = policy_db.get(DocumentJob, job_id)
+    if policy_snapshot is None:
+        return None
+    job_type = policy_snapshot.job_type
+    if job_type not in RECOVERY_POLICIES:
+        if policy_snapshot.status not in {"queued", "running"}:
+            return None
+        now = datetime.now(timezone.utc)
+        fallback_anchor = (
+            policy_snapshot.created_at
+            if policy_snapshot.status == "queued"
+            else policy_snapshot.updated_at
+        )
+        lease_expires_at = policy_snapshot.worker_lease_expires_at
+        if lease_expires_at is None and fallback_anchor is not None:
+            lease_expires_at = fallback_anchor + timedelta(
+                seconds=EXTRACTION_LEASE_SECONDS
+            )
+        if lease_expires_at is None or lease_expires_at > now:
+            return None
+        # The ledger-driven watchdog intentionally sees even a future producer
+        # that bypassed the registered creation helper. With no safe dispatcher
+        # to retry it, use the one existing conditional-delete terminal path
+        # after the full lease window instead of stranding the charge forever.
+        _settle_extraction_predebit_after_failure_sync(
+            job_id=job_id,
+            error_code="DOCUMENT_JOB_RECOVERY_UNSUPPORTED",
+            error_message="Predebited document job has no recovery dispatcher",
+            release_trial=False,
+        )
+        return None
+
     for _resolution_attempt in range(2):
         terminalize = False
         with SyncSessionLocal() as recovery_db:
             job = recovery_db.scalar(
-                sa.select(DocumentJob)
-                .where(DocumentJob.id == job_id)
-                .with_for_update()
+                sa.select(DocumentJob).where(DocumentJob.id == job_id).with_for_update()
             )
-            if job is None or job.job_type != EXTRACTION_JOB_TYPE:
+            if job is None or job.job_type not in RECOVERY_POLICIES:
                 return None
             if job.status not in {"queued", "running"}:
                 return None
 
             # Fresh-session resolution of a staged claim whose COMMIT landed
             # but whose acknowledgement was lost.
-            if (
-                job.status == "queued"
-                and job.worker_claim_token == dispatch_token
-            ):
+            if job.status == "queued" and job.worker_claim_token == dispatch_token:
                 return dispatch_token
 
             now = datetime.now(timezone.utc)
             lease_expires_at = job.worker_lease_expires_at
-            if lease_expires_at is None and job.updated_at is not None:
-                lease_expires_at = job.updated_at + timedelta(
+            fallback_anchor = (
+                job.created_at if job.status == "queued" else job.updated_at
+            )
+            if lease_expires_at is None and fallback_anchor is not None:
+                lease_expires_at = fallback_anchor + timedelta(
                     seconds=EXTRACTION_LEASE_SECONDS
                 )
             if lease_expires_at is None or lease_expires_at > now:
@@ -876,11 +1040,12 @@ def stage_stale_extraction_recovery_sync(job_id: uuid.UUID) -> uuid.UUID | None:
                     continue
 
         if terminalize:
+            policy = RECOVERY_POLICIES[job.job_type]
             _settle_extraction_predebit_after_failure_sync(
                 job_id=job_id,
-                error_code="EXTRACTION_RECOVERY_EXHAUSTED",
-                error_message="Structured extraction could not be recovered",
-                release_trial=True,
+                error_code=policy.error_code,
+                error_message=policy.error_message,
+                release_trial=policy.release_trial,
             )
             return None
 
@@ -901,10 +1066,7 @@ def _run_claimed_extraction_job_sync(
             if not job:
                 logger.warning("Extraction job %s disappeared after claim", job_id)
                 return
-            if (
-                job.status != "running"
-                or job.worker_claim_token != claim_token
-            ):
+            if job.status != "running" or job.worker_claim_token != claim_token:
                 logger.info(
                     "Extraction execution skipped for %s: claim is no longer current",
                     job_id,
@@ -928,15 +1090,21 @@ def _run_claimed_extraction_job_sync(
             if not chunks:
                 raise ValueError("NO_RETRIEVABLE_CHUNKS")
 
-            raw, prompt_tokens, completion_tokens = _call_llm(template, chunks, locale, domain_mode)
+            raw, prompt_tokens, completion_tokens = _call_llm(
+                template, chunks, locale, domain_mode
+            )
             structured = normalize_result(template.key, raw, len(chunks))
             rendered = render_markdown(template, structured)
-            refs = sorted({ref for ref in _walk_refs(structured) if 1 <= ref <= len(chunks)})
+            refs = sorted(
+                {ref for ref in _walk_refs(structured) if 1 <= ref <= len(chunks)}
+            )
             citations = [
                 _citation_from_chunk(ref, chunks[ref - 1][0], chunks[ref - 1][1])
                 for ref in refs
             ]
-            actual_cost = calculate_cost(prompt_tokens, completion_tokens, EXTRACTION_MODEL, mode=EXTRACTION_MODE)
+            actual_cost = calculate_cost(
+                prompt_tokens, completion_tokens, EXTRACTION_MODEL, mode=EXTRACTION_MODE
+            )
             _reconcile_sync(db, job.user_id, ledger_id, pre_debited, actual_cost)
             db.add(
                 UsageRecord(
@@ -992,6 +1160,22 @@ def run_extraction_job_sync(
     expected_claim_token: str | None = None,
 ) -> None:
     """Serialize, lease, and execute one structured extraction delivery."""
+    run_leased_predebited_document_job_sync(
+        job_id,
+        expected_claim_token=expected_claim_token,
+        expected_job_type=EXTRACTION_JOB_TYPE,
+        execute_claimed=_run_claimed_extraction_job_sync,
+    )
+
+
+def run_leased_predebited_document_job_sync(
+    job_id: str,
+    *,
+    expected_claim_token: str | None,
+    expected_job_type: str,
+    execute_claimed: Callable[[uuid.UUID, uuid.UUID], None],
+) -> None:
+    """Run any registered predebited job under the shared lease protocol."""
     job_uuid = uuid.UUID(job_id)
     expected_token_uuid: uuid.UUID | None = None
     if expected_claim_token is not None:
@@ -999,7 +1183,7 @@ def run_extraction_job_sync(
             expected_token_uuid = uuid.UUID(expected_claim_token)
         except ValueError:
             logger.warning(
-                "Extraction job %s received an invalid recovery claim token",
+                "Predebited job %s received an invalid recovery claim token",
                 job_id,
             )
             return
@@ -1007,7 +1191,7 @@ def run_extraction_job_sync(
     with extraction_job_advisory_lock(job_id) as got_lock:
         if not got_lock:
             logger.info(
-                "Extraction skipped for %s: another task holds the job lock",
+                "Predebited job skipped for %s: another task holds the job lock",
                 job_id,
             )
             # A watchdog has already spent a bounded claim before publishing
@@ -1021,7 +1205,8 @@ def run_extraction_job_sync(
         claim_token = _claim_extraction_job_sync(
             job_uuid,
             expected_claim_token=expected_token_uuid,
+            expected_job_type=expected_job_type,
         )
         if claim_token is None:
             return
-        _run_claimed_extraction_job_sync(job_uuid, claim_token)
+        execute_claimed(job_uuid, claim_token)

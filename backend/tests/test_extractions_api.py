@@ -20,7 +20,13 @@ api_app.include_router(extractions_api.router)
 
 
 class _Result:
-    def __init__(self, *, scalar: object = None, scalar_one_or_none: object = None, rowcount: int = 0) -> None:
+    def __init__(
+        self,
+        *,
+        scalar: object = None,
+        scalar_one_or_none: object = None,
+        rowcount: int = 0,
+    ) -> None:
         self._scalar = scalar
         self._scalar_one_or_none = scalar_one_or_none
         self.rowcount = rowcount
@@ -36,11 +42,18 @@ class _Result:
 
 
 def _make_user(*, plan: str = "free") -> SimpleNamespace:
-    return SimpleNamespace(id=uuid.uuid4(), plan=plan, email="user@example.com", monthly_credits_granted_at=None)
+    return SimpleNamespace(
+        id=uuid.uuid4(),
+        plan=plan,
+        email="user@example.com",
+        monthly_credits_granted_at=None,
+    )
 
 
 def _make_doc(user: SimpleNamespace, *, status: str = "ready") -> SimpleNamespace:
-    return SimpleNamespace(id=uuid.uuid4(), user_id=user.id, status=status, demo_slug=None)
+    return SimpleNamespace(
+        id=uuid.uuid4(), user_id=user.id, status=status, demo_slug=None
+    )
 
 
 def _make_db(**overrides: object) -> SimpleNamespace:
@@ -109,7 +122,9 @@ def _clear_dependency_overrides() -> None:
 
 @pytest_asyncio.fixture
 async def client():
-    async with AsyncClient(transport=ASGITransport(app=api_app), base_url="http://test") as ac:
+    async with AsyncClient(
+        transport=ASGITransport(app=api_app), base_url="http://test"
+    ) as ac:
         yield ac
 
 
@@ -134,6 +149,7 @@ async def test_create_extraction_requires_ready_document(client: AsyncClient) ->
 # but this SECOND entry point (extraction jobs) accepted it unconditionally
 # too. Same gate, same error shape, placed right after the 409
 # doc-not-ready check.
+
 
 @pytest.mark.asyncio
 async def test_create_extraction_domain_mode_requires_plus_after_free_trial(
@@ -239,11 +255,11 @@ async def test_queue_failure_refunds_and_releases_trial_in_failure_transaction(
     db = _make_db(
         get=AsyncMock(return_value=doc),
         execute=AsyncMock(
-                side_effect=[
-                    _Result(scalar_one_or_none=uuid.uuid4(), rowcount=1),
-                    _Result(scalar_one_or_none=uuid.uuid4(), rowcount=1),
-                    _Result(),
-                ]
+            side_effect=[
+                _Result(scalar_one_or_none=uuid.uuid4(), rowcount=1),
+                _Result(scalar_one_or_none=uuid.uuid4(), rowcount=1),
+                _Result(),
+            ]
         ),
     )
     _override_dependencies(db, user)
@@ -252,7 +268,9 @@ async def test_queue_failure_refunds_and_releases_trial_in_failure_transaction(
     release = AsyncMock(return_value=True)
     monkeypatch.setattr(extractions_api, "release_failed_extraction_trial", release)
     ledger_id = uuid.uuid4()
-    monkeypatch.setattr(credit_service, "debit_credits", AsyncMock(return_value=ledger_id))
+    monkeypatch.setattr(
+        credit_service, "debit_credits", AsyncMock(return_value=ledger_id)
+    )
     monkeypatch.setattr(
         run_extraction_job,
         "delay",
@@ -303,11 +321,15 @@ async def test_ambiguous_queue_failure_preserves_worker_claim_and_never_releases
     monkeypatch.setattr(extractions_api, "enforce_domain_mode_access", AsyncMock())
     release = AsyncMock(return_value=True)
     monkeypatch.setattr(extractions_api, "release_failed_extraction_trial", release)
-    monkeypatch.setattr(credit_service, "debit_credits", AsyncMock(return_value=uuid.uuid4()))
+    monkeypatch.setattr(
+        credit_service, "debit_credits", AsyncMock(return_value=uuid.uuid4())
+    )
     monkeypatch.setattr(
         run_extraction_job,
         "delay",
-        lambda _job_id: (_ for _ in ()).throw(RuntimeError("publish acknowledgement lost")),
+        lambda _job_id: (_ for _ in ()).throw(
+            RuntimeError("publish acknowledgement lost")
+        ),
     )
 
     response = await client.post(
@@ -323,7 +345,9 @@ async def test_ambiguous_queue_failure_preserves_worker_claim_and_never_releases
 
 
 @pytest.mark.asyncio
-async def test_create_extraction_domain_mode_omitted_does_not_gate_free_plan(client: AsyncClient) -> None:
+async def test_create_extraction_domain_mode_omitted_does_not_gate_free_plan(
+    client: AsyncClient,
+) -> None:
     """Regression guard: domain_mode omitted must reach the NEXT check
     (the free monthly extraction limit here), never the domain_mode 403 —
     the gate is domain_mode-conditional, not a blanket block."""
@@ -368,7 +392,9 @@ async def test_create_extraction_domain_mode_allowed_for_plus_plan(
 
 
 @pytest.mark.asyncio
-async def test_create_extraction_enforces_free_monthly_limit(client: AsyncClient) -> None:
+async def test_create_extraction_enforces_free_monthly_limit(
+    client: AsyncClient,
+) -> None:
     user = _make_user(plan="free")
     doc = _make_doc(user)
     db = _make_db(
@@ -393,7 +419,8 @@ async def test_create_extraction_insufficient_credits_rolls_back(
 ) -> None:
     user = _make_user(plan="plus")
     doc = _make_doc(user)
-    db = _make_db(get=AsyncMock(return_value=doc))
+    added: list[object] = []
+    db = _make_db(get=AsyncMock(return_value=doc), add=added.append)
     _override_dependencies(db, user)
     monkeypatch.setattr(credit_service, "debit_credits", AsyncMock(return_value=None))
     monkeypatch.setattr(credit_service, "get_user_credits", AsyncMock(return_value=12))
@@ -407,6 +434,10 @@ async def test_create_extraction_insufficient_credits_rolls_back(
     assert detail["required"] == 25
     assert detail["balance"] == 12
     db.rollback.assert_awaited_once()
+    created_job = next(
+        row for row in added if getattr(row, "job_type", None) == "extraction"
+    )
+    assert created_job.worker_lease_expires_at > datetime.now(timezone.utc)
 
 
 def test_extraction_job_response_does_not_lazy_load_unloaded_result() -> None:
@@ -417,7 +448,9 @@ def test_extraction_job_response_does_not_lazy_load_unloaded_result() -> None:
 
 
 @pytest.mark.asyncio
-async def test_export_extraction_csv_returns_download_response(client: AsyncClient) -> None:
+async def test_export_extraction_csv_returns_download_response(
+    client: AsyncClient,
+) -> None:
     user = _make_user(plan="plus")
     job_id = uuid.uuid4()
     result = SimpleNamespace(

@@ -19,7 +19,12 @@ api_app.include_router(diffs_api.router)
 
 
 class _Result:
-    def __init__(self, *, scalar_one_or_none: object = None, scalars_all: list[object] | None = None) -> None:
+    def __init__(
+        self,
+        *,
+        scalar_one_or_none: object = None,
+        scalars_all: list[object] | None = None,
+    ) -> None:
         self._scalar_one_or_none = scalar_one_or_none
         self._scalars_all = scalars_all or []
         self.rowcount = 0
@@ -87,8 +92,16 @@ def _make_user(*, plan: str = "free") -> SimpleNamespace:
     return SimpleNamespace(id=uuid.uuid4(), plan=plan, email="user@example.com")
 
 
-def _make_doc(user: SimpleNamespace, *, status: str = "ready", filename: str = "report.pdf") -> SimpleNamespace:
-    return SimpleNamespace(id=uuid.uuid4(), user_id=user.id, status=status, demo_slug=None, filename=filename)
+def _make_doc(
+    user: SimpleNamespace, *, status: str = "ready", filename: str = "report.pdf"
+) -> SimpleNamespace:
+    return SimpleNamespace(
+        id=uuid.uuid4(),
+        user_id=user.id,
+        status=status,
+        demo_slug=None,
+        filename=filename,
+    )
 
 
 class _LazyTrapDocumentDiffRun:
@@ -139,7 +152,9 @@ def _clear_dependency_overrides() -> None:
 
 @pytest_asyncio.fixture
 async def client():
-    async with AsyncClient(transport=ASGITransport(app=api_app), base_url="http://test") as ac:
+    async with AsyncClient(
+        transport=ASGITransport(app=api_app), base_url="http://test"
+    ) as ac:
         yield ac
 
 
@@ -151,7 +166,10 @@ async def test_create_document_diff_requires_pro(client: AsyncClient) -> None:
 
     response = await client.post(
         "/api/document-diffs",
-        json={"old_document_id": str(uuid.uuid4()), "new_document_id": str(uuid.uuid4())},
+        json={
+            "old_document_id": str(uuid.uuid4()),
+            "new_document_id": str(uuid.uuid4()),
+        },
     )
 
     detail = _assert_error(response, 403, "PLAN_REQUIRED")
@@ -174,7 +192,9 @@ async def test_create_document_diff_rejects_same_document(client: AsyncClient) -
 
 
 @pytest.mark.asyncio
-async def test_create_document_diff_requires_ready_documents(client: AsyncClient) -> None:
+async def test_create_document_diff_requires_ready_documents(
+    client: AsyncClient,
+) -> None:
     user = _make_user(plan="pro")
     old_doc = _make_doc(user)
     new_doc = _make_doc(user, status="parsing")
@@ -201,12 +221,20 @@ async def test_create_document_diff_predebits_and_queues(
     _override_dependencies(db, user)
     queued: list[str] = []
     ledger_id = uuid.uuid4()
-    monkeypatch.setattr(credit_service, "debit_credits", AsyncMock(return_value=ledger_id))
-    monkeypatch.setattr(diffs_api, "_enqueue_document_diff_job", lambda job_id: queued.append(job_id))
+    monkeypatch.setattr(
+        credit_service, "debit_credits", AsyncMock(return_value=ledger_id)
+    )
+    monkeypatch.setattr(
+        diffs_api, "_enqueue_document_diff_job", lambda job_id: queued.append(job_id)
+    )
 
     response = await client.post(
         "/api/document-diffs",
-        json={"old_document_id": str(old_doc.id), "new_document_id": str(new_doc.id), "locale": "en"},
+        json={
+            "old_document_id": str(old_doc.id),
+            "new_document_id": str(new_doc.id),
+            "locale": "en",
+        },
     )
 
     assert response.status_code == 202
@@ -217,10 +245,16 @@ async def test_create_document_diff_predebits_and_queues(
     assert body["input_scope"]["new_document_filename"] == "new.pdf"
     assert queued == [body["id"]]
     credit_service.debit_credits.assert_awaited_once()
+    created_job = next(
+        row for row in db.added if getattr(row, "job_type", None) == "document_diff"
+    )
+    assert created_job.worker_lease_expires_at > datetime.now(timezone.utc)
 
 
 @pytest.mark.asyncio
-async def test_create_document_diff_requires_docs_in_collection(client: AsyncClient) -> None:
+async def test_create_document_diff_requires_docs_in_collection(
+    client: AsyncClient,
+) -> None:
     user = _make_user(plan="pro")
     old_doc = _make_doc(user, filename="old.pdf")
     new_doc = _make_doc(user, filename="new.pdf")

@@ -1,5 +1,9 @@
 from __future__ import annotations
 
+from datetime import datetime, timezone
+
+from sqlalchemy.dialects import postgresql
+
 from app.workers import extraction_worker
 
 
@@ -47,3 +51,23 @@ def test_worker_forwards_watchdog_claim_token(monkeypatch) -> None:
     extraction_worker.run_extraction_job.run("job-id", "claim-token")
 
     assert calls == [("job-id", "claim-token")]
+
+
+def test_watchdog_predicate_is_ledger_driven_and_null_lease_safe() -> None:
+    statement = extraction_worker._stale_predebited_job_ids_statement(
+        datetime.now(timezone.utc)
+    )
+    sql = str(
+        statement.compile(
+            dialect=postgresql.dialect(),
+            compile_kwargs={"literal_binds": True},
+        )
+    )
+
+    assert "credit_ledger" in sql
+    assert "credit_ledger.reconciled_at IS NULL" in sql
+    assert "document_jobs.job_type" not in sql
+    assert "document_jobs.worker_lease_expires_at IS NULL" in sql
+    assert "document_jobs.created_at <=" in sql
+    assert "document_jobs.updated_at <=" in sql
+    assert "document_jobs.worker_lease_expires_at IS NOT NULL" not in sql

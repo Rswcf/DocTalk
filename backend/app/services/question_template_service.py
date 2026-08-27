@@ -7,8 +7,6 @@ import uuid
 from datetime import datetime, timezone
 from typing import Any, Sequence
 
-import sqlalchemy as sa
-
 from app.models.tables import (
     Document,
     DocumentJob,
@@ -28,6 +26,7 @@ from app.services.extraction_service import (
     _settle_extraction_predebit_after_failure_sync,
     _str,
     retrieve_extraction_chunks,
+    run_leased_predebited_document_job_sync,
 )
 
 logger = logging.getLogger(__name__)
@@ -54,7 +53,10 @@ def normalize_questions(questions: Sequence[Any]) -> list[str]:
 
 
 def estimated_template_cost(question_count: int, document_count: int) -> int:
-    return max(QUESTION_TEMPLATE_PREDEBIT_PER_CELL, question_count * document_count * QUESTION_TEMPLATE_PREDEBIT_PER_CELL)
+    return max(
+        QUESTION_TEMPLATE_PREDEBIT_PER_CELL,
+        question_count * document_count * QUESTION_TEMPLATE_PREDEBIT_PER_CELL,
+    )
 
 
 def _question_extraction_template(question: str) -> ExtractionTemplate:
@@ -86,10 +88,16 @@ def render_question_template_markdown(data: dict[str, Any]) -> str:
         if doc_name != current_doc:
             current_doc = doc_name
             lines.extend(["", f"## {doc_name}", ""])
-        lines.append(f"### Q{int(answer.get('question_index') or 0) + 1}: {answer.get('question') or ''}")
+        lines.append(
+            f"### Q{int(answer.get('question_index') or 0) + 1}: {answer.get('question') or ''}"
+        )
         lines.append("")
         lines.append(str(answer.get("answer") or ""))
-        refs = answer.get("source_refs") if isinstance(answer.get("source_refs"), list) else []
+        refs = (
+            answer.get("source_refs")
+            if isinstance(answer.get("source_refs"), list)
+            else []
+        )
         if refs:
             lines.append("")
             lines.append("Sources: " + " ".join(f"[{ref}]" for ref in refs))
@@ -105,50 +113,36 @@ def render_question_template_csv(data: dict[str, Any]) -> str:
     for answer in answers:
         if not isinstance(answer, dict):
             continue
-        writer.writerow([
-            answer.get("document_filename") or "",
-            answer.get("question") or "",
-            answer.get("answer") or "",
-            " ".join(map(str, answer.get("source_refs") or [])),
-        ])
+        writer.writerow(
+            [
+                answer.get("document_filename") or "",
+                answer.get("question") or "",
+                answer.get("answer") or "",
+                " ".join(map(str, answer.get("source_refs") or [])),
+            ]
+        )
     return buf.getvalue()
 
 
-def run_batch_template_job_sync(job_id: str) -> None:
+def _run_claimed_batch_template_job_sync(
+    job_uuid: uuid.UUID,
+    claim_token: uuid.UUID,
+) -> None:
     from sqlalchemy import select
 
     from app.models.sync_database import SyncSessionLocal
 
-    job_uuid = uuid.UUID(job_id)
     with SyncSessionLocal() as db:
         job = db.get(DocumentJob, job_uuid)
         if not job:
-            logger.warning("Question template job %s not found", job_id)
+            logger.warning("Question template job %s not found", job_uuid)
             return
-        if job.status not in ("queued", "running"):
-            return
-
-        if job.status == "queued":
-            claimed_job_id = db.scalar(
-                sa.update(DocumentJob)
-                .where(
-                    DocumentJob.id == job_uuid,
-                    DocumentJob.status == "queued",
-                )
-                .values(
-                    status="running",
-                    updated_at=datetime.now(timezone.utc),
-                )
-                .returning(DocumentJob.id)
-                .execution_options(synchronize_session=False)
+        if job.status != "running" or job.worker_claim_token != claim_token:
+            logger.info(
+                "Question template execution skipped for %s: claim is no longer current",
+                job_uuid,
             )
-            if claimed_job_id is None:
-                db.rollback()
-                return
-            db.commit()
-            job = db.get(DocumentJob, job_uuid)
-            if not job:
-                return
+            return
 
         scope = job.input_scope or {}
         metadata = job.metadata_json or {}
@@ -163,7 +157,9 @@ def run_batch_template_job_sync(job_id: str) -> None:
                 raise ValueError("QUESTION_TEMPLATE_EMPTY")
 
             raw_document_ids = scope.get("document_ids") or []
-            document_ids = [uuid.UUID(str(item)) for item in raw_document_ids][:MAX_TEMPLATE_DOCS]
+            document_ids = [uuid.UUID(str(item)) for item in raw_document_ids][
+                :MAX_TEMPLATE_DOCS
+            ]
             if not document_ids and job.collection_id:
                 rows = db.execute(
                     select(collection_documents.c.document_id)
@@ -176,9 +172,15 @@ def run_batch_template_job_sync(job_id: str) -> None:
             if not document_ids:
                 raise ValueError("NO_DOCUMENTS")
 
-            docs = list(db.execute(select(Document).where(Document.id.in_(document_ids))).scalars())
+            docs = list(
+                db.execute(
+                    select(Document).where(Document.id.in_(document_ids))
+                ).scalars()
+            )
             docs_by_id = {doc.id: doc for doc in docs}
-            ordered_docs = [docs_by_id[doc_id] for doc_id in document_ids if doc_id in docs_by_id]
+            ordered_docs = [
+                docs_by_id[doc_id] for doc_id in document_ids if doc_id in docs_by_id
+            ]
             if not ordered_docs:
                 raise ValueError("NO_DOCUMENTS")
             not_ready = [doc.filename for doc in ordered_docs if doc.status != "ready"]
@@ -193,39 +195,47 @@ def run_batch_template_job_sync(job_id: str) -> None:
             for doc in ordered_docs:
                 for question_index, question in enumerate(questions):
                     template = _question_extraction_template(question)
-                    chunks = retrieve_extraction_chunks(db, doc.id, template, max_chunks=8)
+                    chunks = retrieve_extraction_chunks(
+                        db, doc.id, template, max_chunks=8
+                    )
                     if not chunks:
-                        answers.append({
-                            "document_id": str(doc.id),
-                            "document_filename": doc.filename,
-                            "question_index": question_index,
-                            "question": question,
-                            "answer": "",
-                            "source_refs": [],
-                            "citations": [],
-                        })
+                        answers.append(
+                            {
+                                "document_id": str(doc.id),
+                                "document_filename": doc.filename,
+                                "question_index": question_index,
+                                "question": question,
+                                "answer": "",
+                                "source_refs": [],
+                                "citations": [],
+                            }
+                        )
                         continue
                     raw, p_tokens, c_tokens = _call_llm(template, chunks, locale, None)
                     prompt_tokens += p_tokens
                     completion_tokens += c_tokens
                     normalized = _normalize_answer(raw, len(chunks))
                     citations = [
-                        _citation_from_chunk(ref, chunks[ref - 1][0], chunks[ref - 1][1])
+                        _citation_from_chunk(
+                            ref, chunks[ref - 1][0], chunks[ref - 1][1]
+                        )
                         for ref in normalized["source_refs"]
                         if 1 <= ref <= len(chunks)
                     ]
                     for citation in citations:
                         citation["document_filename"] = doc.filename
                     all_citations.extend(citations)
-                    answers.append({
-                        "document_id": str(doc.id),
-                        "document_filename": doc.filename,
-                        "question_index": question_index,
-                        "question": question,
-                        "answer": normalized["answer"],
-                        "source_refs": normalized["source_refs"],
-                        "citations": citations,
-                    })
+                    answers.append(
+                        {
+                            "document_id": str(doc.id),
+                            "document_filename": doc.filename,
+                            "question_index": question_index,
+                            "question": question,
+                            "answer": normalized["answer"],
+                            "source_refs": normalized["source_refs"],
+                            "citations": citations,
+                        }
+                    )
 
             structured = {
                 "template": {
@@ -233,11 +243,16 @@ def run_batch_template_job_sync(job_id: str) -> None:
                     "name": scope.get("template_name") or "Question Template",
                     "questions": questions,
                 },
-                "documents": [{"id": str(doc.id), "filename": doc.filename} for doc in ordered_docs],
+                "documents": [
+                    {"id": str(doc.id), "filename": doc.filename}
+                    for doc in ordered_docs
+                ],
                 "answers": answers,
             }
             rendered = render_question_template_markdown(structured)
-            actual_cost = calculate_cost(prompt_tokens, completion_tokens, EXTRACTION_MODEL, mode=EXTRACTION_MODE)
+            actual_cost = calculate_cost(
+                prompt_tokens, completion_tokens, EXTRACTION_MODEL, mode=EXTRACTION_MODE
+            )
             if ledger_id and pre_debited > 0:
                 _reconcile_sync(db, job.user_id, ledger_id, pre_debited, actual_cost)
 
@@ -258,6 +273,8 @@ def run_batch_template_job_sync(job_id: str) -> None:
             job.error_message = None
             job.completed_at = datetime.now(timezone.utc)
             job.updated_at = job.completed_at
+            job.worker_claim_token = None
+            job.worker_lease_expires_at = None
             db.add(job)
             db.add(
                 ExtractionResult(
@@ -304,4 +321,16 @@ def run_batch_template_job_sync(job_id: str) -> None:
                     user_id,
                     job_uuid,
                 )
-            logger.exception("Question template job %s failed: %s", job_id, exc)
+            logger.exception("Question template job %s failed: %s", job_uuid, exc)
+
+
+def run_batch_template_job_sync(
+    job_id: str,
+    expected_claim_token: str | None = None,
+) -> None:
+    run_leased_predebited_document_job_sync(
+        job_id,
+        expected_claim_token=expected_claim_token,
+        expected_job_type=BATCH_TEMPLATE_JOB_TYPE,
+        execute_claimed=_run_claimed_batch_template_job_sync,
+    )

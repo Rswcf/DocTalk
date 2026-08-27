@@ -7,7 +7,6 @@ import uuid
 from datetime import datetime, timezone
 from typing import Any, Iterable, Sequence
 
-import sqlalchemy as sa
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -29,6 +28,7 @@ from app.services.extraction_service import (
     _reconcile_sync,
     _retrieve_by_query,
     _settle_extraction_predebit_after_failure_sync,
+    run_leased_predebited_document_job_sync,
 )
 
 logger = logging.getLogger(__name__)
@@ -86,7 +86,9 @@ def retrieve_diff_chunks(
     seen: set[uuid.UUID] = set()
     selected: list[tuple[Chunk, float]] = []
     element_budget = max(2, max_chunks // 2)
-    for chunk, score in get_element_aware_chunks(db, document_id, max_chunks=element_budget):
+    for chunk, score in get_element_aware_chunks(
+        db, document_id, max_chunks=element_budget
+    ):
         if chunk.id in seen:
             continue
         seen.add(chunk.id)
@@ -146,7 +148,11 @@ def _user_prompt(
     new_chunks: Sequence[tuple[Chunk, float]],
     locale: str | None,
 ) -> str:
-    language_rule = f"Use the user's interface language if clear from this locale: {locale}." if locale else "Use the document language."
+    language_rule = (
+        f"Use the user's interface language if clear from this locale: {locale}."
+        if locale
+        else "Use the document language."
+    )
     return (
         f"{language_rule}\n\n"
         f"OLD document: {old_doc.filename}\n"
@@ -168,7 +174,10 @@ def _call_diff_llm(
     client = _get_llm_client(DOCUMENT_DIFF_MODEL)
     messages = [
         {"role": "system", "content": _system_prompt()},
-        {"role": "user", "content": _user_prompt(old_doc, new_doc, old_chunks, new_chunks, locale)},
+        {
+            "role": "user",
+            "content": _user_prompt(old_doc, new_doc, old_chunks, new_chunks, locale),
+        },
     ]
     kwargs: dict[str, Any] = {
         "model": DOCUMENT_DIFF_MODEL,
@@ -250,14 +259,21 @@ def normalize_diff_result(
     return {
         "old_document": {"id": str(old_doc.id), "filename": old_doc.filename},
         "new_document": {"id": str(new_doc.id), "filename": new_doc.filename},
-        "summary": _str(raw.get("summary"), "No material differences were found in the retrieved excerpts."),
+        "summary": _str(
+            raw.get("summary"),
+            "No material differences were found in the retrieved excerpts.",
+        ),
         "changes": normalized_changes,
     }
 
 
 def render_document_diff_markdown(data: dict[str, Any]) -> str:
-    old_doc = data.get("old_document") if isinstance(data.get("old_document"), dict) else {}
-    new_doc = data.get("new_document") if isinstance(data.get("new_document"), dict) else {}
+    old_doc = (
+        data.get("old_document") if isinstance(data.get("old_document"), dict) else {}
+    )
+    new_doc = (
+        data.get("new_document") if isinstance(data.get("new_document"), dict) else {}
+    )
     changes = data.get("changes") if isinstance(data.get("changes"), list) else []
     lines = [
         "# Document Diff",
@@ -268,8 +284,16 @@ def render_document_diff_markdown(data: dict[str, Any]) -> str:
         "## Summary",
         str(data.get("summary") or "").strip(),
     ]
-    for kind, title in (("added", "Added"), ("removed", "Removed"), ("modified", "Modified")):
-        group = [item for item in changes if isinstance(item, dict) and item.get("kind") == kind]
+    for kind, title in (
+        ("added", "Added"),
+        ("removed", "Removed"),
+        ("modified", "Modified"),
+    ):
+        group = [
+            item
+            for item in changes
+            if isinstance(item, dict) and item.get("kind") == kind
+        ]
         if not group:
             continue
         lines.extend(["", f"## {title}"])
@@ -278,7 +302,9 @@ def render_document_diff_markdown(data: dict[str, Any]) -> str:
             new_refs = _side_refs("N", item.get("new_refs") or [])
             refs = " ".join(part for part in (old_refs, new_refs) if part)
             detail = str(item.get("detail") or "").strip()
-            lines.append(f"- **{item.get('title', 'Change')}**: {detail} {refs}".rstrip())
+            lines.append(
+                f"- **{item.get('title', 'Change')}**: {detail} {refs}".rstrip()
+            )
     return "\n".join(lines).strip() + "\n"
 
 
@@ -315,7 +341,9 @@ def _iter_refs(data: dict[str, Any], side: str) -> Iterable[int]:
                 continue
 
 
-def _diff_citation(side: str, ref: int, chunk: Chunk, score: float, filename: str) -> dict[str, Any]:
+def _diff_citation(
+    side: str, ref: int, chunk: Chunk, score: float, filename: str
+) -> dict[str, Any]:
     citation = _citation_from_chunk(ref, chunk, score)
     citation["side"] = side
     citation["label"] = f"{'O' if side == 'old' else 'N'}{ref}"
@@ -323,39 +351,23 @@ def _diff_citation(side: str, ref: int, chunk: Chunk, score: float, filename: st
     return citation
 
 
-def run_document_diff_job_sync(job_id: str) -> None:
+def _run_claimed_document_diff_job_sync(
+    job_uuid: uuid.UUID,
+    claim_token: uuid.UUID,
+) -> None:
     from app.models.sync_database import SyncSessionLocal
 
-    job_uuid = uuid.UUID(job_id)
     with SyncSessionLocal() as db:
         job = db.get(DocumentJob, job_uuid)
         if not job:
-            logger.warning("Document diff job %s not found", job_id)
+            logger.warning("Document diff job %s not found", job_uuid)
             return
-        if job.status not in ("queued", "running"):
-            return
-
-        if job.status == "queued":
-            claimed_job_id = db.scalar(
-                sa.update(DocumentJob)
-                .where(
-                    DocumentJob.id == job_uuid,
-                    DocumentJob.status == "queued",
-                )
-                .values(
-                    status="running",
-                    updated_at=datetime.now(timezone.utc),
-                )
-                .returning(DocumentJob.id)
-                .execution_options(synchronize_session=False)
+        if job.status != "running" or job.worker_claim_token != claim_token:
+            logger.info(
+                "Document diff execution skipped for %s: claim is no longer current",
+                job_uuid,
             )
-            if claimed_job_id is None:
-                db.rollback()
-                return
-            db.commit()
-            job = db.get(DocumentJob, job_uuid)
-            if not job:
-                return
+            return
 
         pre_debited = int((job.metadata_json or {}).get("pre_debited") or 0)
         ledger_raw = (job.metadata_json or {}).get("predebit_ledger_id")
@@ -368,7 +380,12 @@ def run_document_diff_job_sync(job_id: str) -> None:
             new_doc_id = uuid.UUID(str(scope.get("new_document_id")))
             old_doc = db.get(Document, old_doc_id)
             new_doc = db.get(Document, new_doc_id)
-            if not old_doc or not new_doc or old_doc.status != "ready" or new_doc.status != "ready":
+            if (
+                not old_doc
+                or not new_doc
+                or old_doc.status != "ready"
+                or new_doc.status != "ready"
+            ):
                 raise ValueError("DOCUMENT_NOT_READY")
             if old_doc.user_id != job.user_id or new_doc.user_id != job.user_id:
                 raise ValueError("DOCUMENT_ACCESS_DENIED")
@@ -393,14 +410,38 @@ def run_document_diff_job_sync(job_id: str) -> None:
                 new_ref_count=len(new_chunks),
             )
             rendered = render_document_diff_markdown(structured)
-            old_refs = sorted({ref for ref in _iter_refs(structured, "old") if 1 <= ref <= len(old_chunks)})
-            new_refs = sorted({ref for ref in _iter_refs(structured, "new") if 1 <= ref <= len(new_chunks)})
+            old_refs = sorted(
+                {
+                    ref
+                    for ref in _iter_refs(structured, "old")
+                    if 1 <= ref <= len(old_chunks)
+                }
+            )
+            new_refs = sorted(
+                {
+                    ref
+                    for ref in _iter_refs(structured, "new")
+                    if 1 <= ref <= len(new_chunks)
+                }
+            )
             citations = [
-                _diff_citation("old", ref, old_chunks[ref - 1][0], old_chunks[ref - 1][1], old_doc.filename)
+                _diff_citation(
+                    "old",
+                    ref,
+                    old_chunks[ref - 1][0],
+                    old_chunks[ref - 1][1],
+                    old_doc.filename,
+                )
                 for ref in old_refs
             ]
             citations.extend(
-                _diff_citation("new", ref, new_chunks[ref - 1][0], new_chunks[ref - 1][1], new_doc.filename)
+                _diff_citation(
+                    "new",
+                    ref,
+                    new_chunks[ref - 1][0],
+                    new_chunks[ref - 1][1],
+                    new_doc.filename,
+                )
                 for ref in new_refs
             )
             actual_cost = calculate_cost(
@@ -428,6 +469,8 @@ def run_document_diff_job_sync(job_id: str) -> None:
             job.error_message = None
             job.completed_at = datetime.now(timezone.utc)
             job.updated_at = job.completed_at
+            job.worker_claim_token = None
+            job.worker_lease_expires_at = None
             db.add(job)
             db.add(
                 ExtractionResult(
@@ -474,4 +517,16 @@ def run_document_diff_job_sync(job_id: str) -> None:
                     user_id,
                     job_uuid,
                 )
-            logger.exception("Document diff job %s failed: %s", job_id, exc)
+            logger.exception("Document diff job %s failed: %s", job_uuid, exc)
+
+
+def run_document_diff_job_sync(
+    job_id: str,
+    expected_claim_token: str | None = None,
+) -> None:
+    run_leased_predebited_document_job_sync(
+        job_id,
+        expected_claim_token=expected_claim_token,
+        expected_job_type=DOCUMENT_DIFF_JOB_TYPE,
+        execute_claimed=_run_claimed_document_diff_job_sync,
+    )

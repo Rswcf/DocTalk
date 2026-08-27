@@ -19,7 +19,12 @@ api_app.include_router(templates_api.router)
 
 
 class _Result:
-    def __init__(self, *, scalar_one_or_none: object = None, scalars_all: list[object] | None = None) -> None:
+    def __init__(
+        self,
+        *,
+        scalar_one_or_none: object = None,
+        scalars_all: list[object] | None = None,
+    ) -> None:
         self._scalar_one_or_none = scalar_one_or_none
         self._scalars_all = scalars_all or []
         self.rowcount = 0
@@ -94,11 +99,21 @@ def _make_user(*, plan: str = "free") -> SimpleNamespace:
     return SimpleNamespace(id=uuid.uuid4(), plan=plan, email="user@example.com")
 
 
-def _make_doc(user: SimpleNamespace, *, status: str = "ready", filename: str = "report.pdf") -> SimpleNamespace:
-    return SimpleNamespace(id=uuid.uuid4(), user_id=user.id, status=status, demo_slug=None, filename=filename)
+def _make_doc(
+    user: SimpleNamespace, *, status: str = "ready", filename: str = "report.pdf"
+) -> SimpleNamespace:
+    return SimpleNamespace(
+        id=uuid.uuid4(),
+        user_id=user.id,
+        status=status,
+        demo_slug=None,
+        filename=filename,
+    )
 
 
-def _make_template(user: SimpleNamespace, *, questions: list[str] | None = None) -> SimpleNamespace:
+def _make_template(
+    user: SimpleNamespace, *, questions: list[str] | None = None
+) -> SimpleNamespace:
     now = datetime.now(timezone.utc)
     return SimpleNamespace(
         id=uuid.uuid4(),
@@ -159,12 +174,16 @@ def _clear_dependency_overrides() -> None:
 
 @pytest_asyncio.fixture
 async def client():
-    async with AsyncClient(transport=ASGITransport(app=api_app), base_url="http://test") as ac:
+    async with AsyncClient(
+        transport=ASGITransport(app=api_app), base_url="http://test"
+    ) as ac:
         yield ac
 
 
 @pytest.mark.asyncio
-async def test_create_question_template_normalizes_questions(client: AsyncClient) -> None:
+async def test_create_question_template_normalizes_questions(
+    client: AsyncClient,
+) -> None:
     user = _make_user()
     db = _FakeDb()
     _override_dependencies(db, user)
@@ -173,7 +192,12 @@ async def test_create_question_template_normalizes_questions(client: AsyncClient
         "/api/question-templates",
         json={
             "name": "  Contract review  ",
-            "questions": [" What is the term? ", "What is the term?", "", "List indemnities."],
+            "questions": [
+                " What is the term? ",
+                "What is the term?",
+                "",
+                "List indemnities.",
+            ],
         },
     )
 
@@ -210,8 +234,14 @@ async def test_document_template_run_predebits_and_queues(
     _override_dependencies(db, user)
     queued: list[str] = []
     ledger_id = uuid.uuid4()
-    monkeypatch.setattr(credit_service, "debit_credits", AsyncMock(return_value=ledger_id))
-    monkeypatch.setattr(templates_api, "_enqueue_batch_template_job", lambda job_id: queued.append(job_id))
+    monkeypatch.setattr(
+        credit_service, "debit_credits", AsyncMock(return_value=ledger_id)
+    )
+    monkeypatch.setattr(
+        templates_api,
+        "_enqueue_batch_template_job",
+        lambda job_id: queued.append(job_id),
+    )
 
     response = await client.post(
         f"/api/documents/{doc.id}/question-template-runs",
@@ -225,6 +255,10 @@ async def test_document_template_run_predebits_and_queues(
     assert body["input_scope"]["questions"] == ["Q1?", "Q2?"]
     assert queued == [body["id"]]
     credit_service.debit_credits.assert_awaited_once()
+    created_job = next(
+        row for row in db.added if getattr(row, "job_type", None) == "batch_template"
+    )
+    assert created_job.worker_lease_expires_at > datetime.now(timezone.utc)
 
 
 @pytest.mark.asyncio
@@ -243,9 +277,14 @@ async def test_collection_template_run_requires_pro(client: AsyncClient) -> None
 
 
 @pytest.mark.asyncio
-async def test_collection_template_run_requires_ready_documents(client: AsyncClient) -> None:
+async def test_collection_template_run_requires_ready_documents(
+    client: AsyncClient,
+) -> None:
     user = _make_user(plan="pro")
-    docs = [_make_doc(user, filename="a.pdf"), _make_doc(user, status="parsing", filename="b.pdf")]
+    docs = [
+        _make_doc(user, filename="a.pdf"),
+        _make_doc(user, status="parsing", filename="b.pdf"),
+    ]
     collection = SimpleNamespace(id=uuid.uuid4(), user_id=user.id, documents=docs)
     template = _make_template(user)
     db = _FakeDb(template=template, collection=collection)
@@ -295,7 +334,9 @@ async def test_export_question_template_run_returns_csv(client: AsyncClient) -> 
     db = _FakeDb(job=job)
     _override_dependencies(db, user)
 
-    response = await client.get(f"/api/question-template-runs/{job_id}/export?format=csv")
+    response = await client.get(
+        f"/api/question-template-runs/{job_id}/export?format=csv"
+    )
 
     assert response.status_code == 200
     assert response.headers["content-type"].startswith("text/csv")

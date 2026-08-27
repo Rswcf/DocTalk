@@ -1,4 +1,5 @@
 """Structured extraction APIs for the document workbench."""
+
 from __future__ import annotations
 
 import re
@@ -31,13 +32,13 @@ from app.services.domain_mode_access import (
 )
 from app.services.extraction_service import (
     EXTRACTION_JOB_TYPE,
-    EXTRACTION_LEASE_SECONDS,
     EXTRACTION_PREDEBIT_CREDITS,
     FREE_MONTHLY_EXTRACTION_LIMIT,
     get_template,
     list_templates,
     render_csv,
 )
+from app.services.predebited_job_service import create_predebited_document_job
 
 router = APIRouter(prefix="/api", tags=["extractions"])
 
@@ -129,7 +130,9 @@ def _job_response(job: DocumentJob) -> ExtractionJobResponse:
     )
 
 
-async def _verify_document(document_id: uuid.UUID, user: User, db: AsyncSession) -> Document:
+async def _verify_document(
+    document_id: uuid.UUID, user: User, db: AsyncSession
+) -> Document:
     doc = await db.get(Document, document_id)
     if not doc or not can_access_document(doc, user):
         raise HTTPException(
@@ -194,51 +197,40 @@ async def create_extraction(
     except ValueError:
         raise HTTPException(
             status_code=400,
-            detail={"error": "UNSUPPORTED_EXTRACTION_TEMPLATE", "message": "Unsupported extraction template"},
+            detail={
+                "error": "UNSUPPORTED_EXTRACTION_TEMPLATE",
+                "message": "Unsupported extraction template",
+            },
         )
 
     await _enforce_free_extraction_limit(user, db)
 
-    job = DocumentJob(
-        id=uuid.uuid4(),
-        user_id=user.id,
-        document_id=doc.id,
-        job_type=EXTRACTION_JOB_TYPE,
-        status="queued",
-        input_scope={
-            "template_key": template.key,
-            "locale": body.locale,
-            "domain_mode": body.domain_mode,
-        },
-        worker_lease_expires_at=datetime.now(timezone.utc)
-        + timedelta(seconds=EXTRACTION_LEASE_SECONDS),
-    )
-    db.add(job)
-    await db.flush()
-
-    # The extraction job is the durable owner. It is still provisional here:
-    # a denial or pre-commit credit failure rolls the job and claim back
-    # together. A terminal, undelivered extraction later releases the claim in
-    # the same transaction as its refund; a delivered result never does.
-    try:
+    async def _claim_domain_mode_trial(job: DocumentJob) -> None:
         await enforce_domain_mode_access(
             db,
             user,
             body.domain_mode,
             owning_job_id=job.id,
         )
+
+    try:
+        job, ledger_id = await create_predebited_document_job(
+            db,
+            user_id=user.id,
+            document_id=doc.id,
+            job_type=EXTRACTION_JOB_TYPE,
+            input_scope={
+                "template_key": template.key,
+                "locale": body.locale,
+                "domain_mode": body.domain_mode,
+            },
+            predebit=EXTRACTION_PREDEBIT_CREDITS,
+            reason="extraction",
+            prepare_job=_claim_domain_mode_trial,
+        )
     except HTTPException:
         await db.rollback()
         raise
-
-    ledger_id = await credit_service.debit_credits(
-        db,
-        user_id=user.id,
-        cost=EXTRACTION_PREDEBIT_CREDITS,
-        reason="extraction",
-        ref_type="document_job",
-        ref_id=str(job.id),
-    )
     if ledger_id is None:
         await db.rollback()
         balance = await credit_service.get_user_credits(db, user.id)
@@ -251,11 +243,6 @@ async def create_extraction(
                 "balance": balance,
             },
         )
-
-    job.metadata_json = {
-        "predebit_ledger_id": str(ledger_id),
-        "pre_debited": EXTRACTION_PREDEBIT_CREDITS,
-    }
     db.add(
         ProductEvent(
             user_id=user.id,
@@ -263,7 +250,11 @@ async def create_extraction(
             source="document_reader",
             reason=template.key,
             plan=(user.plan or "free").lower(),
-            metadata_json={"document_id": str(doc.id), "job_id": str(job.id), "template_key": template.key},
+            metadata_json={
+                "document_id": str(doc.id),
+                "job_id": str(job.id),
+                "template_key": template.key,
+            },
         )
     )
     await db.commit()
@@ -328,13 +319,18 @@ async def create_extraction(
         await db.commit()
         raise HTTPException(
             status_code=500,
-            detail={"error": "EXTRACTION_QUEUE_FAILED", "message": "Failed to queue extraction"},
+            detail={
+                "error": "EXTRACTION_QUEUE_FAILED",
+                "message": "Failed to queue extraction",
+            },
         ) from exc
 
     return _job_response(job)
 
 
-@router.get("/documents/{document_id}/extractions", response_model=list[ExtractionJobResponse])
+@router.get(
+    "/documents/{document_id}/extractions", response_model=list[ExtractionJobResponse]
+)
 async def list_document_extractions(
     document_id: uuid.UUID,
     user: User = Depends(require_auth),

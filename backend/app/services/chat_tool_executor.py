@@ -26,6 +26,7 @@ from app.services.extraction_service import (
     FREE_MONTHLY_EXTRACTION_LIMIT,
     get_template,
 )
+from app.services.predebited_job_service import create_predebited_document_job
 from app.services.table_service import TABLE_SCAN_JOB_TYPE
 
 
@@ -84,7 +85,9 @@ def _copy(plan: ActionPlan, *, en: str, zh: str) -> str:
     return zh if _is_zh(status) else en
 
 
-async def _verify_document(document_id: uuid.UUID, user: User, db: AsyncSession) -> Document | None:
+async def _verify_document(
+    document_id: uuid.UUID, user: User, db: AsyncSession
+) -> Document | None:
     doc = await db.get(Document, document_id)
     if not doc or not can_access_document(doc, user):
         return None
@@ -139,27 +142,20 @@ async def _queue_extraction(
             ),
         )
 
-    job = DocumentJob(
+    job, ledger_id = await create_predebited_document_job(
+        db,
         user_id=user.id,
         document_id=doc.id,
         job_type=EXTRACTION_JOB_TYPE,
-        status="queued",
         input_scope={
             "template_key": template.key,
             "locale": locale,
             "domain_mode": domain_mode,
             "source": "chat",
         },
-    )
-    db.add(job)
-    await db.flush()
-    ledger_id = await credit_service.debit_credits(
-        db,
-        user_id=user.id,
-        cost=EXTRACTION_PREDEBIT_CREDITS,
+        predebit=EXTRACTION_PREDEBIT_CREDITS,
         reason="extraction",
-        ref_type="document_job",
-        ref_id=str(job.id),
+        metadata_json={"source": "chat_tool"},
     )
     if ledger_id is None:
         await db.rollback()
@@ -177,12 +173,6 @@ async def _queue_extraction(
                 summary="Insufficient credits.",
             ),
         )
-
-    job.metadata_json = {
-        "predebit_ledger_id": str(ledger_id),
-        "pre_debited": EXTRACTION_PREDEBIT_CREDITS,
-        "source": "chat_tool",
-    }
     db.add(
         ProductEvent(
             user_id=user.id,
@@ -190,7 +180,11 @@ async def _queue_extraction(
             source="chat",
             reason=template.key,
             plan=(user.plan or "free").lower(),
-            metadata_json={"document_id": str(doc.id), "job_id": str(job.id), "template_key": template.key},
+            metadata_json={
+                "document_id": str(doc.id),
+                "job_id": str(job.id),
+                "template_key": template.key,
+            },
         )
     )
     await db.commit()
@@ -214,6 +208,8 @@ async def _queue_extraction(
                     error_message="Failed to queue extraction",
                     completed_at=datetime.now(timezone.utc),
                     updated_at=datetime.now(timezone.utc),
+                    worker_claim_token=None,
+                    worker_lease_expires_at=None,
                 )
                 .returning(DocumentJob.id)
                 .execution_options(synchronize_session=False)
@@ -290,8 +286,16 @@ async def _queue_extraction(
         title=template.title,
         summary=plan.user_visible_status or template.description,
         download_urls=[
-            {"label": "Markdown", "format": "md", "url": f"/api/extractions/{job.id}/export?format=md"},
-            {"label": "CSV", "format": "csv", "url": f"/api/extractions/{job.id}/export?format=csv"},
+            {
+                "label": "Markdown",
+                "format": "md",
+                "url": f"/api/extractions/{job.id}/export?format=md",
+            },
+            {
+                "label": "CSV",
+                "format": "csv",
+                "url": f"/api/extractions/{job.id}/export?format=csv",
+            },
         ],
     )
     return ToolExecution(
@@ -304,7 +308,9 @@ async def _queue_extraction(
     )
 
 
-def _table_preview(tables: list[DocumentTable], *, max_tables: int = 3) -> list[dict[str, Any]]:
+def _table_preview(
+    tables: list[DocumentTable], *, max_tables: int = 3
+) -> list[dict[str, Any]]:
     preview: list[dict[str, Any]] = []
     for table in tables[:max_tables]:
         rows = (table.cells or {}).get("rows")
@@ -321,7 +327,9 @@ def _table_preview(tables: list[DocumentTable], *, max_tables: int = 3) -> list[
     return preview
 
 
-async def _existing_tables(db: AsyncSession, document_id: uuid.UUID) -> list[DocumentTable]:
+async def _existing_tables(
+    db: AsyncSession, document_id: uuid.UUID
+) -> list[DocumentTable]:
     rows = await db.execute(
         select(DocumentTable)
         .where(DocumentTable.document_id == document_id)
@@ -348,7 +356,11 @@ async def _queue_table_scan(
         if export_requested:
             if plan_name in {"plus", "pro"}:
                 download_urls.append(
-                    {"label": "Download CSV", "format": "csv", "url": f"/api/documents/{doc.id}/tables/export"}
+                    {
+                        "label": "Download CSV",
+                        "format": "csv",
+                        "url": f"/api/documents/{doc.id}/tables/export",
+                    }
                 )
             else:
                 required_plan = "plus"
@@ -387,7 +399,11 @@ async def _queue_table_scan(
             document_id=doc.id,
             job_type=TABLE_SCAN_JOB_TYPE,
             status="queued",
-            input_scope={"document_id": str(doc.id), "source": "chat", "export_requested": export_requested},
+            input_scope={
+                "document_id": str(doc.id),
+                "source": "chat",
+                "export_requested": export_requested,
+            },
             cost_credits=0,
         )
         db.add(job)
@@ -434,7 +450,13 @@ async def _queue_table_scan(
     required_plan = None
     if export_requested:
         if plan_name in {"plus", "pro"}:
-            export_urls.append({"label": "Download CSV", "format": "csv", "url": f"/api/documents/{doc.id}/tables/export"})
+            export_urls.append(
+                {
+                    "label": "Download CSV",
+                    "format": "csv",
+                    "url": f"/api/documents/{doc.id}/tables/export",
+                }
+            )
         else:
             required_plan = "plus"
 
@@ -476,7 +498,10 @@ class ChatToolExecutor:
                 artifact=None,
             )
 
-        if plan.action in {ChatAction.CREATE_QUESTION_TEMPLATE, ChatAction.RUN_QUESTION_TEMPLATE}:
+        if plan.action in {
+            ChatAction.CREATE_QUESTION_TEMPLATE,
+            ChatAction.RUN_QUESTION_TEMPLATE,
+        }:
             return ToolExecution(
                 message=plan.user_visible_status
                 or "Send the checklist questions in chat, one per line, and I can turn them into a reusable template.",

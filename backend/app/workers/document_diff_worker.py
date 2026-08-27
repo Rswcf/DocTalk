@@ -12,5 +12,5 @@ from app.workers.celery_app import celery_app
     retry_kwargs={"max_retries": 2},
     retry_backoff=60,
 )
-def run_document_diff_job(job_id: str) -> None:
-    run_document_diff_job_sync(job_id)
+def run_document_diff_job(job_id: str, claim_token: str | None = None) -> None:
+    run_document_diff_job_sync(job_id, expected_claim_token=claim_token)

@@ -1,4 +1,5 @@
 """Reusable question template APIs for document and collection workflows."""
+
 from __future__ import annotations
 
 import re
@@ -26,6 +27,7 @@ from app.models.tables import (
 )
 from app.services import credit_service
 from app.services.doc_service import can_access_document
+from app.services.predebited_job_service import create_predebited_document_job
 from app.services.question_template_service import (
     BATCH_TEMPLATE_JOB_TYPE,
     MAX_TEMPLATE_DOCS,
@@ -157,12 +159,17 @@ def _clean_description(value: str | None) -> str | None:
     return text or None
 
 
-async def _get_owned_template(template_id: uuid.UUID, user: User, db: AsyncSession) -> QuestionTemplate:
+async def _get_owned_template(
+    template_id: uuid.UUID, user: User, db: AsyncSession
+) -> QuestionTemplate:
     template = await db.get(QuestionTemplate, template_id)
     if not template or template.user_id != user.id:
         raise HTTPException(
             status_code=404,
-            detail={"error": "QUESTION_TEMPLATE_NOT_FOUND", "message": "Question template not found"},
+            detail={
+                "error": "QUESTION_TEMPLATE_NOT_FOUND",
+                "message": "Question template not found",
+            },
         )
     return template
 
@@ -212,7 +219,10 @@ async def _verify_collection(
     if not collection.documents:
         raise HTTPException(
             status_code=400,
-            detail={"error": "COLLECTION_EMPTY", "message": "Collection has no documents"},
+            detail={
+                "error": "COLLECTION_EMPTY",
+                "message": "Collection has no documents",
+            },
         )
     if len(collection.documents) > MAX_TEMPLATE_DOCS:
         raise HTTPException(
@@ -227,7 +237,10 @@ async def _verify_collection(
     if not_ready:
         raise HTTPException(
             status_code=409,
-            detail={"error": "DOCUMENT_NOT_READY", "message": "All collection documents must be ready"},
+            detail={
+                "error": "DOCUMENT_NOT_READY",
+                "message": "All collection documents must be ready",
+            },
         )
     return collection
 
@@ -246,16 +259,19 @@ async def _create_run(
     if not questions:
         raise HTTPException(
             status_code=400,
-            detail={"error": "QUESTION_TEMPLATE_EMPTY", "message": "Question template has no questions"},
+            detail={
+                "error": "QUESTION_TEMPLATE_EMPTY",
+                "message": "Question template has no questions",
+            },
         )
 
     predebit = estimated_template_cost(len(questions), len(document_ids))
-    job = DocumentJob(
+    job, ledger_id = await create_predebited_document_job(
+        db,
         user_id=user.id,
         document_id=document_id,
         collection_id=collection_id,
         job_type=BATCH_TEMPLATE_JOB_TYPE,
-        status="queued",
         input_scope={
             "template_id": str(template.id),
             "template_name": template.name,
@@ -263,18 +279,8 @@ async def _create_run(
             "document_ids": [str(doc_id) for doc_id in document_ids],
             "locale": locale,
         },
-        cost_credits=0,
-    )
-    db.add(job)
-    await db.flush()
-
-    ledger_id = await credit_service.debit_credits(
-        db,
-        user_id=user.id,
-        cost=predebit,
+        predebit=predebit,
         reason="question_template",
-        ref_type="document_job",
-        ref_id=str(job.id),
     )
     if ledger_id is None:
         await db.rollback()
@@ -288,11 +294,6 @@ async def _create_run(
                 "balance": balance,
             },
         )
-
-    job.metadata_json = {
-        "predebit_ledger_id": str(ledger_id),
-        "pre_debited": predebit,
-    }
     db.add(
         ProductEvent(
             user_id=user.id,
@@ -325,6 +326,10 @@ async def _create_run(
                     status="failed",
                     error_code="QUESTION_TEMPLATE_QUEUE_FAILED",
                     error_message="Failed to queue question template run",
+                    completed_at=sa.func.now(),
+                    updated_at=sa.func.now(),
+                    worker_claim_token=None,
+                    worker_lease_expires_at=None,
                 )
                 .returning(DocumentJob.id)
                 .execution_options(synchronize_session=False)
@@ -354,7 +359,10 @@ async def _create_run(
         await db.commit()
         raise HTTPException(
             status_code=500,
-            detail={"error": "QUESTION_TEMPLATE_QUEUE_FAILED", "message": "Failed to queue question template run"},
+            detail={
+                "error": "QUESTION_TEMPLATE_QUEUE_FAILED",
+                "message": "Failed to queue question template run",
+            },
         ) from exc
 
     return job
@@ -379,7 +387,11 @@ async def list_question_templates(
     return [_template_response(template) for template in rows.scalars()]
 
 
-@router.post("/question-templates", response_model=QuestionTemplatePayload, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/question-templates",
+    response_model=QuestionTemplatePayload,
+    status_code=status.HTTP_201_CREATED,
+)
 async def create_question_template(
     body: UpsertQuestionTemplateRequest,
     user: User = Depends(require_auth),
@@ -389,7 +401,10 @@ async def create_question_template(
     if not questions:
         raise HTTPException(
             status_code=400,
-            detail={"error": "QUESTION_TEMPLATE_EMPTY", "message": "Question template must include at least one question"},
+            detail={
+                "error": "QUESTION_TEMPLATE_EMPTY",
+                "message": "Question template must include at least one question",
+            },
         )
     template = QuestionTemplate(
         user_id=user.id,
@@ -403,7 +418,9 @@ async def create_question_template(
     return _template_response(template)
 
 
-@router.patch("/question-templates/{template_id}", response_model=QuestionTemplatePayload)
+@router.patch(
+    "/question-templates/{template_id}", response_model=QuestionTemplatePayload
+)
 async def update_question_template(
     template_id: uuid.UUID,
     body: UpsertQuestionTemplateRequest,
@@ -415,7 +432,10 @@ async def update_question_template(
     if not questions:
         raise HTTPException(
             status_code=400,
-            detail={"error": "QUESTION_TEMPLATE_EMPTY", "message": "Question template must include at least one question"},
+            detail={
+                "error": "QUESTION_TEMPLATE_EMPTY",
+                "message": "Question template must include at least one question",
+            },
         )
     template.name = body.name.strip()
     template.description = _clean_description(body.description)
@@ -426,7 +446,9 @@ async def update_question_template(
     return _template_response(template)
 
 
-@router.delete("/question-templates/{template_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete(
+    "/question-templates/{template_id}", status_code=status.HTTP_204_NO_CONTENT
+)
 async def delete_question_template(
     template_id: uuid.UUID,
     user: User = Depends(require_auth),
@@ -463,7 +485,10 @@ async def run_document_question_template(
     return _run_response(job)
 
 
-@router.get("/documents/{document_id}/question-template-runs", response_model=list[QuestionTemplateRunResponse])
+@router.get(
+    "/documents/{document_id}/question-template-runs",
+    response_model=list[QuestionTemplateRunResponse],
+)
 async def list_document_question_template_runs(
     document_id: uuid.UUID,
     user: User = Depends(require_auth),
@@ -508,7 +533,10 @@ async def run_collection_question_template(
     return _run_response(job)
 
 
-@router.get("/collections/{collection_id}/question-template-runs", response_model=list[QuestionTemplateRunResponse])
+@router.get(
+    "/collections/{collection_id}/question-template-runs",
+    response_model=list[QuestionTemplateRunResponse],
+)
 async def list_collection_question_template_runs(
     collection_id: uuid.UUID,
     user: User = Depends(require_auth),
@@ -527,7 +555,9 @@ async def list_collection_question_template_runs(
     return [_run_response(job) for job in rows.scalars()]
 
 
-@router.get("/question-template-runs/{job_id}", response_model=QuestionTemplateRunResponse)
+@router.get(
+    "/question-template-runs/{job_id}", response_model=QuestionTemplateRunResponse
+)
 async def get_question_template_run(
     job_id: uuid.UUID,
     user: User = Depends(require_auth),
@@ -544,7 +574,10 @@ async def get_question_template_run(
     if not job:
         raise HTTPException(
             status_code=404,
-            detail={"error": "QUESTION_TEMPLATE_RUN_NOT_FOUND", "message": "Question template run not found"},
+            detail={
+                "error": "QUESTION_TEMPLATE_RUN_NOT_FOUND",
+                "message": "Question template run not found",
+            },
         )
     return _run_response(job)
 
@@ -568,7 +601,10 @@ async def export_question_template_run(
     if not job or not result:
         raise HTTPException(
             status_code=404,
-            detail={"error": "QUESTION_TEMPLATE_RUN_NOT_FOUND", "message": "Question template run not found"},
+            detail={
+                "error": "QUESTION_TEMPLATE_RUN_NOT_FOUND",
+                "message": "Question template run not found",
+            },
         )
     stem = f"question-template-{str(job.id)[:8]}"
     if format == "csv":

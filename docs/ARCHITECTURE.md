@@ -1354,13 +1354,20 @@ marker that makes the pre-debit/reconcile/refund triangle race-safe:
   conditional refund atomically marks the undelivered job failed and, for a
   job-owned Free Domain Mode trial, releases the trial row; a zero-row delete
   leaves a committed succeeded job and result untouched.
-- Extraction delivery uses migration `20260826_0042`'s durable per-job claim
-  token, attempt count, and 45-minute lease plus advisory-lock namespace 948.
-  The lease exceeds Redis's 40-minute visibility timeout. A lost claim-commit
+- Every predebited `DocumentJob` producer (direct/chat-native extraction,
+  question-template run, and document diff) uses one creation helper so its
+  job, ledger metadata, debit, and initial 45-minute lease share a transaction.
+  Migration `20260826_0043` backfills active predebits, supplies the lease
+  default as defense in depth, and adds a broader recovery index. The lease
+  exceeds Redis's 40-minute visibility timeout, and every covered worker holds
+  advisory-lock namespace 948 for its entire run. A lost claim-commit
   acknowledgement is resolved in a fresh session by matching the token; a
-  different delivery can reclaim only after expiry. Beat/startup recovery may
-  spend one stale reclaim, while a second expired claim atomically performs
-  the conditional refund, failed-job write, and eligible trial release.
+  different delivery can reclaim only after expiry. Beat/startup recovery is
+  ledger-driven and treats a NULL lease as `created_at`/`updated_at` plus the
+  same 45-minute window, so omission cannot hide a row. Recovery may spend one
+  stale reclaim, while a second expired claim atomically performs the existing
+  conditional refund and failed-job write, plus eligible extraction-trial
+  release.
 - The chat strict-quote route persists answer + reconcile + usage in ONE
   atomic commit, so a cancelled/ambiguous COMMIT can no longer produce a
   persisted answer with a refunded charge (or vice versa).

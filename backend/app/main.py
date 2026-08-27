@@ -131,9 +131,12 @@ async def lifespan(app: FastAPI):
 
             requeued = requeue_stale_running_extractions()
             if requeued:
-                logger.info("Startup recovery requeued %d stale extractions", requeued)
+                logger.info(
+                    "Startup recovery requeued %d stale predebited document jobs",
+                    requeued,
+                )
         except Exception as e:
-            logger.warning("Stuck extraction retry failed: %s", e)
+            logger.warning("Stuck predebited document-job retry failed: %s", e)
 
     def _seed_demo_documents() -> None:
         try:

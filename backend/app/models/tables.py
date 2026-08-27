@@ -24,12 +24,20 @@ class Document(Base):
     file_size: Mapped[int] = mapped_column(sa.BigInteger, nullable=False)
     page_count: Mapped[Optional[int]] = mapped_column(sa.Integer, nullable=True)
     storage_key: Mapped[str] = mapped_column(sa.String(500), nullable=False)
-    status: Mapped[str] = mapped_column(sa.String(20), nullable=False, server_default=sa.text("'uploading'"))
+    status: Mapped[str] = mapped_column(
+        sa.String(20), nullable=False, server_default=sa.text("'uploading'")
+    )
     error_msg: Mapped[Optional[str]] = mapped_column(sa.Text, nullable=True)
 
-    pages_parsed: Mapped[int] = mapped_column(sa.Integer, nullable=False, server_default=sa.text("0"))
-    chunks_total: Mapped[int] = mapped_column(sa.Integer, nullable=False, server_default=sa.text("0"))
-    chunks_indexed: Mapped[int] = mapped_column(sa.Integer, nullable=False, server_default=sa.text("0"))
+    pages_parsed: Mapped[int] = mapped_column(
+        sa.Integer, nullable=False, server_default=sa.text("0")
+    )
+    chunks_total: Mapped[int] = mapped_column(
+        sa.Integer, nullable=False, server_default=sa.text("0")
+    )
+    chunks_indexed: Mapped[int] = mapped_column(
+        sa.Integer, nullable=False, server_default=sa.text("0")
+    )
     # Parse pipeline metadata (R2b) — nullable/add-only. parse_version lets the backfill
     # finder spot docs parsed before a fix; parse_method ∈ {text, ocr, converted};
     # text_quality is the Unicode-aware letter/number ratio; ocr_languages is the resolved
@@ -44,10 +52,18 @@ class Document(Base):
     # published. The worker only READS it — recovery re-dispatches carry no
     # locale argument, and stale queued messages must not resurrect an older
     # request, so the column is the single source of truth.
-    parse_requested_locale: Mapped[Optional[str]] = mapped_column(sa.String(16), nullable=True)
+    parse_requested_locale: Mapped[Optional[str]] = mapped_column(
+        sa.String(16), nullable=True
+    )
 
-    created_at: Mapped[sa.DateTime] = mapped_column(sa.DateTime(timezone=True), server_default=sa.text("now()"))
-    updated_at: Mapped[sa.DateTime] = mapped_column(sa.DateTime(timezone=True), server_default=sa.text("now()"), onupdate=sa.func.now())
+    created_at: Mapped[sa.DateTime] = mapped_column(
+        sa.DateTime(timezone=True), server_default=sa.text("now()")
+    )
+    updated_at: Mapped[sa.DateTime] = mapped_column(
+        sa.DateTime(timezone=True),
+        server_default=sa.text("now()"),
+        onupdate=sa.func.now(),
+    )
 
     # Optional owner user (nullable; set null on user delete)
     user_id: Mapped[Optional[uuid.UUID]] = mapped_column(
@@ -65,10 +81,14 @@ class Document(Base):
     custom_instructions: Mapped[Optional[str]] = mapped_column(sa.Text, nullable=True)
 
     # File type (pdf, docx, pptx, xlsx, txt, md)
-    file_type: Mapped[str] = mapped_column(sa.String(20), nullable=False, server_default=sa.text("'pdf'"))
+    file_type: Mapped[str] = mapped_column(
+        sa.String(20), nullable=False, server_default=sa.text("'pdf'")
+    )
 
     # Storage key for converted PDF (PPTX/DOCX → PDF via LibreOffice)
-    converted_storage_key: Mapped[Optional[str]] = mapped_column(sa.String(500), nullable=True)
+    converted_storage_key: Mapped[Optional[str]] = mapped_column(
+        sa.String(500), nullable=True
+    )
 
     # Source URL for URL-ingested documents
     source_url: Mapped[Optional[str]] = mapped_column(sa.String(2000), nullable=True)
@@ -82,15 +102,21 @@ class Document(Base):
     def is_demo(self) -> bool:
         return self.demo_slug is not None
 
-    pages: Mapped[List[Page]] = relationship("Page", back_populates="document", cascade="all, delete-orphan")
-    chunks: Mapped[List[Chunk]] = relationship("Chunk", back_populates="document", cascade="all, delete-orphan")
+    pages: Mapped[List[Page]] = relationship(
+        "Page", back_populates="document", cascade="all, delete-orphan"
+    )
+    chunks: Mapped[List[Chunk]] = relationship(
+        "Chunk", back_populates="document", cascade="all, delete-orphan"
+    )
     elements: Mapped[List["DocumentElement"]] = relationship(
         "DocumentElement",
         back_populates="document",
         cascade="all, delete-orphan",
     )
     sessions: Mapped[List[ChatSession]] = relationship(
-        "ChatSession", back_populates="document", cascade="all, delete-orphan",
+        "ChatSession",
+        back_populates="document",
+        cascade="all, delete-orphan",
         foreign_keys="ChatSession.document_id",
     )
     collections: Mapped[List["Collection"]] = relationship(
@@ -116,18 +142,24 @@ class Page(Base):
         server_default=sa.text("gen_random_uuid()"),
     )
     document_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), sa.ForeignKey("documents.id", ondelete="CASCADE"), nullable=False
+        UUID(as_uuid=True),
+        sa.ForeignKey("documents.id", ondelete="CASCADE"),
+        nullable=False,
     )
     page_number: Mapped[int] = mapped_column(sa.Integer, nullable=False)
     width_pt: Mapped[Optional[float]] = mapped_column(sa.Float, nullable=True)
     height_pt: Mapped[Optional[float]] = mapped_column(sa.Float, nullable=True)
-    rotation: Mapped[int] = mapped_column(sa.Integer, nullable=False, server_default=sa.text("0"))
+    rotation: Mapped[int] = mapped_column(
+        sa.Integer, nullable=False, server_default=sa.text("0")
+    )
     content: Mapped[Optional[str]] = mapped_column(sa.Text, nullable=True)
 
     document: Mapped[Document] = relationship("Document", back_populates="pages")
 
     __table_args__ = (
-        sa.UniqueConstraint("document_id", "page_number", name="uq_pages_document_page"),
+        sa.UniqueConstraint(
+            "document_id", "page_number", name="uq_pages_document_page"
+        ),
         sa.Index("idx_pages_document", "document_id"),
     )
 
@@ -142,7 +174,9 @@ class Chunk(Base):
         server_default=sa.text("gen_random_uuid()"),
     )
     document_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), sa.ForeignKey("documents.id", ondelete="CASCADE"), nullable=False
+        UUID(as_uuid=True),
+        sa.ForeignKey("documents.id", ondelete="CASCADE"),
+        nullable=False,
     )
     chunk_index: Mapped[int] = mapped_column(sa.Integer, nullable=False)
     text: Mapped[str] = mapped_column(sa.Text, nullable=False)
@@ -152,12 +186,16 @@ class Chunk(Base):
     bboxes: Mapped[dict] = mapped_column(JSONB, nullable=False)
     section_title: Mapped[Optional[str]] = mapped_column(sa.String(500))
     vector_id: Mapped[Optional[str]] = mapped_column(sa.String(100))
-    created_at: Mapped[sa.DateTime] = mapped_column(sa.DateTime(timezone=True), server_default=sa.text("now()"))
+    created_at: Mapped[sa.DateTime] = mapped_column(
+        sa.DateTime(timezone=True), server_default=sa.text("now()")
+    )
 
     document: Mapped[Document] = relationship("Document", back_populates="chunks")
 
     __table_args__ = (
-        sa.UniqueConstraint("document_id", "chunk_index", name="uq_chunks_document_index"),
+        sa.UniqueConstraint(
+            "document_id", "chunk_index", name="uq_chunks_document_index"
+        ),
         sa.Index("idx_chunks_document", "document_id"),
     )
 
@@ -171,16 +209,23 @@ class DocumentElement(Base):
         server_default=sa.text("gen_random_uuid()"),
     )
     document_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), sa.ForeignKey("documents.id", ondelete="CASCADE"), nullable=False, index=True
+        UUID(as_uuid=True),
+        sa.ForeignKey("documents.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
     )
     element_type: Mapped[str] = mapped_column(sa.String(32), nullable=False)
     page_start: Mapped[int] = mapped_column(sa.Integer, nullable=False)
     page_end: Mapped[int] = mapped_column(sa.Integer, nullable=False)
-    bbox: Mapped[dict] = mapped_column(JSONB, nullable=False, server_default=sa.text("'{}'::jsonb"))
+    bbox: Mapped[dict] = mapped_column(
+        JSONB, nullable=False, server_default=sa.text("'{}'::jsonb")
+    )
     text: Mapped[str] = mapped_column(sa.Text, nullable=False)
     reading_order: Mapped[int] = mapped_column(sa.Integer, nullable=False)
     parent_id: Mapped[Optional[uuid.UUID]] = mapped_column(
-        UUID(as_uuid=True), sa.ForeignKey("document_elements.id", ondelete="SET NULL"), nullable=True
+        UUID(as_uuid=True),
+        sa.ForeignKey("document_elements.id", ondelete="SET NULL"),
+        nullable=True,
     )
     metadata_json: Mapped[dict] = mapped_column(
         JSONB, nullable=False, server_default=sa.text("'{}'::jsonb")
@@ -189,14 +234,24 @@ class DocumentElement(Base):
         sa.DateTime(timezone=True), nullable=False, server_default=sa.text("now()")
     )
     updated_at: Mapped[datetime] = mapped_column(
-        sa.DateTime(timezone=True), nullable=False, server_default=sa.text("now()"), onupdate=sa.func.now()
+        sa.DateTime(timezone=True),
+        nullable=False,
+        server_default=sa.text("now()"),
+        onupdate=sa.func.now(),
     )
 
     document: Mapped["Document"] = relationship("Document", back_populates="elements")
 
     __table_args__ = (
-        sa.Index("idx_document_elements_doc_type_order", "document_id", "element_type", "reading_order"),
-        sa.Index("idx_document_elements_doc_pages", "document_id", "page_start", "page_end"),
+        sa.Index(
+            "idx_document_elements_doc_type_order",
+            "document_id",
+            "element_type",
+            "reading_order",
+        ),
+        sa.Index(
+            "idx_document_elements_doc_pages", "document_id", "page_start", "page_end"
+        ),
     )
 
 
@@ -210,10 +265,14 @@ class ChatSession(Base):
         server_default=sa.text("gen_random_uuid()"),
     )
     document_id: Mapped[Optional[uuid.UUID]] = mapped_column(
-        UUID(as_uuid=True), sa.ForeignKey("documents.id", ondelete="CASCADE"), nullable=True
+        UUID(as_uuid=True),
+        sa.ForeignKey("documents.id", ondelete="CASCADE"),
+        nullable=True,
     )
     collection_id: Mapped[Optional[uuid.UUID]] = mapped_column(
-        UUID(as_uuid=True), sa.ForeignKey("collections.id", ondelete="CASCADE"), nullable=True
+        UUID(as_uuid=True),
+        sa.ForeignKey("collections.id", ondelete="CASCADE"),
+        nullable=True,
     )
     user_id: Mapped[Optional[uuid.UUID]] = mapped_column(
         UUID(as_uuid=True),
@@ -223,13 +282,25 @@ class ChatSession(Base):
     )
     title: Mapped[Optional[str]] = mapped_column(sa.String(200), nullable=True)
     domain_mode: Mapped[Optional[str]] = mapped_column(sa.String(20), nullable=True)
-    created_at: Mapped[sa.DateTime] = mapped_column(sa.DateTime(timezone=True), server_default=sa.text("now()"))
-    updated_at: Mapped[sa.DateTime] = mapped_column(sa.DateTime(timezone=True), server_default=sa.text("now()"), onupdate=sa.func.now())
+    created_at: Mapped[sa.DateTime] = mapped_column(
+        sa.DateTime(timezone=True), server_default=sa.text("now()")
+    )
+    updated_at: Mapped[sa.DateTime] = mapped_column(
+        sa.DateTime(timezone=True),
+        server_default=sa.text("now()"),
+        onupdate=sa.func.now(),
+    )
 
     user: Mapped[Optional["User"]] = relationship("User", foreign_keys=[user_id])
-    document: Mapped[Optional[Document]] = relationship("Document", back_populates="sessions", foreign_keys=[document_id])
-    collection: Mapped[Optional["Collection"]] = relationship("Collection", back_populates="sessions")
-    messages: Mapped[List[Message]] = relationship("Message", back_populates="session", cascade="all, delete-orphan")
+    document: Mapped[Optional[Document]] = relationship(
+        "Document", back_populates="sessions", foreign_keys=[document_id]
+    )
+    collection: Mapped[Optional["Collection"]] = relationship(
+        "Collection", back_populates="sessions"
+    )
+    messages: Mapped[List[Message]] = relationship(
+        "Message", back_populates="session", cascade="all, delete-orphan"
+    )
 
 
 # Messages table
@@ -242,7 +313,9 @@ class Message(Base):
         server_default=sa.text("gen_random_uuid()"),
     )
     session_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), sa.ForeignKey("sessions.id", ondelete="CASCADE"), nullable=False
+        UUID(as_uuid=True),
+        sa.ForeignKey("sessions.id", ondelete="CASCADE"),
+        nullable=False,
     )
     role: Mapped[str] = mapped_column(sa.String(10), nullable=False)
     content: Mapped[str] = mapped_column(sa.Text, nullable=False)
@@ -252,14 +325,22 @@ class Message(Base):
     )
     prompt_tokens: Mapped[Optional[int]] = mapped_column(sa.Integer)
     output_tokens: Mapped[Optional[int]] = mapped_column(sa.Integer)
-    continuation_count: Mapped[int] = mapped_column(sa.Integer, nullable=False, server_default=sa.text("0"))
-    created_at: Mapped[sa.DateTime] = mapped_column(sa.DateTime(timezone=True), server_default=sa.text("now()"))
+    continuation_count: Mapped[int] = mapped_column(
+        sa.Integer, nullable=False, server_default=sa.text("0")
+    )
+    created_at: Mapped[sa.DateTime] = mapped_column(
+        sa.DateTime(timezone=True), server_default=sa.text("now()")
+    )
 
-    session: Mapped[ChatSession] = relationship("ChatSession", back_populates="messages")
+    session: Mapped[ChatSession] = relationship(
+        "ChatSession", back_populates="messages"
+    )
 
     __table_args__ = (
         sa.Index("idx_messages_session", "session_id", "created_at"),
-        sa.Index("idx_messages_role_created_session", "role", "created_at", "session_id"),
+        sa.Index(
+            "idx_messages_role_created_session", "role", "created_at", "session_id"
+        ),
     )
 
 
@@ -268,25 +349,45 @@ class User(Base):
     __tablename__ = "users"
 
     id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), primary_key=True, server_default=sa.text("gen_random_uuid()")
+        UUID(as_uuid=True),
+        primary_key=True,
+        server_default=sa.text("gen_random_uuid()"),
     )
-    email: Mapped[str] = mapped_column(sa.String(255), unique=True, nullable=False, index=True)
+    email: Mapped[str] = mapped_column(
+        sa.String(255), unique=True, nullable=False, index=True
+    )
     name: Mapped[Optional[str]] = mapped_column(sa.String(255))
     image: Mapped[Optional[str]] = mapped_column(sa.String(500))
-    email_verified: Mapped[Optional[datetime]] = mapped_column(sa.DateTime(timezone=True))
-    credits_balance: Mapped[int] = mapped_column(sa.Integer, nullable=False, server_default=sa.text("0"))
-    signup_bonus_granted_at: Mapped[Optional[datetime]] = mapped_column(sa.DateTime(timezone=True))
-    plan: Mapped[str] = mapped_column(sa.String(20), nullable=False, server_default=sa.text("'free'"))
+    email_verified: Mapped[Optional[datetime]] = mapped_column(
+        sa.DateTime(timezone=True)
+    )
+    credits_balance: Mapped[int] = mapped_column(
+        sa.Integer, nullable=False, server_default=sa.text("0")
+    )
+    signup_bonus_granted_at: Mapped[Optional[datetime]] = mapped_column(
+        sa.DateTime(timezone=True)
+    )
+    plan: Mapped[str] = mapped_column(
+        sa.String(20), nullable=False, server_default=sa.text("'free'")
+    )
     stripe_customer_id: Mapped[Optional[str]] = mapped_column(sa.String(255))
     stripe_subscription_id: Mapped[Optional[str]] = mapped_column(sa.String(255))
-    monthly_credits_granted_at: Mapped[Optional[datetime]] = mapped_column(sa.DateTime(timezone=True))
-    created_at: Mapped[datetime] = mapped_column(sa.DateTime(timezone=True), server_default=sa.text("now()"))
+    monthly_credits_granted_at: Mapped[Optional[datetime]] = mapped_column(
+        sa.DateTime(timezone=True)
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        sa.DateTime(timezone=True), server_default=sa.text("now()")
+    )
     updated_at: Mapped[datetime] = mapped_column(
-        sa.DateTime(timezone=True), server_default=sa.text("now()"), onupdate=sa.func.now()
+        sa.DateTime(timezone=True),
+        server_default=sa.text("now()"),
+        onupdate=sa.func.now(),
     )
 
     # Relationships
-    accounts: Mapped[List["Account"]] = relationship("Account", back_populates="user", cascade="all, delete-orphan")
+    accounts: Mapped[List["Account"]] = relationship(
+        "Account", back_populates="user", cascade="all, delete-orphan"
+    )
 
 
 class CheckoutAttempt(Base):
@@ -295,11 +396,17 @@ class CheckoutAttempt(Base):
     __tablename__ = "checkout_attempts"
 
     id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), primary_key=True, server_default=sa.text("gen_random_uuid()")
+        UUID(as_uuid=True),
+        primary_key=True,
+        server_default=sa.text("gen_random_uuid()"),
     )
-    idempotency_key: Mapped[str] = mapped_column(sa.String(255), nullable=False, unique=True)
+    idempotency_key: Mapped[str] = mapped_column(
+        sa.String(255), nullable=False, unique=True
+    )
     user_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), sa.ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+        UUID(as_uuid=True),
+        sa.ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=False,
     )
     plan: Mapped[str] = mapped_column(sa.String(16), nullable=False)
     billing_period: Mapped[str] = mapped_column(sa.String(16), nullable=False)
@@ -316,13 +423,18 @@ class CheckoutAttempt(Base):
         sa.String(20), nullable=False, server_default=sa.text("'creating'")
     )
     updated_at: Mapped[datetime] = mapped_column(
-        sa.DateTime(timezone=True), nullable=False, server_default=sa.text("now()"), onupdate=sa.func.now()
+        sa.DateTime(timezone=True),
+        nullable=False,
+        server_default=sa.text("now()"),
+        onupdate=sa.func.now(),
     )
 
     user: Mapped[User] = relationship("User")
 
     __table_args__ = (
-        sa.Index("idx_checkout_attempts_user_started", "user_id", sa.text("started_at DESC")),
+        sa.Index(
+            "idx_checkout_attempts_user_started", "user_id", sa.text("started_at DESC")
+        ),
         sa.Index(
             "uq_checkout_attempts_user_active",
             "user_id",
@@ -345,31 +457,43 @@ class FeatureTrialUsage(Base):
     __tablename__ = "feature_trial_usages"
 
     id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), primary_key=True, server_default=sa.text("gen_random_uuid()")
+        UUID(as_uuid=True),
+        primary_key=True,
+        server_default=sa.text("gen_random_uuid()"),
     )
     user_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), sa.ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+        UUID(as_uuid=True),
+        sa.ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=False,
     )
     feature: Mapped[str] = mapped_column(sa.String(64), nullable=False)
     slot_index: Mapped[int] = mapped_column(sa.Integer, nullable=False)
     owning_session_id: Mapped[Optional[uuid.UUID]] = mapped_column(
-        UUID(as_uuid=True), sa.ForeignKey("sessions.id", ondelete="SET NULL"), nullable=True
+        UUID(as_uuid=True),
+        sa.ForeignKey("sessions.id", ondelete="SET NULL"),
+        nullable=True,
     )
     owning_job_id: Mapped[Optional[uuid.UUID]] = mapped_column(
-        UUID(as_uuid=True), sa.ForeignKey("document_jobs.id", ondelete="SET NULL"), nullable=True
+        UUID(as_uuid=True),
+        sa.ForeignKey("document_jobs.id", ondelete="SET NULL"),
+        nullable=True,
     )
     created_at: Mapped[datetime] = mapped_column(
         sa.DateTime(timezone=True), nullable=False, server_default=sa.text("now()")
     )
 
     __table_args__ = (
-        sa.CheckConstraint("slot_index >= 0", name="ck_feature_trial_usages_slot_nonnegative"),
+        sa.CheckConstraint(
+            "slot_index >= 0", name="ck_feature_trial_usages_slot_nonnegative"
+        ),
         sa.CheckConstraint(
             "owning_session_id IS NULL OR owning_job_id IS NULL",
             name="ck_feature_trial_usages_at_most_one_owner",
         ),
         sa.UniqueConstraint(
-            "user_id", "feature", "slot_index",
+            "user_id",
+            "feature",
+            "slot_index",
             name="uq_feature_trial_usages_user_feature_slot",
         ),
         sa.Index(
@@ -391,10 +515,15 @@ class Account(Base):
     __tablename__ = "accounts"
 
     id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), primary_key=True, server_default=sa.text("gen_random_uuid()")
+        UUID(as_uuid=True),
+        primary_key=True,
+        server_default=sa.text("gen_random_uuid()"),
     )
     user_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), sa.ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True
+        UUID(as_uuid=True),
+        sa.ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
     )
     type: Mapped[str] = mapped_column(sa.String(50), nullable=False)
     provider: Mapped[str] = mapped_column(sa.String(50), nullable=False)
@@ -409,7 +538,9 @@ class Account(Base):
     user: Mapped[User] = relationship("User", back_populates="accounts")
 
     __table_args__ = (
-        sa.UniqueConstraint("provider", "provider_account_id", name="uq_accounts_provider_account"),
+        sa.UniqueConstraint(
+            "provider", "provider_account_id", name="uq_accounts_provider_account"
+        ),
         sa.Index("idx_accounts_user_id", "user_id"),
     )
 
@@ -419,29 +550,39 @@ class VerificationToken(Base):
 
     identifier: Mapped[str] = mapped_column(sa.String(255), primary_key=True)
     token: Mapped[str] = mapped_column(sa.String(255), primary_key=True)
-    expires: Mapped[datetime] = mapped_column(sa.DateTime(timezone=True), nullable=False)
+    expires: Mapped[datetime] = mapped_column(
+        sa.DateTime(timezone=True), nullable=False
+    )
 
 
 class CreditLedger(Base):
     __tablename__ = "credit_ledger"
 
     id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), primary_key=True, server_default=sa.text("gen_random_uuid()")
+        UUID(as_uuid=True),
+        primary_key=True,
+        server_default=sa.text("gen_random_uuid()"),
     )
     user_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), sa.ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+        UUID(as_uuid=True),
+        sa.ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=False,
     )
     delta: Mapped[int] = mapped_column(sa.Integer, nullable=False)
     balance_after: Mapped[int] = mapped_column(sa.Integer, nullable=False)
     reason: Mapped[str] = mapped_column(sa.String(50), nullable=False)
     ref_type: Mapped[Optional[str]] = mapped_column(sa.String(50))
     ref_id: Mapped[Optional[str]] = mapped_column(sa.String(255))
-    created_at: Mapped[datetime] = mapped_column(sa.DateTime(timezone=True), server_default=sa.text("now()"))
+    created_at: Mapped[datetime] = mapped_column(
+        sa.DateTime(timezone=True), server_default=sa.text("now()")
+    )
     # FIX3-A (Codex r3 #4): durable settlement marker — reconcile_credits
     # ALWAYS stamps this (under a row lock), including the equal-cost no-op
     # path. The conditional refund path (DELETE ... WHERE reconciled_at IS
     # NULL) uses it as the sole race-free "already settled" signal.
-    reconciled_at: Mapped[Optional[datetime]] = mapped_column(sa.DateTime(timezone=True), nullable=True)
+    reconciled_at: Mapped[Optional[datetime]] = mapped_column(
+        sa.DateTime(timezone=True), nullable=True
+    )
 
     __table_args__ = (
         sa.Index("idx_credit_ledger_user_created", "user_id", "created_at"),
@@ -464,20 +605,28 @@ class UsageRecord(Base):
     __tablename__ = "usage_records"
 
     id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), primary_key=True, server_default=sa.text("gen_random_uuid()")
+        UUID(as_uuid=True),
+        primary_key=True,
+        server_default=sa.text("gen_random_uuid()"),
     )
     user_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), sa.ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+        UUID(as_uuid=True),
+        sa.ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=False,
     )
     message_id: Mapped[Optional[uuid.UUID]] = mapped_column(
-        UUID(as_uuid=True), sa.ForeignKey("messages.id", ondelete="SET NULL"), nullable=True
+        UUID(as_uuid=True),
+        sa.ForeignKey("messages.id", ondelete="SET NULL"),
+        nullable=True,
     )
     model: Mapped[str] = mapped_column(sa.String(100), nullable=False)
     prompt_tokens: Mapped[int] = mapped_column(sa.Integer, nullable=False)
     completion_tokens: Mapped[int] = mapped_column(sa.Integer, nullable=False)
     total_tokens: Mapped[int] = mapped_column(sa.Integer, nullable=False)
     cost_credits: Mapped[int] = mapped_column(sa.Integer, nullable=False)
-    created_at: Mapped[datetime] = mapped_column(sa.DateTime(timezone=True), server_default=sa.text("now()"))
+    created_at: Mapped[datetime] = mapped_column(
+        sa.DateTime(timezone=True), server_default=sa.text("now()")
+    )
 
     __table_args__ = (
         sa.Index("idx_usage_records_user_created", "user_id", "created_at"),
@@ -488,8 +637,18 @@ class UsageRecord(Base):
 collection_documents = sa.Table(
     "collection_documents",
     Base.metadata,
-    sa.Column("collection_id", UUID(as_uuid=True), sa.ForeignKey("collections.id", ondelete="CASCADE"), primary_key=True),
-    sa.Column("document_id", UUID(as_uuid=True), sa.ForeignKey("documents.id", ondelete="CASCADE"), primary_key=True),
+    sa.Column(
+        "collection_id",
+        UUID(as_uuid=True),
+        sa.ForeignKey("collections.id", ondelete="CASCADE"),
+        primary_key=True,
+    ),
+    sa.Column(
+        "document_id",
+        UUID(as_uuid=True),
+        sa.ForeignKey("documents.id", ondelete="CASCADE"),
+        primary_key=True,
+    ),
     sa.Column("added_at", sa.DateTime(timezone=True), server_default=sa.text("now()")),
 )
 
@@ -498,16 +657,25 @@ class Collection(Base):
     __tablename__ = "collections"
 
     id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), primary_key=True, server_default=sa.text("gen_random_uuid()")
+        UUID(as_uuid=True),
+        primary_key=True,
+        server_default=sa.text("gen_random_uuid()"),
     )
     name: Mapped[str] = mapped_column(sa.String(200), nullable=False)
     description: Mapped[Optional[str]] = mapped_column(sa.Text, nullable=True)
     user_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), sa.ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True
+        UUID(as_uuid=True),
+        sa.ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
     )
-    created_at: Mapped[datetime] = mapped_column(sa.DateTime(timezone=True), server_default=sa.text("now()"))
+    created_at: Mapped[datetime] = mapped_column(
+        sa.DateTime(timezone=True), server_default=sa.text("now()")
+    )
     updated_at: Mapped[datetime] = mapped_column(
-        sa.DateTime(timezone=True), server_default=sa.text("now()"), onupdate=sa.func.now()
+        sa.DateTime(timezone=True),
+        server_default=sa.text("now()"),
+        onupdate=sa.func.now(),
     )
 
     documents: Mapped[List[Document]] = relationship(
@@ -524,18 +692,29 @@ class SharedSession(Base):
     __tablename__ = "shared_sessions"
 
     id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), primary_key=True, server_default=sa.text("gen_random_uuid()")
+        UUID(as_uuid=True),
+        primary_key=True,
+        server_default=sa.text("gen_random_uuid()"),
     )
     session_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), sa.ForeignKey("sessions.id", ondelete="CASCADE"), nullable=False
+        UUID(as_uuid=True),
+        sa.ForeignKey("sessions.id", ondelete="CASCADE"),
+        nullable=False,
     )
     share_token: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), nullable=False, unique=True, server_default=sa.text("gen_random_uuid()")
+        UUID(as_uuid=True),
+        nullable=False,
+        unique=True,
+        server_default=sa.text("gen_random_uuid()"),
     )
     user_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), sa.ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+        UUID(as_uuid=True),
+        sa.ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=False,
     )
-    expires_at: Mapped[Optional[datetime]] = mapped_column(sa.DateTime(timezone=True), nullable=True)
+    expires_at: Mapped[Optional[datetime]] = mapped_column(
+        sa.DateTime(timezone=True), nullable=True
+    )
     created_at: Mapped[datetime] = mapped_column(
         sa.DateTime(timezone=True), server_default=sa.text("now()")
     )
@@ -544,7 +723,9 @@ class SharedSession(Base):
     user: Mapped["User"] = relationship("User")
 
     __table_args__ = (
-        sa.UniqueConstraint("session_id", "user_id", name="uq_shared_sessions_session_user"),
+        sa.UniqueConstraint(
+            "session_id", "user_id", name="uq_shared_sessions_session_user"
+        ),
         sa.Index("idx_shared_sessions_token", "share_token"),
     )
 
@@ -553,15 +734,21 @@ class PlanTransition(Base):
     __tablename__ = "plan_transitions"
 
     id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), primary_key=True, server_default=sa.text("gen_random_uuid()")
+        UUID(as_uuid=True),
+        primary_key=True,
+        server_default=sa.text("gen_random_uuid()"),
     )
     user_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), sa.ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+        UUID(as_uuid=True),
+        sa.ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=False,
     )
     from_plan: Mapped[str] = mapped_column(sa.String(16), nullable=False)
     to_plan: Mapped[str] = mapped_column(sa.String(16), nullable=False)
     source: Mapped[str] = mapped_column(sa.String(32), nullable=False)
-    stripe_event_id: Mapped[Optional[str]] = mapped_column(sa.String(128), nullable=True)
+    stripe_event_id: Mapped[Optional[str]] = mapped_column(
+        sa.String(128), nullable=True
+    )
     effective_at: Mapped[datetime] = mapped_column(
         sa.DateTime(timezone=True), nullable=False, server_default=sa.text("now()")
     )
@@ -577,7 +764,9 @@ class ProductEvent(Base):
     __tablename__ = "product_events"
 
     id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), primary_key=True, server_default=sa.text("gen_random_uuid()")
+        UUID(as_uuid=True),
+        primary_key=True,
+        server_default=sa.text("gen_random_uuid()"),
     )
     user_id: Mapped[Optional[uuid.UUID]] = mapped_column(
         UUID(as_uuid=True),
@@ -601,8 +790,12 @@ class ProductEvent(Base):
 
     __table_args__ = (
         sa.Index("idx_product_events_created", sa.text("created_at DESC")),
-        sa.Index("idx_product_events_name_created", "event_name", sa.text("created_at DESC")),
-        sa.Index("idx_product_events_user_created", "user_id", sa.text("created_at DESC")),
+        sa.Index(
+            "idx_product_events_name_created", "event_name", sa.text("created_at DESC")
+        ),
+        sa.Index(
+            "idx_product_events_user_created", "user_id", sa.text("created_at DESC")
+        ),
     )
 
 
@@ -610,7 +803,9 @@ class UserFeedback(Base):
     __tablename__ = "user_feedback"
 
     id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), primary_key=True, server_default=sa.text("gen_random_uuid()")
+        UUID(as_uuid=True),
+        primary_key=True,
+        server_default=sa.text("gen_random_uuid()"),
     )
     user_id: Mapped[Optional[uuid.UUID]] = mapped_column(
         UUID(as_uuid=True),
@@ -628,23 +823,32 @@ class UserFeedback(Base):
     path: Mapped[Optional[str]] = mapped_column(sa.String(256), nullable=True)
     locale: Mapped[Optional[str]] = mapped_column(sa.String(16), nullable=True)
     plan: Mapped[Optional[str]] = mapped_column(sa.String(16), nullable=True)
-    status: Mapped[str] = mapped_column(sa.String(16), nullable=False, server_default=sa.text("'new'"))
+    status: Mapped[str] = mapped_column(
+        sa.String(16), nullable=False, server_default=sa.text("'new'")
+    )
     user_agent: Mapped[Optional[str]] = mapped_column(sa.String(256), nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         sa.DateTime(timezone=True), nullable=False, server_default=sa.text("now()")
     )
     updated_at: Mapped[datetime] = mapped_column(
-        sa.DateTime(timezone=True), nullable=False, server_default=sa.text("now()"), onupdate=sa.func.now()
+        sa.DateTime(timezone=True),
+        nullable=False,
+        server_default=sa.text("now()"),
+        onupdate=sa.func.now(),
     )
 
     user: Mapped[Optional["User"]] = relationship("User")
 
     __table_args__ = (
         sa.Index("idx_user_feedback_created", sa.text("created_at DESC")),
-        sa.Index("idx_user_feedback_status_created", "status", sa.text("created_at DESC")),
+        sa.Index(
+            "idx_user_feedback_status_created", "status", sa.text("created_at DESC")
+        ),
         sa.Index("idx_user_feedback_type_created", "type", sa.text("created_at DESC")),
         sa.Index("idx_user_feedback_area_created", "area", sa.text("created_at DESC")),
-        sa.Index("idx_user_feedback_user_created", "user_id", sa.text("created_at DESC")),
+        sa.Index(
+            "idx_user_feedback_user_created", "user_id", sa.text("created_at DESC")
+        ),
     )
 
 
@@ -652,24 +856,43 @@ class DocumentJob(Base):
     __tablename__ = "document_jobs"
 
     id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), primary_key=True, server_default=sa.text("gen_random_uuid()")
+        UUID(as_uuid=True),
+        primary_key=True,
+        server_default=sa.text("gen_random_uuid()"),
     )
     user_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), sa.ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True
+        UUID(as_uuid=True),
+        sa.ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
     )
     document_id: Mapped[Optional[uuid.UUID]] = mapped_column(
-        UUID(as_uuid=True), sa.ForeignKey("documents.id", ondelete="CASCADE"), nullable=True, index=True
+        UUID(as_uuid=True),
+        sa.ForeignKey("documents.id", ondelete="CASCADE"),
+        nullable=True,
+        index=True,
     )
     collection_id: Mapped[Optional[uuid.UUID]] = mapped_column(
-        UUID(as_uuid=True), sa.ForeignKey("collections.id", ondelete="CASCADE"), nullable=True, index=True
+        UUID(as_uuid=True),
+        sa.ForeignKey("collections.id", ondelete="CASCADE"),
+        nullable=True,
+        index=True,
     )
     job_type: Mapped[str] = mapped_column(sa.String(32), nullable=False)
-    status: Mapped[str] = mapped_column(sa.String(24), nullable=False, server_default=sa.text("'queued'"))
-    input_scope: Mapped[dict] = mapped_column(JSONB, nullable=False, server_default=sa.text("'{}'::jsonb"))
-    cost_credits: Mapped[int] = mapped_column(sa.Integer, nullable=False, server_default=sa.text("0"))
+    status: Mapped[str] = mapped_column(
+        sa.String(24), nullable=False, server_default=sa.text("'queued'")
+    )
+    input_scope: Mapped[dict] = mapped_column(
+        JSONB, nullable=False, server_default=sa.text("'{}'::jsonb")
+    )
+    cost_credits: Mapped[int] = mapped_column(
+        sa.Integer, nullable=False, server_default=sa.text("0")
+    )
     error_code: Mapped[Optional[str]] = mapped_column(sa.String(64), nullable=True)
     error_message: Mapped[Optional[str]] = mapped_column(sa.Text, nullable=True)
-    metadata_json: Mapped[dict] = mapped_column(JSONB, nullable=False, server_default=sa.text("'{}'::jsonb"))
+    metadata_json: Mapped[dict] = mapped_column(
+        JSONB, nullable=False, server_default=sa.text("'{}'::jsonb")
+    )
     worker_claim_token: Mapped[Optional[uuid.UUID]] = mapped_column(
         UUID(as_uuid=True), nullable=True
     )
@@ -677,15 +900,22 @@ class DocumentJob(Base):
         sa.Integer, nullable=False, server_default=sa.text("0")
     )
     worker_lease_expires_at: Mapped[Optional[datetime]] = mapped_column(
-        sa.DateTime(timezone=True), nullable=True
+        sa.DateTime(timezone=True),
+        nullable=True,
+        server_default=sa.text("now() + interval '45 minutes'"),
     )
     created_at: Mapped[datetime] = mapped_column(
         sa.DateTime(timezone=True), nullable=False, server_default=sa.text("now()")
     )
     updated_at: Mapped[datetime] = mapped_column(
-        sa.DateTime(timezone=True), nullable=False, server_default=sa.text("now()"), onupdate=sa.func.now()
+        sa.DateTime(timezone=True),
+        nullable=False,
+        server_default=sa.text("now()"),
+        onupdate=sa.func.now(),
     )
-    completed_at: Mapped[Optional[datetime]] = mapped_column(sa.DateTime(timezone=True), nullable=True)
+    completed_at: Mapped[Optional[datetime]] = mapped_column(
+        sa.DateTime(timezone=True), nullable=True
+    )
 
     user: Mapped["User"] = relationship("User")
     document: Mapped[Optional["Document"]] = relationship("Document")
@@ -695,8 +925,17 @@ class DocumentJob(Base):
     )
 
     __table_args__ = (
-        sa.Index("idx_document_jobs_user_created", "user_id", sa.text("created_at DESC")),
+        sa.Index(
+            "idx_document_jobs_user_created", "user_id", sa.text("created_at DESC")
+        ),
         sa.Index("idx_document_jobs_type_status", "job_type", "status"),
+        sa.Index(
+            "idx_document_jobs_predebit_lease",
+            "worker_lease_expires_at",
+            postgresql_where=sa.text("status IN ('queued', 'running')"),
+        ),
+        # Retained for add-only migration discipline; 0043 adds the broader
+        # recovery index without dropping 0042's extraction-specific index.
         sa.Index(
             "idx_document_jobs_extraction_lease",
             "worker_lease_expires_at",
@@ -711,52 +950,78 @@ class ExtractionResult(Base):
     __tablename__ = "extraction_results"
 
     id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), primary_key=True, server_default=sa.text("gen_random_uuid()")
+        UUID(as_uuid=True),
+        primary_key=True,
+        server_default=sa.text("gen_random_uuid()"),
     )
     job_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), sa.ForeignKey("document_jobs.id", ondelete="CASCADE"), nullable=False, unique=True
+        UUID(as_uuid=True),
+        sa.ForeignKey("document_jobs.id", ondelete="CASCADE"),
+        nullable=False,
+        unique=True,
     )
     template_key: Mapped[str] = mapped_column(sa.String(64), nullable=False)
-    structured_json: Mapped[dict] = mapped_column(JSONB, nullable=False, server_default=sa.text("'{}'::jsonb"))
-    rendered_markdown: Mapped[str] = mapped_column(sa.Text, nullable=False, server_default=sa.text("''"))
-    citations: Mapped[list] = mapped_column(JSONB, nullable=False, server_default=sa.text("'[]'::jsonb"))
+    structured_json: Mapped[dict] = mapped_column(
+        JSONB, nullable=False, server_default=sa.text("'{}'::jsonb")
+    )
+    rendered_markdown: Mapped[str] = mapped_column(
+        sa.Text, nullable=False, server_default=sa.text("''")
+    )
+    citations: Mapped[list] = mapped_column(
+        JSONB, nullable=False, server_default=sa.text("'[]'::jsonb")
+    )
     created_at: Mapped[datetime] = mapped_column(
         sa.DateTime(timezone=True), nullable=False, server_default=sa.text("now()")
     )
     updated_at: Mapped[datetime] = mapped_column(
-        sa.DateTime(timezone=True), nullable=False, server_default=sa.text("now()"), onupdate=sa.func.now()
+        sa.DateTime(timezone=True),
+        nullable=False,
+        server_default=sa.text("now()"),
+        onupdate=sa.func.now(),
     )
 
-    job: Mapped[DocumentJob] = relationship("DocumentJob", back_populates="extraction_result")
-
-    __table_args__ = (
-        sa.Index("idx_extraction_results_template", "template_key"),
+    job: Mapped[DocumentJob] = relationship(
+        "DocumentJob", back_populates="extraction_result"
     )
+
+    __table_args__ = (sa.Index("idx_extraction_results_template", "template_key"),)
 
 
 class QuestionTemplate(Base):
     __tablename__ = "question_templates"
 
     id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), primary_key=True, server_default=sa.text("gen_random_uuid()")
+        UUID(as_uuid=True),
+        primary_key=True,
+        server_default=sa.text("gen_random_uuid()"),
     )
     user_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), sa.ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True
+        UUID(as_uuid=True),
+        sa.ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
     )
     name: Mapped[str] = mapped_column(sa.String(160), nullable=False)
     description: Mapped[Optional[str]] = mapped_column(sa.Text, nullable=True)
-    questions: Mapped[list] = mapped_column(JSONB, nullable=False, server_default=sa.text("'[]'::jsonb"))
+    questions: Mapped[list] = mapped_column(
+        JSONB, nullable=False, server_default=sa.text("'[]'::jsonb")
+    )
     created_at: Mapped[datetime] = mapped_column(
         sa.DateTime(timezone=True), nullable=False, server_default=sa.text("now()")
     )
     updated_at: Mapped[datetime] = mapped_column(
-        sa.DateTime(timezone=True), nullable=False, server_default=sa.text("now()"), onupdate=sa.func.now()
+        sa.DateTime(timezone=True),
+        nullable=False,
+        server_default=sa.text("now()"),
+        onupdate=sa.func.now(),
     )
 
     user: Mapped["User"] = relationship("User")
 
     __table_args__ = (
-        sa.Index("idx_question_templates_user_updated", "user_id", sa.text("updated_at DESC")),
+        sa.Index(
+            "idx_question_templates_user_updated", "user_id", sa.text("updated_at DESC")
+        ),
     )
 
 
@@ -764,22 +1029,39 @@ class DocumentBrief(Base):
     __tablename__ = "document_briefs"
 
     id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), primary_key=True, server_default=sa.text("gen_random_uuid()")
+        UUID(as_uuid=True),
+        primary_key=True,
+        server_default=sa.text("gen_random_uuid()"),
     )
     document_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), sa.ForeignKey("documents.id", ondelete="CASCADE"), nullable=False, unique=True
+        UUID(as_uuid=True),
+        sa.ForeignKey("documents.id", ondelete="CASCADE"),
+        nullable=False,
+        unique=True,
     )
-    schema_version: Mapped[int] = mapped_column(sa.Integer, nullable=False, server_default=sa.text("1"))
+    schema_version: Mapped[int] = mapped_column(
+        sa.Integer, nullable=False, server_default=sa.text("1")
+    )
     prompt_version: Mapped[str] = mapped_column(
         sa.String(48), nullable=False, server_default=sa.text("'document_brief_v1'")
     )
     model: Mapped[Optional[str]] = mapped_column(sa.String(100), nullable=True)
     summary: Mapped[Optional[str]] = mapped_column(sa.Text, nullable=True)
-    outline: Mapped[list] = mapped_column(JSONB, nullable=False, server_default=sa.text("'[]'::jsonb"))
-    key_points: Mapped[list] = mapped_column(JSONB, nullable=False, server_default=sa.text("'[]'::jsonb"))
-    facts: Mapped[list] = mapped_column(JSONB, nullable=False, server_default=sa.text("'[]'::jsonb"))
-    questions: Mapped[list] = mapped_column(JSONB, nullable=False, server_default=sa.text("'[]'::jsonb"))
-    coverage: Mapped[dict] = mapped_column(JSONB, nullable=False, server_default=sa.text("'{}'::jsonb"))
+    outline: Mapped[list] = mapped_column(
+        JSONB, nullable=False, server_default=sa.text("'[]'::jsonb")
+    )
+    key_points: Mapped[list] = mapped_column(
+        JSONB, nullable=False, server_default=sa.text("'[]'::jsonb")
+    )
+    facts: Mapped[list] = mapped_column(
+        JSONB, nullable=False, server_default=sa.text("'[]'::jsonb")
+    )
+    questions: Mapped[list] = mapped_column(
+        JSONB, nullable=False, server_default=sa.text("'[]'::jsonb")
+    )
+    coverage: Mapped[dict] = mapped_column(
+        JSONB, nullable=False, server_default=sa.text("'{}'::jsonb")
+    )
     error_code: Mapped[Optional[str]] = mapped_column(sa.String(64), nullable=True)
     error_message: Mapped[Optional[str]] = mapped_column(sa.Text, nullable=True)
     generated_at: Mapped[datetime] = mapped_column(
@@ -789,41 +1071,56 @@ class DocumentBrief(Base):
         sa.DateTime(timezone=True), nullable=False, server_default=sa.text("now()")
     )
     updated_at: Mapped[datetime] = mapped_column(
-        sa.DateTime(timezone=True), nullable=False, server_default=sa.text("now()"), onupdate=sa.func.now()
+        sa.DateTime(timezone=True),
+        nullable=False,
+        server_default=sa.text("now()"),
+        onupdate=sa.func.now(),
     )
 
     document: Mapped["Document"] = relationship("Document", back_populates="brief")
 
-    __table_args__ = (
-        sa.Index("idx_document_briefs_document", "document_id"),
-    )
+    __table_args__ = (sa.Index("idx_document_briefs_document", "document_id"),)
 
 
 class DocumentTable(Base):
     __tablename__ = "document_tables"
 
     id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), primary_key=True, server_default=sa.text("gen_random_uuid()")
+        UUID(as_uuid=True),
+        primary_key=True,
+        server_default=sa.text("gen_random_uuid()"),
     )
     document_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), sa.ForeignKey("documents.id", ondelete="CASCADE"), nullable=False, index=True
+        UUID(as_uuid=True),
+        sa.ForeignKey("documents.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
     )
     page: Mapped[int] = mapped_column(sa.Integer, nullable=False)
     table_index: Mapped[int] = mapped_column(sa.Integer, nullable=False)
-    cells: Mapped[dict] = mapped_column(JSONB, nullable=False, server_default=sa.text("'{}'::jsonb"))
-    confidence: Mapped[float] = mapped_column(sa.Float, nullable=False, server_default=sa.text("0"))
+    cells: Mapped[dict] = mapped_column(
+        JSONB, nullable=False, server_default=sa.text("'{}'::jsonb")
+    )
+    confidence: Mapped[float] = mapped_column(
+        sa.Float, nullable=False, server_default=sa.text("0")
+    )
     method: Mapped[str] = mapped_column(sa.String(32), nullable=False)
     created_at: Mapped[datetime] = mapped_column(
         sa.DateTime(timezone=True), nullable=False, server_default=sa.text("now()")
     )
     updated_at: Mapped[datetime] = mapped_column(
-        sa.DateTime(timezone=True), nullable=False, server_default=sa.text("now()"), onupdate=sa.func.now()
+        sa.DateTime(timezone=True),
+        nullable=False,
+        server_default=sa.text("now()"),
+        onupdate=sa.func.now(),
     )
 
     document: Mapped["Document"] = relationship("Document")
 
     __table_args__ = (
-        sa.UniqueConstraint("document_id", "page", "table_index", name="uq_document_tables_position"),
+        sa.UniqueConstraint(
+            "document_id", "page", "table_index", name="uq_document_tables_position"
+        ),
         sa.Index("idx_document_tables_document_page", "document_id", "page"),
     )
 
@@ -832,30 +1129,51 @@ class DocumentLayoutRun(Base):
     __tablename__ = "document_layout_runs"
 
     id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), primary_key=True, server_default=sa.text("gen_random_uuid()")
+        UUID(as_uuid=True),
+        primary_key=True,
+        server_default=sa.text("gen_random_uuid()"),
     )
     document_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), sa.ForeignKey("documents.id", ondelete="CASCADE"), nullable=False, index=True
+        UUID(as_uuid=True),
+        sa.ForeignKey("documents.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
     )
     provider: Mapped[str] = mapped_column(sa.String(64), nullable=False)
-    status: Mapped[str] = mapped_column(sa.String(32), nullable=False, server_default=sa.text("'queued'"))
+    status: Mapped[str] = mapped_column(
+        sa.String(32), nullable=False, server_default=sa.text("'queued'")
+    )
     raw_storage_key: Mapped[Optional[str]] = mapped_column(sa.Text, nullable=True)
-    pages_count: Mapped[int] = mapped_column(sa.Integer, nullable=False, server_default=sa.text("0"))
-    tables_count: Mapped[int] = mapped_column(sa.Integer, nullable=False, server_default=sa.text("0"))
+    pages_count: Mapped[int] = mapped_column(
+        sa.Integer, nullable=False, server_default=sa.text("0")
+    )
+    tables_count: Mapped[int] = mapped_column(
+        sa.Integer, nullable=False, server_default=sa.text("0")
+    )
     error_code: Mapped[Optional[str]] = mapped_column(sa.String(64), nullable=True)
     error_message: Mapped[Optional[str]] = mapped_column(sa.Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         sa.DateTime(timezone=True), nullable=False, server_default=sa.text("now()")
     )
     updated_at: Mapped[datetime] = mapped_column(
-        sa.DateTime(timezone=True), nullable=False, server_default=sa.text("now()"), onupdate=sa.func.now()
+        sa.DateTime(timezone=True),
+        nullable=False,
+        server_default=sa.text("now()"),
+        onupdate=sa.func.now(),
     )
-    completed_at: Mapped[Optional[datetime]] = mapped_column(sa.DateTime(timezone=True), nullable=True)
+    completed_at: Mapped[Optional[datetime]] = mapped_column(
+        sa.DateTime(timezone=True), nullable=True
+    )
 
     document: Mapped["Document"] = relationship("Document")
 
     __table_args__ = (
-        sa.Index("idx_document_layout_runs_document_provider", "document_id", "provider", "created_at"),
+        sa.Index(
+            "idx_document_layout_runs_document_provider",
+            "document_id",
+            "provider",
+            "created_at",
+        ),
     )
 
 
@@ -875,24 +1193,37 @@ class DocumentBiblio(Base):
     migration. This is a deliberate, documented deviation from a literal
     reading of "PK (document_id, user_id)"; functionally equivalent.
     """
+
     __tablename__ = "document_biblio"
 
     id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), primary_key=True, server_default=sa.text("gen_random_uuid()")
+        UUID(as_uuid=True),
+        primary_key=True,
+        server_default=sa.text("gen_random_uuid()"),
     )
     document_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), sa.ForeignKey("documents.id", ondelete="CASCADE"), nullable=False, index=True
+        UUID(as_uuid=True),
+        sa.ForeignKey("documents.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
     )
     user_id: Mapped[Optional[uuid.UUID]] = mapped_column(
         UUID(as_uuid=True), sa.ForeignKey("users.id", ondelete="CASCADE"), nullable=True
     )
-    csl_json: Mapped[dict] = mapped_column(JSONB, nullable=False, server_default=sa.text("'{}'::jsonb"))
-    source: Mapped[str] = mapped_column(sa.String(16), nullable=False, server_default=sa.text("'system'"))
+    csl_json: Mapped[dict] = mapped_column(
+        JSONB, nullable=False, server_default=sa.text("'{}'::jsonb")
+    )
+    source: Mapped[str] = mapped_column(
+        sa.String(16), nullable=False, server_default=sa.text("'system'")
+    )
     created_at: Mapped[datetime] = mapped_column(
         sa.DateTime(timezone=True), nullable=False, server_default=sa.text("now()")
     )
     updated_at: Mapped[datetime] = mapped_column(
-        sa.DateTime(timezone=True), nullable=False, server_default=sa.text("now()"), onupdate=sa.func.now()
+        sa.DateTime(timezone=True),
+        nullable=False,
+        server_default=sa.text("now()"),
+        onupdate=sa.func.now(),
     )
 
     document: Mapped["Document"] = relationship("Document")
@@ -920,16 +1251,23 @@ class SavedQuote(Base):
     range, see saved_quotes_service.compute_quote_hash) — never trust a
     client-supplied hash, or dedup/idempotency becomes forgeable.
     """
+
     __tablename__ = "saved_quotes"
 
     id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), primary_key=True, server_default=sa.text("gen_random_uuid()")
+        UUID(as_uuid=True),
+        primary_key=True,
+        server_default=sa.text("gen_random_uuid()"),
     )
     user_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), sa.ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+        UUID(as_uuid=True),
+        sa.ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=False,
     )
     document_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), sa.ForeignKey("documents.id", ondelete="CASCADE"), nullable=False
+        UUID(as_uuid=True),
+        sa.ForeignKey("documents.id", ondelete="CASCADE"),
+        nullable=False,
     )
     page: Mapped[int] = mapped_column(sa.Integer, nullable=False)
     page_end: Mapped[int] = mapped_column(sa.Integer, nullable=False)
@@ -939,7 +1277,9 @@ class SavedQuote(Base):
     verification_score: Mapped[float] = mapped_column(sa.Float, nullable=False)
     verifier_version: Mapped[str] = mapped_column(sa.String(16), nullable=False)
     source_chunk_id: Mapped[Optional[uuid.UUID]] = mapped_column(
-        UUID(as_uuid=True), sa.ForeignKey("chunks.id", ondelete="SET NULL"), nullable=True
+        UUID(as_uuid=True),
+        sa.ForeignKey("chunks.id", ondelete="SET NULL"),
+        nullable=True,
     )
     source_kind: Mapped[str] = mapped_column(sa.String(16), nullable=False)
     quote_hash: Mapped[str] = mapped_column(sa.String(64), nullable=False)
@@ -963,7 +1303,10 @@ class SavedQuote(Base):
         sa.DateTime(timezone=True), nullable=False, server_default=sa.text("now()")
     )
     updated_at: Mapped[datetime] = mapped_column(
-        sa.DateTime(timezone=True), nullable=False, server_default=sa.text("now()"), onupdate=sa.func.now()
+        sa.DateTime(timezone=True),
+        nullable=False,
+        server_default=sa.text("now()"),
+        onupdate=sa.func.now(),
     )
 
     __table_args__ = (
@@ -978,11 +1321,15 @@ class SavedQuote(Base):
         # useful to this index's only query shape ("which rows reference
         # chunk X").
         sa.Index(
-            "idx_saved_quotes_source_chunk_id", "source_chunk_id",
+            "idx_saved_quotes_source_chunk_id",
+            "source_chunk_id",
             postgresql_where=sa.text("source_chunk_id IS NOT NULL"),
         ),
         sa.UniqueConstraint(
-            "user_id", "document_id", "quote_hash", name="uq_saved_quotes_user_document_hash"
+            "user_id",
+            "document_id",
+            "quote_hash",
+            name="uq_saved_quotes_user_document_hash",
         ),
     )
 

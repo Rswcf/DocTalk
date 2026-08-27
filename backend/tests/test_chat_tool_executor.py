@@ -24,7 +24,13 @@ def _make_user(plan: str = "plus") -> SimpleNamespace:
 
 
 def _make_doc(user: SimpleNamespace) -> SimpleNamespace:
-    return SimpleNamespace(id=uuid.uuid4(), user_id=user.id, status="ready", demo_slug=None, filename="report.pdf")
+    return SimpleNamespace(
+        id=uuid.uuid4(),
+        user_id=user.id,
+        status="ready",
+        demo_slug=None,
+        filename="report.pdf",
+    )
 
 
 @pytest.mark.asyncio
@@ -136,3 +142,50 @@ async def test_executor_asks_for_compare_document_selection() -> None:
 
     assert "which two versions" in result.message
     assert result.artifact is None
+
+
+@pytest.mark.asyncio
+async def test_chat_native_extraction_predebit_is_created_with_lease(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from app.services import credit_service
+    from app.workers.extraction_worker import run_extraction_job
+
+    user = _make_user("plus")
+    doc = _make_doc(user)
+    added: list[object] = []
+    db = SimpleNamespace(
+        get=AsyncMock(return_value=doc),
+        add=added.append,
+        flush=AsyncMock(),
+        commit=AsyncMock(),
+        refresh=AsyncMock(),
+    )
+    monkeypatch.setattr(
+        credit_service,
+        "debit_credits",
+        AsyncMock(return_value=uuid.uuid4()),
+    )
+    monkeypatch.setattr(run_extraction_job, "delay", lambda *_args: None)
+
+    result = await chat_tool_executor.execute(
+        ActionPlan(
+            action=ChatAction.EXTRACT_DELIVERABLE,
+            confidence=1.0,
+            requires_confirmation=False,
+            template_key="executive_summary",
+        ),
+        user=user,
+        db=db,
+        document_id=doc.id,
+        collection_doc_ids=[],
+        locale="en",
+        domain_mode=None,
+    )
+
+    assert result.artifact is not None
+    assert result.artifact.status == "queued"
+    created_job = next(
+        row for row in added if getattr(row, "job_type", None) == "extraction"
+    )
+    assert created_job.worker_lease_expires_at > datetime.now(timezone.utc)

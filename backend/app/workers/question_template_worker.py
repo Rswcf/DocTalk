@@ -1,4 +1,5 @@
 """Celery tasks for reusable question template runs."""
+
 from __future__ import annotations
 
 from celery.utils.log import get_task_logger
@@ -18,6 +19,10 @@ logger = get_task_logger(__name__)
     retry_kwargs={"max_retries": 1},
     retry_backoff=30,
 )
-def run_batch_template_job(self, job_id: str) -> None:
+def run_batch_template_job(
+    self,
+    job_id: str,
+    claim_token: str | None = None,
+) -> None:
     logger.info("Starting question template job %s", job_id)
-    run_batch_template_job_sync(job_id)
+    run_batch_template_job_sync(job_id, expected_claim_token=claim_token)

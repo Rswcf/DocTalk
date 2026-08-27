@@ -1,4 +1,5 @@
 """Semantic document comparison APIs."""
+
 from __future__ import annotations
 
 import re
@@ -29,6 +30,7 @@ from app.services.document_diff_service import (
     DOCUMENT_DIFF_PREDEBIT_CREDITS,
     render_document_diff_csv,
 )
+from app.services.predebited_job_service import create_predebited_document_job
 
 router = APIRouter(prefix="/api", tags=["document-diffs"])
 
@@ -120,7 +122,9 @@ def _require_pro(user: User) -> None:
     )
 
 
-async def _get_owned_ready_document(document_id: uuid.UUID, user: User, db: AsyncSession) -> Document:
+async def _get_owned_ready_document(
+    document_id: uuid.UUID, user: User, db: AsyncSession
+) -> Document:
     doc = await db.get(Document, document_id)
     if not doc or doc.user_id != user.id:
         raise HTTPException(
@@ -135,7 +139,9 @@ async def _get_owned_ready_document(document_id: uuid.UUID, user: User, db: Asyn
     return doc
 
 
-async def _get_owned_collection(collection_id: uuid.UUID, user: User, db: AsyncSession) -> Collection:
+async def _get_owned_collection(
+    collection_id: uuid.UUID, user: User, db: AsyncSession
+) -> Collection:
     row = await db.execute(
         select(Collection)
         .options(selectinload(Collection.documents))
@@ -151,7 +157,9 @@ async def _get_owned_collection(collection_id: uuid.UUID, user: User, db: AsyncS
     return collection
 
 
-def _verify_collection_membership(collection: Collection, old_doc_id: uuid.UUID, new_doc_id: uuid.UUID) -> None:
+def _verify_collection_membership(
+    collection: Collection, old_doc_id: uuid.UUID, new_doc_id: uuid.UUID
+) -> None:
     document_ids = {doc.id for doc in collection.documents}
     if old_doc_id not in document_ids or new_doc_id not in document_ids:
         raise HTTPException(
@@ -172,12 +180,12 @@ async def _create_diff_job(
     collection_id: uuid.UUID | None,
     locale: str | None,
 ) -> DocumentJob:
-    job = DocumentJob(
+    job, ledger_id = await create_predebited_document_job(
+        db,
         user_id=user.id,
         document_id=new_doc.id,
         collection_id=collection_id,
         job_type=DOCUMENT_DIFF_JOB_TYPE,
-        status="queued",
         input_scope={
             "old_document_id": str(old_doc.id),
             "old_document_filename": old_doc.filename,
@@ -185,18 +193,8 @@ async def _create_diff_job(
             "new_document_filename": new_doc.filename,
             "locale": locale,
         },
-        cost_credits=0,
-    )
-    db.add(job)
-    await db.flush()
-
-    ledger_id = await credit_service.debit_credits(
-        db,
-        user_id=user.id,
-        cost=DOCUMENT_DIFF_PREDEBIT_CREDITS,
+        predebit=DOCUMENT_DIFF_PREDEBIT_CREDITS,
         reason="document_diff",
-        ref_type="document_job",
-        ref_id=str(job.id),
     )
     if ledger_id is None:
         await db.rollback()
@@ -210,11 +208,6 @@ async def _create_diff_job(
                 "balance": balance,
             },
         )
-
-    job.metadata_json = {
-        "predebit_ledger_id": str(ledger_id),
-        "pre_debited": DOCUMENT_DIFF_PREDEBIT_CREDITS,
-    }
     db.add(
         ProductEvent(
             user_id=user.id,
@@ -247,6 +240,10 @@ async def _create_diff_job(
                     status="failed",
                     error_code="DOCUMENT_DIFF_QUEUE_FAILED",
                     error_message="Failed to queue document comparison",
+                    completed_at=sa.func.now(),
+                    updated_at=sa.func.now(),
+                    worker_claim_token=None,
+                    worker_lease_expires_at=None,
                 )
                 .returning(DocumentJob.id)
                 .execution_options(synchronize_session=False)
@@ -271,12 +268,17 @@ async def _create_diff_job(
         await db.execute(
             sa.update(User)
             .where(User.id == user.id)
-            .values(credits_balance=User.credits_balance + DOCUMENT_DIFF_PREDEBIT_CREDITS)
+            .values(
+                credits_balance=User.credits_balance + DOCUMENT_DIFF_PREDEBIT_CREDITS
+            )
         )
         await db.commit()
         raise HTTPException(
             status_code=500,
-            detail={"error": "DOCUMENT_DIFF_QUEUE_FAILED", "message": "Failed to queue document comparison"},
+            detail={
+                "error": "DOCUMENT_DIFF_QUEUE_FAILED",
+                "message": "Failed to queue document comparison",
+            },
         ) from exc
 
     return job
@@ -288,7 +290,11 @@ def _enqueue_document_diff_job(job_id: str) -> None:
     run_document_diff_job.delay(job_id)
 
 
-@router.post("/document-diffs", response_model=DocumentDiffRunResponse, status_code=status.HTTP_202_ACCEPTED)
+@router.post(
+    "/document-diffs",
+    response_model=DocumentDiffRunResponse,
+    status_code=status.HTTP_202_ACCEPTED,
+)
 async def create_document_diff(
     body: CreateDocumentDiffRequest,
     user: User = Depends(require_auth),
@@ -298,7 +304,10 @@ async def create_document_diff(
     if body.old_document_id == body.new_document_id:
         raise HTTPException(
             status_code=400,
-            detail={"error": "DOCUMENT_DIFF_SAME_DOCUMENT", "message": "Choose two different documents"},
+            detail={
+                "error": "DOCUMENT_DIFF_SAME_DOCUMENT",
+                "message": "Choose two different documents",
+            },
         )
     old_doc = await _get_owned_ready_document(body.old_document_id, user, db)
     new_doc = await _get_owned_ready_document(body.new_document_id, user, db)
@@ -354,7 +363,10 @@ async def get_document_diff(
     if not job:
         raise HTTPException(
             status_code=404,
-            detail={"error": "DOCUMENT_DIFF_NOT_FOUND", "message": "Document comparison not found"},
+            detail={
+                "error": "DOCUMENT_DIFF_NOT_FOUND",
+                "message": "Document comparison not found",
+            },
         )
     return _run_response(job)
 
@@ -378,7 +390,10 @@ async def export_document_diff(
     if not job or not result:
         raise HTTPException(
             status_code=404,
-            detail={"error": "DOCUMENT_DIFF_NOT_FOUND", "message": "Document comparison not found"},
+            detail={
+                "error": "DOCUMENT_DIFF_NOT_FOUND",
+                "message": "Document comparison not found",
+            },
         )
     stem = f"document-diff-{str(job.id)[:8]}"
     if format == "csv":

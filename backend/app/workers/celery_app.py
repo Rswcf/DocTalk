@@ -65,7 +65,7 @@ celery_app.conf.beat_schedule = {
         "task": "requeue_stale_processing_documents",
         "schedule": 1800,
     },
-    # Structured-extraction leases and this cadence are both 45 minutes,
+    # Predebited DocumentJob leases and this cadence are both 45 minutes,
     # longer than Redis's 40-minute visibility timeout. Broker redelivery gets
     # first chance to recover a dead late-ack task; only then may this watchdog
     # spend the job's one bounded recovery claim.
