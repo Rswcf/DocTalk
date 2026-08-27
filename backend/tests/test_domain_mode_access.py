@@ -1,8 +1,9 @@
 from __future__ import annotations
 
 import uuid
+from datetime import datetime, timezone
 from types import SimpleNamespace
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 from fastapi import HTTPException
@@ -114,3 +115,31 @@ async def test_paid_and_omitted_mode_paths_do_not_touch_trial_storage() -> None:
     db.scalar.assert_not_awaited()
     db.execute.assert_not_awaited()
     assert db.added == []
+
+
+def test_orphaned_trial_release_is_correlated_to_ledger_transaction_time() -> None:
+    from sqlalchemy.dialects import postgresql
+
+    from app.services.domain_mode_access import release_orphaned_extraction_trial_sync
+
+    db = MagicMock()
+    db.scalar.return_value = uuid.uuid4()
+    db.execute.return_value.scalar_one_or_none.return_value = uuid.uuid4()
+    ledger_created_at = datetime.now(timezone.utc)
+
+    assert release_orphaned_extraction_trial_sync(
+        db,
+        user_id=uuid.uuid4(),
+        ledger_created_at=ledger_created_at,
+    ) is True
+
+    statement = db.execute.call_args.args[0]
+    sql = str(
+        statement.compile(
+            dialect=postgresql.dialect(),
+            compile_kwargs={"literal_binds": True},
+        )
+    )
+    assert "owning_session_id IS NULL" in sql
+    assert "owning_job_id IS NULL" in sql
+    assert "created_at =" in sql

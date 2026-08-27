@@ -13,6 +13,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.security_log import log_security_event
 from app.models.tables import Document
+from app.services.predebited_job_service import (
+    settle_active_predebited_jobs_before_parent_delete,
+)
 from app.services.storage_service import storage_service
 
 logger = logging.getLogger(__name__)
@@ -128,10 +131,19 @@ class DocService:
             select(Document)
             .options(selectinload(Document.chunks))
             .where(Document.id == document_id)
+            .with_for_update()
         )
         doc = res.scalar_one_or_none()
         if not doc:
             return False
+
+        # Locking the parent serializes any concurrent child FK insert. Active
+        # credit-bearing jobs then settle under the same per-job advisory lock
+        # as workers before the parent CASCADE can remove their recovery row.
+        await settle_active_predebited_jobs_before_parent_delete(
+            db,
+            document_id=document_id,
+        )
 
         original_storage_ok = True
         converted_storage_ok = True

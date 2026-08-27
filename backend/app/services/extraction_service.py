@@ -29,7 +29,10 @@ from app.models.tables import (
 )
 from app.services.credit_service import calculate_cost
 from app.services.document_element_service import get_element_aware_chunks
-from app.services.domain_mode_access import release_failed_extraction_trial_sync
+from app.services.domain_mode_access import (
+    release_failed_extraction_trial_sync,
+    release_orphaned_extraction_trial_sync,
+)
 from app.services.embedding_service import embedding_service
 from app.services.predebited_job_service import (
     PREDEBITED_JOB_LEASE_SECONDS,
@@ -48,11 +51,12 @@ FREE_MONTHLY_EXTRACTION_LIMIT = 2
 MAX_CONTEXT_CHUNKS = 10
 MAX_CONTEXT_CHARS_PER_CHUNK = 1400
 
-# The worker's hard time limit is seven minutes and Redis redelivers an
-# unacknowledged task after 40 minutes. A claim must remain exclusive beyond
-# that broker window, otherwise the original and redelivered tasks could both
-# deliver/settle. One expired claim may be recovered; a second expiration is
-# terminally refunded instead of leaving the predebit standing forever.
+# Covered worker hard limits are 7 minutes (extraction), 12 minutes (question
+# templates), and 10 minutes (document diffs); Redis redelivers an unacknowledged
+# task after 40 minutes. A claim must remain exclusive beyond that broker
+# window, otherwise the original and redelivered tasks could both deliver or
+# settle. One expired claim may be recovered; a second expiration is terminally
+# refunded instead of leaving the predebit standing forever.
 EXTRACTION_LEASE_SECONDS = PREDEBITED_JOB_LEASE_SECONDS
 EXTRACTION_MAX_CLAIM_ATTEMPTS = PREDEBITED_JOB_MAX_CLAIM_ATTEMPTS
 EXTRACTION_LOCK_NAMESPACE = PREDEBITED_JOB_LOCK_NAMESPACE
@@ -673,7 +677,7 @@ def _reconcile_sync(
 
 def _settle_extraction_predebit_after_failure_sync(
     *,
-    job_id: uuid.UUID,
+    job_id: uuid.UUID | str,
     user_id: uuid.UUID | None = None,
     pre_debited: int | None = None,
     ledger_id: uuid.UUID | None = None,
@@ -686,44 +690,86 @@ def _settle_extraction_predebit_after_failure_sync(
     The conditional ledger delete is the only settlement decision. If the
     success transaction already reconciled the row, this resolver is a no-op
     and deliberately leaves the succeeded job untouched. If the delete wins,
-    the balance refund, failed job state, and optional Domain Mode trial
-    release commit atomically.
+    the balance refund, surviving failed-job state, and optional Domain Mode
+    trial release commit atomically. A historical missing job is recovered
+    from its canonical orphan ledger without inventing a second refund path.
     """
     from app.models.sync_database import SyncSessionLocal
 
     with SyncSessionLocal() as settle_db:
-        job_snapshot = settle_db.get(DocumentJob, job_id)
+        job_id_text = str(job_id)
+        try:
+            job_uuid = uuid.UUID(job_id_text)
+        except (TypeError, ValueError):
+            job_uuid = None
+        job_snapshot = settle_db.get(DocumentJob, job_uuid) if job_uuid else None
+        orphaned_ledger_reason: str | None = None
+        orphaned_ledger_created_at: datetime | None = None
+
         if job_snapshot is None:
-            raise RuntimeError(
-                f"Extraction job {job_id} not found during failure settlement"
-            )
-        metadata = job_snapshot.metadata_json or {}
-        metadata_pre_debited = int(metadata.get("pre_debited") or 0)
-        ledger_raw = metadata.get("predebit_ledger_id")
-        resolved_pre_debited = (
-            int(pre_debited) if pre_debited is not None else metadata_pre_debited
-        )
-        resolved_ledger_id = (
-            ledger_id
-            if ledger_id is not None
-            else (uuid.UUID(str(ledger_raw)) if ledger_raw else None)
-        )
-        resolved_user_id = user_id or job_snapshot.user_id
-        if resolved_ledger_id is None or resolved_pre_debited <= 0:
-            fallback_ledger = settle_db.scalar(
+            # Historical parent/direct deletes can already have removed the
+            # job anchor while leaving its string-referenced ledger. Resolve
+            # from that canonical row so the same conditional DELETE remains
+            # the sole settlement decision; never infer a refund from metadata
+            # alone after the ledger itself is gone or reconciled.
+            orphaned_ledger = settle_db.scalar(
                 sa.select(CreditLedger)
                 .where(
-                    CreditLedger.user_id == resolved_user_id,
                     CreditLedger.ref_type == "document_job",
-                    CreditLedger.ref_id == str(job_id),
+                    CreditLedger.ref_id == job_id_text,
                     CreditLedger.reconciled_at.is_(None),
+                    *(
+                        (CreditLedger.id == ledger_id,)
+                        if ledger_id is not None
+                        else ()
+                    ),
+                    *(
+                        (CreditLedger.user_id == user_id,)
+                        if user_id is not None
+                        else ()
+                    ),
                 )
                 .order_by(CreditLedger.created_at.desc())
                 .limit(1)
             )
-            if fallback_ledger is not None:
-                resolved_ledger_id = fallback_ledger.id
-                resolved_pre_debited = max(0, -int(fallback_ledger.delta))
+            if orphaned_ledger is None:
+                settle_db.rollback()
+                return False
+            resolved_ledger_id = orphaned_ledger.id
+            resolved_pre_debited = max(0, -int(orphaned_ledger.delta))
+            resolved_user_id = orphaned_ledger.user_id
+            orphaned_ledger_reason = orphaned_ledger.reason
+            orphaned_ledger_created_at = orphaned_ledger.created_at
+        else:
+            metadata = job_snapshot.metadata_json or {}
+            metadata_pre_debited = int(metadata.get("pre_debited") or 0)
+            ledger_raw = metadata.get("predebit_ledger_id")
+            resolved_pre_debited = (
+                int(pre_debited)
+                if pre_debited is not None
+                else metadata_pre_debited
+            )
+            resolved_ledger_id = (
+                ledger_id
+                if ledger_id is not None
+                else (uuid.UUID(str(ledger_raw)) if ledger_raw else None)
+            )
+            resolved_user_id = user_id or job_snapshot.user_id
+            if resolved_ledger_id is None or resolved_pre_debited <= 0:
+                fallback_ledger = settle_db.scalar(
+                    sa.select(CreditLedger)
+                    .where(
+                        CreditLedger.user_id == resolved_user_id,
+                        CreditLedger.ref_type == "document_job",
+                        CreditLedger.ref_id == job_id_text,
+                        CreditLedger.reconciled_at.is_(None),
+                    )
+                    .order_by(CreditLedger.created_at.desc())
+                    .limit(1)
+                )
+                if fallback_ledger is not None:
+                    resolved_ledger_id = fallback_ledger.id
+                    resolved_pre_debited = max(0, -int(fallback_ledger.delta))
         if resolved_pre_debited <= 0 or resolved_ledger_id is None:
             raise RuntimeError(
                 f"Extraction job {job_id} has no recoverable predebit metadata"
@@ -739,8 +785,22 @@ def _settle_extraction_predebit_after_failure_sync(
             settle_db.rollback()
             return False
 
+        if job_snapshot is None:
+            if (
+                release_trial
+                and orphaned_ledger_reason == "extraction"
+                and orphaned_ledger_created_at is not None
+            ):
+                release_orphaned_extraction_trial_sync(
+                    settle_db,
+                    user_id=resolved_user_id,
+                    ledger_created_at=orphaned_ledger_created_at,
+                )
+            settle_db.commit()
+            return True
+
         failed_job = settle_db.scalar(
-            sa.select(DocumentJob).where(DocumentJob.id == job_id).with_for_update()
+            sa.select(DocumentJob).where(DocumentJob.id == job_uuid).with_for_update()
         )
         if failed_job is None:
             raise RuntimeError(
@@ -762,7 +822,7 @@ def _settle_extraction_predebit_after_failure_sync(
             release_failed_extraction_trial_sync(
                 settle_db,
                 user_id=resolved_user_id,
-                owning_job_id=job_id,
+                owning_job_id=job_uuid,
             )
 
         settle_db.commit()

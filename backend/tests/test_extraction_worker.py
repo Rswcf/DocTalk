@@ -71,3 +71,46 @@ def test_watchdog_predicate_is_ledger_driven_and_null_lease_safe() -> None:
     assert "document_jobs.created_at <=" in sql
     assert "document_jobs.updated_at <=" in sql
     assert "document_jobs.worker_lease_expires_at IS NOT NULL" not in sql
+
+
+def test_orphan_watchdog_predicate_starts_from_unreconciled_ledgers() -> None:
+    statement = extraction_worker._orphaned_predebit_ledger_ids_statement()
+    sql = str(
+        statement.compile(
+            dialect=postgresql.dialect(),
+            compile_kwargs={"literal_binds": True},
+        )
+    )
+
+    assert "FROM credit_ledger" in sql
+    assert "credit_ledger.ref_type = 'document_job'" in sql
+    assert "credit_ledger.reconciled_at IS NULL" in sql
+    assert "NOT (EXISTS (SELECT document_jobs.id" in sql
+
+
+def test_terminal_watchdog_refunds_only_undelivered_failure_states() -> None:
+    statement = extraction_worker._terminal_undelivered_predebit_job_ids_statement()
+    sql = str(
+        statement.compile(
+            dialect=postgresql.dialect(),
+            compile_kwargs={"literal_binds": True},
+        )
+    )
+
+    assert "document_jobs.status IN ('failed', 'cancelled', 'canceled')" in sql
+    assert "credit_ledger.reconciled_at IS NULL" in sql
+    assert "NOT (EXISTS (SELECT extraction_results.id" in sql
+    assert "succeeded" not in sql
+
+
+def test_every_recovery_policy_has_a_registered_worker_dispatcher() -> None:
+    from app.services.predebited_job_service import RECOVERY_POLICIES
+    from app.workers.celery_app import celery_app
+
+    assert set(extraction_worker.RECOVERY_DISPATCHERS) == set(RECOVERY_POLICIES)
+    includes = set(celery_app.conf.include)
+    assert {
+        "app.workers.extraction_worker",
+        "app.workers.question_template_worker",
+        "app.workers.document_diff_worker",
+    } <= includes

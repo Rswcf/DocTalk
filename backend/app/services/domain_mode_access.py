@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import uuid
+from datetime import datetime
 
 import sqlalchemy as sa
 from fastapi import HTTPException
@@ -52,6 +53,8 @@ async def enforce_domain_mode_access(
     no delivered result, and its credit predebit is refunded in the same
     transaction. Successful extraction reservations are never released.
     Deleting an owner only nulls its pointer and does not itself restore a slot.
+    The orphan-ledger watchdog may later release one legacy NULL-owner
+    extraction slot, but only when its unreconciled refund wins.
     """
     if domain_mode is None:
         return
@@ -193,5 +196,48 @@ def release_failed_extraction_trial_sync(
             user_id=user_id,
             owning_job_id=owning_job_id,
         )
+    )
+    return result.scalar_one_or_none() is not None
+
+
+def release_orphaned_extraction_trial_sync(
+    db: Session,
+    *,
+    user_id: uuid.UUID,
+    ledger_created_at: datetime,
+) -> bool:
+    """Release one legacy NULL-owner slot after an orphan refund wins.
+
+    ``DocumentJob.owning_job_id`` uses ``ON DELETE SET NULL``, so a historical
+    parent CASCADE erased the identity needed by the normal job-specific
+    release predicate. The caller must invoke this only after atomically
+    deleting an unreconciled extraction ledger whose job no longer exists.
+    That marker proves no result was committed. Job trial and predebit rows use
+    the same transaction-scoped PostgreSQL ``now()`` timestamp, which recovers
+    their lost identity without freeing an unrelated NULL-owner chat slot.
+    """
+    locked_user_id = db.scalar(
+        select(User.id).where(User.id == user_id).with_for_update()
+    )
+    if locked_user_id is None:
+        return False
+
+    orphan_id = (
+        select(FeatureTrialUsage.id)
+        .where(
+            FeatureTrialUsage.user_id == user_id,
+            FeatureTrialUsage.feature == DOMAIN_MODE_FEATURE,
+            FeatureTrialUsage.owning_session_id.is_(None),
+            FeatureTrialUsage.owning_job_id.is_(None),
+            FeatureTrialUsage.created_at == ledger_created_at,
+        )
+        .order_by(FeatureTrialUsage.created_at, FeatureTrialUsage.id)
+        .limit(1)
+        .scalar_subquery()
+    )
+    result = db.execute(
+        sa.delete(FeatureTrialUsage)
+        .where(FeatureTrialUsage.id == orphan_id)
+        .returning(FeatureTrialUsage.id)
     )
     return result.scalar_one_or_none() is not None

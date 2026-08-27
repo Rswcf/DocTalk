@@ -19,6 +19,9 @@ from app.models.tables import (
     User,
     collection_documents,
 )
+from app.services.predebited_job_service import (
+    settle_active_predebited_jobs_before_parent_delete,
+)
 
 collections_router = APIRouter(prefix="/api/collections", tags=["collections"])
 
@@ -210,9 +213,17 @@ async def delete_collection(
     db: AsyncSession = Depends(get_db_session),
 ):
     """Delete collection (cascade sessions, keep documents)."""
-    coll = await db.get(Collection, collection_id)
-    if not coll or coll.user_id != user.id:
+    coll = await db.scalar(
+        select(Collection)
+        .where(Collection.id == collection_id, Collection.user_id == user.id)
+        .with_for_update()
+    )
+    if not coll:
         raise HTTPException(status_code=404, detail=COLLECTION_NOT_FOUND_DETAIL)
+    await settle_active_predebited_jobs_before_parent_delete(
+        db,
+        collection_id=collection_id,
+    )
     await db.delete(coll)
     await db.commit()
     return None

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import uuid
 from types import SimpleNamespace
+from unittest.mock import AsyncMock
 
 import pytest
 
@@ -44,6 +45,11 @@ async def test_delete_document_queues_retry_for_converted_pdf_cleanup(monkeypatc
         captured["kwargs"] = kwargs
 
     monkeypatch.setattr(doc_service_module.storage_service, "delete_file", fake_delete_file)
+    monkeypatch.setattr(
+        doc_service_module,
+        "settle_active_predebited_jobs_before_parent_delete",
+        AsyncMock(return_value=0),
+    )
     monkeypatch.setattr(
         embedding_service_module.embedding_service,
         "get_qdrant_client",

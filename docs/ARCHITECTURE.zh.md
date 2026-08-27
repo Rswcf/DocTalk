@@ -1041,7 +1041,7 @@ Table-aware retrieval 会使用这些 canonical table 位置做覆盖选择；�
 
 `credit_ledger.reconciled_at`(迁移 `20260802_0035`)是让预扣/对账/退款三角并发安全的结算标记:异步聊天/Quote Finder 与同步提取类 Worker 的每次对账都先取 `SELECT ... FOR UPDATE`，再必定盖章 `reconciled_at`(含等额无操作路径);所有退款均为单条原子条件删除 `DELETE ... WHERE reconciled_at IS NULL RETURNING id`——行数为 0 即已结算、静默不退且不得覆盖成功 Job;所有终提交异常(不止 `CancelledError`)都走标记解析器，提取类 Worker 必须使用新 Session。解析器失败绝不回落为盲退(预扣保留 + `*.unresolved` 日志);若提取退款胜出，未交付 Job 的失败状态与符合条件的 Domain Mode 试用行释放在同一事务提交;聊天严格引文路由的答案落库+对账+用量记录合并为单一原子提交。对抗调度(对账先胜/退款先胜/对账回滚/等额)已在真实 Postgres 竞态测试下闭合。
 
-提取任务还通过迁移 `20260826_0042` 获得持久的 Job claim token、尝试次数和 45 分钟租约，并在整个执行期间持有 advisory-lock namespace 948。租约长于 Redis 40 分钟的 `visibility_timeout`；claim commit 的回执丢失时，新 Session 通过 token 判定提交是否已落地，其他 delivery 只有在租约过期后才能接管。Beat 与启动恢复最多使用一次过期重试；第二次 claim 再过期时，以同一事务执行条件退款、写入失败 Job 状态，并释放符合条件的 Domain Mode 试用行。
+所有预扣型 `DocumentJob`（直接/聊天内提取、问题模板运行、文档对比）均通过同一创建助手落库；迁移 `20260826_0043` 将持久的 claim token、尝试次数和 45 分钟租约扩展到三类任务。各 Worker 在整个执行期间持有 advisory-lock namespace 948。租约长于 Redis 40 分钟的 `visibility_timeout`；claim commit 的回执丢失时，新 Session 通过 token 判定提交是否已落地，其他 delivery 只有在租约过期后才能接管。Beat 与启动恢复由未对账 ledger 驱动，NULL 租约回退到 `created_at`/`updated_at` 加同一 45 分钟窗口；最多使用一次过期重试，第二次 claim 再过期时，以同一事务执行条件退款、写入失败 Job 状态，并释放符合条件的 Domain Mode 试用行。删除文档或集合时先锁定父行，再取得同一 Job advisory lock 并调用现有终态解析器，随后才允许 CASCADE。Watchdog 还会修复无结果但 ledger 未对账的 failed/cancelled Job，以及历史或绕过服务层删除所留下的无 Job 未对账 ledger；只有后一类提取退款胜出时，才释放一个未交付的 NULL-owner 试用位。`succeeded` 但 ledger 未对账的矛盾数据保持 fail-closed，留待人工核对。
 
 ### 验证式引文保证与路由政策(v0.24.0)
 

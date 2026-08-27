@@ -712,8 +712,8 @@ erDiagram
         string error_code
         text error_message
         jsonb metadata_json
-        uuid worker_claim_token "nullable; extraction lease owner"
-        int worker_claim_attempts "bounded extraction deliveries"
+        uuid worker_claim_token "nullable; predebited delivery owner"
+        int worker_claim_attempts "bounded predebited deliveries"
         datetime worker_lease_expires_at "nullable"
         datetime created_at
         datetime updated_at
@@ -1367,7 +1367,14 @@ marker that makes the pre-debit/reconcile/refund triangle race-safe:
   same 45-minute window, so omission cannot hide a row. Recovery may spend one
   stale reclaim, while a second expired claim atomically performs the existing
   conditional refund and failed-job write, plus eligible extraction-trial
-  release.
+  release. Document and collection deletion lock the parent, then take the same
+  per-job advisory lock and invoke that terminal resolver before their CASCADE;
+  this serializes both worker-claim and concurrent child-insert races. As a
+  historical/out-of-band backstop, the same watchdog starts from unreconciled
+  ledgers whose job no longer exists, conditionally refunds them, and releases
+  one NULL-owner extraction trial only when that undelivered refund wins. It
+  also settles failed/cancelled jobs with no result whose ledger was left
+  unreconciled; ambiguous `succeeded` corruption remains fail-closed.
 - The chat strict-quote route persists answer + reconcile + usage in ONE
   atomic commit, so a cancelled/ambiguous COMMIT can no longer produce a
   persisted answer with a refunded charge (or vice versa).

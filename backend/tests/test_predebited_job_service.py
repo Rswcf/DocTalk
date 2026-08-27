@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+import ast
 import uuid
 from datetime import datetime, timezone
+from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import AsyncMock
 
@@ -76,3 +78,33 @@ async def test_predebited_job_without_registered_recovery_policy_is_rejected(
         )
 
     debit.assert_not_awaited()
+
+
+def test_document_job_predebit_creation_is_exclusive_to_shared_helper() -> None:
+    """A future producer cannot silently bypass lease/recovery registration."""
+    app_dir = Path(__file__).resolve().parents[1] / "app"
+    producer_files: set[str] = set()
+
+    for path in app_dir.rglob("*.py"):
+        tree = ast.parse(path.read_text(), filename=str(path))
+        for node in ast.walk(tree):
+            if not isinstance(node, ast.Call):
+                continue
+            function_name = (
+                node.func.attr
+                if isinstance(node.func, ast.Attribute)
+                else (node.func.id if isinstance(node.func, ast.Name) else "")
+            )
+            if function_name != "debit_credits":
+                continue
+            ref_type = next(
+                (keyword.value for keyword in node.keywords if keyword.arg == "ref_type"),
+                None,
+            )
+            if (
+                isinstance(ref_type, ast.Constant)
+                and ref_type.value == "document_job"
+            ):
+                producer_files.add(path.relative_to(app_dir).as_posix())
+
+    assert producer_files == {"services/predebited_job_service.py"}
