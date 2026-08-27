@@ -405,10 +405,14 @@ export default function DocumentReaderPageClient() {
   // auto-submits — the search itself is billed, so the user still has to
   // hit Find quotes (or edit the topic first).
   const handleTryQuoteFinder = useCallback((topic: string) => {
+    if (!isLoggedIn) {
+      openAuthModal();
+      return;
+    }
     trackEvent('quote_finder_chip_clicked', { source: 'chat_message' });
     setQuoteFinderPrefillTopic(topic);
     setQuoteFinderOpen(true);
-  }, []);
+  }, [isLoggedIn]);
 
   useEffect(() => {
     if (isDesktopLayout !== false || mobileTab !== 'document') return;

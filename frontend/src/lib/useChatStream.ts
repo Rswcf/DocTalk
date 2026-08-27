@@ -70,6 +70,7 @@ export function useChatStream({
   } = useDocTalkStore();
 
   const abortRef = useRef<AbortController | null>(null);
+  const activeAttemptRef = useRef<Promise<void> | null>(null);
 
   // Contract: totalUsed = demoMessagesUsed (server-known count as of the last
   // restore/create) + messages sent locally since then. demoRestoredUserMsgCount
@@ -154,11 +155,11 @@ export function useChatStream({
   // needing a full page reload, regardless of whether the failed request
   // actually consumed server quota or not. Errors are swallowed: this is a
   // best-effort correction, not something that should surface to the user.
-  const reanchorDemoCounter = useCallback((forSessionId: string) => {
+  const reanchorDemoCounter = useCallback((
+    forSessionId: string,
+    epochAtCall = useDocTalkStore.getState().demoAccountingEpoch,
+  ) => {
     if (maxUserMessages == null) return;
-    // Captured synchronously at call time (not read again after the GET
-    // resolves) — see the epoch check below for why.
-    const epochAtCall = useDocTalkStore.getState().demoAccountingEpoch;
     getMessages(forSessionId)
       .then((msgsData) => {
         if (msgsData.demo_messages_used == null) return;
@@ -279,22 +280,31 @@ export function useChatStream({
     quote_finder_hint?: boolean;
     quote_finder_topic?: string | null;
   }) => {
+    if (!d.message_id) {
+      // _processSSEStream uses an empty ID only for terminal EOF without a
+      // backend `done`. The backend releases that reservation before the
+      // response closes, so this is a truncated failed attempt, not success.
+      handleTruncated();
+      setStreaming(false);
+      abortRef.current = null;
+      reanchorDemoCounter(sessionId);
+      return;
+    }
+
     flushPendingText();
     setStreaming(false);
     abortRef.current = null;
     updateSessionActivity(sessionId);
     triggerCreditsRefresh();
     trackEvent('chat_message_completed', { source: 'chat_stream', mode: selectedMode });
-    if (d.message_id) {
-      updateLastMessageMeta({
-        backendId: d.message_id,
-        shareAnchor: messageShareAnchorFromId(d.message_id),
-        ...(d.continuation_count !== undefined ? { continuationCount: d.continuation_count } : {}),
-        quoteFinderHint: d.quote_finder_hint === true,
-        quoteFinderTopic: d.quote_finder_topic ?? null,
-      });
-    }
-  }, [flushPendingText, setStreaming, updateSessionActivity, sessionId, selectedMode, updateLastMessageMeta]);
+    updateLastMessageMeta({
+      backendId: d.message_id,
+      shareAnchor: messageShareAnchorFromId(d.message_id),
+      ...(d.continuation_count !== undefined ? { continuationCount: d.continuation_count } : {}),
+      quoteFinderHint: d.quote_finder_hint === true,
+      quoteFinderTopic: d.quote_finder_topic ?? null,
+    });
+  }, [flushPendingText, handleTruncated, reanchorDemoCounter, setStreaming, updateSessionActivity, sessionId, selectedMode, updateLastMessageMeta]);
 
   const handleAnswerRepaired = useCallback((payload: { text: string; citations: Message['citations'] }) => {
     flushPendingText();
@@ -352,9 +362,25 @@ export function useChatStream({
         handleCitationsRefined,
       );
     } catch (err) {
-      handleAttemptError(err, prompt, epochAtRequest);
+      // Stop owns abort reconciliation after this tracked attempt unwinds.
+      // Running the generic error path here would launch an earlier GET with
+      // the same epoch; its late response could overwrite Stop's newer one.
+      if (!controller.signal.aborted) {
+        handleAttemptError(err, prompt, epochAtRequest);
+      }
     }
   }, [sessionId, updateLastMessage, addCitationToLastMessage, addArtifactToLastMessage, setLastMessageToolStatus, handleAttemptError, handleStreamDone, handleTruncated, handleAnswerRepaired, handleCitationsRefined, selectedMode, locale]);
+
+  const runTrackedAttempt = useCallback(async (attempt: Promise<void>) => {
+    activeAttemptRef.current = attempt;
+    try {
+      await attempt;
+    } finally {
+      if (activeAttemptRef.current === attempt) {
+        activeAttemptRef.current = null;
+      }
+    }
+  }, []);
 
   const sendMessage = useCallback(async (text: string) => {
     if (!text.trim() || isStreaming) return false;
@@ -391,9 +417,9 @@ export function useChatStream({
     setStreaming(true);
     trackEvent('chat_message_sent', { source: 'chat_panel', mode: selectedMode });
 
-    await streamAssistantResponse(text);
+    await runTrackedAttempt(streamAssistantResponse(text));
     return true;
-  }, [isStreaming, demoLimitReached, onRequireAuth, addMessage, setStreaming, streamAssistantResponse, selectedMode, maxUserMessages]);
+  }, [isStreaming, demoLimitReached, onRequireAuth, addMessage, setStreaming, streamAssistantResponse, runTrackedAttempt, selectedMode, maxUserMessages]);
 
   // Regenerate/continue add no new user message locally (they resend/extend
   // an existing turn), but the backend increments demo quota on both — so
@@ -442,8 +468,8 @@ export function useChatStream({
     bumpDemoUsageForRegenOrContinue();
     setStreaming(true);
 
-    await streamAssistantResponse(lastUserText);
-  }, [isStreaming, addMessage, setStreaming, streamAssistantResponse, bumpDemoUsageForRegenOrContinue]);
+    await runTrackedAttempt(streamAssistantResponse(lastUserText));
+  }, [isStreaming, addMessage, setStreaming, streamAssistantResponse, runTrackedAttempt, bumpDemoUsageForRegenOrContinue]);
 
   const continueGenerating = useCallback(async () => {
     if (isStreaming) return;
@@ -462,37 +488,54 @@ export function useChatStream({
     abortRef.current = controller;
     const epochAtRequest = useDocTalkStore.getState().demoAccountingEpoch;
 
-    try {
-      await continueStream(
-        sessionId,
-        lastMsg.backendId || '',
-        ({ text }) => updateLastMessage(text || ''),
-        (citation) => addCitationToLastMessage(citation),
-        // Re-anchor before delegating — covers SSE error-event/mid-stream
-        // failures, which resolve normally (see the try/catch below for the
-        // thrown-fetch-rejection case a callback can't see).
-        (err) => handleAttemptError(err, retryPrompt, epochAtRequest),
-        handleStreamDone,
-        handleTruncated,
-        selectedMode,
-        locale,
-        controller.signal,
-        (artifact) => addArtifactToLastMessage(artifact),
-        ({ message }) => setLastMessageToolStatus(message),
-        handleAnswerRepaired,
-        handleCitationsRefined,
-      );
-    } catch (e) {
-      handleAttemptError(e, retryPrompt, epochAtRequest);
-    }
-  }, [isStreaming, sessionId, markLastMessageTruncated, setStreaming, updateLastMessage, addCitationToLastMessage, addArtifactToLastMessage, setLastMessageToolStatus, handleAttemptError, handleStreamDone, handleTruncated, handleAnswerRepaired, handleCitationsRefined, selectedMode, locale, bumpDemoUsageForRegenOrContinue]);
+    const attempt = (async () => {
+      try {
+        await continueStream(
+          sessionId,
+          lastMsg.backendId || '',
+          ({ text }) => updateLastMessage(text || ''),
+          (citation) => addCitationToLastMessage(citation),
+          // Re-anchor before delegating — covers SSE error-event/mid-stream
+          // failures, which resolve normally (see the try/catch below for the
+          // thrown-fetch-rejection case a callback can't see).
+          (err) => handleAttemptError(err, retryPrompt, epochAtRequest),
+          handleStreamDone,
+          handleTruncated,
+          selectedMode,
+          locale,
+          controller.signal,
+          (artifact) => addArtifactToLastMessage(artifact),
+          ({ message }) => setLastMessageToolStatus(message),
+          handleAnswerRepaired,
+          handleCitationsRefined,
+        );
+      } catch (e) {
+        if (!controller.signal.aborted) {
+          handleAttemptError(e, retryPrompt, epochAtRequest);
+        }
+      }
+    })();
+    await runTrackedAttempt(attempt);
+  }, [isStreaming, sessionId, markLastMessageTruncated, setStreaming, updateLastMessage, addCitationToLastMessage, addArtifactToLastMessage, setLastMessageToolStatus, handleAttemptError, handleStreamDone, handleTruncated, handleAnswerRepaired, handleCitationsRefined, selectedMode, locale, bumpDemoUsageForRegenOrContinue, runTrackedAttempt]);
 
   const stopStreaming = useCallback(() => {
-    abortRef.current?.abort();
+    const controller = abortRef.current;
+    const activeAttempt = activeAttemptRef.current;
+    const epochAtStop = useDocTalkStore.getState().demoAccountingEpoch;
+    controller?.abort();
     abortRef.current = null;
     flushPendingText();
     setStreaming(false);
-  }, [flushPendingText, setStreaming]);
+    if (controller && activeAttempt && maxUserMessages != null) {
+      // Start the GET only after the aborted client stream has unwound. Keep
+      // the Stop-time epoch: if another send/session/document mutation wins
+      // the race, the eventual server snapshot is stale and must be dropped.
+      void activeAttempt.then(
+        () => reanchorDemoCounter(sessionId, epochAtStop),
+        () => reanchorDemoCounter(sessionId, epochAtStop),
+      );
+    }
+  }, [flushPendingText, maxUserMessages, reanchorDemoCounter, sessionId, setStreaming]);
 
   return useMemo(() => ({
     sendMessage,
