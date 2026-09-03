@@ -55,7 +55,6 @@ export function useChatStream({
 }: UseChatStreamOptions): UseChatStreamResult {
   const {
     messages,
-    isStreaming,
     demoMessagesUsed,
     demoRestoredUserMsgCount,
     addMessage,
@@ -71,7 +70,7 @@ export function useChatStream({
   } = useDocTalkStore();
 
   const abortRef = useRef<AbortController | null>(null);
-  const regenerateOrContinueLatchRef = useRef(false);
+  const chatOperationLatchRef = useRef(false);
 
   // Contract: totalUsed = demoMessagesUsed (server-known count as of the last
   // restore/create) + messages sent locally since then. demoRestoredUserMsgCount
@@ -316,69 +315,96 @@ export function useChatStream({
 
   // `onErrorOverride` lets a caller observe an error before it reaches the
   // shared `handleStreamError` (used by regenerateLastResponse to trigger a
-  // demo-counter re-anchor without changing sendMessage's behavior at all).
+  // demo-counter re-anchor). A fetch rejection happens before `chatStream`
+  // can invoke its callback, so route that rejection through the same
+  // caller-selected handler. Once handled, the rejection is swallowed just
+  // like HTTP/SSE failures; user-initiated aborts remain silent.
   const streamAssistantResponse = useCallback(async (prompt: string, onErrorOverride?: (err: unknown) => void) => {
     const controller = new AbortController();
     abortRef.current = controller;
 
     const domainMode = useDocTalkStore.getState().domainMode;
-    await chatStream(
-      sessionId,
-      prompt,
-      ({ text }) => updateLastMessage(text || ''),
-      (citation) => addCitationToLastMessage(citation),
-      onErrorOverride ?? handleStreamError,
-      handleStreamDone,
-      handleTruncated,
-      selectedMode,
-      locale,
-      controller.signal,
-      domainMode,
-      (artifact) => addArtifactToLastMessage(artifact),
-      ({ message }) => setLastMessageToolStatus(message),
-      handleAnswerRepaired,
-      handleCitationsRefined,
-    );
-  }, [sessionId, updateLastMessage, addCitationToLastMessage, addArtifactToLastMessage, setLastMessageToolStatus, handleStreamError, handleStreamDone, handleTruncated, handleAnswerRepaired, handleCitationsRefined, selectedMode, locale]);
+    const onStreamError = onErrorOverride ?? handleStreamError;
+    let errorHandled = false;
+    const reportStreamError = (err: unknown) => {
+      if (errorHandled) return;
+      errorHandled = true;
+      onStreamError(err);
+    };
+
+    try {
+      await chatStream(
+        sessionId,
+        prompt,
+        ({ text }) => updateLastMessage(text || ''),
+        (citation) => addCitationToLastMessage(citation),
+        reportStreamError,
+        handleStreamDone,
+        handleTruncated,
+        selectedMode,
+        locale,
+        controller.signal,
+        domainMode,
+        (artifact) => addArtifactToLastMessage(artifact),
+        ({ message }) => setLastMessageToolStatus(message),
+        handleAnswerRepaired,
+        handleCitationsRefined,
+      );
+    } catch (err) {
+      if (!controller.signal.aborted && !isAbortLikeError(err) && !errorHandled) {
+        reportStreamError(err);
+      }
+    }
+  }, [sessionId, updateLastMessage, addCitationToLastMessage, addArtifactToLastMessage, setLastMessageToolStatus, handleStreamError, handleStreamDone, handleTruncated, handleAnswerRepaired, handleCitationsRefined, selectedMode, locale, isAbortLikeError]);
 
   const sendMessage = useCallback(async (text: string) => {
-    if (!text.trim() || isStreaming) return false;
+    if (!text.trim()) return false;
 
-    if (demoLimitReached) {
-      onRequireAuth();
-      return false;
+    const release = acquireSingleFlight(
+      chatOperationLatchRef,
+      () => useDocTalkStore.getState().isStreaming,
+    );
+    if (!release) return false;
+
+    try {
+      if (demoLimitReached) {
+        onRequireAuth();
+        return false;
+      }
+
+      const userMsg: Message = {
+        id: `m_${Date.now()}_u`,
+        role: 'user',
+        text,
+        createdAt: Date.now(),
+      };
+
+      const asstMsg: Message = {
+        id: `m_${Date.now()}_a`,
+        role: 'assistant',
+        text: '',
+        citations: [],
+        createdAt: Date.now(),
+      };
+
+      addMessage(userMsg);
+      addMessage(asstMsg);
+      // A new user message on this session is itself an accounting-relevant
+      // event (it changes what localUserMsgCount will count) — bump so any
+      // in-flight reanchorDemoCounter GET for this same session (e.g. from an
+      // earlier failed regenerate/continue) recognizes its snapshot is now
+      // stale and drops instead of overwriting this message's delta (Codex
+      // r4). No-op for authenticated/non-demo sessions.
+      if (maxUserMessages != null) useDocTalkStore.getState().bumpDemoAccountingEpoch();
+      setStreaming(true);
+      trackEvent('chat_message_sent', { source: 'chat_panel', mode: selectedMode });
+
+      await streamAssistantResponse(text);
+      return true;
+    } finally {
+      release();
     }
-
-    const userMsg: Message = {
-      id: `m_${Date.now()}_u`,
-      role: 'user',
-      text,
-      createdAt: Date.now(),
-    };
-
-    const asstMsg: Message = {
-      id: `m_${Date.now()}_a`,
-      role: 'assistant',
-      text: '',
-      citations: [],
-      createdAt: Date.now(),
-    };
-
-    addMessage(userMsg);
-    addMessage(asstMsg);
-    // A new user message on this session is itself an accounting-relevant
-    // event (it changes what localUserMsgCount will count) — bump so any
-    // in-flight reanchorDemoCounter GET for this same session (e.g. from an
-    // earlier failed regenerate/continue) recognizes its snapshot is now
-    // stale and drops instead of overwriting this message's delta (Codex
-    // r4). No-op for authenticated/non-demo sessions.
-    if (maxUserMessages != null) useDocTalkStore.getState().bumpDemoAccountingEpoch();
-    setStreaming(true);
-    trackEvent('chat_message_sent', { source: 'chat_panel', mode: selectedMode });
-
-    await streamAssistantResponse(text);
-    return true;
-  }, [isStreaming, demoLimitReached, onRequireAuth, addMessage, setStreaming, streamAssistantResponse, selectedMode, maxUserMessages]);
+  }, [demoLimitReached, onRequireAuth, addMessage, setStreaming, streamAssistantResponse, selectedMode, maxUserMessages]);
 
   // Regenerate/continue add no new user message locally (they resend/extend
   // an existing turn), but the backend increments demo quota on both — so
@@ -406,7 +432,7 @@ export function useChatStream({
 
   const regenerateLastResponse = useCallback(async () => {
     const release = acquireSingleFlight(
-      regenerateOrContinueLatchRef,
+      chatOperationLatchRef,
       () => useDocTalkStore.getState().isStreaming,
     );
     if (!release) return;
@@ -432,30 +458,20 @@ export function useChatStream({
       bumpDemoUsageForRegenOrContinue();
       setStreaming(true);
 
-      try {
-        // Covers errors reported via the SSE error event/mid-stream failures
-        // (which resolve normally, so a try/catch alone wouldn't see them) —
-        // re-anchor before delegating to the shared error handler.
-        await streamAssistantResponse(lastUserText, (err) => {
-          reanchorDemoCounter(sessionId);
-          handleStreamError(err);
-        });
-      } catch (e) {
-        // Covers a thrown fetch() rejection (network failure before/instead
-        // of any SSE response) — the one case the onError override above
-        // can't see, since it never fires. Re-throws unchanged (nothing here
-        // catches it today either) — this only adds the re-anchor.
-        if (!isAbortLikeError(e)) reanchorDemoCounter(sessionId);
-        throw e;
-      }
+      // Covers HTTP/SSE failures and transport-level fetch rejections. The
+      // wrapper re-anchors before delegating and guarantees one invocation.
+      await streamAssistantResponse(lastUserText, (err) => {
+        reanchorDemoCounter(sessionId);
+        handleStreamError(err);
+      });
     } finally {
       release();
     }
-  }, [addMessage, setStreaming, streamAssistantResponse, bumpDemoUsageForRegenOrContinue, reanchorDemoCounter, sessionId, handleStreamError, isAbortLikeError]);
+  }, [addMessage, setStreaming, streamAssistantResponse, bumpDemoUsageForRegenOrContinue, reanchorDemoCounter, sessionId, handleStreamError]);
 
   const continueGenerating = useCallback(async () => {
     const release = acquireSingleFlight(
-      regenerateOrContinueLatchRef,
+      chatOperationLatchRef,
       () => useDocTalkStore.getState().isStreaming,
     );
     if (!release) return;
@@ -473,19 +489,21 @@ export function useChatStream({
       const controller = new AbortController();
       abortRef.current = controller;
 
+      let errorHandled = false;
+      const reportContinueError = (err: unknown) => {
+        if (errorHandled) return;
+        errorHandled = true;
+        reanchorDemoCounter(sessionId);
+        handleStreamError(err);
+      };
+
       try {
         await continueStream(
           sessionId,
           lastMsg.backendId || '',
           ({ text }) => updateLastMessage(text || ''),
           (citation) => addCitationToLastMessage(citation),
-          // Re-anchor before delegating — covers SSE error-event/mid-stream
-          // failures, which resolve normally (see the try/catch below for the
-          // thrown-fetch-rejection case a callback can't see).
-          (err) => {
-            reanchorDemoCounter(sessionId);
-            handleStreamError(err);
-          },
+          reportContinueError,
           handleStreamDone,
           handleTruncated,
           selectedMode,
@@ -497,10 +515,9 @@ export function useChatStream({
           handleCitationsRefined,
         );
       } catch (e) {
-        // Thrown fetch() rejection — re-throws unchanged (nothing here catches
-        // it today either), this only adds the re-anchor.
-        if (!isAbortLikeError(e)) reanchorDemoCounter(sessionId);
-        throw e;
+        if (!controller.signal.aborted && !isAbortLikeError(e) && !errorHandled) {
+          reportContinueError(e);
+        }
       }
     } finally {
       release();

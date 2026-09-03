@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { getDocumentBrief } from "./api";
+import { beginLatestRequest, isLatestRequest } from "./latestRequest";
 import type { DocumentHierarchicalBrief } from "../types";
 
 interface UseDocumentBriefResult {
@@ -18,42 +19,56 @@ function shouldPoll(status?: string | null): boolean {
 
 interface BriefRequestScope {
   documentId: string | undefined;
+  latestRequestOrdinal: number;
 }
 
 type BriefRequestResult =
-  | { scope: BriefRequestScope; data: DocumentHierarchicalBrief; error?: never }
-  | { scope: BriefRequestScope; data?: never; error: unknown };
+  | { scope: BriefRequestScope; ordinal: number; data: DocumentHierarchicalBrief; error?: never }
+  | { scope: BriefRequestScope; ordinal: number; data?: never; error: unknown };
 
 export function useDocumentBrief(documentId: string | undefined): UseDocumentBriefResult {
   const [brief, setBrief] = useState<DocumentHierarchicalBrief | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [pollAttempts, setPollAttempts] = useState(0);
-  const requestScopeRef = useRef<BriefRequestScope>({ documentId });
+  const pollAttemptsRef = useRef(0);
+  const nextRequestOrdinalRef = useRef(0);
+  const requestScopeRef = useRef<BriefRequestScope>({
+    documentId,
+    latestRequestOrdinal: 0,
+  });
 
   // Replace the token synchronously on every document switch, including
   // A -> B -> A and disablement. Any request holding an older object can no
   // longer publish into the current document's state.
   if (requestScopeRef.current.documentId !== documentId) {
-    requestScopeRef.current = { documentId };
+    requestScopeRef.current = { documentId, latestRequestOrdinal: 0 };
+    pollAttemptsRef.current = 0;
   }
 
   const requestBrief = useCallback(async (): Promise<BriefRequestResult | null> => {
     const scope = requestScopeRef.current;
     if (!scope.documentId) return null;
+    const ticket = beginLatestRequest(scope, nextRequestOrdinalRef);
 
     try {
       const data = await getDocumentBrief(scope.documentId);
-      if (requestScopeRef.current !== scope) return null;
-      return { scope, data };
+      if (!isLatestRequest(requestScopeRef.current, ticket)) return null;
+      return { scope, ordinal: ticket.ordinal, data };
     } catch (requestError) {
-      if (requestScopeRef.current !== scope) return null;
-      return { scope, error: requestError };
+      if (!isLatestRequest(requestScopeRef.current, ticket)) return null;
+      return { scope, ordinal: ticket.ordinal, error: requestError };
     }
   }, []);
 
   const applyResult = useCallback((result: BriefRequestResult | null) => {
-    if (!result || requestScopeRef.current !== result.scope) return;
+    if (
+      !result
+      || !isLatestRequest(requestScopeRef.current, {
+        scope: result.scope,
+        ordinal: result.ordinal,
+      })
+    ) return;
     if ("error" in result) {
       setError(result.error instanceof Error ? result.error.message : "Failed to load document brief");
       return;
@@ -71,6 +86,7 @@ export function useDocumentBrief(documentId: string | undefined): UseDocumentBri
       setBrief(null);
       setLoading(false);
       setError(null);
+      pollAttemptsRef.current = 0;
       setPollAttempts(0);
       return;
     }
@@ -78,6 +94,7 @@ export function useDocumentBrief(documentId: string | undefined): UseDocumentBri
     setBrief(null);
     setLoading(true);
     setError(null);
+    pollAttemptsRef.current = 0;
     setPollAttempts(0);
     void requestBrief().then((result) => {
       if (requestScopeRef.current !== scope) return;
@@ -90,8 +107,12 @@ export function useDocumentBrief(documentId: string | undefined): UseDocumentBri
   useEffect(() => {
     if (!shouldPoll(brief?.status)) return;
     if (brief?.status === "empty" && pollAttempts >= 20) return;
+    const scope = requestScopeRef.current;
     const timer = window.setInterval(() => {
-      setPollAttempts((current) => current + 1);
+      if (requestScopeRef.current !== scope || !scope.documentId) return;
+      if (brief?.status === "empty" && pollAttemptsRef.current >= 20) return;
+      pollAttemptsRef.current += 1;
+      setPollAttempts(pollAttemptsRef.current);
       void refresh();
     }, 4000);
     return () => window.clearInterval(timer);
