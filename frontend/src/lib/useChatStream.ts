@@ -10,6 +10,7 @@ import { errorCopy } from './errorCopy';
 import { trackEvent } from './analytics';
 import { messageShareAnchorFromId } from './shareAnchors';
 import { deriveUpgradePlan } from './billingLinks';
+import { acquireSingleFlight } from './singleFlight';
 
 interface UseChatStreamOptions {
   sessionId: string;
@@ -70,6 +71,7 @@ export function useChatStream({
   } = useDocTalkStore();
 
   const abortRef = useRef<AbortController | null>(null);
+  const regenerateOrContinueLatchRef = useRef(false);
 
   // Contract: totalUsed = demoMessagesUsed (server-known count as of the last
   // restore/create) + messages sent locally since then. demoRestoredUserMsgCount
@@ -249,6 +251,7 @@ export function useChatStream({
           ...lastMessage,
           text: copy.body,
           isError: true,
+          retryAction: 'regenerate',
           isTruncated: false,
         },
       ]);
@@ -260,6 +263,7 @@ export function useChatStream({
       role: 'assistant',
       text: copy.body,
       isError: true,
+      retryAction: 'regenerate',
       createdAt: Date.now(),
     });
   }, [addMessage, flushPendingText, getErrorMeta, isAbortLikeError, onShowPaywall, setStreaming, t, tOr, currentPlan]);
@@ -401,91 +405,107 @@ export function useChatStream({
   }, [maxUserMessages]);
 
   const regenerateLastResponse = useCallback(async () => {
-    if (isStreaming) return;
+    const release = acquireSingleFlight(
+      regenerateOrContinueLatchRef,
+      () => useDocTalkStore.getState().isStreaming,
+    );
+    if (!release) return;
 
-    const msgs = useDocTalkStore.getState().messages;
-    let lastUserIdx = -1;
+    try {
+      const msgs = useDocTalkStore.getState().messages;
+      let lastUserIdx = -1;
 
-    for (let i = msgs.length - 1; i >= 0; i--) {
-      if (msgs[i].role === 'user') {
-        lastUserIdx = i;
-        break;
+      for (let i = msgs.length - 1; i >= 0; i--) {
+        if (msgs[i].role === 'user') {
+          lastUserIdx = i;
+          break;
+        }
       }
-    }
 
-    if (lastUserIdx === -1) return;
+      if (lastUserIdx === -1) return;
 
-    const lastUserText = msgs[lastUserIdx].text;
-    const trimmed = msgs.slice(0, lastUserIdx + 1);
+      const lastUserText = msgs[lastUserIdx].text;
+      const trimmed = msgs.slice(0, lastUserIdx + 1);
 
-    useDocTalkStore.getState().setMessages(trimmed);
-    addMessage({ id: `m_${Date.now()}_a`, role: 'assistant', text: '', citations: [], createdAt: Date.now() });
-    bumpDemoUsageForRegenOrContinue();
-    setStreaming(true);
+      useDocTalkStore.getState().setMessages(trimmed);
+      addMessage({ id: `m_${Date.now()}_a`, role: 'assistant', text: '', citations: [], createdAt: Date.now() });
+      bumpDemoUsageForRegenOrContinue();
+      setStreaming(true);
 
-    try {
-      // Covers errors reported via the SSE error event/mid-stream failures
-      // (which resolve normally, so a try/catch alone wouldn't see them) —
-      // re-anchor before delegating to the shared error handler.
-      await streamAssistantResponse(lastUserText, (err) => {
-        reanchorDemoCounter(sessionId);
-        handleStreamError(err);
-      });
-    } catch (e) {
-      // Covers a thrown fetch() rejection (network failure before/instead
-      // of any SSE response) — the one case the onError override above
-      // can't see, since it never fires. Re-throws unchanged (nothing here
-      // catches it today either) — this only adds the re-anchor.
-      if (!isAbortLikeError(e)) reanchorDemoCounter(sessionId);
-      throw e;
-    }
-  }, [isStreaming, addMessage, setStreaming, streamAssistantResponse, bumpDemoUsageForRegenOrContinue, reanchorDemoCounter, sessionId, handleStreamError, isAbortLikeError]);
-
-  const continueGenerating = useCallback(async () => {
-    if (isStreaming) return;
-
-    const msgs = useDocTalkStore.getState().messages;
-    const lastMsg = msgs[msgs.length - 1];
-    if (!lastMsg || lastMsg.role !== 'assistant' || !lastMsg.isTruncated) return;
-
-    // Clear truncated flag and start streaming
-    markLastMessageTruncated(false);
-    bumpDemoUsageForRegenOrContinue();
-    setStreaming(true);
-
-    const controller = new AbortController();
-    abortRef.current = controller;
-
-    try {
-      await continueStream(
-        sessionId,
-        lastMsg.backendId || '',
-        ({ text }) => updateLastMessage(text || ''),
-        (citation) => addCitationToLastMessage(citation),
-        // Re-anchor before delegating — covers SSE error-event/mid-stream
-        // failures, which resolve normally (see the try/catch below for the
-        // thrown-fetch-rejection case a callback can't see).
-        (err) => {
+      try {
+        // Covers errors reported via the SSE error event/mid-stream failures
+        // (which resolve normally, so a try/catch alone wouldn't see them) —
+        // re-anchor before delegating to the shared error handler.
+        await streamAssistantResponse(lastUserText, (err) => {
           reanchorDemoCounter(sessionId);
           handleStreamError(err);
-        },
-        handleStreamDone,
-        handleTruncated,
-        selectedMode,
-        locale,
-        controller.signal,
-        (artifact) => addArtifactToLastMessage(artifact),
-        ({ message }) => setLastMessageToolStatus(message),
-        handleAnswerRepaired,
-        handleCitationsRefined,
-      );
-    } catch (e) {
-      // Thrown fetch() rejection — re-throws unchanged (nothing here catches
-      // it today either), this only adds the re-anchor.
-      if (!isAbortLikeError(e)) reanchorDemoCounter(sessionId);
-      throw e;
+        });
+      } catch (e) {
+        // Covers a thrown fetch() rejection (network failure before/instead
+        // of any SSE response) — the one case the onError override above
+        // can't see, since it never fires. Re-throws unchanged (nothing here
+        // catches it today either) — this only adds the re-anchor.
+        if (!isAbortLikeError(e)) reanchorDemoCounter(sessionId);
+        throw e;
+      }
+    } finally {
+      release();
     }
-  }, [isStreaming, sessionId, markLastMessageTruncated, setStreaming, updateLastMessage, addCitationToLastMessage, addArtifactToLastMessage, setLastMessageToolStatus, handleStreamError, handleStreamDone, handleTruncated, handleAnswerRepaired, handleCitationsRefined, selectedMode, locale, bumpDemoUsageForRegenOrContinue, reanchorDemoCounter, isAbortLikeError]);
+  }, [addMessage, setStreaming, streamAssistantResponse, bumpDemoUsageForRegenOrContinue, reanchorDemoCounter, sessionId, handleStreamError, isAbortLikeError]);
+
+  const continueGenerating = useCallback(async () => {
+    const release = acquireSingleFlight(
+      regenerateOrContinueLatchRef,
+      () => useDocTalkStore.getState().isStreaming,
+    );
+    if (!release) return;
+
+    try {
+      const msgs = useDocTalkStore.getState().messages;
+      const lastMsg = msgs[msgs.length - 1];
+      if (!lastMsg || lastMsg.role !== 'assistant' || !lastMsg.isTruncated) return;
+
+      // Clear truncated flag and start streaming
+      markLastMessageTruncated(false);
+      bumpDemoUsageForRegenOrContinue();
+      setStreaming(true);
+
+      const controller = new AbortController();
+      abortRef.current = controller;
+
+      try {
+        await continueStream(
+          sessionId,
+          lastMsg.backendId || '',
+          ({ text }) => updateLastMessage(text || ''),
+          (citation) => addCitationToLastMessage(citation),
+          // Re-anchor before delegating — covers SSE error-event/mid-stream
+          // failures, which resolve normally (see the try/catch below for the
+          // thrown-fetch-rejection case a callback can't see).
+          (err) => {
+            reanchorDemoCounter(sessionId);
+            handleStreamError(err);
+          },
+          handleStreamDone,
+          handleTruncated,
+          selectedMode,
+          locale,
+          controller.signal,
+          (artifact) => addArtifactToLastMessage(artifact),
+          ({ message }) => setLastMessageToolStatus(message),
+          handleAnswerRepaired,
+          handleCitationsRefined,
+        );
+      } catch (e) {
+        // Thrown fetch() rejection — re-throws unchanged (nothing here catches
+        // it today either), this only adds the re-anchor.
+        if (!isAbortLikeError(e)) reanchorDemoCounter(sessionId);
+        throw e;
+      }
+    } finally {
+      release();
+    }
+  }, [sessionId, markLastMessageTruncated, setStreaming, updateLastMessage, addCitationToLastMessage, addArtifactToLastMessage, setLastMessageToolStatus, handleStreamError, handleStreamDone, handleTruncated, handleAnswerRepaired, handleCitationsRefined, selectedMode, locale, bumpDemoUsageForRegenOrContinue, reanchorDemoCounter, isAbortLikeError]);
 
   const stopStreaming = useCallback(() => {
     abortRef.current?.abort();

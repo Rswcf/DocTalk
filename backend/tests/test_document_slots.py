@@ -40,11 +40,13 @@ async def test_errored_document_is_excluded_from_live_slot_count() -> None:
 
 @pytest.mark.asyncio
 async def test_reparse_refuses_error_when_live_slots_are_full_and_preserves_status() -> None:
-    user = SimpleNamespace(id=uuid.uuid4(), plan="free")
+    # The auth dependency loaded Plus before a concurrent downgrade committed.
+    # Capacity must use the Free plan read while acquiring the user-row lock.
+    user = SimpleNamespace(id=uuid.uuid4(), plan="plus")
     doc = SimpleNamespace(id=uuid.uuid4(), user_id=user.id, status="error")
     db = SimpleNamespace(
         get=AsyncMock(return_value=doc),
-        scalar=AsyncMock(side_effect=[user.id, settings.FREE_MAX_DOCUMENTS, 1]),
+        scalar=AsyncMock(side_effect=["free", settings.FREE_MAX_DOCUMENTS, 1]),
         refresh=AsyncMock(),
         rollback=AsyncMock(),
         execute=AsyncMock(),
@@ -55,9 +57,18 @@ async def test_reparse_refuses_error_when_live_slots_are_full_and_preserves_stat
 
     assert exc_info.value.status_code == 403
     assert exc_info.value.detail["error"] == "DOCUMENT_LIMIT_REACHED"
+    assert exc_info.value.detail["plan"] == "free"
     assert doc.status == "error"
     db.execute.assert_not_awaited()
     db.rollback.assert_awaited_once()
+    lock_sql = str(
+        db.scalar.await_args_list[0].args[0].compile(
+            dialect=postgresql.dialect(),
+            compile_kwargs={"literal_binds": True},
+        )
+    )
+    assert "SELECT users.plan" in lock_sql
+    assert "FOR UPDATE" in lock_sql
 
 
 @pytest.mark.asyncio
@@ -68,7 +79,7 @@ async def test_reparse_winner_keeps_conditional_claim_and_dispatch_order(
     doc = SimpleNamespace(id=uuid.uuid4(), user_id=user.id, status="error")
     db = SimpleNamespace(
         get=AsyncMock(return_value=doc),
-        scalar=AsyncMock(side_effect=[user.id, settings.FREE_MAX_DOCUMENTS - 1, 1]),
+        scalar=AsyncMock(side_effect=["free", settings.FREE_MAX_DOCUMENTS - 1, 1]),
         refresh=AsyncMock(),
         rollback=AsyncMock(),
         execute=AsyncMock(return_value=SimpleNamespace(rowcount=1)),
@@ -104,7 +115,7 @@ async def test_reparse_loser_after_user_lock_returns_processing_409() -> None:
 
     db = SimpleNamespace(
         get=AsyncMock(return_value=doc),
-        scalar=AsyncMock(return_value=user.id),
+        scalar=AsyncMock(return_value="free"),
         refresh=AsyncMock(side_effect=refresh),
         rollback=AsyncMock(),
         execute=AsyncMock(),

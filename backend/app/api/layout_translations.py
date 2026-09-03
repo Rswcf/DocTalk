@@ -156,7 +156,7 @@ async def _free_layout_translation_used(user: User, db: AsyncSession) -> int:
 
 
 async def _assert_document_capacity(user: User, db: AsyncSession) -> None:
-    plan = (user.plan or "free").lower()
+    plan = await db.scalar(select(User.plan).where(User.id == user.id))
     slot_count, errored_count = await count_plan_slot_documents(db, user.id)
     detail = document_capacity_error_detail(
         plan=plan,

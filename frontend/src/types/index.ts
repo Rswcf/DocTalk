@@ -83,6 +83,10 @@ export interface Message {
   toolStatus?: string;
   createdAt?: number;
   isError?: boolean;
+  /** UI-only provenance for error actions. Only chat-response failures may
+   * request a billed regeneration; unrelated operation errors leave this
+   * unset even though they share the generic error-bubble styling. */
+  retryAction?: 'regenerate';
   isTruncated?: boolean;
   continuationCount?: number;
   backendId?: string;

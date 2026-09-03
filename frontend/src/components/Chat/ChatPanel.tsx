@@ -517,8 +517,9 @@ export default function ChatPanel({ sessionId, onCitationClick, onPreviewLayoutT
   );
   const canUseExport = messages.length > 0 && !isStreaming && (userPlan === 'plus' || userPlan === 'pro');
   const showExportInMenu = messages.length > 0 && !isStreaming;
-  const questions = suggestedQuestions ?? documentBrief?.questions ?? [];
-  const briefSummary = truncateDocumentBriefSummary(documentBrief?.summary);
+  const usableDocumentBrief = documentBrief?.status === 'ready' ? documentBrief : null;
+  const questions = suggestedQuestions ?? usableDocumentBrief?.questions ?? [];
+  const briefSummary = truncateDocumentBriefSummary(usableDocumentBrief?.summary);
   const showDocumentBriefEmptyState = shouldRenderDocumentBriefEmptyState(
     messages.length,
     questions,
@@ -565,9 +566,9 @@ export default function ChatPanel({ sessionId, onCitationClick, onPreviewLayoutT
                     <div className="h-3 w-4/5 animate-pulse rounded bg-zinc-200 motion-reduce:animate-none dark:bg-zinc-700" />
                   </div>
                 ) : null}
-                {documentBrief?.key_points?.length ? (
+                {usableDocumentBrief?.key_points?.length ? (
                   <ul className="mt-4 space-y-1.5 text-sm leading-5 text-[var(--workbench-muted)]">
-                    {documentBrief.key_points.slice(0, 3).map((point, index) => (
+                    {usableDocumentBrief.key_points.slice(0, 3).map((point, index) => (
                       <li key={`brief-point-${index}`} className="flex gap-2">
                         <span className="mt-2 h-1 w-1 shrink-0 rounded-full bg-blue-600 dark:bg-blue-400" aria-hidden="true" />
                         <span>{point.text}</span>

@@ -165,7 +165,11 @@ async def client():
 @pytest.mark.asyncio
 async def test_upload_document_limit_reached(client: AsyncClient) -> None:
     user = _make_user(plan="free")
-    db = _make_db(scalar=AsyncMock(return_value=settings.FREE_MAX_DOCUMENTS))
+    db = _make_db(
+        scalar=AsyncMock(
+            side_effect=["free", settings.FREE_MAX_DOCUMENTS, 0]
+        )
+    )
     _override_dependencies(db, auth_user=user)
 
     response = await client.post(
@@ -181,7 +185,7 @@ async def test_upload_document_limit_reached(client: AsyncClient) -> None:
 async def test_upload_failed_document_ceiling_reached(client: AsyncClient) -> None:
     user = _make_user(plan="free")
     db = _make_db(
-        scalar=AsyncMock(side_effect=[0, settings.FREE_MAX_DOCUMENTS]),
+        scalar=AsyncMock(side_effect=["free", 0, settings.FREE_MAX_DOCUMENTS]),
     )
     _override_dependencies(db, auth_user=user)
 
@@ -202,7 +206,11 @@ async def test_ingest_url_document_limit_reached(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     user = _make_user(plan="free")
-    db = _make_db(scalar=AsyncMock(return_value=settings.FREE_MAX_DOCUMENTS))
+    db = _make_db(
+        scalar=AsyncMock(
+            side_effect=["free", settings.FREE_MAX_DOCUMENTS, 0]
+        )
+    )
     _override_dependencies(db, auth_user=user)
     monkeypatch.setattr(url_validator, "validate_url", lambda url: url)
 
@@ -210,6 +218,32 @@ async def test_ingest_url_document_limit_reached(
     detail = _assert_error(response, 403, "DOCUMENT_LIMIT_REACHED")
     assert isinstance(detail["limit"], int)
     assert isinstance(detail["current"], int)
+
+
+@pytest.mark.asyncio
+async def test_upload_precheck_uses_fresh_plan_after_upgrade(
+    client: AsyncClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    user = _make_user(plan="free")
+    db = _make_db(
+        scalar=AsyncMock(
+            side_effect=["plus", settings.FREE_MAX_DOCUMENTS, 0]
+        )
+    )
+    _override_dependencies(db, auth_user=user)
+    create_document = AsyncMock(return_value=uuid.uuid4())
+    monkeypatch.setattr(documents_api.doc_service, "create_document", create_document)
+
+    response = await client.post(
+        "/api/documents/upload",
+        files={"file": ("report.pdf", b"%PDF-1.4\nhello", "application/pdf")},
+    )
+
+    assert response.status_code == 202
+    create_document.assert_awaited_once()
+    plan_sql = str(db.scalar.await_args_list[0].args[0])
+    assert "SELECT users.plan" in plan_sql
 
 
 @pytest.mark.asyncio

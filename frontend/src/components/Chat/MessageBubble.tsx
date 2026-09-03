@@ -350,7 +350,7 @@ function MessageBubble({
           )}
         </div>
 
-        {isAssistant && isError && onRegenerate && !isStreaming ? (
+        {isAssistant && isError && message.retryAction === 'regenerate' && onRegenerate && !isStreaming ? (
           <button
             type="button"
             onClick={onRegenerate}

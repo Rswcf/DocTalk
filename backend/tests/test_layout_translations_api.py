@@ -95,6 +95,19 @@ def _fake_db(doc: object, *, used: int = 0, active_jobs: list[object] | None = N
 
 
 @pytest.mark.asyncio
+async def test_document_capacity_precheck_uses_fresh_plan_after_upgrade() -> None:
+    user = _make_user("free")
+    doc = _make_doc(user.id)
+    db = _fake_db(doc)
+    db.scalar = AsyncMock(side_effect=["plus", 3, 0])
+
+    await layout_api._assert_document_capacity(user, db)
+
+    plan_sql = str(db.scalar.await_args_list[0].args[0])
+    assert "SELECT users.plan" in plan_sql
+
+
+@pytest.mark.asyncio
 async def test_free_user_can_start_two_trial_layout_translations(client: AsyncClient) -> None:
     user = _make_user("free")
     doc = _make_doc(user.id)
@@ -182,6 +195,7 @@ async def test_import_requested_layout_translation_respects_document_limit(clien
     user = _make_user("plus")
     doc = _make_doc(user.id, page_count=12)
     db = _fake_db(doc, used=20)
+    db.scalar = AsyncMock(side_effect=["plus", 20, 0])
     _override_dependencies(db, user)
 
     response = await client.post(
@@ -217,6 +231,7 @@ async def test_import_request_on_existing_layout_translation_respects_document_l
         completed_at=None,
     )
     db = _fake_db(doc, used=20, active_jobs=[existing])
+    db.scalar = AsyncMock(side_effect=["plus", 20, 0])
     _override_dependencies(db, user)
 
     response = await client.post(

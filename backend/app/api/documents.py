@@ -18,6 +18,7 @@ from fastapi import (
 )
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.cache import cache_get, cache_set
@@ -218,7 +219,9 @@ async def upload_document(
     # Unlocked pre-check only: never hold the authoritative user-row lock
     # across the upload byte stream. DocService repeats this under FOR UPDATE
     # immediately before the INSERT.
-    plan = normalized_plan(getattr(user, "plan", None))
+    plan = normalized_plan(
+        await db.scalar(select(User.plan).where(User.id == user.id))
+    )
     slot_count, errored_count = await count_plan_slot_documents(db, user.id)
     limit_detail = document_capacity_error_detail(
         plan=plan,
@@ -361,7 +364,9 @@ async def ingest_url(
         raise HTTPException(status_code=500, detail=SERVER_ERROR_DETAIL)
 
     # Unlocked pre-check; the insert path repeats it under the per-user lock.
-    plan = normalized_plan(getattr(user, "plan", None))
+    plan = normalized_plan(
+        await db.scalar(select(User.plan).where(User.id == user.id))
+    )
     slot_count, errored_count = await count_plan_slot_documents(db, user.id)
     limit_detail = document_capacity_error_detail(
         plan=plan,
@@ -884,9 +889,9 @@ async def reparse_document(
     # user. Refresh after acquiring the lock so a second retry of the same
     # document still observes the winner's in-flight state and returns the
     # established 409 contract rather than a stale limit response.
-    from sqlalchemy import select as sa_select
-
-    await db.scalar(sa_select(User.id).where(User.id == user.id).with_for_update())
+    locked_plan = await db.scalar(
+        select(User.plan).where(User.id == user.id).with_for_update()
+    )
     await db.refresh(doc, attribute_names=["status"])
     if doc.status not in ("ready", "error"):
         await db.rollback()
@@ -902,7 +907,7 @@ async def reparse_document(
     if doc.status == "error":
         slot_count, _errored_count = await count_plan_slot_documents(db, user.id)
         limit_detail = document_capacity_error_detail(
-            plan=getattr(user, "plan", None),
+            plan=locked_plan,
             slot_count=slot_count,
             # Rule C is independent of the retained-error ceiling: the row
             # already exists, so only its return to the live set needs room.
