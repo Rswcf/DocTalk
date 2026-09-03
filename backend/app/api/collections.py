@@ -139,6 +139,37 @@ async def create_collection(
             },
         )
 
+    requested_document_ids: list[uuid.UUID] = []
+    seen_document_ids: set[uuid.UUID] = set()
+    if body.document_ids:
+        for did_str in body.document_ids:
+            try:
+                did = uuid.UUID(did_str)
+            except ValueError:
+                continue
+            if did not in seen_document_ids:
+                seen_document_ids.add(did)
+                requested_document_ids.append(did)
+
+    # Lock owned, still-existing parents before the collection INSERT takes
+    # its implicit users FK key-share. A concurrent delete wins: after waiting
+    # for its FOR UPDATE, a deleted document is absent from these results.
+    locked_document_ids: list[uuid.UUID] = []
+    if requested_document_ids:
+        locked_document_ids = list(
+            (
+                await db.scalars(
+                    select(Document.id)
+                    .where(
+                        Document.id.in_(requested_document_ids),
+                        Document.user_id == user.id,
+                    )
+                    .order_by(Document.id)
+                    .with_for_update(read=True, key_share=True)
+                )
+            ).all()
+        )
+
     coll = Collection(
         name=body.name,
         description=body.description,
@@ -147,20 +178,13 @@ async def create_collection(
     db.add(coll)
     await db.flush()
 
-    # Add initial documents if provided
-    if body.document_ids:
-        for did_str in body.document_ids:
-            try:
-                did = uuid.UUID(did_str)
-            except ValueError:
-                continue
-            doc = await db.get(Document, did)
-            if doc and doc.user_id == user.id:
-                await db.execute(
-                    collection_documents.insert().values(
-                        collection_id=coll.id, document_id=did
-                    )
-                )
+    for document_id in locked_document_ids:
+        await db.execute(
+            collection_documents.insert().values(
+                collection_id=coll.id,
+                document_id=document_id,
+            )
+        )
 
     await db.commit()
     await db.refresh(coll)

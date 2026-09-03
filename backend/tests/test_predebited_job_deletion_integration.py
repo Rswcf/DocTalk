@@ -315,6 +315,134 @@ async def test_delete_and_error_reparse_do_not_form_cross_session_lock_cycle(
         await _cleanup_user(seed["user_id"])
 
 
+async def test_delete_and_create_collection_complete_with_delete_winning(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from app.api.collections import CreateCollectionRequest, create_collection
+    from app.models.database import AsyncSessionLocal
+    from app.models.tables import Collection, Document, collection_documents
+    from app.services import extraction_service
+
+    seed = await _seed_active_predebit(parent="document", claim_trial=True)
+    _disable_external_document_cleanup(monkeypatch)
+
+    async with AsyncSessionLocal() as db:
+        surviving_document = Document(
+            filename="surviving.pdf",
+            file_size=100,
+            storage_key=f"documents/{uuid.uuid4()}/surviving.pdf",
+            status="ready",
+            user_id=seed["user_id"],
+            file_type="pdf",
+        )
+        db.add(surviving_document)
+        await db.flush()
+        surviving_document_id = surviving_document.id
+        await db.commit()
+
+    resolver_entered = threading.Event()
+    release_resolver = threading.Event()
+    original_resolver = extraction_service._settle_extraction_predebit_after_failure_sync
+
+    def blocked_resolver(**kwargs: Any) -> bool:
+        resolver_entered.set()
+        if not release_resolver.wait(timeout=10):
+            raise AssertionError("test did not release the predebit resolver")
+        return original_resolver(**kwargs)
+
+    monkeypatch.setattr(
+        extraction_service,
+        "_settle_extraction_predebit_after_failure_sync",
+        blocked_resolver,
+    )
+
+    delete_task: asyncio.Task[None] | None = None
+    collection_task: asyncio.Task[dict[str, str]] | None = None
+    try:
+        delete_task = asyncio.create_task(_delete_document(seed["document_id"]))
+        assert await asyncio.to_thread(resolver_entered.wait, 3)
+
+        async with AsyncSessionLocal() as collection_db:
+            await collection_db.execute(sa.text("SET LOCAL lock_timeout = '4s'"))
+            collection_backend_pid = await collection_db.scalar(
+                sa.text("SELECT pg_backend_pid()")
+            )
+
+            collection_task = asyncio.create_task(
+                create_collection(
+                    body=CreateCollectionRequest(
+                        name="Delete wins",
+                        document_ids=[
+                            str(seed["document_id"]),
+                            "malformed-document-id",
+                            str(surviving_document_id),
+                            str(surviving_document_id),
+                        ],
+                    ),
+                    user=SimpleNamespace(id=seed["user_id"], plan="free"),
+                    db=collection_db,
+                )
+            )
+
+            # The collection transaction must wait on the document before it
+            # inserts the user-owned collection. Releasing the resolver then
+            # lets deletion commit, so the locking SELECT omits the vanished
+            # parent instead of a later junction INSERT raising an FK error.
+            async with AsyncSessionLocal() as observer_db:
+                for _ in range(200):
+                    wait_event_type = await observer_db.scalar(
+                        sa.text(
+                            "SELECT wait_event_type FROM pg_stat_activity "
+                            "WHERE pid = :pid"
+                        ),
+                        {"pid": collection_backend_pid},
+                    )
+                    if wait_event_type == "Lock":
+                        break
+                    assert not collection_task.done(), (
+                        "collection creation completed before waiting on the locked document"
+                    )
+                    await asyncio.sleep(0.01)
+                else:
+                    pytest.fail("collection creation never waited on the locked document")
+
+            release_resolver.set()
+            delete_result, collection_result = await asyncio.wait_for(
+                asyncio.gather(delete_task, collection_task),
+                timeout=8,
+            )
+
+        assert delete_result is None
+        collection_id = uuid.UUID(collection_result["id"])
+        async with AsyncSessionLocal() as db:
+            collection = await db.get(Collection, collection_id)
+            member_ids = set(
+                (
+                    await db.scalars(
+                        select(collection_documents.c.document_id).where(
+                            collection_documents.c.collection_id == collection_id
+                        )
+                    )
+                ).all()
+            )
+
+        assert collection is not None
+        assert collection.user_id == seed["user_id"]
+        assert member_ids == {surviving_document_id}
+        after = await _state(seed)
+        assert after["balance"] == seed["balance_before"]
+        assert after["document_exists"] is False
+        assert after["job_exists"] is False
+        assert after["ledger_exists"] is False
+        assert after["trial_count"] == 0
+    finally:
+        release_resolver.set()
+        for task in (delete_task, collection_task):
+            if task is not None and not task.done():
+                task.cancel()
+        await _cleanup_user(seed["user_id"])
+
+
 async def test_delete_collection_with_active_job_refunds_before_cascade() -> None:
     from app.api.collections import delete_collection
     from app.models.database import AsyncSessionLocal

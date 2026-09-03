@@ -74,7 +74,9 @@ async def enforce_domain_mode_access(
     # check, this lock remains held until the durable reservation is flushed
     # and its caller-controlled transaction commits.
     locked_user_id = await db.scalar(
-        select(User.id).where(User.id == user.id).with_for_update()
+        select(User.id)
+        .where(User.id == user.id)
+        .with_for_update(key_share=True)
     )
     if locked_user_id is None:
         _deny_domain_mode()
@@ -166,7 +168,9 @@ async def release_failed_extraction_trial(
     same serialization point as claiming, closing release+claim races.
     """
     locked_user_id = await db.scalar(
-        select(User.id).where(User.id == user_id).with_for_update()
+        select(User.id)
+        .where(User.id == user_id)
+        .with_for_update(key_share=True)
     )
     if locked_user_id is None:
         return False
@@ -187,7 +191,9 @@ def release_failed_extraction_trial_sync(
 ) -> bool:
     """Synchronous worker counterpart of ``release_failed_extraction_trial``."""
     locked_user_id = db.scalar(
-        select(User.id).where(User.id == user_id).with_for_update()
+        select(User.id)
+        .where(User.id == user_id)
+        .with_for_update(key_share=True)
     )
     if locked_user_id is None:
         return False
@@ -217,7 +223,9 @@ def release_orphaned_extraction_trial_sync(
     their lost identity without freeing an unrelated NULL-owner chat slot.
     """
     locked_user_id = db.scalar(
-        select(User.id).where(User.id == user_id).with_for_update()
+        select(User.id)
+        .where(User.id == user_id)
+        .with_for_update(key_share=True)
     )
     if locked_user_id is None:
         return False
