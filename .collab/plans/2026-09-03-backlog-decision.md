@@ -296,3 +296,43 @@ Per the standing rule, code claims are re-read at source and never taken from an
 
 No claim failed verification. The single correction is the line number for the nudge eligibility
 condition (`:144`, not `:143-147`); the ruling is unaffected.
+
+---
+
+## 7. Addendum — implementation gaps (Fable 5.1, same day)
+
+Four details the sections above left open. None changes a ruling; each would ship a visible defect
+or miss a checklist item if the document were followed literally.
+
+1. **B2 reader-page Retry must re-arm the loader.** `useDocumentLoader.ts:95-105` sets `error` and
+   `clearInterval`s on `status === 'error'`, and the effect is keyed only on `documentId` (`:163`).
+   After a 202 from reparse nothing restarts the poll, so the reader would keep showing the error —
+   a dead Retry button, the exact defect class B2 exists to remove. Spec: the reader's Retry bumps a
+   `reloadKey` included in the effect deps, or navigates to the dashboard on 202, whose own 2 s poll
+   (`DashboardPageClient.tsx:295-315`) handles it. Dashboard-row Retry is unaffected.
+2. **B2 Rule A's authoritative check must clean up the stored object.** Order in
+   `doc_service.create_document` is object put → `documents` INSERT + commit → dispatch. Moving the
+   authoritative slot check next to the INSERT means a race-losing upload has already written its
+   MinIO object. Spec: on the authoritative reject, delete it via
+   `asyncio.to_thread(storage_service.delete_file, storage_key)` — already the idiom in the delete
+   path — before raising 403. Same for URL import. Without this the concurrency fix leaks storage on
+   every rejected race.
+3. **The §5 deploy procedure omits the changelogs.** `.claude/skills/deploy/SKILL.md:24-25` reads
+   "Version bump = 3 files + changelogs"; `CHANGELOG.md` and `CHANGELOG.zh.md` both exist and both
+   need an entry alongside `version.json`, `frontend/package.json`, `package-lock.json`.
+4. **A5 copy: do not write "unlimited Pro answers".** Plus Pro answers are still bounded by the
+   3,000-credit month, so that trades one overclaim for another and Codex will read it that way.
+   Use **"Pro answers without the monthly cap"** (or "no cap on Pro answers") — it names the real
+   differentiator versus Free's capped Pro answers without claiming unlimited.
+
+### Claude's verification of the addendum
+
+| Claim | Result |
+|---|---|
+| Loader's `error` branch sets error, `clearInterval`s, returns | CONFIRMED (`useDocumentLoader.ts:95-105`) |
+| Its effect deps contain no reload key — only `documentId` + stable setters + `t`/`tOr` | CONFIRMED (`:163`) — a reparse 202 would not restart the poll |
+| `create_document` puts the object **before** the INSERT + commit, then dispatches | CONFIRMED — `asyncio.to_thread(storage_service.upload_file, ...)` precedes `db.add(doc)` / `await db.commit()` |
+| `asyncio.to_thread(storage_service.delete_file, storage_key)` is the existing cleanup idiom | CONFIRMED (delete path, `doc_service.py:~156`) |
+| Item 3 already satisfied | YES — the v0.29.0 bump commit `8e93934` carries both changelogs plus the 3 version files; `check_version_consistency.py` OK |
+
+Line numbers in items 1–2 are approximate by a few lines; the orderings they depend on hold exactly.
