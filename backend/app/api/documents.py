@@ -872,39 +872,43 @@ async def reparse_document(
     Urdu scan) — without it OCR uses the configured default set."""
     from app.models.tables import Document
 
-    doc = await db.get(Document, document_id)
-    if not doc or doc.user_id != user.id:
-        raise HTTPException(status_code=404, detail=DOCUMENT_NOT_FOUND_DETAIL)
-    if doc.status not in ("ready", "error"):
-        raise HTTPException(
-            status_code=409,
-            detail={
-                "error": "DOCUMENT_PROCESSING",
-                "message": "Document is still processing",
-                "status": doc.status,
-            },
-        )
-
-    # Serialize every retry-into-success claim with uploads/imports for this
-    # user. Refresh after acquiring the lock so a second retry of the same
-    # document still observes the winner's in-flight state and returns the
-    # established 409 contract rather than a stale limit response.
-    locked_plan = await db.scalar(
-        select(User.plan).where(User.id == user.id).with_for_update()
+    # Global row-lock order is documents -> users.  Lock the document at the
+    # same strength as the claim UPDATE so deletion and another reparse are
+    # serialized without blocking concurrent child FOR KEY SHARE inserts.
+    doc = await db.scalar(
+        select(Document)
+        .where(Document.id == document_id)
+        .execution_options(populate_existing=True)
+        .with_for_update(key_share=True)
     )
-    await db.refresh(doc, attribute_names=["status"])
-    if doc.status not in ("ready", "error"):
+    if not doc or doc.user_id != user.id:
+        await db.rollback()
+        raise HTTPException(status_code=404, detail=DOCUMENT_NOT_FOUND_DETAIL)
+    # Read the locked status into a local BEFORE any rollback: rollback expires
+    # every ORM attribute regardless of expire_on_commit, so touching doc.status
+    # afterwards triggers a lazy refresh outside the async greenlet
+    # (MissingGreenlet) instead of returning the 409 the caller contracted for.
+    locked_status = doc.status
+    if locked_status not in ("ready", "error"):
         await db.rollback()
         raise HTTPException(
             status_code=409,
             detail={
                 "error": "DOCUMENT_PROCESSING",
                 "message": "Document is still processing",
-                "status": doc.status,
+                "status": locked_status,
             },
         )
 
-    if doc.status == "error":
+    if locked_status == "error":
+        # Returning an errored document to the live set consumes a slot. Lock
+        # the owner only after the document so different-document retries keep
+        # their serialized count-and-claim contract without inverting delete's
+        # document-before-user order. Ready documents are already counted and
+        # therefore skip the user lock entirely.
+        locked_plan = await db.scalar(
+            select(User.plan).where(User.id == user.id).with_for_update()
+        )
         slot_count, _errored_count = await count_plan_slot_documents(db, user.id)
         limit_detail = document_capacity_error_detail(
             plan=locked_plan,
@@ -917,14 +921,11 @@ async def reparse_document(
             await db.rollback()
             raise HTTPException(status_code=403, detail=limit_detail)
 
-    # Atomic claim (Codex r5): a plain read-then-write lets two concurrent
-    # reparse requests both observe 'ready', both write their locale and both
-    # publish — the advisory lock makes the loser's task a no-op, so the run
-    # that executes can use a locale the row no longer records. The
-    # conditional UPDATE picks exactly one winner; it also overwrites (or
-    # intentionally RESETS to NULL = platform defaults) the stored request in
-    # the same statement that opens 'parsing', BEFORE publishing — the worker
-    # reads only this column (Codex r4).
+    # Keep the conditional status predicate as the documented claim contract,
+    # even though the locked status check now serializes same-document
+    # reparses. The UPDATE also overwrites (or intentionally RESETS to NULL =
+    # platform defaults) the stored request in the same statement that opens
+    # 'parsing', BEFORE publishing — the worker reads only this column.
     from sqlalchemy import update as sa_update
 
     requested_locale = body.locale if body else None

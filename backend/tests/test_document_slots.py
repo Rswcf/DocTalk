@@ -45,9 +45,9 @@ async def test_reparse_refuses_error_when_live_slots_are_full_and_preserves_stat
     user = SimpleNamespace(id=uuid.uuid4(), plan="plus")
     doc = SimpleNamespace(id=uuid.uuid4(), user_id=user.id, status="error")
     db = SimpleNamespace(
-        get=AsyncMock(return_value=doc),
-        scalar=AsyncMock(side_effect=["free", settings.FREE_MAX_DOCUMENTS, 1]),
-        refresh=AsyncMock(),
+        scalar=AsyncMock(
+            side_effect=[doc, "free", settings.FREE_MAX_DOCUMENTS, 1]
+        ),
         rollback=AsyncMock(),
         execute=AsyncMock(),
     )
@@ -61,14 +61,22 @@ async def test_reparse_refuses_error_when_live_slots_are_full_and_preserves_stat
     assert doc.status == "error"
     db.execute.assert_not_awaited()
     db.rollback.assert_awaited_once()
-    lock_sql = str(
+    document_lock_sql = str(
         db.scalar.await_args_list[0].args[0].compile(
             dialect=postgresql.dialect(),
             compile_kwargs={"literal_binds": True},
         )
     )
-    assert "SELECT users.plan" in lock_sql
-    assert "FOR UPDATE" in lock_sql
+    user_lock_sql = str(
+        db.scalar.await_args_list[1].args[0].compile(
+            dialect=postgresql.dialect(),
+            compile_kwargs={"literal_binds": True},
+        )
+    )
+    assert "FROM documents" in document_lock_sql
+    assert "FOR NO KEY UPDATE" in document_lock_sql
+    assert "SELECT users.plan" in user_lock_sql
+    assert "FOR UPDATE" in user_lock_sql
 
 
 @pytest.mark.asyncio
@@ -78,9 +86,9 @@ async def test_reparse_winner_keeps_conditional_claim_and_dispatch_order(
     user = SimpleNamespace(id=uuid.uuid4(), plan="free")
     doc = SimpleNamespace(id=uuid.uuid4(), user_id=user.id, status="error")
     db = SimpleNamespace(
-        get=AsyncMock(return_value=doc),
-        scalar=AsyncMock(side_effect=["free", settings.FREE_MAX_DOCUMENTS - 1, 1]),
-        refresh=AsyncMock(),
+        scalar=AsyncMock(
+            side_effect=[doc, "free", settings.FREE_MAX_DOCUMENTS - 1, 1]
+        ),
         rollback=AsyncMock(),
         execute=AsyncMock(return_value=SimpleNamespace(rowcount=1)),
         commit=AsyncMock(),
@@ -106,17 +114,43 @@ async def test_reparse_winner_keeps_conditional_claim_and_dispatch_order(
 
 
 @pytest.mark.asyncio
-async def test_reparse_loser_after_user_lock_returns_processing_409() -> None:
+async def test_ready_reparse_skips_user_lock(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     user = SimpleNamespace(id=uuid.uuid4(), plan="free")
-    doc = SimpleNamespace(id=uuid.uuid4(), user_id=user.id, status="error")
+    doc = SimpleNamespace(id=uuid.uuid4(), user_id=user.id, status="ready")
+    db = SimpleNamespace(
+        scalar=AsyncMock(return_value=doc),
+        rollback=AsyncMock(),
+        execute=AsyncMock(return_value=SimpleNamespace(rowcount=1)),
+        commit=AsyncMock(),
+    )
+    monkeypatch.setattr(
+        "app.workers.parse_worker.parse_document.delay",
+        lambda *_args, **_kwargs: None,
+    )
 
-    async def refresh(_doc, **_kwargs) -> None:
-        doc.status = "parsing"
+    result = await documents_api.reparse_document(doc.id, None, user, db)
+
+    assert result == {"status": "reparsing"}
+    assert db.scalar.await_count == 1
+    lock_sql = str(
+        db.scalar.await_args.args[0].compile(
+            dialect=postgresql.dialect(),
+            compile_kwargs={"literal_binds": True},
+        )
+    )
+    assert "FROM documents" in lock_sql
+    assert "FOR NO KEY UPDATE" in lock_sql
+
+
+@pytest.mark.asyncio
+async def test_reparse_locked_processing_status_returns_409() -> None:
+    user = SimpleNamespace(id=uuid.uuid4(), plan="free")
+    doc = SimpleNamespace(id=uuid.uuid4(), user_id=user.id, status="parsing")
 
     db = SimpleNamespace(
-        get=AsyncMock(return_value=doc),
-        scalar=AsyncMock(return_value="free"),
-        refresh=AsyncMock(side_effect=refresh),
+        scalar=AsyncMock(return_value=doc),
         rollback=AsyncMock(),
         execute=AsyncMock(),
     )

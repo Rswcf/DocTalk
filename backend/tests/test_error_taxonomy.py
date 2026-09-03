@@ -715,7 +715,7 @@ async def test_documents_not_found(client: AsyncClient, monkeypatch: pytest.Monk
 async def test_reparse_document_processing(client: AsyncClient) -> None:
     user = _make_user()
     doc = SimpleNamespace(id=uuid.uuid4(), user_id=user.id, status="parsing")
-    db = _make_db(get=AsyncMock(return_value=doc))
+    db = _make_db(scalar=AsyncMock(return_value=doc))
     _override_dependencies(db, auth_user=user)
 
     response = await client.post(f"/api/documents/{doc.id}/reparse")
