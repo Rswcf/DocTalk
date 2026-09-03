@@ -8,6 +8,43 @@ releases use `0.minor.patch` semantics such as `0.2.0` and `0.2.1`.
 
 ## [Unreleased]
 
+## [0.29.0] - 2026-09-03
+
+### Added
+- Free accounts can now try Domain Mode once. The legal/academic chat overlay
+  was the single most common reason people clicked "upgrade", and nobody had
+  ever been able to see what they were being asked to pay for.
+
+### Changed
+- Upgrade buttons now open Stripe directly. Every in-app upgrade prompt used to
+  drop you on the billing page above a Subscribe button you still had to find
+  and press; the click that expresses intent now starts checkout.
+- Plus accounts can upload files up to 100 MB (was 50 MB, the same as Free) and
+  Pro up to 200 MB (was 100 MB). File size was the limit people hit most often,
+  and Plus did not actually raise it.
+- Documents now have a page limit: 750 on Free, 1,500 on Plus, 3,000 on Pro.
+  Every existing document is comfortably inside it.
+- Importing from a URL now has one flat 10 MB limit on every plan.
+- The demo page shows its sample documents immediately instead of below a
+  headline, a subhead and a three-step explainer.
+
+### Fixed
+- A failed checkout now tells you what actually went wrong instead of a generic
+  error.
+- The "Try Quote Finder" suggestion now appears when you ask the way people
+  really ask — "where does it say", "which page", "what's the source" — instead
+  of only on rare academic phrasing. It still never runs a search on its own.
+- Password-protected PDFs and files whose length cannot be determined are now
+  rejected at upload with a clear reason, rather than being stored and failing
+  later.
+
+### Internal
+- Growth batches A and C from the 2026-08-26 top-down review. Ten adversarial
+  review rounds (A: seven, C: three) to consensus. Along the way, four
+  pre-existing defects were found and fixed in credit settlement for
+  background document jobs — one of which could mint credits by refunding work
+  that had already been paid for. Trail in `.collab/reviews/2026-08-27-batch-{a,c}-CONSENSUS.md`.
+
 ## [0.28.1] - 2026-08-08
 
 ### Fixed
