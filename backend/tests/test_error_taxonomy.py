@@ -178,6 +178,25 @@ async def test_upload_document_limit_reached(client: AsyncClient) -> None:
 
 
 @pytest.mark.asyncio
+async def test_upload_failed_document_ceiling_reached(client: AsyncClient) -> None:
+    user = _make_user(plan="free")
+    db = _make_db(
+        scalar=AsyncMock(side_effect=[0, settings.FREE_MAX_DOCUMENTS]),
+    )
+    _override_dependencies(db, auth_user=user)
+
+    response = await client.post(
+        "/api/documents/upload",
+        files={"file": ("report.pdf", b"%PDF-1.4\nhello", "application/pdf")},
+    )
+
+    detail = _assert_error(response, 403, "DOCUMENT_LIMIT_REACHED")
+    assert detail["reason"] == "failed_documents"
+    assert detail["current"] == settings.FREE_MAX_DOCUMENTS
+    assert "failed documents" in detail["message"].lower()
+
+
+@pytest.mark.asyncio
 async def test_ingest_url_document_limit_reached(
     client: AsyncClient,
     monkeypatch: pytest.MonkeyPatch,

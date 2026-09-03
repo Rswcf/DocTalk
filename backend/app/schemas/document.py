@@ -89,6 +89,7 @@ class DocumentBrief(BaseModel):
     filename: str
     status: str
     created_at: Optional[str] = None
+    error_msg: Optional[str] = None
 
 
 class DemoDocumentResponse(BaseModel):

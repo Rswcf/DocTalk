@@ -16,10 +16,13 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.document_jobs import DocumentJobDetailResponse, _artifact_for_job
-from app.core.config import settings
 from app.core.deps import get_db_session, require_auth
 from app.models.tables import Document, DocumentJob, ProductEvent, User
 from app.services.doc_service import can_access_document, doc_service, sanitize_filename
+from app.services.document_limits import (
+    count_plan_slot_documents,
+    document_capacity_error_detail,
+)
 from app.services.layout_translation_service import (
     DEFAULT_LAYOUT_TRANSLATION_TARGET,
     LAYOUT_TRANSLATION_ACTIVE_STATUSES,
@@ -152,34 +155,16 @@ async def _free_layout_translation_used(user: User, db: AsyncSession) -> int:
     return int(used or 0)
 
 
-def _max_documents_for_plan(plan: str) -> int:
-    return {
-        "free": settings.FREE_MAX_DOCUMENTS,
-        "plus": settings.PLUS_MAX_DOCUMENTS,
-        "pro": settings.PRO_MAX_DOCUMENTS,
-    }.get(plan, settings.FREE_MAX_DOCUMENTS)
-
-
 async def _assert_document_capacity(user: User, db: AsyncSession) -> None:
     plan = (user.plan or "free").lower()
-    current = await db.scalar(
-        select(func.count())
-        .select_from(Document)
-        .where(Document.user_id == user.id)
-        .where(Document.status != "deleting")
+    slot_count, errored_count = await count_plan_slot_documents(db, user.id)
+    detail = document_capacity_error_detail(
+        plan=plan,
+        slot_count=slot_count,
+        errored_count=errored_count,
     )
-    max_docs = _max_documents_for_plan(plan)
-    if int(current or 0) >= max_docs:
-        raise HTTPException(
-            status_code=403,
-            detail={
-                "error": "DOCUMENT_LIMIT_REACHED",
-                "message": "Document limit reached for current plan",
-                "limit": max_docs,
-                "current": int(current or 0),
-                "plan": plan,
-            },
-        )
+    if detail is not None:
+        raise HTTPException(status_code=403, detail=detail)
 
 
 def _enqueue_layout_translation_job(job_id: str) -> None:

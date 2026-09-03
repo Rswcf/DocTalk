@@ -106,6 +106,7 @@ export interface DocumentBrief {
   filename: string;
   status: string;
   created_at: string | null;
+  error_msg?: string | null;
 }
 
 export async function getMyDocuments(signal?: AbortSignal): Promise<DocumentBrief[]> {
@@ -484,6 +485,11 @@ export async function deleteDocument(docId: string): Promise<void> {
     const text = await res.text();
     throw new Error(`HTTP ${res.status}: ${text}`);
   }
+}
+
+export async function reparseDocument(docId: string): Promise<{ status: string }> {
+  const res = await fetch(`${PROXY_BASE}/api/documents/${docId}/reparse`, { method: 'POST' });
+  return handle(res);
 }
 
 export async function getUserProfile(): Promise<UserProfile> {

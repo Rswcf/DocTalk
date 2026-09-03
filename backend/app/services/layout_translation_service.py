@@ -11,10 +11,12 @@ from typing import Any
 
 import fitz
 import httpx
+from sqlalchemy import func, select
 
 from app.core.config import settings
 from app.models.tables import Document, DocumentJob, ProductEvent, User
 from app.services.doc_service import sanitize_filename
+from app.services.document_limits import document_capacity_error_detail
 from app.services.storage_service import storage_service
 
 LAYOUT_TRANSLATION_JOB_TYPE = "layout_translation"
@@ -512,6 +514,43 @@ def _import_translated_pdf_to_document_sync(
         doc_id = uuid.uuid4()
         storage_key = f"documents/{doc_id}/{os.path.basename(filename)}"
         storage_service.upload_file(content, storage_key, "application/pdf")
+
+        # The request-time check is intentionally only a pre-check: the
+        # translation can finish much later. Serialize the authoritative
+        # count with every async upload/reparse by locking the same user row,
+        # after the object is stored and immediately before the INSERT.
+        locked_plan = db.scalar(
+            select(User.plan).where(User.id == job.user_id).with_for_update()
+        )
+        slot_count = int(db.scalar(
+            select(func.count())
+            .select_from(Document)
+            .where(Document.user_id == job.user_id)
+            .where(Document.status.notin_(("deleting", "error")))
+        ) or 0)
+        errored_count = int(db.scalar(
+            select(func.count())
+            .select_from(Document)
+            .where(Document.user_id == job.user_id)
+            .where(Document.status == "error")
+        ) or 0)
+        limit_detail = document_capacity_error_detail(
+            plan=locked_plan,
+            slot_count=slot_count,
+            errored_count=errored_count,
+        )
+        if limit_detail is not None:
+            storage_service.delete_file(storage_key)
+            _set_metadata(
+                job,
+                imported_document_id=None,
+                imported_document_filename=None,
+                imported_document_status="failed",
+                import_error=str(limit_detail["message"]),
+            )
+            db.commit()
+            return
+
         translated_doc = Document(
             id=doc_id,
             filename=filename,

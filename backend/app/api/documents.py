@@ -35,9 +35,12 @@ from app.schemas.document import (
     DocumentResponse,
     DocumentTextContentResponse,
 )
-from app.services.doc_service import can_access_document, doc_service, sanitize_filename
+from app.services.doc_service import can_access_document, doc_service
 from app.services.document_limits import (
     count_document_pages,
+    count_plan_slot_documents,
+    document_capacity_error_detail,
+    max_documents_for_plan,
     max_file_size_mb_for_plan,
     max_pages_for_plan,
     normalized_plan,
@@ -144,6 +147,7 @@ async def list_documents(
             filename=d.filename,
             status=d.status,
             created_at=d.created_at.isoformat() if d.created_at else None,
+            error_msg=d.error_msg,
         )
         for d in docs
     ]
@@ -211,34 +215,27 @@ async def upload_document(
             detail={"error": "UNSUPPORTED_FORMAT", "message": "Unsupported file format"},
         )
 
-    # Enforce per-plan document count limit
-    from sqlalchemy import func
-    from sqlalchemy import select as sa_select
-
-    from app.models.tables import Document
-    user_doc_count = await db.scalar(
-        sa_select(func.count()).select_from(Document)
-        .where(Document.user_id == user.id)
-        .where(Document.status != "deleting")
-    )
+    # Unlocked pre-check only: never hold the authoritative user-row lock
+    # across the upload byte stream. DocService repeats this under FOR UPDATE
+    # immediately before the INSERT.
     plan = normalized_plan(getattr(user, "plan", None))
-    max_docs = {
-        "free": settings.FREE_MAX_DOCUMENTS,
-        "plus": settings.PLUS_MAX_DOCUMENTS,
-        "pro": settings.PRO_MAX_DOCUMENTS,
-    }.get(plan, settings.FREE_MAX_DOCUMENTS)
-    if user_doc_count >= max_docs:
-        log_security_event("plan_limit_hit", user_id=user.id, plan=plan, limit_type="documents", limit=max_docs, current=user_doc_count)
-        raise HTTPException(
-            status_code=403,
-            detail={
-                "error": "DOCUMENT_LIMIT_REACHED",
-                "message": "Document limit reached for current plan",
-                "limit": max_docs,
-                "current": user_doc_count,
-                "plan": plan,
-            },
+    slot_count, errored_count = await count_plan_slot_documents(db, user.id)
+    limit_detail = document_capacity_error_detail(
+        plan=plan,
+        slot_count=slot_count,
+        errored_count=errored_count,
+    )
+    if limit_detail is not None:
+        log_security_event(
+            "plan_limit_hit",
+            user_id=user.id,
+            plan=plan,
+            limit_type="documents",
+            limit=max_documents_for_plan(plan),
+            current=limit_detail["current"],
+            reason=limit_detail.get("reason"),
         )
+        raise HTTPException(status_code=403, detail=limit_detail)
 
     # Validate size by streaming bytes with early abort to prevent memory DoS
     max_size_mb = max_file_size_mb_for_plan(plan)
@@ -363,34 +360,25 @@ async def ingest_url(
         logger.exception("Unexpected ValueError in ingest_url validation")
         raise HTTPException(status_code=500, detail=SERVER_ERROR_DETAIL)
 
-    # Enforce per-plan document count limit
-    from sqlalchemy import func
-    from sqlalchemy import select as sa_select
-
-    from app.models.tables import Document
-    user_doc_count = await db.scalar(
-        sa_select(func.count()).select_from(Document)
-        .where(Document.user_id == user.id)
-        .where(Document.status != "deleting")
-    )
+    # Unlocked pre-check; the insert path repeats it under the per-user lock.
     plan = normalized_plan(getattr(user, "plan", None))
-    max_docs = {
-        "free": settings.FREE_MAX_DOCUMENTS,
-        "plus": settings.PLUS_MAX_DOCUMENTS,
-        "pro": settings.PRO_MAX_DOCUMENTS,
-    }.get(plan, settings.FREE_MAX_DOCUMENTS)
-    if user_doc_count >= max_docs:
-        log_security_event("plan_limit_hit", user_id=user.id, plan=plan, limit_type="documents", limit=max_docs, current=user_doc_count)
-        raise HTTPException(
-            status_code=403,
-            detail={
-                "error": "DOCUMENT_LIMIT_REACHED",
-                "message": "Document limit reached for current plan",
-                "limit": max_docs,
-                "current": user_doc_count,
-                "plan": plan,
-            },
+    slot_count, errored_count = await count_plan_slot_documents(db, user.id)
+    limit_detail = document_capacity_error_detail(
+        plan=plan,
+        slot_count=slot_count,
+        errored_count=errored_count,
+    )
+    if limit_detail is not None:
+        log_security_event(
+            "plan_limit_hit",
+            user_id=user.id,
+            plan=plan,
+            limit_type="documents",
+            limit=max_documents_for_plan(plan),
+            current=limit_detail["current"],
+            reason=limit_detail.get("reason"),
         )
+        raise HTTPException(status_code=403, detail=limit_detail)
 
     try:
         from app.services.extractors.url_extractor import fetch_and_extract_url
@@ -471,30 +459,29 @@ async def ingest_url(
             )
         _enforce_page_limit(page_count=page_count, plan=plan)
 
-        # URL returned a PDF — process through normal PDF pipeline
-        doc_id = uuid.uuid4()
-        storage_key = f"documents/{doc_id}/{title}"
+        # URL returned a PDF — process through the same authoritative,
+        # per-user locked insert path as direct uploads.
+        class _MemUpload:
+            filename = title
+            content_type = "application/pdf"
+
+            async def read(self):
+                return pdf_bytes
+
         try:
-            await asyncio.to_thread(storage_service.upload_file, pdf_bytes, storage_key, 'application/pdf')
+            doc_id = await doc_service.create_document(
+                _MemUpload(),
+                db,
+                user_id=user.id,
+                file_type="pdf",
+                locale=body.locale,
+                source_url=url,
+            )
         except StorageUnavailableError:
-            raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=STORAGE_UNAVAILABLE_DETAIL)
-
-        doc = Document(
-            id=doc_id,
-            filename=title,
-            file_size=len(pdf_bytes),
-            storage_key=storage_key,
-            status="parsing",
-            user_id=user.id,
-            file_type="pdf",
-            source_url=url,
-            parse_requested_locale=body.locale,  # authoritative; worker reads only the column (Codex r4)
-        )
-        db.add(doc)
-        await db.commit()
-
-        from app.workers.parse_worker import parse_document
-        parse_document.delay(str(doc.id), locale=body.locale)
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail=STORAGE_UNAVAILABLE_DETAIL,
+            )
 
         return JSONResponse(
             status_code=status.HTTP_202_ACCEPTED,
@@ -526,31 +513,29 @@ async def ingest_url(
                 },
             )
 
-        doc_id = uuid.uuid4()
         display_title = (title or urlparse(url).netloc or "Imported webpage")[:100]
-        storage_filename = sanitize_filename(f"{display_title}.md", max_length=140)
-        storage_key = f"documents/{doc_id}/{storage_filename}"
+
+        class _MemUpload:
+            filename = display_title
+            content_type = "text/markdown"
+
+            async def read(self):
+                return text_bytes
+
         try:
-            await asyncio.to_thread(storage_service.upload_file, text_bytes, storage_key, 'text/markdown')
+            doc_id = await doc_service.create_document(
+                _MemUpload(),
+                db,
+                user_id=user.id,
+                file_type="url",
+                locale=body.locale,
+                source_url=url,
+            )
         except StorageUnavailableError:
-            raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=STORAGE_UNAVAILABLE_DETAIL)
-
-        doc = Document(
-            id=doc_id,
-            filename=display_title,
-            file_size=len(text_bytes),
-            storage_key=storage_key,
-            status="parsing",
-            user_id=user.id,
-            file_type="url",
-            source_url=url,
-            parse_requested_locale=body.locale,  # authoritative; worker reads only the column (Codex r4)
-        )
-        db.add(doc)
-        await db.commit()
-
-        from app.workers.parse_worker import parse_document
-        parse_document.delay(str(doc.id), locale=body.locale)
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail=STORAGE_UNAVAILABLE_DETAIL,
+            )
 
         return JSONResponse(
             status_code=status.HTTP_202_ACCEPTED,
@@ -894,6 +879,39 @@ async def reparse_document(
                 "status": doc.status,
             },
         )
+
+    # Serialize every retry-into-success claim with uploads/imports for this
+    # user. Refresh after acquiring the lock so a second retry of the same
+    # document still observes the winner's in-flight state and returns the
+    # established 409 contract rather than a stale limit response.
+    from sqlalchemy import select as sa_select
+
+    await db.scalar(sa_select(User.id).where(User.id == user.id).with_for_update())
+    await db.refresh(doc, attribute_names=["status"])
+    if doc.status not in ("ready", "error"):
+        await db.rollback()
+        raise HTTPException(
+            status_code=409,
+            detail={
+                "error": "DOCUMENT_PROCESSING",
+                "message": "Document is still processing",
+                "status": doc.status,
+            },
+        )
+
+    if doc.status == "error":
+        slot_count, _errored_count = await count_plan_slot_documents(db, user.id)
+        limit_detail = document_capacity_error_detail(
+            plan=getattr(user, "plan", None),
+            slot_count=slot_count,
+            # Rule C is independent of the retained-error ceiling: the row
+            # already exists, so only its return to the live set needs room.
+            errored_count=0,
+        )
+        if limit_detail is not None:
+            await db.rollback()
+            raise HTTPException(status_code=403, detail=limit_detail)
+
     # Atomic claim (Codex r5): a plain read-then-write lets two concurrent
     # reparse requests both observe 'ready', both write their locale and both
     # publish — the advisory lock makes the loser's task a no-op, so the run

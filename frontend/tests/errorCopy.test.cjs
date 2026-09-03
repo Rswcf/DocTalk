@@ -77,3 +77,37 @@ test('top-tier collection caps also suppress downgrade CTAs', () => {
     assert.doesNotMatch(copy.body, /upgrade/i);
   }
 });
+
+test('every terminal parse-worker code has specific copy in every locale', () => {
+  const { errorCopy, TERMINAL_PARSE_ERROR_CODES } = loadErrorCopyModule();
+  const workerSource = fs.readFileSync(
+    path.resolve(__dirname, '../../backend/app/workers/parse_worker.py'),
+    'utf8',
+  );
+  const table = workerSource.match(/_WORKER_ERROR_CODES:[\s\S]*?= \{([\s\S]*?)\n\}/);
+  assert.ok(table, 'parse worker error-code table must exist');
+  const workerCodes = [...table[1].matchAll(/^\s+"([A-Z_]+)":/gm)].map((match) => match[1]);
+
+  assert.deepEqual(
+    [...TERMINAL_PARSE_ERROR_CODES].sort(),
+    workerCodes.sort(),
+    'frontend taxonomy must stay in lockstep with terminal worker codes',
+  );
+
+  for (const code of TERMINAL_PARSE_ERROR_CODES) {
+    const copy = errorCopy({ code, detail: {} }, t, tOr);
+    assert.notEqual(copy.title, 'Connection issue', `${code} fell through to generic title`);
+    assert.doesNotMatch(copy.body, /check your connection/i, `${code} fell through to generic body`);
+  }
+
+  for (const locale of ['en', 'zh', 'ja', 'ko', 'es', 'de', 'fr', 'pt', 'it', 'ar', 'hi']) {
+    const messages = JSON.parse(fs.readFileSync(
+      path.resolve(__dirname, `../src/i18n/locales/${locale}.json`),
+      'utf8',
+    ));
+    for (const code of TERMINAL_PARSE_ERROR_CODES) {
+      assert.equal(typeof messages[`errors.${code}.title`], 'string', `${locale} missing ${code} title`);
+      assert.equal(typeof messages[`errors.${code}.body`], 'string', `${locale} missing ${code} body`);
+    }
+  }
+});

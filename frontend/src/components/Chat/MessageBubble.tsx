@@ -218,7 +218,7 @@ function MessageBubble({
   const isUser = message.role === 'user';
   const isError = !!message.isError;
   const isAssistant = !isUser;
-  const { t } = useLocale();
+  const { t, tOr } = useLocale();
 
   const [copied, setCopied] = useState(false);
   const [feedback, setFeedback] = useState<Feedback>(null);
@@ -349,6 +349,17 @@ function MessageBubble({
             </>
           )}
         </div>
+
+        {isAssistant && isError && onRegenerate && !isStreaming ? (
+          <button
+            type="button"
+            onClick={onRegenerate}
+            className="mt-2 inline-flex min-h-9 items-center gap-1.5 rounded-lg border border-red-200 bg-white px-3 py-1.5 text-sm font-semibold text-red-700 transition-colors hover:bg-red-50 focus-visible:ring-2 focus-visible:ring-red-400 dark:border-red-900 dark:bg-zinc-950 dark:text-red-300 dark:hover:bg-red-950/40"
+          >
+            <RotateCcw size={14} aria-hidden="true" />
+            {tOr('chat.retry', 'Retry')}
+          </button>
+        ) : null}
 
         {/* Copy + feedback buttons (assistant only) */}
         {isAssistant && !isError && message.text && (

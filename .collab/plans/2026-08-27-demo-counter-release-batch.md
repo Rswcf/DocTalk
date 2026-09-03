@@ -2,9 +2,9 @@
 > (`.collab/plans/2026-09-03-backlog-decision.md` §3, Fable 5.1). Reserve-then-release was judged
 > disproportionate and defer-to-done was rejected as a money-loss vector (an anonymous client that
 > aborts before `done` would never be counted, leaving only the 10 req/min/IP limiter). Only §1's
-> user-facing half ships, as Batch B item B3: expose the existing `regenerateLastResponse` path as a
-> **Retry** control on error bubbles. A failed demo answer still consumes one of the five questions.
-> Keep this file as the design record; do not implement it without a new ruling.
+> user-facing half shipped, as Batch B item B3: the existing `regenerateLastResponse` path is exposed
+> as a **Retry** control on error bubbles. A failed demo answer still consumes one of the five
+> questions. Keep this file as the design record; do not implement it without a new ruling.
 
 # Demo counter release — follow-up batch specification
 

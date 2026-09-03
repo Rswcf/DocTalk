@@ -4,19 +4,21 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useSession } from 'next-auth/react';
-import { ArrowRight, Sparkles, Trash2, Link2, FileUp, FolderOpen, GitCompare, X } from 'lucide-react';
+import { ArrowRight, Sparkles, Trash2, Link2, FileUp, FolderOpen, GitCompare, RotateCcw, X } from 'lucide-react';
 import {
+  ApiError,
   getDocument,
   uploadDocument,
   deleteDocument,
   getMyDocuments,
   ingestUrl,
+  reparseDocument,
 } from '../../lib/api';
 import type { DocumentBrief } from '../../lib/api';
 import { useDocTalkStore } from '../../store';
 import { useLocale } from '../../i18n';
 import { clearAccountStorage } from '../../lib/clearAccountStorage';
-import { errorCopy, fileTooLargeCopy, type ErrorCopy } from '../../lib/errorCopy';
+import { errorCopy, fileTooLargeCopy, parseWorkerErrorMsg, type ErrorCopy } from '../../lib/errorCopy';
 import { getBillingErrorMessage, startPlanAwareBillingAction } from '../../lib/billing';
 import { trackEvent } from '../../lib/analytics';
 import { sanitizeFilename } from '../../lib/utils';
@@ -24,7 +26,7 @@ import { PrivacyBadge } from '../PrivacyBadge';
 import Header from '../Header';
 import { useUserProfile } from '../../lib/useUserProfile';
 
-type StoredDoc = { document_id: string; filename?: string; createdAt: number; status?: string };
+type StoredDoc = { document_id: string; filename?: string; createdAt: number; status?: string; error_msg?: string | null };
 type PlanTier = 'free' | 'plus' | 'pro';
 
 // Must mirror backend FREE/PLUS/PRO_MAX_FILE_SIZE_MB (app/core/config.py).
@@ -39,7 +41,6 @@ const DASHBOARD_NUDGE_LAST_SHOWN_KEY = 'doctalk_dashboard_upgrade_nudge_last_sho
 const DASHBOARD_NUDGE_IMPRESSIONS_KEY = 'doctalk_dashboard_upgrade_nudge_impressions';
 const DASHBOARD_NUDGE_DISMISS_MS = 14 * 24 * 60 * 60 * 1000;
 const DASHBOARD_NUDGE_SHOW_MS = 7 * 24 * 60 * 60 * 1000;
-const DASHBOARD_NUDGE_MAX_IMPRESSIONS = 3;
 
 /**
  * The authenticated dashboard surface — upload zone, URL ingest, document
@@ -70,7 +71,9 @@ export default function DashboardPageClient() {
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [deleteErrorId, setDeleteErrorId] = useState<string | null>(null);
-  const pollTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const pollTimersRef = useRef<Map<string, ReturnType<typeof setInterval>>>(new Map());
+  const [reparsingId, setReparsingId] = useState<string | null>(null);
+  const [reparseError, setReparseError] = useState<{ documentId: string; copy: ErrorCopy } | null>(null);
   const [urlInput, setUrlInput] = useState('');
   const [urlLoading, setUrlLoading] = useState(false);
   const [urlError, setUrlError] = useState('');
@@ -109,10 +112,10 @@ export default function DashboardPageClient() {
   // still being polled, clear the interval so it doesn't run forever and
   // mutate state on a stale component.
   useEffect(() => () => {
-    if (pollTimerRef.current) {
-      clearInterval(pollTimerRef.current);
-      pollTimerRef.current = null;
+    for (const timer of pollTimersRef.current.values()) {
+      clearInterval(timer);
     }
+    pollTimersRef.current.clear();
   }, []);
 
   const userPlan: PlanTier = useMemo(() => {
@@ -127,6 +130,7 @@ export default function DashboardPageClient() {
           document_id: d.id,
           filename: d.filename,
           status: d.status,
+          error_msg: d.error_msg,
           createdAt: d.created_at ? new Date(d.created_at).getTime() : Date.now(),
         }))
         .sort((a, b) => b.createdAt - a.createdAt);
@@ -141,9 +145,8 @@ export default function DashboardPageClient() {
     [allDocs]
   );
   const durableFreeUsage = userPlan === 'free' && (
-    readyDocumentCount >= 2 ||
-    (profile?.stats.total_documents || 0) >= 2 ||
-    (profile?.stats.total_messages || 0) >= 8
+    readyDocumentCount >= 1
+    && (profile?.stats.total_messages || 0) >= 3
   );
   const showUpgradeNudge = isLoggedIn && durableFreeUsage && !upgradeNudgeDismissed;
   const showWorkspaceNudge = readyDocumentCount >= 2;
@@ -157,11 +160,9 @@ export default function DashboardPageClient() {
       const now = Date.now();
       const dismissedAt = Number(localStorage.getItem(DASHBOARD_NUDGE_DISMISS_KEY) || '0');
       const lastShownAt = Number(localStorage.getItem(DASHBOARD_NUDGE_LAST_SHOWN_KEY) || '0');
-      const impressions = Number(localStorage.getItem(DASHBOARD_NUDGE_IMPRESSIONS_KEY) || '0');
       setUpgradeNudgeDismissed(Boolean(
         (dismissedAt && now - dismissedAt < DASHBOARD_NUDGE_DISMISS_MS) ||
-        (lastShownAt && now - lastShownAt < DASHBOARD_NUDGE_SHOW_MS) ||
-        impressions >= DASHBOARD_NUDGE_MAX_IMPRESSIONS
+        (lastShownAt && now - lastShownAt < DASHBOARD_NUDGE_SHOW_MS)
       ));
     } catch {
       setUpgradeNudgeDismissed(false);
@@ -232,6 +233,63 @@ export default function DashboardPageClient() {
     return { dotClass: 'bg-emerald-500', label: t('dashboard.status.ready') };
   };
 
+  const startDocumentStatusPoll = useCallback((docId: string, navigateWhenReady: boolean) => {
+    const existingTimer = pollTimersRef.current.get(docId);
+    if (existingTimer) clearInterval(existingTimer);
+
+    const stopPolling = () => {
+      const timer = pollTimersRef.current.get(docId);
+      if (timer) clearInterval(timer);
+      pollTimersRef.current.delete(docId);
+    };
+
+    const timer = setInterval(async () => {
+      try {
+        const info = await getDocument(docId);
+        setDocumentStatus(info.status);
+        setServerDocs((current) => current.map((doc) => (
+          doc.id === docId ? { ...doc, status: info.status, error_msg: info.error_msg } : doc
+        )));
+        setMyDocs((current) => current.map((doc) => (
+          doc.document_id === docId ? { ...doc, status: info.status } : doc
+        )));
+
+        if (navigateWhenReady) {
+          const pagesParsed = info.pages_parsed ?? 0;
+          const chunksIndexed = info.chunks_indexed ?? 0;
+          if (info.status === 'ocr') {
+            setProgressText(t('upload.ocr'));
+          } else if (pagesParsed === 0 && chunksIndexed === 0) {
+            setProgressText(t('upload.parsing'));
+          } else {
+            setProgressText(t('upload.parsingProgress', { pagesParsed, chunksIndexed }));
+          }
+        }
+
+        if (info.status === 'ready') {
+          stopPolling();
+          if (navigateWhenReady) router.push(`/d/${docId}`);
+        } else if (info.status === 'error') {
+          stopPolling();
+          if (navigateWhenReady) {
+            setProgressText(t('upload.error'));
+            setUploading(false);
+          }
+        }
+      } catch (err) {
+        stopPolling();
+        if (navigateWhenReady) {
+          setProgressText(t('upload.error'));
+          setUploading(false);
+        } else {
+          setReparseError({ documentId: docId, copy: errorCopy(err, t, tOr) });
+        }
+      }
+    }, 2000);
+
+    pollTimersRef.current.set(docId, timer);
+  }, [router, setDocumentStatus, t, tOr]);
+
   const onFiles = useCallback(async (file: File) => {
     if (!file) return;
     setUploadErrorCopy(null);
@@ -275,46 +333,7 @@ export default function DashboardPageClient() {
       getMyDocuments().then(setServerDocs).catch(console.error);
 
       setProgressText(t('upload.parsing'));
-      // Hold the polling timer in a ref so unmount-mid-parse can clear it
-      // (see useEffect cleanup at the top of the component). The local
-      // `const timer` form leaked when the user navigated away mid-upload.
-      if (pollTimerRef.current) {
-        clearInterval(pollTimerRef.current);
-      }
-      const clearPollTimer = () => {
-        if (pollTimerRef.current) {
-          clearInterval(pollTimerRef.current);
-          pollTimerRef.current = null;
-        }
-      };
-      pollTimerRef.current = setInterval(async () => {
-        try {
-          const info = await getDocument(docId);
-          setDocumentStatus(info.status);
-          const pp = info.pages_parsed ?? 0;
-          const ci = info.chunks_indexed ?? 0;
-          if (info.status === 'ocr') {
-            setProgressText(t('upload.ocr'));
-          } else if (pp === 0 && ci === 0) {
-            setProgressText(t('upload.parsing'));
-          } else {
-            setProgressText(t('upload.parsingProgress', { pagesParsed: pp, chunksIndexed: ci }));
-          }
-          if (info.status === 'ready') {
-            clearPollTimer();
-            router.push(`/d/${docId}`);
-          }
-          if (info.status === 'error') {
-            clearPollTimer();
-            setProgressText(t('upload.error'));
-            setUploading(false);
-          }
-        } catch (e) {
-          clearPollTimer();
-          setProgressText(t('upload.error'));
-          setUploading(false);
-        }
-      }, 2000);
+      startDocumentStatusPoll(docId, true);
     } catch (e: unknown) {
       const copy = errorCopy(e, t, tOr);
       setProgressText(copy.body);
@@ -324,7 +343,7 @@ export default function DashboardPageClient() {
       }
       setUploading(false);
     }
-  }, [isLoggedIn, maxUploadBytes, maxUploadMb, router, setDocument, setDocumentStatus, t, tOr, userPlan]);
+  }, [isLoggedIn, maxUploadBytes, maxUploadMb, setDocument, setDocumentStatus, startDocumentStatusPoll, t, tOr, userPlan]);
 
   const onDrop = (e: React.DragEvent) => {
     e.preventDefault();
@@ -394,6 +413,35 @@ export default function DashboardPageClient() {
     }
   }, [isLoggedIn]);
 
+  const retryDocument = useCallback(async (documentId: string) => {
+    if (reparsingId) return;
+    setReparsingId(documentId);
+    setReparseError((current) => current?.documentId === documentId ? null : current);
+    let processing = false;
+    try {
+      await reparseDocument(documentId);
+      processing = true;
+    } catch (err) {
+      if (err instanceof ApiError && err.code === 'DOCUMENT_PROCESSING') {
+        // A concurrent click already claimed the parse. Treat the 409 as the
+        // in-flight state it represents and resume status polling.
+        processing = true;
+      } else {
+        setReparseError({ documentId, copy: errorCopy(err, t, tOr) });
+      }
+    } finally {
+      setReparsingId(null);
+    }
+
+    if (processing) {
+      setServerDocs((current) => current.map((doc) => (
+        doc.id === documentId ? { ...doc, status: 'parsing' } : doc
+      )));
+      setReparseError((current) => current?.documentId === documentId ? null : current);
+      startDocumentStatusPoll(documentId, false);
+    }
+  }, [reparsingId, startDocumentStatusPoll, t, tOr]);
+
   return (
     <div className="dt-stitch-theme flex flex-col min-h-screen">
       <Header variant="full" />
@@ -417,7 +465,7 @@ export default function DashboardPageClient() {
                     <p className="mt-1 max-w-2xl text-sm leading-6 text-[var(--workbench-muted)]">
                       {tOr(
                         'dashboard.upgradeNudge.body',
-                        'Plus gives you 20 documents, 100 MB uploads, all AI modes, and Markdown export before your next limit stops the workflow.'
+                        'Plus gives you 20 documents, 100 MB uploads, Pro answers without the monthly cap, and Markdown export before your next limit stops the workflow.'
                       )}
                     </p>
                   </div>
@@ -628,6 +676,7 @@ export default function DashboardPageClient() {
             <div className="space-y-3">
               {allDocs.map((d) => {
                 const statusMeta = getDocStatusMeta(d.status);
+                const { code: parseErrorCode } = parseWorkerErrorMsg(d.error_msg);
                 return (
                   <div
                     key={d.document_id}
@@ -644,6 +693,11 @@ export default function DashboardPageClient() {
                       <div className="text-xs text-[var(--workbench-muted)] mt-0.5">
                         {new Date(d.createdAt).toLocaleString()}
                       </div>
+                      {reparseError?.documentId === d.document_id ? (
+                        <p role="alert" className="mt-1 text-xs text-red-600 dark:text-red-400">
+                          {reparseError.copy.body}
+                        </p>
+                      ) : null}
                     </Link>
                     <div className="flex items-center gap-2">
                       <Link
@@ -652,6 +706,17 @@ export default function DashboardPageClient() {
                       >
                         {t('doc.open')}
                       </Link>
+                      {(d.status || '').toLowerCase() === 'error' && parseErrorCode !== 'DOWNLOAD_FAILED' ? (
+                        <button
+                          type="button"
+                          onClick={() => void retryDocument(d.document_id)}
+                          disabled={reparsingId !== null}
+                          className="inline-flex items-center gap-1.5 rounded-full border border-zinc-200 px-3 py-2 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-100 disabled:cursor-not-allowed disabled:opacity-60 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800"
+                        >
+                          <RotateCcw size={14} aria-hidden="true" />
+                          {tOr('common.retry', 'Retry')}
+                        </button>
+                      ) : null}
                       {confirmDeleteId === d.document_id ? (
                         <div className="flex items-center gap-1.5 text-xs text-zinc-500 dark:text-zinc-300">
                           <span>{t('dashboard.deletePrompt')}</span>

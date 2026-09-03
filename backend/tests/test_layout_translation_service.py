@@ -3,7 +3,9 @@ from __future__ import annotations
 import sys
 import uuid
 from types import SimpleNamespace
+from unittest.mock import Mock
 
+from app.core.config import settings
 from app.models.tables import Document, DocumentJob
 from app.services import layout_translation_service as service
 
@@ -29,6 +31,51 @@ class _FakeSession:
 
     def commit(self) -> None:
         self.commits += 1
+
+
+def test_automatic_layout_import_enforces_failed_document_ceiling_and_cleans_object(
+    monkeypatch,
+) -> None:
+    job = SimpleNamespace(
+        id=uuid.uuid4(),
+        user_id=uuid.uuid4(),
+        metadata_json={"target_language": "en"},
+    )
+    source_doc = SimpleNamespace(filename="source.pdf")
+    artifact = service.RetainPdfArtifact(
+        storage_key="layout-translations/result.pdf",
+        filename="result.pdf",
+        content_type="application/pdf",
+        size_bytes=10,
+    )
+    added = Mock()
+    db = SimpleNamespace(
+        scalar=Mock(side_effect=["free", 0, settings.FREE_MAX_DOCUMENTS]),
+        add=added,
+        commit=Mock(),
+    )
+    uploaded: list[str] = []
+    deleted: list[str] = []
+    monkeypatch.setattr(service.storage_service, "download_file", lambda _key: b"%PDF-translated")
+    monkeypatch.setattr(
+        service.storage_service,
+        "upload_file",
+        lambda _content, key, _content_type: uploaded.append(key),
+    )
+    monkeypatch.setattr(service.storage_service, "delete_file", lambda key: deleted.append(key))
+
+    service._import_translated_pdf_to_document_sync(
+        job=job,
+        source_doc=source_doc,
+        pdf_artifact=artifact,
+        db=db,
+    )
+
+    assert uploaded == deleted
+    assert job.metadata_json["imported_document_status"] == "failed"
+    assert job.metadata_json["import_error"] == "Delete failed documents to continue"
+    added.assert_not_called()
+    db.commit.assert_called_once()
 
 
 def test_layout_translation_worker_downloads_pdf_without_ready_flags(monkeypatch) -> None:

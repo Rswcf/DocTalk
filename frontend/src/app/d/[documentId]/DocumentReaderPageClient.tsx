@@ -8,22 +8,23 @@ import { ChatPanel } from '../../../components/Chat';
 import Header from '../../../components/Header';
 import CustomInstructionsModal from '../../../components/CustomInstructionsModal';
 import LayoutTranslationDrawer from '../../../components/LayoutTranslation/LayoutTranslationDrawer';
-import { ApiError, createLayoutTranslation, getChunkDetail, updateDocumentInstructions } from '../../../lib/api';
+import { ApiError, createLayoutTranslation, deleteDocument, getChunkDetail, reparseDocument, updateDocumentInstructions } from '../../../lib/api';
 import { PaywallModal } from '../../../components/PaywallModal';
 import { useDocTalkStore } from '../../../store';
 import { Panel, Group, Separator } from 'react-resizable-panels';
 import { useLocale } from '../../../i18n';
 import { usePageTitle } from '../../../lib/usePageTitle';
-import { AlertTriangle, Download, FileText, LogIn, MessageSquare, Presentation, Quote, X } from 'lucide-react';
+import { AlertTriangle, Download, FileText, LogIn, MessageSquare, Presentation, Quote, RotateCcw, Trash2, X } from 'lucide-react';
 import QuoteFinderPanel from '../../../components/Quotes/QuoteFinderPanel';
 import { useDocumentLoader } from '../../../lib/useDocumentLoader';
 import { useChatSession } from '../../../lib/useChatSession';
 import { useUserPlanProfile } from '../../../lib/useUserPlanProfile';
-import { errorCopy, type ErrorCopy } from '../../../lib/errorCopy';
+import { errorCopy, parseErrorClass, type ErrorCopy } from '../../../lib/errorCopy';
 import { openAuthModal } from '../../../lib/auth-modal';
 import type { ChatArtifact, Citation } from '../../../types';
 import { trackEvent } from '../../../lib/analytics';
 import { layoutTranslationTargetLabel, proxiedArtifactUrl } from '../../../lib/layoutTranslation';
+import { useDocumentBrief } from '../../../lib/useDocumentBrief';
 
 function useDesktopReaderLayout() {
   const [isDesktopLayout, setIsDesktopLayout] = useState<boolean | null>(null);
@@ -48,7 +49,7 @@ export default function DocumentReaderPageClient() {
   const [mobileTab, setMobileTab] = useState<'chat' | 'document'>('chat');
   const isDesktopLayout = useDesktopReaderLayout();
   const { t, tOr, locale } = useLocale();
-  const { pdfUrl, currentPage, highlights, highlightSnippet, highlightFocus, scale, scrollNonce, sessionId, navigateToCitation, totalPages } = useDocTalkStore();
+  const { pdfUrl, currentPage, highlights, highlightSnippet, highlightFocus, scale, scrollNonce, sessionId, navigateToCitation, setDocumentStatus, totalPages } = useDocTalkStore();
   const addMessage = useDocTalkStore((s) => s.addMessage);
 
   const documentName = useDocTalkStore((s) => s.documentName);
@@ -69,9 +70,14 @@ export default function DocumentReaderPageClient() {
     jobId: string | null;
   } | null>(null);
   const [pdfPreviewMode, setPdfPreviewMode] = useState<'original' | 'translated'>('original');
+  const [reparseBusy, setReparseBusy] = useState(false);
+  const [deleteBusy, setDeleteBusy] = useState(false);
+  const [reparseErrorCopy, setReparseErrorCopy] = useState<ErrorCopy | null>(null);
   const layoutTranslationJobIdsRef = useRef<Set<string>>(new Set());
   const {
     error: loaderError,
+    errorCode: loaderErrorCode,
+    reload: reloadDocument,
     isDemo,
     fileType,
     hasConvertedPdf,
@@ -79,10 +85,17 @@ export default function DocumentReaderPageClient() {
     customInstructions,
     setCustomInstructions,
   } = useDocumentLoader(documentId);
+  const { brief: documentBrief, polling: briefPolling } = useDocumentBrief(
+    documentStatus === 'ready' && !isDemo ? documentId : undefined,
+  );
   const { sessionError } = useChatSession(documentId);
   const { isLoggedIn, userPlan, canUseCustomInstructions } = useUserPlanProfile();
   const sessionErrorCopy = sessionError ? errorCopy(sessionError, t, tOr) : null;
   const error = loaderError;
+  const documentErrorCopy = loaderErrorCode
+    ? errorCopy({ code: loaderErrorCode, detail: {} }, t, tOr)
+    : null;
+  const documentErrorClass = parseErrorClass(loaderErrorCode);
 
   usePageTitle(documentName || undefined);
 
@@ -414,6 +427,42 @@ export default function DocumentReaderPageClient() {
     setQuoteFinderOpen(true);
   }, [isLoggedIn]);
 
+  const handleReparse = useCallback(async () => {
+    if (reparseBusy) return;
+    setReparseBusy(true);
+    setReparseErrorCopy(null);
+    try {
+      await reparseDocument(documentId);
+      setDocumentStatus('parsing');
+      reloadDocument();
+    } catch (err) {
+      if (err instanceof ApiError && err.code === 'DOCUMENT_PROCESSING') {
+        // Another request won the conditional claim. The 409 is the server's
+        // in-flight contract, so resume the loader rather than showing it as
+        // a failed Retry click.
+        setDocumentStatus('parsing');
+        reloadDocument();
+      } else {
+        setReparseErrorCopy(errorCopy(err, t, tOr));
+      }
+    } finally {
+      setReparseBusy(false);
+    }
+  }, [documentId, reloadDocument, reparseBusy, setDocumentStatus, t, tOr]);
+
+  const handleDeleteFailedDocument = useCallback(async () => {
+    if (deleteBusy) return;
+    setDeleteBusy(true);
+    setReparseErrorCopy(null);
+    try {
+      await deleteDocument(documentId);
+      router.push('/');
+    } catch (err) {
+      setReparseErrorCopy(errorCopy(err, t, tOr));
+      setDeleteBusy(false);
+    }
+  }, [deleteBusy, documentId, router, t, tOr]);
+
   useEffect(() => {
     if (isDesktopLayout !== false || mobileTab !== 'document') return;
     if (highlights.length === 0 && !highlightSnippet) return;
@@ -430,7 +479,7 @@ export default function DocumentReaderPageClient() {
   }, [isDesktopLayout, mobileTab, currentPage, highlights, highlightSnippet]);
 
   const chatContent = documentStatus === 'ready' && sessionId ? (
-    <ChatPanel sessionId={sessionId} onCitationClick={handleCitationClick} onPreviewLayoutTranslation={handlePreviewLayoutTranslation} maxUserMessages={isDemo && !isLoggedIn ? 5 : undefined} suggestedQuestions={suggestedQuestions.length > 0 ? suggestedQuestions : undefined} initialQuestion={initialQuestion} autoSubmitInitialQuestion={isDemo} onOpenSettings={canUseCustomInstructions ? () => setShowInstructions(true) : undefined} hasCustomInstructions={!!customInstructions} userPlan={userPlan} onTryQuoteFinder={handleTryQuoteFinder} />
+    <ChatPanel sessionId={sessionId} onCitationClick={handleCitationClick} onPreviewLayoutTranslation={handlePreviewLayoutTranslation} maxUserMessages={isDemo && !isLoggedIn ? 5 : undefined} suggestedQuestions={suggestedQuestions.length > 0 ? suggestedQuestions : undefined} documentBrief={documentBrief} briefPolling={briefPolling} initialQuestion={initialQuestion} autoSubmitInitialQuestion={isDemo} onOpenSettings={canUseCustomInstructions ? () => setShowInstructions(true) : undefined} hasCustomInstructions={!!customInstructions} userPlan={userPlan} onTryQuoteFinder={handleTryQuoteFinder} />
   ) : sessionErrorCopy ? (
     <div className="flex h-full w-full items-center justify-center px-5 py-8">
       <div
@@ -488,15 +537,49 @@ export default function DocumentReaderPageClient() {
     <div className="dt-stitch-theme dt-reading-workspace flex flex-col h-screen w-full overflow-hidden">
       <Header isDemo={isDemo} isLoggedIn={isLoggedIn} />
       {error ? (
-        <div className="flex-1 flex items-center justify-center">
-          <div className="text-center">
-            <div className="text-lg font-medium mb-3">{error}</div>
+        <div className="flex flex-1 items-center justify-center px-6 py-10">
+          <div className="w-full max-w-lg rounded-2xl border border-zinc-200 bg-white p-6 text-center shadow-sm dark:border-zinc-800 dark:bg-zinc-950">
+            <h1 className="text-lg font-semibold text-zinc-950 dark:text-zinc-50">
+              {documentErrorCopy?.title || t('upload.error')}
+            </h1>
+            <p className="mt-2 text-sm leading-6 text-zinc-600 dark:text-zinc-400">
+              {documentErrorCopy?.body || error}
+            </p>
+            {reparseErrorCopy ? (
+              <p role="alert" className="mt-3 text-sm text-red-600 dark:text-red-400">
+                {reparseErrorCopy.body}
+              </p>
+            ) : null}
+            <div className="mt-5 flex flex-wrap items-center justify-center gap-2">
+              {documentErrorClass === 'retryable_infrastructure' || documentErrorClass === 'content_fault' ? (
+                <button
+                  type="button"
+                  className="inline-flex items-center gap-2 rounded-lg bg-blue-700 px-4 py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-blue-600 disabled:cursor-not-allowed disabled:opacity-60 dark:bg-blue-600 dark:hover:bg-blue-500"
+                  onClick={() => void handleReparse()}
+                  disabled={reparseBusy || deleteBusy}
+                >
+                  <RotateCcw size={15} aria-hidden="true" />
+                  {tOr('common.retry', 'Retry')}
+                </button>
+              ) : null}
+              {documentErrorClass === 'content_fault' || documentErrorClass === 'unrecoverable' ? (
+                <button
+                  type="button"
+                  className="inline-flex items-center gap-2 rounded-lg border border-red-200 px-4 py-2 text-sm font-semibold text-red-700 transition-colors hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-60 dark:border-red-900 dark:text-red-300 dark:hover:bg-red-950/40"
+                  onClick={() => void handleDeleteFailedDocument()}
+                  disabled={deleteBusy || reparseBusy}
+                >
+                  <Trash2 size={15} aria-hidden="true" />
+                  {t('doc.deleteDoc')}
+                </button>
+              ) : null}
             <button
-              className="px-4 py-2 bg-zinc-900 text-white rounded-lg dark:bg-zinc-50 dark:text-zinc-900 hover:bg-zinc-800 dark:hover:bg-zinc-200 shadow-sm transition-colors focus-visible:ring-2 focus-visible:ring-zinc-400 dark:focus-visible:ring-zinc-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-900"
+              className="rounded-lg px-4 py-2 text-sm font-semibold text-zinc-600 transition-colors hover:bg-zinc-100 hover:text-zinc-950 dark:text-zinc-400 dark:hover:bg-zinc-900 dark:hover:text-zinc-50"
               onClick={() => router.push('/')}
             >
               {t('doc.backHome')}
             </button>
+            </div>
           </div>
         </div>
       ) : (

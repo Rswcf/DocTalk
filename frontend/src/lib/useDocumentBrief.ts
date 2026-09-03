@@ -7,6 +7,7 @@ import type { DocumentHierarchicalBrief } from "../types";
 interface UseDocumentBriefResult {
   brief: DocumentHierarchicalBrief | null;
   loading: boolean;
+  polling: boolean;
   error: string | null;
   refresh: () => Promise<void>;
 }
@@ -15,22 +16,32 @@ function shouldPoll(status?: string | null): boolean {
   return status === "pending" || status === "empty";
 }
 
-export function useDocumentBrief(documentId: string): UseDocumentBriefResult {
+export function useDocumentBrief(documentId: string | undefined): UseDocumentBriefResult {
   const [brief, setBrief] = useState<DocumentHierarchicalBrief | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [pollAttempts, setPollAttempts] = useState(0);
 
   const refresh = useCallback(async () => {
+    if (!documentId) return;
     setError(null);
     const data = await getDocumentBrief(documentId);
     setBrief(data);
   }, [documentId]);
 
   useEffect(() => {
+    if (!documentId) {
+      setBrief(null);
+      setLoading(false);
+      setError(null);
+      setPollAttempts(0);
+      return;
+    }
     let cancelled = false;
+    setBrief(null);
     setLoading(true);
     setError(null);
+    setPollAttempts(0);
     getDocumentBrief(documentId)
       .then((data) => {
         if (cancelled) return;
@@ -50,7 +61,7 @@ export function useDocumentBrief(documentId: string): UseDocumentBriefResult {
 
   useEffect(() => {
     if (!shouldPoll(brief?.status)) return;
-    if (brief?.status === "empty" && pollAttempts >= 10) return;
+    if (brief?.status === "empty" && pollAttempts >= 20) return;
     const timer = window.setInterval(() => {
       setPollAttempts((current) => current + 1);
       void refresh().catch((err) => {
@@ -69,5 +80,13 @@ export function useDocumentBrief(documentId: string): UseDocumentBriefResult {
     }
   }, [brief, refresh]);
 
-  return { brief, loading, error, refresh: wrappedRefresh };
+  const polling = Boolean(
+    documentId && (
+      loading
+      || brief?.status === "pending"
+      || (brief?.status === "empty" && pollAttempts < 20)
+    )
+  );
+
+  return { brief, loading, polling, error, refresh: wrappedRefresh };
 }

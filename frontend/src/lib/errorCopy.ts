@@ -92,6 +92,41 @@ export function errorCopy(err: ErrorInput, t: TFn, tOr: TOrFn): ErrorCopy {
 
 type Handler = (detail: Record<string, unknown>, tOr: TOrFn) => ErrorCopy;
 
+export const PARSE_ERROR_CLASSIFICATION = {
+  QDRANT_CLEANUP_FAILED: 'retryable_infrastructure',
+  VECTORIZE_FAILED: 'retryable_infrastructure',
+  OCR_FAILED: 'retryable_infrastructure',
+  PERSIST_PAGES_FAILED: 'retryable_infrastructure',
+  PERSIST_ELEMENTS_FAILED: 'retryable_infrastructure',
+  PERSIST_CHUNKS_FAILED: 'retryable_infrastructure',
+  CHUNKING_FAILED: 'retryable_infrastructure',
+  PARSE_TIMEOUT: 'retryable_infrastructure',
+  PARSE_FAILED: 'retryable_infrastructure',
+  PDF_PARSE_FAILED: 'content_fault',
+  NO_CHUNKS: 'content_fault',
+  OCR_DISABLED: 'content_fault',
+  OCR_INSUFFICIENT_TEXT: 'content_fault',
+  EXTRACTION_FAILED: 'content_fault',
+  DOWNLOAD_FAILED: 'unrecoverable',
+} as const;
+
+export const TERMINAL_PARSE_ERROR_CODES = Object.keys(PARSE_ERROR_CLASSIFICATION);
+
+export type ParseErrorClass = typeof PARSE_ERROR_CLASSIFICATION[keyof typeof PARSE_ERROR_CLASSIFICATION];
+
+export function parseErrorClass(code: string | null | undefined): ParseErrorClass | null {
+  if (!code || !(code in PARSE_ERROR_CLASSIFICATION)) return null;
+  return PARSE_ERROR_CLASSIFICATION[code as keyof typeof PARSE_ERROR_CLASSIFICATION];
+}
+
+function parseWorkerCopy(code: string, fallbackTitle: string, fallbackBody: string): Handler {
+  return (_detail, tOr) => ({
+    title: tOr(`errors.${code}.title`, fallbackTitle),
+    body: tOr(`errors.${code}.body`, fallbackBody),
+    severity: 'error',
+  });
+}
+
 /** Return the next paid tier for a limit, or no target at the Pro ceiling. */
 export function limitUpgradePlan(plan: unknown): BillingPlanIntent | undefined {
   if (plan === 'pro') return undefined;
@@ -141,6 +176,16 @@ export function fileTooLargeCopy(
 const CODE_TABLE: Record<string, Handler> = {
   // ─── Upload ───
   DOCUMENT_LIMIT_REACHED: (d, tOr) => {
+    if (d.reason === 'failed_documents') {
+      return {
+        title: tOr('errors.DOCUMENT_LIMIT_REACHED.title', 'Document limit reached'),
+        body: tOr(
+          'errors.DOCUMENT_LIMIT_REACHED.bodyFailedDocuments',
+          'Delete failed documents to continue.',
+        ),
+        severity: 'warning',
+      };
+    }
     const plan = limitUpgradePlan(d.plan);
     return {
       title: tOr('errors.DOCUMENT_LIMIT_REACHED.title', 'Document limit reached'),
@@ -240,6 +285,81 @@ const CODE_TABLE: Record<string, Handler> = {
     body: tOr('errors.STORAGE_UNAVAILABLE.body', 'Document storage is temporarily unavailable. Please try again shortly.'),
     severity: 'error',
   }),
+  QDRANT_CLEANUP_FAILED: parseWorkerCopy(
+    'QDRANT_CLEANUP_FAILED',
+    'Search index cleanup failed',
+    'DocTalk could not clear the previous search index. Retry processing this document.',
+  ),
+  VECTORIZE_FAILED: parseWorkerCopy(
+    'VECTORIZE_FAILED',
+    'Search indexing failed',
+    'The content was extracted, but DocTalk could not index it for search. Retry processing this document.',
+  ),
+  OCR_FAILED: parseWorkerCopy(
+    'OCR_FAILED',
+    'Text recognition failed',
+    'DocTalk could not recognize the text in this scanned PDF. Retry, or upload a PDF with a text layer.',
+  ),
+  PERSIST_PAGES_FAILED: parseWorkerCopy(
+    'PERSIST_PAGES_FAILED',
+    'Could not save pages',
+    'The document pages could not be saved because of a server problem. Retry processing.',
+  ),
+  PERSIST_ELEMENTS_FAILED: parseWorkerCopy(
+    'PERSIST_ELEMENTS_FAILED',
+    'Could not save document structure',
+    'The document structure could not be saved because of a server problem. Retry processing.',
+  ),
+  PERSIST_CHUNKS_FAILED: parseWorkerCopy(
+    'PERSIST_CHUNKS_FAILED',
+    'Could not save passages',
+    'The searchable passages could not be saved because of a server problem. Retry processing.',
+  ),
+  CHUNKING_FAILED: parseWorkerCopy(
+    'CHUNKING_FAILED',
+    'Could not prepare passages',
+    'DocTalk extracted the text but could not split it into searchable passages. Retry processing.',
+  ),
+  PARSE_TIMEOUT: parseWorkerCopy(
+    'PARSE_TIMEOUT',
+    'Processing timed out',
+    'This document took too long to process. Retry, or try a smaller document.',
+  ),
+  PARSE_FAILED: parseWorkerCopy(
+    'PARSE_FAILED',
+    'Document processing failed',
+    'An unexpected processing error occurred. Retry this document.',
+  ),
+  PDF_PARSE_FAILED: parseWorkerCopy(
+    'PDF_PARSE_FAILED',
+    'PDF could not be read',
+    'This PDF may be damaged or use an unsupported structure. Export a fresh copy, then retry or upload it again.',
+  ),
+  NO_CHUNKS: parseWorkerCopy(
+    'NO_CHUNKS',
+    'No readable text found',
+    'DocTalk could not find searchable text in this document. Check the file contents or upload a text-readable copy.',
+  ),
+  OCR_DISABLED: parseWorkerCopy(
+    'OCR_DISABLED',
+    'Scanned PDF needs text recognition',
+    'This PDF has no text layer, and text recognition is currently unavailable. Retry later or upload a text-readable copy.',
+  ),
+  OCR_INSUFFICIENT_TEXT: parseWorkerCopy(
+    'OCR_INSUFFICIENT_TEXT',
+    'Not enough readable text',
+    'Text recognition found too little readable content. Try a clearer scan or upload a text-readable copy.',
+  ),
+  EXTRACTION_FAILED: parseWorkerCopy(
+    'EXTRACTION_FAILED',
+    'Content extraction failed',
+    'DocTalk could not read this file\'s content. Check that it opens correctly, then retry or upload a fresh copy.',
+  ),
+  DOWNLOAD_FAILED: parseWorkerCopy(
+    'DOWNLOAD_FAILED',
+    'Original file is no longer stored',
+    'Delete this document entry and upload the original file again.',
+  ),
   INSTRUCTIONS_TOO_LONG: (d, tOr) => ({
     title: tOr('errors.INSTRUCTIONS_TOO_LONG.title', 'Instructions too long'),
     body: tOr('errors.INSTRUCTIONS_TOO_LONG.body', 'Custom instructions are limited to {max} characters.', {

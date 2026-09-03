@@ -31,6 +31,7 @@ logger = get_task_logger(__name__)
 
 _WORKER_ERROR_CODES: dict[str, str] = {
     "PARSE_TIMEOUT": "Document parsing timed out",
+    "QDRANT_CLEANUP_FAILED": "Failed to clear the previous search index",
     "DOWNLOAD_FAILED": "Failed to download document file",
     "EXTRACTION_FAILED": "Failed to extract document content",
     "PDF_PARSE_FAILED": "PDF parsing failed, file may be corrupted",

@@ -8,11 +8,16 @@ import unicodedata
 import uuid
 from typing import TYPE_CHECKING, Optional
 
+from fastapi import HTTPException
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.security_log import log_security_event
-from app.models.tables import Document
+from app.models.tables import Document, User
+from app.services.document_limits import (
+    count_plan_slot_documents,
+    document_capacity_error_detail,
+)
 from app.services.predebited_job_service import (
     settle_active_predebited_jobs_before_parent_delete,
 )
@@ -57,6 +62,7 @@ class DocService:
         self, upload, db: AsyncSession, user_id: Optional[uuid.UUID] = None,
         file_type: str = "pdf",
         locale: Optional[str] = None,
+        source_url: Optional[str] = None,
     ) -> uuid.UUID:
         """Save uploaded document to object storage, create DB record, dispatch parse.
 
@@ -87,6 +93,31 @@ class DocService:
         storage_content_type = mime_types.get(file_type, content_type)
         await asyncio.to_thread(storage_service.upload_file, data, storage_key, storage_content_type)
 
+        if user_id is not None:
+            # The unlocked endpoint pre-check keeps the user-row lock away
+            # from the upload byte stream. Once the object exists, serialize
+            # this authoritative count with every other insert/reparse for the
+            # same user, and keep the winning INSERT in this transaction.
+            locked_plan = await db.scalar(
+                select(User.plan).where(User.id == user_id).with_for_update()
+            )
+            slot_count, errored_count = await count_plan_slot_documents(db, user_id)
+            limit_detail = document_capacity_error_detail(
+                plan=locked_plan,
+                slot_count=slot_count,
+                errored_count=errored_count,
+            )
+            if limit_detail is not None:
+                await db.rollback()
+                try:
+                    await asyncio.to_thread(storage_service.delete_file, storage_key)
+                except Exception:
+                    logger.exception(
+                        "Failed to clean up race-rejected upload object %s",
+                        storage_key,
+                    )
+                raise HTTPException(status_code=403, detail=limit_detail)
+
         # Create document row (status=parsing)
         doc = Document(
             id=doc_id,
@@ -96,6 +127,7 @@ class DocService:
             status="parsing",
             user_id=user_id,  # Associate with user if authenticated
             file_type=file_type,
+            source_url=source_url,
             # Persisted with the same commit that opens 'parsing', BEFORE the
             # task is published: recovery dispatches (watchdog/startup) carry
             # no locale and the worker reads only this stored value (Codex r4).

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { ApiError, getDocument, getDocumentFileUrl, getConvertedFileUrl } from './api';
 import { errorCopy, parseWorkerErrorMsg } from './errorCopy';
 import { sanitizeFilename } from './utils';
@@ -15,6 +15,8 @@ function shouldRetryLoaderError(error: unknown): boolean {
 
 interface UseDocumentLoaderResult {
   error: string | null;
+  errorCode: string | null;
+  reload: () => void;
   isDemo: boolean;
   fileType: string;
   hasConvertedPdf: boolean;
@@ -26,6 +28,8 @@ interface UseDocumentLoaderResult {
 export function useDocumentLoader(documentId: string | undefined): UseDocumentLoaderResult {
   const { t, tOr } = useLocale();
   const [error, setError] = useState<string | null>(null);
+  const [errorCode, setErrorCode] = useState<string | null>(null);
+  const [reloadKey, setReloadKey] = useState(0);
   const [isDemo, setIsDemo] = useState(false);
   const [fileType, setFileType] = useState<string>('pdf');
   const [hasConvertedPdf, setHasConvertedPdf] = useState(false);
@@ -43,10 +47,15 @@ export function useDocumentLoader(documentId: string | undefined): UseDocumentLo
     clearDocumentTransientState,
   } = useDocTalkStore();
 
+  const reload = useCallback(() => {
+    setReloadKey((current) => current + 1);
+  }, []);
+
   useEffect(() => {
     if (!documentId) return;
 
     setError(null);
+    setErrorCode(null);
     setIsDemo(false);
     setFileType('pdf');
     setHasConvertedPdf(false);
@@ -75,6 +84,7 @@ export function useDocumentLoader(documentId: string | undefined): UseDocumentLo
           console.error('Failed to load document metadata:', e);
           setError(copy.body || t('doc.loadError'));
         }
+        setErrorCode(null);
         if (!shouldRetryLoaderError(e) && intervalId) clearInterval(intervalId);
         return;
       }
@@ -82,6 +92,7 @@ export function useDocumentLoader(documentId: string | undefined): UseDocumentLo
       try {
         if (cancelled) return;
         setError(null);
+        setErrorCode(null);
         setDocumentStatus(info.status);
         if (info.is_demo) setIsDemo(true);
         if (info.file_type) setFileType(info.file_type);
@@ -97,8 +108,10 @@ export function useDocumentLoader(documentId: string | undefined): UseDocumentLo
           if (code) {
             const copy = errorCopy({ code, detail: {} }, t, tOr);
             setError(copy.body);
+            setErrorCode(code);
           } else {
             setError(fallback || t('upload.error'));
+            setErrorCode(null);
           }
           if (intervalId) clearInterval(intervalId);
           return;
@@ -122,6 +135,7 @@ export function useDocumentLoader(documentId: string | undefined): UseDocumentLo
               const copy = errorCopy(e, t, tOr);
               console.error('Failed to load PDF:', e);
               setError(copy.body || t('doc.loadError'));
+              setErrorCode(null);
               if (!shouldRetryLoaderError(e) && intervalId) clearInterval(intervalId);
               return;
             }
@@ -138,6 +152,7 @@ export function useDocumentLoader(documentId: string | undefined): UseDocumentLo
               const copy = errorCopy(e, t, tOr);
               console.error('Failed to load converted PDF:', e);
               setError(copy.body || t('doc.loadError'));
+              setErrorCode(null);
               if (!shouldRetryLoaderError(e) && intervalId) clearInterval(intervalId);
               return;
             }
@@ -149,6 +164,7 @@ export function useDocumentLoader(documentId: string | undefined): UseDocumentLo
         if (cancelled) return;
         console.error('Failed to process document metadata:', e);
         setError(t('doc.loadError'));
+        setErrorCode(null);
         if (intervalId) clearInterval(intervalId);
       }
     };
@@ -160,10 +176,12 @@ export function useDocumentLoader(documentId: string | undefined): UseDocumentLo
       cancelled = true;
       if (intervalId) clearInterval(intervalId);
     };
-  }, [documentId, setDocument, setPdfUrl, setDocumentName, setDocumentStatus, setLastDocument, setDocumentSummary, setSuggestedQuestions, clearDocumentTransientState, t, tOr]);
+  }, [documentId, reloadKey, setDocument, setPdfUrl, setDocumentName, setDocumentStatus, setLastDocument, setDocumentSummary, setSuggestedQuestions, clearDocumentTransientState, t, tOr]);
 
   return {
     error,
+    errorCode,
+    reload,
     isDemo,
     fileType,
     hasConvertedPdf,
