@@ -453,3 +453,57 @@ those documents' owners have not returned, which is the retention problem, not a
 Day-0 baseline at T_A (owner included in raw counts): 171 users, 104 ready user-owned documents,
 49 brief rows, **0 active subscriptions**, 15 documents in `error` (ids snapshotted for the reparse
 readout). `product_events` since T_A: none yet.
+
+### 8.6 Pre-registered success criteria for 2026-09-21 (Fable 5.1, dated commitment)
+
+Readout: `backend/scripts/observation_window.py` (read-only, owner excluded,
+`DB=<DATABASE_PUBLIC_URL>`). Recorded **before** the window runs so the 09-21 result is compared to a
+commitment rather than to memory.
+
+**Sample size gates everything.** At ~1 signup/day the window yields ~14 users. Every criterion below
+is an **existence threshold**, not a rate. **If non-owner signups since T_A are < 10 on 2026-09-21,
+extend the window until n = 10 before deciding.** Reporting "no effect" at n < 10 is not permitted.
+
+**Source classification — corrected from the ruling.** The ruling enumerated 12 in-app
+`upgrade_click` sources. The codebase actually emits **30+** (`quote_save`, `profile_credits`,
+`message_actions`, `document_toolbar`, `demo_limit_panel`, `collection_reader`,
+`dashboard_upload_precheck`, `layout_translation_toolbar`, `billing_cancel_modal` … were all missing).
+A hardcoded in-app list would silently drop signal as sources are added, so the script inverts it:
+**marketing** = `pricing, pricing_hero, hero, final_cta, public_header, features_layout_translation`
+(these land on `/billing` and are not what A1 fixed); everything else counts as in-app.
+
+**Defect triggers — act immediately, do not wait for 09-21:**
+- in-app `upgrade_click` >= 1 by a non-owner with `checkout_created` = 0, or any `checkout_failed`
+  → the button is still broken for a real user; read `checkout_attempts`.
+- a day-0 snapshot document retried >= 3 times without reaching `ready`, or any `failed_documents`
+  rejection → read the code.
+
+**Criteria:**
+
+| Area | Metric | Threshold |
+|---|---|---|
+| Purchase (A1/A2) | in-app `upgrade_click` I, `checkout_created` C | C >= 1 → the button works in the wild; the wall becomes price/value, measurable for the first time. I = 0 → absence of intent, not evidence about the button. `checkout_completed` >= 1 → first live subscriber. |
+| Domain Mode (A3) | non-owner `feature_trial_usages` rows since T_A | >= 1 → the #1 intent source converts to usage for the first time in 263 sessions. Then measure post-trial intent from that user. |
+| Quote Finder (C1/C2) | chip clicks, panel opens, and `credit_ledger` `reason='quote_search'` | >= 1 non-owner search = first adoption ever. Clicks with no search = the panel loses them. No chip-shown event exists, so CTR is unmeasurable — do not add one now. |
+| First session (B1) | zero-message rate per document, `[T_A−60d, T_B)` vs `[T_B, +14d)` | Readable only as the zero-message rate halving, or >= 1/3 of first messages matching a suggested question. Otherwise report "unreadable at this n", never "no effect". |
+| Parse failures (B2) | day-0 snapshot documents reaching `ready`; new error documents | any retry-into-ready = a dead end removed. Expected 0–2. |
+| Nudge (B4) | `upgrade_nudge_shown`, then `upgrade_click` and `checkout_created` at `source=dashboard_upgrade_reminder` | shown >= 1 = the surface is alive again (base since the lifetime cap: 0). `checkout_created` >= 1 is §1's stated criterion. |
+| **Day-2 (the decider)** | non-owner, first activity >= T_A, active on a later calendar day within 7 | base over seven months = **0**. >= 1 → read what they returned to do; that is the retention hook and the next batch. 0 with n >= 10 → confirms B was first-session work. |
+
+**Not measurable here, by construction:** `DOCUMENT_PAGE_LIMIT_EXCEEDED` and
+`PDF_PASSWORD_PROTECTED` reject before the `documents` INSERT, and the upload path's `limit_hit` only
+carries `file_size`/`upload_limit` (`DashboardPageClient.tsx:342`) — they read zero regardless of what
+happens. Their instrument is Railway logs. The script says so in its header rather than printing a
+misleading zero.
+
+**Decision rule at 2026-09-21:**
+- any of C >= 1, a trial claim followed by intent, a non-owner quote search, or day-2 >= 1 → follow
+  that thread; the next batch is whatever that user did.
+- everything zero **with n >= 10** → the product walls cannot be measured at 1 signup/day. The next
+  work is ICP-targeted acquisition: the web-filter categorization first (owner-only), then locale
+  structured data and `/tools` links. The 2026-08-25 thesis stands — this is traffic *quality* toward
+  lawyers and analysts, not volume.
+- n < 10 → extend; decide at n = 10.
+
+Baseline at T_A (smoke-run 2026-09-07, ~25 min after deploy): every metric above reads 0, including
+0 non-owner signups. That is the zero line the window is measured against.
