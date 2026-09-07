@@ -8,6 +8,34 @@ releases use `0.minor.patch` semantics such as `0.2.0` and `0.2.1`.
 
 ## [Unreleased]
 
+## [0.30.0] - 2026-09-07
+
+### Added
+- Opening a document now shows what it is about straight away — a short summary,
+  its key points, and suggested questions — instead of an empty chat box. These
+  briefs were already being generated; nothing had been displaying them since May.
+- Documents that fail to process now have a Retry button, on the dashboard and in
+  the reader.
+- A failed answer now has a Retry button instead of leaving you at a dead end with
+  your question lost.
+
+### Changed
+- A document that failed to process no longer uses up one of your plan's document
+  slots. Failed documents still have their own limit, so they cannot pile up.
+- When processing fails, the message now says what actually went wrong — the file
+  could not be read, the scan had no readable text, the download failed — instead
+  of one generic "check your connection" for every cause.
+- The upgrade suggestion on the dashboard appears again for people actually using
+  the product, and its description of Plus is now accurate.
+
+### Fixed
+- Retrying an answer twice in quick succession no longer sends two requests or
+  charges twice.
+- A connection failure mid-answer now shows an error and offers a retry, instead of
+  leaving the page stuck as though it were still thinking.
+- Re-processing a document can no longer stall against a document being deleted at
+  the same time.
+
 ## [0.29.0] - 2026-09-03
 
 ### Added
