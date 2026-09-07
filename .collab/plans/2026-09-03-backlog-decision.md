@@ -420,3 +420,36 @@ driven by the day-2 retention number, which needs production traffic on the ship
 another batch built on a base that has never run in production.
 
 Tags: `v0.28.1` = `84bcbc7`, `v0.29.0` = `8e93934`.
+
+### 8.5 §2.3 resolved — the missing summaries are pre-table legacy, not a broken worker
+
+Query run against production 2026-09-07 (the DSN is `DATABASE_PUBLIC_URL` on the Postgres service;
+`prod_metrics.py`'s `DB=` expects exactly that). Result, ready user-owned documents by month:
+
+| Month | brief row | error_code | summary NULL | n |
+|---|---|---|---|---|
+| 2026-03 | no | – | yes | 8 |
+| 2026-04 | no | – | yes | 30 |
+| 2026-04 | yes | – | no | 1 |
+| 2026-05 | no | – | yes | 18 |
+| 2026-05 | yes | – | no | 20 |
+| 2026-06 | yes | – | no | 4 |
+| 2026-07 | yes | `BRIEF_JSON_INVALID` | yes | 1 |
+| 2026-07 | yes | – | no | 1 |
+| 2026-08 | yes | – | no | 18 |
+| 2026-09 | yes | – | no | 3 |
+
+**56 documents have no `document_briefs` row at all, and all 56 are March–May** (8 + 30 + 18). May is
+the transition month — 18 without a row, 20 with — consistent with the table landing mid-May. From June
+onward every ready document has a brief row.
+
+**Exactly one brief has ever failed with an error code** (`BRIEF_JSON_INVALID`, July) in six months.
+
+Per the §2.3 decision rule ("mostly pre-May rows → no fix; `error_code` rows → add autoretry"), the
+ruling resolves to **no fix**. Adding `autoretry_for` to the brief task is not justified by one failure
+in six months. A one-off backfill for the 56 legacy documents remains optional and is NOT scheduled —
+those documents' owners have not returned, which is the retention problem, not a brief problem.
+
+Day-0 baseline at T_A (owner included in raw counts): 171 users, 104 ready user-owned documents,
+49 brief rows, **0 active subscriptions**, 15 documents in `error` (ids snapshotted for the reparse
+readout). `product_events` since T_A: none yet.
