@@ -20,6 +20,24 @@ Vercel auto-deploy, so `railway up` must run and be health-verified FIRST.
 7. Switch back: `git checkout main`
 8. Test full flow: login → upload → chat → citation jump on doctalk.site
 
+### Rollback after a migration has run (verified 2026-09-07)
+
+`backend/entrypoint.sh` sets `set -e` (line 4) and runs `python -m alembic upgrade head` (line 8)
+**before** starting anything. So once a release's migrations have been applied to production, an
+older image whose `alembic/versions/` does not contain the current head **cannot resolve head, exits
+non-zero, and crash-loops**.
+
+Concretely: after v0.29.0 applied `20260826_0043`, rolling back to the v0.28.1 image (`84bcbc7`, whose
+tree has no `0043`) crash-loops. Safe options:
+
+1. roll forward, or roll back only to an image that contains the current head (>= v0.29.0); or
+2. `alembic downgrade 20260808_0039` first, then deploy the older image — this DROPS the
+   `checkout_attempts` and `feature_trial_usages` tables and their rows.
+
+CI proves the downgrade path on every run (the `migrations` job does
+`upgrade head -> downgrade base -> upgrade head` on Postgres 16.6), so option 2 works, but it is
+destructive. Never assume "just redeploy the previous version" is safe after a migration.
+
 ### Checks
 - Version bump = 3 files + changelogs: `version.json`, `frontend/package.json`,
   `frontend/package-lock.json` (2 places), `CHANGELOG.md`, `CHANGELOG.zh.md`;

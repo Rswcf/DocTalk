@@ -336,3 +336,87 @@ or miss a checklist item if the document were followed literally.
 | Item 3 already satisfied | YES — the v0.29.0 bump commit `8e93934` carries both changelogs plus the 3 version files; `check_version_consistency.py` OK |
 
 Line numbers in items 1–2 are approximate by a few lines; the orderings they depend on hold exactly.
+
+---
+
+## 8. Re-sequencing after the v0.29.0 deploy (2026-09-07)
+
+### 8.0 Release record — what actually happened
+
+**v0.29.0 (Batch A + C) shipped to production 2026-09-07, backend-first, in the skill's order.**
+
+| Event | UTC | Evidence |
+|---|---|---|
+| Railway backend deployment SUCCESS | **00:22:30** | GraphQL `deployments` on service `1e25a8b5`, newest node |
+| `/health` polled to `0.29.0` | before 00:25 | 150s poll from `railway up` to first `0.29.0` response |
+| `alembic current` **inside the container** | before 00:25 | `20260826_0043 (head)` |
+| `RAILWAY_REPLICA_REGION` | before 00:25 | `us-west2` (standing post-deploy rule) |
+| `git push origin stable` | **00:25:40** | GitHub push event, `84bcbc7..8e93934` |
+| Vercel deployment created | **00:27:45** | GitHub deployments API, sha `8e93934`, success |
+
+The backend was live **three minutes before** the frontend push. Steps 3 and 4 of
+`.claude/skills/deploy/SKILL.md` were executed and verified, not skipped.
+
+**Correction to the record:** a re-sequencing ruling drafted while the deploy was still running
+sampled `/health` before 00:22:30, concluded production was serving a v0.29.0 frontend on a v0.28.1
+backend, and recommended treating it as a frontend-first process incident with a revert contingency
+and a freeze on `stable` pushes. That premise was false and those recommendations are void. Recorded
+here because the mistaken version was circulated: **no mixed state existed, and no incident occurred.**
+The deploy had been blocked for four days only because the Railway CLI was authenticated to an account
+(`yijie.ma94@gmail.com`) that the DocTalk project returns `Not Authorized` for; re-authenticating to
+`yijiema123@icloud.com` unblocked it.
+
+Gates on the deploy candidate: ruff clean, sole head `20260826_0043`, 942 passed / 3 skipped,
+48 integration, version check OK. Post-deploy: `/`, `/demo`, `/pricing`, `/use-cases/lawyers`,
+`/trust` all 200; the release-specific string "100 MB uploads" present in the served homepage chunk.
+
+*Verification note:* the site HTML is edge-cached. A plain `curl` returned the previous build's chunk
+hashes for six minutes (`x-vercel-cache: HIT`, `age: 339`) and looked exactly like a stuck Vercel
+build. `curl -H 'Cache-Control: no-cache'` returned the new build immediately. Use that when verifying
+a frontend deploy; the backend has a real version endpoint and needs none of it.
+
+### 8.1 Batch B merges into the next ship — one deploy to v0.30.0
+
+Superseding §1's "Batch B as v0.30.0 following separately": there is now one ship, not two. The only
+reason the original sequencing gave for splitting them was that B did not exist yet; B is now at
+CONSENSUS-SHIP. Deploy events are owner-gated and therefore the scarce resource. B carries no
+migration, and a v0.29.0 frontend runs unchanged against a v0.30.0 backend — B's backend changes
+(a `reason` field on a 403, the reparse plan check, `FOR NO KEY UPDATE` on the trial mutex, the
+`create_collection` reorder) alter no contract the live frontend uses. Attribution survives because it
+is per metric, not per deploy: A → `checkout_created`; C → the Quote Finder events; B → brief-rendered,
+reparse outcomes, nudge conversion.
+
+`main` is at `724f936` (v0.30.0) for CI and the Vercel preview; `stable` stays at `8e93934` until the
+next backend deploy.
+
+### 8.2 Rollback is not "redeploy the previous version"
+
+`backend/entrypoint.sh` sets `set -e` (line 4) and runs `alembic upgrade head` (line 8) before starting
+anything, so once `0040-0043` are applied, the v0.28.1 image — whose tree has no `20260826_0043` —
+cannot resolve head and crash-loops. Safe rollback is an image >= v0.29.0, or
+`alembic downgrade 20260808_0039` first, which DROPS `checkout_attempts` and `feature_trial_usages`.
+CI proves the downgrade path on every run (`upgrade head -> downgrade base -> upgrade head` on
+Postgres 16.6). Written into `.claude/skills/deploy/SKILL.md`.
+
+### 8.3 The credential, not the login
+
+The recurring block is not "the owner forgot to log in" — it is that deploys require an interactive
+login to an account only the owner holds. There is no account-free path: `ci.yml` is test-only, the
+repo has no GitHub secrets, there is no `RAILWAY_TOKEN` anywhere, Railway has no GitHub integration
+(deploys are manual `railway up`), and the Vercel CLI is unauthenticated. Hobby workspaces cannot add
+members, so inviting a second account is not available.
+
+The fix is a **Railway project token** scoped to the production environment
+(`RAILWAY_TOKEN=xxx railway up --service backend`, no `railway link` required), stored chmod-600
+outside the repo. That also unblocks the §2.3 production query, which has been waiting since 2026-09-03.
+
+### 8.4 Stop-line
+
+After the v0.30.0 ship: the observation readout script (read-only, `prod_metrics.py` pattern, owner
+excluded, deploy date as the cut) and nothing else. Explicitly not started: anonymous upload,
+structured data on the locale URLs, `/tools` internal links, `add_documents_to_collection`'s
+FK-violation race, the brief backfill, and Batch A hardening rows 15-18. The next real decision is
+driven by the day-2 retention number, which needs production traffic on the shipped code — not by
+another batch built on a base that has never run in production.
+
+Tags: `v0.28.1` = `84bcbc7`, `v0.29.0` = `8e93934`.
