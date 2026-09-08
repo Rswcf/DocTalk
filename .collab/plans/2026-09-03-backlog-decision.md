@@ -716,3 +716,60 @@ Apply on a branch after `stable` moves, or run by hand. `OWNER`/`MARKETING` as i
 2. Web-filter categorization submissions (§9.6.0).
 3. Railway project token (§8.3).
 4. Later, a second `stable` push for `growth/acquisition-1` (§9.6.1).
+
+### 9.10 Measurements answering §9's open queries — and one correction §9 did not anticipate
+
+Run against production 2026-09-08 (owner excluded, cohort = signups since 2026-02-01, n=170).
+§9 requested all three; the first invalidates a constant §8.6 relied on, and its consequence is larger
+than a corrected number.
+
+**A. The day-2 base rate is ~0.09, not 0.** Robust across definitions, so not a midnight artifact:
+
+| Definition | returned | p |
+|---|---|---|
+| later calendar day, ≤ 7d (as §8.6 specified) | 16/170 | **0.094** |
+| gap ≥ 24h, ≤ 7d (artifact-proof) | 14/170 | 0.082 |
+| gap ≥ 24h, any time later | 18/170 | 0.106 |
+
+`P(read 0 | nothing changed)` = **0.35 at n=10**, 0.12 at n=20, 0.01 at n=45. §9's retraction of the
+negative branch is confirmed; n≈45 is where a zero read becomes informative.
+
+**B. The positive branch is compromised too, which §9 did not intend.** At p≈0.09, one return on a
+later day is what ~9% of users do anyway. On a 09-28 cohort of ~10 that is close to a coin flip under
+the null, so "day-2 ≥ 1 → that session is the next batch" risks building a batch off noise.
+
+**The wall is at day 4, not day 2.** Distinct active days, all non-owner users, all time:
+
+| active days | users |
+|---|---|
+| 1 | 54 |
+| 2 | 9 |
+| 3 | 4 |
+| **4+** | **0** |
+
+This reproduces the 2026-08-25 finding exactly and sharpens how it has been paraphrased since:
+13 of 67 active users (19%) reach 2+ days; **zero have ever reached 4**. The genuinely
+zero-base metric — where a single positive read is unambiguous — is **4+ distinct active days**.
+
+> **OPEN DECISION, must be resolved before the 2026-09-21 checkpoint.** Change the decider from
+> "day-2 return" to "4+ distinct active days"? For: it is the only metric with a true zero base over
+> seven months, which is the property the decision rule depends on. Against: it needs ~4 days of
+> elapsed engagement per user, so an early-window returner cannot reach it by 09-28, and the 09-28
+> date would need a two-tier rule (day-2 as a *lead* indicator worth reading, day-4 as the decider).
+> Raised with the planning authority; unanswered at the time of writing. **Do not treat a single
+> day-2 return as decisive** until this is resolved.
+
+**C. The active-user denominator holds, and it is what makes 09-28 viable.** Last 7d: **3** distinct
+authenticated non-owner users, 13 messages (one user sent 11). Last 30d: **12** distinct users,
+60 messages. Anonymous demo messages last 7d: 2. Every active user signed up pre-T_A — there have been
+no post-T_A signups. Purchase, trial, Quote Finder and nudge all read off these ~12 returning users
+and never needed a new signup; the signup rate was the wrong gate for four of the six rows.
+
+**D. In-app intent rate comfortably clears §9's threshold.** `upgrade_click` at non-marketing sources,
+non-owner, distinct users per month: 2026-05 = 10, 06 = 0, 07 = 2, 08 = 6 → **mean 4.5/month** against
+the stated "holds unless below ~2/month". The 09-28 decision date stands.
+
+**E. Correction to this session's own reporting.** The claim that the signup rate was "declining" was
+over-read: 2 signups in 7 days cannot separate 0.29/day from 0.5/day. The correct statement is
+"consistent with the historical ~0.5/day". The substantive consequence — that the original 14-day
+window could not reach its stated sample — survives at 0.5/day regardless.
