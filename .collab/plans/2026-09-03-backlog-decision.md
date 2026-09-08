@@ -930,9 +930,14 @@ to ~4.5%, so a first day-4 read means "the wall can be crossed, here is who and 
 | 29280f00 | 2 | 5 | 2 | 2026-04-29 |
 | 5e03a844 | 2 | 2 | 1 | 2026-08-30 |
 
-Two immediately worth a closer read: **558731d6** reached 3 active days and 11 messages across
-**zero distinct documents** — its sessions carry no `document_id`, which should not be possible for
-document chat and is either demo usage or a data defect; and **040411e1** is the only recent
+Two immediately worth a closer read. **558731d6** reached 3 active days and 11 messages across
+**zero distinct documents** — *resolved, and not a defect*: its session carries `document_id = NULL`
+with `collection_id = 65237622`, i.e. it is a **collection chat**, which legitimately has no single
+document. All 3 authenticated NULL-document sessions in production carry a collection, and 2 of them
+hold 15 user messages between them. The finding is therefore about the instrument, not the data:
+**a per-document denominator silently hides collection users**, and one of the most engaged multi-day
+returners is exactly that. Any B1-style "documents whose first session did X" metric must decide
+explicitly whether collection sessions are in or out of its denominator. Second, **040411e1** is the only recent
 multi-day returner (first active 2026-08-21) *and* the widest document user here at 5, i.e. the
 closest thing production has to a habitual user. Both reads are read-only and inside §8.4's stop-line.
 
