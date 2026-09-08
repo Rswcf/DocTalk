@@ -1236,3 +1236,44 @@ independent argument for counting conversations rather than rows, wherever the c
 **Process note.** This is the second time in two days that publishing the underlying rows let a wrong
 claim be caught — §9.10 by an internal contradiction, §9.14 by a follow-up query someone else asked
 for. Both were mine. The tables should keep being published in a form that can contradict the prose.
+
+### 9.17 The verification population is real, well-identified, and has 0% overlap with Quote Finder
+
+§9.15 registered this read to decide the next C item. Run 2026-09-08, all time, non-owner.
+
+| | |
+|---|---|
+| users who ever clicked a citation | **19** |
+| total citation clicks | **163** |
+| ...who ever opened the Quote Finder panel | **0** |
+| ...who ever clicked the Quote Finder chip | **0** |
+| ...who ever ran a `quote_search` | **0** |
+| ...who ever saved a quote | **0** |
+
+`quote_finder_chip_clicked` and `quote_finder_panel_opened` have **zero rows ever** (they were only
+allowlisted by C2 on 09-07, so absence before that is expected and this is a baseline, not a result).
+`quote_search` ledger rows across all users including the owner: **2**.
+
+The top citation clickers are the deepest users in production:
+
+| user | citation clicks | active days |
+|---|---|---|
+| 040411e1 | 44 | 3 |
+| 558731d6 | 31 | 3 |
+| 4d660a71 | 20 | 1 |
+| 4b44c184 | 13 | 1 |
+
+The two deepest returners in §9.14's table are the two heaviest citation clickers. **The population
+Quote Finder was built for is real, is 19 people, is identifiable by name, and has never once reached
+the feature.**
+
+**§9.15's hypothesis is supported and now has a number.** This population verifies by *clicking a
+citation*; C1's hint fires on query *phrasing*. A click never produces a phrase, so C1 — correct as it
+is — cannot reach the behaviour these 19 users actually exhibit. The candidate next C item is therefore
+**an entry point on the citation popover itself**, where the behaviour already is, rather than a
+better phrase trigger. Registered for the 09-28 decision, not designed now: the honest test of C1 is
+whether any post-T_A citation-clicker fires the chip, and that has had one day and zero signups to run.
+
+**Caveat kept explicit:** 0/19 is the pre-C1 baseline. C1 and C2 shipped 09-07; the chip has had no
+opportunity yet. This section establishes the denominator the 09-28 read is measured against, and
+must not be cited as evidence that C1 failed.
