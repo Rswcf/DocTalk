@@ -1086,3 +1086,90 @@ slots.
 **What the 09-28 readout should now look for specifically:** a `limit_hit` → `upgrade_click` →
 `checkout_created` chain from an in-app source. That is this exact user story with A1 in place, and it
 is the narrowest, highest-information event the window can produce.
+
+### 9.15 Ruling on §9.14's open product question — the session cap (2026-09-08, Fable 5.1)
+
+§9.14 asks whether Free = 3 sessions per document is right, and whether one user can move a pricing
+boundary. Rulings, with the code facts they turn on.
+
+**What the cap actually is (verified at source).**
+- It counts *open* conversations, not lifetime ones: `count(sessions where document_id = X) >= 3`
+  (`chat.py:236-241`), and `delete_session` is a hard delete (`chat.py:702`), so deleting a conversation
+  frees a slot. Plus and Pro are unlimited (`:236` gates on `plan == "free"`).
+- It is **not** a visit cap: on open the reader reuses the latest session when one exists
+  (`useChatSession.ts:138-146`) and creates one only when none does (`:155`). Returning to a document
+  consumes nothing.
+- It **does** count empty conversations: "New chat" creates the row on click, before any message
+  (`SessionDropdown.tsx:69`), the first open creates one, and nothing prunes empty user sessions (the
+  nightly beat prunes empty *demo* sessions only). Two "reset" clicks without sending reach the cap with
+  the document's total at 0–2 messages.
+- The copy at the cap (`errorCopy.ts:378-385`, `en.json:2368`) is "Free plan is limited to 3 chat
+  sessions per document. Upgrade for unlimited." — the free exit is never mentioned, although the delete
+  control renders on every non-active row of the same dropdown (`SessionDropdown.tsx:335-340`).
+  `limit_hit` fires once per failed click (`:101`): ten hits = ten presses on a wall whose only
+  signposted exit was `/billing`.
+- `FREE_MAX_DOCUMENTS = 3` (`config.py:150`): three copies of one PDF is the entire free quota.
+
+**1. Can one user move the boundary? No** — consistent with every n = 1 ruling above. One user is
+enough to establish that a *defect* exists; a *boundary* moves on a conversion rate measured at a door
+that opens. This door opened on 09-07 (A1: `session_dropdown` now calls `startCheckout`,
+`SessionDropdown.tsx:181-190`). The cap's conversion has never once been observed; its first
+observation is the chain in item 6.
+
+**2. The number 3 stays; what it counts is conditional on one query.** 040411e1 has **6 user messages**
+across 3 days and 5 documents. Three sessions on one 254-page PDF with that little chat means the capped
+sessions were near-empty. The lead's next query (per-session user-message counts on the capped document)
+decides which of two readings holds:
+- *The three sessions carried real work* (≥ 3 user messages each): the cap is a depth paywall placed on
+  the retention hook itself — the modal return is to the same document, so a 4th conversation on it *is*
+  a returner. That is where a freemium wall belongs (a readable unit, hit at proven value; 08-25 found
+  Free otherwise has no wall). Keep it, fix the signage (item 3), measure conversion at the door.
+- *They were empty or one-message* (the likelier reading at 6 messages total): the cap counts the wrong
+  unit — the user hit "3 rows", not "3 conversations". The fix is counting, not pricing: count only
+  sessions with ≥ 1 user message (a join on `messages` at `chat.py:238-240`; empty rows cost nothing, so
+  excluding them weakens no boundary), or reuse the latest empty session on "New chat". That dissolves the
+  question for this user without touching the boundary for one who works in three real threads.
+
+**3. The copy is a defect, decidable at n = 1 — and shipping it confounds the chain.** Honest copy
+states the cap and both exits: "Free keeps 3 open conversations per document. Delete one to start
+another, or upgrade for unlimited." with [Delete a conversation] beside [Upgrade]. It will lower
+`upgrade_click@session_limit`, the numerator of the highest-information read the window can produce.
+Ruling: **ship it in the first frontend push after v0.30.0, record T_copy, split the chain pre/post.**
+A paywall that converts only by hiding the free exit is not the paywall worth measuring; the honest-copy
+version is the real test, and any pre-T_copy chain is the dishonest-copy baseline. Not v0.30.0 — the
+candidate is frozen — and it is 11 locales.
+
+**4. The workaround inference needs two facts before it hardens.** (a) `created_at` and `status` of the
+three copies against the 15:44–15:46 hits on 08-28: after, and all `ready` → workaround confirmed, at
+the cost of three parses and the whole free quota; before, or any `error` → B2-class (parse looked stuck,
+the user re-uploaded) and the slot-burning story is wrong. (b) If confirmed: same-user content-hash dedup
+on upload is a cost guardrail, not a pricing change — backend, not now, registered for the post-09-28
+batch.
+
+**5. The cap's denominator is not 170.** "One user in seven months" reads as rare; the honest denominator
+is users who ever reached 3 sessions on one document. Ask: distinct (user, document) pairs with >= 3
+sessions; how many of those users then hit `limit_hit reason=session_limit`; and the share of all user
+sessions with 0 user messages (how common session churn is). If the cap binds a third of everyone who
+reaches depth 3, it is not rare — it is selective for the engaged, which is the opposite of rare.
+
+**6. 09-28 readout additions (spec-only, per §9.8).**
+- Named row **"Purchase — by limit"**: per user, `limit_hit(reason, source)` → `upgrade_click(source,
+  reason)` within 10 min → `checkout_attempts` row → `checkout_created` → `checkout_completed`, grouped
+  by `reason`, split pre/post T_copy once it exists. This is §9.14's chain; `file_size` (broad) against
+  `session_limit` (deep) is the "which limit converts" read.
+- The day-4 read reports whether the user was ever capped (`limit_hit reason=session_limit`): for a
+  same-document returner, the day-4 wall and the session cap are the same moment.
+- Quote Finder: among post-T_A `citation_clicked` users, any `quote_finder_chip_clicked` /
+  `quote_finder_panel_opened`? §9.14's 75 clicks / 0 searches says this population verifies by
+  *clicking*, and C1's trigger is query *phrasing* (`action_planner.py`), which a click never fires. If
+  the answer is 0 with clicks > 0, the next C item is "Quote Finder from the citation popover" —
+  registered for 09-28, not designed now.
+
+**7. What would move the number 3:** a rate, not a user — `session_limit` chains with
+`checkout_created >= 1` and `checkout_completed = 0` across >= 3 distinct users under honest copy, or the
+depth-3 denominator (item 5) showing the cap binds most users who reach it while none convert. At one
+capped user per seven months that may be a year away, which is itself the answer: the actionable items
+are the copy and the counting unit, and both are defects, not prices.
+
+**Record.** §9.14 (`e7d850e`) is on `main`; this section is on `docs/window-ruling-2026-09-08`, rebuilt
+on `e7d850e`.
