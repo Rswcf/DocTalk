@@ -797,21 +797,25 @@ the first user-message day (SQL below), and confirm the active-days table used t
 m.role='user'` via `sessions.user_id` definition. The threshold table below is **provisional at
 p = 0.094**; it will be regenerated at the reconciled base, which can only be lower.
 
-**Day-2 is demoted to a reported rate.** Denominator = non-owner users whose first active day is
->= T_A **and** <= readout − 7d (exposure; a 09-26 signup has not had seven days by 09-28). At 0.51/day
-that is n ≈ 7 on 09-28 and ≈ 14 on 10-12. Binomial tail under the provisional base:
+**Day-2 is demoted to a reported rate.** *(Regenerated 2026-09-08 at the reconciled base — §9.12; the
+provisional 0.094 version is preserved at `45afdb4`.)* Denominator = non-owner users whose **first active
+day** is >= T_A **and** <= readout − 7d (exposure; a user first active on 09-26 has not had seven days by
+09-28). Base = 10/67 = **0.149** over ever-active users (uncapped lifetime: 13/67 = 0.194). Exposed-active
+arrivals ≈ 0.2/day (0.51 signups/day × 0.39 lifetime activation, 67/170 — an estimate applied to new
+signups): n ≈ 3 by 09-28, ≈ 6 by 10-12, and n = 30 around **February 2027**. Binomial tail under the base:
 
-| exposed n | P(>= 1 \| base) | returners for tail <= 0.10 | for tail <= 0.05 | expected under base |
-|---|---|---|---|---|
-| 5 | 0.39 | 2 | 3 | 0.5 |
-| 7 | 0.50 | 3 | 3 | 0.7 |
-| 10 | 0.63 | 3 | 4 | 0.9 |
-| 15 | 0.77 | 4 | 4 | 1.4 |
-| 20 | 0.86 | 5 | 5 | 1.9 |
-| 30 | 0.95 | 6 | 7 | 2.8 |
+| exposed n | P(>= 1 \| 0.149) | returners for tail <= 0.10 | for tail <= 0.05 | expected | uncapped 0.194: k for <= 0.05 |
+|---|---|---|---|---|---|
+| 3 | 0.38 | 2 | 3 | 0.4 | 3 |
+| 5 | 0.55 | 3 | 3 | 0.7 | 4 |
+| 7 | 0.68 | 3 | 4 | 1.0 | 4 |
+| 10 | 0.80 | 4 | 4 | 1.5 | 5 |
+| 15 | 0.91 | 5 | 6 | 2.2 | 7 |
+| 20 | 0.96 | 6 | 7 | 3.0 | 8 |
+| 30 | 0.99 | 8 | 9 | 4.5 | 11 |
 
-At n = 7 the 0.05 line is 3 of 7 — a ~4× effect. The day-2 rate can only see a very large change this
-quarter. Print the exact tail; **do not decide on day-2 in either direction below ~30 exposed users.**
+At n = 3 the 0.05 line is 3 of 3; at n = 10, 4 of 10. The day-2 rate is printed for honesty and
+**decides nothing in 2026**. Do not decide on it in either direction below ~30 exposed users (§9.13).
 
 **The decider is the 4th distinct active day.** Base over seven months: 0 of 67 ever-active users,
 0 of 170 signups. Rules: (1) count **any** non-owner whose 4th distinct user-message day falls >= T_A,
@@ -834,7 +838,7 @@ acquisition decision is taken with the returner profile in hand.
 **09-28 rule, restated with the default explicit.** At 12 MAU and 4.5 intent users/month, "no intent
 event by 09-28" is ~4% likely; the probable 09-28 state is thin confirmations — a checkout created, a
 trial claimed, no Quote Finder search, no day-4 — none of which picks a batch. So: **the 09-28 default
-is acquisition (§9.6), unless a thread exists** — a returner profile from the historical read, a day-4
+is acquisition (§9.6), unless a thread exists** (§9.13: at ~0.2 exposed-active users/day the day-2 rate cannot decide before 2027 — that arithmetic is itself the argument) — a returner profile from the historical read, a day-4
 user, a non-owner Quote Finder search, or a defect. Day-2 above its threshold raises the retention
 thread's priority and its sessions are read beside the historical ones, but it selects no batch by
 itself; the batch is specified by what returners did. Day-4 >= 1 at any time: read that user's whole
@@ -944,3 +948,67 @@ closest thing production has to a habitual user. Both reads are read-only and in
 **Process note.** §9.10's error was caught by cross-checking two tables in the same section against
 each other, not by re-reading the query. Publishing both tables is what made it falsifiable — the
 figures should continue to be reported in a form that can contradict itself.
+
+### 9.13 Ruling on §9.12's open items (2026-09-08, same day, Fable 5.1)
+
+§9.12 corrected the base (0.059 over signups, **0.149** over ever-active users; day-4 = 0 of 67 confirmed)
+and asked two things: regenerate §9.11's thresholds and decide the 7-day cap. `9f1f0ed` resolved the
+zero-document returner as a collection chat and left one instrument decision open. Rulings:
+
+**1. The regenerated table is in §9.11; its headline is "undecidable in 2026".** Exposed-active users
+arrive at ≈ 0.2/day (0.51 signups/day × 0.39 lifetime activation — an estimate, since lifetime
+activation is being applied to new signups). That is n ≈ 3 by 09-28, ≈ 6 by 10-12, and n = 30 — the
+floor §9.11 set for deciding day-2 in either direction — around **February 2027**. At 0.149 the 0.05 line
+is 3 of 3 at n = 3 and 4 of 10 at n = 10. The rate is printed for honesty and decides nothing this year.
+That is the strongest single argument yet that acquisition binds learning; it is now in the 09-28 default.
+
+**2. 7-day cap: kept for the rate, uncapped printed beside it.** The cap is what makes a rolling readout
+compare equal exposure — without it a user first active on 09-08 and one on 09-20 are not on one scale at
+09-28. The three late returners are carried by the uncapped lifetime line (13/67 = 0.194, its own column
+in §9.11) and by day-4, which has no cap. One tightening: the base denominator should exclude users whose
+first active day is within 7 days of the measurement date (right-censored). At n = 67 that moves the third
+decimal; noted, not re-run.
+
+**3. Day-4 at this traffic is a watch on four named users.** New arrivals cannot plausibly reach a 4th
+distinct day this quarter (0.2/day through the conditional rates 13/67 → 4/13 → 0/4). The near-term
+day-4 read comes from the 4 users already at 3 days — **040411e1** above all (first active 08-21, 5
+documents, active this week), then 72f99d73, 5c451f94, 558731d6. The `rn = 4 and d >= T_A` spec in
+§9.11 catches them; report the 1st→4th span and whether the 4th day is >= T_B.
+
+**4. Collection sessions — split by level; most numbers are already right.** The canonical relation
+(`messages.role='user'` via `sessions.user_id`, no document filter) already includes collection sessions
+(`collections.py:365` creates them with `collection_id` and no `document_id`), so 67 / 13 / 10, the
+day-2 rate and day-4 are unaffected. Two places need the decision:
+- *"distinct docs" in the returner table* — expand collection sessions through `collection_documents`
+  (`tables.py:639`, `collection_id → document_id`), with the caveat that membership is current, not
+  as-of-message-time:
+  ```sql
+  with sess_docs as (
+    select s.id session_id, coalesce(s.document_id, cd.document_id) document_id
+    from sessions s left join collection_documents cd on cd.collection_id = s.collection_id)
+  select x.uid, x.d, count(distinct sd.document_id) docs_touched
+  from (select s.user_id uid, date(m.created_at) d, m.session_id
+        from messages m join sessions s on s.id = m.session_id
+        where m.role = 'user' and s.user_id is not null and s.user_id::text <> :owner) x
+  join sess_docs sd on sd.session_id = x.session_id
+  group by 1, 2;
+  ```
+- *B1's per-document zero-message rate* (script `:123-126`) — stays document-scoped, because that is
+  the surface B1 changed (`DocumentReaderPageClient.tsx:88`), and prints a third line, "documents whose
+  only messages came through collection sessions: N", so collection-only documents do not read as
+  abandoned. Suggested, not added as a row: post-T_B *activation* (share of signups with >= 1 active day
+  within 7d; base 67/170 = 0.39) is a per-user B1 instrument in the same unit as the day-2 rate and
+  measures what B1 actually tries to change — weak at this n like everything else, but cleaner.
+
+**5. The returner table has counts, not activities.** Active days / messages / distinct docs does not
+answer "what did they return to do". Before 09-28, for each return day of the 13: same document as
+day 1 or new; `citation_clicked`; `quote_*` events and `quote_search` ledger rows; Domain Mode
+(`feature_trial_usages`, or `sessions.domain_mode` for paid); `paywall_opened` / `upgrade_click`;
+uploads that day; document type and page count — **not filenames** (PII; 08-25 masked emails for the
+same reason). This is the only near-term source of a retention thread, and the 09-28 default turns on
+whether it yields one.
+
+**Record.** §9.12 (`bfc6619`) and the collection resolution (`9f1f0ed`) are on `main`; this section and
+the §9.11 regeneration are on `docs/window-ruling-2026-09-08`, rebuilt on `9f1f0ed`. Script changes stay
+spec-only: `backend/scripts/` ships in the image through `COPY backend/` even though it is never imported,
+so they wait for a post-v0.30.0 branch.
