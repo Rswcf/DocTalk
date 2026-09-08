@@ -875,3 +875,67 @@ history and decide immediately.
 `main` has moved past `0f1a1d7` by docs-only commits — `git diff 0f1a1d7 main --name-only` touches `.collab/`
 only — so the v0.30.0 candidate's runtime content is unchanged, but §8.1/§9.7's "frozen at `0f1a1d7`" is
 now a statement about code, not about the hash: the release record must name the commit actually shipped.
+
+### 9.12 §9.10's base rate was wrong — corrected, and day-4 confirmed at zero
+
+§9.11 caught an internal contradiction in §9.10: 16 returners each necessarily have >= 2 distinct
+active days, yet the same section's table showed only 13 users at 2+. The cause is exactly as
+diagnosed — the CTE anchored "day 1" on `users.created_at`, so a user whose only session happened the
+day after signup counted as a "return" with one active day. That conflates a delayed first session
+with an actual return. **§9.10's 0.094 is withdrawn.**
+
+Re-run with one canonical activity relation (`messages.role='user'` joined through `sessions.user_id`,
+owner excluded) used identically for every figure below:
+
+| Quantity | Value |
+|---|---|
+| users with >= 1 active day | 67 |
+| users with >= 2 active days | 13 |
+| **returned within 7d of their FIRST ACTIVE DAY** | **10** |
+| base over the signup cohort (n=170) | **0.059** |
+| **base over active users (n=67)** | **0.149** |
+
+§9.11 predicted the reconciled base "can only be lower" and bounded it at <= 13/170 = 0.076; the
+measured value is 0.059, below that bound. The 13-vs-10 gap is real and not an error: three users
+returned *later* than 7 days after their first active day, so the 7-day cap is itself a modelling
+choice, not a natural boundary.
+
+**Which denominator is honest.** Over signups the base is 0.059; over users who ever became active it
+is **0.149**. The second is the right denominator for "does a user come back", and it makes day-2 an
+even weaker decider than §9.11 assumed — roughly one active user in seven already returns. Any
+pre-registered day-2 threshold must be regenerated at 0.149 over the exposed-active denominator, not
+at 0.094 and not at 0.059.
+
+**Day-4 confirmed: zero users, ever.** Under the corrected definition, `row_number() = 4` over
+distinct active days returns **no rows** across the entire history. 67 users have reached day 1,
+13 day 2, 4 day 3, **0 day 4**. The decider named in §9.11 is therefore a true zero-base metric, and
+one positive read is unambiguous — with §9.11's caveat intact: 0/67 is compatible with a true rate up
+to ~4.5%, so a first day-4 read means "the wall can be crossed, here is who and how", never "B worked".
+
+**The retention hook is readable today — the 13 returners, no future event required:**
+
+| user | active days | msgs | distinct docs | first active |
+|---|---|---|---|---|
+| 72f99d73 | 3 | 15 | 2 | 2026-04-04 |
+| 5c451f94 | 3 | 12 | 1 | 2026-05-02 |
+| 558731d6 | 3 | 11 | **0** | 2026-05-18 |
+| 040411e1 | 3 | 6 | 5 | 2026-08-21 |
+| 0c25a28a | 2 | 15 | 3 | 2026-03-19 |
+| 58688124 | 2 | 12 | 1 | 2026-06-17 |
+| 5954da3d | 2 | 10 | 1 | 2026-07-26 |
+| d3300664 | 2 | 9 | 3 | 2026-04-25 |
+| 09508131 | 2 | 8 | 1 | 2026-04-08 |
+| 55dde629 | 2 | 6 | 1 | 2026-04-28 |
+| c6cce383 | 2 | 6 | 3 | 2026-04-06 |
+| 29280f00 | 2 | 5 | 2 | 2026-04-29 |
+| 5e03a844 | 2 | 2 | 1 | 2026-08-30 |
+
+Two immediately worth a closer read: **558731d6** reached 3 active days and 11 messages across
+**zero distinct documents** — its sessions carry no `document_id`, which should not be possible for
+document chat and is either demo usage or a data defect; and **040411e1** is the only recent
+multi-day returner (first active 2026-08-21) *and* the widest document user here at 5, i.e. the
+closest thing production has to a habitual user. Both reads are read-only and inside §8.4's stop-line.
+
+**Process note.** §9.10's error was caught by cross-checking two tables in the same section against
+each other, not by re-reading the query. Publishing both tables is what made it falsifiable — the
+figures should continue to be reported in a form that can contradict itself.
