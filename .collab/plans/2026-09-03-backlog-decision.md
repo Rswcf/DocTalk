@@ -507,3 +507,212 @@ misleading zero.
 
 Baseline at T_A (smoke-run 2026-09-07, ~25 min after deploy): every metric above reads 0, including
 0 non-owner signups. That is the zero line the window is measured against.
+
+## 9. Ruling on the measured signup rate (2026-09-08, Fable 5.1)
+
+Trigger: the lead measured the real non-owner signup rate in production today — 0.29/day (7d), 0.43
+(14d), 0.67 (30d), 0.51 (90d); 0 non-owner signups and every §8.6 metric at 0 in the 28h since T_A.
+§8.6 assumed ~1/day and gated "everything" on n >= 10. Everything below was written **before any
+criterion has produced a non-zero read**, so none of it can have been fit to data.
+
+### 9.0 Rulings at a glance
+
+| # | Question | Ruling |
+|---|---|---|
+| 1 | Window | The single n >= 10 signup gate is withdrawn — the script never applied it to purchase/trial/Quote Finder/nudge anyway (§9.2). Per-criterion existence gates replace it (§9.3). **2026-09-21 = checkpoint** (defect triggers + first reads). **2026-09-28 = decision date** (T_A + 21d: >= 90% odds of the first intent event at historical rates, and the median n = 10 date at the 90-day rate). Decide early on a non-owner day-2 return (positive) or the refined defect trigger (negative). |
+| 2 | Thesis | Not inverted — completed. 08-25 said "fix the walls, then acquire"; walls are shipped/staged; its own step ⑥ is now due. The lead's sharper reading is correct: at ~0.5/day acquisition is binding **for learning**. For revenue the two walls and acquisition are jointly binding until the first intent event, which is decidable on any active user, not on new signups. |
+| 3 | Acquisition | Starts now, bounded to work that does not touch the observed surface. Order: owner items first (web-filter categorization, Railway token — nothing below substitutes for them), then one frontend-only branch (locale structured data, `/tools` inlinks, no-signup post CTA → `/demo`), ready by 2026-09-12, shipped as a separate `git push origin stable` with **no version bump**. Anonymous upload and indexable share pages stay out until 09-28. v0.30.0 is not re-staged for any of it. |
+| 4 | v0.30.0 | Ship on the owner's go-ahead, now. No migration → plain-redeploy rollback. A late T_B splits an already tiny cohort; an early one makes the n = 10 cohort homogeneous on B code. T_B stays mandatory as the attribution key, not as a before/after instrument. |
+
+### 9.1 Three corrections to §8.6 — owned as errors, not extensions
+
+1. **"~1 signup/day" was wrong on the day it was written.** The 08-25 review already had August at
+   17 signups / 31 days ≈ 0.55/day (`memory/topdown-review-2026-08-25.md`). The measured 90-day rate
+   (0.51) is that number. Nothing new was falsified; the assumption was never checked.
+2. **"Sample size gates everything" was prose, not code.** `observation_window.py` keys on
+   `users.created_at >= T_A` in exactly two places — the gate itself (`:60`) and day-2 (`:148-155`).
+   Purchase (`:68-74`, `:87-93`), the trial (`:97-98`), Quote Finder (`:103-106`) and the nudge
+   (`:142-144`) count events since T_A from **any** non-owner. Those criteria were never signup-gated
+   in the instrument; the n >= 10 sentence over-applied to them.
+3. **"Day-2 base over seven months = 0" is unverified and probably wrong.** 08-25 recorded 8 users
+   with 2 active days and 3 with 3 (out of 62 ever-active); "0" was true of the August cohort and of
+   4+ active days. The base for the script's within-7-days definition has never been run. It decides
+   whether n = 10 can ever read a negative (§9.3), so the lead should run it — SQL in §9.8.
+
+On "declining": n = 2 in 7 days cannot separate 0.29/day from 0.5/day (P(<= 2 | 0.5/day) = 0.32), and
+0 signups in 28h at 0.5/day happens 56% of the time. The 7-day and 28-hour numbers are noise. The
+substantive concern survives the correction: at 0.5/day the window is three weeks, not two, and the
+day-2 negative branch is unreadable at any attainable n.
+
+### 9.2 What the instrument actually measures
+
+| §8.6 row | Population counted (from the script) | Needs new signups? |
+|---|---|---|
+| Purchase A1/A2 | every non-owner `upgrade_click`/`checkout_*` since T_A | no |
+| Domain Mode A3 | every non-owner `feature_trial_usages` row since T_A | no |
+| Quote Finder C1/C2 | every non-owner chip/panel event and `quote_search` ledger row since T_A | no |
+| First session B1 | ready non-owner documents by `created_at`, before/after T_B | no (per document) |
+| Parse failures B2 | the 15 day-0 error docs + new error docs | no — but needs their owners to **return** |
+| Nudge B4 | every non-owner `upgrade_nudge_shown` since T_A | no |
+| Day-2 | non-owner users with `created_at >= T_A` | **yes — the only one** |
+
+### 9.3 Denominators — which claim is decidable on what
+
+| Claim | Denominator | Decidable at | Expected wait (historical rate, recalled from 08-25 — refresh with §9.8) |
+|---|---|---|---|
+| The button opens Stripe | in-app `upgrade_click` by an authenticated, known-free non-owner | the **first** event: `checkout_attempts` row within 60s → works; none → §9.8 refined trigger | ~4 in-app intent users/month → 85% by 14d, 94% by 21d |
+| Price/value is the wall | `checkout_created` | needs C >= ~5 (Stripe has 5 sessions ever) | not this quarter — record, do not decide |
+| The trial converts intent to usage | free non-owners who open the Domain Mode selector | first `feature_trial_usages` row; a `domain_mode_selector` `upgrade_click` by a free user with **no** trial row = defect | ~3.2 selector users/month → 78% / 89% |
+| Quote Finder is used | non-owner `citation_clicked` users (the population the C1 chip now reaches) | first non-owner `quote_search` ledger row; chip/panel events with no search = the panel loses them | ~1.75 citation-clicking users/month → 56% / 71% |
+| Nudge surface is alive | eligible non-owners (>= 1 ready doc, >= 3 messages) visiting the dashboard after T_B | first `upgrade_nudge_shown` | days after T_B (any of ~10 MAU qualifies) |
+| B1 halves the zero-message rate | ready non-owner documents after T_B | ~30 post-T_B documents for a 23% → 12% halving to be visible even loosely | ~15 docs/month → ~2 months. **Unreadable.** Keep only the existence half: first user message equal to a stored `suggested_questions` entry. |
+| B2 removes a dead end | the 15 day-0 error docs | any retry-into-ready | their owners never returned (retention = 0) → expected 0 **by construction**. Report "unread", never "B2 failed". |
+| Someone returns on day 2 | non-owner signups since T_A | **positive only**: >= 1 → read that session. Negative: at base p = 0.05, P(read 0 \| nothing changed) = 0.60 at n = 10, 0.36 at n = 20, 0.10 at n = 45 (90 days at 0.5/day). | §8.6's "0 with n >= 10 confirms B was first-session work" is **retracted**. 0 means no evidence. |
+
+On the lead's alternatives: a per-session/per-document denominator helps B1 and the nudge a little
+(their unit arrives faster than users) but does not rescue the halving test and does nothing for day-2,
+which is per-user by definition. The 15 recent messages are the population that generates the purchase,
+trial and Quote Finder signals — the lead should report distinct users behind them, split by signup
+before/after T_A. The 171 existing users are dormant with no channel (lifecycle email vetoed); they
+matter only as the ~10 MAU who return unprompted, and those MAU **are** the denominator for every
+non-day-2 row.
+
+### 9.4 Dates
+
+Days from T_A (2026-09-07 00:22Z) until the 10th non-owner signup, Poisson arrivals:
+
+| Rate | 20% | 50% | 80% |
+|---|---|---|---|
+| 0.67/day (30d) | 09-17 | 09-21 | 09-25 |
+| 0.51/day (90d) | 09-21 | **09-26** | 10-01 |
+| 0.43/day (14d) | 09-24 | 09-29 | 10-06 |
+| 0.29/day (7d) | 10-02 | 10-10 | 10-20 |
+
+- **2026-09-21 — checkpoint, not decision.** Run the readout; act on defect triggers; record first reads.
+- **2026-09-28 — decision.** By then the first in-app intent event has ~94% odds, the trial ~89%, the
+  nudge is near-certain if v0.30.0 ships this week, and n = 10 is at its median. Each row decides on
+  its own gate (§9.3). If **no intent event of any kind** has arrived by 09-28, that is the finding:
+  the active base cannot produce one intent event in three weeks, and acquisition is confirmed binding
+  for learning. Do not extend past 09-28 waiting for signups.
+- **Decide early** on either: (a) any non-owner active on a later calendar day within 7 — read what
+  they returned to do, that is the next batch; (b) the refined defect trigger (§9.8) firing — fix it
+  immediately. `checkout_created >= 1` on its own is confirmation (the button works), not a decision:
+  it moves the purchase question to price/value, which §9.3 says is undecidable at this traffic, and
+  08-25 already ruled out price cuts on one data point.
+
+### 9.5 The thesis is completed, not inverted
+
+08-25 said traffic was not binding **while the walls were broken** — traffic into a button that never
+opened Stripe was wasted — and ordered acquisition as step ⑥ after ①–⑤. ①–⑤ are v0.29.0 (A, C) and
+the staged v0.30.0 (B). The thesis's own sequence now says: acquire. What today's measurement adds is
+that the *wait* was mis-sized (§9.1.1), and the lead's reading is right: at ~0.5/day acquisition is the
+binding constraint **for learning**, regardless of which wall binds revenue. For revenue the honest
+statement is "jointly binding until the first intent event" — and that event is decidable on any
+active user (§9.3), which is why acquisition and the readout run in parallel rather than in sequence.
+
+### 9.6 Acquisition starts now — with a boundary
+
+§8.4's stop-line protected the **observed surface** (chat, reader, billing, dashboard) so the
+registered metrics keep their meaning. Acquisition work that changes who arrives, not what happens
+after arrival, does not confound them, and its effect lags by weeks, so every week it waits is a week
+of compounding lost. The stop-line stands for product batches; it does not cover the items below.
+
+**0. Owner, zero code, today — nothing below substitutes for these.**
+- Web-filter categorization for `www.doctalk.site` (Symantec/Bluecoat, Palo Alto, Zscaler, Cisco
+  Talos/Umbrella, Fortinet, Forcepoint, Netskope). Ruled "today" on 09-03 (§1); still uncategorized
+  on 09-08. The ICP sits behind these gateways with the contract they want to upload.
+- Railway project token (§8.3), so a deploy stops being a multi-day block.
+
+**1. Branch `growth/acquisition-1` — frontend-only, ready by 2026-09-12, Codex-reviewed.**
+- Locale structured data: `frontend/src/lib/marketingLocalePage.tsx:60-66` renders only the generic
+  `MarketingArticleJsonLd` for all 33 `LOCALIZED_PATHS` × 10 URL locales, while the English roots
+  emit `FAQPage`/`HowTo`/`SoftwareApplication`/`BreadcrumbList` (`app/page.tsx`,
+  `features/citations/page.tsx`, `use-cases/lawyers/LawyersJsonLd.tsx`). The factory is a single
+  choke point: add `BreadcrumbList` for every localized page and `FAQPage` wherever the page's
+  Content renders `EdFaqList` (FAQ copy exists in all 11 locales). Localized `SoftwareApplication`
+  with offers on `/[locale]` and `/[locale]/pricing`.
+- `/tools` inlinks: zero exist (`i18n/routing.ts:63` registers the path; nothing in
+  `frontend/src/components` links it). Footer group (`Footer.tsx:81-126` pattern) + `EdRelatedLinks`
+  on `/features/free-demo` and the blog index, EN and locale.
+- The ranking no-signup post: locate its source (not under `frontend/src` by slug grep) and point
+  its primary CTA at `/demo` — the surface that actually is no-signup. Copy stays.
+- Ships as `git push origin stable` — no `railway up`, no backend-first choreography, no migration.
+  Still a production deploy and therefore a **second owner ask**, but a cheaper one. **No version
+  bump on a frontend-only push**: `backend/app/core/version.py:22-36` reads the container's baked
+  `version.json`, so a bump would make `/health` report a version that is not deployed.
+- v0.30.0 stays frozen at `0f1a1d7`. This branch merges to `main` after `stable` moves. If the owner
+  prefers one push, fold in only after the branch is CONSENSUS-SHIP and re-run every gate — the
+  owner's call, not the default.
+
+**2. Not now — decide at 09-28 with intent data in hand.** Anonymous upload (changes the funnel's
+unit: arrival stops meaning signup, the day-2 definition breaks, IP quotas/storage/cleanup are abuse
+surface, backend + Codex loop + owner deploy). Indexable share pages (backend `noindex` + attribution).
+
+If the owner does neither item in (0), the frontend work is second-order: the ICP cannot reach the
+site from work, and every ship remains a multi-day block. Say it plainly; this ruling cannot substitute
+for either.
+
+### 9.7 v0.30.0 ships now, on the owner's go-ahead
+
+Verified: `main` = `0f1a1d7` = `origin/main`; `stable` = `8e93934` (v0.29.0); `git diff stable main`
+touches 66 files, **no `alembic/versions/` change, no `events.py` change** (metric names keep their
+meaning). Reasons to ship today rather than after the window: (a) every arriving user hits the empty
+first pane until it ships — the rate is small, the fix is done; (b) the window is extending anyway, so
+an early T_B makes the n = 10 cohort homogeneous on B code instead of split; (c) no migration → §8.2's
+trap does not apply, rollback is a plain redeploy of `8e93934`; (d) the nudge (B4) is the fastest
+existence signal in §9.3 and does not exist before T_B. The [T_A, T_B) A+C-only window has 0 signups
+and was never going to read; attribution is per metric (§8.1), so nothing is lost. T_B remains
+mandatory — not for a before/after, which is unreadable at this n, but so that "which code was live
+when this user did X" is recorded, never reconstructed. Owner go-ahead is required; a peer ruling is
+not authorization.
+
+### 9.8 Instrument refinements (specified, not applied — the candidate is frozen)
+
+Apply on a branch after `stable` moves, or run by hand. `OWNER`/`MARKETING` as in the script.
+
+1. **Refined defect trigger (replaces `:80-81`).** Two false-positive paths exist in the current test:
+   `billing.ts:69-85` fires `upgrade_click` on the navigate-to-`/billing` branch as well as the
+   checkout branch, with no distinguishing property, and `decidePlanAwareBillingAction` (`:33`) routes
+   to checkout only for `currentPlan === 'free'` — `profile?.plan` undefined at click time is a
+   designed fallback to `/billing`. And `DashboardPageClient.tsx:214` passes `'free'` for anonymous
+   visitors, whose `upgrade_click` is a `PUBLIC_EVENT` (`events.py:60-72`) persisted with NULL
+   `user_id` while their `checkout_failed` is rejected (401) — so an anonymous click reads as an
+   in-app non-owner click with no checkout.
+   ```sql
+   select e.id, e.user_id, e.created_at, e.metadata_json->>'source' src, u.plan plan_now,
+     exists (select 1 from checkout_attempts a where a.user_id = e.user_id
+             and a.started_at between e.created_at - interval '5 seconds'
+                                  and e.created_at + interval '60 seconds') attempted,
+     exists (select 1 from product_events b where b.user_id = e.user_id and b.event_name = 'billing_view'
+             and b.created_at between e.created_at and e.created_at + interval '60 seconds') fell_back
+   from product_events e join users u on u.id = e.user_id
+   where e.event_name = 'upgrade_click' and e.created_at >= '2026-09-07T00:22:30Z'
+     and e.user_id is not null and e.user_id::text <> :owner
+     and coalesce(e.metadata_json->>'source','') <> all(:marketing)
+   order by e.created_at;
+   ```
+   Read: `attempted` → the button works. `plan_now='free' and not attempted and fell_back` → the
+   plan-undefined fallback fired (design gap: plan not loaded at click; not a broken button).
+   `plan_now='free' and not attempted and not fell_back` → **DEFECT**. Dedupe per user-hour: a fallback
+   click followed by the `/billing` button yields two in-app clicks for one checkout.
+2. **Print the active-user denominator** next to the signup gate:
+   ```sql
+   select count(distinct s.user_id) filter (where u.created_at >= :ta) new_users,
+          count(distinct s.user_id) filter (where u.created_at <  :ta) returning_users
+   from messages m join sessions s on s.id = m.session_id join users u on u.id = s.user_id
+   where m.role = 'user' and m.created_at >= :ta and s.user_id::text <> :owner;
+   ```
+3. **Print the day-2 base** beside the window number — the script's `:148-155` CTE with
+   `u.created_at >= '2026-02-01' and u.created_at < :ta`. Replace the `:158` "confirms B was
+   first-session work" branch with "no evidence at this n".
+4. **Refresh the recalled intent rates** (last 90 days, authenticated non-owners, distinct users):
+   `upgrade_click` with in-app source; `upgrade_click` with `source='domain_mode_selector'` (pre-T_A
+   only — post-A3 the same click becomes a `feature_trial_usages` row); `citation_clicked`. Re-derive
+   the §9.3 waits from those; the 09-28 date holds unless in-app intent is below ~2 users/month.
+
+### 9.9 Owner asks, in order
+
+1. Go/no-go on v0.30.0 (§9.7).
+2. Web-filter categorization submissions (§9.6.0).
+3. Railway project token (§8.3).
+4. Later, a second `stable` push for `growth/acquisition-1` (§9.6.1).
