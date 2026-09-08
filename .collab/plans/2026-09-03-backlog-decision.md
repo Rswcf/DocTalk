@@ -1012,3 +1012,77 @@ whether it yields one.
 the §9.11 regeneration are on `docs/window-ruling-2026-09-08`, rebuilt on `9f1f0ed`. Script changes stay
 spec-only: `backend/scripts/` ships in the image through `COPY backend/` even though it is never imported,
 so they wait for a post-v0.30.0 branch.
+
+### 9.14 The returner activity read — a retention thread, and the limit nobody targeted
+
+§9.13 item 5 asked what the 13 returners came back to *do*. Read 2026-09-08, read-only, no filenames.
+
+**The modal return is to the SAME document** — 8 of 13; 4 returned with a new document, 1 through a
+collection. The hook is "keep working on a document I already have", not "bring a new one".
+
+**They verify constantly and never reach Quote Finder.** Across the 13: **75 `citation_clicked`**,
+`rag_verification_completed` on nearly every return day — and **0 saved quotes, 0 `quote_search`**.
+This reproduces the 2026-08-25 finding at the individual level: the users who most want source
+verification are exactly the ones who never found the feature built for them. C1/C2 shipped for this
+population; the window should read whether the chip now reaches them.
+
+**Zero Domain Mode usage** across all 13 (`feature_trial_usages` = 0, `sessions.domain_mode` = 0) —
+expected, since all predate A3.
+
+**They express purchase intent and none of it converts:** 16 `upgrade_click`, 6 `paywall_opened`,
+0 subscriptions.
+
+#### The single most valuable user story in production: `040411e1`
+
+First active 2026-08-21, 3 active days, the only recent multi-day returner. On 2026-08-28, inside
+**113 seconds**:
+
+| Time | Event | Reason / source |
+|---|---|---|
+| 15:44:05–08 | `limit_hit` ×3 | `session_limit` / `session_dropdown` |
+| 15:44:15 | **`upgrade_click`** | `session_limit` → `/billing` |
+| 15:45:04 | **`upgrade_click`** | `academic_domain_mode` / `domain_mode_selector` → `/billing` |
+| 15:45:21–24 | `limit_hit` ×7 | `session_limit` |
+| 15:45:57 | **`upgrade_click`** | `export_pdf` / `chat_plus_menu` → `/billing` |
+| 15:46:04 | `export_clicked` | |
+
+**Three distinct upgrade intents from three different features in under two minutes, every one of them
+dumped on `/billing`, none converted.** They also own the same 254-page PDF **three times** — the
+signature of working around the 3-sessions-per-document cap by re-uploading, which also burns document
+slots.
+
+**What this validates, and what it does not:**
+
+1. **A1 would have caught all three clicks.** `session_dropdown`, `domain_mode_selector` and
+   `chat_plus_menu` are precisely the in-app sources A1 rewired to `startCheckout`. Pre-A1 all three
+   landed on the page whose Subscribe button has never been pressed. This is the concrete mechanism
+   behind "zero events = zero clicks", observed in one real user.
+2. **A3 directly answers the second click** (`reason=academic_domain_mode`): they were asked to pay
+   for a feature they had never been allowed to see.
+3. **A4 would NOT have helped them.** Their documents are 0.7 MB / 254 pages — comfortably inside Free.
+   A4 addressed a real limit, but not this user's.
+4. **The limit that actually blocks the most engaged returner is `session_limit`**
+   (`FREE_MAX_SESSIONS_PER_DOC` = 3), which no batch in this programme targeted. Across all non-owner
+   users, all time:
+
+   | reason | source | events | users |
+   |---|---|---|---|
+   | `file_size` | `dashboard_upload_precheck` | 12 | 8 |
+   | **`session_limit`** | `session_dropdown` | **10** | **1** |
+   | `upload_limit` | `dashboard_upload` | 8 | 6 |
+   | `INSUFFICIENT_CREDITS` | `chat_stream` | 1 | 1 |
+
+   `file_size` is the broadest (8 users) and produced the only sale in the product's history;
+   `session_limit` is the *deepest* — one user hit it ten times in two minutes and tried to pay three
+   times. Breadth and depth point at different limits.
+
+> **OPEN PRODUCT QUESTION for the planning authority.** Is Free = 3 sessions per document the right
+> cap? The evidence is one user, so this is explicitly not a mandate — but it is the only limit in
+> production observed to produce repeated, immediate, multi-feature purchase intent, and the
+> re-uploading workaround suggests the cap is being routed around rather than converting. Raising it
+> weakens a paid boundary; leaving it means the highest-intent behaviour we have ever recorded stays
+> blocked by a cap that is cheap to hit accidentally. Do not act on n=1 without a ruling.
+
+**What the 09-28 readout should now look for specifically:** a `limit_hit` → `upgrade_click` →
+`checkout_created` chain from an in-app source. That is this exact user story with A1 in place, and it
+is the narrowest, highest-information event the window can produce.
