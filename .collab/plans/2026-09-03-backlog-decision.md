@@ -1116,7 +1116,7 @@ that opens. This door opened on 09-07 (A1: `session_dropdown` now calls `startCh
 `SessionDropdown.tsx:181-190`). The cap's conversion has never once been observed; its first
 observation is the chain in item 6.
 
-**2. The number 3 stays; what it counts is conditional on one query.** 040411e1 has **6 user messages**
+**2. The number 3 stays; what it counts is conditional on one query.** *(Both readings below are WITHDRAWN — §9.16: the cap fired on a demo document via `chat.py:257-264`, not on a returner's own document. Re-ruled in §9.18.)* 040411e1 has **6 user messages**
 across 3 days and 5 documents. Three sessions on one 254-page PDF with that little chat means the capped
 sessions were near-empty. The lead's next query (per-session user-message counts on the capped document)
 decides which of two readings holds:
@@ -1277,3 +1277,66 @@ whether any post-T_A citation-clicker fires the chip, and that has had one day a
 **Caveat kept explicit:** 0/19 is the pre-C1 baseline. C1 and C2 shipped 09-07; the chip has had no
 opportunity yet. This section establishes the denominator the 09-28 read is measured against, and
 must not be cited as evidence that C1 failed.
+
+### 9.18 Re-ruling after §9.16/§9.17 — the cap fired on the demo, and that changes the fix (2026-09-08, Fable 5.1)
+
+§9.16 withdrew §9.14's workaround claim: the `session_limit` hits on 08-28 were on the **demo** document
+`court-filing` (per-user demo branch, `chat.py:257-264`), the three 254-page copies predate or postdate
+the hits and are all `ready`, and 040411e1 never had three sessions on a document of their own. §9.15's
+two candidate readings both rested on that premise and are marked withdrawn in place. What follows
+replaces them.
+
+**1. The number 3 stays, now on three grounds.** n = 1 moves no boundary (§9.15.1); the door only opened
+09-07; and §9.16's denominators say the own-document cap has essentially never bound — 2 (user, document)
+pairs ever reached 3 sessions, 1 user ever hit `session_limit`, and that one hit was on the demo.
+
+**2. The counting unit: reuse, do not exclude.** §9.15's primary fix — count only sessions with >= 1 user
+message — is **withdrawn as unsafe**. The per-user demo cap exists to close the row-spam DoS on the
+anonymous cap (`rules/backend.md`, Demo System), and an own-document cap that ignores empty rows is
+unbounded row creation by the same token. §9.16's 22 of 115 (19%) empty authenticated sessions is a
+real churn signal, but the safe shape is the alternative §9.15 listed second: **"New chat" reuses the
+current session when it carries zero user messages** (clear the pane, create no row). That removes the
+churn without loosening either cap. Frontend-only (`SessionDropdown.tsx:69` guards on the live
+transcript). Post-v0.30.0.
+
+**3. The copy is two defects, not one.** Both branches raise the identical `SESSION_LIMIT_REACHED`
+(`chat.py:245`, `:268`) and the frontend renders one string for both (`errorCopy.ts:378-385`): "Free plan
+is limited to 3 chat sessions per document. Upgrade for unlimited."
+- *Own document*: state both exits — delete one (the control renders in the same dropdown,
+  `SessionDropdown.tsx:335-340`) or upgrade. As §9.15.3, with T_copy recorded and the chain split.
+- *Demo document*: the string is wrong in kind. An anti-abuse guard on a sample document is presented as a
+  Free-plan limit with an upsell, and post-A1 that upsell is a Stripe Checkout page for someone who has
+  not uploaded anything. The honest copy is "The demo allows 3 conversations per sample document —
+  upload your own document to keep going", CTA = upload (a signed-in Free user has 3 document slots), not
+  upgrade. The reader already knows the surface (`useDocumentLoader.ts:97` sets `isDemo`), so this is a
+  client-side branch on existing state. Frontend-only, post-v0.30.0, 11 locales.
+
+**4. 040411e1, reframed.** The three intents in 113 seconds were **evaluation on the legal demo**
+(`session_limit` on `court-filing`, `academic_domain_mode` on the same surface, `export_pdf`), not depth
+on their own work. Their own documents: five, one session each, six messages in total. The demo held them
+for three conversations; their own uploads held them for about one message each. That asymmetry is B1's
+hypothesis in one user — the demo page has hard-coded suggested questions, their own first sessions had an
+empty pane — and is recorded here as a hypothesis the 09-28 B1 read touches, not as a finding. It also
+means the "most engaged returner" label in §9.14 should read "widest uploader"; the two deepest returners
+by citation clicks (44 and 31, §9.17) are the engagement to read.
+
+**5. Chain spec amendment.** The "Purchase — by limit" row (§9.15.6) groups additionally by whether the
+document the limit fired on is a demo (`documents.demo_slug is not null`): demo-surface intent is
+evaluation intent and must not be pooled with depth intent. Same split on `upgrade_click` by
+`source=domain_mode_selector`.
+
+**6. §9.16's latent defect — recorded, agreed out of scope.** The own-document branch counts all sessions
+on the document with no user filter (`chat.py:238-240`); equivalent today because only the owner has
+sessions on a private document, wrong the day any shared-document surface exists. It joins the
+post-09-28 hardening list beside the content-hash dedup that §9.16 made moot.
+
+**7. Quote Finder — §9.17 is the baseline, and the candidate is the popover.** 19 non-owner citation
+clickers, 163 clicks, 0 panel opens / chip clicks / searches / saves, with the two deepest returners at
+the top. The lead's caveat stands and is binding: this is the **pre-C1 baseline**, not a C1 result. The
+09-28 read is post-T_A `citation_clicked` users against chip/panel events. If that reads 0 with clicks
+> 0, C1's phrasing trigger does not reach the population that verifies by clicking, and the next C item
+is an entry point on the citation popover itself. Registered; not designed before 09-28.
+
+**Record.** §9.16 (`031b412`) and §9.17 (`ae3f89b`) are on `main`; this section is on
+`docs/window-ruling-2026-09-08`, rebuilt on `ae3f89b`. Nothing in it is code under the stop-line;
+everything blocked remains blocked on the owner.
