@@ -1340,3 +1340,47 @@ is an entry point on the citation popover itself. Registered; not designed befor
 **Record.** §9.16 (`031b412`) and §9.17 (`ae3f89b`) are on `main`; this section is on
 `docs/window-ruling-2026-09-08`, rebuilt on `ae3f89b`. Nothing in it is code under the stop-line;
 everything blocked remains blocked on the owner.
+
+### 9.19 Verified: the demo session wall now sends non-uploaders to Stripe. Live since 09-07.
+
+§9.18 item 3 argued the demo branch's copy is "wrong in kind". Verified at source — it is worse than a
+copy problem, and it is **live in production today**:
+
+1. `chat.py:245` (own-document) and `chat.py:268` (demo) raise the **identical** `SESSION_LIMIT_REACHED`.
+2. `errorCopy.ts:378-385` renders one string for both: *"Free plan is limited to {limit} chat sessions
+   per document. Upgrade for unlimited"*, with `cta: upgradeCta(tOr, 'session_limit', 'plus')`.
+3. `SessionDropdown.tsx:182-193` `onUpgrade` calls `startPlanAwareBillingAction({ currentPlan: profile?.plan })`.
+4. `billing.ts:33-35`: `if (currentPlan === 'free') return { kind: 'checkout' }` — **straight to Stripe.**
+5. `SessionDropdown.tsx` has **no `isDemo` branch on this path.** It cannot tell a sample document from
+   the user's own.
+
+**So a signed-in free user who reaches 3 conversations on a demo document is told they have hit a
+"Free plan" limit and is taken directly to a Stripe Checkout page — having uploaded nothing.** The cap
+they actually hit is the per-user anti-abuse guard on sample documents
+(`rules/backend.md`, Demo System), not a product limit on their own work. The honest next action is
+"upload your own document" — a signed-in free user has 3 slots — and that is not offered.
+
+**A1 did not create the mis-framing; it sharpened the consequence.** Pre-A1 this dumped the user on
+`/billing`, which was inert. Post-A1 it is a payment page. This is the one place where A1's fix lands
+on a surface where asking for money is the wrong move.
+
+**This is exactly the path 040411e1 walked on 2026-08-28** (§9.16): `session_limit` on the
+`court-filing` demo → `upgrade_click` → `/billing`. The same user today would land on Stripe.
+
+**It is also the path the 09-28 window is most likely to actually observe**, because demo traffic is
+the traffic. A `checkout_created` arriving from `source=session_dropdown, reason=session_limit` on a
+demo document must NOT be read as "the purchase wall fell" — it is an evaluation-stage user pushed to
+a payment page by a guard. §9.18 item 5's demo/own split in the "Purchase — by limit" row is therefore
+not a refinement; without it the headline metric is corrupted by this defect.
+
+**Not fixed now, by ruling** (§9.18: frontend-only, post-v0.30.0, 11 locales, Codex-reviewed). It is
+not money loss and not a security issue; it is a wrong-in-kind upsell. Recorded here so that (a) it is
+not rediscovered as a surprise, and (b) the owner knows before running the §5 proofs that hitting the
+demo session wall today leads to Stripe.
+
+**Also amended per §9.18 item 4:** §9.14 called `040411e1` the "most engaged returner". That is
+withdrawn — they are the **widest uploader** (5 documents, but 6 user messages total, ~1 per session).
+The engagement to read is the citation clicking (44 and 31 by the top two, §9.17). Their asymmetry —
+three conversations held by a demo with hard-coded suggested questions, about one message each on
+their own uploads with an empty pane — is B1's hypothesis visible in one user, and is recorded as a
+hypothesis the 09-28 B1 read touches, not as a finding.
