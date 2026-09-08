@@ -1173,3 +1173,66 @@ are the copy and the counting unit, and both are defects, not prices.
 
 **Record.** §9.14 (`e7d850e`) is on `main`; this section is on `docs/window-ruling-2026-09-08`, rebuilt
 on `e7d850e`.
+
+### 9.16 §9.14's workaround claim is WRONG — the cap fired on a demo document
+
+§9.15 asked for per-session message counts on 040411e1's capped document. Running it overturned my
+own causal story, and §9.15's ruling was partly reasoned on that story, so this correction comes first.
+
+**§9.14 claimed** the user "owns the same 254-page PDF three times — the signature of working around
+the 3-sessions-per-document cap by re-uploading". **That is wrong on both halves.**
+
+- The document the cap fired on, `0a29054e`, is **a demo document** — `demo_slug='court-filing'`,
+  `user_id` NULL, 6 pages. Not the user's PDF, and not owned by them.
+- The user's five sessions are on **five different documents**, one each. They never had three
+  sessions on one document of their own.
+- The three 254-page copies were uploaded **2026-08-21 18:35, 08-21 18:53 and 08-28 15:46** — two of
+  them a week before the limit hits, and the third *after* them. All three are `ready`. So they are
+  not cap workarounds. (Three `ready` copies of one 254-page PDF consuming the entire
+  `FREE_MAX_DOCUMENTS = 3` quota is still a real observation; its cause is unexplained and is not this.)
+
+**Which branch fired, verified at source.** `chat.py:236` guards the non-demo cap with
+`not doc.demo_slug`; `chat.py:257-264` is the demo branch and is correctly scoped to
+`ChatSession.user_id == user.id`. `0a29054e` carries a `demo_slug`, so the **demo** cap fired: the
+user had reached 3 of their own conversations on the court-filing demo. It now shows 1 session for
+them (deletions are hard, `chat.py:702`), which is consistent with the ten `limit_hit` presses.
+
+**The corrected story is not weaker — it is a sharper ICP signal.** A prospective user evaluating the
+product on the **legal** demo hit a free wall after three conversations, clicked upgrade three times
+from three different features in 113 seconds, was dumped on `/billing` each time, converted none — and
+then still went on to upload their own 254-page PDF. That is a high-intent legal prospect the product
+failed to convert at the exact moment of intent, which is precisely what A1 rewires. Everything §9.14
+said about A1/A3 catching those three clicks stands; only the "re-upload workaround" mechanism is
+withdrawn.
+
+**A latent defect found on the way, not live.** The non-demo branch counts **all** sessions on a
+document with no user filter:
+
+```python
+select(func.count(ChatSession.id)).where(ChatSession.document_id == document_id)   # chat.py:238-240
+```
+
+For a private document only the owner has sessions, so it is currently equivalent. But any feature
+that lets a second user open sessions on someone else's non-demo document would let their sessions
+consume the owner's cap. The demo branch already does it correctly. Worth fixing when that surface
+appears; not a live bug today, and NOT in scope now.
+
+**§9.15's three queries, answered:**
+
+| Question | Answer |
+|---|---|
+| Were the capped sessions empty? | Unanswerable — the capped demo sessions were hard-deleted. Of what remains, the user has **6 user messages across 5 sessions** (~1 each). |
+| Cap's real denominator | Only **2** (user, document) pairs have ever reached 3+ sessions, neither of them this user; exactly **1** user has ever hit `session_limit`. The cap is rare, not selective-for-the-engaged. |
+| Empty-session prevalence | **22 of 115** authenticated non-owner sessions (19%) carry zero user messages. §9.15's concern that the cap counts rows rather than conversations is real at ~1 in 5. |
+
+**Consequence for §9.15's ruling.** Its two candidate fixes were "depth paywall on the retention hook"
+versus "counts the wrong unit". Neither is now supported as stated: the cap did not fire on a
+returner's own document, so it is not sitting on the retention hook; and it fired on the demo surface,
+where the count is already per-user and correct. What survives is (a) the **copy** defect — still real,
+still n=1-decidable, and it applies to the demo wall too — and (b) the 19% empty-session rate as an
+independent argument for counting conversations rather than rows, wherever the cap applies. The number
+3 stays, for the reason §9.15 gave and one more: it has bound exactly one user, once.
+
+**Process note.** This is the second time in two days that publishing the underlying rows let a wrong
+claim be caught — §9.10 by an internal contradiction, §9.14 by a follow-up query someone else asked
+for. Both were mine. The tables should keep being published in a form that can contradict the prose.
