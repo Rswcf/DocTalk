@@ -567,7 +567,8 @@ day-2 negative branch is unreadable at any attainable n.
 | Nudge surface is alive | eligible non-owners (>= 1 ready doc, >= 3 messages) visiting the dashboard after T_B | first `upgrade_nudge_shown` | days after T_B (any of ~10 MAU qualifies) |
 | B1 halves the zero-message rate | ready non-owner documents after T_B | ~30 post-T_B documents for a 23% → 12% halving to be visible even loosely | ~15 docs/month → ~2 months. **Unreadable.** Keep only the existence half: first user message equal to a stored `suggested_questions` entry. |
 | B2 removes a dead end | the 15 day-0 error docs | any retry-into-ready | their owners never returned (retention = 0) → expected 0 **by construction**. Report "unread", never "B2 failed". |
-| Someone returns on day 2 | non-owner signups since T_A | **positive only**: >= 1 → read that session. Negative: at base p = 0.05, P(read 0 \| nothing changed) = 0.60 at n = 10, 0.36 at n = 20, 0.10 at n = 45 (90 days at 0.5/day). | §8.6's "0 with n >= 10 confirms B was first-session work" is **retracted**. 0 means no evidence. |
+| Someone returns on day 2 | **(amended — see §9.11)** non-owner users whose first active day is >= T_A, with >= 7d exposure | a *reported rate* against the measured base, not an existence read: one return at n = 10 is the null (P >= 0.63). Thresholds in §9.11. | not a decider in either direction at any n reachable this quarter |
+| **Someone reaches a 4th distinct active day (the wall)** | any non-owner, any signup date, 4th distinct user-message day >= T_A | first such user — base over seven months: **0 of 67 ever-active users** | standing metric, no calendar deadline; the 4 users at 3 days are closest (§9.11) |
 
 On the lead's alternatives: a per-session/per-document denominator helps B1 and the nudge a little
 (their unit arrives faster than users) but does not rescue the halving test and does nothing for day-2,
@@ -594,9 +595,7 @@ Days from T_A (2026-09-07 00:22Z) until the 10th non-owner signup, Poisson arriv
   its own gate (§9.3). If **no intent event of any kind** has arrived by 09-28, that is the finding:
   the active base cannot produce one intent event in three weeks, and acquisition is confirmed binding
   for learning. Do not extend past 09-28 waiting for signups.
-- **Decide early** on either: (a) any non-owner active on a later calendar day within 7 — read what
-  they returned to do, that is the next batch; (b) the refined defect trigger (§9.8) firing — fix it
-  immediately. `checkout_created >= 1` on its own is confirmation (the button works), not a decision:
+- **Decide early** on either: (a) **(amended — see §9.11; the day-2 version of this bullet was error #4)** any non-owner reaching a 4th distinct active day — read that user's whole history, the wall broke; (b) the refined defect trigger (§9.8) firing — fix it immediately. `checkout_created >= 1` on its own is confirmation (the button works), not a decision:
   it moves the purchase question to price/value, which §9.3 says is undecidable at this traffic, and
   08-25 already ruled out price cuts on one data point.
 
@@ -773,3 +772,106 @@ the stated "holds unless below ~2/month". The 09-28 decision date stands.
 over-read: 2 signups in 7 days cannot separate 0.29/day from 0.5/day. The correct statement is
 "consistent with the historical ~0.5/day". The substantive consequence — that the original 14-day
 window could not reach its stated sample — survives at 0.5/day regardless.
+
+### 9.11 Ruling on §9.10's open decision (2026-09-08, same day, Fable 5.1)
+
+§9.10 records the lead's measurements and leaves one decision open. **Ruling: yes** — the decider moves to
+the 4th distinct active day; day-2 becomes a reported rate with null-derived thresholds; the retention-hook
+read moves onto data that already exists. The 09-28 date holds (§9.10 D: 4.5 intent users/month against a
+~2/month floor). One reported number does not reconcile, and the constant must be fixed before any threshold
+is treated as pre-registered.
+
+**Error #4, owned before any post-T_A user has returned.** §9.4's "any non-owner active on a later
+calendar day within 7 → read that session, it is the next batch" would have built a batch off the
+null: at p ≈ 0.09, one return in a cohort of 10 happens 63% of the time when nothing changed. Retracted;
+the §9.3 row and §9.4 bullet are marked in place.
+
+**The reported numbers do not reconcile — resolve before pre-registering a constant.** 16 returners on
+the calendar-day definition (18 on the no-cap one) each necessarily have >= 2 distinct active days, yet
+the active-days table has only 13 users at 2+. One explanation covers every variant: the script's day-2
+CTE (`observation_window.py:150`) anchors "day 1" on `users.created_at`, not on the first message.
+A user whose only session happens the day after signup is a "return" with one active day. So 0.094 is a
+**signup-anchored** base that mixes delayed first sessions with real returns; the base for "came back
+after a session" is at most 13/170 = 0.076 and has not been run. Ask: re-run the day-2 base anchored on
+the first user-message day (SQL below), and confirm the active-days table used the same `messages
+m.role='user'` via `sessions.user_id` definition. The threshold table below is **provisional at
+p = 0.094**; it will be regenerated at the reconciled base, which can only be lower.
+
+**Day-2 is demoted to a reported rate.** Denominator = non-owner users whose first active day is
+>= T_A **and** <= readout − 7d (exposure; a 09-26 signup has not had seven days by 09-28). At 0.51/day
+that is n ≈ 7 on 09-28 and ≈ 14 on 10-12. Binomial tail under the provisional base:
+
+| exposed n | P(>= 1 \| base) | returners for tail <= 0.10 | for tail <= 0.05 | expected under base |
+|---|---|---|---|---|
+| 5 | 0.39 | 2 | 3 | 0.5 |
+| 7 | 0.50 | 3 | 3 | 0.7 |
+| 10 | 0.63 | 3 | 4 | 0.9 |
+| 15 | 0.77 | 4 | 4 | 1.4 |
+| 20 | 0.86 | 5 | 5 | 1.9 |
+| 30 | 0.95 | 6 | 7 | 2.8 |
+
+At n = 7 the 0.05 line is 3 of 7 — a ~4× effect. The day-2 rate can only see a very large change this
+quarter. Print the exact tail; **do not decide on day-2 in either direction below ~30 exposed users.**
+
+**The decider is the 4th distinct active day.** Base over seven months: 0 of 67 ever-active users,
+0 of 170 signups. Rules: (1) count **any** non-owner whose 4th distinct user-message day falls >= T_A,
+any signup date — the same MAU denominator as the purchase/trial/Quote Finder rows, so it can read
+before a new signup could; the 4 users at 3 days are the closest. (2) Report the span from 1st to 4th
+day and whether the 4th day is >= T_B: May–May–May–September is a first but not a habit, and says
+nothing about B. No window is added, because none was measured. (3) 0/67 is compatible with a true rate
+up to ~4.5% (rule of three on active users — a user who never messages cannot reach day 4), so one
+day-4 read means "the wall can be crossed; here is who and how", never "B worked". Existence, not
+attribution. It is a standing metric with no calendar deadline: report it whenever it moves, including
+after 09-28.
+
+**The retention-hook read never needed a future event.** The 16 (or 13, once reconciled) pre-T_A
+returners have return-day sessions readable today: same document or a new one, user-message count,
+`citation_clicked`, quote events, uploads, and whether any are the paper-writer cohort the 06-12
+strategy named as the only multi-week retention (`bas***`/`mel***`/`ric***`/`mca***`). Read-only,
+inside §8.4's readout allowance. **Do it before 09-28**, so that if the intent rows are thin the
+acquisition decision is taken with the returner profile in hand.
+
+**09-28 rule, restated with the default explicit.** At 12 MAU and 4.5 intent users/month, "no intent
+event by 09-28" is ~4% likely; the probable 09-28 state is thin confirmations — a checkout created, a
+trial claimed, no Quote Finder search, no day-4 — none of which picks a batch. So: **the 09-28 default
+is acquisition (§9.6), unless a thread exists** — a returner profile from the historical read, a day-4
+user, a non-owner Quote Finder search, or a defect. Day-2 above its threshold raises the retention
+thread's priority and its sessions are read beside the historical ones, but it selects no batch by
+itself; the batch is specified by what returners did. Day-4 >= 1 at any time: read that user's whole
+history and decide immediately.
+
+**Script changes (specified, not applied — the candidate is frozen).**
+- `:150`: anchor on the first user-message day, not `users.created_at`:
+  ```sql
+  with days as (
+    select s.user_id uid, date(m.created_at) d
+    from messages m join sessions s on s.id = m.session_id
+    where m.role = 'user' and s.user_id is not null and s.user_id::text <> :owner
+    group by 1, 2),
+  firsts as (select uid, min(d) first_day from days group by 1)
+  select count(*) filter (where exists (select 1 from days x
+           where x.uid = f.uid and x.d > f.first_day and x.d <= f.first_day + 7)) returned,
+         count(*) exposed
+  from firsts f
+  where f.first_day >= date(:lo) and f.first_day <= date(:hi);   -- base: lo=2026-02-01, hi=T_A−7d; window: lo=T_A, hi=readout−7d
+  ```
+  Print `returned / exposed`, the base, and the binomial tail. Delete the `:157-158` "next batch" print.
+- Add the day-4 read:
+  ```sql
+  with days as (/* as above */),
+  ranked as (select uid, d, row_number() over (partition by uid order by d) rn,
+                    min(d) over (partition by uid) first_day from days)
+  select uid, first_day, d as fourth_day, d - first_day as span_days,
+         (:tb is not null and d >= date(:tb)) as on_b_code
+  from ranked where rn = 4 and d >= date(:ta) order by d;
+  ```
+- Historical returner read (shape; adapt): for each `(uid, return_day)` from `days` where
+  `d > first_day`, join that day's sessions/messages/documents and count documents touched, documents
+  created that day, user messages, `citation_clicked` and `quote_*` events, `quote_search` ledger rows,
+  and whether any document equals a first-day document.
+
+**Record.** §9 (`9402429`) and §9.10 (`79006c6`) are on `main`; this section is on
+`docs/window-ruling-2026-09-08`, rebuilt on `79006c6` (the earlier `86670c6` on the old base is superseded).
+`main` has moved past `0f1a1d7` by docs-only commits — `git diff 0f1a1d7 main --name-only` touches `.collab/`
+only — so the v0.30.0 candidate's runtime content is unchanged, but §8.1/§9.7's "frozen at `0f1a1d7`" is
+now a statement about code, not about the hash: the release record must name the commit actually shipped.
