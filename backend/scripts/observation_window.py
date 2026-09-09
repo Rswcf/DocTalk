@@ -36,6 +36,13 @@ SNAPSHOT = pathlib.Path(__file__).with_name("day0-error-docs.json")
 MARKETING = {"pricing", "pricing_hero", "hero", "final_cta", "public_header",
              "features_layout_translation"}
 
+# Sources that open the AUTH modal, not checkout. `upgrade_click` is in the backend's
+# PUBLIC_EVENTS, so anonymous clients emit it with a NULL user_id; `demo_share_attempt`
+# (ChatPanel handleAnonShareClick) is a signup affordance whose own comment says it is
+# "not a working share". Counting these as purchase intent fires the defect trigger on
+# every anonymous demo share click — observed 2026-09-08. Reported separately.
+SIGNUP_INTENT = {"demo_share_attempt"}
+
 
 def head(s):
     print(f"\n{'=' * 72}\n{s}\n{'=' * 72}")
@@ -65,20 +72,36 @@ async def main():
 
     # ---------- defect triggers ----------
     head("1. DEFECT TRIGGERS — act immediately, do not wait for the window to end")
+    # Refined trigger: purchase intent requires an AUTHENTICATED user (an anonymous
+    # click cannot produce a checkout), a non-marketing source, and a non-signup source.
     ic = await one(con, """select count(*) from product_events
-        where event_name='upgrade_click' and created_at>=$2 and user_id::text is distinct from $1
+        where event_name='upgrade_click' and created_at>=$2
+          and user_id is not null and user_id::text <> $1
           and coalesce(metadata_json->>'source','') <> all($3::text[])""",
-                   OWNER, ta, list(MARKETING))
+                   OWNER, ta, list(MARKETING | SIGNUP_INTENT))
+    anon_ic = await one(con, """select count(*) from product_events
+        where event_name='upgrade_click' and created_at>=$1 and user_id is null""", ta)
+    signup_ic = await one(con, """select count(*) from product_events
+        where event_name='upgrade_click' and created_at>=$2
+          and coalesce(metadata_json->>'source','') = any($1::text[])""",
+                          list(SIGNUP_INTENT), ta)
+    attempts = await one(con, """select count(*) from checkout_attempts
+        where updated_at >= $1""", ta)
     cc = await one(con, """select count(*) from product_events
         where event_name='checkout_created' and created_at>=$2
           and user_id::text is distinct from $1""", OWNER, ta)
     cf = await one(con, """select count(*) from product_events
         where event_name='checkout_failed' and created_at>=$1""", ta)
-    print(f"  in-app upgrade_click (non-owner): {ic}")
-    print(f"  checkout_created (non-owner):     {cc}")
-    print(f"  checkout_failed (any):            {cf}")
+    print(f"  in-app upgrade_click, AUTHENTICATED non-owner: {ic}   <- the trigger")
+    print(f"  checkout_attempts rows since T_A:              {attempts}")
+    print(f"  checkout_created (non-owner):                  {cc}")
+    print(f"  checkout_failed (any):                         {cf}")
+    print(f"  [not intent] anonymous upgrade_click:          {anon_ic}")
+    print(f"  [not intent] signup-affordance sources:        {signup_ic}  {sorted(SIGNUP_INTENT)}")
     if ic >= 1 and cc == 0:
-        print("  *** DEFECT: intent without a checkout session. Read `checkout_attempts`. ***")
+        print("  *** DEFECT: authenticated intent without a checkout session. Read `checkout_attempts`. ***")
+    else:
+        print("  (no defect: anonymous and signup-affordance clicks cannot create a checkout)")
     if cf:
         print("  *** DEFECT: checkout_failed fired. Read its metadata_json. ***")
 
@@ -87,7 +110,12 @@ async def main():
     for r in await q(con, """select coalesce(metadata_json->>'source','<none>') src, count(*) n
         from product_events where event_name='upgrade_click' and created_at>=$2
           and user_id::text is distinct from $1 group by 1 order by 2 desc""", OWNER, ta):
-        kind = "marketing" if r["src"] in MARKETING else "IN-APP"
+        if r["src"] in MARKETING:
+            kind = "marketing (lands on /billing)"
+        elif r["src"] in SIGNUP_INTENT:
+            kind = "signup affordance (opens auth, NOT checkout)"
+        else:
+            kind = "IN-APP purchase intent"
         print(f"  {r['src']:<34}{r['n']:>4}   {kind}")
     for e in ("checkout_created", "checkout_completed"):
         print(f"  {e:<34}{await one(con, 'select count(*) from product_events where event_name=$1 and created_at>=$2', e, ta):>4}")
