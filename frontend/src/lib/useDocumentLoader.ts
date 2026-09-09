@@ -30,7 +30,7 @@ export function useDocumentLoader(documentId: string | undefined): UseDocumentLo
   const [error, setError] = useState<string | null>(null);
   const [errorCode, setErrorCode] = useState<string | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
-  const [isDemo, setIsDemo] = useState(false);
+  const isDemo = useDocTalkStore((s) => s.isDemo);
   const [fileType, setFileType] = useState<string>('pdf');
   const [hasConvertedPdf, setHasConvertedPdf] = useState(false);
   const [convertedPdfUrl, setConvertedPdfUrl] = useState<string | null>(null);
@@ -41,6 +41,7 @@ export function useDocumentLoader(documentId: string | undefined): UseDocumentLo
     setPdfUrl,
     setDocumentName,
     setDocumentStatus,
+    setIsDemo,
     setLastDocument,
     setDocumentSummary,
     setSuggestedQuestions,
@@ -56,7 +57,6 @@ export function useDocumentLoader(documentId: string | undefined): UseDocumentLo
 
     setError(null);
     setErrorCode(null);
-    setIsDemo(false);
     setFileType('pdf');
     setHasConvertedPdf(false);
     setConvertedPdfUrl(null);
@@ -94,7 +94,7 @@ export function useDocumentLoader(documentId: string | undefined): UseDocumentLo
         setError(null);
         setErrorCode(null);
         setDocumentStatus(info.status);
-        if (info.is_demo) setIsDemo(true);
+        setIsDemo(Boolean(info.is_demo));
         if (info.file_type) setFileType(info.file_type);
 
         if (info.filename) {
@@ -176,7 +176,7 @@ export function useDocumentLoader(documentId: string | undefined): UseDocumentLo
       cancelled = true;
       if (intervalId) clearInterval(intervalId);
     };
-  }, [documentId, reloadKey, setDocument, setPdfUrl, setDocumentName, setDocumentStatus, setLastDocument, setDocumentSummary, setSuggestedQuestions, clearDocumentTransientState, t, tOr]);
+  }, [documentId, reloadKey, setDocument, setPdfUrl, setDocumentName, setDocumentStatus, setIsDemo, setLastDocument, setDocumentSummary, setSuggestedQuestions, clearDocumentTransientState, t, tOr]);
 
   return {
     error,
