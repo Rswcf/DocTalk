@@ -27,7 +27,7 @@ import asyncpg
 
 OWNER = "c142f3af-6e6b-488d-ba57-d91aa3e57cc7"  # internal/owner account, excluded everywhere
 T_A = "2026-09-07T00:22:30Z"
-T_B = sys.argv[1] if len(sys.argv) > 1 else None
+T_B = sys.argv[1] if len(sys.argv) > 1 else "2026-09-09T09:27:27Z"  # v0.30.0 backend SUCCESS
 SNAPSHOT = pathlib.Path(__file__).with_name("day0-error-docs.json")
 
 # Marketing surfaces land on /billing and are NOT what A1 fixed. Everything else is

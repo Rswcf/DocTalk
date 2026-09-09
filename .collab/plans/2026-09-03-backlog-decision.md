@@ -1384,3 +1384,30 @@ The engagement to read is the citation clicking (44 and 31 by the top two, §9.1
 three conversations held by a demo with hard-coded suggested questions, about one message each on
 their own uploads with an empty pane — is B1's hypothesis visible in one user, and is recorded as a
 hypothesis the 09-28 B1 read touches, not as a finding.
+
+### 9.20 v0.30.0 shipped — T_B recorded
+
+**T_B = 2026-09-09T09:27:27.985Z** (Railway backend deployment SUCCESS). Deployed backend-first per
+`.claude/skills/deploy/SKILL.md`; the owner authorized it, as they did v0.29.0.
+
+| Step | Evidence |
+|---|---|
+| Gates on the candidate (`31e75ae`) | ruff clean · sole head `20260826_0043` · 956 passed / 3 skipped · 52 integration · build compiles · 22 frontend unit · version check 0.30.0 |
+| No new migration | `git diff 8e93934 stable` touches no `alembic/versions/` — B carries none, so rollback to v0.29.0 is a plain redeploy |
+| Backend live | `/health` = 0.30.0, **confirmed twice ≥30 s apart** per the cutover-sampling rule |
+| In-container | `alembic current` = `20260826_0043 (head)`; `RAILWAY_REPLICA_REGION` = `us-west2` |
+| Frontend pushed after | `8e93934..31e75ae` → `stable`, Vercel rebuilt (chunk hash rolled, release marker "without the monthly cap" served) |
+| Smoke | `/`, `/demo`, `/pricing`, `/use-cases/lawyers`, `/trust` all 200 |
+
+Tag `v0.30.0` = `31e75ae`. The shipped commit is `31e75ae`, not `0f1a1d7`: the runtime content is
+identical (every commit between them is `.collab/` only), but the release record names what shipped.
+
+**Window state.** `[T_A, T_B)` = 2026-09-07T00:22:30Z → 2026-09-09T09:27:27Z was the A+C-only window
+and recorded **zero non-owner signups**, so it reads nothing, exactly as §9 predicted. From T_B the
+full A+B+C surface is live. Attribution stays per metric, not per deploy.
+
+**Both live defects recorded before the window runs**, so neither is mistaken for a signal later:
+§9.19's demo session wall routing non-uploaders to Stripe (unfixed by ruling, frontend-only,
+post-v0.30.0), and §9.18's own-document copy hiding the free delete exit. A `checkout_created` from
+`session_dropdown / session_limit` on a demo document is an artefact of the first, not a purchase-wall
+result.
