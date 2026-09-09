@@ -144,7 +144,7 @@ async def main():
         print(f"  {e} @ dashboard_upgrade_reminder: {await one(con, 'select count(*) from product_events where event_name=$1 and created_at>=$2 and metadata_json->>$3=$4', e, ta, 'source', 'dashboard_upgrade_reminder')}")
 
     # ---------- day 2 ----------
-    head("8. DAY-2 RETENTION — the decider. Base over seven months: 0")
+    head("8. DAY-2 — a REPORTED RATE, not the decider (base 0.149 over active users)")
     d2 = await one(con, """
         with first as (select u.id, u.created_at from users u
                        where u.id::text <> $1 and u.created_at >= $2),
@@ -154,8 +154,26 @@ async def main():
         select count(distinct f.id) from first f join acts a on a.uid=f.id
         where a.d > date(f.created_at) and a.d <= date(f.created_at) + 7""", OWNER, ta)
     print(f"  non-owner users active on a LATER day within 7: {d2}")
-    print("  >>> >=1: read what they came back to do — that is the retention hook and the next batch."
-          if d2 else "  >>> 0: with n>=10 this confirms B was first-session work, and the next move is acquisition.")
+    print("  base rate: 0.149 over ever-active users (10/67), 0.059 over signups (10/170).")
+    print("  >>> RETRACTED (§9.11/§9.12): a single day-2 return is NOT decisive — at p=0.149 it is")
+    print("      what ~1 active user in 7 does anyway, and a zero read at n=10 happens 35% of the")
+    print("      time when nothing changed. Deciding day-2 needs ~30 exposed users (~Feb 2027).")
+
+    head("9. DAY-4 — THE DECIDER. True zero base: 0 of 67 users, ever")
+    d4 = await q(con, """
+        with acts as (select s.user_id uid, date(m.created_at) d from messages m
+                      join sessions s on s.id=m.session_id
+                      where m.role='user' and s.user_id is not null and s.user_id::text <> $1
+                      group by 1,2),
+        ranked as (select uid, d, row_number() over (partition by uid order by d) rn from acts)
+        select uid::text, d from ranked where rn = 4 order by d""", OWNER)
+    print(f"  users reaching a 4th distinct active day: {len(d4)}")
+    for r in d4:
+        print(f"    {r['uid'][:8]}  4th day = {r['d']}")
+    print("  >>> >=1: read that user's whole history and decide immediately. This is the only")
+    print("      metric where one positive read is unambiguous (0/67 over seven months).")
+    print("      Caveat: 0/67 is compatible with a true rate up to ~4.5%, so a first read means")
+    print("      \"the wall can be crossed, here is who and how\", never \"B worked\".")
 
     await con.close()
 
