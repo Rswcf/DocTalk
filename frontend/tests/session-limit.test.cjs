@@ -67,13 +67,14 @@ function harness({ isDemo = false, transcript = [userMessage], createResult, cre
   state.setMessages(transcript);
   state.setDemoMessagesUsed(7);
   state.setDemoRestoredUserMsgCount(transcript.filter((m) => m.role === 'user').length);
-  const calls = { create: [], billing: [], accounting: [], pointers: [], delete: [] };
+  const calls = { create: [], get: [], billing: [], accounting: [], pointers: [], delete: [], events: [] };
   for (const name of ['setDemoMessagesUsed', 'setDemoRestoredUserMsgCount', 'bumpDemoAccountingEpoch']) {
     const original = store.getState()[name];
     store.setState({ [name]: (...args) => { calls.accounting.push([name, ...args]); original(...args); } });
   }
   const slots = [];
   let index = 0;
+  let switchCleanup;
   const react = {
     useState(initial) {
       const current = index++;
@@ -85,12 +86,33 @@ function harness({ isDemo = false, transcript = [userMessage], createResult, cre
       if (!slots[current]) slots[current] = { current: initial };
       return slots[current];
     },
-    useEffect() {},
+    useEffect(effect, deps) {
+      // Exercise the dropdown's switch cancellation lifecycle without DOM effects.
+      if (!switchCleanup && deps?.includes(store.getState().endTranscriptRestore)) switchCleanup = effect();
+    },
     useMemo: (fn) => fn(),
   };
   const useStore = (selector) => selector ? selector(store.getState()) : store.getState();
   useStore.getState = store.getState;
   const pendingMessages = [];
+  const api = {
+    ApiError: class ApiError extends Error {},
+    listSessions: async () => ({ sessions: [row('current'), row('older'), row('oldest')] }),
+    createSession: async (id) => {
+      calls.create.push(id);
+      if (createError) throw createError;
+      return createResult || { session_id: 'new', created_at: '2026-09-10' };
+    },
+    getMessages: (id) => new Promise((resolve, reject) => {
+      calls.get.push(id);
+      pendingMessages.push({ resolve, reject });
+    }),
+    deleteSession: async (id) => { calls.delete.push(id); },
+  };
+  const demoStorage = {
+    clearDemoSession() {}, readDemoSession: () => null,
+    writeDemoSession: (...args) => calls.pointers.push(args),
+  };
   const Component = load('components/SessionDropdown.tsx', {
     react,
     'lucide-react': Object.fromEntries(['ChevronDown', 'Plus', 'Trash2', 'Home', 'X'].map((name) => [name, () => null])),
@@ -99,32 +121,37 @@ function harness({ isDemo = false, transcript = [userMessage], createResult, cre
     'next-auth/react': { useSession: () => ({ status: 'authenticated' }) },
     '../store': { useDocTalkStore: useStore },
     '../i18n': { useLocale: () => ({ t, tOr }) },
-    '../lib/api': {
-      createSession: async (id) => {
-        calls.create.push(id);
-        if (createError) throw createError;
-        return createResult || { session_id: 'new', created_at: '2026-09-10' };
-      },
-      getMessages: () => new Promise((resolve, reject) => { pendingMessages.push({ resolve, reject }); }),
-      deleteSession: async (id) => { calls.delete.push(id); },
-    },
+    '../lib/api': api,
     '../lib/errorCopy': copyModule,
-    '../lib/analytics': { trackEvent() {} },
+    '../lib/analytics': { trackEvent: (...args) => calls.events.push(args) },
     '../lib/billing': {
       startPlanAwareBillingAction: async (args) => { calls.billing.push(args); },
       getBillingErrorMessage: () => 'Billing failed',
     },
     '../lib/useDropdownKeyboard': { useDropdownKeyboard: () => () => {} },
-    '../lib/demoSessionStorage': {
-      clearDemoSession() {}, readDemoSession: () => null,
-      writeDemoSession: (...args) => calls.pointers.push(args),
-    },
+    '../lib/demoSessionStorage': demoStorage,
     '../lib/useUserProfile': { useUserProfile: () => ({ profile: { plan: 'free' } }) },
   }).default;
   const render = () => { index = 0; return Component(); };
   nodes(render()).find((node) => node.props?.['data-tour']).props.onClick();
   return {
     store, calls, render,
+    unmount: () => switchCleanup?.(),
+    startInitialRestore(documentId = 'doc-1', storage = demoStorage) {
+      let cleanup;
+      let sessionError = null;
+      const { useChatSession } = load('lib/useChatSession.ts', {
+        react: {
+          useState: () => [null, (error) => { sessionError = error; }],
+          useEffect: (effect) => { cleanup = effect(); },
+        },
+        '../store': { useDocTalkStore: useStore },
+        './api': api,
+        './demoSessionStorage': storage,
+      });
+      useChatSession(documentId);
+      return { cancel: () => cleanup?.(), getError: () => sessionError };
+    },
     resolveMessages: (data, index = 0) => pendingMessages[index].resolve(data),
     rejectMessages: (error, index = 0) => pendingMessages[index].reject(error),
   };
@@ -265,9 +292,11 @@ test('session switching waits for initial restore and an in-flight switch', asyn
   const h = harness();
   const switchTo = (title) => nodes(h.render()).find((node) => node.type === 'button' && textOf(node).startsWith(title)).props.onClick();
   h.store.getState().setSessionId('current');
+  const restoreToken = h.store.getState().beginTranscriptRestore();
   await switchTo('older');
   assert.equal(h.store.getState().sessionId, 'current', 'initial restore must finish first');
   h.store.getState().setMessages([userMessage]);
+  h.store.getState().endTranscriptRestore(restoreToken);
   const first = switchTo('older');
   await switchTo('oldest');
   assert.equal(h.store.getState().sessionId, 'older', 'do not overlap transcript loads');
@@ -315,5 +344,152 @@ test('failed session switch restores the loaded transcript and allows retry with
   await retry;
   assert.equal(h.store.getState().sessionId, 'older');
   assert.equal(h.store.getState().messagesSessionId, 'older');
+  assert.deepEqual(h.calls.accounting, []);
+});
+
+const settle = () => new Promise((resolve) => setImmediate(resolve));
+const switchTo = (h, title) => nodes(h.render()).find((node) => node.type === 'button' && textOf(node).startsWith(title)).props.onClick();
+
+test('initial GET failure and capped create fallback allow exactly one explicit session retry GET', async () => {
+  const h = harness({ createError: limitError });
+  const restore = h.startInitialRestore();
+  await settle();
+  assert.deepEqual(h.calls.get, ['current']);
+  assert.ok(h.store.getState().transcriptRestoreInFlight);
+  await switchTo(h, 'older');
+  await button(h.render(), t('session.newChat')).props.onClick();
+  assert.deepEqual(h.calls.get, ['current'], 'pending initial restore blocks switching');
+  assert.deepEqual(h.calls.create, [], 'pending initial restore blocks New Chat');
+  h.rejectMessages(new TypeError('initial GET failed'));
+  await settle();
+  assert.deepEqual(h.calls.create, ['doc-1']);
+  assert.equal(restore.getError(), limitError);
+  assert.equal(h.store.getState().sessionId, 'current');
+  assert.equal(h.store.getState().messagesSessionId, null);
+  assert.equal(h.store.getState().transcriptRestoreInFlight, null);
+  const retry = switchTo(h, 'older');
+  assert.deepEqual(h.calls.get, ['current', 'older'], 'one explicit click issues exactly one retry GET');
+  h.resolveMessages({ messages: [userMessage, assistantMessage] }, 1);
+  await retry;
+  assert.equal(h.store.getState().sessionId, 'older');
+  assert.equal(h.store.getState().messagesSessionId, 'older');
+  assert.deepEqual(h.store.getState().messages, [userMessage, assistantMessage]);
+  assert.equal(h.store.getState().transcriptRestoreInFlight, null);
+});
+
+for (const owner of [null, 'foreign']) {
+  test(`unknown/foreign ownership (${owner}) creates instead of reusing an empty transcript`, async () => {
+    const h = harness({ transcript: [], createError: limitError });
+    h.store.getState().setMessages([], owner);
+    await button(h.render(), t('session.newChat')).props.onClick();
+    assert.deepEqual(h.calls.create, ['doc-1']);
+    assert.equal(h.store.getState().messagesSessionId, owner);
+    assert.equal(h.store.getState().sessionId, 'current');
+    assert.deepEqual(h.calls.accounting, []);
+    assert.deepEqual(h.calls.pointers, []);
+  });
+}
+
+test('failed retry preserves unknown ownership so New Chat still falls through to create', async () => {
+  const h = harness({ transcript: [], createError: limitError });
+  h.store.getState().setSessionId('current');
+  const retry = switchTo(h, 'older');
+  h.rejectMessages(new TypeError('retry GET failed'));
+  await retry;
+  assert.equal(h.store.getState().sessionId, 'current');
+  assert.equal(h.store.getState().messagesSessionId, null, 'failed load is never certified empty');
+  assert.equal(h.store.getState().transcriptRestoreInFlight, null);
+  await button(h.render(), t('session.newChat')).props.onClick();
+  assert.deepEqual(h.calls.create, ['doc-1']);
+  assert.deepEqual(h.calls.accounting, []);
+});
+
+test('initial restore clears pending on success and rejects a changed session identity', async () => {
+  for (const changeSession of [false, true]) {
+    const h = harness();
+    h.startInitialRestore();
+    await settle();
+    if (changeSession) {
+      h.store.getState().setSessionId('older');
+      h.store.getState().setMessages([assistantMessage]);
+    }
+    h.resolveMessages({ messages: [userMessage] });
+    await settle();
+    assert.equal(h.store.getState().transcriptRestoreInFlight, null);
+    assert.deepEqual(h.store.getState().messages, changeSession ? [assistantMessage] : [userMessage]);
+    assert.equal(h.store.getState().messagesSessionId, changeSession ? 'older' : 'current');
+    assert.deepEqual(h.calls.create, []);
+  }
+});
+
+test('cancelled initial restore releases immediately and its late finally cannot unlock a newer restore', async () => {
+  const h = harness();
+  const first = h.startInitialRestore();
+  await settle();
+  first.cancel();
+  assert.equal(h.store.getState().transcriptRestoreInFlight, null);
+  h.startInitialRestore();
+  await settle();
+  const newerToken = h.store.getState().transcriptRestoreInFlight;
+  assert.ok(newerToken);
+  h.resolveMessages({ messages: [userMessage] });
+  await settle();
+  assert.equal(h.store.getState().transcriptRestoreInFlight, newerToken);
+  assert.deepEqual(h.store.getState().messages, []);
+  h.resolveMessages({ messages: [assistantMessage] }, 1);
+  await settle();
+  assert.equal(h.store.getState().transcriptRestoreInFlight, null);
+  assert.deepEqual(h.store.getState().messages, [assistantMessage]);
+});
+
+test('pending restore resets on document change/reset and survives same-document transient refresh', () => {
+  const h = harness();
+  const state = h.store.getState();
+  const token = state.beginTranscriptRestore();
+  state.setDocument('doc-1');
+  state.clearDocumentTransientState();
+  assert.equal(h.store.getState().transcriptRestoreInFlight, token);
+  state.setDocument('doc-2');
+  assert.equal(h.store.getState().transcriptRestoreInFlight, null);
+  state.beginTranscriptRestore();
+  state.reset();
+  assert.equal(h.store.getState().transcriptRestoreInFlight, null);
+});
+
+for (const isDemo of [false, true]) {
+  test(`session limit analytics include request document and demo context (${isDemo}) outside reader routes`, async () => {
+    const h = harness({ isDemo, createError: limitError });
+    const events = [];
+    const analytics = load('lib/analytics.ts');
+    const originalWindow = global.window;
+    const originalFetch = global.fetch;
+    try {
+      global.window = { location: { pathname: '/' }, gtag: (...args) => events.push(args) };
+      global.fetch = async () => ({});
+      await button(h.render(), t('session.newChat')).props.onClick();
+      assert.equal(h.calls.events.length, 1);
+      analytics.trackEvent(...h.calls.events[0]);
+      assert.deepEqual(events, [['event', 'limit_hit', {
+        path: '/', source: 'session_dropdown', reason: 'session_limit', document_id: 'doc-1', is_demo: isDemo,
+      }]]);
+    } finally {
+      global.window = originalWindow;
+      global.fetch = originalFetch;
+    }
+  });
+}
+
+test('unmount cancels a pending switch and its late completion cannot affect a newer restore', async () => {
+  const h = harness();
+  const pending = switchTo(h, 'older');
+  h.unmount();
+  assert.equal(h.store.getState().transcriptRestoreInFlight, null);
+  const newerToken = h.store.getState().beginTranscriptRestore();
+  h.store.getState().setSessionId('oldest');
+  h.store.getState().setMessages([assistantMessage]);
+  h.resolveMessages({ messages: [userMessage], demo_messages_used: 100 });
+  await pending;
+  assert.equal(h.store.getState().transcriptRestoreInFlight, newerToken);
+  assert.deepEqual(h.store.getState().messages, [assistantMessage]);
   assert.deepEqual(h.calls.accounting, []);
 });

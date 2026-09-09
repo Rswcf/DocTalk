@@ -33,6 +33,8 @@ export interface DocTalkStore {
   messages: Message[];
   // A session switch clears/loads asynchronously; [] alone may mean loading.
   messagesSessionId: string | null;
+  // A token identifies the pending load; stale completion cannot unlock a newer one.
+  transcriptRestoreInFlight: symbol | null;
   isStreaming: boolean;
   selectedMode: string;
   domainMode: string | null;
@@ -112,7 +114,9 @@ export interface DocTalkStore {
   setSessionId: (id: string | null) => void;
   setSelectedMode: (id: string) => void;
   setDomainMode: (mode: string | null) => void;
-  setMessages: (msgs: Message[]) => void;
+  setMessages: (msgs: Message[], ownerSessionId?: string | null) => void;
+  beginTranscriptRestore: () => symbol;
+  endTranscriptRestore: (token: symbol) => void;
   setSessions: (sessions: SessionItem[]) => void;
   addSession: (session: SessionItem) => void;
   removeSession: (sessionId: string) => void;
@@ -150,6 +154,7 @@ const initialState = {
   sessionId: null as string | null,
   messages: [] as Message[],
   messagesSessionId: null as string | null,
+  transcriptRestoreInFlight: null as symbol | null,
   isStreaming: false,
   scrollNonce: 0,
   selectedMode: (() => {
@@ -184,6 +189,7 @@ export const useDocTalkStore = create<DocTalkStore>((set, get) => ({
     // own surface before session actions can interpret a shared limit code.
     isDemo: state.documentId === id ? state.isDemo : false,
     documentStatus: state.documentId === id ? state.documentStatus : 'idle',
+    transcriptRestoreInFlight: state.documentId === id ? state.transcriptRestoreInFlight : null,
   })),
   setDocumentName: (name: string) => set({ documentName: name }),
   setDocumentStatus: (status: DocStatus) => set({ documentStatus: status }),
@@ -218,7 +224,15 @@ export const useDocTalkStore = create<DocTalkStore>((set, get) => ({
     }));
   },
   addMessage: (msg: Message) => set({ messages: [...get().messages, msg] }),
-  setMessages: (msgs: Message[]) => set({ messages: msgs, messagesSessionId: get().sessionId }),
+  setMessages: (msgs: Message[], ownerSessionId = get().sessionId) => set({ messages: msgs, messagesSessionId: ownerSessionId }),
+  beginTranscriptRestore: () => {
+    const token = Symbol('transcriptRestore');
+    set({ transcriptRestoreInFlight: token });
+    return token;
+  },
+  endTranscriptRestore: (token) => {
+    if (get().transcriptRestoreInFlight === token) set({ transcriptRestoreInFlight: null });
+  },
   updateLastMessage: (text: string) => {
     if (!text) return;
     const state = get();

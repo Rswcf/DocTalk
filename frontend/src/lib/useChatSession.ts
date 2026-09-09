@@ -17,6 +17,8 @@ export function useChatSession(documentId: string | undefined): UseChatSessionRe
     setSessions,
     setSessionId,
     setMessages,
+    beginTranscriptRestore,
+    endTranscriptRestore,
     setDemoMessagesUsed,
     setDemoRestoredUserMsgCount,
     bumpDemoAccountingEpoch,
@@ -62,6 +64,7 @@ export function useChatSession(documentId: string | undefined): UseChatSessionRe
     setMessages([]);
     setSessions([]);
     let cancelled = false;
+    const restoreToken = beginTranscriptRestore();
 
     (async () => {
       let sessionReady = false;
@@ -143,7 +146,9 @@ export function useChatSession(documentId: string | undefined): UseChatSessionRe
           const latest = sessionsData.sessions[0];
           setSessionId(latest.session_id);
           const msgsData = await getMessages(latest.session_id);
-          if (!cancelled) setMessages(msgsData.messages);
+          const live = useDocTalkStore.getState();
+          if (cancelled || live.documentId !== documentId || live.sessionId !== latest.session_id) return;
+          setMessages(msgsData.messages);
           sessionReady = true;
         }
       } catch (e) {
@@ -183,12 +188,14 @@ export function useChatSession(documentId: string | undefined): UseChatSessionRe
           if (!cancelled) setSessionError(e);
         }
       }
-    })();
+    })().finally(() => endTranscriptRestore(restoreToken));
 
     return () => {
       cancelled = true;
+      // Release immediately on cancellation, even if the request never settles.
+      endTranscriptRestore(restoreToken);
     };
-  }, [documentId, documentStatus, setSessions, setSessionId, setMessages, setDemoMessagesUsed, setDemoRestoredUserMsgCount, bumpDemoAccountingEpoch, addSession]);
+  }, [documentId, documentStatus, setSessions, setSessionId, setMessages, beginTranscriptRestore, endTranscriptRestore, setDemoMessagesUsed, setDemoRestoredUserMsgCount, bumpDemoAccountingEpoch, addSession]);
 
   return { sessionError };
 }

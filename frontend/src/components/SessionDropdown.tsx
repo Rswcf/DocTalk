@@ -23,7 +23,7 @@ export default function SessionDropdown() {
   const sessions = useDocTalkStore((s) => s.sessions);
   const isStreaming = useDocTalkStore((s) => s.isStreaming);
 
-  const { addSession, setSessionId, setMessages, removeSession, reset, setDemoMessagesUsed, setDemoRestoredUserMsgCount, bumpDemoAccountingEpoch } = useDocTalkStore();
+  const { addSession, setSessionId, setMessages, beginTranscriptRestore, endTranscriptRestore, removeSession, reset, setDemoMessagesUsed, setDemoRestoredUserMsgCount, bumpDemoAccountingEpoch } = useDocTalkStore();
   const { t, tOr } = useLocale();
   const router = useRouter();
   const { status } = useSession();
@@ -40,6 +40,7 @@ export default function SessionDropdown() {
   const deleteConfirmRef = useRef<HTMLButtonElement>(null);
   const creatingSessionRef = useRef(false);
   const switchRequestRef = useRef(0);
+  const switchRestoreRef = useRef<symbol | null>(null);
 
   useEffect(() => {
     setSessionErrorCopy(null);
@@ -48,8 +49,11 @@ export default function SessionDropdown() {
 
   useEffect(() => {
     switchRequestRef.current += 1;
-    return () => { switchRequestRef.current += 1; };
-  }, [documentId]);
+    return () => {
+      switchRequestRef.current += 1;
+      if (switchRestoreRef.current) endTranscriptRestore(switchRestoreRef.current);
+    };
+  }, [documentId, endTranscriptRestore]);
 
   useEffect(() => {
     if (confirmDeleteId) deleteConfirmRef.current?.focus();
@@ -82,11 +86,10 @@ export default function SessionDropdown() {
 
   const onNewChat = async () => {
     const live = useDocTalkStore.getState();
-    if (!documentId || live.documentId !== documentId || live.documentStatus !== 'ready' || live.isStreaming || creatingSessionRef.current) return;
+    if (!documentId || live.documentId !== documentId || live.documentStatus !== 'ready' || live.isStreaming || creatingSessionRef.current || live.transcriptRestoreInFlight) return;
     const hasCurrentSession = live.sessions.some((s) => s.session_id === live.sessionId);
-    if (hasCurrentSession && live.messagesSessionId !== live.sessionId) return;
     setSessionErrorCopy(null);
-    if (hasCurrentSession && !live.messages.some((message) => message.role === 'user')) {
+    if (hasCurrentSession && live.messagesSessionId === live.sessionId && !live.messages.some((message) => message.role === 'user')) {
       // Removing assistant-only content leaves the user-message count at zero.
       // Keep the server usage, restored baseline, epoch and stored pointer:
       // this is the SAME session, with no accounting event or server request.
@@ -131,7 +134,7 @@ export default function SessionDropdown() {
       const copy = errorCopy(e, t, tOr, { isDemo: useDocTalkStore.getState().isDemo });
       setSessionErrorCopy(copy);
       if (copy.cta) {
-        trackEvent('limit_hit', { source: 'session_dropdown', reason: 'session_limit' });
+        trackEvent('limit_hit', { source: 'session_dropdown', reason: 'session_limit', document_id: documentId, is_demo: live.isDemo });
       }
     } finally {
       creatingSessionRef.current = false;
@@ -141,8 +144,10 @@ export default function SessionDropdown() {
   const onSwitchSession = async (id: string) => {
     const current = useDocTalkStore.getState();
     // Also serialize against useChatSession's initial transcript restore.
-    if (current.isStreaming || creatingSessionRef.current || current.messagesSessionId !== current.sessionId) return;
+    if (current.isStreaming || creatingSessionRef.current || current.transcriptRestoreInFlight) return;
     const request = ++switchRequestRef.current;
+    const restoreToken = beginTranscriptRestore();
+    switchRestoreRef.current = restoreToken;
     setSessionErrorCopy(null);
     setMessages([]);
     setSessionId(id);
@@ -155,9 +160,11 @@ export default function SessionDropdown() {
       // No new accounting was installed. Restore the previous transcript so
       // a failed load remains retryable without certifying the target as empty.
       setSessionId(current.sessionId);
-      setMessages(current.messages);
+      setMessages(current.messages, current.messagesSessionId);
       setSessionErrorCopy(errorCopy(error, t, tOr, { isDemo: live.isDemo }));
       return;
+    } finally {
+      endTranscriptRestore(restoreToken);
     }
     const live = useDocTalkStore.getState();
     if (request !== switchRequestRef.current || live.documentId !== documentId || live.sessionId !== id) return;
