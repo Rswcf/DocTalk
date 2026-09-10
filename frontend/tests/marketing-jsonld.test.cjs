@@ -111,7 +111,15 @@ for (const [slug, name, count] of cases) {
       const blocks = locale === 'en' ? enBlocks
         : await emittedSchemas(await LocalePage({ params: { locale } }));
       assert.deepEqual(schemaTypes(blocks), schemaTypes(enBlocks), `${locale}: type parity, no duplicate Article`);
-      for (const block of blocks) assert.equal(block.inLanguage, locale);
+      // inLanguage applies to CreativeWork-descended types only; BreadcrumbList
+      // is ItemList -> Intangible -> Thing and must NOT carry it.
+      for (const block of blocks) {
+        if (block['@type'] === 'BreadcrumbList') {
+          assert.ok(!('inLanguage' in block), 'BreadcrumbList must not carry inLanguage');
+        } else {
+          assert.equal(block.inLanguage, locale);
+        }
+      }
 
       const content = await Content({ locale });
       const hero = findElement(content, 'EdPageHero').props;

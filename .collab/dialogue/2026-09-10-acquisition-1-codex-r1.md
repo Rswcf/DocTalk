@@ -1,0 +1,24 @@
+SHIP
+
+No BLOCK findings under the requested severity bar. The phase 1 output matches the rendered page in all 11 languages. One non-blocking schema vocabulary note follows; it does not change the verdict.
+
+**NOTE — `inLanguage` is outside the documented domain of `BreadcrumbList`.**
+
+- Location: `frontend/src/components/marketing/MarketingPageJsonLd.tsx:67`.
+- Concrete sequence: build the branch, then parse the `BreadcrumbList` script in `frontend/.next/server/app/ja/use-cases/finance.html`. It contains `"@type":"BreadcrumbList","inLanguage":"ja"`. The same property is emitted on all 99 phase 1 breadcrumb blocks. Schema.org documents `inLanguage` for CreativeWork and several other types, while BreadcrumbList inherits from ItemList → Intangible → Thing, outside those documented types. This is a vocabulary/domain mismatch, not a wrong-language value or a content/URL mismatch. See [inLanguage](https://schema.org/inLanguage) and [BreadcrumbList](https://schema.org/BreadcrumbList).
+- Suggested fix: omit `inLanguage` from the BreadcrumbList block, retaining it on Article and FAQPage. Adjust the test's blanket assertion that every block has `inLanguage` to check the applicable types. Keep the translated breadcrumb names and localized item URLs unchanged. This cleanup is not a release prerequisite under the agreed bar; no search-engine rejection is claimed.
+
+Reviewed the committed tree difference from `9f7dc7acf0b108c6638a864ec885846f11bfd1e2` to `e288850a81ee450a130eb66499944ad931f64d8d` on `growth/acquisition-1`. No git command was run: refs, commit/tree objects and blobs were read directly with Python, and a unified diff was reconstructed. Every changed file in the checkout matched HEAD. Read design authority §9.6, §9.18 and §9.22, plus the frontend rules.
+
+Independent checks:
+
+- **Content and language:** parsed fresh Next production HTML for all nine paths × 11 languages: 99 pages, including 90 translated URLs. All 430 FAQ question/answer pairs exactly match their rendered accordion text, order and count. Their exact keys exist in each applicable locale dictionary and resolve to the emitted text without English fallback. Article headlines/descriptions match the rendered hero. Breadcrumb labels match the rendered trail.
+- **Finance:** `frontend/src/app/use-cases/finance/FinanceJsonLd.tsx:8` mirrors `FinanceContent.tsx:65` and `:73`: six FAQs in EN, five elsewhere. The sixth English question is the rendered “Can DocTalk…” version. The known missing non-English q6 keys are not a finding.
+- **URLs and duplication:** every phase 1 canonical and Article `mainEntityOfPage.@id` equals the current locale URL; breadcrumb links match the visible localized links. Every page has exactly one Article and one BreadcrumbList. Each detail page has exactly one FAQPage; the hub has none. `frontend/src/lib/marketingLocalePage.tsx:60` selects the override instead of the generic Article. All 230 URLs belonging to the other 23 factory consumers still emit only their original generic Article with correct locale/page identity.
+- **Structure:** all emitted JSON parses; no empty FAQ arrays, missing question/answer text, raw translation keys or `undefined` values were found. Question → acceptedAnswer → Answer nesting and breadcrumb positions are correct. Only the final breadcrumb lacks an item URL, which is permitted by [Google's breadcrumb specification](https://developers.google.com/search/docs/appearance/structured-data/breadcrumb#list-item).
+- **Scope and visible output:** the committed diff contains 30 frontend files plus the implementation report. Existing code changes are limited to 18 route wrappers and the factory; additions are the shared helper, nine page-specific components and the test file. Content components, translations, styles, lawyers, phase 2 routes, backend and package files are unchanged. All nine EN metadata blocks and non-JSON-LD render trees compare unchanged against the base.
+- **Gates rerun:** `npm run build` completed compilation, lint/type checks, generation of all 425 static pages and build traces. `npm run test:unit` passed all 44 tests. The build retained static/SSG rendering for the affected routes.
+
+Review evidence: `/private/tmp/doctalk-acquisition1-review.diff`, `/private/tmp/doctalk-acquisition1-review-manifest.json`, `/private/tmp/doctalk-acquisition1-codex-r1-build.log`, `/private/tmp/doctalk-acquisition1-codex-r1-unit.log`, and `/private/tmp/doctalk-acquisition1-codex-r1-html.json`. The independent HTML checker is `/private/tmp/doctalk-acquisition1-codex-r1-html.py`.
+
+Only this review document was added by this review. No product fixes or deployment were performed. Browser upload → chat → citation testing was not run because this batch changes marketing JSON-LD only; the rendered marketing HTML was checked directly. Production crawler ingestion and external validator results were not tested.

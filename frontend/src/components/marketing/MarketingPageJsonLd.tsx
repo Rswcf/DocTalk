@@ -64,7 +64,11 @@ export default function MarketingPageJsonLd({
         <JsonLdScript data={{
           '@context': 'https://schema.org',
           '@type': 'BreadcrumbList',
-          inLanguage: locale,
+          // No `inLanguage`: schema.org documents it for CreativeWork and kin,
+          // while BreadcrumbList inherits ItemList -> Intangible -> Thing, so the
+          // property is outside its domain. Article and FAQPage keep it. The
+          // breadcrumb is still localised — its names are translated and its item
+          // URLs are locale-correct (Codex r1 note).
           itemListElement: breadcrumbs.map(({ label, path: breadcrumbPath }, index) => ({
             '@type': 'ListItem',
             position: index + 1,
