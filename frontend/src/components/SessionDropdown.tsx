@@ -109,7 +109,12 @@ export default function SessionDropdown() {
       setOpen(false);
     } catch (e) {
       if (useDocTalkStore.getState().documentId !== documentId) return;
-      const copy = errorCopy(e, t, tOr, { isDemo: useDocTalkStore.getState().isDemo });
+      // Use THIS request's validated snapshot, not a live re-read: on a return to
+      // the same document before its metadata lands, `isDemo` is briefly false, and a
+      // live read renders own-document copy (with an Upgrade button) for a DEMO cap —
+      // the §9.19 defect in a transition window. The limit_hit below already uses the
+      // snapshot; this keeps the copy consistent with the event (Codex r3 note).
+      const copy = errorCopy(e, t, tOr, { isDemo: live.isDemo });
       setSessionErrorCopy(copy);
       if (copy.cta) {
         trackEvent('limit_hit', { source: 'session_dropdown', reason: 'session_limit', document_id: documentId, is_demo: live.isDemo });
