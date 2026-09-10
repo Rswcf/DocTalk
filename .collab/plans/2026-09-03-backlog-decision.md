@@ -1506,3 +1506,55 @@ numerator of the "Purchase — by limit" row.
 `/tools` has **zero inbound navigational links**. The only references outside the tools section are a
 route definition (`app/[locale]/tools/page.tsx:6`) and a locale-routing entry (`i18n/routing.ts:63`);
 the Footer links `/compare` but not `/tools`. §9.6's item stands as written.
+
+### 9.22 Acquisition item (a) scoped at source — and an EN defect found on the way
+
+§9.6/§9.18 authorised a frontend-only acquisition branch, item (a) being locale structured data.
+Scoped 2026-09-10 before writing any code. Three things changed the shape of the work.
+
+**1. The gap is 31 pages, not 33 — and lawyers is already correct.** Of the 32 locale pages built by
+`marketingLocalePage` (Article-only), **31** have an EN twin that emits richer schema
+(FAQPage / HowTo / SoftwareApplication / BreadcrumbList): all of `alternatives/*`, `compare/*`,
+`features/*`, `use-cases/*` except lawyers, plus `/demo`, `/pricing`, `/tools`, `/trust`.
+**31 paths × 10 locales = 310 URLs** currently under-marked.
+
+`/use-cases/lawyers` is NOT one of them and is not a gap — it is the **proven pattern**. It has a
+dedicated `LawyersJsonLd` component that both the EN route and the locale route mount, and it is
+fully locale-aware: FAQ resolved from the same translation keys the visible FAQ uses,
+`localizedHrefIfAvailable` URLs, `inLanguage: locale`. Its docstring states the reason — Google flags
+content/markup mismatches. It is the only such component in the app.
+
+**2. The fix cannot be "copy the EN schema to the locales".** Every other EN page **hardcodes English
+strings** inside its JSON-LD (`question: 'Can DocTalk summarize a research paper?'`) while the visible
+FAQ renders from translation keys. So the schema must be **rebuilt from the translation keys**, the
+way `LawyersJsonLd` does. Copying would emit English markup on a Japanese page — worse than the
+current generic Article.
+
+**3. There are THREE FAQ key conventions**, which a single generic helper must handle or be told:
+
+| Convention | Example | Seen on |
+|---|---|---|
+| `<pre>.faq.q<n>.question` / `.answer` | `useCasesFinance.faq.q1.question` | finance, teachers, lawyers |
+| `<pre>.faq.q<n>` / `.a<n>` | `useCasesStudents.faq.q1` / `.a1` | students, compare/chatpdf |
+| `<pre>.faq<n>Question` / `faq<n>Answer` | `compareHumata.faq1Question`, `altsChatpdf.faq1Question` | compare/humata, alternatives/* |
+
+Inferring the convention is fragile; the per-page FAQ items should be resolved by the page and passed
+in, not guessed by the helper.
+
+#### EN defect found while scoping — verified
+
+`/use-cases/finance` emits a FAQPage question that **does not appear on the page**:
+
+- JSON-LD: *"Can **AI** summarize financial statement footnotes from 10-K filings?"*
+- Rendered: *"Can **DocTalk** summarize financial statement footnotes from 10-K filings?"*
+
+That is a content/markup mismatch on a live English page — the exact failure `LawyersJsonLd` was
+written to avoid, and a direct consequence of hardcoding schema separately from the rendered copy.
+Rebuilding every page's schema from its translation keys fixes this class permanently rather than
+patching the one instance.
+
+*Method note:* two earlier passes appeared to show drift on `use-cases/students`, `compare/chatpdf`,
+`compare/humata` and `alternatives/chatpdf`. Those were **my key-prefix lookups being wrong**, not
+code defects — each resolved to zero rendered questions because I guessed the wrong convention. Only
+`use-cases/finance`, where both sides resolved (6 hardcoded, 6 rendered), is a real finding. Recorded
+because a wrong finding published as fact is worse than no finding.
