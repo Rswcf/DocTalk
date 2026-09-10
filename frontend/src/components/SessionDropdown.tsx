@@ -18,6 +18,7 @@ import { useUserProfile } from '../lib/useUserProfile';
 export default function SessionDropdown() {
   const documentName = useDocTalkStore((s) => s.documentName);
   const documentId = useDocTalkStore((s) => s.documentId);
+  const isDemo = useDocTalkStore((s) => s.isDemo);
   const sessionId = useDocTalkStore((s) => s.sessionId);
   const sessions = useDocTalkStore((s) => s.sessions);
   const isStreaming = useDocTalkStore((s) => s.isStreaming);
@@ -36,6 +37,16 @@ export default function SessionDropdown() {
   const ref = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const itemRefs = useRef<(HTMLButtonElement | null)[]>([]);
+  const deleteConfirmRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    setSessionErrorCopy(null);
+    setConfirmDeleteId(null);
+  }, [documentId, isDemo]);
+
+  useEffect(() => {
+    if (confirmDeleteId) deleteConfirmRef.current?.focus();
+  }, [confirmDeleteId]);
 
   useEffect(() => {
     function onDocClick(e: MouseEvent) {
@@ -63,10 +74,12 @@ export default function SessionDropdown() {
   const toggle = () => setOpen((v) => !v);
 
   const onNewChat = async () => {
-    if (!documentId || isStreaming) return;
+    const live = useDocTalkStore.getState();
+    if (!documentId || live.documentId !== documentId || live.documentStatus !== 'ready' || live.isStreaming) return;
     setSessionErrorCopy(null);
     try {
       const s = await createSession(documentId);
+      if (useDocTalkStore.getState().documentId !== documentId) return;
       addSession({
         session_id: s.session_id,
         title: null,
@@ -95,10 +108,16 @@ export default function SessionDropdown() {
       setConfirmDeleteId(null);
       setOpen(false);
     } catch (e) {
-      const copy = errorCopy(e, t, tOr);
+      if (useDocTalkStore.getState().documentId !== documentId) return;
+      // Use THIS request's validated snapshot, not a live re-read: on a return to
+      // the same document before its metadata lands, `isDemo` is briefly false, and a
+      // live read renders own-document copy (with an Upgrade button) for a DEMO cap —
+      // the §9.19 defect in a transition window. The limit_hit below already uses the
+      // snapshot; this keeps the copy consistent with the event (Codex r3 note).
+      const copy = errorCopy(e, t, tOr, { isDemo: live.isDemo });
       setSessionErrorCopy(copy);
       if (copy.cta) {
-        trackEvent('limit_hit', { source: 'session_dropdown', reason: 'session_limit' });
+        trackEvent('limit_hit', { source: 'session_dropdown', reason: 'session_limit', document_id: documentId, is_demo: live.isDemo });
       }
     }
   };
@@ -267,6 +286,10 @@ export default function SessionDropdown() {
             {sessionErrorCopy && (
               <div
                 role="alert"
+                onKeyDown={(event) => {
+                  // Let native CTA activation run instead of the menu's New Chat handler.
+                  if (event.key === 'Enter' || event.key === ' ') event.stopPropagation();
+                }}
                 className={`mx-1 mt-2 rounded-lg border px-3 py-2 text-xs ${
                   sessionErrorCopy.severity === 'warning'
                     ? 'border-amber-200 bg-amber-50 text-amber-950 dark:border-amber-900/60 dark:bg-amber-950/30 dark:text-amber-100'
@@ -275,25 +298,40 @@ export default function SessionDropdown() {
               >
                 <p className="font-medium">{sessionErrorCopy.title}</p>
                 <p className="mt-1 leading-5 opacity-90">{sessionErrorCopy.body}</p>
-                {sessionErrorCopy.cta && (
-                  status === 'authenticated' ? (
+                <div className="flex flex-wrap items-center gap-2">
+                  {sessionErrorCopy.secondaryAction?.action === 'delete_session' && (
                     <button
                       type="button"
-                      onClick={onUpgrade}
-                      disabled={checkoutLoading}
-                      className="mt-2 inline-flex items-center justify-center rounded-md bg-zinc-900 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-zinc-800 disabled:opacity-50 dark:bg-zinc-50 dark:text-zinc-900 dark:hover:bg-zinc-200 focus-visible:ring-2 focus-visible:ring-zinc-400 dark:focus-visible:ring-zinc-500"
+                      disabled={isStreaming}
+                      onClick={() => {
+                        const target = sessions.find((s) => s.session_id !== sessionId)?.session_id ?? sessionId;
+                        if (target) requestDeleteSession(target);
+                      }}
+                      className="mt-2 rounded-md border border-zinc-400 px-3 py-1.5 text-xs font-medium text-zinc-900 transition-colors hover:bg-zinc-100 disabled:opacity-50 dark:border-zinc-500 dark:text-zinc-100 dark:hover:bg-zinc-800 focus-visible:ring-2 focus-visible:ring-zinc-400"
                     >
-                      {sessionErrorCopy.cta.label}
+                      {sessionErrorCopy.secondaryAction.label}
                     </button>
-                  ) : (
-                    <Link
-                      href={sessionErrorCopy.cta.href}
-                      className="mt-2 inline-flex items-center justify-center rounded-md bg-zinc-900 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-zinc-800 dark:bg-zinc-50 dark:text-zinc-900 dark:hover:bg-zinc-200 focus-visible:ring-2 focus-visible:ring-zinc-400 dark:focus-visible:ring-zinc-500"
-                    >
-                      {sessionErrorCopy.cta.label}
-                    </Link>
-                  )
-                )}
+                  )}
+                  {sessionErrorCopy.cta && (
+                    status === 'authenticated' && sessionErrorCopy.cta.plan ? (
+                      <button
+                        type="button"
+                        onClick={onUpgrade}
+                        disabled={checkoutLoading}
+                        className="mt-2 inline-flex items-center justify-center rounded-md bg-zinc-900 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-zinc-800 disabled:opacity-50 dark:bg-zinc-50 dark:text-zinc-900 dark:hover:bg-zinc-200 focus-visible:ring-2 focus-visible:ring-zinc-400 dark:focus-visible:ring-zinc-500"
+                      >
+                        {sessionErrorCopy.cta.label}
+                      </button>
+                    ) : (
+                      <Link
+                        href={sessionErrorCopy.cta.href}
+                        className="mt-2 inline-flex items-center justify-center rounded-md bg-zinc-900 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-zinc-800 dark:bg-zinc-50 dark:text-zinc-900 dark:hover:bg-zinc-200 focus-visible:ring-2 focus-visible:ring-zinc-400 dark:focus-visible:ring-zinc-500"
+                      >
+                        {sessionErrorCopy.cta.label}
+                      </Link>
+                    )
+                  )}
+                </div>
               </div>
             )}
           </div>
@@ -333,9 +371,15 @@ export default function SessionDropdown() {
                       </span>
                     </button>
                     {confirmDeleteId === s.session_id && s.session_id !== sessionId ? (
-                      <div className="shrink-0 mr-1 flex items-center gap-1 text-[11px] text-zinc-500 dark:text-zinc-400">
+                      <div
+                        className="shrink-0 mr-1 flex items-center gap-1 text-[11px] text-zinc-500 dark:text-zinc-400"
+                        onKeyDown={(event) => {
+                          if (event.key === 'Enter' || event.key === ' ') event.stopPropagation();
+                        }}
+                      >
                         <span>{t('dashboard.deletePrompt')}</span>
                         <button
+                          ref={deleteConfirmRef}
                           className="px-1.5 py-0.5 rounded bg-red-600 text-white hover:bg-red-500 transition-colors"
                           onClick={(e) => { e.stopPropagation(); onDeleteSessionById(s.session_id); }}
                           disabled={isStreaming}
@@ -383,9 +427,15 @@ export default function SessionDropdown() {
               <span>{t('session.deleteChat')}</span>
             </button>
             {sessionId && confirmDeleteId === sessionId && (
-              <div className="flex items-center gap-1 px-2 py-1.5 text-xs text-zinc-500 dark:text-zinc-400">
+              <div
+                className="flex items-center gap-1 px-2 py-1.5 text-xs text-zinc-500 dark:text-zinc-400"
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter' || event.key === ' ') event.stopPropagation();
+                }}
+              >
                 <span>{t('dashboard.deletePrompt')}</span>
                 <button
+                  ref={deleteConfirmRef}
                   className="px-2 py-0.5 rounded bg-red-600 text-white hover:bg-red-500 transition-colors"
                   onClick={() => onDeleteSessionById(sessionId)}
                   disabled={isStreaming}
