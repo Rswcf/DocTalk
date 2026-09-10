@@ -1411,3 +1411,98 @@ full A+B+C surface is live. Attribution stays per metric, not per deploy.
 post-v0.30.0), and §9.18's own-document copy hiding the free delete exit. A `checkout_created` from
 `session_dropdown / session_limit` on a demo document is an artefact of the first, not a purchase-wall
 result.
+
+### 9.21 The session-limit batch was split — item 4 is dropped, not deferred
+
+Branch `fix/session-limit-copy-only` @ `f486f1e` (off `main` = `a0a446f`) carries items 1–3 and is
+review-clean. The item-4 work is preserved on `wip/session-reuse-r3` @ `a37068c`. Both are pushed.
+
+**What shipped in the branch:** the demo session wall stops routing non-uploaders to Stripe (§9.19's
+live defect) and offers upload instead; the own-document wall names both exits and shows
+[Delete a conversation] beside [Upgrade]; `limit_hit` carries `document_id`/`is_demo` so the 09-28
+demo/own split does not depend on the current route.
+
+**What was dropped: item 4** — "New chat" reusing an empty session. Not deferred; dropped as a
+frontend item.
+
+#### Why it was dropped — the value was measured, not argued
+
+Production, all time, authenticated non-owner sessions:
+
+| | first-open row | via "New chat" |
+|---|---|---|
+| has user messages | 89 | 2 |
+| **empty** | **14** | **7** |
+
+Item 4 can only touch the "empty via New chat" cell: **7 rows in seven months**, about one a month.
+The other 14 empties are first-open auto-creates (`useChatSession.ts:160` creates a row on every first
+open) — those are a B1 retention signal (open, look, leave), not churn, and no client change can
+remove them. The residual fix is extending the existing empty-demo-session prune
+(`cleanup_tasks.py:46-52`, which already covers authenticated empty demo sessions) to own-document
+empties: backend, one filter, a different batch.
+
+#### The bug class this batch exposed — worth not repeating
+
+Two adversarial rounds produced two BLOCKs with the **same** shape, both mine:
+
+- r1: an ownership guard (`messagesSessionId === sessionId`) added to decide "is this session empty"
+  also gated session switching. A failed initial restore never restored ownership, so every later
+  session click and New Chat returned early **forever** — enabled-looking, inert until reload.
+- r2: the restore-in-flight token that replaced it blocked the post-delete replacement, leaving the
+  active session pointing at a **deleted** conversation whose transcript then installed.
+
+Both were demonstrated with executed base-vs-HEAD reproductions, not argument.
+
+**The rule:** never gate a user action on a condition that clears only when an async request settles.
+`frontend/src/lib/api.ts` has no request timeout, so "settles" is not guaranteed — a hung request
+turns the gate into a dead control. Late-response **drops** are the safe class: they discard a stale
+result and never block an action. This is why Codex's "disable deletion while a restore is pending"
+option was rejected — it would have cured the class with the class.
+
+The fault was in the *oracle*, not the feature: the live transcript is not a safe emptiness signal
+during a restore. If item 4 is ever revived, the oracle with no async coupling is the sessions list's
+server-reported `message_count === 0` **and** no local user message — the second conjunct is required,
+because the client only increments `message_count` on stream `done`, so a failed send leaves it 0
+while a user message is visible.
+
+#### Amendment to §9.18 item 2 (authored by Fable 5.1, corrected by Fable 5.1)
+
+§9.18 specified the reuse fix as "frontend-only, guard on the live transcript". That was wrong, and is
+withdrawn: r1 and r2 proved the live transcript is not a safe emptiness oracle during restore.
+§9.18's related assumption in §9.19 — that the demo/own copy branch was "a client-side branch on
+existing state" — was also wrong: `SessionDropdown` takes no props and reads only the store, while
+`isDemo` was local state in `useDocumentLoader`, so it had to be plumbed through the store first.
+
+#### One accepted regression, declared before review
+
+Reverting `onSwitchSession` to base restores base's **absence** of a late-response guard, so the
+A→B→A switch clobber window returns. This is a return to the accepted status quo, not a new defect —
+it predates the batch and has been in production for months. It was declared at the top of the r3
+review brief so it would not be filed as a regression (the framing `b718493` used for Batch C). The
+guard is preserved on `wip/session-reuse-r3` if it is ever wanted.
+
+#### Review outcome
+
+r3 returned **SHIP** with all five acceptance checks PASS, verified byte-level (SHA-256 on
+`useChatSession.ts`, AST-extracted declaration comparison for `onSwitchSession` /
+`onDeleteSessionById`). `useChatStream.ts`, `demoSessionStorage.ts` and `useChatSession.ts` are all
+zero-diff against base, so the demo counter contract is intact by construction rather than by
+argument.
+
+Its one NOTE was fixed anyway (`f486f1e`): within four lines the catch used the validated request
+snapshot for `limit_hit` but a live store re-read for the copy, so on a return to the same document
+before its metadata landed a **demo** cap rendered own-document copy with a working Upgrade button —
+§9.19's defect surviving in a transition window. Graded NOTE rather than BLOCK because base does the
+same, but it is the exact defect class the batch exists to remove and the fix adds no machinery.
+
+#### Not yet done
+
+Not deployed. Shipping items 1–3 needs an owner-authorized `stable` push; **T_copy must be recorded
+at that deploy** (§9.15.3) because the honest copy will lower `upgrade_click@session_limit`, the
+numerator of the "Purchase — by limit" row.
+
+#### Confirmed for the acquisition branch
+
+`/tools` has **zero inbound navigational links**. The only references outside the tools section are a
+route definition (`app/[locale]/tools/page.tsx:6`) and a locale-routing entry (`i18n/routing.ts:63`);
+the Footer links `/compare` but not `/tools`. §9.6's item stands as written.
