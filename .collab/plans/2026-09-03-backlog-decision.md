@@ -1558,3 +1558,29 @@ patching the one instance.
 code defects — each resolved to zero rendered questions because I guessed the wrong convention. Only
 `use-cases/finance`, where both sides resolved (6 hardcoded, 6 rendered), is a real finding. Recorded
 because a wrong finding published as fact is worse than no finding.
+
+### 9.23 Session-limit copy fixes are LIVE — T_copy recorded
+
+**T_copy = 2026-09-10T10:46:35Z** (Vercel production deployment of `1bc208d`).
+
+Frontend-only deploy: `git push origin stable`, **no `railway up` and no version bump**.
+`backend/app/core/version.py:18-37` loads `version.json` from the *container*, so bumping it
+without redeploying the backend would make `/health` report a version that is not running.
+`version.json` stays at 0.30.0 and `/health` remains truthful. The only non-frontend file in the
+diff is `backend/scripts/observation_window.py`, a standalone local analysis script the application
+never imports, so the running image needs no rebuild.
+
+**What is now true in production:** a signed-in free user who reaches 3 conversations on a *sample*
+document is told "The demo allows 3 conversations per sample document. Upload your own document to
+keep going" and is offered **upload**, not Stripe. §9.19's live defect is closed. On their own
+documents the wall now names both exits — delete a conversation, or upgrade — instead of only
+upgrading, and `limit_hit` carries `document_id`/`is_demo` so the 09-28 demo/own split works off
+any route.
+
+Verified live: the release-specific string is present in the served bundle (cache-busted request —
+the site HTML is edge-cached and a plain `curl` shows the previous build for minutes), and
+`/`, `/demo`, `/pricing`, `/use-cases/lawyers`, `/trust` all return 200.
+
+**Consequence for the 09-28 read, as §9.15.3 anticipated:** honest copy will *lower*
+`upgrade_click@session_limit`, which is the numerator of the "Purchase — by limit" row. That row
+must be split pre/post T_copy. A drop is the fix working, not the funnel worsening.
