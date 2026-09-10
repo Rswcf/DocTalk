@@ -65,9 +65,9 @@ The first unit command was accidentally invoked from the repository root and exi
 RESEND_API_KEY not set — email magic link provider disabled
  ⚠ Using edge runtime on a page currently disables static generation for that page
    Generating static pages (0/425) ...
-   Generating static pages (106/425) 
-   Generating static pages (212/425) 
-   Generating static pages (318/425) 
+   Generating static pages (106/425)
+   Generating static pages (212/425)
+   Generating static pages (318/425)
  ✓ Generating static pages (425/425)
    Finalizing page optimization ...
    Collecting build traces ...

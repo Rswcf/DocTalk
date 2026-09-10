@@ -65,6 +65,11 @@ export function useChatSession(documentId: string | undefined): UseChatSessionRe
     setSessions([]);
     let cancelled = false;
     const restoreToken = beginTranscriptRestore();
+    // A confirmed active-session delete releases this token before replacing
+    // the session. All continuations must stop, including error/create fallback.
+    const isRestoreCurrent = () => !cancelled
+      && useDocTalkStore.getState().documentId === documentId
+      && useDocTalkStore.getState().transcriptRestoreInFlight === restoreToken;
 
     (async () => {
       let sessionReady = false;
@@ -80,7 +85,7 @@ export function useChatSession(documentId: string | undefined): UseChatSessionRe
       if (storedDemoSession) {
         try {
           const msgsData = await getMessages(storedDemoSession);
-          if (cancelled) return;
+          if (!isRestoreCurrent()) return;
           setSessionId(storedDemoSession);
           // Populate the sessions list (not []) so SessionDropdown shows the
           // adopted session instead of an empty "New Chat"-only placeholder.
@@ -115,6 +120,7 @@ export function useChatSession(documentId: string | undefined): UseChatSessionRe
           bumpDemoAccountingEpoch();
           return; // adopted — skip listSessions/createSession entirely
         } catch (e) {
+          if (!isRestoreCurrent()) return;
           const status = e instanceof ApiError ? e.status : null;
           if (status === 404 || status === 403) {
             // Confirmed gone or inaccessible (pruned by nightly cleanup, or
@@ -131,7 +137,7 @@ export function useChatSession(documentId: string | undefined): UseChatSessionRe
             // #3 repro). Surface a retryable error and stop instead — the
             // reader already renders an error state for sessionError, and a
             // reload re-runs this same effect from the top.
-            if (!cancelled) setSessionError(e);
+            if (isRestoreCurrent()) setSessionError(e);
             return;
           }
         }
@@ -139,7 +145,7 @@ export function useChatSession(documentId: string | undefined): UseChatSessionRe
 
       try {
         const sessionsData = await listSessions(documentId);
-        if (cancelled) return;
+        if (!isRestoreCurrent()) return;
 
         setSessions(sessionsData.sessions);
         if (sessionsData.sessions.length > 0) {
@@ -147,18 +153,19 @@ export function useChatSession(documentId: string | undefined): UseChatSessionRe
           setSessionId(latest.session_id);
           const msgsData = await getMessages(latest.session_id);
           const live = useDocTalkStore.getState();
-          if (cancelled || live.documentId !== documentId || live.sessionId !== latest.session_id) return;
+          if (!isRestoreCurrent() || live.documentId !== documentId || live.sessionId !== latest.session_id) return;
           setMessages(msgsData.messages);
           sessionReady = true;
         }
       } catch (e) {
+        if (!isRestoreCurrent()) return;
         console.warn('Failed to load sessions, falling back to create:', e);
       }
 
-      if (!sessionReady && !cancelled) {
+      if (!sessionReady && isRestoreCurrent()) {
         try {
           const s = await createSession(documentId);
-          if (cancelled) return;
+          if (!isRestoreCurrent()) return;
 
           setSessionId(s.session_id);
           if (s.demo_messages_used != null) {
@@ -185,7 +192,7 @@ export function useChatSession(documentId: string | undefined): UseChatSessionRe
           if (!expectedRateLimit) {
             console.error('Failed to create session:', e);
           }
-          if (!cancelled) setSessionError(e);
+          if (isRestoreCurrent()) setSessionError(e);
         }
       }
     })().finally(() => endTranscriptRestore(restoreToken));

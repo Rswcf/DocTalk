@@ -1,107 +1,56 @@
-# Session-limit repair — implementation report
+# Session-limit copy — fix round 2 report
 
-Date: 2026-09-10. Scope: frontend only, post-v0.30.0.
+Scope: frontend only, on the user-supplied `fix/session-limit-copy` working tree. No git commands were run, so branch/HEAD were not independently verified. No backend, cap, counting, locale, or palette changes.
 
-Implemented on `fix/session-limit-copy` (confirmed by reading `.git/HEAD`, without running git). The supplied base is `main @ a0a446f`; ancestry was not independently checked. Read `CLAUDE.md`, `.claude/rules/frontend.md`, and backlog decision §9.18 and §9.19 in full before implementation. No git commands, backend edits, migrations, API shape changes, cap/count changes, commits, or deployment.
+## Changes and why the reproduced sequence is closed
 
-## 1. Document surface in the store
+- `frontend/src/components/SessionDropdown.tsx:87` and `:145`: New Chat and switch accept an explicit internal `reason?: 'after-delete'`. Only the pending-restore gate admits that reason; ordinary clicks omit it (`:332`) and remain serialized. Streaming, creation, readiness (New Chat), and document guards remain. Switch response generation/document/session checks remain at `:160` and `:175`; creation now also checks request generation on success and failure (`:102`, `:105`, `:134`).
+- `frontend/src/components/SessionDropdown.tsx:202`: confirmed deletion uses live document/streaming/creation state, and checks document identity after DELETE. The existing anon-demo pointer clearing block and its comment remain before replacement (`:210`). Active-session selection uses live state after deletion (`:220`), rather than the render-time id.
+- `frontend/src/components/SessionDropdown.tsx:225`: when the deleted row is active, synchronously invalidate the switch generation, retire its id to null, clear its transcript with null ownership, and release its restore token. This occurs before any replacement await. The survivor switch (`:230`) or real create (`:232`) then runs through the internal path. With no survivor, the null id and absent row cannot satisfy the reuse condition, so a real create request is issued. A failed create leaves null, never the deleted id.
+- `frontend/src/lib/useChatSession.ts:70`: continuation validity now requires the effect to be uncancelled, the document to match, and the restore to still own its token. Checks at the async restore/adoption/create boundaries reject superseded success. The catch/fallback checks (`:161`, `:165`) also prevent a deleted session's late GET failure from spawning an extra create. Existing session-id validation remains at `:156`. Token release alone is therefore not the cancellation guarantee: the hook explicitly verifies ownership before installing messages or continuing recovery.
+- `frontend/src/components/SessionDropdown.tsx:165`: a replacement GET failure leaves the survivor selected, its empty buffer with unknown ownership, and the existing error copy. It cannot roll back to the deleted session. Ordinary switches retain their original previous-id/message/owner rollback, including null or foreign ownership, and the survivor can be explicitly retried.
 
-- `frontend/src/store/index.ts:15`, `:140`, `:181`, `:190`, `:366`: added `isDemo`, false initially and on full reset; `setDocument` resets it on an actual document-ID change. The same transition resets `documentStatus` to `idle` until new metadata arrives, so session actions cannot interpret a limit using uninitialized document metadata.
-- `frontend/src/lib/useDocumentLoader.ts:33`, `:97`: replaces hook-local demo state with the store selector/action, sets `Boolean(info.is_demo)` unconditionally from the existing response, behind the existing cancellation guard. The hook still returns `isDemo` for its current consumers.
-- `frontend/src/components/SessionDropdown.tsx:21`, `:44`: subscribes to the document surface and clears document-specific error/confirmation state on retarget.
-- Same-document locale changes/reloads preserve known demo-ness: `clearDocumentTransientState` deliberately does not erase it. Otherwise a demo could briefly become an own-document checkout surface during metadata refresh. Actual document changes and `reset()` still clear it. No demo accounting field was added to transient clearing.
+For the reproduced A/B sequence: initial GET(A) owns token A; confirmed DELETE(A) removes its row and clears its stored pointer, then clears the active A identity and releases token A synchronously. GET(B) starts with its own generation/token and selects B. A's delayed successful response fails both token ownership and session identity checks, and its finally cannot release B's token. B's transcript is installed when GET(B) succeeds. If GET(B) fails, B remains active with unknown ownership; A never becomes installable again. The last-row path likewise rejects A even while replacement creation is still pending.
 
-## 2. Demo limit offers upload
+## New regression coverage
 
-- `frontend/src/lib/errorCopy.ts:66`, `:74`: optional client context branches only the shared `SESSION_LIMIT_REACHED` code. Demo body is “The demo allows 3 conversations per sample document. Upload your own document to keep going.” (`{limit}` defaults to 3.) It returns an upload CTA to `/`, with no `plan`, no `upgradeCta`, and no secondary delete action.
-- `/` is the existing authenticated upload dashboard: `frontend/src/app/HomePageClient.tsx:26` dispatches to `DashboardPageClient` for authenticated users. No new route was created.
-- `frontend/src/components/SessionDropdown.tsx:131`, `:349`: passes the live store surface to the mapper, and invokes billing only for authenticated CTAs carrying a billing plan. The demo CTA renders a plain link, so it cannot call Checkout.
-- `frontend/src/app/d/[documentId]/DocumentReaderPageClient.tsx:93`: also passes demo context for initialization errors, avoiding the same shared-code copy defect on this adjacent reader surface.
-- `frontend/src/lib/errorCopy.ts:425`: anonymous `DEMO_SESSION_LIMIT_REACHED` remains unchanged and separate.
+`frontend/tests/session-limit.test.cjs:57`, `:101`, `:105`: extend the existing actual-transpiled-source harness with configurable initial session rows and deferred creation. React hooks/API responses are controlled; the Zustand store, hook, and dropdown implementation are real source.
 
-## 3. Own-document limit names both exits
+Six initial-restore cases at `frontend/tests/session-limit.test.cjs:501`:
 
-- `frontend/src/lib/errorCopy.ts:392`: body is “Free keeps 3 open conversations per document. Delete one to start another, or upgrade for unlimited.” The existing Plus upgrade CTA is retained; a typed `delete_session` secondary action supplies “Delete a conversation”.
-- `frontend/src/components/SessionDropdown.tsx:335`: renders Delete beside Upgrade. It opens the existing deletion confirmation for the first non-active session (falling back to the current session), rather than deleting immediately. The existing hard-delete API call/removal frees the slot.
-- `frontend/src/components/SessionDropdown.tsx:40`, `:55`, `:415`, `:471`: focuses the confirmation. CTA/confirmation wrappers stop only Enter/Space bubbling, so native button/link activation does not accidentally run the menu's New Chat handler; Escape/arrows retain menu handling.
-- `frontend/src/components/SessionDropdown.tsx:234`: the own-document `onUpgrade` function is byte-for-byte unchanged versus the pre-edit snapshot, including Plus/monthly, `source=session_dropdown`, `reason=session_limit`, and `currentPlan: profile?.plan`.
+1. Deleted A's GET succeeds before survivor B's GET; assert A is never installed and A's finally preserves B's pending token.
+2. Deleted A's GET succeeds after B's transcript is installed; assert B's active id/transcript remain.
+3. B's replacement GET fails, then A succeeds; assert B remains selected with unknown ownership, no rollback to A, and explicit retry loads B successfully.
+4. No survivor: a real create is deferred, A succeeds during the pending create, then the real new session is installed; assert A stays retired throughout.
+5. No survivor and create fails, then A succeeds; assert active id stays null and no deleted transcript is installed.
+6. B succeeds, then deleted A's GET fails; assert the invalidated initial restore never starts a fallback create.
 
-## 4. Empty current sessions are reused
+The tests subscribe to store changes to detect even transient installation of A's transcript, check GET/create histories and pending-token ownership, and check that stale results do not write demo accounting or pointers.
 
-- `frontend/src/components/SessionDropdown.tsx:83`: reads the live Zustand transcript inside the event. If an existing current row has zero user messages, it calls `setMessages([])`, clears confirmation/error state, closes the menu, and returns without `createSession`. Assistant-only content is cleared as well. A transcript containing a user message still creates a session. Row `message_count` is not used to decide emptiness.
-- Membership in the current sessions list prevents reuse of a just-deleted current session; deleting the last empty session still creates a real replacement. A synchronous creation latch prevents same-render double-click row creation.
-- `frontend/src/store/index.ts:35`, `:152`, `:221`, `:296`: `messagesSessionId` distinguishes a loaded empty transcript from the temporary empty pane during a load. Setting a session invalidates that ownership; installing messages certifies it.
-- `frontend/src/components/SessionDropdown.tsx:141`: switching waits for initial restore/current loads. Response generation/document/session guards reject late results. Failed switches restore the captured previous session/transcript and remain retryable. These protections are necessary to prevent a loading/stale empty array from being reused as though it were a loaded empty session.
+Two additional cases at `frontend/tests/session-limit.test.cjs:568` delete the active target of a dropdown-initiated switch, then deliver that old GET's success or failure while replacement is pending. Both verify the new generation/token and survivor transcript survive, including rejection of stale demo accounting.
 
-### Demo counter argument
+All 47 existing cases remain passing; 8 new cases bring the final suite to **55 passed, 0 failed**. Before implementation, the initial six regressions were executed against the supplied source and all six failed at the assertion that the deleted id must be retired before replacement awaits.
 
-Contract stays `totalUsed = demoMessagesUsed + (transcript user-message count - demoRestoredUserMsgCount)`.
+## Adversarial review and constraints
 
-**Reuse path:** user-message count is zero before and after clearing assistant-only content. The same session remains active. Server usage, restored baseline, accounting epoch, and sessionStorage pointer remain unchanged; therefore `totalUsed` remains identical. There is no create/restore/accounting event and no new counter mutation. A pending re-anchor still targets the same session and unchanged user-count/accounting state.
+A separate read-only Codex agent performed the project-required adversarial cross-review against pre-edit snapshots. It found **no blockers**, independently ran the then-current 53-test suite successfully, and independently executed two passing late-success/late-failure dropdown deletion probes. It also inspected the subsequently strengthened deferred-create test and the two added dropdown tests. No independent Claude or browser review is claimed.
 
-**Create path:** the original `s.demo_messages_used != null` block at `SessionDropdown.tsx:110` remains in its original position and order: set restored baseline to 0, install `s.demo_messages_used`, bump the epoch, write the new demo-session pointer, then clear messages. Authenticated responses without `demo_messages_used` still execute no demo counter writes. Valid session-switch installs retain their original counter mutation sequence. A failed switch restores the old transcript without accounting writes because no new accounting was installed.
+A TypeScript AST comparison against pre-edit snapshots confirmed identical accounting/pointer mutation call text and lexical order: **9 calls in SessionDropdown.tsx, 11 in useChatSession.ts**. Source comparison verified their existing blocks and pointer-clear ordering/comment remain in place. No accounting, epoch, or pointer mutations were added, moved, or removed. Round 1's pending-token lifetime, owner-aware reuse (unknown → create), ordinary rollback ownership, demo upload exit, and `limit_hit` document/demo attribution remain intact and covered by the existing passing tests.
 
-A direct comparison against the pre-edit snapshot verified that every `setDemoMessagesUsed`, `setDemoRestoredUserMsgCount`, `bumpDemoAccountingEpoch`, and `writeDemoSession` invocation in the dropdown is identical and in the original order. No counter mutation was added, moved, or removed. `useChatSession`, `useChatStream`, and `demoSessionStorage` were not edited. Backend caps/counts remain untouched, including empty-row counting and the number 3.
+Trailing whitespace was stripped from the two prior implementation reports: `.collab/reviews/2026-09-10-session-copy-impl-report.md` and `.collab/reviews/2026-09-10-session-copy-fix-r1-report.md`. A direct whitespace scan was used; no `git diff --check` was run.
 
-## i18n
+Browser upload → chat → citation jump was not run. Validation here covers controlled frontend lifecycle/request races plus the production build, not live browser/backend behavior. No backend tests, checkout, deployment, or git operations were performed.
 
-Four new flat dotted keys, all consumed with `tOr(key, fallback)`:
+## Gates
 
-- `errors.SESSION_LIMIT_REACHED.demoTitle`
-- `errors.SESSION_LIMIT_REACHED.demoBody`
-- `errors.cta.uploadDocument`
-- `errors.cta.deleteConversation`
+Both final gates ran from `/Users/mayijie/Projects/Code/010_DocTalk/frontend`:
 
-Updated existing key: `errors.SESSION_LIMIT_REACHED.body`.
+- `npm run build`: **exit 0**. Compilation, lint/type checks, and **425/425** static pages completed. Existing Sentry deprecation, edge-runtime/static-generation, and missing local RESEND_API_KEY diagnostics appear below.
+- `npm run test:unit`: **exit 0**, **55 tests, 55 pass, 0 fail, 0 cancelled, 0 skipped**. Intentional initial-GET and capped-create failures emit the hook's existing diagnostics.
 
-All five are present with translated copy in en / zh / ja / ko / es / de / fr / pt / it / ar / hi. Both bodies retain exactly one `{limit}` placeholder. English references: `frontend/src/i18n/locales/en.json:2368` through the adjacent keys. Locale file references follow:
+One preliminary unit invocation from the repository root exited 254; it was corrected to the required frontend directory. The final successful outputs follow in full. Build carriage-return progress markers and trailing whitespace are normalized for Markdown; output wording is otherwise unchanged. Raw captured output is also available at `/tmp/session-copy-fix-r2/build.log` and `/tmp/session-copy-fix-r2/unit.log`.
 
-- `frontend/src/i18n/locales/en.json:2368`
-- `frontend/src/i18n/locales/zh.json:2724`
-- `frontend/src/i18n/locales/ja.json:2685`
-- `frontend/src/i18n/locales/ko.json:2685`
-- `frontend/src/i18n/locales/es.json:2685`
-- `frontend/src/i18n/locales/de.json:2685`
-- `frontend/src/i18n/locales/fr.json:2685`
-- `frontend/src/i18n/locales/pt.json:2685`
-- `frontend/src/i18n/locales/it.json:2685`
-- `frontend/src/i18n/locales/ar.json:2685`
-- `frontend/src/i18n/locales/hi.json:2685`
-
-## Verification and review
-
-`frontend/tests/session-limit.test.cjs:133` adds 15 focused tests using actual transpiled component/error mapper/store code with mocked React hooks and API/billing boundaries, matching the existing `.test.cjs` style. They cover rendered demo upload/no-checkout, own-document delete + exact billing arguments, empty and assistant-only reuse, live transcript vs stale row count, unchanged demo accounting/pointer writes, same-render double click, loading protection, last-empty deletion replacement, document reset, same-document refresh, anonymous-code separation, i18n completeness/placeholders, initial-restore/switch serialization, late cross-document responses, and failed-switch retry. Keyboard propagation is checked structurally; these unit tests do not substitute for browser interaction.
-
-Independent Codex adversarial review was performed as required by AGENTS.md. Findings fixed before final gates: demo marker loss on same-document refresh; stale/initial transcript loads falsely certifying emptiness; confirmation keyboard propagation; and failed-switch retry after adding load serialization. Final reviewer disposition: “All previously reported findings are resolved. No remaining blockers in this review scope.”
-
-Additional source verification: existing own-document `onUpgrade` byte-for-byte unchanged; demo mutation invocation/order unchanged; no forbidden palette utilities or `transition-all` in SessionDropdown.
-
-Final gates:
-
-| Command | Working directory | Exit | Result |
-| --- | --- | --- | --- |
-| `npm run build` | `frontend` | 0 | Compiled, lint/types passed, 425/425 pages generated |
-| `npm run test:unit` | `frontend` | 0 | 37 tests, 37 passed, 0 failed/skipped |
-| `python3.12 -m ruff check app/ tests/` | `backend` | 0 | `All checks passed!` |
-
-Build emitted Sentry client-config deprecation, edge-runtime static-generation, and absent local `RESEND_API_KEY` warnings; none failed the build. These are captured verbatim below.
-
-Backend behavior/tests should be unaffected because no backend code, API contract, migration, or counting logic changed. Backend pytest suites were not run for this frontend-only batch; the explicitly requested backend Ruff gate was run with Python 3.12.
-
-## Not completed / limitations
-
-- Browser golden path (upload → chat → citation jump) was not completed. No existing frontend dev server was listening; `npm run dev` failed to bind `0.0.0.0:3000` with `listen EPERM: operation not permitted`. Sandbox approval is unavailable. The dev command itself returned exit 0 despite the failure, so that exit is not treated as a successful browser check. Full attempted-server output is recorded below.
-- No commit, push, deployment, or git command. Branch is already `fix/session-limit-copy`; this report does not claim production has this fix.
-- No backend pytest run, as explained above. No authenticated live upload/chat or real Stripe action was performed; billing was verified at its mocked boundary.
-
-## Exact final gate output
-
-Raw stdout/stderr is retained in sibling files under `session-copy-gates/`. The following blocks contain the full captured output of the final runs (terminal carriage returns normalized for Markdown readability); raw files preserve the original bytes.
-
-<details>
-<summary>npm run build</summary>
-
-Raw log: [session-copy-gates/build.log](session-copy-gates/build.log)
+### Exact final build output
 
 ```text
 
@@ -118,8 +67,8 @@ Raw log: [session-copy-gates/build.log](session-copy-gates/build.log)
  ✓ Compiled successfully
    Linting and checking validity of types ...
    Collecting page data ...
-RESEND_API_KEY not set — email magic link provider disabled
  ⚠ Using edge runtime on a page currently disables static generation for that page
+RESEND_API_KEY not set — email magic link provider disabled
    Generating static pages (0/425) ...
    Generating static pages (106/425)
    Generating static pages (212/425)
@@ -129,7 +78,7 @@ RESEND_API_KEY not set — email magic link provider disabled
    Collecting build traces ...
 
 Route (app)                                 Size     First Load JS
-┌ ○ /                                       9.31 kB         211 kB
+┌ ○ /                                       9.4 kB          211 kB
 ├ ○ /_not-found                             331 B           165 kB
 ├ ● /[locale]                               1.37 kB         278 kB
 ├   ├ /zh
@@ -340,7 +289,7 @@ Route (app)                                 Size     First Load JS
 ├ ○ /compare/notebooklm                     323 B           176 kB
 ├ ○ /compare/pdf-ai                         323 B           176 kB
 ├ ○ /contact                                3.66 kB         176 kB
-├ ƒ /d/[documentId]                         140 kB          388 kB
+├ ƒ /d/[documentId]                         140 kB          389 kB
 ├ ○ /demo                                   462 B           181 kB
 ├ ƒ /demo/[sample]                          2.05 kB         171 kB
 ├ ○ /document-diff                          2.97 kB         189 kB
@@ -378,7 +327,7 @@ Route (app)                                 Size     First Load JS
 ├ ○ /use-cases/students                     2.5 kB          175 kB
 └ ○ /use-cases/teachers                     2.5 kB          175 kB
 + First Load JS shared by all               165 kB
-  ├ chunks/4661-c083a09f7b432cd5.js         103 kB
+  ├ chunks/4661-d55c70a301b1f9ce.js         103 kB
   ├ chunks/fd9d1056-f9e81e1c5db09f1d.js     53.8 kB
   └ other shared chunks (total)             8.28 kB
 
@@ -386,14 +335,10 @@ Route (app)                                 Size     First Load JS
 ○  (Static)   prerendered as static content
 ●  (SSG)      prerendered as static HTML (uses getStaticProps)
 ƒ  (Dynamic)  server-rendered on demand
+
 ```
 
-</details>
-
-<details>
-<summary>npm run test:unit</summary>
-
-Raw log: [session-copy-gates/unit.log](session-copy-gates/unit.log)
+### Exact final unit output
 
 ```text
 
@@ -404,278 +349,345 @@ TAP version 13
 # Subtest: document brief empty pane renders for a summary without questions
 ok 1 - document brief empty pane renders for a summary without questions
   ---
-  duration_ms: 21.574125
+  duration_ms: 18.987541
   type: 'test'
   ...
 # Subtest: only chat-response failures expose existing regenerate as Retry
 ok 2 - only chat-response failures expose existing regenerate as Retry
   ---
-  duration_ms: 0.321209
+  duration_ms: 0.28675
   type: 'test'
   ...
 # Subtest: the same rendered Retry then Send callbacks share one admission gate
 ok 3 - the same rendered Retry then Send callbacks share one admission gate
   ---
-  duration_ms: 31.007875
+  duration_ms: 31.20575
   type: 'test'
   ...
 # Subtest: rejected fetches clean up Send and Regenerate with one Retry bubble
 ok 4 - rejected fetches clean up Send and Regenerate with one Retry bubble
   ---
-  duration_ms: 35.717917
+  duration_ms: 30.393791
   type: 'test'
   ...
 # Subtest: user-aborted transport rejection stays silent
 ok 5 - user-aborted transport rejection stays silent
   ---
-  duration_ms: 17.861458
+  duration_ms: 17.949917
   type: 'test'
   ...
 # Subtest: document brief polling responses are guarded by a switch token
 ok 6 - document brief polling responses are guarded by a switch token
   ---
-  duration_ms: 0.202958
+  duration_ms: 0.225875
   type: 'test'
   ...
 # Subtest: poll 19 empty cannot overwrite the rendered poll 20 ready brief
 ok 7 - poll 19 empty cannot overwrite the rendered poll 20 ready brief
   ---
-  duration_ms: 10.933083
+  duration_ms: 10.043542
   type: 'test'
   ...
 # Subtest: dashboard nudge uses durable 1-document and 3-message eligibility without lifetime cap
 ok 8 - dashboard nudge uses durable 1-document and 3-message eligibility without lifetime cap
   ---
-  duration_ms: 0.477708
+  duration_ms: 0.409
   type: 'test'
   ...
 # Subtest: startCheckout records the intent before the request and records checkout failures
 ok 9 - startCheckout records the intent before the request and records checkout failures
   ---
-  duration_ms: 28.941084
+  duration_ms: 28.511
   type: 'test'
   ...
 # Subtest: plan-aware billing starts Checkout for Free→Plus
 ok 10 - plan-aware billing starts Checkout for Free→Plus
   ---
-  duration_ms: 6.971416
+  duration_ms: 5.967708
   type: 'test'
   ...
 # Subtest: plan-aware billing starts Checkout for Free→Pro
 ok 11 - plan-aware billing starts Checkout for Free→Pro
   ---
-  duration_ms: 7.324583
+  duration_ms: 5.554042
   type: 'test'
   ...
 # Subtest: plan-aware billing routes Plus→Pro through the billing change-plan flow
 ok 12 - plan-aware billing routes Plus→Pro through the billing change-plan flow
   ---
-  duration_ms: 4.635666
+  duration_ms: 4.867458
   type: 'test'
   ...
 # Subtest: plan-aware billing sends Pro insufficient-credit actions to credit packs
 ok 13 - plan-aware billing sends Pro insufficient-credit actions to credit packs
   ---
-  duration_ms: 9.216667
+  duration_ms: 5.70175
   type: 'test'
   ...
 # Subtest: anonymous Quote Finder hint opens auth before panel or private analytics
 ok 14 - anonymous Quote Finder hint opens auth before panel or private analytics
   ---
-  duration_ms: 0.548458
+  duration_ms: 0.541584
   type: 'test'
   ...
 # Subtest: local upload precheck maps free to plus
 ok 15 - local upload precheck maps free to plus
   ---
-  duration_ms: 46.151709
+  duration_ms: 43.128625
   type: 'test'
   ...
 # Subtest: backend FILE_TOO_LARGE maps free to plus
 ok 16 - backend FILE_TOO_LARGE maps free to plus
   ---
-  duration_ms: 21.545209
+  duration_ms: 21.472875
   type: 'test'
   ...
 # Subtest: local upload precheck maps plus to pro
 ok 17 - local upload precheck maps plus to pro
   ---
-  duration_ms: 17.450583
+  duration_ms: 11.361209
   type: 'test'
   ...
 # Subtest: backend FILE_TOO_LARGE maps plus to pro
 ok 18 - backend FILE_TOO_LARGE maps plus to pro
   ---
-  duration_ms: 14.817792
+  duration_ms: 13.776375
   type: 'test'
   ...
 # Subtest: local upload precheck maps pro to no upgrade
 ok 19 - local upload precheck maps pro to no upgrade
   ---
-  duration_ms: 10.068625
+  duration_ms: 9.156291
   type: 'test'
   ...
 # Subtest: backend FILE_TOO_LARGE maps pro to no upgrade
 ok 20 - backend FILE_TOO_LARGE maps pro to no upgrade
   ---
-  duration_ms: 9.618541
+  duration_ms: 8.852792
   type: 'test'
   ...
 # Subtest: top-tier collection caps also suppress downgrade CTAs
 ok 21 - top-tier collection caps also suppress downgrade CTAs
   ---
-  duration_ms: 8.916875
+  duration_ms: 9.395208
   type: 'test'
   ...
 # Subtest: every terminal parse-worker code has specific copy in every locale
 ok 22 - every terminal parse-worker code has specific copy in every locale
   ---
-  duration_ms: 25.704792
+  duration_ms: 27.276041
   type: 'test'
   ...
 # Subtest: signed-in demo session wall renders only upload exit to existing dashboard
 ok 23 - signed-in demo session wall renders only upload exit to existing dashboard
   ---
-  duration_ms: 43.0695
+  duration_ms: 41.589083
   type: 'test'
   ...
 # Subtest: own-document wall renders both exits and preserves plan-aware upgrade
 ok 24 - own-document wall renders both exits and preserves plan-aware upgrade
   ---
-  duration_ms: 26.932791
+  duration_ms: 24.818791
   type: 'test'
   ...
 # Subtest: New chat reuses current session with 0 assistant messages and zero users
 ok 25 - New chat reuses current session with 0 assistant messages and zero users
   ---
-  duration_ms: 16.760333
+  duration_ms: 20.067
   type: 'test'
   ...
 # Subtest: New chat reuses current session with 1 assistant messages and zero users
 ok 26 - New chat reuses current session with 1 assistant messages and zero users
   ---
-  duration_ms: 17.306334
+  duration_ms: 19.578209
   type: 'test'
   ...
 # Subtest: New chat uses live user messages, not stale render or row message_count
 ok 27 - New chat uses live user messages, not stale render or row message_count
   ---
-  duration_ms: 17.291125
+  duration_ms: 16.07825
   type: 'test'
   ...
 # Subtest: nonempty demo create preserves original baseline, epoch and stored-pointer install
 ok 28 - nonempty demo create preserves original baseline, epoch and stored-pointer install
   ---
-  duration_ms: 12.383875
+  duration_ms: 17.93075
   type: 'test'
   ...
 # Subtest: New chat does not reuse the temporary empty pane while switching sessions
 ok 29 - New chat does not reuse the temporary empty pane while switching sessions
   ---
-  duration_ms: 10.951
+  duration_ms: 11.620041
   type: 'test'
   ...
 # Subtest: deleting the last empty session still creates a real replacement
 ok 30 - deleting the last empty session still creates a real replacement
   ---
-  duration_ms: 14.180667
+  duration_ms: 11.623042
   type: 'test'
   ...
 # Subtest: demo metadata resets on document change/reset and survives same-document locale refresh
 ok 31 - demo metadata resets on document change/reset and survives same-document locale refresh
   ---
-  duration_ms: 13.243583
+  duration_ms: 10.651166
   type: 'test'
   ...
 # Subtest: anonymous demo code stays separate and session CTA keyboard activation does not bubble into New chat
 ok 32 - anonymous demo code stays separate and session CTA keyboard activation does not bubble into New chat
   ---
-  duration_ms: 0.372375
+  duration_ms: 0.346084
   type: 'test'
   ...
 # Subtest: all session-limit copy keys are flat, nonempty and interpolated in all 11 locales
 ok 33 - all session-limit copy keys are flat, nonempty and interpolated in all 11 locales
   ---
-  duration_ms: 18.265
+  duration_ms: 17.602375
   type: 'test'
   ...
 # Subtest: session switching waits for initial restore and an in-flight switch
 ok 34 - session switching waits for initial restore and an in-flight switch
   ---
-  duration_ms: 12.660916
+  duration_ms: 11.365917
   type: 'test'
   ...
 # Subtest: late session-switch response cannot install messages or accounting on another document
 ok 35 - late session-switch response cannot install messages or accounting on another document
   ---
-  duration_ms: 10.797291
+  duration_ms: 10.894042
   type: 'test'
   ...
 # Subtest: demo cap still offers upload during a same-document metadata refresh
 ok 36 - demo cap still offers upload during a same-document metadata refresh
   ---
-  duration_ms: 10.738042
+  duration_ms: 9.184167
   type: 'test'
   ...
 # Subtest: failed session switch restores the loaded transcript and allows retry without counter writes
 ok 37 - failed session switch restores the loaded transcript and allows retry without counter writes
   ---
-  duration_ms: 9.842167
+  duration_ms: 10.754
   type: 'test'
   ...
-1..37
-# tests 37
+# Failed to load sessions, falling back to create: TypeError: initial GET failed
+#     at TestContext.<anonymous> (/Users/mayijie/Projects/Code/010_DocTalk/frontend/tests/session-limit.test.cjs:366:20)
+#     at async Test.run (node:internal/test_runner/test:1054:7)
+#     at async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+# Failed to create session: { code: 'SESSION_LIMIT_REACHED', detail: { limit: 3 }, status: 403 }
+# Subtest: initial GET failure and capped create fallback allow exactly one explicit session retry GET
+ok 38 - initial GET failure and capped create fallback allow exactly one explicit session retry GET
+  ---
+  duration_ms: 18.225083
+  type: 'test'
+  ...
+# Subtest: unknown/foreign ownership (null) creates instead of reusing an empty transcript
+ok 39 - unknown/foreign ownership (null) creates instead of reusing an empty transcript
+  ---
+  duration_ms: 10.897292
+  type: 'test'
+  ...
+# Subtest: unknown/foreign ownership (foreign) creates instead of reusing an empty transcript
+ok 40 - unknown/foreign ownership (foreign) creates instead of reusing an empty transcript
+  ---
+  duration_ms: 9.076375
+  type: 'test'
+  ...
+# Subtest: failed retry preserves unknown ownership so New Chat still falls through to create
+ok 41 - failed retry preserves unknown ownership so New Chat still falls through to create
+  ---
+  duration_ms: 10.999333
+  type: 'test'
+  ...
+# Subtest: initial restore clears pending on success and rejects a changed session identity
+ok 42 - initial restore clears pending on success and rejects a changed session identity
+  ---
+  duration_ms: 23.292625
+  type: 'test'
+  ...
+# Subtest: cancelled initial restore releases immediately and its late finally cannot unlock a newer restore
+ok 43 - cancelled initial restore releases immediately and its late finally cannot unlock a newer restore
+  ---
+  duration_ms: 16.079
+  type: 'test'
+  ...
+# Subtest: pending restore resets on document change/reset and survives same-document transient refresh
+ok 44 - pending restore resets on document change/reset and survives same-document transient refresh
+  ---
+  duration_ms: 10.596417
+  type: 'test'
+  ...
+# Subtest: session limit analytics include request document and demo context (false) outside reader routes
+ok 45 - session limit analytics include request document and demo context (false) outside reader routes
+  ---
+  duration_ms: 11.179917
+  type: 'test'
+  ...
+# Subtest: session limit analytics include request document and demo context (true) outside reader routes
+ok 46 - session limit analytics include request document and demo context (true) outside reader routes
+  ---
+  duration_ms: 13.000292
+  type: 'test'
+  ...
+# Subtest: unmount cancels a pending switch and its late completion cannot affect a newer restore
+ok 47 - unmount cancels a pending switch and its late completion cannot affect a newer restore
+  ---
+  duration_ms: 11.514875
+  type: 'test'
+  ...
+# Subtest: active deletion supersedes initial restore: success-before-survivor
+ok 48 - active deletion supersedes initial restore: success-before-survivor
+  ---
+  duration_ms: 15.485833
+  type: 'test'
+  ...
+# Subtest: active deletion supersedes initial restore: success-after-survivor
+ok 49 - active deletion supersedes initial restore: success-after-survivor
+  ---
+  duration_ms: 10.826375
+  type: 'test'
+  ...
+# Subtest: active deletion supersedes initial restore: survivor-failure
+ok 50 - active deletion supersedes initial restore: survivor-failure
+  ---
+  duration_ms: 13.430208
+  type: 'test'
+  ...
+# Subtest: active deletion supersedes initial restore: no-survivor
+ok 51 - active deletion supersedes initial restore: no-survivor
+  ---
+  duration_ms: 13.405792
+  type: 'test'
+  ...
+# Subtest: active deletion supersedes initial restore: create-failure
+ok 52 - active deletion supersedes initial restore: create-failure
+  ---
+  duration_ms: 13.598917
+  type: 'test'
+  ...
+# Subtest: active deletion supersedes initial restore: deleted-get-failure
+ok 53 - active deletion supersedes initial restore: deleted-get-failure
+  ---
+  duration_ms: 11.394875
+  type: 'test'
+  ...
+# Subtest: active deletion supersedes dropdown switch and its late success
+ok 54 - active deletion supersedes dropdown switch and its late success
+  ---
+  duration_ms: 12.676167
+  type: 'test'
+  ...
+# Subtest: active deletion supersedes dropdown switch and its late failure
+ok 55 - active deletion supersedes dropdown switch and its late failure
+  ---
+  duration_ms: 10.71625
+  type: 'test'
+  ...
+1..55
+# tests 55
 # suites 0
-# pass 37
+# pass 55
 # fail 0
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 430.527959
+# duration_ms 628.51
 ```
-
-</details>
-
-<details>
-<summary>python3.12 -m ruff check app/ tests/</summary>
-
-Raw log: [session-copy-gates/ruff.log](session-copy-gates/ruff.log)
-
-```text
-All checks passed!
-```
-
-</details>
-
-<details>
-<summary>npm run dev — blocked browser prerequisite</summary>
-
-Raw log: [session-copy-gates/dev.log](session-copy-gates/dev.log)
-
-```text
-
-> doctalk-frontend@0.30.0 dev
-> next dev
-
- ⨯ Failed to start server
-Error: listen EPERM: operation not permitted 0.0.0.0:3000
-    at Server.setupListenHandle [as _listen2] (node:net:1918:21)
-    at listenInCluster (node:net:1997:12)
-    at Server.listen (node:net:2102:7)
-    at /Users/mayijie/Projects/Code/010_DocTalk/frontend/node_modules/next/dist/server/lib/start-server.js:280:16
-    at new Promise (<anonymous>)
-    at startServer (/Users/mayijie/Projects/Code/010_DocTalk/frontend/node_modules/next/dist/server/lib/start-server.js:191:11)
-    at /Users/mayijie/Projects/Code/010_DocTalk/frontend/node_modules/next/dist/server/lib/start-server.js:310:52
-    at Span.traceAsyncFn (/Users/mayijie/Projects/Code/010_DocTalk/frontend/node_modules/next/dist/trace/trace.js:154:26)
-    at process.<anonymous> (/Users/mayijie/Projects/Code/010_DocTalk/frontend/node_modules/next/dist/server/lib/start-server.js:310:35)
-    at process.emit (node:events:519:28) {
-  code: 'EPERM',
-  errno: -1,
-  syscall: 'listen',
-  address: '0.0.0.0',
-  port: 3000
-}
-[?25h
-```
-
-</details>

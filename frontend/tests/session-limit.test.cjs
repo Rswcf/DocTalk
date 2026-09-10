@@ -54,7 +54,7 @@ function button(tree, label) {
   return found;
 }
 
-function harness({ isDemo = false, transcript = [userMessage], createResult, createError } = {}) {
+function harness({ isDemo = false, transcript = [userMessage], createResult, createError, deferCreate = false, initialSessions = [row('current'), row('older'), row('oldest')] } = {}) {
   const store = load('store/index.ts', {
     '../lib/models': { DEFAULT_MODE: 'quick', isKnownMode: () => false },
   }).useDocTalkStore;
@@ -95,12 +95,14 @@ function harness({ isDemo = false, transcript = [userMessage], createResult, cre
   const useStore = (selector) => selector ? selector(store.getState()) : store.getState();
   useStore.getState = store.getState;
   const pendingMessages = [];
+  let resolveCreate;
   const api = {
     ApiError: class ApiError extends Error {},
-    listSessions: async () => ({ sessions: [row('current'), row('older'), row('oldest')] }),
+    listSessions: async () => ({ sessions: initialSessions }),
     createSession: async (id) => {
       calls.create.push(id);
       if (createError) throw createError;
+      if (deferCreate) return new Promise((resolve) => { resolveCreate = resolve; });
       return createResult || { session_id: 'new', created_at: '2026-09-10' };
     },
     getMessages: (id) => new Promise((resolve, reject) => {
@@ -152,6 +154,7 @@ function harness({ isDemo = false, transcript = [userMessage], createResult, cre
       useChatSession(documentId);
       return { cancel: () => cleanup?.(), getError: () => sessionError };
     },
+    resolveCreate: (data) => resolveCreate(data),
     resolveMessages: (data, index = 0) => pendingMessages[index].resolve(data),
     rejectMessages: (error, index = 0) => pendingMessages[index].reject(error),
   };
@@ -493,3 +496,95 @@ test('unmount cancels a pending switch and its late completion cannot affect a n
   assert.deepEqual(h.store.getState().messages, [assistantMessage]);
   assert.deepEqual(h.calls.accounting, []);
 });
+
+
+for (const outcome of ['success-before-survivor', 'success-after-survivor', 'survivor-failure', 'no-survivor', 'create-failure', 'deleted-get-failure']) {
+  test(`active deletion supersedes initial restore: ${outcome}`, async () => {
+    const noSurvivor = outcome === 'no-survivor' || outcome === 'create-failure';
+    const h = harness({
+      initialSessions: noSurvivor ? [row('current')] : [row('current'), row('older')],
+      createError: outcome === 'create-failure' ? new TypeError('create failed') : undefined,
+      deferCreate: outcome === 'no-survivor',
+    });
+    const deletedMessage = { ...userMessage, id: 'deleted-message', text: 'Deleted transcript' };
+    const survivorMessage = { ...userMessage, id: 'survivor-message', text: 'Survivor transcript' };
+    const installed = [];
+    h.store.subscribe((state) => installed.push(...state.messages));
+    h.startInitialRestore();
+    await settle();
+    const initialToken = h.store.getState().transcriptRestoreInFlight;
+    assert.ok(initialToken);
+    const accountingBefore = [...h.calls.accounting];
+    button(h.render(), t('session.deleteChat')).props.onClick();
+    const deleting = button(h.render(), t('common.yes')).props.onClick();
+    await settle();
+    assert.deepEqual(h.calls.delete, ['current']);
+    assert.notEqual(h.store.getState().sessionId, 'current', 'retire deleted identity before any replacement await');
+    assert.notEqual(h.store.getState().transcriptRestoreInFlight, initialToken, 'release superseded token even if GET hangs');
+    assert.deepEqual(h.calls.get, noSurvivor ? ['current'] : ['current', 'older']);
+    if (outcome === 'no-survivor') {
+      assert.equal(h.store.getState().sessionId, null);
+      assert.equal(h.store.getState().transcriptRestoreInFlight, null);
+      h.resolveMessages({ messages: [deletedMessage] });
+      await settle();
+      assert.equal(h.store.getState().sessionId, null, 'late restore cannot revive deleted id during create');
+      h.resolveCreate({ session_id: 'new', created_at: '2026-09-10' });
+    }
+    if (outcome === 'success-before-survivor') {
+      const replacementToken = h.store.getState().transcriptRestoreInFlight;
+      h.resolveMessages({ messages: [deletedMessage] });
+      await settle();
+      assert.equal(h.store.getState().transcriptRestoreInFlight, replacementToken, 'old finally cannot release replacement token');
+    }
+    if (!noSurvivor) {
+      if (outcome === 'survivor-failure') h.rejectMessages(new TypeError('replacement GET failed'), 1);
+      else h.resolveMessages({ messages: [survivorMessage] }, 1);
+    }
+    await deleting;
+    if (outcome === 'deleted-get-failure') h.rejectMessages(new TypeError('deleted GET failed'));
+    else h.resolveMessages({ messages: [deletedMessage] });
+    await settle();
+    const live = h.store.getState();
+    assert.equal(live.sessionId, noSurvivor ? (outcome === 'create-failure' ? null : 'new') : 'older');
+    assert.deepEqual(live.messages, noSurvivor || outcome === 'survivor-failure' ? [] : [survivorMessage]);
+    assert.equal(installed.some((message) => message.id === deletedMessage.id), false, 'deleted transcript must never be installed, even transiently');
+    assert.equal(live.transcriptRestoreInFlight, null);
+    assert.deepEqual(h.calls.create, noSurvivor ? ['doc-1'] : [], 'old restore must not start a fallback create');
+    assert.deepEqual(h.calls.accounting, accountingBefore);
+    assert.deepEqual(h.calls.pointers, []);
+    if (outcome === 'survivor-failure') {
+      assert.equal(live.messagesSessionId, null, 'failed survivor GET must remain unknown, not certify empty');
+      nodes(h.render()).find((node) => node.props?.['data-tour']).props.onClick();
+      const retry = switchTo(h, 'older');
+      h.resolveMessages({ messages: [survivorMessage] }, 2);
+      await retry;
+      assert.equal(h.store.getState().sessionId, 'older');
+      assert.deepEqual(h.store.getState().messages, [survivorMessage]);
+    }
+  });
+}
+
+
+for (const oldOutcome of ['success', 'failure']) {
+  test(`active deletion supersedes dropdown switch and its late ${oldOutcome}`, async () => {
+    const h = harness();
+    const oldSwitch = switchTo(h, 'older');
+    button(h.render(), t('session.deleteChat')).props.onClick();
+    const deleting = button(h.render(), t('common.yes')).props.onClick();
+    await settle();
+    assert.deepEqual(h.calls.delete, ['older']);
+    assert.deepEqual(h.calls.get, ['older', 'current']);
+    const replacementToken = h.store.getState().transcriptRestoreInFlight;
+    if (oldOutcome === 'success') h.resolveMessages({ messages: [assistantMessage], demo_messages_used: 100 });
+    else h.rejectMessages(new TypeError('old switch failed'));
+    await oldSwitch;
+    assert.equal(h.store.getState().sessionId, 'current');
+    assert.equal(h.store.getState().transcriptRestoreInFlight, replacementToken);
+    assert.deepEqual(h.store.getState().messages, []);
+    assert.deepEqual(h.calls.accounting, []);
+    h.resolveMessages({ messages: [userMessage] }, 1);
+    await deleting;
+    assert.equal(h.store.getState().messagesSessionId, 'current');
+    assert.deepEqual(h.store.getState().messages, [userMessage]);
+  });
+}

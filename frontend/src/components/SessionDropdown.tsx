@@ -84,9 +84,9 @@ export default function SessionDropdown() {
 
   const toggle = () => setOpen((v) => !v);
 
-  const onNewChat = async () => {
+  const onNewChat = async (reason?: 'after-delete') => {
     const live = useDocTalkStore.getState();
-    if (!documentId || live.documentId !== documentId || live.documentStatus !== 'ready' || live.isStreaming || creatingSessionRef.current || live.transcriptRestoreInFlight) return;
+    if (!documentId || live.documentId !== documentId || live.documentStatus !== 'ready' || live.isStreaming || creatingSessionRef.current || (live.transcriptRestoreInFlight && reason !== 'after-delete')) return;
     const hasCurrentSession = live.sessions.some((s) => s.session_id === live.sessionId);
     setSessionErrorCopy(null);
     if (hasCurrentSession && live.messagesSessionId === live.sessionId && !live.messages.some((message) => message.role === 'user')) {
@@ -99,9 +99,10 @@ export default function SessionDropdown() {
       return;
     }
     creatingSessionRef.current = true;
+    const request = ++switchRequestRef.current;
     try {
       const s = await createSession(documentId);
-      if (useDocTalkStore.getState().documentId !== documentId) return;
+      if (request !== switchRequestRef.current || useDocTalkStore.getState().documentId !== documentId) return;
       addSession({
         session_id: s.session_id,
         title: null,
@@ -130,7 +131,7 @@ export default function SessionDropdown() {
       setConfirmDeleteId(null);
       setOpen(false);
     } catch (e) {
-      if (useDocTalkStore.getState().documentId !== documentId) return;
+      if (request !== switchRequestRef.current || useDocTalkStore.getState().documentId !== documentId) return;
       const copy = errorCopy(e, t, tOr, { isDemo: useDocTalkStore.getState().isDemo });
       setSessionErrorCopy(copy);
       if (copy.cta) {
@@ -141,10 +142,10 @@ export default function SessionDropdown() {
     }
   };
 
-  const onSwitchSession = async (id: string) => {
+  const onSwitchSession = async (id: string, reason?: 'after-delete') => {
     const current = useDocTalkStore.getState();
     // Also serialize against useChatSession's initial transcript restore.
-    if (current.isStreaming || creatingSessionRef.current || current.transcriptRestoreInFlight) return;
+    if (!documentId || current.documentId !== documentId || current.isStreaming || creatingSessionRef.current || (current.transcriptRestoreInFlight && reason !== 'after-delete')) return;
     const request = ++switchRequestRef.current;
     const restoreToken = beginTranscriptRestore();
     switchRestoreRef.current = restoreToken;
@@ -159,8 +160,12 @@ export default function SessionDropdown() {
       if (request !== switchRequestRef.current || live.documentId !== documentId || live.sessionId !== id) return;
       // No new accounting was installed. Restore the previous transcript so
       // a failed load remains retryable without certifying the target as empty.
-      setSessionId(current.sessionId);
-      setMessages(current.messages, current.messagesSessionId);
+      // A confirmed delete has no valid previous session to roll back to.
+      // Keep the survivor selected with unknown ownership for an explicit retry.
+      if (reason !== 'after-delete') {
+        setSessionId(current.sessionId);
+        setMessages(current.messages, current.messagesSessionId);
+      }
       setSessionErrorCopy(errorCopy(error, t, tOr, { isDemo: live.isDemo }));
       return;
     } finally {
@@ -195,10 +200,12 @@ export default function SessionDropdown() {
   };
 
   const onDeleteSessionById = async (targetId: string) => {
-    if (isStreaming) return;
+    const current = useDocTalkStore.getState();
+    if (!documentId || current.documentId !== documentId || current.isStreaming || creatingSessionRef.current) return;
     setSessionErrorCopy(null);
     setConfirmDeleteId(null);
     await deleteSession(targetId);
+    if (useDocTalkStore.getState().documentId !== documentId) return;
     removeSession(targetId);
     // Clear the stored anon-demo pointer IMMEDIATELY on confirmed delete, if
     // it named this session — before any replacement GET below. Otherwise a
@@ -210,12 +217,19 @@ export default function SessionDropdown() {
     if (documentId && readDemoSession(documentId) === targetId) {
       clearDemoSession(documentId);
     }
-    const remaining = useDocTalkStore.getState().sessions;
-    if (targetId === sessionId) {
-      if (remaining.length > 0) {
-        await onSwitchSession(remaining[0].session_id);
+    const live = useDocTalkStore.getState();
+    if (targetId === live.sessionId) {
+      // Supersede both initial and dropdown restores before any replacement
+      // await. Retire the deleted id even if creation fails; releasing the
+      // token also makes the hook reject late success AND fallback-on-error.
+      switchRequestRef.current += 1;
+      setSessionId(null);
+      setMessages([], null);
+      if (live.transcriptRestoreInFlight) endTranscriptRestore(live.transcriptRestoreInFlight);
+      if (live.sessions.length > 0) {
+        await onSwitchSession(live.sessions[0].session_id, 'after-delete');
       } else {
-        await onNewChat();
+        await onNewChat('after-delete');
       }
     }
     setOpen(false);
@@ -315,7 +329,7 @@ export default function SessionDropdown() {
             <button
               ref={(el) => { itemRefs.current[0] = el; }}
               className={`w-full text-left flex items-center gap-2 px-2 py-1.5 rounded hover:bg-zinc-100 dark:hover:bg-zinc-800 text-sm text-zinc-700 dark:text-zinc-200 transition-colors focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:ring-inset ${disabledClass}`}
-              onClick={onNewChat}
+              onClick={() => onNewChat()}
               disabled={isStreaming}
               tabIndex={focusIndex === 0 ? 0 : -1}
               role="menuitem"
