@@ -9,8 +9,9 @@ import MarketingArticleJsonLd from '../components/marketing/MarketingArticleJson
  * Factory for `app/[locale]/<route>/page.tsx` files. Removes per-page boilerplate
  * for the localized marketing rollout: builds locale metadata (title/description
  * from translation keys + hreflang via buildMarketingMetadata), validates the
- * locale, and renders generic Article JSON-LD + the shared server content
- * component. The `[locale]/layout.tsx` `generateStaticParams` supplies the locale
+ * locale, and renders generic Article JSON-LD (or an explicit page-specific
+ * JsonLd component) + the shared server content component.
+ * The `[locale]/layout.tsx` `generateStaticParams` supplies the locale
  * params, so page files need only metadata + the default component.
  *
  * Usage:
@@ -27,6 +28,7 @@ export function createMarketingLocalePage({
   descKey,
   keywords,
   datePublished,
+  JsonLd,
 }: {
   Content: (props: { locale: string }) => Promise<JSX.Element> | JSX.Element;
   path: string;
@@ -34,6 +36,7 @@ export function createMarketingLocalePage({
   descKey: string;
   keywords?: string[];
   datePublished?: string;
+  JsonLd?: (props: { locale: string }) => Promise<JSX.Element> | JSX.Element;
 }) {
   async function generateMetadata({ params }: { params: { locale: string } }): Promise<Metadata> {
     const { t } = await getServerT(params.locale);
@@ -54,13 +57,15 @@ export function createMarketingLocalePage({
     if (!isUrlLocale(params.locale)) notFound();
     return (
       <>
-        <MarketingArticleJsonLd
-          locale={params.locale}
-          path={path}
-          titleKey={titleKey}
-          descKey={descKey}
-          datePublished={datePublished}
-        />
+        {JsonLd ? <JsonLd locale={params.locale} /> : (
+          <MarketingArticleJsonLd
+            locale={params.locale}
+            path={path}
+            titleKey={titleKey}
+            descKey={descKey}
+            datePublished={datePublished}
+          />
+        )}
         <Content locale={params.locale} />
       </>
     );
