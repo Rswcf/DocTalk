@@ -90,7 +90,7 @@ export default function DocumentReaderPageClient() {
   );
   const { sessionError } = useChatSession(documentId);
   const { isLoggedIn, userPlan, canUseCustomInstructions } = useUserPlanProfile();
-  const sessionErrorCopy = sessionError ? errorCopy(sessionError, t, tOr) : null;
+  const sessionErrorCopy = sessionError ? errorCopy(sessionError, t, tOr, { isDemo }) : null;
   const error = loaderError;
   const documentErrorCopy = loaderErrorCode
     ? errorCopy({ code: loaderErrorCode, detail: {} }, t, tOr)

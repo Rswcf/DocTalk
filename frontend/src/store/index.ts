@@ -12,6 +12,7 @@ export interface DocTalkStore {
   documentId: string | null;
   documentName: string | null;
   documentStatus: DocStatus;
+  isDemo: boolean;
   totalPages: number;
   parseProgress: { pagesParsed: number; chunksIndexed: number };
 
@@ -92,6 +93,7 @@ export interface DocTalkStore {
   setDocument: (id: string) => void;
   setDocumentName: (name: string) => void;
   setDocumentStatus: (status: DocStatus) => void;
+  setIsDemo: (isDemo: boolean) => void;
   setLastDocument: (id: string, name: string) => void;
   setPdfUrl: (url: string | null) => void;
   setPage: (page: number) => void;
@@ -133,6 +135,7 @@ const initialState = {
   documentId: null as string | null,
   documentName: null as string | null,
   documentStatus: 'idle' as DocStatus,
+  isDemo: false,
   totalPages: 0,
   parseProgress: { pagesParsed: 0, chunksIndexed: 0 },
   lastDocumentId: (typeof window !== 'undefined' ? localStorage.getItem('doctalk_last_doc_id') : null) as string | null,
@@ -172,9 +175,16 @@ const initialState = {
 export const useDocTalkStore = create<DocTalkStore>((set, get) => ({
   ...initialState,
 
-  setDocument: (id: string) => set({ documentId: id }),
+  setDocument: (id: string) => set((state) => ({
+    documentId: id,
+    // Preserve known metadata on locale/reload; a new document must load its
+    // own surface before session actions can interpret a shared limit code.
+    isDemo: state.documentId === id ? state.isDemo : false,
+    documentStatus: state.documentId === id ? state.documentStatus : 'idle',
+  })),
   setDocumentName: (name: string) => set({ documentName: name }),
   setDocumentStatus: (status: DocStatus) => set({ documentStatus: status }),
+  setIsDemo: (isDemo: boolean) => set({ isDemo }),
   setLastDocument: (id: string, name: string) => {
     set({ lastDocumentId: id, lastDocumentName: name });
     try {

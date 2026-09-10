@@ -8,6 +8,7 @@ export interface ErrorCopy {
   body: string;
   /** Optional CTA button (e.g., upgrade or delete-docs link). */
   cta?: { label: string; href: string; plan?: BillingPlanIntent };
+  secondaryAction?: { label: string; action: 'delete_session' };
   severity: 'error' | 'warning' | 'info';
   /**
    * Whether the consumer should auto-open the paywall modal.
@@ -62,11 +63,24 @@ function extract(err: ErrorInput): { code: string | null; status: number | null;
   return { code: null, status: null, detail: {} };
 }
 
-export function errorCopy(err: ErrorInput, t: TFn, tOr: TOrFn): ErrorCopy {
+export function errorCopy(err: ErrorInput, t: TFn, tOr: TOrFn, context: { isDemo?: boolean } = {}): ErrorCopy {
   // Kept for signature symmetry with existing i18n call-sites.
   void t;
 
   const { code, status, detail } = extract(err);
+
+  // The authenticated per-user sample cap shares a wire code with the
+  // own-document plan cap. Keep the anonymous DEMO_SESSION_LIMIT_REACHED separate.
+  if (code === 'SESSION_LIMIT_REACHED' && context.isDemo) {
+    return {
+      title: tOr('errors.SESSION_LIMIT_REACHED.demoTitle', 'Demo conversation limit reached'),
+      body: tOr('errors.SESSION_LIMIT_REACHED.demoBody', 'The demo allows {limit} conversations per sample document. Upload your own document to keep going.', {
+        limit: String(detail.limit ?? 3),
+      }),
+      cta: { label: tOr('errors.cta.uploadDocument', 'Upload your own document'), href: '/' },
+      severity: 'warning',
+    };
+  }
 
   // Dispatch by canonical code first; fall through by status; finally generic network.
   if (code) {
@@ -377,10 +391,11 @@ const CODE_TABLE: Record<string, Handler> = {
   // ─── Sessions / chat ───
   SESSION_LIMIT_REACHED: (d, tOr) => ({
     title: tOr('errors.SESSION_LIMIT_REACHED.title', 'Session limit reached'),
-    body: tOr('errors.SESSION_LIMIT_REACHED.body', 'Free plan is limited to {limit} chat sessions per document. Upgrade for unlimited.', {
-      limit: String(d.limit ?? ''),
+    body: tOr('errors.SESSION_LIMIT_REACHED.body', 'Free keeps {limit} open conversations per document. Delete one to start another, or upgrade for unlimited.', {
+      limit: String(d.limit ?? 3),
     }),
     cta: upgradeCta(tOr, 'session_limit', 'plus'),
+    secondaryAction: { label: tOr('errors.cta.deleteConversation', 'Delete a conversation'), action: 'delete_session' },
     severity: 'warning',
   }),
   SESSION_NOT_FOUND: (_d, tOr) => ({
