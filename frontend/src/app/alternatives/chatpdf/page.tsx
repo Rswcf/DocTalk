@@ -17,17 +17,6 @@ export const metadata: Metadata = buildMarketingMetadata({
   },
 });
 
-
-const alternatives = [
-  { position: 1, name: 'DocTalk', url: 'https://www.doctalk.site' },
-  { position: 2, name: 'AskYourPDF', url: 'https://askyourpdf.com' },
-  { position: 3, name: 'Humata', url: 'https://humata.ai' },
-  { position: 4, name: 'NotebookLM', url: 'https://notebooklm.google.com' },
-  { position: 5, name: 'PDF.ai', url: 'https://pdf.ai' },
-  { position: 6, name: 'ChatDOC', url: 'https://chatdoc.com' },
-  { position: 7, name: 'Sharly', url: 'https://sharly.ai' },
-];
-
 export default function ChatpdfAltsPage() {
   return (
     <>

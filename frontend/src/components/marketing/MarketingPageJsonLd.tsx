@@ -17,6 +17,7 @@ interface MarketingPageJsonLdProps {
   description: string;
   faqItems?: { question: string; answer: string }[];
   breadcrumbs?: { label: string; path?: string }[];
+  itemListItems?: { position: number; name: string; url: string }[];
   softwareApplication?: {
     name: string;
     applicationCategory: string;
@@ -52,6 +53,7 @@ export default function MarketingPageJsonLd({
   description,
   faqItems,
   breadcrumbs,
+  itemListItems,
   softwareApplication,
   howTo,
   datePublished = '2026-02-18',
@@ -104,6 +106,18 @@ export default function MarketingPageJsonLd({
             position: index + 1,
             name: label,
             ...(breadcrumbPath ? { item: url(breadcrumbPath) } : {}),
+          })),
+        }} />
+      ) : null}
+      {itemListItems?.length ? (
+        <JsonLdScript data={{
+          '@context': 'https://schema.org',
+          '@type': 'ItemList',
+          itemListElement: itemListItems.map(({ position, name, url: itemUrl }) => ({
+            '@type': 'ListItem',
+            position,
+            name,
+            url: itemUrl,
           })),
         }} />
       ) : null}

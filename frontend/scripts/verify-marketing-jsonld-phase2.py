@@ -108,6 +108,8 @@ def verify(route, locale, count):
         blocks.extend(data if isinstance(data, list) else [data])
     software = route.startswith('features/') or route == 'pricing'
     types = ['Article'] + (['FAQPage'] if count else []) + ['BreadcrumbList']
+    if route.startswith('alternatives/'):
+        types.append('ItemList')
     if software:
         types.append('SoftwareApplication')
     if route == 'features/citations':
@@ -117,7 +119,7 @@ def verify(route, locale, count):
     assert [block['@type'] for block in blocks] == types, 'Missing, unexpected, or duplicate block'
     schemas = {block['@type']: block for block in blocks}
     for block in blocks:
-        if block['@type'] == 'BreadcrumbList':
+        if block['@type'] in ('BreadcrumbList', 'ItemList'):
             assert 'inLanguage' not in block
         else:
             assert block['inLanguage'] == locale
@@ -135,6 +137,23 @@ def verify(route, locale, count):
                            **({'item': ORIGIN + n.attrs['href']} if 'href' in n.attrs else {}))
                        for i, n in enumerate(crumbs)]
     assert schemas['BreadcrumbList']['itemListElement'] == expected_crumbs
+
+    if 'ItemList' in schemas:
+        items = schemas['ItemList']['itemListElement']
+        headings = root.all(lambda n: n.tag == 'h2')
+        ranked_headings = [n.text() for n in headings
+                           if n.parent.all(lambda c: c.has_class('ed-label-num'))]
+        assert len(items) == len(ranked_headings), 'ItemList count differs from rendered alternatives'
+        for position, (item, heading) in enumerate(zip(items, ranked_headings), 1):
+            assert set(item) == {'@type', 'position', 'name', 'url'}
+            assert item['@type'] == 'ListItem' and item['position'] == position
+            assert item['name'] in root.text(), 'ItemList name missing from script/style-free page text'
+            assert item['name'] in heading, 'ItemList order differs from rendered alternatives'
+            assert item['url'].startswith('https://')
+        homepage = ORIGIN + ('/' if locale == 'en' else f'/{locale}')
+        assert items[0]['name'] == 'DocTalk' and items[0]['url'] == homepage
+        assert root.all(lambda n: n.tag == 'a' and n.attrs.get('href') == homepage[len(ORIGIN):]
+                        and 'DocTalk' in n.text()), 'DocTalk URL must match a rendered homepage link'
 
     buttons = root.all(lambda n: n.tag == 'button' and n.attrs.get('id', '').startswith('ed-faq-btn-'))
     panels = root.all(lambda n: n.attrs.get('id', '').startswith('ed-faq-panel-'))

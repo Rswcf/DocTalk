@@ -112,11 +112,11 @@ for (const [slug, name, count] of cases) {
       const blocks = locale === 'en' ? enBlocks
         : await emittedSchemas(await LocalePage({ params: { locale } }));
       assert.deepEqual(schemaTypes(blocks), schemaTypes(enBlocks), `${locale}: type parity, no duplicate Article`);
-      // inLanguage applies to CreativeWork-descended types only; BreadcrumbList
-      // is ItemList -> Intangible -> Thing and must NOT carry it.
+      // Neither BreadcrumbList nor ItemList descends from CreativeWork;
+      // both inherit Intangible -> Thing and must NOT carry inLanguage.
       for (const block of blocks) {
-        if (block['@type'] === 'BreadcrumbList') {
-          assert.ok(!('inLanguage' in block), 'BreadcrumbList must not carry inLanguage');
+        if (['BreadcrumbList', 'ItemList'].includes(block['@type'])) {
+          assert.ok(!('inLanguage' in block), `${block['@type']} must not carry inLanguage`);
         } else {
           assert.equal(block.inLanguage, locale);
         }
@@ -195,7 +195,7 @@ test('faq<n>Question/faq<n>Answer works with resolved Humata copy', async () => 
 
 test('absent or empty optional inputs emit no block; unavailable routes stay unprefixed', async () => {
   const props = { locale: 'ja', path: '/about', title: 'Title', description: 'Description' };
-  for (const optional of [{}, { faqItems: [], breadcrumbs: [] }]) {
+  for (const optional of [{}, { faqItems: [], breadcrumbs: [], itemListItems: [] }]) {
     const blocks = await emittedSchemas(MarketingPageJsonLd({ ...props, ...optional }));
     assert.deepEqual(schemaTypes(blocks), ['Article']);
     assert.equal(blocks[0].mainEntityOfPage['@id'], `${origin}/about`);
@@ -205,6 +205,22 @@ test('absent or empty optional inputs emit no block; unavailable routes stay unp
   }));
   assert.deepEqual(schemaTypes(blocks), ['Article', 'BreadcrumbList']);
   assert.equal(blocks[1].itemListElement[0].item, `${origin}/about`);
+});
+
+test('ItemList preserves supplied positions, product names and resolved URLs', async () => {
+  const itemListItems = [
+    { position: 2, name: 'DocTalk', url: `${origin}/ja` },
+    { position: 4, name: 'AskYourPDF', url: 'https://askyourpdf.com' },
+  ];
+  const blocks = await emittedSchemas(MarketingPageJsonLd({
+    locale: 'ja', path: '/alternatives/chatpdf', title: 'Title', description: 'Description', itemListItems,
+  }));
+  assert.deepEqual(schemaTypes(blocks), ['Article', 'ItemList']);
+  assert.deepEqual(blocks[1], {
+    '@context': 'https://schema.org', '@type': 'ItemList',
+    itemListElement: itemListItems.map((item) => ({ '@type': 'ListItem', ...item })),
+  });
+  assert.ok(!('inLanguage' in blocks[1]), 'ItemList must not carry inLanguage');
 });
 
 test('factory keeps generic Article output and metadata without a schema override', async () => {
@@ -259,6 +275,7 @@ for (const [route, contentName, count, software] of phase2Cases) {
     const EnPage = loadSource(`${folder}/page.tsx`).default;
     const LocalePage = loadSource(`app/[locale]/${route}/page.tsx`).default;
     const expectedTypes = ['Article', ...(count ? ['FAQPage'] : []), 'BreadcrumbList',
+      ...(route.startsWith('alternatives/') ? ['ItemList'] : []),
       ...(software ? ['SoftwareApplication'] : []), ...(route === 'features/citations' ? ['HowTo'] : []),
       ...(route === 'tools' ? ['CollectionPage'] : [])];
 
@@ -267,8 +284,9 @@ for (const [route, contentName, count, software] of phase2Cases) {
         : await LocalePage({ params: { locale } }));
       assert.deepEqual(schemaTypes(blocks), expectedTypes, `${locale}: exactly one of each intended block`);
       for (const block of blocks) {
-        if (block['@type'] === 'BreadcrumbList') assert.ok(!('inLanguage' in block));
-        else assert.equal(block.inLanguage, locale);
+        if (['BreadcrumbList', 'ItemList'].includes(block['@type'])) {
+          assert.ok(!('inLanguage' in block), `${block['@type']} must not carry inLanguage`);
+        } else assert.equal(block.inLanguage, locale);
       }
       const pageUrl = `${origin}${locale === 'en' ? '' : `/${locale}`}/${route}`;
       const article = blocks.find((block) => block['@type'] === 'Article');

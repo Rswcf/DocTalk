@@ -17,16 +17,6 @@ export const metadata: Metadata = buildMarketingMetadata({
   },
 });
 
-
-const alternatives = [
-  { position: 1, name: 'DocTalk', url: 'https://www.doctalk.site' },
-  { position: 2, name: 'ChatPDF', url: 'https://chatpdf.com' },
-  { position: 3, name: 'AskYourPDF', url: 'https://askyourpdf.com' },
-  { position: 4, name: 'Humata', url: 'https://humata.ai' },
-  { position: 5, name: 'Consensus', url: 'https://consensus.app' },
-  { position: 6, name: 'Elicit', url: 'https://elicit.com' },
-];
-
 export default function NotebooklmAltsPage() {
   return (
     <>
