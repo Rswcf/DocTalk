@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import PdfaiContent from './PdfaiContent';
-import { buildArticleJsonLd, buildMarketingMetadata } from '../../../lib/seo';
+import PdfaiJsonLd from './PdfaiJsonLd';
+import { buildMarketingMetadata } from '../../../lib/seo';
 
 export const metadata: Metadata = buildMarketingMetadata({
   title: 'DocTalk vs PDF.ai: AI PDF Tool Comparison (2026)',
@@ -16,73 +17,11 @@ export const metadata: Metadata = buildMarketingMetadata({
   },
 });
 
-const faqItems = [
-  {
-    question: 'Is PDF.ai still active?',
-    answer: 'PDF.ai continues to operate, but it has seen less development and growth compared to competitors. The tool focuses on basic PDF chat functionality without the advanced features that newer tools like DocTalk offer, such as citation highlighting and multi-format support.',
-  },
-  {
-    question: 'Does PDF.ai support Word or Excel files?',
-    answer: 'No. PDF.ai only supports PDF files. To analyze Word, PowerPoint, or Excel documents, you would need to convert them to PDF first. DocTalk natively supports 7 formats including DOCX, PPTX, and XLSX with dedicated parsers for each.',
-  },
-  {
-    question: 'Which tool has better citations?',
-    answer: 'DocTalk has significantly better citation support with real-time visual highlighting. When you click a citation, the document viewer scrolls to and highlights the exact source passage. PDF.ai provides basic page references without inline highlighting.',
-  },
-  {
-    question: 'Is DocTalk more expensive than PDF.ai?',
-    answer: 'DocTalk offers a free demo with no signup and a free tier with 300 credits per month. Paid plans start at $9.99/month. PDF.ai pricing varies, but DocTalk generally provides more features per dollar, including citation highlighting, 7 format support, and 11 languages.',
-  },
-];
 
 export default function ComparePdfaiPage() {
   return (
     <>
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{
-          __html: JSON.stringify(
-            buildArticleJsonLd({
-              title: 'DocTalk vs PDF.ai: AI PDF Tool Comparison (2026)',
-              description:
-                'A comprehensive comparison of DocTalk and PDF.ai for AI-powered document analysis.',
-              path: '/compare/pdf-ai',
-              datePublished: '2026-02-18',
-            })
-          ),
-        }}
-      />
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{
-          __html: JSON.stringify({
-            '@context': 'https://schema.org',
-            '@type': 'FAQPage',
-            mainEntity: faqItems.map((item) => ({
-              '@type': 'Question',
-              name: item.question,
-              acceptedAnswer: {
-                '@type': 'Answer',
-                text: item.answer,
-              },
-            })),
-          }),
-        }}
-      />
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{
-          __html: JSON.stringify({
-            '@context': 'https://schema.org',
-            '@type': 'BreadcrumbList',
-            itemListElement: [
-              { '@type': 'ListItem', position: 1, name: 'Home', item: 'https://www.doctalk.site' },
-              { '@type': 'ListItem', position: 2, name: 'Compare', item: 'https://www.doctalk.site/compare' },
-              { '@type': 'ListItem', position: 3, name: 'DocTalk vs PDF.ai' },
-            ],
-          }),
-        }}
-      />
+      <PdfaiJsonLd locale="en" />
       <PdfaiContent locale="en" />
     </>
   );

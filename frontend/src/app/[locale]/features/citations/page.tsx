@@ -1,7 +1,9 @@
+import CitationsJsonLd from '../../../features/citations/CitationsJsonLd';
 import CitationsContent from '../../../features/citations/CitationsContent';
 import { createMarketingLocalePage } from '../../../../lib/marketingLocalePage';
 
 const page = createMarketingLocalePage({
+  JsonLd: CitationsJsonLd,
   Content: CitationsContent,
   path: '/features/citations',
   titleKey: 'featuresCitations.heroTitle',

@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import NotebooklmContent from './NotebooklmContent';
-import { buildArticleJsonLd, buildMarketingMetadata } from '../../../lib/seo';
+import NotebooklmJsonLd from './NotebooklmJsonLd';
+import { buildMarketingMetadata } from '../../../lib/seo';
 
 export const metadata: Metadata = buildMarketingMetadata({
   title: 'DocTalk vs NotebookLM: Which AI Document Tool?',
@@ -16,77 +17,11 @@ export const metadata: Metadata = buildMarketingMetadata({
   },
 });
 
-const faqItems = [
-  {
-    question: 'Is DocTalk better than NotebookLM?',
-    answer: 'DocTalk and NotebookLM serve different purposes. DocTalk excels at single-document deep analysis with real-time citation highlighting, 7 format support, and 11 languages. NotebookLM is better for multi-source notebooks and offers unique AI-generated audio podcasts. DocTalk is the better choice if you need citation verification and format flexibility; NotebookLM is better for free multi-source research.',
-  },
-  {
-    question: 'Is NotebookLM really free?',
-    answer: 'Yes, Google NotebookLM is currently free to use, though it requires a Google account. Google has not yet announced pricing for future premium features. However, being free means you are subject to Google data practices and potential changes in service terms.',
-  },
-  {
-    question: 'Does NotebookLM support citation highlighting?',
-    answer: 'NotebookLM shows inline citations that link to the source document within the notebook. However, it does not provide the real-time visual highlighting that DocTalk offers, where clicking a citation scrolls to and highlights the exact passage in a document viewer alongside the chat.',
-  },
-  {
-    question: 'Can I use DocTalk without a Google account?',
-    answer: 'Yes. DocTalk supports Google OAuth, Microsoft OAuth, and email magic links for authentication. You can also use the instant demo with no account at all. NotebookLM requires a Google account, which may be a concern for users who prefer not to use Google services.',
-  },
-  {
-    question: 'Which tool is more private?',
-    answer: 'DocTalk stores documents with SSE-S3 encryption, never trains AI on your data, and provides GDPR data export. NotebookLM is a Google product subject to Google privacy policies. DocTalk gives you more control and transparency over your data.',
-  },
-];
 
 export default function CompareNotebooklmPage() {
   return (
     <>
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{
-          __html: JSON.stringify(
-            buildArticleJsonLd({
-              title: 'DocTalk vs NotebookLM: Which AI Document Tool?',
-              description:
-                'A comprehensive comparison of DocTalk and Google NotebookLM for AI document analysis.',
-              path: '/compare/notebooklm',
-              datePublished: '2026-02-18',
-            })
-          ),
-        }}
-      />
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{
-          __html: JSON.stringify({
-            '@context': 'https://schema.org',
-            '@type': 'FAQPage',
-            mainEntity: faqItems.map((item) => ({
-              '@type': 'Question',
-              name: item.question,
-              acceptedAnswer: {
-                '@type': 'Answer',
-                text: item.answer,
-              },
-            })),
-          }),
-        }}
-      />
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{
-          __html: JSON.stringify({
-            '@context': 'https://schema.org',
-            '@type': 'BreadcrumbList',
-            itemListElement: [
-              { '@type': 'ListItem', position: 1, name: 'Home', item: 'https://www.doctalk.site' },
-              { '@type': 'ListItem', position: 2, name: 'Compare', item: 'https://www.doctalk.site/compare' },
-              { '@type': 'ListItem', position: 3, name: 'DocTalk vs NotebookLM' },
-            ],
-          }),
-        }}
-      />
+      <NotebooklmJsonLd locale="en" />
       <NotebooklmContent locale="en" />
     </>
   );

@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import FeaturesHubContent from './FeaturesHubContent';
+import FeaturesHubJsonLd from './FeaturesHubJsonLd';
 import { buildMarketingMetadata } from '../../lib/seo';
 
 export const metadata: Metadata = buildMarketingMetadata({
@@ -17,19 +18,7 @@ export const metadata: Metadata = buildMarketingMetadata({
 export default function FeaturesPage() {
   return (
     <>
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{
-          __html: JSON.stringify({
-            '@context': 'https://schema.org',
-            '@type': 'BreadcrumbList',
-            itemListElement: [
-              { '@type': 'ListItem', position: 1, name: 'Home', item: 'https://www.doctalk.site' },
-              { '@type': 'ListItem', position: 2, name: 'Features' },
-            ],
-          }),
-        }}
-      />
+      <FeaturesHubJsonLd locale="en" />
       <FeaturesHubContent locale="en" />
     </>
   );

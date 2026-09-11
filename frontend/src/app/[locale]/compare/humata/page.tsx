@@ -1,7 +1,9 @@
+import HumataJsonLd from '../../../compare/humata/HumataJsonLd';
 import HumataContent from '../../../compare/humata/HumataContent';
 import { createMarketingLocalePage } from '../../../../lib/marketingLocalePage';
 
 const page = createMarketingLocalePage({
+  JsonLd: HumataJsonLd,
   Content: HumataContent,
   path: '/compare/humata',
   titleKey: 'compareHumata.heroTitle',

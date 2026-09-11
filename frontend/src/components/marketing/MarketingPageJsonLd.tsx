@@ -2,6 +2,14 @@ import JsonLdScript from '../JsonLdScript';
 import { localizedHrefIfAvailable } from '../../i18n/routing';
 import { absoluteUrl } from '../../lib/seo';
 
+interface SoftwareOffer {
+  '@type': 'Offer';
+  price: string;
+  priceCurrency: string;
+  name?: string;
+  description?: string;
+}
+
 interface MarketingPageJsonLdProps {
   locale: string;
   path: string;
@@ -9,6 +17,27 @@ interface MarketingPageJsonLdProps {
   description: string;
   faqItems?: { question: string; answer: string }[];
   breadcrumbs?: { label: string; path?: string }[];
+  itemListItems?: { position: number; name: string; url: string }[];
+  softwareApplication?: {
+    name: string;
+    applicationCategory: string;
+    operatingSystem: string;
+    path: string;
+    description?: string;
+    offers?: SoftwareOffer | SoftwareOffer[] | {
+      '@type': 'AggregateOffer';
+      priceCurrency: string;
+      lowPrice: string;
+      highPrice: string;
+      offerCount: number;
+      offers: SoftwareOffer[];
+    };
+  };
+  howTo?: {
+    name: string;
+    description?: string;
+    steps: { name: string; text: string }[];
+  };
   datePublished?: string;
 }
 
@@ -24,6 +53,9 @@ export default function MarketingPageJsonLd({
   description,
   faqItems,
   breadcrumbs,
+  itemListItems,
+  softwareApplication,
+  howTo,
   datePublished = '2026-02-18',
 }: MarketingPageJsonLdProps) {
   const url = (value: string) => absoluteUrl(localizedHrefIfAvailable(locale, value));
@@ -74,6 +106,46 @@ export default function MarketingPageJsonLd({
             position: index + 1,
             name: label,
             ...(breadcrumbPath ? { item: url(breadcrumbPath) } : {}),
+          })),
+        }} />
+      ) : null}
+      {itemListItems?.length ? (
+        <JsonLdScript data={{
+          '@context': 'https://schema.org',
+          '@type': 'ItemList',
+          itemListElement: itemListItems.map(({ position, name, url: itemUrl }) => ({
+            '@type': 'ListItem',
+            position,
+            name,
+            url: itemUrl,
+          })),
+        }} />
+      ) : null}
+      {softwareApplication ? (
+        <JsonLdScript data={{
+          '@context': 'https://schema.org',
+          '@type': 'SoftwareApplication',
+          inLanguage: locale,
+          name: softwareApplication.name,
+          applicationCategory: softwareApplication.applicationCategory,
+          operatingSystem: softwareApplication.operatingSystem,
+          url: url(softwareApplication.path),
+          ...(softwareApplication.description ? { description: softwareApplication.description } : {}),
+          ...(softwareApplication.offers ? { offers: softwareApplication.offers } : {}),
+        }} />
+      ) : null}
+      {howTo?.name && howTo.steps.length && howTo.steps.every(({ name, text }) => name && text) ? (
+        <JsonLdScript data={{
+          '@context': 'https://schema.org',
+          '@type': 'HowTo',
+          inLanguage: locale,
+          name: howTo.name,
+          ...(howTo.description ? { description: howTo.description } : {}),
+          step: howTo.steps.map(({ name, text }, index) => ({
+            '@type': 'HowToStep',
+            position: index + 1,
+            name,
+            text,
           })),
         }} />
       ) : null}
