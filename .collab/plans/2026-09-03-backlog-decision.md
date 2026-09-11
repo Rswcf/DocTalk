@@ -1584,3 +1584,50 @@ the site HTML is edge-cached and a plain `curl` shows the previous build for min
 **Consequence for the 09-28 read, as §9.15.3 anticipated:** honest copy will *lower*
 `upgrade_click@session_limit`, which is the numerator of the "Purchase — by limit" row. That row
 must be split pre/post T_copy. A drop is the fix working, not the funnel worsening.
+
+### 9.24 Phase 1 live; phase 2 surveyed — two more markup defects found, one a policy violation
+
+**Phase 1 is in production** (`5497d6b`, frontend-only, no version bump). Verified live across locales:
+`/ja/use-cases/finance`, `/ko/use-cases/students`, `/de/use-cases/compliance` each emit
+`Article[inLanguage=<locale>]` + `FAQPage` + `BreadcrumbList` (the last correctly without
+`inLanguage` — it inherits ItemList → Intangible → Thing, outside that property's domain).
+Codex r1 SHIPped after parsing the built HTML for **99 pages × 11 languages** and matching all
+**430 FAQ pairs** to the rendered accordion text, order and count.
+
+#### Phase 2 survey — 22 pages, and the shared component must grow
+
+| FAQ key convention | pages |
+|---|---|
+| `<pre>.faq<n>Question` | 10 |
+| `<pre>.faq.q<n>` / `.a<n>` | 5 |
+| no FAQ (hubs, `/demo`, `/tools`, `/trust`, `/pricing`) | 7 |
+
+New schema types not in phase 1: **SoftwareApplication** (6 pages) and **HowTo** (1). The shared
+`MarketingPageJsonLd` currently emits Article + FAQPage + BreadcrumbList only.
+
+`SoftwareApplication` is mostly locale-safe facts (name, category, OS, url, offers) with one English
+prose `description` that must be localised or omitted. `HowTo` on `/features/citations` is entirely
+hardcoded English prose; its three **steps are rendered** on the page, so only its `name` is a
+summary, which is acceptable — but it has no translation keys, so it cannot be emitted in other
+locales without adding them.
+
+#### Two more defects found while surveying — both live on ENGLISH pages
+
+1. **`/pricing` emits a FAQPage claiming three questions that appear nowhere on the page.**
+   "How do DocTalk credits work?", "Which plans include all AI modes?", "Can I try DocTalk before
+   paying?" are hardcoded in `page.tsx`, absent from `en.json`, and `PricingPageContent` renders **no
+   FAQ section at all**. Google requires FAQ markup to correspond to content visible to the user, so
+   this is a policy violation, not merely drift — on the pricing page. It must be **removed**, not
+   ported. (Note its second question repeats the "all AI modes" claim that Batch B corrected in
+   visible copy, because Free already has both modes.)
+2. **`/features/citations` claims a FAQ question that is not on the page** — "Does citation
+   highlighting work with DOCX and PPTX?" — while its other four are rendered. Same class as the
+   `/use-cases/finance` drift fixed in phase 1; rebuilding from keys removes it.
+
+Only `/pricing` emits FAQPage among the pages with no FAQ section; `/demo`, `/tools`, `/trust` and
+the three hubs emit BreadcrumbList only, correctly.
+
+*Method note:* the first pass appeared to show pricing's questions were visible. That was my check
+being wrong — stripping HTML tags leaves `<script>` **contents** in the text, so the JSON-LD matched
+itself. Removing script blocks before searching gave the real answer. A survey that can fool itself is
+worse than none.
