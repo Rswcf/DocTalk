@@ -1,3 +1,4 @@
+import DemoJsonLd from '../../demo/DemoJsonLd';
 import { notFound } from 'next/navigation';
 import DemoPageClient from '../../demo/DemoPageClient';
 import LocaleProvider from '../../../i18n/LocaleProvider';
@@ -42,6 +43,7 @@ async function DemoContent({ locale }: { locale: string }) {
 }
 
 const page = createMarketingLocalePage({
+  JsonLd: DemoJsonLd,
   Content: DemoContent,
   path: '/demo',
   titleKey: 'demo.title',

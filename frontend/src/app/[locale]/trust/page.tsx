@@ -1,7 +1,9 @@
+import TrustJsonLd from '../../trust/TrustJsonLd';
 import TrustPageContent from '../../trust/TrustPageContent';
 import { createMarketingLocalePage } from '../../../lib/marketingLocalePage';
 
 const page = createMarketingLocalePage({
+  JsonLd: TrustJsonLd,
   Content: TrustPageContent,
   path: '/trust',
   titleKey: 'trust.hero.title',
