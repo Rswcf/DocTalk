@@ -216,7 +216,7 @@ async def test_invoice_payment_succeeded_skips_allowance_for_proration_invoice(
 
     assert response == {"received": True}
     credit_credits.assert_not_awaited()
-    db.commit.assert_awaited_once()
+    db.commit.assert_not_awaited()
 
 
 @pytest.mark.asyncio

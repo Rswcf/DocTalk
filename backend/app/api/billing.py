@@ -92,6 +92,8 @@ def _get_subscription_price_id(plan: str, billing: str) -> str:
 
 def _plan_from_price_id(price_id: str) -> Optional[str]:
     """Determine plan name from a Stripe price ID. Returns None if unknown."""
+    if not price_id:
+        return None
     plus_prices = {settings.STRIPE_PRICE_PLUS_MONTHLY, settings.STRIPE_PRICE_PLUS_ANNUAL}
     pro_prices = {settings.STRIPE_PRICE_PRO_MONTHLY, settings.STRIPE_PRICE_PRO_ANNUAL}
     if price_id in plus_prices:
@@ -1454,78 +1456,139 @@ async def _handle_checkout_session_completed(
     return {"received": True}
 
 
+async def _invoice_allowance_plan(invoice: dict) -> str:
+    """Resolve the purchased plan from the finalized invoice, never live state.
+
+    Basil moved subscription/line provenance into parent and price into pricing.
+    A delayed invoice must retain its purchased allowance after a plan change.
+    """
+    parent = invoice.get("parent") or {}
+    subscription_id = _stripe_id(invoice.get("subscription"))
+    if parent.get("type") == "subscription_details":
+        nested_id = _stripe_id((parent.get("subscription_details") or {}).get("subscription"))
+        if subscription_id and nested_id != subscription_id:
+            raise ValueError("Conflicting invoice subscriptions")
+        subscription_id = nested_id
+    if not subscription_id:
+        raise ValueError("Invoice subscription is missing")
+
+    page = invoice.get("lines")
+    if not isinstance(page, dict) or not isinstance(page.get("data"), list):
+        page = await asyncio.to_thread(stripe.Invoice.list_lines, invoice["id"], limit=100)
+    lines = list(page["data"])
+    # Do not decide from a truncated page: another recurring plan could follow.
+    seen_cursors: set[str] = set()
+    while page.get("has_more"):
+        cursor = _stripe_id(page["data"][-1]) if page["data"] else None
+        if not cursor or cursor in seen_cursors or len(seen_cursors) >= 100:
+            raise ValueError("Invoice line pagination did not complete")
+        seen_cursors.add(cursor)
+        page = await asyncio.to_thread(
+            stripe.Invoice.list_lines, invoice["id"], limit=100, starting_after=cursor,
+        )
+        lines.extend(page["data"])
+
+    plans: set[str] = set()
+    for line in lines:
+        line_parent = line.get("parent") or {}
+        if line_parent.get("type") == "subscription_item_details":
+            details = line_parent.get("subscription_item_details") or {}
+            line_subscription = _stripe_id(details.get("subscription"))
+            proration = details.get("proration")
+        elif line.get("type") == "subscription":
+            line_subscription = _stripe_id(line.get("subscription"))
+            proration = line.get("proration")
+        else:
+            continue  # One-off invoice items do not grant monthly allowances.
+        if line_subscription != subscription_id or proration is True:
+            continue
+        if proration is not False:
+            raise ValueError("Invoice line proration status is missing")
+
+        pricing = line.get("pricing") or {}
+        price_id = _stripe_id(line.get("price"))
+        if pricing.get("type") == "price_details":
+            nested_price = _stripe_id((pricing.get("price_details") or {}).get("price"))
+            if price_id and nested_price != price_id:
+                raise ValueError("Conflicting invoice line prices")
+            price_id = nested_price
+        plan = _plan_from_price_id(price_id or "")
+        if not plan:
+            raise ValueError("Invoice recurring price is not configured")
+        plans.add(plan)
+    if len(plans) != 1:
+        raise ValueError("Invoice does not identify one allowance plan")
+    return plans.pop()
+
+
 async def _handle_invoice_payment_succeeded(
     invoice: dict,
     db: AsyncSession,
 ):
     invoice_id = invoice.get("id")
-    customer_id = invoice.get("customer")
+    customer_id = _stripe_id(invoice.get("customer"))
     if not invoice_id or not customer_id:
         return {"received": True}
 
-    # Find user by customer id
+    if invoice.get("billing_reason") not in _ALLOWANCE_INVOICE_REASONS:
+        return {"received": True}
+    if invoice.get("status") != "paid":
+        return {"received": True}
+
     user = await db.scalar(select(User).where(User.stripe_customer_id == customer_id))
     if not user:
         return {"received": True}
 
-    # Determine plan from subscription price_id
-    plan = user.plan or "pro"  # default to current plan for backward compat
-    plan_changed = False
-    subscription_id = invoice.get("subscription")
-    if subscription_id:
-        try:
-            sub = await asyncio.to_thread(
-                stripe.Subscription.retrieve, subscription_id
-            )
-            if sub.get("items") and sub["items"].get("data"):
-                sub_price_id = sub["items"]["data"][0].get("price", {}).get("id", "")
-                detected = _plan_from_price_id(sub_price_id)
-                if detected:
-                    plan = detected
-                    # Sync plan in case of upgrade/downgrade
-                    if user.plan != plan:
-                        user.plan = plan
-                        plan_changed = True
-        except Exception as e:
-            logger.warning("Could not retrieve subscription to detect plan on invoice: %s", e)
-
-    billing_reason = invoice.get("billing_reason")
-    should_grant_allowance = billing_reason in _ALLOWANCE_INVOICE_REASONS
-    if not should_grant_allowance:
-        logger.info(
-            "Skipping monthly allowance grant for invoice %s with billing_reason=%s",
-            invoice_id,
-            billing_reason,
-        )
-
-    allowance = _credits_for_plan(plan) if should_grant_allowance else 0
-
-    # Idempotency: ensure we haven't granted for this invoice
-    existing = await db.scalar(
-        select(CreditLedger).where(
-            CreditLedger.ref_type == "stripe_invoice",
-            CreditLedger.ref_id == invoice_id,
-        )
+    # Already settled invoices stay idempotent even after Price configuration
+    # changes or a Stripe outage. Never repair old grants implicitly on replay.
+    reference = select(CreditLedger).where(
+        CreditLedger.user_id == user.id,
+        CreditLedger.ref_type == "stripe_invoice",
+        CreditLedger.ref_id == invoice_id,
     )
-    if not existing and allowance > 0:
-        try:
+    existing = await db.scalar(reference)
+    if existing:
+        await db.commit()
+        return {"received": True}
+
+    try:
+        plan = await _invoice_allowance_plan(invoice)
+        allowance = _credits_for_plan(plan)
+        if allowance <= 0:
+            raise ValueError("Invoice plan allowance is not configured")
+    except Exception as exc:
+        await db.rollback()
+        logger.error("Cannot resolve allowance for invoice %s: %s", invoice_id, exc)
+        raise HTTPException(503, "Invoice allowance temporarily unresolved") from exc
+
+    try:
+        # Complete any Stripe pagination before locking; then serialize and
+        # recheck. No document is touched, preserving document-before-user order.
+        locked_user = await db.scalar(
+            select(User).where(
+                User.id == user.id,
+                User.stripe_customer_id == customer_id,
+            ).with_for_update(of=User).execution_options(populate_existing=True)
+        )
+        if not locked_user:
+            await db.rollback()
+            return {"received": True}
+        if not await db.scalar(reference):
+            # Checkout/subscription events own current entitlements. An old paid
+            # invoice must not revert the current plan or revive a cancelled one.
             await credit_credits(
                 db,
-                user_id=user.id,
+                user_id=locked_user.id,
                 amount=allowance,
                 reason="monthly_allowance",
                 ref_type="stripe_invoice",
                 ref_id=invoice_id,
             )
-            await db.commit()
-        except Exception as e:
-            await db.rollback()
-            logger.error("Failed to grant monthly credits on invoice: %s", e)
-            raise HTTPException(500, "Database error")
-    else:
         await db.commit()
-    if plan_changed:
-        await _invalidate_user_caches(user.id)
+    except Exception as e:
+        await db.rollback()
+        logger.error("Failed to grant monthly credits on invoice: %s", e)
+        raise HTTPException(500, "Database error") from e
     return {"received": True}
 
 
