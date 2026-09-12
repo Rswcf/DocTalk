@@ -11,6 +11,7 @@ import ChatArtifactCard from './ChatArtifactCard';
 import { highlightCode } from '../../lib/highlight';
 import { CopyButton } from '../spell';
 import { trackEvent } from '../../lib/analytics';
+import { insertCitationMarkers, uniqueCitationIndexes } from '../../lib/citationText';
 
 const ReactMarkdown = React.lazy(() => import('react-markdown'));
 
@@ -31,17 +32,6 @@ interface MessageBubbleProps {
    * Undefined on surfaces that don't wire a panel (e.g. collection chat),
    * in which case the chip simply never renders. */
   onTryQuoteFinder?: (topic: string) => void;
-}
-
-function insertCitationMarkers(text: string, citations: Citation[]): string {
-  if (!citations || citations.length === 0) return text;
-  const sorted = [...citations].sort((a, b) => b.offset - a.offset);
-  let result = text;
-  for (const c of sorted) {
-    const idx = Math.max(0, Math.min(result.length, c.offset));
-    result = result.slice(0, idx) + `[${c.refIndex}]` + result.slice(idx);
-  }
-  return result;
 }
 
 function processCitationLinks(
@@ -219,6 +209,7 @@ function MessageBubble({
   const isError = !!message.isError;
   const isAssistant = !isUser;
   const { t, tOr } = useLocale();
+  const displayCitations = useMemo(() => uniqueCitationIndexes(message.citations || []), [message.citations]);
 
   const [copied, setCopied] = useState(false);
   const [feedback, setFeedback] = useState<Feedback>(null);
@@ -230,7 +221,7 @@ function MessageBubble({
   }, [message.id, isAssistant]);
 
   const handleCopy = useCallback(() => {
-    navigator.clipboard.writeText(message.text)
+    navigator.clipboard.writeText(isUser || isError ? message.text : insertCitationMarkers(message.text, displayCitations))
       .then(() => {
         setCopied(true);
         setTimeout(() => setCopied(false), 2000);
@@ -240,7 +231,7 @@ function MessageBubble({
         // "didn't work" cue is the absence of the copied state — no toast
         // needed. Swallowing prevents an unhandled promise rejection.
       });
-  }, [message.text]);
+  }, [message.text, displayCitations, isUser, isError]);
 
   const handleFeedback = useCallback((fb: Feedback) => {
     const newFb = feedback === fb ? null : fb;
@@ -257,11 +248,11 @@ function MessageBubble({
 
   const markdownText = useMemo(() => {
     if (isUser || isError) return message.text;
-    return insertCitationMarkers(message.text, message.citations || []);
-  }, [message.text, message.citations, isUser, isError]);
+    return insertCitationMarkers(message.text, displayCitations);
+  }, [message.text, displayCitations, isUser, isError]);
 
   const markdownComponents = useMemo(() => {
-    const citations = message.citations || [];
+    const citations = displayCitations;
     const components: Record<string, any> = {
       pre: PreBlock,
     };
@@ -272,7 +263,7 @@ function MessageBubble({
       }
     }
     return components;
-  }, [message.citations, onCitationClick, t]);
+  }, [displayCitations, onCitationClick, t]);
 
   return (
     <div className={`w-full flex ${isUser ? 'justify-end' : 'justify-start'} ${isUser ? 'my-4' : 'my-6'} group`}>
@@ -307,7 +298,7 @@ function MessageBubble({
                   doesn't flicker into existence mid-answer. */}
               {isAssistant && (
                 <SourcesStrip
-                  citations={message.citations ?? []}
+                  citations={displayCitations}
                   onCitationClick={onCitationClick}
                   isStreaming={isStreaming}
                 />

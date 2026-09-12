@@ -10,7 +10,10 @@ export function renumberCitations(citations: Citation[]): Citation[] {
     (citation, index, all) => all.findIndex((item) => item.refIndex === citation.refIndex) === index,
   );
 
-  const sorted = [...unique].sort((a, b) => a.offset - b.offset);
+  // Legacy [n] markers are part of the text; changing only their metadata
+  // would leave those markers pointing at a different reference.
+  if (citations.some((citation) => !Number.isInteger(citation.offset))) return citations;
+  const sorted = [...unique].sort((a, b) => (a.offset ?? 0) - (b.offset ?? 0));
   const refMap = new Map<number, number>();
   sorted.forEach((citation, index) => refMap.set(citation.refIndex, index + 1));
 

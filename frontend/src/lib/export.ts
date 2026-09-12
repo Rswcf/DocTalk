@@ -1,7 +1,8 @@
 import type { Message, Citation } from '../types';
 import { sanitizeFilename } from './utils';
+import { citationSourceKey, insertCitationMarkers } from './citationText';
 
-export function exportConversationAsMarkdown(messages: Message[], documentName: string): void {
+export function renderConversationAsMarkdown(messages: Message[], documentName: string): string {
   const lines: string[] = [];
   lines.push(`# ${documentName || 'Document'} — Chat Export`);
   lines.push('');
@@ -10,8 +11,7 @@ export function exportConversationAsMarkdown(messages: Message[], documentName: 
   lines.push('---');
   lines.push('');
 
-  const footnotes: Map<string, { page: number; text: string }> = new Map();
-  let footnoteCounter = 0;
+  const footnotes: Citation[] = [];
 
   for (const msg of messages) {
     if (msg.role === 'user') {
@@ -21,35 +21,17 @@ export function exportConversationAsMarkdown(messages: Message[], documentName: 
     } else {
       lines.push(`**DocTalk:**`);
       lines.push('');
-      let text = msg.text;
-
-      // Process citations into footnotes
-      if (msg.citations && msg.citations.length > 0) {
-        // Build a map of refIndex to citation
-        const citationMap = new Map<number, Citation>();
-        for (const c of msg.citations) {
-          if (!citationMap.has(c.refIndex)) {
-            citationMap.set(c.refIndex, c);
-          }
+      // Ref numbers restart for each answer; retain its source identity as well
+      // because a continued answer may reuse a number for a different source.
+      const sourceIds = new Map<string, number>();
+      const text = insertCitationMarkers(msg.text, msg.citations || [], (citation) => {
+        const key = citationSourceKey(citation);
+        if (!sourceIds.has(key)) {
+          footnotes.push(citation);
+          sourceIds.set(key, footnotes.length);
         }
-
-        // Replace [n] with markdown footnote references
-        text = text.replace(/\[(\d+)\]/g, (_match, num) => {
-          const refIdx = parseInt(num, 10);
-          const citation = citationMap.get(refIdx);
-          if (citation) {
-            footnoteCounter++;
-            const key = `fn-${footnoteCounter}`;
-            footnotes.set(key, {
-              page: citation.page,
-              text: citation.textSnippet || '',
-            });
-            return `[^${footnoteCounter}]`;
-          }
-          return `[${num}]`;
-        });
-      }
-
+        return `[^${sourceIds.get(key)}]`;
+      });
       lines.push(text);
     }
     lines.push('');
@@ -58,18 +40,23 @@ export function exportConversationAsMarkdown(messages: Message[], documentName: 
   }
 
   // Add footnotes
-  if (footnotes.size > 0) {
+  if (footnotes.length > 0) {
     lines.push('## References');
     lines.push('');
-    const entries = Array.from(footnotes.values());
-    entries.forEach((fn, idx) => {
-      const snippet = fn.text ? ` — "${fn.text}"` : '';
-      lines.push(`[^${idx + 1}]: Page ${fn.page}${snippet}`);
+    footnotes.forEach((fn, idx) => {
+      const snippet = fn.textSnippet ? ` — "${fn.textSnippet}"` : '';
+      const location = fn.pageEnd && fn.pageEnd > fn.page ? `Pages ${fn.page}–${fn.pageEnd}` : `Page ${fn.page}`;
+      const document = fn.documentFilename ? `, ${fn.documentFilename}` : '';
+      lines.push(`[^${idx + 1}]: ${location}${document}${snippet}`);
     });
     lines.push('');
   }
 
-  const content = lines.join('\n');
+  return lines.join('\n');
+}
+
+export function exportConversationAsMarkdown(messages: Message[], documentName: string): void {
+  const content = renderConversationAsMarkdown(messages, documentName);
   const blob = new Blob([content], { type: 'text/markdown;charset=utf-8' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');

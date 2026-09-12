@@ -17,7 +17,7 @@ export interface Citation {
   bboxes: NormalizedBBox[];
   textSnippet: string;
   focusSnippet?: string; // verbatim supporting sentence for precise highlight
-  offset: number; // character offset in assistant message text
+  offset?: number | null; // Python Unicode codepoint offset; absent on legacy textual markers
   documentId?: string; // for cross-document citations
   documentFilename?: string; // source document name
   confidenceScore?: number; // Qdrant similarity score 0.0-1.0

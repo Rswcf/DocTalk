@@ -1,0 +1,386 @@
+[
+  {
+    "name": "stored multi-turn citations restart local indexes",
+    "messages": [
+      {
+        "role": "user",
+        "content": "Keep [1] literal",
+        "citations": []
+      },
+      {
+        "role": "assistant",
+        "content": "A 42.",
+        "citations": [
+          {
+            "ref_index": 1,
+            "offset": 5,
+            "page": 1,
+            "chunk_id": "alpha",
+            "document_filename": "alpha.pdf",
+            "text_snippet": "42"
+          }
+        ]
+      },
+      {
+        "role": "assistant",
+        "content": "B 84.",
+        "citations": [
+          {
+            "ref_index": 1,
+            "offset": 5,
+            "page": 2,
+            "chunk_id": "beta",
+            "document_filename": "beta.pdf",
+            "text_snippet": "84"
+          }
+        ]
+      }
+    ],
+    "answers": [
+      "Keep [1] literal",
+      "A 42.[^1]",
+      "B 84.[^2]"
+    ],
+    "sources": [
+      "alpha.pdf",
+      "beta.pdf"
+    ]
+  },
+  {
+    "name": "Unicode offsets count codepoints",
+    "messages": [
+      {
+        "role": "assistant",
+        "content": "😀预算。 More",
+        "citations": [
+          {
+            "ref_index": 1,
+            "offset": 4,
+            "page": 1,
+            "document_filename": "中文.pdf",
+            "text_snippet": "预算"
+          }
+        ]
+      }
+    ],
+    "answers": [
+      "😀预算。[^1] More"
+    ],
+    "sources": [
+      "中文.pdf"
+    ]
+  },
+  {
+    "name": "same source repeated and duplicate deliveries",
+    "messages": [
+      {
+        "role": "assistant",
+        "content": "Alpha. Beta.",
+        "citations": [
+          {
+            "ref_index": 1,
+            "offset": 6,
+            "page": 1,
+            "document_filename": "repeat.pdf",
+            "text_snippet": "Both"
+          },
+          {
+            "ref_index": 1,
+            "offset": 6,
+            "page": 1,
+            "document_filename": "repeat.pdf",
+            "text_snippet": "Both"
+          },
+          {
+            "ref_index": 1,
+            "offset": 12,
+            "page": 1,
+            "document_filename": "repeat.pdf",
+            "text_snippet": "Both"
+          }
+        ]
+      }
+    ],
+    "answers": [
+      "Alpha.[^1] Beta.[^1]"
+    ],
+    "sources": [
+      "repeat.pdf"
+    ]
+  },
+  {
+    "name": "continued answer reuses index across sources",
+    "messages": [
+      {
+        "role": "assistant",
+        "content": "A. B.",
+        "citations": [
+          {
+            "ref_index": 1,
+            "offset": 2,
+            "page": 1,
+            "document_filename": "a.pdf",
+            "text_snippet": "A"
+          },
+          {
+            "ref_index": 1,
+            "offset": 5,
+            "page": 2,
+            "document_filename": "b.pdf",
+            "text_snippet": "B"
+          }
+        ]
+      }
+    ],
+    "answers": [
+      "A.[^1] B.[^2]"
+    ],
+    "sources": [
+      "a.pdf",
+      "b.pdf"
+    ]
+  },
+  {
+    "name": "multiple sources at one offset retain order",
+    "messages": [
+      {
+        "role": "assistant",
+        "content": "Both.",
+        "citations": [
+          {
+            "ref_index": 2,
+            "offset": 5,
+            "page": 1,
+            "document_filename": "first.pdf",
+            "text_snippet": "A"
+          },
+          {
+            "ref_index": 1,
+            "offset": 5,
+            "page": 2,
+            "page_end": 3,
+            "document_filename": "second.pdf",
+            "text_snippet": "B"
+          }
+        ]
+      }
+    ],
+    "answers": [
+      "Both.[^1][^2]"
+    ],
+    "sources": [
+      "first.pdf",
+      "second.pdf"
+    ]
+  },
+  {
+    "name": "legacy markers preserve code links and escaped text",
+    "messages": [
+      {
+        "role": "assistant",
+        "content": "`list[1]` [1](https://example.com) \\[1] [7] Claim.[1]\n```js\nlist[1]\n```",
+        "citations": [
+          {
+            "ref_index": 1,
+            "page": 3,
+            "document_filename": "legacy.pdf",
+            "text_snippet": "Claim"
+          }
+        ]
+      }
+    ],
+    "answers": [
+      "`list[1]` [1](https://example.com) \\[1] [7] Claim.[^1]\n```js\nlist[1]\n```"
+    ],
+    "sources": [
+      "legacy.pdf"
+    ]
+  },
+  {
+    "name": "invalid offsets do not invent locations",
+    "messages": [
+      {
+        "role": "assistant",
+        "content": "Nothing [1].",
+        "citations": [
+          {
+            "ref_index": 1,
+            "offset": 999,
+            "page": 1
+          },
+          {
+            "ref_index": 2,
+            "offset": -1,
+            "page": 2
+          },
+          {
+            "ref_index": 3,
+            "offset": null,
+            "page": 3
+          },
+          {
+            "ref_index": true,
+            "offset": 0,
+            "page": 4
+          }
+        ]
+      }
+    ],
+    "answers": [
+      "Nothing [1]."
+    ],
+    "sources": []
+  },
+  {
+    "name": "structured offsets leave ordinary bracketed text alone",
+    "messages": [
+      {
+        "role": "assistant",
+        "content": "Use [1] and `items[1]`.",
+        "citations": [
+          {
+            "ref_index": 1,
+            "offset": 3,
+            "page": 1,
+            "document_filename": "code.pdf",
+            "text_snippet": "Use"
+          }
+        ]
+      }
+    ],
+    "answers": [
+      "Use[^1] [1] and `items[1]`."
+    ],
+    "sources": [
+      "code.pdf"
+    ]
+  },
+  {
+    "name": "legacy indented long fenced inline and unclosed code remains literal",
+    "messages": [
+      {
+        "role": "assistant",
+        "content": "First.",
+        "citations": [
+          {
+            "ref_index": 1,
+            "offset": 6,
+            "page": 1,
+            "document_filename": "first.pdf"
+          }
+        ]
+      },
+      {
+        "role": "assistant",
+        "content": "Claim.[1]\n\n    array[1]\n\tarray[1]\n\n````js\narray[1]\n```\narray[1]\n````\n\n``code ` array[1]``\n\n~~~js\narray[1]",
+        "citations": [
+          {
+            "ref_index": 1,
+            "page": 2,
+            "document_filename": "legacy-code.pdf"
+          }
+        ]
+      }
+    ],
+    "answers": [
+      "First.[^1]",
+      "Claim.[^2]\n\n    array[1]\n\tarray[1]\n\n````js\narray[1]\n```\narray[1]\n````\n\n``code ` array[1]``\n\n~~~js\narray[1]"
+    ],
+    "sources": [
+      "first.pdf",
+      "legacy-code.pdf"
+    ]
+  },
+  {
+    "name": "legacy loader preserves nonconsecutive textual indexes",
+    "messages": [
+      {
+        "role": "assistant",
+        "content": "Claim.[7]",
+        "citations": [
+          {
+            "ref_index": 7,
+            "page": 7,
+            "document_filename": "seventh.pdf"
+          }
+        ]
+      }
+    ],
+    "answers": [
+      "Claim.[^1]"
+    ],
+    "sources": [
+      "seventh.pdf"
+    ]
+  },
+  {
+    "name": "quoted and list fenced code",
+    "messages": [
+      {
+        "role": "assistant",
+        "content": "Claim.[7]\n> ~~~\n> array[7]\n> ~~~\n\n- ```\n  array[7]\n  ```",
+        "citations": [
+          {
+            "ref_index": 7,
+            "page": 7,
+            "document_filename": "legacy.pdf"
+          }
+        ]
+      }
+    ],
+    "answers": [
+      "Claim.[^1]\n> ~~~\n> array[7]\n> ~~~\n\n- ```\n  array[7]\n  ```"
+    ],
+    "sources": [
+      "legacy.pdf"
+    ]
+  },
+  {
+    "name": "reference links and definitions",
+    "messages": [
+      {
+        "role": "assistant",
+        "content": "[example][7]\n\n[7]: https://example.com\n\n[7]",
+        "citations": [
+          {
+            "ref_index": 7,
+            "page": 7,
+            "document_filename": "legacy.pdf"
+          }
+        ]
+      }
+    ],
+    "answers": [
+      "[example][7]\n\n[7]: https://example.com\n\n[7]"
+    ],
+    "sources": []
+  },
+  {
+    "name": "adjacent legacy citations are not undefined reference links",
+    "messages": [
+      {
+        "role": "assistant",
+        "content": "Both.[1][2]",
+        "citations": [
+          {
+            "ref_index": 1,
+            "page": 1,
+            "document_filename": "one.pdf"
+          },
+          {
+            "ref_index": 2,
+            "page": 2,
+            "document_filename": "two.pdf"
+          }
+        ]
+      }
+    ],
+    "answers": [
+      "Both.[^1][^2]"
+    ],
+    "sources": [
+      "one.pdf",
+      "two.pdf"
+    ]
+  }
+]
