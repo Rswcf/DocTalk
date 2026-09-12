@@ -333,44 +333,47 @@ def _call_llm(
         {"role": "system", "content": _system_prompt(template, domain_mode)},
         {"role": "user", "content": _user_prompt(template, chunks, locale)},
     ]
-    kwargs: dict[str, Any] = {
-        "model": EXTRACTION_MODEL,
-        "messages": messages,
-        "temperature": 0.1,
-        "max_tokens": 1800,
-    }
-    _apply_provider_options(kwargs, EXTRACTION_MODEL)
-    response = client.chat.completions.create(**kwargs)
-    content = response.choices[0].message.content or ""
-    usage = getattr(response, "usage", None)
-    prompt_tokens = int(getattr(usage, "prompt_tokens", 0) or 0)
-    completion_tokens = int(getattr(usage, "completion_tokens", 0) or 0)
-    try:
-        return _json_from_text(content), prompt_tokens, completion_tokens
-    except Exception:
-        repair_messages = [
-            {
-                "role": "system",
-                "content": "Repair the following model output into valid JSON only. Do not add commentary.",
-            },
-            {
-                "role": "user",
-                "content": f"Required contract:\n{template.json_contract}\n\nOutput:\n{content}",
-            },
-        ]
-        repair_kwargs: dict[str, Any] = {
+    # Keep the entire object within a bounded response. A repair that only sees
+    # a truncated object can invent the missing facts; regenerate from the same
+    # source excerpts instead, once, with a smaller result.
+    prompt_tokens = completion_tokens = 0
+    for attempt in range(2):
+        bound = (
+            "Return at most 12 facts or evidence items, 6 key points and 3 risks. "
+            "Keep each field concise (at most 40 words), and the summary under 160 words."
+            if attempt == 0 else
+            "The previous response was incomplete or invalid. Generate a fresh, complete JSON object "
+            "from the document excerpts above. Return at most 6 facts or evidence items, "
+            "4 key points and 2 risks; keep fields under 25 words and the summary under 100 words."
+        )
+        kwargs: dict[str, Any] = {
             "model": EXTRACTION_MODEL,
-            "messages": repair_messages,
-            "temperature": 0,
-            "max_tokens": 1800,
+            "messages": [*messages, {"role": "user", "content": bound}],
+            "temperature": 0.1 if attempt == 0 else 0,
+            "max_tokens": 4096,
         }
-        _apply_provider_options(repair_kwargs, EXTRACTION_MODEL)
-        repaired = client.chat.completions.create(**repair_kwargs)
-        repaired_content = repaired.choices[0].message.content or ""
-        repair_usage = getattr(repaired, "usage", None)
-        prompt_tokens += int(getattr(repair_usage, "prompt_tokens", 0) or 0)
-        completion_tokens += int(getattr(repair_usage, "completion_tokens", 0) or 0)
-        return _json_from_text(repaired_content), prompt_tokens, completion_tokens
+        _apply_provider_options(kwargs, EXTRACTION_MODEL)
+        if _is_deepseek_official_model(EXTRACTION_MODEL):
+            kwargs["response_format"] = {"type": "json_object"}
+        response = client.chat.completions.create(**kwargs)
+        choice = response.choices[0]
+        content = choice.message.content or ""
+        finish_reason = getattr(choice, "finish_reason", None)
+        usage = getattr(response, "usage", None)
+        prompt_tokens += int(getattr(usage, "prompt_tokens", 0) or 0)
+        completion_tokens += int(getattr(usage, "completion_tokens", 0) or 0)
+        logger.info(
+            "extraction.output template=%s attempt=%d finish_reason=%s chars=%d",
+            template.key, attempt + 1, finish_reason, len(content),
+        )
+        try:
+            if finish_reason == "length":
+                raise ValueError("Extraction output exceeded the response limit")
+            return _json_from_text(content), prompt_tokens, completion_tokens
+        except (ValueError, TypeError):
+            if attempt == 1:
+                raise
+    raise RuntimeError("Extraction produced no complete result")
 
 
 def _refs(value: Any, max_ref: int) -> list[int]:

@@ -195,3 +195,37 @@ def test_citation_from_chunk_retains_full_range_despite_majority_boxes() -> None
     assert citation["text_snippet"].startswith("Risk Factors:")
     assert citation["page_end"] == 5
     assert [bbox["page"] for bbox in citation["bboxes"]] == [4, 5, 5]
+
+
+@pytest.mark.parametrize('first,finish', [('{"facts": [', 'length'), ('{bad json', 'stop'), ('', 'stop'), ('{"facts": []}', 'length')])
+def test_incomplete_extraction_regenerates_from_sources_once(monkeypatch, first, finish):
+    from types import SimpleNamespace
+
+    from app.services import extraction_service as service
+
+    def response(content, reason):
+        return SimpleNamespace(choices=[SimpleNamespace(message=SimpleNamespace(content=content), finish_reason=reason)], usage=SimpleNamespace(prompt_tokens=100, completion_tokens=20))
+
+    create = MagicMock(side_effect=[response(first, finish), response('{"facts": []}', 'stop')])
+    monkeypatch.setattr(service, '_get_llm_client', lambda _: SimpleNamespace(chat=SimpleNamespace(completions=SimpleNamespace(create=create))))
+    monkeypatch.setattr(service, '_is_deepseek_official_model', lambda _: True)
+    monkeypatch.setattr(service, '_user_prompt', lambda *_: 'Document excerpts: audited source 99 dollars')
+    result, prompt, completion = service._call_llm(TEMPLATES['key_facts'], [], 'en', None)
+    assert result == {'facts': []}
+    assert (prompt, completion) == (200, 40)
+    assert create.call_count == 2
+    retry = create.call_args.kwargs
+    assert retry['response_format'] == {'type': 'json_object'}
+    assert any('audited source 99 dollars' in m['content'] for m in retry['messages'])
+    assert all(m['content'] != first for m in retry['messages'])
+
+
+def test_extraction_stops_after_two_incomplete_responses(monkeypatch):
+    from types import SimpleNamespace
+
+    from app.services import extraction_service as service
+    create = MagicMock(return_value=SimpleNamespace(choices=[SimpleNamespace(message=SimpleNamespace(content='{}'), finish_reason='length')], usage=None))
+    monkeypatch.setattr(service, '_get_llm_client', lambda _: SimpleNamespace(chat=SimpleNamespace(completions=SimpleNamespace(create=create))))
+    with pytest.raises(ValueError, match='response limit'):
+        service._call_llm(TEMPLATES['key_facts'], [], 'en', None)
+    assert create.call_count == 2

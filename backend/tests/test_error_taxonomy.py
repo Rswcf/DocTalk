@@ -1532,3 +1532,35 @@ async def test_upload_unknown_valueerror_returns_server_error(
     )
     _assert_error(response, 500, "SERVER_ERROR")
     assert "VERY_SECRET_DETAIL" not in response.text
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize('data', [b'', b' \n\t', b'\xef\xbb\xbf \n'])
+@pytest.mark.parametrize('extension', ['txt', 'md'])
+async def test_empty_text_upload_rejected_before_storage_and_slot(
+    client: AsyncClient, monkeypatch: pytest.MonkeyPatch, data: bytes, extension: str,
+) -> None:
+    db = _make_db(scalar=AsyncMock(return_value=0))
+    _override_dependencies(db, auth_user=_make_user(plan='free'))
+    create_document = AsyncMock()
+    monkeypatch.setattr(documents_api.doc_service, 'create_document', create_document)
+    def count_pages(data, file_type):
+        assert file_type == extension
+        return real_count_document_pages(data, file_type)
+    monkeypatch.setattr(documents_api, 'count_document_pages', count_pages)
+    content_type = 'text/markdown' if extension == 'md' else 'text/plain'
+    response = await client.post('/api/documents/upload', files={'file': (f'empty.{extension}', data, content_type)})
+    _assert_error(response, 400, 'NO_CHUNKS')
+    create_document.assert_not_awaited()
+    db.commit.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+async def test_ingest_empty_html_snapshot_has_actionable_error(client, monkeypatch):
+    db = _make_db(scalar=AsyncMock(return_value=0))
+    _override_dependencies(db, auth_user=_make_user(plan='free'))
+    monkeypatch.setattr(url_validator, 'validate_url', lambda url: url)
+    monkeypatch.setattr(url_extractor, 'fetch_and_extract_url', lambda *_a, **_k: ('Empty page', [], None))
+    response = await client.post('/api/documents/ingest-url', json={'url': 'https://example.com'})
+    _assert_error(response, 400, 'NO_TEXT_CONTENT')
+    db.commit.assert_not_awaited()

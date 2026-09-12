@@ -798,6 +798,7 @@ def parse_document(self, document_id: str, locale: str | None = None) -> None:
 
                 # All done — record parse-pipeline metadata (R2b) for observability + backfill.
                 doc.status = "ready"
+                doc.error_msg = None
                 doc.parse_version = PARSE_PIPELINE_VERSION
                 doc.parse_method = parse_method
                 try:

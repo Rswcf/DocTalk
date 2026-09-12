@@ -995,3 +995,27 @@ class TestPersistFailurePaths:
         assert doc.status == "error"
         assert doc.error_msg.startswith("ERR_CODE:VECTORIZE_FAILED:")
         assert fresh_sessions, "error status must be written on a fresh session"
+
+
+def test_successful_reparse_clears_old_error(monkeypatch):
+    from sqlalchemy.sql import Select
+    doc = _make_doc(uuid.uuid4())
+    doc.error_msg = 'ERR_CODE:VECTORIZE_FAILED|old failure'
+    chunk = SimpleNamespace(id=uuid.uuid4(), text='source text', chunk_index=0, page_start=1)
+
+    class SuccessfulSession(_RecordingSession):
+        def execute(self, stmt, params=None):
+            super().execute(stmt, params)
+            if isinstance(stmt, Select):
+                return SimpleNamespace(all=lambda: [chunk])
+            return None
+
+    session = SuccessfulSession(doc)
+    _wire_minimal_pdf_parse(monkeypatch, lambda: session)
+    monkeypatch.setattr(parse_worker.embedding_service, 'embed_texts', lambda _: [[0.1, 0.2]])
+    monkeypatch.setattr(parse_worker.embedding_service, 'get_qdrant_client', lambda: SimpleNamespace(delete=lambda **_: None, upsert=lambda **_: None))
+    monkeypatch.setattr(parse_worker, '_queue_document_brief', lambda _: None)
+    parse_worker.parse_document.run(str(doc.id))
+    assert doc.status == 'ready'
+    assert doc.error_msg is None
+    assert doc.chunks_indexed == 1

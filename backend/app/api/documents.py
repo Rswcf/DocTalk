@@ -76,6 +76,10 @@ URL_BLOCKED_REASONS = {
     "TOO_MANY_REDIRECTS",
 }
 _UPLOAD_VALUE_ERROR_MAP: dict[str, dict[str, object]] = {
+    "NO_CHUNKS": {
+        "error": "NO_CHUNKS",
+        "message": "No text content could be extracted. Upload a document with readable text.",
+    },
     "UNSUPPORTED_FORMAT": {
         "error": "UNSUPPORTED_FORMAT",
         "message": "Unsupported file format",
@@ -496,6 +500,11 @@ async def ingest_url(
         # URL returned HTML: store a structured Markdown snapshot and process
         # it through the URL text pipeline.
         text_content = '\n\n'.join(p.text for p in pages)
+        if not text_content.strip():
+            raise HTTPException(
+                status_code=400,
+                detail={"error": "NO_TEXT_CONTENT", "message": "No readable text was found on this page"},
+            )
         text_bytes = text_content.encode('utf-8')
         # Count the stored Markdown through the same extractor the worker will
         # use; the fetcher's article-section pages are not necessarily the

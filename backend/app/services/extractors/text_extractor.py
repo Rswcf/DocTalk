@@ -10,10 +10,10 @@ def extract_text(file_bytes: bytes, file_type: str = 'txt') -> List[ExtractedPag
 
     For MD files, headings (lines starting with #) become section_titles.
     """
-    text = file_bytes.decode('utf-8', errors='replace')
+    text = file_bytes.decode('utf-8-sig', errors='replace')
 
     if not text.strip():
-        return [ExtractedPage(page_number=1, text='(empty file)')]
+        return []
 
     pages: List[ExtractedPage] = []
     current_text: List[str] = []

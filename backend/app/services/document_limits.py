@@ -111,4 +111,7 @@ def count_document_pages(file_bytes: bytes, file_type: str) -> int:
 
     from app.services.extractors import extract_document
 
-    return len(extract_document(file_bytes, file_type))
+    page_count = len(extract_document(file_bytes, file_type))
+    if page_count == 0:
+        raise ValueError("NO_CHUNKS")
+    return page_count
