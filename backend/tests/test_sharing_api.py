@@ -91,7 +91,7 @@ async def test_shared_view_returns_safe_message_anchor_without_private_citation_
             _Result(first=("contract.pdf",)),
         ]
     )
-    db = SimpleNamespace(execute=execute)
+    db = SimpleNamespace(execute=execute, scalar=AsyncMock(return_value=None))
 
     async def _get_db():
         yield db

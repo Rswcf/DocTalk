@@ -3819,5 +3819,14 @@
   "quoteFinder.noteSaveError": "Échec de l'enregistrement de la note",
   "quoteFinder.delete": "Supprimer",
   "quoteFinder.copyText": "Copier la citation",
-  "quoteFinder.capIndicator": "{count} sur {limit} enregistrées"
+  "quoteFinder.capIndicator": "{count} sur {limit} enregistrées",
+  "share.answerNotice": "Toute personne disposant du lien peut lire cette réponse, le nom du document et les extraits cités ci-dessous. Les autres messages sont exclus. Le lien conserve cette version jusqu’à sa révocation.",
+  "share.answerPreview": "Aperçu public",
+  "share.copyAnswerLink": "Copier le lien de la réponse",
+  "share.revokeAnswer": "Révoquer tous les liens de cette réponse",
+  "share.answerRevoked": "Tous les liens de cette réponse ont été révoqués.",
+  "share.copyManually": "Lien créé. Sélectionnez-le et copiez-le ci-dessous.",
+  "share.answerLink": "Lien de la réponse",
+  "errors.SHARE_CHANGED.title": "Réponse modifiée",
+  "errors.SHARE_CHANGED.body": "Rechargez l’aperçu avant de partager la réponse mise à jour."
 }

@@ -3819,5 +3819,14 @@
   "quoteFinder.noteSaveError": "メモの保存に失敗しました",
   "quoteFinder.delete": "削除",
   "quoteFinder.copyText": "引用をコピー",
-  "quoteFinder.capIndicator": "{count} / {limit} 件保存済み"
+  "quoteFinder.capIndicator": "{count} / {limit} 件保存済み",
+  "share.answerNotice": "リンクを知っている人は、以下の回答、文書名、引用箇所を閲覧できます。他のメッセージは公開されません。取り消すまで、この版が保存されます。",
+  "share.answerPreview": "公開内容のプレビュー",
+  "share.copyAnswerLink": "回答リンクをコピー",
+  "share.revokeAnswer": "この回答のリンクをすべて取り消す",
+  "share.answerRevoked": "この回答のリンクをすべて取り消しました。",
+  "share.copyManually": "リンクを作成しました。以下で選択してコピーしてください。",
+  "share.answerLink": "回答リンク",
+  "errors.SHARE_CHANGED.title": "回答が変更されました",
+  "errors.SHARE_CHANGED.body": "更新された回答を共有する前にプレビューを再読み込みしてください。"
 }

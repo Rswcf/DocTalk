@@ -670,6 +670,47 @@ export async function exportSession(sessionId: string, format: 'pdf' | 'docx'): 
 
 // --- Share API ---
 
+export interface AnswerSharePreview {
+  active_count: number;
+  snapshot_digest: string;
+  preview: {
+    scope: 'answer';
+    session_title: string;
+    document_name: string;
+    messages: Array<{
+      id: string;
+      role: 'assistant';
+      content: string;
+      citations: Array<{
+        ref_index: number;
+        page: number | null;
+        page_end: number | null;
+        text_snippet: string;
+        document_filename: string;
+      }>;
+    }>;
+  };
+}
+
+export async function getAnswerSharePreview(sessionId: string, messageId: string): Promise<AnswerSharePreview> {
+  const res = await fetch(`${PROXY_BASE}/api/sessions/${sessionId}/answers/${messageId}/share`, { cache: 'no-store' });
+  return handle(res);
+}
+
+export async function createAnswerShare(sessionId: string, messageId: string, snapshotDigest: string): Promise<{ share_token: string; url: string }> {
+  const res = await fetch(`${PROXY_BASE}/api/sessions/${sessionId}/answers/${messageId}/share`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ snapshot_digest: snapshotDigest }),
+  });
+  return handle(res);
+}
+
+export async function revokeAnswerShares(sessionId: string, messageId: string): Promise<void> {
+  const res = await fetch(`${PROXY_BASE}/api/sessions/${sessionId}/answers/${messageId}/share`, { method: 'DELETE' });
+  if (!res.ok) await throwApiError(res);
+}
+
 export async function createShare(sessionId: string): Promise<{ share_token: string; url: string }> {
   const res = await fetch(`${PROXY_BASE}/api/sessions/${sessionId}/share`, { method: 'POST' });
   return handle(res);

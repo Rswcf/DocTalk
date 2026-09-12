@@ -3821,5 +3821,14 @@
   "quoteFinder.biblioSave": "Save",
   "quoteFinder.biblioSaving": "Saving...",
   "quoteFinder.biblioSaveError": "Failed to save citation info",
-  "quoteFinder.chip.tryIt": "Try Quote Finder for a verified verbatim quote"
+  "quoteFinder.chip.tryIt": "Try Quote Finder for a verified verbatim quote",
+  "share.answerNotice": "Anyone with the link can read this answer, the document name, and the cited excerpts below. Other messages are excluded. The link keeps this version until you revoke it.",
+  "share.answerPreview": "Public preview",
+  "share.copyAnswerLink": "Copy answer link",
+  "share.revokeAnswer": "Revoke all links for this answer",
+  "share.answerRevoked": "All links for this answer have been revoked.",
+  "share.copyManually": "Link created. Select and copy it below.",
+  "share.answerLink": "Answer link",
+  "errors.SHARE_CHANGED.title": "Answer changed",
+  "errors.SHARE_CHANGED.body": "Reload the preview before sharing the updated answer."
 }

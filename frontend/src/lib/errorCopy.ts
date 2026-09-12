@@ -589,6 +589,11 @@ const CODE_TABLE: Record<string, Handler> = {
     cta: upgradeCta(tOr, 'share_limit', 'plus'),
     severity: 'warning',
   }),
+  SHARE_CHANGED: (_d, tOr) => ({
+    title: tOr('errors.SHARE_CHANGED.title', 'Answer changed'),
+    body: tOr('errors.SHARE_CHANGED.body', 'Reload the preview before sharing the updated answer.'),
+    severity: 'warning',
+  }),
   SHARE_EXPIRED: (_d, tOr) => ({
     title: tOr('errors.SHARE_EXPIRED.title', 'Share expired'),
     body: tOr('errors.SHARE_EXPIRED.body', 'This share link has expired.'),

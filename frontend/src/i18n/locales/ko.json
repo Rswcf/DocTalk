@@ -3819,5 +3819,14 @@
   "quoteFinder.noteSaveError": "메모를 저장하지 못했습니다",
   "quoteFinder.delete": "삭제",
   "quoteFinder.copyText": "인용문 복사",
-  "quoteFinder.capIndicator": "{count}/{limit}개 저장됨"
+  "quoteFinder.capIndicator": "{count}/{limit}개 저장됨",
+  "share.answerNotice": "링크가 있는 사람은 아래 답변, 문서 이름과 인용 발췌문을 볼 수 있습니다. 다른 메시지는 공개되지 않습니다. 취소할 때까지 이 버전이 유지됩니다.",
+  "share.answerPreview": "공개 내용 미리보기",
+  "share.copyAnswerLink": "답변 링크 복사",
+  "share.revokeAnswer": "이 답변의 모든 링크 취소",
+  "share.answerRevoked": "이 답변의 모든 링크가 취소되었습니다.",
+  "share.copyManually": "링크가 생성되었습니다. 아래에서 선택하여 복사하세요.",
+  "share.answerLink": "답변 링크",
+  "errors.SHARE_CHANGED.title": "답변이 변경되었습니다",
+  "errors.SHARE_CHANGED.body": "업데이트된 답변을 공유하기 전에 미리보기를 다시 불러오세요."
 }

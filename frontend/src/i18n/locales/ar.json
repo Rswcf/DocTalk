@@ -3819,5 +3819,14 @@
   "quoteFinder.noteSaveError": "فشل حفظ الملاحظة",
   "quoteFinder.delete": "حذف",
   "quoteFinder.copyText": "نسخ الاقتباس",
-  "quoteFinder.capIndicator": "تم حفظ {count} من {limit}"
+  "quoteFinder.capIndicator": "تم حفظ {count} من {limit}",
+  "share.answerNotice": "يمكن لأي شخص لديه الرابط قراءة هذه الإجابة واسم المستند والمقتطفات المستشهد بها أدناه. لا تُنشر الرسائل الأخرى. يحتفظ الرابط بهذه النسخة حتى تلغي مشاركتها.",
+  "share.answerPreview": "معاينة المحتوى العام",
+  "share.copyAnswerLink": "نسخ رابط الإجابة",
+  "share.revokeAnswer": "إلغاء جميع روابط هذه الإجابة",
+  "share.answerRevoked": "تم إلغاء جميع روابط هذه الإجابة.",
+  "share.copyManually": "تم إنشاء الرابط. حدده وانسخه أدناه.",
+  "share.answerLink": "رابط الإجابة",
+  "errors.SHARE_CHANGED.title": "تغيرت الإجابة",
+  "errors.SHARE_CHANGED.body": "أعد تحميل المعاينة قبل مشاركة الإجابة المحدثة."
 }

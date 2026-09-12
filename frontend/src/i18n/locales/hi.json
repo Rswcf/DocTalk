@@ -3819,5 +3819,14 @@
   "quoteFinder.noteSaveError": "टिप्पणी सहेजने में विफल",
   "quoteFinder.delete": "हटाएं",
   "quoteFinder.copyText": "उद्धरण कॉपी करें",
-  "quoteFinder.capIndicator": "{limit} में से {count} सहेजे गए"
+  "quoteFinder.capIndicator": "{limit} में से {count} सहेजे गए",
+  "share.answerNotice": "लिंक वाला कोई भी व्यक्ति नीचे दिया गया उत्तर, दस्तावेज़ का नाम और उद्धृत अंश पढ़ सकता है। अन्य संदेश शामिल नहीं हैं। रद्द किए जाने तक लिंक इसी संस्करण को दिखाएगा।",
+  "share.answerPreview": "सार्वजनिक पूर्वावलोकन",
+  "share.copyAnswerLink": "उत्तर का लिंक कॉपी करें",
+  "share.revokeAnswer": "इस उत्तर के सभी लिंक रद्द करें",
+  "share.answerRevoked": "इस उत्तर के सभी लिंक रद्द कर दिए गए हैं।",
+  "share.copyManually": "लिंक बन गया है। नीचे उसे चुनकर कॉपी करें।",
+  "share.answerLink": "उत्तर का लिंक",
+  "errors.SHARE_CHANGED.title": "उत्तर बदल गया है",
+  "errors.SHARE_CHANGED.body": "अपडेट किया गया उत्तर साझा करने से पहले पूर्वावलोकन फिर से लोड करें।"
 }

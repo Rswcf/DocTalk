@@ -3819,5 +3819,14 @@
   "quoteFinder.noteSaveError": "Salvataggio della nota non riuscito",
   "quoteFinder.delete": "Elimina",
   "quoteFinder.copyText": "Copia citazione",
-  "quoteFinder.capIndicator": "{count} di {limit} salvate"
+  "quoteFinder.capIndicator": "{count} di {limit} salvate",
+  "share.answerNotice": "Chiunque abbia il link può leggere questa risposta, il nome del documento e gli estratti citati qui sotto. Gli altri messaggi sono esclusi. Il link conserva questa versione fino alla revoca.",
+  "share.answerPreview": "Anteprima pubblica",
+  "share.copyAnswerLink": "Copia link della risposta",
+  "share.revokeAnswer": "Revoca tutti i link di questa risposta",
+  "share.answerRevoked": "Tutti i link di questa risposta sono stati revocati.",
+  "share.copyManually": "Link creato. Selezionalo e copialo qui sotto.",
+  "share.answerLink": "Link della risposta",
+  "errors.SHARE_CHANGED.title": "Risposta modificata",
+  "errors.SHARE_CHANGED.body": "Ricarica l’anteprima prima di condividere la risposta aggiornata."
 }

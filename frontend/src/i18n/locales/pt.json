@@ -3819,5 +3819,14 @@
   "quoteFinder.noteSaveError": "Falha ao salvar a nota",
   "quoteFinder.delete": "Excluir",
   "quoteFinder.copyText": "Copiar citação",
-  "quoteFinder.capIndicator": "{count} de {limit} salvas"
+  "quoteFinder.capIndicator": "{count} de {limit} salvas",
+  "share.answerNotice": "Qualquer pessoa com o link pode ler esta resposta, o nome do documento e os trechos citados abaixo. Outras mensagens são excluídas. O link mantém esta versão até ser revogado.",
+  "share.answerPreview": "Prévia pública",
+  "share.copyAnswerLink": "Copiar link da resposta",
+  "share.revokeAnswer": "Revogar todos os links desta resposta",
+  "share.answerRevoked": "Todos os links desta resposta foram revogados.",
+  "share.copyManually": "Link criado. Selecione e copie abaixo.",
+  "share.answerLink": "Link da resposta",
+  "errors.SHARE_CHANGED.title": "Resposta alterada",
+  "errors.SHARE_CHANGED.body": "Recarregue a prévia antes de compartilhar a resposta atualizada."
 }

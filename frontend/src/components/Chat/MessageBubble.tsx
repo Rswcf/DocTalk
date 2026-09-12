@@ -389,7 +389,7 @@ function MessageBubble({
             >
               <ThumbsDown size={14} fill={feedback === 'down' ? 'currentColor' : 'none'} />
             </button>
-            {message.shareAnchor && onShareAnswer && !isStreaming && (
+            {(isAnonShareAnswer ? message.shareAnchor : message.backendId) && onShareAnswer && !isStreaming && (
               <button
                 onClick={() => onShareAnswer(message)}
                 disabled={isSharingAnswer}

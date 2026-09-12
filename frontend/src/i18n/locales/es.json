@@ -3819,5 +3819,14 @@
   "quoteFinder.noteSaveError": "No se pudo guardar la nota",
   "quoteFinder.delete": "Eliminar",
   "quoteFinder.copyText": "Copiar cita",
-  "quoteFinder.capIndicator": "{count} de {limit} guardadas"
+  "quoteFinder.capIndicator": "{count} de {limit} guardadas",
+  "share.answerNotice": "Cualquiera con el enlace puede leer esta respuesta, el nombre del documento y los fragmentos citados a continuación. Se excluyen los demás mensajes. El enlace conserva esta versión hasta que lo revoques.",
+  "share.answerPreview": "Vista previa pública",
+  "share.copyAnswerLink": "Copiar enlace de respuesta",
+  "share.revokeAnswer": "Revocar todos los enlaces de esta respuesta",
+  "share.answerRevoked": "Se han revocado todos los enlaces de esta respuesta.",
+  "share.copyManually": "Enlace creado. Selecciónalo y cópialo a continuación.",
+  "share.answerLink": "Enlace de respuesta",
+  "errors.SHARE_CHANGED.title": "La respuesta ha cambiado",
+  "errors.SHARE_CHANGED.body": "Recarga la vista previa antes de compartir la respuesta actualizada."
 }

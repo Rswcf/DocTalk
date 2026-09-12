@@ -11,7 +11,9 @@ const ADAPTER_SECRET = process.env.ADAPTER_SECRET;
 
 interface SharedCitation {
   text_snippet: string;
-  page: number;
+  ref_index?: number;
+  page: number | null;
+  page_end?: number | null;
   document_filename: string;
 }
 
@@ -91,7 +93,8 @@ export default async function SharedPage({ params }: { params: Promise<{ token: 
               <div
                 className="ed-card"
                 style={{
-                  maxWidth: '85%',
+                  maxWidth: data.scope === 'answer' ? '100%' : '85%',
+                  overflowWrap: 'anywhere',
                   ...(msg.role === 'user'
                     ? { background: 'var(--ed-ink)', color: '#ffffff', border: '1px solid var(--ed-ink)' }
                     : {}),
@@ -114,7 +117,7 @@ export default async function SharedPage({ params }: { params: Promise<{ token: 
                           color: 'var(--ed-ink-2)',
                         }}
                       >
-                        p. {c.page}{c.document_filename ? ` — ${c.document_filename}` : ''}: &ldquo;{c.text_snippet}&rdquo;
+                        {c.ref_index ? `[${c.ref_index}] ` : ''}{c.page != null ? `p. ${c.page}${c.page_end && c.page_end !== c.page ? `–${c.page_end}` : ''}` : ''}{c.document_filename ? ` — ${c.document_filename}` : ''}: &ldquo;{c.text_snippet}&rdquo;
                       </div>
                     ))}
                   </div>

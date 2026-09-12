@@ -732,6 +732,53 @@ class SharedSession(Base):
     )
 
 
+class AnswerShare(Base):
+    __tablename__ = "answer_shares"
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        primary_key=True,
+        server_default=sa.text("gen_random_uuid()"),
+    )
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        sa.ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    # Deletion cascades through messages; avoid a second parent lock.
+    session_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False)
+    message_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        sa.ForeignKey("messages.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    share_token: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        nullable=False,
+        unique=True,
+        server_default=sa.text("gen_random_uuid()"),
+    )
+    snapshot_digest: Mapped[str] = mapped_column(sa.String(64), nullable=False)
+    snapshot: Mapped[dict] = mapped_column(JSONB, nullable=False)
+    expires_at: Mapped[Optional[datetime]] = mapped_column(
+        sa.DateTime(timezone=True), nullable=True
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        sa.DateTime(timezone=True), server_default=sa.text("now()")
+    )
+
+    __table_args__ = (
+        sa.UniqueConstraint(
+            "user_id",
+            "message_id",
+            "snapshot_digest",
+            name="uq_answer_shares_user_message_snapshot",
+        ),
+        sa.Index("idx_answer_shares_user_session", "user_id", "session_id"),
+        sa.Index("idx_answer_shares_message", "message_id"),
+    )
+
+
 class PlanTransition(Base):
     __tablename__ = "plan_transitions"
 

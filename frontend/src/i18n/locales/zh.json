@@ -3858,5 +3858,14 @@
   "quoteFinder.noteSaveError": "保存备注失败",
   "quoteFinder.delete": "删除",
   "quoteFinder.copyText": "复制引用",
-  "quoteFinder.capIndicator": "已保存 {count}/{limit}"
+  "quoteFinder.capIndicator": "已保存 {count}/{limit}",
+  "share.answerNotice": "任何获得链接的人都能查看下方的回答、文档名称和引用片段。其他消息不会公开。链接将保留此版本，直到你撤销分享。",
+  "share.answerPreview": "公开内容预览",
+  "share.copyAnswerLink": "复制回答链接",
+  "share.revokeAnswer": "撤销此回答的所有链接",
+  "share.answerRevoked": "此回答的所有分享链接已撤销。",
+  "share.copyManually": "链接已创建，请在下方选中并复制。",
+  "share.answerLink": "回答链接",
+  "errors.SHARE_CHANGED.title": "回答已更改",
+  "errors.SHARE_CHANGED.body": "请重新加载预览后再分享更新的回答。"
 }

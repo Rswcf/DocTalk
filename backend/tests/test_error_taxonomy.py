@@ -1336,12 +1336,8 @@ async def test_export_renderer_failed(client: AsyncClient, monkeypatch: pytest.M
 async def test_share_limit_reached(client: AsyncClient, monkeypatch: pytest.MonkeyPatch) -> None:
     user = _make_user(plan="free")
     db = _make_db(
-        execute=AsyncMock(
-            side_effect=[
-                _Result(scalar_one_or_none=None),
-                _Result(scalar=3),
-            ]
-        ),
+        execute=AsyncMock(return_value=_Result(scalar_one_or_none=None)),
+        scalar=AsyncMock(side_effect=[user, 2, 1]),
     )
     _override_dependencies(db, auth_user=user)
     monkeypatch.setattr(

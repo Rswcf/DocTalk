@@ -947,11 +947,15 @@ graph TD
 - **Auto-Summary**: New sessions inject a synthetic assistant message with the AI-generated document summary
 - **Regenerate**: Re-send the last user message to get a new AI response
 - **Export**: Download the full conversation as a Markdown file with citations converted to footnotes (accessed via "+" menu)
-- **Per-answer deep links**: Assistant message actions include `Share this answer`
-  when the message has a persisted backend id. The frontend derives the same
-  safe `msg-*` anchor as the backend, reuses the existing session share token,
-  and copies `/shared/{token}#msg-*` so public viewers land on the highlighted
-  answer.
+- **Answer-only sharing**: `Share this answer` opens a server-generated public
+  preview for the persisted backend message id. Copying submits that preview's
+  SHA-256 digest; a changed answer returns `409 SHARE_CHANGED` and requires a
+  new preview. `answer_shares` stores one immutable assistant answer with its
+  citation markers, document names and cited excerpts, under the fixed title
+  `Shared answer`. Other questions, answers, artifacts and future messages are
+  excluded. Repeated copies of the same snapshot reuse its token; changed
+  snapshots get new tokens. The dialog can revoke all versions of that answer.
+  Existing full-conversation links retain their conversation scope.
 
 **PDF Search**: Ctrl+F triggers an in-viewer search bar. Text is extracted via `pdfjs page.getTextContent()`, matches are highlighted using `customTextRenderer` with `<mark>` tags, and prev/next navigation scrolls between matches.
 
@@ -1174,6 +1178,20 @@ and page/snippet/document-filename citation summaries. They intentionally omit
 bbox coordinates, chunk ids, document ids, and confidence scores; private
 authenticated document pages remain the only surfaces that can jump to exact
 bbox highlights.
+
+Answer snapshots are allowlisted on both write and anonymous read; reads use
+`Cache-Control: no-store` and retain public rate limiting and noindex metadata.
+Creation requires strict session ownership and an assistant message belonging
+to that session. Both full-session and answer-link creation lock the same user
+row `FOR NO KEY UPDATE` before counting the combined Free limit of three active
+links. Paid accounts remain unlimited. No document lock/write follows this
+mutex. Migration `20260912_0044` adds only `answer_shares`, with user and message
+CASCADE FKs and a message index. Session/document/collection deletion propagates
+through `sessions -> messages -> answer_shares`; there is deliberately no second
+session FK that could invert ORM's message-before-session deletion order.
+`session_id` is an internal query field derived from the verified message's
+session; any future message-reparent feature must update or revoke its links.
+Session revocation removes both link types; token revocation is owner-only.
 
 ### Self-serve subscription cancel state machine
 

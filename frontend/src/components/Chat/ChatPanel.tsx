@@ -20,11 +20,13 @@ import { errorCopy } from '../../lib/errorCopy';
 import { billingHref } from '../../lib/billingLinks';
 import { getBillingErrorMessage, startPlanAwareBillingAction } from '../../lib/billing';
 import { trackEvent } from '../../lib/analytics';
-import { withShareAnchor } from '../../lib/shareAnchors';
+import dynamic from 'next/dynamic';
 import {
   shouldRenderDocumentBriefEmptyState,
   truncateDocumentBriefSummary,
 } from '../../lib/documentBriefEmptyState';
+
+const ShareAnswerDialog = dynamic(() => import('./ShareAnswerDialog'), { ssr: false });
 
 /**
  * Per-message row rendered inside the chat scroll. Memoized so the SSE
@@ -399,7 +401,9 @@ export default function ChatPanel({ sessionId, onCitationClick, onPreviewLayoutT
   }, [addMessage, sessionId, t, tOr]);
 
   const [shareLoading, setShareLoading] = useState(false);
-  const [shareAnswerLoadingId, setShareAnswerLoadingId] = useState<string | null>(null);
+  const [answerToShare, setAnswerToShare] = useState<{ sessionId: string; messageId: string } | null>(null);
+  const closeAnswerShare = useCallback(() => setAnswerToShare(null), []);
+  useEffect(() => { setAnswerToShare(null); }, [sessionId]);
 
   const copyShareUrl = useCallback(async (url: string) => {
     try {
@@ -447,35 +451,10 @@ export default function ChatPanel({ sessionId, onCitationClick, onPreviewLayoutT
     }
   }, [addMessage, copyShareUrl, sessionId, shareLoading, t, tOr, userPlan]);
 
-  const handleShareAnswer = useCallback(async (message: Message) => {
-    if (!message.shareAnchor || shareAnswerLoadingId) return;
-    setShareAnswerLoadingId(message.id);
-    try {
-      const { createShare } = await import('../../lib/api');
-      const result = await createShare(sessionId);
-      const answerUrl = withShareAnchor(result.url, message.shareAnchor);
-      await copyShareUrl(answerUrl);
-      trackEvent('share_created', { source: 'answer_action', plan: userPlan || 'unknown' });
-      addMessage({
-        id: `m_${Date.now()}_share_answer_ok`,
-        role: 'assistant',
-        text: tOr('share.answerCopied', 'Answer link copied to clipboard.'),
-        createdAt: Date.now(),
-      });
-    } catch (e) {
-      console.error('Answer share failed:', e);
-      const copy = errorCopy(e, t, tOr);
-      addMessage({
-        id: `m_${Date.now()}_share_answer_err`,
-        role: 'assistant',
-        text: copy.cta ? `${copy.body}\n\n[${copy.cta.label}](${copy.cta.href})` : copy.body,
-        isError: true,
-        createdAt: Date.now(),
-      });
-    } finally {
-      setShareAnswerLoadingId(null);
-    }
-  }, [addMessage, copyShareUrl, sessionId, shareAnswerLoadingId, t, tOr, userPlan]);
+  const handleShareAnswer = useCallback((message: Message) => {
+    if (!message.backendId) return;
+    setAnswerToShare({ sessionId, messageId: message.backendId });
+  }, [sessionId]);
 
   // Stable refs for the per-message row callbacks (I21). Previously the
   // arrow functions `() => void regenerateLastResponse()` / `() => void
@@ -615,7 +594,7 @@ export default function ChatPanel({ sessionId, onCitationClick, onPreviewLayoutT
                     onRegenerate={isLastAssistantMsg ? handleRegenerateLast : undefined}
                     onContinue={isLastAssistantMsg && message.isTruncated ? handleContinueLast : undefined}
                     onShareAnswer={userPlan ? handleShareAnswerVoid : handleAnonShareClick}
-                    isSharingAnswer={shareAnswerLoadingId === message.id}
+                    isSharingAnswer={false}
                     isAnonShareAnswer={!userPlan}
                     onTryQuoteFinder={onTryQuoteFinder}
                   />
@@ -764,6 +743,10 @@ export default function ChatPanel({ sessionId, onCitationClick, onPreviewLayoutT
         </div>
       </form>
 
+      {answerToShare?.sessionId === sessionId && <ShareAnswerDialog
+        key={`${sessionId}:${answerToShare.messageId}`}
+        sessionId={sessionId} messageId={answerToShare.messageId} onClose={closeAnswerShare}
+      />}
       <div className="bg-transparent pb-2 text-center">
         <p className="mx-auto max-w-4xl text-xs text-zinc-400 dark:text-zinc-500">
           {t('chat.disclaimer')}

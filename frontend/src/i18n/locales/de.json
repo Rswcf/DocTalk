@@ -3819,5 +3819,14 @@
   "quoteFinder.noteSaveError": "Notiz konnte nicht gespeichert werden",
   "quoteFinder.delete": "Löschen",
   "quoteFinder.copyText": "Zitat kopieren",
-  "quoteFinder.capIndicator": "{count} von {limit} gespeichert"
+  "quoteFinder.capIndicator": "{count} von {limit} gespeichert",
+  "share.answerNotice": "Alle mit dem Link können diese Antwort, den Dokumentnamen und die unten zitierten Auszüge lesen. Andere Nachrichten sind ausgeschlossen. Der Link behält diese Version bis zum Widerruf.",
+  "share.answerPreview": "Öffentliche Vorschau",
+  "share.copyAnswerLink": "Antwortlink kopieren",
+  "share.revokeAnswer": "Alle Links zu dieser Antwort widerrufen",
+  "share.answerRevoked": "Alle Links zu dieser Antwort wurden widerrufen.",
+  "share.copyManually": "Link erstellt. Wähle ihn unten aus und kopiere ihn.",
+  "share.answerLink": "Antwortlink",
+  "errors.SHARE_CHANGED.title": "Antwort geändert",
+  "errors.SHARE_CHANGED.body": "Lade die Vorschau neu, bevor du die aktualisierte Antwort teilst."
 }
