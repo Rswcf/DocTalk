@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useMemo, useRef, useState, useCallback } from 'react';
+import React, { useEffect, useMemo, useRef, useState, useCallback, useLayoutEffect } from 'react';
 import { Document, Page, pdfjs } from 'react-pdf';
 import type { PDFDocumentProxy } from 'pdfjs-dist/types/src/display/api';
 import 'react-pdf/dist/esm/Page/TextLayer.css';
@@ -87,6 +87,10 @@ export default function PdfViewer({ pdfUrl, currentPage, highlights, scale, scro
   const [visibleRange, setVisibleRange] = useState<{ start: number; end: number }>({ start: 1, end: 6 });
   const BUFFER = 3;
   const isScrollingToPage = useRef(false);
+  const activePdfUrlRef = useRef(pdfUrl);
+  activePdfUrlRef.current = pdfUrl;
+  const zoomAnchorRef = useRef<{ page: number; ratio: number } | null>(null);
+  const navigationRef = useRef<{ key: string; pending: boolean } | null>(null);
   const { setScale, grabMode, setGrabMode, searchQuery, searchMatches, currentMatchIndex, setSearchQuery, setSearchMatches, setCurrentMatchIndex } = useDocTalkStore();
   const setStoreTotalPages = (n: number) => useDocTalkStore.setState({ totalPages: n });
   const { t } = useLocale();
@@ -105,6 +109,7 @@ export default function PdfViewer({ pdfUrl, currentPage, highlights, scale, scro
   }, [searchQuery]);
 
   useEffect(() => {
+    navigationRef.current = null;
     extractedTextRef.current = null;
     extractionRunIdRef.current += 1;
     setTextCacheVersion((v) => v + 1);
@@ -116,6 +121,12 @@ export default function PdfViewer({ pdfUrl, currentPage, highlights, scale, scro
   // If highlights exist, center the viewport on the first highlight bbox
   useEffect(() => {
     if (!numPages || !containerRef.current) return;
+    const key = `${currentPage}:${scrollNonce}`;
+    if (navigationRef.current?.key !== key) {
+      navigationRef.current = { key, pending: true };
+    } else if (!navigationRef.current.pending) {
+      return; // A resize/rerender must not undo the user's subsequent scrolling.
+    }
     // Teleport visible range directly to target page area.
     // CRITICAL: Do NOT expand from prev range — jumping from page 1 to page 400
     // would render 400+ pages simultaneously, crashing the browser.
@@ -127,80 +138,73 @@ export default function PdfViewer({ pdfUrl, currentPage, highlights, scale, scro
     isScrollingToPage.current = true;
     setVisiblePage(currentPage);
 
-    // Scroll to target page, retrying until highlight anchor is available
-    // (the <Page> component loads async, so the anchor may not exist on first paint)
-    let retryCount = 0;
-    const maxRetries = 10;
-
+    // Use one viewport coordinate system. offsetTop values can belong to
+    // different offset parents, and async page placeholders used to collapse.
+    let cancelled = false;
+    let frame = 0;
     const scrollToTarget = () => {
+      if (cancelled || navigationRef.current?.key !== key || !navigationRef.current.pending) return;
       const target = pageRefs.current[currentPage - 1];
       const container = containerRef.current;
-      if (!target || !container || container.clientHeight === 0) {
-        if (retryCount < maxRetries) {
-          retryCount++;
-          requestAnimationFrame(scrollToTarget);
-        }
-        return;
-      }
-
-      const anchor = target.querySelector('[data-highlight-anchor="true"]') as HTMLElement | null;
-      if (!anchor && retryCount < maxRetries) {
-        // Page still loading — retry after a short delay
-        retryCount++;
-        requestAnimationFrame(scrollToTarget);
-        return;
-      }
-
-      if (anchor) {
-        const anchorRect = anchor.getBoundingClientRect();
-        const containerRect = container.getBoundingClientRect();
-        const anchorCenterInContainer =
-          anchor.offsetTop +
-          target.offsetTop -
-          container.offsetTop +
-          anchorRect.height / 2;
-        const scrollTarget = anchorCenterInContainer - containerRect.height / 2;
-        container.scrollTo({
-          top: Math.max(0, scrollTarget),
-          behavior: scrollBehavior(),
-        });
-      } else {
-        const scrollTarget = target.offsetTop - container.offsetTop;
-        container.scrollTo({
-          top: Math.max(0, scrollTarget),
-          behavior: scrollBehavior(),
-        });
+      if (!target || !container || container.clientHeight === 0) return;
+      const pageRect = target.getBoundingClientRect();
+      const containerRect = container.getBoundingClientRect();
+      const first = highlights
+        .filter((box) => (box.page ?? currentPage) === currentPage
+          && Number.isFinite(box.y) && Number.isFinite(box.h)
+          && box.y >= 0 && box.y <= 1 && box.h > 0 && box.h < 0.95)
+        .reduce<typeof highlights[number] | undefined>((top, box) => !top || box.y < top.y ? box : top, undefined);
+      const anchorY = first ? (first.y + first.h / 2) * pageRect.height : 0;
+      const scrollTarget = container.scrollTop + pageRect.top - containerRect.top
+        + anchorY - (first ? container.clientHeight / 2 : 0);
+      container.scrollTo({ top: Math.max(0, scrollTarget), behavior: scrollBehavior() });
+      if (pageDimensions[currentPage - 1] && navigationRef.current?.key === key) {
+        navigationRef.current.pending = false;
       }
     };
+    frame = requestAnimationFrame(() => { frame = requestAnimationFrame(scrollToTarget); });
+    const timer = setTimeout(() => { isScrollingToPage.current = false; }, 1200);
+    return () => {
+      cancelled = true;
+      cancelAnimationFrame(frame);
+      clearTimeout(timer);
+      isScrollingToPage.current = false;
+    };
+  }, [currentPage, scrollNonce, numPages, BUFFER, pageDimensions, scale, highlights]);
 
-    // Double-rAF: first rAF fires after React commit, second after browser paint
-    requestAnimationFrame(() => {
-      requestAnimationFrame(scrollToTarget);
+  useLayoutEffect(() => {
+    const anchor = zoomAnchorRef.current;
+    const container = containerRef.current;
+    const page = anchor && pageRefs.current[anchor.page - 1];
+    if (!anchor || !container || !page) return;
+    const rect = page.getBoundingClientRect();
+    container.scrollTo({
+      top: Math.max(0, container.scrollTop + rect.top - container.getBoundingClientRect().top
+        + anchor.ratio * rect.height - container.clientHeight / 2),
+      behavior: 'instant' as ScrollBehavior,
     });
-
-    // Reset flag after scroll completes
-    setTimeout(() => { isScrollingToPage.current = false; }, 1200);
-  }, [currentPage, scrollNonce, numPages, BUFFER]);
+    zoomAnchorRef.current = null;
+  }, [scale]);
 
   // Observer A: track the most-visible page for toolbar display (no rootMargin)
   useEffect(() => {
     if (!numPages || !containerRef.current) return;
 
     const observer = new IntersectionObserver(
-      (entries) => {
-        if (isScrollingToPage.current) return;
-        let maxRatio = 0;
-        let maxPage = visiblePage;
-        entries.forEach((entry) => {
-          const pageNum = Number(entry.target.getAttribute('data-page-number'));
-          if (entry.intersectionRatio > maxRatio) {
-            maxRatio = entry.intersectionRatio;
-            maxPage = pageNum;
-          }
+      () => {
+        if (isScrollingToPage.current || !containerRef.current) return;
+        // Entries contain only pages whose thresholds changed, not every
+        // visible page. Compare current geometry to avoid stale toolbar pages.
+        const viewport = containerRef.current.getBoundingClientRect();
+        let maxHeight = 0;
+        let bestPage = 0;
+        pageRefs.current.forEach((page, index) => {
+          if (!page) return;
+          const rect = page.getBoundingClientRect();
+          const height = Math.max(0, Math.min(rect.bottom, viewport.bottom) - Math.max(rect.top, viewport.top));
+          if (height > maxHeight) { maxHeight = height; bestPage = index + 1; }
         });
-        if (maxRatio > 0) {
-          setVisiblePage(maxPage);
-        }
+        if (bestPage) setVisiblePage(bestPage);
       },
       { root: containerRef.current, threshold: [0, 0.1, 0.25, 0.5, 0.75] }
     );
@@ -281,24 +285,31 @@ export default function PdfViewer({ pdfUrl, currentPage, highlights, scale, scro
   }, [debouncedSearch, validPdfUrl, numPages, textCacheVersion, setSearchMatches, setCurrentMatchIndex]);
 
   const onDocumentLoadSuccess = (pdf: PDFDocumentProxy) => {
+    if (!validPdfUrl || validPdfUrl !== activePdfUrlRef.current) return;
+    const runId = ++extractionRunIdRef.current;
     const n = pdf.numPages;
     setNumPages(n);
     setStoreTotalPages(n);
     pageRefs.current = new Array(n).fill(null);
 
-    // Extract page dimensions for accurate placeholder sizing
+    // Dimension and text work share the PDF generation; stale translations
+    // must not replace the current document's placeholder geometry.
     (async () => {
-      const dims: Array<{ width: number; aspectRatio: number }> = [];
-      for (let p = 1; p <= n; p++) {
-        const page = await pdf.getPage(p);
-        const viewport = page.getViewport({ scale: 1 });
-        dims.push({ width: viewport.width, aspectRatio: viewport.height / viewport.width });
+      try {
+        const dims: Array<{ width: number; aspectRatio: number }> = [];
+        for (let p = 1; p <= n; p++) {
+          const page = await pdf.getPage(p);
+          if (runId !== extractionRunIdRef.current || validPdfUrl !== activePdfUrlRef.current) return;
+          const viewport = page.getViewport({ scale: 1 });
+          dims.push({ width: viewport.width, aspectRatio: viewport.height / viewport.width });
+        }
+        setPageDimensions(dims);
+      } catch (err) {
+        if (runId === extractionRunIdRef.current && validPdfUrl === activePdfUrlRef.current) {
+          console.error('PDF page dimensions failed:', err);
+        }
       }
-      setPageDimensions(dims);
     })();
-
-    if (!validPdfUrl) return;
-    const runId = ++extractionRunIdRef.current;
 
     (async () => {
       try {
@@ -335,8 +346,21 @@ export default function PdfViewer({ pdfUrl, currentPage, highlights, scale, scro
   }, []);
 
   const handleScaleChange = useCallback((newScale: number) => {
+    const container = containerRef.current;
+    if (container && newScale !== scale) {
+      const center = container.getBoundingClientRect().top + container.clientHeight / 2;
+      const index = pageRefs.current.findIndex((page) => {
+        const rect = page?.getBoundingClientRect();
+        return rect && rect.top <= center && rect.bottom >= center;
+      });
+      const rect = pageRefs.current[index]?.getBoundingClientRect();
+      if (rect && rect.height > 0) {
+        zoomAnchorRef.current = { page: index + 1, ratio: (center - rect.top) / rect.height };
+        setVisiblePage(index + 1);
+      }
+    }
     setScale(newScale);
-  }, [setScale]);
+  }, [setScale, scale]);
 
   const handleSearchNext = useCallback(() => {
     if (searchMatches.length === 0) return;
@@ -429,6 +453,9 @@ export default function PdfViewer({ pdfUrl, currentPage, highlights, scale, scro
         className={`flex-1 overflow-auto ${grabMode ? (isDragging ? 'cursor-grabbing' : 'cursor-grab') : ''}`}
         style={grabMode ? { userSelect: 'none' } : undefined}
         ref={containerRef}
+        onWheelCapture={() => { if (navigationRef.current) navigationRef.current.pending = false; }}
+        onPointerDownCapture={() => { if (navigationRef.current) navigationRef.current.pending = false; }}
+        onKeyDownCapture={() => { if (navigationRef.current) navigationRef.current.pending = false; }}
         onMouseDown={handleMouseDown}
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
@@ -472,6 +499,10 @@ export default function PdfViewer({ pdfUrl, currentPage, highlights, scale, scro
                   key={pageNumber}
                   ref={(el) => { pageRefs.current[pageNumber - 1] = el; }}
                   className="relative"
+                  style={pageDimensions[pageNumber - 1] ? {
+                    height: pageDimensions[pageNumber - 1].width * pageDimensions[pageNumber - 1].aspectRatio * scale,
+                    width: pageDimensions[pageNumber - 1].width * scale,
+                  } : undefined}
                   data-page-number={pageNumber}
                 >
                   <PageWithHighlights pageNumber={pageNumber} scale={scale} highlights={pageHighlights} searchQuery={searchQuery} highlightSnippet={highlightSnippet} highlightFocus={highlightFocus} />

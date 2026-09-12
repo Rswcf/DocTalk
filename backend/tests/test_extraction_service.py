@@ -171,7 +171,7 @@ def test_render_csv_round_trips_commas_and_chinese_text() -> None:
     ]
 
 
-def test_citation_from_chunk_uses_most_specific_page_and_bbox_order() -> None:
+def test_citation_from_chunk_retains_full_range_despite_majority_boxes() -> None:
     chunk = Chunk(
         id=uuid.uuid4(),
         document_id=uuid.uuid4(),
@@ -182,7 +182,7 @@ def test_citation_from_chunk_uses_most_specific_page_and_bbox_order() -> None:
         bboxes=[
             {"page": 5, "x": 0.5, "y": 0.2, "w": 0.1, "h": 0.1},
             {"page": 4, "x": 0.2, "y": 0.3, "w": 0.1, "h": 0.1},
-            {"page": 4, "x": 0.1, "y": 0.1, "w": 0.1, "h": 0.1},
+            {"page": 5, "x": 0.1, "y": 0.1, "w": 0.1, "h": 0.1},
             {"page": 4, "x": "bad", "y": 0.1, "w": 0.1, "h": 0.1},
         ],
     )
@@ -193,4 +193,5 @@ def test_citation_from_chunk_uses_most_specific_page_and_bbox_order() -> None:
     assert citation["page"] == 4
     assert citation["confidence_score"] == 0.912
     assert citation["text_snippet"].startswith("Risk Factors:")
-    assert [bbox["page"] for bbox in citation["bboxes"]] == [4, 4, 5]
+    assert citation["page_end"] == 5
+    assert [bbox["page"] for bbox in citation["bboxes"]] == [4, 5, 5]

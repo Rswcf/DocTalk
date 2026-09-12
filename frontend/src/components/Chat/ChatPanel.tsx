@@ -8,6 +8,7 @@ import type { ChatArtifact, Citation, DocumentHierarchicalBrief, Message } from 
 import { useDocTalkStore } from '../../store';
 import MessageBubble from './MessageBubble';
 import CitationCard from './CitationCard';
+import { uniqueCitationIndexes } from '../../lib/citationText';
 import { useLocale } from '../../i18n';
 import { PaywallModal } from '../PaywallModal';
 import PlusMenu from './PlusMenu';
@@ -78,7 +79,7 @@ const ChatMessageRow = React.memo(function ChatMessageRow({
   const displayCitations = React.useMemo(() => {
     if (message.role !== 'assistant') return undefined;
     if (!message.citations || message.citations.length === 0) return undefined;
-    return renumberCitations(message.citations);
+    return uniqueCitationIndexes(renumberCitations(message.citations));
   }, [message.citations, message.role]);
 
   const displayMessage = React.useMemo(
@@ -117,6 +118,7 @@ const ChatMessageRow = React.memo(function ChatMessageRow({
                 refIndex={citation.refIndex}
                 textSnippet={citation.textSnippet}
                 page={citation.page}
+                pageEnd={citation.pageEnd}
                 onClick={() => onCitationClick(citation)}
               />
             ))}

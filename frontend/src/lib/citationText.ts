@@ -117,3 +117,10 @@ export function uniqueCitationIndexes(citations: Citation[]): Citation[] {
     return index === citation.refIndex ? citation : { ...citation, refIndex: index };
   });
 }
+
+/** Physical page range; never imply a precise page when attribution is broad. */
+export function citationPageRange(citation: Pick<Citation, 'page' | 'pageEnd'>): string {
+  const start = Number.isInteger(citation.page) && citation.page > 0 ? citation.page : 1;
+  const end = citation.pageEnd;
+  return end != null && Number.isInteger(end) && end > start ? `${start}–${end}` : String(start);
+}

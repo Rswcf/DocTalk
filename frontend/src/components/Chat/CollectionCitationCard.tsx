@@ -1,5 +1,6 @@
 "use client";
 
+import { citationPageRange } from '../../lib/citationText';
 import React, { useState } from 'react';
 import { ChevronDown, ChevronUp, ExternalLink } from 'lucide-react';
 import type { Citation } from '../../types';
@@ -42,7 +43,7 @@ export default function CollectionCitationCard({ citation }: Props) {
             <span className="font-semibold text-zinc-800 dark:text-zinc-200">
               {citation.documentFilename || 'Document'}
             </span>
-            <span className="text-zinc-500">p. {citation.page}</span>
+            <span className="text-zinc-500">p. {citationPageRange(citation)}</span>
           </div>
           {citation.contextText && (
             <p className="text-zinc-600 dark:text-zinc-400 mt-1 line-clamp-4">

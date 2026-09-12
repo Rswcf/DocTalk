@@ -1,5 +1,6 @@
 "use client";
 
+import { citationPageRange } from '../../lib/citationText';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { AlertTriangle, CheckCircle2, Clock3, Download, ExternalLink, Eye, FilePlus2, FileText, Languages, Loader2, Quote, RefreshCw, Sparkles, Table2 } from 'lucide-react';
@@ -493,7 +494,7 @@ export default function ChatArtifactCard({ artifact, onCitationClick, onPreviewL
               onClick={() => onCitationClick?.(citation)}
               className="inline-flex min-h-8 items-center rounded-md border border-[var(--reader-evidence-border)] bg-[var(--reader-evidence-soft)] px-2 text-xs font-medium text-[var(--reader-evidence)] transition-colors hover:brightness-95"
             >
-              p.{citation.page}
+              p.{citationPageRange(citation)}
             </button>
           ))}
         </div>

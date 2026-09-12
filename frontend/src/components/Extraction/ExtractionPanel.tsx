@@ -1,5 +1,6 @@
 "use client";
 
+import { citationPageRange } from '../../lib/citationText';
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import {
@@ -326,7 +327,7 @@ export default function ExtractionPanel({ documentId, onCitationClick, userPlan 
               onClick={() => citation && onCitationClick(citation)}
               disabled={!citation}
               className="inline-flex h-5 min-w-5 items-center justify-center rounded bg-[var(--reader-evidence-soft)] px-1.5 text-[11px] font-semibold text-[var(--reader-evidence)] ring-1 ring-[var(--reader-evidence-border)] disabled:opacity-50"
-              title={citation ? tOr("citation.jumpTo", "Jump to page {page}", { page: citation.page }) : undefined}
+              title={citation ? tOr("citation.jumpTo", "Jump to page {page}", { page: citationPageRange(citation) }) : undefined}
             >
               {ref}
             </button>

@@ -24,6 +24,7 @@ from app.models.tables import (
     Document,
     DocumentTable,
     Message,
+    Page,
     ProductEvent,
     User,
     collection_documents,
@@ -32,6 +33,7 @@ from app.services import credit_service, quote_search_service
 from app.services.action_planner import ChatAction, action_planner
 from app.services.chat_tool_executor import ChatArtifact, chat_tool_executor
 from app.services.citation_focus_service import current_claim, focus_sentence
+from app.services.citation_location import citation_location
 from app.services.citation_quote_service import apply_focus_quotes, extract_focus_quotes
 from app.services.claim_verifier_service import claim_verifier_service
 from app.services.corrective_retrieval_service import corrective_retrieval_service
@@ -274,40 +276,9 @@ def _citation_payload(
     ref_num: int, chunk: "_ChunkInfo", offset: int, claim_text: str = ""
 ) -> Dict[str, Any]:
     is_summary = chunk.retrieval_modality == "summary"
-    all_bbs = [] if is_summary else [
-        bb
-        for bb in (chunk.bboxes or [])
-        if isinstance(bb, dict) and _is_valid_bbox(bb)
-    ]
-    all_bbs.sort(
-        key=lambda b: (
-            int(b.get("page", chunk.page_start))
-            if isinstance(b.get("page", chunk.page_start), (int, float))
-            else chunk.page_start,
-            b.get("y", 0),
-            b.get("x", 0),
-        )
-    )
-    page_counts: dict[int, int] = {}
-    for bb in all_bbs:
-        page_val = bb.get("page", chunk.page_start)
-        page = (
-            int(page_val)
-            if isinstance(page_val, (int, float))
-            else chunk.page_start
-        )
-        page_counts[page] = page_counts.get(page, 0) + 1
-    best_page = (
-        min(page_counts, key=lambda p: (-page_counts[p], p))
-        if page_counts
-        else chunk.page_start
-    )
     citation_data: Dict[str, Any] = {
         "ref_index": ref_num,
         "chunk_id": str(chunk.id),
-        "page": best_page,
-        "page_end": chunk.page_end,
-        "bboxes": all_bbs,
         "text_snippet": ((f"{chunk.section_title}: " if chunk.section_title else "") + (chunk.text or ""))[:100],
         "offset": offset,
     }
@@ -318,6 +289,7 @@ def _citation_payload(
         focus = focus_sentence(chunk.text, claim_text)
         if focus:
             citation_data["focus_snippet"] = focus
+    _locate_citation(citation_data, chunk)
     citation_data["confidence_score"] = round(chunk.score, 3)
     # Prepend the source page(s) to the verified context so a correct location number
     # (e.g. "on page 350") isn't flagged as a numeric_claim_source_mismatch — the page
@@ -1083,6 +1055,46 @@ class _ChunkInfo:
     summary_model_covered_sections: tuple[str, ...] = ()
     summary_fallback_sections: tuple[str, ...] = ()
     summary_missing_sections: tuple[str, ...] = ()
+    page_texts: dict[int, str] | None = None
+
+
+def _locate_citation(citation: dict, chunk: _ChunkInfo) -> None:
+    citation.update(citation_location(
+        chunk.page_start, chunk.page_end,
+        [] if chunk.retrieval_modality == "summary" else chunk.bboxes,
+        source_text=chunk.text,
+        focus=citation.get("focus_snippet", "") if chunk.retrieval_modality != "summary" else "",
+        page_texts=chunk.page_texts,
+    ))
+
+
+async def _hydrate_citation_pages(db: AsyncSession, chunk_map: dict[int, _ChunkInfo]) -> None:
+    # Sparse text can span thousands of blank pages. Precision is optional:
+    # bound both per-source reads and PostgreSQL/asyncpg bind parameters.
+    keys: set[tuple[uuid.UUID, int]] = set()
+    selected: list[_ChunkInfo] = []
+    for chunk in chunk_map.values():
+        chunk.page_texts = {}
+        if (not chunk.document_id or chunk.retrieval_modality == "summary"
+                or not 1 < chunk.page_end - chunk.page_start + 1 <= 64):
+            continue
+        candidate = {(chunk.document_id, page)
+                     for page in range(chunk.page_start, chunk.page_end + 1)}
+        if len(keys | candidate) > 512:
+            continue
+        keys.update(candidate)
+        selected.append(chunk)
+    if not keys:
+        return
+    rows = await db.execute(select(Page.document_id, Page.page_number, Page.content).where(
+        sa.tuple_(Page.document_id, Page.page_number).in_(keys)
+    ))
+    texts = {(doc_id, page): content or "" for doc_id, page, content in rows.all()}
+    for chunk in selected:
+        chunk.page_texts = {
+            page: texts.get((chunk.document_id, page), "")
+            for page in range(chunk.page_start, chunk.page_end + 1)
+        }
 
 
 @dataclass
@@ -1200,7 +1212,25 @@ async def _refine_citation_focus(
     - skipped when the stream is close to the 60s proxy budget;
     - hard timeout — a stuck nicety must never hold back done/persist/billing.
     """
-    _skip = (False, "", 0, 0)
+    # Legacy continuation records may already carry the same ref-level focus
+    # on unrelated occurrences. Do not promote those to precise page claims.
+    ambiguous_focus = {
+        (c.get("ref_index"), c.get("focus_snippet")) for c in citations
+        if c.get("focus_snippet") and sum(
+            other.get("ref_index") == c.get("ref_index")
+            and other.get("focus_snippet") == c.get("focus_snippet")
+            for other in citations
+        ) > 1
+    }
+    cleaned = False
+    for citation in citations:
+        if (citation.get("ref_index"), citation.get("focus_snippet")) in ambiguous_focus:
+            citation.pop("focus_snippet", None)
+            source = chunk_map.get(citation.get("ref_index"))
+            if source:
+                _locate_citation(citation, source)
+            cleaned = True
+    _skip = (cleaned, "", 0, 0)
     if user is None:
         return _skip
     if elapsed_seconds is not None and elapsed_seconds > _FOCUS_ELAPSED_BUDGET_S:
@@ -1225,7 +1255,19 @@ async def _refine_citation_focus(
             ),
             timeout=_FOCUS_TIMEOUT_S,
         )
-        changed = apply_focus_quotes(citations, focus_map)
+        # The fallback model returns one quote per ref, not per occurrence.
+        # Repeated refs may support different assertions/pages in one answer.
+        repeated_refs = {ref for ref in focus_map
+                         if sum(c.get("ref_index") == ref for c in citations) > 1}
+        changed = apply_focus_quotes(
+            citations, {ref: quote for ref, quote in focus_map.items() if ref not in repeated_refs}
+        ) or cleaned
+        for citation in citations:
+            chunk = chunk_map.get(citation.get("ref_index"))
+            if chunk:
+                previous = dict(citation)
+                _locate_citation(citation, chunk)
+                changed = changed or previous != citation
         return (changed, focus_model, focus_pt, focus_ct)
     except asyncio.TimeoutError:
         logger.info("citation focus refinement timed out; keeping chunk highlight")
@@ -2062,6 +2104,8 @@ class ChatService:
                     summary_missing_sections=tuple(item.get("map_reduce_missing_sections") or ()),
                 )
 
+            await _hydrate_citation_pages(db, chunk_map)
+
             rules = get_rules_for_model(
                 effective_model, is_collection=is_collection_session
             )
@@ -2819,6 +2863,8 @@ class ChatService:
                                 citation,
                                 collection_doc_names,
                             )
+
+            await _hydrate_citation_pages(db, chunk_map)
 
             # 7) Load conversation history
             max_turns = int(settings.MAX_CHAT_HISTORY_TURNS or 6)

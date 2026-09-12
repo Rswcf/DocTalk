@@ -1,5 +1,6 @@
 "use client";
 
+import { citationPageRange } from '../../lib/citationText';
 import React, { Suspense, useMemo, useState, useCallback, useEffect } from 'react';
 import remarkGfm from 'remark-gfm';
 import { Copy, Check, ThumbsUp, ThumbsDown, RotateCcw, ChevronsDown, Share2, Quote } from 'lucide-react';
@@ -63,7 +64,7 @@ function processCitationLinks(
                 type="button"
                 className="not-prose dt-source-index align-super mx-0.5 inline-flex h-[1.125rem] min-w-[1.125rem] cursor-pointer select-none items-center justify-center rounded px-1 text-[10px] font-semibold leading-none transition-colors hover:brightness-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--reader-evidence)]"
                 onClick={() => onClick?.(citation)}
-                title={t ? t('citation.jumpTo', { page: citation.page }) : `Jump to page ${citation.page}`}
+                title={t ? t('citation.jumpTo', { page: citationPageRange(citation) }) : `Jump to page ${citationPageRange(citation)}`}
               >
                 {refNum}
               </button>

@@ -97,3 +97,18 @@ test('actual download receives reconstructed Markdown in its Blob', async () => 
     URL.revokeObjectURL = previous.revoke;
   }
 });
+
+test('page ranges survive presentation and same-chunk citations on different pages', () => {
+  assert.equal(citationText.citationPageRange({page: 4, pageEnd: 6}), '4–6');
+  assert.equal(citationText.citationPageRange({page: 4, pageEnd: 4}), '4');
+  assert.equal(citationText.citationPageRange({page: 4, pageEnd: 2}), '4');
+  const a = {refIndex: 1, chunkId: 'cross-page', page: 4, pageEnd: 4};
+  const b = {...a, page: 5, pageEnd: 5};
+  assert.notEqual(citationText.citationSourceKey(a), citationText.citationSourceKey(b));
+});
+test('reader bottom cards and inline sources keep distinct locations with stable numbering', () => {
+  const raw = [{refIndex: 2, chunkId:'one', page:5, pageEnd:6, offset:10}, {refIndex:2,chunkId:'one',page:5,pageEnd:5,offset:20}];
+  const display = citationText.uniqueCitationIndexes(renumberCitations(raw));
+  assert.deepEqual(display.map(c=>c.refIndex), [1,2]);
+  assert.deepEqual(citationText.uniqueCitationIndexes(display), display);
+});

@@ -1,5 +1,6 @@
 "use client";
 
+import { citationPageRange } from '../../lib/citationText';
 import React, { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import {
@@ -568,9 +569,9 @@ function TemplateResult({
                           type="button"
                           onClick={() => onCitationClick(citation)}
                           className="inline-flex min-h-6 items-center rounded bg-amber-50 px-1.5 text-[11px] font-semibold text-amber-800 ring-1 ring-amber-200 hover:bg-amber-100 dark:bg-amber-950/30 dark:text-amber-200 dark:ring-amber-900"
-                          title={tOr("citation.jumpTo", "Jump to page {page}", { page: citation.page })}
+                          title={tOr("citation.jumpTo", "Jump to page {page}", { page: citationPageRange(citation) })}
                         >
-                          p.{citation.page}
+                          p.{citationPageRange(citation)}
                         </button>
                       ))
                     )}

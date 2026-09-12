@@ -111,10 +111,12 @@ export default function DocumentReaderPageClient() {
   useEffect(() => {
     const pageParam = searchParams.get('page');
     let fallbackPage = 1;
+    let hasExplicitPage = false;
     if (pageParam) {
       const pageNum = parseInt(pageParam, 10);
       if (!isNaN(pageNum) && pageNum > 0) {
         fallbackPage = pageNum;
+        hasExplicitPage = true;
         useDocTalkStore.getState().setPage(pageNum);
         revealMobileDocumentPane();
       }
@@ -128,12 +130,12 @@ export default function DocumentReaderPageClient() {
     void getChunkDetail(highlightChunkId)
       .then((chunk) => {
         if (cancelled) return;
-        const page = chunk.page_start || fallbackPage;
+        const page = hasExplicitPage ? fallbackPage : (chunk.page_start || 1);
         navigateToCitation({
           refIndex: 1,
           chunkId: chunk.chunk_id,
           page,
-          bboxes: chunk.bboxes || [],
+          bboxes: (chunk.bboxes || []).filter((bbox) => bbox.page == null || bbox.page === page),
           textSnippet: chunk.text || '',
           offset: 0,
         });

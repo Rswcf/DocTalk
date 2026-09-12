@@ -1,5 +1,6 @@
 "use client";
 
+import { citationPageRange, citationSourceKey } from '../../lib/citationText';
 import React from "react";
 import { FileText } from "lucide-react";
 import type { Citation } from "../../types";
@@ -27,11 +28,7 @@ interface SourcesStripProps {
  * Perplexity "sources-before-tokens" pattern, which would need a new
  * chunks_retrieved SSE event and is explicitly out of scope here.
  *
- * Deduplicates by chunkId (guaranteed unique, present on every Citation)
- * so a chunk cited multiple times renders as one chip. The refIndex of
- * the first occurrence is shown. Earlier (docId, page) key was broken on
- * multi-doc Collections because docId falls back to "_" for the
- * single-doc path, which then collapses cross-doc same-page citations.
+ * Deduplicates identical source locations while retaining distinct page targets.
  *
  * Click forwards to the same onCitationClick the inline pills use, so
  * behaviour is identical — PdfViewer scrolls + highlight flashes.
@@ -44,13 +41,14 @@ export default function SourcesStrip({
   const { t, tOr } = useLocale();
   const currentDocumentName = useDocTalkStore((s) => s.documentName);
 
-  // Dedupe by chunkId (stable per chunk) while preserving LLM order.
+  // Preserve distinct page targets within the same cross-page chunk.
   const unique = React.useMemo(() => {
     const seen = new Set<string>();
     const out: Citation[] = [];
     for (const c of citations) {
-      if (seen.has(c.chunkId)) continue;
-      seen.add(c.chunkId);
+      const key = citationSourceKey(c);
+      if (seen.has(key)) continue;
+      seen.add(key);
       out.push(c);
     }
     return out;
@@ -103,10 +101,10 @@ export default function SourcesStrip({
           const filename = c.documentFilename || currentDocumentName || "Document";
           const displayFilename =
             filename.length > 22 ? filename.slice(0, 20) + "…" : filename;
-          const jumpLabel = t("citation.jumpTo", { page: c.page });
+          const jumpLabel = t("citation.jumpTo", { page: citationPageRange(c) });
           return (
             <button
-              key={c.chunkId}
+              key={citationSourceKey(c)}
               type="button"
               onClick={() => onCitationClick?.(c)}
               title={jumpLabel}
@@ -126,7 +124,7 @@ export default function SourcesStrip({
                 className="shrink-0 text-[10px] text-[var(--reader-muted)]"
                 style={{ fontFamily: 'var(--dt-mono)' }}
               >
-                p.{c.page}
+                {t('citation.page', { page: citationPageRange(c) })}
               </span>
             </button>
           );

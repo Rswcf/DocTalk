@@ -1,5 +1,6 @@
 "use client";
 
+import { citationPageRange } from '../../lib/citationText';
 import React from 'react';
 import * as HoverCard from '@radix-ui/react-hover-card';
 import { ExternalLink } from 'lucide-react';
@@ -54,7 +55,7 @@ export default function CitationPopover({ citation, children }: CitationPopoverP
             {citation.documentFilename && (
               <span className="font-medium text-zinc-700 dark:text-zinc-300">{citation.documentFilename}</span>
             )}
-            {citation.page && <span> &mdash; p. {citation.page}</span>}
+            {citation.page && <span> &mdash; p. {citationPageRange(citation)}</span>}
           </div>
           {citation.contextText && (
             <p

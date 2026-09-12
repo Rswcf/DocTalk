@@ -27,6 +27,7 @@ from app.models.tables import (
     UsageRecord,
     User,
 )
+from app.services.citation_location import citation_location
 from app.services.credit_service import calculate_cost
 from app.services.document_element_service import get_element_aware_chunks
 from app.services.domain_mode_access import (
@@ -179,37 +180,13 @@ def _valid_bbox(bb: dict[str, Any]) -> bool:
 def _citation_from_chunk(
     ref_num: int, chunk: Chunk, score: float = 0.0
 ) -> dict[str, Any]:
-    bboxes = [
-        bb for bb in (chunk.bboxes or []) if isinstance(bb, dict) and _valid_bbox(bb)
-    ]
-    bboxes.sort(
-        key=lambda bb: (
-            int(bb.get("page", chunk.page_start))
-            if isinstance(bb.get("page", chunk.page_start), (int, float))
-            else chunk.page_start,
-            bb.get("y", 0),
-            bb.get("x", 0),
-        )
-    )
-    page_counts: dict[int, int] = {}
-    for bb in bboxes:
-        raw_page = bb.get("page", chunk.page_start)
-        page = int(raw_page) if isinstance(raw_page, (int, float)) else chunk.page_start
-        page_counts[page] = page_counts.get(page, 0) + 1
-    best_page = (
-        min(page_counts, key=lambda p: (-page_counts[p], p))
-        if page_counts
-        else chunk.page_start
-    )
     snippet = (
         (f"{chunk.section_title}: " if chunk.section_title else "") + (chunk.text or "")
     )[:140]
     return {
         "ref_index": ref_num,
         "chunk_id": str(chunk.id),
-        "page": best_page,
-        "page_end": chunk.page_end,
-        "bboxes": bboxes,
+        **citation_location(chunk.page_start, chunk.page_end, chunk.bboxes),
         "text_snippet": snippet,
         "offset": 0,
         "confidence_score": round(float(score or 0.0), 3),

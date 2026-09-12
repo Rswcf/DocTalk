@@ -1,5 +1,6 @@
 "use client";
 
+import { citationPageRange } from '../../lib/citationText';
 import React from 'react';
 import { useLocale } from '../../i18n';
 
@@ -7,6 +8,7 @@ interface CitationCardProps {
   refIndex: number;
   textSnippet: string;
   page: number;
+  pageEnd?: number;
   onClick?: () => void;
 }
 
@@ -21,14 +23,14 @@ function sanitizeText(text: string | null | undefined): string {
   return text.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '');
 }
 
-export default function CitationCard({ refIndex, textSnippet, page, onClick }: CitationCardProps) {
+export default function CitationCard({ refIndex, textSnippet, page, pageEnd, onClick }: CitationCardProps) {
   const { t } = useLocale();
   // Sanitize and truncate the snippet
   const sanitized = sanitizeText(textSnippet);
   const snippet = sanitized.length > 60 ? sanitized.slice(0, 60) + '…' : sanitized;
 
   // Validate page number
-  const validPage = typeof page === 'number' && isFinite(page) && page > 0 ? page : 1;
+  const validPage = citationPageRange({ page, pageEnd });
 
   return (
     <button
