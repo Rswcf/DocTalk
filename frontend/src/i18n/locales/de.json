@@ -3828,5 +3828,11 @@
   "share.copyManually": "Link erstellt. Wähle ihn unten aus und kopiere ihn.",
   "share.answerLink": "Antwortlink",
   "errors.SHARE_CHANGED.title": "Antwort geändert",
-  "errors.SHARE_CHANGED.body": "Lade die Vorschau neu, bevor du die aktualisierte Antwort teilst."
+  "errors.SHARE_CHANGED.body": "Lade die Vorschau neu, bevor du die aktualisierte Antwort teilst.",
+  "quoteFinder.topicLabel": "Thema des Zitats",
+  "profile.credits.reason.quote_search": "Zitatsuche",
+  "profile.credits.reason.question_template": "Fragevorlage",
+  "profile.credits.reason.document_diff": "Dokumentvergleich",
+  "profile.credits.reason.extraction": "Strukturierte Extraktion",
+  "profile.credits.reason.other": "Guthabenanpassung"
 }

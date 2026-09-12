@@ -3830,5 +3830,11 @@
   "share.copyManually": "Link created. Select and copy it below.",
   "share.answerLink": "Answer link",
   "errors.SHARE_CHANGED.title": "Answer changed",
-  "errors.SHARE_CHANGED.body": "Reload the preview before sharing the updated answer."
+  "errors.SHARE_CHANGED.body": "Reload the preview before sharing the updated answer.",
+  "quoteFinder.topicLabel": "Quote topic",
+  "profile.credits.reason.quote_search": "Quote search",
+  "profile.credits.reason.question_template": "Question template",
+  "profile.credits.reason.document_diff": "Document comparison",
+  "profile.credits.reason.extraction": "Structured extraction",
+  "profile.credits.reason.other": "Credit adjustment"
 }

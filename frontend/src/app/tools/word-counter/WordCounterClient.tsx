@@ -4,6 +4,7 @@ import React, { useState, useMemo } from 'react';
 import Link from 'next/link';
 import { LetterText, ClipboardPaste, Copy, Check, FileText, Timer, Trash2 } from 'lucide-react';
 import { useLocale } from '../../../i18n';
+import { getWords, getSentences } from '../../../lib/textMetrics';
 import MarketingShell from '../../../components/marketing/MarketingShell';
 import EdPageHero from '../../../components/marketing/EdPageHero';
 import EdSection from '../../../components/marketing/EdSection';
@@ -14,15 +15,6 @@ import EdCtaBanner from '../../../components/marketing/EdCtaBanner';
 type TFn = (key: string, params?: Record<string, string | number>) => string;
 
 /* ---------- helpers ---------- */
-
-function getWords(text: string): string[] {
-  return text.match(/[\p{L}\p{N}]+(?:[-']\p{L}+)*/gu) ?? [];
-}
-
-function getSentences(text: string): number {
-  const matches = text.match(/[^.!?]+[.!?]+/g);
-  return matches ? matches.length : text.trim().length > 0 ? 1 : 0;
-}
 
 function getParagraphs(text: string): number {
   if (text.trim().length === 0) return 0;

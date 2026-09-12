@@ -30,14 +30,11 @@ import {
 export default function EdLanguageSelector({ languageLabel }: { languageLabel?: string }) {
   const { locale, setLocale, tOr } = useLocale();
   const pathname = usePathname() || "/";
-  const { locale: urlLocale, path: agnosticPath } = splitLocaleFromPath(pathname);
+  const { path: agnosticPath } = splitLocaleFromPath(pathname);
   const localized = isLocalizedPath(agnosticPath);
-  // On server-localized marketing pages, the URL is the source of truth. The
-  // unprefixed variants are canonical English pages, so they should not display
-  // a stored client preference such as ZH while their body is English. The root
-  // landing page is still client-localized on `/`, so it keeps using provider
-  // locale until the user chooses a prefixed URL.
-  const activeLocale = localized && agnosticPath !== '/' ? urlLocale : locale;
+  // The provider resolves static route language and interactive-page preference
+  // together, so the selected option always agrees with the rendered content.
+  const activeLocale = locale;
 
   const [open, setOpen] = useState(false);
   const [pos, setPos] = useState({ top: 0, right: 0, maxHeight: 420 });

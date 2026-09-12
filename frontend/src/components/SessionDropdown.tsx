@@ -270,7 +270,7 @@ export default function SessionDropdown() {
         <ChevronDown aria-hidden="true" size={14} className="opacity-70" />
       </button>
       {open && (
-        <div className="absolute left-0 mt-1 w-72 max-w-[calc(100vw-2rem)] bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-md shadow-lg z-20 p-1" onKeyDown={handleMenuKeyDown} role="menu">
+        <div className="fixed inset-x-3 top-14 sm:absolute sm:inset-x-auto sm:top-auto sm:start-0 mt-1 w-auto sm:w-72 max-w-[calc(100vw-2rem)] bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-md shadow-lg z-20 p-1" onKeyDown={handleMenuKeyDown} role="menu">
           <div className="py-1">
             <button
               ref={(el) => { itemRefs.current[0] = el; }}

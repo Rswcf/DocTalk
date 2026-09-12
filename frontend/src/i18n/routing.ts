@@ -113,3 +113,11 @@ export function splitLocaleFromPath(pathname: string): { locale: string; path: s
   }
   return { locale: 'en', path: clean };
 }
+
+/** Static marketing content follows its URL; the app/dashboard and unprefixed
+ * interactive demo continue to use the user's language preference. */
+export function contentLocaleFromPath(pathname: string): string | null {
+  const { locale, path } = splitLocaleFromPath(pathname);
+  if (locale !== 'en') return locale;
+  return isLocalizedPath(path) && path !== '/' && path !== '/demo' ? 'en' : null;
+}

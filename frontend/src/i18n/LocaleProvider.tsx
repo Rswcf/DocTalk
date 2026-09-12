@@ -1,7 +1,8 @@
 "use client";
-import React, { useState, useCallback, useMemo, useEffect } from 'react';
+import React, { useState, useCallback, useMemo, useEffect, useContext } from 'react';
+import { usePathname } from 'next/navigation';
 import { LocaleContext, Locale, LOCALES } from './index';
-import { splitLocaleFromPath } from './routing';
+import { contentLocaleFromPath } from './routing';
 
 import en from './locales/en.json';
 
@@ -9,7 +10,7 @@ function applyParams(str: string, params?: Record<string, string | number>): str
   if (!params) return str;
   let out = str;
   Object.entries(params).forEach(([k, v]) => {
-    out = out.replace(`{${k}}`, String(v));
+    out = out.split(`{${k}}`).join(String(v));
   });
   return out;
 }
@@ -36,15 +37,12 @@ const localeLoaders: Record<string, () => Promise<{ default: Record<string, stri
 };
 
 function detectLocale(): Locale {
-  // A locale URL prefix (`/de/...`) is explicit intent — it wins over stored
-  // preference and browser language, and keeps <html lang>/chrome in sync with
-  // the server-rendered locale page.
-  if (typeof window !== 'undefined') {
-    const { locale } = splitLocaleFromPath(window.location.pathname);
-    if (locale !== 'en' && LOCALES.some((l) => l.code === locale)) return locale as Locale;
+  let stored: string | null = null;
+  try {
+    stored = typeof window !== 'undefined' ? localStorage.getItem('doctalk_locale') : null;
+  } catch {
+    // Preference storage may be unavailable in private browsing.
   }
-
-  const stored = typeof window !== 'undefined' ? localStorage.getItem('doctalk_locale') : null;
   if (stored && LOCALES.some((l) => l.code === stored)) return stored as Locale;
 
   if (typeof navigator !== 'undefined') {
@@ -72,7 +70,10 @@ export default function LocaleProvider({
   initialLocale?: Locale;
   initialMessages?: Record<string, string>;
 }) {
-  const [locale, setLocaleState] = useState<Locale>(initialLocale ?? 'en');
+  const pathname = usePathname() || '/';
+  const parentLocale = useContext(LocaleContext);
+  const [preferredLocale, setLocaleState] = useState<Locale>(initialLocale ?? 'en');
+  const locale = (contentLocaleFromPath(pathname) ?? preferredLocale) as Locale;
   const [loadedTranslations, setLoadedTranslations] = useState<Record<string, Record<string, string>>>(
     // Never let a scoped seed clobber the full bundled English (resolve() relies
     // on it as the fallback); only seed a non-en locale.
@@ -90,18 +91,22 @@ export default function LocaleProvider({
 
   const setLocale = useCallback((l: Locale) => {
     setLocaleState(l);
+    if (initialLocale) parentLocale.setLocale(l);
     try {
       localStorage.setItem('doctalk_locale', l);
     } catch {
       // localStorage unavailable in private browsing
     }
-  }, []);
+  }, [initialLocale, parentLocale.setLocale]);
 
   useEffect(() => {
+    // Only the root owns document language. Scoped server-seeded providers
+    // supply translations without racing their parent to mutate <html>.
+    if (initialLocale) return;
     document.documentElement.lang = locale;
     const localeInfo = LOCALES.find((l) => l.code === locale);
     document.documentElement.dir = localeInfo?.dir === 'rtl' ? 'rtl' : 'ltr';
-  }, [locale]);
+  }, [locale, initialLocale]);
 
   useEffect(() => {
     if (locale === 'en' || loadedTranslations[locale] || !localeLoaders[locale]) return;

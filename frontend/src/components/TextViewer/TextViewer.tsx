@@ -656,7 +656,7 @@ function PlainTextContent({
   }, [text, citationMatch, searchQuery, searchMatches, currentActiveMatch]);
 
   return (
-    <pre className="whitespace-pre-wrap text-sm text-zinc-800 dark:text-zinc-200 font-sans leading-relaxed">
+    <pre dir="auto" className="whitespace-pre-wrap text-sm text-zinc-800 dark:text-zinc-200 font-sans leading-relaxed">
       {segments.map((seg, i) => {
         if (seg.type === 'citation') {
           return (
@@ -710,7 +710,7 @@ function MarkdownContent({
   );
 
   return (
-    <div className={`prose dark:prose-invert max-w-none prose-zinc ${articleMode ? 'prose-base prose-p:leading-8 prose-li:leading-8 prose-headings:scroll-mt-28' : 'prose-sm'}
+    <div dir="auto" className={`prose dark:prose-invert max-w-none prose-zinc ${articleMode ? 'prose-base prose-p:leading-8 prose-li:leading-8 prose-headings:scroll-mt-28' : 'prose-sm'}
       prose-table:border-collapse prose-table:w-full prose-table:text-sm
       prose-th:border prose-th:border-zinc-300 prose-th:dark:border-zinc-600 prose-th:px-3 prose-th:py-2 prose-th:bg-zinc-50 prose-th:dark:bg-zinc-800 prose-th:text-left prose-th:font-semibold
       prose-td:border prose-td:border-zinc-200 prose-td:dark:border-zinc-700 prose-td:px-3 prose-td:py-1.5
@@ -734,7 +734,7 @@ function MarkdownContent({
         is deferred.
       */}
       {citationMatch && citationPage != null && (
-        <p className="not-prose mb-3 text-xs font-mono text-zinc-500 dark:text-zinc-400">
+        <p dir="ltr" className="not-prose mb-3 text-xs font-mono text-zinc-500 dark:text-zinc-400">
           <span ref={highlightRef}>
             Citation &middot; page {citationPage}
           </span>

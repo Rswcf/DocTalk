@@ -220,7 +220,7 @@ export default function CreditsSection({ profile }: Props) {
                         {new Date(it.created_at).toLocaleString()}
                       </td>
                       <td className="py-2 text-zinc-700 dark:text-zinc-300">
-                        {t(reasonKey as any)}
+                        {tOr(reasonKey, tOr('profile.credits.reason.other', 'Credit adjustment'))}
                       </td>
                       <td className={`py-2 font-medium tabular-nums ${isPos ? "text-green-600" : "text-red-600"}`}>
                         {isPos ? "+" : ""}

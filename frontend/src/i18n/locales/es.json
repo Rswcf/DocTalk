@@ -3828,5 +3828,11 @@
   "share.copyManually": "Enlace creado. Selecciónalo y cópialo a continuación.",
   "share.answerLink": "Enlace de respuesta",
   "errors.SHARE_CHANGED.title": "La respuesta ha cambiado",
-  "errors.SHARE_CHANGED.body": "Recarga la vista previa antes de compartir la respuesta actualizada."
+  "errors.SHARE_CHANGED.body": "Recarga la vista previa antes de compartir la respuesta actualizada.",
+  "quoteFinder.topicLabel": "Tema de la cita",
+  "profile.credits.reason.quote_search": "Búsqueda de citas",
+  "profile.credits.reason.question_template": "Plantilla de preguntas",
+  "profile.credits.reason.document_diff": "Comparación de documentos",
+  "profile.credits.reason.extraction": "Extracción estructurada",
+  "profile.credits.reason.other": "Ajuste de créditos"
 }

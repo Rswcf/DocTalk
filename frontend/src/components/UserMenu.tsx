@@ -116,7 +116,7 @@ export default function UserMenu() {
 
       {open && (
         <div
-          className="absolute right-0 top-full mt-2 w-56 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-xl shadow-lg z-50 animate-fade-in motion-reduce:animate-none overflow-hidden"
+          className="absolute end-0 top-full mt-2 w-56 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-xl shadow-lg z-50 animate-fade-in motion-reduce:animate-none overflow-hidden"
           role="menu"
           onKeyDown={handleMenuKeyDown}
         >

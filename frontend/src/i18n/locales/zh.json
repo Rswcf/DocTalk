@@ -3867,5 +3867,11 @@
   "share.copyManually": "链接已创建，请在下方选中并复制。",
   "share.answerLink": "回答链接",
   "errors.SHARE_CHANGED.title": "回答已更改",
-  "errors.SHARE_CHANGED.body": "请重新加载预览后再分享更新的回答。"
+  "errors.SHARE_CHANGED.body": "请重新加载预览后再分享更新的回答。",
+  "quoteFinder.topicLabel": "引文主题",
+  "profile.credits.reason.quote_search": "引用检索",
+  "profile.credits.reason.question_template": "问题模板",
+  "profile.credits.reason.document_diff": "文档对比",
+  "profile.credits.reason.extraction": "结构化提取",
+  "profile.credits.reason.other": "额度调整"
 }

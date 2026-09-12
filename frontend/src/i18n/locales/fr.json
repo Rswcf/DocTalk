@@ -3828,5 +3828,11 @@
   "share.copyManually": "Lien créé. Sélectionnez-le et copiez-le ci-dessous.",
   "share.answerLink": "Lien de la réponse",
   "errors.SHARE_CHANGED.title": "Réponse modifiée",
-  "errors.SHARE_CHANGED.body": "Rechargez l’aperçu avant de partager la réponse mise à jour."
+  "errors.SHARE_CHANGED.body": "Rechargez l’aperçu avant de partager la réponse mise à jour.",
+  "quoteFinder.topicLabel": "Sujet de la citation",
+  "profile.credits.reason.quote_search": "Recherche de citations",
+  "profile.credits.reason.question_template": "Modèle de questions",
+  "profile.credits.reason.document_diff": "Comparaison de documents",
+  "profile.credits.reason.extraction": "Extraction structurée",
+  "profile.credits.reason.other": "Ajustement de crédits"
 }

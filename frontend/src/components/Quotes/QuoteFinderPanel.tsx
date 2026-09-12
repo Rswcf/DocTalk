@@ -293,9 +293,12 @@ export default function QuoteFinderPanel({ isOpen, documentId, userPlan, onClose
         </div>
 
         {activeTab === 'search' ? (
-          <form onSubmit={(e) => void handleSearch(e)} className="flex items-center gap-2 border-b border-[var(--reader-border)] px-5 py-3">
+          <form onSubmit={(e) => void handleSearch(e)} className="border-b border-[var(--reader-border)] px-5 py-3">
+            <label htmlFor="quote-finder-topic" className="mb-2 block text-sm font-medium">{tOr('quoteFinder.topicLabel', 'Quote topic')}</label>
+            <div className="flex items-center gap-2">
             <input
               ref={inputRef}
+              id="quote-finder-topic"
               type="text"
               value={topic}
               onChange={(e) => setTopic(e.target.value)}
@@ -311,6 +314,7 @@ export default function QuoteFinderPanel({ isOpen, documentId, userPlan, onClose
               {loading ? <Loader2 size={16} className="animate-spin motion-reduce:animate-none" aria-hidden="true" /> : <Search size={16} aria-hidden="true" />}
               {loading ? tOr('quoteFinder.searching', 'Searching...') : tOr('quoteFinder.searchButton', 'Find quotes')}
             </button>
+            </div>
           </form>
         ) : null}
 

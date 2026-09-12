@@ -3828,5 +3828,11 @@
   "share.copyManually": "링크가 생성되었습니다. 아래에서 선택하여 복사하세요.",
   "share.answerLink": "답변 링크",
   "errors.SHARE_CHANGED.title": "답변이 변경되었습니다",
-  "errors.SHARE_CHANGED.body": "업데이트된 답변을 공유하기 전에 미리보기를 다시 불러오세요."
+  "errors.SHARE_CHANGED.body": "업데이트된 답변을 공유하기 전에 미리보기를 다시 불러오세요.",
+  "quoteFinder.topicLabel": "인용문 주제",
+  "profile.credits.reason.quote_search": "인용 검색",
+  "profile.credits.reason.question_template": "질문 템플릿",
+  "profile.credits.reason.document_diff": "문서 비교",
+  "profile.credits.reason.extraction": "구조화 추출",
+  "profile.credits.reason.other": "크레딧 조정"
 }

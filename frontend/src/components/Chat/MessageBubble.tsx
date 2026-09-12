@@ -135,7 +135,7 @@ function CodeBlock({ language, code }: { language: string; code: string }) {
   }, [code, language]);
 
   return (
-    <div className="not-prose my-4 rounded-xl overflow-hidden border border-zinc-200 dark:border-zinc-700">
+    <div dir="ltr" className="not-prose my-4 rounded-xl overflow-hidden border border-zinc-200 dark:border-zinc-700">
       <div className="flex items-center justify-between px-4 py-2 text-xs text-zinc-500 dark:text-zinc-400 bg-zinc-50 dark:bg-zinc-800/60 border-b border-zinc-200 dark:border-zinc-700">
         <span className="font-mono">{language || 'text'}</span>
         <CopyButton value={code} label={t('chat.copyCode')} copiedLabel={t('chat.copied')} />
@@ -167,7 +167,7 @@ function PreBlock({ children }: any) {
       return <CodeBlock language={lang} code={text} />;
     }
   }
-  return <pre className="overflow-x-auto">{children}</pre>;
+  return <pre dir="ltr" className="overflow-x-auto">{children}</pre>;
 }
 
 type Feedback = 'up' | 'down' | null;
@@ -279,7 +279,7 @@ function MessageBubble({
           }
         >
           {isUser ? (
-            <span className="whitespace-pre-wrap">{message.text}</span>
+            <span dir="auto" className="whitespace-pre-wrap">{message.text}</span>
           ) : isStreaming && !message.text ? (
             <div className="flex items-center gap-2 text-[var(--workbench-muted)] text-sm" aria-live="polite">
               <div className="flex gap-1">
@@ -304,7 +304,7 @@ function MessageBubble({
                   isStreaming={isStreaming}
                 />
               )}
-              <div className="prose prose-sm dark:prose-invert max-w-none [&>*:first-child]:mt-0 [&>*:last-child]:mb-0 sm:prose-base">
+              <div dir="auto" className="prose prose-sm dark:prose-invert max-w-none [&>*:first-child]:mt-0 [&>*:last-child]:mb-0 sm:prose-base">
                 <Suspense fallback={<span className="whitespace-pre-wrap">{markdownText}</span>}>
                   <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>
                     {markdownText}

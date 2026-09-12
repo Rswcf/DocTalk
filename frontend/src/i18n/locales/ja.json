@@ -3828,5 +3828,11 @@
   "share.copyManually": "リンクを作成しました。以下で選択してコピーしてください。",
   "share.answerLink": "回答リンク",
   "errors.SHARE_CHANGED.title": "回答が変更されました",
-  "errors.SHARE_CHANGED.body": "更新された回答を共有する前にプレビューを再読み込みしてください。"
+  "errors.SHARE_CHANGED.body": "更新された回答を共有する前にプレビューを再読み込みしてください。",
+  "quoteFinder.topicLabel": "引用のテーマ",
+  "profile.credits.reason.quote_search": "引用検索",
+  "profile.credits.reason.question_template": "質問テンプレート",
+  "profile.credits.reason.document_diff": "文書比較",
+  "profile.credits.reason.extraction": "構造化抽出",
+  "profile.credits.reason.other": "クレジット調整"
 }

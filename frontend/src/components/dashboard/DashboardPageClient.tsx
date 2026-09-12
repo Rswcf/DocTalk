@@ -361,8 +361,11 @@ export default function DashboardPageClient() {
     const url = urlInput.trim();
     if (!url) return;
     setUrlErrorCopy(null);
-    if (!url.startsWith('http://') && !url.startsWith('https://')) {
-      setUrlError(t('upload.urlError'));
+    try {
+      const parsed = new URL(url);
+      if (!['http:', 'https:'].includes(parsed.protocol) || !parsed.hostname) throw new Error('Invalid URL');
+    } catch {
+      setUrlError(errorCopy({ code: 'URL_INVALID' }, t, tOr).body);
       setUrlErrorCopy(null);
       return;
     }
@@ -556,6 +559,8 @@ export default function DashboardPageClient() {
                 className="w-full rounded-full border border-zinc-300 bg-white py-2.5 pl-9 pr-3 text-sm text-[var(--workbench-ink)] placeholder:text-zinc-400 dark:border-white/14 dark:bg-white/8 dark:placeholder:text-white/38 transition-shadow focus:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400"
                 disabled={urlLoading}
                 aria-label="Document URL"
+                aria-invalid={Boolean(urlError)}
+                aria-describedby={urlError ? 'document-url-error' : undefined}
               />
             </div>
             <button
@@ -567,7 +572,7 @@ export default function DashboardPageClient() {
             </button>
           </div>
           {urlError && (
-            <div role="alert" className="mt-2 text-center text-sm text-red-600 dark:text-red-400">
+            <div id="document-url-error" role="alert" className="mt-2 text-center text-sm text-red-600 dark:text-red-400">
               <p>{urlError}</p>
               {urlErrorCopy?.cta && (
                 <Link

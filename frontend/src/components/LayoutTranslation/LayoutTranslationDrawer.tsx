@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useId, useMemo, useRef, useState } from 'react';
 import { FilePlus2, Languages, Loader2, X } from 'lucide-react';
 import { useLocale } from '../../i18n';
 import { LAYOUT_TRANSLATION_TARGETS } from '../../lib/layoutTranslation';
@@ -32,6 +32,8 @@ export default function LayoutTranslationDrawer({
   onSubmit,
 }: LayoutTranslationDrawerProps) {
   const { tOr } = useLocale();
+  const dialogRef = useRef<HTMLDialogElement>(null);
+  const titleId = useId();
   const [targetLanguage, setTargetLanguage] = useState('zh-CN');
   const [addToLibrary, setAddToLibrary] = useState(false);
   const maxPages = maxPagesForPlan(userPlan);
@@ -41,6 +43,13 @@ export default function LayoutTranslationDrawer({
   useEffect(() => {
     if (!isOpen) return;
     setAddToLibrary(false);
+    const element = dialogRef.current;
+    const previousFocus = document.activeElement;
+    element?.showModal();
+    return () => {
+      element?.close();
+      if (previousFocus instanceof HTMLElement && previousFocus.isConnected) previousFocus.focus();
+    };
   }, [isOpen]);
 
   const selectedTarget = useMemo(
@@ -51,14 +60,16 @@ export default function LayoutTranslationDrawer({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/34 px-3 py-3 backdrop-blur-sm sm:items-center" role="dialog" aria-modal="true">
+    <dialog ref={dialogRef} aria-labelledby={titleId}
+      onCancel={(event) => { event.preventDefault(); onClose(); }}
+      className="m-auto max-h-[calc(100dvh-1.5rem)] w-[calc(100%-1.5rem)] max-w-lg overflow-y-auto rounded-2xl bg-transparent p-0 text-[var(--reader-ink)] backdrop:bg-black/35">
       <div className="w-full max-w-lg overflow-hidden rounded-2xl border border-[var(--reader-border)] bg-[var(--reader-panel-solid)] text-[var(--reader-ink)] shadow-2xl">
         <div className="flex items-start justify-between gap-4 border-b border-[var(--reader-border)] px-5 py-4">
           <div className="min-w-0">
             <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--reader-muted)]">
               {tOr('layoutTranslation.drawerEyebrow', 'PDF translation')}
             </p>
-            <h2 className="mt-1 text-lg font-semibold">
+            <h2 id={titleId} className="mt-1 text-lg font-semibold">
               {tOr('layoutTranslation.drawerTitle', 'Create a translated PDF')}
             </h2>
             <p className="mt-1 truncate text-sm text-[var(--reader-muted)]">
@@ -69,6 +80,7 @@ export default function LayoutTranslationDrawer({
             type="button"
             onClick={onClose}
             className="rounded-full p-1.5 text-[var(--reader-muted)] transition-colors hover:bg-[var(--reader-panel-muted)] hover:text-[var(--reader-ink)] focus-visible:ring-2 focus-visible:ring-zinc-400"
+            autoFocus
             aria-label={tOr('common.close', 'Close')}
           >
             <X size={18} aria-hidden="true" />
@@ -153,6 +165,6 @@ export default function LayoutTranslationDrawer({
           </button>
         </div>
       </div>
-    </div>
+    </dialog>
   );
 }

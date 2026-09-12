@@ -3828,5 +3828,11 @@
   "share.copyManually": "تم إنشاء الرابط. حدده وانسخه أدناه.",
   "share.answerLink": "رابط الإجابة",
   "errors.SHARE_CHANGED.title": "تغيرت الإجابة",
-  "errors.SHARE_CHANGED.body": "أعد تحميل المعاينة قبل مشاركة الإجابة المحدثة."
+  "errors.SHARE_CHANGED.body": "أعد تحميل المعاينة قبل مشاركة الإجابة المحدثة.",
+  "quoteFinder.topicLabel": "موضوع الاقتباس",
+  "profile.credits.reason.quote_search": "البحث عن الاقتباسات",
+  "profile.credits.reason.question_template": "قالب الأسئلة",
+  "profile.credits.reason.document_diff": "مقارنة المستندات",
+  "profile.credits.reason.extraction": "استخراج منظم",
+  "profile.credits.reason.other": "تعديل الرصيد"
 }

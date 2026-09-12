@@ -29,7 +29,7 @@ export default function AppHeaderShell({ isDemo, isLoggedIn }: AppHeaderShellPro
   const isDocumentPage = pathname?.startsWith('/d/');
 
   return (
-    <header className="dt-shell-header h-14 flex items-center px-3 sm:px-6 gap-2 sm:gap-3 min-w-0 shrink-0 sticky top-0 z-30 border-b">
+    <header className="dt-shell-header min-h-14 h-auto flex flex-wrap lg:flex-nowrap lg:h-14 items-center px-3 sm:px-6 py-2 lg:py-0 gap-2 sm:gap-3 min-w-0 shrink-0 sticky top-0 z-30 border-b">
       <Link href="/" className="font-logo font-semibold text-lg sm:text-xl text-[var(--workbench-ink)] hover:text-zinc-950 dark:hover:text-white transition-colors shrink-0 focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:rounded-sm inline-flex items-center gap-1.5 sm:gap-2">
         <DocTalkLogo size={26} />
         {t('app.title')}
@@ -61,7 +61,7 @@ export default function AppHeaderShell({ isDemo, isLoggedIn }: AppHeaderShellPro
           <span className="hidden sm:inline">{t('collections.title')}</span>
         </Link>
       )}
-      <div className="ml-auto flex items-center gap-1 sm:gap-2 shrink-0">
+      <div className="ms-auto flex items-center gap-1 sm:gap-2 shrink-0">
         {!(isDemo && !isLoggedIn) && <ModeSelector />}
         <div className="hidden sm:flex"><ThemeSelector /></div>
         {!(isDemo && !isLoggedIn) && <FeedbackButton />}

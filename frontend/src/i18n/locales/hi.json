@@ -3828,5 +3828,11 @@
   "share.copyManually": "लिंक बन गया है। नीचे उसे चुनकर कॉपी करें।",
   "share.answerLink": "उत्तर का लिंक",
   "errors.SHARE_CHANGED.title": "उत्तर बदल गया है",
-  "errors.SHARE_CHANGED.body": "अपडेट किया गया उत्तर साझा करने से पहले पूर्वावलोकन फिर से लोड करें।"
+  "errors.SHARE_CHANGED.body": "अपडेट किया गया उत्तर साझा करने से पहले पूर्वावलोकन फिर से लोड करें।",
+  "quoteFinder.topicLabel": "उद्धरण का विषय",
+  "profile.credits.reason.quote_search": "उद्धरण खोज",
+  "profile.credits.reason.question_template": "प्रश्न टेम्पलेट",
+  "profile.credits.reason.document_diff": "दस्तावेज़ तुलना",
+  "profile.credits.reason.extraction": "संरचित निष्कर्षण",
+  "profile.credits.reason.other": "क्रेडिट समायोजन"
 }
