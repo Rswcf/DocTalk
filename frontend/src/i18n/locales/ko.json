@@ -3879,5 +3879,16 @@
   "domainModes.legal": "법률",
   "domainModes.academic": "학술",
   "citation.cardLabel": "인용 {index}, {page}페이지",
-  "billing.annualUnavailable": "월별 크레딧 지급 기능을 수정하는 동안 신규 연간 구독과 연간 요금제 변경을 일시 중단합니다. 월간 구독은 이용할 수 있습니다."
+  "billing.annualUnavailable": "월별 크레딧 지급 기능을 수정하는 동안 신규 연간 구독과 연간 요금제 변경을 일시 중단합니다. 월간 구독은 이용할 수 있습니다.",
+  "evidence.reference": "인용 {index} · {page}페이지",
+  "evidence.exact": "일치하는 원문",
+  "evidence.region": "관련 문단",
+  "evidence.page": "페이지만 확인됨",
+  "evidence.loading": "원문 위치 찾는 중…",
+  "evidence.hidden": "강조 표시 숨김",
+  "evidence.hide": "강조 숨기기",
+  "evidence.show": "강조 표시",
+  "evidence.return": "답변으로 돌아가기",
+  "evidence.fitWidth": "너비에 맞춤",
+  "evidence.unavailable": "출처 페이지를 표시할 수 없습니다"
 }

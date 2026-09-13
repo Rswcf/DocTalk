@@ -3879,5 +3879,16 @@
   "domainModes.legal": "Legale",
   "domainModes.academic": "Accademico",
   "citation.cardLabel": "Citazione {index}, pagina {page}",
-  "billing.annualUnavailable": "I nuovi abbonamenti annuali e le modifiche ai piani annuali sono sospesi mentre correggiamo l’assegnazione mensile dei crediti. Gli abbonamenti mensili restano disponibili."
+  "billing.annualUnavailable": "I nuovi abbonamenti annuali e le modifiche ai piani annuali sono sospesi mentre correggiamo l’assegnazione mensile dei crediti. Gli abbonamenti mensili restano disponibili.",
+  "evidence.reference": "Citazione {index} · Pagina {page}",
+  "evidence.exact": "Passaggio esatto",
+  "evidence.region": "Passaggio correlato",
+  "evidence.page": "Solo pagina individuata",
+  "evidence.loading": "Ricerca della fonte…",
+  "evidence.hidden": "Evidenziazione nascosta",
+  "evidence.hide": "Nascondi evidenziazione",
+  "evidence.show": "Mostra evidenziazione",
+  "evidence.return": "Torna alla risposta",
+  "evidence.fitWidth": "Adatta alla larghezza",
+  "evidence.unavailable": "Pagina di origine non disponibile"
 }

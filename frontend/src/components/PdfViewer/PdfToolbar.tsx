@@ -44,18 +44,19 @@ export default function PdfToolbar({ currentPage, totalPages, scale, onPageChang
     }
   };
 
-  const zoomOut = () => onScaleChange(Math.max(0.5, +(scale - 0.25).toFixed(2)));
+  const zoomOut = () => onScaleChange(Math.max(0.25, +(scale - 0.25).toFixed(2)));
   const zoomIn = () => onScaleChange(Math.min(3.0, +(scale + 0.25).toFixed(2)));
   const prevPage = () => { if (currentPage > 1) onPageChange(currentPage - 1); };
   const nextPage = () => { if (currentPage < totalPages) onPageChange(currentPage + 1); };
 
-  const btnClass = 'p-1 rounded-md hover:bg-[var(--reader-panel-muted)] focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:ring-offset-1';
-  const separatorClass = 'w-px h-5 bg-[var(--reader-border)] mx-1';
+  const btnClass = 'inline-flex min-h-8 min-w-8 items-center justify-center p-1 rounded-md hover:bg-[var(--reader-panel-muted)] focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:ring-offset-1';
+  const separatorClass = 'hidden sm:block w-px h-5 bg-[var(--reader-border)] mx-1';
 
   return (
     <>
-      <div className="sticky top-0 z-10 flex shrink-0 items-center justify-center gap-2 border-b border-[var(--reader-border)] bg-[var(--reader-panel-solid)]/92 px-3 py-2 text-sm text-[var(--reader-ink)] backdrop-blur">
+      <div className="sticky top-0 z-10 flex flex-wrap shrink-0 items-center justify-center gap-1 sm:gap-2 border-b border-[var(--reader-border)] bg-[var(--reader-panel-solid)]/92 px-3 py-2 text-sm text-[var(--reader-ink)] backdrop-blur">
         {/* Zoom controls */}
+        <div className="flex shrink-0 items-center gap-1">
         <button onClick={zoomOut} className={btnClass} title={t('toolbar.zoomOut')} aria-label={t('toolbar.zoomOut')}>
           <ZoomOut size={16} />
         </button>
@@ -63,6 +64,7 @@ export default function PdfToolbar({ currentPage, totalPages, scale, onPageChang
         <button onClick={zoomIn} className={btnClass} title={t('toolbar.zoomIn')} aria-label={t('toolbar.zoomIn')}>
           <ZoomIn size={16} />
         </button>
+        </div>
 
         <div className={separatorClass} />
 
@@ -111,6 +113,7 @@ export default function PdfToolbar({ currentPage, totalPages, scale, onPageChang
         <div className={separatorClass} />
 
         {/* Page navigation */}
+        <div className="flex shrink-0 items-center gap-1">
         <button onClick={prevPage} disabled={currentPage <= 1} className={`${btnClass} disabled:opacity-30 disabled:cursor-not-allowed`} title={t('toolbar.prevPage')} aria-label={t('toolbar.prevPage')}>
           <ChevronLeft size={16} />
         </button>
@@ -124,11 +127,12 @@ export default function PdfToolbar({ currentPage, totalPages, scale, onPageChang
             className="w-10 rounded-md border border-[var(--reader-border)] bg-[var(--reader-panel-solid)] px-1 py-0.5 text-center text-xs"
             aria-label={t('doc.page')}
           />
-          <span className="text-xs text-zinc-500 dark:text-zinc-400">/ {totalPages}</span>
+          <span className="whitespace-nowrap text-xs text-zinc-500 dark:text-zinc-400">/ {totalPages}</span>
         </div>
         <button onClick={nextPage} disabled={currentPage >= totalPages} className={`${btnClass} disabled:opacity-30 disabled:cursor-not-allowed`} title={t('toolbar.nextPage')} aria-label={t('toolbar.nextPage')}>
           <ChevronRight size={16} />
         </button>
+        </div>
       </div>
 
       {searchOpen && (

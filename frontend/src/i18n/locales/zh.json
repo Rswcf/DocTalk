@@ -3918,5 +3918,16 @@
   "domainModes.legal": "法律",
   "domainModes.academic": "学术",
   "citation.cardLabel": "引用 {index}，第 {page} 页",
-  "billing.annualUnavailable": "年付积分的按月发放机制正在修复，暂不开放新的年付订阅和年付套餐变更。仍可选择月付订阅。"
+  "billing.annualUnavailable": "年付积分的按月发放机制正在修复，暂不开放新的年付订阅和年付套餐变更。仍可选择月付订阅。",
+  "evidence.reference": "引用 {index} · 第 {page} 页",
+  "evidence.exact": "精确原文",
+  "evidence.region": "相关段落",
+  "evidence.page": "仅定位到页面",
+  "evidence.loading": "正在定位原文…",
+  "evidence.hidden": "高亮已隐藏",
+  "evidence.hide": "隐藏高亮",
+  "evidence.show": "显示高亮",
+  "evidence.return": "返回刚才回答",
+  "evidence.fitWidth": "适合宽度",
+  "evidence.unavailable": "来源页不可用"
 }

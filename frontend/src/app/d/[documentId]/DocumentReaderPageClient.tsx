@@ -16,6 +16,7 @@ import { useLocale } from '../../../i18n';
 import { usePageTitle } from '../../../lib/usePageTitle';
 import { AlertTriangle, Download, FileText, LogIn, MessageSquare, Presentation, Quote, RotateCcw, Trash2, X } from 'lucide-react';
 import QuoteFinderPanel from '../../../components/Quotes/QuoteFinderPanel';
+import { useCitationReturn } from '../../../lib/useCitationReturn';
 import { useDocumentLoader } from '../../../lib/useDocumentLoader';
 import { useChatSession } from '../../../lib/useChatSession';
 import { useUserPlanProfile } from '../../../lib/useUserPlanProfile';
@@ -49,7 +50,17 @@ export default function DocumentReaderPageClient() {
   const [mobileTab, setMobileTab] = useState<'chat' | 'document'>('chat');
   const isDesktopLayout = useDesktopReaderLayout();
   const { t, tOr, locale } = useLocale();
-  const { pdfUrl, currentPage, highlights, highlightSnippet, highlightFocus, scale, scrollNonce, sessionId, navigateToCitation, setDocumentStatus, totalPages } = useDocTalkStore();
+  const { pdfUrl, currentPage, citationTarget, highlights, highlightSnippet, highlightFocus, scale, scrollNonce, sessionId, navigateToCitation, setDocumentStatus, totalPages } = useDocTalkStore();
+  const revealChat = useCallback(() => setMobileTab('chat'), []);
+  const { capture: captureCitationOrigin, returnToAnswer, canReturn } = useCitationReturn(documentId, sessionId, revealChat);
+  const citationSession = useRef({ documentId, sessionId });
+  useEffect(() => {
+    const previous = citationSession.current;
+    if (previous.documentId === documentId && previous.sessionId && previous.sessionId !== sessionId) {
+      useDocTalkStore.setState({ citationTarget: null, highlights: [], highlightFocus: null, highlightSnippet: null });
+    }
+    citationSession.current = { documentId, sessionId };
+  }, [documentId, sessionId]);
   const addMessage = useDocTalkStore((s) => s.addMessage);
 
   const documentName = useDocTalkStore((s) => s.documentName);
@@ -374,6 +385,8 @@ export default function DocumentReaderPageClient() {
               ) : null}
               <div className="flex-1 min-h-0">
                 <PdfViewer
+                  citation={pdfPreviewMode === 'original' ? citationTarget?.citation : undefined}
+                  onReturnToAnswer={canReturn ? returnToAnswer : undefined}
                   pdfUrl={pdfPreviewMode === 'translated' && translatedPreview ? translatedPreview.url : pdfUrl}
                   onRefreshUrl={pdfPreviewMode === 'translated' ? undefined : refreshPdfUrl}
                   currentPage={currentPage}
@@ -392,7 +405,7 @@ export default function DocumentReaderPageClient() {
             <div className="h-full w-full flex items-center justify-center text-zinc-500">{t('doc.loading')}</div>
           )
         ) : useConvertedPdf ? (
-          <PdfViewer pdfUrl={convertedPdfUrl} onRefreshUrl={refreshConvertedPdfUrl} currentPage={currentPage} highlights={highlights} scale={scale} scrollNonce={scrollNonce} highlightSnippet={highlightSnippet} highlightFocus={highlightFocus} />
+          <PdfViewer citation={citationTarget?.citation} onReturnToAnswer={canReturn ? returnToAnswer : undefined} pdfUrl={convertedPdfUrl} onRefreshUrl={refreshConvertedPdfUrl} currentPage={currentPage} highlights={highlights} scale={scale} scrollNonce={scrollNonce} highlightSnippet={highlightSnippet} highlightFocus={highlightFocus} />
         ) : (
           <TextViewer documentId={documentId} fileType={fileType} targetPage={currentPage} scrollNonce={scrollNonce} highlightSnippet={highlightSnippet} />
         )}
@@ -408,15 +421,23 @@ export default function DocumentReaderPageClient() {
         ? t('status.ocr')
         : t('status.processing');
 
-  const handleCitationClick = useCallback((citation: Citation) => {
+  const handleCitationClick = useCallback((citation: Citation, messageId?: string) => {
     trackEvent('citation_clicked', {
       source: isDemo ? 'demo_reader' : 'document_reader',
       page: citation.page,
       has_bboxes: Boolean(citation.bboxes?.length),
     });
-    navigateToCitation(citation);
+    captureCitationOrigin(messageId);
+    setPdfPreviewMode('original');
+    navigateToCitation(citation, messageId);
     revealMobileDocumentPane();
-  }, [isDemo, navigateToCitation, revealMobileDocumentPane]);
+    if (window.innerWidth < 640) {
+      const target = useDocTalkStore.getState().citationTarget;
+      requestAnimationFrame(() => requestAnimationFrame(() => {
+        if (useDocTalkStore.getState().citationTarget === target) document.querySelector<HTMLElement>('.dt-evidence-status')?.focus({ preventScroll: true });
+      }));
+    }
+  }, [isDemo, navigateToCitation, revealMobileDocumentPane, captureCitationOrigin]);
 
   // "Try Quote Finder" chip (FIX3-B, Codex r3 #5): reuses the same panel-open
   // mechanism as the toolbar entry, just with a prefilled topic. Never
@@ -467,21 +488,6 @@ export default function DocumentReaderPageClient() {
       setDeleteBusy(false);
     }
   }, [deleteBusy, documentId, router, t, tOr]);
-
-  useEffect(() => {
-    if (isDesktopLayout !== false || mobileTab !== 'document') return;
-    if (highlights.length === 0 && !highlightSnippet) return;
-    let secondFrame: number | null = null;
-    const firstFrame = requestAnimationFrame(() => {
-      secondFrame = requestAnimationFrame(() => {
-        useDocTalkStore.setState((state) => ({ scrollNonce: state.scrollNonce + 1 }));
-      });
-    });
-    return () => {
-      cancelAnimationFrame(firstFrame);
-      if (secondFrame !== null) cancelAnimationFrame(secondFrame);
-    };
-  }, [isDesktopLayout, mobileTab, currentPage, highlights, highlightSnippet]);
 
   const chatContent = documentStatus === 'ready' && sessionId ? (
     <ChatPanel sessionId={sessionId} onCitationClick={handleCitationClick} onPreviewLayoutTranslation={handlePreviewLayoutTranslation} maxUserMessages={isDemo && !isLoggedIn ? 5 : undefined} suggestedQuestions={suggestedQuestions.length > 0 ? suggestedQuestions : undefined} documentBrief={documentBrief} briefPolling={briefPolling} initialQuestion={initialQuestion} autoSubmitInitialQuestion={isDemo} onOpenSettings={canUseCustomInstructions ? () => setShowInstructions(true) : undefined} hasCustomInstructions={!!customInstructions} userPlan={userPlan} onTryQuoteFinder={handleTryQuoteFinder} />

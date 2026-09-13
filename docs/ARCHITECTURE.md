@@ -889,7 +889,7 @@ graph TD
 
     subgraph PdfComp["PDF Components"]
         PdfToolbar["PdfToolbar<br/>Zoom + Hand + Search"]
-        PageHL["PageWithHighlights<br/>bbox + Search Overlays"]
+        PageHL["PageWithHighlights<br/>Exact Lines / Margin Ranges + Search"]
     end
 
     subgraph ProfileComp["Profile Components"]
@@ -924,6 +924,8 @@ graph TD
     Layout -.-> AuthModal
     Layout -.-> PaywallMod
 ```
+
+PDF citation evidence uses one overlay: a complete unique quote, restricted to the cited pages and regions, maps through DOM Range to transparent amber lines. Unverified text falls back to margin ranges or page-only status; table margin unions are display-only and never expand matching regions. Navigation waits for text readiness, preserves zoom, respects user interruption, and offers hide/show, fit width and return to the originating answer. `useCitationReturn` scopes saved scroll/focus to the document and session. Search stays separate; reduced motion disables the evidence fade.
 
 **Header variants:**
 - `variant="minimal"` — Logo + UserMenu only (transparent background) — used on Home, Demo, Auth pages

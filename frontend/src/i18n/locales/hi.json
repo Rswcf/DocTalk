@@ -3879,5 +3879,16 @@
   "domainModes.legal": "कानूनी",
   "domainModes.academic": "शैक्षणिक",
   "citation.cardLabel": "उद्धरण {index}, पृष्ठ {page}",
-  "billing.annualUnavailable": "मासिक क्रेडिट वितरण में सुधार होने तक नई वार्षिक सदस्यताएँ और वार्षिक प्लान में बदलाव अस्थायी रूप से बंद हैं। मासिक सदस्यताएँ उपलब्ध हैं।"
+  "billing.annualUnavailable": "मासिक क्रेडिट वितरण में सुधार होने तक नई वार्षिक सदस्यताएँ और वार्षिक प्लान में बदलाव अस्थायी रूप से बंद हैं। मासिक सदस्यताएँ उपलब्ध हैं।",
+  "evidence.reference": "उद्धरण {index} · पृष्ठ {page}",
+  "evidence.exact": "सटीक अंश",
+  "evidence.region": "संबंधित अनुच्छेद",
+  "evidence.page": "केवल पृष्ठ मिला",
+  "evidence.loading": "स्रोत खोजा जा रहा है…",
+  "evidence.hidden": "हाइलाइट छिपा है",
+  "evidence.hide": "हाइलाइट छिपाएँ",
+  "evidence.show": "हाइलाइट दिखाएँ",
+  "evidence.return": "उत्तर पर वापस जाएँ",
+  "evidence.fitWidth": "चौड़ाई के अनुसार",
+  "evidence.unavailable": "स्रोत पृष्ठ उपलब्ध नहीं है"
 }

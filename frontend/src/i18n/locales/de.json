@@ -3879,5 +3879,16 @@
   "domainModes.legal": "Recht",
   "domainModes.academic": "Forschung",
   "citation.cardLabel": "Zitat {index}, Seite {page}",
-  "billing.annualUnavailable": "Neue Jahresabos und Änderungen von Jahrestarifen sind vorübergehend pausiert, bis die monatliche Credit-Vergabe korrigiert ist. Monatsabos bleiben verfügbar."
+  "billing.annualUnavailable": "Neue Jahresabos und Änderungen von Jahrestarifen sind vorübergehend pausiert, bis die monatliche Credit-Vergabe korrigiert ist. Monatsabos bleiben verfügbar.",
+  "evidence.reference": "Beleg {index} · Seite {page}",
+  "evidence.exact": "Exakte Textstelle",
+  "evidence.region": "Zugehöriger Abschnitt",
+  "evidence.page": "Nur Seite gefunden",
+  "evidence.loading": "Quelltext wird gesucht…",
+  "evidence.hidden": "Markierung ausgeblendet",
+  "evidence.hide": "Markierung ausblenden",
+  "evidence.show": "Markierung anzeigen",
+  "evidence.return": "Zurück zur Antwort",
+  "evidence.fitWidth": "An Breite anpassen",
+  "evidence.unavailable": "Quellseite nicht verfügbar"
 }

@@ -3879,5 +3879,16 @@
   "domainModes.legal": "قانوني",
   "domainModes.academic": "أكاديمي",
   "citation.cardLabel": "الاقتباس {index}، الصفحة {page}",
-  "billing.annualUnavailable": "الاشتراكات السنوية الجديدة وتغييرات الخطط السنوية متوقفة مؤقتًا أثناء إصلاح منح الرصيد شهريًا. تظل الاشتراكات الشهرية متاحة."
+  "billing.annualUnavailable": "الاشتراكات السنوية الجديدة وتغييرات الخطط السنوية متوقفة مؤقتًا أثناء إصلاح منح الرصيد شهريًا. تظل الاشتراكات الشهرية متاحة.",
+  "evidence.reference": "المرجع {index} · الصفحة {page}",
+  "evidence.exact": "المقطع المطابق",
+  "evidence.region": "المقطع ذو الصلة",
+  "evidence.page": "تم تحديد الصفحة فقط",
+  "evidence.loading": "جارٍ تحديد موضع المصدر…",
+  "evidence.hidden": "التمييز مخفي",
+  "evidence.hide": "إخفاء التمييز",
+  "evidence.show": "إظهار التمييز",
+  "evidence.return": "العودة إلى الإجابة",
+  "evidence.fitWidth": "ملاءمة العرض",
+  "evidence.unavailable": "صفحة المصدر غير متاحة"
 }

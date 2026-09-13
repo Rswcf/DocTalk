@@ -3879,5 +3879,16 @@
   "domainModes.legal": "Jurídico",
   "domainModes.academic": "Académico",
   "citation.cardLabel": "Cita {index}, página {page}",
-  "billing.annualUnavailable": "Las nuevas suscripciones anuales y los cambios de plan anual están suspendidos mientras se corrige la entrega mensual de créditos. Las suscripciones mensuales siguen disponibles."
+  "billing.annualUnavailable": "Las nuevas suscripciones anuales y los cambios de plan anual están suspendidos mientras se corrige la entrega mensual de créditos. Las suscripciones mensuales siguen disponibles.",
+  "evidence.reference": "Cita {index} · Página {page}",
+  "evidence.exact": "Pasaje exacto",
+  "evidence.region": "Pasaje relacionado",
+  "evidence.page": "Solo se ubicó la página",
+  "evidence.loading": "Localizando la fuente…",
+  "evidence.hidden": "Resaltado oculto",
+  "evidence.hide": "Ocultar resaltado",
+  "evidence.show": "Mostrar resaltado",
+  "evidence.return": "Volver a la respuesta",
+  "evidence.fitWidth": "Ajustar al ancho",
+  "evidence.unavailable": "Página de origen no disponible"
 }

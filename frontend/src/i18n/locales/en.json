@@ -3881,5 +3881,16 @@
   "domainModes.legal": "Legal",
   "domainModes.academic": "Academic",
   "citation.cardLabel": "Citation {index}, page {page}",
-  "billing.annualUnavailable": "New annual subscriptions and annual plan changes are temporarily unavailable while monthly credit delivery is being fixed. Monthly subscriptions remain available."
+  "billing.annualUnavailable": "New annual subscriptions and annual plan changes are temporarily unavailable while monthly credit delivery is being fixed. Monthly subscriptions remain available.",
+  "evidence.reference": "Citation {index} · Page {page}",
+  "evidence.exact": "Exact passage",
+  "evidence.region": "Related passage",
+  "evidence.page": "Page location only",
+  "evidence.loading": "Locating source…",
+  "evidence.hidden": "Highlight hidden",
+  "evidence.hide": "Hide highlight",
+  "evidence.show": "Show highlight",
+  "evidence.return": "Back to answer",
+  "evidence.fitWidth": "Fit width",
+  "evidence.unavailable": "Source page unavailable"
 }

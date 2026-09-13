@@ -6,11 +6,14 @@ import type { PDFDocumentProxy } from 'pdfjs-dist/types/src/display/api';
 import 'react-pdf/dist/esm/Page/TextLayer.css';
 import PageWithHighlights from './PageWithHighlights';
 import PdfToolbar from './PdfToolbar';
-import type { NormalizedBBox } from '../../types';
+import type { Citation, NormalizedBBox } from '../../types';
 import { useDocTalkStore } from '../../store';
 import { useLocale } from '../../i18n';
 import { usePdfRecovery } from '../../lib/usePdfRecovery';
 import { errorCopy } from '../../lib/errorCopy';
+import { citationPageRange } from '../../lib/citationText';
+import type { EvidenceKind } from '../../lib/pdfEvidence';
+import { Eye, EyeOff, ScanLine } from 'lucide-react';
 
 // Load pdf.js worker from same origin to avoid CSP cross-origin issues.
 // The worker file is copied from node_modules/pdfjs-dist/build/ to public/.
@@ -66,6 +69,8 @@ export interface PdfViewerProps {
   scrollNonce: number;
   highlightSnippet?: string | null;
   highlightFocus?: string | null;
+  citation?: Citation;
+  onReturnToAnswer?: () => void;
   onLayoutTranslate?: () => void;
   layoutTranslateBusy?: boolean;
   layoutTranslateDisabled?: boolean;
@@ -75,8 +80,13 @@ export interface PdfViewerProps {
 const scrollBehavior = () =>
   window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' as const : 'smooth' as const;
 
-export default function PdfViewer({ pdfUrl, currentPage, highlights, scale, scrollNonce, highlightSnippet, highlightFocus, onLayoutTranslate, layoutTranslateBusy, layoutTranslateDisabled, onRefreshUrl }: PdfViewerProps) {
+export default function PdfViewer({ pdfUrl, currentPage, highlights, scale, scrollNonce, highlightSnippet, highlightFocus, citation, onReturnToAnswer, onLayoutTranslate, layoutTranslateBusy, layoutTranslateDisabled, onRefreshUrl }: PdfViewerProps) {
   const { refreshing, revision, retry, error: recoveryError } = usePdfRecovery(pdfUrl, onRefreshUrl);
+  const [hiddenEvidence, setHiddenEvidence] = useState(false);
+  const [evidenceVersion, setEvidenceVersion] = useState(0);
+  const [evidenceStatus, setEvidenceStatus] = useState<EvidenceKind | 'loading' | 'unavailable'>('loading');
+  const onEvidenceReady = useCallback(() => setEvidenceVersion(value => value + 1), []);
+  useEffect(() => { setHiddenEvidence(false); setEvidenceStatus('loading'); }, [citation]);
   const [numPages, setNumPages] = useState<number>(0);
   const [isDragging, setIsDragging] = useState(false);
   const [debouncedSearch, setDebouncedSearch] = useState('');
@@ -94,7 +104,7 @@ export default function PdfViewer({ pdfUrl, currentPage, highlights, scale, scro
   const activePdfUrlRef = useRef(pdfUrl);
   activePdfUrlRef.current = pdfUrl;
   const zoomAnchorRef = useRef<{ page: number; ratio: number } | null>(null);
-  const navigationRef = useRef<{ key: string; pending: boolean } | null>(null);
+  const navigationRef = useRef<{ key: string; pending: boolean; staged?: boolean } | null>(null);
   const { setScale, grabMode, setGrabMode, searchQuery, searchMatches, currentMatchIndex, setSearchQuery, setSearchMatches, setCurrentMatchIndex } = useDocTalkStore();
   const setStoreTotalPages = (n: number) => useDocTalkStore.setState({ totalPages: n });
   const { t, tOr } = useLocale();
@@ -121,60 +131,64 @@ export default function PdfViewer({ pdfUrl, currentPage, highlights, scale, scro
     setVisibleRange({ start: 1, end: 6 });
   }, [validPdfUrl, revision]);
 
-  // Scroll to page when currentPage changes (e.g. citation click or toolbar nav)
-  // If highlights exist, center the viewport on the first highlight bbox
+  useEffect(() => {
+    if (!citation) return;
+    if (numPages > 0 && (citation.page < 1 || citation.page > numPages)) {
+      setEvidenceStatus('unavailable');
+      return;
+    }
+    const page = pageRefs.current[citation.page - 1];
+    const evidence = page?.querySelector<HTMLElement>('[data-evidence-ready="true"]');
+    if (evidence) setEvidenceStatus(evidence.dataset.evidenceKind as EvidenceKind);
+  }, [citation, evidenceVersion, numPages]);
+
+  // Stage a distant virtualized page, then place its measured evidence once.
+  // User input cancels pending work; a completed jump never fights later scrolling.
   useEffect(() => {
     if (!numPages || !containerRef.current) return;
+    if (currentPage < 1 || currentPage > numPages) {
+      navigationRef.current = { key: `${currentPage}:${scrollNonce}`, pending: false };
+      return;
+    }
     const key = `${currentPage}:${scrollNonce}`;
     if (navigationRef.current?.key !== key) {
       navigationRef.current = { key, pending: true };
-    } else if (!navigationRef.current.pending) {
-      return; // A resize/rerender must not undo the user's subsequent scrolling.
-    }
-    // Teleport visible range directly to target page area.
-    // CRITICAL: Do NOT expand from prev range — jumping from page 1 to page 400
-    // would render 400+ pages simultaneously, crashing the browser.
-    setVisibleRange({
-      start: Math.max(1, currentPage - BUFFER),
-      end: Math.min(numPages, currentPage + BUFFER),
-    });
-
+    } else if (!navigationRef.current.pending) return;
+    setVisibleRange({ start: Math.max(1, currentPage - BUFFER), end: Math.min(numPages, currentPage + BUFFER) });
     isScrollingToPage.current = true;
     setVisiblePage(currentPage);
-
-    // Use one viewport coordinate system. offsetTop values can belong to
-    // different offset parents, and async page placeholders used to collapse.
     let cancelled = false;
     let frame = 0;
     const scrollToTarget = () => {
-      if (cancelled || navigationRef.current?.key !== key || !navigationRef.current.pending) return;
+      const navigation = navigationRef.current;
+      if (cancelled || navigation?.key !== key || !navigation.pending) return;
       const target = pageRefs.current[currentPage - 1];
       const container = containerRef.current;
       if (!target || !container || container.clientHeight === 0) return;
       const pageRect = target.getBoundingClientRect();
       const containerRect = container.getBoundingClientRect();
-      const first = highlights
-        .filter((box) => (box.page ?? currentPage) === currentPage
-          && Number.isFinite(box.y) && Number.isFinite(box.h)
-          && box.y >= 0 && box.y <= 1 && box.h > 0 && box.h < 0.95)
+      const isCitationPage = citation && currentPage >= citation.page && currentPage <= (citation.pageEnd || citation.page);
+      const ready = !isCitationPage || target.querySelector('[data-evidence-ready="true"]');
+      if (!ready && navigation.staged) return;
+      const anchor = ready ? target.querySelector<HTMLElement>('[data-evidence-anchor="true"]')?.getBoundingClientRect() : undefined;
+      const first = highlights.filter(box => (box.page ?? currentPage) === currentPage && Number.isFinite(box.y) && box.y >= 0 && box.h > 0 && box.h < 0.95)
         .reduce<typeof highlights[number] | undefined>((top, box) => !top || box.y < top.y ? box : top, undefined);
-      const anchorY = first ? (first.y + first.h / 2) * pageRect.height : 0;
-      const scrollTarget = container.scrollTop + pageRect.top - containerRect.top
-        + anchorY - (first ? container.clientHeight / 2 : 0);
-      container.scrollTo({ top: Math.max(0, scrollTarget), behavior: scrollBehavior() });
-      if (pageDimensions[currentPage - 1] && navigationRef.current?.key === key) {
-        navigationRef.current.pending = false;
+      const anchorY = anchor ? anchor.top - pageRect.top : first ? first.y * pageRect.height : 0;
+      const hasAnchor = Boolean(anchor || first);
+      const top = Math.max(0, container.scrollTop + pageRect.top - containerRect.top + anchorY - (hasAnchor ? container.clientHeight * 0.32 : 0));
+      let left = container.scrollLeft;
+      if (anchor && (anchor.left < containerRect.left + 16 || anchor.right > containerRect.right - 16)) {
+        left = Math.max(0, container.scrollLeft + anchor.left - containerRect.left - 24);
       }
+      const distance = Math.abs(top - container.scrollTop);
+      container.scrollTo({ top, left, behavior: ready && distance < container.clientHeight ? scrollBehavior() : 'auto' });
+      navigation.staged = true;
+      if (ready && pageDimensions[currentPage - 1]) navigation.pending = false;
     };
     frame = requestAnimationFrame(() => { frame = requestAnimationFrame(scrollToTarget); });
     const timer = setTimeout(() => { isScrollingToPage.current = false; }, 1200);
-    return () => {
-      cancelled = true;
-      cancelAnimationFrame(frame);
-      clearTimeout(timer);
-      isScrollingToPage.current = false;
-    };
-  }, [currentPage, scrollNonce, numPages, BUFFER, pageDimensions, scale, highlights]);
+    return () => { cancelled = true; cancelAnimationFrame(frame); clearTimeout(timer); isScrollingToPage.current = false; };
+  }, [currentPage, scrollNonce, numPages, BUFFER, pageDimensions, scale, highlights, citation, evidenceVersion]);
 
   useLayoutEffect(() => {
     const anchor = zoomAnchorRef.current;
@@ -349,8 +363,6 @@ export default function PdfViewer({ pdfUrl, currentPage, highlights, scale, scro
     })();
   };
 
-  // removed onPageRender: no longer needed with text-level highlights
-
   const handlePageChange = useCallback((page: number) => {
     useDocTalkStore.setState((state) => ({
       currentPage: Math.max(1, page),
@@ -362,9 +374,13 @@ export default function PdfViewer({ pdfUrl, currentPage, highlights, scale, scro
     const container = containerRef.current;
     if (container && newScale !== scale) {
       const center = container.getBoundingClientRect().top + container.clientHeight / 2;
-      const index = pageRefs.current.findIndex((page) => {
+      let index = -1;
+      let distance = Infinity;
+      pageRefs.current.forEach((page, pageIndex) => {
         const rect = page?.getBoundingClientRect();
-        return rect && rect.top <= center && rect.bottom >= center;
+        if (!rect) return;
+        const gap = Math.max(rect.top - center, center - rect.bottom, 0);
+        if (gap < distance) { index = pageIndex; distance = gap; }
       });
       const rect = pageRefs.current[index]?.getBoundingClientRect();
       if (rect && rect.height > 0) {
@@ -374,6 +390,14 @@ export default function PdfViewer({ pdfUrl, currentPage, highlights, scale, scro
     }
     setScale(newScale);
   }, [setScale, scale]);
+
+  const handleFitWidth = useCallback(() => {
+    const container = containerRef.current;
+    const width = pageDimensions[visiblePage - 1]?.width;
+    if (!container || !width || container.clientWidth <= 24) return;
+    handleScaleChange(Math.min(3, Math.max(0.25, (container.clientWidth - 24) / width)));
+    container.scrollLeft = 0;
+  }, [pageDimensions, visiblePage, handleScaleChange]);
 
   const handleSearchNext = useCallback(() => {
     if (searchMatches.length === 0) return;
@@ -462,6 +486,28 @@ export default function PdfViewer({ pdfUrl, currentPage, highlights, scale, scro
           layoutTranslateDisabled={layoutTranslateDisabled}
         />
       )}
+      {citation && <div className="dt-evidence-bar flex flex-wrap items-center justify-between gap-x-3 gap-y-1 border-b border-[var(--reader-evidence-border)] bg-[var(--reader-evidence-soft)] px-3 py-1.5 text-xs">
+        <span role="status" className="dt-evidence-status min-w-0" tabIndex={-1}>
+          {t('evidence.reference', { index: citation.refIndex, page: citationPageRange(citation) })}
+          {' · '}{t(hiddenEvidence ? 'evidence.hidden' : `evidence.${evidenceStatus}`)}
+        </span>
+        <span className="flex flex-wrap items-center gap-1">
+          <button type="button" aria-pressed={hiddenEvidence} onClick={() => setHiddenEvidence(value => !value)}
+            aria-label={t(hiddenEvidence ? 'evidence.show' : 'evidence.hide')} title={t(hiddenEvidence ? 'evidence.show' : 'evidence.hide')}
+            className="flex min-h-9 min-w-9 items-center justify-center gap-1.5 rounded px-2 hover:bg-black/5 focus-visible:ring-2 focus-visible:ring-blue-500 dark:hover:bg-white/10">
+            {hiddenEvidence ? <Eye size={14} aria-hidden="true" /> : <EyeOff size={14} aria-hidden="true" />}
+            <span className="hidden sm:inline">{t(hiddenEvidence ? 'evidence.show' : 'evidence.hide')}</span>
+          </button>
+          <button type="button" onClick={handleFitWidth} disabled={!pageDimensions[visiblePage - 1]}
+            className="flex min-h-9 items-center gap-1.5 rounded px-2 hover:bg-black/5 focus-visible:ring-2 focus-visible:ring-blue-500 dark:hover:bg-white/10 disabled:opacity-50">
+            <ScanLine size={14} aria-hidden="true" />{t('evidence.fitWidth')}
+          </button>
+          {onReturnToAnswer && <button type="button" onClick={onReturnToAnswer}
+            className="min-h-9 rounded border border-[var(--reader-evidence-border)] px-2 hover:bg-black/5 focus-visible:ring-2 focus-visible:ring-blue-500 dark:hover:bg-white/10">
+            {t('evidence.return')}
+          </button>}
+        </span>
+      </div>}
       <div
         className={`flex-1 overflow-auto ${grabMode ? (isDragging ? 'cursor-grabbing' : 'cursor-grab') : ''}`}
         style={grabMode ? { userSelect: 'none' } : undefined}
@@ -494,7 +540,7 @@ export default function PdfViewer({ pdfUrl, currentPage, highlights, scale, scro
             </button>
           </div>}
         >
-          <div className="flex flex-col items-center gap-5 py-6">
+          <div className="flex flex-col items-start gap-5 py-6">
             {pages.map((pageNumber) => {
               const isInRange = pageNumber >= visibleRange.start && pageNumber <= visibleRange.end;
 
@@ -508,7 +554,7 @@ export default function PdfViewer({ pdfUrl, currentPage, highlights, scale, scro
                     key={pageNumber}
                     ref={(el) => { pageRefs.current[pageNumber - 1] = el; }}
                     data-page-number={pageNumber}
-                    className="rounded bg-white/55 dark:bg-zinc-800/70"
+                    className="mx-auto shrink-0 rounded bg-white/55 dark:bg-zinc-800/70"
                     style={{ height: pageHeight, width: pageWidth }}
                   />
                 );
@@ -519,14 +565,18 @@ export default function PdfViewer({ pdfUrl, currentPage, highlights, scale, scro
                 <div
                   key={pageNumber}
                   ref={(el) => { pageRefs.current[pageNumber - 1] = el; }}
-                  className="relative"
+                  className="relative mx-auto shrink-0"
                   style={pageDimensions[pageNumber - 1] ? {
                     height: pageDimensions[pageNumber - 1].width * pageDimensions[pageNumber - 1].aspectRatio * scale,
                     width: pageDimensions[pageNumber - 1].width * scale,
                   } : undefined}
                   data-page-number={pageNumber}
                 >
-                  <PageWithHighlights pageNumber={pageNumber} scale={scale} highlights={pageHighlights} searchQuery={searchQuery} highlightSnippet={highlightSnippet} highlightFocus={highlightFocus} />
+                  <PageWithHighlights pageNumber={pageNumber} scale={scale} highlights={pageHighlights} searchQuery={searchQuery}
+                    highlightSnippet={citation && pageNumber >= citation.page && pageNumber <= (citation.pageEnd || citation.page) ? highlightSnippet : null}
+                    highlightFocus={citation && pageNumber >= citation.page && pageNumber <= (citation.pageEnd || citation.page) ? highlightFocus : null}
+                    citationIndex={pageHighlights.length || (citation?.page === pageNumber) ? citation?.refIndex : undefined}
+                    navigationId={scrollNonce} hidden={hiddenEvidence} onEvidenceReady={onEvidenceReady} />
                 </div>
               );
             })}

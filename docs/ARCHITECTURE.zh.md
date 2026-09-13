@@ -784,7 +784,7 @@ graph TD
 
     subgraph PdfComp["PDF 组件"]
         PdfToolbar["PdfToolbar<br/>缩放 + 拖拽 + 搜索"]
-        PageHL["PageWithHighlights<br/>边界框 + 搜索覆盖层"]
+        PageHL["PageWithHighlights<br/>精确行 / 页边范围 + 搜索"]
     end
 
     subgraph ProfileComp["Profile 组件"]
@@ -819,6 +819,8 @@ graph TD
     Layout -.-> AuthModal
     Layout -.-> PaywallMod
 ```
+
+PDF 引用仅使用一套覆盖层：完整、唯一且属于引用页/区域的文字通过 DOM Range 映射为透明浅琥珀行级标记；无法验证时降级为页边范围或仅页码。表格范围合并只用于显示，不扩大精确匹配区域。导航等待文本就绪、保持缩放、允许用户中断，并提供隐藏/重显、适合宽度和返回原回答。`useCitationReturn` 按文档和会话保存滚动位置与焦点。搜索保持独立，减少动画偏好关闭证据淡入。
 
 **Header 变体：**
 - `variant="minimal"` — 仅 Logo + UserMenu（透明背景）— 用于首页、Demo、登录页

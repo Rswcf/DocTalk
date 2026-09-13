@@ -23,10 +23,10 @@ function harness(dimensions = [{}]) {
   let id = 0;
   const frames = new Map(), scrolls = [];
   const scope = {
-    numPages: 2, currentPage: 1, scrollNonce: 1, scale: 1,
-    containerRef: { current: { clientHeight: 500, scrollTop: 0,
-      getBoundingClientRect: () => ({ top: 0 }), scrollTo: (value) => scrolls.push(value) } },
-    pageRefs: { current: [{ getBoundingClientRect: () => ({ top: 100, height: 1000 }) }] },
+    numPages: 2, currentPage: 1, scrollNonce: 1, scale: 1, citation: undefined,
+    containerRef: { current: { clientHeight: 500, scrollTop: 0, scrollLeft: 0,
+      getBoundingClientRect: () => ({ top: 0, left: 0, right: 600 }), scrollTo: (value) => scrolls.push(value) } },
+    pageRefs: { current: [{ querySelector: () => null, getBoundingClientRect: () => ({ top: 100, height: 1000 }) }] },
     navigationRef: { current: null }, isScrollingToPage: { current: false },
     setVisibleRange() {}, setVisiblePage() {}, BUFFER: 3,
     highlights: [], pageDimensions: dimensions,
@@ -73,7 +73,7 @@ function harness(dimensions = [{}]) {
   const h = harness(); h.effect(); h.frame(); h.cleanup(); h.drain();
   assert.equal(h.scrolls.length, 0, 'effect cleanup cancels its queued frame');
 }
-console.log('5 actual-effect navigation regression scenarios passed; no browser/network/DB access.');
+
 
 let zoomBody;
 function findZoom(node) {
@@ -119,3 +119,20 @@ observedStore.currentPage=1;
 observedNavigation.current={key:'1:10',pending:true};
 observed([]);
 assert.equal(observedStore.currentPage,1, 'observation cannot override pending explicit navigation');
+
+{
+  const h = harness(); let ready = false;
+  h.scope.citation = {page:1};
+  h.scope.pageRefs.current[0].querySelector = selector => selector.includes('ready') ? (ready ? {} : null) : ready ? {getBoundingClientRect:()=>({top:340,left:50,right:400})} : null;
+  h.effect();h.drain();assert.equal(h.scope.navigationRef.current.pending,true,'stage page while text renders');
+  const staged=h.scrolls.length;h.effect();h.drain();assert.equal(h.scrolls.length,staged,'do not repeatedly jump while waiting');
+  ready=true;h.effect();h.drain();assert.equal(h.scrolls.at(-1).top,180,'align measured first line with context above');
+  assert.equal(h.scope.navigationRef.current.pending,false);h.cleanup();
+}
+
+{
+ const h=harness();h.scope.currentPage=99;h.effect();h.drain();
+ assert.equal(h.scope.navigationRef.current.pending,false,'unavailable pages cannot leave navigation pending forever');
+ assert.equal(h.scrolls.length,0);
+}
+console.log('Navigation lifecycle, evidence readiness, zoom and observer regression scenarios passed; no browser/network/DB access.');

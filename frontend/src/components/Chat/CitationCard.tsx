@@ -10,6 +10,7 @@ interface CitationCardProps {
   page: number;
   pageEnd?: number;
   onClick?: () => void;
+  active?: boolean;
 }
 
 /**
@@ -23,7 +24,7 @@ function sanitizeText(text: string | null | undefined): string {
   return text.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '');
 }
 
-export default function CitationCard({ refIndex, textSnippet, page, pageEnd, onClick }: CitationCardProps) {
+export default function CitationCard({ refIndex, textSnippet, page, pageEnd, onClick, active = false }: CitationCardProps) {
   const { t } = useLocale();
   // Sanitize and truncate the snippet
   const sanitized = sanitizeText(textSnippet);
@@ -36,6 +37,7 @@ export default function CitationCard({ refIndex, textSnippet, page, pageEnd, onC
     <button
       type="button"
       onClick={onClick}
+      aria-current={active ? 'location' : undefined}
       className="dt-citation-card inline-flex items-center gap-2 rounded-lg px-2.5 py-2 text-start text-xs focus-visible:ring-2 focus-visible:ring-[var(--reader-evidence)] focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-900"
       aria-label={t('citation.cardLabel', { index: refIndex, page: validPage })}
     >

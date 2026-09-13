@@ -25,6 +25,7 @@ export interface DocTalkStore {
   scale: number;
   grabMode: boolean;
   highlights: NormalizedBBox[];
+  citationTarget: { citation: Citation; messageId?: string } | null;
   pdfUrl: string | null;
   scrollNonce: number;
 
@@ -100,7 +101,7 @@ export interface DocTalkStore {
   setScale: (scale: number) => void;
   setGrabMode: (v: boolean) => void;
   setHighlights: (highlights: NormalizedBBox[]) => void;
-  navigateToCitation: (citation: Citation) => void;
+  navigateToCitation: (citation: Citation, messageId?: string) => void;
   addMessage: (msg: Message) => void;
   updateLastMessage: (text: string) => void;
   addCitationToLastMessage: (citation: Citation) => void;
@@ -144,6 +145,7 @@ const initialState = {
   scale: 1,
   grabMode: false,
   highlights: [] as NormalizedBBox[],
+  citationTarget: null as { citation: Citation; messageId?: string } | null,
   pdfUrl: null as string | null,
   sessionId: null as string | null,
   messages: [] as Message[],
@@ -199,14 +201,15 @@ export const useDocTalkStore = create<DocTalkStore>((set, get) => ({
   setScale: (scale: number) => set({ scale: Math.max(0.25, scale) }),
   setGrabMode: (v: boolean) => set({ grabMode: v }),
   setHighlights: (highlights: NormalizedBBox[]) => set({ highlights }),
-  navigateToCitation: (citation: Citation) => {
+  navigateToCitation: (citation: Citation, messageId?: string) => {
     const bboxes = (citation.bboxes || []).map((bb: NormalizedBBox) => ({
       ...bb,
       page: bb.page ?? citation.page,
     }));
     set((state) => ({
       currentPage: citation.page,
-      highlights: bboxes,
+      citationTarget: { citation: { ...citation }, messageId },
+      highlights: bboxes.filter(box => box.page! >= citation.page && box.page! <= (citation.pageEnd || citation.page)),
       // Chunk snippet stays the reliable fallback (converted-PDF/TextViewer
       // paths depend on it). The focus sentence is layered ON TOP as emphasis.
       highlightSnippet: citation.textSnippet || null,
@@ -350,6 +353,7 @@ export const useDocTalkStore = create<DocTalkStore>((set, get) => ({
     searchMatches: [],
     currentMatchIndex: -1,
     highlights: [],
+    citationTarget: null,
     highlightSnippet: null,
     highlightFocus: null,
     grabMode: false,

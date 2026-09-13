@@ -3879,5 +3879,16 @@
   "domainModes.legal": "Juridique",
   "domainModes.academic": "Académique",
   "citation.cardLabel": "Citation {index}, page {page}",
-  "billing.annualUnavailable": "Les nouveaux abonnements annuels et les changements de formule annuelle sont suspendus pendant la correction de l’attribution mensuelle des crédits. Les abonnements mensuels restent disponibles."
+  "billing.annualUnavailable": "Les nouveaux abonnements annuels et les changements de formule annuelle sont suspendus pendant la correction de l’attribution mensuelle des crédits. Les abonnements mensuels restent disponibles.",
+  "evidence.reference": "Référence {index} · Page {page}",
+  "evidence.exact": "Passage exact",
+  "evidence.region": "Passage associé",
+  "evidence.page": "Page uniquement",
+  "evidence.loading": "Recherche de la source…",
+  "evidence.hidden": "Surlignage masqué",
+  "evidence.hide": "Masquer le surlignage",
+  "evidence.show": "Afficher le surlignage",
+  "evidence.return": "Revenir à la réponse",
+  "evidence.fitWidth": "Ajuster à la largeur",
+  "evidence.unavailable": "Page source indisponible"
 }
