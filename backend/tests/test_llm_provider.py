@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import io
 import logging
 import re
 import time
@@ -92,7 +93,18 @@ def test_flash_profile_and_legacy_credit_rate_match() -> None:
     assert MODEL_TO_MODE["deepseek-v4-flash"] == "quick"
 
 
-def test_completion_telemetry_records_provider_facts(caplog) -> None:
+def _capture_telemetry(call) -> str:
+    stream = io.StringIO()
+    handler = logging.StreamHandler(stream)
+    llm_provider._TELEMETRY_LOGGER.addHandler(handler)
+    try:
+        call()
+    finally:
+        llm_provider._TELEMETRY_LOGGER.removeHandler(handler)
+    return stream.getvalue()
+
+
+def test_completion_telemetry_records_provider_facts() -> None:
     response = SimpleNamespace(
         model="deepseek-flash",
         choices=[SimpleNamespace(finish_reason="stop")],
@@ -104,24 +116,25 @@ def test_completion_telemetry_records_provider_facts(caplog) -> None:
         ),
     )
 
-    with caplog.at_level(logging.INFO):
-        llm_provider.log_completion(
+    captured = _capture_telemetry(
+        lambda: llm_provider.log_completion(
             logging.getLogger("provider-contract-test"),
             operation="contract_test",
             requested_model="deepseek-v4-flash",
             started_at=time.monotonic(),
             response=response,
         )
+    )
 
-    assert "requested_model=deepseek-v4-flash" in caplog.text
-    assert "actual_model=deepseek-flash" in caplog.text
-    assert "finish_reason=stop" in caplog.text
-    assert "cache_hit_tokens=8" in caplog.text
-    assert "cache_miss_tokens=4" in caplog.text
+    assert "requested_model=deepseek-v4-flash" in captured
+    assert "actual_model=deepseek-flash" in captured
+    assert "finish_reason=stop" in captured
+    assert "cache_hit_tokens=8" in captured
+    assert "cache_miss_tokens=4" in captured
 
 
-def test_completion_error_boundary_logs_failure_without_swallowing_it(caplog) -> None:
-    with caplog.at_level(logging.WARNING), pytest.raises(TimeoutError):
+def test_completion_error_boundary_logs_failure_without_swallowing_it() -> None:
+    def fail() -> None:
         with llm_provider.completion_error_boundary(
             logging.getLogger("provider-contract-test"),
             operation="contract_test",
@@ -129,6 +142,45 @@ def test_completion_error_boundary_logs_failure_without_swallowing_it(caplog) ->
         ):
             raise TimeoutError("provider timed out")
 
-    assert "llm.error operation=contract_test" in caplog.text
-    assert "requested_model=deepseek-flash" in caplog.text
-    assert "error_type=TimeoutError" in caplog.text
+    stream = io.StringIO()
+    handler = logging.StreamHandler(stream)
+    llm_provider._TELEMETRY_LOGGER.addHandler(handler)
+    try:
+        with pytest.raises(TimeoutError):
+            fail()
+    finally:
+        llm_provider._TELEMETRY_LOGGER.removeHandler(handler)
+    captured = stream.getvalue()
+
+    assert "llm.error operation=contract_test" in captured
+    assert "requested_model=deepseek-flash" in captured
+    assert "error_type=TimeoutError" in captured
+
+
+def test_stream_completion_uses_dedicated_visible_channel() -> None:
+    captured = _capture_telemetry(
+        lambda: llm_provider.log_stream_completion(
+            operation="chat",
+            requested_model="deepseek-flash",
+            started_at=time.monotonic(),
+            actual_model="deepseek-flash",
+            finish_reason="stop",
+            prompt_tokens=12,
+            completion_tokens=4,
+            output_chunks=3,
+            cache_hit_tokens=8,
+            cache_miss_tokens=4,
+        )
+    )
+
+    assert "operation=chat" in captured
+    assert "output_chunks=3" in captured
+    assert llm_provider._TELEMETRY_LOGGER.propagate is False
+    llm_provider._configure_telemetry_logger()
+    llm_provider._configure_telemetry_logger()
+    handlers = [
+        handler
+        for handler in llm_provider._TELEMETRY_LOGGER.handlers
+        if getattr(handler, "_doctalk_llm_handler", False)
+    ]
+    assert len(handlers) == 1

@@ -62,6 +62,7 @@ from app.services.llm_provider import (
     create_async_llm_client,
     log_completion,
     log_completion_error,
+    log_stream_completion,
 )
 from app.services.llm_provider import (
     is_deepseek_official_model as _is_deepseek_official_model,
@@ -2447,20 +2448,17 @@ class ChatService:
                     )
                     yield sse("truncated", {"reason": "max_tokens"})
 
-                logger.info(
-                    "llm.completion operation=chat requested_model=%s actual_model=%s "
-                    "latency_ms=%d finish_reason=%s prompt_tokens=%s "
-                    "completion_tokens=%s output_chunks=%d cache_hit_tokens=%s "
-                    "cache_miss_tokens=%s",
-                    effective_model,
-                    actual_model,
-                    max(0, round((time.monotonic() - llm_started_at) * 1000)),
-                    finish_reason,
-                    prompt_tokens,
-                    output_tokens,
-                    token_count,
-                    cache_hit_tokens,
-                    cache_miss_tokens,
+                log_stream_completion(
+                    operation="chat",
+                    requested_model=effective_model,
+                    started_at=llm_started_at,
+                    actual_model=actual_model,
+                    finish_reason=finish_reason,
+                    prompt_tokens=prompt_tokens,
+                    completion_tokens=output_tokens,
+                    output_chunks=token_count,
+                    cache_hit_tokens=cache_hit_tokens,
+                    cache_miss_tokens=cache_miss_tokens,
                 )
 
             except Exception as e:
@@ -3222,19 +3220,16 @@ class ChatService:
                 if finish_reason == "length":
                     yield sse("truncated", {"reason": "max_tokens"})
 
-                logger.info(
-                    "llm.completion operation=continuation requested_model=%s "
-                    "actual_model=%s latency_ms=%d finish_reason=%s "
-                    "prompt_tokens=%s completion_tokens=%s cache_hit_tokens=%s "
-                    "cache_miss_tokens=%s",
-                    effective_model,
-                    actual_model,
-                    max(0, round((time.monotonic() - llm_started_at) * 1000)),
-                    finish_reason,
-                    prompt_tokens,
-                    output_tokens,
-                    cache_hit_tokens,
-                    cache_miss_tokens,
+                log_stream_completion(
+                    operation="continuation",
+                    requested_model=effective_model,
+                    started_at=llm_started_at,
+                    actual_model=actual_model,
+                    finish_reason=finish_reason,
+                    prompt_tokens=prompt_tokens,
+                    completion_tokens=output_tokens,
+                    cache_hit_tokens=cache_hit_tokens,
+                    cache_miss_tokens=cache_miss_tokens,
                 )
 
             except Exception as e:

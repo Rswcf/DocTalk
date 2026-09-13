@@ -19,6 +19,24 @@ from openai import AsyncOpenAI, OpenAI
 from app.core.config import settings
 
 DEFAULT_MAX_RETRIES = 2
+_TELEMETRY_LOGGER = logging.getLogger("doctalk.llm")
+
+
+def _configure_telemetry_logger() -> None:
+    """Give the LLM channel its own handler under Uvicorn and Celery."""
+    if not any(
+        getattr(handler, "_doctalk_llm_handler", False)
+        for handler in _TELEMETRY_LOGGER.handlers
+    ):
+        handler = logging.StreamHandler()
+        handler.setFormatter(logging.Formatter("[%(name)s] %(message)s"))
+        setattr(handler, "_doctalk_llm_handler", True)
+        _TELEMETRY_LOGGER.addHandler(handler)
+    _TELEMETRY_LOGGER.setLevel(logging.INFO)
+    _TELEMETRY_LOGGER.propagate = False
+
+
+_configure_telemetry_logger()
 
 
 def is_deepseek_official_model(model: str) -> bool:
@@ -115,10 +133,11 @@ def log_completion(
     response: Any,
 ) -> None:
     """Emit comparable completion telemetry without logging prompt content."""
+    del log  # Retained in the API so callers do not need logger-specific wiring.
     usage = getattr(response, "usage", None)
     choices = getattr(response, "choices", None) or []
     finish_reason = getattr(choices[0], "finish_reason", None) if choices else None
-    log.info(
+    _TELEMETRY_LOGGER.info(
         "llm.completion operation=%s requested_model=%s actual_model=%s "
         "latency_ms=%d finish_reason=%s prompt_tokens=%s completion_tokens=%s "
         "cache_hit_tokens=%s cache_miss_tokens=%s",
@@ -143,12 +162,44 @@ def log_completion_error(
     error: BaseException,
 ) -> None:
     """Emit failure telemetry without request or response content."""
-    log.warning(
+    del log  # Success and failure records share the same production channel.
+    _TELEMETRY_LOGGER.warning(
         "llm.error operation=%s requested_model=%s latency_ms=%d error_type=%s",
         operation,
         requested_model,
         max(0, round((time.monotonic() - started_at) * 1000)),
         type(error).__name__,
+    )
+
+
+def log_stream_completion(
+    *,
+    operation: str,
+    requested_model: str,
+    started_at: float,
+    actual_model: str | None,
+    finish_reason: str | None,
+    prompt_tokens: int | None,
+    completion_tokens: int | None,
+    cache_hit_tokens: int | None,
+    cache_miss_tokens: int | None,
+    output_chunks: int | None = None,
+) -> None:
+    """Emit the same provider facts for streamed completions."""
+    _TELEMETRY_LOGGER.info(
+        "llm.completion operation=%s requested_model=%s actual_model=%s "
+        "latency_ms=%d finish_reason=%s prompt_tokens=%s completion_tokens=%s "
+        "output_chunks=%s cache_hit_tokens=%s cache_miss_tokens=%s",
+        operation,
+        requested_model,
+        actual_model,
+        max(0, round((time.monotonic() - started_at) * 1000)),
+        finish_reason,
+        prompt_tokens,
+        completion_tokens,
+        output_chunks,
+        cache_hit_tokens,
+        cache_miss_tokens,
     )
 
 
