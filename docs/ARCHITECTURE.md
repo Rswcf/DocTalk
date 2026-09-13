@@ -547,7 +547,7 @@ flowchart TB
 
 3. **One-Time Purchase**: Stripe Checkout creates a payment session. On `checkout.session.completed` webhook (mode=payment), credits are added to the user's balance. Idempotent by `payment_intent` ID.
 
-4. **Plus/Pro Subscription**: Stripe recurring subscriptions: new annual purchases and annual plan changes are paused locally (2026-09-13 QA finding D28); monthly purchases remain available. Existing subscription webhooks and cancellation still run. `checkout.session.completed` (mode=subscription) only updates the user's plan — it does **not** grant credits (prevents double-grant with invoice webhook). `invoice.payment_succeeded` grants the allowance from the **paid invoice's recurring Price snapshot** (Plus: 3K, Pro: 9K), supporting legacy fields and Basil `parent` / `pricing` fields and fetching all line pages. It never falls back to the current user plan or a live subscription's changed Price. Unknown/missing/conflicting recurring prices return 503 without a ledger write so Stripe can retry. Proration/update invoices do not grant a full allowance; paid zero-cash invoices (e.g. discounts) remain eligible. The handler checks invoice idempotency before external reads, then locks the user and rechecks before atomically committing the balance and ledger. Late invoices do not change current entitlements or reactivate a cancelled subscription. Existing under-grants are not silently corrected on replay; they require separate reconciliation. On `customer.subscription.deleted`, plan is reset to Free.
+4. **Plus/Pro Subscription**: Stripe recurring subscriptions: annual purchases and plan changes are controlled by `ANNUAL_BILLING_ENABLED` (default false during rollout); monthly purchases remain available. Paid annual invoices atomically register twelve calendar-month installments, with month zero retaining the `stripe_invoice` ledger reference. Celery Beat sweeps due installments every five minutes; each grant and its balance/ledger/delivery marker commit together under user-then-installment locks. Existing subscription webhooks and cancellation still run. `checkout.session.completed` (mode=subscription) only updates the user's plan — it does **not** grant credits (prevents double-grant with invoice webhook). `invoice.payment_succeeded` grants the allowance from the **paid invoice's recurring Price snapshot** (Plus: 3K, Pro: 9K), supporting legacy fields and Basil `parent` / `pricing` fields and fetching all line pages. It never falls back to the current user plan or a live subscription's changed Price. Unknown/missing/conflicting recurring prices return 503 without a ledger write so Stripe can retry. Proration/update invoices do not grant a full allowance; paid zero-cash invoices (e.g. discounts) remain eligible. The handler checks invoice idempotency before external reads, then locks the user and rechecks before atomically committing the balance and ledger. Late invoices do not change current entitlements or reactivate a cancelled subscription. Existing under-grants are not silently corrected on replay; they require separate reconciliation. On `customer.subscription.deleted`, plan is reset to Free.
 
 5. **Chat Debit (2-phase)**: ① `chat.py` pre-checks balance >= `MODE_ESTIMATED_COST` (quick=5, balanced=15, thorough=35), returns 402 if insufficient. ② `chat_service.py` calls `debit_credits()` to debit estimated cost before LLM streaming starts (returns ledger entry ID). After streaming completes, `reconcile_credits()` updates the **same ledger entry in-place** (delta and balance_after) to reflect actual token-based cost — no new entries are created. Each chat produces exactly one ledger row (reason="chat"). On LLM failure, the ledger entry is deleted and credits fully refunded (no trace). All operations recorded in `CreditLedger` (balance tracking) and `UsageRecord` (analytics).
 
@@ -1555,3 +1555,44 @@ asyncio cancellation arriving during cleanup can still leave an unresolved
 predebit; unavailable cleanup can leave the session lease until its 120-second
 expiry. These rare outage/deadline windows are recorded follow-up work, not a
 claim of fully proven production disconnect recovery.
+
+
+### Production release candidate 0.30.1 (2026-09-13)
+
+D28 now has an add-only `20260913_0046` migration and an application-owned annual
+credit schedule. Month anniversaries retain the original calendar day (Jan 31 →
+Feb 28/29 → Mar 31). Duplicate invoice deliveries and concurrent workers cannot
+create duplicate credit grants. Failed invoice lookups defer that invoice for
+15 minutes so unrelated due customers continue. An already settled legacy annual
+invoice is not silently backfilled: a read-only production audit on this date
+found zero annual subscriptions and zero annual paid invoices, so no backfill was
+performed.
+
+Every annual grant verifies its paid invoice, subscription/customer provenance,
+all invoice-payment pages, cash refunds/disputes and post-payment credit notes.
+Ambiguous facts remain pending; refunded payments are held for review. End-of-year
+cancellation preserves prepaid monthly delivery. An unpaid later renewal does not
+invalidate an older paid period. Paid annual upgrades also retain their funding
+invoice in the transition audit. Metadata/cancellation-only subscription events
+cannot advance the financial transition watermark. Late upgrades settle omitted
+monthly differences, without reclaiming already delivered downgrade credits.
+
+Release sequence: migrate and deploy backend/worker/one Beat instance, verify
+health, US-West region, schedule registration and no unresolved grant errors, then
+enable `ANNUAL_BILLING_ENABLED`; the price endpoint exposes `annual_enabled` so the
+frontend follows actual server capability. Disabling new annual sales must never
+stop fulfillment of a previously paid annual invoice. `review` installments and
+unsettled chat debits require an operator to examine the original payment/answer
+facts; they must not be blindly supplemented, deleted or refunded.
+
+R3-2/R3-3: cleanup now runs once in an independently awaited task that survives
+repeated native cancellation; heartbeat joining cannot skip same-task generator
+closure. Short-lived cleanup sessions close explicitly instead of spawning
+SQLAlchemy's shielded `__aexit__` child task. Rollback/close failure invalidates the
+connection. Each phase has a finite budget plus at most three seconds to cancel
+and drain; the enumerated normal shutdown path is at most 44 seconds, and uvicorn
+allows 60 seconds. This is not a claim that arbitrary code which ignores all
+cancellation can be forcibly stopped. Such an unresponsive task emits a critical
+operational error; unresolved accounting retains the debit pending investigation.
+Real PostgreSQL NOWAIT tests verify lock release after delayed rollback and
+session-close cancellation, alongside full ASGI 2.3/2.4 disconnect regressions.

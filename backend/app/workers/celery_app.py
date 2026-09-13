@@ -28,6 +28,7 @@ celery_app = Celery(
         "app.workers.layout_translation_worker",
         "app.workers.deletion_worker",
         "app.workers.cleanup_tasks",
+        "app.workers.annual_credit_worker",
     ],
 )
 
@@ -49,6 +50,10 @@ celery_app.conf.task_routes = {
 
 # Periodic tasks (requires celery beat scheduler)
 celery_app.conf.beat_schedule = {
+    "deliver-annual-credits": {
+        "task": "deliver_annual_credit_installments",
+        "schedule": 300,
+    },
     "cleanup-expired-tokens-daily": {
         "task": "cleanup_expired_verification_tokens",
         "schedule": 86400,  # Every 24 hours

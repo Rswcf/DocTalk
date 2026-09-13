@@ -1386,7 +1386,7 @@ export interface SubscriptionPrice {
   currency: string;
   amount_minor: number;
 }
-export async function getSubscriptionPrices(): Promise<{ prices: SubscriptionPrice[] }> {
+export async function getSubscriptionPrices(): Promise<{ prices: SubscriptionPrice[]; annual_enabled?: boolean }> {
   return handle(await fetch(`${PROXY_BASE}/api/billing/subscription-prices`, { cache: 'no-store' }));
 }
 

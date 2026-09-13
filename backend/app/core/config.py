@@ -145,6 +145,8 @@ class Settings(BaseSettings):
     STRIPE_PRICE_PLUS_ANNUAL: str = ''
     STRIPE_PRICE_PRO_MONTHLY: str = ''
     STRIPE_PRICE_PRO_ANNUAL: str = ''
+    # Enable only after migrations and the annual allowance Beat task are live.
+    ANNUAL_BILLING_ENABLED: bool = False
 
     # Per-plan limits
     FREE_MAX_DOCUMENTS: int = 3

@@ -3890,5 +3890,6 @@
   "evidence.show": "Markierung anzeigen",
   "evidence.return": "Zurück zur Antwort",
   "evidence.fitWidth": "An Breite anpassen",
-  "evidence.unavailable": "Quellseite nicht verfügbar"
+  "evidence.unavailable": "Quellseite nicht verfügbar",
+  "billing.subscribePlan": "{plan} abonnieren"
 }

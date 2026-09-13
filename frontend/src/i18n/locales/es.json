@@ -3890,5 +3890,6 @@
   "evidence.show": "Mostrar resaltado",
   "evidence.return": "Volver a la respuesta",
   "evidence.fitWidth": "Ajustar al ancho",
-  "evidence.unavailable": "Página de origen no disponible"
+  "evidence.unavailable": "Página de origen no disponible",
+  "billing.subscribePlan": "Suscribirse a {plan}"
 }

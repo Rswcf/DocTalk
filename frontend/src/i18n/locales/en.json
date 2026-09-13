@@ -3892,5 +3892,6 @@
   "evidence.show": "Show highlight",
   "evidence.return": "Back to answer",
   "evidence.fitWidth": "Fit width",
-  "evidence.unavailable": "Source page unavailable"
+  "evidence.unavailable": "Source page unavailable",
+  "billing.subscribePlan": "Subscribe to {plan}"
 }

@@ -434,3 +434,151 @@ async def test_hung_renewal_is_bounded_before_lease_expiry(conversation, monkeyp
     async with asyncio.timeout(1):
         with pytest.raises(asyncio.CancelledError):
             await consume(op, source)
+
+
+@pytest.mark.parametrize('spec', ['2.3', '2.4'])
+async def test_full_asgi_disconnect_releases_lease(conversation, spec):
+    from contextlib import aclosing
+
+    from starlette.background import BackgroundTask
+    from starlette.requests import ClientDisconnect
+
+    from app.services.chat_cleanup import protected_cleanup
+    from app.services.chat_response_versions import (
+        ChatStreamingResponse,
+        release_operation,
+    )
+    session, _, _ = conversation
+    op = await claim_operation(session.id)
+    sent, cleaned = asyncio.Event(), asyncio.Event()
+    async with AsyncSessionLocal() as db:
+        async def source():
+            try:
+                yield 'chunk'
+            finally:
+                async def save():
+                    await fence_message_write(db)
+                    await db.commit()
+                    cleaned.set()
+                await protected_cleanup(save(), timeout=1, label='asgi-test')
+        async def body():
+            async with aclosing(stream_with_operation(source(), op, db)) as events:
+                async for event in events:
+                    yield event
+        async def receive():
+            await sent.wait()
+            return {'type': 'http.disconnect'}
+        async def send(message):
+            if message['type'] == 'http.response.body':
+                sent.set()
+                if spec == '2.4':
+                    raise OSError('client closed')
+                await asyncio.Event().wait()
+        response = ChatStreamingResponse(body(), background=BackgroundTask(release_operation, op))
+        if spec == '2.4':
+            with pytest.raises(ClientDisconnect):
+                await response({'type': 'http', 'asgi': {'spec_version': spec}}, receive, send)
+        else:
+            await response({'type': 'http', 'asgi': {'spec_version': spec}}, receive, send)
+    assert cleaned.is_set() and current_operation.get() is None
+    await consume(await claim_operation(session.id), finish)
+
+
+async def test_failed_rollback_still_releases_lease(conversation, monkeypatch):
+    from unittest.mock import AsyncMock
+    session, _, _ = conversation
+    op = await claim_operation(session.id)
+    async with AsyncSessionLocal() as db:
+        original = db.invalidate
+        invalidated = AsyncMock(side_effect=original)
+        monkeypatch.setattr(db, 'rollback', AsyncMock(side_effect=RuntimeError('connection lost')))
+        monkeypatch.setattr(db, 'invalidate', invalidated)
+        assert [e async for e in stream_with_operation(finish(db), op, db)] == ['done']
+        invalidated.assert_awaited_once()
+    await consume(await claim_operation(session.id), finish)
+
+
+async def test_cleanup_timeout_invalidates_connection_and_releases_real_pg_lock(conversation, monkeypatch):
+    from app.services.chat_cleanup import protected_cleanup, rollback_or_invalidate
+    session, _, _ = conversation
+    async with AsyncSessionLocal() as db:
+        await db.execute(update(User).where(User.id == session.user_id).values(credits_balance=1234))
+        async def hang():
+            await asyncio.Event().wait()
+        monkeypatch.setattr(db, 'rollback', hang)
+        with pytest.raises(TimeoutError):
+            await protected_cleanup(rollback_or_invalidate(db), timeout=.01, label='pg-lock-timeout')
+        # NOWAIT proves the transaction's actual lock was released, independent
+        # of logical lease expiry or of the parent's timeout result.
+        async with AsyncSessionLocal() as verify:
+            row = await verify.scalar(select(User).where(User.id == session.user_id).with_for_update(nowait=True))
+            assert row.credits_balance != 1234
+    assert not [t for t in asyncio.all_tasks() if t.get_name() == 'chat-cleanup:pg-lock-timeout']
+
+
+async def test_second_cancel_during_heartbeat_join_still_closes_source(conversation, monkeypatch):
+    from contextlib import aclosing
+
+    import app.services.chat_response_versions as versions
+    session, _, _ = conversation
+    op = await claim_operation(session.id)
+    renewing, ending, resume, source_closed, sent = (asyncio.Event() for _ in range(5))
+    monkeypatch.setattr(versions, 'RENEW_SECONDS', .01)
+    async def blocked_renew(db):
+        renewing.set()
+        try:
+            await asyncio.Event().wait()
+        finally:
+            ending.set()
+            await resume.wait()
+    monkeypatch.setattr(versions, 'fence_message_write', blocked_renew)
+    async def source():
+        try:
+            yield 'token'
+        finally:
+            source_closed.set()
+    async def owner():
+        async with AsyncSessionLocal() as db:
+            async with aclosing(stream_with_operation(source(), op, db)) as stream:
+                async for _ in stream:
+                    sent.set()
+                    await asyncio.Event().wait()
+    task = asyncio.create_task(owner())
+    await asyncio.wait_for(sent.wait(), 1)
+    await asyncio.wait_for(renewing.wait(), 1)
+    task.cancel()
+    await asyncio.wait_for(ending.wait(), 1)
+    task.cancel()
+    resume.set()
+    with pytest.raises(asyncio.CancelledError):
+        await task
+    assert source_closed.is_set()
+    async with AsyncSessionLocal() as db:
+        assert await db.get(ChatStreamLease, session.id) is None
+
+
+async def test_delayed_session_close_does_not_leave_hidden_task_or_pg_lock(conversation):
+    from sqlalchemy.ext.asyncio import AsyncSession
+
+    from app.models.database import async_engine
+    from app.services.chat_cleanup import cleanup_session, protected_cleanup
+    session, _, _ = conversation
+    acquired, close_started = asyncio.Event(), asyncio.Event()
+    class SlowCloseSession(AsyncSession):
+        async def close(self):
+            close_started.set()
+            await asyncio.Event().wait()
+    async def cleanup():
+        async with cleanup_session(lambda: SlowCloseSession(bind=async_engine)) as db:
+            await db.execute(update(User).where(User.id == session.user_id).values(credits_balance=4321))
+            acquired.set()
+            await asyncio.Event().wait()
+    before = asyncio.all_tasks()
+    with pytest.raises(TimeoutError):
+        await protected_cleanup(cleanup(), timeout=.08, label='actual-close-timeout')
+    assert acquired.is_set() and close_started.is_set()
+    async with AsyncSessionLocal() as verify:
+        row = await verify.scalar(select(User).where(User.id == session.user_id).with_for_update(nowait=True))
+        assert row.credits_balance != 4321
+    await asyncio.sleep(0)
+    assert not [task for task in asyncio.all_tasks() - before if not task.done()]

@@ -3929,5 +3929,6 @@
   "evidence.show": "显示高亮",
   "evidence.return": "返回刚才回答",
   "evidence.fitWidth": "适合宽度",
-  "evidence.unavailable": "来源页不可用"
+  "evidence.unavailable": "来源页不可用",
+  "billing.subscribePlan": "订阅 {plan}"
 }

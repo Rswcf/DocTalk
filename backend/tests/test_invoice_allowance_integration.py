@@ -169,7 +169,7 @@ async def test_delivery_order_and_replay_preserve_exact_allowance(
 async def test_two_connections_grant_same_invoice_once(purchase, monkeypatch):
     # Both deliveries must pass the initial ledger read before either takes the
     # row lock, making this exercise the locked recheck rather than the fast path.
-    resolve = billing._invoice_allowance_plan
+    resolve = billing._invoice_allowance_details
     both_resolving = asyncio.Event()
     arrived = 0
 
@@ -181,7 +181,7 @@ async def test_two_connections_grant_same_invoice_once(purchase, monkeypatch):
         await asyncio.wait_for(both_resolving.wait(), timeout=5)
         return await resolve(item)
 
-    monkeypatch.setattr(billing, "_invoice_allowance_plan", synchronized_resolve)
+    monkeypatch.setattr(billing, "_invoice_allowance_details", synchronized_resolve)
     item = paid_invoice(purchase)
     results = await asyncio.wait_for(
         asyncio.gather(deliver_invoice(item), deliver_invoice(item)), timeout=10

@@ -1006,3 +1006,67 @@ async def test_regenerate_failure_finally_uses_durable_delivery_and_captured_use
     else:
         assert settle.await_args.kwargs['has_answer'] is delivery
         assert settle.await_args.kwargs['user_id'] == user_id
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize('kind', ['answer', 'continue', 'regenerate'])
+@pytest.mark.parametrize('phase', ['rollback', 'persist', 'settle'])
+async def test_repeated_native_cancel_finishes_cleanup(monkeypatch, kind, phase):
+    from contextlib import aclosing
+
+    from app.services.chat_response_versions import ChatOperation, current_operation
+    if kind == 'regenerate' and phase == 'persist':
+        phase = 'resolve'
+    sid, did, uid, lid, mid = (uuid.uuid4() for _ in range(5))
+    session = SimpleNamespace(id=sid, document_id=did, collection_id=None, title=None, domain_mode=None)
+    doc = SimpleNamespace(id=did, demo_slug=None, custom_instructions=None)
+    assistant = SimpleNamespace(id=mid, role='assistant', session_id=sid, citations=[], content='original ', continuation_count=0, output_tokens=10, response_version=None)
+    db = _make_db(session, doc, assistant_message=assistant, execute_side_effect=[_ScalarOneResult(session), _MessagesResult([assistant] if kind == 'continue' else [SimpleNamespace(role='user', content='What is MetaX?')])])
+    refund, reconcile, usage = (AsyncMock() for _ in range(3))
+    store = []
+    _patch_common(monkeypatch, lid, did, refund=refund, reconcile=reconcile, record_usage=usage, persist_store=store)
+    monkeypatch.setattr(chat_service_module, 'AsyncSessionLocal', lambda: _FakePersistSession(store, assistant if kind == 'continue' else None))
+    monkeypatch.setattr(chat_service_module, 'fence_message_write', AsyncMock())
+    monkeypatch.setattr(chat_service_module, 'replacement_delivered', AsyncMock(return_value=False))
+    reached, resume, token_seen = asyncio.Event(), asyncio.Event(), asyncio.Event()
+    target = {'persist': '_persist_continuation_on_cancel' if kind == 'continue' else '_persist_partial_on_cancel', 'settle': '_settle_predebit_on_cancel', 'resolve': 'replacement_delivered'}.get(phase)
+    original = db.rollback if phase == 'rollback' else getattr(chat_service_module, target)
+    async def barrier(*args, **kwargs):
+        reached.set()
+        await resume.wait()
+        return await original(*args, **kwargs)
+    if phase == 'rollback':
+        db.rollback = barrier
+    else:
+        monkeypatch.setattr(chat_service_module, target, barrier)
+    async def drive():
+        context = current_operation.set(ChatOperation(sid, uuid.uuid4(), replace_id=mid) if kind == 'regenerate' else None)
+        try:
+            if kind == 'continue':
+                stream = chat_service_module.chat_service.continue_stream(session_id=sid, message_id=mid, db=db, user=SimpleNamespace(id=uid, plan='pro'), mode='quick')
+            else:
+                stream = chat_service_module.chat_service.chat_stream(session_id=sid, user_message='What is MetaX?', db=db, user=SimpleNamespace(id=uid, plan='pro'), mode='quick')
+            async with aclosing(stream):
+                async for event in stream:
+                    if event['event'] == 'token':
+                        token_seen.set()
+                        await asyncio.Event().wait()
+        finally:
+            current_operation.reset(context)
+    task = asyncio.create_task(drive())
+    await asyncio.wait_for(token_seen.wait(), 2)
+    task.cancel()
+    await asyncio.wait_for(reached.wait(), 2)
+    task.cancel()
+    await asyncio.sleep(0)
+    task.cancel()
+    resume.set()
+    with pytest.raises(asyncio.CancelledError):
+        await task
+    assert refund.await_count + reconcile.await_count == 1
+    if kind == 'regenerate':
+        assert refund.await_count == 1 and not store and assistant.content == 'original '
+    elif kind == 'answer':
+        assert len([m for m in store if getattr(m, 'role', '') == 'assistant']) == 1
+    else:
+        assert assistant.content == 'original t' and assistant.continuation_count == 1

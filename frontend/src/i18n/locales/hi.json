@@ -3890,5 +3890,6 @@
   "evidence.show": "हाइलाइट दिखाएँ",
   "evidence.return": "उत्तर पर वापस जाएँ",
   "evidence.fitWidth": "चौड़ाई के अनुसार",
-  "evidence.unavailable": "स्रोत पृष्ठ उपलब्ध नहीं है"
+  "evidence.unavailable": "स्रोत पृष्ठ उपलब्ध नहीं है",
+  "billing.subscribePlan": "{plan} की सदस्यता लें"
 }

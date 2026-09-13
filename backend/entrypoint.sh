@@ -59,7 +59,7 @@ uvicorn app.main:app \
     --port "${PORT:-8000}" \
     --proxy-headers \
     --forwarded-allow-ips="${FORWARDED_ALLOW_IPS:-127.0.0.1}" \
-    --timeout-graceful-shutdown 30 &
+    --timeout-graceful-shutdown 60 &
 UVICORN_PID=$!
 
 # --- 6. Wait for first child to exit; then tear down and let Railway restart ---

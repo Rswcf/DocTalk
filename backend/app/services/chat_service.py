@@ -31,6 +31,12 @@ from app.models.tables import (
 )
 from app.services import credit_service, quote_search_service
 from app.services.action_planner import ChatAction, action_planner
+from app.services.chat_cleanup import (
+    SETTLEMENT_SECONDS,
+    cleanup_session,
+    protected_cleanup,
+    rollback_or_invalidate,
+)
 from app.services.chat_response_versions import (
     current_operation,
     fence_message_write,
@@ -823,7 +829,7 @@ async def _persist_partial_on_cancel(
     if not text:
         return None
 
-    async with AsyncSessionLocal() as persist_db:
+    async with cleanup_session(AsyncSessionLocal) as persist_db:
         if message_id is not None and await persist_db.scalar(select(Message.id).where(
             Message.id == message_id, Message.session_id == session_id,
         ).with_for_update()):
@@ -855,7 +861,7 @@ async def _persist_continuation_on_cancel(
     if not continuation_text.strip():
         return False
 
-    async with AsyncSessionLocal() as persist_db:
+    async with cleanup_session(AsyncSessionLocal) as persist_db:
         await fence_message_write(persist_db)
         asst_msg = await persist_db.scalar(select(Message).where(Message.id == message_id).with_for_update())
         if not asst_msg or asst_msg.role != "assistant":
@@ -886,7 +892,7 @@ async def _settle_predebit_on_cancel(
     model: str,
     mode: str,
 ) -> None:
-    async with AsyncSessionLocal() as settle_db:
+    async with cleanup_session(AsyncSessionLocal) as settle_db:
         if has_answer:
             actual_cost = credit_service.calculate_cost(
                 int(prompt_tokens or 0),
@@ -940,7 +946,7 @@ async def _settle_verified_quote_predebit_after_failure(
     matches the existing pattern for non-cancellation failures elsewhere.
     """
     if use_independent_session:
-        async with AsyncSessionLocal() as settle_db:
+        async with cleanup_session(AsyncSessionLocal) as settle_db:
             return await _refund_predebit(settle_db, user_id, pre_debited, predebit_ledger_id)
     assert db is not None
     return await _refund_predebit(db, user_id, pre_debited, predebit_ledger_id)
@@ -1882,14 +1888,14 @@ class ChatService:
                         settled = True
                         try:
                             with anyio.CancelScope(shield=True):
-                                refunded = await asyncio.wait_for(
+                                refunded = await protected_cleanup(
                                     _settle_verified_quote_predebit_after_failure(
                                         user_id=user.id,
                                         pre_debited=pre_debited,
                                         predebit_ledger_id=predebit_ledger_id,
                                         use_independent_session=True,
                                     ),
-                                    timeout=_CANCEL_IO_TIMEOUT_S,
+                                    timeout=_CANCEL_IO_TIMEOUT_S, label="setup-settlement",
                                 )
                             if not refunded:
                                 logger.info(
@@ -2260,7 +2266,7 @@ class ChatService:
             if user is not None and pre_debited > 0 and predebit_ledger_id is not None and not settled:
                 try:
                     with anyio.CancelScope(shield=True):
-                        await asyncio.wait_for(
+                        await protected_cleanup(
                             _settle_predebit_on_cancel(
                                 user_id=user.id,
                                 pre_debited=pre_debited,
@@ -2271,7 +2277,7 @@ class ChatService:
                                 model=effective_model,
                                 mode=effective_mode,
                             ),
-                            timeout=_CANCEL_IO_TIMEOUT_S,
+                            timeout=_CANCEL_IO_TIMEOUT_S, label="setup-settlement",
                         )
                     settled = True
                 except Exception:
@@ -2684,75 +2690,81 @@ class ChatService:
         except asyncio.CancelledError:
             raise
         finally:
-            assistant_snapshot = "".join(assistant_text_parts)
-            has_partial_answer = bool(assistant_snapshot.strip())
-            if not is_replacement and not done_emitted and has_partial_answer and not persisted:
-                try:
-                    with anyio.CancelScope(shield=True):
-                        await db.rollback()
-                        saved_id = await asyncio.wait_for(
-                            _persist_partial_on_cancel(
-                                message_id=answer_id,
-                                session_id=session_id,
-                                assistant_text=assistant_snapshot,
-                                citations=citations,
-                                prompt_tokens=prompt_tokens,
-                                output_tokens=output_tokens,
-                            ),
-                            timeout=_CANCEL_IO_TIMEOUT_S,
+            async def finish_cleanup():
+                nonlocal persisted, settled
+                assistant_snapshot = "".join(assistant_text_parts)
+                has_partial_answer = bool(assistant_snapshot.strip())
+                if not is_replacement and not done_emitted and has_partial_answer and not persisted:
+                    try:
+                        with anyio.CancelScope(shield=True):
+                            await rollback_or_invalidate(db)
+                            saved_id = await asyncio.wait_for(
+                                _persist_partial_on_cancel(
+                                    message_id=answer_id,
+                                    session_id=session_id,
+                                    assistant_text=assistant_snapshot,
+                                    citations=citations,
+                                    prompt_tokens=prompt_tokens,
+                                    output_tokens=output_tokens,
+                                ),
+                                timeout=_CANCEL_IO_TIMEOUT_S,
+                            )
+                        persisted = saved_id is not None
+                    except Exception:
+                        logger.exception(
+                            "Failed to persist partial assistant response on cancel/error for session %s",
+                            session_id,
                         )
-                    persisted = saved_id is not None
-                except Exception:
-                    logger.exception(
-                        "Failed to persist partial assistant response on cancel/error for session %s",
-                        session_id,
-                    )
-            if (
-                user is not None
-                and pre_debited > 0
-                and predebit_ledger_id is not None
-                and not settled
-            ):
-                try:
-                    with anyio.CancelScope(shield=True):
-                        delivered = persisted
-                        if not is_replacement and not persisted:
-                            await db.rollback()
-                            async with AsyncSessionLocal() as resolve_db:
-                                delivered = bool(await asyncio.wait_for(resolve_db.scalar(
-                                    select(Message.id).where(Message.id == answer_id, Message.session_id == session_id).with_for_update()
-                                ), timeout=_CANCEL_IO_TIMEOUT_S))
-                        if is_replacement:
-                            # A replacement candidate is not a delivered answer.
-                            # Resolve even ordinary commit errors; a failed read
-                            # leaves the debit standing rather than blind-refunding.
-                            await db.rollback()
-                            try:
-                                delivered = persisted or await asyncio.wait_for(
-                                    replacement_delivered(operation), timeout=_CANCEL_IO_TIMEOUT_S,
-                                )
-                            except Exception:
-                                logger.exception("regenerate_settlement.unresolved")
-                                raise
-                        await asyncio.wait_for(
-                            _settle_predebit_on_cancel(
-                                user_id=settlement_user_id,
-                                pre_debited=pre_debited,
-                                predebit_ledger_id=predebit_ledger_id,
-                                has_answer=delivered,
-                                prompt_tokens=prompt_tokens,
-                                output_tokens=output_tokens,
-                                model=effective_model,
-                                mode=effective_mode,
-                            ),
-                            timeout=_CANCEL_IO_TIMEOUT_S,
+                if (
+                    user is not None
+                    and pre_debited > 0
+                    and predebit_ledger_id is not None
+                    and not settled
+                ):
+                    try:
+                        with anyio.CancelScope(shield=True):
+                            delivered = persisted
+                            if not is_replacement and not persisted:
+                                await rollback_or_invalidate(db)
+                                async with cleanup_session(AsyncSessionLocal) as resolve_db:
+                                    delivered = bool(await asyncio.wait_for(resolve_db.scalar(
+                                        select(Message.id).where(Message.id == answer_id, Message.session_id == session_id).with_for_update()
+                                    ), timeout=_CANCEL_IO_TIMEOUT_S))
+                            if is_replacement:
+                                # A replacement candidate is not a delivered answer.
+                                # Resolve even ordinary commit errors; a failed read
+                                # leaves the debit standing rather than blind-refunding.
+                                await rollback_or_invalidate(db)
+                                try:
+                                    delivered = persisted or await asyncio.wait_for(
+                                        replacement_delivered(operation), timeout=_CANCEL_IO_TIMEOUT_S,
+                                    )
+                                except Exception:
+                                    logger.exception("regenerate_settlement.unresolved")
+                                    raise
+                            await asyncio.wait_for(
+                                _settle_predebit_on_cancel(
+                                    user_id=settlement_user_id,
+                                    pre_debited=pre_debited,
+                                    predebit_ledger_id=predebit_ledger_id,
+                                    has_answer=delivered,
+                                    prompt_tokens=prompt_tokens,
+                                    output_tokens=output_tokens,
+                                    model=effective_model,
+                                    mode=effective_mode,
+                                ),
+                                timeout=_CANCEL_IO_TIMEOUT_S,
+                            )
+                        settled = True
+                    except Exception:
+                        logger.exception(
+                            "Failed to settle pre-debit on cancel/error for user %s",
+                            settlement_user_id,
                         )
-                    settled = True
-                except Exception:
-                    logger.exception(
-                        "Failed to settle pre-debit on cancel/error for user %s",
-                        settlement_user_id,
-                    )
+            try:
+                await protected_cleanup(finish_cleanup(), timeout=SETTLEMENT_SECONDS, label="answer")
+            except TimeoutError:
+                logger.exception("chat_cleanup.settlement_incomplete")
 
     async def continue_stream(
         self,
@@ -3030,7 +3042,7 @@ class ChatService:
             if user is not None and pre_debited > 0 and predebit_ledger_id is not None and not settled:
                 try:
                     with anyio.CancelScope(shield=True):
-                        await asyncio.wait_for(
+                        await protected_cleanup(
                             _settle_predebit_on_cancel(
                                 user_id=settlement_user_id,
                                 pre_debited=pre_debited,
@@ -3041,7 +3053,7 @@ class ChatService:
                                 model=effective_model,
                                 mode=effective_mode,
                             ),
-                            timeout=_CANCEL_IO_TIMEOUT_S,
+                            timeout=_CANCEL_IO_TIMEOUT_S, label="setup-settlement",
                         )
                     settled = True
                 except Exception:
@@ -3368,66 +3380,72 @@ class ChatService:
         except asyncio.CancelledError:
             raise
         finally:
-            continuation_snapshot = "".join(continuation_text_parts)
-            has_partial_answer = bool(continuation_snapshot.strip())
-            if not done_emitted and has_partial_answer and message_id is not None and not persisted:
-                try:
-                    with anyio.CancelScope(shield=True):
-                        await db.rollback()
-                        saved = await asyncio.wait_for(
-                            _persist_continuation_on_cancel(
-                                message_id=message_id,
-                                continuation_text=continuation_snapshot,
-                                expected_version=base_response_version,
-                                result_version=continuation_version,
-                                new_citations=new_citations,
-                                output_tokens=output_tokens,
-                            ),
-                            timeout=_CANCEL_IO_TIMEOUT_S,
+            async def finish_cleanup():
+                nonlocal persisted, settled
+                continuation_snapshot = "".join(continuation_text_parts)
+                has_partial_answer = bool(continuation_snapshot.strip())
+                if not done_emitted and has_partial_answer and message_id is not None and not persisted:
+                    try:
+                        with anyio.CancelScope(shield=True):
+                            await rollback_or_invalidate(db)
+                            saved = await asyncio.wait_for(
+                                _persist_continuation_on_cancel(
+                                    message_id=message_id,
+                                    continuation_text=continuation_snapshot,
+                                    expected_version=base_response_version,
+                                    result_version=continuation_version,
+                                    new_citations=new_citations,
+                                    output_tokens=output_tokens,
+                                ),
+                                timeout=_CANCEL_IO_TIMEOUT_S,
+                            )
+                        persisted = saved
+                    except Exception:
+                        logger.exception(
+                            "Failed to persist continuation partial response on cancel/error for message %s",
+                            message_id,
                         )
-                    persisted = saved
-                except Exception:
-                    logger.exception(
-                        "Failed to persist continuation partial response on cancel/error for message %s",
-                        message_id,
-                    )
-            if (
-                user is not None
-                and pre_debited > 0
-                and predebit_ledger_id is not None
-                and not settled
-            ):
-                try:
-                    with anyio.CancelScope(shield=True):
-                        delivered = persisted
-                        if not delivered:
-                            await db.rollback()
-                            async with AsyncSessionLocal() as resolve_db:
-                                # Failed resolver raises: never blind-refund a
-                                # continuation whose commit may have succeeded.
-                                version = await asyncio.wait_for(resolve_db.scalar(
-                                    select(Message.response_version).where(Message.id == message_id).with_for_update()
-                                ), timeout=_CANCEL_IO_TIMEOUT_S)
-                                delivered = version == continuation_version
-                        await asyncio.wait_for(
-                            _settle_predebit_on_cancel(
-                                user_id=settlement_user_id,
-                                pre_debited=pre_debited,
-                                predebit_ledger_id=predebit_ledger_id,
-                                has_answer=delivered,
-                                prompt_tokens=prompt_tokens,
-                                output_tokens=output_tokens,
-                                model=effective_model,
-                                mode=effective_mode,
-                            ),
-                            timeout=_CANCEL_IO_TIMEOUT_S,
+                if (
+                    user is not None
+                    and pre_debited > 0
+                    and predebit_ledger_id is not None
+                    and not settled
+                ):
+                    try:
+                        with anyio.CancelScope(shield=True):
+                            delivered = persisted
+                            if not delivered:
+                                await rollback_or_invalidate(db)
+                                async with cleanup_session(AsyncSessionLocal) as resolve_db:
+                                    # Failed resolver raises: never blind-refund a
+                                    # continuation whose commit may have succeeded.
+                                    version = await asyncio.wait_for(resolve_db.scalar(
+                                        select(Message.response_version).where(Message.id == message_id).with_for_update()
+                                    ), timeout=_CANCEL_IO_TIMEOUT_S)
+                                    delivered = version == continuation_version
+                            await asyncio.wait_for(
+                                _settle_predebit_on_cancel(
+                                    user_id=settlement_user_id,
+                                    pre_debited=pre_debited,
+                                    predebit_ledger_id=predebit_ledger_id,
+                                    has_answer=delivered,
+                                    prompt_tokens=prompt_tokens,
+                                    output_tokens=output_tokens,
+                                    model=effective_model,
+                                    mode=effective_mode,
+                                ),
+                                timeout=_CANCEL_IO_TIMEOUT_S,
+                            )
+                        settled = True
+                    except Exception:
+                        logger.exception(
+                            "Failed to settle continuation pre-debit on cancel/error for user %s",
+                            settlement_user_id,
                         )
-                    settled = True
-                except Exception:
-                    logger.exception(
-                        "Failed to settle continuation pre-debit on cancel/error for user %s",
-                        settlement_user_id,
-                    )
+            try:
+                await protected_cleanup(finish_cleanup(), timeout=SETTLEMENT_SECONDS, label="continuation")
+            except TimeoutError:
+                logger.exception("chat_cleanup.settlement_incomplete")
 
 
 # Singleton service

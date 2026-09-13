@@ -86,9 +86,9 @@ def database(plan="free", subscription="pending"):
     "price,amount",
     [
         ("price_plus", 3000),
-        ("price_plus_annual", 3000),
+
         ("price_pro", 9000),
-        ("price_pro_annual", 9000),
+
     ],
 )
 async def test_paid_invoice_before_checkout_including_zero_cash(

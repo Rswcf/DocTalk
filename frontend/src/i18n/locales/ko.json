@@ -3890,5 +3890,6 @@
   "evidence.show": "강조 표시",
   "evidence.return": "답변으로 돌아가기",
   "evidence.fitWidth": "너비에 맞춤",
-  "evidence.unavailable": "출처 페이지를 표시할 수 없습니다"
+  "evidence.unavailable": "출처 페이지를 표시할 수 없습니다",
+  "billing.subscribePlan": "{plan} 구독"
 }

@@ -3890,5 +3890,6 @@
   "evidence.show": "Afficher le surlignage",
   "evidence.return": "Revenir à la réponse",
   "evidence.fitWidth": "Ajuster à la largeur",
-  "evidence.unavailable": "Page source indisponible"
+  "evidence.unavailable": "Page source indisponible",
+  "billing.subscribePlan": "S’abonner à {plan}"
 }

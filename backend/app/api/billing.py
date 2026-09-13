@@ -11,7 +11,7 @@ from typing import Literal, Optional
 import stripe
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response
 from pydantic import BaseModel
-from sqlalchemy import select
+from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.cache import cache_delete, cache_get, cache_set
@@ -20,6 +20,7 @@ from app.core.deps import get_db_session, require_auth
 from app.core.rate_limit import RedisRateLimiter, get_client_ip
 from app.core.security_log import log_security_event
 from app.models.tables import (
+    AnnualCreditInstallment,
     CheckoutAttempt,
     CreditLedger,
     PlanTransition,
@@ -35,6 +36,12 @@ from app.schemas.billing import (
     PortalUrlResponse,
 )
 from app.schemas.common import ReceivedResponse
+from app.services.annual_credit_service import (
+    grant_installment,
+    month_anniversary,
+    register_annual_invoice,
+    update_future_plan,
+)
 from app.services.credit_service import credit_credits
 
 logger = logging.getLogger(__name__)
@@ -64,7 +71,7 @@ async def _limit_status_reads(user: User = Depends(require_auth)):
 def _require_supported_purchase_period(period: str):
     # Annual Stripe invoices only grant once per year. Keep new annual sales
     # closed until monthly, idempotent fulfillment has been implemented.
-    if period == "annual":
+    if period == "annual" and not settings.ANNUAL_BILLING_ENABLED:
         raise HTTPException(503, detail={"error": "ANNUAL_BILLING_UNAVAILABLE",
             "message": "New annual subscriptions are temporarily unavailable. Choose monthly billing."})
 
@@ -152,6 +159,90 @@ _CANCELLABLE_SUBSCRIPTION_STATUSES = {"active", "trialing", "past_due"}
 _PENDING_SENTINEL = "pending"
 _STRIPE_SUB_ID_PREFIX = "sub_"
 _ACTIVE_CHECKOUT_ATTEMPT_STATUSES = {"creating", "open"}
+
+
+def _plan_change_period(subscription: dict, now: datetime) -> int:
+    items = subscription.get("items", {}).get("data", [])
+    item = items[0] if len(items) == 1 else {}
+    start = item.get("current_period_start", subscription.get("current_period_start"))
+    if type(start) is not int:
+        raise ValueError("Subscription billing period is missing")
+    if _interval_from_price_id(_stripe_id(item.get("price")) or "") == "annual":
+        anchor = datetime.fromtimestamp(start, timezone.utc)
+        offset = max(0, (now.year - anchor.year) * 12 + now.month - anchor.month)
+        if month_anniversary(anchor, offset) > now:
+            offset = max(0, offset - 1)
+        return int(month_anniversary(anchor, offset).timestamp())
+    return start
+
+
+async def _apply_confirmed_plan(db, user_id, subscription, *, effective_at):
+    """Serialize local entitlements and supplements from a confirmed Stripe state."""
+    items = subscription.get("items", {}).get("data", [])
+    if len(items) != 1 or subscription.get("pending_update"):
+        raise HTTPException(409, "Subscription update is pending or unsupported")
+    price_id = _stripe_id(items[0].get("price")) or ""
+    plan = _plan_from_price_id(price_id)
+    if plan is None or subscription.get("status") not in _ACTIVE_SUBSCRIPTION_STATUSES:
+        raise HTTPException(409, "Subscription plan is not confirmed")
+    funding_invoice = subscription.get('latest_invoice')
+    annual = _interval_from_price_id(price_id) == 'annual'
+    if annual:
+        if not isinstance(funding_invoice, dict) or not funding_invoice.get('id'):
+            raise HTTPException(503, 'Annual plan payment is unresolved')
+        from app.workers.annual_credit_worker import verify_paid_service
+        cutoff, review = await asyncio.to_thread(verify_paid_service,
+            funding_invoice['id'], subscription['id'], _stripe_id(subscription.get('customer')))
+        if cutoff or review:
+            raise HTTPException(409, 'Annual plan payment requires review')
+    user = await _lock_user(db, user_id)
+    if user.stripe_subscription_id != subscription.get("id"):
+        raise HTTPException(409, "Subscription changed. Refresh billing.")
+    latest_transition = await db.scalar(select(PlanTransition).where(
+        PlanTransition.user_id == user_id, PlanTransition.source == 'plan_change',
+        PlanTransition.metadata_json['subscription_id'].astext == subscription['id'],
+    ).order_by(PlanTransition.effective_at.desc()).limit(1))
+    if latest_transition and (latest_transition.effective_at > effective_at or (
+        latest_transition.effective_at == effective_at and latest_transition.to_plan == plan
+    )):
+        # Price equality cannot identify a transition: Plus -> Pro -> Plus ->
+        # Pro can make an old Pro webhook look current again.
+        await db.commit()
+        return 0
+    old_plan = user.plan
+    supplement = 0
+    if old_plan in {"plus", "pro"} and PLAN_HIERARCHY[plan] > PLAN_HIERARCHY[old_plan]:
+        # A proration invoice must be paid before granting the upgrade. The
+        # caller expands this outside the lock, including webhook retries.
+        invoice = subscription.get("latest_invoice")
+        if not isinstance(invoice, dict) or invoice.get("status") != "paid":
+            raise HTTPException(409, "Upgrade payment is not complete")
+        ref_id = f"plan_change_{subscription['id']}_{_plan_change_period(subscription, effective_at)}"
+        exists = await db.scalar(select(CreditLedger.id).where(
+            CreditLedger.user_id == user_id, CreditLedger.ref_type == "plan_change",
+            CreditLedger.ref_id == ref_id))
+        if not exists:
+            supplement = _credits_for_plan(plan) - _credits_for_plan(old_plan)
+            await credit_credits(db, user_id=user_id, amount=supplement,
+                reason="plan_upgrade_supplement", ref_type="plan_change", ref_id=ref_id)
+    if _interval_from_price_id(price_id) == "annual":
+        # The invoice webhook owns registration. Retry a plan event that arrived
+        # ahead of it, rather than losing the change to future installments.
+        registered = await db.scalar(select(AnnualCreditInstallment.id).where(
+            AnnualCreditInstallment.user_id == user_id,
+            AnnualCreditInstallment.subscription_id == subscription['id']).limit(1))
+        if registered is None:
+            raise HTTPException(503, "Annual payment delivery is still processing")
+        await db.run_sync(lambda session: update_future_plan(session, user_id=user_id,
+            subscription_id=subscription['id'], plan=plan, credits=_credits_for_plan(plan), now=effective_at))
+    user.plan = plan
+    db.add(PlanTransition(user_id=user_id, from_plan=old_plan, to_plan=plan,
+        source='plan_change', effective_at=effective_at,
+        metadata_json={'subscription_id': subscription['id'], 'price_id': price_id,
+            'funding_invoice': funding_invoice.get('id') if annual and PLAN_HIERARCHY[plan] > PLAN_HIERARCHY.get(old_plan, 0) else None}))
+    await db.commit()
+    await _invalidate_user_caches(user_id)
+    return supplement
 
 
 @dataclass(frozen=True)
@@ -323,7 +414,7 @@ async def _apply_remote_checkout_session(
         if session_status != "open":
             raise HTTPException(502, f"Unexpected Stripe Checkout Session status: {session_status}")
 
-        if attempt.billing_period == "annual" or _checkout_attempt_is_stale(attempt):
+        if (attempt.billing_period == "annual" and not settings.ANNUAL_BILLING_ENABLED) or _checkout_attempt_is_stale(attempt):
             try:
                 session = await asyncio.to_thread(
                     stripe.checkout.Session.expire,
@@ -446,7 +537,7 @@ async def _recover_checkout_attempt(
     db: AsyncSession,
 ) -> CheckoutResolution | None:
     if not attempt.stripe_session_id:
-        if attempt.billing_period == "annual":
+        if attempt.billing_period == "annual" and not settings.ANNUAL_BILLING_ENABLED:
             # A sessionless attempt can mean Stripe accepted the POST but its
             # acknowledgement was lost. Do not abandon it or create a duplicate.
             raise HTTPException(409, detail={"error": "ANNUAL_CHECKOUT_UNRESOLVED",
@@ -483,7 +574,7 @@ async def list_products():
 async def subscription_prices():
     # A bounded process-local cache and single flight protect Stripe even when
     # Redis is unavailable. Re-key whenever configured Price IDs change.
-    key = ":".join(_get_subscription_price_id(p, t) for p in ("plus", "pro") for t in ("monthly", "annual"))
+    key = str(settings.ANNUAL_BILLING_ENABLED) + ":" + ":".join(_get_subscription_price_id(p, t) for p in ("plus", "pro") for t in ("monthly", "annual"))
     async with _price_lock:
         cached = _price_cache.get(key)
         if cached and cached[0] > time.monotonic():
@@ -508,7 +599,7 @@ async def _load_subscription_prices():
     ids = [_get_subscription_price_id(plan, period) for plan, period in combinations]
     if not settings.STRIPE_SECRET_KEY or not ids[0] or not ids[2]:
         raise HTTPException(503, "Subscription prices are temporarily unavailable")
-    cache_key = "subscription-prices:v1:" + ":".join(ids)
+    cache_key = "subscription-prices:v2:" + str(settings.ANNUAL_BILLING_ENABLED) + ":" + ":".join(ids)
     cached = await cache_get(cache_key)
     if cached is not None:
         return cached
@@ -538,7 +629,7 @@ async def _load_subscription_prices():
     except (stripe.StripeError, ValueError) as exc:
         logger.warning("Subscription price lookup failed: %s", type(exc).__name__)
         raise HTTPException(503, "Subscription prices are temporarily unavailable") from exc
-    result = {"prices": items}
+    result = {"prices": items, "annual_enabled": settings.ANNUAL_BILLING_ENABLED and sum(item["period"] == "annual" for item in items) == 2}
     await cache_set(cache_key, result, ttl_seconds=60)
     return result
 
@@ -862,45 +953,27 @@ async def change_plan(
 
     is_upgrade = PLAN_HIERARCHY.get(body.plan, 0) > PLAN_HIERARCHY.get(old_plan, 0)
 
+    effective_at = datetime.now(timezone.utc)
+    # Prevent a user-initiated annual change before its original delivery plan
+    # exists, including invoice/checkout webhook delivery in either order.
+    if current_interval == "annual" and not await db.scalar(select(AnnualCreditInstallment.id).where(
+        AnnualCreditInstallment.subscription_id == user.stripe_subscription_id,
+        AnnualCreditInstallment.user_id == user.id).limit(1)):
+        raise HTTPException(409, "Annual payment delivery is still processing")
     try:
-        await asyncio.to_thread(
+        updated_sub = await asyncio.to_thread(
             stripe.Subscription.modify,
             user.stripe_subscription_id,
             items=[{"id": current_item["id"], "price": new_price_id}],
             proration_behavior="always_invoice" if is_upgrade else "create_prorations",
+            payment_behavior="error_if_incomplete",
+            expand=["latest_invoice"],
         )
     except stripe.StripeError as e:
         logger.error("Stripe modify subscription failed: %s", e)
         raise HTTPException(502, "Stripe subscription update failed")
 
-    user.plan = body.plan
-    supplement = 0
-    if is_upgrade:
-        supplement = _credits_for_plan(body.plan) - _credits_for_plan(old_plan)
-        if supplement > 0:
-            ref_id = (
-                f"plan_change_{user.stripe_subscription_id}_{sub.get('current_period_start', '')}"
-            )
-            existing = await db.scalar(
-                select(CreditLedger).where(
-                    CreditLedger.user_id == user.id,
-                    CreditLedger.ref_type == "plan_change",
-                    CreditLedger.ref_id == ref_id,
-                )
-            )
-            if not existing:
-                await credit_credits(
-                    db=db,
-                    user_id=user.id,
-                    amount=supplement,
-                    reason="plan_upgrade_supplement",
-                    ref_type="plan_change",
-                    ref_id=ref_id,
-                )
-            else:
-                supplement = 0
-    await db.commit()
-    await _invalidate_user_caches(user.id)
+    supplement = await _apply_confirmed_plan(db, user.id, updated_sub, effective_at=effective_at)
 
     return {
         "status": "upgraded" if is_upgrade else "downgraded",
@@ -1610,7 +1683,20 @@ async def _handle_checkout_session_completed(
     return {"received": True}
 
 
+@dataclass(frozen=True)
+class InvoiceAllowance:
+    plan: str
+    interval: str
+    subscription_id: str
+    start: datetime | None = None
+    end: datetime | None = None
+
+
 async def _invoice_allowance_plan(invoice: dict) -> str:
+    return (await _invoice_allowance_details(invoice)).plan
+
+
+async def _invoice_allowance_details(invoice: dict) -> InvoiceAllowance:
     """Resolve the purchased plan from the finalized invoice, never live state.
 
     Basil moved subscription/line provenance into parent and price into pricing.
@@ -1642,7 +1728,7 @@ async def _invoice_allowance_plan(invoice: dict) -> str:
         )
         lines.extend(page["data"])
 
-    plans: set[str] = set()
+    contracts: set[InvoiceAllowance] = set()
     for line in lines:
         line_parent = line.get("parent") or {}
         if line_parent.get("type") == "subscription_item_details":
@@ -1669,10 +1755,20 @@ async def _invoice_allowance_plan(invoice: dict) -> str:
         plan = _plan_from_price_id(price_id or "")
         if not plan:
             raise ValueError("Invoice recurring price is not configured")
-        plans.add(plan)
-    if len(plans) != 1:
+        interval = _interval_from_price_id(price_id or "")
+        start = end = None
+        if interval == "annual":
+            period = line.get("period") or {}
+            if type(period.get("start")) is not int or type(period.get("end")) is not int:
+                raise ValueError("Annual invoice line requires a service period")
+            start = datetime.fromtimestamp(period["start"], timezone.utc)
+            end = datetime.fromtimestamp(period["end"], timezone.utc)
+            if end != month_anniversary(start, 12):
+                raise ValueError("Annual invoice must cover twelve calendar months")
+        contracts.add(InvoiceAllowance(plan, interval, subscription_id, start, end))
+    if len(contracts) != 1:
         raise ValueError("Invoice does not identify one allowance plan")
-    return plans.pop()
+    return contracts.pop()
 
 
 async def _handle_invoice_payment_succeeded(
@@ -1705,9 +1801,16 @@ async def _handle_invoice_payment_succeeded(
         await db.commit()
         return {"received": True}
 
+    cutoff = None
+    payment_review = False
     try:
-        plan = await _invoice_allowance_plan(invoice)
+        contract = await _invoice_allowance_details(invoice)
+        plan = contract.plan
         allowance = _credits_for_plan(plan)
+        if contract.interval == "annual":
+            from app.workers.annual_credit_worker import verify_paid_service
+            cutoff, payment_review = await asyncio.to_thread(
+                verify_paid_service, invoice_id, contract.subscription_id, customer_id)
         if allowance <= 0:
             raise ValueError("Invoice plan allowance is not configured")
     except Exception as exc:
@@ -1730,14 +1833,31 @@ async def _handle_invoice_payment_succeeded(
         if not await db.scalar(reference):
             # Checkout/subscription events own current entitlements. An old paid
             # invoice must not revert the current plan or revive a cancelled one.
-            await credit_credits(
-                db,
-                user_id=locked_user.id,
-                amount=allowance,
-                reason="monthly_allowance",
-                ref_type="stripe_invoice",
-                ref_id=invoice_id,
-            )
+            if contract.interval == "annual":
+                await db.run_sync(lambda session: register_annual_invoice(
+                    session, user_id=locked_user.id, invoice_id=invoice_id,
+                    subscription_id=contract.subscription_id, plan=plan, credits=allowance,
+                    start=contract.start, end=contract.end))
+                if payment_review:
+                    await db.execute(update(AnnualCreditInstallment).where(
+                        AnnualCreditInstallment.invoice_id == invoice_id,
+                        AnnualCreditInstallment.state == 'pending').values(state='review'))
+                elif cutoff:
+                    from app.services.annual_credit_service import (
+                        stop_future_installments,
+                    )
+                    await db.run_sync(lambda session: stop_future_installments(session,
+                        user_id=locked_user.id, subscription_id=contract.subscription_id, cutoff=cutoff))
+                first_id = await db.scalar(select(AnnualCreditInstallment.id).where(
+                    AnnualCreditInstallment.invoice_id == invoice_id,
+                    AnnualCreditInstallment.month_index == 0))
+                await db.run_sync(lambda session: grant_installment(
+                    session, first_id, now=datetime.now(timezone.utc)))
+            else:
+                await credit_credits(
+                    db, user_id=locked_user.id, amount=allowance,
+                    reason="monthly_allowance", ref_type="stripe_invoice", ref_id=invoice_id,
+                )
         await db.commit()
     except Exception as e:
         await db.rollback()
@@ -1869,8 +1989,15 @@ async def _handle_subscription_updated(
     customer_id = subscription.get("customer")
     if not customer_id:
         return {"received": True}
-    # Don't change plan if subscription is just marked for cancellation
-    if subscription.get("cancel_at_period_end"):
+    # Metadata/payment-method/cancellation events are not price transitions and
+    # must not advance the financial watermark or choose an upgrade month.
+    previous = event.get('data', {}).get('previous_attributes', {})
+    old_items = previous.get('items', {}).get('data', [])
+    new_items = subscription.get('items', {}).get('data', [])
+    if len(old_items) != 1 or len(new_items) != 1:
+        return {"received": True}
+    previous_price = _stripe_id(old_items[0].get('price'))
+    if not previous_price or previous_price == _stripe_id(new_items[0].get('price')):
         return {"received": True}
     user = await db.scalar(select(User).where(User.stripe_customer_id == customer_id))
     if not user:
@@ -1881,57 +2008,20 @@ async def _handle_subscription_updated(
     if subscription.get("id") != user.stripe_subscription_id:
         return {"received": True}
 
-    items = subscription.get("items", {}).get("data", [])
-    if not items:
+    # Webhooks can arrive out of order. Only apply this event if its price is
+    # still current at Stripe; otherwise the newer event owns the transition.
+    current = await asyncio.to_thread(stripe.Subscription.retrieve, subscription['id'], expand=['latest_invoice'])
+    incoming_items = subscription.get('items', {}).get('data', [])
+    current_items = current.get('items', {}).get('data', [])
+    if len(incoming_items) != 1 or len(current_items) != 1:
         return {"received": True}
-    price_id = items[0].get("price", {}).get("id", "")
-    detected_plan = _plan_from_price_id(price_id)
-    if detected_plan and detected_plan != user.plan:
-        old_plan = user.plan
-        user.plan = detected_plan
-        sub_id = subscription.get("id")
-        if sub_id:
-            user.stripe_subscription_id = sub_id
+    if _stripe_id(incoming_items[0].get('price')) != _stripe_id(current_items[0].get('price')):
+        return {"received": True}
+    if current.get('status') not in _ACTIVE_SUBSCRIPTION_STATUSES:
+        return {"received": True}
+    effective_at = datetime.fromtimestamp(event.get('created', time.time()), timezone.utc)
+    await _apply_confirmed_plan(db, user.id, current, effective_at=effective_at)
 
-        is_upgrade = PLAN_HIERARCHY.get(detected_plan, 0) > PLAN_HIERARCHY.get(old_plan, 0)
-        supplement = 0
-        if is_upgrade:
-            supplement = _credits_for_plan(detected_plan) - _credits_for_plan(old_plan)
-            if supplement > 0:
-                event_subscription = event.get("data", {}).get("object", {})
-                current_period_start = subscription.get(
-                    "current_period_start",
-                    event_subscription.get("current_period_start", ""),
-                )
-                ref_id = f"plan_change_{user.stripe_subscription_id}_{current_period_start}"
-                existing = await db.scalar(
-                    select(CreditLedger).where(
-                        CreditLedger.user_id == user.id,
-                        CreditLedger.ref_type == "plan_change",
-                        CreditLedger.ref_id == ref_id,
-                    )
-                )
-                if not existing:
-                    await credit_credits(
-                        db=db,
-                        user_id=user.id,
-                        amount=supplement,
-                        reason="plan_upgrade_supplement",
-                        ref_type="plan_change",
-                        ref_id=ref_id,
-                    )
-                else:
-                    supplement = 0
-
-        await db.commit()
-        await _invalidate_user_caches(user.id)
-        logger.info(
-            "Plan synced from webhook: user=%s, %s -> %s, supplement=%s",
-            user.id,
-            old_plan,
-            detected_plan,
-            supplement,
-        )
     return {"received": True}
 
 

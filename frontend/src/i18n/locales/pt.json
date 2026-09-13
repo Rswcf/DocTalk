@@ -3890,5 +3890,6 @@
   "evidence.show": "Mostrar destaque",
   "evidence.return": "Voltar à resposta",
   "evidence.fitWidth": "Ajustar à largura",
-  "evidence.unavailable": "Página de origem indisponível"
+  "evidence.unavailable": "Página de origem indisponível",
+  "billing.subscribePlan": "Assinar {plan}"
 }

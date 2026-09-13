@@ -8,6 +8,28 @@ releases use `0.minor.patch` semantics such as `0.2.0` and `0.2.1`.
 
 ## [Unreleased]
 
+## [0.30.1] - 2026-09-13
+
+- Billing cards show the actual annual charge; admin-assigned plan changes start a new subscription, and same-plan intent buttons no longer imply an action.
+
+### Changed
+- PDF citations use restrained amber text marks, with honest region/page fallbacks,
+  fit-to-width controls and a return-to-answer action. Long quotes and page changes
+  no longer color unrelated words.
+- Annual subscription credits have a durable monthly delivery schedule, separate
+  from Stripe's yearly charge. Purchase availability follows a server release flag.
+
+### Fixed
+- Repeated cancellation and disconnects preserve partial answers, settle credits
+  once, and finish database/stream cleanup before releasing the conversation.
+- Regeneration keeps the previous answer until its replacement is saved, preserves
+  history, and fences conflicting requests. Sharing/export use the current answer.
+- Billing verifies actual Stripe prices and durable fulfillment before displaying
+  success. Paid plan changes reject incomplete payments; delayed and duplicate
+  annual events, refunds and monthly delivery retries are handled explicitly.
+- Document workflow recovery, narrow-screen controls, quotation navigation,
+  translation footnotes and the other verified issues from the systematic QA pass.
+
 ## [0.30.0] - 2026-09-07
 
 ### Added

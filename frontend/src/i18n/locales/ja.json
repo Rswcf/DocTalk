@@ -3890,5 +3890,6 @@
   "evidence.show": "ハイライトを表示",
   "evidence.return": "回答に戻る",
   "evidence.fitWidth": "幅に合わせる",
-  "evidence.unavailable": "出典ページを表示できません"
+  "evidence.unavailable": "出典ページを表示できません",
+  "billing.subscribePlan": "{plan} を契約"
 }

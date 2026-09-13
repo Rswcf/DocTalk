@@ -3890,5 +3890,6 @@
   "evidence.show": "إظهار التمييز",
   "evidence.return": "العودة إلى الإجابة",
   "evidence.fitWidth": "ملاءمة العرض",
-  "evidence.unavailable": "صفحة المصدر غير متاحة"
+  "evidence.unavailable": "صفحة المصدر غير متاحة",
+  "billing.subscribePlan": "الاشتراك في {plan}"
 }

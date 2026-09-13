@@ -22,6 +22,12 @@ from starlette.responses import StreamingResponse
 
 from app.models.database import AsyncSessionLocal
 from app.models.tables import ChatStreamLease, Message, MessageRevision
+from app.services.chat_cleanup import (
+    RESOURCE_SECONDS,
+    cleanup_session,
+    protected_cleanup,
+    rollback_or_invalidate,
+)
 
 LEASE_SECONDS = 120
 RENEW_SECONDS = 30
@@ -33,6 +39,16 @@ class LeaseLost(RuntimeError):
 
 
 class ChatStreamingResponse(StreamingResponse):
+    async def __call__(self, scope, receive, send):
+        # Starlette's ASGI 2.4 OSError path skips its background task. Always
+        # perform our idempotent lease release, including a never-started body.
+        background, self.background = self.background, None
+        try:
+            await super().__call__(scope, receive, send)
+        finally:
+            if background is not None:
+                await background()
+
     async def stream_response(self, send):
         try:
             await super().stream_response(send)
@@ -67,7 +83,7 @@ async def claim_operation(session_id, *, regenerate_of=None, expected_version=No
     """Claim and validate together, after the endpoint has verified ownership."""
     token = uuid.uuid4()
     save_retry_question = False
-    async with AsyncSessionLocal() as db:
+    async with cleanup_session(AsyncSessionLocal) as db:
         claimed = await db.execute(
             insert(ChatStreamLease).values(session_id=session_id, token=token,
                 expires_at=func.clock_timestamp() + timedelta(seconds=LEASE_SECONDS))
@@ -163,7 +179,7 @@ async def replacement_delivered(operation: ChatOperation) -> bool:
     have archived our version; that is also durable delivery evidence.
     Caller must release its failed transaction before opening this session.
     """
-    async with AsyncSessionLocal() as db:
+    async with cleanup_session(AsyncSessionLocal) as db:
         version = await db.scalar(select(Message.response_version).where(
             Message.id == operation.replace_id,
             Message.session_id == operation.session_id,
@@ -178,12 +194,16 @@ async def replacement_delivered(operation: ChatOperation) -> bool:
 
 async def release_operation(operation: ChatOperation):
     # Also registered on the response, covering an iterator never started.
-    with anyio.move_on_after(15, shield=True):
-        async with AsyncSessionLocal() as db:
+    async def release():
+        async with cleanup_session(AsyncSessionLocal) as db:
             await db.execute(delete(ChatStreamLease).where(
                 ChatStreamLease.session_id == operation.session_id,
                 ChatStreamLease.token == operation.token))
             await db.commit()
+    try:
+        await protected_cleanup(release(), timeout=RESOURCE_SECONDS, label='lease-release')
+    except TimeoutError:
+        logger.exception('chat_lease.release_timeout')
 
 
 async def stream_with_operation(source, operation: ChatOperation, request_db):
@@ -198,7 +218,7 @@ async def stream_with_operation(source, operation: ChatOperation, request_db):
             await asyncio.sleep(min(RENEW_SECONDS, max(0, deadline - time.monotonic())))
             try:
                 async with asyncio.timeout(min(10, max(0.01, deadline - time.monotonic()))):
-                    async with AsyncSessionLocal() as db:
+                    async with cleanup_session(AsyncSessionLocal) as db:
                         await fence_message_write(db)
                         await db.commit()
                 last_success = time.monotonic()
@@ -226,15 +246,24 @@ async def stream_with_operation(source, operation: ChatOperation, request_db):
             yield event
     finally:
         try:
-            # A failed connection must not keep the response task alive forever.
-            # If cleanup cannot finish, expiry still makes the lease reclaimable.
-            with anyio.move_on_after(15, shield=True):
-                heartbeat.cancel()
-                await asyncio.gather(heartbeat, return_exceptions=True)
+            heartbeat.cancel()
+            try:
+                # Closing/resetting the async generator stays in this ASGI
+                # task; its settlement pipeline shields its own DB task.
+                async def join_heartbeat():
+                    await asyncio.gather(heartbeat, return_exceptions=True)
                 try:
-                    await source.aclose()
+                    await protected_cleanup(join_heartbeat(), timeout=RESOURCE_SECONDS, label='heartbeat-stop')
                 finally:
-                    await request_db.rollback()
+                    with anyio.move_on_after(14, shield=True):
+                        await source.aclose()
+            finally:
+                try:
+                    await protected_cleanup(rollback_or_invalidate(request_db),
+                        timeout=RESOURCE_SECONDS * 2, label='request-rollback')
+                except Exception:
+                    logger.exception('chat_cleanup.rollback_failed')
+                finally:
                     await release_operation(operation)
         finally:
             current_operation.reset(context_token)

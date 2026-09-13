@@ -606,6 +606,35 @@ class CreditLedger(Base):
     )
 
 
+class AnnualCreditInstallment(Base):
+    """One durable monthly delivery from a paid annual invoice."""
+
+    __tablename__ = "annual_credit_installments"
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, server_default=sa.text("gen_random_uuid()"))
+    user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), sa.ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    invoice_id: Mapped[str] = mapped_column(sa.String(255), nullable=False)
+    subscription_id: Mapped[str] = mapped_column(sa.String(255), nullable=False)
+    month_index: Mapped[int] = mapped_column(sa.Integer, nullable=False)
+    plan: Mapped[str] = mapped_column(sa.String(20), nullable=False)
+    credits: Mapped[int] = mapped_column(sa.Integer, nullable=False)
+    due_at: Mapped[datetime] = mapped_column(sa.DateTime(timezone=True), nullable=False)
+    retry_at: Mapped[Optional[datetime]] = mapped_column(sa.DateTime(timezone=True))
+    period_end: Mapped[datetime] = mapped_column(sa.DateTime(timezone=True), nullable=False)
+    state: Mapped[str] = mapped_column(sa.String(20), nullable=False, server_default="pending")
+    granted_at: Mapped[Optional[datetime]] = mapped_column(sa.DateTime(timezone=True))
+    ledger_id: Mapped[Optional[uuid.UUID]] = mapped_column(UUID(as_uuid=True), sa.ForeignKey("credit_ledger.id", ondelete="SET NULL"))
+    created_at: Mapped[datetime] = mapped_column(sa.DateTime(timezone=True), server_default=sa.text("now()"), nullable=False)
+
+    __table_args__ = (
+        sa.UniqueConstraint("invoice_id", "month_index", name="uq_annual_invoice_month"),
+        sa.CheckConstraint("month_index >= 0 AND month_index < 12", name="ck_annual_month_index"),
+        sa.CheckConstraint("credits > 0", name="ck_annual_positive_credits"),
+        sa.CheckConstraint("state IN ('pending', 'granted', 'stopped', 'review')", name="ck_annual_state"),
+        sa.Index("ix_annual_due", "state", "due_at"),
+        sa.Index("ix_annual_subscription", "subscription_id"),
+    )
+
+
 class UsageRecord(Base):
     __tablename__ = "usage_records"
 

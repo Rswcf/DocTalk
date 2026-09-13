@@ -25,8 +25,8 @@ frontend/
 docs/
 scripts/
 
-# Large non-runtime trees at repo root. The backend build context is `backend/`
-# (service Root Directory), so these never enter the image — but `railway up`
+# Large non-runtime trees at repo root. The backend build context is the repo
+# root (Dockerfile: backend/Dockerfile), and `railway up`
 # still uploads the whole archive, and test_inputs/ alone is ~207 MB. Excluding
 # them keeps the upload ~10 MB so it doesn't stall at the snapshot stage.
 test_inputs/
@@ -45,3 +45,7 @@ Thumbs.db
 # but anything else local-only:
 .claude/
 memory/
+
+# Never upload local credentials or environment overrides.
+.env
+.env.*
