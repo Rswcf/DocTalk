@@ -1,6 +1,6 @@
 # 发布候选独立定向复核
 
-日期：2026-09-13。范围：`codex/systematic-qa-fixes` 的冻结聊天清理与年付履约候选，以及最后新增的订阅入口、年付金额和 11 语言文案差异。复核人独立只读检查产品代码；本次仅写此报告。
+日期：2026-09-13。范围：`codex/systematic-qa-fixes` 的冻结聊天清理与年付履约候选，以及最后新增的订阅入口、年付金额和 11 语言文案差异；最后前端复核对应 release commit `1f53ba0`。复核人独立只读检查产品代码；本次仅写此报告。
 
 在上述范围内，未发现当前可复现的 P1/P2。此前提出的正常数据库路径清理问题已修正；这不代表生产部署已经验收。
 
@@ -13,10 +13,10 @@
 
 验证来源：
 
-- 独立执行了聊天清理纯测试及延迟 Session close 隔离反例；检查了真实 PostgreSQL 故障注入测试的锁与任务断言。最后前端检查从实际 TSX 提取 `handlePlanAction` 执行 8 个隔离分支断言，并验证全年金额格式化。没有将这些测试称为浏览器验收。
-- 主任务报告的证据包括：48 项聊天定向测试、真实 PG 集成回归，以及 Stripe Sandbox Test Clock 的全年履约、升级、取消和退款流程。最后补齐的迟到升级月度差额、`funding_invoice` 和升级发票退款核验属于主任务补充证据；本报告不冒称独立执行了 Stripe 生命周期测试或全量回归。
+- 独立执行了聊天清理纯测试及延迟 Session close 隔离反例；检查了真实 PostgreSQL 故障注入测试的锁与任务断言。最后前端检查从实际 TSX 提取 `handlePlanAction` 执行 8 个隔离分支断言，并验证全年金额格式化；P3 修正后又从实际 CTA AST 提取条件、disabled 和文案表达式，执行 8 项断言。没有将这些测试称为浏览器验收。
+- 主任务报告的证据包括：48 项聊天定向测试、真实 PG 集成回归，以及 Stripe Sandbox Test Clock 的全年履约、升级、取消和退款流程。最后补齐的迟到升级月度差额、`funding_invoice` 和升级发票退款核验属于主任务补充证据；主任务另报告两个真实 PG 回归通过，覆盖已发未来月份的补差幂等、仅升级发票退款时暂停未来发放，年付集成测试文件最终 8 项通过。本报告不冒称独立执行了 Stripe 生命周期测试或全量回归。
 - 相关回归文件：`backend/tests/test_chat_cleanup.py`、`backend/tests/test_response_versions_integration.py`、`backend/tests/test_asst0_cancellation_baseline.py`、`backend/tests/test_annual_credit_delivery.py`、`backend/tests/test_annual_credit_integration.py`。
 
-保留一个非阻断 P3：`BillingPageClient.tsx` 顶部营销意图 CTA 对 admin-managed 的同套餐仍显示 “Subscribe to {plan}”，而 `handlePlanAction` 同套餐直接返回。例如当前 Plus 打开 `/billing?source=pricing&plan=plus`。无动作分支是历史行为，本次新文案使承诺更明确；建议同套餐显示 Current plan 并禁用，保留 Pro 缺额度时查看额度包的特殊入口。不同套餐的本次修复不受影响。
+P3 已解决：`BillingPageClient.tsx` 顶部营销意图 CTA 在 `offerIsCurrentPlan` 时显示 Current plan 并禁用。实际 AST 的定向断言确认 Plus/Pro 同套餐入口均不再承诺订阅动作；`offerShowsCreditPacks` 保留 Pro 的 `credits` / `insufficient_credits` 入口，不禁用额度包跳转；不同套餐订阅及 Stripe 用户的原动作保持不变。本次限定范围内无剩余已确认问题。
 
 覆盖边界：本次独立复核没有浏览器操作、外部付款、生产写入或部署。已验证正常异步数据库取消路径；不能据此保证恶意吞掉取消的任意协程、进程崩溃或外部服务永久不可用时仍能完成收尾。Sandbox 生命周期与生产投递/部署验收应分别记录。

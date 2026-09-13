@@ -10,10 +10,9 @@ missing or ambiguous.
 docker build -t doctalk-retainpdf:footnotes-20260913 infra/retainpdf
 ```
 
-This image is a local QA candidate, not a production deployment. Preserve the
-existing sidecar authentication, private network placement, volume, resource
-limits and backend-first release ordering when it is eventually reviewed and
-released. See `docs/layout-translation-retainpdf.md` for the runtime contract.
+This image was released to production on 2026-09-13. Preserve the existing
+sidecar authentication, private network placement, volume, resource limits and
+backend-first release ordering for future updates. See `docs/layout-translation-retainpdf.md` for the runtime contract.
 
 Validation source: the existing public six-page
 `USCOURTS-flnd-1_22-cv-00226-0.pdf`; page 5 contains a substantive footnote whose
@@ -38,4 +37,21 @@ settlement-letter text is not hard-replaced. The local contract image
 `e8959e78d300b98b3fe9868827af68029e2fd82484dd6ef1e5d951268c81c24b`).
 The earlier six-page visual regression ran on the equivalent footnote-policy image;
 this added build step validates compatibility and does not change OCR/translation
-code. Production image/configuration and end-to-end output remain unverified.
+code. At that local review, production image/configuration and end-to-end output were still unverified; see the subsequent rollout below.
+
+
+## Production rollout (2026-09-13)
+
+Final deployment `d968faad-6959-497a-8082-8d40daf6520d` passed `/health` and the
+installed-wheel contract in the actual container. PID 1 runs as UID/GID 10001,
+actual `RAILWAY_REPLICA_REGION=us-west2`, and the original API authentication is
+enabled. Railway `PORT=41000` must match `RUST_API_PORT=41000` for its healthcheck.
+
+The legacy `/data` volume was root-owned. The first non-root rollout failed
+before API startup and was rolled back. An independently reviewed one-time
+maintenance deployment migrated 397 runtime paths, preserving contents and
+ordinary mode bits, then dropped privileges before starting the API. The final
+image does not contain that root migration wrapper. See
+`.collab/reviews/2026-09-13-production-release/retainpdf-volume-migration.md`.
+Existing volumes must pass ownership/write checks before subsequent non-root
+rollouts; do not use world-writable permissions or leave the API running as root.

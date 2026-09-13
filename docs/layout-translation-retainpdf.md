@@ -259,3 +259,18 @@ settlement-letter text is not hard-replaced. The local contract image
 The earlier six-page visual regression ran on the equivalent footnote-policy image;
 this added build step validates compatibility and does not change OCR/translation
 code. Production image/configuration and end-to-end output remain unverified.
+
+
+### 2026-09-13 production image rollout
+
+The reviewed footnote/context-contract image is now deployed as Railway
+`d968faad-6959-497a-8082-8d40daf6520d`. Actual-container validation confirmed
+UID/GID10001, us-west2, authenticated API and `/health`200, translated footnote
+policy, and the installed contextual glossary assertions. A one-time ownership
+migration was required for the legacy root-owned `/data` volume; it preserved
+files and permissions and is absent from the final application image. Railway
+healthchecks require explicit `PORT=41000` alongside `RUST_API_PORT=41000`.
+The backend contextual glossary switch is enabled only after this validation.
+Document-specific end-to-end production output is recorded in the release
+acceptance report; the earlier local output is not evidence of every production
+translation being linguistically correct.
