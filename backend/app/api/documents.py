@@ -3,7 +3,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import uuid
-from typing import Optional
+from typing import Literal, Optional
 from urllib.parse import urlparse
 
 from fastapi import (
@@ -18,7 +18,7 @@ from fastapi import (
 )
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.cache import cache_get, cache_set
@@ -126,6 +126,8 @@ def _enforce_page_limit(*, page_count: int, plan: str) -> None:
 async def list_documents(
     limit: int = Query(50, ge=1, le=100),
     offset: int = Query(0, ge=0),
+    q: str = Query("", max_length=200),
+    sort: Literal["newest", "oldest", "name"] = "newest",
     user: Optional[User] = Depends(get_current_user_optional),
     db: AsyncSession = Depends(get_db_session),
 ):
@@ -137,14 +139,20 @@ async def list_documents(
 
     from app.models.tables import Document
 
-    result = await db.execute(
+    statement = (
         select(Document)
         .where(Document.user_id == user.id)
         .where(Document.status != "deleting")
-        .order_by(Document.created_at.desc())
-        .limit(limit)
-        .offset(offset)
     )
+    if q.strip():
+        # User input is a literal filename substring, including % and _.
+        statement = statement.where(Document.filename.icontains(q.strip(), autoescape=True))
+    ordering = {
+        "newest": (Document.created_at.desc(), Document.id.desc()),
+        "oldest": (Document.created_at.asc(), Document.id.asc()),
+        "name": (func.lower(Document.filename).asc(), Document.created_at.desc(), Document.id.desc()),
+    }
+    result = await db.execute(statement.order_by(*ordering[sort]).limit(limit).offset(offset))
     docs = result.scalars().all()
     return [
         DocumentBrief(
@@ -153,6 +161,9 @@ async def list_documents(
             status=d.status,
             created_at=d.created_at.isoformat() if d.created_at else None,
             error_msg=d.error_msg,
+            file_type=d.file_type,
+            file_size=d.file_size,
+            page_count=d.page_count,
         )
         for d in docs
     ]

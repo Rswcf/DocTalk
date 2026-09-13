@@ -30,9 +30,8 @@
  *   billing.pro.priceMonthly       annually with the standard discount)
  *   billing.pro.priceAnnual
  *
- * Also remember: the annual price is the per-month-equivalent shown when
- * `billing.savePercent` is rendered alongside it. Multiply by 12 to get the
- * actual annual charge.
+ * These rounded marketing equivalents must never be multiplied to derive a
+ * charge. Billing decision points use the configured Stripe Price amount.
  *
  * If you ever add a new plan/period combo, update both this file AND every
  * locale JSON in the same PR.
@@ -61,4 +60,16 @@ export const PLAN_PRICE_USD: Record<PlanId, Record<BillingPeriod, string>> = {
 export function formatPlanPrice(plan: string, period: string): string {
   const planTable = PLAN_PRICE_USD[plan as PlanId];
   return planTable?.[period as BillingPeriod] ?? '';
+}
+
+/** Preserve the exact cycle amount; round only the monthly display equivalent. */
+export function formatStripePlanPrice(
+  prices: Array<{ plan: string; period: string; currency: string; amount_minor: number }>,
+  plan: string, period: string, locale: string, monthlyEquivalent = true,
+): string {
+  const price = prices.find(item => item.plan === plan && item.period === period);
+  if (!price || !Number.isSafeInteger(price.amount_minor) || price.amount_minor <= 0 || price.currency !== 'USD') return '—';
+  return new Intl.NumberFormat(locale, { style: 'currency', currency: price.currency }).format(
+    price.amount_minor / 100 / (period === 'annual' && monthlyEquivalent ? 12 : 1),
+  );
 }

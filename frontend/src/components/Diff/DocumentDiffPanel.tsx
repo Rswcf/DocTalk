@@ -1,5 +1,8 @@
 "use client";
 
+import { useWorkflowEstimates } from '../../lib/useWorkflowEstimates';
+import { WorkflowCostEstimate, WorkflowCostSummary } from '../WorkflowCost';
+
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import {
@@ -22,6 +25,7 @@ import {
 import type { DocumentBrief } from "../../lib/api";
 import { trackEvent } from "../../lib/analytics";
 import { billingHref } from "../../lib/billingLinks";
+import { errorCopy } from "../../lib/errorCopy";
 import { useLocale } from "../../i18n";
 import type { Citation, ExtractionJob, NormalizedBBox } from "../../types";
 
@@ -162,7 +166,8 @@ export default function DocumentDiffPanel({
   surface = "app",
 }: DocumentDiffPanelProps) {
   const editorial = surface === "editorial";
-  const { tOr, locale } = useLocale();
+  const { t, tOr, locale } = useLocale();
+  const { costs, failed: costsFailed, retry: retryCosts } = useWorkflowEstimates(true);
   const [availableDocs, setAvailableDocs] = useState<DiffDocument[]>(documents || []);
   const [runs, setRuns] = useState<ExtractionJob[]>([]);
   const [oldDocumentId, setOldDocumentId] = useState("");
@@ -202,14 +207,14 @@ export default function DocumentDiffPanel({
       })
       .catch((err) => {
         if (!cancelled) {
-          setError(err instanceof Error ? err.message : "Failed to load comparisons");
+          setError(errorCopy(err, t, tOr).body);
           setLoading(false);
         }
       });
     return () => {
       cancelled = true;
     };
-  }, [documents, refreshRuns]);
+  }, [documents, refreshRuns, t, tOr]);
 
   useEffect(() => {
     if (oldDocumentId && newDocumentId) return;
@@ -227,6 +232,11 @@ export default function DocumentDiffPanel({
   }, [refreshRuns, runs]);
 
   const activeRun = runs[0] || null;
+  const activeRunId = activeRun?.id;
+  const activeRunStatus = activeRun?.status;
+  useEffect(() => {
+    if (activeRunId && activeRunStatus && ['succeeded', 'failed', 'cancelled'].includes(activeRunStatus)) retryCosts();
+  }, [activeRunId, activeRunStatus, retryCosts]);
   const result = activeRun?.result?.structured_json || {};
   const changes: DiffChange[] = asArray(result.changes).map((item) => ({
     kind: item.kind === "added" || item.kind === "removed" || item.kind === "modified" ? item.kind : "modified",
@@ -268,7 +278,7 @@ export default function DocumentDiffPanel({
   }, [collectionId, onCitationClick]);
 
   const runCompare = useCallback(async () => {
-    if (!oldDocumentId || !newDocumentId || oldDocumentId === newDocumentId || running) return;
+    if (!oldDocumentId || !newDocumentId || oldDocumentId === newDocumentId || running || !costs) return;
     setRunning(true);
     setError(null);
     setPaywall(null);
@@ -305,7 +315,7 @@ export default function DocumentDiffPanel({
     } finally {
       setRunning(false);
     }
-  }, [collectionId, locale, newDocumentId, oldDocumentId, running, userPlan]);
+  }, [collectionId, locale, newDocumentId, oldDocumentId, running, userPlan, costs]);
 
   const handleExport = useCallback(async (format: "md" | "csv") => {
     if (!activeRun?.result) return;
@@ -378,7 +388,7 @@ export default function DocumentDiffPanel({
               <button
                 type="button"
                 onClick={() => void runCompare()}
-                disabled={isWorking || readyDocs.length < 2 || oldDocumentId === newDocumentId}
+                disabled={isWorking || readyDocs.length < 2 || oldDocumentId === newDocumentId || !costs}
                 className="ed-cta self-end disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {isWorking ? <Clock3 size={15} aria-hidden="true" /> : <Play size={15} aria-hidden="true" />}
@@ -441,6 +451,7 @@ export default function DocumentDiffPanel({
           )}
         </section>
 
+        <WorkflowCostEstimate amount={costs?.document_diff} balance={costs?.balance} failed={costsFailed} retry={retryCosts} />
         {activeRun ? (
           <section style={{ ...edPanelStyle, padding: 0 }}>
             <div
@@ -463,6 +474,7 @@ export default function DocumentDiffPanel({
                     ? tOr("diff.completed", "Completed")
                     : tOr("diff.status", "Status: {status}", { status: activeRun.status })}
                 </p>
+                <WorkflowCostSummary status={activeRun.status} cost={activeRun.cost_credits} preDebited={activeRun.pre_debited} />
               </div>
               {activeRun.result && (
                 <div className="flex gap-2">
@@ -644,7 +656,7 @@ export default function DocumentDiffPanel({
               <button
                 type="button"
                 onClick={() => void runCompare()}
-                disabled={isWorking || readyDocs.length < 2 || oldDocumentId === newDocumentId}
+                disabled={isWorking || readyDocs.length < 2 || oldDocumentId === newDocumentId || !costs}
                 className="inline-flex h-10 items-center justify-center gap-2 self-end rounded-lg bg-zinc-900 px-4 text-sm font-semibold text-white transition-colors hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-zinc-50 dark:text-zinc-900 dark:hover:bg-zinc-200"
               >
                 {isWorking ? <Clock3 size={15} aria-hidden="true" /> : <Play size={15} aria-hidden="true" />}
@@ -680,6 +692,7 @@ export default function DocumentDiffPanel({
           )}
         </section>
 
+        <WorkflowCostEstimate amount={costs?.document_diff} balance={costs?.balance} failed={costsFailed} retry={retryCosts} />
         {activeRun ? (
           <section className="rounded-lg border border-zinc-200 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
             <div className="flex flex-col gap-3 border-b border-zinc-200 p-4 dark:border-zinc-800 sm:flex-row sm:items-center sm:justify-between">
@@ -699,6 +712,7 @@ export default function DocumentDiffPanel({
                     ? tOr("diff.completed", "Completed")
                     : tOr("diff.status", "Status: {status}", { status: activeRun.status })}
                 </p>
+                <WorkflowCostSummary status={activeRun.status} cost={activeRun.cost_credits} preDebited={activeRun.pre_debited} />
               </div>
               {activeRun.result && (
                 <div className="flex gap-2">

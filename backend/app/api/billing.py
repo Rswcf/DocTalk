@@ -2,13 +2,14 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import time
 import uuid
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from typing import Literal, Optional
 
 import stripe
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response
 from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -16,6 +17,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.cache import cache_delete, cache_get, cache_set
 from app.core.config import settings
 from app.core.deps import get_db_session, require_auth
+from app.core.rate_limit import RedisRateLimiter, get_client_ip
 from app.core.security_log import log_security_event
 from app.models.tables import (
     CheckoutAttempt,
@@ -40,6 +42,31 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/billing", tags=["billing"])
 
 stripe.api_key = settings.STRIPE_SECRET_KEY
+
+
+_price_limiter = RedisRateLimiter(namespace="billing_prices", max_requests=30, window_seconds=60)
+_status_limiter = RedisRateLimiter(namespace="billing_status", max_requests=60, window_seconds=60)
+_price_cache: dict[str, tuple[float, dict]] = {}
+_price_lock = asyncio.Lock()
+_price_failures: dict[str, float] = {}
+
+
+async def _limit_price_reads(request: Request):
+    if not await _price_limiter.is_allowed(get_client_ip(request)):
+        raise HTTPException(429, "Too many price requests", headers={"Retry-After": "60"})
+
+
+async def _limit_status_reads(user: User = Depends(require_auth)):
+    if not await _status_limiter.is_allowed(str(user.id)):
+        raise HTTPException(429, "Too many checkout status requests", headers={"Retry-After": "60"})
+
+
+def _require_supported_purchase_period(period: str):
+    # Annual Stripe invoices only grant once per year. Keep new annual sales
+    # closed until monthly, idempotent fulfillment has been implemented.
+    if period == "annual":
+        raise HTTPException(503, detail={"error": "ANNUAL_BILLING_UNAVAILABLE",
+            "message": "New annual subscriptions are temporarily unavailable. Choose monthly billing."})
 
 
 class SubscribeRequest(BaseModel):
@@ -181,7 +208,7 @@ async def _get_customer_active_subscription(customer_id: Optional[str]) -> Optio
 
 async def _lock_user(db: AsyncSession, user_id: uuid.UUID) -> User:
     return (
-        await db.execute(select(User).where(User.id == user_id).with_for_update(of=User))
+        await db.execute(select(User).where(User.id == user_id).with_for_update(of=User).execution_options(populate_existing=True))
     ).scalar_one()
 
 
@@ -198,7 +225,7 @@ async def _latest_checkout_attempt(
         .limit(1)
     )
     if for_update:
-        statement = statement.with_for_update(of=CheckoutAttempt)
+        statement = statement.with_for_update(of=CheckoutAttempt).execution_options(populate_existing=True)
     return await db.scalar(statement)
 
 
@@ -210,8 +237,8 @@ async def _lock_checkout_state(
     locked_user = await _lock_user(db, user_id)
     locked_attempt = await db.scalar(
         select(CheckoutAttempt)
-        .where(CheckoutAttempt.id == attempt_id)
-        .with_for_update(of=CheckoutAttempt)
+        .where(CheckoutAttempt.id == attempt_id, CheckoutAttempt.user_id == user_id)
+        .with_for_update(of=CheckoutAttempt).execution_options(populate_existing=True)
     )
     if locked_attempt is None:
         raise HTTPException(409, "The subscription checkout attempt no longer exists.")
@@ -280,7 +307,7 @@ async def _apply_remote_checkout_session(
             await db.commit()
             await _invalidate_user_caches(user_id)
             return CheckoutResolution(
-                checkout_url=f"{settings.FRONTEND_URL}/billing?success=1",
+                checkout_url=f"{settings.FRONTEND_URL}/billing?success=1&session_id={session_id}",
                 stripe_session_id=session_id,
                 completed=True,
             )
@@ -296,7 +323,7 @@ async def _apply_remote_checkout_session(
         if session_status != "open":
             raise HTTPException(502, f"Unexpected Stripe Checkout Session status: {session_status}")
 
-        if _checkout_attempt_is_stale(attempt):
+        if attempt.billing_period == "annual" or _checkout_attempt_is_stale(attempt):
             try:
                 session = await asyncio.to_thread(
                     stripe.checkout.Session.expire,
@@ -327,7 +354,7 @@ async def _apply_remote_checkout_session(
             await db.commit()
             await _invalidate_user_caches(user_id)
             return CheckoutResolution(
-                checkout_url=f"{settings.FRONTEND_URL}/billing?success=1",
+                checkout_url=f"{settings.FRONTEND_URL}/billing?success=1&session_id={session_id}",
                 stripe_session_id=session_id,
                 completed=True,
             )
@@ -351,6 +378,7 @@ async def _create_or_recover_checkout_session(
     db: AsyncSession,
 ) -> CheckoutResolution | None:
     """Create (or replay) Stripe POSTs with this attempt's stable keys."""
+    _require_supported_purchase_period(attempt.billing_period)
     price_id = _get_subscription_price_id(attempt.plan, attempt.billing_period)
     if not price_id:
         raise HTTPException(
@@ -382,7 +410,7 @@ async def _create_or_recover_checkout_session(
         stripe.checkout.Session.create,
         mode="subscription",
         line_items=[{"price": price_id, "quantity": 1}],
-        success_url=f"{settings.FRONTEND_URL}/billing?success=1",
+        success_url=f"{settings.FRONTEND_URL}/billing?success=1&session_id={{CHECKOUT_SESSION_ID}}",
         cancel_url=f"{settings.FRONTEND_URL}/billing",
         customer=customer_id,
         client_reference_id=str(user.id),
@@ -418,6 +446,12 @@ async def _recover_checkout_attempt(
     db: AsyncSession,
 ) -> CheckoutResolution | None:
     if not attempt.stripe_session_id:
+        if attempt.billing_period == "annual":
+            # A sessionless attempt can mean Stripe accepted the POST but its
+            # acknowledgement was lost. Do not abandon it or create a duplicate.
+            raise HTTPException(409, detail={"error": "ANNUAL_CHECKOUT_UNRESOLVED",
+                "message": "An earlier annual checkout needs support review before another subscription can be started. Contact support@doctalk.site."})
+
         # Stripe may have accepted the original POST even though its response
         # was ambiguous. Replaying with the same key returns that Session.
         return await _create_or_recover_checkout_session(user, attempt, db)
@@ -445,6 +479,124 @@ async def list_products():
     }
 
 
+@router.get("/subscription-prices", dependencies=[Depends(_limit_price_reads)])
+async def subscription_prices():
+    # A bounded process-local cache and single flight protect Stripe even when
+    # Redis is unavailable. Re-key whenever configured Price IDs change.
+    key = ":".join(_get_subscription_price_id(p, t) for p in ("plus", "pro") for t in ("monthly", "annual"))
+    async with _price_lock:
+        cached = _price_cache.get(key)
+        if cached and cached[0] > time.monotonic():
+            return cached[1]
+        if _price_failures.get(key, 0) > time.monotonic():
+            raise HTTPException(503, "Subscription prices are temporarily unavailable")
+        try:
+            result = await _load_subscription_prices()
+        except HTTPException:
+            _price_failures.clear()
+            _price_failures[key] = time.monotonic() + 5
+            raise
+        _price_failures.clear()
+        _price_cache.clear()
+        _price_cache[key] = (time.monotonic() + 60, result)
+        return result
+
+
+async def _load_subscription_prices():
+    """Decision-point prices come from the same Stripe IDs used by Checkout."""
+    combinations = [(plan, period) for plan in ("plus", "pro") for period in ("monthly", "annual")]
+    ids = [_get_subscription_price_id(plan, period) for plan, period in combinations]
+    if not settings.STRIPE_SECRET_KEY or not ids[0] or not ids[2]:
+        raise HTTPException(503, "Subscription prices are temporarily unavailable")
+    cache_key = "subscription-prices:v1:" + ":".join(ids)
+    cached = await cache_get(cache_key)
+    if cached is not None:
+        return cached
+    try:
+        prices = await asyncio.gather(*[
+            (asyncio.to_thread(stripe.Price.retrieve, price_id) if price_id else asyncio.sleep(0, result=None)) for price_id in ids
+        ], return_exceptions=True)
+        items = []
+        for (plan, period), price in zip(combinations, prices):
+            recurring = _stripe_value(price, "recurring") or {}
+            amount = _stripe_value(price, "unit_amount")
+            # DocTalk currently sells fixed-price USD plans. Fail closed on a
+            # mismatched Stripe configuration rather than inventing a total.
+            if (
+                isinstance(price, Exception)
+                or _stripe_value(price, "active") is not True
+                or _stripe_value(price, "currency") != "usd"
+                or type(amount) is not int or amount <= 0
+                or _stripe_value(recurring, "interval") != ("year" if period == "annual" else "month")
+                or _stripe_value(recurring, "interval_count") != 1
+                or _stripe_value(price, "billing_scheme") != "per_unit"
+            ):
+                if period == "annual":
+                    continue  # Paused annual prices must not disable monthly sales.
+                raise ValueError("Unsupported subscription Price configuration")
+            items.append({"plan": plan, "period": period, "currency": "USD", "amount_minor": amount})
+    except (stripe.StripeError, ValueError) as exc:
+        logger.warning("Subscription price lookup failed: %s", type(exc).__name__)
+        raise HTTPException(503, "Subscription prices are temporarily unavailable") from exc
+    result = {"prices": items}
+    await cache_set(cache_key, result, ttl_seconds=60)
+    return result
+
+
+@router.get("/checkout-status", dependencies=[Depends(_limit_status_reads)])
+async def checkout_status(
+    response: Response,
+    session_id: str = Query(min_length=4, max_length=255, pattern=r"^cs_[A-Za-z0-9_]+$"),
+    user: User = Depends(require_auth),
+    db: AsyncSession = Depends(get_db_session),
+):
+    """Read payment + durable fulfillment truth; this endpoint never grants credits."""
+    response.headers["Cache-Control"] = "private, no-store"
+    try:
+        checkout = await asyncio.to_thread(stripe.checkout.Session.retrieve, session_id)
+    except stripe.InvalidRequestError as exc:
+        raise HTTPException(404, "Checkout not found") from exc
+    except stripe.StripeError as exc:
+        raise HTTPException(503, "Checkout status is temporarily unavailable") from exc
+    if _stripe_value(checkout, "client_reference_id") != str(user.id):
+        raise HTTPException(404, "Checkout not found")
+    if _stripe_value(checkout, "status") == "expired":
+        return {"status": "expired"}
+    if (_stripe_value(checkout, "status") != "complete"
+            or _stripe_value(checkout, "payment_status") not in {"paid", "no_payment_required"}):
+        return {"status": "payment_pending"}
+    mode = _stripe_value(checkout, "mode")
+    reference = None
+    if mode == "payment":
+        reference = _stripe_id(_stripe_value(checkout, "payment_intent"))
+        reference_type = "stripe_payment"
+    elif mode == "subscription":
+        reference = _stripe_id(_stripe_value(checkout, "invoice"))
+        reference_type = "stripe_invoice"
+        attempt = await db.scalar(select(CheckoutAttempt).where(
+            CheckoutAttempt.user_id == user.id,
+            CheckoutAttempt.stripe_session_id == session_id,
+        ))
+        # Invoice and checkout webhooks can arrive in either order. A credit
+        # grant alone does not prove the subscription plan was applied too.
+        plan_applied = (attempt.status == "complete") if attempt else (
+            bool(_stripe_id(_stripe_value(checkout, "subscription")))
+            and user.stripe_subscription_id == _stripe_id(_stripe_value(checkout, "subscription"))
+            and user.plan in {"plus", "pro"}
+        )
+        if not plan_applied:
+            return {"status": "processing"}
+    else:
+        return {"status": "processing"}
+    fulfilled = reference and await db.scalar(select(CreditLedger.id).where(
+        CreditLedger.user_id == user.id,
+        CreditLedger.ref_type == reference_type,
+        CreditLedger.ref_id == reference,
+        CreditLedger.delta > 0,
+    ))
+    return {"status": "complete" if fulfilled else "processing"}
+
+
 @router.post("/checkout", response_model=CheckoutUrlResponse)
 async def create_checkout(
     pack_id: Literal["boost", "power", "ultra"],
@@ -465,7 +617,7 @@ async def create_checkout(
         stripe.checkout.Session.create,
         mode="payment",
         line_items=[{"price": price_id, "quantity": 1}],
-        success_url=f"{settings.FRONTEND_URL}/billing?success=1",
+        success_url=f"{settings.FRONTEND_URL}/billing?success=1&session_id={{CHECKOUT_SESSION_ID}}",
         cancel_url=f"{settings.FRONTEND_URL}/billing?canceled=1",
         client_reference_id=str(user.id),
         metadata={"credits": str(credits), "pack_id": pack_id},
@@ -488,6 +640,7 @@ async def subscribe(
     user: User = Depends(require_auth),
     db: AsyncSession = Depends(get_db_session),
 ):
+    _require_supported_purchase_period(body.billing)
     if not settings.STRIPE_SECRET_KEY:
         raise HTTPException(503, "Stripe not configured")
 
@@ -654,6 +807,7 @@ async def change_plan(
     user: User = Depends(require_auth),
     db: AsyncSession = Depends(get_db_session),
 ):
+    _require_supported_purchase_period(body.billing)
     if not settings.STRIPE_SECRET_KEY:
         raise HTTPException(503, "Stripe not configured")
     if not user.stripe_subscription_id:

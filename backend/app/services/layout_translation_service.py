@@ -269,6 +269,18 @@ def layout_translation_config_status() -> LayoutTranslationConfigStatus:
     )
 
 
+def _translation_glossary(target_language_label: str) -> list[dict[str, str]]:
+    if target_language_label != "Simplified Chinese":
+        return []
+    # Scoped to court-dismissal prose: "without prejudice" has other legal
+    # meanings, so do not replace it globally in unrelated correspondence.
+    # Context matching is case-insensitive within 160 characters in RetainPDF.
+    return [
+        {"source": "without prejudice", "target": "不妨碍再次起诉（without prejudice）", "level": "canonical", "match_mode": "case_insensitive", "context": "dismiss", "note": "Court-dismissal meaning; preserve separate limitations-period qualifications."},
+        {"source": "with prejudice", "target": "不得再次起诉（with prejudice）", "level": "canonical", "match_mode": "case_insensitive", "context": "dismiss", "note": "Court-dismissal meaning; retain may, likely and other source qualifications."},
+    ]
+
+
 class RetainPdfClient:
     def __init__(self) -> None:
         base_url = (settings.RETAINPDF_API_BASE_URL or "").rstrip("/")
@@ -368,11 +380,27 @@ class RetainPdfClient:
                 "custom_rules_text": (
                     f"Translate all translatable prose into {target_language_label} while preserving "
                     "equations, symbols, citations, code, references, numbers, and document structure. "
+                    "Translate substantive footnote prose too, preserving footnote markers. "
+                    "Use domain-appropriate terminology rather than literal word-by-word substitutions. "
+                    "For court dismissals, with/without prejudice concerns whether the claim can be "
+                    "filed again, not personal bias. Preserve qualifications such as may, time limits, "
+                    "and warnings about effective finality; do not add legal advice. "
                     "Do not translate legal case numbers, docket identifiers, URLs, email addresses, "
-                    "or source citation labels."
+                    "or source citation labels. "
+                    + ("For Simplified Chinese court-dismissal prose, never translate prejudice as 偏见. "
+                       "Keep the complete contextual glossary available for joined cross-page paragraphs. "
+                       + " ".join(f"Near {entry['context']}: {entry['source']} means {entry['target']}."
+                                  for entry in _translation_glossary(target_language_label))
+                       if target_language_label == "Simplified Chinese" else "")
                 ),
                 "glossary_id": "",
-                "glossary_entries": [],
+                "glossary_entries": (_translation_glossary(target_language_label)
+                                     if settings.RETAINPDF_CONTEXTUAL_GLOSSARY_ENABLED else []),
+                # Keep both bounded entries available to joined cross-page units.
+                # RetainPDF still applies each hard term only where its own
+                # source/context matches; pre-scoping can discard the second page.
+                "glossary_mode": ("all" if settings.RETAINPDF_CONTEXTUAL_GLOSSARY_ENABLED
+                                  and target_language_label == "Simplified Chinese" else "matched"),
                 "model": settings.RETAINPDF_TRANSLATION_MODEL,
                 "base_url": settings.RETAINPDF_TRANSLATION_BASE_URL,
                 "api_key": translation_api_key,
@@ -402,6 +430,9 @@ class RetainPdfClient:
                 "timeout_seconds": max(60, settings.RETAINPDF_TIMEOUT_SECONDS),
             },
         }
+        if not settings.RETAINPDF_CONTEXTUAL_GLOSSARY_ENABLED:
+            payload["translation"].pop("glossary_mode", None)
+
         with httpx.Client(timeout=self.timeout, headers={**self.headers, "Content-Type": "application/json"}) as client:
             response = client.post(self._url("/api/v1/jobs"), json=payload)
         data = self._data(response)

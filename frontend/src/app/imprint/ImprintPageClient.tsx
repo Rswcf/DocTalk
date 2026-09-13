@@ -49,7 +49,7 @@ export default function ImprintPageClient() {
         )}
         meta={
           <p className="ed-caption">
-            {tOr('imprint.lastUpdated', 'Zuletzt aktualisiert / Last updated')}: 2026-04-14
+            {tOr('imprint.lastUpdated', 'Zuletzt aktualisiert / Last updated')}: 2026-09-13
           </p>
         }
       />
@@ -139,16 +139,16 @@ export default function ImprintPageClient() {
           <p>
             {tOr(
               'imprint.odr.body',
-              'Die Europäische Kommission stellt eine Plattform zur Online-Streitbeilegung (OS) bereit. / The European Commission provides a platform for online dispute resolution (ODR):'
+              'The EU Online Dispute Resolution (ODR) platform closed on 20 July 2025. The European Commission provides current consumer redress information:'
             )}
             <br />
             <a
-              href="https://ec.europa.eu/consumers/odr/"
+              href="https://consumer-redress.ec.europa.eu/site-relocation_en"
               target="_blank"
               rel="noopener noreferrer"
               style={LINK_STYLE}
             >
-              https://ec.europa.eu/consumers/odr/
+              {tOr('imprint.odr.link', 'European Commission: consumer redress information')}
             </a>
           </p>
         </EdProse>

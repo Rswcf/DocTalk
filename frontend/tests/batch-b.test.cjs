@@ -149,11 +149,13 @@ function flushAsyncWork() {
   return new Promise((resolve) => setImmediate(resolve));
 }
 
-function createChatHookHarness({ chatStream, initialMessages, maxUserMessages }) {
+function createChatHookHarness({ chatStream, initialMessages, maxUserMessages, getMessages, continueStream }) {
   const metrics = {
     accountingEpochBumps: 0,
     demoUsageWrites: 0,
     reanchorRequests: 0,
+    paywalls: 0,
+    events: [],
   };
   const state = {
     sessionId: 'session-1',
@@ -215,17 +217,18 @@ function createChatHookHarness({ chatStream, initialMessages, maxUserMessages })
     path.resolve(__dirname, '../src/lib/useChatStream.ts'),
     {
       react,
-      './sse': { chatStream, continueStream: async () => {} },
+      './sse': { chatStream, continueStream: continueStream || (async () => {}) },
       './api': {
         getMessages: async () => {
           metrics.reanchorRequests += 1;
-          return { demo_messages_used: state.demoMessagesUsed };
+          if (getMessages) return getMessages();
+          return { messages: state.messages, demo_messages_used: state.demoMessagesUsed };
         },
       },
       '../store': { useDocTalkStore },
       '../components/CreditsDisplay': { triggerCreditsRefresh: () => {} },
       './errorCopy': { errorCopy: () => ({ body: 'Retryable network error' }) },
-      './analytics': { trackEvent: () => {} },
+      './analytics': { trackEvent: (name) => metrics.events.push(name) },
       './shareAnchors': { messageShareAnchorFromId: (id) => id },
       './billingLinks': { deriveUpgradePlan: () => 'plus' },
       './singleFlight': { acquireSingleFlight },
@@ -238,12 +241,79 @@ function createChatHookHarness({ chatStream, initialMessages, maxUserMessages })
     t: (key) => key,
     tOr: (_key, fallback) => fallback,
     maxUserMessages,
-    onShowPaywall: () => {},
+    onShowPaywall: () => { metrics.paywalls++; },
     onRequireAuth: () => {},
   });
 
   return { hook, metrics, state };
 }
+
+test('regenerate sends the original backend ID and adopts only the server current version', async () => {
+  const old = [
+    { id: 'q', backendId: 'question-id', role: 'user', text: 'What year?' },
+    { id: 'a', backendId: 'answer-id', responseVersion: null, role: 'assistant', text: '2023' },
+  ];
+  const current = [old[0], { ...old[1], text: 'May 2023', responseVersion: 'version-2' }];
+  let payload;
+  const { hook, state } = createChatHookHarness({
+    initialMessages: old,
+    getMessages: async () => ({ messages: current }),
+    chatStream: async (...args) => {
+      payload = args[15];
+      args[2]({ text: 'May 2023' });
+      args[5]({ message_id: 'answer-id', response_version: 'version-2' });
+    },
+  });
+  await hook.regenerateLastResponse();
+  assert.deepEqual(payload, { regenerate_of: 'answer-id', expected_response_version: null });
+  assert.equal(state.messages.filter(m => m.role === 'user').length, 1);
+  assert.equal(state.messages.at(-1).responseVersion, 'version-2');
+});
+
+test('failed or aborted regenerate preserves the old answer while offline', async () => {
+  for (const abort of [false, true]) {
+    const old = [{ id: 'q', role: 'user', text: 'Question' }, { id: 'a', backendId: 'answer', role: 'assistant', text: 'Original answer' }];
+    const { hook, state } = createChatHookHarness({
+      initialMessages: old, getMessages: async () => { throw new Error('offline'); },
+      chatStream: async (...args) => {
+        args[2]({ text: 'Unfinished candidate' });
+        if (!abort) throw new Error('network disconnected');
+        await new Promise((resolve) => args[9].addEventListener('abort', resolve, { once: true }));
+      },
+    });
+    const pending = hook.regenerateLastResponse();
+    if (abort) hook.stopStreaming();
+    await pending;
+    assert.equal(state.messages.filter(m => m.role === 'user').length, 1);
+    assert.ok(state.messages.some(m => m.text === 'Original answer'));
+    assert.ok(!state.messages.some(m => m.text.includes('Unfinished candidate')));
+    assert.equal(state.isStreaming, false);
+    assert.equal(state.messages.some(m => m.isError), !abort);
+  }
+});
+
+test('late regenerate callbacks and restore cannot write into a switched conversation', async () => {
+  let resolve, callbacks;
+  const { hook, state } = createChatHookHarness({
+    initialMessages: [{ id: 'q', role: 'user', text: 'Question' }, { id: 'a', backendId: 'answer', role: 'assistant', text: 'Old' }],
+    chatStream: async (...args) => { callbacks = args; await new Promise(r => { resolve = r; }); },
+  });
+  const pending = hook.regenerateLastResponse();
+  state.sessionId = 'session-2'; state.demoAccountingEpoch++;
+  state.messages = [{ id: 'new', role: 'assistant', text: 'Other conversation' }];
+  callbacks[2]({ text: 'Late token' }); callbacks[5]({ message_id: 'late-id' }); resolve();
+  await pending;
+  assert.deepEqual(state.messages, [{ id: 'new', role: 'assistant', text: 'Other conversation' }]);
+});
+
+test('generic regenerate cannot restart tool artifacts and retries unsaved questions explicitly', async () => {
+  let calls = 0, payload;
+  const tool = createChatHookHarness({ initialMessages: [{ id: 'q', role: 'user', text: 'Translate' }, { id: 'a', backendId: 'tool', role: 'assistant', text: 'Started', artifacts: [{ type: 'layout_translation' }] }], chatStream: async () => { calls++; } });
+  await tool.hook.regenerateLastResponse(); assert.equal(calls, 0);
+  const retry = createChatHookHarness({ initialMessages: [{ id: 'q', role: 'user', text: 'Unsaved question' }, { id: 'e', role: 'assistant', text: 'Failed', isError: true }], chatStream: async (...args) => { payload = args[15]; } });
+  await retry.hook.regenerateLastResponse();
+  assert.deepEqual(payload, { retry_latest_question: true, retry_after: null });
+});
 
 test('document brief empty pane renders for a summary without questions', () => {
   const { shouldRenderDocumentBriefEmptyState, truncateDocumentBriefSummary } = loadBriefEmptyStateModule();
@@ -302,7 +372,7 @@ test('the same rendered Retry then Send callbacks share one admission gate', asy
     },
     initialMessages: [
       { id: 'user-1', role: 'user', text: 'Original question', createdAt: 1 },
-      { id: 'assistant-1', role: 'assistant', text: 'Failed answer', isError: true, createdAt: 2 },
+      { id: 'assistant-1', role: 'assistant', text: 'Failed answer', isError: true, retryAction: 'regenerate', createdAt: 2 },
     ],
     maxUserMessages: 5,
   });
@@ -482,4 +552,60 @@ test('dashboard nudge uses durable 1-document and 3-message eligibility without 
   assert.match(dashboard, /readyDocumentCount >= 1[\s\S]*profile\?\.stats\.total_messages \|\| 0\) >= 3/);
   assert.doesNotMatch(dashboard, /DASHBOARD_NUDGE_MAX_IMPRESSIONS/);
   assert.match(dashboard, /Pro answers without the monthly cap/);
+});
+
+
+test('continue preserves the response version needed by the next regenerate', async () => {
+  let continuationVersion, regeneratePayload;
+  const { hook, state } = createChatHookHarness({
+    initialMessages: [{ id: 'q', role: 'user', text: 'Question' }, { id: 'a', backendId: 'answer', responseVersion: 'v1', role: 'assistant', text: 'Partial answer', isTruncated: true }],
+    continueStream: async (...args) => {
+      continuationVersion = args[14];
+      args[5]({ message_id: 'answer', response_version: 'v2' });
+    },
+    chatStream: async (...args) => { regeneratePayload = args[15]; args[5]({ message_id: 'answer', response_version: 'v3' }); },
+  });
+  await hook.continueGenerating();
+  assert.equal(continuationVersion, 'v1');
+  assert.equal(state.messages.at(-1).responseVersion, 'v2');
+  await hook.regenerateLastResponse();
+  assert.equal(regeneratePayload.expected_response_version, 'v2');
+});
+
+
+test('regenerate keeps truncation and quote hints when server confirms the live version', async () => {
+  const question = { id: 'q', role: 'user', text: 'Question' };
+  const { hook, state } = createChatHookHarness({
+    initialMessages: [question, { id: 'a', backendId: 'answer', responseVersion: 'v1', role: 'assistant', text: 'Old' }],
+    chatStream: async (...args) => { args[5]({ message_id: 'answer', response_version: 'v2', can_continue: true, continuation_count: 1, quote_finder_hint: true, quote_finder_topic: 'Topic' }); },
+    getMessages: async () => ({ messages: [question, { id: 'server-a', backendId: 'answer', responseVersion: 'v2', role: 'assistant', text: 'Saved candidate' }] }),
+  });
+  await hook.regenerateLastResponse();
+  assert.equal(state.messages.at(-1).text, 'Saved candidate');
+  assert.equal(state.messages.at(-1).isTruncated, true);
+  assert.equal(state.messages.at(-1).quoteFinderHint, true);
+  assert.equal(state.messages.at(-1).quoteFinderTopic, 'Topic');
+});
+
+test('a rejected regenerate opens the paywall once', async () => {
+  const { hook, metrics } = createChatHookHarness({
+    initialMessages: [{ id: 'q', role: 'user', text: 'Question' }, { id: 'a', backendId: 'answer', responseVersion: 'v1', role: 'assistant', text: 'Old' }],
+    chatStream: async () => { throw { status: 402, code: 'INSUFFICIENT_CREDITS' }; },
+  });
+  await hook.regenerateLastResponse();
+  assert.equal(metrics.paywalls, 1);
+  assert.equal(metrics.events.filter(x => x === 'paywall_opened').length, 1);
+});
+
+test('first regenerate after a stopped ordinary answer recovers its saved ID before retrying', async () => {
+  let payload;
+  const q={id:'q',role:'user',text:'Question'};
+  let reads=0;
+  const {hook}=createChatHookHarness({
+    initialMessages:[q,{id:'local',role:'assistant',text:'Saved partial'}],
+    getMessages:async()=>({messages:[q,{id:'saved',backendId:'answer',responseVersion: reads++ ? 'v2' : null,role:'assistant',text:'Saved partial'}]}),
+    chatStream:async(...args)=>{payload=args[15];args[5]({message_id:'answer',response_version:'v2'});},
+  });
+  await hook.regenerateLastResponse();
+  assert.deepEqual(payload,{regenerate_of:'answer',expected_response_version:null});
 });

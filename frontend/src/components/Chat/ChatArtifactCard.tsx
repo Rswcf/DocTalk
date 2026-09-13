@@ -18,6 +18,7 @@ interface ChatArtifactCardProps {
   artifact: ChatArtifact;
   onCitationClick?: (citation: Citation) => void;
   onPreviewLayoutTranslation?: (url: string, artifact: ChatArtifact) => void;
+  allowAutoImport?: boolean;
 }
 
 /**
@@ -100,7 +101,7 @@ function tableMethodLabel(method: unknown, tOr: (key: string, fallback: string, 
   return typeof method === 'string' && method ? method : '';
 }
 
-export default function ChatArtifactCard({ artifact, onCitationClick, onPreviewLayoutTranslation }: ChatArtifactCardProps) {
+export default function ChatArtifactCard({ artifact, onCitationClick, onPreviewLayoutTranslation, allowAutoImport = true }: ChatArtifactCardProps) {
   const { t, tOr, locale } = useLocale();
   const [current, setCurrent] = useState(artifact);
   const [tableJob, setTableJob] = useState<{ id: string; status: string; tableId: string } | null>(null);
@@ -111,6 +112,7 @@ export default function ChatArtifactCard({ artifact, onCitationClick, onPreviewL
   const autoImportAttemptedRef = useRef(false);
   const isPending = current.status === 'queued' || current.status === 'running';
   const isFailed = current.status === 'failed';
+  const isCancelled = current.status === 'cancelled';
   const isDone = current.status === 'succeeded';
   const isLayoutTranslation = current.artifactType === 'layout_translation';
   const isQuoteSearch = current.artifactType === 'quote_search';
@@ -174,6 +176,8 @@ export default function ChatArtifactCard({ artifact, onCitationClick, onPreviewL
   const displaySummary = isLayoutTranslation
     ? isDone
       ? tOr('layoutTranslation.summarySucceeded', 'Layout-preserved PDF translation is ready.')
+      : isCancelled
+        ? tOr('layoutTranslation.summaryCancelled', 'PDF translation was canceled.')
       : isFailed
         ? tOr('layoutTranslation.summaryFailed', 'Layout-preserving PDF translation failed.')
         : tOr('layoutTranslation.summaryQueued', 'Translating this PDF while preserving layout.')
@@ -302,11 +306,11 @@ export default function ChatArtifactCard({ artifact, onCitationClick, onPreviewL
   };
 
   useEffect(() => {
-    if (!isLayoutTranslation || !isDone || !importRequested || importedDocumentId || autoImportAttemptedRef.current) return;
+    if (!allowAutoImport || !isLayoutTranslation || !isDone || !importRequested || importedDocumentId || autoImportAttemptedRef.current) return;
     autoImportAttemptedRef.current = true;
     void handleImportLayoutTranslation();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [importRequested, importedDocumentId, isDone, isLayoutTranslation]);
+  }, [allowAutoImport, importRequested, importedDocumentId, isDone, isLayoutTranslation]);
 
   return (
     <div className="not-prose mt-4 overflow-hidden rounded-lg border border-[var(--reader-border)] bg-[var(--reader-panel-solid)] shadow-sm">

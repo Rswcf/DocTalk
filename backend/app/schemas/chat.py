@@ -9,13 +9,18 @@ from pydantic import BaseModel, Field
 
 class ChatRequest(BaseModel):
     message: str
+    regenerate_of: Optional[uuid.UUID] = None
+    expected_response_version: Optional[uuid.UUID] = None
+    retry_latest_question: bool = False
+    retry_after: Optional[uuid.UUID] = None
     mode: Optional[Literal["quick", "balanced", "thorough"]] = None
     domain_mode: Optional[Literal["legal", "academic"]] = None
     locale: Optional[str] = None  # Frontend locale code (en/zh/es/fr/de)
 
 
 class ContinueRequest(BaseModel):
-    message_id: Optional[str] = None  # If absent, use most recent assistant message
+    message_id: Optional[uuid.UUID] = None  # If absent, use most recent assistant message
+    expected_response_version: Optional[uuid.UUID] = None
     mode: Optional[Literal["quick", "balanced", "thorough"]] = None
     locale: Optional[str] = None
 
@@ -28,6 +33,7 @@ class ChatMessageResponse(BaseModel):
     citations: Optional[List[dict]] = None
     metadata_json: dict = Field(default_factory=dict)
     created_at: datetime
+    response_version: Optional[uuid.UUID] = None
 
     class Config:
         from_attributes = True

@@ -90,7 +90,7 @@ export default function HomePage() {
             name: 'Is my data secure?',
             acceptedAnswer: {
               '@type': 'Answer',
-              text: 'Absolutely. Your documents are TLS encrypted in transit and AES-256 encrypted at rest, never used for AI training, and you can delete them anytime. We follow privacy-first principles.',
+              text: 'Your documents are private by default and can be deleted from your account. Shared links expose the content you choose to share. DocTalk does not use your data to train models; see our privacy policy for processing providers and their terms.',
             },
           },
           {

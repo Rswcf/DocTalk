@@ -205,13 +205,23 @@ async def reconcile_credits(
     # lock is what a concurrent _refund_predebit blocks on, regardless of
     # which branch below actually runs.
     locked = await db.execute(
-        sa.select(CreditLedger).where(CreditLedger.id == predebit_ledger_id).with_for_update()
+        sa.select(CreditLedger).where(
+            CreditLedger.id == predebit_ledger_id, CreditLedger.user_id == user_id,
+        ).with_for_update().execution_options(populate_existing=True)
     )
     ledger_row = locked.scalar_one_or_none()
     if ledger_row is None:
         raise RuntimeError(
             f"Predebit ledger {predebit_ledger_id} not found during credit reconciliation"
         )
+
+    if ledger_row.reconciled_at is not None:
+        # A commit acknowledgement can be lost. Recovery must not apply the
+        # same predebit difference again, even with a different token estimate.
+        balance = await db.scalar(sa.select(User.credits_balance).where(User.id == user_id))
+        if balance is None:
+            raise RuntimeError(f"User {user_id} not found during credit reconciliation")
+        return balance
 
     diff = pre_debited - actual_cost
     if diff == 0:
@@ -220,11 +230,11 @@ async def reconcile_credits(
             .where(CreditLedger.id == predebit_ledger_id)
             .values(reconciled_at=sa.func.now())
         )
-        user = await db.get(User, user_id)
-        if user is None:
+        balance = await db.scalar(sa.select(User.credits_balance).where(User.id == user_id))
+        if balance is None:
             raise RuntimeError(f"User {user_id} not found during credit reconciliation")
         await db.flush()
-        return user.credits_balance
+        return balance
 
     balance_result = await db.execute(
         sa.update(User)

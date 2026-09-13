@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { ApiError, getDocument, getDocumentFileUrl, getConvertedFileUrl } from './api';
 import { errorCopy, parseWorkerErrorMsg } from './errorCopy';
 import { sanitizeFilename } from './utils';
@@ -17,6 +17,8 @@ interface UseDocumentLoaderResult {
   error: string | null;
   errorCode: string | null;
   reload: () => void;
+  refreshPdfUrl: () => Promise<string | undefined>;
+  refreshConvertedPdfUrl: () => Promise<string | undefined>;
   isDemo: boolean;
   fileType: string;
   hasConvertedPdf: boolean;
@@ -27,6 +29,9 @@ interface UseDocumentLoaderResult {
 
 export function useDocumentLoader(documentId: string | undefined): UseDocumentLoaderResult {
   const { t, tOr } = useLocale();
+  const copyRef = useRef({ t, tOr });
+  copyRef.current = { t, tOr };
+  const documentGeneration = useRef(0);
   const [error, setError] = useState<string | null>(null);
   const [errorCode, setErrorCode] = useState<string | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
@@ -52,6 +57,18 @@ export function useDocumentLoader(documentId: string | undefined): UseDocumentLo
     setReloadKey((current) => current + 1);
   }, []);
 
+  const refreshFileUrl = useCallback(async (converted: boolean) => {
+    if (!documentId) return;
+    const generation = documentGeneration.current;
+    const file = await (converted ? getConvertedFileUrl(documentId) : getDocumentFileUrl(documentId));
+    if (generation !== documentGeneration.current) return;
+    if (converted) setConvertedPdfUrl(file.url);
+    else setPdfUrl(file.url);
+    return file.url;
+  }, [documentId, setPdfUrl]);
+  const refreshPdfUrl = useCallback(() => refreshFileUrl(false), [refreshFileUrl]);
+  const refreshConvertedPdfUrl = useCallback(() => refreshFileUrl(true), [refreshFileUrl]);
+
   useEffect(() => {
     if (!documentId) return;
 
@@ -72,6 +89,7 @@ export function useDocumentLoader(documentId: string | undefined): UseDocumentLo
     let cancelled = false;
 
     const fetchStatus = async () => {
+      const { t, tOr } = copyRef.current;
       let info: DocumentResponse;
       try {
         info = await getDocument(documentId);
@@ -174,14 +192,17 @@ export function useDocumentLoader(documentId: string | undefined): UseDocumentLo
 
     return () => {
       cancelled = true;
+      documentGeneration.current += 1;
       if (intervalId) clearInterval(intervalId);
     };
-  }, [documentId, reloadKey, setDocument, setPdfUrl, setDocumentName, setDocumentStatus, setIsDemo, setLastDocument, setDocumentSummary, setSuggestedQuestions, clearDocumentTransientState, t, tOr]);
+  }, [documentId, reloadKey, setDocument, setPdfUrl, setDocumentName, setDocumentStatus, setIsDemo, setLastDocument, setDocumentSummary, setSuggestedQuestions, clearDocumentTransientState]);
 
   return {
     error,
     errorCode,
     reload,
+    refreshPdfUrl,
+    refreshConvertedPdfUrl,
     isDemo,
     fileType,
     hasConvertedPdf,

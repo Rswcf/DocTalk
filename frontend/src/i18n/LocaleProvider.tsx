@@ -71,7 +71,7 @@ export default function LocaleProvider({
   initialMessages?: Record<string, string>;
 }) {
   const pathname = usePathname() || '/';
-  const parentLocale = useContext(LocaleContext);
+  const { setLocale: parentSetLocale } = useContext(LocaleContext);
   const [preferredLocale, setLocaleState] = useState<Locale>(initialLocale ?? 'en');
   const locale = (contentLocaleFromPath(pathname) ?? preferredLocale) as Locale;
   const [loadedTranslations, setLoadedTranslations] = useState<Record<string, Record<string, string>>>(
@@ -91,13 +91,13 @@ export default function LocaleProvider({
 
   const setLocale = useCallback((l: Locale) => {
     setLocaleState(l);
-    if (initialLocale) parentLocale.setLocale(l);
+    if (initialLocale) parentSetLocale(l);
     try {
       localStorage.setItem('doctalk_locale', l);
     } catch {
       // localStorage unavailable in private browsing
     }
-  }, [initialLocale, parentLocale.setLocale]);
+  }, [initialLocale, parentSetLocale]);
 
   useEffect(() => {
     // Only the root owns document language. Scoped server-seeded providers

@@ -1,5 +1,8 @@
 "use client";
 
+import { useWorkflowEstimates } from '../../lib/useWorkflowEstimates';
+import { WorkflowCostEstimate, WorkflowCostSummary } from '../WorkflowCost';
+
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { FormEvent } from 'react';
 import { Bookmark, Loader2, Search, X } from 'lucide-react';
@@ -50,6 +53,7 @@ interface QuoteFinderPanelProps {
  */
 export default function QuoteFinderPanel({ isOpen, documentId, userPlan, onClose, onCitationClick, initialTopic }: QuoteFinderPanelProps) {
   const { t, tOr, locale } = useLocale();
+  const { costs, failed: costsFailed, retry: retryCosts } = useWorkflowEstimates(isOpen);
   const [topic, setTopic] = useState('');
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<QuoteSearchResult | null>(null);
@@ -184,10 +188,11 @@ export default function QuoteFinderPanel({ isOpen, documentId, userPlan, onClose
   const handleSearch = async (e: FormEvent) => {
     e.preventDefault();
     const trimmed = topic.trim();
-    if (!trimmed || loading) return;
+    if (!trimmed || loading || !costs) return;
     // Captured now so a LATER open/retarget (which bumps the ref) can be
     // detected when this request resolves — see openGenerationRef above.
     const generation = openGenerationRef.current;
+    setResult(null);
     setLoading(true);
     setErrorMsg(null);
     // Fires on SUBMIT, before the request — not after success (Codex M2 r1
@@ -221,6 +226,7 @@ export default function QuoteFinderPanel({ isOpen, documentId, userPlan, onClose
     } finally {
       if (openGenerationRef.current === generation) {
         setLoading(false);
+        retryCosts();
       }
     }
   };
@@ -304,17 +310,20 @@ export default function QuoteFinderPanel({ isOpen, documentId, userPlan, onClose
               onChange={(e) => setTopic(e.target.value)}
               maxLength={300}
               placeholder={tOr('quoteFinder.topicPlaceholder', 'What should the quote be about?')}
-              className="min-h-10 flex-1 rounded-lg border border-[var(--reader-border)] bg-[var(--reader-panel-solid)] px-3 text-sm text-[var(--reader-ink)] outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+              className="min-h-10 min-w-0 flex-1 rounded-lg border border-[var(--reader-border)] bg-[var(--reader-panel-solid)] px-3 text-sm text-[var(--reader-ink)] outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
             />
             <button
               type="submit"
-              disabled={loading || !topic.trim()}
-              className="inline-flex min-h-10 items-center gap-2 rounded-lg bg-zinc-950 px-4 text-sm font-semibold text-white transition-colors hover:bg-zinc-800 focus-visible:ring-2 focus-visible:ring-blue-500 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-zinc-50 dark:text-zinc-950 dark:hover:bg-zinc-200"
+              disabled={loading || !topic.trim() || !costs}
+              className="inline-flex min-h-10 shrink-0 items-center gap-2 whitespace-nowrap rounded-lg bg-zinc-950 px-3 text-sm font-semibold text-white transition-colors hover:bg-zinc-800 focus-visible:ring-2 focus-visible:ring-blue-500 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-zinc-50 dark:text-zinc-950 dark:hover:bg-zinc-200"
             >
               {loading ? <Loader2 size={16} className="animate-spin motion-reduce:animate-none" aria-hidden="true" /> : <Search size={16} aria-hidden="true" />}
               {loading ? tOr('quoteFinder.searching', 'Searching...') : tOr('quoteFinder.searchButton', 'Find quotes')}
             </button>
             </div>
+            <WorkflowCostEstimate amount={costs?.quote_search} balance={result?.remainingCredits ?? costs?.balance} failed={costsFailed} retry={retryCosts} quoteSearch />
+            {loading && <WorkflowCostSummary status="running" preDebited={costs?.quote_search} />}
+            {result && !loading && <WorkflowCostSummary status="succeeded" cost={result.costCredits} preDebited={result.preDebited} />}
           </form>
         ) : null}
 

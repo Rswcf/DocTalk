@@ -36,6 +36,7 @@ from app.services.question_template_service import (
     normalize_questions,
     render_question_template_csv,
 )
+from app.services.workflow_costs import job_predebit
 
 router = APIRouter(prefix="/api", tags=["question-templates"])
 
@@ -76,6 +77,7 @@ class QuestionTemplateRunResponse(BaseModel):
     status: str
     input_scope: dict[str, Any]
     cost_credits: int
+    pre_debited: int | None = None
     error_code: str | None
     error_message: str | None
     created_at: str
@@ -129,6 +131,7 @@ def _run_response(job: DocumentJob) -> QuestionTemplateRunResponse:
         status=job.status,
         input_scope=job.input_scope or {},
         cost_credits=int(job.cost_credits or 0),
+        pre_debited=job_predebit(job),
         error_code=job.error_code,
         error_message=job.error_message,
         created_at=job.created_at.isoformat(),

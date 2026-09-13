@@ -216,3 +216,46 @@ reconstruction. Users should preview the translated PDF before relying on it.
   RetainPDF exposes those downloads.
 - Celery's Redis visibility timeout must stay above the layout translation task
   time limit. The app currently uses 40 minutes for a 35 minute task cap.
+
+## 2026-09-13 local QA candidate: substantive footnotes
+
+A real six-page public court filing exposed an upstream Paddle policy gap:
+`p005-b0010` was recognized as a footnote, but normalized with
+`policy.translate=false` / `provider_non_body:footnote`. It never entered the
+translation model and remained English in the rendered Chinese PDF. The prior
+job and output are retained as evidence. A successful job status alone does not
+establish translation completeness or terminology accuracy.
+
+`infra/retainpdf/Dockerfile` builds from the inspected immutable upstream image
+and applies a single checked policy replacement to include recognized ordinary
+Paddle footnotes. The image runs as the upstream `retainpdf:retainpdf` user;
+root is used only during the build to patch the source copy and the installed Python package. The entry point imports the installed wheel, so modifying only `/app/services/pipeline` has no runtime effect. The build imports the installed module and asserts its footnote policy.
+Headers, references, and non-text blocks keep their previous policy. The patch
+fails if the expected upstream implementation changes. This is a local QA
+candidate, not an instruction to deploy or an assertion that production uses
+this image. Preserve the configured `RUST_API_ROOT` and mount `auth.local.json`
+under that same root; mismatched paths correctly prevent startup.
+
+DocTalk's translation rules also clarify domain terminology and require
+substantive footnote prose to be translated. Legal dismissal terminology must
+preserve the distinction described in the [US Courts glossary](https://www.uscourts.gov/glossary),
+including qualifications about limitations periods. General language rules do
+not replace domain review and cannot repair blocks excluded before translation.
+
+Actual browser preview of local job `c8145a3a-f529-4bda-a18c-5e2b528c72be` confirms a translated page-5 footnote, six retained pages, and no visible overlap there. The Simplified Chinese glossary applies only near dismissal wording and does not guarantee complete terminology coverage: a page-3 phrase still used a literal bias translation. Treat this as a coverage fix with an open terminology issue, pending independent review.
+
+
+Final local retest `74b10882-964f-41c0-948b-88dbf59fc71b` corrected the page-3 terminology and retained the translated page-5 footnote and six-page layout. The two Simplified Chinese dismissal entries remain context-restricted; `glossary_mode=all` keeps them available across joined paragraphs, and explicit translation rules are derived from the same entries. This also distinguishes the semantic request from older upstream unit-cache entries (mode alone is not in the unit-cache key). The prior failed mode-only job is preserved. No cache was purged and no further upstream pipeline patch was added. See the real PDF QA report for screenshots, failed intermediate runs and limits; review and production rollout are separate gates.
+
+
+2026-09-13 independent review follow-up (local, not deployed):
+`RETAINPDF_CONTEXTUAL_GLOSSARY_ENABLED` defaults to `false`. Enable it only after
+confirming the installed sidecar's contextual matching contract. The pinned
+Dockerfile now executes `verify_contract.py` against the actual installed wheel:
+both court-dismissal terms are protected, qualifications remain, and unrelated
+settlement-letter text is not hard-replaced. The local contract image
+`doctalk-retainpdf:reviewed-contract-20260913` built successfully (manifest
+`e8959e78d300b98b3fe9868827af68029e2fd82484dd6ef1e5d951268c81c24b`).
+The earlier six-page visual regression ran on the equivalent footnote-policy image;
+this added build step validates compatibility and does not change OCR/translation
+code. Production image/configuration and end-to-end output remain unverified.

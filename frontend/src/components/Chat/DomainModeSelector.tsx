@@ -33,6 +33,7 @@ export default function DomainModeSelector() {
         const active = domainMode === m.id;
         const disabled = isStreaming;
         const Icon = m.icon;
+        const label = tOr(`domainModes.${m.id ?? 'default'}`, m.label);
 
         return (
           <button
@@ -42,7 +43,7 @@ export default function DomainModeSelector() {
             aria-checked={active}
             onClick={() => chooseMode(m.id)}
             disabled={disabled}
-            title={m.label}
+            title={label}
             className={`flex items-center gap-1 px-2 py-1 text-xs rounded-md border transition-colors ${
               active
                 ? m.id === 'legal'
@@ -54,7 +55,7 @@ export default function DomainModeSelector() {
             } ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
           >
             {Icon && <Icon aria-hidden="true" size={10} />}
-            {m.label}
+            {label}
           </button>
         );
       })}

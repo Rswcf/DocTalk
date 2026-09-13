@@ -78,6 +78,8 @@ export default function DocumentReaderPageClient() {
     error: loaderError,
     errorCode: loaderErrorCode,
     reload: reloadDocument,
+    refreshPdfUrl,
+    refreshConvertedPdfUrl,
     isDemo,
     fileType,
     hasConvertedPdf,
@@ -373,6 +375,7 @@ export default function DocumentReaderPageClient() {
               <div className="flex-1 min-h-0">
                 <PdfViewer
                   pdfUrl={pdfPreviewMode === 'translated' && translatedPreview ? translatedPreview.url : pdfUrl}
+                  onRefreshUrl={pdfPreviewMode === 'translated' ? undefined : refreshPdfUrl}
                   currentPage={currentPage}
                   highlights={pdfPreviewMode === 'translated' ? [] : highlights}
                   scale={scale}
@@ -389,7 +392,7 @@ export default function DocumentReaderPageClient() {
             <div className="h-full w-full flex items-center justify-center text-zinc-500">{t('doc.loading')}</div>
           )
         ) : useConvertedPdf ? (
-          <PdfViewer pdfUrl={convertedPdfUrl} currentPage={currentPage} highlights={highlights} scale={scale} scrollNonce={scrollNonce} highlightSnippet={highlightSnippet} highlightFocus={highlightFocus} />
+          <PdfViewer pdfUrl={convertedPdfUrl} onRefreshUrl={refreshConvertedPdfUrl} currentPage={currentPage} highlights={highlights} scale={scale} scrollNonce={scrollNonce} highlightSnippet={highlightSnippet} highlightFocus={highlightFocus} />
         ) : (
           <TextViewer documentId={documentId} fileType={fileType} targetPage={currentPage} scrollNonce={scrollNonce} highlightSnippet={highlightSnippet} />
         )}
@@ -676,6 +679,11 @@ export default function DocumentReaderPageClient() {
       />
       <LayoutTranslationDrawer
         isOpen={layoutTranslationDrawerOpen}
+        documentId={documentId}
+        onPreview={(url, artifact) => {
+          setLayoutTranslationDrawerOpen(false);
+          handlePreviewLayoutTranslation(url, artifact);
+        }}
         busy={layoutTranslationBusy}
         documentName={documentName}
         pageCount={totalPages || undefined}

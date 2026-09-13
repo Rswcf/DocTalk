@@ -122,6 +122,8 @@ async def _artifact_for_job(job: DocumentJob, db: AsyncSession, user: User) -> D
             summary = f"Layout-preserved PDF translation to {target} is ready."
         elif job.status == "failed":
             summary = error_message or "Layout-preserving translation failed."
+        elif job.status == "cancelled":
+            summary = "Layout-preserving translation was cancelled."
         else:
             summary = f"Translating this PDF to {target} while preserving layout."
         return DocumentJobArtifactResponse(

@@ -31,6 +31,7 @@ from app.services import (
     saved_quotes_service,
 )
 from app.services.doc_service import can_access_document
+from app.services.workflow_costs import QUOTE_SEARCH_PREDEBIT_CREDITS
 
 logger = logging.getLogger(__name__)
 
@@ -43,7 +44,6 @@ router = APIRouter(prefix="/api", tags=["quotes"])
 
 # Same shape as chat's balanced-mode estimate (extraction_service.EXTRACTION_PREDEBIT_CREDITS
 # precedent) — one LLM call over retrieved context, same cost class as a chat turn.
-QUOTE_SEARCH_PREDEBIT_CREDITS = 15
 
 # FIX-6 (Codex r1 IMPORTANT #6): the discarded list is unbounded (one entry
 # per LLM proposal that failed verification) — cap what lands in telemetry
@@ -75,6 +75,8 @@ class QuoteSearchResponse(BaseModel):
     discarded_count: int
     scanned_chunks: int
     remaining_credits: int
+    cost_credits: int
+    pre_debited: int
 
 
 async def _verify_document(document_id: uuid.UUID, user: User, db: AsyncSession) -> Document:
@@ -381,6 +383,8 @@ async def create_quote_search(
         discarded_count=len(result.discarded),
         scanned_chunks=result.scanned_chunks,
         remaining_credits=remaining_credits,
+        cost_credits=actual_cost,
+        pre_debited=QUOTE_SEARCH_PREDEBIT_CREDITS,
     )
 
 

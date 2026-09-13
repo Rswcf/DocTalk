@@ -80,12 +80,16 @@ class _FakeStream:
 
 
 def _make_db(session_obj, doc_obj, *, assistant_message=None, execute_side_effect=None):
+    if assistant_message is not None:
+        assistant_message.response_version = None
     async def fake_get(model, _id):
         if model is Document:
             return doc_obj
         if model is ChatSession:
             return session_obj
         if model is Message:
+            if assistant_message is not None and not hasattr(assistant_message, "id"):
+                assistant_message.id = _id
             return assistant_message
         return None
 

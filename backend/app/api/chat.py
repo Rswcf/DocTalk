@@ -3,14 +3,16 @@ from __future__ import annotations
 import datetime as dt
 import json
 import uuid
+from contextlib import aclosing
 from datetime import datetime, timedelta, timezone
 from typing import AsyncGenerator, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
-from fastapi.responses import JSONResponse, StreamingResponse
+from fastapi.responses import JSONResponse
 from sqlalchemy import asc, desc, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
+from starlette.background import BackgroundTask
 
 from app.core.config import settings
 from app.core.deps import get_current_user_optional, get_db_session
@@ -42,6 +44,12 @@ from app.schemas.chat import (
 )
 from app.services import credit_service
 from app.services.action_planner import ChatAction, deterministic_plan
+from app.services.chat_response_versions import (
+    ChatStreamingResponse,
+    claim_operation,
+    release_operation,
+    stream_with_operation,
+)
 from app.services.chat_service import chat_service
 from app.services.doc_service import can_access_document
 from app.services.domain_mode_access import enforce_domain_mode_access
@@ -351,6 +359,7 @@ async def get_session_messages(
                 citations=m.citations,
                 metadata_json=getattr(m, "metadata_json", {}) or {},
                 created_at=m.created_at,
+                response_version=getattr(m, "response_version", None),
             )
         )
     # Anonymous demo sessions: surface the used count so the frontend can
@@ -427,23 +436,6 @@ async def chat_stream(
         commit_claim=True,
     )
 
-    # Enforce message limit for anonymous users on demo documents.
-    # Tracker key is scoped per (IP, document) and survives session recreation.
-    if user is None and session.document and session.document.demo_slug:
-        allowed, _count = await demo_message_tracker.check_and_increment(
-            _demo_message_key(client_ip, session.document_id), DEMO_MESSAGE_LIMIT
-        )
-        if not allowed:
-            log_security_event("demo_message_limit", ip=client_ip, document_id=session.document_id)
-            raise HTTPException(
-                status_code=429,
-                detail={
-                    "error": "DEMO_MESSAGE_LIMIT_REACHED",
-                    "message": "Demo message limit reached",
-                    "limit": DEMO_MESSAGE_LIMIT,
-                },
-            )
-
     # If authenticated, ensure sufficient credits before opening stream
     if user is not None:
         from app.services.credit_service import ensure_monthly_credits
@@ -474,19 +466,50 @@ async def chat_stream(
                 },
             )
 
+    operation = await claim_operation(
+        session_id, regenerate_of=body.regenerate_of,
+        expected_version=body.expected_response_version,
+        retry_question=body.retry_latest_question, question=body.message, retry_after=body.retry_after,
+    )
+
+    try:
+        # Enforce message limit for anonymous users on demo documents.
+        # Tracker key is scoped per (IP, document) and survives session recreation.
+        if user is None and session.document and session.document.demo_slug:
+            allowed, _count = await demo_message_tracker.check_and_increment(
+                _demo_message_key(client_ip, session.document_id), DEMO_MESSAGE_LIMIT
+            )
+            if not allowed:
+                log_security_event("demo_message_limit", ip=client_ip, document_id=session.document_id)
+                raise HTTPException(
+                    status_code=429,
+                    detail={
+                        "error": "DEMO_MESSAGE_LIMIT_REACHED",
+                        "message": "Demo message limit reached",
+                        "limit": DEMO_MESSAGE_LIMIT,
+                    },
+                )
+
+    except BaseException:
+        await release_operation(operation)
+        raise
+
     async def event_generator() -> AsyncGenerator[str, None]:
-        async for ev in chat_service.chat_stream(
+        source = chat_service.chat_stream(
             session_id, body.message, db, user=user, locale=body.locale, mode=body.mode,
             domain_mode=body.domain_mode
-        ):
-            # Format per SSE: event: <type>\ndata: {json}\n\n
-            line = f"event: {ev['event']}\n"
-            payload = json.dumps(ev.get("data", {}), ensure_ascii=False)
-            data_line = f"data: {payload}\n\n"
-            yield line + data_line
+        )
+        async with aclosing(stream_with_operation(source, operation, db)) as events:
+            async for ev in events:
+                # Format per SSE: event: <type>\ndata: {json}\n\n
+                line = f"event: {ev['event']}\n"
+                payload = json.dumps(ev.get("data", {}), ensure_ascii=False)
+                data_line = f"data: {payload}\n\n"
+                yield line + data_line
 
-    return StreamingResponse(
+    return ChatStreamingResponse(
         event_generator(),
+        background=BackgroundTask(release_operation, operation),
         media_type="text/event-stream",
         headers={
             "Cache-Control": "no-cache, no-transform",
@@ -546,28 +569,11 @@ async def chat_continue(
                 headers={"Retry-After": "60"},
             )
 
-    # Demo message limit (continuations count against it)
-    if user is None and session.document and session.document.demo_slug:
-        client_ip = get_client_ip(request)
-        allowed, _count = await demo_message_tracker.check_and_increment(
-            _demo_message_key(client_ip, session.document_id), DEMO_MESSAGE_LIMIT
-        )
-        if not allowed:
-            log_security_event("demo_message_limit", ip=client_ip, document_id=session.document_id)
-            raise HTTPException(
-                status_code=429,
-                detail={
-                    "error": "DEMO_MESSAGE_LIMIT_REACHED",
-                    "message": "Demo message limit reached",
-                    "limit": DEMO_MESSAGE_LIMIT,
-                },
-            )
-
     # Check continuation limit
-    msg_id = uuid.UUID(body.message_id) if body.message_id else None
+    msg_id = body.message_id
     if msg_id:
         from sqlalchemy import select as sa_select
-        msg_row = await db.execute(sa_select(Message).where(Message.id == msg_id))
+        msg_row = await db.execute(sa_select(Message).where(Message.id == msg_id, Message.session_id == session_id, Message.role == "assistant"))
         msg = msg_row.scalar_one_or_none()
     else:
         msg_row = await db.execute(
@@ -611,17 +617,47 @@ async def chat_continue(
                 },
             )
 
-    async def event_generator() -> AsyncGenerator[str, None]:
-        async for ev in chat_service.continue_stream(
-            session_id, msg_id, db, user=user, locale=body.locale, mode=body.mode
-        ):
-            line = f"event: {ev['event']}\n"
-            payload = json.dumps(ev.get("data", {}), ensure_ascii=False)
-            data_line = f"data: {payload}\n\n"
-            yield line + data_line
+    msg_id = msg.id
+    operation = await claim_operation(session_id, continue_id=msg_id,
+        expected_version=body.expected_response_version,
+        continue_version_supplied="expected_response_version" in body.model_fields_set)
 
-    return StreamingResponse(
+    try:
+        # Demo message limit (continuations count against it)
+        if user is None and session.document and session.document.demo_slug:
+            client_ip = get_client_ip(request)
+            allowed, _count = await demo_message_tracker.check_and_increment(
+                _demo_message_key(client_ip, session.document_id), DEMO_MESSAGE_LIMIT
+            )
+            if not allowed:
+                log_security_event("demo_message_limit", ip=client_ip, document_id=session.document_id)
+                raise HTTPException(
+                    status_code=429,
+                    detail={
+                        "error": "DEMO_MESSAGE_LIMIT_REACHED",
+                        "message": "Demo message limit reached",
+                        "limit": DEMO_MESSAGE_LIMIT,
+                    },
+                )
+
+    except BaseException:
+        await release_operation(operation)
+        raise
+
+    async def event_generator() -> AsyncGenerator[str, None]:
+        source = chat_service.continue_stream(
+            session_id, msg_id, db, user=user, locale=body.locale, mode=body.mode
+        )
+        async with aclosing(stream_with_operation(source, operation, db)) as events:
+            async for ev in events:
+                line = f"event: {ev['event']}\n"
+                payload = json.dumps(ev.get("data", {}), ensure_ascii=False)
+                data_line = f"data: {payload}\n\n"
+                yield line + data_line
+
+    return ChatStreamingResponse(
         event_generator(),
+        background=BackgroundTask(release_operation, operation),
         media_type="text/event-stream",
         headers={
             "Cache-Control": "no-cache, no-transform",

@@ -107,12 +107,18 @@ export interface DocumentBrief {
   status: string;
   created_at: string | null;
   error_msg?: string | null;
+  file_type?: string | null;
+  file_size?: number | null;
+  page_count?: number | null;
 }
 
-export async function getMyDocuments(signal?: AbortSignal): Promise<DocumentBrief[]> {
-  const res = await fetch(`${PROXY_BASE}/api/documents`, { signal });
+export type DocumentListOptions = { q?: string; sort?: 'newest' | 'oldest' | 'name'; limit?: number; offset?: number };
+
+export async function getMyDocuments(signal?: AbortSignal, options: DocumentListOptions = {}): Promise<DocumentBrief[]> {
+  const params = new URLSearchParams();
+  Object.entries(options).forEach(([key, value]) => { if (value !== undefined) params.set(key, String(value)); });
+  const res = await fetch(`${PROXY_BASE}/api/documents?${params}`, { signal });
   if (!res.ok) {
-    if (res.status === 401) return [];
     throw new Error(`Failed to fetch documents: ${res.status}`);
   }
   return res.json();
@@ -167,7 +173,7 @@ export async function createSession(docId: string): Promise<{ session_id: string
 
 export async function getMessages(sessionId: string): Promise<{ messages: Message[]; demo_messages_used?: number | null }> {
   const res = await fetch(`${PROXY_BASE}/api/sessions/${sessionId}/messages`);
-  const data: { messages: Array<{ id?: string; share_anchor?: string; role: Message['role']; content: string; citations?: any[]; metadata_json?: any; created_at: string }>; demo_messages_used?: number | null } = await handle(res);
+  const data: { messages: Array<{ id?: string; response_version?: string | null; share_anchor?: string; role: Message['role']; content: string; citations?: any[]; metadata_json?: any; created_at: string }>; demo_messages_used?: number | null } = await handle(res);
 
   const mapped = (data.messages || []).map((m, idx) => {
     const citations: Citation[] | undefined = m.citations
@@ -185,6 +191,7 @@ export async function getMessages(sessionId: string): Promise<{ messages: Messag
       artifacts,
       createdAt: Date.parse(m.created_at),
       backendId: m.id,
+      responseVersion: m.response_version ?? null,
       shareAnchor: m.share_anchor,
     } as Message;
   });
@@ -199,6 +206,13 @@ export interface DocumentJobDetail {
   job_type: string;
   status: string;
   artifact: ChatArtifact;
+  created_at?: string;
+}
+
+export async function listLayoutTranslations(documentId: string, offset = 0): Promise<{ items: DocumentJobDetail[]; total: number; limit: number; offset: number }> {
+  const res = await fetch(`${PROXY_BASE}/api/documents/${documentId}/layout-translations?limit=5&offset=${offset}`, { cache: 'no-store' });
+  const data = await handle<{ items: Array<Omit<DocumentJobDetail, 'artifact'> & { artifact: unknown }>; total: number; limit: number; offset: number }>(res);
+  return { ...data, items: data.items.map((item) => ({ ...item, artifact: mapArtifactPayload(item.artifact) })) };
 }
 
 export async function getDocumentJob(jobId: string): Promise<DocumentJobDetail> {
@@ -291,6 +305,8 @@ export interface QuoteSearchResult {
   discardedCount: number;
   scannedChunks: number;
   remainingCredits: number;
+  costCredits?: number;
+  preDebited?: number;
 }
 
 export async function searchDocumentQuotes(documentId: string, topic: string, locale?: string | null): Promise<QuoteSearchResult> {
@@ -316,6 +332,8 @@ export async function searchDocumentQuotes(documentId: string, topic: string, lo
     discardedCount: data.discarded_count,
     scannedChunks: data.scanned_chunks,
     remainingCredits: data.remaining_credits,
+    costCredits: data.cost_credits,
+    preDebited: data.pre_debited,
   };
 }
 
@@ -1354,4 +1372,31 @@ export async function exportDocumentDiffRun(jobId: string, format: 'md' | 'csv')
   const res = await fetch(`${PROXY_BASE}/api/document-diffs/${jobId}/export?format=${format}`);
   if (!res.ok) await throwApiError(res);
   return res.blob();
+}
+
+export type CheckoutStatus = 'payment_pending' | 'processing' | 'complete' | 'expired';
+export async function getCheckoutStatus(sessionId: string): Promise<{ status: CheckoutStatus }> {
+  const res = await fetch(`${PROXY_BASE}/api/billing/checkout-status?session_id=${encodeURIComponent(sessionId)}`, { cache: 'no-store' });
+  return handle(res);
+}
+
+export interface SubscriptionPrice {
+  plan: 'plus' | 'pro';
+  period: 'monthly' | 'annual';
+  currency: string;
+  amount_minor: number;
+}
+export async function getSubscriptionPrices(): Promise<{ prices: SubscriptionPrice[] }> {
+  return handle(await fetch(`${PROXY_BASE}/api/billing/subscription-prices`, { cache: 'no-store' }));
+}
+
+export interface WorkflowEstimates {
+  balance: number;
+  quote_search: number;
+  template_per_cell: number;
+  document_diff: number;
+  extraction: number;
+}
+export async function getWorkflowEstimates(): Promise<WorkflowEstimates> {
+  return handle(await fetch(`${PROXY_BASE}/api/credits/workflow-estimates`, { cache: 'no-store' }));
 }

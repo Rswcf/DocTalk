@@ -2,13 +2,19 @@ from __future__ import annotations
 
 from typing import List, Optional
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Response
 from pydantic import BaseModel
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.deps import get_db_session, require_auth
 from app.models.tables import CreditLedger, User
+from app.services.workflow_costs import (
+    DOCUMENT_DIFF_PREDEBIT_CREDITS,
+    EXTRACTION_PREDEBIT_CREDITS,
+    QUESTION_TEMPLATE_PREDEBIT_PER_CELL,
+    QUOTE_SEARCH_PREDEBIT_CREDITS,
+)
 
 router = APIRouter(prefix="/api/credits", tags=["credits"])
 
@@ -26,6 +32,18 @@ class LedgerEntryResponse(BaseModel):
     ref_type: Optional[str]
     ref_id: Optional[str]
     created_at: str
+
+
+@router.get("/workflow-estimates")
+async def workflow_estimates(response: Response, user: User = Depends(require_auth)):
+    response.headers["Cache-Control"] = "private, no-store"
+    return {
+        "balance": user.credits_balance,
+        "quote_search": QUOTE_SEARCH_PREDEBIT_CREDITS,
+        "template_per_cell": QUESTION_TEMPLATE_PREDEBIT_PER_CELL,
+        "document_diff": DOCUMENT_DIFF_PREDEBIT_CREDITS,
+        "extraction": EXTRACTION_PREDEBIT_CREDITS,
+    }
 
 
 @router.get("/balance", response_model=CreditsBalanceResponse)

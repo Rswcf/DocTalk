@@ -9,7 +9,7 @@ from datetime import datetime, timezone
 from typing import Any, Literal
 from urllib.parse import quote
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 from sqlalchemy import func, select
@@ -95,6 +95,43 @@ async def _job_response(job: DocumentJob, db: AsyncSession, user: User) -> Docum
         updated_at=_iso(job.updated_at),
         completed_at=job.completed_at.isoformat() if job.completed_at else None,
         artifact=await _artifact_for_job(job, db, user),
+    )
+
+
+class LayoutTranslationHistoryResponse(BaseModel):
+    items: list[DocumentJobDetailResponse]
+    total: int
+    limit: int
+    offset: int
+
+
+@router.get("/documents/{document_id}/layout-translations", response_model=LayoutTranslationHistoryResponse)
+async def list_layout_translations(
+    document_id: uuid.UUID,
+    response: Response,
+    limit: int = Query(5, ge=1, le=50),
+    offset: int = Query(0, ge=0),
+    user: User = Depends(require_auth),
+    db: AsyncSession = Depends(get_db_session),
+):
+    doc = await db.get(Document, document_id)
+    if not doc or doc.user_id != user.id:
+        raise HTTPException(status_code=404, detail={"error": "DOCUMENT_NOT_FOUND", "message": "Document not found"})
+    filters = (
+        DocumentJob.document_id == document_id,
+        DocumentJob.user_id == user.id,
+        DocumentJob.job_type == LAYOUT_TRANSLATION_JOB_TYPE,
+    )
+    total = int(await db.scalar(select(func.count()).select_from(DocumentJob).where(*filters)) or 0)
+    rows = await db.execute(
+        select(DocumentJob).where(*filters)
+        .order_by(DocumentJob.created_at.desc(), DocumentJob.id.desc())
+        .offset(offset).limit(limit)
+    )
+    response.headers["Cache-Control"] = "private, no-store"
+    return LayoutTranslationHistoryResponse(
+        items=[await _job_response(job, db, user) for job in rows.scalars()],
+        total=total, limit=limit, offset=offset,
     )
 
 

@@ -11,11 +11,14 @@ import {
   changePlan,
   createPortalSession,
   type CancelSubscriptionReason,
+  getSubscriptionPrices,
+  type SubscriptionPrice,
 } from "../../lib/api";
 import { triggerCreditsRefresh } from "../../components/CreditsDisplay";
 import PricingTable from "../../components/PricingTable";
 import { PLAN_HIERARCHY, type PlanType } from "../../lib/models";
-import { formatPlanPrice } from "../../lib/planPricing";
+import { formatStripePlanPrice } from "../../lib/planPricing";
+import CheckoutStatusNotice from "../../components/CheckoutStatusNotice";
 import { authHrefFor, type BillingPeriodIntent, type BillingPlanIntent } from "../../lib/billingLinks";
 import { getBillingErrorMessage as billingErrorMessage, startCheckout } from "../../lib/billing";
 import { trackEvent } from "../../lib/analytics";
@@ -81,6 +84,12 @@ function BillingContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [products, setProducts] = useState<Product[]>([]);
+  const [subscriptionPrices, setSubscriptionPrices] = useState<SubscriptionPrice[]>([]);
+  const [pricesLoading, setPricesLoading] = useState(true);
+  const [pricesError, setPricesError] = useState(false);
+  const pricesReady = ['plus', 'pro'].every(plan => subscriptionPrices.some(price => price.plan === plan && price.period === 'monthly')) && !pricesLoading && !pricesError;
+  const formatPlanPrice = (plan: string, period: string, monthlyEquivalent = true) =>
+    formatStripePlanPrice(subscriptionPrices, plan, period, locale, monthlyEquivalent);
   const [loading, setLoading] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const {
@@ -134,18 +143,28 @@ function BillingContent() {
     const isSuccess = searchParams.get("success");
     const isCanceled = searchParams.get("canceled");
 
-    if (isSuccess) {
-      setMessage(t("billing.purchaseSuccess"));
-      triggerCreditsRefresh();
-      void refetchProfile();
-    } else if (isCanceled) {
+    if (!isSuccess && isCanceled) {
       setMessage(t("billing.purchaseCanceled"));
     }
 
-    if (isSuccess || isCanceled) {
+    if (!isSuccess && isCanceled) {
       router.replace("/billing", { scroll: false });
     }
-  }, [searchParams, t, refetchProfile, router]);
+  }, [searchParams, t, router]);
+
+  const onPurchaseConfirmed = useCallback(() => {
+    triggerCreditsRefresh();
+    void refetchProfile();
+  }, [refetchProfile]);
+
+  const fetchSubscriptionPrices = useCallback(async () => {
+    setPricesLoading(true);
+    setPricesError(false);
+    try { setSubscriptionPrices((await getSubscriptionPrices()).prices); }
+    catch { setPricesError(true); }
+    finally { setPricesLoading(false); }
+  }, []);
+  useEffect(() => { void fetchSubscriptionPrices(); }, [fetchSubscriptionPrices]);
 
   useEffect(() => {
     if (status === "unauthenticated") {
@@ -225,7 +244,7 @@ function BillingContent() {
   };
 
   const handleSubscribe = async (plan: 'plus' | 'pro') => {
-    if (submitting) return;
+    if (submitting || !pricesReady || billingPeriod === 'annual') return;
     setSubmitting(plan);
     const source = searchParams.get("source") || "billing";
     const reason = searchParams.get("reason");
@@ -242,7 +261,7 @@ function BillingContent() {
   };
 
   const handlePlanAction = async (plan: PlanType) => {
-    if (submitting) return;
+    if (submitting || !pricesReady || billingPeriod === 'annual') return;
     if (plan === 'free') return;
     if (!profile) return;
     const currentPlan = profile.plan as PlanType;
@@ -526,6 +545,13 @@ function BillingContent() {
           </aside>
         </section>
 
+        {searchParams.get('success') && <CheckoutStatusNotice
+          key={searchParams.get('session_id') || 'legacy-checkout'}
+          sessionId={searchParams.get('session_id')}
+          enabled={status === 'authenticated'}
+          onConfirmed={onPurchaseConfirmed}
+        />}
+
         {message && (
           <div className="mb-6 p-4 rounded-xl bg-zinc-100 dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-800">
             {message}
@@ -639,7 +665,7 @@ function BillingContent() {
               {tOr('billing.planSelector.title', 'Subscription plans')}
             </h2>
             <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
-              {tOr('billing.planSelector.subtitle', 'Annual billing keeps the same monthly credit allowance and lowers the effective price.')}
+              {t('billing.annualUnavailable')}
             </p>
           </div>
           <div className="inline-flex rounded-lg border border-zinc-200 bg-zinc-50 p-1 dark:border-zinc-800 dark:bg-zinc-950">
@@ -701,6 +727,11 @@ function BillingContent() {
           </section>
         ) : (
           <>
+            {pricesLoading && <p className="mb-4 text-sm" role="status">{t('common.loading')}</p>}
+            {pricesError && <div className="mb-4 rounded-xl border p-4 text-sm" role="alert">
+              <p>{t('billing.pricesUnavailable')}</p>
+              <button type="button" className="mt-2 min-h-10 underline" onClick={() => void fetchSubscriptionPrices()}>{t('common.retry')}</button>
+            </div>}
             {/* Subscription Cards */}
             <section className="mb-8 grid md:grid-cols-2 gap-6">
               {/* Plus Card */}
@@ -732,6 +763,9 @@ function BillingContent() {
                         {t('billing.savePercent', { percent: 20 })}
                       </span>
                     )}
+                    {billingPeriod === 'annual' && pricesReady && <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-300">
+                      {t('billing.annualUnavailable')}
+                    </p>}
                   </div>
                   <ul className="space-y-2 mb-6 flex-1">
                     {plusFeatures.map((f, i) => (
@@ -761,7 +795,7 @@ function BillingContent() {
                   ) : profile?.plan === 'pro' ? (
                     <button
                       onClick={() => handlePlanAction('plus')}
-                      disabled={submitting !== null}
+                      disabled={submitting !== null || !pricesReady || billingPeriod === 'annual'}
                       className="w-full px-4 py-2.5 rounded-lg bg-zinc-900 dark:bg-zinc-50 text-white dark:text-zinc-900 hover:bg-zinc-800 dark:hover:bg-zinc-200 disabled:opacity-50 shadow-sm hover:shadow-md transition-colors font-medium focus-visible:ring-2 focus-visible:ring-zinc-400 dark:focus-visible:ring-zinc-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-900"
                     >
                       {submitting === 'plus' ? t("common.loading") : `${t("billing.downgrade")} Plus`}
@@ -769,7 +803,7 @@ function BillingContent() {
                   ) : (
                     <button
                       onClick={() => handlePlanAction('plus')}
-                      disabled={submitting !== null}
+                      disabled={submitting !== null || !pricesReady || billingPeriod === 'annual'}
                       className="w-full px-4 py-2.5 rounded-lg bg-accent hover:bg-accent-hover text-accent-foreground disabled:opacity-50 shadow-sm hover:shadow-md transition-colors font-medium focus-visible:ring-2 focus-visible:ring-zinc-400 dark:focus-visible:ring-zinc-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-900"
                     >
                       {submitting === 'plus' ? t("common.loading") : `${t("billing.upgrade")} Plus`}
@@ -802,6 +836,9 @@ function BillingContent() {
                         {t('billing.savePercent', { percent: 20 })}
                       </span>
                     )}
+                    {billingPeriod === 'annual' && pricesReady && <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-300">
+                      {t('billing.annualUnavailable')}
+                    </p>}
                   </div>
                   <ul className="space-y-2 mb-6 flex-1">
                     {proFeatures.map((f, i) => (
@@ -831,7 +868,7 @@ function BillingContent() {
                   ) : profile?.plan === 'plus' ? (
                     <button
                       onClick={() => handlePlanAction('pro')}
-                      disabled={submitting !== null}
+                      disabled={submitting !== null || !pricesReady || billingPeriod === 'annual'}
                       className="w-full px-4 py-2.5 rounded-lg bg-zinc-900 dark:bg-zinc-50 text-white dark:text-zinc-900 hover:bg-zinc-800 dark:hover:bg-zinc-200 disabled:opacity-50 shadow-sm hover:shadow-md transition-colors font-medium focus-visible:ring-2 focus-visible:ring-zinc-400 dark:focus-visible:ring-zinc-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-900"
                     >
                       {submitting === 'pro' ? t("common.loading") : `${t("billing.upgrade")} Pro`}
@@ -839,7 +876,7 @@ function BillingContent() {
                   ) : (
                     <button
                       onClick={() => handlePlanAction('pro')}
-                      disabled={submitting !== null}
+                      disabled={submitting !== null || !pricesReady || billingPeriod === 'annual'}
                       className="w-full px-4 py-2.5 rounded-lg bg-zinc-900 dark:bg-zinc-50 text-white dark:text-zinc-900 hover:bg-zinc-800 dark:hover:bg-zinc-200 disabled:opacity-50 shadow-sm hover:shadow-md transition-colors font-medium focus-visible:ring-2 focus-visible:ring-zinc-400 dark:focus-visible:ring-zinc-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-900"
                     >
                       {submitting === 'pro' ? t("common.loading") : `${t("billing.upgrade")} Pro`}
@@ -876,6 +913,7 @@ function BillingContent() {
                 selectedPlan={selectedPlan}
                 onSelectPlan={setSelectedPlan}
                 submitting={submitting}
+                purchaseDisabled={!pricesReady || billingPeriod === 'annual'}
               />
             </section>
           </>
@@ -971,6 +1009,9 @@ function BillingContent() {
                 {' · '}
                 {confirmUpgrade.billing === 'annual' ? t('billing.annual') : t('billing.monthly')}
               </p>
+              {confirmUpgrade.billing === 'annual' && <p className="mt-2 text-sm">
+                {t('billing.billedAnnual', { amount: formatPlanPrice(confirmUpgrade.plan, 'annual', false) })}
+              </p>}
               <ul className="mt-4 space-y-2 text-sm text-zinc-700 dark:text-zinc-300">
                 <li className="flex items-start gap-2">
                   <Check size={16} className="mt-0.5 shrink-0 text-zinc-900 dark:text-zinc-100" />
@@ -1039,6 +1080,9 @@ function BillingContent() {
                 {' · '}
                 {confirmDowngrade.billing === 'annual' ? t('billing.annual') : t('billing.monthly')}
               </p>
+              {confirmDowngrade.billing === 'annual' && <p className="mt-2 text-sm">
+                {t('billing.billedAnnual', { amount: formatPlanPrice(confirmDowngrade.plan, 'annual', false) })}
+              </p>}
               <ul className="mt-4 space-y-2 text-sm text-zinc-700 dark:text-zinc-300">
                 <li className="flex items-start gap-2">
                   <Check size={16} className="mt-0.5 shrink-0 text-zinc-900 dark:text-zinc-100" />

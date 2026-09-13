@@ -24,7 +24,7 @@ export default function PrivacyPageClient() {
         lede={tOr('privacy.controller.intro', 'The controller responsible for the processing of personal data on this website is:')}
         meta={
           <p className="ed-caption">
-            {t('privacy.lastUpdated')}: 2026-02-05
+            {t('privacy.lastUpdated')}: 2026-09-13
           </p>
         }
       />

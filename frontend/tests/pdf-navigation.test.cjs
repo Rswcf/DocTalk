@@ -103,10 +103,19 @@ function findObserver(node) {
 }
 findObserver(source);
 let observed, selectedPage;
-Function('numPages','containerRef','isScrollingToPage','pageRefs','setVisiblePage','IntersectionObserver',observerBody.slice(1,-1))(
+const observedStore = {currentPage:1,scrollNonce:9};
+const observedNavigation = {current:{key:'1:9',pending:false}};
+Function('numPages','containerRef','isScrollingToPage','pageRefs','setVisiblePage','IntersectionObserver','useDocTalkStore','navigationRef',observerBody.slice(1,-1))(
   2, {current:{getBoundingClientRect:()=>({top:100,bottom:900})}}, {current:false},
   {current:[{getBoundingClientRect:()=>({top:-500,bottom:250})},{getBoundingClientRect:()=>({top:270,bottom:1070})}]},
   page=>{selectedPage=page;}, class {constructor(callback){observed=callback;} observe(){} disconnect(){}},
+  {getState:()=>observedStore,setState:update=>Object.assign(observedStore,update)}, observedNavigation,
 );
 observed([{target:'only previous page changed',intersectionRatio:0.2}]);
 assert.equal(selectedPage,2);
+assert.equal(observedStore.currentPage,2, 'manual position survives viewer remount');
+assert.deepEqual(observedNavigation.current,{key:'2:9',pending:false}, 'manual observation never starts navigation');
+observedStore.currentPage=1;
+observedNavigation.current={key:'1:10',pending:true};
+observed([]);
+assert.equal(observedStore.currentPage,1, 'observation cannot override pending explicit navigation');

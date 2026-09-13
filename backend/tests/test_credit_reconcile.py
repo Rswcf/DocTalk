@@ -19,8 +19,8 @@ class _ScalarResult:
 
 def _locked_ledger_row():
     """Stand-in for the SELECT ... FOR UPDATE result — reconcile_credits
-    only checks it's not None; the row's own field values aren't read."""
-    return _ScalarResult(SimpleNamespace(id=uuid.uuid4()))
+    reads the durable settlement marker before any balance update."""
+    return _ScalarResult(SimpleNamespace(id=uuid.uuid4(), reconciled_at=None))
 
 
 @pytest.mark.asyncio
@@ -95,7 +95,7 @@ async def test_reconcile_noop_still_locks_and_stamps_reconciled_at() -> None:
     user_id = uuid.uuid4()
     fake_user = SimpleNamespace(id=user_id, credits_balance=470)
     db = SimpleNamespace(
-        get=AsyncMock(return_value=fake_user),
+        scalar=AsyncMock(return_value=fake_user.credits_balance),
         execute=AsyncMock(side_effect=[_locked_ledger_row(), _ScalarResult(None)]),
         flush=AsyncMock(),
     )
@@ -116,7 +116,7 @@ async def test_reconcile_noop_still_locks_and_stamps_reconciled_at() -> None:
 @pytest.mark.asyncio
 async def test_reconcile_noop_raises_when_user_missing() -> None:
     db = SimpleNamespace(
-        get=AsyncMock(return_value=None),
+        scalar=AsyncMock(return_value=None),
         execute=AsyncMock(side_effect=[_locked_ledger_row(), _ScalarResult(None)]),
         flush=AsyncMock(),
     )

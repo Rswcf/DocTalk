@@ -325,12 +325,15 @@ class Message(Base):
     )
     prompt_tokens: Mapped[Optional[int]] = mapped_column(sa.Integer)
     output_tokens: Mapped[Optional[int]] = mapped_column(sa.Integer)
+    response_version: Mapped[Optional[uuid.UUID]] = mapped_column(UUID(as_uuid=True), nullable=True)
     continuation_count: Mapped[int] = mapped_column(
         sa.Integer, nullable=False, server_default=sa.text("0")
     )
     created_at: Mapped[sa.DateTime] = mapped_column(
         sa.DateTime(timezone=True), server_default=sa.text("now()")
     )
+
+    revisions: Mapped[List[MessageRevision]] = relationship("MessageRevision", cascade="all, delete-orphan", passive_deletes=True)
 
     session: Mapped[ChatSession] = relationship(
         "ChatSession", back_populates="messages"
@@ -1383,3 +1386,20 @@ class SavedQuote(Base):
     )
 
     document: Mapped["Document"] = relationship("Document")
+
+
+class ChatStreamLease(Base):
+    """A short renewable operation claim; never hold a SQL lock across an LLM call."""
+    __tablename__ = "chat_stream_leases"
+    session_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), sa.ForeignKey("sessions.id", ondelete="CASCADE"), primary_key=True)
+    token: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False)
+    expires_at: Mapped[sa.DateTime] = mapped_column(sa.DateTime(timezone=True), nullable=False)
+
+
+class MessageRevision(Base):
+    """Previous answer snapshot; current Message stays at its original position."""
+    __tablename__ = "message_revisions"
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, server_default=sa.text("gen_random_uuid()"))
+    message_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), sa.ForeignKey("messages.id", ondelete="CASCADE"), nullable=False, index=True)
+    snapshot: Mapped[dict] = mapped_column(JSONB, nullable=False)
+    created_at: Mapped[sa.DateTime] = mapped_column(sa.DateTime(timezone=True), server_default=sa.text("now()"))

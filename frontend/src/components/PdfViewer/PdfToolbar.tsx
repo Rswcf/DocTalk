@@ -27,7 +27,7 @@ interface PdfToolbarProps {
 export default function PdfToolbar({ currentPage, totalPages, scale, onPageChange, onScaleChange, grabMode, onGrabModeToggle, searchQuery, searchMatchCount, currentMatchIndex, onSearchQueryChange, onSearchNext, onSearchPrev, onSearchClose, onLayoutTranslate, layoutTranslateBusy = false, layoutTranslateDisabled = false }: PdfToolbarProps) {
   const { t, tOr } = useLocale();
   const [pageInput, setPageInput] = useState(String(currentPage));
-  const [searchOpen, setSearchOpen] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(Boolean(searchQuery));
 
   useEffect(() => {
     setPageInput(String(currentPage));

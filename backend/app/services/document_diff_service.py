@@ -30,6 +30,9 @@ from app.services.extraction_service import (
     _settle_extraction_predebit_after_failure_sync,
     run_leased_predebited_document_job_sync,
 )
+from app.services.workflow_costs import (
+    DOCUMENT_DIFF_PREDEBIT_CREDITS as DOCUMENT_DIFF_PREDEBIT_CREDITS,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -37,7 +40,6 @@ DOCUMENT_DIFF_JOB_TYPE = "document_diff"
 DOCUMENT_DIFF_RESULT_KEY = "document_diff"
 DOCUMENT_DIFF_MODE = "balanced"
 DOCUMENT_DIFF_MODEL = settings.MODE_MODELS.get(DOCUMENT_DIFF_MODE, settings.LLM_MODEL)
-DOCUMENT_DIFF_PREDEBIT_CREDITS = 60
 MAX_DIFF_CHUNKS_PER_DOC = 8
 MAX_DIFF_CONTEXT_CHARS_PER_CHUNK = 1200
 MAX_DIFF_CHANGES = 24

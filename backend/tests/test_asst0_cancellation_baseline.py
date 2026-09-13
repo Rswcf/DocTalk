@@ -146,8 +146,9 @@ class _FakePersistSession:
     block on asyncpg's 60s connect timeout under the shield).
     """
 
-    def __init__(self, store):
+    def __init__(self, store, assistant=None):
         self.store = store
+        self.assistant = assistant
 
     async def __aenter__(self):
         return self
@@ -157,6 +158,15 @@ class _FakePersistSession:
 
     async def get(self, _model, _id):
         return None
+
+    async def scalar(self, statement):
+        description = statement.column_descriptions[0]
+        if description['expr'] is Message:
+            return self.assistant
+        candidates = ([self.assistant] if self.assistant is not None else []) + self.store
+        params = statement.compile().params.values()
+        message = next((m for m in candidates if isinstance(m, (Message, SimpleNamespace)) and getattr(m, 'id', None) in params), None)
+        return getattr(message, description['name'], None) if message else None
 
     def add(self, obj):
         self.store.append(obj)
@@ -169,12 +179,16 @@ class _FakePersistSession:
 
 
 def _make_db(session_obj, doc_obj, *, assistant_message=None, execute_side_effect=None):
+    if assistant_message is not None:
+        assistant_message.response_version = None
     async def fake_get(model, _id):
         if model is Document:
             return doc_obj
         if model is ChatSession:
             return session_obj
         if model is Message:
+            if assistant_message is not None and not hasattr(assistant_message, "id"):
+                assistant_message.id = _id
             return assistant_message
         return None
 
@@ -339,7 +353,7 @@ async def test_continue_stream_midstream_cancel_settles_credits(monkeypatch):
     monkeypatch.setattr(chat_service_module.credit_service, "record_usage", record_usage)
     monkeypatch.setattr(chat_service_module, "_refund_predebit", refund)
     monkeypatch.setattr(
-        chat_service_module, "AsyncSessionLocal", lambda: _FakePersistSession(persist_store)
+        chat_service_module, "AsyncSessionLocal", lambda: _FakePersistSession(persist_store, assistant_message)
     )
 
     agen = chat_service_module.chat_service.continue_stream(
@@ -593,7 +607,7 @@ async def test_continue_stream_llm_error_after_partial_answer_does_not_full_refu
         lambda *args, **kwargs: _PassVerificationReport(),
     )
     monkeypatch.setattr(
-        chat_service_module, "AsyncSessionLocal", lambda: _FakePersistSession([])
+        chat_service_module, "AsyncSessionLocal", lambda: _FakePersistSession([], assistant_message)
     )
     settle_on_cancel = AsyncMock()
     monkeypatch.setattr(chat_service_module, "_settle_predebit_on_cancel", settle_on_cancel)
@@ -758,7 +772,7 @@ async def test_continue_stream_persist_failed_with_partial_answer_does_not_full_
         lambda *args, **kwargs: _PassVerificationReport(),
     )
     monkeypatch.setattr(
-        chat_service_module, "AsyncSessionLocal", lambda: _FakePersistSession([])
+        chat_service_module, "AsyncSessionLocal", lambda: _FakePersistSession([], assistant_message)
     )
     settle_on_cancel = AsyncMock()
     monkeypatch.setattr(chat_service_module, "_settle_predebit_on_cancel", settle_on_cancel)
@@ -951,3 +965,44 @@ async def test_continue_stream_accounting_error_still_runs_fallback_settlement(m
     assert events[-1]["event"] == "done"
     assert settle_on_cancel.await_count == 1
     assert settle_on_cancel.await_args.kwargs["has_answer"] is True
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize('delivery', [False, True, 'unresolved'])
+async def test_regenerate_failure_finally_uses_durable_delivery_and_captured_user_id(monkeypatch, delivery):
+    from app.services.chat_response_versions import ChatOperation, current_operation
+    session_id, document_id, user_id, ledger_id = (uuid.uuid4() for _ in range(4))
+    session = SimpleNamespace(id=session_id, document_id=document_id, collection_id=None, title=None, domain_mode=None)
+    doc = SimpleNamespace(id=document_id, demo_slug=None, custom_instructions=None)
+    db = _make_db(session, doc, execute_side_effect=[_ScalarOneResult(session), _MessagesResult([])])
+    refund, reconcile, usage = (AsyncMock() for _ in range(3))
+    _patch_common(monkeypatch, ledger_id, document_id, refund=refund, reconcile=reconcile, record_usage=usage, persist_store=[])
+    monkeypatch.setattr(chat_service_module, '_get_llm_client', lambda _: SimpleNamespace(chat=SimpleNamespace(completions=SimpleNamespace(create=AsyncMock(return_value=_PartialThenErrorStream(RuntimeError('model failed')))))))
+    resolver = AsyncMock(side_effect=RuntimeError('DB unresolved')) if delivery == 'unresolved' else AsyncMock(return_value=delivery)
+    monkeypatch.setattr(chat_service_module, 'replacement_delivered', resolver)
+    settle = AsyncMock()
+    monkeypatch.setattr(chat_service_module, '_settle_predebit_on_cancel', settle)
+    class UserWithExpiredAttributes:
+        plan = 'pro'
+        expired = False
+        @property
+        def id(self):
+            if self.expired:
+                raise RuntimeError('ORM expired: implicit IO forbidden')
+            return user_id
+    user = UserWithExpiredAttributes()
+    async def rollback():
+        user.expired = True
+    db.rollback = AsyncMock(side_effect=rollback)
+    token=current_operation.set(ChatOperation(session_id=session_id, token=uuid.uuid4(), replace_id=uuid.uuid4()))
+    try:
+        events=[e async for e in chat_service_module.chat_service.chat_stream(session_id=session_id,user_message='Question',db=db,user=user,mode='quick')]
+    finally:
+        current_operation.reset(token)
+    assert events[-1]['data']['code']=='LLM_ERROR'
+    resolver.assert_awaited_once()
+    if delivery == 'unresolved':
+        settle.assert_not_awaited()
+    else:
+        assert settle.await_args.kwargs['has_answer'] is delivery
+        assert settle.await_args.kwargs['user_id'] == user_id

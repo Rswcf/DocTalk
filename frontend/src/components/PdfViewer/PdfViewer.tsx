@@ -9,6 +9,8 @@ import PdfToolbar from './PdfToolbar';
 import type { NormalizedBBox } from '../../types';
 import { useDocTalkStore } from '../../store';
 import { useLocale } from '../../i18n';
+import { usePdfRecovery } from '../../lib/usePdfRecovery';
+import { errorCopy } from '../../lib/errorCopy';
 
 // Load pdf.js worker from same origin to avoid CSP cross-origin issues.
 // The worker file is copied from node_modules/pdfjs-dist/build/ to public/.
@@ -67,12 +69,14 @@ export interface PdfViewerProps {
   onLayoutTranslate?: () => void;
   layoutTranslateBusy?: boolean;
   layoutTranslateDisabled?: boolean;
+  onRefreshUrl?: () => Promise<string | undefined>;
 }
 
 const scrollBehavior = () =>
   window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' as const : 'smooth' as const;
 
-export default function PdfViewer({ pdfUrl, currentPage, highlights, scale, scrollNonce, highlightSnippet, highlightFocus, onLayoutTranslate, layoutTranslateBusy, layoutTranslateDisabled }: PdfViewerProps) {
+export default function PdfViewer({ pdfUrl, currentPage, highlights, scale, scrollNonce, highlightSnippet, highlightFocus, onLayoutTranslate, layoutTranslateBusy, layoutTranslateDisabled, onRefreshUrl }: PdfViewerProps) {
+  const { refreshing, revision, retry, error: recoveryError } = usePdfRecovery(pdfUrl, onRefreshUrl);
   const [numPages, setNumPages] = useState<number>(0);
   const [isDragging, setIsDragging] = useState(false);
   const [debouncedSearch, setDebouncedSearch] = useState('');
@@ -93,7 +97,7 @@ export default function PdfViewer({ pdfUrl, currentPage, highlights, scale, scro
   const navigationRef = useRef<{ key: string; pending: boolean } | null>(null);
   const { setScale, grabMode, setGrabMode, searchQuery, searchMatches, currentMatchIndex, setSearchQuery, setSearchMatches, setCurrentMatchIndex } = useDocTalkStore();
   const setStoreTotalPages = (n: number) => useDocTalkStore.setState({ totalPages: n });
-  const { t } = useLocale();
+  const { t, tOr } = useLocale();
 
   // Validate PDF URL
   const { validPdfUrl, urlError } = useMemo(() => {
@@ -115,7 +119,7 @@ export default function PdfViewer({ pdfUrl, currentPage, highlights, scale, scro
     setTextCacheVersion((v) => v + 1);
     setPageDimensions([]);
     setVisibleRange({ start: 1, end: 6 });
-  }, [validPdfUrl]);
+  }, [validPdfUrl, revision]);
 
   // Scroll to page when currentPage changes (e.g. citation click or toolbar nav)
   // If highlights exist, center the viewport on the first highlight bbox
@@ -204,7 +208,16 @@ export default function PdfViewer({ pdfUrl, currentPage, highlights, scale, scro
           const height = Math.max(0, Math.min(rect.bottom, viewport.bottom) - Math.max(rect.top, viewport.top));
           if (height > maxHeight) { maxHeight = height; bestPage = index + 1; }
         });
-        if (bestPage) setVisiblePage(bestPage);
+        if (bestPage) {
+          setVisiblePage(bestPage);
+          const store = useDocTalkStore.getState();
+          // Persist manual scrolling for mobile tab/layout remounts without
+          // turning this observation into another explicit navigation.
+          if (store.currentPage !== bestPage && !navigationRef.current?.pending) {
+            navigationRef.current = { key: `${bestPage}:${store.scrollNonce}`, pending: false };
+            useDocTalkStore.setState({ currentPage: bestPage });
+          }
+        }
       },
       { root: containerRef.current, threshold: [0, 0.1, 0.25, 0.5, 0.75] }
     );
@@ -467,11 +480,19 @@ export default function PdfViewer({ pdfUrl, currentPage, highlights, scale, scro
           <div className="p-4">{t('doc.pdfLoading')}</div>
         ) : (
         <Document
+          key={`${validPdfUrl}:${revision}`}
           file={validPdfUrl}
           options={PDF_OPTIONS}
           onLoadSuccess={onDocumentLoadSuccess}
+          onLoadError={() => { void retry(true); }}
           loading={<div className="p-4" aria-live="polite">{t('doc.pdfLoading')}</div>}
-          error={<div className="p-4 text-red-600" aria-live="polite">{t('doc.pdfLoadError')}</div>}
+          error={<div className="p-4" role="status">
+            <p className="text-red-600">{refreshing ? t('doc.pdfLoading') : recoveryError ? errorCopy(recoveryError, t, tOr).body : t('doc.pdfLoadError')}</p>
+            <button type="button" disabled={refreshing} onClick={() => { void retry(); }}
+              className="mt-3 min-h-10 rounded-lg border border-zinc-300 px-4 text-sm dark:border-zinc-600 disabled:opacity-50">
+              {t('common.retry')}
+            </button>
+          </div>}
         >
           <div className="flex flex-col items-center gap-5 py-6">
             {pages.map((pageNumber) => {

@@ -6,6 +6,7 @@ from types import SimpleNamespace
 from unittest.mock import AsyncMock
 
 import pytest
+from fastapi import HTTPException
 
 from app.api import billing as billing_api
 
@@ -180,7 +181,7 @@ async def test_two_tab_retry_adopts_completed_checkout_without_new_session(
 
     assert recovered is not None
     assert recovered.completed is True
-    assert recovered.checkout_url.endswith("/billing?success=1")
+    assert recovered.checkout_url.endswith("/billing?success=1&session_id=cs_completed")
     assert user.stripe_subscription_id == "sub_completed"
     assert user.plan == "pro"
     assert attempt.status == "complete"
@@ -242,3 +243,30 @@ async def test_subscription_deleted_ignores_stale_deleted_subscription() -> None
     assert user.plan == "pro"
     assert user.stripe_subscription_id == "sub_live"
     db.commit.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+async def test_fresh_annual_checkout_is_expired_before_monthly_replacement(monkeypatch):
+    user = _checkout_user()
+    attempt = _checkout_attempt(user, status='open', stripe_session_id='cs_annual', billing_period='annual')
+    db = SimpleNamespace(commit=AsyncMock())
+    calls=AsyncMock(side_effect=[{'id':'cs_annual','status':'open'},{'id':'cs_annual','status':'expired'}])
+    monkeypatch.setattr(billing_api.asyncio,'to_thread',calls)
+    monkeypatch.setattr(billing_api,'_lock_checkout_state',AsyncMock(return_value=(user,attempt)))
+    monkeypatch.setattr(billing_api,'_invalidate_user_caches',AsyncMock())
+    assert await billing_api._recover_checkout_attempt(user,attempt,db) is None
+    assert attempt.status == 'expired' and user.stripe_subscription_id is None
+    assert calls.await_args_list[1].args[0].__name__ == 'expire'
+
+
+@pytest.mark.asyncio
+async def test_ambiguous_sessionless_annual_checkout_is_not_recreated_or_abandoned(monkeypatch):
+    user = _checkout_user()
+    attempt = _checkout_attempt(user,billing_period='annual')
+    calls=AsyncMock()
+    monkeypatch.setattr(billing_api.asyncio,'to_thread',calls)
+    with pytest.raises(HTTPException) as exc:
+        await billing_api._recover_checkout_attempt(user,attempt,SimpleNamespace())
+    assert exc.value.detail['error'] == 'ANNUAL_CHECKOUT_UNRESOLVED'
+    assert attempt.status == 'creating'
+    calls.assert_not_awaited()

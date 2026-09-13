@@ -188,6 +188,10 @@ export function fileTooLargeCopy(
 }
 
 const CODE_TABLE: Record<string, Handler> = {
+  CHAT_IN_PROGRESS: (_d, tOr) => ({ title: tOr('errors.CHAT_IN_PROGRESS.body', "Another answer is being generated in this conversation. Wait for it to finish, then retry."), body: tOr('errors.CHAT_IN_PROGRESS.body', "Another answer is being generated in this conversation. Wait for it to finish, then retry."), severity: 'warning' }),
+  RESPONSE_CHANGED: (_d, tOr) => ({ title: tOr('errors.RESPONSE_CHANGED.body', "This conversation changed. Reload it before trying again."), body: tOr('errors.RESPONSE_CHANGED.body', "This conversation changed. Reload it before trying again."), severity: 'warning' }),
+  TOOL_RETRY_UNSUPPORTED: (_d, tOr) => ({ title: tOr('errors.TOOL_RETRY_UNSUPPORTED.body', "Use the tool\u2019s own controls to start another task."), body: tOr('errors.TOOL_RETRY_UNSUPPORTED.body', "Use the tool\u2019s own controls to start another task."), severity: 'warning' }),
+
   // ─── Upload ───
   DOCUMENT_LIMIT_REACHED: (d, tOr) => {
     if (d.reason === 'failed_documents') {

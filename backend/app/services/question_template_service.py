@@ -28,12 +28,12 @@ from app.services.extraction_service import (
     retrieve_extraction_chunks,
     run_leased_predebited_document_job_sync,
 )
+from app.services.workflow_costs import QUESTION_TEMPLATE_PREDEBIT_PER_CELL
 
 logger = logging.getLogger(__name__)
 
 BATCH_TEMPLATE_JOB_TYPE = "batch_template"
 QUESTION_TEMPLATE_RESULT_KEY = "question_template"
-QUESTION_TEMPLATE_PREDEBIT_PER_CELL = 15
 MAX_TEMPLATE_QUESTIONS = 20
 MAX_TEMPLATE_DOCS = 25
 

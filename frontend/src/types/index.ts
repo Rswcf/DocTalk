@@ -90,6 +90,7 @@ export interface Message {
   isTruncated?: boolean;
   continuationCount?: number;
   backendId?: string;
+  responseVersion?: string | null;
   shareAnchor?: string;
   /** Hint-only signal on safe RAG/citation paths where Quote Finder may help.
    * Live-only — the backend does not persist it on the Message row. Used to
@@ -285,6 +286,7 @@ export interface ExtractionJob {
   status: 'queued' | 'running' | 'succeeded' | 'failed';
   input_scope: Record<string, unknown>;
   cost_credits: number;
+  pre_debited?: number | null;
   error_code: string | null;
   error_message: string | null;
   created_at: string;

@@ -116,6 +116,9 @@ class TestRestEndpointPreCheckUsesBalancedEstimate:
             yield {"event": "done", "data": {}}
 
         monkeypatch.setattr(chat_api.chat_service, "chat_stream", fake_chat_stream)
+        # Lease persistence has dedicated real-Postgres concurrency coverage.
+        monkeypatch.setattr(chat_api, "claim_operation", AsyncMock())
+        monkeypatch.setattr(chat_api, "release_operation", AsyncMock())
 
         user = SimpleNamespace(id=uuid.uuid4(), plan="pro")
         db = SimpleNamespace(commit=AsyncMock())

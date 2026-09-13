@@ -41,13 +41,15 @@ from app.services.predebited_job_service import (
     PREDEBITED_JOB_MAX_CLAIM_ATTEMPTS,
     RECOVERY_POLICIES,
 )
+from app.services.workflow_costs import (
+    EXTRACTION_PREDEBIT_CREDITS as EXTRACTION_PREDEBIT_CREDITS,
+)
 
 logger = logging.getLogger(__name__)
 
 EXTRACTION_JOB_TYPE = "extraction"
 EXTRACTION_MODE = "balanced"
 EXTRACTION_MODEL = settings.MODE_MODELS.get(EXTRACTION_MODE, settings.LLM_MODEL)
-EXTRACTION_PREDEBIT_CREDITS = 25
 FREE_MONTHLY_EXTRACTION_LIMIT = 2
 MAX_CONTEXT_CHUNKS = 10
 MAX_CONTEXT_CHARS_PER_CHUNK = 1400

@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useMemo, useRef } from 'react';
-import { chatStream, continueStream } from './sse';
+import { chatStream, continueStream, type ChatRetry } from './sse';
 import { getMessages } from './api';
 import { useDocTalkStore } from '../store';
 import type { Message } from '../types';
@@ -203,7 +203,7 @@ export function useChatStream({
       return;
     }
 
-    if (status === 409 || code === 'DOCUMENT_PROCESSING') {
+    if (code === 'DOCUMENT_PROCESSING') {
       addMessage({
         id: `m_${Date.now()}_proc`,
         role: 'assistant',
@@ -243,7 +243,7 @@ export function useChatStream({
       && (!lastMessage.citations || lastMessage.citations.length === 0)
       && (!lastMessage.artifacts || lastMessage.artifacts.length === 0);
 
-    if (lastAssistantIsEmpty) {
+    if (lastAssistantIsEmpty || lastMessage?.isError) {
       state.setMessages([
         ...currentMessages.slice(0, -1),
         {
@@ -274,6 +274,7 @@ export function useChatStream({
 
   const handleStreamDone = useCallback((d: {
     message_id: string;
+    response_version?: string | null;
     can_continue?: boolean;
     continuation_count?: number;
     quote_finder_hint?: boolean;
@@ -288,8 +289,10 @@ export function useChatStream({
     if (d.message_id) {
       updateLastMessageMeta({
         backendId: d.message_id,
+        ...(d.response_version !== undefined ? { responseVersion: d.response_version } : {}),
         shareAnchor: messageShareAnchorFromId(d.message_id),
         ...(d.continuation_count !== undefined ? { continuationCount: d.continuation_count } : {}),
+        ...(d.can_continue !== undefined ? { isTruncated: d.can_continue } : {}),
         quoteFinderHint: d.quote_finder_hint === true,
         quoteFinderTopic: d.quote_finder_topic ?? null,
       });
@@ -319,15 +322,21 @@ export function useChatStream({
   // can invoke its callback, so route that rejection through the same
   // caller-selected handler. Once handled, the rejection is swallowed just
   // like HTTP/SSE failures; user-initiated aborts remain silent.
-  const streamAssistantResponse = useCallback(async (prompt: string, onErrorOverride?: (err: unknown) => void) => {
+  const streamAssistantResponse = useCallback(async (prompt: string, onErrorOverride?: (err: unknown) => void, retry?: ChatRetry) => {
     const controller = new AbortController();
     abortRef.current = controller;
 
+    const epoch = useDocTalkStore.getState().demoAccountingEpoch;
+    const active = () => {
+      const state = useDocTalkStore.getState();
+      return state.sessionId === sessionId && state.demoAccountingEpoch === epoch;
+    };
+    let completed = false;
     const domainMode = useDocTalkStore.getState().domainMode;
     const onStreamError = onErrorOverride ?? handleStreamError;
     let errorHandled = false;
     const reportStreamError = (err: unknown) => {
-      if (errorHandled) return;
+      if (errorHandled || !active()) return;
       errorHandled = true;
       onStreamError(err);
     };
@@ -336,25 +345,27 @@ export function useChatStream({
       await chatStream(
         sessionId,
         prompt,
-        ({ text }) => updateLastMessage(text || ''),
-        (citation) => addCitationToLastMessage(citation),
+        ({ text }) => { if (active()) updateLastMessage(text || ''); },
+        (citation) => { if (active()) addCitationToLastMessage(citation); },
         reportStreamError,
-        handleStreamDone,
-        handleTruncated,
+        (data) => { if (active()) { completed = true; handleStreamDone(data); } },
+        () => { if (active()) handleTruncated(); },
         selectedMode,
         locale,
         controller.signal,
         domainMode,
-        (artifact) => addArtifactToLastMessage(artifact),
-        ({ message }) => setLastMessageToolStatus(message),
-        handleAnswerRepaired,
-        handleCitationsRefined,
+        (artifact) => { if (active()) addArtifactToLastMessage(artifact); },
+        ({ message }) => { if (active()) setLastMessageToolStatus(message); },
+        (data) => { if (active()) handleAnswerRepaired(data); },
+        (data) => { if (active()) handleCitationsRefined(data); },
+        retry,
       );
     } catch (err) {
       if (!controller.signal.aborted && !isAbortLikeError(err) && !errorHandled) {
         reportStreamError(err);
       }
     }
+    return completed;
   }, [sessionId, updateLastMessage, addCitationToLastMessage, addArtifactToLastMessage, setLastMessageToolStatus, handleStreamError, handleStreamDone, handleTruncated, handleAnswerRepaired, handleCitationsRefined, selectedMode, locale, isAbortLikeError]);
 
   const sendMessage = useCallback(async (text: string) => {
@@ -438,7 +449,21 @@ export function useChatStream({
     if (!release) return;
 
     try {
-      const msgs = useDocTalkStore.getState().messages;
+      let msgs = useDocTalkStore.getState().messages;
+      const stoppedAnswer = msgs.at(-1);
+      if (stoppedAnswer?.role === 'assistant' && stoppedAnswer.text && !stoppedAnswer.backendId && !stoppedAnswer.isError) {
+        const epoch = useDocTalkStore.getState().demoAccountingEpoch;
+        try {
+          const server = await getMessages(sessionId);
+          if (useDocTalkStore.getState().sessionId !== sessionId || useDocTalkStore.getState().demoAccountingEpoch !== epoch) return;
+          const localQuestion = [...msgs].reverse().find(m => m.role === 'user');
+          const serverQuestion = [...server.messages].reverse().find(m => m.role === 'user');
+          if (server.messages.at(-1)?.backendId && server.messages.at(-1)?.role === 'assistant' && serverQuestion?.text === localQuestion?.text) {
+            msgs = server.messages;
+            useDocTalkStore.getState().setMessages(msgs);
+          }
+        } catch { /* Existing retry/error reconciliation still handles offline state. */ }
+      }
       let lastUserIdx = -1;
 
       for (let i = msgs.length - 1; i >= 0; i--) {
@@ -450,24 +475,62 @@ export function useChatStream({
 
       if (lastUserIdx === -1) return;
 
+      const originalAnswer = msgs.slice(lastUserIdx + 1).find(m => m.role === 'assistant' && m.backendId && !m.isError);
+      if (originalAnswer?.artifacts?.length || demoLimitReached) {
+        if (demoLimitReached) onRequireAuth();
+        return;
+      }
       const lastUserText = msgs[lastUserIdx].text;
-      const trimmed = msgs.slice(0, lastUserIdx + 1);
-
-      useDocTalkStore.getState().setMessages(trimmed);
+      const retry: ChatRetry = originalAnswer?.backendId
+        ? { regenerate_of: originalAnswer.backendId, expected_response_version: originalAnswer.responseVersion ?? null }
+        : { retry_latest_question: true, retry_after: msgs.slice(0, lastUserIdx).reverse().find(m => m.backendId)?.backendId ?? null };
+      useDocTalkStore.getState().setMessages(msgs.slice(0, lastUserIdx + 1));
       addMessage({ id: `m_${Date.now()}_a`, role: 'assistant', text: '', citations: [], createdAt: Date.now() });
       bumpDemoUsageForRegenOrContinue();
+      const epoch = useDocTalkStore.getState().demoAccountingEpoch;
+      const active = () => useDocTalkStore.getState().sessionId === sessionId
+        && useDocTalkStore.getState().demoAccountingEpoch === epoch;
       setStreaming(true);
-
-      // Covers HTTP/SSE failures and transport-level fetch rejections. The
-      // wrapper re-anchors before delegating and guarantees one invocation.
-      await streamAssistantResponse(lastUserText, (err) => {
-        reanchorDemoCounter(sessionId);
-        handleStreamError(err);
-      });
+      let failure: unknown;
+      const completed = await streamAssistantResponse(lastUserText, (err) => {
+        failure = err;
+      }, retry);
+      if (!active()) return;
+      if (!completed) {
+        flushPendingText();
+        useDocTalkStore.getState().setMessages(msgs);
+        setStreaming(false);
+      }
+      let restoredFromServer = false;
+      const liveAnswer = completed ? useDocTalkStore.getState().messages.at(-1) : undefined;
+      // Reconcile even on transport failure: the terminal DB commit may have
+      // succeeded before the connection closed. Never discard a server winner.
+      try {
+        const server = await getMessages(sessionId);
+        if (!active()) return;
+        useDocTalkStore.getState().setMessages(server.messages.map(message =>
+          liveAnswer?.backendId && liveAnswer.backendId === message.backendId && liveAnswer.responseVersion === message.responseVersion
+            ? { ...message, isTruncated: liveAnswer.isTruncated, continuationCount: liveAnswer.continuationCount, quoteFinderHint: liveAnswer.quoteFinderHint, quoteFinderTopic: liveAnswer.quoteFinderTopic }
+            : message));
+        restoredFromServer = true;
+        if (server.demo_messages_used != null) {
+          useDocTalkStore.getState().setDemoMessagesUsed(server.demo_messages_used);
+          useDocTalkStore.getState().setDemoRestoredUserMsgCount(server.messages.filter(m => m.role === 'user').length);
+        }
+      } catch {
+        // The pre-generation snapshot remains available while offline.
+      }
+      if (failure && active()) {
+        const current = useDocTalkStore.getState().messages;
+        const last = current[current.length - 1];
+        const serverDidNotReplace = last?.role !== 'assistant' || !last?.backendId || (last.backendId === originalAnswer?.backendId && last.responseVersion === originalAnswer?.responseVersion);
+        if (serverDidNotReplace) handleStreamError(failure);
+      }
+      if (!restoredFromServer) reanchorDemoCounter(sessionId);
     } finally {
       release();
     }
-  }, [addMessage, setStreaming, streamAssistantResponse, bumpDemoUsageForRegenOrContinue, reanchorDemoCounter, sessionId, handleStreamError]);
+  }, [addMessage, setStreaming, streamAssistantResponse, bumpDemoUsageForRegenOrContinue, reanchorDemoCounter, sessionId, handleStreamError, demoLimitReached, onRequireAuth, flushPendingText]);
 
   const continueGenerating = useCallback(async () => {
     const release = acquireSingleFlight(
@@ -485,13 +548,16 @@ export function useChatStream({
       markLastMessageTruncated(false);
       bumpDemoUsageForRegenOrContinue();
       setStreaming(true);
+      const epoch = useDocTalkStore.getState().demoAccountingEpoch;
+      const active = () => useDocTalkStore.getState().sessionId === sessionId
+        && useDocTalkStore.getState().demoAccountingEpoch === epoch;
 
       const controller = new AbortController();
       abortRef.current = controller;
 
       let errorHandled = false;
       const reportContinueError = (err: unknown) => {
-        if (errorHandled) return;
+        if (errorHandled || !active()) return;
         errorHandled = true;
         reanchorDemoCounter(sessionId);
         handleStreamError(err);
@@ -501,18 +567,19 @@ export function useChatStream({
         await continueStream(
           sessionId,
           lastMsg.backendId || '',
-          ({ text }) => updateLastMessage(text || ''),
-          (citation) => addCitationToLastMessage(citation),
+          ({ text }) => { if (active()) updateLastMessage(text || ''); },
+          (citation) => { if (active()) addCitationToLastMessage(citation); },
           reportContinueError,
-          handleStreamDone,
-          handleTruncated,
+          (data) => { if (active()) handleStreamDone(data); },
+          () => { if (active()) handleTruncated(); },
           selectedMode,
           locale,
           controller.signal,
-          (artifact) => addArtifactToLastMessage(artifact),
-          ({ message }) => setLastMessageToolStatus(message),
-          handleAnswerRepaired,
-          handleCitationsRefined,
+          (artifact) => { if (active()) addArtifactToLastMessage(artifact); },
+          ({ message }) => { if (active()) setLastMessageToolStatus(message); },
+          (data) => { if (active()) handleAnswerRepaired(data); },
+          (data) => { if (active()) handleCitationsRefined(data); },
+          lastMsg.responseVersion ?? null,
         );
       } catch (e) {
         if (!controller.signal.aborted && !isAbortLikeError(e) && !errorHandled) {

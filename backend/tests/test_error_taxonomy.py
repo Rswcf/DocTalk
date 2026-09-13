@@ -952,9 +952,13 @@ async def test_chat_demo_message_limit_reached(
         AsyncMock(return_value=(False, chat_api.DEMO_MESSAGE_LIMIT)),
     )
 
+    monkeypatch.setattr(chat_api, "claim_operation", AsyncMock())
+    release = AsyncMock()
+    monkeypatch.setattr(chat_api, "release_operation", release)
     response = await client.post(f"/api/sessions/{uuid.uuid4()}/chat", json={"message": "Hello"})
     detail = _assert_error(response, 429, "DEMO_MESSAGE_LIMIT_REACHED")
     assert isinstance(detail["limit"], int)
+    release.assert_awaited_once()
 
 
 @pytest.mark.asyncio
@@ -1084,6 +1088,10 @@ async def test_chat_domain_mode_allows_free_trial(
         yield {"event": "done", "data": {}}
 
     monkeypatch.setattr(chat_api.chat_service, "chat_stream", _fake_chat_stream)
+    # This test isolates billing taxonomy; lease transactions are integration-tested.
+    monkeypatch.setattr(chat_api, "claim_operation", AsyncMock())
+    monkeypatch.setattr(chat_api, "release_operation", AsyncMock())
+    monkeypatch.setattr(chat_api, "stream_with_operation", lambda source, *_args: source)
 
     response = await client.post(
         f"/api/sessions/{uuid.uuid4()}/chat",
@@ -1161,6 +1169,10 @@ async def test_chat_domain_mode_allowed_for_plus_plan(
         yield {"event": "done", "data": {}}
 
     monkeypatch.setattr(chat_api.chat_service, "chat_stream", _fake_chat_stream)
+    # This test isolates billing taxonomy; lease transactions are integration-tested.
+    monkeypatch.setattr(chat_api, "claim_operation", AsyncMock())
+    monkeypatch.setattr(chat_api, "release_operation", AsyncMock())
+    monkeypatch.setattr(chat_api, "stream_with_operation", lambda source, *_args: source)
 
     response = await client.post(
         f"/api/sessions/{uuid.uuid4()}/chat",
@@ -1564,3 +1576,18 @@ async def test_ingest_empty_html_snapshot_has_actionable_error(client, monkeypat
     response = await client.post('/api/documents/ingest-url', json={'url': 'https://example.com'})
     _assert_error(response, 400, 'NO_TEXT_CONTENT')
     db.commit.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+async def test_chat_rejected_lease_does_not_spend_demo_quota(client, monkeypatch):
+    db = _make_db()
+    _override_dependencies(db, optional_user=None)
+    session = SimpleNamespace(document=SimpleNamespace(status="ready", demo_slug="demo"), document_id=uuid.uuid4())
+    monkeypatch.setattr(chat_api, "verify_session_access", AsyncMock(return_value=session))
+    monkeypatch.setattr(chat_api.demo_chat_limiter, "is_allowed", AsyncMock(return_value=True))
+    counter = AsyncMock()
+    monkeypatch.setattr(chat_api.demo_message_tracker, "check_and_increment", counter)
+    monkeypatch.setattr(chat_api, "claim_operation", AsyncMock(side_effect=HTTPException(409, detail={"error": "CHAT_IN_PROGRESS", "message": "Another answer is being generated"})))
+    response = await client.post(f"/api/sessions/{uuid.uuid4()}/chat", json={"message": "Hello"})
+    _assert_error(response, 409, "CHAT_IN_PROGRESS")
+    counter.assert_not_awaited()

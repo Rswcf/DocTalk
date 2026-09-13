@@ -301,11 +301,22 @@ def test_retainpdf_create_job_payload_matches_grouped_api(monkeypatch) -> None:
     assert payload["source"] == {"upload_id": "upload_1", "source_url": "", "artifact_job_id": ""}
     assert payload["ocr"]["provider"] == "paddle"
     assert payload["ocr"]["paddle_token"] == "paddle-token"
+    assert "glossary_mode" not in payload["translation"]
     assert payload["translation"]["workers"] == 2
     assert payload["translation"]["batch_size"] == 1
     assert payload["translation"]["classify_batch_size"] == 12
     assert payload["render"]["compile_workers"] == 1
     assert payload["runtime"] == {"job_id": "", "timeout_seconds": 1800}
+    monkeypatch.setattr(service.settings, "RETAINPDF_CONTEXTUAL_GLOSSARY_ENABLED", True)
+    service.RetainPdfClient().create_book_job(upload_id="upload_1", source_filename="Court.pdf", target_language_label="Simplified Chinese")
+    chinese = captured["json"]["translation"]
+    assert chinese["glossary_mode"] == "all"
+    assert len(chinese["glossary_entries"]) == 2
+    assert all(entry["context"] == "dismiss" for entry in chinese["glossary_entries"])
+    monkeypatch.setattr(service.settings, "RETAINPDF_CONTEXTUAL_GLOSSARY_ENABLED", False)
+    service.RetainPdfClient().create_book_job(upload_id="upload_1", source_filename="Court.pdf", target_language_label="Simplified Chinese")
+    assert "glossary_mode" not in captured["json"]["translation"]
+    assert captured["json"]["translation"]["glossary_entries"] == []
 
 
 def test_retainpdf_create_job_payload_supports_datalab_provider(monkeypatch) -> None:
@@ -375,3 +386,33 @@ def test_layout_translation_config_status_accepts_datalab_fallback_key(monkeypat
     assert status.ready is True
     assert status.missing == ()
     assert status.ocr_provider == "datalab"
+
+
+def test_pinned_sidecar_patch_is_narrow_and_rejects_changed_upstream(tmp_path):
+    import importlib.util
+    from pathlib import Path
+
+    import pytest
+
+    path = Path(__file__).resolve().parents[2] / 'infra/retainpdf/enable_footnotes.py'
+    spec = importlib.util.spec_from_file_location('qa_footnote_patch', path)
+    patch = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(patch)
+    policy = tmp_path / 'translation_policy.py'
+    unchanged = '"header": False,\n"reference": False,\n'
+    policy.write_text(unchanged + patch.OLD)
+    patch.patch_policy(policy)
+    assert policy.read_text() == unchanged + patch.NEW
+    for text in ('unexpected upstream', patch.OLD + patch.OLD, patch.NEW):
+        policy.write_text(text)
+        with pytest.raises(RuntimeError, match='inspect upstream'):
+            patch.patch_policy(policy)
+        assert policy.read_text() == text
+
+
+def test_dismissal_glossary_is_language_and_context_scoped():
+    entries = service._translation_glossary('Simplified Chinese')
+    assert {entry['source'] for entry in entries} == {'with prejudice', 'without prejudice'}
+    assert all(entry['context'] == 'dismiss' and entry['match_mode'] == 'case_insensitive' for entry in entries)
+    assert service._translation_glossary('German') == []
+    assert service._translation_glossary('English') == []

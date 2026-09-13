@@ -401,7 +401,7 @@ function MessageBubble({
                 <Share2 size={14} />
               </button>
             )}
-            {isLastAssistant && onRegenerate && !isStreaming && (
+            {isLastAssistant && onRegenerate && !isStreaming && !message.artifacts?.length && (
               <button
                 onClick={onRegenerate}
                 className="rounded-full p-1.5 text-[var(--workbench-muted)] transition-colors hover:bg-zinc-100 hover:text-zinc-900 dark:hover:bg-white/10 dark:hover:text-white focus-visible:ring-2 focus-visible:ring-zinc-400"

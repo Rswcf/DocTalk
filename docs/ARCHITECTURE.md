@@ -547,7 +547,7 @@ flowchart TB
 
 3. **One-Time Purchase**: Stripe Checkout creates a payment session. On `checkout.session.completed` webhook (mode=payment), credits are added to the user's balance. Idempotent by `payment_intent` ID.
 
-4. **Plus/Pro Subscription**: Stripe recurring subscription (monthly or annual). `checkout.session.completed` (mode=subscription) only updates the user's plan — it does **not** grant credits (prevents double-grant with invoice webhook). `invoice.payment_succeeded` grants the allowance from the **paid invoice's recurring Price snapshot** (Plus: 3K, Pro: 9K), supporting legacy fields and Basil `parent` / `pricing` fields and fetching all line pages. It never falls back to the current user plan or a live subscription's changed Price. Unknown/missing/conflicting recurring prices return 503 without a ledger write so Stripe can retry. Proration/update invoices do not grant a full allowance; paid zero-cash invoices (e.g. discounts) remain eligible. The handler checks invoice idempotency before external reads, then locks the user and rechecks before atomically committing the balance and ledger. Late invoices do not change current entitlements or reactivate a cancelled subscription. Existing under-grants are not silently corrected on replay; they require separate reconciliation. On `customer.subscription.deleted`, plan is reset to Free.
+4. **Plus/Pro Subscription**: Stripe recurring subscriptions: new annual purchases and annual plan changes are paused locally (2026-09-13 QA finding D28); monthly purchases remain available. Existing subscription webhooks and cancellation still run. `checkout.session.completed` (mode=subscription) only updates the user's plan — it does **not** grant credits (prevents double-grant with invoice webhook). `invoice.payment_succeeded` grants the allowance from the **paid invoice's recurring Price snapshot** (Plus: 3K, Pro: 9K), supporting legacy fields and Basil `parent` / `pricing` fields and fetching all line pages. It never falls back to the current user plan or a live subscription's changed Price. Unknown/missing/conflicting recurring prices return 503 without a ledger write so Stripe can retry. Proration/update invoices do not grant a full allowance; paid zero-cash invoices (e.g. discounts) remain eligible. The handler checks invoice idempotency before external reads, then locks the user and rechecks before atomically committing the balance and ledger. Late invoices do not change current entitlements or reactivate a cancelled subscription. Existing under-grants are not silently corrected on replay; they require separate reconciliation. On `customer.subscription.deleted`, plan is reset to Free.
 
 5. **Chat Debit (2-phase)**: ① `chat.py` pre-checks balance >= `MODE_ESTIMATED_COST` (quick=5, balanced=15, thorough=35), returns 402 if insufficient. ② `chat_service.py` calls `debit_credits()` to debit estimated cost before LLM streaming starts (returns ledger entry ID). After streaming completes, `reconcile_credits()` updates the **same ledger entry in-place** (delta and balance_after) to reflect actual token-based cost — no new entries are created. Each chat produces exactly one ledger row (reason="chat"). On LLM failure, the ledger entry is deleted and credits fully refunded (no trace). All operations recorded in `CreditLedger` (balance tracking) and `UsageRecord` (analytics).
 
@@ -1358,7 +1358,7 @@ runner is a follow-up.
 marker that makes the pre-debit/reconcile/refund triangle race-safe:
 
 - `reconcile_credits()` acquires `SELECT ... FOR UPDATE` on the ledger row and
-  ALWAYS stamps `reconciled_at = now()` — including the equal-cost no-op path,
+  checks the owned row's `reconciled_at` first: an already settled retry only returns the current balance. The first settlement ALWAYS stamps `reconciled_at = now()` — including the equal-cost no-op path,
   which previously left the row untouched and therefore unserialized.
 - Every refund is a single atomic conditional
   `DELETE FROM credit_ledger WHERE id = :id AND reconciled_at IS NULL
@@ -1510,3 +1510,46 @@ must fail fast, never provision remotely. This followed two same-day shared
 dev-DB data-loss incidents (an `alembic downgrade base` round-trip and
 integration fixtures). Never run destructive migration tests against
 `doctalk`.
+
+
+### Local QA additions: response versions and annual fulfillment (2026-09-13)
+
+Migration `20260913_0045` adds `messages.response_version`, `message_revisions`,
+and per-session `chat_stream_leases`. New chat, continue, and regenerate use the
+same 120-second lease with 30-second renewal and transaction-local fencing.
+Renewal tolerates transient DB errors; confirmed token loss cancels immediately,
+and unresolved renewals cancel before expiry. Own-token response cleanup also
+covers an unstarted iterator. Anonymous quota increments after successful claim.
+
+Regenerate leaves the current answer intact until a verified candidate commits.
+It archives the previous answer and updates the same message ID/position atomically.
+A predetermined version UUID resolves an ambiguous commit from a fresh locking
+read of current/revision data. A candidate that did not persist is refunded;
+resolver failure leaves the predebit unresolved rather than issuing a blind refund.
+Continuation commits bump the version too. The first credit settlement wins under
+the ledger lock; repeated settlement cannot apply the same difference again.
+Account JSON exports include prior revisions; ordinary chats/shares/exports use
+current messages, while existing answer-share snapshots stay immutable.
+
+D28: annual invoices currently grant one monthly allowance only once each year;
+there is no monthly fulfillment scheduler. New annual subscribe/change-plan and
+open-checkout recovery paths are therefore paused, with a translated billing-page
+notice. Existing annual entitlements and historic credits have not been changed.
+Before reopening annual sales, implement and review an idempotent paid-period
+monthly grant mechanism, reconcile existing annual customers from actual invoices,
+and review external Stripe portal/checkout configuration. This local guard alone
+does not stop externally created or previously opened Stripe sessions.
+
+
+Billing row-lock reads refresh ORM identity-map state (`populate_existing=True`)
+for the user and owned CheckoutAttempt. Auth may have loaded `pending` before a
+webhook commit; a locking read must observe the subscription ID committed by that
+webhook before deciding whether a new checkout may be created. A real PostgreSQL
+concurrency test covers this exact schedule.
+
+Review limitations: individual chat recovery calls have timeouts, but nested anyio
+shields do not establish a strict aggregate 15/20-second cleanup bound. A native
+asyncio cancellation arriving during cleanup can still leave an unresolved
+predebit; unavailable cleanup can leave the session lease until its 120-second
+expiry. These rare outage/deadline windows are recorded follow-up work, not a
+claim of fully proven production disconnect recovery.

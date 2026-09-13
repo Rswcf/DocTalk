@@ -195,6 +195,8 @@ class Settings(BaseSettings):
     RETAINPDF_TRANSLATION_MODEL: str = Field(default="deepseek-v4-flash")
     RETAINPDF_POLL_INTERVAL_SECONDS: int = Field(default=5)
     RETAINPDF_TIMEOUT_SECONDS: int = Field(default=1800)
+    # Enable only for the image with verified contextual glossary semantics.
+    RETAINPDF_CONTEXTUAL_GLOSSARY_ENABLED: bool = False
     RETAINPDF_WORKERS: int = Field(default=0)
     RETAINPDF_BATCH_SIZE: int = Field(default=1)
     RETAINPDF_CLASSIFY_BATCH_SIZE: int = Field(default=12)

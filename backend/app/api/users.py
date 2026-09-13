@@ -275,7 +275,7 @@ async def export_my_data(
     docs_result = await db.execute(
         select(Document)
         .where(Document.user_id == user.id)
-        .options(selectinload(Document.sessions).selectinload(ChatSession.messages))
+        .options(selectinload(Document.sessions).selectinload(ChatSession.messages).selectinload(Message.revisions))
         .order_by(Document.created_at)
     )
     docs = docs_result.scalars().unique().all()
@@ -308,6 +308,7 @@ async def export_my_data(
                     {
                         "role": m.role,
                         "content": m.content,
+                        "previous_versions": [r.snapshot for r in sorted(getattr(m, "revisions", []), key=lambda r: r.created_at)],
                         "created_at": m.created_at.isoformat() if m.created_at else None,
                     }
                     for m in sorted_messages

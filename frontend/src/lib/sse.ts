@@ -22,6 +22,7 @@ type CitationEventPayload = CitationPayload & {
 type ErrorPayload = { code: string; message: string; status?: number };
 type DonePayload = {
   message_id: string;
+  response_version?: string | null;
   can_continue?: boolean;
   continuation_count?: number;
   /** Hint-only signal for safe RAG/citation paths where Quote Finder may help.
@@ -134,6 +135,7 @@ async function _processSSEStream(
               receivedDone = true;
               onDone({
                 message_id: typeof data.message_id === 'string' ? data.message_id : '',
+                response_version: typeof data.response_version === 'string' ? data.response_version : data.response_version === null ? null : undefined,
                 can_continue: data.can_continue === true,
                 continuation_count: typeof data.continuation_count === 'number' ? data.continuation_count : undefined,
                 quote_finder_hint: data.quote_finder_hint === true,
@@ -165,6 +167,8 @@ async function _processSSEStream(
   }
 }
 
+export type ChatRetry = { regenerate_of?: string; expected_response_version?: string | null; retry_latest_question?: boolean; retry_after?: string | null };
+
 export async function chatStream(
   sessionId: string,
   message: string,
@@ -181,6 +185,7 @@ export async function chatStream(
   onToolStatus?: (status: ToolStatusPayload) => void,
   onAnswerRepaired?: (payload: AnswerRepairedPayload) => void,
   onCitationsRefined?: (citations: Citation[]) => void,
+  retry?: ChatRetry,
 ) {
   const res = await fetch(`${PROXY_BASE}/api/sessions/${sessionId}/chat`, {
     method: 'POST',
@@ -190,6 +195,7 @@ export async function chatStream(
       ...(mode ? { mode } : {}),
       ...(locale ? { locale } : {}),
       domain_mode: domainMode ?? null,
+      ...retry,
     }),
     signal,
   });
@@ -235,12 +241,14 @@ export async function continueStream(
   onToolStatus?: (status: ToolStatusPayload) => void,
   onAnswerRepaired?: (payload: AnswerRepairedPayload) => void,
   onCitationsRefined?: (citations: Citation[]) => void,
+  expectedResponseVersion?: string | null,
 ) {
   const res = await fetch(`${PROXY_BASE}/api/sessions/${sessionId}/chat/continue`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       message_id: messageId || undefined,
+      ...(expectedResponseVersion !== undefined ? { expected_response_version: expectedResponseVersion } : {}),
       ...(mode ? { mode } : {}),
       ...(locale ? { locale } : {}),
     }),

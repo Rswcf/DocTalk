@@ -1,5 +1,8 @@
 "use client";
 
+import { useWorkflowEstimates } from '../../lib/useWorkflowEstimates';
+import { WorkflowCostEstimate, WorkflowCostSummary } from '../WorkflowCost';
+
 import { citationPageRange } from '../../lib/citationText';
 import React, { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
@@ -104,6 +107,7 @@ export default function QuestionTemplatesPanel({
   documentCount,
 }: QuestionTemplatesPanelProps) {
   const { tOr, locale } = useLocale();
+  const { costs, failed: costsFailed, retry: retryCosts } = useWorkflowEstimates(true);
   const [templates, setTemplates] = useState<QuestionTemplate[]>([]);
   const [runs, setRuns] = useState<ExtractionJob[]>([]);
   const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(null);
@@ -159,6 +163,11 @@ export default function QuestionTemplatesPanel({
   }, [refreshRuns, runs]);
 
   const activeRun = runs[0] || null;
+  const activeRunId = activeRun?.id;
+  const activeRunStatus = activeRun?.status;
+  useEffect(() => {
+    if (activeRunId && activeRunStatus && ['succeeded', 'failed', 'cancelled'].includes(activeRunStatus)) retryCosts();
+  }, [activeRunId, activeRunStatus, retryCosts]);
   const selectedTemplate = templates.find((template) => template.id === selectedTemplateId) || templates[0] || null;
   const questions = splitQuestions(questionsText);
   const estimatedCells = (selectedTemplate?.questions.length || 0) * Math.max(1, documentCount || 1);
@@ -214,7 +223,7 @@ export default function QuestionTemplatesPanel({
   }, [editingId, resetForm]);
 
   const runTemplate = useCallback(async () => {
-    if (!selectedTemplate || running) return;
+    if (!selectedTemplate || running || !costs) return;
     setRunning(true);
     setError(null);
     setPaywall(null);
@@ -243,7 +252,7 @@ export default function QuestionTemplatesPanel({
     } finally {
       setRunning(false);
     }
-  }, [locale, running, scope, selectedTemplate, userPlan]);
+  }, [locale, running, scope, selectedTemplate, userPlan, costs]);
 
   const handleExport = useCallback(async (run: ExtractionJob, format: "md" | "csv") => {
     try {
@@ -421,13 +430,14 @@ export default function QuestionTemplatesPanel({
                 <button
                   type="button"
                   onClick={() => void runTemplate()}
-                  disabled={!selectedTemplate || isWorking}
+                  disabled={!selectedTemplate || isWorking || !costs}
                   className="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg bg-zinc-900 px-3 text-sm font-medium text-white shadow-sm transition-colors hover:bg-zinc-800 disabled:opacity-50 dark:bg-zinc-50 dark:text-zinc-900 dark:hover:bg-zinc-200"
                 >
                   <Play size={14} aria-hidden="true" />
                   {isWorking ? tOr("templates.running", "Running...") : tOr("templates.run", "Run template")}
                 </button>
               </div>
+              {selectedTemplate && <WorkflowCostEstimate amount={costs ? costs.template_per_cell * estimatedCells : undefined} balance={costs?.balance} failed={costsFailed} retry={retryCosts} />}
               {paywall && (
                 <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900 dark:border-amber-900/60 dark:bg-amber-950/30 dark:text-amber-100">
                   <p className="font-medium">
@@ -473,6 +483,7 @@ export default function QuestionTemplatesPanel({
                             ? tOr("extract.status.failed", "Failed")
                             : tOr("extract.status.running", "Working...")}
                       </p>
+                      <WorkflowCostSummary status={activeRun.status} cost={activeRun.cost_credits} preDebited={activeRun.pre_debited} />
                     </div>
                   </div>
                   {activeRun.status === "succeeded" && (

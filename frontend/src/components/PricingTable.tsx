@@ -32,6 +32,7 @@ interface PricingTableProps {
   selectedPlan?: 'plus' | 'pro';
   onSelectPlan?: (plan: 'plus' | 'pro') => void;
   submitting?: string | null;
+  purchaseDisabled?: boolean;
 }
 
 export default function PricingTable({
@@ -40,6 +41,7 @@ export default function PricingTable({
   selectedPlan = 'plus',
   onSelectPlan,
   submitting = null,
+  purchaseDisabled = false,
 }: PricingTableProps) {
   const { t } = useLocale();
 
@@ -78,7 +80,7 @@ export default function PricingTable({
     return (
       <button
         onClick={() => onUpgrade?.(plan)}
-        disabled={submitting !== null}
+        disabled={submitting !== null || purchaseDisabled}
         className="w-full mt-4 px-4 py-2 rounded-lg text-sm font-medium bg-zinc-900 dark:bg-zinc-50 text-white dark:text-zinc-900 hover:bg-zinc-800 dark:hover:bg-zinc-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-sm focus-visible:ring-2 focus-visible:ring-zinc-400 dark:focus-visible:ring-zinc-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-900"
       >
         {isDowngrade ? t('billing.downgrade') : t('billing.upgrade')} {plan === 'plus' ? 'Plus' : 'Pro'}

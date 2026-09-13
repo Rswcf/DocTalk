@@ -31,6 +31,12 @@ from app.models.tables import (
 )
 from app.services import credit_service, quote_search_service
 from app.services.action_planner import ChatAction, action_planner
+from app.services.chat_response_versions import (
+    current_operation,
+    fence_message_write,
+    replace_answer,
+    replacement_delivered,
+)
 from app.services.chat_tool_executor import ChatArtifact, chat_tool_executor
 from app.services.citation_focus_service import current_claim, focus_sentence
 from app.services.citation_location import citation_location
@@ -811,13 +817,19 @@ async def _persist_partial_on_cancel(
     citations: Optional[List[dict]] = None,
     prompt_tokens: Optional[int] = None,
     output_tokens: Optional[int] = None,
+    message_id: Optional[uuid.UUID] = None,
 ) -> Optional[uuid.UUID]:
     text = assistant_text.strip()
     if not text:
         return None
 
     async with AsyncSessionLocal() as persist_db:
+        if message_id is not None and await persist_db.scalar(select(Message.id).where(
+            Message.id == message_id, Message.session_id == session_id,
+        ).with_for_update()):
+            return message_id  # The draft commit landed despite a lost acknowledgement.
         asst_msg = Message(
+            id=message_id or uuid.uuid4(),
             session_id=session_id,
             role="assistant",
             content=text,
@@ -825,6 +837,7 @@ async def _persist_partial_on_cancel(
             prompt_tokens=int(prompt_tokens) if prompt_tokens is not None else None,
             output_tokens=int(output_tokens) if output_tokens is not None else None,
         )
+        await fence_message_write(persist_db)
         persist_db.add(asst_msg)
         await persist_db.commit()
         return asst_msg.id
@@ -836,18 +849,26 @@ async def _persist_continuation_on_cancel(
     continuation_text: str,
     new_citations: List[dict],
     output_tokens: Optional[int],
+    expected_version: uuid.UUID | None,
+    result_version: uuid.UUID,
 ) -> bool:
     if not continuation_text.strip():
         return False
 
     async with AsyncSessionLocal() as persist_db:
-        asst_msg = await persist_db.get(Message, message_id)
+        await fence_message_write(persist_db)
+        asst_msg = await persist_db.scalar(select(Message).where(Message.id == message_id).with_for_update())
         if not asst_msg or asst_msg.role != "assistant":
             return False
 
+        if asst_msg.response_version == result_version:
+            return True
+        if asst_msg.response_version != expected_version:
+            return False
         merged_citations = list(asst_msg.citations or []) + list(new_citations or [])
         asst_msg.content = (asst_msg.content or "") + continuation_text
         asst_msg.citations = merged_citations if merged_citations else None
+        asst_msg.response_version = result_version
         asst_msg.continuation_count = (asst_msg.continuation_count or 0) + 1
         asst_msg.output_tokens = (asst_msg.output_tokens or 0) + int(output_tokens or 0)
         await persist_db.commit()
@@ -1351,6 +1372,10 @@ class ChatService:
         session_id: uuid.UUID,
         user_message: str,
     ) -> None:
+        operation = current_operation.get()
+        if operation and (operation.replace_id or (operation.retry_question and not operation.save_retry_question)):
+            return
+        await fence_message_write(db)
         user_msg = Message(session_id=session_id, role="user", content=user_message)
         db.add(user_msg)
         await db.commit()
@@ -1413,6 +1438,7 @@ class ChatService:
                     "artifacts": [artifact_payload] if artifact_payload else [],
                 },
             )
+            await fence_message_write(db)
             db.add(asst_msg)
             # P1 hygiene r2 (Codex, 2026-08-03): a PURE assignment, set
             # INSIDE this try block right before the branch's own terminal
@@ -1544,6 +1570,7 @@ class ChatService:
                 "artifacts": [artifact_payload] if artifact_payload else [],
             },
         )
+        await fence_message_write(db)
         db.add(asst_msg)
 
         # FIX2-B(a) (Codex r2 #4, NOT ADDRESSED): message-persist + reconcile
@@ -1658,6 +1685,10 @@ class ChatService:
         9) Yield done
         """
 
+        operation = current_operation.get()
+        is_retry = bool(operation and (operation.replace_id or operation.retry_question))
+        is_replacement = bool(operation and operation.replace_id)
+
         # 1) Load session
         row = await db.execute(select(ChatSession).where(ChatSession.id == session_id))
         session_obj: Optional[ChatSession] = row.scalar_one_or_none()
@@ -1723,6 +1754,12 @@ class ChatService:
             is_collection=is_collection_session,
             locale=locale,
         )
+        if is_retry and (not action_plan.uses_rag_answer_path or _is_strict_quote_routed(
+            action_plan, user=user, document_id=document_id,
+            is_collection_session=is_collection_session, doc=doc,
+        )):
+            yield sse("error", {"code": "TOOL_RETRY_UNSUPPORTED", "message": "Use the tool's own action to start another task."})
+            return
         if not action_plan.uses_rag_answer_path:
             # P1 hygiene r1+r2 (Codex, 2026-08-03): this successful
             # early-return path needs the domain_mode session sync too —
@@ -1950,6 +1987,7 @@ class ChatService:
             msgs_row = await db.execute(
                 select(Message)
                 .where(Message.session_id == session_id)
+                .where(Message.id != operation.replace_id if is_replacement else True)
                 .order_by(Message.created_at.desc())
                 .limit(max_msgs + 1)
             )
@@ -2313,6 +2351,8 @@ class ChatService:
         finish_reason: Optional[str] = None
         asst_msg: Optional[Message] = None
         repair_metadata: dict[str, Any] | None = None
+        settlement_user_id = user.id if user is not None else None
+        answer_id = uuid.uuid4()
         persisted = False
         done_emitted = False
 
@@ -2422,6 +2462,7 @@ class ChatService:
             assistant_text = "".join(assistant_text_parts)
             try:
                 asst_msg = Message(
+                    id=answer_id,
                     session_id=session_id,
                     role="assistant",
                     content=assistant_text,
@@ -2429,9 +2470,11 @@ class ChatService:
                     prompt_tokens=int(prompt_tokens) if prompt_tokens is not None else None,
                     output_tokens=int(output_tokens) if output_tokens is not None else None,
                 )
-                db.add(asst_msg)
-                await db.commit()
-                persisted = True
+                if not is_replacement:
+                    await fence_message_write(db)
+                    db.add(asst_msg)
+                    await db.commit()
+                    persisted = True
             except Exception:
                 await db.rollback()
                 has_partial_answer = bool(assistant_text.strip())
@@ -2442,12 +2485,12 @@ class ChatService:
                     and not has_partial_answer
                 ):
                     try:
-                        await _refund_predebit(db, user.id, pre_debited, predebit_ledger_id)
+                        await _refund_predebit(db, settlement_user_id, pre_debited, predebit_ledger_id)
                         settled = True
                     except Exception:
                         logger.exception(
                             "Failed to refund pre-debited credits after PERSIST_FAILED for user %s",
-                            user.id,
+                            settlement_user_id,
                         )
                 yield sse("error", {"code": "PERSIST_FAILED", "message": "Failed to save response"})
                 return
@@ -2531,7 +2574,12 @@ class ChatService:
                 asst_msg.citations = citations or None
                 asst_msg.prompt_tokens = int(prompt_tokens) if prompt_tokens is not None else None
                 asst_msg.output_tokens = int(output_tokens) if output_tokens is not None else None
-                await db.commit()
+                if is_replacement:
+                    asst_msg = await replace_answer(db, asst_msg)
+                    persisted = True
+                else:
+                    await fence_message_write(db)
+                    await db.commit()
             except Exception:
                 await db.rollback()
                 yield sse("error", {"code": "PERSIST_FAILED", "message": "Failed to save response"})
@@ -2621,6 +2669,7 @@ class ChatService:
             done_emitted = True
             yield sse("done", {
                 "message_id": str(asst_msg.id),
+                "response_version": str(asst_msg.response_version) if asst_msg.response_version else None,
                 "citations_count": len(citations),
                 "verification": verification_payload,
                 "repair": repair_metadata,
@@ -2637,11 +2686,13 @@ class ChatService:
         finally:
             assistant_snapshot = "".join(assistant_text_parts)
             has_partial_answer = bool(assistant_snapshot.strip())
-            if not done_emitted and has_partial_answer and not persisted:
+            if not is_replacement and not done_emitted and has_partial_answer and not persisted:
                 try:
                     with anyio.CancelScope(shield=True):
-                        await asyncio.wait_for(
+                        await db.rollback()
+                        saved_id = await asyncio.wait_for(
                             _persist_partial_on_cancel(
+                                message_id=answer_id,
                                 session_id=session_id,
                                 assistant_text=assistant_snapshot,
                                 citations=citations,
@@ -2650,7 +2701,7 @@ class ChatService:
                             ),
                             timeout=_CANCEL_IO_TIMEOUT_S,
                         )
-                    persisted = True
+                    persisted = saved_id is not None
                 except Exception:
                     logger.exception(
                         "Failed to persist partial assistant response on cancel/error for session %s",
@@ -2664,12 +2715,31 @@ class ChatService:
             ):
                 try:
                     with anyio.CancelScope(shield=True):
+                        delivered = persisted
+                        if not is_replacement and not persisted:
+                            await db.rollback()
+                            async with AsyncSessionLocal() as resolve_db:
+                                delivered = bool(await asyncio.wait_for(resolve_db.scalar(
+                                    select(Message.id).where(Message.id == answer_id, Message.session_id == session_id).with_for_update()
+                                ), timeout=_CANCEL_IO_TIMEOUT_S))
+                        if is_replacement:
+                            # A replacement candidate is not a delivered answer.
+                            # Resolve even ordinary commit errors; a failed read
+                            # leaves the debit standing rather than blind-refunding.
+                            await db.rollback()
+                            try:
+                                delivered = persisted or await asyncio.wait_for(
+                                    replacement_delivered(operation), timeout=_CANCEL_IO_TIMEOUT_S,
+                                )
+                            except Exception:
+                                logger.exception("regenerate_settlement.unresolved")
+                                raise
                         await asyncio.wait_for(
                             _settle_predebit_on_cancel(
-                                user_id=user.id,
+                                user_id=settlement_user_id,
                                 pre_debited=pre_debited,
                                 predebit_ledger_id=predebit_ledger_id,
-                                has_answer=has_partial_answer,
+                                has_answer=delivered,
                                 prompt_tokens=prompt_tokens,
                                 output_tokens=output_tokens,
                                 model=effective_model,
@@ -2681,7 +2751,7 @@ class ChatService:
                 except Exception:
                     logger.exception(
                         "Failed to settle pre-debit on cancel/error for user %s",
-                        user.id,
+                        settlement_user_id,
                     )
 
     async def continue_stream(
@@ -2695,6 +2765,7 @@ class ChatService:
     ) -> AsyncGenerator[Dict[str, Any], None]:
         """Continue a truncated assistant response, appending to the existing message."""
 
+        settlement_user_id = user.id if user is not None else None
         # 1) Load session
         row = await db.execute(select(ChatSession).where(ChatSession.id == session_id))
         session_obj: Optional[ChatSession] = row.scalar_one_or_none()
@@ -2750,6 +2821,8 @@ class ChatService:
             yield sse("error", {"code": "MESSAGE_NOT_FOUND", "message": "Message does not belong to this session"})
             return
 
+        message_id = asst_msg.id
+
         # 3) Check continuation limit
         if asst_msg.continuation_count >= settings.MAX_CONTINUATIONS_PER_MESSAGE:
             yield sse("error", {"code": "CONTINUATION_LIMIT", "message": "Maximum continuations reached"})
@@ -2782,7 +2855,7 @@ class ChatService:
         if user is not None:
             estimated = credit_service.get_estimated_cost(effective_mode)
             predebit_ledger_id = await credit_service.debit_credits(
-                db, user_id=user.id, cost=estimated,
+                db, user_id=settlement_user_id, cost=estimated,
                 reason="chat", ref_type="mode", ref_id=effective_mode,
             )
             if predebit_ledger_id:
@@ -2959,7 +3032,7 @@ class ChatService:
                     with anyio.CancelScope(shield=True):
                         await asyncio.wait_for(
                             _settle_predebit_on_cancel(
-                                user_id=user.id,
+                                user_id=settlement_user_id,
                                 pre_debited=pre_debited,
                                 predebit_ledger_id=predebit_ledger_id,
                                 has_answer=False,
@@ -2974,18 +3047,18 @@ class ChatService:
                 except Exception:
                     logger.exception(
                         "Failed to settle continuation pre-debit during setup cancellation for user %s",
-                        user.id,
+                        settlement_user_id,
                     )
             raise
         except Exception as e:
             if user is not None and pre_debited > 0 and predebit_ledger_id is not None:
                 try:
-                    await _refund_predebit(db, user.id, pre_debited, predebit_ledger_id)
+                    await _refund_predebit(db, settlement_user_id, pre_debited, predebit_ledger_id)
                     settled = True
                 except Exception:
                     logger.exception(
                         "Failed to refund pre-debited credits during continuation setup failure for user %s",
-                        user.id,
+                        settlement_user_id,
                     )
             yield _safe_sse("error", "CHAT_SETUP_ERROR", e, session_id=str(session_id))
             return
@@ -2996,12 +3069,12 @@ class ChatService:
         except Exception as e:
             if user is not None and pre_debited > 0 and predebit_ledger_id is not None:
                 try:
-                    await _refund_predebit(db, user.id, pre_debited, predebit_ledger_id)
+                    await _refund_predebit(db, settlement_user_id, pre_debited, predebit_ledger_id)
                     settled = True
                 except Exception:
                     logger.exception(
                         "Failed to refund pre-debited credits before continuation LLM client setup for user %s",
-                        user.id,
+                        settlement_user_id,
                     )
             yield _safe_sse("error", "LLM_ERROR", e, session_id=str(session_id))
             return
@@ -3029,6 +3102,8 @@ class ChatService:
         repair_metadata: dict[str, Any] | None = None
         persisted = False
         done_emitted = False
+        base_response_version = asst_msg.response_version
+        continuation_version = uuid.uuid4()
         base_assistant_text = asst_msg.content or ""
         base_output_tokens = int(asst_msg.output_tokens or 0)
 
@@ -3103,12 +3178,12 @@ class ChatService:
                     and not has_partial_answer
                 ):
                     try:
-                        await _refund_predebit(db, user.id, pre_debited, predebit_ledger_id)
+                        await _refund_predebit(db, settlement_user_id, pre_debited, predebit_ledger_id)
                         settled = True
                     except Exception:
                         logger.exception(
                             "Failed to refund pre-debited credits after continuation LLM error for user %s",
-                            user.id,
+                            settlement_user_id,
                         )
                 yield _safe_sse("error", "LLM_ERROR", e, session_id=str(session_id))
                 return
@@ -3118,8 +3193,10 @@ class ChatService:
             full_assistant_text = base_assistant_text + continuation_text
             merged_citations = list(asst_msg.citations or []) + new_citations
             try:
+                await fence_message_write(db)
                 asst_msg.content = full_assistant_text
                 asst_msg.citations = merged_citations if merged_citations else None
+                asst_msg.response_version = continuation_version
                 asst_msg.continuation_count = (asst_msg.continuation_count or 0) + 1
                 asst_msg.output_tokens = base_output_tokens + int(output_tokens or 0)
                 await db.commit()
@@ -3134,12 +3211,12 @@ class ChatService:
                     and not has_partial_answer
                 ):
                     try:
-                        await _refund_predebit(db, user.id, pre_debited, predebit_ledger_id)
+                        await _refund_predebit(db, settlement_user_id, pre_debited, predebit_ledger_id)
                         settled = True
                     except Exception:
                         logger.exception(
                             "Failed to refund pre-debited credits after continuation PERSIST_FAILED for user %s",
-                            user.id,
+                            settlement_user_id,
                         )
                 yield sse("error", {"code": "PERSIST_FAILED", "message": "Failed to save continuation"})
                 return
@@ -3216,6 +3293,7 @@ class ChatService:
                 yield sse("citations_refined", {"citations": merged_citations})
 
             try:
+                await fence_message_write(db)
                 asst_msg.content = full_assistant_text
                 asst_msg.citations = merged_citations if merged_citations else None
                 asst_msg.output_tokens = base_output_tokens + int(output_tokens or 0)
@@ -3253,7 +3331,7 @@ class ChatService:
                     )
                     await credit_service.record_usage(
                         db,
-                        user_id=user.id,
+                        user_id=settlement_user_id,
                         message_id=asst_msg.id,
                         model=effective_model,
                         prompt_tokens=pt,
@@ -3263,7 +3341,7 @@ class ChatService:
                     if focus_cost:
                         await credit_service.record_usage(
                             db,
-                            user_id=user.id,
+                            user_id=settlement_user_id,
                             message_id=asst_msg.id,
                             model=focus_model_used,
                             prompt_tokens=focus_pt,
@@ -3280,6 +3358,7 @@ class ChatService:
             done_emitted = True
             yield sse("done", {
                 "message_id": str(asst_msg.id),
+                "response_version": str(asst_msg.response_version) if asst_msg.response_version else None,
                 "citations_count": len(merged_citations) if merged_citations else 0,
                 "verification": verification_payload,
                 "repair": repair_metadata,
@@ -3291,23 +3370,26 @@ class ChatService:
         finally:
             continuation_snapshot = "".join(continuation_text_parts)
             has_partial_answer = bool(continuation_snapshot.strip())
-            if not done_emitted and has_partial_answer and getattr(asst_msg, "id", None) is not None and not persisted:
+            if not done_emitted and has_partial_answer and message_id is not None and not persisted:
                 try:
                     with anyio.CancelScope(shield=True):
-                        await asyncio.wait_for(
+                        await db.rollback()
+                        saved = await asyncio.wait_for(
                             _persist_continuation_on_cancel(
-                                message_id=asst_msg.id,
+                                message_id=message_id,
                                 continuation_text=continuation_snapshot,
+                                expected_version=base_response_version,
+                                result_version=continuation_version,
                                 new_citations=new_citations,
                                 output_tokens=output_tokens,
                             ),
                             timeout=_CANCEL_IO_TIMEOUT_S,
                         )
-                    persisted = True
+                    persisted = saved
                 except Exception:
                     logger.exception(
                         "Failed to persist continuation partial response on cancel/error for message %s",
-                        getattr(asst_msg, "id", None),
+                        message_id,
                     )
             if (
                 user is not None
@@ -3317,12 +3399,22 @@ class ChatService:
             ):
                 try:
                     with anyio.CancelScope(shield=True):
+                        delivered = persisted
+                        if not delivered:
+                            await db.rollback()
+                            async with AsyncSessionLocal() as resolve_db:
+                                # Failed resolver raises: never blind-refund a
+                                # continuation whose commit may have succeeded.
+                                version = await asyncio.wait_for(resolve_db.scalar(
+                                    select(Message.response_version).where(Message.id == message_id).with_for_update()
+                                ), timeout=_CANCEL_IO_TIMEOUT_S)
+                                delivered = version == continuation_version
                         await asyncio.wait_for(
                             _settle_predebit_on_cancel(
-                                user_id=user.id,
+                                user_id=settlement_user_id,
                                 pre_debited=pre_debited,
                                 predebit_ledger_id=predebit_ledger_id,
-                                has_answer=has_partial_answer,
+                                has_answer=delivered,
                                 prompt_tokens=prompt_tokens,
                                 output_tokens=output_tokens,
                                 model=effective_model,
@@ -3334,7 +3426,7 @@ class ChatService:
                 except Exception:
                     logger.exception(
                         "Failed to settle continuation pre-debit on cancel/error for user %s",
-                        user.id,
+                        settlement_user_id,
                     )
 
 

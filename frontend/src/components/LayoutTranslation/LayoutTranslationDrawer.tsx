@@ -4,10 +4,14 @@ import { useEffect, useId, useMemo, useRef, useState } from 'react';
 import { FilePlus2, Languages, Loader2, X } from 'lucide-react';
 import { useLocale } from '../../i18n';
 import { LAYOUT_TRANSLATION_TARGETS } from '../../lib/layoutTranslation';
+import type { ChatArtifact } from '../../types';
+import LayoutTranslationHistory from './LayoutTranslationHistory';
 
 interface LayoutTranslationDrawerProps {
   isOpen: boolean;
   busy: boolean;
+  documentId: string;
+  onPreview: (url: string, artifact: ChatArtifact) => void;
   documentName?: string | null;
   pageCount?: number;
   userPlan?: string;
@@ -25,6 +29,8 @@ function maxPagesForPlan(plan?: string): number {
 export default function LayoutTranslationDrawer({
   isOpen,
   busy,
+  documentId,
+  onPreview,
   documentName,
   pageCount,
   userPlan,
@@ -86,6 +92,8 @@ export default function LayoutTranslationDrawer({
             <X size={18} aria-hidden="true" />
           </button>
         </div>
+
+        <LayoutTranslationHistory key={documentId} documentId={documentId} onPreview={onPreview} />
 
         <div className="space-y-5 px-5 py-5">
           <label className="block">

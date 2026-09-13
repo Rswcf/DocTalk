@@ -10,11 +10,9 @@ import {
   getDocument,
   uploadDocument,
   deleteDocument,
-  getMyDocuments,
   ingestUrl,
   reparseDocument,
 } from '../../lib/api';
-import type { DocumentBrief } from '../../lib/api';
 import { useDocTalkStore } from '../../store';
 import { useLocale } from '../../i18n';
 import { clearAccountStorage } from '../../lib/clearAccountStorage';
@@ -25,8 +23,9 @@ import { sanitizeFilename } from '../../lib/utils';
 import { PrivacyBadge } from '../PrivacyBadge';
 import Header from '../Header';
 import { useUserProfile } from '../../lib/useUserProfile';
+import { useDocumentLibrary } from '../../lib/useDocumentLibrary';
 
-type StoredDoc = { document_id: string; filename?: string; createdAt: number; status?: string; error_msg?: string | null };
+type StoredDoc = { file_type?: string | null; file_size?: number | null; page_count?: number | null; document_id: string; filename?: string; createdAt: number; status?: string; error_msg?: string | null };
 type PlanTier = 'free' | 'plus' | 'pro';
 
 // Must mirror backend FREE/PLUS/PRO_MAX_FILE_SIZE_MB (app/core/config.py).
@@ -58,7 +57,7 @@ const DASHBOARD_NUDGE_SHOW_MS = 7 * 24 * 60 * 60 * 1000;
  */
 export default function DashboardPageClient() {
   const router = useRouter();
-  const { status } = useSession();
+  const { status, data: session } = useSession();
   const { setDocument, setDocumentStatus } = useDocTalkStore();
   const { t, tOr } = useLocale();
   const [isDragging, setDragging] = useState(false);
@@ -67,7 +66,6 @@ export default function DashboardPageClient() {
   const [uploadErrorCopy, setUploadErrorCopy] = useState<ErrorCopy | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const [myDocs, setMyDocs] = useState<StoredDoc[]>([]);
-  const [serverDocs, setServerDocs] = useState<DocumentBrief[]>([]);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [deleteErrorId, setDeleteErrorId] = useState<string | null>(null);
@@ -84,6 +82,8 @@ export default function DashboardPageClient() {
   const upgradeNudgeTrackedRef = useRef(false);
   const isLoggedIn = status === 'authenticated';
   const { profile } = useUserProfile();
+  const library = useDocumentLibrary(isLoggedIn, session?.user?.id || session?.user?.email || '');
+  const { documents: serverDocs, setDocuments: setServerDocs, refresh: refreshDocuments } = library;
 
   useEffect(() => {
     if (status !== 'unauthenticated') return;
@@ -91,14 +91,6 @@ export default function DashboardPageClient() {
     setMyDocs(docs.sort((a, b) => b.createdAt - a.createdAt));
   }, [status]);
 
-  useEffect(() => {
-    if (!isLoggedIn) return;
-    const controller = new AbortController();
-    getMyDocuments(controller.signal).then(setServerDocs).catch((err) => {
-      if (err.name !== 'AbortError') console.error(err);
-    });
-    return () => controller.abort();
-  }, [isLoggedIn]);
 
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -106,7 +98,7 @@ export default function DashboardPageClient() {
       setServerDocs([]);
       clearAccountStorage();
     }
-  }, [status]);
+  }, [status, setServerDocs]);
 
   // Catch unmount-mid-polling: if the user navigates away while an upload is
   // still being polled, clear the interval so it doesn't run forever and
@@ -131,9 +123,9 @@ export default function DashboardPageClient() {
           filename: d.filename,
           status: d.status,
           error_msg: d.error_msg,
-          createdAt: d.created_at ? new Date(d.created_at).getTime() : Date.now(),
-        }))
-        .sort((a, b) => b.createdAt - a.createdAt);
+          file_type: d.file_type, file_size: d.file_size, page_count: d.page_count,
+          createdAt: d.created_at ? new Date(d.created_at).getTime() : 0,
+        }));
     }
     return myDocs;
   }, [isLoggedIn, myDocs, serverDocs]);
@@ -288,7 +280,7 @@ export default function DashboardPageClient() {
     }, 2000);
 
     pollTimersRef.current.set(docId, timer);
-  }, [router, setDocumentStatus, t, tOr]);
+  }, [router, setDocumentStatus, setServerDocs, t, tOr]);
 
   const onFiles = useCallback(async (file: File) => {
     if (!file) return;
@@ -330,7 +322,7 @@ export default function DashboardPageClient() {
         localStorage.setItem('doctalk_docs', JSON.stringify([entry, ...docs.filter((d) => d.document_id !== docId)]));
         setMyDocs([entry, ...docs.filter((d) => d.document_id !== docId)].sort((a, b) => b.createdAt - a.createdAt));
       }
-      getMyDocuments().then(setServerDocs).catch(console.error);
+      refreshDocuments();
 
       setProgressText(t('upload.parsing'));
       startDocumentStatusPoll(docId, true);
@@ -343,7 +335,7 @@ export default function DashboardPageClient() {
       }
       setUploading(false);
     }
-  }, [isLoggedIn, maxUploadBytes, maxUploadMb, setDocument, setDocumentStatus, startDocumentStatusPoll, t, tOr, userPlan]);
+  }, [refreshDocuments, isLoggedIn, maxUploadBytes, maxUploadMb, setDocument, setDocumentStatus, startDocumentStatusPoll, t, tOr, userPlan]);
 
   const onDrop = (e: React.DragEvent) => {
     e.preventDefault();
@@ -378,7 +370,7 @@ export default function DashboardPageClient() {
       trackEvent('url_ingest_created', { source: 'dashboard_url', plan: userPlan });
       setDocument(docId);
       setUrlInput('');
-      getMyDocuments().then(setServerDocs).catch(console.error);
+      refreshDocuments();
       router.push(`/d/${docId}`);
     } catch (e: unknown) {
       const copy = errorCopy(e, t, tOr);
@@ -390,7 +382,7 @@ export default function DashboardPageClient() {
     } finally {
       setUrlLoading(false);
     }
-  }, [urlInput, router, setDocument, t, tOr, userPlan]);
+  }, [refreshDocuments, urlInput, router, setDocument, t, tOr, userPlan]);
 
   const confirmDeleteDocument = useCallback(async (documentId: string) => {
     setDeletingId(documentId);
@@ -407,6 +399,7 @@ export default function DashboardPageClient() {
       }
       setServerDocs((prev) => prev.filter((s) => s.id !== documentId));
       setConfirmDeleteId((prev) => (prev === documentId ? null : prev));
+      refreshDocuments();
     } catch (e) {
       console.error('Failed to delete document:', e);
       // Surface the failure so users know to retry rather than think it worked.
@@ -414,7 +407,7 @@ export default function DashboardPageClient() {
     } finally {
       setDeletingId(null);
     }
-  }, [isLoggedIn]);
+  }, [isLoggedIn, refreshDocuments, setServerDocs]);
 
   const retryDocument = useCallback(async (documentId: string) => {
     if (reparsingId) return;
@@ -443,7 +436,7 @@ export default function DashboardPageClient() {
       setReparseError((current) => current?.documentId === documentId ? null : current);
       startDocumentStatusPoll(documentId, false);
     }
-  }, [reparsingId, startDocumentStatusPoll, t, tOr]);
+  }, [reparsingId, setServerDocs, startDocumentStatusPoll, t, tOr]);
 
   return (
     <div className="dt-stitch-theme flex flex-col min-h-screen">
@@ -621,6 +614,21 @@ export default function DashboardPageClient() {
             </div>
           </div>
 
+          <div className="mb-4 grid gap-3 sm:grid-cols-[1fr_auto]">
+            <label className="min-w-0 text-sm text-[var(--workbench-muted)]">
+              {t('library.search')}
+              <input type="search" maxLength={200} value={library.query} onChange={event => library.setQuery(event.target.value)} className="mt-1 min-h-11 w-full rounded-lg border border-zinc-300 bg-white px-3 text-zinc-900 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100" />
+            </label>
+            <label className="text-sm text-[var(--workbench-muted)]">
+              {t('library.sort')}
+              <select value={library.sort} onChange={event => library.setSort(event.target.value as 'newest' | 'oldest' | 'name')} className="mt-1 min-h-11 w-full rounded-lg border border-zinc-300 bg-white px-3 text-zinc-900 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100">
+                <option value="newest">{t('library.newest')}</option>
+                <option value="oldest">{t('library.oldest')}</option>
+                <option value="name">{t('library.name')}</option>
+              </select>
+            </label>
+          </div>
+
           {showWorkspaceNudge && (
             <section className="dt-stitch-card mb-4 rounded-2xl p-4">
               <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -651,7 +659,17 @@ export default function DashboardPageClient() {
             </section>
           )}
 
-          {allDocs.length === 0 ? (
+          {library.error && allDocs.length > 0 && <div role="alert" className="py-4 text-sm">
+            <p>{t('library.loadError')}</p>
+            <button type="button" onClick={refreshDocuments} className="min-h-11 underline">{t('common.retry')}</button>
+          </div>}
+          {library.loading && allDocs.length === 0 ? <p role="status" className="py-8 text-sm">{t('common.loading')}</p>
+            : library.error && allDocs.length === 0 ? <div role="alert" className="py-8 text-sm">
+              <p>{t('library.loadError')}</p>
+              <button type="button" onClick={refreshDocuments} className="min-h-11 underline">{t('common.retry')}</button>
+            </div>
+            : allDocs.length === 0 && library.searching ? <p role="status" className="py-8 text-sm">{t('library.noResults')}</p>
+            : allDocs.length === 0 ? (
             <div className="dt-stitch-card flex flex-col items-center justify-center rounded-2xl border-dashed px-6 py-16 text-center">
               <FileUp aria-hidden="true" size={52} className="text-[var(--workbench-muted)]" />
               <h3 className="mt-5 text-xl font-semibold text-[var(--workbench-ink)]">{t('dashboard.emptyTitle')}</h3>
@@ -685,17 +703,20 @@ export default function DashboardPageClient() {
                 return (
                   <div
                     key={d.document_id}
-                    className="dt-stitch-card flex items-center justify-between rounded-2xl p-5 transition-transform duration-200 hover:-translate-y-0.5"
+                    className="dt-stitch-card flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between rounded-2xl p-5 transition-transform duration-200 hover:-translate-y-0.5"
                   >
-                    <Link href={`/d/${d.document_id}`} className="flex-1 min-w-0 focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:rounded-lg">
+                    <Link href={`/d/${d.document_id}`} className="w-full flex-1 min-w-0 focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:rounded-lg">
                       <div className="font-medium text-[var(--workbench-ink)] flex items-center gap-2 min-w-0">
-                        <span className="truncate">{d.filename ? sanitizeFilename(d.filename) : d.document_id}</span>
+                        <span dir="auto" className="min-w-0 break-all">{d.filename ? sanitizeFilename(d.filename) : d.document_id}</span>
                         <span className="inline-flex items-center gap-1.5 text-xs text-[var(--workbench-muted)] shrink-0">
                           <span className={`w-2 h-2 rounded-full ${statusMeta.dotClass}`} />
                           <span>{statusMeta.label}</span>
                         </span>
                       </div>
                       <div className="text-xs text-[var(--workbench-muted)] mt-0.5">
+                        {d.file_type && <span>{d.file_type.toUpperCase()} · </span>}
+                        {d.file_size != null && <span>{(d.file_size / 1000).toLocaleString(undefined, { maximumFractionDigits: 1 })} KB · </span>}
+                        {d.page_count != null && <span>{t('library.pageCount', { count: d.page_count })} · </span>}
                         {new Date(d.createdAt).toLocaleString()}
                       </div>
                       {reparseError?.documentId === d.document_id ? (
@@ -776,6 +797,11 @@ export default function DashboardPageClient() {
               })}
             </div>
           )}
+          {!library.loading && (library.page > 0 || library.hasNext) && <nav aria-label={t('library.pages')} className="mt-5 flex flex-wrap items-center justify-between gap-2 text-sm">
+            <button type="button" disabled={library.page === 0} onClick={library.previous} className="min-h-11 rounded-lg border border-zinc-300 px-3 disabled:opacity-40 dark:border-zinc-700">{t('library.previous')}</button>
+            <span>{t('library.page', { number: library.page + 1 })}</span>
+            <button type="button" disabled={!library.hasNext || library.error} onClick={library.next} className="min-h-11 rounded-lg border border-zinc-300 px-3 disabled:opacity-40 dark:border-zinc-700">{t('library.next')}</button>
+          </nav>}
         </div>
       </main>
     </div>

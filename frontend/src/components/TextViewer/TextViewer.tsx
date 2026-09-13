@@ -703,9 +703,10 @@ function MarkdownContent({
   highlightRef: React.RefObject<HTMLSpanElement>;
   articleMode?: boolean;
 }) {
+  const { t } = useLocale();
   const markdownFallback = (
     <div className="flex items-center justify-center py-8">
-      <Spinner variant="circle" size="md" label="Rendering content" />
+      <Spinner variant="circle" size="md" label={t('common.loading')} />
     </div>
   );
 
@@ -734,9 +735,9 @@ function MarkdownContent({
         is deferred.
       */}
       {citationMatch && citationPage != null && (
-        <p dir="ltr" className="not-prose mb-3 text-xs font-mono text-zinc-500 dark:text-zinc-400">
+        <p dir="auto" className="not-prose mb-3 text-xs font-mono text-zinc-500 dark:text-zinc-400">
           <span ref={highlightRef}>
-            Citation &middot; page {citationPage}
+            {t('citation.page', { page: citationPage })}
           </span>
         </p>
       )}

@@ -90,6 +90,9 @@ class DocumentBrief(BaseModel):
     status: str
     created_at: Optional[str] = None
     error_msg: Optional[str] = None
+    file_type: Optional[str] = None
+    file_size: Optional[int] = None
+    page_count: Optional[int] = None
 
 
 class DemoDocumentResponse(BaseModel):
