@@ -55,3 +55,11 @@ image does not contain that root migration wrapper. See
 `.collab/reviews/2026-09-13-production-release/retainpdf-volume-migration.md`.
 Existing volumes must pass ownership/write checks before subsequent non-root
 rollouts; do not use world-writable permissions or leave the API running as root.
+
+The final production six-page court-PDF translation also passed browser preview:
+page 3 dismissal terminology and the page 5 substantive footnote were translated,
+six pages were retained, and the inspected footnote did not overlap the body.
+The completed result remained accessible through translation history after reload.
+Chrome's organization policy blocked saving a download to disk; preview success
+does not close that separate browser acceptance item. See the release report for
+the exact measured scope and evidence.

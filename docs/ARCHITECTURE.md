@@ -1514,7 +1514,7 @@ integration fixtures). Never run destructive migration tests against
 `doctalk`.
 
 
-### Local QA additions: response versions and annual fulfillment (2026-09-13)
+### Response versions and pre-release QA history (2026-09-13)
 
 Migration `20260913_0045` adds `messages.response_version`, `message_revisions`,
 and per-session `chat_stream_leases`. New chat, continue, and regenerate use the
@@ -1533,14 +1533,12 @@ the ledger lock; repeated settlement cannot apply the same difference again.
 Account JSON exports include prior revisions; ordinary chats/shares/exports use
 current messages, while existing answer-share snapshots stay immutable.
 
-D28: annual invoices currently grant one monthly allowance only once each year;
-there is no monthly fulfillment scheduler. New annual subscribe/change-plan and
-open-checkout recovery paths are therefore paused, with a translated billing-page
-notice. Existing annual entitlements and historic credits have not been changed.
-Before reopening annual sales, implement and review an idempotent paid-period
-monthly grant mechanism, reconcile existing annual customers from actual invoices,
-and review external Stripe portal/checkout configuration. This local guard alone
-does not stop externally created or previously opened Stripe sessions.
+D28 pre-release finding: annual invoices granted one monthly allowance only once
+each year without a monthly scheduler. Annual subscribe/change-plan and checkout
+recovery were temporarily paused while a persistent, idempotent delivery mechanism
+was implemented and reviewed. The completed mechanism and production enablement
+are described below; the temporary sales guard alone never stopped external or
+previously opened Stripe sessions.
 
 
 Billing row-lock reads refresh ORM identity-map state (`populate_existing=True`)
@@ -1549,15 +1547,14 @@ webhook commit; a locking read must observe the subscription ID committed by tha
 webhook before deciding whether a new checkout may be created. A real PostgreSQL
 concurrency test covers this exact schedule.
 
-Review limitations: individual chat recovery calls have timeouts, but nested anyio
-shields do not establish a strict aggregate 15/20-second cleanup bound. A native
-asyncio cancellation arriving during cleanup can still leave an unresolved
-predebit; unavailable cleanup can leave the session lease until its 120-second
-expiry. These rare outage/deadline windows are recorded follow-up work, not a
-claim of fully proven production disconnect recovery.
+Pre-release review found that per-call timeouts and nested anyio shields did not
+establish an aggregate cleanup bound, and native asyncio cancellation could
+interrupt settlement. Those findings drove the R3-2/R3-3 correction and fault
+injection described below. External outages and process crashes remain distinct
+from the tested cooperative cancellation paths.
 
 
-### Production release candidate 0.30.1 (2026-09-13)
+### Production release 0.30.1 (2026-09-13)
 
 D28 now has an add-only `20260913_0046` migration and an application-owned annual
 credit schedule. Month anniversaries retain the original calendar day (Jan 31 →
@@ -1596,3 +1593,14 @@ cancellation can be forcibly stopped. Such an unresponsive task emits a critical
 operational error; unresolved accounting retains the debit pending investigation.
 Real PostgreSQL NOWAIT tests verify lock release after delayed rollback and
 session-close cancellation, alongside full ASGI 2.3/2.4 disconnect regressions.
+
+Production rollout completed backend-first: Railway backend
+`50770a13-3afd-4a25-a571-3bdbe7dd13ac` is healthy at 0.30.1, migration 0046 is
+applied, actual region is us-west2, and exactly one steady-state Beat is running.
+The annual sweep was scheduled and executed successfully; new annual sales are
+enabled. RetainPDF `d968faad-6959-497a-8082-8d40daf6520d` runs as UID/GID10001 in
+us-west2 with the installed glossary/footnote contract verified. Vercel production
+`CHybqPGzUM2CSMpSyZDAdxiCFDGY` reached Ready on stable source `8ebad0e` after the
+backend checks. The final release report records real-PDF production acceptance,
+the resolved volume-ownership migration, laboratory performance, and the browser
+organization-policy restriction on saving downloads.
