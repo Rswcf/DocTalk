@@ -14,6 +14,7 @@ the test wipes and rebuilds schema, so do NOT point it at a shared DB.
 """
 from __future__ import annotations
 
+import asyncio
 import os
 import subprocess
 import sys
@@ -21,7 +22,8 @@ from pathlib import Path
 from urllib.parse import urlsplit
 
 import pytest
-from sqlalchemy import create_engine, text
+from sqlalchemy import text
+from sqlalchemy.ext.asyncio import create_async_engine
 
 # Project root holds alembic.ini (backend/alembic.ini)
 BACKEND_DIR = Path(__file__).resolve().parent.parent
@@ -35,16 +37,18 @@ def _reset_scratch_schema() -> None:
         raise RuntimeError(
             f"Refusing to reset non-scratch database {database_name!r}"
         )
-    sync_url = database_url.replace(
-        "postgresql+asyncpg://", "postgresql+psycopg://", 1
-    )
-    engine = create_engine(sync_url)
-    try:
-        with engine.begin() as connection:
-            connection.execute(text("DROP SCHEMA public CASCADE"))
-            connection.execute(text("CREATE SCHEMA public"))
-    finally:
-        engine.dispose()
+    async_url = database_url.replace("postgresql://", "postgresql+asyncpg://", 1)
+
+    async def reset() -> None:
+        engine = create_async_engine(async_url)
+        try:
+            async with engine.begin() as connection:
+                await connection.execute(text("DROP SCHEMA public CASCADE"))
+                await connection.execute(text("CREATE SCHEMA public"))
+        finally:
+            await engine.dispose()
+
+    asyncio.run(reset())
 
 
 def _alembic(*args: str) -> None:
