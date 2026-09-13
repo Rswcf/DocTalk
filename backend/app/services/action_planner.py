@@ -4,6 +4,7 @@ import asyncio
 import json
 import logging
 import re
+import time
 from dataclasses import dataclass
 from enum import Enum
 from typing import Any
@@ -11,6 +12,12 @@ from typing import Any
 from openai import AsyncOpenAI
 
 from app.core.config import settings
+from app.services.llm_provider import (
+    apply_provider_options,
+    create_async_llm_client,
+    log_completion,
+    log_completion_error,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -413,11 +420,10 @@ def _json_from_text(text: str) -> dict[str, Any]:
 
 class ActionPlanner:
     def _client_for_model(self, model: str) -> AsyncOpenAI | None:
-        if model in settings.DEEPSEEK_OFFICIAL_MODELS and settings.DEEPSEEK_API_KEY:
-            return AsyncOpenAI(api_key=settings.DEEPSEEK_API_KEY, base_url=settings.DEEPSEEK_BASE_URL)
-        if settings.OPENROUTER_API_KEY:
-            return AsyncOpenAI(api_key=settings.OPENROUTER_API_KEY, base_url=settings.OPENROUTER_BASE_URL)
-        return None
+        try:
+            return create_async_llm_client(model)
+        except RuntimeError:
+            return None
 
     async def plan(
         self,
@@ -425,6 +431,7 @@ class ActionPlanner:
         *,
         is_collection: bool = False,
         locale: str | None = None,
+        user_id: object | None = None,
     ) -> ActionPlan:
         deterministic = deterministic_plan(message, is_collection=is_collection)
         if deterministic.action in {
@@ -460,18 +467,33 @@ class ActionPlanner:
             f"Scope: {'collection' if is_collection else 'single document'}\n"
             f"Request: {message}"
         )
+        kwargs: dict[str, Any] = {
+            "model": model,
+            "temperature": 0,
+            "max_tokens": 220,
+            "messages": [
+                {"role": "system", "content": system},
+                {"role": "user", "content": user},
+            ],
+        }
+        apply_provider_options(
+            kwargs,
+            model,
+            json_output=True,
+            user_id=user_id,
+        )
+        started_at = time.monotonic()
         try:
             response = await asyncio.wait_for(
-                client.chat.completions.create(
-                    model=model,
-                    temperature=0,
-                    max_tokens=220,
-                    messages=[
-                        {"role": "system", "content": system},
-                        {"role": "user", "content": user},
-                    ],
-                ),
+                client.chat.completions.create(**kwargs),
                 timeout=float(settings.ACTION_PLANNER_TIMEOUT_SECONDS or 3.0),
+            )
+            log_completion(
+                logger,
+                operation="action_planner",
+                requested_model=model,
+                started_at=started_at,
+                response=response,
             )
             text = response.choices[0].message.content if response.choices else ""
             raw = _json_from_text(text or "")
@@ -496,6 +518,13 @@ class ActionPlanner:
                 reason="llm planner",
             )
         except Exception as exc:
+            log_completion_error(
+                logger,
+                operation="action_planner",
+                requested_model=model,
+                started_at=started_at,
+                error=exc,
+            )
             logger.info("Action planner LLM fallback failed: %s", exc)
             return deterministic
 

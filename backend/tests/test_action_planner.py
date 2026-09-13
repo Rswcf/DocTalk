@@ -1,8 +1,17 @@
 from __future__ import annotations
 
+from types import SimpleNamespace
+from unittest.mock import AsyncMock
+
 import pytest
 
-from app.services.action_planner import ActionPlanner, ChatAction, deterministic_plan
+from app.services import action_planner as action_planner_module
+from app.services.action_planner import (
+    ActionPlan,
+    ActionPlanner,
+    ChatAction,
+    deterministic_plan,
+)
 
 
 def test_planner_routes_table_export_in_chinese() -> None:
@@ -105,3 +114,60 @@ def test_planner_strict_original_text_quote_routes_to_verified_quote_search() ->
 
     assert plan.action == ChatAction.VERIFIED_QUOTE_SEARCH
     assert plan.uses_rag_answer_path
+
+
+@pytest.mark.asyncio
+async def test_deepseek_planner_disables_thinking_and_requires_json(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    create = AsyncMock(
+        return_value=SimpleNamespace(
+            model="deepseek-flash",
+            choices=[
+                SimpleNamespace(
+                    finish_reason="stop",
+                    message=SimpleNamespace(
+                        content=(
+                            '{"action":"scan_tables","confidence":0.91,'
+                            '"requires_confirmation":false,"missing_slots":[]}'
+                        )
+                    ),
+                )
+            ],
+            usage=SimpleNamespace(
+                prompt_tokens=30,
+                completion_tokens=12,
+                prompt_cache_hit_tokens=0,
+                prompt_cache_miss_tokens=30,
+            ),
+        )
+    )
+    client = SimpleNamespace(
+        chat=SimpleNamespace(completions=SimpleNamespace(create=create))
+    )
+    planner = ActionPlanner()
+    monkeypatch.setattr(planner, "_client_for_model", lambda _model: client)
+    monkeypatch.setattr(
+        action_planner_module,
+        "deterministic_plan",
+        lambda *_args, **_kwargs: ActionPlan(
+            action=ChatAction.CLARIFY,
+            confidence=0.2,
+            requires_confirmation=False,
+        ),
+    )
+    monkeypatch.setattr(
+        action_planner_module.settings,
+        "MODE_MODELS",
+        {"quick": "deepseek-flash", "balanced": "deepseek-v4-pro"},
+    )
+    monkeypatch.setattr(action_planner_module.settings, "ADAPTER_SECRET", "test-secret")
+
+    plan = await planner.plan("inspect it", user_id="internal-user-123")
+
+    assert plan.action == ChatAction.SCAN_TABLES
+    kwargs = create.await_args.kwargs
+    assert kwargs["response_format"] == {"type": "json_object"}
+    assert kwargs["extra_body"]["thinking"] == {"type": "disabled"}
+    assert kwargs["extra_body"]["user_id"].startswith("dt_")
+    assert "internal-user-123" not in kwargs["extra_body"]["user_id"]

@@ -195,7 +195,13 @@ async def test_whole_document_summary_uses_brief_context_not_semantic_retrieval(
         )
     ]
 
-    summary_context.assert_awaited_once_with(db, document_id, max_chunks=18, usage_collector=ANY)
+    summary_context.assert_awaited_once_with(
+        db,
+        document_id,
+        max_chunks=18,
+        usage_collector=ANY,
+        user_id=None,
+    )
     corrective_retrieval.assert_not_awaited()
     assert {
         "event": "tool_status",
@@ -225,7 +231,15 @@ async def test_document_summary_map_reduce_usage_is_included_in_chat_accounting(
     user = SimpleNamespace(id=user_id, plan="free")
     db = _make_db(session_obj, doc_obj)
 
-    async def fake_summary_context(_db, _document_id, *, max_chunks, usage_collector):
+    async def fake_summary_context(
+        _db,
+        _document_id,
+        *,
+        max_chunks,
+        usage_collector,
+        user_id,
+    ):
+        assert user_id == user.id
         usage_collector.add(
             model="deepseek-v4-flash",
             prompt_tokens=1000,

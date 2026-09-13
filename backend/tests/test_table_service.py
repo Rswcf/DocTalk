@@ -186,7 +186,7 @@ def test_reconstruct_document_table_updates_table_and_element(monkeypatch) -> No
     def fake_pdf_words_context(_document, _page_start, _page_end):
         return "Page 15 word boxes as x0,y0,x1,y1,text:\n10,10,20,20,Total\n30,10,40,20,Equity"
 
-    def fake_call_llm(context):
+    def fake_call_llm(context, *, user_id=None):
         assert "Parser draft rows" in context
         assert "Source page text" in context
         return (

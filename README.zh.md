@@ -150,7 +150,7 @@ npm install && npm run dev
 | `RETAINPDF_DATALAB_OUTPUT_FORMAT` | 否 | Datalab 输出格式，默认 `json,markdown` |
 | `RETAINPDF_TRANSLATION_API_KEY` | 否 | 可选覆盖；为空时 PDF 翻译复用 `DEEPSEEK_API_KEY` |
 | `RETAINPDF_TRANSLATION_BASE_URL` | 否 | 翻译 API base URL，默认 `https://api.deepseek.com/v1` |
-| `RETAINPDF_TRANSLATION_MODEL` | 否 | 翻译模型，默认 `deepseek-v4-flash` |
+| `RETAINPDF_TRANSLATION_MODEL` | 否 | 翻译模型，默认 `deepseek-flash` |
 
 ### 前端 (`.env.local`)
 

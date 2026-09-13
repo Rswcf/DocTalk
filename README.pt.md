@@ -150,7 +150,7 @@ Abra [http://localhost:3000](http://localhost:3000).
 | `RETAINPDF_DATALAB_OUTPUT_FORMAT` | Não | Formatos de saída Datalab, padrão `json,markdown` |
 | `RETAINPDF_TRANSLATION_API_KEY` | Não | Override opcional; vazio, a tradução PDF reutiliza `DEEPSEEK_API_KEY` |
 | `RETAINPDF_TRANSLATION_BASE_URL` | Não | URL base da API de tradução, padrão `https://api.deepseek.com/v1` |
-| `RETAINPDF_TRANSLATION_MODEL` | Não | Modelo de tradução, padrão `deepseek-v4-flash` |
+| `RETAINPDF_TRANSLATION_MODEL` | Não | Modelo de tradução, padrão `deepseek-flash` |
 
 ### Frontend (`.env.local`)
 

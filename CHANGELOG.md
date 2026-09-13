@@ -8,6 +8,21 @@ releases use `0.minor.patch` semantics such as `0.2.0` and `0.2.1`.
 
 ## [Unreleased]
 
+## [0.30.2] - 2026-09-13
+
+### Changed
+- Flash chat, anonymous demos, document workflows, and layout translation now
+  use DeepSeek's canonical `deepseek-flash` identifier for V4.1 Flash. The old
+  identifier remains recognized for historical usage records and rollback.
+- Direct DeepSeek calls share one provider contract with explicit retries,
+  non-thinking product modes, anonymized user isolation, JSON output controls,
+  and structured model/cache/latency telemetry.
+
+### Fixed
+- The chat action planner no longer spends its full response budget on hidden
+  reasoning and then silently falls back. It disables thinking and requests a
+  JSON object explicitly.
+
 ## [0.30.1] - 2026-09-13
 
 - Billing cards show the actual annual charge; admin-assigned plan changes start a new subscription, and same-plan intent buttons no longer imply an action.

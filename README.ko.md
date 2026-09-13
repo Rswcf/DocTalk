@@ -150,7 +150,7 @@ npm install && npm run dev
 | `RETAINPDF_DATALAB_OUTPUT_FORMAT` | 아니요 | Datalab 출력 형식, 기본값 `json,markdown` |
 | `RETAINPDF_TRANSLATION_API_KEY` | 아니요 | 선택적 override. 비어 있으면 PDF 번역은 `DEEPSEEK_API_KEY` 재사용 |
 | `RETAINPDF_TRANSLATION_BASE_URL` | 아니요 | 번역 API base URL, 기본값 `https://api.deepseek.com/v1` |
-| `RETAINPDF_TRANSLATION_MODEL` | 아니요 | 번역 모델, 기본값 `deepseek-v4-flash` |
+| `RETAINPDF_TRANSLATION_MODEL` | 아니요 | 번역 모델, 기본값 `deepseek-flash` |
 
 ### Frontend (`.env.local`)
 

@@ -23,7 +23,7 @@ Usage:
 
     # Test official DeepSeek API using cached chunks:
     DEEPSEEK_API_KEY=... python scripts/run_benchmark.py --provider deepseek \
-      --models deepseek-v4-flash,deepseek-v4-pro \
+      --models deepseek-flash,deepseek-v4-pro \
       --chunk-cache chunks_injection_from_existing_2026-05-04.json
 
     # Specific test cases:
@@ -69,14 +69,14 @@ ALL_MODELS = [
     "z-ai/glm-5",
 ]
 DEEPSEEK_MODELS = [
-    "deepseek-v4-flash",
+    "deepseek-flash",
     "deepseek-v4-pro",
 ]
 
 # Per-model parameters (mirrors model_profiles.py)
 MODEL_PARAMS: dict[str, dict] = {
     "deepseek/deepseek-v3.2":        {"temperature": 0.1, "max_tokens": 2048, "prompt_style": "positive_framing"},
-    "deepseek-v4-flash":             {"temperature": 0.1, "max_tokens": 2048, "prompt_style": "positive_framing"},
+    "deepseek-flash":             {"temperature": 0.1, "max_tokens": 2048, "prompt_style": "positive_framing"},
     "deepseek-v4-pro":               {"temperature": 0.1, "max_tokens": 2048, "prompt_style": "positive_framing"},
     "openai/gpt-5.2":                {"temperature": 0.0, "max_tokens": 4096},
     "qwen/qwen3-30b-a3b":            {"temperature": 0.2, "max_tokens": 4096},
@@ -172,17 +172,17 @@ MIN_CHUNK_LEN = 200
 CHUNK_TRUNCATE = 1400
 DEEPSEEK_PRICING_USD_PER_1M = {
     # Source: https://api-docs.deepseek.com/quick_start/pricing
-    # Snapshot date: 2026-05-05. V4 Pro discount is documented through
-    # 2026-05-31 15:59 UTC; refresh before using these numbers for billing.
-    "deepseek-v4-flash": {
-        "input_cache_hit": 0.0028,
-        "input_cache_miss": 0.14,
-        "output": 0.28,
+    # Snapshot date: 2026-09-13. Conservative peak-hour rates are used;
+    # off-peak rates are half these values. Refresh before cost analysis.
+    "deepseek-flash": {
+        "input_cache_hit": 0.006,
+        "input_cache_miss": 0.3,
+        "output": 1.2,
     },
     "deepseek-v4-pro": {
-        "input_cache_hit": 0.003625,
-        "input_cache_miss": 0.435,
-        "output": 0.87,
+        "input_cache_hit": 0.044,
+        "input_cache_miss": 1.32,
+        "output": 3.96,
     },
 }
 

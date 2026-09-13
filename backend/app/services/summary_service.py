@@ -21,6 +21,14 @@ from app.core.config import settings
 from app.models.sync_database import SyncSessionLocal
 from app.models.tables import Chunk, Document, DocumentBrief
 from app.services.document_brief_service import _select_representative_chunks
+from app.services.llm_provider import (
+    apply_provider_options as _apply_provider_options,
+)
+from app.services.llm_provider import (
+    completion_error_boundary,
+    create_sync_llm_client,
+    log_completion,
+)
 
 logger = get_task_logger(__name__)
 
@@ -65,23 +73,11 @@ Document excerpts:
 """
 
 
-def _is_deepseek_official_model(model: str) -> bool:
-    return model in settings.DEEPSEEK_OFFICIAL_MODELS
-
-
 def _get_llm_client(model: str) -> OpenAI | None:
-    if _is_deepseek_official_model(model):
-        if not settings.DEEPSEEK_API_KEY:
-            return None
-        return OpenAI(api_key=settings.DEEPSEEK_API_KEY, base_url=settings.DEEPSEEK_BASE_URL)
-    if not settings.OPENROUTER_API_KEY:
+    try:
+        return create_sync_llm_client(model)
+    except RuntimeError:
         return None
-    return OpenAI(api_key=settings.OPENROUTER_API_KEY, base_url=settings.OPENROUTER_BASE_URL)
-
-
-def _apply_provider_options(kwargs: dict[str, Any], model: str) -> None:
-    if _is_deepseek_official_model(model):
-        kwargs["extra_body"] = {"thinking": {"type": "disabled"}}
 
 
 def _json_from_text(text: str) -> dict[str, Any]:
@@ -388,8 +384,25 @@ def generate_document_brief_sync(document_id: str) -> None:
                 "temperature": 0.2,
                 "max_tokens": 2200,
             }
-            _apply_provider_options(kwargs, BRIEF_MODEL)
-            response = client.chat.completions.create(**kwargs)
+            _apply_provider_options(
+                kwargs,
+                BRIEF_MODEL,
+                json_output=True,
+                user_id=getattr(doc, "user_id", None),
+            )
+            with completion_error_boundary(
+                logger,
+                operation="document_brief",
+                requested_model=BRIEF_MODEL,
+            ) as started_at:
+                response = client.chat.completions.create(**kwargs)
+            log_completion(
+                logger,
+                operation="document_brief",
+                requested_model=BRIEF_MODEL,
+                started_at=started_at,
+                response=response,
+            )
             raw = _json_from_text(response.choices[0].message.content or "")
             payload = normalize_document_brief(
                 raw,

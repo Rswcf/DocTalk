@@ -18,11 +18,33 @@ import os
 import subprocess
 import sys
 from pathlib import Path
+from urllib.parse import urlsplit
 
 import pytest
+from sqlalchemy import create_engine, text
 
 # Project root holds alembic.ini (backend/alembic.ini)
 BACKEND_DIR = Path(__file__).resolve().parent.parent
+
+
+def _reset_scratch_schema() -> None:
+    """Remove test data so downgrade checks only migration reversibility."""
+    database_url = os.environ["DATABASE_URL"]
+    database_name = urlsplit(database_url).path.lstrip("/")
+    if not os.environ.get("DOCTALK_TEST_DATABASE_URL") and database_name != "doctalk_test":
+        raise RuntimeError(
+            f"Refusing to reset non-scratch database {database_name!r}"
+        )
+    sync_url = database_url.replace(
+        "postgresql+asyncpg://", "postgresql+psycopg://", 1
+    )
+    engine = create_engine(sync_url)
+    try:
+        with engine.begin() as connection:
+            connection.execute(text("DROP SCHEMA public CASCADE"))
+            connection.execute(text("CREATE SCHEMA public"))
+    finally:
+        engine.dispose()
 
 
 def _alembic(*args: str) -> None:
@@ -49,7 +71,11 @@ def _alembic(*args: str) -> None:
 @pytest.mark.integration
 def test_migrations_downgrade_and_reupgrade_round_trip():
     """All migrations must support a full downgrade → upgrade cycle."""
-    # Start from a known state: fully upgraded.
+    # Earlier integration cases intentionally create collection-only sessions,
+    # which cannot exist before migration 0009. Reset this dedicated scratch
+    # schema so the round trip tests migration DDL rather than test-order data.
+    _reset_scratch_schema()
+    # Start from a known state: fully upgraded and empty.
     _alembic("upgrade", "head")
     # Walk all the way back. If any migration's downgrade() is missing or
     # broken, alembic will raise and the test fails with diagnostic output.

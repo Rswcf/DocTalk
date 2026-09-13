@@ -29,6 +29,12 @@ from app.services.document_intelligence import (
     DocumentIntelligenceError,
     get_document_intelligence_provider,
 )
+from app.services.llm_provider import (
+    apply_provider_options,
+    completion_error_boundary,
+    create_sync_llm_client,
+    log_completion,
+)
 from app.services.storage_service import storage_service
 
 logger = logging.getLogger(__name__)
@@ -92,24 +98,14 @@ def render_table_csv(rows: list[list[str]]) -> str:
     return buf.getvalue()
 
 
-def _is_deepseek_official_model(model: str) -> bool:
-    return model in settings.DEEPSEEK_OFFICIAL_MODELS
-
-
 def _get_llm_client(model: str) -> OpenAI:
-    if _is_deepseek_official_model(model):
-        if not settings.DEEPSEEK_API_KEY:
-            raise RuntimeError("DEEPSEEK_API_KEY is not configured")
-        return OpenAI(api_key=settings.DEEPSEEK_API_KEY, base_url=settings.DEEPSEEK_BASE_URL)
-    if not settings.OPENROUTER_API_KEY:
-        raise RuntimeError("OPENROUTER_API_KEY is not configured")
-    return OpenAI(api_key=settings.OPENROUTER_API_KEY, base_url=settings.OPENROUTER_BASE_URL)
+    return create_sync_llm_client(model)
 
 
-def _apply_table_llm_options(kwargs: dict[str, Any], model: str) -> None:
-    if _is_deepseek_official_model(model):
-        kwargs["extra_body"] = {"thinking": {"type": "disabled"}}
-        kwargs["response_format"] = {"type": "json_object"}
+def _apply_table_llm_options(
+    kwargs: dict[str, Any], model: str, *, user_id: object | None = None
+) -> None:
+    apply_provider_options(kwargs, model, json_output=True, user_id=user_id)
 
 
 def _json_from_text(text: str) -> dict[str, Any]:
@@ -534,7 +530,9 @@ def _table_reconstruction_contract() -> str:
     )
 
 
-def _call_table_reconstruction_llm(context: str) -> tuple[dict[str, Any], int, int, str]:
+def _call_table_reconstruction_llm(
+    context: str, *, user_id: object | None = None
+) -> tuple[dict[str, Any], int, int, str]:
     model = TABLE_RECONSTRUCTION_MODEL
     client = _get_llm_client(model)
     contract = _table_reconstruction_contract()
@@ -563,8 +561,20 @@ def _call_table_reconstruction_llm(context: str) -> tuple[dict[str, Any], int, i
         "temperature": 0,
         "max_tokens": 6000,
     }
-    _apply_table_llm_options(kwargs, model)
-    response = client.chat.completions.create(**kwargs)
+    _apply_table_llm_options(kwargs, model, user_id=user_id)
+    with completion_error_boundary(
+        logger,
+        operation="table_reconstruction",
+        requested_model=model,
+    ) as started_at:
+        response = client.chat.completions.create(**kwargs)
+    log_completion(
+        logger,
+        operation="table_reconstruction",
+        requested_model=model,
+        started_at=started_at,
+        response=response,
+    )
     content = response.choices[0].message.content or ""
     usage = getattr(response, "usage", None)
     prompt_tokens = int(getattr(usage, "prompt_tokens", 0) or 0)
@@ -582,8 +592,20 @@ def _call_table_reconstruction_llm(context: str) -> tuple[dict[str, Any], int, i
             "temperature": 0,
             "max_tokens": 6000,
         }
-        _apply_table_llm_options(repair_kwargs, model)
-        repaired = client.chat.completions.create(**repair_kwargs)
+        _apply_table_llm_options(repair_kwargs, model, user_id=user_id)
+        with completion_error_boundary(
+            logger,
+            operation="table_reconstruction_repair",
+            requested_model=model,
+        ) as started_at:
+            repaired = client.chat.completions.create(**repair_kwargs)
+        log_completion(
+            logger,
+            operation="table_reconstruction_repair",
+            requested_model=model,
+            started_at=started_at,
+            response=repaired,
+        )
         repaired_content = repaired.choices[0].message.content or ""
         repair_usage = getattr(repaired, "usage", None)
         prompt_tokens += int(getattr(repair_usage, "prompt_tokens", 0) or 0)
@@ -795,7 +817,9 @@ def scan_document_tables(db: Session, document: Document) -> int:
 
 def reconstruct_document_table_with_outcome(db: Session, document: Document, table: DocumentTable) -> TableReconstructionOutcome:
     context = build_table_reconstruction_context(db, document, table)
-    raw, prompt_tokens, completion_tokens, model = _call_table_reconstruction_llm(context)
+    raw, prompt_tokens, completion_tokens, model = _call_table_reconstruction_llm(
+        context, user_id=getattr(document, "user_id", None)
+    )
     outcome = normalize_reconstructed_table_payload(raw, context, model=model)
     outcome.prompt_tokens = prompt_tokens
     outcome.completion_tokens = completion_tokens

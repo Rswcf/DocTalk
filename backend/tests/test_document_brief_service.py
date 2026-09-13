@@ -491,9 +491,10 @@ async def test_llm_map_empty_sections_are_reported_as_fallback_not_model_coverag
             model,
             messages,
             max_tokens,
-            timeout_seconds,
-            usage_collector=None,
-            phase="unknown",
+                timeout_seconds,
+                usage_collector=None,
+                phase="unknown",
+                user_id=None,
         ):
             prompt = messages[0]["content"]
             if "map step" in prompt:
@@ -510,6 +511,45 @@ async def test_llm_map_empty_sections_are_reported_as_fallback_not_model_coverag
     assert result.missing_sections == ()
     assert set(result.covered_sections) == {chunk.section_title for chunk in chunks}
     assert reduce_prompts and "fallback_sections" in reduce_prompts[0]
+
+
+@pytest.mark.asyncio
+async def test_map_reduce_forwards_private_user_partition_to_every_llm_call() -> None:
+    chunks = [
+        _chunk(index, section=f"Section {index}", text=(f"Section {index} narrative " * 20))
+        for index in range(12)
+    ]
+    calls: list[tuple[str, object | None]] = []
+    private_user_id = uuid.uuid4()
+
+    class CapturingPlanner(SectionMapReducePlanner):
+        async def _llm_json_completion(
+            self,
+            *,
+            model,
+            messages,
+            max_tokens,
+            timeout_seconds,
+            usage_collector=None,
+            phase="unknown",
+            user_id=None,
+        ):
+            calls.append((phase, user_id))
+            if phase == "map":
+                return {"group_summary": "mapped", "sections": []}
+            return {"summary": "reduced", "covered_sections": []}
+
+    planner = CapturingPlanner(max_groups=2, min_groups=2, max_group_chunks=6)
+
+    await planner.build_summary_context(
+        chunks,
+        max_chunks=18,
+        user_id=private_user_id,
+    )
+
+    assert calls
+    assert {phase for phase, _user_id in calls} == {"map", "reduce"}
+    assert all(user_id == private_user_id for _phase, user_id in calls)
 
 
 @pytest.mark.asyncio
@@ -646,6 +686,7 @@ async def test_large_document_summary_context_uses_section_map_reduce() -> None:
         chunks,
         max_chunks=18,
         usage_collector=None,
+        user_id=None,
     )
     assert len(contexts) == 1
     assert contexts[0]["retrieval_modality"] == "summary"
@@ -718,6 +759,7 @@ async def test_large_document_bypasses_persisted_coverage_when_map_reduce_needed
         chunks,
         max_chunks=18,
         usage_collector=None,
+        user_id=None,
     )
     assert len(contexts) == 1
     assert len(contexts[0]["map_reduce_covered_sections"]) > 18

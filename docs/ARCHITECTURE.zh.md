@@ -337,7 +337,7 @@ sequenceDiagram
   文档结尾。若旧文档还没有 elements，则 fallback 到代表性 chunks，并跳过通常属于页脚
   或侧栏的过短 chunks。
 
-- **LLM 提示词**：系统提示指示模型使用 `[n]` 标记引用来源，编号对应提供的文档片段。生产聊天模式使用 DeepSeek V4（内部 `quick` = Flash，内部 `balanced` = Pro）；匿名 Demo 用户强制使用 `DEMO_LLM_MODEL`（默认 DeepSeek V4 Flash）以控制成本。**模型自适应提示系统**（`model_profiles.py`）为每个模型定制规则部分和 API 参数：DeepSeek 使用 `positive_framing` 避免消极表述过度遵从，其他模型使用 `default` 风格。temperature、max_tokens 和功能标志（stream_options）也按模型配置。
+- **LLM 提示词与供应商契约**：系统提示要求模型使用与编号文档片段对应的 `[n]` 引用。生产聊天调用 DeepSeek V4.1 官方端点：内部 `quick` 映射到规范模型名 `deepseek-flash`，`balanced` 映射到 `deepseek-v4-pro`；旧的 `deepseek-v4-flash` 标识只为历史记录兼容保留。两个产品模式都显式关闭 thinking，结构化工作流启用 JSON mode，并且只向供应商发送经 HMAC 匿名化的 `user_id`。供应商遥测记录请求/实际模型、延迟、结束原因、用量、缓存命中/未命中及错误类型，不记录提示词内容。匿名 Demo 使用 `DEMO_LLM_MODEL`（默认 `deepseek-flash`）控制成本。**模型自适应提示系统**（`model_profiles.py`）仍按模型定制规则与 API 参数。
 
 - **RefParserFSM**：`chat_service.py` 中的有限状态机，处理流式 token 中跨边界的 `[n]` 引用标记。例如，token `"[1"` 后跟 `"]"` 会被正确解析为引用标记 1。
 

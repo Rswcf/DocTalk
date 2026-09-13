@@ -150,7 +150,7 @@ npm install && npm run dev
 | `RETAINPDF_DATALAB_OUTPUT_FORMAT` | いいえ | Datalab出力形式。デフォルトは `json,markdown` |
 | `RETAINPDF_TRANSLATION_API_KEY` | いいえ | 任意の上書き。空の場合、PDF翻訳は `DEEPSEEK_API_KEY` を再利用 |
 | `RETAINPDF_TRANSLATION_BASE_URL` | いいえ | 翻訳API base URL。デフォルトは `https://api.deepseek.com/v1` |
-| `RETAINPDF_TRANSLATION_MODEL` | いいえ | 翻訳モデル。デフォルトは `deepseek-v4-flash` |
+| `RETAINPDF_TRANSLATION_MODEL` | いいえ | 翻訳モデル。デフォルトは `deepseek-flash` |
 
 ### フロントエンド (`.env.local`)
 

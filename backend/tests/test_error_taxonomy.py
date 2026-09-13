@@ -1511,7 +1511,7 @@ async def test_chunks_rate_limited(client: AsyncClient, monkeypatch: pytest.Monk
 def test_mode_registry_has_flash_and_pro_only() -> None:
     """Current product surface exposes Flash and Pro; Thorough is legacy only."""
     assert settings.MODE_MODELS == {
-        "quick": "deepseek-v4-flash",
+        "quick": "deepseek-flash",
         "balanced": "deepseek-v4-pro",
     }
     assert settings.PREMIUM_MODES == []
@@ -1520,7 +1520,7 @@ def test_mode_registry_has_flash_and_pro_only() -> None:
 
 def test_deepseek_chat_requests_disable_thinking_by_default() -> None:
     kwargs: dict[str, object] = {}
-    chat_service_module._apply_provider_options(kwargs, "deepseek-v4-flash")
+    chat_service_module._apply_provider_options(kwargs, "deepseek-flash")
     assert kwargs["extra_body"] == {"thinking": {"type": "disabled"}}
 
 

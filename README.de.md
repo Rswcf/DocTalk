@@ -150,7 +150,7 @@ npm install && npm run dev
 | `RETAINPDF_DATALAB_OUTPUT_FORMAT` | Nein | Datalab-Ausgabeformate, Standard `json,markdown` |
 | `RETAINPDF_TRANSLATION_API_KEY` | Nein | Optionaler Override; leer wiederverwendet die PDF-Übersetzung `DEEPSEEK_API_KEY` |
 | `RETAINPDF_TRANSLATION_BASE_URL` | Nein | Basis-URL der Übersetzungs-API, Standard `https://api.deepseek.com/v1` |
-| `RETAINPDF_TRANSLATION_MODEL` | Nein | Übersetzungsmodell, Standard `deepseek-v4-flash` |
+| `RETAINPDF_TRANSLATION_MODEL` | Nein | Übersetzungsmodell, Standard `deepseek-flash` |
 
 ### Frontend (`.env.local`)
 

@@ -18,8 +18,10 @@ from __future__ import annotations
 import json
 import logging
 import re
+import time
 from typing import Any, Dict, List, Optional, Tuple
 
+from app.services.llm_provider import log_completion, log_completion_error
 from app.services.quote_verification_service import verify_quote
 
 logger = logging.getLogger(__name__)
@@ -125,11 +127,25 @@ async def extract_focus_quotes(
     }
     if extra_body:
         create_kwargs["extra_body"] = extra_body
+    started_at = time.monotonic()
     try:
         resp = await client.chat.completions.create(**create_kwargs)
     except Exception as e:  # noqa: BLE001 — focus is a nicety, never break the answer
-        logger.warning("citation focus extraction call failed: %s", e)
+        log_completion_error(
+            logger,
+            operation="citation_focus",
+            requested_model=model,
+            started_at=started_at,
+            error=e,
+        )
         return {}, (0, 0)
+    log_completion(
+        logger,
+        operation="citation_focus",
+        requested_model=model,
+        started_at=started_at,
+        response=resp,
+    )
 
     resp_usage = getattr(resp, "usage", None)
     usage = (

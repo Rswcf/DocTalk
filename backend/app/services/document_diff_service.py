@@ -21,7 +21,6 @@ from app.models.tables import (
 from app.services.credit_service import calculate_cost
 from app.services.document_element_service import get_element_aware_chunks
 from app.services.extraction_service import (
-    _apply_provider_options,
     _citation_from_chunk,
     _get_llm_client,
     _json_from_text,
@@ -30,6 +29,10 @@ from app.services.extraction_service import (
     _settle_extraction_predebit_after_failure_sync,
     run_leased_predebited_document_job_sync,
 )
+from app.services.llm_provider import (
+    apply_provider_options as _apply_provider_options,
+)
+from app.services.llm_provider import completion_error_boundary, log_completion
 from app.services.workflow_costs import (
     DOCUMENT_DIFF_PREDEBIT_CREDITS as DOCUMENT_DIFF_PREDEBIT_CREDITS,
 )
@@ -172,6 +175,7 @@ def _call_diff_llm(
     old_chunks: Sequence[tuple[Chunk, float]],
     new_chunks: Sequence[tuple[Chunk, float]],
     locale: str | None,
+    user_id: object | None = None,
 ) -> tuple[dict[str, Any], int, int]:
     client = _get_llm_client(DOCUMENT_DIFF_MODEL)
     messages = [
@@ -187,8 +191,25 @@ def _call_diff_llm(
         "temperature": 0.1,
         "max_tokens": 2200,
     }
-    _apply_provider_options(kwargs, DOCUMENT_DIFF_MODEL)
-    response = client.chat.completions.create(**kwargs)
+    _apply_provider_options(
+        kwargs,
+        DOCUMENT_DIFF_MODEL,
+        json_output=True,
+        user_id=user_id,
+    )
+    with completion_error_boundary(
+        logger,
+        operation="document_diff",
+        requested_model=DOCUMENT_DIFF_MODEL,
+    ) as started_at:
+        response = client.chat.completions.create(**kwargs)
+    log_completion(
+        logger,
+        operation="document_diff",
+        requested_model=DOCUMENT_DIFF_MODEL,
+        started_at=started_at,
+        response=response,
+    )
     content = response.choices[0].message.content or ""
     usage = getattr(response, "usage", None)
     prompt_tokens = int(getattr(usage, "prompt_tokens", 0) or 0)
@@ -212,8 +233,25 @@ def _call_diff_llm(
             "temperature": 0,
             "max_tokens": 2200,
         }
-        _apply_provider_options(repair_kwargs, DOCUMENT_DIFF_MODEL)
-        repaired = client.chat.completions.create(**repair_kwargs)
+        _apply_provider_options(
+            repair_kwargs,
+            DOCUMENT_DIFF_MODEL,
+            json_output=True,
+            user_id=user_id,
+        )
+        with completion_error_boundary(
+            logger,
+            operation="document_diff_repair",
+            requested_model=DOCUMENT_DIFF_MODEL,
+        ) as started_at:
+            repaired = client.chat.completions.create(**repair_kwargs)
+        log_completion(
+            logger,
+            operation="document_diff_repair",
+            requested_model=DOCUMENT_DIFF_MODEL,
+            started_at=started_at,
+            response=repaired,
+        )
         repaired_content = repaired.choices[0].message.content or ""
         repair_usage = getattr(repaired, "usage", None)
         prompt_tokens += int(getattr(repair_usage, "prompt_tokens", 0) or 0)
@@ -403,6 +441,7 @@ def _run_claimed_document_diff_job_sync(
                 old_chunks,
                 new_chunks,
                 scope.get("locale"),
+                user_id=job.user_id,
             )
             structured = normalize_diff_result(
                 raw,

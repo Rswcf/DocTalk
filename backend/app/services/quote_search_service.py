@@ -32,6 +32,14 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.config import settings
 from app.models.tables import Chunk, Document, Page, User
 from app.services.corrective_retrieval_service import corrective_retrieval_service
+from app.services.llm_provider import (
+    apply_provider_options as _apply_provider_options,
+)
+from app.services.llm_provider import (
+    completion_error_boundary,
+    create_async_llm_client,
+    log_completion,
+)
 from app.services.query_router import QueryRouter
 from app.services.quote_source_service import (
     QuoteSource,
@@ -132,23 +140,8 @@ class QuoteSearchResult:
 # but with an AsyncOpenAI client since this service is async end-to-end
 # (chat_service.py's async pattern), not extraction_service's sync worker.
 
-def _is_deepseek_official_model(model: str) -> bool:
-    return model in settings.DEEPSEEK_OFFICIAL_MODELS
-
-
 def _get_llm_client(model: str) -> AsyncOpenAI:
-    if _is_deepseek_official_model(model):
-        if not settings.DEEPSEEK_API_KEY:
-            raise RuntimeError("DEEPSEEK_API_KEY is not configured")
-        return AsyncOpenAI(api_key=settings.DEEPSEEK_API_KEY, base_url=settings.DEEPSEEK_BASE_URL)
-    if not settings.OPENROUTER_API_KEY:
-        raise RuntimeError("OPENROUTER_API_KEY is not configured")
-    return AsyncOpenAI(api_key=settings.OPENROUTER_API_KEY, base_url=settings.OPENROUTER_BASE_URL)
-
-
-def _apply_provider_options(kwargs: dict[str, Any], model: str) -> None:
-    if _is_deepseek_official_model(model):
-        kwargs["extra_body"] = {"thinking": {"type": "disabled"}}
+    return create_async_llm_client(model)
 
 
 def _json_from_text(text: str) -> dict[str, Any]:
@@ -314,7 +307,13 @@ def _candidate_prompt_block(candidates: list[Chunk]) -> str:
     return "\n\n".join(parts)
 
 
-async def _call_llm(candidates: list[Chunk], topic: str, locale: str) -> tuple[list[dict], int, int]:
+async def _call_llm(
+    candidates: list[Chunk],
+    topic: str,
+    locale: str,
+    *,
+    user_id: object | None = None,
+) -> tuple[list[dict], int, int]:
     client = _get_llm_client(MODEL)
     language_rule = f" Match the topic's language; if unclear, use locale {locale}." if locale else ""
     user_prompt = (
@@ -327,8 +326,20 @@ async def _call_llm(candidates: list[Chunk], topic: str, locale: str) -> tuple[l
         {"role": "user", "content": user_prompt},
     ]
     kwargs: dict[str, Any] = {"model": MODEL, "messages": messages, "temperature": 0, "max_tokens": 1200}
-    _apply_provider_options(kwargs, MODEL)
-    response = await client.chat.completions.create(**kwargs)
+    _apply_provider_options(kwargs, MODEL, json_output=True, user_id=user_id)
+    with completion_error_boundary(
+        logger,
+        operation="quote_search",
+        requested_model=MODEL,
+    ) as started_at:
+        response = await client.chat.completions.create(**kwargs)
+    log_completion(
+        logger,
+        operation="quote_search",
+        requested_model=MODEL,
+        started_at=started_at,
+        response=response,
+    )
     content = str(getattr(getattr(response.choices[0], "message", None), "content", "") or "")
     usage = getattr(response, "usage", None)
     prompt_tokens = int(getattr(usage, "prompt_tokens", 0) or 0)
@@ -353,9 +364,26 @@ async def _call_llm(candidates: list[Chunk], topic: str, locale: str) -> tuple[l
         repair_kwargs: dict[str, Any] = {
             "model": MODEL, "messages": repair_messages, "temperature": 0, "max_tokens": 1200,
         }
-        _apply_provider_options(repair_kwargs, MODEL)
+        _apply_provider_options(
+            repair_kwargs,
+            MODEL,
+            json_output=True,
+            user_id=user_id,
+        )
         try:
-            repaired = await client.chat.completions.create(**repair_kwargs)
+            with completion_error_boundary(
+                logger,
+                operation="quote_search_repair",
+                requested_model=MODEL,
+            ) as started_at:
+                repaired = await client.chat.completions.create(**repair_kwargs)
+            log_completion(
+                logger,
+                operation="quote_search_repair",
+                requested_model=MODEL,
+                started_at=started_at,
+                response=repaired,
+            )
             repaired_content = str(
                 getattr(getattr(repaired.choices[0], "message", None), "content", "") or ""
             )
@@ -585,7 +613,12 @@ async def quote_search(
             retrieved_count=0, candidate_pages=0, no_result=True,
         )
 
-    raw_quotes, prompt_tokens, completion_tokens = await _call_llm(candidates, topic, locale)
+    raw_quotes, prompt_tokens, completion_tokens = await _call_llm(
+        candidates,
+        topic,
+        locale,
+        user_id=user.id if user is not None else None,
+    )
 
     cards: list[QuoteCard] = []
     discarded: list[tuple[str, str, float]] = []

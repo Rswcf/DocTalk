@@ -12,6 +12,8 @@ from app.models.tables import CreditLedger, UsageRecord, User
 # Token-to-credit rates by model tier
 CREDIT_RATES = {
     # Active models (reachable via mode system)
+    "deepseek-flash": (1, 3),
+    # Legacy alias retained for historical UsageRecord cost lookups.
     "deepseek-v4-flash": (1, 3),
     "deepseek-v4-pro": (2, 6),
     "deepseek/deepseek-v3.2": (1, 5),

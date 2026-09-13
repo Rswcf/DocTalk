@@ -167,7 +167,7 @@ Open [http://localhost:3000](http://localhost:3000).
 | `RETAINPDF_DATALAB_OUTPUT_FORMAT` | No | Datalab output formats, default `json,markdown` |
 | `RETAINPDF_TRANSLATION_API_KEY` | No | Optional override; when empty, PDF translation reuses `DEEPSEEK_API_KEY` |
 | `RETAINPDF_TRANSLATION_BASE_URL` | No | Translation API base URL, default `https://api.deepseek.com/v1` |
-| `RETAINPDF_TRANSLATION_MODEL` | No | Translation model, default `deepseek-v4-flash` |
+| `RETAINPDF_TRANSLATION_MODEL` | No | Translation model, default `deepseek-flash` |
 
 ### Frontend (`.env.local`)
 

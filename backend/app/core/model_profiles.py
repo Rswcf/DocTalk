@@ -106,6 +106,14 @@ DOMAIN_RULES: dict[str, list[str]] = {
 # ---------------------------------------------------------------------------
 
 MODEL_PROFILES: dict[str, ModelProfile] = {
+    "deepseek-flash": ModelProfile(
+        temperature=0.1,
+        max_tokens=3072,
+        supports_cache_control=False,
+        supports_stream_options=True,
+        prompt_style="positive_framing",
+    ),
+    # Legacy alias retained while DeepSeek still accepts it and for rollback.
     "deepseek-v4-flash": ModelProfile(
         temperature=0.1,
         max_tokens=3072,

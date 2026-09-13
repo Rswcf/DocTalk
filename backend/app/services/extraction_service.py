@@ -35,6 +35,14 @@ from app.services.domain_mode_access import (
     release_orphaned_extraction_trial_sync,
 )
 from app.services.embedding_service import embedding_service
+from app.services.llm_provider import (
+    apply_provider_options as _apply_provider_options,
+)
+from app.services.llm_provider import (
+    completion_error_boundary,
+    create_sync_llm_client,
+    log_completion,
+)
 from app.services.predebited_job_service import (
     PREDEBITED_JOB_LEASE_SECONDS,
     PREDEBITED_JOB_LOCK_NAMESPACE,
@@ -135,27 +143,8 @@ def get_template(template_key: str) -> ExtractionTemplate:
         raise ValueError("UNSUPPORTED_EXTRACTION_TEMPLATE") from exc
 
 
-def _is_deepseek_official_model(model: str) -> bool:
-    return model in settings.DEEPSEEK_OFFICIAL_MODELS
-
-
 def _get_llm_client(model: str) -> OpenAI:
-    if _is_deepseek_official_model(model):
-        if not settings.DEEPSEEK_API_KEY:
-            raise RuntimeError("DEEPSEEK_API_KEY is not configured")
-        return OpenAI(
-            api_key=settings.DEEPSEEK_API_KEY, base_url=settings.DEEPSEEK_BASE_URL
-        )
-    if not settings.OPENROUTER_API_KEY:
-        raise RuntimeError("OPENROUTER_API_KEY is not configured")
-    return OpenAI(
-        api_key=settings.OPENROUTER_API_KEY, base_url=settings.OPENROUTER_BASE_URL
-    )
-
-
-def _apply_provider_options(kwargs: dict[str, Any], model: str) -> None:
-    if _is_deepseek_official_model(model):
-        kwargs["extra_body"] = {"thinking": {"type": "disabled"}}
+    return create_sync_llm_client(model)
 
 
 def _json_from_text(text: str) -> dict[str, Any]:
@@ -329,6 +318,7 @@ def _call_llm(
     chunks: Sequence[tuple[Chunk, float]],
     locale: str | None,
     domain_mode: str | None,
+    user_id: object | None = None,
 ) -> tuple[dict[str, Any], int, int]:
     client = _get_llm_client(EXTRACTION_MODEL)
     messages = [
@@ -354,10 +344,26 @@ def _call_llm(
             "temperature": 0.1 if attempt == 0 else 0,
             "max_tokens": 4096,
         }
-        _apply_provider_options(kwargs, EXTRACTION_MODEL)
-        if _is_deepseek_official_model(EXTRACTION_MODEL):
-            kwargs["response_format"] = {"type": "json_object"}
-        response = client.chat.completions.create(**kwargs)
+        _apply_provider_options(
+            kwargs,
+            EXTRACTION_MODEL,
+            json_output=True,
+            user_id=user_id,
+        )
+        operation = f"extraction:{template.key}:{attempt + 1}"
+        with completion_error_boundary(
+            logger,
+            operation=operation,
+            requested_model=EXTRACTION_MODEL,
+        ) as started_at:
+            response = client.chat.completions.create(**kwargs)
+        log_completion(
+            logger,
+            operation=operation,
+            requested_model=EXTRACTION_MODEL,
+            started_at=started_at,
+            response=response,
+        )
         choice = response.choices[0]
         content = choice.message.content or ""
         finish_reason = getattr(choice, "finish_reason", None)
@@ -1133,7 +1139,7 @@ def _run_claimed_extraction_job_sync(
                 raise ValueError("NO_RETRIEVABLE_CHUNKS")
 
             raw, prompt_tokens, completion_tokens = _call_llm(
-                template, chunks, locale, domain_mode
+                template, chunks, locale, domain_mode, user_id=job.user_id
             )
             structured = normalize_result(template.key, raw, len(chunks))
             rendered = render_markdown(template, structured)

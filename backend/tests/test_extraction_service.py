@@ -208,7 +208,6 @@ def test_incomplete_extraction_regenerates_from_sources_once(monkeypatch, first,
 
     create = MagicMock(side_effect=[response(first, finish), response('{"facts": []}', 'stop')])
     monkeypatch.setattr(service, '_get_llm_client', lambda _: SimpleNamespace(chat=SimpleNamespace(completions=SimpleNamespace(create=create))))
-    monkeypatch.setattr(service, '_is_deepseek_official_model', lambda _: True)
     monkeypatch.setattr(service, '_user_prompt', lambda *_: 'Document excerpts: audited source 99 dollars')
     result, prompt, completion = service._call_llm(TEMPLATES['key_facts'], [], 'en', None)
     assert result == {'facts': []}

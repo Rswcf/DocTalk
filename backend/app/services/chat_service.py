@@ -54,6 +54,18 @@ from app.services.document_brief_service import (
     document_brief_service,
 )
 from app.services.document_element_service import chunk_to_retrieval_item
+from app.services.llm_provider import (
+    apply_provider_options as _apply_provider_options,
+)
+from app.services.llm_provider import (
+    completion_error_boundary,
+    create_async_llm_client,
+    log_completion,
+    log_completion_error,
+)
+from app.services.llm_provider import (
+    is_deepseek_official_model as _is_deepseek_official_model,
+)
 from app.services.query_planner_service import QueryPlan
 from app.services.query_router import QueryIntent, query_router
 from app.services.retrieval_service import table_evidence_text
@@ -233,51 +245,21 @@ def _continuation_system_rule(locale: Optional[str], existing_response: Optional
     )
 
 
-def _get_openai_client() -> AsyncOpenAI:
-    global _openai_client
+def _get_llm_client(model: str) -> AsyncOpenAI:
+    global _openai_client, _deepseek_client
+    if _is_deepseek_official_model(model):
+        if _deepseek_client is None:
+            _deepseek_client = create_async_llm_client(model)
+        return _deepseek_client
     if _openai_client is None:
-        _openai_client = AsyncOpenAI(
-            api_key=settings.OPENROUTER_API_KEY,
-            base_url=settings.OPENROUTER_BASE_URL,
-            default_headers={
+        _openai_client = create_async_llm_client(
+            model,
+            openrouter_headers={
                 "HTTP-Referer": settings.FRONTEND_URL,
                 "X-Title": "DocTalk",
             },
         )
     return _openai_client
-
-
-def _is_deepseek_official_model(model: str) -> bool:
-    return model in settings.DEEPSEEK_OFFICIAL_MODELS
-
-
-def _get_deepseek_client() -> AsyncOpenAI:
-    global _deepseek_client
-    if not settings.DEEPSEEK_API_KEY:
-        raise RuntimeError("DEEPSEEK_API_KEY is not configured")
-    if _deepseek_client is None:
-        _deepseek_client = AsyncOpenAI(
-            api_key=settings.DEEPSEEK_API_KEY,
-            base_url=settings.DEEPSEEK_BASE_URL,
-        )
-    return _deepseek_client
-
-
-def _get_llm_client(model: str) -> AsyncOpenAI:
-    if _is_deepseek_official_model(model):
-        return _get_deepseek_client()
-    return _get_openai_client()
-
-
-def _apply_provider_options(create_kwargs: dict[str, Any], model: str) -> None:
-    """Apply provider-specific body options.
-
-    DeepSeek V4 defaults to thinking enabled. DocTalk's interactive Flash/Pro
-    modes are the non-thinking variants unless a future product surface enables
-    a separately priced reasoning path.
-    """
-    if _is_deepseek_official_model(model):
-        create_kwargs["extra_body"] = {"thinking": {"type": "disabled"}}
 
 
 def _is_valid_bbox(bb: dict) -> bool:
@@ -464,6 +446,7 @@ async def _try_repair_rag_answer(
     numbered_chunks: List[str],
     verification: dict,
     locale: Optional[str],
+    user_id: object | None = None,
 ) -> _CitationRepairResult | None:
     if verification.get("status") == "pass" or not chunk_map or not assistant_text.strip():
         return None
@@ -515,8 +498,20 @@ async def _try_repair_rag_answer(
             ],
             "stream": False,
         }
-        _apply_provider_options(create_kwargs, model)
-        response = await client.chat.completions.create(**create_kwargs)
+        _apply_provider_options(create_kwargs, model, user_id=user_id)
+        with completion_error_boundary(
+            logger,
+            operation="citation_repair",
+            requested_model=model,
+        ) as started_at:
+            response = await client.chat.completions.create(**create_kwargs)
+        log_completion(
+            logger,
+            operation="citation_repair",
+            requested_model=model,
+            started_at=started_at,
+            response=response,
+        )
         usage = getattr(response, "usage", None)
         prompt_tokens = int(getattr(usage, "prompt_tokens", 0) or 0)
         output_tokens = int(getattr(usage, "completion_tokens", 0) or 0)
@@ -1270,7 +1265,7 @@ async def _refine_citation_focus(
         # Match the chat/repair calls' provider options (e.g. DeepSeek V4
         # thinking-disabled) so this stays the intended cheap, fast call.
         _opts: dict[str, Any] = {}
-        _apply_provider_options(_opts, focus_model)
+        _apply_provider_options(_opts, focus_model, user_id=user.id)
         focus_map, (focus_pt, focus_ct) = await asyncio.wait_for(
             extract_focus_quotes(
                 answer=answer,
@@ -1759,6 +1754,7 @@ class ChatService:
             user_message,
             is_collection=is_collection_session,
             locale=locale,
+            user_id=user.id if user is not None else None,
         )
         if is_retry and (not action_plan.uses_rag_answer_path or _is_strict_quote_routed(
             action_plan, user=user, document_id=document_id,
@@ -2026,6 +2022,7 @@ class ChatService:
                     document_id,
                     max_chunks=18,
                     usage_collector=summary_usage,
+                    user_id=getattr(user, "id", None),
                 )
                 retrieval_strategy = "document_summary_context"
             elif (
@@ -2352,9 +2349,13 @@ class ChatService:
         prompt_tokens: Optional[int] = None
         output_tokens: Optional[int] = None
         llm_start = time.time()
+        llm_started_at = time.monotonic()
         first_token_logged = False
         token_count = 0
         finish_reason: Optional[str] = None
+        actual_model: Optional[str] = None
+        cache_hit_tokens: Optional[int] = None
+        cache_miss_tokens: Optional[int] = None
         asst_msg: Optional[Message] = None
         repair_metadata: dict[str, Any] | None = None
         settlement_user_id = user.id if user is not None else None
@@ -2373,10 +2374,15 @@ class ChatService:
                 }
                 if profile.supports_stream_options:
                     create_kwargs["stream_options"] = {"include_usage": True}
-                _apply_provider_options(create_kwargs, effective_model)
+                _apply_provider_options(
+                    create_kwargs,
+                    effective_model,
+                    user_id=settlement_user_id,
+                )
                 stream = await client.chat.completions.create(**create_kwargs)
 
                 async for chunk in stream:
+                    actual_model = getattr(chunk, "model", None) or actual_model
                     # Extract text delta
                     if chunk.choices and chunk.choices[0].delta.content:
                         text = chunk.choices[0].delta.content
@@ -2401,6 +2407,12 @@ class ChatService:
                     if hasattr(chunk, "usage") and chunk.usage:
                         prompt_tokens = getattr(chunk.usage, "prompt_tokens", None)
                         output_tokens = getattr(chunk.usage, "completion_tokens", None)
+                        cache_hit_tokens = getattr(
+                            chunk.usage, "prompt_cache_hit_tokens", None
+                        )
+                        cache_miss_tokens = getattr(
+                            chunk.usage, "prompt_cache_miss_tokens", None
+                        )
 
                     # Ping every 15 seconds
                     now = time.monotonic()
@@ -2435,16 +2447,30 @@ class ChatService:
                     )
                     yield sse("truncated", {"reason": "max_tokens"})
 
-                total_time = time.time() - llm_start
-                final_token_count = int(output_tokens) if output_tokens is not None else token_count
                 logger.info(
-                    "LLM total_latency=%.2fs tokens=%d model=%s",
-                    total_time,
-                    final_token_count,
+                    "llm.completion operation=chat requested_model=%s actual_model=%s "
+                    "latency_ms=%d finish_reason=%s prompt_tokens=%s "
+                    "completion_tokens=%s output_chunks=%d cache_hit_tokens=%s "
+                    "cache_miss_tokens=%s",
                     effective_model,
+                    actual_model,
+                    max(0, round((time.monotonic() - llm_started_at) * 1000)),
+                    finish_reason,
+                    prompt_tokens,
+                    output_tokens,
+                    token_count,
+                    cache_hit_tokens,
+                    cache_miss_tokens,
                 )
 
             except Exception as e:
+                log_completion_error(
+                    logger,
+                    operation="chat",
+                    requested_model=effective_model,
+                    started_at=llm_started_at,
+                    error=e,
+                )
                 assistant_snapshot = "".join(assistant_text_parts)
                 has_partial_answer = bool(assistant_snapshot.strip())
                 if (
@@ -2521,6 +2547,7 @@ class ChatService:
                     numbered_chunks=numbered_chunks,
                     verification=verification_payload,
                     locale=locale,
+                    user_id=settlement_user_id,
                 )
                 if repair is not None:
                     repair_metadata = repair.metadata
@@ -3108,9 +3135,13 @@ class ChatService:
 
         last_ping = time.monotonic()
         llm_start = time.time()  # for the focus-refinement proxy-budget guard
+        llm_started_at = time.monotonic()
         prompt_tokens: Optional[int] = None
         output_tokens: Optional[int] = None
         finish_reason: Optional[str] = None
+        actual_model: Optional[str] = None
+        cache_hit_tokens: Optional[int] = None
+        cache_miss_tokens: Optional[int] = None
         repair_metadata: dict[str, Any] | None = None
         persisted = False
         done_emitted = False
@@ -3130,10 +3161,15 @@ class ChatService:
                 }
                 if profile.supports_stream_options:
                     create_kwargs["stream_options"] = {"include_usage": True}
-                _apply_provider_options(create_kwargs, effective_model)
+                _apply_provider_options(
+                    create_kwargs,
+                    effective_model,
+                    user_id=settlement_user_id,
+                )
                 stream = await client.chat.completions.create(**create_kwargs)
 
                 async for chunk in stream:
+                    actual_model = getattr(chunk, "model", None) or actual_model
                     if chunk.choices and chunk.choices[0].delta.content:
                         text = chunk.choices[0].delta.content
                         for ev in fsm.feed(text):
@@ -3149,6 +3185,12 @@ class ChatService:
                     if hasattr(chunk, "usage") and chunk.usage:
                         prompt_tokens = getattr(chunk.usage, "prompt_tokens", None)
                         output_tokens = getattr(chunk.usage, "completion_tokens", None)
+                        cache_hit_tokens = getattr(
+                            chunk.usage, "prompt_cache_hit_tokens", None
+                        )
+                        cache_miss_tokens = getattr(
+                            chunk.usage, "prompt_cache_miss_tokens", None
+                        )
 
                     now = time.monotonic()
                     if now - last_ping >= 15.0:
@@ -3180,7 +3222,29 @@ class ChatService:
                 if finish_reason == "length":
                     yield sse("truncated", {"reason": "max_tokens"})
 
+                logger.info(
+                    "llm.completion operation=continuation requested_model=%s "
+                    "actual_model=%s latency_ms=%d finish_reason=%s "
+                    "prompt_tokens=%s completion_tokens=%s cache_hit_tokens=%s "
+                    "cache_miss_tokens=%s",
+                    effective_model,
+                    actual_model,
+                    max(0, round((time.monotonic() - llm_started_at) * 1000)),
+                    finish_reason,
+                    prompt_tokens,
+                    output_tokens,
+                    cache_hit_tokens,
+                    cache_miss_tokens,
+                )
+
             except Exception as e:
+                log_completion_error(
+                    logger,
+                    operation="continuation",
+                    requested_model=effective_model,
+                    started_at=llm_started_at,
+                    error=e,
+                )
                 continuation_snapshot = "".join(continuation_text_parts)
                 has_partial_answer = bool(continuation_snapshot.strip())
                 if (
@@ -3253,6 +3317,7 @@ class ChatService:
                     numbered_chunks=numbered_chunks,
                     verification=verification_payload,
                     locale=locale,
+                    user_id=settlement_user_id,
                 )
                 if repair is not None:
                     repair_metadata = repair.metadata

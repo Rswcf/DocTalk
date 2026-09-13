@@ -575,7 +575,7 @@ class TestTopicHardCap:
 
         captured: dict[str, str] = {}
 
-        async def fake_call_llm(_candidates, topic, _locale):
+        async def fake_call_llm(_candidates, topic, _locale, *, user_id=None):
             captured["topic"] = topic
             return [], 0, 0
 

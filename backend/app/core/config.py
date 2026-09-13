@@ -16,6 +16,8 @@ class Settings(BaseSettings):
     DEEPSEEK_API_KEY: Optional[str] = None
     DEEPSEEK_BASE_URL: str = Field(default="https://api.deepseek.com")
     DEEPSEEK_OFFICIAL_MODELS: list[str] = Field(default=[
+        "deepseek-flash",
+        # Compatibility alias: DeepSeek currently routes this to Flash.
         "deepseek-v4-flash",
         "deepseek-v4-pro",
     ])
@@ -32,6 +34,7 @@ class Settings(BaseSettings):
     # LLM defaults
     LLM_MODEL: str = Field(default="deepseek-v4-pro")
     ALLOWED_MODELS: list[str] = Field(default=[
+        "deepseek-flash",
         "deepseek-v4-flash",
         "deepseek-v4-pro",
         "deepseek/deepseek-v3.2",
@@ -102,13 +105,13 @@ class Settings(BaseSettings):
     ADAPTER_SECRET: Optional[str] = None  # For internal adapter API calls
 
     # Demo LLM — faster model for anonymous demo conversations
-    DEMO_LLM_MODEL: str = "deepseek-v4-flash"
+    DEMO_LLM_MODEL: str = "deepseek-flash"
 
     # Mode-based model selection.
     # Internal IDs are kept for backwards compatibility:
     # quick = Flash, balanced = Pro.
     MODE_MODELS: dict[str, str] = {
-        "quick": "deepseek-v4-flash",
+        "quick": "deepseek-flash",
         "balanced": "deepseek-v4-pro",
     }
     MODE_CREDIT_MULTIPLIER: dict[str, float] = {
@@ -194,7 +197,7 @@ class Settings(BaseSettings):
     DATALAB_API_KEY: Optional[str] = None
     RETAINPDF_TRANSLATION_API_KEY: Optional[str] = None
     RETAINPDF_TRANSLATION_BASE_URL: str = Field(default="https://api.deepseek.com/v1")
-    RETAINPDF_TRANSLATION_MODEL: str = Field(default="deepseek-v4-flash")
+    RETAINPDF_TRANSLATION_MODEL: str = Field(default="deepseek-flash")
     RETAINPDF_POLL_INTERVAL_SECONDS: int = Field(default=5)
     RETAINPDF_TIMEOUT_SECONDS: int = Field(default=1800)
     # Enable only for the image with verified contextual glossary semantics.
@@ -226,6 +229,8 @@ settings = Settings(_env_file=_env_file) if _env_file else Settings()
 
 # Reverse lookup: model → mode (for enforcing correct credit multiplier)
 MODEL_TO_MODE: dict[str, str] = {v: k for k, v in settings.MODE_MODELS.items()}
+# Preserve reporting for UsageRecord rows written before the V4.1 Flash rename.
+MODEL_TO_MODE.setdefault("deepseek-v4-flash", "quick")
 
 FILE_TYPE_MAP = {
     'application/pdf': 'pdf',

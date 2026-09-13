@@ -464,8 +464,14 @@ class SectionMapReducePlanner:
         timeout_seconds: float,
         usage_collector: MapReduceUsageCollector | None = None,
         phase: str = "unknown",
+        user_id: object | None = None,
     ) -> dict[str, Any]:
-        from app.services.chat_service import _apply_provider_options, _get_llm_client
+        from app.services.chat_service import _get_llm_client
+        from app.services.llm_provider import (
+            apply_provider_options,
+            completion_error_boundary,
+            log_completion,
+        )
 
         client = _get_llm_client(model)
         last_error: Exception | None = None
@@ -478,10 +484,28 @@ class SectionMapReducePlanner:
                 "stream": False,
                 "response_format": {"type": "json_object"},
             }
-            _apply_provider_options(kwargs, model)
-            response = await asyncio.wait_for(
-                client.chat.completions.create(**kwargs),
-                timeout=timeout_seconds,
+            apply_provider_options(
+                kwargs,
+                model,
+                json_output=True,
+                user_id=user_id,
+            )
+            operation = f"document_brief_map_reduce:{phase}:{attempt + 1}"
+            with completion_error_boundary(
+                logger,
+                operation=operation,
+                requested_model=model,
+            ) as started_at:
+                response = await asyncio.wait_for(
+                    client.chat.completions.create(**kwargs),
+                    timeout=timeout_seconds,
+                )
+            log_completion(
+                logger,
+                operation=operation,
+                requested_model=model,
+                started_at=started_at,
+                response=response,
             )
             usage = getattr(response, "usage", None)
             if usage_collector is not None and usage is not None:
@@ -554,6 +578,7 @@ class SectionMapReducePlanner:
         group: SectionMapGroup,
         *,
         usage_collector: MapReduceUsageCollector | None = None,
+        user_id: object | None = None,
     ) -> MapStepResult:
         prompt = (
             "You are the map step in a document map-reduce summary pipeline.\n"
@@ -576,6 +601,7 @@ class SectionMapReducePlanner:
             timeout_seconds=self._map_timeout_seconds,
             usage_collector=usage_collector,
             phase="map",
+            user_id=user_id,
         )
 
         raw_sections = data.get("sections") if isinstance(data.get("sections"), list) else []
@@ -752,6 +778,7 @@ class SectionMapReducePlanner:
         *,
         max_total_chunks: int,
         usage_collector: MapReduceUsageCollector | None = None,
+        user_id: object | None = None,
     ) -> MapReduceSummaryResult:
         covered_sections = self._mapped_covered_sections(mapped)
         target_sections = self._mapped_target_sections(mapped)
@@ -798,6 +825,7 @@ class SectionMapReducePlanner:
             timeout_seconds=self._reduce_timeout_seconds,
             usage_collector=usage_collector,
             phase="reduce",
+            user_id=user_id,
         )
         overview = str(data.get("summary") or "").strip()
         if not overview:
@@ -824,12 +852,17 @@ class SectionMapReducePlanner:
         use_llm_default: bool,
         use_injected_step: bool,
         usage_collector: MapReduceUsageCollector | None = None,
+        user_id: object | None = None,
     ) -> MapStepResult:
         async with semaphore:
             if use_injected_step and self._map_step is not None:
                 step = self._map_step
             elif use_llm_default:
-                return await self._llm_map_step(group, usage_collector=usage_collector)
+                return await self._llm_map_step(
+                    group,
+                    usage_collector=usage_collector,
+                    user_id=user_id,
+                )
             else:
                 step = self._default_map_step
             return await step(group)
@@ -942,6 +975,7 @@ class SectionMapReducePlanner:
         use_llm_default: bool,
         use_injected_steps: bool,
         usage_collector: MapReduceUsageCollector | None = None,
+        user_id: object | None = None,
     ) -> list[MapStepResult]:
         semaphore = asyncio.Semaphore(self._max_concurrency)
         tasks = [
@@ -952,6 +986,7 @@ class SectionMapReducePlanner:
                     use_llm_default=use_llm_default,
                     use_injected_step=use_injected_steps,
                     usage_collector=usage_collector,
+                    user_id=user_id,
                 )
             )
             for group in groups
@@ -1237,6 +1272,7 @@ class SectionMapReducePlanner:
         *,
         max_chunks: int,
         usage_collector: MapReduceUsageCollector | None = None,
+        user_id: object | None = None,
     ) -> MapReduceSummaryResult:
         ordered_chunks, segments, prepared_groups = self._plan_groups(
             chunks,
@@ -1274,6 +1310,7 @@ class SectionMapReducePlanner:
             use_llm_default=True,
             use_injected_steps=True,
             usage_collector=usage_collector,
+            user_id=user_id,
         )
         try:
             if self._reduce_step is not None:
@@ -1288,6 +1325,7 @@ class SectionMapReducePlanner:
                     mapped,
                     max_total_chunks=max_total_chunks,
                     usage_collector=usage_collector,
+                    user_id=user_id,
                 )
         except Exception:
             logger.exception("Section map-reduce reduce step failed; using mapped fallback selection")
@@ -1628,6 +1666,7 @@ class DocumentBriefService:
         max_chunks: int = DEFAULT_MAX_SUMMARY_CHUNKS,
         allow_map_reduce: bool = True,
         usage_collector: MapReduceUsageCollector | None = None,
+        user_id: object | None = None,
     ) -> list[dict[str, Any]]:
         coverage = await self._get_document_brief_coverage(db, document_id)
         persisted = await self._get_persisted_summary_context(
@@ -1696,6 +1735,7 @@ class DocumentBriefService:
                 chunks,
                 max_chunks=max_chunks,
                 usage_collector=usage_collector,
+                user_id=user_id,
             )
             if (
                 map_reduce_result.strategy == "map_reduce"
