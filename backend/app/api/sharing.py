@@ -85,8 +85,13 @@ def _answer_snapshot(session, message) -> tuple[dict, str]:
     safe_citations = [
         PublicAnswerCitation(
             ref_index=c["ref_index"],
-            page=c.get("page") if type(c.get("page")) is int else None,
-            page_end=c.get("page_end") if type(c.get("page_end")) is int else None,
+            page=c.get("page")
+            if isinstance(c.get("page"), int) and not isinstance(c.get("page"), bool)
+            else None,
+            page_end=c.get("page_end")
+            if isinstance(c.get("page_end"), int)
+            and not isinstance(c.get("page_end"), bool)
+            else None,
             text_snippet=c.get("text_snippet")
             if isinstance(c.get("text_snippet"), str)
             else "",

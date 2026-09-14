@@ -1,5 +1,7 @@
 """Real database proof that status reads cannot mistake another payment for fulfillment."""
+import asyncio
 import uuid
+from unittest.mock import AsyncMock
 
 import pytest
 from fastapi import FastAPI
@@ -93,7 +95,6 @@ async def test_subscription_status_requires_both_checkout_and_invoice_commit(mon
 
 
 async def test_checkout_locks_refresh_auth_identity_map_after_webhook_commit():
-    import asyncio
     async with AsyncSessionLocal() as db:
         user=User(email=f'lock-refresh-{uuid.uuid4().hex}@example.com',plan='free',stripe_subscription_id='pending')
         db.add(user)
@@ -126,4 +127,74 @@ async def test_checkout_locks_refresh_auth_identity_map_after_webhook_commit():
     finally:
         async with AsyncSessionLocal() as db:
             await db.execute(delete(User).where(User.id==user_id))
+            await db.commit()
+
+
+async def test_two_legacy_sentinel_retries_share_one_durable_attempt(monkeypatch):
+    async with AsyncSessionLocal() as db:
+        user = User(
+            email=f"legacy-retry-{uuid.uuid4().hex}@example.com",
+            plan="free",
+            stripe_customer_id="cus_legacy_fixture",
+            stripe_subscription_id="pending",
+        )
+        db.add(user)
+        await db.commit()
+        user_id = user.id
+
+    monkeypatch.setattr(billing.settings, "STRIPE_SECRET_KEY", "sk_test_placeholder")
+    monkeypatch.setattr(
+        billing,
+        "_get_subscription_price_id",
+        lambda *_args: "price_pro_monthly",
+    )
+    monkeypatch.setattr(
+        billing,
+        "_list_customer_subscription_checkouts",
+        AsyncMock(return_value=[]),
+    )
+    monkeypatch.setattr(
+        billing,
+        "_list_customer_subscriptions",
+        AsyncMock(return_value=[]),
+    )
+
+    async def create_checkout(_user, attempt, _db):
+        await asyncio.sleep(0.05)
+        return billing.CheckoutResolution(
+            checkout_url=f"https://checkout.stripe.test/{attempt.id}",
+            stripe_session_id="cs_shared",
+        )
+
+    async def recover_checkout(_user, attempt, _db):
+        return billing.CheckoutResolution(
+            checkout_url=f"https://checkout.stripe.test/{attempt.id}",
+            stripe_session_id="cs_shared",
+        )
+
+    monkeypatch.setattr(billing, "_create_or_recover_checkout_session", create_checkout)
+    monkeypatch.setattr(billing, "_recover_checkout_attempt", recover_checkout)
+    body = billing.SubscribeRequest(plan="pro", billing="monthly")
+
+    async def subscribe_once():
+        async with AsyncSessionLocal() as db:
+            auth_user = await db.get(User, user_id)
+            return await billing.subscribe(body=body, user=auth_user, db=db)
+
+    try:
+        first, second = await asyncio.gather(subscribe_once(), subscribe_once())
+        assert first["checkout_url"] == second["checkout_url"]
+        async with AsyncSessionLocal() as db:
+            attempts = list(
+                (
+                    await db.scalars(
+                        select(CheckoutAttempt).where(CheckoutAttempt.user_id == user_id)
+                    )
+                ).all()
+            )
+            assert len(attempts) == 1
+            assert attempts[0].status == "creating"
+    finally:
+        async with AsyncSessionLocal() as db:
+            await db.execute(delete(User).where(User.id == user_id))
             await db.commit()

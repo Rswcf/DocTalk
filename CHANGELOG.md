@@ -8,6 +8,14 @@ releases use `0.minor.patch` semantics such as `0.2.0` and `0.2.1`.
 
 ## [Unreleased]
 
+## [0.30.3] - 2026-09-13
+
+### Fixed
+- Accounts left with a legacy pending-subscription marker now reconcile against
+  Stripe before checkout. Verified open sessions are reused, unresolved
+  subscriptions remain protected from duplicates, and orphaned markers are
+  cleared automatically so a new idempotent checkout can start.
+
 ## [0.30.2] - 2026-09-13
 
 ### Changed

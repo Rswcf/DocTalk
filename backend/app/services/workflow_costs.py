@@ -8,4 +8,8 @@ EXTRACTION_PREDEBIT_CREDITS = 25
 def job_predebit(job) -> int | None:
     metadata = getattr(job, "metadata_json", None)
     value = metadata.get("pre_debited") if isinstance(metadata, dict) else None
-    return value if type(value) is int and value >= 0 else None
+    return (
+        value
+        if isinstance(value, int) and not isinstance(value, bool) and value >= 0
+        else None
+    )

@@ -150,6 +150,17 @@ PLAN_HIERARCHY = {"free": 0, "plus": 1, "pro": 2}
 PENDING_SUBSCRIPTION_TTL = timedelta(minutes=10)
 _ALLOWANCE_INVOICE_REASONS = {"subscription_create", "subscription_cycle"}
 _ACTIVE_SUBSCRIPTION_STATUSES = {"active", "trialing"}
+# These statuses still represent one live billing relationship even when the
+# user must fix a payment issue before access can be provisioned. A legacy
+# checkout sentinel must not create a second subscription beside one of these.
+_NONTERMINAL_SUBSCRIPTION_STATUSES = {
+    "incomplete",
+    "active",
+    "trialing",
+    "past_due",
+    "unpaid",
+    "paused",
+}
 # Statuses for which a subscription is still cancellable (i.e. Stripe will
 # accept `cancel_at_period_end=true`). `past_due` is cancellable so users
 # can stop recurring billing even while a payment is failing.
@@ -165,7 +176,7 @@ def _plan_change_period(subscription: dict, now: datetime) -> int:
     items = subscription.get("items", {}).get("data", [])
     item = items[0] if len(items) == 1 else {}
     start = item.get("current_period_start", subscription.get("current_period_start"))
-    if type(start) is not int:
+    if not isinstance(start, int) or isinstance(start, bool):
         raise ValueError("Subscription billing period is missing")
     if _interval_from_price_id(_stripe_id(item.get("price")) or "") == "annual":
         anchor = datetime.fromtimestamp(start, timezone.utc)
@@ -279,13 +290,21 @@ def _checkout_attempt_is_stale(attempt: CheckoutAttempt) -> bool:
 
 
 async def _list_customer_subscriptions(customer_id: str) -> list[dict]:
-    subs = await asyncio.to_thread(
-        stripe.Subscription.list,
-        customer=customer_id,
-        status="all",
-        limit=10,
-    )
-    return list(getattr(subs, "data", []) or [])
+    subscriptions: list[dict] = []
+    starting_after: str | None = None
+    for _ in range(100):
+        params = {"customer": customer_id, "status": "all", "limit": 100}
+        if starting_after:
+            params["starting_after"] = starting_after
+        page = await asyncio.to_thread(stripe.Subscription.list, **params)
+        data = list(_stripe_value(page, "data", []) or [])
+        subscriptions.extend(data)
+        if not _stripe_value(page, "has_more", False):
+            return subscriptions
+        starting_after = _stripe_id(data[-1]) if data else None
+        if not starting_after:
+            break
+    raise HTTPException(502, "Could not fully reconcile Stripe subscription state.")
 
 
 async def _get_customer_active_subscription(customer_id: Optional[str]) -> Optional[dict]:
@@ -294,6 +313,164 @@ async def _get_customer_active_subscription(customer_id: Optional[str]) -> Optio
     for sub in await _list_customer_subscriptions(customer_id):
         if sub.get("status") in _ACTIVE_SUBSCRIPTION_STATUSES:
             return sub
+    return None
+
+
+async def _list_customer_subscription_checkouts(customer_id: str) -> list[dict]:
+    """Return every subscription Checkout Session for one Stripe customer."""
+    sessions: list[dict] = []
+    starting_after: str | None = None
+    for _ in range(100):
+        params = {
+            "customer": customer_id,
+            "limit": 100,
+            "expand": ["data.line_items"],
+        }
+        if starting_after:
+            params["starting_after"] = starting_after
+        page = await asyncio.to_thread(stripe.checkout.Session.list, **params)
+        data = list(_stripe_value(page, "data", []) or [])
+        sessions.extend(
+            session
+            for session in data
+            if _stripe_value(session, "mode") == "subscription"
+        )
+        if not _stripe_value(page, "has_more", False):
+            return sessions
+        starting_after = _stripe_id(data[-1]) if data else None
+        if not starting_after:
+            break
+    raise HTTPException(502, "Could not fully reconcile Stripe checkout state.")
+
+
+async def _reconcile_legacy_subscription_sentinel(
+    user: User,
+    db: AsyncSession,
+    *,
+    expected_price_id: str,
+) -> CheckoutResolution | None:
+    """Resolve a pre-CheckoutAttempt ``pending`` value against Stripe.
+
+    ``None`` means Stripe has no live billing object and the caller may create
+    a durable CheckoutAttempt. A resolution means an existing Checkout must be
+    reused. Ambiguous remote state remains fail-closed.
+    """
+    if not user.stripe_customer_id:
+        raise HTTPException(
+            409,
+            "The legacy subscription checkout cannot be verified. Please contact support before retrying.",
+        )
+
+    # Snapshot Checkout first. A Session can only move from open to complete or
+    # expired, so an open snapshot is never grounds for clearing the sentinel.
+    # Listing subscriptions second closes the open -> complete race: the new
+    # subscription is then visible or the earlier open snapshot is reused.
+    try:
+        sessions = await _list_customer_subscription_checkouts(
+            user.stripe_customer_id
+        )
+        subscriptions = await _list_customer_subscriptions(user.stripe_customer_id)
+    except stripe.StripeError as exc:
+        logger.error("Failed to reconcile legacy Stripe state for %s: %s", user.id, exc)
+        raise HTTPException(502, "Failed to reconcile subscription state") from exc
+
+    active_sub = next(
+        (sub for sub in subscriptions if sub.get("status") in _ACTIVE_SUBSCRIPTION_STATUSES),
+        None,
+    )
+    if active_sub:
+        user.stripe_subscription_id = active_sub["id"]
+        active_price_id = (
+            active_sub.get("items", {})
+            .get("data", [{}])[0]
+            .get("price", {})
+            .get("id", "")
+        )
+        detected_plan = _plan_from_price_id(active_price_id)
+        if detected_plan:
+            user.plan = detected_plan
+        await db.commit()
+        await _invalidate_user_caches(user.id)
+        raise HTTPException(
+            400,
+            "You already have an active subscription. Use /change-plan to switch plans.",
+        )
+
+    unresolved_sub = next(
+        (
+            sub
+            for sub in subscriptions
+            if sub.get("status") in _NONTERMINAL_SUBSCRIPTION_STATUSES
+        ),
+        None,
+    )
+    if unresolved_sub:
+        raise HTTPException(
+            409,
+            "An existing Stripe subscription requires attention before another checkout can start.",
+        )
+
+    open_sessions = [
+        session for session in sessions if _stripe_value(session, "status") == "open"
+    ]
+    if len(open_sessions) > 1:
+        raise HTTPException(
+            409,
+            "Multiple subscription checkouts are still open. Please contact support before retrying.",
+        )
+
+    subscriptions_by_id = {
+        _stripe_id(subscription): subscription
+        for subscription in subscriptions
+        if _stripe_id(subscription)
+    }
+    for session in sessions:
+        status = _stripe_value(session, "status")
+        if status in {"open", "expired"}:
+            continue
+        if status != "complete":
+            raise HTTPException(409, "Stripe returned an unresolved checkout state.")
+        subscription_id = _stripe_id(_stripe_value(session, "subscription"))
+        subscription = subscriptions_by_id.get(subscription_id)
+        if (
+            not subscription_id
+            or subscription is None
+            or subscription.get("status") not in {"canceled", "incomplete_expired"}
+        ):
+            raise HTTPException(
+                409,
+                "A completed subscription checkout requires attention before retrying.",
+            )
+
+    if open_sessions:
+        session = open_sessions[0]
+        client_reference_id = _stripe_value(session, "client_reference_id")
+        session_id = _stripe_id(_stripe_value(session, "id"))
+        checkout_url = _stripe_value(session, "url")
+        line_items = _stripe_value(_stripe_value(session, "line_items") or {}, "data", [])
+        session_price_ids = [
+            _stripe_id(_stripe_value(item, "price")) for item in (line_items or [])
+        ]
+        if (
+            client_reference_id != str(user.id)
+            or not session_id
+            or not checkout_url
+            or session_price_ids != [expected_price_id]
+        ):
+            raise HTTPException(
+                409,
+                "An unverified subscription checkout is still open. Please contact support before retrying.",
+            )
+        await db.commit()
+        return CheckoutResolution(
+            checkout_url=checkout_url,
+            stripe_session_id=session_id,
+        )
+
+    # Keep the row lock and transaction open. The caller creates the durable
+    # attempt before committing, so a concurrent request cannot slip into the
+    # gap between clearing the legacy marker and reserving the replacement.
+    user.stripe_subscription_id = None
     return None
 
 
@@ -617,7 +794,7 @@ async def _load_subscription_prices():
                 isinstance(price, Exception)
                 or _stripe_value(price, "active") is not True
                 or _stripe_value(price, "currency") != "usd"
-                or type(amount) is not int or amount <= 0
+                or not isinstance(amount, int) or isinstance(amount, bool) or amount <= 0
                 or _stripe_value(recurring, "interval") != ("year" if period == "annual" else "month")
                 or _stripe_value(recurring, "interval_count") != 1
                 or _stripe_value(price, "billing_scheme") != "per_unit"
@@ -777,33 +954,16 @@ async def subscribe(
             await db.commit()
             locked_user = await _lock_user(db, user.id)
         else:
-            # Deployment compatibility for a pre-migration sentinel: adopt an
-            # active subscription if one exists, but never use User.updated_at
-            # to guess that a possibly-live legacy Checkout is stale.
-            active_sub = await _get_customer_active_subscription(
-                locked_user.stripe_customer_id
+            # Deployment compatibility for a pre-migration sentinel. Reconcile
+            # with Stripe before either reusing a live Checkout or clearing an
+            # orphaned marker and entering the durable attempt flow below.
+            recovered = await _reconcile_legacy_subscription_sentinel(
+                locked_user,
+                db,
+                expected_price_id=price_id,
             )
-            if active_sub:
-                locked_user.stripe_subscription_id = active_sub["id"]
-                price_id = (
-                    active_sub.get("items", {})
-                    .get("data", [{}])[0]
-                    .get("price", {})
-                    .get("id", "")
-                )
-                detected_plan = _plan_from_price_id(price_id)
-                if detected_plan:
-                    locked_user.plan = detected_plan
-                await db.commit()
-                await _invalidate_user_caches(user.id)
-                raise HTTPException(
-                    400,
-                    "You already have an active subscription. Use /change-plan to switch plans.",
-                )
-            raise HTTPException(
-                409,
-                "A legacy subscription checkout is still in progress. Please contact support before retrying.",
-            )
+            if recovered is not None:
+                return {"checkout_url": recovered.checkout_url}
 
     if (
         locked_user.stripe_subscription_id
@@ -1759,7 +1919,12 @@ async def _invoice_allowance_details(invoice: dict) -> InvoiceAllowance:
         start = end = None
         if interval == "annual":
             period = line.get("period") or {}
-            if type(period.get("start")) is not int or type(period.get("end")) is not int:
+            if (
+                not isinstance(period.get("start"), int)
+                or isinstance(period.get("start"), bool)
+                or not isinstance(period.get("end"), int)
+                or isinstance(period.get("end"), bool)
+            ):
                 raise ValueError("Annual invoice line requires a service period")
             start = datetime.fromtimestamp(period["start"], timezone.utc)
             end = datetime.fromtimestamp(period["end"], timezone.utc)

@@ -45,7 +45,7 @@ def verify_paid_service(invoice_id: str, subscription_id: str, customer_id: str)
     cutoff = None
     if subscription.get('status') in {'canceled', 'incomplete_expired'}:
         ended = subscription.get('ended_at')
-        if type(ended) is not int:
+        if not isinstance(ended, int) or isinstance(ended, bool):
             raise ValueError('Terminal subscription has no service end')
         cutoff = datetime.fromtimestamp(ended, timezone.utc)
     elif subscription.get('status') not in {'active', 'past_due', 'trialing', 'paused', 'unpaid'}:

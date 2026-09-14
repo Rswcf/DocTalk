@@ -82,8 +82,14 @@ def _prepare_export(messages: List[Any], *, markdown: bool = False) -> tuple[lis
         if msg.role != "assistant" or not isinstance(raw, list):
             prepared.append((msg.role, text))
             continue
-        citations = [c for c in raw if isinstance(c, dict)
-                     and type(c.get("ref_index")) is int and c["ref_index"] > 0]
+        citations = [
+            c
+            for c in raw
+            if isinstance(c, dict)
+            and isinstance(c.get("ref_index"), int)
+            and not isinstance(c.get("ref_index"), bool)
+            and c["ref_index"] > 0
+        ]
         source_ids: dict[tuple, int] = {}
 
         def marker(c):
@@ -104,7 +110,11 @@ def _prepare_export(messages: List[Any], *, markdown: bool = False) -> tuple[lis
         ambiguous: set[int] = set()
         for c in citations:
             offset = c.get("offset")
-            if type(offset) is int and 0 <= offset <= len(text):
+            if (
+                isinstance(offset, int)
+                and not isinstance(offset, bool)
+                and 0 <= offset <= len(text)
+            ):
                 edits.append((offset, offset, c))
             elif "offset" not in c:
                 ref = c["ref_index"]
