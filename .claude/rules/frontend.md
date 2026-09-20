@@ -21,6 +21,38 @@ paths:
 - **De-glass leftovers are a bug class**: commit `0b7404a` flattened the CSS but left dark-glass Tailwind utilities in JSX; ~40 invisible-on-white sites were fixed in v0.23.0. When touching app-surface JSX, any `*-white/NN` or bare `text-white`/`hover:text-white` on a light surface needs a light-mode variant (`dark:` keeps the old value). Theme-inverting solids (`bg-zinc-900 text-white dark:bg-zinc-50 dark:text-zinc-900`) are correct as-is.
 - **i18n**: Components using `t()` MUST be inside `<LocaleProvider>`. Outside = raw key fallback. Only `en` is statically loaded; other 10 locales lazy-loaded. Localized server pages seed `<LocaleProvider initialLocale initialMessages>` (see `app/[locale]/page.tsx` + `getScopedMessages`) so SSR HTML is translated — a `[locale]` page without seeding ships English first paint (the exact failure the locale-URL program exists to fix).
 
+## Sitemap & Structured Data (2026-09-20)
+
+Three defects all came from the same shape: a hand-maintained list drifting away
+from `LOCALIZED_PATHS`. The fixes are structural, not one-off.
+
+- **The sitemap's English entries are DERIVED from `LOCALIZED_PATHS`**, not hand-listed
+  (`app/sitemap.ts`). `/features/layout-translation` and `/trust` had locale URLs but no
+  English URL for months because the two lists were maintained separately.
+  `LOCALIZED_PRIORITY` must carry an explicit value for every path in the set;
+  `tests/sitemap-routes.test.cjs` asserts set/route/priority agreement in both
+  directions and fails on the old hand-written sitemap. Production is 405 `<loc>`.
+- **`createMarketingLocalePage` REQUIRES its `JsonLd` prop.** It used to be optional and
+  fell back to a generic Article-only component; `/features/layout-translation` was the
+  one caller that took the fallback, so its ten locale URLs shipped without the schema
+  every sibling emits. `MarketingArticleJsonLd.tsx` is deleted — **do not reintroduce a
+  fallback**; a missing JsonLd must stay a build-time type error.
+- **Landing FAQ and How-it-works copy lives in
+  `components/landing/landingSchemaSources.ts`** — a non-client module so the client
+  `FAQ.tsx`/`HowItWorks.tsx` and the server `app/HomeJsonLd.tsx` read the same key list
+  and the same `tOr` fallback. Before this, the English home page hardcoded schema whose
+  HowTo steps did not match the rendered text. A test asserts parity in all 11 locales.
+- `HomeJsonLd` serves both `/` and `/[locale]` — all 11 home pages emit
+  WebSite+Organization, FAQPage, SoftwareApplication and HowTo from their own
+  translations. `dateModified` is a pinned literal (`DATE_MODIFIED`); a computed date
+  changed the markup on every build.
+- Every `features/*` page emits SoftwareApplication — `scripts/verify-marketing-jsonld-phase2.py`
+  encodes that as a rule against the built HTML. Add new marketing pages to both that
+  verifier's `PAGES` and the test's `phase2Cases`.
+- **`/tools` inbound links**: footer (both `EditorialFooter` and the app `Footer`),
+  `FreeDemoContent` related links, blog index. Anchor text differs by placement on
+  purpose — repeating one string site-wide is a weaker internal-link signal.
+
 ## Demo Counter & Session Reuse (v0.23.0 — Codex 6-round consensus; do not re-break)
 - Contract: `totalUsed = demoMessagesUsed (server count at last restore/create) + (transcript user msgs − demoRestoredUserMsgCount baseline)`. Counters reset ONLY in `useChatSession`'s documentId-keyed effect (NOT `clearDocumentTransientState` — its effect reruns on locale change and wiped the baseline).
 - Anonymous demo sessions are reused via `sessionStorage["dt-demo-session:"+docId]` (helper `demoSessionStorage.ts`); pointer cleared only on 404/403; transient adoption failure sets `sessionError` and STOPS (no create fall-through).

@@ -8,6 +8,29 @@ releases use `0.minor.patch` semantics such as `0.2.0` and `0.2.1`.
 
 ## [Unreleased]
 
+### Added
+- Free document tools are now reachable from the site: a "Free Document Tools"
+  link in the footer's Resources column on every page, plus contextual links
+  from the free-demo page and the blog index. `/tools` previously had no
+  inbound links at all.
+
+### Fixed
+- `/features/layout-translation` and `/trust` were missing their English URLs
+  from the sitemap; their translated URLs were listed but the English ones were
+  not. The sitemap now derives its English entries from `LOCALIZED_PATHS` so the
+  two lists cannot drift, and a guard test fails if they ever do.
+- `/features/layout-translation` emitted no structured data in English, and
+  Article-only markup in the ten translated locales. It now emits Article,
+  BreadcrumbList and SoftwareApplication on every locale, matching its sibling
+  feature pages.
+- The ten translated home pages emitted only WebSite and Organization markup,
+  while the English home page carried FAQPage, SoftwareApplication and HowTo as
+  hardcoded English. All eleven home pages now emit the full set, resolved from
+  each locale's own translations.
+- The home page's HowTo steps described text the page does not render. The
+  structured data and the visible How-it-works section now read from one shared
+  source, and a test asserts they match in all eleven languages.
+
 ## [0.30.3] - 2026-09-13
 
 ### Fixed

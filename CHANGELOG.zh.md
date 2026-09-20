@@ -8,6 +8,23 @@
 
 ## [Unreleased]
 
+### 新增
+- 免费文档工具现在从站内可达：全站页脚「资源」栏新增「免费文档工具」入口，
+  免费演示页和博客索引页各加一条上下文链接。此前 `/tools` 没有任何内部链接。
+
+### 修复
+- `/features/layout-translation` 与 `/trust` 的英文网址此前不在站点地图中
+  （译文网址在，英文的缺失）。站点地图的英文条目改为从 `LOCALIZED_PATHS`
+  派生，两份清单不会再各自漂移，并新增守卫测试。
+- `/features/layout-translation` 的英文页此前不输出任何结构化数据，十个译文
+  页只输出通用 Article。现在所有语言均输出 Article、BreadcrumbList 与
+  SoftwareApplication，与同组功能页一致。
+- 十个译文首页此前只输出 WebSite 与 Organization，而英文首页的 FAQPage、
+  SoftwareApplication、HowTo 是硬编码英文。现在十一个首页都输出完整类型，
+  并各自取用本语言的译文。
+- 首页 HowTo 的步骤文案与页面实际渲染的内容不符。结构化数据与可见的
+  「使用步骤」现在读取同一份来源，并有测试逐语言比对。
+
 ## [0.30.3] - 2026-09-13
 
 ### 修复
