@@ -1,0 +1,286 @@
+# Disavow file for doctalk.site — generated 2026-09-20
+#
+# Source: Semrush Backlink Analytics, crawl 2026-09-19 (191 referring domains,
+# 307 backlinks). 96% of referring domains sit at Authority Score 0-10.
+#
+# Two live link-selling campaigns name doctalk.site inside their own ad copy:
+#   "high quality dofollow backlinks da 50 pa 40 premium pbn network service
+#    doctalk.site rank first page google fast seo link building buy backlinks
+#    online cheap"   - 105 backlinks / 70 referring domains, last seen 2026-09-20
+#   "expert manual outreach backlinks for doctalk.site designed to improve da,
+#    dr and tf..."  - 13 backlinks / 13 referring domains, first seen 2026-09-11
+#
+# Nobody at DocTalk purchased links. These are unsolicited.
+#
+# 188 domains disavowed, grouped by the anchor-text campaign they belong to.
+# Deliberately NOT disavowed:
+#   doctalk-liard.vercel.app — our own Vercel preview deployment, not a third-party link
+#   github.com — the project's own public repository
+#   parse.gl — editorial mention in an article about AI discovery engines
+
+# aged domains and backlinks (62)
+domain:1000.co.in
+domain:2x9.co
+domain:all-aged-domains.com
+domain:alljobs.info
+domain:allwebsitesdirectory.com
+domain:australianwebdirectory.shop
+domain:backlinkhouse.com
+domain:backlinkon.com
+domain:backlinksbank.com
+domain:backlinkshouse.com
+domain:backlinkstree.com
+domain:bestwebstats.com
+domain:booksreadr.org
+domain:carplz.com
+domain:cheapsmmprovider.info
+domain:cheapsmmprovider.online
+domain:domain.com.lc
+domain:domainanalysis.org
+domain:domainsc.com
+domain:ecommercebenchmarking.com
+domain:egyptiandirectory.com
+domain:findinfo.in
+domain:gamerkun.com
+domain:getonline.co.in
+domain:getwebsiteworth.com
+domain:globalecommerce.org
+domain:hebagh.cv
+domain:homefinance.co.in
+domain:indexaward.com
+domain:indians.cc
+domain:jobsapp.info
+domain:linksnatcher.art
+domain:linksnatcher.com
+domain:mp3fresh.net
+domain:musweb.org
+domain:pagesearch.net
+domain:prashikshan.in
+domain:preparation.co.in
+domain:procycling.org
+domain:pudhe.com
+domain:queries.co.in
+domain:read.org.in
+domain:sergechel.info
+domain:taxies.biz
+domain:theface.in
+domain:themumbai.in
+domain:thirty.co.in
+domain:topleveldomains.space
+domain:tunca.org
+domain:tyre.pro
+domain:tyres.pro
+domain:uaewebdirectory.info
+domain:wallpapers.pro
+domain:way2check.art
+domain:way2check.cv
+domain:websiterace.com
+domain:websitescrawl.art
+domain:websitesea.com
+domain:webworthchecker.cv
+domain:wonvision.com
+domain:ycm.info
+domain:youtoo.in
+
+# Premium PBN and Link building (54)
+domain:adcreativevideo.com
+domain:aloysionunes.com
+domain:archive-hu.com
+domain:bestnz-poker-casinoslot.com
+domain:bestofthefirstcoast.com
+domain:bestwebs123.site
+domain:betulcrime.com
+domain:bisprofit.com
+domain:blogerreviewers.com
+domain:canadapsilocybin.com
+domain:cgpa2percentag.com
+domain:chordmp3.net
+domain:cindylaup.com
+domain:clifflisting.com
+domain:coruzants.com
+domain:cvillico.com
+domain:daechul.co.com
+domain:digitalchatni.com
+domain:digitalseotool.com
+domain:dupurgeniefr.com
+domain:emergencydentistinrichmondva.com
+domain:exotichealths.com
+domain:fashionclothingnews.com
+domain:fastlifesite.com
+domain:fittyfoody.com
+domain:fletcherrld.com
+domain:homesforsaleoldgreenwichct.com
+domain:hostprinter.com
+domain:hotonlinegaming.com
+domain:juaralaundry.com
+domain:kernelpanicpodcast.com
+domain:kkinsider.com
+domain:marinasone.com
+domain:masihnyata.com
+domain:mylisthero.com
+domain:mymarketpost.com
+domain:onlyhealthydeals.com
+domain:onvaxs.com
+domain:phanerosart.com
+domain:plrdownloadshub.com
+domain:primenewsartical.com
+domain:quotesblom.com
+domain:reisenweg.com
+domain:royaldb.us.com
+domain:sahammurah.com
+domain:shanzytechs.site
+domain:smartstimer.com
+domain:soulvocable.com
+domain:southfwb.com
+domain:techbumppy.com
+domain:thedocmag.com
+domain:ufabettererm4.com
+domain:wecelebrities.com
+domain:wioutlet.com
+
+# seo domain research (9)
+domain:blinks.monster
+domain:blinks.sbs
+domain:knows.monster
+domain:knows.sbs
+domain:seodomains.website
+domain:seol.store
+domain:takes.homes
+domain:takes.sbs
+domain:wants.cfd
+
+# Any SEO resource - we have it (8)
+domain:domraider.br.com
+domain:domraider.de.com
+domain:domraider.eu.com
+domain:domraider.gb.net
+domain:domraider.it.com
+domain:domraider.uk.com
+domain:domraider.uk.net
+domain:domraider.us.com
+
+# Website Stats scraper (7)
+domain:analyticshaven.top
+domain:blogsphere.top
+domain:creativeposts.top
+domain:dailymusings.top
+domain:metamagic.top
+domain:optimizeflow.top
+domain:ready.pro
+
+# URL Shared scraper (6)
+domain:backlinks-checker.com
+domain:buzzshrink.website
+domain:freemyip.com
+domain:jake.eu
+domain:shortenurls.eu
+domain:urls-shortener.eu
+
+# Domain Report scraper (5)
+domain:atomizelink.icu
+domain:bye.fyi
+domain:byteshort.xyz
+domain:drjack.world
+domain:screenshots.wiki
+
+# Buy High Quality Dofollow Seo Backlinks (4)
+domain:boosttraffic.site
+domain:eliteseo.site
+domain:organictraffic.site
+domain:premiumseo.shop
+
+# Directory Pages Index (2)
+domain:factmags.com
+domain:goooogla.com
+
+# Top Domains listing spam (2)
+domain:domains.com.bz
+domain:newwebsiteslist.com
+
+# Advanced Niche Edit Links (1)
+domain:nokvio.shop
+
+# Effective Dofollow Link Building (1)
+domain:flenro.shop
+
+# Effective Guest Post Service (1)
+domain:mervi.shop
+
+# Effective PBN Backlinks (1)
+domain:crinto.shop
+
+# Expert Contextual Link Placements (1)
+domain:sidarma88gacor.shop
+
+# Expert SEO Authority Backlinks (1)
+domain:fioro.shop
+
+# Expert Tiered Link Building (1)
+domain:ggmap.us.com
+
+# Expert White Hat SEO Links (1)
+domain:juvex.shop
+
+# High Quality Dofollow Link Building (1)
+domain:cmocheatsheets.com
+
+# High Quality SEO Authority Backlinks (1)
+domain:betwinnermirror.com
+
+# High Quality Tiered Link Building (1)
+domain:themicrodigits.com
+
+# Powerful Contextual Link Placements (1)
+domain:realwinningonlinecasino.online
+
+# Powerful High DA Backlinks (1)
+domain:ninko.shop
+
+# Powerful Manual Outreach Backlinks (1)
+domain:casinopopular.online
+
+# Powerful PBN Backlinks (1)
+domain:cartermanageus.com
+
+# Powerful White Hat SEO Links (1)
+domain:rjcentinc.com
+
+# Premium High DA Backlinks (1)
+domain:bunero.shop
+
+# Premium Niche Edit Links (1)
+domain:bestonlinecasinomexico.online
+
+# Premium Tiered Link Building (1)
+domain:forvi.shop
+
+# Professional Manual Outreach Backlinks (1)
+domain:nuxlo.shop
+
+# Professional SEO Authority Backlinks (1)
+domain:plendo.shop
+
+# Proven Contextual Link Placements (1)
+domain:newblogerseo.com
+
+# Proven Dofollow Link Building (1)
+domain:ggmap.co.com
+
+# Reliable High DA Backlinks (1)
+domain:breachviews.com
+
+# Reliable Manual Outreach Backlinks (1)
+domain:bestonlinecasinogamescanada.online
+
+# Reliable Niche Edit Links (1)
+domain:murvix.shop
+
+# Trusted SEO Authority Backlinks (1)
+domain:casinooftheking.com
+
+# no anchor, content farm (1)
+domain:mediaboooster.com
+
+# Single junk pages on shared hosts — subdomain-scoped on purpose,
+# because disavowing the parent domain would be far too broad.
+domain:suharikelimddw.blogspot.com

@@ -14,6 +14,7 @@ from __future__ import annotations
 import json
 import os
 import random
+import threading as _threading
 import time
 import urllib.error
 import urllib.request
@@ -69,6 +70,7 @@ class JevClient:
         self.total_input_tokens = 0
         self.total_output_tokens = 0
         self.request_count = 0
+        self._usage_lock = _threading.Lock()
 
     # -- public ---------------------------------------------------------
 
@@ -85,10 +87,45 @@ class JevClient:
         body = json.dumps(payload).encode("utf-8")
         result = self._post(body)
         usage = result.get("usage") or {}
-        self.total_input_tokens += int(usage.get("input_tokens") or 0)
-        self.total_output_tokens += int(usage.get("output_tokens") or 0)
-        self.request_count += 1
+        with self._usage_lock:
+            self.total_input_tokens += int(usage.get("input_tokens") or 0)
+            self.total_output_tokens += int(usage.get("output_tokens") or 0)
+            self.request_count += 1
         return result
+
+
+    def ask_many(
+        self, items: list, build, *, workers: int = 8, on_progress=None
+    ) -> list:
+        """Run one `ask` per item concurrently, preserving input order.
+
+        Jev's limits are 250k tokens/sec and 1200 requests/minute, so a small
+        pool is well inside them; the SDK-equivalent backoff in `_post` handles
+        a 429 if we ever brush the ceiling. `build(item)` returns
+        (state, questions).
+        """
+        import threading
+        from concurrent.futures import ThreadPoolExecutor
+
+        results: list = [None] * len(items)
+        lock = threading.Lock()
+        done = 0
+
+        def run(index_item):
+            nonlocal done
+            index, item = index_item
+            state, questions = build(item)
+            answer = self.ask(state, questions)
+            with lock:
+                done += 1
+                if on_progress:
+                    on_progress(done, len(items))
+            return index, answer
+
+        with ThreadPoolExecutor(max_workers=workers) as pool:
+            for index, answer in pool.map(run, enumerate(items)):
+                results[index] = answer
+        return results
 
     @property
     def cost_usd(self) -> float:
