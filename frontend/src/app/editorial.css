@@ -8,13 +8,13 @@
   --ed-paper: #eae8e3;
   --ed-paper-2: #e4e2db;
   --ed-ink: #20211e;
-  --ed-ink-2: #5b5a52;
-  --ed-ink-3: #8a897f;
-  --ed-signal: #a04b34;
-  --ed-signal-deep: #843c28;
+  --ed-ink-2: #4a4943;
+  --ed-ink-3: #5f5e56;
+  --ed-signal: #843c28;
+  --ed-signal-deep: #6d3120;
   --ed-slate: #1f3a4d;
   --ed-slate-2: #2f556b;
-  --ed-olive: #3f6a34;
+  --ed-olive: #35592c;
   --ed-rule: rgba(32, 33, 30, 0.12);
 
   /* Glass material tokens (warm, Ocean v5 recipe — spec §2.3). Consumed by

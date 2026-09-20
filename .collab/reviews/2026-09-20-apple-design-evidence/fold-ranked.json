@@ -1,0 +1,402 @@
+[
+  {
+    "url": "/pricing",
+    "headline": "Pricing built around real document work, not vague AI limits.",
+    "grammar": 1.11,
+    "weight": 3.98,
+    "compete": 0.89,
+    "prose": 0.67,
+    "defect": 0.749,
+    "priority": 0.745
+  },
+  {
+    "url": "/alternatives",
+    "headline": "AI Document Tool Alternatives",
+    "grammar": 0.01,
+    "weight": 3.0,
+    "compete": 0.86,
+    "prose": 0.63,
+    "defect": 0.853,
+    "priority": 0.64
+  },
+  {
+    "url": "/compare",
+    "headline": "AI Document Tool Comparisons",
+    "grammar": 0.01,
+    "weight": 3.01,
+    "compete": 0.82,
+    "prose": 0.57,
+    "defect": 0.825,
+    "priority": 0.621
+  },
+  {
+    "url": "/alternatives/chatpdf",
+    "headline": "7 Best ChatPDF Alternatives in 2026 (Free & Paid)",
+    "grammar": 0.13,
+    "weight": 3.02,
+    "compete": 0.27,
+    "prose": 0.87,
+    "defect": 0.764,
+    "priority": 0.577
+  },
+  {
+    "url": "/alternatives/notebooklm",
+    "headline": "6 Best NotebookLM Alternatives for Document Analysis (2026)",
+    "grammar": 0.09,
+    "weight": 3.01,
+    "compete": 0.24,
+    "prose": 0.88,
+    "defect": 0.764,
+    "priority": 0.575
+  },
+  {
+    "url": "/alternatives/humata",
+    "headline": "5 Best Humata AI Alternatives in 2026",
+    "grammar": 0.13,
+    "weight": 3.02,
+    "compete": 0.26,
+    "prose": 0.86,
+    "defect": 0.758,
+    "priority": 0.573
+  },
+  {
+    "url": "/compare/chatpdf",
+    "headline": "DocTalk vs ChatPDF: Full Comparison (2026)",
+    "grammar": 0.04,
+    "weight": 3.01,
+    "compete": 0.08,
+    "prose": 0.88,
+    "defect": 0.73,
+    "priority": 0.549
+  },
+  {
+    "url": "/compare/humata",
+    "headline": "DocTalk vs Humata: AI Document Tool Comparison",
+    "grammar": 0.03,
+    "weight": 3.0,
+    "compete": 0.09,
+    "prose": 0.87,
+    "defect": 0.73,
+    "priority": 0.548
+  },
+  {
+    "url": "/compare/pdf-ai",
+    "headline": "DocTalk vs PDF.ai: AI PDF Tool Comparison (2026)",
+    "grammar": 0.06,
+    "weight": 3.0,
+    "compete": 0.08,
+    "prose": 0.87,
+    "defect": 0.724,
+    "priority": 0.543
+  },
+  {
+    "url": "/compare/notebooklm",
+    "headline": "DocTalk vs NotebookLM: Which AI Document Tool?",
+    "grammar": 0.16,
+    "weight": 3.0,
+    "compete": 0.08,
+    "prose": 0.9,
+    "defect": 0.722,
+    "priority": 0.541
+  },
+  {
+    "url": "/compare/askyourpdf",
+    "headline": "DocTalk vs AskYourPDF: Which AI PDF Tool Is Better?",
+    "grammar": 0.3,
+    "weight": 3.0,
+    "compete": 0.08,
+    "prose": 0.88,
+    "defect": 0.7,
+    "priority": 0.525
+  },
+  {
+    "url": "/alternatives/askyourpdf",
+    "headline": "7 Best AskYourPDF Alternatives in 2026",
+    "grammar": 0.11,
+    "weight": 3.01,
+    "compete": 0.09,
+    "prose": 0.75,
+    "defect": 0.685,
+    "priority": 0.516
+  },
+  {
+    "url": "/alternatives/pdf-ai",
+    "headline": "7 Best PDF.ai Alternatives in 2026",
+    "grammar": 0.19,
+    "weight": 3.01,
+    "compete": 0.08,
+    "prose": 0.74,
+    "defect": 0.671,
+    "priority": 0.505
+  },
+  {
+    "url": "/features",
+    "headline": "DocTalk Features",
+    "grammar": 0.03,
+    "weight": 2.27,
+    "compete": 0.78,
+    "prose": 0.68,
+    "defect": 0.846,
+    "priority": 0.48
+  },
+  {
+    "url": "/use-cases/finance",
+    "headline": "AI 10-K and Financial Report Analysis with Cited Sources",
+    "grammar": 0.26,
+    "weight": 2.35,
+    "compete": 0.07,
+    "prose": 0.8,
+    "defect": 0.678,
+    "priority": 0.398
+  },
+  {
+    "url": "/use-cases/lawyers",
+    "headline": "AI-Powered Legal Document Analysis with Verifiable Citations",
+    "grammar": 0.44,
+    "weight": 2.46,
+    "compete": 0.07,
+    "prose": 0.75,
+    "defect": 0.643,
+    "priority": 0.395
+  },
+  {
+    "url": "/use-cases/students",
+    "headline": "AI-Powered Research Paper Analysis for Students and Academics",
+    "grammar": 0.32,
+    "weight": 2.31,
+    "compete": 0.07,
+    "prose": 0.77,
+    "defect": 0.663,
+    "priority": 0.383
+  },
+  {
+    "url": "/use-cases/real-estate",
+    "headline": "AI Document Analysis for Real Estate Professionals",
+    "grammar": 0.22,
+    "weight": 2.48,
+    "compete": 0.07,
+    "prose": 0.56,
+    "defect": 0.611,
+    "priority": 0.379
+  },
+  {
+    "url": "/use-cases/compliance",
+    "headline": "AI Document Analysis for Compliance and Risk Teams",
+    "grammar": 0.25,
+    "weight": 2.45,
+    "compete": 0.07,
+    "prose": 0.57,
+    "defect": 0.61,
+    "priority": 0.374
+  },
+  {
+    "url": "/use-cases",
+    "headline": "AI Document Analysis for Every Profession",
+    "grammar": 1.06,
+    "weight": 2.24,
+    "compete": 0.56,
+    "prose": 0.63,
+    "defect": 0.66,
+    "priority": 0.369
+  },
+  {
+    "url": "/use-cases/consultants",
+    "headline": "AI Document Analysis for Consultants and Advisors",
+    "grammar": 0.27,
+    "weight": 2.29,
+    "compete": 0.07,
+    "prose": 0.62,
+    "defect": 0.623,
+    "priority": 0.357
+  },
+  {
+    "url": "/use-cases/teachers",
+    "headline": "AI Document Analysis for Teachers and Educators",
+    "grammar": 0.21,
+    "weight": 2.26,
+    "compete": 0.07,
+    "prose": 0.62,
+    "defect": 0.63,
+    "priority": 0.356
+  },
+  {
+    "url": "/use-cases/hr-contracts",
+    "headline": "AI-Powered Contract & HR Document Review",
+    "grammar": 0.47,
+    "weight": 2.25,
+    "compete": 0.07,
+    "prose": 0.7,
+    "defect": 0.625,
+    "priority": 0.351
+  },
+  {
+    "url": "/use-cases/healthcare",
+    "headline": "AI Document Analysis for Healthcare Professionals",
+    "grammar": 0.4,
+    "weight": 2.23,
+    "compete": 0.06,
+    "prose": 0.67,
+    "defect": 0.621,
+    "priority": 0.346
+  },
+  {
+    "url": "/features/layout-translation",
+    "headline": "Layout-preserving PDF translation",
+    "grammar": 1.49,
+    "weight": 2.28,
+    "compete": 0.56,
+    "prose": 0.52,
+    "defect": 0.578,
+    "priority": 0.33
+  },
+  {
+    "url": "/features/free-demo",
+    "headline": "Try DocTalk Free — No Account Required",
+    "grammar": 2.02,
+    "weight": 2.93,
+    "compete": 0.07,
+    "prose": 0.56,
+    "defect": 0.408,
+    "priority": 0.299
+  },
+  {
+    "url": "/trust",
+    "headline": "The real controls protecting your documents.",
+    "grammar": 2.47,
+    "weight": 2.49,
+    "compete": 0.28,
+    "prose": 0.73,
+    "defect": 0.461,
+    "priority": 0.287
+  },
+  {
+    "url": "/features/citations",
+    "headline": "AI Answers You Can Trust: Source Citations with Real-Time Highlighting",
+    "grammar": 1.59,
+    "weight": 2.41,
+    "compete": 0.06,
+    "prose": 0.63,
+    "defect": 0.475,
+    "priority": 0.286
+  },
+  {
+    "url": "/demo",
+    "headline": "Choose a sample document",
+    "grammar": 1.49,
+    "weight": 3.14,
+    "compete": 0.11,
+    "prose": 0.1,
+    "defect": 0.34,
+    "priority": 0.267
+  },
+  {
+    "url": "/",
+    "headline": "Every answer cites the exact page.",
+    "grammar": 2.82,
+    "weight": 3.54,
+    "compete": 0.43,
+    "prose": 0.13,
+    "defect": 0.279,
+    "priority": 0.247
+  },
+  {
+    "url": "/features/performance-modes",
+    "headline": "Choose Your AI Performance Mode",
+    "grammar": 2.03,
+    "weight": 2.03,
+    "compete": 0.07,
+    "prose": 0.62,
+    "defect": 0.425,
+    "priority": 0.216
+  },
+  {
+    "url": "/tools",
+    "headline": "Document tools for quick checks before deeper AI analysis.",
+    "grammar": 1.21,
+    "weight": 1.33,
+    "compete": 0.74,
+    "prose": 0.5,
+    "defect": 0.649,
+    "priority": 0.216
+  },
+  {
+    "url": "/features/multilingual",
+    "headline": "Chat with Documents in 11 Languages",
+    "grammar": 2.4,
+    "weight": 2.21,
+    "compete": 0.07,
+    "prose": 0.64,
+    "defect": 0.39,
+    "priority": 0.215
+  },
+  {
+    "url": "/features/multi-format",
+    "headline": "Chat with Any Document Format Using AI",
+    "grammar": 2.47,
+    "weight": 2.24,
+    "compete": 0.06,
+    "prose": 0.57,
+    "defect": 0.358,
+    "priority": 0.201
+  },
+  {
+    "url": "/about",
+    "headline": "AI document chat designed for answers you can verify.",
+    "grammar": 1.31,
+    "weight": 1.07,
+    "compete": 0.07,
+    "prose": 0.91,
+    "defect": 0.593,
+    "priority": 0.159
+  },
+  {
+    "url": "/tools/word-counter",
+    "headline": "Free Document Word Counter",
+    "grammar": 0.49,
+    "weight": 0.97,
+    "compete": 0.34,
+    "prose": 0.54,
+    "defect": 0.642,
+    "priority": 0.156
+  },
+  {
+    "url": "/tools/reading-time",
+    "headline": "Reading Time Calculator",
+    "grammar": 0.07,
+    "weight": 0.9,
+    "compete": 0.11,
+    "prose": 0.51,
+    "defect": 0.623,
+    "priority": 0.14
+  },
+  {
+    "url": "/contact",
+    "headline": "Reach the DocTalk team.",
+    "grammar": 2.14,
+    "weight": 0.06,
+    "compete": 0.32,
+    "prose": 0.63,
+    "defect": 0.478,
+    "priority": 0.007
+  },
+  {
+    "url": "/privacy",
+    "headline": "Privacy Policy",
+    "grammar": 0.01,
+    "weight": 0.02,
+    "compete": 0.1,
+    "prose": 0.76,
+    "defect": 0.702,
+    "priority": 0.004
+  },
+  {
+    "url": "/terms",
+    "headline": "Terms of Service",
+    "grammar": 0.01,
+    "weight": 0.01,
+    "compete": 0.05,
+    "prose": 0.81,
+    "defect": 0.704,
+    "priority": 0.002
+  }
+]

@@ -1,0 +1,42 @@
+pair                                 role                      ratio  AA4.5  AAA7
+----------------------------------------------------------------------------------
+editorial body on paper              body text                  5.66  PASS   —
+editorial ink on paper               headline                  13.22  PASS   pass
+editorial ink-3 muted on paper       small label / eyebrow      2.87  FAIL   —
+editorial terracotta on paper        link / CTA text            4.83  PASS   —
+editorial slate on paper             link                       9.69  PASS   pass
+editorial olive on paper             verified state             5.16  PASS   —
+white on terracotta CTA              primary button label       5.91  PASS   —
+white on terracotta-deep             primary button hover       7.90  PASS   pass
+app fg on white                      body                      19.90  PASS   pass
+app accent blue on white             link / CTA text            6.70  PASS   —
+white on accent blue                 primary button label       6.70  PASS   —
+app fg on page bg                    body on canvas            18.71  PASS   pass
+workbench muted on canvas            secondary label            4.27  FAIL   —
+workbench ink on canvas              primary UI text           15.92  PASS   pass
+reader ink on reader bg              reader body               13.08  PASS   pass
+reader muted on reader bg            reader secondary           4.67  PASS   —
+reader evidence on reader bg         citation marker            3.23  FAIL   —
+reader evidence on evidence-soft     highlighted citation       3.32  FAIL   —
+dark fg on dark bg                   body (dark)               19.06  PASS   pass
+dark accent on dark bg               link (dark)                7.83  PASS   pass
+dark accent on surface-1             link on card (dark)        6.97  PASS   —
+accent-fg on dark accent             button label (dark)        7.09  PASS   pass
+workbench muted on dark canvas       secondary label (dark)     3.94  FAIL   —
+
+Below the HIG 4.5:1 floor: 5
+  ✗ editorial ink-3 muted on paper (small label / eyebrow) = 2.87:1
+  ✗ workbench muted on canvas (secondary label) = 4.27:1
+  ✗ reader evidence on reader bg (citation marker) = 3.23:1
+  ✗ reader evidence on evidence-soft (highlighted citation) = 3.32:1
+  ✗ workbench muted on dark canvas (secondary label (dark)) = 3.94:1
+
+Passes 4.5 but below the 7:1 target for small text: 8
+  · editorial body on paper (body text) = 5.66:1
+  · editorial terracotta on paper (link / CTA text) = 4.83:1
+  · editorial olive on paper (verified state) = 5.16:1
+  · white on terracotta CTA (primary button label) = 5.91:1
+  · app accent blue on white (link / CTA text) = 6.70:1
+  · white on accent blue (primary button label) = 6.70:1
+  · reader muted on reader bg (reader secondary) = 4.67:1
+  · dark accent on surface-1 (link on card (dark)) = 6.97:1

@@ -1,0 +1,48 @@
+route                         prio  defect  hdln/4  acq/4  compete  prose   headline
+------------------------------------------------------------------------------------------------------
+/pricing                      0.74  0.75    1.1     4.0    0.89     0.67   Pricing built around real document work, not
+/alternatives                 0.64  0.85    0.0     3.0    0.86     0.63   AI Document Tool Alternatives
+/compare                      0.62  0.82    0.0     3.0    0.82     0.57   AI Document Tool Comparisons
+/alternatives/chatpdf         0.58  0.76    0.1     3.0    0.27     0.87   7 Best ChatPDF Alternatives in 2026 (Free & 
+/alternatives/notebooklm      0.57  0.76    0.1     3.0    0.24     0.88   6 Best NotebookLM Alternatives for Document 
+/alternatives/humata          0.57  0.76    0.1     3.0    0.26     0.86   5 Best Humata AI Alternatives in 2026
+/compare/chatpdf              0.55  0.73    0.0     3.0    0.08     0.88   DocTalk vs ChatPDF: Full Comparison (2026)
+/compare/humata               0.55  0.73    0.0     3.0    0.09     0.87   DocTalk vs Humata: AI Document Tool Comparis
+/compare/pdf-ai               0.54  0.72    0.1     3.0    0.08     0.87   DocTalk vs PDF.ai: AI PDF Tool Comparison (2
+/compare/notebooklm           0.54  0.72    0.2     3.0    0.08     0.90   DocTalk vs NotebookLM: Which AI Document Too
+/compare/askyourpdf           0.53  0.70    0.3     3.0    0.08     0.88   DocTalk vs AskYourPDF: Which AI PDF Tool Is 
+/alternatives/askyourpdf      0.52  0.69    0.1     3.0    0.09     0.75   7 Best AskYourPDF Alternatives in 2026
+/alternatives/pdf-ai          0.51  0.67    0.2     3.0    0.08     0.74   7 Best PDF.ai Alternatives in 2026
+/features                     0.48  0.85    0.0     2.3    0.78     0.68   DocTalk Features
+/use-cases/finance            0.40  0.68    0.3     2.4    0.07     0.80   AI 10-K and Financial Report Analysis with C
+/use-cases/lawyers            0.40  0.64    0.4     2.5    0.07     0.75   AI-Powered Legal Document Analysis with Veri
+/use-cases/students           0.38  0.66    0.3     2.3    0.07     0.77   AI-Powered Research Paper Analysis for Stude
+/use-cases/real-estate        0.38  0.61    0.2     2.5    0.07     0.56   AI Document Analysis for Real Estate Profess
+/use-cases/compliance         0.37  0.61    0.2     2.5    0.07     0.57   AI Document Analysis for Compliance and Risk
+/use-cases                    0.37  0.66    1.1     2.2    0.56     0.63   AI Document Analysis for Every Profession
+/use-cases/consultants        0.36  0.62    0.3     2.3    0.07     0.62   AI Document Analysis for Consultants and Adv
+/use-cases/teachers           0.36  0.63    0.2     2.3    0.07     0.62   AI Document Analysis for Teachers and Educat
+/use-cases/hr-contracts       0.35  0.62    0.5     2.2    0.07     0.70   AI-Powered Contract & HR Document Review
+/use-cases/healthcare         0.35  0.62    0.4     2.2    0.06     0.67   AI Document Analysis for Healthcare Professi
+/features/layout-translation  0.33  0.58    1.5     2.3    0.56     0.52   Layout-preserving PDF translation
+/features/free-demo           0.30  0.41    2.0     2.9    0.07     0.56   Try DocTalk Free — No Account Required
+/trust                        0.29  0.46    2.5     2.5    0.28     0.73   The real controls protecting your documents.
+/features/citations           0.29  0.47    1.6     2.4    0.06     0.63   AI Answers You Can Trust: Source Citations w
+/demo                         0.27  0.34    1.5     3.1    0.11     0.10   Choose a sample document
+/                             0.25  0.28    2.8     3.5    0.43     0.13   Every answer cites the exact page.
+/features/performance-modes   0.22  0.42    2.0     2.0    0.07     0.62   Choose Your AI Performance Mode
+/tools                        0.22  0.65    1.2     1.3    0.74     0.50   Document tools for quick checks before deepe
+/features/multilingual        0.21  0.39    2.4     2.2    0.07     0.64   Chat with Documents in 11 Languages
+/features/multi-format        0.20  0.36    2.5     2.2    0.06     0.57   Chat with Any Document Format Using AI
+/about                        0.16  0.59    1.3     1.1    0.07     0.91   AI document chat designed for answers you ca
+/tools/word-counter           0.16  0.64    0.5     1.0    0.34     0.54   Free Document Word Counter
+/tools/reading-time           0.14  0.62    0.1     0.9    0.11     0.51   Reading Time Calculator
+/contact                      0.01  0.48    2.1     0.1    0.32     0.63   Reach the DocTalk team.
+/privacy                      0.00  0.70    0.0     0.0    0.10     0.76   Privacy Policy
+/terms                        0.00  0.70    0.0     0.0    0.05     0.81   Terms of Service
+
+routes judged: 40
+headline grammar mean: 0.76 / 4
+routes with competing actions >0.5 : 7
+routes with prose-before-product >0.5 : 37
+routes scoring <2 on headline grammar : 33
