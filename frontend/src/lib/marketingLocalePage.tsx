@@ -3,20 +3,27 @@ import { notFound } from 'next/navigation';
 import { getServerT } from '../i18n/server';
 import { isUrlLocale } from '../i18n/routing';
 import { buildMarketingMetadata } from './seo';
-import MarketingArticleJsonLd from '../components/marketing/MarketingArticleJsonLd';
 
 /**
  * Factory for `app/[locale]/<route>/page.tsx` files. Removes per-page boilerplate
  * for the localized marketing rollout: builds locale metadata (title/description
  * from translation keys + hreflang via buildMarketingMetadata), validates the
- * locale, and renders generic Article JSON-LD (or an explicit page-specific
- * JsonLd component) + the shared server content component.
+ * locale, and renders the page's own JSON-LD component + the shared server
+ * content component.
  * The `[locale]/layout.tsx` `generateStaticParams` supplies the locale
  * params, so page files need only metadata + the default component.
  *
+ * `JsonLd` is REQUIRED. It used to be optional, falling back to a generic
+ * Article-only component; `/features/layout-translation` was the one caller that
+ * took the fallback, so its ten locale pages shipped without the FAQ/breadcrumb/
+ * SoftwareApplication schema every sibling page emits. Making the prop required
+ * moves that class of omission from "silently degraded at runtime" to a type
+ * error at build time.
+ *
  * Usage:
  *   const page = createMarketingLocalePage({ Content: FinanceContent,
- *     path: '/use-cases/finance', titleKey: 'useCasesFinance.heroTitle',
+ *     JsonLd: FinanceJsonLd, path: '/use-cases/finance',
+ *     titleKey: 'useCasesFinance.heroTitle',
  *     descKey: 'useCasesFinance.heroDescription', keywords: [...] });
  *   export const generateMetadata = page.generateMetadata;
  *   export default page.Page;
@@ -27,7 +34,6 @@ export function createMarketingLocalePage({
   titleKey,
   descKey,
   keywords,
-  datePublished,
   JsonLd,
 }: {
   Content: (props: { locale: string }) => Promise<JSX.Element> | JSX.Element;
@@ -35,8 +41,7 @@ export function createMarketingLocalePage({
   titleKey: string;
   descKey: string;
   keywords?: string[];
-  datePublished?: string;
-  JsonLd?: (props: { locale: string }) => Promise<JSX.Element> | JSX.Element;
+  JsonLd: (props: { locale: string }) => Promise<JSX.Element> | JSX.Element;
 }) {
   async function generateMetadata({ params }: { params: { locale: string } }): Promise<Metadata> {
     const { t } = await getServerT(params.locale);
@@ -57,15 +62,7 @@ export function createMarketingLocalePage({
     if (!isUrlLocale(params.locale)) notFound();
     return (
       <>
-        {JsonLd ? <JsonLd locale={params.locale} /> : (
-          <MarketingArticleJsonLd
-            locale={params.locale}
-            path={path}
-            titleKey={titleKey}
-            descKey={descKey}
-            datePublished={datePublished}
-          />
-        )}
+        <JsonLd locale={params.locale} />
         <Content locale={params.locale} />
       </>
     );

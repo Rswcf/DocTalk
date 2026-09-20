@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import LayoutTranslationContent from './LayoutTranslationContent';
+import LayoutTranslationJsonLd from './LayoutTranslationJsonLd';
 import { buildMarketingMetadata } from '../../../lib/seo';
 
 export const metadata: Metadata = buildMarketingMetadata({
@@ -15,5 +16,10 @@ export const metadata: Metadata = buildMarketingMetadata({
 });
 
 export default function LayoutTranslationPage() {
-  return <LayoutTranslationContent locale="en" />;
+  return (
+    <>
+      <LayoutTranslationJsonLd locale="en" />
+      <LayoutTranslationContent locale="en" />
+    </>
+  );
 }

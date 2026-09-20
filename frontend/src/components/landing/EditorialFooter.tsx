@@ -37,6 +37,7 @@ export default function EditorialFooter({ chrome }: { chrome?: ChromeStrings }) 
     blog: f?.blog ?? t("footer.links.blog"),
     comparisonGuides: f?.comparisonGuides ?? t("footer.links.comparisonGuides"),
     multiFormatSupport: f?.multiFormatSupport ?? t("footer.links.multiFormatSupport"),
+    tools: f?.tools ?? t("footer.links.tools"),
     about: f?.about ?? t("footer.links.about"),
     contact: f?.contact ?? t("footer.contact"),
     trust: f?.trust ?? t("footer.links.trust"),
@@ -70,6 +71,7 @@ export default function EditorialFooter({ chrome }: { chrome?: ChromeStrings }) 
     { href: lh("/blog"), label: L.blog },
     { href: lh("/blog/category/comparisons"), label: L.comparisonGuides },
     { href: lh("/features/multi-format"), label: L.multiFormatSupport },
+    { href: lh("/tools"), label: L.tools },
   ];
 
   const companyLinks = [

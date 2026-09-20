@@ -90,3 +90,6 @@ frontend/tsconfig.tsbuildinfo
 
 # Replay fixtures (large, restored from MinIO; do not commit)
 backend/test_inputs/replay/
+
+# Jev SEO harness raw output (tables are committed under .collab/reviews/ instead)
+frontend/scripts/seo/out/

@@ -97,6 +97,9 @@ export default function BlogIndexClient({ posts }: BlogIndexClientProps) {
             <Link href="/use-cases" className="ed-link">
               {t('blog.index.panel.useCases')}
             </Link>
+            <Link href="/tools" className="ed-link">
+              {t('blog.index.panel.tools')}
+            </Link>
           </div>
         </div>
 

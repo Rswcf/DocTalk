@@ -43,6 +43,7 @@ export default function Footer() {
     { href: '/blog', label: t('footer.links.blog') },
     { href: '/blog/category/comparisons', label: t('footer.links.comparisonGuides') },
     { href: '/features/multi-format', label: t('footer.links.multiFormatSupport') },
+    { href: '/tools', label: t('footer.links.tools') },
   ];
   const companyLinks = [
     { href: '/about', label: t('footer.links.about') },

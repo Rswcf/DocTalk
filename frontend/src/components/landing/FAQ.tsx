@@ -3,17 +3,8 @@
 import React, { useState } from 'react';
 import { useLocale } from '../../i18n';
 import ScrollReveal from './ScrollReveal';
+import { FAQ_ITEMS } from './landingSchemaSources';
 
-const FILE_SUPPORT_FALLBACK = 'DocTalk supports PDF, DOCX, PPTX, XLSX, TXT, and Markdown files, plus web URLs. PDFs include scanned documents via built-in OCR. Direct uploads use plan limits of Free 50 MB / 750 pages, Plus 100 MB / 1,500 pages, and Pro 200 MB / 3,000 pages. URL imports are capped at 10 MB on every plan.';
-
-const FAQ_ITEMS = [
-  { q: 'landing.faq.q1', a: 'landing.faq.a1' },
-  { q: 'landing.faq.q2', a: 'landing.faq.a2', fallback: FILE_SUPPORT_FALLBACK },
-  { q: 'landing.faq.q3', a: 'landing.faq.a3' },
-  { q: 'landing.faq.q4', a: 'landing.faq.a4' },
-  { q: 'landing.faq.q5', a: 'landing.faq.a5' },
-  { q: 'landing.faq.q6', a: 'landing.faq.a6' },
-] as const;
 
 export default function FAQ() {
   const { t, tOr } = useLocale();

@@ -223,15 +223,66 @@ test('ItemList preserves supplied positions, product names and resolved URLs', a
   assert.ok(!('inLanguage' in blocks[1]), 'ItemList must not carry inLanguage');
 });
 
-test('factory keeps generic Article output and metadata without a schema override', async () => {
-  const LayoutTranslationLocalePage = loadSource('app/[locale]/features/layout-translation/page.tsx');
-  const blocks = await emittedSchemas(await LayoutTranslationLocalePage.default({ params: { locale: 'ja' } }));
-  assert.deepEqual(schemaTypes(blocks), ['Article']);
-  assert.equal(blocks[0].mainEntityOfPage['@id'], `${origin}/ja/features/layout-translation`);
+// Was: "factory keeps generic Article output ... without a schema override".
+// The optional-JsonLd fallback it pinned is gone — /features/layout-translation
+// was its only caller, and taking the fallback is why that page's ten locale
+// URLs shipped Article-only while every sibling emitted a breadcrumb trail.
+// `JsonLd` is now a required prop, so the fallback cannot be reached at all.
+test('layout-translation: Article + BreadcrumbList match rendered copy in all 11 languages', async () => {
+  // Not in `phase2Cases`: this page's `*Content` is a thin async wrapper that
+  // renders a separate `*PageContent`, so the shared `findElement(content, ...)`
+  // walk cannot reach its hero. Unwrap that one level here instead of changing
+  // the shared helper that twenty other cases depend on.
+  const EnPage = loadSource('app/features/layout-translation/page.tsx').default;
+  const LocalePage = loadSource('app/[locale]/features/layout-translation/page.tsx').default;
+  const PageContent = loadSource('app/features/layout-translation/LayoutTranslationPageContent.tsx').default;
+  const { getChromeStrings } = loadSource('i18n/chrome.ts');
+
+  for (const locale of MARKETING_LOCALES) {
+    const blocks = await emittedSchemas(locale === 'en' ? await EnPage() : await LocalePage({ params: { locale } }));
+    // No visible FAQ and no visible step list on this page, so neither may be emitted.
+    assert.deepEqual(schemaTypes(blocks), ['Article', 'BreadcrumbList', 'SoftwareApplication'],
+      `${locale}: exactly one of each intended block`);
+
+    const [article, breadcrumbs, software] = blocks;
+    assert.equal(article.inLanguage, locale);
+    assert.ok(!('inLanguage' in breadcrumbs), 'BreadcrumbList must not carry inLanguage');
+    const pageUrl = `${origin}${locale === 'en' ? '' : `/${locale}`}/features/layout-translation`;
+    assert.equal(article.mainEntityOfPage['@id'], pageUrl);
+
+    const { t, tOr } = await getServerT(locale);
+    const chrome = await getChromeStrings(locale);
+    const content = PageContent({ locale, t, tOr, chrome, languageLabel: chrome.language });
+    const hero = findElement(content, 'EdPageHero').props;
+    assert.equal(article.headline, hero.title, `${locale}: headline must equal the rendered hero title`);
+    assert.equal(article.description, hero.lede, `${locale}: description must equal the rendered hero lede`);
+
+    assert.deepEqual(software.offers.map((offer) => offer.price), ['0', '9.99', '19.99'],
+      `${locale}: numeric pricing facts only, same as the sibling feature pages`);
+
+    const trail = findElement(content, 'MarketingShell').props.breadcrumb;
+    assert.deepEqual(breadcrumbs.itemListElement, trail.map(({ label, href }, index) => ({
+      '@type': 'ListItem', position: index + 1, name: label,
+      ...(href ? { item: `${origin}${href}` } : {}),
+    })), `${locale}: breadcrumb schema must equal the rendered trail`);
+  }
+
   const { t } = await getServerT('ja');
-  const metadata = await LayoutTranslationLocalePage.generateMetadata({ params: { locale: 'ja' } });
+  const metadata = await loadSource('app/[locale]/features/layout-translation/page.tsx')
+    .generateMetadata({ params: { locale: 'ja' } });
   assert.equal(metadata.title, t('featuresLayoutTranslation.heroTitle'));
   assert.equal(metadata.alternates.canonical, '/ja/features/layout-translation');
+});
+test('the marketing locale factory requires a JsonLd component', () => {
+  const factory = fs.readFileSync(path.resolve(src, 'lib/marketingLocalePage.tsx'), 'utf8');
+  assert.ok(
+    /\n  JsonLd: \(props: \{ locale: string \}\)/.test(factory),
+    'JsonLd must stay a required prop — an optional one silently degrades a page to Article-only',
+  );
+  assert.ok(
+    !fs.existsSync(path.resolve(src, 'components/marketing/MarketingArticleJsonLd.tsx')),
+    'the Article-only fallback component must stay deleted',
+  );
 });
 
 test('schema override preserves locale validation and localized metadata', async () => {
@@ -397,4 +448,90 @@ test('every phase 2 schema translation exists directly in its locale, without En
   } finally {
     server.getServerT = original;
   }
+});
+
+// --- Home page (English root + ten locale roots) -----------------------------
+// Rendered directly rather than through the page: the landing route mounts
+// `HomePageClient`, a client component with hooks that `emittedSchemas` would try
+// to invoke. The two source assertions below cover the wiring instead.
+
+test('both home routes mount the shared HomeJsonLd', () => {
+  for (const file of ['app/page.tsx', 'app/[locale]/page.tsx']) {
+    const source = fs.readFileSync(path.resolve(src, file), 'utf8');
+    assert.match(source, /<HomeJsonLd locale=/, `${file} must render HomeJsonLd`);
+    assert.ok(
+      !/'@type': 'FAQPage'|'@type': 'HowTo'|'@type': 'SoftwareApplication'/.test(source),
+      `${file} must not hardcode schema blocks — they belong in HomeJsonLd, resolved from keys`,
+    );
+  }
+});
+
+test('home schema matches the visible landing copy in all 11 languages', async () => {
+  const HomeJsonLd = loadSource('app/HomeJsonLd.tsx').default;
+  const { FAQ_ITEMS, HOW_IT_WORKS_STEPS } = loadSource('components/landing/landingSchemaSources.ts');
+
+  for (const locale of MARKETING_LOCALES) {
+    const blocks = await emittedSchemas(await HomeJsonLd({ locale }));
+    // First script is an @graph wrapper (WebSite + Organization, as the English
+    // root has always emitted); the other three are standalone typed blocks.
+    assert.deepEqual(
+      blocks[0]['@graph'].map((node) => node['@type']),
+      ['WebSite', 'Organization'],
+      `${locale}: @graph holds WebSite + Organization`,
+    );
+    assert.deepEqual(
+      schemaTypes(blocks.slice(1)),
+      ['FAQPage', 'SoftwareApplication', 'HowTo'],
+      `${locale}: every home page emits the same rich types`,
+    );
+
+    const { t, tOr } = await getServerT(locale);
+    const byType = (type) => blocks.slice(1).find((block) => block['@type'] === type)
+      ?? blocks[0]['@graph'].find((node) => node['@type'] === type);
+
+    const faq = byType('FAQPage');
+    assert.equal(faq.inLanguage, locale);
+    assert.deepEqual(
+      faqEntries(faq),
+      FAQ_ITEMS.map((item) => ({
+        question: t(item.q),
+        answer: 'fallback' in item ? tOr(item.a, item.fallback) : t(item.a),
+      })),
+      `${locale}: FAQ schema must equal what the visible FAQ section renders`,
+    );
+
+    const howTo = byType('HowTo');
+    assert.equal(howTo.name, t('landing.howItWorks.title'));
+    assert.deepEqual(
+      howTo.step.map(({ name, text }) => ({ name, text })),
+      HOW_IT_WORKS_STEPS.map((step) => ({ name: t(step.titleKey), text: t(step.descKey) })),
+      `${locale}: HowTo steps must equal the visible How-it-works steps`,
+    );
+
+    const localeRoot = locale === 'en' ? origin : `${origin}/${locale}`;
+    assert.equal(byType('WebSite').url.replace(/\/$/, ''), localeRoot);
+    assert.equal(byType('SoftwareApplication').url.replace(/\/$/, ''), localeRoot);
+    assert.deepEqual(
+      byType('SoftwareApplication').offers.map((offer) => offer.price),
+      ['0', '9.99', '19.99'],
+      'numeric pricing facts only',
+    );
+    for (const offer of byType('SoftwareApplication').offers) {
+      assert.ok(!('name' in offer) && !('description' in offer), 'offers carry no untranslated English prose');
+    }
+    assert.ok(!('featureList' in byType('SoftwareApplication')), 'featureList was English-only; it stays dropped');
+  }
+});
+
+test('home SoftwareApplication dateModified is a pinned literal, not the build date', async () => {
+  // The invariant is "constant", not "some particular day": a computed date makes
+  // the emitted markup differ on every build for no reader benefit.
+  const source = fs.readFileSync(path.resolve(src, 'app/HomeJsonLd.tsx'), 'utf8');
+  const pinned = source.match(/const DATE_MODIFIED = '(\d{4}-\d{2}-\d{2})'/);
+  assert.ok(pinned, 'DATE_MODIFIED must be a date literal in the source');
+
+  const HomeJsonLd = loadSource('app/HomeJsonLd.tsx').default;
+  const blocks = await emittedSchemas(await HomeJsonLd({ locale: 'en' }));
+  const software = blocks.find((block) => block['@type'] === 'SoftwareApplication');
+  assert.equal(software.dateModified, pinned[1], 'emitted dateModified must be that literal');
 });

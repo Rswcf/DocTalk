@@ -234,6 +234,7 @@ export default async function FreeDemoContent({ locale }: { locale: string }) {
             { href: href('/pricing'), label: t('featuresDemo.cta.linkPricing') },
             { href: href('/features/citations'), label: t('featuresDemo.cta.linkCitations') },
             { href: href('/features/multi-format'), label: t('featuresDemo.cta.linkMultiFormat') },
+            { href: href('/tools'), label: t('featuresDemo.cta.linkTools') },
           ]}
         />
       </EdSection>

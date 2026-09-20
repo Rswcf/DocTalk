@@ -1,7 +1,8 @@
 import type { Metadata } from 'next';
 import HomePageClient from './HomePageClient';
 import MarketingLocaleLinks from '../components/marketing/MarketingLocaleLinks';
-import { absoluteUrl, buildMarketingMetadata } from '../lib/seo';
+import HomeJsonLd from './HomeJsonLd';
+import { buildMarketingMetadata } from '../lib/seo';
 
 export const metadata: Metadata = buildMarketingMetadata({
   title: { absolute: 'DocTalk — AI Document Chat with Cited Answers' },
@@ -31,146 +32,7 @@ export const metadata: Metadata = buildMarketingMetadata({
 export default function HomePage() {
   return (
     <>
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{
-          __html: JSON.stringify({
-            '@context': 'https://schema.org',
-            '@graph': [
-              {
-                '@type': 'WebSite',
-                name: 'DocTalk',
-                alternateName: 'DocTalk AI',
-                url: 'https://www.doctalk.site',
-                description: 'AI document chat with cited answers.',
-              },
-              {
-                '@type': 'Organization',
-                name: 'DocTalk',
-                url: 'https://www.doctalk.site',
-                logo: absoluteUrl('/logo-icon.png'),
-                description:
-                  'AI-powered document chat app. Upload PDF, DOCX, PPTX, XLSX, TXT, Markdown, and URLs to get cited answers.',
-                foundingDate: '2025',
-                sameAs: ['https://github.com/Rswcf/DocTalk'],
-                contactPoint: {
-                  '@type': 'ContactPoint',
-                  email: 'support@doctalk.site',
-                  contactType: 'customer support',
-                },
-              },
-            ],
-          }),
-        }}
-      />
-
-      {/* FAQPage JSON-LD */}
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({
-        '@context': 'https://schema.org',
-        '@type': 'FAQPage',
-        mainEntity: [
-          {
-            '@type': 'Question',
-            name: 'How accurate are the AI answers?',
-            acceptedAnswer: {
-              '@type': 'Answer',
-              text: 'Every answer includes numbered citations that link to the exact passage in your document. Click any citation to jump to the source and see it highlighted. You always verify the AI\'s work yourself.',
-            },
-          },
-          {
-            '@type': 'Question',
-            name: 'What file types are supported?',
-            acceptedAnswer: {
-              '@type': 'Answer',
-              text: 'DocTalk supports PDF, DOCX, PPTX, XLSX, TXT, and Markdown files, plus web URLs. PDFs include scanned documents via built-in OCR. Direct uploads use plan limits of Free 50 MB / 750 pages, Plus 100 MB / 1,500 pages, and Pro 200 MB / 3,000 pages. URL imports are capped at 10 MB on every plan.',
-            },
-          },
-          {
-            '@type': 'Question',
-            name: 'Is my data secure?',
-            acceptedAnswer: {
-              '@type': 'Answer',
-              text: 'Your documents are private by default and can be deleted from your account. Shared links expose the content you choose to share. DocTalk does not use your data to train models; see our privacy policy for processing providers and their terms.',
-            },
-          },
-          {
-            '@type': 'Question',
-            name: 'Which AI models can I use?',
-            acceptedAnswer: {
-              '@type': 'Answer',
-              text: 'DocTalk offers 2 performance modes: Flash for fast cited answers and Pro for deeper document analysis. Free users can use Flash and limited Pro. Plus removes the Pro monthly cap.',
-            },
-          },
-          {
-            '@type': 'Question',
-            name: 'Is there a free tier?',
-            acceptedAnswer: {
-              '@type': 'Answer',
-              text: 'Yes! Free accounts include 300 credits per month, enough for dozens of questions. No credit card required to get started.',
-            },
-          },
-          {
-            '@type': 'Question',
-            name: 'Can it handle long documents?',
-            acceptedAnswer: {
-              '@type': 'Answer',
-              text: 'Yes. Per-document page limits are 750 on Free, 1,500 on Plus, and 3,000 on Pro. Smart chunking and semantic search keep answers accurate across long documents.',
-            },
-          },
-        ],
-      })}} />
-
-      {/* SoftwareApplication JSON-LD */}
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({
-        '@context': 'https://schema.org',
-        '@type': 'SoftwareApplication',
-        name: 'DocTalk',
-        applicationCategory: 'ProductivityApplication',
-        operatingSystem: 'Web',
-        url: 'https://www.doctalk.site',
-        description: 'AI-powered document chat with cited answers. Upload PDF, DOCX, PPTX, XLSX and get instant answers with source citations.',
-        offers: [
-          { '@type': 'Offer', price: '0', priceCurrency: 'USD', name: 'Free', description: '300 credits/month' },
-          { '@type': 'Offer', price: '9.99', priceCurrency: 'USD', name: 'Plus', description: '3000 credits/month' },
-          { '@type': 'Offer', price: '19.99', priceCurrency: 'USD', name: 'Pro', description: '9000 credits/month' },
-        ],
-        featureList: ['PDF chat', 'DOCX analysis', 'PPTX analysis', 'XLSX analysis', 'Citation highlighting', 'OCR support', '11 languages', '2 AI performance modes'],
-        datePublished: '2026-01-15',
-        dateModified: new Date().toISOString().split('T')[0],
-      })}} />
-
-      {/* HowTo JSON-LD */}
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({
-        '@context': 'https://schema.org',
-        '@type': 'HowTo',
-        name: 'How to chat with your documents using DocTalk',
-        description: 'Upload any document and get AI-powered answers with source citations in 3 simple steps.',
-        totalTime: 'PT2M',
-        step: [
-          {
-            '@type': 'HowToStep',
-            position: 1,
-            name: 'Upload your document',
-            text: 'Upload a PDF, Word, PowerPoint, Excel, or text file, or paste a web URL. Drag, drop, done.',
-            url: 'https://www.doctalk.site/#how-it-works',
-          },
-          {
-            '@type': 'HowToStep',
-            position: 2,
-            name: 'Ask questions',
-            text: 'Type naturally — like asking a colleague who just read the whole thing.',
-            url: 'https://www.doctalk.site/#how-it-works',
-          },
-          {
-            '@type': 'HowToStep',
-            position: 3,
-            name: 'Get verified answers',
-            text: 'Every answer cites specific pages. Click a citation to jump straight to the source.',
-            url: 'https://www.doctalk.site/#how-it-works',
-          },
-        ],
-      })}} />
-
+      <HomeJsonLd locale="en" />
       <HomePageClient />
       <MarketingLocaleLinks path="/" />
     </>

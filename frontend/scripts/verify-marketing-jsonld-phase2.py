@@ -28,6 +28,7 @@ PAGES = {
     'features': 0,
     'features/citations': 5,
     'features/free-demo': 5,
+    'features/layout-translation': 0,
     'features/multi-format': 5,
     'features/multilingual': 4,
     'features/performance-modes': 4,

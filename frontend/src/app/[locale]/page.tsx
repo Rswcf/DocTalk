@@ -4,8 +4,9 @@ import LandingPageContent from '../../components/landing/LandingPageContent';
 import LocaleProvider from '../../i18n/LocaleProvider';
 import MarketingLocaleLinks from '../../components/marketing/MarketingLocaleLinks';
 import { getServerT, getScopedMessages } from '../../i18n/server';
-import { buildMarketingMetadata, absoluteUrl } from '../../lib/seo';
-import { isUrlLocale, localizedHref } from '../../i18n/routing';
+import { buildMarketingMetadata } from '../../lib/seo';
+import HomeJsonLd from '../HomeJsonLd';
+import { isUrlLocale } from '../../i18n/routing';
 
 // Namespaces the landing tree (header + sections + footer + HeroArtifact) reads.
 // Seeding only these keeps the hydration payload ~17KB instead of the full 400KB.
@@ -37,32 +38,10 @@ export default async function LocaleLandingPage({ params }: { params: { locale: 
   const { t } = await getServerT(locale);
   const messages = await getScopedMessages(locale, LANDING_PREFIXES);
 
-  const websiteJsonLd = {
-    '@context': 'https://schema.org',
-    '@graph': [
-      {
-        '@type': 'WebSite',
-        name: 'DocTalk',
-        url: absoluteUrl(localizedHref(locale, '/')),
-        inLanguage: locale,
-        description: t('landing.description'),
-      },
-      {
-        '@type': 'Organization',
-        name: 'DocTalk',
-        url: absoluteUrl('/'),
-        logo: absoluteUrl('/logo-icon.png'),
-        sameAs: ['https://github.com/Rswcf/DocTalk'],
-      },
-    ],
-  };
 
   return (
     <>
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(websiteJsonLd) }}
-      />
+      <HomeJsonLd locale={locale} />
       <LocaleProvider initialLocale={locale} initialMessages={messages}>
         <LandingPageContent />
       </LocaleProvider>

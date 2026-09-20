@@ -37,6 +37,7 @@ export interface ChromeStrings {
     blog: string;
     comparisonGuides: string;
     multiFormatSupport: string;
+    tools: string;
     about: string;
     contact: string;
     trust: string;
@@ -77,6 +78,7 @@ export async function getChromeStrings(locale: string): Promise<ChromeStrings> {
       blog: t('footer.links.blog'),
       comparisonGuides: t('footer.links.comparisonGuides'),
       multiFormatSupport: t('footer.links.multiFormatSupport'),
+      tools: t('footer.links.tools'),
       about: t('footer.links.about'),
       contact: t('footer.contact'),
       trust: t('footer.links.trust'),

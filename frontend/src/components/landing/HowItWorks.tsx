@@ -3,12 +3,8 @@
 import React from 'react';
 import { useLocale } from '../../i18n';
 import ScrollReveal from './ScrollReveal';
+import { HOW_IT_WORKS_STEPS as steps } from './landingSchemaSources';
 
-const steps = [
-  { num: '01', titleKey: 'landing.howItWorks.step1.title', descKey: 'landing.howItWorks.step1.desc' },
-  { num: '02', titleKey: 'landing.howItWorks.step2.title', descKey: 'landing.howItWorks.step2.desc' },
-  { num: '03', titleKey: 'landing.howItWorks.step3.title', descKey: 'landing.howItWorks.step3.desc' },
-];
 
 export default function HowItWorks() {
   const { t, tOr } = useLocale();
