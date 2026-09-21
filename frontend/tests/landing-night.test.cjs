@@ -219,8 +219,8 @@ test('both field settings place the citation inside the laid-out repeats', () =>
 });
 
 test("the passage always starts below the claim's darkness pool", () => {
-  // The pool reaches `bottom: -40px` past the claim (editorial.css); the
-  // passage is anchored at the claim bottom + passageGap(), floored at 40.
+  // The pool reaches `bottom: -32px` past the claim (editorial.css); the
+  // passage is anchored at the claim bottom + passageGap(), floored at 32.
   // If either number moves alone, the pool covers the citation again
   // (review 2026-09-21, MAJOR-1).
   const css = stripCssComments(read('app/editorial.css'));

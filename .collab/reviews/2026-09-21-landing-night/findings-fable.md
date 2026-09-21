@@ -1,6 +1,8 @@
 # Landing Night, slices 1–2 — adversarial review (Fable, 2026-09-21)
 
-**Verdict: SHIP-WITH-FIXES (re-verified 2026-09-21 after `725f66e`, tree `4adf43e`, production build).** The two facts that blocked are gone — the pool no longer touches the passage (pixel diff 0 over the highlighted rows at six viewports) and the evidence is now by measurement — but two local residuals must land and be re-measured before any 1920×1080 capture reaches the owner or the 09-23 gate: the field's top-fade mask (`editorial.css:795-801`) still dims the cited sentence to 39–62 % at 1920×1080, where the un-cited text under it is brighter (MAJOR-1b), and the answer card overhangs the fold in 7 of 11 locales at 1366×768 (MAJOR-3, open for de/fr/pt/ja/ko/hi/es). Everything else is closed; see "Re-verification" at the end. No redesign.
+**Verdict: SHIP (final check 2026-09-21 after `ed77a85`, HEAD `6f061f6`, production build on :3200).** MAJOR-1b and MAJOR-3 are closed by measurement — passage p99 difference 0 against the pool-and-mask-free control and no card below the fold in all 23 re-run renders (en/de/ja/ko/hi × 1920×1080 / 1440×900 / 1366×768, plus ko/hi/ja/de × 1366×650 / 1280×720) — and the compact decision cannot oscillate. Nothing open; two nits for the 09-23 pass in "Final check" at the end.
+
+*Previous verdict (2026-09-21, after `725f66e`, tree `4adf43e`, before `ed77a85`): SHIP-WITH-FIXES.* The two facts that blocked are gone — the pool no longer touches the passage (pixel diff 0 over the highlighted rows at six viewports) and the evidence is now by measurement — but two local residuals must land and be re-measured before any 1920×1080 capture reaches the owner or the 09-23 gate: the field's top-fade mask (`editorial.css:795-801`) still dims the cited sentence to 39–62 % at 1920×1080, where the un-cited text under it is brighter (MAJOR-1b), and the answer card overhangs the fold in 7 of 11 locales at 1366×768 (MAJOR-3, open for de/fr/pt/ja/ko/hi/es). Everything else is closed; see "Re-verification" at the end. No redesign.
 
 *Original verdict (2026-09-21, before `725f66e`): BLOCK (short).* The slice fails its own §5 acceptance gate at the viewports most visitors have: under the committed CSS the claim's darkness pool sits on top of the cited passage — 95 %/94 %/75 % over its three lines at 1440×900 (measured live), ≈95 % over the whole passage on the 800 px stages of 1280×720, 1366×768 and 1024×768 (computed from measured geometry, consistent with their screenshots) — so the final frame shows no lit passage. The evidence PNGs in this folder show a render the committed CSS does not produce at those sizes, so the owner milestone review cannot proceed on them. The fix is one declaration plus a re-derivation of the pool box, but it changes the hero's composition, so the four desktop viewports must be re-verified and re-captured before the owner and Codex judge it. Everything else below is small and local; nothing needs redesign.
 
@@ -207,3 +209,23 @@ Lines 2–3 match the mask model to ±0.02 (`maskprofile.py`), so it is the mask
   Contrast audit, 54 pages, light OS: 0 below AA. 177/177 unit tests; lint and build pass.
 - The `frontend.md` zinc-pages sentence noted under "Not findings" was already removed in `12a8565`; the five pages
   are listed in the editorial surface.
+
+## Final check (Fable, 2026-09-21, after `ed77a85`; HEAD `6f061f6`, `next start` on :3200)
+
+- Re-measured with the committed tools (`herocheck.mjs` + `herocompare.py`), 23 renders: en/de/ja/ko/hi × 1920×1080,
+  1440×900, 1366×768, then ko/hi/ja/de × 1366×650, 1280×720 (the floor-height stages, where the mask's one fixed stop
+  `#000 86%` is most stressed). Passage p99 difference **0** in 23/23 (max 2) against the control without pool and mask
+  — MAJOR-1b closed, including 1920×1080 where the old mask dimmed 39–62 %; card overflow **none** in 23/23 (tightest:
+  ja 1366×650, card ends at 646/650) — MAJOR-3 closed; canvas topmost at the passage in all 23. The other 32
+  locale×viewport pairs are accepted from Resolution 2's 55-render run, not re-run.
+- Served build = the committed fix: BUILD_ID (20:12) predates the commit (20:20), but the served chunk carries
+  `--passage-top`, `.max(32,` and `is-compact`, and the served CSS `bottom:-32px` plus the 820/700 blocks; HEAD has
+  no diff against `ed77a85` in either source file.
+- Code read, no flip-flop: `wantCompact` is judged against the remembered full height, and the stage is never below
+  its floor, so every evaluation is ≥ the value at the floor — monotone, no two-cycle; the grow-stage → gap → passage
+  loop has slope 0.06 and converges (ja 1440×900 settles at stage 845). The card's `top` is the lowest covered span
+  + 16 and `sizeStage` grows the stage rather than pulling it up, so it cannot sit over the passage; at the floor
+  stage the passage (ja 1366×650: 343 of 640) stays well above the 86 % stop (550).
+- Nits for 09-23, not fixes: the comment at `tests/landing-night.test.cjs:222-223` still says `-40px` / "floored at
+  40" (the assertion is parametric, so the pin holds); `fullCardHeight` is frozen at the first layout, so before the
+  web fonts settle it can be a few px off — borderline only, not measured, no oscillation.
