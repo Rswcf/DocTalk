@@ -2,7 +2,6 @@
 
 import React from 'react';
 import { useLocale } from '../../i18n';
-import ScrollReveal from './ScrollReveal';
 
 /* ---------- Bespoke per-feature visuals — editorial neutrals ---------- */
 /* All backgrounds → var(--ed-paper-2), borders → var(--ed-rule),
@@ -244,14 +243,14 @@ export default function FeatureGrid() {
     <section id="features" className="ed-section">
       <div className="ed-shell">
         {/* Section header */}
-        <ScrollReveal>
+        <div>
           <div className="mb-10">
             <p className="ed-label mb-3">{t('landing.features.eyebrow')}</p>
             <h2 className="ed-h2 max-w-xl">
               {t('landing.features.title')}
             </h2>
           </div>
-        </ScrollReveal>
+        </div>
 
         <hr className="ed-rule mb-0" />
 
@@ -265,7 +264,7 @@ export default function FeatureGrid() {
 
             return (
               <React.Fragment key={titleKey}>
-                <ScrollReveal delay={Math.min((index % 2) * 80, 160)}>
+                <div>
                   <div
                     role="listitem"
                     className={[
@@ -296,7 +295,7 @@ export default function FeatureGrid() {
                       </div>
                     </div>
                   </div>
-                </ScrollReveal>
+                </div>
               </React.Fragment>
             );
           })}

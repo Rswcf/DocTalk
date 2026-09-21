@@ -2,7 +2,6 @@
 
 import React from 'react';
 import { useLocale } from '../../i18n';
-import ScrollReveal from './ScrollReveal';
 import { HOW_IT_WORKS_STEPS as steps } from './landingSchemaSources';
 
 
@@ -10,7 +9,7 @@ export default function HowItWorks() {
   const { t, tOr } = useLocale();
 
   return (
-    <ScrollReveal>
+    <div>
       <section id="how-it-works" className="ed-section">
         <div className="ed-shell">
           {/* Section header */}
@@ -42,6 +41,6 @@ export default function HowItWorks() {
           <hr className="ed-rule mt-0" />
         </div>
       </section>
-    </ScrollReveal>
+    </div>
   );
 }

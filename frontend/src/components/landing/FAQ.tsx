@@ -2,7 +2,6 @@
 
 import React, { useState } from 'react';
 import { useLocale } from '../../i18n';
-import ScrollReveal from './ScrollReveal';
 import { FAQ_ITEMS } from './landingSchemaSources';
 
 
@@ -17,20 +16,20 @@ export default function FAQ() {
   return (
     <section className="ed-section">
       <div className="ed-shell">
-        <ScrollReveal>
+        <div>
           <div className="max-w-[760px]">
             <p className="ed-label mb-3">{t('landing.faq.eyebrow')}</p>
             <h2 className="ed-h2 mb-10">{t('landing.faq.title')}</h2>
           </div>
           <hr className="ed-rule" />
-        </ScrollReveal>
+        </div>
 
         <div className="max-w-[760px]">
           {FAQ_ITEMS.map((item, idx) => {
             const num = String(idx + 1).padStart(2, '0');
             const isOpen = openIndex === idx;
             return (
-              <ScrollReveal key={idx} delay={idx * 60}>
+              <div key={idx}>
                 <div>
                   <button
                     type="button"
@@ -76,7 +75,7 @@ export default function FAQ() {
 
                   <hr className="ed-rule" />
                 </div>
-              </ScrollReveal>
+              </div>
             );
           })}
         </div>

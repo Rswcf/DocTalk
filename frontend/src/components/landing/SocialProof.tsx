@@ -2,7 +2,6 @@
 
 import React from 'react';
 import { useLocale } from '../../i18n';
-import ScrollReveal from './ScrollReveal';
 
 const metrics = [
   { value: '6', labelKey: 'landing.social.metric1' },
@@ -15,7 +14,7 @@ export default function SocialProof() {
   const { t, tOr } = useLocale();
 
   return (
-    <ScrollReveal>
+    <div>
       <section className="ed-section">
         <div className="ed-shell">
           <hr className="ed-rule mb-12" />
@@ -47,6 +46,6 @@ export default function SocialProof() {
           <hr className="ed-rule mt-12" />
         </div>
       </section>
-    </ScrollReveal>
+    </div>
   );
 }

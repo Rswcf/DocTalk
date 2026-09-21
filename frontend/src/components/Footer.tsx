@@ -3,7 +3,6 @@
 import React from 'react';
 import Link from 'next/link';
 import { useLocale } from '../i18n';
-import ScrollReveal from './landing/ScrollReveal';
 import DocTalkLogo from './DocTalkLogo';
 import { getReleaseLabel, getShortBuildSha } from '../lib/version';
 import { TextMarquee } from './spell';
@@ -58,7 +57,7 @@ export default function Footer() {
   return (
     <footer className="border-t border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950">
       <div className="max-w-5xl mx-auto px-6 py-12">
-        <ScrollReveal>
+        <div>
           {/* Logo / brand anchor */}
           <div className="mb-10">
             <Link href="/" className="inline-flex items-center gap-2.5 hover:opacity-80 transition-opacity">
@@ -171,7 +170,7 @@ export default function Footer() {
               <span>{t('footer.github.label')}</span>
             </a>
           </div>
-        </ScrollReveal>
+        </div>
       </div>
     </footer>
   );
