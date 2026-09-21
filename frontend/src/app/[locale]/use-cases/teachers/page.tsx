@@ -6,8 +6,8 @@ const page = createMarketingLocalePage({
   Content: TeachersContent,
   JsonLd: TeachersJsonLd,
   path: '/use-cases/teachers',
-  titleKey: 'useCasesTeachers.heroTitle',
-  descKey: 'useCasesTeachers.heroDescription',
+  metaTitleKey: 'useCasesTeachers.metaTitle',
+  metaDescKey: 'useCasesTeachers.metaDescription',
 });
 
 export const generateMetadata = page.generateMetadata;

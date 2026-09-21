@@ -6,8 +6,8 @@ const page = createMarketingLocalePage({
   JsonLd: PricingJsonLd,
   Content: PricingPageContent,
   path: '/pricing',
-  titleKey: 'pricing.headline',
-  descKey: 'pricing.description',
+  metaTitleKey: 'pricing.metaTitle',
+  metaDescKey: 'pricing.metaDescription',
 });
 
 export const generateMetadata = page.generateMetadata;

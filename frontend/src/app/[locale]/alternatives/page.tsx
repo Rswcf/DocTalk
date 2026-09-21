@@ -6,8 +6,8 @@ const page = createMarketingLocalePage({
   JsonLd: AlternativesHubJsonLd,
   Content: AlternativesHubContent,
   path: '/alternatives',
-  titleKey: 'altsHub.title',
-  descKey: 'altsHub.subtitle',
+  metaTitleKey: 'altsHub.metaTitle',
+  metaDescKey: 'altsHub.metaDescription',
 });
 
 export const generateMetadata = page.generateMetadata;

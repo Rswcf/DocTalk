@@ -6,8 +6,8 @@ const page = createMarketingLocalePage({
   JsonLd: NotebooklmJsonLd,
   Content: NotebooklmContent,
   path: '/compare/notebooklm',
-  titleKey: 'compareNotebooklm.heroTitle',
-  descKey: 'compareNotebooklm.heroDescription',
+  metaTitleKey: 'compareNotebooklm.metaTitle',
+  metaDescKey: 'compareNotebooklm.metaDescription',
 });
 
 export const generateMetadata = page.generateMetadata;

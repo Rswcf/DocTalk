@@ -6,8 +6,8 @@ const page = createMarketingLocalePage({
   JsonLd: PdfAiAltsJsonLd,
   Content: PdfAiAltsContent,
   path: '/alternatives/pdf-ai',
-  titleKey: 'altsPdfai.heroTitle',
-  descKey: 'altsPdfai.heroDescription',
+  metaTitleKey: 'altsPdfai.metaTitle',
+  metaDescKey: 'altsPdfai.metaDescription',
 });
 
 export const generateMetadata = page.generateMetadata;

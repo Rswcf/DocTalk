@@ -6,8 +6,8 @@ const page = createMarketingLocalePage({
   Content: UseCasesHubContent,
   JsonLd: UseCasesHubJsonLd,
   path: '/use-cases',
-  titleKey: 'useCasesHub.heroTitle',
-  descKey: 'useCasesHub.heroDescription',
+  metaTitleKey: 'useCasesHub.metaTitle',
+  metaDescKey: 'useCasesHub.metaDescription',
 });
 
 export const generateMetadata = page.generateMetadata;

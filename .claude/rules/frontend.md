@@ -42,6 +42,7 @@ from `LOCALIZED_PATHS`. The fixes are structural, not one-off.
   `FAQ.tsx`/`HowItWorks.tsx` and the server `app/HomeJsonLd.tsx` read the same key list
   and the same `tOr` fallback. Before this, the English home page hardcoded schema whose
   HowTo steps did not match the rendered text. A test asserts parity in all 11 locales.
+- **Localized marketing metadata uses dedicated SEO keys, never the hero's (2026-09-21).** `createMarketingLocalePage` takes `metaTitleKey`/`metaDescKey`, which must be `<ns>.metaTitle` / `<ns>.metaDescription`; `[locale]/page.tsx` reads `landing.metaTitle`/`landing.metaDescription`. Before this, the ten translated locales built `<title>`/`<meta description>` from the hero's own keys, so rewriting a visible headline silently rewrote its search title. The split was seeded from the values rendered at the time, proved by an empty before/after diff of every page's title, description and Open Graph text (416 pages). Rewrite a headline freely now; change a search title only by editing its `meta*` key, deliberately. English pages hardcode their metadata in each `page.tsx` and were never coupled. JSON-LD still follows the VISIBLE hero, by design. `tests/seo-meta-keys.test.cjs` enforces the naming, presence in all 11 locales, and that no component renders a `*.metaTitle` key.
 - `HomeJsonLd` serves both `/` and `/[locale]` — all 11 home pages emit
   WebSite+Organization, FAQPage, SoftwareApplication and HowTo from their own
   translations. `dateModified` is a pinned literal (`DATE_MODIFIED`); a computed date

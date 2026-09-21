@@ -6,8 +6,8 @@ const page = createMarketingLocalePage({
   Content: LayoutTranslationContent,
   JsonLd: LayoutTranslationJsonLd,
   path: '/features/layout-translation',
-  titleKey: 'featuresLayoutTranslation.heroTitle',
-  descKey: 'featuresLayoutTranslation.heroSubtitle',
+  metaTitleKey: 'featuresLayoutTranslation.metaTitle',
+  metaDescKey: 'featuresLayoutTranslation.metaDescription',
 });
 
 export const generateMetadata = page.generateMetadata;

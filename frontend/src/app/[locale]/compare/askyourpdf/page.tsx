@@ -6,8 +6,8 @@ const page = createMarketingLocalePage({
   JsonLd: AskyourpdfJsonLd,
   Content: AskyourpdfContent,
   path: '/compare/askyourpdf',
-  titleKey: 'compareAskyourpdf.heroTitle',
-  descKey: 'compareAskyourpdf.heroDescription',
+  metaTitleKey: 'compareAskyourpdf.metaTitle',
+  metaDescKey: 'compareAskyourpdf.metaDescription',
 });
 
 export const generateMetadata = page.generateMetadata;

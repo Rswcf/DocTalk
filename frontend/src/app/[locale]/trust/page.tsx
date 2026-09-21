@@ -6,8 +6,8 @@ const page = createMarketingLocalePage({
   JsonLd: TrustJsonLd,
   Content: TrustPageContent,
   path: '/trust',
-  titleKey: 'trust.hero.title',
-  descKey: 'trust.hero.lede',
+  metaTitleKey: 'trust.metaTitle',
+  metaDescKey: 'trust.metaDescription',
 });
 
 export const generateMetadata = page.generateMetadata;

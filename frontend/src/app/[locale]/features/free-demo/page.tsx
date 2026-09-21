@@ -6,8 +6,8 @@ const page = createMarketingLocalePage({
   JsonLd: FreeDemoJsonLd,
   Content: FreeDemoContent,
   path: '/features/free-demo',
-  titleKey: 'featuresDemo.hero.title',
-  descKey: 'featuresDemo.hero.subtitle',
+  metaTitleKey: 'featuresDemo.metaTitle',
+  metaDescKey: 'featuresDemo.metaDescription',
 });
 
 export const generateMetadata = page.generateMetadata;

@@ -6,8 +6,8 @@ const page = createMarketingLocalePage({
   JsonLd: PerformanceModesJsonLd,
   Content: PerformanceModesContent,
   path: '/features/performance-modes',
-  titleKey: 'featuresPerformance.hero.title',
-  descKey: 'featuresPerformance.hero.subtitle',
+  metaTitleKey: 'featuresPerformance.metaTitle',
+  metaDescKey: 'featuresPerformance.metaDescription',
 });
 
 export const generateMetadata = page.generateMetadata;

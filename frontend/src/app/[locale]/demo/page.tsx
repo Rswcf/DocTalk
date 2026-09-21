@@ -46,8 +46,8 @@ const page = createMarketingLocalePage({
   JsonLd: DemoJsonLd,
   Content: DemoContent,
   path: '/demo',
-  titleKey: 'demo.title',
-  descKey: 'demo.subtitle',
+  metaTitleKey: 'demo.metaTitle',
+  metaDescKey: 'demo.metaDescription',
 });
 
 export const generateMetadata = page.generateMetadata;

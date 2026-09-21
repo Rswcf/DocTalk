@@ -6,8 +6,8 @@ const page = createMarketingLocalePage({
   JsonLd: AskyourpdfAltsJsonLd,
   Content: AskyourpdfAltsContent,
   path: '/alternatives/askyourpdf',
-  titleKey: 'altsAskyourpdf.heroTitle',
-  descKey: 'altsAskyourpdf.heroDescription',
+  metaTitleKey: 'altsAskyourpdf.metaTitle',
+  metaDescKey: 'altsAskyourpdf.metaDescription',
 });
 
 export const generateMetadata = page.generateMetadata;

@@ -6,8 +6,8 @@ const page = createMarketingLocalePage({
   JsonLd: ChatpdfAltsJsonLd,
   Content: ChatpdfAltsContent,
   path: '/alternatives/chatpdf',
-  titleKey: 'altsChatpdf.heroTitle',
-  descKey: 'altsChatpdf.heroDescription',
+  metaTitleKey: 'altsChatpdf.metaTitle',
+  metaDescKey: 'altsChatpdf.metaDescription',
 });
 
 export const generateMetadata = page.generateMetadata;

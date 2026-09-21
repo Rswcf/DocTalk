@@ -6,8 +6,8 @@ const page = createMarketingLocalePage({
   JsonLd: ChatpdfJsonLd,
   Content: ChatpdfContent,
   path: '/compare/chatpdf',
-  titleKey: 'compareChatpdf.heroTitle',
-  descKey: 'compareChatpdf.heroDescription',
+  metaTitleKey: 'compareChatpdf.metaTitle',
+  metaDescKey: 'compareChatpdf.metaDescription',
 });
 
 export const generateMetadata = page.generateMetadata;

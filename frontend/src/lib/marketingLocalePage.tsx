@@ -23,30 +23,41 @@ import { buildMarketingMetadata } from './seo';
  * Usage:
  *   const page = createMarketingLocalePage({ Content: FinanceContent,
  *     JsonLd: FinanceJsonLd, path: '/use-cases/finance',
- *     titleKey: 'useCasesFinance.heroTitle',
- *     descKey: 'useCasesFinance.heroDescription', keywords: [...] });
+ *     metaTitleKey: 'useCasesFinance.metaTitle',
+ *     metaDescKey: 'useCasesFinance.metaDescription', keywords: [...] });
+ *
+ * metaTitleKey / metaDescKey are SEO-only keys: they drive <title>, <meta
+ * description> and Open Graph, and nothing else. They must NOT be the keys the
+ * hero renders. Until 2026-09-21 they were (titleKey/descKey pointed at
+ * `heroTitle` / `heroDescription`), so rewriting a visible headline silently
+ * rewrote that page's search title in all ten translated locales. The dedicated
+ * `<ns>.metaTitle` / `<ns>.metaDescription` keys were seeded from the values
+ * rendered at the time, so the split changed no metadata. The hero is now free
+ * to change; the search title changes only when these keys do, deliberately.
+ * The page's JSON-LD still follows the VISIBLE hero, by design
+ * (tests/marketing-jsonld asserts Article.headline === EdPageHero.title).
  *   export const generateMetadata = page.generateMetadata;
  *   export default page.Page;
  */
 export function createMarketingLocalePage({
   Content,
   path,
-  titleKey,
-  descKey,
+  metaTitleKey,
+  metaDescKey,
   keywords,
   JsonLd,
 }: {
   Content: (props: { locale: string }) => Promise<JSX.Element> | JSX.Element;
   path: string;
-  titleKey: string;
-  descKey: string;
+  metaTitleKey: string;
+  metaDescKey: string;
   keywords?: string[];
   JsonLd: (props: { locale: string }) => Promise<JSX.Element> | JSX.Element;
 }) {
   async function generateMetadata({ params }: { params: { locale: string } }): Promise<Metadata> {
     const { t } = await getServerT(params.locale);
-    const title = t(titleKey);
-    const description = t(descKey);
+    const title = t(metaTitleKey);
+    const description = t(metaDescKey);
     return buildMarketingMetadata({
       title,
       description,

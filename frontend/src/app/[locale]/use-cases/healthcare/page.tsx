@@ -6,8 +6,8 @@ const page = createMarketingLocalePage({
   Content: HealthcareContent,
   JsonLd: HealthcareJsonLd,
   path: '/use-cases/healthcare',
-  titleKey: 'useCasesHealthcare.heroTitle',
-  descKey: 'useCasesHealthcare.heroDescription',
+  metaTitleKey: 'useCasesHealthcare.metaTitle',
+  metaDescKey: 'useCasesHealthcare.metaDescription',
 });
 
 export const generateMetadata = page.generateMetadata;

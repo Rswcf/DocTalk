@@ -6,8 +6,8 @@ const page = createMarketingLocalePage({
   JsonLd: MultilingualJsonLd,
   Content: MultilingualContent,
   path: '/features/multilingual',
-  titleKey: 'featuresMultilingual.hero.title',
-  descKey: 'featuresMultilingual.hero.subtitle',
+  metaTitleKey: 'featuresMultilingual.metaTitle',
+  metaDescKey: 'featuresMultilingual.metaDescription',
 });
 
 export const generateMetadata = page.generateMetadata;

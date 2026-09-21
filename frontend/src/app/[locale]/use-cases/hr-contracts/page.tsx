@@ -6,8 +6,8 @@ const page = createMarketingLocalePage({
   Content: HrContractsContent,
   JsonLd: HrContractsJsonLd,
   path: '/use-cases/hr-contracts',
-  titleKey: 'useCasesHr.hero.title',
-  descKey: 'useCasesHr.hero.subtitle',
+  metaTitleKey: 'useCasesHr.metaTitle',
+  metaDescKey: 'useCasesHr.metaDescription',
 });
 
 export const generateMetadata = page.generateMetadata;

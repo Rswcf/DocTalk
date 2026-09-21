@@ -6,8 +6,8 @@ const page = createMarketingLocalePage({
   JsonLd: HumataJsonLd,
   Content: HumataContent,
   path: '/compare/humata',
-  titleKey: 'compareHumata.heroTitle',
-  descKey: 'compareHumata.heroDescription',
+  metaTitleKey: 'compareHumata.metaTitle',
+  metaDescKey: 'compareHumata.metaDescription',
 });
 
 export const generateMetadata = page.generateMetadata;

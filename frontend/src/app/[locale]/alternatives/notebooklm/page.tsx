@@ -6,8 +6,8 @@ const page = createMarketingLocalePage({
   JsonLd: NotebooklmAltsJsonLd,
   Content: NotebooklmAltsContent,
   path: '/alternatives/notebooklm',
-  titleKey: 'altsNotebooklm.heroTitle',
-  descKey: 'altsNotebooklm.heroDescription',
+  metaTitleKey: 'altsNotebooklm.metaTitle',
+  metaDescKey: 'altsNotebooklm.metaDescription',
 });
 
 export const generateMetadata = page.generateMetadata;

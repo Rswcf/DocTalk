@@ -6,8 +6,8 @@ const page = createMarketingLocalePage({
   Content: RealEstateContent,
   JsonLd: RealEstateJsonLd,
   path: '/use-cases/real-estate',
-  titleKey: 'useCasesRealEstate.heroTitle',
-  descKey: 'useCasesRealEstate.heroLede',
+  metaTitleKey: 'useCasesRealEstate.metaTitle',
+  metaDescKey: 'useCasesRealEstate.metaDescription',
 });
 
 export const generateMetadata = page.generateMetadata;

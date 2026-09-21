@@ -6,8 +6,8 @@ const page = createMarketingLocalePage({
   JsonLd: CompareHubJsonLd,
   Content: CompareHubContent,
   path: '/compare',
-  titleKey: 'compareHub.heroTitle',
-  descKey: 'compareHub.heroDescription',
+  metaTitleKey: 'compareHub.metaTitle',
+  metaDescKey: 'compareHub.metaDescription',
 });
 
 export const generateMetadata = page.generateMetadata;

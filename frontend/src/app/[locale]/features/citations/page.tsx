@@ -6,8 +6,8 @@ const page = createMarketingLocalePage({
   JsonLd: CitationsJsonLd,
   Content: CitationsContent,
   path: '/features/citations',
-  titleKey: 'featuresCitations.heroTitle',
-  descKey: 'featuresCitations.heroSubtitle',
+  metaTitleKey: 'featuresCitations.metaTitle',
+  metaDescKey: 'featuresCitations.metaDescription',
 });
 
 export const generateMetadata = page.generateMetadata;

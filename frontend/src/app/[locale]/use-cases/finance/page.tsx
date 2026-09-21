@@ -6,8 +6,8 @@ const page = createMarketingLocalePage({
   Content: FinanceContent,
   JsonLd: FinanceJsonLd,
   path: '/use-cases/finance',
-  titleKey: 'useCasesFinance.heroTitle',
-  descKey: 'useCasesFinance.heroDescription',
+  metaTitleKey: 'useCasesFinance.metaTitle',
+  metaDescKey: 'useCasesFinance.metaDescription',
 });
 
 export const generateMetadata = page.generateMetadata;

@@ -6,8 +6,8 @@ const page = createMarketingLocalePage({
   JsonLd: PdfaiJsonLd,
   Content: PdfaiContent,
   path: '/compare/pdf-ai',
-  titleKey: 'comparePdfai.heroTitle',
-  descKey: 'comparePdfai.heroDescription',
+  metaTitleKey: 'comparePdfai.metaTitle',
+  metaDescKey: 'comparePdfai.metaDescription',
 });
 
 export const generateMetadata = page.generateMetadata;

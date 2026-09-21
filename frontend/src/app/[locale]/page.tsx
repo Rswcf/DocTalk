@@ -20,8 +20,8 @@ export async function generateMetadata({
   params: { locale: string };
 }): Promise<Metadata> {
   const { t } = await getServerT(params.locale);
-  const title = t('landing.headline').replace(/\s*\n\s*/g, ' ').trim();
-  const description = t('landing.description');
+  const title = t('landing.metaTitle').replace(/\s*\n\s*/g, ' ').trim();
+  const description = t('landing.metaDescription');
   return buildMarketingMetadata({
     title: { absolute: `${title} | DocTalk` },
     description,

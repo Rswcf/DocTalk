@@ -6,8 +6,8 @@ const page = createMarketingLocalePage({
   JsonLd: MultiFormatJsonLd,
   Content: MultiFormatContent,
   path: '/features/multi-format',
-  titleKey: 'featuresMultiFormat.heroTitle',
-  descKey: 'featuresMultiFormat.heroSubtitle',
+  metaTitleKey: 'featuresMultiFormat.metaTitle',
+  metaDescKey: 'featuresMultiFormat.metaDescription',
 });
 
 export const generateMetadata = page.generateMetadata;
