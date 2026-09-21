@@ -217,7 +217,7 @@ export default function ReadingTimeClient() {
                 className="tabular-nums"
                 style={{
                   marginTop: '8px',
-                  fontFamily: 'var(--dt-serif)',
+                  fontFamily: 'var(--ed-display-family)',
                   fontSize: '26px',
                   fontWeight: 600,
                   color: 'var(--ed-ink)',

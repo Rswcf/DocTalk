@@ -2,6 +2,12 @@
 
 **Date** 2026-09-21 · **Decision** owner chose B · Night (closed; this plan is the HOW) · **Executor** Claude · **Review** Fable after slice 2, Codex on 2026-09-23 · **Branch** child branch `claude/landing-night` off `claude/frontend-design-review-c26fcb` (so Night and the four unpushed Phase 2a commits can merge in either order) · **Spec** `design-explorations/2026-09-21-citation-field/{b-dark.html,citation-field.js}`.
 
+## 0. Status and owner amendments (2026-09-21)
+Slices 1–3 built (`7ee6637`, `cab3bd8`, `c26a2e8`). Then three owner decisions changed this plan:
+1. **Prototype B's look, not the plan's compromise** (`f095f20`): stage `#0a0908` via one night-only value block (the sanctioned exception to §2's twin rule) and Geist display type (`geist` package) instead of §3's Fraunces.
+2. **Night on every marketing page** (§13 Q1 answered "yes"): `MarketingShell` renders the same `NIGHT_ROOT_CLASS` as the landing (`components/marketing/night.ts`); display type flows through `--ed-display-family`. A CDP contrast audit of 54 marketing pages in a light OS found zero text below AA.
+3. **Release pairing** (§13 Q2): ship together with the four Phase 2a commits in one release after Codex's review on 2026-09-23.
+
 ## 1. Scope
 Night = the unauthenticated landing only: `app/page.tsx` → `HomePageClient` → `LandingPageContent`, and `app/[locale]/page.tsx`. Header and footer on those routes go Night through tokens (no edits to `EditorialHeaderBase`/`EditorialFooter`). Every other marketing page stays paper-light / system-dark. Follow-up, not built: extending Night is one class on `MarketingShell.tsx:23` — owner call after seeing `/` live (§13).
 

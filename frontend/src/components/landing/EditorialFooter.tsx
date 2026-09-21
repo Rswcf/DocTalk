@@ -151,7 +151,7 @@ export default function EditorialFooter({ chrome }: { chrome?: ChromeStrings }) 
               <DocTalkLogo size={22} />
               <span
                 style={{
-                  fontFamily: "var(--dt-serif)",
+                  fontFamily: "var(--ed-display-family)",
                   fontSize: "18px",
                   fontWeight: 500,
                   color: "var(--ed-ink)",

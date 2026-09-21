@@ -52,6 +52,11 @@
   --ed-r-4: 24px;   /* product frames       */
   --ed-r-pill: 999px;
 
+  /* The display family: Fraunces on paper. The night block swaps it for Geist,
+     so every display consumer (the classes below and the header/footer
+     wordmark, which set it inline) follows without a per-selector rule. */
+  --ed-display-family: var(--dt-serif);
+
   /* Motion (§5.5). */
   --ed-dur-1: 120ms;  /* colour / opacity   */
   --ed-dur-2: 200ms;  /* open / close       */
@@ -152,6 +157,10 @@
   --ed-paper-2: #12110f;        /* inset band, the same small step up       */
   --ed-glass: rgba(18, 17, 15, 0.6);
   --ed-glass-strong: rgba(14, 13, 11, 0.82);
+  /* Geist, loaded by components/marketing/night.ts on the same element; the
+     body stack stands in wherever the variable is absent (the portalled
+     chrome that mirrors .dt-night has no display type anyway). */
+  --ed-display-family: var(--font-geist-sans, var(--dt-body));
 }
 
 /* Counter the app-surface reset at globals.css:819-826:
@@ -240,7 +249,7 @@
 
 /* display-1 — landing h1 only. ≤ 2 lines, ≤ 22 chars/line at 80px. */
 .dt-editorial .ed-display {
-  font-family: var(--dt-serif);
+  font-family: var(--ed-display-family);
   font-weight: 600;
   font-variation-settings: "SOFT" 0;
   font-optical-sizing: auto;
@@ -266,7 +275,7 @@
 
 /* title-1 — marketing h2. */
 .dt-editorial .ed-h2 {
-  font-family: var(--dt-serif);
+  font-family: var(--ed-display-family);
   font-weight: 600;
   font-variation-settings: "SOFT" 0;
   font-optical-sizing: auto;
@@ -324,7 +333,7 @@
 }
 
 .dt-editorial .ed-num {
-  font-family: var(--dt-serif);
+  font-family: var(--ed-display-family);
   font-weight: 400;
   font-size: clamp(32px, 4vw, 52px);
   line-height: 1;
@@ -434,7 +443,7 @@
 
 /* display-2 — inner-page hero headline (EdPageHero, the h1 of 46 routes). */
 .dt-editorial .ed-h1 {
-  font-family: var(--dt-serif);
+  font-family: var(--ed-display-family);
   font-weight: 600;
   font-variation-settings: "SOFT" 0;
   font-optical-sizing: auto;
@@ -445,16 +454,16 @@
 }
 
 /* ─── Night display type (owner, 2026-09-21) ───────────────────────────
-   On the Night landing the display steps are set in Geist, prototype B's
-   sans (the `geist` package, loaded by LandingPageContent only, so no other
-   route preloads it). Fraunces stays the display voice everywhere else.
-   Declared BEFORE the non-Latin block on purpose: equal specificity, so for
-   zh/ja/ko/hi/ar that block still wins weight, zero tracking (negative
-   tracking breaks Arabic joining) and leading; Geist carries Latin only and
-   their own glyphs fall through to the body stack. */
+   Every marketing page is Night, and Night sets its display steps in Geist
+   (prototype B's sans) through --ed-display-family above. These rules only
+   retune weight and tracking for it. Declared BEFORE the non-Latin block on
+   purpose: equal specificity, so for zh/ja/ko/hi/ar that block still wins
+   weight, zero tracking (negative tracking breaks Arabic joining) and
+   leading; Geist carries Latin only and their own glyphs fall through to the
+   body stack. */
 .dt-editorial.dt-night .ed-display,
+.dt-editorial.dt-night .ed-h1,
 .dt-editorial.dt-night .ed-h2 {
-  font-family: var(--font-geist-sans), var(--dt-body);
   font-variation-settings: normal;
   font-weight: 500;
 }
@@ -463,11 +472,10 @@
   line-height: 1;
   letter-spacing: -0.045em;
 }
+.dt-editorial.dt-night .ed-h1 { letter-spacing: -0.04em; }
 .dt-editorial.dt-night .ed-h2 { letter-spacing: -0.035em; }
-/* The step numerals are display type too; left in Fraunces they read as a
-   second voice beside the Geist headings. */
+/* The step numerals are display type too, lighter at their size. */
 .dt-editorial.dt-night .ed-num {
-  font-family: var(--font-geist-sans), var(--dt-body);
   font-weight: 300;
   letter-spacing: -0.04em;
 }

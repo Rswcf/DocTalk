@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useEffect } from 'react';
-import { GeistSans } from 'geist/font/sans';
+import React from 'react';
+import { NIGHT_ROOT_CLASS, useNightThemeColor } from '../marketing/night';
 import EditorialHeader from './EditorialHeader';
 import EditorialFooter from './EditorialFooter';
 import HeroSection from './HeroSection';
@@ -24,10 +24,10 @@ import FinalCTA from './FinalCTA';
  * outside this root (the cookie banner, the language popover) mirrors the
  * class itself. Every other marketing page stays paper in a light OS.
  *
- * The owner then asked for prototype B's deeper ground and its sans headline:
- * editorial.css gives `.dt-night` its own stage colour (the one sanctioned
- * exception to the twin rule), and the display steps are set in Geist. The
- * font is loaded here, not in the root layout, so only the landing preloads it.
+ * The owner then asked for prototype B's deeper ground and its sans display
+ * type, and then for Night on every marketing page: the class, the Geist
+ * font and the theme-color hook live in components/marketing/night.ts, shared
+ * with MarketingShell.
  *
  * Extracted from `HomePageClient.tsx` (Wave-2 Q27) so the unauth marketing
  * path and the authenticated dashboard live in separate files. The auth
@@ -38,7 +38,7 @@ export default function LandingPageContent() {
   useNightThemeColor();
 
   return (
-    <div className={`dt-editorial dt-night ${GeistSans.variable}`}>
+    <div className={NIGHT_ROOT_CLASS}>
       <EditorialHeader />
       <main>
         <HeroSection />
@@ -51,26 +51,4 @@ export default function LandingPageContent() {
       <EditorialFooter />
     </div>
   );
-}
-
-// The night stage, `--ed-paper` under `.dt-night`. A literal because the meta
-// tags live in <head>, outside any element that could resolve the token.
-const NIGHT_THEME_COLOR = '#0a0908';
-
-/**
- * Tint the browser chrome to the night stage while the landing is mounted.
- * layout.tsx declares theme-color per OS scheme (paper for light), which would
- * paint a pale toolbar over a dark page. A page-level `viewport` export can't
- * do this: the signed-in dashboard renders at the same route and must keep
- * the paper colour, so the tags are swapped on mount and restored on unmount.
- */
-function useNightThemeColor() {
-  useEffect(() => {
-    const metas = Array.from(document.querySelectorAll<HTMLMetaElement>('meta[name="theme-color"]'));
-    const previous = metas.map((m) => m.content);
-    metas.forEach((m) => { m.content = NIGHT_THEME_COLOR; });
-    return () => {
-      metas.forEach((m, i) => { m.content = previous[i]; });
-    };
-  }, []);
 }

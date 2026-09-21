@@ -73,7 +73,7 @@ export default function EditorialHeaderBase({
               <DocTalkLogo size={24} />
               <span
                 style={{
-                  fontFamily: "var(--dt-serif)",
+                  fontFamily: "var(--ed-display-family)",
                   fontSize: "19px",
                   fontWeight: 500,
                   color: "var(--ed-ink)",

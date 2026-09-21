@@ -33,9 +33,10 @@ test('every .dark .dt-editorial selector has a .dt-editorial.dt-night twin in th
 // landing carries exactly two things the dark theme does not: its stage and
 // chrome values, and its display type. Anything else under .dt-night must be
 // a twin of a .dark .dt-editorial rule.
-const NIGHT_STAGE_TOKENS = ['--ed-paper', '--ed-paper-2', '--ed-glass', '--ed-glass-strong'];
+const NIGHT_STAGE_TOKENS = ['--ed-paper', '--ed-paper-2', '--ed-glass', '--ed-glass-strong', '--ed-display-family'];
 const NIGHT_TYPE_SELECTORS = [
   '.dt-editorial.dt-night .ed-display',
+  '.dt-editorial.dt-night .ed-h1',
   '.dt-editorial.dt-night .ed-h2',
   '.dt-editorial.dt-night .ed-night-claim .ed-display',
   '.dt-editorial.dt-night .ed-num',
@@ -67,8 +68,9 @@ test('night-only rules are limited to the stage tokens and the display type', ()
   assert.equal(stageBlocks, 1, 'expected exactly one night stage block');
 });
 
-test('Geist is loaded by the landing only', () => {
-  // Loading it in the root layout would make every route preload the face.
+test('Geist is loaded by the night module only', () => {
+  // Loading it in the root layout would make every route, the app included,
+  // preload the face. night.ts is imported by the two marketing roots only.
   const walk = (dir, out = []) => {
     for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
       const full = path.join(dir, entry.name);
@@ -80,11 +82,34 @@ test('Geist is loaded by the landing only', () => {
   const users = walk(src)
     .filter((f) => /from ['"]geist\//.test(fs.readFileSync(f, 'utf8')))
     .map((f) => path.relative(src, f));
-  assert.deepEqual(users, [path.join('components', 'landing', 'LandingPageContent.tsx')]);
+  assert.deepEqual(users, [path.join('components', 'marketing', 'night.ts')]);
 });
 
-test('the landing root is Night', () => {
-  assert.match(read('components/landing/LandingPageContent.tsx'), /className=\{`dt-editorial dt-night /);
+test('every marketing root is Night', () => {
+  // The landing and MarketingShell are the only two elements that open the
+  // editorial system (the cookie banner and the language menu mirror it).
+  assert.match(read('components/marketing/night.ts'), /NIGHT_ROOT_CLASS = `dt-editorial dt-night /);
+  assert.match(read('components/landing/LandingPageContent.tsx'), /className=\{NIGHT_ROOT_CLASS\}/);
+  assert.match(read('components/marketing/MarketingShell.tsx'), /className=\{`\$\{NIGHT_ROOT_CLASS\} /);
+  for (const root of ['components/landing/LandingPageContent.tsx', 'components/marketing/MarketingShell.tsx']) {
+    assert.match(read(root), /useNightThemeColor\(\)/, `${root} does not tint theme-color`);
+  }
+});
+
+test('display type goes through --ed-display-family, never straight to Fraunces', () => {
+  // One token swaps the display voice for Night; a direct var(--dt-serif)
+  // would stay Fraunces on a Geist page.
+  const css = stripCssComments(read('app/editorial.css'));
+  const direct = [...css.matchAll(/([^{}]+)\{[^{}]*font-family:\s*var\(--dt-serif\)/g)].map((m) => m[1].trim());
+  assert.deepEqual(direct, [], `font-family: var(--dt-serif) outside the token: ${direct.join(' | ')}`);
+  for (const file of [
+    'components/marketing/EditorialHeaderBase.tsx',
+    'components/landing/EditorialFooter.tsx',
+    'app/demo/DemoPageClient.tsx',
+    'app/tools/reading-time/ReadingTimeClient.tsx',
+  ]) {
+    assert.doesNotMatch(read(file), /var\(--dt-serif\)/, `${file} sets Fraunces directly`);
+  }
 });
 
 test('chrome rendered outside the landing root mirrors Night', () => {

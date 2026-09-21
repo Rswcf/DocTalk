@@ -204,7 +204,7 @@ export default function DemoPageClient() {
                     className="ed-body"
                     style={{
                       marginTop: '8px',
-                      fontFamily: 'var(--dt-serif)',
+                      fontFamily: 'var(--ed-display-family)',
                       fontStyle: 'italic',
                     }}
                   >
