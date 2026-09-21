@@ -1,0 +1,1566 @@
+diff --git a/frontend/src/app/editorial.css b/frontend/src/app/editorial.css
+index e22a613..3601002 100644
+--- a/frontend/src/app/editorial.css
++++ b/frontend/src/app/editorial.css
+@@ -98,8 +98,14 @@
+ /* ─── Dark (§5.3) — a warm near-black, not an inversion of paper and not
+    zinc. Hue is fixed at H13–16 across both modes; only lightness moves.
+    Overriding the same token names means the ~40 inline `var(--ed-paper-2)`
+-   consumers and the !important counter-rule below follow automatically. */
+-.dark .dt-editorial {
++   consumers and the !important counter-rule below follow automatically.
++
++   Night (plan 2026-09-21-landing-night): `.dt-editorial.dt-night` is the
++   landing page, which is dark in BOTH OS themes. Every `.dark .dt-editorial`
++   selector carries a `.dt-editorial.dt-night` twin IN THE SAME LIST — one
++   value set, never a second one (tests/landing-night.test.cjs). */
++.dark .dt-editorial,
++.dt-editorial.dt-night {
+   --ed-paper: #171614;          /* stage                                    */
+   --ed-paper-2: #1c1b18;        /* inset band                               */
+   --ed-surface: #211f1c;        /* raised                                   */
+@@ -167,7 +173,8 @@
+    a faint LIGHT speckle on the near-black stage instead of invisible black
+    on black. Opacity .35 (§5.6) — the texture reads stronger on a dark
+    ground at equal alpha. */
+-.dark .dt-editorial::before {
++.dark .dt-editorial::before,
++.dt-editorial.dt-night::before {
+   opacity: 0.35;
+   background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200'><filter id='g'><feTurbulence type='fractalNoise' baseFrequency='0.82' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0.93  0 0 0 0 0.91  0 0 0 0 0.88  0 0 0 0.05 0'/></filter><rect width='100%25' height='100%25' filter='url(%23g)'/></svg>");
+ }
+@@ -663,80 +670,146 @@
+   }
+ }
+ 
+-/* ─── Product frame (landing hero) ────────────────────────────────────
+-   Plan 2026-09-20 §7 Phase 1 and owner decision A2: a static depiction of
+-   the reader. Three regions map one-to-one onto real reader regions (header
+-   strip, chat column, document pane) so the Phase 4 reader can replace it.
+-   Content layer, so standard opaque materials only — no glass (§5.4).
+-   The ONE accent inside the frame is evidence amber: the answer's citation
+-   badge and the highlighted sentence share its colour and its number. */
+-.dt-editorial .ed-frame-figure { margin: 56px 0 0; }
+-
+-.dt-editorial .ed-frame {
+-  background: var(--ed-surface);
+-  border: 1px solid var(--ed-rule);
+-  border-radius: var(--ed-r-4);
+-  box-shadow: var(--ed-shadow-card);
++/* ─── Night hero (plan .collab/plans/2026-09-21-landing-night.md §4) ────
++   The landing's stage. Behind the claim, a real document page sits in low
++   light (components/landing/CitationField.tsx draws it on a canvas that
++   takes its colours from the tokens and its font from `.ed-night-field`).
++   The answer card beside the passage is content layer: an opaque raised
++   surface, never glass (§5.4). */
++.dt-editorial .ed-night-stage {
++  position: relative;
++  isolation: isolate;
+   overflow: hidden;
+-  text-align: start;
++  min-height: 800px;
++  /* svh, not vh: collapsing mobile toolbars must not move the passage. 64px
++     is the sticky header above the stage. */
++  min-height: max(800px, calc(100svh - 64px));
++  padding: 88px 24px 0;
+ }
+ 
+-.dt-editorial .ed-frame-bar {
++/* The document, full-bleed behind the claim: faint at the top, where the
++   claim sits, full strength around the passage, faded out at the edges. */
++.dt-editorial .ed-night-field {
++  position: absolute;
++  z-index: -1;
++  top: 0;
++  bottom: 0;
++  left: 50%;
++  width: min(1080px, 100%);
++  transform: translateX(-50%);
++  font-family: var(--dt-body);
++  -webkit-mask-image:
++    linear-gradient(to bottom, rgba(0, 0, 0, 0.12) 0%, rgba(0, 0, 0, 0.2) 44%, #000 64%, #000 86%, transparent 100%),
++    linear-gradient(to right, transparent 0%, #000 6%, #000 94%, transparent 100%);
++  -webkit-mask-composite: source-in;
++  mask-image:
++    linear-gradient(to bottom, rgba(0, 0, 0, 0.12) 0%, rgba(0, 0, 0, 0.2) 44%, #000 64%, #000 86%, transparent 100%),
++    linear-gradient(to right, transparent 0%, #000 6%, #000 94%, transparent 100%);
++  mask-composite: intersect;
++}
++.dt-editorial .ed-night-canvas {
++  display: block;
++  width: 100%;
++  height: 100%;
++}
++
++.dt-editorial .ed-night-claim {
++  position: relative;
++  max-width: 760px;
++  margin: 0 auto;
++  text-align: center;
++}
++/* Darkness pooled behind the claim, so the document never competes with it.
++   Browsers without color-mix() get no pool; the field's top fade still keeps
++   the claim legible. */
++.dt-editorial .ed-night-claim::before {
++  content: "";
++  position: absolute;
++  z-index: -1;
++  top: -80px;
++  left: 50%;
++  width: 1560px;
++  height: 660px;
++  transform: translateX(-50%);
++  background: radial-gradient(
++    closest-side,
++    color-mix(in srgb, var(--ed-paper) 97%, transparent) 0%,
++    color-mix(in srgb, var(--ed-paper) 94%, transparent) 62%,
++    transparent 100%
++  );
++}
++.dt-editorial .ed-night-claim .ed-display { text-wrap: balance; }
++.dt-editorial .ed-night-claim .ed-lede {
++  max-width: 600px;
++  margin: 24px auto 0;
++  text-wrap: pretty;
++}
++.dt-editorial .ed-night-actions {
+   display: flex;
++  flex-wrap: wrap;
+   align-items: center;
+-  gap: 10px;
+-  min-height: 44px;
+-  padding: 0 16px;
+-  border-bottom: 1px solid var(--ed-rule);
+-  font-size: 13px;
+-  line-height: 1.4;
+-}
+-.dt-editorial .ed-frame-mark {
+-  flex: none;
+-  width: 14px;
+-  height: 14px;
+-  border-radius: 3px;
+-  background: var(--ed-ink);
++  justify-content: center;
++  gap: 12px 28px;
++  margin-top: 34px;
+ }
+-.dt-editorial .ed-frame-doc {
+-  min-width: 0;
+-  overflow: hidden;
+-  text-overflow: ellipsis;
+-  white-space: nowrap;
+-  color: var(--ed-ink-2);
++
++/* The answer. Physical `left`, not inline-start: it annotates the document,
++   which is left-to-right in every locale. It aligns with the document's text
++   column; HeroSection moves it directly under the passage once the field
++   reports where the passage is. */
++.dt-editorial .ed-night-card {
++  position: absolute;
++  z-index: 2;
++  bottom: 40px;
++  left: max(24px, calc(50% - 447px));
++  width: 420px;
++  margin: 0;
++  padding: 18px 20px;
++  background: var(--ed-surface);
++  border: 1px solid var(--ed-rule);
++  border-radius: var(--ed-r-3);
++  box-shadow: var(--ed-shadow-card);
++  text-align: start;
++  transition:
++    opacity var(--ed-dur-3) var(--ed-ease),
++    transform var(--ed-dur-3) var(--ed-ease);
++}
++/* With scripting, the card waits for the highlighter (HeroSection shows it
++   after at most 6s regardless). Without it, it is simply there. */
++@media (scripting: enabled) {
++  .dt-editorial .ed-night-stage:not(.is-cited) .ed-night-card {
++    opacity: 0;
++    transform: translateY(14px);
++  }
+ }
+-.dt-editorial .ed-frame-pageno {
+-  flex: none;
+-  margin-inline-start: auto;
++.dt-editorial .ed-night-q {
++  margin: 0;
+   color: var(--ed-ink-3);
+-  font-variant-numeric: tabular-nums;
++  font-size: 13px;
++  line-height: 1.45;
+ }
+-
+-.dt-editorial .ed-frame-body { display: grid; grid-template-columns: 1fr; }
+-@media (min-width: 768px) {
+-  .dt-editorial .ed-frame-body { grid-template-columns: minmax(0, 38fr) minmax(0, 62fr); }
++.dt-editorial .ed-night-card .ed-frame-a {
++  margin-top: 8px;
++  font-size: 15px;
++  line-height: 1.5;
+ }
++.dt-editorial .ed-night-card .ed-frame-source { margin-top: 14px; }
+ 
+-.dt-editorial .ed-frame-chat {
+-  padding: 24px;
+-  border-bottom: 1px solid var(--ed-rule);
+-}
+-@media (min-width: 768px) {
+-  .dt-editorial .ed-frame-chat {
+-    border-bottom: 0;
+-    border-inline-end: 1px solid var(--ed-rule);
+-  }
+-}
+-.dt-editorial .ed-frame-q {
+-  max-width: 90%;
+-  margin-inline-start: auto;
+-  padding: 10px 14px;
+-  border-radius: var(--ed-r-3);
+-  background: var(--ed-paper-2);
+-  color: var(--ed-ink);
+-  font-size: 15px;
+-  line-height: 1.45;
++/* Quote Finder, named once: the hero's footnote, under the stage. */
++.dt-editorial .ed-night-note {
++  max-width: 640px;
++  margin: 20px auto 0;
++  padding: 0 24px;
++  color: var(--ed-ink-3);
++  font-size: 14px;
++  line-height: 1.5;
++  text-align: center;
++  text-wrap: pretty;
+ }
++
++/* Answer rows, shared with the answer card. Named for the v0.31.0 product
++   frame they came from; the frame itself is gone (Phase 4's visual spec is
++   `git show v0.31.0:frontend/src/components/landing/ProductFrame.tsx`). */
+ .dt-editorial .ed-frame-a {
+   margin-top: 20px;
+   color: var(--ed-ink);
+@@ -791,86 +864,42 @@
+   color: var(--ed-ink-3);
+ }
+ 
+-/* Document pane. The page is a light "paper island" in BOTH themes, the way
+-   a real PDF renders — so it carries its own colours and never inherits the
+-   dark ink. In dark mode the white is softened (HIG Dark Mode: "soften the
+-   color of white backgrounds") so it does not glare against the stage.
+-   Measured: page ink 16.18 (light) / 12.76 (dark); muted 9.03 / 7.12;
+-   badge 7.54; ink on highlight 13.88 / 10.98. Phase 4 inherits this choice. */
+-.dt-editorial .ed-frame-pane {
+-  display: flex;
+-  justify-content: center;
+-  padding: 24px;
+-  background: var(--ed-paper-2);
+-}
+-.dt-editorial .ed-frame-page {
+-  --pg-bg: #ffffff;
+-  --pg-ink: #20211e;
+-  --pg-ink-2: #4a4943;
+-  width: 100%;
+-  max-width: 540px;
+-  padding: 28px 32px 32px;
+-  border-radius: 2px;
+-  background: var(--pg-bg);
+-  color: var(--pg-ink);
+-  box-shadow: 0 1px 2px rgba(20, 18, 14, 0.08), 0 8px 24px -12px rgba(20, 18, 14, 0.22);
+-  font-size: 13px;
+-  line-height: 1.65;
+-}
+-.dark .dt-editorial .ed-frame-page { --pg-bg: #e8e4dc; }
+-.dt-editorial .ed-frame-page-title {
+-  color: var(--pg-ink);
+-  font-size: 17px;
+-  font-weight: 600;
+-  line-height: 1.3;
+-}
+-.dt-editorial .ed-frame-page-text { margin-top: 12px; }
+-.dt-editorial .ed-frame-page-muted { color: var(--pg-ink-2); }
+-.dt-editorial .ed-frame-page-sub {
+-  margin-top: 18px;
+-  color: var(--pg-ink);
+-  font-size: 14px;
+-  font-weight: 600;
+-}
+-.dt-editorial .ed-frame-mark-cited {
+-  padding: 1px 2px;
+-  border-radius: 2px;
+-  background: rgba(255, 196, 0, 0.3);
+-  color: inherit;
+-  -webkit-box-decoration-break: clone;
+-  box-decoration-break: clone;
+-}
+-.dt-editorial .ed-frame-badge {
+-  display: inline-flex;
+-  align-items: center;
+-  justify-content: center;
+-  min-width: 18px;
+-  height: 18px;
+-  padding: 0 4px;
+-  margin-inline-end: 4px;
+-  vertical-align: 1px;
+-  border: 1px solid #e6c56a;
+-  border-radius: 5px;
+-  background: #fff0c2;
+-  color: #6b4400;
+-  font-size: 12px;
+-  font-weight: 600;
+-  line-height: 1;
+-  font-variant-numeric: tabular-nums;
+-}
+-
+-.dt-editorial .ed-frame-caption {
+-  max-width: 640px;
+-  margin: 20px auto 0;
+-  color: var(--ed-ink-2);
+-  font-size: 15px;
+-  line-height: 1.5;
+-  text-align: center;
+-}
+-
++/* Phones: the claim, then the document as its own band, then the answer
++   overlapping the band's faded foot. */
+ @media (max-width: 767px) {
+-  .dt-editorial .ed-frame-figure { margin-top: 40px; }
+-  .dt-editorial .ed-frame-chat { padding: 18px; }
+-  .dt-editorial .ed-frame-pane { padding: 16px; }
+-  .dt-editorial .ed-frame-page { padding: 20px; }
++  .dt-editorial .ed-night-stage {
++    display: flex;
++    flex-direction: column;
++    min-height: 0;
++    padding: 48px 20px 36px;
++  }
++  .dt-editorial .ed-night-claim { order: 1; }
++  /* The headline's authored break suits two desktop lines; on a phone it
++     strands a word ("cites", "zitiert") on a line of its own. Drop it and let
++     text-wrap: balance set the whole headline. */
++  .dt-editorial .ed-night-claim .ed-display br { display: none; }
++  .dt-editorial .ed-night-claim::before { display: none; }
++  .dt-editorial .ed-night-field {
++    order: 2;
++    position: relative;
++    z-index: 0;
++    top: auto;
++    bottom: auto;
++    left: auto;
++    width: auto;
++    height: 420px;
++    margin: 20px -20px 0;
++    transform: none;
++    -webkit-mask-image: linear-gradient(to bottom, transparent 0%, #000 20%, #000 70%, transparent 100%);
++    mask-image: linear-gradient(to bottom, transparent 0%, #000 20%, #000 70%, transparent 100%);
++  }
++  .dt-editorial .ed-night-card {
++    order: 3;
++    position: relative;
++    bottom: auto;
++    left: auto;
++    width: auto;
++    max-width: 420px;
++    margin: -64px auto 0;
++  }
+ }
+diff --git a/frontend/src/components/CookieConsentBanner.tsx b/frontend/src/components/CookieConsentBanner.tsx
+index 4b45c14..3070e23 100644
+--- a/frontend/src/components/CookieConsentBanner.tsx
++++ b/frontend/src/components/CookieConsentBanner.tsx
+@@ -7,10 +7,16 @@ import { useLocale } from '../i18n';
+ 
+ const CONSENT_KEY = 'doctalk_analytics_consent';
+ 
++type Surface = 'app' | 'editorial' | 'night';
++
+ // Scoped to #page-content so the banner's own .dt-editorial wrapper can never
+-// make it detect itself.
+-function detectSurface(): 'app' | 'editorial' {
+-  return document.querySelector('#page-content .dt-editorial') ? 'editorial' : 'app';
++// make it detect itself. 'night' is the landing page, which is dark in both OS
++// themes (.dt-editorial.dt-night); the banner mirrors the class, because it
++// renders outside that root and would otherwise stay paper in a light OS.
++function detectSurface(): Surface {
++  const root = document.querySelector('#page-content .dt-editorial');
++  if (!root) return 'app';
++  return root.classList.contains('dt-night') ? 'night' : 'editorial';
+ }
+ 
+ export function CookieConsentBanner() {
+@@ -19,7 +25,7 @@ export function CookieConsentBanner() {
+   // Which visual system is on the page underneath. The banner is mounted once in
+   // app/layout.tsx as a SIBLING of #page-content, so no page can pass it a
+   // `surface` prop the way DocumentDiffPanel receives one — it has to look.
+-  const [surface, setSurface] = useState<'app' | 'editorial'>('app');
++  const [surface, setSurface] = useState<Surface>('app');
+   const { t } = useLocale();
+   const pathname = usePathname();
+ 
+@@ -89,7 +95,7 @@ export function CookieConsentBanner() {
+     setVisible(false);
+   };
+ 
+-  if (surface === 'editorial') {
++  if (surface !== 'app') {
+     // Marketing surface (plan 2026-09-20 §5.3/§5.4). The inner .dt-editorial
+     // wrapper gives the banner the paper tokens, including the warm dark set,
+     // without the outer element inheriting .dt-editorial's position: relative.
+@@ -108,7 +114,7 @@ export function CookieConsentBanner() {
+         aria-label={t('consent.message')}
+       >
+         <div
+-          className="dt-editorial px-3 py-2.5 sm:px-4 sm:py-3"
++          className={`dt-editorial${surface === 'night' ? ' dt-night' : ''} px-3 py-2.5 sm:px-4 sm:py-3`}
+           style={{
+             background: 'var(--ed-surface)',
+             border: '1px solid var(--ed-rule)',
+diff --git a/frontend/src/components/landing/CitationField.tsx b/frontend/src/components/landing/CitationField.tsx
+new file mode 100644
+index 0000000..8e0d57a
+--- /dev/null
++++ b/frontend/src/components/landing/CitationField.tsx
+@@ -0,0 +1,500 @@
++"use client";
++
++import { useEffect, useRef } from 'react';
++import { CITED, PARAGRAPHS } from './citationFieldContent';
++
++/**
++ * The landing hero's citation field: a real document page, set as text, in
++ * low light. A lamp scans down the page, stops on the cited sentence, a
++ * highlighter draws across it and a margin badge pops. That is the product in
++ * one moment: every answer cites the exact page.
++ *
++ * Ported from design-explorations/2026-09-21-citation-field/citation-field.js
++ * (plan .collab/plans/2026-09-21-landing-night.md §4). Differences from the
++ * prototype, all deliberate:
++ *  - No colour or font literal. Colours come from the `--ed-*` tokens and the
++ *    font from the canvas's own computed `font-family` (`var(--dt-body)`, so
++ *    next/font's generated family name). A test forbids hex literals here.
++ *  - The loop stops. It runs until the citation is marked, draws one final
++ *    frame and cancels; only a fine pointer over the field restarts it, and it
++ *    stops again when the cursor lamp has faded. The prototype's ambient
++ *    "breathing" is gone: it redrew the whole field sixty times a second
++ *    forever.
++ *  - The clock starts the first time the field is on screen.
++ *  - `prefers-reduced-motion` and `?still` (screenshots, verification) draw
++ *    the finished frame only.
++ *
++ * Rendering: all text is drawn once to an offscreen "ink" layer. Each frame
++ * draws that layer dim, then again masked by the lamp's radial gradient
++ * (destination-in), so light falls only where there is ink.
++ *
++ * The canvas is decoration: its wrapper is aria-hidden, and HeroSection
++ * carries the real text (the claim, the answer card, an sr-only description).
++ */
++
++export interface CitationSpan {
++  x1: number;
++  x2: number;
++  top: number;
++  bottom: number;
++}
++
++export interface CitationFieldLayout {
++  width: number;
++  height: number;
++  /** Vertical centre of the cited lines, in canvas CSS px. */
++  citedY: number;
++  /** One box per highlighted line, in canvas CSS px. */
++  spans: CitationSpan[];
++  /** Left edge of the text column (the highlight's left edge), canvas CSS px. */
++  textLeft: number;
++}
++
++export interface CitationFieldSettings {
++  fontSize: number;
++  titleFontSize: number;
++  lineHeight: number;
++  paraGap: number;
++  /** Text inset from the canvas edges; the margin badge sits inside it. */
++  pad: number;
++  /** Tile the page to fill a tall field. */
++  repeat: number;
++  /** Repeats after the first omit this many leading paragraphs (title, dateline). */
++  repeatSkip: number;
++  /** Which repeat carries the lit citation. */
++  occurrence: number;
++  /** 0..1: slide the text so the citation sits at this fraction of the height. */
++  focusY: number;
++  dimAlpha: number;
++  litAlpha: number;
++  lampRadius: number;
++  /** Additive warm light around the lamp, in the evidence colour. */
++  bloomAlpha: number;
++  bloomRadius: number;
++  cursorRadius: number;
++  cursorAlpha: number;
++  /** ms before the scan begins, then the scan and the highlighter durations. */
++  start: number;
++  scanDur: number;
++  markDur: number;
++}
++
++interface Props {
++  settings: CitationFieldSettings;
++  onLayout?: (layout: CitationFieldLayout) => void;
++  /** Fires once, when the highlighter has finished and the badge is up. */
++  onCited?: () => void;
++}
++
++type Rgb = [number, number, number];
++
++interface Word {
++  text: string;
++  x: number;
++  y: number;
++  w: number;
++  font: string;
++  cited: boolean;
++}
++
++interface Span {
++  y: number;
++  x1: number;
++  x2: number;
++  from: number;
++  to: number;
++}
++
++const ease = (t: number) => 1 - Math.pow(1 - Math.min(1, Math.max(0, t)), 3);
++const rgba = ([r, g, b]: Rgb, a: number) => `rgba(${r}, ${g}, ${b}, ${a})`;
++
++/** A token's colour as rgb. Tokens are hex today; rgb()/rgba() also parse. */
++function readColour(style: CSSStyleDeclaration, name: string): Rgb {
++  const value = style.getPropertyValue(name).trim();
++  if (value.startsWith('#')) {
++    let hex = value.slice(1);
++    if (hex.length === 3) hex = hex.split('').map((c) => c + c).join('');
++    const n = parseInt(hex.slice(0, 6), 16);
++    return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
++  }
++  const parts = value.match(/\d+(\.\d+)?/g);
++  if (parts && parts.length >= 3) return [Number(parts[0]), Number(parts[1]), Number(parts[2])];
++  return [128, 128, 128];
++}
++
++export default function CitationField({ settings, onLayout, onCited }: Props) {
++  const canvasRef = useRef<HTMLCanvasElement>(null);
++  // The engine lives in one effect for the component's lifetime; it reads the
++  // latest props through refs, so a settings change re-lays out the field
++  // without tearing down the animation.
++  const settingsRef = useRef(settings);
++  const onLayoutRef = useRef(onLayout);
++  const onCitedRef = useRef(onCited);
++  const relayoutRef = useRef<(() => void) | null>(null);
++  onLayoutRef.current = onLayout;
++  onCitedRef.current = onCited;
++
++  useEffect(() => {
++    settingsRef.current = settings;
++    relayoutRef.current?.();
++  }, [settings]);
++
++  useEffect(() => {
++    const canvas = canvasRef.current;
++    if (!canvas) return;
++    const ctx = canvas.getContext('2d');
++    const ink = document.createElement('canvas');
++    const tmp = document.createElement('canvas');
++    const ictx = ink.getContext('2d');
++    const tctx = tmp.getContext('2d');
++    if (!ctx || !ictx || !tctx) return;
++
++    const still =
++      /[?&]still\b/.test(window.location.search) ||
++      window.matchMedia('(prefers-reduced-motion: reduce)').matches;
++    const finePointer = window.matchMedia('(pointer: fine)').matches;
++
++    let alive = true;
++    let started = false;
++    let finished = false;
++    let visible = true;
++    let raf = 0;
++    let t0: number | null = null;
++    let W = 0;
++    let H = 0;
++    let dpr = 1;
++    let offsetY = 0;
++    let words: Word[] = [];
++    let spans: Span[] = [];
++    let cited: { cx: number; cy: number; first: Span } | null = null;
++    let fonts = { body: '', title: '', badge: '' };
++    let colours = { ink: [128, 128, 128] as Rgb, evidence: [128, 128, 128] as Rgb, soft: [128, 128, 128] as Rgb };
++    const cursor = { x: 0, y: 0, tx: 0, ty: 0, a: 0, ta: 0 };
++
++    function readTheme() {
++      const style = getComputedStyle(canvas!);
++      const s = settingsRef.current;
++      const family = style.fontFamily;
++      fonts = {
++        body: `${s.fontSize}px ${family}`,
++        title: `600 ${s.titleFontSize}px ${family}`,
++        badge: `600 12px ${family}`,
++      };
++      colours = {
++        ink: readColour(style, '--ed-ink'),
++        evidence: readColour(style, '--ed-evidence'),
++        soft: readColour(style, '--ed-evidence-soft'),
++      };
++    }
++
++    function buildLayout() {
++      const s = settingsRef.current;
++      const paras: { text: string; title: boolean; rep: number }[] = [];
++      for (let r = 0; r < s.repeat; r += 1) {
++        PARAGRAPHS.forEach((text, i) => {
++          if (r > 0 && i < s.repeatSkip) return;
++          paras.push({ text, title: i === 0, rep: r });
++        });
++      }
++      const maxX = W - s.pad;
++      words = [];
++      let y = s.pad + s.lineHeight * 0.8;
++      for (const p of paras) {
++        const font = p.title ? fonts.title : fonts.body;
++        ictx!.font = font;
++        const space = ictx!.measureText(' ').width;
++        const citedStart = p.rep === s.occurrence ? p.text.indexOf(CITED) : -1;
++        const citedEnd = citedStart < 0 ? -1 : citedStart + CITED.length;
++        let x = s.pad;
++        let idx = 0;
++        for (const w of p.text.split(' ')) {
++          const ww = ictx!.measureText(w).width;
++          if (x + ww > maxX && x > s.pad) {
++            x = s.pad;
++            y += s.lineHeight;
++          }
++          const start = idx;
++          const end = idx + w.length;
++          words.push({ text: w, x, y, w: ww, font, cited: citedStart >= 0 && start < citedEnd && end > citedStart });
++          x += ww + space;
++          idx = end + 1;
++        }
++        y += s.lineHeight + s.paraGap;
++      }
++
++      // Cited words grouped into one span per line, in reading order; each
++      // span knows which fraction of the highlighter's stroke it takes.
++      spans = [];
++      for (const w of words) {
++        if (!w.cited) continue;
++        const last = spans[spans.length - 1];
++        if (last && last.y === w.y) last.x2 = w.x + w.w;
++        else spans.push({ y: w.y, x1: w.x, x2: w.x + w.w, from: 0, to: 0 });
++      }
++      const total = spans.reduce((sum, sp) => sum + (sp.x2 - sp.x1), 0) || 1;
++      let acc = 0;
++      for (const sp of spans) {
++        sp.from = acc / total;
++        acc += sp.x2 - sp.x1;
++        sp.to = acc / total;
++      }
++      cited = spans.length
++        ? {
++            cx: (Math.min(...spans.map((sp) => sp.x1)) + Math.max(...spans.map((sp) => sp.x2))) / 2,
++            cy: (spans[0].y + spans[spans.length - 1].y) / 2 - s.lineHeight * 0.3,
++            first: spans[0],
++          }
++        : null;
++      offsetY = cited ? Math.round(s.focusY * H - cited.cy) : 0;
++    }
++
++    function paintInk() {
++      ink.width = tmp.width = Math.round(W * dpr);
++      ink.height = tmp.height = Math.round(H * dpr);
++      ictx!.setTransform(dpr, 0, 0, dpr, 0, 0);
++      ictx!.clearRect(0, 0, W, H);
++      ictx!.fillStyle = rgba(colours.ink, 1);
++      ictx!.textBaseline = 'alphabetic';
++      const lh = settingsRef.current.lineHeight;
++      for (const w of words) {
++        const y = w.y + offsetY;
++        if (y < -lh || y > H + lh) continue;
++        ictx!.font = w.font;
++        ictx!.fillText(w.text, w.x, y);
++      }
++    }
++
++    function lampPass(x: number, y: number, radius: number, alpha: number) {
++      tctx!.setTransform(1, 0, 0, 1, 0, 0);
++      tctx!.globalCompositeOperation = 'source-over';
++      tctx!.clearRect(0, 0, tmp.width, tmp.height);
++      tctx!.drawImage(ink, 0, 0);
++      tctx!.globalCompositeOperation = 'destination-in';
++      const g = tctx!.createRadialGradient(x * dpr, y * dpr, 0, x * dpr, y * dpr, radius * dpr);
++      g.addColorStop(0, 'rgba(0, 0, 0, 1)');
++      g.addColorStop(0.55, 'rgba(0, 0, 0, 0.55)');
++      g.addColorStop(1, 'rgba(0, 0, 0, 0)');
++      tctx!.fillStyle = g;
++      tctx!.fillRect(0, 0, tmp.width, tmp.height);
++      tctx!.globalCompositeOperation = 'source-over';
++      ctx!.globalAlpha = alpha;
++      ctx!.drawImage(tmp, 0, 0, W, H);
++      ctx!.globalAlpha = 1;
++    }
++
++    function draw(t: number) {
++      const s = settingsRef.current;
++      ctx!.clearRect(0, 0, W, H);
++      if (!cited) {
++        ctx!.globalAlpha = s.dimAlpha;
++        ctx!.drawImage(ink, 0, 0, W, H);
++        ctx!.globalAlpha = 1;
++        return;
++      }
++      const fade = still ? 1 : ease(t / 600);
++      const scan = still ? 1 : ease((t - s.start) / s.scanDur);
++      const mark = still ? 1 : ease((t - s.start - s.scanDur * 0.85) / s.markDur);
++      const cy = cited.cy + offsetY;
++      const top = s.pad + offsetY + 20;
++      const lampY = top + (cy - top) * scan;
++      const lampX = cited.cx;
++      const radius = s.lampRadius * (1.25 - 0.25 * scan);
++
++      if (s.bloomAlpha > 0) {
++        ctx!.globalCompositeOperation = 'lighter';
++        const g = ctx!.createRadialGradient(lampX, lampY, 0, lampX, lampY, s.bloomRadius);
++        g.addColorStop(0, rgba(colours.evidence, s.bloomAlpha * fade));
++        g.addColorStop(1, rgba(colours.evidence, 0));
++        ctx!.fillStyle = g;
++        ctx!.fillRect(0, 0, W, H);
++        ctx!.globalCompositeOperation = 'source-over';
++      }
++
++      ctx!.globalAlpha = s.dimAlpha * fade;
++      ctx!.drawImage(ink, 0, 0, W, H);
++      ctx!.globalAlpha = 1;
++      lampPass(lampX, lampY, radius, s.litAlpha * fade);
++
++      if (cursor.a > 0.01) lampPass(cursor.x, cursor.y, s.cursorRadius, s.cursorAlpha * cursor.a);
++
++      // The highlighter, then the cited words in full ink on top of it.
++      const h = s.lineHeight * 0.92;
++      for (const sp of spans) {
++        const local = Math.min(1, Math.max(0, (mark - sp.from) / Math.max(1e-6, sp.to - sp.from)));
++        if (local <= 0) continue;
++        const y = sp.y + offsetY - s.lineHeight * 0.72;
++        // The soft evidence fill, warmed with the evidence colour itself: on
++        // its own the dark-theme fill barely separates from the stage.
++        ctx!.beginPath();
++        ctx!.roundRect(sp.x1 - 3, y, (sp.x2 - sp.x1 + 6) * local, h, 3);
++        ctx!.fillStyle = rgba(colours.soft, 1);
++        ctx!.fill();
++        ctx!.fillStyle = rgba(colours.evidence, 0.16);
++        ctx!.fill();
++        // A hairline of the evidence colour under the stroke, so the mark
++        // reads as a highlight and not as a text selection on a dark ground.
++        ctx!.fillStyle = rgba(colours.evidence, 0.9);
++        ctx!.fillRect(sp.x1 - 3, y + h - 1, (sp.x2 - sp.x1 + 6) * local, 1);
++      }
++      ctx!.save();
++      ctx!.globalAlpha = mark;
++      ctx!.fillStyle = rgba(colours.ink, 1);
++      for (const w of words) {
++        if (!w.cited) continue;
++        ctx!.font = w.font;
++        ctx!.fillText(w.text, w.x, w.y + offsetY);
++      }
++      ctx!.restore();
++
++      // The margin badge pops as the highlighter finishes: a margin note,
++      // level with the first cited line.
++      const pop = still ? 1 : ease((mark - 0.7) / 0.3);
++      if (pop > 0.01) {
++        const f = cited.first;
++        ctx!.font = fonts.badge;
++        const bw = Math.max(20, ctx!.measureText('1').width + 10);
++        const bh = 20;
++        const bx = Math.max(4, s.pad - bw - 12);
++        const by = f.y + offsetY - s.lineHeight * 0.72 + (h - bh) / 2;
++        ctx!.save();
++        ctx!.translate(bx + bw / 2, by + bh / 2);
++        ctx!.scale(0.6 + 0.4 * pop, 0.6 + 0.4 * pop);
++        ctx!.globalAlpha = pop;
++        ctx!.fillStyle = rgba(colours.soft, 1);
++        ctx!.strokeStyle = rgba(colours.evidence, 1);
++        ctx!.lineWidth = 1;
++        ctx!.beginPath();
++        ctx!.roundRect(-bw / 2, -bh / 2, bw, bh, 5);
++        ctx!.fill();
++        ctx!.stroke();
++        ctx!.fillStyle = rgba(colours.evidence, 1);
++        ctx!.textAlign = 'center';
++        ctx!.textBaseline = 'middle';
++        ctx!.fillText('1', 0, 1);
++        ctx!.restore();
++      }
++
++      if (mark >= 1 && !finished) {
++        finished = true;
++        onCitedRef.current?.();
++      }
++    }
++
++    function reportLayout() {
++      const s = settingsRef.current;
++      if (!cited || !onLayoutRef.current) return;
++      onLayoutRef.current({
++        width: W,
++        height: H,
++        citedY: cited.cy + offsetY,
++        spans: spans.map((sp) => {
++          const top = sp.y + offsetY - s.lineHeight * 0.72;
++          return { x1: sp.x1 - 3, x2: sp.x2 + 3, top, bottom: top + s.lineHeight * 0.92 };
++        }),
++        textLeft: s.pad - 3,
++      });
++    }
++
++    function frame(now: number) {
++      raf = 0;
++      if (!alive || !visible) return;
++      if (t0 === null) t0 = now;
++      cursor.x += (cursor.tx - cursor.x) * 0.14;
++      cursor.y += (cursor.ty - cursor.y) * 0.14;
++      cursor.a += (cursor.ta - cursor.a) * 0.08;
++      const cursorLive = cursor.ta > 0 || cursor.a > 0.01;
++      if (!cursorLive) cursor.a = 0;
++      draw(still ? 1e9 : now - t0);
++      if (!finished || cursorLive) raf = requestAnimationFrame(frame);
++    }
++
++    function kick() {
++      if (alive && started && visible && !raf) raf = requestAnimationFrame(frame);
++    }
++
++    function layout() {
++      W = canvas!.clientWidth;
++      H = canvas!.clientHeight;
++      if (W < 1 || H < 1) return;
++      dpr = Math.min(window.devicePixelRatio || 1, 2);
++      canvas!.width = Math.round(W * dpr);
++      canvas!.height = Math.round(H * dpr);
++      ctx!.setTransform(dpr, 0, 0, dpr, 0, 0);
++      readTheme();
++      buildLayout();
++      paintInk();
++      reportLayout();
++      if (still || finished) draw(1e9);
++      else kick();
++    }
++    relayoutRef.current = () => {
++      if (started) layout();
++    };
++
++    function start() {
++      if (!alive || started) return;
++      started = true;
++      layout();
++    }
++
++    const onMove = (e: PointerEvent) => {
++      cursor.tx = e.offsetX;
++      cursor.ty = e.offsetY;
++      if (cursor.a < 0.01) {
++        cursor.x = cursor.tx;
++        cursor.y = cursor.ty;
++      }
++      cursor.ta = 1;
++      kick();
++    };
++    const onLeave = () => {
++      cursor.ta = 0;
++    };
++    if (finePointer && !still) {
++      canvas.addEventListener('pointermove', onMove);
++      canvas.addEventListener('pointerleave', onLeave);
++    }
++
++    const resizeObserver = new ResizeObserver(() => {
++      if (started) layout();
++    });
++    resizeObserver.observe(canvas);
++    const visibilityObserver = new IntersectionObserver(([entry]) => {
++      visible = entry.isIntersecting;
++      if (visible) kick();
++    });
++    visibilityObserver.observe(canvas);
++
++    // A face used only inside a canvas is not "in use" by the DOM, so load it
++    // explicitly. Never wait on the network indefinitely: start after at most
++    // 1.2s in whatever face is available, and lay out again when the real one
++    // arrives.
++    readTheme();
++    const fontsLoaded = Promise.all(
++      [fonts.body, fonts.title, fonts.badge].map((f) => document.fonts.load(f).catch(() => null)),
++    ).then(() => document.fonts.ready);
++    const timer = window.setTimeout(start, 1200);
++    fontsLoaded.then(() => {
++      if (!alive) return;
++      window.clearTimeout(timer);
++      if (started) layout();
++      else start();
++    });
++
++    return () => {
++      alive = false;
++      relayoutRef.current = null;
++      window.clearTimeout(timer);
++      if (raf) cancelAnimationFrame(raf);
++      resizeObserver.disconnect();
++      visibilityObserver.disconnect();
++      canvas.removeEventListener('pointermove', onMove);
++      canvas.removeEventListener('pointerleave', onLeave);
++    };
++  }, []);
++
++  // letter-spacing 0: a canvas in the DOM picks up the page's CSS
++  // letter-spacing and the offscreen layers do not, so words laid out on one
++  // and redrawn on the other would drift apart glyph by glyph.
++  return <canvas ref={canvasRef} className="ed-night-canvas" style={{ letterSpacing: 0 }} />;
++}
+diff --git a/frontend/src/components/landing/HeroSection.tsx b/frontend/src/components/landing/HeroSection.tsx
+index 0f51653..8ae9ed5 100644
+--- a/frontend/src/components/landing/HeroSection.tsx
++++ b/frontend/src/components/landing/HeroSection.tsx
+@@ -1,55 +1,149 @@
+ "use client";
+ 
+-import React from 'react';
++import React, { useCallback, useEffect, useRef, useState } from 'react';
+ import Link from 'next/link';
+ import { useLocale } from '../../i18n';
+-import ProductFrame from './ProductFrame';
+ import { trackEvent } from '../../lib/analytics';
++import CitationField, { type CitationFieldLayout, type CitationFieldSettings } from './CitationField';
+ 
+ /**
+- * Landing hero, in the Apple order (plan 2026-09-20 §5.2): one claim, one
+- * sentence, one filled action, then the product. The landing is the one page
+- * where the claim and frame sit centred.
++ * Landing hero, Night (plan .collab/plans/2026-09-21-landing-night.md; the
++ * owner chose prototype B). One claim, one sentence, one filled action, then
++ * the product: behind the claim a real document page sits in low light, a
++ * lamp finds the cited sentence, and the answer arrives with its citation.
+  *
+- * Deliberately absent, and why:
+- *  - No eyebrow. It read "01 — Document intelligence": a numbered label on
+- *    content that is not a sequence.
+- *  - No stat band ("11 / 6 / 01"). "01 cited answers" read as a broken counter.
+- *    The `landing.heroStats.*` keys are left in the locale files, unused.
+- *  - No italic split. The last headline line used to be wrapped in <em>; the
+- *    type system now sets display type upright, so the wrapper only made the
+- *    markup misleading.
+- *  - No trailing arrows on the actions.
++ * Real text first. The h1, lede and actions are server-rendered; the canvas is
++ * aria-hidden decoration inside a `dir="ltr" lang="en"` wrapper (it is an
++ * English document and must not reflow in the Arabic UI); the answer card is
++ * real text, and an sr-only line describes the picture.
+  *
+- * `landing.headline` drives only this h1. Since 2026-09-21 the page's <title>
+- * reads `landing.metaTitle` instead (app/[locale]/page.tsx), so the headline can
+- * change without moving the search title. `landing.description` is the visible
+- * lede and the landing JSON-LD's description (app/HomeJsonLd.tsx); the meta
+- * description reads `landing.metaDescription`. The English `/` hardcodes all of
+- * its metadata in app/page.tsx.
++ * `landing.headline` drives only this h1; the page <title> reads
++ * `landing.metaTitle` (app/[locale]/page.tsx), so the headline can change
++ * without moving the search title. `landing.description` is the visible lede
++ * and the landing JSON-LD's description (app/HomeJsonLd.tsx).
++ *
++ * Deliberately absent: an eyebrow, a stat band, an italic split, trailing
++ * arrows on the actions (plan 2026-09-20 §5.2), and an entrance animation on
++ * the claim: the h1 is the page's largest paint, and hiding it would delay it.
+  */
++
++// The field behind a desktop hero: the page tiled so the passage can sit low,
++// with the claim in the dark above it.
++const WIDE: CitationFieldSettings = {
++  fontSize: 18,
++  titleFontSize: 22,
++  lineHeight: 30,
++  paraGap: 12,
++  pad: 96,
++  repeat: 3,
++  repeatSkip: 2,
++  occurrence: 1,
++  focusY: 0.64,
++  dimAlpha: 0.2,
++  litAlpha: 0.72, // below full ink, so the cited words stay the brightest thing on the page
++  lampRadius: 340,
++  bloomAlpha: 0.18,
++  bloomRadius: 420,
++  cursorRadius: 190,
++  cursorAlpha: 0.5,
++  start: 700,
++  scanDur: 1500,
++  markDur: 900,
++};
++
++// Phones: the field is its own band under the claim.
++const NARROW: CitationFieldSettings = {
++  ...WIDE,
++  fontSize: 15,
++  titleFontSize: 18,
++  lineHeight: 25,
++  pad: 30,
++  repeat: 2,
++  occurrence: 0,
++  focusY: 0.55,
++  lampRadius: 220,
++  bloomRadius: 260,
++};
++
++const NARROW_QUERY = '(max-width: 767px)';
++const CARD_WIDTH = 420;
++// Desktop card: aligned with the document's text column, directly under the
++// passage (badge, passage, answer read down one edge). It stays clear of the
++// bottom-right corner, where the first-visit cookie banner sits.
++const CARD_EDGE = 24;
++
+ export default function HeroSection() {
+-  const { t } = useLocale();
++  const { t, tOr } = useLocale();
+   const headlineLines = t('landing.headline').split('\n');
+ 
++  const stageRef = useRef<HTMLElement>(null);
++  const cardRef = useRef<HTMLElement>(null);
++  const [narrow, setNarrow] = useState(false);
++  const [cited, setCited] = useState(false);
++  const [cardPos, setCardPos] = useState<{ left: number; top: number } | null>(null);
++
++  useEffect(() => {
++    const mq = window.matchMedia(NARROW_QUERY);
++    const sync = () => setNarrow(mq.matches);
++    sync();
++    mq.addEventListener('change', sync);
++    // The card waits for the citation. Never let it wait forever: if the
++    // canvas cannot run, show it anyway.
++    const fallback = window.setTimeout(() => setCited(true), 6000);
++    return () => {
++      mq.removeEventListener('change', sync);
++      window.clearTimeout(fallback);
++    };
++  }, []);
++
++  const onLayout = useCallback((layout: CitationFieldLayout) => {
++    const stage = stageRef.current;
++    const card = cardRef.current;
++    if (!stage || !card || window.matchMedia(NARROW_QUERY).matches) {
++      setCardPos(null);
++      return;
++    }
++    const stageWidth = stage.clientWidth;
++    const stageHeight = stage.clientHeight;
++    // The field is centred in the stage, so stage x = canvas x + inset.
++    const inset = (stageWidth - layout.width) / 2;
++    const left = Math.max(CARD_EDGE, inset + layout.textLeft);
++    const cardFrom = left - inset - 8;
++    const cardTo = left - inset + CARD_WIDTH + 8;
++    const covered = layout.spans.filter((s) => s.x2 > cardFrom && s.x1 < cardTo);
++    const below = covered.length ? Math.max(...covered.map((s) => s.bottom)) + 16 : layout.citedY + 24;
++    const top = Math.min(below, stageHeight - card.offsetHeight - CARD_EDGE);
++    setCardPos({ left: Math.round(left), top: Math.round(top) });
++  }, []);
++
++  const onCited = useCallback(() => setCited(true), []);
++
+   return (
+-    <section className="ed-section">
+-      <div className="ed-shell">
+-        <div className="mx-auto max-w-[760px] text-center">
+-          <h1 className="ed-display">
++    <>
++      <section
++        ref={stageRef}
++        className={`ed-night-stage${cited ? ' is-cited' : ''}`}
++        aria-labelledby="landing-hero-title"
++      >
++        <div className="ed-night-field" dir="ltr" lang="en" aria-hidden="true">
++          <CitationField settings={narrow ? NARROW : WIDE} onLayout={onLayout} onCited={onCited} />
++        </div>
++
++        <div className="ed-night-claim">
++          <h1 id="landing-hero-title" className="ed-display">
+             {headlineLines.map((line: string, i: number) => (
+               <React.Fragment key={i}>
+-                {i > 0 && <br />}
++                {/* The space keeps the words apart where the break is hidden
++                    (phones balance the whole headline instead). */}
++                {i > 0 && <>{' '}<br /></>}
+                 {line}
+               </React.Fragment>
+             ))}
+           </h1>
+ 
+-          <p className="ed-lede mx-auto mt-6 max-w-[600px]">
+-            {t('landing.description')}
+-          </p>
++          <p className="ed-lede">{t('landing.description')}</p>
+ 
+-          <div className="mt-8 flex flex-wrap items-center justify-center gap-x-6 gap-y-3">
++          <div className="ed-night-actions">
+             <Link
+               href="/demo"
+               onClick={() => trackEvent('landing_cta_clicked', { source: 'hero', reason: 'demo' })}
+@@ -70,8 +164,46 @@ export default function HeroSection() {
+           </div>
+         </div>
+ 
+-        <ProductFrame />
+-      </div>
+-    </section>
++        <figure
++          ref={cardRef}
++          className="ed-night-card"
++          style={cardPos ? { left: cardPos.left, top: cardPos.top, bottom: 'auto' } : undefined}
++        >
++          <p className="ed-night-q">
++            {tOr('landing.frame.question', 'How much does Alphabet plan to spend on capital in 2026?')}
++          </p>
++          <p className="ed-frame-a">
++            {tOr(
++              'landing.frame.answer',
++              'Alphabet expects its 2026 capital expenditure to be between $175 and $185 billion, to meet customer demand and the growing opportunities ahead.',
++            )}
++            <span className="ed-frame-cite">1</span>
++          </p>
++          <figcaption className="ed-frame-source">
++            <span className="ed-frame-cite">1</span>
++            <span className="ed-frame-source-doc">
++              {tOr('landing.frame.source', 'Alphabet Q4 2025 earnings release, p. 1')}
++            </span>
++          </figcaption>
++        </figure>
++
++        <p className="sr-only">
++          {tOr(
++            'landing.frame.description',
++            "An example of DocTalk answering a question about Alphabet's fourth-quarter 2025 earnings release. The answer cites page 1, and the cited sentence is highlighted on that page.",
++          )}
++        </p>
++
++      </section>
++
++      {/* Quote Finder, named once, as the hero's footnote: under the stage, on
++          plain ground, where no document text runs behind it. */}
++      <p className="ed-night-note">
++        {tOr(
++          'landing.frame.quoteFinder',
++          'Writing something that needs quotes? Quote Finder pulls them straight from your document, each checked against the source text.',
++        )}
++      </p>
++    </>
+   );
+ }
+diff --git a/frontend/src/components/landing/LandingPageContent.tsx b/frontend/src/components/landing/LandingPageContent.tsx
+index 96d2047..441e411 100644
+--- a/frontend/src/components/landing/LandingPageContent.tsx
++++ b/frontend/src/components/landing/LandingPageContent.tsx
+@@ -1,6 +1,6 @@
+ "use client";
+ 
+-import React from 'react';
++import React, { useEffect } from 'react';
+ import EditorialHeader from './EditorialHeader';
+ import EditorialFooter from './EditorialFooter';
+ import HeroSection from './HeroSection';
+@@ -11,9 +11,17 @@ import FAQ from './FAQ';
+ import FinalCTA from './FinalCTA';
+ 
+ /**
+- * The unauthenticated public landing surface. Uses the scoped editorial
+- * design system (`.dt-editorial`) — warm-paper palette, Newsreader serif,
+- * IBM Plex Mono. Light-only by design (see `.claude/rules/frontend.md`).
++ * The unauthenticated public landing surface, on the scoped editorial design
++ * system (`.dt-editorial`: Fraunces display, IBM Plex Sans text, the `--ed-*`
++ * tokens).
++ *
++ * Night (plan .collab/plans/2026-09-21-landing-night.md; the owner chose
++ * prototype B): the root also carries `.dt-night`, which applies the dark
++ * `--ed-*` values in BOTH OS themes. editorial.css gives every
++ * `.dark .dt-editorial` selector a `.dt-editorial.dt-night` twin, so this
++ * page is the editorial dark theme, not a second design. Chrome rendered
++ * outside this root (the cookie banner, the language popover) mirrors the
++ * class itself. Every other marketing page stays paper in a light OS.
+  *
+  * Extracted from `HomePageClient.tsx` (Wave-2 Q27) so the unauth marketing
+  * path and the authenticated dashboard live in separate files. The auth
+@@ -21,8 +29,10 @@ import FinalCTA from './FinalCTA';
+  * and `<DashboardPageClient />` based on session status.
+  */
+ export default function LandingPageContent() {
++  useNightThemeColor();
++
+   return (
+-    <div className="dt-editorial">
++    <div className="dt-editorial dt-night">
+       <EditorialHeader />
+       <main>
+         <HeroSection />
+@@ -36,3 +46,25 @@ export default function LandingPageContent() {
+     </div>
+   );
+ }
++
++// The dark stage, `--ed-paper` under `.dt-night`. A literal because the meta
++// tags live in <head>, outside any element that could resolve the token.
++const NIGHT_THEME_COLOR = '#171614';
++
++/**
++ * Tint the browser chrome to the night stage while the landing is mounted.
++ * layout.tsx declares theme-color per OS scheme (paper for light), which would
++ * paint a pale toolbar over a dark page. A page-level `viewport` export can't
++ * do this: the signed-in dashboard renders at the same route and must keep
++ * the paper colour, so the tags are swapped on mount and restored on unmount.
++ */
++function useNightThemeColor() {
++  useEffect(() => {
++    const metas = Array.from(document.querySelectorAll<HTMLMetaElement>('meta[name="theme-color"]'));
++    const previous = metas.map((m) => m.content);
++    metas.forEach((m) => { m.content = NIGHT_THEME_COLOR; });
++    return () => {
++      metas.forEach((m, i) => { m.content = previous[i]; });
++    };
++  }, []);
++}
+diff --git a/frontend/src/components/landing/ProductFrame.tsx b/frontend/src/components/landing/ProductFrame.tsx
+deleted file mode 100644
+index 90bd4d2..0000000
+--- a/frontend/src/components/landing/ProductFrame.tsx
++++ /dev/null
+@@ -1,129 +0,0 @@
+-"use client";
+-
+-import { useLocale } from "../../i18n";
+-
+-/**
+- * The landing hero's product frame: a static depiction of the DocTalk reader
+- * answering one question about one real document.
+- *
+- * Plan: .collab/plans/2026-09-20-apple-design-direction.md §7 Phase 1, owner
+- * decision A2 (§10 Q1) — the frame shows the full reader and is the visual
+- * spec for the Phase 4 reader redesign. Its three regions map one-to-one onto
+- * real reader regions (header strip, chat column, document pane) so Phase 4
+- * can swap in the real components; nothing here is a feature the reader lacks.
+- *
+- * HONESTY CONSTRAINTS — read before editing:
+- *  - PAGE_TEXT is copied verbatim from page 1 of
+- *    backend/seed_data/alphabet-earnings.pdf (the finance demo document).
+- *    The highlighted sentence is the one the live product cites for this
+- *    question. Do not edit it; do not translate it — it is a quotation from an
+- *    English document, and the reader never translates source text.
+- *  - The answer paraphrases only that sentence. It must not assert anything the
+- *    source does not.
+- *  - The caption must not claim quotes are word-for-word. Word-for-word is only
+- *    guaranteed for `page_text` results (see .claude/rules/frontend.md, Quote
+- *    Finder UI). "Taken straight from the document" and "checked against the
+- *    source text" are both backed by the verified-quote pipeline.
+- *
+- * The visual is aria-hidden; screen readers get the sr-only description and
+- * the visible caption, which are real text.
+- */
+-
+-const DOC_NAME = "2025q4-alphabet-earnings-release.pdf";
+-
+-// Verbatim, page 1. Split so the cited sentence can be highlighted.
+-const PAGE_TITLE = "Alphabet Announces Fourth Quarter and Fiscal Year 2025 Results";
+-const PAGE_DATELINE =
+-  "MOUNTAIN VIEW, Calif. – February 4, 2026 – Alphabet Inc. (NASDAQ: GOOG, GOOGL) today announced financial results for the quarter ended December 31, 2025.";
+-// The paragraph opens with no quotation mark in the source (it is the third
+-// paragraph of a quotation that began two paragraphs earlier); only the
+-// closing ” after "billion." is present, and it is rendered below.
+-const PAGE_LEAD_IN =
+-  "We’re seeing our AI investments and infrastructure drive revenue and growth across the board. ";
+-const PAGE_CITED =
+-  "To meet customer demand and capitalize on the growing opportunities we have ahead of us, our 2026 CapEx investments are anticipated to be in the range of $175 to $185 billion.";
+-const PAGE_AFTER = "Q4 2025 Financial Highlights";
+-
+-export default function ProductFrame() {
+-  const { tOr } = useLocale();
+-
+-  const question = tOr(
+-    "landing.frame.question",
+-    "How much does Alphabet plan to spend on capital in 2026?",
+-  );
+-  const answer = tOr(
+-    "landing.frame.answer",
+-    "Alphabet expects its 2026 capital expenditure to be between $175 and $185 billion, to meet customer demand and the growing opportunities ahead.",
+-  );
+-
+-  return (
+-    <figure className="ed-frame-figure">
+-      <div className="ed-frame" aria-hidden="true">
+-        {/* (a) header strip — the reader's own chrome, not a fake browser */}
+-        <div className="ed-frame-bar">
+-          <span className="ed-frame-mark" />
+-          <span className="ed-frame-doc" dir="ltr">{DOC_NAME}</span>
+-          <span className="ed-frame-pageno">p. 1</span>
+-        </div>
+-
+-        <div className="ed-frame-body">
+-          {/* (b) chat column */}
+-          <div className="ed-frame-chat">
+-            <p className="ed-frame-q">{question}</p>
+-            <p className="ed-frame-a">
+-              {answer}
+-              <span className="ed-frame-cite">1</span>
+-            </p>
+-            <div className="ed-frame-source">
+-              <span className="ed-frame-cite">1</span>
+-              <span className="ed-frame-source-page">p. 1</span>
+-              <span className="ed-frame-source-doc" dir="ltr">{DOC_NAME}</span>
+-            </div>
+-          </div>
+-
+-          {/* (c) document pane — a light "paper island" in both themes, the way
+-              a real PDF page renders. dir="ltr" because it IS an English
+-              document: in the Arabic UI it must not inherit right-to-left, just as
+-              a real English PDF does not reflow when the interface language changes. */}
+-          <div className="ed-frame-pane">
+-            <div className="ed-frame-page" dir="ltr" lang="en">
+-              <p className="ed-frame-page-title">{PAGE_TITLE}</p>
+-              <p className="ed-frame-page-text ed-frame-page-muted">{PAGE_DATELINE}</p>
+-              <p className="ed-frame-page-text">
+-                {PAGE_LEAD_IN}
+-                <mark className="ed-frame-mark-cited">
+-                  <span className="ed-frame-badge">1</span>
+-                  {PAGE_CITED}
+-                </mark>
+-                ”
+-              </p>
+-              <p className="ed-frame-page-sub">{PAGE_AFTER}</p>
+-            </div>
+-          </div>
+-        </div>
+-      </div>
+-
+-      <p className="sr-only">
+-        {tOr(
+-          "landing.frame.description",
+-          "An example of DocTalk answering a question about Alphabet's fourth-quarter 2025 earnings release. The answer cites page 1, and the cited sentence is highlighted on that page.",
+-        )}
+-      </p>
+-
+-      <figcaption className="ed-frame-caption">
+-        <span>
+-          {tOr(
+-            "landing.frame.caption",
+-            "Every answer links to the sentence it came from, on its page.",
+-          )}
+-        </span>{" "}
+-        <span>
+-          {tOr(
+-            "landing.frame.quoteFinder",
+-            "Writing something that needs quotes? Quote Finder pulls them straight from your document, each checked against the source text.",
+-          )}
+-        </span>
+-      </figcaption>
+-    </figure>
+-  );
+-}
+diff --git a/frontend/src/components/landing/citationFieldContent.ts b/frontend/src/components/landing/citationFieldContent.ts
+new file mode 100644
+index 0000000..f028789
+--- /dev/null
++++ b/frontend/src/components/landing/citationFieldContent.ts
+@@ -0,0 +1,43 @@
++/**
++ * The document the landing hero's citation field sets in low light: page 1 of
++ * backend/seed_data/alphabet-earnings.pdf, the finance demo document the
++ * "Try a sample document" action opens.
++ *
++ * HONESTY CONSTRAINTS (tests/landing-night.test.cjs checks the first two):
++ *  - Every paragraph is copied VERBATIM from page 1 of a PDF in
++ *    backend/seed_data/. Do not edit, abridge or translate the text: it is a
++ *    quotation from an English document, and the reader never translates
++ *    source text (the field renders it `dir="ltr" lang="en"` in every locale).
++ *  - CITED is one sentence inside PARAGRAPHS, and it is the sentence the live
++ *    product cites for `landing.frame.question`.
++ *  - The answer card paraphrases only CITED. `landing.frame.{question,answer,
++ *    source,description}` change together, in all 11 locales, whenever the
++ *    sample changes.
++ *
++ * Replacing the sample: pick a page 1 from backend/seed_data/, copy its
++ * paragraphs, re-point CITED and the four keys above. The canvas lays out
++ * whatever text is here; no code changes. The company names and marks are
++ * quoted from a public earnings release; the 2026 guidance dates the sample,
++ * so revisit it whenever the seed set changes.
++ */
++
++export const DOC_NAME = '2025q4-alphabet-earnings-release.pdf';
++
++export const PARAGRAPHS: readonly string[] = [
++  'Alphabet Announces Fourth Quarter and Fiscal Year 2025 Results',
++  'MOUNTAIN VIEW, Calif. – February 4, 2026 – Alphabet Inc. (NASDAQ: GOOG, GOOGL) today announced financial results for the quarter ended December 31, 2025.',
++  '• Consolidated Alphabet revenues increased 18%, or 17% in constant currency, to $113.8 billion, reflecting strong momentum across the business and acceleration in growth in both Google Services and Google Cloud.',
++  '• Google Services revenues increased 14% to $95.9 billion, led by 17% growth in Google Search & other, 17% in Google subscriptions, platforms, and devices, and 9% in YouTube ads.',
++  '• YouTube revenue across ads and subscriptions exceeded $60 billion for the full year 2025.',
++  '• Google Cloud saw a continued increase in customer demand as revenues increased 48% to $17.7 billion, led by an increase in Google Cloud Platform (GCP) across enterprise AI Infrastructure and enterprise AI Solutions, as well as core GCP products.',
++  '• Consolidated Alphabet operating income increased 16% and operating margin was 31.6%. Operating income included a $2.1 billion employee compensation charge for Waymo.',
++  '• Net income increased 30% and EPS increased 31% to $2.82.',
++  'Sundar Pichai, CEO of Alphabet and Google, said: “It was a tremendous quarter for Alphabet and annual revenues exceeded $400 billion for the first time. The launch of Gemini 3 was a major milestone and we have great momentum. Our first party models, like Gemini, now process over 10 billion tokens per minute via direct API use by our customers, and the Gemini App has grown to over 750 million monthly active users. Search saw more usage than ever before, with AI continuing to drive an expansionary moment.',
++  'We continue to drive strong growth across the business. YouTube’s annual revenues surpassed $60 billion across ads and subscriptions; we now have over 325 million paid subscriptions across consumer services, led by strong adoption for Google One and YouTube Premium. And Google Cloud ended 2025 at an annual run rate of over $70 billion, representing a wide breadth of customers, driven by demand for AI products.',
++  'We’re seeing our AI investments and infrastructure drive revenue and growth across the board. To meet customer demand and capitalize on the growing opportunities we have ahead of us, our 2026 CapEx investments are anticipated to be in the range of $175 to $185 billion.”',
++  'Q4 2025 Financial Highlights',
++  'The following table summarizes our consolidated financial results for the quarter and fiscal year ended December 31, 2024 and 2025 (in millions, except for per share information and percentages).',
++];
++
++export const CITED =
++  'To meet customer demand and capitalize on the growing opportunities we have ahead of us, our 2026 CapEx investments are anticipated to be in the range of $175 to $185 billion.';
+diff --git a/frontend/src/components/marketing/EdLanguageSelector.tsx b/frontend/src/components/marketing/EdLanguageSelector.tsx
+index b4f6d20..f5a3e32 100644
+--- a/frontend/src/components/marketing/EdLanguageSelector.tsx
++++ b/frontend/src/components/marketing/EdLanguageSelector.tsx
+@@ -38,12 +38,17 @@ export default function EdLanguageSelector({ languageLabel }: { languageLabel?:
+ 
+   const [open, setOpen] = useState(false);
+   const [pos, setPos] = useState({ top: 0, right: 0, maxHeight: 420 });
++  // The menu is portalled to <body>, outside the page's .dt-editorial root, so
++  // it cannot inherit the landing's Night class (.dt-night: dark tokens in both
++  // OS themes). Mirror it from the trigger's ancestry when the menu opens.
++  const [night, setNight] = useState(false);
+   const wrapRef = useRef<HTMLDivElement>(null);
+   const triggerRef = useRef<HTMLButtonElement>(null);
+   const menuRef = useRef<HTMLDivElement>(null);
+ 
+   const updatePos = useCallback(() => {
+     if (!triggerRef.current) return;
++    setNight(Boolean(triggerRef.current.closest(".dt-night")));
+     const r = triggerRef.current.getBoundingClientRect();
+     const top = r.bottom + 10;
+     setPos({
+@@ -126,7 +131,7 @@ export default function EdLanguageSelector({ languageLabel }: { languageLabel?:
+   const menu = (
+     <div
+       ref={menuRef}
+-      className="dt-editorial ed-glass ed-glass--strong ed-glass--popover"
++      className={`dt-editorial${night ? " dt-night" : ""} ed-glass ed-glass--strong ed-glass--popover`}
+       style={{
+         position: "fixed",
+         top: pos.top,
+diff --git a/frontend/src/i18n/locales/en.json b/frontend/src/i18n/locales/en.json
+index b095c4e..746ec23 100644
+--- a/frontend/src/i18n/locales/en.json
++++ b/frontend/src/i18n/locales/en.json
+@@ -366,6 +366,7 @@
+   "landing.frame.description": "An example of DocTalk answering a question about Alphabet's fourth-quarter 2025 earnings release. The answer cites page 1, and the cited sentence is highlighted on that page.",
+   "landing.frame.caption": "Every answer links to the sentence it came from, on its page.",
+   "landing.frame.quoteFinder": "Writing something that needs quotes? Quote Finder pulls them straight from your document, each checked against the source text.",
++  "landing.frame.source": "Alphabet Q4 2025 earnings release, p. 1",
+   "landing.proof.citations": "Answers cite exact source passages",
+   "landing.proof.private": "Documents are private and deletable",
+   "landing.proof.locales": "Works across 11 interface languages",
+diff --git a/frontend/tests/landing-night.test.cjs b/frontend/tests/landing-night.test.cjs
+new file mode 100644
+index 0000000..c7b457a
+--- /dev/null
++++ b/frontend/tests/landing-night.test.cjs
+@@ -0,0 +1,107 @@
++const assert = require('node:assert/strict');
++const fs = require('node:fs');
++const path = require('node:path');
++const test = require('node:test');
++
++// Night landing (plan .collab/plans/2026-09-21-landing-night.md). The landing
++// root is `.dt-editorial.dt-night`: the editorial dark theme in BOTH OS themes.
++// It must stay the SAME value set as `.dark .dt-editorial`, never a second one,
++// and chrome rendered outside the root must follow it.
++
++const src = path.resolve(__dirname, '../src');
++const read = (rel) => fs.readFileSync(path.join(src, rel), 'utf8');
++const stripCssComments = (css) => css.replace(/\/\*[\s\S]*?\*\//g, '');
++
++test('every .dark .dt-editorial selector has a .dt-editorial.dt-night twin in the same list', () => {
++  const css = stripCssComments(read('app/editorial.css'));
++  const preludes = [...css.matchAll(/([^{}]+)\{/g)].map((m) => m[1]);
++  let darkSelectors = 0;
++  for (const prelude of preludes) {
++    const list = prelude.split(',').map((s) => s.trim().replace(/\s+/g, ' '));
++    for (const selector of list) {
++      if (!selector.startsWith('.dark .dt-editorial')) continue;
++      darkSelectors += 1;
++      const twin = selector.replace('.dark .dt-editorial', '.dt-editorial.dt-night');
++      assert.ok(list.includes(twin), `"${selector}" has no "${twin}" twin in the same selector list`);
++    }
++  }
++  assert.ok(darkSelectors >= 2, 'expected the dark token set and the dark grain at least');
++});
++
++test('the night twin never carries values of its own', () => {
++  // A standalone `.dt-editorial.dt-night { ... }` block would be a second
++  // value set that drifts from the dark one. Twins only appear in lists.
++  const css = stripCssComments(read('app/editorial.css'));
++  const preludes = [...css.matchAll(/([^{}]+)\{/g)].map((m) => m[1].trim().replace(/\s+/g, ' '));
++  for (const prelude of preludes) {
++    const list = prelude.split(',').map((s) => s.trim());
++    const night = list.filter((s) => s.startsWith('.dt-editorial.dt-night'));
++    for (const selector of night) {
++      const dark = selector.replace('.dt-editorial.dt-night', '.dark .dt-editorial');
++      assert.ok(list.includes(dark), `"${selector}" is styled without its "${dark}" original`);
++    }
++  }
++});
++
++test('the landing root is Night', () => {
++  assert.match(read('components/landing/LandingPageContent.tsx'), /className="dt-editorial dt-night"/);
++});
++
++test('chrome rendered outside the landing root mirrors Night', () => {
++  // Both render outside the page root (the banner is a sibling of
++  // #page-content; the language menu is portalled to <body>), so neither can
++  // inherit the class and each must look for it.
++  assert.match(read('components/CookieConsentBanner.tsx'), /dt-night/);
++  assert.match(read('components/marketing/EdLanguageSelector.tsx'), /closest\(["']\.dt-night["']\)/);
++});
++
++// ── The citation field (slice 2) ─────────────────────────────────────────
++
++const repoRoot = path.resolve(__dirname, '../..');
++const stringLiterals = (code) =>
++  [...code.matchAll(/'((?:[^'\\]|\\.)*)'/g)].map((m) => m[1].replace(/\\'/g, "'"));
++
++function fieldContent() {
++  const code = read('components/landing/citationFieldContent.ts');
++  const paraBlock = code.slice(code.indexOf('export const PARAGRAPHS'), code.indexOf('];', code.indexOf('export const PARAGRAPHS')));
++  const citedBlock = code.slice(code.indexOf('export const CITED'));
++  return { paragraphs: stringLiterals(paraBlock), cited: stringLiterals(citedBlock)[0] };
++}
++
++test('the hero document is verbatim page 1 of the finance seed PDF, and CITED is inside it', (t) => {
++  const { paragraphs, cited } = fieldContent();
++  assert.ok(paragraphs.length >= 10, `expected the page's paragraphs, got ${paragraphs.length}`);
++  assert.ok(cited && cited.length > 40, 'CITED is missing');
++  assert.equal(paragraphs.filter((p) => p.includes(cited)).length, 1, 'CITED must be one sentence inside exactly one paragraph');
++
++  const { spawnSync } = require('node:child_process');
++  const pdf = path.join(repoRoot, 'backend/seed_data/alphabet-earnings.pdf');
++  const out = spawnSync('pdftotext', ['-f', '1', '-l', '1', pdf, '-'], { encoding: 'utf8' });
++  if (out.error || out.status !== 0) {
++    t.skip('pdftotext is not installed; the verbatim check needs it (brew install poppler)');
++    return;
++  }
++  const normalise = (s) => s.replace(/\s+/g, ' ').trim();
++  const page = normalise(out.stdout);
++  for (const p of paragraphs) {
++    assert.ok(page.includes(normalise(p)), `not verbatim on page 1: "${p.slice(0, 70)}…"`);
++  }
++});
++
++test('the citation field takes every colour and font from the tokens', () => {
++  const code = read('components/landing/CitationField.tsx')
++    .replace(/\/\*[\s\S]*?\*\//g, '')
++    .replace(/\/\/.*$/gm, '');
++  assert.doesNotMatch(code, /['"`]#[0-9a-f]{3,8}\b/i, 'hardcoded hex colour in CitationField');
++  assert.doesNotMatch(code, /IBM Plex Sans|Geist|system-ui/, 'hardcoded font family in CitationField');
++  for (const token of ['--ed-ink', '--ed-evidence', '--ed-evidence-soft']) {
++    assert.ok(code.includes(`'${token}'`), `CitationField no longer reads ${token}`);
++  }
++});
++
++test('the hero no longer carries the v0.31.0 product frame', () => {
++  assert.equal(fs.existsSync(path.join(src, 'components/landing/ProductFrame.tsx')), false);
++  const hero = read('components/landing/HeroSection.tsx');
++  assert.doesNotMatch(hero, /ProductFrame/);
++  assert.match(hero, /<CitationField\b/);
++});
