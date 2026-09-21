@@ -173,10 +173,13 @@ export default function EditorialHeaderBase({
                   <Menu aria-hidden="true" size={20} color="var(--ed-ink-2)" />
                 )}
               </button>
+              {/* Quiet, not filled: the masthead is on every marketing page, and a
+                  filled terracotta Sign In here competed with each page's own
+                  primary action — two filled pills above the fold (plan §5.2). */}
               <Link
                 href="/auth"
-                className="ed-cta"
-                style={{ padding: "9px 18px", fontSize: "13px" }}
+                className="ed-cta-quiet"
+                style={{ padding: "8px 17px", fontSize: "13px" }}
               >
                 {labels.signIn}
               </Link>

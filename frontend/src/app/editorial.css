@@ -331,6 +331,34 @@
 }
 .dt-editorial .ed-cta:hover { background: var(--ed-signal-deep); }
 
+/* The secondary action (§5.2: "everything else is ink-outline or text").
+   Same pill geometry as .ed-cta so the two sit together, but ink rather than
+   terracotta, so the page's one filled action is never contested. Used for
+   the masthead's Sign In, which is on every marketing page and used to be a
+   second filled terracotta pill beside each page's own primary action.
+   Measured: ink on stage 13.22 light / 14.91 dark; control border on stage
+   3.06 / 3.77 (WCAG 1.4.11 non-text, floor 3:1). */
+.dt-editorial .ed-cta-quiet {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: transparent;
+  color: var(--ed-ink);
+  border: 1px solid var(--ed-control-border);
+  font-family: var(--dt-body);
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.4;
+  padding: 11px 23px;
+  border-radius: var(--ed-r-pill);
+  transition: background-color var(--ed-dur-1) var(--ed-ease),
+    border-color var(--ed-dur-1) var(--ed-ease);
+}
+.dt-editorial .ed-cta-quiet:hover {
+  background: var(--ed-surface);
+  border-color: var(--ed-ink-3);
+}
+
 .dt-editorial .ed-link {
   display: inline-flex;
   align-items: center;
