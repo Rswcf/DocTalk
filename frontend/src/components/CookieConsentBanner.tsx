@@ -7,10 +7,16 @@ import { useLocale } from '../i18n';
 
 const CONSENT_KEY = 'doctalk_analytics_consent';
 
+type Surface = 'app' | 'editorial' | 'night';
+
 // Scoped to #page-content so the banner's own .dt-editorial wrapper can never
-// make it detect itself.
-function detectSurface(): 'app' | 'editorial' {
-  return document.querySelector('#page-content .dt-editorial') ? 'editorial' : 'app';
+// make it detect itself. 'night' is the landing page, which is dark in both OS
+// themes (.dt-editorial.dt-night); the banner mirrors the class, because it
+// renders outside that root and would otherwise stay paper in a light OS.
+function detectSurface(): Surface {
+  const root = document.querySelector('#page-content .dt-editorial');
+  if (!root) return 'app';
+  return root.classList.contains('dt-night') ? 'night' : 'editorial';
 }
 
 export function CookieConsentBanner() {
@@ -19,7 +25,7 @@ export function CookieConsentBanner() {
   // Which visual system is on the page underneath. The banner is mounted once in
   // app/layout.tsx as a SIBLING of #page-content, so no page can pass it a
   // `surface` prop the way DocumentDiffPanel receives one — it has to look.
-  const [surface, setSurface] = useState<'app' | 'editorial'>('app');
+  const [surface, setSurface] = useState<Surface>('app');
   const { t } = useLocale();
   const pathname = usePathname();
 
@@ -89,7 +95,7 @@ export function CookieConsentBanner() {
     setVisible(false);
   };
 
-  if (surface === 'editorial') {
+  if (surface !== 'app') {
     // Marketing surface (plan 2026-09-20 §5.3/§5.4). The inner .dt-editorial
     // wrapper gives the banner the paper tokens, including the warm dark set,
     // without the outer element inheriting .dt-editorial's position: relative.
@@ -108,7 +114,7 @@ export function CookieConsentBanner() {
         aria-label={t('consent.message')}
       >
         <div
-          className="dt-editorial px-3 py-2.5 sm:px-4 sm:py-3"
+          className={`dt-editorial${surface === 'night' ? ' dt-night' : ''} px-3 py-2.5 sm:px-4 sm:py-3`}
           style={{
             background: 'var(--ed-surface)',
             border: '1px solid var(--ed-rule)',

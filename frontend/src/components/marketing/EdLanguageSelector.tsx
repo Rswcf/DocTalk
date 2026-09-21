@@ -38,12 +38,17 @@ export default function EdLanguageSelector({ languageLabel }: { languageLabel?: 
 
   const [open, setOpen] = useState(false);
   const [pos, setPos] = useState({ top: 0, right: 0, maxHeight: 420 });
+  // The menu is portalled to <body>, outside the page's .dt-editorial root, so
+  // it cannot inherit the landing's Night class (.dt-night: dark tokens in both
+  // OS themes). Mirror it from the trigger's ancestry when the menu opens.
+  const [night, setNight] = useState(false);
   const wrapRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
 
   const updatePos = useCallback(() => {
     if (!triggerRef.current) return;
+    setNight(Boolean(triggerRef.current.closest(".dt-night")));
     const r = triggerRef.current.getBoundingClientRect();
     const top = r.bottom + 10;
     setPos({
@@ -126,7 +131,7 @@ export default function EdLanguageSelector({ languageLabel }: { languageLabel?: 
   const menu = (
     <div
       ref={menuRef}
-      className="dt-editorial ed-glass ed-glass--strong ed-glass--popover"
+      className={`dt-editorial${night ? " dt-night" : ""} ed-glass ed-glass--strong ed-glass--popover`}
       style={{
         position: "fixed",
         top: pos.top,
