@@ -1631,6 +1631,7 @@
   "landing.frame.description": "Um exemplo do DocTalk respondendo a uma pergunta sobre o relatório de resultados do quarto trimestre de 2025 da Alphabet. A resposta cita a página 1, e a frase citada aparece destacada nessa página.",
   "landing.frame.caption": "Cada resposta leva à frase de onde veio, na página certa.",
   "landing.frame.quoteFinder": "Escrevendo algo que precisa de citações? O Localizador de citações as extrai diretamente do seu documento, cada uma conferida com o texto original.",
+  "landing.frame.source": "Resultados do 4º trimestre de 2025 da Alphabet, p. 1",
   "landing.proof.citations": "As respostas citam trechos exatos da fonte",
   "landing.proof.private": "Documentos são privados e podem ser excluídos",
   "landing.proof.locales": "Funciona em 11 idiomas de interface",

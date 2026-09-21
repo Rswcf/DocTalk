@@ -352,6 +352,7 @@
   "landing.frame.description": "Alphabet の 2025 年第 4 四半期決算発表に関する質問に DocTalk が答える例です。回答は 1 ページを引用しており、引用された文がそのページ上でハイライトされています。",
   "landing.frame.caption": "すべての回答は、根拠となった文とそのページにリンクしています。",
   "landing.frame.quoteFinder": "引用が必要な文章を書いていますか？引用ファインダーは文書から直接引用を抜き出し、それぞれを原文と照合します。",
+  "landing.frame.source": "Alphabet 2025 年第 4 四半期決算発表、1 ページ",
   "landing.proof.citations": "回答は正確な原文箇所を引用",
   "landing.proof.private": "文書は非公開で削除可能",
   "landing.proof.locales": "11種類のUI言語に対応",

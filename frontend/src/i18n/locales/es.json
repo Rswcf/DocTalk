@@ -223,6 +223,7 @@
   "landing.frame.description": "Un ejemplo de DocTalk respondiendo a una pregunta sobre el informe de resultados del cuarto trimestre de 2025 de Alphabet. La respuesta cita la página 1 y la frase citada aparece resaltada en esa página.",
   "landing.frame.caption": "Cada respuesta enlaza con la frase de la que procede, en su página.",
   "landing.frame.quoteFinder": "¿Escribes algo que necesita citas? El Buscador de citas las extrae directamente de tu documento y comprueba cada una con el texto original.",
+  "landing.frame.source": "Resultados del 4T 2025 de Alphabet, pág. 1",
   "landing.proof.citations": "Las respuestas citan pasajes exactos",
   "landing.proof.private": "Los documentos son privados y eliminables",
   "landing.proof.locales": "Funciona en 11 idiomas de interfaz",

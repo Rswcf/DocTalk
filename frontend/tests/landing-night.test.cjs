@@ -105,3 +105,17 @@ test('the hero no longer carries the v0.31.0 product frame', () => {
   assert.doesNotMatch(hero, /ProductFrame/);
   assert.match(hero, /<CitationField\b/);
 });
+
+test('the answer card copy exists in all 11 locales', () => {
+  // The card is real text in every locale; only the document behind it stays
+  // English. The four frame keys change together whenever the sample changes
+  // (see citationFieldContent.ts).
+  const LOCALES = ['en', 'zh', 'ja', 'ko', 'es', 'de', 'fr', 'pt', 'it', 'ar', 'hi'];
+  const keys = ['landing.frame.question', 'landing.frame.answer', 'landing.frame.source', 'landing.frame.description', 'landing.frame.quoteFinder'];
+  for (const locale of LOCALES) {
+    const messages = JSON.parse(read(`i18n/locales/${locale}.json`));
+    for (const key of keys) {
+      assert.ok(typeof messages[key] === 'string' && messages[key].trim(), `${key} missing or empty in ${locale}.json`);
+    }
+  }
+});

@@ -361,6 +361,7 @@
   "landing.frame.description": "Ein Beispiel dafür, wie DocTalk eine Frage zum Ergebnisbericht von Alphabet für das vierte Quartal 2025 beantwortet. Die Antwort zitiert Seite 1, und der zitierte Satz ist auf dieser Seite hervorgehoben.",
   "landing.frame.caption": "Jede Antwort verweist auf den Satz, aus dem sie stammt – auf der richtigen Seite.",
   "landing.frame.quoteFinder": "Sie schreiben etwas, das Zitate braucht? Die Zitatsuche holt sie direkt aus Ihrem Dokument und prüft jedes einzelne am Quelltext.",
+  "landing.frame.source": "Alphabet-Quartalszahlen Q4 2025, S. 1",
   "landing.proof.citations": "Antworten zitieren genaue Quellpassagen",
   "landing.proof.private": "Dokumente sind privat und löschbar",
   "landing.proof.locales": "Funktioniert in 11 Oberflächensprachen",

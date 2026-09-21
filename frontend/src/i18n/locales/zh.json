@@ -366,6 +366,7 @@
   "landing.frame.description": "DocTalk 回答一个关于 Alphabet 2025 年第四季度财报问题的示例。回答引用了第 1 页，被引用的句子在该页上高亮显示。",
   "landing.frame.caption": "每个回答都链接到它所依据的原句，并定位到所在页面。",
   "landing.frame.quoteFinder": "写作需要引文？引用查找器直接从您的文档中提取引文，每一条都与原文核对过。",
+  "landing.frame.source": "Alphabet 2025 年第四季度财报，第 1 页",
   "landing.proof.citations": "每个回答都引用确切原文",
   "landing.proof.private": "文档私密且可删除",
   "landing.proof.locales": "支持 11 种界面语言",
