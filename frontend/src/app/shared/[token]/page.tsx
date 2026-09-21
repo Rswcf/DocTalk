@@ -96,11 +96,11 @@ export default async function SharedPage({ params }: { params: Promise<{ token: 
                   maxWidth: data.scope === 'answer' ? '100%' : '85%',
                   overflowWrap: 'anywhere',
                   ...(msg.role === 'user'
-                    ? { background: 'var(--ed-ink)', color: '#ffffff', border: '1px solid var(--ed-ink)' }
+                    ? { background: 'var(--ed-ink)', color: 'var(--ed-paper)', border: '1px solid var(--ed-ink)' }
                     : {}),
                 }}
               >
-                <p className="ed-body" style={{ whiteSpace: 'pre-wrap', ...(msg.role === 'user' ? { color: '#ffffff' } : {}) }}>
+                <p className="ed-body" style={{ whiteSpace: 'pre-wrap', ...(msg.role === 'user' ? { color: 'var(--ed-paper)' } : {}) }}>
                   {msg.content}
                 </p>
                 {msg.citations && msg.citations.length > 0 && (
