@@ -196,6 +196,18 @@ export default async function PricingPageContent({ locale }: { locale: string })
                 <span className="ed-num">{t(plan.priceKey)}</span>
                 <span className="ed-caption">{t(plan.cadenceKey)}</span>
               </div>
+              {/* Name, price, then the button — Apple's pricing order. Only the featured
+                  plan is filled: three filled pills side by side would break the
+                  one-dominant-action rule (plan §5.2), and the masthead's Sign In is
+                  now quiet, so without this the page had no action above the fold. */}
+              <TrackedCtaLink
+                href={plan.ctaHref}
+                event={plan.intentPlan ? { name: 'upgrade_click', params: { plan: plan.intentPlan, period: 'monthly', source: 'pricing' } } : undefined}
+                className={plan.featured ? 'ed-cta' : 'ed-cta-quiet'}
+                style={{ display: 'flex', width: '100%', justifyContent: 'center', marginTop: '16px' }}
+              >
+                {t(plan.ctaKey)}
+              </TrackedCtaLink>
               <p className="ed-body" style={{ marginTop: '14px' }}>
                 {t(plan.summaryKey)}
               </p>
@@ -209,17 +221,9 @@ export default async function PricingPageContent({ locale }: { locale: string })
               >
                 {tOr(plan.fitKey, plan.fitFallback)}
               </p>
-              <div style={{ flex: 1, marginTop: '18px' }}>
+              <div style={{ marginTop: '18px' }}>
                 <EdCheckList items={plan.featureKeys.map((k) => t(k))} />
               </div>
-              <TrackedCtaLink
-                href={plan.ctaHref}
-                event={plan.intentPlan ? { name: 'upgrade_click', params: { plan: plan.intentPlan, period: 'monthly', source: 'pricing' } } : undefined}
-                className="ed-cta"
-                style={{ display: 'flex', width: '100%', justifyContent: 'center', marginTop: '24px' }}
-              >
-                {t(plan.ctaKey)}
-              </TrackedCtaLink>
             </div>
           ))}
         </div>
