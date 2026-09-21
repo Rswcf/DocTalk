@@ -54,3 +54,54 @@ test('chrome rendered outside the landing root mirrors Night', () => {
   assert.match(read('components/CookieConsentBanner.tsx'), /dt-night/);
   assert.match(read('components/marketing/EdLanguageSelector.tsx'), /closest\(["']\.dt-night["']\)/);
 });
+
+// ── The citation field (slice 2) ─────────────────────────────────────────
+
+const repoRoot = path.resolve(__dirname, '../..');
+const stringLiterals = (code) =>
+  [...code.matchAll(/'((?:[^'\\]|\\.)*)'/g)].map((m) => m[1].replace(/\\'/g, "'"));
+
+function fieldContent() {
+  const code = read('components/landing/citationFieldContent.ts');
+  const paraBlock = code.slice(code.indexOf('export const PARAGRAPHS'), code.indexOf('];', code.indexOf('export const PARAGRAPHS')));
+  const citedBlock = code.slice(code.indexOf('export const CITED'));
+  return { paragraphs: stringLiterals(paraBlock), cited: stringLiterals(citedBlock)[0] };
+}
+
+test('the hero document is verbatim page 1 of the finance seed PDF, and CITED is inside it', (t) => {
+  const { paragraphs, cited } = fieldContent();
+  assert.ok(paragraphs.length >= 10, `expected the page's paragraphs, got ${paragraphs.length}`);
+  assert.ok(cited && cited.length > 40, 'CITED is missing');
+  assert.equal(paragraphs.filter((p) => p.includes(cited)).length, 1, 'CITED must be one sentence inside exactly one paragraph');
+
+  const { spawnSync } = require('node:child_process');
+  const pdf = path.join(repoRoot, 'backend/seed_data/alphabet-earnings.pdf');
+  const out = spawnSync('pdftotext', ['-f', '1', '-l', '1', pdf, '-'], { encoding: 'utf8' });
+  if (out.error || out.status !== 0) {
+    t.skip('pdftotext is not installed; the verbatim check needs it (brew install poppler)');
+    return;
+  }
+  const normalise = (s) => s.replace(/\s+/g, ' ').trim();
+  const page = normalise(out.stdout);
+  for (const p of paragraphs) {
+    assert.ok(page.includes(normalise(p)), `not verbatim on page 1: "${p.slice(0, 70)}…"`);
+  }
+});
+
+test('the citation field takes every colour and font from the tokens', () => {
+  const code = read('components/landing/CitationField.tsx')
+    .replace(/\/\*[\s\S]*?\*\//g, '')
+    .replace(/\/\/.*$/gm, '');
+  assert.doesNotMatch(code, /['"`]#[0-9a-f]{3,8}\b/i, 'hardcoded hex colour in CitationField');
+  assert.doesNotMatch(code, /IBM Plex Sans|Geist|system-ui/, 'hardcoded font family in CitationField');
+  for (const token of ['--ed-ink', '--ed-evidence', '--ed-evidence-soft']) {
+    assert.ok(code.includes(`'${token}'`), `CitationField no longer reads ${token}`);
+  }
+});
+
+test('the hero no longer carries the v0.31.0 product frame', () => {
+  assert.equal(fs.existsSync(path.join(src, 'components/landing/ProductFrame.tsx')), false);
+  const hero = read('components/landing/HeroSection.tsx');
+  assert.doesNotMatch(hero, /ProductFrame/);
+  assert.match(hero, /<CitationField\b/);
+});

@@ -366,6 +366,7 @@
   "landing.frame.description": "An example of DocTalk answering a question about Alphabet's fourth-quarter 2025 earnings release. The answer cites page 1, and the cited sentence is highlighted on that page.",
   "landing.frame.caption": "Every answer links to the sentence it came from, on its page.",
   "landing.frame.quoteFinder": "Writing something that needs quotes? Quote Finder pulls them straight from your document, each checked against the source text.",
+  "landing.frame.source": "Alphabet Q4 2025 earnings release, p. 1",
   "landing.proof.citations": "Answers cite exact source passages",
   "landing.proof.private": "Documents are private and deletable",
   "landing.proof.locales": "Works across 11 interface languages",
