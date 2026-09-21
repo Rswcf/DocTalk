@@ -332,3 +332,29 @@ the consent banner renders the app variant at the top; `/`, `/demo`, `/features`
 `/use-cases/lawyers`, `/trust`, `/tools` probed in light and dark — zero low-contrast text, no overflow.
 MINOR-6 correction: the rendered count on `/` is **30** sub-12px text nodes (7–10px), all inside
 FeatureGrid's aria-hidden decorative graphics — larger than the 13 source sites counted above.
+
+---
+
+## Round 2 — reviewer verdict on the fixes (Fable 5.1, 2026-09-21)
+
+Each commit was read as a diff and checked against the current tree; nothing accepted from the description alone.
+
+| Finding | Verdict | Evidence |
+|---|---|---|
+| MAJOR-1 | **CONFIRMED FIXED** (`f93ae39`) | Selector is now `.dt-editorial, .dt-editorial *, .dt-editorial *::before, .dt-editorial *::after` with `animation-iteration-count: 1 !important`. My own parser over the post-fix file (comments stripped, `@keyframes` removed, `@media` flattened): 120 selectors, 0 without `.dt-editorial`. Option (b) is the right call — the guard now still covers editorial components without their own. |
+| MAJOR-2 | **CONFIRMED FIXED** (`10f59bc`) | Both sites (`shared/[token]/page.tsx:99,103`) are `var(--ed-paper)`. Wide grep (`shared`, `document-diff`, `demo`, all marketing dirs, `components/marketing|landing`) finds no other hardcoded white on an `--ed-*` background. |
+| MINOR-2 | **CONFIRMED FIXED** (`662f7aa`) | `<h2 className="ed-h3">` at `PricingPageContent.tsx:180`; outline is now h1 → h2 ×3 → h2 (`EdSection`). Visual class unchanged. |
+| MINOR-9 | **CONFIRMED FIXED** (`662f7aa`) | `text-[var(--ed-paper)]` on the olive chip; ratios match the token comments inverted (6.55 / 8.77). |
+| MINOR-7 | **CONFIRMED FIXED** (`7a4698c`) | `.claude/rules/frontend.md:19-20` now states light+dark required, the 2026-09-20 supersession, the reduced-motion scoping rule, and the `!important` pair warning. **The CLAUDE.md / AGENTS.md claim holds**: grep for `light-only`, `TWO surface`, `re-propose`, `zinc monochrome`, `editorial`, `warm-paper`, `glass` returns nothing in either file (sanity: both contain "DocTalk" ×3); each delegates via `@.claude/rules/frontend.md` / `.claude/rules/frontend.md`. Plan §8 items 3–4 did name the wrong files. |
+| MINOR-1 | **ACCEPT** | Plan-sanctioned; recorded in the outcome section with the "fill only Plus" deviation. Dead `admin.py:101` label is a backend hygiene item, not a shipping issue. |
+| MINOR-3 | **ACCEPT — no missed case found** | The only other `MarketingShell` route not in the list is `/demo`, which was bottom-anchored before this change too. `/shared/[token]` ends in a static CTA, `DocumentDiffPanel` has no fixed/sticky bottom controls (grep). A one-line comment on the `isWorkspaceRoute` list saying the two editorial entries are inert would stop the next reader re-deriving this; optional. |
+| MINOR-4 | **ACCEPT** | Bounded as stated (pre-consent only, ≤60 Hz). One correction to the acceptance note: "anchored on an id" does not give browsers a fast path for a compound descendant selector — the cost is a subtree class walk — but it is small and coalesced, so the conclusion stands. |
+| MINOR-5 | **ACCEPT** | Degrades to a taller banner, not a broken one; the misleading "one row" comment is the only casualty. |
+| MINOR-6 | **ACCEPT, as disclosed** | The upward correction (30 rendered nodes vs my 13 source sites, all inside aria-hidden graphics) is the honest number. The gate remains unmet on `/` pending the owner's FeatureGrid decision; the outcome section says so in bold, which is what I asked for. |
+| MINOR-8 | **ACCEPT** | Already accepted in execution note 7. |
+
+**Post-fix checks I re-ran myself:** `npm run test:unit` 161/161 (renders `PricingPageContent` in 11 locales, so the h2 change is exercised); selector-scope parser 120/120; `git diff --name-only origin/main..HEAD` contains no file under `components/Chat|PdfViewer|TextViewer`, `app/d/`, `lib/sse|api`, dashboard, billing, `PricingTable`, or the store. I did not re-run `npm run build` after the fix commits (CSS, one heading tag, one inline colour, markdown) — accepted on the author's word plus the passing render tests.
+
+**On the golden-path argument.** It is sound, with one precision: Phase 1 *does* touch three things that render on `/d/<id>` — `editorial.css` (global import, now provably scoped), `layout.tsx` (two `theme-color` metas only), and `CookieConsentBanner` (app branch byte-identical, verified round 1; the observer gains one bounded `querySelector`). None of them can alter upload → chat → citation behaviour; the CSS was the one real vector and MAJOR-1 closed it. Stating the argument as "touches those three, and here is why each is inert" is stronger than "touches none".
+
+**Overall: SHIP.**
