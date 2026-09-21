@@ -2,11 +2,28 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { ArrowRight } from 'lucide-react';
 import { useLocale } from '../../i18n';
-import HeroCollage from './HeroCollage';
+import ProductFrame from './ProductFrame';
 import { trackEvent } from '../../lib/analytics';
 
+/**
+ * Landing hero, in the Apple order (plan 2026-09-20 §5.2): one claim, one
+ * sentence, one filled action, then the product. The landing is the one page
+ * where the claim and frame sit centred.
+ *
+ * Deliberately absent, and why:
+ *  - No eyebrow. It read "01 — Document intelligence": a numbered label on
+ *    content that is not a sequence.
+ *  - No stat band ("11 / 6 / 01"). "01 cited answers" read as a broken counter.
+ *    The `landing.heroStats.*` keys are left in the locale files, unused.
+ *  - No italic split. The last headline line used to be wrapped in <em>; the
+ *    type system now sets display type upright, so the wrapper only made the
+ *    markup misleading.
+ *  - No trailing arrows on the actions.
+ *
+ * `landing.headline` and `landing.description` are not edited: they are also
+ * the <title> and <meta description> keys for app/[locale]/page.tsx.
+ */
 export default function HeroSection() {
   const { t } = useLocale();
   const headlineLines = t('landing.headline').split('\n');
@@ -14,88 +31,42 @@ export default function HeroSection() {
   return (
     <section className="ed-section">
       <div className="ed-shell">
-        {/* Asymmetric 12-col grid: text 7 cols, figure 5 cols */}
-        <div className="md:grid md:grid-cols-12 md:gap-12">
+        <div className="mx-auto max-w-[760px] text-center">
+          <h1 className="ed-display">
+            {headlineLines.map((line: string, i: number) => (
+              <React.Fragment key={i}>
+                {i > 0 && <br />}
+                {line}
+              </React.Fragment>
+            ))}
+          </h1>
 
-          {/* ── Text column ── */}
-          <div className="md:col-span-7 flex flex-col justify-center">
+          <p className="ed-lede mx-auto mt-6 max-w-[600px]">
+            {t('landing.description')}
+          </p>
 
-            {/* Eyebrow label */}
-            <p className="ed-label mb-6">
-              <span className="ed-label-num">01</span>
-              {' '}—{' '}{t('landing.heroEyebrow')}
-            </p>
-
-            {/* Headline — heavy grotesque first line, italic-serif second line */}
-            <h1 className="ed-display mb-6">
-              {headlineLines.map((line: string, i: number) => (
-                <React.Fragment key={i}>
-                  {i > 0 && <br />}
-                  {i === headlineLines.length - 1 && headlineLines.length > 1
-                    ? <em>{line}</em>
-                    : line}
-                </React.Fragment>
-              ))}
-            </h1>
-
-            {/* Standfirst */}
-            <p className="ed-lede mb-8">
-              {t('landing.description')}
-            </p>
-
-            {/* CTA row */}
-            <div className="flex flex-wrap items-center gap-4 mb-10">
-              <Link
-                href="/demo"
-                onClick={() => trackEvent('landing_cta_clicked', { source: 'hero', reason: 'demo' })}
-                className="ed-cta"
-              >
-                {t('landing.cta.demo')}
-                <ArrowRight aria-hidden="true" size={16} />
-              </Link>
-              {/* Plain <a> (not next/link): a native hash anchor fires the
-                  `hashchange` event AuthModal listens for, so the modal opens.
-                  next/link updates the hash via history API without firing it. */}
-              <a
-                href="#auth"
-                onClick={() => trackEvent('landing_cta_clicked', { source: 'hero', reason: 'sign_up' })}
-                className="ed-link"
-              >
-                {t('hero.signUpFree')}
-                <ArrowRight aria-hidden="true" size={14} />
-              </a>
-            </div>
-
-            {/* Metrics — editorial stat band. The hairline rule is constrained
-                to the stat group's width (max-w) so it caps the three figures
-                instead of running across the empty right half; an even 3-col
-                grid gives 11 / 6 / 01 a consistent rhythm regardless of digit
-                count; the rule sits close above so the band reads as one unit. */}
-            <div className="mt-2 max-w-[460px]">
-              <hr className="ed-rule mb-5" />
-              <div className="grid grid-cols-3 gap-4">
-                <div>
-                  <p className="ed-num">11</p>
-                  <p className="ed-label mt-1.5">{t('landing.heroStats.languages')}</p>
-                </div>
-                <div>
-                  <p className="ed-num">6</p>
-                  <p className="ed-label mt-1.5">{t('landing.heroStats.formats')}</p>
-                </div>
-                <div>
-                  <p className="ed-num">01</p>
-                  <p className="ed-label mt-1.5">{t('landing.heroStats.citedAnswers')}</p>
-                </div>
-              </div>
-            </div>
+          <div className="mt-8 flex flex-wrap items-center justify-center gap-x-6 gap-y-3">
+            <Link
+              href="/demo"
+              onClick={() => trackEvent('landing_cta_clicked', { source: 'hero', reason: 'demo' })}
+              className="ed-cta"
+            >
+              {t('landing.cta.demo')}
+            </Link>
+            {/* Plain <a> (not next/link): a native hash anchor fires the
+                `hashchange` event AuthModal listens for, so the modal opens.
+                next/link updates the hash via history API without firing it. */}
+            <a
+              href="#auth"
+              onClick={() => trackEvent('landing_cta_clicked', { source: 'hero', reason: 'sign_up' })}
+              className="ed-link"
+            >
+              {t('hero.signUpFree')}
+            </a>
           </div>
-
-          {/* ── Figure column ── */}
-          <div className="md:col-span-5 mt-12 md:mt-0 flex flex-col justify-center">
-            <HeroCollage />
-          </div>
-
         </div>
+
+        <ProductFrame />
       </div>
     </section>
   );
