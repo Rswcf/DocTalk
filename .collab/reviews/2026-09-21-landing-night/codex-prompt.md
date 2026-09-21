@@ -5,7 +5,8 @@ Review only. Do NOT edit files under frontend/. Codex cannot run git: the change
 reviewed separately with `.collab/reviews/2026-09-21-phase2a-seo-keys/codex-prompt.md`). The Night commits are
 `7ee6637` (slice 1: Night ground), `cab3bd8` (slice 2: citation-field hero), `c26a2e8` (slice 3: i18n + rules),
 `f095f20` (owner: prototype B's #0a0908 stage and Geist display type), `12a8565` (owner: Night on every marketing
-page) and any fix commits after them. Their combined diff (with the Phase 2a base excluded) is `night.diff` beside
+page), `725f66e` (fixes for Fable's findings — read the Resolution section of `findings-fable.md`) and any fix
+commits after them. Their combined diff (with the Phase 2a base excluded) is `night.diff` beside
 this file. Plan: `.collab/plans/2026-09-21-landing-night.md` (read §0 first: three owner amendments). Rules:
 `.claude/rules/frontend.md` (UI Design System). A Fable review of slices 1–2 is in `findings-fable.md` if present.
 Write findings to `.collab/reviews/2026-09-21-landing-night/findings-codex.md`: a verdict line

@@ -11,6 +11,21 @@ index 8059f63..1dbf488 100644
  - **De-glass leftovers are a bug class**: commit `0b7404a` flattened the CSS but left dark-glass Tailwind utilities in JSX; ~40 invisible-on-white sites were fixed in v0.23.0. When touching app-surface JSX, any `*-white/NN` or bare `text-white`/`hover:text-white` on a light surface needs a light-mode variant (`dark:` keeps the old value). Theme-inverting solids (`bg-zinc-900 text-white dark:bg-zinc-50 dark:text-zinc-900`) are correct as-is.
  - **i18n**: Components using `t()` MUST be inside `<LocaleProvider>`. Outside = raw key fallback. Only `en` is statically loaded; other 10 locales lazy-loaded. Localized server pages seed `<LocaleProvider initialLocale initialMessages>` (see `app/[locale]/page.tsx` + `getScopedMessages`) so SSR HTML is translated — a `[locale]` page without seeding ships English first paint (the exact failure the locale-URL program exists to fix).
  
+diff --git a/.github/workflows/ci.yml b/.github/workflows/ci.yml
+index 28814b6..d1550dc 100644
+--- a/.github/workflows/ci.yml
++++ b/.github/workflows/ci.yml
+@@ -79,6 +79,10 @@ jobs:
+           cache: npm
+           cache-dependency-path: frontend/package-lock.json
+       - run: npm ci
++      # pdftotext (poppler) backs tests/landing-night.test.cjs's check that the
++      # hero's document text is verbatim from backend/seed_data.
++      - run: sudo apt-get update && sudo apt-get install -y poppler-utils
++      - run: npm run test:unit
+       - run: npm run lint
+       - run: npm run build
+         env:
 diff --git a/frontend/package-lock.json b/frontend/package-lock.json
 index 41e605b..3283a2d 100644
 --- a/frontend/package-lock.json
@@ -65,7 +80,7 @@ index e3b4700..001648e 100644
                      }}
                    >
 diff --git a/frontend/src/app/editorial.css b/frontend/src/app/editorial.css
-index e22a613..9e3103e 100644
+index e22a613..8fafe8f 100644
 --- a/frontend/src/app/editorial.css
 +++ b/frontend/src/app/editorial.css
 @@ -52,6 +52,11 @@
@@ -167,10 +182,25 @@ index e22a613..9e3103e 100644
    font-weight: 600;
    font-variation-settings: "SOFT" 0;
    font-optical-sizing: auto;
-@@ -424,6 +453,48 @@
+@@ -424,6 +453,66 @@
    color: var(--ed-ink);
  }
  
++/* Night pages paint the document itself dark. components/marketing/night.ts
++   puts `dt-night-doc` on <html> while a marketing root is mounted; without
++   it, rubber-band overscroll shows the app's light body above and below the
++   page, and the scrollbar stays light (review 2026-09-21, MINOR-4). This is
++   the one editorial rule outside .dt-editorial, gated by a class only Night
++   sets. The colour is the night stage (the token is not defined up here);
++   !important because next-themes writes color-scheme inline on <html>. */
++html.dt-night-doc,
++html.dt-night-doc body {
++  background-color: #0a0908;
++}
++html.dt-night-doc {
++  color-scheme: dark !important;
++}
++
 +/* ─── Night display type (owner, 2026-09-21) ───────────────────────────
 +   Every marketing page is Night, and Night sets its display steps in Geist
 +   (prototype B's sans) through --ed-display-family above. These rules only
@@ -187,6 +217,9 @@ index e22a613..9e3103e 100644
 +}
 +.dt-editorial.dt-night .ed-display {
 +  font-size: clamp(44px, 6vw, 84px);
++  /* ...and with the viewport height, so a laptop's first screen keeps the
++     passage and the answer under the claim (MAJOR-3). */
++  font-size: clamp(44px, min(6vw, 9.5svh), 84px);
 +  line-height: 1;
 +  letter-spacing: -0.045em;
 +}
@@ -216,7 +249,7 @@ index e22a613..9e3103e 100644
  /* ─── Non-Latin degradation (§5.1) ────────────────────────────────────
     --dt-serif already resolves to the sans stack for these locales, so the
     display steps render in the body family. Made explicit here: weight 600
-@@ -663,80 +734,146 @@
+@@ -663,80 +752,161 @@
    }
  }
  
@@ -245,11 +278,15 @@ index e22a613..9e3103e 100644
 +  isolation: isolate;
    overflow: hidden;
 -  text-align: start;
-+  min-height: 800px;
++  min-height: 640px;
 +  /* svh, not vh: collapsing mobile toolbars must not move the passage. 64px
-+     is the sticky header above the stage. */
-+  min-height: max(800px, calc(100svh - 64px));
++     is the sticky header above the stage. The floor is low on purpose: the
++     claim, the passage and the answer have to share a laptop's first screen
++     (review 2026-09-21, MAJOR-3). HeroSection grows the stage when the
++     answer would not fit. */
++  min-height: max(640px, calc(100svh - 64px));
 +  padding: 88px 24px 0;
++  padding-top: clamp(40px, 7svh, 88px);
 +}
 +
 +/* The document, full-bleed behind the claim: faint at the top, where the
@@ -286,6 +323,11 @@ index e22a613..9e3103e 100644
 +  text-align: center;
 +}
 +/* Darkness pooled behind the claim, so the document never competes with it.
++   Sized to the claim (top and bottom insets), not a fixed height: a fixed
++   660px box reached down over the passage on every laptop viewport and put
++   it under ~94% darkness (review 2026-09-21, MAJOR-1). The passage starts at
++   least 40px below the claim (HeroSection), so it is always outside this box.
++   No pointer events: the cursor lamp lives on the document underneath.
 +   Browsers without color-mix() get no pool; the field's top fade still keeps
 +   the claim legible. */
 +.dt-editorial .ed-night-claim::before {
@@ -293,10 +335,11 @@ index e22a613..9e3103e 100644
 +  position: absolute;
 +  z-index: -1;
 +  top: -80px;
++  bottom: -40px;
 +  left: 50%;
 +  width: 1560px;
-+  height: 660px;
 +  transform: translateX(-50%);
++  pointer-events: none;
 +  background: radial-gradient(
 +    closest-side,
 +    color-mix(in srgb, var(--ed-paper) 97%, transparent) 0%,
@@ -308,6 +351,7 @@ index e22a613..9e3103e 100644
 +.dt-editorial .ed-night-claim .ed-lede {
 +  max-width: 600px;
 +  margin: 24px auto 0;
++  margin-top: clamp(16px, 2.6svh, 24px);
 +  text-wrap: pretty;
 +}
 +.dt-editorial .ed-night-actions {
@@ -330,6 +374,7 @@ index e22a613..9e3103e 100644
 +  justify-content: center;
 +  gap: 12px 28px;
 +  margin-top: 34px;
++  margin-top: clamp(24px, 3.8svh, 34px);
  }
 -.dt-editorial .ed-frame-doc {
 -  min-width: 0;
@@ -360,7 +405,10 @@ index e22a613..9e3103e 100644
 +    transform var(--ed-dur-3) var(--ed-ease);
 +}
 +/* With scripting, the card waits for the highlighter (HeroSection shows it
-+   after at most 6s regardless). Without it, it is simply there. */
++   after at most 6s regardless). Without it, it is simply there. Browsers
++   without the `scripting` feature (Safari < 17, Chrome < 120, Firefox < 113)
++   show it from first paint at the CSS position, then see it move to the
++   computed one: accepted degradation, not a regression. */
 +@media (scripting: enabled) {
 +  .dt-editorial .ed-night-stage:not(.is-cited) .ed-night-card {
 +    opacity: 0;
@@ -425,7 +473,7 @@ index e22a613..9e3103e 100644
  .dt-editorial .ed-frame-a {
    margin-top: 20px;
    color: var(--ed-ink);
-@@ -791,86 +928,42 @@
+@@ -791,86 +961,54 @@
    color: var(--ed-ink-3);
  }
  
@@ -504,8 +552,18 @@ index e22a613..9e3103e 100644
 -  font-size: 15px;
 -  line-height: 1.5;
 -  text-align: center;
--}
--
++/* Short desktop viewports (a 768px laptop screen leaves ~650px under the
++   browser's own chrome; 1280x720 windows too): the claim, the passage and the answer still share
++   the first screen. Tighter spacing, and the card drops its source row — the
++   margin badge on the page and the answer's chip already carry the "1". */
++@media (min-width: 768px) and (max-height: 740px) {
++  .dt-editorial .ed-night-stage { padding-top: clamp(32px, 6svh, 88px); }
++  .dt-editorial.dt-night .ed-night-claim .ed-display { font-size: clamp(44px, min(6vw, 9svh), 84px); }
++  .dt-editorial .ed-night-card { padding: 14px 18px; }
++  .dt-editorial .ed-night-card .ed-frame-a { margin-top: 6px; }
++  .dt-editorial .ed-night-card .ed-frame-source { display: none; }
+ }
+ 
 +/* Phones: the claim, then the document as its own band, then the answer
 +   overlapping the band's faded foot. */
  @media (max-width: 767px) {
@@ -615,10 +673,10 @@ index 4b45c14..3070e23 100644
              border: '1px solid var(--ed-rule)',
 diff --git a/frontend/src/components/landing/CitationField.tsx b/frontend/src/components/landing/CitationField.tsx
 new file mode 100644
-index 0000000..8e0d57a
+index 0000000..f191316
 --- /dev/null
 +++ b/frontend/src/components/landing/CitationField.tsx
-@@ -0,0 +1,500 @@
+@@ -0,0 +1,538 @@
 +"use client";
 +
 +import { useEffect, useRef } from 'react';
@@ -686,6 +744,12 @@ index 0000000..8e0d57a
 +  occurrence: number;
 +  /** 0..1: slide the text so the citation sits at this fraction of the height. */
 +  focusY: number;
++  /**
++   * If set, overrides focusY: the top of the first highlighted line sits this
++   * many px from the canvas top. HeroSection derives it from the claim's
++   * measured bottom, so the passage follows the claim at every viewport.
++   */
++  anchorTop?: number;
 +  dimAlpha: number;
 +  litAlpha: number;
 +  lampRadius: number;
@@ -728,6 +792,13 @@ index 0000000..8e0d57a
 +
 +const ease = (t: number) => 1 - Math.pow(1 - Math.min(1, Math.max(0, t)), 3);
 +const rgba = ([r, g, b]: Rgb, a: number) => `rgba(${r}, ${g}, ${b}, ${a})`;
++
++/** Begin a rounded-rect path; square corners where roundRect is missing (Safari < 16). */
++function roundedRect(c: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) {
++  c.beginPath();
++  if (typeof c.roundRect === 'function') c.roundRect(x, y, w, h, r);
++  else c.rect(x, y, w, h);
++}
 +
 +/** A token's colour as rgb. Tokens are hex today; rgb()/rgba() also parse. */
 +function readColour(style: CSSStyleDeclaration, name: string): Rgb {
@@ -866,7 +937,9 @@ index 0000000..8e0d57a
 +            first: spans[0],
 +          }
 +        : null;
-+      offsetY = cited ? Math.round(s.focusY * H - cited.cy) : 0;
++      if (!cited) offsetY = 0;
++      else if (s.anchorTop != null) offsetY = Math.round(s.anchorTop - (cited.first.y - s.lineHeight * 0.72));
++      else offsetY = Math.round(s.focusY * H - cited.cy);
 +    }
 +
 +    function paintInk() {
@@ -891,6 +964,8 @@ index 0000000..8e0d57a
 +      tctx!.clearRect(0, 0, tmp.width, tmp.height);
 +      tctx!.drawImage(ink, 0, 0);
 +      tctx!.globalCompositeOperation = 'destination-in';
++      // destination-in keeps only the alpha of these stops; their colour is
++      // discarded, so the black here is not a colour to tokenise.
 +      const g = tctx!.createRadialGradient(x * dpr, y * dpr, 0, x * dpr, y * dpr, radius * dpr);
 +      g.addColorStop(0, 'rgba(0, 0, 0, 1)');
 +      g.addColorStop(0.55, 'rgba(0, 0, 0, 0.55)');
@@ -946,8 +1021,7 @@ index 0000000..8e0d57a
 +        const y = sp.y + offsetY - s.lineHeight * 0.72;
 +        // The soft evidence fill, warmed with the evidence colour itself: on
 +        // its own the dark-theme fill barely separates from the stage.
-+        ctx!.beginPath();
-+        ctx!.roundRect(sp.x1 - 3, y, (sp.x2 - sp.x1 + 6) * local, h, 3);
++        roundedRect(ctx!, sp.x1 - 3, y, (sp.x2 - sp.x1 + 6) * local, h, 3);
 +        ctx!.fillStyle = rgba(colours.soft, 1);
 +        ctx!.fill();
 +        ctx!.fillStyle = rgba(colours.evidence, 0.16);
@@ -984,8 +1058,7 @@ index 0000000..8e0d57a
 +        ctx!.fillStyle = rgba(colours.soft, 1);
 +        ctx!.strokeStyle = rgba(colours.evidence, 1);
 +        ctx!.lineWidth = 1;
-+        ctx!.beginPath();
-+        ctx!.roundRect(-bw / 2, -bh / 2, bw, bh, 5);
++        roundedRect(ctx!, -bw / 2, -bh / 2, bw, bh, 5);
 +        ctx!.fill();
 +        ctx!.stroke();
 +        ctx!.fillStyle = rgba(colours.evidence, 1);
@@ -1045,6 +1118,17 @@ index 0000000..8e0d57a
 +      buildLayout();
 +      paintInk();
 +      reportLayout();
++      if (!cited) {
++        // The sentence is not in the laid-out text (a content edit, or an
++        // occurrence beyond the repeats): show the page, release the card,
++        // and never start a loop with nothing to animate.
++        draw(1e9);
++        if (!finished) {
++          finished = true;
++          onCitedRef.current?.();
++        }
++        return;
++      }
 +      if (still || finished) draw(1e9);
 +      else kick();
 +    }
@@ -1058,6 +1142,11 @@ index 0000000..8e0d57a
 +      layout();
 +    }
 +
++    // The cursor lamp is lit only while the pointer moves. A pointer parked
++    // over the field would otherwise hold the loop at full frame rate
++    // forever (review 2026-09-21, MAJOR-2): after a short rest the lamp
++    // fades out and the loop stops with it.
++    let idle = 0;
 +    const onMove = (e: PointerEvent) => {
 +      cursor.tx = e.offsetX;
 +      cursor.ty = e.offsetY;
@@ -1066,9 +1155,15 @@ index 0000000..8e0d57a
 +        cursor.y = cursor.ty;
 +      }
 +      cursor.ta = 1;
++      window.clearTimeout(idle);
++      idle = window.setTimeout(() => {
++        cursor.ta = 0;
++        kick();
++      }, 1200);
 +      kick();
 +    };
 +    const onLeave = () => {
++      window.clearTimeout(idle);
 +      cursor.ta = 0;
 +    };
 +    if (finePointer && !still) {
@@ -1106,6 +1201,7 @@ index 0000000..8e0d57a
 +      alive = false;
 +      relayoutRef.current = null;
 +      window.clearTimeout(timer);
++      window.clearTimeout(idle);
 +      if (raf) cancelAnimationFrame(raf);
 +      resizeObserver.disconnect();
 +      visibilityObserver.disconnect();
@@ -1133,14 +1229,14 @@ index be1dd89..d67e928 100644
                    fontWeight: 500,
                    color: "var(--ed-ink)",
 diff --git a/frontend/src/components/landing/HeroSection.tsx b/frontend/src/components/landing/HeroSection.tsx
-index 0f51653..78e1cd9 100644
+index 0f51653..3aba339 100644
 --- a/frontend/src/components/landing/HeroSection.tsx
 +++ b/frontend/src/components/landing/HeroSection.tsx
-@@ -1,55 +1,149 @@
+@@ -1,55 +1,192 @@
  "use client";
  
 -import React from 'react';
-+import React, { useCallback, useEffect, useRef, useState } from 'react';
++import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
  import Link from 'next/link';
  import { useLocale } from '../../i18n';
 -import ProductFrame from './ProductFrame';
@@ -1230,17 +1326,52 @@ index 0f51653..78e1cd9 100644
 +// passage (badge, passage, answer read down one edge). It stays clear of the
 +// bottom-right corner, where the first-visit cookie banner sits.
 +const CARD_EDGE = 24;
++// The passage starts this far under the claim: a share of the stage height,
++// never less than the claim's darkness pool reaches past it (editorial.css,
++// `.ed-night-claim::before`, bottom: -40px), never more than a comfortable gap.
++const passageGap = (stageHeight: number) => Math.min(64, Math.max(40, Math.round(stageHeight * 0.06)));
++// useLayoutEffect warns during SSR; the measurement only matters in the browser.
++const useIsoLayoutEffect = typeof window === 'undefined' ? useEffect : useLayoutEffect;
 +
  export default function HeroSection() {
 -  const { t } = useLocale();
-+  const { t, tOr } = useLocale();
++  const { t, tOr, locale } = useLocale();
    const headlineLines = t('landing.headline').split('\n');
- 
++  // Where the authored break is hidden (phones), the lines need a space to
++  // stay separate words, except in scripts written without spaces.
++  const joiner = /^(zh|ja)/.test(locale) ? '' : ' ';
++
 +  const stageRef = useRef<HTMLElement>(null);
++  const claimRef = useRef<HTMLDivElement>(null);
 +  const cardRef = useRef<HTMLElement>(null);
 +  const [narrow, setNarrow] = useState(false);
 +  const [cited, setCited] = useState(false);
 +  const [cardPos, setCardPos] = useState<{ left: number; top: number } | null>(null);
++  const [anchorTop, setAnchorTop] = useState<number | undefined>(undefined);
++  const [stageMin, setStageMin] = useState<number | null>(null);
++
++  // The passage follows the claim: measure the claim's bottom (it moves with
++  // the locale, the viewport height and the web fonts arriving) and anchor
++  // the first highlighted line under it.
++  useIsoLayoutEffect(() => {
++    const stage = stageRef.current;
++    const claim = claimRef.current;
++    if (!stage || !claim) return;
++    const measure = () => {
++      const bottom = claim.offsetTop + claim.offsetHeight;
++      setAnchorTop(bottom + passageGap(stage.clientHeight));
++    };
++    measure();
++    const observer = new ResizeObserver(measure);
++    observer.observe(claim);
++    observer.observe(stage);
++    return () => observer.disconnect();
++  }, []);
++
++  const settings = useMemo<CitationFieldSettings>(
++    () => (narrow ? NARROW : { ...WIDE, anchorTop }),
++    [narrow, anchorTop],
++  );
 +
 +  useEffect(() => {
 +    const mq = window.matchMedia(NARROW_QUERY);
@@ -1261,23 +1392,30 @@ index 0f51653..78e1cd9 100644
 +    const card = cardRef.current;
 +    if (!stage || !card || window.matchMedia(NARROW_QUERY).matches) {
 +      setCardPos(null);
++      setStageMin(null);
 +      return;
 +    }
 +    const stageWidth = stage.clientWidth;
-+    const stageHeight = stage.clientHeight;
 +    // The field is centred in the stage, so stage x = canvas x + inset.
 +    const inset = (stageWidth - layout.width) / 2;
 +    const left = Math.max(CARD_EDGE, inset + layout.textLeft);
 +    const cardFrom = left - inset - 8;
 +    const cardTo = left - inset + CARD_WIDTH + 8;
 +    const covered = layout.spans.filter((s) => s.x2 > cardFrom && s.x1 < cardTo);
-+    const below = covered.length ? Math.max(...covered.map((s) => s.bottom)) + 16 : layout.citedY + 24;
-+    const top = Math.min(below, stageHeight - card.offsetHeight - CARD_EDGE);
++    const top = covered.length ? Math.max(...covered.map((s) => s.bottom)) + 16 : layout.citedY + 24;
 +    setCardPos({ left: Math.round(left), top: Math.round(top) });
++    // Never pull the card up over the passage to make it fit: grow the stage
++    // instead. The claim, the passage and the card fit a laptop's first
++    // screen at the svh-scaled sizes; where they cannot, the card continues
++    // below the fold rather than covering the citation.
++    // `floor` mirrors the stage's CSS min-height, max(640px, 100svh - 64px).
++    const needed = Math.ceil(top + card.offsetHeight + CARD_EDGE);
++    const floor = Math.max(640, window.innerHeight - 64);
++    setStageMin(needed > floor ? needed : null);
 +  }, []);
 +
 +  const onCited = useCallback(() => setCited(true), []);
-+
+ 
    return (
 -    <section className="ed-section">
 -      <div className="ed-shell">
@@ -1287,20 +1425,21 @@ index 0f51653..78e1cd9 100644
 +      <section
 +        ref={stageRef}
 +        className={`ed-night-stage${cited ? ' is-cited' : ''}`}
++        style={stageMin ? { minHeight: stageMin } : undefined}
 +        aria-labelledby="landing-hero-title"
 +      >
 +        <div className="ed-night-field" dir="ltr" lang="en" aria-hidden="true">
-+          <CitationField settings={narrow ? NARROW : WIDE} onLayout={onLayout} onCited={onCited} />
++          <CitationField settings={settings} onLayout={onLayout} onCited={onCited} />
 +        </div>
 +
-+        <div className="ed-night-claim">
++        <div ref={claimRef} className="ed-night-claim">
 +          <h1 id="landing-hero-title" className="ed-display">
              {headlineLines.map((line: string, i: number) => (
                <React.Fragment key={i}>
 -                {i > 0 && <br />}
 +                {/* The space keeps the words apart where the break is hidden
 +                    (phones balance the whole headline instead). */}
-+                {i > 0 && <>{' '}<br /></>}
++                {i > 0 && <>{joiner}<br /></>}
                  {line}
                </React.Fragment>
              ))}
@@ -1316,7 +1455,7 @@ index 0f51653..78e1cd9 100644
              <Link
                href="/demo"
                onClick={() => trackEvent('landing_cta_clicked', { source: 'hero', reason: 'demo' })}
-@@ -70,8 +164,46 @@ export default function HeroSection() {
+@@ -70,8 +207,46 @@ export default function HeroSection() {
            </div>
          </div>
  
@@ -1367,14 +1506,14 @@ index 0f51653..78e1cd9 100644
    );
  }
 diff --git a/frontend/src/components/landing/LandingPageContent.tsx b/frontend/src/components/landing/LandingPageContent.tsx
-index 96d2047..ecf5535 100644
+index 96d2047..b86a173 100644
 --- a/frontend/src/components/landing/LandingPageContent.tsx
 +++ b/frontend/src/components/landing/LandingPageContent.tsx
 @@ -1,6 +1,7 @@
  "use client";
  
  import React from 'react';
-+import { NIGHT_ROOT_CLASS, useNightThemeColor } from '../marketing/night';
++import { NIGHT_ROOT_CLASS, useNightDocument } from '../marketing/night';
  import EditorialHeader from './EditorialHeader';
  import EditorialFooter from './EditorialFooter';
  import HeroSection from './HeroSection';
@@ -1408,7 +1547,7 @@ index 96d2047..ecf5535 100644
   * and `<DashboardPageClient />` based on session status.
   */
  export default function LandingPageContent() {
-+  useNightThemeColor();
++  useNightDocument();
 +
    return (
 -    <div className="dt-editorial">
@@ -1645,14 +1784,14 @@ index def63c5..b069011 100644
                    fontWeight: 500,
                    color: "var(--ed-ink)",
 diff --git a/frontend/src/components/marketing/MarketingShell.tsx b/frontend/src/components/marketing/MarketingShell.tsx
-index f33d93d..fe2856a 100644
+index f33d93d..01866b6 100644
 --- a/frontend/src/components/marketing/MarketingShell.tsx
 +++ b/frontend/src/components/marketing/MarketingShell.tsx
 @@ -4,6 +4,7 @@ import EditorialMarketingHeader from "./EditorialMarketingHeader";
  import type { Crumb } from "./EditorialMarketingHeader";
  import EditorialFooter from "../landing/EditorialFooter";
  import type { ChromeStrings } from "../../i18n/chrome";
-+import { NIGHT_ROOT_CLASS, useNightThemeColor } from "./night";
++import { NIGHT_ROOT_CLASS, useNightDocument } from "./night";
  
  export default function MarketingShell({
    breadcrumb,
@@ -1662,7 +1801,7 @@ index f33d93d..fe2856a 100644
  }) {
 +  // Night on every marketing page (owner, 2026-09-21), the same theme as the
 +  // landing: see ./night.ts.
-+  useNightThemeColor();
++  useNightDocument();
    return (
 -    <div className="dt-editorial min-h-screen flex flex-col">
 +    <div className={`${NIGHT_ROOT_CLASS} min-h-screen flex flex-col`}>
@@ -1671,10 +1810,10 @@ index f33d93d..fe2856a 100644
        <EditorialFooter chrome={chrome} />
 diff --git a/frontend/src/components/marketing/night.ts b/frontend/src/components/marketing/night.ts
 new file mode 100644
-index 0000000..76386f0
+index 0000000..9ef725e
 --- /dev/null
 +++ b/frontend/src/components/marketing/night.ts
-@@ -0,0 +1,42 @@
+@@ -0,0 +1,59 @@
 +import { useEffect } from 'react';
 +import { GeistSans } from 'geist/font/sans';
 +
@@ -1697,23 +1836,40 @@ index 0000000..76386f0
 +export const NIGHT_THEME_COLOR = '#0a0908';
 +
 +/**
-+ * Tint the browser chrome to the night stage while a marketing root is
-+ * mounted. layout.tsx declares theme-color per OS scheme (paper for light),
-+ * which would paint a pale toolbar over a dark page. A page-level `viewport`
-+ * export can't do this: the signed-in dashboard renders at `/` too and keeps
-+ * the app's colours, so the tags are swapped on mount and restored on unmount.
++ * Dress the document for Night while a marketing root is mounted, and undo it
++ * on unmount (the signed-in dashboard renders at `/` too and keeps the app's
++ * colours, so none of this can be a static page export):
++ *  - theme-color: layout.tsx declares it per OS scheme (paper for light),
++ *    which would paint a pale toolbar over a dark page;
++ *  - `dt-night-doc` on <html>: editorial.css paints <html>/<body> the night
++ *    stage and sets `color-scheme: dark`, so overscroll bands and the page
++ *    scrollbar are dark too.
 + */
-+export function useNightThemeColor() {
++// Reference-counted across roots: two marketing pages can overlap during a
++// client navigation (the next one mounted before the last one unmounts), so
++// the ORIGINAL values are captured by the first mount and restored only by
++// the last unmount, whatever the order.
++let mountedRoots = 0;
++let originalThemeColors: string[] | null = null;
++
++export function useNightDocument() {
 +  useEffect(() => {
++    const root = document.documentElement;
 +    const metas = Array.from(document.querySelectorAll<HTMLMetaElement>('meta[name="theme-color"]'));
-+    const previous = metas.map((m) => m.content);
++    if (mountedRoots === 0) originalThemeColors = metas.map((m) => m.content);
++    mountedRoots += 1;
 +    metas.forEach((m) => {
 +      m.content = NIGHT_THEME_COLOR;
 +    });
++    root.classList.add('dt-night-doc');
 +    return () => {
++      mountedRoots -= 1;
++      if (mountedRoots > 0) return;
 +      metas.forEach((m, i) => {
-+        m.content = previous[i];
++        if (originalThemeColors) m.content = originalThemeColors[i];
 +      });
++      originalThemeColors = null;
++      root.classList.remove('dt-night-doc');
 +    };
 +  }, []);
 +}
@@ -1851,10 +2007,10 @@ index a80bf25..b00e881 100644
    "landing.proof.locales": "支持 11 种界面语言",
 diff --git a/frontend/tests/landing-night.test.cjs b/frontend/tests/landing-night.test.cjs
 new file mode 100644
-index 0000000..37fe5bc
+index 0000000..ca09625
 --- /dev/null
 +++ b/frontend/tests/landing-night.test.cjs
-@@ -0,0 +1,186 @@
+@@ -0,0 +1,219 @@
 +const assert = require('node:assert/strict');
 +const fs = require('node:fs');
 +const path = require('node:path');
@@ -1876,13 +2032,27 @@ index 0000000..37fe5bc
 +  for (const prelude of preludes) {
 +    const list = prelude.split(',').map((s) => s.trim().replace(/\s+/g, ' '));
 +    for (const selector of list) {
-+      if (!selector.startsWith('.dark .dt-editorial')) continue;
++      if (!/\.dark\b/.test(selector)) continue;
++      // Any other spelling (html.dark …, .dark :is(…), .dark > …) would slip
++      // past the twin rule; the editorial layer only ever writes this one.
++      assert.ok(selector.startsWith('.dark .dt-editorial'), `"${selector}": write dark editorial rules as ".dark .dt-editorial …"`);
 +      darkSelectors += 1;
 +      const twin = selector.replace('.dark .dt-editorial', '.dt-editorial.dt-night');
 +      assert.ok(list.includes(twin), `"${selector}" has no "${twin}" twin in the same selector list`);
 +    }
 +  }
 +  assert.ok(darkSelectors >= 2, 'expected the dark token set and the dark grain at least');
++});
++
++test('the app stylesheet never styles the editorial layer through .dark', () => {
++  // A .dark rule for editorial classes in globals.css would reach dark-OS
++  // marketing pages but never Night in a light OS, silently splitting them.
++  const css = stripCssComments(read('app/globals.css'));
++  const offenders = [...css.matchAll(/([^{}]+)\{/g)]
++    .flatMap((m) => m[1].split(','))
++    .map((s) => s.trim().replace(/\s+/g, ' '))
++    .filter((s) => /\.dark\b/.test(s) && /\.(dt-editorial|ed-[\w-]+)\b/.test(s));
++  assert.deepEqual(offenders, []);
 +});
 +
 +// Night-only rules are an explicit, closed list. The owner asked for
@@ -1949,7 +2119,7 @@ index 0000000..37fe5bc
 +  assert.match(read('components/landing/LandingPageContent.tsx'), /className=\{NIGHT_ROOT_CLASS\}/);
 +  assert.match(read('components/marketing/MarketingShell.tsx'), /className=\{`\$\{NIGHT_ROOT_CLASS\} /);
 +  for (const root of ['components/landing/LandingPageContent.tsx', 'components/marketing/MarketingShell.tsx']) {
-+    assert.match(read(root), /useNightThemeColor\(\)/, `${root} does not tint theme-color`);
++    assert.match(read(root), /useNightDocument\(\)/, `${root} does not dress the document for Night`);
 +  }
 +});
 +
@@ -2000,6 +2170,9 @@ index 0000000..37fe5bc
 +  const pdf = path.join(repoRoot, 'backend/seed_data/alphabet-earnings.pdf');
 +  const out = spawnSync('pdftotext', ['-f', '1', '-l', '1', pdf, '-'], { encoding: 'utf8' });
 +  if (out.error || out.status !== 0) {
++    // CI installs poppler, so a missing pdftotext there is a broken job, not a
++    // reason to skip the one check that the hero quotes its source exactly.
++    assert.ok(!process.env.CI, 'pdftotext is missing in CI; install poppler-utils');
 +    t.skip('pdftotext is not installed; the verbatim check needs it (brew install poppler)');
 +    return;
 +  }
@@ -2039,5 +2212,21 @@ index 0000000..37fe5bc
 +    for (const key of keys) {
 +      assert.ok(typeof messages[key] === 'string' && messages[key].trim(), `${key} missing or empty in ${locale}.json`);
 +    }
++  }
++});
++
++test('both field settings place the citation inside the laid-out repeats', () => {
++  // With occurrence >= repeat the sentence is never laid out: no highlight,
++  // and (before the guard in CitationField) a loop with nothing to animate.
++  const hero = read('components/landing/HeroSection.tsx');
++  const block = (name) => hero.slice(hero.indexOf(`const ${name}: CitationFieldSettings = {`), hero.indexOf('};', hero.indexOf(`const ${name}: CitationFieldSettings = {`)));
++  const num = (text, key) => { const m = text.match(new RegExp(`\\b${key}: (\\d+)`)); return m ? Number(m[1]) : undefined; };
++  const wide = block('WIDE');
++  const narrow = block('NARROW');
++  for (const [name, text] of [['WIDE', wide], ['NARROW', narrow]]) {
++    const repeat = num(text, 'repeat') ?? num(wide, 'repeat');
++    const occurrence = num(text, 'occurrence') ?? num(wide, 'occurrence');
++    assert.ok(Number.isInteger(repeat) && Number.isInteger(occurrence), `${name}: repeat/occurrence not found`);
++    assert.ok(occurrence < repeat, `${name}: occurrence ${occurrence} must be < repeat ${repeat}`);
 +  }
 +});
