@@ -284,6 +284,13 @@ Three layers, deliberately separable:
 - **Judge:** Jev re-run on all 40 routes with identical questions; targets: prose-first > 0.5 on ≤ 5 routes, headline grammar mean ≥ 2.5, competing actions > 0.5 on 0 routes.
 - **Codex:** required for the metadata/title decoupling and the `PublicHeader` removal; the copy batches themselves need the i18n parity check, not Codex.
 
+#### Phase 1 follow-up found during execution — the cookie banner now covers the price
+Discovered 2026-09-21 while verifying the `/pricing` restructure at 375×812. `CookieConsentBanner` is `fixed z-40` with `bottom-3 left-3 right-3` on phones — full-bleed across the bottom of the viewport — and on a first visit it **sits directly on top of the `$0` that Phase 1 just moved into the first screen**. The measured win (first price y=1877 → y=661) is real, but a first-time visitor does not see it until they dismiss the banner.
+
+It is also a fifth instance of the seam: the banner is built entirely from the cool app palette — `--workbench-border`, `--workbench-panel-solid`, `--workbench-ink`, `--workbench-muted`, `dt-stitch-primary` (the blue button) and `zinc-*` hovers — and it renders on all 46 editorial routes. `backdrop-blur-2xl` on it is also content-layer glass by the §5.4 rule.
+
+The plan currently schedules this component for Phase 3 (the `--workbench-*` re-point). That is now too late: it directly undermines Phase 1's only measured outcome. **Recommendation: pull it into Phase 1**, using the sanctioned dual-surface pattern (`surface="app" | "editorial"`, the `DocumentDiffPanel` precedent) rather than a second component — re-point the colours, drop the blur, and on phones anchor it so it cannot overlap the first screen's primary content. Owner decision, because it is a visible change on every marketing page.
+
 #### Phase 2 addendum — who each page is actually for (added 2026-09-20 from the parallel user-needs test)
 A separate session ran Jev over all nine `/use-cases/*` pages × the five personas measured in production data (45 Nouls: "would a person matching this persona recognise their own task as something this product is built for?"). Source: `.collab/reviews/2026-09-20-user-needs-test/01-persona-page-matrix.md`. This is a **different question** from our fold audit — ours asked whether a page is *structured* like a product page, this asks whether it *addresses anyone*. A page can score well on ours and still address nobody. Both are text-only judgements; neither speaks to ranking, conversion or visuals.
 
