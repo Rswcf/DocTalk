@@ -634,26 +634,31 @@
   outline-offset: 2px;
 }
 
-/* ─── Reduced motion (§5.5) ───────────────────────────────────────────
-   DELIBERATELY UNSCOPED — the one rule in this file that is not under
-   .dt-editorial, and it must stay that way. It is an accessibility escape
-   hatch, not a style: the plan names targets that live OUTSIDE the
-   marketing surface (the cookie banner's `slideUp`, which layout.tsx
-   renders as a sibling of #page-content), and per-component JS guards
-   cover only the components that remember to add one. Scoping it down
-   would silently drop those.
-   `.01ms` rather than `0s` so animationend/transitionend still fire and
-   nothing that waits on them deadlocks. Component-level guards
-   (ShimmerBadge, StaggeredReveal, TiltCard, BlurReveal, EdFaqList, the
-   PDF/Text viewers' scroll behaviour) stay — this is the floor, not a
-   replacement.
-   Phase 3 moves this to globals.css when the app surface joins the system;
-   until then globals.css is out of scope for this phase. */
+/* Reduced motion (§5.5), SCOPED to the marketing surface.
+   An earlier revision was deliberately unscoped, to reach the cookie
+   banner's slideUp (layout.tsx renders it outside #page-content). That
+   reason no longer holds -- both banner branches carry their own
+   `motion-reduce:animate-none` -- and the unscoped rule did real harm:
+   editorial.css is imported globally, so it also hit the app surface,
+   where 12 infinite animations (billing and profile skeletons, the avatar
+   placeholder, the dashboard's processing dot, spinners) have no
+   motion-reduce guard. With a 0.01ms period and no iteration limit, an
+   infinite animation samples a pseudo-random phase every frame: spinners
+   jitter and skeletons strobe at 60Hz -- the opposite of what a
+   reduce-motion user asked for. It also broke the rule that editorial
+   styles never leak into the app (CLAUDE.md).
+   `animation-iteration-count: 1` is what stops an infinite animation
+   cycling at frame rate; `.01ms` rather than `0s` keeps animationend and
+   transitionend firing so nothing that waits on them deadlocks.
+   The app-wide floor belongs in globals.css in Phase 3, WITH the
+   iteration-count line. Found by the Phase 1 adversarial review. */
 @media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after {
+  .dt-editorial,
+  .dt-editorial *,
+  .dt-editorial *::before,
+  .dt-editorial *::after {
     animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
   }
 }
