@@ -7,6 +7,12 @@ import { useLocale } from '../i18n';
 
 const CONSENT_KEY = 'doctalk_analytics_consent';
 
+// Scoped to #page-content so the banner's own .dt-editorial wrapper can never
+// make it detect itself.
+function detectSurface(): 'app' | 'editorial' {
+  return document.querySelector('#page-content .dt-editorial') ? 'editorial' : 'app';
+}
+
 export function CookieConsentBanner() {
   const [visible, setVisible] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -20,6 +26,11 @@ export function CookieConsentBanner() {
   useEffect(() => {
     const consent = localStorage.getItem(CONSENT_KEY);
     if (!consent) {
+      // Decide the surface in the same batch that reveals the banner. If it were
+      // left to the observer effect below, which runs after paint, the first
+      // visible frame on a marketing page would be the app-styled banner, and
+      // the swap to the editorial tree would restart its slide-in.
+      setSurface(detectSurface());
       setVisible(true);
     }
   }, []);
@@ -29,9 +40,7 @@ export function CookieConsentBanner() {
 
     const syncDialogState = () => {
       setDialogOpen(Boolean(document.querySelector('[role="dialog"][aria-modal="true"]')));
-      // Scoped to #page-content so the banner's own .dt-editorial wrapper below
-      // can never make it detect itself.
-      setSurface(document.querySelector('#page-content .dt-editorial') ? 'editorial' : 'app');
+      setSurface(detectSurface());
     };
     syncDialogState();
 
