@@ -217,3 +217,17 @@ test('both field settings place the citation inside the laid-out repeats', () =>
     assert.ok(occurrence < repeat, `${name}: occurrence ${occurrence} must be < repeat ${repeat}`);
   }
 });
+
+test("the passage always starts below the claim's darkness pool", () => {
+  // The pool reaches `bottom: -40px` past the claim (editorial.css); the
+  // passage is anchored at the claim bottom + passageGap(), floored at 40.
+  // If either number moves alone, the pool covers the citation again
+  // (review 2026-09-21, MAJOR-1).
+  const css = stripCssComments(read('app/editorial.css'));
+  const pool = css.slice(css.indexOf('.dt-editorial .ed-night-claim::before {'));
+  const reach = Number((pool.slice(0, pool.indexOf('}')).match(/bottom:\s*-(\d+)px/) || [])[1]);
+  const hero = read('components/landing/HeroSection.tsx');
+  const floor = Number((hero.match(/const passageGap = [^;]*Math\.max\((\d+),/) || [])[1]);
+  assert.ok(reach > 0 && floor > 0, 'pool reach or passage gap floor not found');
+  assert.ok(floor >= reach, `passage gap floor ${floor}px must be >= the pool's reach ${reach}px`);
+});
