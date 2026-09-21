@@ -1,0 +1,176 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DocTalk — prototype C · Daylight</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;14..32,500;14..32,600;14..32,700&display=swap" rel="stylesheet">
+<style>
+  /* C · Daylight — the apple.com product page grammar: near-white, one
+     typeface at every size (Inter with optical sizing, standing in for SF Pro),
+     a centred claim, and the product itself as the hero image. The product is
+     the reader: the page on the left, the answer on the right. */
+  :root {
+    --bg: #fbfbfd;
+    --band: #f5f5f7;
+    --ink: #1d1d1f;
+    --ink-2: #6e6e73;  /* 4.9:1 on --bg */
+    --ink-3: #86868b;
+    --blue: #0071e3;
+    --link: #0066cc;
+    --hair: rgba(0, 0, 0, 0.08);
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; }
+  body {
+    background: var(--bg); color: var(--ink);
+    font: 17px/1.47 Inter, -apple-system, system-ui, sans-serif; font-optical-sizing: auto;
+    letter-spacing: -0.011em;
+    -webkit-font-smoothing: antialiased;
+  }
+  a { color: inherit; }
+
+  nav {
+    position: sticky; top: 0; z-index: 10; height: 52px;
+    background: rgba(251, 251, 253, 0.8);
+    -webkit-backdrop-filter: saturate(180%) blur(20px); backdrop-filter: saturate(180%) blur(20px);
+    border-bottom: 1px solid var(--hair);
+  }
+  nav .row { max-width: 1080px; height: 100%; margin: 0 auto; padding: 0 24px; display: flex; align-items: center; gap: 30px; font-size: 14px; }
+  .brand { font-weight: 600; font-size: 17px; letter-spacing: -0.02em; display: flex; align-items: center; gap: 8px; text-decoration: none; }
+  .brand i { width: 12px; height: 16px; background: var(--ink); border-radius: 2px 5px 2px 2px; display: inline-block; }
+  nav .links { display: flex; gap: 30px; margin-left: auto; }
+  nav a { text-decoration: none; color: #424245; transition: color .15s ease; }
+  nav a:hover { color: var(--ink); }
+
+  .claim { text-align: center; padding: 72px 24px 0; }
+  h1 {
+    font-weight: 600; font-size: clamp(44px, 6vw, 80px); line-height: 1.05;
+    letter-spacing: -0.035em; margin: 0 auto; max-width: 14ch; text-wrap: balance;
+  }
+  .lede { font-size: 21px; line-height: 1.43; color: var(--ink-2); max-width: 640px; margin: 20px auto 0; text-wrap: pretty; letter-spacing: -0.015em; }
+  .actions { display: flex; gap: 30px; justify-content: center; align-items: center; margin-top: 30px; }
+  .cta {
+    background: var(--blue); color: #fff; text-decoration: none;
+    border-radius: 999px; padding: 12px 22px; font-weight: 500; font-size: 17px;
+    transition: background-color .15s ease;
+  }
+  .cta:hover { background: #0077ed; }
+  .more { color: var(--link); text-decoration: none; font-size: 17px; }
+  .more:hover { text-decoration: underline; }
+  .more::after { content: " \203A"; }
+  .cta, .more { white-space: nowrap; }
+
+  /* the product, rising into place */
+  .scene { perspective: 2200px; padding: 56px 24px 0; }
+  .window {
+    width: min(1120px, 100%); height: 600px; margin: 0 auto;
+    display: grid; grid-template-columns: minmax(0, 1.55fr) minmax(0, 1fr); grid-template-rows: 44px 1fr;
+    background: #fff; border-radius: 18px; overflow: hidden;
+    box-shadow: 0 0 0 1px rgba(0,0,0,.06), 0 2px 6px rgba(0,0,0,.04), 0 40px 90px -30px rgba(0,0,0,.28);
+    transform-origin: 50% 0;
+    animation: lift 1.5s cubic-bezier(.16,1,.3,1) .15s both;
+  }
+  @keyframes lift { from { transform: rotateX(24deg) scale(.93) translateY(40px); opacity: 0; } to { transform: none; opacity: 1; } }
+  .bar { grid-column: 1 / -1; display: flex; align-items: center; gap: 8px; padding: 0 16px; border-bottom: 1px solid var(--hair); background: #fbfbfd; }
+  .bar i { width: 12px; height: 12px; border-radius: 50%; background: #e1e1e6; display: inline-block; }
+  .bar span { margin: 0 auto; font-size: 13px; color: var(--ink-3); transform: translateX(-26px); }
+  .doc { background: var(--band); padding: 26px 28px 0; border-right: 1px solid var(--hair); }
+  .sheet { position: relative; height: 100%; background: #fff; border-radius: 6px 6px 0 0; box-shadow: 0 0 0 1px rgba(0,0,0,.05), 0 8px 24px -12px rgba(0,0,0,.18); }
+  .sheet canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+  .chat { display: flex; flex-direction: column; padding: 26px 26px 20px; gap: 18px; font-size: 16px; }
+  .ask { align-self: flex-end; max-width: 85%; background: var(--blue); color: #fff; padding: 10px 14px; border-radius: 18px 18px 4px 18px; line-height: 1.4; }
+  .reply { line-height: 1.55; animation: rise .8s cubic-bezier(.2,.8,.2,1) 1.1s both; }
+  .reply small { display: block; color: var(--ink-3); font-size: 13px; margin-top: 10px; }
+  .chip { display: inline-flex; align-items: center; justify-content: center; min-width: 19px; height: 19px; padding: 0 5px; margin-left: 4px; border-radius: 6px; background: #fff4c2; color: #6b4f00; border: 1px solid #f0d264; font-size: 12px; font-weight: 600; vertical-align: 1px; }
+  .input { margin-top: auto; display: flex; align-items: center; justify-content: space-between; border: 1px solid #d2d2d7; border-radius: 999px; padding: 10px 10px 10px 18px; color: var(--ink-3); font-size: 15px; }
+  .input b { width: 28px; height: 28px; border-radius: 50%; background: #d2d2d7; display: inline-flex; align-items: center; justify-content: center; }
+  .input b::before { content: ""; width: 0; height: 0; border-left: 5px solid transparent; border-right: 5px solid transparent; border-bottom: 7px solid #fff; transform: translateY(-1px); }
+  @keyframes rise { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+
+  .band { background: var(--band); margin-top: 120px; padding: 130px 24px 150px; text-align: center; }
+  h2 { font-weight: 600; font-size: clamp(34px, 4.4vw, 56px); line-height: 1.07; letter-spacing: -0.03em; margin: 0 auto; max-width: 16ch; text-wrap: balance; }
+  .sub { color: var(--ink-2); font-size: 21px; max-width: 40ch; margin: 18px auto 0; letter-spacing: -0.015em; text-wrap: pretty; }
+  .trio { max-width: 1080px; margin: 64px auto 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 20px; text-align: left; }
+  .trio > div { background: #fff; border-radius: 22px; padding: 34px 30px 38px; }
+  .trio h3 { font-size: 22px; font-weight: 600; margin: 0 0 10px; letter-spacing: -0.02em; line-height: 1.2; }
+  .trio p { margin: 0; color: var(--ink-2); font-size: 17px; }
+
+  @media (max-width: 900px) {
+    nav .links a:not(:last-child) { display: none; }
+    .claim { padding: 56px 20px 0; }
+    .actions { flex-wrap: wrap; gap: 18px 28px; }
+    .input { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 14px; }
+    .scene { padding-top: 44px; }
+    .window { height: auto; grid-template-columns: 1fr; grid-template-rows: 44px 400px auto; }
+    .doc { border-right: 0; border-bottom: 1px solid var(--hair); padding: 18px 16px 0; }
+    .input { margin-top: 6px; }
+    .band { margin-top: 80px; padding: 90px 20px 110px; }
+    .trio { grid-template-columns: 1fr; }
+  }
+  @media (prefers-reduced-motion: reduce) { .window, .reply { animation: none; } }
+  /* ?still = the finished frame (poster frames, screenshots): no entrance animation either */
+  .still *, .still *::before { animation: none !important; }
+</style>
+</head>
+<body>
+<nav><div class="row">
+  <a class="brand" href="#"><i></i>DocTalk</a>
+  <div class="links"><a href="#">Features</a><a href="#">Pricing</a><a href="#">Trust</a><a href="#">Sign in</a></div>
+</div></nav>
+
+<section class="claim">
+  <h1>Every answer cites the exact page.</h1>
+  <p class="lede">Drop a PDF, DOCX or URL. Ask anything, and every answer takes you to the sentence it came from.</p>
+  <div class="actions">
+    <a class="cta" href="#">Try a sample document</a>
+    <a class="more" href="#">Sign up free</a>
+  </div>
+</section>
+
+<div class="scene">
+  <div class="window">
+    <div class="bar"><i></i><i></i><i></i><span>alphabet-earnings.pdf</span></div>
+    <div class="doc"><div class="sheet"><canvas id="page" aria-hidden="true"></canvas></div></div>
+    <div class="chat">
+      <div class="ask">How much will Alphabet spend on capital in 2026?</div>
+      <div class="reply">
+        Between $175 and $185 billion, to meet customer demand and the growing opportunities ahead.<span class="chip">1</span>
+        <small>1 · Page 1 · “…our 2026 CapEx investments are anticipated to be in the range of $175 to $185 billion.”</small>
+      </div>
+      <div class="input">Ask anything about this document<b></b></div>
+    </div>
+  </div>
+</div>
+
+<section class="band">
+  <h2>Read less. Verify everything.</h2>
+  <p class="sub">DocTalk answers from your document and nothing else, and shows you exactly where each answer came from.</p>
+  <div class="trio">
+    <div><h3>Every answer has a source</h3><p>Numbered citations open the exact page, with the passage highlighted.</p></div>
+    <div><h3>Ask in any of 11 languages</h3><p>Question an English contract in Japanese. The citation still lands on the original line.</p></div>
+    <div><h3>Translate without breaking layout</h3><p>Get a translated PDF that keeps its pages, tables and structure.</p></div>
+  </div>
+</section>
+
+<script>if (/[?&]still\b/.test(location.search)) document.documentElement.classList.add('still');</script>
+<script src="citation-field.js"></script>
+<script>
+  const narrow = matchMedia('(max-width: 900px)').matches;
+  CitationField.mount(document.getElementById('page'), {
+    font: (narrow ? '13px' : '15px') + ' Inter, sans-serif',
+    titleFont: (narrow ? '600 16px' : '600 19px') + ' Inter, sans-serif',
+    lineHeight: narrow ? 21 : 25, paraGap: 10, pad: narrow ? 30 : 40,
+    focusY: 0.42,
+    ink: '#1d1d1f', dimAlpha: 0.2, litAlpha: 0.94,
+    lampRadius: narrow ? 200 : 280,
+    highlight: 'rgba(255, 214, 10, 0.42)', citedInk: '#1d1d1f',
+    badge: { bg: '#fff4c2', fg: '#6b4f00', border: '#f0d264', label: '1', font: '600 12px Inter, sans-serif' },
+    cursorRadius: 150, cursorAlpha: 0.5,
+    start: 1500, // the answer arrives first; then its citation is found on the page
+  });
+</script>
+</body>
+</html>

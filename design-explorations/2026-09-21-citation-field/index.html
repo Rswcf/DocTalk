@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>首页原型 · 三选一</title>
+<style>
+  :root { --bg: #f4f3f0; --card: #fff; --ink: #1c1c1a; --ink-2: #5d5c57; --hair: rgba(0,0,0,.09); --accent: #843c28; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; }
+  body { background: var(--bg); color: var(--ink); font: 16px/1.65 -apple-system, "PingFang SC", "Hiragino Sans GB", system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+  main { max-width: 1320px; margin: 0 auto; padding: 56px 24px 96px; }
+  h1 { font-size: 34px; line-height: 1.2; margin: 0; letter-spacing: -0.01em; }
+  .intro { color: var(--ink-2); max-width: 70ch; margin: 14px 0 0; }
+  .shared { margin: 28px 0 0; padding: 18px 22px; background: var(--card); border: 1px solid var(--hair); border-radius: 14px; color: var(--ink-2); font-size: 15px; }
+  .shared b { color: var(--ink); }
+
+  .option { margin-top: 56px; }
+  .head { display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap; }
+  .head h2 { font-size: 26px; margin: 0; letter-spacing: -0.01em; }
+  .head .tag { font-size: 14px; color: var(--ink-2); }
+  .head .open { margin-left: auto; display: flex; gap: 10px; }
+  .btn { font: inherit; font-size: 14px; border: 1px solid var(--hair); background: var(--card); color: var(--ink); border-radius: 999px; padding: 6px 14px; text-decoration: none; cursor: pointer; transition: border-color .15s ease; }
+  .btn:hover { border-color: rgba(0,0,0,.3); }
+
+  .views { display: grid; grid-template-columns: minmax(0, 1fr) 246px; gap: 20px; margin-top: 16px; align-items: start; }
+  .frame { position: relative; overflow: hidden; border-radius: 12px; background: #ddd; box-shadow: 0 0 0 1px var(--hair), 0 20px 40px -24px rgba(0,0,0,.35); }
+  .frame iframe { position: absolute; top: 0; left: 0; border: 0; transform-origin: 0 0; }
+  .desk { aspect-ratio: 1440 / 900; }
+  .phone { aspect-ratio: 375 / 812; border-radius: 22px; }
+
+  .notes { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 20px; margin-top: 18px; font-size: 15px; }
+  .notes div { background: var(--card); border: 1px solid var(--hair); border-radius: 14px; padding: 16px 18px; }
+  .notes h3 { font-size: 14px; margin: 0 0 6px; color: var(--ink-2); font-weight: 600; }
+  .notes p { margin: 0; }
+
+  .rec { margin-top: 64px; padding: 22px 24px; border-radius: 14px; background: var(--card); border: 1px solid var(--hair); border-left: 4px solid var(--accent); }
+  .rec h2 { font-size: 20px; margin: 0 0 6px; }
+  .rec p { margin: 6px 0 0; color: var(--ink-2); }
+
+  @media (max-width: 900px) {
+    .views { grid-template-columns: 1fr; }
+    .phone { max-width: 300px; }
+    .notes { grid-template-columns: 1fr; }
+    .head .open { margin-left: 0; }
+  }
+</style>
+</head>
+<body>
+<main>
+  <h1>首页原型 · 三选一</h1>
+  <p class="intro">三个方向都是可交互的真实网页，不是效果图：动画会实际播放；鼠标移到文档上，会有一小块“灯光”跟着光标走。建议点“全屏打开”逐个看，再用“重播”看入场动画。</p>
+  <div class="shared">
+    <b>三个方案共用：</b>同一段文案（标题 “Every answer cites the exact page.”，一个主按钮）；同一个签名视觉——<b>引文聚光</b>：一页真实文档（Alphabet 财报第 1 页，逐字原文）处在暗处，一束光扫下来，停在被引用的那句话上，荧光笔划过，角标 “1” 弹出，然后出现带 [1] 的回答。这就是产品本身：每个回答都指向原文的确切位置。
+    <br><b>三个方案的区别：</b>只在“舞台”——材质、光线、字体和配色。
+  </div>
+
+  <section class="option" id="a">
+    <div class="head">
+      <h2>A · 纸</h2><span class="tag">保留暖纸 + 赤陶品牌，把纸当成真实的物体：台灯下、桌面上的一整页纸（第二版，已按 Fable 评审修改）</span>
+      <div class="open"><button class="btn" data-replay="a">重播</button><a class="btn" href="a-paper.html" target="_blank">全屏打开</a></div>
+    </div>
+    <div class="views">
+      <div class="frame desk"><iframe data-key="a" src="a-paper.html" width="1440" height="900" title="A 桌面"></iframe></div>
+      <div class="frame phone"><iframe data-key="a" src="a-paper.html" width="375" height="812" title="A 手机"></iframe></div>
+    </div>
+    <div class="notes">
+      <div><h3>它好在哪</h3><p>在 v0.31.0 刚上线的体系上加码（Fraunces + Plex、赤陶色），不推翻任何决定；app 迁到暖纸的计划照常。倾斜的纸、纸的投影、台灯的光晕都有实物感，温暖、安静，像一个认真读文件的工具。</p></div>
+      <div><h3>代价 / 风险</h3><p>“米色 + 衬线 + 赤陶”是很多 AI 生成网站的默认审美。能不能跳出这个套路，全靠签名视觉和质感撑着；如果细节做粗了，会退回“又一个米色 SaaS”。</p></div>
+      <div><h3>落地工作量</h3><p>最小。token 和字体都已经在 editorial.css 里；主要是新做 Hero（画布组件 + 纸张和卡片），再改几节的节奏与留白。</p></div>
+    </div>
+  </section>
+
+  <section class="option" id="b">
+    <div class="head">
+      <h2>B · 夜</h2><span class="tag">暗色、电影感，像 memorable.sh / apple.com 发布页：只亮一盏灯的阅览室</span>
+      <div class="open"><button class="btn" data-replay="b">重播</button><a class="btn" href="b-dark.html" target="_blank">全屏打开</a></div>
+    </div>
+    <div class="views">
+      <div class="frame desk"><iframe data-key="b" src="b-dark.html" width="1440" height="900" title="B 桌面"></iframe></div>
+      <div class="frame phone"><iframe data-key="b" src="b-dark.html" width="375" height="812" title="B 手机"></iframe></div>
+    </div>
+    <div class="notes">
+      <div><h3>它好在哪</h3><p>冲击力最强，第一眼最“有设计”。整屏文档在暗处，琥珀色的光落在那句引文上，是三个方案里最戏剧化、最难忘的画面。琥珀色取自 DocTalk 的引文色，刻意避开 AI 工具都在用的紫色光。</p></div>
+      <div><h3>代价 / 风险</h3><p>推翻 09-20 “保留暖纸”的决定，需要一套新的深色 token 和新字体（Geist）。长时间读文档不适合纯暗底，app 本体仍要浅色，营销页和 app 又会变成两套表面，而这正是 09-20 决定要消灭的。</p></div>
+      <div><h3>落地工作量</h3><p>中到大。营销层所有页面都要换舞台，而不只是首页（否则从首页点进 /pricing 会从夜晚跳回白天）；深色下的对比度也要重新校验一遍。</p></div>
+    </div>
+  </section>
+
+  <section class="option" id="c">
+    <div class="head">
+      <h2>C · 日光</h2><span class="tag">apple.com 产品页的语法：近白底、单一字体、居中宣言，产品界面本身就是主视觉</span>
+      <div class="open"><button class="btn" data-replay="c">重播</button><a class="btn" href="c-light.html" target="_blank">全屏打开</a></div>
+    </div>
+    <div class="views">
+      <div class="frame desk"><iframe data-key="c" src="c-light.html" width="1440" height="900" title="C 桌面"></iframe></div>
+      <div class="frame phone"><iframe data-key="c" src="c-light.html" width="375" height="812" title="C 手机"></iframe></div>
+    </div>
+    <div class="notes">
+      <div><h3>它好在哪</h3><p>最“苹果”，也最诚实：主视觉就是真实的阅读器，左边是文档，右边是回答，窗口带 3D 入场。营销页和 app 最容易统一，因为 app 现在本来就是 zinc + 蓝。</p></div>
+      <div><h3>代价 / 风险</h3><p>放弃暖纸和赤陶品牌；蓝色按钮 + Inter 会和无数 SaaS 撞脸，辨识度最低。这也直接违反了 frontend.md 里“不要再提中性/蓝色重塑”的记录（是你这次要求一起做的，所以放进来比较）。</p></div>
+      <div><h3>落地工作量</h3><p>中。营销层要整体换 token；好处是 app 的 Phase 3–4 反而会变简单。</p></div>
+    </div>
+  </section>
+
+  <div class="rec">
+    <h2>推荐：A（Fable 独立评审同意，排序 A &gt; B &gt; C）</h2>
+    <p>这次问题的根源不在配色，而在首屏没有一个只属于 DocTalk 的画面，而且没有光、没有纵深、没有动效。三个方案里真正起作用的是“引文聚光”，它在三个舞台上都成立。A 是唯一不推翻已上线体系、也不把营销页和 app 拆成两套表面的方案。</p>
+    <p>Fable 的原话要点：A 的第一版是三个里第一眼最弱的，推荐成立的前提是修掉它指出的问题。这些问题已经按它的意见改完，现在看到的 A 是第二版：纸张改为整页、投影真正画出来、桌面调深、灯光改成“纸在阴影里”、回答卡片暖色化并用细线连到角标，动画顺序改成“问题 → 扫描 → 划线 → 角标 → 答案”。</p>
+    <p>如果你看完仍然想要 B 那种暗场的冲击力，Fable 给的退路是：只把首页首屏做成一段深色带，用已经上线的深色暖纸 token（#171614），仍然留在同一套纸面体系里。这比整站换成 B 代价小得多。</p>
+  </div>
+</main>
+<script>
+  // scale each fixed-size prototype to fit its frame
+  function fit() {
+    document.querySelectorAll('.frame').forEach((f) => {
+      const i = f.querySelector('iframe');
+      i.style.transform = 'scale(' + (f.clientWidth / Number(i.getAttribute('width'))) + ')';
+    });
+  }
+  new ResizeObserver(fit).observe(document.body);
+  fit();
+  document.querySelectorAll('[data-replay]').forEach((b) => b.addEventListener('click', () => {
+    document.querySelectorAll('iframe[data-key="' + b.dataset.replay + '"]').forEach((i) => { i.src = i.getAttribute('src').split('?')[0] + '?r=' + Date.now(); });
+  }));
+</script>
+</body>
+</html>
