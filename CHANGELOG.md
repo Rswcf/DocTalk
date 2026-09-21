@@ -8,13 +8,49 @@ releases use `0.minor.patch` semantics such as `0.2.0` and `0.2.1`.
 
 ## [Unreleased]
 
+## [0.31.0] - 2026-09-21
+
+The marketing site moves to Apple's compositional grammar -- one claim, one
+action, then the product -- while keeping DocTalk's warm-paper identity. Plan:
+`.collab/plans/2026-09-20-apple-design-direction.md`.
+
+### Changed
+- The landing page now shows the product instead of an illustration of it: the
+  reader answering a question about a real document (Alphabet's Q4 2025 earnings
+  release), with the answer's citation linked to the highlighted sentence on its
+  page. The headline, one sentence and one action come first; the stat bands,
+  numbered labels and the italic headline split are gone.
+- The pricing page puts plans on the first screen. On a phone the first price
+  used to sit 2.31 screens down behind a long introduction; it now appears in the
+  first screen. Each plan shows its price directly under its name, and only the
+  recommended plan's button is filled.
+- The landing feature section is reduced to three: citations, 11 languages, and
+  layout-preserving translation.
+- Marketing pages follow the device's light or dark setting instead of always
+  rendering light. Dark mode is a warm near-black, not an inversion.
+- Headlines use one display face at every size, with optical sizing that follows
+  the rendered size, which stops words crowding together on phones. Mono labels
+  and ALL-CAPS eyebrows are replaced with sentence-case text.
+- Glass effects are limited to the header and menus; cards, FAQ rows, banners and
+  tables are solid.
+- The consent banner matches the marketing pages, sits in one compact row on
+  phones without covering the page's content, and its buttons meet the 44pt
+  minimum touch target. The header's Sign In is a secondary button, so each page
+  has one primary action.
+
 ### Added
+- Quote Finder is named on the landing page, in every language, using each
+  locale's own name for it.
 - Free document tools are now reachable from the site: a "Free Document Tools"
   link in the footer's Resources column on every page, plus contextual links
   from the free-demo page and the blog index. `/tools` previously had no
   inbound links at all.
 
 ### Fixed
+- Every design colour now meets WCAG's 4.5:1 minimum contrast. The largest gains
+  were the citation marker (3.23:1 to 6.57:1) and small labels (2.87:1 to 5.32:1).
+- Landing sections no longer start invisible until they are scrolled into view.
+- In the Arabic interface, the English example document reads left-to-right.
 - `/features/layout-translation` and `/trust` were missing their English URLs
   from the sitemap; their translated URLs were listed but the English ones were
   not. The sitemap now derives its English entries from `LOCALIZED_PATHS` so the
@@ -30,6 +66,10 @@ releases use `0.minor.patch` semantics such as `0.2.0` and `0.2.1`.
 - The home page's HowTo steps described text the page does not render. The
   structured data and the visible How-it-works section now read from one shared
   source, and a test asserts they match in all eleven languages.
+
+### Removed
+- An unused animated product showcase and its two dependencies (`remotion`,
+  `@remotion/player`).
 
 ## [0.30.3] - 2026-09-13
 

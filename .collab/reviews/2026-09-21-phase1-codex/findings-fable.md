@@ -358,3 +358,24 @@ Each commit was read as a diff and checked against the current tree; nothing acc
 **On the golden-path argument.** It is sound, with one precision: Phase 1 *does* touch three things that render on `/d/<id>` — `editorial.css` (global import, now provably scoped), `layout.tsx` (two `theme-color` metas only), and `CookieConsentBanner` (app branch byte-identical, verified round 1; the observer gains one bounded `querySelector`). None of them can alter upload → chat → citation behaviour; the CSS was the one real vector and MAJOR-1 closed it. Stating the argument as "touches those three, and here is why each is inert" is stronger than "touches none".
 
 **Overall: SHIP.**
+
+---
+
+## Round 3 — `d05a5f6` "Reduce the landing feature set to three claims" (Fable 5.1, 2026-09-21)
+
+Scope: one file, `frontend/src/components/landing/FeatureGrid.tsx` (+45/−284). Read as a diff and as the current file; `npm run build` deliberately NOT run (coordinator is building from this worktree).
+
+| Author claim | Verdict | Evidence |
+|---|---|---|
+| `t()` is safe for citations/languages; `tOr` kept for layoutTranslation | **CONFIRMED** | Script over all 11 locale JSONs: all seven keys (`landing.features.title`, `citations.title/desc`, `languages.title/desc`, `layoutTranslation.title/desc`) present, non-empty, and not equal to the English value in any of the 10 non-English locales. The old code was `tOr(key, fallback \|\| t(key))` / `tOr(descKey, fallback \|\| '')`, which only differs from `t()` when a key is missing — none is. `landing.` is in `app/[locale]/page.tsx` `LANDING_PREFIXES`, so locale first paint is seeded. Keeping `tOr` on layoutTranslation is harmless belt-and-braces. |
+| Landing structured data lists no features | **CONFIRMED** | `grep landing.feature` in `HomeJsonLd.tsx`, `landingSchemaSources.ts`, `tests/*.cjs`: no hits. `HomeJsonLd` reads only `landing.description`, `FAQ_ITEMS`, `HOW_IT_WORKS_STEPS`. |
+| No other importer of the `Visual*` components; nothing links to `#features` | **CONFIRMED** | The seven `Visual*` were module-private functions in the old file (never exported); grep for their names and for `#features` / `/#features` across `frontend/src` outside this file: none. `id="features"` is kept at line 39. |
+| `<ul>/<li>` replaces `role="list"`/`role="listitem"` divs — regression? | **NONE FOUND** | Native list semantics are the better form (the old ARIA was a polyfill for divs). Styling: Tailwind preflight resets `ul` margin/padding/list-style; no global `ul`/`li` rule in `globals.css` or `editorial.css` (`.dt-editorial .ed-prose ul` is scoped to `.ed-prose`, which this list is not in). Note Safari drops list semantics when `list-style: none` is set — pre-existing platform behaviour, three items, not worth a `role="list"` re-add. |
+| Zero rendered text < 12 px on `/`; three items on one row at 1440; `/ar` mirrors | **Source-verified, not rendered** | New file's only text is `.ed-h2` (28–40 px), `.ed-h3` (22 px), `.ed-body` (15.5 px). Logical utilities `md:border-s`, `md:ps-8`, `md:pe-8` exist in Tailwind 3.4.19 (added 3.3) and mirror under `dir="rtl"`. Divider logic is sound: `border-t` on the `ul`, `border-t` on items 2–3 only on phones, swapped for `border-s` from `md`. Rendered claims accepted on the author's measurement. |
+| "Features eyebrow was still English in four locales" | **CONFIRMED** | `landing.features.eyebrow` equals the English value in ar, hi, it, zh. |
+
+**My own checks:** `npx tsc --noEmit` exit 0 (the `'titleFallback' in feature` narrowing on the `as const` union compiles); `npm run test:unit` 161/161. `git show d05a5f6 --stat`: exactly one file.
+
+**NITs (no action needed for ship):** 14 locale keys are now dead in all 11 files (`landing.features.eyebrow`, `landing.feature.{formats,modes,freeDemo,privacy}.{title,desc}`, `landing.plate.{cite,deeper,fast,noSignup,noTraining}`) — Phase 5 cleanup, alongside the already-dead `landing.heroStats.*`. This closes MINOR-6 from round 1 (the sub-12px gate on `/`) and MINOR-9's site no longer exists.
+
+**Round 3 verdict: SHIP.**
