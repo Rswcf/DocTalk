@@ -104,7 +104,7 @@ export default function EdComparisonTable(props: EdComparisonTableProps) {
   };
 
   return (
-    <div className="ed-glass" style={{ padding: "4px", overflow: "hidden" }}>
+    <div className="ed-panel" style={{ padding: "4px", overflow: "hidden" }}>
       <div style={{ overflowX: "auto" }}>
         <table
           style={{

@@ -85,8 +85,13 @@ export default function RootLayout({
       <head>
         <meta name="google-site-verification" content="168G1TYJfQ7MNp4sNdF-7gC2wDWKGeds618LyLdkCUM" />
         <meta name="msvalidate.01" content="50E7D296303C85BC31C1BE98539EA393" />
-        <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)" />
-        <meta name="theme-color" content="#09090b" media="(prefers-color-scheme: dark)" />
+        {/* Paper stage / warm near-black — the §5.3 tokens, so mobile browser
+            chrome matches the page instead of framing it in white or zinc.
+            These are root-level and therefore apply to the app surface too;
+            under decision A2 the app moves onto the same ground in Phase 3,
+            at which point they are already right. */}
+        <meta name="theme-color" content="#eae8e3" media="(prefers-color-scheme: light)" />
+        <meta name="theme-color" content="#171614" media="(prefers-color-scheme: dark)" />
       </head>
       <body className="font-sans antialiased">
         {/* i18n: skip link is server-rendered, locale-specific version requires server-side i18n */}

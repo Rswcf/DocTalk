@@ -1,26 +1,72 @@
-/* Editorial design layer — "Monocle-crisp". Every rule is scoped under
-   .dt-editorial so it never affects the functional app UI. Light only. */
+/* Editorial design layer. Every rule is scoped under .dt-editorial so it
+   never affects the functional app UI.
+
+   Token set = §5.3 of `.collab/plans/2026-09-20-apple-design-direction.md`
+   (Phase 1, layer 1). The plan writes the target names unprefixed
+   (`--stage`, `--surface`, `--inset`, `--ink-*`, …) because under decision
+   A2 they become ONE set shared with the app in Phases 3–4. They are kept
+   `--ed-*` here for two hard reasons:
+     1. `--surface-2` already exists in globals.css `:root` with a different
+        value (#f4f4f5 / #27272a). Redeclaring it inside .dt-editorial would
+        shadow the app token for every subtree that renders inside a
+        marketing shell (DocumentDiffPanel surface="editorial", the language
+        popover, …).
+     2. Dark mode has to reach ~40 components that already write
+        `var(--ed-paper-2)` inline, and the untouchable !important counter-
+        rule below that resolves `var(--ed-paper)`. Overriding the SAME names
+        in `.dark .dt-editorial` gives all of them dark for free; new names
+        would leave them light-on-dark.
+   Mapping for the Phase 3 rename: stage→--ed-paper, inset→--ed-paper-2,
+   surface→--ed-surface, surface-2→--ed-surface-2, ink*→--ed-ink*,
+   signal→--ed-signal, hairline→--ed-rule.
+
+   Colour roles (§5.3): terracotta = action + links (always underlined);
+   olive = verified/ready ONLY; amber = evidence/citation ONLY; red = error
+   ONLY. Slate is RETIRED as a role and survives only for the handful of
+   existing consumers until Phase 2 sweeps them. Accent-as-text ≥ 15px. */
 .dt-editorial {
-  /* Counterpoint palette (2026-08-04 redesign). Two accents, not one:
-     rust = action (primary CTA, brand mark, feature eyebrows), slate =
-     structure (links, secondary CTA, quote borders, nav hover, decorative
-     set-dressing), olive = verified/positive state ONLY. */
-  --ed-paper: #eae8e3;
-  --ed-paper-2: #e4e2db;
-  --ed-ink: #20211e;
-  --ed-ink-2: #4a4943;
-  --ed-ink-3: #5f5e56;
-  --ed-signal: #843c28;
-  --ed-signal-deep: #6d3120;
-  --ed-slate: #1f3a4d;
+  --ed-paper: #eae8e3;          /* stage                                    */
+  --ed-paper-2: #e5e3dc;        /* inset band — was #e4e2db, +1 step so body
+                                   prose on EdSection alt clears 7:1 (7.03) */
+  --ed-surface: #f6f5f2;        /* raised card / panel / product frame      */
+  --ed-surface-2: #ffffff;      /* document page inside a frame             */
+  --ed-ink: #20211e;            /* 13.22 on stage · 14.84 on surface        */
+  --ed-ink-2: #4a4943;          /* 7.38 / 8.28 / 7.03 on stage/surface/inset*/
+  --ed-ink-3: #5f5e56;          /* 5.32 / 5.98 / 5.08 — captions ≥ 13px only*/
+  --ed-signal: #843c28;         /* 6.45 on stage · 7.90 under white         */
+  --ed-signal-deep: #6d3120;    /* hover — 8.13 on stage · 9.95 under white */
+  --ed-on-signal: #ffffff;      /* label ON a signal fill — 7.90            */
+  --ed-slate: #1f3a4d;          /* retired role, kept for live consumers    */
   --ed-slate-2: #2f556b;
-  --ed-olive: #35592c;
+  --ed-olive: #35592c;          /* verified — 6.55 on stage                 */
+  --ed-evidence: #7a4b00;       /* citation text/marker — 6.05 on stage     */
+  --ed-evidence-soft: #fff0c2;  /* highlight fill — ink on it 14.25         */
+  --ed-danger: #9a2119;         /* error — 6.58 on stage; icon + label too  */
+  --ed-control-border: #86847b; /* 3.06 on stage (WCAG 1.4.11 non-text ≥ 3) */
   --ed-rule: rgba(32, 33, 30, 0.12);
 
-  /* Glass material tokens (warm, Ocean v5 recipe — spec §2.3). Consumed by
-     the .ed-glass utility classes below; never reference these directly
-     from a component's inline style (fallbacks require @media, which
-     inline styles cannot express). */
+  /* Radius scale (§5.2) — five steps, no sixth. */
+  --ed-r-1: 8px;    /* inputs, chips        */
+  --ed-r-2: 12px;   /* controls, menus      */
+  --ed-r-3: 16px;   /* cards, panels        */
+  --ed-r-4: 24px;   /* product frames       */
+  --ed-r-pill: 999px;
+
+  /* Motion (§5.5). */
+  --ed-dur-1: 120ms;  /* colour / opacity   */
+  --ed-dur-2: 200ms;  /* open / close       */
+  --ed-dur-3: 320ms;  /* sheets, hero reveal*/
+  --ed-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+
+  /* The ONE raised-card shadow of the content layer (§5.4). */
+  --ed-shadow-card: 0 1px 2px rgba(20, 18, 14, 0.06),
+                    0 12px 32px -16px rgba(20, 18, 14, 0.18);
+
+  /* Glass material tokens. After Phase 1 these feed exactly two consumers,
+     both functional-layer chrome: the sticky marketing header and the
+     language popover (§5.4). Never reference them from a component's inline
+     style — the fallbacks require @media, which inline styles cannot
+     express. */
   --ed-glass: rgba(250, 249, 246, 0.55);
   --ed-glass-strong: rgba(251, 250, 247, 0.85);
   --ed-glass-blur: blur(22px) saturate(150%);
@@ -34,6 +80,59 @@
   color: var(--ed-ink-2);
   font-family: var(--dt-body);
   -webkit-font-smoothing: antialiased;
+
+  /* next-themes writes the concrete scheme onto <html> inline, so declare the
+     one that is actually applied rather than `light dark` — otherwise a user
+     who has FORCED light while the OS is dark gets dark UA widgets inside a
+     paper page. */
+  color-scheme: light;
+
+  /* §5.1 — a missing face must look missing during QA, not like a faux bold
+     or a faux italic. The shorthand is for Safari < 16.4, which never learned
+     the longhands. */
+  font-synthesis: none;
+  font-synthesis-weight: none;
+  font-synthesis-style: none;
+}
+
+/* ─── Dark (§5.3) — a warm near-black, not an inversion of paper and not
+   zinc. Hue is fixed at H13–16 across both modes; only lightness moves.
+   Overriding the same token names means the ~40 inline `var(--ed-paper-2)`
+   consumers and the !important counter-rule below follow automatically. */
+.dark .dt-editorial {
+  --ed-paper: #171614;          /* stage                                    */
+  --ed-paper-2: #1c1b18;        /* inset band                               */
+  --ed-surface: #211f1c;        /* raised                                   */
+  --ed-surface-2: #2a2825;
+  --ed-ink: #ece9e2;            /* 14.91 on stage · 13.56 on surface        */
+  --ed-ink-2: #b8b4ab;          /* 8.74 / 7.95 / 8.33                       */
+  --ed-ink-3: #948f86;          /* 5.63 / 5.11 — captions ≥ 13px only       */
+  --ed-signal: #e0957a;         /* 7.53 on stage — same hue, L68            */
+  --ed-signal-deep: #eaa78f;    /* hover BRIGHTENS in dark — 8.97 on stage  */
+  --ed-on-signal: #171614;      /* CTA label on the signal fill — 7.53.
+                                   #843c28 must NOT stay the dark fill: it is
+                                   2.29 against the stage.                  */
+  --ed-slate: #a8bfd0;          /* retired role, lifted so it stays legible */
+  --ed-slate-2: #9fb8c9;
+  --ed-olive: #8fc27d;          /* 8.77 on stage · 7.97 on surface          */
+  --ed-evidence: #f0b323;       /* 9.62 on stage · 7.08 on the soft fill    */
+  --ed-evidence-soft: #3a2e10;
+  --ed-danger: #ff7a6b;         /* 7.10 on stage · 6.46 on surface          */
+  --ed-control-border: #767268; /* 3.43 on surface                          */
+  --ed-rule: rgba(236, 233, 226, 0.12);
+
+  --ed-shadow-card: 0 1px 2px rgba(0, 0, 0, 0.12),
+                    0 12px 32px -16px rgba(0, 0, 0, 0.36);
+
+  /* Glass has to be re-mixed, not inherited: the light recipe would paint a
+     near-white slab for the header and popover on a near-black page. */
+  --ed-glass: rgba(33, 31, 28, 0.62);
+  --ed-glass-strong: rgba(33, 31, 28, 0.86);
+  --ed-glass-line: rgba(236, 233, 226, 0.12);
+  --ed-glass-hi: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  --ed-glass-shadow: 0 18px 44px -18px rgba(0, 0, 0, 0.6);
+
+  color-scheme: dark;
 }
 
 /* Counter the app-surface reset at globals.css:819-826:
@@ -64,28 +163,21 @@
   opacity: 0.5;
   background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200'><filter id='g'><feTurbulence type='fractalNoise' baseFrequency='0.82' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0.1  0 0 0 0 0.09  0 0 0 0 0.07  0 0 0 0.035 0'/></filter><rect width='100%25' height='100%25' filter='url(%23g)'/></svg>");
 }
+/* Dark: the same turbulence with the colour matrix inverted, so the grain is
+   a faint LIGHT speckle on the near-black stage instead of invisible black
+   on black. Opacity .35 (§5.6) — the texture reads stronger on a dark
+   ground at equal alpha. */
+.dark .dt-editorial::before {
+  opacity: 0.35;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200'><filter id='g'><feTurbulence type='fractalNoise' baseFrequency='0.82' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0.93  0 0 0 0 0.91  0 0 0 0 0.88  0 0 0 0.05 0'/></filter><rect width='100%25' height='100%25' filter='url(%23g)'/></svg>");
+}
 .dt-editorial > * { position: relative; z-index: 1; }
 
-/* Ambient canvas — restrained, asymmetric static gradients so glass has
-   something to blur. Static gradients only (not filter:blur) for zero
-   scroll repaint (spec §3). Sits above the paper-grain ::before, below
-   real content (z-index 1, set above). */
-.dt-editorial::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  z-index: 0;
-  pointer-events: none;
-  background:
-    radial-gradient(680px 480px at 14% 0%, rgba(160, 75, 52, 0.10), transparent 60%),
-    radial-gradient(560px 420px at 92% 38%, rgba(31, 58, 77, 0.07), transparent 65%);
-}
-@media (prefers-reduced-transparency: reduce) {
-  .dt-editorial::after { display: none; }
-}
-@media print {
-  .dt-editorial::after { display: none; }
-}
+/* The ambient `::after` glow is RETIRED (§5.4/§5.6). It existed for exactly
+   one reason — to give content-layer glass something to blur — and the
+   content-layer glass is gone (EdCardGrid, EdFaqList, EdCtaBanner,
+   EdComparisonTable, HeroCollage). Do not reintroduce it: the two surviving
+   glass consumers are chrome and blur the real page beneath them. */
 
 .dt-editorial .ed-shell {
   max-width: 1200px;
@@ -107,37 +199,61 @@
   .dt-editorial .ed-section { padding: 56px 0; }
 }
 
-/* Hero display headline — heavy grotesque with italic-serif emphasis
-   words (wrap emphasis in <em>). A mixed-voice editorial headline. */
+/* ─── Type ramp (§5.1) ────────────────────────────────────────────────
+   Two families, one job each. Fraunces (--dt-serif) is the display voice
+   and appears on display-1/display-2/title-1 ONLY — never below h2, never
+   italic, never on numerals. IBM Plex Sans (--dt-body) is every other
+   glyph. Presence comes from size, leading and tracking, not weight:
+   Fraunces above 600 reads "Cooper", and Plex Sans tops out at 700.
+   `font-variation-settings` is explicit rather than `font-optical-sizing:
+   auto`, which would tie opsz to the rendered size instead of pinning the
+   high-contrast display cut. Under :lang(zh|ja|ko|ar|hi) --dt-serif already
+   resolves to the sans stack (globals.css:17-45): the degradation rules at
+   the end of this block make that honest instead of accidental. */
+
+/* display-1 — landing h1 only. ≤ 2 lines, ≤ 22 chars/line at 80px. */
 .dt-editorial .ed-display {
-  font-family: var(--dt-body);
-  font-weight: 700;
-  font-size: clamp(46px, 7.4vw, 88px);
-  line-height: 1.0;
-  letter-spacing: -0.035em;
+  font-family: var(--dt-serif);
+  font-weight: 600;
+  font-variation-settings: "opsz" 144, "SOFT" 0;
+  font-size: clamp(44px, 6.5vw, 80px);
+  line-height: 1.02;
+  letter-spacing: -0.02em;
   color: var(--ed-ink);
 }
-.dt-editorial .ed-display em {
-  font-family: var(--dt-serif);
-  font-weight: 500;
-  font-style: italic;
-  letter-spacing: -0.01em;
+
+/* The italic-serif `<em>` split is retired (§5.0). Deleting the old rule is
+   not enough on its own — the UA default for <em> is italic, Fraunces ships
+   an italic, and `font-synthesis-style: none` would leave Latin italic while
+   the five non-Latin locales go upright. Neutralising it here retires the
+   split everywhere without touching HeroSection's markup or any i18n key. */
+.dt-editorial .ed-display em,
+.dt-editorial .ed-h1 em,
+.dt-editorial .ed-h2 em {
+  font-family: inherit;
+  font-style: normal;
+  font-weight: inherit;
+  letter-spacing: inherit;
 }
 
+/* title-1 — marketing h2. */
 .dt-editorial .ed-h2 {
   font-family: var(--dt-serif);
-  font-weight: 400;
-  font-size: clamp(28px, 3.5vw, 40px);
-  line-height: 1.1;
-  letter-spacing: -0.015em;
+  font-weight: 600;
+  font-variation-settings: "opsz" 96, "SOFT" 0;
+  font-size: clamp(28px, 3.2vw, 40px);
+  line-height: 1.12;
+  letter-spacing: -0.01em;
   color: var(--ed-ink);
 }
 
+/* title-2 — h3 and card titles. Plex Sans, not the display voice. */
 .dt-editorial .ed-h3 {
-  font-family: var(--dt-serif);
-  font-weight: 500;
-  font-size: 21px;
+  font-family: var(--dt-body);
+  font-weight: 600;
+  font-size: 22px;
   line-height: 1.25;
+  letter-spacing: -0.01em;
   color: var(--ed-ink);
 }
 
@@ -153,20 +269,28 @@
   color: var(--ed-ink-2);
 }
 
+/* Product label — an Apple "MacBook Pro"-style name, sentence case, Plex
+   Sans 15/600. NOT mono, NOT ALL-CAPS, NOT 11px (§2.5, §5.1). Colour lifts
+   from --ed-ink-3 to --ed-ink-2 because at 15/600 this is a real line of
+   text, not a caption. */
 .dt-editorial .ed-label {
-  font-family: var(--dt-mono);
-  font-size: 11px;
-  text-transform: uppercase;
-  letter-spacing: 0.13em;
-  color: var(--ed-ink-3);
+  font-family: var(--dt-body);
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: 0;
+  color: var(--ed-ink-2);
 }
 
 .dt-editorial .ed-label-num { color: var(--ed-signal); }
 
+/* caption — the floor of the ramp at 13px. Nothing in this file may go
+   below 12px, and 12px is reserved for tabular numerals inside chips. */
 .dt-editorial .ed-caption {
-  font-family: var(--dt-mono);
-  font-size: 10.5px;
-  letter-spacing: 0.04em;
+  font-family: var(--dt-body);
+  font-size: 13px;
+  font-weight: 400;
+  line-height: 1.4;
+  letter-spacing: 0.005em;
   color: var(--ed-ink-3);
 }
 
@@ -178,18 +302,23 @@
   color: var(--ed-ink);
 }
 
+/* The one dominant action per view (§5.2). Pill, not the 3px "print"
+   rectangle. The label colour is a token because the dark fill is the
+   LIGHT terracotta with a near-black label — #ffffff on #e0957a would be
+   1.9:1. */
 .dt-editorial .ed-cta {
   display: inline-flex;
   align-items: center;
   gap: 8px;
   background: var(--ed-signal);
-  color: #ffffff;
-  font-family: var(--font-plex-sans), sans-serif;
-  font-size: 14px;
-  font-weight: 500;
-  padding: 13px 22px;
-  border-radius: 3px;
-  transition: background-color 150ms ease;
+  color: var(--ed-on-signal);
+  font-family: var(--dt-body);
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.4;
+  padding: 12px 24px;
+  border-radius: var(--ed-r-pill);
+  transition: background-color var(--ed-dur-1) var(--ed-ease);
 }
 .dt-editorial .ed-cta:hover { background: var(--ed-signal-deep); }
 
@@ -246,32 +375,70 @@
 .dt-editorial .ed-crosshair::before { left: 50%; top: 0; width: 1px; height: 100%; transform: translateX(-50%); }
 .dt-editorial .ed-crosshair::after { top: 50%; left: 0; height: 1px; width: 100%; transform: translateY(-50%); }
 
-/* Inner-page hero headline — quieter than the landing .ed-display. */
+/* display-2 — inner-page hero headline (EdPageHero, the h1 of 46 routes). */
 .dt-editorial .ed-h1 {
   font-family: var(--dt-serif);
-  font-weight: 500;
-  font-size: clamp(34px, 4.6vw, 56px);
-  line-height: 1.08;
-  letter-spacing: -0.02em;
+  font-weight: 600;
+  font-variation-settings: "opsz" 144, "SOFT" 0;
+  font-size: clamp(36px, 4.8vw, 56px);
+  line-height: 1.06;
+  letter-spacing: -0.015em;
   color: var(--ed-ink);
 }
 
-/* Hairline-bordered editorial card on the inset paper tone. */
+/* ─── Non-Latin degradation (§5.1) ────────────────────────────────────
+   --dt-serif already resolves to the sans stack for these locales, so the
+   display steps render in the body family. Made explicit here: weight 600
+   (PingFang SC tops out at Semibold and `font-synthesis: none` means 700
+   would simply not render), tracking 0 (negative tracking collides CJK and
+   Arabic glyphs), and looser display leading. `font-variation-settings` is
+   cleared so the opsz/SOFT axes are not inherited onto a static face. */
+.dt-editorial:lang(zh) .ed-display,
+.dt-editorial:lang(zh) .ed-h1,
+.dt-editorial:lang(zh) .ed-h2,
+.dt-editorial:lang(ja) .ed-display,
+.dt-editorial:lang(ja) .ed-h1,
+.dt-editorial:lang(ja) .ed-h2,
+.dt-editorial:lang(ko) .ed-display,
+.dt-editorial:lang(ko) .ed-h1,
+.dt-editorial:lang(ko) .ed-h2,
+.dt-editorial:lang(hi) .ed-display,
+.dt-editorial:lang(hi) .ed-h1,
+.dt-editorial:lang(hi) .ed-h2 {
+  font-weight: 600;
+  font-variation-settings: normal;
+  letter-spacing: 0;
+  line-height: 1.2;
+}
+.dt-editorial:lang(ar) .ed-display,
+.dt-editorial:lang(ar) .ed-h1,
+.dt-editorial:lang(ar) .ed-h2 {
+  font-weight: 600;
+  font-variation-settings: normal;
+  letter-spacing: 0;
+  line-height: 1.3;
+}
+
+/* Hairline-bordered card — content layer (§5.4): opaque --ed-surface (a step
+   LIGHTER than the stage, which is what reads as raised in light mode),
+   hairline border, the one raised-card shadow, r-3. */
 .dt-editorial .ed-card {
   border: 1px solid var(--ed-rule);
-  background: var(--ed-paper-2);
+  background: var(--ed-surface);
+  border-radius: var(--ed-r-3);
+  box-shadow: var(--ed-shadow-card);
   padding: 22px;
 }
 
-/* Breadcrumb trail link. */
+/* Breadcrumb trail link — sentence case Plex Sans at the 13px floor. */
 .dt-editorial .ed-crumb {
-  font-family: var(--dt-mono);
-  font-size: 10.5px;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
+  font-family: var(--dt-body);
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0;
   color: var(--ed-ink-3);
   text-decoration: none;
-  transition: color 150ms ease;
+  transition: color var(--ed-dur-1) var(--ed-ease);
 }
 .dt-editorial a.ed-crumb:hover { color: var(--ed-signal); }
 
@@ -290,17 +457,18 @@
 }
 
 /* Clickable editorial cards (anchor cards) get hover feedback;
-   non-interactive .ed-card divs are unaffected. */
+   non-interactive .ed-card divs are unaffected. No hover translation on any
+   control (§5.5) — the feedback is colour, at 120ms.
+   The former `a.ed-card.ed-glass:hover` rule (and its reduced-transparency /
+   print counterparts) is deleted: cards are opaque now, so it matched
+   nothing. */
 .dt-editorial a.ed-card {
-  transition: border-color 150ms ease, background-color 150ms ease;
+  transition: border-color var(--ed-dur-1) var(--ed-ease),
+              background-color var(--ed-dur-1) var(--ed-ease);
 }
 .dt-editorial a.ed-card:hover {
   border-color: var(--ed-ink-3);
-  background: var(--ed-paper);
-}
-.dt-editorial a.ed-card.ed-glass:hover {
-  background: var(--ed-glass-strong);
-  border-color: rgba(31, 58, 77, 0.28);
+  background: var(--ed-surface-2);
 }
 
 /* Bulleted lists inside editorial prose. */
@@ -328,15 +496,39 @@
 }
 .dt-editorial .ed-prose ul li:last-child { margin-bottom: 0; }
 
-/* ─── Liquid Glass utility classes (spec §2.3, §4.1) ───────────────────
-   Glass is chrome, not content: apply only to nav, cards, popovers, CTA
-   panels, FAQ/comparison containers, hero art. NEVER to EdProse/article
-   body/EdSection text or anything rendering real document/quote text.
-   backdrop-filter appears exactly once below (the .ed-glass base) with
-   its two required fallbacks directly underneath — do not add
-   backdrop-filter anywhere else in this file without both. Source order
-   matters: this block is appended AFTER .ed-card so `.ed-card.ed-glass`
-   (Task 5) resolves background/border to the glass values. */
+/* ─── Content layer (§5.4) ─────────────────────────────────────────────
+   Standard materials: opaque, hairline, ONE raised-card shadow. No
+   backdrop-filter, no translucency. These two classes are what the five
+   ex-glass consumers use.
+
+   .ed-panel — a raised container that groups content (FAQ list, comparison
+   table, hero plates). Same material as .ed-card, without the padding.
+   .ed-band  — a full-bleed section band (the CTA banner). Not a card: no
+   radius, no shadow, a hairline at the top edge only. */
+.dt-editorial .ed-panel {
+  background: var(--ed-surface);
+  border: 1px solid var(--ed-rule);
+  border-radius: var(--ed-r-3);
+  box-shadow: var(--ed-shadow-card);
+}
+.dt-editorial .ed-band,
+.dt-editorial.ed-band {
+  background: var(--ed-surface);
+  border-top: 1px solid var(--ed-rule);
+}
+
+/* ─── Liquid Glass utility classes — FUNCTIONAL LAYER ONLY ─────────────
+   After Phase 1 (§5.4) glass has exactly TWO consumers, both chrome that
+   floats over scrolling content: the sticky marketing header
+   (EditorialHeaderBase) and the language popover (EdLanguageSelector).
+   HIG's rule is that the material belongs to controls, not to content, and
+   the five content consumers (HeroCollage, EdCardGrid, EdFaqList,
+   EdCtaBanner, EdComparisonTable) were moved to .ed-panel / .ed-band /
+   .ed-card above. Do not put .ed-glass back on content: at real scale it
+   did not read as glass, and it charged a repaint for the privilege.
+   backdrop-filter appears exactly once below (the .ed-glass base) with its
+   two required fallbacks directly underneath — do not add backdrop-filter
+   anywhere else in this file without both. */
 .dt-editorial .ed-glass,
 .dt-editorial.ed-glass {
   background: var(--ed-glass);
@@ -367,11 +559,8 @@
   top: 0;
   z-index: 50;
 }
-.dt-editorial .ed-glass--cta,
-.dt-editorial.ed-glass--cta {
-  border-radius: 0;
-  border-width: 1px 0 0 0;
-}
+/* `.ed-glass--cta` is deleted with EdCtaBanner's glass: a full-bleed band is
+   content, and it is now `.ed-band` above. */
 .dt-editorial .ed-glass--popover,
 .dt-editorial.ed-glass--popover {
   box-shadow: var(--ed-glass-hi), 0 14px 36px rgba(40, 33, 24, 0.24);
@@ -379,28 +568,19 @@
 @media (prefers-reduced-transparency: reduce) {
   .dt-editorial .ed-glass,
   .dt-editorial.ed-glass {
-    background: var(--ed-paper-2);
+    background: var(--ed-surface);
     backdrop-filter: none;
     -webkit-backdrop-filter: none;
-  }
-  .dt-editorial a.ed-card.ed-glass:hover {
-    background: var(--ed-paper);
-    border-color: var(--ed-ink-3);
   }
 }
 @media print {
   .dt-editorial .ed-glass,
   .dt-editorial.ed-glass {
-    background: var(--ed-paper-2);
+    background: var(--ed-surface);
     backdrop-filter: none;
     -webkit-backdrop-filter: none;
     box-shadow: none;
     border-color: var(--ed-rule);
-  }
-  .dt-editorial a.ed-card.ed-glass:hover {
-    background: var(--ed-paper-2);
-    border-color: var(--ed-rule);
-    box-shadow: none;
   }
   /* A sticky masthead prints at its stuck offset, so a page printed while
      scrolled paints the header across the middle of the content (it landed
@@ -414,4 +594,28 @@
 .dt-editorial *:focus-visible {
   outline: 2px solid var(--ed-signal);
   outline-offset: 2px;
+}
+
+/* ─── Reduced motion (§5.5) ───────────────────────────────────────────
+   DELIBERATELY UNSCOPED — the one rule in this file that is not under
+   .dt-editorial, and it must stay that way. It is an accessibility escape
+   hatch, not a style: the plan names targets that live OUTSIDE the
+   marketing surface (the cookie banner's `slideUp`, which layout.tsx
+   renders as a sibling of #page-content), and per-component JS guards
+   cover only the components that remember to add one. Scoping it down
+   would silently drop those.
+   `.01ms` rather than `0s` so animationend/transitionend still fire and
+   nothing that waits on them deadlocks. Component-level guards
+   (ShimmerBadge, StaggeredReveal, TiltCard, BlurReveal, EdFaqList, the
+   PDF/Text viewers' scroll behaviour) stay — this is the floor, not a
+   replacement.
+   Phase 3 moves this to globals.css when the app surface joins the system;
+   until then globals.css is out of scope for this phase. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
 }
