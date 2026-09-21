@@ -150,59 +150,7 @@ export default async function PricingPageContent({ locale }: { locale: string })
     textAlign: 'left',
   };
 
-  const heroMeta = (
-    <div>
-      <div className="flex gap-4 flex-wrap items-center">
-        <TrackedCtaLink
-          href={billingHref({ plan: 'plus', source: 'pricing_hero' })}
-          event={{ name: 'upgrade_click', params: { plan: 'plus', period: 'monthly', source: 'pricing_hero' } }}
-          className="ed-cta"
-        >
-          {t('pricing.plus.cta')}
-        </TrackedCtaLink>
-        <Link href={href("/demo")} className="ed-link">
-          {t('pricing.tryDemo')} <span aria-hidden="true">→</span>
-        </Link>
-      </div>
-      <div
-        style={{
-          marginTop: '20px',
-          maxWidth: '620px',
-          border: '1px solid var(--ed-rule)',
-          padding: '12px 16px',
-        }}
-      >
-        <p className="ed-body">
-          <strong>{tOr('pricing.refundPolicy.title', '7-day fair-use refund.')}</strong>{' '}
-          {tOr('pricing.refundPolicy.body', 'If DocTalk is not a fit and usage is low, cancel within 7 days and request a refund review.')}
-        </p>
-      </div>
-    </div>
-  );
-
-  return (
-    <MarketingShell
-      chrome={chrome}
-      breadcrumb={[
-        { label: t('useCasesHub.breadcrumb.home'), href: href('/') },
-        { label: t('pricing.eyebrow') },
-      ]}
-    >
-      <EdPageHero
-        eyebrow={t('pricing.eyebrow')}
-        title={t('pricing.headline')}
-        lede={t('pricing.description')}
-        meta={heroMeta}
-      />
-
-      <EdSection alt title={tOr('pricing.creditGuide.title', 'Credits map to real work')}>
-        <EdCardGrid
-          columns={3}
-          items={creditGuide.map((c) => ({ title: c.title, body: c.body, icon: c.icon }))}
-        />
-      </EdSection>
-
-      <EdSection>
+  const planGrid = (
         <div
           className="grid grid-cols-1 lg:grid-cols-3"
           style={{ gap: '20px', gridAutoRows: '1fr' }}
@@ -272,6 +220,64 @@ export default async function PricingPageContent({ locale }: { locale: string })
             </div>
           ))}
         </div>
+  );
+
+  const planFootnote = (
+    <p
+      className="ed-caption"
+      style={{ marginTop: '20px', maxWidth: '640px' }}
+    >
+      <strong>{tOr('pricing.refundPolicy.title', '7-day fair-use refund.')}</strong>{' '}
+      {tOr('pricing.refundPolicy.body', 'If DocTalk is not a fit and usage is low, cancel within 7 days and request a refund review.')}
+    </p>
+  );
+
+  return (
+    <MarketingShell
+      chrome={chrome}
+      breadcrumb={[
+        { label: t('useCasesHub.breadcrumb.home'), href: href('/') },
+        { label: t('pricing.eyebrow') },
+      ]}
+    >
+      {/*
+        Apple grammar (plan §5.2): label → one claim → ONE sentence → the product.
+        The plans ARE the product on this page, so they render inside the hero and
+        the explanatory prose moves below them. Measured before this change: on a
+        375×812 phone the first price sat at y=1877 — 2.31 screens down.
+
+        `pricing.headline` and `pricing.description` are NOT edited: they are also
+        `titleKey` and `descKey` in app/[locale]/pricing/page.tsx, so rewording them
+        would silently change the <title> and <meta description> of this page in 11
+        locales. The one-line hero claim is a NEW key shipped via tOr().
+      */}
+      <EdPageHero
+        variant="product"
+        eyebrow={t('pricing.eyebrow')}
+        title={t('pricing.headline')}
+        lede={tOr(
+          'pricing.heroLine',
+          'Every plan answers with a citation you can open. Paid tiers raise the limits.',
+        )}
+        product={
+          <>
+            {planGrid}
+            {planFootnote}
+          </>
+        }
+      />
+
+      <EdSection alt>
+        <p className="ed-lede" style={{ maxWidth: '640px' }}>
+          {t('pricing.description')}
+        </p>
+      </EdSection>
+
+      <EdSection title={tOr('pricing.creditGuide.title', 'Credits map to real work')}>
+        <EdCardGrid
+          columns={3}
+          items={creditGuide.map((c) => ({ title: c.title, body: c.body, icon: c.icon }))}
+        />
       </EdSection>
 
       <EdSection alt title={t('pricing.comparison.title')}>
