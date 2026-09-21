@@ -310,3 +310,25 @@ unscoped reduced-motion rule (`editorial.css:652-659`) and change `#ffffff` →
 should be corrected: the `pricing_hero` `upgrade_click` was removed (plan-sanctioned, but the
 "every event preserved" statement is false), and `.claude/rules/frontend.md` still says
 "light-only".
+
+---
+
+## Author's note — fixes landed after this review (added 2026-09-21)
+`phase1.diff` and the line numbers above describe the tree at `aba8208`, **before** these fixes.
+Each finding was re-verified by the author against the code before being fixed.
+
+| Finding | Commit | Result |
+|---|---|---|
+| MAJOR-1 unscoped reduced-motion | `f93ae39` | scoped to `.dt-editorial`, `animation-iteration-count: 1` added |
+| MAJOR-2 `/shared` bubble in dark | `10f59bc` | `#ffffff` → `var(--ed-paper)`: 1.21:1 → 14.91:1 dark |
+| MINOR-2 h1→h3 skip on /pricing | `662f7aa` | plan names `h2`, visual class unchanged |
+| MINOR-9 olive chip in dark | `662f7aa` | 2.06:1 → 8.77:1 |
+| MINOR-7 rule text not rewritten | `7a4698c` | `.claude/rules/frontend.md` lines 19–20 rewritten |
+| MINOR-1, 3, 4, 5, 6, 8 | — | accepted with reasons; see the plan's "Phase 1 adversarial review — outcome" |
+
+Post-fix checks by the author: 161/161 unit tests; `npm run build` green; contrast gate PASS; all 120
+`editorial.css` selectors scoped to `.dt-editorial`; Phase 1 touches no golden-path file; on `/d/<id>`
+the consent banner renders the app variant at the top; `/`, `/demo`, `/features`,
+`/use-cases/lawyers`, `/trust`, `/tools` probed in light and dark — zero low-contrast text, no overflow.
+MINOR-6 correction: the rendered count on `/` is **30** sub-12px text nodes (7–10px), all inside
+FeatureGrid's aria-hidden decorative graphics — larger than the 13 source sites counted above.
