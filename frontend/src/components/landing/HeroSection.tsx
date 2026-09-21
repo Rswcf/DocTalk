@@ -39,10 +39,10 @@ const WIDE: CitationFieldSettings = {
   repeatSkip: 2,
   occurrence: 1,
   focusY: 0.64,
-  dimAlpha: 0.2,
+  dimAlpha: 0.16, // prototype B's value on its #0a0908 ground
   litAlpha: 0.72, // below full ink, so the cited words stay the brightest thing on the page
   lampRadius: 340,
-  bloomAlpha: 0.18,
+  bloomAlpha: 0.2,
   bloomRadius: 420,
   cursorRadius: 190,
   cursorAlpha: 0.5,

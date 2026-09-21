@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect } from 'react';
+import { GeistSans } from 'geist/font/sans';
 import EditorialHeader from './EditorialHeader';
 import EditorialFooter from './EditorialFooter';
 import HeroSection from './HeroSection';
@@ -23,6 +24,11 @@ import FinalCTA from './FinalCTA';
  * outside this root (the cookie banner, the language popover) mirrors the
  * class itself. Every other marketing page stays paper in a light OS.
  *
+ * The owner then asked for prototype B's deeper ground and its sans headline:
+ * editorial.css gives `.dt-night` its own stage colour (the one sanctioned
+ * exception to the twin rule), and the display steps are set in Geist. The
+ * font is loaded here, not in the root layout, so only the landing preloads it.
+ *
  * Extracted from `HomePageClient.tsx` (Wave-2 Q27) so the unauth marketing
  * path and the authenticated dashboard live in separate files. The auth
  * router lives in `HomePageClient.tsx`, which picks between this component
@@ -32,7 +38,7 @@ export default function LandingPageContent() {
   useNightThemeColor();
 
   return (
-    <div className="dt-editorial dt-night">
+    <div className={`dt-editorial dt-night ${GeistSans.variable}`}>
       <EditorialHeader />
       <main>
         <HeroSection />
@@ -47,9 +53,9 @@ export default function LandingPageContent() {
   );
 }
 
-// The dark stage, `--ed-paper` under `.dt-night`. A literal because the meta
+// The night stage, `--ed-paper` under `.dt-night`. A literal because the meta
 // tags live in <head>, outside any element that could resolve the token.
-const NIGHT_THEME_COLOR = '#171614';
+const NIGHT_THEME_COLOR = '#0a0908';
 
 /**
  * Tint the browser chrome to the night stage while the landing is mounted.

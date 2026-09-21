@@ -28,23 +28,63 @@ test('every .dark .dt-editorial selector has a .dt-editorial.dt-night twin in th
   assert.ok(darkSelectors >= 2, 'expected the dark token set and the dark grain at least');
 });
 
-test('the night twin never carries values of its own', () => {
-  // A standalone `.dt-editorial.dt-night { ... }` block would be a second
-  // value set that drifts from the dark one. Twins only appear in lists.
+// Night-only rules are an explicit, closed list. The owner asked for
+// prototype B's deeper ground and its sans headline (2026-09-21), so the
+// landing carries exactly two things the dark theme does not: its stage and
+// chrome values, and its display type. Anything else under .dt-night must be
+// a twin of a .dark .dt-editorial rule.
+const NIGHT_STAGE_TOKENS = ['--ed-paper', '--ed-paper-2', '--ed-glass', '--ed-glass-strong'];
+const NIGHT_TYPE_SELECTORS = [
+  '.dt-editorial.dt-night .ed-display',
+  '.dt-editorial.dt-night .ed-h2',
+  '.dt-editorial.dt-night .ed-night-claim .ed-display',
+  '.dt-editorial.dt-night .ed-num',
+];
+
+test('night-only rules are limited to the stage tokens and the display type', () => {
   const css = stripCssComments(read('app/editorial.css'));
-  const preludes = [...css.matchAll(/([^{}]+)\{/g)].map((m) => m[1].trim().replace(/\s+/g, ' '));
-  for (const prelude of preludes) {
-    const list = prelude.split(',').map((s) => s.trim());
-    const night = list.filter((s) => s.startsWith('.dt-editorial.dt-night'));
-    for (const selector of night) {
+  const rules = [...css.matchAll(/([^{}]+)\{([^{}]*)\}/g)].map((m) => ({
+    list: m[1].trim().replace(/\s+/g, ' ').split(',').map((sel) => sel.trim()),
+    body: m[2],
+  }));
+  let stageBlocks = 0;
+  for (const { list, body } of rules) {
+    for (const selector of list.filter((sel) => sel.startsWith('.dt-editorial.dt-night'))) {
       const dark = selector.replace('.dt-editorial.dt-night', '.dark .dt-editorial');
-      assert.ok(list.includes(dark), `"${selector}" is styled without its "${dark}" original`);
+      if (list.includes(dark)) continue; // a twin: fine
+      const props = [...body.matchAll(/(--?[\w-]+)\s*:/g)].map((m) => m[1]);
+      if (selector === '.dt-editorial.dt-night') {
+        stageBlocks += 1;
+        for (const prop of props) {
+          assert.ok(NIGHT_STAGE_TOKENS.includes(prop), `the night stage block may not set ${prop}`);
+        }
+        continue;
+      }
+      assert.ok(NIGHT_TYPE_SELECTORS.includes(selector), `"${selector}" is night-only without being on the list`);
+      assert.ok(!props.some((prop) => prop.startsWith('--ed-')), `"${selector}" redefines a token`);
     }
   }
+  assert.equal(stageBlocks, 1, 'expected exactly one night stage block');
+});
+
+test('Geist is loaded by the landing only', () => {
+  // Loading it in the root layout would make every route preload the face.
+  const walk = (dir, out = []) => {
+    for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+      const full = path.join(dir, entry.name);
+      if (entry.isDirectory()) walk(full, out);
+      else if (/\.(tsx?|jsx?)$/.test(entry.name)) out.push(full);
+    }
+    return out;
+  };
+  const users = walk(src)
+    .filter((f) => /from ['"]geist\//.test(fs.readFileSync(f, 'utf8')))
+    .map((f) => path.relative(src, f));
+  assert.deepEqual(users, [path.join('components', 'landing', 'LandingPageContent.tsx')]);
 });
 
 test('the landing root is Night', () => {
-  assert.match(read('components/landing/LandingPageContent.tsx'), /className="dt-editorial dt-night"/);
+  assert.match(read('components/landing/LandingPageContent.tsx'), /className=\{`dt-editorial dt-night /);
 });
 
 test('chrome rendered outside the landing root mirrors Night', () => {

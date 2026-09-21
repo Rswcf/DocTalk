@@ -141,6 +141,19 @@
   color-scheme: dark;
 }
 
+/* ─── Night stage (owner, 2026-09-21: "the darker ground of prototype B").
+   The ONE sanctioned exception to the twin rule above: on the landing the
+   ground is deeper than the dark theme's, so exactly these stage and chrome
+   values differ. Everything else is the dark set, unchanged. Contrast on
+   #0a0908: ink 16.4, ink-2 9.6, ink-3 6.2, signal 8.3. tests/landing-night
+   .test.cjs allows this list and nothing more. */
+.dt-editorial.dt-night {
+  --ed-paper: #0a0908;          /* stage                                    */
+  --ed-paper-2: #12110f;        /* inset band, the same small step up       */
+  --ed-glass: rgba(18, 17, 15, 0.6);
+  --ed-glass-strong: rgba(14, 13, 11, 0.82);
+}
+
 /* Counter the app-surface reset at globals.css:819-826:
      `.dt-stitch-root > .min-h-screen { background: transparent !important }`
    MarketingShell's root is `.dt-editorial min-h-screen flex flex-col` and a
@@ -429,6 +442,49 @@
   line-height: 1.06;
   letter-spacing: -0.015em;
   color: var(--ed-ink);
+}
+
+/* ─── Night display type (owner, 2026-09-21) ───────────────────────────
+   On the Night landing the display steps are set in Geist, prototype B's
+   sans (the `geist` package, loaded by LandingPageContent only, so no other
+   route preloads it). Fraunces stays the display voice everywhere else.
+   Declared BEFORE the non-Latin block on purpose: equal specificity, so for
+   zh/ja/ko/hi/ar that block still wins weight, zero tracking (negative
+   tracking breaks Arabic joining) and leading; Geist carries Latin only and
+   their own glyphs fall through to the body stack. */
+.dt-editorial.dt-night .ed-display,
+.dt-editorial.dt-night .ed-h2 {
+  font-family: var(--font-geist-sans), var(--dt-body);
+  font-variation-settings: normal;
+  font-weight: 500;
+}
+.dt-editorial.dt-night .ed-display {
+  font-size: clamp(44px, 6vw, 84px);
+  line-height: 1;
+  letter-spacing: -0.045em;
+}
+.dt-editorial.dt-night .ed-h2 { letter-spacing: -0.035em; }
+/* The step numerals are display type too; left in Fraunces they read as a
+   second voice beside the Geist headings. */
+.dt-editorial.dt-night .ed-num {
+  font-family: var(--font-geist-sans), var(--dt-body);
+  font-weight: 300;
+  letter-spacing: -0.04em;
+}
+/* The headline's light falls off toward its foot, as in the prototype. */
+/* Both features or neither: a gradient that failed to parse would leave
+   `color: transparent` and an invisible headline. */
+@supports ((background-clip: text) or (-webkit-background-clip: text)) and (color: color-mix(in srgb, red, blue)) {
+  .dt-editorial.dt-night .ed-night-claim .ed-display {
+    background: linear-gradient(
+      180deg,
+      var(--ed-ink) 30%,
+      color-mix(in srgb, var(--ed-ink) 80%, var(--ed-paper)) 100%
+    );
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
 }
 
 /* ─── Non-Latin degradation (§5.1) ────────────────────────────────────
