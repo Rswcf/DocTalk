@@ -1,5 +1,5 @@
 diff --git a/.claude/rules/frontend.md b/.claude/rules/frontend.md
-index 8059f63..1dbf488 100644
+index 8059f63..e67a805 100644
 --- a/.claude/rules/frontend.md
 +++ b/.claude/rules/frontend.md
 @@ -17,7 +17,7 @@ paths:
@@ -7,7 +7,7 @@ index 8059f63..1dbf488 100644
  ## UI Design System
  - **Palette (app UI)**: zinc monochrome + blue accent (`#1D4ED8`/`#60A5FA`) **until Phase 3 of the 2026-09-20 plan**, when the app moves onto the shared `--ed-*` paper tokens (owner decision A2: one paper system across marketing and app). Zero `gray-*`/`indigo-*`/`violet-*`/`purple-*` classes (except Google OAuth brand + status colors). Zero `transition-all` (use specific properties). Nothing renders below 12px (12px only for tabular numerals inside chips); radius from the five-step scale `--ed-r-1..4` / `--ed-r-pill`.
 -- **Editorial marketing layer**: the public marketing surface (unauthenticated `/`, `use-cases/*`, `compare/*`, `alternatives/*`, `features/*`, `tools/*`, `pricing`, `trust`, `demo`, `shared/[token]`, `document-diff`) uses the scoped editorial system in `frontend/src/app/editorial.css` — every rule under `.dt-editorial`. **Light AND dark are both required** (HIG: every custom colour needs both): `.dt-editorial` is warm paper (`--ed-paper` `#eae8e3`, `--ed-ink` `#20211e`, `--ed-signal` terracotta `#843c28`), `.dark .dt-editorial` a warm near-black that is NOT an inversion and NOT zinc (`--ed-paper` `#171614`, `--ed-ink` `#ece9e2`, `--ed-signal` `#e0957a`). Olive = verified only; amber `--ed-evidence` = citation only. **Dark tokens must reuse the `--ed-*` names** — ~40 components write `var(--ed-paper-2)` inline and the `!important` counter-rule resolves `var(--ed-paper)`, so new names would leave them light-on-dark. Never hardcode `#fff`/`white` on an `--ed-*` background; use `var(--ed-paper)` so it inverts. Type: **Fraunces 600 for marketing `h1`/`h2` only** (optical size follows the rendered size — do NOT pin `"opsz" 144`, it crowds words together at phone sizes); IBM Plex Sans for every other glyph; no italic `<em>` in headlines, no mono labels, no ALL-CAPS eyebrows. Structure follows Apple's grammar: one claim → one sentence → **exactly one filled `.ed-cta` per view** → the product; secondary actions use `.ed-cta-quiet` or `.ed-link`. Liquid Glass (`.ed-glass`) is permitted ONLY in the functional layer (the sticky header and popovers) — never on cards, FAQ rows, banners, tables or hero art. **Design decision 2026-09-20 (supersedes 2026-05-20):** the warm-paper terracotta identity is kept (re-affirmed by the owner, who chose it over a neutral rebrand), but the light-only rule, content-layer glass, 3px buttons and the two-surface split are retired; the app joins the paper system in Phases 3–4. Do not re-propose a neutral/blue rebrand, and do not reintroduce a second surface treatment. Plan: `.collab/plans/2026-09-20-apple-design-direction.md`. Marketing pages compose the shared editorial kit in `frontend/src/components/marketing/` (`MarketingShell`, `EditorialMarketingHeader`, `EdPageHero` — `variant="product"` for the product-first hero, `EdSection`, `EdProse`, `EdFeatureList`, `EdCardGrid`, `EdStepRow`, `EdFaqList`, `EdCtaBanner`, `EdComparisonTable`, `EdInlineCell`, `EdRelatedLinks`, `EdCheckList`, `EdChoiceList`) — `MarketingShell` supplies the `.dt-editorial` root, so kit components never add it themselves. Keep editorial styles scoped under `.dt-editorial`, including reduced-motion rules; do not let them leak into the functional app UI (`editorial.css` is imported globally, so an unscoped selector hits every app route). Do not apply the zinc/blue rule to editorial components. Two dual-surface components are sanctioned: `DocumentDiffPanel` takes `surface="app"|"editorial"`; the global `CookieConsentBanner` detects the surface itself. Pages still on the zinc/blue app palette: `about`, `contact`, `imprint`, `privacy`, `terms`, `blog/*`. **Never touch one half of the `!important` pair alone**: `globals.css` `.dt-stitch-root > .min-h-screen { background: transparent !important }` and its `editorial.css` counter-rule `.dt-stitch-root > .dt-editorial` — removing either blanks the paper on every marketing page.
-+- **Editorial marketing layer**: the public marketing surface (unauthenticated `/`, `use-cases/*`, `compare/*`, `alternatives/*`, `features/*`, `tools/*`, `pricing`, `trust`, `demo`, `shared/[token]`, `document-diff`, `about`, `contact`, `imprint`, `privacy`, `terms`, `blog/*`) uses the scoped editorial system in `frontend/src/app/editorial.css` — every rule under `.dt-editorial`. **Light AND dark are both required** (HIG: every custom colour needs both): `.dt-editorial` is warm paper (`--ed-paper` `#eae8e3`, `--ed-ink` `#20211e`, `--ed-signal` terracotta `#843c28`), `.dark .dt-editorial` a warm near-black that is NOT an inversion and NOT zinc (`--ed-paper` `#171614`, `--ed-ink` `#ece9e2`, `--ed-signal` `#e0957a`). Olive = verified only; amber `--ed-evidence` = citation only. **Dark tokens must reuse the `--ed-*` names** — ~40 components write `var(--ed-paper-2)` inline and the `!important` counter-rule resolves `var(--ed-paper)`, so new names would leave them light-on-dark. Never hardcode `#fff`/`white` on an `--ed-*` background; use `var(--ed-paper)` so it inverts. Type: display steps (`.ed-display`, `.ed-h1`, `.ed-h2`, `.ed-num`, the header/footer wordmark) read `--ed-display-family` and never `var(--dt-serif)` directly — Fraunces 600 on paper (optical size follows the rendered size — do NOT pin `"opsz" 144`, it crowds words together at phone sizes), Geist on Night (below); IBM Plex Sans for every other glyph; no italic `<em>` in headlines, no mono labels, no ALL-CAPS eyebrows. Structure follows Apple's grammar: one claim → one sentence → **exactly one filled `.ed-cta` per view** → the product; secondary actions use `.ed-cta-quiet` or `.ed-link`. Liquid Glass (`.ed-glass`) is permitted ONLY in the functional layer (the sticky header and popovers) — never on cards, FAQ rows, banners, tables or hero art. **Design decision 2026-09-20 (supersedes 2026-05-20):** the warm-paper terracotta identity is kept (re-affirmed by the owner, who chose it over a neutral rebrand), but the light-only rule, content-layer glass, 3px buttons and the two-surface split are retired; the app joins the paper system in Phases 3–4. Do not re-propose a neutral/blue rebrand, and do not reintroduce a second surface treatment. Plan: `.collab/plans/2026-09-20-apple-design-direction.md`. **Night marketing surface (2026-09-21, owner decisions: prototype B for the landing, then "其他营销页也改成夜间"):** every marketing root — `LandingPageContent` and `MarketingShell`, the only two elements that open `.dt-editorial` — renders `NIGHT_ROOT_CLASS` from `components/marketing/night.ts` (`dt-editorial dt-night` + the Geist variable) and calls its `useNightThemeColor()`: the editorial dark theme in BOTH OS themes — every `.dark .dt-editorial…` selector carries a `.dt-editorial.dt-night…` twin in the same selector list; never new token names. The owner then asked for prototype B's deeper ground and sans headline, so there is exactly ONE night-only value block (`.dt-editorial.dt-night`: stage `--ed-paper` `#0a0908`, `--ed-paper-2`, `--ed-glass`, `--ed-glass-strong`, `--ed-display-family` = Geist — a closed list) plus weight/tracking retunes for the display steps. Geist comes from the `geist` package and is imported by `night.ts` only, so app routes never preload it; the retunes sit BEFORE the non-Latin `:lang()` block so zh/ja/ko/hi/ar keep zero tracking (negative tracking breaks Arabic joining). `tests/landing-night.test.cjs` enforces the twin rule, the closed night-only list, both roots, the display-family indirection and Geist's single importer; a CDP contrast audit of 54 marketing pages (light OS) found zero text below AA at ship time. Chrome rendered outside the root mirrors the class (`CookieConsentBanner`, `EdLanguageSelector`'s portalled menu), and `LandingPageContent` tints `theme-color` while mounted. The hero is `CitationField` — a canvas whose colours come from the `--ed-*` tokens and whose font comes from the computed `--dt-body`, with no literals (tested); its rAF loop stops once the citation is marked, and reduced motion / `?still` draw the final frame — behind a real-text claim, with an opaque answer card under the passage and Quote Finder named in the footnote. The document text in `citationFieldContent.ts` is verbatim page 1 of a `backend/seed_data/` PDF (checked with `pdftotext`) and always renders `dir="ltr" lang="en"`; `landing.frame.{question,answer,source,description}` change together with it. The paper values stay the base of the token set, but no marketing page renders them now. **Open owner question:** decision A2 (the app joins the paper system in Phases 3–4) predates Night — whether the app follows Night, stays zinc, or goes paper is undecided; do not start Phase 3 without asking. Terracotta, Plex and the olive/amber roles are unchanged. Plan: `.collab/plans/2026-09-21-landing-night.md`. Marketing pages compose the shared editorial kit in `frontend/src/components/marketing/` (`MarketingShell`, `EditorialMarketingHeader`, `EdPageHero` — `variant="product"` for the product-first hero, `EdSection`, `EdProse`, `EdFeatureList`, `EdCardGrid`, `EdStepRow`, `EdFaqList`, `EdCtaBanner`, `EdComparisonTable`, `EdInlineCell`, `EdRelatedLinks`, `EdCheckList`, `EdChoiceList`) — `MarketingShell` supplies the `.dt-editorial` root, so kit components never add it themselves. Keep editorial styles scoped under `.dt-editorial`, including reduced-motion rules; do not let them leak into the functional app UI (`editorial.css` is imported globally, so an unscoped selector hits every app route). Do not apply the zinc/blue rule to editorial components. Two dual-surface components are sanctioned: `DocumentDiffPanel` takes `surface="app"|"editorial"`; the global `CookieConsentBanner` detects the surface itself (and mirrors Night). **Never touch one half of the `!important` pair alone**: `globals.css` `.dt-stitch-root > .min-h-screen { background: transparent !important }` and its `editorial.css` counter-rule `.dt-stitch-root > .dt-editorial` — removing either blanks the paper on every marketing page.
++- **Editorial marketing layer**: the public marketing surface (unauthenticated `/`, `use-cases/*`, `compare/*`, `alternatives/*`, `features/*`, `tools/*`, `pricing`, `trust`, `demo`, `shared/[token]`, `document-diff`, `about`, `contact`, `imprint`, `privacy`, `terms`, `blog/*`) uses the scoped editorial system in `frontend/src/app/editorial.css` — every rule under `.dt-editorial`. **Light AND dark are both required** (HIG: every custom colour needs both): `.dt-editorial` is warm paper (`--ed-paper` `#eae8e3`, `--ed-ink` `#20211e`, `--ed-signal` terracotta `#843c28`), `.dark .dt-editorial` a warm near-black that is NOT an inversion and NOT zinc (`--ed-paper` `#171614`, `--ed-ink` `#ece9e2`, `--ed-signal` `#e0957a`). Olive = verified only; amber `--ed-evidence` = citation only. **Dark tokens must reuse the `--ed-*` names** — ~40 components write `var(--ed-paper-2)` inline and the `!important` counter-rule resolves `var(--ed-paper)`, so new names would leave them light-on-dark. Never hardcode `#fff`/`white` on an `--ed-*` background; use `var(--ed-paper)` so it inverts. Type: display steps (`.ed-display`, `.ed-h1`, `.ed-h2`, `.ed-num`, the header/footer wordmark) read `--ed-display-family` and never `var(--dt-serif)` directly — Fraunces 600 on paper (optical size follows the rendered size — do NOT pin `"opsz" 144`, it crowds words together at phone sizes), Geist on Night (below); IBM Plex Sans for every other glyph; no italic `<em>` in headlines, no mono labels, no ALL-CAPS eyebrows. Structure follows Apple's grammar: one claim → one sentence → **exactly one filled `.ed-cta` per view** → the product; secondary actions use `.ed-cta-quiet` or `.ed-link`. Liquid Glass (`.ed-glass`) is permitted ONLY in the functional layer (the sticky header and popovers) — never on cards, FAQ rows, banners, tables or hero art. **Design decision 2026-09-20 (supersedes 2026-05-20):** the warm-paper terracotta identity is kept (re-affirmed by the owner, who chose it over a neutral rebrand), but the light-only rule, content-layer glass, 3px buttons and the two-surface split are retired; the app joins the paper system in Phases 3–4. Do not re-propose a neutral/blue rebrand, and do not reintroduce a second surface treatment. Plan: `.collab/plans/2026-09-20-apple-design-direction.md`. **Night marketing surface (2026-09-21, owner decisions: prototype B for the landing, then "其他营销页也改成夜间"):** every marketing root — `LandingPageContent` and `MarketingShell`, the only two elements that open `.dt-editorial` — renders `NIGHT_ROOT_CLASS` from `components/marketing/night.ts` (`dt-editorial dt-night` + the Geist variable) and calls its `useNightDocument()` (reference-counted: theme-color swapped to the night stage and `dt-night-doc` on `<html>`, so overscroll and the scrollbar are dark too — the ONE editorial rule outside `.dt-editorial`, gated by that class): the editorial dark theme in BOTH OS themes — every `.dark .dt-editorial…` selector carries a `.dt-editorial.dt-night…` twin in the same selector list; never new token names. The owner then asked for prototype B's deeper ground and sans headline, so there is exactly ONE night-only value block (`.dt-editorial.dt-night`: stage `--ed-paper` `#0a0908`, `--ed-paper-2`, `--ed-glass`, `--ed-glass-strong`, `--ed-display-family` = Geist — a closed list) plus weight/tracking retunes for the display steps. Geist comes from the `geist` package and is imported by `night.ts` only, so app routes never preload it; the retunes sit BEFORE the non-Latin `:lang()` block so zh/ja/ko/hi/ar keep zero tracking (negative tracking breaks Arabic joining). `tests/landing-night.test.cjs` enforces the twin rule, the closed night-only list, both roots, the display-family indirection and Geist's single importer; a CDP contrast audit of 54 marketing pages (light OS) found zero text below AA at ship time. Chrome rendered outside the root mirrors the class (`CookieConsentBanner`, `EdLanguageSelector`'s portalled menu), and `LandingPageContent` tints `theme-color` while mounted. The hero is `CitationField` — a canvas whose colours come from the `--ed-*` tokens and whose font comes from the computed `--dt-body`, with no literals (tested); its rAF loop stops once the citation is marked, and reduced motion / `?still` draw the final frame — behind a real-text claim, with an opaque answer card under the passage and Quote Finder named in the footnote. The document text in `citationFieldContent.ts` is verbatim page 1 of a `backend/seed_data/` PDF (checked with `pdftotext`) and always renders `dir="ltr" lang="en"`; `landing.frame.{question,answer,source,description}` change together with it. The paper values stay the base of the token set, but no marketing page renders them now. **Open owner question:** decision A2 (the app joins the paper system in Phases 3–4) predates Night — whether the app follows Night, stays zinc, or goes paper is undecided; do not start Phase 3 without asking. Terracotta, Plex and the olive/amber roles are unchanged. Plan: `.collab/plans/2026-09-21-landing-night.md`. Marketing pages compose the shared editorial kit in `frontend/src/components/marketing/` (`MarketingShell`, `EditorialMarketingHeader`, `EdPageHero` — `variant="product"` for the product-first hero, `EdSection`, `EdProse`, `EdFeatureList`, `EdCardGrid`, `EdStepRow`, `EdFaqList`, `EdCtaBanner`, `EdComparisonTable`, `EdInlineCell`, `EdRelatedLinks`, `EdCheckList`, `EdChoiceList`) — `MarketingShell` supplies the `.dt-editorial` root, so kit components never add it themselves. Keep editorial styles scoped under `.dt-editorial`, including reduced-motion rules; do not let them leak into the functional app UI (`editorial.css` is imported globally, so an unscoped selector hits every app route). Do not apply the zinc/blue rule to editorial components. Two dual-surface components are sanctioned: `DocumentDiffPanel` takes `surface="app"|"editorial"`; the global `CookieConsentBanner` detects the surface itself (and mirrors Night). **Never touch one half of the `!important` pair alone**: `globals.css` `.dt-stitch-root > .min-h-screen { background: transparent !important }` and its `editorial.css` counter-rule `.dt-stitch-root > .dt-editorial` — removing either blanks the paper on every marketing page.
  - **De-glass leftovers are a bug class**: commit `0b7404a` flattened the CSS but left dark-glass Tailwind utilities in JSX; ~40 invisible-on-white sites were fixed in v0.23.0. When touching app-surface JSX, any `*-white/NN` or bare `text-white`/`hover:text-white` on a light surface needs a light-mode variant (`dark:` keeps the old value). Theme-inverting solids (`bg-zinc-900 text-white dark:bg-zinc-50 dark:text-zinc-900`) are correct as-is.
  - **i18n**: Components using `t()` MUST be inside `<LocaleProvider>`. Outside = raw key fallback. Only `en` is statically loaded; other 10 locales lazy-loaded. Localized server pages seed `<LocaleProvider initialLocale initialMessages>` (see `app/[locale]/page.tsx` + `getScopedMessages`) so SSR HTML is translated — a `[locale]` page without seeding ships English first paint (the exact failure the locale-URL program exists to fix).
  
@@ -66,6 +66,345 @@ index 23c8efa..c0a10fe 100644
      "gray-matter": "^4.0.3",
      "jose": "^6.1.3",
      "lucide-react": "^0.563.0",
+diff --git a/frontend/scripts/design-audit/cdpshot.mjs b/frontend/scripts/design-audit/cdpshot.mjs
+new file mode 100644
+index 0000000..c0234b1
+--- /dev/null
++++ b/frontend/scripts/design-audit/cdpshot.mjs
+@@ -0,0 +1,52 @@
++// cdpshot.mjs <url> <out.png> [width=1440] [height=900] [waitMs=4000] [fullPage=0]
++// Real-time headless screenshot over the Chrome DevTools Protocol, so rAF-driven
++// canvas animations actually run (the --screenshot flag's virtual time starves them).
++import { spawn } from 'node:child_process';
++import { writeFileSync, mkdtempSync } from 'node:fs';
++import { tmpdir } from 'node:os';
++import { join } from 'node:path';
++const [url, out, w = '1440', h = '900', waitMs = '4000', full = '0'] = process.argv.slice(2);
++const CH = '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
++const port = 9300 + Math.floor(Math.random() * 500);
++const profile = mkdtempSync(join(tmpdir(), 'cdpshot-'));
++const chrome = spawn(CH, ['--headless=new', `--remote-debugging-port=${port}`, `--user-data-dir=${profile}`,
++  '--hide-scrollbars', ...(process.env.EXTRA_FLAGS ? process.env.EXTRA_FLAGS.split(' ') : []), '--force-device-scale-factor=1', `--window-size=${w},${h}`, 'about:blank'], { stdio: 'ignore' });
++const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
++const kill = () => { try { chrome.kill('SIGKILL'); } catch {} };
++const timer = setTimeout(() => { console.error('TIMEOUT'); kill(); process.exit(2); }, 45000);
++try {
++  let target;
++  for (let i = 0; i < 60 && !target; i++) {
++    await sleep(150);
++    try { target = (await (await fetch(`http://127.0.0.1:${port}/json`)).json()).find((t) => t.type === 'page'); } catch {}
++  }
++  const ws = new WebSocket(target.webSocketDebuggerUrl);
++  await new Promise((r) => (ws.onopen = r));
++  let id = 0; const pending = new Map();
++  ws.onmessage = (m) => { const d = JSON.parse(m.data); if (d.id && pending.has(d.id)) { pending.get(d.id)(d); pending.delete(d.id); } };
++  const send = (method, params = {}) => new Promise((r) => { const i = ++id; pending.set(i, r); ws.send(JSON.stringify({ id: i, method, params })); });
++  await send('Emulation.setDeviceMetricsOverride', { width: +w, height: +h, deviceScaleFactor: 1, mobile: +w < 768 });
++  // optional: SCHEME=dark|light and REDUCE=1 emulate the user's OS settings
++  const features = [];
++  if (process.env.SCHEME) features.push({ name: 'prefers-color-scheme', value: process.env.SCHEME });
++  if (process.env.REDUCE) features.push({ name: 'prefers-reduced-motion', value: 'reduce' });
++  if (features.length) await send('Emulation.setEmulatedMedia', { features });
++  await send('Page.enable');
++  await send('Page.navigate', { url });
++  if (process.env.INJECT_CSS) {
++    await sleep(800);
++    await send('Runtime.evaluate', { expression: 'document.head.insertAdjacentHTML("beforeend", "<style>" + ' + JSON.stringify(process.env.INJECT_CSS) + ' + "</style>")' });
++  }
++  await sleep(+waitMs);
++  let clip;
++  if (full === '1') {
++    const m = await send('Page.getLayoutMetrics');
++    const cs = m.result.cssContentSize || m.result.contentSize;
++    clip = { x: 0, y: 0, width: +w, height: Math.min(cs.height, 8000), scale: 1 };
++  }
++  const shot = await send('Page.captureScreenshot', { format: 'png', ...(clip ? { clip, captureBeyondViewport: true } : {}) });
++  writeFileSync(out, Buffer.from(shot.result.data, 'base64'));
++  console.log(`ok ${out} (${w}x${h}${full === '1' ? ', full page' : ''}, waited ${waitMs}ms)`);
++  ws.close();
++} catch (e) { console.error('FAILED', e.message); process.exitCode = 1; }
++finally { clearTimeout(timer); kill(); }
+diff --git a/frontend/scripts/design-audit/herocheck.mjs b/frontend/scripts/design-audit/herocheck.mjs
+new file mode 100644
+index 0000000..de0f6a8
+--- /dev/null
++++ b/frontend/scripts/design-audit/herocheck.mjs
+@@ -0,0 +1,68 @@
++// Hero geometry + pixel check across viewports (review 2026-09-21 MAJOR-1/3).
++// usage: node herocheck.mjs <base-url> <out-dir>   → writes <loc>-<WxH>.png, <loc>-<WxH>-off.png, geometry.json
++// env: VIEWPORTS="1440x900 1366x768" LOCALES="en de ja" (default en). The -off render removes the claim
++// pool AND the field's fade mask: identical passage pixels in both renders mean neither dims the citation.
++import { spawn } from 'node:child_process';
++import fs from 'node:fs';
++import os from 'node:os';
++
++const [base, outDir] = process.argv.slice(2);
++const VIEWPORTS = (process.env.VIEWPORTS || '1440x900 1366x768 1366x650 1280x720 1024x768 1920x1080').split(' ');
++const LOCALES = (process.env.LOCALES || 'en').split(' ');
++const CHROME = '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
++const port = 9300 + Math.floor(Math.random() * 400);
++const profile = fs.mkdtempSync(os.tmpdir() + '/herocheck-');
++const chrome = spawn(CHROME, ['--headless=new', `--remote-debugging-port=${port}`, `--user-data-dir=${profile}`, '--hide-scrollbars', 'about:blank'], { stdio: 'ignore' });
++const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
++fs.mkdirSync(outDir, { recursive: true });
++
++const GEOMETRY = `(() => {
++  const stage = document.querySelector('.ed-night-stage');
++  const claim = document.querySelector('.ed-night-claim');
++  const card = document.querySelector('.ed-night-card');
++  const sr = stage.getBoundingClientRect(), cr = claim.getBoundingClientRect(), kr = card.getBoundingClientRect();
++  const gap = Math.min(64, Math.max(32, Math.round(stage.clientHeight * 0.06))); /* HeroSection passageGap() */
++  const at = document.elementFromPoint(innerWidth / 2, cr.bottom + gap + 20);
++  return {
++    vh: innerHeight, stageTop: Math.round(sr.top), stageH: Math.round(sr.height),
++    claimBottom: Math.round(cr.bottom), poolBottom: Math.round(cr.bottom + 32) /* .ed-night-claim::before bottom */, passageTop: Math.round(cr.bottom + gap),
++    cardTop: Math.round(kr.top), cardBottom: Math.round(kr.bottom), cardLeft: Math.round(kr.left),
++    cardOpacity: getComputedStyle(card).opacity,
++    topmostAtPassage: at ? at.tagName.toLowerCase() + '.' + String(at.className).split(' ')[0] : null,
++    h1px: parseFloat(getComputedStyle(document.querySelector('.ed-night-claim h1')).fontSize),
++  };
++})()`;
++
++async function main() {
++  let ws;
++  for (let i = 0; i < 50 && !ws; i++) {
++    await sleep(200);
++    try { const list = await (await fetch(`http://127.0.0.1:${port}/json/list`)).json(); ws = list.find((t) => t.type === 'page')?.webSocketDebuggerUrl; } catch {}
++  }
++  const sock = new WebSocket(ws);
++  await new Promise((r) => sock.addEventListener('open', r, { once: true }));
++  let id = 0; const pending = new Map();
++  sock.addEventListener('message', (ev) => { const m = JSON.parse(ev.data); if (m.id && pending.has(m.id)) { pending.get(m.id)(m); pending.delete(m.id); } });
++  const send = (method, params = {}) => new Promise((res) => { const n = ++id; pending.set(n, res); sock.send(JSON.stringify({ id: n, method, params })); });
++  await send('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-color-scheme', value: 'light' }] });
++  const out = {};
++  for (const loc of LOCALES) for (const vp of VIEWPORTS) {
++    const [w, h] = vp.split('x').map(Number);
++    const key = `${loc}-${vp}`;
++    await send('Emulation.setDeviceMetricsOverride', { width: w, height: h, deviceScaleFactor: 1, mobile: false });
++    await send('Page.navigate', { url: `${base}${loc === 'en' ? '' : '/' + loc}/?still` });
++    await sleep(3000);
++    const g = await send('Runtime.evaluate', { expression: GEOMETRY, returnByValue: true });
++    out[key] = g.result?.result?.value || g.result?.exceptionDetails;
++    const a = await send('Page.captureScreenshot', { format: 'png' });
++    fs.writeFileSync(`${outDir}/${key}.png`, Buffer.from(a.result.data, 'base64'));
++    await send('Runtime.evaluate', { expression: `document.head.insertAdjacentHTML('beforeend','<style>.dt-editorial .ed-night-claim::before{display:none!important}.dt-editorial .ed-night-field{-webkit-mask-image:none!important;mask-image:none!important}</style>')` });
++    await sleep(400);
++    const b = await send('Page.captureScreenshot', { format: 'png' });
++    fs.writeFileSync(`${outDir}/${key}-off.png`, Buffer.from(b.result.data, 'base64'));
++    process.stdout.write(`${key} ${JSON.stringify(out[key])}\n`);
++  }
++  fs.writeFileSync(`${outDir}/geometry.json`, JSON.stringify(out, null, 2));
++  sock.close(); chrome.kill();
++}
++main().catch((e) => { console.error(e); chrome.kill(); process.exit(1); });
+diff --git a/frontend/scripts/design-audit/herocompare.py b/frontend/scripts/design-audit/herocompare.py
+new file mode 100644
+index 0000000..2527c5e
+--- /dev/null
++++ b/frontend/scripts/design-audit/herocompare.py
+@@ -0,0 +1,61 @@
++"""Compare herocheck.mjs renders: does anything dim the citation, and does the answer fit?
++
++usage: python3 herocompare.py <herocheck-out-dir>
++
++For every <key> in geometry.json it compares <key>.png with <key>-off.png (the control render
++without the claim pool and without the field's fade mask) over the passage rows, and reports
++whether the answer card ends inside the viewport. Uses macOS `sips` to turn PNG into BMP,
++because PIL is not installed.
++"""
++import json
++import os
++import struct
++import subprocess
++import sys
++
++
++def load(png):
++    bmp = png[:-4] + '.bmp'
++    subprocess.run(['sips', '-s', 'format', 'bmp', png, '--out', bmp], capture_output=True, check=True)
++    b = open(bmp, 'rb').read()
++    off = struct.unpack_from('<I', b, 10)[0]
++    w, h = struct.unpack_from('<ii', b, 18)
++    bpp = struct.unpack_from('<H', b, 28)[0]
++    row = ((w * bpp // 8) + 3) // 4 * 4
++
++    def px(x, y):
++        yy = (h - 1 - y) if h > 0 else y
++        i = off + yy * row + x * (bpp // 8)
++        return (b[i + 2], b[i + 1], b[i])
++
++    return px, w, abs(h)
++
++
++def main(d):
++    geometry = json.load(open(os.path.join(d, 'geometry.json')))
++    worst = 0
++    overflow = []
++    for key, g in geometry.items():
++        on, w, h = load(os.path.join(d, key + '.png'))
++        off, _, _ = load(os.path.join(d, key + '-off.png'))
++        # the passage: ~3 lines under passageTop, inside the document column
++        x0, x1 = max(0, (w - 1080) // 2 + 60), min(w, (w + 1080) // 2 - 60)
++        diffs = []
++        for y in range(g['passageTop'] + 4, min(h, g['passageTop'] + 92), 2):
++            for x in range(x0, x1, 3):
++                a, b = on(x, y), off(x, y)
++                diffs.append(max(abs(a[i] - b[i]) for i in range(3)))
++        diffs.sort()
++        p99 = diffs[int(len(diffs) * 0.99)] if diffs else -1
++        worst = max(worst, p99)
++        over = g['cardBottom'] - g['vh']
++        if over > 0:
++            overflow.append((key, over))
++        print(f"{key:18s} card {g['cardTop']:4d}-{g['cardBottom']:4d}/{g['vh']:4d} {'fits' if over <= 0 else f'OVER +{over}':9s}"
++              f" passage dimming p99={p99:3d} max={diffs[-1] if diffs else -1:3d}")
++    print(f"\nworst passage p99 difference: {worst} (0 = nothing dims the citation)")
++    print('card overflow:', overflow or 'none')
++
++
++if __name__ == '__main__':
++    main(sys.argv[1])
+diff --git a/frontend/scripts/design-audit/nightaudit.mjs b/frontend/scripts/design-audit/nightaudit.mjs
+new file mode 100644
+index 0000000..b8751d9
+--- /dev/null
++++ b/frontend/scripts/design-audit/nightaudit.mjs
+@@ -0,0 +1,95 @@
++// Contrast audit for the Night marketing surface.
++// usage: node nightaudit.mjs <base-url> <urls-file> <out.json>   (SCHEME=light|dark)
++// Loads each page in headless Chrome over CDP, waits, and reports every visible
++// text element whose colour against its composited background is below WCAG AA
++// (4.5:1, or 3:1 for large text).
++import { spawn } from 'node:child_process';
++import fs from 'node:fs';
++import os from 'node:os';
++
++const [base, listFile, outFile] = process.argv.slice(2);
++const urls = fs.readFileSync(listFile, 'utf8').split('\n').map((s) => s.trim()).filter(Boolean);
++const CHROME = '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
++const port = 9300 + Math.floor(Math.random() * 400);
++const profile = fs.mkdtempSync(os.tmpdir() + '/nightaudit-');
++const chrome = spawn(CHROME, ['--headless=new', `--remote-debugging-port=${port}`, `--user-data-dir=${profile}`, '--hide-scrollbars', 'about:blank'], { stdio: 'ignore' });
++const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
++
++const AUDIT = `(() => {
++  const lum = (c) => { const f = (v) => { v /= 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); }; return 0.2126 * f(c.r) + 0.7152 * f(c.g) + 0.0722 * f(c.b); };
++  const parse = (s) => { const m = s && s.match(/rgba?\\(([^)]+)\\)/); if (!m) return null; const p = m[1].split(/[ ,\\/]+/).filter(Boolean).map(Number); return { r: p[0], g: p[1], b: p[2], a: p.length > 3 ? p[3] : 1 }; };
++  const over = (top, under) => ({ r: top.r * top.a + under.r * (1 - top.a), g: top.g * top.a + under.g * (1 - top.a), b: top.b * top.a + under.b * (1 - top.a), a: 1 });
++  function background(el) {
++    const layers = [];
++    for (let e = el; e; e = e.parentElement) {
++      const c = parse(getComputedStyle(e).backgroundColor);
++      if (c && c.a > 0) { layers.push(c); if (c.a >= 1) break; }
++    }
++    let base = { r: 255, g: 255, b: 255, a: 1 };
++    for (let i = layers.length - 1; i >= 0; i--) base = over(layers[i], base);
++    return base;
++  }
++  const out = [];
++  const seen = new Set();
++  const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
++  while (walker.nextNode()) {
++    const node = walker.currentNode;
++    const text = node.textContent.trim();
++    if (!text) continue;
++    const el = node.parentElement;
++    if (!el || seen.has(el)) continue;
++    seen.add(el);
++    if (el.closest('[aria-hidden="true"], script, style, noscript, .sr-only')) continue; // not painted for sighted users
++    const cs = getComputedStyle(el);
++    if (cs.visibility === 'hidden' || cs.display === 'none') continue;
++    let op = 1; for (let e = el; e; e = e.parentElement) op *= parseFloat(getComputedStyle(e).opacity);
++    if (op < 0.5) continue;
++    const r = el.getBoundingClientRect();
++    if (r.width < 2 || r.height < 2) continue;
++    const fill = parse(cs.webkitTextFillColor);
++    if (fill && fill.a === 0) continue; // gradient-clipped text (the night h1)
++    const fg = parse(cs.color);
++    if (!fg || fg.a === 0) continue;
++    const bg = background(el);
++    const fgc = over(fg, bg);
++    const L1 = lum(fgc), L2 = lum(bg);
++    const ratio = (Math.max(L1, L2) + 0.05) / (Math.min(L1, L2) + 0.05);
++    const size = parseFloat(cs.fontSize), weight = parseInt(cs.fontWeight, 10);
++    const large = size >= 24 || (size >= 18.66 && weight >= 700);
++    const min = large ? 3 : 4.5;
++    if (ratio < min) {
++      out.push({ text: text.slice(0, 60), ratio: +ratio.toFixed(2), min, color: cs.color, bg: 'rgb(' + [bg.r, bg.g, bg.b].map(Math.round).join(', ') + ')', size, tag: el.tagName.toLowerCase(), cls: String(el.className).slice(0, 70) });
++    }
++  }
++  const root = document.querySelector('#page-content .dt-editorial');
++  return { night: !!(root && root.classList.contains('dt-night')), stage: root ? getComputedStyle(root).backgroundColor : null, offenders: out };
++})()`;
++
++async function main() {
++  let ws;
++  for (let i = 0; i < 50 && !ws; i++) {
++    await sleep(200);
++    try { const list = await (await fetch(`http://127.0.0.1:${port}/json/list`)).json(); ws = list.find((t) => t.type === 'page')?.webSocketDebuggerUrl; } catch {}
++  }
++  const sock = new WebSocket(ws);
++  await new Promise((r) => sock.addEventListener('open', r, { once: true }));
++  let id = 0; const pending = new Map();
++  sock.addEventListener('message', (ev) => { const m = JSON.parse(ev.data); if (m.id && pending.has(m.id)) { pending.get(m.id)(m); pending.delete(m.id); } });
++  const send = (method, params = {}) => new Promise((res) => { const n = ++id; pending.set(n, res); sock.send(JSON.stringify({ id: n, method, params })); });
++  await send('Emulation.setDeviceMetricsOverride', { width: 1440, height: 900, deviceScaleFactor: 1, mobile: false });
++  await send('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-color-scheme', value: process.env.SCHEME || 'light' }] });
++  const results = [];
++  for (const u of urls) {
++    const url = u.startsWith('http') ? u : base + u;
++    await send('Page.navigate', { url });
++    await sleep(+(process.env.WAIT || 3500));
++    if (process.env.INJECT) await send('Runtime.evaluate', { expression: `document.querySelector('main').insertAdjacentHTML('afterbegin', '<p style="color:#2a2825;font-size:16px">LOW CONTRAST PROBE</p><p style="color:#948f86;font-size:14px">OK PROBE ink-3</p>')` });
++    const r = await send('Runtime.evaluate', { expression: AUDIT, returnByValue: true });
++    const v = r.result?.result?.value || { error: JSON.stringify(r.result?.exceptionDetails || r.error) };
++    results.push({ url: u, ...v });
++    process.stdout.write(`${u}  night=${v.night} offenders=${v.offenders ? v.offenders.length : 'ERR'}\n`);
++  }
++  fs.writeFileSync(outFile, JSON.stringify(results, null, 2));
++  sock.close(); chrome.kill();
++}
++main().catch((e) => { console.error(e); chrome.kill(); process.exit(1); });
+diff --git a/frontend/scripts/design-audit/rafcheck.mjs b/frontend/scripts/design-audit/rafcheck.mjs
+new file mode 100644
+index 0000000..aa726d4
+--- /dev/null
++++ b/frontend/scripts/design-audit/rafcheck.mjs
+@@ -0,0 +1,33 @@
++// MAJOR-2 check: does a parked pointer keep the citation field's loop alive?
++// usage: node rafcheck.mjs <url>
++import { spawn } from 'node:child_process';
++import fs from 'node:fs';
++import os from 'node:os';
++const [url] = process.argv.slice(2);
++const CHROME = '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
++const port = 9300 + Math.floor(Math.random() * 400);
++const profile = fs.mkdtempSync(os.tmpdir() + '/rafcheck-');
++const chrome = spawn(CHROME, ['--headless=new', `--remote-debugging-port=${port}`, `--user-data-dir=${profile}`, 'about:blank'], { stdio: 'ignore' });
++const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
++const COUNT = `new Promise((resolve) => { let n = 0; const orig = window.requestAnimationFrame; window.requestAnimationFrame = (cb) => { n++; return orig.call(window, cb); }; setTimeout(() => { window.requestAnimationFrame = orig; resolve(n); }, 2000); })`;
++async function main() {
++  let ws;
++  for (let i = 0; i < 50 && !ws; i++) { await sleep(200); try { const l = await (await fetch(`http://127.0.0.1:${port}/json/list`)).json(); ws = l.find((t) => t.type === 'page')?.webSocketDebuggerUrl; } catch {} }
++  const sock = new WebSocket(ws); await new Promise((r) => sock.addEventListener('open', r, { once: true }));
++  let id = 0; const pending = new Map();
++  sock.addEventListener('message', (ev) => { const m = JSON.parse(ev.data); if (m.id && pending.has(m.id)) { pending.get(m.id)(m); pending.delete(m.id); } });
++  const send = (method, params = {}) => new Promise((res) => { const n = ++id; pending.set(n, res); sock.send(JSON.stringify({ id: n, method, params })); });
++  await send('Emulation.setDeviceMetricsOverride', { width: 1440, height: 900, deviceScaleFactor: 1, mobile: false });
++  await send('Page.navigate', { url });
++  await sleep(7000); // let the sequence finish
++  const count = async () => (await send('Runtime.evaluate', { expression: COUNT, awaitPromise: true, returnByValue: true })).result.result.value;
++  console.log('idle, no pointer:           rAF in 2s =', await count());
++  for (let i = 0; i < 12; i++) { await send('Input.dispatchMouseEvent', { type: 'mouseMoved', x: 600 + i * 15, y: 720 }); await sleep(40); }
++  console.log('while the pointer moves:    rAF in 2s =', await count());
++  await sleep(3500); // parked: idle timer 1.2s + fade
++  console.log('pointer parked 3.5s later:  rAF in 2s =', await count());
++  const at = await send('Runtime.evaluate', { expression: `(() => { const e = document.elementFromPoint(720, 720); return e.tagName + '.' + e.className; })()`, returnByValue: true });
++  console.log('topmost element under the pointer:', at.result.result.value);
++  sock.close(); chrome.kill();
++}
++main().catch((e) => { console.error(e); chrome.kill(); process.exit(1); });
 diff --git a/frontend/src/app/demo/DemoPageClient.tsx b/frontend/src/app/demo/DemoPageClient.tsx
 index e3b4700..001648e 100644
 --- a/frontend/src/app/demo/DemoPageClient.tsx
@@ -80,7 +419,7 @@ index e3b4700..001648e 100644
                      }}
                    >
 diff --git a/frontend/src/app/editorial.css b/frontend/src/app/editorial.css
-index e22a613..8fafe8f 100644
+index e22a613..bc41956 100644
 --- a/frontend/src/app/editorial.css
 +++ b/frontend/src/app/editorial.css
 @@ -52,6 +52,11 @@
@@ -249,7 +588,22 @@ index e22a613..8fafe8f 100644
  /* ─── Non-Latin degradation (§5.1) ────────────────────────────────────
     --dt-serif already resolves to the sans stack for these locales, so the
     display steps render in the body family. Made explicit here: weight 600
-@@ -663,80 +752,161 @@
+@@ -448,6 +537,14 @@
+   letter-spacing: 0;
+   line-height: 1.2;
+ }
++/* Japanese breaks between any two characters, so a balanced headline can
++   split a word ("ペ / ージ"); phrase-aware breaking keeps words whole where
++   the browser supports it (Chrome 119+), and is ignored elsewhere. */
++.dt-editorial:lang(ja) .ed-display,
++.dt-editorial:lang(ja) .ed-h1,
++.dt-editorial:lang(ja) .ed-h2 {
++  word-break: auto-phrase;
++}
+ .dt-editorial:lang(ar) .ed-display,
+ .dt-editorial:lang(ar) .ed-h1,
+ .dt-editorial:lang(ar) .ed-h2 {
+@@ -663,80 +760,167 @@
    }
  }
  
@@ -287,8 +641,9 @@ index e22a613..8fafe8f 100644
 +  min-height: max(640px, calc(100svh - 64px));
 +  padding: 88px 24px 0;
 +  padding-top: clamp(40px, 7svh, 88px);
-+}
-+
+ }
+ 
+-.dt-editorial .ed-frame-bar {
 +/* The document, full-bleed behind the claim: faint at the top, where the
 +   claim sits, full strength around the passage, faded out at the edges. */
 +.dt-editorial .ed-night-field {
@@ -300,12 +655,17 @@ index e22a613..8fafe8f 100644
 +  width: min(1080px, 100%);
 +  transform: translateX(-50%);
 +  font-family: var(--dt-body);
++  /* The top fade ends just above the passage, wherever it sits: HeroSection
++     sets --passage-top to the measured anchor. Fixed percentages dimmed the
++     cited sentence once the passage followed the claim (review 2026-09-21,
++     MAJOR-1b). 64% is the pre-measurement stand-in. */
++  --passage-top: 64%;
 +  -webkit-mask-image:
-+    linear-gradient(to bottom, rgba(0, 0, 0, 0.12) 0%, rgba(0, 0, 0, 0.2) 44%, #000 64%, #000 86%, transparent 100%),
++    linear-gradient(to bottom, rgba(0, 0, 0, 0.12) 0%, rgba(0, 0, 0, 0.2) calc(var(--passage-top) - 180px), #000 calc(var(--passage-top) - 24px), #000 86%, transparent 100%),
 +    linear-gradient(to right, transparent 0%, #000 6%, #000 94%, transparent 100%);
 +  -webkit-mask-composite: source-in;
 +  mask-image:
-+    linear-gradient(to bottom, rgba(0, 0, 0, 0.12) 0%, rgba(0, 0, 0, 0.2) 44%, #000 64%, #000 86%, transparent 100%),
++    linear-gradient(to bottom, rgba(0, 0, 0, 0.12) 0%, rgba(0, 0, 0, 0.2) calc(var(--passage-top) - 180px), #000 calc(var(--passage-top) - 24px), #000 86%, transparent 100%),
 +    linear-gradient(to right, transparent 0%, #000 6%, #000 94%, transparent 100%);
 +  mask-composite: intersect;
 +}
@@ -313,9 +673,8 @@ index e22a613..8fafe8f 100644
 +  display: block;
 +  width: 100%;
 +  height: 100%;
- }
- 
--.dt-editorial .ed-frame-bar {
++}
++
 +.dt-editorial .ed-night-claim {
 +  position: relative;
 +  max-width: 760px;
@@ -326,7 +685,8 @@ index e22a613..8fafe8f 100644
 +   Sized to the claim (top and bottom insets), not a fixed height: a fixed
 +   660px box reached down over the passage on every laptop viewport and put
 +   it under ~94% darkness (review 2026-09-21, MAJOR-1). The passage starts at
-+   least 40px below the claim (HeroSection), so it is always outside this box.
++   least 32px below the claim (HeroSection, pinned by a test against this
++   32px), so it is always outside this box.
 +   No pointer events: the cursor lamp lives on the document underneath.
 +   Browsers without color-mix() get no pool; the field's top fade still keeps
 +   the claim legible. */
@@ -335,7 +695,7 @@ index e22a613..8fafe8f 100644
 +  position: absolute;
 +  z-index: -1;
 +  top: -80px;
-+  bottom: -40px;
++  bottom: -32px;
 +  left: 50%;
 +  width: 1560px;
 +  transform: translateX(-50%);
@@ -473,7 +833,7 @@ index e22a613..8fafe8f 100644
  .dt-editorial .ed-frame-a {
    margin-top: 20px;
    color: var(--ed-ink);
-@@ -791,86 +961,54 @@
+@@ -791,86 +975,71 @@
    color: var(--ed-ink-3);
  }
  
@@ -552,17 +912,35 @@ index e22a613..8fafe8f 100644
 -  font-size: 15px;
 -  line-height: 1.5;
 -  text-align: center;
-+/* Short desktop viewports (a 768px laptop screen leaves ~650px under the
-+   browser's own chrome; 1280x720 windows too): the claim, the passage and the answer still share
+-}
++/* Short desktop viewports (up to a 1366x768 window; a 768px laptop screen
++   leaves ~650px under the browser's own chrome), in every locale — the long
++   German, Korean and Japanese answers need the room: the claim, the passage and the answer still share
 +   the first screen. Tighter spacing, and the card drops its source row — the
 +   margin badge on the page and the answer's chip already carry the "1". */
-+@media (min-width: 768px) and (max-height: 740px) {
++@media (min-width: 768px) and (max-height: 820px) {
 +  .dt-editorial .ed-night-stage { padding-top: clamp(32px, 6svh, 88px); }
 +  .dt-editorial.dt-night .ed-night-claim .ed-display { font-size: clamp(44px, min(6vw, 9svh), 84px); }
 +  .dt-editorial .ed-night-card { padding: 14px 18px; }
 +  .dt-editorial .ed-night-card .ed-frame-a { margin-top: 6px; }
 +  .dt-editorial .ed-night-card .ed-frame-source { display: none; }
- }
++}
++/* The shortest laptop windows (~650px under the browser's chrome), where
++   the three-line German, French, Portuguese and Japanese claims need a few
++   more pixels. */
++@media (min-width: 768px) and (max-height: 700px) {
++  .dt-editorial .ed-night-stage { padding-top: clamp(28px, 5svh, 88px); }
++  .dt-editorial.dt-night .ed-night-claim .ed-display { font-size: clamp(40px, min(6vw, 8.5svh), 84px); }
++  .dt-editorial .ed-night-claim .ed-lede { font-size: 18px; }
++  .dt-editorial .ed-night-actions { margin-top: 20px; }
++  .dt-editorial .ed-night-card .ed-frame-a { font-size: 14px; line-height: 1.45; }
++}
++/* The same compact card wherever HeroSection measures that the full one
++   would end below the first screen (the three-line ja/hi headlines at
++   1440x900), at any viewport height. */
++.dt-editorial .ed-night-stage.is-compact .ed-night-card { padding: 14px 18px; }
++.dt-editorial .ed-night-stage.is-compact .ed-night-card .ed-frame-a { margin-top: 6px; }
++.dt-editorial .ed-night-stage.is-compact .ed-night-card .ed-frame-source { display: none; }
  
 +/* Phones: the claim, then the document as its own band, then the answer
 +   overlapping the band's faded foot. */
@@ -1229,10 +1607,10 @@ index be1dd89..d67e928 100644
                    fontWeight: 500,
                    color: "var(--ed-ink)",
 diff --git a/frontend/src/components/landing/HeroSection.tsx b/frontend/src/components/landing/HeroSection.tsx
-index 0f51653..3aba339 100644
+index 0f51653..459885e 100644
 --- a/frontend/src/components/landing/HeroSection.tsx
 +++ b/frontend/src/components/landing/HeroSection.tsx
-@@ -1,55 +1,192 @@
+@@ -1,55 +1,226 @@
  "use client";
  
 -import React from 'react';
@@ -1328,8 +1706,8 @@ index 0f51653..3aba339 100644
 +const CARD_EDGE = 24;
 +// The passage starts this far under the claim: a share of the stage height,
 +// never less than the claim's darkness pool reaches past it (editorial.css,
-+// `.ed-night-claim::before`, bottom: -40px), never more than a comfortable gap.
-+const passageGap = (stageHeight: number) => Math.min(64, Math.max(40, Math.round(stageHeight * 0.06)));
++// `.ed-night-claim::before`, bottom: -32px), never more than a comfortable gap.
++const passageGap = (stageHeight: number) => Math.min(64, Math.max(32, Math.round(stageHeight * 0.06)));
 +// useLayoutEffect warns during SSR; the measurement only matters in the browser.
 +const useIsoLayoutEffect = typeof window === 'undefined' ? useEffect : useLayoutEffect;
 +
@@ -1349,6 +1727,33 @@ index 0f51653..3aba339 100644
 +  const [cardPos, setCardPos] = useState<{ left: number; top: number } | null>(null);
 +  const [anchorTop, setAnchorTop] = useState<number | undefined>(undefined);
 +  const [stageMin, setStageMin] = useState<number | null>(null);
++  // The card drops to its compact form (editorial.css `.is-compact`: no source
++  // row, tighter padding) only when the full card would end below the first
++  // screen, e.g. the three-line ja/hi headlines at 1440x900. The full height
++  // is remembered, so the decision does not flip once the card has shrunk.
++  const [compact, setCompact] = useState(false);
++  const compactRef = useRef(false);
++  const fullCardHeight = useRef(0);
++  const lastTop = useRef<number | null>(null);
++
++  // Grow the stage when the card (at its current, possibly compact, size)
++  // would run past it: never pull the card up over the passage instead.
++  // `floor` mirrors the stage's CSS min-height, max(640px, 100svh - 64px).
++  const sizeStage = useCallback(() => {
++    const card = cardRef.current;
++    if (!card || lastTop.current === null) return;
++    const needed = Math.ceil(lastTop.current + card.offsetHeight + CARD_EDGE);
++    const floor = Math.max(640, window.innerHeight - 64);
++    setStageMin(needed > floor ? needed : null);
++  }, []);
++
++  useEffect(() => {
++    const card = cardRef.current;
++    if (!card) return;
++    const observer = new ResizeObserver(sizeStage);
++    observer.observe(card);
++    return () => observer.disconnect();
++  }, [sizeStage]);
 +
 +  // The passage follows the claim: measure the claim's bottom (it moves with
 +  // the locale, the viewport height and the web fonts arriving) and anchor
@@ -1391,6 +1796,7 @@ index 0f51653..3aba339 100644
 +    const stage = stageRef.current;
 +    const card = cardRef.current;
 +    if (!stage || !card || window.matchMedia(NARROW_QUERY).matches) {
++      lastTop.current = null;
 +      setCardPos(null);
 +      setStageMin(null);
 +      return;
@@ -1404,15 +1810,14 @@ index 0f51653..3aba339 100644
 +    const covered = layout.spans.filter((s) => s.x2 > cardFrom && s.x1 < cardTo);
 +    const top = covered.length ? Math.max(...covered.map((s) => s.bottom)) + 16 : layout.citedY + 24;
 +    setCardPos({ left: Math.round(left), top: Math.round(top) });
-+    // Never pull the card up over the passage to make it fit: grow the stage
-+    // instead. The claim, the passage and the card fit a laptop's first
-+    // screen at the svh-scaled sizes; where they cannot, the card continues
-+    // below the fold rather than covering the citation.
-+    // `floor` mirrors the stage's CSS min-height, max(640px, 100svh - 64px).
-+    const needed = Math.ceil(top + card.offsetHeight + CARD_EDGE);
-+    const floor = Math.max(640, window.innerHeight - 64);
-+    setStageMin(needed > floor ? needed : null);
-+  }, []);
++    lastTop.current = top;
++    if (!compactRef.current) fullCardHeight.current = card.offsetHeight;
++    const stageTop = stage.getBoundingClientRect().top + window.scrollY;
++    const wantCompact = stageTop + top + fullCardHeight.current + CARD_EDGE > window.innerHeight;
++    compactRef.current = wantCompact;
++    setCompact(wantCompact);
++    sizeStage();
++  }, [sizeStage]);
 +
 +  const onCited = useCallback(() => setCited(true), []);
  
@@ -1424,11 +1829,18 @@ index 0f51653..3aba339 100644
 +    <>
 +      <section
 +        ref={stageRef}
-+        className={`ed-night-stage${cited ? ' is-cited' : ''}`}
++        className={`ed-night-stage${cited ? ' is-cited' : ''}${compact ? ' is-compact' : ''}`}
 +        style={stageMin ? { minHeight: stageMin } : undefined}
 +        aria-labelledby="landing-hero-title"
 +      >
-+        <div className="ed-night-field" dir="ltr" lang="en" aria-hidden="true">
++        <div
++          className="ed-night-field"
++          dir="ltr"
++          lang="en"
++          aria-hidden="true"
++          // The field's top fade ends at the passage (editorial.css).
++          style={anchorTop !== undefined && !narrow ? ({ '--passage-top': `${anchorTop}px` } as React.CSSProperties) : undefined}
++        >
 +          <CitationField settings={settings} onLayout={onLayout} onCited={onCited} />
 +        </div>
 +
@@ -1455,7 +1867,7 @@ index 0f51653..3aba339 100644
              <Link
                href="/demo"
                onClick={() => trackEvent('landing_cta_clicked', { source: 'hero', reason: 'demo' })}
-@@ -70,8 +207,46 @@ export default function HeroSection() {
+@@ -70,8 +241,46 @@ export default function HeroSection() {
            </div>
          </div>
  
@@ -2007,10 +2419,10 @@ index a80bf25..b00e881 100644
    "landing.proof.locales": "支持 11 种界面语言",
 diff --git a/frontend/tests/landing-night.test.cjs b/frontend/tests/landing-night.test.cjs
 new file mode 100644
-index 0000000..ca09625
+index 0000000..93ef7c8
 --- /dev/null
 +++ b/frontend/tests/landing-night.test.cjs
-@@ -0,0 +1,219 @@
+@@ -0,0 +1,233 @@
 +const assert = require('node:assert/strict');
 +const fs = require('node:fs');
 +const path = require('node:path');
@@ -2229,4 +2641,18 @@ index 0000000..ca09625
 +    assert.ok(Number.isInteger(repeat) && Number.isInteger(occurrence), `${name}: repeat/occurrence not found`);
 +    assert.ok(occurrence < repeat, `${name}: occurrence ${occurrence} must be < repeat ${repeat}`);
 +  }
++});
++
++test("the passage always starts below the claim's darkness pool", () => {
++  // The pool reaches `bottom: -40px` past the claim (editorial.css); the
++  // passage is anchored at the claim bottom + passageGap(), floored at 40.
++  // If either number moves alone, the pool covers the citation again
++  // (review 2026-09-21, MAJOR-1).
++  const css = stripCssComments(read('app/editorial.css'));
++  const pool = css.slice(css.indexOf('.dt-editorial .ed-night-claim::before {'));
++  const reach = Number((pool.slice(0, pool.indexOf('}')).match(/bottom:\s*-(\d+)px/) || [])[1]);
++  const hero = read('components/landing/HeroSection.tsx');
++  const floor = Number((hero.match(/const passageGap = [^;]*Math\.max\((\d+),/) || [])[1]);
++  assert.ok(reach > 0 && floor > 0, 'pool reach or passage gap floor not found');
++  assert.ok(floor >= reach, `passage gap floor ${floor}px must be >= the pool's reach ${reach}px`);
 +});
