@@ -8,6 +8,12 @@ releases use `0.minor.patch` semantics such as `0.2.0` and `0.2.1`.
 
 ## [Unreleased]
 
+### Fixed
+- Pages no longer preload the Fraunces font, which no page shows when it loads
+  since the Night theme. That takes 270 KB off every page's critical path and
+  about 0.2 s off the largest paint on a throttled phone. The one place that
+  still uses it (the quote in a chat citation's popover) loads it on first use.
+
 ## [0.32.0] - 2026-09-21
 
 The marketing site goes dark. Every marketing page now uses "Night": a warm

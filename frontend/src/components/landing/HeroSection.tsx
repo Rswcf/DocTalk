@@ -24,7 +24,10 @@ import CitationField, { type CitationFieldLayout, type CitationFieldSettings } f
  *
  * Deliberately absent: an eyebrow, a stat band, an italic split, trailing
  * arrows on the actions (plan 2026-09-20 §5.2), and an entrance animation on
- * the claim: the h1 is the page's largest paint, and hiding it would delay it.
+ * the claim: its lede is the page's largest contentful paint, and hiding the
+ * claim would delay it. (Not the h1: its gradient fill paints `color:
+ * transparent` text, which Chrome does not report as an LCP candidate;
+ * measured with scripts/design-audit/cwvcheck.mjs.)
  */
 
 // The field behind a desktop hero: the page tiled so the passage can sit low,

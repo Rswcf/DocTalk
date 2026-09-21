@@ -1,5 +1,6 @@
 """Extract every page's SEO head fields from a Next build: <title>, meta description,
-og:title, og:description. One sorted line per (page, field) so two builds diff cleanly."""
+og:title, og:description, twitter:title, twitter:description. One sorted line per
+(page, field) so two builds diff cleanly."""
 import html, re, sys
 from pathlib import Path
 root = Path(sys.argv[1]) / ".next/server/app"
@@ -8,6 +9,8 @@ pats = {
   "desc":  re.compile(r'<meta name="description" content="([^"]*)"'),
   "ogt":   re.compile(r'<meta property="og:title" content="([^"]*)"'),
   "ogd":   re.compile(r'<meta property="og:description" content="([^"]*)"'),
+  "twt":   re.compile(r'<meta name="twitter:title" content="([^"]*)"'),
+  "twd":   re.compile(r'<meta name="twitter:description" content="([^"]*)"'),
 }
 out = []
 for f in sorted(root.rglob("*.html")):

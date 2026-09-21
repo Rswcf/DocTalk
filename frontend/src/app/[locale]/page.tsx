@@ -20,6 +20,8 @@ export async function generateMetadata({
   params: { locale: string };
 }): Promise<Metadata> {
   const { t } = await getServerT(params.locale);
+  // SEO-only keys (lib/marketingLocalePage.tsx). The English `/` hardcodes its
+  // title in app/page.tsx, so en.landing.metaTitle is a fallback only.
   const title = t('landing.metaTitle').replace(/\s*\n\s*/g, ' ').trim();
   const description = t('landing.metaDescription');
   return buildMarketingMetadata({

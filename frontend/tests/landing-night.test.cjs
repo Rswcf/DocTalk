@@ -99,6 +99,15 @@ test('Geist is loaded by the night module only', () => {
   assert.deepEqual(users, [path.join('components', 'marketing', 'night.ts')]);
 });
 
+test('Fraunces is declared but never preloaded', () => {
+  // No page shows it at load since Night; preloading it put 270 KB on every
+  // route's critical path. The popover that still uses it fetches on demand.
+  const layout = read('app/layout.tsx');
+  const block = layout.match(/const fraunces = Fraunces\(\{[\s\S]*?\}\)/);
+  assert.ok(block, 'the Fraunces declaration moved; update this test');
+  assert.match(block[0], /preload:\s*false/, 'Fraunces is preloaded again');
+});
+
 test('every marketing root is Night', () => {
   // The landing and MarketingShell are the only two elements that open the
   // editorial system (the cookie banner and the language menu mirror it).

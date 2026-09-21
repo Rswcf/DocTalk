@@ -229,3 +229,15 @@ Lines 2–3 match the mask model to ±0.02 (`maskprofile.py`), so it is the mask
 - Nits for 09-23, not fixes: the comment at `tests/landing-night.test.cjs:222-223` still says `-40px` / "floored at
   40" (the assertion is parametric, so the pin holds); `fullCardHeight` is frozen at the first layout, so before the
   web fonts settle it can be a few px off — borderline only, not measured, no oscillation.
+
+## Resolution 3 (Claude, 2026-09-21, after v0.32.0 shipped) — the `fullCardHeight` nit, measured
+
+- The nit's premise holds: `CitationField` starts after at most 1.2 s in whatever face is loaded, so the first
+  `onLayout` can measure the card in the fallback face, and a card already compact never re-measures its full
+  form. A probe on `next start` (ja 1440×900, every `.woff2` held 4 s) shows it: at 1.5 s `document.fonts.status`
+  is `loading` and the card is already placed and compact.
+- Its effect does not: `scripts/design-audit/fontdelay.mjs` (every `.woff2` delayed 4 s; afterwards it compares
+  the card's actual state with the decision a real-face measurement gives — stage class off for one synchronous
+  read) found **0 wrong decisions in 33 cases** (11 locales × 1440×900, 1366×768, 1280×720), the same as with
+  no delay. next/font's metric-matched fallback faces keep the pre-font card height inside the decision margin.
+- No code change; `fontdelay.mjs` stays as the check to re-run if the card's copy, its CSS or the fonts change.

@@ -34,6 +34,9 @@ import { buildMarketingMetadata } from './seo';
  * `<ns>.metaTitle` / `<ns>.metaDescription` keys were seeded from the values
  * rendered at the time, so the split changed no metadata. The hero is now free
  * to change; the search title changes only when these keys do, deliberately.
+ * Their `en` values are fallback-only: English pages hardcode their metadata in
+ * their own page.tsx (the landing in app/page.tsx) and never read these keys, so
+ * an English search title is changed there, not in en.json.
  * The page's JSON-LD still follows the VISIBLE hero, by design
  * (tests/marketing-jsonld asserts Article.headline === EdPageHero.title).
  *   export const generateMetadata = page.generateMetadata;

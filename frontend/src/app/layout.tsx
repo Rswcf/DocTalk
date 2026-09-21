@@ -24,12 +24,18 @@ const sora = Sora({
   display: 'swap',
 })
 
+// Not preloaded. Since the Night marketing surface (v0.32.0) no page shows
+// Fraunces when it loads: Night display type is Geist, and the app's citation
+// popover (italic) is its only reader, which fetches the face on first open.
+// Preloading put 270 KB on every route's critical path; on a throttled phone
+// that cost ~0.2 s of LCP (scripts/design-audit/cwvcheck.mjs, 2026-09-21).
 const fraunces = Fraunces({
   subsets: ['latin'],
   style: ['normal', 'italic'],
   axes: ['opsz', 'SOFT'],
   variable: '--font-fraunces',
   display: 'swap',
+  preload: false,
 })
 
 const plexMono = IBM_Plex_Mono({
