@@ -175,7 +175,9 @@ export default async function PricingPageContent({ locale }: { locale: string })
                   flexWrap: 'wrap',
                 }}
               >
-                <h3 className="ed-h3">{t(plan.nameKey)}</h3>
+                {/* h2, styled as ed-h3: the plans now sit in the hero, directly under the
+                    page h1, so an h3 here skipped a level for screen readers. */}
+                <h2 className="ed-h3">{t(plan.nameKey)}</h2>
                 {plan.featured && (
                   <span className="ed-label" style={{ color: 'var(--ed-signal)' }}>
                     {t('pricing.mostPopular')}

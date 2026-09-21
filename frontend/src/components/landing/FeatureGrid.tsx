@@ -36,7 +36,7 @@ function VisualCitations() {
             p. 4 · ln 3
           </div>
           <div className="inline-flex items-center border border-[var(--ed-rule)] bg-[var(--ed-paper)] px-1.5 py-1 font-mono text-[9px] text-[var(--ed-ink-2)]">
-            <span className="mr-1 inline-flex items-center justify-center bg-[var(--ed-olive)] px-1 py-0.5 text-[8px] font-bold leading-none text-white">
+            <span className="mr-1 inline-flex items-center justify-center bg-[var(--ed-olive)] px-1 py-0.5 text-[8px] font-bold leading-none text-[var(--ed-paper)]">
               1
             </span>
             {t('landing.plate.cite')}
