@@ -27,8 +27,19 @@ const localeDir = path.join(src, 'app/[locale]');
 const localePages = walk(localeDir).filter((f) => path.basename(f) === 'page.tsx');
 const helperCallers = localePages.filter((f) => fs.readFileSync(f, 'utf8').includes('createMarketingLocalePage'));
 
-test('every localized marketing page points its metadata at dedicated SEO keys', () => {
-  assert.equal(helperCallers.length, 32, 'expected 32 createMarketingLocalePage call sites');
+test('every localized page except the landing goes through the metadata helper', () => {
+  // Structural, not a count: a hand-written generateMetadata is invisible to
+  // the key checks below. /use-cases/lawyers was exactly that until the Phase
+  // 2a review (M1) and read its search title from the hero's keys.
+  const landing = path.join(localeDir, 'page.tsx');
+  const others = localePages.filter((f) => f !== landing);
+  const handWritten = others.filter((f) => !helperCallers.includes(f)).map((f) => path.relative(src, f));
+  assert.deepEqual(handWritten, [], `localized pages outside createMarketingLocalePage: ${handWritten.join(', ')}`);
+  assert.ok(others.length >= 33, `expected at least 33 localized marketing pages, found ${others.length}`);
+});
+
+test('every localized marketing page points its metadata at its own dedicated SEO keys', () => {
+  const owners = new Map();
   for (const file of helperCallers) {
     const source = fs.readFileSync(file, 'utf8');
     const rel = path.relative(src, file);
@@ -37,6 +48,11 @@ test('every localized marketing page points its metadata at dedicated SEO keys',
     const desc = source.match(/metaDescKey: '([^']+)'/)?.[1];
     assert.match(title ?? '', /\.metaTitle$/, `${rel}: metaTitleKey must be a *.metaTitle key`);
     assert.match(desc ?? '', /\.metaDescription$/, `${rel}: metaDescKey must be a *.metaDescription key`);
+    for (const key of [title, desc]) {
+      // One page per key: a pasted key would give two pages one search title.
+      assert.ok(!owners.has(key), `${rel}: ${key} is already used by ${owners.get(key)}`);
+      owners.set(key, rel);
+    }
     for (const locale of LOCALES) {
       for (const key of [title, desc]) {
         assert.ok(messages[locale][key]?.trim(), `${rel}: ${key} missing or empty in ${locale}.json`);
@@ -61,7 +77,12 @@ test('SEO keys are read only by metadata code, never rendered on the page', () =
   const allowed = new Set([...helperCallers, path.join(localeDir, 'page.tsx'), path.join(src, 'lib/marketingLocalePage.tsx')]);
   const offenders = walk(src)
     .filter((f) => !allowed.has(f) && !f.includes(`${path.sep}i18n${path.sep}locales${path.sep}`))
-    .filter((f) => /['"][A-Za-z0-9]+\.meta(Title|Description)['"]/.test(fs.readFileSync(f, 'utf8')))
+    // Quoted or backticked literals, and keys built from a template
+    // (`${ns}.metaTitle`) or by concatenation (ns + '.metaTitle').
+    // Comments are stripped first: prose may name a key without reading it.
+    .filter((f) => /['"`][A-Za-z0-9]*\.meta(Title|Description)['"`]|\$\{[^}]*\}\.meta(Title|Description)/.test(
+      fs.readFileSync(f, 'utf8').replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|[^:])\/\/.*$/gm, '$1'),
+    ))
     .map((f) => path.relative(src, f));
   assert.deepEqual(offenders, [], `SEO keys referenced outside metadata code: ${offenders.join(', ')}`);
 });

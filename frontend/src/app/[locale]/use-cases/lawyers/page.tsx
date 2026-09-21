@@ -1,37 +1,20 @@
-import type { Metadata } from 'next';
-import { notFound } from 'next/navigation';
 import LawyersContent from '../../../use-cases/lawyers/LawyersContent';
 import LawyersJsonLd from '../../../use-cases/lawyers/LawyersJsonLd';
-import { buildMarketingMetadata } from '../../../../lib/seo';
-import { isUrlLocale } from '../../../../i18n/routing';
-import { getServerT } from '../../../../i18n/server';
+import { createMarketingLocalePage } from '../../../../lib/marketingLocalePage';
 
-export async function generateMetadata({
-  params,
-}: {
-  params: { locale: string };
-}): Promise<Metadata> {
-  const { t } = await getServerT(params.locale);
-  return buildMarketingMetadata({
-    title: t('useCasesLawyers.heroTitle'),
-    description: t('useCasesLawyers.heroDescription'),
-    path: '/use-cases/lawyers',
-    locale: params.locale,
-    localized: true,
-    keywords: ['ai for lawyers', 'legal document ai', 'contract analysis ai', 'legal pdf reader'],
-    openGraph: {
-      title: `${t('useCasesLawyers.heroTitle')} | DocTalk`,
-      description: t('useCasesLawyers.heroDescription'),
-    },
-  });
-}
+// Hand-written before the helper existed, this page read its metadata from the
+// hero's own keys, so a headline rewrite would have moved its search title in
+// ten locales (Phase 2a review, M1). It now goes through the helper like every
+// other localized marketing page; the two meta keys were seeded from the hero
+// values rendered at the time, so the metadata is unchanged.
+const page = createMarketingLocalePage({
+  Content: LawyersContent,
+  JsonLd: LawyersJsonLd,
+  path: '/use-cases/lawyers',
+  metaTitleKey: 'useCasesLawyers.metaTitle',
+  metaDescKey: 'useCasesLawyers.metaDescription',
+  keywords: ['ai for lawyers', 'legal document ai', 'contract analysis ai', 'legal pdf reader'],
+});
 
-export default function LawyersLocalePage({ params }: { params: { locale: string } }) {
-  if (!isUrlLocale(params.locale)) notFound();
-  return (
-    <>
-      <LawyersJsonLd locale={params.locale} />
-      <LawyersContent locale={params.locale} />
-    </>
-  );
-}
+export const generateMetadata = page.generateMetadata;
+export default page.Page;

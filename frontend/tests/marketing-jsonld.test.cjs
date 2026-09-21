@@ -270,7 +270,8 @@ test('layout-translation: Article + BreadcrumbList match rendered copy in all 11
   const { t } = await getServerT('ja');
   const metadata = await loadSource('app/[locale]/features/layout-translation/page.tsx')
     .generateMetadata({ params: { locale: 'ja' } });
-  assert.equal(metadata.title, t('featuresLayoutTranslation.heroTitle'));
+  // The search title reads the page's dedicated SEO key, never the hero's.
+  assert.equal(metadata.title, t('featuresLayoutTranslation.metaTitle'));
   assert.equal(metadata.alternates.canonical, '/ja/features/layout-translation');
 });
 test('the marketing locale factory requires a JsonLd component', () => {
@@ -290,7 +291,7 @@ test('schema override preserves locale validation and localized metadata', async
   await assert.rejects(FinanceLocalePage.default({ params: { locale: 'invalid' } }), /NEXT_NOT_FOUND/);
   const { t } = await getServerT('ja');
   const metadata = await FinanceLocalePage.generateMetadata({ params: { locale: 'ja' } });
-  assert.equal(metadata.title, t('useCasesFinance.heroTitle'));
+  assert.equal(metadata.title, t('useCasesFinance.metaTitle'));
   assert.equal(metadata.alternates.canonical, '/ja/use-cases/finance');
 });
 
