@@ -182,7 +182,21 @@ export default async function PricingPageContent({ locale }: { locale: string })
                   </span>
                 )}
               </div>
-              <p className="ed-body" style={{ marginTop: '10px' }}>
+              {/* Name, then price: the Apple pricing order. The price used to be the
+                  fifth element in the card, behind a three-line summary and a boxed
+                  note, which put it back under the consent banner on phones. */}
+              <div
+                style={{
+                  marginTop: '8px',
+                  display: 'flex',
+                  alignItems: 'baseline',
+                  gap: '6px',
+                }}
+              >
+                <span className="ed-num">{t(plan.priceKey)}</span>
+                <span className="ed-caption">{t(plan.cadenceKey)}</span>
+              </div>
+              <p className="ed-body" style={{ marginTop: '14px' }}>
                 {t(plan.summaryKey)}
               </p>
               <p
@@ -195,17 +209,6 @@ export default async function PricingPageContent({ locale }: { locale: string })
               >
                 {tOr(plan.fitKey, plan.fitFallback)}
               </p>
-              <div
-                style={{
-                  marginTop: '18px',
-                  display: 'flex',
-                  alignItems: 'baseline',
-                  gap: '6px',
-                }}
-              >
-                <span className="ed-num">{t(plan.priceKey)}</span>
-                <span className="ed-caption">{t(plan.cadenceKey)}</span>
-              </div>
               <div style={{ flex: 1, marginTop: '18px' }}>
                 <EdCheckList items={plan.featureKeys.map((k) => t(k))} />
               </div>
