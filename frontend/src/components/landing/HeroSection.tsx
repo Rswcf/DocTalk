@@ -21,8 +21,12 @@ import { trackEvent } from '../../lib/analytics';
  *    markup misleading.
  *  - No trailing arrows on the actions.
  *
- * `landing.headline` and `landing.description` are not edited: they are also
- * the <title> and <meta description> keys for app/[locale]/page.tsx.
+ * `landing.headline` drives only this h1. Since 2026-09-21 the page's <title>
+ * reads `landing.metaTitle` instead (app/[locale]/page.tsx), so the headline can
+ * change without moving the search title. `landing.description` is the visible
+ * lede and the landing JSON-LD's description (app/HomeJsonLd.tsx); the meta
+ * description reads `landing.metaDescription`. The English `/` hardcodes all of
+ * its metadata in app/page.tsx.
  */
 export default function HeroSection() {
   const { t } = useLocale();
