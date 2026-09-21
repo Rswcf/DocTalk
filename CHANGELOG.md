@@ -8,6 +8,13 @@ releases use `0.minor.patch` semantics such as `0.2.0` and `0.2.1`.
 
 ## [Unreleased]
 
+### Changed
+- The German and Portuguese home pages' search titles now carry the same
+  message as the other translated home pages ("Chat with any PDF in seconds",
+  in their own words). They had shown the headline's claim without the word
+  "PDF" since those pages launched. The Japanese title loses a stray space.
+  Every other page's search title and description is unchanged.
+
 ### Fixed
 - Pages no longer preload the Fraunces font, which no page shows when it loads
   since the Night theme. That takes 270 KB off every page's critical path and

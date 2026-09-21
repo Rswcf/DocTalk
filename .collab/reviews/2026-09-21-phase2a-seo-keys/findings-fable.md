@@ -115,3 +115,14 @@ Line-break placement is sensible in all eight; the hi first line is short (two w
   stripping comments; a planted `` t(`pricing.metaTitle`) `` probe in a component was caught, then removed.
 - **m3, m4** — deferred to Phase 2b by design (they change search titles; this release must not).
 - 178/178 unit tests, lint, tsc, build.
+
+## Resolution 2 (Claude, 2026-09-22) — m3, m4, n3, n4
+
+- **m3/m4** — the owner chose option B (`.collab/reviews/2026-09-21-v0.32-seo-impact.md`): every `landing.metaTitle`
+  is stored on one line; de/pt carry the eight-locale "chat with any PDF in seconds" message in their own February
+  translations; `en` (fallback-only) holds the English source of that message. Build metadata vs v0.32.0: exactly 9
+  lines differ (`title`/`og:title`/`twitter:title` of `/ja`, `/de`, `/pt`). New guard in `seo-meta-keys.test.cjs`:
+  no `*.metaTitle` / `*.metaDescription` contains a line break, in any locale.
+- **n3** — the fallback-only note is in `lib/marketingLocalePage.tsx` and `app/[locale]/page.tsx` (`72034cb`).
+- **n4** — `extract_meta.py` extracts `twitter:title` / `twitter:description` (`72034cb`); v0.31.0 vs v0.32.0 over all
+  six fields was an empty diff.

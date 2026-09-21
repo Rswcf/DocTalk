@@ -70,6 +70,19 @@ test('the localized landing page reads its metadata from landing.meta* keys', ()
     'the landing <title> must not follow the visible headline');
 });
 
+test('search titles and descriptions are stored as single-line text in every locale', () => {
+  // The landing keys were seeded from the two-line h1, so every locale's title
+  // carried its line break and ja rendered a stray space inside a Japanese
+  // phrase. Only [locale]/page.tsx collapses whitespace; the helper path does
+  // not, so a stored break would reach a <title> verbatim.
+  for (const locale of LOCALES) {
+    for (const [key, value] of Object.entries(messages[locale])) {
+      if (!/\.meta(Title|Description)$/.test(key)) continue;
+      assert.doesNotMatch(value, /\n/, `${locale}: ${key} contains a line break`);
+    }
+  }
+});
+
 test('SEO keys are read only by metadata code, never rendered on the page', () => {
   // If a component rendered a *.metaTitle key, editing the search title would
   // change the visible page again -- the coupling this split exists to remove.
